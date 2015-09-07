@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -e
+
+ARGS=$@
+
+if egrep -q gqt <(echo "$ARGS"); then
+   (cd ../../../..; ./scripts/remote-fly ci/nested-guardian-tests.yml -- -nodes 4 $ARGS)
+elif [ -d $ARGS ] && 
+     [ "$(find $ARGS -maxdepth 1 -name '*_linux_test.go')" != "" ]; then
+   (cd ../../../..; ./scripts/remote-fly ci/nested-guardian-tests.yml $ARGS)
+else
+  ginkgo -r -race $ARGS
+fi
+
