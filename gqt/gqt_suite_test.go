@@ -15,16 +15,21 @@ import (
 var OciRuntimeBin = os.Getenv("OCI_RUNTIME")
 
 var defaultRuntime = map[string]string{
-	"linux":  "runc",
-	"darwin": "nocs",
+	"linux": "runc",
 }
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	if OciRuntimeBin == "" {
-		OciRuntimeBin = defaultRuntime[runtime.GOOS]
-	}
+	BeforeEach(func() {
+		if OciRuntimeBin == "" {
+			OciRuntimeBin = defaultRuntime[runtime.GOOS]
+		}
+
+		if OciRuntimeBin == "" {
+			Skip("No OCI Runtime for Platform: " + runtime.GOOS)
+		}
+	})
 
 	RunSpecs(t, "Gqt Suite")
 }
