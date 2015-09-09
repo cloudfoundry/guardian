@@ -12,7 +12,7 @@ type container struct {
 }
 
 func (c *container) Handle() string {
-	return ""
+	return c.handle
 }
 
 func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {

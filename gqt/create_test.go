@@ -14,28 +14,30 @@ import (
 
 var _ = Describe("Creating a Container", func() {
 	var client *runner.RunningGarden
+	var container garden.Container
 
 	Context("after creating a container", func() {
 		BeforeEach(func() {
 			client = startGarden()
-			_, err := client.Create(garden.ContainerSpec{
-				Handle: "fred",
-			})
+
+			var err error
+			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("should create a depot subdirectory based on the container handle", func() {
-			Expect(filepath.Join(client.DepotDir, "fred")).To(BeADirectory())
+			Expect(container.Handle()).NotTo(BeEmpty())
+			Expect(filepath.Join(client.DepotDir, container.Handle())).To(BeADirectory())
 		})
 
 		Describe("created container directories", func() {
 			It("should have a config.json", func() {
-				Expect(filepath.Join(client.DepotDir, "fred", "config.json")).To(BeARegularFile())
+				Expect(filepath.Join(client.DepotDir, container.Handle(), "config.json")).To(BeARegularFile())
 			})
 
 			It("should support creating OCI container manually", func() {
 				cmd := exec.Command(OciRuntimeBin)
-				cmd.Dir = filepath.Join(client.DepotDir, "fred")
+				cmd.Dir = filepath.Join(client.DepotDir, container.Handle())
 
 				session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())

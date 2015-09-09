@@ -12,20 +12,43 @@ type Containerizer interface {
 	Run(handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 }
 
+//go:generate counterfeiter . UidGenerator
+type UidGenerator interface {
+	Generate() string
+}
+
+type UidGeneratorFunc func() string
+
+func (fn UidGeneratorFunc) Generate() string {
+	return fn()
+}
+
 type DesiredContainerSpec struct {
 	Handle string
 }
 
 type Gardener struct {
 	Containerizer Containerizer
+	UidGenerator  UidGenerator
 }
 
 func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
+	if spec.Handle == "" {
+		spec.Handle = g.UidGenerator.Generate()
+	}
+
 	g.Containerizer.Create(DesiredContainerSpec{
 		Handle: spec.Handle,
 	})
 
-	return &container{}, nil
+	return g.Lookup(spec.Handle)
+}
+
+func (g *Gardener) Lookup(handle string) (garden.Container, error) {
+	return &container{
+		handle:        handle,
+		containerizer: g.Containerizer,
+	}, nil
 }
 
 func (g *Gardener) Start() error                                             { return nil }
@@ -42,11 +65,4 @@ func (g *Gardener) BulkInfo(handles []string) (map[string]garden.ContainerInfoEn
 
 func (g *Gardener) BulkMetrics(handles []string) (map[string]garden.ContainerMetricsEntry, error) {
 	return nil, nil
-}
-
-func (g *Gardener) Lookup(handle string) (garden.Container, error) {
-	return &container{
-		handle:        handle,
-		containerizer: g.Containerizer,
-	}, nil
 }

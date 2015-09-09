@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,6 +12,7 @@ import (
 	"github.com/cloudfoundry-incubator/garden/server"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/nu7hatch/gouuid"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -166,6 +168,7 @@ func main() {
 	}
 
 	backend := &gardener.Gardener{
+		UidGenerator: gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) }),
 		Containerizer: &rundmc.Containerizer{
 			Depot: &rundmc.DirectoryDepot{
 				Dir: *depotPath,
@@ -202,4 +205,12 @@ func missing(flagName string) {
 	println("missing " + flagName)
 	println()
 	flag.Usage()
+}
+
+func mustStringify(s interface{}, e error) string {
+	if e != nil {
+		panic(e)
+	}
+
+	return fmt.Sprintf("%s", s)
 }

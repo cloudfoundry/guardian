@@ -14,27 +14,63 @@ import (
 var _ = Describe("Gardener", func() {
 	var (
 		containerizer *fakes.FakeContainerizer
-		gdnr          *gardener.Gardener
+		uidGenerator  *fakes.FakeUidGenerator
+
+		gdnr *gardener.Gardener
 	)
 
 	BeforeEach(func() {
 		containerizer = new(fakes.FakeContainerizer)
+		uidGenerator = new(fakes.FakeUidGenerator)
 		gdnr = &gardener.Gardener{
 			Containerizer: containerizer,
+			UidGenerator:  uidGenerator,
 		}
 	})
 
 	Describe("creating a container", func() {
-		It("asks the containerizer to create a container", func() {
-			_, err := gdnr.Create(garden.ContainerSpec{
-				Handle: "bob",
+		Context("when a handle is specified", func() {
+			It("asks the containerizer to create a container", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{
+					Handle: "bob",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(containerizer.CreateCallCount()).To(Equal(1))
+				Expect(containerizer.CreateArgsForCall(0)).To(Equal(gardener.DesiredContainerSpec{
+					Handle: "bob",
+				}))
 			})
 
-			Expect(err).NotTo(HaveOccurred())
-			Expect(containerizer.CreateCallCount()).To(Equal(1))
-			Expect(containerizer.CreateArgsForCall(0)).To(Equal(gardener.DesiredContainerSpec{
-				Handle: "bob",
-			}))
+			It("returns the container that Lookup would return", func() {
+				c, err := gdnr.Create(garden.ContainerSpec{Handle: "handle"})
+				Expect(err).NotTo(HaveOccurred())
+
+				d, err := gdnr.Lookup("handle")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(c).To(Equal(d))
+			})
+		})
+
+		Context("when no handle is specified", func() {
+			It("assigns a handle to the container", func() {
+				uidGenerator.GenerateReturns("generated-handle")
+
+				_, err := gdnr.Create(garden.ContainerSpec{})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(containerizer.CreateCallCount()).To(Equal(1))
+				Expect(containerizer.CreateArgsForCall(0).Handle).To(Equal("generated-handle"))
+			})
+
+			It("returns the container that Lookup would return", func() {
+				c, err := gdnr.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				d, err := gdnr.Lookup(c.Handle())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(c).To(Equal(d))
+			})
 		})
 	})
 
