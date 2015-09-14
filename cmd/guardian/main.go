@@ -4,14 +4,20 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path"
 	"syscall"
+	"time"
 
 	"github.com/cloudfoundry-incubator/cf-debug-server"
 	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/cloudfoundry-incubator/garden/server"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
+	"github.com/cloudfoundry-incubator/guardian/loggingrunner"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
+	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/nu7hatch/gouuid"
 	"github.com/pivotal-golang/lager"
 )
@@ -38,6 +44,12 @@ var binPath = flag.String(
 	"bin",
 	"",
 	"directory containing backend-specific scripts (i.e. ./create.sh)",
+)
+
+var iodaemonBin = flag.String(
+	"iodaemonBin",
+	"",
+	"path to iodaemon binary",
 )
 
 var depotPath = flag.String(
@@ -167,11 +179,29 @@ func main() {
 		missing("-depot")
 	}
 
+	if *iodaemonBin == "" {
+		missing("-iodaemonBin")
+	}
+
+	runner := &loggingrunner.Runner{
+		linux_command_runner.New(),
+		logger,
+	}
+
 	backend := &gardener.Gardener{
 		UidGenerator: gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) }),
 		Containerizer: &rundmc.Containerizer{
+			StartCheck: rundmc.StdoutCheck{
+				Expect:  "Pid 1 Running",
+				Timeout: 1 * time.Second,
+			},
+			ContainerRunner: &rundmc.RunRunc{
+				PidGenerator: &rundmc.SimplePidGenerator{},
+				Tracker:      process_tracker.New(path.Join(os.TempDir(), "garden-processes"), *iodaemonBin, runner),
+			},
 			Depot: &rundmc.DirectoryDepot{
-				Dir: *depotPath,
+				BundleCreator: rundmc.BundleForCmd(exec.Command("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)),
+				Dir:           *depotPath,
 			},
 		},
 	}

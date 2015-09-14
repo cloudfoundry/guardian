@@ -38,5 +38,8 @@ func startGarden(argv ...string) *runner.RunningGarden {
 	gardenBin, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/guardian")
 	Expect(err).NotTo(HaveOccurred())
 
-	return runner.Start(gardenBin, argv...)
+	iodaemonBin, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/cmd/iodaemon")
+	Expect(err).NotTo(HaveOccurred())
+
+	return runner.Start(gardenBin, iodaemonBin, argv...)
 }

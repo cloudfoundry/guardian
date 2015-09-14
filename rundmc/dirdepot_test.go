@@ -1,30 +1,56 @@
 package rundmc_test
 
 import (
-	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 
-	"github.com/cf-guardian/specs"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Depot", func() {
+	var (
+		tmpDir     string
+		fakeBundle *fakes.FakeBundleCreator
+		depot      *rundmc.DirectoryDepot
+	)
+
+	BeforeEach(func() {
+		var err error
+
+		tmpDir, err = ioutil.TempDir("", "depot-test")
+		Expect(err).NotTo(HaveOccurred())
+
+		fakeBundle = new(fakes.FakeBundleCreator)
+		depot = &rundmc.DirectoryDepot{
+			Dir:           tmpDir,
+			BundleCreator: fakeBundle,
+		}
+	})
+
+	Describe("lookup", func() {
+		Context("when a subdirectory with the given name does not exist", func() {
+			It("returns an ErrDoesNotExist", func() {
+				_, err := depot.Lookup("potato")
+				Expect(err).To(MatchError(rundmc.ErrDoesNotExist))
+			})
+		})
+
+		Context("when a subdirectory with the given name exists", func() {
+			It("returns the absolute path of the directory", func() {
+				os.Mkdir(filepath.Join(tmpDir, "potato"), 0700)
+				Expect(depot.Lookup("potato")).To(Equal(filepath.Join(tmpDir, "potato")))
+			})
+		})
+	})
+
 	Describe("create", func() {
-		var tmpDir string
 		BeforeEach(func() {
-			var err error
-
-			tmpDir, err = ioutil.TempDir("", "depot-test")
-			Expect(err).NotTo(HaveOccurred())
-
-			depot := rundmc.DirectoryDepot{
-				Dir: tmpDir,
-			}
-
 			Expect(depot.Create("aardvaark")).To(Succeed())
 		})
 
@@ -32,34 +58,15 @@ var _ = Describe("Depot", func() {
 			Expect(filepath.Join(tmpDir, "aardvaark")).To(BeADirectory())
 		})
 
-		Describe("the container directory", func() {
-			It("should contain a config.json", func() {
-				Expect(filepath.Join(tmpDir, "aardvaark", "config.json")).To(BeARegularFile())
-			})
-
-			It("should have a config.json with a process which echos 'Pid 1 Running'", func() {
-				file, err := os.Open(filepath.Join(tmpDir, "aardvaark", "config.json"))
-				Expect(err).NotTo(HaveOccurred())
-
-				var target specs.Spec
-				Expect(json.NewDecoder(file).Decode(&target)).To(Succeed())
-
-				Expect(target.Process).To(Equal(specs.Process{
-					Args: []string{
-						"/bin/echo", "Pid 1 Running",
-					},
-				}))
-			})
-
-			It("should have a config.json which specifies the spec version", func() {
-				file, err := os.Open(filepath.Join(tmpDir, "aardvaark", "config.json"))
-				Expect(err).NotTo(HaveOccurred())
-
-				var target specs.Spec
-				Expect(json.NewDecoder(file).Decode(&target)).To(Succeed())
-
-				Expect(target.Version).To(Equal("pre-draft"))
-			})
+		It("should serialize the a container config to the directory", func() {
+			Expect(fakeBundle.CreateCallCount()).To(Equal(1))
+			Expect(fakeBundle.CreateArgsForCall(0)).To(Equal(path.Join(tmpDir, "aardvaark")))
 		})
+	})
+
+	It("destroys the container directory if creation fails", func() {
+		fakeBundle.CreateReturns(errors.New("didn't work"))
+		Expect(depot.Create("aardvaark")).NotTo(Succeed())
+		Expect(filepath.Join(tmpDir, "aardvaark")).NotTo(BeADirectory())
 	})
 })

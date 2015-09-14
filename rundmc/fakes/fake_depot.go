@@ -16,6 +16,15 @@ type FakeDepot struct {
 	createReturns struct {
 		result1 error
 	}
+	LookupStub        func(handle string) (path string, err error)
+	lookupMutex       sync.RWMutex
+	lookupArgsForCall []struct {
+		handle string
+	}
+	lookupReturns struct {
+		result1 string
+		result2 error
+	}
 }
 
 func (fake *FakeDepot) Create(handle string) error {
@@ -48,6 +57,39 @@ func (fake *FakeDepot) CreateReturns(result1 error) {
 	fake.createReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeDepot) Lookup(handle string) (path string, err error) {
+	fake.lookupMutex.Lock()
+	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
+		handle string
+	}{handle})
+	fake.lookupMutex.Unlock()
+	if fake.LookupStub != nil {
+		return fake.LookupStub(handle)
+	} else {
+		return fake.lookupReturns.result1, fake.lookupReturns.result2
+	}
+}
+
+func (fake *FakeDepot) LookupCallCount() int {
+	fake.lookupMutex.RLock()
+	defer fake.lookupMutex.RUnlock()
+	return len(fake.lookupArgsForCall)
+}
+
+func (fake *FakeDepot) LookupArgsForCall(i int) string {
+	fake.lookupMutex.RLock()
+	defer fake.lookupMutex.RUnlock()
+	return fake.lookupArgsForCall[i].handle
+}
+
+func (fake *FakeDepot) LookupReturns(result1 string, result2 error) {
+	fake.LookupStub = nil
+	fake.lookupReturns = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
 }
 
 var _ rundmc.Depot = new(FakeDepot)
