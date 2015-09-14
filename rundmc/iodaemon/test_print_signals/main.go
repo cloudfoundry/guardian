@@ -6,7 +6,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/cloudfoundry-incubator/garden-linux/iodaemon/link"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/link"
 )
 
 func main() {

@@ -37,7 +37,7 @@ var _ = Describe("RuncRunner", func() {
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			_, cmd, io, _, _ := tracker.RunArgsForCall(0)
-			Expect(cmd.Path).To(Equal("runc"))
+			Expect(cmd.Args[0]).To(Equal("runc"))
 			Expect(cmd.Dir).To(Equal("some/oci/container"))
 			Expect(io.Stdout).To(Equal(GinkgoWriter))
 		})

@@ -10,7 +10,7 @@ import (
 var _ = Describe("Run", func() {
 	var client *runner.RunningGarden
 
-	FIt("should run a process and return the exit code", func() {
+	It("should run a process and return the exit code", func() {
 		client = startGarden()
 		container, err := client.Create(garden.ContainerSpec{
 			Handle: "fred",
@@ -30,6 +30,4 @@ var _ = Describe("Run", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(exitCode).To(Equal(12))
 	})
-
-	PIt("supports lookpath rather than requiring full path", func() {})
 })

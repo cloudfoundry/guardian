@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -184,12 +185,17 @@ func main() {
 	}
 
 	runner := &loggingrunner.Runner{
-		linux_command_runner.New(),
-		logger,
+		CommandRunner: linux_command_runner.New(),
+		Logger:        logger,
 	}
 
 	backend := &gardener.Gardener{
 		UidGenerator: gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) }),
+		Starter: &rundmc.Starter{
+			CgroupPath:    "/tmp/cgroups",
+			ProcCgroups:   mustOpen("/proc/cgroups"),
+			CommandRunner: runner,
+		},
 		Containerizer: &rundmc.Containerizer{
 			StartCheck: rundmc.StdoutCheck{
 				Expect:  "Pid 1 Running",
@@ -235,6 +241,8 @@ func missing(flagName string) {
 	println("missing " + flagName)
 	println()
 	flag.Usage()
+
+	os.Exit(1)
 }
 
 func mustStringify(s interface{}, e error) string {
@@ -243,4 +251,12 @@ func mustStringify(s interface{}, e error) string {
 	}
 
 	return fmt.Sprintf("%s", s)
+}
+
+func mustOpen(path string) io.ReadCloser {
+	if r, err := os.Open(path); err != nil {
+		panic(err)
+	} else {
+		return r
+	}
 }

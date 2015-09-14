@@ -17,6 +17,10 @@ type UidGenerator interface {
 	Generate() string
 }
 
+type Starter interface {
+	Start() error
+}
+
 type UidGeneratorFunc func() string
 
 func (fn UidGeneratorFunc) Generate() string {
@@ -30,6 +34,8 @@ type DesiredContainerSpec struct {
 type Gardener struct {
 	Containerizer Containerizer
 	UidGenerator  UidGenerator
+
+	Starter
 }
 
 func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
@@ -37,9 +43,11 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		spec.Handle = g.UidGenerator.Generate()
 	}
 
-	g.Containerizer.Create(DesiredContainerSpec{
+	if err := g.Containerizer.Create(DesiredContainerSpec{
 		Handle: spec.Handle,
-	})
+	}); err != nil {
+		return nil, err
+	}
 
 	return g.Lookup(spec.Handle)
 }
@@ -51,7 +59,6 @@ func (g *Gardener) Lookup(handle string) (garden.Container, error) {
 	}, nil
 }
 
-func (g *Gardener) Start() error                                             { return nil }
 func (g *Gardener) Stop()                                                    {}
 func (g *Gardener) GraceTime(garden.Container) time.Duration                 { return 0 }
 func (g *Gardener) Ping() error                                              { return nil }

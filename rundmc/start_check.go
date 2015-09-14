@@ -3,7 +3,6 @@ package rundmc
 import (
 	"errors"
 	"io"
-	"io/ioutil"
 	"time"
 )
 
@@ -27,12 +26,6 @@ func (s StdoutCheck) Check(stdout, stderr io.Reader) error {
 	case <-detected:
 		return nil
 	case <-time.After(s.Timeout):
-		if b, err := ioutil.ReadAll(stderr); err == nil {
-			return errors.New(string(b))
-		}
-
-		return errors.New("timeout, and could not read stderr")
+		return errors.New("timed out waiting for container to start")
 	}
-
-	return nil
 }

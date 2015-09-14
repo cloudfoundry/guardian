@@ -14,7 +14,7 @@ var _ = Describe("StdoutCheck", func() {
 	Context("when the Expect string is printed to stdout before the timeout", func() {
 		It("returns nil", func() {
 			check := &rundmc.StdoutCheck{
-				"potato", 100 * time.Millisecond,
+				Expect: "potato", Timeout: 100 * time.Millisecond,
 			}
 
 			sR, sW := io.Pipe()
@@ -26,7 +26,7 @@ var _ = Describe("StdoutCheck", func() {
 	Context("when a string is printed to stdout, but it doesnt match", func() {
 		It("returns nil", func() {
 			check := &rundmc.StdoutCheck{
-				"potato", 100 * time.Millisecond,
+				Expect: "potato", Timeout: 100 * time.Millisecond,
 			}
 
 			sR, sW := io.Pipe()
@@ -39,9 +39,9 @@ var _ = Describe("StdoutCheck", func() {
 
 	Context("when the Expect string is not printed to stdout before the timeout", func() {
 		Context("and text has been printed to stderr", func() {
-			It("returns an error containing the stderr text", func() {
+			It("returns an error", func() {
 				check := &rundmc.StdoutCheck{
-					"potato", 100 * time.Millisecond,
+					Expect: "potato", Timeout: 100 * time.Millisecond,
 				}
 
 				sR, sW := io.Pipe()
@@ -50,7 +50,7 @@ var _ = Describe("StdoutCheck", func() {
 					sW.Write([]byte("potato"))
 				}()
 
-				Expect(check.Check(sR, gbytes.BufferWithBytes([]byte("blammo")))).To(MatchError("blammo"))
+				Expect(check.Check(sR, gbytes.BufferWithBytes([]byte("blammo")))).NotTo(Succeed())
 			})
 		})
 	})
