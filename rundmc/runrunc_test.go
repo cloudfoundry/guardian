@@ -9,6 +9,8 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
+	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
+	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/specs"
@@ -16,8 +18,9 @@ import (
 
 var _ = Describe("RuncRunner", func() {
 	var (
-		tracker      *fakes.FakeProcessTracker
-		pidGenerator *fakes.FakePidGenerator
+		tracker       *fakes.FakeProcessTracker
+		commandRunner *fake_command_runner.FakeCommandRunner
+		pidGenerator  *fakes.FakePidGenerator
 
 		runner *rundmc.RunRunc
 	)
@@ -25,9 +28,11 @@ var _ = Describe("RuncRunner", func() {
 	BeforeEach(func() {
 		tracker = new(fakes.FakeProcessTracker)
 		pidGenerator = new(fakes.FakePidGenerator)
+		commandRunner = fake_command_runner.New()
 		runner = &rundmc.RunRunc{
-			PidGenerator: pidGenerator,
-			Tracker:      tracker,
+			PidGenerator:  pidGenerator,
+			Tracker:       tracker,
+			CommandRunner: commandRunner,
 		}
 	})
 
@@ -101,6 +106,17 @@ var _ = Describe("RuncRunner", func() {
 				Expect(tracker.RunCallCount()).To(Equal(1))
 				Expect(spec.Env).To(Equal([]string{"a", "b", "c"}))
 			})
+		})
+	})
+
+	Describe("Kill", func() {
+		It("runs 'runc kill' in the container directory", func() {
+			Expect(runner.Kill("some-container")).To(Succeed())
+			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+				Dir:  "some-container",
+				Path: "runc",
+				Args: []string{"kill"},
+			}))
 		})
 	})
 })

@@ -146,4 +146,28 @@ var _ = Describe("Rundmc", func() {
 			})
 		})
 	})
+
+	Describe("destroy", func() {
+		It("should run kill", func() {
+			Expect(containerizer.Destroy("some-handle")).To(Succeed())
+			Expect(fakeContainerRunner.KillCallCount()).To(Equal(1))
+			Expect(fakeContainerRunner.KillArgsForCall(0)).To(Equal("/path/to/some-handle"))
+		})
+
+		Context("when kill succeeds", func() {
+			It("destroys the depot directory", func() {
+				Expect(containerizer.Destroy("some-handle")).To(Succeed())
+				Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
+				Expect(fakeDepot.DestroyArgsForCall(0)).To(Equal("some-handle"))
+			})
+		})
+
+		Context("when kill fails", func() {
+			It("does not destroy the depot directory", func() {
+				fakeContainerRunner.KillReturns(errors.New("killing is wrong"))
+				containerizer.Destroy("some-handle")
+				Expect(fakeDepot.DestroyCallCount()).To(Equal(0))
+			})
+		})
+	})
 })

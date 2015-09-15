@@ -10,6 +10,7 @@ import (
 type Containerizer interface {
 	Create(spec DesiredContainerSpec) error
 	Run(handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Destroy(handle string) error
 }
 
 //go:generate counterfeiter . UidGenerator
@@ -59,11 +60,14 @@ func (g *Gardener) Lookup(handle string) (garden.Container, error) {
 	}, nil
 }
 
+func (g *Gardener) Destroy(handle string) error {
+	return g.Containerizer.Destroy(handle)
+}
+
 func (g *Gardener) Stop()                                                    {}
 func (g *Gardener) GraceTime(garden.Container) time.Duration                 { return 0 }
 func (g *Gardener) Ping() error                                              { return nil }
 func (g *Gardener) Capacity() (garden.Capacity, error)                       { return garden.Capacity{}, nil }
-func (g *Gardener) Destroy(handle string) error                              { return nil }
 func (g *Gardener) Containers(garden.Properties) ([]garden.Container, error) { return nil, nil }
 
 func (g *Gardener) BulkInfo(handles []string) (map[string]garden.ContainerInfoEntry, error) {

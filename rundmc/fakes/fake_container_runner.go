@@ -30,6 +30,14 @@ type FakeContainerRunner struct {
 		result1 garden.Process
 		result2 error
 	}
+	KillStub        func(path string) error
+	killMutex       sync.RWMutex
+	killArgsForCall []struct {
+		path string
+	}
+	killReturns struct {
+		result1 error
+	}
 }
 
 func (fake *FakeContainerRunner) Start(path string, io garden.ProcessIO) (garden.Process, error) {
@@ -99,6 +107,38 @@ func (fake *FakeContainerRunner) ExecReturns(result1 garden.Process, result2 err
 		result1 garden.Process
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeContainerRunner) Kill(path string) error {
+	fake.killMutex.Lock()
+	fake.killArgsForCall = append(fake.killArgsForCall, struct {
+		path string
+	}{path})
+	fake.killMutex.Unlock()
+	if fake.KillStub != nil {
+		return fake.KillStub(path)
+	} else {
+		return fake.killReturns.result1
+	}
+}
+
+func (fake *FakeContainerRunner) KillCallCount() int {
+	fake.killMutex.RLock()
+	defer fake.killMutex.RUnlock()
+	return len(fake.killArgsForCall)
+}
+
+func (fake *FakeContainerRunner) KillArgsForCall(i int) string {
+	fake.killMutex.RLock()
+	defer fake.killMutex.RUnlock()
+	return fake.killArgsForCall[i].path
+}
+
+func (fake *FakeContainerRunner) KillReturns(result1 error) {
+	fake.KillStub = nil
+	fake.killReturns = struct {
+		result1 error
+	}{result1}
 }
 
 var _ rundmc.ContainerRunner = new(FakeContainerRunner)

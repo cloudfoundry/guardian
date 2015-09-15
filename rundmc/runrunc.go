@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
+	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/opencontainers/specs"
 )
 
@@ -22,8 +23,9 @@ type PidGenerator interface {
 
 // da doo
 type RunRunc struct {
-	Tracker      ProcessTracker
-	PidGenerator PidGenerator
+	Tracker       ProcessTracker
+	CommandRunner command_runner.CommandRunner
+	PidGenerator  PidGenerator
 }
 
 func (r RunRunc) Start(bundlePath string, io garden.ProcessIO) (garden.Process, error) {
@@ -51,4 +53,10 @@ func (r RunRunc) Exec(bundlePath string, spec garden.ProcessSpec, io garden.Proc
 	cmd.Dir = bundlePath
 
 	return r.Tracker.Run(r.PidGenerator.Generate(), cmd, io, spec.TTY, nil)
+}
+
+func (r RunRunc) Kill(bundlePath string) error {
+	cmd := exec.Command("runc", "kill")
+	cmd.Dir = bundlePath
+	return r.CommandRunner.Run(cmd)
 }

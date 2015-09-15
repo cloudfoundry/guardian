@@ -202,8 +202,9 @@ func main() {
 				Timeout: 1 * time.Second,
 			},
 			ContainerRunner: &rundmc.RunRunc{
-				PidGenerator: &rundmc.SimplePidGenerator{},
-				Tracker:      process_tracker.New(path.Join(os.TempDir(), "garden-processes"), *iodaemonBin, runner),
+				PidGenerator:  &rundmc.SimplePidGenerator{},
+				Tracker:       process_tracker.New(path.Join(os.TempDir(), "garden-processes"), *iodaemonBin, runner),
+				CommandRunner: runner,
 			},
 			Depot: &rundmc.DirectoryDepot{
 				BundleCreator: rundmc.BundleForCmd(exec.Command("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)),

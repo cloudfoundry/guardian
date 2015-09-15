@@ -50,23 +50,35 @@ var _ = Describe("Depot", func() {
 	})
 
 	Describe("create", func() {
-		BeforeEach(func() {
-			Expect(depot.Create("aardvaark")).To(Succeed())
-		})
-
 		It("should create a directory", func() {
+			Expect(depot.Create("aardvaark")).To(Succeed())
 			Expect(filepath.Join(tmpDir, "aardvaark")).To(BeADirectory())
 		})
 
 		It("should serialize the a container config to the directory", func() {
+			Expect(depot.Create("aardvaark")).To(Succeed())
 			Expect(fakeBundle.CreateCallCount()).To(Equal(1))
 			Expect(fakeBundle.CreateArgsForCall(0)).To(Equal(path.Join(tmpDir, "aardvaark")))
 		})
+
+		It("destroys the container directory if creation fails", func() {
+			fakeBundle.CreateReturns(errors.New("didn't work"))
+			Expect(depot.Create("aardvaark")).NotTo(Succeed())
+			Expect(filepath.Join(tmpDir, "aardvaark")).NotTo(BeADirectory())
+		})
 	})
 
-	It("destroys the container directory if creation fails", func() {
-		fakeBundle.CreateReturns(errors.New("didn't work"))
-		Expect(depot.Create("aardvaark")).NotTo(Succeed())
-		Expect(filepath.Join(tmpDir, "aardvaark")).NotTo(BeADirectory())
+	Describe("destroy", func() {
+		It("should destroy the container directory", func() {
+			Expect(os.MkdirAll(filepath.Join(tmpDir, "potato"), 0755)).To(Succeed())
+			Expect(depot.Destroy("potato")).To(Succeed())
+			Expect(filepath.Join(tmpDir, "potato")).NotTo(BeAnExistingFile())
+		})
+
+		Context("when the container directory does not exist", func() {
+			It("does not error (i.e. the method is idempotent)", func() {
+				Expect(depot.Destroy("potato")).To(Succeed())
+			})
+		})
 	})
 })

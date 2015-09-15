@@ -25,6 +25,14 @@ type FakeDepot struct {
 		result1 string
 		result2 error
 	}
+	DestroyStub        func(handle string) error
+	destroyMutex       sync.RWMutex
+	destroyArgsForCall []struct {
+		handle string
+	}
+	destroyReturns struct {
+		result1 error
+	}
 }
 
 func (fake *FakeDepot) Create(handle string) error {
@@ -90,6 +98,38 @@ func (fake *FakeDepot) LookupReturns(result1 string, result2 error) {
 		result1 string
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeDepot) Destroy(handle string) error {
+	fake.destroyMutex.Lock()
+	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
+		handle string
+	}{handle})
+	fake.destroyMutex.Unlock()
+	if fake.DestroyStub != nil {
+		return fake.DestroyStub(handle)
+	} else {
+		return fake.destroyReturns.result1
+	}
+}
+
+func (fake *FakeDepot) DestroyCallCount() int {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return len(fake.destroyArgsForCall)
+}
+
+func (fake *FakeDepot) DestroyArgsForCall(i int) string {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return fake.destroyArgsForCall[i].handle
+}
+
+func (fake *FakeDepot) DestroyReturns(result1 error) {
+	fake.DestroyStub = nil
+	fake.destroyReturns = struct {
+		result1 error
+	}{result1}
 }
 
 var _ rundmc.Depot = new(FakeDepot)

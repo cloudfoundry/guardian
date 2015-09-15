@@ -110,5 +110,13 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 		})
+
+		Describe("destroying a container", func() {
+			It("asks the containerizer to destroy the container", func() {
+				Expect(gdnr.Destroy(container.Handle())).To(Succeed())
+				Expect(containerizer.DestroyCallCount()).To(Equal(1))
+				Expect(containerizer.DestroyArgsForCall(0)).To(Equal(container.Handle()))
+			})
+		})
 	})
 })

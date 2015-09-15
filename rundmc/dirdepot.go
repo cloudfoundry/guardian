@@ -20,12 +20,12 @@ type DirectoryDepot struct {
 }
 
 func (d *DirectoryDepot) Create(handle string) error {
-	path := filepath.Join(d.Dir, handle)
+	path := d.dir(handle)
 	if err := os.MkdirAll(path, 0700); err != nil {
 		return err
 	}
 
-	if err := d.BundleCreator.Create(filepath.Join(d.Dir, handle)); err != nil {
+	if err := d.BundleCreator.Create(path); err != nil {
 		os.RemoveAll(path)
 		return err
 	}
@@ -34,9 +34,17 @@ func (d *DirectoryDepot) Create(handle string) error {
 }
 
 func (d *DirectoryDepot) Lookup(handle string) (string, error) {
-	if _, err := os.Stat(filepath.Join(d.Dir, handle)); err != nil {
+	if _, err := os.Stat(d.dir(handle)); err != nil {
 		return "", ErrDoesNotExist
 	}
 
-	return filepath.Join(d.Dir, handle), nil
+	return d.dir(handle), nil
+}
+
+func (d *DirectoryDepot) Destroy(handle string) error {
+	return os.RemoveAll(d.dir(handle))
+}
+
+func (d *DirectoryDepot) dir(handle string) string {
+	return filepath.Join(d.Dir, handle)
 }

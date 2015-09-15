@@ -11,6 +11,7 @@ import (
 type Depot interface {
 	Create(handle string) error
 	Lookup(handle string) (path string, err error)
+	Destroy(handle string) error
 }
 
 //go:generate counterfeiter . Checker
@@ -22,6 +23,7 @@ type Checker interface {
 type ContainerRunner interface {
 	Start(path string, io garden.ProcessIO) (garden.Process, error)
 	Exec(path string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Kill(path string) error
 }
 
 type Containerizer struct {
@@ -58,4 +60,17 @@ func (c *Containerizer) Run(handle string, spec garden.ProcessSpec, io garden.Pr
 	}
 
 	return c.ContainerRunner.Exec(path, spec, io)
+}
+
+func (c *Containerizer) Destroy(handle string) error {
+	path, err := c.Depot.Lookup(handle)
+	if err != nil {
+		return err
+	}
+
+	if err := c.ContainerRunner.Kill(path); err != nil {
+		return err
+	}
+
+	return c.Depot.Destroy(handle)
 }

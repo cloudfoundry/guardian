@@ -28,6 +28,14 @@ type FakeContainerizer struct {
 		result1 garden.Process
 		result2 error
 	}
+	DestroyStub        func(handle string) error
+	destroyMutex       sync.RWMutex
+	destroyArgsForCall []struct {
+		handle string
+	}
+	destroyReturns struct {
+		result1 error
+	}
 }
 
 func (fake *FakeContainerizer) Create(spec gardener.DesiredContainerSpec) error {
@@ -95,6 +103,38 @@ func (fake *FakeContainerizer) RunReturns(result1 garden.Process, result2 error)
 		result1 garden.Process
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeContainerizer) Destroy(handle string) error {
+	fake.destroyMutex.Lock()
+	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
+		handle string
+	}{handle})
+	fake.destroyMutex.Unlock()
+	if fake.DestroyStub != nil {
+		return fake.DestroyStub(handle)
+	} else {
+		return fake.destroyReturns.result1
+	}
+}
+
+func (fake *FakeContainerizer) DestroyCallCount() int {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return len(fake.destroyArgsForCall)
+}
+
+func (fake *FakeContainerizer) DestroyArgsForCall(i int) string {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return fake.destroyArgsForCall[i].handle
+}
+
+func (fake *FakeContainerizer) DestroyReturns(result1 error) {
+	fake.DestroyStub = nil
+	fake.destroyReturns = struct {
+		result1 error
+	}{result1}
 }
 
 var _ gardener.Containerizer = new(FakeContainerizer)
