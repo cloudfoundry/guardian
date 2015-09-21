@@ -17,7 +17,7 @@ import (
 var _ = Describe("Rundmc", func() {
 	var (
 		fakeDepot           *fakes.FakeDepot
-		fakeContainerRunner *fakes.FakeContainerRunner
+		fakeContainerRunner *fakes.FakeBundleRunner
 		fakeStartCheck      *fakes.FakeChecker
 
 		containerizer *rundmc.Containerizer
@@ -25,13 +25,10 @@ var _ = Describe("Rundmc", func() {
 
 	BeforeEach(func() {
 		fakeDepot = new(fakes.FakeDepot)
-		fakeContainerRunner = new(fakes.FakeContainerRunner)
+		fakeContainerRunner = new(fakes.FakeBundleRunner)
 		fakeStartCheck = new(fakes.FakeChecker)
-		containerizer = &rundmc.Containerizer{
-			Depot:           fakeDepot,
-			ContainerRunner: fakeContainerRunner,
-			StartCheck:      fakeStartCheck,
-		}
+
+		containerizer = rundmc.New(fakeDepot, fakeContainerRunner, fakeStartCheck)
 
 		fakeDepot.LookupStub = func(handle string) (string, error) {
 			return "/path/to/" + handle, nil

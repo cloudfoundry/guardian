@@ -15,9 +15,11 @@ import (
 	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/cloudfoundry-incubator/garden/server"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
-	"github.com/cloudfoundry-incubator/guardian/loggingrunner"
+	"github.com/cloudfoundry-incubator/guardian/log"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/nu7hatch/gouuid"
 	"github.com/pivotal-golang/lager"
@@ -174,7 +176,8 @@ func main() {
 	cf_lager.AddFlags(flag.CommandLine)
 	flag.Parse()
 
-	logger, _ := cf_lager.New("guardian")
+	l, _ := cf_lager.New("guardian")
+	log.SetLogger(l)
 
 	if *depotPath == "" {
 		missing("-depot")
@@ -184,40 +187,17 @@ func main() {
 		missing("-iodaemonBin")
 	}
 
-	runner := &loggingrunner.Runner{
-		CommandRunner: linux_command_runner.New(),
-		Logger:        logger,
-	}
-
 	backend := &gardener.Gardener{
-		UidGenerator: gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) }),
-		Starter: &rundmc.Starter{
-			CgroupPath:    "/tmp/cgroups",
-			ProcCgroups:   mustOpen("/proc/cgroups"),
-			CommandRunner: runner,
-		},
-		Containerizer: &rundmc.Containerizer{
-			StartCheck: rundmc.StdoutCheck{
-				Expect:  "Pid 1 Running",
-				Timeout: 1 * time.Second,
-			},
-			ContainerRunner: &rundmc.RunRunc{
-				PidGenerator:  &rundmc.SimplePidGenerator{},
-				Tracker:       process_tracker.New(path.Join(os.TempDir(), "garden-processes"), *iodaemonBin, runner),
-				CommandRunner: runner,
-			},
-			Depot: &rundmc.DirectoryDepot{
-				BundleCreator: rundmc.BundleForCmd(exec.Command("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)),
-				Dir:           *depotPath,
-			},
-		},
+		UidGenerator:  wireUidGenerator(),
+		Starter:       wireStarter(),
+		Containerizer: wireContainerizer(*depotPath, *iodaemonBin),
 	}
 
-	gardenServer := server.New(*listenNetwork, *listenAddr, *graceTime, backend, logger)
+	gardenServer := server.New(*listenNetwork, *listenAddr, *graceTime, backend, log.Session("api"))
 
 	err := gardenServer.Start()
 	if err != nil {
-		logger.Fatal("failed-to-start-server", err)
+		log.Fatal("failed-to-start-server", err)
 	}
 
 	signals := make(chan os.Signal, 1)
@@ -230,12 +210,36 @@ func main() {
 
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	logger.Info("started", lager.Data{
+	log.Info("started", lager.Data{
 		"network": *listenNetwork,
 		"addr":    *listenAddr,
 	})
 
 	select {}
+}
+
+func wireUidGenerator() gardener.UidGeneratorFunc {
+	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
+}
+
+func wireStarter() *rundmc.Starter {
+	runner := &log.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("runner")}
+	return rundmc.NewStarter(mustOpen("/proc/cgroups"), "/tmp/cgroups", runner)
+}
+
+func wireContainerizer(depotPath, iodaemonPath string) *rundmc.Containerizer {
+	depot := depot.New(
+		depotPath,
+		rundmc.BundleForCmd(exec.Command("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)))
+
+	startCheck := rundmc.StdoutCheck{Expect: "Pid 1 Running", Timeout: 1 * time.Second}
+
+	runcrunner := runrunc.New(
+		process_tracker.New(path.Join(os.TempDir(), "garden-processes"), iodaemonPath, linux_command_runner.New()),
+		linux_command_runner.New(),
+		&rundmc.SimplePidGenerator{})
+
+	return rundmc.New(depot, runcrunner, startCheck)
 }
 
 func missing(flagName string) {

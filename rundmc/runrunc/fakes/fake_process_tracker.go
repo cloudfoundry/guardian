@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 )
 
 type FakeProcessTracker struct {
@@ -63,4 +63,4 @@ func (fake *FakeProcessTracker) RunReturns(result1 garden.Process, result2 error
 	}{result1, result2}
 }
 
-var _ rundmc.ProcessTracker = new(FakeProcessTracker)
+var _ runrunc.ProcessTracker = new(FakeProcessTracker)

@@ -15,10 +15,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Starter", func() {
+var _ = Describe("CgroupStarter", func() {
 	var (
 		runner      *fake_command_runner.FakeCommandRunner
-		starter     *rundmc.Starter
+		starter     *rundmc.CgroupStarter
 		procCgroups *FakeReadCloser
 
 		tmpDir string
@@ -31,7 +31,7 @@ var _ = Describe("Starter", func() {
 
 		runner = fake_command_runner.New()
 		procCgroups = &FakeReadCloser{Buffer: bytes.NewBufferString("")}
-		starter = &rundmc.Starter{
+		starter = &rundmc.CgroupStarter{
 			CgroupPath:    path.Join(tmpDir, "cgroup"),
 			CommandRunner: runner,
 			ProcCgroups:   procCgroups,

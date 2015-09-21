@@ -9,8 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
-
 var _ = Describe("Creating a Container", func() {
 	var client *runner.RunningGarden
 	var container garden.Container

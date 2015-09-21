@@ -32,10 +32,15 @@ type DesiredContainerSpec struct {
 	Handle string
 }
 
+// Gardener orchestrates other components to implement the Garden API
 type Gardener struct {
+	// Containerizer runs and manages linux containers
 	Containerizer Containerizer
-	UidGenerator  UidGenerator
 
+	// UidGenerator generates unique ids for containers
+	UidGenerator UidGenerator
+
+	// Starter runs any needed start-up tasks (e.g. setting up cgroups)
 	Starter
 }
 

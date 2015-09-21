@@ -1,4 +1,4 @@
-package loggingrunner
+package log
 
 import (
 	"bytes"

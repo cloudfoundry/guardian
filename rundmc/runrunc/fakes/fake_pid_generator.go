@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 )
 
 type FakePidGenerator struct {
@@ -40,4 +40,4 @@ func (fake *FakePidGenerator) GenerateReturns(result1 uint32) {
 	}{result1}
 }
 
-var _ rundmc.PidGenerator = new(FakePidGenerator)
+var _ runrunc.PidGenerator = new(FakePidGenerator)

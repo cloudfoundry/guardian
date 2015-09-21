@@ -1,11 +1,11 @@
-package loggingrunner_test
+package log_test
 
 import (
 	"bytes"
 	"os/exec"
 	"time"
 
-	"github.com/cloudfoundry-incubator/guardian/loggingrunner"
+	"github.com/cloudfoundry-incubator/guardian/log"
 	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
@@ -21,7 +21,7 @@ var _ = Describe("Logging Runner", func() {
 	var innerRunner command_runner.CommandRunner
 	var logger *lagertest.TestLogger
 
-	var runner *loggingrunner.Runner
+	var runner *log.Runner
 
 	BeforeEach(func() {
 		innerRunner = linux_command_runner.New()
@@ -29,7 +29,7 @@ var _ = Describe("Logging Runner", func() {
 	})
 
 	JustBeforeEach(func() {
-		runner = &loggingrunner.Runner{
+		runner = &log.Runner{
 			CommandRunner: innerRunner,
 			Logger:        logger,
 		}

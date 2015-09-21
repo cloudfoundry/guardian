@@ -1,4 +1,4 @@
-package rundmc_test
+package runrunc_test
 
 import (
 	"encoding/json"
@@ -6,9 +6,9 @@ import (
 	"os/exec"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/fakes"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
@@ -22,18 +22,15 @@ var _ = Describe("RuncRunner", func() {
 		commandRunner *fake_command_runner.FakeCommandRunner
 		pidGenerator  *fakes.FakePidGenerator
 
-		runner *rundmc.RunRunc
+		runner *runrunc.RunRunc
 	)
 
 	BeforeEach(func() {
 		tracker = new(fakes.FakeProcessTracker)
 		pidGenerator = new(fakes.FakePidGenerator)
 		commandRunner = fake_command_runner.New()
-		runner = &rundmc.RunRunc{
-			PidGenerator:  pidGenerator,
-			Tracker:       tracker,
-			CommandRunner: commandRunner,
-		}
+
+		runner = runrunc.New(tracker, commandRunner, pidGenerator)
 	})
 
 	Describe("Run", func() {
@@ -98,13 +95,27 @@ var _ = Describe("RuncRunner", func() {
 				Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
 			})
 
-			It("passes the correct env", func() {
-				runner.Exec("some/oci/container", garden.ProcessSpec{
-					Env: []string{"a", "b", "c"},
-				}, garden.ProcessIO{})
+			Context("when the environment already contains a PATH", func() {
+				It("passes the environment variables", func() {
+					runner.Exec("some/oci/container", garden.ProcessSpec{
+						Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
+					}, garden.ProcessIO{})
 
-				Expect(tracker.RunCallCount()).To(Equal(1))
-				Expect(spec.Env).To(Equal([]string{"a", "b", "c"}))
+					Expect(tracker.RunCallCount()).To(Equal(1))
+					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a"}))
+				})
+			})
+
+			Context("when the environment does not already contain a PATH", func() {
+				It("appends a default PATH to the environment variables", func() {
+					runner.Exec("some/oci/container", garden.ProcessSpec{
+						Env: []string{"a=1", "b=3", "c=4"},
+					}, garden.ProcessIO{})
+
+					Expect(tracker.RunCallCount()).To(Equal(1))
+					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
+						"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}))
+				})
 			})
 		})
 	})

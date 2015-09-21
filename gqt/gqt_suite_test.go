@@ -4,6 +4,7 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,6 +18,8 @@ var OciRuntimeBin = os.Getenv("OCI_RUNTIME")
 var defaultRuntime = map[string]string{
 	"linux": "runc",
 }
+
+var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)

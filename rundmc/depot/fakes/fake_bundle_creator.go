@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 )
 
 type FakeBundleCreator struct {
@@ -50,4 +50,4 @@ func (fake *FakeBundleCreator) CreateReturns(result1 error) {
 	}{result1}
 }
 
-var _ rundmc.BundleCreator = new(FakeBundleCreator)
+var _ depot.BundleCreator = new(FakeBundleCreator)

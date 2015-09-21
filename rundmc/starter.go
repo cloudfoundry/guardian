@@ -12,13 +12,27 @@ import (
 )
 
 type Starter struct {
+	*CgroupStarter
+}
+
+func NewStarter(procCgroupReader io.ReadCloser, cgroupMountpoint string, runner command_runner.CommandRunner) *Starter {
+	return &Starter{
+		&CgroupStarter{
+			CgroupPath:    cgroupMountpoint,
+			ProcCgroups:   procCgroupReader,
+			CommandRunner: runner,
+		},
+	}
+}
+
+type CgroupStarter struct {
 	CgroupPath    string
 	CommandRunner command_runner.CommandRunner
 
 	ProcCgroups io.ReadCloser
 }
 
-func (s *Starter) Start() error {
+func (s *CgroupStarter) Start() error {
 	defer s.ProcCgroups.Close()
 	if err := os.MkdirAll(s.CgroupPath, 0755); err != nil {
 		return err
