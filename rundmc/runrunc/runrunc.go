@@ -59,19 +59,22 @@ func (r RunRunc) WithLogSession(sess log.ChainLogger) *RunRunc {
 // Starts a bundle by running 'runc' in the bundle directory
 func (r *RunRunc) Start(bundlePath string, io garden.ProcessIO) (garden.Process, error) {
 	mlog := plog.Start("start", lager.Data{"bundle": bundlePath})
-	defer mlog.Info("started")
 
 	cmd := exec.Command("runc", "start")
 	cmd.Dir = bundlePath
 
 	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil, nil)
+	if err == nil {
+		mlog.Info("started")
+	} else {
+		mlog.Error("runc start failed", err)
+	}
 	return process, err
 }
 
 // Exec a process in a bundle using 'runc exec'
 func (r *RunRunc) Exec(bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	mlog := plog.Start("exec", lager.Data{"bundle": bundlePath, "path": spec.Path})
-	defer mlog.Info("execced")
 
 	tmpFile, err := ioutil.TempFile("", "guardianprocess")
 	if err != nil {
@@ -85,17 +88,28 @@ func (r *RunRunc) Exec(bundlePath string, spec garden.ProcessSpec, io garden.Pro
 	cmd := exec.Command("runc", "exec", tmpFile.Name())
 	cmd.Dir = bundlePath
 
-	return r.tracker.Run(r.pidGenerator.Generate(), cmd, io, spec.TTY, nil)
+	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, spec.TTY, nil)
+	if err == nil {
+		mlog.Info("execed")
+	} else {
+		mlog.Error("runc exec failed", err)
+	}
+	return process, err
 }
 
 // Kill a bundle using 'runc kill'
 func (r *RunRunc) Kill(bundlePath string) error {
 	mlog := plog.Start("kill", lager.Data{"bundle": bundlePath})
-	defer mlog.Info("killed")
 
 	cmd := exec.Command("runc", "kill")
 	cmd.Dir = bundlePath
-	return r.commandRunner.Run(cmd)
+	err := r.commandRunner.Run(cmd)
+	if err == nil {
+		mlog.Info("killed")
+	} else {
+		mlog.Error("runc kill failed", err)
+	}
+	return err
 }
 
 func writeProcessJSON(spec garden.ProcessSpec, writer io.Writer) error {
