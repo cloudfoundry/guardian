@@ -96,24 +96,20 @@ var _ = Describe("Rundmc", func() {
 					fakeStartCheck.CheckStub = func(stdout, stderr io.Reader) error {
 						so, err := ioutil.ReadAll(stdout)
 						Expect(err).NotTo(HaveOccurred())
-						se, err := ioutil.ReadAll(stderr)
-						Expect(err).NotTo(HaveOccurred())
 
-						return fmt.Errorf("%s, %s", so, se)
+						return fmt.Errorf("%s", so)
 					}
 
 					fakeContainerRunner.StartStub = func(path string, gio garden.ProcessIO) (garden.Process, error) {
 						go func() { // run runs in the background
 							gio.Stdout.Write([]byte("stdout"))
 							gio.Stdout.(io.Closer).Close()
-							gio.Stderr.Write([]byte("stderr"))
-							gio.Stderr.(io.Closer).Close()
 						}()
 
 						return nil, nil
 					}
 
-					Expect(containerizer.Create(gardener.DesiredContainerSpec{})).To(MatchError("stdout, stderr"))
+					Expect(containerizer.Create(gardener.DesiredContainerSpec{})).To(MatchError("stdout"))
 				})
 			})
 		})

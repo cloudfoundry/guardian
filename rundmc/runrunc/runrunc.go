@@ -64,7 +64,7 @@ func (r *RunRunc) Start(bundlePath string, io garden.ProcessIO) (garden.Process,
 	cmd := exec.Command("runc")
 	cmd.Dir = bundlePath
 
-	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, &garden.TTYSpec{}, nil)
+	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil, nil)
 	return process, err
 }
 
