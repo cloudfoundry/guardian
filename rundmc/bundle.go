@@ -19,7 +19,7 @@ func (b Bundle) Create(path string) error {
 
 func BundleForCmd(cmd *exec.Cmd) *Bundle {
 	configJson, err := json.Marshal(specs.Spec{
-		Version: "pre-draft",
+		Version: "0.1.0",
 		Process: specs.Process{
 			Terminal: true,
 			Args:     cmd.Args,
