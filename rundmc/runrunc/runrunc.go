@@ -61,7 +61,7 @@ func (r *RunRunc) Start(bundlePath string, io garden.ProcessIO) (garden.Process,
 	mlog := plog.Start("start", lager.Data{"bundle": bundlePath})
 	defer mlog.Info("started")
 
-	cmd := exec.Command("runc")
+	cmd := exec.Command("runc", "start")
 	cmd.Dir = bundlePath
 
 	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil, nil)
