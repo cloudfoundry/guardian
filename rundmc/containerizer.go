@@ -61,30 +61,15 @@ func (c *Containerizer) Create(spec gardener.DesiredContainerSpec) error {
 	}
 
 	stdoutR, stdoutW := io.Pipe()
-	stderrR, stderrW := io.Pipe()
-	if c.runner.withLog(mlog).Start(path, garden.ProcessIO{Stdout: stdoutW, Stderr: stderrW}); err != nil {
+	if c.runner.withLog(mlog).Start(path, garden.ProcessIO{Stdout: stdoutW, Stderr: mlog.Start("start")}); err != nil {
 		return mlog.Err("start", err)
 	}
-
-	go logFromReader(stderrR, mlog)
 
 	if err := c.startChecker.Check(stdoutR); err != nil {
 		return mlog.Err("check", err)
 	}
 
 	return nil
-}
-
-func logFromReader(reader io.Reader, log lager.Logger) {
-	buff := make([]byte, 1000)
-	for {
-		n, err := reader.Read(buff)
-		if err != nil {
-			log.Error("failed-to-read", err)
-			return
-		}
-		log.Info("received-data", lager.Data{"data": string(buff[:n])})
-	}
 }
 
 // Run runs a process inside a running container

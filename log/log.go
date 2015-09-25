@@ -1,6 +1,8 @@
 package log
 
 import (
+	"io"
+
 	"github.com/onsi/ginkgo"
 	"github.com/pivotal-golang/lager"
 )
@@ -47,6 +49,8 @@ type ChainLogger interface {
 	Start(session string, data ...lager.Data) ChainLogger
 	Err(action string, err error, data ...lager.Data) error
 	LogIfNotNil(action string, err error, data ...lager.Data)
+
+	io.Writer
 }
 
 type chainLogger struct {
@@ -63,6 +67,11 @@ func (c *chainLogger) Start(action string, data ...lager.Data) ChainLogger {
 func (c *chainLogger) Data(data lager.Data) ChainLogger {
 	session := c.WithData(data)
 	return &chainLogger{session}
+}
+
+func (c *chainLogger) Write(p []byte) (n int, err error) {
+	c.Info("received-data", lager.Data{"data": string(p)})
+	return len(p), nil
 }
 
 func (c *chainLogger) LogIfNotNil(action string, err error, data ...lager.Data) {
