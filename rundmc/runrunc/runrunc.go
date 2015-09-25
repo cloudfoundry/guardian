@@ -64,11 +64,11 @@ func (r *RunRunc) Start(bundlePath string, io garden.ProcessIO) (garden.Process,
 	cmd.Dir = bundlePath
 
 	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil, nil)
-	if err == nil {
-		mlog.Info("started")
-	} else {
-		mlog.Error("runc start failed", err)
+	if err != nil {
+		return nil, mlog.Err("run", err)
 	}
+
+	mlog.Info("started")
 	return process, err
 }
 
@@ -89,11 +89,11 @@ func (r *RunRunc) Exec(bundlePath string, spec garden.ProcessSpec, io garden.Pro
 	cmd.Dir = bundlePath
 
 	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, spec.TTY, nil)
-	if err == nil {
-		mlog.Info("execed")
-	} else {
-		mlog.Error("runc exec failed", err)
+	if err != nil {
+		return nil, mlog.Err("run", err)
 	}
+
+	mlog.Info("execed")
 	return process, err
 }
 
@@ -104,11 +104,11 @@ func (r *RunRunc) Kill(bundlePath string) error {
 	cmd := exec.Command("runc", "kill")
 	cmd.Dir = bundlePath
 	err := r.commandRunner.Run(cmd)
-	if err == nil {
-		mlog.Info("killed")
-	} else {
-		mlog.Error("runc kill failed", err)
+	if err != nil {
+		return mlog.Err("run", err)
 	}
+
+	mlog.Info("killed")
 	return err
 }
 
