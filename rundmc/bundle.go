@@ -37,8 +37,7 @@ func BundleForCmd(cmd *exec.Cmd) *Bundle {
 	configJson, err := json.Marshal(specs.Spec{
 		Version: "0.1.0",
 		Process: specs.Process{
-			Terminal: true,
-			Args:     cmd.Args,
+			Args: cmd.Args,
 		},
 	})
 
@@ -49,6 +48,14 @@ func BundleForCmd(cmd *exec.Cmd) *Bundle {
 	runtimeJson, err := json.Marshal(RuntimeSpec{
 		Linux: Linux{
 			Namespaces: namespaces(),
+			Resources: map[string]interface{}{
+				"memory":        struct{}{},
+				"cpu":           struct{}{},
+				"pids":          struct{}{},
+				"blockIO":       struct{}{},
+				"hugepageLimit": struct{}{},
+				"network":       struct{}{},
+			},
 		},
 	})
 	if err != nil {
@@ -61,13 +68,13 @@ func BundleForCmd(cmd *exec.Cmd) *Bundle {
 	}
 }
 
-func namespaces() []namespace {
-	namespaces := make([]namespace, 6)
-	nsTypes := []namespaceType{"pid", "network", "mount", "ipc", "uts", "user"}
-	for i, nsType := range nsTypes {
-		namespaces[i] = namespace{
+func namespaces() (namespaces []namespace) {
+	nsTypes := []namespaceType{"pid", "network", "mount", "ipc", "uts"}
+	for _, nsType := range nsTypes {
+		namespaces = append(namespaces, namespace{
 			NsType: nsType,
-			Path:   ""}
+			Path:   "",
+		})
 	}
 	return namespaces
 }
@@ -77,5 +84,6 @@ type RuntimeSpec struct {
 }
 
 type Linux struct {
-	Namespaces []namespace `json:"namespaces"`
+	Namespaces []namespace            `json:"namespaces"`
+	Resources  map[string]interface{} `json:"resources"`
 }

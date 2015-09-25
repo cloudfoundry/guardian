@@ -70,27 +70,30 @@ var _ = Describe("BundleForCmd", func() {
 			})
 
 			It("should configure all the namespaces", func() {
-				Expect(linux).To(HaveKey(
+				Expect(linux).To(HaveKeyWithValue(
 					BeEquivalentTo("namespaces"),
+					ConsistOf(ns("network"), ns("pid"), ns("mount"), ns("ipc"), ns("uts")),
 				))
-				namespaces, ok := linux["namespaces"].([]interface{})
-				Expect(ok).To(BeTrue())
-				Expect(namespaces).To(ConsistOf(expectedNamespaces()...))
+			})
+
+			It("should configure cgroups", func() {
+				for _, key := range []string{"memory", "cpu", "pids", "blockIO", "hugepageLimit", "network"} {
+					Expect(linux).To(HaveKeyWithValue(
+						BeEquivalentTo("resources"),
+						HaveKey(key),
+					))
+				}
 			})
 		})
 
 	})
 })
 
-func expectedNamespaces() []interface{} {
-	namespaces := make([]interface{}, 6)
-	nsTypes := []interface{}{"pid", "network", "mount", "ipc", "uts", "user"}
-	for i, NsType := range nsTypes {
-		nsMap := make(map[string]interface{}, 2)
-		nsMap["type"], nsMap["path"] = NsType, ""
-		namespaces[i] = nsMap
+func ns(n string) map[string]interface{} {
+	return map[string]interface{}{
+		"type": n,
+		"path": "",
 	}
-	return namespaces
 }
 
 func parseJson(path string) map[string]interface{} {
