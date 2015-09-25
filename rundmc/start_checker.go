@@ -6,16 +6,16 @@ import (
 	"time"
 )
 
-type StdoutCheck struct {
+type StartChecker struct {
 	Expect  string
 	Timeout time.Duration
 }
 
-func (s StdoutCheck) Check(stdout, stderr io.Reader) error {
+func (s StartChecker) Check(output io.Reader) error {
 	detected := make(chan struct{})
 	go func() {
 		buff := make([]byte, len(s.Expect))
-		io.ReadAtLeast(stdout, buff, len(s.Expect))
+		io.ReadAtLeast(output, buff, len(s.Expect))
 
 		if string(buff) == s.Expect {
 			close(detected)

@@ -232,7 +232,7 @@ func wireContainerizer(depotPath, iodaemonPath string) *rundmc.Containerizer {
 		depotPath,
 		rundmc.BundleForCmd(exec.Command("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)))
 
-	startCheck := rundmc.StdoutCheck{Expect: "Pid 1 Running", Timeout: 1 * time.Second}
+	startCheck := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 1 * time.Second}
 
 	runcrunner := runrunc.New(
 		process_tracker.New(path.Join(os.TempDir(), "garden-processes"), iodaemonPath, linux_command_runner.New()),

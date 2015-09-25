@@ -21,7 +21,7 @@ type Depot interface {
 
 //go:generate counterfeiter . Checker
 type Checker interface {
-	Check(stdout, stderr io.Reader) error
+	Check(output io.Reader) error
 }
 
 //go:generate counterfeiter . BundleRunner
@@ -33,16 +33,16 @@ type BundleRunner interface {
 
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
-	depot      Depot
-	runner     *MaybeLoggingRunner
-	startCheck Checker
+	depot        Depot
+	runner       *MaybeLoggingRunner
+	startChecker Checker
 }
 
-func New(depot Depot, runner BundleRunner, startCheck Checker) *Containerizer {
+func New(depot Depot, runner BundleRunner, startChecker Checker) *Containerizer {
 	return &Containerizer{
-		depot:      depot,
-		runner:     &MaybeLoggingRunner{runner},
-		startCheck: startCheck,
+		depot:        depot,
+		runner:       &MaybeLoggingRunner{runner},
+		startChecker: startChecker,
 	}
 }
 
@@ -68,7 +68,7 @@ func (c *Containerizer) Create(spec gardener.DesiredContainerSpec) error {
 
 	go logFromReader(stderrR, mlog)
 
-	if err := c.startCheck.Check(stdoutR, stderrR); err != nil {
+	if err := c.startChecker.Check(stdoutR); err != nil {
 		return mlog.Err("check", err)
 	}
 

@@ -93,7 +93,7 @@ var _ = Describe("Rundmc", func() {
 
 			Context("when the container fails to start", func() {
 				It("returns the underlying error", func() {
-					fakeStartCheck.CheckStub = func(stdout, stderr io.Reader) error {
+					fakeStartCheck.CheckStub = func(stdout io.Reader) error {
 						so, err := ioutil.ReadAll(stdout)
 						Expect(err).NotTo(HaveOccurred())
 

@@ -9,26 +9,24 @@ import (
 )
 
 type FakeChecker struct {
-	CheckStub        func(stdout, stderr io.Reader) error
+	CheckStub        func(output io.Reader) error
 	checkMutex       sync.RWMutex
 	checkArgsForCall []struct {
-		stdout io.Reader
-		stderr io.Reader
+		output io.Reader
 	}
 	checkReturns struct {
 		result1 error
 	}
 }
 
-func (fake *FakeChecker) Check(stdout io.Reader, stderr io.Reader) error {
+func (fake *FakeChecker) Check(output io.Reader) error {
 	fake.checkMutex.Lock()
 	fake.checkArgsForCall = append(fake.checkArgsForCall, struct {
-		stdout io.Reader
-		stderr io.Reader
-	}{stdout, stderr})
+		output io.Reader
+	}{output})
 	fake.checkMutex.Unlock()
 	if fake.CheckStub != nil {
-		return fake.CheckStub(stdout, stderr)
+		return fake.CheckStub(output)
 	} else {
 		return fake.checkReturns.result1
 	}
@@ -40,10 +38,10 @@ func (fake *FakeChecker) CheckCallCount() int {
 	return len(fake.checkArgsForCall)
 }
 
-func (fake *FakeChecker) CheckArgsForCall(i int) (io.Reader, io.Reader) {
+func (fake *FakeChecker) CheckArgsForCall(i int) io.Reader {
 	fake.checkMutex.RLock()
 	defer fake.checkMutex.RUnlock()
-	return fake.checkArgsForCall[i].stdout, fake.checkArgsForCall[i].stderr
+	return fake.checkArgsForCall[i].output
 }
 
 func (fake *FakeChecker) CheckReturns(result1 error) {
