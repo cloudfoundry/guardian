@@ -61,7 +61,7 @@ func (c *Containerizer) Create(spec gardener.DesiredContainerSpec) error {
 	}
 
 	stdoutR, stdoutW := io.Pipe()
-	if c.runner.withLog(mlog).Start(path, garden.ProcessIO{Stdout: stdoutW, Stderr: mlog.Start("start")}); err != nil {
+	if c.runner.withLog(mlog).Start(path, garden.ProcessIO{Stdout: io.MultiWriter(mlog.Start("start-stdout"), stdoutW), Stderr: mlog.Start("start-stderr")}); err != nil {
 		return mlog.Err("start", err)
 	}
 

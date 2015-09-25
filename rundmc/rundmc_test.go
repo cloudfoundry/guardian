@@ -2,9 +2,7 @@ package rundmc_test
 
 import (
 	"errors"
-	"fmt"
 	"io"
-	"io/ioutil"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
@@ -94,22 +92,10 @@ var _ = Describe("Rundmc", func() {
 			Context("when the container fails to start", func() {
 				It("returns the underlying error", func() {
 					fakeStartCheck.CheckStub = func(stdout io.Reader) error {
-						so, err := ioutil.ReadAll(stdout)
-						Expect(err).NotTo(HaveOccurred())
-
-						return fmt.Errorf("%s", so)
+						return errors.New("I died")
 					}
 
-					fakeContainerRunner.StartStub = func(path string, gio garden.ProcessIO) (garden.Process, error) {
-						go func() { // run runs in the background
-							gio.Stdout.Write([]byte("stdout"))
-							gio.Stdout.(io.Closer).Close()
-						}()
-
-						return nil, nil
-					}
-
-					Expect(containerizer.Create(gardener.DesiredContainerSpec{})).To(MatchError("stdout"))
+					Expect(containerizer.Create(gardener.DesiredContainerSpec{})).To(MatchError("I died"))
 				})
 			})
 		})
