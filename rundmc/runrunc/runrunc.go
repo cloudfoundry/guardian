@@ -69,7 +69,7 @@ func (r *RunRunc) Start(bundlePath string, io garden.ProcessIO) (garden.Process,
 	}
 
 	mlog.Info("started")
-	return process, err
+	return process, nil
 }
 
 // Exec a process in a bundle using 'runc exec'
@@ -94,7 +94,7 @@ func (r *RunRunc) Exec(bundlePath string, spec garden.ProcessSpec, io garden.Pro
 	}
 
 	mlog.Info("execed")
-	return process, err
+	return process, nil
 }
 
 // Kill a bundle using 'runc kill'

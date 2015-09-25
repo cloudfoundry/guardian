@@ -9,23 +9,53 @@ import (
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("BundleForCmd", func() {
 
 	var (
-		bndle *rundmc.Bundle
-		tmp   string
+		bundle *rundmc.Bundle
+		mounts []rundmc.Mount
+		tmp    string
 	)
 
 	BeforeEach(func() {
 		var err error
-		tmp, err = ioutil.TempDir("", "bndle")
+		tmp, err = ioutil.TempDir("", "bundle")
 		Expect(err).NotTo(HaveOccurred())
 
-		bndle = rundmc.BundleForCmd(exec.Command("echo", "hello"))
-		Expect(bndle.Create(tmp)).To(Succeed())
+		mounts = []rundmc.Mount{
+			{
+				Name:        "apple",
+				Type:        "apple_fs",
+				Source:      "iDevice",
+				Destination: "/apple",
+				Options: []string{
+					"healthy",
+					"shiny",
+				},
+			},
+			{
+				Name:        "banana",
+				Type:        "banana_fs",
+				Source:      "banana_device",
+				Destination: "/banana",
+				Options: []string{
+					"yellow",
+					"fresh",
+				},
+			},
+		}
+	})
+
+	JustBeforeEach(func() {
+		bundle = rundmc.BundleForCmd(
+			exec.Command("echo", "hello"),
+			mounts,
+		)
+		Expect(bundle.Create(tmp)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -39,7 +69,7 @@ var _ = Describe("BundleForCmd", func() {
 			config map[string]interface{}
 		)
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			config = parseJson(path.Join(tmp, "config.json"))
 		})
 
@@ -49,6 +79,21 @@ var _ = Describe("BundleForCmd", func() {
 				ConsistOf("echo", "hello"),
 			))
 		})
+
+		Describe("mounts", func() {
+			DescribeTable("should mount",
+				func(name, path string) {
+					Expect(config["mounts"]).To(ContainElement(
+						map[string]interface{}{
+							"name": name,
+							"path": path,
+						},
+					))
+				},
+				Entry("banana", "banana", "/banana"),
+				Entry("apple", "apple", "/apple"),
+			)
+		})
 	})
 
 	Context("runtime.json", func() {
@@ -56,17 +101,46 @@ var _ = Describe("BundleForCmd", func() {
 			runtime map[string]interface{}
 		)
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			runtime = parseJson(path.Join(tmp, "runtime.json"))
 		})
 
-		Context("linux", func() {
-			var linux map[string]interface{}
+		Describe("mounts", func() {
+			DescribeTable("should mount",
+				func(name, fsType, source string, options []string) {
+					Expect(runtime).To(HaveKey("mounts"))
+					mounts, _ := runtime["mounts"].(map[string]interface{})
 
-			BeforeEach(func() {
-				var ok bool
-				linux, ok = runtime["linux"].(map[string]interface{})
-				Expect(ok).To(BeTrue())
+					Expect(mounts).To(HaveKey(name))
+					mount, _ := mounts[name].(map[string]interface{})
+
+					Expect(mount).To(HaveKeyWithValue(
+						BeEquivalentTo("type"), Equal(fsType),
+					))
+					Expect(mount).To(HaveKeyWithValue(
+						BeEquivalentTo("source"), Equal(source),
+					))
+					for _, option := range options {
+						Expect(mount).To(HaveKeyWithValue(
+							BeEquivalentTo("options"), ContainElement(option),
+						))
+					}
+				},
+				Entry("banana", "banana", "banana_fs", "banana_device", []string{
+					"yellow", "fresh",
+				}),
+				Entry("apple", "apple", "apple_fs", "iDevice", []string{
+					"healthy", "shiny",
+				}),
+			)
+		})
+
+		Describe("linux", func() {
+			var linux interface{}
+
+			JustBeforeEach(func() {
+				Expect(runtime).To(HaveKey("linux"))
+				linux = runtime["linux"]
 			})
 
 			It("should configure all the namespaces", func() {
@@ -85,7 +159,6 @@ var _ = Describe("BundleForCmd", func() {
 				}
 			})
 		})
-
 	})
 })
 
