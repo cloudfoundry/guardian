@@ -8,44 +8,44 @@ import (
 )
 
 type FakeBundleCreator struct {
-	CreateStub        func(path string) error
-	createMutex       sync.RWMutex
-	createArgsForCall []struct {
+	SaveStub        func(path string) error
+	saveMutex       sync.RWMutex
+	saveArgsForCall []struct {
 		path string
 	}
-	createReturns struct {
+	saveReturns struct {
 		result1 error
 	}
 }
 
-func (fake *FakeBundleCreator) Create(path string) error {
-	fake.createMutex.Lock()
-	fake.createArgsForCall = append(fake.createArgsForCall, struct {
+func (fake *FakeBundleCreator) Save(path string) error {
+	fake.saveMutex.Lock()
+	fake.saveArgsForCall = append(fake.saveArgsForCall, struct {
 		path string
 	}{path})
-	fake.createMutex.Unlock()
-	if fake.CreateStub != nil {
-		return fake.CreateStub(path)
+	fake.saveMutex.Unlock()
+	if fake.SaveStub != nil {
+		return fake.SaveStub(path)
 	} else {
-		return fake.createReturns.result1
+		return fake.saveReturns.result1
 	}
 }
 
-func (fake *FakeBundleCreator) CreateCallCount() int {
-	fake.createMutex.RLock()
-	defer fake.createMutex.RUnlock()
-	return len(fake.createArgsForCall)
+func (fake *FakeBundleCreator) SaveCallCount() int {
+	fake.saveMutex.RLock()
+	defer fake.saveMutex.RUnlock()
+	return len(fake.saveArgsForCall)
 }
 
-func (fake *FakeBundleCreator) CreateArgsForCall(i int) string {
-	fake.createMutex.RLock()
-	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].path
+func (fake *FakeBundleCreator) SaveArgsForCall(i int) string {
+	fake.saveMutex.RLock()
+	defer fake.saveMutex.RUnlock()
+	return fake.saveArgsForCall[i].path
 }
 
-func (fake *FakeBundleCreator) CreateReturns(result1 error) {
-	fake.CreateStub = nil
-	fake.createReturns = struct {
+func (fake *FakeBundleCreator) SaveReturns(result1 error) {
+	fake.SaveStub = nil
+	fake.saveReturns = struct {
 		result1 error
 	}{result1}
 }

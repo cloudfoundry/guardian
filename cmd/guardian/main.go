@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/exec"
 	"os/signal"
 	"path"
 	"syscall"
@@ -14,6 +13,8 @@ import (
 	"github.com/cloudfoundry-incubator/cf-debug-server"
 	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/cloudfoundry-incubator/garden/server"
+	"github.com/cloudfoundry-incubator/goci"
+	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/log"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
@@ -224,20 +225,25 @@ func wireUidGenerator() gardener.UidGeneratorFunc {
 
 func wireStarter() *rundmc.Starter {
 	runner := &log.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("runner")}
-	return rundmc.NewStarter(mustOpen("/proc/cgroups"), "/tmp/cgroups", runner)
+	return rundmc.NewStarter(mustOpen("/proc/cgroups"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner)
 }
 
 func wireContainerizer(depotPath, iodaemonPath string) *rundmc.Containerizer {
 	depot := depot.New(
 		depotPath,
-		rundmc.BundleForCmd(exec.Command("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)))
+		goci.Bundle().
+			WithResources(&specs.Resources{}).
+			WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)),
+	)
 
 	startCheck := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 1 * time.Second}
 
 	runcrunner := runrunc.New(
-		process_tracker.New(path.Join(os.TempDir(), "garden-processes"), iodaemonPath, linux_command_runner.New()),
+		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", *tag), "processes"), iodaemonPath, linux_command_runner.New()),
 		linux_command_runner.New(),
-		&rundmc.SimplePidGenerator{})
+		&rundmc.SimplePidGenerator{},
+		goci.RuncBinary("runc"),
+	)
 
 	return rundmc.New(depot, runcrunner, startCheck)
 }

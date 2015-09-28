@@ -15,7 +15,7 @@ var ErrDoesNotExist = errors.New("does not exist")
 
 //go:generate counterfeiter . BundleCreator
 type BundleCreator interface {
-	Create(path string) error
+	Save(path string) error
 }
 
 // a depot which stores containers as subdirs of a depot directory
@@ -40,7 +40,7 @@ func (d *DirectoryDepot) Create(handle string) error {
 		return mlog.Err("mkdir", err, lager.Data{"path": path})
 	}
 
-	if err := d.bundleCreator.Create(path); err != nil {
+	if err := d.bundleCreator.Save(path); err != nil {
 		mlog.LogIfNotNil("remove-all", os.RemoveAll(path))
 		return mlog.Err("create", err, lager.Data{"path": path})
 	}

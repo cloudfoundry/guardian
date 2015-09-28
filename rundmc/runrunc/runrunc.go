@@ -34,15 +34,23 @@ type RunRunc struct {
 	tracker       ProcessTracker
 	commandRunner command_runner.CommandRunner
 	pidGenerator  PidGenerator
+	runc          RuncBinary
 
 	log log.ChainLogger
 }
 
-func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen PidGenerator) *RunRunc {
+//go:generate counterfeiter . RuncBinary
+type RuncBinary interface {
+	StartCommand(path, id string) *exec.Cmd
+	ExecCommand(id, processJSONPath string) *exec.Cmd
+}
+
+func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen PidGenerator, runc RuncBinary) *RunRunc {
 	return &RunRunc{
 		tracker:       tracker,
 		commandRunner: runner,
 		pidGenerator:  pidgen,
+		runc:          runc,
 
 		log: plog,
 	}
@@ -57,11 +65,10 @@ func (r RunRunc) WithLogSession(sess log.ChainLogger) *RunRunc {
 }
 
 // Starts a bundle by running 'runc' in the bundle directory
-func (r *RunRunc) Start(bundlePath string, io garden.ProcessIO) (garden.Process, error) {
+func (r *RunRunc) Start(bundlePath, id string, io garden.ProcessIO) (garden.Process, error) {
 	mlog := plog.Start("start", lager.Data{"bundle": bundlePath})
 
-	cmd := exec.Command("runc", "start")
-	cmd.Dir = bundlePath
+	cmd := r.runc.StartCommand(bundlePath, id)
 
 	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil, nil)
 	if err != nil {
@@ -73,8 +80,8 @@ func (r *RunRunc) Start(bundlePath string, io garden.ProcessIO) (garden.Process,
 }
 
 // Exec a process in a bundle using 'runc exec'
-func (r *RunRunc) Exec(bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-	mlog := plog.Start("exec", lager.Data{"bundle": bundlePath, "path": spec.Path})
+func (r *RunRunc) Exec(id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+	mlog := plog.Start("exec", lager.Data{"id": id, "path": spec.Path})
 
 	tmpFile, err := ioutil.TempFile("", "guardianprocess")
 	if err != nil {
@@ -85,8 +92,7 @@ func (r *RunRunc) Exec(bundlePath string, spec garden.ProcessSpec, io garden.Pro
 		return nil, mlog.Err("encode", err)
 	}
 
-	cmd := exec.Command("runc", "exec", tmpFile.Name())
-	cmd.Dir = bundlePath
+	cmd := r.runc.ExecCommand(id, tmpFile.Name())
 
 	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, spec.TTY, nil)
 	if err != nil {

@@ -21,6 +21,7 @@ var _ = Describe("RuncRunner", func() {
 		tracker       *fakes.FakeProcessTracker
 		commandRunner *fake_command_runner.FakeCommandRunner
 		pidGenerator  *fakes.FakePidGenerator
+		runcBinary    *fakes.FakeRuncBinary
 
 		runner *runrunc.RunRunc
 	)
@@ -28,25 +29,33 @@ var _ = Describe("RuncRunner", func() {
 	BeforeEach(func() {
 		tracker = new(fakes.FakeProcessTracker)
 		pidGenerator = new(fakes.FakePidGenerator)
+		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
 
-		runner = runrunc.New(tracker, commandRunner, pidGenerator)
+		runner = runrunc.New(tracker, commandRunner, pidGenerator, runcBinary)
+
+		runcBinary.StartCommandStub = func(path, id string) *exec.Cmd {
+			return exec.Command("funC", path, id)
+		}
+
+		runcBinary.ExecCommandStub = func(id, processJSONPath string) *exec.Cmd {
+			return exec.Command("funC", id, processJSONPath)
+		}
 	})
 
-	Describe("Run", func() {
-		It("runs runC in the directory using process tracker", func() {
-			runner.Start("some/oci/container", garden.ProcessIO{Stdout: GinkgoWriter})
+	Describe("Start", func() {
+		It("runs the injected runC binary using process tracker", func() {
+			runner.Start("some/oci/container", "handle", garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			_, cmd, io, _, _ := tracker.RunArgsForCall(0)
-			Expect(cmd.Args[0]).To(Equal("runc"))
-			Expect(cmd.Dir).To(Equal("some/oci/container"))
+			Expect(cmd.Args).To(Equal([]string{"funC", "some/oci/container", "handle"}))
 			Expect(io.Stdout).To(Equal(GinkgoWriter))
 		})
 
-		It("configures the tracker with the next id", func() {
+		It("configures the tracker with the next process id", func() {
 			pidGenerator.GenerateReturns(42)
-			runner.Start("some/oci/container", garden.ProcessIO{Stdout: GinkgoWriter})
+			runner.Start("some/oci/container", "some-handle", garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			id, _, _, _, _ := tracker.RunArgsForCall(0)
@@ -55,7 +64,7 @@ var _ = Describe("RuncRunner", func() {
 	})
 
 	Describe("Exec", func() {
-		It("runs the tracker with the next id", func() {
+		It("runs the tracker with the next process id", func() {
 			pidGenerator.GenerateReturns(55)
 			runner.Exec("some/oci/container", garden.ProcessSpec{}, garden.ProcessIO{})
 			Expect(tracker.RunCallCount()).To(Equal(1))
@@ -64,19 +73,18 @@ var _ = Describe("RuncRunner", func() {
 			Expect(pid).To(BeEquivalentTo(55))
 		})
 
-		It("runs 'runC exec' in the directory using process tracker", func() {
+		It("runs exec against the injected runC binary using process tracker", func() {
 			ttyspec := &garden.TTYSpec{WindowSize: &garden.WindowSize{Rows: 1}}
-			runner.Exec("some/oci/container", garden.ProcessSpec{TTY: ttyspec}, garden.ProcessIO{Stdout: GinkgoWriter})
+			runner.Exec("some-id", garden.ProcessSpec{TTY: ttyspec}, garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			_, cmd, io, tty, _ := tracker.RunArgsForCall(0)
-			Expect(cmd.Args[:2]).To(Equal([]string{"runc", "exec"}))
-			Expect(cmd.Dir).To(Equal("some/oci/container"))
+			Expect(cmd.Args[:2]).To(Equal([]string{"funC", "some-id"}))
 			Expect(io.Stdout).To(Equal(GinkgoWriter))
 			Expect(tty).To(Equal(ttyspec))
 		})
 
-		Describe("process.json", func() {
+		Describe("the process.json passed to 'runc exec'", func() {
 			var spec specs.Process
 
 			BeforeEach(func() {

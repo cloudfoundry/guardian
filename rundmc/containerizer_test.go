@@ -77,8 +77,9 @@ var _ = Describe("Rundmc", func() {
 
 			Expect(fakeContainerRunner.StartCallCount()).To(Equal(1))
 
-			path, _ := fakeContainerRunner.StartArgsForCall(0)
+			path, id, _ := fakeContainerRunner.StartArgsForCall(0)
 			Expect(path).To(Equal("/path/to/exuberant!"))
+			Expect(id).To(Equal("exuberant!"))
 		})
 
 		Describe("waiting for the container to start", func() {
@@ -106,8 +107,8 @@ var _ = Describe("Rundmc", func() {
 			containerizer.Run("some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
 			Expect(fakeContainerRunner.ExecCallCount()).To(Equal(1))
 
-			path, spec, _ := fakeContainerRunner.ExecArgsForCall(0)
-			Expect(path).To(Equal("/path/to/some-handle"))
+			id, spec, _ := fakeContainerRunner.ExecArgsForCall(0)
+			Expect(id).To(Equal("some-handle"))
 			Expect(spec.Path).To(Equal("hello"))
 		})
 

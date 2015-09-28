@@ -26,8 +26,8 @@ type Checker interface {
 
 //go:generate counterfeiter . BundleRunner
 type BundleRunner interface {
-	Start(bundlePath string, io garden.ProcessIO) (garden.Process, error)
-	Exec(bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Start(bundlePath, id string, io garden.ProcessIO) (garden.Process, error)
+	Exec(id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Kill(bundlePath string) error
 }
 
@@ -61,7 +61,10 @@ func (c *Containerizer) Create(spec gardener.DesiredContainerSpec) error {
 	}
 
 	stdoutR, stdoutW := io.Pipe()
-	if c.runner.withLog(mlog).Start(path, garden.ProcessIO{Stdout: io.MultiWriter(mlog.Start("start-stdout"), stdoutW), Stderr: mlog.Start("start-stderr")}); err != nil {
+	if c.runner.withLog(mlog).Start(path, spec.Handle, garden.ProcessIO{
+		Stdout: io.MultiWriter(mlog.Start("start-stdout"), stdoutW),
+		Stderr: mlog.Start("start-stderr"),
+	}); err != nil {
 		return mlog.Err("start", err)
 	}
 
@@ -77,12 +80,12 @@ func (c *Containerizer) Run(handle string, spec garden.ProcessSpec, io garden.Pr
 	mlog := plog.Start("run", lager.Data{"handle": handle, "path": spec.Path})
 	defer mlog.Info("ran")
 
-	path, err := c.depot.Lookup(handle)
+	_, err := c.depot.Lookup(handle)
 	if err != nil {
 		return nil, mlog.Err("lookup", err)
 	}
 
-	return c.runner.withLog(mlog).Exec(path, spec, io)
+	return c.runner.withLog(mlog).Exec(handle, spec, io)
 }
 
 // Destroy kills any container processes and deletes the bundle directory

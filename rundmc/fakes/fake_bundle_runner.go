@@ -9,22 +9,23 @@ import (
 )
 
 type FakeBundleRunner struct {
-	StartStub        func(bundlePath string, io garden.ProcessIO) (garden.Process, error)
+	StartStub        func(bundlePath, id string, io garden.ProcessIO) (garden.Process, error)
 	startMutex       sync.RWMutex
 	startArgsForCall []struct {
 		bundlePath string
+		id         string
 		io         garden.ProcessIO
 	}
 	startReturns struct {
 		result1 garden.Process
 		result2 error
 	}
-	ExecStub        func(bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	ExecStub        func(id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
-		bundlePath string
-		spec       garden.ProcessSpec
-		io         garden.ProcessIO
+		id   string
+		spec garden.ProcessSpec
+		io   garden.ProcessIO
 	}
 	execReturns struct {
 		result1 garden.Process
@@ -40,15 +41,16 @@ type FakeBundleRunner struct {
 	}
 }
 
-func (fake *FakeBundleRunner) Start(bundlePath string, io garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeBundleRunner) Start(bundlePath string, id string, io garden.ProcessIO) (garden.Process, error) {
 	fake.startMutex.Lock()
 	fake.startArgsForCall = append(fake.startArgsForCall, struct {
 		bundlePath string
+		id         string
 		io         garden.ProcessIO
-	}{bundlePath, io})
+	}{bundlePath, id, io})
 	fake.startMutex.Unlock()
 	if fake.StartStub != nil {
-		return fake.StartStub(bundlePath, io)
+		return fake.StartStub(bundlePath, id, io)
 	} else {
 		return fake.startReturns.result1, fake.startReturns.result2
 	}
@@ -60,10 +62,10 @@ func (fake *FakeBundleRunner) StartCallCount() int {
 	return len(fake.startArgsForCall)
 }
 
-func (fake *FakeBundleRunner) StartArgsForCall(i int) (string, garden.ProcessIO) {
+func (fake *FakeBundleRunner) StartArgsForCall(i int) (string, string, garden.ProcessIO) {
 	fake.startMutex.RLock()
 	defer fake.startMutex.RUnlock()
-	return fake.startArgsForCall[i].bundlePath, fake.startArgsForCall[i].io
+	return fake.startArgsForCall[i].bundlePath, fake.startArgsForCall[i].id, fake.startArgsForCall[i].io
 }
 
 func (fake *FakeBundleRunner) StartReturns(result1 garden.Process, result2 error) {
@@ -74,16 +76,16 @@ func (fake *FakeBundleRunner) StartReturns(result1 garden.Process, result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeBundleRunner) Exec(bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeBundleRunner) Exec(id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	fake.execMutex.Lock()
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
-		bundlePath string
-		spec       garden.ProcessSpec
-		io         garden.ProcessIO
-	}{bundlePath, spec, io})
+		id   string
+		spec garden.ProcessSpec
+		io   garden.ProcessIO
+	}{id, spec, io})
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
-		return fake.ExecStub(bundlePath, spec, io)
+		return fake.ExecStub(id, spec, io)
 	} else {
 		return fake.execReturns.result1, fake.execReturns.result2
 	}
@@ -98,7 +100,7 @@ func (fake *FakeBundleRunner) ExecCallCount() int {
 func (fake *FakeBundleRunner) ExecArgsForCall(i int) (string, garden.ProcessSpec, garden.ProcessIO) {
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
-	return fake.execArgsForCall[i].bundlePath, fake.execArgsForCall[i].spec, fake.execArgsForCall[i].io
+	return fake.execArgsForCall[i].id, fake.execArgsForCall[i].spec, fake.execArgsForCall[i].io
 }
 
 func (fake *FakeBundleRunner) ExecReturns(result1 garden.Process, result2 error) {

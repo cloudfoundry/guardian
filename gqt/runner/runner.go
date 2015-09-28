@@ -142,6 +142,7 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, RootFSPat
 	gardenArgs = appendDefaultFlag(gardenArgs, "--listenNetwork", network)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--listenAddr", addr)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--depot", depotDir)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--iodaemonBin", iodaemonBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--logLevel", "debug")
 	gardenArgs = appendDefaultFlag(gardenArgs, "--debugAddr", fmt.Sprintf(":808%d", ginkgo.GinkgoParallelNode()))
