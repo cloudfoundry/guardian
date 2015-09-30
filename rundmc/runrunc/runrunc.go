@@ -107,7 +107,7 @@ func (r *RunRunc) Exec(id string, spec garden.ProcessSpec, io garden.ProcessIO) 
 func (r *RunRunc) Kill(bundlePath string) error {
 	mlog := plog.Start("kill", lager.Data{"bundle": bundlePath})
 
-	cmd := exec.Command("runc", "kill")
+	cmd := exec.Command("runc", "kill", "SIGKILL")
 	cmd.Dir = bundlePath
 	err := r.commandRunner.Run(cmd)
 	if err != nil {

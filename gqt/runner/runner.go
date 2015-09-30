@@ -113,7 +113,7 @@ func (r *RunningGarden) Stop() error {
 	}
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, RootFSPath string, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, rootFSPath string, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -146,7 +146,7 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, RootFSPat
 	gardenArgs = appendDefaultFlag(gardenArgs, "--iodaemonBin", iodaemonBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--logLevel", "debug")
 	gardenArgs = appendDefaultFlag(gardenArgs, "--debugAddr", fmt.Sprintf(":808%d", ginkgo.GinkgoParallelNode()))
-
+	gardenArgs = appendDefaultFlag(gardenArgs, "--rootfs", rootFSPath)
 	return exec.Command(bin, gardenArgs...)
 }
 

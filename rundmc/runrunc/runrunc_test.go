@@ -134,7 +134,7 @@ var _ = Describe("RuncRunner", func() {
 			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
 				Dir:  "some-container",
 				Path: "runc",
-				Args: []string{"kill"},
+				Args: []string{"kill", "SIGKILL"},
 			}))
 		})
 	})
