@@ -27,6 +27,10 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+var PrivilegedContainerNamespaces = []specs.Namespace{
+	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace,
+}
+
 var listenNetwork = flag.String(
 	"listenNetwork",
 	"unix",
@@ -238,23 +242,9 @@ func wireContainerizer(depotPath, iodaemonPath, defaultRootFSPath string) *rundm
 	depot := depot.New(
 		depotPath,
 		goci.Bundle().
+			WithNamespaces(PrivilegedContainerNamespaces...).
 			WithResources(&specs.Resources{}).
-			WithNamespaces(
-			specs.Namespace{Type: specs.NetworkNamespace},
-			specs.Namespace{Type: specs.MountNamespace},
-			specs.Namespace{Type: specs.PIDNamespace},
-			specs.Namespace{Type: specs.UTSNamespace},
-			specs.Namespace{Type: specs.IPCNamespace},
-		).
 			WithMounts(goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"}).
-			WithDevices(
-			stdDev("/dev/null", 1, 3),
-			stdDev("dev/random", 1, 8),
-			stdDev("/dev/full", 1, 7),
-			stdDev("/dev/tty", 5, 0),
-			stdDev("/dev/zero", 1, 5),
-			stdDev("/dev/urandom", 1, 9),
-		).
 			WithRootFS(defaultRootFSPath).
 			WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)),
 	)
@@ -269,10 +259,6 @@ func wireContainerizer(depotPath, iodaemonPath, defaultRootFSPath string) *rundm
 	)
 
 	return rundmc.New(depot, runcrunner, startCheck)
-}
-
-func stdDev(path string, major, minor int64) specs.Device {
-	return specs.Device{Path: path, Type: 99, Major: major, Minor: minor, Permissions: "rwm", FileMode: os.FileMode(438)}
 }
 
 func missing(flagName string) {
