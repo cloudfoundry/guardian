@@ -13,6 +13,7 @@ import (
 
 var _ = Describe("Gardener", func() {
 	var (
+		networker     *fakes.FakeNetworker
 		containerizer *fakes.FakeContainerizer
 		uidGenerator  *fakes.FakeUidGenerator
 
@@ -22,24 +23,53 @@ var _ = Describe("Gardener", func() {
 	BeforeEach(func() {
 		containerizer = new(fakes.FakeContainerizer)
 		uidGenerator = new(fakes.FakeUidGenerator)
+		networker = new(fakes.FakeNetworker)
 		gdnr = &gardener.Gardener{
 			Containerizer: containerizer,
 			UidGenerator:  uidGenerator,
+			Networker:     networker,
 		}
 	})
 
 	Describe("creating a container", func() {
 		Context("when a handle is specified", func() {
 			It("asks the containerizer to create a container", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{
-					Handle: "bob",
-				})
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				Expect(containerizer.CreateArgsForCall(0)).To(Equal(gardener.DesiredContainerSpec{
-					Handle: "bob",
-				}))
+				Expect(containerizer.CreateArgsForCall(0).Handle).To(Equal("bob"))
+			})
+
+			It("passes the created network to the containerizer", func() {
+				networker.NetworkStub = func(spec string) (string, error) {
+					return "/path/to/netns/" + spec, nil
+				}
+
+				_, err := gdnr.Create(garden.ContainerSpec{
+					Handle:  "bob",
+					Network: "10.0.0.2/30",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(containerizer.CreateCallCount()).To(Equal(1))
+				Expect(containerizer.CreateArgsForCall(0).NetworkPath).To(Equal("/path/to/netns/10.0.0.2/30"))
+			})
+
+			Context("when networker fails", func() {
+				BeforeEach(func() {
+					networker.NetworkReturns("", errors.New("booom!"))
+				})
+
+				It("returns an error", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+					Expect(err).To(MatchError("booom!"))
+				})
+
+				It("does not create a container", func() {
+					gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+					Expect(containerizer.CreateCallCount()).To(Equal(0))
+				})
 			})
 
 			It("returns the container that Lookup would return", func() {

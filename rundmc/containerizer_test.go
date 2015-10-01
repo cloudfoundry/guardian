@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
@@ -15,6 +16,7 @@ import (
 var _ = Describe("Rundmc", func() {
 	var (
 		fakeDepot           *fakes.FakeDepot
+		fakeBundler         *fakes.FakeBundler
 		fakeContainerRunner *fakes.FakeBundleRunner
 		fakeStartCheck      *fakes.FakeChecker
 
@@ -25,8 +27,9 @@ var _ = Describe("Rundmc", func() {
 		fakeDepot = new(fakes.FakeDepot)
 		fakeContainerRunner = new(fakes.FakeBundleRunner)
 		fakeStartCheck = new(fakes.FakeChecker)
+		fakeBundler = new(fakes.FakeBundler)
 
-		containerizer = rundmc.New(fakeDepot, fakeContainerRunner, fakeStartCheck)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartCheck)
 
 		fakeDepot.LookupStub = func(handle string) (string, error) {
 			return "/path/to/" + handle, nil
@@ -35,12 +38,21 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("create", func() {
 		It("should ask the depot to create a container", func() {
+			var returnedBundle *goci.Bndl
+			fakeBundler.BundleStub = func(spec gardener.DesiredContainerSpec) *goci.Bndl {
+				returnedBundle = goci.Bundle().WithRootFS(spec.NetworkPath)
+				return returnedBundle
+			}
+
 			containerizer.Create(gardener.DesiredContainerSpec{
 				Handle: "exuberant!",
 			})
 
 			Expect(fakeDepot.CreateCallCount()).To(Equal(1))
-			Expect(fakeDepot.CreateArgsForCall(0)).To(Equal("exuberant!"))
+
+			handle, bundle := fakeDepot.CreateArgsForCall(0)
+			Expect(handle).To(Equal("exuberant!"))
+			Expect(bundle).To(Equal(returnedBundle))
 		})
 
 		Context("when creating the depot directory fails", func() {

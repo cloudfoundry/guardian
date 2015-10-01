@@ -13,6 +13,11 @@ type Containerizer interface {
 	Destroy(handle string) error
 }
 
+//go:generate counterfeiter . Networker
+type Networker interface {
+	Network(network string) (string, error)
+}
+
 //go:generate counterfeiter . UidGenerator
 type UidGenerator interface {
 	Generate() string
@@ -30,6 +35,12 @@ func (fn UidGeneratorFunc) Generate() string {
 
 type DesiredContainerSpec struct {
 	Handle string
+
+	// Path to the Root Filesystem for the container
+	RootFSPath string
+
+	// Path to a Network Namespace to enter
+	NetworkPath string
 }
 
 // Gardener orchestrates other components to implement the Garden API
@@ -42,6 +53,9 @@ type Gardener struct {
 
 	// Starter runs any needed start-up tasks (e.g. setting up cgroups)
 	Starter
+
+	// Networker creates a network for containers
+	Networker Networker
 }
 
 func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
@@ -49,8 +63,14 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		spec.Handle = g.UidGenerator.Generate()
 	}
 
+	networkPath, err := g.Networker.Network(spec.Network)
+	if err != nil {
+		return nil, err
+	}
+
 	if err := g.Containerizer.Create(DesiredContainerSpec{
-		Handle: spec.Handle,
+		Handle:      spec.Handle,
+		NetworkPath: networkPath,
 	}); err != nil {
 		return nil, err
 	}

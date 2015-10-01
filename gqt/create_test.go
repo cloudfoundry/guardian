@@ -104,6 +104,11 @@ func initProcessPID(handle string) int {
 		Pid int `json:"init_process_pid"`
 	}{}
 
-	Expect(json.NewDecoder(stateFile).Decode(&state)).To(Succeed())
+	Eventually(func() error {
+		// state.json is sometimes empty immediately after creation, so keep
+		// trying until it's valid json
+		return json.NewDecoder(stateFile).Decode(&state)
+	}).Should(Succeed())
+
 	return state.Pid
 }

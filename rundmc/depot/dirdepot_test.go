@@ -27,7 +27,7 @@ var _ = Describe("Depot", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeBundle = new(fakes.FakeBundleCreator)
-		dirdepot = depot.New(tmpDir, fakeBundle)
+		dirdepot = depot.New(tmpDir)
 	})
 
 	Describe("lookup", func() {
@@ -48,19 +48,19 @@ var _ = Describe("Depot", func() {
 
 	Describe("create", func() {
 		It("should create a directory", func() {
-			Expect(dirdepot.Create("aardvaark")).To(Succeed())
+			Expect(dirdepot.Create("aardvaark", fakeBundle)).To(Succeed())
 			Expect(filepath.Join(tmpDir, "aardvaark")).To(BeADirectory())
 		})
 
 		It("should serialize the a container config to the directory", func() {
-			Expect(dirdepot.Create("aardvaark")).To(Succeed())
+			Expect(dirdepot.Create("aardvaark", fakeBundle)).To(Succeed())
 			Expect(fakeBundle.SaveCallCount()).To(Equal(1))
 			Expect(fakeBundle.SaveArgsForCall(0)).To(Equal(path.Join(tmpDir, "aardvaark")))
 		})
 
 		It("destroys the container directory if creation fails", func() {
 			fakeBundle.SaveReturns(errors.New("didn't work"))
-			Expect(dirdepot.Create("aardvaark")).NotTo(Succeed())
+			Expect(dirdepot.Create("aardvaark", fakeBundle)).NotTo(Succeed())
 			Expect(filepath.Join(tmpDir, "aardvaark")).NotTo(BeADirectory())
 		})
 	})

@@ -7,7 +7,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 )
 
-type FakeBundleCreator struct {
+type FakeBundleSaver struct {
 	SaveStub        func(path string) error
 	saveMutex       sync.RWMutex
 	saveArgsForCall []struct {
@@ -18,7 +18,7 @@ type FakeBundleCreator struct {
 	}
 }
 
-func (fake *FakeBundleCreator) Save(path string) error {
+func (fake *FakeBundleSaver) Save(path string) error {
 	fake.saveMutex.Lock()
 	fake.saveArgsForCall = append(fake.saveArgsForCall, struct {
 		path string
@@ -31,23 +31,23 @@ func (fake *FakeBundleCreator) Save(path string) error {
 	}
 }
 
-func (fake *FakeBundleCreator) SaveCallCount() int {
+func (fake *FakeBundleSaver) SaveCallCount() int {
 	fake.saveMutex.RLock()
 	defer fake.saveMutex.RUnlock()
 	return len(fake.saveArgsForCall)
 }
 
-func (fake *FakeBundleCreator) SaveArgsForCall(i int) string {
+func (fake *FakeBundleSaver) SaveArgsForCall(i int) string {
 	fake.saveMutex.RLock()
 	defer fake.saveMutex.RUnlock()
 	return fake.saveArgsForCall[i].path
 }
 
-func (fake *FakeBundleCreator) SaveReturns(result1 error) {
+func (fake *FakeBundleSaver) SaveReturns(result1 error) {
 	fake.SaveStub = nil
 	fake.saveReturns = struct {
 		result1 error
 	}{result1}
 }
 
-var _ depot.BundleSaver = new(FakeBundleCreator)
+var _ depot.BundleSaver = new(FakeBundleSaver)

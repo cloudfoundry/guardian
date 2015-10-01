@@ -5,13 +5,15 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 )
 
 type FakeDepot struct {
-	CreateStub        func(handle string) error
+	CreateStub        func(handle string, bundle depot.BundleSaver) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		handle string
+		bundle depot.BundleSaver
 	}
 	createReturns struct {
 		result1 error
@@ -35,14 +37,15 @@ type FakeDepot struct {
 	}
 }
 
-func (fake *FakeDepot) Create(handle string) error {
+func (fake *FakeDepot) Create(handle string, bundle depot.BundleSaver) error {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		handle string
-	}{handle})
+		bundle depot.BundleSaver
+	}{handle, bundle})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(handle)
+		return fake.CreateStub(handle, bundle)
 	} else {
 		return fake.createReturns.result1
 	}
@@ -54,10 +57,10 @@ func (fake *FakeDepot) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeDepot) CreateArgsForCall(i int) string {
+func (fake *FakeDepot) CreateArgsForCall(i int) (string, depot.BundleSaver) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].handle
+	return fake.createArgsForCall[i].handle, fake.createArgsForCall[i].bundle
 }
 
 func (fake *FakeDepot) CreateReturns(result1 error) {

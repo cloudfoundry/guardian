@@ -17,6 +17,7 @@ import (
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/log"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
@@ -201,6 +202,7 @@ func main() {
 	backend := &gardener.Gardener{
 		UidGenerator:  wireUidGenerator(),
 		Starter:       wireStarter(),
+		Networker:     wireNetworker(),
 		Containerizer: wireContainerizer(*depotPath, *iodaemonBin, resolvedRootFSPath),
 	}
 
@@ -238,15 +240,12 @@ func wireStarter() *rundmc.Starter {
 	return rundmc.NewStarter(mustOpen("/proc/cgroups"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner)
 }
 
+func wireNetworker() *kawasaki.Networker {
+	return kawasaki.New()
+}
+
 func wireContainerizer(depotPath, iodaemonPath, defaultRootFSPath string) *rundmc.Containerizer {
-	depot := depot.New(
-		depotPath,
-		goci.Bundle().
-			WithNamespaces(PrivilegedContainerNamespaces...).
-			WithResources(&specs.Resources{}).
-			WithMounts(goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"}).
-			WithRootFS(defaultRootFSPath).
-			WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)))
+	depot := depot.New(depotPath)
 
 	startCheck := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 3 * time.Second}
 
@@ -257,7 +256,14 @@ func wireContainerizer(depotPath, iodaemonPath, defaultRootFSPath string) *rundm
 		goci.RuncBinary("runc"),
 	)
 
-	return rundmc.New(depot, runcrunner, startCheck)
+	baseBundle := goci.Bundle().
+		WithNamespaces(PrivilegedContainerNamespaces...).
+		WithResources(&specs.Resources{}).
+		WithMounts(goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"}).
+		WithRootFS(defaultRootFSPath).
+		WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`))
+
+	return rundmc.New(depot, &rundmc.BundleTemplate{baseBundle}, runcrunner, startCheck)
 }
 
 func missing(flagName string) {
