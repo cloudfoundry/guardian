@@ -2,7 +2,6 @@ package runrunc
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -25,16 +24,16 @@ type ProcessTracker interface {
 	Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, signaller process_tracker.Signaller) (garden.Process, error)
 }
 
-//go:generate counterfeiter . PidGenerator
-type PidGenerator interface {
-	Generate() uint32
+//go:generate counterfeiter . UidGenerator
+type UidGenerator interface {
+	Generate() string
 }
 
 // da doo
 type RunRunc struct {
 	tracker       ProcessTracker
 	commandRunner command_runner.CommandRunner
-	pidGenerator  PidGenerator
+	pidGenerator  UidGenerator
 	runc          RuncBinary
 
 	log log.ChainLogger
@@ -46,7 +45,7 @@ type RuncBinary interface {
 	ExecCommand(id, processJSONPath string) *exec.Cmd
 }
 
-func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen PidGenerator, runc RuncBinary) *RunRunc {
+func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary) *RunRunc {
 	return &RunRunc{
 		tracker:       tracker,
 		commandRunner: runner,
@@ -71,7 +70,7 @@ func (r *RunRunc) Start(bundlePath, id string, io garden.ProcessIO) (garden.Proc
 
 	cmd := r.runc.StartCommand(bundlePath, id)
 
-	process, err := r.tracker.Run(fmt.Sprintf("%d", r.pidGenerator.Generate()), cmd, io, nil, nil)
+	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil, nil)
 	if err != nil {
 		return nil, mlog.Err("run", err)
 	}
@@ -95,7 +94,7 @@ func (r *RunRunc) Exec(id string, spec garden.ProcessSpec, io garden.ProcessIO) 
 
 	cmd := r.runc.ExecCommand(id, tmpFile.Name())
 
-	process, err := r.tracker.Run(fmt.Sprintf("%d", r.pidGenerator.Generate()), cmd, io, spec.TTY, nil)
+	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, spec.TTY, nil)
 	if err != nil {
 		return nil, mlog.Err("run", err)
 	}

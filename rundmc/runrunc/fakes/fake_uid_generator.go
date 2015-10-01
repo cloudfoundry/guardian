@@ -7,16 +7,16 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 )
 
-type FakePidGenerator struct {
-	GenerateStub        func() uint32
+type FakeUidGenerator struct {
+	GenerateStub        func() string
 	generateMutex       sync.RWMutex
 	generateArgsForCall []struct{}
 	generateReturns     struct {
-		result1 uint32
+		result1 string
 	}
 }
 
-func (fake *FakePidGenerator) Generate() uint32 {
+func (fake *FakeUidGenerator) Generate() string {
 	fake.generateMutex.Lock()
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct{}{})
 	fake.generateMutex.Unlock()
@@ -27,17 +27,17 @@ func (fake *FakePidGenerator) Generate() uint32 {
 	}
 }
 
-func (fake *FakePidGenerator) GenerateCallCount() int {
+func (fake *FakeUidGenerator) GenerateCallCount() int {
 	fake.generateMutex.RLock()
 	defer fake.generateMutex.RUnlock()
 	return len(fake.generateArgsForCall)
 }
 
-func (fake *FakePidGenerator) GenerateReturns(result1 uint32) {
+func (fake *FakeUidGenerator) GenerateReturns(result1 string) {
 	fake.GenerateStub = nil
 	fake.generateReturns = struct {
-		result1 uint32
+		result1 string
 	}{result1}
 }
 
-var _ runrunc.PidGenerator = new(FakePidGenerator)
+var _ runrunc.UidGenerator = new(FakeUidGenerator)

@@ -20,7 +20,7 @@ var _ = Describe("RuncRunner", func() {
 	var (
 		tracker       *fakes.FakeProcessTracker
 		commandRunner *fake_command_runner.FakeCommandRunner
-		pidGenerator  *fakes.FakePidGenerator
+		pidGenerator  *fakes.FakeUidGenerator
 		runcBinary    *fakes.FakeRuncBinary
 
 		runner *runrunc.RunRunc
@@ -28,7 +28,7 @@ var _ = Describe("RuncRunner", func() {
 
 	BeforeEach(func() {
 		tracker = new(fakes.FakeProcessTracker)
-		pidGenerator = new(fakes.FakePidGenerator)
+		pidGenerator = new(fakes.FakeUidGenerator)
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
 
@@ -53,24 +53,24 @@ var _ = Describe("RuncRunner", func() {
 			Expect(io.Stdout).To(Equal(GinkgoWriter))
 		})
 
-		It("configures the tracker with the next process id", func() {
-			pidGenerator.GenerateReturns(42)
+		It("configures the tracker with the a generated process guid", func() {
+			pidGenerator.GenerateReturns("some-process-guid")
 			runner.Start("some/oci/container", "some-handle", garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			id, _, _, _, _ := tracker.RunArgsForCall(0)
-			Expect(id).To(BeEquivalentTo("42"))
+			Expect(id).To(BeEquivalentTo("some-process-guid"))
 		})
 	})
 
 	Describe("Exec", func() {
-		It("runs the tracker with the next process id", func() {
-			pidGenerator.GenerateReturns(55)
+		It("runs the tracker with the a generated process guid", func() {
+			pidGenerator.GenerateReturns("another-process-guid")
 			runner.Exec("some/oci/container", garden.ProcessSpec{}, garden.ProcessIO{})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			pid, _, _, _, _ := tracker.RunArgsForCall(0)
-			Expect(pid).To(BeEquivalentTo("55"))
+			Expect(pid).To(BeEquivalentTo("another-process-guid"))
 		})
 
 		It("runs exec against the injected runC binary using process tracker", func() {

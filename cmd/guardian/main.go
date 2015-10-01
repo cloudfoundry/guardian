@@ -253,7 +253,7 @@ func wireContainerizer(depotPath, iodaemonPath, defaultRootFSPath string) *rundm
 	runcrunner := runrunc.New(
 		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", *tag), "processes"), iodaemonPath, linux_command_runner.New()),
 		linux_command_runner.New(),
-		&rundmc.SimplePidGenerator{},
+		wireUidGenerator(),
 		goci.RuncBinary("runc"),
 	)
 
