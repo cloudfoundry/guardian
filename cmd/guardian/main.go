@@ -248,7 +248,7 @@ func wireContainerizer(depotPath, iodaemonPath, defaultRootFSPath string) *rundm
 			WithRootFS(defaultRootFSPath).
 			WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)))
 
-	startCheck := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 1 * time.Second}
+	startCheck := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 3 * time.Second}
 
 	runcrunner := runrunc.New(
 		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", *tag), "processes"), iodaemonPath, linux_command_runner.New()),
