@@ -2,16 +2,17 @@ package runrunc
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os/exec"
 	"strings"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/log"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
 	"github.com/cloudfoundry/gunk/command_runner"
-	"github.com/opencontainers/specs"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -21,7 +22,7 @@ var plog = log.Session("runrunc")
 
 //go:generate counterfeiter . ProcessTracker
 type ProcessTracker interface {
-	Run(id uint32, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, signaller process_tracker.Signaller) (garden.Process, error)
+	Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, signaller process_tracker.Signaller) (garden.Process, error)
 }
 
 //go:generate counterfeiter . PidGenerator
@@ -70,7 +71,7 @@ func (r *RunRunc) Start(bundlePath, id string, io garden.ProcessIO) (garden.Proc
 
 	cmd := r.runc.StartCommand(bundlePath, id)
 
-	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil, nil)
+	process, err := r.tracker.Run(fmt.Sprintf("%d", r.pidGenerator.Generate()), cmd, io, nil, nil)
 	if err != nil {
 		return nil, mlog.Err("run", err)
 	}
@@ -94,7 +95,7 @@ func (r *RunRunc) Exec(id string, spec garden.ProcessSpec, io garden.ProcessIO) 
 
 	cmd := r.runc.ExecCommand(id, tmpFile.Name())
 
-	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, spec.TTY, nil)
+	process, err := r.tracker.Run(fmt.Sprintf("%d", r.pidGenerator.Generate()), cmd, io, spec.TTY, nil)
 	if err != nil {
 		return nil, mlog.Err("run", err)
 	}

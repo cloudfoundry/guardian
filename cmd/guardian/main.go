@@ -246,8 +246,7 @@ func wireContainerizer(depotPath, iodaemonPath, defaultRootFSPath string) *rundm
 			WithResources(&specs.Resources{}).
 			WithMounts(goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"}).
 			WithRootFS(defaultRootFSPath).
-			WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)),
-	)
+			WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)))
 
 	startCheck := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 1 * time.Second}
 

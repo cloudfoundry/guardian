@@ -2,6 +2,7 @@ package gardener
 
 import (
 	"io"
+	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
 )
@@ -75,7 +76,7 @@ func (c *container) NetOut(netOutRule garden.NetOutRule) error {
 	return nil
 }
 
-func (c *container) Attach(processID uint32, io garden.ProcessIO) (garden.Process, error) {
+func (c *container) Attach(processID string, io garden.ProcessIO) (garden.Process, error) {
 	return nil, nil
 }
 
@@ -96,5 +97,9 @@ func (c *container) SetProperty(name string, value string) error {
 }
 
 func (c *container) RemoveProperty(name string) error {
+	return nil
+}
+
+func (c *container) SetGraceTime(t time.Duration) error {
 	return nil
 }

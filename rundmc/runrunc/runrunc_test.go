@@ -6,6 +6,7 @@ import (
 	"os/exec"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/fakes"
@@ -13,7 +14,6 @@ import (
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/specs"
 )
 
 var _ = Describe("RuncRunner", func() {
@@ -59,7 +59,7 @@ var _ = Describe("RuncRunner", func() {
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			id, _, _, _, _ := tracker.RunArgsForCall(0)
-			Expect(id).To(BeEquivalentTo(42))
+			Expect(id).To(BeEquivalentTo("42"))
 		})
 	})
 
@@ -70,7 +70,7 @@ var _ = Describe("RuncRunner", func() {
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			pid, _, _, _, _ := tracker.RunArgsForCall(0)
-			Expect(pid).To(BeEquivalentTo(55))
+			Expect(pid).To(BeEquivalentTo("55"))
 		})
 
 		It("runs exec against the injected runC binary using process tracker", func() {
@@ -88,7 +88,7 @@ var _ = Describe("RuncRunner", func() {
 			var spec specs.Process
 
 			BeforeEach(func() {
-				tracker.RunStub = func(_ uint32, cmd *exec.Cmd, _ garden.ProcessIO, _ *garden.TTYSpec, _ process_tracker.Signaller) (garden.Process, error) {
+				tracker.RunStub = func(_ string, cmd *exec.Cmd, _ garden.ProcessIO, _ *garden.TTYSpec, _ process_tracker.Signaller) (garden.Process, error) {
 					f, err := os.Open(cmd.Args[2])
 					Expect(err).NotTo(HaveOccurred())
 
