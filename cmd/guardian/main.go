@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/signal"
 	"path"
@@ -18,6 +19,9 @@ import (
 	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
 	"github.com/cloudfoundry-incubator/guardian/log"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
@@ -199,10 +203,15 @@ func main() {
 		panic(err)
 	}
 
+	_, networkPoolCIDR, err := net.ParseCIDR(*networkPool)
+	if err != nil {
+		panic(err)
+	}
+
 	backend := &gardener.Gardener{
 		UidGenerator:  wireUidGenerator(),
 		Starter:       wireStarter(),
-		Networker:     wireNetworker(),
+		Networker:     wireNetworker(networkPoolCIDR),
 		Containerizer: wireContainerizer(*depotPath, *iodaemonBin, resolvedRootFSPath),
 	}
 
@@ -240,8 +249,30 @@ func wireStarter() *rundmc.Starter {
 	return rundmc.NewStarter(mustOpen("/proc/cgroups"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner)
 }
 
-func wireNetworker() *kawasaki.Networker {
-	return kawasaki.New()
+func wireNetworker(networkPoolCIDR *net.IPNet) *kawasaki.Networker {
+	runner := &log.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("runner")}
+
+	hostCfgApplier := &configure.Host{
+		Veth:   &devices.VethCreator{},
+		Link:   &devices.Link{Name: "guardian"},
+		Bridge: &devices.Bridge{},
+		Logger: log.Session("network-host-configurer"),
+	}
+
+	containerCfgApplier := &configure.Container{
+		Logger: log.Session("network-container-configurer"),
+		Link:   &devices.Link{Name: "guardian"},
+	}
+
+	return kawasaki.New(
+		kawasaki.NewManager(runner, "/var/run/netns"),
+		kawasaki.NewConfigCreator(networkPoolCIDR),
+		kawasaki.NewConfigApplier(
+			hostCfgApplier,
+			containerCfgApplier,
+			&netns.Execer{},
+		),
+	)
 }
 
 func wireContainerizer(depotPath, iodaemonPath, defaultRootFSPath string) *rundmc.Containerizer {
@@ -263,7 +294,7 @@ func wireContainerizer(depotPath, iodaemonPath, defaultRootFSPath string) *rundm
 		WithRootFS(defaultRootFSPath).
 		WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`))
 
-	return rundmc.New(depot, &rundmc.BundleTemplate{baseBundle}, runcrunner, startCheck)
+	return rundmc.New(depot, &rundmc.BundleTemplate{Bndl: baseBundle}, runcrunner, startCheck)
 }
 
 func missing(flagName string) {

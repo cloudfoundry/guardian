@@ -42,8 +42,8 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("passes the created network to the containerizer", func() {
-				networker.NetworkStub = func(spec string) (string, error) {
-					return "/path/to/netns/" + spec, nil
+				networker.NetworkStub = func(handle, spec string) (string, error) {
+					return "/path/to/netns/" + handle, nil
 				}
 
 				_, err := gdnr.Create(garden.ContainerSpec{
@@ -53,7 +53,7 @@ var _ = Describe("Gardener", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				Expect(containerizer.CreateArgsForCall(0).NetworkPath).To(Equal("/path/to/netns/10.0.0.2/30"))
+				Expect(containerizer.CreateArgsForCall(0).NetworkPath).To(Equal("/path/to/netns/bob"))
 			})
 
 			Context("when networker fails", func() {

@@ -8,10 +8,11 @@ import (
 )
 
 type FakeNetworker struct {
-	NetworkStub        func(network string) (string, error)
+	NetworkStub        func(handle, spec string) (string, error)
 	networkMutex       sync.RWMutex
 	networkArgsForCall []struct {
-		network string
+		handle string
+		spec   string
 	}
 	networkReturns struct {
 		result1 string
@@ -19,14 +20,15 @@ type FakeNetworker struct {
 	}
 }
 
-func (fake *FakeNetworker) Network(network string) (string, error) {
+func (fake *FakeNetworker) Network(handle string, spec string) (string, error) {
 	fake.networkMutex.Lock()
 	fake.networkArgsForCall = append(fake.networkArgsForCall, struct {
-		network string
-	}{network})
+		handle string
+		spec   string
+	}{handle, spec})
 	fake.networkMutex.Unlock()
 	if fake.NetworkStub != nil {
-		return fake.NetworkStub(network)
+		return fake.NetworkStub(handle, spec)
 	} else {
 		return fake.networkReturns.result1, fake.networkReturns.result2
 	}
@@ -38,10 +40,10 @@ func (fake *FakeNetworker) NetworkCallCount() int {
 	return len(fake.networkArgsForCall)
 }
 
-func (fake *FakeNetworker) NetworkArgsForCall(i int) string {
+func (fake *FakeNetworker) NetworkArgsForCall(i int) (string, string) {
 	fake.networkMutex.RLock()
 	defer fake.networkMutex.RUnlock()
-	return fake.networkArgsForCall[i].network
+	return fake.networkArgsForCall[i].handle, fake.networkArgsForCall[i].spec
 }
 
 func (fake *FakeNetworker) NetworkReturns(result1 string, result2 error) {

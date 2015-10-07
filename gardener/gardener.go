@@ -15,7 +15,7 @@ type Containerizer interface {
 
 //go:generate counterfeiter . Networker
 type Networker interface {
-	Network(network string) (string, error)
+	Network(handle, spec string) (string, error)
 }
 
 //go:generate counterfeiter . UidGenerator
@@ -63,7 +63,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		spec.Handle = g.UidGenerator.Generate()
 	}
 
-	networkPath, err := g.Networker.Network(spec.Network)
+	networkPath, err := g.Networker.Network(spec.Handle, spec.Network)
 	if err != nil {
 		return nil, err
 	}

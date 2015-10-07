@@ -13,7 +13,7 @@ var _ = Describe("Bundle", func() {
 	Context("when there is a network path", func() {
 		It("adds the network path to the network namespace of the bundle", func() {
 			base := goci.Bundle().WithNamespaces(specs.Namespace{Type: "network"})
-			modifiedBundle := rundmc.BundleTemplate{base}.Bundle(gardener.DesiredContainerSpec{
+			modifiedBundle := rundmc.BundleTemplate{Bndl: base}.Bundle(gardener.DesiredContainerSpec{
 				NetworkPath: "/path/to/network",
 			})
 
@@ -24,7 +24,7 @@ var _ = Describe("Bundle", func() {
 
 		It("does not modify the other fields", func() {
 			base := goci.Bundle().WithProcess(goci.Process("potato"))
-			modifiedBundle := rundmc.BundleTemplate{base}.Bundle(gardener.DesiredContainerSpec{})
+			modifiedBundle := rundmc.BundleTemplate{Bndl: base}.Bundle(gardener.DesiredContainerSpec{})
 			Expect(modifiedBundle.Spec.Process.Args).Should(ConsistOf("potato"))
 		})
 	})
