@@ -22,6 +22,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/cloudfoundry-incubator/guardian/log"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
@@ -266,7 +267,9 @@ func wireNetworker(networkPoolCIDR *net.IPNet) *kawasaki.Networker {
 
 	return kawasaki.New(
 		kawasaki.NewManager(runner, "/var/run/netns"),
-		kawasaki.NewConfigCreator(networkPoolCIDR),
+		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
+		subnets.NewPool(networkPoolCIDR),
+		kawasaki.NewConfigCreator(),
 		kawasaki.NewConfigApplier(
 			hostCfgApplier,
 			containerCfgApplier,

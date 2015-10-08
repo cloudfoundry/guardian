@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices/fakedevices"
+	"github.com/pivotal-golang/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,7 +23,8 @@ var _ = Describe("Container", func() {
 	BeforeEach(func() {
 		linkApplyr = &fakedevices.FakeLink{AddIPReturns: make(map[string]error)}
 		configurer = &configure.Container{
-			Link: linkApplyr,
+			Link:   linkApplyr,
+			Logger: lagertest.NewTestLogger("test"),
 		}
 	})
 

@@ -2,9 +2,12 @@ package kawasaki_test
 
 import (
 	"errors"
+	"net"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/fakes"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets/fake_subnet_pool"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -12,6 +15,8 @@ import (
 var _ = Describe("Networker", func() {
 	var (
 		fakeNetnsMgr      *fakes.FakeNetnsMgr
+		fakeSpecParser    *fakes.FakeSpecParser
+		fakeSubnetPool    *fake_subnet_pool.FakePool
 		fakeConfigCreator *fakes.FakeConfigCreator
 		fakeConfigApplier *fakes.FakeConfigApplier
 		networker         *kawasaki.Networker
@@ -19,17 +24,57 @@ var _ = Describe("Networker", func() {
 
 	BeforeEach(func() {
 		fakeNetnsMgr = new(fakes.FakeNetnsMgr)
+		fakeSpecParser = new(fakes.FakeSpecParser)
+		fakeSubnetPool = new(fake_subnet_pool.FakePool)
 		fakeConfigApplier = new(fakes.FakeConfigApplier)
 		fakeConfigCreator = new(fakes.FakeConfigCreator)
 
 		networker = kawasaki.New(
 			fakeNetnsMgr,
+			fakeSpecParser,
+			fakeSubnetPool,
 			fakeConfigCreator,
 			fakeConfigApplier,
 		)
 	})
 
 	Describe("Network", func() {
+		It("parses the spec", func() {
+			networker.Network("some-handle", "1.2.3.4/30")
+			Expect(fakeSpecParser.ParseCallCount()).To(Equal(1))
+			Expect(fakeSpecParser.ParseArgsForCall(0)).To(Equal("1.2.3.4/30"))
+		})
+
+		It("returns an error if the spec can't be parsed", func() {
+			fakeSpecParser.ParseReturns(nil, nil, errors.New("no parsey"))
+			_, err := networker.Network("some-handle", "1.2.3.4/30")
+			Expect(err).To(MatchError("no parsey"))
+		})
+
+		It("acquires a subnet and IP", func() {
+			someSubnetRequest := subnets.DynamicSubnetSelector
+			someIpRequest := subnets.DynamicIPSelector
+			fakeSpecParser.ParseReturns(someSubnetRequest, someIpRequest, nil)
+
+			networker.Network("some-handle", "1.2.3.4/30")
+			Expect(fakeSubnetPool.AcquireCallCount()).To(Equal(1))
+			sr, ir := fakeSubnetPool.AcquireArgsForCall(0)
+			Expect(sr).To(Equal(someSubnetRequest))
+			Expect(ir).To(Equal(someIpRequest))
+		})
+
+		It("creates a network config", func() {
+			someIp, someSubnet, err := net.ParseCIDR("1.2.3.4/5")
+			fakeSubnetPool.AcquireReturns(someSubnet, someIp, err)
+
+			networker.Network("some-handle", "1.2.3.4/30")
+			Expect(fakeConfigCreator.CreateCallCount()).To(Equal(1))
+			handle, subnet, ip := fakeConfigCreator.CreateArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+			Expect(subnet).To(Equal(someSubnet))
+			Expect(ip).To(Equal(someIp))
+		})
+
 		Context("when the configuration can't be created", func() {
 			It("returns a wrapped error", func() {
 				fakeConfigCreator.CreateReturns(kawasaki.NetworkConfig{}, errors.New("bad config"))

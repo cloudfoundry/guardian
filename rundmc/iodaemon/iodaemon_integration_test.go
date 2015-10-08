@@ -69,7 +69,7 @@ var _ = Describe("Iodaemon integration tests", func() {
 	})
 
 	It("consistently executes a quickly-printing-and-exiting command", func() {
-		for i := 0; i < 100; i++ {
+		for i := 0; i < 10; i++ {
 			spawnS, err := gexec.Start(exec.Command(
 				iodaemonBinPath,
 				"spawn",

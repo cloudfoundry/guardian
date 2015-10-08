@@ -2,17 +2,19 @@
 package fakes
 
 import (
+	"net"
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 )
 
 type FakeConfigCreator struct {
-	CreateStub        func(handle, spec string) (kawasaki.NetworkConfig, error)
+	CreateStub        func(handle string, subnet *net.IPNet, ip net.IP) (kawasaki.NetworkConfig, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		handle string
-		spec   string
+		subnet *net.IPNet
+		ip     net.IP
 	}
 	createReturns struct {
 		result1 kawasaki.NetworkConfig
@@ -20,15 +22,16 @@ type FakeConfigCreator struct {
 	}
 }
 
-func (fake *FakeConfigCreator) Create(handle string, spec string) (kawasaki.NetworkConfig, error) {
+func (fake *FakeConfigCreator) Create(handle string, subnet *net.IPNet, ip net.IP) (kawasaki.NetworkConfig, error) {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		handle string
-		spec   string
-	}{handle, spec})
+		subnet *net.IPNet
+		ip     net.IP
+	}{handle, subnet, ip})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(handle, spec)
+		return fake.CreateStub(handle, subnet, ip)
 	} else {
 		return fake.createReturns.result1, fake.createReturns.result2
 	}
@@ -40,10 +43,10 @@ func (fake *FakeConfigCreator) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeConfigCreator) CreateArgsForCall(i int) (string, string) {
+func (fake *FakeConfigCreator) CreateArgsForCall(i int) (string, *net.IPNet, net.IP) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].handle, fake.createArgsForCall[i].spec
+	return fake.createArgsForCall[i].handle, fake.createArgsForCall[i].subnet, fake.createArgsForCall[i].ip
 }
 
 func (fake *FakeConfigCreator) CreateReturns(result1 kawasaki.NetworkConfig, result2 error) {

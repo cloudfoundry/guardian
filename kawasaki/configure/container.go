@@ -34,6 +34,16 @@ func (c *Container) Apply(config kawasaki.NetworkConfig) error {
 }
 
 func (c *Container) configureContainerIntf(name string, ip, gatewayIP net.IP, subnet *net.IPNet, mtu int) (err error) {
+	cLog := c.Logger.Session("configure-container", lager.Data{
+		"name":    name,
+		"ip":      ip,
+		"gateway": gatewayIP,
+		"subnet":  subnet,
+		"mtu":     mtu,
+	})
+
+	cLog.Debug("start")
+
 	var found bool
 	var intf *net.Interface
 	if intf, found, err = c.Link.InterfaceByName(name); !found || err != nil {
@@ -56,6 +66,7 @@ func (c *Container) configureContainerIntf(name string, ip, gatewayIP net.IP, su
 		return &MTUError{err, intf, mtu}
 	}
 
+	cLog.Debug("done")
 	return nil
 }
 
