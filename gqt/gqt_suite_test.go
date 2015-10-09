@@ -3,6 +3,7 @@ package gqt_test
 import (
 	"os"
 	"runtime"
+	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
@@ -34,6 +35,7 @@ func TestGqt(t *testing.T) {
 		}
 	})
 
+	SetDefaultEventuallyTimeout(5 * time.Second)
 	RunSpecs(t, "Gqt Suite")
 }
 
