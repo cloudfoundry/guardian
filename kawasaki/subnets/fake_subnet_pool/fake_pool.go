@@ -6,14 +6,16 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
+	"github.com/pivotal-golang/lager"
 )
 
 type FakePool struct {
-	AcquireStub        func(subnets.SubnetSelector, subnets.IPSelector) (*net.IPNet, net.IP, error)
+	AcquireStub        func(lager.Logger, subnets.SubnetSelector, subnets.IPSelector) (*net.IPNet, net.IP, error)
 	acquireMutex       sync.RWMutex
 	acquireArgsForCall []struct {
-		arg1 subnets.SubnetSelector
-		arg2 subnets.IPSelector
+		arg1 lager.Logger
+		arg2 subnets.SubnetSelector
+		arg3 subnets.IPSelector
 	}
 	acquireReturns struct {
 		result1 *net.IPNet
@@ -46,15 +48,16 @@ type FakePool struct {
 	}
 }
 
-func (fake *FakePool) Acquire(arg1 subnets.SubnetSelector, arg2 subnets.IPSelector) (*net.IPNet, net.IP, error) {
+func (fake *FakePool) Acquire(arg1 lager.Logger, arg2 subnets.SubnetSelector, arg3 subnets.IPSelector) (*net.IPNet, net.IP, error) {
 	fake.acquireMutex.Lock()
 	fake.acquireArgsForCall = append(fake.acquireArgsForCall, struct {
-		arg1 subnets.SubnetSelector
-		arg2 subnets.IPSelector
-	}{arg1, arg2})
+		arg1 lager.Logger
+		arg2 subnets.SubnetSelector
+		arg3 subnets.IPSelector
+	}{arg1, arg2, arg3})
 	fake.acquireMutex.Unlock()
 	if fake.AcquireStub != nil {
-		return fake.AcquireStub(arg1, arg2)
+		return fake.AcquireStub(arg1, arg2, arg3)
 	} else {
 		return fake.acquireReturns.result1, fake.acquireReturns.result2, fake.acquireReturns.result3
 	}
@@ -66,10 +69,10 @@ func (fake *FakePool) AcquireCallCount() int {
 	return len(fake.acquireArgsForCall)
 }
 
-func (fake *FakePool) AcquireArgsForCall(i int) (subnets.SubnetSelector, subnets.IPSelector) {
+func (fake *FakePool) AcquireArgsForCall(i int) (lager.Logger, subnets.SubnetSelector, subnets.IPSelector) {
 	fake.acquireMutex.RLock()
 	defer fake.acquireMutex.RUnlock()
-	return fake.acquireArgsForCall[i].arg1, fake.acquireArgsForCall[i].arg2
+	return fake.acquireArgsForCall[i].arg1, fake.acquireArgsForCall[i].arg2, fake.acquireArgsForCall[i].arg3
 }
 
 func (fake *FakePool) AcquireReturns(result1 *net.IPNet, result2 net.IP, result3 error) {

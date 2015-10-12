@@ -6,23 +6,28 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("ConfigCreator", func() {
 	var creator *kawasaki.Creator
 	var subnet *net.IPNet
 	var ip net.IP
+	var logger lager.Logger
 
 	BeforeEach(func() {
 		var err error
 		ip, subnet, err = net.ParseCIDR("192.168.12.20/24")
 		Expect(err).NotTo(HaveOccurred())
 
+		logger = lagertest.NewTestLogger("test")
+
 		creator = kawasaki.NewConfigCreator()
 	})
 
 	It("assigns the bridge name based on the subnet", func() {
-		config, err := creator.Create("banana", subnet, ip)
+		config, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(config.BridgeName).To(Equal("br-192-168-12-0"))
@@ -30,7 +35,7 @@ var _ = Describe("ConfigCreator", func() {
 
 	Context("when the interface names are short", func() {
 		It("assigns the correct interface names", func() {
-			config, err := creator.Create("banana", subnet, ip)
+			config, err := creator.Create(logger, "banana", subnet, ip)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config.HostIntf).To(Equal("w-banana-0"))
@@ -40,7 +45,7 @@ var _ = Describe("ConfigCreator", func() {
 
 	Context("when the interface names are long", func() {
 		It("truncates the names", func() {
-			config, err := creator.Create("bananashmanana", subnet, ip)
+			config, err := creator.Create(logger, "bananashmanana", subnet, ip)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config.HostIntf).To(Equal("w-bananash-0"))
@@ -49,7 +54,7 @@ var _ = Describe("ConfigCreator", func() {
 	})
 
 	It("saves the subnet and ip", func() {
-		config, err := creator.Create("banana", subnet, ip)
+		config, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(config.ContainerIP.String()).To(Equal("192.168.12.20"))
@@ -57,14 +62,14 @@ var _ = Describe("ConfigCreator", func() {
 	})
 
 	It("assigns the bridge IP as the first IP in the subnet", func() {
-		config, err := creator.Create("banana", subnet, ip)
+		config, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(config.BridgeIP.String()).To(Equal("192.168.12.1"))
 	})
 
 	It("hard-codes the MTU to 1500", func() {
-		config, err := creator.Create("banana", subnet, ip)
+		config, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(config.Mtu).To(Equal(1500))

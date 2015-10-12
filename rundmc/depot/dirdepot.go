@@ -5,11 +5,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cloudfoundry-incubator/guardian/log"
 	"github.com/pivotal-golang/lager"
 )
-
-var plog = log.Session("depot")
 
 var ErrDoesNotExist = errors.New("does not exist")
 
@@ -29,26 +26,32 @@ func New(dir string) *DirectoryDepot {
 	}
 }
 
-func (d *DirectoryDepot) Create(handle string, bundle BundleSaver) error {
-	mlog := plog.Start("create", lager.Data{"handle": handle})
-	defer mlog.Info("created")
+func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle BundleSaver) error {
+	log = log.Session("create", lager.Data{"handle": handle})
+
+	log.Info("started")
+	defer log.Info("finished")
 
 	path := d.toDir(handle)
 	if err := os.MkdirAll(path, 0700); err != nil {
-		return mlog.Err("mkdir", err, lager.Data{"path": path})
+		log.Error("mkdir", err, lager.Data{"path": path})
+		return err
 	}
 
 	if err := bundle.Save(path); err != nil {
-		mlog.LogIfNotNil("remove-all", os.RemoveAll(path))
-		return mlog.Err("create", err, lager.Data{"path": path})
+		removeOrLog(log, path)
+		log.Error("create", err, lager.Data{"path": path})
+		return err
 	}
 
 	return nil
 }
 
-func (d *DirectoryDepot) Lookup(handle string) (string, error) {
-	mlog := plog.Start("lookup", lager.Data{"handle": handle})
-	defer mlog.Info("looked-up")
+func (d *DirectoryDepot) Lookup(log lager.Logger, handle string) (string, error) {
+	log = log.Session("lookup", lager.Data{"handle": handle})
+
+	log.Info("started")
+	defer log.Info("finished")
 
 	if _, err := os.Stat(d.toDir(handle)); err != nil {
 		return "", ErrDoesNotExist
@@ -57,13 +60,21 @@ func (d *DirectoryDepot) Lookup(handle string) (string, error) {
 	return d.toDir(handle), nil
 }
 
-func (d *DirectoryDepot) Destroy(handle string) error {
-	mlog := plog.Start("destroy", lager.Data{"handle": handle})
-	defer mlog.Info("destroyed")
+func (d *DirectoryDepot) Destroy(log lager.Logger, handle string) error {
+	log = log.Session("destroy", lager.Data{"handle": handle})
+
+	log.Info("started")
+	defer log.Info("finished")
 
 	return os.RemoveAll(d.toDir(handle))
 }
 
 func (d *DirectoryDepot) toDir(handle string) string {
 	return filepath.Join(d.dir, handle)
+}
+
+func removeOrLog(log lager.Logger, path string) {
+	if err := os.RemoveAll(path); err != nil {
+		log.Error("remove-failed", err, lager.Data{"path": path})
+	}
 }

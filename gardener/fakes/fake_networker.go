@@ -5,12 +5,14 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/gardener"
+	"github.com/pivotal-golang/lager"
 )
 
 type FakeNetworker struct {
-	NetworkStub        func(handle, spec string) (string, error)
+	NetworkStub        func(log lager.Logger, handle, spec string) (string, error)
 	networkMutex       sync.RWMutex
 	networkArgsForCall []struct {
+		log    lager.Logger
 		handle string
 		spec   string
 	}
@@ -20,15 +22,16 @@ type FakeNetworker struct {
 	}
 }
 
-func (fake *FakeNetworker) Network(handle string, spec string) (string, error) {
+func (fake *FakeNetworker) Network(log lager.Logger, handle string, spec string) (string, error) {
 	fake.networkMutex.Lock()
 	fake.networkArgsForCall = append(fake.networkArgsForCall, struct {
+		log    lager.Logger
 		handle string
 		spec   string
-	}{handle, spec})
+	}{log, handle, spec})
 	fake.networkMutex.Unlock()
 	if fake.NetworkStub != nil {
-		return fake.NetworkStub(handle, spec)
+		return fake.NetworkStub(log, handle, spec)
 	} else {
 		return fake.networkReturns.result1, fake.networkReturns.result2
 	}
@@ -40,10 +43,10 @@ func (fake *FakeNetworker) NetworkCallCount() int {
 	return len(fake.networkArgsForCall)
 }
 
-func (fake *FakeNetworker) NetworkArgsForCall(i int) (string, string) {
+func (fake *FakeNetworker) NetworkArgsForCall(i int) (lager.Logger, string, string) {
 	fake.networkMutex.RLock()
 	defer fake.networkMutex.RUnlock()
-	return fake.networkArgsForCall[i].handle, fake.networkArgsForCall[i].spec
+	return fake.networkArgsForCall[i].log, fake.networkArgsForCall[i].handle, fake.networkArgsForCall[i].spec
 }
 
 func (fake *FakeNetworker) NetworkReturns(result1 string, result2 error) {

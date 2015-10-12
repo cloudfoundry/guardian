@@ -23,7 +23,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
-	"github.com/cloudfoundry-incubator/guardian/log"
+	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
@@ -188,8 +188,7 @@ func main() {
 	cf_lager.AddFlags(flag.CommandLine)
 	flag.Parse()
 
-	l, _ := cf_lager.New("guardian")
-	log.SetLogger(l)
+	logger, _ := cf_lager.New("guardian")
 
 	if *depotPath == "" {
 		missing("-depot")
@@ -211,16 +210,17 @@ func main() {
 
 	backend := &gardener.Gardener{
 		UidGenerator:  wireUidGenerator(),
-		Starter:       wireStarter(),
-		Networker:     wireNetworker(networkPoolCIDR),
-		Containerizer: wireContainerizer(*depotPath, *iodaemonBin, resolvedRootFSPath),
+		Starter:       wireStarter(logger),
+		Networker:     wireNetworker(logger, networkPoolCIDR),
+		Containerizer: wireContainerizer(logger, *depotPath, *iodaemonBin, resolvedRootFSPath),
+		Logger:        logger,
 	}
 
-	gardenServer := server.New(*listenNetwork, *listenAddr, *graceTime, backend, log.Session("api"))
+	gardenServer := server.New(*listenNetwork, *listenAddr, *graceTime, backend, logger.Session("api"))
 
 	err = gardenServer.Start()
 	if err != nil {
-		log.Fatal("failed-to-start-server", err)
+		logger.Fatal("failed-to-start-server", err)
 	}
 
 	signals := make(chan os.Signal, 1)
@@ -233,7 +233,7 @@ func main() {
 
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 
-	log.Info("started", lager.Data{
+	logger.Info("started", lager.Data{
 		"network": *listenNetwork,
 		"addr":    *listenAddr,
 	})
@@ -245,13 +245,13 @@ func wireUidGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
-func wireStarter() *rundmc.Starter {
-	runner := &log.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("runner")}
-	return rundmc.NewStarter(mustOpen("/proc/cgroups"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner)
+func wireStarter(logger lager.Logger) *rundmc.Starter {
+	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("runner")}
+	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner)
 }
 
-func wireNetworker(networkPoolCIDR *net.IPNet) *kawasaki.Networker {
-	runner := &log.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("runner")}
+func wireNetworker(log lager.Logger, networkPoolCIDR *net.IPNet) *kawasaki.Networker {
+	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("runner")}
 
 	hostCfgApplier := &configure.Host{
 		Veth:   &devices.VethCreator{},
@@ -278,7 +278,7 @@ func wireNetworker(networkPoolCIDR *net.IPNet) *kawasaki.Networker {
 	)
 }
 
-func wireContainerizer(depotPath, iodaemonPath, defaultRootFSPath string) *rundmc.Containerizer {
+func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, defaultRootFSPath string) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
 	startCheck := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 3 * time.Second}

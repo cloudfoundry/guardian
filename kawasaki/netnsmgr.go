@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/cloudfoundry/gunk/command_runner"
+	"github.com/pivotal-golang/lager"
 )
 
 type mgr struct {
@@ -22,11 +23,11 @@ func NewManager(runner command_runner.CommandRunner, netnsDir string) NetnsMgr {
 
 // Create creates a namespace using 'ip netns add' and
 // runs a configurer against it to set it up.
-func (m *mgr) Create(handle string) error {
+func (m *mgr) Create(log lager.Logger, handle string) error {
 	return m.runner.Run(exec.Command("ip", "netns", "add", handle))
 }
 
-func (m *mgr) Lookup(handle string) (string, error) {
+func (m *mgr) Lookup(log lager.Logger, handle string) (string, error) {
 	nspath := path.Join(m.netnsDir, handle)
 	if _, err := os.Stat(nspath); os.IsNotExist(err) {
 		return "", err
@@ -35,6 +36,6 @@ func (m *mgr) Lookup(handle string) (string, error) {
 	return nspath, nil
 }
 
-func (m *mgr) Destroy(handle string) error {
+func (m *mgr) Destroy(log lager.Logger, handle string) error {
 	return m.runner.Run(exec.Command("ip", "netns", "delete", handle))
 }

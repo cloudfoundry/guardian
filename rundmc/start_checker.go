@@ -4,6 +4,8 @@ import (
 	"errors"
 	"io"
 	"time"
+
+	"github.com/pivotal-golang/lager"
 )
 
 type StartChecker struct {
@@ -11,7 +13,15 @@ type StartChecker struct {
 	Timeout time.Duration
 }
 
-func (s StartChecker) Check(output io.Reader) error {
+func (s StartChecker) Check(log lager.Logger, output io.Reader) error {
+	log = log.Session("check", lager.Data{
+		"expect":  s.Expect,
+		"timeout": s.Timeout,
+	})
+
+	log.Info("started")
+	defer log.Info("finished")
+
 	detected := make(chan struct{})
 	go func() {
 		buff := make([]byte, len(s.Expect))

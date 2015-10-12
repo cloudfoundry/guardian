@@ -1,6 +1,10 @@
 package kawasaki
 
-import "os"
+import (
+	"os"
+
+	"github.com/pivotal-golang/lager"
+)
 
 //go:generate counterfeiter . NetnsExecer
 type NetnsExecer interface {
@@ -31,7 +35,7 @@ func NewConfigApplier(hostConfigApplier HostApplier, containerConfigApplier Cont
 	}
 }
 
-func (c *applier) Apply(cfg NetworkConfig, nsPath string) error {
+func (c *applier) Apply(log lager.Logger, cfg NetworkConfig, nsPath string) error {
 	fd, err := os.Open(nsPath)
 	if err != nil {
 		return err

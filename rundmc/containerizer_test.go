@@ -11,6 +11,8 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Rundmc", func() {
@@ -19,6 +21,7 @@ var _ = Describe("Rundmc", func() {
 		fakeBundler         *fakes.FakeBundler
 		fakeContainerRunner *fakes.FakeBundleRunner
 		fakeStartCheck      *fakes.FakeChecker
+		logger              lager.Logger
 
 		containerizer *rundmc.Containerizer
 	)
@@ -28,10 +31,11 @@ var _ = Describe("Rundmc", func() {
 		fakeContainerRunner = new(fakes.FakeBundleRunner)
 		fakeStartCheck = new(fakes.FakeChecker)
 		fakeBundler = new(fakes.FakeBundler)
+		logger = lagertest.NewTestLogger("test")
 
 		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartCheck)
 
-		fakeDepot.LookupStub = func(handle string) (string, error) {
+		fakeDepot.LookupStub = func(_ lager.Logger, handle string) (string, error) {
 			return "/path/to/" + handle, nil
 		}
 	})
@@ -44,13 +48,13 @@ var _ = Describe("Rundmc", func() {
 				return returnedBundle
 			}
 
-			containerizer.Create(gardener.DesiredContainerSpec{
+			containerizer.Create(logger, gardener.DesiredContainerSpec{
 				Handle: "exuberant!",
 			})
 
 			Expect(fakeDepot.CreateCallCount()).To(Equal(1))
 
-			handle, bundle := fakeDepot.CreateArgsForCall(0)
+			_, handle, bundle := fakeDepot.CreateArgsForCall(0)
 			Expect(handle).To(Equal("exuberant!"))
 			Expect(bundle).To(Equal(returnedBundle))
 		})
@@ -58,7 +62,7 @@ var _ = Describe("Rundmc", func() {
 		Context("when creating the depot directory fails", func() {
 			It("returns an error", func() {
 				fakeDepot.CreateReturns(errors.New("blam"))
-				Expect(containerizer.Create(gardener.DesiredContainerSpec{
+				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
 					Handle: "exuberant!",
 				})).NotTo(Succeed())
 			})
@@ -67,14 +71,14 @@ var _ = Describe("Rundmc", func() {
 		Context("when looking up the container fails", func() {
 			It("returns an error", func() {
 				fakeDepot.LookupReturns("", errors.New("blam"))
-				Expect(containerizer.Create(gardener.DesiredContainerSpec{
+				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
 					Handle: "exuberant!",
 				})).NotTo(Succeed())
 			})
 
 			It("does not attempt to start the container", func() {
 				fakeDepot.LookupReturns("", errors.New("blam"))
-				containerizer.Create(gardener.DesiredContainerSpec{
+				containerizer.Create(logger, gardener.DesiredContainerSpec{
 					Handle: "exuberant!",
 				})
 
@@ -83,13 +87,13 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should start a container in the created directory", func() {
-			containerizer.Create(gardener.DesiredContainerSpec{
+			containerizer.Create(logger, gardener.DesiredContainerSpec{
 				Handle: "exuberant!",
 			})
 
 			Expect(fakeContainerRunner.StartCallCount()).To(Equal(1))
 
-			path, id, _ := fakeContainerRunner.StartArgsForCall(0)
+			_, path, id, _ := fakeContainerRunner.StartArgsForCall(0)
 			Expect(path).To(Equal("/path/to/exuberant!"))
 			Expect(id).To(Equal("exuberant!"))
 		})
@@ -98,17 +102,17 @@ var _ = Describe("Rundmc", func() {
 			Context("when the container starts succesfully", func() {
 				It("returns success", func() {
 					fakeStartCheck.CheckReturns(nil)
-					Expect(containerizer.Create(gardener.DesiredContainerSpec{})).To(Succeed())
+					Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(Succeed())
 				})
 			})
 
 			Context("when the container fails to start", func() {
 				It("returns the underlying error", func() {
-					fakeStartCheck.CheckStub = func(stdout io.Reader) error {
+					fakeStartCheck.CheckStub = func(_ lager.Logger, stdout io.Reader) error {
 						return errors.New("I died")
 					}
 
-					Expect(containerizer.Create(gardener.DesiredContainerSpec{})).To(MatchError("I died"))
+					Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(MatchError("I died"))
 				})
 			})
 		})
@@ -116,10 +120,10 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("run", func() {
 		It("should ask the execer to exec a process in the container", func() {
-			containerizer.Run("some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
+			containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
 			Expect(fakeContainerRunner.ExecCallCount()).To(Equal(1))
 
-			id, spec, _ := fakeContainerRunner.ExecArgsForCall(0)
+			_, id, spec, _ := fakeContainerRunner.ExecArgsForCall(0)
 			Expect(id).To(Equal("some-handle"))
 			Expect(spec.Path).To(Equal("hello"))
 		})
@@ -127,13 +131,13 @@ var _ = Describe("Rundmc", func() {
 		Context("when looking up the container fails", func() {
 			It("returns an error", func() {
 				fakeDepot.LookupReturns("", errors.New("blam"))
-				_, err := containerizer.Run("some-handle", garden.ProcessSpec{}, garden.ProcessIO{})
+				_, err := containerizer.Run(logger, "some-handle", garden.ProcessSpec{}, garden.ProcessIO{})
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("does not attempt to exec the process", func() {
 				fakeDepot.LookupReturns("", errors.New("blam"))
-				containerizer.Run("some-handle", garden.ProcessSpec{}, garden.ProcessIO{})
+				containerizer.Run(logger, "some-handle", garden.ProcessSpec{}, garden.ProcessIO{})
 				Expect(fakeContainerRunner.StartCallCount()).To(Equal(0))
 			})
 		})
@@ -141,25 +145,29 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("destroy", func() {
 		It("should run kill", func() {
-			Expect(containerizer.Destroy("some-handle")).To(Succeed())
+			Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
 			Expect(fakeContainerRunner.KillCallCount()).To(Equal(1))
-			Expect(fakeContainerRunner.KillArgsForCall(0)).To(Equal("/path/to/some-handle"))
+			Expect(arg2(fakeContainerRunner.KillArgsForCall(0))).To(Equal("/path/to/some-handle"))
 		})
 
 		Context("when kill succeeds", func() {
 			It("destroys the depot directory", func() {
-				Expect(containerizer.Destroy("some-handle")).To(Succeed())
+				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
 				Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
-				Expect(fakeDepot.DestroyArgsForCall(0)).To(Equal("some-handle"))
+				Expect(arg2(fakeDepot.DestroyArgsForCall(0))).To(Equal("some-handle"))
 			})
 		})
 
 		Context("when kill fails", func() {
 			It("does not destroy the depot directory", func() {
 				fakeContainerRunner.KillReturns(errors.New("killing is wrong"))
-				containerizer.Destroy("some-handle")
+				containerizer.Destroy(logger, "some-handle")
 				Expect(fakeDepot.DestroyCallCount()).To(Equal(0))
 			})
 		})
 	})
 })
+
+func arg2(_ lager.Logger, i interface{}) interface{} {
+	return i
+}

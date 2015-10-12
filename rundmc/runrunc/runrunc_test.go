@@ -14,6 +14,8 @@ import (
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("RuncRunner", func() {
@@ -22,6 +24,7 @@ var _ = Describe("RuncRunner", func() {
 		commandRunner *fake_command_runner.FakeCommandRunner
 		pidGenerator  *fakes.FakeUidGenerator
 		runcBinary    *fakes.FakeRuncBinary
+		logger        lager.Logger
 
 		runner *runrunc.RunRunc
 	)
@@ -31,6 +34,7 @@ var _ = Describe("RuncRunner", func() {
 		pidGenerator = new(fakes.FakeUidGenerator)
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
+		logger = lagertest.NewTestLogger("test")
 
 		runner = runrunc.New(tracker, commandRunner, pidGenerator, runcBinary)
 
@@ -45,7 +49,7 @@ var _ = Describe("RuncRunner", func() {
 
 	Describe("Start", func() {
 		It("runs the injected runC binary using process tracker", func() {
-			runner.Start("some/oci/container", "handle", garden.ProcessIO{Stdout: GinkgoWriter})
+			runner.Start(logger, "some/oci/container", "handle", garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			_, cmd, io, _, _ := tracker.RunArgsForCall(0)
@@ -55,7 +59,7 @@ var _ = Describe("RuncRunner", func() {
 
 		It("configures the tracker with the a generated process guid", func() {
 			pidGenerator.GenerateReturns("some-process-guid")
-			runner.Start("some/oci/container", "some-handle", garden.ProcessIO{Stdout: GinkgoWriter})
+			runner.Start(logger, "some/oci/container", "some-handle", garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			id, _, _, _, _ := tracker.RunArgsForCall(0)
@@ -66,7 +70,7 @@ var _ = Describe("RuncRunner", func() {
 	Describe("Exec", func() {
 		It("runs the tracker with the a generated process guid", func() {
 			pidGenerator.GenerateReturns("another-process-guid")
-			runner.Exec("some/oci/container", garden.ProcessSpec{}, garden.ProcessIO{})
+			runner.Exec(logger, "some/oci/container", garden.ProcessSpec{}, garden.ProcessIO{})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			pid, _, _, _, _ := tracker.RunArgsForCall(0)
@@ -75,7 +79,7 @@ var _ = Describe("RuncRunner", func() {
 
 		It("runs exec against the injected runC binary using process tracker", func() {
 			ttyspec := &garden.TTYSpec{WindowSize: &garden.WindowSize{Rows: 1}}
-			runner.Exec("some-id", garden.ProcessSpec{TTY: ttyspec}, garden.ProcessIO{Stdout: GinkgoWriter})
+			runner.Exec(logger, "some-id", garden.ProcessSpec{TTY: ttyspec}, garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			_, cmd, io, tty, _ := tracker.RunArgsForCall(0)
@@ -98,14 +102,14 @@ var _ = Describe("RuncRunner", func() {
 			})
 
 			It("passes a process.json with the correct path and args", func() {
-				runner.Exec("some/oci/container", garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}}, garden.ProcessIO{})
+				runner.Exec(logger, "some/oci/container", garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}}, garden.ProcessIO{})
 				Expect(tracker.RunCallCount()).To(Equal(1))
 				Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
 			})
 
 			Context("when the environment already contains a PATH", func() {
 				It("passes the environment variables", func() {
-					runner.Exec("some/oci/container", garden.ProcessSpec{
+					runner.Exec(logger, "some/oci/container", garden.ProcessSpec{
 						Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
 					}, garden.ProcessIO{})
 
@@ -116,7 +120,7 @@ var _ = Describe("RuncRunner", func() {
 
 			Context("when the environment does not already contain a PATH", func() {
 				It("appends a default PATH to the environment variables", func() {
-					runner.Exec("some/oci/container", garden.ProcessSpec{
+					runner.Exec(logger, "some/oci/container", garden.ProcessSpec{
 						Env: []string{"a=1", "b=3", "c=4"},
 					}, garden.ProcessIO{})
 
@@ -130,7 +134,7 @@ var _ = Describe("RuncRunner", func() {
 
 	Describe("Kill", func() {
 		It("runs 'runc kill' in the container directory", func() {
-			Expect(runner.Kill("some-container")).To(Succeed())
+			Expect(runner.Kill(logger, "some-container")).To(Succeed())
 			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
 				Dir:  "some-container",
 				Path: "runc",

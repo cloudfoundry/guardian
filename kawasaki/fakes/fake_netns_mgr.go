@@ -5,29 +5,33 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
+	"github.com/pivotal-golang/lager"
 )
 
 type FakeNetnsMgr struct {
-	CreateStub        func(handle string) error
+	CreateStub        func(log lager.Logger, handle string) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
+		log    lager.Logger
 		handle string
 	}
 	createReturns struct {
 		result1 error
 	}
-	LookupStub        func(handle string) (string, error)
+	LookupStub        func(log lager.Logger, handle string) (string, error)
 	lookupMutex       sync.RWMutex
 	lookupArgsForCall []struct {
+		log    lager.Logger
 		handle string
 	}
 	lookupReturns struct {
 		result1 string
 		result2 error
 	}
-	DestroyStub        func(handle string) error
+	DestroyStub        func(log lager.Logger, handle string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
+		log    lager.Logger
 		handle string
 	}
 	destroyReturns struct {
@@ -35,14 +39,15 @@ type FakeNetnsMgr struct {
 	}
 }
 
-func (fake *FakeNetnsMgr) Create(handle string) error {
+func (fake *FakeNetnsMgr) Create(log lager.Logger, handle string) error {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
+		log    lager.Logger
 		handle string
-	}{handle})
+	}{log, handle})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(handle)
+		return fake.CreateStub(log, handle)
 	} else {
 		return fake.createReturns.result1
 	}
@@ -54,10 +59,10 @@ func (fake *FakeNetnsMgr) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeNetnsMgr) CreateArgsForCall(i int) string {
+func (fake *FakeNetnsMgr) CreateArgsForCall(i int) (lager.Logger, string) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].handle
+	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle
 }
 
 func (fake *FakeNetnsMgr) CreateReturns(result1 error) {
@@ -67,14 +72,15 @@ func (fake *FakeNetnsMgr) CreateReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeNetnsMgr) Lookup(handle string) (string, error) {
+func (fake *FakeNetnsMgr) Lookup(log lager.Logger, handle string) (string, error) {
 	fake.lookupMutex.Lock()
 	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
+		log    lager.Logger
 		handle string
-	}{handle})
+	}{log, handle})
 	fake.lookupMutex.Unlock()
 	if fake.LookupStub != nil {
-		return fake.LookupStub(handle)
+		return fake.LookupStub(log, handle)
 	} else {
 		return fake.lookupReturns.result1, fake.lookupReturns.result2
 	}
@@ -86,10 +92,10 @@ func (fake *FakeNetnsMgr) LookupCallCount() int {
 	return len(fake.lookupArgsForCall)
 }
 
-func (fake *FakeNetnsMgr) LookupArgsForCall(i int) string {
+func (fake *FakeNetnsMgr) LookupArgsForCall(i int) (lager.Logger, string) {
 	fake.lookupMutex.RLock()
 	defer fake.lookupMutex.RUnlock()
-	return fake.lookupArgsForCall[i].handle
+	return fake.lookupArgsForCall[i].log, fake.lookupArgsForCall[i].handle
 }
 
 func (fake *FakeNetnsMgr) LookupReturns(result1 string, result2 error) {
@@ -100,14 +106,15 @@ func (fake *FakeNetnsMgr) LookupReturns(result1 string, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeNetnsMgr) Destroy(handle string) error {
+func (fake *FakeNetnsMgr) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Lock()
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
+		log    lager.Logger
 		handle string
-	}{handle})
+	}{log, handle})
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
-		return fake.DestroyStub(handle)
+		return fake.DestroyStub(log, handle)
 	} else {
 		return fake.destroyReturns.result1
 	}
@@ -119,10 +126,10 @@ func (fake *FakeNetnsMgr) DestroyCallCount() int {
 	return len(fake.destroyArgsForCall)
 }
 
-func (fake *FakeNetnsMgr) DestroyArgsForCall(i int) string {
+func (fake *FakeNetnsMgr) DestroyArgsForCall(i int) (lager.Logger, string) {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
-	return fake.destroyArgsForCall[i].handle
+	return fake.destroyArgsForCall[i].log, fake.destroyArgsForCall[i].handle
 }
 
 func (fake *FakeNetnsMgr) DestroyReturns(result1 error) {

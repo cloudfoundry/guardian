@@ -6,12 +6,14 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/pivotal-golang/lager"
 )
 
 type FakeChecker struct {
-	CheckStub        func(output io.Reader) error
+	CheckStub        func(log lager.Logger, output io.Reader) error
 	checkMutex       sync.RWMutex
 	checkArgsForCall []struct {
+		log    lager.Logger
 		output io.Reader
 	}
 	checkReturns struct {
@@ -19,14 +21,15 @@ type FakeChecker struct {
 	}
 }
 
-func (fake *FakeChecker) Check(output io.Reader) error {
+func (fake *FakeChecker) Check(log lager.Logger, output io.Reader) error {
 	fake.checkMutex.Lock()
 	fake.checkArgsForCall = append(fake.checkArgsForCall, struct {
+		log    lager.Logger
 		output io.Reader
-	}{output})
+	}{log, output})
 	fake.checkMutex.Unlock()
 	if fake.CheckStub != nil {
-		return fake.CheckStub(output)
+		return fake.CheckStub(log, output)
 	} else {
 		return fake.checkReturns.result1
 	}
@@ -38,10 +41,10 @@ func (fake *FakeChecker) CheckCallCount() int {
 	return len(fake.checkArgsForCall)
 }
 
-func (fake *FakeChecker) CheckArgsForCall(i int) io.Reader {
+func (fake *FakeChecker) CheckArgsForCall(i int) (lager.Logger, io.Reader) {
 	fake.checkMutex.RLock()
 	defer fake.checkMutex.RUnlock()
-	return fake.checkArgsForCall[i].output
+	return fake.checkArgsForCall[i].log, fake.checkArgsForCall[i].output
 }
 
 func (fake *FakeChecker) CheckReturns(result1 error) {

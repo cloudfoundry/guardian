@@ -11,6 +11,8 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot/fakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Depot", func() {
@@ -18,6 +20,7 @@ var _ = Describe("Depot", func() {
 		tmpDir     string
 		fakeBundle *fakes.FakeBundleCreator
 		dirdepot   *depot.DirectoryDepot
+		logger     lager.Logger
 	)
 
 	BeforeEach(func() {
@@ -26,6 +29,8 @@ var _ = Describe("Depot", func() {
 		tmpDir, err = ioutil.TempDir("", "depot-test")
 		Expect(err).NotTo(HaveOccurred())
 
+		logger = lagertest.NewTestLogger("test")
+
 		fakeBundle = new(fakes.FakeBundleCreator)
 		dirdepot = depot.New(tmpDir)
 	})
@@ -33,7 +38,7 @@ var _ = Describe("Depot", func() {
 	Describe("lookup", func() {
 		Context("when a subdirectory with the given name does not exist", func() {
 			It("returns an ErrDoesNotExist", func() {
-				_, err := dirdepot.Lookup("potato")
+				_, err := dirdepot.Lookup(logger, "potato")
 				Expect(err).To(MatchError(depot.ErrDoesNotExist))
 			})
 		})
@@ -41,26 +46,26 @@ var _ = Describe("Depot", func() {
 		Context("when a subdirectory with the given name exists", func() {
 			It("returns the absolute path of the directory", func() {
 				os.Mkdir(filepath.Join(tmpDir, "potato"), 0700)
-				Expect(dirdepot.Lookup("potato")).To(Equal(filepath.Join(tmpDir, "potato")))
+				Expect(dirdepot.Lookup(logger, "potato")).To(Equal(filepath.Join(tmpDir, "potato")))
 			})
 		})
 	})
 
 	Describe("create", func() {
 		It("should create a directory", func() {
-			Expect(dirdepot.Create("aardvaark", fakeBundle)).To(Succeed())
+			Expect(dirdepot.Create(logger, "aardvaark", fakeBundle)).To(Succeed())
 			Expect(filepath.Join(tmpDir, "aardvaark")).To(BeADirectory())
 		})
 
 		It("should serialize the a container config to the directory", func() {
-			Expect(dirdepot.Create("aardvaark", fakeBundle)).To(Succeed())
+			Expect(dirdepot.Create(logger, "aardvaark", fakeBundle)).To(Succeed())
 			Expect(fakeBundle.SaveCallCount()).To(Equal(1))
 			Expect(fakeBundle.SaveArgsForCall(0)).To(Equal(path.Join(tmpDir, "aardvaark")))
 		})
 
 		It("destroys the container directory if creation fails", func() {
 			fakeBundle.SaveReturns(errors.New("didn't work"))
-			Expect(dirdepot.Create("aardvaark", fakeBundle)).NotTo(Succeed())
+			Expect(dirdepot.Create(logger, "aardvaark", fakeBundle)).NotTo(Succeed())
 			Expect(filepath.Join(tmpDir, "aardvaark")).NotTo(BeADirectory())
 		})
 	})
@@ -68,13 +73,13 @@ var _ = Describe("Depot", func() {
 	Describe("destroy", func() {
 		It("should destroy the container directory", func() {
 			Expect(os.MkdirAll(filepath.Join(tmpDir, "potato"), 0755)).To(Succeed())
-			Expect(dirdepot.Destroy("potato")).To(Succeed())
+			Expect(dirdepot.Destroy(logger, "potato")).To(Succeed())
 			Expect(filepath.Join(tmpDir, "potato")).NotTo(BeAnExistingFile())
 		})
 
 		Context("when the container directory does not exist", func() {
 			It("does not error (i.e. the method is idempotent)", func() {
-				Expect(dirdepot.Destroy("potato")).To(Succeed())
+				Expect(dirdepot.Destroy(logger, "potato")).To(Succeed())
 			})
 		})
 	})

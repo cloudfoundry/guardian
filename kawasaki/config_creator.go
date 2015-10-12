@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
+	"github.com/pivotal-golang/lager"
 )
 
 const maxHandleBeforeTruncation = 8
@@ -26,7 +27,7 @@ func NewConfigCreator() *Creator {
 	return &Creator{}
 }
 
-func (c *Creator) Create(handle string, subnet *net.IPNet, ip net.IP) (NetworkConfig, error) {
+func (c *Creator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip net.IP) (NetworkConfig, error) {
 	return NetworkConfig{
 		HostIntf:      fmt.Sprintf("w-%s-0", truncate(handle)),
 		ContainerIntf: fmt.Sprintf("w-%s-1", truncate(handle)),

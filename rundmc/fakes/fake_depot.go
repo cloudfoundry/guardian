@@ -6,30 +6,34 @@ import (
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
+	"github.com/pivotal-golang/lager"
 )
 
 type FakeDepot struct {
-	CreateStub        func(handle string, bundle depot.BundleSaver) error
+	CreateStub        func(log lager.Logger, handle string, bundle depot.BundleSaver) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
+		log    lager.Logger
 		handle string
 		bundle depot.BundleSaver
 	}
 	createReturns struct {
 		result1 error
 	}
-	LookupStub        func(handle string) (path string, err error)
+	LookupStub        func(log lager.Logger, handle string) (path string, err error)
 	lookupMutex       sync.RWMutex
 	lookupArgsForCall []struct {
+		log    lager.Logger
 		handle string
 	}
 	lookupReturns struct {
 		result1 string
 		result2 error
 	}
-	DestroyStub        func(handle string) error
+	DestroyStub        func(log lager.Logger, handle string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
+		log    lager.Logger
 		handle string
 	}
 	destroyReturns struct {
@@ -37,15 +41,16 @@ type FakeDepot struct {
 	}
 }
 
-func (fake *FakeDepot) Create(handle string, bundle depot.BundleSaver) error {
+func (fake *FakeDepot) Create(log lager.Logger, handle string, bundle depot.BundleSaver) error {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
+		log    lager.Logger
 		handle string
 		bundle depot.BundleSaver
-	}{handle, bundle})
+	}{log, handle, bundle})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(handle, bundle)
+		return fake.CreateStub(log, handle, bundle)
 	} else {
 		return fake.createReturns.result1
 	}
@@ -57,10 +62,10 @@ func (fake *FakeDepot) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeDepot) CreateArgsForCall(i int) (string, depot.BundleSaver) {
+func (fake *FakeDepot) CreateArgsForCall(i int) (lager.Logger, string, depot.BundleSaver) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].handle, fake.createArgsForCall[i].bundle
+	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].bundle
 }
 
 func (fake *FakeDepot) CreateReturns(result1 error) {
@@ -70,14 +75,15 @@ func (fake *FakeDepot) CreateReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeDepot) Lookup(handle string) (path string, err error) {
+func (fake *FakeDepot) Lookup(log lager.Logger, handle string) (path string, err error) {
 	fake.lookupMutex.Lock()
 	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
+		log    lager.Logger
 		handle string
-	}{handle})
+	}{log, handle})
 	fake.lookupMutex.Unlock()
 	if fake.LookupStub != nil {
-		return fake.LookupStub(handle)
+		return fake.LookupStub(log, handle)
 	} else {
 		return fake.lookupReturns.result1, fake.lookupReturns.result2
 	}
@@ -89,10 +95,10 @@ func (fake *FakeDepot) LookupCallCount() int {
 	return len(fake.lookupArgsForCall)
 }
 
-func (fake *FakeDepot) LookupArgsForCall(i int) string {
+func (fake *FakeDepot) LookupArgsForCall(i int) (lager.Logger, string) {
 	fake.lookupMutex.RLock()
 	defer fake.lookupMutex.RUnlock()
-	return fake.lookupArgsForCall[i].handle
+	return fake.lookupArgsForCall[i].log, fake.lookupArgsForCall[i].handle
 }
 
 func (fake *FakeDepot) LookupReturns(result1 string, result2 error) {
@@ -103,14 +109,15 @@ func (fake *FakeDepot) LookupReturns(result1 string, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeDepot) Destroy(handle string) error {
+func (fake *FakeDepot) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Lock()
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
+		log    lager.Logger
 		handle string
-	}{handle})
+	}{log, handle})
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
-		return fake.DestroyStub(handle)
+		return fake.DestroyStub(log, handle)
 	} else {
 		return fake.destroyReturns.result1
 	}
@@ -122,10 +129,10 @@ func (fake *FakeDepot) DestroyCallCount() int {
 	return len(fake.destroyArgsForCall)
 }
 
-func (fake *FakeDepot) DestroyArgsForCall(i int) string {
+func (fake *FakeDepot) DestroyArgsForCall(i int) (lager.Logger, string) {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
-	return fake.destroyArgsForCall[i].handle
+	return fake.destroyArgsForCall[i].log, fake.destroyArgsForCall[i].handle
 }
 
 func (fake *FakeDepot) DestroyReturns(result1 error) {

@@ -10,6 +10,8 @@ import (
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
+	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
@@ -21,10 +23,12 @@ var _ = Describe("NetnsMgr", func() {
 		fakeRunner *fake_command_runner.FakeCommandRunner
 		netnsDir   string
 		mgr        kawasaki.NetnsMgr
+		logger     lager.Logger
 	)
 
 	BeforeEach(func() {
 		netnsDir = tmpDir()
+		logger = lagertest.NewTestLogger("test")
 	})
 
 	JustBeforeEach(func() {
@@ -38,7 +42,7 @@ var _ = Describe("NetnsMgr", func() {
 
 	Describe("Creating a Network Namespace", func() {
 		It("creates a namespace using 'ip netns add'", func() {
-			Expect(mgr.Create("my-namespace")).To(Succeed())
+			Expect(mgr.Create(logger, "my-namespace")).To(Succeed())
 
 			Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
 				Path: "ip",
@@ -57,7 +61,7 @@ var _ = Describe("NetnsMgr", func() {
 					},
 				)
 
-				Expect(mgr.Create("my-namespace")).NotTo(Succeed())
+				Expect(mgr.Create(logger, "my-namespace")).NotTo(Succeed())
 			})
 		})
 	})
@@ -66,14 +70,14 @@ var _ = Describe("NetnsMgr", func() {
 		It("looks up the Network Namespace path", func() {
 			Expect(ioutil.WriteFile(path.Join(netnsDir, "banana"), []byte(""), 0700)).To(Succeed())
 
-			path, theUnexpected := mgr.Lookup("banana")
+			path, theUnexpected := mgr.Lookup(logger, "banana")
 			Expect(theUnexpected).NotTo(HaveOccurred())
 			Expect(path).To(Equal(filepath.Join(netnsDir, "banana")))
 		})
 
 		Context("when the namespace does not exist", func() {
 			It("returns an error", func() {
-				_, theUnexpected := mgr.Lookup("banana")
+				_, theUnexpected := mgr.Lookup(logger, "banana")
 				Expect(theUnexpected).To(HaveOccurred())
 			})
 		})
@@ -81,7 +85,7 @@ var _ = Describe("NetnsMgr", func() {
 
 	Describe("Destroying a Network Namespace", func() {
 		It("destroys the network using 'ip netns delete'", func() {
-			Expect(mgr.Destroy("my-namespace")).To(Succeed())
+			Expect(mgr.Destroy(logger, "my-namespace")).To(Succeed())
 
 			Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
 				Path: "ip",
@@ -100,7 +104,7 @@ var _ = Describe("NetnsMgr", func() {
 					},
 				)
 
-				Expect(mgr.Destroy("my-namespace")).NotTo(Succeed())
+				Expect(mgr.Destroy(logger, "my-namespace")).NotTo(Succeed())
 			})
 		})
 	})

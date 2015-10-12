@@ -6,12 +6,14 @@ import (
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
+	"github.com/pivotal-golang/lager"
 )
 
 type FakeSpecParser struct {
-	ParseStub        func(spec string) (subnets.SubnetSelector, subnets.IPSelector, error)
+	ParseStub        func(log lager.Logger, spec string) (subnets.SubnetSelector, subnets.IPSelector, error)
 	parseMutex       sync.RWMutex
 	parseArgsForCall []struct {
+		log  lager.Logger
 		spec string
 	}
 	parseReturns struct {
@@ -21,14 +23,15 @@ type FakeSpecParser struct {
 	}
 }
 
-func (fake *FakeSpecParser) Parse(spec string) (subnets.SubnetSelector, subnets.IPSelector, error) {
+func (fake *FakeSpecParser) Parse(log lager.Logger, spec string) (subnets.SubnetSelector, subnets.IPSelector, error) {
 	fake.parseMutex.Lock()
 	fake.parseArgsForCall = append(fake.parseArgsForCall, struct {
+		log  lager.Logger
 		spec string
-	}{spec})
+	}{log, spec})
 	fake.parseMutex.Unlock()
 	if fake.ParseStub != nil {
-		return fake.ParseStub(spec)
+		return fake.ParseStub(log, spec)
 	} else {
 		return fake.parseReturns.result1, fake.parseReturns.result2, fake.parseReturns.result3
 	}
@@ -40,10 +43,10 @@ func (fake *FakeSpecParser) ParseCallCount() int {
 	return len(fake.parseArgsForCall)
 }
 
-func (fake *FakeSpecParser) ParseArgsForCall(i int) string {
+func (fake *FakeSpecParser) ParseArgsForCall(i int) (lager.Logger, string) {
 	fake.parseMutex.RLock()
 	defer fake.parseMutex.RUnlock()
-	return fake.parseArgsForCall[i].spec
+	return fake.parseArgsForCall[i].log, fake.parseArgsForCall[i].spec
 }
 
 func (fake *FakeSpecParser) ParseReturns(result1 subnets.SubnetSelector, result2 subnets.IPSelector, result3 error) {

@@ -9,6 +9,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Gardener", func() {
@@ -28,6 +30,7 @@ var _ = Describe("Gardener", func() {
 			Containerizer: containerizer,
 			UidGenerator:  uidGenerator,
 			Networker:     networker,
+			Logger:        lagertest.NewTestLogger("test"),
 		}
 	})
 
@@ -38,11 +41,12 @@ var _ = Describe("Gardener", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				Expect(containerizer.CreateArgsForCall(0).Handle).To(Equal("bob"))
+				_, spec := containerizer.CreateArgsForCall(0)
+				Expect(spec.Handle).To(Equal("bob"))
 			})
 
 			It("passes the created network to the containerizer", func() {
-				networker.NetworkStub = func(handle, spec string) (string, error) {
+				networker.NetworkStub = func(_ lager.Logger, handle, spec string) (string, error) {
 					return "/path/to/netns/" + handle, nil
 				}
 
@@ -53,7 +57,8 @@ var _ = Describe("Gardener", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				Expect(containerizer.CreateArgsForCall(0).NetworkPath).To(Equal("/path/to/netns/bob"))
+				_, spec := containerizer.CreateArgsForCall(0)
+				Expect(spec.NetworkPath).To(Equal("/path/to/netns/bob"))
 			})
 
 			Context("when networker fails", func() {
@@ -90,7 +95,8 @@ var _ = Describe("Gardener", func() {
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				Expect(containerizer.CreateArgsForCall(0).Handle).To(Equal("generated-handle"))
+				_, spec := containerizer.CreateArgsForCall(0)
+				Expect(spec.Handle).To(Equal("generated-handle"))
 			})
 
 			It("returns the container that Lookup would return", func() {
@@ -123,7 +129,7 @@ var _ = Describe("Gardener", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(containerizer.RunCallCount()).To(Equal(1))
-				id, spec, io := containerizer.RunArgsForCall(0)
+				_, id, spec, io := containerizer.RunArgsForCall(0)
 				Expect(id).To(Equal("banana"))
 				Expect(spec).To(Equal(origSpec))
 				Expect(io).To(Equal(origIO))
@@ -145,7 +151,8 @@ var _ = Describe("Gardener", func() {
 			It("asks the containerizer to destroy the container", func() {
 				Expect(gdnr.Destroy(container.Handle())).To(Succeed())
 				Expect(containerizer.DestroyCallCount()).To(Equal(1))
-				Expect(containerizer.DestroyArgsForCall(0)).To(Equal(container.Handle()))
+				_, handle := containerizer.DestroyArgsForCall(0)
+				Expect(handle).To(Equal(container.Handle()))
 			})
 		})
 	})

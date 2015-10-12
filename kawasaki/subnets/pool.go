@@ -7,6 +7,8 @@ import (
 	"math"
 	"net"
 	"sync"
+
+	"github.com/pivotal-golang/lager"
 )
 
 type Network struct {
@@ -21,7 +23,7 @@ type Pool interface {
 	// Returns a subnet, an IP address, and a boolean which is true if and only if this is the
 	// first IP address to be associated with this subnet.
 	// If either selector fails, an error is returned.
-	Acquire(SubnetSelector, IPSelector) (*net.IPNet, net.IP, error)
+	Acquire(lager.Logger, SubnetSelector, IPSelector) (*net.IPNet, net.IP, error)
 
 	// Releases an IP address associated with an allocated subnet. If the subnet has no other IP
 	// addresses associated with it, it is deallocated.
@@ -66,7 +68,7 @@ func NewPool(ipNet *net.IPNet) Pool {
 
 // Acquire uses the given subnet and IP selectors to request a subnet, container IP address combination
 // from the pool.
-func (p *pool) Acquire(sn SubnetSelector, i IPSelector) (subnet *net.IPNet, ip net.IP, err error) {
+func (p *pool) Acquire(log lager.Logger, sn SubnetSelector, i IPSelector) (subnet *net.IPNet, ip net.IP, err error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 

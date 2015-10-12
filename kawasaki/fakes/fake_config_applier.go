@@ -5,12 +5,14 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
+	"github.com/pivotal-golang/lager"
 )
 
 type FakeConfigApplier struct {
-	ApplyStub        func(cfg kawasaki.NetworkConfig, nsPath string) error
+	ApplyStub        func(log lager.Logger, cfg kawasaki.NetworkConfig, nsPath string) error
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
+		log    lager.Logger
 		cfg    kawasaki.NetworkConfig
 		nsPath string
 	}
@@ -19,15 +21,16 @@ type FakeConfigApplier struct {
 	}
 }
 
-func (fake *FakeConfigApplier) Apply(cfg kawasaki.NetworkConfig, nsPath string) error {
+func (fake *FakeConfigApplier) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, nsPath string) error {
 	fake.applyMutex.Lock()
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
+		log    lager.Logger
 		cfg    kawasaki.NetworkConfig
 		nsPath string
-	}{cfg, nsPath})
+	}{log, cfg, nsPath})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(cfg, nsPath)
+		return fake.ApplyStub(log, cfg, nsPath)
 	} else {
 		return fake.applyReturns.result1
 	}
@@ -39,10 +42,10 @@ func (fake *FakeConfigApplier) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
-func (fake *FakeConfigApplier) ApplyArgsForCall(i int) (kawasaki.NetworkConfig, string) {
+func (fake *FakeConfigApplier) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, string) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
-	return fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].nsPath
+	return fake.applyArgsForCall[i].log, fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].nsPath
 }
 
 func (fake *FakeConfigApplier) ApplyReturns(result1 error) {

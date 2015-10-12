@@ -7,6 +7,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/fakes"
+	"github.com/pivotal-golang/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -43,12 +44,12 @@ var _ = Describe("ConfigApplier", func() {
 	Describe("Apply", func() {
 		Context("when the ns path cannot be opened", func() {
 			It("returns an error", func() {
-				err := applier.Apply(kawasaki.NetworkConfig{}, "DOESNOTEXIST")
+				err := applier.Apply(lagertest.NewTestLogger("test"), kawasaki.NetworkConfig{}, "DOESNOTEXIST")
 				Expect(err).To(HaveOccurred())
 			})
 
 			It("does not configure anything", func() {
-				applier.Apply(kawasaki.NetworkConfig{}, "DOESNOTEXIST")
+				applier.Apply(lagertest.NewTestLogger("test"), kawasaki.NetworkConfig{}, "DOESNOTEXIST")
 				Expect(fakeHostConfigApplier.ApplyCallCount()).To(Equal(0))
 			})
 		})
@@ -58,7 +59,7 @@ var _ = Describe("ConfigApplier", func() {
 				ContainerIntf: "banana",
 			}
 
-			Expect(applier.Apply(cfg, netnsFD.Name())).To(Succeed())
+			Expect(applier.Apply(lagertest.NewTestLogger("test"), cfg, netnsFD.Name())).To(Succeed())
 
 			Expect(fakeHostConfigApplier.ApplyCallCount()).To(Equal(1))
 			appliedCfg, fd := fakeHostConfigApplier.ApplyArgsForCall(0)
@@ -69,7 +70,7 @@ var _ = Describe("ConfigApplier", func() {
 		Context("if applying the host config fails", func() {
 			It("returns the error", func() {
 				fakeHostConfigApplier.ApplyReturns(errors.New("boom"))
-				Expect(applier.Apply(kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("boom"))
+				Expect(applier.Apply(lagertest.NewTestLogger("test"), kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("boom"))
 			})
 		})
 
@@ -78,7 +79,7 @@ var _ = Describe("ConfigApplier", func() {
 				ContainerIntf: "banana",
 			}
 
-			Expect(applier.Apply(cfg, netnsFD.Name())).To(Succeed())
+			Expect(applier.Apply(lagertest.NewTestLogger("test"), cfg, netnsFD.Name())).To(Succeed())
 
 			Expect(fakeNsExecer.ExecCallCount()).To(Equal(1))
 			fd, cb := fakeNsExecer.ExecArgsForCall(0)
@@ -93,7 +94,7 @@ var _ = Describe("ConfigApplier", func() {
 		Context("if entering the namespace fails", func() {
 			It("returns the error", func() {
 				fakeNsExecer.ExecReturns(errors.New("boom"))
-				Expect(applier.Apply(kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("boom"))
+				Expect(applier.Apply(lagertest.NewTestLogger("test"), kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("boom"))
 			})
 		})
 
@@ -104,7 +105,7 @@ var _ = Describe("ConfigApplier", func() {
 				}
 
 				fakeContainerConfigApplier.ApplyReturns(errors.New("banana"))
-				Expect(applier.Apply(kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("banana"))
+				Expect(applier.Apply(lagertest.NewTestLogger("test"), kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("banana"))
 			})
 		})
 	})

@@ -1,4 +1,4 @@
-package log_test
+package logging_test
 
 import (
 	. "github.com/onsi/ginkgo"

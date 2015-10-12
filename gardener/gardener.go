@@ -4,18 +4,19 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/pivotal-golang/lager"
 )
 
 //go:generate counterfeiter . Containerizer
 type Containerizer interface {
-	Create(spec DesiredContainerSpec) error
-	Run(handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
-	Destroy(handle string) error
+	Create(log lager.Logger, spec DesiredContainerSpec) error
+	Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Destroy(log lager.Logger, handle string) error
 }
 
 //go:generate counterfeiter . Networker
 type Networker interface {
-	Network(handle, spec string) (string, error)
+	Network(log lager.Logger, handle, spec string) (string, error)
 }
 
 //go:generate counterfeiter . UidGenerator
@@ -56,19 +57,23 @@ type Gardener struct {
 
 	// Networker creates a network for containers
 	Networker Networker
+
+	Logger lager.Logger
 }
 
 func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
+	log := g.Logger.Session("create")
+
 	if spec.Handle == "" {
 		spec.Handle = g.UidGenerator.Generate()
 	}
 
-	networkPath, err := g.Networker.Network(spec.Handle, spec.Network)
+	networkPath, err := g.Networker.Network(log, spec.Handle, spec.Network)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := g.Containerizer.Create(DesiredContainerSpec{
+	if err := g.Containerizer.Create(log, DesiredContainerSpec{
 		Handle:      spec.Handle,
 		NetworkPath: networkPath,
 	}); err != nil {
@@ -82,11 +87,12 @@ func (g *Gardener) Lookup(handle string) (garden.Container, error) {
 	return &container{
 		handle:        handle,
 		containerizer: g.Containerizer,
+		logger:        g.Logger,
 	}, nil
 }
 
 func (g *Gardener) Destroy(handle string) error {
-	return g.Containerizer.Destroy(handle)
+	return g.Containerizer.Destroy(g.Logger, handle)
 }
 
 func (g *Gardener) Stop()                                                    {}

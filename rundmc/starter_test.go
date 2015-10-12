@@ -13,6 +13,8 @@ import (
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("CgroupStarter", func() {
@@ -20,6 +22,7 @@ var _ = Describe("CgroupStarter", func() {
 		runner      *fake_command_runner.FakeCommandRunner
 		starter     *rundmc.CgroupStarter
 		procCgroups *FakeReadCloser
+		logger      lager.Logger
 
 		tmpDir string
 	)
@@ -29,12 +32,14 @@ var _ = Describe("CgroupStarter", func() {
 		tmpDir, err = ioutil.TempDir("", "gdncgroup")
 		Expect(err).NotTo(HaveOccurred())
 
+		logger = lagertest.NewTestLogger("test")
 		runner = fake_command_runner.New()
 		procCgroups = &FakeReadCloser{Buffer: bytes.NewBufferString("")}
 		starter = &rundmc.CgroupStarter{
 			CgroupPath:    path.Join(tmpDir, "cgroup"),
 			CommandRunner: runner,
 			ProcCgroups:   procCgroups,
+			Logger:        logger,
 		}
 	})
 

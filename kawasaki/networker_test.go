@@ -10,6 +10,8 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets/fake_subnet_pool"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Networker", func() {
@@ -20,6 +22,7 @@ var _ = Describe("Networker", func() {
 		fakeConfigCreator *fakes.FakeConfigCreator
 		fakeConfigApplier *fakes.FakeConfigApplier
 		networker         *kawasaki.Networker
+		logger            lager.Logger
 	)
 
 	BeforeEach(func() {
@@ -29,6 +32,7 @@ var _ = Describe("Networker", func() {
 		fakeConfigApplier = new(fakes.FakeConfigApplier)
 		fakeConfigCreator = new(fakes.FakeConfigCreator)
 
+		logger = lagertest.NewTestLogger("test")
 		networker = kawasaki.New(
 			fakeNetnsMgr,
 			fakeSpecParser,
@@ -40,14 +44,15 @@ var _ = Describe("Networker", func() {
 
 	Describe("Network", func() {
 		It("parses the spec", func() {
-			networker.Network("some-handle", "1.2.3.4/30")
+			networker.Network(logger, "some-handle", "1.2.3.4/30")
 			Expect(fakeSpecParser.ParseCallCount()).To(Equal(1))
-			Expect(fakeSpecParser.ParseArgsForCall(0)).To(Equal("1.2.3.4/30"))
+			_, spec := fakeSpecParser.ParseArgsForCall(0)
+			Expect(spec).To(Equal("1.2.3.4/30"))
 		})
 
 		It("returns an error if the spec can't be parsed", func() {
 			fakeSpecParser.ParseReturns(nil, nil, errors.New("no parsey"))
-			_, err := networker.Network("some-handle", "1.2.3.4/30")
+			_, err := networker.Network(logger, "some-handle", "1.2.3.4/30")
 			Expect(err).To(MatchError("no parsey"))
 		})
 
@@ -56,9 +61,9 @@ var _ = Describe("Networker", func() {
 			someIpRequest := subnets.DynamicIPSelector
 			fakeSpecParser.ParseReturns(someSubnetRequest, someIpRequest, nil)
 
-			networker.Network("some-handle", "1.2.3.4/30")
+			networker.Network(logger, "some-handle", "1.2.3.4/30")
 			Expect(fakeSubnetPool.AcquireCallCount()).To(Equal(1))
-			sr, ir := fakeSubnetPool.AcquireArgsForCall(0)
+			_, sr, ir := fakeSubnetPool.AcquireArgsForCall(0)
 			Expect(sr).To(Equal(someSubnetRequest))
 			Expect(ir).To(Equal(someIpRequest))
 		})
@@ -67,9 +72,9 @@ var _ = Describe("Networker", func() {
 			someIp, someSubnet, err := net.ParseCIDR("1.2.3.4/5")
 			fakeSubnetPool.AcquireReturns(someSubnet, someIp, err)
 
-			networker.Network("some-handle", "1.2.3.4/30")
+			networker.Network(logger, "some-handle", "1.2.3.4/30")
 			Expect(fakeConfigCreator.CreateCallCount()).To(Equal(1))
-			handle, subnet, ip := fakeConfigCreator.CreateArgsForCall(0)
+			_, handle, subnet, ip := fakeConfigCreator.CreateArgsForCall(0)
 			Expect(handle).To(Equal("some-handle"))
 			Expect(subnet).To(Equal(someSubnet))
 			Expect(ip).To(Equal(someIp))
@@ -78,23 +83,23 @@ var _ = Describe("Networker", func() {
 		Context("when the configuration can't be created", func() {
 			It("returns a wrapped error", func() {
 				fakeConfigCreator.CreateReturns(kawasaki.NetworkConfig{}, errors.New("bad config"))
-				_, err := networker.Network("some-handle", "1.2.3.4/30")
+				_, err := networker.Network(logger, "some-handle", "1.2.3.4/30")
 				Expect(err).To(MatchError("create network config: bad config"))
 			})
 
 			It("does not create a namespace", func() {
 				fakeConfigCreator.CreateReturns(kawasaki.NetworkConfig{}, errors.New("bad config"))
-				networker.Network("some-handle", "1.2.3.4/30")
+				networker.Network(logger, "some-handle", "1.2.3.4/30")
 
 				Expect(fakeNetnsMgr.CreateCallCount()).To(Equal(0))
 			})
 		})
 
 		It("should create a network namespace", func() {
-			networker.Network("some-handle", "")
+			networker.Network(logger, "some-handle", "")
 			Expect(fakeNetnsMgr.CreateCallCount()).To(Equal(1))
 
-			handle := fakeNetnsMgr.CreateArgsForCall(0)
+			_, handle := fakeNetnsMgr.CreateArgsForCall(0)
 			Expect(handle).To(Equal("some-handle"))
 		})
 
@@ -104,12 +109,12 @@ var _ = Describe("Networker", func() {
 			})
 
 			It("should return an error", func() {
-				_, err := networker.Network("", "")
+				_, err := networker.Network(logger, "", "")
 				Expect(err).To(MatchError("banana"))
 			})
 
 			It("should not configure the network", func() {
-				_, err := networker.Network("", "")
+				_, err := networker.Network(logger, "", "")
 				Expect(err).To(HaveOccurred())
 
 				Expect(fakeConfigApplier.ApplyCallCount()).To(Equal(0))
@@ -119,7 +124,7 @@ var _ = Describe("Networker", func() {
 		It("should return the looked up network path", func() {
 			fakeNetnsMgr.LookupReturns("/i/lost/my/banana", nil)
 
-			path, err := networker.Network("", "")
+			path, err := networker.Network(logger, "", "")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(path).To(Equal("/i/lost/my/banana"))
 		})
@@ -130,12 +135,12 @@ var _ = Describe("Networker", func() {
 			})
 
 			It("should return an error", func() {
-				_, err := networker.Network("", "")
+				_, err := networker.Network(logger, "", "")
 				Expect(err).To(MatchError("banana"))
 			})
 
 			It("should not configure the network", func() {
-				_, err := networker.Network("", "")
+				_, err := networker.Network(logger, "", "")
 				Expect(err).To(HaveOccurred())
 
 				Expect(fakeConfigApplier.ApplyCallCount()).To(Equal(0))
@@ -151,11 +156,11 @@ var _ = Describe("Networker", func() {
 
 			fakeConfigCreator.CreateReturns(cfg, nil)
 
-			_, err := networker.Network("some-handle", "1.2.3.4/30")
+			_, err := networker.Network(logger, "some-handle", "1.2.3.4/30")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeConfigApplier.ApplyCallCount()).To(Equal(1))
-			actualCfg, path := fakeConfigApplier.ApplyArgsForCall(0)
+			_, actualCfg, path := fakeConfigApplier.ApplyArgsForCall(0)
 			Expect(path).To(Equal("/i/lost/my/banana"))
 			Expect(actualCfg).To(Equal(cfg))
 		})
@@ -166,16 +171,16 @@ var _ = Describe("Networker", func() {
 			})
 
 			It("should return an error", func() {
-				_, err := networker.Network("", "")
+				_, err := networker.Network(logger, "", "")
 				Expect(err).To(MatchError("banana"))
 			})
 
 			It("destroys the network namespace", func() {
-				_, err := networker.Network("banana-handle", "")
+				_, err := networker.Network(logger, "banana-handle", "")
 				Expect(err).To(HaveOccurred())
-
 				Expect(fakeNetnsMgr.DestroyCallCount()).To(Equal(1))
-				Expect(fakeNetnsMgr.DestroyArgsForCall(0)).To(Equal("banana-handle"))
+				_, handle := fakeNetnsMgr.DestroyArgsForCall(0)
+				Expect(handle).To(Equal("banana-handle"))
 			})
 		})
 	})

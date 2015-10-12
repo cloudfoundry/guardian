@@ -5,11 +5,13 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/pivotal-golang/lager"
 )
 
 type container struct {
 	handle        string
 	containerizer Containerizer
+	logger        lager.Logger
 }
 
 func (c *container) Handle() string {
@@ -17,7 +19,7 @@ func (c *container) Handle() string {
 }
 
 func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-	return c.containerizer.Run(c.handle, spec, io)
+	return c.containerizer.Run(c.logger, c.handle, spec, io)
 }
 
 func (c *container) Stop(kill bool) error {
