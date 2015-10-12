@@ -21,6 +21,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/cloudfoundry-incubator/guardian/logging"
@@ -208,10 +209,14 @@ func main() {
 		panic(err)
 	}
 
+	interfacePrefix := fmt.Sprintf("w%s", *tag)
+	chainPrefix := fmt.Sprintf("w-%s-instance", *tag)
+	iptablesMgr := wireIptables(logger, *tag, *allowHostAccess, interfacePrefix, chainPrefix)
+
 	backend := &gardener.Gardener{
 		UidGenerator:  wireUidGenerator(),
-		Starter:       wireStarter(logger),
-		Networker:     wireNetworker(logger, networkPoolCIDR),
+		Starter:       wireStarter(logger, iptablesMgr),
+		Networker:     wireNetworker(logger, *tag, networkPoolCIDR, iptablesMgr, interfacePrefix, chainPrefix),
 		Containerizer: wireContainerizer(logger, *depotPath, *iodaemonBin, resolvedRootFSPath),
 		Logger:        logger,
 	}
@@ -245,13 +250,42 @@ func wireUidGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
-func wireStarter(logger lager.Logger) *rundmc.Starter {
+func wireStarter(logger lager.Logger, iptablesMgr *iptables.Manager) gardener.Starter {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("runner")}
-	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner)
+
+	return &StartAll{starters: []gardener.Starter{
+		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner),
+		iptablesMgr,
+	}}
 }
 
-func wireNetworker(log lager.Logger, networkPoolCIDR *net.IPNet) *kawasaki.Networker {
-	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("runner")}
+func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfacePrefix, chainPrefix string) *iptables.Manager {
+	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("iptables-runner")}
+
+	filterConfig := iptables.FilterConfig{
+		AllowHostAccess: allowHostAccess,
+		InputChain:      fmt.Sprintf("w-%s-input", tag),
+		ForwardChain:    fmt.Sprintf("w-%s-forward", tag),
+		DefaultChain:    fmt.Sprintf("w-%s-default", tag),
+	}
+
+	natConfig := iptables.NATConfig{
+		PreroutingChain:  fmt.Sprintf("w-%s-prerouting", tag),
+		PostroutingChain: fmt.Sprintf("w-%s-postrouting", tag),
+	}
+
+	return iptables.NewManager(
+		filterConfig,
+		natConfig,
+		interfacePrefix,
+		chainPrefix,
+		runner,
+		logger,
+	)
+}
+
+func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, iptablesMgr kawasaki.IPTablesApplier, interfacePrefix, chainPrefix string) *kawasaki.Networker {
+	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("network-runner")}
 
 	hostCfgApplier := &configure.Host{
 		Veth:   &devices.VethCreator{},
@@ -269,10 +303,11 @@ func wireNetworker(log lager.Logger, networkPoolCIDR *net.IPNet) *kawasaki.Netwo
 		kawasaki.NewManager(runner, "/var/run/netns"),
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(networkPoolCIDR),
-		kawasaki.NewConfigCreator(),
+		kawasaki.NewConfigCreator(interfacePrefix, chainPrefix),
 		kawasaki.NewConfigApplier(
 			hostCfgApplier,
 			containerCfgApplier,
+			iptablesMgr,
 			&netns.Execer{},
 		),
 	)
@@ -322,4 +357,18 @@ func mustOpen(path string) io.ReadCloser {
 	} else {
 		return r
 	}
+}
+
+type StartAll struct {
+	starters []gardener.Starter
+}
+
+func (s *StartAll) Start() error {
+	for _, starter := range s.starters {
+		if err := starter.Start(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

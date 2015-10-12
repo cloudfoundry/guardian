@@ -14,6 +14,7 @@ const maxHandleBeforeTruncation = 8
 type NetworkConfig struct {
 	HostIntf      string
 	ContainerIntf string
+	IPTableChain  string
 	BridgeName    string
 	BridgeIP      net.IP
 	ContainerIP   net.IP
@@ -21,17 +22,24 @@ type NetworkConfig struct {
 	Mtu           int
 }
 
-type Creator struct{}
+type Creator struct {
+	interfacePrefix string
+	chainPrefix     string
+}
 
-func NewConfigCreator() *Creator {
-	return &Creator{}
+func NewConfigCreator(interfacePrefix, chainPrefix string) *Creator {
+	return &Creator{
+		interfacePrefix: interfacePrefix,
+		chainPrefix:     chainPrefix,
+	}
 }
 
 func (c *Creator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip net.IP) (NetworkConfig, error) {
 	return NetworkConfig{
-		HostIntf:      fmt.Sprintf("w-%s-0", truncate(handle)),
-		ContainerIntf: fmt.Sprintf("w-%s-1", truncate(handle)),
+		HostIntf:      fmt.Sprintf("%s-%s-0", c.interfacePrefix, truncate(handle)),
+		ContainerIntf: fmt.Sprintf("%s-%s-1", c.interfacePrefix, truncate(handle)),
 		BridgeName:    fmt.Sprintf("br-%s", strings.Replace(subnet.IP.String(), ".", "-", -1)),
+		IPTableChain:  fmt.Sprintf("%s-%s", c.chainPrefix, truncate(handle)),
 		ContainerIP:   ip,
 		BridgeIP:      subnets.GatewayIP(subnet),
 		Subnet:        subnet,

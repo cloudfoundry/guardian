@@ -3,6 +3,7 @@ package kawasaki_test
 import (
 	"errors"
 	"io/ioutil"
+	"net"
 	"os"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
@@ -17,6 +18,7 @@ var _ = Describe("ConfigApplier", func() {
 	var (
 		fakeHostConfigApplier      *fakes.FakeHostApplier
 		fakeContainerConfigApplier *fakes.FakeContainerApplier
+		fakeIPTablesApplier        *fakes.FakeIPTablesApplier
 		fakeNsExecer               *fakes.FakeNetnsExecer
 
 		netnsFD *os.File
@@ -27,6 +29,7 @@ var _ = Describe("ConfigApplier", func() {
 	BeforeEach(func() {
 		fakeHostConfigApplier = new(fakes.FakeHostApplier)
 		fakeContainerConfigApplier = new(fakes.FakeContainerApplier)
+		fakeIPTablesApplier = new(fakes.FakeIPTablesApplier)
 
 		fakeNsExecer = new(fakes.FakeNetnsExecer)
 
@@ -34,7 +37,7 @@ var _ = Describe("ConfigApplier", func() {
 		netnsFD, err = ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		applier = kawasaki.NewConfigApplier(fakeHostConfigApplier, fakeContainerConfigApplier, fakeNsExecer)
+		applier = kawasaki.NewConfigApplier(fakeHostConfigApplier, fakeContainerConfigApplier, fakeIPTablesApplier, fakeNsExecer)
 	})
 
 	AfterEach(func() {
@@ -68,9 +71,47 @@ var _ = Describe("ConfigApplier", func() {
 		})
 
 		Context("if applying the host config fails", func() {
-			It("returns the error", func() {
+			BeforeEach(func() {
 				fakeHostConfigApplier.ApplyReturns(errors.New("boom"))
+			})
+
+			It("returns the error", func() {
 				Expect(applier.Apply(lagertest.NewTestLogger("test"), kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("boom"))
+			})
+
+			It("does not configure the container", func() {
+				Expect(applier.Apply(lagertest.NewTestLogger("test"), kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("boom"))
+				Expect(fakeContainerConfigApplier.ApplyCallCount()).To(Equal(0))
+			})
+
+			It("does not configure IPTables", func() {
+				Expect(applier.Apply(lagertest.NewTestLogger("test"), kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("boom"))
+				Expect(fakeIPTablesApplier.ApplyCallCount()).To(Equal(0))
+			})
+		})
+
+		It("applies the iptable configuration", func() {
+			_, subnet, _ := net.ParseCIDR("1.2.3.4/5")
+			cfg := kawasaki.NetworkConfig{
+				IPTableChain: "the-iptable-chain",
+				BridgeName:   "the-bridge-name",
+				ContainerIP:  net.ParseIP("1.2.3.4"),
+				Subnet:       subnet,
+			}
+
+			Expect(applier.Apply(lagertest.NewTestLogger("test"), cfg, netnsFD.Name())).To(Succeed())
+			Expect(fakeIPTablesApplier.ApplyCallCount()).To(Equal(1))
+			instanceChain, bridgeName, ip, subnet := fakeIPTablesApplier.ApplyArgsForCall(0)
+			Expect(instanceChain).To(Equal("the-iptable-chain"))
+			Expect(bridgeName).To(Equal("the-bridge-name"))
+			Expect(ip).To(Equal(net.ParseIP("1.2.3.4")))
+			Expect(subnet).To(Equal(subnet))
+		})
+
+		Context("when applying IPTables configuration fails", func() {
+			It("returns the error", func() {
+				fakeIPTablesApplier.ApplyReturns(errors.New("oh no"))
+				Expect(applier.Apply(lagertest.NewTestLogger("test"), kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("oh no"))
 			})
 		})
 

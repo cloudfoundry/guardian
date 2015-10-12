@@ -1,6 +1,7 @@
 package kawasaki
 
 import (
+	"net"
 	"os"
 
 	"github.com/pivotal-golang/lager"
@@ -14,6 +15,7 @@ type NetnsExecer interface {
 type applier struct {
 	hostConfigApplier      HostApplier
 	containerConfigApplier ContainerApplier
+	iptablesApplier        IPTablesApplier
 	nsExecer               NetnsExecer
 }
 
@@ -22,15 +24,22 @@ type HostApplier interface {
 	Apply(cfg NetworkConfig, netnsFD *os.File) error
 }
 
+//go:generate counterfeiter . IPTablesApplier
+type IPTablesApplier interface {
+	Apply(instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error
+	Teardown(instanceChain string) error
+}
+
 //go:generate counterfeiter . ContainerApplier
 type ContainerApplier interface {
 	Apply(cfg NetworkConfig) error
 }
 
-func NewConfigApplier(hostConfigApplier HostApplier, containerConfigApplier ContainerApplier, nsExecer NetnsExecer) *applier {
+func NewConfigApplier(hostConfigApplier HostApplier, containerConfigApplier ContainerApplier, iptablesApplier IPTablesApplier, nsExecer NetnsExecer) *applier {
 	return &applier{
 		hostConfigApplier:      hostConfigApplier,
 		containerConfigApplier: containerConfigApplier,
+		iptablesApplier:        iptablesApplier,
 		nsExecer:               nsExecer,
 	}
 }
@@ -42,6 +51,10 @@ func (c *applier) Apply(log lager.Logger, cfg NetworkConfig, nsPath string) erro
 	}
 
 	if err := c.hostConfigApplier.Apply(cfg, fd); err != nil {
+		return err
+	}
+
+	if err := c.iptablesApplier.Apply(cfg.IPTableChain, cfg.BridgeName, cfg.ContainerIP, cfg.Subnet); err != nil {
 		return err
 	}
 

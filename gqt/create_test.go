@@ -78,14 +78,14 @@ var _ = Describe("Creating a Container", func() {
 
 			It("should kill the containers init process", func() {
 				pid := initProcessPID(container.Handle())
-				var lsOfExitCode = func() int {
-					sess, err := gexec.Start(exec.Command("lsof", "-p", fmt.Sprintf("%d", pid)), GinkgoWriter, GinkgoWriter)
+				var killExitCode = func() int {
+					sess, err := gexec.Start(exec.Command("kill", "-0", fmt.Sprintf("%d", pid)), GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
 					sess.Wait(1 * time.Second)
 					return sess.ExitCode()
 				}
 
-				Eventually(lsOfExitCode, "5s").Should(Equal(0))
+				Eventually(killExitCode, "5s").Should(Equal(1))
 			})
 
 			It("should destroy the container's depot directory", func() {

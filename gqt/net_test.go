@@ -1,6 +1,8 @@
 package gqt_test
 
 import (
+	"fmt"
+	"net"
 	"os/exec"
 
 	"github.com/cloudfoundry-incubator/garden"
@@ -37,7 +39,7 @@ var _ = Describe("Net", func() {
 			garden.ProcessSpec{
 				Path: "/sbin/ifconfig",
 				User: "root",
-			}, garden.ProcessIO{Stdout: buffer},
+			}, garden.ProcessIO{Stdout: buffer, Stderr: GinkgoWriter},
 		)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(proc.Wait()).To(Equal(0))
@@ -107,5 +109,34 @@ var _ = Describe("Net", func() {
 			Expect(out).To(ContainSubstring(" 0% packet loss"))
 			Expect(err).ToNot(HaveOccurred())
 		})
+
+		It("should access internet", func() {
+			ips, err := net.LookupIP("www.example.com")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(checkConnection(container, ips[0].String(), 80)).To(Succeed())
+		})
 	})
 })
+
+func checkConnection(container garden.Container, ip string, port int) error {
+	process, err := container.Run(garden.ProcessSpec{
+		User: "alice",
+		Path: "sh",
+		Args: []string{"-c", fmt.Sprintf("echo hello | nc -w1 %s %d", ip, port)},
+	}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
+	if err != nil {
+		return err
+	}
+
+	exitCode, err := process.Wait()
+	if err != nil {
+		return err
+	}
+
+	if exitCode == 0 {
+		return nil
+	} else {
+		return fmt.Errorf("Request failed. Process exited with code %d", exitCode)
+	}
+}

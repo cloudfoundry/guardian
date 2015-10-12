@@ -23,7 +23,7 @@ var _ = Describe("ConfigCreator", func() {
 
 		logger = lagertest.NewTestLogger("test")
 
-		creator = kawasaki.NewConfigCreator()
+		creator = kawasaki.NewConfigCreator("intf-prefix", "chain-prefix")
 	})
 
 	It("assigns the bridge name based on the subnet", func() {
@@ -33,23 +33,37 @@ var _ = Describe("ConfigCreator", func() {
 		Expect(config.BridgeName).To(Equal("br-192-168-12-0"))
 	})
 
-	Context("when the interface names are short", func() {
+	Context("when the handle is short", func() {
 		It("assigns the correct interface names", func() {
 			config, err := creator.Create(logger, "banana", subnet, ip)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(config.HostIntf).To(Equal("w-banana-0"))
-			Expect(config.ContainerIntf).To(Equal("w-banana-1"))
+			Expect(config.HostIntf).To(Equal("intf-prefix-banana-0"))
+			Expect(config.ContainerIntf).To(Equal("intf-prefix-banana-1"))
+		})
+
+		It("assigns the correct instance chain name", func() {
+			config, err := creator.Create(logger, "banana", subnet, ip)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(config.IPTableChain).To(Equal("chain-prefix-banana"))
 		})
 	})
 
-	Context("when the interface names are long", func() {
-		It("truncates the names", func() {
+	Context("when the handle is long", func() {
+		It("truncates the interface names", func() {
 			config, err := creator.Create(logger, "bananashmanana", subnet, ip)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(config.HostIntf).To(Equal("w-bananash-0"))
-			Expect(config.ContainerIntf).To(Equal("w-bananash-1"))
+			Expect(config.HostIntf).To(Equal("intf-prefix-bananash-0"))
+			Expect(config.ContainerIntf).To(Equal("intf-prefix-bananash-1"))
+		})
+
+		It("truncates the name to create the iptable chain name", func() {
+			config, err := creator.Create(logger, "bananashmanana", subnet, ip)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(config.IPTableChain).To(Equal("chain-prefix-bananash"))
 		})
 	})
 
