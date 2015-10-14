@@ -12,6 +12,7 @@ type Containerizer interface {
 	Create(log lager.Logger, spec DesiredContainerSpec) error
 	Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Destroy(log lager.Logger, handle string) error
+	Handles() ([]string, error)
 }
 
 //go:generate counterfeiter . Networker
@@ -95,12 +96,29 @@ func (g *Gardener) Destroy(handle string) error {
 	return g.Containerizer.Destroy(g.Logger, handle)
 }
 
-func (g *Gardener) Stop()                                                    {}
-func (g *Gardener) GraceTime(garden.Container) time.Duration                 { return 0 }
-func (g *Gardener) Ping() error                                              { return nil }
-func (g *Gardener) Capacity() (garden.Capacity, error)                       { return garden.Capacity{}, nil }
-func (g *Gardener) Containers(garden.Properties) ([]garden.Container, error) { return nil, nil }
+func (g *Gardener) Stop()                                    {}
+func (g *Gardener) GraceTime(garden.Container) time.Duration { return 0 }
+func (g *Gardener) Ping() error                              { return nil }
+func (g *Gardener) Capacity() (garden.Capacity, error)       { return garden.Capacity{}, nil }
 
+func (g *Gardener) Containers(garden.Properties) ([]garden.Container, error) {
+	containers := []garden.Container{}
+
+	handles, err := g.Containerizer.Handles()
+	if err != nil {
+		return containers, err
+	}
+
+	for _, handle := range handles {
+		container, err := g.Lookup(handle)
+		if err != nil {
+			return []garden.Container{}, err
+		}
+		containers = append(containers, container)
+	}
+
+	return containers, nil
+}
 func (g *Gardener) BulkInfo(handles []string) (map[string]garden.ContainerInfoEntry, error) {
 	return nil, nil
 }

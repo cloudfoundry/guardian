@@ -166,6 +166,31 @@ var _ = Describe("Rundmc", func() {
 			})
 		})
 	})
+
+	Describe("handles", func() {
+		Context("when handles exist", func() {
+			BeforeEach(func() {
+				fakeDepot.HandlesReturns([]string{"banana", "banana2"}, nil)
+			})
+
+			It("should return the handles", func() {
+				Expect(containerizer.Handles()).To(ConsistOf("banana", "banana2"))
+			})
+		})
+
+		Context("when the depot returns an error", func() {
+			testErr := errors.New("spiderman error")
+
+			BeforeEach(func() {
+				fakeDepot.HandlesReturns([]string{}, testErr)
+			})
+
+			It("should return the error", func() {
+				_, err := containerizer.Handles()
+				Expect(err).To(MatchError(testErr))
+			})
+		})
+	})
 })
 
 func arg2(_ lager.Logger, i interface{}) interface{} {

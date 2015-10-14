@@ -2,6 +2,8 @@ package depot
 
 import (
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -67,6 +69,19 @@ func (d *DirectoryDepot) Destroy(log lager.Logger, handle string) error {
 	defer log.Info("finished")
 
 	return os.RemoveAll(d.toDir(handle))
+}
+
+func (d *DirectoryDepot) Handles() ([]string, error) {
+	handles := []string{}
+	fileInfos, err := ioutil.ReadDir(d.dir)
+	if err != nil {
+		return handles, fmt.Errorf("invalid depot directory %s: %s", d.dir, err)
+	}
+
+	for _, f := range fileInfos {
+		handles = append(handles, f.Name())
+	}
+	return handles, nil
 }
 
 func (d *DirectoryDepot) toDir(handle string) string {

@@ -16,6 +16,7 @@ type Depot interface {
 	Create(log lager.Logger, handle string, bundle depot.BundleSaver) error
 	Lookup(log lager.Logger, handle string) (path string, err error)
 	Destroy(log lager.Logger, handle string) error
+	Handles() ([]string, error)
 }
 
 //go:generate counterfeiter . Bundler
@@ -122,4 +123,9 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 	}
 
 	return c.depot.Destroy(log, handle)
+}
+
+// Handles returns a list of all container handles
+func (c *Containerizer) Handles() ([]string, error) {
+	return c.depot.Handles()
 }

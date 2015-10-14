@@ -39,6 +39,13 @@ type FakeDepot struct {
 	destroyReturns struct {
 		result1 error
 	}
+	HandlesStub        func() ([]string, error)
+	handlesMutex       sync.RWMutex
+	handlesArgsForCall []struct{}
+	handlesReturns     struct {
+		result1 []string
+		result2 error
+	}
 }
 
 func (fake *FakeDepot) Create(log lager.Logger, handle string, bundle depot.BundleSaver) error {
@@ -140,6 +147,31 @@ func (fake *FakeDepot) DestroyReturns(result1 error) {
 	fake.destroyReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeDepot) Handles() ([]string, error) {
+	fake.handlesMutex.Lock()
+	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct{}{})
+	fake.handlesMutex.Unlock()
+	if fake.HandlesStub != nil {
+		return fake.HandlesStub()
+	} else {
+		return fake.handlesReturns.result1, fake.handlesReturns.result2
+	}
+}
+
+func (fake *FakeDepot) HandlesCallCount() int {
+	fake.handlesMutex.RLock()
+	defer fake.handlesMutex.RUnlock()
+	return len(fake.handlesArgsForCall)
+}
+
+func (fake *FakeDepot) HandlesReturns(result1 []string, result2 error) {
+	fake.HandlesStub = nil
+	fake.handlesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
 }
 
 var _ rundmc.Depot = new(FakeDepot)

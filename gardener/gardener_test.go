@@ -156,4 +156,50 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 	})
+
+	Describe("listing containers", func() {
+		Context("when containers exist", func() {
+			BeforeEach(func() {
+				containerizer.HandlesReturns([]string{"banana", "banana2"}, nil)
+			})
+
+			It("should return the containers", func() {
+				containers, err := gdnr.Containers(garden.Properties{})
+				Expect(err).NotTo(HaveOccurred())
+
+				handles := []string{}
+				for _, c := range containers {
+					handles = append(handles, c.Handle())
+				}
+
+				Expect(handles).To(ConsistOf("banana", "banana2"))
+			})
+		})
+
+		Context("when no containers exist", func() {
+			BeforeEach(func() {
+				containerizer.HandlesReturns([]string{}, nil)
+			})
+
+			It("should return an empty list", func() {
+				containers, err := gdnr.Containers(garden.Properties{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(containers).To(BeEmpty())
+			})
+		})
+
+		Context("when the containerizer returns an error", func() {
+			testErr := errors.New("failure")
+
+			BeforeEach(func() {
+				containerizer.HandlesReturns([]string{}, testErr)
+			})
+
+			It("should return an empty list", func() {
+				_, err := gdnr.Containers(garden.Properties{})
+				Expect(err).To(MatchError(testErr))
+			})
+		})
+	})
 })

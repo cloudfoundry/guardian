@@ -17,7 +17,7 @@ import (
 
 var _ = Describe("Depot", func() {
 	var (
-		tmpDir     string
+		depotDir   string
 		fakeBundle *fakes.FakeBundleCreator
 		dirdepot   *depot.DirectoryDepot
 		logger     lager.Logger
@@ -26,13 +26,13 @@ var _ = Describe("Depot", func() {
 	BeforeEach(func() {
 		var err error
 
-		tmpDir, err = ioutil.TempDir("", "depot-test")
+		depotDir, err = ioutil.TempDir("", "depot-test")
 		Expect(err).NotTo(HaveOccurred())
 
 		logger = lagertest.NewTestLogger("test")
 
 		fakeBundle = new(fakes.FakeBundleCreator)
-		dirdepot = depot.New(tmpDir)
+		dirdepot = depot.New(depotDir)
 	})
 
 	Describe("lookup", func() {
@@ -45,8 +45,8 @@ var _ = Describe("Depot", func() {
 
 		Context("when a subdirectory with the given name exists", func() {
 			It("returns the absolute path of the directory", func() {
-				os.Mkdir(filepath.Join(tmpDir, "potato"), 0700)
-				Expect(dirdepot.Lookup(logger, "potato")).To(Equal(filepath.Join(tmpDir, "potato")))
+				os.Mkdir(filepath.Join(depotDir, "potato"), 0700)
+				Expect(dirdepot.Lookup(logger, "potato")).To(Equal(filepath.Join(depotDir, "potato")))
 			})
 		})
 	})
@@ -54,32 +54,64 @@ var _ = Describe("Depot", func() {
 	Describe("create", func() {
 		It("should create a directory", func() {
 			Expect(dirdepot.Create(logger, "aardvaark", fakeBundle)).To(Succeed())
-			Expect(filepath.Join(tmpDir, "aardvaark")).To(BeADirectory())
+			Expect(filepath.Join(depotDir, "aardvaark")).To(BeADirectory())
 		})
 
 		It("should serialize the a container config to the directory", func() {
 			Expect(dirdepot.Create(logger, "aardvaark", fakeBundle)).To(Succeed())
 			Expect(fakeBundle.SaveCallCount()).To(Equal(1))
-			Expect(fakeBundle.SaveArgsForCall(0)).To(Equal(path.Join(tmpDir, "aardvaark")))
+			Expect(fakeBundle.SaveArgsForCall(0)).To(Equal(path.Join(depotDir, "aardvaark")))
 		})
 
 		It("destroys the container directory if creation fails", func() {
 			fakeBundle.SaveReturns(errors.New("didn't work"))
 			Expect(dirdepot.Create(logger, "aardvaark", fakeBundle)).NotTo(Succeed())
-			Expect(filepath.Join(tmpDir, "aardvaark")).NotTo(BeADirectory())
+			Expect(filepath.Join(depotDir, "aardvaark")).NotTo(BeADirectory())
 		})
 	})
 
 	Describe("destroy", func() {
 		It("should destroy the container directory", func() {
-			Expect(os.MkdirAll(filepath.Join(tmpDir, "potato"), 0755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(depotDir, "potato"), 0755)).To(Succeed())
 			Expect(dirdepot.Destroy(logger, "potato")).To(Succeed())
-			Expect(filepath.Join(tmpDir, "potato")).NotTo(BeAnExistingFile())
+			Expect(filepath.Join(depotDir, "potato")).NotTo(BeAnExistingFile())
 		})
 
 		Context("when the container directory does not exist", func() {
 			It("does not error (i.e. the method is idempotent)", func() {
 				Expect(dirdepot.Destroy(logger, "potato")).To(Succeed())
+			})
+		})
+	})
+
+	Describe("handles", func() {
+		Context("when handles exist", func() {
+			BeforeEach(func() {
+				Expect(dirdepot.Create(logger, "banana", fakeBundle)).To(Succeed())
+				Expect(dirdepot.Create(logger, "banana2", fakeBundle)).To(Succeed())
+			})
+
+			It("should return the handles", func() {
+				Expect(dirdepot.Handles()).To(ConsistOf("banana", "banana2"))
+			})
+		})
+
+		Context("when no handles exist", func() {
+			It("should return an empty list", func() {
+				Expect(dirdepot.Handles()).To(BeEmpty())
+			})
+		})
+
+		Context("when the depot directory does not exist", func() {
+			var invalidDepot *depot.DirectoryDepot
+
+			BeforeEach(func() {
+				invalidDepot = depot.New("rubbish")
+			})
+
+			It("should return the handles", func() {
+				_, err := invalidDepot.Handles()
+				Expect(err).To(MatchError("invalid depot directory rubbish: open rubbish: no such file or directory"))
 			})
 		})
 	})

@@ -40,6 +40,13 @@ type FakeContainerizer struct {
 	destroyReturns struct {
 		result1 error
 	}
+	HandlesStub        func() ([]string, error)
+	handlesMutex       sync.RWMutex
+	handlesArgsForCall []struct{}
+	handlesReturns     struct {
+		result1 []string
+		result2 error
+	}
 }
 
 func (fake *FakeContainerizer) Create(log lager.Logger, spec gardener.DesiredContainerSpec) error {
@@ -142,6 +149,31 @@ func (fake *FakeContainerizer) DestroyReturns(result1 error) {
 	fake.destroyReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeContainerizer) Handles() ([]string, error) {
+	fake.handlesMutex.Lock()
+	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct{}{})
+	fake.handlesMutex.Unlock()
+	if fake.HandlesStub != nil {
+		return fake.HandlesStub()
+	} else {
+		return fake.handlesReturns.result1, fake.handlesReturns.result2
+	}
+}
+
+func (fake *FakeContainerizer) HandlesCallCount() int {
+	fake.handlesMutex.RLock()
+	defer fake.handlesMutex.RUnlock()
+	return len(fake.handlesArgsForCall)
+}
+
+func (fake *FakeContainerizer) HandlesReturns(result1 []string, result2 error) {
+	fake.HandlesStub = nil
+	fake.handlesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
 }
 
 var _ gardener.Containerizer = new(FakeContainerizer)
