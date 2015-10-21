@@ -21,7 +21,7 @@ var _ = Describe("Creating a Container", func() {
 	var client *runner.RunningGarden
 	var container garden.Container
 
-	Context("after creating a container", func() {
+	Context("after creating a container without a specified handle", func() {
 		BeforeEach(func() {
 			client = startGarden()
 
@@ -34,6 +34,13 @@ var _ = Describe("Creating a Container", func() {
 			Expect(container.Handle()).NotTo(BeEmpty())
 			Expect(filepath.Join(client.DepotDir, container.Handle())).To(BeADirectory())
 			Expect(filepath.Join(client.DepotDir, container.Handle(), "config.json")).To(BeARegularFile())
+		})
+
+		It("should lookup the right container", func() {
+			lookupContainer, lookupError := client.Lookup(container.Handle())
+
+			Expect(lookupError).NotTo(HaveOccurred())
+			Expect(lookupContainer).To(Equal(container))
 		})
 
 		DescribeTable("placing the container in to all namespaces", func(ns string) {
@@ -93,6 +100,29 @@ var _ = Describe("Creating a Container", func() {
 			})
 		})
 	})
+
+	Context("after creating a container with a specified handle", func() {
+		BeforeEach(func() {
+			client = startGarden()
+
+			var mySpec garden.ContainerSpec
+			mySpec = garden.ContainerSpec{
+				Handle: "containerA",
+			}
+
+			var err error
+			container, err = client.Create(mySpec)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("should lookup the right container for the handle", func() {
+			lookupContainer, lookupError := client.Lookup("containerA")
+
+			Expect(lookupError).NotTo(HaveOccurred())
+			Expect(lookupContainer).To(Equal(container))
+		})
+	})
+
 })
 
 func initProcessPID(handle string) int {
