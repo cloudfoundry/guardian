@@ -17,15 +17,24 @@ var _ = Describe("Net", func() {
 	var (
 		client    *runner.RunningGarden
 		container garden.Container
+
+		ipPrefix string
+		subnet   string
 	)
+
+	var ipAddress = func(index int) string {
+		return fmt.Sprintf("%s.%d", ipPrefix, index)
+	}
 
 	BeforeEach(func() {
 		var err error
 
 		client = startGarden()
+		ipPrefix = fmt.Sprintf("192.168.%d", 12+GinkgoParallelNode())
+		subnet = ipAddress(0) + "/24"
 
 		container, err = client.Create(garden.ContainerSpec{
-			Network: "192.168.12.0/24",
+			Network: subnet,
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -54,17 +63,19 @@ var _ = Describe("Net", func() {
 			garden.ProcessSpec{
 				Path: "ifconfig",
 				User: "root",
-			}, garden.ProcessIO{Stdout: buffer},
+			}, garden.ProcessIO{Stdout: io.MultiWriter(GinkgoWriter, buffer), Stderr: io.MultiWriter(GinkgoWriter, buffer)},
 		)
-
 		Expect(err).NotTo(HaveOccurred())
-		Expect(proc.Wait()).To(Equal(0))
 
-		Expect(buffer).To(gbytes.Say("192.168.12.2"))
+		exitCode, err := proc.Wait()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(exitCode).To(Equal(0))
+
+		Expect(buffer).To(gbytes.Say(ipAddress(2)))
 	})
 
 	It("should be pingable", func() {
-		out, err := exec.Command("/bin/ping", "-c 2", "192.168.12.2").Output()
+		out, err := exec.Command("/bin/ping", "-c 2", ipAddress(2)).Output()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(out).To(ContainSubstring(" 0% packet loss"))
 	})
@@ -76,7 +87,7 @@ var _ = Describe("Net", func() {
 			var err error
 			originContainer = container
 			container, err = client.Create(garden.ContainerSpec{
-				Network: "192.168.12.0/24",
+				Network: subnet,
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -98,15 +109,15 @@ var _ = Describe("Net", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(proc.Wait()).To(Equal(0))
 
-			Expect(buffer).To(gbytes.Say("192.168.12.3"))
+			Expect(buffer).To(gbytes.Say(ipAddress(3)))
 		})
 
 		It("should be pingable", func() {
-			out, err := exec.Command("/bin/ping", "-c 2", "192.168.12.2").Output()
+			out, err := exec.Command("/bin/ping", "-c 2", ipAddress(2)).Output()
 			Expect(out).To(ContainSubstring(" 0% packet loss"))
 			Expect(err).ToNot(HaveOccurred())
 
-			out, err = exec.Command("/bin/ping", "-c 2", "192.168.12.3").Output()
+			out, err = exec.Command("/bin/ping", "-c 2", ipAddress(3)).Output()
 			Expect(out).To(ContainSubstring(" 0% packet loss"))
 			Expect(err).ToNot(HaveOccurred())
 		})
