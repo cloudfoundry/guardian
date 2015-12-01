@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"fmt"
+	"io"
 	"net"
 	"os/exec"
 
@@ -37,9 +38,9 @@ var _ = Describe("Net", func() {
 		buffer := gbytes.NewBuffer()
 		proc, err := container.Run(
 			garden.ProcessSpec{
-				Path: "/sbin/ifconfig",
+				Path: "ifconfig",
 				User: "root",
-			}, garden.ProcessIO{Stdout: buffer, Stderr: GinkgoWriter},
+			}, garden.ProcessIO{Stdout: io.MultiWriter(GinkgoWriter, buffer), Stderr: GinkgoWriter},
 		)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(proc.Wait()).To(Equal(0))
@@ -51,7 +52,7 @@ var _ = Describe("Net", func() {
 		buffer := gbytes.NewBuffer()
 		proc, err := container.Run(
 			garden.ProcessSpec{
-				Path: "/sbin/ifconfig",
+				Path: "ifconfig",
 				User: "root",
 			}, garden.ProcessIO{Stdout: buffer},
 		)
@@ -89,7 +90,7 @@ var _ = Describe("Net", func() {
 			buffer := gbytes.NewBuffer()
 			proc, err := container.Run(
 				garden.ProcessSpec{
-					Path: "/sbin/ifconfig",
+					Path: "ifconfig",
 					User: "root",
 				}, garden.ProcessIO{Stdout: buffer},
 			)
