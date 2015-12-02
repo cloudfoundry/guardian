@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/gardener/fakes"
 	. "github.com/onsi/ginkgo"
@@ -16,6 +17,7 @@ import (
 var _ = Describe("Gardener", func() {
 	var (
 		networker     *fakes.FakeNetworker
+		volumeCreator *fakes.FakeVolumeCreator
 		containerizer *fakes.FakeContainerizer
 		uidGenerator  *fakes.FakeUidGenerator
 
@@ -26,10 +28,12 @@ var _ = Describe("Gardener", func() {
 		containerizer = new(fakes.FakeContainerizer)
 		uidGenerator = new(fakes.FakeUidGenerator)
 		networker = new(fakes.FakeNetworker)
+		volumeCreator = new(fakes.FakeVolumeCreator)
 		gdnr = &gardener.Gardener{
 			Containerizer: containerizer,
 			UidGenerator:  uidGenerator,
 			Networker:     networker,
+			VolumeCreator: volumeCreator,
 			Logger:        lagertest.NewTestLogger("test"),
 		}
 	})
@@ -64,6 +68,38 @@ var _ = Describe("Gardener", func() {
 			Context("when networker fails", func() {
 				BeforeEach(func() {
 					networker.NetworkReturns("", errors.New("booom!"))
+				})
+
+				It("returns an error", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+					Expect(err).To(MatchError("booom!"))
+				})
+
+				It("does not create a container", func() {
+					gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+					Expect(containerizer.CreateCallCount()).To(Equal(0))
+				})
+			})
+
+			It("passes the created rootfs to the containerizer", func() {
+				volumeCreator.CreateStub = func(handle string, spec rootfs_provider.Spec) (string, []string, error) {
+					return "/path/to/rootfs/" + spec.RootFS.String() + "/" + handle, []string{}, nil
+				}
+
+				_, err := gdnr.Create(garden.ContainerSpec{
+					Handle:     "bob",
+					RootFSPath: "alice",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(containerizer.CreateCallCount()).To(Equal(1))
+				_, spec := containerizer.CreateArgsForCall(0)
+				Expect(spec.RootFSPath).To(Equal("/path/to/rootfs/alice/bob"))
+			})
+
+			Context("when volume creator fails", func() {
+				BeforeEach(func() {
+					volumeCreator.CreateReturns("", []string{}, errors.New("booom!"))
 				})
 
 				It("returns an error", func() {

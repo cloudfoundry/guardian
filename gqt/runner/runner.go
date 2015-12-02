@@ -54,6 +54,8 @@ func Start(bin string, iodaemonBin string, argv ...string) *RunningGarden {
 	graphPath := filepath.Join(GraphRoot, fmt.Sprintf("node-%d", ginkgo.GinkgoParallelNode()))
 	depotDir := filepath.Join(tmpDir, "containers")
 
+	MustMountTmpfs(graphPath)
+
 	r := &RunningGarden{
 		DepotDir: depotDir,
 
@@ -142,6 +144,7 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, rootFSPat
 	gardenArgs = appendDefaultFlag(gardenArgs, "--listenNetwork", network)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--listenAddr", addr)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--depot", depotDir)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--graph", graphPath)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--iodaemonBin", iodaemonBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--logLevel", "debug")
@@ -151,6 +154,8 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, rootFSPat
 }
 
 func (r *RunningGarden) Cleanup() {
+	MustUnmountTmpfs(r.GraphPath)
+
 	if err := os.RemoveAll(r.GraphPath); err != nil {
 		r.logger.Error("remove graph", err)
 	}

@@ -14,6 +14,11 @@ import (
 
 	"github.com/cloudfoundry-incubator/cf-debug-server"
 	"github.com/cloudfoundry-incubator/cf-lager"
+	quotaed_aufs "github.com/cloudfoundry-incubator/garden-shed/docker_drivers/aufs"
+	"github.com/cloudfoundry-incubator/garden-shed/layercake"
+	"github.com/cloudfoundry-incubator/garden-shed/pkg/retrier"
+	"github.com/cloudfoundry-incubator/garden-shed/repository_fetcher"
+	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/garden/server"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/goci/specs"
@@ -29,8 +34,15 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
+	"github.com/cloudfoundry-incubator/guardian/sysinfo"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
+	"github.com/docker/docker/daemon/graphdriver"
+	_ "github.com/docker/docker/daemon/graphdriver/aufs"
+	"github.com/docker/docker/graph"
+	_ "github.com/docker/docker/pkg/chrootarchive" // allow reexec of docker-applyLayer
+	"github.com/docker/docker/pkg/reexec"
 	"github.com/nu7hatch/gouuid"
+	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -185,6 +197,10 @@ var maxContainers = flag.Uint(
 	"Maximum number of containers that can be created")
 
 func main() {
+	if reexec.Init() {
+		return
+	}
+
 	cf_debug_server.AddFlags(flag.CommandLine)
 	cf_lager.AddFlags(flag.CommandLine)
 	flag.Parse()
@@ -217,6 +233,7 @@ func main() {
 		UidGenerator:  wireUidGenerator(),
 		Starter:       wireStarter(logger, iptablesMgr),
 		Networker:     wireNetworker(logger, *tag, networkPoolCIDR, iptablesMgr, interfacePrefix, chainPrefix),
+		VolumeCreator: wireVolumeCreator(logger, *graphRoot),
 		Containerizer: wireContainerizer(logger, *depotPath, *iodaemonBin, resolvedRootFSPath),
 		Logger:        logger,
 	}
@@ -311,6 +328,103 @@ func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, ipt
 			&netns.Execer{},
 		),
 	)
+}
+
+func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.CakeOrdinator {
+	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})
+	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger}
+
+	if err := os.MkdirAll(graphRoot, 0755); err != nil {
+		logger.Fatal("failed-to-create-graph-directory", err)
+	}
+
+	dockerGraphDriver, err := graphdriver.New(graphRoot, nil)
+	if err != nil {
+		logger.Fatal("failed-to-construct-graph-driver", err)
+	}
+
+	backingStoresPath := filepath.Join(graphRoot, "backing_stores")
+	if err := os.MkdirAll(backingStoresPath, 0660); err != nil {
+		logger.Fatal("failed-to-mkdir-backing-stores", err)
+	}
+
+	graphRetrier := &retrier.Retrier{
+		Timeout:         100 * time.Second,
+		PollingInterval: 500 * time.Millisecond,
+		Clock:           clock.NewClock(),
+	}
+
+	quotaedGraphDriver := &quotaed_aufs.QuotaedDriver{
+		GraphDriver: dockerGraphDriver,
+		Unmount:     quotaed_aufs.Unmount,
+		BackingStoreMgr: &quotaed_aufs.BackingStore{
+			RootPath: backingStoresPath,
+			Logger:   logger.Session("backing-store-mgr"),
+		},
+		LoopMounter: &quotaed_aufs.Loop{
+			Retrier: graphRetrier,
+			Logger:  logger.Session("loop-mounter"),
+		},
+		Retrier:  graphRetrier,
+		RootPath: graphRoot,
+		Logger:   logger.Session("quotaed-driver"),
+	}
+
+	dockerGraph, err := graph.NewGraph(graphRoot, quotaedGraphDriver)
+	if err != nil {
+		logger.Fatal("failed-to-construct-graph", err)
+	}
+
+	var cake layercake.Cake = &layercake.Docker{
+		Graph:  dockerGraph,
+		Driver: quotaedGraphDriver,
+	}
+
+	if cake.DriverName() == "aufs" {
+		cake = &layercake.AufsCake{
+			Cake:      cake,
+			Runner:    runner,
+			GraphRoot: graphRoot,
+		}
+	}
+
+	repoFetcher := &repository_fetcher.CompositeFetcher{
+		LocalFetcher: &repository_fetcher.Local{
+			Cake:              cake,
+			DefaultRootFSPath: *rootFSPath,
+			IDProvider:        repository_fetcher.LayerIDProvider{},
+		},
+	}
+
+	maxId := sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID())
+	mappingList := rootfs_provider.MappingList{
+		{
+			FromID: 0,
+			ToID:   maxId,
+			Size:   1,
+		},
+		{
+			FromID: 1,
+			ToID:   1,
+			Size:   maxId - 1,
+		},
+	}
+
+	rootFSNamespacer := &rootfs_provider.UidNamespacer{
+		Logger: logger,
+		Translator: rootfs_provider.NewUidTranslator(
+			mappingList, // uid
+			mappingList, // gid
+		),
+	}
+
+	layerCreator := rootfs_provider.NewLayerCreator(
+		cake, rootfs_provider.SimpleVolumeCreator{}, rootFSNamespacer)
+
+	cakeOrdinator := rootfs_provider.NewCakeOrdinator(
+		cake, repoFetcher, layerCreator, nil, logger.Session("cake-ordinator"),
+	)
+	return cakeOrdinator
 }
 
 func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, defaultRootFSPath string) *rundmc.Containerizer {

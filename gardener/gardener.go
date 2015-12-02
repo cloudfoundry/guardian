@@ -1,13 +1,16 @@
 package gardener
 
 import (
+	"net/url"
 	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/pivotal-golang/lager"
 )
 
 //go:generate counterfeiter . Containerizer
+
 type Containerizer interface {
 	Create(log lager.Logger, spec DesiredContainerSpec) error
 	Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
@@ -16,11 +19,19 @@ type Containerizer interface {
 }
 
 //go:generate counterfeiter . Networker
+
 type Networker interface {
 	Network(log lager.Logger, handle, spec string) (string, error)
 }
 
+//go:generate counterfeiter . VolumeCreator
+
+type VolumeCreator interface {
+	Create(handle string, spec rootfs_provider.Spec) (string, []string, error)
+}
+
 //go:generate counterfeiter . UidGenerator
+
 type UidGenerator interface {
 	Generate() string
 }
@@ -59,6 +70,9 @@ type Gardener struct {
 	// Networker creates a network for containers
 	Networker Networker
 
+	// VolumeCreator creates volumes for containers
+	VolumeCreator VolumeCreator
+
 	Logger lager.Logger
 }
 
@@ -74,8 +88,19 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		return nil, err
 	}
 
+	rootFSURL, err := url.Parse(spec.RootFSPath)
+	if err != nil {
+		return nil, err
+	}
+
+	rootFSPath, _, err := g.VolumeCreator.Create(spec.Handle, rootfs_provider.Spec{RootFS: rootFSURL})
+	if err != nil {
+		return nil, err
+	}
+
 	if err := g.Containerizer.Create(log, DesiredContainerSpec{
 		Handle:      spec.Handle,
+		RootFSPath:  rootFSPath,
 		NetworkPath: networkPath,
 	}); err != nil {
 		return nil, err

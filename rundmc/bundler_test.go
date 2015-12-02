@@ -21,11 +21,22 @@ var _ = Describe("Bundle", func() {
 				specs.Namespace{Type: specs.NetworkNamespace, Path: "/path/to/network"},
 			))
 		})
+	})
 
-		It("does not modify the other fields", func() {
-			base := goci.Bundle().WithProcess(goci.Process("potato"))
-			modifiedBundle := rundmc.BundleTemplate{Bndl: base}.Bundle(gardener.DesiredContainerSpec{})
-			Expect(modifiedBundle.Spec.Process.Args).Should(ConsistOf("potato"))
+	Context("when there is a root filesystem path", func() {
+		It("adds the rootfs path to the bundle", func() {
+			base := goci.Bundle()
+			modifiedBundle := rundmc.BundleTemplate{Bndl: base}.Bundle(gardener.DesiredContainerSpec{
+				RootFSPath: "/some/path",
+			})
+
+			Expect(modifiedBundle.Spec.Root.Path).To(Equal("/some/path"))
 		})
+	})
+
+	It("does not modify the other fields", func() {
+		base := goci.Bundle().WithProcess(goci.Process("potato"))
+		modifiedBundle := rundmc.BundleTemplate{Bndl: base}.Bundle(gardener.DesiredContainerSpec{})
+		Expect(modifiedBundle.Spec.Process.Args).Should(ConsistOf("potato"))
 	})
 })

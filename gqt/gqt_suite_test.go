@@ -36,7 +36,7 @@ func TestGqt(t *testing.T) {
 	})
 
 	SetDefaultEventuallyTimeout(5 * time.Second)
-	RunSpecs(t, "Gqt Suite")
+	RunSpecs(t, "GQT Suite")
 }
 
 func startGarden(argv ...string) *runner.RunningGarden {

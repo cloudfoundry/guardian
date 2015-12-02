@@ -3,6 +3,7 @@ package gqt_test
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,6 +12,8 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
+
+	. "github.com/cloudfoundry-incubator/guardian/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
@@ -18,8 +21,10 @@ import (
 )
 
 var _ = Describe("Creating a Container", func() {
-	var client *runner.RunningGarden
-	var container garden.Container
+	var (
+		client    *runner.RunningGarden
+		container garden.Container
+	)
 
 	Context("after creating a container without a specified handle", func() {
 		BeforeEach(func() {
@@ -101,6 +106,47 @@ var _ = Describe("Creating a Container", func() {
 		})
 	})
 
+	Context("after creating a container with a specified root filesystem", func() {
+		var rootFSPath string
+
+		BeforeEach(func() {
+			var err error
+
+			client = startGarden()
+			rootFSPath, err = ioutil.TempDir("", "test-rootfs")
+			Expect(err).NotTo(HaveOccurred())
+			command := fmt.Sprintf("cp -rf %s/* %s", os.Getenv("GARDEN_TEST_ROOTFS"), rootFSPath)
+			Expect(exec.Command("sh", "-c", command).Run()).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(rootFSPath, "my-file"), []byte("some-content"), 0644)).To(Succeed())
+
+			container, err = client.Create(garden.ContainerSpec{
+				RootFSPath: rootFSPath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			client.DestroyAndStop()
+		})
+
+		It("provides the containers with the right rootfs", func() {
+			Expect(container).To(HaveFile("/my-file"))
+		})
+
+		It("isolates the filesystem properly for multiple containers", func() {
+			runCommand(container, "touch", []string{"/created-file"})
+			Expect(container).To(HaveFile("/created-file"))
+
+			container2, err := client.Create(garden.ContainerSpec{
+				RootFSPath: rootFSPath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(container2).To(HaveFile("/my-file"))
+			Expect(container2).NotTo(HaveFile("/created-file"))
+		})
+	})
+
 	Context("after creating a container with a specified handle", func() {
 		BeforeEach(func() {
 			Skip("skipping because we don't cleanup the networks, unpend after #101501268")
@@ -137,7 +183,6 @@ var _ = Describe("Creating a Container", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
-
 })
 
 func initProcessPID(handle string) int {
@@ -156,4 +201,18 @@ func initProcessPID(handle string) int {
 	}).Should(Succeed())
 
 	return state.Pid
+}
+
+func runCommand(container garden.Container, path string, args []string) {
+	proc, err := container.Run(
+		garden.ProcessSpec{
+			Path: path,
+			Args: args,
+		},
+		ginkgoIO)
+	Expect(err).NotTo(HaveOccurred())
+
+	exitCode, err := proc.Wait()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(exitCode).To(Equal(0))
 }

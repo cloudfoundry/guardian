@@ -11,5 +11,7 @@ type BundleTemplate struct {
 }
 
 func (base BundleTemplate) Bundle(spec gardener.DesiredContainerSpec) *goci.Bndl {
-	return base.WithNamespace(specs.Namespace{Type: specs.NetworkNamespace, Path: spec.NetworkPath})
+	return base.
+		WithNamespace(specs.Namespace{Type: specs.NetworkNamespace, Path: spec.NetworkPath}).
+		WithRootFS(spec.RootFSPath)
 }
