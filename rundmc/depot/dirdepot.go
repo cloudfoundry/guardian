@@ -29,7 +29,7 @@ func New(dir string) *DirectoryDepot {
 }
 
 func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle BundleSaver) error {
-	log = log.Session("create", lager.Data{"handle": handle})
+	log = log.Session("depot-create", lager.Data{"handle": handle})
 
 	log.Info("started")
 	defer log.Info("finished")

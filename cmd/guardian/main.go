@@ -444,7 +444,8 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, defaultRootFSP
 		WithResources(&specs.Resources{}).
 		WithMounts(goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"}).
 		WithRootFS(defaultRootFSPath).
-		WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`))
+		WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)).
+		WithDevices(specs.Device{Path: "/dev/null", Type: 'c', Major: 1, Minor: 3, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666})
 
 	return rundmc.New(depot, &rundmc.BundleTemplate{Bndl: baseBundle}, runcrunner, startCheck)
 }

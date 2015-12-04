@@ -55,7 +55,7 @@ func New(depot Depot, bundler Bundler, runner BundleRunner, startChecker Checker
 
 // Create creates a bundle in the depot and starts its init process
 func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerSpec) error {
-	log = log.Session("create", lager.Data{"handle": spec.Handle})
+	log = log.Session("containerizer-create", lager.Data{"handle": spec.Handle})
 
 	log.Info("started")
 	defer log.Info("finished")
@@ -72,10 +72,11 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 	}
 
 	stdoutR, stdoutW := io.Pipe()
-	if c.runner.Start(log, path, spec.Handle, garden.ProcessIO{
+	_, err = c.runner.Start(log, path, spec.Handle, garden.ProcessIO{
 		Stdout: io.MultiWriter(logging.Writer(log), stdoutW),
 		Stderr: logging.Writer(log),
-	}); err != nil {
+	})
+	if err != nil {
 		log.Error("start", err)
 		return err
 	}
