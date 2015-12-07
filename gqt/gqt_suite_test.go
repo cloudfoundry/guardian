@@ -40,7 +40,7 @@ func TestGqt(t *testing.T) {
 }
 
 func startGarden(argv ...string) *runner.RunningGarden {
-	gardenBin, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/guardian")
+	gardenBin, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/guardian", "-tags", "daemon")
 	Expect(err).NotTo(HaveOccurred())
 
 	iodaemonBin, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/cmd/iodaemon")
