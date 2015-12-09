@@ -16,10 +16,11 @@ import (
 
 var _ = Describe("Gardener", func() {
 	var (
-		networker     *fakes.FakeNetworker
-		volumeCreator *fakes.FakeVolumeCreator
-		containerizer *fakes.FakeContainerizer
-		uidGenerator  *fakes.FakeUidGenerator
+		networker       *fakes.FakeNetworker
+		volumeCreator   *fakes.FakeVolumeCreator
+		containerizer   *fakes.FakeContainerizer
+		uidGenerator    *fakes.FakeUidGenerator
+		sysinfoProvider *fakes.FakeSysInfoProvider
 
 		gdnr *gardener.Gardener
 	)
@@ -29,12 +30,14 @@ var _ = Describe("Gardener", func() {
 		uidGenerator = new(fakes.FakeUidGenerator)
 		networker = new(fakes.FakeNetworker)
 		volumeCreator = new(fakes.FakeVolumeCreator)
+		sysinfoProvider = new(fakes.FakeSysInfoProvider)
 		gdnr = &gardener.Gardener{
-			Containerizer: containerizer,
-			UidGenerator:  uidGenerator,
-			Networker:     networker,
-			VolumeCreator: volumeCreator,
-			Logger:        lagertest.NewTestLogger("test"),
+			SysInfoProvider: sysinfoProvider,
+			Containerizer:   containerizer,
+			UidGenerator:    uidGenerator,
+			Networker:       networker,
+			VolumeCreator:   volumeCreator,
+			Logger:          lagertest.NewTestLogger("test"),
 		}
 	})
 
@@ -235,6 +238,47 @@ var _ = Describe("Gardener", func() {
 			It("should return an empty list", func() {
 				_, err := gdnr.Containers(garden.Properties{})
 				Expect(err).To(MatchError(testErr))
+			})
+		})
+	})
+
+	Describe("getting capacity", func() {
+		BeforeEach(func() {
+			sysinfoProvider.TotalMemoryReturns(999, nil)
+			sysinfoProvider.TotalDiskReturns(888, nil)
+			networker.CapacityReturns(1000)
+		})
+
+		It("returns capacity", func() {
+			capacity, err := gdnr.Capacity()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(capacity.MemoryInBytes).To(BeEquivalentTo(999))
+			Expect(capacity.DiskInBytes).To(BeEquivalentTo(888))
+			Expect(capacity.MaxContainers).To(BeEquivalentTo(1000))
+		})
+
+		Context("when getting the total memory fails", func() {
+			BeforeEach(func() {
+				sysinfoProvider.TotalMemoryReturns(0, errors.New("whelp"))
+			})
+
+			It("returns the error", func() {
+				_, err := gdnr.Capacity()
+				Expect(sysinfoProvider.TotalMemoryCallCount()).To(Equal(1))
+				Expect(err).To(MatchError(errors.New("whelp")))
+			})
+		})
+
+		Context("when getting the total disk fails", func() {
+			BeforeEach(func() {
+				sysinfoProvider.TotalDiskReturns(0, errors.New("whelp"))
+			})
+
+			It("returns the error", func() {
+				_, err := gdnr.Capacity()
+				Expect(sysinfoProvider.TotalDiskCallCount()).To(Equal(1))
+				Expect(err).To(MatchError(errors.New("whelp")))
 			})
 		})
 	})

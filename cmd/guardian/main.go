@@ -229,13 +229,16 @@ func main() {
 	chainPrefix := fmt.Sprintf("w-%s-instance", *tag)
 	iptablesMgr := wireIptables(logger, *tag, *allowHostAccess, interfacePrefix, chainPrefix)
 
+	sysInfoProvider := sysinfo.NewProvider(*depotPath)
+
 	backend := &gardener.Gardener{
-		UidGenerator:  wireUidGenerator(),
-		Starter:       wireStarter(logger, iptablesMgr),
-		Networker:     wireNetworker(logger, *tag, networkPoolCIDR, iptablesMgr, interfacePrefix, chainPrefix),
-		VolumeCreator: wireVolumeCreator(logger, *graphRoot),
-		Containerizer: wireContainerizer(logger, *depotPath, *iodaemonBin, resolvedRootFSPath),
-		Logger:        logger,
+		SysInfoProvider: sysInfoProvider,
+		UidGenerator:    wireUidGenerator(),
+		Starter:         wireStarter(logger, iptablesMgr),
+		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, iptablesMgr, interfacePrefix, chainPrefix),
+		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
+		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, resolvedRootFSPath),
+		Logger:          logger,
 	}
 
 	gardenServer := server.New(*listenNetwork, *listenAddr, *graceTime, backend, logger.Session("api"))
