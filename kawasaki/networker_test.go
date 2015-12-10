@@ -2,6 +2,7 @@ package kawasaki_test
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
@@ -83,6 +84,8 @@ var _ = Describe("Networker", func() {
 		fakeConfigCreator *fakes.FakeConfigCreator
 		fakeConfigurer    *fakes.FakeConfigurer
 		fakeConfigStore   *fakes.FakeConfigStore
+		fakePortForwarder *fakes.FakePortForwarder
+		fakePortPool      *fakes.FakePortPool
 		networker         *kawasaki.Networker
 		logger            lager.Logger
 	)
@@ -94,6 +97,8 @@ var _ = Describe("Networker", func() {
 		fakeConfigurer = new(fakes.FakeConfigurer)
 		fakeConfigCreator = new(fakes.FakeConfigCreator)
 		fakeConfigStore = new(fakes.FakeConfigStore)
+		fakePortForwarder = new(fakes.FakePortForwarder)
+		fakePortPool = new(fakes.FakePortPool)
 
 		logger = lagertest.NewTestLogger("test")
 		networker = kawasaki.New(
@@ -103,6 +108,8 @@ var _ = Describe("Networker", func() {
 			fakeConfigCreator,
 			fakeConfigurer,
 			fakeConfigStore,
+			fakePortForwarder,
+			fakePortPool,
 		)
 	})
 
@@ -357,6 +364,97 @@ var _ = Describe("Networker", func() {
 
 				err := networker.Destroy(logger, "some-handle")
 				Expect(err).To(MatchError("spiderman-error"))
+			})
+		})
+
+		Describe("NetIt", func() {
+			const (
+				externalPort  uint32 = 123
+				containerPort uint32 = 456
+				handle        string = "handle"
+			)
+
+			var networkConfig kawasaki.NetworkConfig
+
+			BeforeEach(func() {
+				networkConfig = kawasaki.NetworkConfig{BridgeName: "fake-bridge-name"}
+
+				fakeConfigStore.GetReturns(networkConfig, nil)
+				_, err := networker.Network(logger, handle, "")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("calls the PortForwarder with correct parameters", func() {
+				networker.NetIn(handle, externalPort, containerPort)
+				Expect(fakePortForwarder.ForwardCallCount()).To(Equal(1))
+
+				actualSpec := fakePortForwarder.ForwardArgsForCall(0)
+				Expect(actualSpec.NetworkConfig.BridgeName).To(Equal("fake-bridge-name"))
+				Expect(actualSpec.FromPort).To(Equal(externalPort))
+				Expect(actualSpec.ToPort).To(Equal(containerPort))
+
+				Expect(fakePortPool.AcquireCallCount()).To(Equal(0))
+			})
+
+			Context("when external port is not specified", func() {
+				It("acquires a random port from the pool", func() {
+					fakePortPool.AcquireReturns(externalPort, nil)
+
+					actualHostPort, actualContainerPort, err := networker.NetIn(handle, 0, containerPort)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(actualHostPort).To(Equal(externalPort))
+					Expect(actualContainerPort).To(Equal(containerPort))
+
+					Expect(fakePortPool.AcquireCallCount()).To(Equal(1))
+					Expect(fakePortForwarder.ForwardCallCount()).To(Equal(1))
+					spec := fakePortForwarder.ForwardArgsForCall(0)
+
+					Expect(spec.FromPort).To(Equal(externalPort))
+					Expect(spec.ToPort).To(Equal(containerPort))
+				})
+			})
+
+			Context("when port pool fails to acquire", func() {
+				It("returns the error", func() {
+					fakePortPool.AcquireReturns(0, fmt.Errorf("Oh no!"))
+
+					actualHostPort, actualContainerPort, err := networker.NetIn(handle, 0, containerPort)
+					Expect(err).To(MatchError("Oh no!"))
+					Expect(actualHostPort).To(Equal(uint32(0)))
+					Expect(actualContainerPort).To(Equal(uint32(0)))
+
+					Expect(fakePortForwarder.ForwardCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("when container port is not specified", func() {
+				It("aquires a port from the pool", func() {
+					actualHostPort, actualContainerPort, err := networker.NetIn(handle, externalPort, 0)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(actualHostPort).To(Equal(externalPort))
+					Expect(actualContainerPort).To(Equal(externalPort))
+				})
+			})
+
+			Context("when the PortForwarder fails", func() {
+				It("returns an error", func() {
+					fakePortForwarder.ForwardReturns(fmt.Errorf("Oh no!"))
+
+					_, _, err := networker.NetIn(handle, 0, 0)
+					Expect(err).To(MatchError("Oh no!"))
+				})
+			})
+
+			Context("when handle does not exist", func() {
+				BeforeEach(func() {
+					fakeConfigStore.GetReturns(kawasaki.NetworkConfig{}, errors.New("Handle does not exist"))
+				})
+				It("returns an error", func() {
+					_, _, err := networker.NetIn("nonexistent", 0, 0)
+					Expect(err).To(MatchError("Handle does not exist"))
+				})
 			})
 		})
 	})

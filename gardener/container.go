@@ -9,17 +9,20 @@ import (
 )
 
 type container struct {
-	logger          lager.Logger
+	logger lager.Logger
+
 	handle          string
 	containerizer   Containerizer
+	networker       Networker
 	propertyManager PropertyManager
 }
 
-func NewContainer(logger lager.Logger, handle string, containerizer Containerizer, propertyManager PropertyManager) *container {
+func NewContainer(logger lager.Logger, handle string, containerizer Containerizer, networker Networker, propertyManager PropertyManager) *container {
 	return &container{
 		logger:          logger,
 		handle:          handle,
 		containerizer:   containerizer,
+		networker:       networker,
 		propertyManager: propertyManager,
 	}
 }
@@ -81,7 +84,7 @@ func (c *container) CurrentMemoryLimits() (garden.MemoryLimits, error) {
 }
 
 func (c *container) NetIn(hostPort, containerPort uint32) (uint32, uint32, error) {
-	return 0, 0, nil
+	return c.networker.NetIn(c.handle, hostPort, containerPort)
 }
 
 func (c *container) NetOut(netOutRule garden.NetOutRule) error {

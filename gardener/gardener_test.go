@@ -2,6 +2,7 @@ package gardener_test
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
@@ -306,6 +307,7 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 		})
+
 	})
 
 	Describe("listing containers", func() {
@@ -328,6 +330,43 @@ var _ = Describe("Gardener", func() {
 			Expect(c).To(HaveLen(2))
 			Expect(c[0].Handle()).To(Equal("banana2"))
 			Expect(c[1].Handle()).To(Equal("cola"))
+		})
+
+		Describe("NetIn", func() {
+			var container garden.Container
+
+			const (
+				externalPort  uint32 = 8888
+				contianerPort uint32 = 8080
+			)
+
+			BeforeEach(func() {
+				var err error
+				container, err = gdnr.Lookup("banana")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("asks the netwoker to forward the correct ports", func() {
+				_, _, err := container.NetIn(externalPort, contianerPort)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(networker.NetInCallCount()).To(Equal(1))
+
+				actualHandle, actualExtPort, actualContainerPort := networker.NetInArgsForCall(0)
+				Expect(actualHandle).To(Equal(container.Handle()))
+				Expect(actualExtPort).To(Equal(externalPort))
+				Expect(actualContainerPort).To(Equal(contianerPort))
+			})
+
+			Context("when networker returns an error", func() {
+				It("returns the error", func() {
+					networker.NetInReturns(uint32(0), uint32(0), fmt.Errorf("error"))
+
+					_, _, err := container.NetIn(externalPort, contianerPort)
+
+					Expect(err).To(MatchError("error"))
+				})
+			})
 		})
 	})
 

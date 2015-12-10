@@ -17,6 +17,9 @@ type SysInfoProvider interface {
 }
 
 //go:generate counterfeiter . Containerizer
+//go:generate counterfeiter . Networker
+//go:generate counterfeiter . VolumeCreator
+//go:generate counterfeiter . UidGenerator
 
 type Containerizer interface {
 	Create(log lager.Logger, spec DesiredContainerSpec) error
@@ -25,21 +28,16 @@ type Containerizer interface {
 	Handles() ([]string, error)
 }
 
-//go:generate counterfeiter . Networker
-
 type Networker interface {
 	Network(log lager.Logger, handle, spec string) (string, error)
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
+	NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error)
 }
-
-//go:generate counterfeiter . VolumeCreator
 
 type VolumeCreator interface {
 	Create(handle string, spec rootfs_provider.Spec) (string, []string, error)
 }
-
-//go:generate counterfeiter . UidGenerator
 
 type UidGenerator interface {
 	Generate() string
@@ -158,9 +156,10 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 
 func (g *Gardener) Lookup(handle string) (garden.Container, error) {
 	return &container{
+		logger:          g.Logger,
 		handle:          handle,
 		containerizer:   g.Containerizer,
-		logger:          g.Logger,
+		networker:       g.Networker,
 		propertyManager: g.PropertyManager,
 	}, nil
 }

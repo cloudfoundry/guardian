@@ -35,6 +35,18 @@ type FakeNetworker struct {
 	destroyReturns struct {
 		result1 error
 	}
+	NetInStub        func(handle string, hostPort, containerPort uint32) (uint32, uint32, error)
+	netInMutex       sync.RWMutex
+	netInArgsForCall []struct {
+		handle        string
+		hostPort      uint32
+		containerPort uint32
+	}
+	netInReturns struct {
+		result1 uint32
+		result2 uint32
+		result3 error
+	}
 }
 
 func (fake *FakeNetworker) Network(log lager.Logger, handle string, spec string) (string, error) {
@@ -127,6 +139,42 @@ func (fake *FakeNetworker) DestroyReturns(result1 error) {
 	fake.destroyReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeNetworker) NetIn(handle string, hostPort uint32, containerPort uint32) (uint32, uint32, error) {
+	fake.netInMutex.Lock()
+	fake.netInArgsForCall = append(fake.netInArgsForCall, struct {
+		handle        string
+		hostPort      uint32
+		containerPort uint32
+	}{handle, hostPort, containerPort})
+	fake.netInMutex.Unlock()
+	if fake.NetInStub != nil {
+		return fake.NetInStub(handle, hostPort, containerPort)
+	} else {
+		return fake.netInReturns.result1, fake.netInReturns.result2, fake.netInReturns.result3
+	}
+}
+
+func (fake *FakeNetworker) NetInCallCount() int {
+	fake.netInMutex.RLock()
+	defer fake.netInMutex.RUnlock()
+	return len(fake.netInArgsForCall)
+}
+
+func (fake *FakeNetworker) NetInArgsForCall(i int) (string, uint32, uint32) {
+	fake.netInMutex.RLock()
+	defer fake.netInMutex.RUnlock()
+	return fake.netInArgsForCall[i].handle, fake.netInArgsForCall[i].hostPort, fake.netInArgsForCall[i].containerPort
+}
+
+func (fake *FakeNetworker) NetInReturns(result1 uint32, result2 uint32, result3 error) {
+	fake.NetInStub = nil
+	fake.netInReturns = struct {
+		result1 uint32
+		result2 uint32
+		result3 error
+	}{result1, result2, result3}
 }
 
 var _ gardener.Networker = new(FakeNetworker)

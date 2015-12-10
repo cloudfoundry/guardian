@@ -28,6 +28,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/ports"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry-incubator/guardian/properties"
@@ -322,6 +323,10 @@ func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, ipt
 	}
 
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
+	portPool, err := ports.NewPool(uint32(*portPoolStart), uint32(*portPoolSize), ports.State{})
+	if err != nil {
+		log.Fatal("invalid pool range", err)
+	}
 
 	return kawasaki.New(
 		kawasaki.NewManager(runner, "/var/run/netns"),
@@ -335,6 +340,8 @@ func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, ipt
 			&netns.Execer{},
 		),
 		&kawasaki.ConfigMap{},
+		iptables.NewPortForwarder(runner),
+		portPool,
 	)
 }
 

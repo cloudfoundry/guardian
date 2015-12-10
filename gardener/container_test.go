@@ -17,7 +17,7 @@ var _ = Describe("Container", func() {
 	Describe("Properties", func() {
 		BeforeEach(func() {
 			propertyManager = new(fakes.FakePropertyManager)
-			container = gardener.NewContainer(nil, "some-handle", nil, propertyManager)
+			container = gardener.NewContainer(nil, "some-handle", nil, nil, propertyManager)
 		})
 
 		It("delegates to the property manager for Properties", func() {
