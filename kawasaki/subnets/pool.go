@@ -11,11 +11,6 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-type Network struct {
-	Subnet *net.IPNet
-	IP     net.IP
-}
-
 //go:generate counterfeiter -o fake_subnet_pool/fake_pool.go . Pool
 type Pool interface {
 	// Allocates an IP address and associates it with a subnet. The subnet is selected by the given SubnetSelector.
