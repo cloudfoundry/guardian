@@ -40,7 +40,7 @@ func Spawn(
 
 	cmd := child(executablePath, argv)
 
-	stdinW, stdoutR, stderrR, extraFdW, err := wirer.Wire(cmd)
+	stdinW, stdoutR, stderrR, err := wirer.Wire(cmd)
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func Spawn(
 				launched <- true
 			})
 
-			daemon.HandleConnection(conn, cmd.Process, stdinW, extraFdW)
+			daemon.HandleConnection(conn, cmd.Process, stdinW)
 		}
 	}()
 

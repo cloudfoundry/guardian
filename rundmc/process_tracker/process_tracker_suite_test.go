@@ -11,7 +11,6 @@ import (
 )
 
 var iodaemonBin string
-var testPrintBin string
 
 func TestProcess_tracker(t *testing.T) {
 	var beforeSuite struct {

@@ -112,13 +112,7 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 	log.Info("started")
 	defer log.Info("finished")
 
-	path, err := c.depot.Lookup(log, handle)
-	if err != nil {
-		log.Error("lookup-failed", err)
-		return err
-	}
-
-	if err := c.runner.Kill(log, path); err != nil {
+	if err := c.runner.Kill(log, handle); err != nil {
 		log.Error("kill-failed", err)
 		return err
 	}

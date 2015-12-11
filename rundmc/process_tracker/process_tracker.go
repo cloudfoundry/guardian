@@ -11,9 +11,9 @@ import (
 
 //go:generate counterfeiter -o fake_process_tracker/fake_process_tracker.go . ProcessTracker
 type ProcessTracker interface {
-	Run(processID string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, signaller Signaller) (garden.Process, error)
+	Run(processID string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec) (garden.Process, error)
 	Attach(processID string, io garden.ProcessIO) (garden.Process, error)
-	Restore(processID string, signaller Signaller)
+	Restore(processID string)
 	ActiveProcesses() []garden.Process
 }
 
@@ -47,9 +47,9 @@ func New(containerPath string, iodaemonBin string, runner command_runner.Command
 	}
 }
 
-func (t *processTracker) Run(processID string, cmd *exec.Cmd, processIO garden.ProcessIO, tty *garden.TTYSpec, signaller Signaller) (garden.Process, error) {
+func (t *processTracker) Run(processID string, cmd *exec.Cmd, processIO garden.ProcessIO, tty *garden.TTYSpec) (garden.Process, error) {
 	t.processesMutex.Lock()
-	process := NewProcess(processID, t.containerPath, t.iodaemonBin, t.runner, signaller)
+	process := NewProcess(processID, t.containerPath, t.iodaemonBin, t.runner)
 	t.processes[processID] = process
 	t.processesMutex.Unlock()
 
@@ -88,10 +88,10 @@ func (t *processTracker) Attach(processID string, processIO garden.ProcessIO) (g
 	return process, nil
 }
 
-func (t *processTracker) Restore(processID string, signaller Signaller) {
+func (t *processTracker) Restore(processID string) {
 	t.processesMutex.Lock()
 
-	process := NewProcess(processID, t.containerPath, t.iodaemonBin, t.runner, signaller)
+	process := NewProcess(processID, t.containerPath, t.iodaemonBin, t.runner)
 
 	t.processes[processID] = process
 

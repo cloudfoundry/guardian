@@ -7,7 +7,6 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci/specs"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/fakes"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
@@ -39,11 +38,15 @@ var _ = Describe("RuncRunner", func() {
 		runner = runrunc.New(tracker, commandRunner, pidGenerator, runcBinary)
 
 		runcBinary.StartCommandStub = func(path, id string) *exec.Cmd {
-			return exec.Command("funC", path, id)
+			return exec.Command("funC", "start", path, id)
 		}
 
 		runcBinary.ExecCommandStub = func(id, processJSONPath string) *exec.Cmd {
-			return exec.Command("funC", id, processJSONPath)
+			return exec.Command("funC", "exec", id, processJSONPath)
+		}
+
+		runcBinary.KillCommandStub = func(id, signal string) *exec.Cmd {
+			return exec.Command("funC", "kill", id, signal)
 		}
 	})
 
@@ -52,8 +55,8 @@ var _ = Describe("RuncRunner", func() {
 			runner.Start(logger, "some/oci/container", "handle", garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
-			_, cmd, io, _, _ := tracker.RunArgsForCall(0)
-			Expect(cmd.Args).To(Equal([]string{"funC", "some/oci/container", "handle"}))
+			_, cmd, io, _ := tracker.RunArgsForCall(0)
+			Expect(cmd.Args).To(Equal([]string{"funC", "start", "some/oci/container", "handle"}))
 			Expect(io.Stdout).To(Equal(GinkgoWriter))
 		})
 
@@ -62,7 +65,7 @@ var _ = Describe("RuncRunner", func() {
 			runner.Start(logger, "some/oci/container", "some-handle", garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
-			id, _, _, _, _ := tracker.RunArgsForCall(0)
+			id, _, _, _ := tracker.RunArgsForCall(0)
 			Expect(id).To(BeEquivalentTo("some-process-guid"))
 		})
 	})
@@ -73,7 +76,7 @@ var _ = Describe("RuncRunner", func() {
 			runner.Exec(logger, "some/oci/container", garden.ProcessSpec{}, garden.ProcessIO{})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
-			pid, _, _, _, _ := tracker.RunArgsForCall(0)
+			pid, _, _, _ := tracker.RunArgsForCall(0)
 			Expect(pid).To(BeEquivalentTo("another-process-guid"))
 		})
 
@@ -82,8 +85,8 @@ var _ = Describe("RuncRunner", func() {
 			runner.Exec(logger, "some-id", garden.ProcessSpec{TTY: ttyspec}, garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
-			_, cmd, io, tty, _ := tracker.RunArgsForCall(0)
-			Expect(cmd.Args[:2]).To(Equal([]string{"funC", "some-id"}))
+			_, cmd, io, tty := tracker.RunArgsForCall(0)
+			Expect(cmd.Args[:3]).To(Equal([]string{"funC", "exec", "some-id"}))
 			Expect(io.Stdout).To(Equal(GinkgoWriter))
 			Expect(tty).To(Equal(ttyspec))
 		})
@@ -92,8 +95,8 @@ var _ = Describe("RuncRunner", func() {
 			var spec specs.Process
 
 			BeforeEach(func() {
-				tracker.RunStub = func(_ string, cmd *exec.Cmd, _ garden.ProcessIO, _ *garden.TTYSpec, _ process_tracker.Signaller) (garden.Process, error) {
-					f, err := os.Open(cmd.Args[2])
+				tracker.RunStub = func(_ string, cmd *exec.Cmd, _ garden.ProcessIO, _ *garden.TTYSpec) (garden.Process, error) {
+					f, err := os.Open(cmd.Args[3])
 					Expect(err).NotTo(HaveOccurred())
 
 					json.NewDecoder(f).Decode(&spec)
@@ -136,9 +139,8 @@ var _ = Describe("RuncRunner", func() {
 		It("runs 'runc kill' in the container directory", func() {
 			Expect(runner.Kill(logger, "some-container")).To(Succeed())
 			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Dir:  "some-container",
-				Path: "runc",
-				Args: []string{"kill", "SIGKILL"},
+				Path: "funC",
+				Args: []string{"kill", "some-container", "KILL"},
 			}))
 		})
 	})

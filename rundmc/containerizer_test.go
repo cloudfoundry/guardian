@@ -147,7 +147,7 @@ var _ = Describe("Rundmc", func() {
 		It("should run kill", func() {
 			Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
 			Expect(fakeContainerRunner.KillCallCount()).To(Equal(1))
-			Expect(arg2(fakeContainerRunner.KillArgsForCall(0))).To(Equal("/path/to/some-handle"))
+			Expect(arg2(fakeContainerRunner.KillArgsForCall(0))).To(Equal("some-handle"))
 		})
 
 		Context("when kill succeeds", func() {

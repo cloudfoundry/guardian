@@ -83,8 +83,8 @@ var _ = Describe("Creating a Container", func() {
 						"-c", "read x",
 					},
 				}, ginkgoIO)
-
 				Expect(err).NotTo(HaveOccurred())
+
 				Expect(client.Destroy(container.Handle())).To(Succeed())
 			})
 

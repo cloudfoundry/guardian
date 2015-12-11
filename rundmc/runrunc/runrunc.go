@@ -9,7 +9,6 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci/specs"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
 	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/pivotal-golang/lager"
 )
@@ -18,7 +17,7 @@ const DefaultPath = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbi
 
 //go:generate counterfeiter . ProcessTracker
 type ProcessTracker interface {
-	Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, signaller process_tracker.Signaller) (garden.Process, error)
+	Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec) (garden.Process, error)
 }
 
 //go:generate counterfeiter . UidGenerator
@@ -38,6 +37,7 @@ type RunRunc struct {
 type RuncBinary interface {
 	StartCommand(path, id string) *exec.Cmd
 	ExecCommand(id, processJSONPath string) *exec.Cmd
+	KillCommand(id, signal string) *exec.Cmd
 }
 
 func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary) *RunRunc {
@@ -58,7 +58,7 @@ func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, io garden.Proce
 
 	cmd := r.runc.StartCommand(bundlePath, id)
 
-	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil, nil)
+	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil)
 	if err != nil {
 		log.Error("run", err)
 		return nil, err
@@ -87,7 +87,7 @@ func (r *RunRunc) Exec(log lager.Logger, id string, spec garden.ProcessSpec, io 
 
 	cmd := r.runc.ExecCommand(id, tmpFile.Name())
 
-	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, spec.TTY, nil)
+	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, spec.TTY)
 	if err != nil {
 		log.Error("run-failed", err)
 		return nil, err
@@ -97,21 +97,18 @@ func (r *RunRunc) Exec(log lager.Logger, id string, spec garden.ProcessSpec, io 
 }
 
 // Kill a bundle using 'runc kill'
-func (r *RunRunc) Kill(log lager.Logger, bundlePath string) error {
-	log = log.Session("kill", lager.Data{"bundle": bundlePath})
+func (r *RunRunc) Kill(log lager.Logger, handle string) error {
+	log = log.Session("kill", lager.Data{"handle": handle})
 
 	log.Info("started")
 	defer log.Info("finished")
 
-	cmd := exec.Command("runc", "kill", "SIGKILL")
-	cmd.Dir = bundlePath
-	err := r.commandRunner.Run(cmd)
-	if err != nil {
+	if err := r.commandRunner.Run(r.runc.KillCommand(handle, "KILL")); err != nil {
 		log.Error("run-failed", err)
 		return err
 	}
 
-	return err
+	return nil
 }
 
 func writeProcessJSON(spec garden.ProcessSpec, writer io.Writer) error {

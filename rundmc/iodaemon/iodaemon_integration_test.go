@@ -5,6 +5,9 @@ import (
 	"os"
 	"os/exec"
 
+	"io"
+
+	"github.com/cloudfoundry-incubator/garden"
 	linkpkg "github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/link"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -128,6 +131,73 @@ var _ = Describe("Iodaemon integration tests", func() {
 
 		close(done)
 	}, 2.0)
+
+	Describe("Signalling", func() {
+		It("should forward SIGTERM", func(done Done) {
+			spawnS, err := gexec.Start(exec.Command(
+				iodaemonBinPath,
+				"spawn",
+				socketPath,
+				"sh", "-c", `
+					trap 'exit 42' TERM
+					echo 'trapping'
+
+					sleep 100 &
+					wait
+				`,
+			), GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(spawnS).Should(gbytes.Say("ready\n"))
+
+			buffer := gbytes.NewBuffer()
+			link, err := linkpkg.Create(socketPath, io.MultiWriter(buffer, GinkgoWriter), GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(buffer).Should(gbytes.Say("trapping"))
+
+			err = link.Signal(garden.SignalTerminate)
+			Expect(err).ToNot(HaveOccurred())
+
+			status, err := link.Wait()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(status).To(Equal(42))
+
+			Eventually(spawnS).Should(gexec.Exit(0))
+
+			close(done)
+		}, 5.0)
+
+		It("should forward SIGKILL", func(done Done) {
+			spawnS, err := gexec.Start(exec.Command(
+				iodaemonBinPath,
+				"spawn",
+				socketPath,
+				// signals other than kill will be delived to sh after sleep has finished
+				"sh", "-c", "sleep 100",
+			), GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(spawnS).Should(gbytes.Say("ready\n"))
+
+			buffer := gbytes.NewBuffer()
+			link, err := linkpkg.Create(socketPath, io.MultiWriter(buffer, GinkgoWriter), GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(spawnS).Should(gbytes.Say("active\n"))
+
+			err = link.Signal(garden.SignalKill)
+			Expect(err).ToNot(HaveOccurred())
+
+			status, err := link.Wait()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(status).To(Equal(255))
+
+			Eventually(spawnS).Should(gexec.Exit(0))
+
+			close(done)
+		}, 5.0)
+	})
 
 	Context("when the process is exiting with a non-zero exit code", func() {
 		var (

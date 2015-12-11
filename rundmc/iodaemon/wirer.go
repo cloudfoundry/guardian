@@ -13,14 +13,12 @@ type Wirer struct {
 	WindowRows    int
 }
 
-func (w *Wirer) Wire(cmd *exec.Cmd) (*os.File, *os.File, *os.File, *os.File, error) {
-	extraFdR, extraFdW, err := os.Pipe()
-	if err != nil {
-		return nil, nil, nil, nil, err
-	}
-	cmd.ExtraFiles = []*os.File{extraFdR}
+func (w *Wirer) Wire(cmd *exec.Cmd) (*os.File, *os.File, *os.File, error) {
+	var (
+		stdinW, stdoutR, stderrR *os.File
+		err                      error
+	)
 
-	var stdinW, stdoutR, stderrR *os.File
 	if w.WithTty {
 		cmd.Stdin, stdinW, stdoutR, cmd.Stdout, stderrR, cmd.Stderr, err = createTtyPty(w.WindowColumns, w.WindowRows)
 		cmd.SysProcAttr.Setctty = true
@@ -29,7 +27,11 @@ func (w *Wirer) Wire(cmd *exec.Cmd) (*os.File, *os.File, *os.File, *os.File, err
 		cmd.Stdin, stdinW, stdoutR, cmd.Stdout, stderrR, cmd.Stderr, err = createPipes()
 	}
 
-	return stdinW, stdoutR, stderrR, extraFdW, nil
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return stdinW, stdoutR, stderrR, nil
 }
 
 func createPipes() (stdinR, stdinW, stdoutR, stdoutW, stderrR, stderrW *os.File, err error) {

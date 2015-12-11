@@ -7,6 +7,7 @@ import (
 	"os"
 	"sync"
 	"syscall"
+	"time"
 )
 
 type SignalMsg struct {
@@ -92,7 +93,6 @@ func Create(socketPath string, stdout io.Writer, stderr io.Writer) (*Link, error
 }
 
 func (link *Link) Wait() (int, error) {
-	<-link.done
 	defer link.exitStatus.Close()
 
 	var exitStatus int
@@ -101,5 +101,13 @@ func (link *Link) Wait() (int, error) {
 		return -1, fmt.Errorf("could not determine exit status: %s", err)
 	}
 
-	return exitStatus, nil
+	// wait for goroutines to finish copying output:
+	// sometimes a process exiting wont close its output streams, so time out
+	// defensively to avoid hanging
+	select {
+	case <-link.done:
+		return exitStatus, nil
+	case <-time.After(200 * time.Millisecond):
+		return exitStatus, nil
+	}
 }

@@ -6,19 +6,17 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 )
 
 type FakeProcessTracker struct {
-	RunStub        func(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, signaller process_tracker.Signaller) (garden.Process, error)
+	RunStub        func(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec) (garden.Process, error)
 	runMutex       sync.RWMutex
 	runArgsForCall []struct {
-		id        string
-		cmd       *exec.Cmd
-		io        garden.ProcessIO
-		tty       *garden.TTYSpec
-		signaller process_tracker.Signaller
+		id  string
+		cmd *exec.Cmd
+		io  garden.ProcessIO
+		tty *garden.TTYSpec
 	}
 	runReturns struct {
 		result1 garden.Process
@@ -26,18 +24,17 @@ type FakeProcessTracker struct {
 	}
 }
 
-func (fake *FakeProcessTracker) Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, signaller process_tracker.Signaller) (garden.Process, error) {
+func (fake *FakeProcessTracker) Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec) (garden.Process, error) {
 	fake.runMutex.Lock()
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
-		id        string
-		cmd       *exec.Cmd
-		io        garden.ProcessIO
-		tty       *garden.TTYSpec
-		signaller process_tracker.Signaller
-	}{id, cmd, io, tty, signaller})
+		id  string
+		cmd *exec.Cmd
+		io  garden.ProcessIO
+		tty *garden.TTYSpec
+	}{id, cmd, io, tty})
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
-		return fake.RunStub(id, cmd, io, tty, signaller)
+		return fake.RunStub(id, cmd, io, tty)
 	} else {
 		return fake.runReturns.result1, fake.runReturns.result2
 	}
@@ -49,10 +46,10 @@ func (fake *FakeProcessTracker) RunCallCount() int {
 	return len(fake.runArgsForCall)
 }
 
-func (fake *FakeProcessTracker) RunArgsForCall(i int) (string, *exec.Cmd, garden.ProcessIO, *garden.TTYSpec, process_tracker.Signaller) {
+func (fake *FakeProcessTracker) RunArgsForCall(i int) (string, *exec.Cmd, garden.ProcessIO, *garden.TTYSpec) {
 	fake.runMutex.RLock()
 	defer fake.runMutex.RUnlock()
-	return fake.runArgsForCall[i].id, fake.runArgsForCall[i].cmd, fake.runArgsForCall[i].io, fake.runArgsForCall[i].tty, fake.runArgsForCall[i].signaller
+	return fake.runArgsForCall[i].id, fake.runArgsForCall[i].cmd, fake.runArgsForCall[i].io, fake.runArgsForCall[i].tty
 }
 
 func (fake *FakeProcessTracker) RunReturns(result1 garden.Process, result2 error) {

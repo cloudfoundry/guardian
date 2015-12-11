@@ -54,6 +54,39 @@ var _ = Describe("Run", func() {
 			shouldNot(gexec.Exit(0)),
 		),
 	)
+
+	Describe("Signalling", func() {
+		It("should forward SIGTERM to the process", func(done Done) {
+			client = startGarden()
+
+			container, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			buffer := gbytes.NewBuffer()
+			proc, err := container.Run(garden.ProcessSpec{
+				Path: "sh",
+				Args: []string{"-c", `
+					trap 'exit 42' TERM
+					echo 'trapping'
+
+					sleep 100 &
+					wait
+				`},
+			}, garden.ProcessIO{
+				Stdout: buffer,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(buffer).Should(gbytes.Say("trapping"))
+
+			err = proc.Signal(garden.SignalTerminate)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(proc.Wait()).To(Equal(42))
+
+			close(done)
+		}, 20.0)
+	})
 })
 
 func should(matchers ...types.GomegaMatcher) func(actual interface{}) {

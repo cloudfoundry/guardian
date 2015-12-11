@@ -6,29 +6,12 @@ import (
 	"os/exec"
 	"path"
 	"sync"
-	"syscall"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/link"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker/writer"
 	"github.com/cloudfoundry/gunk/command_runner"
 )
-
-//go:generate counterfeiter -o fake_signaller/fake_signaller.go . Signaller
-type Signaller interface {
-	Signal(*SignalRequest) error
-}
-
-//go:generate counterfeiter -o fake_msg_sender/fake_msg_sender.go . MsgSender
-type MsgSender interface {
-	SendMsg(msg []byte) error
-}
-
-type SignalRequest struct {
-	Pid    string
-	Signal syscall.Signal
-	Link   MsgSender
-}
 
 type Process struct {
 	id string
@@ -49,8 +32,6 @@ type Process struct {
 	stdin  writer.FanIn
 	stdout writer.FanOut
 	stderr writer.FanOut
-
-	signaller Signaller
 }
 
 func NewProcess(
@@ -58,7 +39,6 @@ func NewProcess(
 	containerPath string,
 	iodaemonBin string,
 	runner command_runner.CommandRunner,
-	signaller Signaller,
 ) *Process {
 	return &Process{
 		id: id,
@@ -73,10 +53,9 @@ func NewProcess(
 
 		exited: make(chan struct{}),
 
-		stdin:     writer.NewFanIn(),
-		stdout:    writer.NewFanOut(),
-		stderr:    writer.NewFanOut(),
-		signaller: signaller,
+		stdin:  writer.NewFanIn(),
+		stdout: writer.NewFanOut(),
+		stderr: writer.NewFanOut(),
 	}
 }
 
@@ -102,18 +81,7 @@ func (p *Process) SetTTY(tty garden.TTYSpec) error {
 func (p *Process) Signal(signal garden.Signal) error {
 	<-p.linked
 
-	request := &SignalRequest{Pid: p.id, Link: p.link}
-
-	switch signal {
-	case garden.SignalKill:
-		request.Signal = syscall.SIGKILL
-	case garden.SignalTerminate:
-		request.Signal = syscall.SIGTERM
-	default:
-		return fmt.Errorf("process_tracker: failed to send signal: unknown signal: %d", signal)
-	}
-
-	return p.signaller.Signal(request)
+	return p.link.Signal(signal)
 }
 
 func (p *Process) Spawn(cmd *exec.Cmd, tty *garden.TTYSpec) (ready, active chan error) {

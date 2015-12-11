@@ -3,13 +3,19 @@ package link
 import (
 	"encoding/gob"
 	"net"
+
+	"github.com/cloudfoundry-incubator/garden"
 )
 
 type Input struct {
 	StdinData  []byte
 	EOF        bool
 	WindowSize *WindowSize
-	Msg        []byte
+	Signal     *Signal
+}
+
+type Signal struct {
+	Signal garden.Signal
 }
 
 type WindowSize struct {
@@ -52,8 +58,9 @@ func (w *Writer) SetWindowSize(cols, rows int) error {
 	})
 }
 
-func (w *Writer) SendMsg(msg []byte) error {
+func (w *Writer) Signal(signal garden.Signal) error {
 	return w.enc.Encode(Input{
-		Msg: msg,
+		Signal: &Signal{signal},
 	})
+
 }
