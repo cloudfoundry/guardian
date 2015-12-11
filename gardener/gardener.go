@@ -9,6 +9,13 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+//go:generate counterfeiter . SysInfoProvider
+
+type SysInfoProvider interface {
+	TotalMemory() (uint64, error)
+	TotalDisk() (uint64, error)
+}
+
 //go:generate counterfeiter . Containerizer
 
 type Containerizer interface {
@@ -22,6 +29,7 @@ type Containerizer interface {
 
 type Networker interface {
 	Network(log lager.Logger, handle, spec string) (string, error)
+	Capacity() uint64
 }
 
 //go:generate counterfeiter . VolumeCreator
@@ -58,6 +66,9 @@ type DesiredContainerSpec struct {
 
 // Gardener orchestrates other components to implement the Garden API
 type Gardener struct {
+	// SysInfoProvider returns total memory and total disk
+	SysInfoProvider SysInfoProvider
+
 	// Containerizer runs and manages linux containers
 	Containerizer Containerizer
 
@@ -124,7 +135,26 @@ func (g *Gardener) Destroy(handle string) error {
 func (g *Gardener) Stop()                                    {}
 func (g *Gardener) GraceTime(garden.Container) time.Duration { return 0 }
 func (g *Gardener) Ping() error                              { return nil }
-func (g *Gardener) Capacity() (garden.Capacity, error)       { return garden.Capacity{}, nil }
+
+func (g *Gardener) Capacity() (garden.Capacity, error) {
+	mem, err := g.SysInfoProvider.TotalMemory()
+	if err != nil {
+		return garden.Capacity{}, err
+	}
+
+	disk, err := g.SysInfoProvider.TotalDisk()
+	if err != nil {
+		return garden.Capacity{}, err
+	}
+
+	cap := g.Networker.Capacity()
+
+	return garden.Capacity{
+		MemoryInBytes: mem,
+		DiskInBytes:   disk,
+		MaxContainers: cap,
+	}, nil
+}
 
 func (g *Gardener) Containers(garden.Properties) ([]garden.Container, error) {
 	containers := []garden.Container{}

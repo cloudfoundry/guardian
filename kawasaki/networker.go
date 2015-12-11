@@ -104,6 +104,11 @@ func (n *Networker) Network(log lager.Logger, handle, spec string) (string, erro
 	return path, nil
 }
 
+// Capacity returns the number of subnets this network can host
+func (n *Networker) Capacity() uint64 {
+	return uint64(n.subnetPool.Capacity())
+}
+
 func (n *Networker) destroyOrLog(log lager.Logger, handle string) {
 	if err := n.netnsMgr.Destroy(log, handle); err != nil {
 		log.Error("destroy-failed", err)

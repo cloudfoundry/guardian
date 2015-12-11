@@ -184,4 +184,17 @@ var _ = Describe("Networker", func() {
 			})
 		})
 	})
+
+	Describe("Capacity", func() {
+		BeforeEach(func() {
+			fakeSubnetPool.CapacityReturns(9000)
+		})
+
+		It("delegates to subnetPool for capacity", func() {
+			cap := networker.Capacity()
+
+			Expect(fakeSubnetPool.CapacityCallCount()).To(Equal(1))
+			Expect(cap).To(BeEquivalentTo(9000))
+		})
+	})
 })

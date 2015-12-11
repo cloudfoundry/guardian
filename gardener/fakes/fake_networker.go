@@ -20,6 +20,12 @@ type FakeNetworker struct {
 		result1 string
 		result2 error
 	}
+	CapacityStub        func() uint64
+	capacityMutex       sync.RWMutex
+	capacityArgsForCall []struct{}
+	capacityReturns     struct {
+		result1 uint64
+	}
 }
 
 func (fake *FakeNetworker) Network(log lager.Logger, handle string, spec string) (string, error) {
@@ -55,6 +61,30 @@ func (fake *FakeNetworker) NetworkReturns(result1 string, result2 error) {
 		result1 string
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeNetworker) Capacity() uint64 {
+	fake.capacityMutex.Lock()
+	fake.capacityArgsForCall = append(fake.capacityArgsForCall, struct{}{})
+	fake.capacityMutex.Unlock()
+	if fake.CapacityStub != nil {
+		return fake.CapacityStub()
+	} else {
+		return fake.capacityReturns.result1
+	}
+}
+
+func (fake *FakeNetworker) CapacityCallCount() int {
+	fake.capacityMutex.RLock()
+	defer fake.capacityMutex.RUnlock()
+	return len(fake.capacityArgsForCall)
+}
+
+func (fake *FakeNetworker) CapacityReturns(result1 uint64) {
+	fake.CapacityStub = nil
+	fake.capacityReturns = struct {
+		result1 uint64
+	}{result1}
 }
 
 var _ gardener.Networker = new(FakeNetworker)
