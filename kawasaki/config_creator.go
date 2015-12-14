@@ -9,7 +9,16 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-const maxHandleBeforeTruncation = 8
+const (
+	maxInterfacePrefixLen = 2
+	maxChainPrefixLen     = 16
+)
+
+//go:generate counterfeiter . IDGenerator
+
+type IDGenerator interface {
+	Generate() string
+}
 
 type NetworkConfig struct {
 	HostIntf      string
@@ -23,34 +32,37 @@ type NetworkConfig struct {
 }
 
 type Creator struct {
+	idGenerator     IDGenerator
 	interfacePrefix string
 	chainPrefix     string
 }
 
-func NewConfigCreator(interfacePrefix, chainPrefix string) *Creator {
+func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix string) *Creator {
+	if len(interfacePrefix) > maxInterfacePrefixLen {
+		panic("interface prefix is too long")
+	}
+
+	if len(chainPrefix) > maxChainPrefixLen {
+		panic("chain prefix is too long")
+	}
+
 	return &Creator{
+		idGenerator:     idGenerator,
 		interfacePrefix: interfacePrefix,
 		chainPrefix:     chainPrefix,
 	}
 }
 
 func (c *Creator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip net.IP) (NetworkConfig, error) {
+	id := c.idGenerator.Generate()
 	return NetworkConfig{
-		HostIntf:      fmt.Sprintf("%s-%s-0", c.interfacePrefix, truncate(handle)),
-		ContainerIntf: fmt.Sprintf("%s-%s-1", c.interfacePrefix, truncate(handle)),
+		HostIntf:      fmt.Sprintf("%s%s-0", c.interfacePrefix, id),
+		ContainerIntf: fmt.Sprintf("%s%s-1", c.interfacePrefix, id),
 		BridgeName:    fmt.Sprintf("br-%s", strings.Replace(subnet.IP.String(), ".", "-", -1)),
-		IPTableChain:  fmt.Sprintf("%s-%s", c.chainPrefix, truncate(handle)),
+		IPTableChain:  fmt.Sprintf("%s-%s", c.chainPrefix, id),
 		ContainerIP:   ip,
 		BridgeIP:      subnets.GatewayIP(subnet),
 		Subnet:        subnet,
 		Mtu:           1500,
 	}, nil
-}
-
-func truncate(handle string) string {
-	if len(handle) > maxHandleBeforeTruncation {
-		return handle[:maxHandleBeforeTruncation]
-	}
-
-	return handle
 }

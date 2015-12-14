@@ -319,11 +319,13 @@ func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, ipt
 		Link:   &devices.Link{Name: "guardian"},
 	}
 
+	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
+
 	return kawasaki.New(
 		kawasaki.NewManager(runner, "/var/run/netns"),
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(networkPoolCIDR),
-		kawasaki.NewConfigCreator(interfacePrefix, chainPrefix),
+		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix),
 		kawasaki.NewConfigApplier(
 			hostCfgApplier,
 			containerCfgApplier,
