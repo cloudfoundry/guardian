@@ -1,9 +1,7 @@
 package gardener
 
 import (
-	"fmt"
 	"io"
-	"sync"
 	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
@@ -12,26 +10,17 @@ import (
 
 type container struct {
 	logger          lager.Logger
-	properties      map[string]string
-	propertiesMutex sync.RWMutex
 	handle          string
 	containerizer   Containerizer
+	propertyManager PropertyManager
 }
 
-type NoSuchPropertyError struct {
-	Message string
-}
-
-func (e NoSuchPropertyError) Error() string {
-	return e.Message
-}
-
-func NewContainer(logger lager.Logger, handle string, containerizer Containerizer) *container {
+func NewContainer(logger lager.Logger, handle string, containerizer Containerizer, propertyManager PropertyManager) *container {
 	return &container{
-		logger:        logger,
-		properties:    make(map[string]string),
-		handle:        handle,
-		containerizer: containerizer,
+		logger:          logger,
+		handle:          handle,
+		containerizer:   containerizer,
+		propertyManager: propertyManager,
 	}
 }
 
@@ -108,49 +97,19 @@ func (c *container) Metrics() (garden.Metrics, error) {
 }
 
 func (c *container) Properties() (garden.Properties, error) {
-	return garden.Properties(c.properties), nil
+	return c.propertyManager.Properties()
 }
 
 func (c *container) Property(name string) (string, error) {
-	var (
-		val string
-		ok  bool
-	)
-
-	c.propertiesMutex.RLock()
-	defer c.propertiesMutex.RUnlock()
-
-	val, ok = c.properties[name]
-
-	if !ok {
-		return "", NoSuchPropertyError{
-			fmt.Sprintf("No such property: %s", name),
-		}
-	}
-
-	return val, nil
+	return c.propertyManager.Property(name)
 }
 
 func (c *container) SetProperty(name string, value string) error {
-	c.propertiesMutex.Lock()
-	defer c.propertiesMutex.Unlock()
-
-	c.properties[name] = value
-
-	return nil
+	return c.propertyManager.SetProperty(name, value)
 }
 
 func (c *container) RemoveProperty(name string) error {
-	c.propertiesMutex.Lock()
-	defer c.propertiesMutex.Unlock()
-
-	if _, ok := c.properties[name]; !ok {
-		return NoSuchPropertyError{fmt.Sprintf("No such property: %s", name)}
-	}
-
-	delete(c.properties, name)
-
-	return nil
+	return c.propertyManager.RemoveProperty(name)
 }
 
 func (c *container) SetGraceTime(t time.Duration) error {

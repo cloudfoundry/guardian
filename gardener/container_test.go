@@ -3,67 +3,41 @@ package gardener_test
 import (
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
-
+	"github.com/cloudfoundry-incubator/guardian/gardener/fakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Container", func() {
 	var (
-		container garden.Container
+		container       garden.Container
+		propertyManager *fakes.FakePropertyManager
 	)
 
 	Describe("Properties", func() {
 		BeforeEach(func() {
-			container = gardener.NewContainer(nil, "", nil)
-
-			err := container.SetProperty("name", "value")
-			Expect(err).NotTo(HaveOccurred())
+			propertyManager = new(fakes.FakePropertyManager)
+			container = gardener.NewContainer(nil, "", nil, propertyManager)
 		})
 
-		It("returns the container properties", func() {
-			properties, err := container.Properties()
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(properties).To(HaveLen(1))
-			Expect(properties).To(HaveKeyWithValue("name", "value"))
+		It("delegates to the property manager for Properties", func() {
+			container.Properties()
+			Expect(propertyManager.PropertiesCallCount()).To(Equal(1))
 		})
 
-		It("returns a specific property when passed a name", func() {
-			property, err := container.Property("name")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(property).To(Equal("value"))
+		It("delegates to the property manager for SetProperty", func() {
+			container.SetProperty("name", "value")
+			Expect(propertyManager.SetPropertyCallCount()).To(Equal(1))
 		})
 
-		It("removes properties", func() {
-			properties, err := container.Properties()
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(properties).To(HaveLen(1))
-
-			err = container.RemoveProperty("name")
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = container.Property("name")
-			Expect(err).To(MatchError(gardener.NoSuchPropertyError{"No such property: name"}))
+		It("delegates to the property manager for Property", func() {
+			container.Property("name")
+			Expect(propertyManager.PropertyCallCount()).To(Equal(1))
 		})
 
-		Context("when the property already exists", func() {
-			It("updates the property value", func() {
-				err := container.SetProperty("name", "some-other-value")
-				Expect(err).NotTo(HaveOccurred())
-
-				properties, err := container.Properties()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(properties).To(HaveKeyWithValue("name", "some-other-value"))
-			})
-		})
-
-		Context("when attempting to remove a property that doesn't exist", func() {
-			It("returns a NoSuchPropertyError", func() {
-				err := container.RemoveProperty("missing")
-				Expect(err).To(MatchError(gardener.NoSuchPropertyError{"No such property: missing"}))
-			})
+		It("delegates to the property manager for RemoveProperty", func() {
+			container.RemoveProperty("name")
+			Expect(propertyManager.RemovePropertyCallCount()).To(Equal(1))
 		})
 	})
 })

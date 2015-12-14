@@ -21,6 +21,7 @@ var _ = Describe("Gardener", func() {
 		containerizer   *fakes.FakeContainerizer
 		uidGenerator    *fakes.FakeUidGenerator
 		sysinfoProvider *fakes.FakeSysInfoProvider
+		propertyManager *fakes.FakePropertyManager
 
 		gdnr *gardener.Gardener
 	)
@@ -31,6 +32,7 @@ var _ = Describe("Gardener", func() {
 		networker = new(fakes.FakeNetworker)
 		volumeCreator = new(fakes.FakeVolumeCreator)
 		sysinfoProvider = new(fakes.FakeSysInfoProvider)
+		propertyManager = new(fakes.FakePropertyManager)
 		gdnr = &gardener.Gardener{
 			SysInfoProvider: sysinfoProvider,
 			Containerizer:   containerizer,
@@ -38,6 +40,7 @@ var _ = Describe("Gardener", func() {
 			Networker:       networker,
 			VolumeCreator:   volumeCreator,
 			Logger:          lagertest.NewTestLogger("test"),
+			PropertyManager: propertyManager,
 		}
 	})
 
@@ -145,6 +148,55 @@ var _ = Describe("Gardener", func() {
 				d, err := gdnr.Lookup(c.Handle())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(c).To(Equal(d))
+			})
+		})
+
+		Context("when properties are specified", func() {
+			var properties garden.Properties
+
+			BeforeEach(func() {
+				properties = garden.Properties{
+					"thingy": "thing",
+					"blingy": "bling",
+				}
+			})
+
+			Context("with a property manager", func() {
+				It("can set properties on a container", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Properties: properties,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(propertyManager.SetPropertyCallCount()).To(Equal(2))
+
+					var allProps = make(map[string]string)
+					for i := 0; i < 2; i++ {
+						name, value := propertyManager.SetPropertyArgsForCall(i)
+						allProps[name] = value
+					}
+
+					Expect(allProps).To(HaveKeyWithValue("thingy", "thing"))
+					Expect(allProps).To(HaveKeyWithValue("blingy", "bling"))
+				})
+
+				It("can get properties set on a created container", func() {
+					propertyManager.PropertiesReturns(properties, nil)
+
+					c, err := gdnr.Create(garden.ContainerSpec{
+						Properties: properties,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					d, err := gdnr.Lookup(c.Handle())
+					Expect(err).NotTo(HaveOccurred())
+
+					props, err := d.Properties()
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(propertyManager.PropertiesCallCount()).To(Equal(1))
+					Expect(props).To(Equal(properties))
+				})
 			})
 		})
 	})

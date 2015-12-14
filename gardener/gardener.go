@@ -44,6 +44,15 @@ type UidGenerator interface {
 	Generate() string
 }
 
+//go:generate counterfeiter . PropertyManager
+
+type PropertyManager interface {
+	Properties() (garden.Properties, error)
+	SetProperty(name string, value string) error
+	RemoveProperty(string) error
+	Property(string) (string, error)
+}
+
 type Starter interface {
 	Start() error
 }
@@ -85,6 +94,9 @@ type Gardener struct {
 	VolumeCreator VolumeCreator
 
 	Logger lager.Logger
+
+	// PropertyManager creates map of container properties
+	PropertyManager PropertyManager
 }
 
 func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
@@ -117,14 +129,27 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		return nil, err
 	}
 
-	return g.Lookup(spec.Handle)
+	container, err := g.Lookup(spec.Handle)
+	if err != nil {
+		return nil, err
+	}
+
+	for name, value := range spec.Properties {
+		err := container.SetProperty(name, value)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	return container, nil
 }
 
 func (g *Gardener) Lookup(handle string) (garden.Container, error) {
 	return &container{
-		handle:        handle,
-		containerizer: g.Containerizer,
-		logger:        g.Logger,
+		handle:          handle,
+		containerizer:   g.Containerizer,
+		logger:          g.Logger,
+		propertyManager: g.PropertyManager,
 	}, nil
 }
 
@@ -174,6 +199,7 @@ func (g *Gardener) Containers(garden.Properties) ([]garden.Container, error) {
 
 	return containers, nil
 }
+
 func (g *Gardener) BulkInfo(handles []string) (map[string]garden.ContainerInfoEntry, error) {
 	return nil, nil
 }
