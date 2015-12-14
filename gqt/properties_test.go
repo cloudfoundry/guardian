@@ -22,13 +22,6 @@ var _ = Describe("Properties", func() {
 			Properties: props,
 		})
 		Expect(err).NotTo(HaveOccurred())
-
-		_, err = client.Create(garden.ContainerSpec{
-			Properties: garden.Properties{
-				"name": "value",
-			},
-		})
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
