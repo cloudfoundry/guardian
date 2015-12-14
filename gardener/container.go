@@ -141,7 +141,15 @@ func (c *container) SetProperty(name string, value string) error {
 }
 
 func (c *container) RemoveProperty(name string) error {
+	c.propertiesMutex.Lock()
+	defer c.propertiesMutex.Unlock()
+
+	if _, ok := c.properties[name]; !ok {
+		return NoSuchPropertyError{fmt.Sprintf("No such property: %s", name)}
+	}
+
 	delete(c.properties, name)
+
 	return nil
 }
 

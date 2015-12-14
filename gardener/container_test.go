@@ -61,7 +61,7 @@ var _ = Describe("Container", func() {
 
 		Context("when attempting to remove a property that doesn't exist", func() {
 			It("returns a NoSuchPropertyError", func() {
-				_, err := container.Property("missing")
+				err := container.RemoveProperty("missing")
 				Expect(err).To(MatchError(gardener.NoSuchPropertyError{"No such property: missing"}))
 			})
 		})
