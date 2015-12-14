@@ -47,6 +47,7 @@ import (
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/localip"
+	"github.com/rosenhouse/ducati"
 )
 
 const OciStateDir = "/var/run/opencontainer/containers"
@@ -213,6 +214,11 @@ var maxContainers = flag.Uint(
 	0,
 	"Maximum number of containers that can be created")
 
+var networkModule = flag.String(
+	"networkModule",
+	"kawasaki",
+	"Name of network module")
+
 func main() {
 	if reexec.Init() {
 		return
@@ -266,7 +272,7 @@ func main() {
 		SysInfoProvider: sysInfoProvider,
 		UidGenerator:    wireUidGenerator(),
 		Starter:         wireStarter(logger, iptablesMgr),
-		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, externalIPAddr, iptablesMgr, interfacePrefix, chainPrefix, propManager),
+		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, externalIPAddr, iptablesMgr, interfacePrefix, chainPrefix, propManager, *networkModule),
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath),
 		Logger:          logger,
@@ -336,7 +342,7 @@ func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfa
 	)
 }
 
-func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, externalIP net.IP, iptablesMgr kawasaki.IPTablesConfigurer, interfacePrefix, chainPrefix string, propManager *properties.Manager) *kawasaki.Networker {
+func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, externalIP net.IP, iptablesMgr kawasaki.IPTablesConfigurer, interfacePrefix, chainPrefix string, propManager *properties.Manager, networkModule string) gardener.Networker {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("network-runner")}
 
 	hostConfigurer := &configure.Host{
@@ -357,21 +363,29 @@ func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, ext
 		log.Fatal("invalid pool range", err)
 	}
 
-	return kawasaki.New(
-		kawasaki.NewManager(runner, "/var/run/netns"),
-		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
-		subnets.NewPool(networkPoolCIDR),
-		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP),
-		kawasaki.NewConfigurer(
-			hostConfigurer,
-			containerCfgApplier,
-			iptablesMgr,
-			&netns.Execer{},
-		),
-		propManager,
-		iptables.NewPortForwarder(runner),
-		portPool,
-	)
+	switch networkModule {
+	case "kawasaki":
+		return kawasaki.New(
+			kawasaki.NewManager(runner, "/var/run/netns"),
+			kawasaki.SpecParserFunc(kawasaki.ParseSpec),
+			subnets.NewPool(networkPoolCIDR),
+			kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP),
+			kawasaki.NewConfigurer(
+				hostConfigurer,
+				containerCfgApplier,
+				iptablesMgr,
+				&netns.Execer{},
+			),
+			propManager,
+			iptables.NewPortForwarder(runner),
+			portPool,
+		)
+	case "ducati":
+		return &ducati.Ducati{}
+	default:
+		log.Fatal("failed-to-select-network-module", fmt.Errorf("unknown network module %q", networkModule))
+		return nil
+	}
 }
 
 func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.CakeOrdinator {
