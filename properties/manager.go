@@ -9,40 +9,59 @@ import (
 
 type Manager struct {
 	propMutex sync.RWMutex
-	prop      map[string]string
+	prop      map[string]map[string]string
 }
 
 func NewManager() *Manager {
 	return &Manager{
-		prop: make(map[string]string),
+		prop: make(map[string]map[string]string),
 	}
 }
 
-func (m *Manager) Set(name string, value string) error {
-	m.propMutex.Lock()
-	defer m.propMutex.Unlock()
-
-	m.prop[name] = value
+func (m *Manager) CreateKeySpace(handle string) error {
+	if _, exists := m.prop[handle]; !exists {
+		m.prop[handle] = make(map[string]string)
+	}
 	return nil
 }
 
-func (m *Manager) All() (garden.Properties, error) {
+func (m *Manager) DestroyKeySpace(handle string) error {
+	if _, exists := m.prop[handle]; !exists {
+		return NoSuchKeySpaceError{
+			Message: fmt.Sprintf("No such key space: %s", handle),
+		}
+	}
+
+	delete(m.prop, handle)
+
+	return nil
+}
+
+func (m *Manager) Set(handle string, name string, value string) error {
+	m.propMutex.Lock()
+	defer m.propMutex.Unlock()
+
+	m.prop[handle][name] = value
+	return nil
+}
+
+func (m *Manager) All(handle string) (garden.Properties, error) {
 	m.propMutex.RLock()
 	defer m.propMutex.RUnlock()
 
-	return m.prop, nil
+	return m.prop[handle], nil
 }
 
-func (m *Manager) Get(name string) (string, error) {
+func (m *Manager) Get(handle string, name string) (string, error) {
 	var (
-		prop string
-		ok   bool
+		prop   string
+		exists bool
 	)
 
 	m.propMutex.RLock()
 	defer m.propMutex.RUnlock()
 
-	if prop, ok = m.prop[name]; !ok {
+	if prop, exists = m.prop[handle][name]; !exists {
 		return "", NoSuchPropertyError{
 			Message: fmt.Sprintf("No such property: %s", name),
 		}
@@ -51,14 +70,14 @@ func (m *Manager) Get(name string) (string, error) {
 	return prop, nil
 }
 
-func (m *Manager) Remove(name string) error {
-	if _, ok := m.prop[name]; !ok {
+func (m *Manager) Remove(handle string, name string) error {
+	if _, exists := m.prop[handle][name]; !exists {
 		return NoSuchPropertyError{
 			Message: fmt.Sprintf("No such property: %s", name),
 		}
 	}
 
-	delete(m.prop, name)
+	delete(m.prop[handle], name)
 
 	return nil
 }
@@ -68,5 +87,13 @@ type NoSuchPropertyError struct {
 }
 
 func (e NoSuchPropertyError) Error() string {
+	return e.Message
+}
+
+type NoSuchKeySpaceError struct {
+	Message string
+}
+
+func (e NoSuchKeySpaceError) Error() string {
 	return e.Message
 }

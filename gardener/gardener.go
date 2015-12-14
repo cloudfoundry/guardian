@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
+	"github.com/cloudfoundry-incubator/guardian/properties"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -136,6 +137,11 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 }
 
 func (g *Gardener) Lookup(handle string) (garden.Container, error) {
+	err := g.PropertyManager.CreateKeySpace(handle)
+	if err != nil {
+		panic(err)
+	}
+
 	return &container{
 		handle:          handle,
 		containerizer:   g.Containerizer,
@@ -145,6 +151,10 @@ func (g *Gardener) Lookup(handle string) (garden.Container, error) {
 }
 
 func (g *Gardener) Destroy(handle string) error {
+	err := g.PropertyManager.DestroyKeySpace(handle)
+	if err != nil {
+		return err
+	}
 	return g.Containerizer.Destroy(g.Logger, handle)
 }
 
@@ -172,12 +182,12 @@ func (g *Gardener) Capacity() (garden.Capacity, error) {
 	}, nil
 }
 
-func (g *Gardener) Containers(garden.Properties) ([]garden.Container, error) {
-	containers := []garden.Container{}
+func (g *Gardener) Containers(props garden.Properties) ([]garden.Container, error) {
+	var containers []garden.Container
 
 	handles, err := g.Containerizer.Handles()
 	if err != nil {
-		return containers, err
+		return []garden.Container{}, err
 	}
 
 	for _, handle := range handles {
@@ -185,7 +195,26 @@ func (g *Gardener) Containers(garden.Properties) ([]garden.Container, error) {
 		if err != nil {
 			return []garden.Container{}, err
 		}
-		containers = append(containers, container)
+
+		if len(props) == 0 {
+			containers = append(containers, container)
+			continue
+		}
+
+		for name, value := range props {
+			containerValue, err := container.Property(name)
+			switch err.(type) {
+			case properties.NoSuchPropertyError:
+			case nil:
+			default:
+				return []garden.Container{}, err
+			}
+
+			if containerValue == value {
+				containers = append(containers, container)
+				continue
+			}
+		}
 	}
 
 	return containers, nil

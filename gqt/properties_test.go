@@ -11,14 +11,21 @@ var _ = Describe("Properties", func() {
 	var (
 		client    *runner.RunningGarden
 		container garden.Container
+		props     garden.Properties
 	)
 
 	BeforeEach(func() {
 		var err error
 		client = startGarden()
+		props = garden.Properties{"somename": "somevalue"}
 		container, err = client.Create(garden.ContainerSpec{
+			Properties: props,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = client.Create(garden.ContainerSpec{
 			Properties: garden.Properties{
-				"somename": "somevalue",
+				"name": "value",
 			},
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -40,6 +47,7 @@ var _ = Describe("Properties", func() {
 
 		properties, err := container.Properties()
 		Expect(err).NotTo(HaveOccurred())
+		Expect(properties).To(HaveLen(2))
 		Expect(properties).To(HaveKeyWithValue("somename", "somevalue"))
 		Expect(properties).To(HaveKeyWithValue("someothername", "someothervalue"))
 	})
@@ -62,5 +70,19 @@ var _ = Describe("Properties", func() {
 
 		_, err = container.Property("bing")
 		Expect(err).To(HaveOccurred())
+	})
+
+	It("can filter containers based on their properties", func() {
+		_, err := client.Create(garden.ContainerSpec{
+			Properties: garden.Properties{
+				"somename": "wrongvalue",
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		containers, err := client.Containers(props)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(containers).To(HaveLen(1))
+		Expect(containers).To(ConsistOf(container))
 	})
 })

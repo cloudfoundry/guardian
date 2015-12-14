@@ -11,10 +11,12 @@ import (
 //go:generate counterfeiter . PropertyManager
 
 type PropertyManager interface {
-	All() (garden.Properties, error)
-	Set(name string, value string) error
-	Remove(string) error
-	Get(string) (string, error)
+	All(handle string) (props garden.Properties, err error)
+	Set(handle string, name string, value string) error
+	Remove(handle string, name string) error
+	Get(handle string, name string) (string, error)
+	CreateKeySpace(string) error
+	DestroyKeySpace(string) error
 }
 
 type container struct {
@@ -106,19 +108,19 @@ func (c *container) Metrics() (garden.Metrics, error) {
 }
 
 func (c *container) Properties() (garden.Properties, error) {
-	return c.propertyManager.All()
+	return c.propertyManager.All(c.handle)
 }
 
 func (c *container) Property(name string) (string, error) {
-	return c.propertyManager.Get(name)
+	return c.propertyManager.Get(c.handle, name)
 }
 
 func (c *container) SetProperty(name string, value string) error {
-	return c.propertyManager.Set(name, value)
+	return c.propertyManager.Set(c.handle, name, value)
 }
 
 func (c *container) RemoveProperty(name string) error {
-	return c.propertyManager.Remove(name)
+	return c.propertyManager.Remove(c.handle, name)
 }
 
 func (c *container) SetGraceTime(t time.Duration) error {
