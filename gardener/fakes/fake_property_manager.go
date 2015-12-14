@@ -9,159 +9,159 @@ import (
 )
 
 type FakePropertyManager struct {
-	PropertiesStub        func() (garden.Properties, error)
-	propertiesMutex       sync.RWMutex
-	propertiesArgsForCall []struct{}
-	propertiesReturns     struct {
+	AllStub        func() (garden.Properties, error)
+	allMutex       sync.RWMutex
+	allArgsForCall []struct{}
+	allReturns     struct {
 		result1 garden.Properties
 		result2 error
 	}
-	SetPropertyStub        func(name string, value string) error
-	setPropertyMutex       sync.RWMutex
-	setPropertyArgsForCall []struct {
+	SetStub        func(name string, value string) error
+	setMutex       sync.RWMutex
+	setArgsForCall []struct {
 		name  string
 		value string
 	}
-	setPropertyReturns struct {
+	setReturns struct {
 		result1 error
 	}
-	RemovePropertyStub        func(string) error
-	removePropertyMutex       sync.RWMutex
-	removePropertyArgsForCall []struct {
+	RemoveStub        func(string) error
+	removeMutex       sync.RWMutex
+	removeArgsForCall []struct {
 		arg1 string
 	}
-	removePropertyReturns struct {
+	removeReturns struct {
 		result1 error
 	}
-	PropertyStub        func(string) (string, error)
-	propertyMutex       sync.RWMutex
-	propertyArgsForCall []struct {
+	GetStub        func(string) (string, error)
+	getMutex       sync.RWMutex
+	getArgsForCall []struct {
 		arg1 string
 	}
-	propertyReturns struct {
+	getReturns struct {
 		result1 string
 		result2 error
 	}
 }
 
-func (fake *FakePropertyManager) Properties() (garden.Properties, error) {
-	fake.propertiesMutex.Lock()
-	fake.propertiesArgsForCall = append(fake.propertiesArgsForCall, struct{}{})
-	fake.propertiesMutex.Unlock()
-	if fake.PropertiesStub != nil {
-		return fake.PropertiesStub()
+func (fake *FakePropertyManager) All() (garden.Properties, error) {
+	fake.allMutex.Lock()
+	fake.allArgsForCall = append(fake.allArgsForCall, struct{}{})
+	fake.allMutex.Unlock()
+	if fake.AllStub != nil {
+		return fake.AllStub()
 	} else {
-		return fake.propertiesReturns.result1, fake.propertiesReturns.result2
+		return fake.allReturns.result1, fake.allReturns.result2
 	}
 }
 
-func (fake *FakePropertyManager) PropertiesCallCount() int {
-	fake.propertiesMutex.RLock()
-	defer fake.propertiesMutex.RUnlock()
-	return len(fake.propertiesArgsForCall)
+func (fake *FakePropertyManager) AllCallCount() int {
+	fake.allMutex.RLock()
+	defer fake.allMutex.RUnlock()
+	return len(fake.allArgsForCall)
 }
 
-func (fake *FakePropertyManager) PropertiesReturns(result1 garden.Properties, result2 error) {
-	fake.PropertiesStub = nil
-	fake.propertiesReturns = struct {
+func (fake *FakePropertyManager) AllReturns(result1 garden.Properties, result2 error) {
+	fake.AllStub = nil
+	fake.allReturns = struct {
 		result1 garden.Properties
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakePropertyManager) SetProperty(name string, value string) error {
-	fake.setPropertyMutex.Lock()
-	fake.setPropertyArgsForCall = append(fake.setPropertyArgsForCall, struct {
+func (fake *FakePropertyManager) Set(name string, value string) error {
+	fake.setMutex.Lock()
+	fake.setArgsForCall = append(fake.setArgsForCall, struct {
 		name  string
 		value string
 	}{name, value})
-	fake.setPropertyMutex.Unlock()
-	if fake.SetPropertyStub != nil {
-		return fake.SetPropertyStub(name, value)
+	fake.setMutex.Unlock()
+	if fake.SetStub != nil {
+		return fake.SetStub(name, value)
 	} else {
-		return fake.setPropertyReturns.result1
+		return fake.setReturns.result1
 	}
 }
 
-func (fake *FakePropertyManager) SetPropertyCallCount() int {
-	fake.setPropertyMutex.RLock()
-	defer fake.setPropertyMutex.RUnlock()
-	return len(fake.setPropertyArgsForCall)
+func (fake *FakePropertyManager) SetCallCount() int {
+	fake.setMutex.RLock()
+	defer fake.setMutex.RUnlock()
+	return len(fake.setArgsForCall)
 }
 
-func (fake *FakePropertyManager) SetPropertyArgsForCall(i int) (string, string) {
-	fake.setPropertyMutex.RLock()
-	defer fake.setPropertyMutex.RUnlock()
-	return fake.setPropertyArgsForCall[i].name, fake.setPropertyArgsForCall[i].value
+func (fake *FakePropertyManager) SetArgsForCall(i int) (string, string) {
+	fake.setMutex.RLock()
+	defer fake.setMutex.RUnlock()
+	return fake.setArgsForCall[i].name, fake.setArgsForCall[i].value
 }
 
-func (fake *FakePropertyManager) SetPropertyReturns(result1 error) {
-	fake.SetPropertyStub = nil
-	fake.setPropertyReturns = struct {
+func (fake *FakePropertyManager) SetReturns(result1 error) {
+	fake.SetStub = nil
+	fake.setReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakePropertyManager) RemoveProperty(arg1 string) error {
-	fake.removePropertyMutex.Lock()
-	fake.removePropertyArgsForCall = append(fake.removePropertyArgsForCall, struct {
+func (fake *FakePropertyManager) Remove(arg1 string) error {
+	fake.removeMutex.Lock()
+	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	fake.removePropertyMutex.Unlock()
-	if fake.RemovePropertyStub != nil {
-		return fake.RemovePropertyStub(arg1)
+	fake.removeMutex.Unlock()
+	if fake.RemoveStub != nil {
+		return fake.RemoveStub(arg1)
 	} else {
-		return fake.removePropertyReturns.result1
+		return fake.removeReturns.result1
 	}
 }
 
-func (fake *FakePropertyManager) RemovePropertyCallCount() int {
-	fake.removePropertyMutex.RLock()
-	defer fake.removePropertyMutex.RUnlock()
-	return len(fake.removePropertyArgsForCall)
+func (fake *FakePropertyManager) RemoveCallCount() int {
+	fake.removeMutex.RLock()
+	defer fake.removeMutex.RUnlock()
+	return len(fake.removeArgsForCall)
 }
 
-func (fake *FakePropertyManager) RemovePropertyArgsForCall(i int) string {
-	fake.removePropertyMutex.RLock()
-	defer fake.removePropertyMutex.RUnlock()
-	return fake.removePropertyArgsForCall[i].arg1
+func (fake *FakePropertyManager) RemoveArgsForCall(i int) string {
+	fake.removeMutex.RLock()
+	defer fake.removeMutex.RUnlock()
+	return fake.removeArgsForCall[i].arg1
 }
 
-func (fake *FakePropertyManager) RemovePropertyReturns(result1 error) {
-	fake.RemovePropertyStub = nil
-	fake.removePropertyReturns = struct {
+func (fake *FakePropertyManager) RemoveReturns(result1 error) {
+	fake.RemoveStub = nil
+	fake.removeReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakePropertyManager) Property(arg1 string) (string, error) {
-	fake.propertyMutex.Lock()
-	fake.propertyArgsForCall = append(fake.propertyArgsForCall, struct {
+func (fake *FakePropertyManager) Get(arg1 string) (string, error) {
+	fake.getMutex.Lock()
+	fake.getArgsForCall = append(fake.getArgsForCall, struct {
 		arg1 string
 	}{arg1})
-	fake.propertyMutex.Unlock()
-	if fake.PropertyStub != nil {
-		return fake.PropertyStub(arg1)
+	fake.getMutex.Unlock()
+	if fake.GetStub != nil {
+		return fake.GetStub(arg1)
 	} else {
-		return fake.propertyReturns.result1, fake.propertyReturns.result2
+		return fake.getReturns.result1, fake.getReturns.result2
 	}
 }
 
-func (fake *FakePropertyManager) PropertyCallCount() int {
-	fake.propertyMutex.RLock()
-	defer fake.propertyMutex.RUnlock()
-	return len(fake.propertyArgsForCall)
+func (fake *FakePropertyManager) GetCallCount() int {
+	fake.getMutex.RLock()
+	defer fake.getMutex.RUnlock()
+	return len(fake.getArgsForCall)
 }
 
-func (fake *FakePropertyManager) PropertyArgsForCall(i int) string {
-	fake.propertyMutex.RLock()
-	defer fake.propertyMutex.RUnlock()
-	return fake.propertyArgsForCall[i].arg1
+func (fake *FakePropertyManager) GetArgsForCall(i int) string {
+	fake.getMutex.RLock()
+	defer fake.getMutex.RUnlock()
+	return fake.getArgsForCall[i].arg1
 }
 
-func (fake *FakePropertyManager) PropertyReturns(result1 string, result2 error) {
-	fake.PropertyStub = nil
-	fake.propertyReturns = struct {
+func (fake *FakePropertyManager) GetReturns(result1 string, result2 error) {
+	fake.GetStub = nil
+	fake.getReturns = struct {
 		result1 string
 		result2 error
 	}{result1, result2}

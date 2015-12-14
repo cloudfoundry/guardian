@@ -44,15 +44,6 @@ type UidGenerator interface {
 	Generate() string
 }
 
-//go:generate counterfeiter . PropertyManager
-
-type PropertyManager interface {
-	Properties() (garden.Properties, error)
-	SetProperty(name string, value string) error
-	RemoveProperty(string) error
-	Property(string) (string, error)
-}
-
 type Starter interface {
 	Start() error
 }

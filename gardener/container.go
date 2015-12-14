@@ -8,6 +8,15 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+//go:generate counterfeiter . PropertyManager
+
+type PropertyManager interface {
+	All() (garden.Properties, error)
+	Set(name string, value string) error
+	Remove(string) error
+	Get(string) (string, error)
+}
+
 type container struct {
 	logger          lager.Logger
 	handle          string
@@ -97,19 +106,19 @@ func (c *container) Metrics() (garden.Metrics, error) {
 }
 
 func (c *container) Properties() (garden.Properties, error) {
-	return c.propertyManager.Properties()
+	return c.propertyManager.All()
 }
 
 func (c *container) Property(name string) (string, error) {
-	return c.propertyManager.Property(name)
+	return c.propertyManager.Get(name)
 }
 
 func (c *container) SetProperty(name string, value string) error {
-	return c.propertyManager.SetProperty(name, value)
+	return c.propertyManager.Set(name, value)
 }
 
 func (c *container) RemoveProperty(name string) error {
-	return c.propertyManager.RemoveProperty(name)
+	return c.propertyManager.Remove(name)
 }
 
 func (c *container) SetGraceTime(t time.Duration) error {

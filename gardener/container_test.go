@@ -22,22 +22,22 @@ var _ = Describe("Container", func() {
 
 		It("delegates to the property manager for Properties", func() {
 			container.Properties()
-			Expect(propertyManager.PropertiesCallCount()).To(Equal(1))
+			Expect(propertyManager.AllCallCount()).To(Equal(1))
 		})
 
 		It("delegates to the property manager for SetProperty", func() {
 			container.SetProperty("name", "value")
-			Expect(propertyManager.SetPropertyCallCount()).To(Equal(1))
+			Expect(propertyManager.SetCallCount()).To(Equal(1))
 		})
 
 		It("delegates to the property manager for Property", func() {
 			container.Property("name")
-			Expect(propertyManager.PropertyCallCount()).To(Equal(1))
+			Expect(propertyManager.GetCallCount()).To(Equal(1))
 		})
 
 		It("delegates to the property manager for RemoveProperty", func() {
 			container.RemoveProperty("name")
-			Expect(propertyManager.RemovePropertyCallCount()).To(Equal(1))
+			Expect(propertyManager.RemoveCallCount()).To(Equal(1))
 		})
 	})
 })

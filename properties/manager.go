@@ -18,7 +18,7 @@ func NewManager() *Manager {
 	}
 }
 
-func (m *Manager) SetProperty(name string, value string) error {
+func (m *Manager) Set(name string, value string) error {
 	m.propMutex.Lock()
 	defer m.propMutex.Unlock()
 
@@ -26,14 +26,14 @@ func (m *Manager) SetProperty(name string, value string) error {
 	return nil
 }
 
-func (m *Manager) Properties() (garden.Properties, error) {
+func (m *Manager) All() (garden.Properties, error) {
 	m.propMutex.RLock()
 	defer m.propMutex.RUnlock()
 
 	return m.prop, nil
 }
 
-func (m *Manager) Property(name string) (string, error) {
+func (m *Manager) Get(name string) (string, error) {
 	var (
 		prop string
 		ok   bool
@@ -51,7 +51,7 @@ func (m *Manager) Property(name string) (string, error) {
 	return prop, nil
 }
 
-func (m *Manager) RemoveProperty(name string) error {
+func (m *Manager) Remove(name string) error {
 	if _, ok := m.prop[name]; !ok {
 		return NoSuchPropertyError{
 			Message: fmt.Sprintf("No such property: %s", name),

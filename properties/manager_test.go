@@ -15,12 +15,12 @@ var _ = Describe("Properties", func() {
 		BeforeEach(func() {
 			propertyManager = properties.NewManager()
 
-			err := propertyManager.SetProperty("name", "value")
+			err := propertyManager.Set("name", "value")
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("returns the properties", func() {
-			props, err := propertyManager.Properties()
+			props, err := propertyManager.All()
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(props).To(HaveLen(1))
@@ -28,30 +28,30 @@ var _ = Describe("Properties", func() {
 		})
 
 		It("returns a specific property when passed a name", func() {
-			property, err := propertyManager.Property("name")
+			property, err := propertyManager.Get("name")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(property).To(Equal("value"))
 		})
 
 		It("removes properties", func() {
-			props, err := propertyManager.Properties()
+			props, err := propertyManager.All()
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(props).To(HaveLen(1))
 
-			err = propertyManager.RemoveProperty("name")
+			err = propertyManager.Remove("name")
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = propertyManager.Property("name")
+			_, err = propertyManager.Get("name")
 			Expect(err).To(MatchError(properties.NoSuchPropertyError{"No such property: name"}))
 		})
 
 		Context("when the property already exists", func() {
 			It("updates the property value", func() {
-				err := propertyManager.SetProperty("name", "some-other-value")
+				err := propertyManager.Set("name", "some-other-value")
 				Expect(err).NotTo(HaveOccurred())
 
-				props, err := propertyManager.Properties()
+				props, err := propertyManager.All()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(props).To(HaveKeyWithValue("name", "some-other-value"))
 			})
@@ -59,7 +59,7 @@ var _ = Describe("Properties", func() {
 
 		Context("when attempting to remove a property that doesn't exist", func() {
 			It("returns a NoSuchPropertyError", func() {
-				err := propertyManager.RemoveProperty("missing")
+				err := propertyManager.Remove("missing")
 				Expect(err).To(MatchError(properties.NoSuchPropertyError{"No such property: missing"}))
 			})
 		})

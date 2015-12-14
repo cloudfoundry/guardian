@@ -168,11 +168,11 @@ var _ = Describe("Gardener", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(propertyManager.SetPropertyCallCount()).To(Equal(2))
+					Expect(propertyManager.SetCallCount()).To(Equal(2))
 
 					var allProps = make(map[string]string)
 					for i := 0; i < 2; i++ {
-						name, value := propertyManager.SetPropertyArgsForCall(i)
+						name, value := propertyManager.SetArgsForCall(i)
 						allProps[name] = value
 					}
 
@@ -181,7 +181,7 @@ var _ = Describe("Gardener", func() {
 				})
 
 				It("can get properties set on a created container", func() {
-					propertyManager.PropertiesReturns(properties, nil)
+					propertyManager.AllReturns(properties, nil)
 
 					c, err := gdnr.Create(garden.ContainerSpec{
 						Properties: properties,
@@ -194,13 +194,13 @@ var _ = Describe("Gardener", func() {
 					props, err := d.Properties()
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(propertyManager.PropertiesCallCount()).To(Equal(1))
+					Expect(propertyManager.AllCallCount()).To(Equal(1))
 					Expect(props).To(Equal(properties))
 				})
 
 				Context("when error on set property occurs", func() {
 					It("returns the error", func() {
-						propertyManager.SetPropertyReturns(errors.New("error"))
+						propertyManager.SetReturns(errors.New("error"))
 
 						_, err := gdnr.Create(garden.ContainerSpec{
 							Properties: properties,
