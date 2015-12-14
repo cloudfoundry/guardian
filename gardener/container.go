@@ -1,7 +1,9 @@
 package gardener
 
 import (
+	"fmt"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
@@ -9,9 +11,28 @@ import (
 )
 
 type container struct {
-	handle        string
-	containerizer Containerizer
-	logger        lager.Logger
+	logger          lager.Logger
+	properties      map[string]string
+	propertiesMutex sync.RWMutex
+	handle          string
+	containerizer   Containerizer
+}
+
+type NoSuchPropertyError struct {
+	Message string
+}
+
+func (e NoSuchPropertyError) Error() string {
+	return e.Message
+}
+
+func NewContainer(logger lager.Logger, handle string, containerizer Containerizer) *container {
+	return &container{
+		logger:        logger,
+		properties:    make(map[string]string),
+		handle:        handle,
+		containerizer: containerizer,
+	}
 }
 
 func (c *container) Handle() string {
@@ -87,18 +108,40 @@ func (c *container) Metrics() (garden.Metrics, error) {
 }
 
 func (c *container) Properties() (garden.Properties, error) {
-	return nil, nil
+	return garden.Properties(c.properties), nil
 }
 
 func (c *container) Property(name string) (string, error) {
-	return "", nil
+	var (
+		val string
+		ok  bool
+	)
+
+	c.propertiesMutex.RLock()
+	defer c.propertiesMutex.RUnlock()
+
+	val, ok = c.properties[name]
+
+	if !ok {
+		return "", NoSuchPropertyError{
+			fmt.Sprintf("No such property: %s", name),
+		}
+	}
+
+	return val, nil
 }
 
 func (c *container) SetProperty(name string, value string) error {
+	c.propertiesMutex.Lock()
+	defer c.propertiesMutex.Unlock()
+
+	c.properties[name] = value
+
 	return nil
 }
 
 func (c *container) RemoveProperty(name string) error {
+	delete(c.properties, name)
 	return nil
 }
 
