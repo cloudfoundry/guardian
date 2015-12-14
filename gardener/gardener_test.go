@@ -197,6 +197,17 @@ var _ = Describe("Gardener", func() {
 					Expect(propertyManager.PropertiesCallCount()).To(Equal(1))
 					Expect(props).To(Equal(properties))
 				})
+
+				Context("when error on set property occurs", func() {
+					It("returns the error", func() {
+						propertyManager.SetPropertyReturns(errors.New("error"))
+
+						_, err := gdnr.Create(garden.ContainerSpec{
+							Properties: properties,
+						})
+						Expect(err).To(MatchError(errors.New("error")))
+					})
+				})
 			})
 		})
 	})

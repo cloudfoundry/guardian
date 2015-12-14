@@ -137,7 +137,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 	for name, value := range spec.Properties {
 		err := container.SetProperty(name, value)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 
