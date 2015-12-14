@@ -121,6 +121,11 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		return nil, err
 	}
 
+	err = g.PropertyManager.CreateKeySpace(spec.Handle)
+	if err != nil {
+		return nil, err
+	}
+
 	container, err := g.Lookup(spec.Handle)
 	if err != nil {
 		return nil, err
@@ -137,11 +142,6 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 }
 
 func (g *Gardener) Lookup(handle string) (garden.Container, error) {
-	err := g.PropertyManager.CreateKeySpace(handle)
-	if err != nil {
-		panic(err)
-	}
-
 	return &container{
 		handle:          handle,
 		containerizer:   g.Containerizer,
