@@ -4,6 +4,7 @@ import (
 	"net"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/fakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
@@ -15,6 +16,7 @@ var _ = Describe("ConfigCreator", func() {
 	var subnet *net.IPNet
 	var ip net.IP
 	var logger lager.Logger
+	var idGenerator *fakes.FakeIDGenerator
 
 	BeforeEach(func() {
 		var err error
@@ -22,8 +24,21 @@ var _ = Describe("ConfigCreator", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		logger = lagertest.NewTestLogger("test")
+		idGenerator = &fakes.FakeIDGenerator{}
 
-		creator = kawasaki.NewConfigCreator("intf-prefix", "chain-prefix")
+		creator = kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdef")
+	})
+
+	It("panics if the interface prefix is longer than 2 characters", func() {
+		Expect(func() {
+			kawasaki.NewConfigCreator(idGenerator, "too-long", "wc")
+		}).To(Panic())
+	})
+
+	It("panics if the chain prefix is longer than 16 characters", func() {
+		Expect(func() {
+			kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdefg")
+		}).To(Panic())
 	})
 
 	It("assigns the bridge name based on the subnet", func() {
@@ -33,38 +48,22 @@ var _ = Describe("ConfigCreator", func() {
 		Expect(config.BridgeName).To(Equal("br-192-168-12-0"))
 	})
 
-	Context("when the handle is short", func() {
-		It("assigns the correct interface names", func() {
-			config, err := creator.Create(logger, "banana", subnet, ip)
-			Expect(err).NotTo(HaveOccurred())
+	It("it assigns the interface names based on the ID from the ID generator", func() {
+		idGenerator.GenerateReturns("cocacola")
 
-			Expect(config.HostIntf).To(Equal("intf-prefix-banana-0"))
-			Expect(config.ContainerIntf).To(Equal("intf-prefix-banana-1"))
-		})
+		config, err := creator.Create(logger, "bananashmanana", subnet, ip)
+		Expect(err).NotTo(HaveOccurred())
 
-		It("assigns the correct instance chain name", func() {
-			config, err := creator.Create(logger, "banana", subnet, ip)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(config.IPTableChain).To(Equal("chain-prefix-banana"))
-		})
+		Expect(config.HostIntf).To(Equal("w1cocacola-0"))
+		Expect(config.ContainerIntf).To(Equal("w1cocacola-1"))
+		Expect(config.IPTableChain).To(Equal("0123456789abcdef-cocacola"))
 	})
 
-	Context("when the handle is long", func() {
-		It("truncates the interface names", func() {
-			config, err := creator.Create(logger, "bananashmanana", subnet, ip)
-			Expect(err).NotTo(HaveOccurred())
+	It("only generates 1 ID per invocation", func() {
+		_, err := creator.Create(logger, "bananashmanana", subnet, ip)
+		Expect(err).NotTo(HaveOccurred())
 
-			Expect(config.HostIntf).To(Equal("intf-prefix-bananash-0"))
-			Expect(config.ContainerIntf).To(Equal("intf-prefix-bananash-1"))
-		})
-
-		It("truncates the name to create the iptable chain name", func() {
-			config, err := creator.Create(logger, "bananashmanana", subnet, ip)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(config.IPTableChain).To(Equal("chain-prefix-bananash"))
-		})
+		Expect(idGenerator.GenerateCallCount()).To(Equal(1))
 	})
 
 	It("saves the subnet and ip", func() {
