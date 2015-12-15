@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
@@ -75,37 +74,6 @@ var _ = Describe("Creating a Container", func() {
 			Entry("should place the container in to the MNT namespace", "mnt"),
 		)
 
-		Describe("destroying the container", func() {
-			var process garden.Process
-
-			BeforeEach(func() {
-				var err error
-				process, err = container.Run(garden.ProcessSpec{
-					Path: "/bin/sh",
-					Args: []string{
-						"-c", "read x",
-					},
-				}, ginkgoIO)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(client.Destroy(container.Handle())).To(Succeed())
-			})
-
-			It("should kill the containers init process", func() {
-				var killExitCode = func() int {
-					sess, err := gexec.Start(exec.Command("kill", "-0", fmt.Sprintf("%d", initProcPid)), GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					sess.Wait(1 * time.Second)
-					return sess.ExitCode()
-				}
-
-				Eventually(killExitCode, "5s").Should(Equal(1))
-			})
-
-			It("should destroy the container's depot directory", func() {
-				Expect(filepath.Join(client.DepotDir, container.Handle())).NotTo(BeAnExistingFile())
-			})
-		})
 	})
 
 	Context("after creating a container with a specified root filesystem", func() {
