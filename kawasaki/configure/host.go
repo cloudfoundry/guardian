@@ -23,6 +23,7 @@ type Host struct {
 	Bridge interface {
 		Create(bridgeName string, ip net.IP, subnet *net.IPNet) (*net.Interface, error)
 		Add(bridge, slave *net.Interface) error
+		Destroy(bridgeName string) error
 	}
 
 	Logger lager.Logger
@@ -66,6 +67,10 @@ func (c *Host) Apply(config kawasaki.NetworkConfig, netns *os.File) error {
 	}
 
 	return nil
+}
+
+func (c *Host) Destroy(config kawasaki.NetworkConfig) error {
+	return c.Bridge.Destroy(config.BridgeName)
 }
 
 func (c *Host) configureBridgeIntf(log lager.Logger, name string, ip net.IP, subnet *net.IPNet) (*net.Interface, error) {

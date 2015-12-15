@@ -304,10 +304,10 @@ func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfa
 	)
 }
 
-func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, iptablesMgr kawasaki.IPTablesApplier, interfacePrefix, chainPrefix string) *kawasaki.Networker {
+func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, iptablesMgr kawasaki.IPTablesConfigurer, interfacePrefix, chainPrefix string) *kawasaki.Networker {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("network-runner")}
 
-	hostCfgApplier := &configure.Host{
+	hostConfigurer := &configure.Host{
 		Veth:   &devices.VethCreator{},
 		Link:   &devices.Link{Name: "guardian"},
 		Bridge: &devices.Bridge{},
@@ -326,12 +326,13 @@ func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, ipt
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(networkPoolCIDR),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix),
-		kawasaki.NewConfigApplier(
-			hostCfgApplier,
+		kawasaki.NewConfigurer(
+			hostConfigurer,
 			containerCfgApplier,
 			iptablesMgr,
 			&netns.Execer{},
 		),
+		&kawasaki.ConfigMap{},
 	)
 }
 

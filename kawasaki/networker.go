@@ -1,6 +1,7 @@
 package kawasaki
 
 import (
+	"errors"
 	"fmt"
 	"net"
 
@@ -25,9 +26,31 @@ type ConfigCreator interface {
 	Create(log lager.Logger, handle string, subnet *net.IPNet, ip net.IP) (NetworkConfig, error)
 }
 
-//go:generate counterfeiter . ConfigApplier
-type ConfigApplier interface {
+//go:generate counterfeiter . Configurer
+type Configurer interface {
 	Apply(log lager.Logger, cfg NetworkConfig, nsPath string) error
+	Destroy(log lager.Logger, cfg NetworkConfig) error
+}
+
+//go:generate counterfeiter . ConfigStore
+type ConfigStore interface {
+	Put(handle string, cfg NetworkConfig)
+	Get(handle string) (NetworkConfig, error)
+}
+
+type ConfigMap map[string]NetworkConfig
+
+func (m ConfigMap) Put(handle string, cfg NetworkConfig) {
+	m[handle] = cfg
+}
+
+func (m ConfigMap) Get(handle string) (NetworkConfig, error) {
+	v, ok := m[handle]
+	if !ok {
+		return NetworkConfig{}, errors.New("Handle does not exist")
+	}
+
+	return v, nil
 }
 
 type Networker struct {
@@ -36,21 +59,25 @@ type Networker struct {
 	specParser    SpecParser
 	subnetPool    subnets.Pool
 	configCreator ConfigCreator
-	configApplier ConfigApplier
+	configurer    Configurer
+	configStore   ConfigStore
 }
 
 func New(netnsMgr NetnsMgr,
 	specParser SpecParser,
 	subnetPool subnets.Pool,
 	configCreator ConfigCreator,
-	configApplier ConfigApplier) *Networker {
+	configurer Configurer,
+	configStore ConfigStore,
+) *Networker {
 	return &Networker{
 		netnsMgr: netnsMgr,
 
 		specParser:    specParser,
 		subnetPool:    subnetPool,
 		configCreator: configCreator,
-		configApplier: configApplier,
+		configurer:    configurer,
+		configStore:   configStore,
 	}
 }
 
@@ -82,6 +109,7 @@ func (n *Networker) Network(log lager.Logger, handle, spec string) (string, erro
 		log.Error("create-config-failed", err)
 		return "", fmt.Errorf("create network config: %s", err)
 	}
+	n.configStore.Put(handle, config)
 
 	err = n.netnsMgr.Create(log, handle)
 	if err != nil {
@@ -95,7 +123,7 @@ func (n *Networker) Network(log lager.Logger, handle, spec string) (string, erro
 		return "", err
 	}
 
-	if err := n.configApplier.Apply(log, config, path); err != nil {
+	if err := n.configurer.Apply(log, config, path); err != nil {
 		log.Error("apply-config-failed", err)
 		n.destroyOrLog(log, handle)
 		return "", err
@@ -109,8 +137,27 @@ func (n *Networker) Capacity() uint64 {
 	return uint64(n.subnetPool.Capacity())
 }
 
-func (n *Networker) destroyOrLog(log lager.Logger, handle string) {
+func (n *Networker) Destroy(log lager.Logger, handle string) error {
+	cfg, err := n.configStore.Get(handle)
+	if err != nil {
+		return err
+	}
+
 	if err := n.netnsMgr.Destroy(log, handle); err != nil {
+		log.Error("destroy-namespace-failed", err)
+		return err
+	}
+
+	if err := n.configurer.Destroy(log, cfg); err != nil {
+		log.Error("destroy-config-failed", err)
+		return err
+	}
+
+	return nil
+}
+
+func (n *Networker) destroyOrLog(log lager.Logger, handle string) {
+	if err := n.Destroy(log, handle); err != nil {
 		log.Error("destroy-failed", err)
 	}
 }

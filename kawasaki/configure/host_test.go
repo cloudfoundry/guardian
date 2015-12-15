@@ -16,25 +16,34 @@ import (
 )
 
 var _ = Describe("Host", func() {
-	Describe("Configure", func() {
-		var (
-			vethCreator    *fakedevices.FaveVethCreator
-			linkConfigurer *fakedevices.FakeLink
-			bridger        *fakedevices.FakeBridge
+	var (
+		vethCreator    *fakedevices.FaveVethCreator
+		linkConfigurer *fakedevices.FakeLink
+		bridger        *fakedevices.FakeBridge
 
+		configurer *configure.Host
+
+		config kawasaki.NetworkConfig
+	)
+
+	BeforeEach(func() {
+		vethCreator = &fakedevices.FaveVethCreator{}
+		linkConfigurer = &fakedevices.FakeLink{AddIPReturns: make(map[string]error)}
+		bridger = &fakedevices.FakeBridge{}
+
+		configurer = &configure.Host{Veth: vethCreator, Link: linkConfigurer, Bridge: bridger, Logger: lagertest.NewTestLogger("test")}
+
+		config = kawasaki.NetworkConfig{}
+	})
+
+	Describe("Apply", func() {
+		var (
 			netnsFD *os.File
 
-			configurer     *configure.Host
 			existingBridge *net.Interface
-			config         kawasaki.NetworkConfig
 		)
 
 		BeforeEach(func() {
-			vethCreator = &fakedevices.FaveVethCreator{}
-			linkConfigurer = &fakedevices.FakeLink{AddIPReturns: make(map[string]error)}
-			bridger = &fakedevices.FakeBridge{}
-			configurer = &configure.Host{Veth: vethCreator, Link: linkConfigurer, Bridge: bridger, Logger: lagertest.NewTestLogger("test")}
-
 			var err error
 			netnsFD, err = ioutil.TempFile("", "")
 			Expect(err).NotTo(HaveOccurred())
@@ -186,6 +195,25 @@ var _ = Describe("Host", func() {
 						})
 					})
 				})
+			})
+		})
+	})
+
+	Describe("Destroy", func() {
+		It("should destroy the bridge", func() {
+			config.HostIntf = "host"
+			config.BridgeName = "spiderman-bridge"
+			Expect(configurer.Destroy(config)).To(Succeed())
+
+			Expect(bridger.DestroyCalledWith).To(HaveLen(1))
+			Expect(bridger.DestroyCalledWith[0]).To(Equal(config.BridgeName))
+		})
+
+		Context("when bridge fails to be destroyed", func() {
+			It("should return an error", func() {
+				bridger.DestroyReturns = errors.New("banana-bridge-failure")
+
+				Expect(configurer.Destroy(config)).NotTo(Succeed())
 			})
 		})
 	})

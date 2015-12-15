@@ -30,6 +30,7 @@ type Containerizer interface {
 type Networker interface {
 	Network(log lager.Logger, handle, spec string) (string, error)
 	Capacity() uint64
+	Destroy(log lager.Logger, handle string) error
 }
 
 //go:generate counterfeiter . VolumeCreator
@@ -129,7 +130,11 @@ func (g *Gardener) Lookup(handle string) (garden.Container, error) {
 }
 
 func (g *Gardener) Destroy(handle string) error {
-	return g.Containerizer.Destroy(g.Logger, handle)
+	err := g.Containerizer.Destroy(g.Logger, handle)
+	if err != nil {
+		return err
+	}
+	return g.Networker.Destroy(g.Logger, handle)
 }
 
 func (g *Gardener) Stop()                                    {}

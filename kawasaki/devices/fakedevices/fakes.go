@@ -124,9 +124,9 @@ type FakeBridge struct {
 
 	AddReturns error
 
-	DeleteCalledWith []string
+	DestroyCalledWith []string
 
-	DeleteReturns error
+	DestroyReturns error
 }
 
 func (f *FakeBridge) Create(name string, ip net.IP, subnet *net.IPNet) (*net.Interface, error) {
@@ -142,7 +142,7 @@ func (f *FakeBridge) Add(bridge, slave *net.Interface) error {
 	return f.AddReturns
 }
 
-func (f *FakeBridge) Delete(bridge string) error {
-	f.DeleteCalledWith = append(f.DeleteCalledWith, bridge)
-	return f.DeleteReturns
+func (f *FakeBridge) Destroy(bridge string) error {
+	f.DestroyCalledWith = append(f.DestroyCalledWith, bridge)
+	return f.DestroyReturns
 }

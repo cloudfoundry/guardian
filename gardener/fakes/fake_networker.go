@@ -26,6 +26,15 @@ type FakeNetworker struct {
 	capacityReturns     struct {
 		result1 uint64
 	}
+	DestroyStub        func(log lager.Logger, handle string) error
+	destroyMutex       sync.RWMutex
+	destroyArgsForCall []struct {
+		log    lager.Logger
+		handle string
+	}
+	destroyReturns struct {
+		result1 error
+	}
 }
 
 func (fake *FakeNetworker) Network(log lager.Logger, handle string, spec string) (string, error) {
@@ -84,6 +93,39 @@ func (fake *FakeNetworker) CapacityReturns(result1 uint64) {
 	fake.CapacityStub = nil
 	fake.capacityReturns = struct {
 		result1 uint64
+	}{result1}
+}
+
+func (fake *FakeNetworker) Destroy(log lager.Logger, handle string) error {
+	fake.destroyMutex.Lock()
+	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
+		log    lager.Logger
+		handle string
+	}{log, handle})
+	fake.destroyMutex.Unlock()
+	if fake.DestroyStub != nil {
+		return fake.DestroyStub(log, handle)
+	} else {
+		return fake.destroyReturns.result1
+	}
+}
+
+func (fake *FakeNetworker) DestroyCallCount() int {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return len(fake.destroyArgsForCall)
+}
+
+func (fake *FakeNetworker) DestroyArgsForCall(i int) (lager.Logger, string) {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return fake.destroyArgsForCall[i].log, fake.destroyArgsForCall[i].handle
+}
+
+func (fake *FakeNetworker) DestroyReturns(result1 error) {
+	fake.DestroyStub = nil
+	fake.destroyReturns = struct {
+		result1 error
 	}{result1}
 }
 

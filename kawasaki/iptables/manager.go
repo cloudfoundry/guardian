@@ -35,7 +35,7 @@ func NewManager(fc FilterConfig, nc NATConfig, chainPrefix, nicPrefix string, ru
 }
 
 func (mgr *Manager) Apply(instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error {
-	if err := mgr.Teardown(instanceChain); err != nil {
+	if err := mgr.Destroy(instanceChain); err != nil {
 		return err
 	}
 
@@ -52,7 +52,7 @@ func (mgr *Manager) Apply(instanceChain, bridgeName string, ip net.IP, network *
 	return nil
 }
 
-func (mgr *Manager) Teardown(instanceChain string) error {
+func (mgr *Manager) Destroy(instanceChain string) error {
 	var lastErr error
 	for _, chain := range mgr.Chains {
 		if err := chain.Teardown(instanceChain); err != nil {

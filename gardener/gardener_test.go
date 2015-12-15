@@ -22,10 +22,13 @@ var _ = Describe("Gardener", func() {
 		uidGenerator    *fakes.FakeUidGenerator
 		sysinfoProvider *fakes.FakeSysInfoProvider
 
+		logger lager.Logger
+
 		gdnr *gardener.Gardener
 	)
 
 	BeforeEach(func() {
+		logger = lagertest.NewTestLogger("test")
 		containerizer = new(fakes.FakeContainerizer)
 		uidGenerator = new(fakes.FakeUidGenerator)
 		networker = new(fakes.FakeNetworker)
@@ -37,8 +40,43 @@ var _ = Describe("Gardener", func() {
 			UidGenerator:    uidGenerator,
 			Networker:       networker,
 			VolumeCreator:   volumeCreator,
-			Logger:          lagertest.NewTestLogger("test"),
+			Logger:          logger,
 		}
+	})
+
+	Describe("destroying a container", func() {
+		It("asks the containerizer to destroy the container", func() {
+			Expect(gdnr.Destroy("some-handle")).To(Succeed())
+			Expect(containerizer.DestroyCallCount()).To(Equal(1))
+			_, handle := containerizer.DestroyArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+		})
+
+		It("ask the networker to destroy the container network", func() {
+			gdnr.Destroy("some-handle")
+			Expect(networker.DestroyCallCount()).To(Equal(1))
+			networkLogger, handleToDestroy := networker.DestroyArgsForCall(0)
+			Expect(handleToDestroy).To(Equal("some-handle"))
+			Expect(networkLogger).To(Equal(logger))
+		})
+
+		Context("when containerized fails to destroy the container", func() {
+			It("return the error", func() {
+				containerizer.DestroyReturns(errors.New("containerized deletion failed"))
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(MatchError("containerized deletion failed"))
+				Expect(networker.DestroyCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when network deletion fails", func() {
+			It("returns the error", func() {
+				networker.DestroyReturns(errors.New("network deletion failed"))
+				err := gdnr.Destroy("some-handle")
+				Expect(containerizer.DestroyCallCount()).To(Equal(1))
+				Expect(err).To(MatchError("network deletion failed"))
+			})
+		})
 	})
 
 	Describe("creating a container", func() {
@@ -183,15 +221,6 @@ var _ = Describe("Gardener", func() {
 					_, err := container.Run(garden.ProcessSpec{}, garden.ProcessIO{})
 					Expect(err).To(MatchError("lost my banana"))
 				})
-			})
-		})
-
-		Describe("destroying a container", func() {
-			It("asks the containerizer to destroy the container", func() {
-				Expect(gdnr.Destroy(container.Handle())).To(Succeed())
-				Expect(containerizer.DestroyCallCount()).To(Equal(1))
-				_, handle := containerizer.DestroyArgsForCall(0)
-				Expect(handle).To(Equal(container.Handle()))
 			})
 		})
 	})

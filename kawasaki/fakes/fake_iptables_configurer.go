@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 )
 
-type FakeIPTablesApplier struct {
+type FakeIPTablesConfigurer struct {
 	ApplyStub        func(instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
@@ -20,17 +20,17 @@ type FakeIPTablesApplier struct {
 	applyReturns struct {
 		result1 error
 	}
-	TeardownStub        func(instanceChain string) error
-	teardownMutex       sync.RWMutex
-	teardownArgsForCall []struct {
+	DestroyStub        func(instanceChain string) error
+	destroyMutex       sync.RWMutex
+	destroyArgsForCall []struct {
 		instanceChain string
 	}
-	teardownReturns struct {
+	destroyReturns struct {
 		result1 error
 	}
 }
 
-func (fake *FakeIPTablesApplier) Apply(instanceChain string, bridgeName string, ip net.IP, network *net.IPNet) error {
+func (fake *FakeIPTablesConfigurer) Apply(instanceChain string, bridgeName string, ip net.IP, network *net.IPNet) error {
 	fake.applyMutex.Lock()
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
 		instanceChain string
@@ -46,55 +46,55 @@ func (fake *FakeIPTablesApplier) Apply(instanceChain string, bridgeName string, 
 	}
 }
 
-func (fake *FakeIPTablesApplier) ApplyCallCount() int {
+func (fake *FakeIPTablesConfigurer) ApplyCallCount() int {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
 	return len(fake.applyArgsForCall)
 }
 
-func (fake *FakeIPTablesApplier) ApplyArgsForCall(i int) (string, string, net.IP, *net.IPNet) {
+func (fake *FakeIPTablesConfigurer) ApplyArgsForCall(i int) (string, string, net.IP, *net.IPNet) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
 	return fake.applyArgsForCall[i].instanceChain, fake.applyArgsForCall[i].bridgeName, fake.applyArgsForCall[i].ip, fake.applyArgsForCall[i].network
 }
 
-func (fake *FakeIPTablesApplier) ApplyReturns(result1 error) {
+func (fake *FakeIPTablesConfigurer) ApplyReturns(result1 error) {
 	fake.ApplyStub = nil
 	fake.applyReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeIPTablesApplier) Teardown(instanceChain string) error {
-	fake.teardownMutex.Lock()
-	fake.teardownArgsForCall = append(fake.teardownArgsForCall, struct {
+func (fake *FakeIPTablesConfigurer) Destroy(instanceChain string) error {
+	fake.destroyMutex.Lock()
+	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
 		instanceChain string
 	}{instanceChain})
-	fake.teardownMutex.Unlock()
-	if fake.TeardownStub != nil {
-		return fake.TeardownStub(instanceChain)
+	fake.destroyMutex.Unlock()
+	if fake.DestroyStub != nil {
+		return fake.DestroyStub(instanceChain)
 	} else {
-		return fake.teardownReturns.result1
+		return fake.destroyReturns.result1
 	}
 }
 
-func (fake *FakeIPTablesApplier) TeardownCallCount() int {
-	fake.teardownMutex.RLock()
-	defer fake.teardownMutex.RUnlock()
-	return len(fake.teardownArgsForCall)
+func (fake *FakeIPTablesConfigurer) DestroyCallCount() int {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return len(fake.destroyArgsForCall)
 }
 
-func (fake *FakeIPTablesApplier) TeardownArgsForCall(i int) string {
-	fake.teardownMutex.RLock()
-	defer fake.teardownMutex.RUnlock()
-	return fake.teardownArgsForCall[i].instanceChain
+func (fake *FakeIPTablesConfigurer) DestroyArgsForCall(i int) string {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return fake.destroyArgsForCall[i].instanceChain
 }
 
-func (fake *FakeIPTablesApplier) TeardownReturns(result1 error) {
-	fake.TeardownStub = nil
-	fake.teardownReturns = struct {
+func (fake *FakeIPTablesConfigurer) DestroyReturns(result1 error) {
+	fake.DestroyStub = nil
+	fake.destroyReturns = struct {
 		result1 error
 	}{result1}
 }
 
-var _ kawasaki.IPTablesApplier = new(FakeIPTablesApplier)
+var _ kawasaki.IPTablesConfigurer = new(FakeIPTablesConfigurer)

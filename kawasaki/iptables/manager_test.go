@@ -38,7 +38,7 @@ var _ = Describe("Manager", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Describe("ContainerSetup", func() {
+	Describe("Apply", func() {
 		It("should set up the chains", func() {
 			Expect(manager.Apply(containerID, bridgeName, ip, network)).To(Succeed())
 			for _, fakeChain := range fakeChains {
@@ -115,9 +115,9 @@ var _ = Describe("Manager", func() {
 		})
 	})
 
-	Describe("ContainerTeardown", func() {
+	Describe("Destroy", func() {
 		It("should tear down the chains", func() {
-			Expect(manager.Teardown(containerID)).To(Succeed())
+			Expect(manager.Destroy(containerID)).To(Succeed())
 
 			for _, fakeChain := range fakeChains {
 				Expect(fakeChain.TeardownCallCount()).To(Equal(1))
@@ -132,11 +132,11 @@ var _ = Describe("Manager", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(manager.Teardown(containerID)).To(MatchError("banana"))
+				Expect(manager.Destroy(containerID)).To(MatchError("banana"))
 			})
 
 			It("should tear down subsequent chains", func() {
-				Expect(manager.Teardown(containerID)).NotTo(Succeed())
+				Expect(manager.Destroy(containerID)).NotTo(Succeed())
 
 				Expect(fakeChains[1].TeardownCallCount()).To(Equal(1))
 			})
