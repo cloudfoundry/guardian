@@ -27,12 +27,16 @@ var _ = Describe("Creating a Container", func() {
 	)
 
 	Context("after creating a container without a specified handle", func() {
+		var initProcPid int
+
 		BeforeEach(func() {
 			client = startGarden()
 
 			var err error
 			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
+
+			initProcPid = initProcessPID(container.Handle())
 		})
 
 		It("should create a depot subdirectory based on the container handle", func() {
@@ -49,11 +53,10 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		DescribeTable("placing the container in to all namespaces", func(ns string) {
-			pid := initProcessPID(container.Handle())
 			hostNS, err := gexec.Start(exec.Command("ls", "-l", fmt.Sprintf("/proc/1/ns/%s", ns)), GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
-			containerNS, err := gexec.Start(exec.Command("ls", "-l", fmt.Sprintf("/proc/%d/ns/%s", pid, ns)), GinkgoWriter, GinkgoWriter)
+			containerNS, err := gexec.Start(exec.Command("ls", "-l", fmt.Sprintf("/proc/%d/ns/%s", initProcPid, ns)), GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(containerNS).Should(gexec.Exit(0))
@@ -89,9 +92,8 @@ var _ = Describe("Creating a Container", func() {
 			})
 
 			It("should kill the containers init process", func() {
-				pid := initProcessPID(container.Handle())
 				var killExitCode = func() int {
-					sess, err := gexec.Start(exec.Command("kill", "-0", fmt.Sprintf("%d", pid)), GinkgoWriter, GinkgoWriter)
+					sess, err := gexec.Start(exec.Command("kill", "-0", fmt.Sprintf("%d", initProcPid)), GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
 					sess.Wait(1 * time.Second)
 					return sess.ExitCode()
