@@ -21,6 +21,7 @@ var _ = Describe("Gardener", func() {
 		containerizer   *fakes.FakeContainerizer
 		uidGenerator    *fakes.FakeUidGenerator
 		sysinfoProvider *fakes.FakeSysInfoProvider
+		propertyManager *fakes.FakePropertyManager
 
 		logger lager.Logger
 
@@ -34,6 +35,7 @@ var _ = Describe("Gardener", func() {
 		networker = new(fakes.FakeNetworker)
 		volumeCreator = new(fakes.FakeVolumeCreator)
 		sysinfoProvider = new(fakes.FakeSysInfoProvider)
+		propertyManager = new(fakes.FakePropertyManager)
 		gdnr = &gardener.Gardener{
 			SysInfoProvider: sysinfoProvider,
 			Containerizer:   containerizer,
@@ -41,6 +43,7 @@ var _ = Describe("Gardener", func() {
 			Networker:       networker,
 			VolumeCreator:   volumeCreator,
 			Logger:          logger,
+			PropertyManager: propertyManager,
 		}
 	})
 
@@ -50,6 +53,19 @@ var _ = Describe("Gardener", func() {
 			Expect(containerizer.DestroyCallCount()).To(Equal(1))
 			_, handle := containerizer.DestroyArgsForCall(0)
 			Expect(handle).To(Equal("some-handle"))
+		})
+
+		It("removes the key space from property manager", func() {
+			Expect(gdnr.Destroy("some-handle")).To(Succeed())
+			Expect(propertyManager.DestroyKeySpaceArgsForCall(0)).To(Equal("some-handle"))
+		})
+
+		Context("when an error occurs deleting a key space", func() {
+			It("returns the error", func() {
+				propertyManager.DestroyKeySpaceReturns(errors.New("some error"))
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(MatchError(errors.New("some error")))
+			})
 		})
 
 		It("ask the networker to destroy the container network", func() {
@@ -154,6 +170,25 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 
+			It("creates a key space for container properties", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "some-handle"})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(propertyManager.CreateKeySpaceCallCount()).To(Equal(1))
+				Expect(propertyManager.CreateKeySpaceArgsForCall(0)).To(Equal("some-handle"))
+			})
+
+			Context("when creating the key space fails", func() {
+				BeforeEach(func() {
+					propertyManager.CreateKeySpaceReturns(errors.New("kabluey"))
+				})
+
+				It("returns the error", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+					Expect(err).To(MatchError("kabluey"))
+				})
+			})
+
 			It("returns the container that Lookup would return", func() {
 				c, err := gdnr.Create(garden.ContainerSpec{Handle: "handle"})
 				Expect(err).NotTo(HaveOccurred())
@@ -183,6 +218,50 @@ var _ = Describe("Gardener", func() {
 				d, err := gdnr.Lookup(c.Handle())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(c).To(Equal(d))
+			})
+		})
+
+		Context("when properties are specified", func() {
+			var startingProperties garden.Properties
+
+			BeforeEach(func() {
+				startingProperties = garden.Properties{
+					"thingy": "thing",
+					"blingy": "bling",
+				}
+			})
+
+			It("sets every property on the container", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{
+					Handle:     "something",
+					Properties: startingProperties,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(propertyManager.SetCallCount()).To(Equal(2))
+
+				var allProps = make(map[string]string)
+				for i := 0; i < 2; i++ {
+					handle, name, value := propertyManager.SetArgsForCall(i)
+					Expect(handle).To(Equal("something"))
+					allProps[name] = value
+				}
+
+				Expect(allProps).To(Equal(map[string]string{
+					"blingy": "bling",
+					"thingy": "thing",
+				}))
+			})
+
+			Context("when error on set property occurs", func() {
+				It("returns the error", func() {
+					propertyManager.SetReturns(errors.New("error"))
+
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Properties: startingProperties,
+					})
+					Expect(err).To(MatchError(errors.New("error")))
+				})
 			})
 		})
 	})
@@ -226,48 +305,51 @@ var _ = Describe("Gardener", func() {
 	})
 
 	Describe("listing containers", func() {
-		Context("when containers exist", func() {
-			BeforeEach(func() {
-				containerizer.HandlesReturns([]string{"banana", "banana2"}, nil)
-			})
+		BeforeEach(func() {
+			containerizer.HandlesReturns([]string{"banana", "banana2", "cola"}, nil)
+		})
 
-			It("should return the containers", func() {
-				containers, err := gdnr.Containers(garden.Properties{})
-				Expect(err).NotTo(HaveOccurred())
-
-				handles := []string{}
-				for _, c := range containers {
-					handles = append(handles, c.Handle())
+		It("should return matching containers", func() {
+			propertyManager.MatchesAllStub = func(handle string, props garden.Properties) bool {
+				if handle != "banana" {
+					return true
 				}
+				return false
+			}
 
-				Expect(handles).To(ConsistOf("banana", "banana2"))
+			c, err := gdnr.Containers(garden.Properties{
+				"somename": "somevalue",
 			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(c).To(HaveLen(2))
+			Expect(c[0].Handle()).To(Equal("banana2"))
+			Expect(c[1].Handle()).To(Equal("cola"))
+		})
+	})
+
+	Context("when no containers exist", func() {
+		BeforeEach(func() {
+			containerizer.HandlesReturns([]string{}, nil)
 		})
 
-		Context("when no containers exist", func() {
-			BeforeEach(func() {
-				containerizer.HandlesReturns([]string{}, nil)
-			})
+		It("should return an empty list", func() {
+			containers, err := gdnr.Containers(garden.Properties{})
+			Expect(err).NotTo(HaveOccurred())
 
-			It("should return an empty list", func() {
-				containers, err := gdnr.Containers(garden.Properties{})
-				Expect(err).NotTo(HaveOccurred())
+			Expect(containers).To(BeEmpty())
+		})
+	})
 
-				Expect(containers).To(BeEmpty())
-			})
+	Context("when the containerizer returns an error", func() {
+		testErr := errors.New("failure")
+
+		BeforeEach(func() {
+			containerizer.HandlesReturns([]string{}, testErr)
 		})
 
-		Context("when the containerizer returns an error", func() {
-			testErr := errors.New("failure")
-
-			BeforeEach(func() {
-				containerizer.HandlesReturns([]string{}, testErr)
-			})
-
-			It("should return an empty list", func() {
-				_, err := gdnr.Containers(garden.Properties{})
-				Expect(err).To(MatchError(testErr))
-			})
+		It("should return an error", func() {
+			_, err := gdnr.Containers(garden.Properties{})
+			Expect(err).To(MatchError(testErr))
 		})
 	})
 

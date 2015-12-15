@@ -9,9 +9,19 @@ import (
 )
 
 type container struct {
-	handle        string
-	containerizer Containerizer
-	logger        lager.Logger
+	logger          lager.Logger
+	handle          string
+	containerizer   Containerizer
+	propertyManager PropertyManager
+}
+
+func NewContainer(logger lager.Logger, handle string, containerizer Containerizer, propertyManager PropertyManager) *container {
+	return &container{
+		logger:          logger,
+		handle:          handle,
+		containerizer:   containerizer,
+		propertyManager: propertyManager,
+	}
 }
 
 func (c *container) Handle() string {
@@ -87,19 +97,19 @@ func (c *container) Metrics() (garden.Metrics, error) {
 }
 
 func (c *container) Properties() (garden.Properties, error) {
-	return nil, nil
+	return c.propertyManager.All(c.handle)
 }
 
 func (c *container) Property(name string) (string, error) {
-	return "", nil
+	return c.propertyManager.Get(c.handle, name)
 }
 
 func (c *container) SetProperty(name string, value string) error {
-	return nil
+	return c.propertyManager.Set(c.handle, name, value)
 }
 
 func (c *container) RemoveProperty(name string) error {
-	return nil
+	return c.propertyManager.Remove(c.handle, name)
 }
 
 func (c *container) SetGraceTime(t time.Duration) error {

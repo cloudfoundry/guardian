@@ -30,6 +30,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/cloudfoundry-incubator/guardian/logging"
+	"github.com/cloudfoundry-incubator/guardian/properties"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
@@ -239,6 +240,7 @@ func main() {
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, resolvedRootFSPath),
 		Logger:          logger,
+		PropertyManager: properties.NewManager(),
 	}
 
 	gardenServer := server.New(*listenNetwork, *listenAddr, *graceTime, backend, logger.Session("api"))
