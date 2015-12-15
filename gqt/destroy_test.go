@@ -100,11 +100,6 @@ var _ = Describe("Destroying a Container", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(out)).NotTo(ContainSubstring("177.100.10.0/24"))
 			Expect(string(out)).To(ContainSubstring("168.100.20.0/24"))
-
-			out, err = exec.Command("iptables", "-S", "-t", "nat").CombinedOutput()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(out)).NotTo(ContainSubstring("177.100.10.0/24"))
-			Expect(string(out)).To(ContainSubstring("168.100.20.0/24"))
 		})
 
 		It("should remove namespaces", func() {
