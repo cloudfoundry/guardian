@@ -36,6 +36,7 @@ type Configurer interface {
 type ConfigStore interface {
 	Put(handle string, cfg NetworkConfig)
 	Get(handle string) (NetworkConfig, error)
+	Remove(handle string)
 }
 
 type ConfigMap map[string]NetworkConfig
@@ -51,6 +52,10 @@ func (m ConfigMap) Get(handle string) (NetworkConfig, error) {
 	}
 
 	return v, nil
+}
+
+func (m ConfigMap) Remove(handle string) {
+	delete(m, handle)
 }
 
 type Networker struct {
@@ -142,6 +147,7 @@ func (n *Networker) Destroy(log lager.Logger, handle string) error {
 	if err != nil {
 		return err
 	}
+	n.configStore.Remove(handle)
 
 	if err := n.netnsMgr.Destroy(log, handle); err != nil {
 		log.Error("destroy-namespace-failed", err)

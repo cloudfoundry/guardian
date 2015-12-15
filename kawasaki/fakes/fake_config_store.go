@@ -23,6 +23,11 @@ type FakeConfigStore struct {
 		result1 kawasaki.NetworkConfig
 		result2 error
 	}
+	RemoveStub        func(handle string)
+	removeMutex       sync.RWMutex
+	removeArgsForCall []struct {
+		handle string
+	}
 }
 
 func (fake *FakeConfigStore) Put(handle string, cfg kawasaki.NetworkConfig) {
@@ -80,6 +85,29 @@ func (fake *FakeConfigStore) GetReturns(result1 kawasaki.NetworkConfig, result2 
 		result1 kawasaki.NetworkConfig
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeConfigStore) Remove(handle string) {
+	fake.removeMutex.Lock()
+	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
+		handle string
+	}{handle})
+	fake.removeMutex.Unlock()
+	if fake.RemoveStub != nil {
+		fake.RemoveStub(handle)
+	}
+}
+
+func (fake *FakeConfigStore) RemoveCallCount() int {
+	fake.removeMutex.RLock()
+	defer fake.removeMutex.RUnlock()
+	return len(fake.removeArgsForCall)
+}
+
+func (fake *FakeConfigStore) RemoveArgsForCall(i int) string {
+	fake.removeMutex.RLock()
+	defer fake.removeMutex.RUnlock()
+	return fake.removeArgsForCall[i].handle
 }
 
 var _ kawasaki.ConfigStore = new(FakeConfigStore)

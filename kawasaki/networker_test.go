@@ -56,6 +56,15 @@ var _ = Describe("ConfigStore", func() {
 				Expect(v).To(Equal(newCfg))
 			})
 		})
+
+		Context("and then removed", func() {
+			It("should return error when we call get", func() {
+				store.Remove("test")
+
+				_, err := store.Get("test")
+				Expect(err).To(HaveOccurred())
+			})
+		})
 	})
 
 	Context("when a configuration is not put", func() {
@@ -284,6 +293,12 @@ var _ = Describe("Networker", func() {
 
 				Expect(fakeNetnsMgr.DestroyCallCount()).To(Equal(0))
 			})
+		})
+
+		It("should remove the handle config pair in ConfigStore", func() {
+			Expect(networker.Destroy(logger, "spiderman-handle")).To(Succeed())
+			Expect(fakeConfigStore.RemoveCallCount()).To(Equal(1))
+			Expect(fakeConfigStore.RemoveArgsForCall(0)).To(Equal("spiderman-handle"))
 		})
 
 		It("should destroy the network namespace", func() {
