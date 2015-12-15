@@ -47,65 +47,8 @@ var _ = Describe("Gardener", func() {
 		}
 	})
 
-	Describe("destroying a container", func() {
-		It("asks the containerizer to destroy the container", func() {
-			Expect(gdnr.Destroy("some-handle")).To(Succeed())
-			Expect(containerizer.DestroyCallCount()).To(Equal(1))
-			_, handle := containerizer.DestroyArgsForCall(0)
-			Expect(handle).To(Equal("some-handle"))
-		})
-
-		It("removes the key space from property manager", func() {
-			Expect(gdnr.Destroy("some-handle")).To(Succeed())
-			Expect(propertyManager.DestroyKeySpaceArgsForCall(0)).To(Equal("some-handle"))
-		})
-
-		Context("when an error occurs deleting a key space", func() {
-			It("returns the error", func() {
-				propertyManager.DestroyKeySpaceReturns(errors.New("some error"))
-				err := gdnr.Destroy("some-handle")
-				Expect(err).To(MatchError(errors.New("some error")))
-			})
-		})
-
-		It("ask the networker to destroy the container network", func() {
-			gdnr.Destroy("some-handle")
-			Expect(networker.DestroyCallCount()).To(Equal(1))
-			networkLogger, handleToDestroy := networker.DestroyArgsForCall(0)
-			Expect(handleToDestroy).To(Equal("some-handle"))
-			Expect(networkLogger).To(Equal(logger))
-		})
-
-		Context("when containerized fails to destroy the container", func() {
-			It("return the error", func() {
-				containerizer.DestroyReturns(errors.New("containerized deletion failed"))
-				err := gdnr.Destroy("some-handle")
-				Expect(err).To(MatchError("containerized deletion failed"))
-				Expect(networker.DestroyCallCount()).To(Equal(0))
-			})
-		})
-
-		Context("when network deletion fails", func() {
-			It("returns the error", func() {
-				networker.DestroyReturns(errors.New("network deletion failed"))
-				err := gdnr.Destroy("some-handle")
-				Expect(containerizer.DestroyCallCount()).To(Equal(1))
-				Expect(err).To(MatchError("network deletion failed"))
-			})
-		})
-	})
-
 	Describe("creating a container", func() {
 		Context("when a handle is specified", func() {
-			It("asks the containerizer to create a container", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.Handle).To(Equal("bob"))
-			})
-
 			It("passes the created network to the containerizer", func() {
 				networker.NetworkStub = func(_ lager.Logger, handle, spec string) (string, error) {
 					return "/path/to/netns/" + handle, nil
@@ -132,9 +75,30 @@ var _ = Describe("Gardener", func() {
 					Expect(err).To(MatchError("booom!"))
 				})
 
-				It("does not create a container", func() {
+				It("should not create the volume", func() {
 					gdnr.Create(garden.ContainerSpec{Handle: "bob"})
-					Expect(containerizer.CreateCallCount()).To(Equal(0))
+					Expect(volumeCreator.CreateCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("when parsing the rootfs path fails", func() {
+				It("should return an error", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						RootFSPath: "://banana",
+					})
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("should clean up networking configuration", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Handle:     "banana-container",
+						RootFSPath: "://banana",
+					})
+					Expect(err).To(HaveOccurred())
+
+					Expect(networker.DestroyCallCount()).To(Equal(1))
+					_, handle := networker.DestroyArgsForCall(0)
+					Expect(handle).To(Equal("banana-container"))
 				})
 			})
 
@@ -164,9 +128,49 @@ var _ = Describe("Gardener", func() {
 					Expect(err).To(MatchError("booom!"))
 				})
 
-				It("does not create a container", func() {
+				It("should not call the containerizer", func() {
 					gdnr.Create(garden.ContainerSpec{Handle: "bob"})
 					Expect(containerizer.CreateCallCount()).To(Equal(0))
+				})
+
+				It("should clean up networking configuration", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{Handle: "adam"})
+					Expect(err).To(HaveOccurred())
+
+					Expect(networker.DestroyCallCount()).To(Equal(1))
+				})
+			})
+
+			It("asks the containerizer to create a container", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(containerizer.CreateCallCount()).To(Equal(1))
+				_, spec := containerizer.CreateArgsForCall(0)
+				Expect(spec.Handle).To(Equal("bob"))
+			})
+
+			Context("when the containerizer fails to create the container", func() {
+				BeforeEach(func() {
+					containerizer.CreateReturns(errors.New("failed to create the banana"))
+				})
+
+				It("should return an error", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Handle: "poor-banana",
+					})
+					Expect(err).To(HaveOccurred())
+				})
+
+				It("should cleanup the networking configuration", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Handle: "poor-banana",
+					})
+					Expect(err).To(HaveOccurred())
+
+					Expect(networker.DestroyCallCount()).To(Equal(1))
+					_, handle := networker.DestroyArgsForCall(0)
+					Expect(handle).To(Equal("poor-banana"))
 				})
 			})
 
@@ -350,6 +354,41 @@ var _ = Describe("Gardener", func() {
 		It("should return an error", func() {
 			_, err := gdnr.Containers(garden.Properties{})
 			Expect(err).To(MatchError(testErr))
+		})
+	})
+
+	Describe("destroying a container", func() {
+		It("asks the containerizer to destroy the container", func() {
+			Expect(gdnr.Destroy("some-handle")).To(Succeed())
+			Expect(containerizer.DestroyCallCount()).To(Equal(1))
+			_, handle := containerizer.DestroyArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+		})
+
+		It("ask the networker to destroy the container network", func() {
+			gdnr.Destroy("some-handle")
+			Expect(networker.DestroyCallCount()).To(Equal(1))
+			networkLogger, handleToDestroy := networker.DestroyArgsForCall(0)
+			Expect(handleToDestroy).To(Equal("some-handle"))
+			Expect(networkLogger).To(Equal(logger))
+		})
+
+		Context("when containerized fails to destroy the container", func() {
+			It("return the error", func() {
+				containerizer.DestroyReturns(errors.New("containerized deletion failed"))
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(MatchError("containerized deletion failed"))
+				Expect(networker.DestroyCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when network deletion fails", func() {
+			It("returns the error", func() {
+				networker.DestroyReturns(errors.New("network deletion failed"))
+				err := gdnr.Destroy("some-handle")
+				Expect(containerizer.DestroyCallCount()).To(Equal(1))
+				Expect(err).To(MatchError("network deletion failed"))
+			})
 		})
 	})
 

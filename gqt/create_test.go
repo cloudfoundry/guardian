@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -73,7 +74,6 @@ var _ = Describe("Creating a Container", func() {
 			Entry("should place the container in to the PID namespace", "pid"),
 			Entry("should place the container in to the MNT namespace", "mnt"),
 		)
-
 	})
 
 	Context("after creating a container with a specified root filesystem", func() {
@@ -119,7 +119,6 @@ var _ = Describe("Creating a Container", func() {
 
 	Context("after creating a container with a specified handle", func() {
 		BeforeEach(func() {
-			Skip("skipping because we don't cleanup the networks, unpend after #101501268")
 			client = startGarden()
 
 			var mySpec garden.ContainerSpec
@@ -151,6 +150,27 @@ var _ = Describe("Creating a Container", func() {
 				Handle: "containerA",
 			})
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("when creating a container fails", func() {
+		BeforeEach(func() {
+			client = startGarden()
+		})
+
+		It("should not leak networking configuration", func() {
+			_, err := client.Create(garden.ContainerSpec{
+				Network:    fmt.Sprintf("172.250.%d.20/24", GinkgoParallelNode()),
+				RootFSPath: "/banana/does/not/exist",
+			})
+			Expect(err).To(HaveOccurred())
+
+			session, err := gexec.Start(
+				exec.Command("ifconfig"),
+				GinkgoWriter, GinkgoWriter,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			Consistently(session).ShouldNot(gbytes.Say(fmt.Sprintf("br-172-250-%d-0", GinkgoParallelNode())))
 		})
 	})
 })

@@ -117,11 +117,13 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 
 	rootFSURL, err := url.Parse(spec.RootFSPath)
 	if err != nil {
+		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err
 	}
 
 	rootFSPath, _, err := g.VolumeCreator.Create(spec.Handle, rootfs_provider.Spec{RootFS: rootFSURL})
 	if err != nil {
+		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err
 	}
 
@@ -130,6 +132,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		RootFSPath:  rootFSPath,
 		NetworkPath: networkPath,
 	}); err != nil {
+		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err
 	}
 
