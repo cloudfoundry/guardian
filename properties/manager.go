@@ -19,13 +19,20 @@ func NewManager() *Manager {
 }
 
 func (m *Manager) CreateKeySpace(handle string) error {
+	m.propMutex.Lock()
+	defer m.propMutex.Unlock()
+
 	if _, exists := m.prop[handle]; !exists {
 		m.prop[handle] = make(map[string]string)
 	}
+
 	return nil
 }
 
 func (m *Manager) DestroyKeySpace(handle string) error {
+	m.propMutex.Lock()
+	defer m.propMutex.Unlock()
+
 	if _, exists := m.prop[handle]; !exists {
 		return NoSuchKeySpaceError{
 			Message: fmt.Sprintf("No such key space: %s", handle),
@@ -71,6 +78,9 @@ func (m *Manager) Get(handle string, name string) (string, error) {
 }
 
 func (m *Manager) Remove(handle string, name string) error {
+	m.propMutex.Lock()
+	defer m.propMutex.Unlock()
+
 	if _, exists := m.prop[handle][name]; !exists {
 		return NoSuchPropertyError{
 			Message: fmt.Sprintf("No such property: %s", name),
