@@ -8,17 +8,6 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-//go:generate counterfeiter . PropertyManager
-
-type PropertyManager interface {
-	All(handle string) (props garden.Properties, err error)
-	Set(handle string, name string, value string) error
-	Remove(handle string, name string) error
-	Get(handle string, name string) (string, error)
-	CreateKeySpace(string) error
-	DestroyKeySpace(string) error
-}
-
 type container struct {
 	logger          lager.Logger
 	handle          string

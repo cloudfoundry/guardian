@@ -7,7 +7,6 @@ import (
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/gardener/fakes"
-	"github.com/cloudfoundry-incubator/guardian/properties"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -277,99 +276,51 @@ var _ = Describe("Gardener", func() {
 	})
 
 	Describe("listing containers", func() {
-		Context("when containers exist", func() {
-			BeforeEach(func() {
-				containerizer.HandlesReturns([]string{"banana", "banana2"}, nil)
-			})
+		BeforeEach(func() {
+			containerizer.HandlesReturns([]string{"banana", "banana2", "cola"}, nil)
+		})
 
-			It("should return the containers", func() {
-				containers, err := gdnr.Containers(garden.Properties{})
-				Expect(err).NotTo(HaveOccurred())
-
-				handles := []string{}
-				for _, c := range containers {
-					handles = append(handles, c.Handle())
+		It("should return matching containers", func() {
+			propertyManager.MatchesAllStub = func(handle string, props garden.Properties) bool {
+				if handle != "banana" {
+					return true
 				}
+				return false
+			}
 
-				Expect(handles).To(ConsistOf("banana", "banana2"))
+			c, err := gdnr.Containers(garden.Properties{
+				"somename": "somevalue",
 			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(c).To(HaveLen(2))
+			Expect(c[0].Handle()).To(Equal("banana2"))
+			Expect(c[1].Handle()).To(Equal("cola"))
+		})
+	})
+
+	Context("when no containers exist", func() {
+		BeforeEach(func() {
+			containerizer.HandlesReturns([]string{}, nil)
 		})
 
-		Context("when filtering containers", func() {
-			BeforeEach(func() {
-				containerizer.HandlesReturns([]string{"banana", "banana2"}, nil)
-			})
+		It("should return an empty list", func() {
+			containers, err := gdnr.Containers(garden.Properties{})
+			Expect(err).NotTo(HaveOccurred())
 
-			It("should return matching containers", func() {
-				propertyManager.GetStub = func(handle, name string) (string, error) {
-					if propertyManager.GetCallCount() == 1 {
-						return "somevalue", nil
-					}
+			Expect(containers).To(BeEmpty())
+		})
+	})
 
-					return "", nil
-				}
+	Context("when the containerizer returns an error", func() {
+		testErr := errors.New("failure")
 
-				c, err := gdnr.Containers(garden.Properties{
-					"somename": "somevalue",
-				})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(c).To(HaveLen(1))
-				Expect(c[0].Handle()).To(Equal("banana"))
-
-				handle, name := propertyManager.GetArgsForCall(0)
-				Expect(handle).To(Equal("banana"))
-				Expect(name).To(Equal("somename"))
-			})
-
-			Context("when an error occurs", func() {
-				Context("when the error is a NoSuchPropertyError", func() {
-					It("does not error", func() {
-						propertyManager.GetReturns("", properties.NoSuchPropertyError{Message: "wut"})
-
-						_, err := gdnr.Containers(garden.Properties{
-							"somename": "somevalue",
-						})
-						Expect(err).NotTo(HaveOccurred())
-					})
-				})
-
-				Context("when any other error", func() {
-					It("returns the error", func() {
-						propertyManager.GetReturns("", errors.New("error"))
-
-						_, err := gdnr.Containers(garden.Properties{
-							"somename": "somevalue",
-						})
-						Expect(err).To(MatchError(errors.New("error")))
-					})
-				})
-			})
+		BeforeEach(func() {
+			containerizer.HandlesReturns([]string{}, testErr)
 		})
 
-		Context("when no containers exist", func() {
-			BeforeEach(func() {
-				containerizer.HandlesReturns([]string{}, nil)
-			})
-
-			It("should return an empty list", func() {
-				containers, err := gdnr.Containers(garden.Properties{})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(containers).To(BeEmpty())
-			})
-		})
-
-		Context("when the containerizer returns an error", func() {
-			testErr := errors.New("failure")
-
-			BeforeEach(func() {
-				containerizer.HandlesReturns([]string{}, testErr)
-			})
-
-			It("should return an empty list", func() {
-				_, err := gdnr.Containers(garden.Properties{})
-				Expect(err).To(MatchError(testErr))
-			})
+		It("should return an error", func() {
+			_, err := gdnr.Containers(garden.Properties{})
+			Expect(err).To(MatchError(testErr))
 		})
 	})
 

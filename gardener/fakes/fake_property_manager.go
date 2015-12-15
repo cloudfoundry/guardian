@@ -47,6 +47,15 @@ type FakePropertyManager struct {
 		result1 string
 		result2 error
 	}
+	MatchesAllStub        func(handle string, props garden.Properties) bool
+	matchesAllMutex       sync.RWMutex
+	matchesAllArgsForCall []struct {
+		handle string
+		props  garden.Properties
+	}
+	matchesAllReturns struct {
+		result1 bool
+	}
 	CreateKeySpaceStub        func(string) error
 	createKeySpaceMutex       sync.RWMutex
 	createKeySpaceArgsForCall []struct {
@@ -197,6 +206,39 @@ func (fake *FakePropertyManager) GetReturns(result1 string, result2 error) {
 		result1 string
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakePropertyManager) MatchesAll(handle string, props garden.Properties) bool {
+	fake.matchesAllMutex.Lock()
+	fake.matchesAllArgsForCall = append(fake.matchesAllArgsForCall, struct {
+		handle string
+		props  garden.Properties
+	}{handle, props})
+	fake.matchesAllMutex.Unlock()
+	if fake.MatchesAllStub != nil {
+		return fake.MatchesAllStub(handle, props)
+	} else {
+		return fake.matchesAllReturns.result1
+	}
+}
+
+func (fake *FakePropertyManager) MatchesAllCallCount() int {
+	fake.matchesAllMutex.RLock()
+	defer fake.matchesAllMutex.RUnlock()
+	return len(fake.matchesAllArgsForCall)
+}
+
+func (fake *FakePropertyManager) MatchesAllArgsForCall(i int) (string, garden.Properties) {
+	fake.matchesAllMutex.RLock()
+	defer fake.matchesAllMutex.RUnlock()
+	return fake.matchesAllArgsForCall[i].handle, fake.matchesAllArgsForCall[i].props
+}
+
+func (fake *FakePropertyManager) MatchesAllReturns(result1 bool) {
+	fake.MatchesAllStub = nil
+	fake.matchesAllReturns = struct {
+		result1 bool
+	}{result1}
 }
 
 func (fake *FakePropertyManager) CreateKeySpace(arg1 string) error {

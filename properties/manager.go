@@ -92,6 +92,19 @@ func (m *Manager) Remove(handle string, name string) error {
 	return nil
 }
 
+func (m *Manager) MatchesAll(handle string, props garden.Properties) bool {
+	m.propMutex.RLock()
+	defer m.propMutex.RUnlock()
+
+	for key, val := range props {
+		if m.prop[handle][key] != val {
+			return false
+		}
+	}
+
+	return true
+}
+
 type NoSuchPropertyError struct {
 	Message string
 }

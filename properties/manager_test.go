@@ -1,6 +1,7 @@
 package properties_test
 
 import (
+	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/properties"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -79,6 +80,13 @@ var _ = Describe("Properties", func() {
 				_, err = propertyManager.Get("handle", "name")
 				Expect(err).To(MatchError(properties.NoSuchPropertyError{"No such property: name"}))
 			})
+
+			Context("when attempting to remove a property that doesn't exist", func() {
+				It("returns a NoSuchPropertyError", func() {
+					err := propertyManager.Remove("handle", "missing")
+					Expect(err).To(MatchError(properties.NoSuchPropertyError{"No such property: missing"}))
+				})
+			})
 		})
 
 		Describe("Set", func() {
@@ -94,10 +102,69 @@ var _ = Describe("Properties", func() {
 			})
 		})
 
-		Context("when attempting to remove a property that doesn't exist", func() {
-			It("returns a NoSuchPropertyError", func() {
-				err := propertyManager.Remove("handle", "missing")
-				Expect(err).To(MatchError(properties.NoSuchPropertyError{"No such property: missing"}))
+		Describe("MatchesAll", func() {
+			Context("when the properties list is empty", func() {
+				It("matches", func() {
+					Expect(propertyManager.MatchesAll("", garden.Properties{})).To(BeTrue())
+				})
+			})
+
+			Context("when the properties list contains a single property", func() {
+				Context("which isn't in the keyspace", func() {
+					It("does not match", func() {
+						match := propertyManager.MatchesAll("", garden.Properties{"fred": "bob"})
+						Expect(match).To(BeFalse())
+					})
+				})
+
+				Context("...which is in the keyspace", func() {
+					BeforeEach(func() {
+						propertyManager.CreateKeySpace("flintstones")
+						propertyManager.Set("flintstones", "wilma", "fred")
+					})
+
+					It("matches", func() {
+						match := propertyManager.MatchesAll("flintstones", garden.Properties{"wilma": "fred"})
+						Expect(match).To(BeTrue())
+					})
+
+					Context("with the wrong value", func() {
+						It("does not match", func() {
+							match := propertyManager.MatchesAll("flintstones", garden.Properties{"wilma": "pebbles"})
+							Expect(match).To(BeFalse())
+						})
+					})
+				})
+			})
+
+			Context("when the properties list contains many properties", func() {
+				Context("all of which are in the keyspace", func() {
+					BeforeEach(func() {
+						propertyManager.CreateKeySpace("flintstones")
+						propertyManager.Set("flintstones", "wilma", "fred")
+						propertyManager.Set("flintstones", "betty", "barney")
+					})
+
+					It("matches", func() {
+						match := propertyManager.MatchesAll("flintstones",
+							garden.Properties{"wilma": "fred", "betty": "barney"})
+						Expect(match).To(BeTrue())
+					})
+				})
+
+				Context("only some of which are in the namespace", func() {
+					BeforeEach(func() {
+						propertyManager.CreateKeySpace("flintstones")
+						propertyManager.Set("flintstones", "wilma", "fred")
+						propertyManager.Set("flintstones", "betty", "barney")
+					})
+
+					It("does not match", func() {
+						match := propertyManager.MatchesAll("flintstones",
+							garden.Properties{"wilma": "fred", "pebbles": "bambam", "betty": "barney"})
+						Expect(match).To(BeFalse())
+					})
+				})
 			})
 		})
 	})

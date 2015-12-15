@@ -6,7 +6,6 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
-	"github.com/cloudfoundry-incubator/guardian/properties"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -43,6 +42,18 @@ type VolumeCreator interface {
 
 type UidGenerator interface {
 	Generate() string
+}
+
+//go:generate counterfeiter . PropertyManager
+
+type PropertyManager interface {
+	All(handle string) (props garden.Properties, err error)
+	Set(handle string, name string, value string) error
+	Remove(handle string, name string) error
+	Get(handle string, name string) (string, error)
+	MatchesAll(handle string, props garden.Properties) bool
+	CreateKeySpace(string) error
+	DestroyKeySpace(string) error
 }
 
 type Starter interface {
@@ -183,37 +194,26 @@ func (g *Gardener) Capacity() (garden.Capacity, error) {
 }
 
 func (g *Gardener) Containers(props garden.Properties) ([]garden.Container, error) {
-	var containers []garden.Container
+	log := g.Logger.Session("list-containers")
+
+	log.Info("starting")
+	defer log.Info("finished")
 
 	handles, err := g.Containerizer.Handles()
 	if err != nil {
+		log.Error("handles-failed", err)
 		return []garden.Container{}, err
 	}
 
+	var containers []garden.Container
 	for _, handle := range handles {
-		container, err := g.Lookup(handle)
-		if err != nil {
-			return []garden.Container{}, err
-		}
+		if g.PropertyManager.MatchesAll(handle, props) {
+			container, err := g.Lookup(handle)
+			if err != nil {
+				log.Error("lookup-failed", err)
+			}
 
-		if len(props) == 0 {
 			containers = append(containers, container)
-			continue
-		}
-
-		for name, value := range props {
-			containerValue, err := container.Property(name)
-			switch err.(type) {
-			case properties.NoSuchPropertyError:
-			case nil:
-			default:
-				return []garden.Container{}, err
-			}
-
-			if containerValue == value {
-				containers = append(containers, container)
-				continue
-			}
 		}
 	}
 
