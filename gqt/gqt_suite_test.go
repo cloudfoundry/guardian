@@ -46,5 +46,9 @@ func startGarden(argv ...string) *runner.RunningGarden {
 	iodaemonBin, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/cmd/iodaemon")
 	Expect(err).NotTo(HaveOccurred())
 
+	if networkModule := os.Getenv("NETWORK_MODULE"); networkModule != "" {
+		argv = append(argv, "--networkModule="+networkModule)
+	}
+
 	return runner.Start(gardenBin, iodaemonBin, argv...)
 }
