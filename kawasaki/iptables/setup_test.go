@@ -1,6 +1,9 @@
 package iptables_test
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
@@ -25,6 +28,7 @@ var _ = Describe("Setup", func() {
 			Path: "bash",
 			Args: []string{"-c", iptables.SetupScript},
 			Env: []string{
+				fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 				"ACTION=setup",
 
 				"GARDEN_IPTABLES_FILTER_INPUT_CHAIN=the-filter-input-chain",

@@ -2,6 +2,7 @@ package iptables
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 
 	"github.com/cloudfoundry/gunk/command_runner"
@@ -60,7 +61,7 @@ const SetupScript = `
 		iptables -w -S 2> /dev/null |
 		grep "^-N ${filter_instance_prefix}" |
 		sed -e "s/-N/-X/" -e "s/\s\+\$//" |
-		xargs --no-run-if-empty --max-lines=1 iptables -w
+		xargs --no-run-if-empty --max-lines=1 iptables -w || true
 
 		# Remove jump to garden-forward from FORWARD
 		iptables -w -S FORWARD 2> /dev/null |
@@ -141,7 +142,7 @@ const SetupScript = `
 		iptables -w -t nat -S 2> /dev/null |
 		grep "^-N ${nat_instance_prefix}" |
 		sed -e "s/-N/-X/" -e "s/\s\+\$//" |
-		xargs --no-run-if-empty --max-lines=1 iptables -w -t nat
+		xargs --no-run-if-empty --max-lines=1 iptables -w -t nat || true
 
 		# Flush prerouting chain
 		iptables -w -t nat -F ${nat_prerouting_chain} 2> /dev/null || true
@@ -216,6 +217,7 @@ func NewStarter(runner command_runner.CommandRunner, fc FilterConfig, nc NATConf
 func (s Starter) Start() error {
 	cmd := exec.Command("bash", "-c", SetupScript)
 	cmd.Env = []string{
+		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 		"ACTION=setup",
 		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s", s.fc.InputChain),
 		fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s", s.fc.ForwardChain),
