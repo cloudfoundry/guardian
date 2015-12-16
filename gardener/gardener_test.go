@@ -175,25 +175,6 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 
-			It("creates a key space for container properties", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "some-handle"})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(propertyManager.CreateKeySpaceCallCount()).To(Equal(1))
-				Expect(propertyManager.CreateKeySpaceArgsForCall(0)).To(Equal("some-handle"))
-			})
-
-			Context("when creating the key space fails", func() {
-				BeforeEach(func() {
-					propertyManager.CreateKeySpaceReturns(errors.New("kabluey"))
-				})
-
-				It("returns the error", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
-					Expect(err).To(MatchError("kabluey"))
-				})
-			})
-
 			It("returns the container that Lookup would return", func() {
 				c, err := gdnr.Create(garden.ContainerSpec{Handle: "handle"})
 				Expect(err).NotTo(HaveOccurred())
@@ -257,17 +238,6 @@ var _ = Describe("Gardener", func() {
 					"thingy": "thing",
 				}))
 			})
-
-			Context("when error on set property occurs", func() {
-				It("returns the error", func() {
-					propertyManager.SetReturns(errors.New("error"))
-
-					_, err := gdnr.Create(garden.ContainerSpec{
-						Properties: startingProperties,
-					})
-					Expect(err).To(MatchError(errors.New("error")))
-				})
-			})
 		})
 	})
 
@@ -307,7 +277,6 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 		})
-
 	})
 
 	Describe("listing containers", func() {
@@ -404,7 +373,7 @@ var _ = Describe("Gardener", func() {
 			Expect(handle).To(Equal("some-handle"))
 		})
 
-		It("ask the networker to destroy the container network", func() {
+		It("asks the networker to destroy the container network", func() {
 			gdnr.Destroy("some-handle")
 			Expect(networker.DestroyCallCount()).To(Equal(1))
 			networkLogger, handleToDestroy := networker.DestroyArgsForCall(0)
@@ -412,21 +381,46 @@ var _ = Describe("Gardener", func() {
 			Expect(networkLogger).To(Equal(logger))
 		})
 
-		Context("when containerized fails to destroy the container", func() {
-			It("return the error", func() {
+		It("should destroy the key space of the property manager", func() {
+			gdnr.Destroy("some-handle")
+
+			Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(1))
+			Expect(propertyManager.DestroyKeySpaceArgsForCall(0)).To(Equal("some-handle"))
+		})
+
+		Context("when containerizer fails to destroy the container", func() {
+			BeforeEach(func() {
 				containerizer.DestroyReturns(errors.New("containerized deletion failed"))
+			})
+
+			It("return the error", func() {
 				err := gdnr.Destroy("some-handle")
 				Expect(err).To(MatchError("containerized deletion failed"))
+			})
+
+			It("should not destroy the network configuration", func() {
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(HaveOccurred())
+
 				Expect(networker.DestroyCallCount()).To(Equal(0))
 			})
 		})
 
 		Context("when network deletion fails", func() {
-			It("returns the error", func() {
+			BeforeEach(func() {
 				networker.DestroyReturns(errors.New("network deletion failed"))
+			})
+
+			It("returns the error", func() {
 				err := gdnr.Destroy("some-handle")
-				Expect(containerizer.DestroyCallCount()).To(Equal(1))
 				Expect(err).To(MatchError("network deletion failed"))
+			})
+
+			It("should not destroy the key space of the property manager", func() {
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(HaveOccurred())
+
+				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(0))
 			})
 		})
 	})

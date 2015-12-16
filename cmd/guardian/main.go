@@ -233,15 +233,17 @@ func main() {
 
 	sysInfoProvider := sysinfo.NewProvider(*depotPath)
 
+	propManager := properties.NewManager()
+
 	backend := &gardener.Gardener{
 		SysInfoProvider: sysInfoProvider,
 		UidGenerator:    wireUidGenerator(),
 		Starter:         wireStarter(logger, iptablesMgr),
-		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, iptablesMgr, interfacePrefix, chainPrefix),
+		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, iptablesMgr, interfacePrefix, chainPrefix, propManager),
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, resolvedRootFSPath),
 		Logger:          logger,
-		PropertyManager: properties.NewManager(),
+		PropertyManager: propManager,
 	}
 
 	gardenServer := server.New(*listenNetwork, *listenAddr, *graceTime, backend, logger.Session("api"))
@@ -307,7 +309,7 @@ func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfa
 	)
 }
 
-func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, iptablesMgr kawasaki.IPTablesConfigurer, interfacePrefix, chainPrefix string) *kawasaki.Networker {
+func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, iptablesMgr kawasaki.IPTablesConfigurer, interfacePrefix, chainPrefix string, propManager *properties.Manager) *kawasaki.Networker {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("network-runner")}
 
 	hostConfigurer := &configure.Host{
@@ -339,7 +341,7 @@ func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, ipt
 			iptablesMgr,
 			&netns.Execer{},
 		),
-		&kawasaki.ConfigMap{},
+		propManager,
 		iptables.NewPortForwarder(runner),
 		portPool,
 	)

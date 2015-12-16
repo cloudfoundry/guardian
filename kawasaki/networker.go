@@ -1,13 +1,22 @@
 package kawasaki
 
 import (
-	"errors"
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/pivotal-golang/lager"
 )
+
+const hostIntfKey = "kawasaki.host-interface"
+const containerIntfKey = "kawasaki.container-interface"
+const bridgeIntfKey = "kawasaki.bridge-interface"
+const bridgeIpKey = "kawasaki.bridge-ip"
+const containerIpKey = "kawasaki.container-ip"
+const subnetIpKey = "kawasaki.subnet-ip"
+const iptableChainKey = "kawasaki.iptable-chain"
+const mtuKey = "kawasaki.mtu"
 
 //go:generate counterfeiter . NetnsMgr
 
@@ -39,28 +48,8 @@ type Configurer interface {
 //go:generate counterfeiter . ConfigStore
 
 type ConfigStore interface {
-	Put(handle string, cfg NetworkConfig)
-	Get(handle string) (NetworkConfig, error)
-	Remove(handle string)
-}
-
-type ConfigMap map[string]NetworkConfig
-
-func (m ConfigMap) Put(handle string, cfg NetworkConfig) {
-	m[handle] = cfg
-}
-
-func (m ConfigMap) Get(handle string) (NetworkConfig, error) {
-	v, ok := m[handle]
-	if !ok {
-		return NetworkConfig{}, errors.New("Handle does not exist")
-	}
-
-	return v, nil
-}
-
-func (m ConfigMap) Remove(handle string) {
-	delete(m, handle)
+	Set(handle string, name string, value string)
+	Get(handle string, name string) (string, error)
 }
 
 //go:generate counterfeiter . PortPool
@@ -76,9 +65,11 @@ type PortForwarder interface {
 }
 
 type PortForwarderSpec struct {
-	NetworkConfig *NetworkConfig
-	FromPort      uint32
-	ToPort        uint32
+	FromPort     uint32
+	ToPort       uint32
+	IPTableChain string
+	BridgeIP     net.IP
+	ContainerIP  net.IP
 }
 
 type Networker struct {
@@ -144,7 +135,7 @@ func (n *Networker) Network(log lager.Logger, handle, spec string) (string, erro
 		return "", fmt.Errorf("create network config: %s", err)
 	}
 
-	n.configStore.Put(handle, config)
+	save(n.configStore, handle, config)
 
 	err = n.netnsMgr.Create(log, handle)
 	if err != nil {
@@ -160,7 +151,7 @@ func (n *Networker) Network(log lager.Logger, handle, spec string) (string, erro
 
 	if err := n.configurer.Apply(log, config, path); err != nil {
 		log.Error("apply-config-failed", err)
-		n.destroyOrLog(log, handle)
+		n.destroyNetnsOrLog(log, handle)
 		return "", err
 	}
 
@@ -173,7 +164,7 @@ func (n *Networker) Capacity() uint64 {
 }
 
 func (n *Networker) NetIn(handle string, externalPort, containerPort uint32) (uint32, uint32, error) {
-	netConfig, err := n.configStore.Get(handle)
+	cfg, err := load(n.configStore, handle)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -190,9 +181,11 @@ func (n *Networker) NetIn(handle string, externalPort, containerPort uint32) (ui
 	}
 
 	err = n.portForwarder.Forward(&PortForwarderSpec{
-		FromPort:      externalPort,
-		ToPort:        containerPort,
-		NetworkConfig: &netConfig,
+		FromPort:     externalPort,
+		ToPort:       containerPort,
+		IPTableChain: cfg.IPTableChain,
+		ContainerIP:  cfg.ContainerIP,
+		BridgeIP:     cfg.BridgeIP,
 	})
 
 	if err != nil {
@@ -203,11 +196,10 @@ func (n *Networker) NetIn(handle string, externalPort, containerPort uint32) (ui
 }
 
 func (n *Networker) Destroy(log lager.Logger, handle string) error {
-	cfg, err := n.configStore.Get(handle)
+	cfg, err := load(n.configStore, handle)
 	if err != nil {
 		return err
 	}
-	n.configStore.Remove(handle)
 
 	if err := n.netnsMgr.Destroy(log, handle); err != nil {
 		log.Error("destroy-namespace-failed", err)
@@ -222,8 +214,61 @@ func (n *Networker) Destroy(log lager.Logger, handle string) error {
 	return nil
 }
 
-func (n *Networker) destroyOrLog(log lager.Logger, handle string) {
-	if err := n.Destroy(log, handle); err != nil {
+func (n *Networker) destroyNetnsOrLog(log lager.Logger, handle string) {
+	if err := n.netnsMgr.Destroy(log, handle); err != nil {
 		log.Error("destroy-failed", err)
 	}
+}
+
+func getAll(config ConfigStore, handle string, key ...string) (vals []string, err error) {
+	for _, k := range key {
+		v, err := config.Get(handle, k)
+		if err != nil {
+			return nil, err
+		}
+
+		vals = append(vals, v)
+	}
+
+	return vals, nil
+}
+
+func save(config ConfigStore, handle string, netConfig NetworkConfig) {
+	config.Set(handle, hostIntfKey, netConfig.HostIntf)
+	config.Set(handle, containerIntfKey, netConfig.ContainerIntf)
+	config.Set(handle, bridgeIntfKey, netConfig.BridgeName)
+	config.Set(handle, bridgeIpKey, netConfig.BridgeIP.String())
+	config.Set(handle, containerIpKey, netConfig.ContainerIP.String())
+	config.Set(handle, subnetIpKey, netConfig.Subnet.String())
+	config.Set(handle, iptableChainKey, netConfig.IPTableChain)
+	config.Set(handle, mtuKey, strconv.Itoa(netConfig.Mtu))
+}
+
+func load(config ConfigStore, handle string) (NetworkConfig, error) {
+	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetIpKey, iptableChainKey, mtuKey)
+
+	if err != nil {
+		return NetworkConfig{}, err
+	}
+
+	_, ipnet, err := net.ParseCIDR(vals[5])
+	if err != nil {
+		return NetworkConfig{}, err
+	}
+
+	mtu, err := strconv.Atoi(vals[7])
+	if err != nil {
+		return NetworkConfig{}, err
+	}
+
+	return NetworkConfig{
+		HostIntf:      vals[0],
+		ContainerIntf: vals[1],
+		BridgeName:    vals[2],
+		BridgeIP:      net.ParseIP(vals[3]),
+		ContainerIP:   net.ParseIP(vals[4]),
+		Subnet:        ipnet,
+		IPTableChain:  vals[6],
+		Mtu:           mtu,
+	}, nil
 }

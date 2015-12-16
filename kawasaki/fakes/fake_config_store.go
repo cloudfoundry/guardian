@@ -8,60 +8,59 @@ import (
 )
 
 type FakeConfigStore struct {
-	PutStub        func(handle string, cfg kawasaki.NetworkConfig)
-	putMutex       sync.RWMutex
-	putArgsForCall []struct {
+	SetStub        func(handle string, name string, value string)
+	setMutex       sync.RWMutex
+	setArgsForCall []struct {
 		handle string
-		cfg    kawasaki.NetworkConfig
+		name   string
+		value  string
 	}
-	GetStub        func(handle string) (kawasaki.NetworkConfig, error)
+	GetStub        func(handle string, name string) (string, error)
 	getMutex       sync.RWMutex
 	getArgsForCall []struct {
 		handle string
+		name   string
 	}
 	getReturns struct {
-		result1 kawasaki.NetworkConfig
+		result1 string
 		result2 error
 	}
-	RemoveStub        func(handle string)
-	removeMutex       sync.RWMutex
-	removeArgsForCall []struct {
+}
+
+func (fake *FakeConfigStore) Set(handle string, name string, value string) {
+	fake.setMutex.Lock()
+	fake.setArgsForCall = append(fake.setArgsForCall, struct {
 		handle string
+		name   string
+		value  string
+	}{handle, name, value})
+	fake.setMutex.Unlock()
+	if fake.SetStub != nil {
+		fake.SetStub(handle, name, value)
 	}
 }
 
-func (fake *FakeConfigStore) Put(handle string, cfg kawasaki.NetworkConfig) {
-	fake.putMutex.Lock()
-	fake.putArgsForCall = append(fake.putArgsForCall, struct {
-		handle string
-		cfg    kawasaki.NetworkConfig
-	}{handle, cfg})
-	fake.putMutex.Unlock()
-	if fake.PutStub != nil {
-		fake.PutStub(handle, cfg)
-	}
+func (fake *FakeConfigStore) SetCallCount() int {
+	fake.setMutex.RLock()
+	defer fake.setMutex.RUnlock()
+	return len(fake.setArgsForCall)
 }
 
-func (fake *FakeConfigStore) PutCallCount() int {
-	fake.putMutex.RLock()
-	defer fake.putMutex.RUnlock()
-	return len(fake.putArgsForCall)
+func (fake *FakeConfigStore) SetArgsForCall(i int) (string, string, string) {
+	fake.setMutex.RLock()
+	defer fake.setMutex.RUnlock()
+	return fake.setArgsForCall[i].handle, fake.setArgsForCall[i].name, fake.setArgsForCall[i].value
 }
 
-func (fake *FakeConfigStore) PutArgsForCall(i int) (string, kawasaki.NetworkConfig) {
-	fake.putMutex.RLock()
-	defer fake.putMutex.RUnlock()
-	return fake.putArgsForCall[i].handle, fake.putArgsForCall[i].cfg
-}
-
-func (fake *FakeConfigStore) Get(handle string) (kawasaki.NetworkConfig, error) {
+func (fake *FakeConfigStore) Get(handle string, name string) (string, error) {
 	fake.getMutex.Lock()
 	fake.getArgsForCall = append(fake.getArgsForCall, struct {
 		handle string
-	}{handle})
+		name   string
+	}{handle, name})
 	fake.getMutex.Unlock()
 	if fake.GetStub != nil {
-		return fake.GetStub(handle)
+		return fake.GetStub(handle, name)
 	} else {
 		return fake.getReturns.result1, fake.getReturns.result2
 	}
@@ -73,41 +72,18 @@ func (fake *FakeConfigStore) GetCallCount() int {
 	return len(fake.getArgsForCall)
 }
 
-func (fake *FakeConfigStore) GetArgsForCall(i int) string {
+func (fake *FakeConfigStore) GetArgsForCall(i int) (string, string) {
 	fake.getMutex.RLock()
 	defer fake.getMutex.RUnlock()
-	return fake.getArgsForCall[i].handle
+	return fake.getArgsForCall[i].handle, fake.getArgsForCall[i].name
 }
 
-func (fake *FakeConfigStore) GetReturns(result1 kawasaki.NetworkConfig, result2 error) {
+func (fake *FakeConfigStore) GetReturns(result1 string, result2 error) {
 	fake.GetStub = nil
 	fake.getReturns = struct {
-		result1 kawasaki.NetworkConfig
+		result1 string
 		result2 error
 	}{result1, result2}
-}
-
-func (fake *FakeConfigStore) Remove(handle string) {
-	fake.removeMutex.Lock()
-	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
-		handle string
-	}{handle})
-	fake.removeMutex.Unlock()
-	if fake.RemoveStub != nil {
-		fake.RemoveStub(handle)
-	}
-}
-
-func (fake *FakeConfigStore) RemoveCallCount() int {
-	fake.removeMutex.RLock()
-	defer fake.removeMutex.RUnlock()
-	return len(fake.removeArgsForCall)
-}
-
-func (fake *FakeConfigStore) RemoveArgsForCall(i int) string {
-	fake.removeMutex.RLock()
-	defer fake.removeMutex.RUnlock()
-	return fake.removeArgsForCall[i].handle
 }
 
 var _ kawasaki.ConfigStore = new(FakeConfigStore)

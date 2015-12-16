@@ -18,17 +18,6 @@ func NewManager() *Manager {
 	}
 }
 
-func (m *Manager) CreateKeySpace(handle string) error {
-	m.propMutex.Lock()
-	defer m.propMutex.Unlock()
-
-	if _, exists := m.prop[handle]; !exists {
-		m.prop[handle] = make(map[string]string)
-	}
-
-	return nil
-}
-
 func (m *Manager) DestroyKeySpace(handle string) error {
 	m.propMutex.Lock()
 	defer m.propMutex.Unlock()
@@ -44,12 +33,15 @@ func (m *Manager) DestroyKeySpace(handle string) error {
 	return nil
 }
 
-func (m *Manager) Set(handle string, name string, value string) error {
+func (m *Manager) Set(handle string, name string, value string) {
 	m.propMutex.Lock()
 	defer m.propMutex.Unlock()
 
+	if _, ok := m.prop[handle]; !ok {
+		m.prop[handle] = make(map[string]string)
+	}
+
 	m.prop[handle][name] = value
-	return nil
 }
 
 func (m *Manager) All(handle string) (garden.Properties, error) {

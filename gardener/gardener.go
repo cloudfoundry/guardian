@@ -47,11 +47,10 @@ type UidGenerator interface {
 
 type PropertyManager interface {
 	All(handle string) (props garden.Properties, err error)
-	Set(handle string, name string, value string) error
+	Set(handle string, name string, value string)
 	Remove(handle string, name string) error
 	Get(handle string, name string) (string, error)
 	MatchesAll(handle string, props garden.Properties) bool
-	CreateKeySpace(string) error
 	DestroyKeySpace(string) error
 }
 
@@ -134,11 +133,6 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		return nil, err
 	}
 
-	err = g.PropertyManager.CreateKeySpace(spec.Handle)
-	if err != nil {
-		return nil, err
-	}
-
 	container, err := g.Lookup(spec.Handle)
 	if err != nil {
 		return nil, err
@@ -169,11 +163,11 @@ func (g *Gardener) Destroy(handle string) error {
 		return err
 	}
 
-	if err := g.PropertyManager.DestroyKeySpace(handle); err != nil {
+	if err := g.Networker.Destroy(g.Logger, handle); err != nil {
 		return err
 	}
 
-	return g.Networker.Destroy(g.Logger, handle)
+	return g.PropertyManager.DestroyKeySpace(handle)
 }
 
 func (g *Gardener) Stop()                                    {}

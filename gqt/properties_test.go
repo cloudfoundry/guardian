@@ -40,7 +40,6 @@ var _ = Describe("Properties", func() {
 
 		properties, err := container.Properties()
 		Expect(err).NotTo(HaveOccurred())
-		Expect(properties).To(HaveLen(2))
 		Expect(properties).To(HaveKeyWithValue("somename", "somevalue"))
 		Expect(properties).To(HaveKeyWithValue("someothername", "someothervalue"))
 	})

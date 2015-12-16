@@ -23,12 +23,12 @@ func (p *PortForwarder) Forward(spec *kawasaki.PortForwarderSpec) error {
 	buff := bytes.NewBufferString("")
 
 	cmd := exec.Command("iptables", "--wait", "--table", "nat",
-		"-A", spec.NetworkConfig.IPTableChain,
+		"-A", spec.IPTableChain,
 		"--protocol", "tcp",
-		"--destination", spec.NetworkConfig.BridgeIP.String(),
+		"--destination", spec.BridgeIP.String(),
 		"--destination-port", fmt.Sprintf("%d", spec.FromPort),
 		"--jump", "DNAT",
-		"--to-destination", fmt.Sprintf("%s:%d", spec.NetworkConfig.ContainerIP.String(), spec.ToPort))
+		"--to-destination", fmt.Sprintf("%s:%d", spec.ContainerIP.String(), spec.ToPort))
 
 	cmd.Stderr = buff
 	err := p.runner.Run(cmd)

@@ -16,26 +16,7 @@ var _ = Describe("Properties", func() {
 		BeforeEach(func() {
 			propertyManager = properties.NewManager()
 
-			err := propertyManager.CreateKeySpace("handle")
-			Expect(err).NotTo(HaveOccurred())
-
-			err = propertyManager.Set("handle", "name", "value")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		Describe("CreateKeySpace", func() {
-			It("does not reinitialize key space if present", func() {
-				val, err := propertyManager.Get("handle", "name")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(val).To(Equal("value"))
-
-				err = propertyManager.CreateKeySpace("handle")
-				Expect(err).NotTo(HaveOccurred())
-
-				val, err = propertyManager.Get("handle", "name")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(val).To(Equal("value"))
-			})
+			propertyManager.Set("handle", "name", "value")
 		})
 
 		Describe("DestroyKeySpace", func() {
@@ -92,8 +73,7 @@ var _ = Describe("Properties", func() {
 		Describe("Set", func() {
 			Context("when the property already exists", func() {
 				It("updates the property value", func() {
-					err := propertyManager.Set("handle", "name", "some-other-value")
-					Expect(err).NotTo(HaveOccurred())
+					propertyManager.Set("handle", "name", "some-other-value")
 
 					props, err := propertyManager.All("handle")
 					Expect(err).NotTo(HaveOccurred())
@@ -119,7 +99,6 @@ var _ = Describe("Properties", func() {
 
 				Context("...which is in the keyspace", func() {
 					BeforeEach(func() {
-						propertyManager.CreateKeySpace("flintstones")
 						propertyManager.Set("flintstones", "wilma", "fred")
 					})
 
@@ -140,7 +119,6 @@ var _ = Describe("Properties", func() {
 			Context("when the properties list contains many properties", func() {
 				Context("all of which are in the keyspace", func() {
 					BeforeEach(func() {
-						propertyManager.CreateKeySpace("flintstones")
 						propertyManager.Set("flintstones", "wilma", "fred")
 						propertyManager.Set("flintstones", "betty", "barney")
 					})
@@ -154,7 +132,6 @@ var _ = Describe("Properties", func() {
 
 				Context("only some of which are in the namespace", func() {
 					BeforeEach(func() {
-						propertyManager.CreateKeySpace("flintstones")
 						propertyManager.Set("flintstones", "wilma", "fred")
 						propertyManager.Set("flintstones", "betty", "barney")
 					})
