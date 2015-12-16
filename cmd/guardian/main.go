@@ -46,6 +46,7 @@ import (
 	"github.com/nu7hatch/gouuid"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
+	"github.com/pivotal-golang/localip"
 )
 
 var PrivilegedContainerNamespaces = []specs.Namespace{
@@ -230,6 +231,10 @@ func main() {
 	interfacePrefix := fmt.Sprintf("w%s", *tag)
 	chainPrefix := fmt.Sprintf("w-%s-instance", *tag)
 	iptablesMgr := wireIptables(logger, *tag, *allowHostAccess, interfacePrefix, chainPrefix)
+	externalIPAddr, err := parseExternalIP(*externalIP)
+	if err != nil {
+		panic(err)
+	}
 
 	sysInfoProvider := sysinfo.NewProvider(*depotPath)
 
@@ -239,7 +244,7 @@ func main() {
 		SysInfoProvider: sysInfoProvider,
 		UidGenerator:    wireUidGenerator(),
 		Starter:         wireStarter(logger, iptablesMgr),
-		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, iptablesMgr, interfacePrefix, chainPrefix, propManager),
+		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, externalIPAddr, iptablesMgr, interfacePrefix, chainPrefix, propManager),
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, resolvedRootFSPath),
 		Logger:          logger,
@@ -309,7 +314,7 @@ func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfa
 	)
 }
 
-func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, iptablesMgr kawasaki.IPTablesConfigurer, interfacePrefix, chainPrefix string, propManager *properties.Manager) *kawasaki.Networker {
+func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, externalIP net.IP, iptablesMgr kawasaki.IPTablesConfigurer, interfacePrefix, chainPrefix string, propManager *properties.Manager) *kawasaki.Networker {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("network-runner")}
 
 	hostConfigurer := &configure.Host{
@@ -334,7 +339,7 @@ func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, ipt
 		kawasaki.NewManager(runner, "/var/run/netns"),
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(networkPoolCIDR),
-		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix),
+		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP),
 		kawasaki.NewConfigurer(
 			hostConfigurer,
 			containerCfgApplier,
@@ -473,6 +478,22 @@ func missing(flagName string) {
 	flag.Usage()
 
 	os.Exit(1)
+}
+
+func parseExternalIP(ip string) (net.IP, error) {
+	if *externalIP == "" {
+		localIP, err := localip.LocalIP()
+		if err != nil {
+			return nil, fmt.Errorf("Couldn't determine local IP to use for -externalIP parameter. You can use the -externalIP flag to pass an external IP")
+		}
+		externalIP = &localIP
+	}
+
+	externalIPAddr := net.ParseIP(*externalIP)
+	if externalIPAddr == nil {
+		return nil, fmt.Errorf("Value of -externalIP %s could not be converted to an IP", *externalIP)
+	}
+	return externalIPAddr, nil
 }
 
 func mustStringify(s interface{}, e error) string {

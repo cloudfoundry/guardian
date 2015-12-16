@@ -25,7 +25,7 @@ func (p *PortForwarder) Forward(spec *kawasaki.PortForwarderSpec) error {
 	cmd := exec.Command("iptables", "--wait", "--table", "nat",
 		"-A", spec.IPTableChain,
 		"--protocol", "tcp",
-		"--destination", spec.BridgeIP.String(),
+		"--destination", spec.ExternalIP.String(),
 		"--destination-port", fmt.Sprintf("%d", spec.FromPort),
 		"--jump", "DNAT",
 		"--to-destination", fmt.Sprintf("%s:%d", spec.ContainerIP.String(), spec.ToPort))

@@ -27,6 +27,7 @@ type NetworkConfig struct {
 	BridgeName    string
 	BridgeIP      net.IP
 	ContainerIP   net.IP
+	ExternalIP    net.IP
 	Subnet        *net.IPNet
 	Mtu           int
 }
@@ -35,9 +36,10 @@ type Creator struct {
 	idGenerator     IDGenerator
 	interfacePrefix string
 	chainPrefix     string
+	externalIP      net.IP
 }
 
-func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix string) *Creator {
+func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix string, externalIP net.IP) *Creator {
 	if len(interfacePrefix) > maxInterfacePrefixLen {
 		panic("interface prefix is too long")
 	}
@@ -50,6 +52,7 @@ func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix stri
 		idGenerator:     idGenerator,
 		interfacePrefix: interfacePrefix,
 		chainPrefix:     chainPrefix,
+		externalIP:      externalIP,
 	}
 }
 
@@ -62,6 +65,7 @@ func (c *Creator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip 
 		IPTableChain:  fmt.Sprintf("%s-%s", c.chainPrefix, id),
 		ContainerIP:   ip,
 		BridgeIP:      subnets.GatewayIP(subnet),
+		ExternalIP:    c.externalIP,
 		Subnet:        subnet,
 		Mtu:           1500,
 	}, nil

@@ -12,32 +12,37 @@ import (
 )
 
 var _ = Describe("ConfigCreator", func() {
-	var creator *kawasaki.Creator
-	var subnet *net.IPNet
-	var ip net.IP
-	var logger lager.Logger
-	var idGenerator *fakes.FakeIDGenerator
+	var (
+		creator     *kawasaki.Creator
+		subnet      *net.IPNet
+		ip          net.IP
+		externalIP  net.IP
+		logger      lager.Logger
+		idGenerator *fakes.FakeIDGenerator
+	)
 
 	BeforeEach(func() {
 		var err error
 		ip, subnet, err = net.ParseCIDR("192.168.12.20/24")
 		Expect(err).NotTo(HaveOccurred())
 
+		externalIP = net.ParseIP("220.10.120.5")
+
 		logger = lagertest.NewTestLogger("test")
 		idGenerator = &fakes.FakeIDGenerator{}
 
-		creator = kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdef")
+		creator = kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdef", externalIP)
 	})
 
 	It("panics if the interface prefix is longer than 2 characters", func() {
 		Expect(func() {
-			kawasaki.NewConfigCreator(idGenerator, "too-long", "wc")
+			kawasaki.NewConfigCreator(idGenerator, "too-long", "wc", externalIP)
 		}).To(Panic())
 	})
 
 	It("panics if the chain prefix is longer than 16 characters", func() {
 		Expect(func() {
-			kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdefg")
+			kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdefg", externalIP)
 		}).To(Panic())
 	})
 
@@ -64,6 +69,13 @@ var _ = Describe("ConfigCreator", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(idGenerator.GenerateCallCount()).To(Equal(1))
+	})
+
+	It("saves the external ip", func() {
+		config, err := creator.Create(logger, "banana", subnet, ip)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(config.ExternalIP.String()).To(Equal("220.10.120.5"))
 	})
 
 	It("saves the subnet and ip", func() {

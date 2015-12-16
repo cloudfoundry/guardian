@@ -141,8 +141,7 @@ var _ = Describe("Net", func() {
 			Expect(actualContainerPort).To(Equal(containerPort))
 			Expect(listenInContainer(container, containerPort)).To(Succeed())
 
-			externalIP := bridgeInetAddr(subnet)
-
+			externalIP := externalIP(container)
 			stdout := sendRequest(externalIP, hostPort)
 			Expect(stdout).To(gbytes.Say(fmt.Sprintf("%d", containerPort)))
 		})
@@ -155,42 +154,17 @@ var _ = Describe("Net", func() {
 			Expect(actualContainerPort).NotTo(Equal(0))
 			Expect(listenInContainer(container, actualContainerPort)).To(Succeed())
 
-			externalIP := bridgeInetAddr(subnet)
-
+			externalIP := externalIP(container)
 			stdout := sendRequest(externalIP, actualHostPort)
 			Expect(stdout).To(gbytes.Say(fmt.Sprintf("%d", actualContainerPort)))
 		})
 	})
 })
 
-func bridgeInetAddr(subnet string) string {
-	subnet = strings.Split(subnet, "/")[0]
-	bridgeName := fmt.Sprintf("br-%s", strings.Replace(subnet, ".", "-", -1))
-
-	ifaces, err := net.Interfaces()
+func externalIP(container garden.Container) string {
+	properties, err := container.Properties()
 	Expect(err).NotTo(HaveOccurred())
-
-	for _, i := range ifaces {
-		if !strings.EqualFold(i.Name, bridgeName) {
-			continue
-		}
-
-		addrs, err := i.Addrs()
-		Expect(err).ToNot(HaveOccurred())
-		Expect(addrs).NotTo(HaveLen(0))
-
-		for _, addr := range addrs {
-			switch v := addr.(type) {
-			case *net.IPNet:
-				return v.IP.String()
-			case *net.IPAddr:
-				return v.IP.String()
-			}
-		}
-	}
-
-	Fail("bridge interface not found")
-	return ""
+	return properties["kawasaki.external-ip"]
 }
 
 func checkConnection(container garden.Container, ip string, port int) error {

@@ -21,9 +21,8 @@ var _ = Describe("PortForwarder", func() {
 		externalPort    uint32
 		containerPort   uint32
 		iptablesChain   string
-		bridgeIP        net.IP
+		externalIP      net.IP
 		containerIP     net.IP
-		subnet          *net.IPNet
 	)
 
 	BeforeEach(func() {
@@ -31,15 +30,14 @@ var _ = Describe("PortForwarder", func() {
 		containerPort = uint32(2120 + GinkgoParallelNode())
 		containerHandle = fmt.Sprintf("h-%d", GinkgoParallelNode())
 		iptablesChain = ""
-		bridgeIP = nil
+		externalIP = nil
 		containerIP = nil
-		subnet = nil
 	})
 
 	JustBeforeEach(func() {
 		spec = &kawasaki.PortForwarderSpec{
 			IPTableChain: iptablesChain,
-			BridgeIP:     bridgeIP,
+			ExternalIP:   externalIP,
 			ContainerIP:  containerIP,
 			FromPort:     externalPort,
 			ToPort:       containerPort,
@@ -50,10 +48,7 @@ var _ = Describe("PortForwarder", func() {
 
 	Context("when NetworkConfig is valid", func() {
 		BeforeEach(func() {
-			var err error
-			bridgeIP, subnet, err = net.ParseCIDR("127.0.0.1/32")
-			Expect(err).NotTo(HaveOccurred())
-
+			externalIP = net.ParseIP("127.0.0.1")
 			containerIP = net.ParseIP("127.0.0.2")
 			iptablesChain = fmt.Sprintf("chain-%s", containerHandle)
 
@@ -63,11 +58,10 @@ var _ = Describe("PortForwarder", func() {
 
 		AfterEach(func() {
 			// clean up rules created by PortForwarder
-			_, maskSize := subnet.Mask.Size()
 			deleteRuleCmd := exec.Command(
 				"iptables", "-w", "-t", "nat",
 				"-D", iptablesChain,
-				"-d", fmt.Sprintf("%s/%d", bridgeIP.String(), maskSize),
+				"-d", externalIP.String(),
 				"-p", "tcp",
 				"-m", "tcp",
 				"--dport", fmt.Sprint(externalPort),
@@ -96,7 +90,7 @@ var _ = Describe("PortForwarder", func() {
 			Expect(ipTableRules).To(ContainSubstring(containerHandle))
 			Expect(ipTableRules).To(ContainSubstring(fmt.Sprint(externalPort)))
 			Expect(ipTableRules).To(ContainSubstring(fmt.Sprint(containerPort)))
-			Expect(ipTableRules).To(ContainSubstring(bridgeIP.String()))
+			Expect(ipTableRules).To(ContainSubstring(externalIP.String()))
 			Expect(ipTableRules).To(ContainSubstring(containerIP.String()))
 		})
 	})

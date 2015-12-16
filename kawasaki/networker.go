@@ -14,6 +14,7 @@ const containerIntfKey = "kawasaki.container-interface"
 const bridgeIntfKey = "kawasaki.bridge-interface"
 const bridgeIpKey = "kawasaki.bridge-ip"
 const containerIpKey = "kawasaki.container-ip"
+const externalIpKey = "kawasaki.external-ip"
 const subnetIpKey = "kawasaki.subnet-ip"
 const iptableChainKey = "kawasaki.iptable-chain"
 const mtuKey = "kawasaki.mtu"
@@ -68,8 +69,8 @@ type PortForwarderSpec struct {
 	FromPort     uint32
 	ToPort       uint32
 	IPTableChain string
-	BridgeIP     net.IP
 	ContainerIP  net.IP
+	ExternalIP   net.IP
 }
 
 type Networker struct {
@@ -185,7 +186,7 @@ func (n *Networker) NetIn(handle string, externalPort, containerPort uint32) (ui
 		ToPort:       containerPort,
 		IPTableChain: cfg.IPTableChain,
 		ContainerIP:  cfg.ContainerIP,
-		BridgeIP:     cfg.BridgeIP,
+		ExternalIP:   cfg.ExternalIP,
 	})
 
 	if err != nil {
@@ -242,10 +243,11 @@ func save(config ConfigStore, handle string, netConfig NetworkConfig) {
 	config.Set(handle, subnetIpKey, netConfig.Subnet.String())
 	config.Set(handle, iptableChainKey, netConfig.IPTableChain)
 	config.Set(handle, mtuKey, strconv.Itoa(netConfig.Mtu))
+	config.Set(handle, externalIpKey, netConfig.ExternalIP.String())
 }
 
 func load(config ConfigStore, handle string) (NetworkConfig, error) {
-	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetIpKey, iptableChainKey, mtuKey)
+	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetIpKey, iptableChainKey, mtuKey, externalIpKey)
 
 	if err != nil {
 		return NetworkConfig{}, err
@@ -267,6 +269,7 @@ func load(config ConfigStore, handle string) (NetworkConfig, error) {
 		BridgeName:    vals[2],
 		BridgeIP:      net.ParseIP(vals[3]),
 		ContainerIP:   net.ParseIP(vals[4]),
+		ExternalIP:    net.ParseIP(vals[8]),
 		Subnet:        ipnet,
 		IPTableChain:  vals[6],
 		Mtu:           mtu,

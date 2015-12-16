@@ -62,6 +62,7 @@ var _ = Describe("Networker", func() {
 			BridgeName:    "bananas-bridge",
 			BridgeIP:      net.ParseIP("123.123.123.1"),
 			ContainerIP:   ip,
+			ExternalIP:    net.ParseIP("128.128.90.90"),
 			Subnet:        subnet,
 			Mtu:           1200,
 		}
@@ -74,6 +75,7 @@ var _ = Describe("Networker", func() {
 			"kawasaki.bridge-interface":    networkConfig.BridgeName,
 			"kawasaki.bridge-ip":           networkConfig.BridgeIP.String(),
 			"kawasaki.container-ip":        networkConfig.ContainerIP.String(),
+			"kawasaki.external-ip":         networkConfig.ExternalIP.String(),
 			"kawasaki.subnet-ip":           networkConfig.Subnet.String(),
 			"kawasaki.iptable-chain":       networkConfig.IPTableChain,
 			"kawasaki.mtu":                 strconv.Itoa(networkConfig.Mtu),
@@ -139,6 +141,7 @@ var _ = Describe("Networker", func() {
 			Expect(config["kawasaki.bridge-interface"]).To(Equal(networkConfig.BridgeName))
 			Expect(config["kawasaki.bridge-ip"]).To(Equal(networkConfig.BridgeIP.String()))
 			Expect(config["kawasaki.container-ip"]).To(Equal(networkConfig.ContainerIP.String()))
+			Expect(config["kawasaki.external-ip"]).To(Equal(networkConfig.ExternalIP.String()))
 			Expect(config["kawasaki.subnet-ip"]).To(Equal(networkConfig.Subnet.String()))
 			Expect(config["kawasaki.iptable-chain"]).To(Equal(networkConfig.IPTableChain))
 			Expect(config["kawasaki.mtu"]).To(Equal(strconv.Itoa(networkConfig.Mtu)))
@@ -339,7 +342,7 @@ var _ = Describe("Networker", func() {
 			actualSpec := fakePortForwarder.ForwardArgsForCall(0)
 			Expect(actualSpec.IPTableChain).To(Equal(networkConfig.IPTableChain))
 			Expect(actualSpec.ContainerIP).To(Equal(networkConfig.ContainerIP))
-			Expect(actualSpec.BridgeIP).To(Equal(networkConfig.BridgeIP))
+			Expect(actualSpec.ExternalIP).To(Equal(networkConfig.ExternalIP))
 			Expect(actualSpec.FromPort).To(Equal(externalPort))
 			Expect(actualSpec.ToPort).To(Equal(containerPort))
 
