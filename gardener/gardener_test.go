@@ -476,4 +476,48 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 	})
+
+	Describe("ForeignNetworkAdaptor", func() {
+		var (
+			fakeForeignNetworker *fakes.FakeForeignNetworker
+			adaptor              gardener.Networker
+		)
+
+		BeforeEach(func() {
+			fakeForeignNetworker = new(fakes.FakeForeignNetworker)
+			adaptor = gardener.ForeignNetworkAdaptor{
+				ForeignNetworker: fakeForeignNetworker,
+			}
+		})
+
+		It("delegates Network(...) to the ForeignNetworker", func() {
+			theErr := errors.New("Oh, no!")
+			logger := lager.NewLogger("test-logger")
+			fakeForeignNetworker.NetworkReturns(
+				"my-subnet",
+				theErr,
+			)
+
+			subnet, err := adaptor.Network(logger, "handle", "spec")
+
+			Expect(err).To(Equal(theErr))
+			Expect(subnet).To(Equal("my-subnet"))
+			Expect(fakeForeignNetworker.NetworkCallCount()).To(Equal(1))
+
+			logger, handle, spec := fakeForeignNetworker.NetworkArgsForCall(0)
+			Expect(logger).To(Equal(logger))
+			Expect(handle).To(Equal("handle"))
+			Expect(spec).To(Equal("spec"))
+
+		})
+
+		It("delegates Capacity(...) to the ForeignNetworker", func() {
+			fakeForeignNetworker.CapacityReturns(432)
+
+			capacity := adaptor.Capacity()
+
+			Expect(capacity).To(Equal(uint64(432)))
+			Expect(fakeForeignNetworker.CapacityCallCount()).To(Equal(1))
+		})
+	})
 })

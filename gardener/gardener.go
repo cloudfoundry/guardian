@@ -1,6 +1,7 @@
 package gardener
 
 import (
+	"errors"
 	"net/url"
 	"time"
 
@@ -20,6 +21,7 @@ type SysInfoProvider interface {
 //go:generate counterfeiter . Networker
 //go:generate counterfeiter . VolumeCreator
 //go:generate counterfeiter . UidGenerator
+//go:generate counterfeiter . ForeignNetworker
 
 type Containerizer interface {
 	Create(log lager.Logger, spec DesiredContainerSpec) error
@@ -34,6 +36,23 @@ type Networker interface {
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error)
+}
+
+type ForeignNetworkAdaptor struct {
+	ForeignNetworker
+}
+
+func (a ForeignNetworkAdaptor) Destroy(log lager.Logger, handle string) error {
+	return errors.New("not implemented")
+}
+
+func (a ForeignNetworkAdaptor) NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error) {
+	return 0, 0, errors.New("not implemented")
+}
+
+type ForeignNetworker interface {
+	Network(log lager.Logger, handle, spec string) (string, error)
+	Capacity() uint64
 }
 
 type VolumeCreator interface {
