@@ -1,6 +1,7 @@
 package rundmc
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/cloudfoundry-incubator/garden"
@@ -12,6 +13,12 @@ import (
 )
 
 //go:generate counterfeiter . Depot
+//go:generate counterfeiter . Bundler
+//go:generate counterfeiter . Checker
+//go:generate counterfeiter . BundleRunner
+//go:generate counterfeiter . NstarRunner
+//go:generate counterfeiter . ContainerStater
+
 type Depot interface {
 	Create(log lager.Logger, handle string, bundle depot.BundleSaver) error
 	Lookup(log lager.Logger, handle string) (path string, err error)
@@ -19,21 +26,26 @@ type Depot interface {
 	Handles() ([]string, error)
 }
 
-//go:generate counterfeiter . Bundler
 type Bundler interface {
 	Bundle(spec gardener.DesiredContainerSpec) *goci.Bndl
 }
 
-//go:generate counterfeiter . Checker
 type Checker interface {
 	Check(log lager.Logger, output io.Reader) error
 }
 
-//go:generate counterfeiter . BundleRunner
+type ContainerStater interface {
+	State(log lager.Logger, id string) (State, error)
+}
+
 type BundleRunner interface {
 	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) (garden.Process, error)
 	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
+}
+
+type NstarRunner interface {
+	StreamIn(log lager.Logger, pid int, path string, user string, tarStream io.Reader) error
 }
 
 // Containerizer knows how to manage a depot of container bundles
@@ -42,14 +54,18 @@ type Containerizer struct {
 	bundler      Bundler
 	runner       BundleRunner
 	startChecker Checker
+	stateChecker ContainerStater
+	nstar        NstarRunner
 }
 
-func New(depot Depot, bundler Bundler, runner BundleRunner, startChecker Checker) *Containerizer {
+func New(depot Depot, bundler Bundler, runner BundleRunner, startChecker Checker, stateChecker ContainerStater, nstarRunner NstarRunner) *Containerizer {
 	return &Containerizer{
 		depot:        depot,
 		bundler:      bundler,
 		runner:       runner,
 		startChecker: startChecker,
+		stateChecker: stateChecker,
+		nstar:        nstarRunner,
 	}
 }
 
@@ -103,6 +119,27 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	}
 
 	return c.runner.Exec(log, handle, spec, io)
+}
+
+// StreamIn streams files in to the container
+func (c *Containerizer) StreamIn(log lager.Logger, handle string, spec garden.StreamInSpec) error {
+	log = log.Session("stream-in", lager.Data{"handle": handle})
+
+	log.Info("started")
+	defer log.Info("finished")
+
+	state, err := c.stateChecker.State(log, handle)
+	if err != nil {
+		log.Error("check-pid-failed", err)
+		return fmt.Errorf("stream-in: pid not found for container")
+	}
+
+	if err := c.nstar.StreamIn(log, state.Pid, spec.Path, spec.User, spec.TarStream); err != nil {
+		log.Error("nstar-failed", err)
+		return fmt.Errorf("stream-in: nstar: %s", err)
+	}
+
+	return nil
 }
 
 // Destroy kills any container processes and deletes the bundle directory

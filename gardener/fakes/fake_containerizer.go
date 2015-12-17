@@ -19,6 +19,16 @@ type FakeContainerizer struct {
 	createReturns struct {
 		result1 error
 	}
+	StreamInStub        func(log lager.Logger, handle string, spec garden.StreamInSpec) error
+	streamInMutex       sync.RWMutex
+	streamInArgsForCall []struct {
+		log    lager.Logger
+		handle string
+		spec   garden.StreamInSpec
+	}
+	streamInReturns struct {
+		result1 error
+	}
 	RunStub        func(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	runMutex       sync.RWMutex
 	runArgsForCall []struct {
@@ -78,6 +88,40 @@ func (fake *FakeContainerizer) CreateArgsForCall(i int) (lager.Logger, gardener.
 func (fake *FakeContainerizer) CreateReturns(result1 error) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeContainerizer) StreamIn(log lager.Logger, handle string, spec garden.StreamInSpec) error {
+	fake.streamInMutex.Lock()
+	fake.streamInArgsForCall = append(fake.streamInArgsForCall, struct {
+		log    lager.Logger
+		handle string
+		spec   garden.StreamInSpec
+	}{log, handle, spec})
+	fake.streamInMutex.Unlock()
+	if fake.StreamInStub != nil {
+		return fake.StreamInStub(log, handle, spec)
+	} else {
+		return fake.streamInReturns.result1
+	}
+}
+
+func (fake *FakeContainerizer) StreamInCallCount() int {
+	fake.streamInMutex.RLock()
+	defer fake.streamInMutex.RUnlock()
+	return len(fake.streamInArgsForCall)
+}
+
+func (fake *FakeContainerizer) StreamInArgsForCall(i int) (lager.Logger, string, garden.StreamInSpec) {
+	fake.streamInMutex.RLock()
+	defer fake.streamInMutex.RUnlock()
+	return fake.streamInArgsForCall[i].log, fake.streamInArgsForCall[i].handle, fake.streamInArgsForCall[i].spec
+}
+
+func (fake *FakeContainerizer) StreamInReturns(result1 error) {
+	fake.StreamInStub = nil
+	fake.streamInReturns = struct {
 		result1 error
 	}{result1}
 }

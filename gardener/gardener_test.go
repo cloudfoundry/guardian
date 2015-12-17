@@ -277,6 +277,17 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 		})
+
+		Describe("streaming files in to the container", func() {
+			It("asks the containerizer to stream in the tar stream", func() {
+				spec := garden.StreamInSpec{Path: "potato", User: "chef", TarStream: gbytes.NewBuffer()}
+				Expect(container.StreamIn(spec)).To(Succeed())
+
+				_, handle, specArg := containerizer.StreamInArgsForCall(0)
+				Expect(handle).To(Equal("banana"))
+				Expect(specArg).To(Equal(spec))
+			})
+		})
 	})
 
 	Describe("listing containers", func() {

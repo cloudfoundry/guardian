@@ -11,6 +11,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
@@ -20,7 +21,9 @@ var _ = Describe("Rundmc", func() {
 		fakeDepot           *fakes.FakeDepot
 		fakeBundler         *fakes.FakeBundler
 		fakeContainerRunner *fakes.FakeBundleRunner
-		fakeStartCheck      *fakes.FakeChecker
+		fakeStartChecker    *fakes.FakeChecker
+		fakeNstarRunner     *fakes.FakeNstarRunner
+		fakeStater          *fakes.FakeContainerStater
 		logger              lager.Logger
 
 		containerizer *rundmc.Containerizer
@@ -29,18 +32,20 @@ var _ = Describe("Rundmc", func() {
 	BeforeEach(func() {
 		fakeDepot = new(fakes.FakeDepot)
 		fakeContainerRunner = new(fakes.FakeBundleRunner)
-		fakeStartCheck = new(fakes.FakeChecker)
+		fakeStartChecker = new(fakes.FakeChecker)
 		fakeBundler = new(fakes.FakeBundler)
+		fakeNstarRunner = new(fakes.FakeNstarRunner)
+		fakeStater = new(fakes.FakeContainerStater)
 		logger = lagertest.NewTestLogger("test")
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartCheck)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartChecker, fakeStater, fakeNstarRunner)
 
 		fakeDepot.LookupStub = func(_ lager.Logger, handle string) (string, error) {
 			return "/path/to/" + handle, nil
 		}
 	})
 
-	Describe("create", func() {
+	Describe("Create", func() {
 		It("should ask the depot to create a container", func() {
 			var returnedBundle *goci.Bndl
 			fakeBundler.BundleStub = func(spec gardener.DesiredContainerSpec) *goci.Bndl {
@@ -68,28 +73,10 @@ var _ = Describe("Rundmc", func() {
 			})
 		})
 
-		Context("when looking up the container fails", func() {
-			It("returns an error", func() {
-				fakeDepot.LookupReturns("", errors.New("blam"))
-				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
-					Handle: "exuberant!",
-				})).NotTo(Succeed())
-			})
-
-			It("does not attempt to start the container", func() {
-				fakeDepot.LookupReturns("", errors.New("blam"))
-				containerizer.Create(logger, gardener.DesiredContainerSpec{
-					Handle: "exuberant!",
-				})
-
-				Expect(fakeContainerRunner.StartCallCount()).To(Equal(0))
-			})
-		})
-
 		It("should start a container in the created directory", func() {
-			containerizer.Create(logger, gardener.DesiredContainerSpec{
+			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
 				Handle: "exuberant!",
-			})
+			})).To(Succeed())
 
 			Expect(fakeContainerRunner.StartCallCount()).To(Equal(1))
 
@@ -98,27 +85,40 @@ var _ = Describe("Rundmc", func() {
 			Expect(id).To(Equal("exuberant!"))
 		})
 
-		Describe("waiting for the container to start", func() {
-			Context("when the container starts succesfully", func() {
-				It("returns success", func() {
-					fakeStartCheck.CheckReturns(nil)
-					Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(Succeed())
-				})
+		Context("when the container fails to start", func() {
+			BeforeEach(func() {
+				fakeContainerRunner.StartReturns(nil, errors.New("banana"))
 			})
 
-			Context("when the container fails to start", func() {
-				It("returns the underlying error", func() {
-					fakeStartCheck.CheckStub = func(_ lager.Logger, stdout io.Reader) error {
-						return errors.New("I died")
-					}
+			It("should return an error", func() {
+				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).NotTo(Succeed())
+			})
 
-					Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(MatchError("I died"))
-				})
+			It("should not check if the container is started", func() {
+				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).NotTo(Succeed())
+
+				Expect(fakeStartChecker.CheckCallCount()).To(Equal(0))
+			})
+		})
+
+		It("should check if the container is started", func() {
+			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(Succeed())
+
+			Expect(fakeStartChecker.CheckCallCount()).To(Equal(1))
+		})
+
+		Context("when the start check fails", func() {
+			It("returns the underlying error", func() {
+				fakeStartChecker.CheckStub = func(_ lager.Logger, stdout io.Reader) error {
+					return errors.New("I died")
+				}
+
+				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{Handle: "the-handle"})).To(MatchError("I died"))
 			})
 		})
 	})
 
-	Describe("run", func() {
+	Describe("Run", func() {
 		It("should ask the execer to exec a process in the container", func() {
 			containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
 			Expect(fakeContainerRunner.ExecCallCount()).To(Equal(1))
@@ -140,6 +140,37 @@ var _ = Describe("Rundmc", func() {
 				containerizer.Run(logger, "some-handle", garden.ProcessSpec{}, garden.ProcessIO{})
 				Expect(fakeContainerRunner.StartCallCount()).To(Equal(0))
 			})
+		})
+	})
+
+	Describe("StreamIn", func() {
+		It("should execute the NSTar command with the container PID", func() {
+			fakeStater.StateReturns(rundmc.State{
+				Pid: 12,
+			}, nil)
+
+			someStream := gbytes.NewBuffer()
+			Expect(containerizer.StreamIn(logger, "some-handle", garden.StreamInSpec{
+				Path:      "some-path",
+				User:      "some-user",
+				TarStream: someStream,
+			})).To(Succeed())
+
+			_, pid, path, user, stream := fakeNstarRunner.StreamInArgsForCall(0)
+			Expect(pid).To(Equal(12))
+			Expect(path).To(Equal("some-path"))
+			Expect(user).To(Equal("some-user"))
+			Expect(stream).To(Equal(someStream))
+		})
+
+		It("returns an error if the PID cannot be found", func() {
+			fakeStater.StateReturns(rundmc.State{}, errors.New("pid not found"))
+			Expect(containerizer.StreamIn(logger, "some-handle", garden.StreamInSpec{})).To(MatchError("stream-in: pid not found for container"))
+		})
+
+		It("returns the error if nstar fails", func() {
+			fakeNstarRunner.StreamInReturns(errors.New("failed"))
+			Expect(containerizer.StreamIn(logger, "some-handle", garden.StreamInSpec{})).To(MatchError("stream-in: nstar: failed"))
 		})
 	})
 

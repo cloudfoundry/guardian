@@ -49,6 +49,8 @@ import (
 	"github.com/pivotal-golang/localip"
 )
 
+const OciStateDir = "/var/run/opencontainer/containers"
+
 var PrivilegedContainerNamespaces = []specs.Namespace{
 	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace,
 }
@@ -81,6 +83,18 @@ var iodaemonBin = flag.String(
 	"iodaemonBin",
 	"",
 	"path to iodaemon binary",
+)
+
+var nstarBin = flag.String(
+	"nstarBin",
+	"",
+	"path to nstar binary",
+)
+
+var tarBin = flag.String(
+	"tarBin",
+	"",
+	"path to tar binary",
 )
 
 var depotPath = flag.String(
@@ -218,6 +232,14 @@ func main() {
 		missing("-iodaemonBin")
 	}
 
+	if *nstarBin == "" {
+		missing("-nstarBin")
+	}
+
+	if *tarBin == "" {
+		missing("-tarBin")
+	}
+
 	resolvedRootFSPath, err := filepath.EvalSymlinks(*rootFSPath)
 	if err != nil {
 		panic(err)
@@ -246,7 +268,7 @@ func main() {
 		Starter:         wireStarter(logger, iptablesMgr),
 		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, externalIPAddr, iptablesMgr, interfacePrefix, chainPrefix, propManager),
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
-		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, resolvedRootFSPath),
+		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath),
 		Logger:          logger,
 		PropertyManager: propManager,
 	}
@@ -449,10 +471,11 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.C
 	return cakeOrdinator
 }
 
-func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, defaultRootFSPath string) *rundmc.Containerizer {
+func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tarPath, defaultRootFSPath string) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
-	startCheck := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 3 * time.Second}
+	startChecker := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 3 * time.Second}
+	stateChecker := rundmc.StateChecker{StateFileDir: OciStateDir, Timeout: 3 * time.Second}
 
 	runcrunner := runrunc.New(
 		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", *tag), "processes"), iodaemonPath, linux_command_runner.New()),
@@ -469,7 +492,8 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, defaultRootFSP
 		WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)).
 		WithDevices(specs.Device{Path: "/dev/null", Type: 'c', Major: 1, Minor: 3, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666})
 
-	return rundmc.New(depot, &rundmc.BundleTemplate{Bndl: baseBundle}, runcrunner, startCheck)
+	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
+	return rundmc.New(depot, &rundmc.BundleTemplate{Bndl: baseBundle}, runcrunner, startChecker, stateChecker, nstar)
 }
 
 func missing(flagName string) {

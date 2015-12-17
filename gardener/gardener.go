@@ -23,6 +23,7 @@ type SysInfoProvider interface {
 
 type Containerizer interface {
 	Create(log lager.Logger, spec DesiredContainerSpec) error
+	StreamIn(log lager.Logger, handle string, spec garden.StreamInSpec) error
 	Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Destroy(log lager.Logger, handle string) error
 	Handles() ([]string, error)

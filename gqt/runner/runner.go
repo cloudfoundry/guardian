@@ -23,6 +23,7 @@ import (
 
 var RootFSPath = os.Getenv("GARDEN_TEST_ROOTFS")
 var GraphRoot = os.Getenv("GARDEN_TEST_GRAPHPATH")
+var TarPath = os.Getenv("GARDEN_TAR_PATH")
 
 type RunningGarden struct {
 	client.Client
@@ -39,7 +40,7 @@ type RunningGarden struct {
 	logger lager.Logger
 }
 
-func Start(bin string, iodaemonBin string, argv ...string) *RunningGarden {
+func Start(bin, iodaemonBin, nstarBin string, argv ...string) *RunningGarden {
 	network := "unix"
 	addr := fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
 	tmpDir := filepath.Join(
@@ -67,7 +68,7 @@ func Start(bin string, iodaemonBin string, argv ...string) *RunningGarden {
 		Client: client.New(connection.New(network, addr)),
 	}
 
-	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, iodaemonBin, RootFSPath, argv...)
+	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, iodaemonBin, nstarBin, TarPath, RootFSPath, argv...)
 	r.process = ifrit.Invoke(&ginkgomon.Runner{
 		Name:              "guardian",
 		Command:           c,
@@ -115,7 +116,7 @@ func (r *RunningGarden) Stop() error {
 	}
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, rootFSPath string, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, nstarBin, tarBin, rootFSPath string, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -147,6 +148,8 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, rootFSPat
 	gardenArgs = appendDefaultFlag(gardenArgs, "--graph", graphPath)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--iodaemonBin", iodaemonBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--nstarBin", nstarBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--tarBin", tarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--logLevel", "debug")
 	gardenArgs = appendDefaultFlag(gardenArgs, "--debugAddr", fmt.Sprintf(":808%d", ginkgo.GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--rootfs", rootFSPath)

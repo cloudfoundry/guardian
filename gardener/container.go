@@ -43,8 +43,8 @@ func (c *container) Info() (garden.ContainerInfo, error) {
 	return garden.ContainerInfo{}, nil
 }
 
-func (c *container) StreamIn(garden.StreamInSpec) error {
-	return nil
+func (c *container) StreamIn(spec garden.StreamInSpec) error {
+	return c.containerizer.StreamIn(c.logger, c.handle, spec)
 }
 
 func (c *container) StreamOut(garden.StreamOutSpec) (io.ReadCloser, error) {
