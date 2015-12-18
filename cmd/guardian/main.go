@@ -68,12 +68,6 @@ var listenAddr = flag.String(
 	"address to listen on",
 )
 
-var snapshotsPath = flag.String(
-	"snapshots",
-	"",
-	"directory in which to store container state to persist through restarts",
-)
-
 var binPath = flag.String(
 	"bin",
 	"",
@@ -108,12 +102,6 @@ var rootFSPath = flag.String(
 	"rootfs",
 	"",
 	"directory of the rootfs for the containers",
-)
-
-var disableQuotas = flag.Bool(
-	"disableQuotas",
-	false,
-	"disable disk quotas",
 )
 
 var graceTime = flag.Duration(
