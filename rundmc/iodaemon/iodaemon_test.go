@@ -73,7 +73,7 @@ var _ = Describe("Iodaemon", func() {
 		}
 	})
 
-	Context("spawning a process", func() {
+	Context("spawning a process: when no listeners connect", func() {
 		spawnProcess := func(args ...string) {
 			go func() {
 				iodaemon.Spawn(socketPath, args, time.Second, fakeOut, wirer, daemon)
@@ -86,6 +86,16 @@ var _ = Describe("Iodaemon", func() {
 
 			Eventually(exited, DEFAULT_TIMEOUT).Should(BeClosed())
 		})
+	})
+
+	Context("spawning a process: when listeners connect", func() {
+		spawnProcess := func(args ...string) {
+			go func() {
+				defer GinkgoRecover()
+				Expect(iodaemon.Spawn(socketPath, args, time.Second, fakeOut, wirer, daemon)).To(Succeed())
+				close(exited)
+			}()
+		}
 
 		It("reports back stdout", func() {
 			spawnProcess("echo", "hello")
@@ -148,14 +158,14 @@ var _ = Describe("Iodaemon", func() {
 			l, _, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
 
-			l.Close() //bash will normally terminate when it receives EOF on stdin
+			Expect(l.Close()).To(Succeed()) //bash will normally terminate when it receives EOF on stdin
 		})
 
 		Context("when there is an existing socket file", func() {
 			BeforeEach(func() {
 				file, err := os.Create(socketPath)
 				Expect(err).ToNot(HaveOccurred())
-				file.Close()
+				Expect(file.Close()).To(Succeed())
 			})
 
 			It("still creates the process", func() {
@@ -171,7 +181,8 @@ var _ = Describe("Iodaemon", func() {
 	Context("spawning a tty", func() {
 		spawnTty := func(args ...string) {
 			go func() {
-				iodaemon.Spawn(socketPath, args, time.Second, fakeOut, wirer, daemon)
+				defer GinkgoRecover()
+				Expect(iodaemon.Spawn(socketPath, args, time.Second, fakeOut, wirer, daemon)).To(Succeed())
 				close(exited)
 			}()
 		}
@@ -215,7 +226,7 @@ var _ = Describe("Iodaemon", func() {
 			l, _, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
 
-			l.Close() //bash will normally terminate when it receives EOF on stdin
+			Expect(l.Close()).To(Succeed()) //bash will normally terminate when it receives EOF on stdin
 		})
 
 		It("sends stdin to child", func() {
