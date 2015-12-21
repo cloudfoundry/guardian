@@ -288,6 +288,18 @@ var _ = Describe("Gardener", func() {
 				Expect(specArg).To(Equal(spec))
 			})
 		})
+
+		Describe("streaming files outside the container", func() {
+			It("asks the containerizer to stream out the files", func() {
+				spec := garden.StreamOutSpec{Path: "potato", User: "chef"}
+				_, err := container.StreamOut(spec)
+				Expect(err).To(Succeed())
+
+				_, handle, specArg := containerizer.StreamOutArgsForCall(0)
+				Expect(handle).To(Equal("banana"))
+				Expect(specArg).To(Equal(spec))
+			})
+		})
 	})
 
 	Describe("listing containers", func() {

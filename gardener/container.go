@@ -47,8 +47,8 @@ func (c *container) StreamIn(spec garden.StreamInSpec) error {
 	return c.containerizer.StreamIn(c.logger, c.handle, spec)
 }
 
-func (c *container) StreamOut(garden.StreamOutSpec) (io.ReadCloser, error) {
-	return nil, nil
+func (c *container) StreamOut(spec garden.StreamOutSpec) (io.ReadCloser, error) {
+	return c.containerizer.StreamOut(c.logger, c.handle, spec)
 }
 
 func (c *container) LimitBandwidth(limits garden.BandwidthLimits) error {

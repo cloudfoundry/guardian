@@ -2,6 +2,7 @@
 package fakes
 
 import (
+	"io"
 	"sync"
 
 	"github.com/cloudfoundry-incubator/garden"
@@ -28,6 +29,17 @@ type FakeContainerizer struct {
 	}
 	streamInReturns struct {
 		result1 error
+	}
+	StreamOutStub        func(log lager.Logger, handle string, spec garden.StreamOutSpec) (io.ReadCloser, error)
+	streamOutMutex       sync.RWMutex
+	streamOutArgsForCall []struct {
+		log    lager.Logger
+		handle string
+		spec   garden.StreamOutSpec
+	}
+	streamOutReturns struct {
+		result1 io.ReadCloser
+		result2 error
 	}
 	RunStub        func(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	runMutex       sync.RWMutex
@@ -124,6 +136,41 @@ func (fake *FakeContainerizer) StreamInReturns(result1 error) {
 	fake.streamInReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeContainerizer) StreamOut(log lager.Logger, handle string, spec garden.StreamOutSpec) (io.ReadCloser, error) {
+	fake.streamOutMutex.Lock()
+	fake.streamOutArgsForCall = append(fake.streamOutArgsForCall, struct {
+		log    lager.Logger
+		handle string
+		spec   garden.StreamOutSpec
+	}{log, handle, spec})
+	fake.streamOutMutex.Unlock()
+	if fake.StreamOutStub != nil {
+		return fake.StreamOutStub(log, handle, spec)
+	} else {
+		return fake.streamOutReturns.result1, fake.streamOutReturns.result2
+	}
+}
+
+func (fake *FakeContainerizer) StreamOutCallCount() int {
+	fake.streamOutMutex.RLock()
+	defer fake.streamOutMutex.RUnlock()
+	return len(fake.streamOutArgsForCall)
+}
+
+func (fake *FakeContainerizer) StreamOutArgsForCall(i int) (lager.Logger, string, garden.StreamOutSpec) {
+	fake.streamOutMutex.RLock()
+	defer fake.streamOutMutex.RUnlock()
+	return fake.streamOutArgsForCall[i].log, fake.streamOutArgsForCall[i].handle, fake.streamOutArgsForCall[i].spec
+}
+
+func (fake *FakeContainerizer) StreamOutReturns(result1 io.ReadCloser, result2 error) {
+	fake.StreamOutStub = nil
+	fake.streamOutReturns = struct {
+		result1 io.ReadCloser
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeContainerizer) Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {

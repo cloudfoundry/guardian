@@ -46,6 +46,7 @@ type BundleRunner interface {
 
 type NstarRunner interface {
 	StreamIn(log lager.Logger, pid int, path string, user string, tarStream io.Reader) error
+	StreamOut(log lager.Logger, pid int, path string, user string) (io.ReadCloser, error)
 }
 
 // Containerizer knows how to manage a depot of container bundles
@@ -140,6 +141,28 @@ func (c *Containerizer) StreamIn(log lager.Logger, handle string, spec garden.St
 	}
 
 	return nil
+}
+
+// StreamOut stream files from the container
+func (c *Containerizer) StreamOut(log lager.Logger, handle string, spec garden.StreamOutSpec) (io.ReadCloser, error) {
+	log = log.Session("stream-out", lager.Data{"handle": handle})
+
+	log.Info("started")
+	defer log.Info("finished")
+
+	state, err := c.stateChecker.State(log, handle)
+	if err != nil {
+		log.Error("check-pid-failed", err)
+		return nil, fmt.Errorf("stream-out: pid not found for container")
+	}
+
+	stream, err := c.nstar.StreamOut(log, state.Pid, spec.Path, spec.User)
+	if err != nil {
+		log.Error("nstar-failed", err)
+		return nil, fmt.Errorf("stream-out: nstar: %s", err)
+	}
+
+	return stream, nil
 }
 
 // Destroy kills any container processes and deletes the bundle directory

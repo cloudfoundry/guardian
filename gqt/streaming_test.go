@@ -1,6 +1,8 @@
 package gqt_test
 
 import (
+	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"io"
 	"io/ioutil"
@@ -74,6 +76,47 @@ var _ = Describe("Streaming", func() {
 
 			Expect(container).To(HaveFile("/root/test/some-temp-dir"))
 			Expect(container).To(HaveFile("/root/test/some-temp-dir/some-temp-file"))
+		})
+	})
+
+	Describe("StreamOut", func() {
+		BeforeEach(func() {
+			process, err := container.Run(garden.ProcessSpec{
+				User: "root",
+				Path: "sh",
+				Args: []string{"-c", "mkdir -p /root/documents/some/reports && echo hello > /root/documents/some/reports/test"},
+			}, ginkgoIO)
+
+			Expect(err).NotTo(HaveOccurred())
+			statusCode, err := process.Wait()
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(statusCode).To(Equal(0))
+		})
+
+		It("should stream out the files", func() {
+			tarStream, err := container.StreamOut(garden.StreamOutSpec{
+				Path: "/root/documents/some/reports",
+				User: "root",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			tarReader := tar.NewReader(tarStream)
+
+			header, err := tarReader.Next()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(header.Name).To(Equal("reports/"))
+
+			header, err = tarReader.Next()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(header.Name).To(Equal("reports/test"))
+
+			buffer := bytes.NewBufferString("")
+
+			_, err = io.Copy(buffer, tarReader)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(buffer.String()).To(Equal("hello\n"))
 		})
 	})
 })

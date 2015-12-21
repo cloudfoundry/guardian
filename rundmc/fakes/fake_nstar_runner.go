@@ -22,6 +22,18 @@ type FakeNstarRunner struct {
 	streamInReturns struct {
 		result1 error
 	}
+	StreamOutStub        func(log lager.Logger, pid int, path string, user string) (io.ReadCloser, error)
+	streamOutMutex       sync.RWMutex
+	streamOutArgsForCall []struct {
+		log  lager.Logger
+		pid  int
+		path string
+		user string
+	}
+	streamOutReturns struct {
+		result1 io.ReadCloser
+		result2 error
+	}
 }
 
 func (fake *FakeNstarRunner) StreamIn(log lager.Logger, pid int, path string, user string, tarStream io.Reader) error {
@@ -58,6 +70,42 @@ func (fake *FakeNstarRunner) StreamInReturns(result1 error) {
 	fake.streamInReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeNstarRunner) StreamOut(log lager.Logger, pid int, path string, user string) (io.ReadCloser, error) {
+	fake.streamOutMutex.Lock()
+	fake.streamOutArgsForCall = append(fake.streamOutArgsForCall, struct {
+		log  lager.Logger
+		pid  int
+		path string
+		user string
+	}{log, pid, path, user})
+	fake.streamOutMutex.Unlock()
+	if fake.StreamOutStub != nil {
+		return fake.StreamOutStub(log, pid, path, user)
+	} else {
+		return fake.streamOutReturns.result1, fake.streamOutReturns.result2
+	}
+}
+
+func (fake *FakeNstarRunner) StreamOutCallCount() int {
+	fake.streamOutMutex.RLock()
+	defer fake.streamOutMutex.RUnlock()
+	return len(fake.streamOutArgsForCall)
+}
+
+func (fake *FakeNstarRunner) StreamOutArgsForCall(i int) (lager.Logger, int, string, string) {
+	fake.streamOutMutex.RLock()
+	defer fake.streamOutMutex.RUnlock()
+	return fake.streamOutArgsForCall[i].log, fake.streamOutArgsForCall[i].pid, fake.streamOutArgsForCall[i].path, fake.streamOutArgsForCall[i].user
+}
+
+func (fake *FakeNstarRunner) StreamOutReturns(result1 io.ReadCloser, result2 error) {
+	fake.StreamOutStub = nil
+	fake.streamOutReturns = struct {
+		result1 io.ReadCloser
+		result2 error
+	}{result1, result2}
 }
 
 var _ rundmc.NstarRunner = new(FakeNstarRunner)

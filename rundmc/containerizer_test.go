@@ -3,6 +3,7 @@ package rundmc_test
 import (
 	"errors"
 	"io"
+	"os"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
@@ -171,6 +172,45 @@ var _ = Describe("Rundmc", func() {
 		It("returns the error if nstar fails", func() {
 			fakeNstarRunner.StreamInReturns(errors.New("failed"))
 			Expect(containerizer.StreamIn(logger, "some-handle", garden.StreamInSpec{})).To(MatchError("stream-in: nstar: failed"))
+		})
+	})
+
+	Describe("StreamOut", func() {
+		It("should execute the NSTar command with the container PID", func() {
+			fakeStater.StateReturns(rundmc.State{
+				Pid: 12,
+			}, nil)
+
+			fakeNstarRunner.StreamOutReturns(os.Stdin, nil)
+
+			tarStream, err := containerizer.StreamOut(logger, "some-handle", garden.StreamOutSpec{
+				Path: "some-path",
+				User: "some-user",
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tarStream).To(Equal(os.Stdin))
+
+			_, pid, path, user := fakeNstarRunner.StreamOutArgsForCall(0)
+			Expect(pid).To(Equal(12))
+			Expect(path).To(Equal("some-path"))
+			Expect(user).To(Equal("some-user"))
+		})
+
+		It("returns an error if the PID cannot be found", func() {
+			fakeStater.StateReturns(rundmc.State{}, errors.New("pid not found"))
+			tarStream, err := containerizer.StreamOut(logger, "some-handle", garden.StreamOutSpec{})
+
+			Expect(tarStream).To(BeNil())
+			Expect(err).To(MatchError("stream-out: pid not found for container"))
+		})
+
+		It("returns the error if nstar fails", func() {
+			fakeNstarRunner.StreamOutReturns(nil, errors.New("failed"))
+			tarStream, err := containerizer.StreamOut(logger, "some-handle", garden.StreamOutSpec{})
+
+			Expect(tarStream).To(BeNil())
+			Expect(err).To(MatchError("stream-out: nstar: failed"))
 		})
 	})
 
