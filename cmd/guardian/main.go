@@ -371,7 +371,7 @@ func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, ext
 	case "ducati":
 		d, err := ducati.New()
 		if err != nil {
-			panic(err)
+			log.Fatal("failed-to-initialize-ducati-network-module", err)
 		}
 		return gardener.ForeignNetworkAdaptor{
 			ForeignNetworker: d,
