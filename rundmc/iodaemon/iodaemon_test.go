@@ -106,7 +106,8 @@ var _ = Describe("Iodaemon", func() {
 			m, _, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
 
-			m.Write([]byte("exit\n"))
+			_, err = m.Write([]byte("exit\n"))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("reports back stderr", func() {
@@ -123,10 +124,12 @@ var _ = Describe("Iodaemon", func() {
 			l, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
 
-			l.Write([]byte("echo hello\n"))
+			_, err = l.Write([]byte("echo hello\n"))
+			Expect(err).ToNot(HaveOccurred())
 			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say(".*hello.*"))
 
-			l.Write([]byte("exit\n"))
+			_, err = l.Write([]byte("exit\n"))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("exits when the child exits", func() {
@@ -135,7 +138,8 @@ var _ = Describe("Iodaemon", func() {
 			l, _, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
 
-			l.Write([]byte("exit\n"))
+			_, err = l.Write([]byte("exit\n"))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("closes stdin when the link is closed", func() {
@@ -201,7 +205,8 @@ var _ = Describe("Iodaemon", func() {
 			l, _, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
 
-			l.Write([]byte("exit\n"))
+			_, err = l.Write([]byte("exit\n"))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("closes stdin when the link is closed", func() {
@@ -219,10 +224,12 @@ var _ = Describe("Iodaemon", func() {
 			l, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
 
-			l.Write([]byte("echo hello\n"))
+			_, err = l.Write([]byte("echo hello\n"))
+			Expect(err).ToNot(HaveOccurred())
 			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say(".*hello.*"))
 
-			l.Write([]byte("exit\n"))
+			_, err = l.Write([]byte("exit\n"))
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("correctly sets the window size", func() {
@@ -231,15 +238,18 @@ var _ = Describe("Iodaemon", func() {
 			l, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
 
-			l.Write([]byte("echo $COLUMNS $LINES\n"))
+			_, err = l.Write([]byte("echo $COLUMNS $LINES\n"))
+			Expect(err).ToNot(HaveOccurred())
 			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say(".*\\s200 80\\s.*"))
 
-			l.SetWindowSize(100, 40)
+			Expect(l.SetWindowSize(100, 40)).To(Succeed())
 
-			l.Write([]byte("echo $COLUMNS $LINES\n"))
+			_, err = l.Write([]byte("echo $COLUMNS $LINES\n"))
+			Expect(err).ToNot(HaveOccurred())
 			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say(".*\\s100 40\\s.*"))
 
-			l.Write([]byte("exit\n"))
+			_, err = l.Write([]byte("exit\n"))
+			Expect(err).ToNot(HaveOccurred())
 		})
 	})
 
