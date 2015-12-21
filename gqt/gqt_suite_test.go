@@ -37,6 +37,7 @@ func TestGqt(t *testing.T) {
 		}
 
 		if bins["oci_runtime_path"] != "" {
+			os.Setenv("GO15VENDOREXPERIMENT", "1")
 			bins["garden_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/guardian", "-tags", "daemon")
 			Expect(err).NotTo(HaveOccurred())
 
