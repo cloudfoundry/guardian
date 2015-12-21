@@ -212,7 +212,7 @@ func (n *Networker) Destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	return nil
+	return n.subnetPool.Release(cfg.Subnet, cfg.ContainerIP)
 }
 
 func (n *Networker) destroyNetnsOrLog(log lager.Logger, handle string) {

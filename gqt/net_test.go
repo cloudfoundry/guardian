@@ -22,13 +22,18 @@ var _ = Describe("Net", func() {
 		container garden.Container
 
 		subnet string
+		args   []string
 	)
 
 	BeforeEach(func() {
+		args = []string{}
+		subnet = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
+	})
+
+	JustBeforeEach(func() {
 		var err error
 
-		client = startGarden()
-		subnet = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
+		client = startGarden(args...)
 
 		container, err = client.Create(garden.ContainerSpec{
 			Network: subnet,
@@ -80,7 +85,7 @@ var _ = Describe("Net", func() {
 	Context("a second container", func() {
 		var originContainer garden.Container
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			var err error
 			originContainer = container
 			container, err = client.Create(garden.ContainerSpec{
@@ -127,6 +132,53 @@ var _ = Describe("Net", func() {
 		})
 	})
 
+	Context("when default network pool is changed", func() {
+		var (
+			otherContainer   garden.Container
+			otherContainerIP string
+		)
+
+		BeforeEach(func() {
+			args = []string{"-networkPool", "10.254.0.0/29"}
+			subnet = ""
+		})
+
+		JustBeforeEach(func() {
+			var err error
+			otherContainer, err = client.Create(garden.ContainerSpec{})
+			Expect(err).ToNot(HaveOccurred())
+
+			otherContainerIP = containerIP(otherContainer)
+
+			Expect(client.Destroy(otherContainer.Handle())).To(Succeed())
+
+			otherContainer, err = client.Create(garden.ContainerSpec{})
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			Expect(client.Destroy(otherContainer.Handle())).To(Succeed())
+		})
+
+		It("reuses IP addresses", func() {
+			newIpAddress := containerIP(otherContainer)
+
+			Expect(newIpAddress).To(Equal(otherContainerIP))
+		})
+
+		It("is accessible from the outside", func() {
+			hostPort, containerPort, err := otherContainer.NetIn(0, 4321)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(listenInContainer(otherContainer, containerPort)).To(Succeed())
+
+			externalIP := externalIP(otherContainer)
+			stdout := sendRequest(externalIP, hostPort)
+			Expect(stdout).To(gbytes.Say(fmt.Sprintf("%d", containerPort)))
+
+		})
+	})
+
 	Describe("NetIn", func() {
 		It("maps the provided host port to the container port", func() {
 			const (
@@ -165,6 +217,12 @@ func externalIP(container garden.Container) string {
 	properties, err := container.Properties()
 	Expect(err).NotTo(HaveOccurred())
 	return properties["kawasaki.external-ip"]
+}
+
+func containerIP(container garden.Container) string {
+	properties, err := container.Properties()
+	Expect(err).NotTo(HaveOccurred())
+	return properties["kawasaki.container-ip"]
 }
 
 func checkConnection(container garden.Container, ip string, port int) error {

@@ -275,6 +275,12 @@ var _ = Describe("Networker", func() {
 
 				Expect(fakeNetnsMgr.DestroyCallCount()).To(Equal(0))
 			})
+
+			It("should not release the subnet", func() {
+				networker.Destroy(logger, "non-existing-handle")
+
+				Expect(fakeSubnetPool.ReleaseCallCount()).To(Equal(0))
+			})
 		})
 
 		It("should destroy the network namespace", func() {
@@ -300,6 +306,12 @@ var _ = Describe("Networker", func() {
 
 				Expect(fakeConfigurer.DestroyCallCount()).To(Equal(0))
 			})
+
+			It("should not release the subnet", func() {
+				Expect(networker.Destroy(logger, "some-handle")).NotTo(Succeed())
+
+				Expect(fakeSubnetPool.ReleaseCallCount()).To(Equal(0))
+			})
 		})
 
 		It("should destroy the configuration", func() {
@@ -318,6 +330,25 @@ var _ = Describe("Networker", func() {
 				Expect(err).To(MatchError("spiderman-error"))
 			})
 		})
+
+		It("releases the subnet", func() {
+			Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
+
+			Expect(fakeSubnetPool.ReleaseCallCount()).To(Equal(1))
+			actualSubnet, actualIp := fakeSubnetPool.ReleaseArgsForCall(0)
+
+			Expect(actualIp).To(Equal(networkConfig.ContainerIP))
+			Expect(actualSubnet).To(Equal(networkConfig.Subnet))
+		})
+
+		Context("when releasing subnet fails", func() {
+			It("should return the error", func() {
+				fakeSubnetPool.ReleaseReturns(errors.New("oh no"))
+
+				Expect(networker.Destroy(logger, "some-handle")).To(MatchError("oh no"))
+			})
+		})
+
 	})
 
 	Describe("NetIn", func() {
