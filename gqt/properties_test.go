@@ -25,7 +25,7 @@ var _ = Describe("Properties", func() {
 	})
 
 	AfterEach(func() {
-		client.DestroyAndStop()
+		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
 	It("can get properties", func() {

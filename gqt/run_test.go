@@ -16,6 +16,10 @@ import (
 var _ = Describe("Run", func() {
 	var client *runner.RunningGarden
 
+	AfterEach(func() {
+		Expect(client.DestroyAndStop()).To(Succeed())
+	})
+
 	DescribeTable("running a process",
 		func(spec garden.ProcessSpec, matchers ...func(actual interface{})) {
 			client = startGarden()

@@ -21,7 +21,7 @@ var _ = Describe("Garden API", func() {
 	})
 
 	AfterEach(func() {
-		client.DestroyAndStop()
+		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
 	Describe("Capacity", func() {

@@ -39,6 +39,10 @@ var _ = Describe("Creating a Container", func() {
 			initProcPid = initProcessPID(container.Handle())
 		})
 
+		AfterEach(func() {
+			Expect(client.DestroyAndStop()).To(Succeed())
+		})
+
 		It("should create a depot subdirectory based on the container handle", func() {
 			Expect(container.Handle()).NotTo(BeEmpty())
 			Expect(filepath.Join(client.DepotDir, container.Handle())).To(BeADirectory())
@@ -96,7 +100,7 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		AfterEach(func() {
-			client.DestroyAndStop()
+			Expect(client.DestroyAndStop()).To(Succeed())
 		})
 
 		It("provides the containers with the right rootfs", func() {
@@ -123,7 +127,7 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		AfterEach(func() {
-			client.DestroyAndStop()
+			Expect(client.DestroyAndStop()).To(Succeed())
 		})
 
 		It("should lookup the right container for the handle", func() {
@@ -155,6 +159,10 @@ var _ = Describe("Creating a Container", func() {
 	Context("when creating a container fails", func() {
 		BeforeEach(func() {
 			client = startGarden()
+		})
+
+		AfterEach(func() {
+			Expect(client.DestroyAndStop()).To(Succeed())
 		})
 
 		It("should not leak networking configuration", func() {

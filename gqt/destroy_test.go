@@ -25,6 +25,10 @@ var _ = Describe("Destroying a Container", func() {
 		client = startGarden()
 	})
 
+	AfterEach(func() {
+		Expect(client.DestroyAndStop()).To(Succeed())
+	})
+
 	JustBeforeEach(func() {
 		Expect(client.Destroy(container.Handle())).To(Succeed())
 	})

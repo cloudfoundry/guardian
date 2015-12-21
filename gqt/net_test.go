@@ -42,7 +42,7 @@ var _ = Describe("Net", func() {
 	})
 
 	AfterEach(func() {
-		client.Destroy(container.Handle())
+		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
 	It("should have a loopback interface", func() {
