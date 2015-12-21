@@ -59,13 +59,13 @@ var _ = Describe("Properties", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = propertyManager.Get("handle", "name")
-				Expect(err).To(MatchError("No such property: name"))
+				Expect(err).To(MatchError("cannot Get handle:name"))
 			})
 
 			Context("when attempting to remove a property that doesn't exist", func() {
 				It("returns a NoSuchPropertyError", func() {
 					err := propertyManager.Remove("handle", "missing")
-					Expect(err).To(MatchError("No such property: missing"))
+					Expect(err).To(MatchError("cannot Remove handle:missing"))
 				})
 			})
 		})

@@ -62,7 +62,7 @@ func (m *Manager) Get(handle string, name string) (string, error) {
 
 	if prop, exists = m.prop[handle][name]; !exists {
 		return "", NoSuchPropertyError{
-			Message: fmt.Sprintf("No such property: %s", name),
+			Message: fmt.Sprintf("cannot Get %s:%s", handle, name),
 		}
 	}
 
@@ -75,7 +75,7 @@ func (m *Manager) Remove(handle string, name string) error {
 
 	if _, exists := m.prop[handle][name]; !exists {
 		return NoSuchPropertyError{
-			Message: fmt.Sprintf("No such property: %s", name),
+			Message: fmt.Sprintf("cannot Remove %s:%s", handle, name),
 		}
 	}
 
