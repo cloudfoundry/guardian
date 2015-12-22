@@ -26,21 +26,23 @@ var _ = Describe("Creating a Container", func() {
 		container garden.Container
 	)
 
+	BeforeEach(func() {
+		client = startGarden()
+	})
+
+	AfterEach(func() {
+		Expect(client.DestroyAndStop()).To(Succeed())
+	})
+
 	Context("after creating a container without a specified handle", func() {
 		var initProcPid int
 
 		BeforeEach(func() {
-			client = startGarden()
-
 			var err error
 			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			initProcPid = initProcessPID(container.Handle())
-		})
-
-		AfterEach(func() {
-			Expect(client.DestroyAndStop()).To(Succeed())
 		})
 
 		It("should create a depot subdirectory based on the container handle", func() {
@@ -86,7 +88,6 @@ var _ = Describe("Creating a Container", func() {
 		BeforeEach(func() {
 			var err error
 
-			client = startGarden()
 			rootFSPath, err = ioutil.TempDir("", "test-rootfs")
 			Expect(err).NotTo(HaveOccurred())
 			command := fmt.Sprintf("cp -rf %s/* %s", os.Getenv("GARDEN_TEST_ROOTFS"), rootFSPath)
@@ -97,10 +98,6 @@ var _ = Describe("Creating a Container", func() {
 				RootFSPath: rootFSPath,
 			})
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			Expect(client.DestroyAndStop()).To(Succeed())
 		})
 
 		It("provides the containers with the right rootfs", func() {
@@ -122,14 +119,6 @@ var _ = Describe("Creating a Container", func() {
 	})
 
 	Context("after creating a container with a specified handle", func() {
-		BeforeEach(func() {
-			client = startGarden()
-		})
-
-		AfterEach(func() {
-			Expect(client.DestroyAndStop()).To(Succeed())
-		})
-
 		It("should lookup the right container for the handle", func() {
 			container, err := client.Create(garden.ContainerSpec{
 				Handle: "container-banana",
@@ -157,14 +146,6 @@ var _ = Describe("Creating a Container", func() {
 	})
 
 	Context("when creating a container fails", func() {
-		BeforeEach(func() {
-			client = startGarden()
-		})
-
-		AfterEach(func() {
-			Expect(client.DestroyAndStop()).To(Succeed())
-		})
-
 		It("should not leak networking configuration", func() {
 			_, err := client.Create(garden.ContainerSpec{
 				Network:    fmt.Sprintf("172.250.%d.20/24", GinkgoParallelNode()),
