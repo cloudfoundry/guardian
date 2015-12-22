@@ -330,8 +330,16 @@ func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfa
 	)
 }
 
-func wireNetworker(log lager.Logger, tag string, networkPoolCIDR *net.IPNet, externalIP net.IP, iptablesMgr kawasaki.IPTablesConfigurer,
-	interfacePrefix, chainPrefix string, propManager *properties.Manager, networkModule string) gardener.Networker {
+func wireNetworker(
+	log lager.Logger,
+	tag string,
+	networkPoolCIDR *net.IPNet,
+	externalIP net.IP,
+	iptablesMgr kawasaki.IPTablesConfigurer,
+	interfacePrefix string,
+	chainPrefix string,
+	propManager *properties.Manager,
+	networkModule string) gardener.Networker {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("network-runner")}
 
 	hostConfigurer := &configure.Host{
