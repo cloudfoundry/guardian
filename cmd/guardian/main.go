@@ -378,8 +378,12 @@ func wireNetworker(
 			portPool,
 		)
 	case "ducati":
+		d, err := ducati.New()
+		if err != nil {
+			log.Fatal("failed-to-initialize-ducati-network-module", err)
+		}
 		return gardener.ForeignNetworkAdaptor{
-			ForeignNetworker: &ducati.Ducati{},
+			ForeignNetworker: d,
 		}
 	default:
 		log.Fatal("failed-to-select-network-module", fmt.Errorf("unknown network module %q", networkModule))
