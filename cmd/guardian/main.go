@@ -20,6 +20,7 @@ import (
 	"github.com/cloudfoundry-incubator/garden-shed/repository_fetcher"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/garden/server"
+	"github.com/cloudfoundry-incubator/genclient"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
@@ -47,7 +48,6 @@ import (
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/localip"
-	"github.com/rosenhouse/ducati"
 )
 
 const OciStateDir = "/var/run/opencontainer/containers"
@@ -202,10 +202,10 @@ var maxContainers = flag.Uint(
 	0,
 	"Maximum number of containers that can be created")
 
-var networkModule = flag.String(
-	"networkModule",
-	"kawasaki",
-	"Name of network module")
+var networkModulePath = flag.String(
+	"networkModulePath",
+	"",
+	"Path to external networker binary.  If empty, defaults to built-in Kawasaki module")
 
 func main() {
 	if reexec.Init() {
@@ -260,7 +260,7 @@ func main() {
 		SysInfoProvider: sysInfoProvider,
 		UidGenerator:    wireUidGenerator(),
 		Starter:         wireStarter(logger, iptablesMgr),
-		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, externalIPAddr, iptablesMgr, interfacePrefix, chainPrefix, propManager, *networkModule),
+		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, externalIPAddr, iptablesMgr, interfacePrefix, chainPrefix, propManager, *networkModulePath),
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath),
 		Logger:          logger,
@@ -339,7 +339,7 @@ func wireNetworker(
 	interfacePrefix string,
 	chainPrefix string,
 	propManager *properties.Manager,
-	networkModule string) gardener.Networker {
+	networkModulePath string) gardener.Networker {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("network-runner")}
 
 	hostConfigurer := &configure.Host{
@@ -360,8 +360,8 @@ func wireNetworker(
 		log.Fatal("invalid pool range", err)
 	}
 
-	switch networkModule {
-	case "kawasaki":
+	switch networkModulePath {
+	case "":
 		return kawasaki.New(
 			kawasaki.NewManager(runner, "/var/run/netns"),
 			kawasaki.SpecParserFunc(kawasaki.ParseSpec),
@@ -377,13 +377,14 @@ func wireNetworker(
 			iptables.NewPortForwarder(runner),
 			portPool,
 		)
-	case "ducati":
-		return gardener.ForeignNetworkAdaptor{
-			ForeignNetworker: &ducati.Ducati{},
-		}
 	default:
-		log.Fatal("failed-to-select-network-module", fmt.Errorf("unknown network module %q", networkModule))
-		return nil
+		if _, err := os.Stat(networkModulePath); err != nil {
+			log.Fatal("failed-to-stat-network-module", err)
+			return nil
+		}
+		return gardener.ForeignNetworkAdaptor{
+			genclient.New(networkModulePath),
+		}
 	}
 }
 
