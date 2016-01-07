@@ -76,8 +76,8 @@ func TestGqt(t *testing.T) {
 }
 
 func startGarden(argv ...string) *runner.RunningGarden {
-	if networkModule := os.Getenv("NETWORK_MODULE"); networkModule != "" {
-		argv = append(argv, "--networkModule="+networkModule)
+	if networkModulePath := os.Getenv("NETWORK_MODULE_PATH"); networkModulePath != "" {
+		argv = append(argv, "--networkModulePath="+networkModulePath)
 	}
 
 	return runner.Start(gardenBin, iodaemonBin, nstarBin, argv...)
