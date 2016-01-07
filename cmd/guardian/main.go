@@ -383,7 +383,7 @@ func wireNetworker(
 			return nil
 		}
 		return gardener.ForeignNetworkAdaptor{
-			genclient.New(networkModulePath),
+			ForeignNetworker: genclient.New(networkModulePath),
 		}
 	}
 }
