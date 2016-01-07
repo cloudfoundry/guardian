@@ -501,8 +501,10 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
 		WithResources(&specs.Resources{}).
-		WithMounts(goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"}).
-		WithRootFS(defaultRootFSPath).
+		WithMounts(
+		goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"},
+		goci.Mount{Name: "tmp", Type: "tmpfs", Source: "tmpfs", Destination: "/tmp"},
+	).WithRootFS(defaultRootFSPath).
 		WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)).
 		WithDevices(specs.Device{Path: "/dev/null", Type: 'c', Major: 1, Minor: 3, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666})
 
