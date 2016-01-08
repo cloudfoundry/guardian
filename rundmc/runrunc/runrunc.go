@@ -25,12 +25,18 @@ type UidGenerator interface {
 	Generate() string
 }
 
+//go:generate counterfeiter . IdGetter
+type IdGetter interface {
+	GetIDs(containerID string, user string) (uint32, uint32, error)
+}
+
 // da doo
 type RunRunc struct {
 	tracker       ProcessTracker
 	commandRunner command_runner.CommandRunner
 	pidGenerator  UidGenerator
 	runc          RuncBinary
+	idGetter      IdGetter
 }
 
 //go:generate counterfeiter . RuncBinary
@@ -40,12 +46,13 @@ type RuncBinary interface {
 	KillCommand(id, signal string) *exec.Cmd
 }
 
-func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary) *RunRunc {
+func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary, idGetter IdGetter) *RunRunc {
 	return &RunRunc{
 		tracker:       tracker,
 		commandRunner: runner,
 		pidGenerator:  pidgen,
 		runc:          runc,
+		idGetter:      idGetter,
 	}
 }
 
@@ -80,7 +87,7 @@ func (r *RunRunc) Exec(log lager.Logger, id string, spec garden.ProcessSpec, io 
 		return nil, err
 	}
 
-	if err := writeProcessJSON(spec, tmpFile); err != nil {
+	if err := r.writeProcessJSON(id, spec, tmpFile); err != nil {
 		log.Error("encode-failed", err)
 		return nil, err
 	}
@@ -111,10 +118,19 @@ func (r *RunRunc) Kill(log lager.Logger, handle string) error {
 	return nil
 }
 
-func writeProcessJSON(spec garden.ProcessSpec, writer io.Writer) error {
+func (r *RunRunc) writeProcessJSON(contianerId string, spec garden.ProcessSpec, writer io.Writer) error {
+	uid, gid, err := r.idGetter.GetIDs(contianerId, spec.User)
+	if err != nil {
+		return err
+	}
+
 	return json.NewEncoder(writer).Encode(specs.Process{
 		Args: append([]string{spec.Path}, spec.Args...),
 		Env:  envWithPath(spec.Env),
+		User: specs.User{
+			UID: uid,
+			GID: gid,
+		},
 	})
 }
 

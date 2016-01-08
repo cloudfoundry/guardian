@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/cloudfoundry-incubator/goci"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -69,6 +70,20 @@ func (d *DirectoryDepot) Destroy(log lager.Logger, handle string) error {
 	defer log.Info("finished")
 
 	return os.RemoveAll(d.toDir(handle))
+}
+
+//go:generate counterfeiter . BundleLoader
+type BundleLoader interface {
+	Load(bundleDir string) (*goci.Bndl, error)
+}
+
+func (d *DirectoryDepot) GetBundle(log lager.Logger, bundleLoader BundleLoader, handle string) (*goci.Bndl, error) {
+	bundleDir, err := d.Lookup(log, handle)
+	if err != nil {
+		return nil, err
+	}
+
+	return bundleLoader.Load(bundleDir)
 }
 
 func (d *DirectoryDepot) Handles() ([]string, error) {

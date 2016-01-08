@@ -2,6 +2,7 @@ package runrunc_test
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 
@@ -23,6 +24,7 @@ var _ = Describe("RuncRunner", func() {
 		commandRunner *fake_command_runner.FakeCommandRunner
 		pidGenerator  *fakes.FakeUidGenerator
 		runcBinary    *fakes.FakeRuncBinary
+		idGetter      *fakes.FakeIdGetter
 		logger        lager.Logger
 
 		runner *runrunc.RunRunc
@@ -33,9 +35,10 @@ var _ = Describe("RuncRunner", func() {
 		pidGenerator = new(fakes.FakeUidGenerator)
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
+		idGetter = new(fakes.FakeIdGetter)
 		logger = lagertest.NewTestLogger("test")
 
-		runner = runrunc.New(tracker, commandRunner, pidGenerator, runcBinary)
+		runner = runrunc.New(tracker, commandRunner, pidGenerator, runcBinary, idGetter)
 
 		runcBinary.StartCommandStub = func(path, id string) *exec.Cmd {
 			return exec.Command("funC", "start", path, id)
@@ -108,6 +111,31 @@ var _ = Describe("RuncRunner", func() {
 				runner.Exec(logger, "some/oci/container", garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}}, garden.ProcessIO{})
 				Expect(tracker.RunCallCount()).To(Equal(1))
 				Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
+			})
+
+			Context("when IdGetter runs fine", func() {
+				It("passes a process.json with the correct user and group ids", func() {
+					idGetter.GetIDsReturns(9, 7, nil)
+
+					_, err := runner.Exec(logger, "some/oci/container", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(idGetter.GetIDsCallCount()).To(Equal(1))
+					actualContainerId, actualUserName := idGetter.GetIDsArgsForCall(0)
+					Expect(actualContainerId).To(Equal("some/oci/container"))
+					Expect(actualUserName).To(Equal("spiderman"))
+
+					Expect(spec.User).To(Equal(specs.User{UID: 9, GID: 7}))
+				})
+			})
+
+			Context("when IdGetter returns an error", func() {
+				It("passes a process.json with the correct user and group ids", func() {
+					idGetter.GetIDsReturns(0, 0, errors.New("bang"))
+
+					_, err := runner.Exec(logger, "some/oci/container", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
+					Expect(err).To(MatchError("bang"))
+				})
 			})
 
 			Context("when the environment already contains a PATH", func() {

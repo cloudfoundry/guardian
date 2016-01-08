@@ -59,6 +59,34 @@ var _ = Describe("Run", func() {
 		),
 	)
 
+	Context("when container is privileged", func() {
+		It("can run a process as a particular user", func() {
+			client = startGarden()
+			container, err := client.Create(garden.ContainerSpec{
+				Privileged: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			out := gbytes.NewBuffer()
+			proc, err := container.Run(
+				garden.ProcessSpec{
+					Path: "whoami",
+					User: "alice",
+				},
+				garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, out),
+					Stderr: io.MultiWriter(GinkgoWriter, out),
+				})
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := proc.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(0))
+
+			Expect(out).To(gbytes.Say("alice"))
+		})
+	})
+
 	Describe("Signalling", func() {
 		It("should forward SIGTERM to the process", func(done Done) {
 			client = startGarden()

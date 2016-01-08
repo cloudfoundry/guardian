@@ -45,6 +45,7 @@ import (
 	_ "github.com/docker/docker/pkg/chrootarchive" // allow reexec of docker-applyLayer
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/nu7hatch/gouuid"
+	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/localip"
@@ -491,11 +492,22 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	startChecker := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 3 * time.Second}
 	stateChecker := rundmc.StateChecker{StateFileDir: OciStateDir, Timeout: 3 * time.Second}
 
+	commandRunner := linux_command_runner.New()
+	runcBinary := goci.RuncBinary("runc")
+
+	idGetter := &runrunc.UidGidGetter{
+		BundleGetter:     depot,
+		Logger:           log,
+		BundleLoader:     &goci.BndlLoader{},
+		PasswdFileParser: user.ParsePasswdFile,
+	}
+
 	runcrunner := runrunc.New(
-		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", *tag), "processes"), iodaemonPath, linux_command_runner.New()),
+		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", *tag), "processes"), iodaemonPath, commandRunner),
 		linux_command_runner.New(),
 		wireUidGenerator(),
-		goci.RuncBinary("runc"),
+		runcBinary,
+		idGetter,
 	)
 
 	baseBundle := goci.Bundle().
