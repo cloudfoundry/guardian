@@ -140,7 +140,7 @@ func (r *RunRunc) writeProcessJSON(bundlePath string, spec garden.ProcessSpec, w
 		return err
 	}
 
-	rootFsPath := bndl.Spec.Spec.Root.Path
+	rootFsPath := bndl.GetRootfsPath()
 	if rootFsPath == "" {
 		return fmt.Errorf("empty rootfs path")
 	}
