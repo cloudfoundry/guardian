@@ -77,15 +77,6 @@ type BundleLoader interface {
 	Load(bundleDir string) (*goci.Bndl, error)
 }
 
-func (d *DirectoryDepot) GetBundle(log lager.Logger, bundleLoader BundleLoader, handle string) (*goci.Bndl, error) {
-	bundleDir, err := d.Lookup(log, handle)
-	if err != nil {
-		return nil, err
-	}
-
-	return bundleLoader.Load(bundleDir)
-}
-
 func (d *DirectoryDepot) Handles() ([]string, error) {
 	handles := []string{}
 	fileInfos, err := ioutil.ReadDir(d.dir)

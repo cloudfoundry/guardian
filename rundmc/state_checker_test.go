@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"time"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	. "github.com/onsi/ginkgo"
@@ -29,7 +28,6 @@ var _ = Describe("StateChecker", func() {
 
 		checker = &rundmc.StateChecker{
 			StateFileDir: tmp,
-			Timeout:      800 * time.Millisecond,
 		}
 	})
 

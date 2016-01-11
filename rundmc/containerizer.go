@@ -40,7 +40,7 @@ type ContainerStater interface {
 
 type BundleRunner interface {
 	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) (garden.Process, error)
-	Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Exec(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
 }
 
@@ -113,13 +113,13 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	log.Info("started")
 	defer log.Info("finished")
 
-	_, err := c.depot.Lookup(log, handle)
+	path, err := c.depot.Lookup(log, handle)
 	if err != nil {
 		log.Error("lookup", err)
 		return nil, err
 	}
 
-	return c.runner.Exec(log, handle, spec, io)
+	return c.runner.Exec(log, path, handle, spec, io)
 }
 
 // StreamIn streams files in to the container

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/fakes"
@@ -24,7 +25,8 @@ var _ = Describe("RuncRunner", func() {
 		commandRunner *fake_command_runner.FakeCommandRunner
 		pidGenerator  *fakes.FakeUidGenerator
 		runcBinary    *fakes.FakeRuncBinary
-		idGetter      *fakes.FakeIdGetter
+		bundleLoader  *fakes.FakeBundleLoader
+		idGetter      *fakes.FakeUserLookupper
 		logger        lager.Logger
 
 		runner *runrunc.RunRunc
@@ -35,10 +37,17 @@ var _ = Describe("RuncRunner", func() {
 		pidGenerator = new(fakes.FakeUidGenerator)
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
-		idGetter = new(fakes.FakeIdGetter)
+		bundleLoader = new(fakes.FakeBundleLoader)
+		idGetter = new(fakes.FakeUserLookupper)
 		logger = lagertest.NewTestLogger("test")
 
-		runner = runrunc.New(tracker, commandRunner, pidGenerator, runcBinary, idGetter)
+		runner = runrunc.New(tracker, commandRunner, pidGenerator, runcBinary, bundleLoader, idGetter)
+
+		bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
+			bndl := &goci.Bndl{}
+			bndl.Spec.Spec.Root.Path = "/rootfs/of/bundle/" + path
+			return bndl, nil
+		}
 
 		runcBinary.StartCommandStub = func(path, id string) *exec.Cmd {
 			return exec.Command("funC", "start", path, id)
@@ -76,7 +85,7 @@ var _ = Describe("RuncRunner", func() {
 	Describe("Exec", func() {
 		It("runs the tracker with the a generated process guid", func() {
 			pidGenerator.GenerateReturns("another-process-guid")
-			runner.Exec(logger, "some/oci/container", garden.ProcessSpec{}, garden.ProcessIO{})
+			runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{}, garden.ProcessIO{})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			pid, _, _, _ := tracker.RunArgsForCall(0)
@@ -85,7 +94,7 @@ var _ = Describe("RuncRunner", func() {
 
 		It("runs exec against the injected runC binary using process tracker", func() {
 			ttyspec := &garden.TTYSpec{WindowSize: &garden.WindowSize{Rows: 1}}
-			runner.Exec(logger, "some-id", garden.ProcessSpec{TTY: ttyspec}, garden.ProcessIO{Stdout: GinkgoWriter})
+			runner.Exec(logger, "/some/bundle/path", "some-id", garden.ProcessSpec{TTY: ttyspec}, garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			_, cmd, io, tty := tracker.RunArgsForCall(0)
@@ -108,39 +117,69 @@ var _ = Describe("RuncRunner", func() {
 			})
 
 			It("passes a process.json with the correct path and args", func() {
-				runner.Exec(logger, "some/oci/container", garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}}, garden.ProcessIO{})
+				runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}}, garden.ProcessIO{})
 				Expect(tracker.RunCallCount()).To(Equal(1))
 				Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
 			})
 
-			Context("when IdGetter runs fine", func() {
-				It("passes a process.json with the correct user and group ids", func() {
-					idGetter.GetIDsReturns(9, 7, nil)
+			Describe("passing the correct uid and gid", func() {
+				Context("when the bundle can be loaded", func() {
+					BeforeEach(func() {
+						idGetter.LookupReturns(9, 7, nil)
+						_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
+						Expect(err).ToNot(HaveOccurred())
+					})
 
-					_, err := runner.Exec(logger, "some/oci/container", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
-					Expect(err).ToNot(HaveOccurred())
+					It("looks up the user and group IDs of the user in the right rootfs", func() {
+						Expect(idGetter.LookupCallCount()).To(Equal(1))
+						actualRootfsPath, actualUserName := idGetter.LookupArgsForCall(0)
+						Expect(actualRootfsPath).To(Equal("/rootfs/of/bundle/some/oci/container"))
+						Expect(actualUserName).To(Equal("spiderman"))
+					})
 
-					Expect(idGetter.GetIDsCallCount()).To(Equal(1))
-					actualContainerId, actualUserName := idGetter.GetIDsArgsForCall(0)
-					Expect(actualContainerId).To(Equal("some/oci/container"))
-					Expect(actualUserName).To(Equal("spiderman"))
-
-					Expect(spec.User).To(Equal(specs.User{UID: 9, GID: 7}))
+					It("passes a process.json with the correct user and group ids", func() {
+						Expect(spec.User).To(Equal(specs.User{UID: 9, GID: 7}))
+					})
 				})
-			})
 
-			Context("when IdGetter returns an error", func() {
-				It("passes a process.json with the correct user and group ids", func() {
-					idGetter.GetIDsReturns(0, 0, errors.New("bang"))
+				Context("when the bundle can't be loaded", func() {
+					BeforeEach(func() {
+						bundleLoader.LoadReturns(nil, errors.New("whoa! Hold them horses!"))
+					})
 
-					_, err := runner.Exec(logger, "some/oci/container", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
-					Expect(err).To(MatchError("bang"))
+					It("fails", func() {
+						_, err := runner.Exec(logger, "some/oci/container", "someid",
+							garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
+						Expect(err).To(MatchError(ContainSubstring("Hold them horses")))
+					})
+				})
+
+				Context("when the bundle contains an empty rootfs path", func() {
+					BeforeEach(func() {
+						bundleLoader.LoadReturns(&goci.Bndl{}, nil)
+					})
+
+					It("returns an appropriate error", func() {
+						_, err := runner.Exec(logger, "some/oci/container", "someid",
+							garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
+						Expect(err).To(MatchError(ContainSubstring("empty rootfs path")))
+						Expect(err).To(MatchError(ContainSubstring("someid")))
+					})
+				})
+
+				Context("when IdGetter returns an error", func() {
+					It("passes a process.json with the correct user and group ids", func() {
+						idGetter.LookupReturns(0, 0, errors.New("bang"))
+
+						_, err := runner.Exec(logger, "some/oci/container", "some-id", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
+						Expect(err).To(MatchError(ContainSubstring("bang")))
+					})
 				})
 			})
 
 			Context("when the environment already contains a PATH", func() {
 				It("passes the environment variables", func() {
-					runner.Exec(logger, "some/oci/container", garden.ProcessSpec{
+					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
 						Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
 					}, garden.ProcessIO{})
 
@@ -151,7 +190,7 @@ var _ = Describe("RuncRunner", func() {
 
 			Context("when the environment does not already contain a PATH", func() {
 				It("appends a default PATH to the environment variables", func() {
-					runner.Exec(logger, "some/oci/container", garden.ProcessSpec{
+					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
 						Env: []string{"a=1", "b=3", "c=4"},
 					}, garden.ProcessIO{})
 

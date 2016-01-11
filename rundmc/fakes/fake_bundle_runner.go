@@ -22,13 +22,14 @@ type FakeBundleRunner struct {
 		result1 garden.Process
 		result2 error
 	}
-	ExecStub        func(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	ExecStub        func(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
-		log  lager.Logger
-		id   string
-		spec garden.ProcessSpec
-		io   garden.ProcessIO
+		log        lager.Logger
+		id         string
+		bundlePath string
+		spec       garden.ProcessSpec
+		io         garden.ProcessIO
 	}
 	execReturns struct {
 		result1 garden.Process
@@ -81,17 +82,18 @@ func (fake *FakeBundleRunner) StartReturns(result1 garden.Process, result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeBundleRunner) Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeBundleRunner) Exec(log lager.Logger, id string, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	fake.execMutex.Lock()
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
-		log  lager.Logger
-		id   string
-		spec garden.ProcessSpec
-		io   garden.ProcessIO
-	}{log, id, spec, io})
+		log        lager.Logger
+		id         string
+		bundlePath string
+		spec       garden.ProcessSpec
+		io         garden.ProcessIO
+	}{log, id, bundlePath, spec, io})
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
-		return fake.ExecStub(log, id, spec, io)
+		return fake.ExecStub(log, id, bundlePath, spec, io)
 	} else {
 		return fake.execReturns.result1, fake.execReturns.result2
 	}
@@ -103,10 +105,10 @@ func (fake *FakeBundleRunner) ExecCallCount() int {
 	return len(fake.execArgsForCall)
 }
 
-func (fake *FakeBundleRunner) ExecArgsForCall(i int) (lager.Logger, string, garden.ProcessSpec, garden.ProcessIO) {
+func (fake *FakeBundleRunner) ExecArgsForCall(i int) (lager.Logger, string, string, garden.ProcessSpec, garden.ProcessIO) {
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
-	return fake.execArgsForCall[i].log, fake.execArgsForCall[i].id, fake.execArgsForCall[i].spec, fake.execArgsForCall[i].io
+	return fake.execArgsForCall[i].log, fake.execArgsForCall[i].id, fake.execArgsForCall[i].bundlePath, fake.execArgsForCall[i].spec, fake.execArgsForCall[i].io
 }
 
 func (fake *FakeBundleRunner) ExecReturns(result1 garden.Process, result2 error) {

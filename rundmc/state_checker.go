@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path"
-	"time"
 
 	"github.com/pivotal-golang/lager"
 )
@@ -15,7 +14,6 @@ type State struct {
 
 type StateChecker struct {
 	StateFileDir string
-	Timeout      time.Duration
 }
 
 func (s StateChecker) State(log lager.Logger, id string) (State, error) {

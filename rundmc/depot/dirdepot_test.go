@@ -2,13 +2,11 @@ package depot_test
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 
-	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot/fakes"
 	. "github.com/onsi/ginkgo"
@@ -118,47 +116,6 @@ var _ = Describe("Depot", func() {
 			It("should return the handles", func() {
 				_, err := invalidDepot.Handles()
 				Expect(err).To(MatchError("invalid depot directory rubbish: open rubbish: no such file or directory"))
-			})
-		})
-	})
-
-	Describe("GetBundle", func() {
-		Context("when a subdirectory for the bundle does not exist", func() {
-			It("returns an ErrDoesNotExist", func() {
-				fakeBundleLoader := &fakes.FakeBundleLoader{}
-				_, err := dirdepot.GetBundle(logger, fakeBundleLoader, "potato")
-				Expect(err).To(MatchError(depot.ErrDoesNotExist))
-			})
-		})
-
-		Context("when a subdirectory for the bundle exists", func() {
-			var fakeBundleLoader *fakes.FakeBundleLoader
-
-			BeforeEach(func() {
-				os.Mkdir(filepath.Join(depotDir, "potato"), 0700)
-				fakeBundleLoader = &fakes.FakeBundleLoader{}
-			})
-
-			It("should delegate loading the bundle to the BundleLoader", func() {
-				_, _ = dirdepot.GetBundle(logger, fakeBundleLoader, "potato")
-				Expect(fakeBundleLoader.LoadCallCount()).To(Equal(1))
-				Expect(fakeBundleLoader.LoadArgsForCall(0)).To(Equal(filepath.Join(depotDir, "potato")))
-			})
-
-			It("should return the loaded bundle", func() {
-				bundle := &goci.Bndl{}
-				fakeBundleLoader.LoadReturns(bundle, nil)
-
-				loadedBundle, _ := dirdepot.GetBundle(logger, fakeBundleLoader, "potato")
-				Expect(loadedBundle).To(Equal(bundle))
-			})
-
-			Context("when loading the bundle fails", func() {
-				It("should return an error", func() {
-					fakeBundleLoader.LoadReturns(nil, fmt.Errorf("load failed"))
-					_, err := dirdepot.GetBundle(logger, fakeBundleLoader, "potato")
-					Expect(err).To(HaveOccurred())
-				})
 			})
 		})
 	})

@@ -2,12 +2,14 @@ package runrunc
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os/exec"
 	"strings"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/pivotal-golang/lager"
@@ -25,9 +27,20 @@ type UidGenerator interface {
 	Generate() string
 }
 
-//go:generate counterfeiter . IdGetter
-type IdGetter interface {
-	GetIDs(containerID string, user string) (uint32, uint32, error)
+//go:generate counterfeiter . UserLookupper
+type UserLookupper interface {
+	Lookup(rootFsPath string, user string) (uint32, uint32, error)
+}
+
+type LookupFunc func(rootfsPath, user string) (uint32, uint32, error)
+
+func (fn LookupFunc) Lookup(rootfsPath, user string) (uint32, uint32, error) {
+	return fn(rootfsPath, user)
+}
+
+//go:generate counterfeiter . BundleLoader
+type BundleLoader interface {
+	Load(path string) (*goci.Bndl, error)
 }
 
 // da doo
@@ -36,7 +49,9 @@ type RunRunc struct {
 	commandRunner command_runner.CommandRunner
 	pidGenerator  UidGenerator
 	runc          RuncBinary
-	idGetter      IdGetter
+
+	bundleLoader BundleLoader
+	users        UserLookupper
 }
 
 //go:generate counterfeiter . RuncBinary
@@ -46,13 +61,14 @@ type RuncBinary interface {
 	KillCommand(id, signal string) *exec.Cmd
 }
 
-func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary, idGetter IdGetter) *RunRunc {
+func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary, bundleLoader BundleLoader, users UserLookupper) *RunRunc {
 	return &RunRunc{
 		tracker:       tracker,
 		commandRunner: runner,
 		pidGenerator:  pidgen,
 		runc:          runc,
-		idGetter:      idGetter,
+		bundleLoader:  bundleLoader,
+		users:         users,
 	}
 }
 
@@ -75,7 +91,7 @@ func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, io garden.Proce
 }
 
 // Exec a process in a bundle using 'runc exec'
-func (r *RunRunc) Exec(log lager.Logger, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+func (r *RunRunc) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("exec", lager.Data{"id": id, "path": spec.Path})
 
 	log.Info("started")
@@ -87,9 +103,9 @@ func (r *RunRunc) Exec(log lager.Logger, id string, spec garden.ProcessSpec, io 
 		return nil, err
 	}
 
-	if err := r.writeProcessJSON(id, spec, tmpFile); err != nil {
+	if err := r.writeProcessJSON(bundlePath, spec, tmpFile); err != nil {
 		log.Error("encode-failed", err)
-		return nil, err
+		return nil, fmt.Errorf("writeProcessJSON for container %s: %s", id, err)
 	}
 
 	cmd := r.runc.ExecCommand(id, tmpFile.Name())
@@ -118,8 +134,18 @@ func (r *RunRunc) Kill(log lager.Logger, handle string) error {
 	return nil
 }
 
-func (r *RunRunc) writeProcessJSON(contianerId string, spec garden.ProcessSpec, writer io.Writer) error {
-	uid, gid, err := r.idGetter.GetIDs(contianerId, spec.User)
+func (r *RunRunc) writeProcessJSON(bundlePath string, spec garden.ProcessSpec, writer io.Writer) error {
+	bndl, err := r.bundleLoader.Load(bundlePath)
+	if err != nil {
+		return err
+	}
+
+	rootFsPath := bndl.Spec.Spec.Root.Path
+	if rootFsPath == "" {
+		return fmt.Errorf("empty rootfs path")
+	}
+
+	uid, gid, err := r.users.Lookup(rootFsPath, spec.User)
 	if err != nil {
 		return err
 	}
