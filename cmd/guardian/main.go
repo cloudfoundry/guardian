@@ -488,7 +488,7 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.C
 func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tarPath, defaultRootFSPath string) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
-	startChecker := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 3 * time.Second}
+	startChecker := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 15 * time.Second}
 	stateChecker := rundmc.StateChecker{StateFileDir: OciStateDir}
 
 	commandRunner := linux_command_runner.New()
