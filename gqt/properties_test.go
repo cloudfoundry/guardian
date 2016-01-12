@@ -77,4 +77,23 @@ var _ = Describe("Properties", func() {
 		Expect(containers).To(HaveLen(1))
 		Expect(containers).To(ConsistOf(container))
 	})
+
+	It("can get the default properties", func() {
+		container, err := client.Create(garden.ContainerSpec{})
+		Expect(err).ToNot(HaveOccurred())
+
+		props, err := container.Properties()
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(props).To(HaveLen(9))
+		Expect(props).To(HaveKey("kawasaki.bridge-interface"))
+		Expect(props).To(HaveKey("kawasaki.bridge-ip"))
+		Expect(props).To(HaveKey("kawasaki.container-ip"))
+		Expect(props).To(HaveKey("kawasaki.host-interface"))
+		Expect(props).To(HaveKey("kawasaki.iptable-chain"))
+		Expect(props).To(HaveKey("kawasaki.subnet-ip"))
+		Expect(props).To(HaveKey("kawasaki.container-interface"))
+		Expect(props).To(HaveKey("kawasaki.external-ip"))
+		Expect(props).To(HaveKey("kawasaki.mtu"))
+	})
 })
