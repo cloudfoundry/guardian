@@ -15,7 +15,8 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
-const DefaultPath = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+const DefaultRootPath = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+const DefaultPath = "PATH=/usr/local/bin:/usr/bin:/bin"
 
 //go:generate counterfeiter . ProcessTracker
 type ProcessTracker interface {
@@ -150,9 +151,14 @@ func (r *RunRunc) writeProcessJSON(bundlePath string, spec garden.ProcessSpec, w
 		return err
 	}
 
+	defaultPath := DefaultPath
+	if uid == 0 {
+		defaultPath = DefaultRootPath
+	}
+
 	return json.NewEncoder(writer).Encode(specs.Process{
 		Args: append([]string{spec.Path}, spec.Args...),
-		Env:  envWithPath(spec.Env),
+		Env:  envWithDefaultPath(spec.Env, defaultPath),
 		User: specs.User{
 			UID: uid,
 			GID: gid,
@@ -160,12 +166,12 @@ func (r *RunRunc) writeProcessJSON(bundlePath string, spec garden.ProcessSpec, w
 	})
 }
 
-func envWithPath(env []string) []string {
+func envWithDefaultPath(env []string, defaultPath string) []string {
 	for _, envVar := range env {
 		if strings.Contains(envVar, "PATH=") {
 			return env
 		}
 	}
 
-	return append(env, DefaultPath)
+	return append(env, defaultPath)
 }

@@ -87,6 +87,42 @@ var _ = Describe("Run", func() {
 		})
 	})
 
+	Describe("PATH env variable", func() {
+		var container garden.Container
+
+		BeforeEach(func() {
+			client = startGarden()
+			var err error
+			container, err = client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		DescribeTable("contains the correct default values", func(user, path string) {
+			out := gbytes.NewBuffer()
+			proc, err := container.Run(
+				garden.ProcessSpec{
+					Path: "sh",
+					Args: []string{"-c", "echo $PATH"},
+					User: user,
+				},
+				garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, out),
+					Stderr: io.MultiWriter(GinkgoWriter, out),
+				})
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := proc.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(0))
+
+			Expect(out).To(gbytes.Say(path))
+		},
+			Entry("for a non-root user", "alice", `^/usr/local/bin:/usr/bin:/bin\n$`),
+			Entry("for the root user", "root",
+				`^/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n$`),
+		)
+	})
+
 	Describe("Signalling", func() {
 		It("should forward SIGTERM to the process", func(done Done) {
 			client = startGarden()

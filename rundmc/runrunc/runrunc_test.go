@@ -189,14 +189,28 @@ var _ = Describe("RuncRunner", func() {
 			})
 
 			Context("when the environment does not already contain a PATH", func() {
-				It("appends a default PATH to the environment variables", func() {
+				It("appends a default PATH for the root user", func() {
+					idGetter.LookupReturns(0, 0, nil)
 					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
-						Env: []string{"a=1", "b=3", "c=4"},
+						Env:  []string{"a=1", "b=3", "c=4"},
+						User: "root",
 					}, garden.ProcessIO{})
 
 					Expect(tracker.RunCallCount()).To(Equal(1))
 					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
 						"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}))
+				})
+
+				It("appends a default PATH for non-root users", func() {
+					idGetter.LookupReturns(1000, 1000, nil)
+					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+						Env:  []string{"a=1", "b=3", "c=4"},
+						User: "alice",
+					}, garden.ProcessIO{})
+
+					Expect(tracker.RunCallCount()).To(Equal(1))
+					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
+						"PATH=/usr/local/bin:/usr/bin:/bin"}))
 				})
 			})
 		})
