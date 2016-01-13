@@ -50,7 +50,7 @@ var _ = Describe("ConfigCreator", func() {
 		config, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(config.BridgeName).To(Equal("br-192-168-12-0"))
+		Expect(config.BridgeName).To(Equal("w1br-192-168-12-0"))
 	})
 
 	It("it assigns the interface names based on the ID from the ID generator", func() {

@@ -69,7 +69,7 @@ func (mgr *filterChain) Teardown(instanceChain string) error {
 	for _, cmd := range commands {
 		buffer := &bytes.Buffer{}
 		cmd.Stderr = buffer
-		logger := mgr.logger.Session("teardown", lager.Data{"cmd": cmd})
+		logger := mgr.logger.Session("teardown-chain", lager.Data{"cmd": cmd})
 		logger.Debug("starting")
 		if err := mgr.runner.Run(cmd); err != nil {
 			stderr, _ := ioutil.ReadAll(buffer)
