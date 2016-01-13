@@ -244,8 +244,8 @@ func main() {
 		panic(err)
 	}
 
-	interfacePrefix := fmt.Sprintf("w%s", *tag)
-	chainPrefix := fmt.Sprintf("w-%s-instance", *tag)
+	interfacePrefix := fmt.Sprintf("g%s", *tag)
+	chainPrefix := fmt.Sprintf("g-%s-instance", *tag)
 	iptablesMgr := wireIptables(logger, *tag, *allowHostAccess, interfacePrefix, chainPrefix)
 	externalIPAddr, err := parseExternalIP(*externalIP)
 	if err != nil {
@@ -310,14 +310,14 @@ func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfa
 
 	filterConfig := iptables.FilterConfig{
 		AllowHostAccess: allowHostAccess,
-		InputChain:      fmt.Sprintf("w-%s-input", tag),
-		ForwardChain:    fmt.Sprintf("w-%s-forward", tag),
-		DefaultChain:    fmt.Sprintf("w-%s-default", tag),
+		InputChain:      fmt.Sprintf("g-%s-input", tag),
+		ForwardChain:    fmt.Sprintf("g-%s-forward", tag),
+		DefaultChain:    fmt.Sprintf("g-%s-default", tag),
 	}
 
 	natConfig := iptables.NATConfig{
-		PreroutingChain:  fmt.Sprintf("w-%s-prerouting", tag),
-		PostroutingChain: fmt.Sprintf("w-%s-postrouting", tag),
+		PreroutingChain:  fmt.Sprintf("g-%s-prerouting", tag),
+		PostroutingChain: fmt.Sprintf("g-%s-postrouting", tag),
 	}
 
 	return iptables.NewManager(

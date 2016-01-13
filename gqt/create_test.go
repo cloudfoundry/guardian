@@ -158,7 +158,7 @@ var _ = Describe("Creating a Container", func() {
 				GinkgoWriter, GinkgoWriter,
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Consistently(session).ShouldNot(gbytes.Say(fmt.Sprintf("br-172-250-%d-0", GinkgoParallelNode())))
+			Consistently(session).ShouldNot(gbytes.Say(fmt.Sprintf("172-250-%d-0", GinkgoParallelNode())))
 		})
 	})
 })

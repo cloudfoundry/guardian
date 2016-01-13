@@ -61,7 +61,7 @@ func (c *Creator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip 
 	return NetworkConfig{
 		HostIntf:      fmt.Sprintf("%s%s-0", c.interfacePrefix, id),
 		ContainerIntf: fmt.Sprintf("%s%s-1", c.interfacePrefix, id),
-		BridgeName:    fmt.Sprintf("%sbr-%s", c.interfacePrefix, strings.Replace(subnet.IP.String(), ".", "-", -1)),
+		BridgeName:    fmt.Sprintf("%s%s", c.interfacePrefix, strings.Replace(subnet.IP.String(), ".", "-", -1)),
 		IPTableChain:  fmt.Sprintf("%s-%s", c.chainPrefix, id),
 		ContainerIP:   ip,
 		BridgeIP:      subnets.GatewayIP(subnet),

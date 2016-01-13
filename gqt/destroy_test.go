@@ -143,14 +143,14 @@ var _ = Describe("Destroying a Container", func() {
 				GinkgoWriter, GinkgoWriter,
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Consistently(session).ShouldNot(gbytes.Say("br-177-100-10-0"))
+			Consistently(session).ShouldNot(gbytes.Say("177-100-10-0"))
 
 			session, err = gexec.Start(
 				exec.Command("ifconfig"),
 				GinkgoWriter, GinkgoWriter,
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gbytes.Say("br-168-100-20-0"))
+			Eventually(session).Should(gbytes.Say("168-100-20-0"))
 		})
 	})
 })
@@ -171,7 +171,7 @@ func ethInterfaceName(container garden.Container) string {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(proc.Wait()).To(Equal(0))
 
-	contIfaceName := string(buffer.Contents()) // w3-abc-1
+	contIfaceName := string(buffer.Contents()) // g3-abc-1
 
-	return contIfaceName[:len(contIfaceName)-2] + "0" // w3-abc-0
+	return contIfaceName[:len(contIfaceName)-2] + "0" // g3-abc-0
 }

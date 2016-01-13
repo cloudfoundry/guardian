@@ -50,7 +50,23 @@ var _ = Describe("ConfigCreator", func() {
 		config, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(config.BridgeName).To(Equal("w1br-192-168-12-0"))
+		Expect(config.BridgeName).To(Equal("w1192-168-12-0"))
+	})
+
+	Context("when the subnet IP is of the form xxx.xxx.xxx.xxx", func() {
+		BeforeEach(func() {
+			var err error
+
+			ip, subnet, err = net.ParseCIDR("123.122.180.191/24")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("does not assign a bridge name that is longer than 15 chars", func() {
+			config, err := creator.Create(logger, "banana", subnet, ip)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(len(config.BridgeName)).To(BeNumerically("<=", 15))
+		})
 	})
 
 	It("it assigns the interface names based on the ID from the ID generator", func() {
