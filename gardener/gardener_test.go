@@ -104,7 +104,7 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("passes the created rootfs to the containerizer", func() {
-				volumeCreator.CreateStub = func(handle string, spec rootfs_provider.Spec) (string, []string, error) {
+				volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error) {
 					return "/path/to/rootfs/" + spec.RootFS.String() + "/" + handle, []string{}, nil
 				}
 
@@ -404,6 +404,13 @@ var _ = Describe("Gardener", func() {
 			Expect(networkLogger).To(Equal(logger))
 		})
 
+		It("asks the volume creator to destroy the container rootfs", func() {
+			gdnr.Destroy("some-handle")
+			Expect(volumeCreator.DestroyCallCount()).To(Equal(1))
+			_, handleToDestroy := volumeCreator.DestroyArgsForCall(0)
+			Expect(handleToDestroy).To(Equal("some-handle"))
+		})
+
 		It("should destroy the key space of the property manager", func() {
 			gdnr.Destroy("some-handle")
 
@@ -444,6 +451,17 @@ var _ = Describe("Gardener", func() {
 				Expect(err).To(HaveOccurred())
 
 				Expect(propertyManager.DestroyKeySpaceCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when destroying the rootfs fails", func() {
+			BeforeEach(func() {
+				volumeCreator.DestroyReturns(errors.New("rootfs deletion failed"))
+			})
+
+			It("returns the error", func() {
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(MatchError("rootfs deletion failed"))
 			})
 		})
 	})

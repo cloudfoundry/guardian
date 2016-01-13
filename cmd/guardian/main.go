@@ -446,9 +446,15 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.C
 		}
 	}
 
+	ovenCleanerCake := &layercake.OvenCleaner{
+		Cake:               cake,
+		Logger:             logger.Session("oven-cleaner"),
+		EnableImageCleanup: true,
+	}
+
 	repoFetcher := &repository_fetcher.CompositeFetcher{
 		LocalFetcher: &repository_fetcher.Local{
-			Cake:              cake,
+			Cake:              ovenCleanerCake,
 			DefaultRootFSPath: *rootFSPath,
 			IDProvider:        repository_fetcher.LayerIDProvider{},
 		},
@@ -477,11 +483,12 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.C
 	}
 
 	layerCreator := rootfs_provider.NewLayerCreator(
-		cake, rootfs_provider.SimpleVolumeCreator{}, rootFSNamespacer)
+		ovenCleanerCake, rootfs_provider.SimpleVolumeCreator{}, rootFSNamespacer)
 
 	cakeOrdinator := rootfs_provider.NewCakeOrdinator(
-		cake, repoFetcher, layerCreator, nil, logger.Session("cake-ordinator"),
+		ovenCleanerCake, repoFetcher, layerCreator, nil,
 	)
+
 	return cakeOrdinator
 }
 

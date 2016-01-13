@@ -58,7 +58,8 @@ type ForeignNetworker interface {
 }
 
 type VolumeCreator interface {
-	Create(handle string, spec rootfs_provider.Spec) (string, []string, error)
+	Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error)
+	Destroy(log lager.Logger, handle string) error
 }
 
 type UidGenerator interface {
@@ -140,7 +141,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		return nil, err
 	}
 
-	rootFSPath, _, err := g.VolumeCreator.Create(spec.Handle, rootfs_provider.Spec{RootFS: rootFSURL})
+	rootFSPath, _, err := g.VolumeCreator.Create(log, spec.Handle, rootfs_provider.Spec{RootFS: rootFSURL})
 	if err != nil {
 		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err
@@ -186,6 +187,10 @@ func (g *Gardener) Destroy(handle string) error {
 	}
 
 	if err := g.Networker.Destroy(g.Logger, handle); err != nil {
+		return err
+	}
+
+	if err := g.VolumeCreator.Destroy(g.Logger, handle); err != nil {
 		return err
 	}
 

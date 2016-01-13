@@ -70,6 +70,12 @@ var _ = Describe("Destroying a Container", func() {
 		It("should destroy the container's depot directory", func() {
 			Expect(filepath.Join(client.DepotDir, container.Handle())).NotTo(BeAnExistingFile())
 		})
+
+		It("should destroy the container rootfs", func() {
+			session, err := gexec.Start(exec.Command("du", "-d0", client.GraphPath), GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(session).Should(gbytes.Say(`^0\s+`))
+		})
 	})
 
 	Context("when using a static subnet", func() {
