@@ -5,7 +5,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/docker/libcontainer/netlink"
+	"github.com/vishvananda/netlink"
 )
 
 // netlink is not thread-safe, all calls to netlink should be guarded by this mutex
@@ -19,7 +19,9 @@ func (Bridge) Create(name string, ip net.IP, subnet *net.IPNet) (intf *net.Inter
 	netlinkMu.Lock()
 	defer netlinkMu.Unlock()
 
-	if err := netlink.NetworkLinkAdd(name, "bridge"); err != nil && err.Error() != "file exists" {
+	link := &netlink.Bridge{netlink.LinkAttrs{Name: name}}
+
+	if err := netlink.LinkAdd(link); err != nil && err.Error() != "file exists" {
 		return nil, fmt.Errorf("devices: create bridge: %v", err)
 	}
 
@@ -27,17 +29,27 @@ func (Bridge) Create(name string, ip net.IP, subnet *net.IPNet) (intf *net.Inter
 		return nil, fmt.Errorf("devices: look up created bridge interface: %v", err)
 	}
 
-	if err = netlink.NetworkLinkAddIp(intf, ip, subnet); err != nil && err.Error() != "file exists" {
+	addr := &netlink.Addr{IPNet: &net.IPNet{IP: ip, Mask: subnet.Mask}}
+	if err = netlink.AddrAdd(link, addr); err != nil && err.Error() != "file exists" {
 		return nil, fmt.Errorf("devices: add IP to bridge: %v", err)
 	}
 	return intf, nil
 }
 
-func (Bridge) Add(bridge, slave *net.Interface) error {
+func (Bridge) Add(bridge, slaveIf *net.Interface) error {
 	netlinkMu.Lock()
 	defer netlinkMu.Unlock()
 
-	return netlink.AddToBridge(slave, bridge)
+	master, err := netlink.LinkByName(bridge.Name)
+	if err != nil {
+		return err
+	}
+
+	slave, err := netlink.LinkByName(slaveIf.Name)
+	if err != nil {
+		return err
+	}
+	return netlink.LinkSetMaster(slave, master.(*netlink.Bridge))
 }
 
 func (Bridge) Destroy(bridge string) error {
@@ -51,7 +63,8 @@ func (Bridge) Destroy(bridge string) error {
 
 	for _, i := range intfs {
 		if i.Name == bridge {
-			return netlink.DeleteBridge(bridge)
+			link := &netlink.Bridge{netlink.LinkAttrs{Name: bridge}}
+			return netlink.LinkDel(link)
 		}
 	}
 

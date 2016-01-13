@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/docker/libcontainer/netlink"
+	"github.com/vishvananda/netlink"
 )
 
 type VethCreator struct{}
@@ -13,7 +13,12 @@ func (VethCreator) Create(hostIfcName, containerIfcName string) (host, container
 	netlinkMu.Lock()
 	defer netlinkMu.Unlock()
 
-	if err := netlink.NetworkCreateVethPair(hostIfcName, containerIfcName, 1); err != nil {
+	veth := &netlink.Veth{
+		LinkAttrs: netlink.LinkAttrs{Name: hostIfcName, TxQLen: 1},
+		PeerName:  containerIfcName,
+	}
+
+	if err := netlink.LinkAdd(veth); err != nil {
 		return nil, nil, fmt.Errorf("devices: create veth pair: %v", err)
 	}
 

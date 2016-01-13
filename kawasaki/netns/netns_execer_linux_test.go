@@ -8,7 +8,7 @@ import (
 	"os/exec"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
-	"github.com/docker/libcontainer/netlink"
+	"github.com/vishvananda/netlink"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -34,7 +34,9 @@ var _ = Describe("NetnsExecerLinux", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(netns.Exec(fd, func() error {
-				netlink.NetworkLinkAdd("banana-iface", "bridge")
+
+				link := &netlink.Bridge{netlink.LinkAttrs{Name: "banana-iface"}}
+				Expect(netlink.LinkAdd(link)).To(Succeed())
 
 				_, err := net.InterfaceByName("banana-iface")
 				Expect(err).NotTo(HaveOccurred())

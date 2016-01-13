@@ -67,6 +67,14 @@ var _ = Describe("Bridge Management", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
+			Context("when the bridge is duplicated", func() {
+				It("returns the interface", func() {
+					infc, err := b.Create(name, ip, subnet)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(infc).To(Equal(existingIfc))
+				})
+			})
+
 			It("returns the interface for it", func() {
 				ifc, err := b.Create(name, ip, subnet)
 				Expect(err).ToNot(HaveOccurred())
@@ -85,6 +93,30 @@ var _ = Describe("Bridge Management", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(addrs[0].String()).To(Equal(addr))
+			})
+		})
+	})
+
+	Describe("Add", func() {
+		Context("when the slave does not exist", func() {
+			It("returns the error", func() {
+				existingIfc, err := b.Create(name, ip, subnet)
+				Expect(err).ToNot(HaveOccurred())
+
+				slave := &net.Interface{Name: "does not exist"}
+				Expect(b.Add(existingIfc, slave)).To(MatchError("Link not found"))
+			})
+		})
+
+		Context("when the bridge does not exist", func() {
+			It("returns the error", func() {
+				interfaces, err := net.Interfaces()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(interfaces).NotTo(HaveLen(0))
+
+				slave := &interfaces[0]
+				bridge := &net.Interface{Name: "does not exist"}
+				Expect(b.Add(bridge, slave)).To(MatchError("Link not found"))
 			})
 		})
 	})

@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/docker/libcontainer/netlink"
+	"github.com/vishvananda/netlink"
 )
 
 type Link struct {
@@ -20,35 +20,67 @@ func (Link) AddIP(intf *net.Interface, ip net.IP, subnet *net.IPNet) error {
 	netlinkMu.Lock()
 	defer netlinkMu.Unlock()
 
-	return errF(netlink.NetworkLinkAddIp(intf, ip, subnet))
+	link, err := netlink.LinkByName(intf.Name)
+	if err != nil {
+		return errF(err)
+	}
+
+	addr := &netlink.Addr{IPNet: &net.IPNet{IP: ip, Mask: subnet.Mask}}
+	return errF(netlink.AddrAdd(link, addr))
 }
 
 func (Link) AddDefaultGW(intf *net.Interface, ip net.IP) error {
 	netlinkMu.Lock()
 	defer netlinkMu.Unlock()
 
-	return errF(netlink.AddDefaultGw(ip.String(), intf.Name))
+	link, err := netlink.LinkByName(intf.Name)
+	if err != nil {
+		return errF(err)
+	}
+
+	route := &netlink.Route{
+		Scope:     netlink.SCOPE_UNIVERSE,
+		LinkIndex: link.Attrs().Index,
+		Gw:        ip,
+	}
+
+	return errF(netlink.RouteAdd(route))
 }
 
 func (Link) SetUp(intf *net.Interface) error {
 	netlinkMu.Lock()
 	defer netlinkMu.Unlock()
 
-	return errF(netlink.NetworkLinkUp(intf))
+	link, err := netlink.LinkByName(intf.Name)
+	if err != nil {
+		return errF(err)
+	}
+
+	return errF(netlink.LinkSetUp(link))
 }
 
 func (Link) SetMTU(intf *net.Interface, mtu int) error {
 	netlinkMu.Lock()
 	defer netlinkMu.Unlock()
 
-	return errF(netlink.NetworkSetMTU(intf, mtu))
+	link, err := netlink.LinkByName(intf.Name)
+	if err != nil {
+		return errF(err)
+	}
+
+	return errF(netlink.LinkSetMTU(link, mtu))
 }
 
 func (Link) SetNs(intf *net.Interface, ns int) error {
 	netlinkMu.Lock()
 	defer netlinkMu.Unlock()
 
-	return errF(netlink.NetworkSetNsFd(intf, ns))
+	link, err := netlink.LinkByName(intf.Name)
+	if err != nil {
+		return errF(err)
+	}
+
+	return errF(netlink.LinkSetNsFd(link, ns))
 }
 
 func (Link) InterfaceByName(name string) (*net.Interface, bool, error) {
