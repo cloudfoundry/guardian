@@ -515,9 +515,19 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 		WithMounts(
 		goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"},
 		goci.Mount{Name: "tmp", Type: "tmpfs", Source: "tmpfs", Destination: "/tmp"},
+		goci.Mount{Name: "pts", Type: "devpts", Source: "devpts", Destination: "/dev/pts",
+			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
 	).WithRootFS(defaultRootFSPath).
 		WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)).
-		WithDevices(specs.Device{Path: "/dev/null", Type: 'c', Major: 1, Minor: 3, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666})
+		WithDevices(
+		specs.Device{Path: "/dev/null", Type: 'c', Major: 1, Minor: 3, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
+		specs.Device{Path: "/dev/tty", Type: 'c', Major: 5, Minor: 0, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
+		specs.Device{Path: "/dev/random", Type: 'c', Major: 1, Minor: 8, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
+		specs.Device{Path: "/dev/urandom", Type: 'c', Major: 1, Minor: 9, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
+		specs.Device{Path: "/dev/zero", Type: 'c', Major: 1, Minor: 5, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
+		specs.Device{Path: "/dev/full", Type: 'c', Major: 1, Minor: 7, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
+		specs.Device{Path: "/dev/pts/ptmx", Type: 'c', Major: 5, Minor: 2, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
+	)
 
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 	return rundmc.New(depot, &rundmc.BundleTemplate{Bndl: baseBundle}, runcrunner, startChecker, stateChecker, nstar)
