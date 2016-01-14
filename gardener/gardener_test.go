@@ -82,6 +82,25 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 
+			Context("when a disk limit is provided", func() {
+				var spec garden.ContainerSpec
+
+				BeforeEach(func() {
+					spec.Limits.Disk.Scope = garden.DiskLimitScopeExclusive
+					spec.Limits.Disk.ByteHard = 10 * 1024 * 1024
+				})
+
+				It("should delegate the limit to the volume creator", func() {
+					_, err := gdnr.Create(spec)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(volumeCreator.CreateCallCount()).To(Equal(1))
+					_, _, rpSpec := volumeCreator.CreateArgsForCall(0)
+					Expect(rpSpec.QuotaSize).To(BeEquivalentTo(spec.Limits.Disk.ByteHard))
+					Expect(rpSpec.QuotaScope).To(Equal(rootfs_provider.QuotaScopeExclusive))
+				})
+			})
+
 			Context("when parsing the rootfs path fails", func() {
 				It("should return an error", func() {
 					_, err := gdnr.Create(garden.ContainerSpec{
