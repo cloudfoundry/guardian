@@ -64,7 +64,7 @@ var _ = Describe("Destroying a Container", func() {
 				return sess.ExitCode()
 			}
 
-			Eventually(killExitCode, "5s").Should(Equal(1))
+			Eventually(killExitCode).Should(Equal(1))
 		})
 
 		It("should destroy the container's depot directory", func() {
@@ -108,7 +108,7 @@ var _ = Describe("Destroying a Container", func() {
 		It("should remove iptable entries", func() {
 			out, err := exec.Command("iptables", "-S", "-t", "filter").CombinedOutput()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(out)).NotTo(ContainSubstring("177.100.10.0/24"))
+			Expect(string(out)).NotTo(MatchRegexp("g-%d-instance.* 177.100.10.0/24", GinkgoParallelNode()))
 			Expect(string(out)).To(ContainSubstring("168.100.20.0/24"))
 		})
 
@@ -143,14 +143,14 @@ var _ = Describe("Destroying a Container", func() {
 				GinkgoWriter, GinkgoWriter,
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Consistently(session).ShouldNot(gbytes.Say("177-100-10-0"))
+			Consistently(session).ShouldNot(gbytes.Say("g%d177-100-10-0", GinkgoParallelNode()))
 
 			session, err = gexec.Start(
 				exec.Command("ifconfig"),
 				GinkgoWriter, GinkgoWriter,
 			)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gbytes.Say("168-100-20-0"))
+			Eventually(session).Should(gbytes.Say("g%d168-100-20-0", GinkgoParallelNode()))
 		})
 	})
 })
