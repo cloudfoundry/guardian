@@ -498,6 +498,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 			},
 			rundmc.RootFSRule{},
 			rundmc.NetworkHookRule{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
+			rundmc.BindMountsRule{},
 		},
 	}
 

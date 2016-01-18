@@ -12,6 +12,8 @@ import (
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
 
+	"io"
+
 	. "github.com/cloudfoundry-incubator/guardian/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
@@ -189,6 +191,110 @@ var _ = Describe("Creating a Container", func() {
 			Consistently(session).ShouldNot(gbytes.Say(fmt.Sprintf("172-250-%d-0", GinkgoParallelNode())))
 		})
 	})
+
+	Context("when creating a container with RW bind mount", func() {
+		var dir string
+		BeforeEach(func() {
+			var err error
+			dir, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			ioutil.WriteFile(filepath.Join(dir, "foo"), []byte{}, 755)
+		})
+
+		It("should be able to access the foo file", func() {
+			container, err := client.Create(garden.ContainerSpec{
+				BindMounts: []garden.BindMount{
+					garden.BindMount{
+						SrcPath: dir,
+						DstPath: "/home/alice/some/dir/",
+						Mode:    garden.BindMountModeRW,
+						Origin:  garden.BindMountOriginHost,
+					},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			out := gbytes.NewBuffer()
+			proc, err := container.Run(
+				garden.ProcessSpec{
+					Path: "ls",
+					Args: []string{"-l", "/home/alice/some/dir/"},
+				},
+				garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, out),
+					Stderr: io.MultiWriter(GinkgoWriter, out),
+				})
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := proc.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(0))
+
+			Expect(out).To(gbytes.Say("foo"))
+		})
+	})
+
+	Context("when creating a container with RO bind mount", func() {
+		var dir string
+		BeforeEach(func() {
+			var err error
+			dir, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			ioutil.WriteFile(filepath.Join(dir, "foo"), []byte{}, 755)
+		})
+
+		It("should be able to access the foo file", func() {
+			container, err := client.Create(garden.ContainerSpec{
+				BindMounts: []garden.BindMount{
+					garden.BindMount{
+						SrcPath: dir,
+						DstPath: "/home/alice/some/dir/",
+						Mode:    garden.BindMountModeRO,
+						Origin:  garden.BindMountOriginHost,
+					},
+				},
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			out := gbytes.NewBuffer()
+			proc, err := container.Run(
+				garden.ProcessSpec{
+					Path: "ls",
+					Args: []string{"-l", "/home/alice/some/dir/"},
+				},
+				garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, out),
+					Stderr: io.MultiWriter(GinkgoWriter, out),
+				})
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := proc.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(0))
+
+			Expect(out).To(gbytes.Say("foo"))
+
+			proc, err = container.Run(
+				garden.ProcessSpec{
+					Path: "touch",
+					Args: []string{"/home/alice/some/dir/test.txt"},
+				},
+				garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, out),
+					Stderr: io.MultiWriter(GinkgoWriter, out),
+				})
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, _ = proc.Wait()
+			Expect(exitCode).ToNot(Equal(0))
+
+		})
+	})
+
 })
 
 func initProcessPID(handle string) int {

@@ -83,6 +83,9 @@ type DesiredContainerSpec struct {
 	// Network pre-start hook
 	NetworkHook Hook
 
+	// Bind mounts
+	BindMounts []garden.BindMount
+
 	// Container is privileged
 	Privileged bool
 }
@@ -146,6 +149,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		RootFSPath:  rootFSPath,
 		NetworkHook: hook,
 		Privileged:  spec.Privileged,
+		BindMounts:  spec.BindMounts,
 	}); err != nil {
 		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err

@@ -266,6 +266,26 @@ var _ = Describe("Gardener", func() {
 				}))
 			})
 		})
+
+		Context("when bind mounts are specified", func() {
+			It("generates a proper mount spec", func() {
+				bindMounts := []garden.BindMount{
+					garden.BindMount{
+						SrcPath: "src",
+						DstPath: "dst",
+					},
+				}
+
+				_, err := gdnr.Create(garden.ContainerSpec{
+					BindMounts: bindMounts,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(containerizer.CreateCallCount()).To(Equal(1))
+				_, spec := containerizer.CreateArgsForCall(0)
+				Expect(spec.BindMounts).To(Equal(bindMounts))
+			})
+		})
 	})
 
 	Context("when having a container", func() {
