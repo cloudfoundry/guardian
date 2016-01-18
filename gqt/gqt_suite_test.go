@@ -69,6 +69,10 @@ func TestGqt(t *testing.T) {
 		if ociRuntimeBin == "" {
 			Skip("No OCI Runtime for Platform: " + runtime.GOOS)
 		}
+
+		if os.Getenv("GARDEN_TEST_ROOTFS") == "" {
+			Skip("No Garden RootFS")
+		}
 	})
 
 	SetDefaultEventuallyTimeout(5 * time.Second)
