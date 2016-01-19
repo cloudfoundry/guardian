@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -246,7 +247,12 @@ func main() {
 
 	interfacePrefix := fmt.Sprintf("g%s", *tag)
 	chainPrefix := fmt.Sprintf("g-%s-instance", *tag)
-	iptablesMgr := wireIptables(logger, *tag, *allowHostAccess, interfacePrefix, chainPrefix)
+	var denyNetworksList []string
+	if *denyNetworks != "" {
+		denyNetworksList = strings.Split(*denyNetworks, ",")
+	}
+	iptablesMgr := wireIptables(logger, *tag, *allowHostAccess, denyNetworksList, interfacePrefix, chainPrefix)
+
 	externalIPAddr, err := parseExternalIP(*externalIP)
 	if err != nil {
 		panic(err)
@@ -310,11 +316,12 @@ type IptablesManagerStarter struct {
 	gardener.Starter
 }
 
-func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfacePrefix, chainPrefix string) *IptablesManagerStarter {
+func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, denyNetworks []string, interfacePrefix, chainPrefix string) *IptablesManagerStarter {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("iptables-runner")}
 
 	filterConfig := iptables.FilterConfig{
 		AllowHostAccess: allowHostAccess,
+		DenyNetworks:    denyNetworks,
 		InputChain:      fmt.Sprintf("g-%s-input", tag),
 		ForwardChain:    fmt.Sprintf("g-%s-forward", tag),
 		DefaultChain:    fmt.Sprintf("g-%s-default", tag),

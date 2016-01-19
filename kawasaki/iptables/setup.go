@@ -229,6 +229,16 @@ func (s Starter) Start() error {
 		fmt.Sprintf("GARDEN_NETWORK_INTERFACE_PREFIX=%s", s.nicPrefix),
 		fmt.Sprintf("GARDEN_IPTABLES_ALLOW_HOST_ACCESS=%t", s.fc.AllowHostAccess),
 	}
+	if err := s.runner.Run(cmd); err != nil {
+		return fmt.Errorf("setting up default chains: %s", err)
+	}
 
-	return s.runner.Run(cmd)
+	for _, n := range s.fc.DenyNetworks {
+		cmd := exec.Command("/sbin/iptables", "-w", "-A", s.fc.DefaultChain, "-d", n, "-j", "REJECT")
+		if err := s.runner.Run(cmd); err != nil {
+			return fmt.Errorf("denying network '%s': %s", n, err)
+		}
+	}
+
+	return nil
 }

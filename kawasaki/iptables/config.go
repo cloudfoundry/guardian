@@ -2,6 +2,7 @@ package iptables
 
 type FilterConfig struct {
 	AllowHostAccess bool
+	DenyNetworks    []string
 	InputChain      string
 	ForwardChain    string
 	DefaultChain    string

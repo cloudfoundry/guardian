@@ -211,6 +211,31 @@ var _ = Describe("Net", func() {
 			Expect(stdout).To(gbytes.Say(fmt.Sprintf("%d", actualContainerPort)))
 		})
 	})
+
+	Describe("--denyNetworks flag", func() {
+		BeforeEach(func() {
+			args = append(args, "--denyNetworks", "8.8.8.0/24")
+		})
+
+		It("should deny outbound traffic to IPs in the range", func() {
+			Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
+		})
+
+		It("should allow outbound traffic to IPs outside of the range", func() {
+			Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+		})
+
+		Context("when multiple denyNetworks are defined", func() {
+			BeforeEach(func() {
+				args = append(args, "--denyNetworks", "8.8.8.0/24,8.8.4.0/24")
+			})
+
+			It("should deny IPs in either range", func() {
+				Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
+				Expect(checkConnection(container, "8.8.4.4", 53)).To(MatchError("Request failed. Process exited with code 1"))
+			})
+		})
+	})
 })
 
 func externalIP(container garden.Container) string {
@@ -246,6 +271,7 @@ func checkConnection(container garden.Container, ip string, port int) error {
 		return fmt.Errorf("Request failed. Process exited with code %d", exitCode)
 	}
 }
+
 func ipAddress(subnet string, index int) string {
 	ip := strings.Split(subnet, "/")[0]
 	pattern := regexp.MustCompile(".[0-9]+$")
