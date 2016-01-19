@@ -1,7 +1,6 @@
 package gardener
 
 import (
-	"errors"
 	"io"
 	"net/url"
 	"time"
@@ -34,27 +33,10 @@ type Containerizer interface {
 }
 
 type Networker interface {
-	Network(log lager.Logger, handle, spec string) (string, error)
+	Hook(log lager.Logger, handle, spec string) (Hook, error)
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error)
-}
-
-type ForeignNetworkAdaptor struct {
-	ForeignNetworker
-}
-
-func (a ForeignNetworkAdaptor) Destroy(log lager.Logger, handle string) error {
-	return errors.New("not implemented")
-}
-
-func (a ForeignNetworkAdaptor) NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error) {
-	return 0, 0, errors.New("not implemented")
-}
-
-type ForeignNetworker interface {
-	Network(log lager.Logger, handle, spec string) (string, error)
-	Capacity() uint64
 }
 
 type VolumeCreator interface {
@@ -87,14 +69,22 @@ func (fn UidGeneratorFunc) Generate() string {
 	return fn()
 }
 
+type Hook struct {
+	Path string
+	Args []string
+}
+
 type DesiredContainerSpec struct {
 	Handle string
 
 	// Path to the Root Filesystem for the container
 	RootFSPath string
 
-	// Path to a Network Namespace to enter
-	NetworkPath string
+	// Network pre-start hook
+	NetworkHook Hook
+
+	// Container is privileged
+	Privileged bool
 }
 
 // Gardener orchestrates other components to implement the Garden API
@@ -130,7 +120,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		spec.Handle = g.UidGenerator.Generate()
 	}
 
-	networkPath, err := g.Networker.Network(log, spec.Handle, spec.Network)
+	hook, err := g.Networker.Hook(log, spec.Handle, spec.Network)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +144,8 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 	if err := g.Containerizer.Create(log, DesiredContainerSpec{
 		Handle:      spec.Handle,
 		RootFSPath:  rootFSPath,
-		NetworkPath: networkPath,
+		NetworkHook: hook,
+		Privileged:  spec.Privileged,
 	}); err != nil {
 		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err

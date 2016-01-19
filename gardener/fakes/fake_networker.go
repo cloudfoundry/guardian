@@ -9,15 +9,15 @@ import (
 )
 
 type FakeNetworker struct {
-	NetworkStub        func(log lager.Logger, handle, spec string) (string, error)
-	networkMutex       sync.RWMutex
-	networkArgsForCall []struct {
+	HookStub        func(log lager.Logger, handle, spec string) (gardener.Hook, error)
+	hookMutex       sync.RWMutex
+	hookArgsForCall []struct {
 		log    lager.Logger
 		handle string
 		spec   string
 	}
-	networkReturns struct {
-		result1 string
+	hookReturns struct {
+		result1 gardener.Hook
 		result2 error
 	}
 	CapacityStub        func() uint64
@@ -49,37 +49,37 @@ type FakeNetworker struct {
 	}
 }
 
-func (fake *FakeNetworker) Network(log lager.Logger, handle string, spec string) (string, error) {
-	fake.networkMutex.Lock()
-	fake.networkArgsForCall = append(fake.networkArgsForCall, struct {
+func (fake *FakeNetworker) Hook(log lager.Logger, handle string, spec string) (gardener.Hook, error) {
+	fake.hookMutex.Lock()
+	fake.hookArgsForCall = append(fake.hookArgsForCall, struct {
 		log    lager.Logger
 		handle string
 		spec   string
 	}{log, handle, spec})
-	fake.networkMutex.Unlock()
-	if fake.NetworkStub != nil {
-		return fake.NetworkStub(log, handle, spec)
+	fake.hookMutex.Unlock()
+	if fake.HookStub != nil {
+		return fake.HookStub(log, handle, spec)
 	} else {
-		return fake.networkReturns.result1, fake.networkReturns.result2
+		return fake.hookReturns.result1, fake.hookReturns.result2
 	}
 }
 
-func (fake *FakeNetworker) NetworkCallCount() int {
-	fake.networkMutex.RLock()
-	defer fake.networkMutex.RUnlock()
-	return len(fake.networkArgsForCall)
+func (fake *FakeNetworker) HookCallCount() int {
+	fake.hookMutex.RLock()
+	defer fake.hookMutex.RUnlock()
+	return len(fake.hookArgsForCall)
 }
 
-func (fake *FakeNetworker) NetworkArgsForCall(i int) (lager.Logger, string, string) {
-	fake.networkMutex.RLock()
-	defer fake.networkMutex.RUnlock()
-	return fake.networkArgsForCall[i].log, fake.networkArgsForCall[i].handle, fake.networkArgsForCall[i].spec
+func (fake *FakeNetworker) HookArgsForCall(i int) (lager.Logger, string, string) {
+	fake.hookMutex.RLock()
+	defer fake.hookMutex.RUnlock()
+	return fake.hookArgsForCall[i].log, fake.hookArgsForCall[i].handle, fake.hookArgsForCall[i].spec
 }
 
-func (fake *FakeNetworker) NetworkReturns(result1 string, result2 error) {
-	fake.NetworkStub = nil
-	fake.networkReturns = struct {
-		result1 string
+func (fake *FakeNetworker) HookReturns(result1 gardener.Hook, result2 error) {
+	fake.HookStub = nil
+	fake.hookReturns = struct {
+		result1 gardener.Hook
 		result2 error
 	}{result1, result2}
 }

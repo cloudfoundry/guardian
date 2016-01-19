@@ -35,11 +35,17 @@ var _ = Describe("Creating a Container", func() {
 	})
 
 	Context("after creating a container without a specified handle", func() {
-		var initProcPid int
+		var (
+			privileged bool
 
-		BeforeEach(func() {
+			initProcPid int
+		)
+
+		JustBeforeEach(func() {
 			var err error
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(garden.ContainerSpec{
+				Privileged: privileged,
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			initProcPid = initProcessPID(container.Handle())
@@ -72,14 +78,36 @@ var _ = Describe("Creating a Container", func() {
 			containerFD := strings.Split(string(containerNS.Out.Contents()), ">")[1]
 
 			Expect(hostFD).NotTo(Equal(containerFD))
-
 		},
 			Entry("should place the container in to the NET namespace", "net"),
 			Entry("should place the container in to the IPC namespace", "ipc"),
 			Entry("should place the container in to the UTS namespace", "uts"),
 			Entry("should place the container in to the PID namespace", "pid"),
 			Entry("should place the container in to the MNT namespace", "mnt"),
+			Entry("should place the container in to the USER namespace", "user"),
 		)
+
+		Context("which is privileged", func() {
+			BeforeEach(func() {
+				privileged = true
+			})
+
+			It("should not place the container in its own user namespace", func() {
+				hostNS, err := gexec.Start(exec.Command("ls", "-l", "/proc/1/ns/user"), GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				containerNS, err := gexec.Start(exec.Command("ls", "-l", fmt.Sprintf("/proc/%d/ns/user", initProcPid)), GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(containerNS).Should(gexec.Exit(0))
+				Eventually(hostNS).Should(gexec.Exit(0))
+
+				hostFD := strings.Split(string(hostNS.Out.Contents()), ">")[1]
+				containerFD := strings.Split(string(containerNS.Out.Contents()), ">")[1]
+
+				Expect(hostFD).To(Equal(containerFD))
+			})
+		})
 	})
 
 	Context("after creating a container with a specified root filesystem", func() {

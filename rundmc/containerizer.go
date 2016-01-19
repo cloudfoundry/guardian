@@ -13,7 +13,7 @@ import (
 )
 
 //go:generate counterfeiter . Depot
-//go:generate counterfeiter . Bundler
+//go:generate counterfeiter . BundleGenerator
 //go:generate counterfeiter . Checker
 //go:generate counterfeiter . BundleRunner
 //go:generate counterfeiter . NstarRunner
@@ -26,8 +26,8 @@ type Depot interface {
 	Handles() ([]string, error)
 }
 
-type Bundler interface {
-	Bundle(spec gardener.DesiredContainerSpec) *goci.Bndl
+type BundleGenerator interface {
+	Generate(spec gardener.DesiredContainerSpec) *goci.Bndl
 }
 
 type Checker interface {
@@ -52,14 +52,14 @@ type NstarRunner interface {
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
 	depot        Depot
-	bundler      Bundler
+	bundler      BundleGenerator
 	runner       BundleRunner
 	startChecker Checker
 	stateChecker ContainerStater
 	nstar        NstarRunner
 }
 
-func New(depot Depot, bundler Bundler, runner BundleRunner, startChecker Checker, stateChecker ContainerStater, nstarRunner NstarRunner) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker Checker, stateChecker ContainerStater, nstarRunner NstarRunner) *Containerizer {
 	return &Containerizer{
 		depot:        depot,
 		bundler:      bundler,
@@ -77,7 +77,7 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 	log.Info("started")
 	defer log.Info("finished")
 
-	if err := c.depot.Create(log, spec.Handle, c.bundler.Bundle(spec)); err != nil {
+	if err := c.depot.Create(log, spec.Handle, c.bundler.Generate(spec)); err != nil {
 		log.Error("create-failed", err)
 		return err
 	}

@@ -91,7 +91,7 @@ var _ = Describe("Properties", func() {
 		Expect(props).To(HaveKey("kawasaki.container-ip"))
 		Expect(props).To(HaveKey("kawasaki.host-interface"))
 		Expect(props).To(HaveKey("kawasaki.iptable-chain"))
-		Expect(props).To(HaveKey("kawasaki.subnet-ip"))
+		Expect(props).To(HaveKey("kawasaki.subnet"))
 		Expect(props).To(HaveKey("kawasaki.container-interface"))
 		Expect(props).To(HaveKey("kawasaki.external-ip"))
 		Expect(props).To(HaveKey("kawasaki.mtu"))

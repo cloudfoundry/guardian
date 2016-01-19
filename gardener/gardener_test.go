@@ -50,9 +50,12 @@ var _ = Describe("Gardener", func() {
 
 	Describe("creating a container", func() {
 		Context("when a handle is specified", func() {
-			It("passes the created network to the containerizer", func() {
-				networker.NetworkStub = func(_ lager.Logger, handle, spec string) (string, error) {
-					return "/path/to/netns/" + handle, nil
+			It("passes the network hook to the containerizer", func() {
+				networker.HookStub = func(_ lager.Logger, handle, spec string) (gardener.Hook, error) {
+					return gardener.Hook{
+						Path: "/path/to/banana/exe",
+						Args: []string{"--handle", handle, "--spec", spec},
+					}, nil
 				}
 
 				_, err := gdnr.Create(garden.ContainerSpec{
@@ -63,12 +66,15 @@ var _ = Describe("Gardener", func() {
 
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
 				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.NetworkPath).To(Equal("/path/to/netns/bob"))
+				Expect(spec.NetworkHook).To(Equal(gardener.Hook{
+					Path: "/path/to/banana/exe",
+					Args: []string{"--handle", "bob", "--spec", "10.0.0.2/30"},
+				}))
 			})
 
 			Context("when networker fails", func() {
 				BeforeEach(func() {
-					networker.NetworkReturns("", errors.New("booom!"))
+					networker.HookReturns(gardener.Hook{}, errors.New("booom!"))
 				})
 
 				It("returns an error", func() {
@@ -162,12 +168,13 @@ var _ = Describe("Gardener", func() {
 			})
 
 			It("asks the containerizer to create a container", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob", Privileged: true})
 
 				Expect(err).NotTo(HaveOccurred())
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
 				_, spec := containerizer.CreateArgsForCall(0)
 				Expect(spec.Handle).To(Equal("bob"))
+				Expect(spec.Privileged).To(BeTrue())
 			})
 
 			Context("when the containerizer fails to create the container", func() {
@@ -523,50 +530,6 @@ var _ = Describe("Gardener", func() {
 				Expect(sysinfoProvider.TotalDiskCallCount()).To(Equal(1))
 				Expect(err).To(MatchError(errors.New("whelp")))
 			})
-		})
-	})
-
-	Describe("ForeignNetworkAdaptor", func() {
-		var (
-			fakeForeignNetworker *fakes.FakeForeignNetworker
-			adaptor              gardener.Networker
-		)
-
-		BeforeEach(func() {
-			fakeForeignNetworker = new(fakes.FakeForeignNetworker)
-			adaptor = gardener.ForeignNetworkAdaptor{
-				ForeignNetworker: fakeForeignNetworker,
-			}
-		})
-
-		It("delegates Network(...) to the ForeignNetworker", func() {
-			theErr := errors.New("Oh, no!")
-			logger := lager.NewLogger("test-logger")
-			fakeForeignNetworker.NetworkReturns(
-				"my-subnet",
-				theErr,
-			)
-
-			subnet, err := adaptor.Network(logger, "handle", "spec")
-
-			Expect(err).To(Equal(theErr))
-			Expect(subnet).To(Equal("my-subnet"))
-			Expect(fakeForeignNetworker.NetworkCallCount()).To(Equal(1))
-
-			logger, handle, spec := fakeForeignNetworker.NetworkArgsForCall(0)
-			Expect(logger).To(Equal(logger))
-			Expect(handle).To(Equal("handle"))
-			Expect(spec).To(Equal("spec"))
-
-		})
-
-		It("delegates Capacity(...) to the ForeignNetworker", func() {
-			fakeForeignNetworker.CapacityReturns(432)
-
-			capacity := adaptor.Capacity()
-
-			Expect(capacity).To(Equal(uint64(432)))
-			Expect(fakeForeignNetworker.CapacityCallCount()).To(Equal(1))
 		})
 	})
 })

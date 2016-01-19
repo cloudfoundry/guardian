@@ -112,16 +112,6 @@ var _ = Describe("Destroying a Container", func() {
 			Expect(string(out)).To(ContainSubstring("168.100.20.0/24"))
 		})
 
-		It("should remove namespaces", func() {
-			session, err := gexec.Start(
-				exec.Command("ip", "netns", "list"),
-				GinkgoWriter, GinkgoWriter,
-			)
-			Expect(err).NotTo(HaveOccurred())
-			Consistently(session).ShouldNot(gbytes.Say(contHandle))
-			Expect(session).Should(gbytes.Say(existingContainer.Handle()))
-		})
-
 		It("should remove virtual ethernet cards", func() {
 			ifconfigExits := func() int {
 				session, err := gexec.Start(exec.Command("ifconfig", contIfaceName), GinkgoWriter, GinkgoWriter)

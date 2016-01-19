@@ -40,7 +40,7 @@ type RunningGarden struct {
 	logger lager.Logger
 }
 
-func Start(bin, iodaemonBin, nstarBin string, argv ...string) *RunningGarden {
+func Start(bin, kawasakiBin, iodaemonBin, nstarBin string, argv ...string) *RunningGarden {
 	network := "unix"
 	addr := fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
 	tmpDir := filepath.Join(
@@ -68,7 +68,7 @@ func Start(bin, iodaemonBin, nstarBin string, argv ...string) *RunningGarden {
 		Client: client.New(connection.New(network, addr)),
 	}
 
-	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, iodaemonBin, nstarBin, TarPath, RootFSPath, argv...)
+	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, kawasakiBin, iodaemonBin, nstarBin, TarPath, RootFSPath, argv...)
 	r.process = ifrit.Invoke(&ginkgomon.Runner{
 		Name:              "guardian",
 		Command:           c,
@@ -116,7 +116,7 @@ func (r *RunningGarden) Stop() error {
 	}
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, nstarBin, tarBin, rootFSPath string, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, network, addr, bin, kawasakiBin, iodaemonBin, nstarBin, tarBin, rootFSPath string, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -148,6 +148,7 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, iodaemonBin, nstarBin,
 	gardenArgs = appendDefaultFlag(gardenArgs, "--graph", graphPath)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--iodaemonBin", iodaemonBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--kawasakiBin", kawasakiBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--nstarBin", nstarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tarBin", tarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--logLevel", "debug")

@@ -18,7 +18,6 @@ import (
 
 var _ = Describe("Networker", func() {
 	var (
-		fakeNetnsMgr      *fakes.FakeNetnsMgr
 		fakeSpecParser    *fakes.FakeSpecParser
 		fakeSubnetPool    *fake_subnet_pool.FakePool
 		fakeConfigCreator *fakes.FakeConfigCreator
@@ -32,7 +31,6 @@ var _ = Describe("Networker", func() {
 	)
 
 	BeforeEach(func() {
-		fakeNetnsMgr = new(fakes.FakeNetnsMgr)
 		fakeSpecParser = new(fakes.FakeSpecParser)
 		fakeSubnetPool = new(fake_subnet_pool.FakePool)
 		fakeConfigurer = new(fakes.FakeConfigurer)
@@ -43,7 +41,7 @@ var _ = Describe("Networker", func() {
 
 		logger = lagertest.NewTestLogger("test")
 		networker = kawasaki.New(
-			fakeNetnsMgr,
+			"/path/to/kawasaki",
 			fakeSpecParser,
 			fakeSubnetPool,
 			fakeConfigCreator,
@@ -51,6 +49,7 @@ var _ = Describe("Networker", func() {
 			fakeConfigStore,
 			fakePortForwarder,
 			fakePortPool,
+			"potato",
 		)
 
 		ip, subnet, err := net.ParseCIDR("123.123.123.12/24")
@@ -76,7 +75,7 @@ var _ = Describe("Networker", func() {
 			"kawasaki.bridge-ip":           networkConfig.BridgeIP.String(),
 			"kawasaki.container-ip":        networkConfig.ContainerIP.String(),
 			"kawasaki.external-ip":         networkConfig.ExternalIP.String(),
-			"kawasaki.subnet-ip":           networkConfig.Subnet.String(),
+			"kawasaki.subnet":              networkConfig.Subnet.String(),
 			"kawasaki.iptable-chain":       networkConfig.IPTableChain,
 			"kawasaki.mtu":                 strconv.Itoa(networkConfig.Mtu),
 		}
@@ -87,9 +86,9 @@ var _ = Describe("Networker", func() {
 		}
 	})
 
-	Describe("Network", func() {
+	Describe("Hook", func() {
 		It("parses the spec", func() {
-			networker.Network(logger, "some-handle", "1.2.3.4/30")
+			networker.Hook(logger, "some-handle", "1.2.3.4/30")
 			Expect(fakeSpecParser.ParseCallCount()).To(Equal(1))
 			_, spec := fakeSpecParser.ParseArgsForCall(0)
 			Expect(spec).To(Equal("1.2.3.4/30"))
@@ -97,7 +96,7 @@ var _ = Describe("Networker", func() {
 
 		It("returns an error if the spec can't be parsed", func() {
 			fakeSpecParser.ParseReturns(nil, nil, errors.New("no parsey"))
-			_, err := networker.Network(logger, "some-handle", "1.2.3.4/30")
+			_, err := networker.Hook(logger, "some-handle", "1.2.3.4/30")
 			Expect(err).To(MatchError("no parsey"))
 		})
 
@@ -106,7 +105,7 @@ var _ = Describe("Networker", func() {
 			someIpRequest := subnets.DynamicIPSelector
 			fakeSpecParser.ParseReturns(someSubnetRequest, someIpRequest, nil)
 
-			networker.Network(logger, "some-handle", "1.2.3.4/30")
+			networker.Hook(logger, "some-handle", "1.2.3.4/30")
 			Expect(fakeSubnetPool.AcquireCallCount()).To(Equal(1))
 			_, sr, ir := fakeSubnetPool.AcquireArgsForCall(0)
 			Expect(sr).To(Equal(someSubnetRequest))
@@ -117,7 +116,7 @@ var _ = Describe("Networker", func() {
 			someIp, someSubnet, err := net.ParseCIDR("1.2.3.4/5")
 			fakeSubnetPool.AcquireReturns(someSubnet, someIp, err)
 
-			networker.Network(logger, "some-handle", "1.2.3.4/30")
+			networker.Hook(logger, "some-handle", "1.2.3.4/30")
 			Expect(fakeConfigCreator.CreateCallCount()).To(Equal(1))
 			_, handle, subnet, ip := fakeConfigCreator.CreateArgsForCall(0)
 			Expect(handle).To(Equal("some-handle"))
@@ -133,7 +132,7 @@ var _ = Describe("Networker", func() {
 				config[name] = value
 			}
 
-			_, err := networker.Network(logger, "some-handle", "1.2.3.4/30")
+			_, err := networker.Hook(logger, "some-handle", "1.2.3.4/30")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config["kawasaki.host-interface"]).To(Equal(networkConfig.HostIntf))
@@ -142,7 +141,7 @@ var _ = Describe("Networker", func() {
 			Expect(config["kawasaki.bridge-ip"]).To(Equal(networkConfig.BridgeIP.String()))
 			Expect(config["kawasaki.container-ip"]).To(Equal(networkConfig.ContainerIP.String()))
 			Expect(config["kawasaki.external-ip"]).To(Equal(networkConfig.ExternalIP.String()))
-			Expect(config["kawasaki.subnet-ip"]).To(Equal(networkConfig.Subnet.String()))
+			Expect(config["kawasaki.subnet"]).To(Equal(networkConfig.Subnet.String()))
 			Expect(config["kawasaki.iptable-chain"]).To(Equal(networkConfig.IPTableChain))
 			Expect(config["kawasaki.mtu"]).To(Equal(strconv.Itoa(networkConfig.Mtu)))
 		})
@@ -150,100 +149,32 @@ var _ = Describe("Networker", func() {
 		Context("when the configuration can't be created", func() {
 			It("returns a wrapped error", func() {
 				fakeConfigCreator.CreateReturns(kawasaki.NetworkConfig{}, errors.New("bad config"))
-				_, err := networker.Network(logger, "some-handle", "1.2.3.4/30")
+				_, err := networker.Hook(logger, "some-handle", "1.2.3.4/30")
 				Expect(err).To(MatchError("create network config: bad config"))
 			})
-
-			It("does not create a namespace", func() {
-				fakeConfigCreator.CreateReturns(kawasaki.NetworkConfig{}, errors.New("bad config"))
-				networker.Network(logger, "some-handle", "1.2.3.4/30")
-
-				Expect(fakeNetnsMgr.CreateCallCount()).To(Equal(0))
-			})
 		})
 
-		It("should create a network namespace", func() {
-			networker.Network(logger, "some-handle", "")
-			Expect(fakeNetnsMgr.CreateCallCount()).To(Equal(1))
-
-			_, handle := fakeNetnsMgr.CreateArgsForCall(0)
-			Expect(handle).To(Equal("some-handle"))
-		})
-
-		Context("when creating the network namespace fails", func() {
-			BeforeEach(func() {
-				fakeNetnsMgr.CreateReturns(errors.New("banana"))
-			})
-
-			It("should return an error", func() {
-				_, err := networker.Network(logger, "", "")
-				Expect(err).To(MatchError("banana"))
-			})
-
-			It("should not configure the network", func() {
-				_, err := networker.Network(logger, "", "")
-				Expect(err).To(HaveOccurred())
-
-				Expect(fakeConfigurer.ApplyCallCount()).To(Equal(0))
-			})
-		})
-
-		It("should return the looked up network path", func() {
-			fakeNetnsMgr.LookupReturns("/i/lost/my/banana", nil)
-
-			path, err := networker.Network(logger, "", "")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(path).To(Equal("/i/lost/my/banana"))
-		})
-
-		Context("when looking up the network namespace path fails", func() {
-			BeforeEach(func() {
-				fakeNetnsMgr.LookupReturns("", errors.New("banana"))
-			})
-
-			It("should return an error", func() {
-				_, err := networker.Network(logger, "", "")
-				Expect(err).To(MatchError("banana"))
-			})
-
-			It("should not configure the network", func() {
-				_, err := networker.Network(logger, "", "")
-				Expect(err).To(HaveOccurred())
-
-				Expect(fakeConfigurer.ApplyCallCount()).To(Equal(0))
-			})
-		})
-
-		It("should apply the configuration", func() {
-			fakeNetnsMgr.LookupReturns("/i/lost/my/banana", nil)
-
-			_, err := networker.Network(logger, "some-handle", "1.2.3.4/30")
+		It("returns the path to the kawasaki binary with the created config as flags", func() {
+			hook, err := networker.Hook(logger, "some-handle", "1.2.3.4/30")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeConfigurer.ApplyCallCount()).To(Equal(1))
-			_, actualCfg, path := fakeConfigurer.ApplyArgsForCall(0)
-			Expect(path).To(Equal("/i/lost/my/banana"))
-			Expect(actualCfg).To(Equal(networkConfig))
+			Expect(hook.Path).To(Equal("/path/to/kawasaki"))
 		})
 
-		Context("when applying the configuration fails", func() {
-			BeforeEach(func() {
-				fakeConfigurer.ApplyReturns(errors.New("banana"))
-			})
+		It("passes the config as flags to the binary", func() {
+			hook, err := networker.Hook(logger, "some-handle", "1.2.3.4/30")
+			Expect(err).NotTo(HaveOccurred())
 
-			It("should return an error", func() {
-				_, err := networker.Network(logger, "", "")
-				Expect(err).To(MatchError("banana"))
-			})
-
-			It("destroys the network namespace", func() {
-				_, err := networker.Network(logger, "banana-handle", "")
-				Expect(err).To(HaveOccurred())
-
-				Expect(fakeNetnsMgr.DestroyCallCount()).To(Equal(1))
-				_, handle := fakeNetnsMgr.DestroyArgsForCall(0)
-				Expect(handle).To(Equal("banana-handle"))
-			})
+			Expect(hook.Args).To(ContainElement("--host-interface=" + networkConfig.HostIntf))
+			Expect(hook.Args).To(ContainElement("--container-interface=" + networkConfig.ContainerIntf))
+			Expect(hook.Args).To(ContainElement("--bridge-interface=" + networkConfig.BridgeName))
+			Expect(hook.Args).To(ContainElement("--bridge-ip=" + networkConfig.BridgeIP.String()))
+			Expect(hook.Args).To(ContainElement("--container-ip=" + networkConfig.ContainerIP.String()))
+			Expect(hook.Args).To(ContainElement("--external-ip=" + networkConfig.ExternalIP.String()))
+			Expect(hook.Args).To(ContainElement("--subnet=" + networkConfig.Subnet.String()))
+			Expect(hook.Args).To(ContainElement("--iptable-chain=" + networkConfig.IPTableChain))
+			Expect(hook.Args).To(ContainElement("--mtu=" + strconv.Itoa(networkConfig.Mtu)))
+			Expect(hook.Args).To(ContainElement("--tag=potato"))
 		})
 	})
 
@@ -261,59 +192,6 @@ var _ = Describe("Networker", func() {
 	})
 
 	Describe("Destroy", func() {
-		Context("when the handle does not exist", func() {
-			BeforeEach(func() {
-				fakeConfigStore.GetReturns("", errors.New("Handle does not exist"))
-			})
-
-			It("should return the error", func() {
-				Expect(networker.Destroy(logger, "non-existing-handle")).To(MatchError("Handle does not exist"))
-			})
-
-			It("should not destroy the network namespace", func() {
-				networker.Destroy(logger, "non-existing-handle")
-
-				Expect(fakeNetnsMgr.DestroyCallCount()).To(Equal(0))
-			})
-
-			It("should not release the subnet", func() {
-				networker.Destroy(logger, "non-existing-handle")
-
-				Expect(fakeSubnetPool.ReleaseCallCount()).To(Equal(0))
-			})
-		})
-
-		It("should destroy the network namespace", func() {
-			networker.Destroy(logger, "some-handle")
-			Expect(fakeNetnsMgr.DestroyCallCount()).To(Equal(1))
-
-			_, handle := fakeNetnsMgr.DestroyArgsForCall(0)
-			Expect(handle).To(Equal("some-handle"))
-		})
-
-		Context("when network namespace manager fails to destroy", func() {
-			BeforeEach(func() {
-				fakeNetnsMgr.DestroyReturns(errors.New("namespace deletion failed"))
-			})
-
-			It("should return the error", func() {
-				err := networker.Destroy(logger, "some-handle")
-				Expect(err).To(MatchError("namespace deletion failed"))
-			})
-
-			It("should not destroy the configuration", func() {
-				Expect(networker.Destroy(logger, "some-handle")).NotTo(Succeed())
-
-				Expect(fakeConfigurer.DestroyCallCount()).To(Equal(0))
-			})
-
-			It("should not release the subnet", func() {
-				Expect(networker.Destroy(logger, "some-handle")).NotTo(Succeed())
-
-				Expect(fakeSubnetPool.ReleaseCallCount()).To(Equal(0))
-			})
-		})
-
 		It("should destroy the configuration", func() {
 			Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
 

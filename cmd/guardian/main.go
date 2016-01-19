@@ -20,7 +20,6 @@ import (
 	"github.com/cloudfoundry-incubator/garden-shed/repository_fetcher"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/garden/server"
-	"github.com/cloudfoundry-incubator/genclient"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
@@ -90,6 +89,12 @@ var tarBin = flag.String(
 	"tarBin",
 	"",
 	"path to tar binary",
+)
+
+var kawasakiBin = flag.String(
+	"kawasakiBin",
+	"",
+	"path to the kawasaki network hook binary",
 )
 
 var depotPath = flag.String(
@@ -202,11 +207,6 @@ var maxContainers = flag.Uint(
 	0,
 	"Maximum number of containers that can be created")
 
-var networkModulePath = flag.String(
-	"networkModulePath",
-	"",
-	"Path to external networker binary.  If empty, defaults to built-in Kawasaki module")
-
 func main() {
 	if reexec.Init() {
 		return
@@ -260,7 +260,7 @@ func main() {
 		SysInfoProvider: sysInfoProvider,
 		UidGenerator:    wireUidGenerator(),
 		Starter:         wireStarter(logger, iptablesMgr),
-		Networker:       wireNetworker(logger, *tag, networkPoolCIDR, externalIPAddr, iptablesMgr, interfacePrefix, chainPrefix, propManager, *networkModulePath),
+		Networker:       wireNetworker(logger, *kawasakiBin, *tag, networkPoolCIDR, externalIPAddr, iptablesMgr, interfacePrefix, chainPrefix, propManager),
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath),
 		Logger:          logger,
@@ -296,16 +296,21 @@ func wireUidGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
-func wireStarter(logger lager.Logger, iptablesMgr *iptables.Manager) gardener.Starter {
+func wireStarter(logger lager.Logger, iptablesStarter gardener.Starter) gardener.Starter {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("runner")}
 
 	return &StartAll{starters: []gardener.Starter{
 		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner),
-		iptablesMgr,
+		iptablesStarter,
 	}}
 }
 
-func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfacePrefix, chainPrefix string) *iptables.Manager {
+type IptablesManagerStarter struct {
+	*iptables.Manager
+	gardener.Starter
+}
+
+func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfacePrefix, chainPrefix string) *IptablesManagerStarter {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("iptables-runner")}
 
 	filterConfig := iptables.FilterConfig{
@@ -320,18 +325,26 @@ func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, interfa
 		PostroutingChain: fmt.Sprintf("g-%s-postrouting", tag),
 	}
 
-	return iptables.NewManager(
-		filterConfig,
-		natConfig,
-		interfacePrefix,
-		chainPrefix,
-		runner,
-		logger,
-	)
+	return &IptablesManagerStarter{
+		Starter: iptables.NewStarter(
+			runner,
+			filterConfig,
+			natConfig,
+			chainPrefix,
+			interfacePrefix,
+		),
+		Manager: iptables.NewManager(
+			filterConfig,
+			natConfig,
+			runner,
+			logger,
+		),
+	}
 }
 
 func wireNetworker(
 	log lager.Logger,
+	kawasakiBin string,
 	tag string,
 	networkPoolCIDR *net.IPNet,
 	externalIP net.IP,
@@ -339,7 +352,7 @@ func wireNetworker(
 	interfacePrefix string,
 	chainPrefix string,
 	propManager *properties.Manager,
-	networkModulePath string) gardener.Networker {
+) gardener.Networker {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("network-runner")}
 
 	hostConfigurer := &configure.Host{
@@ -360,32 +373,22 @@ func wireNetworker(
 		log.Fatal("invalid pool range", err)
 	}
 
-	switch networkModulePath {
-	case "":
-		return kawasaki.New(
-			kawasaki.NewManager(runner, "/var/run/netns"),
-			kawasaki.SpecParserFunc(kawasaki.ParseSpec),
-			subnets.NewPool(networkPoolCIDR),
-			kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP),
-			kawasaki.NewConfigurer(
-				hostConfigurer,
-				containerCfgApplier,
-				iptablesMgr,
-				&netns.Execer{},
-			),
-			propManager,
-			iptables.NewPortForwarder(runner),
-			portPool,
-		)
-	default:
-		if _, err := os.Stat(networkModulePath); err != nil {
-			log.Fatal("failed-to-stat-network-module", err)
-			return nil
-		}
-		return gardener.ForeignNetworkAdaptor{
-			ForeignNetworker: genclient.New(networkModulePath),
-		}
-	}
+	return kawasaki.New(
+		kawasakiBin,
+		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
+		subnets.NewPool(networkPoolCIDR),
+		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP),
+		kawasaki.NewConfigurer(
+			hostConfigurer,
+			containerCfgApplier,
+			iptablesMgr,
+			&netns.Execer{},
+		),
+		propManager,
+		iptables.NewPortForwarder(runner),
+		portPool,
+		tag,
+	)
 }
 
 func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.CakeOrdinator {
@@ -529,8 +532,25 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 		specs.Device{Path: "/dev/pts/ptmx", Type: 'c', Major: 5, Minor: 2, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
 	)
 
+	uidMap := specs.IDMapping{
+		HostID:      0,
+		ContainerID: 0,
+		Size:        10000,
+	}
+
+	template := &rundmc.BundleTemplate{
+		Rules: []rundmc.BundlerRule{
+			rundmc.BaseTemplateRule{
+				PrivilegedBase:   baseBundle,
+				UnprivilegedBase: baseBundle.WithNamespace(goci.UserNamespace).WithUIDMappings(uidMap).WithGIDMappings(uidMap),
+			},
+			rundmc.RootFSRule{},
+			rundmc.NetworkHookRule{},
+		},
+	}
+
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
-	return rundmc.New(depot, &rundmc.BundleTemplate{Bndl: baseBundle}, runcrunner, startChecker, stateChecker, nstar)
+	return rundmc.New(depot, template, runcrunner, startChecker, stateChecker, nstar)
 }
 
 func missing(flagName string) {

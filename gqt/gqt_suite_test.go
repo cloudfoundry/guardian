@@ -22,7 +22,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, iodaemonBin, nstarBin string
+var ociRuntimeBin, gardenBin, kawasakiBin, iodaemonBin, nstarBin string
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -38,6 +38,9 @@ func TestGqt(t *testing.T) {
 
 		if bins["oci_runtime_path"] != "" {
 			bins["garden_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/guardian", "-tags", "daemon")
+			Expect(err).NotTo(HaveOccurred())
+
+			bins["kawasaki_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/kawasaki")
 			Expect(err).NotTo(HaveOccurred())
 
 			bins["iodaemon_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/cmd/iodaemon")
@@ -63,6 +66,7 @@ func TestGqt(t *testing.T) {
 		gardenBin = bins["garden_bin_path"]
 		iodaemonBin = bins["iodaemon_bin_path"]
 		nstarBin = bins["nstar_bin_path"]
+		kawasakiBin = bins["kawasaki_bin_path"]
 	})
 
 	BeforeEach(func() {
@@ -84,5 +88,5 @@ func startGarden(argv ...string) *runner.RunningGarden {
 		argv = append(argv, "--networkModulePath="+networkModulePath)
 	}
 
-	return runner.Start(gardenBin, iodaemonBin, nstarBin, argv...)
+	return runner.Start(gardenBin, kawasakiBin, iodaemonBin, nstarBin, argv...)
 }

@@ -20,7 +20,7 @@ import (
 var _ = Describe("Rundmc", func() {
 	var (
 		fakeDepot           *fakes.FakeDepot
-		fakeBundler         *fakes.FakeBundler
+		fakeBundler         *fakes.FakeBundleGenerator
 		fakeContainerRunner *fakes.FakeBundleRunner
 		fakeStartChecker    *fakes.FakeChecker
 		fakeNstarRunner     *fakes.FakeNstarRunner
@@ -34,7 +34,7 @@ var _ = Describe("Rundmc", func() {
 		fakeDepot = new(fakes.FakeDepot)
 		fakeContainerRunner = new(fakes.FakeBundleRunner)
 		fakeStartChecker = new(fakes.FakeChecker)
-		fakeBundler = new(fakes.FakeBundler)
+		fakeBundler = new(fakes.FakeBundleGenerator)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeStater = new(fakes.FakeContainerStater)
 		logger = lagertest.NewTestLogger("test")
@@ -49,8 +49,7 @@ var _ = Describe("Rundmc", func() {
 	Describe("Create", func() {
 		It("should ask the depot to create a container", func() {
 			var returnedBundle *goci.Bndl
-			fakeBundler.BundleStub = func(spec gardener.DesiredContainerSpec) *goci.Bndl {
-				returnedBundle = goci.Bundle().WithRootFS(spec.NetworkPath)
+			fakeBundler.GenerateStub = func(spec gardener.DesiredContainerSpec) *goci.Bndl {
 				return returnedBundle
 			}
 

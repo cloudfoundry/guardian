@@ -15,21 +15,13 @@ type Chain interface {
 
 type Manager struct {
 	Chains []Chain
-	*Starter
 }
 
-func NewManager(fc FilterConfig, nc NATConfig, chainPrefix, nicPrefix string, runner command_runner.CommandRunner, logger lager.Logger) *Manager {
+func NewManager(fc FilterConfig, nc NATConfig, runner command_runner.CommandRunner, logger lager.Logger) *Manager {
 	return &Manager{
 		Chains: []Chain{
 			NewFilterChain(fc, runner, logger),
 			NewNATChain(nc, runner, logger),
-		},
-		Starter: &Starter{
-			runner:      runner,
-			fc:          fc,
-			nc:          nc,
-			chainPrefix: chainPrefix,
-			nicPrefix:   nicPrefix,
 		},
 	}
 }

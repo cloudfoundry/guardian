@@ -5,6 +5,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/pivotal-golang/lager"
 )
@@ -15,7 +16,7 @@ const bridgeIntfKey = "kawasaki.bridge-interface"
 const bridgeIpKey = "kawasaki.bridge-ip"
 const containerIpKey = "kawasaki.container-ip"
 const externalIpKey = "kawasaki.external-ip"
-const subnetIpKey = "kawasaki.subnet-ip"
+const subnetKey = "kawasaki.subnet"
 const iptableChainKey = "kawasaki.iptable-chain"
 const mtuKey = "kawasaki.mtu"
 
@@ -74,7 +75,7 @@ type PortForwarderSpec struct {
 }
 
 type Networker struct {
-	netnsMgr NetnsMgr
+	kawasakiBinPath string // path to a binary that will apply the configuration
 
 	specParser    SpecParser
 	subnetPool    subnets.Pool
@@ -83,18 +84,21 @@ type Networker struct {
 	configStore   ConfigStore
 	portForwarder PortForwarder
 	portPool      PortPool
+	tag           string
 }
 
-func New(netnsMgr NetnsMgr,
+func New(
+	kawasakiBinPath string,
 	specParser SpecParser,
 	subnetPool subnets.Pool,
 	configCreator ConfigCreator,
 	configurer Configurer,
 	configStore ConfigStore,
 	portForwarder PortForwarder,
-	portPool PortPool) *Networker {
+	portPool PortPool,
+	tag string) *Networker {
 	return &Networker{
-		netnsMgr: netnsMgr,
+		kawasakiBinPath: kawasakiBinPath,
 
 		specParser:    specParser,
 		subnetPool:    subnetPool,
@@ -104,12 +108,13 @@ func New(netnsMgr NetnsMgr,
 
 		portForwarder: portForwarder,
 		portPool:      portPool,
+		tag:           tag,
 	}
 }
 
-// Network configures a network namespace based on the given spec
-// and returns the path to it
-func (n *Networker) Network(log lager.Logger, handle, spec string) (string, error) {
+// Hook provides path and appropriate arguments to the kawasaki executable that
+// applies the network configuration after the network namesapce creation.
+func (n *Networker) Hook(log lager.Logger, handle, spec string) (gardener.Hook, error) {
 	log = log.Session("network", lager.Data{
 		"handle": handle,
 		"spec":   spec,
@@ -121,42 +126,40 @@ func (n *Networker) Network(log lager.Logger, handle, spec string) (string, erro
 	subnetReq, ipReq, err := n.specParser.Parse(log, spec)
 	if err != nil {
 		log.Error("parse-failed", err)
-		return "", err
+		return gardener.Hook{}, err
 	}
 
 	subnet, ip, err := n.subnetPool.Acquire(log, subnetReq, ipReq)
 	if err != nil {
 		log.Error("acquire-failed", err)
-		return "", err
+		return gardener.Hook{}, err
 	}
 
 	config, err := n.configCreator.Create(log, handle, subnet, ip)
 	if err != nil {
 		log.Error("create-config-failed", err)
-		return "", fmt.Errorf("create network config: %s", err)
+		return gardener.Hook{}, fmt.Errorf("create network config: %s", err)
 	}
+	log.Info("config-create", lager.Data{"config": config})
 
 	save(n.configStore, handle, config)
 
-	err = n.netnsMgr.Create(log, handle)
-	if err != nil {
-		log.Error("create-netns-failed", err)
-		return "", err
-	}
-
-	path, err := n.netnsMgr.Lookup(log, handle)
-	if err != nil {
-		log.Error("lookup-netns-failed", err)
-		return "", err
-	}
-
-	if err := n.configurer.Apply(log, config, path); err != nil {
-		log.Error("apply-config-failed", err)
-		n.destroyNetnsOrLog(log, handle)
-		return "", err
-	}
-
-	return path, nil
+	return gardener.Hook{
+		Path: n.kawasakiBinPath,
+		Args: []string{
+			n.kawasakiBinPath,
+			fmt.Sprintf("--host-interface=%s", config.HostIntf),
+			fmt.Sprintf("--container-interface=%s", config.ContainerIntf),
+			fmt.Sprintf("--bridge-interface=%s", config.BridgeName),
+			fmt.Sprintf("--bridge-ip=%s", config.BridgeIP),
+			fmt.Sprintf("--container-ip=%s", config.ContainerIP),
+			fmt.Sprintf("--external-ip=%s", config.ExternalIP),
+			fmt.Sprintf("--subnet=%s", config.Subnet.String()),
+			fmt.Sprintf("--iptable-chain=%s", config.IPTableChain),
+			fmt.Sprintf("--mtu=%d", config.Mtu),
+			fmt.Sprintf("--tag=%s", n.tag),
+		},
+	}, nil
 }
 
 // Capacity returns the number of subnets this network can host
@@ -202,23 +205,12 @@ func (n *Networker) Destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	if err := n.netnsMgr.Destroy(log, handle); err != nil {
-		log.Error("destroy-namespace-failed", err)
-		return err
-	}
-
 	if err := n.configurer.Destroy(log, cfg); err != nil {
 		log.Error("destroy-config-failed", err)
 		return err
 	}
 
 	return n.subnetPool.Release(cfg.Subnet, cfg.ContainerIP)
-}
-
-func (n *Networker) destroyNetnsOrLog(log lager.Logger, handle string) {
-	if err := n.netnsMgr.Destroy(log, handle); err != nil {
-		log.Error("destroy-failed", err)
-	}
 }
 
 func getAll(config ConfigStore, handle string, key ...string) (vals []string, err error) {
@@ -240,14 +232,14 @@ func save(config ConfigStore, handle string, netConfig NetworkConfig) {
 	config.Set(handle, bridgeIntfKey, netConfig.BridgeName)
 	config.Set(handle, bridgeIpKey, netConfig.BridgeIP.String())
 	config.Set(handle, containerIpKey, netConfig.ContainerIP.String())
-	config.Set(handle, subnetIpKey, netConfig.Subnet.String())
+	config.Set(handle, subnetKey, netConfig.Subnet.String())
 	config.Set(handle, iptableChainKey, netConfig.IPTableChain)
 	config.Set(handle, mtuKey, strconv.Itoa(netConfig.Mtu))
 	config.Set(handle, externalIpKey, netConfig.ExternalIP.String())
 }
 
 func load(config ConfigStore, handle string) (NetworkConfig, error) {
-	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetIpKey, iptableChainKey, mtuKey, externalIpKey)
+	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetKey, iptableChainKey, mtuKey, externalIpKey)
 
 	if err != nil {
 		return NetworkConfig{}, err
