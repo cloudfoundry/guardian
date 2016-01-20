@@ -552,7 +552,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 				UnprivilegedBase: baseBundle.WithNamespace(goci.UserNamespace).WithUIDMappings(uidMap).WithGIDMappings(uidMap),
 			},
 			rundmc.RootFSRule{},
-			rundmc.NetworkHookRule{},
+			rundmc.NetworkHookRule{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
 		},
 	}
 

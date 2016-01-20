@@ -93,6 +93,7 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		Stdout: io.MultiWriter(logging.Writer(log), stdoutW),
 		Stderr: logging.Writer(log),
 	})
+
 	if err != nil {
 		log.Error("start", err)
 		return err

@@ -96,14 +96,12 @@ var _ = Describe("Rundmc", func() {
 
 			It("should not check if the container is started", func() {
 				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).NotTo(Succeed())
-
 				Expect(fakeStartChecker.CheckCallCount()).To(Equal(0))
 			})
 		})
 
 		It("should check if the container is started", func() {
 			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(Succeed())
-
 			Expect(fakeStartChecker.CheckCallCount()).To(Equal(1))
 		})
 

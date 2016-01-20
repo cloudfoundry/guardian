@@ -1,12 +1,15 @@
 package rundmc_test
 
 import (
+	"os"
+
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
@@ -140,18 +143,45 @@ var _ = Describe("RootFSRule", func() {
 })
 
 var _ = Describe("NetworkHookRule", func() {
-	It("add the hook to the pre-start hooks of the passed bundle", func() {
-		bndl := goci.Bndl{}.WithNamespace(goci.UserNamespace)
+	DescribeTable("the envirionment should contain", func(envVar string) {
+		rule := rundmc.NetworkHookRule{LogFilePattern: "/path/to/%s.log"}
 
-		newBndl := rundmc.NetworkHookRule{}.Apply(bndl, gardener.DesiredContainerSpec{
+		newBndl := rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+			Handle: "fred",
+		})
+
+		Expect(newBndl.RuntimeSpec.Hooks.Prestart[0].Env).To(
+			ContainElement(envVar),
+		)
+	},
+		Entry("the GARDEN_LOG_FILE path", "GARDEN_LOG_FILE=/path/to/fred.log"),
+		Entry("a sensible PATH", "PATH="+os.Getenv("PATH")),
+	)
+
+	It("add the hook to the pre-start hooks of the passed bundle", func() {
+		newBndl := rundmc.NetworkHookRule{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			NetworkHook: gardener.Hook{
 				Path: "/path/to/bananas/network",
 				Args: []string{"arg", "barg"},
 			},
 		})
-		Expect(newBndl.RuntimeSpec.Hooks.Prestart).To(ContainElement(specs.Hook{
+
+		Expect(pathAndArgsOf(newBndl.RuntimeSpec.Hooks.Prestart)).To(ContainElement(PathAndArgs{
 			Path: "/path/to/bananas/network",
 			Args: []string{"arg", "barg"},
 		}))
 	})
 })
+
+func pathAndArgsOf(a []specs.Hook) (b []PathAndArgs) {
+	for _, h := range a {
+		b = append(b, PathAndArgs{h.Path, h.Args})
+	}
+
+	return
+}
+
+type PathAndArgs struct {
+	Path string
+	Args []string
+}

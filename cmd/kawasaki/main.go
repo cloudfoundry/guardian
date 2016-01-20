@@ -22,13 +22,29 @@ import (
 )
 
 func main() {
+	cf_lager.AddFlags(flag.CommandLine)
+	logger, _ := cf_lager.New("kawasaki")
+
+	logFile := os.Getenv("GARDEN_LOG_FILE")
+	logFileHandle, err := os.Create(logFile)
+	if err != nil {
+		panic(err)
+	}
+
+	logger.RegisterSink(lager.NewWriterSink(logFileHandle, lager.DEBUG))
+
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Fatal("panicked", fmt.Errorf("%#v", err))
+		}
+	}()
+
 	state := specs.State{}
 	if err := json.NewDecoder(os.Stdin).Decode(&state); err != nil {
 		panic(err)
 	}
 
 	cf_debug_server.AddFlags(flag.CommandLine)
-	cf_lager.AddFlags(flag.CommandLine)
 
 	var config kawasaki.NetworkConfig
 	flag.StringVar(&config.HostIntf, "host-interface", "", "the host interface to create")
@@ -43,13 +59,10 @@ func main() {
 	subnet := flag.String("subnet", "", "subnet of the bridge")
 	flag.Parse()
 
-	var err error
 	_, config.Subnet, err = net.ParseCIDR(*subnet)
 	if err != nil {
 		panic(err)
 	}
-
-	logger, _ := cf_lager.New("kawasaki")
 
 	logger = logger.Session("hook", lager.Data{
 		"config": config,

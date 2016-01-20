@@ -3,8 +3,10 @@ package gqt_test
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -43,6 +45,13 @@ var _ = Describe("Net", func() {
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
+	})
+
+	It("should include logs from the kawasaki network hook in the main logging output", func() {
+		Expect(filepath.Join(client.DepotDir, container.Handle(), "network.log")).To(BeAnExistingFile())
+		log, err := ioutil.ReadFile(filepath.Join(client.DepotDir, container.Handle(), "network.log"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(gbytes.BufferWithBytes(log)).To(gbytes.Say("kawasaki.hook.start"))
 	})
 
 	It("should have a loopback interface", func() {

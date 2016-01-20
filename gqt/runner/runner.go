@@ -15,6 +15,7 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 	"github.com/tedsuo/ifrit"
@@ -27,6 +28,8 @@ var TarPath = os.Getenv("GARDEN_TAR_PATH")
 
 type RunningGarden struct {
 	client.Client
+
+	runner  *ginkgomon.Runner
 	process ifrit.Process
 
 	Pid int
@@ -69,13 +72,14 @@ func Start(bin, kawasakiBin, iodaemonBin, nstarBin string, argv ...string) *Runn
 	}
 
 	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, kawasakiBin, iodaemonBin, nstarBin, TarPath, RootFSPath, argv...)
-	r.process = ifrit.Invoke(&ginkgomon.Runner{
+	r.runner = ginkgomon.New(ginkgomon.Config{
 		Name:              "guardian",
 		Command:           c,
 		AnsiColorCode:     "31m",
 		StartCheck:        "guardian.started",
 		StartCheckTimeout: 30 * time.Second,
 	})
+	r.process = ifrit.Invoke(r.runner)
 
 	r.Pid = c.Process.Pid
 
@@ -225,4 +229,8 @@ func (r *RunningGarden) DestroyContainers() error {
 	}
 
 	return nil
+}
+
+func (r *RunningGarden) Buffer() *gbytes.Buffer {
+	return r.runner.Buffer()
 }
