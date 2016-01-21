@@ -4,16 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Bind mount", func() {
@@ -32,15 +28,6 @@ var _ = Describe("Bind mount", func() {
 		testFileName string
 	)
 
-	allBridges := func() []byte {
-		stdout := gbytes.NewBuffer()
-		cmd, err := gexec.Start(exec.Command("ip", "a"), stdout, GinkgoWriter)
-		Expect(err).ToNot(HaveOccurred())
-		cmd.Wait(time.Second * 5)
-
-		return stdout.Contents()
-	}
-
 	BeforeEach(func() {
 		privilegedContainer = false
 		container = nil
@@ -49,6 +36,9 @@ var _ = Describe("Bind mount", func() {
 		bindMountMode = garden.BindMountModeRO
 		bindMountOrigin = garden.BindMountOriginHost
 		testFileName = ""
+
+		srcPath, testFileName = createTestHostDirAndTestFile()
+		bindMountOrigin = garden.BindMountOriginHost
 	})
 
 	JustBeforeEach(func() {
@@ -70,96 +60,151 @@ var _ = Describe("Bind mount", func() {
 	})
 
 	AfterEach(func() {
+		err := os.RemoveAll(srcPath)
+		Expect(err).ToNot(HaveOccurred())
+
 		if container != nil {
 			err := client.Destroy(container.Handle())
 			Expect(err).ToNot(HaveOccurred())
 		}
 
-		// sanity check that bridges were cleaned up
-		bridgePrefix := fmt.Sprintf("w%db-", GinkgoParallelNode())
-		Expect(allBridges()).ToNot(ContainSubstring(bridgePrefix))
-
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
-	Context("with a host origin bind-mount", func() {
+	Context("which is read-only", func() {
 		BeforeEach(func() {
-			srcPath, testFileName = createTestHostDirAndTestFile()
-			bindMountOrigin = garden.BindMountOriginHost
+			bindMountMode = garden.BindMountModeRO
+			dstPath = "/home/alice/readonly"
 		})
 
-		AfterEach(func() {
-			err := os.RemoveAll(srcPath)
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		Context("which is read-only", func() {
+		Context("and with privileged=true", func() {
 			BeforeEach(func() {
-				bindMountMode = garden.BindMountModeRO
-				dstPath = "/home/alice/readonly"
+				privilegedContainer = true
 			})
 
-			Context("and with privileged=true", func() {
-				BeforeEach(func() {
-					privilegedContainer = true
-				})
-
-				It("is successfully created with correct privileges for non-root in container", func() {
-					checkFileAccess(container, bindMountMode, bindMountOrigin, dstPath, testFileName, privilegedContainer, false)
-				})
-
-				It("is successfully created with correct privileges for root in container", func() {
-					checkFileAccess(container, bindMountMode, bindMountOrigin, dstPath, testFileName, privilegedContainer, true)
-				})
+			It("allows all users to read files", func() {
+				readProcess := readFile(container, dstPath, testFileName, "alice")
+				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
-			Context("and with privileged=false", func() {
-				BeforeEach(func() {
-					privilegedContainer = false
-				})
+			It("does not allow non-root users to write files", func() {
+				writeProcess := writeFile(container, dstPath, "alice")
+				Expect(writeProcess.Wait()).ToNot(Equal(0))
+			})
 
-				It("is successfully created with correct privileges for non-root in container", func() {
-					checkFileAccess(container, bindMountMode, bindMountOrigin, dstPath, testFileName, privilegedContainer, false)
-				})
+			It("allows root to read files", func() {
+				readProcess := readFile(container, dstPath, testFileName, "root")
+				Expect(readProcess.Wait()).To(Equal(0))
+			})
 
-				It("is successfully created with correct privileges for root in container", func() {
-					checkFileAccess(container, bindMountMode, bindMountOrigin, dstPath, testFileName, privilegedContainer, true)
-				})
+			It("does not allow root to write files", func() {
+				writeProcess := writeFile(container, dstPath, "root")
+				Expect(writeProcess.Wait()).ToNot(Equal(0))
 			})
 		})
 
-		Context("which is read-write", func() {
+		Context("and with privileged=false", func() {
 			BeforeEach(func() {
-				bindMountMode = garden.BindMountModeRW
-				dstPath = "/home/alice/readwrite"
+				privilegedContainer = false
 			})
 
-			Context("and with privileged=true", func() {
-				BeforeEach(func() {
-					privilegedContainer = true
-				})
-
-				It("is successfully created with correct privileges for non-root in container", func() {
-					checkFileAccess(container, bindMountMode, bindMountOrigin, dstPath, testFileName, privilegedContainer, false)
-				})
-
-				It("is successfully created with correct privileges for root in container", func() {
-					checkFileAccess(container, bindMountMode, bindMountOrigin, dstPath, testFileName, privilegedContainer, true)
-				})
+			It("allows all users to read files", func() {
+				readProcess := readFile(container, dstPath, testFileName, "alice")
+				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
-			Context("and with privileged=false", func() {
-				BeforeEach(func() {
-					privilegedContainer = false
-				})
+			It("does not allow non-root users to write files", func() {
+				writeProcess := writeFile(container, dstPath, "alice")
+				Expect(writeProcess.Wait()).ToNot(Equal(0))
+			})
 
-				It("is successfully created with correct privileges for non-root in container", func() {
-					checkFileAccess(container, bindMountMode, bindMountOrigin, dstPath, testFileName, privilegedContainer, false)
-				})
+			It("allows root to read files", func() {
+				readProcess := readFile(container, dstPath, testFileName, "root")
+				Expect(readProcess.Wait()).To(Equal(0))
+			})
 
-				PIt("is successfully created with correct privileges for root in container", func() {
-					checkFileAccess(container, bindMountMode, bindMountOrigin, dstPath, testFileName, privilegedContainer, true)
-				})
+			It("does not allow root to write files", func() {
+				writeProcess := writeFile(container, dstPath, "root")
+				Expect(writeProcess.Wait()).ToNot(Equal(0))
+			})
+		})
+	})
+
+	Context("which is read-write", func() {
+		BeforeEach(func() {
+			bindMountMode = garden.BindMountModeRW
+			dstPath = "/home/alice/readwrite"
+		})
+
+		Context("and with privileged=true", func() {
+			BeforeEach(func() {
+				privilegedContainer = true
+			})
+
+			It("allows all users to read files", func() {
+				readProcess := readFile(container, dstPath, testFileName, "alice")
+				Expect(readProcess.Wait()).To(Equal(0))
+			})
+
+			It("does not allow non-root users to write files (since the mounted directory is owned by host-root)", func() {
+				writeProcess := writeFile(container, dstPath, "alice")
+				Expect(writeProcess.Wait()).ToNot(Equal(0))
+			})
+
+			It("allows root to read files", func() {
+				readProcess := readFile(container, dstPath, testFileName, "root")
+				Expect(readProcess.Wait()).To(Equal(0))
+			})
+
+			It("allows root to write files (as container and host root are the same)", func() {
+				writeProcess := writeFile(container, dstPath, "root")
+				Expect(writeProcess.Wait()).To(Equal(0))
+			})
+		})
+
+		Context("and with privileged=false", func() {
+			BeforeEach(func() {
+				privilegedContainer = false
+			})
+
+			It("allows all users to read files", func() {
+				readProcess := readFile(container, dstPath, testFileName, "alice")
+				Expect(readProcess.Wait()).To(Equal(0))
+			})
+
+			// the mounted directory is owned by host-root, so alice shouldnt be able to write
+			It("does not allow non-root users to write files", func() {
+				writeProcess := writeFile(container, dstPath, "alice")
+				Expect(writeProcess.Wait()).ToNot(Equal(0))
+			})
+
+			It("allows root to read files", func() {
+				readProcess := readFile(container, dstPath, testFileName, "root")
+				Expect(readProcess.Wait()).To(Equal(0))
+			})
+
+			// Dear Future Us:
+			// THIS TEST DOCUMENTS THE CURRENT BEHAVIOUR, IT WILL FAIL WHEN UID
+			// MAPPING IS FIXED, AT WHICH POINT THE PENDED TEST BELOW SHOULD BE
+			// UNPENDED, AND THIS TEST SHOULD BE DELETED.
+			// thank you.
+			It("inadvertently allows write to work, since uid mapping currently hard-codes container->host root as 0", func() {
+				writeProcess := writeFile(container, dstPath, "root")
+
+				// Expect(writeProcess.Wait()).NotTo(Equal(0))
+				Expect(writeProcess.Wait()).To(Equal(0))
+			})
+
+			// (this test is pended until uid mapping properly maps unprivileged
+			// container root to a non-host-root uid)
+			//
+			// container and host root are not the same, and the mounted directory is
+			// owned by host-root, so writes should fail.
+			PIt("does not allow root to write files", func() {
+				writeProcess := writeFile(container, dstPath, "root")
+
+				// Expect(writeProcess.Wait()).NotTo(Equal(0))
+				Expect(writeProcess.Wait()).To(Equal(0))
 			})
 		})
 	})
@@ -181,20 +226,8 @@ func createTestHostDirAndTestFile() (string, string) {
 	return tstHostDir, fileName
 }
 
-func checkFileAccess(container garden.Container, bindMountMode garden.BindMountMode, bindMountOrigin garden.BindMountOrigin, dstPath string, fileName string, privCtr, privReq bool) {
-	readOnly := (garden.BindMountModeRO == bindMountMode)
-	ctrOrigin := (garden.BindMountOriginContainer == bindMountOrigin)
-	realRoot := (privReq && privCtr)
-
-	// can we read a file?
+func readFile(container garden.Container, dstPath, fileName, user string) garden.Process {
 	filePath := filepath.Join(dstPath, fileName)
-
-	var user string
-	if privReq {
-		user = "root"
-	} else {
-		user = "alice"
-	}
 
 	process, err := container.Run(garden.ProcessSpec{
 		Path: "cat",
@@ -203,12 +236,14 @@ func checkFileAccess(container garden.Container, bindMountMode garden.BindMountM
 	}, garden.ProcessIO{})
 	Expect(err).ToNot(HaveOccurred())
 
-	Expect(process.Wait()).To(Equal(0))
+	return process
+}
 
+func writeFile(container garden.Container, dstPath, user string) garden.Process {
 	// try to write a new file
-	filePath = filepath.Join(dstPath, "checkFileAccess-file")
+	filePath := filepath.Join(dstPath, "checkFileAccess-file")
 
-	process, err = container.Run(garden.ProcessSpec{
+	process, err := container.Run(garden.ProcessSpec{
 		Path: "touch",
 		Args: []string{filePath},
 		User: user,
@@ -218,24 +253,5 @@ func checkFileAccess(container garden.Container, bindMountMode garden.BindMountM
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	if readOnly || (!realRoot && !ctrOrigin) {
-		Expect(process.Wait()).ToNot(Equal(0))
-	} else {
-		Expect(process.Wait()).To(Equal(0))
-	}
-
-	// try to delete an existing file
-	filePath = filepath.Join(dstPath, fileName)
-
-	process, err = container.Run(garden.ProcessSpec{
-		Path: "rm",
-		Args: []string{filePath},
-		User: user,
-	}, garden.ProcessIO{})
-	Expect(err).ToNot(HaveOccurred())
-	if readOnly || (!realRoot && !ctrOrigin) {
-		Expect(process.Wait()).ToNot(Equal(0))
-	} else {
-		Expect(process.Wait()).To(Equal(0))
-	}
+	return process
 }
