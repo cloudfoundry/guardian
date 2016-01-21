@@ -10,6 +10,6 @@ elif [ -d $ARGS ] &&
      [ "$(find $ARGS -maxdepth 1 -name '*_linux_test.go')" != "" ]; then
    (cd ../../../..; ./scripts/remote-fly ci/guardian.yml -- $ARGS)
 else
-  ginkgo -r -race $ARGS
+  ginkgo -race $ARGS
 fi
 
