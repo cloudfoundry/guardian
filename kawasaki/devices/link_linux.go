@@ -13,7 +13,6 @@ import (
 )
 
 type Link struct {
-	Name string
 }
 
 func (Link) AddIP(intf *net.Interface, ip net.IP, subnet *net.IPNet) error {
@@ -117,14 +116,14 @@ func (Link) List() (names []string, err error) {
 	return names, nil
 }
 
-func (l Link) Statistics() (stats garden.ContainerNetworkStat, err error) {
+func (l Link) Statistics(name string) (stats garden.ContainerNetworkStat, err error) {
 	var RxBytes, TxBytes uint64
 
-	if RxBytes, err = intfStat(l.Name, "rx_bytes"); err != nil {
+	if RxBytes, err = intfStat(name, "rx_bytes"); err != nil {
 		return stats, err
 	}
 
-	if TxBytes, err = intfStat(l.Name, "tx_bytes"); err != nil {
+	if TxBytes, err = intfStat(name, "tx_bytes"); err != nil {
 		return stats, err
 	}
 

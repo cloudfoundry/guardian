@@ -5,27 +5,30 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
+	"github.com/pivotal-golang/lager"
 )
 
 type FakeContainerApplier struct {
-	ApplyStub        func(cfg kawasaki.NetworkConfig) error
+	ApplyStub        func(logger lager.Logger, cfg kawasaki.NetworkConfig) error
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
-		cfg kawasaki.NetworkConfig
+		logger lager.Logger
+		cfg    kawasaki.NetworkConfig
 	}
 	applyReturns struct {
 		result1 error
 	}
 }
 
-func (fake *FakeContainerApplier) Apply(cfg kawasaki.NetworkConfig) error {
+func (fake *FakeContainerApplier) Apply(logger lager.Logger, cfg kawasaki.NetworkConfig) error {
 	fake.applyMutex.Lock()
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
-		cfg kawasaki.NetworkConfig
-	}{cfg})
+		logger lager.Logger
+		cfg    kawasaki.NetworkConfig
+	}{logger, cfg})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(cfg)
+		return fake.ApplyStub(logger, cfg)
 	} else {
 		return fake.applyReturns.result1
 	}
@@ -37,10 +40,10 @@ func (fake *FakeContainerApplier) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
-func (fake *FakeContainerApplier) ApplyArgsForCall(i int) kawasaki.NetworkConfig {
+func (fake *FakeContainerApplier) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
-	return fake.applyArgsForCall[i].cfg
+	return fake.applyArgsForCall[i].logger, fake.applyArgsForCall[i].cfg
 }
 
 func (fake *FakeContainerApplier) ApplyReturns(result1 error) {

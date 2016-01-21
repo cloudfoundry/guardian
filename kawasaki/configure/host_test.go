@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices/fakedevices"
+	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
@@ -23,6 +24,7 @@ var _ = Describe("Host", func() {
 
 		configurer *configure.Host
 
+		logger lager.Logger
 		config kawasaki.NetworkConfig
 	)
 
@@ -31,7 +33,8 @@ var _ = Describe("Host", func() {
 		linkConfigurer = &fakedevices.FakeLink{AddIPReturns: make(map[string]error)}
 		bridger = &fakedevices.FakeBridge{}
 
-		configurer = &configure.Host{Veth: vethCreator, Link: linkConfigurer, Bridge: bridger, Logger: lagertest.NewTestLogger("test")}
+		logger = lagertest.NewTestLogger("test")
+		configurer = &configure.Host{Veth: vethCreator, Link: linkConfigurer, Bridge: bridger}
 
 		config = kawasaki.NetworkConfig{}
 	})
@@ -69,7 +72,7 @@ var _ = Describe("Host", func() {
 			config.HostIntf = "host"
 			config.BridgeName = "bridge"
 			config.ContainerIntf = "container"
-			Expect(configurer.Apply(config, netnsFD)).To(Succeed())
+			Expect(configurer.Apply(logger, config, netnsFD)).To(Succeed())
 
 			Expect(vethCreator.CreateCalledWith.HostIfcName).To(Equal("host"))
 			Expect(vethCreator.CreateCalledWith.ContainerIfcName).To(Equal("container"))
@@ -81,7 +84,7 @@ var _ = Describe("Host", func() {
 				config.BridgeName = "bridge"
 				config.ContainerIntf = "container"
 				vethCreator.CreateReturns.Err = errors.New("foo bar baz")
-				err := configurer.Apply(config, netnsFD)
+				err := configurer.Apply(logger, config, netnsFD)
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(&configure.VethPairCreationError{Cause: vethCreator.CreateReturns.Err, HostIfcName: "host", ContainerIfcName: "container"}))
 			})
@@ -97,7 +100,7 @@ var _ = Describe("Host", func() {
 				config.HostIntf = "host"
 				config.BridgeName = "bridge"
 				config.Mtu = 123
-				Expect(configurer.Apply(config, netnsFD)).To(Succeed())
+				Expect(configurer.Apply(logger, config, netnsFD)).To(Succeed())
 
 				Expect(linkConfigurer.SetMTUCalledWith.Interface).To(Equal(vethCreator.CreateReturns.Host))
 				Expect(linkConfigurer.SetMTUCalledWith.MTU).To(Equal(123))
@@ -110,7 +113,7 @@ var _ = Describe("Host", func() {
 					config.ContainerIntf = "container"
 					config.Mtu = 14
 					linkConfigurer.SetMTUReturns = errors.New("o no")
-					err := configurer.Apply(config, netnsFD)
+					err := configurer.Apply(logger, config, netnsFD)
 					Expect(err).To(MatchError(&configure.MTUError{Cause: linkConfigurer.SetMTUReturns, Intf: vethCreator.CreateReturns.Host, MTU: 14}))
 				})
 			})
@@ -121,7 +124,7 @@ var _ = Describe("Host", func() {
 
 				config.BridgeName = "bridge"
 
-				Expect(configurer.Apply(config, netnsFD)).To(Succeed())
+				Expect(configurer.Apply(logger, config, netnsFD)).To(Succeed())
 				Expect(linkConfigurer.SetNsCalledWith.Fd).To(Equal(int(netnsFD.Fd())))
 
 				os.RemoveAll(f.Name())
@@ -133,7 +136,7 @@ var _ = Describe("Host", func() {
 
 					linkConfigurer.SetNsReturns = errors.New("o no")
 
-					err := configurer.Apply(config, netnsFD)
+					err := configurer.Apply(logger, config, netnsFD)
 					Expect(err).To(MatchError(&configure.SetNsFailedError{Cause: linkConfigurer.SetNsReturns, Intf: vethCreator.CreateReturns.Container, Netns: netnsFD}))
 				})
 			})
@@ -142,7 +145,7 @@ var _ = Describe("Host", func() {
 				Context("when the bridge interface does not exist", func() {
 					It("creates the bridge", func() {
 						config.BridgeName = "banana-bridge"
-						Expect(configurer.Apply(config, netnsFD)).To(Succeed())
+						Expect(configurer.Apply(logger, config, netnsFD)).To(Succeed())
 						Expect(bridger.CreateCalledWith.Name).To(Equal("banana-bridge"))
 					})
 
@@ -151,7 +154,7 @@ var _ = Describe("Host", func() {
 						bridger.CreateReturns.Interface = createdBridge
 
 						config.BridgeName = "banana-bridge"
-						Expect(configurer.Apply(config, netnsFD)).To(Succeed())
+						Expect(configurer.Apply(logger, config, netnsFD)).To(Succeed())
 						Expect(bridger.AddCalledWith.Bridge).To(Equal(createdBridge))
 					})
 
@@ -160,7 +163,7 @@ var _ = Describe("Host", func() {
 							bridger.CreateReturns.Error = errors.New("kawasaki!")
 
 							config.BridgeName = "banana-bridge"
-							Expect(configurer.Apply(config, netnsFD)).To(MatchError("kawasaki!"))
+							Expect(configurer.Apply(logger, config, netnsFD)).To(MatchError("kawasaki!"))
 						})
 					})
 				})
@@ -168,13 +171,13 @@ var _ = Describe("Host", func() {
 				Context("when the bridge interface exists", func() {
 					It("adds the host interface to the existing bridge", func() {
 						config.BridgeName = "bridge"
-						Expect(configurer.Apply(config, netnsFD)).To(Succeed())
+						Expect(configurer.Apply(logger, config, netnsFD)).To(Succeed())
 						Expect(bridger.AddCalledWith.Bridge).To(Equal(existingBridge))
 					})
 
 					It("brings the host interface up", func() {
 						config.BridgeName = "bridge"
-						Expect(configurer.Apply(config, netnsFD)).To(Succeed())
+						Expect(configurer.Apply(logger, config, netnsFD)).To(Succeed())
 						Expect(linkConfigurer.SetUpCalledWith).To(ContainElement(vethCreator.CreateReturns.Host))
 					})
 
@@ -190,7 +193,7 @@ var _ = Describe("Host", func() {
 							}
 
 							config.BridgeName = "bridge"
-							err := configurer.Apply(config, netnsFD)
+							err := configurer.Apply(logger, config, netnsFD)
 							Expect(err).To(MatchError(&configure.LinkUpError{Cause: cause, Link: vethCreator.CreateReturns.Host, Role: "host"}))
 						})
 					})

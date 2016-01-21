@@ -88,7 +88,7 @@ func (c *container) NetIn(hostPort, containerPort uint32) (uint32, uint32, error
 }
 
 func (c *container) NetOut(netOutRule garden.NetOutRule) error {
-	return nil
+	return c.networker.NetOut(c.logger, c.handle, netOutRule)
 }
 
 func (c *container) Attach(processID string, io garden.ProcessIO) (garden.Process, error) {

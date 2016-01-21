@@ -10,15 +10,11 @@ import (
 	"github.com/cloudfoundry-incubator/cf-debug-server"
 	"github.com/cloudfoundry-incubator/cf-lager"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/factory"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
-	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/opencontainers/specs"
 	"github.com/pivotal-golang/lager"
-
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices"
 )
 
 func main() {
@@ -50,12 +46,12 @@ func main() {
 	flag.StringVar(&config.HostIntf, "host-interface", "", "the host interface to create")
 	flag.StringVar(&config.ContainerIntf, "container-interface", "", "the container interface to create")
 	flag.StringVar(&config.BridgeName, "bridge-interface", "", "the bridge interface to create or use")
-	flag.StringVar(&config.IPTableChain, "iptable-chain", "", "the iptable chain to add rules to")
+	flag.StringVar(&config.IPTablePrefix, "iptable-prefix", "", "the iptable chain prefix")
+	flag.StringVar(&config.IPTableInstance, "iptable-instance", "", "the iptable instance to add rules to")
 	flag.IntVar(&config.Mtu, "mtu", 1500, "the mtu")
 	flag.Var(&IPValue{&config.BridgeIP}, "bridge-ip", "the IP address of the bridge interface")
 	flag.Var(&IPValue{&config.ExternalIP}, "external-ip", "the IP address of the host interface")
 	flag.Var(&IPValue{&config.ContainerIP}, "container-ip", "the IP address of the container interface")
-	tag := flag.String("tag", "", "a uniquness tag for iptable chains")
 	subnet := flag.String("subnet", "", "subnet of the bridge")
 	flag.Parse()
 
@@ -71,58 +67,10 @@ func main() {
 
 	logger.Info("start")
 
-	iptablesMgr := wireIptables(logger, *tag, true)
-	configurer := wireConfigurer(logger, iptablesMgr)
-
+	configurer := factory.NewDefaultConfigurer(iptables.New(linux_command_runner.New(), config.IPTablePrefix))
 	if err := configurer.Apply(logger, config, fmt.Sprintf("/proc/%d/ns/net", state.Pid)); err != nil {
 		panic(err)
 	}
-}
-
-func wireConfigurer(log lager.Logger, iptablesMgr *iptables.Manager) kawasaki.Configurer {
-	hostConfigurer := &configure.Host{
-		Veth:   &devices.VethCreator{},
-		Link:   &devices.Link{Name: "guardian"},
-		Bridge: &devices.Bridge{},
-		Logger: log.Session("network-host-configurer"),
-	}
-
-	containerCfgApplier := &configure.Container{
-		Logger: log.Session("network-container-configurer"),
-		Link:   &devices.Link{Name: "guardian"},
-	}
-
-	configurer := kawasaki.NewConfigurer(
-		hostConfigurer,
-		containerCfgApplier,
-		iptablesMgr,
-		&netns.Execer{},
-	)
-
-	return configurer
-}
-
-func wireIptables(logger lager.Logger, tag string, allowHostAccess bool) *iptables.Manager {
-	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("iptables-runner")}
-
-	filterConfig := iptables.FilterConfig{
-		AllowHostAccess: allowHostAccess,
-		InputChain:      fmt.Sprintf("g-%s-input", tag),
-		ForwardChain:    fmt.Sprintf("g-%s-forward", tag),
-		DefaultChain:    fmt.Sprintf("g-%s-default", tag),
-	}
-
-	natConfig := iptables.NATConfig{
-		PreroutingChain:  fmt.Sprintf("g-%s-prerouting", tag),
-		PostroutingChain: fmt.Sprintf("g-%s-postrouting", tag),
-	}
-
-	return iptables.NewManager(
-		filterConfig,
-		natConfig,
-		runner,
-		logger,
-	)
 }
 
 type IPValue struct {

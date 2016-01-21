@@ -5,6 +5,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/pivotal-golang/lager"
@@ -17,7 +18,8 @@ const bridgeIpKey = "kawasaki.bridge-ip"
 const containerIpKey = "kawasaki.container-ip"
 const externalIpKey = "kawasaki.external-ip"
 const subnetKey = "kawasaki.subnet"
-const iptableChainKey = "kawasaki.iptable-chain"
+const iptablePrefixKey = "kawasaki.iptable-prefix"
+const iptableInstanceKey = "kawasaki.iptable-inst"
 const mtuKey = "kawasaki.mtu"
 
 //go:generate counterfeiter . NetnsMgr
@@ -63,28 +65,34 @@ type PortPool interface {
 //go:generate counterfeiter . PortForwarder
 
 type PortForwarder interface {
-	Forward(spec *PortForwarderSpec) error
+	Forward(spec PortForwarderSpec) error
 }
 
 type PortForwarderSpec struct {
-	FromPort     uint32
-	ToPort       uint32
-	IPTableChain string
-	ContainerIP  net.IP
-	ExternalIP   net.IP
+	InstanceID  string
+	FromPort    uint32
+	ToPort      uint32
+	ContainerIP net.IP
+	ExternalIP  net.IP
+}
+
+//go:generate counterfeiter . FirewallOpener
+
+type FirewallOpener interface {
+	Open(log lager.Logger, instance string, rule garden.NetOutRule) error
 }
 
 type Networker struct {
 	kawasakiBinPath string // path to a binary that will apply the configuration
 
-	specParser    SpecParser
-	subnetPool    subnets.Pool
-	configCreator ConfigCreator
-	configurer    Configurer
-	configStore   ConfigStore
-	portForwarder PortForwarder
-	portPool      PortPool
-	tag           string
+	specParser     SpecParser
+	subnetPool     subnets.Pool
+	configCreator  ConfigCreator
+	configurer     Configurer
+	configStore    ConfigStore
+	portForwarder  PortForwarder
+	portPool       PortPool
+	firewallOpener FirewallOpener
 }
 
 func New(
@@ -94,9 +102,10 @@ func New(
 	configCreator ConfigCreator,
 	configurer Configurer,
 	configStore ConfigStore,
-	portForwarder PortForwarder,
 	portPool PortPool,
-	tag string) *Networker {
+	portForwarder PortForwarder,
+	firewallOpener FirewallOpener,
+) *Networker {
 	return &Networker{
 		kawasakiBinPath: kawasakiBinPath,
 
@@ -108,7 +117,8 @@ func New(
 
 		portForwarder: portForwarder,
 		portPool:      portPool,
-		tag:           tag,
+
+		firewallOpener: firewallOpener,
 	}
 }
 
@@ -155,9 +165,9 @@ func (n *Networker) Hook(log lager.Logger, handle, spec string) (gardener.Hook, 
 			fmt.Sprintf("--container-ip=%s", config.ContainerIP),
 			fmt.Sprintf("--external-ip=%s", config.ExternalIP),
 			fmt.Sprintf("--subnet=%s", config.Subnet.String()),
-			fmt.Sprintf("--iptable-chain=%s", config.IPTableChain),
 			fmt.Sprintf("--mtu=%d", config.Mtu),
-			fmt.Sprintf("--tag=%s", n.tag),
+			fmt.Sprintf("--iptable-prefix=%s", config.IPTablePrefix),
+			fmt.Sprintf("--iptable-instance=%s", config.IPTableInstance),
 		},
 	}, nil
 }
@@ -184,12 +194,12 @@ func (n *Networker) NetIn(handle string, externalPort, containerPort uint32) (ui
 		containerPort = externalPort
 	}
 
-	err = n.portForwarder.Forward(&PortForwarderSpec{
-		FromPort:     externalPort,
-		ToPort:       containerPort,
-		IPTableChain: cfg.IPTableChain,
-		ContainerIP:  cfg.ContainerIP,
-		ExternalIP:   cfg.ExternalIP,
+	err = n.portForwarder.Forward(PortForwarderSpec{
+		InstanceID:  cfg.IPTableInstance,
+		FromPort:    externalPort,
+		ToPort:      containerPort,
+		ContainerIP: cfg.ContainerIP,
+		ExternalIP:  cfg.ExternalIP,
 	})
 
 	if err != nil {
@@ -197,6 +207,15 @@ func (n *Networker) NetIn(handle string, externalPort, containerPort uint32) (ui
 	}
 
 	return externalPort, containerPort, nil
+}
+
+func (n *Networker) NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error {
+	cfg, err := load(n.configStore, handle)
+	if err != nil {
+		return err
+	}
+
+	return n.firewallOpener.Open(log, cfg.IPTableInstance, rule)
 }
 
 func (n *Networker) Destroy(log lager.Logger, handle string) error {
@@ -233,13 +252,14 @@ func save(config ConfigStore, handle string, netConfig NetworkConfig) {
 	config.Set(handle, bridgeIpKey, netConfig.BridgeIP.String())
 	config.Set(handle, containerIpKey, netConfig.ContainerIP.String())
 	config.Set(handle, subnetKey, netConfig.Subnet.String())
-	config.Set(handle, iptableChainKey, netConfig.IPTableChain)
+	config.Set(handle, iptablePrefixKey, netConfig.IPTablePrefix)
+	config.Set(handle, iptableInstanceKey, netConfig.IPTableInstance)
 	config.Set(handle, mtuKey, strconv.Itoa(netConfig.Mtu))
 	config.Set(handle, externalIpKey, netConfig.ExternalIP.String())
 }
 
 func load(config ConfigStore, handle string) (NetworkConfig, error) {
-	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetKey, iptableChainKey, mtuKey, externalIpKey)
+	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetKey, iptablePrefixKey, iptableInstanceKey, mtuKey, externalIpKey)
 
 	if err != nil {
 		return NetworkConfig{}, err
@@ -250,20 +270,21 @@ func load(config ConfigStore, handle string) (NetworkConfig, error) {
 		return NetworkConfig{}, err
 	}
 
-	mtu, err := strconv.Atoi(vals[7])
+	mtu, err := strconv.Atoi(vals[8])
 	if err != nil {
 		return NetworkConfig{}, err
 	}
 
 	return NetworkConfig{
-		HostIntf:      vals[0],
-		ContainerIntf: vals[1],
-		BridgeName:    vals[2],
-		BridgeIP:      net.ParseIP(vals[3]),
-		ContainerIP:   net.ParseIP(vals[4]),
-		ExternalIP:    net.ParseIP(vals[8]),
-		Subnet:        ipnet,
-		IPTableChain:  vals[6],
-		Mtu:           mtu,
+		HostIntf:        vals[0],
+		ContainerIntf:   vals[1],
+		BridgeName:      vals[2],
+		BridgeIP:        net.ParseIP(vals[3]),
+		ContainerIP:     net.ParseIP(vals[4]),
+		ExternalIP:      net.ParseIP(vals[9]),
+		Subnet:          ipnet,
+		IPTablePrefix:   vals[6],
+		IPTableInstance: vals[7],
+		Mtu:             mtu,
 	}, nil
 }

@@ -85,12 +85,11 @@ var _ = Describe("Properties", func() {
 		props, err := container.Properties()
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(props).To(HaveLen(9))
 		Expect(props).To(HaveKey("kawasaki.bridge-interface"))
 		Expect(props).To(HaveKey("kawasaki.bridge-ip"))
 		Expect(props).To(HaveKey("kawasaki.container-ip"))
 		Expect(props).To(HaveKey("kawasaki.host-interface"))
-		Expect(props).To(HaveKey("kawasaki.iptable-chain"))
+		Expect(props).To(HaveKey("kawasaki.iptable-inst"))
 		Expect(props).To(HaveKey("kawasaki.subnet"))
 		Expect(props).To(HaveKey("kawasaki.container-interface"))
 		Expect(props).To(HaveKey("kawasaki.external-ip"))

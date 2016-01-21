@@ -15,16 +15,15 @@ type Container struct {
 		SetMTU(intf *net.Interface, mtu int) error
 		InterfaceByName(name string) (*net.Interface, bool, error)
 	}
-
-	Logger lager.Logger
 }
 
-func (c *Container) Apply(config kawasaki.NetworkConfig) error {
+func (c *Container) Apply(log lager.Logger, config kawasaki.NetworkConfig) error {
 	if err := c.configureLoopbackIntf(); err != nil {
 		return err
 	}
 
 	return c.configureContainerIntf(
+		log,
 		config.ContainerIntf,
 		config.ContainerIP,
 		config.BridgeIP,
@@ -33,8 +32,8 @@ func (c *Container) Apply(config kawasaki.NetworkConfig) error {
 	)
 }
 
-func (c *Container) configureContainerIntf(name string, ip, gatewayIP net.IP, subnet *net.IPNet, mtu int) (err error) {
-	cLog := c.Logger.Session("configure-container", lager.Data{
+func (c *Container) configureContainerIntf(log lager.Logger, name string, ip, gatewayIP net.IP, subnet *net.IPNet, mtu int) (err error) {
+	cLog := log.Session("configure-container", lager.Data{
 		"name":    name,
 		"ip":      ip,
 		"gateway": gatewayIP,

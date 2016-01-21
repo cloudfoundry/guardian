@@ -8,20 +8,20 @@ import (
 )
 
 type FakePortForwarder struct {
-	ForwardStub        func(spec *kawasaki.PortForwarderSpec) error
+	ForwardStub        func(spec kawasaki.PortForwarderSpec) error
 	forwardMutex       sync.RWMutex
 	forwardArgsForCall []struct {
-		spec *kawasaki.PortForwarderSpec
+		spec kawasaki.PortForwarderSpec
 	}
 	forwardReturns struct {
 		result1 error
 	}
 }
 
-func (fake *FakePortForwarder) Forward(spec *kawasaki.PortForwarderSpec) error {
+func (fake *FakePortForwarder) Forward(spec kawasaki.PortForwarderSpec) error {
 	fake.forwardMutex.Lock()
 	fake.forwardArgsForCall = append(fake.forwardArgsForCall, struct {
-		spec *kawasaki.PortForwarderSpec
+		spec kawasaki.PortForwarderSpec
 	}{spec})
 	fake.forwardMutex.Unlock()
 	if fake.ForwardStub != nil {
@@ -37,7 +37,7 @@ func (fake *FakePortForwarder) ForwardCallCount() int {
 	return len(fake.forwardArgsForCall)
 }
 
-func (fake *FakePortForwarder) ForwardArgsForCall(i int) *kawasaki.PortForwarderSpec {
+func (fake *FakePortForwarder) ForwardArgsForCall(i int) kawasaki.PortForwarderSpec {
 	fake.forwardMutex.RLock()
 	defer fake.forwardMutex.RUnlock()
 	return fake.forwardArgsForCall[i].spec

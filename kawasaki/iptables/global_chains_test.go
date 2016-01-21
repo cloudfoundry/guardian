@@ -24,16 +24,12 @@ var _ = Describe("Setup", func() {
 	})
 
 	JustBeforeEach(func() {
-		starter = iptables.NewStarter(fakeRunner, iptables.FilterConfig{
-			InputChain:      "the-filter-input-chain",
-			ForwardChain:    "the-filter-forward-chain",
-			DefaultChain:    "the-filter-default-chain",
-			DenyNetworks:    denyNetworks,
-			AllowHostAccess: true,
-		}, iptables.NATConfig{
-			PreroutingChain:  "the-nat-prerouting-chain",
-			PostroutingChain: "the-nat-postrouting-chain",
-		}, "the-chain-prefix", "the-nic-prefix")
+		starter = iptables.NewStarter(
+			iptables.New(fakeRunner, "prefix-"),
+			true,
+			"the-nic-prefix",
+			denyNetworks,
+		)
 	})
 
 	It("runs the setup script, passing the environment variables", func() {
@@ -46,13 +42,13 @@ var _ = Describe("Setup", func() {
 				fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 				"ACTION=setup",
 
-				"GARDEN_IPTABLES_FILTER_INPUT_CHAIN=the-filter-input-chain",
-				"GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=the-filter-forward-chain",
-				"GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=the-filter-default-chain",
-				"GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=the-chain-prefix",
-				"GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=the-nat-prerouting-chain",
-				"GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=the-nat-postrouting-chain",
-				"GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=the-chain-prefix",
+				"GARDEN_IPTABLES_FILTER_INPUT_CHAIN=prefix-input",
+				"GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=prefix-forward",
+				"GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=prefix-default",
+				"GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=prefix-instance-",
+				"GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=prefix-prerouting",
+				"GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=prefix-postrouting",
+				"GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=prefix-instance-",
 				"GARDEN_NETWORK_INTERFACE_PREFIX=the-nic-prefix",
 				"GARDEN_IPTABLES_ALLOW_HOST_ACCESS=true",
 			},
@@ -64,8 +60,9 @@ var _ = Describe("Setup", func() {
 			fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "bash",
 				Args: []string{"-c", iptables.SetupScript},
-			}, func(_ *exec.Cmd) error {
-				return fmt.Errorf("oh no!")
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stderr.Write([]byte("oh no!"))
+				return fmt.Errorf("exit status something")
 			})
 		})
 
@@ -89,11 +86,11 @@ var _ = Describe("Setup", func() {
 				},
 				fake_command_runner.CommandSpec{
 					Path: "/sbin/iptables",
-					Args: []string{"-w", "-A", "the-filter-default-chain", "-d", "1.2.3.4/11", "-j", "REJECT"},
+					Args: []string{"-w", "-A", "prefix-default", "--destination", "1.2.3.4/11", "--jump", "REJECT"},
 				},
 				fake_command_runner.CommandSpec{
 					Path: "/sbin/iptables",
-					Args: []string{"-w", "-A", "the-filter-default-chain", "-d", "5.6.7.8/33", "-j", "REJECT"},
+					Args: []string{"-w", "-A", "prefix-default", "--destination", "5.6.7.8/33", "--jump", "REJECT"},
 				},
 			))
 		})
@@ -102,8 +99,9 @@ var _ = Describe("Setup", func() {
 			BeforeEach(func() {
 				fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "/sbin/iptables",
-				}, func(_ *exec.Cmd) error {
-					return fmt.Errorf("oh banana error!")
+				}, func(cmd *exec.Cmd) error {
+					cmd.Stderr.Write([]byte("oh banana error!"))
+					return fmt.Errorf("exit status something")
 				})
 			})
 

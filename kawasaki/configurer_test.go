@@ -22,7 +22,7 @@ var _ = Describe("Configurer", func() {
 	var (
 		fakeHostConfigurer         *fakes.FakeHostConfigurer
 		fakeContainerConfigApplier *fakes.FakeContainerApplier
-		fakeIPTablesConfigurer     *fakes.FakeIPTablesConfigurer
+		fakeInstanceChainCreator   *fakes.FakeInstanceChainCreator
 		fakeNsExecer               *fakes.FakeNetnsExecer
 
 		netnsFD *os.File
@@ -35,14 +35,14 @@ var _ = Describe("Configurer", func() {
 	BeforeEach(func() {
 		fakeHostConfigurer = new(fakes.FakeHostConfigurer)
 		fakeContainerConfigApplier = new(fakes.FakeContainerApplier)
-		fakeIPTablesConfigurer = new(fakes.FakeIPTablesConfigurer)
+		fakeInstanceChainCreator = new(fakes.FakeInstanceChainCreator)
 
 		fakeNsExecer = new(fakes.FakeNetnsExecer)
 
 		var err error
 		netnsFD, err = ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
-		configurer = kawasaki.NewConfigurer(fakeHostConfigurer, fakeContainerConfigApplier, fakeIPTablesConfigurer, fakeNsExecer)
+		configurer = kawasaki.NewConfigurer(fakeHostConfigurer, fakeContainerConfigApplier, fakeInstanceChainCreator, fakeNsExecer)
 
 		logger = lagertest.NewTestLogger("test")
 	})
@@ -73,7 +73,7 @@ var _ = Describe("Configurer", func() {
 				Expect(configurer.Apply(logger, cfg, netnsFD.Name())).To(Succeed())
 
 				Expect(fakeHostConfigurer.ApplyCallCount()).To(Equal(1))
-				appliedCfg, fd := fakeHostConfigurer.ApplyArgsForCall(0)
+				_, appliedCfg, fd := fakeHostConfigurer.ApplyArgsForCall(0)
 				Expect(appliedCfg).To(Equal(cfg))
 				Expect(fd.Name()).To(Equal(netnsFD.Name()))
 			})
@@ -94,23 +94,24 @@ var _ = Describe("Configurer", func() {
 
 				It("does not configure IPTables", func() {
 					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("boom"))
-					Expect(fakeIPTablesConfigurer.ApplyCallCount()).To(Equal(0))
+					Expect(fakeInstanceChainCreator.CreateCallCount()).To(Equal(0))
 				})
 			})
 
 			It("applies the iptable configuration", func() {
 				_, subnet, _ := net.ParseCIDR("1.2.3.4/5")
 				cfg := kawasaki.NetworkConfig{
-					IPTableChain: "the-iptable-chain",
-					BridgeName:   "the-bridge-name",
-					ContainerIP:  net.ParseIP("1.2.3.4"),
-					Subnet:       subnet,
+					IPTablePrefix:   "the-iptable",
+					IPTableInstance: "instance",
+					BridgeName:      "the-bridge-name",
+					ContainerIP:     net.ParseIP("1.2.3.4"),
+					Subnet:          subnet,
 				}
 
 				Expect(configurer.Apply(logger, cfg, netnsFD.Name())).To(Succeed())
-				Expect(fakeIPTablesConfigurer.ApplyCallCount()).To(Equal(1))
-				instanceChain, bridgeName, ip, subnet := fakeIPTablesConfigurer.ApplyArgsForCall(0)
-				Expect(instanceChain).To(Equal("the-iptable-chain"))
+				Expect(fakeInstanceChainCreator.CreateCallCount()).To(Equal(1))
+				_, instanceChain, bridgeName, ip, subnet := fakeInstanceChainCreator.CreateArgsForCall(0)
+				Expect(instanceChain).To(Equal("instance"))
 				Expect(bridgeName).To(Equal("the-bridge-name"))
 				Expect(ip).To(Equal(net.ParseIP("1.2.3.4")))
 				Expect(subnet).To(Equal(subnet))
@@ -118,7 +119,7 @@ var _ = Describe("Configurer", func() {
 
 			Context("when applying IPTables configuration fails", func() {
 				It("returns the error", func() {
-					fakeIPTablesConfigurer.ApplyReturns(errors.New("oh no"))
+					fakeInstanceChainCreator.CreateReturns(errors.New("oh no"))
 					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("oh no"))
 				})
 			})
@@ -137,7 +138,9 @@ var _ = Describe("Configurer", func() {
 				Expect(fakeContainerConfigApplier.ApplyCallCount()).To(Equal(0))
 				cb()
 				Expect(fakeContainerConfigApplier.ApplyCallCount()).To(Equal(1))
-				Expect(fakeContainerConfigApplier.ApplyArgsForCall(0)).To(Equal(cfg))
+
+				_, cfgArg := fakeContainerConfigApplier.ApplyArgsForCall(0)
+				Expect(cfgArg).To(Equal(cfg))
 			})
 
 			Context("if entering the namespace fails", func() {
@@ -176,17 +179,19 @@ var _ = Describe("Configurer", func() {
 	Describe("Destroy", func() {
 		It("should tear down the IP tables chains", func() {
 			cfg := kawasaki.NetworkConfig{
-				IPTableChain: "chain-of-sausages",
+				IPTablePrefix:   "chain-of-",
+				IPTableInstance: "sausages",
 			}
 			Expect(configurer.Destroy(logger, cfg)).To(Succeed())
 
-			Expect(fakeIPTablesConfigurer.DestroyCallCount()).To(Equal(1))
-			Expect(fakeIPTablesConfigurer.DestroyArgsForCall(0)).To(Equal("chain-of-sausages"))
+			Expect(fakeInstanceChainCreator.DestroyCallCount()).To(Equal(1))
+			_, instance := fakeInstanceChainCreator.DestroyArgsForCall(0)
+			Expect(instance).To(Equal("sausages"))
 		})
 
 		Context("when the teardown of ip tables fail", func() {
 			BeforeEach(func() {
-				fakeIPTablesConfigurer.DestroyReturns(errors.New("ananas is the best"))
+				fakeInstanceChainCreator.DestroyReturns(errors.New("ananas is the best"))
 			})
 
 			It("should return the error", func() {

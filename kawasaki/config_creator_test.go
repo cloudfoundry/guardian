@@ -77,7 +77,8 @@ var _ = Describe("ConfigCreator", func() {
 
 		Expect(config.HostIntf).To(Equal("w1cocacola-0"))
 		Expect(config.ContainerIntf).To(Equal("w1cocacola-1"))
-		Expect(config.IPTableChain).To(Equal("0123456789abcdef-cocacola"))
+		Expect(config.IPTablePrefix).To(Equal("0123456789abcdef"))
+		Expect(config.IPTableInstance).To(Equal("cocacola"))
 	})
 
 	It("only generates 1 ID per invocation", func() {

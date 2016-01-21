@@ -25,11 +25,9 @@ type Host struct {
 		Add(bridge, slave *net.Interface) error
 		Destroy(bridgeName string) error
 	}
-
-	Logger lager.Logger
 }
 
-func (c *Host) Apply(config kawasaki.NetworkConfig, netns *os.File) error {
+func (c *Host) Apply(logger lager.Logger, config kawasaki.NetworkConfig, netns *os.File) error {
 	var (
 		err       error
 		host      *net.Interface
@@ -37,7 +35,7 @@ func (c *Host) Apply(config kawasaki.NetworkConfig, netns *os.File) error {
 		bridge    *net.Interface
 	)
 
-	cLog := c.Logger.Session("configure-host", lager.Data{
+	cLog := logger.Session("configure-host", lager.Data{
 		"bridgeName":     config.BridgeName,
 		"bridgeIP":       config.BridgeIP,
 		"subnet":         config.Subnet,

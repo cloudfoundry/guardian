@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices/fakedevices"
+	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
@@ -18,13 +19,14 @@ var _ = Describe("Container", func() {
 		linkApplyr *fakedevices.FakeLink
 		configurer *configure.Container
 		config     kawasaki.NetworkConfig
+		logger     lager.Logger
 	)
 
 	BeforeEach(func() {
+		logger = lagertest.NewTestLogger("test")
 		linkApplyr = &fakedevices.FakeLink{AddIPReturns: make(map[string]error)}
 		configurer = &configure.Container{
-			Link:   linkApplyr,
-			Logger: lagertest.NewTestLogger("test"),
+			Link: linkApplyr,
 		}
 	})
 
@@ -41,12 +43,12 @@ var _ = Describe("Container", func() {
 		})
 
 		It("returns a wrapped error", func() {
-			err := configurer.Apply(config)
+			err := configurer.Apply(logger, config)
 			Expect(err).To(MatchError(&configure.FindLinkError{Cause: nil, Role: "loopback", Name: "lo"}))
 		})
 
 		It("does not attempt to configure other devices", func() {
-			Expect(configurer.Apply(config)).ToNot(Succeed())
+			Expect(configurer.Apply(logger, config)).ToNot(Succeed())
 			Expect(linkApplyr.SetUpCalledWith).ToNot(ContainElement(eth))
 		})
 	})
@@ -63,21 +65,21 @@ var _ = Describe("Container", func() {
 
 		It("adds 127.0.0.1/8 as an address", func() {
 			ip, subnet, _ := net.ParseCIDR("127.0.0.1/8")
-			Expect(configurer.Apply(config)).To(Succeed())
+			Expect(configurer.Apply(logger, config)).To(Succeed())
 			Expect(linkApplyr.AddIPCalledWith).To(ContainElement(fakedevices.InterfaceIPAndSubnet{Interface: lo, IP: ip, Subnet: subnet}))
 		})
 
 		Context("when adding the IP address fails", func() {
 			It("returns a wrapped error", func() {
 				linkApplyr.AddIPReturns["lo"] = errors.New("o no")
-				err := configurer.Apply(config)
+				err := configurer.Apply(logger, config)
 				ip, subnet, _ := net.ParseCIDR("127.0.0.1/8")
 				Expect(err).To(MatchError(&configure.ConfigureLinkError{Cause: errors.New("o no"), Role: "loopback", Interface: lo, IntendedIP: ip, IntendedSubnet: subnet}))
 			})
 		})
 
 		It("brings it up", func() {
-			Expect(configurer.Apply(config)).To(Succeed())
+			Expect(configurer.Apply(logger, config)).To(Succeed())
 			Expect(linkApplyr.SetUpCalledWith).To(ContainElement(lo))
 		})
 
@@ -87,7 +89,7 @@ var _ = Describe("Container", func() {
 					return errors.New("o no")
 				}
 
-				err := configurer.Apply(config)
+				err := configurer.Apply(logger, config)
 				Expect(err).To(MatchError(&configure.LinkUpError{Cause: errors.New("o no"), Link: lo, Role: "loopback"}))
 			})
 		})
@@ -106,7 +108,7 @@ var _ = Describe("Container", func() {
 
 		It("returns a wrapped error", func() {
 			config.ContainerIntf = "foo"
-			err := configurer.Apply(config)
+			err := configurer.Apply(logger, config)
 			Expect(err).To(MatchError(&configure.FindLinkError{Cause: nil, Role: "container", Name: "foo"}))
 		})
 	})
@@ -122,7 +124,7 @@ var _ = Describe("Container", func() {
 			config.ContainerIntf = "foo"
 			config.ContainerIP, config.Subnet, _ = net.ParseCIDR("2.3.4.5/6")
 
-			Expect(configurer.Apply(config)).To(Succeed())
+			Expect(configurer.Apply(logger, config)).To(Succeed())
 			Expect(linkApplyr.AddIPCalledWith).To(ContainElement(fakedevices.InterfaceIPAndSubnet{
 				Interface: &net.Interface{Name: "foo"},
 				IP:        config.ContainerIP,
@@ -136,7 +138,7 @@ var _ = Describe("Container", func() {
 
 				config.ContainerIntf = "foo"
 				config.ContainerIP, config.Subnet, _ = net.ParseCIDR("2.3.4.5/6")
-				err := configurer.Apply(config)
+				err := configurer.Apply(logger, config)
 				Expect(err).To(MatchError(&configure.ConfigureLinkError{
 					Cause:          errors.New("o no"),
 					Role:           "container",
@@ -149,7 +151,7 @@ var _ = Describe("Container", func() {
 
 		It("Brings the link up", func() {
 			config.ContainerIntf = "foo"
-			Expect(configurer.Apply(config)).To(Succeed())
+			Expect(configurer.Apply(logger, config)).To(Succeed())
 			Expect(linkApplyr.SetUpCalledWith).To(ContainElement(&net.Interface{Name: "foo"}))
 		})
 
@@ -165,7 +167,7 @@ var _ = Describe("Container", func() {
 				}
 
 				config.ContainerIntf = "foo"
-				err := configurer.Apply(config)
+				err := configurer.Apply(logger, config)
 				Expect(err).To(MatchError(&configure.LinkUpError{Cause: cause, Link: &net.Interface{Name: "foo"}, Role: "container"}))
 			})
 		})
@@ -173,7 +175,7 @@ var _ = Describe("Container", func() {
 		It("sets the mtu", func() {
 			config.ContainerIntf = "foo"
 			config.Mtu = 1234
-			Expect(configurer.Apply(config)).To(Succeed())
+			Expect(configurer.Apply(logger, config)).To(Succeed())
 			Expect(linkApplyr.SetMTUCalledWith.Interface).To(Equal(&net.Interface{Name: "foo"}))
 			Expect(linkApplyr.SetMTUCalledWith.MTU).To(Equal(1234))
 		})
@@ -184,7 +186,7 @@ var _ = Describe("Container", func() {
 
 				config.ContainerIntf = "foo"
 				config.Mtu = 1234
-				err := configurer.Apply(config)
+				err := configurer.Apply(logger, config)
 				Expect(err).To(MatchError(&configure.MTUError{Cause: linkApplyr.SetMTUReturns, Intf: &net.Interface{Name: "foo"}, MTU: 1234}))
 			})
 		})
@@ -192,7 +194,7 @@ var _ = Describe("Container", func() {
 		It("adds a default gateway with the requested IP", func() {
 			config.ContainerIntf = "foo"
 			config.BridgeIP = net.ParseIP("2.3.4.5")
-			Expect(configurer.Apply(config)).To(Succeed())
+			Expect(configurer.Apply(logger, config)).To(Succeed())
 			Expect(linkApplyr.AddDefaultGWCalledWith.Interface).To(Equal(&net.Interface{Name: "foo"}))
 			Expect(linkApplyr.AddDefaultGWCalledWith.IP).To(Equal(net.ParseIP("2.3.4.5")))
 		})
@@ -203,7 +205,7 @@ var _ = Describe("Container", func() {
 
 				config.ContainerIntf = "foo"
 				config.BridgeIP = net.ParseIP("2.3.4.5")
-				err := configurer.Apply(config)
+				err := configurer.Apply(logger, config)
 				Expect(err).To(MatchError(&configure.ConfigureDefaultGWError{Cause: linkApplyr.AddDefaultGWReturns, Interface: &net.Interface{Name: "foo"}, IP: net.ParseIP("2.3.4.5")}))
 			})
 		})

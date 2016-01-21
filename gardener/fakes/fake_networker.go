@@ -4,6 +4,7 @@ package fakes
 import (
 	"sync"
 
+	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/pivotal-golang/lager"
 )
@@ -46,6 +47,16 @@ type FakeNetworker struct {
 		result1 uint32
 		result2 uint32
 		result3 error
+	}
+	NetOutStub        func(log lager.Logger, handle string, rule garden.NetOutRule) error
+	netOutMutex       sync.RWMutex
+	netOutArgsForCall []struct {
+		log    lager.Logger
+		handle string
+		rule   garden.NetOutRule
+	}
+	netOutReturns struct {
+		result1 error
 	}
 }
 
@@ -175,6 +186,40 @@ func (fake *FakeNetworker) NetInReturns(result1 uint32, result2 uint32, result3 
 		result2 uint32
 		result3 error
 	}{result1, result2, result3}
+}
+
+func (fake *FakeNetworker) NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error {
+	fake.netOutMutex.Lock()
+	fake.netOutArgsForCall = append(fake.netOutArgsForCall, struct {
+		log    lager.Logger
+		handle string
+		rule   garden.NetOutRule
+	}{log, handle, rule})
+	fake.netOutMutex.Unlock()
+	if fake.NetOutStub != nil {
+		return fake.NetOutStub(log, handle, rule)
+	} else {
+		return fake.netOutReturns.result1
+	}
+}
+
+func (fake *FakeNetworker) NetOutCallCount() int {
+	fake.netOutMutex.RLock()
+	defer fake.netOutMutex.RUnlock()
+	return len(fake.netOutArgsForCall)
+}
+
+func (fake *FakeNetworker) NetOutArgsForCall(i int) (lager.Logger, string, garden.NetOutRule) {
+	fake.netOutMutex.RLock()
+	defer fake.netOutMutex.RUnlock()
+	return fake.netOutArgsForCall[i].log, fake.netOutArgsForCall[i].handle, fake.netOutArgsForCall[i].rule
+}
+
+func (fake *FakeNetworker) NetOutReturns(result1 error) {
+	fake.NetOutStub = nil
+	fake.netOutReturns = struct {
+		result1 error
+	}{result1}
 }
 
 var _ gardener.Networker = new(FakeNetworker)

@@ -23,13 +23,20 @@ var _ = Describe("Net", func() {
 		client    *runner.RunningGarden
 		container garden.Container
 
-		subnet string
-		args   []string
+		containerNetwork string
+		args             []string
+
+		exampleDotCom net.IP
 	)
 
 	BeforeEach(func() {
 		args = []string{}
-		subnet = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
+		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
+
+		ips, err := net.LookupIP("www.example.com")
+		Expect(err).ToNot(HaveOccurred())
+
+		exampleDotCom = ips[0]
 	})
 
 	JustBeforeEach(func() {
@@ -38,7 +45,7 @@ var _ = Describe("Net", func() {
 		client = startGarden(args...)
 
 		container, err = client.Create(garden.ContainerSpec{
-			Network: subnet,
+			Network: containerNetwork,
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -82,11 +89,11 @@ var _ = Describe("Net", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(exitCode).To(Equal(0))
 
-		Expect(buffer).To(gbytes.Say(ipAddress(subnet, 2)))
+		Expect(buffer).To(gbytes.Say(ipAddress(containerNetwork, 2)))
 	})
 
 	It("should be pingable", func() {
-		out, err := exec.Command("/bin/ping", "-c 2", ipAddress(subnet, 2)).Output()
+		out, err := exec.Command("/bin/ping", "-c 2", ipAddress(containerNetwork, 2)).Output()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(out).To(ContainSubstring(" 0% packet loss"))
 	})
@@ -98,7 +105,7 @@ var _ = Describe("Net", func() {
 			var err error
 			originContainer = container
 			container, err = client.Create(garden.ContainerSpec{
-				Network: subnet,
+				Network: containerNetwork,
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -120,24 +127,21 @@ var _ = Describe("Net", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(proc.Wait()).To(Equal(0))
 
-			Expect(buffer).To(gbytes.Say(ipAddress(subnet, 3)))
+			Expect(buffer).To(gbytes.Say(ipAddress(containerNetwork, 3)))
 		})
 
 		It("should be pingable", func() {
-			out, err := exec.Command("/bin/ping", "-c 2", ipAddress(subnet, 2)).Output()
+			out, err := exec.Command("/bin/ping", "-c 2", ipAddress(containerNetwork, 2)).Output()
 			Expect(out).To(ContainSubstring(" 0% packet loss"))
 			Expect(err).ToNot(HaveOccurred())
 
-			out, err = exec.Command("/bin/ping", "-c 2", ipAddress(subnet, 3)).Output()
+			out, err = exec.Command("/bin/ping", "-c 2", ipAddress(containerNetwork, 3)).Output()
 			Expect(out).To(ContainSubstring(" 0% packet loss"))
 			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("should access internet", func() {
-			ips, err := net.LookupIP("www.example.com")
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(checkConnection(container, ips[0].String(), 80)).To(Succeed())
+			Expect(checkConnection(container, exampleDotCom.String(), 80)).To(Succeed())
 		})
 	})
 
@@ -149,7 +153,7 @@ var _ = Describe("Net", func() {
 
 		BeforeEach(func() {
 			args = []string{"-networkPool", "10.254.0.0/29"}
-			subnet = ""
+			containerNetwork = ""
 		})
 
 		JustBeforeEach(func() {
@@ -171,7 +175,6 @@ var _ = Describe("Net", func() {
 
 		It("reuses IP addresses", func() {
 			newIpAddress := containerIP(otherContainer)
-
 			Expect(newIpAddress).To(Equal(otherContainerIP))
 		})
 
@@ -184,7 +187,31 @@ var _ = Describe("Net", func() {
 			externalIP := externalIP(otherContainer)
 			stdout := sendRequest(externalIP, hostPort)
 			Expect(stdout).To(gbytes.Say(fmt.Sprintf("%d", containerPort)))
+		})
+	})
 
+	Describe("--denyNetworks flag", func() {
+		BeforeEach(func() {
+			args = append(args, "--denyNetworks", "8.8.8.0/24")
+		})
+
+		It("should deny outbound traffic to IPs in the range", func() {
+			Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
+		})
+
+		It("should allow outbound traffic to IPs outside of the range", func() {
+			Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+		})
+
+		Context("when multiple denyNetworks are defined", func() {
+			BeforeEach(func() {
+				args = append(args, "--denyNetworks", "8.8.8.0/24,8.8.4.0/24")
+			})
+
+			It("should deny IPs in either range", func() {
+				Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
+				Expect(checkConnection(container, "8.8.4.4", 53)).To(MatchError("Request failed. Process exited with code 1"))
+			})
 		})
 	})
 
@@ -221,27 +248,78 @@ var _ = Describe("Net", func() {
 		})
 	})
 
-	Describe("--denyNetworks flag", func() {
+	Describe("NetOut", func() {
 		BeforeEach(func() {
-			args = append(args, "--denyNetworks", "8.8.8.0/24")
+			args = append(args, "--denyNetworks", "0.0.0.0/0")
 		})
 
-		It("should deny outbound traffic to IPs in the range", func() {
+		It("should access internet", func() {
 			Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
+
+			Expect(container.NetOut(garden.NetOutRule{
+				Protocol: garden.ProtocolTCP,
+				Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+				Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+			})).To(Succeed())
+
+			Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
 		})
 
-		It("should allow outbound traffic to IPs outside of the range", func() {
-			Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
-		})
+		Context("external addresses", func() {
+			var (
+				ByAllowingTCP, ByRejectingTCP func()
+			)
 
-		Context("when multiple denyNetworks are defined", func() {
 			BeforeEach(func() {
-				args = append(args, "--denyNetworks", "8.8.8.0/24,8.8.4.0/24")
+				ByAllowingTCP = func() {
+					By("allowing outbound tcp traffic", func() {
+						Expect(checkConnection(container, exampleDotCom.String(), 80)).To(Succeed())
+					})
+				}
+
+				ByRejectingTCP = func() {
+					By("rejecting outbound tcp traffic", func() {
+						Expect(checkConnection(container, exampleDotCom.String(), 80)).NotTo(Succeed())
+					})
+				}
 			})
 
-			It("should deny IPs in either range", func() {
-				Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
-				Expect(checkConnection(container, "8.8.4.4", 53)).To(MatchError("Request failed. Process exited with code 1"))
+			Context("when the target address is inside DENY_NETWORKS", func() {
+				//The target address is the ip addr of www.example.com in these tests
+				BeforeEach(func() {
+					args = append(args, "--denyNetworks", "0.0.0.0/0")
+					containerNetwork = fmt.Sprintf("10.1%d.0.0/24", GinkgoParallelNode())
+				})
+
+				It("disallows TCP connections", func() {
+					ByRejectingTCP()
+				})
+
+				Context("when a rule that allows all traffic to the target is added", func() {
+					JustBeforeEach(func() {
+						err := container.NetOut(garden.NetOutRule{
+							Networks: []garden.IPRange{
+								garden.IPRangeFromIP(exampleDotCom),
+							},
+						})
+						Expect(err).ToNot(HaveOccurred())
+					})
+
+					It("allows TCP traffic to the target", func() {
+						ByAllowingTCP()
+					})
+				})
+			})
+
+			Context("when the target address is not in DENY_NETWORKS", func() {
+				BeforeEach(func() {
+					args = append(args, "--denyNetworks", "4.4.4.4/30")
+					containerNetwork = fmt.Sprintf("10.1%d.0.0/24", GinkgoParallelNode())
+				})
+
+				It("allows connections", func() {
+					ByAllowingTCP()
+				})
 			})
 		})
 	})

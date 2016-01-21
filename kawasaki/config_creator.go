@@ -21,15 +21,16 @@ type IDGenerator interface {
 }
 
 type NetworkConfig struct {
-	HostIntf      string
-	ContainerIntf string
-	IPTableChain  string
-	BridgeName    string
-	BridgeIP      net.IP
-	ContainerIP   net.IP
-	ExternalIP    net.IP
-	Subnet        *net.IPNet
-	Mtu           int
+	HostIntf        string
+	ContainerIntf   string
+	IPTablePrefix   string
+	IPTableInstance string
+	BridgeName      string
+	BridgeIP        net.IP
+	ContainerIP     net.IP
+	ExternalIP      net.IP
+	Subnet          *net.IPNet
+	Mtu             int
 }
 
 type Creator struct {
@@ -59,14 +60,15 @@ func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix stri
 func (c *Creator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip net.IP) (NetworkConfig, error) {
 	id := c.idGenerator.Generate()
 	return NetworkConfig{
-		HostIntf:      fmt.Sprintf("%s%s-0", c.interfacePrefix, id),
-		ContainerIntf: fmt.Sprintf("%s%s-1", c.interfacePrefix, id),
-		BridgeName:    fmt.Sprintf("%s%s", c.interfacePrefix, strings.Replace(subnet.IP.String(), ".", "-", -1)),
-		IPTableChain:  fmt.Sprintf("%s-%s", c.chainPrefix, id),
-		ContainerIP:   ip,
-		BridgeIP:      subnets.GatewayIP(subnet),
-		ExternalIP:    c.externalIP,
-		Subnet:        subnet,
-		Mtu:           1500,
+		HostIntf:        fmt.Sprintf("%s%s-0", c.interfacePrefix, id),
+		ContainerIntf:   fmt.Sprintf("%s%s-1", c.interfacePrefix, id),
+		BridgeName:      fmt.Sprintf("%s%s", c.interfacePrefix, strings.Replace(subnet.IP.String(), ".", "-", -1)),
+		IPTablePrefix:   c.chainPrefix,
+		IPTableInstance: id,
+		ContainerIP:     ip,
+		BridgeIP:        subnets.GatewayIP(subnet),
+		ExternalIP:      c.externalIP,
+		Subnet:          subnet,
+		Mtu:             1500,
 	}, nil
 }

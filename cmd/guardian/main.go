@@ -25,10 +25,8 @@ import (
 	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/factory"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/ports"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/cloudfoundry-incubator/guardian/logging"
@@ -245,28 +243,27 @@ func main() {
 		panic(err)
 	}
 
-	interfacePrefix := fmt.Sprintf("g%s", *tag)
-	chainPrefix := fmt.Sprintf("g-%s-instance", *tag)
 	var denyNetworksList []string
 	if *denyNetworks != "" {
 		denyNetworksList = strings.Split(*denyNetworks, ",")
 	}
-	iptablesMgr := wireIptables(logger, *tag, *allowHostAccess, denyNetworksList, interfacePrefix, chainPrefix)
 
 	externalIPAddr, err := parseExternalIP(*externalIP)
 	if err != nil {
 		panic(err)
 	}
 
-	sysInfoProvider := sysinfo.NewProvider(*depotPath)
+	interfacePrefix := fmt.Sprintf("g%s", *tag)
+	chainPrefix := fmt.Sprintf("g-%s-", *tag)
+	ipt := wireIptables(logger, chainPrefix)
 
 	propManager := properties.NewManager()
 
 	backend := &gardener.Gardener{
-		SysInfoProvider: sysInfoProvider,
+		SysInfoProvider: sysinfo.NewProvider(*depotPath),
 		UidGenerator:    wireUidGenerator(),
-		Starter:         wireStarter(logger, iptablesMgr),
-		Networker:       wireNetworker(logger, *kawasakiBin, *tag, networkPoolCIDR, externalIPAddr, iptablesMgr, interfacePrefix, chainPrefix, propManager),
+		Starter:         wireStarter(logger, ipt, *allowHostAccess, interfacePrefix, denyNetworksList),
+		Networker:       wireNetworker(logger, *kawasakiBin, *tag, networkPoolCIDR, externalIPAddr, ipt, interfacePrefix, chainPrefix, propManager),
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath),
 		Logger:          logger,
@@ -302,51 +299,18 @@ func wireUidGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
-func wireStarter(logger lager.Logger, iptablesStarter gardener.Starter) gardener.Starter {
+func wireStarter(logger lager.Logger, ipt *iptables.IPTables, allowHostAccess bool, nicPrefix string, denyNetworks []string) gardener.Starter {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("runner")}
 
 	return &StartAll{starters: []gardener.Starter{
 		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner),
-		iptablesStarter,
+		iptables.NewStarter(ipt, allowHostAccess, nicPrefix, denyNetworks),
 	}}
 }
 
-type IptablesManagerStarter struct {
-	*iptables.Manager
-	gardener.Starter
-}
-
-func wireIptables(logger lager.Logger, tag string, allowHostAccess bool, denyNetworks []string, interfacePrefix, chainPrefix string) *IptablesManagerStarter {
+func wireIptables(logger lager.Logger, prefix string) *iptables.IPTables {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("iptables-runner")}
-
-	filterConfig := iptables.FilterConfig{
-		AllowHostAccess: allowHostAccess,
-		DenyNetworks:    denyNetworks,
-		InputChain:      fmt.Sprintf("g-%s-input", tag),
-		ForwardChain:    fmt.Sprintf("g-%s-forward", tag),
-		DefaultChain:    fmt.Sprintf("g-%s-default", tag),
-	}
-
-	natConfig := iptables.NATConfig{
-		PreroutingChain:  fmt.Sprintf("g-%s-prerouting", tag),
-		PostroutingChain: fmt.Sprintf("g-%s-postrouting", tag),
-	}
-
-	return &IptablesManagerStarter{
-		Starter: iptables.NewStarter(
-			runner,
-			filterConfig,
-			natConfig,
-			chainPrefix,
-			interfacePrefix,
-		),
-		Manager: iptables.NewManager(
-			filterConfig,
-			natConfig,
-			runner,
-			logger,
-		),
-	}
+	return iptables.New(runner, prefix)
 }
 
 func wireNetworker(
@@ -355,25 +319,11 @@ func wireNetworker(
 	tag string,
 	networkPoolCIDR *net.IPNet,
 	externalIP net.IP,
-	iptablesMgr kawasaki.IPTablesConfigurer,
+	ipt *iptables.IPTables,
 	interfacePrefix string,
 	chainPrefix string,
 	propManager *properties.Manager,
 ) gardener.Networker {
-	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("network-runner")}
-
-	hostConfigurer := &configure.Host{
-		Veth:   &devices.VethCreator{},
-		Link:   &devices.Link{Name: "guardian"},
-		Bridge: &devices.Bridge{},
-		Logger: log.Session("network-host-configurer"),
-	}
-
-	containerCfgApplier := &configure.Container{
-		Logger: log.Session("network-container-configurer"),
-		Link:   &devices.Link{Name: "guardian"},
-	}
-
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 	portPool, err := ports.NewPool(uint32(*portPoolStart), uint32(*portPoolSize), ports.State{})
 	if err != nil {
@@ -385,16 +335,11 @@ func wireNetworker(
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(networkPoolCIDR),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP),
-		kawasaki.NewConfigurer(
-			hostConfigurer,
-			containerCfgApplier,
-			iptablesMgr,
-			&netns.Execer{},
-		),
+		factory.NewDefaultConfigurer(ipt),
 		propManager,
-		iptables.NewPortForwarder(runner),
 		portPool,
-		tag,
+		iptables.NewPortForwarder(ipt),
+		iptables.NewFirewallOpener(ipt),
 	)
 }
 

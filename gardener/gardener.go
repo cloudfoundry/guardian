@@ -21,7 +21,6 @@ type SysInfoProvider interface {
 //go:generate counterfeiter . Networker
 //go:generate counterfeiter . VolumeCreator
 //go:generate counterfeiter . UidGenerator
-//go:generate counterfeiter . ForeignNetworker
 
 type Containerizer interface {
 	Create(log lager.Logger, spec DesiredContainerSpec) error
@@ -37,6 +36,7 @@ type Networker interface {
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error)
+	NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error
 }
 
 type VolumeCreator interface {

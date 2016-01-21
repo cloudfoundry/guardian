@@ -6,6 +6,7 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/fakes"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
@@ -18,16 +19,17 @@ import (
 
 var _ = Describe("Networker", func() {
 	var (
-		fakeSpecParser    *fakes.FakeSpecParser
-		fakeSubnetPool    *fake_subnet_pool.FakePool
-		fakeConfigCreator *fakes.FakeConfigCreator
-		fakeConfigurer    *fakes.FakeConfigurer
-		fakeConfigStore   *fakes.FakeConfigStore
-		fakePortForwarder *fakes.FakePortForwarder
-		fakePortPool      *fakes.FakePortPool
-		networker         *kawasaki.Networker
-		logger            lager.Logger
-		networkConfig     kawasaki.NetworkConfig
+		fakeSpecParser     *fakes.FakeSpecParser
+		fakeSubnetPool     *fake_subnet_pool.FakePool
+		fakeConfigCreator  *fakes.FakeConfigCreator
+		fakeConfigurer     *fakes.FakeConfigurer
+		fakeConfigStore    *fakes.FakeConfigStore
+		fakePortForwarder  *fakes.FakePortForwarder
+		fakePortPool       *fakes.FakePortPool
+		fakeFirewallOpener *fakes.FakeFirewallOpener
+		networker          *kawasaki.Networker
+		logger             lager.Logger
+		networkConfig      kawasaki.NetworkConfig
 	)
 
 	BeforeEach(func() {
@@ -38,6 +40,7 @@ var _ = Describe("Networker", func() {
 		fakeConfigStore = new(fakes.FakeConfigStore)
 		fakePortForwarder = new(fakes.FakePortForwarder)
 		fakePortPool = new(fakes.FakePortPool)
+		fakeFirewallOpener = new(fakes.FakeFirewallOpener)
 
 		logger = lagertest.NewTestLogger("test")
 		networker = kawasaki.New(
@@ -47,23 +50,24 @@ var _ = Describe("Networker", func() {
 			fakeConfigCreator,
 			fakeConfigurer,
 			fakeConfigStore,
-			fakePortForwarder,
 			fakePortPool,
-			"potato",
+			fakePortForwarder,
+			fakeFirewallOpener,
 		)
 
 		ip, subnet, err := net.ParseCIDR("123.123.123.12/24")
 		Expect(err).NotTo(HaveOccurred())
 		networkConfig = kawasaki.NetworkConfig{
-			HostIntf:      "banana-iface",
-			ContainerIntf: "container-of-bananas-iface",
-			IPTableChain:  "bananas-table",
-			BridgeName:    "bananas-bridge",
-			BridgeIP:      net.ParseIP("123.123.123.1"),
-			ContainerIP:   ip,
-			ExternalIP:    net.ParseIP("128.128.90.90"),
-			Subnet:        subnet,
-			Mtu:           1200,
+			HostIntf:        "banana-iface",
+			ContainerIntf:   "container-of-bananas-iface",
+			IPTablePrefix:   "bananas-",
+			IPTableInstance: "table",
+			BridgeName:      "bananas-bridge",
+			BridgeIP:        net.ParseIP("123.123.123.1"),
+			ContainerIP:     ip,
+			ExternalIP:      net.ParseIP("128.128.90.90"),
+			Subnet:          subnet,
+			Mtu:             1200,
 		}
 
 		fakeConfigCreator.CreateReturns(networkConfig, nil)
@@ -76,7 +80,8 @@ var _ = Describe("Networker", func() {
 			"kawasaki.container-ip":        networkConfig.ContainerIP.String(),
 			"kawasaki.external-ip":         networkConfig.ExternalIP.String(),
 			"kawasaki.subnet":              networkConfig.Subnet.String(),
-			"kawasaki.iptable-chain":       networkConfig.IPTableChain,
+			"kawasaki.iptable-prefix":      networkConfig.IPTablePrefix,
+			"kawasaki.iptable-inst":        networkConfig.IPTableInstance,
 			"kawasaki.mtu":                 strconv.Itoa(networkConfig.Mtu),
 		}
 
@@ -142,7 +147,8 @@ var _ = Describe("Networker", func() {
 			Expect(config["kawasaki.container-ip"]).To(Equal(networkConfig.ContainerIP.String()))
 			Expect(config["kawasaki.external-ip"]).To(Equal(networkConfig.ExternalIP.String()))
 			Expect(config["kawasaki.subnet"]).To(Equal(networkConfig.Subnet.String()))
-			Expect(config["kawasaki.iptable-chain"]).To(Equal(networkConfig.IPTableChain))
+			Expect(config["kawasaki.iptable-prefix"]).To(Equal(networkConfig.IPTablePrefix))
+			Expect(config["kawasaki.iptable-inst"]).To(Equal(networkConfig.IPTableInstance))
 			Expect(config["kawasaki.mtu"]).To(Equal(strconv.Itoa(networkConfig.Mtu)))
 		})
 
@@ -172,9 +178,9 @@ var _ = Describe("Networker", func() {
 			Expect(hook.Args).To(ContainElement("--container-ip=" + networkConfig.ContainerIP.String()))
 			Expect(hook.Args).To(ContainElement("--external-ip=" + networkConfig.ExternalIP.String()))
 			Expect(hook.Args).To(ContainElement("--subnet=" + networkConfig.Subnet.String()))
-			Expect(hook.Args).To(ContainElement("--iptable-chain=" + networkConfig.IPTableChain))
+			Expect(hook.Args).To(ContainElement("--iptable-instance=" + networkConfig.IPTableInstance))
+			Expect(hook.Args).To(ContainElement("--iptable-prefix=" + networkConfig.IPTablePrefix))
 			Expect(hook.Args).To(ContainElement("--mtu=" + strconv.Itoa(networkConfig.Mtu)))
-			Expect(hook.Args).To(ContainElement("--tag=potato"))
 		})
 	})
 
@@ -226,7 +232,19 @@ var _ = Describe("Networker", func() {
 				Expect(networker.Destroy(logger, "some-handle")).To(MatchError("oh no"))
 			})
 		})
+	})
 
+	Describe("NetOut", func() {
+		It("delegates to FirewallOpener", func() {
+			rule := garden.NetOutRule{Protocol: garden.ProtocolICMP}
+
+			fakeFirewallOpener.OpenReturns(errors.New("potato"))
+			Expect(networker.NetOut(lagertest.NewTestLogger(""), "some-handle", rule)).To(MatchError("potato"))
+
+			_, chainArg, ruleArg := fakeFirewallOpener.OpenArgsForCall(0)
+			Expect(chainArg).To(Equal(networkConfig.IPTableInstance))
+			Expect(ruleArg).To(Equal(rule))
+		})
 	})
 
 	Describe("NetIn", func() {
@@ -249,7 +267,7 @@ var _ = Describe("Networker", func() {
 			Expect(fakePortForwarder.ForwardCallCount()).To(Equal(1))
 
 			actualSpec := fakePortForwarder.ForwardArgsForCall(0)
-			Expect(actualSpec.IPTableChain).To(Equal(networkConfig.IPTableChain))
+			Expect(actualSpec.InstanceID).To(Equal(networkConfig.IPTableInstance))
 			Expect(actualSpec.ContainerIP).To(Equal(networkConfig.ContainerIP))
 			Expect(actualSpec.ExternalIP).To(Equal(networkConfig.ExternalIP))
 			Expect(actualSpec.FromPort).To(Equal(externalPort))

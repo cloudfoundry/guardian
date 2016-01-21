@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 const SetupScript = `
@@ -197,20 +195,20 @@ const SetupScript = `
 `
 
 type Starter struct {
-	runner      command_runner.CommandRunner
-	fc          FilterConfig
-	nc          NATConfig
-	chainPrefix string
-	nicPrefix   string
+	iptables        *IPTables
+	allowHostAccess bool
+	nicPrefix       string
+
+	denyNetworks []string
 }
 
-func NewStarter(runner command_runner.CommandRunner, fc FilterConfig, nc NATConfig, chainPrefix, nicPrefix string) *Starter {
+func NewStarter(iptables *IPTables, allowHostAccess bool, nicPrefix string, denyNetworks []string) *Starter {
 	return &Starter{
-		runner:      runner,
-		fc:          fc,
-		nc:          nc,
-		chainPrefix: chainPrefix,
-		nicPrefix:   nicPrefix,
+		iptables:        iptables,
+		allowHostAccess: allowHostAccess,
+		nicPrefix:       nicPrefix,
+
+		denyNetworks: denyNetworks,
 	}
 }
 
@@ -219,24 +217,24 @@ func (s Starter) Start() error {
 	cmd.Env = []string{
 		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 		"ACTION=setup",
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s", s.fc.InputChain),
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s", s.fc.ForwardChain),
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=%s", s.fc.DefaultChain),
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=%s", s.chainPrefix),
-		fmt.Sprintf("GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=%s", s.nc.PreroutingChain),
-		fmt.Sprintf("GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=%s", s.nc.PostroutingChain),
-		fmt.Sprintf("GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=%s", s.chainPrefix),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s", s.iptables.inputChain),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s", s.iptables.forwardChain),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=%s", s.iptables.defaultChain),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=%s", s.iptables.instanceChainPrefix),
+		fmt.Sprintf("GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=%s", s.iptables.preroutingChain),
+		fmt.Sprintf("GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=%s", s.iptables.postroutingChain),
+		fmt.Sprintf("GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=%s", s.iptables.instanceChainPrefix),
 		fmt.Sprintf("GARDEN_NETWORK_INTERFACE_PREFIX=%s", s.nicPrefix),
-		fmt.Sprintf("GARDEN_IPTABLES_ALLOW_HOST_ACCESS=%t", s.fc.AllowHostAccess),
+		fmt.Sprintf("GARDEN_IPTABLES_ALLOW_HOST_ACCESS=%t", s.allowHostAccess),
 	}
-	if err := s.runner.Run(cmd); err != nil {
+
+	if err := s.iptables.run("setup-global-chains", cmd); err != nil {
 		return fmt.Errorf("setting up default chains: %s", err)
 	}
 
-	for _, n := range s.fc.DenyNetworks {
-		cmd := exec.Command("/sbin/iptables", "-w", "-A", s.fc.DefaultChain, "-d", n, "-j", "REJECT")
-		if err := s.runner.Run(cmd); err != nil {
-			return fmt.Errorf("denying network '%s': %s", n, err)
+	for _, n := range s.denyNetworks {
+		if err := s.iptables.appendRule(s.iptables.defaultChain, rejectRule(n)); err != nil {
+			return err
 		}
 	}
 

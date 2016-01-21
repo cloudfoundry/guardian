@@ -13,35 +13,35 @@ type NetnsExecer interface {
 }
 
 type configurer struct {
-	hostConfigurer     HostConfigurer
-	containerApplier   ContainerApplier
-	ipTablesConfigurer IPTablesConfigurer
-	nsExecer           NetnsExecer
+	hostConfigurer       HostConfigurer
+	containerApplier     ContainerApplier
+	instanceChainCreator InstanceChainCreator
+	nsExecer             NetnsExecer
 }
 
 //go:generate counterfeiter . HostConfigurer
 type HostConfigurer interface {
-	Apply(cfg NetworkConfig, netnsFD *os.File) error
+	Apply(logger lager.Logger, cfg NetworkConfig, netnsFD *os.File) error
 	Destroy(cfg NetworkConfig) error
 }
 
-//go:generate counterfeiter . IPTablesConfigurer
-type IPTablesConfigurer interface {
-	Apply(instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error
-	Destroy(instanceChain string) error
+//go:generate counterfeiter . InstanceChainCreator
+type InstanceChainCreator interface {
+	Create(logger lager.Logger, instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error
+	Destroy(logger lager.Logger, instanceChain string) error
 }
 
 //go:generate counterfeiter . ContainerApplier
 type ContainerApplier interface {
-	Apply(cfg NetworkConfig) error
+	Apply(logger lager.Logger, cfg NetworkConfig) error
 }
 
-func NewConfigurer(hostConfigurer HostConfigurer, containerApplier ContainerApplier, ipTablesConfigurer IPTablesConfigurer, nsExecer NetnsExecer) *configurer {
+func NewConfigurer(hostConfigurer HostConfigurer, containerApplier ContainerApplier, instanceChainCreator InstanceChainCreator, nsExecer NetnsExecer) *configurer {
 	return &configurer{
-		hostConfigurer:     hostConfigurer,
-		containerApplier:   containerApplier,
-		ipTablesConfigurer: ipTablesConfigurer,
-		nsExecer:           nsExecer,
+		hostConfigurer:       hostConfigurer,
+		containerApplier:     containerApplier,
+		instanceChainCreator: instanceChainCreator,
+		nsExecer:             nsExecer,
 	}
 }
 
@@ -52,21 +52,21 @@ func (c *configurer) Apply(log lager.Logger, cfg NetworkConfig, nsPath string) e
 	}
 	defer fd.Close()
 
-	if err := c.hostConfigurer.Apply(cfg, fd); err != nil {
+	if err := c.hostConfigurer.Apply(log, cfg, fd); err != nil {
 		return err
 	}
 
-	if err := c.ipTablesConfigurer.Apply(cfg.IPTableChain, cfg.BridgeName, cfg.ContainerIP, cfg.Subnet); err != nil {
+	if err := c.instanceChainCreator.Create(log, cfg.IPTableInstance, cfg.BridgeName, cfg.ContainerIP, cfg.Subnet); err != nil {
 		return err
 	}
 
 	return c.nsExecer.Exec(fd, func() error {
-		return c.containerApplier.Apply(cfg)
+		return c.containerApplier.Apply(log, cfg)
 	})
 }
 
 func (c *configurer) Destroy(log lager.Logger, cfg NetworkConfig) error {
-	if err := c.ipTablesConfigurer.Destroy(cfg.IPTableChain); err != nil {
+	if err := c.instanceChainCreator.Destroy(log, cfg.IPTableInstance); err != nil {
 		return err
 	}
 

@@ -215,8 +215,8 @@ var _ = Describe("Link Management", func() {
 			})
 
 			It("Gets statistics from the interface", func() {
-				link := devices.Link{Name: "veth0"}
-				beforeStat, err := link.Statistics()
+				link := devices.Link{}
+				beforeStat, err := link.Statistics("veth0")
 				Expect(err).ToNot(HaveOccurred())
 				cmd, err := gexec.Start(exec.Command(
 					"sh", "-c", `
@@ -226,7 +226,7 @@ var _ = Describe("Link Management", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(cmd, "15s").Should(gexec.Exit(0))
 
-				afterStat, err := link.Statistics()
+				afterStat, err := link.Statistics("veth0")
 				Expect(err).ToNot(HaveOccurred())
 
 				// size of ping packet is 42 + payload_size (80 bytes)
@@ -241,8 +241,8 @@ var _ = Describe("Link Management", func() {
 
 		Context("when the interface does not exist", func() {
 			It("Gets statistics return an error", func() {
-				link := devices.Link{Name: "non-existent-intf"}
-				_, err := link.Statistics()
+				link := devices.Link{}
+				_, err := link.Statistics("non-existing-intf")
 				Expect(err).To(HaveOccurred())
 			})
 		})

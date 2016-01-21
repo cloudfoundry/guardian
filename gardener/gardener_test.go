@@ -3,6 +3,7 @@ package gardener_test
 import (
 	"errors"
 	"fmt"
+	"net"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
@@ -383,6 +384,40 @@ var _ = Describe("Gardener", func() {
 					_, _, err := container.NetIn(externalPort, contianerPort)
 
 					Expect(err).To(MatchError("error"))
+				})
+			})
+		})
+
+		Describe("NetOut", func() {
+			var (
+				container garden.Container
+				rule      garden.NetOutRule
+			)
+
+			BeforeEach(func() {
+				var err error
+				container, err = gdnr.Lookup("banana")
+				Expect(err).NotTo(HaveOccurred())
+
+				rule = garden.NetOutRule{
+					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.2.3.4"))},
+					Ports:    []garden.PortRange{garden.PortRangeFromPort(9321)},
+				}
+			})
+
+			It("asks the networker to apply the provided netout rule", func() {
+				Expect(container.NetOut(rule)).To(Succeed())
+				Expect(networker.NetOutCallCount()).To(Equal(1))
+
+				_, handle, actualRule := networker.NetOutArgsForCall(0)
+				Expect(handle).To(Equal("banana"))
+				Expect(actualRule).To(Equal(rule))
+			})
+
+			Context("when networker returns an error", func() {
+				It("return the error", func() {
+					networker.NetOutReturns(fmt.Errorf("banana republic"))
+					Expect(container.NetOut(rule)).To(MatchError("banana republic"))
 				})
 			})
 		})
