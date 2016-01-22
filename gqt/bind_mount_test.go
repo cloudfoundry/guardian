@@ -183,28 +183,11 @@ var _ = Describe("Bind mount", func() {
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
-			// Dear Future Us:
-			// THIS TEST DOCUMENTS THE CURRENT BEHAVIOUR, IT WILL FAIL WHEN UID
-			// MAPPING IS FIXED, AT WHICH POINT THE PENDED TEST BELOW SHOULD BE
-			// UNPENDED, AND THIS TEST SHOULD BE DELETED.
-			// thank you.
-			It("inadvertently allows write to work, since uid mapping currently hard-codes container->host root as 0", func() {
-				writeProcess := writeFile(container, dstPath, "root")
-
-				// Expect(writeProcess.Wait()).NotTo(Equal(0))
-				Expect(writeProcess.Wait()).To(Equal(0))
-			})
-
-			// (this test is pended until uid mapping properly maps unprivileged
-			// container root to a non-host-root uid)
-			//
 			// container and host root are not the same, and the mounted directory is
 			// owned by host-root, so writes should fail.
-			PIt("does not allow root to write files", func() {
+			It("does not allow root to write files", func() {
 				writeProcess := writeFile(container, dstPath, "root")
-
-				// Expect(writeProcess.Wait()).NotTo(Equal(0))
-				Expect(writeProcess.Wait()).To(Equal(0))
+				Expect(writeProcess.Wait()).NotTo(Equal(0))
 			})
 		})
 	})

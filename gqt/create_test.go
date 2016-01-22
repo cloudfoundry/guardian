@@ -3,9 +3,11 @@ package gqt_test
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -87,6 +89,21 @@ var _ = Describe("Creating a Container", func() {
 			Entry("should place the container in to the USER namespace", "user"),
 		)
 
+		It("should have the proper uid and gid mappings", func() {
+			buffer := gbytes.NewBuffer()
+			proc, err := container.Run(garden.ProcessSpec{
+				Path: "cat",
+				Args: []string{"/proc/self/uid_map"},
+			}, garden.ProcessIO{
+				Stdout: io.MultiWriter(buffer, GinkgoWriter),
+				Stderr: GinkgoWriter,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(proc.Wait()).To(Equal(0))
+
+			Eventually(buffer).Should(gbytes.Say(`0\s+4294967294\s+1\n\s+1\s+1\s+4294967293`))
+		})
+
 		Context("which is privileged", func() {
 			BeforeEach(func() {
 				privileged = true
@@ -121,6 +138,7 @@ var _ = Describe("Creating a Container", func() {
 			command := fmt.Sprintf("cp -rf %s/* %s", os.Getenv("GARDEN_TEST_ROOTFS"), rootFSPath)
 			Expect(exec.Command("sh", "-c", command).Run()).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(rootFSPath, "my-file"), []byte("some-content"), 0644)).To(Succeed())
+			Expect(os.Mkdir(path.Join(rootFSPath, "somedir"), 0777)).To(Succeed())
 
 			container, err = client.Create(garden.ContainerSpec{
 				RootFSPath: rootFSPath,
@@ -133,8 +151,8 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		It("isolates the filesystem properly for multiple containers", func() {
-			runCommand(container, "touch", []string{"/created-file"})
-			Expect(container).To(HaveFile("/created-file"))
+			runCommand(container, "touch", []string{"/somedir/created-file"})
+			Expect(container).To(HaveFile("/somedir/created-file"))
 
 			container2, err := client.Create(garden.ContainerSpec{
 				RootFSPath: rootFSPath,
@@ -142,7 +160,7 @@ var _ = Describe("Creating a Container", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(container2).To(HaveFile("/my-file"))
-			Expect(container2).NotTo(HaveFile("/created-file"))
+			Expect(container2).NotTo(HaveFile("/somedir/created-file"))
 		})
 	})
 

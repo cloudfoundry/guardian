@@ -85,6 +85,13 @@ var _ = Describe("Rundmc", func() {
 			Expect(id).To(Equal("exuberant!"))
 		})
 
+		It("should prepare the root file system", func() {
+			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
+				Handle: "exuberant!",
+			})).To(Succeed())
+
+		})
+
 		Context("when the container fails to start", func() {
 			BeforeEach(func() {
 				fakeContainerRunner.StartReturns(nil, errors.New("banana"))

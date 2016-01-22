@@ -143,6 +143,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		RootFS:     rootFSURL,
 		QuotaSize:  int64(spec.Limits.Disk.ByteHard),
 		QuotaScope: rootfs_provider.QuotaScopeExclusive,
+		Namespaced: !spec.Privileged,
 	})
 	if err != nil {
 		g.Networker.Destroy(g.Logger, spec.Handle)

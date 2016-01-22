@@ -119,6 +119,26 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 
+			It("should ask the shed for a namespaced rootfs", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(volumeCreator.CreateCallCount()).To(Equal(1))
+				_, _, fsSpec := volumeCreator.CreateArgsForCall(0)
+				Expect(fsSpec.Namespaced).To(BeTrue())
+			})
+
+			Context("when the container is privileged", func() {
+				It("should ask the shed for an unnamespaced rootfs", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Privileged: true,
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(volumeCreator.CreateCallCount()).To(Equal(1))
+					_, _, fsSpec := volumeCreator.CreateArgsForCall(0)
+					Expect(fsSpec.Namespaced).To(BeFalse())
+				})
+			})
+
 			Context("when parsing the rootfs path fails", func() {
 				It("should return an error", func() {
 					_, err := gdnr.Create(garden.ContainerSpec{

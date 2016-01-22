@@ -219,6 +219,24 @@ var maxContainers = flag.Uint(
 	0,
 	"Maximum number of containers that can be created")
 
+var idMappings rootfs_provider.MappingList
+
+func init() {
+	maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
+	idMappings = rootfs_provider.MappingList{
+		{
+			ContainerID: 0,
+			HostID:      maxId,
+			Size:        1,
+		},
+		{
+			ContainerID: 1,
+			HostID:      1,
+			Size:        maxId - 1,
+		},
+	}
+}
+
 func main() {
 	if reexec.Init() {
 		return
@@ -433,25 +451,11 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.C
 		},
 	}
 
-	maxId := sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID())
-	mappingList := rootfs_provider.MappingList{
-		{
-			FromID: 0,
-			ToID:   maxId,
-			Size:   1,
-		},
-		{
-			FromID: 1,
-			ToID:   1,
-			Size:   maxId - 1,
-		},
-	}
-
 	rootFSNamespacer := &rootfs_provider.UidNamespacer{
 		Logger: logger,
 		Translator: rootfs_provider.NewUidTranslator(
-			mappingList, // uid
-			mappingList, // gid
+			idMappings, // uid
+			idMappings, // gid
 		),
 	}
 
@@ -502,19 +506,17 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 		specs.Device{Path: "/dev/pts/ptmx", Type: 'c', Major: 5, Minor: 2, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
 	)
 
-	uidMap := specs.IDMapping{
-		HostID:      0,
-		ContainerID: 0,
-		Size:        10000,
-	}
-
 	template := &rundmc.BundleTemplate{
 		Rules: []rundmc.BundlerRule{
 			rundmc.BaseTemplateRule{
 				PrivilegedBase:   baseBundle,
-				UnprivilegedBase: baseBundle.WithNamespace(goci.UserNamespace).WithUIDMappings(uidMap).WithGIDMappings(uidMap),
+				UnprivilegedBase: baseBundle.WithNamespace(goci.UserNamespace).WithUIDMappings(idMappings...).WithGIDMappings(idMappings...),
 			},
-			rundmc.RootFSRule{},
+			rundmc.RootFSRule{
+				ContainerRootUID: idMappings.Map(0),
+				ContainerRootGID: idMappings.Map(0),
+				MkdirChowner:     rundmc.MkdirChownFunc(rundmc.MkdirChown),
+			},
 			rundmc.NetworkHookRule{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
 			rundmc.BindMountsRule{},
 		},
