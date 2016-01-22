@@ -383,7 +383,7 @@ func listenInContainer(container garden.Container, containerPort uint32) error {
 
 func sendRequest(ip string, port uint32) *gbytes.Buffer {
 	stdout := gbytes.NewBuffer()
-	cmd := exec.Command("nc", "-w1", ip, fmt.Sprintf("%d", port))
+	cmd := exec.Command("nc", "-w3", ip, fmt.Sprintf("%d", port))
 	cmd.Stdout = stdout
 	cmd.Stderr = GinkgoWriter
 
