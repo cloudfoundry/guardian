@@ -15,7 +15,6 @@ var _ = Describe("Properties", func() {
 	Describe("Manager", func() {
 		BeforeEach(func() {
 			propertyManager = properties.NewManager()
-
 			propertyManager.Set("handle", "name", "value")
 		})
 
@@ -23,9 +22,12 @@ var _ = Describe("Properties", func() {
 			It("removes key space", func() {
 				err := propertyManager.DestroyKeySpace("handle")
 				Expect(err).NotTo(HaveOccurred())
+			})
 
-				err = propertyManager.DestroyKeySpace("handle")
-				Expect(err).To(MatchError("No such key space: handle"))
+			Context("when the keyspace is already gone", func() {
+				It("succeeds (destroy should be idempotent)", func() {
+					Expect(propertyManager.DestroyKeySpace("some-handle-that-doesnt-exist")).To(Succeed())
+				})
 			})
 		})
 

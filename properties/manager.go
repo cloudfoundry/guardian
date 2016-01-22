@@ -22,12 +22,6 @@ func (m *Manager) DestroyKeySpace(handle string) error {
 	m.propMutex.Lock()
 	defer m.propMutex.Unlock()
 
-	if _, exists := m.prop[handle]; !exists {
-		return NoSuchKeySpaceError{
-			Message: fmt.Sprintf("No such key space: %s", handle),
-		}
-	}
-
 	delete(m.prop, handle)
 
 	return nil

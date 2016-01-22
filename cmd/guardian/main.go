@@ -30,6 +30,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/ports"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/cloudfoundry-incubator/guardian/logging"
+	"github.com/cloudfoundry-incubator/guardian/netplugin"
 	"github.com/cloudfoundry-incubator/guardian/properties"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
@@ -94,6 +95,18 @@ var kawasakiBin = flag.String(
 	"kawasakiBin",
 	"",
 	"path to the kawasaki network hook binary",
+)
+
+var networkPlugin = flag.String(
+	"networkPlugin",
+	"",
+	"path to the network plugin hook binary",
+)
+
+var networkPluginExtraArgs = flag.String(
+	"networkPluginExtraArgs",
+	"",
+	"path to the extra arg to the network plugin hook binary",
 )
 
 var depotPath = flag.String(
@@ -259,11 +272,16 @@ func main() {
 
 	propManager := properties.NewManager()
 
+	var networker gardener.Networker = netplugin.New(*networkPlugin, strings.Split(*networkPluginExtraArgs, ",")...)
+	if *networkPlugin == "" {
+		networker = wireNetworker(logger, *kawasakiBin, *tag, networkPoolCIDR, externalIPAddr, ipt, interfacePrefix, chainPrefix, propManager)
+	}
+
 	backend := &gardener.Gardener{
 		SysInfoProvider: sysinfo.NewProvider(*depotPath),
 		UidGenerator:    wireUidGenerator(),
 		Starter:         wireStarter(logger, ipt, *allowHostAccess, interfacePrefix, denyNetworksList),
-		Networker:       wireNetworker(logger, *kawasakiBin, *tag, networkPoolCIDR, externalIPAddr, ipt, interfacePrefix, chainPrefix, propManager),
+		Networker:       networker,
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath),
 		Logger:          logger,
