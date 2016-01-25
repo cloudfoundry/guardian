@@ -198,7 +198,7 @@ var _ = Describe("Net", func() {
 			)
 
 			BeforeEach(func() {
-				args = []string{"-networkPool", "10.254.0.0/29"}
+				args = []string{"-networkPool", "10.253.0.0/29"}
 				containerNetwork = ""
 			})
 
@@ -224,6 +224,10 @@ var _ = Describe("Net", func() {
 				Expect(newIpAddress).To(Equal(otherContainerIP))
 			})
 
+			It("vends IPs from the given network pool", func() {
+				Expect(containerIP(otherContainer)).To(ContainSubstring("10.253."))
+			})
+
 			It("is accessible from the outside", func() {
 				hostPort, containerPort, err := otherContainer.NetIn(0, 4321)
 				Expect(err).ToNot(HaveOccurred())
@@ -237,7 +241,7 @@ var _ = Describe("Net", func() {
 				Eventually(func() int {
 					session := sendRequest(externalIP, hostPort)
 					return session.Wait().ExitCode()
-				}, "5s", "1s").Should(Equal(0))
+				}).Should(Equal(0))
 			})
 		})
 
