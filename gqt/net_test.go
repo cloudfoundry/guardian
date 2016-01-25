@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
@@ -232,8 +231,13 @@ var _ = Describe("Net", func() {
 				Expect(listenInContainer(otherContainer, containerPort)).To(Succeed())
 
 				externalIP := externalIP(otherContainer)
-				stdout := sendRequest(externalIP, hostPort)
-				Expect(stdout).To(gbytes.Say(fmt.Sprintf("%d", containerPort)))
+
+				// retry because listener process inside other container
+				// may not start immediately
+				Eventually(func() int {
+					session := sendRequest(externalIP, hostPort)
+					return session.Wait().ExitCode()
+				}, "5s", "1s").Should(Equal(0))
 			})
 		})
 
@@ -277,8 +281,9 @@ var _ = Describe("Net", func() {
 				Expect(listenInContainer(container, containerPort)).To(Succeed())
 
 				externalIP := externalIP(container)
-				stdout := sendRequest(externalIP, hostPort)
-				Expect(stdout).To(gbytes.Say(fmt.Sprintf("%d", containerPort)))
+
+				Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait() }).
+					Should(gbytes.Say(fmt.Sprintf("%d", containerPort)))
 			})
 
 			It("maps the provided host port to the container port", func() {
@@ -290,8 +295,9 @@ var _ = Describe("Net", func() {
 				Expect(listenInContainer(container, actualContainerPort)).To(Succeed())
 
 				externalIP := externalIP(container)
-				stdout := sendRequest(externalIP, actualHostPort)
-				Expect(stdout).To(gbytes.Say(fmt.Sprintf("%d", actualContainerPort)))
+
+				Eventually(func() *gexec.Session { return sendRequest(externalIP, actualHostPort).Wait() }).
+					Should(gbytes.Say(fmt.Sprintf("%d", actualContainerPort)))
 			})
 		})
 
@@ -424,21 +430,15 @@ func listenInContainer(container garden.Container, containerPort uint32) error {
 		Stderr: GinkgoWriter,
 	})
 	Expect(err).ToNot(HaveOccurred())
-	time.Sleep(2 * time.Second)
 
 	return err
 }
 
-func sendRequest(ip string, port uint32) *gbytes.Buffer {
-	stdout := gbytes.NewBuffer()
-	cmd := exec.Command("nc", "-w5", "-v", ip, fmt.Sprintf("%d", port))
-	cmd.Stdout = stdout
-	cmd.Stderr = GinkgoWriter
+func sendRequest(ip string, port uint32) *gexec.Session {
+	sess, err := gexec.Start(exec.Command("nc", "-w5", "-v", ip, fmt.Sprintf("%d", port)), GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
 
-	err := cmd.Run()
-	Expect(err).ToNot(HaveOccurred())
-
-	return stdout
+	return sess
 }
 
 func getContent(filename string) func() []byte {
