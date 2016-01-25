@@ -77,10 +77,24 @@ var _ = Describe("Net", func() {
 		})
 
 		It("executes the network plugin during container creation", func() {
-			Expect(tmpFile).To(BeAnExistingFile())
-			Expect(ioutil.ReadFile(tmpFile)).To(
+			containerHandle := container.Handle()
+
+			Eventually(getContent(tmpFile)).Should(
 				ContainSubstring(
-					fmt.Sprintf("up,--handle,%s,--network,%s", container.Handle(), containerNetwork),
+					fmt.Sprintf("up,%s,--handle,%s,--network,%s", tmpFile, containerHandle, containerNetwork),
+				),
+			)
+		})
+
+		It("executes the network plugin during container destroy", func() {
+			containerHandle := container.Handle()
+
+			Expect(client.Destroy(containerHandle)).To(Succeed())
+			Expect(tmpFile).To(BeAnExistingFile())
+
+			Eventually(getContent(tmpFile)).Should(
+				ContainSubstring(
+					fmt.Sprintf("down,%s,--handle,%s,--network,%s", tmpFile, containerHandle, containerNetwork),
 				),
 			)
 		})
@@ -425,4 +439,12 @@ func sendRequest(ip string, port uint32) *gbytes.Buffer {
 	Expect(err).ToNot(HaveOccurred())
 
 	return stdout
+}
+
+func getContent(filename string) func() []byte {
+	return func() []byte {
+		bytes, err := ioutil.ReadFile(filename)
+		Expect(err).NotTo(HaveOccurred())
+		return bytes
+	}
 }

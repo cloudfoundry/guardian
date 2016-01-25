@@ -51,11 +51,17 @@ var _ = Describe("Gardener", func() {
 
 	Describe("creating a container", func() {
 		Context("when a handle is specified", func() {
-			It("passes the network hook to the containerizer", func() {
-				networker.HookStub = func(_ lager.Logger, handle, spec string) (gardener.Hook, error) {
-					return gardener.Hook{
-						Path: "/path/to/banana/exe",
-						Args: []string{"--handle", handle, "--spec", spec},
+			It("passes the network hooks to the containerizer", func() {
+				networker.HooksStub = func(_ lager.Logger, handle, spec string) (gardener.Hooks, error) {
+					return gardener.Hooks{
+						Prestart: gardener.Hook{
+							Path: "/path/to/banana/exe",
+							Args: []string{"--handle", handle, "--spec", spec},
+						},
+						Poststop: gardener.Hook{
+							Path: "/path/to/bananana/exe",
+							Args: []string{"--handle", handle, "--spec", spec},
+						},
 					}, nil
 				}
 
@@ -67,15 +73,20 @@ var _ = Describe("Gardener", func() {
 
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
 				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.NetworkHook).To(Equal(gardener.Hook{
+				Expect(spec.NetworkHooks.Prestart).To(Equal(gardener.Hook{
 					Path: "/path/to/banana/exe",
+					Args: []string{"--handle", "bob", "--spec", "10.0.0.2/30"},
+				}))
+
+				Expect(spec.NetworkHooks.Poststop).To(Equal(gardener.Hook{
+					Path: "/path/to/bananana/exe",
 					Args: []string{"--handle", "bob", "--spec", "10.0.0.2/30"},
 				}))
 			})
 
 			Context("when networker fails", func() {
 				BeforeEach(func() {
-					networker.HookReturns(gardener.Hook{}, errors.New("booom!"))
+					networker.HooksReturns(gardener.Hooks{}, errors.New("booom!"))
 				})
 
 				It("returns an error", func() {

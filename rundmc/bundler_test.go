@@ -159,15 +159,26 @@ var _ = Describe("NetworkHookRule", func() {
 		Entry("a sensible PATH", "PATH="+os.Getenv("PATH")),
 	)
 
-	It("add the hook to the pre-start hooks of the passed bundle", func() {
+	It("adds the prestart and poststop hooks of the passed bundle", func() {
 		newBndl := rundmc.NetworkHookRule{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
-			NetworkHook: gardener.Hook{
-				Path: "/path/to/bananas/network",
-				Args: []string{"arg", "barg"},
+			NetworkHooks: gardener.Hooks{
+				Prestart: gardener.Hook{
+					Path: "/path/to/bananas/network",
+					Args: []string{"arg", "barg"},
+				},
+				Poststop: gardener.Hook{
+					Path: "/path/to/bananas/network",
+					Args: []string{"arg", "barg"},
+				},
 			},
 		})
 
 		Expect(pathAndArgsOf(newBndl.RuntimeSpec.Hooks.Prestart)).To(ContainElement(PathAndArgs{
+			Path: "/path/to/bananas/network",
+			Args: []string{"arg", "barg"},
+		}))
+
+		Expect(pathAndArgsOf(newBndl.RuntimeSpec.Hooks.Poststop)).To(ContainElement(PathAndArgs{
 			Path: "/path/to/bananas/network",
 			Args: []string{"arg", "barg"},
 		}))

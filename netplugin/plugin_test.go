@@ -9,50 +9,52 @@ import (
 )
 
 var _ = Describe("Plugin", func() {
-	Describe("Hook", func() {
-		It("returns a Hook struct with the correct params", func() {
+	Describe("Hooks", func() {
+		It("returns a Hooks struct with the correct path", func() {
 			plugin := netplugin.New("some/path")
-			hook, err := plugin.Hook(lagertest.NewTestLogger("test"), "some-handle", "potato")
+			hooks, err := plugin.Hooks(lagertest.NewTestLogger("test"), "some-handle", "potato")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(hook.Path).To(Equal("some/path"))
+			Expect(hooks.Prestart.Path).To(Equal("some/path"))
+			Expect(hooks.Poststop.Path).To(Equal("some/path"))
 		})
 
-		Context("when no extra args are passed", func() {
-			It("uses the plugin name as the first argument", func() {
-				plugin := netplugin.New("some/path")
-				hook, err := plugin.Hook(lagertest.NewTestLogger("test"), "some-handle", "potato")
-				Expect(err).NotTo(HaveOccurred())
+		It("uses the plugin name as the first argument", func() {
+			plugin := netplugin.New("some/path")
+			hooks, err := plugin.Hooks(lagertest.NewTestLogger("test"), "some-handle", "potato")
+			Expect(err).NotTo(HaveOccurred())
 
-				Expect(hook.Args[0]).To(Equal("some/path"))
-			})
+			Expect(hooks.Prestart.Args[0]).To(Equal("some/path"))
+			Expect(hooks.Poststop.Args[0]).To(Equal("some/path"))
+		})
 
-			It("returns a Hook struct with the correct args", func() {
-				plugin := netplugin.New("some/path")
+		It("returns a Hook struct with the correct args", func() {
+			plugin := netplugin.New("some/path")
 
-				hook, err := plugin.Hook(
-					lagertest.NewTestLogger("test"),
-					"some-handle",
-					"potato",
-				)
+			hooks, err := plugin.Hooks(
+				lagertest.NewTestLogger("test"),
+				"some-handle",
+				"potato",
+			)
 
-				Expect(err).NotTo(HaveOccurred())
-				Expect(hook.Args).To(Equal([]string{"some/path", "up", "--handle", "some-handle", "--network", "potato"}))
-			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hooks.Prestart.Args).To(Equal([]string{"some/path", "up", "--handle", "some-handle", "--network", "potato"}))
+			Expect(hooks.Poststop.Args).To(Equal([]string{"some/path", "down", "--handle", "some-handle", "--network", "potato"}))
 		})
 
 		Context("when there are extra args", func() {
 			It("prepends the extra args before the standard hook parameters", func() {
 				plugin := netplugin.New("some/path", "arg1", "arg2")
 
-				hook, err := plugin.Hook(
+				hooks, err := plugin.Hooks(
 					lagertest.NewTestLogger("test"),
 					"some-handle",
 					"potato",
 				)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hook.Args).To(Equal([]string{"some/path", "arg1", "arg2", "up", "--handle", "some-handle", "--network", "potato"}))
+				Expect(hooks.Prestart.Args).To(Equal([]string{"some/path", "up", "arg1", "arg2", "--handle", "some-handle", "--network", "potato"}))
+				Expect(hooks.Poststop.Args).To(Equal([]string{"some/path", "down", "arg1", "arg2", "--handle", "some-handle", "--network", "potato"}))
 			})
 		})
 	})

@@ -93,7 +93,7 @@ var _ = Describe("Networker", func() {
 
 	Describe("Hook", func() {
 		It("parses the spec", func() {
-			networker.Hook(logger, "some-handle", "1.2.3.4/30")
+			networker.Hooks(logger, "some-handle", "1.2.3.4/30")
 			Expect(fakeSpecParser.ParseCallCount()).To(Equal(1))
 			_, spec := fakeSpecParser.ParseArgsForCall(0)
 			Expect(spec).To(Equal("1.2.3.4/30"))
@@ -101,7 +101,7 @@ var _ = Describe("Networker", func() {
 
 		It("returns an error if the spec can't be parsed", func() {
 			fakeSpecParser.ParseReturns(nil, nil, errors.New("no parsey"))
-			_, err := networker.Hook(logger, "some-handle", "1.2.3.4/30")
+			_, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30")
 			Expect(err).To(MatchError("no parsey"))
 		})
 
@@ -110,7 +110,7 @@ var _ = Describe("Networker", func() {
 			someIpRequest := subnets.DynamicIPSelector
 			fakeSpecParser.ParseReturns(someSubnetRequest, someIpRequest, nil)
 
-			networker.Hook(logger, "some-handle", "1.2.3.4/30")
+			networker.Hooks(logger, "some-handle", "1.2.3.4/30")
 			Expect(fakeSubnetPool.AcquireCallCount()).To(Equal(1))
 			_, sr, ir := fakeSubnetPool.AcquireArgsForCall(0)
 			Expect(sr).To(Equal(someSubnetRequest))
@@ -121,7 +121,7 @@ var _ = Describe("Networker", func() {
 			someIp, someSubnet, err := net.ParseCIDR("1.2.3.4/5")
 			fakeSubnetPool.AcquireReturns(someSubnet, someIp, err)
 
-			networker.Hook(logger, "some-handle", "1.2.3.4/30")
+			networker.Hooks(logger, "some-handle", "1.2.3.4/30")
 			Expect(fakeConfigCreator.CreateCallCount()).To(Equal(1))
 			_, handle, subnet, ip := fakeConfigCreator.CreateArgsForCall(0)
 			Expect(handle).To(Equal("some-handle"))
@@ -137,7 +137,7 @@ var _ = Describe("Networker", func() {
 				config[name] = value
 			}
 
-			_, err := networker.Hook(logger, "some-handle", "1.2.3.4/30")
+			_, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config["kawasaki.host-interface"]).To(Equal(networkConfig.HostIntf))
@@ -155,32 +155,32 @@ var _ = Describe("Networker", func() {
 		Context("when the configuration can't be created", func() {
 			It("returns a wrapped error", func() {
 				fakeConfigCreator.CreateReturns(kawasaki.NetworkConfig{}, errors.New("bad config"))
-				_, err := networker.Hook(logger, "some-handle", "1.2.3.4/30")
+				_, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30")
 				Expect(err).To(MatchError("create network config: bad config"))
 			})
 		})
 
 		It("returns the path to the kawasaki binary with the created config as flags", func() {
-			hook, err := networker.Hook(logger, "some-handle", "1.2.3.4/30")
+			hooks, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(hook.Path).To(Equal("/path/to/kawasaki"))
+			Expect(hooks.Prestart.Path).To(Equal("/path/to/kawasaki"))
 		})
 
 		It("passes the config as flags to the binary", func() {
-			hook, err := networker.Hook(logger, "some-handle", "1.2.3.4/30")
+			hooks, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(hook.Args).To(ContainElement("--host-interface=" + networkConfig.HostIntf))
-			Expect(hook.Args).To(ContainElement("--container-interface=" + networkConfig.ContainerIntf))
-			Expect(hook.Args).To(ContainElement("--bridge-interface=" + networkConfig.BridgeName))
-			Expect(hook.Args).To(ContainElement("--bridge-ip=" + networkConfig.BridgeIP.String()))
-			Expect(hook.Args).To(ContainElement("--container-ip=" + networkConfig.ContainerIP.String()))
-			Expect(hook.Args).To(ContainElement("--external-ip=" + networkConfig.ExternalIP.String()))
-			Expect(hook.Args).To(ContainElement("--subnet=" + networkConfig.Subnet.String()))
-			Expect(hook.Args).To(ContainElement("--iptable-instance=" + networkConfig.IPTableInstance))
-			Expect(hook.Args).To(ContainElement("--iptable-prefix=" + networkConfig.IPTablePrefix))
-			Expect(hook.Args).To(ContainElement("--mtu=" + strconv.Itoa(networkConfig.Mtu)))
+			Expect(hooks.Prestart.Args).To(ContainElement("--host-interface=" + networkConfig.HostIntf))
+			Expect(hooks.Prestart.Args).To(ContainElement("--container-interface=" + networkConfig.ContainerIntf))
+			Expect(hooks.Prestart.Args).To(ContainElement("--bridge-interface=" + networkConfig.BridgeName))
+			Expect(hooks.Prestart.Args).To(ContainElement("--bridge-ip=" + networkConfig.BridgeIP.String()))
+			Expect(hooks.Prestart.Args).To(ContainElement("--container-ip=" + networkConfig.ContainerIP.String()))
+			Expect(hooks.Prestart.Args).To(ContainElement("--external-ip=" + networkConfig.ExternalIP.String()))
+			Expect(hooks.Prestart.Args).To(ContainElement("--subnet=" + networkConfig.Subnet.String()))
+			Expect(hooks.Prestart.Args).To(ContainElement("--iptable-instance=" + networkConfig.IPTableInstance))
+			Expect(hooks.Prestart.Args).To(ContainElement("--iptable-prefix=" + networkConfig.IPTablePrefix))
+			Expect(hooks.Prestart.Args).To(ContainElement("--mtu=" + strconv.Itoa(networkConfig.Mtu)))
 		})
 	})
 

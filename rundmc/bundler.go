@@ -53,13 +53,19 @@ type NetworkHookRule struct {
 }
 
 func (r NetworkHookRule) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
+	env := []string{fmt.Sprintf(
+		"GARDEN_LOG_FILE="+r.LogFilePattern, spec.Handle),
+		"PATH=" + os.Getenv("PATH"),
+	}
+
 	return bndl.WithPrestartHooks(specs.Hook{
-		Env: []string{fmt.Sprintf(
-			"GARDEN_LOG_FILE="+r.LogFilePattern, spec.Handle),
-			"PATH=" + os.Getenv("PATH"),
-		},
-		Path: spec.NetworkHook.Path,
-		Args: spec.NetworkHook.Args,
+		Env:  env,
+		Path: spec.NetworkHooks.Prestart.Path,
+		Args: spec.NetworkHooks.Prestart.Args,
+	}).WithPoststopHooks(specs.Hook{
+		Env:  env,
+		Path: spec.NetworkHooks.Poststop.Path,
+		Args: spec.NetworkHooks.Poststop.Args,
 	})
 }
 

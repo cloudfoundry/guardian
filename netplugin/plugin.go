@@ -18,14 +18,20 @@ func New(path string, extraArg ...string) *Plugin {
 	}
 }
 
-func (p Plugin) Hook(log lager.Logger, handle, spec string) (gardener.Hook, error) {
-	args := []string{p.path}
+func (p Plugin) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks, error) {
+	var args []string
 	args = append(args, p.extraArg...)
-	args = append(args, []string{"up", "--handle", handle, "--network", spec}...)
+	args = append(args, []string{"--handle", handle, "--network", spec}...)
 
-	return gardener.Hook{
-		Path: p.path,
-		Args: args,
+	return gardener.Hooks{
+		Prestart: gardener.Hook{
+			Path: p.path,
+			Args: append([]string{p.path, "up"}, args...),
+		},
+		Poststop: gardener.Hook{
+			Path: p.path,
+			Args: append([]string{p.path, "down"}, args...),
+		},
 	}, nil
 }
 

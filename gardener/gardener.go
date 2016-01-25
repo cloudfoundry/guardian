@@ -32,7 +32,7 @@ type Containerizer interface {
 }
 
 type Networker interface {
-	Hook(log lager.Logger, handle, spec string) (Hook, error)
+	Hooks(log lager.Logger, handle, spec string) (Hooks, error)
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error)
@@ -69,6 +69,11 @@ func (fn UidGeneratorFunc) Generate() string {
 	return fn()
 }
 
+type Hooks struct {
+	Prestart Hook
+	Poststop Hook
+}
+
 type Hook struct {
 	Path string
 	Args []string
@@ -80,8 +85,8 @@ type DesiredContainerSpec struct {
 	// Path to the Root Filesystem for the container
 	RootFSPath string
 
-	// Network pre-start hook
-	NetworkHook Hook
+	// Network hook
+	NetworkHooks Hooks
 
 	// Bind mounts
 	BindMounts []garden.BindMount
@@ -123,7 +128,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		spec.Handle = g.UidGenerator.Generate()
 	}
 
-	hook, err := g.Networker.Hook(log, spec.Handle, spec.Network)
+	hooks, err := g.Networker.Hooks(log, spec.Handle, spec.Network)
 	if err != nil {
 		return nil, err
 	}
@@ -145,11 +150,11 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 	}
 
 	if err := g.Containerizer.Create(log, DesiredContainerSpec{
-		Handle:      spec.Handle,
-		RootFSPath:  rootFSPath,
-		NetworkHook: hook,
-		Privileged:  spec.Privileged,
-		BindMounts:  spec.BindMounts,
+		Handle:       spec.Handle,
+		RootFSPath:   rootFSPath,
+		NetworkHooks: hooks,
+		Privileged:   spec.Privileged,
+		BindMounts:   spec.BindMounts,
 	}); err != nil {
 		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err

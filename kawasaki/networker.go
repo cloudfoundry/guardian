@@ -124,7 +124,7 @@ func New(
 
 // Hook provides path and appropriate arguments to the kawasaki executable that
 // applies the network configuration after the network namesapce creation.
-func (n *Networker) Hook(log lager.Logger, handle, spec string) (gardener.Hook, error) {
+func (n *Networker) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks, error) {
 	log = log.Session("network", lager.Data{
 		"handle": handle,
 		"spec":   spec,
@@ -136,38 +136,40 @@ func (n *Networker) Hook(log lager.Logger, handle, spec string) (gardener.Hook, 
 	subnetReq, ipReq, err := n.specParser.Parse(log, spec)
 	if err != nil {
 		log.Error("parse-failed", err)
-		return gardener.Hook{}, err
+		return gardener.Hooks{}, err
 	}
 
 	subnet, ip, err := n.subnetPool.Acquire(log, subnetReq, ipReq)
 	if err != nil {
 		log.Error("acquire-failed", err)
-		return gardener.Hook{}, err
+		return gardener.Hooks{}, err
 	}
 
 	config, err := n.configCreator.Create(log, handle, subnet, ip)
 	if err != nil {
 		log.Error("create-config-failed", err)
-		return gardener.Hook{}, fmt.Errorf("create network config: %s", err)
+		return gardener.Hooks{}, fmt.Errorf("create network config: %s", err)
 	}
 	log.Info("config-create", lager.Data{"config": config})
 
 	save(n.configStore, handle, config)
 
-	return gardener.Hook{
-		Path: n.kawasakiBinPath,
-		Args: []string{
-			n.kawasakiBinPath,
-			fmt.Sprintf("--host-interface=%s", config.HostIntf),
-			fmt.Sprintf("--container-interface=%s", config.ContainerIntf),
-			fmt.Sprintf("--bridge-interface=%s", config.BridgeName),
-			fmt.Sprintf("--bridge-ip=%s", config.BridgeIP),
-			fmt.Sprintf("--container-ip=%s", config.ContainerIP),
-			fmt.Sprintf("--external-ip=%s", config.ExternalIP),
-			fmt.Sprintf("--subnet=%s", config.Subnet.String()),
-			fmt.Sprintf("--mtu=%d", config.Mtu),
-			fmt.Sprintf("--iptable-prefix=%s", config.IPTablePrefix),
-			fmt.Sprintf("--iptable-instance=%s", config.IPTableInstance),
+	return gardener.Hooks{
+		Prestart: gardener.Hook{
+			Path: n.kawasakiBinPath,
+			Args: []string{
+				n.kawasakiBinPath,
+				fmt.Sprintf("--host-interface=%s", config.HostIntf),
+				fmt.Sprintf("--container-interface=%s", config.ContainerIntf),
+				fmt.Sprintf("--bridge-interface=%s", config.BridgeName),
+				fmt.Sprintf("--bridge-ip=%s", config.BridgeIP),
+				fmt.Sprintf("--container-ip=%s", config.ContainerIP),
+				fmt.Sprintf("--external-ip=%s", config.ExternalIP),
+				fmt.Sprintf("--subnet=%s", config.Subnet.String()),
+				fmt.Sprintf("--mtu=%d", config.Mtu),
+				fmt.Sprintf("--iptable-prefix=%s", config.IPTablePrefix),
+				fmt.Sprintf("--iptable-instance=%s", config.IPTableInstance),
+			},
 		},
 	}, nil
 }

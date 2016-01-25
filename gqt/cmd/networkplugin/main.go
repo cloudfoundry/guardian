@@ -7,6 +7,12 @@ import (
 )
 
 func main() {
+	if len(os.Args) < 3 {
+		panic("network test plugin requires at least 3 arguments")
+	}
+
 	args := strings.Join(os.Args, ",")
-	ioutil.WriteFile(os.Args[1], []byte(args), 0700)
+	if err := ioutil.WriteFile(os.Args[2], []byte(args), 0700); err != nil {
+		panic(err)
+	}
 }
