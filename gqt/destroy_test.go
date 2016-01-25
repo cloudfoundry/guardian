@@ -106,7 +106,7 @@ var _ = Describe("Destroying a Container", func() {
 		})
 
 		It("should remove iptable entries", func() {
-			out, err := exec.Command("iptables", "-S", "-t", "filter").CombinedOutput()
+			out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(out)).NotTo(MatchRegexp("g-%d-instance.* 177.100.10.0/24", GinkgoParallelNode()))
 			Expect(string(out)).To(ContainSubstring("168.100.20.0/24"))
