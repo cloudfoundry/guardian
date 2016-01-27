@@ -11,7 +11,7 @@ type FakeUidGenerator struct {
 	GenerateStub        func() string
 	generateMutex       sync.RWMutex
 	generateArgsForCall []struct{}
-	generateReturns     struct {
+	generateReturns struct {
 		result1 string
 	}
 }

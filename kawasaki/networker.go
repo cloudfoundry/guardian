@@ -1,6 +1,7 @@
 package kawasaki
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"strconv"
@@ -11,12 +12,15 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+// generic gardener properties
+const containerIpKey = gardener.ContainerIPKey
+const bridgeIpKey = gardener.BridgeIPKey
+const externalIpKey = gardener.ExternalIPKey
+
+// kawasaki-specific state properties
 const hostIntfKey = "kawasaki.host-interface"
 const containerIntfKey = "kawasaki.container-interface"
 const bridgeIntfKey = "kawasaki.bridge-interface"
-const bridgeIpKey = "kawasaki.bridge-ip"
-const containerIpKey = "kawasaki.container-ip"
-const externalIpKey = "kawasaki.external-ip"
 const subnetKey = "kawasaki.subnet"
 const iptablePrefixKey = "kawasaki.iptable-prefix"
 const iptableInstanceKey = "kawasaki.iptable-inst"
@@ -179,7 +183,7 @@ func (n *Networker) Capacity() uint64 {
 	return uint64(n.subnetPool.Capacity())
 }
 
-func (n *Networker) NetIn(handle string, externalPort, containerPort uint32) (uint32, uint32, error) {
+func (n *Networker) NetIn(log lager.Logger, handle string, externalPort, containerPort uint32) (uint32, uint32, error) {
 	cfg, err := load(n.configStore, handle)
 	if err != nil {
 		return 0, 0, err
@@ -208,6 +212,11 @@ func (n *Networker) NetIn(handle string, externalPort, containerPort uint32) (ui
 		return 0, 0, err
 	}
 
+	addPortMapping(log, n.configStore, handle, garden.PortMapping{
+		HostPort:      externalPort,
+		ContainerPort: containerPort,
+	})
+
 	return externalPort, containerPort, nil
 }
 
@@ -232,6 +241,27 @@ func (n *Networker) Destroy(log lager.Logger, handle string) error {
 	}
 
 	return n.subnetPool.Release(cfg.Subnet, cfg.ContainerIP)
+}
+
+func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string, newMapping garden.PortMapping) {
+	currentMappingsJson, err := configStore.Get(handle, gardener.MappedPortsKey)
+	if err != nil {
+		log := logger.Session("net-in", lager.Data{"handle": handle})
+		log.Debug(fmt.Sprintf("ConfigStore fails to get key: %s. Possibly it is not yet initialized.", gardener.MappedPortsKey))
+	}
+
+	currentMappings := []garden.PortMapping{}
+
+	// If unmarshall fails, we get a default empty struct
+	json.Unmarshal([]byte(currentMappingsJson), &currentMappings)
+
+	updatedMappings := append(currentMappings, newMapping)
+
+	// Since the object we are marshalling here is always going to be
+	// valid, not checking for errors here
+	upadtedMappingsJson, _ := json.Marshal(updatedMappings)
+
+	configStore.Set(handle, gardener.MappedPortsKey, string(upadtedMappingsJson))
 }
 
 func getAll(config ConfigStore, handle string, key ...string) (vals []string, err error) {

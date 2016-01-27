@@ -11,7 +11,7 @@ type FakePortPool struct {
 	AcquireStub        func() (uint32, error)
 	acquireMutex       sync.RWMutex
 	acquireArgsForCall []struct{}
-	acquireReturns     struct {
+	acquireReturns struct {
 		result1 uint32
 		result2 error
 	}

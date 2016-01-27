@@ -42,7 +42,7 @@ type FakeDepot struct {
 	HandlesStub        func() ([]string, error)
 	handlesMutex       sync.RWMutex
 	handlesArgsForCall []struct{}
-	handlesReturns     struct {
+	handlesReturns struct {
 		result1 []string
 		result2 error
 	}

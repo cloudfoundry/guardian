@@ -38,6 +38,7 @@ var _ = Describe("Gardener", func() {
 		volumeCreator = new(fakes.FakeVolumeCreator)
 		sysinfoProvider = new(fakes.FakeSysInfoProvider)
 		propertyManager = new(fakes.FakePropertyManager)
+
 		gdnr = &gardener.Gardener{
 			SysInfoProvider: sysinfoProvider,
 			Containerizer:   containerizer,
@@ -440,7 +441,8 @@ var _ = Describe("Gardener", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(networker.NetInCallCount()).To(Equal(1))
 
-				actualHandle, actualExtPort, actualContainerPort := networker.NetInArgsForCall(0)
+				actualLogger, actualHandle, actualExtPort, actualContainerPort := networker.NetInArgsForCall(0)
+				Expect(actualLogger).To(Equal(logger))
 				Expect(actualHandle).To(Equal(container.Handle()))
 				Expect(actualExtPort).To(Equal(externalPort))
 				Expect(actualContainerPort).To(Equal(contianerPort))
@@ -635,5 +637,203 @@ var _ = Describe("Gardener", func() {
 				Expect(err).To(MatchError(errors.New("whelp")))
 			})
 		})
+	})
+
+	Describe("Properties", func() {
+		var container garden.Container
+
+		BeforeEach(func() {
+			var err error
+			container, err = gdnr.Lookup("some-handle")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("delegates to the property manager for Properties", func() {
+			container.Properties()
+			Expect(propertyManager.AllCallCount()).To(Equal(1))
+			handle := propertyManager.AllArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+		})
+
+		It("delegates to the property manager for SetProperty", func() {
+			container.SetProperty("name", "value")
+			Expect(propertyManager.SetCallCount()).To(Equal(1))
+			handle, prop, val := propertyManager.SetArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+			Expect(prop).To(Equal("name"))
+			Expect(val).To(Equal("value"))
+		})
+
+		It("delegates to the property manager for Property", func() {
+			container.Property("name")
+			Expect(propertyManager.GetCallCount()).To(Equal(1))
+			handle, name := propertyManager.GetArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+			Expect(name).To(Equal("name"))
+		})
+
+		It("delegates to the property manager for RemoveProperty", func() {
+			container.RemoveProperty("name")
+			Expect(propertyManager.RemoveCallCount()).To(Equal(1))
+			handle, name := propertyManager.RemoveArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+			Expect(name).To(Equal("name"))
+		})
+	})
+
+	Describe("Info", func() {
+		var container garden.Container
+
+		var properties map[string]string
+		var propertyMgrErrors map[string]error
+
+		BeforeEach(func() {
+			var err error
+			container, err = gdnr.Lookup("some-handle")
+			Expect(err).NotTo(HaveOccurred())
+
+			properties = make(map[string]string)
+			propertyMgrErrors = make(map[string]error)
+			propertyManager.GetStub = func(handle, key string) (string, error) {
+				Expect(handle).To(Equal("some-handle"))
+				return properties[key], propertyMgrErrors[key]
+			}
+		})
+
+		It("hard-codes the state to 'active'", func() {
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(info.State).To(Equal("active"))
+		})
+
+		It("returns the garden.network.container-ip property from the propertyManager as the ContainerIP", func() {
+			properties[gardener.ContainerIPKey] = "1.2.3.4"
+
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(info.ContainerIP).To(Equal("1.2.3.4"))
+		})
+
+		Context("when getting the containerIP fails", func() {
+			It("should return the error", func() {
+				propertyMgrErrors[gardener.ContainerIPKey] = errors.New("spiderman-error")
+
+				_, err := container.Info()
+				Expect(err).To(MatchError("spiderman-error"))
+			})
+		})
+
+		It("returns the garden.network.host-ip property from the propertyManager as the HostIP", func() {
+			properties[gardener.BridgeIPKey] = "1.2.3.4"
+
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(info.HostIP).To(Equal("1.2.3.4"))
+		})
+
+		Context("when getting the hostIP fails", func() {
+			It("should return the error", func() {
+				propertyMgrErrors[gardener.BridgeIPKey] = errors.New("spiderman-error")
+
+				_, err := container.Info()
+				Expect(err).To(MatchError("spiderman-error"))
+			})
+		})
+
+		It("returns the garden.network.external-ip property from the propertyManager as the ExternalIP", func() {
+			properties[gardener.ExternalIPKey] = "1.2.3.4"
+
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(info.ExternalIP).To(Equal("1.2.3.4"))
+		})
+
+		Context("when getting the externalIP fails", func() {
+			It("should return the error", func() {
+				propertyMgrErrors[gardener.ExternalIPKey] = errors.New("spiderman-error")
+
+				_, err := container.Info()
+				Expect(err).To(MatchError("spiderman-error"))
+			})
+		})
+
+		It("returns the container path based on the info returned by the containerizer", func() {
+			containerizer.InfoReturns(gardener.ActualContainerSpec{
+				BundlePath: "/foo/bar/baz",
+			}, nil)
+
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(info.ContainerPath).To(Equal("/foo/bar/baz"))
+		})
+
+		Context("when getting the ActualContainerSpec fails", func() {
+			It("return the error", func() {
+				containerizer.InfoReturns(gardener.ActualContainerSpec{}, errors.New("info-error"))
+
+				_, err := container.Info()
+				Expect(err).To(MatchError("info-error"))
+			})
+		})
+
+		It("returns the container properties", func() {
+			propertyManager.AllReturns(garden.Properties{
+				"spider": "man",
+				"super":  "man",
+			}, nil)
+
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(info.Properties).To(Equal(garden.Properties{
+				"spider": "man",
+				"super":  "man",
+			}))
+		})
+
+		Context("when the propertymanager fails to get properties", func() {
+			It("should return the error", func() {
+				propertyManager.AllReturns(garden.Properties{}, errors.New("hey-error"))
+
+				_, err := container.Info()
+				Expect(err).To(MatchError(("hey-error")))
+			})
+		})
+
+		It("returns the list of mapped ports", func() {
+			propertyManager.GetReturns(`[
+			  {"HostPort":123,"ContainerPort":456},
+			  {"HostPort":789,"ContainerPort":321}
+			]`, nil)
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(info.MappedPorts).To(HaveLen(2))
+
+			portMapping1 := info.MappedPorts[0]
+			Expect(portMapping1.HostPort).To(BeNumerically("==", 123))
+			Expect(portMapping1.ContainerPort).To(BeNumerically("==", 456))
+
+			portMapping2 := info.MappedPorts[1]
+			Expect(portMapping2.HostPort).To(BeNumerically("==", 789))
+			Expect(portMapping2.ContainerPort).To(BeNumerically("==", 321))
+		})
+
+		Context("when PropertyManager fails to get port mappings", func() {
+			It("should return empty port mapping list", func() {
+				propertyMgrErrors[gardener.MappedPortsKey] = errors.New("spiderman-error")
+
+				info, err := container.Info()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(info.MappedPorts).To(BeEmpty())
+			})
+		})
+
 	})
 })

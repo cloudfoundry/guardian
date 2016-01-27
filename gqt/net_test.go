@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -386,13 +387,13 @@ var _ = Describe("Net", func() {
 func externalIP(container garden.Container) string {
 	properties, err := container.Properties()
 	Expect(err).NotTo(HaveOccurred())
-	return properties["kawasaki.external-ip"]
+	return properties[gardener.ExternalIPKey]
 }
 
 func containerIP(container garden.Container) string {
 	properties, err := container.Properties()
 	Expect(err).NotTo(HaveOccurred())
-	return properties["kawasaki.container-ip"]
+	return properties[gardener.ContainerIPKey]
 }
 
 func checkConnection(container garden.Container, ip string, port int) error {

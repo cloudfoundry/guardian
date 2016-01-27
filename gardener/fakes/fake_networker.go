@@ -24,7 +24,7 @@ type FakeNetworker struct {
 	CapacityStub        func() uint64
 	capacityMutex       sync.RWMutex
 	capacityArgsForCall []struct{}
-	capacityReturns     struct {
+	capacityReturns struct {
 		result1 uint64
 	}
 	DestroyStub        func(log lager.Logger, handle string) error
@@ -36,9 +36,10 @@ type FakeNetworker struct {
 	destroyReturns struct {
 		result1 error
 	}
-	NetInStub        func(handle string, hostPort, containerPort uint32) (uint32, uint32, error)
+	NetInStub        func(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error)
 	netInMutex       sync.RWMutex
 	netInArgsForCall []struct {
+		log           lager.Logger
 		handle        string
 		hostPort      uint32
 		containerPort uint32
@@ -152,16 +153,17 @@ func (fake *FakeNetworker) DestroyReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeNetworker) NetIn(handle string, hostPort uint32, containerPort uint32) (uint32, uint32, error) {
+func (fake *FakeNetworker) NetIn(log lager.Logger, handle string, hostPort uint32, containerPort uint32) (uint32, uint32, error) {
 	fake.netInMutex.Lock()
 	fake.netInArgsForCall = append(fake.netInArgsForCall, struct {
+		log           lager.Logger
 		handle        string
 		hostPort      uint32
 		containerPort uint32
-	}{handle, hostPort, containerPort})
+	}{log, handle, hostPort, containerPort})
 	fake.netInMutex.Unlock()
 	if fake.NetInStub != nil {
-		return fake.NetInStub(handle, hostPort, containerPort)
+		return fake.NetInStub(log, handle, hostPort, containerPort)
 	} else {
 		return fake.netInReturns.result1, fake.netInReturns.result2, fake.netInReturns.result3
 	}
@@ -173,10 +175,10 @@ func (fake *FakeNetworker) NetInCallCount() int {
 	return len(fake.netInArgsForCall)
 }
 
-func (fake *FakeNetworker) NetInArgsForCall(i int) (string, uint32, uint32) {
+func (fake *FakeNetworker) NetInArgsForCall(i int) (lager.Logger, string, uint32, uint32) {
 	fake.netInMutex.RLock()
 	defer fake.netInMutex.RUnlock()
-	return fake.netInArgsForCall[i].handle, fake.netInArgsForCall[i].hostPort, fake.netInArgsForCall[i].containerPort
+	return fake.netInArgsForCall[i].log, fake.netInArgsForCall[i].handle, fake.netInArgsForCall[i].hostPort, fake.netInArgsForCall[i].containerPort
 }
 
 func (fake *FakeNetworker) NetInReturns(result1 uint32, result2 uint32, result3 error) {

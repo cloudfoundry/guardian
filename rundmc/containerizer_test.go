@@ -243,6 +243,22 @@ var _ = Describe("Rundmc", func() {
 		})
 	})
 
+	Describe("Info", func() {
+		It("should return the ActualContainerSpec with the correct bundlePath", func() {
+			actualSpec, err := containerizer.Info(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualSpec.BundlePath).To(Equal("/path/to/some-handle"))
+		})
+
+		Context("when the lookup fails", func() {
+			It("should return the error", func() {
+				fakeDepot.LookupReturns("", errors.New("spiderman-error"))
+				_, err := containerizer.Info(logger, "some-handle")
+				Expect(err).To(MatchError("spiderman-error"))
+			})
+		})
+	})
+
 	Describe("handles", func() {
 		Context("when handles exist", func() {
 			BeforeEach(func() {

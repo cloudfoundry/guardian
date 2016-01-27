@@ -11,16 +11,20 @@ import (
 )
 
 //go:generate counterfeiter . SysInfoProvider
+//go:generate counterfeiter . Containerizer
+//go:generate counterfeiter . Networker
+//go:generate counterfeiter . VolumeCreator
+//go:generate counterfeiter . UidGenerator
+
+const ContainerIPKey = "garden.network.container-ip"
+const BridgeIPKey = "garden.network.host-ip"
+const ExternalIPKey = "garden.network.external-ip"
+const MappedPortsKey = "garden.network.mapped-ports"
 
 type SysInfoProvider interface {
 	TotalMemory() (uint64, error)
 	TotalDisk() (uint64, error)
 }
-
-//go:generate counterfeiter . Containerizer
-//go:generate counterfeiter . Networker
-//go:generate counterfeiter . VolumeCreator
-//go:generate counterfeiter . UidGenerator
 
 type Containerizer interface {
 	Create(log lager.Logger, spec DesiredContainerSpec) error
@@ -28,6 +32,7 @@ type Containerizer interface {
 	StreamOut(log lager.Logger, handle string, spec garden.StreamOutSpec) (io.ReadCloser, error)
 	Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Destroy(log lager.Logger, handle string) error
+	Info(log lager.Logger, handle string) (ActualContainerSpec, error)
 	Handles() ([]string, error)
 }
 
@@ -35,7 +40,7 @@ type Networker interface {
 	Hooks(log lager.Logger, handle, spec string) (Hooks, error)
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
-	NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error)
+	NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error)
 	NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error
 }
 
@@ -95,6 +100,16 @@ type DesiredContainerSpec struct {
 	Privileged bool
 
 	Limits garden.Limits
+}
+
+type ActualContainerSpec struct {
+	// The path to the container's bundle directory
+	BundlePath string
+
+	// Whether the container is stopped
+	Stopped bool
+
+	ProcessIDs []string
 }
 
 // Gardener orchestrates other components to implement the Garden API

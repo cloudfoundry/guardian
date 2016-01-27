@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/fakes"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
@@ -30,6 +31,7 @@ var _ = Describe("Networker", func() {
 		networker          *kawasaki.Networker
 		logger             lager.Logger
 		networkConfig      kawasaki.NetworkConfig
+		config             map[string]string
 	)
 
 	BeforeEach(func() {
@@ -72,13 +74,13 @@ var _ = Describe("Networker", func() {
 
 		fakeConfigCreator.CreateReturns(networkConfig, nil)
 
-		config := map[string]string{
+		config = map[string]string{
+			gardener.ContainerIPKey:        networkConfig.ContainerIP.String(),
 			"kawasaki.host-interface":      networkConfig.HostIntf,
 			"kawasaki.container-interface": networkConfig.ContainerIntf,
 			"kawasaki.bridge-interface":    networkConfig.BridgeName,
-			"kawasaki.bridge-ip":           networkConfig.BridgeIP.String(),
-			"kawasaki.container-ip":        networkConfig.ContainerIP.String(),
-			"kawasaki.external-ip":         networkConfig.ExternalIP.String(),
+			gardener.BridgeIPKey:           networkConfig.BridgeIP.String(),
+			gardener.ExternalIPKey:         networkConfig.ExternalIP.String(),
 			"kawasaki.subnet":              networkConfig.Subnet.String(),
 			"kawasaki.iptable-prefix":      networkConfig.IPTablePrefix,
 			"kawasaki.iptable-inst":        networkConfig.IPTableInstance,
@@ -143,9 +145,9 @@ var _ = Describe("Networker", func() {
 			Expect(config["kawasaki.host-interface"]).To(Equal(networkConfig.HostIntf))
 			Expect(config["kawasaki.container-interface"]).To(Equal(networkConfig.ContainerIntf))
 			Expect(config["kawasaki.bridge-interface"]).To(Equal(networkConfig.BridgeName))
-			Expect(config["kawasaki.bridge-ip"]).To(Equal(networkConfig.BridgeIP.String()))
-			Expect(config["kawasaki.container-ip"]).To(Equal(networkConfig.ContainerIP.String()))
-			Expect(config["kawasaki.external-ip"]).To(Equal(networkConfig.ExternalIP.String()))
+			Expect(config[gardener.BridgeIPKey]).To(Equal(networkConfig.BridgeIP.String()))
+			Expect(config[gardener.ContainerIPKey]).To(Equal(networkConfig.ContainerIP.String()))
+			Expect(config[gardener.ExternalIPKey]).To(Equal(networkConfig.ExternalIP.String()))
 			Expect(config["kawasaki.subnet"]).To(Equal(networkConfig.Subnet.String()))
 			Expect(config["kawasaki.iptable-prefix"]).To(Equal(networkConfig.IPTablePrefix))
 			Expect(config["kawasaki.iptable-inst"]).To(Equal(networkConfig.IPTableInstance))
@@ -262,7 +264,7 @@ var _ = Describe("Networker", func() {
 		})
 
 		It("calls the PortForwarder with correct parameters", func() {
-			_, _, err := networker.NetIn(handle, externalPort, containerPort)
+			_, _, err := networker.NetIn(logger, handle, externalPort, containerPort)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakePortForwarder.ForwardCallCount()).To(Equal(1))
 
@@ -280,7 +282,7 @@ var _ = Describe("Networker", func() {
 			It("acquires a random port from the pool", func() {
 				fakePortPool.AcquireReturns(externalPort, nil)
 
-				actualHostPort, actualContainerPort, err := networker.NetIn(handle, 0, containerPort)
+				actualHostPort, actualContainerPort, err := networker.NetIn(logger, handle, 0, containerPort)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(actualHostPort).To(Equal(externalPort))
@@ -296,21 +298,29 @@ var _ = Describe("Networker", func() {
 		})
 
 		Context("when port pool fails to acquire", func() {
-			It("returns the error", func() {
+			var err error
+
+			BeforeEach(func() {
 				fakePortPool.AcquireReturns(0, fmt.Errorf("Oh no!"))
+				_, _, err = networker.NetIn(logger, handle, 0, containerPort)
+			})
 
-				actualHostPort, actualContainerPort, err := networker.NetIn(handle, 0, containerPort)
+			It("returns the error", func() {
 				Expect(err).To(MatchError("Oh no!"))
-				Expect(actualHostPort).To(Equal(uint32(0)))
-				Expect(actualContainerPort).To(Equal(uint32(0)))
+			})
 
+			It("does not add a new port mapping", func() {
+				Expect(fakeConfigStore.SetCallCount()).To(Equal(0))
+			})
+
+			It("does not do port forwarding", func() {
 				Expect(fakePortForwarder.ForwardCallCount()).To(Equal(0))
 			})
 		})
 
 		Context("when container port is not specified", func() {
 			It("aquires a port from the pool", func() {
-				actualHostPort, actualContainerPort, err := networker.NetIn(handle, externalPort, 0)
+				actualHostPort, actualContainerPort, err := networker.NetIn(logger, handle, externalPort, 0)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(actualHostPort).To(Equal(externalPort))
@@ -318,12 +328,47 @@ var _ = Describe("Networker", func() {
 			})
 		})
 
-		Context("when the PortForwarder fails", func() {
-			It("returns an error", func() {
-				fakePortForwarder.ForwardReturns(fmt.Errorf("Oh no!"))
+		It("stores port mapping in ConfigStore", func() {
+			_, _, err := networker.NetIn(logger, handle, externalPort, containerPort)
+			Expect(err).NotTo(HaveOccurred())
 
-				_, _, err := networker.NetIn(handle, 0, 0)
+			Expect(fakeConfigStore.SetCallCount()).To(Equal(1))
+
+			actualHandle, actualName, actualValue := fakeConfigStore.SetArgsForCall(0)
+			Expect(actualHandle).To(Equal(handle))
+			Expect(actualName).To(Equal(gardener.MappedPortsKey))
+			Expect(actualValue).To(Equal(`[{"HostPort":123,"ContainerPort":456}]`))
+		})
+
+		It("stores a list of port mappings in ConfigStore", func() {
+			_, _, err := networker.NetIn(logger, handle, externalPort, containerPort)
+			Expect(err).NotTo(HaveOccurred())
+
+			config[gardener.MappedPortsKey] = `[{"HostPort":123,"ContainerPort":456}]`
+
+			_, _, err = networker.NetIn(logger, handle, 654, 987)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeConfigStore.SetCallCount()).To(Equal(2))
+
+			_, _, actualValue := fakeConfigStore.SetArgsForCall(1)
+			Expect(actualValue).To(Equal(`[{"HostPort":123,"ContainerPort":456},{"HostPort":654,"ContainerPort":987}]`))
+		})
+
+		Context("when the PortForwarder fails", func() {
+			var err error
+
+			BeforeEach(func() {
+				fakePortForwarder.ForwardReturns(fmt.Errorf("Oh no!"))
+				_, _, err = networker.NetIn(logger, handle, 0, 0)
+			})
+
+			It("returns an error", func() {
 				Expect(err).To(MatchError("Oh no!"))
+			})
+
+			It("does not add the new port mapping", func() {
+				Expect(fakeConfigStore.SetCallCount()).To(Equal(0))
 			})
 		})
 
@@ -333,7 +378,7 @@ var _ = Describe("Networker", func() {
 			})
 
 			It("returns an error", func() {
-				_, _, err := networker.NetIn("nonexistent", 0, 0)
+				_, _, err := networker.NetIn(logger, "nonexistent", 0, 0)
 				Expect(err).To(MatchError("Handle does not exist"))
 			})
 		})

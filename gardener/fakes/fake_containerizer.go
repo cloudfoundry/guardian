@@ -62,10 +62,20 @@ type FakeContainerizer struct {
 	destroyReturns struct {
 		result1 error
 	}
+	InfoStub        func(log lager.Logger, handle string) (gardener.ActualContainerSpec, error)
+	infoMutex       sync.RWMutex
+	infoArgsForCall []struct {
+		log    lager.Logger
+		handle string
+	}
+	infoReturns struct {
+		result1 gardener.ActualContainerSpec
+		result2 error
+	}
 	HandlesStub        func() ([]string, error)
 	handlesMutex       sync.RWMutex
 	handlesArgsForCall []struct{}
-	handlesReturns     struct {
+	handlesReturns struct {
 		result1 []string
 		result2 error
 	}
@@ -240,6 +250,40 @@ func (fake *FakeContainerizer) DestroyReturns(result1 error) {
 	fake.destroyReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeContainerizer) Info(log lager.Logger, handle string) (gardener.ActualContainerSpec, error) {
+	fake.infoMutex.Lock()
+	fake.infoArgsForCall = append(fake.infoArgsForCall, struct {
+		log    lager.Logger
+		handle string
+	}{log, handle})
+	fake.infoMutex.Unlock()
+	if fake.InfoStub != nil {
+		return fake.InfoStub(log, handle)
+	} else {
+		return fake.infoReturns.result1, fake.infoReturns.result2
+	}
+}
+
+func (fake *FakeContainerizer) InfoCallCount() int {
+	fake.infoMutex.RLock()
+	defer fake.infoMutex.RUnlock()
+	return len(fake.infoArgsForCall)
+}
+
+func (fake *FakeContainerizer) InfoArgsForCall(i int) (lager.Logger, string) {
+	fake.infoMutex.RLock()
+	defer fake.infoMutex.RUnlock()
+	return fake.infoArgsForCall[i].log, fake.infoArgsForCall[i].handle
+}
+
+func (fake *FakeContainerizer) InfoReturns(result1 gardener.ActualContainerSpec, result2 error) {
+	fake.InfoStub = nil
+	fake.infoReturns = struct {
+		result1 gardener.ActualContainerSpec
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeContainerizer) Handles() ([]string, error) {

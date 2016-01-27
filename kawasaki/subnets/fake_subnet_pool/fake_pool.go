@@ -43,7 +43,7 @@ type FakePool struct {
 	CapacityStub        func() int
 	capacityMutex       sync.RWMutex
 	capacityArgsForCall []struct{}
-	capacityReturns     struct {
+	capacityReturns struct {
 		result1 int
 	}
 }

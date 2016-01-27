@@ -1,6 +1,8 @@
 package gardener
 
 import (
+	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 
@@ -17,16 +19,6 @@ type container struct {
 	propertyManager PropertyManager
 }
 
-func NewContainer(logger lager.Logger, handle string, containerizer Containerizer, networker Networker, propertyManager PropertyManager) *container {
-	return &container{
-		logger:          logger,
-		handle:          handle,
-		containerizer:   containerizer,
-		networker:       networker,
-		propertyManager: propertyManager,
-	}
-}
-
 func (c *container) Handle() string {
 	return c.handle
 }
@@ -40,7 +32,50 @@ func (c *container) Stop(kill bool) error {
 }
 
 func (c *container) Info() (garden.ContainerInfo, error) {
-	return garden.ContainerInfo{}, nil
+	containerIP, err := c.propertyManager.Get(c.handle, ContainerIPKey)
+	if err != nil {
+		return garden.ContainerInfo{}, err
+	}
+
+	hostIP, err := c.propertyManager.Get(c.handle, BridgeIPKey)
+	if err != nil {
+		return garden.ContainerInfo{}, err
+	}
+
+	externalIP, err := c.propertyManager.Get(c.handle, ExternalIPKey)
+	if err != nil {
+		return garden.ContainerInfo{}, err
+	}
+
+	actualContainerSpec, err := c.containerizer.Info(c.logger, c.handle)
+	if err != nil {
+		return garden.ContainerInfo{}, err
+	}
+
+	properties, err := c.propertyManager.All(c.handle)
+	if err != nil {
+		return garden.ContainerInfo{}, err
+	}
+
+	mappedPorts := []garden.PortMapping{}
+
+	mappedPortsCfg, err := c.propertyManager.Get(c.handle, MappedPortsKey)
+	if err != nil {
+		log := c.logger.Session("container.info", lager.Data{"handle": c.handle})
+		log.Debug(fmt.Sprintf("Missing key in PropertyManager: %s", MappedPortsKey))
+	}
+
+	json.Unmarshal([]byte(mappedPortsCfg), &mappedPorts)
+
+	return garden.ContainerInfo{
+		State:         "active",
+		ContainerIP:   containerIP,
+		HostIP:        hostIP,
+		ExternalIP:    externalIP,
+		ContainerPath: actualContainerSpec.BundlePath,
+		Properties:    properties,
+		MappedPorts:   mappedPorts,
+	}, nil
 }
 
 func (c *container) StreamIn(spec garden.StreamInSpec) error {
@@ -84,7 +119,7 @@ func (c *container) CurrentMemoryLimits() (garden.MemoryLimits, error) {
 }
 
 func (c *container) NetIn(hostPort, containerPort uint32) (uint32, uint32, error) {
-	return c.networker.NetIn(c.handle, hostPort, containerPort)
+	return c.networker.NetIn(c.logger, c.handle, hostPort, containerPort)
 }
 
 func (c *container) NetOut(netOutRule garden.NetOutRule) error {

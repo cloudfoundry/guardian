@@ -11,14 +11,14 @@ type FakeSysInfoProvider struct {
 	TotalMemoryStub        func() (uint64, error)
 	totalMemoryMutex       sync.RWMutex
 	totalMemoryArgsForCall []struct{}
-	totalMemoryReturns     struct {
+	totalMemoryReturns struct {
 		result1 uint64
 		result2 error
 	}
 	TotalDiskStub        func() (uint64, error)
 	totalDiskMutex       sync.RWMutex
 	totalDiskArgsForCall []struct{}
-	totalDiskReturns     struct {
+	totalDiskReturns struct {
 		result1 uint64
 		result2 error
 	}

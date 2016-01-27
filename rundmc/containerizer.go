@@ -181,6 +181,18 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 	return c.depot.Destroy(log, handle)
 }
 
+func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualContainerSpec, error) {
+	bundlePath, err := c.depot.Lookup(log, handle)
+
+	if err != nil {
+		return gardener.ActualContainerSpec{}, err
+	}
+
+	return gardener.ActualContainerSpec{
+		BundlePath: bundlePath,
+	}, nil
+}
+
 // Handles returns a list of all container handles
 func (c *Containerizer) Handles() ([]string, error) {
 	return c.depot.Handles()

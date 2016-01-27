@@ -43,7 +43,7 @@ func (Plugin) Destroy(log lager.Logger, handle string) error {
 	return nil
 }
 
-func (Plugin) NetIn(handle string, hostPort, containerPort uint32) (uint32, uint32, error) {
+func (Plugin) NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error) {
 	return 0, 0, nil
 }
 
