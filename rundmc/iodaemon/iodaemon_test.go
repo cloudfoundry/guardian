@@ -39,8 +39,6 @@ var _ = Describe("Iodaemon", func() {
 		exited chan struct{}
 	)
 
-	const DEFAULT_TIMEOUT = "3s"
-
 	BeforeEach(func() {
 		var err error
 		expectedExitCode = 0
@@ -65,7 +63,7 @@ var _ = Describe("Iodaemon", func() {
 	AfterEach(func() {
 		defer os.RemoveAll(tmpdir)
 
-		Eventually(exited, DEFAULT_TIMEOUT).Should(BeClosed())
+		Eventually(exited).Should(BeClosed())
 
 		By("tidying up the socket file")
 		if _, err := os.Stat(socketPath); !os.IsNotExist(err) {
@@ -84,7 +82,7 @@ var _ = Describe("Iodaemon", func() {
 		It("times out when no listeners connect", func() {
 			spawnProcess("echo", "hello")
 
-			Eventually(exited, DEFAULT_TIMEOUT).Should(BeClosed())
+			Eventually(exited).Should(BeClosed())
 		})
 	})
 
@@ -102,7 +100,7 @@ var _ = Describe("Iodaemon", func() {
 
 			_, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say("hello\n"))
+			Eventually(linkStdout).Should(gbytes.Say("hello\n"))
 		})
 
 		It("supports re-linking to an iodaemon instance", func() {
@@ -125,7 +123,7 @@ var _ = Describe("Iodaemon", func() {
 
 			_, _, linkStderr, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(linkStderr, DEFAULT_TIMEOUT).Should(gbytes.Say("error\n"))
+			Eventually(linkStderr).Should(gbytes.Say("error\n"))
 		})
 
 		It("sends stdin to child", func() {
@@ -136,7 +134,7 @@ var _ = Describe("Iodaemon", func() {
 
 			_, err = l.Write([]byte("echo hello\n"))
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say(".*hello.*"))
+			Eventually(linkStdout).Should(gbytes.Say(".*hello.*"))
 
 			_, err = l.Write([]byte("exit\n"))
 			Expect(err).ToNot(HaveOccurred())
@@ -173,7 +171,7 @@ var _ = Describe("Iodaemon", func() {
 
 				_, linkStdout, _, err := createLink(socketPath)
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say("hello\n"))
+				Eventually(linkStdout).Should(gbytes.Say("hello\n"))
 			})
 		})
 	})
@@ -199,7 +197,7 @@ var _ = Describe("Iodaemon", func() {
 
 			_, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say("hello"))
+			Eventually(linkStdout).Should(gbytes.Say("hello"))
 		})
 
 		It("reports back stderr to stdout", func() {
@@ -207,7 +205,7 @@ var _ = Describe("Iodaemon", func() {
 
 			_, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say("error"))
+			Eventually(linkStdout).Should(gbytes.Say("error"))
 		})
 
 		It("exits when the child exits", func() {
@@ -237,7 +235,7 @@ var _ = Describe("Iodaemon", func() {
 
 			_, err = l.Write([]byte("echo hello\n"))
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say(".*hello.*"))
+			Eventually(linkStdout).Should(gbytes.Say(".*hello.*"))
 
 			_, err = l.Write([]byte("exit\n"))
 			Expect(err).ToNot(HaveOccurred())
@@ -251,13 +249,13 @@ var _ = Describe("Iodaemon", func() {
 
 			_, err = l.Write([]byte("echo $COLUMNS $LINES\n"))
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say(".*\\s200 80\\s.*"))
+			Eventually(linkStdout).Should(gbytes.Say(".*\\s200 80\\s.*"))
 
 			Expect(l.SetWindowSize(100, 40)).To(Succeed())
 
 			_, err = l.Write([]byte("echo $COLUMNS $LINES\n"))
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(linkStdout, DEFAULT_TIMEOUT).Should(gbytes.Say(".*\\s100 40\\s.*"))
+			Eventually(linkStdout).Should(gbytes.Say(".*\\s100 40\\s.*"))
 
 			_, err = l.Write([]byte("exit\n"))
 			Expect(err).ToNot(HaveOccurred())
