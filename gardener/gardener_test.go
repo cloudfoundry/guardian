@@ -119,6 +119,24 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 
+			Context("when a memory limit is provided", func() {
+				It("should pass the memory limit to the containerizer", func() {
+					memLimit := garden.Limits{
+						Memory: garden.MemoryLimits{LimitInBytes: 4096},
+					}
+
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Limits: memLimit,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(containerizer.CreateCallCount()).To(Equal(1))
+
+					_, spec := containerizer.CreateArgsForCall(0)
+					Expect(spec.Limits).To(Equal(memLimit))
+				})
+			})
+
 			It("should ask the shed for a namespaced rootfs", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())

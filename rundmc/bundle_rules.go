@@ -99,3 +99,12 @@ func (b BindMountsRule) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpe
 
 	return bndl.WithMounts(mounts...)
 }
+
+type LimitsRule struct {
+}
+
+func (l LimitsRule) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
+	return bndl.WithResources(&specs.Resources{
+		Memory: specs.Memory{Limit: int64(spec.Limits.Memory.LimitInBytes)},
+	})
+}

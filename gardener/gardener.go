@@ -93,6 +93,8 @@ type DesiredContainerSpec struct {
 
 	// Container is privileged
 	Privileged bool
+
+	Limits garden.Limits
 }
 
 // Gardener orchestrates other components to implement the Garden API
@@ -156,6 +158,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		NetworkHooks: hooks,
 		Privileged:   spec.Privileged,
 		BindMounts:   spec.BindMounts,
+		Limits:       spec.Limits,
 	}); err != nil {
 		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err

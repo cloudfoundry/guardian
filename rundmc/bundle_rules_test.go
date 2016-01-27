@@ -203,3 +203,15 @@ var _ = Describe("BindMountsRule", func() {
 		}))
 	})
 })
+
+var _ = Describe("LimitsRule", func() {
+	It("sets the correct memory limit in bundle resources", func() {
+		newBndl := rundmc.LimitsRule{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+			Limits: garden.Limits{
+				Memory: garden.MemoryLimits{LimitInBytes: 4096},
+			},
+		})
+		runtimeSpec := newBndl.RuntimeSpec.Linux
+		Expect(runtimeSpec.Resources.Memory.Limit).To(BeNumerically("==", 4096))
+	})
+})

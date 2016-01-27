@@ -492,6 +492,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 		WithMounts(
 		goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"},
 		goci.Mount{Name: "tmp", Type: "tmpfs", Source: "tmpfs", Destination: "/tmp"},
+		goci.Mount{Name: "shm", Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
 		goci.Mount{Name: "pts", Type: "devpts", Source: "devpts", Destination: "/dev/pts",
 			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
 	).WithRootFS(defaultRootFSPath).
@@ -516,6 +517,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 				ContainerRootGID: idMappings.Map(0),
 				MkdirChowner:     rundmc.MkdirChownFunc(rundmc.MkdirChown),
 			},
+			rundmc.LimitsRule{},
 			rundmc.NetworkHookRule{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
 			rundmc.BindMountsRule{},
 		},
