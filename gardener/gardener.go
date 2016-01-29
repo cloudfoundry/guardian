@@ -272,7 +272,23 @@ func (g *Gardener) Containers(props garden.Properties) ([]garden.Container, erro
 }
 
 func (g *Gardener) BulkInfo(handles []string) (map[string]garden.ContainerInfoEntry, error) {
-	return nil, nil
+	result := make(map[string]garden.ContainerInfoEntry)
+	for _, handle := range handles {
+		// currently never returns error
+		container, _ := g.Lookup(handle)
+
+		var infoErr *garden.Error = nil
+		info, err := container.Info()
+		if err != nil {
+			infoErr = garden.NewError(err.Error())
+		}
+		result[handle] = garden.ContainerInfoEntry{
+			Info: info,
+			Err:  infoErr,
+		}
+	}
+
+	return result, nil
 }
 
 func (g *Gardener) BulkMetrics(handles []string) (map[string]garden.ContainerMetricsEntry, error) {

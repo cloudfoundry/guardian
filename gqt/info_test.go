@@ -73,3 +73,39 @@ var _ = Describe("Info", func() {
 	})
 
 })
+
+var _ = Describe("BulkInfo", func() {
+	var (
+		client *runner.RunningGarden
+	)
+
+	BeforeEach(func() {
+		client = startGarden()
+		_, err := client.Create(garden.ContainerSpec{
+			Handle: "first",
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = client.Create(garden.ContainerSpec{
+			Handle: "second",
+		})
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		Expect(client.DestroyAndStop()).To(Succeed())
+	})
+
+	It("can return info for each handle", func() {
+		infos, err := client.BulkInfo([]string{"first", "second"})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(infos).To(HaveLen(2))
+
+		Expect(infos["first"].Info).NotTo(BeNil())
+		Expect(infos["first"].Err).NotTo(HaveOccurred())
+
+		Expect(infos["second"].Info).NotTo(BeNil())
+		Expect(infos["second"].Err).NotTo(HaveOccurred())
+	})
+})
