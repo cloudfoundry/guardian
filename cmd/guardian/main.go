@@ -491,7 +491,6 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 		WithResources(&specs.Resources{}).
 		WithMounts(
 		goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"},
-		goci.Mount{Name: "tmp", Type: "tmpfs", Source: "tmpfs", Destination: "/tmp"},
 		goci.Mount{Name: "shm", Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
 		goci.Mount{Name: "pts", Type: "devpts", Source: "devpts", Destination: "/dev/pts",
 			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
