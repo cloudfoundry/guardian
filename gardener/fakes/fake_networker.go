@@ -24,7 +24,7 @@ type FakeNetworker struct {
 	CapacityStub        func() uint64
 	capacityMutex       sync.RWMutex
 	capacityArgsForCall []struct{}
-	capacityReturns struct {
+	capacityReturns     struct {
 		result1 uint64
 	}
 	DestroyStub        func(log lager.Logger, handle string) error
