@@ -72,7 +72,7 @@ var _ = Describe("Iodaemon", func() {
 	})
 
 	Context("spawning a process: when no listeners connect", func() {
-		spawnProcess := func(args ...string) {
+		spawnProcess := func(socketPath string, args ...string) {
 			go func() {
 				iodaemon.Spawn(socketPath, args, time.Second, fakeOut, wirer, daemon)
 				close(exited)
@@ -80,14 +80,13 @@ var _ = Describe("Iodaemon", func() {
 		}
 
 		It("times out when no listeners connect", func() {
-			spawnProcess("echo", "hello")
-
+			spawnProcess(socketPath, "echo", "hello")
 			Eventually(exited).Should(BeClosed())
 		})
 	})
 
 	Context("spawning a process: when listeners connect", func() {
-		spawnProcess := func(args ...string) {
+		spawnProcess := func(socketPath string, args ...string) {
 			go func() {
 				defer GinkgoRecover()
 				Expect(iodaemon.Spawn(socketPath, args, time.Second, fakeOut, wirer, daemon)).To(Succeed())
@@ -96,7 +95,7 @@ var _ = Describe("Iodaemon", func() {
 		}
 
 		It("reports back stdout", func() {
-			spawnProcess("echo", "hello")
+			spawnProcess(socketPath, "echo", "hello")
 
 			_, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -104,7 +103,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("supports re-linking to an iodaemon instance", func() {
-			spawnProcess("bash")
+			spawnProcess(socketPath, "bash")
 
 			l, _, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -119,7 +118,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("reports back stderr", func() {
-			spawnProcess("bash", "-c", "echo error 1>&2")
+			spawnProcess(socketPath, "bash", "-c", "echo error 1>&2")
 
 			_, _, linkStderr, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -127,7 +126,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("sends stdin to child", func() {
-			spawnProcess("env", "-i", "bash", "--noprofile", "--norc")
+			spawnProcess(socketPath, "env", "-i", "bash", "--noprofile", "--norc")
 
 			l, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -141,7 +140,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("exits when the child exits", func() {
-			spawnProcess("bash")
+			spawnProcess(socketPath, "bash")
 
 			l, _, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -151,7 +150,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("closes stdin when the link is closed", func() {
-			spawnProcess("bash")
+			spawnProcess(socketPath, "bash")
 
 			l, _, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -167,7 +166,7 @@ var _ = Describe("Iodaemon", func() {
 			})
 
 			It("still creates the process", func() {
-				spawnProcess("echo", "hello")
+				spawnProcess(socketPath, "echo", "hello")
 
 				_, linkStdout, _, err := createLink(socketPath)
 				Expect(err).ToNot(HaveOccurred())
@@ -177,7 +176,7 @@ var _ = Describe("Iodaemon", func() {
 	})
 
 	Context("spawning a tty", func() {
-		spawnTty := func(args ...string) {
+		spawnTty := func(socketPath string, args ...string) {
 			go func() {
 				defer GinkgoRecover()
 				Expect(iodaemon.Spawn(socketPath, args, time.Second, fakeOut, wirer, daemon)).To(Succeed())
@@ -193,7 +192,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("reports back stdout", func() {
-			spawnTty("echo", "hello")
+			spawnTty(socketPath, "echo", "hello")
 
 			_, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -201,7 +200,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("reports back stderr to stdout", func() {
-			spawnTty("bash", "-c", "echo error 1>&2")
+			spawnTty(socketPath, "bash", "-c", "echo error 1>&2")
 
 			_, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -209,7 +208,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("exits when the child exits", func() {
-			spawnTty("bash")
+			spawnTty(socketPath, "bash")
 
 			l, _, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -219,7 +218,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("closes stdin when the link is closed", func() {
-			spawnTty("bash")
+			spawnTty(socketPath, "bash")
 
 			l, _, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -228,7 +227,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("sends stdin to child", func() {
-			spawnTty("env", "-i", "bash", "--noprofile", "--norc")
+			spawnTty(socketPath, "env", "-i", "bash", "--noprofile", "--norc")
 
 			l, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
@@ -242,7 +241,7 @@ var _ = Describe("Iodaemon", func() {
 		})
 
 		It("correctly sets the window size", func() {
-			spawnTty("env", "-i", "bash", "--noprofile", "--norc")
+			spawnTty(socketPath, "env", "-i", "bash", "--noprofile", "--norc")
 
 			l, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())

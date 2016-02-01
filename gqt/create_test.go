@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -26,10 +27,13 @@ var _ = Describe("Creating a Container", func() {
 	var (
 		client    *runner.RunningGarden
 		container garden.Container
+
+		initialSockets int
 	)
 
 	BeforeEach(func() {
 		client = startGarden()
+		initialSockets = numOpenSockets(client.Pid)
 	})
 
 	AfterEach(func() {
@@ -64,6 +68,13 @@ var _ = Describe("Creating a Container", func() {
 
 			Expect(lookupError).NotTo(HaveOccurred())
 			Expect(lookupContainer).To(Equal(container))
+		})
+
+		It("should not leak sockets", func() {
+			Expect(client.Destroy(container.Handle())).To(Succeed())
+			container = nil // avoid double-destroying
+
+			Eventually(func() int { return numOpenSockets(client.Pid) }).Should(Equal(initialSockets))
 		})
 
 		DescribeTable("placing the container in to all namespaces", func(ns string) {
@@ -241,4 +252,12 @@ func runCommand(container garden.Container, path string, args []string) {
 	exitCode, err := proc.Wait()
 	Expect(err).NotTo(HaveOccurred())
 	Expect(exitCode).To(Equal(0))
+}
+
+func numOpenSockets(pid int) (num int) {
+	sess, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep sock", pid)), GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(sess).Should(gexec.Exit(0))
+
+	return bytes.Count(sess.Out.Contents(), []byte("\\n"))
 }

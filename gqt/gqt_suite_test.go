@@ -3,6 +3,7 @@ package gqt_test
 import (
 	"os"
 	"os/exec"
+	"path"
 	"runtime"
 	"time"
 
