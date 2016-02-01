@@ -515,6 +515,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 				ContainerRootUID: idMappings.Map(0),
 				ContainerRootGID: idMappings.Map(0),
 				MkdirChowner:     rundmc.MkdirChownFunc(rundmc.MkdirChown),
+				DirRemover:       rundmc.OsDirRemover(os.Remove),
 			},
 			rundmc.LimitsRule{},
 			rundmc.NetworkHookRule{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},

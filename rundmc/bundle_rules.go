@@ -12,6 +12,7 @@ import (
 )
 
 //go:generate counterfeiter . MkdirChowner
+//go:generate counterfeiter . DirRemover
 
 type BaseTemplateRule struct {
 	PrivilegedBase   *goci.Bndl
@@ -31,10 +32,12 @@ type RootFSRule struct {
 	ContainerRootGID int
 
 	MkdirChowner MkdirChowner
+	DirRemover   DirRemover
 }
 
 func (r RootFSRule) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
 	r.MkdirChowner.MkdirChown(filepath.Join(spec.RootFSPath, ".pivot_root"), 0700, r.ContainerRootUID, r.ContainerRootGID)
+	r.DirRemover.Remove(filepath.Join(spec.RootFSPath, "dev", "shm"))
 	return bndl.WithRootFS(spec.RootFSPath)
 }
 
@@ -75,6 +78,16 @@ func MkdirChown(path string, perms os.FileMode, uid, gid int) error {
 	}
 
 	return os.Chown(path, uid, gid)
+}
+
+type DirRemover interface {
+	Remove(name string) error
+}
+
+type OsDirRemover func(name string) error
+
+func (fn OsDirRemover) Remove(name string) error {
+	return fn(name)
 }
 
 type BindMountsRule struct {
