@@ -97,6 +97,12 @@ var kawasakiBin = flag.String(
 	"path to the kawasaki network hook binary",
 )
 
+var initBin = flag.String(
+	"initBin",
+	"",
+	"path to process used as pid 1 inside container",
+)
+
 var networkPlugin = flag.String(
 	"networkPlugin",
 	"",
@@ -262,6 +268,10 @@ func main() {
 
 	if *tarBin == "" {
 		missing("-tarBin")
+	}
+
+	if *initBin == "" {
+		missing("-initBin")
 	}
 
 	resolvedRootFSPath, err := filepath.EvalSymlinks(*rootFSPath)
@@ -494,8 +504,9 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 		goci.Mount{Name: "shm", Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
 		goci.Mount{Name: "pts", Type: "devpts", Source: "devpts", Destination: "/dev/pts",
 			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
+		goci.Mount{Name: "init", Type: "bind", Source: *initBin, Destination: "/tmp/garden-init", Options: []string{"bind"}},
 	).WithRootFS(defaultRootFSPath).
-		WithProcess(goci.Process("/bin/sh", "-c", `echo "Pid 1 Running"; read x`)).
+		WithProcess(goci.Process("/tmp/garden-init")).
 		WithDevices(
 		specs.Device{Path: "/dev/null", Type: 'c', Major: 1, Minor: 3, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
 		specs.Device{Path: "/dev/tty", Type: 'c', Major: 5, Minor: 0, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},

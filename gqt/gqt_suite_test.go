@@ -23,7 +23,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, kawasakiBin, iodaemonBin, nstarBin string
+var ociRuntimeBin, gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin string
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -47,6 +47,9 @@ func TestGqt(t *testing.T) {
 			bins["iodaemon_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/cmd/iodaemon")
 			Expect(err).NotTo(HaveOccurred())
 
+			bins["init_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/init")
+			Expect(err).NotTo(HaveOccurred())
+
 			cmd := exec.Command("make")
 			cmd.Dir = "../rundmc/nstar"
 			cmd.Stdout = GinkgoWriter
@@ -68,6 +71,7 @@ func TestGqt(t *testing.T) {
 		iodaemonBin = bins["iodaemon_bin_path"]
 		nstarBin = bins["nstar_bin_path"]
 		kawasakiBin = bins["kawasaki_bin_path"]
+		initBin = bins["init_bin_path"]
 	})
 
 	BeforeEach(func() {
@@ -78,6 +82,10 @@ func TestGqt(t *testing.T) {
 		if os.Getenv("GARDEN_TEST_ROOTFS") == "" {
 			Skip("No Garden RootFS")
 		}
+
+		Expect(os.Chmod(initBin, 0755)).To(Succeed())
+		Expect(os.Chmod(path.Dir(initBin), 0755)).To(Succeed())
+		Expect(os.Chmod(path.Dir(path.Dir(initBin)), 0755)).To(Succeed())
 	})
 
 	SetDefaultEventuallyTimeout(5 * time.Second)
@@ -89,5 +97,5 @@ func startGarden(argv ...string) *runner.RunningGarden {
 		argv = append(argv, "--networkModulePath="+networkModulePath)
 	}
 
-	return runner.Start(gardenBin, kawasakiBin, iodaemonBin, nstarBin, argv...)
+	return runner.Start(gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, argv...)
 }

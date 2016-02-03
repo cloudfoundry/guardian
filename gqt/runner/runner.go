@@ -43,7 +43,7 @@ type RunningGarden struct {
 	logger lager.Logger
 }
 
-func Start(bin, kawasakiBin, iodaemonBin, nstarBin string, argv ...string) *RunningGarden {
+func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin string, argv ...string) *RunningGarden {
 	network := "unix"
 	addr := fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
 	tmpDir := filepath.Join(
@@ -71,7 +71,7 @@ func Start(bin, kawasakiBin, iodaemonBin, nstarBin string, argv ...string) *Runn
 		Client: client.New(connection.New(network, addr)),
 	}
 
-	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, kawasakiBin, iodaemonBin, nstarBin, TarPath, RootFSPath, argv...)
+	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, TarPath, RootFSPath, argv...)
 	r.runner = ginkgomon.New(ginkgomon.Config{
 		Name:              "guardian",
 		Command:           c,
@@ -120,7 +120,7 @@ func (r *RunningGarden) Stop() error {
 	}
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, kawasakiBin, iodaemonBin, nstarBin, tarBin, rootFSPath string, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, tarBin, rootFSPath string, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -151,6 +151,7 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, kawasakiBin, iodaemonB
 	gardenArgs = appendDefaultFlag(gardenArgs, "--depot", depotDir)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--graph", graphPath)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
+	gardenArgs = appendDefaultFlag(gardenArgs, "--initBin", initBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--iodaemonBin", iodaemonBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--kawasakiBin", kawasakiBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--nstarBin", nstarBin)
@@ -222,10 +223,7 @@ func (r *RunningGarden) DestroyContainers() error {
 	}
 
 	for _, container := range containers {
-		err := r.Destroy(container.Handle())
-		if err != nil {
-			return err
-		}
+		r.Destroy(container.Handle())
 	}
 
 	return nil
