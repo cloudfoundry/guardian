@@ -354,16 +354,14 @@ var _ = Describe("Net", func() {
 					})
 
 					Context("when a rule that allows all traffic to the target is added", func() {
-						JustBeforeEach(func() {
+						It("allows TCP traffic to the target", func() {
 							err := container.NetOut(garden.NetOutRule{
 								Networks: []garden.IPRange{
 									garden.IPRangeFromIP(exampleDotCom),
 								},
 							})
 							Expect(err).ToNot(HaveOccurred())
-						})
 
-						It("allows TCP traffic to the target", func() {
 							ByAllowingTCP()
 						})
 					})
@@ -400,7 +398,7 @@ func checkConnection(container garden.Container, ip string, port int) error {
 	process, err := container.Run(garden.ProcessSpec{
 		User: "alice",
 		Path: "sh",
-		Args: []string{"-c", fmt.Sprintf("echo hello | nc -w1 %s %d", ip, port)},
+		Args: []string{"-c", fmt.Sprintf("echo hello | nc -w5 %s %d", ip, port)},
 	}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
 	if err != nil {
 		return err
