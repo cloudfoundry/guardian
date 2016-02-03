@@ -53,8 +53,8 @@ var _ = Describe("Plugin", func() {
 				)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hooks.Prestart.Args).To(Equal([]string{"some/path", "up", "arg1", "arg2", "--handle", "some-handle", "--network", "potato"}))
-				Expect(hooks.Poststop.Args).To(Equal([]string{"some/path", "down", "arg1", "arg2", "--handle", "some-handle", "--network", "potato"}))
+				Expect(hooks.Prestart.Args).To(Equal([]string{"some/path", "arg1", "arg2", "up", "--handle", "some-handle", "--network", "potato"}))
+				Expect(hooks.Poststop.Args).To(Equal([]string{"some/path", "arg1", "arg2", "down", "--handle", "some-handle", "--network", "potato"}))
 			})
 		})
 	})

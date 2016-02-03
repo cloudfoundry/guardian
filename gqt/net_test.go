@@ -81,7 +81,7 @@ var _ = Describe("Net", func() {
 
 			Eventually(getContent(tmpFile)).Should(
 				ContainSubstring(
-					fmt.Sprintf("up,%s,--handle,%s,--network,%s", tmpFile, containerHandle, containerNetwork),
+					fmt.Sprintf("%s,up,--handle,%s,--network,%s", tmpFile, containerHandle, containerNetwork),
 				),
 			)
 		})
@@ -94,7 +94,7 @@ var _ = Describe("Net", func() {
 
 			Eventually(getContent(tmpFile)).Should(
 				ContainSubstring(
-					fmt.Sprintf("down,%s,--handle,%s,--network,%s", tmpFile, containerHandle, containerNetwork),
+					fmt.Sprintf("%s,down,--handle,%s,--network,%s", tmpFile, containerHandle, containerNetwork),
 				),
 			)
 		})
