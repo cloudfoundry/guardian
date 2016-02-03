@@ -53,7 +53,7 @@ var _ = Describe("BaseTemplateRule", func() {
 	})
 })
 
-var _ = FDescribe("RootFSRule", func() {
+var _ = Describe("RootFSRule", func() {
 	var (
 		fakeMkdirChowner *fakes.FakeMkdirChowner
 		fakeDirRemover   *fakes.FakeDirRemover
