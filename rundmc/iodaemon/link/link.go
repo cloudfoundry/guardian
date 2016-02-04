@@ -1,10 +1,11 @@
 package link
 
 import (
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
-	"os"
 	"sync"
 	"syscall"
 	"time"
@@ -65,13 +66,8 @@ func Create(socketPath string, stdout io.Writer, stderr io.Writer) (*Link, error
 		return nil, err
 	}
 
-	devNull, err := os.Open("/dev/null")
-	if err != nil {
-		return nil, err
-	}
-
 	var devNullS syscall.Stat_t
-	if err := syscall.Fstat(int(devNull.Fd()), &devNullS); err != nil {
+	if err := syscall.Stat("/dev/null", &devNullS); err != nil {
 		return nil, err
 	}
 
@@ -80,26 +76,12 @@ func Create(socketPath string, stdout io.Writer, stderr io.Writer) (*Link, error
 		return nil, err
 	}
 
-	// if using a tty, stderr will be /dev/null remotely, which we can't poll
-	// so just check for that case explicitly and re-open /dev/null
-	var lstderr io.ReadCloser = devNull
-	if s.Rdev != devNullS.Rdev {
-		lstderr, err = poller.NewFD(fds[1])
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	lstatus, err := poller.NewFD(fds[2])
 	if err != nil {
 		return nil, err
 	}
 
 	linkWriter := NewWriter(conn)
-
-	stdoutCh := make(chan []byte, 50)
-	stderrCh := make(chan []byte, 50)
-	statusCh := make(chan int)
 	done := make(chan struct{})
 
 	wg := sync.WaitGroup{}
@@ -113,7 +95,7 @@ func Create(socketPath string, stdout io.Writer, stderr io.Writer) (*Link, error
 			n, err := fd.Read(buff)
 
 			if n > 0 {
-				stdoutCh <- buff[0:n]
+				stdout.Write(buff[0:n])
 			}
 
 			if err != nil {
@@ -122,7 +104,14 @@ func Create(socketPath string, stdout io.Writer, stderr io.Writer) (*Link, error
 		}
 	}(lstdout)
 
+	// if using a tty, stderr will be /dev/null remotely, which we can't poll
+	var lstderr io.ReadCloser = ioutil.NopCloser(&bytes.Buffer{})
 	if s.Rdev != devNullS.Rdev {
+		lstderr, err = poller.NewFD(fds[1])
+		if err != nil {
+			return nil, err
+		}
+
 		wg.Add(1)
 		go func(fd io.Reader) {
 			defer wg.Done()
@@ -132,7 +121,7 @@ func Create(socketPath string, stdout io.Writer, stderr io.Writer) (*Link, error
 				n, err := fd.Read(buff)
 
 				if n > 0 {
-					stderrCh <- buff[0:n]
+					stderr.Write(buff[0:n])
 				}
 
 				if err != nil {
@@ -143,16 +132,6 @@ func Create(socketPath string, stdout io.Writer, stderr io.Writer) (*Link, error
 	}
 
 	go func() {
-		var s int
-		_, err := fmt.Fscanf(lstatus, "%d\n", &s)
-		if err != nil {
-			s = 255
-		}
-
-		statusCh <- s
-	}()
-
-	go func() {
 		wg.Wait()
 		close(done)
 	}()
@@ -160,35 +139,16 @@ func Create(socketPath string, stdout io.Writer, stderr io.Writer) (*Link, error
 	exitStatus := make(chan int)
 	go func() {
 		var s int
-
-		// loop pulling back data until we get an exit status
-	LOOP:
-		for {
-			select {
-			case b := <-stdoutCh:
-				stdout.Write(b)
-			case b := <-stderrCh:
-				stderr.Write(b)
-			case s = <-statusCh:
-				break LOOP
-			}
+		_, err := fmt.Fscanf(lstatus, "%d\n", &s)
+		if err != nil {
+			s = 255
 		}
 
-		// process has exited, consume anything in the buffers and exit
-	DRAIN:
-		for {
-			select {
-			case b := <-stdoutCh:
-				stdout.Write(b)
-			case b := <-stderrCh:
-				stderr.Write(b)
-			case <-done:
-				// quit immediately if stdout and error have closed
-				break DRAIN
-			case <-time.After(200 * time.Millisecond):
-				// need a timeout here in case streams never close
-				break DRAIN
-			}
+		select {
+		case <-done:
+			// quit immediately if stdout and error have closed
+		case <-time.After(200 * time.Millisecond):
+			// need a timeout here in case streams never close
 		}
 
 		conn.Close()

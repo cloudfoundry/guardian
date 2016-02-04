@@ -29,11 +29,13 @@ var _ = Describe("Creating a Container", func() {
 		container garden.Container
 
 		initialSockets int
+		initialPipes   int
 	)
 
 	BeforeEach(func() {
 		client = startGarden()
 		initialSockets = numOpenSockets(client.Pid)
+		initialPipes = numPipes(client.Pid)
 	})
 
 	AfterEach(func() {
@@ -68,6 +70,18 @@ var _ = Describe("Creating a Container", func() {
 
 			Expect(lookupError).NotTo(HaveOccurred())
 			Expect(lookupContainer).To(Equal(container))
+		})
+
+		It("should not leak pipes", func() {
+			process, err := container.Run(garden.ProcessSpec{Path: "echo", Args: []string{"hello"}}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(process.Wait()).To(Equal(0))
+
+			Expect(client.Destroy(container.Handle())).To(Succeed())
+			container = nil // avoid double-destroying
+
+			Eventually(func() int { return numPipes(client.Pid) }).Should(Equal(initialPipes))
 		})
 
 		It("should not leak sockets", func() {
@@ -259,5 +273,13 @@ func numOpenSockets(pid int) (num int) {
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))
 
-	return bytes.Count(sess.Out.Contents(), []byte("\\n"))
+	return bytes.Count(sess.Out.Contents(), []byte{'\n'})
+}
+
+func numPipes(pid int) (num int) {
+	sess, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep pipe", pid)), GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(sess).Should(gexec.Exit(0))
+
+	return bytes.Count(sess.Out.Contents(), []byte{'\n'})
 }
