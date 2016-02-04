@@ -173,6 +173,12 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 	log.Info("started")
 	defer log.Info("finished")
 
+	_, err := c.stateChecker.State(log, handle)
+	if err != nil {
+		log.Error("pid-gone-skip-kill", err)
+		return c.depot.Destroy(log, handle)
+	}
+
 	if err := c.runner.Kill(log, handle); err != nil {
 		log.Error("kill-failed", err)
 		return err
