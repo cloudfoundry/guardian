@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules"
 )
 
 type FakeDirRemover struct {
@@ -50,4 +50,4 @@ func (fake *FakeDirRemover) RemoveReturns(result1 error) {
 	}{result1}
 }
 
-var _ rundmc.DirRemover = new(FakeDirRemover)
+var _ bundlerules.DirRemover = new(FakeDirRemover)

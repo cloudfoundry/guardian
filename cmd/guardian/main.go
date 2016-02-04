@@ -33,6 +33,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/netplugin"
 	"github.com/cloudfoundry-incubator/guardian/properties"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
@@ -518,19 +519,19 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 
 	template := &rundmc.BundleTemplate{
 		Rules: []rundmc.BundlerRule{
-			rundmc.BaseTemplateRule{
+			bundlerules.Base{
 				PrivilegedBase:   baseBundle,
 				UnprivilegedBase: baseBundle.WithNamespace(goci.UserNamespace).WithUIDMappings(idMappings...).WithGIDMappings(idMappings...),
 			},
-			rundmc.RootFSRule{
+			bundlerules.RootFS{
 				ContainerRootUID: idMappings.Map(0),
 				ContainerRootGID: idMappings.Map(0),
-				MkdirChowner:     rundmc.MkdirChownFunc(rundmc.MkdirChown),
-				DirRemover:       rundmc.OsDirRemover(os.Remove),
+				MkdirChowner:     bundlerules.MkdirChownFunc(bundlerules.MkdirChown),
+				DirRemover:       bundlerules.OsDirRemover(os.Remove),
 			},
-			rundmc.LimitsRule{},
-			rundmc.NetworkHookRule{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
-			rundmc.BindMountsRule{},
+			bundlerules.Limits{},
+			bundlerules.Hooks{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
+			bundlerules.BindMounts{},
 		},
 	}
 

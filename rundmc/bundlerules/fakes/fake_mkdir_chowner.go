@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules"
 )
 
 type FakeMkdirChowner struct {
@@ -57,4 +57,4 @@ func (fake *FakeMkdirChowner) MkdirChownReturns(result1 error) {
 	}{result1}
 }
 
-var _ rundmc.MkdirChowner = new(FakeMkdirChowner)
+var _ bundlerules.MkdirChowner = new(FakeMkdirChowner)
