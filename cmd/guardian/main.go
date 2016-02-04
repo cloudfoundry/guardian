@@ -527,7 +527,6 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 				ContainerRootUID: idMappings.Map(0),
 				ContainerRootGID: idMappings.Map(0),
 				MkdirChowner:     bundlerules.MkdirChownFunc(bundlerules.MkdirChown),
-				DirRemover:       bundlerules.OsDirRemover(os.Remove),
 			},
 			bundlerules.Limits{},
 			bundlerules.Hooks{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
