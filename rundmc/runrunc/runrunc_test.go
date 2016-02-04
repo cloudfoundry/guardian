@@ -224,5 +224,14 @@ var _ = Describe("RuncRunner", func() {
 				Args: []string{"kill", "some-container", "KILL"},
 			}))
 		})
+
+		It("returns any stderr output when 'runc kill' fails", func() {
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{}, func(cmd *exec.Cmd) error {
+				cmd.Stderr.Write([]byte("some error"))
+				return errors.New("exit status banana")
+			})
+
+			Expect(runner.Kill(logger, "some-container")).To(MatchError("runc kill: exit status banana: some error"))
+		})
 	})
 })

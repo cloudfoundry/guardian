@@ -1,6 +1,7 @@
 package runrunc
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -127,9 +128,12 @@ func (r *RunRunc) Kill(log lager.Logger, handle string) error {
 	log.Info("started")
 	defer log.Info("finished")
 
-	if err := r.commandRunner.Run(r.runc.KillCommand(handle, "KILL")); err != nil {
-		log.Error("run-failed", err)
-		return err
+	buf := &bytes.Buffer{}
+	cmd := r.runc.KillCommand(handle, "KILL")
+	cmd.Stderr = buf
+	if err := r.commandRunner.Run(cmd); err != nil {
+		log.Error("run-failed", err, lager.Data{"stderr": buf.String()})
+		return fmt.Errorf("runc kill: %s: %s", err, string(buf.String()))
 	}
 
 	return nil
