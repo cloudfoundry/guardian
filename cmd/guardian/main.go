@@ -107,13 +107,13 @@ var initBin = flag.String(
 var networkPlugin = flag.String(
 	"networkPlugin",
 	"",
-	"path to the network plugin hook binary",
+	"path to optional network plugin binary",
 )
 
 var networkPluginExtraArgs = flag.String(
 	"networkPluginExtraArgs",
 	"",
-	"path to the extra arg to the network plugin hook binary",
+	"comma seperated extra args for the network plugin binary",
 )
 
 var depotPath = flag.String(
