@@ -121,6 +121,23 @@ var _ = Describe("Rundmc", func() {
 				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{Handle: "the-handle"})).To(MatchError("I died"))
 			})
 		})
+
+		It("should check the container's state", func() {
+			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
+				Handle: "some-handle",
+			})).To(Succeed())
+			Expect(fakeStater.StateCallCount()).To(Equal(1))
+
+			_, id := fakeStater.StateArgsForCall(0)
+			Expect(id).To(Equal("some-handle"))
+		})
+
+		Context("when state check fails", func() {
+			It("returns the error", func() {
+				fakeStater.StateReturns(rundmc.State{}, errors.New("state-not-found"))
+				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).NotTo(Succeed())
+			})
+		})
 	})
 
 	Describe("Run", func() {

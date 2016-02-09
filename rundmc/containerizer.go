@@ -104,6 +104,12 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		return err
 	}
 
+	_, err = c.stateChecker.State(log, spec.Handle)
+	if err != nil {
+		log.Error("check-state-failed", err)
+		return fmt.Errorf("create: state file not found for container")
+	}
+
 	return nil
 }
 

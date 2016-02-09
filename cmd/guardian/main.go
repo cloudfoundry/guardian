@@ -484,7 +484,17 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	depot := depot.New(depotPath)
 
 	startChecker := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 15 * time.Second}
-	stateChecker := rundmc.StateChecker{StateFileDir: OciStateDir}
+
+	stateCheckRetrier := retrier.Retrier{
+		Timeout:         1 * time.Second,
+		PollingInterval: 100 * time.Millisecond,
+		Clock:           clock.NewClock(),
+	}
+
+	stateChecker := rundmc.StateChecker{
+		StateFileDir: OciStateDir,
+		Retrier:      stateCheckRetrier,
+	}
 
 	commandRunner := linux_command_runner.New()
 
