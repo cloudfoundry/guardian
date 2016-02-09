@@ -213,6 +213,60 @@ var _ = Describe("RuncRunner", func() {
 						"PATH=/usr/local/bin:/usr/bin:/bin"}))
 				})
 			})
+
+			Context("when the container has environment variables", func() {
+				var (
+					processEnv   []string
+					containerEnv []string
+					bndl         *goci.Bndl
+				)
+
+				BeforeEach(func() {
+					containerEnv = []string{"ENV_CONTAINER_NAME=garden"}
+					processEnv = []string{"ENV_PROCESS_ID=1"}
+				})
+
+				JustBeforeEach(func() {
+					bndl = &goci.Bndl{}
+					bndl.Spec.Spec.Root.Path = "/some/rootfs/path"
+					bndl.Spec.Spec.Process.Env = containerEnv
+					bundleLoader.LoadReturns(bndl, nil)
+
+					_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+						Env: processEnv,
+					}, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("appends the process vars into container vars", func() {
+					envWContainer := make([]string, len(spec.Env))
+					copy(envWContainer, spec.Env)
+
+					bndl.Spec.Spec.Process.Env = []string{}
+					bundleLoader.LoadReturns(bndl, nil)
+
+					_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+						Env: processEnv,
+					}, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(envWContainer).To(Equal(append(containerEnv, spec.Env...)))
+				})
+
+				Context("and the container environment contains PATH", func() {
+					BeforeEach(func() {
+						containerEnv = append(containerEnv, "PATH=/test")
+					})
+
+					It("should not apply the default PATH", func() {
+						Expect(spec.Env).To(Equal([]string{
+							"ENV_CONTAINER_NAME=garden",
+							"PATH=/test",
+							"ENV_PROCESS_ID=1",
+						}))
+					})
+				})
+			})
 		})
 	})
 

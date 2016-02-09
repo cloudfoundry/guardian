@@ -508,7 +508,6 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
 		goci.Mount{Name: "init", Type: "bind", Source: *initBin, Destination: "/tmp/garden-init", Options: []string{"bind"}},
 	).WithRootFS(defaultRootFSPath).
-		WithProcess(goci.Process("/tmp/garden-init")).
 		WithDevices(
 		specs.Device{Path: "/dev/null", Type: 'c', Major: 1, Minor: 3, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
 		specs.Device{Path: "/dev/tty", Type: 'c', Major: 5, Minor: 0, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
@@ -532,6 +531,9 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 			bundlerules.Limits{},
 			bundlerules.Hooks{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
 			bundlerules.BindMounts{},
+			bundlerules.InitProcess{
+				Process: goci.Process("/tmp/garden-init"),
+			},
 		},
 	}
 

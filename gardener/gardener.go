@@ -100,6 +100,8 @@ type DesiredContainerSpec struct {
 	Privileged bool
 
 	Limits garden.Limits
+
+	Env []string
 }
 
 type ActualContainerSpec struct {
@@ -174,6 +176,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		Privileged:   spec.Privileged,
 		BindMounts:   spec.BindMounts,
 		Limits:       spec.Limits,
+		Env:          spec.Env,
 	}); err != nil {
 		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err

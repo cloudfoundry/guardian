@@ -160,9 +160,12 @@ func (r *RunRunc) writeProcessJSON(bundlePath string, spec garden.ProcessSpec, w
 		defaultPath = DefaultRootPath
 	}
 
+	env := envWithDefaultPath(append(
+		bndl.Spec.Spec.Process.Env, spec.Env...,
+	), defaultPath)
 	return json.NewEncoder(writer).Encode(specs.Process{
 		Args: append([]string{spec.Path}, spec.Args...),
-		Env:  envWithDefaultPath(spec.Env, defaultPath),
+		Env:  env,
 		User: specs.User{
 			UID: uid,
 			GID: gid,

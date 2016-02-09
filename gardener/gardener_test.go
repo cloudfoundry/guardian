@@ -218,6 +218,23 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 
+			Context("when environment variables are specified", func() {
+				It("passes into the containerizer", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Env: []string{"ENV.CONTAINER_ID=1", "ENV.CONTAINER_NAME=garden"},
+					})
+
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(containerizer.CreateCallCount()).To(Equal(1))
+					_, spec := containerizer.CreateArgsForCall(0)
+					Expect(spec.Env).To(Equal([]string{
+						"ENV.CONTAINER_ID=1",
+						"ENV.CONTAINER_NAME=garden",
+					}))
+				})
+			})
+
 			It("asks the containerizer to create a container", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob", Privileged: true})
 
