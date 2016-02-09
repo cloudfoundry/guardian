@@ -5,7 +5,6 @@ import (
 	"os"
 	"path"
 
-	"github.com/cloudfoundry-incubator/garden-shed/pkg/retrier"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -15,19 +14,15 @@ type State struct {
 
 type StateChecker struct {
 	StateFileDir string
-	Retrier      retrier.Retrier
 }
 
-func (s StateChecker) State(log lager.Logger, id string) (state State, lastErr error) {
-	lastErr = s.Retrier.Retry(func() error {
-		state, lastErr = readFromStateFile(log, path.Join(s.StateFileDir, id, "state.json"))
-		if lastErr != nil {
-			return lastErr
-		}
-		return nil
-	})
+func (s StateChecker) State(log lager.Logger, id string) (State, error) {
+	state, err := readFromStateFile(log, path.Join(s.StateFileDir, id, "state.json"))
+	if err != nil {
+		return State{}, err
+	}
 
-	return
+	return state, nil
 }
 
 func readFromStateFile(log lager.Logger, path string) (State, error) {

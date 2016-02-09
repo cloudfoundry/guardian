@@ -4,8 +4,10 @@ import (
 	"errors"
 	"io"
 	"os"
+	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/garden-shed/pkg/retrier"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
@@ -13,11 +15,17 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/pivotal-golang/clock"
+	"github.com/pivotal-golang/clock/fakeclock"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Rundmc", func() {
+	const (
+		retrierTimeout  time.Duration = 100 * time.Millisecond
+		retrierInterval time.Duration = 10 * time.Millisecond
+	)
 	var (
 		fakeDepot           *fakes.FakeDepot
 		fakeBundler         *fakes.FakeBundleGenerator
@@ -26,6 +34,8 @@ var _ = Describe("Rundmc", func() {
 		fakeNstarRunner     *fakes.FakeNstarRunner
 		fakeStater          *fakes.FakeContainerStater
 		logger              lager.Logger
+		stateRetrier        retrier.Retrier
+		clk                 clock.Clock
 
 		containerizer *rundmc.Containerizer
 	)
@@ -38,12 +48,21 @@ var _ = Describe("Rundmc", func() {
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeStater = new(fakes.FakeContainerStater)
 		logger = lagertest.NewTestLogger("test")
-
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartChecker, fakeStater, fakeNstarRunner)
+		clk = clock.NewClock()
 
 		fakeDepot.LookupStub = func(_ lager.Logger, handle string) (string, error) {
 			return "/path/to/" + handle, nil
 		}
+	})
+
+	JustBeforeEach(func() {
+		stateRetrier = retrier.Retrier{
+			Timeout:         retrierTimeout,
+			PollingInterval: retrierInterval,
+			Clock:           clk,
+		}
+
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartChecker, fakeStater, fakeNstarRunner, stateRetrier)
 	})
 
 	Describe("Create", func() {
@@ -132,10 +151,43 @@ var _ = Describe("Rundmc", func() {
 			Expect(id).To(Equal("some-handle"))
 		})
 
-		Context("when state check fails", func() {
+		Context("when state file is not present", func() {
 			It("returns the error", func() {
 				fakeStater.StateReturns(rundmc.State{}, errors.New("state-not-found"))
 				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).NotTo(Succeed())
+			})
+
+			Context("and then shows up", func() {
+				var (
+					fakeClock *fakeclock.FakeClock
+				)
+
+				BeforeEach(func() {
+					fakeClock = fakeclock.NewFakeClock(time.Now())
+					clk = fakeClock
+				})
+
+				JustBeforeEach(func() {
+					stateCallCounter := 0
+					fakeStater.StateStub = func(logger lager.Logger, handle string) (rundmc.State, error) {
+						if stateCallCounter == 5 {
+							return rundmc.State{Pid: 4}, nil
+						}
+						stateCallCounter++
+						return rundmc.State{}, errors.New("state-not-found")
+					}
+
+					numberOfRetries := int(retrierTimeout.Nanoseconds() / retrierInterval.Nanoseconds())
+					go func() {
+						for i := 0; i < numberOfRetries; i++ {
+							fakeClock.WaitForWatcherAndIncrement(10 * time.Millisecond)
+						}
+					}()
+				})
+
+				It("should not return an error", func() {
+					Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(Succeed())
+				})
 			})
 		})
 	})

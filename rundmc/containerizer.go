@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/garden-shed/pkg/retrier"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/logging"
@@ -57,9 +58,10 @@ type Containerizer struct {
 	startChecker Checker
 	stateChecker ContainerStater
 	nstar        NstarRunner
+	retrier      retrier.Retrier
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker Checker, stateChecker ContainerStater, nstarRunner NstarRunner) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker Checker, stateChecker ContainerStater, nstarRunner NstarRunner, retrier retrier.Retrier) *Containerizer {
 	return &Containerizer{
 		depot:        depot,
 		bundler:      bundler,
@@ -67,6 +69,7 @@ func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker
 		startChecker: startChecker,
 		stateChecker: stateChecker,
 		nstar:        nstarRunner,
+		retrier:      retrier,
 	}
 }
 
@@ -104,7 +107,14 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		return err
 	}
 
-	_, err = c.stateChecker.State(log, spec.Handle)
+	err = c.retrier.Retry(func() error {
+		_, retryErr := c.stateChecker.State(log, spec.Handle)
+		if retryErr != nil {
+			return retryErr
+		}
+		return nil
+	})
+
 	if err != nil {
 		log.Error("check-state-failed", err)
 		return fmt.Errorf("create: state file not found for container")

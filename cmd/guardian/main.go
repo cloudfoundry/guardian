@@ -485,16 +485,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 
 	startChecker := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 15 * time.Second}
 
-	stateCheckRetrier := retrier.Retrier{
-		Timeout:         1 * time.Second,
-		PollingInterval: 100 * time.Millisecond,
-		Clock:           clock.NewClock(),
-	}
-
-	stateChecker := rundmc.StateChecker{
-		StateFileDir: OciStateDir,
-		Retrier:      stateCheckRetrier,
-	}
+	stateChecker := rundmc.StateChecker{StateFileDir: OciStateDir}
 
 	commandRunner := linux_command_runner.New()
 
@@ -545,7 +536,14 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	}
 
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
-	return rundmc.New(depot, template, runcrunner, startChecker, stateChecker, nstar)
+
+	stateCheckRetrier := retrier.Retrier{
+		Timeout:         1 * time.Second,
+		PollingInterval: 100 * time.Millisecond,
+		Clock:           clock.NewClock(),
+	}
+
+	return rundmc.New(depot, template, runcrunner, startChecker, stateChecker, nstar, stateCheckRetrier)
 }
 
 func missing(flagName string) {
