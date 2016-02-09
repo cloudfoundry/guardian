@@ -5,7 +5,6 @@ import (
 	"io"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/garden-shed/pkg/retrier"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/logging"
@@ -19,6 +18,7 @@ import (
 //go:generate counterfeiter . BundleRunner
 //go:generate counterfeiter . NstarRunner
 //go:generate counterfeiter . ContainerStater
+//go:generate counterfeiter . Retrier
 
 type Depot interface {
 	Create(log lager.Logger, handle string, bundle depot.BundleSaver) error
@@ -50,6 +50,10 @@ type NstarRunner interface {
 	StreamOut(log lager.Logger, pid int, path string, user string) (io.ReadCloser, error)
 }
 
+type Retrier interface {
+	Run(fn func() error) error
+}
+
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
 	depot        Depot
@@ -58,10 +62,10 @@ type Containerizer struct {
 	startChecker Checker
 	stateChecker ContainerStater
 	nstar        NstarRunner
-	retrier      retrier.Retrier
+	retrier      Retrier
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker Checker, stateChecker ContainerStater, nstarRunner NstarRunner, retrier retrier.Retrier) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker Checker, stateChecker ContainerStater, nstarRunner NstarRunner, retrier Retrier) *Containerizer {
 	return &Containerizer{
 		depot:        depot,
 		bundler:      bundler,
@@ -107,17 +111,9 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		return err
 	}
 
-	err = c.retrier.Retry(func() error {
-		_, retryErr := c.stateChecker.State(log, spec.Handle)
-		if retryErr != nil {
-			return retryErr
-		}
-		return nil
-	})
-
-	if err != nil {
+	if err := c.waitForStateJSON(log, spec.Handle); err != nil {
 		log.Error("check-state-failed", err)
-		return fmt.Errorf("create: state file not found for container")
+		return fmt.Errorf("create: state file not found for container: %s", err)
 	}
 
 	return nil
@@ -218,4 +214,11 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 // Handles returns a list of all container handles
 func (c *Containerizer) Handles() ([]string, error) {
 	return c.depot.Handles()
+}
+
+func (c *Containerizer) waitForStateJSON(log lager.Logger, handle string) error {
+	return c.retrier.Run(func() error {
+		_, err := c.stateChecker.State(log, handle)
+		return err
+	})
 }

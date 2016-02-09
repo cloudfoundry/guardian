@@ -4,10 +4,8 @@ import (
 	"errors"
 	"io"
 	"os"
-	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/garden-shed/pkg/retrier"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
@@ -15,17 +13,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/pivotal-golang/clock"
-	"github.com/pivotal-golang/clock/fakeclock"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
 var _ = Describe("Rundmc", func() {
-	const (
-		retrierTimeout  time.Duration = 100 * time.Millisecond
-		retrierInterval time.Duration = 10 * time.Millisecond
-	)
 	var (
 		fakeDepot           *fakes.FakeDepot
 		fakeBundler         *fakes.FakeBundleGenerator
@@ -34,8 +26,7 @@ var _ = Describe("Rundmc", func() {
 		fakeNstarRunner     *fakes.FakeNstarRunner
 		fakeStater          *fakes.FakeContainerStater
 		logger              lager.Logger
-		stateRetrier        retrier.Retrier
-		clk                 clock.Clock
+		fakeRetrier         *fakes.FakeRetrier
 
 		containerizer *rundmc.Containerizer
 	)
@@ -48,21 +39,17 @@ var _ = Describe("Rundmc", func() {
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeStater = new(fakes.FakeContainerStater)
 		logger = lagertest.NewTestLogger("test")
-		clk = clock.NewClock()
 
 		fakeDepot.LookupStub = func(_ lager.Logger, handle string) (string, error) {
 			return "/path/to/" + handle, nil
 		}
-	})
 
-	JustBeforeEach(func() {
-		stateRetrier = retrier.Retrier{
-			Timeout:         retrierTimeout,
-			PollingInterval: retrierInterval,
-			Clock:           clk,
+		fakeRetrier = new(fakes.FakeRetrier)
+		fakeRetrier.RunStub = func(fn func() error) error {
+			return fn()
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartChecker, fakeStater, fakeNstarRunner, stateRetrier)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartChecker, fakeStater, fakeNstarRunner, fakeRetrier)
 	})
 
 	Describe("Create", func() {
@@ -141,51 +128,31 @@ var _ = Describe("Rundmc", func() {
 			})
 		})
 
-		It("should check the container's state", func() {
-			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
-				Handle: "some-handle",
-			})).To(Succeed())
-			Expect(fakeStater.StateCallCount()).To(Equal(1))
-
-			_, id := fakeStater.StateArgsForCall(0)
-			Expect(id).To(Equal("some-handle"))
-		})
-
-		Context("when state file is not present", func() {
-			It("returns the error", func() {
+		Context("when the state file was not written even after PID 1 has started", func() {
+			It("returns an error", func() {
 				fakeStater.StateReturns(rundmc.State{}, errors.New("state-not-found"))
-				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).NotTo(Succeed())
+				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(MatchError(ContainSubstring("create: state file not found")))
 			})
 
-			Context("and then shows up", func() {
-				var (
-					fakeClock *fakeclock.FakeClock
-				)
-
+			Context("if it eventually appears", func() {
 				BeforeEach(func() {
-					fakeClock = fakeclock.NewFakeClock(time.Now())
-					clk = fakeClock
-				})
-
-				JustBeforeEach(func() {
 					stateCallCounter := 0
 					fakeStater.StateStub = func(logger lager.Logger, handle string) (rundmc.State, error) {
-						if stateCallCounter == 5 {
+						if stateCallCounter == 1 {
 							return rundmc.State{Pid: 4}, nil
 						}
 						stateCallCounter++
 						return rundmc.State{}, errors.New("state-not-found")
 					}
 
-					numberOfRetries := int(retrierTimeout.Nanoseconds() / retrierInterval.Nanoseconds())
-					go func() {
-						for i := 0; i < numberOfRetries; i++ {
-							fakeClock.WaitForWatcherAndIncrement(10 * time.Millisecond)
-						}
-					}()
+					fakeRetrier.RunStub = func(fn func() error) error {
+						Expect(fn()).NotTo(Succeed())
+						Expect(fn()).To(Succeed())
+						return nil
+					}
 				})
 
-				It("should not return an error", func() {
+				It("does not return an error", func() {
 					Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(Succeed())
 				})
 			})

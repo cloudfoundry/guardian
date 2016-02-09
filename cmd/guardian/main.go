@@ -17,7 +17,6 @@ import (
 	"github.com/cloudfoundry-incubator/cf-lager"
 	quotaed_aufs "github.com/cloudfoundry-incubator/garden-shed/docker_drivers/aufs"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake"
-	"github.com/cloudfoundry-incubator/garden-shed/pkg/retrier"
 	"github.com/cloudfoundry-incubator/garden-shed/repository_fetcher"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/garden/server"
@@ -44,8 +43,8 @@ import (
 	"github.com/docker/docker/graph"
 	_ "github.com/docker/docker/pkg/chrootarchive" // allow reexec of docker-applyLayer
 	"github.com/docker/docker/pkg/reexec"
+	"github.com/eapache/go-resiliency/retrier"
 	"github.com/nu7hatch/gouuid"
-	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/localip"
 )
@@ -408,12 +407,6 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.C
 		logger.Fatal("failed-to-mkdir-backing-stores", err)
 	}
 
-	graphRetrier := &retrier.Retrier{
-		Timeout:         100 * time.Second,
-		PollingInterval: 500 * time.Millisecond,
-		Clock:           clock.NewClock(),
-	}
-
 	quotaedGraphDriver := &quotaed_aufs.QuotaedDriver{
 		GraphDriver: dockerGraphDriver,
 		Unmount:     quotaed_aufs.Unmount,
@@ -422,10 +415,10 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.C
 			Logger:   logger.Session("backing-store-mgr"),
 		},
 		LoopMounter: &quotaed_aufs.Loop{
-			Retrier: graphRetrier,
+			Retrier: retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil),
 			Logger:  logger.Session("loop-mounter"),
 		},
-		Retrier:  graphRetrier,
+		Retrier:  retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil),
 		RootPath: graphRoot,
 		Logger:   logger.Session("quotaed-driver"),
 	}
@@ -539,12 +532,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 
-	stateCheckRetrier := retrier.Retrier{
-		Timeout:         1 * time.Second,
-		PollingInterval: 100 * time.Millisecond,
-		Clock:           clock.NewClock(),
-	}
-
+	stateCheckRetrier := retrier.New(retrier.ConstantBackoff(10, 100*time.Millisecond), nil)
 	return rundmc.New(depot, template, runcrunner, startChecker, stateChecker, nstar, stateCheckRetrier)
 }
 
