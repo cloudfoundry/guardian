@@ -54,7 +54,7 @@ var _ = BeforeEach(func() {
 
 	socketPath = filepath.Join(tmpdir, "iodaemon.sock")
 
-	SetDefaultEventuallyTimeout(10 * time.Second)
+	SetDefaultEventuallyTimeout(5 * time.Second)
 })
 
 var _ = AfterEach(func() {

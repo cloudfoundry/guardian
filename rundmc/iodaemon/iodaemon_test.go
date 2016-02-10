@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"bytes"
-	"io"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon"
 	linkpkg "github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/link"
@@ -246,24 +245,25 @@ var _ = Describe("Iodaemon", func() {
 			l, linkStdout, _, err := createLink(socketPath)
 			Expect(err).ToNot(HaveOccurred())
 
-			_, err = l.Write([]byte("echo $COLUMNS $LINES\n"))
+			_, err = l.Write([]byte("TERM=xterm tput cols && TERM=xterm tput lines\n"))
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(linkStdout).Should(gbytes.Say(".*\\s200 80\\s.*"))
+			Eventually(linkStdout).Should(gbytes.Say(`200\s*80`))
 
 			Expect(l.SetWindowSize(100, 40)).To(Succeed())
 
-			_, err = l.Write([]byte("echo $COLUMNS $LINES\n"))
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(linkStdout).Should(gbytes.Say(".*\\s100 40\\s.*"))
+			Eventually(func() *gbytes.Buffer {
+				_, err = l.Write([]byte("TERM=xterm tput cols && TERM=xterm tput lines\n"))
+				Expect(err).ToNot(HaveOccurred())
+				return linkStdout
+			}).Should(gbytes.Say((`100\s*40`)))
 
 			_, err = l.Write([]byte("exit\n"))
 			Expect(err).ToNot(HaveOccurred())
 		})
 	})
-
 })
 
-func createLink(socketPath string) (*linkpkg.Link, io.WriteCloser, io.WriteCloser, error) {
+func createLink(socketPath string) (*linkpkg.Link, *gbytes.Buffer, *gbytes.Buffer, error) {
 	linkStdout := gbytes.NewBuffer()
 	linkStderr := gbytes.NewBuffer()
 	var l *linkpkg.Link
