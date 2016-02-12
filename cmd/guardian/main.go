@@ -501,6 +501,9 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	)
 
 	baseBundle := goci.Bundle().
+		// CAP_CHOWN is needed by the GITS in otder to propperly chown
+		// home dir on `useradd`
+		WithCapabilities("CAP_CHOWN").
 		WithNamespaces(PrivilegedContainerNamespaces...).
 		WithResources(&specs.Resources{}).
 		WithMounts(
