@@ -161,7 +161,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 	rootFSPath, env, err := g.VolumeCreator.Create(log, spec.Handle, rootfs_provider.Spec{
 		RootFS:     rootFSURL,
 		QuotaSize:  int64(spec.Limits.Disk.ByteHard),
-		QuotaScope: rootfs_provider.QuotaScopeExclusive,
+		QuotaScope: spec.Limits.Disk.Scope,
 		Namespaced: !spec.Privileged,
 	})
 	if err != nil {

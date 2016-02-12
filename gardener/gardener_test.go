@@ -105,7 +105,7 @@ var _ = Describe("Gardener", func() {
 				var spec garden.ContainerSpec
 
 				BeforeEach(func() {
-					spec.Limits.Disk.Scope = garden.DiskLimitScopeExclusive
+					spec.Limits.Disk.Scope = garden.DiskLimitScopeTotal
 					spec.Limits.Disk.ByteHard = 10 * 1024 * 1024
 				})
 
@@ -116,7 +116,7 @@ var _ = Describe("Gardener", func() {
 					Expect(volumeCreator.CreateCallCount()).To(Equal(1))
 					_, _, rpSpec := volumeCreator.CreateArgsForCall(0)
 					Expect(rpSpec.QuotaSize).To(BeEquivalentTo(spec.Limits.Disk.ByteHard))
-					Expect(rpSpec.QuotaScope).To(Equal(rootfs_provider.QuotaScopeExclusive))
+					Expect(rpSpec.QuotaScope).To(Equal(garden.DiskLimitScopeTotal))
 				})
 			})
 
