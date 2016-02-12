@@ -195,6 +195,21 @@ var _ = Describe("Gardener", func() {
 				Expect(spec.RootFSPath).To(Equal("/path/to/rootfs/alice/bob"))
 			})
 
+			Context("when environment variables are returned by the volume manager", func() {
+				It("passes them to the containerizer", func() {
+					volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error) {
+						return "", []string{"foo=bar", "name=blame"}, nil
+					}
+
+					_, err := gdnr.Create(garden.ContainerSpec{})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(containerizer.CreateCallCount()).To(Equal(1))
+					_, spec := containerizer.CreateArgsForCall(0)
+					Expect(spec.Env).To(Equal([]string{"foo=bar", "name=blame"}))
+				})
+			})
+
 			Context("when volume creator fails", func() {
 				BeforeEach(func() {
 					volumeCreator.CreateReturns("", []string{}, errors.New("booom!"))

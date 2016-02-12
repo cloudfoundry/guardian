@@ -15,6 +15,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/cf-debug-server"
 	"github.com/cloudfoundry-incubator/cf-lager"
+	"github.com/cloudfoundry-incubator/garden-shed/distclient"
 	quotaed_aufs "github.com/cloudfoundry-incubator/garden-shed/docker_drivers/aufs"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake"
 	"github.com/cloudfoundry-incubator/garden-shed/repository_fetcher"
@@ -30,6 +31,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry-incubator/guardian/netplugin"
+	"github.com/cloudfoundry-incubator/guardian/pkg/vars"
 	"github.com/cloudfoundry-incubator/guardian/properties"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules"
@@ -169,15 +171,8 @@ var graphRoot = flag.String(
 
 var dockerRegistry = flag.String(
 	"registry",
-	"",
-	///registry.IndexServerAddress(),
+	"registry-1.docker.io",
 	"docker registry API endpoint",
-)
-
-var insecureRegistries = flag.String(
-	"insecureDockerRegistryList",
-	"",
-	"comma-separated list of docker registries to allow connection to even if they are not secure",
 )
 
 var tag = flag.String(
@@ -248,6 +243,13 @@ func main() {
 		return
 	}
 
+	var insecureRegistries vars.StringList
+	flag.Var(
+		&insecureRegistries,
+		"insecureDockerRegistry",
+		"Docker registry to allow connecting to even if not secure. (Can be specified multiple times to allow insecure connection to multiple repositories)",
+	)
+
 	cf_debug_server.AddFlags(flag.CommandLine)
 	cf_lager.AddFlags(flag.CommandLine)
 	flag.Parse()
@@ -310,7 +312,7 @@ func main() {
 		UidGenerator:    wireUidGenerator(),
 		Starter:         wireStarter(logger, ipt, *allowHostAccess, interfacePrefix, denyNetworksList),
 		Networker:       networker,
-		VolumeCreator:   wireVolumeCreator(logger, *graphRoot),
+		VolumeCreator:   wireVolumeCreator(logger, *graphRoot, insecureRegistries),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath),
 		Logger:          logger,
 		PropertyManager: propManager,
@@ -389,7 +391,7 @@ func wireNetworker(
 	)
 }
 
-func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.CakeOrdinator {
+func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries vars.StringList) *rootfs_provider.CakeOrdinator {
 	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger}
 
@@ -444,7 +446,7 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.C
 	ovenCleanerCake := &layercake.OvenCleaner{
 		Cake:               cake,
 		Logger:             logger.Session("oven-cleaner"),
-		EnableImageCleanup: true,
+		EnableImageCleanup: false,
 	}
 
 	repoFetcher := &repository_fetcher.CompositeFetcher{
@@ -453,6 +455,13 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string) *rootfs_provider.C
 			DefaultRootFSPath: *rootFSPath,
 			IDProvider:        repository_fetcher.LayerIDProvider{},
 		},
+		RemoteFetcher: repository_fetcher.NewRemote(
+			logger,
+			*dockerRegistry,
+			ovenCleanerCake,
+			distclient.NewDialer(insecureRegistries.List),
+			repository_fetcher.VerifyFunc(repository_fetcher.Verify),
+		),
 	}
 
 	rootFSNamespacer := &rootfs_provider.UidNamespacer{

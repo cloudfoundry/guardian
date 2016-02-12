@@ -35,8 +35,9 @@ var _ = Describe("Destroying a Container", func() {
 
 	Context("when running a process", func() {
 		var (
-			process     garden.Process
-			initProcPid int
+			process         garden.Process
+			initProcPid     int
+			containerRootfs string
 		)
 
 		BeforeEach(func() {
@@ -54,6 +55,10 @@ var _ = Describe("Destroying a Container", func() {
 				},
 			}, ginkgoIO)
 			Expect(err).NotTo(HaveOccurred())
+
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+			containerRootfs = info.ContainerPath
 		})
 
 		It("should kill the containers init process", func() {
@@ -72,9 +77,7 @@ var _ = Describe("Destroying a Container", func() {
 		})
 
 		It("should destroy the container rootfs", func() {
-			session, err := gexec.Start(exec.Command("du", "-d0", client.GraphPath), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gbytes.Say(`^0\s+`))
+			Expect(containerRootfs).NotTo(BeAnExistingFile())
 		})
 	})
 
