@@ -114,9 +114,9 @@ func (r *RunningGarden) Stop() error {
 	select {
 	case err := <-r.process.Wait():
 		return err
-	case <-time.After(time.Second * 10):
+	case <-time.After(time.Second * 30):
 		r.process.Signal(syscall.SIGKILL)
-		return errors.New("timed out waiting for garden to shutdown after 10 seconds")
+		return errors.New("timed out waiting for garden to shutdown after 30 seconds")
 	}
 }
 
