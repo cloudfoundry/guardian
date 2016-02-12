@@ -72,11 +72,24 @@ var _ = Describe("RootFS", func() {
 	})
 
 	It("recreates /dev as container root", func() {
-		p, perms, uid, gid := fakeMkdirChowner.MkdirChownArgsForCall(1)
-		Expect(p).To(Equal(path.Join(rootfsPath, "dev")))
-		Expect(perms).To(Equal(os.FileMode(0755)))
-		Expect(uid).To(BeEquivalentTo(999))
-		Expect(gid).To(BeEquivalentTo(888))
+		Expect(mkdirChownCalls(fakeMkdirChowner)).To(ContainElement(mkdirChownCall{
+			path:  path.Join(rootfsPath, "dev"),
+			perms: os.FileMode(0755),
+			uid:   999,
+			gid:   888,
+		}))
+	})
+
+	// we ask runc to mount both of these, so we need to ensure they exist
+	It("creates /proc and /dev as container root if neccesary", func() {
+		for _, p := range []string{"proc", "sys"} {
+			Expect(mkdirChownCalls(fakeMkdirChowner)).To(ContainElement(mkdirChownCall{
+				path:  path.Join(rootfsPath, p),
+				perms: os.FileMode(0755),
+				uid:   999,
+				gid:   888,
+			}))
+		}
 	})
 })
 
@@ -84,4 +97,21 @@ func tmp() string {
 	tmp, err := ioutil.TempDir("", "rootfstest")
 	Expect(err).NotTo(HaveOccurred())
 	return tmp
+}
+
+type mkdirChownCall struct {
+	path     string
+	perms    os.FileMode
+	uid, gid int
+}
+
+func mkdirChownCalls(fakeMkdirChowner *fakes.FakeMkdirChowner) []mkdirChownCall {
+	args := []mkdirChownCall{}
+	for i := 0; i < fakeMkdirChowner.MkdirChownCallCount(); i++ {
+		var a mkdirChownCall
+		a.path, a.perms, a.uid, a.gid = fakeMkdirChowner.MkdirChownArgsForCall(i)
+		args = append(args, a)
+	}
+
+	return args
 }
