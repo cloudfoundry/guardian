@@ -443,22 +443,19 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries
 		}
 	}
 
-	ovenCleanerCake := &layercake.OvenCleaner{
-		Cake:               cake,
-		Logger:             logger.Session("oven-cleaner"),
-		EnableImageCleanup: false,
-	}
+	retainer := layercake.NewRetainer()
+	ovenCleaner := layercake.NewOvenCleaner(retainer, false)
 
 	repoFetcher := &repository_fetcher.CompositeFetcher{
 		LocalFetcher: &repository_fetcher.Local{
-			Cake:              ovenCleanerCake,
+			Cake:              cake,
 			DefaultRootFSPath: *rootFSPath,
 			IDProvider:        repository_fetcher.LayerIDProvider{},
 		},
 		RemoteFetcher: repository_fetcher.NewRemote(
 			logger,
 			*dockerRegistry,
-			ovenCleanerCake,
+			cake,
 			distclient.NewDialer(insecureRegistries.List),
 			repository_fetcher.VerifyFunc(repository_fetcher.Verify),
 		),
@@ -472,12 +469,8 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries
 		),
 	}
 
-	layerCreator := rootfs_provider.NewLayerCreator(
-		ovenCleanerCake, rootfs_provider.SimpleVolumeCreator{}, rootFSNamespacer)
-
-	cakeOrdinator := rootfs_provider.NewCakeOrdinator(
-		ovenCleanerCake, repoFetcher, layerCreator, nil,
-	)
+	layerCreator := rootfs_provider.NewLayerCreator(cake, rootfs_provider.SimpleVolumeCreator{}, rootFSNamespacer)
+	cakeOrdinator := rootfs_provider.NewCakeOrdinator(cake, repoFetcher, layerCreator, ovenCleaner)
 
 	return cakeOrdinator
 }
