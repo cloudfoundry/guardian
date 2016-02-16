@@ -7,6 +7,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/specs"
 )
 
 var _ = Describe("BundleTemplate", func() {
@@ -66,8 +67,8 @@ var _ = Describe("BundleTemplate", func() {
 
 		It("passes the bundle from the first rule to the subsequent rules", func() {
 			bndl := goci.Bndl{}.WithMounts(
-				goci.Mount{Name: "test_a"},
-				goci.Mount{Name: "test_b"},
+				specs.Mount{Destination: "test_a"},
+				specs.Mount{Destination: "test_b"},
 			)
 			ruleA.ApplyReturns(bndl)
 
@@ -80,8 +81,8 @@ var _ = Describe("BundleTemplate", func() {
 
 		It("returns the results of the last rule", func() {
 			bndl := goci.Bndl{}.WithMounts(
-				goci.Mount{Name: "test_a"},
-				goci.Mount{Name: "test_b"},
+				specs.Mount{Destination: "test_a"},
+				specs.Mount{Destination: "test_b"},
 			)
 			ruleB.ApplyReturns(bndl)
 

@@ -6,9 +6,9 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/specs"
 
 	"github.com/cloudfoundry-incubator/goci"
-	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules"
 )
@@ -21,7 +21,7 @@ var _ = Describe("Hooks", func() {
 			Handle: "fred",
 		})
 
-		Expect(newBndl.RuntimeSpec.Hooks.Prestart[0].Env).To(
+		Expect(newBndl.PrestartHooks()[0].Env).To(
 			ContainElement(envVar),
 		)
 	},
@@ -43,12 +43,12 @@ var _ = Describe("Hooks", func() {
 			},
 		})
 
-		Expect(pathAndArgsOf(newBndl.RuntimeSpec.Hooks.Prestart)).To(ContainElement(PathAndArgs{
+		Expect(pathAndArgsOf(newBndl.PrestartHooks())).To(ContainElement(PathAndArgs{
 			Path: "/path/to/bananas/network",
 			Args: []string{"arg", "barg"},
 		}))
 
-		Expect(pathAndArgsOf(newBndl.RuntimeSpec.Hooks.Poststop)).To(ContainElement(PathAndArgs{
+		Expect(pathAndArgsOf(newBndl.PoststopHooks())).To(ContainElement(PathAndArgs{
 			Path: "/path/to/bananas/network",
 			Args: []string{"arg", "barg"},
 		}))

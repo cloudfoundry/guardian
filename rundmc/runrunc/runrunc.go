@@ -11,8 +11,8 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
-	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry/gunk/command_runner"
+	"github.com/opencontainers/specs"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -145,7 +145,7 @@ func (r *RunRunc) writeProcessJSON(bundlePath string, spec garden.ProcessSpec, w
 		return err
 	}
 
-	rootFsPath := bndl.GetRootfsPath()
+	rootFsPath := bndl.RootFS()
 	if rootFsPath == "" {
 		return fmt.Errorf("empty rootfs path")
 	}

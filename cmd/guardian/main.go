@@ -22,7 +22,6 @@ import (
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/garden/server"
 	"github.com/cloudfoundry-incubator/goci"
-	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/factory"
@@ -47,6 +46,7 @@ import (
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/nu7hatch/gouuid"
+	"github.com/opencontainers/specs"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/localip"
 )
@@ -493,33 +493,49 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 		runrunc.LookupFunc(runrunc.LookupUser),
 	)
 
+	mounts := []specs.Mount{
+		specs.Mount{Type: "proc", Source: "proc", Destination: "/proc"},
+		specs.Mount{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
+		specs.Mount{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
+			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
+		specs.Mount{Type: "bind", Source: *initBin, Destination: "/tmp/garden-init", Options: []string{"bind"}},
+	}
+
+	rwm := "rwm"
+	character := 'c'
+	var majorMinor = func(i int64) *int64 {
+		return &i
+	}
+
+	denyAll := specs.DeviceCgroup{Allow: false, Access: &rwm}
+	allowedDevices := []specs.DeviceCgroup{
+		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(3), Allow: true},
+		{Access: &rwm, Type: &character, Major: majorMinor(5), Minor: majorMinor(0), Allow: true},
+		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(8), Allow: true},
+		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(9), Allow: true},
+		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(5), Allow: true},
+		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(7), Allow: true},
+	}
+
 	baseBundle := goci.Bundle().
 		// CAP_CHOWN is needed by the GITS in otder to propperly chown
 		// home dir on `useradd`
 		WithCapabilities("CAP_CHOWN").
 		WithNamespaces(PrivilegedContainerNamespaces...).
-		WithResources(&specs.Resources{}).
-		WithMounts(
-		goci.Mount{Name: "proc", Type: "proc", Source: "proc", Destination: "/proc"},
-		goci.Mount{Name: "shm", Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
-		goci.Mount{Name: "pts", Type: "devpts", Source: "devpts", Destination: "/dev/pts",
-			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
-		goci.Mount{Name: "init", Type: "bind", Source: *initBin, Destination: "/tmp/garden-init", Options: []string{"bind"}},
-	).WithRootFS(defaultRootFSPath).
-		WithDevices(
-		specs.Device{Path: "/dev/null", Type: 'c', Major: 1, Minor: 3, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
-		specs.Device{Path: "/dev/tty", Type: 'c', Major: 5, Minor: 0, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
-		specs.Device{Path: "/dev/random", Type: 'c', Major: 1, Minor: 8, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
-		specs.Device{Path: "/dev/urandom", Type: 'c', Major: 1, Minor: 9, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
-		specs.Device{Path: "/dev/zero", Type: 'c', Major: 1, Minor: 5, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
-		specs.Device{Path: "/dev/full", Type: 'c', Major: 1, Minor: 7, UID: 0, GID: 0, Permissions: "rwm", FileMode: 0666},
-	)
+		WithResources(&specs.Resources{Devices: append([]specs.DeviceCgroup{denyAll}, allowedDevices...)}).
+		WithMounts(mounts...).
+		WithRootFS(defaultRootFSPath)
+
+	unprivilegedBundle := baseBundle.
+		WithNamespace(goci.UserNamespace).
+		WithUIDMappings(idMappings...).
+		WithGIDMappings(idMappings...)
 
 	template := &rundmc.BundleTemplate{
 		Rules: []rundmc.BundlerRule{
 			bundlerules.Base{
 				PrivilegedBase:   baseBundle,
-				UnprivilegedBase: baseBundle.WithNamespace(goci.UserNamespace).WithUIDMappings(idMappings...).WithGIDMappings(idMappings...),
+				UnprivilegedBase: unprivilegedBundle,
 			},
 			bundlerules.RootFS{
 				ContainerRootUID: idMappings.Map(0),
@@ -530,7 +546,10 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 			bundlerules.Hooks{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
 			bundlerules.BindMounts{},
 			bundlerules.InitProcess{
-				Process: goci.Process("/tmp/garden-init"),
+				Process: specs.Process{
+					Args: []string{"/tmp/garden-init"},
+					Cwd:  "/",
+				},
 			},
 		},
 	}

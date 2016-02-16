@@ -2,8 +2,8 @@ package bundlerules
 
 import (
 	"github.com/cloudfoundry-incubator/goci"
-	"github.com/cloudfoundry-incubator/goci/specs"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
+	"github.com/opencontainers/specs"
 )
 
 type InitProcess struct {
