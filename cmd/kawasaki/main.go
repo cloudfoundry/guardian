@@ -9,7 +9,9 @@ import (
 
 	"github.com/cloudfoundry-incubator/cf-debug-server"
 	"github.com/cloudfoundry-incubator/cf-lager"
+	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/factory"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
@@ -71,6 +73,59 @@ func main() {
 	if err := configurer.Apply(logger, config, fmt.Sprintf("/proc/%d/ns/net", state.Pid)); err != nil {
 		panic(err)
 	}
+
+	dnsResolvConfigurer := wireDNSResolvConfigurer(state, config)
+	if err := dnsResolvConfigurer.Configure(logger); err != nil {
+		panic(err)
+	}
+}
+
+func extractRootIds(bndl *goci.Bndl) (int, int) {
+	rootUid := 0
+	for _, mapping := range bndl.Spec.Linux.UIDMappings {
+		if mapping.ContainerID == 0 && mapping.Size >= 1 {
+			rootUid = int(mapping.HostID)
+			break
+		}
+	}
+
+	rootGid := 0
+	for _, mapping := range bndl.Spec.Linux.GIDMappings {
+		if mapping.ContainerID == 0 && mapping.Size >= 1 {
+			rootGid = int(mapping.HostID)
+			break
+		}
+	}
+
+	return rootUid, rootGid
+}
+
+func wireDNSResolvConfigurer(state specs.State, config kawasaki.NetworkConfig) *dns.ResolvConfigurer {
+	bundleLoader := &goci.BndlLoader{}
+	bndl, err := bundleLoader.Load(state.BundlePath)
+	if err != nil {
+		panic(err)
+	}
+
+	rootUid, rootGid := extractRootIds(bndl)
+
+	configurer := &dns.ResolvConfigurer{
+		HostsFileCompiler: &dns.HostsFileCompiler{
+			Handle: state.ID,
+			IP:     config.ContainerIP,
+		},
+		ResolvFileCompiler: &dns.ResolvFileCompiler{
+			HostResolvConfPath: "/etc/resolv.conf",
+			HostIP:             config.BridgeIP,
+		},
+		FileWriter: &dns.RootfsWriter{
+			RootfsPath: bndl.Spec.Spec.Root.Path,
+			RootUid:    rootUid,
+			RootGid:    rootGid,
+		},
+	}
+
+	return configurer
 }
 
 type IPValue struct {
