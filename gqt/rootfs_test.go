@@ -353,18 +353,6 @@ func startV2DockerRegistry(client garden.Client, dockerRegistryIP string, docker
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	// Write the `/etc/hosts` files to map localhost to 127.0.0.1. Garden-Linux
-	// used to properly propulate `/etc/hosts` but Guardian isn't yet.
-	proc, err := dockerRegistry.Run(garden.ProcessSpec{
-		User: "root",
-		Path: "bash",
-		Args: []string{"-c", "echo '127.0.0.1 localhost' >> /etc/hosts"},
-	}, ginkgoIO)
-	Expect(err).NotTo(HaveOccurred())
-	exitCode, err := proc.Wait()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(exitCode).To(Equal(0))
-
 	_, err = dockerRegistry.Run(garden.ProcessSpec{
 		User: "root",
 		Env: []string{
