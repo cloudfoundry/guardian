@@ -22,9 +22,9 @@ func (p Plugin) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks, er
 	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
 	networkPluginFlags := []string{"--handle", handle, "--network", spec}
 
-	upArgs := append(pathAndExtraArgs, "up")
+	upArgs := append(pathAndExtraArgs, "--action", "up")
 	upArgs = append(upArgs, networkPluginFlags...)
-	downArgs := append(pathAndExtraArgs, "down")
+	downArgs := append(pathAndExtraArgs, "--action", "down")
 	downArgs = append(downArgs, networkPluginFlags...)
 
 	return gardener.Hooks{

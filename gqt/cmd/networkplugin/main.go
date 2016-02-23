@@ -11,7 +11,7 @@ func main() {
 		panic("network test plugin requires at least 3 arguments")
 	}
 
-	args := strings.Join(os.Args, ",")
+	args := strings.Join(os.Args, " ")
 	if err := ioutil.WriteFile(os.Args[1], []byte(args), 0700); err != nil {
 		panic(err)
 	}

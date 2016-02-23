@@ -38,8 +38,8 @@ var _ = Describe("Plugin", func() {
 			)
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(hooks.Prestart.Args).To(Equal([]string{"some/path", "up", "--handle", "some-handle", "--network", "potato"}))
-			Expect(hooks.Poststop.Args).To(Equal([]string{"some/path", "down", "--handle", "some-handle", "--network", "potato"}))
+			Expect(hooks.Prestart.Args).To(Equal([]string{"some/path", "--action", "up", "--handle", "some-handle", "--network", "potato"}))
+			Expect(hooks.Poststop.Args).To(Equal([]string{"some/path", "--action", "down", "--handle", "some-handle", "--network", "potato"}))
 		})
 
 		Context("when there are extra args", func() {
@@ -53,8 +53,8 @@ var _ = Describe("Plugin", func() {
 				)
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(hooks.Prestart.Args).To(Equal([]string{"some/path", "arg1", "arg2", "up", "--handle", "some-handle", "--network", "potato"}))
-				Expect(hooks.Poststop.Args).To(Equal([]string{"some/path", "arg1", "arg2", "down", "--handle", "some-handle", "--network", "potato"}))
+				Expect(hooks.Prestart.Args).To(Equal([]string{"some/path", "arg1", "arg2", "--action", "up", "--handle", "some-handle", "--network", "potato"}))
+				Expect(hooks.Poststop.Args).To(Equal([]string{"some/path", "arg1", "arg2", "--action", "down", "--handle", "some-handle", "--network", "potato"}))
 			})
 		})
 	})
