@@ -27,6 +27,7 @@ var _ = Describe("RuncRunner", func() {
 		runcBinary    *fakes.FakeRuncBinary
 		bundleLoader  *fakes.FakeBundleLoader
 		idGetter      *fakes.FakeUserLookupper
+		mkdirer       *fakes.FakeMkdirer
 		logger        lager.Logger
 
 		runner *runrunc.RunRunc
@@ -39,9 +40,20 @@ var _ = Describe("RuncRunner", func() {
 		commandRunner = fake_command_runner.New()
 		bundleLoader = new(fakes.FakeBundleLoader)
 		idGetter = new(fakes.FakeUserLookupper)
+		mkdirer = new(fakes.FakeMkdirer)
 		logger = lagertest.NewTestLogger("test")
 
-		runner = runrunc.New(tracker, commandRunner, pidGenerator, runcBinary, bundleLoader, idGetter)
+		runner = runrunc.New(
+			tracker,
+			commandRunner,
+			pidGenerator,
+			runcBinary,
+			runrunc.NewExecPreparer(
+				bundleLoader,
+				idGetter,
+				mkdirer,
+			),
+		)
 
 		bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
 			bndl := &goci.Bndl{}
@@ -163,7 +175,6 @@ var _ = Describe("RuncRunner", func() {
 						_, err := runner.Exec(logger, "some/oci/container", "someid",
 							garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
 						Expect(err).To(MatchError(ContainSubstring("empty rootfs path")))
-						Expect(err).To(MatchError(ContainSubstring("someid")))
 					})
 				})
 
@@ -264,6 +275,41 @@ var _ = Describe("RuncRunner", func() {
 							"PATH=/test",
 							"ENV_PROCESS_ID=1",
 						}))
+					})
+				})
+			})
+
+			Describe("working directory", func() {
+				It("passes the correct cwd to the spec", func() {
+					runner.Exec(
+						logger, "some/oci/container", "someid",
+						garden.ProcessSpec{Dir: "/home/dir"}, garden.ProcessIO{},
+					)
+					Expect(tracker.RunCallCount()).To(Equal(1))
+					Expect(spec.Cwd).To(Equal("/home/dir"))
+				})
+
+				It("creates the working directory", func() {
+					idGetter.LookupReturns(1012, 1013, nil)
+
+					_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+						Dir: "/path/to/banana/dir",
+					}, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
+					path, mode, uid, gid := mkdirer.MkdirAsArgsForCall(0)
+					Expect(path).To(Equal("/rootfs/of/bundle/some/oci/container/path/to/banana/dir"))
+					Expect(mode).To(BeNumerically("==", 0755))
+					Expect(uid).To(Equal(1012))
+					Expect(gid).To(Equal(1013))
+				})
+
+				Context("when the working directory creation fails", func() {
+					It("returns an error", func() {
+						mkdirer.MkdirAsReturns(errors.New("BOOOOOM"))
+						_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{}, garden.ProcessIO{})
+						Expect(err).To(MatchError(ContainSubstring("create working directory: BOOOOOM")))
 					})
 				})
 			})

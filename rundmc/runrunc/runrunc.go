@@ -2,17 +2,13 @@ package runrunc
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
+	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry/gunk/command_runner"
-	"github.com/opencontainers/specs"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -34,6 +30,11 @@ type UserLookupper interface {
 	Lookup(rootFsPath string, user string) (uint32, uint32, error)
 }
 
+//go:generate counterfeiter . Mkdirer
+type Mkdirer interface {
+	MkdirAs(path string, mode os.FileMode, uid, gid int) error
+}
+
 type LookupFunc func(rootfsPath, user string) (uint32, uint32, error)
 
 func (fn LookupFunc) Lookup(rootfsPath, user string) (uint32, uint32, error) {
@@ -52,8 +53,7 @@ type RunRunc struct {
 	pidGenerator  UidGenerator
 	runc          RuncBinary
 
-	bundleLoader BundleLoader
-	users        UserLookupper
+	execPreparer *ExecPreparer
 }
 
 //go:generate counterfeiter . RuncBinary
@@ -63,14 +63,13 @@ type RuncBinary interface {
 	KillCommand(id, signal string) *exec.Cmd
 }
 
-func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary, bundleLoader BundleLoader, users UserLookupper) *RunRunc {
+func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary, execPreparer *ExecPreparer) *RunRunc {
 	return &RunRunc{
 		tracker:       tracker,
 		commandRunner: runner,
 		pidGenerator:  pidgen,
 		runc:          runc,
-		bundleLoader:  bundleLoader,
-		users:         users,
+		execPreparer:  execPreparer,
 	}
 }
 
@@ -99,18 +98,10 @@ func (r *RunRunc) Exec(log lager.Logger, bundlePath, id string, spec garden.Proc
 	log.Info("started")
 	defer log.Info("finished")
 
-	tmpFile, err := ioutil.TempFile("", "guardianprocess")
+	cmd, err := r.execPreparer.Prepare(log, id, bundlePath, spec, r.runc)
 	if err != nil {
-		log.Error("tempfile-failed", err)
 		return nil, err
 	}
-
-	if err := r.writeProcessJSON(bundlePath, spec, tmpFile); err != nil {
-		log.Error("encode-failed", err)
-		return nil, fmt.Errorf("writeProcessJSON for container %s: %s", id, err)
-	}
-
-	cmd := r.runc.ExecCommand(id, tmpFile.Name())
 
 	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, spec.TTY)
 	if err != nil {
@@ -137,48 +128,4 @@ func (r *RunRunc) Kill(log lager.Logger, handle string) error {
 	}
 
 	return nil
-}
-
-func (r *RunRunc) writeProcessJSON(bundlePath string, spec garden.ProcessSpec, writer io.Writer) error {
-	bndl, err := r.bundleLoader.Load(bundlePath)
-	if err != nil {
-		return err
-	}
-
-	rootFsPath := bndl.RootFS()
-	if rootFsPath == "" {
-		return fmt.Errorf("empty rootfs path")
-	}
-
-	uid, gid, err := r.users.Lookup(rootFsPath, spec.User)
-	if err != nil {
-		return err
-	}
-
-	defaultPath := DefaultPath
-	if uid == 0 {
-		defaultPath = DefaultRootPath
-	}
-
-	env := envWithDefaultPath(append(
-		bndl.Spec.Spec.Process.Env, spec.Env...,
-	), defaultPath)
-	return json.NewEncoder(writer).Encode(specs.Process{
-		Args: append([]string{spec.Path}, spec.Args...),
-		Env:  env,
-		User: specs.User{
-			UID: uid,
-			GID: gid,
-		},
-	})
-}
-
-func envWithDefaultPath(env []string, defaultPath string) []string {
-	for _, envVar := range env {
-		if strings.Contains(envVar, "PATH=") {
-			return env
-		}
-	}
-
-	return append(env, defaultPath)
 }
