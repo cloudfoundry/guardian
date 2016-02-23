@@ -27,10 +27,10 @@ var _ = Describe("LookupUser", func() {
 		Context("when we try to get the Uid and Gid of the empty string", func() {
 			It("returns the default UID and GID", func() {
 				rootFsPath = "some path"
-				resultUID, resultGID, err := runrunc.LookupUser(rootFsPath, "")
+				user, err := runrunc.LookupUser(rootFsPath, "")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(resultUID).To(Equal(uint32(runrunc.DefaultUID)))
-				Expect(resultGID).To(Equal(uint32(runrunc.DefaultGID)))
+				Expect(user.Uid).To(BeEquivalentTo(runrunc.DefaultUID))
+				Expect(user.Gid).To(BeEquivalentTo(runrunc.DefaultGID))
 			})
 		})
 
@@ -47,26 +47,26 @@ _dovecot:*:214:6:Dovecot Administrator:/var/empty:/usr/bin/false`,
 			})
 
 			It("gets the user ID from /etc/passwd", func() {
-				resultUID, resultGID, err := runrunc.LookupUser(rootFsPath, "devil")
+				user, err := runrunc.LookupUser(rootFsPath, "devil")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(resultUID).To(Equal(uint32(666))) // the UID of the beast
-				Expect(resultGID).To(Equal(uint32(777))) // the GID of the beast
+				Expect(user.Uid).To(BeEquivalentTo(666))             // the UID of the beas
+				Expect(user.Gid).To(BeEquivalentTo(777))             // the GID of the beas
+				Expect(user.Home).To(Equal("/home/fieryunderworld")) // the GID of the beast
 			})
-
 		})
 
 		Context("when /etc/passwd exists with no matching users", func() {
 			It("returns an error", func() {
 				Expect(ioutil.WriteFile(filepath.Join(rootFsPath, "etc", "passwd"), []byte{}, 0777)).To(Succeed())
 
-				_, _, err := runrunc.LookupUser(rootFsPath, "unknownUser")
+				_, err := runrunc.LookupUser(rootFsPath, "unknownUser")
 				Expect(err).To(MatchError(ContainSubstring("Unable to find")))
 			})
 		})
 
 		DescribeTable("when /etc/passwd cannot be parsed", func(breakEtcPasswd func()) {
 			breakEtcPasswd()
-			_, _, err := runrunc.LookupUser(rootFsPath, "devil")
+			_, err := runrunc.LookupUser(rootFsPath, "devil")
 			Expect(err).To(MatchError(ContainSubstring("Unable to find")))
 		},
 			Entry("because it doesn't exist", func() {}),

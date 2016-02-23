@@ -14,6 +14,7 @@ import (
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/specs"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
@@ -60,6 +61,8 @@ var _ = Describe("RuncRunner", func() {
 			bndl.Spec.Spec.Root.Path = "/rootfs/of/bundle/" + path
 			return bndl, nil
 		}
+
+		idGetter.LookupReturns(&user.ExecUser{}, nil)
 
 		runcBinary.StartCommandStub = func(path, id string) *exec.Cmd {
 			return exec.Command("funC", "start", path, id)
@@ -137,7 +140,7 @@ var _ = Describe("RuncRunner", func() {
 			Describe("passing the correct uid and gid", func() {
 				Context("when the bundle can be loaded", func() {
 					BeforeEach(func() {
-						idGetter.LookupReturns(9, 7, nil)
+						idGetter.LookupReturns(&user.ExecUser{Uid: 9, Gid: 7}, nil)
 						_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
 						Expect(err).ToNot(HaveOccurred())
 					})
@@ -180,7 +183,7 @@ var _ = Describe("RuncRunner", func() {
 
 				Context("when IdGetter returns an error", func() {
 					It("passes a process.json with the correct user and group ids", func() {
-						idGetter.LookupReturns(0, 0, errors.New("bang"))
+						idGetter.LookupReturns(&user.ExecUser{Uid: 0, Gid: 0}, errors.New("bang"))
 
 						_, err := runner.Exec(logger, "some/oci/container", "some-id", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
 						Expect(err).To(MatchError(ContainSubstring("bang")))
@@ -201,7 +204,7 @@ var _ = Describe("RuncRunner", func() {
 
 			Context("when the environment does not already contain a PATH", func() {
 				It("appends a default PATH for the root user", func() {
-					idGetter.LookupReturns(0, 0, nil)
+					idGetter.LookupReturns(&user.ExecUser{Uid: 0, Gid: 0}, nil)
 					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
 						Env:  []string{"a=1", "b=3", "c=4"},
 						User: "root",
@@ -213,7 +216,7 @@ var _ = Describe("RuncRunner", func() {
 				})
 
 				It("appends a default PATH for non-root users", func() {
-					idGetter.LookupReturns(1000, 1000, nil)
+					idGetter.LookupReturns(&user.ExecUser{Uid: 1000, Gid: 1000}, nil)
 					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
 						Env:  []string{"a=1", "b=3", "c=4"},
 						User: "alice",
@@ -280,29 +283,56 @@ var _ = Describe("RuncRunner", func() {
 			})
 
 			Describe("working directory", func() {
-				It("passes the correct cwd to the spec", func() {
-					runner.Exec(
-						logger, "some/oci/container", "someid",
-						garden.ProcessSpec{Dir: "/home/dir"}, garden.ProcessIO{},
-					)
-					Expect(tracker.RunCallCount()).To(Equal(1))
-					Expect(spec.Cwd).To(Equal("/home/dir"))
+				Context("when the working directory is specified", func() {
+					It("passes the correct cwd to the spec", func() {
+						runner.Exec(
+							logger, "some/oci/container", "someid",
+							garden.ProcessSpec{Dir: "/home/dir"}, garden.ProcessIO{},
+						)
+						Expect(tracker.RunCallCount()).To(Equal(1))
+						Expect(spec.Cwd).To(Equal("/home/dir"))
+					})
+
+					It("creates the working directory", func() {
+						idGetter.LookupReturns(&user.ExecUser{Uid: 1012, Gid: 1013}, nil)
+
+						_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+							Dir: "/path/to/banana/dir",
+						}, garden.ProcessIO{})
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
+						path, mode, uid, gid := mkdirer.MkdirAsArgsForCall(0)
+						Expect(path).To(Equal("/rootfs/of/bundle/some/oci/container/path/to/banana/dir"))
+						Expect(mode).To(BeNumerically("==", 0755))
+						Expect(uid).To(BeEquivalentTo(1012))
+						Expect(gid).To(BeEquivalentTo(1013))
+					})
 				})
 
-				It("creates the working directory", func() {
-					idGetter.LookupReturns(1012, 1013, nil)
+				Context("when the working directory is not specified", func() {
+					It("defaults to the user's HOME directory", func() {
+						idGetter.LookupReturns(&user.ExecUser{Home: "/the/home/dir"}, nil)
 
-					_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
-						Dir: "/path/to/banana/dir",
-					}, garden.ProcessIO{})
-					Expect(err).NotTo(HaveOccurred())
+						runner.Exec(
+							logger, "some/oci/container", "someid",
+							garden.ProcessSpec{Dir: ""}, garden.ProcessIO{},
+						)
 
-					Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-					path, mode, uid, gid := mkdirer.MkdirAsArgsForCall(0)
-					Expect(path).To(Equal("/rootfs/of/bundle/some/oci/container/path/to/banana/dir"))
-					Expect(mode).To(BeNumerically("==", 0755))
-					Expect(uid).To(Equal(1012))
-					Expect(gid).To(Equal(1013))
+						Expect(tracker.RunCallCount()).To(Equal(1))
+						Expect(spec.Cwd).To(Equal("/the/home/dir"))
+					})
+
+					It("creates the directory", func() {
+						idGetter.LookupReturns(&user.ExecUser{Uid: 1012, Gid: 1013, Home: "/some/dir"}, nil)
+
+						_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{}, garden.ProcessIO{})
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
+						path, _, _, _ := mkdirer.MkdirAsArgsForCall(0)
+						Expect(path).To(Equal("/rootfs/of/bundle/some/oci/container/some/dir"))
+					})
 				})
 
 				Context("when the working directory creation fails", func() {

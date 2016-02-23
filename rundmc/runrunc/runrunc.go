@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry/gunk/command_runner"
+	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -27,7 +28,7 @@ type UidGenerator interface {
 
 //go:generate counterfeiter . UserLookupper
 type UserLookupper interface {
-	Lookup(rootFsPath string, user string) (uint32, uint32, error)
+	Lookup(rootFsPath string, user string) (*user.ExecUser, error)
 }
 
 //go:generate counterfeiter . Mkdirer
@@ -35,9 +36,9 @@ type Mkdirer interface {
 	MkdirAs(path string, mode os.FileMode, uid, gid int) error
 }
 
-type LookupFunc func(rootfsPath, user string) (uint32, uint32, error)
+type LookupFunc func(rootfsPath, user string) (*user.ExecUser, error)
 
-func (fn LookupFunc) Lookup(rootfsPath, user string) (uint32, uint32, error) {
+func (fn LookupFunc) Lookup(rootfsPath, user string) (*user.ExecUser, error) {
 	return fn(rootfsPath, user)
 }
 

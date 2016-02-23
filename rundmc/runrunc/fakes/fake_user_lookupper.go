@@ -5,23 +5,23 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
+	"github.com/opencontainers/runc/libcontainer/user"
 )
 
 type FakeUserLookupper struct {
-	LookupStub        func(rootFsPath string, user string) (uint32, uint32, error)
+	LookupStub        func(rootFsPath string, user string) (*user.ExecUser, error)
 	lookupMutex       sync.RWMutex
 	lookupArgsForCall []struct {
 		rootFsPath string
 		user       string
 	}
 	lookupReturns struct {
-		result1 uint32
-		result2 uint32
-		result3 error
+		result1 *user.ExecUser
+		result2 error
 	}
 }
 
-func (fake *FakeUserLookupper) Lookup(rootFsPath string, user string) (uint32, uint32, error) {
+func (fake *FakeUserLookupper) Lookup(rootFsPath string, user string) (*user.ExecUser, error) {
 	fake.lookupMutex.Lock()
 	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
 		rootFsPath string
@@ -31,7 +31,7 @@ func (fake *FakeUserLookupper) Lookup(rootFsPath string, user string) (uint32, u
 	if fake.LookupStub != nil {
 		return fake.LookupStub(rootFsPath, user)
 	} else {
-		return fake.lookupReturns.result1, fake.lookupReturns.result2, fake.lookupReturns.result3
+		return fake.lookupReturns.result1, fake.lookupReturns.result2
 	}
 }
 
@@ -47,13 +47,12 @@ func (fake *FakeUserLookupper) LookupArgsForCall(i int) (string, string) {
 	return fake.lookupArgsForCall[i].rootFsPath, fake.lookupArgsForCall[i].user
 }
 
-func (fake *FakeUserLookupper) LookupReturns(result1 uint32, result2 uint32, result3 error) {
+func (fake *FakeUserLookupper) LookupReturns(result1 *user.ExecUser, result2 error) {
 	fake.LookupStub = nil
 	fake.lookupReturns = struct {
-		result1 uint32
-		result2 uint32
-		result3 error
-	}{result1, result2, result3}
+		result1 *user.ExecUser
+		result2 error
+	}{result1, result2}
 }
 
 var _ runrunc.UserLookupper = new(FakeUserLookupper)

@@ -44,17 +44,22 @@ func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath string, spec gar
 		return nil, fmt.Errorf("empty rootfs path")
 	}
 
-	uid, gid, err := r.users.Lookup(rootFsPath, spec.User)
+	user, err := r.users.Lookup(rootFsPath, spec.User)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := r.mkdirer.MkdirAs(filepath.Join(rootFsPath, spec.Dir), 0755, int(uid), int(gid)); err != nil {
+	cwd := user.Home
+	if spec.Dir != "" {
+		cwd = spec.Dir
+	}
+
+	if err := r.mkdirer.MkdirAs(filepath.Join(rootFsPath, cwd), 0755, user.Uid, user.Gid); err != nil {
 		return nil, fmt.Errorf("create working directory: %s", err)
 	}
 
 	defaultPath := DefaultPath
-	if uid == 0 {
+	if user.Uid == 0 {
 		defaultPath = DefaultRootPath
 	}
 
@@ -66,10 +71,10 @@ func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath string, spec gar
 		Args: append([]string{spec.Path}, spec.Args...),
 		Env:  env,
 		User: specs.User{
-			UID: uid,
-			GID: gid,
+			UID: uint32(user.Uid),
+			GID: uint32(user.Gid),
 		},
-		Cwd: spec.Dir,
+		Cwd: cwd,
 	}); err != nil {
 		log.Error("encode-failed", err)
 		return nil, fmt.Errorf("writeProcessJSON: %s", err)
