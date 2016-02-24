@@ -111,13 +111,20 @@ func (r *RunningGarden) DestroyAndStop() error {
 
 func (r *RunningGarden) Stop() error {
 	r.process.Signal(syscall.SIGTERM)
-	select {
-	case err := <-r.process.Wait():
-		return err
-	case <-time.After(time.Second * 30):
-		r.process.Signal(syscall.SIGKILL)
-		return errors.New("timed out waiting for garden to shutdown after 30 seconds")
+
+	var err error
+	for i := 0; i < 5; i++ {
+		select {
+		case err := <-r.process.Wait():
+			return err
+		case <-time.After(time.Second * 5):
+			r.process.Signal(syscall.SIGTERM)
+			err = errors.New("timed out waiting for garden to shutdown after 5 seconds")
+		}
 	}
+
+	r.process.Signal(syscall.SIGKILL)
+	return err
 }
 
 func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, tarBin, rootFSPath string, argv ...string) *exec.Cmd {
