@@ -66,7 +66,7 @@ var _ = Describe("MkdirAs", func() {
 		BeforeEach(func() {
 			oldMask = syscall.Umask(0022)
 
-			nestedTmpDirPath = path.Join(tmpDirPath, "test/nest")
+			nestedTmpDirPath = path.Join(tmpDirPath, "test", "nest", "is", "best")
 		})
 
 		AfterEach(func() {
@@ -75,7 +75,6 @@ var _ = Describe("MkdirAs", func() {
 
 		It("creates the directory", func() {
 			Expect(dirCreator.MkdirAs(nestedTmpDirPath, 0755, 1012, 1013)).To(Succeed())
-
 			Expect(nestedTmpDirPath).To(BeADirectory())
 		})
 
@@ -87,11 +86,10 @@ var _ = Describe("MkdirAs", func() {
 			Expect(dirStat.Mode().String()).To(Equal("drwxr-xr-x"))
 		})
 
-		It("sets the correct owner", func() {
-			chownFuncCallCount := 0
+		It("sets the correct owner on all the created directories", func() {
+			chowned := []string{}
 			runrunc.ChownFunc = func(filePath string, uid, gid int) error {
-				chownFuncCallCount++
-
+				chowned = append(chowned, filePath)
 				Expect(uid).To(Equal(1012))
 				Expect(gid).To(Equal(1013))
 
@@ -99,14 +97,22 @@ var _ = Describe("MkdirAs", func() {
 			}
 
 			Expect(dirCreator.MkdirAs(nestedTmpDirPath, 0755, 1012, 1013)).To(Succeed())
-
-			Expect(chownFuncCallCount).To(Equal(1))
+			Expect(chowned).To(HaveLen(4))
+			Expect(chowned).To(ContainElement(nestedTmpDirPath))
+			Expect(chowned).To(ContainElement(path.Join(tmpDirPath, "test")))
 		})
 
 		Context("when setting the owner fails", func() {
 			BeforeEach(func() {
+				call := 0
 				runrunc.ChownFunc = func(_ string, _ int, _ int) error {
-					return errors.New("banana")
+					call++
+
+					if call == 2 {
+						return errors.New("banana")
+					}
+
+					return nil
 				}
 			})
 

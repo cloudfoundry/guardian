@@ -1,8 +1,8 @@
 package runrunc
 
 import (
-	"fmt"
 	"os"
+	"path/filepath"
 )
 
 var ChownFunc func(string, int, int) error = os.Chown
@@ -15,8 +15,12 @@ func (d DirectoryCreator) MkdirAs(path string, mode os.FileMode, uid, gid int) e
 		return nil
 	}
 
-	if err := os.MkdirAll(path, mode); err != nil {
-		return fmt.Errorf("%s", err.Error())
+	if err := d.MkdirAs(filepath.Dir(path), mode, uid, gid); err != nil {
+		return err
+	}
+
+	if err := os.Mkdir(path, mode); err != nil {
+		return err
 	}
 
 	return ChownFunc(path, uid, gid)
