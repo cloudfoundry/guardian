@@ -308,14 +308,15 @@ func main() {
 	}
 
 	backend := &gardener.Gardener{
-		SysInfoProvider: sysinfo.NewProvider(*depotPath),
 		UidGenerator:    wireUidGenerator(),
 		Starter:         wireStarter(logger, ipt, *allowHostAccess, interfacePrefix, denyNetworksList),
+		SysInfoProvider: sysinfo.NewProvider(*depotPath),
 		Networker:       networker,
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot, insecureRegistries),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath),
-		Logger:          logger,
 		PropertyManager: propManager,
+
+		Logger: logger,
 	}
 
 	gardenServer := server.New(*listenNetwork, *listenAddr, *graceTime, backend, logger.Session("api"))

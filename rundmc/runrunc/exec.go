@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/opencontainers/specs"
 	"github.com/pivotal-golang/lager"
 )
@@ -54,7 +55,13 @@ func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath string, spec gar
 		cwd = spec.Dir
 	}
 
-	if err := r.mkdirer.MkdirAs(filepath.Join(rootFsPath, cwd), 0755, user.Uid, user.Gid); err != nil {
+	uid, gid := user.Uid, user.Gid
+	if len(bndl.Spec.Linux.UIDMappings) > 0 {
+		uid = rootfs_provider.MappingList(bndl.Spec.Linux.UIDMappings).Map(uid)
+		gid = rootfs_provider.MappingList(bndl.Spec.Linux.GIDMappings).Map(gid)
+	}
+
+	if err := r.mkdirer.MkdirAs(filepath.Join(rootFsPath, cwd), 0755, uid, gid); err != nil {
 		return nil, fmt.Errorf("create working directory: %s", err)
 	}
 
