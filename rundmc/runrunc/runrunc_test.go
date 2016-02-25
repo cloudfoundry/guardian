@@ -191,6 +191,56 @@ var _ = Describe("RuncRunner", func() {
 				})
 			})
 
+			Context("when the user is specified in the process spec", func() {
+				Context("when the environment does not contain a USER", func() {
+					It("appends a default user", func() {
+						runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+							User: "spiderman",
+							Env:  []string{"a=1", "b=3", "c=4", "PATH=a", "HOME=/spidermanhome"},
+						}, garden.ProcessIO{})
+
+						Expect(tracker.RunCallCount()).To(Equal(1))
+						Expect(spec.Env).To(ConsistOf("a=1", "b=3", "c=4", "PATH=a", "USER=spiderman", "HOME=/spidermanhome"))
+					})
+				})
+
+				Context("when the environment does contain a USER", func() {
+					It("appends a default user", func() {
+						runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+							User: "spiderman",
+							Env:  []string{"a=1", "b=3", "c=4", "PATH=a", "USER=superman"},
+						}, garden.ProcessIO{})
+
+						Expect(tracker.RunCallCount()).To(Equal(1))
+						Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=superman"}))
+					})
+				})
+			})
+
+			Context("when the user is not specified in the process spec", func() {
+				Context("when the environment does not contain a USER", func() {
+					It("passes the environment variables", func() {
+						runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+							Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
+						}, garden.ProcessIO{})
+
+						Expect(tracker.RunCallCount()).To(Equal(1))
+						Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
+					})
+				})
+
+				Context("when the environment already contains a USER", func() {
+					It("passes the environment variables", func() {
+						runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+							Env: []string{"a=1", "b=3", "c=4", "PATH=a", "USER=yo"},
+						}, garden.ProcessIO{})
+
+						Expect(tracker.RunCallCount()).To(Equal(1))
+						Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=yo"}))
+					})
+				})
+			})
+
 			Context("when the environment already contains a PATH", func() {
 				It("passes the environment variables", func() {
 					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
@@ -198,7 +248,7 @@ var _ = Describe("RuncRunner", func() {
 					}, garden.ProcessIO{})
 
 					Expect(tracker.RunCallCount()).To(Equal(1))
-					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a"}))
+					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
 				})
 			})
 
@@ -212,7 +262,7 @@ var _ = Describe("RuncRunner", func() {
 
 					Expect(tracker.RunCallCount()).To(Equal(1))
 					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
-						"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}))
+						"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=root"}))
 				})
 
 				It("appends a default PATH for non-root users", func() {
@@ -224,7 +274,7 @@ var _ = Describe("RuncRunner", func() {
 
 					Expect(tracker.RunCallCount()).To(Equal(1))
 					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
-						"PATH=/usr/local/bin:/usr/bin:/bin"}))
+						"PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"}))
 				})
 			})
 
@@ -277,6 +327,7 @@ var _ = Describe("RuncRunner", func() {
 							"ENV_CONTAINER_NAME=garden",
 							"PATH=/test",
 							"ENV_PROCESS_ID=1",
+							"USER=root",
 						}))
 					})
 				})

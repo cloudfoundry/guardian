@@ -74,6 +74,8 @@ func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath string, spec gar
 		bndl.Spec.Spec.Process.Env, spec.Env...,
 	), defaultPath)
 
+	env = envWithUser(env, spec.User)
+
 	if err := json.NewEncoder(tmpFile).Encode(specs.Process{
 		Args: append([]string{spec.Path}, spec.Args...),
 		Env:  env,
@@ -98,4 +100,18 @@ func envWithDefaultPath(env []string, defaultPath string) []string {
 	}
 
 	return append(env, defaultPath)
+}
+
+func envWithUser(env []string, user string) []string {
+	for _, envVar := range env {
+		if strings.Contains(envVar, "USER=") {
+			return env
+		}
+	}
+
+	if user != "" {
+		return append(env, "USER="+user)
+	} else {
+		return append(env, "USER=root")
+	}
 }

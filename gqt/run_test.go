@@ -123,6 +123,46 @@ var _ = Describe("Run", func() {
 		)
 	})
 
+	Describe("user env variable", func() {
+		var container garden.Container
+
+		BeforeEach(func() {
+			client = startGarden()
+			var err error
+			container, err = client.Create(garden.ContainerSpec{
+				Env: []string{"USER=ppp", "HOME=/home/ppp"},
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		DescribeTable("contains the correct values", func(user string, env, paths []string) {
+			out := gbytes.NewBuffer()
+			proc, err := container.Run(
+				garden.ProcessSpec{
+					Path: "sh",
+					Args: []string{"-c", "env"},
+					User: user,
+					Env:  env,
+				},
+				garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, out),
+					Stderr: io.MultiWriter(GinkgoWriter, out),
+				})
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := proc.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(0))
+
+			for _, path := range paths {
+				Expect(out).To(gbytes.Say(path))
+			}
+		},
+			Entry("for empty user", "", []string{}, []string{"USER=ppp", "HOME=/home/ppp"}),
+			Entry("when we specify the env in processSpec", "alice", []string{"USER=alice", "HI=YO"}, []string{"USER=alice", "HOME=/home/ppp", "HI=YO"}),
+		)
+	})
+
 	Describe("Signalling", func() {
 		It("should forward SIGTERM to the process", func(done Done) {
 			client = startGarden()
