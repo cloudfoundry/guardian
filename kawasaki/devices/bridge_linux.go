@@ -19,7 +19,7 @@ func (Bridge) Create(name string, ip net.IP, subnet *net.IPNet) (intf *net.Inter
 	netlinkMu.Lock()
 	defer netlinkMu.Unlock()
 
-	link := &netlink.Bridge{netlink.LinkAttrs{Name: name}}
+	link := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: name}}
 
 	if err := netlink.LinkAdd(link); err != nil && err.Error() != "file exists" {
 		return nil, fmt.Errorf("devices: create bridge: %v", err)
@@ -63,7 +63,7 @@ func (Bridge) Destroy(bridge string) error {
 
 	for _, i := range intfs {
 		if i.Name == bridge {
-			link := &netlink.Bridge{netlink.LinkAttrs{Name: bridge}}
+			link := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: bridge}}
 			return netlink.LinkDel(link)
 		}
 	}
