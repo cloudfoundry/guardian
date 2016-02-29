@@ -175,17 +175,18 @@ var _ = Describe("Run", func() {
 				Path: "sh",
 				Args: []string{"-c", `
 					trap 'exit 42' TERM
-					echo 'trapping'
 
-					sleep 100 &
-					wait
+					while true; do
+					  echo 'sleeping'
+					  sleep 1
+					done
 				`},
 			}, garden.ProcessIO{
 				Stdout: buffer,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(buffer).Should(gbytes.Say("trapping"))
+			Eventually(buffer).Should(gbytes.Say("sleeping"))
 
 			err = proc.Signal(garden.SignalTerminate)
 			Expect(err).NotTo(HaveOccurred())
