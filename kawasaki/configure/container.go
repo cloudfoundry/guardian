@@ -18,10 +18,6 @@ type Container struct {
 }
 
 func (c *Container) Apply(log lager.Logger, config kawasaki.NetworkConfig) error {
-	if err := c.configureLoopbackIntf(); err != nil {
-		return err
-	}
-
 	return c.configureContainerIntf(
 		log,
 		config.ContainerIntf,
