@@ -915,5 +915,16 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
+		It("returns the events reported by the containerizer", func() {
+			containerizer.InfoReturns(gardener.ActualContainerSpec{
+				Events: []string{"some", "things", "happened"},
+			}, nil)
+
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.Events).To(Equal([]string{
+				"some", "things", "happened",
+			}))
+		})
 	})
 })

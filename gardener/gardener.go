@@ -111,7 +111,11 @@ type ActualContainerSpec struct {
 	// Whether the container is stopped
 	Stopped bool
 
+	// Process IDs (not PIDs) of processes in the container
 	ProcessIDs []string
+
+	// Events (e.g. OOM) which have occured in the container
+	Events []string
 }
 
 // Gardener orchestrates other components to implement the Garden API

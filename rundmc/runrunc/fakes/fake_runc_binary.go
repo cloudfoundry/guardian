@@ -28,6 +28,14 @@ type FakeRuncBinary struct {
 	execCommandReturns struct {
 		result1 *exec.Cmd
 	}
+	EventsCommandStub        func(id string) *exec.Cmd
+	eventsCommandMutex       sync.RWMutex
+	eventsCommandArgsForCall []struct {
+		id string
+	}
+	eventsCommandReturns struct {
+		result1 *exec.Cmd
+	}
 	KillCommandStub        func(id, signal string) *exec.Cmd
 	killCommandMutex       sync.RWMutex
 	killCommandArgsForCall []struct {
@@ -102,6 +110,38 @@ func (fake *FakeRuncBinary) ExecCommandArgsForCall(i int) (string, string, strin
 func (fake *FakeRuncBinary) ExecCommandReturns(result1 *exec.Cmd) {
 	fake.ExecCommandStub = nil
 	fake.execCommandReturns = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
+func (fake *FakeRuncBinary) EventsCommand(id string) *exec.Cmd {
+	fake.eventsCommandMutex.Lock()
+	fake.eventsCommandArgsForCall = append(fake.eventsCommandArgsForCall, struct {
+		id string
+	}{id})
+	fake.eventsCommandMutex.Unlock()
+	if fake.EventsCommandStub != nil {
+		return fake.EventsCommandStub(id)
+	} else {
+		return fake.eventsCommandReturns.result1
+	}
+}
+
+func (fake *FakeRuncBinary) EventsCommandCallCount() int {
+	fake.eventsCommandMutex.RLock()
+	defer fake.eventsCommandMutex.RUnlock()
+	return len(fake.eventsCommandArgsForCall)
+}
+
+func (fake *FakeRuncBinary) EventsCommandArgsForCall(i int) string {
+	fake.eventsCommandMutex.RLock()
+	defer fake.eventsCommandMutex.RUnlock()
+	return fake.eventsCommandArgsForCall[i].id
+}
+
+func (fake *FakeRuncBinary) EventsCommandReturns(result1 *exec.Cmd) {
+	fake.EventsCommandStub = nil
+	fake.eventsCommandReturns = struct {
 		result1 *exec.Cmd
 	}{result1}
 }

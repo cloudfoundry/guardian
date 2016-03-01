@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -18,6 +19,7 @@ import (
 //go:generate counterfeiter . BundleRunner
 //go:generate counterfeiter . NstarRunner
 //go:generate counterfeiter . ContainerStater
+//go:generate counterfeiter . EventStore
 //go:generate counterfeiter . Retrier
 
 type Depot interface {
@@ -43,11 +45,17 @@ type BundleRunner interface {
 	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) (garden.Process, error)
 	Exec(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
+	Watch(log lager.Logger, id string, notifier runrunc.Notifier) error
 }
 
 type NstarRunner interface {
 	StreamIn(log lager.Logger, pid int, path string, user string, tarStream io.Reader) error
 	StreamOut(log lager.Logger, pid int, path string, user string) (io.ReadCloser, error)
+}
+
+type EventStore interface {
+	OnEvent(id string, event string)
+	Events(id string) []string
 }
 
 type Retrier interface {
@@ -62,10 +70,11 @@ type Containerizer struct {
 	startChecker Checker
 	stateChecker ContainerStater
 	nstar        NstarRunner
+	events       EventStore
 	retrier      Retrier
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker Checker, stateChecker ContainerStater, nstarRunner NstarRunner, retrier Retrier) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker Checker, stateChecker ContainerStater, nstarRunner NstarRunner, events EventStore, retrier Retrier) *Containerizer {
 	return &Containerizer{
 		depot:        depot,
 		bundler:      bundler,
@@ -73,6 +82,7 @@ func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker
 		startChecker: startChecker,
 		stateChecker: stateChecker,
 		nstar:        nstarRunner,
+		events:       events,
 		retrier:      retrier,
 	}
 }
@@ -100,7 +110,6 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		Stdout: io.MultiWriter(logging.Writer(log), stdoutW),
 		Stderr: logging.Writer(log),
 	})
-
 	if err != nil {
 		log.Error("start", err)
 		return err
@@ -115,6 +124,12 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		log.Error("check-state-failed", err)
 		return fmt.Errorf("create: state file not found for container: %s", err)
 	}
+
+	go func() {
+		if err := c.runner.Watch(log, spec.Handle, c.events); err != nil {
+			log.Error("watch-failed", err)
+		}
+	}()
 
 	return nil
 }
@@ -201,13 +216,13 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 
 func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualContainerSpec, error) {
 	bundlePath, err := c.depot.Lookup(log, handle)
-
 	if err != nil {
 		return gardener.ActualContainerSpec{}, err
 	}
 
 	return gardener.ActualContainerSpec{
 		BundlePath: bundlePath,
+		Events:     c.events.Events(handle),
 	}, nil
 }
 

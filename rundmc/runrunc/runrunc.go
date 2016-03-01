@@ -2,7 +2,9 @@ package runrunc
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
@@ -37,6 +39,11 @@ type Mkdirer interface {
 	MkdirAs(path string, mode os.FileMode, uid, gid int) error
 }
 
+//go:generate counterfeiter . Notifier
+type Notifier interface {
+	OnEvent(handle string, event string)
+}
+
 type LookupFunc func(rootfsPath, user string) (*user.ExecUser, error)
 
 func (fn LookupFunc) Lookup(rootfsPath, user string) (*user.ExecUser, error) {
@@ -62,6 +69,7 @@ type RunRunc struct {
 type RuncBinary interface {
 	StartCommand(path, id string) *exec.Cmd
 	ExecCommand(id, processJSONPath, pidFilePath string) *exec.Cmd
+	EventsCommand(id string) *exec.Cmd
 	KillCommand(id, signal string) *exec.Cmd
 }
 
@@ -116,6 +124,47 @@ func (r *RunRunc) Exec(log lager.Logger, bundlePath, id string, spec garden.Proc
 	}
 
 	return process, nil
+}
+
+func (r *RunRunc) Watch(log lager.Logger, handle string, notifier Notifier) error {
+	stdoutR, w := io.Pipe()
+	cmd := r.runc.EventsCommand(handle)
+	cmd.Stdout = w
+
+	log = log.Session("watch", lager.Data{
+		"handle": handle,
+	})
+
+	log.Info("watching")
+	defer log.Info("done")
+
+	if err := r.commandRunner.Start(cmd); err != nil {
+		log.Error("run-events", err)
+		return fmt.Errorf("start: %s", err)
+	}
+
+	decoder := json.NewDecoder(stdoutR)
+
+	for {
+		event := struct {
+			Type string `json:"type"`
+		}{}
+
+		log.Debug("wait-next-event")
+
+		err := decoder.Decode(&event)
+		if err != nil {
+			return fmt.Errorf("decode event: %s", err)
+		}
+
+		log.Debug("got-event", lager.Data{
+			"type": event.Type,
+		})
+
+		if event.Type == "oom" {
+			notifier.OnEvent(handle, "Out of memory")
+		}
+	}
 }
 
 // Kill a bundle using 'runc kill'

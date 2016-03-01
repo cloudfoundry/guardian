@@ -4,12 +4,14 @@ import (
 	"errors"
 	"io"
 	"os"
+	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -25,9 +27,10 @@ var _ = Describe("Rundmc", func() {
 		fakeStartChecker    *fakes.FakeChecker
 		fakeNstarRunner     *fakes.FakeNstarRunner
 		fakeStater          *fakes.FakeContainerStater
-		logger              lager.Logger
+		fakeEventStore      *fakes.FakeEventStore
 		fakeRetrier         *fakes.FakeRetrier
 
+		logger        lager.Logger
 		containerizer *rundmc.Containerizer
 	)
 
@@ -38,6 +41,7 @@ var _ = Describe("Rundmc", func() {
 		fakeBundler = new(fakes.FakeBundleGenerator)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeStater = new(fakes.FakeContainerStater)
+		fakeEventStore = new(fakes.FakeEventStore)
 		logger = lagertest.NewTestLogger("test")
 
 		fakeDepot.LookupStub = func(_ lager.Logger, handle string) (string, error) {
@@ -49,7 +53,7 @@ var _ = Describe("Rundmc", func() {
 			return fn()
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartChecker, fakeStater, fakeNstarRunner, fakeRetrier)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartChecker, fakeStater, fakeNstarRunner, fakeEventStore, fakeRetrier)
 	})
 
 	Describe("Create", func() {
@@ -111,6 +115,32 @@ var _ = Describe("Rundmc", func() {
 				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).NotTo(Succeed())
 				Expect(fakeStartChecker.CheckCallCount()).To(Equal(0))
 			})
+		})
+
+		It("should watch for events in a goroutine", func() {
+			fakeContainerRunner.WatchStub = func(_ lager.Logger, handle string, notifier runrunc.Notifier) error {
+				time.Sleep(10 * time.Second)
+				return nil
+			}
+
+			created := make(chan struct{})
+			go func() {
+				defer GinkgoRecover()
+				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{Handle: "some-container"})).To(Succeed())
+				close(created)
+			}()
+
+			select {
+			case <-time.After(2 * time.Second):
+				Fail("Watch should be called in a goroutine")
+			case <-created:
+			}
+
+			Eventually(fakeContainerRunner.WatchCallCount).Should(Equal(1))
+
+			_, handle, notifier := fakeContainerRunner.WatchArgsForCall(0)
+			Expect(handle).To(Equal("some-container"))
+			Expect(notifier).To(Equal(fakeEventStore))
 		})
 
 		It("should check if the container is started", func() {
@@ -309,12 +339,26 @@ var _ = Describe("Rundmc", func() {
 			Expect(actualSpec.BundlePath).To(Equal("/path/to/some-handle"))
 		})
 
-		Context("when the lookup fails", func() {
+		Context("when looking up the bundle path fails", func() {
 			It("should return the error", func() {
 				fakeDepot.LookupReturns("", errors.New("spiderman-error"))
 				_, err := containerizer.Info(logger, "some-handle")
 				Expect(err).To(MatchError("spiderman-error"))
 			})
+		})
+
+		It("should return any events from the event store", func() {
+			fakeEventStore.EventsReturns([]string{
+				"potato",
+				"fire",
+			})
+
+			actualSpec, err := containerizer.Info(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualSpec.Events).To(Equal([]string{
+				"potato",
+				"fire",
+			}))
 		})
 	})
 

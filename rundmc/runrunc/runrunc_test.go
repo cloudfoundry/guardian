@@ -3,6 +3,8 @@ package runrunc_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -472,6 +474,89 @@ var _ = Describe("RuncRunner", func() {
 			})
 
 			Expect(runner.Kill(logger, "some-container")).To(MatchError("runc kill: exit status banana: some error"))
+		})
+	})
+
+	Describe("Watching for Events", func() {
+		var (
+			eventsCh chan bool
+		)
+
+		BeforeEach(func() {
+			runcBinary.EventsCommandStub = func(handle string) *exec.Cmd {
+				return exec.Command("funC-events", "events", handle)
+			}
+		})
+
+		It("blows up if `runc events` returns an error", func() {
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC-events",
+			}, func(cmd *exec.Cmd) error {
+				return errors.New("boom")
+			})
+
+			Expect(runner.Watch(logger, "some-container", nil)).To(MatchError("start: boom"))
+		})
+
+		Context("when runc events succeeds", func() {
+			BeforeEach(func() {
+				eventsCh = make(chan bool, 2)
+				stdoutCh := make(chan io.WriteCloser)
+
+				go func() {
+					stdoutW := <-stdoutCh
+					for eventIsOOM := range eventsCh {
+						t := "something-else"
+						if eventIsOOM {
+							t = "oom"
+						}
+
+						stdoutW.Write([]byte(fmt.Sprintf(`{
+						"type": "%s"
+					}`, t)))
+					}
+
+					stdoutW.Close()
+				}()
+
+				commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+					Path: "funC-events",
+				}, func(cmd *exec.Cmd) error {
+					stdoutCh <- cmd.Stdout.(io.WriteCloser)
+					return nil
+				})
+			})
+
+			AfterEach(func() {
+				close(eventsCh)
+			})
+
+			It("reports an event if one happens", func() {
+				notifier := new(fakes.FakeNotifier)
+				go runner.Watch(logger, "some-container", notifier)
+
+				Consistently(notifier.OnEventCallCount).Should(Equal(0))
+
+				eventsCh <- true
+				Eventually(notifier.OnEventCallCount).Should(Equal(1))
+				handle, event := notifier.OnEventArgsForCall(0)
+				Expect(handle).To(Equal("some-container"))
+				Expect(event).To(Equal("Out of memory"))
+
+				eventsCh <- true
+				Eventually(notifier.OnEventCallCount).Should(Equal(2))
+				handle, event = notifier.OnEventArgsForCall(1)
+				Expect(handle).To(Equal("some-container"))
+				Expect(event).To(Equal("Out of memory"))
+			})
+
+			It("does not report non-OOM events", func() {
+				notifier := new(fakes.FakeNotifier)
+				go runner.Watch(logger, "some-container", notifier)
+
+				eventsCh <- false
+				Consistently(notifier.OnEventCallCount).Should(Equal(0))
+			})
 		})
 	})
 })

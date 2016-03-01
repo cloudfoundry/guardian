@@ -338,7 +338,7 @@ func main() {
 		SysInfoProvider: sysinfo.NewProvider(*depotPath),
 		Networker:       networker,
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot, insecureRegistries),
-		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath),
+		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath, propManager),
 		PropertyManager: propManager,
 
 		Logger: logger,
@@ -502,15 +502,13 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries
 	return cakeOrdinator
 }
 
-func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tarPath, defaultRootFSPath string) *rundmc.Containerizer {
+func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
 	startChecker := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 15 * time.Second}
-
 	stateChecker := rundmc.StateChecker{StateFileDir: OciStateDir}
 
 	commandRunner := linux_command_runner.New()
-
 	execPreparer := runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), runrunc.DirectoryCreator{})
 
 	pidFileReader := &process_tracker.PidFileReader{
@@ -586,10 +584,11 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 		},
 	}
 
+	eventStore := rundmc.NewEventStore(properties)
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 
 	stateCheckRetrier := retrier.New(retrier.ConstantBackoff(10, 100*time.Millisecond), nil)
-	return rundmc.New(depot, template, runcrunner, startChecker, stateChecker, nstar, stateCheckRetrier)
+	return rundmc.New(depot, template, runcrunner, startChecker, stateChecker, nstar, eventStore, stateCheckRetrier)
 }
 
 func missing(flagName string) {

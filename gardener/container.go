@@ -2,7 +2,6 @@ package gardener
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"time"
 
@@ -32,6 +31,11 @@ func (c *container) Stop(kill bool) error {
 }
 
 func (c *container) Info() (garden.ContainerInfo, error) {
+	log := c.logger.Session("info", lager.Data{"handle": c.handle})
+
+	log.Info("starting")
+	defer log.Info("finished")
+
 	containerIP, err := c.propertyManager.Get(c.handle, ContainerIPKey)
 	if err != nil {
 		return garden.ContainerInfo{}, err
@@ -58,21 +62,19 @@ func (c *container) Info() (garden.ContainerInfo, error) {
 	}
 
 	mappedPorts := []garden.PortMapping{}
-
 	mappedPortsCfg, err := c.propertyManager.Get(c.handle, MappedPortsKey)
 	if err != nil {
-		log := c.logger.Session("container.info", lager.Data{"handle": c.handle})
-		log.Debug(fmt.Sprintf("Missing key in PropertyManager: %s", MappedPortsKey))
+		log.Error("find-key", err)
 	}
 
 	json.Unmarshal([]byte(mappedPortsCfg), &mappedPorts)
-
 	return garden.ContainerInfo{
 		State:         "active",
 		ContainerIP:   containerIP,
 		HostIP:        hostIP,
 		ExternalIP:    externalIP,
 		ContainerPath: actualContainerSpec.BundlePath,
+		Events:        actualContainerSpec.Events,
 		Properties:    properties,
 		MappedPorts:   mappedPorts,
 	}, nil

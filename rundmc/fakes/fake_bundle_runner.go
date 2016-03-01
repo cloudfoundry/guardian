@@ -6,6 +6,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -42,6 +43,16 @@ type FakeBundleRunner struct {
 		bundlePath string
 	}
 	killReturns struct {
+		result1 error
+	}
+	WatchStub        func(log lager.Logger, id string, notifier runrunc.Notifier) error
+	watchMutex       sync.RWMutex
+	watchArgsForCall []struct {
+		log      lager.Logger
+		id       string
+		notifier runrunc.Notifier
+	}
+	watchReturns struct {
 		result1 error
 	}
 }
@@ -148,6 +159,40 @@ func (fake *FakeBundleRunner) KillArgsForCall(i int) (lager.Logger, string) {
 func (fake *FakeBundleRunner) KillReturns(result1 error) {
 	fake.KillStub = nil
 	fake.killReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeBundleRunner) Watch(log lager.Logger, id string, notifier runrunc.Notifier) error {
+	fake.watchMutex.Lock()
+	fake.watchArgsForCall = append(fake.watchArgsForCall, struct {
+		log      lager.Logger
+		id       string
+		notifier runrunc.Notifier
+	}{log, id, notifier})
+	fake.watchMutex.Unlock()
+	if fake.WatchStub != nil {
+		return fake.WatchStub(log, id, notifier)
+	} else {
+		return fake.watchReturns.result1
+	}
+}
+
+func (fake *FakeBundleRunner) WatchCallCount() int {
+	fake.watchMutex.RLock()
+	defer fake.watchMutex.RUnlock()
+	return len(fake.watchArgsForCall)
+}
+
+func (fake *FakeBundleRunner) WatchArgsForCall(i int) (lager.Logger, string, runrunc.Notifier) {
+	fake.watchMutex.RLock()
+	defer fake.watchMutex.RUnlock()
+	return fake.watchArgsForCall[i].log, fake.watchArgsForCall[i].id, fake.watchArgsForCall[i].notifier
+}
+
+func (fake *FakeBundleRunner) WatchReturns(result1 error) {
+	fake.WatchStub = nil
+	fake.watchReturns = struct {
 		result1 error
 	}{result1}
 }
