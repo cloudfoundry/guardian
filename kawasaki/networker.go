@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"strings"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
@@ -25,6 +26,7 @@ const subnetKey = "kawasaki.subnet"
 const iptablePrefixKey = "kawasaki.iptable-prefix"
 const iptableInstanceKey = "kawasaki.iptable-inst"
 const mtuKey = "kawasaki.mtu"
+const dnsServerKey = "kawasaki.dns-servers"
 
 //go:generate counterfeiter . NetnsMgr
 
@@ -158,22 +160,28 @@ func (n *Networker) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks
 
 	save(n.configStore, handle, config)
 
+	args := []string{
+		n.kawasakiBinPath,
+		fmt.Sprintf("--host-interface=%s", config.HostIntf),
+		fmt.Sprintf("--container-interface=%s", config.ContainerIntf),
+		fmt.Sprintf("--bridge-interface=%s", config.BridgeName),
+		fmt.Sprintf("--bridge-ip=%s", config.BridgeIP),
+		fmt.Sprintf("--container-ip=%s", config.ContainerIP),
+		fmt.Sprintf("--external-ip=%s", config.ExternalIP),
+		fmt.Sprintf("--subnet=%s", config.Subnet.String()),
+		fmt.Sprintf("--mtu=%d", config.Mtu),
+		fmt.Sprintf("--iptable-prefix=%s", config.IPTablePrefix),
+		fmt.Sprintf("--iptable-instance=%s", config.IPTableInstance),
+	}
+
+	for _, dnsServer := range config.DNSServers {
+		args = append(args, fmt.Sprintf("--dns-server=%s", dnsServer.String()))
+	}
+
 	return gardener.Hooks{
 		Prestart: gardener.Hook{
 			Path: n.kawasakiBinPath,
-			Args: []string{
-				n.kawasakiBinPath,
-				fmt.Sprintf("--host-interface=%s", config.HostIntf),
-				fmt.Sprintf("--container-interface=%s", config.ContainerIntf),
-				fmt.Sprintf("--bridge-interface=%s", config.BridgeName),
-				fmt.Sprintf("--bridge-ip=%s", config.BridgeIP),
-				fmt.Sprintf("--container-ip=%s", config.ContainerIP),
-				fmt.Sprintf("--external-ip=%s", config.ExternalIP),
-				fmt.Sprintf("--subnet=%s", config.Subnet.String()),
-				fmt.Sprintf("--mtu=%d", config.Mtu),
-				fmt.Sprintf("--iptable-prefix=%s", config.IPTablePrefix),
-				fmt.Sprintf("--iptable-instance=%s", config.IPTableInstance),
-			},
+			Args: args,
 		},
 	}, nil
 }
@@ -288,10 +296,15 @@ func save(config ConfigStore, handle string, netConfig NetworkConfig) {
 	config.Set(handle, iptableInstanceKey, netConfig.IPTableInstance)
 	config.Set(handle, mtuKey, strconv.Itoa(netConfig.Mtu))
 	config.Set(handle, externalIpKey, netConfig.ExternalIP.String())
+	var dnsServers []string
+	for _, dnsServer := range netConfig.DNSServers {
+		dnsServers = append(dnsServers, dnsServer.String())
+	}
+	config.Set(handle, dnsServerKey, strings.Join(dnsServers, ", "))
 }
 
 func load(config ConfigStore, handle string) (NetworkConfig, error) {
-	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetKey, iptablePrefixKey, iptableInstanceKey, mtuKey, externalIpKey)
+	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetKey, iptablePrefixKey, iptableInstanceKey, mtuKey, externalIpKey, dnsServerKey)
 
 	if err != nil {
 		return NetworkConfig{}, err
@@ -307,6 +320,19 @@ func load(config ConfigStore, handle string) (NetworkConfig, error) {
 		return NetworkConfig{}, err
 	}
 
+	var dnsServers []net.IP
+	for _, dnsServerName := range strings.Split(vals[10], ",") {
+		dnsServerName = strings.TrimSpace(dnsServerName)
+		if dnsServerName == "" {
+			continue
+		}
+		ip := net.ParseIP(dnsServerName)
+		if ip == nil {
+			return NetworkConfig{}, fmt.Errorf("Failed to parse DNS server IP address %s", dnsServerName)
+		}
+		dnsServers = append(dnsServers, ip)
+	}
+
 	return NetworkConfig{
 		HostIntf:        vals[0],
 		ContainerIntf:   vals[1],
@@ -318,5 +344,6 @@ func load(config ConfigStore, handle string) (NetworkConfig, error) {
 		IPTablePrefix:   vals[6],
 		IPTableInstance: vals[7],
 		Mtu:             mtu,
+		DNSServers:      dnsServers,
 	}, nil
 }

@@ -70,6 +70,10 @@ var _ = Describe("Networker", func() {
 			ExternalIP:      net.ParseIP("128.128.90.90"),
 			Subnet:          subnet,
 			Mtu:             1200,
+			DNSServers: []net.IP{
+				net.ParseIP("8.8.8.8"),
+				net.ParseIP("8.8.4.4"),
+			},
 		}
 
 		fakeConfigCreator.CreateReturns(networkConfig, nil)
@@ -85,6 +89,7 @@ var _ = Describe("Networker", func() {
 			"kawasaki.iptable-prefix":      networkConfig.IPTablePrefix,
 			"kawasaki.iptable-inst":        networkConfig.IPTableInstance,
 			"kawasaki.mtu":                 strconv.Itoa(networkConfig.Mtu),
+			"kawasaki.dns-servers":         "8.8.8.8, 8.8.4.4",
 		}
 
 		fakeConfigStore.GetStub = func(handle, name string) (string, error) {
@@ -152,6 +157,7 @@ var _ = Describe("Networker", func() {
 			Expect(config["kawasaki.iptable-prefix"]).To(Equal(networkConfig.IPTablePrefix))
 			Expect(config["kawasaki.iptable-inst"]).To(Equal(networkConfig.IPTableInstance))
 			Expect(config["kawasaki.mtu"]).To(Equal(strconv.Itoa(networkConfig.Mtu)))
+			Expect(config["kawasaki.dns-servers"]).To(Equal("8.8.8.8, 8.8.4.4"))
 		})
 
 		Context("when the configuration can't be created", func() {
@@ -183,6 +189,9 @@ var _ = Describe("Networker", func() {
 			Expect(hooks.Prestart.Args).To(ContainElement("--iptable-instance=" + networkConfig.IPTableInstance))
 			Expect(hooks.Prestart.Args).To(ContainElement("--iptable-prefix=" + networkConfig.IPTablePrefix))
 			Expect(hooks.Prestart.Args).To(ContainElement("--mtu=" + strconv.Itoa(networkConfig.Mtu)))
+			for _, dnsServer := range networkConfig.DNSServers {
+				Expect(hooks.Prestart.Args).To(ContainElement("--dns-server=" + dnsServer.String()))
+			}
 		})
 	})
 

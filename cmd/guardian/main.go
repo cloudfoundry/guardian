@@ -250,6 +250,13 @@ func main() {
 		"Docker registry to allow connecting to even if not secure. (Can be specified multiple times to allow insecure connection to multiple repositories)",
 	)
 
+	var dnsServers []net.IP
+	flag.Var(
+		vars.IPList{List: &dnsServers},
+		"dnsServer",
+		"DNS server IP address to use instead of automatically determined servers. (Can be specified multiple times)",
+	)
+
 	cf_debug_server.AddFlags(flag.CommandLine)
 	cf_lager.AddFlags(flag.CommandLine)
 	flag.Parse()
@@ -304,7 +311,7 @@ func main() {
 
 	var networker gardener.Networker = netplugin.New(*networkPlugin, strings.Split(*networkPluginExtraArgs, ",")...)
 	if *networkPlugin == "" {
-		networker = wireNetworker(logger, *kawasakiBin, *tag, networkPoolCIDR, externalIPAddr, ipt, interfacePrefix, chainPrefix, propManager)
+		networker = wireNetworker(logger, *kawasakiBin, *tag, networkPoolCIDR, externalIPAddr, dnsServers, ipt, interfacePrefix, chainPrefix, propManager)
 	}
 
 	backend := &gardener.Gardener{
@@ -368,6 +375,7 @@ func wireNetworker(
 	tag string,
 	networkPoolCIDR *net.IPNet,
 	externalIP net.IP,
+	dnsServers []net.IP,
 	ipt *iptables.IPTables,
 	interfacePrefix string,
 	chainPrefix string,
@@ -383,7 +391,7 @@ func wireNetworker(
 		kawasakiBin,
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(networkPoolCIDR),
-		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP),
+		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers),
 		factory.NewDefaultConfigurer(ipt),
 		propManager,
 		portPool,

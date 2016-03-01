@@ -17,6 +17,7 @@ var _ = Describe("ConfigCreator", func() {
 		subnet      *net.IPNet
 		ip          net.IP
 		externalIP  net.IP
+		dnsServers  []net.IP
 		logger      lager.Logger
 		idGenerator *fakes.FakeIDGenerator
 	)
@@ -27,22 +28,26 @@ var _ = Describe("ConfigCreator", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		externalIP = net.ParseIP("220.10.120.5")
+		dnsServers = []net.IP{
+			net.ParseIP("8.8.8.8"),
+			net.ParseIP("8.8.4.4"),
+		}
 
 		logger = lagertest.NewTestLogger("test")
 		idGenerator = &fakes.FakeIDGenerator{}
 
-		creator = kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdef", externalIP)
+		creator = kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdef", externalIP, dnsServers)
 	})
 
 	It("panics if the interface prefix is longer than 2 characters", func() {
 		Expect(func() {
-			kawasaki.NewConfigCreator(idGenerator, "too-long", "wc", externalIP)
+			kawasaki.NewConfigCreator(idGenerator, "too-long", "wc", externalIP, dnsServers)
 		}).To(Panic())
 	})
 
 	It("panics if the chain prefix is longer than 16 characters", func() {
 		Expect(func() {
-			kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdefg", externalIP)
+			kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdefg", externalIP, dnsServers)
 		}).To(Panic())
 	})
 
@@ -115,5 +120,12 @@ var _ = Describe("ConfigCreator", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(config.Mtu).To(Equal(1500))
+	})
+
+	It("Assigns the DNS servers", func() {
+		config, err := creator.Create(logger, "banana", subnet, ip)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(config.DNSServers).To(Equal(dnsServers))
 	})
 })
