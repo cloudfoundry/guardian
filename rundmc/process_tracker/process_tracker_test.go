@@ -8,7 +8,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,13 +15,16 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker/fakes"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 )
 
 var _ = Describe("Process tracker", func() {
 	var (
+		tmpdir    string
+		pidGetter *fakes.FakePidGetter
+
 		processTracker *process_tracker.ProcessTracker
-		tmpdir         string
 	)
 
 	BeforeEach(func() {
@@ -34,7 +36,14 @@ var _ = Describe("Process tracker", func() {
 		err = os.MkdirAll(filepath.Join(tmpdir, "bin"), 0755)
 		Expect(err).ToNot(HaveOccurred())
 
-		processTracker = process_tracker.New(tmpdir, iodaemonBin, linux_command_runner.New())
+		pidGetter = new(fakes.FakePidGetter)
+
+		processTracker = process_tracker.New(
+			tmpdir,
+			iodaemonBin,
+			linux_command_runner.New(),
+			pidGetter,
+		)
 	})
 
 	AfterEach(func() {
@@ -69,22 +78,15 @@ var _ = Describe("Process tracker", func() {
 
 		Describe("signalling a running process", func() {
 			var (
-				process         garden.Process
-				stdout          *gbytes.Buffer
-				cmd             *exec.Cmd
-				otherCmd        *exec.Cmd
-				pidFilePath     string
-				pidFileContents string
+				process  garden.Process
+				stdout   *gbytes.Buffer
+				cmd      *exec.Cmd
+				otherCmd *exec.Cmd
 			)
 
 			BeforeEach(func() {
-				pidFileContents = ""
-			})
-
-			JustBeforeEach(func() {
 				cmd = exec.Command("sleep", "1000")
 
-				var err error
 				stdout = gbytes.NewBuffer()
 				otherCmd = exec.Command("sh", "-c", `
 					trap "echo 'terminated'; exit 42" TERM
@@ -93,29 +95,24 @@ var _ = Describe("Process tracker", func() {
 						sleep 1
 					done
 				`)
-
 				otherCmd.Stdout = io.MultiWriter(GinkgoWriter, stdout)
 				Expect(otherCmd.Start()).To(Succeed())
 
-				pidFile, err := ioutil.TempFile("", "some-pid-file.pid")
-				Expect(err).NotTo(HaveOccurred())
+				pidGetter.PidReturns(otherCmd.Process.Pid, nil)
+			})
 
-				if pidFileContents != "" {
-					pidFile.WriteString(pidFileContents)
-				} else {
-					pidFile.WriteString(strconv.Itoa(otherCmd.Process.Pid))
-					Expect(pidFile.Close()).To(Succeed())
-				}
-
-				pidFilePath = pidFile.Name()
+			JustBeforeEach(func() {
+				var err error
 
 				process, err = processTracker.Run(
 					"2", cmd,
 					garden.ProcessIO{
 						Stdout: GinkgoWriter,
 						Stderr: GinkgoWriter,
-					}, nil, pidFilePath)
+					}, nil, "/path/to/pid/file",
+				)
 				Expect(err).NotTo(HaveOccurred())
+
 				Eventually(stdout).Should(gbytes.Say("sleeping"))
 			})
 
@@ -123,13 +120,9 @@ var _ = Describe("Process tracker", func() {
 				if cmd.ProcessState != nil && !cmd.ProcessState.Exited() {
 					cmd.Process.Signal(os.Kill)
 				}
-
-				if pidFilePath != "" {
-					Expect(os.Remove(pidFilePath)).To(Succeed())
-				}
 			})
 
-			It("kills the process whose pid is found in the pid file", func() {
+			It("kills the process whose pid is returned by the PID getter", func() {
 				Expect(process.Signal(garden.SignalKill)).To(Succeed())
 
 				exitted := make(chan error)
@@ -138,11 +131,6 @@ var _ = Describe("Process tracker", func() {
 				}(otherCmd)
 
 				Eventually(exitted, "3s").Should(Receive())
-			})
-
-			It("does not kill the spawned process", func() {
-				Expect(process.Signal(garden.SignalTerminate)).To(Succeed())
-				Consistently(stdout).ShouldNot(gbytes.Say("terminated"))
 			})
 
 			It("kills the process with a terminate signal", func() {
@@ -157,22 +145,13 @@ var _ = Describe("Process tracker", func() {
 				Eventually(stdout, "3s").Should(gbytes.Say("terminated"))
 			})
 
-			It("returns a helpful error when there is no pidfile", func() {
-				Expect(os.Remove(pidFilePath)).To(Succeed())
-				pidFilePath = ""
-
-				Expect(process.Signal(garden.SignalTerminate)).To(MatchError(
-					MatchRegexp("open .* no such file")))
-			})
-
-			Context("when the pid file does not contain an integer", func() {
+			Context("when getting the pid fails", func() {
 				BeforeEach(func() {
-					pidFileContents = "blah0blah"
+					pidGetter.PidReturns(0, errors.New("banana"))
 				})
 
-				It("returns a helpful error when the pid file does not contain an integer", func() {
-					Expect(process.Signal(garden.SignalTerminate)).To(MatchError(
-						MatchRegexp("invalid pid")))
+				It("returns an error", func() {
+					Expect(process.Signal(garden.SignalTerminate)).To(MatchError("banana"))
 				})
 			})
 		})

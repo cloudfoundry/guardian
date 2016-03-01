@@ -9,11 +9,16 @@ import (
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 
+//go:generate counterfeiter . PidGetter
+type PidGetter interface {
+	Pid(pidFilePath string) (int, error)
+}
+
 type ProcessTracker struct {
 	containerPath string
+	iodaemonBin   string
 	runner        command_runner.CommandRunner
-
-	iodaemonBin string
+	pidGetter     PidGetter
 
 	processes      map[string]*Process
 	processesMutex *sync.RWMutex
@@ -27,12 +32,17 @@ func (e UnknownProcessError) Error() string {
 	return fmt.Sprintf("process_tracker: unknown process: %s", e.ProcessID)
 }
 
-func New(containerPath string, iodaemonBin string, runner command_runner.CommandRunner) *ProcessTracker {
+func New(
+	containerPath string,
+	iodaemonBin string,
+	runner command_runner.CommandRunner,
+	pidGetter PidGetter,
+) *ProcessTracker {
 	return &ProcessTracker{
 		containerPath: containerPath,
+		iodaemonBin:   iodaemonBin,
 		runner:        runner,
-
-		iodaemonBin: iodaemonBin,
+		pidGetter:     pidGetter,
 
 		processesMutex: new(sync.RWMutex),
 		processes:      make(map[string]*Process),
@@ -41,7 +51,7 @@ func New(containerPath string, iodaemonBin string, runner command_runner.Command
 
 func (t *ProcessTracker) Run(processID string, cmd *exec.Cmd, processIO garden.ProcessIO, tty *garden.TTYSpec, pidFilePath string) (garden.Process, error) {
 	t.processesMutex.Lock()
-	process := NewProcess(processID, t.containerPath, t.iodaemonBin, t.runner, pidFilePath)
+	process := NewProcess(t.containerPath, t.iodaemonBin, t.runner, t.pidGetter, processID, pidFilePath)
 	t.processes[processID] = process
 	t.processesMutex.Unlock()
 
@@ -83,7 +93,7 @@ func (t *ProcessTracker) Attach(processID string, processIO garden.ProcessIO) (g
 func (t *ProcessTracker) Restore(processID string) {
 	t.processesMutex.Lock()
 
-	process := NewProcess(processID, t.containerPath, t.iodaemonBin, t.runner, "")
+	process := NewProcess(t.containerPath, t.iodaemonBin, t.runner, t.pidGetter, processID, "")
 
 	t.processes[processID] = process
 

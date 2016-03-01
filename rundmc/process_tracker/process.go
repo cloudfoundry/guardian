@@ -3,11 +3,9 @@ package process_tracker
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
-	"strconv"
 	"sync"
 	"syscall"
 
@@ -29,13 +27,12 @@ func (s osSignal) OsSignal() syscall.Signal {
 }
 
 type Process struct {
-	id string
-
-	iodaemonBin string
-
 	containerPath string
-	pidFilePath   string
+	iodaemonBin   string
 	runner        command_runner.CommandRunner
+	pidGetter     PidGetter
+	id            string
+	pidFilePath   string
 
 	runningLink *sync.Once
 	linked      chan struct{}
@@ -51,23 +48,23 @@ type Process struct {
 }
 
 func NewProcess(
-	id string,
 	containerPath string,
 	iodaemonBin string,
 	runner command_runner.CommandRunner,
+	pidGetter PidGetter,
+	id string,
 	pidFilePath string,
 ) *Process {
 	return &Process{
-		id: id,
-
-		iodaemonBin:   iodaemonBin,
 		containerPath: containerPath,
-		pidFilePath:   pidFilePath,
+		iodaemonBin:   iodaemonBin,
 		runner:        runner,
+		pidGetter:     pidGetter,
+		id:            id,
+		pidFilePath:   pidFilePath,
 
 		runningLink: &sync.Once{},
-
-		linked: make(chan struct{}),
+		linked:      make(chan struct{}),
 
 		exited: make(chan struct{}),
 
@@ -99,7 +96,12 @@ func (p *Process) SetTTY(tty garden.TTYSpec) error {
 func (p *Process) Signal(signal garden.Signal) error {
 	<-p.linked
 
-	process, err := p.processFromPidFile()
+	pid, err := p.pidGetter.Pid(p.pidFilePath)
+	if err != nil {
+		return err
+	}
+
+	process, err := os.FindProcess(pid)
 	if err != nil {
 		return err
 	}
@@ -218,22 +220,4 @@ func (p *Process) completed(exitStatus int, err error) {
 	p.exitStatus = exitStatus
 	p.exitErr = err
 	close(p.exited)
-}
-
-func (p *Process) processFromPidFile() (*os.Process, error) {
-	pid, err := ioutil.ReadFile(p.pidFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("signal: %s", err)
-	}
-
-	pidN, err := strconv.Atoi(string(pid))
-	if err != nil {
-		return nil, fmt.Errorf("signal: invalid pid: %s", err)
-	}
-
-	process, err := os.FindProcess(pidN)
-	if err != nil {
-		return nil, fmt.Errorf("signal: find process: %s", err)
-	}
-	return process, nil
 }

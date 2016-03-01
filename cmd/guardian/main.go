@@ -47,6 +47,7 @@ import (
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/nu7hatch/gouuid"
 	"github.com/opencontainers/specs"
+	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/localip"
 )
@@ -512,8 +513,14 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 
 	execPreparer := runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), runrunc.DirectoryCreator{})
 
+	pidFileReader := &process_tracker.PidFileReader{
+		Clock:         clock.NewClock(),
+		Timeout:       10 * time.Second,
+		SleepInterval: time.Millisecond * 100,
+	}
+
 	runcrunner := runrunc.New(
-		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", *tag), "processes"), iodaemonPath, commandRunner),
+		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", *tag), "processes"), iodaemonPath, commandRunner, pidFileReader),
 		commandRunner,
 		wireUidGenerator(),
 		goci.RuncBinary("runc"),
