@@ -9,15 +9,7 @@ import (
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 
-//go:generate counterfeiter -o fake_process_tracker/fake_process_tracker.go . ProcessTracker
-type ProcessTracker interface {
-	Run(processID string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec) (garden.Process, error)
-	Attach(processID string, io garden.ProcessIO) (garden.Process, error)
-	Restore(processID string)
-	ActiveProcesses() []garden.Process
-}
-
-type processTracker struct {
+type ProcessTracker struct {
 	containerPath string
 	runner        command_runner.CommandRunner
 
@@ -35,8 +27,8 @@ func (e UnknownProcessError) Error() string {
 	return fmt.Sprintf("process_tracker: unknown process: %s", e.ProcessID)
 }
 
-func New(containerPath string, iodaemonBin string, runner command_runner.CommandRunner) ProcessTracker {
-	return &processTracker{
+func New(containerPath string, iodaemonBin string, runner command_runner.CommandRunner) *ProcessTracker {
+	return &ProcessTracker{
 		containerPath: containerPath,
 		runner:        runner,
 
@@ -47,9 +39,9 @@ func New(containerPath string, iodaemonBin string, runner command_runner.Command
 	}
 }
 
-func (t *processTracker) Run(processID string, cmd *exec.Cmd, processIO garden.ProcessIO, tty *garden.TTYSpec) (garden.Process, error) {
+func (t *ProcessTracker) Run(processID string, cmd *exec.Cmd, processIO garden.ProcessIO, tty *garden.TTYSpec, pidFilePath string) (garden.Process, error) {
 	t.processesMutex.Lock()
-	process := NewProcess(processID, t.containerPath, t.iodaemonBin, t.runner)
+	process := NewProcess(processID, t.containerPath, t.iodaemonBin, t.runner, pidFilePath)
 	t.processes[processID] = process
 	t.processesMutex.Unlock()
 
@@ -72,7 +64,7 @@ func (t *processTracker) Run(processID string, cmd *exec.Cmd, processIO garden.P
 	return process, nil
 }
 
-func (t *processTracker) Attach(processID string, processIO garden.ProcessIO) (garden.Process, error) {
+func (t *ProcessTracker) Attach(processID string, processIO garden.ProcessIO) (garden.Process, error) {
 	t.processesMutex.RLock()
 	process, ok := t.processes[processID]
 	t.processesMutex.RUnlock()
@@ -88,10 +80,10 @@ func (t *processTracker) Attach(processID string, processIO garden.ProcessIO) (g
 	return process, nil
 }
 
-func (t *processTracker) Restore(processID string) {
+func (t *ProcessTracker) Restore(processID string) {
 	t.processesMutex.Lock()
 
-	process := NewProcess(processID, t.containerPath, t.iodaemonBin, t.runner)
+	process := NewProcess(processID, t.containerPath, t.iodaemonBin, t.runner, "")
 
 	t.processes[processID] = process
 
@@ -100,7 +92,7 @@ func (t *processTracker) Restore(processID string) {
 	t.processesMutex.Unlock()
 }
 
-func (t *processTracker) ActiveProcesses() []garden.Process {
+func (t *ProcessTracker) ActiveProcesses() []garden.Process {
 	t.processesMutex.RLock()
 	defer t.processesMutex.RUnlock()
 
@@ -115,7 +107,7 @@ func (t *processTracker) ActiveProcesses() []garden.Process {
 	return processes
 }
 
-func (t *processTracker) link(processID string) {
+func (t *ProcessTracker) link(processID string) {
 	t.processesMutex.RLock()
 	process, ok := t.processes[processID]
 	t.processesMutex.RUnlock()
@@ -131,7 +123,7 @@ func (t *processTracker) link(processID string) {
 	return
 }
 
-func (t *processTracker) unregister(processID string) {
+func (t *ProcessTracker) unregister(processID string) {
 	t.processesMutex.Lock()
 	defer t.processesMutex.Unlock()
 

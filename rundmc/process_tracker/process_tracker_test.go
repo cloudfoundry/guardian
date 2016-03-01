@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,7 +21,7 @@ import (
 
 var _ = Describe("Process tracker", func() {
 	var (
-		processTracker process_tracker.ProcessTracker
+		processTracker *process_tracker.ProcessTracker
 		tmpdir         string
 	)
 
@@ -44,7 +45,7 @@ var _ = Describe("Process tracker", func() {
 		It("runs the process and returns its exit code", func() {
 			cmd := exec.Command("bash", "-c", "exit 42")
 
-			process, err := processTracker.Run("555", cmd, garden.ProcessIO{}, nil)
+			process, err := processTracker.Run("555", cmd, garden.ProcessIO{}, nil, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			status, err := process.Wait()
@@ -60,7 +61,7 @@ var _ = Describe("Process tracker", func() {
 			cmd.Dir = tmpDir
 
 			stdout := gbytes.NewBuffer()
-			_, err = processTracker.Run("556", cmd, garden.ProcessIO{Stdout: stdout}, nil)
+			_, err = processTracker.Run("556", cmd, garden.ProcessIO{Stdout: stdout}, nil, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(stdout).Should(gbytes.Say(tmpDir))
@@ -68,55 +69,112 @@ var _ = Describe("Process tracker", func() {
 
 		Describe("signalling a running process", func() {
 			var (
-				process garden.Process
-				stdout  *gbytes.Buffer
-				cmd     *exec.Cmd
+				process         garden.Process
+				stdout          *gbytes.Buffer
+				cmd             *exec.Cmd
+				otherCmd        *exec.Cmd
+				pidFilePath     string
+				pidFileContents string
 			)
 
-			JustBeforeEach(func() {
-				var err error
-				cmd = exec.Command("sh", "-c", `
-					trap "echo 'terminated'; exit 42" TERM
-					echo "trapping"
+			BeforeEach(func() {
+				pidFileContents = ""
+			})
 
-					sleep 100 &
-					wait
+			JustBeforeEach(func() {
+				cmd = exec.Command("sleep", "1000")
+
+				var err error
+				stdout = gbytes.NewBuffer()
+				otherCmd = exec.Command("sh", "-c", `
+					trap "echo 'terminated'; exit 42" TERM
+					while true; do
+						echo sleeping
+						sleep 1
+					done
 				`)
 
-				stdout = gbytes.NewBuffer()
+				otherCmd.Stdout = io.MultiWriter(GinkgoWriter, stdout)
+				Expect(otherCmd.Start()).To(Succeed())
+
+				pidFile, err := ioutil.TempFile("", "some-pid-file.pid")
+				Expect(err).NotTo(HaveOccurred())
+
+				if pidFileContents != "" {
+					pidFile.WriteString(pidFileContents)
+				} else {
+					pidFile.WriteString(strconv.Itoa(otherCmd.Process.Pid))
+					Expect(pidFile.Close()).To(Succeed())
+				}
+
+				pidFilePath = pidFile.Name()
+
 				process, err = processTracker.Run(
 					"2", cmd,
 					garden.ProcessIO{
-						Stdout: io.MultiWriter(stdout, GinkgoWriter),
+						Stdout: GinkgoWriter,
 						Stderr: GinkgoWriter,
-					}, nil)
+					}, nil, pidFilePath)
 				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(stdout).Should(gbytes.Say("trapping"))
+				Eventually(stdout).Should(gbytes.Say("sleeping"))
 			})
 
 			AfterEach(func() {
 				if cmd.ProcessState != nil && !cmd.ProcessState.Exited() {
 					cmd.Process.Signal(os.Kill)
 				}
+
+				if pidFilePath != "" {
+					Expect(os.Remove(pidFilePath)).To(Succeed())
+				}
 			})
 
-			It("kill the process", func(done Done) {
+			It("kills the process whose pid is found in the pid file", func() {
 				Expect(process.Signal(garden.SignalKill)).To(Succeed())
 
-				Expect(cmd.Wait()).NotTo(Succeed())
+				exitted := make(chan error)
+				go func(cmd *exec.Cmd) {
+					exitted <- cmd.Wait()
+				}(otherCmd)
 
-				close(done)
-			}, 2.0)
+				Eventually(exitted, "3s").Should(Receive())
+			})
 
-			It("kills the process with a terminate signal", func(done Done) {
+			It("does not kill the spawned process", func() {
+				Expect(process.Signal(garden.SignalTerminate)).To(Succeed())
+				Consistently(stdout).ShouldNot(gbytes.Say("terminated"))
+			})
+
+			It("kills the process with a terminate signal", func() {
 				Expect(process.Signal(garden.SignalTerminate)).To(Succeed())
 
-				Eventually(stdout).Should(gbytes.Say("terminated"))
-				Expect(cmd.Wait()).NotTo(Succeed())
+				exitted := make(chan error)
+				go func(cmd *exec.Cmd) {
+					exitted <- cmd.Wait()
+				}(otherCmd)
 
-				close(done)
-			}, 2.0)
+				Eventually(exitted, "3s").Should(Receive())
+				Eventually(stdout, "3s").Should(gbytes.Say("terminated"))
+			})
+
+			It("returns a helpful error when there is no pidfile", func() {
+				Expect(os.Remove(pidFilePath)).To(Succeed())
+				pidFilePath = ""
+
+				Expect(process.Signal(garden.SignalTerminate)).To(MatchError(
+					MatchRegexp("open .* no such file")))
+			})
+
+			Context("when the pid file does not contain an integer", func() {
+				BeforeEach(func() {
+					pidFileContents = "blah0blah"
+				})
+
+				It("returns a helpful error when the pid file does not contain an integer", func() {
+					Expect(process.Signal(garden.SignalTerminate)).To(MatchError(
+						MatchRegexp("invalid pid")))
+				})
+			})
 		})
 
 		It("streams the process's stdout and stderr", func() {
@@ -132,7 +190,7 @@ var _ = Describe("Process tracker", func() {
 			_, err := processTracker.Run("40", cmd, garden.ProcessIO{
 				Stdout: stdout,
 				Stderr: stderr,
-			}, nil)
+			}, nil, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(stdout).Should(gbytes.Say("hi out\n"))
@@ -145,7 +203,7 @@ var _ = Describe("Process tracker", func() {
 			_, err := processTracker.Run("50", exec.Command("cat"), garden.ProcessIO{
 				Stdin:  bytes.NewBufferString("stdin-line1\nstdin-line2\n"),
 				Stdout: stdout,
-			}, nil)
+			}, nil, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(stdout).Should(gbytes.Say("stdin-line1\nstdin-line2\n"))
@@ -159,7 +217,7 @@ var _ = Describe("Process tracker", func() {
 				process, err := processTracker.Run("60", exec.Command("cat"), garden.ProcessIO{
 					Stdin:  pipeR,
 					Stdout: stdout,
-				}, nil)
+				}, nil, "")
 				Expect(err).NotTo(HaveOccurred())
 
 				pipeW.Write([]byte("Hello stdin!"))
@@ -189,7 +247,7 @@ var _ = Describe("Process tracker", func() {
 				process, err := processTracker.Run("70", exec.Command("cat"), garden.ProcessIO{
 					Stdin:  pipeR,
 					Stdout: stdout,
-				}, nil)
+				}, nil, "")
 				Expect(err).NotTo(HaveOccurred())
 
 				pipeW.Write([]byte("Hello stdin!"))
@@ -239,7 +297,7 @@ var _ = Describe("Process tracker", func() {
 						Columns: 95,
 						Rows:    13,
 					},
-				})
+				}, "")
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(stdout).Should(gbytes.Say("13 95"))
@@ -265,7 +323,7 @@ var _ = Describe("Process tracker", func() {
 
 					_, err := processTracker.Run("100", cmd, garden.ProcessIO{
 						Stdout: stdout,
-					}, &garden.TTYSpec{})
+					}, &garden.TTYSpec{}, "")
 					Expect(err).NotTo(HaveOccurred())
 
 					Eventually(stdout).Should(gbytes.Say("24 80"))
@@ -275,7 +333,7 @@ var _ = Describe("Process tracker", func() {
 
 		Context("when spawning fails", func() {
 			It("returns the error", func() {
-				_, err := processTracker.Run("200", exec.Command("/bin/does-not-exist"), garden.ProcessIO{}, nil)
+				_, err := processTracker.Run("200", exec.Command("/bin/does-not-exist"), garden.ProcessIO{}, nil, "")
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -299,7 +357,7 @@ var _ = Describe("Process tracker", func() {
 			echo "hi stderr" $stuff >&2
 		`)
 
-			process, err := processTracker.Run("855", cmd, garden.ProcessIO{}, nil)
+			process, err := processTracker.Run("855", cmd, garden.ProcessIO{}, nil, "")
 			Expect(err).NotTo(HaveOccurred())
 
 			stdout := gbytes.NewBuffer()
@@ -326,14 +384,14 @@ var _ = Describe("Process tracker", func() {
 
 			process1, err := processTracker.Run("9955", exec.Command("cat"), garden.ProcessIO{
 				Stdin: stdin1,
-			}, nil)
+			}, nil, "")
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(processTracker.ActiveProcesses).Should(ConsistOf(process1))
 
 			process2, err := processTracker.Run("9956", exec.Command("cat"), garden.ProcessIO{
 				Stdin: stdin2,
-			}, nil)
+			}, nil, "")
 			Expect(err).ToNot(HaveOccurred())
 
 			Eventually(processTracker.ActiveProcesses).Should(ConsistOf(process1, process2))

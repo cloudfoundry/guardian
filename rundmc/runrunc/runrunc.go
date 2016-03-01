@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
@@ -18,7 +19,7 @@ const DefaultPath = "PATH=/usr/local/bin:/usr/bin:/bin"
 
 //go:generate counterfeiter . ProcessTracker
 type ProcessTracker interface {
-	Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec) (garden.Process, error)
+	Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, pidFile string) (garden.Process, error)
 }
 
 //go:generate counterfeiter . UidGenerator
@@ -60,7 +61,7 @@ type RunRunc struct {
 //go:generate counterfeiter . RuncBinary
 type RuncBinary interface {
 	StartCommand(path, id string) *exec.Cmd
-	ExecCommand(id, processJSONPath string) *exec.Cmd
+	ExecCommand(id, processJSONPath, pidFilePath string) *exec.Cmd
 	KillCommand(id, signal string) *exec.Cmd
 }
 
@@ -83,7 +84,7 @@ func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, io garden.Proce
 
 	cmd := r.runc.StartCommand(bundlePath, id)
 
-	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil)
+	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil, "")
 	if err != nil {
 		log.Error("run", err)
 		return nil, err
@@ -96,15 +97,19 @@ func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, io garden.Proce
 func (r *RunRunc) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("exec", lager.Data{"id": id, "path": spec.Path})
 
-	log.Info("started")
+	pid := r.pidGenerator.Generate()
+
+	log.Info("started", lager.Data{pid: "pid"})
 	defer log.Info("finished")
 
-	cmd, err := r.execPreparer.Prepare(log, id, bundlePath, spec, r.runc)
+	pidFilePath := path.Join(bundlePath, "processes", fmt.Sprintf("%s.pid", pid))
+	cmd, err := r.execPreparer.Prepare(log, id, bundlePath, pidFilePath, spec, r.runc)
 	if err != nil {
+		log.Error("prepare-failed", err)
 		return nil, err
 	}
 
-	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, spec.TTY)
+	process, err := r.tracker.Run(pid, cmd, io, spec.TTY, pidFilePath)
 	if err != nil {
 		log.Error("run-failed", err)
 		return nil, err

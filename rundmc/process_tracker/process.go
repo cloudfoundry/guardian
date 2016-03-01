@@ -3,9 +3,13 @@ package process_tracker
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"sync"
+	"syscall"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/link"
@@ -13,12 +17,24 @@ import (
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 
+type osSignal garden.Signal
+
+func (s osSignal) OsSignal() syscall.Signal {
+	switch garden.Signal(s) {
+	case garden.SignalTerminate:
+		return syscall.SIGTERM
+	default:
+		return syscall.SIGKILL
+	}
+}
+
 type Process struct {
 	id string
 
 	iodaemonBin string
 
 	containerPath string
+	pidFilePath   string
 	runner        command_runner.CommandRunner
 
 	runningLink *sync.Once
@@ -39,12 +55,14 @@ func NewProcess(
 	containerPath string,
 	iodaemonBin string,
 	runner command_runner.CommandRunner,
+	pidFilePath string,
 ) *Process {
 	return &Process{
 		id: id,
 
 		iodaemonBin:   iodaemonBin,
 		containerPath: containerPath,
+		pidFilePath:   pidFilePath,
 		runner:        runner,
 
 		runningLink: &sync.Once{},
@@ -81,7 +99,12 @@ func (p *Process) SetTTY(tty garden.TTYSpec) error {
 func (p *Process) Signal(signal garden.Signal) error {
 	<-p.linked
 
-	return p.link.Signal(signal)
+	process, err := p.processFromPidFile()
+	if err != nil {
+		return err
+	}
+
+	return process.Signal(osSignal(signal).OsSignal())
 }
 
 func (p *Process) Spawn(cmd *exec.Cmd, tty *garden.TTYSpec) (ready, active chan error) {
@@ -195,4 +218,22 @@ func (p *Process) completed(exitStatus int, err error) {
 	p.exitStatus = exitStatus
 	p.exitErr = err
 	close(p.exited)
+}
+
+func (p *Process) processFromPidFile() (*os.Process, error) {
+	pid, err := ioutil.ReadFile(p.pidFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("signal: %s", err)
+	}
+
+	pidN, err := strconv.Atoi(string(pid))
+	if err != nil {
+		return nil, fmt.Errorf("signal: invalid pid: %s", err)
+	}
+
+	process, err := os.FindProcess(pidN)
+	if err != nil {
+		return nil, fmt.Errorf("signal: find process: %s", err)
+	}
+	return process, nil
 }

@@ -18,11 +18,12 @@ type FakeRuncBinary struct {
 	startCommandReturns struct {
 		result1 *exec.Cmd
 	}
-	ExecCommandStub        func(id, processJSONPath string) *exec.Cmd
+	ExecCommandStub        func(id, processJSONPath, pidFilePath string) *exec.Cmd
 	execCommandMutex       sync.RWMutex
 	execCommandArgsForCall []struct {
 		id              string
 		processJSONPath string
+		pidFilePath     string
 	}
 	execCommandReturns struct {
 		result1 *exec.Cmd
@@ -71,15 +72,16 @@ func (fake *FakeRuncBinary) StartCommandReturns(result1 *exec.Cmd) {
 	}{result1}
 }
 
-func (fake *FakeRuncBinary) ExecCommand(id string, processJSONPath string) *exec.Cmd {
+func (fake *FakeRuncBinary) ExecCommand(id string, processJSONPath string, pidFilePath string) *exec.Cmd {
 	fake.execCommandMutex.Lock()
 	fake.execCommandArgsForCall = append(fake.execCommandArgsForCall, struct {
 		id              string
 		processJSONPath string
-	}{id, processJSONPath})
+		pidFilePath     string
+	}{id, processJSONPath, pidFilePath})
 	fake.execCommandMutex.Unlock()
 	if fake.ExecCommandStub != nil {
-		return fake.ExecCommandStub(id, processJSONPath)
+		return fake.ExecCommandStub(id, processJSONPath, pidFilePath)
 	} else {
 		return fake.execCommandReturns.result1
 	}
@@ -91,10 +93,10 @@ func (fake *FakeRuncBinary) ExecCommandCallCount() int {
 	return len(fake.execCommandArgsForCall)
 }
 
-func (fake *FakeRuncBinary) ExecCommandArgsForCall(i int) (string, string) {
+func (fake *FakeRuncBinary) ExecCommandArgsForCall(i int) (string, string, string) {
 	fake.execCommandMutex.RLock()
 	defer fake.execCommandMutex.RUnlock()
-	return fake.execCommandArgsForCall[i].id, fake.execCommandArgsForCall[i].processJSONPath
+	return fake.execCommandArgsForCall[i].id, fake.execCommandArgsForCall[i].processJSONPath, fake.execCommandArgsForCall[i].pidFilePath
 }
 
 func (fake *FakeRuncBinary) ExecCommandReturns(result1 *exec.Cmd) {
