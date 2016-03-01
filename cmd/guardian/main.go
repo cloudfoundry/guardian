@@ -53,6 +53,23 @@ import (
 
 const OciStateDir = "/var/run/opencontainer/containers"
 
+var DefaultCapabilities = []string{
+	"CAP_CHOWN",
+	"CAP_DAC_OVERRIDE",
+	"CAP_FSETID",
+	"CAP_FOWNER",
+	"CAP_MKNOD",
+	"CAP_NET_RAW",
+	"CAP_SETGID",
+	"CAP_SETUID",
+	"CAP_SETFCAP",
+	"CAP_SETPCAP",
+	"CAP_NET_BIND_SERVICE",
+	"CAP_SYS_CHROOT",
+	"CAP_KILL",
+	"CAP_AUDIT_WRITE",
+}
+
 var PrivilegedContainerNamespaces = []specs.Namespace{
 	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace,
 }
@@ -528,10 +545,8 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	}
 
 	baseBundle := goci.Bundle().
-		// CAP_CHOWN is needed by the GITS in otder to propperly chown
-		// home dir on `useradd`
-		WithCapabilities("CAP_CHOWN").
 		WithNamespaces(PrivilegedContainerNamespaces...).
+		WithCapabilities(DefaultCapabilities...).
 		WithResources(&specs.Resources{Devices: append([]specs.DeviceCgroup{denyAll}, allowedDevices...)}).
 		WithMounts(mounts...).
 		WithRootFS(defaultRootFSPath)
