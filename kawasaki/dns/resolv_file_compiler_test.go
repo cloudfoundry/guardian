@@ -63,6 +63,21 @@ var _ = Describe("ResolvFileCompiler", func() {
 			Expect(os.Remove(hostResolvConfPath)).To(Succeed())
 		})
 
+		Context("and explicit overrides are given", func() {
+			It("should make the container use given DNS servers", func() {
+				compiler.OverrideServers = []net.IP{
+					net.ParseIP("8.8.8.8"),
+					net.ParseIP("8.8.4.4"),
+				}
+
+				Expect(compiler.OverrideServers).NotTo(BeEmpty())
+				contents, err := compiler.Compile(log)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(string(contents)).To(Equal("nameserver 8.8.8.8\nnameserver 8.8.4.4\n"))
+			})
+		})
+
 		Context("and the host is running DNS", func() {
 			BeforeEach(func() {
 				writeFile(hostResolvConfPath, "nameserver 127.0.0.1\n")

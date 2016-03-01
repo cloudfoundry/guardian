@@ -14,6 +14,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/factory"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
+	"github.com/cloudfoundry-incubator/guardian/pkg/vars"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/opencontainers/specs"
 	"github.com/pivotal-golang/lager"
@@ -54,6 +55,7 @@ func main() {
 	flag.Var(&IPValue{&config.BridgeIP}, "bridge-ip", "the IP address of the bridge interface")
 	flag.Var(&IPValue{&config.ExternalIP}, "external-ip", "the IP address of the host interface")
 	flag.Var(&IPValue{&config.ContainerIP}, "container-ip", "the IP address of the container interface")
+	flag.Var(&vars.IPList{List: &config.DNSServers}, "dns-server", "the IP address(s) of DNS servers to unconditionally use")
 	subnet := flag.String("subnet", "", "subnet of the bridge")
 	flag.Parse()
 
@@ -117,6 +119,7 @@ func wireDNSResolvConfigurer(state specs.State, config kawasaki.NetworkConfig) *
 		ResolvFileCompiler: &dns.ResolvFileCompiler{
 			HostResolvConfPath: "/etc/resolv.conf",
 			HostIP:             config.BridgeIP,
+			OverrideServers:    config.DNSServers,
 		},
 		FileWriter: &dns.RootfsWriter{
 			RootfsPath: bndl.Spec.Spec.Root.Path,
