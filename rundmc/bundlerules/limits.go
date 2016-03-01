@@ -11,5 +11,5 @@ type Limits struct {
 
 func (l Limits) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
 	limit := uint64(spec.Limits.Memory.LimitInBytes)
-	return bndl.WithMemoryLimit(specs.Memory{Limit: &limit})
+	return bndl.WithMemoryLimit(specs.Memory{Limit: &limit, Swap: &limit})
 }

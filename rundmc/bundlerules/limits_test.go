@@ -20,6 +20,7 @@ var _ = Describe("LimitsRule", func() {
 		})
 
 		Expect(*(newBndl.Resources().Memory.Limit)).To(BeNumerically("==", 4096))
+		Expect(*(newBndl.Resources().Memory.Swap)).To(BeNumerically("==", 4096))
 	})
 
 	It("does not clobber other fields of the resources sections", func() {
