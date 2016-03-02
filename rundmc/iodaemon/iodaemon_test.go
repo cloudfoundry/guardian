@@ -62,12 +62,8 @@ var _ = Describe("Iodaemon", func() {
 	AfterEach(func() {
 		defer os.RemoveAll(tmpdir)
 
+		Eventually(func() error { _, err := os.Stat(socketPath); return err }).ShouldNot(Succeed())
 		Eventually(exited).Should(BeClosed())
-
-		By("tidying up the socket file")
-		if _, err := os.Stat(socketPath); !os.IsNotExist(err) {
-			Fail("socket file not cleaned up")
-		}
 	})
 
 	Context("spawning a process: when no listeners connect", func() {
@@ -80,7 +76,7 @@ var _ = Describe("Iodaemon", func() {
 
 		It("times out when no listeners connect", func() {
 			spawnProcess(socketPath, "echo", "hello")
-			Eventually(exited).Should(BeClosed())
+			Eventually(exited, "2s").Should(BeClosed())
 		})
 	})
 

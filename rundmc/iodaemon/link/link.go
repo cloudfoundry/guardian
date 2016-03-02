@@ -136,7 +136,7 @@ func Create(socketPath string, stdout io.Writer, stderr io.Writer) (*Link, error
 		close(done)
 	}()
 
-	exitStatus := make(chan int)
+	exitStatus := make(chan int, 2)
 	go func() {
 		var s int
 		_, err := fmt.Fscanf(lstatus, "%d\n", &s)
