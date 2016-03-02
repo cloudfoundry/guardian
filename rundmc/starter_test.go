@@ -19,10 +19,11 @@ import (
 
 var _ = Describe("CgroupStarter", func() {
 	var (
-		runner      *fake_command_runner.FakeCommandRunner
-		starter     *rundmc.CgroupStarter
-		procCgroups *FakeReadCloser
-		logger      lager.Logger
+		runner          *fake_command_runner.FakeCommandRunner
+		starter         *rundmc.CgroupStarter
+		procCgroups     *FakeReadCloser
+		procSelfCgroups *FakeReadCloser
+		logger          lager.Logger
 
 		tmpDir string
 	)
@@ -35,11 +36,13 @@ var _ = Describe("CgroupStarter", func() {
 		logger = lagertest.NewTestLogger("test")
 		runner = fake_command_runner.New()
 		procCgroups = &FakeReadCloser{Buffer: bytes.NewBufferString("")}
+		procSelfCgroups = &FakeReadCloser{Buffer: bytes.NewBufferString("")}
 		starter = &rundmc.CgroupStarter{
-			CgroupPath:    path.Join(tmpDir, "cgroup"),
-			CommandRunner: runner,
-			ProcCgroups:   procCgroups,
-			Logger:        logger,
+			CgroupPath:      path.Join(tmpDir, "cgroup"),
+			CommandRunner:   runner,
+			ProcCgroups:     procCgroups,
+			ProcSelfCgroups: procSelfCgroups,
+			Logger:          logger,
 		}
 	})
 
@@ -81,23 +84,34 @@ var _ = Describe("CgroupStarter", func() {
 		})
 	})
 
-	Context("when the ProcCgroup reader contains a single entry (after the header)", func() {
+	Context("when the ProcCgroup reader contains entries (after the header), and ProcSelfCgroup reader contains the mount scheme", func() {
 		BeforeEach(func() {
 			procCgroups.Write([]byte(
 				`header header header
 ---- ---- ----
 devices blah blah
-memory lala la`))
+memory lala la
+cpu trala la
+cpuacct blahdy blah
+`))
+
+			procSelfCgroups.Write([]byte(
+				`5:devices:/
+4:memory:/
+3:cpu,cpuacct:/
+`))
 		})
 
 		Context("and the hierarchy is not mounted", func() {
 			BeforeEach(func() {
-				runner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "mountpoint",
-					Args: []string{"-q", path.Join(tmpDir, "cgroup", "devices")},
-				}, func(cmd *exec.Cmd) error {
-					return errors.New("not a mountpoint")
-				})
+				for _, notMounted := range []string{"devices", "cpu", "cpuacct"} {
+					runner.WhenRunning(fake_command_runner.CommandSpec{
+						Path: "mountpoint",
+						Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted)},
+					}, func(cmd *exec.Cmd) error {
+						return errors.New("not a mountpoint")
+					})
+				}
 			})
 
 			It("mounts the hierarchies which are not mounted", func() {
@@ -111,6 +125,16 @@ memory lala la`))
 					Path: "mount",
 					Args: []string{"-n", "-t", "cgroup", "-o", "memory", "cgroup", path.Join(tmpDir, "cgroup", "memory")},
 				}))
+
+				Expect(runner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+					Path: "mount",
+					Args: []string{"-n", "-t", "cgroup", "-o", "cpu,cpuacct", "cgroup", path.Join(tmpDir, "cgroup", "cpu")},
+				}))
+
+				Expect(runner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+					Path: "mount",
+					Args: []string{"-n", "-t", "cgroup", "-o", "cpu,cpuacct", "cgroup", path.Join(tmpDir, "cgroup", "cpuacct")},
+				}))
 			})
 
 			It("creates needed directories", func() {
@@ -123,6 +147,11 @@ memory lala la`))
 	It("closes the procCgroups reader", func() {
 		starter.Start()
 		Expect(procCgroups.closed).To(BeTrue())
+	})
+
+	It("closes the procSelfCgroups reader", func() {
+		starter.Start()
+		Expect(procSelfCgroups.closed).To(BeTrue())
 	})
 })
 

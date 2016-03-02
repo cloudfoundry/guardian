@@ -377,7 +377,7 @@ func wireStarter(logger lager.Logger, ipt *iptables.IPTables, allowHostAccess bo
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("runner")}
 
 	return &StartAll{starters: []gardener.Starter{
-		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner),
+		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", *tag)), runner),
 		iptables.NewStarter(ipt, allowHostAccess, nicPrefix, denyNetworks),
 	}}
 }
