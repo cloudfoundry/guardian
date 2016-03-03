@@ -108,9 +108,16 @@ func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 	}
 
 	forwardRuncLogsToLager(log, buff.Bytes())
-	if status, err := process.Wait(); status > 0 || err != nil {
-		log.Error("run-runc-start-failed", err)
+
+	status, err := process.Wait()
+	if err != nil {
+		log.Error("run-runc-start-failed", err, lager.Data{"exit-status": status})
 		return wrapWithErrorFromRuncLog(log, err, buff.Bytes())
+	}
+
+	if status > 0 {
+		log.Info("run-runc-start-exit-status-not-zero", lager.Data{"exit-status": status})
+		return wrapWithErrorFromRuncLog(log, fmt.Errorf("exit status %d", status), buff.Bytes())
 	}
 
 	return nil

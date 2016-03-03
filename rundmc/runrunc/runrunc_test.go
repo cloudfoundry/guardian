@@ -109,11 +109,13 @@ var _ = Describe("RuncRunner", func() {
 
 		Describe("forwarding logs from runC", func() {
 			var (
+				exitStatus     int
 				errorFromStart error
 				logs           string
 			)
 
 			BeforeEach(func() {
+				exitStatus = 0
 				errorFromStart = nil
 				logs = `time="2016-03-02T13:56:38Z" level=warning msg="signal: potato"
 				time="2016-03-02T13:56:38Z" level=error msg="fork/exec POTATO: no such file or directory"
@@ -125,10 +127,7 @@ var _ = Describe("RuncRunner", func() {
 					io.Stdout.Write([]byte(logs))
 					fakeProcess := new(fakes.FakeProcess)
 
-					if errorFromStart != nil {
-						fakeProcess.WaitReturns(12, errorFromStart)
-					}
-
+					fakeProcess.WaitReturns(exitStatus, errorFromStart)
 					return fakeProcess, nil
 				}
 			})
@@ -165,6 +164,16 @@ var _ = Describe("RuncRunner", func() {
 					It("returns an error with only the exit status if the log can't be parsed", func() {
 						Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc start: exit status potato"))
 					})
+				})
+			})
+
+			Context("when runC start exits non-zero", func() {
+				BeforeEach(func() {
+					exitStatus = 12
+				})
+
+				It("return an error including parsed logs when runC fails to starts the container", func() {
+					Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc start: exit status 12: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
 				})
 			})
 		})
