@@ -25,6 +25,7 @@ import (
 
 var _ = Describe("Creating a Container", func() {
 	var (
+		args      []string
 		client    *runner.RunningGarden
 		container garden.Container
 
@@ -33,13 +34,32 @@ var _ = Describe("Creating a Container", func() {
 	)
 
 	BeforeEach(func() {
-		client = startGarden()
+		args = nil
+	})
+
+	JustBeforeEach(func() {
+		client = startGarden(args...)
 		initialSockets = numOpenSockets(client.Pid)
 		initialPipes = numPipes(client.Pid)
 	})
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
+	})
+
+	Context("when creating fails", func() {
+		BeforeEach(func() {
+			args = []string{
+				// force it to fail by specifying invalid network plugin
+				// this assumes you do not have a binary named POTATO on your path. :-).
+				"--networkPlugin", "POTATO",
+			}
+		})
+
+		It("returns a nice error rather than timing out", func() {
+			_, err := client.Create(garden.ContainerSpec{})
+			Expect(err).To(MatchError(ContainSubstring("fork/exec POTATO: no such file or directory")))
+		})
 	})
 
 	Context("after creating a container without a specified handle", func() {
@@ -155,7 +175,7 @@ var _ = Describe("Creating a Container", func() {
 	Context("after creating a container with a specified root filesystem", func() {
 		var rootFSPath string
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			var err error
 
 			rootFSPath, err = ioutil.TempDir("", "test-rootfs")

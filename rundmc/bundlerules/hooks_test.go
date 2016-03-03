@@ -53,6 +53,19 @@ var _ = Describe("Hooks", func() {
 			Args: []string{"arg", "barg"},
 		}))
 	})
+
+	It("does not include a post-stop hook if none was requested", func() {
+		newBndl := bundlerules.Hooks{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+			NetworkHooks: gardener.Hooks{
+				Prestart: gardener.Hook{
+					Path: "/path/to/bananas/network",
+					Args: []string{"arg", "barg"},
+				},
+			},
+		})
+
+		Expect(pathAndArgsOf(newBndl.PoststopHooks())).To(BeEmpty())
+	})
 })
 
 func pathAndArgsOf(a []specs.Hook) (b []PathAndArgs) {

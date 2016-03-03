@@ -20,6 +20,12 @@ const DefaultRootPath = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:
 const DefaultPath = "PATH=/usr/local/bin:/usr/bin:/bin"
 
 //go:generate counterfeiter . ProcessTracker
+//go:generate counterfeiter . Process
+
+type Process interface {
+	garden.Process
+}
+
 type ProcessTracker interface {
 	Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, pidFile string) (garden.Process, error)
 }
@@ -67,10 +73,11 @@ type RunRunc struct {
 
 //go:generate counterfeiter . RuncBinary
 type RuncBinary interface {
-	StartCommand(path, id string) *exec.Cmd
+	StartCommand(path, id string, detach bool) *exec.Cmd
 	ExecCommand(id, processJSONPath, pidFilePath string) *exec.Cmd
 	EventsCommand(id string) *exec.Cmd
 	KillCommand(id, signal string) *exec.Cmd
+	DeleteCommand(id string) *exec.Cmd
 }
 
 func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary, execPreparer *ExecPreparer) *RunRunc {
@@ -84,21 +91,29 @@ func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen Uid
 }
 
 // Starts a bundle by running 'runc' in the bundle directory
-func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) (garden.Process, error) {
+func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, _ garden.ProcessIO) error {
 	log = log.Session("start", lager.Data{"bundle": bundlePath})
 
 	log.Info("started")
 	defer log.Info("finished")
 
-	cmd := r.runc.StartCommand(bundlePath, id)
+	var buff bytes.Buffer
+	cmd := r.runc.StartCommand(bundlePath, id, true)
+	cmd.Stdout = &buff
 
-	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, io, nil, "")
+	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, garden.ProcessIO{Stdout: &buff}, nil, "")
 	if err != nil {
-		log.Error("run", err)
-		return nil, err
+		log.Error("run-runc-track-failed", err)
+		return err
 	}
 
-	return process, nil
+	forwardRuncLogsToLager(log, buff.Bytes())
+	if status, err := process.Wait(); status > 0 || err != nil {
+		log.Error("run-runc-start-failed", err)
+		return wrapWithErrorFromRuncLog(log, err, buff.Bytes())
+	}
+
+	return nil
 }
 
 // Exec a process in a bundle using 'runc exec'
@@ -183,4 +198,10 @@ func (r *RunRunc) Kill(log lager.Logger, handle string) error {
 	}
 
 	return nil
+}
+
+// Delete a bundle which was detached (requires the bundle was already killed)
+func (r *RunRunc) Delete(log lager.Logger, handle string) error {
+	cmd := r.runc.DeleteCommand(handle)
+	return r.commandRunner.Run(cmd)
 }

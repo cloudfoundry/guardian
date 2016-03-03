@@ -505,7 +505,6 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries
 func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
-	startChecker := rundmc.StartChecker{Expect: "Pid 1 Running", Timeout: 15 * time.Second}
 	stateChecker := rundmc.StateChecker{StateFileDir: OciStateDir}
 
 	commandRunner := linux_command_runner.New()
@@ -588,7 +587,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 
 	stateCheckRetrier := retrier.New(retrier.ConstantBackoff(10, 100*time.Millisecond), nil)
-	return rundmc.New(depot, template, runcrunner, startChecker, stateChecker, nstar, eventStore, stateCheckRetrier)
+	return rundmc.New(depot, template, runcrunner, stateChecker, nstar, eventStore, stateCheckRetrier)
 }
 
 func missing(flagName string) {

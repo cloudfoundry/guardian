@@ -35,7 +35,7 @@ var _ = Describe("RuncRunner", func() {
 		users         *fakes.FakeUserLookupper
 		mkdirer       *fakes.FakeMkdirer
 		bundlePath    string
-		logger        lager.Logger
+		logger        *lagertest.TestLogger
 
 		runner *runrunc.RunRunc
 	)
@@ -78,8 +78,8 @@ var _ = Describe("RuncRunner", func() {
 
 		users.LookupReturns(&user.ExecUser{}, nil)
 
-		runcBinary.StartCommandStub = func(path, id string) *exec.Cmd {
-			return exec.Command("funC", "start", path, id)
+		runcBinary.StartCommandStub = func(path, id string, detach bool) *exec.Cmd {
+			return exec.Command("funC", "start", path, id, fmt.Sprintf("%t", detach))
 		}
 
 		runcBinary.ExecCommandStub = func(id, processJSONPath, pidFilePath string) *exec.Cmd {
@@ -89,25 +89,84 @@ var _ = Describe("RuncRunner", func() {
 		runcBinary.KillCommandStub = func(id, signal string) *exec.Cmd {
 			return exec.Command("funC", "kill", id, signal)
 		}
+
+		runcBinary.DeleteCommandStub = func(id string) *exec.Cmd {
+			return exec.Command("funC", "delete", id)
+		}
 	})
 
 	Describe("Start", func() {
-		It("runs the injected runC binary using process tracker", func() {
-			runner.Start(logger, bundlePath, "handle", garden.ProcessIO{Stdout: GinkgoWriter})
-			Expect(tracker.RunCallCount()).To(Equal(1))
+		It("starts the container with runC passing the detach flag", func() {
+			tracker.RunReturns(new(fakes.FakeProcess), nil)
+			Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
 
-			_, cmd, io, _, _ := tracker.RunArgsForCall(0)
-			Expect(cmd.Args).To(Equal([]string{"funC", "start", bundlePath, "handle"}))
-			Expect(io.Stdout).To(Equal(GinkgoWriter))
+			Expect(tracker.RunCallCount()).To(Equal(1))
+			_, cmd, _, _, _ := tracker.RunArgsForCall(0)
+
+			Expect(cmd.Path).To(Equal("funC"))
+			Expect(cmd.Args).To(Equal([]string{"funC", "start", bundlePath, "some-id", "true"}))
 		})
 
-		It("configures the tracker with the a generated process guid", func() {
-			pidGenerator.GenerateReturns("some-process-guid")
-			runner.Start(logger, bundlePath, "some-handle", garden.ProcessIO{Stdout: GinkgoWriter})
-			Expect(tracker.RunCallCount()).To(Equal(1))
+		Describe("forwarding logs from runC", func() {
+			var (
+				errorFromStart error
+				logs           string
+			)
 
-			id, _, _, _, _ := tracker.RunArgsForCall(0)
-			Expect(id).To(BeEquivalentTo("some-process-guid"))
+			BeforeEach(func() {
+				errorFromStart = nil
+				logs = `time="2016-03-02T13:56:38Z" level=warning msg="signal: potato"
+				time="2016-03-02T13:56:38Z" level=error msg="fork/exec POTATO: no such file or directory"
+				time="2016-03-02T13:56:38Z" level=fatal msg="Container start failed: [10] System error: fork/exec POTATO: no such file or directory"`
+			})
+
+			JustBeforeEach(func() {
+				tracker.RunStub = func(_ string, _ *exec.Cmd, io garden.ProcessIO, _ *garden.TTYSpec, _ string) (garden.Process, error) {
+					io.Stdout.Write([]byte(logs))
+					fakeProcess := new(fakes.FakeProcess)
+
+					if errorFromStart != nil {
+						fakeProcess.WaitReturns(12, errorFromStart)
+					}
+
+					return fakeProcess, nil
+				}
+			})
+
+			It("sends all the logs to the logger", func() {
+				Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
+
+				runcLogs := make([]lager.LogFormat, 0)
+				for _, log := range logger.Logs() {
+					if log.Message == "test.start.runc" {
+						runcLogs = append(runcLogs, log)
+					}
+				}
+
+				Expect(runcLogs).To(HaveLen(3))
+				Expect(runcLogs[0].Data).To(HaveKeyWithValue("message", "signal: potato"))
+			})
+
+			Context("when runC start fails", func() {
+				BeforeEach(func() {
+					errorFromStart = errors.New("exit status potato")
+				})
+
+				It("return an error including parsed logs when runC fails to starts the container", func() {
+					Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc start: exit status potato: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
+				})
+
+				Context("when the log messages can't be parsed", func() {
+					BeforeEach(func() {
+						logs = `foo="'
+					`
+					})
+
+					It("returns an error with only the exit status if the log can't be parsed", func() {
+						Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc start: exit status potato"))
+					})
+				})
+			})
 		})
 	})
 
@@ -474,6 +533,16 @@ var _ = Describe("RuncRunner", func() {
 			})
 
 			Expect(runner.Kill(logger, "some-container")).To(MatchError("runc kill: exit status banana: some error"))
+		})
+	})
+
+	Describe("Delete", func() {
+		It("deletes the bundle with 'runc delete'", func() {
+			Expect(runner.Delete(logger, "some-container")).To(Succeed())
+			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+				Path: "funC",
+				Args: []string{"delete", "some-container"},
+			}))
 		})
 	})
 

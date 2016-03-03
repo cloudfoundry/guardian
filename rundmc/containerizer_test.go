@@ -2,7 +2,6 @@ package rundmc_test
 
 import (
 	"errors"
-	"io"
 	"os"
 	"time"
 
@@ -24,7 +23,6 @@ var _ = Describe("Rundmc", func() {
 		fakeDepot           *fakes.FakeDepot
 		fakeBundler         *fakes.FakeBundleGenerator
 		fakeContainerRunner *fakes.FakeBundleRunner
-		fakeStartChecker    *fakes.FakeChecker
 		fakeNstarRunner     *fakes.FakeNstarRunner
 		fakeStater          *fakes.FakeContainerStater
 		fakeEventStore      *fakes.FakeEventStore
@@ -37,7 +35,6 @@ var _ = Describe("Rundmc", func() {
 	BeforeEach(func() {
 		fakeDepot = new(fakes.FakeDepot)
 		fakeContainerRunner = new(fakes.FakeBundleRunner)
-		fakeStartChecker = new(fakes.FakeChecker)
 		fakeBundler = new(fakes.FakeBundleGenerator)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeStater = new(fakes.FakeContainerStater)
@@ -53,7 +50,7 @@ var _ = Describe("Rundmc", func() {
 			return fn()
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStartChecker, fakeStater, fakeNstarRunner, fakeEventStore, fakeRetrier)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStater, fakeNstarRunner, fakeEventStore, fakeRetrier)
 	})
 
 	Describe("Create", func() {
@@ -104,16 +101,11 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when the container fails to start", func() {
 			BeforeEach(func() {
-				fakeContainerRunner.StartReturns(nil, errors.New("banana"))
+				fakeContainerRunner.StartReturns(errors.New("banana"))
 			})
 
 			It("should return an error", func() {
 				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).NotTo(Succeed())
-			})
-
-			It("should not check if the container is started", func() {
-				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).NotTo(Succeed())
-				Expect(fakeStartChecker.CheckCallCount()).To(Equal(0))
 			})
 		})
 
@@ -141,21 +133,6 @@ var _ = Describe("Rundmc", func() {
 			_, handle, notifier := fakeContainerRunner.WatchArgsForCall(0)
 			Expect(handle).To(Equal("some-container"))
 			Expect(notifier).To(Equal(fakeEventStore))
-		})
-
-		It("should check if the container is started", func() {
-			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(Succeed())
-			Expect(fakeStartChecker.CheckCallCount()).To(Equal(1))
-		})
-
-		Context("when the start check fails", func() {
-			It("returns the underlying error", func() {
-				fakeStartChecker.CheckStub = func(_ lager.Logger, stdout io.Reader) error {
-					return errors.New("I died")
-				}
-
-				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{Handle: "the-handle"})).To(MatchError("I died"))
-			})
 		})
 
 		Context("when the state file was not written even after PID 1 has started", func() {
@@ -312,6 +289,43 @@ var _ = Describe("Rundmc", func() {
 				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
 				Expect(fakeContainerRunner.KillCallCount()).To(Equal(1))
 				Expect(arg2(fakeContainerRunner.KillArgsForCall(0))).To(Equal("some-handle"))
+			})
+
+			It("should run delete", func() {
+				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
+				Expect(fakeContainerRunner.DeleteCallCount()).To(Equal(1))
+				Expect(arg2(fakeContainerRunner.DeleteArgsForCall(0))).To(Equal("some-handle"))
+			})
+
+			It("should retry deletes", func() {
+				fakeRetrier.RunStub = func(fn func() error) error {
+					for {
+						if fn() == nil {
+							return nil
+						}
+					}
+				}
+
+				i := 0
+				fakeContainerRunner.DeleteStub = func(_ lager.Logger, handle string) error {
+					i++
+					if i >= 4 {
+						return nil
+					}
+
+					return errors.New("didn't work")
+				}
+
+				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
+				Expect(fakeContainerRunner.DeleteCallCount()).To(Equal(4))
+			})
+
+			It("should return an error if delete never succeeds", func() {
+				fakeRetrier.RunStub = func(fn func() error) error {
+					return errors.New("never worked")
+				}
+
+				Expect(containerizer.Destroy(logger, "some-handle")).To(MatchError("never worked"))
 			})
 
 			Context("when kill succeeds", func() {

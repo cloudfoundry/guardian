@@ -7,7 +7,6 @@ import (
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
-	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/pivotal-golang/lager"
@@ -42,9 +41,10 @@ type ContainerStater interface {
 }
 
 type BundleRunner interface {
-	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) (garden.Process, error)
+	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 	Exec(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
+	Delete(log lager.Logger, id string) error
 	Watch(log lager.Logger, id string, notifier runrunc.Notifier) error
 }
 
@@ -67,19 +67,17 @@ type Containerizer struct {
 	depot        Depot
 	bundler      BundleGenerator
 	runner       BundleRunner
-	startChecker Checker
 	stateChecker ContainerStater
 	nstar        NstarRunner
 	events       EventStore
 	retrier      Retrier
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker Checker, stateChecker ContainerStater, nstarRunner NstarRunner, events EventStore, retrier Retrier) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, stateChecker ContainerStater, nstarRunner NstarRunner, events EventStore, retrier Retrier) *Containerizer {
 	return &Containerizer{
 		depot:        depot,
 		bundler:      bundler,
 		runner:       runner,
-		startChecker: startChecker,
 		stateChecker: stateChecker,
 		nstar:        nstarRunner,
 		events:       events,
@@ -91,7 +89,7 @@ func New(depot Depot, bundler BundleGenerator, runner BundleRunner, startChecker
 func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerSpec) error {
 	log = log.Session("containerizer-create", lager.Data{"handle": spec.Handle})
 
-	log.Info("started")
+	log.Info("start")
 	defer log.Info("finished")
 
 	if err := c.depot.Create(log, spec.Handle, c.bundler.Generate(spec)); err != nil {
@@ -105,18 +103,9 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		return err
 	}
 
-	stdoutR, stdoutW := io.Pipe()
-	_, err = c.runner.Start(log, path, spec.Handle, garden.ProcessIO{
-		Stdout: io.MultiWriter(logging.Writer(log), stdoutW),
-		Stderr: logging.Writer(log),
-	})
+	err = c.runner.Start(log, path, spec.Handle, garden.ProcessIO{})
 	if err != nil {
 		log.Error("start", err)
-		return err
-	}
-
-	if err := c.startChecker.Check(log, stdoutR); err != nil {
-		log.Error("check", err)
 		return err
 	}
 
@@ -208,6 +197,10 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 
 	if err := c.runner.Kill(log, handle); err != nil {
 		log.Error("kill-failed", err)
+		return err
+	}
+
+	if err := c.retrier.Run(func() error { return c.runner.Delete(log, handle) }); err != nil {
 		return err
 	}
 

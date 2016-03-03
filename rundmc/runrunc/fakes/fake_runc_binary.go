@@ -9,11 +9,12 @@ import (
 )
 
 type FakeRuncBinary struct {
-	StartCommandStub        func(path, id string) *exec.Cmd
+	StartCommandStub        func(path, id string, detach bool) *exec.Cmd
 	startCommandMutex       sync.RWMutex
 	startCommandArgsForCall []struct {
-		path string
-		id   string
+		path   string
+		id     string
+		detach bool
 	}
 	startCommandReturns struct {
 		result1 *exec.Cmd
@@ -45,17 +46,26 @@ type FakeRuncBinary struct {
 	killCommandReturns struct {
 		result1 *exec.Cmd
 	}
+	DeleteCommandStub        func(id string) *exec.Cmd
+	deleteCommandMutex       sync.RWMutex
+	deleteCommandArgsForCall []struct {
+		id string
+	}
+	deleteCommandReturns struct {
+		result1 *exec.Cmd
+	}
 }
 
-func (fake *FakeRuncBinary) StartCommand(path string, id string) *exec.Cmd {
+func (fake *FakeRuncBinary) StartCommand(path string, id string, detach bool) *exec.Cmd {
 	fake.startCommandMutex.Lock()
 	fake.startCommandArgsForCall = append(fake.startCommandArgsForCall, struct {
-		path string
-		id   string
-	}{path, id})
+		path   string
+		id     string
+		detach bool
+	}{path, id, detach})
 	fake.startCommandMutex.Unlock()
 	if fake.StartCommandStub != nil {
-		return fake.StartCommandStub(path, id)
+		return fake.StartCommandStub(path, id, detach)
 	} else {
 		return fake.startCommandReturns.result1
 	}
@@ -67,10 +77,10 @@ func (fake *FakeRuncBinary) StartCommandCallCount() int {
 	return len(fake.startCommandArgsForCall)
 }
 
-func (fake *FakeRuncBinary) StartCommandArgsForCall(i int) (string, string) {
+func (fake *FakeRuncBinary) StartCommandArgsForCall(i int) (string, string, bool) {
 	fake.startCommandMutex.RLock()
 	defer fake.startCommandMutex.RUnlock()
-	return fake.startCommandArgsForCall[i].path, fake.startCommandArgsForCall[i].id
+	return fake.startCommandArgsForCall[i].path, fake.startCommandArgsForCall[i].id, fake.startCommandArgsForCall[i].detach
 }
 
 func (fake *FakeRuncBinary) StartCommandReturns(result1 *exec.Cmd) {
@@ -175,6 +185,38 @@ func (fake *FakeRuncBinary) KillCommandArgsForCall(i int) (string, string) {
 func (fake *FakeRuncBinary) KillCommandReturns(result1 *exec.Cmd) {
 	fake.KillCommandStub = nil
 	fake.killCommandReturns = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
+func (fake *FakeRuncBinary) DeleteCommand(id string) *exec.Cmd {
+	fake.deleteCommandMutex.Lock()
+	fake.deleteCommandArgsForCall = append(fake.deleteCommandArgsForCall, struct {
+		id string
+	}{id})
+	fake.deleteCommandMutex.Unlock()
+	if fake.DeleteCommandStub != nil {
+		return fake.DeleteCommandStub(id)
+	} else {
+		return fake.deleteCommandReturns.result1
+	}
+}
+
+func (fake *FakeRuncBinary) DeleteCommandCallCount() int {
+	fake.deleteCommandMutex.RLock()
+	defer fake.deleteCommandMutex.RUnlock()
+	return len(fake.deleteCommandArgsForCall)
+}
+
+func (fake *FakeRuncBinary) DeleteCommandArgsForCall(i int) string {
+	fake.deleteCommandMutex.RLock()
+	defer fake.deleteCommandMutex.RUnlock()
+	return fake.deleteCommandArgsForCall[i].id
+}
+
+func (fake *FakeRuncBinary) DeleteCommandReturns(result1 *exec.Cmd) {
+	fake.DeleteCommandStub = nil
+	fake.deleteCommandReturns = struct {
 		result1 *exec.Cmd
 	}{result1}
 }
