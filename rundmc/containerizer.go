@@ -109,11 +109,6 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		return err
 	}
 
-	if err := c.waitForStateJSON(log, spec.Handle); err != nil {
-		log.Error("check-state-failed", err)
-		return fmt.Errorf("create: state file not found for container: %s", err)
-	}
-
 	go func() {
 		if err := c.runner.Watch(log, spec.Handle, c.events); err != nil {
 			log.Error("watch-failed", err)
@@ -222,11 +217,4 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 // Handles returns a list of all container handles
 func (c *Containerizer) Handles() ([]string, error) {
 	return c.depot.Handles()
-}
-
-func (c *Containerizer) waitForStateJSON(log lager.Logger, handle string) error {
-	return c.retrier.Run(func() error {
-		_, err := c.stateChecker.State(log, handle)
-		return err
-	})
 }

@@ -134,36 +134,6 @@ var _ = Describe("Rundmc", func() {
 			Expect(handle).To(Equal("some-container"))
 			Expect(notifier).To(Equal(fakeEventStore))
 		})
-
-		Context("when the state file was not written even after PID 1 has started", func() {
-			It("returns an error", func() {
-				fakeStater.StateReturns(rundmc.State{}, errors.New("state-not-found"))
-				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(MatchError(ContainSubstring("create: state file not found")))
-			})
-
-			Context("if it eventually appears", func() {
-				BeforeEach(func() {
-					stateCallCounter := 0
-					fakeStater.StateStub = func(logger lager.Logger, handle string) (rundmc.State, error) {
-						if stateCallCounter == 1 {
-							return rundmc.State{Pid: 4}, nil
-						}
-						stateCallCounter++
-						return rundmc.State{}, errors.New("state-not-found")
-					}
-
-					fakeRetrier.RunStub = func(fn func() error) error {
-						Expect(fn()).NotTo(Succeed())
-						Expect(fn()).To(Succeed())
-						return nil
-					}
-				})
-
-				It("does not return an error", func() {
-					Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(Succeed())
-				})
-			})
-		})
 	})
 
 	Describe("Run", func() {
