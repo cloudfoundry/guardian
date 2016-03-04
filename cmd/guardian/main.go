@@ -321,8 +321,8 @@ func main() {
 		panic(err)
 	}
 
-	interfacePrefix := fmt.Sprintf("g%s", *tag)
-	chainPrefix := fmt.Sprintf("g-%s-", *tag)
+	interfacePrefix := fmt.Sprintf("w%s", *tag)
+	chainPrefix := fmt.Sprintf("w-%s-", *tag)
 	ipt := wireIptables(logger, chainPrefix)
 
 	propManager := properties.NewManager()
