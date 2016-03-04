@@ -505,8 +505,6 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries
 func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
-	stateChecker := rundmc.StateChecker{StateFileDir: OciStateDir}
-
 	commandRunner := linux_command_runner.New()
 	execPreparer := runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), runrunc.DirectoryCreator{})
 
@@ -533,7 +531,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	}
 
 	rwm := "rwm"
-	character := 'c'
+	character := "c"
 	var majorMinor = func(i int64) *int64 {
 		return &i
 	}
@@ -550,7 +548,6 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
-		WithCapabilities(DefaultCapabilities...).
 		WithResources(&specs.Resources{Devices: append([]specs.DeviceCgroup{denyAll}, allowedDevices...)}).
 		WithMounts(mounts...).
 		WithRootFS(defaultRootFSPath)
@@ -576,18 +573,24 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 			bundlerules.BindMounts{},
 			bundlerules.InitProcess{
 				Process: specs.Process{
-					Args: []string{"/tmp/garden-init"},
-					Cwd:  "/",
+					Capabilities: DefaultCapabilities,
+					Args:         []string{"/tmp/garden-init"},
+					Cwd:          "/",
 				},
 			},
 		},
 	}
 
+	log.Info("base-bundles", lager.Data{
+		"privileged":   baseBundle,
+		"unprivileged": unprivilegedBundle,
+	})
+
 	eventStore := rundmc.NewEventStore(properties)
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 
-	stateCheckRetrier := retrier.New(retrier.ConstantBackoff(10, 100*time.Millisecond), nil)
-	return rundmc.New(depot, template, runcrunner, stateChecker, nstar, eventStore, stateCheckRetrier)
+	deleteRetrier := retrier.New(retrier.ConstantBackoff(10, 100*time.Millisecond), nil)
+	return rundmc.New(depot, template, runcrunner, nstar, eventStore, deleteRetrier)
 }
 
 func missing(flagName string) {

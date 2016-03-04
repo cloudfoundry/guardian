@@ -24,7 +24,6 @@ var _ = Describe("Rundmc", func() {
 		fakeBundler         *fakes.FakeBundleGenerator
 		fakeContainerRunner *fakes.FakeBundleRunner
 		fakeNstarRunner     *fakes.FakeNstarRunner
-		fakeStater          *fakes.FakeContainerStater
 		fakeEventStore      *fakes.FakeEventStore
 		fakeRetrier         *fakes.FakeRetrier
 
@@ -37,7 +36,6 @@ var _ = Describe("Rundmc", func() {
 		fakeContainerRunner = new(fakes.FakeBundleRunner)
 		fakeBundler = new(fakes.FakeBundleGenerator)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
-		fakeStater = new(fakes.FakeContainerStater)
 		fakeEventStore = new(fakes.FakeEventStore)
 		logger = lagertest.NewTestLogger("test")
 
@@ -50,7 +48,7 @@ var _ = Describe("Rundmc", func() {
 			return fn()
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeStater, fakeNstarRunner, fakeEventStore, fakeRetrier)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeNstarRunner, fakeEventStore, fakeRetrier)
 	})
 
 	Describe("Create", func() {
@@ -164,7 +162,7 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("StreamIn", func() {
 		It("should execute the NSTar command with the container PID", func() {
-			fakeStater.StateReturns(rundmc.State{
+			fakeContainerRunner.StateReturns(runrunc.State{
 				Pid: 12,
 			}, nil)
 
@@ -183,7 +181,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("returns an error if the PID cannot be found", func() {
-			fakeStater.StateReturns(rundmc.State{}, errors.New("pid not found"))
+			fakeContainerRunner.StateReturns(runrunc.State{}, errors.New("pid not found"))
 			Expect(containerizer.StreamIn(logger, "some-handle", garden.StreamInSpec{})).To(MatchError("stream-in: pid not found for container"))
 		})
 
@@ -195,7 +193,7 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("StreamOut", func() {
 		It("should execute the NSTar command with the container PID", func() {
-			fakeStater.StateReturns(rundmc.State{
+			fakeContainerRunner.StateReturns(runrunc.State{
 				Pid: 12,
 			}, nil)
 
@@ -216,7 +214,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("returns an error if the PID cannot be found", func() {
-			fakeStater.StateReturns(rundmc.State{}, errors.New("pid not found"))
+			fakeContainerRunner.StateReturns(runrunc.State{}, errors.New("pid not found"))
 			tarStream, err := containerizer.StreamOut(logger, "some-handle", garden.StreamOutSpec{})
 
 			Expect(tarStream).To(BeNil())
@@ -233,9 +231,9 @@ var _ = Describe("Rundmc", func() {
 	})
 
 	Describe("destroy", func() {
-		Context("when the state.json is already gone", func() {
+		Context("when getting state fails", func() {
 			BeforeEach(func() {
-				fakeStater.StateReturns(rundmc.State{}, errors.New("pid not found"))
+				fakeContainerRunner.StateReturns(runrunc.State{}, errors.New("pid not found"))
 			})
 
 			It("should NOT run kill", func() {
@@ -250,9 +248,11 @@ var _ = Describe("Rundmc", func() {
 			})
 		})
 
-		Context("when state.json exists", func() {
+		Context("when state is running", func() {
 			BeforeEach(func() {
-				fakeStater.StateReturns(rundmc.State{}, nil)
+				fakeContainerRunner.StateReturns(runrunc.State{
+					Status: "running",
+				}, nil)
 			})
 
 			It("should run kill", func() {
@@ -312,6 +312,25 @@ var _ = Describe("Rundmc", func() {
 					containerizer.Destroy(logger, "some-handle")
 					Expect(fakeDepot.DestroyCallCount()).To(Equal(0))
 				})
+			})
+		})
+
+		Context("when state is not running", func() {
+			BeforeEach(func() {
+				fakeContainerRunner.StateReturns(runrunc.State{
+					Status: "potato",
+				}, nil)
+			})
+
+			It("should not run kill", func() {
+				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
+				Expect(fakeContainerRunner.KillCallCount()).To(Equal(0))
+			})
+
+			It("should run delete", func() {
+				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
+				Expect(fakeContainerRunner.DeleteCallCount()).To(Equal(1))
+				Expect(arg2(fakeContainerRunner.DeleteArgsForCall(0))).To(Equal("some-handle"))
 			})
 		})
 	})

@@ -31,18 +31,26 @@ func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdire
 }
 
 func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath, pidFilePath string, spec garden.ProcessSpec, runc RuncBinary) (*exec.Cmd, error) {
+	log = log.Session("prepare")
+
+	log.Info("start")
+	defer log.Info("finished")
+
 	if err := os.MkdirAll(path.Dir(pidFilePath), 0755); err != nil {
+		log.Error("mk-process-dir-failed", err)
 		return nil, err
 	}
 
 	bndl, err := r.bundleLoader.Load(bundlePath)
 	if err != nil {
+		log.Error("load-bundle-failed", err)
 		return nil, err
 	}
 
 	rootFsPath := bndl.RootFS()
 	u, err := r.lookupUser(bndl, rootFsPath, spec.User)
 	if err != nil {
+		log.Error("lookup-user-failed", err)
 		return nil, err
 	}
 
@@ -52,6 +60,7 @@ func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath, pidFilePath str
 	}
 
 	if err := r.ensureDirExists(rootFsPath, cwd, u.hostUid, u.hostGid); err != nil {
+		log.Error("ensure-dir-failed", err)
 		return nil, err
 	}
 
@@ -62,10 +71,12 @@ func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath, pidFilePath str
 			UID: uint32(u.containerUid),
 			GID: uint32(u.containerGid),
 		},
-		Cwd: cwd,
+		Cwd:          cwd,
+		Capabilities: bndl.Capabilities(),
 	})
 
 	if err != nil {
+		log.Error("encode-process-json-failed", err)
 		return nil, err
 	}
 

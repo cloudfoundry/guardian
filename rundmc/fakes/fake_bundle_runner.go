@@ -53,6 +53,16 @@ type FakeBundleRunner struct {
 	deleteReturns struct {
 		result1 error
 	}
+	StateStub        func(log lager.Logger, id string) (runrunc.State, error)
+	stateMutex       sync.RWMutex
+	stateArgsForCall []struct {
+		log lager.Logger
+		id  string
+	}
+	stateReturns struct {
+		result1 runrunc.State
+		result2 error
+	}
 	WatchStub        func(log lager.Logger, id string, notifier runrunc.Notifier) error
 	watchMutex       sync.RWMutex
 	watchArgsForCall []struct {
@@ -201,6 +211,40 @@ func (fake *FakeBundleRunner) DeleteReturns(result1 error) {
 	fake.deleteReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeBundleRunner) State(log lager.Logger, id string) (runrunc.State, error) {
+	fake.stateMutex.Lock()
+	fake.stateArgsForCall = append(fake.stateArgsForCall, struct {
+		log lager.Logger
+		id  string
+	}{log, id})
+	fake.stateMutex.Unlock()
+	if fake.StateStub != nil {
+		return fake.StateStub(log, id)
+	} else {
+		return fake.stateReturns.result1, fake.stateReturns.result2
+	}
+}
+
+func (fake *FakeBundleRunner) StateCallCount() int {
+	fake.stateMutex.RLock()
+	defer fake.stateMutex.RUnlock()
+	return len(fake.stateArgsForCall)
+}
+
+func (fake *FakeBundleRunner) StateArgsForCall(i int) (lager.Logger, string) {
+	fake.stateMutex.RLock()
+	defer fake.stateMutex.RUnlock()
+	return fake.stateArgsForCall[i].log, fake.stateArgsForCall[i].id
+}
+
+func (fake *FakeBundleRunner) StateReturns(result1 runrunc.State, result2 error) {
+	fake.StateStub = nil
+	fake.stateReturns = struct {
+		result1 runrunc.State
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeBundleRunner) Watch(log lager.Logger, id string, notifier runrunc.Notifier) error {

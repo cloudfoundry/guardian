@@ -76,6 +76,7 @@ type RuncBinary interface {
 	StartCommand(path, id string, detach bool) *exec.Cmd
 	ExecCommand(id, processJSONPath, pidFilePath string) *exec.Cmd
 	EventsCommand(id string) *exec.Cmd
+	StateCommand(id string) *exec.Cmd
 	KillCommand(id, signal string) *exec.Cmd
 	DeleteCommand(id string) *exec.Cmd
 }
@@ -187,6 +188,30 @@ func (r *RunRunc) Watch(log lager.Logger, handle string, notifier Notifier) erro
 			notifier.OnEvent(handle, "Out of memory")
 		}
 	}
+}
+
+// State gets the state of the bundle
+func (r *RunRunc) State(log lager.Logger, handle string) (state State, err error) {
+	log = log.Session("State", lager.Data{"handle": handle})
+
+	log.Info("started")
+	defer log.Info("finished")
+
+	buff := new(bytes.Buffer)
+	cmd := r.runc.StateCommand(handle)
+	cmd.Stdout = buff
+
+	if err := r.commandRunner.Run(cmd); err != nil {
+		log.Error("state-cmd-failed", err)
+		return State{}, fmt.Errorf("runc state: %s", err)
+	}
+
+	if err := json.NewDecoder(buff).Decode(&state); err != nil {
+		log.Error("decode-state-failed", err)
+		return State{}, fmt.Errorf("runc state: %s", err)
+	}
+
+	return state, nil
 }
 
 // Kill a bundle using 'runc kill'

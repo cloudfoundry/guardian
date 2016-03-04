@@ -12,6 +12,5 @@ type InitProcess struct {
 
 func (r InitProcess) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
 	r.Process.Env = append(r.Process.Env, spec.Env...)
-
 	return bndl.WithProcess(r.Process)
 }

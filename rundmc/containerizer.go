@@ -17,7 +17,6 @@ import (
 //go:generate counterfeiter . Checker
 //go:generate counterfeiter . BundleRunner
 //go:generate counterfeiter . NstarRunner
-//go:generate counterfeiter . ContainerStater
 //go:generate counterfeiter . EventStore
 //go:generate counterfeiter . Retrier
 
@@ -36,15 +35,12 @@ type Checker interface {
 	Check(log lager.Logger, output io.Reader) error
 }
 
-type ContainerStater interface {
-	State(log lager.Logger, id string) (State, error)
-}
-
 type BundleRunner interface {
 	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 	Exec(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
 	Delete(log lager.Logger, id string) error
+	State(log lager.Logger, id string) (runrunc.State, error)
 	Watch(log lager.Logger, id string, notifier runrunc.Notifier) error
 }
 
@@ -64,24 +60,22 @@ type Retrier interface {
 
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
-	depot        Depot
-	bundler      BundleGenerator
-	runner       BundleRunner
-	stateChecker ContainerStater
-	nstar        NstarRunner
-	events       EventStore
-	retrier      Retrier
+	depot   Depot
+	bundler BundleGenerator
+	runner  BundleRunner
+	nstar   NstarRunner
+	events  EventStore
+	retrier Retrier
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, stateChecker ContainerStater, nstarRunner NstarRunner, events EventStore, retrier Retrier) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, nstarRunner NstarRunner, events EventStore, retrier Retrier) *Containerizer {
 	return &Containerizer{
-		depot:        depot,
-		bundler:      bundler,
-		runner:       runner,
-		stateChecker: stateChecker,
-		nstar:        nstarRunner,
-		events:       events,
-		retrier:      retrier,
+		depot:   depot,
+		bundler: bundler,
+		runner:  runner,
+		nstar:   nstarRunner,
+		events:  events,
+		retrier: retrier,
 	}
 }
 
@@ -141,7 +135,7 @@ func (c *Containerizer) StreamIn(log lager.Logger, handle string, spec garden.St
 	log.Info("started")
 	defer log.Info("finished")
 
-	state, err := c.stateChecker.State(log, handle)
+	state, err := c.runner.State(log, handle)
 	if err != nil {
 		log.Error("check-pid-failed", err)
 		return fmt.Errorf("stream-in: pid not found for container")
@@ -162,7 +156,7 @@ func (c *Containerizer) StreamOut(log lager.Logger, handle string, spec garden.S
 	log.Info("started")
 	defer log.Info("finished")
 
-	state, err := c.stateChecker.State(log, handle)
+	state, err := c.runner.State(log, handle)
 	if err != nil {
 		log.Error("check-pid-failed", err)
 		return nil, fmt.Errorf("stream-out: pid not found for container")
@@ -184,15 +178,21 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 	log.Info("started")
 	defer log.Info("finished")
 
-	_, err := c.stateChecker.State(log, handle)
+	state, err := c.runner.State(log, handle)
 	if err != nil {
-		log.Error("pid-gone-skip-kill", err)
+		log.Error("state-failed-skipping-kill", err)
 		return c.depot.Destroy(log, handle)
 	}
 
-	if err := c.runner.Kill(log, handle); err != nil {
-		log.Error("kill-failed", err)
-		return err
+	log.Info("state", lager.Data{
+		"state": state,
+	})
+
+	if state.Status == runrunc.RunningStatus {
+		if err := c.runner.Kill(log, handle); err != nil {
+			log.Error("kill-failed", err)
+			return err
+		}
 	}
 
 	if err := c.retrier.Run(func() error { return c.runner.Delete(log, handle) }); err != nil {

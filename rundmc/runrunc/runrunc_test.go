@@ -90,6 +90,10 @@ var _ = Describe("RuncRunner", func() {
 			return exec.Command("funC", "kill", id, signal)
 		}
 
+		runcBinary.StateCommandStub = func(id string) *exec.Cmd {
+			return exec.Command("funC", "state", id)
+		}
+
 		runcBinary.DeleteCommandStub = func(id string) *exec.Cmd {
 			return exec.Command("funC", "delete", id)
 		}
@@ -427,6 +431,20 @@ var _ = Describe("RuncRunner", func() {
 				})
 			})
 
+			Context("when the container has capabilities", func() {
+				BeforeEach(func() {
+					bndl := &goci.Bndl{}
+					bndl.Spec.Spec.Process.Capabilities = []string{"foo", "bar", "baz"}
+					bundleLoader.LoadReturns(bndl, nil)
+				})
+
+				It("passes them on to the process", func() {
+					_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{}, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(spec.Capabilities).To(Equal([]string{"foo", "bar", "baz"}))
+				})
+			})
+
 			Describe("working directory", func() {
 				Context("when the working directory is specified", func() {
 					It("passes the correct cwd to the spec", func() {
@@ -552,6 +570,65 @@ var _ = Describe("RuncRunner", func() {
 				Path: "funC",
 				Args: []string{"delete", "some-container"},
 			}))
+		})
+	})
+
+	Describe("State", func() {
+		var (
+			stateCmdOutput string
+			stateCmdExit   error
+		)
+
+		BeforeEach(func() {
+			stateCmdExit = nil
+			stateCmdOutput = `{
+					"Pid": 4,
+					"Status": "quite-a-status"
+				}`
+		})
+
+		JustBeforeEach(func() {
+			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "funC",
+				Args: []string{"state", "some-container"},
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stdout.Write([]byte(stateCmdOutput))
+				return stateCmdExit
+			})
+		})
+
+		It("gets the bundle state", func() {
+			state, err := runner.State(logger, "some-container")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(state.Pid).To(Equal(4))
+			Expect(state.Status).To(BeEquivalentTo("quite-a-status"))
+		})
+
+		Context("when getting state fails", func() {
+			BeforeEach(func() {
+				stateCmdExit = errors.New("boom")
+			})
+
+			It("returns the error", func() {
+				_, err := runner.State(logger, "some-container")
+				Expect(err).To(
+					MatchError(ContainSubstring("boom")),
+				)
+			})
+		})
+
+		Context("when the state output is not JSON", func() {
+			BeforeEach(func() {
+				stateCmdOutput = "potato"
+			})
+
+			It("returns a reasonable error", func() {
+				_, err := runner.State(logger, "some-container")
+				Expect(err).To(
+					MatchError(ContainSubstring("runc state: invalid character 'p'")),
+				)
+			})
 		})
 	})
 
