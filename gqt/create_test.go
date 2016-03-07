@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/cloudfoundry-incubator/garden"
@@ -263,6 +264,57 @@ var _ = Describe("Creating a Container", func() {
 			Consistently(session).ShouldNot(gbytes.Say(fmt.Sprintf("172-250-%d-0", GinkgoParallelNode())))
 		})
 	})
+
+	Context("when creating a container and specifying CPU limits", func() {
+		readFileContent := func(path string) string {
+			content, err := ioutil.ReadFile(path)
+			Expect(err).NotTo(HaveOccurred())
+
+			return strings.TrimSpace(string(content))
+		}
+
+		createContainerWithCpuShares := func(share uint64) (garden.Container, error) {
+			limits := garden.Limits{
+				CPU: garden.CPULimits{LimitInShares: share},
+			}
+
+			container, err := client.Create(garden.ContainerSpec{
+				Limits: limits,
+			})
+
+			return container, err
+		}
+
+		checkCPUSharesInContainer := func(container garden.Container, clientPid int, expected int) {
+			cpuset := readFileContent(fmt.Sprintf("/proc/%d/cpuset", clientPid))
+			cpuset = strings.TrimLeft(cpuset, "/")
+
+			cpuSharesPath := fmt.Sprintf("%s/cgroups-%d/cpu/%s/%s/cpu.shares", os.TempDir(),
+				GinkgoParallelNode(), cpuset, container.Handle())
+
+			cpuShares := readFileContent(cpuSharesPath)
+			Expect(cpuShares).To(Equal(strconv.Itoa(expected)))
+		}
+
+		It("should return an error when the cpu shares is invalid", func() {
+			_, err := createContainerWithCpuShares(1)
+
+			Expect(err.Error()).To(ContainSubstring("The minimum allowed cpu-shares is 2"))
+		})
+
+		It("should use the default value when the cpu share is set to zero", func() {
+			container, err := createContainerWithCpuShares(0)
+			Expect(err).NotTo(HaveOccurred())
+			checkCPUSharesInContainer(container, client.Pid, 1024)
+		})
+
+		It("should use the custom cpu shares limit", func() {
+			container, err := createContainerWithCpuShares(2)
+			Expect(err).NotTo(HaveOccurred())
+			checkCPUSharesInContainer(container, client.Pid, 2)
+		})
+	})
+
 })
 
 func initProcessPID(handle string) int {

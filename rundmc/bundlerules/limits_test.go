@@ -23,6 +23,16 @@ var _ = Describe("LimitsRule", func() {
 		Expect(*(newBndl.Resources().Memory.Swap)).To(BeNumerically("==", 4096))
 	})
 
+	It("sets the correct CPU limit in bundle resources", func() {
+		newBndl := bundlerules.Limits{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+			Limits: garden.Limits{
+				CPU: garden.CPULimits{LimitInShares: 1},
+			},
+		})
+
+		Expect(*(newBndl.Resources().CPU.Shares)).To(BeNumerically("==", 1))
+	})
+
 	It("does not clobber other fields of the resources sections", func() {
 		foo := "foo"
 		bndl := goci.Bundle().WithResources(
