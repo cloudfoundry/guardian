@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry/gunk/command_runner"
@@ -17,13 +18,14 @@ type Starter struct {
 	*CgroupStarter
 }
 
-func NewStarter(logger lager.Logger, procCgroupReader io.ReadCloser, cgroupMountpoint string, runner command_runner.CommandRunner) *Starter {
+func NewStarter(logger lager.Logger, procCgroupReader io.ReadCloser, procSelfCgroupReader io.ReadCloser, cgroupMountpoint string, runner command_runner.CommandRunner) *Starter {
 	return &Starter{
 		&CgroupStarter{
-			CgroupPath:    cgroupMountpoint,
-			ProcCgroups:   procCgroupReader,
-			CommandRunner: runner,
-			Logger:        logger,
+			CgroupPath:      cgroupMountpoint,
+			ProcCgroups:     procCgroupReader,
+			ProcSelfCgroups: procSelfCgroupReader,
+			CommandRunner:   runner,
+			Logger:          logger,
 		},
 	}
 }
@@ -32,8 +34,10 @@ type CgroupStarter struct {
 	CgroupPath    string
 	CommandRunner command_runner.CommandRunner
 
-	ProcCgroups io.ReadCloser
-	Logger      lager.Logger
+	ProcCgroups     io.ReadCloser
+	ProcSelfCgroups io.ReadCloser
+
+	Logger lager.Logger
 }
 
 func (s *CgroupStarter) Start() error {
@@ -42,12 +46,18 @@ func (s *CgroupStarter) Start() error {
 
 func (s *CgroupStarter) mountCgroupsIfNeeded(log lager.Logger) error {
 	defer s.ProcCgroups.Close()
+	defer s.ProcSelfCgroups.Close()
 	if err := os.MkdirAll(s.CgroupPath, 0755); err != nil {
 		return err
 	}
 
 	if !s.isMountPoint(s.CgroupPath) {
 		s.mountTmpfsOnCgroupPath(s.CgroupPath)
+	}
+
+	subsystemGroupings, err := s.subsystemGroupings()
+	if err != nil {
+		return err
 	}
 
 	scanner := bufio.NewScanner(s.ProcCgroups)
@@ -61,7 +71,9 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(log lager.Logger) error {
 			continue
 		}
 
-		if err := s.mountCgroup(log, path.Join(s.CgroupPath, cgroupInProcCgroups), cgroupInProcCgroups); err != nil {
+		cgroupsToMount := subsystemGroupings[cgroupInProcCgroups]
+
+		if err := s.mountCgroup(log, path.Join(s.CgroupPath, cgroupInProcCgroups), cgroupsToMount); err != nil {
 			return err
 		}
 	}
@@ -73,10 +85,30 @@ func (s *CgroupStarter) mountTmpfsOnCgroupPath(path string) {
 	s.CommandRunner.Run(exec.Command("mount", "-t", "tmpfs", "-o", "uid=0,gid=0,mode=0755", "cgroup", path))
 }
 
-func (s *CgroupStarter) mountCgroup(log lager.Logger, cgroupPath, cgroupType string) error {
+func (s *CgroupStarter) subsystemGroupings() (map[string]string, error) {
+	groupings := map[string]string{}
+
+	scanner := bufio.NewScanner(s.ProcSelfCgroups)
+
+	for scanner.Scan() {
+		segs := strings.Split(scanner.Text(), ":")
+		if len(segs) != 3 {
+			continue
+		}
+
+		subsystems := strings.Split(segs[1], ",")
+		for _, subsystem := range subsystems {
+			groupings[subsystem] = segs[1]
+		}
+	}
+
+	return groupings, scanner.Err()
+}
+
+func (s *CgroupStarter) mountCgroup(log lager.Logger, cgroupPath, subsystems string) error {
 	log = log.Session("setup-cgroup", lager.Data{
-		"path": cgroupPath,
-		"type": cgroupType,
+		"path":       cgroupPath,
+		"subsystems": subsystems,
 	})
 
 	log.Info("started")
@@ -88,7 +120,7 @@ func (s *CgroupStarter) mountCgroup(log lager.Logger, cgroupPath, cgroupType str
 			return err
 		}
 
-		cmd := exec.Command("mount", "-n", "-t", "cgroup", "-o", cgroupType, "cgroup", cgroupPath)
+		cmd := exec.Command("mount", "-n", "-t", "cgroup", "-o", subsystems, "cgroup", cgroupPath)
 		cmd.Stderr = logging.Writer(log.Session("mount-cgroup-cmd"))
 		if err := s.CommandRunner.Run(cmd); err != nil {
 			log.Error("mount-cgroup-failed", err)
