@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/cloudfoundry-incubator/garden/client"
 	"github.com/cloudfoundry-incubator/garden/client/connection"
+	"github.com/eapache/go-resiliency/retrier"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -52,7 +53,10 @@ func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin string, argv ...stri
 	)
 
 	if GraphRoot == "" {
-		GraphRoot = filepath.Join(tmpDir, "graph")
+		// This must be set outside of the Ginkgo node directory (tmpDir) because
+		// otherwise the Concourse worker may run into one of the AUFS kernel
+		// module bugs that cause the VM to become unresponsive.
+		GraphRoot = "/tmp/aufs_mount"
 	}
 
 	graphPath := filepath.Join(GraphRoot, fmt.Sprintf("node-%d", ginkgo.GinkgoParallelNode()))
@@ -170,56 +174,44 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, 
 }
 
 func (r *RunningGarden) Cleanup() {
+	// unmount aufs since the docker graph driver leaves this around,
+	// otherwise the following commands might fail
+	retry := retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil)
+
+	err := retry.Run(func() error {
+		if err := os.RemoveAll(path.Join(r.GraphPath, "aufs")); err == nil {
+			return nil // if we can remove it, it's already unmounted
+		}
+
+		if err := syscall.Unmount(path.Join(r.GraphPath, "aufs"), 0); err != nil {
+			r.logger.Error("failed-unmount-attempt", err)
+			return err
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		r.logger.Error("failed-to-unmount", err)
+	}
+
 	MustUnmountTmpfs(r.GraphPath)
 
-	if err := os.RemoveAll(r.GraphPath); err != nil {
-		r.logger.Error("remove graph", err)
-	}
-
-	if os.Getenv("BTRFS_SUPPORTED") != "" {
-		r.cleanupSubvolumes()
-	}
+	// In the kernel version 3.19.0-51-generic the code bellow results in
+	// hanging the running VM. We are not deleting the node-X directories. They
+	// are empty and the next test will re-use them. We will stick with that
+	// workaround until we can test on a newer kernel that will hopefully not
+	// have this bug.
+	//
+	// if err := os.RemoveAll(r.GraphPath); err != nil {
+	// 	r.logger.Error("remove-graph", err)
+	// }
 
 	r.logger.Info("cleanup-tempdirs")
 	if err := os.RemoveAll(r.tmpdir); err != nil {
 		r.logger.Error("cleanup-tempdirs-failed", err, lager.Data{"tmpdir": r.tmpdir})
 	} else {
 		r.logger.Info("tempdirs-removed")
-	}
-}
-
-func (r *RunningGarden) cleanupSubvolumes() {
-	r.logger.Info("cleanup-subvolumes")
-
-	// need to remove subvolumes before cleaning graphpath
-	subvolumesOutput, err := exec.Command("btrfs", "subvolume", "list", "-o", r.GraphRoot).CombinedOutput()
-	r.logger.Debug(fmt.Sprintf("listing-subvolumes: %s", string(subvolumesOutput)))
-	if err != nil {
-		r.logger.Fatal("listing-subvolumes-error", err)
-	}
-
-	for _, line := range strings.Split(string(subvolumesOutput), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) < 1 {
-			continue
-		}
-
-		subvolumePath := fields[len(fields)-1] // this path is relative to the outer Garden-Linux BTRFS mount
-		idx := strings.Index(subvolumePath, r.GraphRoot)
-		if idx == -1 {
-			continue
-		}
-		subvolumeAbsolutePath := subvolumePath[idx:]
-
-		if strings.Contains(subvolumeAbsolutePath, r.GraphPath) {
-			if b, err := exec.Command("btrfs", "subvolume", "delete", subvolumeAbsolutePath).CombinedOutput(); err != nil {
-				r.logger.Fatal(fmt.Sprintf("deleting-subvolume: %s", string(b)), err)
-			}
-		}
-	}
-
-	if err := os.RemoveAll(r.GraphPath); err != nil {
-		r.logger.Error("remove-graph-again", err)
 	}
 }
 

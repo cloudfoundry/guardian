@@ -47,6 +47,7 @@ type Networker interface {
 type VolumeCreator interface {
 	Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error)
 	Destroy(log lager.Logger, handle string) error
+	GC(log lager.Logger) error
 }
 
 type UidGenerator interface {
@@ -160,6 +161,10 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 	if err != nil {
 		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err
+	}
+
+	if err := g.VolumeCreator.GC(log); err != nil {
+		log.Error("graph-cleanup-failed", err)
 	}
 
 	rootFSPath, env, err := g.VolumeCreator.Create(log, spec.Handle, rootfs_provider.Spec{

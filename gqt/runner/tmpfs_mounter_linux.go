@@ -9,16 +9,15 @@ import (
 func MustMountTmpfs(destination string) {
 	if _, err := os.Stat(destination); os.IsNotExist(err) {
 		must(os.MkdirAll(destination, 0755))
+	}
+
+	if err := exec.Command("mountpoint", destination).Run(); err != nil {
 		must(syscall.Mount("tmpfs", destination, "tmpfs", 0, ""))
 	}
 }
 
 func MustUnmountTmpfs(destination string) {
-	if out, err := exec.Command("umount", destination).CombinedOutput(); err != nil {
-		panic(string(out))
-	}
-
-	must(os.Remove(destination))
+	must(syscall.Unmount(destination, 0))
 }
 
 func must(err error) {

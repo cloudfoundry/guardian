@@ -18,6 +18,7 @@ import (
 	"github.com/cloudfoundry-incubator/garden-shed/distclient"
 	quotaed_aufs "github.com/cloudfoundry-incubator/garden-shed/docker_drivers/aufs"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake"
+	"github.com/cloudfoundry-incubator/garden-shed/layercake/cleaner"
 	"github.com/cloudfoundry-incubator/garden-shed/repository_fetcher"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/garden/server"
@@ -147,6 +148,12 @@ var rootFSPath = flag.String(
 	"directory of the rootfs for the containers",
 )
 
+var graphCleanupThreshold = flag.Int(
+	"graphCleanupThresholdMB",
+	-1,
+	"sets the thredhold for trigerring graph cleanup",
+)
+
 var graceTime = flag.Duration(
 	"containerGraceTime",
 	0,
@@ -268,6 +275,13 @@ func main() {
 		"Docker registry to allow connecting to even if not secure. (Can be specified multiple times to allow insecure connection to multiple repositories)",
 	)
 
+	var persistentImages vars.StringList
+	flag.Var(
+		&persistentImages,
+		"persistentImage",
+		"Image which should never be garbage collected. (Can be specified multiple times)",
+	)
+
 	var dnsServers []net.IP
 	flag.Var(
 		vars.IPList{List: &dnsServers},
@@ -337,7 +351,7 @@ func main() {
 		Starter:         wireStarter(logger, ipt, *allowHostAccess, interfacePrefix, denyNetworksList),
 		SysInfoProvider: sysinfo.NewProvider(*depotPath),
 		Networker:       networker,
-		VolumeCreator:   wireVolumeCreator(logger, *graphRoot, insecureRegistries),
+		VolumeCreator:   wireVolumeCreator(logger, *graphRoot, insecureRegistries, persistentImages),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath, propManager),
 		PropertyManager: propManager,
 
@@ -418,7 +432,7 @@ func wireNetworker(
 	)
 }
 
-func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries vars.StringList) *rootfs_provider.CakeOrdinator {
+func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages vars.StringList) *rootfs_provider.CakeOrdinator {
 	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger}
 
@@ -470,9 +484,6 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries
 		}
 	}
 
-	retainer := layercake.NewRetainer()
-	ovenCleaner := layercake.NewOvenCleaner(retainer, false)
-
 	repoFetcher := &repository_fetcher.CompositeFetcher{
 		LocalFetcher: &repository_fetcher.Local{
 			Cake:              cake,
@@ -495,6 +506,26 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries
 			idMappings, // gid
 		),
 	}
+
+	retainer := cleaner.NewRetainer()
+	ovenCleaner := cleaner.NewOvenCleaner(retainer,
+		cleaner.NewThreshold(int64(*graphCleanupThreshold)*1024*1024),
+	)
+
+	imageRetainer := &repository_fetcher.ImageRetainer{
+		GraphRetainer:             retainer,
+		DirectoryRootfsIDProvider: repository_fetcher.LayerIDProvider{},
+		DockerImageIDFetcher:      repoFetcher,
+
+		NamespaceCacheKey: rootFSNamespacer.CacheKey(),
+		Logger:            logger,
+	}
+
+	// spawn off in a go function to avoid blocking startup
+	// worst case is if an image is immediately created and deleted faster than
+	// we can retain it we'll garbage collect it when we shouldn't. This
+	// is an OK trade-off for not having garden startup block on dockerhub.
+	go imageRetainer.Retain(persistentImages.List)
 
 	layerCreator := rootfs_provider.NewLayerCreator(cake, rootfs_provider.SimpleVolumeCreator{}, rootFSNamespacer)
 	cakeOrdinator := rootfs_provider.NewCakeOrdinator(cake, repoFetcher, layerCreator, ovenCleaner)

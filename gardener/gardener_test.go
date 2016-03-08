@@ -101,6 +101,21 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 
+			It("run the graph cleanup", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(volumeCreator.GCCallCount()).To(Equal(1))
+			})
+
+			Context("when the graph cleanup fails", func() {
+				It("does NOT return the error", func() {
+					volumeCreator.GCReturns(errors.New("graph-cleanup-fail"))
+					_, err := gdnr.Create(garden.ContainerSpec{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+
 			Context("when a disk limit is provided", func() {
 				var spec garden.ContainerSpec
 
@@ -117,24 +132,6 @@ var _ = Describe("Gardener", func() {
 					_, _, rpSpec := volumeCreator.CreateArgsForCall(0)
 					Expect(rpSpec.QuotaSize).To(BeEquivalentTo(spec.Limits.Disk.ByteHard))
 					Expect(rpSpec.QuotaScope).To(Equal(garden.DiskLimitScopeTotal))
-				})
-			})
-
-			Context("when a memory limit is provided", func() {
-				It("should pass the memory limit to the containerizer", func() {
-					memLimit := garden.Limits{
-						Memory: garden.MemoryLimits{LimitInBytes: 4096},
-					}
-
-					_, err := gdnr.Create(garden.ContainerSpec{
-						Limits: memLimit,
-					})
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(containerizer.CreateCallCount()).To(Equal(1))
-
-					_, spec := containerizer.CreateArgsForCall(0)
-					Expect(spec.Limits).To(Equal(memLimit))
 				})
 			})
 
@@ -176,6 +173,24 @@ var _ = Describe("Gardener", func() {
 					Expect(networker.DestroyCallCount()).To(Equal(1))
 					_, handle := networker.DestroyArgsForCall(0)
 					Expect(handle).To(Equal("banana-container"))
+				})
+			})
+
+			Context("when a memory limit is provided", func() {
+				It("should pass the memory limit to the containerizer", func() {
+					memLimit := garden.Limits{
+						Memory: garden.MemoryLimits{LimitInBytes: 4096},
+					}
+
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Limits: memLimit,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(containerizer.CreateCallCount()).To(Equal(1))
+
+					_, spec := containerizer.CreateArgsForCall(0)
+					Expect(spec.Limits).To(Equal(memLimit))
 				})
 			})
 
