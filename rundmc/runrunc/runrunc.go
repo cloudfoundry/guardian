@@ -108,7 +108,7 @@ func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 		return err
 	}
 
-	forwardRuncLogsToLager(log, buff.Bytes())
+	defer forwardRuncLogsToLager(log, buff.Bytes())
 
 	status, err := process.Wait()
 	if err != nil {
@@ -166,8 +166,9 @@ func (r *RunRunc) Watch(log lager.Logger, handle string, notifier Notifier) erro
 		return fmt.Errorf("start: %s", err)
 	}
 
-	decoder := json.NewDecoder(stdoutR)
+	go r.commandRunner.Wait(cmd) // avoid zombie
 
+	decoder := json.NewDecoder(stdoutR)
 	for {
 		event := struct {
 			Type string `json:"type"`
@@ -176,6 +177,10 @@ func (r *RunRunc) Watch(log lager.Logger, handle string, notifier Notifier) erro
 		log.Debug("wait-next-event")
 
 		err := decoder.Decode(&event)
+		if err == io.EOF {
+			return nil
+		}
+
 		if err != nil {
 			return fmt.Errorf("decode event: %s", err)
 		}

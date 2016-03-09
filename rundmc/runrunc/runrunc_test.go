@@ -682,11 +682,9 @@ var _ = Describe("RuncRunner", func() {
 				})
 			})
 
-			AfterEach(func() {
-				close(eventsCh)
-			})
-
 			It("reports an event if one happens", func() {
+				defer close(eventsCh)
+
 				notifier := new(fakes.FakeNotifier)
 				go runner.Watch(logger, "some-container", notifier)
 
@@ -706,11 +704,21 @@ var _ = Describe("RuncRunner", func() {
 			})
 
 			It("does not report non-OOM events", func() {
+				defer close(eventsCh)
+
 				notifier := new(fakes.FakeNotifier)
 				go runner.Watch(logger, "some-container", notifier)
 
 				eventsCh <- false
 				Consistently(notifier.OnEventCallCount).Should(Equal(0))
+			})
+
+			It("waits on the process to avoid zombies", func() {
+				close(eventsCh)
+
+				Expect(runner.Watch(logger, "some-container", new(fakes.FakeNotifier))).To(Succeed())
+				Expect(commandRunner.WaitedCommands()).To(HaveLen(1))
+				Expect(commandRunner.WaitedCommands()[0].Path).To(Equal("funC-events"))
 			})
 		})
 	})
