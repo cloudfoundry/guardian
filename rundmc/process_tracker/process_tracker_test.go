@@ -130,7 +130,7 @@ var _ = Describe("Process tracker", func() {
 					exitted <- cmd.Wait()
 				}(otherCmd)
 
-				Eventually(exitted, "3s").Should(Receive())
+				Eventually(exitted, "5s").Should(Receive())
 			})
 
 			It("kills the process with a terminate signal", func() {
@@ -141,8 +141,8 @@ var _ = Describe("Process tracker", func() {
 					exitted <- cmd.Wait()
 				}(otherCmd)
 
-				Eventually(exitted, "3s").Should(Receive())
-				Eventually(stdout, "3s").Should(gbytes.Say("terminated"))
+				Eventually(exitted, "5s").Should(Receive())
+				Eventually(stdout, "5s").Should(gbytes.Say("terminated"))
 			})
 
 			Context("when getting the pid fails", func() {
