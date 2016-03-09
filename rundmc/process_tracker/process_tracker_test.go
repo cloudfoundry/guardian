@@ -85,7 +85,7 @@ var _ = Describe("Process tracker", func() {
 			)
 
 			BeforeEach(func() {
-				cmd = exec.Command("sleep", "1000")
+				cmd = exec.Command("echo", "killme")
 
 				stdout = gbytes.NewBuffer()
 				otherCmd = exec.Command("sh", "-c", `
