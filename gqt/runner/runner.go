@@ -23,6 +23,8 @@ import (
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
+const MNT_DETACH = 0x2
+
 var RootFSPath = os.Getenv("GARDEN_TEST_ROOTFS")
 var GraphRoot = os.Getenv("GARDEN_TEST_GRAPHPATH")
 var TarPath = os.Getenv("GARDEN_TAR_PATH")
@@ -183,7 +185,7 @@ func (r *RunningGarden) Cleanup() {
 			return nil // if we can remove it, it's already unmounted
 		}
 
-		if err := syscall.Unmount(path.Join(r.GraphPath, "aufs"), 0); err != nil {
+		if err := syscall.Unmount(path.Join(r.GraphPath, "aufs"), MNT_DETACH); err != nil {
 			r.logger.Error("failed-unmount-attempt", err)
 			return err
 		}
