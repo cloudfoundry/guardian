@@ -247,6 +247,48 @@ var _ = Describe("RuncRunner", func() {
 				Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
 			})
 
+			It("sets the rlimits correctly", func() {
+				ptr := func(n uint64) *uint64 { return &n }
+				Expect(runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+					Limits: garden.ResourceLimits{
+						As:         ptr(12),
+						Core:       ptr(24),
+						Cpu:        ptr(36),
+						Data:       ptr(99),
+						Fsize:      ptr(101),
+						Locks:      ptr(111),
+						Memlock:    ptr(987),
+						Msgqueue:   ptr(777),
+						Nice:       ptr(111),
+						Nofile:     ptr(222),
+						Nproc:      ptr(1234),
+						Rss:        ptr(888),
+						Rtprio:     ptr(254),
+						Sigpending: ptr(101),
+						Stack:      ptr(44),
+					},
+				}, garden.ProcessIO{})).To(Succeed())
+				Expect(tracker.RunCallCount()).To(Equal(1))
+
+				Expect(spec.Rlimits).To(ConsistOf(
+					specs.Rlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
+					specs.Rlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
+					specs.Rlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
+					specs.Rlimit{Type: "RLIMIT_DATA", Hard: 99, Soft: 99},
+					specs.Rlimit{Type: "RLIMIT_FSIZE", Hard: 101, Soft: 101},
+					specs.Rlimit{Type: "RLIMIT_LOCKS", Hard: 111, Soft: 111},
+					specs.Rlimit{Type: "RLIMIT_MEMLOCK", Hard: 987, Soft: 987},
+					specs.Rlimit{Type: "RLIMIT_MSGQUEUE", Hard: 777, Soft: 777},
+					specs.Rlimit{Type: "RLIMIT_NICE", Hard: 111, Soft: 111},
+					specs.Rlimit{Type: "RLIMIT_NOFILE", Hard: 222, Soft: 222},
+					specs.Rlimit{Type: "RLIMIT_NPROC", Hard: 1234, Soft: 1234},
+					specs.Rlimit{Type: "RLIMIT_RSS", Hard: 888, Soft: 888},
+					specs.Rlimit{Type: "RLIMIT_RTPRIO", Hard: 254, Soft: 254},
+					specs.Rlimit{Type: "RLIMIT_SIGPENDING", Hard: 101, Soft: 101},
+					specs.Rlimit{Type: "RLIMIT_STACK", Hard: 44, Soft: 44},
+				))
+			})
+
 			Describe("passing the correct uid and gid", func() {
 				Context("when the bundle can be loaded", func() {
 					BeforeEach(func() {

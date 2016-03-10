@@ -73,6 +73,7 @@ func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath, pidFilePath str
 		},
 		Cwd:          cwd,
 		Capabilities: bndl.Capabilities(),
+		Rlimits:      toRlimits(spec.Limits),
 	})
 
 	if err != nil {
