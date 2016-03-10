@@ -717,7 +717,7 @@ var _ = Describe("RuncRunner", func() {
 				close(eventsCh)
 
 				Expect(runner.Watch(logger, "some-container", new(fakes.FakeNotifier))).To(Succeed())
-				Expect(commandRunner.WaitedCommands()).To(HaveLen(1))
+				Eventually(commandRunner.WaitedCommands).Should(HaveLen(1))
 				Expect(commandRunner.WaitedCommands()[0].Path).To(Equal("funC-events"))
 			})
 		})

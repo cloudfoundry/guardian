@@ -116,11 +116,12 @@ var _ = Describe("Creating a Container", func() {
 			Expect(client.Destroy(container.Handle())).To(Succeed())
 			container = nil // avoid double-destroying
 
-			sess, err := gexec.Start(exec.Command("ps"), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(sess).Should(gexec.Exit(0))
-			Eventually(sess).ShouldNot(gbytes.Say("defunct"))
+			Eventually(func() *gexec.Session {
+				sess, err := gexec.Start(exec.Command("ps"), GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+				return sess
+			}).ShouldNot(gbytes.Say("defunct"))
 		})
 
 		DescribeTable("placing the container in to all namespaces", func(ns string) {
