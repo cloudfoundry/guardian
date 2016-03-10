@@ -60,7 +60,7 @@ var _ = Describe("Configurer", func() {
 
 				Expect(configurer.Apply(logger, cfg, netnsFD.Name())).To(Succeed())
 				command := fmt.Sprintf("lsof %s | wc -l", netnsFD.Name())
-				output, err := exec.Command("sh", "-c", command).CombinedOutput()
+				output, err := exec.Command("sh", "-c", command).Output()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(strings.TrimSpace(string(output))).To(Equal("2"))
 			})

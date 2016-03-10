@@ -35,7 +35,7 @@ var _ = Describe("NetnsExecerLinux", func() {
 
 			Expect(netns.Exec(fd, func() error {
 
-				link := &netlink.Bridge{netlink.LinkAttrs{Name: "banana-iface"}}
+				link := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: "banana-iface"}}
 				Expect(netlink.LinkAdd(link)).To(Succeed())
 
 				_, err := net.InterfaceByName("banana-iface")
