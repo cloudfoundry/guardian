@@ -577,11 +577,18 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(7), Allow: true},
 	}
 
+	baseProcess := specs.Process{
+		Capabilities: DefaultCapabilities,
+		Args:         []string{"/tmp/garden-init"},
+		Cwd:          "/",
+	}
+
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
 		WithResources(&specs.Resources{Devices: append([]specs.DeviceCgroup{denyAll}, allowedDevices...)}).
 		WithMounts(mounts...).
-		WithRootFS(defaultRootFSPath)
+		WithRootFS(defaultRootFSPath).
+		WithProcess(baseProcess)
 
 	unprivilegedBundle := baseBundle.
 		WithNamespace(goci.UserNamespace).
@@ -602,13 +609,8 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 			bundlerules.Limits{},
 			bundlerules.Hooks{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
 			bundlerules.BindMounts{},
-			bundlerules.InitProcess{
-				Process: specs.Process{
-					Capabilities: DefaultCapabilities,
-					Args:         []string{"/tmp/garden-init"},
-					Cwd:          "/",
-				},
-			},
+			bundlerules.Env{},
+			bundlerules.PrivilegedCaps{},
 		},
 	}
 
