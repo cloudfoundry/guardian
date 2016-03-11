@@ -48,6 +48,7 @@ type Networker interface {
 type VolumeCreator interface {
 	Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error)
 	Destroy(log lager.Logger, handle string) error
+	Metrics(log lager.Logger, handle string) (garden.ContainerDiskStat, error)
 	GC(log lager.Logger) error
 }
 
@@ -221,6 +222,7 @@ func (g *Gardener) lookup(handle string) garden.Container {
 		logger:          g.Logger,
 		handle:          handle,
 		containerizer:   g.Containerizer,
+		volumeCreator:   g.VolumeCreator,
 		networker:       g.Networker,
 		propertyManager: g.PropertyManager,
 	}

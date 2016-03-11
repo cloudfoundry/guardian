@@ -19,6 +19,7 @@ import (
 	quotaed_aufs "github.com/cloudfoundry-incubator/garden-shed/docker_drivers/aufs"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake/cleaner"
+	"github.com/cloudfoundry-incubator/garden-shed/quota_manager"
 	"github.com/cloudfoundry-incubator/garden-shed/repository_fetcher"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/garden/server"
@@ -528,9 +529,19 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries
 	go imageRetainer.Retain(persistentImages.List)
 
 	layerCreator := rootfs_provider.NewLayerCreator(cake, rootfs_provider.SimpleVolumeCreator{}, rootFSNamespacer)
-	cakeOrdinator := rootfs_provider.NewCakeOrdinator(cake, repoFetcher, layerCreator, ovenCleaner)
 
-	return cakeOrdinator
+	quotaManager := &quota_manager.AUFSQuotaManager{
+		BaseSizer: quota_manager.NewAUFSBaseSizer(cake),
+		DiffSizer: &quota_manager.AUFSDiffSizer{
+			AUFSDiffPathFinder: quotaedGraphDriver,
+		},
+	}
+
+	return rootfs_provider.NewCakeOrdinator(cake,
+		repoFetcher,
+		layerCreator,
+		rootfs_provider.NewMetricsAdapter(quotaManager.GetUsage, quotaedGraphDriver.GetMntPath),
+		ovenCleaner)
 }
 
 func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {

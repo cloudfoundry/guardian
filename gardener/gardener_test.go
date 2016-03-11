@@ -948,6 +948,7 @@ var _ = Describe("Gardener", func() {
 
 			cpuStat    garden.ContainerCPUStat
 			memoryStat garden.ContainerMemoryStat
+			diskStat   garden.ContainerDiskStat
 		)
 
 		BeforeEach(func() {
@@ -966,13 +967,22 @@ var _ = Describe("Gardener", func() {
 				Rss:   12,
 			}
 
+			diskStat = garden.ContainerDiskStat{
+				TotalBytesUsed:      13,
+				TotalInodesUsed:     14,
+				ExclusiveBytesUsed:  15,
+				ExclusiveInodesUsed: 16,
+			}
+
 			containerizer.MetricsReturns(gardener.ActualContainerMetrics{
 				CPU:    cpuStat,
 				Memory: memoryStat,
 			}, nil)
+
+			volumeCreator.MetricsReturns(diskStat, nil)
 		})
 
-		It("should return the metrics", func() {
+		It("should return the cpu and memory metrics the containerizer", func() {
 			metrics, err := container.Metrics()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -980,9 +990,27 @@ var _ = Describe("Gardener", func() {
 			Expect(metrics.MemoryStat).To(Equal(memoryStat))
 		})
 
-		Context("when metrics cannot be acquired", func() {
+		It("should return the disk metrics from the volumizer", func() {
+			metrics, err := container.Metrics()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(metrics.DiskStat).To(Equal(diskStat))
+		})
+
+		Context("when cpu/mem metrics cannot be acquired", func() {
 			BeforeEach(func() {
 				containerizer.MetricsReturns(gardener.ActualContainerMetrics{}, errors.New("banana"))
+			})
+
+			It("should propagete the error", func() {
+				_, err := container.Metrics()
+				Expect(err).To(MatchError("banana"))
+			})
+		})
+
+		Context("when disk metrics cannot be acquired", func() {
+			BeforeEach(func() {
+				volumeCreator.MetricsReturns(garden.ContainerDiskStat{}, errors.New("banana"))
 			})
 
 			It("should propagete the error", func() {
@@ -1008,6 +1036,7 @@ var _ = Describe("Gardener", func() {
 
 			Expect(metrics).To(HaveKeyWithValue("some-handle", garden.ContainerMetricsEntry{
 				Metrics: garden.Metrics{
+					DiskStat:   diskStat,
 					MemoryStat: memoryStat,
 					CPUStat:    cpuStat,
 				},

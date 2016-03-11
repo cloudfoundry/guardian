@@ -4,6 +4,7 @@ package fakes
 import (
 	"sync"
 
+	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/pivotal-golang/lager"
@@ -30,6 +31,16 @@ type FakeVolumeCreator struct {
 	}
 	destroyReturns struct {
 		result1 error
+	}
+	MetricsStub        func(log lager.Logger, handle string) (garden.ContainerDiskStat, error)
+	metricsMutex       sync.RWMutex
+	metricsArgsForCall []struct {
+		log    lager.Logger
+		handle string
+	}
+	metricsReturns struct {
+		result1 garden.ContainerDiskStat
+		result2 error
 	}
 	GCStub        func(log lager.Logger) error
 	gCMutex       sync.RWMutex
@@ -108,6 +119,40 @@ func (fake *FakeVolumeCreator) DestroyReturns(result1 error) {
 	fake.destroyReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeVolumeCreator) Metrics(log lager.Logger, handle string) (garden.ContainerDiskStat, error) {
+	fake.metricsMutex.Lock()
+	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
+		log    lager.Logger
+		handle string
+	}{log, handle})
+	fake.metricsMutex.Unlock()
+	if fake.MetricsStub != nil {
+		return fake.MetricsStub(log, handle)
+	} else {
+		return fake.metricsReturns.result1, fake.metricsReturns.result2
+	}
+}
+
+func (fake *FakeVolumeCreator) MetricsCallCount() int {
+	fake.metricsMutex.RLock()
+	defer fake.metricsMutex.RUnlock()
+	return len(fake.metricsArgsForCall)
+}
+
+func (fake *FakeVolumeCreator) MetricsArgsForCall(i int) (lager.Logger, string) {
+	fake.metricsMutex.RLock()
+	defer fake.metricsMutex.RUnlock()
+	return fake.metricsArgsForCall[i].log, fake.metricsArgsForCall[i].handle
+}
+
+func (fake *FakeVolumeCreator) MetricsReturns(result1 garden.ContainerDiskStat, result2 error) {
+	fake.MetricsStub = nil
+	fake.metricsReturns = struct {
+		result1 garden.ContainerDiskStat
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeVolumeCreator) GC(log lager.Logger) error {

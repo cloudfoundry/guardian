@@ -14,6 +14,7 @@ type container struct {
 
 	handle          string
 	containerizer   Containerizer
+	volumeCreator   VolumeCreator
 	networker       Networker
 	propertyManager PropertyManager
 }
@@ -138,9 +139,15 @@ func (c *container) Metrics() (garden.Metrics, error) {
 		return garden.Metrics{}, err
 	}
 
+	diskMetrics, err := c.volumeCreator.Metrics(c.logger, c.handle)
+	if err != nil {
+		return garden.Metrics{}, err
+	}
+
 	return garden.Metrics{
 		CPUStat:    actualContainerMetrics.CPU,
 		MemoryStat: actualContainerMetrics.Memory,
+		DiskStat:   diskMetrics,
 	}, nil
 }
 
