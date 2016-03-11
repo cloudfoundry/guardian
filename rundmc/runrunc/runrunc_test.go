@@ -94,6 +94,10 @@ var _ = Describe("RuncRunner", func() {
 			return exec.Command("funC", "state", id)
 		}
 
+		runcBinary.StatsCommandStub = func(id string) *exec.Cmd {
+			return exec.Command("funC-stats", "--handle", id)
+		}
+
 		runcBinary.DeleteCommandStub = func(id string) *exec.Cmd {
 			return exec.Command("funC", "delete", id)
 		}
@@ -675,10 +679,6 @@ var _ = Describe("RuncRunner", func() {
 	})
 
 	Describe("Watching for Events", func() {
-		var (
-			eventsCh chan bool
-		)
-
 		BeforeEach(func() {
 			runcBinary.EventsCommandStub = func(handle string) *exec.Cmd {
 				return exec.Command("funC-events", "events", handle)
@@ -696,51 +696,48 @@ var _ = Describe("RuncRunner", func() {
 		})
 
 		Context("when runc events succeeds", func() {
+			var (
+				eventsCh chan string
+
+				eventsNotifier *fakes.FakeEventsNotifier
+			)
+
 			BeforeEach(func() {
-				eventsCh = make(chan bool, 2)
-				stdoutCh := make(chan io.WriteCloser)
-
-				go func() {
-					stdoutW := <-stdoutCh
-					for eventIsOOM := range eventsCh {
-						t := "something-else"
-						if eventIsOOM {
-							t = "oom"
-						}
-
-						stdoutW.Write([]byte(fmt.Sprintf(`{
-						"type": "%s"
-					}`, t)))
-					}
-
-					stdoutW.Close()
-				}()
+				eventsCh = make(chan string, 2)
 
 				commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "funC-events",
 				}, func(cmd *exec.Cmd) error {
-					stdoutCh <- cmd.Stdout.(io.WriteCloser)
+					go func(stdoutW io.WriteCloser) {
+						defer stdoutW.Close()
+
+						for eventJSON := range eventsCh {
+							stdoutW.Write([]byte(eventJSON))
+						}
+					}(cmd.Stdout.(io.WriteCloser))
+
 					return nil
 				})
+
+				eventsNotifier = new(fakes.FakeEventsNotifier)
 			})
 
 			It("reports an event if one happens", func() {
 				defer close(eventsCh)
 
-				notifier := new(fakes.FakeNotifier)
-				go runner.WatchEvents(logger, "some-container", notifier)
+				go runner.WatchEvents(logger, "some-container", eventsNotifier)
 
-				Consistently(notifier.OnEventCallCount).Should(Equal(0))
+				Consistently(eventsNotifier.OnEventCallCount).Should(Equal(0))
 
-				eventsCh <- true
-				Eventually(notifier.OnEventCallCount).Should(Equal(1))
-				handle, event := notifier.OnEventArgsForCall(0)
+				eventsCh <- `{"type":"oom"}`
+				Eventually(eventsNotifier.OnEventCallCount).Should(Equal(1))
+				handle, event := eventsNotifier.OnEventArgsForCall(0)
 				Expect(handle).To(Equal("some-container"))
 				Expect(event).To(Equal("Out of memory"))
 
-				eventsCh <- true
-				Eventually(notifier.OnEventCallCount).Should(Equal(2))
-				handle, event = notifier.OnEventArgsForCall(1)
+				eventsCh <- `{"type":"oom"}`
+				Eventually(eventsNotifier.OnEventCallCount).Should(Equal(2))
+				handle, event = eventsNotifier.OnEventArgsForCall(1)
 				Expect(handle).To(Equal("some-container"))
 				Expect(event).To(Equal("Out of memory"))
 			})
@@ -748,19 +745,161 @@ var _ = Describe("RuncRunner", func() {
 			It("does not report non-OOM events", func() {
 				defer close(eventsCh)
 
-				notifier := new(fakes.FakeNotifier)
-				go runner.WatchEvents(logger, "some-container", notifier)
+				go runner.WatchEvents(logger, "some-container", eventsNotifier)
 
-				eventsCh <- false
-				Consistently(notifier.OnEventCallCount).Should(Equal(0))
+				eventsCh <- `{"type":"stats"}`
+				Consistently(eventsNotifier.OnEventCallCount).Should(Equal(0))
 			})
 
 			It("waits on the process to avoid zombies", func() {
 				close(eventsCh)
 
-				Expect(runner.Watch(logger, "some-container", new(fakes.FakeNotifier))).To(Succeed())
+				Expect(runner.WatchEvents(logger, "some-container", eventsNotifier)).To(Succeed())
 				Eventually(commandRunner.WaitedCommands).Should(HaveLen(1))
 				Expect(commandRunner.WaitedCommands()[0].Path).To(Equal("funC-events"))
+			})
+		})
+	})
+
+	Describe("Stats", func() {
+		Context("when runC reports valid JSON", func() {
+			BeforeEach(func() {
+				commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+					Path: "funC-stats",
+				}, func(cmd *exec.Cmd) error {
+					cmd.Stdout.Write([]byte(`{
+					"type": "stats",
+					"data": {
+						"CgroupStats": {
+							"cpu_stats": {
+								"cpu_usage": {
+									"total_usage": 1,
+									"usage_in_kernelmode": 2,
+									"usage_in_usermode": 3
+								}
+							},
+							"memory_stats": {
+								"stats": {
+									"active_anon": 1,
+									"active_file": 2,
+									"cache": 3,
+									"hierarchical_memory_limit": 4,
+									"inactive_anon": 5,
+									"inactive_file": 6,
+									"mapped_file": 7,
+									"pgfault": 8,
+									"pgmajfault": 9,
+									"pgpgin": 10,
+									"pgpgout": 11,
+									"rss": 12,
+									"rss_huge": 13,
+									"total_active_anon": 14,
+									"total_active_file": 15,
+									"total_cache": 16,
+									"total_inactive_anon": 17,
+									"total_inactive_file": 18,
+									"total_mapped_file": 19,
+									"total_pgfault": 20,
+									"total_pgmajfault": 21,
+									"total_pgpgin": 22,
+									"total_pgpgout": 23,
+									"total_rss": 24,
+									"total_rss_huge": 25,
+									"total_unevictable": 26,
+									"total_writeback": 27,
+									"unevictable": 28,
+									"writeback": 29,
+									"swap": 30,
+									"hierarchical_memsw_limit": 31,
+									"total_swap": 32
+								}
+							}
+						}
+					}
+				}`))
+
+					return nil
+				})
+			})
+
+			It("parses the CPU stats", func() {
+				stats, err := runner.Stats(logger, "some-handle")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(stats.CPU).To(Equal(garden.ContainerCPUStat{
+					Usage:  1,
+					System: 2,
+					User:   3,
+				}))
+			})
+
+			It("parses the memory stats", func() {
+				stats, err := runner.Stats(logger, "some-handle")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(stats.Memory).To(Equal(garden.ContainerMemoryStat{
+					ActiveAnon: 1,
+					ActiveFile: 2,
+					Cache:      3,
+					HierarchicalMemoryLimit: 4,
+					InactiveAnon:            5,
+					InactiveFile:            6,
+					MappedFile:              7,
+					Pgfault:                 8,
+					Pgmajfault:              9,
+					Pgpgin:                  10,
+					Pgpgout:                 11,
+					Rss:                     12,
+					TotalActiveAnon:         14,
+					TotalActiveFile:         15,
+					TotalCache:              16,
+					TotalInactiveAnon:       17,
+					TotalInactiveFile:       18,
+					TotalMappedFile:         19,
+					TotalPgfault:            20,
+					TotalPgmajfault:         21,
+					TotalPgpgin:             22,
+					TotalPgpgout:            23,
+					TotalRss:                24,
+					TotalUnevictable:        26,
+					Unevictable:             28,
+					Swap:                    30,
+					HierarchicalMemswLimit: 31,
+					TotalSwap:              32,
+					TotalUsageTowardLimit:  22,
+				}))
+			})
+		})
+
+		Context("when runC reports invalid JSON", func() {
+			BeforeEach(func() {
+				commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+					Path: "funC-stats",
+				}, func(cmd *exec.Cmd) error {
+					cmd.Stdout.Write([]byte(`{ banana potato banana potato }`))
+
+					return nil
+				})
+			})
+
+			It("should return an error", func() {
+				_, err := runner.Stats(logger, "some-container")
+				Expect(err).To(MatchError(ContainSubstring("decode stats")))
+			})
+		})
+
+		Context("when runC fails", func() {
+			BeforeEach(func() {
+				commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+					Path: "funC-stats",
+				}, func(cmd *exec.Cmd) error {
+					return errors.New("banana")
+				})
+			})
+
+			It("returns an error", func() {
+				_, err := runner.Stats(logger, "some-container")
+				Expect(err).To(MatchError(ContainSubstring("runC stats: banana")))
 			})
 		})
 	})

@@ -41,7 +41,8 @@ type BundleRunner interface {
 	Kill(log lager.Logger, bundlePath string) error
 	Delete(log lager.Logger, id string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
-	WatchEvents(log lager.Logger, id string, notifier runrunc.Notifier) error
+	Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
+	WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
 }
 
 type NstarRunner interface {
@@ -212,6 +213,10 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 		BundlePath: bundlePath,
 		Events:     c.events.Events(handle),
 	}, nil
+}
+
+func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error) {
+	return c.runner.Stats(log, handle)
 }
 
 // Handles returns a list of all container handles

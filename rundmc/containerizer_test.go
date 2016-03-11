@@ -48,7 +48,8 @@ var _ = Describe("Rundmc", func() {
 			return fn()
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeNstarRunner, fakeEventStore, fakeRetrier)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeNstarRunner, fakeEventStore,
+			fakeRetrier)
 	})
 
 	Describe("Create", func() {
@@ -108,7 +109,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should watch for events in a goroutine", func() {
-			fakeContainerRunner.WatchEventsStub = func(_ lager.Logger, handle string, notifier runrunc.Notifier) error {
+			fakeContainerRunner.WatchEventsStub = func(_ lager.Logger, _ string, _ runrunc.EventsNotifier) error {
 				time.Sleep(10 * time.Second)
 				return nil
 			}
@@ -128,9 +129,9 @@ var _ = Describe("Rundmc", func() {
 
 			Eventually(fakeContainerRunner.WatchEventsCallCount).Should(Equal(1))
 
-			_, handle, notifier := fakeContainerRunner.WatchEventsArgsForCall(0)
+			_, handle, eventsNotifier := fakeContainerRunner.WatchEventsArgsForCall(0)
 			Expect(handle).To(Equal("some-container"))
-			Expect(notifier).To(Equal(fakeEventStore))
+			Expect(eventsNotifier).To(Equal(fakeEventStore))
 		})
 	})
 
@@ -362,6 +363,32 @@ var _ = Describe("Rundmc", func() {
 				"potato",
 				"fire",
 			}))
+		})
+	})
+
+	Describe("Metrics", func() {
+		It("returns the CPU metrics", func() {
+			metrics := gardener.ActualContainerMetrics{
+				CPU: garden.ContainerCPUStat{
+					Usage:  1,
+					User:   2,
+					System: 3,
+				},
+			}
+
+			fakeContainerRunner.StatsReturns(metrics, nil)
+			Expect(containerizer.Metrics(logger, "foo")).To(Equal(metrics))
+		})
+
+		Context("when container fails to provide stats", func() {
+			BeforeEach(func() {
+				fakeContainerRunner.StatsReturns(gardener.ActualContainerMetrics{}, errors.New("banana"))
+			})
+
+			It("should return the error", func() {
+				_, err := containerizer.Metrics(logger, "foo")
+				Expect(err).To(MatchError("banana"))
+			})
 		})
 	})
 

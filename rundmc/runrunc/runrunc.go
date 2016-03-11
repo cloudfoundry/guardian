@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
+	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/pivotal-golang/lager"
@@ -21,6 +22,23 @@ const DefaultPath = "PATH=/usr/local/bin:/usr/bin:/bin"
 
 //go:generate counterfeiter . ProcessTracker
 //go:generate counterfeiter . Process
+
+type runcStats struct {
+	Data struct {
+		CgroupStats struct {
+			CPUStats struct {
+				CPUUsage struct {
+					Usage  uint64 `json:"total_usage"`
+					System uint64 `json:"usage_in_kernelmode"`
+					User   uint64 `json:"usage_in_usermode"`
+				} `json:"cpu_usage"`
+			} `json:"cpu_stats"`
+			MemoryStats struct {
+				Stats garden.ContainerMemoryStat `json:"stats"`
+			} `json:"memory_stats"`
+		} `json:"CgroupStats"`
+	}
+}
 
 type Process interface {
 	garden.Process
@@ -45,9 +63,14 @@ type Mkdirer interface {
 	MkdirAs(path string, mode os.FileMode, uid, gid int) error
 }
 
-//go:generate counterfeiter . Notifier
-type Notifier interface {
+//go:generate counterfeiter . EventsNotifier
+type EventsNotifier interface {
 	OnEvent(handle string, event string)
+}
+
+//go:generate counterfeiter . StatsNotifier
+type StatsNotifier interface {
+	OnStat(handle string, cpuStat garden.ContainerCPUStat, memoryStat garden.ContainerMemoryStat)
 }
 
 type LookupFunc func(rootfsPath, user string) (*user.ExecUser, error)
@@ -77,6 +100,7 @@ type RuncBinary interface {
 	ExecCommand(id, processJSONPath, pidFilePath string) *exec.Cmd
 	EventsCommand(id string) *exec.Cmd
 	StateCommand(id string) *exec.Cmd
+	StatsCommand(id string) *exec.Cmd
 	KillCommand(id, signal string) *exec.Cmd
 	DeleteCommand(id string) *exec.Cmd
 }
@@ -149,7 +173,12 @@ func (r *RunRunc) Exec(log lager.Logger, bundlePath, id string, spec garden.Proc
 	return process, nil
 }
 
-func (r *RunRunc) WatchEvents(log lager.Logger, handle string, notifier Notifier) error {
+type runcEvent struct {
+	Type string          `json:"type"`
+	Data json.RawMessage `json:"data"`
+}
+
+func (r *RunRunc) WatchEvents(log lager.Logger, handle string, eventsNotifier EventsNotifier) error {
 	stdoutR, w := io.Pipe()
 	cmd := r.runc.EventsCommand(handle)
 	cmd.Stdout = w
@@ -157,7 +186,6 @@ func (r *RunRunc) WatchEvents(log lager.Logger, handle string, notifier Notifier
 	log = log.Session("watch", lager.Data{
 		"handle": handle,
 	})
-
 	log.Info("watching")
 	defer log.Info("done")
 
@@ -165,22 +193,17 @@ func (r *RunRunc) WatchEvents(log lager.Logger, handle string, notifier Notifier
 		log.Error("run-events", err)
 		return fmt.Errorf("start: %s", err)
 	}
-
 	go r.commandRunner.Wait(cmd) // avoid zombie
 
 	decoder := json.NewDecoder(stdoutR)
 	for {
-		event := struct {
-			Type string `json:"type"`
-		}{}
-
 		log.Debug("wait-next-event")
 
+		var event runcEvent
 		err := decoder.Decode(&event)
 		if err == io.EOF {
 			return nil
 		}
-
 		if err != nil {
 			return fmt.Errorf("decode event: %s", err)
 		}
@@ -188,11 +211,35 @@ func (r *RunRunc) WatchEvents(log lager.Logger, handle string, notifier Notifier
 		log.Debug("got-event", lager.Data{
 			"type": event.Type,
 		})
-
 		if event.Type == "oom" {
-			notifier.OnEvent(handle, "Out of memory")
+			eventsNotifier.OnEvent(handle, "Out of memory")
 		}
 	}
+}
+
+func (r *RunRunc) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
+	buf, err := r.run(log, r.runc.StatsCommand(id))
+	if err != nil {
+		return gardener.ActualContainerMetrics{}, fmt.Errorf("runC stats: %s", err)
+	}
+
+	var data runcStats
+	if err := json.NewDecoder(buf).Decode(&data); err != nil {
+		return gardener.ActualContainerMetrics{}, fmt.Errorf("decode stats: %s", err)
+	}
+
+	stats := gardener.ActualContainerMetrics{
+		Memory: data.Data.CgroupStats.MemoryStats.Stats,
+		CPU: garden.ContainerCPUStat{
+			Usage:  data.Data.CgroupStats.CPUStats.CPUUsage.Usage,
+			System: data.Data.CgroupStats.CPUStats.CPUUsage.System,
+			User:   data.Data.CgroupStats.CPUStats.CPUUsage.User,
+		},
+	}
+
+	stats.Memory.TotalUsageTowardLimit = stats.Memory.TotalRss + (stats.Memory.TotalCache - stats.Memory.TotalInactiveFile)
+
+	return stats, nil
 }
 
 // State gets the state of the bundle
@@ -202,11 +249,8 @@ func (r *RunRunc) State(log lager.Logger, handle string) (state State, err error
 	log.Info("started")
 	defer log.Info("finished")
 
-	buff := new(bytes.Buffer)
-	cmd := r.runc.StateCommand(handle)
-	cmd.Stdout = buff
-
-	if err := r.commandRunner.Run(cmd); err != nil {
+	buff, err := r.run(log, r.runc.StateCommand(handle))
+	if err != nil {
 		log.Error("state-cmd-failed", err)
 		return State{}, fmt.Errorf("runc state: %s", err)
 	}
@@ -226,10 +270,8 @@ func (r *RunRunc) Kill(log lager.Logger, handle string) error {
 	log.Info("started")
 	defer log.Info("finished")
 
-	buf := &bytes.Buffer{}
-	cmd := r.runc.KillCommand(handle, "KILL")
-	cmd.Stderr = buf
-	if err := r.commandRunner.Run(cmd); err != nil {
+	buf, err := r.run(log, r.runc.KillCommand(handle, "KILL"))
+	if err != nil {
 		log.Error("run-failed", err, lager.Data{"stderr": buf.String()})
 		return fmt.Errorf("runc kill: %s: %s", err, string(buf.String()))
 	}
@@ -241,4 +283,12 @@ func (r *RunRunc) Kill(log lager.Logger, handle string) error {
 func (r *RunRunc) Delete(log lager.Logger, handle string) error {
 	cmd := r.runc.DeleteCommand(handle)
 	return r.commandRunner.Run(cmd)
+}
+
+func (r *RunRunc) run(log lager.Logger, cmd *exec.Cmd) (*bytes.Buffer, error) {
+	buf := new(bytes.Buffer)
+	cmd.Stdout = buf
+	cmd.Stderr = buf
+
+	return buf, r.commandRunner.Run(cmd)
 }

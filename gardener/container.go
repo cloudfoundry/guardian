@@ -133,7 +133,15 @@ func (c *container) Attach(processID string, io garden.ProcessIO) (garden.Proces
 }
 
 func (c *container) Metrics() (garden.Metrics, error) {
-	return garden.Metrics{}, nil
+	actualContainerMetrics, err := c.containerizer.Metrics(c.logger, c.handle)
+	if err != nil {
+		return garden.Metrics{}, err
+	}
+
+	return garden.Metrics{
+		CPUStat:    actualContainerMetrics.CPU,
+		MemoryStat: actualContainerMetrics.Memory,
+	}, nil
 }
 
 func (c *container) Properties() (garden.Properties, error) {

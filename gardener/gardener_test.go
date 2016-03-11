@@ -942,4 +942,54 @@ var _ = Describe("Gardener", func() {
 			}))
 		})
 	})
+
+	Describe("Metrics", func() {
+		var (
+			container garden.Container
+
+			cpuStat    garden.ContainerCPUStat
+			memoryStat garden.ContainerMemoryStat
+		)
+
+		BeforeEach(func() {
+			var err error
+			container, err = gdnr.Lookup("some-handle")
+			Expect(err).NotTo(HaveOccurred())
+
+			cpuStat = garden.ContainerCPUStat{
+				Usage:  12,
+				System: 10,
+				User:   11,
+			}
+
+			memoryStat = garden.ContainerMemoryStat{
+				Cache: 10,
+				Rss:   12,
+			}
+
+			containerizer.MetricsReturns(gardener.ActualContainerMetrics{
+				CPU:    cpuStat,
+				Memory: memoryStat,
+			}, nil)
+		})
+
+		It("should return the metrics", func() {
+			metrics, err := container.Metrics()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(metrics.CPUStat).To(Equal(cpuStat))
+			Expect(metrics.MemoryStat).To(Equal(memoryStat))
+		})
+
+		Context("when metrics cannot be acquired", func() {
+			BeforeEach(func() {
+				containerizer.MetricsReturns(gardener.ActualContainerMetrics{}, errors.New("banana"))
+			})
+
+			It("should propagete the error", func() {
+				_, err := container.Metrics()
+				Expect(err).To(MatchError("banana"))
+			})
+		})
+	})
 })

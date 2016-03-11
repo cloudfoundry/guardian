@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/pivotal-golang/lager"
@@ -63,12 +64,22 @@ type FakeBundleRunner struct {
 		result1 runrunc.State
 		result2 error
 	}
-	WatchEventsStub        func(log lager.Logger, id string, notifier runrunc.Notifier) error
+	StatsStub        func(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
+	statsMutex       sync.RWMutex
+	statsArgsForCall []struct {
+		log lager.Logger
+		id  string
+	}
+	statsReturns struct {
+		result1 gardener.ActualContainerMetrics
+		result2 error
+	}
+	WatchEventsStub        func(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
 	watchEventsMutex       sync.RWMutex
 	watchEventsArgsForCall []struct {
-		log      lager.Logger
-		id       string
-		notifier runrunc.Notifier
+		log            lager.Logger
+		id             string
+		eventsNotifier runrunc.EventsNotifier
 	}
 	watchEventsReturns struct {
 		result1 error
@@ -247,16 +258,50 @@ func (fake *FakeBundleRunner) StateReturns(result1 runrunc.State, result2 error)
 	}{result1, result2}
 }
 
-func (fake *FakeBundleRunner) WatchEvents(log lager.Logger, id string, notifier runrunc.Notifier) error {
+func (fake *FakeBundleRunner) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
+	fake.statsMutex.Lock()
+	fake.statsArgsForCall = append(fake.statsArgsForCall, struct {
+		log lager.Logger
+		id  string
+	}{log, id})
+	fake.statsMutex.Unlock()
+	if fake.StatsStub != nil {
+		return fake.StatsStub(log, id)
+	} else {
+		return fake.statsReturns.result1, fake.statsReturns.result2
+	}
+}
+
+func (fake *FakeBundleRunner) StatsCallCount() int {
+	fake.statsMutex.RLock()
+	defer fake.statsMutex.RUnlock()
+	return len(fake.statsArgsForCall)
+}
+
+func (fake *FakeBundleRunner) StatsArgsForCall(i int) (lager.Logger, string) {
+	fake.statsMutex.RLock()
+	defer fake.statsMutex.RUnlock()
+	return fake.statsArgsForCall[i].log, fake.statsArgsForCall[i].id
+}
+
+func (fake *FakeBundleRunner) StatsReturns(result1 gardener.ActualContainerMetrics, result2 error) {
+	fake.StatsStub = nil
+	fake.statsReturns = struct {
+		result1 gardener.ActualContainerMetrics
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBundleRunner) WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error {
 	fake.watchEventsMutex.Lock()
 	fake.watchEventsArgsForCall = append(fake.watchEventsArgsForCall, struct {
-		log      lager.Logger
-		id       string
-		notifier runrunc.Notifier
-	}{log, id, notifier})
+		log            lager.Logger
+		id             string
+		eventsNotifier runrunc.EventsNotifier
+	}{log, id, eventsNotifier})
 	fake.watchEventsMutex.Unlock()
 	if fake.WatchEventsStub != nil {
-		return fake.WatchEventsStub(log, id, notifier)
+		return fake.WatchEventsStub(log, id, eventsNotifier)
 	} else {
 		return fake.watchEventsReturns.result1
 	}
@@ -268,10 +313,10 @@ func (fake *FakeBundleRunner) WatchEventsCallCount() int {
 	return len(fake.watchEventsArgsForCall)
 }
 
-func (fake *FakeBundleRunner) WatchEventsArgsForCall(i int) (lager.Logger, string, runrunc.Notifier) {
+func (fake *FakeBundleRunner) WatchEventsArgsForCall(i int) (lager.Logger, string, runrunc.EventsNotifier) {
 	fake.watchEventsMutex.RLock()
 	defer fake.watchEventsMutex.RUnlock()
-	return fake.watchEventsArgsForCall[i].log, fake.watchEventsArgsForCall[i].id, fake.watchEventsArgsForCall[i].notifier
+	return fake.watchEventsArgsForCall[i].log, fake.watchEventsArgsForCall[i].id, fake.watchEventsArgsForCall[i].eventsNotifier
 }
 
 func (fake *FakeBundleRunner) WatchEventsReturns(result1 error) {

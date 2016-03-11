@@ -33,6 +33,7 @@ type Containerizer interface {
 	Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Destroy(log lager.Logger, handle string) error
 	Info(log lager.Logger, handle string) (ActualContainerSpec, error)
+	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
 	Handles() ([]string, error)
 }
 
@@ -117,6 +118,11 @@ type ActualContainerSpec struct {
 
 	// Events (e.g. OOM) which have occured in the container
 	Events []string
+}
+
+type ActualContainerMetrics struct {
+	CPU    garden.ContainerCPUStat
+	Memory garden.ContainerMemoryStat
 }
 
 // Gardener orchestrates other components to implement the Garden API

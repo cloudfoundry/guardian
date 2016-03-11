@@ -7,7 +7,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 )
 
-type FakeNotifier struct {
+type FakeEventsNotifier struct {
 	OnEventStub        func(handle string, event string)
 	onEventMutex       sync.RWMutex
 	onEventArgsForCall []struct {
@@ -16,7 +16,7 @@ type FakeNotifier struct {
 	}
 }
 
-func (fake *FakeNotifier) OnEvent(handle string, event string) {
+func (fake *FakeEventsNotifier) OnEvent(handle string, event string) {
 	fake.onEventMutex.Lock()
 	fake.onEventArgsForCall = append(fake.onEventArgsForCall, struct {
 		handle string
@@ -28,16 +28,16 @@ func (fake *FakeNotifier) OnEvent(handle string, event string) {
 	}
 }
 
-func (fake *FakeNotifier) OnEventCallCount() int {
+func (fake *FakeEventsNotifier) OnEventCallCount() int {
 	fake.onEventMutex.RLock()
 	defer fake.onEventMutex.RUnlock()
 	return len(fake.onEventArgsForCall)
 }
 
-func (fake *FakeNotifier) OnEventArgsForCall(i int) (string, string) {
+func (fake *FakeEventsNotifier) OnEventArgsForCall(i int) (string, string) {
 	fake.onEventMutex.RLock()
 	defer fake.onEventMutex.RUnlock()
 	return fake.onEventArgsForCall[i].handle, fake.onEventArgsForCall[i].event
 }
 
-var _ runrunc.Notifier = new(FakeNotifier)
+var _ runrunc.EventsNotifier = new(FakeEventsNotifier)
