@@ -63,14 +63,14 @@ type FakeBundleRunner struct {
 		result1 runrunc.State
 		result2 error
 	}
-	WatchStub        func(log lager.Logger, id string, notifier runrunc.Notifier) error
-	watchMutex       sync.RWMutex
-	watchArgsForCall []struct {
+	WatchEventsStub        func(log lager.Logger, id string, notifier runrunc.Notifier) error
+	watchEventsMutex       sync.RWMutex
+	watchEventsArgsForCall []struct {
 		log      lager.Logger
 		id       string
 		notifier runrunc.Notifier
 	}
-	watchReturns struct {
+	watchEventsReturns struct {
 		result1 error
 	}
 }
@@ -247,36 +247,36 @@ func (fake *FakeBundleRunner) StateReturns(result1 runrunc.State, result2 error)
 	}{result1, result2}
 }
 
-func (fake *FakeBundleRunner) Watch(log lager.Logger, id string, notifier runrunc.Notifier) error {
-	fake.watchMutex.Lock()
-	fake.watchArgsForCall = append(fake.watchArgsForCall, struct {
+func (fake *FakeBundleRunner) WatchEvents(log lager.Logger, id string, notifier runrunc.Notifier) error {
+	fake.watchEventsMutex.Lock()
+	fake.watchEventsArgsForCall = append(fake.watchEventsArgsForCall, struct {
 		log      lager.Logger
 		id       string
 		notifier runrunc.Notifier
 	}{log, id, notifier})
-	fake.watchMutex.Unlock()
-	if fake.WatchStub != nil {
-		return fake.WatchStub(log, id, notifier)
+	fake.watchEventsMutex.Unlock()
+	if fake.WatchEventsStub != nil {
+		return fake.WatchEventsStub(log, id, notifier)
 	} else {
-		return fake.watchReturns.result1
+		return fake.watchEventsReturns.result1
 	}
 }
 
-func (fake *FakeBundleRunner) WatchCallCount() int {
-	fake.watchMutex.RLock()
-	defer fake.watchMutex.RUnlock()
-	return len(fake.watchArgsForCall)
+func (fake *FakeBundleRunner) WatchEventsCallCount() int {
+	fake.watchEventsMutex.RLock()
+	defer fake.watchEventsMutex.RUnlock()
+	return len(fake.watchEventsArgsForCall)
 }
 
-func (fake *FakeBundleRunner) WatchArgsForCall(i int) (lager.Logger, string, runrunc.Notifier) {
-	fake.watchMutex.RLock()
-	defer fake.watchMutex.RUnlock()
-	return fake.watchArgsForCall[i].log, fake.watchArgsForCall[i].id, fake.watchArgsForCall[i].notifier
+func (fake *FakeBundleRunner) WatchEventsArgsForCall(i int) (lager.Logger, string, runrunc.Notifier) {
+	fake.watchEventsMutex.RLock()
+	defer fake.watchEventsMutex.RUnlock()
+	return fake.watchEventsArgsForCall[i].log, fake.watchEventsArgsForCall[i].id, fake.watchEventsArgsForCall[i].notifier
 }
 
-func (fake *FakeBundleRunner) WatchReturns(result1 error) {
-	fake.WatchStub = nil
-	fake.watchReturns = struct {
+func (fake *FakeBundleRunner) WatchEventsReturns(result1 error) {
+	fake.WatchEventsStub = nil
+	fake.watchEventsReturns = struct {
 		result1 error
 	}{result1}
 }

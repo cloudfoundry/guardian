@@ -108,7 +108,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should watch for events in a goroutine", func() {
-			fakeContainerRunner.WatchStub = func(_ lager.Logger, handle string, notifier runrunc.Notifier) error {
+			fakeContainerRunner.WatchEventsStub = func(_ lager.Logger, handle string, notifier runrunc.Notifier) error {
 				time.Sleep(10 * time.Second)
 				return nil
 			}
@@ -122,13 +122,13 @@ var _ = Describe("Rundmc", func() {
 
 			select {
 			case <-time.After(2 * time.Second):
-				Fail("Watch should be called in a goroutine")
+				Fail("WatchEvents should be called in a goroutine")
 			case <-created:
 			}
 
-			Eventually(fakeContainerRunner.WatchCallCount).Should(Equal(1))
+			Eventually(fakeContainerRunner.WatchEventsCallCount).Should(Equal(1))
 
-			_, handle, notifier := fakeContainerRunner.WatchArgsForCall(0)
+			_, handle, notifier := fakeContainerRunner.WatchEventsArgsForCall(0)
 			Expect(handle).To(Equal("some-container"))
 			Expect(notifier).To(Equal(fakeEventStore))
 		})

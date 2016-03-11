@@ -692,7 +692,7 @@ var _ = Describe("RuncRunner", func() {
 				return errors.New("boom")
 			})
 
-			Expect(runner.Watch(logger, "some-container", nil)).To(MatchError("start: boom"))
+			Expect(runner.WatchEvents(logger, "some-container", nil)).To(MatchError("start: boom"))
 		})
 
 		Context("when runc events succeeds", func() {
@@ -728,7 +728,7 @@ var _ = Describe("RuncRunner", func() {
 				defer close(eventsCh)
 
 				notifier := new(fakes.FakeNotifier)
-				go runner.Watch(logger, "some-container", notifier)
+				go runner.WatchEvents(logger, "some-container", notifier)
 
 				Consistently(notifier.OnEventCallCount).Should(Equal(0))
 
@@ -749,7 +749,7 @@ var _ = Describe("RuncRunner", func() {
 				defer close(eventsCh)
 
 				notifier := new(fakes.FakeNotifier)
-				go runner.Watch(logger, "some-container", notifier)
+				go runner.WatchEvents(logger, "some-container", notifier)
 
 				eventsCh <- false
 				Consistently(notifier.OnEventCallCount).Should(Equal(0))

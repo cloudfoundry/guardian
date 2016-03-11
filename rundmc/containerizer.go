@@ -41,7 +41,7 @@ type BundleRunner interface {
 	Kill(log lager.Logger, bundlePath string) error
 	Delete(log lager.Logger, id string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
-	Watch(log lager.Logger, id string, notifier runrunc.Notifier) error
+	WatchEvents(log lager.Logger, id string, notifier runrunc.Notifier) error
 }
 
 type NstarRunner interface {
@@ -104,7 +104,7 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 	}
 
 	go func() {
-		if err := c.runner.Watch(log, spec.Handle, c.events); err != nil {
+		if err := c.runner.WatchEvents(log, spec.Handle, c.events); err != nil {
 			log.Error("watch-failed", err)
 		}
 	}()

@@ -149,7 +149,7 @@ func (r *RunRunc) Exec(log lager.Logger, bundlePath, id string, spec garden.Proc
 	return process, nil
 }
 
-func (r *RunRunc) Watch(log lager.Logger, handle string, notifier Notifier) error {
+func (r *RunRunc) WatchEvents(log lager.Logger, handle string, notifier Notifier) error {
 	stdoutR, w := io.Pipe()
 	cmd := r.runc.EventsCommand(handle)
 	cmd.Stdout = w
