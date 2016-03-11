@@ -213,13 +213,17 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 }
 
 func (g *Gardener) Lookup(handle string) (garden.Container, error) {
+	return g.lookup(handle), nil
+}
+
+func (g *Gardener) lookup(handle string) garden.Container {
 	return &container{
 		logger:          g.Logger,
 		handle:          handle,
 		containerizer:   g.Containerizer,
 		networker:       g.Networker,
 		propertyManager: g.PropertyManager,
-	}, nil
+	}
 }
 
 func (g *Gardener) Destroy(handle string) error {
@@ -277,12 +281,7 @@ func (g *Gardener) Containers(props garden.Properties) ([]garden.Container, erro
 	var containers []garden.Container
 	for _, handle := range handles {
 		if g.PropertyManager.MatchesAll(handle, props) {
-			container, err := g.Lookup(handle)
-			if err != nil {
-				log.Error("lookup-failed", err)
-			}
-
-			containers = append(containers, container)
+			containers = append(containers, g.lookup(handle))
 		}
 	}
 
@@ -292,8 +291,7 @@ func (g *Gardener) Containers(props garden.Properties) ([]garden.Container, erro
 func (g *Gardener) BulkInfo(handles []string) (map[string]garden.ContainerInfoEntry, error) {
 	result := make(map[string]garden.ContainerInfoEntry)
 	for _, handle := range handles {
-		// currently never returns error
-		container, _ := g.Lookup(handle)
+		container := g.lookup(handle)
 
 		var infoErr *garden.Error = nil
 		info, err := container.Info()
@@ -310,5 +308,19 @@ func (g *Gardener) BulkInfo(handles []string) (map[string]garden.ContainerInfoEn
 }
 
 func (g *Gardener) BulkMetrics(handles []string) (map[string]garden.ContainerMetricsEntry, error) {
-	return nil, nil
+	result := make(map[string]garden.ContainerMetricsEntry)
+	for _, handle := range handles {
+		var e *garden.Error
+		m, err := g.lookup(handle).Metrics()
+		if err != nil {
+			e = garden.NewError(err.Error())
+		}
+
+		result[handle] = garden.ContainerMetricsEntry{
+			Err:     e,
+			Metrics: m,
+		}
+	}
+
+	return result, nil
 }

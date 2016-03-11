@@ -71,7 +71,6 @@ var _ = Describe("Info", func() {
 		Expect(portMapping.HostPort).To(Equal(hostPort))
 		Expect(portMapping.ContainerPort).To(Equal(containerPort))
 	})
-
 })
 
 var _ = Describe("BulkInfo", func() {

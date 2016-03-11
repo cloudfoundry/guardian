@@ -728,54 +728,6 @@ var _ = Describe("Gardener", func() {
 		})
 	})
 
-	Describe("BulkInfo", func() {
-		var (
-			container1 garden.Container
-			container2 garden.Container
-		)
-
-		BeforeEach(func() {
-			var err error
-			container1, err = gdnr.Lookup("some-handle-1")
-			Expect(err).NotTo(HaveOccurred())
-
-			container2, err = gdnr.Lookup("some-handle-2")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("returns the list of ContainerInfos of the containers", func() {
-			infos, err := gdnr.BulkInfo([]string{"some-handle-1", "some-handle-2"})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(infos).To(HaveKey("some-handle-1"))
-			Expect(infos).To(HaveKey("some-handle-2"))
-
-			info1, err := container1.Info()
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(infos["some-handle-1"].Info).To(Equal(info1))
-			Expect(infos["some-handle-1"].Err).NotTo(HaveOccurred())
-
-			info2, err := container2.Info()
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(infos["some-handle-2"].Info).To(Equal(info2))
-			Expect(infos["some-handle-2"].Err).NotTo(HaveOccurred())
-		})
-
-		Context("when info errors", func() {
-			It("returns the error", func() {
-				propertyManager.GetReturns("", errors.New("boom"))
-
-				infos, err := gdnr.BulkInfo([]string{"some-handle-1"})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(infos["some-handle-1"].Err).To(MatchError("boom"))
-			})
-		})
-
-	})
-
 	Describe("Info", func() {
 		var container garden.Container
 
@@ -943,6 +895,53 @@ var _ = Describe("Gardener", func() {
 		})
 	})
 
+	Describe("BulkInfo", func() {
+		var (
+			container1 garden.Container
+			container2 garden.Container
+		)
+
+		BeforeEach(func() {
+			var err error
+			container1, err = gdnr.Lookup("some-handle-1")
+			Expect(err).NotTo(HaveOccurred())
+
+			container2, err = gdnr.Lookup("some-handle-2")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns the list of ContainerInfos of the containers", func() {
+			infos, err := gdnr.BulkInfo([]string{"some-handle-1", "some-handle-2"})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(infos).To(HaveKey("some-handle-1"))
+			Expect(infos).To(HaveKey("some-handle-2"))
+
+			info1, err := container1.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(infos["some-handle-1"].Info).To(Equal(info1))
+			Expect(infos["some-handle-1"].Err).NotTo(HaveOccurred())
+
+			info2, err := container2.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(infos["some-handle-2"].Info).To(Equal(info2))
+			Expect(infos["some-handle-2"].Err).NotTo(HaveOccurred())
+		})
+
+		Context("when info errors", func() {
+			It("returns the error", func() {
+				propertyManager.GetReturns("", errors.New("boom"))
+
+				infos, err := gdnr.BulkInfo([]string{"some-handle-1"})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(infos["some-handle-1"].Err).To(MatchError("boom"))
+			})
+		})
+	})
+
 	Describe("Metrics", func() {
 		var (
 			container garden.Container
@@ -990,6 +989,33 @@ var _ = Describe("Gardener", func() {
 				_, err := container.Metrics()
 				Expect(err).To(MatchError("banana"))
 			})
+		})
+
+		It("should return BulkMetrics", func() {
+			containerizer.MetricsStub = func(_ lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
+				if id == "potato" {
+					return gardener.ActualContainerMetrics{}, errors.New("potatoError")
+				}
+
+				return gardener.ActualContainerMetrics{
+					CPU:    cpuStat,
+					Memory: memoryStat,
+				}, nil
+			}
+
+			metrics, err := gdnr.BulkMetrics([]string{"some-handle", "potato"})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(metrics).To(HaveKeyWithValue("some-handle", garden.ContainerMetricsEntry{
+				Metrics: garden.Metrics{
+					MemoryStat: memoryStat,
+					CPUStat:    cpuStat,
+				},
+			}))
+
+			Expect(metrics).To(HaveKeyWithValue("potato", garden.ContainerMetricsEntry{
+				Err: garden.NewError("potatoError"),
+			}))
 		})
 	})
 })
