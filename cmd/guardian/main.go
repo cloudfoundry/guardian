@@ -37,6 +37,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/preparerootfs"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry-incubator/guardian/sysinfo"
@@ -249,6 +250,10 @@ var maxContainers = flag.Uint(
 var idMappings rootfs_provider.MappingList
 
 func init() {
+	if reexec.Init() {
+		os.Exit(0)
+	}
+
 	maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
 	idMappings = rootfs_provider.MappingList{
 		{
@@ -615,7 +620,10 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 			bundlerules.RootFS{
 				ContainerRootUID: idMappings.Map(0),
 				ContainerRootGID: idMappings.Map(0),
-				MkdirChowner:     bundlerules.MkdirChownFunc(bundlerules.MkdirChown),
+				MkdirChown: bundlerules.Mkdir{
+					Command:       preparerootfs.Command,
+					CommandRunner: commandRunner,
+				},
 			},
 			bundlerules.Limits{},
 			bundlerules.Hooks{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},

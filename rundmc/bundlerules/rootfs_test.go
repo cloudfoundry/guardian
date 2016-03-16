@@ -1,42 +1,51 @@
 package bundlerules_test
 
 import (
-	"io/ioutil"
 	"os"
-	"path"
+	"os/exec"
+	"strconv"
 
+	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
+	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules/fakes"
 )
 
 var _ = Describe("RootFS", func() {
 	var (
-		fakeMkdirChowner *fakes.FakeMkdirChowner
-		rule             bundlerules.RootFS
+		rule          bundlerules.RootFS
+		commandRunner *fake_command_runner.FakeCommandRunner
 
 		rootfsPath     string
 		returnedBundle *goci.Bndl
 	)
 
 	BeforeEach(func() {
-		fakeMkdirChowner = new(fakes.FakeMkdirChowner)
-		rootfsPath = tmp()
+		rootfsPath = "banana/"
+		commandRunner = fake_command_runner.New()
 
 		rule = bundlerules.RootFS{
 			ContainerRootUID: 999,
 			ContainerRootGID: 888,
 
-			MkdirChowner: fakeMkdirChowner,
-		}
+			MkdirChown: bundlerules.Mkdir{
+				Command: func(rootfsPath string, uid, gid int, mode os.FileMode, paths ...string) *exec.Cmd {
+					return exec.Command("reexeced-thing", append(
+						[]string{
+							"-rootfsPath", rootfsPath,
+							"-uid", strconv.Itoa(uid),
+							"-gid", strconv.Itoa(gid),
+							"-perm", strconv.FormatUint(uint64(mode.Perm()), 8),
+						}, paths...)...)
+				},
 
-		Expect(os.MkdirAll(path.Join(rootfsPath, "dev", "shm"), 0700)).To(Succeed())
-		Expect(ioutil.WriteFile(path.Join(rootfsPath, "dev", "foo"), []byte("blah"), 0700)).To(Succeed())
-		Expect(os.MkdirAll(path.Join(rootfsPath, "notdev", "shm"), 0700)).To(Succeed())
+				CommandRunner: commandRunner,
+			},
+		}
 
 		returnedBundle = rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			RootFSPath: rootfsPath,
@@ -51,67 +60,36 @@ var _ = Describe("RootFS", func() {
 		Expect(returnedBundle.Spec.Root.Path).To(Equal(rootfsPath))
 	})
 
-	// this is a workaround for our current aufs code not properly changing the
-	// ownership of / to container-root. Without this step runC is unable to
-	// pivot root in user-namespaced containers.
-	Describe("creating the .pivot_root directory", func() {
-		It("pre-creates the /.pivot_root directory with the correct ownership", func() {
-			p, perms, uid, gid := fakeMkdirChowner.MkdirChownArgsForCall(0)
-			Expect(p).To(Equal(path.Join(rootfsPath, ".pivot_root")))
-			Expect(perms).To(Equal(os.FileMode(0700)))
-			Expect(uid).To(BeEquivalentTo(999))
-			Expect(gid).To(BeEquivalentTo(888))
+	Describe("creating needed directories", func() {
+		It("pre-creates needed directories with the correct ownership", func() {
+			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+				Path: "reexeced-thing",
+				Args: []string{
+					"-rootfsPath", rootfsPath,
+					"-uid", "999",
+					"-gid", "888",
+					"-perm", "700",
+					// this is a workaround for our current aufs code not properly changing the
+					// ownership of / to container-root. without this step runc is unable to
+					// pivot root in user-namespaced containers.
+					".pivot_root",
+				},
+			},
+				fake_command_runner.CommandSpec{
+					Path: "reexeced-thing",
+					Args: []string{
+						"-rootfsPath", rootfsPath,
+						"-uid", "999",
+						"-gid", "888",
+						"-perm", "755",
+						// stuff in this directory frequently confuses runc, and poses a potential
+						// security vulnerability.
+						"dev",
+						// we ask runc to mount both of these, so we need to ensure they exist
+						"proc",
+						"sys",
+					},
+				}))
 		})
 	})
-
-	// stuff in this directory frequently confuses runc, and poses a potential
-	// security vulnerability.
-	It("deletes the /dev/ directory", func() {
-		Expect(path.Join(rootfsPath, "dev")).NotTo(BeAnExistingFile())
-		Expect(path.Join(rootfsPath, "notdev", "shm")).To(BeAnExistingFile())
-	})
-
-	It("recreates /dev as container root", func() {
-		Expect(mkdirChownCalls(fakeMkdirChowner)).To(ContainElement(mkdirChownCall{
-			path:  path.Join(rootfsPath, "dev"),
-			perms: os.FileMode(0755),
-			uid:   999,
-			gid:   888,
-		}))
-	})
-
-	// we ask runc to mount both of these, so we need to ensure they exist
-	It("creates /proc and /dev as container root if neccesary", func() {
-		for _, p := range []string{"proc", "sys"} {
-			Expect(mkdirChownCalls(fakeMkdirChowner)).To(ContainElement(mkdirChownCall{
-				path:  path.Join(rootfsPath, p),
-				perms: os.FileMode(0755),
-				uid:   999,
-				gid:   888,
-			}))
-		}
-	})
 })
-
-func tmp() string {
-	tmp, err := ioutil.TempDir("", "rootfstest")
-	Expect(err).NotTo(HaveOccurred())
-	return tmp
-}
-
-type mkdirChownCall struct {
-	path     string
-	perms    os.FileMode
-	uid, gid int
-}
-
-func mkdirChownCalls(fakeMkdirChowner *fakes.FakeMkdirChowner) []mkdirChownCall {
-	args := []mkdirChownCall{}
-	for i := 0; i < fakeMkdirChowner.MkdirChownCallCount(); i++ {
-		var a mkdirChownCall
-		a.path, a.perms, a.uid, a.gid = fakeMkdirChowner.MkdirChownArgsForCall(i)
-		args = append(args, a)
-	}
-
-	return args
-}

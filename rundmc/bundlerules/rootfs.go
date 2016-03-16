@@ -2,31 +2,48 @@ package bundlerules
 
 import (
 	"os"
-	"path"
-	"path/filepath"
+	"os/exec"
 
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
+	"github.com/cloudfoundry/gunk/command_runner"
 )
 
-//go:generate counterfeiter . MkdirChowner
+type MkdirChowner interface {
+	MkdirChown(rootfsPath string, uid, gid int, mode os.FileMode, paths ...string)
+}
 
 type RootFS struct {
 	ContainerRootUID int
 	ContainerRootGID int
 
-	MkdirChowner MkdirChowner
+	MkdirChown MkdirChowner
 }
 
 func (r RootFS) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
-	os.RemoveAll(path.Join(spec.RootFSPath, "dev"))
-	r.mkdirAsContainerRoot(filepath.Join(spec.RootFSPath, ".pivot_root"), 0700)
-	r.mkdirAsContainerRoot(filepath.Join(spec.RootFSPath, "dev"), 0755)
-	r.mkdirAsContainerRoot(filepath.Join(spec.RootFSPath, "proc"), 0755)
-	r.mkdirAsContainerRoot(filepath.Join(spec.RootFSPath, "sys"), 0755)
+	r.MkdirChown.MkdirChown(
+		spec.RootFSPath, r.ContainerRootUID, r.ContainerRootGID, 0700,
+		".pivot_root",
+	)
+	r.MkdirChown.MkdirChown(
+		spec.RootFSPath, r.ContainerRootUID, r.ContainerRootGID, 0755,
+		"dev", "proc", "sys",
+	)
+
 	return bndl.WithRootFS(spec.RootFSPath)
 }
 
-func (r RootFS) mkdirAsContainerRoot(path string, perms os.FileMode) {
-	r.MkdirChowner.MkdirChown(path, perms, r.ContainerRootUID, r.ContainerRootGID)
+type Mkdir struct {
+	Command       func(rootfsPath string, uid, gid int, mode os.FileMode, paths ...string) *exec.Cmd
+	CommandRunner command_runner.CommandRunner
+}
+
+func (m Mkdir) MkdirChown(rootfsPath string, uid, gid int, mode os.FileMode, paths ...string) {
+	m.CommandRunner.Run(m.Command(
+		rootfsPath,
+		uid,
+		gid,
+		mode,
+		paths...,
+	))
 }
