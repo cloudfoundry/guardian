@@ -31,6 +31,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/ports"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/cloudfoundry-incubator/guardian/logging"
+	"github.com/cloudfoundry-incubator/guardian/metrics"
 	"github.com/cloudfoundry-incubator/guardian/netplugin"
 	"github.com/cloudfoundry-incubator/guardian/pkg/vars"
 	"github.com/cloudfoundry-incubator/guardian/properties"
@@ -299,7 +300,7 @@ func main() {
 	cf_lager.AddFlags(flag.CommandLine)
 	flag.Parse()
 
-	logger, _ := cf_lager.New("guardian")
+	logger, reconfigurableSink := cf_lager.New("guardian")
 
 	if *depotPath == "" {
 		missing("-depot")
@@ -365,6 +366,13 @@ func main() {
 	}
 
 	gardenServer := server.New(*listenNetwork, *listenAddr, *graceTime, backend, logger.Session("api"))
+
+	if dbgAddr := cf_debug_server.DebugAddress(flag.CommandLine); dbgAddr != "" {
+		metrics.StartDebugServer(
+			dbgAddr, reconfigurableSink,
+			wireMetricsProvider(logger, *depotPath, *graphRoot),
+		)
+	}
 
 	err = gardenServer.Start()
 	if err != nil {
@@ -645,6 +653,11 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 
 	deleteRetrier := retrier.New(retrier.ConstantBackoff(10, 100*time.Millisecond), nil)
 	return rundmc.New(depot, template, runcrunner, nstar, eventStore, deleteRetrier)
+}
+
+func wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {
+	backingStoresPath := filepath.Join(graphRoot, "backing_stores")
+	return metrics.NewMetrics(log, backingStoresPath, depotPath)
 }
 
 func missing(flagName string) {
