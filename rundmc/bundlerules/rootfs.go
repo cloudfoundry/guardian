@@ -10,7 +10,7 @@ import (
 )
 
 type MkdirChowner interface {
-	MkdirChown(rootfsPath string, uid, gid int, mode os.FileMode, paths ...string)
+	MkdirAs(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error
 }
 
 type RootFS struct {
@@ -21,29 +21,27 @@ type RootFS struct {
 }
 
 func (r RootFS) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
-	r.MkdirChown.MkdirChown(
-		spec.RootFSPath, r.ContainerRootUID, r.ContainerRootGID, 0700,
+	r.MkdirChown.MkdirAs(
+		spec.RootFSPath, r.ContainerRootUID, r.ContainerRootGID, 0755, true,
 		".pivot_root",
-	)
-	r.MkdirChown.MkdirChown(
-		spec.RootFSPath, r.ContainerRootUID, r.ContainerRootGID, 0755,
 		"dev", "proc", "sys",
 	)
 
 	return bndl.WithRootFS(spec.RootFSPath)
 }
 
-type Mkdir struct {
-	Command       func(rootfsPath string, uid, gid int, mode os.FileMode, paths ...string) *exec.Cmd
+type ChrootMkdir struct {
+	Command       func(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
 	CommandRunner command_runner.CommandRunner
 }
 
-func (m Mkdir) MkdirChown(rootfsPath string, uid, gid int, mode os.FileMode, paths ...string) {
-	m.CommandRunner.Run(m.Command(
+func (m ChrootMkdir) MkdirAs(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
+	return m.CommandRunner.Run(m.Command(
 		rootfsPath,
 		uid,
 		gid,
 		mode,
+		recreate,
 		paths...,
 	))
 }

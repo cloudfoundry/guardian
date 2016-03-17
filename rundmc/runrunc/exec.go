@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
@@ -112,7 +111,7 @@ func (r *ExecPreparer) lookupUser(bndl *goci.Bndl, rootfsPath, username string) 
 }
 
 func (r *ExecPreparer) ensureDirExists(rootfsPath, dir string, uid, gid int) error {
-	if err := r.mkdirer.MkdirAs(filepath.Join(rootfsPath, dir), 0755, uid, gid); err != nil {
+	if err := r.mkdirer.MkdirAs(rootfsPath, uid, gid, 0755, false, dir); err != nil {
 		return fmt.Errorf("create working directory: %s", err)
 	}
 

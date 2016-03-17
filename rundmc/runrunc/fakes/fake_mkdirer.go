@@ -9,30 +9,34 @@ import (
 )
 
 type FakeMkdirer struct {
-	MkdirAsStub        func(path string, mode os.FileMode, uid, gid int) error
+	MkdirAsStub        func(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 	mkdirAsMutex       sync.RWMutex
 	mkdirAsArgsForCall []struct {
-		path string
-		mode os.FileMode
-		uid  int
-		gid  int
+		rootfsPath string
+		uid        int
+		gid        int
+		mode       os.FileMode
+		recreate   bool
+		path       []string
 	}
 	mkdirAsReturns struct {
 		result1 error
 	}
 }
 
-func (fake *FakeMkdirer) MkdirAs(path string, mode os.FileMode, uid int, gid int) error {
+func (fake *FakeMkdirer) MkdirAs(rootfsPath string, uid int, gid int, mode os.FileMode, recreate bool, path ...string) error {
 	fake.mkdirAsMutex.Lock()
 	fake.mkdirAsArgsForCall = append(fake.mkdirAsArgsForCall, struct {
-		path string
-		mode os.FileMode
-		uid  int
-		gid  int
-	}{path, mode, uid, gid})
+		rootfsPath string
+		uid        int
+		gid        int
+		mode       os.FileMode
+		recreate   bool
+		path       []string
+	}{rootfsPath, uid, gid, mode, recreate, path})
 	fake.mkdirAsMutex.Unlock()
 	if fake.MkdirAsStub != nil {
-		return fake.MkdirAsStub(path, mode, uid, gid)
+		return fake.MkdirAsStub(rootfsPath, uid, gid, mode, recreate, path...)
 	} else {
 		return fake.mkdirAsReturns.result1
 	}
@@ -44,10 +48,10 @@ func (fake *FakeMkdirer) MkdirAsCallCount() int {
 	return len(fake.mkdirAsArgsForCall)
 }
 
-func (fake *FakeMkdirer) MkdirAsArgsForCall(i int) (string, os.FileMode, int, int) {
+func (fake *FakeMkdirer) MkdirAsArgsForCall(i int) (string, int, int, os.FileMode, bool, []string) {
 	fake.mkdirAsMutex.RLock()
 	defer fake.mkdirAsMutex.RUnlock()
-	return fake.mkdirAsArgsForCall[i].path, fake.mkdirAsArgsForCall[i].mode, fake.mkdirAsArgsForCall[i].uid, fake.mkdirAsArgsForCall[i].gid
+	return fake.mkdirAsArgsForCall[i].rootfsPath, fake.mkdirAsArgsForCall[i].uid, fake.mkdirAsArgsForCall[i].gid, fake.mkdirAsArgsForCall[i].mode, fake.mkdirAsArgsForCall[i].recreate, fake.mkdirAsArgsForCall[i].path
 }
 
 func (fake *FakeMkdirer) MkdirAsReturns(result1 error) {

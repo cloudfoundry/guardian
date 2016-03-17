@@ -18,13 +18,17 @@ func init() {
 	reexec.Register(name, prepare)
 }
 
-func Command(rootfsPath string, uid, gid int, mode os.FileMode, paths ...string) *exec.Cmd {
+func Command(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd {
 	flags := []string{
 		name,
 		"-rootfsPath", rootfsPath,
 		"-uid", strconv.Itoa(uid),
 		"-gid", strconv.Itoa(gid),
 		"-perm", strconv.Itoa(int(mode.Perm())),
+	}
+
+	if recreate {
+		flags = append(flags, "-recreate=true")
 	}
 
 	return reexec.Command(append(flags, paths...)...)
@@ -34,8 +38,8 @@ func prepare() {
 	var rootfsPath = flag.String("rootfsPath", "", "rootfs path to chroot into")
 	var uid = flag.Int("uid", 0, "uid to create directories as")
 	var gid = flag.Int("gid", 0, "gid to create directories as")
-	// Default permission: 493 decimal is 0755 octal
-	var perm = flag.Int("perm", 493, "Mode to create the directory with")
+	var perm = flag.Int("perm", 0755, "Mode to create the directory with")
+	var recreate = flag.Bool("recreate", false, "whether to delete the directory before (re-)creating it")
 
 	flag.Parse()
 
@@ -49,7 +53,15 @@ func prepare() {
 	}
 
 	for _, path := range flag.Args() {
-		rmdir(path)
+		path, err := filepath.Abs(path)
+		if err != nil {
+			panic(err)
+		}
+
+		if *recreate {
+			rmdir(path)
+		}
+
 		mkdir(path, *uid, *gid, os.FileMode(*perm))
 	}
 }
@@ -61,7 +73,11 @@ func rmdir(path string) {
 }
 
 func mkdir(path string, uid, gid int, mode os.FileMode) {
-	if _, err := os.Stat(path); err == nil {
+	if stat, err := os.Lstat(path); err == nil {
+		if isSymlink(stat) {
+			mkdir(mustReadSymlink(path), uid, gid, mode)
+		}
+
 		return
 	}
 
@@ -74,4 +90,17 @@ func mkdir(path string, uid, gid int, mode os.FileMode) {
 	if err := os.Chown(path, uid, gid); err != nil {
 		panic(err)
 	}
+}
+
+func isSymlink(stat os.FileInfo) bool {
+	return stat.Mode()&os.ModeSymlink == os.ModeSymlink
+}
+
+func mustReadSymlink(path string) string {
+	path, err := os.Readlink(path)
+	if err != nil {
+		panic(err)
+	}
+
+	return path
 }

@@ -60,7 +60,7 @@ type UserLookupper interface {
 
 //go:generate counterfeiter . Mkdirer
 type Mkdirer interface {
-	MkdirAs(path string, mode os.FileMode, uid, gid int) error
+	MkdirAs(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
 //go:generate counterfeiter . EventsNotifier

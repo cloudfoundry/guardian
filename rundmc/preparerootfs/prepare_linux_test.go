@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -41,22 +42,22 @@ var _ = Describe("Preparerootfs", func() {
 		Expect(os.RemoveAll(rootfsPath)).To(Succeed())
 	})
 
-	run := func(rootfsPath string, uid, gid int, mode os.FileMode, args ...string) *gexec.Session {
-		cmd := preparerootfs.Command(rootfsPath, uid, gid, mode, args...)
+	run := func(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, args ...string) *gexec.Session {
+		cmd := preparerootfs.Command(rootfsPath, uid, gid, mode, recreate, args...)
 		sess, err := gexec.Start(cmd, gexec.NewPrefixedWriter("reexec-stdout: ", GinkgoWriter), gexec.NewPrefixedWriter("reexec-stderr: ", GinkgoWriter))
 		Expect(err).NotTo(HaveOccurred())
 		return sess
 	}
 
 	It("creates each directory", func() {
-		Eventually(run(rootfsPath, 0, 0, 0755, dir1, dir2)).Should(gexec.Exit(0))
+		Eventually(run(rootfsPath, 0, 0, 0755, true, dir1, dir2)).Should(gexec.Exit(0))
 
 		Expect(path.Join(rootfsPath, dir1)).To(BeADirectory())
 		Expect(path.Join(rootfsPath, dir2)).To(BeADirectory())
 	})
 
 	It("creates the directories as the requested uid and gid", func() {
-		Eventually(run(rootfsPath, 12, 24, 0777, dir1, dir2)).Should(gexec.Exit(0))
+		Eventually(run(rootfsPath, 12, 24, 0777, true, dir1, dir2)).Should(gexec.Exit(0))
 
 		stat, err := os.Stat(path.Join(rootfsPath, dir2))
 		Expect(err).NotTo(HaveOccurred())
@@ -66,7 +67,7 @@ var _ = Describe("Preparerootfs", func() {
 	})
 
 	It("chowns all created directories, not just the final directory", func() {
-		Eventually(run(rootfsPath, 12, 24, 0700, dir1, dir2)).Should(gexec.Exit(0))
+		Eventually(run(rootfsPath, 12, 24, 0700, true, dir1, dir2)).Should(gexec.Exit(0))
 
 		stat, err := os.Stat(path.Join(rootfsPath, path.Dir(dir2)))
 		Expect(err).NotTo(HaveOccurred())
@@ -76,7 +77,7 @@ var _ = Describe("Preparerootfs", func() {
 	})
 
 	It("sets the provided permissions in the directories", func() {
-		Eventually(run(rootfsPath, 12, 24, 0700, dir1, dir2)).Should(gexec.Exit(0))
+		Eventually(run(rootfsPath, 12, 24, 0700, true, dir1, dir2)).Should(gexec.Exit(0))
 
 		stat, err := os.Stat(path.Join(rootfsPath, path.Dir(dir2)))
 		Expect(err).NotTo(HaveOccurred())
@@ -96,24 +97,34 @@ var _ = Describe("Preparerootfs", func() {
 			Expect(os.MkdirAll(path.Join(target, "foo", "shouldnotbedeleted"), 0700)).To(Succeed())
 			Expect(os.Symlink(target, path.Join(rootfsPath, "test"))).To(Succeed())
 
-			Eventually(run(rootfsPath, 0, 0, 0544, path.Join("test", "foo"))).ShouldNot(gexec.Exit(0))
+			Eventually(run(rootfsPath, 0, 0, 0544, true, path.Join("test", "foo"))).Should(gexec.Exit(0))
 			Expect(path.Join(target, "foo", "shouldnotbedeleted")).To(BeAnExistingFile())
+			Expect(path.Join(rootfsPath, target)).To(BeADirectory()) // should've got created in rootfs
 		})
 	})
 
 	Context("when the directory already exists", func() {
-		It("does not fail", func() {
-			Expect(os.MkdirAll(dir1, 0700)).To(Succeed())
-			Eventually(run(rootfsPath, 0, 0, 0755, dir1)).Should(gexec.Exit(0))
+		BeforeEach(func() {
+			Expect(os.MkdirAll(filepath.Join(rootfsPath, dir1), 0700)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(rootfsPath, dir1, "foo.txt"), []byte("brrr"), 0700)).To(Succeed())
 		})
 
-		It("removes any existing files from the directories", func() {
-			Expect(os.MkdirAll(dir1, 0700)).To(Succeed())
-			Expect(ioutil.WriteFile(path.Join(dir1, "foo.txt"), []byte("brrr"), 0700)).To(Succeed())
+		It("does not fail", func() {
+			Eventually(run(rootfsPath, 0, 0, 0755, true, dir1)).Should(gexec.Exit(0))
+		})
 
-			Eventually(run(rootfsPath, 0, 0, 0744, dir1)).Should(gexec.Exit(0))
+		Context("when -recreate is specified", func() {
+			It("removes any existing files from the directories", func() {
+				Eventually(run(rootfsPath, 0, 0, 0744, true, dir1)).Should(gexec.Exit(0))
+				Expect(path.Join(rootfsPath, dir1, "foo.txt")).NotTo(BeAnExistingFile())
+			})
+		})
 
-			Expect(path.Join(rootfsPath, dir1, "foo.txt")).NotTo(BeAnExistingFile())
+		Context("when -recreate is NOT specified", func() {
+			It("does not remove files from the existing directory", func() {
+				Eventually(run(rootfsPath, 0, 0, 0744, false, dir1)).Should(gexec.Exit(0))
+				Expect(path.Join(rootfsPath, dir1, "foo.txt")).To(BeAnExistingFile())
+			})
 		})
 	})
 })

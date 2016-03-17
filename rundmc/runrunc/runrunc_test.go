@@ -9,7 +9,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
@@ -515,9 +514,11 @@ var _ = Describe("RuncRunner", func() {
 						Context("when the container is privileged", func() {
 							It("creates the working directory", func() {
 								Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-								path, mode, uid, gid := mkdirer.MkdirAsArgsForCall(0)
-								Expect(path).To(Equal(rootfsPath(filepath.Join(bundlePath, "/path/to/banana/dir"))))
+								rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
+								Expect(rootfs).To(Equal(rootfsPath(bundlePath)))
+								Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
 								Expect(mode).To(BeNumerically("==", 0755))
+								Expect(recreate).To(BeFalse())
 								Expect(uid).To(BeEquivalentTo(1012))
 								Expect(gid).To(BeEquivalentTo(1013))
 							})
@@ -527,7 +528,7 @@ var _ = Describe("RuncRunner", func() {
 							BeforeEach(func() {
 								bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
 									bndl := &goci.Bndl{}
-									bndl.Spec.Spec.Root.Path = "/rootfs/of/bundle/" + path
+									bndl.Spec.Spec.Root.Path = "/rootfs/of/bundle" + path
 									bndl.Spec.Linux.UIDMappings = []specs.IDMapping{{
 										HostID:      1712,
 										ContainerID: 1012,
@@ -544,9 +545,11 @@ var _ = Describe("RuncRunner", func() {
 
 							It("creates the working directory as the mapped user", func() {
 								Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-								path, mode, uid, gid := mkdirer.MkdirAsArgsForCall(0)
-								Expect(path).To(Equal(rootfsPath(filepath.Join(bundlePath, "/path/to/banana/dir"))))
-								Expect(mode).To(BeNumerically("==", 0755))
+								rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
+								Expect(rootfs).To(Equal(rootfsPath(bundlePath)))
+								Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
+								Expect(mode).To(BeEquivalentTo(0755))
+								Expect(recreate).To(BeFalse())
 								Expect(uid).To(BeEquivalentTo(1712))
 								Expect(gid).To(BeEquivalentTo(1713))
 							})
@@ -574,8 +577,8 @@ var _ = Describe("RuncRunner", func() {
 						Expect(err).NotTo(HaveOccurred())
 
 						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-						path, _, _, _ := mkdirer.MkdirAsArgsForCall(0)
-						Expect(path).To(Equal(rootfsPath(filepath.Join(bundlePath, "/some/dir"))))
+						_, _, _, _, _, dirs := mkdirer.MkdirAsArgsForCall(0)
+						Expect(dirs).To(ConsistOf("/some/dir"))
 					})
 				})
 

@@ -553,7 +553,12 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	depot := depot.New(depotPath)
 
 	commandRunner := linux_command_runner.New()
-	execPreparer := runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), runrunc.DirectoryCreator{})
+	chrootMkdir := bundlerules.ChrootMkdir{
+		Command:       preparerootfs.Command,
+		CommandRunner: commandRunner,
+	}
+
+	execPreparer := runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir)
 
 	pidFileReader := &process_tracker.PidFileReader{
 		Clock:         clock.NewClock(),
@@ -620,10 +625,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 			bundlerules.RootFS{
 				ContainerRootUID: idMappings.Map(0),
 				ContainerRootGID: idMappings.Map(0),
-				MkdirChown: bundlerules.Mkdir{
-					Command:       preparerootfs.Command,
-					CommandRunner: commandRunner,
-				},
+				MkdirChown:       chrootMkdir,
 			},
 			bundlerules.Limits{},
 			bundlerules.Hooks{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},

@@ -2,6 +2,10 @@ package gqt_test
 
 import (
 	"io"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
@@ -58,6 +62,43 @@ var _ = Describe("Run", func() {
 			shouldNot(gexec.Exit(0)),
 		),
 	)
+
+	Describe("security", func() {
+		Describe("symlinks", func() {
+			var (
+				target, rootfs string
+			)
+
+			BeforeEach(func() {
+				var err error
+				rootfs, err = ioutil.TempDir("", "symlinks")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(os.Mkdir(filepath.Join(rootfs, "tmp"), 0777)).To(Succeed())
+
+				target, err = ioutil.TempDir("", "symlinkstarget")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(os.Symlink(target, path.Join(rootfs, "symlink"))).To(Succeed())
+			})
+
+			It("does not follow symlinks into the host when creating cwd", func() {
+				client = startGarden()
+				container, err := client.Create(garden.ContainerSpec{RootFSPath: rootfs})
+				Expect(err).NotTo(HaveOccurred())
+
+				process, err := container.Run(garden.ProcessSpec{
+					Path: "echo",
+					Args: []string{"hello"},
+					Dir:  "/symlink/foo/bar",
+				}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(process.Wait()).To(Equal(127)) // `echo` wont exist in the fake rootfs. This is fine.
+				Expect(path.Join(target, "foo")).NotTo(BeADirectory())
+			})
+		})
+	})
 
 	Context("when container is privileged", func() {
 		It("can run a process as a particular user", func() {
