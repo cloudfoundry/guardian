@@ -1,17 +1,24 @@
 package dns_test
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
+	"github.com/docker/docker/pkg/reexec"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
+
+func init() {
+	if reexec.Init() {
+		os.Exit(0)
+	}
+}
 
 var _ = Describe("RootfsWriter", func() {
 	var (
@@ -26,11 +33,7 @@ var _ = Describe("RootfsWriter", func() {
 
 	BeforeEach(func() {
 		rootUid = 40000
-		rootGid = 40000
-
-		dns.ChownFunc = func(_ string, _, _ int) error {
-			return nil
-		}
+		rootGid = 40001
 	})
 
 	JustBeforeEach(func() {
@@ -48,7 +51,7 @@ var _ = Describe("RootfsWriter", func() {
 			BeforeEach(func() {
 				var err error
 
-				rootfsPath, err = ioutil.TempDir("", "")
+				rootfsPath, err = ioutil.TempDir("", "rootfs")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -71,46 +74,32 @@ var _ = Describe("RootfsWriter", func() {
 
 			It("should apply the correct ownership", func() {
 				filePath := filepath.Join(rootfsPath, "/test/file.txt")
-
-				calledCount := 0
-				dns.ChownFunc = func(path string, uid, gid int) error {
-					calledCount++
-					Expect(path).To(Equal(filePath))
-					Expect(uid).To(Equal(rootUid))
-					Expect(gid).To(Equal(rootGid))
-
-					return nil
-				}
-
 				Expect(rootfsWriter.WriteFile(log, "/test/file.txt", []byte("Hello world"))).To(Succeed())
 
-				Expect(calledCount).To(Equal(1))
+				stat, err := os.Stat(filePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(BeEquivalentTo(40000))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(BeEquivalentTo(40001))
 			})
 
-			Context("when chowing fails", func() {
+			Context("when the file path is a symlink", func() {
+				var (
+					target string
+				)
+
 				BeforeEach(func() {
-					dns.ChownFunc = func(_ string, _, _ int) error {
-						return errors.New("banana chown")
-					}
+					var err error
+					target, err = ioutil.TempDir("", "symlink")
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(os.Symlink(target, filepath.Join(rootfsPath, "symlink"))).To(Succeed())
+					Expect(os.MkdirAll(filepath.Join(rootfsPath, target), 0700)).To(Succeed())
 				})
 
-				It("should return the error", func() {
-					Expect(
-						rootfsWriter.WriteFile(log, "file.txt", []byte("Hello world")),
-					).To(MatchError(ContainSubstring("banana chown")))
+				It("is resolved relative to the root path", func() {
+					Expect(rootfsWriter.WriteFile(log, "/symlink/file.txt", []byte("Hello world"))).To(Succeed())
+					Expect(filepath.Join(target, "file.txt")).NotTo(BeAnExistingFile())
 				})
-			})
-		})
-
-		Context("when the root path does not exist", func() {
-			BeforeEach(func() {
-				rootfsPath = "/does/not/exist"
-			})
-
-			It("should return an error", func() {
-				Expect(
-					rootfsWriter.WriteFile(log, "file.txt", []byte("Hello world")),
-				).To(MatchError(ContainSubstring("/does/not/exist")))
 			})
 		})
 	})

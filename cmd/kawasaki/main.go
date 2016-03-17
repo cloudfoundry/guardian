@@ -16,9 +16,16 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
 	"github.com/cloudfoundry-incubator/guardian/pkg/vars"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
+	"github.com/docker/docker/pkg/reexec"
 	"github.com/opencontainers/specs"
 	"github.com/pivotal-golang/lager"
 )
+
+func init() {
+	if reexec.Init() {
+		os.Exit(0)
+	}
+}
 
 func main() {
 	cf_lager.AddFlags(flag.CommandLine)
