@@ -42,6 +42,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry-incubator/guardian/sysinfo"
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/docker/docker/daemon/graphdriver"
 	_ "github.com/docker/docker/daemon/graphdriver/aufs"
@@ -221,6 +222,12 @@ var dropsondeDestination = flag.String(
 	"Destination for dropsonde-emitted metrics.",
 )
 
+var metricsEmissionInterval = flag.Duration(
+	"metricsEmissionInterval",
+	time.Minute,
+	"Interval in which to emit metrics to the metron agent",
+)
+
 var allowHostAccess = flag.Bool(
 	"allowHostAccess",
 	false,
@@ -367,11 +374,15 @@ func main() {
 
 	gardenServer := server.New(*listenNetwork, *listenAddr, *graceTime, backend, logger.Session("api"))
 
+	initializeDropsonde(logger)
+
+	metricsProvider := wireMetricsProvider(logger, *depotPath, *graphRoot)
+
+	metronNotifier := wireMetronNotifier(logger, metricsProvider)
+	metronNotifier.Start()
+
 	if dbgAddr := cf_debug_server.DebugAddress(flag.CommandLine); dbgAddr != "" {
-		metrics.StartDebugServer(
-			dbgAddr, reconfigurableSink,
-			wireMetricsProvider(logger, *depotPath, *graphRoot),
-		)
+		metrics.StartDebugServer(dbgAddr, reconfigurableSink, metricsProvider)
 	}
 
 	err = gardenServer.Start()
@@ -658,6 +669,19 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 func wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {
 	backingStoresPath := filepath.Join(graphRoot, "backing_stores")
 	return metrics.NewMetrics(log, backingStoresPath, depotPath)
+}
+
+func wireMetronNotifier(log lager.Logger, metricsProvider metrics.Metrics) *metrics.PeriodicMetronNotifier {
+	return metrics.NewPeriodicMetronNotifier(
+		log, metricsProvider, *metricsEmissionInterval, clock.NewClock(),
+	)
+}
+
+func initializeDropsonde(log lager.Logger) {
+	err := dropsonde.Initialize(*dropsondeDestination, *dropsondeOrigin)
+	if err != nil {
+		log.Error("failed to initialize dropsonde", err)
+	}
 }
 
 func missing(flagName string) {
