@@ -23,7 +23,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin string
+var ociRuntimeBin, gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, inspectorGardenBin string
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -50,6 +50,9 @@ func TestGqt(t *testing.T) {
 			bins["init_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/init")
 			Expect(err).NotTo(HaveOccurred())
 
+			bins["inspector-garden_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/inspector-garden")
+			Expect(err).NotTo(HaveOccurred())
+
 			cmd := exec.Command("make")
 			cmd.Dir = "../rundmc/nstar"
 			cmd.Stdout = GinkgoWriter
@@ -72,6 +75,7 @@ func TestGqt(t *testing.T) {
 		nstarBin = bins["nstar_bin_path"]
 		kawasakiBin = bins["kawasaki_bin_path"]
 		initBin = bins["init_bin_path"]
+		inspectorGardenBin = bins["inspector-garden_bin_path"]
 	})
 
 	BeforeEach(func() {
