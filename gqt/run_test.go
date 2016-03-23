@@ -94,7 +94,7 @@ var _ = Describe("Run", func() {
 				}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(process.Wait()).To(Equal(127)) // `echo` wont exist in the fake rootfs. This is fine.
+				Expect(process.Wait()).ToNot(Equal(0)) // `echo` wont exist in the fake rootfs. This is fine.
 				Expect(path.Join(target, "foo")).NotTo(BeADirectory())
 			})
 		})

@@ -4,7 +4,7 @@ import (
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 )
 
 type BindMounts struct {

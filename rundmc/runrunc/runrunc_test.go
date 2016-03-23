@@ -19,7 +19,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runc/libcontainer/user"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
@@ -71,14 +71,14 @@ var _ = Describe("RuncRunner", func() {
 
 		bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
 			bndl := &goci.Bndl{}
-			bndl.Spec.Spec.Root.Path = rootfsPath(path)
+			bndl.Spec.Root.Path = rootfsPath(path)
 			return bndl, nil
 		}
 
 		users.LookupReturns(&user.ExecUser{}, nil)
 
-		runcBinary.StartCommandStub = func(path, id string, detach bool) *exec.Cmd {
-			return exec.Command("funC", "start", path, id, fmt.Sprintf("%t", detach))
+		runcBinary.StartCommandStub = func(path, id string, detach bool, logFilePath string) *exec.Cmd {
+			return exec.Command("funC", "start", path, id, fmt.Sprintf("%t", detach), "-logFile", logFilePath)
 		}
 
 		runcBinary.ExecCommandStub = func(id, processJSONPath, pidFilePath string) *exec.Cmd {
@@ -104,14 +104,23 @@ var _ = Describe("RuncRunner", func() {
 
 	Describe("Start", func() {
 		It("starts the container with runC passing the detach flag", func() {
-			tracker.RunReturns(new(fakes.FakeProcess), nil)
+			tracker.RunStub = func(_ string, cmd *exec.Cmd, io garden.ProcessIO, _ *garden.TTYSpec, _ string) (garden.Process, error) {
+				Expect(ioutil.WriteFile(cmd.Args[6], []byte(""), 0700)).To(Succeed())
+				return new(fakes.FakeProcess), nil
+			}
+
 			Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
 
 			Expect(tracker.RunCallCount()).To(Equal(1))
 			_, cmd, _, _, _ := tracker.RunArgsForCall(0)
 
 			Expect(cmd.Path).To(Equal("funC"))
-			Expect(cmd.Args).To(Equal([]string{"funC", "start", bundlePath, "some-id", "true"}))
+			Expect(cmd.Args[4]).To(Equal("true"))
+		})
+
+		It("returns an error if the log file from start can't be read", func() {
+			tracker.RunReturns(new(fakes.FakeProcess), nil)
+			Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError(ContainSubstring("start: read log file")))
 		})
 
 		Describe("forwarding logs from runC", func() {
@@ -130,8 +139,8 @@ var _ = Describe("RuncRunner", func() {
 			})
 
 			JustBeforeEach(func() {
-				tracker.RunStub = func(_ string, _ *exec.Cmd, io garden.ProcessIO, _ *garden.TTYSpec, _ string) (garden.Process, error) {
-					io.Stdout.Write([]byte(logs))
+				tracker.RunStub = func(_ string, cmd *exec.Cmd, io garden.ProcessIO, _ *garden.TTYSpec, _ string) (garden.Process, error) {
+					Expect(ioutil.WriteFile(cmd.Args[6], []byte(logs), 0700)).To(Succeed())
 					fakeProcess := new(fakes.FakeProcess)
 
 					fakeProcess.WaitReturns(exitStatus, errorFromStart)
@@ -435,8 +444,8 @@ var _ = Describe("RuncRunner", func() {
 
 				JustBeforeEach(func() {
 					bndl = &goci.Bndl{}
-					bndl.Spec.Spec.Root.Path = "/some/rootfs/path"
-					bndl.Spec.Spec.Process.Env = containerEnv
+					bndl.Spec.Root.Path = "/some/rootfs/path"
+					bndl.Spec.Process.Env = containerEnv
 					bundleLoader.LoadReturns(bndl, nil)
 
 					_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
@@ -449,7 +458,7 @@ var _ = Describe("RuncRunner", func() {
 					envWContainer := make([]string, len(spec.Env))
 					copy(envWContainer, spec.Env)
 
-					bndl.Spec.Spec.Process.Env = []string{}
+					bndl.Spec.Process.Env = []string{}
 					bundleLoader.LoadReturns(bndl, nil)
 
 					_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
@@ -479,7 +488,7 @@ var _ = Describe("RuncRunner", func() {
 			Context("when the container has capabilities", func() {
 				BeforeEach(func() {
 					bndl := &goci.Bndl{}
-					bndl.Spec.Spec.Process.Capabilities = []string{"foo", "bar", "baz"}
+					bndl.Spec.Process.Capabilities = []string{"foo", "bar", "baz"}
 					bundleLoader.LoadReturns(bndl, nil)
 				})
 
@@ -528,7 +537,7 @@ var _ = Describe("RuncRunner", func() {
 							BeforeEach(func() {
 								bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
 									bndl := &goci.Bndl{}
-									bndl.Spec.Spec.Root.Path = "/rootfs/of/bundle" + path
+									bndl.Spec.Root.Path = "/rootfs/of/bundle" + path
 									bndl.Spec.Linux.UIDMappings = []specs.IDMapping{{
 										HostID:      1712,
 										ContainerID: 1012,

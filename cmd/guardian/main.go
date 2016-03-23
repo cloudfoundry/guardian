@@ -51,7 +51,7 @@ import (
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/nu7hatch/gouuid"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/localip"

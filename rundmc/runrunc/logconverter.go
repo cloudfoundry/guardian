@@ -25,5 +25,9 @@ func wrapWithErrorFromRuncLog(log lager.Logger, originalError error, buff []byte
 		return fmt.Errorf("runc start: %s", originalError)
 	}
 
+	if parsedLogLine.Msg == "" {
+		return fmt.Errorf("runc start: %s", originalError)
+	}
+
 	return fmt.Errorf("runc start: %s: %s", originalError, parsedLogLine.Msg)
 }

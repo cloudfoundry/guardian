@@ -9,12 +9,13 @@ import (
 )
 
 type FakeRuncBinary struct {
-	StartCommandStub        func(path, id string, detach bool) *exec.Cmd
+	StartCommandStub        func(path, id string, detach bool, logFilePath string) *exec.Cmd
 	startCommandMutex       sync.RWMutex
 	startCommandArgsForCall []struct {
-		path   string
-		id     string
-		detach bool
+		path        string
+		id          string
+		detach      bool
+		logFilePath string
 	}
 	startCommandReturns struct {
 		result1 *exec.Cmd
@@ -72,16 +73,17 @@ type FakeRuncBinary struct {
 	}
 }
 
-func (fake *FakeRuncBinary) StartCommand(path string, id string, detach bool) *exec.Cmd {
+func (fake *FakeRuncBinary) StartCommand(path string, id string, detach bool, logFilePath string) *exec.Cmd {
 	fake.startCommandMutex.Lock()
 	fake.startCommandArgsForCall = append(fake.startCommandArgsForCall, struct {
-		path   string
-		id     string
-		detach bool
-	}{path, id, detach})
+		path        string
+		id          string
+		detach      bool
+		logFilePath string
+	}{path, id, detach, logFilePath})
 	fake.startCommandMutex.Unlock()
 	if fake.StartCommandStub != nil {
-		return fake.StartCommandStub(path, id, detach)
+		return fake.StartCommandStub(path, id, detach, logFilePath)
 	} else {
 		return fake.startCommandReturns.result1
 	}
@@ -93,10 +95,10 @@ func (fake *FakeRuncBinary) StartCommandCallCount() int {
 	return len(fake.startCommandArgsForCall)
 }
 
-func (fake *FakeRuncBinary) StartCommandArgsForCall(i int) (string, string, bool) {
+func (fake *FakeRuncBinary) StartCommandArgsForCall(i int) (string, string, bool, string) {
 	fake.startCommandMutex.RLock()
 	defer fake.startCommandMutex.RUnlock()
-	return fake.startCommandArgsForCall[i].path, fake.startCommandArgsForCall[i].id, fake.startCommandArgsForCall[i].detach
+	return fake.startCommandArgsForCall[i].path, fake.startCommandArgsForCall[i].id, fake.startCommandArgsForCall[i].detach, fake.startCommandArgsForCall[i].logFilePath
 }
 
 func (fake *FakeRuncBinary) StartCommandReturns(result1 *exec.Cmd) {

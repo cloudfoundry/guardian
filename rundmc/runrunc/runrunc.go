@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
@@ -96,7 +98,7 @@ type RunRunc struct {
 
 //go:generate counterfeiter . RuncBinary
 type RuncBinary interface {
-	StartCommand(path, id string, detach bool) *exec.Cmd
+	StartCommand(path, id string, detach bool, logFilePath string) *exec.Cmd
 	ExecCommand(id, processJSONPath, pidFilePath string) *exec.Cmd
 	EventsCommand(id string) *exec.Cmd
 	StateCommand(id string) *exec.Cmd
@@ -116,36 +118,53 @@ func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen Uid
 }
 
 // Starts a bundle by running 'runc' in the bundle directory
-func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, _ garden.ProcessIO) error {
+func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, _ garden.ProcessIO) (err error) {
 	log = log.Session("start", lager.Data{"bundle": bundlePath})
 
 	log.Info("started")
 	defer log.Info("finished")
 
-	var buff bytes.Buffer
-	cmd := r.runc.StartCommand(bundlePath, id, true)
-	cmd.Stdout = &buff
+	logFile := filepath.Join(bundlePath, "start.log")
 
-	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, garden.ProcessIO{Stdout: &buff}, nil, "")
+	cmd := r.runc.StartCommand(bundlePath, id, true, logFile)
+	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, garden.ProcessIO{Stdout: os.Stdout, Stderr: os.Stderr}, nil, "")
 	if err != nil {
 		log.Error("run-runc-track-failed", err)
 		return err
 	}
 
-	defer forwardRuncLogsToLager(log, buff.Bytes())
+	defer func() {
+		logFileR, openErr := os.Open(logFile)
+		if openErr != nil {
+			err = fmt.Errorf("start: read log file: %s", openErr)
+			return
+		}
+
+		buff, readErr := ioutil.ReadAll(logFileR)
+		if readErr != nil {
+			err = fmt.Errorf("start: read log file: %s", readErr)
+			return
+		}
+
+		forwardRuncLogsToLager(log, buff)
+
+		if err != nil {
+			err = wrapWithErrorFromRuncLog(log, err, buff)
+		}
+	}()
 
 	status, err := process.Wait()
 	if err != nil {
 		log.Error("run-runc-start-failed", err, lager.Data{"exit-status": status})
-		return wrapWithErrorFromRuncLog(log, err, buff.Bytes())
+		return err
 	}
 
 	if status > 0 {
 		log.Info("run-runc-start-exit-status-not-zero", lager.Data{"exit-status": status})
-		return wrapWithErrorFromRuncLog(log, fmt.Errorf("exit status %d", status), buff.Bytes())
+		err = fmt.Errorf("exit status %d", status)
 	}
 
-	return nil
+	return err
 }
 
 // Exec a process in a bundle using 'runc exec'

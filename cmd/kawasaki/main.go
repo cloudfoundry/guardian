@@ -17,7 +17,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/pkg/vars"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -129,7 +129,7 @@ func wireDNSResolvConfigurer(state specs.State, config kawasaki.NetworkConfig) *
 			OverrideServers:    config.DNSServers,
 		},
 		FileWriter: &dns.RootfsWriter{
-			RootfsPath: bndl.Spec.Spec.Root.Path,
+			RootfsPath: bndl.Spec.Root.Path,
 			RootUid:    rootUid,
 			RootGid:    rootGid,
 		},

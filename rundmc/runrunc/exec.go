@@ -11,7 +11,7 @@ import (
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/goci"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 	"github.com/pivotal-golang/lager"
 )
 

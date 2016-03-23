@@ -2,7 +2,7 @@ package runrunc
 
 import (
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/opencontainers/specs"
+	"github.com/opencontainers/specs/specs-go"
 )
 
 func toRlimits(rlimits garden.ResourceLimits) (results []specs.Rlimit) {

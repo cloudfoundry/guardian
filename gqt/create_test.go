@@ -319,14 +319,14 @@ var _ = Describe("Creating a Container", func() {
 })
 
 func initProcessPID(handle string) int {
-	Eventually(fmt.Sprintf("/run/opencontainer/containers/%s/state.json", handle)).Should(BeAnExistingFile())
+	Eventually(fmt.Sprintf("/run/runc/%s/state.json", handle)).Should(BeAnExistingFile())
 
 	state := struct {
 		Pid int `json:"init_process_pid"`
 	}{}
 
 	Eventually(func() error {
-		stateFile, err := os.Open(fmt.Sprintf("/run/opencontainer/containers/%s/state.json", handle))
+		stateFile, err := os.Open(fmt.Sprintf("/run/runc/%s/state.json", handle))
 		Expect(err).NotTo(HaveOccurred())
 		defer stateFile.Close()
 
