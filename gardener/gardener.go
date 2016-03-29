@@ -154,7 +154,7 @@ type Gardener struct {
 
 // Create creates a container by combining the results of networker.Network,
 // volumizer.Create and containzer.Create.
-func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
+func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err error) {
 	if spec.Handle == "" {
 		spec.Handle = g.UidGenerator.Generate()
 	}
@@ -164,6 +164,15 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 	log.Info("start")
 	defer log.Info("created")
 
+	defer func() {
+		if err != nil {
+			log := log.Session("cleanup")
+			log.Info("start")
+			g.destroy(log, spec.Handle)
+			log.Info("cleanedup")
+		}
+	}()
+
 	hooks, err := g.Networker.Hooks(log, spec.Handle, spec.Network)
 	if err != nil {
 		return nil, err
@@ -171,7 +180,6 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 
 	rootFSURL, err := url.Parse(spec.RootFSPath)
 	if err != nil {
-		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err
 	}
 
@@ -186,7 +194,6 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		Namespaced: !spec.Privileged,
 	})
 	if err != nil {
-		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err
 	}
 
@@ -199,7 +206,6 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
 		Limits:       spec.Limits,
 		Env:          append(env, spec.Env...),
 	}); err != nil {
-		g.Networker.Destroy(g.Logger, spec.Handle)
 		return nil, err
 	}
 
@@ -235,6 +241,15 @@ func (g *Gardener) lookup(handle string) garden.Container {
 
 // Destroy idempotently destroys any resources associated with the given handle
 func (g *Gardener) Destroy(handle string) error {
+	log := g.Logger.Session("destroy", lager.Data{"handle": handle})
+
+	log.Info("start")
+	defer log.Info("destroyed")
+
+	return g.destroy(log, handle)
+}
+
+func (g *Gardener) destroy(log lager.Logger, handle string) error {
 	if err := g.Containerizer.Destroy(g.Logger, handle); err != nil {
 		return err
 	}

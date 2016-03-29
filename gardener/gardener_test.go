@@ -51,6 +51,34 @@ var _ = Describe("Gardener", func() {
 	})
 
 	Describe("creating a container", func() {
+		ItDestroysEverything := func(rootfsPath string) {
+			BeforeEach(func() {
+				_, err := gdnr.Create(garden.ContainerSpec{
+					RootFSPath: rootfsPath,
+					Handle:     "poor-banana",
+				})
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("should clean up the networking configuration", func() {
+				Expect(networker.DestroyCallCount()).To(Equal(1))
+				_, handle := networker.DestroyArgsForCall(0)
+				Expect(handle).To(Equal("poor-banana"))
+			})
+
+			It("should clean up any created volumes", func() {
+				Expect(volumeCreator.DestroyCallCount()).To(Equal(1))
+				_, handle := volumeCreator.DestroyArgsForCall(0)
+				Expect(handle).To(Equal("poor-banana"))
+			})
+
+			It("should destroy any container state", func() {
+				Expect(containerizer.DestroyCallCount()).To(Equal(1))
+				_, handle := containerizer.DestroyArgsForCall(0)
+				Expect(handle).To(Equal("poor-banana"))
+			})
+		}
+
 		Context("when a handle is specified", func() {
 			It("passes the network hooks to the containerizer", func() {
 				networker.HooksStub = func(_ lager.Logger, handle, spec string) (gardener.Hooks, error) {
@@ -163,17 +191,7 @@ var _ = Describe("Gardener", func() {
 					Expect(err).To(HaveOccurred())
 				})
 
-				It("should clean up networking configuration", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{
-						Handle:     "banana-container",
-						RootFSPath: "://banana",
-					})
-					Expect(err).To(HaveOccurred())
-
-					Expect(networker.DestroyCallCount()).To(Equal(1))
-					_, handle := networker.DestroyArgsForCall(0)
-					Expect(handle).To(Equal("banana-container"))
-				})
+				ItDestroysEverything("://banana")
 			})
 
 			Context("when a memory limit is provided", func() {
@@ -240,12 +258,7 @@ var _ = Describe("Gardener", func() {
 					Expect(containerizer.CreateCallCount()).To(Equal(0))
 				})
 
-				It("should clean up networking configuration", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{Handle: "adam"})
-					Expect(err).To(HaveOccurred())
-
-					Expect(networker.DestroyCallCount()).To(Equal(1))
-				})
+				ItDestroysEverything("")
 			})
 
 			Context("when environment variables are specified", func() {
@@ -287,16 +300,7 @@ var _ = Describe("Gardener", func() {
 					Expect(err).To(HaveOccurred())
 				})
 
-				It("should cleanup the networking configuration", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{
-						Handle: "poor-banana",
-					})
-					Expect(err).To(HaveOccurred())
-
-					Expect(networker.DestroyCallCount()).To(Equal(1))
-					_, handle := networker.DestroyArgsForCall(0)
-					Expect(handle).To(Equal("poor-banana"))
-				})
+				ItDestroysEverything("")
 			})
 
 			It("returns the container that Lookup would return", func() {

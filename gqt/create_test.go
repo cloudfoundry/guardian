@@ -61,6 +61,23 @@ var _ = Describe("Creating a Container", func() {
 			_, err := client.Create(garden.ContainerSpec{})
 			Expect(err).To(MatchError(ContainSubstring("fork/exec POTATO: no such file or directory")))
 		})
+
+		It("cleans up the depot directory", func() {
+			_, err := client.Create(garden.ContainerSpec{})
+			Expect(err).To(HaveOccurred())
+
+			Expect(ioutil.ReadDir(client.DepotDir)).To(BeEmpty())
+		})
+
+		It("cleans up the graph", func() {
+			prev, err := ioutil.ReadDir(filepath.Join(client.GraphPath, "aufs", "mnt"))
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Create(garden.ContainerSpec{})
+			Expect(err).To(HaveOccurred())
+
+			Expect(ioutil.ReadDir(filepath.Join(client.GraphPath, "aufs", "mnt"))).To(HaveLen(len(prev)))
+		})
 	})
 
 	Context("after creating a container without a specified handle", func() {
