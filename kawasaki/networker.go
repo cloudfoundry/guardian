@@ -248,7 +248,12 @@ func (n *Networker) Destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	return n.subnetPool.Release(cfg.Subnet, cfg.ContainerIP)
+	if err := n.subnetPool.Release(cfg.Subnet, cfg.ContainerIP); err != nil && err != subnets.ErrReleasedUnallocatedSubnet {
+		log.Error("release-failed", err)
+		return err
+	}
+
+	return nil
 }
 
 func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string, newMapping garden.PortMapping) {
@@ -264,12 +269,14 @@ func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string,
 	json.Unmarshal([]byte(currentMappingsJson), &currentMappings)
 
 	updatedMappings := append(currentMappings, newMapping)
+	updatedMappingsJson, err := json.Marshal(updatedMappings)
+	if err != nil {
+		// Since the object we are marshalling here is always going to be
+		// valid, this would be a programming error
+		panic(err)
+	}
 
-	// Since the object we are marshalling here is always going to be
-	// valid, not checking for errors here
-	upadtedMappingsJson, _ := json.Marshal(updatedMappings)
-
-	configStore.Set(handle, gardener.MappedPortsKey, string(upadtedMappingsJson))
+	configStore.Set(handle, gardener.MappedPortsKey, string(updatedMappingsJson))
 }
 
 func getAll(config ConfigStore, handle string, key ...string) (vals []string, err error) {

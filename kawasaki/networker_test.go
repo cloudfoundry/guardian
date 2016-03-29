@@ -237,10 +237,18 @@ var _ = Describe("Networker", func() {
 		})
 
 		Context("when releasing subnet fails", func() {
-			It("should return the error", func() {
-				fakeSubnetPool.ReleaseReturns(errors.New("oh no"))
+			Context("when the error indicates the subnet is already gone", func() {
+				It("should return nil (no error)", func() {
+					fakeSubnetPool.ReleaseReturns(subnets.ErrReleasedUnallocatedSubnet)
+					Expect(networker.Destroy(logger, "some-handle")).To(BeNil())
+				})
+			})
 
-				Expect(networker.Destroy(logger, "some-handle")).To(MatchError("oh no"))
+			Context("when the error is generic", func() {
+				It("should return the error", func() {
+					fakeSubnetPool.ReleaseReturns(errors.New("oh no"))
+					Expect(networker.Destroy(logger, "some-handle")).To(MatchError("oh no"))
+				})
 			})
 		})
 	})

@@ -152,12 +152,17 @@ type Gardener struct {
 	PropertyManager PropertyManager
 }
 
+// Create creates a container by combining the results of networker.Network,
+// volumizer.Create and containzer.Create.
 func (g *Gardener) Create(spec garden.ContainerSpec) (garden.Container, error) {
-	log := g.Logger.Session("create")
-
 	if spec.Handle == "" {
 		spec.Handle = g.UidGenerator.Generate()
 	}
+
+	log := g.Logger.Session("create", lager.Data{"handle": spec.Handle})
+
+	log.Info("start")
+	defer log.Info("created")
 
 	hooks, err := g.Networker.Hooks(log, spec.Handle, spec.Network)
 	if err != nil {
@@ -228,6 +233,7 @@ func (g *Gardener) lookup(handle string) garden.Container {
 	}
 }
 
+// Destroy idempotently destroys any resources associated with the given handle
 func (g *Gardener) Destroy(handle string) error {
 	if err := g.Containerizer.Destroy(g.Logger, handle); err != nil {
 		return err
