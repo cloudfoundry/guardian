@@ -127,7 +127,7 @@ func (r *RunRunc) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 	logFile := filepath.Join(bundlePath, "start.log")
 
 	cmd := r.runc.StartCommand(bundlePath, id, true, logFile)
-	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, garden.ProcessIO{Stdout: os.Stdout, Stderr: os.Stderr}, nil, "")
+	process, err := r.tracker.Run(r.pidGenerator.Generate(), cmd, garden.ProcessIO{}, nil, "")
 	if err != nil {
 		log.Error("run-runc-track-failed", err)
 		return err
