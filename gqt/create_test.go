@@ -121,7 +121,7 @@ var _ = Describe("Creating a Container", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
 				return sess
-			}).ShouldNot(gbytes.Say("defunct"))
+			}, "10s").ShouldNot(gbytes.Say("defunct")) // this is a pretty broad test since we're looking at all processes, so give it quite a while to see no defuncts
 		})
 
 		DescribeTable("placing the container in to all namespaces", func(ns string) {
