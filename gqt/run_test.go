@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"syscall"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
@@ -64,6 +65,44 @@ var _ = Describe("Run", func() {
 	)
 
 	Describe("security", func() {
+		Describe("rlimits", func() {
+			It("sets requested rlimits, even if they are increased above current limit", func() {
+				var old syscall.Rlimit
+				Expect(syscall.Getrlimit(syscall.RLIMIT_NOFILE, &old)).To(Succeed())
+
+				Expect(syscall.Setrlimit(syscall.RLIMIT_NOFILE, &syscall.Rlimit{
+					Max: 100000,
+					Cur: 100000,
+				})).To(Succeed())
+
+				defer syscall.Setrlimit(syscall.RLIMIT_NOFILE, &old)
+
+				client = startGarden()
+				container, err := client.Create(garden.ContainerSpec{
+					Privileged: false,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				limit := uint64(100001)
+				stdout := gbytes.NewBuffer()
+				process, err := container.Run(garden.ProcessSpec{
+					User: "root",
+					Path: "/bin/sh",
+					Args: []string{"-c", "ulimit -a"},
+					Limits: garden.ResourceLimits{
+						Nofile: &limit,
+					},
+				}, garden.ProcessIO{
+					Stdout: stdout,
+					Stderr: GinkgoWriter,
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(process.Wait()).To(Equal(0))
+				Expect(stdout).To(gbytes.Say("file descriptors\\W+100001"))
+			})
+		})
+
 		Describe("symlinks", func() {
 			var (
 				target, rootfs string
