@@ -300,8 +300,17 @@ func (r *RunRunc) Kill(log lager.Logger, handle string) error {
 
 // Delete a bundle which was detached (requires the bundle was already killed)
 func (r *RunRunc) Delete(log lager.Logger, handle string) error {
+	log = log.Session("delete")
+	log.Info("start")
+	defer log.Info("deleted")
+
 	cmd := r.runc.DeleteCommand(handle)
-	return r.commandRunner.Run(cmd)
+	if out, err := r.run(log, cmd); err != nil {
+		log.Error("delete-run-failed", err, lager.Data{"out": out.String()})
+		return err
+	}
+
+	return nil
 }
 
 func (r *RunRunc) run(log lager.Logger, cmd *exec.Cmd) (*bytes.Buffer, error) {

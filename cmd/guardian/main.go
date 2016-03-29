@@ -662,7 +662,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	eventStore := rundmc.NewEventStore(properties)
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 
-	deleteRetrier := retrier.New(retrier.ConstantBackoff(10, 100*time.Millisecond), nil)
+	deleteRetrier := retrier.New(retrier.ConstantBackoff(20, 100*time.Millisecond), nil)
 	return rundmc.New(depot, template, runcrunner, nstar, eventStore, deleteRetrier)
 }
 

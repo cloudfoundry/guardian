@@ -197,6 +197,7 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 	}
 
 	if err := c.retrier.Run(func() error { return c.runner.Delete(log, handle) }); err != nil {
+		log.Error("delete-failed", err)
 		return err
 	}
 
