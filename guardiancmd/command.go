@@ -79,26 +79,30 @@ type GuardianCommand struct {
 	Logger LagerFlag
 
 	Server struct {
-		ListenNetwork string `long:"listen-network" choice:"unix" choice:"tcp" default:"unix" description:"Network type to listen with."`
-		ListenAddr    string `long:"listen-addr" default:"/tmp/garden.sock" description:"Network address or socket path on which to listen."`
+		BindIP   IPFlag `long:"bind-ip"                  description:"Bind with TCP on the given IP."`
+		BindPort uint16 `long:"bind-port" default:"7777" description:"Bind with TCP on the given port."`
 
-		DebugListenAddr string `long:"debug-listen-addr" description:"IP:Port on which to bind the debug server."`
+		BindSocket string `long:"bind-socket" default:"/tmp/garden.sock" description:"Bind with Unix on the given socket path."`
+
+		DebugBindIP   IPFlag `long:"debug-bind-ip"                   description:"Bind the debug server on the given IP."`
+		DebugBindPort uint16 `long:"debug-bind-port" default:"17013" description:"Bind the debug server to the given port."`
 
 		Tag string `long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
 	} `group:"Server Configuration"`
 
 	Containers struct {
-		Dir              DirFlag       `long:"depot" required:"true" description:"Directory in which to store container data."`
-		DefaultRootFSDir DirFlag       `long:"default-rootfs" description:"Default rootfs to use when not specified on container creation."`
+		Dir DirFlag `long:"depot" required:"true" description:"Directory in which to store container data."`
+
+		DefaultRootFSDir DirFlag       `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
 		DefaultGraceTime time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
 	} `group:"Container Lifecycle"`
 
 	Bin struct {
 		IODaemon FileFlag `long:"iodaemon-bin" required:"true" description:"Path to the 'iodaemon' binary."`
-		NSTar    FileFlag `long:"nstar-bin" required:"true" description:"Path to the 'nstar' binary."`
-		Tar      FileFlag `long:"tar-bin" required:"true" description:"Path to the 'tar' binary."`
+		NSTar    FileFlag `long:"nstar-bin"    required:"true" description:"Path to the 'nstar' binary."`
+		Tar      FileFlag `long:"tar-bin"      required:"true" description:"Path to the 'tar' binary."`
 		Kawasaki FileFlag `long:"kawasaki-bin" required:"true" description:"Path to the 'kawasaki' network hook binary."`
-		Init     FileFlag `long:"init-bin" required:"true" description:"Path execute as pid 1 inside each container."`
+		Init     FileFlag `long:"init-bin"     required:"true" description:"Path execute as pid 1 inside each container."`
 	} `group:"Binary Tools"`
 
 	Graph struct {
@@ -116,23 +120,23 @@ type GuardianCommand struct {
 		Pool CIDRFlag `long:"network-pool" default:"10.254.0.0/22" description:"Network range to use for dynamically allocated container subnets."`
 
 		AllowHostAccess bool       `long:"allow-host-access" description:"Allow network access to the host machine."`
-		DenyNetworks    []CIDRFlag `long:"deny-network" description:"Network ranges to which traffic from containers will be denied. Can be specified multiple times."`
-		AllowNetworks   []CIDRFlag `long:"allow-network" description:"Network ranges to which traffic from containers will be allowed. Can be specified multiple times."`
+		DenyNetworks    []CIDRFlag `long:"deny-network"      description:"Network ranges to which traffic from containers will be denied. Can be specified multiple times."`
+		AllowNetworks   []CIDRFlag `long:"allow-network"     description:"Network ranges to which traffic from containers will be allowed. Can be specified multiple times."`
 
 		DNSServers []IPFlag `long:"dns-server" description:"DNS server IP address to use instead of automatically determined servers. Can be specified multiple times."`
 
-		ExternalIP    IPFlag `long:"external-ip" description:"IP address to use to reach container's mapped ports. Autodetected if not specified."`
+		ExternalIP    IPFlag `long:"external-ip"                     description:"IP address to use to reach container's mapped ports. Autodetected if not specified."`
 		PortPoolStart uint32 `long:"port-pool-start" default:"60000" description:"Start of the ephemeral port range used for mapped container ports."`
 		PortPoolSize  uint32 `long:"port-pool-size"  default:"5000"  description:"Size of the port pool used for mapped container ports."`
 
-		Plugin          FileFlag `long:"network-plugin" description:"Path to network plugin binary."`
+		Plugin          FileFlag `long:"network-plugin"           description:"Path to network plugin binary."`
 		PluginExtraArgs []string `long:"network-plugin-extra-arg" description:"Extra argument to pass to the network plugin. Can be specified multiple times."`
 	} `group:"Container Networking"`
 
 	Metrics struct {
 		EmissionInterval time.Duration `long:"metrics-emission-interval" default:"1m" description:"Interval on which to emit metrics."`
 
-		DropsondeOrigin      string `long:"dropsonde-origin" default:"garden-linux" description:"Origin identifier for Dropsonde-emitted metrics."`
+		DropsondeOrigin      string `long:"dropsonde-origin"      default:"garden-linux"   description:"Origin identifier for Dropsonde-emitted metrics."`
 		DropsondeDestination string `long:"dropsonde-destination" default:"127.0.0.1:3457" description:"Destination for Dropsonde-emitted metrics."`
 	} `group:"Metrics"`
 }
@@ -210,7 +214,16 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 		Logger: logger,
 	}
 
-	gardenServer := server.New(cmd.Server.ListenNetwork, cmd.Server.ListenAddr, cmd.Containers.DefaultGraceTime, backend, logger.Session("api"))
+	var listenNetwork, listenAddr string
+	if cmd.Server.BindIP != nil {
+		listenNetwork = "tcp"
+		listenAddr = fmt.Sprintf("%s:%d", cmd.Server.BindIP, cmd.Server.BindPort)
+	} else {
+		listenNetwork = "unix"
+		listenAddr = cmd.Server.BindSocket
+	}
+
+	gardenServer := server.New(listenNetwork, listenAddr, cmd.Containers.DefaultGraceTime, backend, logger.Session("api"))
 
 	cmd.initializeDropsonde(logger)
 
@@ -219,8 +232,9 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	metronNotifier := cmd.wireMetronNotifier(logger, metricsProvider)
 	metronNotifier.Start()
 
-	if cmd.Server.DebugListenAddr != "" {
-		metrics.StartDebugServer(cmd.Server.DebugListenAddr, reconfigurableSink, metricsProvider)
+	if cmd.Server.DebugBindIP != nil {
+		addr := fmt.Sprintf("%s:%d", cmd.Server.DebugBindIP, cmd.Server.DebugBindPort)
+		metrics.StartDebugServer(addr, reconfigurableSink, metricsProvider)
 	}
 
 	err = gardenServer.Start()
@@ -232,8 +246,8 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	close(ready)
 
 	logger.Info("started", lager.Data{
-		"network": cmd.Server.ListenNetwork,
-		"addr":    cmd.Server.ListenAddr,
+		"network": listenNetwork,
+		"addr":    listenAddr,
 	})
 
 	<-signals
