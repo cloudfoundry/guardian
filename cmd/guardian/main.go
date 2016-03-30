@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/cloudfoundry-incubator/guardian/guardiancmd"
@@ -20,7 +19,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	log.Println("executing", args)
 	err = cmd.Execute(args)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
