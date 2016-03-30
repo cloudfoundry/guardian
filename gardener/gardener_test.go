@@ -212,6 +212,20 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 
+			Context("when the rootfs path is raw", func() {
+				It("creates the container with the given path", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Handle:     "bob",
+						RootFSPath: "raw:///banana",
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(containerizer.CreateCallCount()).To(Equal(1))
+					_, spec := containerizer.CreateArgsForCall(0)
+					Expect(spec.RootFSPath).To(Equal("/banana"))
+				})
+			})
+
 			It("passes the created rootfs to the containerizer", func() {
 				volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error) {
 					return "/path/to/rootfs/" + spec.RootFS.String() + "/" + handle, []string{}, nil
