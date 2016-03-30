@@ -14,10 +14,6 @@ const (
 	LogLevelFatal = "fatal"
 )
 
-type LoggerProvider interface {
-	Logger(string) (lager.Logger, *lager.ReconfigurableSink)
-}
-
 type LagerFlag struct {
 	LogLevel string `long:"log-level" default:"info" choice:"debug" choice:"info" choice:"error" choice:"fatal" description:"Minimum level of logs to see."`
 }

@@ -76,52 +76,65 @@ var PrivilegedContainerNamespaces = []specs.Namespace{
 }
 
 type GuardianCommand struct {
-	Logger LoggerProvider
+	Logger LagerFlag
 
-	ListenNetwork string `long:"listen-network" choice:"unix" choice:"tcp" default:"unix" description:"Network type to listen with."`
-	ListenAddr    string `long:"listen-addr" default:"/tmp/garden.sock" description:"Network address or socket path on which to listen."`
+	Server struct {
+		ListenNetwork string `long:"listen-network" choice:"unix" choice:"tcp" default:"unix" description:"Network type to listen with."`
+		ListenAddr    string `long:"listen-addr" default:"/tmp/garden.sock" description:"Network address or socket path on which to listen."`
 
-	DebugBindAddr string `long:"debug-bind-addr" description:"IP:Port on which to bind the debug server."`
+		DebugListenAddr string `long:"debug-listen-addr" description:"IP:Port on which to bind the debug server."`
 
-	IODaemonBin FileFlag `long:"iodaemon-bin" required:"true" description:"Path to the 'iodaemon' binary."`
-	NSTarBin    FileFlag `long:"nstar-bin" required:"true" description:"Path to the 'nstar' binary."`
-	TarBin      FileFlag `long:"tar-bin" required:"true" description:"Path to the 'tar' binary."`
-	KawasakiBin FileFlag `long:"kawasaki-bin" required:"true" description:"Path to the 'kawasaki' network hook binary."`
-	InitBin     FileFlag `long:"init-bin" required:"true" description:"Path execute as pid 1 inside each container."`
+		Tag string `long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
+	} `group:"Server Configuration"`
 
-	NetworkPlugin          FileFlag `long:"network-plugin" description:"Path to network plugin binary."`
-	NetworkPluginExtraArgs []string `long:"network-plugin-extra-arg" description:"Extra arguments to pass to the network plugin."`
+	Containers struct {
+		Dir              DirFlag       `long:"depot" required:"true" description:"Directory in which to store container data."`
+		DefaultRootFSDir DirFlag       `long:"default-rootfs" description:"Default rootfs to use when not specified on container creation."`
+		DefaultGraceTime time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
+	} `group:"Container Lifecycle"`
 
-	DepotDir DirFlag `long:"depot" required:"true" description:"Directory in which to store container data."`
-	GraphDir DirFlag `long:"graph"                 description:"Directory on which to store imported rootfs graph data."`
+	Bin struct {
+		IODaemon FileFlag `long:"iodaemon-bin" required:"true" description:"Path to the 'iodaemon' binary."`
+		NSTar    FileFlag `long:"nstar-bin" required:"true" description:"Path to the 'nstar' binary."`
+		Tar      FileFlag `long:"tar-bin" required:"true" description:"Path to the 'tar' binary."`
+		Kawasaki FileFlag `long:"kawasaki-bin" required:"true" description:"Path to the 'kawasaki' network hook binary."`
+		Init     FileFlag `long:"init-bin" required:"true" description:"Path execute as pid 1 inside each container."`
+	} `group:"Binary Tools"`
 
-	GraphCleanupThresholdInMegabytes int `long:"graph-cleanup-threshold-in-megabytes" default:"-1" description:"Disk usage of the graph dir at which cleanup should trigger."`
+	Graph struct {
+		Dir                         DirFlag  `long:"graph"                 description:"Directory on which to store imported rootfs graph data."`
+		CleanupThresholdInMegabytes int      `long:"graph-cleanup-threshold-in-megabytes" default:"-1" description:"Disk usage of the graph dir at which cleanup should trigger, or -1 to disable graph cleanup."`
+		PersistentImages            []string `long:"persistent-image" description:"Image that should never be garbage collected. Can be specified multiple times."`
+	} `group:"Image Graph"`
 
-	DefaultRootFSDir DirFlag       `long:"default-rootfs" description:"Default rootfs to use when not specified."`
-	DefaultGraceTime time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
+	Docker struct {
+		Registry           string   `long:"docker-registry" default:"registry-1.docker.io" description:"Docker registry API endpoint."`
+		InsecureRegistries []string `long:"insecure-docker-registry" description:"Docker registry to allow connecting to even if not secure. Can be specified multiple times."`
+	} `group:"Docker Image Fetching"`
 
-	PersistentImages []string `long:"persistent-image" description:"Image that should never be garbage collected."`
+	Network struct {
+		Pool CIDRFlag `long:"network-pool" default:"10.254.0.0/22" description:"Network range to use for dynamically allocated container subnets."`
 
-	DNSServers []IPFlag `long:"dns-server" description:"DNS server IP address to use instead of automatically determined servers."`
+		AllowHostAccess bool       `long:"allow-host-access" description:"Allow network access to the host machine."`
+		DenyNetworks    []CIDRFlag `long:"deny-network" description:"Network ranges to which traffic from containers will be denied. Can be specified multiple times."`
+		AllowNetworks   []CIDRFlag `long:"allow-network" description:"Network ranges to which traffic from containers will be allowed. Can be specified multiple times."`
 
-	PortPoolStart uint32 `long:"port-pool-start" default:"60000" description:"Start of the ephemeral port range used for mapped container ports."`
-	PortPoolSize  uint32 `long:"port-pool-size"  default:"5000"  description:"Size of the port pool used for mapped container ports."`
-	ExternalIP    IPFlag `long:"external-ip" description:"IP address to use to reach container's mapped ports. Autodetected if not specified."`
+		DNSServers []IPFlag `long:"dns-server" description:"DNS server IP address to use instead of automatically determined servers. Can be specified multiple times."`
 
-	NetworkPool CIDRFlag `long:"network-pool" default:"10.254.0.0/22" description:"Network range to use for dynamically allocated container subnets."`
+		ExternalIP    IPFlag `long:"external-ip" description:"IP address to use to reach container's mapped ports. Autodetected if not specified."`
+		PortPoolStart uint32 `long:"port-pool-start" default:"60000" description:"Start of the ephemeral port range used for mapped container ports."`
+		PortPoolSize  uint32 `long:"port-pool-size"  default:"5000"  description:"Size of the port pool used for mapped container ports."`
 
-	AllowHostAccess bool       `long:"allow-host-access" description:"Allow network access to the host machine."`
-	DenyNetworks    []CIDRFlag `long:"deny-network" description:"Network ranges to which traffic from containers will be denied."`
-	AllowNetworks   []CIDRFlag `long:"allow-network" description:"Network ranges to which traffic from containers will be allowed."`
+		Plugin          FileFlag `long:"network-plugin" description:"Path to network plugin binary."`
+		PluginExtraArgs []string `long:"network-plugin-extra-arg" description:"Extra argument to pass to the network plugin. Can be specified multiple times."`
+	} `group:"Container Networking"`
 
-	DockerRegistry           string   `long:"docker-registry" default:"registry-1.docker.io" description:"Docker registry API endpoint."`
-	InsecureDockerRegistries []string `long:"insecure-docker-registry" description:"Docker registry to allow connecting to even if not secure."`
+	Metrics struct {
+		EmissionInterval time.Duration `long:"metrics-emission-interval" default:"1m" description:"Interval on which to emit metrics."`
 
-	Tag string `long:"tag" description:"Server-wide identifier used for namespacing global configuration. Must be less than 3 characters long."`
-
-	DropsondeOrigin         string        `long:"dropsonde-origin" default:"garden-linux" description:"Origin identifier for Dropsonde-emitted metrics."`
-	DropsondeDestination    string        `long:"dropsonde-destination" default:"127.0.0.1:3457" description:"Destination for Dropsonde-emitted metrics."`
-	MetricsEmissionInterval time.Duration `long:"metrics-emission-interval" default:"1m" description:"Interval on which to emit metrics."`
+		DropsondeOrigin      string `long:"dropsonde-origin" default:"garden-linux" description:"Origin identifier for Dropsonde-emitted metrics."`
+		DropsondeDestination string `long:"dropsonde-destination" default:"127.0.0.1:3457" description:"Destination for Dropsonde-emitted metrics."`
+	} `group:"Metrics"`
 }
 
 var idMappings rootfs_provider.MappingList
@@ -160,54 +173,54 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
 
 	var denyNetworksList []string
-	for _, network := range cmd.DenyNetworks {
+	for _, network := range cmd.Network.DenyNetworks {
 		denyNetworksList = append(denyNetworksList, network.String())
 	}
 
-	externalIPAddr, err := defaultExternalIP(cmd.ExternalIP)
+	externalIPAddr, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
 		return err
 	}
 
-	interfacePrefix := fmt.Sprintf("w%s", cmd.Tag)
-	chainPrefix := fmt.Sprintf("w-%s-", cmd.Tag)
+	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
+	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
 	ipt := cmd.wireIptables(logger, chainPrefix)
 
 	propManager := properties.NewManager()
 
-	var networker gardener.Networker = netplugin.New(cmd.NetworkPlugin.Path(), cmd.NetworkPluginExtraArgs...)
-	if cmd.NetworkPlugin == "" {
-		dnsIPs := make([]net.IP, len(cmd.DNSServers))
-		for i, ip := range cmd.DNSServers {
+	var networker gardener.Networker = netplugin.New(cmd.Network.Plugin.Path(), cmd.Network.PluginExtraArgs...)
+	if cmd.Network.Plugin == "" {
+		dnsIPs := make([]net.IP, len(cmd.Network.DNSServers))
+		for i, ip := range cmd.Network.DNSServers {
 			dnsIPs[i] = ip.IP()
 		}
 
-		networker = cmd.wireNetworker(logger, cmd.KawasakiBin.Path(), cmd.Tag, cmd.NetworkPool.CIDR(), externalIPAddr, dnsIPs, ipt, interfacePrefix, chainPrefix, propManager)
+		networker = cmd.wireNetworker(logger, cmd.Bin.Kawasaki.Path(), cmd.Server.Tag, cmd.Network.Pool.CIDR(), externalIPAddr, dnsIPs, ipt, interfacePrefix, chainPrefix, propManager)
 	}
 
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
-		Starter:         cmd.wireStarter(logger, ipt, cmd.AllowHostAccess, interfacePrefix, denyNetworksList),
-		SysInfoProvider: sysinfo.NewProvider(cmd.DepotDir.Path()),
+		Starter:         cmd.wireStarter(logger, ipt, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList),
+		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
 		Networker:       networker,
-		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.GraphDir.Path(), cmd.InsecureDockerRegistries, cmd.PersistentImages),
-		Containerizer:   cmd.wireContainerizer(logger, cmd.DepotDir.Path(), cmd.IODaemonBin.Path(), cmd.NSTarBin.Path(), cmd.TarBin.Path(), cmd.DefaultRootFSDir.Path(), propManager),
+		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
+		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), propManager),
 		PropertyManager: propManager,
 
 		Logger: logger,
 	}
 
-	gardenServer := server.New(cmd.ListenNetwork, cmd.ListenAddr, cmd.DefaultGraceTime, backend, logger.Session("api"))
+	gardenServer := server.New(cmd.Server.ListenNetwork, cmd.Server.ListenAddr, cmd.Containers.DefaultGraceTime, backend, logger.Session("api"))
 
 	cmd.initializeDropsonde(logger)
 
-	metricsProvider := cmd.wireMetricsProvider(logger, cmd.DepotDir.Path(), cmd.GraphDir.Path())
+	metricsProvider := cmd.wireMetricsProvider(logger, cmd.Containers.Dir.Path(), cmd.Graph.Dir.Path())
 
 	metronNotifier := cmd.wireMetronNotifier(logger, metricsProvider)
 	metronNotifier.Start()
 
-	if cmd.DebugBindAddr != "" {
-		metrics.StartDebugServer(cmd.DebugBindAddr, reconfigurableSink, metricsProvider)
+	if cmd.Server.DebugListenAddr != "" {
+		metrics.StartDebugServer(cmd.Server.DebugListenAddr, reconfigurableSink, metricsProvider)
 	}
 
 	err = gardenServer.Start()
@@ -219,8 +232,8 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	close(ready)
 
 	logger.Info("started", lager.Data{
-		"network": cmd.ListenNetwork,
-		"addr":    cmd.ListenAddr,
+		"network": cmd.Server.ListenNetwork,
+		"addr":    cmd.Server.ListenAddr,
 	})
 
 	<-signals
@@ -238,7 +251,7 @@ func (cmd *GuardianCommand) wireStarter(logger lager.Logger, ipt *iptables.IPTab
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("runner")}
 
 	return &StartAll{starters: []gardener.Starter{
-		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Tag)), runner),
+		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag)), runner),
 		iptables.NewStarter(ipt, allowHostAccess, nicPrefix, denyNetworks),
 	}}
 }
@@ -261,7 +274,7 @@ func (cmd *GuardianCommand) wireNetworker(
 	propManager *properties.Manager,
 ) gardener.Networker {
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
-	portPool, err := ports.NewPool(cmd.PortPoolStart, cmd.PortPoolSize, ports.State{})
+	portPool, err := ports.NewPool(cmd.Network.PortPoolStart, cmd.Network.PortPoolSize, ports.State{})
 	if err != nil {
 		log.Fatal("invalid pool range", err)
 	}
@@ -334,12 +347,12 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 	repoFetcher := &repository_fetcher.CompositeFetcher{
 		LocalFetcher: &repository_fetcher.Local{
 			Cake:              cake,
-			DefaultRootFSPath: cmd.DefaultRootFSDir.Path(),
+			DefaultRootFSPath: cmd.Containers.DefaultRootFSDir.Path(),
 			IDProvider:        repository_fetcher.LayerIDProvider{},
 		},
 		RemoteFetcher: repository_fetcher.NewRemote(
 			logger,
-			cmd.DockerRegistry,
+			cmd.Docker.Registry,
 			cake,
 			distclient.NewDialer(insecureRegistries),
 			repository_fetcher.VerifyFunc(repository_fetcher.Verify),
@@ -356,7 +369,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 
 	retainer := cleaner.NewRetainer()
 	ovenCleaner := cleaner.NewOvenCleaner(retainer,
-		cleaner.NewThreshold(int64(cmd.GraphCleanupThresholdInMegabytes)*1024*1024),
+		cleaner.NewThreshold(int64(cmd.Graph.CleanupThresholdInMegabytes)*1024*1024),
 	)
 
 	imageRetainer := &repository_fetcher.ImageRetainer{
@@ -408,7 +421,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	}
 
 	runcrunner := runrunc.New(
-		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", cmd.Tag), "processes"), iodaemonPath, commandRunner, pidFileReader),
+		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", cmd.Server.Tag), "processes"), iodaemonPath, commandRunner, pidFileReader),
 		commandRunner,
 		cmd.wireUidGenerator(),
 		goci.RuncBinary("runc"),
@@ -421,7 +434,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		specs.Mount{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
 		specs.Mount{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
 			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
-		specs.Mount{Type: "bind", Source: cmd.InitBin.Path(), Destination: "/tmp/garden-init", Options: []string{"bind"}},
+		specs.Mount{Type: "bind", Source: cmd.Bin.Init.Path(), Destination: "/tmp/garden-init", Options: []string{"bind"}},
 	}
 
 	rwm := "rwm"
@@ -496,12 +509,12 @@ func (cmd *GuardianCommand) wireMetricsProvider(log lager.Logger, depotPath, gra
 
 func (cmd *GuardianCommand) wireMetronNotifier(log lager.Logger, metricsProvider metrics.Metrics) *metrics.PeriodicMetronNotifier {
 	return metrics.NewPeriodicMetronNotifier(
-		log, metricsProvider, cmd.MetricsEmissionInterval, clock.NewClock(),
+		log, metricsProvider, cmd.Metrics.EmissionInterval, clock.NewClock(),
 	)
 }
 
 func (cmd *GuardianCommand) initializeDropsonde(log lager.Logger) {
-	err := dropsonde.Initialize(cmd.DropsondeDestination, cmd.DropsondeOrigin)
+	err := dropsonde.Initialize(cmd.Metrics.DropsondeDestination, cmd.Metrics.DropsondeOrigin)
 	if err != nil {
 		log.Error("failed to initialize dropsonde", err)
 	}

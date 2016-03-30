@@ -11,7 +11,6 @@ import (
 
 func main() {
 	cmd := &guardiancmd.GuardianCommand{}
-	cmd.Logger = guardiancmd.LagerFlag{}
 
 	parser := flags.NewParser(cmd, flags.Default)
 	parser.NamespaceDelimiter = "-"
