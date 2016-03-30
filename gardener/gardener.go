@@ -23,6 +23,8 @@ const BridgeIPKey = "garden.network.host-ip"
 const ExternalIPKey = "garden.network.external-ip"
 const MappedPortsKey = "garden.network.mapped-ports"
 
+const RawRootFSScheme = "raw"
+
 type SysInfoProvider interface {
 	TotalMemory() (uint64, error)
 	TotalDisk() (uint64, error)
@@ -197,14 +199,22 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		log.Error("graph-cleanup-failed", err)
 	}
 
-	rootFSPath, env, err := g.VolumeCreator.Create(log, spec.Handle, rootfs_provider.Spec{
-		RootFS:     rootFSURL,
-		QuotaSize:  int64(spec.Limits.Disk.ByteHard),
-		QuotaScope: spec.Limits.Disk.Scope,
-		Namespaced: !spec.Privileged,
-	})
-	if err != nil {
-		return nil, err
+	var rootFSPath string
+	var env []string
+
+	if rootFSURL.Scheme == RawRootFSScheme {
+		rootFSPath = rootFSURL.Path
+	} else {
+		var err error
+		rootFSPath, env, err = g.VolumeCreator.Create(log, spec.Handle, rootfs_provider.Spec{
+			RootFS:     rootFSURL,
+			QuotaSize:  int64(spec.Limits.Disk.ByteHard),
+			QuotaScope: spec.Limits.Disk.Scope,
+			Namespaced: !spec.Privileged,
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if err := g.Containerizer.Create(log, DesiredContainerSpec{
