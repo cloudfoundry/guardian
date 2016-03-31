@@ -306,7 +306,11 @@ func (cmd *GuardianCommand) wireNetworker(
 	)
 }
 
-func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) *rootfs_provider.CakeOrdinator {
+func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
+	if graphRoot == "" {
+		return gardener.NoopVolumeCreator{}
+	}
+
 	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger}
 
@@ -517,7 +521,11 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 }
 
 func (cmd *GuardianCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {
-	backingStoresPath := filepath.Join(graphRoot, "backing_stores")
+	var backingStoresPath string
+	if graphRoot != "" {
+		backingStoresPath = filepath.Join(graphRoot, "backing_stores")
+	}
+
 	return metrics.NewMetrics(log, backingStoresPath, depotPath)
 }
 

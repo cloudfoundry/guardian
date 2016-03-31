@@ -15,6 +15,7 @@ import (
 
 var _ = Describe("Metrics", func() {
 	var (
+		logger           *lagertest.TestLogger
 		backingStorePath string
 		depotPath        string
 
@@ -40,7 +41,7 @@ var _ = Describe("Metrics", func() {
 		Expect(os.Mkdir(filepath.Join(depotPath, "depot-3"), 0660)).To(Succeed())
 
 		Expect(err).ToNot(HaveOccurred())
-		logger := lagertest.NewTestLogger("test")
+		logger = lagertest.NewTestLogger("test")
 		m = metrics.NewMetrics(logger, backingStorePath, depotPath)
 	})
 
@@ -55,5 +56,14 @@ var _ = Describe("Metrics", func() {
 		Expect(m.LoopDevices()).NotTo(BeNil())
 		Expect(m.BackingStores()).To(Equal(2))
 		Expect(m.DepotDirs()).To(Equal(3))
+	})
+
+	Context("when the backing store path is empty", func() {
+		It("reports BackingStores as -1 without doing any funny business", func() {
+			m := metrics.NewMetrics(logger, "", depotPath)
+			Expect(m.BackingStores()).To(Equal(-1))
+
+			Expect(logger.LogMessages()).To(BeEmpty())
+		})
 	})
 })
