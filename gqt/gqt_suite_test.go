@@ -23,7 +23,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, inspectorGardenBin string
+var ociRuntimeBin, gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, inspectorGardenBin string
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -45,6 +45,9 @@ func TestGqt(t *testing.T) {
 			Expect(err).NotTo(HaveOccurred())
 
 			bins["iodaemon_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/cmd/iodaemon")
+			Expect(err).NotTo(HaveOccurred())
+
+			bins["dadoo_bin_bin_bin"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/dadoo")
 			Expect(err).NotTo(HaveOccurred())
 
 			bins["init_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/init")
@@ -73,6 +76,7 @@ func TestGqt(t *testing.T) {
 		gardenBin = bins["garden_bin_path"]
 		iodaemonBin = bins["iodaemon_bin_path"]
 		nstarBin = bins["nstar_bin_path"]
+		dadooBin = bins["dadoo_bin_bin_bin"]
 		kawasakiBin = bins["kawasaki_bin_path"]
 		initBin = bins["init_bin_path"]
 		inspectorGardenBin = bins["inspector-garden_bin_path"]
@@ -101,5 +105,5 @@ func startGarden(argv ...string) *runner.RunningGarden {
 		argv = append(argv, "--networkModulePath="+networkModulePath)
 	}
 
-	return runner.Start(gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, argv...)
+	return runner.Start(gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, argv...)
 }

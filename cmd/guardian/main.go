@@ -104,6 +104,12 @@ var iodaemonBin = flag.String(
 	"path to iodaemon binary",
 )
 
+var dadooBin = flag.String(
+	"dadooBin",
+	"",
+	"path to dadoo binary",
+)
+
 var nstarBin = flag.String(
 	"nstarBin",
 	"",
@@ -317,6 +323,10 @@ func main() {
 		missing("-iodaemonBin")
 	}
 
+	if *dadooBin == "" {
+		missing("-dadooBin")
+	}
+
 	if *nstarBin == "" {
 		missing("-nstarBin")
 	}
@@ -366,7 +376,7 @@ func main() {
 		SysInfoProvider: sysinfo.NewProvider(*depotPath),
 		Networker:       networker,
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot, insecureRegistries, persistentImages),
-		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *nstarBin, *tarBin, resolvedRootFSPath, propManager),
+		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *dadooBin, *nstarBin, *tarBin, resolvedRootFSPath, propManager),
 		PropertyManager: propManager,
 
 		Logger: logger,
@@ -568,7 +578,7 @@ func wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries
 		ovenCleaner)
 }
 
-func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {
+func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, dadooPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
 	commandRunner := linux_command_runner.New()
@@ -590,6 +600,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 		commandRunner,
 		wireUidGenerator(),
 		goci.RuncBinary("runc"),
+		dadooPath,
 		execPreparer,
 	)
 
@@ -662,8 +673,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tar
 	eventStore := rundmc.NewEventStore(properties)
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 
-	deleteRetrier := retrier.New(retrier.ConstantBackoff(20, 100*time.Millisecond), nil)
-	return rundmc.New(depot, template, runcrunner, nstar, eventStore, deleteRetrier)
+	return rundmc.New(depot, template, runcrunner, nstar, eventStore)
 }
 
 func wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {

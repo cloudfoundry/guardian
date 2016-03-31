@@ -18,7 +18,6 @@ import (
 //go:generate counterfeiter . BundleRunner
 //go:generate counterfeiter . NstarRunner
 //go:generate counterfeiter . EventStore
-//go:generate counterfeiter . Retrier
 
 type Depot interface {
 	Create(log lager.Logger, handle string, bundle depot.BundleSaver) error
@@ -39,7 +38,6 @@ type BundleRunner interface {
 	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 	Exec(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
-	Delete(log lager.Logger, id string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
 	Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
 	WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
@@ -55,10 +53,6 @@ type EventStore interface {
 	Events(id string) []string
 }
 
-type Retrier interface {
-	Run(fn func() error) error
-}
-
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
 	depot   Depot
@@ -66,17 +60,15 @@ type Containerizer struct {
 	runner  BundleRunner
 	nstar   NstarRunner
 	events  EventStore
-	retrier Retrier
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, nstarRunner NstarRunner, events EventStore, retrier Retrier) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, nstarRunner NstarRunner, events EventStore) *Containerizer {
 	return &Containerizer{
 		depot:   depot,
 		bundler: bundler,
 		runner:  runner,
 		nstar:   nstarRunner,
 		events:  events,
-		retrier: retrier,
 	}
 }
 
@@ -194,11 +186,6 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 			log.Error("kill-failed", err)
 			return err
 		}
-	}
-
-	if err := c.retrier.Run(func() error { return c.runner.Delete(log, handle) }); err != nil {
-		log.Error("delete-failed", err)
-		return err
 	}
 
 	return c.depot.Destroy(log, handle)

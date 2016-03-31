@@ -45,15 +45,6 @@ type FakeBundleRunner struct {
 	killReturns struct {
 		result1 error
 	}
-	DeleteStub        func(log lager.Logger, id string) error
-	deleteMutex       sync.RWMutex
-	deleteArgsForCall []struct {
-		log lager.Logger
-		id  string
-	}
-	deleteReturns struct {
-		result1 error
-	}
 	StateStub        func(log lager.Logger, id string) (runrunc.State, error)
 	stateMutex       sync.RWMutex
 	stateArgsForCall []struct {
@@ -187,39 +178,6 @@ func (fake *FakeBundleRunner) KillArgsForCall(i int) (lager.Logger, string) {
 func (fake *FakeBundleRunner) KillReturns(result1 error) {
 	fake.KillStub = nil
 	fake.killReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeBundleRunner) Delete(log lager.Logger, id string) error {
-	fake.deleteMutex.Lock()
-	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
-		log lager.Logger
-		id  string
-	}{log, id})
-	fake.deleteMutex.Unlock()
-	if fake.DeleteStub != nil {
-		return fake.DeleteStub(log, id)
-	} else {
-		return fake.deleteReturns.result1
-	}
-}
-
-func (fake *FakeBundleRunner) DeleteCallCount() int {
-	fake.deleteMutex.RLock()
-	defer fake.deleteMutex.RUnlock()
-	return len(fake.deleteArgsForCall)
-}
-
-func (fake *FakeBundleRunner) DeleteArgsForCall(i int) (lager.Logger, string) {
-	fake.deleteMutex.RLock()
-	defer fake.deleteMutex.RUnlock()
-	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].id
-}
-
-func (fake *FakeBundleRunner) DeleteReturns(result1 error) {
-	fake.DeleteStub = nil
-	fake.deleteReturns = struct {
 		result1 error
 	}{result1}
 }

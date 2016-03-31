@@ -11,9 +11,87 @@ import (
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/goci"
+	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/specs/specs-go"
 	"github.com/pivotal-golang/lager"
 )
+
+//go:generate counterfeiter . UidGenerator
+//go:generate counterfeiter . UserLookupper
+//go:generate counterfeiter . Mkdirer
+//go:generate counterfeiter . BundleLoader
+//go:generate counterfeiter . ProcessTracker
+//go:generate counterfeiter . Process
+
+type UidGenerator interface {
+	Generate() string
+}
+
+type UserLookupper interface {
+	Lookup(rootFsPath string, user string) (*user.ExecUser, error)
+}
+type Mkdirer interface {
+	MkdirAs(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
+}
+
+type LookupFunc func(rootfsPath, user string) (*user.ExecUser, error)
+
+func (fn LookupFunc) Lookup(rootfsPath, user string) (*user.ExecUser, error) {
+	return fn(rootfsPath, user)
+}
+
+type BundleLoader interface {
+	Load(path string) (*goci.Bndl, error)
+}
+
+type Process interface {
+	garden.Process
+}
+
+type ProcessTracker interface {
+	Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, pidFile string) (garden.Process, error)
+}
+
+type Execer struct {
+	pidGenerator UidGenerator
+	execPreparer *ExecPreparer
+	runc         RuncBinary
+	tracker      ProcessTracker
+}
+
+func NewExecer(runc RuncBinary, pids UidGenerator, tracker ProcessTracker, execPreparer *ExecPreparer) *Execer {
+	return &Execer{
+		pidGenerator: pids,
+		execPreparer: execPreparer,
+		runc:         runc,
+		tracker:      tracker,
+	}
+}
+
+// Exec a process in a bundle using 'runc exec'
+func (e *Execer) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+	log = log.Session("exec", lager.Data{"id": id, "path": spec.Path})
+
+	pid := e.pidGenerator.Generate()
+
+	log.Info("started", lager.Data{pid: "pid"})
+	defer log.Info("finished")
+
+	pidFilePath := path.Join(bundlePath, "processes", fmt.Sprintf("%s.pid", pid))
+	cmd, err := e.execPreparer.Prepare(log, id, bundlePath, pidFilePath, spec, e.runc)
+	if err != nil {
+		log.Error("prepare-failed", err)
+		return nil, err
+	}
+
+	process, err := e.tracker.Run(pid, cmd, io, spec.TTY, pidFilePath)
+	if err != nil {
+		log.Error("run-failed", err)
+		return nil, err
+	}
+
+	return process, nil
+}
 
 type ExecPreparer struct {
 	bundleLoader BundleLoader

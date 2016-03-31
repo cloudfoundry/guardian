@@ -25,7 +25,6 @@ var _ = Describe("Rundmc", func() {
 		fakeContainerRunner *fakes.FakeBundleRunner
 		fakeNstarRunner     *fakes.FakeNstarRunner
 		fakeEventStore      *fakes.FakeEventStore
-		fakeRetrier         *fakes.FakeRetrier
 
 		logger        lager.Logger
 		containerizer *rundmc.Containerizer
@@ -43,13 +42,7 @@ var _ = Describe("Rundmc", func() {
 			return "/path/to/" + handle, nil
 		}
 
-		fakeRetrier = new(fakes.FakeRetrier)
-		fakeRetrier.RunStub = func(fn func() error) error {
-			return fn()
-		}
-
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeNstarRunner, fakeEventStore,
-			fakeRetrier)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeNstarRunner, fakeEventStore)
 	})
 
 	Describe("Create", func() {
@@ -262,43 +255,6 @@ var _ = Describe("Rundmc", func() {
 				Expect(arg2(fakeContainerRunner.KillArgsForCall(0))).To(Equal("some-handle"))
 			})
 
-			It("should run delete", func() {
-				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakeContainerRunner.DeleteCallCount()).To(Equal(1))
-				Expect(arg2(fakeContainerRunner.DeleteArgsForCall(0))).To(Equal("some-handle"))
-			})
-
-			It("should retry deletes", func() {
-				fakeRetrier.RunStub = func(fn func() error) error {
-					for {
-						if fn() == nil {
-							return nil
-						}
-					}
-				}
-
-				i := 0
-				fakeContainerRunner.DeleteStub = func(_ lager.Logger, handle string) error {
-					i++
-					if i >= 4 {
-						return nil
-					}
-
-					return errors.New("didn't work")
-				}
-
-				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakeContainerRunner.DeleteCallCount()).To(Equal(4))
-			})
-
-			It("should return an error if delete never succeeds", func() {
-				fakeRetrier.RunStub = func(fn func() error) error {
-					return errors.New("never worked")
-				}
-
-				Expect(containerizer.Destroy(logger, "some-handle")).To(MatchError("never worked"))
-			})
-
 			Context("when kill succeeds", func() {
 				It("destroys the depot directory", func() {
 					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
@@ -326,12 +282,6 @@ var _ = Describe("Rundmc", func() {
 			It("should not run kill", func() {
 				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
 				Expect(fakeContainerRunner.KillCallCount()).To(Equal(0))
-			})
-
-			It("should run delete", func() {
-				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakeContainerRunner.DeleteCallCount()).To(Equal(1))
-				Expect(arg2(fakeContainerRunner.DeleteArgsForCall(0))).To(Equal("some-handle"))
 			})
 		})
 	})
