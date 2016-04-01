@@ -35,8 +35,12 @@ var _ = Describe("Net", func() {
 		args = []string{}
 		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
 
-		ips, err := net.LookupIP("www.example.com")
-		Expect(err).ToNot(HaveOccurred())
+		var ips []net.IP
+		Eventually(func() error {
+			var err error
+			ips, err = net.LookupIP("www.example.com")
+			return err
+		}, "20s", "1s").Should(Succeed())
 
 		exampleDotCom = ips[0]
 	})
