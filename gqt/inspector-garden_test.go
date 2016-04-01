@@ -24,13 +24,20 @@ var _ = Describe("InspectorGarden", func() {
 		err         error
 		commandName string
 		command     *exec.Cmd
+		dummyCmd    *exec.Cmd
 	)
 
 	BeforeEach(func() {
-		dummyCmd := exec.Command("sleep", "15")
-		dummyCmd.Start()
+		dummyCmd = exec.Command("sleep", "15")
+		Expect(dummyCmd.Start()).To(Succeed())
+
 		pid = strconv.Itoa(dummyCmd.Process.Pid)
 		commandName = "/bin/sh"
+	})
+
+	AfterEach(func() {
+		dummyCmd.Process.Kill()
+		dummyCmd.Wait()
 	})
 
 	JustBeforeEach(func() {
