@@ -6,17 +6,20 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/fakes"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
+	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 )
 
 var _ = Describe("Stats", func() {
 	var (
 		commandRunner *fake_command_runner.FakeCommandRunner
+		loggingRunner *fakes.FakeRuncCmdRunner
 		runcBinary    *fakes.FakeRuncBinary
 		logger        *lagertest.TestLogger
 
@@ -26,12 +29,16 @@ var _ = Describe("Stats", func() {
 	BeforeEach(func() {
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
+		loggingRunner = new(fakes.FakeRuncCmdRunner)
 		logger = lagertest.NewTestLogger("test")
 
-		runner = runrunc.NewStatser(commandRunner, runcBinary)
+		runner = runrunc.NewStatser(loggingRunner, runcBinary)
 
-		runcBinary.StatsCommandStub = func(id string) *exec.Cmd {
-			return exec.Command("funC-stats", "--handle", id)
+		runcBinary.StatsCommandStub = func(id string, logFile string) *exec.Cmd {
+			return exec.Command("funC-stats", "--log", logFile, id)
+		}
+		loggingRunner.RunAndLogStub = func(_ lager.Logger, fn runrunc.LoggingCmd) error {
+			return commandRunner.Run(fn("potato.log"))
 		}
 	})
 
@@ -142,6 +149,17 @@ var _ = Describe("Stats", func() {
 				TotalUsageTowardLimit:  22,
 			}))
 		})
+
+		It("forwards logs from runc", func() {
+			_, err := runner.Stats(logger, "some-container")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+				Path: "funC-stats",
+				Args: []string{"--log", "potato.log", "some-container"},
+			}))
+		})
+
 	})
 
 	Context("when runC reports invalid JSON", func() {

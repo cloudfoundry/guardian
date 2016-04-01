@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
-	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -34,22 +34,24 @@ type runcStats struct {
 }
 
 type Statser struct {
-	commandRunner command_runner.CommandRunner
+	loggingRunner RuncCmdRunner
 	runc          RuncBinary
 }
 
-func NewStatser(commandRunner command_runner.CommandRunner, runc RuncBinary) *Statser {
+func NewStatser(runner RuncCmdRunner, runc RuncBinary) *Statser {
 	return &Statser{
-		commandRunner, runc,
+		runner, runc,
 	}
 }
 
 func (r *Statser) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
 	buf := new(bytes.Buffer)
-	cmd := r.runc.StatsCommand(id)
-	cmd.Stdout = buf
 
-	if err := r.commandRunner.Run(cmd); err != nil {
+	if err := r.loggingRunner.RunAndLog(log, func(logFile string) *exec.Cmd {
+		cmd := r.runc.StatsCommand(id, logFile)
+		cmd.Stdout = buf
+		return cmd
+	}); err != nil {
 		return gardener.ActualContainerMetrics{}, fmt.Errorf("runC stats: %s", err)
 	}
 

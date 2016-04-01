@@ -30,6 +30,7 @@ type runcEvent struct {
 
 func (r *OomWatcher) WatchEvents(log lager.Logger, handle string, eventsNotifier EventsNotifier) error {
 	stdoutR, w := io.Pipe()
+
 	cmd := r.runc.EventsCommand(handle)
 	cmd.Stdout = w
 
@@ -37,7 +38,12 @@ func (r *OomWatcher) WatchEvents(log lager.Logger, handle string, eventsNotifier
 		"handle": handle,
 	})
 	log.Info("watching")
-	defer log.Info("done")
+
+	defer func() {
+		w.Close()
+		stdoutR.Close()
+		log.Info("done")
+	}()
 
 	if err := r.commandRunner.Start(cmd); err != nil {
 		log.Error("run-events", err)

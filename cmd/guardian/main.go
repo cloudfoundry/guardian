@@ -602,6 +602,7 @@ func wireContainerizer(log lager.Logger, depotPath, iodaemonPath, dadooPath, nst
 		goci.RuncBinary("runc"),
 		dadooPath,
 		execPreparer,
+		os.TempDir(),
 	)
 
 	mounts := []specs.Mount{

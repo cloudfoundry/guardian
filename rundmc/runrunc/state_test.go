@@ -8,14 +8,17 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/fakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
+	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 )
 
 var _ = Describe("State", func() {
 	var (
 		commandRunner *fake_command_runner.FakeCommandRunner
+		loggingRunner *fakes.FakeRuncCmdRunner
 		runcBinary    *fakes.FakeRuncBinary
 		logger        *lagertest.TestLogger
 
@@ -26,14 +29,15 @@ var _ = Describe("State", func() {
 	)
 
 	BeforeEach(func() {
+		loggingRunner = new(fakes.FakeRuncCmdRunner)
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
 		logger = lagertest.NewTestLogger("test")
 
-		runner = runrunc.NewStater(commandRunner, runcBinary)
+		runner = runrunc.NewStater(loggingRunner, runcBinary)
 
-		runcBinary.StateCommandStub = func(id string) *exec.Cmd {
-			return exec.Command("funC", "state", id)
+		runcBinary.StateCommandStub = func(id, logFile string) *exec.Cmd {
+			return exec.Command("funC-state", "--log", logFile, "state", id)
 		}
 
 		stateCmdExit = nil
@@ -44,9 +48,12 @@ var _ = Describe("State", func() {
 	})
 
 	JustBeforeEach(func() {
+		loggingRunner.RunAndLogStub = func(_ lager.Logger, fn runrunc.LoggingCmd) error {
+			return commandRunner.Run(fn("potato.log"))
+		}
+
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
-			Path: "funC",
-			Args: []string{"state", "some-container"},
+			Path: "funC-state",
 		}, func(cmd *exec.Cmd) error {
 			cmd.Stdout.Write([]byte(stateCmdOutput))
 			return stateCmdExit
@@ -59,6 +66,17 @@ var _ = Describe("State", func() {
 
 		Expect(state.Pid).To(Equal(4))
 		Expect(state.Status).To(BeEquivalentTo("quite-a-status"))
+	})
+
+	It("forwards runc logs", func() {
+		_, err := runner.State(logger, "some-container")
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+			Path: "funC-state",
+			Args: []string{"--log", "potato.log", "state", "some-container"},
+		}))
+
 	})
 
 	Context("when getting state fails", func() {

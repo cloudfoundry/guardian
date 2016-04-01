@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 
-	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -19,11 +19,11 @@ type State struct {
 }
 
 type Stater struct {
-	commandRunner command_runner.CommandRunner
-	runc          RuncBinary
+	runner RuncCmdRunner
+	runc   RuncBinary
 }
 
-func NewStater(runner command_runner.CommandRunner, runc RuncBinary) *Stater {
+func NewStater(runner RuncCmdRunner, runc RuncBinary) *Stater {
 	return &Stater{
 		runner, runc,
 	}
@@ -37,10 +37,13 @@ func (r *Stater) State(log lager.Logger, handle string) (state State, err error)
 	defer log.Info("finished")
 
 	buf := new(bytes.Buffer)
-	cmd := r.runc.StateCommand(handle)
-	cmd.Stdout = buf
+	err = r.runner.RunAndLog(log, func(logFile string) *exec.Cmd {
+		cmd := r.runc.StateCommand(handle, logFile)
+		cmd.Stdout = buf
+		return cmd
+	})
 
-	if err := r.commandRunner.Run(cmd); err != nil {
+	if err != nil {
 		log.Error("state-cmd-failed", err)
 		return State{}, fmt.Errorf("runc state: %s", err)
 	}

@@ -26,20 +26,21 @@ type RunRunc struct {
 type RuncBinary interface {
 	ExecCommand(id, processJSONPath, pidFilePath string) *exec.Cmd
 	EventsCommand(id string) *exec.Cmd
-	StateCommand(id string) *exec.Cmd
-	StatsCommand(id string) *exec.Cmd
-	KillCommand(id, signal string) *exec.Cmd
-	DeleteCommand(id string) *exec.Cmd
+	StateCommand(id, logFile string) *exec.Cmd
+	StatsCommand(id, logFile string) *exec.Cmd
+	KillCommand(id, signal, logFile string) *exec.Cmd
 }
 
-func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary, dadooPath string, execPreparer *ExecPreparer) *RunRunc {
+func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary, dadooPath string, execPreparer *ExecPreparer, logDir string) *RunRunc {
+	logRunner := NewLogRunner(runner, LogDir(logDir).GenerateLogFile)
+
 	return &RunRunc{
 		Starter: NewStarter(dadooPath, runner),
 		Execer:  NewExecer(runc, pidgen, tracker, execPreparer),
 
 		OomWatcher: NewOomWatcher(runner, runc),
-		Statser:    NewStatser(runner, runc),
-		Stater:     NewStater(runner, runc),
-		Killer:     NewKiller(runner, runc),
+		Statser:    NewStatser(logRunner, runc),
+		Stater:     NewStater(logRunner, runc),
+		Killer:     NewKiller(logRunner, runc),
 	}
 }

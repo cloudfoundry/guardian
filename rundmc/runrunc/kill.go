@@ -1,21 +1,20 @@
 package runrunc
 
 import (
-	"bytes"
-	"fmt"
+	"os/exec"
 
-	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/pivotal-golang/lager"
 )
 
 type Killer struct {
-	commandRunner command_runner.CommandRunner
+	loggingRunner RuncCmdRunner
 	runc          RuncBinary
 }
 
-func NewKiller(commandRunner command_runner.CommandRunner, runc RuncBinary) *Killer {
+func NewKiller(loggingRunner RuncCmdRunner, runc RuncBinary) *Killer {
 	return &Killer{
-		commandRunner, runc,
+		loggingRunner,
+		runc,
 	}
 }
 
@@ -26,14 +25,7 @@ func (r *Killer) Kill(log lager.Logger, handle string) error {
 	log.Info("started")
 	defer log.Info("finished")
 
-	buf := new(bytes.Buffer)
-	cmd := r.runc.KillCommand(handle, "KILL")
-	cmd.Stderr = buf
-
-	if err := r.commandRunner.Run(cmd); err != nil {
-		log.Error("run-failed", err, lager.Data{"stderr": buf.String()})
-		return fmt.Errorf("runc kill: %s: %s", err, string(buf.String()))
-	}
-
-	return nil
+	return r.loggingRunner.RunAndLog(log, func(logFile string) *exec.Cmd {
+		return r.runc.KillCommand(handle, "KILL", logFile)
+	})
 }
