@@ -41,10 +41,6 @@ var _ = Describe("RunAndLog", func() {
 		})
 	})
 
-	AfterEach(func() {
-		Expect(os.Remove(logFile.Name())).To(Succeed())
-	})
-
 	It("execs the command", func() {
 		Expect(logRunner.RunAndLog(logger, func(logFile string) *exec.Cmd {
 			return exec.Command("something.exe")
@@ -91,7 +87,18 @@ var _ = Describe("RunAndLog", func() {
 		})).To(MatchError(MatchRegexp("potato: .*System error.*POTATO.*")))
 	})
 
-	PIt("deletes the log file when it's done", func() {})
+	It("deletes the log file when it's done", func() {
+		var logFileName string
+
+		err := logRunner.RunAndLog(logger, func(logFile string) *exec.Cmd {
+			logFileName = logFile
+			Expect(logFile).To(BeARegularFile())
+			return exec.Command("something.exe", logFile)
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(logFileName).NotTo(BeARegularFile())
+	})
 
 	Describe("Log File Generator", func() {
 		It("generates unique log files", func() {
@@ -102,6 +109,8 @@ var _ = Describe("RunAndLog", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(a.Name()).NotTo(Equal(b.Name()))
+			Expect(os.Remove(a.Name())).To(Succeed())
+			Expect(os.Remove(b.Name())).To(Succeed())
 		})
 
 		It("generates files within a given directory", func() {
@@ -112,6 +121,7 @@ var _ = Describe("RunAndLog", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(b.Name()).To(HavePrefix(dir))
+			Expect(os.RemoveAll(dir)).To(Succeed())
 		})
 	})
 })

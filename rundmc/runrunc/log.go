@@ -29,18 +29,19 @@ func NewLogRunner(runner command_runner.CommandRunner, logFileGenerator generate
 	return &logRunner{runner, logFileGenerator}
 }
 
-func (l *logRunner) RunAndLog(log lager.Logger, fn LoggingCmd) (err error) {
+func (l *logRunner) RunAndLog(log lager.Logger, loggingCmd LoggingCmd) (err error) {
 	log = log.Session("run")
 
 	logFile, err := l.generateLogFile()
 	if err != nil {
 		return err
 	}
-
-	return forwardLogs(log, logFile, l.runner.Run(fn(logFile.Name())))
+	err = l.runner.Run(loggingCmd(logFile.Name()))
+	return forwardLogs(log, logFile, err)
 }
 
 func forwardLogs(log lager.Logger, logFile *os.File, err error) error {
+	defer os.Remove(logFile.Name())
 	buff, readErr := ioutil.ReadAll(logFile)
 	if readErr != nil {
 		return fmt.Errorf("read log file: %s", readErr)

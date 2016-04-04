@@ -176,7 +176,7 @@ var _ = Describe("Start", func() {
 				})
 
 				It("returns an error with only the exit status if the log can't be parsed", func() {
-					Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc start: exit status 3"))
+					Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc start: exit status 3: "))
 				})
 			})
 		})
