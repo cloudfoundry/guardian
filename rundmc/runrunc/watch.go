@@ -11,7 +11,7 @@ import (
 
 //go:generate counterfeiter . EventsNotifier
 type EventsNotifier interface {
-	OnEvent(handle string, event string)
+	OnEvent(handle string, event string) error
 }
 
 type OomWatcher struct {
@@ -68,7 +68,10 @@ func (r *OomWatcher) WatchEvents(log lager.Logger, handle string, eventsNotifier
 			"type": event.Type,
 		})
 		if event.Type == "oom" {
-			eventsNotifier.OnEvent(handle, "Out of memory")
+			err := eventsNotifier.OnEvent(handle, "Out of memory")
+			if err != nil {
+				log.Debug("failed-to-notify-oom-event", lager.Data{"event": event.Data})
+			}
 		}
 	}
 }

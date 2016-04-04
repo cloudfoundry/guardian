@@ -1,6 +1,11 @@
 package gqt_test
 
 import (
+	"encoding/json"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
@@ -13,11 +18,15 @@ var _ = Describe("Properties", func() {
 		client    *runner.RunningGarden
 		container garden.Container
 		props     garden.Properties
+		propsDir  string
 	)
 
 	BeforeEach(func() {
 		var err error
-		client = startGarden()
+		propsDir, err = ioutil.TempDir("", "property_manager")
+		Expect(err).NotTo(HaveOccurred())
+
+		client = startGarden([]string{"--properties", propsDir}...)
 		props = garden.Properties{"somename": "somevalue"}
 		container, err = client.Create(garden.ContainerSpec{
 			RootFSPath: runner.RootFSPath,
@@ -28,6 +37,7 @@ var _ = Describe("Properties", func() {
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
+		Expect(os.RemoveAll(propsDir)).To(Succeed())
 	})
 
 	It("can get properties", func() {
@@ -99,5 +109,15 @@ var _ = Describe("Properties", func() {
 		Expect(props).To(HaveKey("kawasaki.container-interface"))
 		Expect(props).To(HaveKey(gardener.ExternalIPKey))
 		Expect(props).To(HaveKey("kawasaki.mtu"))
+	})
+
+	It("persists properties to the specified location", func() {
+		file, err := os.Open(filepath.Join(propsDir, container.Handle()))
+		Expect(err).NotTo(HaveOccurred())
+
+		var props map[string]string
+		Expect(json.NewDecoder(file).Decode(&props)).To(Succeed())
+
+		Expect(props).To(HaveKey("kawasaki.container-interface"))
 	})
 })

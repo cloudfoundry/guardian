@@ -65,10 +65,10 @@ type UidGenerator interface {
 
 type PropertyManager interface {
 	All(handle string) (props garden.Properties, err error)
-	Set(handle string, name string, value string)
+	Set(handle string, name string, value string) error
 	Remove(handle string, name string) error
 	Get(handle string, name string) (string, error)
-	MatchesAll(handle string, props garden.Properties) bool
+	MatchesAll(handle string, props garden.Properties) (bool, error)
 	DestroyKeySpace(string) error
 }
 
@@ -143,7 +143,7 @@ type Gardener struct {
 	UidGenerator UidGenerator
 
 	// Starter runs any needed start-up tasks (e.g. setting up cgroups)
-	Starter
+	Starters []Starter
 
 	// Networker creates a network for containers
 	Networker Networker
@@ -326,7 +326,12 @@ func (g *Gardener) Containers(props garden.Properties) ([]garden.Container, erro
 
 	var containers []garden.Container
 	for _, handle := range handles {
-		if g.PropertyManager.MatchesAll(handle, props) {
+		matched, err := g.PropertyManager.MatchesAll(handle, props)
+		if err != nil {
+			log.Error("matching-failed", err)
+			return []garden.Container{}, fmt.Errorf("failed to list containers: %s", err)
+		}
+		if matched {
 			containers = append(containers, g.lookup(handle))
 		}
 	}
@@ -379,6 +384,30 @@ func (g *Gardener) checkDuplicateHandle(handle string) error {
 	for _, h := range handles {
 		if h == handle {
 			return errors.New(fmt.Sprintf("Handle '%s' already in use", handle))
+		}
+	}
+	return nil
+}
+
+func (g *Gardener) Start() error {
+	if err := g.cleanupContainer(); err != nil {
+		return err
+	}
+
+	for _, starter := range g.Starters {
+		if err := starter.Start(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (g *Gardener) cleanupContainer() error {
+	handles, _ := g.Containerizer.Handles()
+
+	for _, handle := range handles {
+		if err := g.Destroy(handle); err != nil {
+			return err
 		}
 	}
 	return nil

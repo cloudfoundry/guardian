@@ -8,11 +8,14 @@ import (
 )
 
 type FakeEventStore struct {
-	OnEventStub        func(id string, event string)
+	OnEventStub        func(id string, event string) error
 	onEventMutex       sync.RWMutex
 	onEventArgsForCall []struct {
 		id    string
 		event string
+	}
+	onEventReturns struct {
+		result1 error
 	}
 	EventsStub        func(id string) []string
 	eventsMutex       sync.RWMutex
@@ -24,7 +27,7 @@ type FakeEventStore struct {
 	}
 }
 
-func (fake *FakeEventStore) OnEvent(id string, event string) {
+func (fake *FakeEventStore) OnEvent(id string, event string) error {
 	fake.onEventMutex.Lock()
 	fake.onEventArgsForCall = append(fake.onEventArgsForCall, struct {
 		id    string
@@ -32,7 +35,9 @@ func (fake *FakeEventStore) OnEvent(id string, event string) {
 	}{id, event})
 	fake.onEventMutex.Unlock()
 	if fake.OnEventStub != nil {
-		fake.OnEventStub(id, event)
+		return fake.OnEventStub(id, event)
+	} else {
+		return fake.onEventReturns.result1
 	}
 }
 
@@ -46,6 +51,13 @@ func (fake *FakeEventStore) OnEventArgsForCall(i int) (string, string) {
 	fake.onEventMutex.RLock()
 	defer fake.onEventMutex.RUnlock()
 	return fake.onEventArgsForCall[i].id, fake.onEventArgsForCall[i].event
+}
+
+func (fake *FakeEventStore) OnEventReturns(result1 error) {
+	fake.OnEventStub = nil
+	fake.onEventReturns = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeEventStore) Events(id string) []string {

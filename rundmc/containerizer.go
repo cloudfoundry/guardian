@@ -54,7 +54,7 @@ type NstarRunner interface {
 }
 
 type EventStore interface {
-	OnEvent(id string, event string)
+	OnEvent(id string, event string) error
 	Events(id string) []string
 }
 

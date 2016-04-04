@@ -8,12 +8,15 @@ import (
 )
 
 type FakeConfigStore struct {
-	SetStub        func(handle string, name string, value string)
+	SetStub        func(handle string, name string, value string) error
 	setMutex       sync.RWMutex
 	setArgsForCall []struct {
 		handle string
 		name   string
 		value  string
+	}
+	setReturns struct {
+		result1 error
 	}
 	GetStub        func(handle string, name string) (string, error)
 	getMutex       sync.RWMutex
@@ -27,7 +30,7 @@ type FakeConfigStore struct {
 	}
 }
 
-func (fake *FakeConfigStore) Set(handle string, name string, value string) {
+func (fake *FakeConfigStore) Set(handle string, name string, value string) error {
 	fake.setMutex.Lock()
 	fake.setArgsForCall = append(fake.setArgsForCall, struct {
 		handle string
@@ -36,7 +39,9 @@ func (fake *FakeConfigStore) Set(handle string, name string, value string) {
 	}{handle, name, value})
 	fake.setMutex.Unlock()
 	if fake.SetStub != nil {
-		fake.SetStub(handle, name, value)
+		return fake.SetStub(handle, name, value)
+	} else {
+		return fake.setReturns.result1
 	}
 }
 
@@ -50,6 +55,13 @@ func (fake *FakeConfigStore) SetArgsForCall(i int) (string, string, string) {
 	fake.setMutex.RLock()
 	defer fake.setMutex.RUnlock()
 	return fake.setArgsForCall[i].handle, fake.setArgsForCall[i].name, fake.setArgsForCall[i].value
+}
+
+func (fake *FakeConfigStore) SetReturns(result1 error) {
+	fake.SetStub = nil
+	fake.setReturns = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeConfigStore) Get(handle string, name string) (string, error) {

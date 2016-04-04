@@ -2,47 +2,63 @@ package properties
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/cloudfoundry-incubator/garden"
 )
 
-type Manager struct {
-	propMutex sync.RWMutex
-	prop      map[string]map[string]string
+//go:generate counterfeiter . MapPersister
+type MapPersister interface {
+	LoadMap(string) (map[string]string, error)
+	SaveMap(string, map[string]string) error
+	DeleteMap(string) error
+	IsMapPersisted(string) bool
 }
 
-func NewManager() *Manager {
+type Manager struct {
+	mapPersister MapPersister
+}
+
+func NewManager(mapPersister MapPersister) *Manager {
 	return &Manager{
-		prop: make(map[string]map[string]string),
+		mapPersister: mapPersister,
 	}
 }
 
 func (m *Manager) DestroyKeySpace(handle string) error {
-	m.propMutex.Lock()
-	defer m.propMutex.Unlock()
+	if !m.mapPersister.IsMapPersisted(handle) {
+		return nil
+	}
 
-	delete(m.prop, handle)
+	return m.mapPersister.DeleteMap(handle)
+}
+
+func (m *Manager) Set(handle string, name string, value string) error {
+	propMap := map[string]string{}
+	var err error
+	if m.mapPersister.IsMapPersisted(handle) {
+		propMap, err = m.mapPersister.LoadMap(handle)
+		if err != nil {
+			return fmt.Errorf("failed to set property for handle: %s - %s", handle, err)
+		}
+	}
+
+	propMap[name] = value
+
+	err = m.mapPersister.SaveMap(handle, propMap)
+	if err != nil {
+		return fmt.Errorf("failed to set property for handle: %s - %s", handle, err)
+	}
 
 	return nil
 }
 
-func (m *Manager) Set(handle string, name string, value string) {
-	m.propMutex.Lock()
-	defer m.propMutex.Unlock()
-
-	if _, ok := m.prop[handle]; !ok {
-		m.prop[handle] = make(map[string]string)
+func (m *Manager) All(handle string) (garden.Properties, error) {
+	props, err := m.mapPersister.LoadMap(handle)
+	if err != nil {
+		return map[string]string{}, fmt.Errorf("failed to get properties for handle: %s - %s", handle, err)
 	}
 
-	m.prop[handle][name] = value
-}
-
-func (m *Manager) All(handle string) (garden.Properties, error) {
-	m.propMutex.RLock()
-	defer m.propMutex.RUnlock()
-
-	return m.prop[handle], nil
+	return props, nil
 }
 
 func (m *Manager) Get(handle string, name string) (string, error) {
@@ -51,10 +67,12 @@ func (m *Manager) Get(handle string, name string) (string, error) {
 		exists bool
 	)
 
-	m.propMutex.RLock()
-	defer m.propMutex.RUnlock()
+	propMap, err := m.mapPersister.LoadMap(handle)
+	if err != nil {
+		return "", fmt.Errorf("cannot Get %s:%s - %s", handle, name, err)
+	}
 
-	if prop, exists = m.prop[handle][name]; !exists {
+	if prop, exists = propMap[name]; !exists {
 		return "", NoSuchPropertyError{
 			Message: fmt.Sprintf("cannot Get %s:%s", handle, name),
 		}
@@ -64,31 +82,48 @@ func (m *Manager) Get(handle string, name string) (string, error) {
 }
 
 func (m *Manager) Remove(handle string, name string) error {
-	m.propMutex.Lock()
-	defer m.propMutex.Unlock()
+	propMap, err := m.mapPersister.LoadMap(handle)
+	if err != nil {
+		return fmt.Errorf("cannot Remove %s:%s - %s", handle, name, err)
+	}
 
-	if _, exists := m.prop[handle][name]; !exists {
+	if _, exists := propMap[name]; !exists {
 		return NoSuchPropertyError{
 			Message: fmt.Sprintf("cannot Remove %s:%s", handle, name),
 		}
 	}
 
-	delete(m.prop[handle], name)
+	delete(propMap, name)
+
+	err = m.mapPersister.SaveMap(handle, propMap)
+	if err != nil {
+		return fmt.Errorf("cannot Remove %s:%s - %s", handle, name, err)
+	}
 
 	return nil
 }
 
-func (m *Manager) MatchesAll(handle string, props garden.Properties) bool {
-	m.propMutex.RLock()
-	defer m.propMutex.RUnlock()
+func (m *Manager) MatchesAll(handle string, props garden.Properties) (bool, error) {
+	if len(props) == 0 {
+		return true, nil
+	}
+
+	if !m.mapPersister.IsMapPersisted(handle) {
+		return false, nil
+	}
+
+	propMap, err := m.mapPersister.LoadMap(handle)
+	if err != nil {
+		return false, fmt.Errorf("cannot MatchAll %s - %s", handle, err)
+	}
 
 	for key, val := range props {
-		if m.prop[handle][key] != val {
-			return false
+		if propMap[key] != val {
+			return false, nil
 		}
 	}
 
-	return true
+	return true, nil
 }
 
 type NoSuchPropertyError struct {
@@ -96,13 +131,5 @@ type NoSuchPropertyError struct {
 }
 
 func (e NoSuchPropertyError) Error() string {
-	return e.Message
-}
-
-type NoSuchKeySpaceError struct {
-	Message string
-}
-
-func (e NoSuchKeySpaceError) Error() string {
 	return e.Message
 }

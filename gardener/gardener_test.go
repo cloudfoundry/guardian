@@ -504,17 +504,46 @@ var _ = Describe("Gardener", func() {
 		})
 	})
 
+	Describe("starting up gardener", func() {
+		var err error
+
+		BeforeEach(func() {
+			containers := []string{"container1", "container2"}
+			containerizer.HandlesReturns(containers, nil)
+		})
+
+		It("calls destroy on the existing containers", func() {
+			err = gdnr.Start()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(containerizer.HandlesCallCount()).To(Equal(1))
+			Expect(containerizer.DestroyCallCount()).To(Equal(2))
+
+			_, handle := containerizer.DestroyArgsForCall(0)
+			Expect(handle).To(Equal("container1"))
+
+			_, handle = containerizer.DestroyArgsForCall(1)
+			Expect(handle).To(Equal("container2"))
+		})
+
+		It("returns an error when failing to destroy", func() {
+			containerizer.DestroyReturns(errors.New("containerized deletion failed"))
+			err = gdnr.Start()
+			Expect(err).To(MatchError("containerized deletion failed"))
+		})
+	})
+
 	Describe("listing containers", func() {
 		BeforeEach(func() {
 			containerizer.HandlesReturns([]string{"banana", "banana2", "cola"}, nil)
 		})
 
 		It("should return matching containers", func() {
-			propertyManager.MatchesAllStub = func(handle string, props garden.Properties) bool {
+			propertyManager.MatchesAllStub = func(handle string, props garden.Properties) (bool, error) {
 				if handle != "banana" {
-					return true
+					return true, nil
 				}
-				return false
+				return false, nil
 			}
 
 			c, err := gdnr.Containers(garden.Properties{
@@ -524,6 +553,19 @@ var _ = Describe("Gardener", func() {
 			Expect(c).To(HaveLen(2))
 			Expect(c[0].Handle()).To(Equal("banana2"))
 			Expect(c[1].Handle()).To(Equal("cola"))
+		})
+
+		Context("when property matching errors", func() {
+			It("returns the error", func() {
+				propertyManager.MatchesAllStub = func(handle string, props garden.Properties) (bool, error) {
+					if handle == "banana2" {
+						return false, errors.New("boom")
+					}
+					return true, nil
+				}
+				_, err := gdnr.Containers(garden.Properties{})
+				Expect(err).To(MatchError("failed to list containers: boom"))
+			})
 		})
 
 		Describe("NetIn", func() {

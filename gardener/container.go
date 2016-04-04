@@ -160,8 +160,7 @@ func (c *container) Property(name string) (string, error) {
 }
 
 func (c *container) SetProperty(name string, value string) error {
-	c.propertyManager.Set(c.handle, name, value)
-	return nil
+	return c.propertyManager.Set(c.handle, name, value)
 }
 
 func (c *container) RemoveProperty(name string) error {

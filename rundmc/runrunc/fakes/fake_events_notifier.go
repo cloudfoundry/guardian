@@ -8,15 +8,18 @@ import (
 )
 
 type FakeEventsNotifier struct {
-	OnEventStub        func(handle string, event string)
+	OnEventStub        func(handle string, event string) error
 	onEventMutex       sync.RWMutex
 	onEventArgsForCall []struct {
 		handle string
 		event  string
 	}
+	onEventReturns struct {
+		result1 error
+	}
 }
 
-func (fake *FakeEventsNotifier) OnEvent(handle string, event string) {
+func (fake *FakeEventsNotifier) OnEvent(handle string, event string) error {
 	fake.onEventMutex.Lock()
 	fake.onEventArgsForCall = append(fake.onEventArgsForCall, struct {
 		handle string
@@ -24,7 +27,9 @@ func (fake *FakeEventsNotifier) OnEvent(handle string, event string) {
 	}{handle, event})
 	fake.onEventMutex.Unlock()
 	if fake.OnEventStub != nil {
-		fake.OnEventStub(handle, event)
+		return fake.OnEventStub(handle, event)
+	} else {
+		return fake.onEventReturns.result1
 	}
 }
 
@@ -38,6 +43,13 @@ func (fake *FakeEventsNotifier) OnEventArgsForCall(i int) (string, string) {
 	fake.onEventMutex.RLock()
 	defer fake.onEventMutex.RUnlock()
 	return fake.onEventArgsForCall[i].handle, fake.onEventArgsForCall[i].event
+}
+
+func (fake *FakeEventsNotifier) OnEventReturns(result1 error) {
+	fake.OnEventStub = nil
+	fake.onEventReturns = struct {
+		result1 error
+	}{result1}
 }
 
 var _ runrunc.EventsNotifier = new(FakeEventsNotifier)

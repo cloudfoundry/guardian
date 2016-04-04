@@ -138,10 +138,11 @@ var _ = Describe("Networker", func() {
 
 		It("stores the config to ConfigStore", func() {
 			config := make(map[string]string)
-			fakeConfigStore.SetStub = func(handle, name, value string) {
+			fakeConfigStore.SetStub = func(handle, name, value string) error {
 				Expect(handle).To(Equal("some-handle"))
 
 				config[name] = value
+				return nil
 			}
 
 			_, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30")
@@ -162,9 +163,10 @@ var _ = Describe("Networker", func() {
 
 		Context("when the configuration can't be created", func() {
 			It("returns a wrapped error", func() {
-				fakeConfigCreator.CreateReturns(kawasaki.NetworkConfig{}, errors.New("bad config"))
+				fakeConfigStore.SetReturns(errors.New("failed to set"))
+
 				_, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30")
-				Expect(err).To(MatchError("create network config: bad config"))
+				Expect(err).To(MatchError("failed to save config: failed to set"))
 			})
 		})
 
@@ -408,6 +410,15 @@ var _ = Describe("Networker", func() {
 
 			It("does not add the new port mapping", func() {
 				Expect(fakeConfigStore.SetCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when storing the port mapping fails", func() {
+			It("returns an error", func() {
+				fakeConfigStore.SetReturns(errors.New("failed to set"))
+
+				_, _, err := networker.NetIn(logger, handle, 0, 0)
+				Expect(err).To(MatchError("add-port-mapping: failed to set"))
 			})
 		})
 

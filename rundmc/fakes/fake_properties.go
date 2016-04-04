@@ -8,12 +8,15 @@ import (
 )
 
 type FakeProperties struct {
-	SetStub        func(handle string, key string, value string)
+	SetStub        func(handle string, key string, value string) error
 	setMutex       sync.RWMutex
 	setArgsForCall []struct {
 		handle string
 		key    string
 		value  string
+	}
+	setReturns struct {
+		result1 error
 	}
 	GetStub        func(handle string, key string) (string, error)
 	getMutex       sync.RWMutex
@@ -27,7 +30,7 @@ type FakeProperties struct {
 	}
 }
 
-func (fake *FakeProperties) Set(handle string, key string, value string) {
+func (fake *FakeProperties) Set(handle string, key string, value string) error {
 	fake.setMutex.Lock()
 	fake.setArgsForCall = append(fake.setArgsForCall, struct {
 		handle string
@@ -36,7 +39,9 @@ func (fake *FakeProperties) Set(handle string, key string, value string) {
 	}{handle, key, value})
 	fake.setMutex.Unlock()
 	if fake.SetStub != nil {
-		fake.SetStub(handle, key, value)
+		return fake.SetStub(handle, key, value)
+	} else {
+		return fake.setReturns.result1
 	}
 }
 
@@ -50,6 +55,13 @@ func (fake *FakeProperties) SetArgsForCall(i int) (string, string, string) {
 	fake.setMutex.RLock()
 	defer fake.setMutex.RUnlock()
 	return fake.setArgsForCall[i].handle, fake.setArgsForCall[i].key, fake.setArgsForCall[i].value
+}
+
+func (fake *FakeProperties) SetReturns(result1 error) {
+	fake.SetStub = nil
+	fake.setReturns = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeProperties) Get(handle string, key string) (string, error) {

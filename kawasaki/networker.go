@@ -58,7 +58,7 @@ type Configurer interface {
 //go:generate counterfeiter . ConfigStore
 
 type ConfigStore interface {
-	Set(handle string, name string, value string)
+	Set(handle string, name string, value string) error
 	Get(handle string, name string) (string, error)
 }
 
@@ -158,7 +158,10 @@ func (n *Networker) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks
 	}
 	log.Info("config-create", lager.Data{"config": config})
 
-	save(n.configStore, handle, config)
+	err = save(n.configStore, handle, config)
+	if err != nil {
+		return gardener.Hooks{}, err
+	}
 
 	netCfgArgs := []string{
 		fmt.Sprintf("--host-interface=%s", config.HostIntf),
@@ -232,10 +235,13 @@ func (n *Networker) NetIn(log lager.Logger, handle string, externalPort, contain
 		return 0, 0, err
 	}
 
-	addPortMapping(log, n.configStore, handle, garden.PortMapping{
+	err = addPortMapping(log, n.configStore, handle, garden.PortMapping{
 		HostPort:      externalPort,
 		ContainerPort: containerPort,
 	})
+	if err != nil {
+		return 0, 0, err
+	}
 
 	return externalPort, containerPort, nil
 }
@@ -268,7 +274,7 @@ func (n *Networker) Destroy(log lager.Logger, handle string) error {
 	return nil
 }
 
-func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string, newMapping garden.PortMapping) {
+func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string, newMapping garden.PortMapping) error {
 	currentMappingsJson, err := configStore.Get(handle, gardener.MappedPortsKey)
 	if err != nil {
 		log := logger.Session("net-in", lager.Data{"handle": handle})
@@ -288,7 +294,12 @@ func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string,
 		panic(err)
 	}
 
-	configStore.Set(handle, gardener.MappedPortsKey, string(updatedMappingsJson))
+	err = configStore.Set(handle, gardener.MappedPortsKey, string(updatedMappingsJson))
+	if err != nil {
+		return fmt.Errorf("add-port-mapping: %s", err)
+	}
+
+	return nil
 }
 
 func getAll(config ConfigStore, handle string, key ...string) (vals []string, err error) {
@@ -304,22 +315,34 @@ func getAll(config ConfigStore, handle string, key ...string) (vals []string, er
 	return vals, nil
 }
 
-func save(config ConfigStore, handle string, netConfig NetworkConfig) {
-	config.Set(handle, hostIntfKey, netConfig.HostIntf)
-	config.Set(handle, containerIntfKey, netConfig.ContainerIntf)
-	config.Set(handle, bridgeIntfKey, netConfig.BridgeName)
-	config.Set(handle, bridgeIpKey, netConfig.BridgeIP.String())
-	config.Set(handle, containerIpKey, netConfig.ContainerIP.String())
-	config.Set(handle, subnetKey, netConfig.Subnet.String())
-	config.Set(handle, iptablePrefixKey, netConfig.IPTablePrefix)
-	config.Set(handle, iptableInstanceKey, netConfig.IPTableInstance)
-	config.Set(handle, mtuKey, strconv.Itoa(netConfig.Mtu))
-	config.Set(handle, externalIpKey, netConfig.ExternalIP.String())
+func save(config ConfigStore, handle string, netConfig NetworkConfig) error {
+	errors := []error{}
+	errors = appendIfNotNil(errors, config.Set(handle, hostIntfKey, netConfig.HostIntf))
+	errors = appendIfNotNil(errors, config.Set(handle, containerIntfKey, netConfig.ContainerIntf))
+	errors = appendIfNotNil(errors, config.Set(handle, bridgeIntfKey, netConfig.BridgeName))
+	errors = appendIfNotNil(errors, config.Set(handle, bridgeIpKey, netConfig.BridgeIP.String()))
+	errors = appendIfNotNil(errors, config.Set(handle, containerIpKey, netConfig.ContainerIP.String()))
+	errors = appendIfNotNil(errors, config.Set(handle, subnetKey, netConfig.Subnet.String()))
+	errors = appendIfNotNil(errors, config.Set(handle, iptablePrefixKey, netConfig.IPTablePrefix))
+	errors = appendIfNotNil(errors, config.Set(handle, iptableInstanceKey, netConfig.IPTableInstance))
+	errors = appendIfNotNil(errors, config.Set(handle, mtuKey, strconv.Itoa(netConfig.Mtu)))
+	errors = appendIfNotNil(errors, config.Set(handle, externalIpKey, netConfig.ExternalIP.String()))
 	var dnsServers []string
 	for _, dnsServer := range netConfig.DNSServers {
 		dnsServers = append(dnsServers, dnsServer.String())
 	}
-	config.Set(handle, dnsServerKey, strings.Join(dnsServers, ", "))
+	errors = appendIfNotNil(errors, config.Set(handle, dnsServerKey, strings.Join(dnsServers, ", ")))
+	if len(errors) > 0 {
+		return fmt.Errorf("failed to save config: %s", errors[len(errors)-1])
+	}
+	return nil
+}
+
+func appendIfNotNil(errors []error, err error) []error {
+	if err != nil {
+		return append(errors, err)
+	}
+	return errors
 }
 
 func load(config ConfigStore, handle string) (NetworkConfig, error) {

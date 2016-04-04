@@ -88,7 +88,8 @@ type GuardianCommand struct {
 		DebugBindIP   IPFlag `long:"debug-bind-ip"                   description:"Bind the debug server on the given IP."`
 		DebugBindPort uint16 `long:"debug-bind-port" default:"17013" description:"Bind the debug server to the given port."`
 
-		Tag string `long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
+		Tag            string `long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
+		PropertiesPath string `long:"properties" description:"Path in which to store properties."`
 	} `group:"Server Configuration"`
 
 	Containers struct {
@@ -194,7 +195,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
 	ipt := cmd.wireIptables(logger, chainPrefix)
 
-	propManager := properties.NewManager()
+	propManager := properties.NewManager(&properties.FilesystemPersister{PersistenceDir: cmd.Server.PropertiesPath})
 
 	var networker gardener.Networker = netplugin.New(cmd.Network.Plugin.Path(), cmd.Network.PluginExtraArgs...)
 	if cmd.Network.Plugin == "" {
@@ -208,7 +209,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
-		Starter:         cmd.wireStarter(logger, ipt, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList),
+		Starters:        cmd.wireStarter(logger, ipt, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList),
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
 		Networker:       networker,
 		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
@@ -266,13 +267,13 @@ func (cmd *GuardianCommand) wireUidGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
-func (cmd *GuardianCommand) wireStarter(logger lager.Logger, ipt *iptables.IPTables, allowHostAccess bool, nicPrefix string, denyNetworks []string) gardener.Starter {
+func (cmd *GuardianCommand) wireStarter(logger lager.Logger, ipt *iptables.IPTables, allowHostAccess bool, nicPrefix string, denyNetworks []string) []gardener.Starter {
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("runner")}
 
-	return &StartAll{starters: []gardener.Starter{
+	return []gardener.Starter{
 		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag)), runner),
 		iptables.NewStarter(ipt, allowHostAccess, nicPrefix, denyNetworks),
-	}}
+	}
 }
 
 func (cmd *GuardianCommand) wireIptables(logger lager.Logger, prefix string) *iptables.IPTables {
