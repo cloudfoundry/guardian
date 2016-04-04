@@ -1,6 +1,8 @@
 package netplugin_test
 
 import (
+	"math"
+
 	"github.com/cloudfoundry-incubator/guardian/netplugin"
 	"github.com/pivotal-golang/lager/lagertest"
 
@@ -56,6 +58,13 @@ var _ = Describe("Plugin", func() {
 				Expect(hooks.Prestart.Args).To(Equal([]string{"some/path", "arg1", "arg2", "--action", "up", "--handle", "some-handle", "--network", "potato"}))
 				Expect(hooks.Poststop.Args).To(Equal([]string{"some/path", "arg1", "arg2", "--action", "down", "--handle", "some-handle", "--network", "potato"}))
 			})
+		})
+	})
+
+	Describe("Capacity", func() {
+		It("returns math.MaxUint64", func() {
+			plugin := netplugin.New("some/path")
+			Expect(plugin.Capacity()).To(Equal(uint64(math.MaxUint64)))
 		})
 	})
 })

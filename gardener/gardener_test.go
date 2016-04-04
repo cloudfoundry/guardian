@@ -665,6 +665,45 @@ var _ = Describe("Gardener", func() {
 			Expect(capacity.MaxContainers).To(BeEquivalentTo(1000))
 		})
 
+		Context("when MaxContainers is not set ", func() {
+			BeforeEach(func() {
+				gdnr.MaxContainers = 0
+			})
+
+			It("uses the network capacity", func() {
+				capacity, err := gdnr.Capacity()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(capacity.MaxContainers).To(BeEquivalentTo(1000))
+			})
+		})
+
+		Context("when MaxContainers is set to less than the network capacity", func() {
+			BeforeEach(func() {
+				gdnr.MaxContainers = 1
+			})
+
+			It("uses MaxContainers", func() {
+				capacity, err := gdnr.Capacity()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(capacity.MaxContainers).To(BeEquivalentTo(1))
+			})
+		})
+
+		Context("when MaxContainers is set to more than the network capacity", func() {
+			BeforeEach(func() {
+				gdnr.MaxContainers = 1001
+			})
+
+			It("uses the network capacity", func() {
+				capacity, err := gdnr.Capacity()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(capacity.MaxContainers).To(BeEquivalentTo(1000))
+			})
+		})
+
 		Context("when getting the total memory fails", func() {
 			BeforeEach(func() {
 				sysinfoProvider.TotalMemoryReturns(0, errors.New("whelp"))

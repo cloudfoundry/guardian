@@ -256,7 +256,7 @@ var externalIP = flag.String(
 	"",
 	"IP address to use to reach container's mapped ports")
 
-var maxContainers = flag.Uint(
+var maxContainers = flag.Uint64(
 	"maxContainers",
 	0,
 	"Maximum number of containers that can be created")
@@ -378,6 +378,7 @@ func main() {
 		VolumeCreator:   wireVolumeCreator(logger, *graphRoot, insecureRegistries, persistentImages),
 		Containerizer:   wireContainerizer(logger, *depotPath, *iodaemonBin, *dadooBin, *nstarBin, *tarBin, resolvedRootFSPath, propManager),
 		PropertyManager: propManager,
+		MaxContainers:   *maxContainers,
 
 		Logger: logger,
 	}
