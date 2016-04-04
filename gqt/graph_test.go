@@ -59,7 +59,7 @@ var _ = Describe("graph flags", func() {
 
 	JustBeforeEach(func() {
 		for _, image := range persistentImages {
-			args = append(args, "--persistentImage", image)
+			args = append(args, "--persistent-image", image)
 		}
 		client = startGarden(args...)
 
@@ -74,7 +74,7 @@ var _ = Describe("graph flags", func() {
 		client.Cleanup()
 	})
 
-	Describe("--graphCleanupThresholdMB", func() {
+	Describe("--graph-cleanup-threshold-in-megabytes", func() {
 		JustBeforeEach(func() {
 			container, err := client.Create(garden.ContainerSpec{
 				RootFSPath: "docker:///busybox",
@@ -85,12 +85,14 @@ var _ = Describe("graph flags", func() {
 
 		Context("when the graph cleanup threshold is set to -1", func() {
 			BeforeEach(func() {
-				args = []string{"--graphCleanupThresholdMB", "-1"}
+				args = []string{"--graph-cleanup-threshold-in-megabytes=-1"}
 			})
 
 			It("does NOT clean up the graph directory on create", func() {
 				initialNumberOfLayers := numLayersInGraph()
-				anotherContainer, err := client.Create(garden.ContainerSpec{})
+				anotherContainer, err := client.Create(garden.ContainerSpec{
+					RootFSPath: runner.RootFSPath,
+				})
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(numLayersInGraph()).To(BeNumerically(">", initialNumberOfLayers), "after creation, should NOT have deleted anything")
@@ -100,19 +102,21 @@ var _ = Describe("graph flags", func() {
 
 		Context("when the graph cleanup threshold is exceeded", func() {
 			BeforeEach(func() {
-				args = []string{"--graphCleanupThresholdMB", "0"}
+				args = []string{"--graph-cleanup-threshold-in-megabytes", "0"}
 			})
 
 			Context("when there are other rootfs layers in the graph dir", func() {
 				BeforeEach(func() {
-					args = append(args, "--persistentImage", "docker:///busybox")
+					args = append(args, "--persistent-image", "docker:///busybox")
 				})
 
 				It("cleans up the graph directory on container creation (and not on destruction)", func() {
-					restartGarden(client, "--graphCleanupThresholdMB=1") // restart with persistent image list empty
+					restartGarden(client, "--graph-cleanup-threshold-in-megabytes=1") // restart with persistent image list empty
 					Expect(numLayersInGraph()).To(BeNumerically(">", 0))
 
-					anotherContainer, err := client.Create(garden.ContainerSpec{})
+					anotherContainer, err := client.Create(garden.ContainerSpec{
+						RootFSPath: runner.RootFSPath,
+					})
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(numLayersInGraph()).To(Equal(3), "after creation, should have deleted everything other than the default rootfs, uid translation layer and container layer")
@@ -124,14 +128,16 @@ var _ = Describe("graph flags", func() {
 
 		Context("when the graph cleanup threshold is not exceeded", func() {
 			BeforeEach(func() {
-				args = []string{"--graphCleanupThresholdMB", "1024"}
+				args = []string{"--graph-cleanup-threshold-in-megabytes", "1024"}
 			})
 
 			It("does not cleanup", func() {
 				// threshold is not yet exceeded
 				Expect(numLayersInGraph()).To(Equal(3))
 
-				anotherContainer, err := client.Create(garden.ContainerSpec{})
+				anotherContainer, err := client.Create(garden.ContainerSpec{
+					RootFSPath: runner.RootFSPath,
+				})
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(numLayersInGraph()).To(Equal(6))
@@ -142,7 +148,7 @@ var _ = Describe("graph flags", func() {
 
 	Describe("--persistentImage", func() {
 		BeforeEach(func() {
-			args = []string{"--graphCleanupThresholdMB", "0"}
+			args = []string{"--graph-cleanup-threshold-in-megabytes", "0"}
 		})
 
 		Context("when set", func() {
@@ -243,7 +249,9 @@ var _ = Describe("graph flags", func() {
 			})
 
 			It("cleans up all unused images from the graph", func() {
-				defaultRootfsContainer, err := client.Create(garden.ContainerSpec{})
+				defaultRootfsContainer, err := client.Create(garden.ContainerSpec{
+					RootFSPath: runner.RootFSPath,
+				})
 				Expect(err).ToNot(HaveOccurred())
 
 				nonDefaultRootfsContainer, err := client.Create(garden.ContainerSpec{

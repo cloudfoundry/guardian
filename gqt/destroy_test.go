@@ -43,7 +43,9 @@ var _ = Describe("Destroying a Container", func() {
 		BeforeEach(func() {
 			var err error
 
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(garden.ContainerSpec{
+				RootFSPath: runner.RootFSPath,
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			initProcPid = initProcessPID(container.Handle())
@@ -92,14 +94,16 @@ var _ = Describe("Destroying a Container", func() {
 			var err error
 
 			container, err = client.Create(garden.ContainerSpec{
-				Network: "177.100.10.30/24",
+				RootFSPath: runner.RootFSPath,
+				Network:    "177.100.10.30/24",
 			})
 			Expect(err).NotTo(HaveOccurred())
 			contIfaceName = ethInterfaceName(container)
 			contHandle = container.Handle()
 
 			existingContainer, err = client.Create(garden.ContainerSpec{
-				Network: "168.100.20.10/24",
+				RootFSPath: runner.RootFSPath,
+				Network:    "168.100.20.10/24",
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
