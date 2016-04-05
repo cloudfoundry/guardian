@@ -307,7 +307,7 @@ var _ = Describe("Creating a Container", func() {
 			cpuset := readFileContent(fmt.Sprintf("/proc/%d/cpuset", clientPid))
 			cpuset = strings.TrimLeft(cpuset, "/")
 
-			cpuSharesPath := fmt.Sprintf("%s/cgroups-%d/cpu/%s/%s/cpu.shares", os.TempDir(),
+			cpuSharesPath := fmt.Sprintf("%s/cgroups-%d/cpu/%s/%s/cpu.shares", client.Tmpdir,
 				GinkgoParallelNode(), cpuset, container.Handle())
 
 			cpuShares := readFileContent(cpuSharesPath)

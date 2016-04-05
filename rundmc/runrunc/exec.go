@@ -77,18 +77,26 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, id string, spec garden.Proce
 	log.Info("started", lager.Data{pid: "pid"})
 	defer log.Info("finished")
 
-	pidFilePath := path.Join(bundlePath, "processes", fmt.Sprintf("%s.pid", pid))
-	cmd, err := e.execPreparer.Prepare(log, id, bundlePath, pidFilePath, spec, e.runc)
+	processJSONFilePath, pidFilePath, err := e.execPreparer.PrepareProcess(log, bundlePath, pid, spec, e.runc)
 	if err != nil {
 		log.Error("prepare-failed", err)
 		return nil, err
 	}
+
+	cmd := e.runc.ExecCommand(id, processJSONFilePath, pidFilePath)
 
 	process, err := e.tracker.Run(pid, cmd, io, spec.TTY, pidFilePath)
 	if err != nil {
 		log.Error("run-failed", err)
 		return nil, err
 	}
+
+	go func() {
+		process.Wait()
+		if err := os.Remove(processJSONFilePath); err != nil {
+			log.Error("remove-process-json-failed", err)
+		}
+	}()
 
 	return process, nil
 }
@@ -107,28 +115,29 @@ func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdire
 	}
 }
 
-func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath, pidFilePath string, spec garden.ProcessSpec, runc RuncBinary) (*exec.Cmd, error) {
+func (r *ExecPreparer) PrepareProcess(log lager.Logger, bundlePath, pid string, spec garden.ProcessSpec, runc RuncBinary) (string, string, error) {
 	log = log.Session("prepare")
 
 	log.Info("start")
 	defer log.Info("finished")
 
-	if err := os.MkdirAll(path.Dir(pidFilePath), 0755); err != nil {
-		log.Error("mk-process-dir-failed", err)
-		return nil, err
+	processesPath := path.Join(bundlePath, "processes")
+	if err := os.MkdirAll(processesPath, 0755); err != nil {
+		log.Error("mk-processes-dir-failed", err)
+		return "", "", err
 	}
 
 	bndl, err := r.bundleLoader.Load(bundlePath)
 	if err != nil {
 		log.Error("load-bundle-failed", err)
-		return nil, err
+		return "", "", err
 	}
 
 	rootFsPath := bndl.RootFS()
 	u, err := r.lookupUser(bndl, rootFsPath, spec.User)
 	if err != nil {
 		log.Error("lookup-user-failed", err)
-		return nil, err
+		return "", "", err
 	}
 
 	cwd := u.home
@@ -138,10 +147,10 @@ func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath, pidFilePath str
 
 	if err := r.ensureDirExists(rootFsPath, cwd, u.hostUid, u.hostGid); err != nil {
 		log.Error("ensure-dir-failed", err)
-		return nil, err
+		return "", "", err
 	}
 
-	processJSON, err := writeProcessJSON(log, specs.Process{
+	processJsonPath, err := writeProcessJSON(log, specs.Process{
 		Args: append([]string{spec.Path}, spec.Args...),
 		Env:  envFor(u.containerUid, bndl, spec),
 		User: specs.User{
@@ -151,14 +160,15 @@ func (r *ExecPreparer) Prepare(log lager.Logger, id, bundlePath, pidFilePath str
 		Cwd:          cwd,
 		Capabilities: bndl.Capabilities(),
 		Rlimits:      toRlimits(spec.Limits),
-	})
+	}, processesPath)
 
 	if err != nil {
 		log.Error("encode-process-json-failed", err)
-		return nil, err
+		return "", "", err
 	}
 
-	return runc.ExecCommand(id, processJSON, pidFilePath), nil
+	pidFilePath := path.Join(processesPath, fmt.Sprintf("%s.pid", pid))
+	return processJsonPath, pidFilePath, nil
 }
 
 type usr struct {
@@ -196,8 +206,8 @@ func (r *ExecPreparer) ensureDirExists(rootfsPath, dir string, uid, gid int) err
 	return nil
 }
 
-func writeProcessJSON(log lager.Logger, spec specs.Process) (string, error) {
-	tmpFile, err := ioutil.TempFile("", "guardianprocess")
+func writeProcessJSON(log lager.Logger, spec specs.Process, processesPath string) (string, error) {
+	tmpFile, err := ioutil.TempFile(processesPath, "guardianprocess")
 	if err != nil {
 		log.Error("tempfile-failed", err)
 		return "", err

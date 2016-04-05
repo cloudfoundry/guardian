@@ -37,7 +37,7 @@ type RunningGarden struct {
 
 	Pid int
 
-	tmpdir string
+	Tmpdir string
 
 	DepotDir  string
 	GraphRoot string
@@ -71,13 +71,14 @@ func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin string, ar
 
 		GraphRoot: GraphRoot,
 		GraphPath: graphPath,
-		tmpdir:    tmpDir,
+		Tmpdir:    tmpDir,
 		logger:    lagertest.NewTestLogger("garden-runner"),
 
 		Client: client.New(connection.New(network, addr)),
 	}
 
 	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, TarPath, RootFSPath, argv...)
+	c.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", tmpDir))
 	r.runner = ginkgomon.New(ginkgomon.Config{
 		Name:              "guardian",
 		Command:           c,
@@ -211,8 +212,8 @@ func (r *RunningGarden) Cleanup() {
 	// }
 
 	r.logger.Info("cleanup-tempdirs")
-	if err := os.RemoveAll(r.tmpdir); err != nil {
-		r.logger.Error("cleanup-tempdirs-failed", err, lager.Data{"tmpdir": r.tmpdir})
+	if err := os.RemoveAll(r.Tmpdir); err != nil {
+		r.logger.Error("cleanup-tempdirs-failed", err, lager.Data{"tmpdir": r.Tmpdir})
 	} else {
 		r.logger.Info("tempdirs-removed")
 	}

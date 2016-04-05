@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -22,6 +23,11 @@ var _ = Describe("Run", func() {
 	var client *runner.RunningGarden
 
 	AfterEach(func() {
+		// Ensure we don't leak process.json files
+		matches, err := filepath.Glob(fmt.Sprintf("%s/guardianprocess*", client.Tmpdir))
+		Expect(err).ToNot(HaveOccurred())
+		Expect(len(matches)).To(Equal(0))
+
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
