@@ -1,6 +1,8 @@
 package gardener
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"net/url"
 	"time"
@@ -155,6 +157,10 @@ type Gardener struct {
 // Create creates a container by combining the results of networker.Network,
 // volumizer.Create and containzer.Create.
 func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err error) {
+	if err := g.checkDuplicateHandle(spec.Handle); err != nil {
+		return nil, err
+	}
+
 	if spec.Handle == "" {
 		spec.Handle = g.UidGenerator.Generate()
 	}
@@ -346,4 +352,17 @@ func (g *Gardener) BulkMetrics(handles []string) (map[string]garden.ContainerMet
 	}
 
 	return result, nil
+}
+
+func (g *Gardener) checkDuplicateHandle(handle string) error {
+	handles, err := g.Containerizer.Handles()
+	if err != nil {
+		return err
+	}
+	for _, h := range handles {
+		if h == handle {
+			return errors.New(fmt.Sprintf("Handle '%s' already in use", handle))
+		}
+	}
+	return nil
 }

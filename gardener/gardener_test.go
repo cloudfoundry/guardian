@@ -335,6 +335,40 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
+		Context("when passed a handle that already exists", func() {
+			var (
+				containerSpec garden.ContainerSpec
+			)
+
+			BeforeEach(func() {
+				containerizer.HandlesReturns([]string{"duplicate-banana"}, nil)
+				containerSpec = garden.ContainerSpec{Handle: "duplicate-banana"}
+			})
+
+			It("returns a useful error message", func() {
+				_, err := gdnr.Create(containerSpec)
+				Expect(err).To(MatchError("Handle 'duplicate-banana' already in use"))
+			})
+
+			It("doesn't return a container", func() {
+				container, _ := gdnr.Create(containerSpec)
+				Expect(container).To(BeNil())
+			})
+
+			Context("when containerizer.Handles() returns an error", func() {
+				BeforeEach(func() {
+					containerizer.HandlesReturns(nil, errors.New("boom"))
+				})
+
+				It("forwards the error", func() {
+					containerSpec := garden.ContainerSpec{Handle: "duplicate-banana"}
+					container, err := gdnr.Create(containerSpec)
+					Expect(container).To(BeNil())
+					Expect(err).To(MatchError("boom"))
+				})
+			})
+		})
+
 		Context("when properties are specified", func() {
 			var startingProperties garden.Properties
 
