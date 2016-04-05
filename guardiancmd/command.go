@@ -146,7 +146,6 @@ var idMappings rootfs_provider.MappingList
 
 func init() {
 	if reexec.Init() {
-		println("reexeced in init")
 		os.Exit(0)
 	}
 
@@ -167,7 +166,6 @@ func init() {
 
 func (cmd *GuardianCommand) Execute([]string) error {
 	if reexec.Init() {
-		println("reexeced in execute")
 		return nil
 	}
 
