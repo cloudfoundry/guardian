@@ -80,6 +80,11 @@ var _ = Describe("Exec", func() {
 		}
 	})
 
+	AfterEach(func() {
+		err := os.RemoveAll(bundlePath)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
 	It("runs exec against the injected runC binary using process tracker", func() {
 		pidGenerator.GenerateReturns("another-process-guid")
 		tracker.RunReturns(&process_tracker.Process{}, nil)
@@ -150,14 +155,14 @@ var _ = Describe("Exec", func() {
 		})
 
 		It("passes a process.json with the correct path and args", func() {
-			runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}}, garden.ProcessIO{})
+			runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}}, garden.ProcessIO{})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 			Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
 		})
 
 		It("sets the rlimits correctly", func() {
 			ptr := func(n uint64) *uint64 { return &n }
-			_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+			_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
 				Limits: garden.ResourceLimits{
 					As:         ptr(12),
 					Core:       ptr(24),
@@ -203,14 +208,14 @@ var _ = Describe("Exec", func() {
 			Context("when the bundle can be loaded", func() {
 				BeforeEach(func() {
 					users.LookupReturns(&user.ExecUser{Uid: 9, Gid: 7}, nil)
-					_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
+					_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
 					Expect(err).ToNot(HaveOccurred())
 				})
 
 				It("looks up the user and group IDs of the user in the right rootfs", func() {
 					Expect(users.LookupCallCount()).To(Equal(1))
 					actualRootfsPath, actualUserName := users.LookupArgsForCall(0)
-					Expect(actualRootfsPath).To(Equal(rootfsPath("some/oci/container")))
+					Expect(actualRootfsPath).To(Equal(rootfsPath(bundlePath)))
 					Expect(actualUserName).To(Equal("spiderman"))
 				})
 
@@ -225,7 +230,7 @@ var _ = Describe("Exec", func() {
 				})
 
 				It("fails", func() {
-					_, err := runner.Exec(logger, "some/oci/container", "someid",
+					_, err := runner.Exec(logger, bundlePath, "someid",
 						garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
 					Expect(err).To(MatchError(ContainSubstring("Hold them horses")))
 				})
@@ -235,7 +240,7 @@ var _ = Describe("Exec", func() {
 				It("passes a process.json with the correct user and group ids", func() {
 					users.LookupReturns(&user.ExecUser{Uid: 0, Gid: 0}, errors.New("bang"))
 
-					_, err := runner.Exec(logger, "some/oci/container", "some-id", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
+					_, err := runner.Exec(logger, bundlePath, "some-id", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
 					Expect(err).To(MatchError(ContainSubstring("bang")))
 				})
 			})
@@ -244,7 +249,7 @@ var _ = Describe("Exec", func() {
 		Context("when the user is specified in the process spec", func() {
 			Context("when the environment does not contain a USER", func() {
 				It("appends a default user", func() {
-					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+					runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
 						User: "spiderman",
 						Env:  []string{"a=1", "b=3", "c=4", "PATH=a", "HOME=/spidermanhome"},
 					}, garden.ProcessIO{})
@@ -256,7 +261,7 @@ var _ = Describe("Exec", func() {
 
 			Context("when the environment does contain a USER", func() {
 				It("appends a default user", func() {
-					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+					runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
 						User: "spiderman",
 						Env:  []string{"a=1", "b=3", "c=4", "PATH=a", "USER=superman"},
 					}, garden.ProcessIO{})
@@ -270,7 +275,7 @@ var _ = Describe("Exec", func() {
 		Context("when the user is not specified in the process spec", func() {
 			Context("when the environment does not contain a USER", func() {
 				It("passes the environment variables", func() {
-					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+					runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
 						Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
 					}, garden.ProcessIO{})
 
@@ -281,7 +286,7 @@ var _ = Describe("Exec", func() {
 
 			Context("when the environment already contains a USER", func() {
 				It("passes the environment variables", func() {
-					runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+					runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
 						Env: []string{"a=1", "b=3", "c=4", "PATH=a", "USER=yo"},
 					}, garden.ProcessIO{})
 
@@ -293,7 +298,7 @@ var _ = Describe("Exec", func() {
 
 		Context("when the environment already contains a PATH", func() {
 			It("passes the environment variables", func() {
-				runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+				runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
 					Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
 				}, garden.ProcessIO{})
 
@@ -305,7 +310,7 @@ var _ = Describe("Exec", func() {
 		Context("when the environment does not already contain a PATH", func() {
 			It("appends a default PATH for the root user", func() {
 				users.LookupReturns(&user.ExecUser{Uid: 0, Gid: 0}, nil)
-				runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+				runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
 					Env:  []string{"a=1", "b=3", "c=4"},
 					User: "root",
 				}, garden.ProcessIO{})
@@ -317,7 +322,7 @@ var _ = Describe("Exec", func() {
 
 			It("appends a default PATH for non-root users", func() {
 				users.LookupReturns(&user.ExecUser{Uid: 1000, Gid: 1000}, nil)
-				runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+				runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
 					Env:  []string{"a=1", "b=3", "c=4"},
 					User: "alice",
 				}, garden.ProcessIO{})
@@ -346,7 +351,7 @@ var _ = Describe("Exec", func() {
 				bndl.Spec.Process.Env = containerEnv
 				bundleLoader.LoadReturns(bndl, nil)
 
-				_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+				_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
 					Env: processEnv,
 				}, garden.ProcessIO{})
 				Expect(err).NotTo(HaveOccurred())
@@ -359,7 +364,7 @@ var _ = Describe("Exec", func() {
 				bndl.Spec.Process.Env = []string{}
 				bundleLoader.LoadReturns(bndl, nil)
 
-				_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{
+				_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
 					Env: processEnv,
 				}, garden.ProcessIO{})
 				Expect(err).NotTo(HaveOccurred())
@@ -391,7 +396,7 @@ var _ = Describe("Exec", func() {
 			})
 
 			It("passes them on to the process", func() {
-				_, err := runner.Exec(logger, "some/oci/container", "someid", garden.ProcessSpec{}, garden.ProcessIO{})
+				_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{}, garden.ProcessIO{})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(spec.Capabilities).To(Equal([]string{"foo", "bar", "baz"}))
 			})
