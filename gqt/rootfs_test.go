@@ -50,10 +50,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 			var err error
 
 			container, err = client.Create(garden.ContainerSpec{RootFSPath: ""})
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(ContainSubstring(
-				"RootFSPath: is a required parameter, since no default rootfs was provided to the server. To provide a default rootfs, use the --rootfs flag on startup.",
-			)))
+			Expect(err).To(MatchError(ContainSubstring("RootFSPath: is a required parameter")))
 		})
 
 		It("with a rootfs in container spec, the container is created successfully", func() {
