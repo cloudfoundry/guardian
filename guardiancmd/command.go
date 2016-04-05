@@ -99,6 +99,7 @@ type GuardianCommand struct {
 
 	Bin struct {
 		IODaemon FileFlag `long:"iodaemon-bin" required:"true" description:"Path to the 'iodaemon' binary."`
+		Dadoo    FileFlag `long:"dadoo-bin" required:"true" description:"Path to the 'dadoo' binary."`
 		NSTar    FileFlag `long:"nstar-bin"    required:"true" description:"Path to the 'nstar' binary."`
 		Tar      FileFlag `long:"tar-bin"      required:"true" description:"Path to the 'tar' binary."`
 		Kawasaki FileFlag `long:"kawasaki-bin" required:"true" description:"Path to the 'kawasaki' network hook binary."`
@@ -208,7 +209,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
 		Networker:       networker,
 		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
-		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), propManager),
+		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), propManager),
 		PropertyManager: propManager,
 
 		Logger: logger,
@@ -421,7 +422,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		ovenCleaner)
 }
 
-func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodaemonPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {
+func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodaemonPath, dadooPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
 	commandRunner := linux_command_runner.New()
@@ -443,6 +444,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		commandRunner,
 		cmd.wireUidGenerator(),
 		goci.RuncBinary("runc"),
+		dadooPath,
 		execPreparer,
 		os.TempDir(),
 	)
@@ -516,8 +518,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	eventStore := rundmc.NewEventStore(properties)
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 
-	deleteRetrier := retrier.New(retrier.ConstantBackoff(20, 100*time.Millisecond), nil)
-	return rundmc.New(depot, template, runcrunner, nstar, eventStore, deleteRetrier)
+	return rundmc.New(depot, template, runcrunner, nstar, eventStore)
 }
 
 func (cmd *GuardianCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {
