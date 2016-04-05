@@ -218,7 +218,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	var listenNetwork, listenAddr string
 	if cmd.Server.BindIP != nil {
 		listenNetwork = "tcp"
-		listenAddr = fmt.Sprintf("%s:%d", cmd.Server.BindIP, cmd.Server.BindPort)
+		listenAddr = fmt.Sprintf("%s:%d", cmd.Server.BindIP.IP(), cmd.Server.BindPort)
 	} else {
 		listenNetwork = "unix"
 		listenAddr = cmd.Server.BindSocket
@@ -234,7 +234,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	metronNotifier.Start()
 
 	if cmd.Server.DebugBindIP != nil {
-		addr := fmt.Sprintf("%s:%d", cmd.Server.DebugBindIP, cmd.Server.DebugBindPort)
+		addr := fmt.Sprintf("%s:%d", cmd.Server.DebugBindIP.IP(), cmd.Server.DebugBindPort)
 		metrics.StartDebugServer(addr, reconfigurableSink, metricsProvider)
 	}
 
