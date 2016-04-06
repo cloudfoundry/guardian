@@ -34,7 +34,9 @@ var _ = Describe("Run", func() {
 	DescribeTable("running a process",
 		func(spec garden.ProcessSpec, matchers ...func(actual interface{})) {
 			client = startGarden()
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(garden.ContainerSpec{
+				RootFSPath: runner.RootFSPath,
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			out := gbytes.NewBuffer()
@@ -85,6 +87,7 @@ var _ = Describe("Run", func() {
 
 				client = startGarden()
 				container, err := client.Create(garden.ContainerSpec{
+					RootFSPath: runner.RootFSPath,
 					Privileged: false,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -149,6 +152,7 @@ var _ = Describe("Run", func() {
 		It("can run a process as a particular user", func() {
 			client = startGarden()
 			container, err := client.Create(garden.ContainerSpec{
+				RootFSPath: runner.RootFSPath,
 				Privileged: true,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -179,7 +183,9 @@ var _ = Describe("Run", func() {
 		BeforeEach(func() {
 			client = startGarden()
 			var err error
-			container, err = client.Create(garden.ContainerSpec{})
+			container, err = client.Create(garden.ContainerSpec{
+				RootFSPath: runner.RootFSPath,
+			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -216,7 +222,8 @@ var _ = Describe("Run", func() {
 			client = startGarden()
 			var err error
 			container, err = client.Create(garden.ContainerSpec{
-				Env: []string{"USER=ppp", "HOME=/home/ppp"},
+				RootFSPath: runner.RootFSPath,
+				Env:        []string{"USER=ppp", "HOME=/home/ppp"},
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -253,7 +260,9 @@ var _ = Describe("Run", func() {
 		It("should forward SIGTERM to the process", func(done Done) {
 			client = startGarden()
 
-			container, err := client.Create(garden.ContainerSpec{})
+			container, err := client.Create(garden.ContainerSpec{
+				RootFSPath: runner.RootFSPath,
+			})
 			Expect(err).NotTo(HaveOccurred())
 
 			buffer := gbytes.NewBuffer()

@@ -52,6 +52,11 @@ func (m *metrics) LoopDevices() int {
 }
 
 func (m *metrics) BackingStores() int {
+	if m.backingStoresPath == "" {
+		// graph is disabled
+		return -1
+	}
+
 	entries, err := ioutil.ReadDir(m.backingStoresPath)
 	if err != nil {
 		m.logger.Error("cannot-get-backing-stores", err)

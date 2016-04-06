@@ -51,7 +51,8 @@ var _ = Describe("Net", func() {
 		client = startGarden(args...)
 
 		container, err = client.Create(garden.ContainerSpec{
-			Network: containerNetwork,
+			RootFSPath: runner.RootFSPath,
+			Network:    containerNetwork,
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -75,8 +76,8 @@ var _ = Describe("Net", func() {
 			tmpFile = path.Join(tmpDir, "iwasrun.log")
 
 			args = []string{
-				"--networkPlugin", binPath,
-				"--networkPluginExtraArgs", tmpFile,
+				"--network-plugin", binPath,
+				"--network-plugin-extra-arg", tmpFile,
 			}
 		})
 
@@ -156,7 +157,8 @@ var _ = Describe("Net", func() {
 				var err error
 				originContainer = container
 				container, err = client.Create(garden.ContainerSpec{
-					Network: containerNetwork,
+					RootFSPath: runner.RootFSPath,
+					Network:    containerNetwork,
 				})
 
 				Expect(err).NotTo(HaveOccurred())
@@ -203,20 +205,24 @@ var _ = Describe("Net", func() {
 			)
 
 			BeforeEach(func() {
-				args = []string{"-networkPool", "10.253.0.0/29"}
+				args = []string{"--network-pool", "10.253.0.0/29"}
 				containerNetwork = ""
 			})
 
 			JustBeforeEach(func() {
 				var err error
-				otherContainer, err = client.Create(garden.ContainerSpec{})
+				otherContainer, err = client.Create(garden.ContainerSpec{
+					RootFSPath: runner.RootFSPath,
+				})
 				Expect(err).ToNot(HaveOccurred())
 
 				otherContainerIP = containerIP(otherContainer)
 
 				Expect(client.Destroy(otherContainer.Handle())).To(Succeed())
 
-				otherContainer, err = client.Create(garden.ContainerSpec{})
+				otherContainer, err = client.Create(garden.ContainerSpec{
+					RootFSPath: runner.RootFSPath,
+				})
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -250,9 +256,9 @@ var _ = Describe("Net", func() {
 			})
 		})
 
-		Describe("--denyNetworks flag", func() {
+		Describe("--deny-network flag", func() {
 			BeforeEach(func() {
-				args = append(args, "--denyNetworks", "8.8.8.0/24")
+				args = append(args, "--deny-network", "8.8.8.0/24")
 			})
 
 			It("should deny outbound traffic to IPs in the range", func() {
@@ -263,9 +269,9 @@ var _ = Describe("Net", func() {
 				Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
 			})
 
-			Context("when multiple denyNetworks are defined", func() {
+			Context("when multiple --deny-networks are passed", func() {
 				BeforeEach(func() {
-					args = append(args, "--denyNetworks", "8.8.8.0/24,8.8.4.0/24")
+					args = append(args, "--deny-network", "8.8.4.0/24")
 				})
 
 				It("should deny IPs in either range", func() {
@@ -311,20 +317,22 @@ var _ = Describe("Net", func() {
 		})
 
 		Describe("NetOut", func() {
-			BeforeEach(func() {
-				args = append(args, "--denyNetworks", "0.0.0.0/0")
-			})
+			Context("when an IP within the denied network range is permitted", func() {
+				BeforeEach(func() {
+					args = append(args, "--deny-network", "0.0.0.0/0")
+				})
 
-			It("should access internet", func() {
-				Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
+				It("should access internet", func() {
+					Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
 
-				Expect(container.NetOut(garden.NetOutRule{
-					Protocol: garden.ProtocolTCP,
-					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
-					Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
-				})).To(Succeed())
+					Expect(container.NetOut(garden.NetOutRule{
+						Protocol: garden.ProtocolTCP,
+						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+						Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+					})).To(Succeed())
 
-				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+					Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+				})
 			})
 
 			Context("external addresses", func() {
@@ -349,7 +357,7 @@ var _ = Describe("Net", func() {
 				Context("when the target address is inside DENY_NETWORKS", func() {
 					//The target address is the ip addr of www.example.com in these tests
 					BeforeEach(func() {
-						args = append(args, "--denyNetworks", "0.0.0.0/0")
+						args = append(args, "--deny-network", "0.0.0.0/0")
 						containerNetwork = fmt.Sprintf("10.1%d.0.0/24", GinkgoParallelNode())
 					})
 
@@ -373,7 +381,7 @@ var _ = Describe("Net", func() {
 
 				Context("when the target address is not in DENY_NETWORKS", func() {
 					BeforeEach(func() {
-						args = append(args, "--denyNetworks", "4.4.4.4/30")
+						args = append(args, "--deny-network", "4.4.4.4/30")
 						containerNetwork = fmt.Sprintf("10.1%d.0.0/24", GinkgoParallelNode())
 					})
 

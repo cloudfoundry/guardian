@@ -36,7 +36,7 @@ var _ = Describe("Garden API", func() {
 
 		Context("when the network pool is /24", func() {
 			BeforeEach(func() {
-				args = append(args, "--networkPool", "10.254.0.0/24")
+				args = append(args, "--network-pool", "10.254.0.0/24")
 			})
 
 			It("returns the capacity of the subnet pool", func() {

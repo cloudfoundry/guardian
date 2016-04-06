@@ -160,20 +160,25 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, 
 	gardenArgs := make([]string, len(argv))
 	copy(gardenArgs, argv)
 
-	gardenArgs = appendDefaultFlag(gardenArgs, "--listenNetwork", network)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--listenAddr", addr)
+	switch network {
+	case "tcp":
+		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-ip", addr)
+	case "unix":
+		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-socket", addr)
+	}
+
 	gardenArgs = appendDefaultFlag(gardenArgs, "--depot", depotDir)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--graph", graphPath)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
-	gardenArgs = appendDefaultFlag(gardenArgs, "--initBin", initBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--iodaemonBin", iodaemonBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--dadooBin", dadooBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--kawasakiBin", kawasakiBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--nstarBin", nstarBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--tarBin", tarBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--logLevel", "debug")
-	gardenArgs = appendDefaultFlag(gardenArgs, "--debugAddr", fmt.Sprintf(":808%d", ginkgo.GinkgoParallelNode()))
-	gardenArgs = appendDefaultFlag(gardenArgs, "--rootfs", rootFSPath)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--init-bin", initBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--iodaemon-bin", iodaemonBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--dadoo-bin", dadooBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--kawasaki-bin", kawasakiBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--nstar-bin", nstarBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", tarBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--log-level", "debug")
+	gardenArgs = appendDefaultFlag(gardenArgs, "--debug-bind-ip", "0.0.0.0")
+	gardenArgs = appendDefaultFlag(gardenArgs, "--debug-bind-port", fmt.Sprintf("%d", 8080+ginkgo.GinkgoParallelNode()))
 	return exec.Command(bin, gardenArgs...)
 }
 
