@@ -18,23 +18,23 @@ import (
 var _ = Describe("State", func() {
 	var (
 		commandRunner *fake_command_runner.FakeCommandRunner
-		loggingRunner *fakes.FakeRuncCmdRunner
+		runner        *fakes.FakeRuncCmdRunner
 		runcBinary    *fakes.FakeRuncBinary
 		logger        *lagertest.TestLogger
 
 		stateCmdOutput string
 		stateCmdExit   error
 
-		runner *runrunc.Stater
+		stater *runrunc.Stater
 	)
 
 	BeforeEach(func() {
-		loggingRunner = new(fakes.FakeRuncCmdRunner)
+		runner = new(fakes.FakeRuncCmdRunner)
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
 		logger = lagertest.NewTestLogger("test")
 
-		runner = runrunc.NewStater(loggingRunner, runcBinary)
+		stater = runrunc.NewStater(runner, runcBinary)
 
 		runcBinary.StateCommandStub = func(id, logFile string) *exec.Cmd {
 			return exec.Command("funC-state", "--log", logFile, "state", id)
@@ -48,7 +48,7 @@ var _ = Describe("State", func() {
 	})
 
 	JustBeforeEach(func() {
-		loggingRunner.RunAndLogStub = func(_ lager.Logger, fn runrunc.LoggingCmd) error {
+		runner.RunAndLogStub = func(_ lager.Logger, fn runrunc.LoggingCmd) error {
 			return commandRunner.Run(fn("potato.log"))
 		}
 
@@ -61,7 +61,7 @@ var _ = Describe("State", func() {
 	})
 
 	It("gets the bundle state", func() {
-		state, err := runner.State(logger, "some-container")
+		state, err := stater.State(logger, "some-container")
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(state.Pid).To(Equal(4))
@@ -69,7 +69,7 @@ var _ = Describe("State", func() {
 	})
 
 	It("forwards runc logs", func() {
-		_, err := runner.State(logger, "some-container")
+		_, err := stater.State(logger, "some-container")
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
@@ -85,7 +85,7 @@ var _ = Describe("State", func() {
 		})
 
 		It("returns the error", func() {
-			_, err := runner.State(logger, "some-container")
+			_, err := stater.State(logger, "some-container")
 			Expect(err).To(
 				MatchError(ContainSubstring("boom")),
 			)
@@ -98,7 +98,7 @@ var _ = Describe("State", func() {
 		})
 
 		It("returns a reasonable error", func() {
-			_, err := runner.State(logger, "some-container")
+			_, err := stater.State(logger, "some-container")
 			Expect(err).To(
 				MatchError(ContainSubstring("runc state: invalid character 'p'")),
 			)

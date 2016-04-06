@@ -16,7 +16,7 @@ import (
 var _ = Describe("Kill", func() {
 	var (
 		commandRunner *fake_command_runner.FakeCommandRunner
-		loggingRunner *fakes.FakeRuncCmdRunner
+		runner        *fakes.FakeRuncCmdRunner
 		runcBinary    *fakes.FakeRuncBinary
 		logger        *lagertest.TestLogger
 
@@ -26,16 +26,16 @@ var _ = Describe("Kill", func() {
 	BeforeEach(func() {
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
-		loggingRunner = new(fakes.FakeRuncCmdRunner)
+		runner = new(fakes.FakeRuncCmdRunner)
 		logger = lagertest.NewTestLogger("test")
 
-		killer = runrunc.NewKiller(loggingRunner, runcBinary)
+		killer = runrunc.NewKiller(runner, runcBinary)
 
 		runcBinary.KillCommandStub = func(id, signal, logFile string) *exec.Cmd {
 			return exec.Command("funC", "--log", logFile, "kill", id, signal)
 		}
 
-		loggingRunner.RunAndLogStub = func(_ lager.Logger, fn runrunc.LoggingCmd) error {
+		runner.RunAndLogStub = func(_ lager.Logger, fn runrunc.LoggingCmd) error {
 			return commandRunner.Run(fn("potato.log"))
 		}
 	})

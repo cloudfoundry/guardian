@@ -34,8 +34,8 @@ type runcStats struct {
 }
 
 type Statser struct {
-	loggingRunner RuncCmdRunner
-	runc          RuncBinary
+	runner RuncCmdRunner
+	runc   RuncBinary
 }
 
 func NewStatser(runner RuncCmdRunner, runc RuncBinary) *Statser {
@@ -47,7 +47,7 @@ func NewStatser(runner RuncCmdRunner, runc RuncBinary) *Statser {
 func (r *Statser) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
 	buf := new(bytes.Buffer)
 
-	if err := r.loggingRunner.RunAndLog(log, func(logFile string) *exec.Cmd {
+	if err := r.runner.RunAndLog(log, func(logFile string) *exec.Cmd {
 		cmd := r.runc.StatsCommand(id, logFile)
 		cmd.Stdout = buf
 		return cmd

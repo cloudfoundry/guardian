@@ -19,25 +19,25 @@ import (
 var _ = Describe("Stats", func() {
 	var (
 		commandRunner *fake_command_runner.FakeCommandRunner
-		loggingRunner *fakes.FakeRuncCmdRunner
+		runner        *fakes.FakeRuncCmdRunner
 		runcBinary    *fakes.FakeRuncBinary
 		logger        *lagertest.TestLogger
 
-		runner *runrunc.Statser
+		statser *runrunc.Statser
 	)
 
 	BeforeEach(func() {
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
-		loggingRunner = new(fakes.FakeRuncCmdRunner)
+		runner = new(fakes.FakeRuncCmdRunner)
 		logger = lagertest.NewTestLogger("test")
 
-		runner = runrunc.NewStatser(loggingRunner, runcBinary)
+		statser = runrunc.NewStatser(runner, runcBinary)
 
 		runcBinary.StatsCommandStub = func(id string, logFile string) *exec.Cmd {
 			return exec.Command("funC-stats", "--log", logFile, id)
 		}
-		loggingRunner.RunAndLogStub = func(_ lager.Logger, fn runrunc.LoggingCmd) error {
+		runner.RunAndLogStub = func(_ lager.Logger, fn runrunc.LoggingCmd) error {
 			return commandRunner.Run(fn("potato.log"))
 		}
 	})
@@ -103,7 +103,7 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("parses the CPU stats", func() {
-			stats, err := runner.Stats(logger, "some-handle")
+			stats, err := statser.Stats(logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(stats.CPU).To(Equal(garden.ContainerCPUStat{
@@ -114,7 +114,7 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("parses the memory stats", func() {
-			stats, err := runner.Stats(logger, "some-handle")
+			stats, err := statser.Stats(logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(stats.Memory).To(Equal(garden.ContainerMemoryStat{
@@ -151,7 +151,7 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("forwards logs from runc", func() {
-			_, err := runner.Stats(logger, "some-container")
+			_, err := statser.Stats(logger, "some-container")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
@@ -174,7 +174,7 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("should return an error", func() {
-			_, err := runner.Stats(logger, "some-container")
+			_, err := statser.Stats(logger, "some-container")
 			Expect(err).To(MatchError(ContainSubstring("decode stats")))
 		})
 	})
@@ -189,7 +189,7 @@ var _ = Describe("Stats", func() {
 		})
 
 		It("returns an error", func() {
-			_, err := runner.Stats(logger, "some-container")
+			_, err := statser.Stats(logger, "some-container")
 			Expect(err).To(MatchError(ContainSubstring("runC stats: banana")))
 		})
 	})

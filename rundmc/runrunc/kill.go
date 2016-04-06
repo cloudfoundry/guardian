@@ -7,13 +7,13 @@ import (
 )
 
 type Killer struct {
-	loggingRunner RuncCmdRunner
-	runc          RuncBinary
+	runner RuncCmdRunner
+	runc   RuncBinary
 }
 
-func NewKiller(loggingRunner RuncCmdRunner, runc RuncBinary) *Killer {
+func NewKiller(runner RuncCmdRunner, runc RuncBinary) *Killer {
 	return &Killer{
-		loggingRunner,
+		runner,
 		runc,
 	}
 }
@@ -25,7 +25,7 @@ func (r *Killer) Kill(log lager.Logger, handle string) error {
 	log.Info("started")
 	defer log.Info("finished")
 
-	return r.loggingRunner.RunAndLog(log, func(logFile string) *exec.Cmd {
+	return r.runner.RunAndLog(log, func(logFile string) *exec.Cmd {
 		return r.runc.KillCommand(handle, "KILL", logFile)
 	})
 }
