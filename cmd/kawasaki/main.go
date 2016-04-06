@@ -53,6 +53,9 @@ func main() {
 	cf_debug_server.AddFlags(flag.CommandLine)
 
 	var config kawasaki.NetworkConfig
+	var action string
+
+	flag.StringVar(&action, "action", "create", "the action to take (either 'create' or 'destroy')")
 	flag.StringVar(&config.HostIntf, "host-interface", "", "the host interface to create")
 	flag.StringVar(&config.ContainerIntf, "container-interface", "", "the container interface to create")
 	flag.StringVar(&config.BridgeName, "bridge-interface", "", "the bridge interface to create or use")
@@ -79,12 +82,13 @@ func main() {
 	logger.Info("start")
 
 	configurer := factory.NewDefaultConfigurer(iptables.New(linux_command_runner.New(), config.IPTablePrefix))
-	if err := configurer.Apply(logger, config, fmt.Sprintf("/proc/%d/ns/net", state.Pid)); err != nil {
-		panic(err)
+	dnsResolvConfigurer := wireDNSResolvConfigurer(state, config)
+	hookActioner := &kawasaki.HookActioner{
+		Configurer:          configurer,
+		DnsResolvConfigurer: dnsResolvConfigurer,
 	}
 
-	dnsResolvConfigurer := wireDNSResolvConfigurer(state, config)
-	if err := dnsResolvConfigurer.Configure(logger); err != nil {
+	if err := hookActioner.Run(logger, action, config, fmt.Sprintf("/proc/%d/ns/net", state.Pid)); err != nil {
 		panic(err)
 	}
 }
