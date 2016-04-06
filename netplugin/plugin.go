@@ -1,6 +1,8 @@
 package netplugin
 
 import (
+	"math"
+
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/pivotal-golang/lager"
@@ -40,7 +42,7 @@ func (p Plugin) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks, er
 }
 
 func (Plugin) Capacity() uint64 {
-	return 0
+	return math.MaxUint64
 }
 
 func (Plugin) Destroy(log lager.Logger, handle string) error {
