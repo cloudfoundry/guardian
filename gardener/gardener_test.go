@@ -213,16 +213,22 @@ var _ = Describe("Gardener", func() {
 			})
 
 			Context("when the rootfs path is raw", func() {
-				It("creates the container with the given path", func() {
+				BeforeEach(func() {
 					_, err := gdnr.Create(garden.ContainerSpec{
 						Handle:     "bob",
 						RootFSPath: "raw:///banana",
 					})
 					Expect(err).NotTo(HaveOccurred())
+				})
 
+				It("creates the container with the given path", func() {
 					Expect(containerizer.CreateCallCount()).To(Equal(1))
 					_, spec := containerizer.CreateArgsForCall(0)
 					Expect(spec.RootFSPath).To(Equal("/banana"))
+				})
+
+				It("does not create a volume", func() {
+					Expect(volumeCreator.CreateCallCount()).To(Equal(0))
 				})
 			})
 
