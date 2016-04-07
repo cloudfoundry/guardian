@@ -435,8 +435,6 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		CommandRunner: commandRunner,
 	}
 
-	execPreparer := runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir)
-
 	pidFileReader := &process_tracker.PidFileReader{
 		Clock:         clock.NewClock(),
 		Timeout:       10 * time.Second,
@@ -444,13 +442,14 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	}
 
 	runcrunner := runrunc.New(
-		process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", cmd.Server.Tag), "processes"), iodaemonPath, commandRunner, pidFileReader),
 		commandRunner,
-		cmd.wireUidGenerator(),
+		runrunc.NewLogRunner(commandRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
 		goci.RuncBinary("runc"),
 		dadooPath,
-		execPreparer,
-		os.TempDir(),
+		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir),
+		runrunc.NewExecRunner(cmd.wireUidGenerator(), goci.RuncBinary("runc"),
+			process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", cmd.Server.Tag), "processes"), iodaemonPath, commandRunner, pidFileReader),
+			&runrunc.ProcessJsonCleaner{}),
 	)
 
 	mounts := []specs.Mount{

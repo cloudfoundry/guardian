@@ -3,7 +3,6 @@ package runrunc
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -53,18 +52,15 @@ type ProcessTracker interface {
 }
 
 type Execer struct {
-	pidGenerator UidGenerator
-	execPreparer *ExecPreparer
-	runc         RuncBinary
-	tracker      ProcessTracker
+	preparer *ExecPreparer
+	runner   *ExecRunner
 }
 
-func NewExecer(runc RuncBinary, pids UidGenerator, tracker ProcessTracker, execPreparer *ExecPreparer) *Execer {
+func NewExecer(execPreparer *ExecPreparer, runner *ExecRunner) *Execer {
 	return &Execer{
-		pidGenerator: pids,
-		execPreparer: execPreparer,
-		runc:         runc,
-		tracker:      tracker,
+		preparer: execPreparer,
+
+		runner: runner,
 	}
 }
 
@@ -72,31 +68,70 @@ func NewExecer(runc RuncBinary, pids UidGenerator, tracker ProcessTracker, execP
 func (e *Execer) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("exec", lager.Data{"id": id, "path": spec.Path})
 
-	pid := e.pidGenerator.Generate()
-
-	log.Info("started", lager.Data{pid: "pid"})
+	log.Info("start")
 	defer log.Info("finished")
 
-	processJSONFilePath, pidFilePath, err := e.execPreparer.PrepareProcess(log, bundlePath, pid, spec, e.runc)
+	preparedSpec, err := e.preparer.Prepare(log, bundlePath, spec)
 	if err != nil {
 		log.Error("prepare-failed", err)
 		return nil, err
 	}
 
-	cmd := e.runc.ExecCommand(id, processJSONFilePath, pidFilePath)
+	processesPath := path.Join(bundlePath, "processes")
+	return e.runner.Run(log, preparedSpec, processesPath, id, spec.TTY, io)
+}
 
-	process, err := e.tracker.Run(pid, cmd, io, spec.TTY, pidFilePath)
+type ExecRunner struct {
+	pidGenerator       UidGenerator
+	runc               RuncBinary
+	tracker            ProcessTracker
+	processJsonCleaner Cleaner
+}
+
+func NewExecRunner(pidGen UidGenerator, runc RuncBinary, tracker ProcessTracker, processJsonCleaner Cleaner) *ExecRunner {
+	return &ExecRunner{
+		pidGenerator:       pidGen,
+		runc:               runc,
+		tracker:            tracker,
+		processJsonCleaner: processJsonCleaner,
+	}
+}
+
+// runrunc saves a process.json and invokes runc exec
+func (e *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, id string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
+	pid := e.pidGenerator.Generate()
+
+	log = log.Session("runrunc", lager.Data{"pid": pid})
+
+	log.Debug("start")
+	defer log.Debug("finished")
+
+	if err := os.MkdirAll(processesPath, 0755); err != nil {
+		log.Error("mk-processes-dir-failed", err)
+		return nil, err
+	}
+
+	processJson, err := os.Create(path.Join(processesPath, fmt.Sprintf("%s.json", pid)))
+	if err != nil {
+		log.Error("create-process-json-failed", err)
+		return nil, err
+	}
+
+	if err := json.NewEncoder(processJson).Encode(spec); err != nil {
+		log.Error("json-encode-failed", err)
+		return nil, err
+	}
+
+	pidFilePath := path.Join(processesPath, fmt.Sprintf("%s.pid", pid))
+	cmd := e.runc.ExecCommand(id, processJson.Name(), pidFilePath)
+
+	process, err := e.tracker.Run(pid, cmd, io, tty, pidFilePath)
 	if err != nil {
 		log.Error("run-failed", err)
 		return nil, err
 	}
 
-	go func() {
-		process.Wait()
-		if err := os.Remove(processJSONFilePath); err != nil {
-			log.Error("remove-process-json-failed", err)
-		}
-	}()
+	go e.processJsonCleaner.Clean(log, process, processJson.Name())
 
 	return process, nil
 }
@@ -115,29 +150,23 @@ func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdire
 	}
 }
 
-func (r *ExecPreparer) PrepareProcess(log lager.Logger, bundlePath, pid string, spec garden.ProcessSpec, runc RuncBinary) (string, string, error) {
+func (r *ExecPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*specs.Process, error) {
 	log = log.Session("prepare")
 
 	log.Info("start")
 	defer log.Info("finished")
 
-	processesPath := path.Join(bundlePath, "processes")
-	if err := os.MkdirAll(processesPath, 0755); err != nil {
-		log.Error("mk-processes-dir-failed", err)
-		return "", "", err
-	}
-
 	bndl, err := r.bundleLoader.Load(bundlePath)
 	if err != nil {
 		log.Error("load-bundle-failed", err)
-		return "", "", err
+		return nil, err
 	}
 
 	rootFsPath := bndl.RootFS()
 	u, err := r.lookupUser(bndl, rootFsPath, spec.User)
 	if err != nil {
 		log.Error("lookup-user-failed", err)
-		return "", "", err
+		return nil, err
 	}
 
 	cwd := u.home
@@ -147,10 +176,10 @@ func (r *ExecPreparer) PrepareProcess(log lager.Logger, bundlePath, pid string, 
 
 	if err := r.ensureDirExists(rootFsPath, cwd, u.hostUid, u.hostGid); err != nil {
 		log.Error("ensure-dir-failed", err)
-		return "", "", err
+		return nil, err
 	}
 
-	processJsonPath, err := writeProcessJSON(log, specs.Process{
+	return &specs.Process{
 		Args: append([]string{spec.Path}, spec.Args...),
 		Env:  envFor(u.containerUid, bndl, spec),
 		User: specs.User{
@@ -160,15 +189,7 @@ func (r *ExecPreparer) PrepareProcess(log lager.Logger, bundlePath, pid string, 
 		Cwd:          cwd,
 		Capabilities: bndl.Capabilities(),
 		Rlimits:      toRlimits(spec.Limits),
-	}, processesPath)
-
-	if err != nil {
-		log.Error("encode-process-json-failed", err)
-		return "", "", err
-	}
-
-	pidFilePath := path.Join(processesPath, fmt.Sprintf("%s.pid", pid))
-	return processJsonPath, pidFilePath, nil
+	}, nil
 }
 
 type usr struct {
@@ -206,17 +227,22 @@ func (r *ExecPreparer) ensureDirExists(rootfsPath, dir string, uid, gid int) err
 	return nil
 }
 
-func writeProcessJSON(log lager.Logger, spec specs.Process, processesPath string) (string, error) {
-	tmpFile, err := ioutil.TempFile(processesPath, "guardianprocess")
-	if err != nil {
-		log.Error("tempfile-failed", err)
-		return "", err
-	}
+//go:generate counterfeiter . Waiter
+type Waiter interface {
+	Wait() (int, error)
+}
 
-	if err := json.NewEncoder(tmpFile).Encode(spec); err != nil {
-		log.Error("encode-failed", err)
-		return "", fmt.Errorf("writeProcessJSON: %s", err)
-	}
+//go:generate counterfeiter . Cleaner
+type Cleaner interface {
+	Clean(log lager.Logger, process Waiter, path string)
+}
 
-	return tmpFile.Name(), nil
+type ProcessJsonCleaner struct{}
+
+func (ProcessJsonCleaner) Clean(log lager.Logger, process Waiter, path string) {
+	process.Wait()
+
+	if err := os.Remove(path); err != nil {
+		log.Error("cleanup-process-json-failed", err)
+	}
 }

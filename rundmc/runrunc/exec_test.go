@@ -18,6 +18,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/specs/specs-go"
+	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
 
@@ -32,24 +33,23 @@ var _ = Describe("Exec", func() {
 		mkdirer       *fakes.FakeMkdirer
 		bundlePath    string
 		logger        *lagertest.TestLogger
+		cleaner       *fakes.FakeCleaner
 
 		runner       *runrunc.Execer
 		execPreparer *runrunc.ExecPreparer
 	)
-
-	var rootfsPath = func(bundlePath string) string {
-		return "/rootfs/of/bundle" + bundlePath
-	}
 
 	BeforeEach(func() {
 		tracker = new(fakes.FakeProcessTracker)
 		pidGenerator = new(fakes.FakeUidGenerator)
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
+		logger = lagertest.NewTestLogger("test")
 		bundleLoader = new(fakes.FakeBundleLoader)
 		users = new(fakes.FakeUserLookupper)
 		mkdirer = new(fakes.FakeMkdirer)
-		logger = lagertest.NewTestLogger("test")
+		cleaner = new(fakes.FakeCleaner)
+
 		execPreparer = runrunc.NewExecPreparer(
 			bundleLoader,
 			users,
@@ -61,10 +61,13 @@ var _ = Describe("Exec", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		runner = runrunc.NewExecer(
-			runcBinary,
-			pidGenerator,
-			tracker,
 			execPreparer,
+			runrunc.NewExecRunner(
+				pidGenerator,
+				runcBinary,
+				tracker,
+				cleaner,
+			),
 		)
 
 		bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
@@ -133,374 +136,469 @@ var _ = Describe("Exec", func() {
 		Expect(pidFile).To(Equal(path.Join(bundlePath, "/processes/another-process-guid.pid")))
 	})
 
+	It("tells runc that the process.json is in /processes/$guid.json", func() {
+		pidGenerator.GenerateReturns("another-process-guid")
+		tracker.RunReturns(&process_tracker.Process{}, nil)
+		runner.Exec(logger, bundlePath, "some-id", garden.ProcessSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
+
+		_, cmd, _, _, _ := tracker.RunArgsForCall(0)
+		Expect(cmd.Args[3]).To(Equal(path.Join(bundlePath, "/processes/another-process-guid.json")))
+	})
+
 	Describe("the process.json passed to 'runc exec'", func() {
 		var spec specs.Process
+		var processJsonPath string
+		var fakeProcess *fakes.FakeProcess
 
 		BeforeEach(func() {
+			pidGenerator.GenerateReturns("another-process-guid")
+
+			fakeProcess = new(fakes.FakeProcess)
 			tracker.RunStub = func(_ string, cmd *exec.Cmd, _ garden.ProcessIO, _ *garden.TTYSpec, _ string) (garden.Process, error) {
-				f, err := os.Open(cmd.Args[3])
+				processJsonPath = cmd.Args[3]
+
+				f, err := os.Open(processJsonPath)
 				Expect(err).NotTo(HaveOccurred())
 
 				json.NewDecoder(f).Decode(&spec)
-				return &process_tracker.Process{}, nil
+				return fakeProcess, nil
 			}
-		})
 
-		It("creates the guardianprocess*.json files in the depot dir", func() {
-			gardenSpec := garden.ProcessSpec{Path: "/var/vcap/process", Args: []string{}}
-			processJSONPath, pidFilePath, err := execPreparer.PrepareProcess(logger, bundlePath, "pid", gardenSpec, runcBinary)
+			_, err := runner.Exec(logger, bundlePath, "some-id", garden.ProcessSpec{
+				Path: "potato",
+				Args: []string{"boom"},
+			}, garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(processJSONPath).To(ContainSubstring(path.Join(bundlePath, "processes", "guardianprocess")))
-			Expect(pidFilePath).To(ContainSubstring(path.Join(bundlePath, "processes", "pid")))
 		})
 
-		It("passes a process.json with the correct path and args", func() {
-			runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}}, garden.ProcessIO{})
-			Expect(tracker.RunCallCount()).To(Equal(1))
-			Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
+		It("is the encoded version of the config", func() {
+			Expect(spec.Args).To(ConsistOf("potato", "boom"))
 		})
 
-		It("sets the rlimits correctly", func() {
-			ptr := func(n uint64) *uint64 { return &n }
-			_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
-				Limits: garden.ResourceLimits{
-					As:         ptr(12),
-					Core:       ptr(24),
-					Cpu:        ptr(36),
-					Data:       ptr(99),
-					Fsize:      ptr(101),
-					Locks:      ptr(111),
-					Memlock:    ptr(987),
-					Msgqueue:   ptr(777),
-					Nice:       ptr(111),
-					Nofile:     ptr(222),
-					Nproc:      ptr(1234),
-					Rss:        ptr(888),
-					Rtprio:     ptr(254),
-					Sigpending: ptr(101),
-					Stack:      ptr(44),
-				},
-			}, garden.ProcessIO{})
-
-			Expect(err).ToNot(HaveOccurred())
-			Expect(tracker.RunCallCount()).To(Equal(1))
-
-			Expect(spec.Rlimits).To(ConsistOf(
-				specs.Rlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
-				specs.Rlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
-				specs.Rlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
-				specs.Rlimit{Type: "RLIMIT_DATA", Hard: 99, Soft: 99},
-				specs.Rlimit{Type: "RLIMIT_FSIZE", Hard: 101, Soft: 101},
-				specs.Rlimit{Type: "RLIMIT_LOCKS", Hard: 111, Soft: 111},
-				specs.Rlimit{Type: "RLIMIT_MEMLOCK", Hard: 987, Soft: 987},
-				specs.Rlimit{Type: "RLIMIT_MSGQUEUE", Hard: 777, Soft: 777},
-				specs.Rlimit{Type: "RLIMIT_NICE", Hard: 111, Soft: 111},
-				specs.Rlimit{Type: "RLIMIT_NOFILE", Hard: 222, Soft: 222},
-				specs.Rlimit{Type: "RLIMIT_NPROC", Hard: 1234, Soft: 1234},
-				specs.Rlimit{Type: "RLIMIT_RSS", Hard: 888, Soft: 888},
-				specs.Rlimit{Type: "RLIMIT_RTPRIO", Hard: 254, Soft: 254},
-				specs.Rlimit{Type: "RLIMIT_SIGPENDING", Hard: 101, Soft: 101},
-				specs.Rlimit{Type: "RLIMIT_STACK", Hard: 44, Soft: 44},
-			))
+		It("defers cleanup of the json file until the process has completed", func() {
+			Eventually(cleaner.CleanCallCount).Should(Equal(1))
+			_, process, file := cleaner.CleanArgsForCall(0)
+			Expect(process).To(Equal(fakeProcess))
+			Expect(file).To(Equal(processJsonPath))
 		})
 
-		Describe("passing the correct uid and gid", func() {
-			Context("when the bundle can be loaded", func() {
-				BeforeEach(func() {
-					users.LookupReturns(&user.ExecUser{Uid: 9, Gid: 7}, nil)
-					_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
-					Expect(err).ToNot(HaveOccurred())
-				})
+		PIt("doesnt leak when the thing fails", func() {})
+	})
+})
 
-				It("looks up the user and group IDs of the user in the right rootfs", func() {
-					Expect(users.LookupCallCount()).To(Equal(1))
-					actualRootfsPath, actualUserName := users.LookupArgsForCall(0)
-					Expect(actualRootfsPath).To(Equal(rootfsPath(bundlePath)))
-					Expect(actualUserName).To(Equal("spiderman"))
-				})
+var _ = Describe("ExecPreparer", func() {
+	var (
+		spec         *specs.Process
+		bundleLoader *fakes.FakeBundleLoader
+		users        *fakes.FakeUserLookupper
+		mkdirer      *fakes.FakeMkdirer
+		bundlePath   string
+		logger       lager.Logger
 
-				It("passes a process.json with the correct user and group ids", func() {
-					Expect(spec.User).To(Equal(specs.User{UID: 9, GID: 7}))
-				})
-			})
+		preparer *runrunc.ExecPreparer
+	)
 
-			Context("when the bundle can't be loaded", func() {
-				BeforeEach(func() {
-					bundleLoader.LoadReturns(nil, errors.New("whoa! Hold them horses!"))
-				})
+	BeforeEach(func() {
+		logger = lagertest.NewTestLogger("test")
+		bundleLoader = new(fakes.FakeBundleLoader)
+		users = new(fakes.FakeUserLookupper)
+		mkdirer = new(fakes.FakeMkdirer)
 
-				It("fails", func() {
-					_, err := runner.Exec(logger, bundlePath, "someid",
-						garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
-					Expect(err).To(MatchError(ContainSubstring("Hold them horses")))
-				})
-			})
+		var err error
+		bundlePath, err = ioutil.TempDir("", "bundle")
+		Expect(err).NotTo(HaveOccurred())
 
-			Context("when User Lookup returns an error", func() {
-				It("passes a process.json with the correct user and group ids", func() {
-					users.LookupReturns(&user.ExecUser{Uid: 0, Gid: 0}, errors.New("bang"))
+		bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
+			bndl := &goci.Bndl{}
+			bndl.Spec.Root.Path = rootfsPath(path)
+			return bndl, nil
+		}
 
-					_, err := runner.Exec(logger, bundlePath, "some-id", garden.ProcessSpec{User: "spiderman"}, garden.ProcessIO{})
-					Expect(err).To(MatchError(ContainSubstring("bang")))
-				})
-			})
+		users.LookupReturns(&user.ExecUser{}, nil)
+
+		preparer = runrunc.NewExecPreparer(bundleLoader, users, mkdirer)
+	})
+
+	It("passes a process.json with the correct path and args", func() {
+		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
+	})
+
+	It("sets the rlimits correctly", func() {
+		ptr := func(n uint64) *uint64 { return &n }
+		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+			Limits: garden.ResourceLimits{
+				As:         ptr(12),
+				Core:       ptr(24),
+				Cpu:        ptr(36),
+				Data:       ptr(99),
+				Fsize:      ptr(101),
+				Locks:      ptr(111),
+				Memlock:    ptr(987),
+				Msgqueue:   ptr(777),
+				Nice:       ptr(111),
+				Nofile:     ptr(222),
+				Nproc:      ptr(1234),
+				Rss:        ptr(888),
+				Rtprio:     ptr(254),
+				Sigpending: ptr(101),
+				Stack:      ptr(44),
+			},
 		})
+		Expect(err).ToNot(HaveOccurred())
 
-		Context("when the user is specified in the process spec", func() {
-			Context("when the environment does not contain a USER", func() {
-				It("appends a default user", func() {
-					runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
-						User: "spiderman",
-						Env:  []string{"a=1", "b=3", "c=4", "PATH=a", "HOME=/spidermanhome"},
-					}, garden.ProcessIO{})
+		Expect(spec.Rlimits).To(ConsistOf(
+			specs.Rlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
+			specs.Rlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
+			specs.Rlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
+			specs.Rlimit{Type: "RLIMIT_DATA", Hard: 99, Soft: 99},
+			specs.Rlimit{Type: "RLIMIT_FSIZE", Hard: 101, Soft: 101},
+			specs.Rlimit{Type: "RLIMIT_LOCKS", Hard: 111, Soft: 111},
+			specs.Rlimit{Type: "RLIMIT_MEMLOCK", Hard: 987, Soft: 987},
+			specs.Rlimit{Type: "RLIMIT_MSGQUEUE", Hard: 777, Soft: 777},
+			specs.Rlimit{Type: "RLIMIT_NICE", Hard: 111, Soft: 111},
+			specs.Rlimit{Type: "RLIMIT_NOFILE", Hard: 222, Soft: 222},
+			specs.Rlimit{Type: "RLIMIT_NPROC", Hard: 1234, Soft: 1234},
+			specs.Rlimit{Type: "RLIMIT_RSS", Hard: 888, Soft: 888},
+			specs.Rlimit{Type: "RLIMIT_RTPRIO", Hard: 254, Soft: 254},
+			specs.Rlimit{Type: "RLIMIT_SIGPENDING", Hard: 101, Soft: 101},
+			specs.Rlimit{Type: "RLIMIT_STACK", Hard: 44, Soft: 44},
+		))
+	})
 
-					Expect(tracker.RunCallCount()).To(Equal(1))
-					Expect(spec.Env).To(ConsistOf("a=1", "b=3", "c=4", "PATH=a", "USER=spiderman", "HOME=/spidermanhome"))
-				})
+	Describe("passing the correct uid and gid", func() {
+		Context("when the bundle can be loaded", func() {
+
+			BeforeEach(func() {
+				users.LookupReturns(&user.ExecUser{Uid: 9, Gid: 7}, nil)
+
+				var err error
+				spec, err = preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
+				Expect(err).ToNot(HaveOccurred())
 			})
 
-			Context("when the environment does contain a USER", func() {
-				It("appends a default user", func() {
-					runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
-						User: "spiderman",
-						Env:  []string{"a=1", "b=3", "c=4", "PATH=a", "USER=superman"},
-					}, garden.ProcessIO{})
-
-					Expect(tracker.RunCallCount()).To(Equal(1))
-					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=superman"}))
-				})
-			})
-		})
-
-		Context("when the user is not specified in the process spec", func() {
-			Context("when the environment does not contain a USER", func() {
-				It("passes the environment variables", func() {
-					runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
-						Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
-					}, garden.ProcessIO{})
-
-					Expect(tracker.RunCallCount()).To(Equal(1))
-					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
-				})
+			It("looks up the user and group IDs of the user in the right rootfs", func() {
+				Expect(users.LookupCallCount()).To(Equal(1))
+				actualRootfsPath, actualUserName := users.LookupArgsForCall(0)
+				Expect(actualRootfsPath).To(Equal(rootfsPath(bundlePath)))
+				Expect(actualUserName).To(Equal("spiderman"))
 			})
 
-			Context("when the environment already contains a USER", func() {
-				It("passes the environment variables", func() {
-					runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
-						Env: []string{"a=1", "b=3", "c=4", "PATH=a", "USER=yo"},
-					}, garden.ProcessIO{})
-
-					Expect(tracker.RunCallCount()).To(Equal(1))
-					Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=yo"}))
-				})
+			It("passes a process.json with the correct user and group ids", func() {
+				Expect(spec.User).To(Equal(specs.User{UID: 9, GID: 7}))
 			})
 		})
 
-		Context("when the environment already contains a PATH", func() {
+		Context("when the bundle can't be loaded", func() {
+			BeforeEach(func() {
+				bundleLoader.LoadReturns(nil, errors.New("whoa! Hold them horses!"))
+			})
+
+			It("fails", func() {
+				_, err := preparer.Prepare(logger, bundlePath,
+					garden.ProcessSpec{User: "spiderman"})
+				Expect(err).To(MatchError(ContainSubstring("Hold them horses")))
+			})
+		})
+
+		Context("when User Lookup returns an error", func() {
+			It("passes a process.json with the correct user and group ids", func() {
+				users.LookupReturns(&user.ExecUser{Uid: 0, Gid: 0}, errors.New("bang"))
+
+				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
+				Expect(err).To(MatchError(ContainSubstring("bang")))
+			})
+		})
+	})
+
+	Context("when the user is specified in the process spec", func() {
+		Context("when the environment does not contain a USER", func() {
+			It("appends a default user", func() {
+				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+					User: "spiderman",
+					Env:  []string{"a=1", "b=3", "c=4", "PATH=a", "HOME=/spidermanhome"},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(spec.Env).To(ConsistOf("a=1", "b=3", "c=4", "PATH=a", "USER=spiderman", "HOME=/spidermanhome"))
+			})
+		})
+
+		Context("when the environment does contain a USER", func() {
+			It("appends a default user", func() {
+				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+					User: "spiderman",
+					Env:  []string{"a=1", "b=3", "c=4", "PATH=a", "USER=superman"},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=superman"}))
+			})
+		})
+	})
+
+	Context("when the user is not specified in the process spec", func() {
+		Context("when the environment does not contain a USER", func() {
 			It("passes the environment variables", func() {
-				runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
+				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
 					Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
-				}, garden.ProcessIO{})
+				})
+				Expect(err).NotTo(HaveOccurred())
 
-				Expect(tracker.RunCallCount()).To(Equal(1))
 				Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
 			})
 		})
 
-		Context("when the environment does not already contain a PATH", func() {
-			It("appends a default PATH for the root user", func() {
-				users.LookupReturns(&user.ExecUser{Uid: 0, Gid: 0}, nil)
-				runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
-					Env:  []string{"a=1", "b=3", "c=4"},
-					User: "root",
-				}, garden.ProcessIO{})
+		Context("when the environment already contains a USER", func() {
+			It("passes the environment variables", func() {
+				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+					Env: []string{"a=1", "b=3", "c=4", "PATH=a", "USER=yo"},
+				})
+				Expect(err).NotTo(HaveOccurred())
 
-				Expect(tracker.RunCallCount()).To(Equal(1))
-				Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
-					"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=root"}))
-			})
-
-			It("appends a default PATH for non-root users", func() {
-				users.LookupReturns(&user.ExecUser{Uid: 1000, Gid: 1000}, nil)
-				runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
-					Env:  []string{"a=1", "b=3", "c=4"},
-					User: "alice",
-				}, garden.ProcessIO{})
-
-				Expect(tracker.RunCallCount()).To(Equal(1))
-				Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
-					"PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"}))
+				Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=yo"}))
 			})
 		})
+	})
 
-		Context("when the container has environment variables", func() {
-			var (
-				processEnv   []string
-				containerEnv []string
-				bndl         *goci.Bndl
-			)
+	Context("when the environment already contains a PATH", func() {
+		It("passes the environment variables", func() {
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+				Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
+			})
+			Expect(err).NotTo(HaveOccurred())
 
+			Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
+		})
+	})
+
+	Context("when the environment does not already contain a PATH", func() {
+		It("appends a default PATH for the root user", func() {
+			users.LookupReturns(&user.ExecUser{Uid: 0, Gid: 0}, nil)
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+				Env:  []string{"a=1", "b=3", "c=4"},
+				User: "root",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
+				"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=root"}))
+		})
+
+		It("appends a default PATH for non-root users", func() {
+			users.LookupReturns(&user.ExecUser{Uid: 1000, Gid: 1000}, nil)
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+				Env:  []string{"a=1", "b=3", "c=4"},
+				User: "alice",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
+				"PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"}))
+		})
+	})
+
+	Context("when the container has environment variables", func() {
+		var (
+			processEnv   []string
+			containerEnv []string
+			bndl         *goci.Bndl
+
+			spec *specs.Process
+		)
+
+		BeforeEach(func() {
+			containerEnv = []string{"ENV_CONTAINER_NAME=garden"}
+			processEnv = []string{"ENV_PROCESS_ID=1"}
+		})
+
+		JustBeforeEach(func() {
+			bndl = &goci.Bndl{}
+			bndl.Spec.Root.Path = "/some/rootfs/path"
+			bndl.Spec.Process.Env = containerEnv
+			bundleLoader.LoadReturns(bndl, nil)
+
+			var err error
+			spec, err = preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+				Env: processEnv,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("appends the process vars into container vars", func() {
+			envWContainer := make([]string, len(spec.Env))
+			copy(envWContainer, spec.Env)
+
+			bndl.Spec.Process.Env = []string{}
+			bundleLoader.LoadReturns(bndl, nil)
+
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+				Env: processEnv,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(envWContainer).To(Equal(append(containerEnv, spec.Env...)))
+		})
+
+		Context("and the container environment contains PATH", func() {
 			BeforeEach(func() {
-				containerEnv = []string{"ENV_CONTAINER_NAME=garden"}
-				processEnv = []string{"ENV_PROCESS_ID=1"}
+				containerEnv = append(containerEnv, "PATH=/test")
 			})
 
-			JustBeforeEach(func() {
-				bndl = &goci.Bndl{}
-				bndl.Spec.Root.Path = "/some/rootfs/path"
-				bndl.Spec.Process.Env = containerEnv
-				bundleLoader.LoadReturns(bndl, nil)
-
-				_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
-					Env: processEnv,
-				}, garden.ProcessIO{})
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("appends the process vars into container vars", func() {
-				envWContainer := make([]string, len(spec.Env))
-				copy(envWContainer, spec.Env)
-
-				bndl.Spec.Process.Env = []string{}
-				bundleLoader.LoadReturns(bndl, nil)
-
-				_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
-					Env: processEnv,
-				}, garden.ProcessIO{})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(envWContainer).To(Equal(append(containerEnv, spec.Env...)))
-			})
-
-			Context("and the container environment contains PATH", func() {
-				BeforeEach(func() {
-					containerEnv = append(containerEnv, "PATH=/test")
-				})
-
-				It("should not apply the default PATH", func() {
-					Expect(spec.Env).To(Equal([]string{
-						"ENV_CONTAINER_NAME=garden",
-						"PATH=/test",
-						"ENV_PROCESS_ID=1",
-						"USER=root",
-					}))
-				})
+			It("should not apply the default PATH", func() {
+				Expect(spec.Env).To(Equal([]string{
+					"ENV_CONTAINER_NAME=garden",
+					"PATH=/test",
+					"ENV_PROCESS_ID=1",
+					"USER=root",
+				}))
 			})
 		})
+	})
 
-		Context("when the container has capabilities", func() {
-			BeforeEach(func() {
-				bndl := &goci.Bndl{}
-				bndl.Spec.Process.Capabilities = []string{"foo", "bar", "baz"}
-				bundleLoader.LoadReturns(bndl, nil)
-			})
-
-			It("passes them on to the process", func() {
-				_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{}, garden.ProcessIO{})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(spec.Capabilities).To(Equal([]string{"foo", "bar", "baz"}))
-			})
+	Context("when the container has capabilities", func() {
+		BeforeEach(func() {
+			bndl := &goci.Bndl{}
+			bndl.Spec.Process.Capabilities = []string{"foo", "bar", "baz"}
+			bundleLoader.LoadReturns(bndl, nil)
 		})
 
-		Describe("working directory", func() {
-			Context("when the working directory is specified", func() {
-				It("passes the correct cwd to the spec", func() {
-					runner.Exec(
-						logger, bundlePath, "someid",
-						garden.ProcessSpec{Dir: "/home/dir"}, garden.ProcessIO{},
-					)
-					Expect(tracker.RunCallCount()).To(Equal(1))
-					Expect(spec.Cwd).To(Equal("/home/dir"))
-				})
+		It("passes them on to the process", func() {
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec.Capabilities).To(Equal([]string{"foo", "bar", "baz"}))
+		})
+	})
 
-				Describe("Creating the working directory", func() {
-					JustBeforeEach(func() {
-						users.LookupReturns(&user.ExecUser{Uid: 1012, Gid: 1013}, nil)
+	Describe("working directory", func() {
+		Context("when the working directory is specified", func() {
+			It("passes the correct cwd to the spec", func() {
+				spec, err := preparer.Prepare(
+					logger, bundlePath,
+					garden.ProcessSpec{Dir: "/home/dir"},
+				)
+				Expect(err).NotTo(HaveOccurred())
 
-						_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{
-							Dir: "/path/to/banana/dir",
-						}, garden.ProcessIO{})
-						Expect(err).NotTo(HaveOccurred())
-					})
-
-					Context("when the container is privileged", func() {
-						It("creates the working directory", func() {
-							Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-							rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
-							Expect(rootfs).To(Equal(rootfsPath(bundlePath)))
-							Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
-							Expect(mode).To(BeNumerically("==", 0755))
-							Expect(recreate).To(BeFalse())
-							Expect(uid).To(BeEquivalentTo(1012))
-							Expect(gid).To(BeEquivalentTo(1013))
-						})
-					})
-
-					Context("when the container is unprivileged", func() {
-						BeforeEach(func() {
-							bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
-								bndl := &goci.Bndl{}
-								bndl.Spec.Root.Path = "/rootfs/of/bundle" + path
-								bndl.Spec.Linux.UIDMappings = []specs.IDMapping{{
-									HostID:      1712,
-									ContainerID: 1012,
-									Size:        1,
-								}}
-								bndl.Spec.Linux.GIDMappings = []specs.IDMapping{{
-									HostID:      1713,
-									ContainerID: 1013,
-									Size:        1,
-								}}
-								return bndl, nil
-							}
-						})
-
-						It("creates the working directory as the mapped user", func() {
-							Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-							rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
-							Expect(rootfs).To(Equal(rootfsPath(bundlePath)))
-							Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
-							Expect(mode).To(BeEquivalentTo(0755))
-							Expect(recreate).To(BeFalse())
-							Expect(uid).To(BeEquivalentTo(1712))
-							Expect(gid).To(BeEquivalentTo(1713))
-						})
-					})
-				})
+				Expect(spec.Cwd).To(Equal("/home/dir"))
 			})
 
-			Context("when the working directory is not specified", func() {
-				It("defaults to the user's HOME directory", func() {
-					users.LookupReturns(&user.ExecUser{Home: "/the/home/dir"}, nil)
+			Describe("Creating the working directory", func() {
+				JustBeforeEach(func() {
+					users.LookupReturns(&user.ExecUser{Uid: 1012, Gid: 1013}, nil)
 
-					runner.Exec(
-						logger, bundlePath, "someid",
-						garden.ProcessSpec{Dir: ""}, garden.ProcessIO{},
-					)
-
-					Expect(tracker.RunCallCount()).To(Equal(1))
-					Expect(spec.Cwd).To(Equal("/the/home/dir"))
-				})
-
-				It("creates the directory", func() {
-					users.LookupReturns(&user.ExecUser{Uid: 1012, Gid: 1013, Home: "/some/dir"}, nil)
-
-					_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{}, garden.ProcessIO{})
+					_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+						Dir: "/path/to/banana/dir",
+					})
 					Expect(err).NotTo(HaveOccurred())
+				})
 
-					Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
-					_, _, _, _, _, dirs := mkdirer.MkdirAsArgsForCall(0)
-					Expect(dirs).To(ConsistOf("/some/dir"))
+				Context("when the container is privileged", func() {
+					It("creates the working directory", func() {
+						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
+						rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
+						Expect(rootfs).To(Equal(rootfsPath(bundlePath)))
+						Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
+						Expect(mode).To(BeNumerically("==", 0755))
+						Expect(recreate).To(BeFalse())
+						Expect(uid).To(BeEquivalentTo(1012))
+						Expect(gid).To(BeEquivalentTo(1013))
+					})
+				})
+
+				Context("when the container is unprivileged", func() {
+					BeforeEach(func() {
+						bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
+							bndl := &goci.Bndl{}
+							bndl.Spec.Root.Path = "/rootfs/of/bundle" + path
+							bndl.Spec.Linux.UIDMappings = []specs.IDMapping{{
+								HostID:      1712,
+								ContainerID: 1012,
+								Size:        1,
+							}}
+							bndl.Spec.Linux.GIDMappings = []specs.IDMapping{{
+								HostID:      1713,
+								ContainerID: 1013,
+								Size:        1,
+							}}
+							return bndl, nil
+						}
+					})
+
+					It("creates the working directory as the mapped user", func() {
+						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
+						rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
+						Expect(rootfs).To(Equal(rootfsPath(bundlePath)))
+						Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
+						Expect(mode).To(BeEquivalentTo(0755))
+						Expect(recreate).To(BeFalse())
+						Expect(uid).To(BeEquivalentTo(1712))
+						Expect(gid).To(BeEquivalentTo(1713))
+					})
 				})
 			})
+		})
 
-			Context("when the working directory creation fails", func() {
-				It("returns an error", func() {
-					mkdirer.MkdirAsReturns(errors.New("BOOOOOM"))
-					_, err := runner.Exec(logger, bundlePath, "someid", garden.ProcessSpec{}, garden.ProcessIO{})
-					Expect(err).To(MatchError(ContainSubstring("create working directory: BOOOOOM")))
-				})
+		Context("when the working directory is not specified", func() {
+			It("defaults to the user's HOME directory", func() {
+				users.LookupReturns(&user.ExecUser{Home: "/the/home/dir"}, nil)
+
+				spec, err := preparer.Prepare(
+					logger, bundlePath,
+					garden.ProcessSpec{Dir: ""},
+				)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(spec.Cwd).To(Equal("/the/home/dir"))
+			})
+
+			It("creates the directory", func() {
+				users.LookupReturns(&user.ExecUser{Uid: 1012, Gid: 1013, Home: "/some/dir"}, nil)
+
+				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
+				_, _, _, _, _, dirs := mkdirer.MkdirAsArgsForCall(0)
+				Expect(dirs).To(ConsistOf("/some/dir"))
+			})
+		})
+
+		Context("when the working directory creation fails", func() {
+			It("returns an error", func() {
+				mkdirer.MkdirAsReturns(errors.New("BOOOOOM"))
+				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+				Expect(err).To(MatchError(ContainSubstring("create working directory: BOOOOOM")))
 			})
 		})
 	})
 })
+
+var _ = Describe("ProcessJsonCleaner", func() {
+	var waiter *fakes.FakeWaiter
+	var file string
+
+	BeforeEach(func() {
+		waiter = new(fakes.FakeWaiter)
+
+		tmp, err := ioutil.TempFile("", "cleanwhendone")
+		Expect(err).NotTo(HaveOccurred())
+
+		file = tmp.Name()
+	})
+
+	It("removes the given path once Wait returns", func() {
+		waiter.WaitStub = func() (int, error) {
+			Expect(file).To(BeAnExistingFile())
+			return 0, nil
+		}
+
+		runrunc.ProcessJsonCleaner{}.Clean(lagertest.NewTestLogger("test"), waiter, file)
+		Expect(file).NotTo(BeAnExistingFile())
+	})
+})
+
+func rootfsPath(bundlePath string) string {
+	return "/rootfs/of/bundle" + bundlePath
+}

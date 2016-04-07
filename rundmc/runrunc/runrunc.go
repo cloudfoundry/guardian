@@ -31,16 +31,14 @@ type RuncBinary interface {
 	KillCommand(id, signal, logFile string) *exec.Cmd
 }
 
-func New(tracker ProcessTracker, runner command_runner.CommandRunner, pidgen UidGenerator, runc RuncBinary, dadooPath string, execPreparer *ExecPreparer, logDir string) *RunRunc {
-	logRunner := NewLogRunner(runner, LogDir(logDir).GenerateLogFile)
-
+func New(runner command_runner.CommandRunner, runcCmdRunner RuncCmdRunner, runc RuncBinary, dadooPath string, execPreparer *ExecPreparer, execRunner *ExecRunner) *RunRunc {
 	return &RunRunc{
 		Starter: NewStarter(dadooPath, runner),
-		Execer:  NewExecer(runc, pidgen, tracker, execPreparer),
+		Execer:  NewExecer(execPreparer, execRunner),
 
 		OomWatcher: NewOomWatcher(runner, runc),
-		Statser:    NewStatser(logRunner, runc),
-		Stater:     NewStater(logRunner, runc),
-		Killer:     NewKiller(logRunner, runc),
+		Statser:    NewStatser(runcCmdRunner, runc),
+		Stater:     NewStater(runcCmdRunner, runc),
+		Killer:     NewKiller(runcCmdRunner, runc),
 	}
 }
