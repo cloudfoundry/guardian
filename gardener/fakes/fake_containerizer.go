@@ -82,6 +82,16 @@ type FakeContainerizer struct {
 		result1 gardener.ActualContainerMetrics
 		result2 error
 	}
+	CPULimitStub        func(log lager.Logger, handle string) (garden.CPULimits, error)
+	cPULimitMutex       sync.RWMutex
+	cPULimitArgsForCall []struct {
+		log    lager.Logger
+		handle string
+	}
+	cPULimitReturns struct {
+		result1 garden.CPULimits
+		result2 error
+	}
 	HandlesStub        func() ([]string, error)
 	handlesMutex       sync.RWMutex
 	handlesArgsForCall []struct{}
@@ -326,6 +336,40 @@ func (fake *FakeContainerizer) MetricsReturns(result1 gardener.ActualContainerMe
 	fake.MetricsStub = nil
 	fake.metricsReturns = struct {
 		result1 gardener.ActualContainerMetrics
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeContainerizer) CPULimit(log lager.Logger, handle string) (garden.CPULimits, error) {
+	fake.cPULimitMutex.Lock()
+	fake.cPULimitArgsForCall = append(fake.cPULimitArgsForCall, struct {
+		log    lager.Logger
+		handle string
+	}{log, handle})
+	fake.cPULimitMutex.Unlock()
+	if fake.CPULimitStub != nil {
+		return fake.CPULimitStub(log, handle)
+	} else {
+		return fake.cPULimitReturns.result1, fake.cPULimitReturns.result2
+	}
+}
+
+func (fake *FakeContainerizer) CPULimitCallCount() int {
+	fake.cPULimitMutex.RLock()
+	defer fake.cPULimitMutex.RUnlock()
+	return len(fake.cPULimitArgsForCall)
+}
+
+func (fake *FakeContainerizer) CPULimitArgsForCall(i int) (lager.Logger, string) {
+	fake.cPULimitMutex.RLock()
+	defer fake.cPULimitMutex.RUnlock()
+	return fake.cPULimitArgsForCall[i].log, fake.cPULimitArgsForCall[i].handle
+}
+
+func (fake *FakeContainerizer) CPULimitReturns(result1 garden.CPULimits, result2 error) {
+	fake.CPULimitStub = nil
+	fake.cPULimitReturns = struct {
+		result1 garden.CPULimits
 		result2 error
 	}{result1, result2}
 }

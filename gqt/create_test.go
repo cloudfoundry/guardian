@@ -354,7 +354,6 @@ var _ = Describe("Creating a Container", func() {
 			checkCPUSharesInContainer(container, client.Pid, 2)
 		})
 	})
-
 })
 
 func initProcessPID(handle string) int {

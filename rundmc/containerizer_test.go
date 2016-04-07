@@ -14,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/opencontainers/specs/specs-go"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 )
@@ -22,6 +23,7 @@ var _ = Describe("Rundmc", func() {
 	var (
 		fakeDepot           *fakes.FakeDepot
 		fakeBundler         *fakes.FakeBundleGenerator
+		fakeBundleLoader    *fakes.FakeBundleLoader
 		fakeContainerRunner *fakes.FakeBundleRunner
 		fakeNstarRunner     *fakes.FakeNstarRunner
 		fakeEventStore      *fakes.FakeEventStore
@@ -34,6 +36,7 @@ var _ = Describe("Rundmc", func() {
 		fakeDepot = new(fakes.FakeDepot)
 		fakeContainerRunner = new(fakes.FakeBundleRunner)
 		fakeBundler = new(fakes.FakeBundleGenerator)
+		fakeBundleLoader = new(fakes.FakeBundleLoader)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeEventStore = new(fakes.FakeEventStore)
 		logger = lagertest.NewTestLogger("test")
@@ -42,7 +45,7 @@ var _ = Describe("Rundmc", func() {
 			return "/path/to/" + handle, nil
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeNstarRunner, fakeEventStore)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeBundleLoader, fakeNstarRunner, fakeEventStore)
 	})
 
 	Describe("Create", func() {
@@ -338,6 +341,57 @@ var _ = Describe("Rundmc", func() {
 			It("should return the error", func() {
 				_, err := containerizer.Metrics(logger, "foo")
 				Expect(err).To(MatchError("banana"))
+			})
+		})
+	})
+
+	Describe("CPULimit", func() {
+		BeforeEach(func() {
+			fakeBundleLoader.LoadStub = func(bundlePath string) (*goci.Bndl, error) {
+				if bundlePath != "/path/to/some-handle" {
+					return nil, errors.New("cannot find bundle")
+				}
+
+				var shares uint64 = 10
+				return &goci.Bndl{
+					Spec: specs.Spec{
+						Linux: specs.Linux{
+							Resources: &specs.Resources{
+								CPU: &specs.CPU{
+									Shares: &shares,
+								},
+							},
+						},
+					},
+				}, nil
+			}
+		})
+
+		It("should return the limit", func() {
+			cpuLimit, err := containerizer.CPULimit(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cpuLimit.LimitInShares).To(BeEquivalentTo(10))
+		})
+
+		Context("when the container does not exist", func() {
+			BeforeEach(func() {
+				fakeDepot.LookupReturns("", errors.New("aaa"))
+			})
+
+			It("returns an error", func() {
+				_, err := containerizer.CPULimit(logger, "some-handle")
+				Expect(err).To(MatchError("looking up container: aaa"))
+			})
+		})
+
+		Context("when the bundle is not found", func() {
+			BeforeEach(func() {
+				fakeBundleLoader.LoadReturns(nil, errors.New("banana"))
+			})
+
+			It("returns an error", func() {
+				_, err := containerizer.CPULimit(logger, "some-handle")
+				Expect(err).To(MatchError("loading bundle: banana"))
 			})
 		})
 	})

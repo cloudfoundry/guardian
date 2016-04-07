@@ -521,7 +521,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	eventStore := rundmc.NewEventStore(properties)
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 
-	return rundmc.New(depot, template, runcrunner, nstar, eventStore)
+	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, eventStore)
 }
 
 func (cmd *GuardianCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {

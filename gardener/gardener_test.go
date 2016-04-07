@@ -1124,4 +1124,32 @@ var _ = Describe("Gardener", func() {
 			}))
 		})
 	})
+
+	Describe("Limits", func() {
+		var container garden.Container
+
+		BeforeEach(func() {
+			var err error
+			container, err = gdnr.Lookup("some-handle")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("gets the set CPU limit", func() {
+			containerizer.CPULimitReturns(garden.CPULimits{LimitInShares: 10}, nil)
+
+			currentCPULimits, err := container.CurrentCPULimits()
+			Expect(err).ToNot(HaveOccurred())
+			Expect(currentCPULimits.LimitInShares).To(BeEquivalentTo(10))
+
+		})
+
+		Context("when getting the CPU limits fails", func() {
+			It("forwards the error", func() {
+				containerizer.CPULimitReturns(garden.CPULimits{}, errors.New("some-error."))
+
+				_, err := container.CurrentCPULimits()
+				Expect(err).To(MatchError("some-error."))
+			})
+		})
+	})
 })

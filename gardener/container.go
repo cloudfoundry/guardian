@@ -102,7 +102,7 @@ func (c *container) LimitCPU(limits garden.CPULimits) error {
 }
 
 func (c *container) CurrentCPULimits() (garden.CPULimits, error) {
-	return garden.CPULimits{}, nil
+	return c.containerizer.CPULimit(c.logger, c.handle)
 }
 
 func (c *container) LimitDisk(limits garden.DiskLimits) error {

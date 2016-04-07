@@ -36,6 +36,7 @@ type Containerizer interface {
 	Destroy(log lager.Logger, handle string) error
 	Info(log lager.Logger, handle string) (ActualContainerSpec, error)
 	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
+	CPULimit(log lager.Logger, handle string) (garden.CPULimits, error)
 	Handles() ([]string, error)
 }
 
