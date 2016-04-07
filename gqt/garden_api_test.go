@@ -74,38 +74,55 @@ var _ = Describe("Garden API", func() {
 			args = append(args, "--tag", "m")
 		})
 
-		It("destroys the remaining containers in the depotDir", func() {
-			_, err := client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ioutil.ReadDir(client.DepotDir)).NotTo(BeEmpty())
+		Describe("destruction of container resources", func() {
+			It("destroys the remaining containers in the depotDir", func() {
+				_, err := client.Create(garden.ContainerSpec{
+					RootFSPath: "docker:///cloudfoundry/garden-busybox",
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ioutil.ReadDir(client.DepotDir)).NotTo(BeEmpty())
 
-			Expect(client.Stop()).To(Succeed())
-			client = startGarden(args...)
-			Expect(ioutil.ReadDir(client.DepotDir)).To(BeEmpty())
-		})
-
-		It("destroys the remaining containers' iptables", func() {
-			_, err := client.Create(garden.ContainerSpec{
-				Network: "177.100.10.30/24",
+				Expect(client.Stop()).To(Succeed())
+				client = startGarden(args...)
+				Expect(ioutil.ReadDir(client.DepotDir)).To(BeEmpty())
 			})
-			Expect(err).NotTo(HaveOccurred())
 
-			Expect(client.Stop()).To(Succeed())
-			client = startGarden(args...)
+			It("destroys the remaining containers' iptables", func() {
+				_, err := client.Create(garden.ContainerSpec{
+					RootFSPath: "docker:///cloudfoundry/garden-busybox",
+					Network:    "177.100.10.30/24",
+				})
+				Expect(err).NotTo(HaveOccurred())
 
-			out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(out)).NotTo(MatchRegexp("w-%d-instance.* 177.100.10.0/24", GinkgoParallelNode()))
+				Expect(client.Stop()).To(Succeed())
+				client = startGarden(args...)
 
-			out, err = exec.Command("ifconfig").CombinedOutput()
-			Expect(err).NotTo(HaveOccurred())
+				out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(out)).NotTo(MatchRegexp("w-%d-instance.* 177.100.10.0/24", GinkgoParallelNode()))
 
-			pattern := fmt.Sprintf(".*w%s%s.*", bridgePrefix, subnetName)
-			Expect(string(out)).NotTo(MatchRegexp(pattern))
+				out, err = exec.Command("ifconfig").CombinedOutput()
+				Expect(err).NotTo(HaveOccurred())
+
+				pattern := fmt.Sprintf(".*w%s%s.*", bridgePrefix, subnetName)
+				Expect(string(out)).NotTo(MatchRegexp(pattern))
+			})
 		})
 
-		It("can still create containers after restart", func() {
+		Describe("successful operations after restart", func() {
+			It("can still create container", func() {
+				spec := garden.ContainerSpec{
+					RootFSPath: "docker:///cloudfoundry/garden-busybox",
+					Network:    "177.100.10.30/24",
+				}
+				_, err := client.Create(spec)
+				Expect(err).NotTo(HaveOccurred())
 
+				Expect(client.Stop()).To(Succeed())
+				client = startGarden(args...)
+				_, err = client.Create(spec)
+				Expect(err).NotTo(HaveOccurred())
+			})
 		})
 	})
 
