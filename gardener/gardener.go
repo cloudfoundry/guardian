@@ -152,6 +152,9 @@ type Gardener struct {
 
 	// PropertyManager creates map of container properties
 	PropertyManager PropertyManager
+
+	// MaxContainers limits the advertised container capacity
+	MaxContainers uint64
 }
 
 // Create creates a container by combining the results of networker.Network,
@@ -287,6 +290,9 @@ func (g *Gardener) Capacity() (garden.Capacity, error) {
 	}
 
 	cap := g.Networker.Capacity()
+	if g.MaxContainers > 0 && g.MaxContainers < cap {
+		cap = g.MaxContainers
+	}
 
 	return garden.Capacity{
 		MemoryInBytes: mem,

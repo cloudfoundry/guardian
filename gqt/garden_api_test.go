@@ -44,6 +44,18 @@ var _ = Describe("Garden API", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(capacity.MaxContainers).To(Equal(uint64(64)))
 			})
+
+			Context("when the capacity is limited by maxContainers", func() {
+				BeforeEach(func() {
+					args = append(args, "--max-containers", "32")
+				})
+
+				It("returns the limited capacity from maxContainers", func() {
+					capacity, err := client.Capacity()
+					Expect(err).ToNot(HaveOccurred())
+					Expect(capacity.MaxContainers).To(Equal(uint64(32)))
+				})
+			})
 		})
 	})
 })

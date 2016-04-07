@@ -10,6 +10,9 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/garden-shed/distclient"
+	"github.com/nu7hatch/gouuid"
+	"github.com/opencontainers/specs/specs-go"
+
 	quotaed_aufs "github.com/cloudfoundry-incubator/garden-shed/docker_drivers/aufs"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake/cleaner"
@@ -43,8 +46,6 @@ import (
 	_ "github.com/docker/docker/pkg/chrootarchive" // allow reexec of docker-applyLayer
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/eapache/go-resiliency/retrier"
-	"github.com/nu7hatch/gouuid"
-	"github.com/opencontainers/specs/specs-go"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/localip"
@@ -134,6 +135,10 @@ type GuardianCommand struct {
 		PluginExtraArgs []string `long:"network-plugin-extra-arg" description:"Extra argument to pass to the network plugin. Can be specified multiple times."`
 	} `group:"Container Networking"`
 
+	Limits struct {
+		MaxContainers uint64 `long:"max-containers" default:"0" description:"Maximum number of containers that can be created."`
+	} `group:"Limits"`
+
 	Metrics struct {
 		EmissionInterval time.Duration `long:"metrics-emission-interval" default:"1m" description:"Interval on which to emit metrics."`
 
@@ -209,6 +214,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
 		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), propManager),
 		PropertyManager: propManager,
+		MaxContainers:   cmd.Limits.MaxContainers,
 
 		Logger: logger,
 	}
