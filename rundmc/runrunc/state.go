@@ -31,7 +31,7 @@ func NewStater(runner RuncCmdRunner, runc RuncBinary) *Stater {
 
 // State gets the state of the bundle
 func (r *Stater) State(log lager.Logger, handle string) (state State, err error) {
-	log = log.Session("State", lager.Data{"handle": handle})
+	log = log.Session("state", lager.Data{"handle": handle})
 
 	log.Info("started")
 	defer log.Info("finished")
@@ -42,9 +42,7 @@ func (r *Stater) State(log lager.Logger, handle string) (state State, err error)
 		cmd.Stdout = buf
 		return cmd
 	})
-
 	if err != nil {
-		log.Error("state-cmd-failed", err)
 		return State{}, fmt.Errorf("runc state: %s", err)
 	}
 

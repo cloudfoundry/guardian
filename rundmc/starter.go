@@ -52,7 +52,9 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(log lager.Logger) error {
 	}
 
 	if !s.isMountPoint(s.CgroupPath) {
-		s.mountTmpfsOnCgroupPath(s.CgroupPath)
+		s.mountTmpfsOnCgroupPath(log, s.CgroupPath)
+	} else {
+		log.Info("cgroups-tmpfs-already-mounted", lager.Data{"path": s.CgroupPath})
 	}
 
 	subsystemGroupings, err := s.subsystemGroupings()
@@ -81,8 +83,15 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(log lager.Logger) error {
 	return nil
 }
 
-func (s *CgroupStarter) mountTmpfsOnCgroupPath(path string) {
-	s.CommandRunner.Run(exec.Command("mount", "-t", "tmpfs", "-o", "uid=0,gid=0,mode=0755", "cgroup", path))
+func (s *CgroupStarter) mountTmpfsOnCgroupPath(log lager.Logger, path string) {
+	log = log.Session("cgroups-tmpfs-mounting", lager.Data{"path": path})
+
+	log.Info("started")
+	if err := s.CommandRunner.Run(exec.Command("mount", "-t", "tmpfs", "-o", "uid=0,gid=0,mode=0755", "cgroup", path)); err != nil {
+		log.Error("failed-to-mount", err)
+	} else {
+		log.Info("finished")
+	}
 }
 
 func (s *CgroupStarter) subsystemGroupings() (map[string]string, error) {
@@ -106,27 +115,26 @@ func (s *CgroupStarter) subsystemGroupings() (map[string]string, error) {
 }
 
 func (s *CgroupStarter) mountCgroup(log lager.Logger, cgroupPath, subsystems string) error {
-	log = log.Session("setup-cgroup", lager.Data{
+	log = log.Session("mount-cgroup", lager.Data{
 		"path":       cgroupPath,
 		"subsystems": subsystems,
 	})
 
 	log.Info("started")
-	defer log.Info("finished")
-
 	if !s.isMountPoint(cgroupPath) {
 		if err := os.MkdirAll(cgroupPath, 0755); err != nil {
-			log.Error("mkdir-failed", err)
-			return err
+			return fmt.Errorf("mkdir '%s': %s", cgroupPath, err)
 		}
 
 		cmd := exec.Command("mount", "-n", "-t", "cgroup", "-o", subsystems, "cgroup", cgroupPath)
 		cmd.Stderr = logging.Writer(log.Session("mount-cgroup-cmd"))
 		if err := s.CommandRunner.Run(cmd); err != nil {
-			log.Error("mount-cgroup-failed", err)
-			return err
+			return fmt.Errorf("mounting subsystems '%s' in '%s': %s", subsystems, cgroupPath, err)
 		}
+	} else {
+		log.Info("subsystems-already-mounted")
 	}
+	log.Info("finished")
 
 	return nil
 }

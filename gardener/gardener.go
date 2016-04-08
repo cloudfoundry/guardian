@@ -174,14 +174,14 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	log := g.Logger.Session("create", lager.Data{"handle": spec.Handle})
 
 	log.Info("start")
-	defer log.Info("created")
-
 	defer func() {
 		if err != nil {
-			log := log.Session("cleanup")
+			log := log.Session("create-failed-cleaningup")
 			log.Info("start")
 			g.destroy(log, spec.Handle)
 			log.Info("cleanedup")
+		} else {
+			log.Info("created")
 		}
 	}()
 
@@ -390,22 +390,30 @@ func (g *Gardener) checkDuplicateHandle(handle string) error {
 }
 
 func (g *Gardener) Start() error {
-	if err := g.cleanupContainer(); err != nil {
-		return err
+	log := g.Logger.Session("start")
+
+	log.Info("starting")
+
+	if err := g.cleanupContainers(log); err != nil {
+		return fmt.Errorf("cleaning up containers: %s", err)
 	}
 
 	for _, starter := range g.Starters {
 		if err := starter.Start(); err != nil {
-			return err
+			return fmt.Errorf("starting starter: %s", err)
 		}
 	}
+
+	log.Info("completed")
+
 	return nil
 }
 
-func (g *Gardener) cleanupContainer() error {
+func (g *Gardener) cleanupContainers(log lager.Logger) error {
 	handles, _ := g.Containerizer.Handles()
 
 	for _, handle := range handles {
+		log.Info("cleaningup-container", lager.Data{"handle": handle})
 		if err := g.Destroy(handle); err != nil {
 			return err
 		}

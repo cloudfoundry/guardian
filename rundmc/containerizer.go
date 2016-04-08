@@ -180,7 +180,7 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 
 	state, err := c.runner.State(log, handle)
 	if err != nil {
-		log.Error("state-failed-skipping-kill", err)
+		log.Info("state-failed-skipping-kill", lager.Data{"error": err.Error()})
 		return c.depot.Destroy(log, handle)
 	}
 

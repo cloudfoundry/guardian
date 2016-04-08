@@ -529,7 +529,7 @@ var _ = Describe("Gardener", func() {
 		It("returns an error when failing to destroy", func() {
 			containerizer.DestroyReturns(errors.New("containerized deletion failed"))
 			err = gdnr.Start()
-			Expect(err).To(MatchError("containerized deletion failed"))
+			Expect(err).To(MatchError("cleaning up containers: containerized deletion failed"))
 		})
 	})
 

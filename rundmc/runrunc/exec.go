@@ -241,8 +241,5 @@ type ProcessJsonCleaner struct{}
 
 func (ProcessJsonCleaner) Clean(log lager.Logger, process Waiter, path string) {
 	process.Wait()
-
-	if err := os.Remove(path); err != nil {
-		log.Error("cleanup-process-json-failed", err)
-	}
+	os.Remove(path)
 }

@@ -63,10 +63,7 @@ func (c *container) Info() (garden.ContainerInfo, error) {
 	}
 
 	mappedPorts := []garden.PortMapping{}
-	mappedPortsCfg, err := c.propertyManager.Get(c.handle, MappedPortsKey)
-	if err != nil {
-		log.Error("find-key", err)
-	}
+	mappedPortsCfg, _ := c.propertyManager.Get(c.handle, MappedPortsKey)
 
 	json.Unmarshal([]byte(mappedPortsCfg), &mappedPorts)
 	return garden.ContainerInfo{

@@ -53,8 +53,6 @@ import (
 	"github.com/tedsuo/ifrit/sigmon"
 )
 
-const OciStateDir = "/var/run/opencontainer/containers"
-
 var DefaultCapabilities = []string{
 	"CAP_CHOWN",
 	"CAP_DAC_OVERRIDE",
@@ -268,10 +266,8 @@ func (cmd *GuardianCommand) wireUidGenerator() gardener.UidGeneratorFunc {
 }
 
 func (cmd *GuardianCommand) wireStarter(logger lager.Logger, ipt *iptables.IPTables, allowHostAccess bool, nicPrefix string, denyNetworks []string) []gardener.Starter {
-	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("runner")}
-
 	return []gardener.Starter{
-		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag)), runner),
+		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag)), linux_command_runner.New()),
 		iptables.NewStarter(ipt, allowHostAccess, nicPrefix, denyNetworks),
 	}
 }
@@ -574,18 +570,4 @@ func mustOpen(path string) io.ReadCloser {
 	} else {
 		return r
 	}
-}
-
-type StartAll struct {
-	starters []gardener.Starter
-}
-
-func (s *StartAll) Start() error {
-	for _, starter := range s.starters {
-		if err := starter.Start(); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
