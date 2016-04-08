@@ -55,7 +55,7 @@ func main() {
 			var rusage syscall.Rusage
 			wpid, err := syscall.Wait4(-1, &status, syscall.WNOHANG, &rusage)
 
-			if err != nil || wpid < 0 {
+			if err != nil || wpid <= 0 {
 				break // wait for next SIGCHLD
 			}
 
