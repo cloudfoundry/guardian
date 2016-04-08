@@ -77,7 +77,7 @@ var _ = Describe("Garden API", func() {
 		Describe("destruction of container resources", func() {
 			It("destroys the remaining containers in the depotDir", func() {
 				_, err := client.Create(garden.ContainerSpec{
-					RootFSPath: "docker:///cloudfoundry/garden-busybox",
+					RootFSPath: runner.RootFSPath,
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(ioutil.ReadDir(client.DepotDir)).NotTo(BeEmpty())
@@ -89,7 +89,7 @@ var _ = Describe("Garden API", func() {
 
 			It("destroys the remaining containers' iptables", func() {
 				_, err := client.Create(garden.ContainerSpec{
-					RootFSPath: "docker:///cloudfoundry/garden-busybox",
+					RootFSPath: runner.RootFSPath,
 					Network:    "177.100.10.30/24",
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -112,7 +112,7 @@ var _ = Describe("Garden API", func() {
 		Describe("successful operations after restart", func() {
 			It("can still create container", func() {
 				spec := garden.ContainerSpec{
-					RootFSPath: "docker:///cloudfoundry/garden-busybox",
+					RootFSPath: runner.RootFSPath,
 					Network:    "177.100.10.30/24",
 				}
 				_, err := client.Create(spec)

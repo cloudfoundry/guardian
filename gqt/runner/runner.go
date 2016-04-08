@@ -77,7 +77,7 @@ func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin string, ar
 		Client: client.New(connection.New(network, addr)),
 	}
 
-	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, TarPath, RootFSPath, argv...)
+	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, TarPath, argv...)
 	c.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", tmpDir))
 	r.runner = ginkgomon.New(ginkgomon.Config{
 		Name:              "guardian",
@@ -134,7 +134,7 @@ func (r *RunningGarden) Stop() error {
 	return err
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, tarBin, rootFSPath string, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, tarBin string, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
