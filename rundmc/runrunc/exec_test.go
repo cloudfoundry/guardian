@@ -268,9 +268,22 @@ var _ = Describe("ExecPreparer", func() {
 		))
 	})
 
+	It("sets Terminal to true if a TTY is configured", func() {
+		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+			TTY: &garden.TTYSpec{
+				WindowSize: &garden.WindowSize{
+					Columns: 80,
+					Rows:    24,
+				},
+			},
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(spec.Terminal).To(BeTrue())
+	})
+
 	Describe("passing the correct uid and gid", func() {
 		Context("when the bundle can be loaded", func() {
-
 			BeforeEach(func() {
 				users.LookupReturns(&user.ExecUser{Uid: 9, Gid: 7}, nil)
 

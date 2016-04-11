@@ -189,6 +189,7 @@ func (r *ExecPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		Cwd:          cwd,
 		Capabilities: bndl.Capabilities(),
 		Rlimits:      toRlimits(spec.Limits),
+		Terminal:     spec.TTY != nil,
 	}, nil
 }
 
