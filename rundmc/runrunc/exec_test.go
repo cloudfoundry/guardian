@@ -268,7 +268,7 @@ var _ = Describe("ExecPreparer", func() {
 		))
 	})
 
-	It("sets Terminal to true if a TTY is configured", func() {
+	It("sets Terminal to true iff a TTY is configured", func() {
 		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
 			TTY: &garden.TTYSpec{
 				WindowSize: &garden.WindowSize{
@@ -280,6 +280,13 @@ var _ = Describe("ExecPreparer", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(spec.Terminal).To(BeTrue())
+
+		spec, err = preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+			TTY: nil,
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		Expect(spec.Terminal).To(BeFalse())
 	})
 
 	Describe("passing the correct uid and gid", func() {
