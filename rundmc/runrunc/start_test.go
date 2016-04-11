@@ -165,7 +165,7 @@ var _ = Describe("Start", func() {
 				runcExitStatus = []byte{3}
 			})
 
-			It("return an error including parsed logs when runC fails to starts the container", func() {
+			It("return an error including parsed logs when runC fails to start the container", func() {
 				Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc start: exit status 3: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
 			})
 

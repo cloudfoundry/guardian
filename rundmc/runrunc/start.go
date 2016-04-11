@@ -24,7 +24,7 @@ func NewStarter(dadooPath string, commandRunner command_runner.CommandRunner) *S
 }
 
 // Starts a bundle by running 'dadoo run runc' in the bundle directory
-func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.ProcessIO) (err error) {
+func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.ProcessIO) (theErr error) {
 	log = log.Session("start", lager.Data{"bundle": bundlePath})
 
 	log.Info("started")
@@ -56,7 +56,7 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 	}
 
 	defer func() {
-		err = processLogs(log, logFile, err)
+		theErr = processLogs(log, logFile, theErr)
 	}()
 
 	if b[0] != 0 {
