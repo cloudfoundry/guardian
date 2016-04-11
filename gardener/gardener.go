@@ -22,6 +22,7 @@ const ContainerIPKey = "garden.network.container-ip"
 const BridgeIPKey = "garden.network.host-ip"
 const ExternalIPKey = "garden.network.external-ip"
 const MappedPortsKey = "garden.network.mapped-ports"
+const GraceTimeKey = "garden.grace-time"
 
 const RawRootFSScheme = "raw"
 
@@ -234,6 +235,13 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		return nil, err
 	}
 
+	if spec.GraceTime != 0 {
+		err := container.SetGraceTime(spec.GraceTime)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	for name, value := range spec.Properties {
 		err := container.SetProperty(name, value)
 		if err != nil {
@@ -285,9 +293,24 @@ func (g *Gardener) destroy(log lager.Logger, handle string) error {
 	return g.PropertyManager.DestroyKeySpace(handle)
 }
 
-func (g *Gardener) Stop()                                    {}
-func (g *Gardener) GraceTime(garden.Container) time.Duration { return 0 }
-func (g *Gardener) Ping() error                              { return nil }
+func (g *Gardener) Stop() {}
+
+func (g *Gardener) GraceTime(container garden.Container) time.Duration {
+	property, err := g.PropertyManager.Get(container.Handle(), GraceTimeKey)
+	if err != nil {
+		return 0
+	}
+
+	var graceTime time.Duration
+	_, err = fmt.Sscanf(property, "%d", &graceTime)
+	if err != nil {
+		return 0
+	}
+
+	return graceTime
+}
+
+func (g *Gardener) Ping() error { return nil }
 
 func (g *Gardener) Capacity() (garden.Capacity, error) {
 	mem, err := g.SysInfoProvider.TotalMemory()
