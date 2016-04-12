@@ -24,6 +24,7 @@ const BridgeIPKey = "garden.network.host-ip"
 const ExternalIPKey = "garden.network.external-ip"
 const MappedPortsKey = "garden.network.mapped-ports"
 const GraceTimeKey = "garden.grace-time"
+const ExternalNetworkSpecKey = "garden.external.network-spec"
 
 const RawRootFSScheme = "raw"
 
@@ -45,7 +46,7 @@ type Containerizer interface {
 }
 
 type Networker interface {
-	Hooks(log lager.Logger, handle, spec string) ([]Hooks, error)
+	Hooks(log lager.Logger, handle, spec, externalSpec string) ([]Hooks, error)
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error)
@@ -185,7 +186,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		}
 	}()
 
-	networkHooks, err := g.Networker.Hooks(log, spec.Handle, spec.Network)
+	networkHooks, err := g.Networker.Hooks(log, spec.Handle, spec.Network, spec.Properties[ExternalNetworkSpecKey])
 	if err != nil {
 		return nil, err
 	}

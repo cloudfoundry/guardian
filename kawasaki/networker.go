@@ -91,7 +91,7 @@ type FirewallOpener interface {
 //go:generate counterfeiter . NetworkHooker
 
 type NetworkHooker interface {
-	Hooks(log lager.Logger, handle, spec string) (gardener.Hooks, error)
+	Hooks(log lager.Logger, handle, spec, externalNetworkSpec string) (gardener.Hooks, error)
 }
 
 type Networker struct {
@@ -139,7 +139,7 @@ func New(
 
 // Hooks provides path and appropriate arguments to the kawasaki executable that
 // applies the network configuration after the network namesapce creation.
-func (n *Networker) Hooks(log lager.Logger, handle, spec string) ([]gardener.Hooks, error) {
+func (n *Networker) Hooks(log lager.Logger, handle, spec, externalNetworkSpec string) ([]gardener.Hooks, error) {
 	log = log.Session("network", lager.Data{
 		"handle": handle,
 		"spec":   spec,
@@ -211,7 +211,7 @@ func (n *Networker) Hooks(log lager.Logger, handle, spec string) ([]gardener.Hoo
 
 	hooks := []gardener.Hooks{kawasakiHooks}
 	for _, hooker := range n.networkHookers {
-		h, err := hooker.Hooks(log, handle, spec)
+		h, err := hooker.Hooks(log, handle, spec, externalNetworkSpec)
 		if err != nil {
 			return nil, err
 		}

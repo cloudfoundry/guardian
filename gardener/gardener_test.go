@@ -83,7 +83,7 @@ var _ = Describe("Gardener", func() {
 		Context("when a handle is specified", func() {
 			Context("when the networker provides hooks", func() {
 				BeforeEach(func() {
-					networker.HooksStub = func(_ lager.Logger, handle, spec string) ([]gardener.Hooks, error) {
+					networker.HooksStub = func(_ lager.Logger, handle, spec, externalSpec string) ([]gardener.Hooks, error) {
 						return []gardener.Hooks{
 							gardener.Hooks{
 								Prestart: gardener.Hook{

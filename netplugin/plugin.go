@@ -17,9 +17,9 @@ func New(path string, extraArg ...string) *Plugin {
 	}
 }
 
-func (p Plugin) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks, error) {
+func (p Plugin) Hooks(log lager.Logger, handle, spec, externalSpec string) (gardener.Hooks, error) {
 	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
-	networkPluginFlags := []string{"--handle", handle, "--network", spec}
+	networkPluginFlags := []string{"--handle", handle, "--network", spec, "--external-network", externalSpec}
 
 	upArgs := append(pathAndExtraArgs, "--action", "up")
 	upArgs = append(upArgs, networkPluginFlags...)
