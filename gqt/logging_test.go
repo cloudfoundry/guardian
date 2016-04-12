@@ -32,7 +32,6 @@ var _ = Describe("Logging", func() {
 
 		AfterEach(func() {
 			Expect(client.DestroyAndStop()).To(Succeed())
-			gexec.CleanupBuildArtifacts()
 		})
 
 		It("forwards RunC logs", func() {
