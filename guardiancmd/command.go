@@ -104,6 +104,7 @@ type GuardianCommand struct {
 		Tar      FileFlag `long:"tar-bin"      required:"true" description:"Path to the 'tar' binary."`
 		Kawasaki FileFlag `long:"kawasaki-bin" required:"true" description:"Path to the 'kawasaki' network hook binary."`
 		Init     FileFlag `long:"init-bin"     required:"true" description:"Path execute as pid 1 inside each container."`
+		Runc     string   `long:"runc-bin"     default:"runc" description:"Path to the 'runc' binary."`
 	} `group:"Binary Tools"`
 
 	Graph struct {
@@ -211,7 +212,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
 		Networker:       networker,
 		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
-		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), propManager),
+		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), propManager),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 
@@ -423,7 +424,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		ovenCleaner)
 }
 
-func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodaemonPath, dadooPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {
+func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodaemonPath, dadooPath, runcPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
 	commandRunner := linux_command_runner.New()
@@ -441,10 +442,11 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	runcrunner := runrunc.New(
 		commandRunner,
 		runrunc.NewLogRunner(commandRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
-		goci.RuncBinary("runc"),
+		goci.RuncBinary(runcPath),
 		dadooPath,
+		runcPath,
 		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir),
-		runrunc.NewExecRunner(cmd.wireUidGenerator(), goci.RuncBinary("runc"),
+		runrunc.NewExecRunner(cmd.wireUidGenerator(), goci.RuncBinary(runcPath),
 			process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", cmd.Server.Tag), "processes"), iodaemonPath, commandRunner, pidFileReader),
 			&runrunc.Watcher{}),
 	)

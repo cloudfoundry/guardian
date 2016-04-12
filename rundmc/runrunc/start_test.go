@@ -33,7 +33,7 @@ var _ = Describe("Start", func() {
 		bundlePath, err = ioutil.TempDir("", "bundle")
 		Expect(err).NotTo(HaveOccurred())
 
-		runner = runrunc.NewStarter("dadoo", commandRunner)
+		runner = runrunc.NewStarter("dadoo", "runc", commandRunner)
 	})
 
 	It("starts the container with runC passing the detach flag", func() {

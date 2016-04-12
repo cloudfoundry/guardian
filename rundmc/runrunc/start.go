@@ -14,12 +14,13 @@ import (
 
 type Starter struct {
 	dadooPath     string
+	runcPath      string
 	commandRunner command_runner.CommandRunner
 }
 
-func NewStarter(dadooPath string, commandRunner command_runner.CommandRunner) *Starter {
+func NewStarter(dadooPath, runcPath string, commandRunner command_runner.CommandRunner) *Starter {
 	return &Starter{
-		dadooPath, commandRunner,
+		dadooPath, runcPath, commandRunner,
 	}
 }
 
@@ -39,7 +40,7 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 	defer runcExitStatusW.Close()
 
 	logFile := filepath.Join(bundlePath, "start.log")
-	cmd := exec.Command(s.dadooPath, "-log", logFile, "run", "runc", bundlePath, id)
+	cmd := exec.Command(s.dadooPath, "-log", logFile, "run", s.runcPath, bundlePath, id)
 	cmd.ExtraFiles = []*os.File{
 		runcExitStatusW,
 	}
