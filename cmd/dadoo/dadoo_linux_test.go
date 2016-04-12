@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"syscall"
 	"time"
 
 	"github.com/cloudfoundry-incubator/goci"
@@ -41,8 +40,9 @@ var _ = Describe("Dadoo", func() {
 		bundle, err = loader.Load(bundlePath)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(os.MkdirAll(path.Join(bundlePath, "root"), 0755)).To(Succeed())
-		Expect(syscall.Mount(os.Getenv("GARDEN_TEST_ROOTFS"), filepath.Join(bundlePath, "root"), "", uintptr(syscall.MS_BIND), "")).To(Succeed())
+		cp, err := gexec.Start(exec.Command("cp", "-a", os.Getenv("GARDEN_TEST_ROOTFS"), filepath.Join(bundlePath, "root")), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(cp, "2m").Should(gexec.Exit(0))
 
 		bundle = bundle.
 			WithProcess(specs.Process{Args: []string{"/bin/sh", "-c", "exit 12"}, Cwd: "/"}).
@@ -56,7 +56,7 @@ var _ = Describe("Dadoo", func() {
 	})
 
 	AfterEach(func() {
-		Expect(syscall.Unmount(filepath.Join(bundlePath, "root"), syscall.MNT_DETACH)).To(Succeed())
+		Expect(os.RemoveAll(bundlePath)).To(Succeed())
 	})
 
 	It("should return the exit code of the container process", func() {

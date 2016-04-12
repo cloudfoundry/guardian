@@ -46,7 +46,7 @@ func main() {
 		os.Exit(2)
 	}
 
-	pid := -2
+	containerPid := -2
 	for range signals {
 
 		exits := make(map[int]int)
@@ -66,15 +66,15 @@ func main() {
 					os.Exit(3) // nothing to wait for, container didn't launch
 				}
 
-				pid, err = readPid(pidFilePath)
+				containerPid, err = readPid(pidFilePath)
 				check(err)
 			}
 
-			if wpid == pid || pid < 0 {
+			if wpid == containerPid || containerPid < 0 {
 				exits[wpid] = status.ExitStatus()
 			}
 
-			if status, ok := exits[pid]; ok {
+			if status, ok := exits[containerPid]; ok {
 				check(exec.Command(runtime, "delete", containerId).Run())
 				os.Exit(status)
 			}
