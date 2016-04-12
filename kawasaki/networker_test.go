@@ -55,6 +55,7 @@ var _ = Describe("Networker", func() {
 			fakePortPool,
 			fakePortForwarder,
 			fakeFirewallOpener,
+			nil,
 		)
 
 		ip, subnet, err := net.ParseCIDR("123.123.123.12/24")
@@ -173,7 +174,7 @@ var _ = Describe("Networker", func() {
 		Context("configuring Hooks", func() {
 			var (
 				handle string
-				hooks  gardener.Hooks
+				hooks  []gardener.Hooks
 			)
 
 			BeforeEach(func() {
@@ -201,20 +202,82 @@ var _ = Describe("Networker", func() {
 			}
 
 			It("passes the correct args to the prestart hook", func() {
-				Expect(hooks.Prestart.Args[0]).To(Equal("/path/to/kawasaki"))
-				Expect(hooks.Prestart.Args).To(ContainElement("--action=create"))
-				itPassesTheNetworkConfig(hooks.Prestart.Args)
+				Expect(hooks).To(HaveLen(1))
+				Expect(hooks[0].Prestart.Args[0]).To(Equal("/path/to/kawasaki"))
+				Expect(hooks[0].Prestart.Args).To(ContainElement("--action=create"))
+				itPassesTheNetworkConfig(hooks[0].Prestart.Args)
 			})
 
 			It("passes the correct args to the poststop hook", func() {
-				Expect(hooks.Poststop.Args[0]).To(Equal("/path/to/kawasaki"))
-				Expect(hooks.Poststop.Args).To(ContainElement("--action=destroy"))
-				itPassesTheNetworkConfig(hooks.Poststop.Args)
+				Expect(hooks).To(HaveLen(1))
+				Expect(hooks[0].Poststop.Args[0]).To(Equal("/path/to/kawasaki"))
+				Expect(hooks[0].Poststop.Args).To(ContainElement("--action=destroy"))
+				itPassesTheNetworkConfig(hooks[0].Poststop.Args)
 			})
 
 			It("returns the path to the kawasaki binary", func() {
-				Expect(hooks.Prestart.Path).To(Equal("/path/to/kawasaki"))
-				Expect(hooks.Poststop.Path).To(Equal("/path/to/kawasaki"))
+				Expect(hooks[0].Prestart.Path).To(Equal("/path/to/kawasaki"))
+				Expect(hooks[0].Poststop.Path).To(Equal("/path/to/kawasaki"))
+			})
+
+			Context("when a network hooker is provided", func() {
+				var (
+					fakeNetworkHooker *fakes.FakeNetworkHooker
+					extraHooks        gardener.Hooks
+				)
+
+				BeforeEach(func() {
+					var err error
+					fakeNetworkHooker = new(fakes.FakeNetworkHooker)
+
+					extraHooks = gardener.Hooks{
+						Prestart: gardener.Hook{
+							Path: "/some/prestart/path",
+							Args: []string{"prestart_args"},
+						},
+						Poststop: gardener.Hook{
+							Path: "/some/poststop/path",
+							Args: []string{"poststop_args"},
+						},
+					}
+
+					fakeNetworkHooker.HooksReturns(extraHooks, nil)
+					networkHookers := []kawasaki.NetworkHooker{fakeNetworkHooker}
+
+					networker = kawasaki.New(
+						"/path/to/kawasaki",
+						fakeSpecParser,
+						fakeSubnetPool,
+						fakeConfigCreator,
+						fakeConfigurer,
+						fakeConfigStore,
+						fakePortPool,
+						fakePortForwarder,
+						fakeFirewallOpener,
+						networkHookers,
+					)
+
+					handle = "some-handle"
+					hooks, err = networker.Hooks(logger, handle, "1.2.3.4/30")
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("appends the extra hooks returned by the network hooker", func() {
+					Expect(fakeNetworkHooker.HooksCallCount()).To(Equal(1))
+					Expect(hooks).To(HaveLen(2))
+					Expect(hooks[1]).To(Equal(extraHooks))
+				})
+
+				Context("and it fails", func() {
+					BeforeEach(func() {
+						fakeNetworkHooker.HooksReturns(gardener.Hooks{}, errors.New("batman-error"))
+					})
+
+					It("returns an error", func() {
+						_, err := networker.Hooks(logger, handle, "1.2.3.4/30")
+						Expect(err).To(MatchError("batman-error"))
+					})
+				})
 			})
 		})
 	})

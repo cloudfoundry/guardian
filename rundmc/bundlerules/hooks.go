@@ -19,19 +19,29 @@ func (r Hooks) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.
 		"PATH=" + os.Getenv("PATH"),
 	}
 
-	hooks := bndl.WithPrestartHooks(specs.Hook{
-		Env:  env,
-		Path: spec.NetworkHooks.Prestart.Path,
-		Args: spec.NetworkHooks.Prestart.Args,
-	})
+	var prestart, poststop []specs.Hook
 
-	if spec.NetworkHooks.Poststop.Path != "" {
-		hooks = hooks.WithPoststopHooks(specs.Hook{
-			Env:  env,
-			Path: spec.NetworkHooks.Poststop.Path,
-			Args: spec.NetworkHooks.Poststop.Args,
-		})
+	for _, networkHooks := range spec.NetworkHooks {
+		if networkHooks.Prestart.Path != "" {
+			prestart = append(prestart, specs.Hook{
+				Env:  env,
+				Path: networkHooks.Prestart.Path,
+				Args: networkHooks.Prestart.Args,
+			})
+		}
+
+		if networkHooks.Poststop.Path != "" {
+			poststop = append(poststop, specs.Hook{
+				Env:  env,
+				Path: networkHooks.Poststop.Path,
+				Args: networkHooks.Poststop.Args,
+			})
+		}
 	}
 
-	return hooks
+	for i, j := 0, len(poststop)-1; i < j; i, j = i+1, j-1 {
+		poststop[i], poststop[j] = poststop[j], poststop[i]
+	}
+
+	return bndl.WithPrestartHooks(prestart...).WithPoststopHooks(poststop...)
 }

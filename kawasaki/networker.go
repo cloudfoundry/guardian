@@ -88,6 +88,12 @@ type FirewallOpener interface {
 	Open(log lager.Logger, instance string, rule garden.NetOutRule) error
 }
 
+//go:generate counterfeiter . NetworkHooker
+
+type NetworkHooker interface {
+	Hooks(log lager.Logger, handle, spec string) (gardener.Hooks, error)
+}
+
 type Networker struct {
 	kawasakiBinPath string // path to a binary that will apply the configuration
 
@@ -99,6 +105,7 @@ type Networker struct {
 	portForwarder  PortForwarder
 	portPool       PortPool
 	firewallOpener FirewallOpener
+	networkHookers []NetworkHooker
 }
 
 func New(
@@ -111,6 +118,7 @@ func New(
 	portPool PortPool,
 	portForwarder PortForwarder,
 	firewallOpener FirewallOpener,
+	networkHookers []NetworkHooker,
 ) *Networker {
 	return &Networker{
 		kawasakiBinPath: kawasakiBinPath,
@@ -125,12 +133,13 @@ func New(
 		portPool:      portPool,
 
 		firewallOpener: firewallOpener,
+		networkHookers: networkHookers,
 	}
 }
 
 // Hooks provides path and appropriate arguments to the kawasaki executable that
 // applies the network configuration after the network namesapce creation.
-func (n *Networker) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks, error) {
+func (n *Networker) Hooks(log lager.Logger, handle, spec string) ([]gardener.Hooks, error) {
 	log = log.Session("network", lager.Data{
 		"handle": handle,
 		"spec":   spec,
@@ -142,25 +151,25 @@ func (n *Networker) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks
 	subnetReq, ipReq, err := n.specParser.Parse(log, spec)
 	if err != nil {
 		log.Error("parse-failed", err)
-		return gardener.Hooks{}, err
+		return nil, err
 	}
 
 	subnet, ip, err := n.subnetPool.Acquire(log, subnetReq, ipReq)
 	if err != nil {
 		log.Error("acquire-failed", err)
-		return gardener.Hooks{}, err
+		return nil, err
 	}
 
 	config, err := n.configCreator.Create(log, handle, subnet, ip)
 	if err != nil {
 		log.Error("create-config-failed", err)
-		return gardener.Hooks{}, fmt.Errorf("create network config: %s", err)
+		return nil, fmt.Errorf("create network config: %s", err)
 	}
 	log.Info("config-create", lager.Data{"config": config})
 
 	err = save(n.configStore, handle, config)
 	if err != nil {
-		return gardener.Hooks{}, err
+		return nil, err
 	}
 
 	netCfgArgs := []string{
@@ -189,7 +198,7 @@ func (n *Networker) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks
 		"--action=destroy",
 	}, netCfgArgs...)
 
-	return gardener.Hooks{
+	kawasakiHooks := gardener.Hooks{
 		Prestart: gardener.Hook{
 			Path: n.kawasakiBinPath,
 			Args: preStartArgs,
@@ -198,7 +207,18 @@ func (n *Networker) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks
 			Path: n.kawasakiBinPath,
 			Args: postStopArgs,
 		},
-	}, nil
+	}
+
+	hooks := []gardener.Hooks{kawasakiHooks}
+	for _, hooker := range n.networkHookers {
+		h, err := hooker.Hooks(log, handle, spec)
+		if err != nil {
+			return nil, err
+		}
+		hooks = append(hooks, h)
+	}
+
+	return hooks, nil
 }
 
 // Capacity returns the number of subnets this network can host

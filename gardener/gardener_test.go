@@ -81,42 +81,49 @@ var _ = Describe("Gardener", func() {
 		}
 
 		Context("when a handle is specified", func() {
-			It("passes the network hooks to the containerizer", func() {
-				networker.HooksStub = func(_ lager.Logger, handle, spec string) (gardener.Hooks, error) {
-					return gardener.Hooks{
-						Prestart: gardener.Hook{
-							Path: "/path/to/banana/exe",
-							Args: []string{"--handle", handle, "--spec", spec},
-						},
-						Poststop: gardener.Hook{
-							Path: "/path/to/bananana/exe",
-							Args: []string{"--handle", handle, "--spec", spec},
-						},
-					}, nil
-				}
-
-				_, err := gdnr.Create(garden.ContainerSpec{
-					Handle:  "bob",
-					Network: "10.0.0.2/30",
+			Context("when the networker provides hooks", func() {
+				BeforeEach(func() {
+					networker.HooksStub = func(_ lager.Logger, handle, spec string) ([]gardener.Hooks, error) {
+						return []gardener.Hooks{
+							gardener.Hooks{
+								Prestart: gardener.Hook{
+									Path: "/path/to/banana/exe",
+									Args: []string{"--handle", handle, "--spec", spec},
+								},
+								Poststop: gardener.Hook{
+									Path: "/path/to/bananana/exe",
+									Args: []string{"--handle", handle, "--spec", spec},
+								},
+							},
+						}, nil
+					}
 				})
-				Expect(err).NotTo(HaveOccurred())
 
-				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.NetworkHooks.Prestart).To(Equal(gardener.Hook{
-					Path: "/path/to/banana/exe",
-					Args: []string{"--handle", "bob", "--spec", "10.0.0.2/30"},
-				}))
+				It("passes the network hooks to the containerizer", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Handle:  "bob",
+						Network: "10.0.0.2/30",
+					})
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(spec.NetworkHooks.Poststop).To(Equal(gardener.Hook{
-					Path: "/path/to/bananana/exe",
-					Args: []string{"--handle", "bob", "--spec", "10.0.0.2/30"},
-				}))
+					Expect(containerizer.CreateCallCount()).To(Equal(1))
+					_, spec := containerizer.CreateArgsForCall(0)
+					Expect(spec.NetworkHooks).To(HaveLen(1))
+					Expect(spec.NetworkHooks[0].Prestart).To(Equal(gardener.Hook{
+						Path: "/path/to/banana/exe",
+						Args: []string{"--handle", "bob", "--spec", "10.0.0.2/30"},
+					}))
+
+					Expect(spec.NetworkHooks[0].Poststop).To(Equal(gardener.Hook{
+						Path: "/path/to/bananana/exe",
+						Args: []string{"--handle", "bob", "--spec", "10.0.0.2/30"},
+					}))
+				})
 			})
 
-			Context("when networker fails", func() {
+			Context("when networker fails generating hooks", func() {
 				BeforeEach(func() {
-					networker.HooksReturns(gardener.Hooks{}, errors.New("booom!"))
+					networker.HooksReturns([]gardener.Hooks{}, errors.New("booom!"))
 				})
 
 				It("returns an error", func() {
@@ -130,7 +137,7 @@ var _ = Describe("Gardener", func() {
 				})
 			})
 
-			It("run the graph cleanup", func() {
+			It("runs the graph cleanup", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 

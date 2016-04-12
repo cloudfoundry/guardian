@@ -64,9 +64,7 @@ var _ = Describe("Net", func() {
 	})
 
 	Context("when a network plugin path is provided at startup", func() {
-		var (
-			tmpFile string
-		)
+		var tmpFile string
 
 		BeforeEach(func() {
 			binPath, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/gqt/cmd/networkplugin")
@@ -81,6 +79,15 @@ var _ = Describe("Net", func() {
 				"--network-plugin", binPath,
 				"--network-plugin-extra-arg", tmpFile,
 			}
+		})
+
+		It("continues to execute the kawasaki networker", func() {
+			logFile := filepath.Join(client.DepotDir, container.Handle(), "network.log")
+			Expect(logFile).To(BeAnExistingFile())
+
+			log, err := ioutil.ReadFile(logFile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(gbytes.BufferWithBytes(log)).To(gbytes.Say("kawasaki.hook.start"))
 		})
 
 		It("executes the network plugin during container creation", func() {

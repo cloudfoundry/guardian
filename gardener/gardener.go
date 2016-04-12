@@ -17,6 +17,7 @@ import (
 //go:generate counterfeiter . Networker
 //go:generate counterfeiter . VolumeCreator
 //go:generate counterfeiter . UidGenerator
+//go:generate counterfeiter . PropertyManager
 
 const ContainerIPKey = "garden.network.container-ip"
 const BridgeIPKey = "garden.network.host-ip"
@@ -44,7 +45,7 @@ type Containerizer interface {
 }
 
 type Networker interface {
-	Hooks(log lager.Logger, handle, spec string) (Hooks, error)
+	Hooks(log lager.Logger, handle, spec string) ([]Hooks, error)
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error)
@@ -61,8 +62,6 @@ type VolumeCreator interface {
 type UidGenerator interface {
 	Generate() string
 }
-
-//go:generate counterfeiter . PropertyManager
 
 type PropertyManager interface {
 	All(handle string) (props garden.Properties, err error)
@@ -100,7 +99,7 @@ type DesiredContainerSpec struct {
 	RootFSPath string
 
 	// Network hook
-	NetworkHooks Hooks
+	NetworkHooks []Hooks
 
 	// Bind mounts
 	BindMounts []garden.BindMount
@@ -186,7 +185,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		}
 	}()
 
-	hooks, err := g.Networker.Hooks(log, spec.Handle, spec.Network)
+	networkHooks, err := g.Networker.Hooks(log, spec.Handle, spec.Network)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +220,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	if err := g.Containerizer.Create(log, DesiredContainerSpec{
 		Handle:       spec.Handle,
 		RootFSPath:   rootFSPath,
-		NetworkHooks: hooks,
+		NetworkHooks: networkHooks,
 		Privileged:   spec.Privileged,
 		BindMounts:   spec.BindMounts,
 		Limits:       spec.Limits,

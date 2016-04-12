@@ -10,7 +10,7 @@ import (
 )
 
 type FakeNetworker struct {
-	HooksStub        func(log lager.Logger, handle, spec string) (gardener.Hooks, error)
+	HooksStub        func(log lager.Logger, handle, spec string) ([]gardener.Hooks, error)
 	hooksMutex       sync.RWMutex
 	hooksArgsForCall []struct {
 		log    lager.Logger
@@ -18,7 +18,7 @@ type FakeNetworker struct {
 		spec   string
 	}
 	hooksReturns struct {
-		result1 gardener.Hooks
+		result1 []gardener.Hooks
 		result2 error
 	}
 	CapacityStub        func() uint64
@@ -61,7 +61,7 @@ type FakeNetworker struct {
 	}
 }
 
-func (fake *FakeNetworker) Hooks(log lager.Logger, handle string, spec string) (gardener.Hooks, error) {
+func (fake *FakeNetworker) Hooks(log lager.Logger, handle string, spec string) ([]gardener.Hooks, error) {
 	fake.hooksMutex.Lock()
 	fake.hooksArgsForCall = append(fake.hooksArgsForCall, struct {
 		log    lager.Logger
@@ -88,10 +88,10 @@ func (fake *FakeNetworker) HooksArgsForCall(i int) (lager.Logger, string, string
 	return fake.hooksArgsForCall[i].log, fake.hooksArgsForCall[i].handle, fake.hooksArgsForCall[i].spec
 }
 
-func (fake *FakeNetworker) HooksReturns(result1 gardener.Hooks, result2 error) {
+func (fake *FakeNetworker) HooksReturns(result1 []gardener.Hooks, result2 error) {
 	fake.HooksStub = nil
 	fake.hooksReturns = struct {
-		result1 gardener.Hooks
+		result1 []gardener.Hooks
 		result2 error
 	}{result1, result2}
 }
