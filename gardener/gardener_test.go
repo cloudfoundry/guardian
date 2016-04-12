@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
@@ -330,6 +331,23 @@ var _ = Describe("Gardener", func() {
 				d, err := gdnr.Lookup("handle")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(c).To(Equal(d))
+			})
+
+			Context("when a grace time is specified", func() {
+				It("sets the grace time via the property manager", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						Handle:    "something",
+						GraceTime: time.Minute,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(propertyManager.SetCallCount()).To(Equal(1))
+
+					handle, name, value := propertyManager.SetArgsForCall(0)
+					Expect(handle).To(Equal("something"))
+					Expect(name).To(Equal(gardener.GraceTimeKey))
+					Expect(value).To(Equal(fmt.Sprintf("%d", time.Minute)))
+				})
 			})
 		})
 
@@ -1211,6 +1229,45 @@ var _ = Describe("Gardener", func() {
 
 				_, err := container.CurrentCPULimits()
 				Expect(err).To(MatchError("some-error."))
+			})
+		})
+	})
+
+	Describe("GraceTime", func() {
+		var container garden.Container
+
+		BeforeEach(func() {
+			var err error
+			container, err = gdnr.Lookup("some-handle")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("when the grace time property is present", func() {
+			var graceTime time.Duration
+
+			BeforeEach(func() {
+				graceTime = time.Minute
+
+				propertyManager.GetReturns(fmt.Sprintf("%d", graceTime), nil)
+			})
+
+			It("returns the parsed duration", func() {
+				Expect(gdnr.GraceTime(container)).To(Equal(time.Minute))
+
+				Expect(propertyManager.GetCallCount()).To(Equal(1))
+				handle, name := propertyManager.GetArgsForCall(0)
+				Expect(handle).To(Equal("some-handle"))
+				Expect(name).To(Equal(gardener.GraceTimeKey))
+			})
+		})
+
+		Context("when getting the grace time fails (i.e. property not found)", func() {
+			BeforeEach(func() {
+				propertyManager.GetReturns("", errors.New("nope"))
+			})
+
+			It("returns no grace time", func() {
+				Expect(gdnr.GraceTime(container)).To(BeZero())
 			})
 		})
 	})
