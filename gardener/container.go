@@ -2,6 +2,7 @@ package gardener
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"time"
 
@@ -165,5 +166,5 @@ func (c *container) RemoveProperty(name string) error {
 }
 
 func (c *container) SetGraceTime(t time.Duration) error {
-	return nil
+	return c.propertyManager.Set(c.handle, GraceTimeKey, fmt.Sprintf("%d", t))
 }
