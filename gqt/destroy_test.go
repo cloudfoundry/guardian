@@ -135,19 +135,15 @@ var _ = Describe("Destroying a Container", func() {
 		})
 
 		It("should remove the network bridge", func() {
+			Expect(client.Destroy(existingContainer.Handle())).To(Succeed())
 			session, err := gexec.Start(
 				exec.Command("ifconfig"),
 				GinkgoWriter, GinkgoWriter,
 			)
-			Expect(err).NotTo(HaveOccurred())
-			Consistently(session).ShouldNot(gbytes.Say("w%d177-100-10-0", GinkgoParallelNode()))
 
-			session, err = gexec.Start(
-				exec.Command("ifconfig"),
-				GinkgoWriter, GinkgoWriter,
-			)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gbytes.Say("w%d168-100-20-0", GinkgoParallelNode()))
+			Eventually(session).Should(gexec.Exit(0))
+			Expect(session).NotTo(gbytes.Say("w%dbrdg-", GinkgoParallelNode()))
 		})
 	})
 })

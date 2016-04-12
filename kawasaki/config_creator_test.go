@@ -51,11 +51,14 @@ var _ = Describe("ConfigCreator", func() {
 		}).To(Panic())
 	})
 
-	It("assigns the bridge name based on the subnet", func() {
-		config, err := creator.Create(logger, "banana", subnet, ip)
+	It("assigns the same bridge name to all IPs in the same subnet", func() {
+		config1, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(config.BridgeName).To(Equal("w1192-168-12-0"))
+		config2, err := creator.Create(logger, "banana", subnet, net.ParseIP("3.4.5.6"))
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(config1.BridgeName).To(Equal(config2.BridgeName))
 	})
 
 	Context("when the subnet IP is of the form xxx.xxx.xxx.xxx", func() {
@@ -71,6 +74,13 @@ var _ = Describe("ConfigCreator", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(len(config.BridgeName)).To(BeNumerically("<=", 15))
+		})
+
+		It("starts all bridge names with the interface prefix then the string 'brdg-'", func() {
+			config, err := creator.Create(logger, "banana", subnet, ip)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(config.BridgeName).To(HavePrefix("w1brdg-"))
 		})
 	})
 

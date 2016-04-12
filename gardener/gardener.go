@@ -441,5 +441,6 @@ func (g *Gardener) cleanupContainers(log lager.Logger) error {
 			return err
 		}
 	}
+
 	return nil
 }
