@@ -72,6 +72,29 @@ var _ = Describe("Run", func() {
 		),
 	)
 
+	It("cleans up any files by the time the process exits", func() {
+		client = startGarden()
+		container, err := client.Create(garden.ContainerSpec{
+			RootFSPath: runner.RootFSPath,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		before := filesInDir(filepath.Join(client.DepotDir, container.Handle()))
+
+		process, err := container.Run(garden.ProcessSpec{
+			Path: "echo",
+			Args: []string{
+				"ohai",
+			},
+		}, garden.ProcessIO{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(process.Wait()).To(Equal(0))
+
+		after := filesInDir(filepath.Join(client.DepotDir, container.Handle()))
+
+		Expect(after).To(ConsistOf(before))
+	})
+
 	Describe("security", func() {
 		Describe("rlimits", func() {
 			It("sets requested rlimits, even if they are increased above current limit", func() {
@@ -314,6 +337,21 @@ func spec(path string, args ...string) garden.ProcessSpec {
 		Path: path,
 		Args: args,
 	}
+}
+
+func filesInDir(path string) []string {
+	files := make([]string, 0)
+	Expect(filepath.Walk(path, func(p string, i os.FileInfo, err error) error {
+		Expect(err).NotTo(HaveOccurred())
+		if i.Mode()&os.ModeDir == os.ModeDir {
+			return nil
+		}
+
+		files = append(files, p)
+
+		return nil
+	})).To(Succeed())
+	return files
 }
 
 type process struct {

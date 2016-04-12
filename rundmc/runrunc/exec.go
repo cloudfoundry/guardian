@@ -82,18 +82,18 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, id string, spec garden.Proce
 }
 
 type ExecRunner struct {
-	pidGenerator       UidGenerator
-	runc               RuncBinary
-	tracker            ProcessTracker
-	processJsonCleaner Cleaner
+	pidGenerator UidGenerator
+	runc         RuncBinary
+	tracker      ProcessTracker
+	waitWatcher  WaitWatcher
 }
 
-func NewExecRunner(pidGen UidGenerator, runc RuncBinary, tracker ProcessTracker, processJsonCleaner Cleaner) *ExecRunner {
+func NewExecRunner(pidGen UidGenerator, runc RuncBinary, tracker ProcessTracker, waitWatcher WaitWatcher) *ExecRunner {
 	return &ExecRunner{
-		pidGenerator:       pidGen,
-		runc:               runc,
-		tracker:            tracker,
-		processJsonCleaner: processJsonCleaner,
+		pidGenerator: pidGen,
+		runc:         runc,
+		tracker:      tracker,
+		waitWatcher:  waitWatcher,
 	}
 }
 
@@ -128,10 +128,12 @@ func (e *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, i
 	process, err := e.tracker.Run(pid, cmd, io, tty, pidFilePath)
 	if err != nil {
 		log.Error("run-failed", err)
+		RemoveFiles([]string{processJson.Name(), pidFilePath}).Run(log)
+
 		return nil, err
 	}
 
-	go e.processJsonCleaner.Clean(log, process, processJson.Name())
+	go e.waitWatcher.OnExit(log, process, RemoveFiles([]string{processJson.Name(), pidFilePath}))
 
 	return process, nil
 }
@@ -228,18 +230,35 @@ func (r *ExecPreparer) ensureDirExists(rootfsPath, dir string, uid, gid int) err
 }
 
 //go:generate counterfeiter . Waiter
+//go:generate counterfeiter . Runner
+
 type Waiter interface {
 	Wait() (int, error)
 }
 
-//go:generate counterfeiter . Cleaner
-type Cleaner interface {
-	Clean(log lager.Logger, process Waiter, path string)
+type Runner interface {
+	Run(log lager.Logger)
 }
 
-type ProcessJsonCleaner struct{}
+//go:generate counterfeiter . WaitWatcher
 
-func (ProcessJsonCleaner) Clean(log lager.Logger, process Waiter, path string) {
+type WaitWatcher interface { // get it??
+	OnExit(log lager.Logger, process Waiter, onExit Runner)
+}
+
+type Watcher struct{}
+
+func (w Watcher) OnExit(log lager.Logger, process Waiter, onExit Runner) {
 	process.Wait()
-	os.Remove(path)
+	onExit.Run(log)
+}
+
+type RemoveFiles []string
+
+func (files RemoveFiles) Run(log lager.Logger) {
+	for _, file := range files {
+		if err := os.Remove(file); err != nil {
+			log.Error("cleanup-process-json-failed", err)
+		}
+	}
 }

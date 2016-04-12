@@ -33,7 +33,7 @@ var _ = Describe("Exec", func() {
 		mkdirer       *fakes.FakeMkdirer
 		bundlePath    string
 		logger        *lagertest.TestLogger
-		cleaner       *fakes.FakeCleaner
+		waitWatcher   *fakes.FakeWaitWatcher
 
 		runner       *runrunc.Execer
 		execPreparer *runrunc.ExecPreparer
@@ -48,7 +48,7 @@ var _ = Describe("Exec", func() {
 		bundleLoader = new(fakes.FakeBundleLoader)
 		users = new(fakes.FakeUserLookupper)
 		mkdirer = new(fakes.FakeMkdirer)
-		cleaner = new(fakes.FakeCleaner)
+		waitWatcher = new(fakes.FakeWaitWatcher)
 
 		execPreparer = runrunc.NewExecPreparer(
 			bundleLoader,
@@ -66,7 +66,7 @@ var _ = Describe("Exec", func() {
 				pidGenerator,
 				runcBinary,
 				tracker,
-				cleaner,
+				waitWatcher,
 			),
 		)
 
@@ -145,44 +145,71 @@ var _ = Describe("Exec", func() {
 		Expect(cmd.Args[3]).To(Equal(path.Join(bundlePath, "/processes/another-process-guid.json")))
 	})
 
-	Describe("the process.json passed to 'runc exec'", func() {
-		var spec specs.Process
-		var processJsonPath string
-		var fakeProcess *fakes.FakeProcess
+	Describe("process-related files", func() {
+		Context("when process tracker succeeds", func() {
+			var spec specs.Process
+			var processJsonPath, pidFilePath string
+			var fakeProcess *fakes.FakeProcess
 
-		BeforeEach(func() {
-			pidGenerator.GenerateReturns("another-process-guid")
+			BeforeEach(func() {
+				pidGenerator.GenerateReturns("another-process-guid")
 
-			fakeProcess = new(fakes.FakeProcess)
-			tracker.RunStub = func(_ string, cmd *exec.Cmd, _ garden.ProcessIO, _ *garden.TTYSpec, _ string) (garden.Process, error) {
-				processJsonPath = cmd.Args[3]
+				fakeProcess = new(fakes.FakeProcess)
+				tracker.RunStub = func(_ string, cmd *exec.Cmd, _ garden.ProcessIO, _ *garden.TTYSpec, pidPath string) (garden.Process, error) {
+					processJsonPath = cmd.Args[3]
+					pidFilePath = pidPath
 
-				f, err := os.Open(processJsonPath)
+					f, err := os.Open(processJsonPath)
+					Expect(err).NotTo(HaveOccurred())
+
+					json.NewDecoder(f).Decode(&spec)
+					return fakeProcess, nil
+				}
+
+				_, err := runner.Exec(logger, bundlePath, "some-id", garden.ProcessSpec{
+					Path: "potato",
+					Args: []string{"boom"},
+				}, garden.ProcessIO{Stdout: GinkgoWriter})
 				Expect(err).NotTo(HaveOccurred())
+			})
 
-				json.NewDecoder(f).Decode(&spec)
-				return fakeProcess, nil
-			}
+			Describe("the process.json file passed to 'runc exec'", func() {
+				It("is the encoded version of the config", func() {
+					Expect(spec.Args).To(ConsistOf("potato", "boom"))
+				})
+			})
 
-			_, err := runner.Exec(logger, bundlePath, "some-id", garden.ProcessSpec{
-				Path: "potato",
-				Args: []string{"boom"},
-			}, garden.ProcessIO{Stdout: GinkgoWriter})
-			Expect(err).NotTo(HaveOccurred())
+			It("defers cleanup of the process.json and pid file until the process has completed", func() {
+				Eventually(waitWatcher.OnExitCallCount).Should(Equal(1))
+
+				_, process, callback := waitWatcher.OnExitArgsForCall(0)
+				Expect(process).To(Equal(fakeProcess))
+				Expect(callback).To(ConsistOf(
+					processJsonPath, pidFilePath,
+				))
+			})
 		})
 
-		It("is the encoded version of the config", func() {
-			Expect(spec.Args).To(ConsistOf("potato", "boom"))
-		})
+		Context("when process tracker fails", func() {
+			It("immediately cleans up the process.json and pid file ", func() {
+				var processJsonPath, pidFilePath string
+				tracker.RunStub = func(_ string, cmd *exec.Cmd, _ garden.ProcessIO, _ *garden.TTYSpec, pidPath string) (garden.Process, error) {
+					processJsonPath = cmd.Args[3]
+					pidFilePath = pidPath
 
-		It("defers cleanup of the json file until the process has completed", func() {
-			Eventually(cleaner.CleanCallCount).Should(Equal(1))
-			_, process, file := cleaner.CleanArgsForCall(0)
-			Expect(process).To(Equal(fakeProcess))
-			Expect(file).To(Equal(processJsonPath))
-		})
+					Expect(ioutil.WriteFile(processJsonPath, []byte{}, 0700)).To(Succeed())
+					Expect(ioutil.WriteFile(pidFilePath, []byte{}, 0700)).To(Succeed())
 
-		PIt("doesnt leak when the thing fails", func() {})
+					return nil, errors.New("Boom")
+				}
+
+				_, err := runner.Exec(logger, bundlePath, "some-id", garden.ProcessSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
+				Expect(err).To(MatchError(ContainSubstring("Boom")))
+
+				Expect(processJsonPath).NotTo(BeAnExistingFile())
+				Expect(pidFilePath).NotTo(BeAnExistingFile())
+			})
+		})
 	})
 })
 
@@ -575,30 +602,44 @@ var _ = Describe("ExecPreparer", func() {
 	})
 })
 
-var _ = Describe("ProcessJsonCleaner", func() {
-	var waiter *fakes.FakeWaiter
-	var file string
-
-	BeforeEach(func() {
-		waiter = new(fakes.FakeWaiter)
-
-		tmp, err := ioutil.TempFile("", "cleanwhendone")
-		Expect(err).NotTo(HaveOccurred())
-
-		file = tmp.Name()
-	})
-
-	It("removes the given path once Wait returns", func() {
+var _ = Describe("WaitWatcher", func() {
+	It("calls Wait only once process.Wait returns", func() {
+		waiter := new(fakes.FakeWaiter)
+		waitReturns := make(chan struct{})
 		waiter.WaitStub = func() (int, error) {
-			Expect(file).To(BeAnExistingFile())
+			<-waitReturns
 			return 0, nil
 		}
 
-		runrunc.ProcessJsonCleaner{}.Clean(lagertest.NewTestLogger("test"), waiter, file)
-		Expect(file).NotTo(BeAnExistingFile())
+		runner := new(fakes.FakeRunner)
+
+		watcher := runrunc.Watcher{}
+		go watcher.OnExit(lagertest.NewTestLogger("test"), waiter, runner)
+
+		Consistently(runner.RunCallCount).ShouldNot(Equal(1))
+		close(waitReturns)
+		Eventually(runner.RunCallCount).Should(Equal(1))
+	})
+})
+
+var _ = Describe("RemoveFiles", func() {
+	It("removes all the paths", func() {
+		a := tmpFile("testremovefiles")
+		b := tmpFile("testremovefiles")
+
+		runrunc.RemoveFiles([]string{a, b}).Run(lagertest.NewTestLogger("test"))
+		Expect(a).NotTo(BeAnExistingFile())
+		Expect(b).NotTo(BeAnExistingFile())
 	})
 })
 
 func rootfsPath(bundlePath string) string {
 	return "/rootfs/of/bundle" + bundlePath
+}
+
+func tmpFile(name string) string {
+	tmp, err := ioutil.TempFile("", name)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(tmp.Close()).To(Succeed())
+	return tmp.Name()
 }
