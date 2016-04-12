@@ -181,7 +181,7 @@ var _ = Describe("CgroupStarter", func() {
 				})
 			})
 
-			It("mounts it as its own subsystem", func() {
+			It("skips it", func() {
 				starter.Start()
 
 				Expect(runner).ToNot(HaveExecutedSerially(fake_command_runner.CommandSpec{
