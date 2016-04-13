@@ -15,6 +15,11 @@ type FakePortPool struct {
 		result1 uint32
 		result2 error
 	}
+	ReleaseStub        func(uint32)
+	releaseMutex       sync.RWMutex
+	releaseArgsForCall []struct {
+		arg1 uint32
+	}
 }
 
 func (fake *FakePortPool) Acquire() (uint32, error) {
@@ -40,6 +45,29 @@ func (fake *FakePortPool) AcquireReturns(result1 uint32, result2 error) {
 		result1 uint32
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakePortPool) Release(arg1 uint32) {
+	fake.releaseMutex.Lock()
+	fake.releaseArgsForCall = append(fake.releaseArgsForCall, struct {
+		arg1 uint32
+	}{arg1})
+	fake.releaseMutex.Unlock()
+	if fake.ReleaseStub != nil {
+		fake.ReleaseStub(arg1)
+	}
+}
+
+func (fake *FakePortPool) ReleaseCallCount() int {
+	fake.releaseMutex.RLock()
+	defer fake.releaseMutex.RUnlock()
+	return len(fake.releaseArgsForCall)
+}
+
+func (fake *FakePortPool) ReleaseArgsForCall(i int) uint32 {
+	fake.releaseMutex.RLock()
+	defer fake.releaseMutex.RUnlock()
+	return fake.releaseArgsForCall[i].arg1
 }
 
 var _ kawasaki.PortPool = new(FakePortPool)

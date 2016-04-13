@@ -294,6 +294,30 @@ var _ = Describe("Net", func() {
 			Eventually(func() *gexec.Session { return sendRequest(externalIP, actualHostPort).Wait() }).
 				Should(gbytes.Say(fmt.Sprintf("%d", actualContainerPort)))
 		})
+
+		Describe("allocating and releasing ports", func() {
+			BeforeEach(func() {
+				args = append(args, "--port-pool-size", "1")
+			})
+
+			It("releases ports after the container is destroyed", func() {
+				container2, err := client.Create(garden.ContainerSpec{
+					RootFSPath: runner.RootFSPath,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, _, err = container2.NetIn(0, 0)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, _, err = container.NetIn(0, 0)
+				Expect(err).To(HaveOccurred())
+
+				Expect(client.Destroy(container2.Handle())).To(Succeed())
+
+				_, _, err = container.NetIn(0, 0)
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 
 	Describe("NetOut", func() {

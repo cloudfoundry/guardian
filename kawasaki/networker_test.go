@@ -95,7 +95,11 @@ var _ = Describe("Networker", func() {
 
 		fakeConfigStore.GetStub = func(handle, name string) (string, error) {
 			Expect(handle).To(Equal("some-handle"))
-			return config[name], nil
+			if val, ok := config[name]; ok {
+				return val, nil
+			}
+
+			return "", errors.New("nope")
 		}
 	})
 
@@ -323,6 +327,27 @@ var _ = Describe("Networker", func() {
 					fakeSubnetPool.ReleaseReturns(errors.New("oh no"))
 					Expect(networker.Destroy(logger, "some-handle")).To(MatchError("oh no"))
 				})
+			})
+		})
+
+		Describe("releasing ports", func() {
+			It("does nothing when no ports are stored in the config", func() {
+				Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
+				Expect(fakePortPool.ReleaseCallCount()).To(Equal(0))
+			})
+
+			It("destroys any ports named in the config", func() {
+				config[gardener.MappedPortsKey] = `[{"HostPort": 123}, {"HostPort": 456}]`
+
+				Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
+				Expect(fakePortPool.ReleaseCallCount()).To(Equal(2))
+				Expect(fakePortPool.ReleaseArgsForCall(0)).To(BeEquivalentTo(123))
+				Expect(fakePortPool.ReleaseArgsForCall(1)).To(BeEquivalentTo(456))
+			})
+
+			It("returns an error if the ports property is not valid JSON", func() {
+				config[gardener.MappedPortsKey] = `potato`
+				Expect(networker.Destroy(logger, "some-handle")).To(MatchError(ContainSubstring("invalid")))
 			})
 		})
 	})
