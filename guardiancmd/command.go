@@ -11,7 +11,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden-shed/distclient"
 	"github.com/nu7hatch/gouuid"
-	"github.com/opencontainers/specs/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go"
 
 	quotaed_aufs "github.com/cloudfoundry-incubator/garden-shed/docker_drivers/aufs"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake"

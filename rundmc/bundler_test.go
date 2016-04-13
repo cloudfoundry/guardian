@@ -7,7 +7,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/specs/specs-go"
+	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("BundleTemplate", func() {
