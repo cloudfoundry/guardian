@@ -47,16 +47,16 @@ var _ = Describe("Create", func() {
 
 		BeforeEach(func() {
 			specs = []fake_command_runner.CommandSpec{
-				fake_command_runner.CommandSpec{
+				{
 					Path: "iptables",
 					Args: []string{"--wait", "--table", "nat", "-N", "prefix-instance-some-id"},
 				},
-				fake_command_runner.CommandSpec{
+				{
 					Path: "iptables",
 					Args: []string{"--wait", "--table", "nat", "-A", "prefix-prerouting",
 						"--jump", "prefix-instance-some-id"},
 				},
-				fake_command_runner.CommandSpec{
+				{
 					Path: "sh",
 					Args: []string{"-c", fmt.Sprintf(
 						`(iptables --wait --table nat -S %s | grep "\-j MASQUERADE\b" | grep -q -F -- "-s %s") || iptables --wait --table nat -A %s --source %s ! --destination %s --jump MASQUERADE`,
@@ -64,21 +64,21 @@ var _ = Describe("Create", func() {
 						network.String(), network.String(),
 					)},
 				},
-				fake_command_runner.CommandSpec{
+				{
 					Path: "iptables",
 					Args: []string{"--wait", "-N", "prefix-instance-some-id"},
 				},
-				fake_command_runner.CommandSpec{
+				{
 					Path: "iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id",
 						"-s", network.String(), "-d", network.String(), "-j", "ACCEPT"},
 				},
-				fake_command_runner.CommandSpec{
+				{
 					Path: "iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id",
 						"--goto", "prefix-default"},
 				},
-				fake_command_runner.CommandSpec{
+				{
 					Path: "iptables",
 					Args: []string{"--wait", "-I", "prefix-forward", "2", "--in-interface", bridgeName,
 						"--source", ip.String(), "--goto", "prefix-instance-some-id"},
@@ -112,39 +112,39 @@ var _ = Describe("Create", func() {
 		Describe("nat chain", func() {
 			BeforeEach(func() {
 				specs = []fake_command_runner.CommandSpec{
-					fake_command_runner.CommandSpec{
+					{
 						Path: "sh",
 						Args: []string{"-c", fmt.Sprintf(
 							`iptables --wait --table nat -S %s 2> /dev/null | grep "\-j %s\b" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 iptables --wait --table nat`,
 							"prefix-prerouting", "prefix-instance-some-id",
 						)},
 					},
-					fake_command_runner.CommandSpec{
+					{
 						Path: "sh",
 						Args: []string{"-c", fmt.Sprintf(
 							`iptables --wait --table nat -F %s 2> /dev/null || true`,
 							"prefix-instance-some-id",
 						)},
 					},
-					fake_command_runner.CommandSpec{
+					{
 						Path: "sh",
 						Args: []string{"-c", fmt.Sprintf(
 							`iptables --wait --table nat -X %s 2> /dev/null || true`,
 							"prefix-instance-some-id",
 						)},
 					},
-					fake_command_runner.CommandSpec{
+					{
 						Path: "sh",
 						Args: []string{"-c", fmt.Sprintf(
 							`iptables --wait -S %s 2> /dev/null | grep "\-g %s\b" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 iptables --wait`,
 							"prefix-forward", "prefix-instance-some-id",
 						)},
 					},
-					fake_command_runner.CommandSpec{
+					{
 						Path: "sh",
 						Args: []string{"-c", fmt.Sprintf("iptables --wait -F %s 2> /dev/null || true", "prefix-instance-some-id")},
 					},
-					fake_command_runner.CommandSpec{
+					{
 						Path: "sh",
 						Args: []string{"-c", fmt.Sprintf("iptables --wait -X %s 2> /dev/null || true", "prefix-instance-some-id")},
 					},

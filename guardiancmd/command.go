@@ -194,7 +194,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
 	ipt := cmd.wireIptables(logger, chainPrefix)
 
-	propManager := properties.NewManager(&properties.FilesystemPersister{PersistenceDir: cmd.Server.PropertiesPath})
+	propManager := properties.NewManager()
 
 	dnsIPs := make([]net.IP, len(cmd.Network.DNSServers))
 	for i, ip := range cmd.Network.DNSServers {
@@ -456,11 +456,11 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	)
 
 	mounts := []specs.Mount{
-		specs.Mount{Type: "proc", Source: "proc", Destination: "/proc"},
-		specs.Mount{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
-		specs.Mount{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
+		{Type: "proc", Source: "proc", Destination: "/proc"},
+		{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
+		{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
 			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
-		specs.Mount{Type: "bind", Source: cmd.Bin.Init.Path(), Destination: "/tmp/garden-init", Options: []string{"bind"}},
+		{Type: "bind", Source: cmd.Bin.Init.Path(), Destination: "/tmp/garden-init", Options: []string{"bind"}},
 	}
 
 	rwm := "rwm"
@@ -524,7 +524,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	eventStore := rundmc.NewEventStore(properties)
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 
-	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, eventStore)
+	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, rundmc.NewExitStore(), eventStore)
 }
 
 func (cmd *GuardianCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {

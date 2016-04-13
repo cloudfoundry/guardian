@@ -139,11 +139,9 @@ var _ = Describe("Networker", func() {
 
 		It("stores the config to ConfigStore", func() {
 			config := make(map[string]string)
-			fakeConfigStore.SetStub = func(handle, name, value string) error {
+			fakeConfigStore.SetStub = func(handle, name, value string) {
 				Expect(handle).To(Equal("some-handle"))
-
 				config[name] = value
-				return nil
 			}
 
 			_, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30", "external-network-spec")
@@ -160,15 +158,6 @@ var _ = Describe("Networker", func() {
 			Expect(config["kawasaki.iptable-inst"]).To(Equal(networkConfig.IPTableInstance))
 			Expect(config["kawasaki.mtu"]).To(Equal(strconv.Itoa(networkConfig.Mtu)))
 			Expect(config["kawasaki.dns-servers"]).To(Equal("8.8.8.8, 8.8.4.4"))
-		})
-
-		Context("when the configuration can't be created", func() {
-			It("returns a wrapped error", func() {
-				fakeConfigStore.SetReturns(errors.New("failed to set"))
-
-				_, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30", "external-network-spec")
-				Expect(err).To(MatchError("failed to save config: failed to set"))
-			})
 		})
 
 		Context("configuring Hooks", func() {
@@ -304,20 +293,10 @@ var _ = Describe("Networker", func() {
 	})
 
 	Describe("Destroy", func() {
-		It("should destroy the configuration", func() {
-			Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
-
-			Expect(fakeConfigurer.DestroyCallCount()).To(Equal(1))
-			_, netConfig := fakeConfigurer.DestroyArgsForCall(0)
-			Expect(netConfig).To(Equal(networkConfig))
-		})
-
-		Context("when the configuration is not destroyed", func() {
-			It("should return the error", func() {
-				fakeConfigurer.DestroyReturns(errors.New("spiderman-error"))
-
-				err := networker.Destroy(logger, "some-handle")
-				Expect(err).To(MatchError("spiderman-error"))
+		Context("when the store does not contain the properties for the container", func() {
+			It("should skip destroy, to maintain idempotence", func() {
+				config = nil
+				Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
 			})
 		})
 
@@ -481,15 +460,6 @@ var _ = Describe("Networker", func() {
 
 			It("does not add the new port mapping", func() {
 				Expect(fakeConfigStore.SetCallCount()).To(Equal(0))
-			})
-		})
-
-		Context("when storing the port mapping fails", func() {
-			It("returns an error", func() {
-				fakeConfigStore.SetReturns(errors.New("failed to set"))
-
-				_, _, err := networker.NetIn(logger, handle, 0, 0)
-				Expect(err).To(MatchError("add-port-mapping: failed to set"))
 			})
 		})
 

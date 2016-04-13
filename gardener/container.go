@@ -158,13 +158,16 @@ func (c *container) Property(name string) (string, error) {
 }
 
 func (c *container) SetProperty(name string, value string) error {
-	return c.propertyManager.Set(c.handle, name, value)
+	c.propertyManager.Set(c.handle, name, value)
+	return nil
 }
 
 func (c *container) RemoveProperty(name string) error {
-	return c.propertyManager.Remove(c.handle, name)
+	c.propertyManager.Remove(c.handle, name)
+	return nil
 }
 
 func (c *container) SetGraceTime(t time.Duration) error {
-	return c.propertyManager.Set(c.handle, GraceTimeKey, fmt.Sprintf("%d", t))
+	c.propertyManager.Set(c.handle, GraceTimeKey, fmt.Sprintf("%d", t))
+	return nil
 }

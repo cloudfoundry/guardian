@@ -1,7 +1,6 @@
 package rundmc
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 )
@@ -9,7 +8,7 @@ import (
 //go:generate counterfeiter . Properties
 
 type Properties interface {
-	Set(handle string, key string, value string) error
+	Set(handle string, key string, value string)
 	Get(handle string, key string) (string, error)
 }
 
@@ -29,10 +28,7 @@ func (e *events) OnEvent(handle, event string) error {
 	defer e.mu.Unlock()
 
 	events := append(e.Events(handle), event)
-	err := e.props.Set(handle, "rundmc.events", strings.Join(events, ","))
-	if err != nil {
-		return fmt.Errorf("failed to handle onEvent: %s", err)
-	}
+	e.props.Set(handle, "rundmc.events", strings.Join(events, ","))
 
 	return nil
 }

@@ -49,7 +49,7 @@ var _ = Describe("Bind mount", func() {
 			garden.ContainerSpec{
 				RootFSPath: runner.RootFSPath,
 				Privileged: privilegedContainer,
-				BindMounts: []garden.BindMount{garden.BindMount{
+				BindMounts: []garden.BindMount{{
 					SrcPath: srcPath,
 					DstPath: dstPath,
 					Mode:    bindMountMode,

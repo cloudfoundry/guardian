@@ -19,6 +19,7 @@ import (
 //go:generate counterfeiter . NstarRunner
 //go:generate counterfeiter . EventStore
 //go:generate counterfeiter . BundleLoader
+//go:generate counterfeiter . ExitStore
 
 type Depot interface {
 	Create(log lager.Logger, handle string, bundle depot.BundleSaver) error
@@ -40,7 +41,7 @@ type BundleLoader interface {
 }
 
 type BundleRunner interface {
-	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
+	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) (exit <-chan struct{}, err error)
 	Exec(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
@@ -58,6 +59,12 @@ type EventStore interface {
 	Events(id string) []string
 }
 
+type ExitStore interface {
+	Store(handle string, exit <-chan struct{})
+	Unstore(handle string)
+	Wait(handle string)
+}
+
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
 	depot   Depot
@@ -65,10 +72,11 @@ type Containerizer struct {
 	runner  BundleRunner
 	loader  BundleLoader
 	nstar   NstarRunner
+	exits   ExitStore
 	events  EventStore
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader BundleLoader, nstarRunner NstarRunner, events EventStore) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader BundleLoader, nstarRunner NstarRunner, exitStore ExitStore, events EventStore) *Containerizer {
 	return &Containerizer{
 		depot:   depot,
 		bundler: bundler,
@@ -76,6 +84,7 @@ func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader Bundl
 		loader:  loader,
 		nstar:   nstarRunner,
 		events:  events,
+		exits:   exitStore,
 	}
 }
 
@@ -97,11 +106,13 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		return err
 	}
 
-	err = c.runner.Start(log, path, spec.Handle, garden.ProcessIO{})
+	exitCh, err := c.runner.Start(log, path, spec.Handle, garden.ProcessIO{})
 	if err != nil {
 		log.Error("start", err)
 		return err
 	}
+
+	c.exits.Store(spec.Handle, exitCh)
 
 	go func() {
 		if err := c.runner.WatchEvents(log, spec.Handle, c.events); err != nil {
@@ -194,6 +205,10 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 			return err
 		}
 	}
+
+	// wait for container to exit as a result of kill
+	c.exits.Wait(handle)
+	c.exits.Unstore(handle)
 
 	return c.depot.Destroy(log, handle)
 }

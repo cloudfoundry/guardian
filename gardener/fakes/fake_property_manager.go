@@ -18,15 +18,12 @@ type FakePropertyManager struct {
 		result1 garden.Properties
 		result2 error
 	}
-	SetStub        func(handle string, name string, value string) error
+	SetStub        func(handle string, name string, value string)
 	setMutex       sync.RWMutex
 	setArgsForCall []struct {
 		handle string
 		name   string
 		value  string
-	}
-	setReturns struct {
-		result1 error
 	}
 	RemoveStub        func(handle string, name string) error
 	removeMutex       sync.RWMutex
@@ -47,7 +44,7 @@ type FakePropertyManager struct {
 		result1 string
 		result2 error
 	}
-	MatchesAllStub        func(handle string, props garden.Properties) (bool, error)
+	MatchesAllStub        func(handle string, props garden.Properties) bool
 	matchesAllMutex       sync.RWMutex
 	matchesAllArgsForCall []struct {
 		handle string
@@ -55,7 +52,6 @@ type FakePropertyManager struct {
 	}
 	matchesAllReturns struct {
 		result1 bool
-		result2 error
 	}
 	DestroyKeySpaceStub        func(string) error
 	destroyKeySpaceMutex       sync.RWMutex
@@ -100,7 +96,7 @@ func (fake *FakePropertyManager) AllReturns(result1 garden.Properties, result2 e
 	}{result1, result2}
 }
 
-func (fake *FakePropertyManager) Set(handle string, name string, value string) error {
+func (fake *FakePropertyManager) Set(handle string, name string, value string) {
 	fake.setMutex.Lock()
 	fake.setArgsForCall = append(fake.setArgsForCall, struct {
 		handle string
@@ -109,9 +105,7 @@ func (fake *FakePropertyManager) Set(handle string, name string, value string) e
 	}{handle, name, value})
 	fake.setMutex.Unlock()
 	if fake.SetStub != nil {
-		return fake.SetStub(handle, name, value)
-	} else {
-		return fake.setReturns.result1
+		fake.SetStub(handle, name, value)
 	}
 }
 
@@ -125,13 +119,6 @@ func (fake *FakePropertyManager) SetArgsForCall(i int) (string, string, string) 
 	fake.setMutex.RLock()
 	defer fake.setMutex.RUnlock()
 	return fake.setArgsForCall[i].handle, fake.setArgsForCall[i].name, fake.setArgsForCall[i].value
-}
-
-func (fake *FakePropertyManager) SetReturns(result1 error) {
-	fake.SetStub = nil
-	fake.setReturns = struct {
-		result1 error
-	}{result1}
 }
 
 func (fake *FakePropertyManager) Remove(handle string, name string) error {
@@ -201,7 +188,7 @@ func (fake *FakePropertyManager) GetReturns(result1 string, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakePropertyManager) MatchesAll(handle string, props garden.Properties) (bool, error) {
+func (fake *FakePropertyManager) MatchesAll(handle string, props garden.Properties) bool {
 	fake.matchesAllMutex.Lock()
 	fake.matchesAllArgsForCall = append(fake.matchesAllArgsForCall, struct {
 		handle string
@@ -211,7 +198,7 @@ func (fake *FakePropertyManager) MatchesAll(handle string, props garden.Properti
 	if fake.MatchesAllStub != nil {
 		return fake.MatchesAllStub(handle, props)
 	} else {
-		return fake.matchesAllReturns.result1, fake.matchesAllReturns.result2
+		return fake.matchesAllReturns.result1
 	}
 }
 
@@ -227,12 +214,11 @@ func (fake *FakePropertyManager) MatchesAllArgsForCall(i int) (string, garden.Pr
 	return fake.matchesAllArgsForCall[i].handle, fake.matchesAllArgsForCall[i].props
 }
 
-func (fake *FakePropertyManager) MatchesAllReturns(result1 bool, result2 error) {
+func (fake *FakePropertyManager) MatchesAllReturns(result1 bool) {
 	fake.MatchesAllStub = nil
 	fake.matchesAllReturns = struct {
 		result1 bool
-		result2 error
-	}{result1, result2}
+	}{result1}
 }
 
 func (fake *FakePropertyManager) DestroyKeySpace(arg1 string) error {

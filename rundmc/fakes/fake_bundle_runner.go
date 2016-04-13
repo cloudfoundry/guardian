@@ -12,7 +12,7 @@ import (
 )
 
 type FakeBundleRunner struct {
-	StartStub        func(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
+	StartStub        func(log lager.Logger, bundlePath, id string, io garden.ProcessIO) (exit <-chan struct{}, err error)
 	startMutex       sync.RWMutex
 	startArgsForCall []struct {
 		log        lager.Logger
@@ -21,7 +21,8 @@ type FakeBundleRunner struct {
 		io         garden.ProcessIO
 	}
 	startReturns struct {
-		result1 error
+		result1 <-chan struct{}
+		result2 error
 	}
 	ExecStub        func(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	execMutex       sync.RWMutex
@@ -77,7 +78,7 @@ type FakeBundleRunner struct {
 	}
 }
 
-func (fake *FakeBundleRunner) Start(log lager.Logger, bundlePath string, id string, io garden.ProcessIO) error {
+func (fake *FakeBundleRunner) Start(log lager.Logger, bundlePath string, id string, io garden.ProcessIO) (exit <-chan struct{}, err error) {
 	fake.startMutex.Lock()
 	fake.startArgsForCall = append(fake.startArgsForCall, struct {
 		log        lager.Logger
@@ -89,7 +90,7 @@ func (fake *FakeBundleRunner) Start(log lager.Logger, bundlePath string, id stri
 	if fake.StartStub != nil {
 		return fake.StartStub(log, bundlePath, id, io)
 	} else {
-		return fake.startReturns.result1
+		return fake.startReturns.result1, fake.startReturns.result2
 	}
 }
 
@@ -105,11 +106,12 @@ func (fake *FakeBundleRunner) StartArgsForCall(i int) (lager.Logger, string, str
 	return fake.startArgsForCall[i].log, fake.startArgsForCall[i].bundlePath, fake.startArgsForCall[i].id, fake.startArgsForCall[i].io
 }
 
-func (fake *FakeBundleRunner) StartReturns(result1 error) {
+func (fake *FakeBundleRunner) StartReturns(result1 <-chan struct{}, result2 error) {
 	fake.StartStub = nil
 	fake.startReturns = struct {
-		result1 error
-	}{result1}
+		result1 <-chan struct{}
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeBundleRunner) Exec(log lager.Logger, id string, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {

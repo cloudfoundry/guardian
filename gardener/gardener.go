@@ -66,10 +66,10 @@ type UidGenerator interface {
 
 type PropertyManager interface {
 	All(handle string) (props garden.Properties, err error)
-	Set(handle string, name string, value string) error
+	Set(handle string, name string, value string)
 	Remove(handle string, name string) error
 	Get(handle string, name string) (string, error)
-	MatchesAll(handle string, props garden.Properties) (bool, error)
+	MatchesAll(handle string, props garden.Properties) bool
 	DestroyKeySpace(string) error
 }
 
@@ -349,11 +349,7 @@ func (g *Gardener) Containers(props garden.Properties) ([]garden.Container, erro
 
 	var containers []garden.Container
 	for _, handle := range handles {
-		matched, err := g.PropertyManager.MatchesAll(handle, props)
-		if err != nil {
-			log.Error("matching-failed", err)
-			return []garden.Container{}, fmt.Errorf("failed to list containers: %s", err)
-		}
+		matched := g.PropertyManager.MatchesAll(handle, props)
 		if matched {
 			containers = append(containers, g.lookup(handle))
 		}

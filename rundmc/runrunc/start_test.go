@@ -46,7 +46,7 @@ var _ = Describe("Start", func() {
 			return nil
 		})
 
-		Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
+		Expect(ignoreExitCh(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{}))).To(Succeed())
 
 		Expect(commandRunner.StartedCommands()[0].Path).To(Equal("dadoo"))
 		Expect(commandRunner.StartedCommands()[0].Args).To(ConsistOf(
@@ -78,12 +78,40 @@ var _ = Describe("Start", func() {
 
 		done := make(chan struct{})
 		go func() {
-			Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
+			Expect(ignoreExitCh(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{}))).To(Succeed())
 			close(done)
 		}()
 
 		Eventually(waited).Should(BeClosed(), "should wait on the dadoo process to avoid zombies")
 		Eventually(done).Should(BeClosed(), "should not block on dadoo")
+	})
+
+	It("returns a channel that is only closed when dadoo returns", func() {
+		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+			Path: "dadoo",
+		}, func(cmd *exec.Cmd) error {
+			Expect(ioutil.WriteFile(cmd.Args[2], []byte(""), 0700)).To(Succeed())
+			_, err := cmd.ExtraFiles[0].Write([]byte{0})
+			Expect(err).NotTo(HaveOccurred())
+			cmd.ExtraFiles[0].Close()
+
+			return nil
+		})
+
+		dadooBlocks := make(chan struct{})
+		commandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
+			Path: "dadoo",
+		}, func(cmd *exec.Cmd) error {
+			<-dadooBlocks
+			return nil
+		})
+
+		exitCh, err := runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})
+		Expect(err).NotTo(HaveOccurred())
+
+		Consistently(exitCh).ShouldNot(BeClosed())
+		close(dadooBlocks)
+		Eventually(exitCh).Should(BeClosed())
 	})
 
 	It("returns an error if the log file from start can't be read", func() {
@@ -95,7 +123,7 @@ var _ = Describe("Start", func() {
 			return nil
 		})
 
-		Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError(ContainSubstring("start: read log file")))
+		Expect(ignoreExitCh(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{}))).To(MatchError(ContainSubstring("start: read log file")))
 	})
 
 	Describe("forwarding logs from runC", func() {
@@ -127,7 +155,7 @@ var _ = Describe("Start", func() {
 		})
 
 		It("sends all the logs to the logger", func() {
-			Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
+			Expect(ignoreExitCh(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{}))).To(Succeed())
 
 			runcLogs := make([]lager.LogFormat, 0)
 			for _, log := range logger.Logs() {
@@ -146,7 +174,7 @@ var _ = Describe("Start", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("dadoo: baboom"))
+				Expect(ignoreExitCh(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{}))).To(MatchError("dadoo: baboom"))
 			})
 		})
 
@@ -156,7 +184,7 @@ var _ = Describe("Start", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("dadoo: read fd3: EOF"))
+				Expect(ignoreExitCh(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{}))).To(MatchError("dadoo: read fd3: EOF"))
 			})
 		})
 
@@ -166,7 +194,7 @@ var _ = Describe("Start", func() {
 			})
 
 			It("return an error including parsed logs when runC fails to start the container", func() {
-				Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc start: exit status 3: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
+				Expect(ignoreExitCh(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{}))).To(MatchError("runc start: exit status 3: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
 			})
 
 			Context("when the log messages can't be parsed", func() {
@@ -176,9 +204,13 @@ var _ = Describe("Start", func() {
 				})
 
 				It("returns an error with only the exit status if the log can't be parsed", func() {
-					Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc start: exit status 3: "))
+					Expect(ignoreExitCh(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{}))).To(MatchError("runc start: exit status 3: "))
 				})
 			})
 		})
 	})
 })
+
+func ignoreExitCh(_ <-chan struct{}, err error) error {
+	return err
+}

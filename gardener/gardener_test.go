@@ -450,7 +450,7 @@ var _ = Describe("Gardener", func() {
 		Context("when bind mounts are specified", func() {
 			It("generates a proper mount spec", func() {
 				bindMounts := []garden.BindMount{
-					garden.BindMount{
+					{
 						SrcPath: "src",
 						DstPath: "dst",
 					},
@@ -564,11 +564,8 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("should return matching containers", func() {
-			propertyManager.MatchesAllStub = func(handle string, props garden.Properties) (bool, error) {
-				if handle != "banana" {
-					return true, nil
-				}
-				return false, nil
+			propertyManager.MatchesAllStub = func(handle string, props garden.Properties) bool {
+				return handle != "banana"
 			}
 
 			c, err := gdnr.Containers(garden.Properties{
@@ -578,19 +575,6 @@ var _ = Describe("Gardener", func() {
 			Expect(c).To(HaveLen(2))
 			Expect(c[0].Handle()).To(Equal("banana2"))
 			Expect(c[1].Handle()).To(Equal("cola"))
-		})
-
-		Context("when property matching errors", func() {
-			It("returns the error", func() {
-				propertyManager.MatchesAllStub = func(handle string, props garden.Properties) (bool, error) {
-					if handle == "banana2" {
-						return false, errors.New("boom")
-					}
-					return true, nil
-				}
-				_, err := gdnr.Containers(garden.Properties{})
-				Expect(err).To(MatchError("failed to list containers: boom"))
-			})
 		})
 
 		Describe("NetIn", func() {

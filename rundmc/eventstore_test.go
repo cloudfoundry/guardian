@@ -66,14 +66,4 @@ var _ = Describe("Event Store", func() {
 		events := rundmc.NewEventStore(props)
 		Expect(events.Events("some-container")).To(HaveLen(0))
 	})
-
-	Context("when set property errors", func() {
-		It("errors when set property error", func() {
-			events := rundmc.NewEventStore(props)
-			props.SetReturns(errors.New("bang"))
-
-			err := events.OnEvent("foo", "bar")
-			Expect(err).To(MatchError("failed to handle onEvent: bang"))
-		})
-	})
 })

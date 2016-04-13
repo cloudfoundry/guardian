@@ -58,7 +58,7 @@ type Configurer interface {
 //go:generate counterfeiter . ConfigStore
 
 type ConfigStore interface {
-	Set(handle string, name string, value string) error
+	Set(handle string, name string, value string)
 	Get(handle string, name string) (string, error)
 }
 
@@ -255,13 +255,10 @@ func (n *Networker) NetIn(log lager.Logger, handle string, externalPort, contain
 		return 0, 0, err
 	}
 
-	err = addPortMapping(log, n.configStore, handle, garden.PortMapping{
+	addPortMapping(log, n.configStore, handle, garden.PortMapping{
 		HostPort:      externalPort,
 		ContainerPort: containerPort,
 	})
-	if err != nil {
-		return 0, 0, err
-	}
 
 	return externalPort, containerPort, nil
 }
@@ -278,12 +275,8 @@ func (n *Networker) NetOut(log lager.Logger, handle string, rule garden.NetOutRu
 func (n *Networker) Destroy(log lager.Logger, handle string) error {
 	cfg, err := load(n.configStore, handle)
 	if err != nil {
-		return err
-	}
-
-	if err := n.configurer.Destroy(log, cfg); err != nil {
-		log.Error("destroy-config-failed", err)
-		return err
+		log.Debug("no-properties-for-container-skipping-destroy-network")
+		return nil
 	}
 
 	if err := n.subnetPool.Release(cfg.Subnet, cfg.ContainerIP); err != nil && err != subnets.ErrReleasedUnallocatedSubnet {
@@ -294,11 +287,12 @@ func (n *Networker) Destroy(log lager.Logger, handle string) error {
 	return nil
 }
 
-func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string, newMapping garden.PortMapping) error {
+func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string, newMapping garden.PortMapping) {
+	log := logger.Session("net-in", lager.Data{"handle": handle})
+
 	currentMappingsJson, err := configStore.Get(handle, gardener.MappedPortsKey)
 	if err != nil {
-		log := logger.Session("net-in", lager.Data{"handle": handle})
-		log.Debug(fmt.Sprintf("ConfigStore fails to get key: %s. Possibly it is not yet initialized.", gardener.MappedPortsKey))
+		log.Debug("config-store-no-key-skipping")
 	}
 
 	currentMappings := []garden.PortMapping{}
@@ -314,12 +308,7 @@ func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string,
 		panic(err)
 	}
 
-	err = configStore.Set(handle, gardener.MappedPortsKey, string(updatedMappingsJson))
-	if err != nil {
-		return fmt.Errorf("add-port-mapping: %s", err)
-	}
-
-	return nil
+	configStore.Set(handle, gardener.MappedPortsKey, string(updatedMappingsJson))
 }
 
 func getAll(config ConfigStore, handle string, key ...string) (vals []string, err error) {
@@ -336,25 +325,24 @@ func getAll(config ConfigStore, handle string, key ...string) (vals []string, er
 }
 
 func save(config ConfigStore, handle string, netConfig NetworkConfig) error {
-	errors := []error{}
-	errors = appendIfNotNil(errors, config.Set(handle, hostIntfKey, netConfig.HostIntf))
-	errors = appendIfNotNil(errors, config.Set(handle, containerIntfKey, netConfig.ContainerIntf))
-	errors = appendIfNotNil(errors, config.Set(handle, bridgeIntfKey, netConfig.BridgeName))
-	errors = appendIfNotNil(errors, config.Set(handle, bridgeIpKey, netConfig.BridgeIP.String()))
-	errors = appendIfNotNil(errors, config.Set(handle, containerIpKey, netConfig.ContainerIP.String()))
-	errors = appendIfNotNil(errors, config.Set(handle, subnetKey, netConfig.Subnet.String()))
-	errors = appendIfNotNil(errors, config.Set(handle, iptablePrefixKey, netConfig.IPTablePrefix))
-	errors = appendIfNotNil(errors, config.Set(handle, iptableInstanceKey, netConfig.IPTableInstance))
-	errors = appendIfNotNil(errors, config.Set(handle, mtuKey, strconv.Itoa(netConfig.Mtu)))
-	errors = appendIfNotNil(errors, config.Set(handle, externalIpKey, netConfig.ExternalIP.String()))
+	config.Set(handle, hostIntfKey, netConfig.HostIntf)
+	config.Set(handle, containerIntfKey, netConfig.ContainerIntf)
+	config.Set(handle, bridgeIntfKey, netConfig.BridgeName)
+	config.Set(handle, bridgeIpKey, netConfig.BridgeIP.String())
+	config.Set(handle, containerIpKey, netConfig.ContainerIP.String())
+	config.Set(handle, subnetKey, netConfig.Subnet.String())
+	config.Set(handle, iptablePrefixKey, netConfig.IPTablePrefix)
+	config.Set(handle, iptableInstanceKey, netConfig.IPTableInstance)
+	config.Set(handle, mtuKey, strconv.Itoa(netConfig.Mtu))
+	config.Set(handle, externalIpKey, netConfig.ExternalIP.String())
+
 	var dnsServers []string
 	for _, dnsServer := range netConfig.DNSServers {
 		dnsServers = append(dnsServers, dnsServer.String())
 	}
-	errors = appendIfNotNil(errors, config.Set(handle, dnsServerKey, strings.Join(dnsServers, ", ")))
-	if len(errors) > 0 {
-		return fmt.Errorf("failed to save config: %s", errors[len(errors)-1])
-	}
+
+	config.Set(handle, dnsServerKey, strings.Join(dnsServers, ", "))
+
 	return nil
 }
 

@@ -1,10 +1,8 @@
 package gqt_test
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
@@ -109,15 +107,5 @@ var _ = Describe("Properties", func() {
 		Expect(props).To(HaveKey("kawasaki.container-interface"))
 		Expect(props).To(HaveKey(gardener.ExternalIPKey))
 		Expect(props).To(HaveKey("kawasaki.mtu"))
-	})
-
-	It("persists properties to the specified location", func() {
-		file, err := os.Open(filepath.Join(propsDir, container.Handle()))
-		Expect(err).NotTo(HaveOccurred())
-
-		var props map[string]string
-		Expect(json.NewDecoder(file).Decode(&props)).To(Succeed())
-
-		Expect(props).To(HaveKey("kawasaki.container-interface"))
 	})
 })

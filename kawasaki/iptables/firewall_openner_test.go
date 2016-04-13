@@ -47,7 +47,7 @@ var _ = Describe("FirewallOpenner", func() {
 				It("does not limit the range", func() {
 					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
 						Networks: []garden.IPRange{
-							garden.IPRange{},
+							{},
 						},
 					})).To(Succeed())
 

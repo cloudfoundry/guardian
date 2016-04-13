@@ -70,9 +70,5 @@ func (c *configurer) Destroy(log lager.Logger, cfg NetworkConfig) error {
 		return err
 	}
 
-	if err := c.hostConfigurer.Destroy(cfg); err != nil {
-		return err
-	}
-
-	return nil
+	return c.hostConfigurer.Destroy(cfg)
 }
