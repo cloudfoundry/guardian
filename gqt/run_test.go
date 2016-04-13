@@ -70,6 +70,16 @@ var _ = Describe("Run", func() {
 			spec("potato"),
 			shouldNot(gexec.Exit(0)),
 		),
+
+		Entry("without a TTY",
+			spec("test", "-t", "1"),
+			should(gexec.Exit(1)),
+		),
+
+		Entry("with a TTY",
+			ttySpec("test", "-t", "1"),
+			should(gexec.Exit(0)),
+		),
 	)
 
 	It("cleans up any files by the time the process exits", func() {
@@ -352,6 +362,12 @@ func filesInDir(path string) []string {
 		return nil
 	})).To(Succeed())
 	return files
+}
+
+func ttySpec(path string, args ...string) garden.ProcessSpec {
+	base := spec(path, args...)
+	base.TTY = &garden.TTYSpec{}
+	return base
 }
 
 type process struct {
