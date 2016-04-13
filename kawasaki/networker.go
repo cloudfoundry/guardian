@@ -28,14 +28,6 @@ const iptableInstanceKey = "kawasaki.iptable-inst"
 const mtuKey = "kawasaki.mtu"
 const dnsServerKey = "kawasaki.dns-servers"
 
-//go:generate counterfeiter . NetnsMgr
-
-type NetnsMgr interface {
-	Create(log lager.Logger, handle string) error
-	Lookup(log lager.Logger, handle string) (string, error)
-	Destroy(log lager.Logger, handle string) error
-}
-
 //go:generate counterfeiter . SpecParser
 
 type SpecParser interface {
