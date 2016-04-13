@@ -455,12 +455,20 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	)
 
 	mounts := []specs.Mount{
-		{Type: "proc", Source: "proc", Destination: "/proc"},
+		{Type: "sysfs", Source: "sysfs", Destination: "/sys", Options: []string{"nosuid", "noexec", "nodev", "ro"}},
 		{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
 		{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
 			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
 		{Type: "bind", Source: cmd.Bin.Init.Path(), Destination: "/tmp/garden-init", Options: []string{"bind"}},
 	}
+
+	privilegedMounts := append(mounts,
+		specs.Mount{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
+	)
+
+	unprivilegedMounts := append(mounts,
+		specs.Mount{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev", "ro"}},
+	)
 
 	rwm := "rwm"
 	character := "c"
@@ -487,19 +495,23 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
 		WithResources(&specs.Resources{Devices: append([]specs.DeviceCgroup{denyAll}, allowedDevices...)}).
-		WithMounts(mounts...).
 		WithRootFS(defaultRootFSPath).
 		WithProcess(baseProcess)
 
 	unprivilegedBundle := baseBundle.
 		WithNamespace(goci.UserNamespace).
 		WithUIDMappings(idMappings...).
-		WithGIDMappings(idMappings...)
+		WithGIDMappings(idMappings...).
+		WithMounts(unprivilegedMounts...)
+
+	privilegedBundle := baseBundle.
+		WithMounts(privilegedMounts...).
+		WithCapabilities(append(DefaultCapabilities, "CAP_SYS_ADMIN")...)
 
 	template := &rundmc.BundleTemplate{
 		Rules: []rundmc.BundlerRule{
 			bundlerules.Base{
-				PrivilegedBase:   baseBundle,
+				PrivilegedBase:   privilegedBundle,
 				UnprivilegedBase: unprivilegedBundle,
 			},
 			bundlerules.RootFS{
@@ -511,12 +523,11 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 			bundlerules.Hooks{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
 			bundlerules.BindMounts{},
 			bundlerules.Env{},
-			bundlerules.PrivilegedCaps{},
 		},
 	}
 
 	log.Info("base-bundles", lager.Data{
-		"privileged":   baseBundle,
+		"privileged":   privilegedBundle,
 		"unprivileged": unprivilegedBundle,
 	})
 
