@@ -45,7 +45,7 @@ func (m *Manager) All(handle string) (garden.Properties, error) {
 	return m.prop[handle], nil
 }
 
-func (m *Manager) Get(handle string, name string) (string, error) {
+func (m *Manager) Get(handle string, name string) (string, bool) {
 	var (
 		prop   string
 		exists bool
@@ -54,13 +54,8 @@ func (m *Manager) Get(handle string, name string) (string, error) {
 	m.propMutex.RLock()
 	defer m.propMutex.RUnlock()
 
-	if prop, exists = m.prop[handle][name]; !exists {
-		return "", NoSuchPropertyError{
-			Message: fmt.Sprintf("cannot Get %s:%s", handle, name),
-		}
-	}
-
-	return prop, nil
+	prop, exists = m.prop[handle][name]
+	return prop, exists
 }
 
 func (m *Manager) Remove(handle string, name string) error {

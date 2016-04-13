@@ -38,19 +38,19 @@ func (c *container) Info() (garden.ContainerInfo, error) {
 	log.Info("starting")
 	defer log.Info("finished")
 
-	containerIP, err := c.propertyManager.Get(c.handle, ContainerIPKey)
-	if err != nil {
-		return garden.ContainerInfo{}, err
+	containerIP, ok := c.propertyManager.Get(c.handle, ContainerIPKey)
+	if !ok {
+		return garden.ContainerInfo{}, fmt.Errorf("info: no property found: %s", ContainerIPKey)
 	}
 
-	hostIP, err := c.propertyManager.Get(c.handle, BridgeIPKey)
-	if err != nil {
-		return garden.ContainerInfo{}, err
+	hostIP, ok := c.propertyManager.Get(c.handle, BridgeIPKey)
+	if !ok {
+		return garden.ContainerInfo{}, fmt.Errorf("info: no property found: %s", BridgeIPKey)
 	}
 
-	externalIP, err := c.propertyManager.Get(c.handle, ExternalIPKey)
-	if err != nil {
-		return garden.ContainerInfo{}, err
+	externalIP, ok := c.propertyManager.Get(c.handle, ExternalIPKey)
+	if !ok {
+		return garden.ContainerInfo{}, fmt.Errorf("info: no property found: %s", ExternalIPKey)
 	}
 
 	actualContainerSpec, err := c.containerizer.Info(c.logger, c.handle)
@@ -154,7 +154,11 @@ func (c *container) Properties() (garden.Properties, error) {
 }
 
 func (c *container) Property(name string) (string, error) {
-	return c.propertyManager.Get(c.handle, name)
+	if prop, ok := c.propertyManager.Get(c.handle, name); ok {
+		return prop, nil
+	}
+
+	return "", fmt.Errorf("property does not exist: %s", name)
 }
 
 func (c *container) SetProperty(name string, value string) error {

@@ -15,7 +15,7 @@ type FakeProperties struct {
 		key    string
 		value  string
 	}
-	GetStub        func(handle string, key string) (string, error)
+	GetStub        func(handle string, key string) (string, bool)
 	getMutex       sync.RWMutex
 	getArgsForCall []struct {
 		handle string
@@ -23,7 +23,7 @@ type FakeProperties struct {
 	}
 	getReturns struct {
 		result1 string
-		result2 error
+		result2 bool
 	}
 }
 
@@ -52,7 +52,7 @@ func (fake *FakeProperties) SetArgsForCall(i int) (string, string, string) {
 	return fake.setArgsForCall[i].handle, fake.setArgsForCall[i].key, fake.setArgsForCall[i].value
 }
 
-func (fake *FakeProperties) Get(handle string, key string) (string, error) {
+func (fake *FakeProperties) Get(handle string, key string) (string, bool) {
 	fake.getMutex.Lock()
 	fake.getArgsForCall = append(fake.getArgsForCall, struct {
 		handle string
@@ -78,11 +78,11 @@ func (fake *FakeProperties) GetArgsForCall(i int) (string, string) {
 	return fake.getArgsForCall[i].handle, fake.getArgsForCall[i].key
 }
 
-func (fake *FakeProperties) GetReturns(result1 string, result2 error) {
+func (fake *FakeProperties) GetReturns(result1 string, result2 bool) {
 	fake.GetStub = nil
 	fake.getReturns = struct {
 		result1 string
-		result2 error
+		result2 bool
 	}{result1, result2}
 }
 

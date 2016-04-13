@@ -59,7 +59,7 @@ type Configurer interface {
 
 type ConfigStore interface {
 	Set(handle string, name string, value string)
-	Get(handle string, name string) (string, error)
+	Get(handle string, name string) (string, bool)
 }
 
 //go:generate counterfeiter . PortPool
@@ -287,7 +287,7 @@ func (n *Networker) Destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	if ports, err := n.configStore.Get(handle, gardener.MappedPortsKey); err == nil {
+	if ports, ok := n.configStore.Get(handle, gardener.MappedPortsKey); ok {
 		mappings, err := portsFromJson(ports)
 		if err != nil {
 			return err
@@ -303,8 +303,8 @@ func (n *Networker) Destroy(log lager.Logger, handle string) error {
 
 func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string, newMapping garden.PortMapping) error {
 	var currentMappings portMappingList
-	currentMappingsJson, err := configStore.Get(handle, gardener.MappedPortsKey)
-	if err == nil {
+	if currentMappingsJson, ok := configStore.Get(handle, gardener.MappedPortsKey); ok {
+		var err error
 		currentMappings, err = portsFromJson(currentMappingsJson)
 		if err != nil {
 			return err
@@ -318,9 +318,9 @@ func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string,
 
 func getAll(config ConfigStore, handle string, key ...string) (vals []string, err error) {
 	for _, k := range key {
-		v, err := config.Get(handle, k)
-		if err != nil {
-			return nil, err
+		v, ok := config.Get(handle, k)
+		if !ok {
+			return nil, fmt.Errorf("property not found: %s", k)
 		}
 
 		vals = append(vals, v)

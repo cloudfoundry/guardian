@@ -1,7 +1,6 @@
 package rundmc_test
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
@@ -32,7 +31,7 @@ var _ = Describe("Event Store", func() {
 	})
 
 	It("stashes further events on the same property using a CSV for the value", func() {
-		props.GetReturns("bar", nil)
+		props.GetReturns("bar", true)
 
 		events := rundmc.NewEventStore(props)
 		events.OnEvent("foo", "baz")
@@ -45,8 +44,8 @@ var _ = Describe("Event Store", func() {
 	})
 
 	It("retrieves events from the property manager", func() {
-		props.GetStub = func(handle, key string) (string, error) {
-			return fmt.Sprintf("%s,%s", handle, key), nil
+		props.GetStub = func(handle, key string) (string, bool) {
+			return fmt.Sprintf("%s,%s", handle, key), true
 		}
 
 		events := rundmc.NewEventStore(props)
@@ -56,7 +55,7 @@ var _ = Describe("Event Store", func() {
 	})
 
 	It("returns no events when the property hasn't been set or cant be retrieved", func() {
-		props.GetReturns("bar", errors.New("boom"))
+		props.GetReturns("bar", false)
 
 		events := rundmc.NewEventStore(props)
 		Expect(events.Events("some-container")).To(HaveLen(0))

@@ -9,7 +9,7 @@ import (
 
 type Properties interface {
 	Set(handle string, key string, value string)
-	Get(handle string, key string) (string, error)
+	Get(handle string, key string) (string, bool)
 }
 
 type events struct {
@@ -29,12 +29,11 @@ func (e *events) OnEvent(handle, event string) error {
 
 	events := append(e.Events(handle), event)
 	e.props.Set(handle, "rundmc.events", strings.Join(events, ","))
-
 	return nil
 }
 
 func (e *events) Events(handle string) []string {
-	if value, err := e.props.Get(handle, "rundmc.events"); err == nil && value != "" {
+	if value, ok := e.props.Get(handle, "rundmc.events"); ok {
 		return strings.Split(value, ",")
 	}
 

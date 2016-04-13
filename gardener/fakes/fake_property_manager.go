@@ -34,7 +34,7 @@ type FakePropertyManager struct {
 	removeReturns struct {
 		result1 error
 	}
-	GetStub        func(handle string, name string) (string, error)
+	GetStub        func(handle string, name string) (string, bool)
 	getMutex       sync.RWMutex
 	getArgsForCall []struct {
 		handle string
@@ -42,7 +42,7 @@ type FakePropertyManager struct {
 	}
 	getReturns struct {
 		result1 string
-		result2 error
+		result2 bool
 	}
 	MatchesAllStub        func(handle string, props garden.Properties) bool
 	matchesAllMutex       sync.RWMutex
@@ -154,7 +154,7 @@ func (fake *FakePropertyManager) RemoveReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakePropertyManager) Get(handle string, name string) (string, error) {
+func (fake *FakePropertyManager) Get(handle string, name string) (string, bool) {
 	fake.getMutex.Lock()
 	fake.getArgsForCall = append(fake.getArgsForCall, struct {
 		handle string
@@ -180,11 +180,11 @@ func (fake *FakePropertyManager) GetArgsForCall(i int) (string, string) {
 	return fake.getArgsForCall[i].handle, fake.getArgsForCall[i].name
 }
 
-func (fake *FakePropertyManager) GetReturns(result1 string, result2 error) {
+func (fake *FakePropertyManager) GetReturns(result1 string, result2 bool) {
 	fake.GetStub = nil
 	fake.getReturns = struct {
 		result1 string
-		result2 error
+		result2 bool
 	}{result1, result2}
 }
 

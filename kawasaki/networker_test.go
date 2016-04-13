@@ -93,13 +93,13 @@ var _ = Describe("Networker", func() {
 			"kawasaki.dns-servers":         "8.8.8.8, 8.8.4.4",
 		}
 
-		fakeConfigStore.GetStub = func(handle, name string) (string, error) {
+		fakeConfigStore.GetStub = func(handle, name string) (string, bool) {
 			Expect(handle).To(Equal("some-handle"))
 			if val, ok := config[name]; ok {
-				return val, nil
+				return val, true
 			}
 
-			return "", errors.New("nope")
+			return "", false
 		}
 	})
 
@@ -490,12 +490,12 @@ var _ = Describe("Networker", func() {
 
 		Context("when handle does not exist", func() {
 			BeforeEach(func() {
-				fakeConfigStore.GetReturns("", errors.New("Handle does not exist"))
+				fakeConfigStore.GetReturns("", false)
 			})
 
 			It("returns an error", func() {
 				_, _, err := networker.NetIn(logger, "nonexistent", 0, 0)
-				Expect(err).To(MatchError("Handle does not exist"))
+				Expect(err).To(MatchError(ContainSubstring("property not found")))
 			})
 		})
 	})

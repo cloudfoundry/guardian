@@ -68,7 +68,7 @@ type PropertyManager interface {
 	All(handle string) (props garden.Properties, err error)
 	Set(handle string, name string, value string)
 	Remove(handle string, name string) error
-	Get(handle string, name string) (string, error)
+	Get(handle string, name string) (string, bool)
 	MatchesAll(handle string, props garden.Properties) bool
 	DestroyKeySpace(string) error
 }
@@ -296,13 +296,13 @@ func (g *Gardener) destroy(log lager.Logger, handle string) error {
 func (g *Gardener) Stop() {}
 
 func (g *Gardener) GraceTime(container garden.Container) time.Duration {
-	property, err := g.PropertyManager.Get(container.Handle(), GraceTimeKey)
-	if err != nil {
+	property, ok := g.PropertyManager.Get(container.Handle(), GraceTimeKey)
+	if !ok {
 		return 0
 	}
 
 	var graceTime time.Duration
-	_, err = fmt.Sscanf(property, "%d", &graceTime)
+	_, err := fmt.Sscanf(property, "%d", &graceTime)
 	if err != nil {
 		return 0
 	}

@@ -43,9 +43,9 @@ var _ = Describe("Properties", func() {
 
 		Describe("Get", func() {
 			It("returns a specific property when passed a name", func() {
-				property, err := propertyManager.Get("handle", "name")
+				property, ok := propertyManager.Get("handle", "name")
 
-				Expect(err).NotTo(HaveOccurred())
+				Expect(ok).To(BeTrue())
 				Expect(property).To(Equal("value"))
 			})
 		})
@@ -60,8 +60,8 @@ var _ = Describe("Properties", func() {
 				err = propertyManager.Remove("handle", "name")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = propertyManager.Get("handle", "name")
-				Expect(err).To(MatchError("cannot Get handle:name"))
+				_, ok := propertyManager.Get("handle", "name")
+				Expect(ok).To(BeFalse())
 			})
 
 			Context("when attempting to remove a property that doesn't exist", func() {
