@@ -19,6 +19,11 @@ var _ = Describe("Hooks", func() {
 
 		newBndl := rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			Handle: "fred",
+			NetworkHooks: []gardener.Hooks{
+				gardener.Hooks{
+					Prestart: gardener.Hook{Path: "/path/to/bananas/network"},
+				},
+			},
 		})
 
 		Expect(newBndl.PrestartHooks()[0].Env).To(
@@ -31,35 +36,76 @@ var _ = Describe("Hooks", func() {
 
 	It("adds the prestart and poststop hooks of the passed bundle", func() {
 		newBndl := bundlerules.Hooks{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
-			NetworkHooks: gardener.Hooks{
-				Prestart: gardener.Hook{
-					Path: "/path/to/bananas/network",
-					Args: []string{"arg", "barg"},
+			NetworkHooks: []gardener.Hooks{
+				gardener.Hooks{
+					Prestart: gardener.Hook{
+						Path: "/path/to/bananas/network",
+						Args: []string{"arg", "barg"},
+					},
+					Poststop: gardener.Hook{
+						Path: "/path/to/bananas/network",
+						Args: []string{"arg", "barg"},
+					},
 				},
-				Poststop: gardener.Hook{
-					Path: "/path/to/bananas/network",
-					Args: []string{"arg", "barg"},
+				gardener.Hooks{
+					Prestart: gardener.Hook{
+						Path: "/path/to/potato/network",
+						Args: []string{"arg", "parg"},
+					},
+					Poststop: gardener.Hook{
+						Path: "/path/to/potato/network",
+						Args: []string{"arg", "parg"},
+					},
 				},
 			},
 		})
 
-		Expect(pathAndArgsOf(newBndl.PrestartHooks())).To(ContainElement(PathAndArgs{
-			Path: "/path/to/bananas/network",
-			Args: []string{"arg", "barg"},
+		Expect(pathAndArgsOf(newBndl.PrestartHooks())).To(Equal([]PathAndArgs{
+			PathAndArgs{
+				Path: "/path/to/bananas/network",
+				Args: []string{"arg", "barg"},
+			},
+			PathAndArgs{
+				Path: "/path/to/potato/network",
+				Args: []string{"arg", "parg"},
+			},
 		}))
 
-		Expect(pathAndArgsOf(newBndl.PoststopHooks())).To(ContainElement(PathAndArgs{
-			Path: "/path/to/bananas/network",
-			Args: []string{"arg", "barg"},
+		Expect(pathAndArgsOf(newBndl.PoststopHooks())).To(Equal([]PathAndArgs{
+			PathAndArgs{
+				Path: "/path/to/potato/network",
+				Args: []string{"arg", "parg"},
+			},
+			PathAndArgs{
+				Path: "/path/to/bananas/network",
+				Args: []string{"arg", "barg"},
+			},
 		}))
+	})
+
+	It("does not include a pre-start hook if none was requested", func() {
+		newBndl := bundlerules.Hooks{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+			NetworkHooks: []gardener.Hooks{
+				gardener.Hooks{
+					Poststop: gardener.Hook{
+						Path: "/path/to/bananas/network",
+						Args: []string{"arg", "barg"},
+					},
+				},
+			},
+		})
+
+		Expect(pathAndArgsOf(newBndl.PrestartHooks())).To(BeEmpty())
 	})
 
 	It("does not include a post-stop hook if none was requested", func() {
 		newBndl := bundlerules.Hooks{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
-			NetworkHooks: gardener.Hooks{
-				Prestart: gardener.Hook{
-					Path: "/path/to/bananas/network",
-					Args: []string{"arg", "barg"},
+			NetworkHooks: []gardener.Hooks{
+				gardener.Hooks{
+					Prestart: gardener.Hook{
+						Path: "/path/to/bananas/network",
+						Args: []string{"arg", "barg"},
+					},
 				},
 			},
 		})

@@ -1,9 +1,6 @@
 package netplugin
 
 import (
-	"math"
-
-	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/pivotal-golang/lager"
 )
@@ -20,9 +17,9 @@ func New(path string, extraArg ...string) *Plugin {
 	}
 }
 
-func (p Plugin) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks, error) {
+func (p Plugin) Hooks(log lager.Logger, handle, spec, externalSpec string) (gardener.Hooks, error) {
 	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
-	networkPluginFlags := []string{"--handle", handle, "--network", spec}
+	networkPluginFlags := []string{"--handle", handle, "--network", spec, "--external-network", externalSpec}
 
 	upArgs := append(pathAndExtraArgs, "--action", "up")
 	upArgs = append(upArgs, networkPluginFlags...)
@@ -39,20 +36,4 @@ func (p Plugin) Hooks(log lager.Logger, handle, spec string) (gardener.Hooks, er
 			Args: downArgs,
 		},
 	}, nil
-}
-
-func (Plugin) Capacity() uint64 {
-	return math.MaxUint64
-}
-
-func (Plugin) Destroy(log lager.Logger, handle string) error {
-	return nil
-}
-
-func (Plugin) NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error) {
-	return 0, 0, nil
-}
-
-func (Plugin) NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error {
-	return nil
 }

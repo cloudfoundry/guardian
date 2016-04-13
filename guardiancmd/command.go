@@ -196,15 +196,17 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	propManager := properties.NewManager(&properties.FilesystemPersister{PersistenceDir: cmd.Server.PropertiesPath})
 
-	var networker gardener.Networker = netplugin.New(cmd.Network.Plugin.Path(), cmd.Network.PluginExtraArgs...)
-	if cmd.Network.Plugin == "" {
-		dnsIPs := make([]net.IP, len(cmd.Network.DNSServers))
-		for i, ip := range cmd.Network.DNSServers {
-			dnsIPs[i] = ip.IP()
-		}
-
-		networker = cmd.wireNetworker(logger, cmd.Bin.Kawasaki.Path(), cmd.Server.Tag, cmd.Network.Pool.CIDR(), externalIPAddr, dnsIPs, ipt, interfacePrefix, chainPrefix, propManager)
+	dnsIPs := make([]net.IP, len(cmd.Network.DNSServers))
+	for i, ip := range cmd.Network.DNSServers {
+		dnsIPs[i] = ip.IP()
 	}
+
+	var networkHookers []kawasaki.NetworkHooker
+	if cmd.Network.Plugin.Path() != "" {
+		networkHookers = append(networkHookers, netplugin.New(cmd.Network.Plugin.Path(), cmd.Network.PluginExtraArgs...))
+	}
+
+	networker := cmd.wireNetworker(logger, cmd.Bin.Kawasaki.Path(), cmd.Server.Tag, cmd.Network.Pool.CIDR(), externalIPAddr, dnsIPs, ipt, interfacePrefix, chainPrefix, propManager, networkHookers)
 
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
@@ -289,6 +291,7 @@ func (cmd *GuardianCommand) wireNetworker(
 	interfacePrefix string,
 	chainPrefix string,
 	propManager *properties.Manager,
+	networkHookers []kawasaki.NetworkHooker,
 ) gardener.Networker {
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 	portPool, err := ports.NewPool(cmd.Network.PortPoolStart, cmd.Network.PortPoolSize, ports.State{})
@@ -306,6 +309,7 @@ func (cmd *GuardianCommand) wireNetworker(
 		portPool,
 		iptables.NewPortForwarder(ipt),
 		iptables.NewFirewallOpener(ipt),
+		networkHookers,
 	)
 }
 
