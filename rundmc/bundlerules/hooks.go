@@ -39,9 +39,13 @@ func (r Hooks) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.
 		}
 	}
 
-	for i, j := 0, len(poststop)-1; i < j; i, j = i+1, j-1 {
-		poststop[i], poststop[j] = poststop[j], poststop[i]
+	return bndl.WithPrestartHooks(prestart...).WithPoststopHooks(reverse(poststop)...)
+}
+
+func reverse(hooks []specs.Hook) []specs.Hook {
+	for i, j := 0, len(hooks)-1; i < j; i, j = i+1, j-1 {
+		hooks[i], hooks[j] = hooks[j], hooks[i]
 	}
 
-	return bndl.WithPrestartHooks(prestart...).WithPoststopHooks(poststop...)
+	return hooks
 }
