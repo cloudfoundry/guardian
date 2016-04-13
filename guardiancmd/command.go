@@ -86,8 +86,7 @@ type GuardianCommand struct {
 		DebugBindIP   IPFlag `long:"debug-bind-ip"                   description:"Bind the debug server on the given IP."`
 		DebugBindPort uint16 `long:"debug-bind-port" default:"17013" description:"Bind the debug server to the given port."`
 
-		Tag            string `long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
-		PropertiesPath string `long:"properties" description:"Path in which to store properties."`
+		Tag string `long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
 	} `group:"Server Configuration"`
 
 	Containers struct {

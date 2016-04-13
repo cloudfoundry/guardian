@@ -1,9 +1,6 @@
 package gqt_test
 
 import (
-	"io/ioutil"
-	"os"
-
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
@@ -16,16 +13,13 @@ var _ = Describe("Properties", func() {
 		client    *runner.RunningGarden
 		container garden.Container
 		props     garden.Properties
-		propsDir  string
 	)
 
 	BeforeEach(func() {
-		var err error
-		propsDir, err = ioutil.TempDir("", "property_manager")
-		Expect(err).NotTo(HaveOccurred())
-
-		client = startGarden([]string{"--properties", propsDir}...)
+		client = startGarden()
 		props = garden.Properties{"somename": "somevalue"}
+
+		var err error
 		container, err = client.Create(garden.ContainerSpec{
 			RootFSPath: runner.RootFSPath,
 			Properties: props,
@@ -35,7 +29,6 @@ var _ = Describe("Properties", func() {
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
-		Expect(os.RemoveAll(propsDir)).To(Succeed())
 	})
 
 	It("can get properties", func() {
