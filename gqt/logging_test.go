@@ -11,33 +11,51 @@ import (
 )
 
 var _ = Describe("runC Logging", func() {
-	Context("when a container is created", func() {
-		var (
-			client *runner.RunningGarden
-		)
+	var (
+		client   *runner.RunningGarden
+		logLevel string
+	)
 
+	JustBeforeEach(func() {
+		binPath, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/gqt/cmd/runc")
+		Expect(err).NotTo(HaveOccurred())
+
+		containerSpec := garden.ContainerSpec{
+			RootFSPath: runner.RootFSPath,
+		}
+
+		client = startGarden("--runc-bin", binPath, "--log-level", logLevel)
+		_, err = client.Create(containerSpec)
+		Expect(err).ToNot(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		Expect(client.DestroyAndStop()).To(Succeed())
+	})
+
+	Context("when the log-level is set to debug", func() {
 		BeforeEach(func() {
-			binPath, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/gqt/cmd/runc")
-			Expect(err).NotTo(HaveOccurred())
-
-			containerSpec := garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-			}
-
-			client = startGarden("--runc-bin", binPath, "--log-level", "debug")
-			_, err = client.Create(containerSpec)
-			Expect(err).ToNot(HaveOccurred())
+			logLevel = "debug"
 		})
 
-		AfterEach(func() {
-			Expect(client.DestroyAndStop()).To(Succeed())
-		})
-
-		It("forwards RunC logs", func() {
+		It("logs runc logs to stdout", func() {
 			Eventually(client, "1s").Should(gbytes.Say("guardian-runc-logging-test-info"))
 			Eventually(client, "1s").Should(gbytes.Say("guardian-runc-logging-test-warn"))
 			Eventually(client, "1s").Should(gbytes.Say("guardian-runc-logging-test-error"))
 			Eventually(client, "1s").Should(gbytes.Say("guardian-runc-logging-test-print"))
+		})
+	})
+
+	Context("when the log-level is set to info", func() {
+		BeforeEach(func() {
+			logLevel = "info"
+		})
+
+		It("does not log runc logs to stdout", func() {
+			Consistently(client, "1s").ShouldNot(gbytes.Say("guardian-runc-logging-test-info"))
+			Consistently(client, "1s").ShouldNot(gbytes.Say("guardian-runc-logging-test-warn"))
+			Consistently(client, "1s").ShouldNot(gbytes.Say("guardian-runc-logging-test-error"))
+			Consistently(client, "1s").ShouldNot(gbytes.Say("guardian-runc-logging-test-print"))
 		})
 	})
 })
