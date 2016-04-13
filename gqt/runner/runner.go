@@ -176,7 +176,6 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, 
 	gardenArgs = appendDefaultFlag(gardenArgs, "--kawasaki-bin", kawasakiBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--nstar-bin", nstarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", tarBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--log-level", "debug")
 	gardenArgs = appendDefaultFlag(gardenArgs, "--debug-bind-ip", "0.0.0.0")
 	gardenArgs = appendDefaultFlag(gardenArgs, "--debug-bind-port", fmt.Sprintf("%d", 8080+ginkgo.GinkgoParallelNode()))
 	return exec.Command(bin, gardenArgs...)
@@ -239,4 +238,8 @@ func (r *RunningGarden) DestroyContainers() error {
 
 func (r *RunningGarden) Buffer() *gbytes.Buffer {
 	return r.runner.Buffer()
+}
+
+func (r *RunningGarden) ExitCode() int {
+	return r.runner.ExitCode()
 }
