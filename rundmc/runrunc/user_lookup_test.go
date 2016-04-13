@@ -60,14 +60,14 @@ _dovecot:*:214:6:Dovecot Administrator:/var/empty:/usr/bin/false`,
 				Expect(ioutil.WriteFile(filepath.Join(rootFsPath, "etc", "passwd"), []byte{}, 0777)).To(Succeed())
 
 				_, err := runrunc.LookupUser(rootFsPath, "unknownUser")
-				Expect(err).To(MatchError(ContainSubstring("Unable to find")))
+				Expect(err).To(MatchError(ContainSubstring("unable to find")))
 			})
 		})
 
 		DescribeTable("when /etc/passwd cannot be parsed", func(breakEtcPasswd func()) {
 			breakEtcPasswd()
 			_, err := runrunc.LookupUser(rootFsPath, "devil")
-			Expect(err).To(MatchError(ContainSubstring("Unable to find")))
+			Expect(err).To(MatchError(ContainSubstring("unable to find")))
 		},
 			Entry("because it doesn't exist", func() {}),
 			Entry("because the contents makes no sense", func() {
