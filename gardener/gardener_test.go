@@ -41,6 +41,7 @@ var _ = Describe("Gardener", func() {
 		propertyManager = new(fakes.FakePropertyManager)
 
 		propertyManager.GetReturns("", true)
+		containerizer.HandlesReturns([]string{"some-handle"}, nil)
 
 		gdnr = &gardener.Gardener{
 			SysInfoProvider: sysinfoProvider,
@@ -543,7 +544,6 @@ var _ = Describe("Gardener", func() {
 			err = gdnr.Start()
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(containerizer.HandlesCallCount()).To(Equal(1))
 			Expect(containerizer.DestroyCallCount()).To(Equal(2))
 
 			_, handle := containerizer.DestroyArgsForCall(0)
@@ -679,6 +679,11 @@ var _ = Describe("Gardener", func() {
 	})
 
 	Describe("destroying a container", func() {
+		It("returns garden.ContainreNotFoundError if the container handle isn't in the depot", func() {
+			containerizer.HandlesReturns([]string{}, nil)
+			Expect(gdnr.Destroy("cake!")).To(MatchError(garden.ContainerNotFoundError{Handle: "cake!"}))
+		})
+
 		It("asks the containerizer to destroy the container", func() {
 			Expect(gdnr.Destroy("some-handle")).To(Succeed())
 			Expect(containerizer.DestroyCallCount()).To(Equal(1))

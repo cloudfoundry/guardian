@@ -267,16 +267,25 @@ func (g *Gardener) lookup(handle string) garden.Container {
 	}
 }
 
-// Destroy idempotently destroys any resources associated with the given handle
 func (g *Gardener) Destroy(handle string) error {
 	log := g.Logger.Session("destroy", lager.Data{"handle": handle})
 
 	log.Info("start")
 	defer log.Info("destroyed")
 
+	handles, err := g.Containerizer.Handles()
+	if err != nil {
+		return err
+	}
+
+	if !g.exists(handles, handle) {
+		return garden.ContainerNotFoundError{Handle: handle}
+	}
+
 	return g.destroy(log, handle)
 }
 
+// destroy idempotently destroys any resources associated with the given handle
 func (g *Gardener) destroy(log lager.Logger, handle string) error {
 	if err := g.Containerizer.Destroy(g.Logger, handle); err != nil {
 		return err
@@ -400,12 +409,22 @@ func (g *Gardener) checkDuplicateHandle(handle string) error {
 	if err != nil {
 		return err
 	}
+
+	if g.exists(handles, handle) {
+		return errors.New(fmt.Sprintf("Handle '%s' already in use", handle))
+	}
+
+	return nil
+}
+
+func (g *Gardener) exists(handles []string, handle string) bool {
 	for _, h := range handles {
 		if h == handle {
-			return errors.New(fmt.Sprintf("Handle '%s' already in use", handle))
+			return true
 		}
 	}
-	return nil
+
+	return false
 }
 
 func (g *Gardener) Start() error {
