@@ -20,9 +20,7 @@ var _ = Describe("runC Logging", func() {
 		binPath, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/gqt/cmd/runc")
 		Expect(err).NotTo(HaveOccurred())
 
-		containerSpec := garden.ContainerSpec{
-			RootFSPath: runner.RootFSPath,
-		}
+		containerSpec := garden.ContainerSpec{}
 
 		client = startGarden("--runc-bin", binPath, "--log-level", logLevel)
 		_, err = client.Create(containerSpec)

@@ -69,16 +69,12 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		It("returns a nice error rather than timing out", func() {
-			_, err := client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-			})
+			_, err := client.Create(garden.ContainerSpec{})
 			Expect(err).To(MatchError(ContainSubstring("permission denied")))
 		})
 
 		It("cleans up the depot directory", func() {
-			_, err := client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-			})
+			_, err := client.Create(garden.ContainerSpec{})
 			Expect(err).To(HaveOccurred())
 
 			Expect(ioutil.ReadDir(client.DepotDir)).To(BeEmpty())
@@ -88,9 +84,7 @@ var _ = Describe("Creating a Container", func() {
 			prev, err := ioutil.ReadDir(filepath.Join(client.GraphPath, "aufs", "mnt"))
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-			})
+			_, err = client.Create(garden.ContainerSpec{})
 			Expect(err).To(HaveOccurred())
 
 			Expect(ioutil.ReadDir(filepath.Join(client.GraphPath, "aufs", "mnt"))).To(HaveLen(len(prev)))
@@ -107,7 +101,6 @@ var _ = Describe("Creating a Container", func() {
 		JustBeforeEach(func() {
 			var err error
 			container, err = client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
 				Privileged: privileged,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -260,8 +253,7 @@ var _ = Describe("Creating a Container", func() {
 	Context("after creating a container with a specified handle", func() {
 		It("should lookup the right container for the handle", func() {
 			container, err := client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-				Handle:     "container-banana",
+				Handle: "container-banana",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -272,16 +264,14 @@ var _ = Describe("Creating a Container", func() {
 
 		It("allow the container to be created with the same name after destroying", func() {
 			container, err := client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-				Handle:     "another-banana",
+				Handle: "another-banana",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(client.Destroy(container.Handle())).To(Succeed())
 
 			container, err = client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-				Handle:     "another-banana",
+				Handle: "another-banana",
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -318,8 +308,7 @@ var _ = Describe("Creating a Container", func() {
 			}
 
 			container, err := client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-				Limits:     limits,
+				Limits: limits,
 			})
 
 			return container, err

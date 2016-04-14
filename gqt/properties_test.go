@@ -21,7 +21,6 @@ var _ = Describe("Properties", func() {
 
 		var err error
 		container, err = client.Create(garden.ContainerSpec{
-			RootFSPath: runner.RootFSPath,
 			Properties: props,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -69,7 +68,6 @@ var _ = Describe("Properties", func() {
 
 	It("can filter containers based on their properties", func() {
 		_, err := client.Create(garden.ContainerSpec{
-			RootFSPath: runner.RootFSPath,
 			Properties: garden.Properties{
 				"somename": "wrongvalue",
 			},
@@ -83,9 +81,7 @@ var _ = Describe("Properties", func() {
 	})
 
 	It("can get the default properties", func() {
-		container, err := client.Create(garden.ContainerSpec{
-			RootFSPath: runner.RootFSPath,
-		})
+		container, err := client.Create(garden.ContainerSpec{})
 		Expect(err).ToNot(HaveOccurred())
 
 		props, err := container.Properties()

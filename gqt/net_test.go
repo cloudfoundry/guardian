@@ -53,8 +53,7 @@ var _ = Describe("Net", func() {
 		client = startGarden(args...)
 
 		container, err = client.Create(garden.ContainerSpec{
-			RootFSPath: runner.RootFSPath,
-			Network:    containerNetwork,
+			Network: containerNetwork,
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -137,8 +136,7 @@ var _ = Describe("Net", func() {
 			var err error
 			originContainer = container
 			container, err = client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-				Network:    containerNetwork,
+				Network: containerNetwork,
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -191,18 +189,14 @@ var _ = Describe("Net", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			otherContainer, err = client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-			})
+			otherContainer, err = client.Create(garden.ContainerSpec{})
 			Expect(err).ToNot(HaveOccurred())
 
 			otherContainerIP = containerIP(otherContainer)
 
 			Expect(client.Destroy(otherContainer.Handle())).To(Succeed())
 
-			otherContainer, err = client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-			})
+			otherContainer, err = client.Create(garden.ContainerSpec{})
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -301,9 +295,7 @@ var _ = Describe("Net", func() {
 			})
 
 			It("releases ports after the container is destroyed", func() {
-				container2, err := client.Create(garden.ContainerSpec{
-					RootFSPath: runner.RootFSPath,
-				})
+				container2, err := client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
 				_, _, err = container2.NetIn(0, 0)

@@ -47,7 +47,6 @@ var _ = Describe("Bind mount", func() {
 		var err error
 		container, err = client.Create(
 			garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
 				Privileged: privilegedContainer,
 				BindMounts: []garden.BindMount{{
 					SrcPath: srcPath,

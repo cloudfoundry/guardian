@@ -43,9 +43,7 @@ var _ = Describe("Destroying a Container", func() {
 		BeforeEach(func() {
 			var err error
 
-			container, err = client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-			})
+			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			initProcPid = initProcessPID(container.Handle())
@@ -94,22 +92,23 @@ var _ = Describe("Destroying a Container", func() {
 			var err error
 
 			container, err = client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-				Network:    "177.100.10.30/24",
+				Network: "177.100.10.30/24",
 			})
 			Expect(err).NotTo(HaveOccurred())
 			contIfaceName = ethInterfaceName(container)
 			contHandle = container.Handle()
 
 			existingContainer, err = client.Create(garden.ContainerSpec{
-				RootFSPath: runner.RootFSPath,
-				Network:    "168.100.20.10/24",
+				Network: "168.100.20.10/24",
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
-			Expect(client.Destroy(existingContainer.Handle())).To(Succeed())
+			err := client.Destroy(existingContainer.Handle())
+			if err != nil {
+				Expect(err).To(MatchError(garden.ContainerNotFoundError{Handle: existingContainer.Handle()}))
+			}
 		})
 
 		It("should remove iptable entries", func() {
@@ -136,6 +135,7 @@ var _ = Describe("Destroying a Container", func() {
 
 		It("should remove the network bridge", func() {
 			Expect(client.Destroy(existingContainer.Handle())).To(Succeed())
+
 			session, err := gexec.Start(
 				exec.Command("ifconfig"),
 				GinkgoWriter, GinkgoWriter,

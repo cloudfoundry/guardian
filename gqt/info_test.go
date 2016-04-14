@@ -19,8 +19,7 @@ var _ = Describe("Info", func() {
 		var err error
 		client = startGarden()
 		container, err = client.Create(garden.ContainerSpec{
-			RootFSPath: runner.RootFSPath,
-			Network:    "10.252.0.2",
+			Network: "10.252.0.2",
 			Properties: garden.Properties{
 				"foo": "bar",
 			},
@@ -82,14 +81,12 @@ var _ = Describe("BulkInfo", func() {
 	BeforeEach(func() {
 		client = startGarden()
 		_, err := client.Create(garden.ContainerSpec{
-			RootFSPath: runner.RootFSPath,
-			Handle:     "first",
+			Handle: "first",
 		})
 		Expect(err).NotTo(HaveOccurred())
 
 		_, err = client.Create(garden.ContainerSpec{
-			RootFSPath: runner.RootFSPath,
-			Handle:     "second",
+			Handle: "second",
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})

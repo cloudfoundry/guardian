@@ -25,6 +25,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 	var container garden.Container
 	var args []string
 	var client *runner.RunningGarden
+	var supplyDefaultRootfs bool
 
 	BeforeEach(func() {
 		container = nil
@@ -32,7 +33,11 @@ var _ = Describe("Rootfs container create parameter", func() {
 	})
 
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		if supplyDefaultRootfs {
+			client = startGarden(args...)
+		} else {
+			client = startGardenWithoutDefaultRootfs(args...)
+		}
 	})
 
 	AfterEach(func() {
@@ -43,10 +48,10 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 	Context("without a default rootfs", func() {
 		BeforeEach(func() {
-			args = []string{}
+			supplyDefaultRootfs = false
 		})
 
-		It("without a rootfs in container spec, the container creation fails", func() {
+		It("fails if a rootfs is not supplied in container spec", func() {
 			var err error
 
 			container, err = client.Create(garden.ContainerSpec{RootFSPath: ""})
@@ -54,7 +59,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 			Expect(err).To(MatchError(ContainSubstring("RootFSPath: is a required parameter, since no default rootfs was provided to the server.")))
 		})
 
-		It("with a rootfs in container spec, the container is created successfully", func() {
+		It("creates successfully if a rootfs is supplied in container spec", func() {
 			var err error
 
 			container, err = client.Create(garden.ContainerSpec{RootFSPath: runner.RootFSPath})

@@ -101,5 +101,9 @@ func TestGqt(t *testing.T) {
 }
 
 func startGarden(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, argv...)
+	return runner.Start(gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, true, argv...)
+}
+
+func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
+	return runner.Start(gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, false, argv...)
 }

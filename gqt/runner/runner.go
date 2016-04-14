@@ -46,7 +46,7 @@ type RunningGarden struct {
 	logger lager.Logger
 }
 
-func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin string, argv ...string) *RunningGarden {
+func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin string, supplyDefaultRootfs bool, argv ...string) *RunningGarden {
 	network := "unix"
 	addr := fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
 	tmpDir := filepath.Join(
@@ -77,7 +77,7 @@ func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin string, ar
 		Client: client.New(connection.New(network, addr)),
 	}
 
-	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, TarPath, argv...)
+	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, TarPath, supplyDefaultRootfs, argv...)
 	c.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", tmpDir))
 	r.runner = ginkgomon.New(ginkgomon.Config{
 		Name:              "guardian",
@@ -134,7 +134,7 @@ func (r *RunningGarden) Stop() error {
 	return err
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, tarBin string, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, tarBin string, supplyDefaultRootfs bool, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -167,6 +167,10 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, 
 		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-socket", addr)
 	}
 
+	if supplyDefaultRootfs {
+		gardenArgs = appendDefaultFlag(gardenArgs, "--default-rootfs", RootFSPath)
+	}
+
 	gardenArgs = appendDefaultFlag(gardenArgs, "--depot", depotDir)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--graph", graphPath)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
@@ -178,6 +182,7 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, 
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", tarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--debug-bind-ip", "0.0.0.0")
 	gardenArgs = appendDefaultFlag(gardenArgs, "--debug-bind-port", fmt.Sprintf("%d", 8080+ginkgo.GinkgoParallelNode()))
+
 	return exec.Command(bin, gardenArgs...)
 }
 

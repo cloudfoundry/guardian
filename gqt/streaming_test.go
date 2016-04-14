@@ -29,9 +29,7 @@ var _ = Describe("Streaming", func() {
 
 		client = startGarden()
 
-		container, err = client.Create(garden.ContainerSpec{
-			RootFSPath: runner.RootFSPath,
-		})
+		container, err = client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
