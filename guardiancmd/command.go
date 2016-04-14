@@ -23,7 +23,6 @@ import (
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/factory"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/ports"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
@@ -305,7 +304,6 @@ func (cmd *GuardianCommand) wireNetworker(
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(networkPoolCIDR),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
-		factory.NewDefaultConfigurer(ipt),
 		propManager,
 		portPool,
 		iptables.NewPortForwarder(ipt),

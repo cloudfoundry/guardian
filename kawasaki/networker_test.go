@@ -23,7 +23,6 @@ var _ = Describe("Networker", func() {
 		fakeSpecParser     *fakes.FakeSpecParser
 		fakeSubnetPool     *fake_subnet_pool.FakePool
 		fakeConfigCreator  *fakes.FakeConfigCreator
-		fakeConfigurer     *fakes.FakeConfigurer
 		fakeConfigStore    *fakes.FakeConfigStore
 		fakePortForwarder  *fakes.FakePortForwarder
 		fakePortPool       *fakes.FakePortPool
@@ -37,7 +36,6 @@ var _ = Describe("Networker", func() {
 	BeforeEach(func() {
 		fakeSpecParser = new(fakes.FakeSpecParser)
 		fakeSubnetPool = new(fake_subnet_pool.FakePool)
-		fakeConfigurer = new(fakes.FakeConfigurer)
 		fakeConfigCreator = new(fakes.FakeConfigCreator)
 		fakeConfigStore = new(fakes.FakeConfigStore)
 		fakePortForwarder = new(fakes.FakePortForwarder)
@@ -50,7 +48,6 @@ var _ = Describe("Networker", func() {
 			fakeSpecParser,
 			fakeSubnetPool,
 			fakeConfigCreator,
-			fakeConfigurer,
 			fakeConfigStore,
 			fakePortPool,
 			fakePortForwarder,
@@ -242,7 +239,6 @@ var _ = Describe("Networker", func() {
 						fakeSpecParser,
 						fakeSubnetPool,
 						fakeConfigCreator,
-						fakeConfigurer,
 						fakeConfigStore,
 						fakePortPool,
 						fakePortForwarder,

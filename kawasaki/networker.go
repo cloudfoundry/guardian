@@ -93,7 +93,6 @@ type Networker struct {
 	specParser     SpecParser
 	subnetPool     subnets.Pool
 	configCreator  ConfigCreator
-	configurer     Configurer
 	configStore    ConfigStore
 	portForwarder  PortForwarder
 	portPool       PortPool
@@ -106,7 +105,6 @@ func New(
 	specParser SpecParser,
 	subnetPool subnets.Pool,
 	configCreator ConfigCreator,
-	configurer Configurer,
 	configStore ConfigStore,
 	portPool PortPool,
 	portForwarder PortForwarder,
@@ -119,7 +117,6 @@ func New(
 		specParser:    specParser,
 		subnetPool:    subnetPool,
 		configCreator: configCreator,
-		configurer:    configurer,
 		configStore:   configStore,
 
 		portForwarder: portForwarder,
