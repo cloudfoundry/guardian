@@ -130,6 +130,8 @@ type GuardianCommand struct {
 		PortPoolStart uint32 `long:"port-pool-start" default:"60000" description:"Start of the ephemeral port range used for mapped container ports."`
 		PortPoolSize  uint32 `long:"port-pool-size"  default:"5000"  description:"Size of the port pool used for mapped container ports."`
 
+		Mtu int `long:"mtu" default:"1500" description:"MTU size for container network interfaces."`
+
 		Plugin          FileFlag `long:"network-plugin"           description:"Path to network plugin binary."`
 		PluginExtraArgs []string `long:"network-plugin-extra-arg" description:"Extra argument to pass to the network plugin. Can be specified multiple times."`
 	} `group:"Container Networking"`
@@ -302,7 +304,7 @@ func (cmd *GuardianCommand) wireNetworker(
 		kawasakiBin,
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(networkPoolCIDR),
-		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers),
+		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
 		factory.NewDefaultConfigurer(ipt),
 		propManager,
 		portPool,

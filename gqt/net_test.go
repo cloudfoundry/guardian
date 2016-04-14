@@ -429,6 +429,48 @@ var _ = Describe("Net", func() {
 			)
 		})
 	})
+
+	Describe("MTU size", func() {
+		BeforeEach(func() {
+			args = append(args, "--mtu", "6789")
+		})
+
+		AfterEach(func() {
+			err := client.Destroy(container.Handle())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		Describe("container's network interface", func() {
+			It("has the correct MTU size", func() {
+				stdout := gbytes.NewBuffer()
+				stderr := gbytes.NewBuffer()
+
+				process, err := container.Run(garden.ProcessSpec{
+					User: "alice",
+					Path: "ifconfig",
+					Args: []string{containerIfName(container)},
+				}, garden.ProcessIO{
+					Stdout: stdout,
+					Stderr: stderr,
+				})
+				Expect(err).ToNot(HaveOccurred())
+				rc, err := process.Wait()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(rc).To(Equal(0))
+
+				Expect(stdout.Contents()).To(ContainSubstring(" MTU:6789 "))
+			})
+		})
+
+		Describe("hosts's network interface for a container", func() {
+			It("has the correct MTU size", func() {
+				out, err := exec.Command("ifconfig", hostIfName(container)).Output()
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(out).To(ContainSubstring(" MTU:6789 "))
+			})
+		})
+	})
 })
 
 func externalIP(container garden.Container) string {
@@ -499,4 +541,16 @@ func getContent(filename string) func() []byte {
 		Expect(err).NotTo(HaveOccurred())
 		return bytes
 	}
+}
+
+func containerIfName(container garden.Container) string {
+	properties, err := container.Properties()
+	Expect(err).NotTo(HaveOccurred())
+	return properties["kawasaki.container-interface"]
+}
+
+func hostIfName(container garden.Container) string {
+	properties, err := container.Properties()
+	Expect(err).NotTo(HaveOccurred())
+	return properties["kawasaki.host-interface"]
 }

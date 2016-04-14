@@ -40,9 +40,10 @@ type Creator struct {
 	chainPrefix     string
 	externalIP      net.IP
 	dnsServers      []net.IP
+	mtu             int
 }
 
-func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix string, externalIP net.IP, dnsServers []net.IP) *Creator {
+func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix string, externalIP net.IP, dnsServers []net.IP, mtu int) *Creator {
 	if len(interfacePrefix) > maxInterfacePrefixLen {
 		panic("interface prefix is too long")
 	}
@@ -57,6 +58,7 @@ func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix stri
 		chainPrefix:     chainPrefix,
 		externalIP:      externalIP,
 		dnsServers:      dnsServers,
+		mtu:             mtu,
 	}
 }
 
@@ -74,7 +76,7 @@ func (c *Creator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip 
 		BridgeIP:        subnets.GatewayIP(subnet),
 		ExternalIP:      c.externalIP,
 		Subnet:          subnet,
-		Mtu:             1500,
+		Mtu:             c.mtu,
 		DNSServers:      c.dnsServers,
 	}, nil
 }
