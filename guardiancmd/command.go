@@ -299,7 +299,7 @@ func (cmd *GuardianCommand) wireNetworker(
 		log.Fatal("invalid pool range", err)
 	}
 
-	return kawasaki.New(
+	kawasakiNetworker := kawasaki.New(
 		kawasakiBin,
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(networkPoolCIDR),
@@ -308,8 +308,12 @@ func (cmd *GuardianCommand) wireNetworker(
 		portPool,
 		iptables.NewPortForwarder(ipt),
 		iptables.NewFirewallOpener(ipt),
-		networkHookers,
 	)
+
+	return &kawasaki.CompositeNetworker{
+		Networker:  kawasakiNetworker,
+		ExtraHooks: networkHookers,
+	}
 }
 
 func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
