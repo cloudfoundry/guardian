@@ -23,7 +23,10 @@ var _ = Describe("CompositeNetworker", func() {
 	})
 
 	JustBeforeEach(func() {
-		compositeNetworker = &kawasaki.CompositeNetworker{fakeNetworker, extraHooks}
+		compositeNetworker = &kawasaki.CompositeNetworker{
+			Networker:  fakeNetworker,
+			ExtraHooks: extraHooks,
+		}
 	})
 
 	It("delegates to the netwoker", func() {
