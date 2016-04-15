@@ -480,6 +480,15 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		return &i
 	}
 
+	var worldReadWrite os.FileMode = 0666
+	fuseDevice := specs.Device{
+		Path:     "/dev/fuse",
+		Type:     "c",
+		Major:    10,
+		Minor:    229,
+		FileMode: &worldReadWrite,
+	}
+
 	denyAll := specs.DeviceCgroup{Allow: false, Access: &rwm}
 	allowedDevices := []specs.DeviceCgroup{
 		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(3), Allow: true},
@@ -488,6 +497,8 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(9), Allow: true},
 		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(5), Allow: true},
 		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(7), Allow: true},
+		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(7), Allow: true},
+		{Access: &rwm, Type: &character, Major: majorMinor(fuseDevice.Major), Minor: majorMinor(fuseDevice.Minor), Allow: true},
 	}
 
 	baseProcess := specs.Process{
@@ -500,6 +511,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		WithNamespaces(PrivilegedContainerNamespaces...).
 		WithResources(&specs.Resources{Devices: append([]specs.DeviceCgroup{denyAll}, allowedDevices...)}).
 		WithRootFS(defaultRootFSPath).
+		WithDevices(fuseDevice).
 		WithProcess(baseProcess)
 
 	unprivilegedBundle := baseBundle.
