@@ -76,7 +76,17 @@ var _ = Describe("Rootfs container create parameter", func() {
 			var err error
 
 			container, err = client.Create(garden.ContainerSpec{RootFSPath: ""})
-			Expect(err).ToNot(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("with an empty rootfs", func() {
+		It("creates the container successfully", func() {
+			rootfs, err := ioutil.TempDir("", "emptyrootfs")
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Create(garden.ContainerSpec{RootFSPath: rootfs})
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 

@@ -21,10 +21,21 @@ type RootFS struct {
 }
 
 func (r RootFS) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
+	var uid, gid int
+	if !spec.Privileged {
+		uid = r.ContainerRootUID
+		gid = r.ContainerRootGID
+	}
+
 	r.MkdirChown.MkdirAs(
-		spec.RootFSPath, r.ContainerRootUID, r.ContainerRootGID, 0755, true,
+		spec.RootFSPath, uid, gid, 0755, true,
 		".pivot_root",
 		"dev", "proc", "sys",
+	)
+
+	r.MkdirChown.MkdirAs(
+		spec.RootFSPath, uid, gid, 0777, false,
+		"tmp",
 	)
 
 	return bndl.WithRootFS(spec.RootFSPath)
