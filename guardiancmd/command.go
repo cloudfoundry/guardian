@@ -269,8 +269,15 @@ func (cmd *GuardianCommand) wireUidGenerator() gardener.UidGeneratorFunc {
 }
 
 func (cmd *GuardianCommand) wireStarter(logger lager.Logger, ipt *iptables.IPTables, allowHostAccess bool, nicPrefix string, denyNetworks []string) []gardener.Starter {
+	var cgroupsMountpoint string
+	if cmd.Server.Tag != "" {
+		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
+	} else {
+		cgroupsMountpoint = "/sys/fs/cgroup"
+	}
+
 	return []gardener.Starter{
-		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag)), linux_command_runner.New()),
+		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, linux_command_runner.New()),
 		iptables.NewStarter(ipt, allowHostAccess, nicPrefix, denyNetworks),
 	}
 }
