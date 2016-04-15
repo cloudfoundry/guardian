@@ -9,10 +9,10 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/cloudfoundry-incubator/garden-shed/distclient"
 	"github.com/nu7hatch/gouuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
+	"github.com/cloudfoundry-incubator/garden-shed/distclient"
 	quotaed_aufs "github.com/cloudfoundry-incubator/garden-shed/docker_drivers/aufs"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake/cleaner"
@@ -372,19 +372,22 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		}
 	}
 
-	repoFetcher := &repository_fetcher.CompositeFetcher{
-		LocalFetcher: &repository_fetcher.Local{
-			Cake:              cake,
-			DefaultRootFSPath: cmd.Containers.DefaultRootFSDir.Path(),
-			IDProvider:        repository_fetcher.LayerIDProvider{},
+	repoFetcher := repository_fetcher.Retryable{
+		RepositoryFetcher: &repository_fetcher.CompositeFetcher{
+			LocalFetcher: &repository_fetcher.Local{
+				Cake:              cake,
+				DefaultRootFSPath: cmd.Containers.DefaultRootFSDir.Path(),
+				IDProvider:        repository_fetcher.LayerIDProvider{},
+			},
+			RemoteFetcher: repository_fetcher.NewRemote(
+				logger,
+				cmd.Docker.Registry,
+				cake,
+				distclient.NewDialer(insecureRegistries),
+				repository_fetcher.VerifyFunc(repository_fetcher.Verify),
+			),
 		},
-		RemoteFetcher: repository_fetcher.NewRemote(
-			logger,
-			cmd.Docker.Registry,
-			cake,
-			distclient.NewDialer(insecureRegistries),
-			repository_fetcher.VerifyFunc(repository_fetcher.Verify),
-		),
+		Logger: logger,
 	}
 
 	rootFSNamespacer := &rootfs_provider.UidNamespacer{
