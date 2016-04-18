@@ -42,7 +42,7 @@ var _ = Describe("Net", func() {
 			var err error
 			ips, err = net.LookupIP("www.example.com")
 			return err
-		}, "20s", "1s").Should(Succeed())
+		}, "60s", "2s").Should(Succeed())
 
 		exampleDotCom = ips[0]
 	})
