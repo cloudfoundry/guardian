@@ -684,6 +684,20 @@ var _ = Describe("Gardener", func() {
 		})
 	})
 
+	Describe("stopping a container", func() {
+		It("asks the containerizer to stop all processes", func() {
+			container, err := gdnr.Lookup("banana")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(container.Stop(true)).To(Succeed())
+			Expect(containerizer.StopCallCount()).To(Equal(1))
+
+			_, handle, kill := containerizer.StopArgsForCall(0)
+			Expect(handle).To(Equal("banana"))
+			Expect(kill).To(Equal(true))
+		})
+	})
+
 	Describe("destroying a container", func() {
 		It("returns garden.ContainreNotFoundError if the container handle isn't in the depot", func() {
 			containerizer.HandlesReturns([]string{}, nil)

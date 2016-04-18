@@ -35,14 +35,18 @@ type SysInfoProvider interface {
 
 type Containerizer interface {
 	Create(log lager.Logger, spec DesiredContainerSpec) error
+	Handles() ([]string, error)
+
 	StreamIn(log lager.Logger, handle string, spec garden.StreamInSpec) error
 	StreamOut(log lager.Logger, handle string, spec garden.StreamOutSpec) (io.ReadCloser, error)
+
 	Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Stop(log lager.Logger, handle string, kill bool) error
 	Destroy(log lager.Logger, handle string) error
+
 	Info(log lager.Logger, handle string) (ActualContainerSpec, error)
-	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
 	CPULimit(log lager.Logger, handle string) (garden.CPULimits, error)
-	Handles() ([]string, error)
+	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
 }
 
 type Networker interface {

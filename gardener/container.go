@@ -29,7 +29,7 @@ func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Pr
 }
 
 func (c *container) Stop(kill bool) error {
-	return nil
+	return c.containerizer.Stop(c.logger, c.handle, kill)
 }
 
 func (c *container) Info() (garden.ContainerInfo, error) {

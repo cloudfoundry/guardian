@@ -36,6 +36,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/preparerootfs"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/stopper"
 	"github.com/cloudfoundry-incubator/guardian/sysinfo"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
@@ -561,7 +562,8 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	eventStore := rundmc.NewEventStore(properties)
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 
-	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, rundmc.NewExitStore(), eventStore)
+	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver("/run/runc"), nil)
+	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, stopper, rundmc.NewExitStore(), eventStore)
 }
 
 func (cmd *GuardianCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {

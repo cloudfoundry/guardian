@@ -26,6 +26,7 @@ var _ = Describe("Rundmc", func() {
 		fakeBundleLoader    *fakes.FakeBundleLoader
 		fakeContainerRunner *fakes.FakeBundleRunner
 		fakeNstarRunner     *fakes.FakeNstarRunner
+		fakeStopper         *fakes.FakeStopper
 		fakeExitStore       *fakes.FakeExitStore
 		fakeEventStore      *fakes.FakeEventStore
 
@@ -39,6 +40,7 @@ var _ = Describe("Rundmc", func() {
 		fakeBundler = new(fakes.FakeBundleGenerator)
 		fakeBundleLoader = new(fakes.FakeBundleLoader)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
+		fakeStopper = new(fakes.FakeStopper)
 		fakeExitStore = new(fakes.FakeExitStore)
 		fakeEventStore = new(fakes.FakeEventStore)
 		logger = lagertest.NewTestLogger("test")
@@ -47,7 +49,7 @@ var _ = Describe("Rundmc", func() {
 			return "/path/to/" + handle, nil
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeBundleLoader, fakeNstarRunner, fakeExitStore, fakeEventStore)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeExitStore, fakeEventStore)
 	})
 
 	Describe("Create", func() {
@@ -240,6 +242,34 @@ var _ = Describe("Rundmc", func() {
 
 			Expect(tarStream).To(BeNil())
 			Expect(err).To(MatchError("stream-out: nstar: failed"))
+		})
+	})
+
+	Describe("stop", func() {
+		var (
+			cgroupPathArg string
+			exceptionsArg []int
+			killArg       bool
+		)
+
+		BeforeEach(func() {
+			fakeContainerRunner.StateReturns(runrunc.State{
+				Pid: 1234,
+			}, nil)
+
+			Expect(containerizer.Stop(logger, "some-handle", true)).To(Succeed())
+			Expect(fakeStopper.StopAllCallCount()).To(Equal(1))
+
+			_, cgroupPathArg, exceptionsArg, killArg = fakeStopper.StopAllArgsForCall(0)
+		})
+
+		It("asks to stop all processes in the processes's cgroup", func() {
+			Expect(cgroupPathArg).To(Equal("some-handle"))
+			Expect(killArg).To(Equal(true))
+		})
+
+		It("asks to not stop the pid of the init process", func() {
+			Expect(exceptionsArg).To(ConsistOf(1234))
 		})
 	})
 

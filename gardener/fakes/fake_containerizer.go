@@ -20,6 +20,13 @@ type FakeContainerizer struct {
 	createReturns struct {
 		result1 error
 	}
+	HandlesStub        func() ([]string, error)
+	handlesMutex       sync.RWMutex
+	handlesArgsForCall []struct{}
+	handlesReturns     struct {
+		result1 []string
+		result2 error
+	}
 	StreamInStub        func(log lager.Logger, handle string, spec garden.StreamInSpec) error
 	streamInMutex       sync.RWMutex
 	streamInArgsForCall []struct {
@@ -53,6 +60,16 @@ type FakeContainerizer struct {
 		result1 garden.Process
 		result2 error
 	}
+	StopStub        func(log lager.Logger, handle string, kill bool) error
+	stopMutex       sync.RWMutex
+	stopArgsForCall []struct {
+		log    lager.Logger
+		handle string
+		kill   bool
+	}
+	stopReturns struct {
+		result1 error
+	}
 	DestroyStub        func(log lager.Logger, handle string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
@@ -72,16 +89,6 @@ type FakeContainerizer struct {
 		result1 gardener.ActualContainerSpec
 		result2 error
 	}
-	MetricsStub        func(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error)
-	metricsMutex       sync.RWMutex
-	metricsArgsForCall []struct {
-		log    lager.Logger
-		handle string
-	}
-	metricsReturns struct {
-		result1 gardener.ActualContainerMetrics
-		result2 error
-	}
 	CPULimitStub        func(log lager.Logger, handle string) (garden.CPULimits, error)
 	cPULimitMutex       sync.RWMutex
 	cPULimitArgsForCall []struct {
@@ -92,11 +99,14 @@ type FakeContainerizer struct {
 		result1 garden.CPULimits
 		result2 error
 	}
-	HandlesStub        func() ([]string, error)
-	handlesMutex       sync.RWMutex
-	handlesArgsForCall []struct{}
-	handlesReturns     struct {
-		result1 []string
+	MetricsStub        func(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error)
+	metricsMutex       sync.RWMutex
+	metricsArgsForCall []struct {
+		log    lager.Logger
+		handle string
+	}
+	metricsReturns struct {
+		result1 gardener.ActualContainerMetrics
 		result2 error
 	}
 }
@@ -132,6 +142,31 @@ func (fake *FakeContainerizer) CreateReturns(result1 error) {
 	fake.createReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakeContainerizer) Handles() ([]string, error) {
+	fake.handlesMutex.Lock()
+	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct{}{})
+	fake.handlesMutex.Unlock()
+	if fake.HandlesStub != nil {
+		return fake.HandlesStub()
+	} else {
+		return fake.handlesReturns.result1, fake.handlesReturns.result2
+	}
+}
+
+func (fake *FakeContainerizer) HandlesCallCount() int {
+	fake.handlesMutex.RLock()
+	defer fake.handlesMutex.RUnlock()
+	return len(fake.handlesArgsForCall)
+}
+
+func (fake *FakeContainerizer) HandlesReturns(result1 []string, result2 error) {
+	fake.HandlesStub = nil
+	fake.handlesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeContainerizer) StreamIn(log lager.Logger, handle string, spec garden.StreamInSpec) error {
@@ -239,6 +274,40 @@ func (fake *FakeContainerizer) RunReturns(result1 garden.Process, result2 error)
 	}{result1, result2}
 }
 
+func (fake *FakeContainerizer) Stop(log lager.Logger, handle string, kill bool) error {
+	fake.stopMutex.Lock()
+	fake.stopArgsForCall = append(fake.stopArgsForCall, struct {
+		log    lager.Logger
+		handle string
+		kill   bool
+	}{log, handle, kill})
+	fake.stopMutex.Unlock()
+	if fake.StopStub != nil {
+		return fake.StopStub(log, handle, kill)
+	} else {
+		return fake.stopReturns.result1
+	}
+}
+
+func (fake *FakeContainerizer) StopCallCount() int {
+	fake.stopMutex.RLock()
+	defer fake.stopMutex.RUnlock()
+	return len(fake.stopArgsForCall)
+}
+
+func (fake *FakeContainerizer) StopArgsForCall(i int) (lager.Logger, string, bool) {
+	fake.stopMutex.RLock()
+	defer fake.stopMutex.RUnlock()
+	return fake.stopArgsForCall[i].log, fake.stopArgsForCall[i].handle, fake.stopArgsForCall[i].kill
+}
+
+func (fake *FakeContainerizer) StopReturns(result1 error) {
+	fake.StopStub = nil
+	fake.stopReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeContainerizer) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Lock()
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
@@ -306,40 +375,6 @@ func (fake *FakeContainerizer) InfoReturns(result1 gardener.ActualContainerSpec,
 	}{result1, result2}
 }
 
-func (fake *FakeContainerizer) Metrics(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error) {
-	fake.metricsMutex.Lock()
-	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
-		log    lager.Logger
-		handle string
-	}{log, handle})
-	fake.metricsMutex.Unlock()
-	if fake.MetricsStub != nil {
-		return fake.MetricsStub(log, handle)
-	} else {
-		return fake.metricsReturns.result1, fake.metricsReturns.result2
-	}
-}
-
-func (fake *FakeContainerizer) MetricsCallCount() int {
-	fake.metricsMutex.RLock()
-	defer fake.metricsMutex.RUnlock()
-	return len(fake.metricsArgsForCall)
-}
-
-func (fake *FakeContainerizer) MetricsArgsForCall(i int) (lager.Logger, string) {
-	fake.metricsMutex.RLock()
-	defer fake.metricsMutex.RUnlock()
-	return fake.metricsArgsForCall[i].log, fake.metricsArgsForCall[i].handle
-}
-
-func (fake *FakeContainerizer) MetricsReturns(result1 gardener.ActualContainerMetrics, result2 error) {
-	fake.MetricsStub = nil
-	fake.metricsReturns = struct {
-		result1 gardener.ActualContainerMetrics
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *FakeContainerizer) CPULimit(log lager.Logger, handle string) (garden.CPULimits, error) {
 	fake.cPULimitMutex.Lock()
 	fake.cPULimitArgsForCall = append(fake.cPULimitArgsForCall, struct {
@@ -374,27 +409,36 @@ func (fake *FakeContainerizer) CPULimitReturns(result1 garden.CPULimits, result2
 	}{result1, result2}
 }
 
-func (fake *FakeContainerizer) Handles() ([]string, error) {
-	fake.handlesMutex.Lock()
-	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct{}{})
-	fake.handlesMutex.Unlock()
-	if fake.HandlesStub != nil {
-		return fake.HandlesStub()
+func (fake *FakeContainerizer) Metrics(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error) {
+	fake.metricsMutex.Lock()
+	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
+		log    lager.Logger
+		handle string
+	}{log, handle})
+	fake.metricsMutex.Unlock()
+	if fake.MetricsStub != nil {
+		return fake.MetricsStub(log, handle)
 	} else {
-		return fake.handlesReturns.result1, fake.handlesReturns.result2
+		return fake.metricsReturns.result1, fake.metricsReturns.result2
 	}
 }
 
-func (fake *FakeContainerizer) HandlesCallCount() int {
-	fake.handlesMutex.RLock()
-	defer fake.handlesMutex.RUnlock()
-	return len(fake.handlesArgsForCall)
+func (fake *FakeContainerizer) MetricsCallCount() int {
+	fake.metricsMutex.RLock()
+	defer fake.metricsMutex.RUnlock()
+	return len(fake.metricsArgsForCall)
 }
 
-func (fake *FakeContainerizer) HandlesReturns(result1 []string, result2 error) {
-	fake.HandlesStub = nil
-	fake.handlesReturns = struct {
-		result1 []string
+func (fake *FakeContainerizer) MetricsArgsForCall(i int) (lager.Logger, string) {
+	fake.metricsMutex.RLock()
+	defer fake.metricsMutex.RUnlock()
+	return fake.metricsArgsForCall[i].log, fake.metricsArgsForCall[i].handle
+}
+
+func (fake *FakeContainerizer) MetricsReturns(result1 gardener.ActualContainerMetrics, result2 error) {
+	fake.MetricsStub = nil
+	fake.metricsReturns = struct {
+		result1 gardener.ActualContainerMetrics
 		result2 error
 	}{result1, result2}
 }

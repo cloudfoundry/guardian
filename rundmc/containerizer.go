@@ -14,12 +14,12 @@ import (
 
 //go:generate counterfeiter . Depot
 //go:generate counterfeiter . BundleGenerator
-//go:generate counterfeiter . Checker
 //go:generate counterfeiter . BundleRunner
 //go:generate counterfeiter . NstarRunner
 //go:generate counterfeiter . EventStore
 //go:generate counterfeiter . BundleLoader
 //go:generate counterfeiter . ExitStore
+//go:generate counterfeiter . Stopper
 
 type Depot interface {
 	Create(log lager.Logger, handle string, bundle depot.BundleSaver) error
@@ -30,10 +30,6 @@ type Depot interface {
 
 type BundleGenerator interface {
 	Generate(spec gardener.DesiredContainerSpec) *goci.Bndl
-}
-
-type Checker interface {
-	Check(log lager.Logger, output io.Reader) error
 }
 
 type BundleLoader interface {
@@ -54,6 +50,10 @@ type NstarRunner interface {
 	StreamOut(log lager.Logger, pid int, path string, user string) (io.ReadCloser, error)
 }
 
+type Stopper interface {
+	StopAll(log lager.Logger, cgroupName string, save []int, kill bool) error
+}
+
 type EventStore interface {
 	OnEvent(id string, event string) error
 	Events(id string) []string
@@ -69,20 +69,22 @@ type ExitStore interface {
 type Containerizer struct {
 	depot   Depot
 	bundler BundleGenerator
-	runner  BundleRunner
 	loader  BundleLoader
+	runner  BundleRunner
+	stopper Stopper
 	nstar   NstarRunner
 	exits   ExitStore
 	events  EventStore
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader BundleLoader, nstarRunner NstarRunner, exitStore ExitStore, events EventStore) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, exitStore ExitStore, events EventStore) *Containerizer {
 	return &Containerizer{
 		depot:   depot,
 		bundler: bundler,
 		runner:  runner,
 		loader:  loader,
 		nstar:   nstarRunner,
+		stopper: stopper,
 		events:  events,
 		exits:   exitStore,
 	}
@@ -180,6 +182,22 @@ func (c *Containerizer) StreamOut(log lager.Logger, handle string, spec garden.S
 	}
 
 	return stream, nil
+}
+
+// Stop stops all the processes other than the init process in the container
+func (c *Containerizer) Stop(log lager.Logger, handle string, kill bool) error {
+	log = log.Session("stop", lager.Data{"handle": handle, "kill": kill})
+
+	log.Info("started")
+	defer log.Info("finished")
+
+	state, err := c.runner.State(log, handle)
+	if err != nil {
+		log.Error("check-pid-failed", err)
+		return fmt.Errorf("stop: pid not found for container")
+	}
+
+	return c.stopper.StopAll(log, handle, []int{state.Pid}, kill)
 }
 
 // Destroy kills any container processes and deletes the bundle directory
