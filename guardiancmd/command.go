@@ -549,6 +549,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 			bundlerules.Hooks{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
 			bundlerules.BindMounts{},
 			bundlerules.Env{},
+			bundlerules.Hostname{},
 		},
 	}
 

@@ -102,6 +102,9 @@ type DesiredContainerSpec struct {
 	// Network hook
 	NetworkHooks []Hooks
 
+	// Container hostname
+	Hostname string
+
 	// Bind mounts
 	BindMounts []garden.BindMount
 
@@ -222,6 +225,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		Handle:       spec.Handle,
 		RootFSPath:   rootFSPath,
 		NetworkHooks: networkHooks,
+		Hostname:     spec.Handle,
 		Privileged:   spec.Privileged,
 		BindMounts:   spec.BindMounts,
 		Limits:       spec.Limits,

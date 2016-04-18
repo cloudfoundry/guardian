@@ -271,6 +271,14 @@ var _ = Describe("Gardener", func() {
 			Expect(spec.Privileged).To(BeTrue())
 		})
 
+		It("sets the handle as the container hostname", func() {
+			_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, spec := containerizer.CreateArgsForCall(0)
+			Expect(spec.Hostname).To(Equal("bob"))
+		})
+
 		Context("when the containerizer fails to create the container", func() {
 			BeforeEach(func() {
 				containerizer.CreateReturns(errors.New("failed to create the banana"))
