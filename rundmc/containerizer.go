@@ -20,6 +20,7 @@ import (
 //go:generate counterfeiter . BundleLoader
 //go:generate counterfeiter . ExitStore
 //go:generate counterfeiter . Stopper
+//go:generate counterfeiter . StateStore
 
 type Depot interface {
 	Create(log lager.Logger, handle string, bundle depot.BundleSaver) error
@@ -59,6 +60,11 @@ type EventStore interface {
 	Events(id string) []string
 }
 
+type StateStore interface {
+	Store(handle string, stopped bool)
+	IsStopped(handle string) bool
+}
+
 type ExitStore interface {
 	Store(handle string, exit <-chan struct{})
 	Unstore(handle string)
@@ -75,9 +81,10 @@ type Containerizer struct {
 	nstar   NstarRunner
 	exits   ExitStore
 	events  EventStore
+	states  StateStore
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, exitStore ExitStore, events EventStore) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, exitStore ExitStore, events EventStore, states StateStore) *Containerizer {
 	return &Containerizer{
 		depot:   depot,
 		bundler: bundler,
@@ -87,6 +94,7 @@ func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader Bundl
 		stopper: stopper,
 		events:  events,
 		exits:   exitStore,
+		states:  states,
 	}
 }
 
@@ -194,10 +202,15 @@ func (c *Containerizer) Stop(log lager.Logger, handle string, kill bool) error {
 	state, err := c.runner.State(log, handle)
 	if err != nil {
 		log.Error("check-pid-failed", err)
-		return fmt.Errorf("stop: pid not found for container")
+		return fmt.Errorf("stop: pid not found for container: %s", err)
 	}
 
-	return c.stopper.StopAll(log, handle, []int{state.Pid}, kill)
+	if err = c.stopper.StopAll(log, handle, []int{state.Pid}, kill); err != nil {
+		return fmt.Errorf("stop: %s", err)
+	}
+
+	c.states.Store(handle, true)
+	return nil
 }
 
 // Destroy kills any container processes and deletes the bundle directory
@@ -240,6 +253,7 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 	return gardener.ActualContainerSpec{
 		BundlePath: bundlePath,
 		Events:     c.events.Events(handle),
+		Stopped:    c.states.IsStopped(handle),
 	}, nil
 }
 

@@ -24,6 +24,10 @@ var _ = Describe("Resolver", func() {
 		Expect(os.MkdirAll(filepath.Join(fakeStateDir, "some-handle"), 0700)).To(Succeed())
 	})
 
+	AfterEach(func() {
+		os.RemoveAll(fakeStateDir)
+	})
+
 	Context("with valid state.json", func() {
 		BeforeEach(func() {
 			stateJson, err := os.Create(filepath.Join(fakeStateDir, "some-handle", "state.json"))

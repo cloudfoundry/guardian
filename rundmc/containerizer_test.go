@@ -29,6 +29,7 @@ var _ = Describe("Rundmc", func() {
 		fakeStopper         *fakes.FakeStopper
 		fakeExitStore       *fakes.FakeExitStore
 		fakeEventStore      *fakes.FakeEventStore
+		fakeStateStore      *fakes.FakeStateStore
 
 		logger        lager.Logger
 		containerizer *rundmc.Containerizer
@@ -43,13 +44,14 @@ var _ = Describe("Rundmc", func() {
 		fakeStopper = new(fakes.FakeStopper)
 		fakeExitStore = new(fakes.FakeExitStore)
 		fakeEventStore = new(fakes.FakeEventStore)
+		fakeStateStore = new(fakes.FakeStateStore)
 		logger = lagertest.NewTestLogger("test")
 
 		fakeDepot.LookupStub = func(_ lager.Logger, handle string) (string, error) {
 			return "/path/to/" + handle, nil
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeExitStore, fakeEventStore)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeExitStore, fakeEventStore, fakeStateStore)
 	})
 
 	Describe("Create", func() {
@@ -245,31 +247,66 @@ var _ = Describe("Rundmc", func() {
 		})
 	})
 
-	Describe("stop", func() {
+	Describe("Stop", func() {
 		var (
 			cgroupPathArg string
 			exceptionsArg []int
 			killArg       bool
 		)
 
-		BeforeEach(func() {
-			fakeContainerRunner.StateReturns(runrunc.State{
-				Pid: 1234,
-			}, nil)
+		Context("when the stop succeeds", func() {
+			BeforeEach(func() {
+				fakeContainerRunner.StateReturns(runrunc.State{
+					Pid: 1234,
+				}, nil)
 
-			Expect(containerizer.Stop(logger, "some-handle", true)).To(Succeed())
-			Expect(fakeStopper.StopAllCallCount()).To(Equal(1))
+				Expect(containerizer.Stop(logger, "some-handle", true)).To(Succeed())
+				Expect(fakeStopper.StopAllCallCount()).To(Equal(1))
 
-			_, cgroupPathArg, exceptionsArg, killArg = fakeStopper.StopAllArgsForCall(0)
+				_, cgroupPathArg, exceptionsArg, killArg = fakeStopper.StopAllArgsForCall(0)
+			})
+
+			It("asks to stop all processes in the processes's cgroup", func() {
+				Expect(cgroupPathArg).To(Equal("some-handle"))
+				Expect(killArg).To(Equal(true))
+			})
+
+			It("asks to not stop the pid of the init process", func() {
+				Expect(exceptionsArg).To(ConsistOf(1234))
+			})
+
+			It("transitions the stored state", func() {
+				Expect(fakeStateStore.StoreCallCount()).To(Equal(1))
+				handle, stopped := fakeStateStore.StoreArgsForCall(0)
+				Expect(handle).To(Equal("some-handle"))
+				Expect(stopped).To(Equal(true))
+			})
 		})
 
-		It("asks to stop all processes in the processes's cgroup", func() {
-			Expect(cgroupPathArg).To(Equal("some-handle"))
-			Expect(killArg).To(Equal(true))
+		Context("when the stop fails", func() {
+			BeforeEach(func() {
+				fakeStopper.StopAllReturns(errors.New("boom"))
+			})
+
+			It("does not transition to the stopped state", func() {
+				Expect(containerizer.Stop(logger, "some-handle", true)).To(MatchError(ContainSubstring("boom")))
+				Expect(fakeStateStore.StoreCallCount()).To(Equal(0))
+			})
 		})
 
-		It("asks to not stop the pid of the init process", func() {
-			Expect(exceptionsArg).To(ConsistOf(1234))
+		Context("when getting runc's state fails", func() {
+			BeforeEach(func() {
+				fakeContainerRunner.StateReturns(runrunc.State{}, errors.New("boom"))
+			})
+
+			It("does not stop the processes", func() {
+				Expect(fakeStopper.StopAllCallCount()).To(Equal(0))
+			})
+
+			It("does not transition to the stopped state", func() {
+				Expect(containerizer.Stop(logger, "some-handle", true)).To(MatchError(ContainSubstring("boom")))
+				Expect(fakeStateStore.StoreCallCount()).To(Equal(0))
+			})
 		})
 	})
 
@@ -379,6 +416,14 @@ var _ = Describe("Rundmc", func() {
 				"potato",
 				"fire",
 			}))
+		})
+
+		It("should return the stopped state from the property manager", func() {
+			fakeStateStore.IsStoppedReturns(true)
+
+			actualSpec, err := containerizer.Info(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualSpec.Stopped).To(Equal(true))
 		})
 	})
 

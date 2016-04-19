@@ -925,11 +925,18 @@ var _ = Describe("Gardener", func() {
 			}
 		})
 
-		It("hard-codes the state to 'active'", func() {
+		It("returns state as 'active' or 'stopped' depending on whether the actual container is stopped", func() {
 			info, err := container.Info()
 			Expect(err).NotTo(HaveOccurred())
-
 			Expect(info.State).To(Equal("active"))
+
+			containerizer.InfoReturns(gardener.ActualContainerSpec{
+				Stopped: true,
+			}, nil)
+
+			info, err = container.Info()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.State).To(Equal("stopped"))
 		})
 
 		It("returns the garden.network.container-ip property from the propertyManager as the ContainerIP", func() {

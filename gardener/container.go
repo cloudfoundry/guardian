@@ -66,9 +66,14 @@ func (c *container) Info() (garden.ContainerInfo, error) {
 	mappedPorts := []garden.PortMapping{}
 	mappedPortsCfg, _ := c.propertyManager.Get(c.handle, MappedPortsKey)
 
+	state := "active"
+	if actualContainerSpec.Stopped {
+		state = "stopped"
+	}
+
 	json.Unmarshal([]byte(mappedPortsCfg), &mappedPorts)
 	return garden.ContainerInfo{
-		State:         "active",
+		State:         state,
 		ContainerIP:   containerIP,
 		HostIP:        hostIP,
 		ExternalIP:    externalIP,
