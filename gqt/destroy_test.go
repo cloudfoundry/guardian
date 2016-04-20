@@ -136,13 +136,26 @@ var _ = Describe("Destroying a Container", func() {
 		It("should remove the network bridge", func() {
 			Expect(client.Destroy(existingContainer.Handle())).To(Succeed())
 
-			session, err := gexec.Start(
-				exec.Command("ifconfig"),
-				GinkgoWriter, GinkgoWriter,
-			)
+			// ifconfig can be flakey when it runs while parallel tests are destroying
+			// interfaces, so run it a few times to minimize chance of problems
+			var session *gexec.Session
+			for i := 0; i < 30; i++ {
+				var err error
+				session, err = gexec.Start(
+					exec.Command("ifconfig"),
+					GinkgoWriter, GinkgoWriter,
+				)
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
+				session.Wait()
+				if session.ExitCode() == 0 {
+					break
+				}
+
+				time.Sleep(1 * time.Second)
+			}
+
+			Expect(session.ExitCode()).To(Equal(0))
 			Expect(session).NotTo(gbytes.Say("w%dbrdg-", GinkgoParallelNode()))
 		})
 	})
