@@ -1,6 +1,7 @@
 package main_test
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -175,7 +176,7 @@ func setupCgroups() error {
 	logger := lagertest.NewTestLogger("test")
 	runner := linux_command_runner.New()
 
-	starter := rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), path.Join(os.TempDir(), "cgroups"), runner)
+	starter := rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%d", GinkgoParallelNode())), runner)
 
 	return starter.Start()
 }
