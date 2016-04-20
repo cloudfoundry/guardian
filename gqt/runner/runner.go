@@ -1,12 +1,15 @@
 package runner
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -34,6 +37,9 @@ type RunningGarden struct {
 
 	runner  *ginkgomon.Runner
 	process ifrit.Process
+
+	debugIP   string
+	debugPort int
 
 	Pid int
 
@@ -89,6 +95,15 @@ func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin string, su
 	r.process = ifrit.Invoke(r.runner)
 
 	r.Pid = c.Process.Pid
+
+	for i, arg := range c.Args {
+		if arg == "--debug-bind-ip" {
+			r.debugIP = c.Args[i+1]
+		}
+		if arg == "--debug-bind-port" {
+			r.debugPort, _ = strconv.Atoi(c.Args[i+1])
+		}
+	}
 
 	return r
 }
@@ -239,6 +254,28 @@ func (r *RunningGarden) DestroyContainers() error {
 	}
 
 	return nil
+}
+
+type debugVars struct {
+	NumGoRoutines int `json:"numGoRoutines"`
+}
+
+func (r *RunningGarden) NumGoroutines() (int, error) {
+	debugURL := fmt.Sprintf("http://%s:%d/debug/vars", r.debugIP, r.debugPort)
+	res, err := http.Get(debugURL)
+	defer res.Body.Close()
+	if err != nil {
+		return 0, err
+	}
+
+	decoder := json.NewDecoder(res.Body)
+	var debugVarsData debugVars
+	err = decoder.Decode(&debugVarsData)
+	if err != nil {
+		return 0, err
+	}
+
+	return debugVarsData.NumGoRoutines, nil
 }
 
 func (r *RunningGarden) Buffer() *gbytes.Buffer {

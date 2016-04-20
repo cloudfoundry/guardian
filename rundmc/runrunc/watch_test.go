@@ -75,6 +75,15 @@ var _ = Describe("Watching for Events", func() {
 		It("reports an event if one happens", func() {
 			defer close(eventsCh)
 
+			waitCh := make(chan struct{})
+			defer close(waitCh)
+			commandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
+				Path: "funC-events",
+			}, func(cmd *exec.Cmd) error {
+				<-waitCh
+				return nil
+			})
+
 			go runner.WatchEvents(logger, "some-container", eventsNotifier)
 
 			Consistently(eventsNotifier.OnEventCallCount).Should(Equal(0))

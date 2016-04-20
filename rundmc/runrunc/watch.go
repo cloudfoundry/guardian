@@ -40,7 +40,6 @@ func (r *OomWatcher) WatchEvents(log lager.Logger, handle string, eventsNotifier
 	log.Info("watching")
 
 	defer func() {
-		w.Close()
 		stdoutR.Close()
 		log.Info("done")
 	}()
@@ -49,7 +48,11 @@ func (r *OomWatcher) WatchEvents(log lager.Logger, handle string, eventsNotifier
 		log.Error("run-events", err)
 		return fmt.Errorf("start: %s", err)
 	}
-	go r.commandRunner.Wait(cmd) // avoid zombie
+
+	go func() {
+		defer w.Close()
+		r.commandRunner.Wait(cmd) // avoid zombie
+	}()
 
 	decoder := json.NewDecoder(stdoutR)
 	for {

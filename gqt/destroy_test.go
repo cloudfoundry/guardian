@@ -29,10 +29,6 @@ var _ = Describe("Destroying a Container", func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
-	JustBeforeEach(func() {
-		Expect(client.Destroy(container.Handle())).To(Succeed())
-	})
-
 	Context("when running a process", func() {
 		var (
 			process         garden.Process
@@ -59,6 +55,10 @@ var _ = Describe("Destroying a Container", func() {
 			info, err := container.Info()
 			Expect(err).NotTo(HaveOccurred())
 			containerRootfs = info.ContainerPath
+		})
+
+		JustBeforeEach(func() {
+			Expect(client.Destroy(container.Handle())).To(Succeed())
 		})
 
 		It("should kill the containers init process", func() {
@@ -102,6 +102,10 @@ var _ = Describe("Destroying a Container", func() {
 				Network: "168.100.20.10/24",
 			})
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		JustBeforeEach(func() {
+			Expect(client.Destroy(container.Handle())).To(Succeed())
 		})
 
 		AfterEach(func() {
@@ -158,6 +162,26 @@ var _ = Describe("Destroying a Container", func() {
 			Expect(session.ExitCode()).To(Equal(0))
 			Expect(session).NotTo(gbytes.Say("w%dbrdg-", GinkgoParallelNode()))
 		})
+	})
+
+	It("doesn't leak goroutines", func() {
+		handle := fmt.Sprintf("goroutine-leak-test-%d", GinkgoParallelNode())
+
+		numGoroutinesBefore, err := client.NumGoroutines()
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = client.Create(garden.ContainerSpec{
+			Handle: handle,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		client.Destroy(handle)
+
+		Eventually(func() int {
+			numGoroutinesAfter, err := client.NumGoroutines()
+			Expect(err).NotTo(HaveOccurred())
+			return numGoroutinesAfter
+		}).Should(Equal(numGoroutinesBefore))
 	})
 })
 
