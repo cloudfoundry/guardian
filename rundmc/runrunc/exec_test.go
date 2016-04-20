@@ -54,6 +54,7 @@ var _ = Describe("Exec", func() {
 			bundleLoader,
 			users,
 			mkdirer,
+			[]string{"foo", "bar", "brains"},
 		)
 
 		var err error
@@ -243,7 +244,7 @@ var _ = Describe("ExecPreparer", func() {
 
 		users.LookupReturns(&user.ExecUser{}, nil)
 
-		preparer = runrunc.NewExecPreparer(bundleLoader, users, mkdirer)
+		preparer = runrunc.NewExecPreparer(bundleLoader, users, mkdirer, []string{"foo", "bar", "brains"})
 	})
 
 	It("passes a process.json with the correct path and args", func() {
@@ -512,10 +513,22 @@ var _ = Describe("ExecPreparer", func() {
 			bundleLoader.LoadReturns(bndl, nil)
 		})
 
-		It("passes them on to the process", func() {
-			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(spec.Capabilities).To(Equal([]string{"foo", "bar", "baz"}))
+		Context("and the user is root", func() {
+			It("passes them on to the process", func() {
+				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(spec.Capabilities).To(Equal([]string{"foo", "bar", "baz"}))
+			})
+		})
+
+		Context("and the user is not root", func() {
+			It("removes any caps not in nonRootMaxCaps list", func() {
+				users.LookupReturns(&user.ExecUser{Uid: 1234, Gid: 0}, nil)
+				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(spec.Capabilities).To(Equal([]string{"foo", "bar"}))
+			})
 		})
 	})
 

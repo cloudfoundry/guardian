@@ -53,7 +53,9 @@ import (
 	"github.com/tedsuo/ifrit/sigmon"
 )
 
-var DefaultCapabilities = []string{
+// These are the maximum caps an unprivileged container process ever gets
+// (it may get less if the user is not root, see NonRootMaxCaps)
+var UnprivilegedMaxCaps = []string{
 	"CAP_CHOWN",
 	"CAP_DAC_OVERRIDE",
 	"CAP_FSETID",
@@ -69,6 +71,54 @@ var DefaultCapabilities = []string{
 	"CAP_KILL",
 	"CAP_AUDIT_WRITE",
 }
+
+// These are the maximum caps a privileged container process ever gets
+// (it may get less if the user is not root, see NonRootMaxCaps)
+var PrivilegedMaxCaps = []string{
+	"CAP_AUDIT_CONTROL",
+	"CAP_AUDIT_READ",
+	"CAP_AUDIT_WRITE",
+	"CAP_BLOCK_SUSPEND",
+	"CAP_CHOWN",
+	"CAP_DAC_OVERRIDE",
+	"CAP_DAC_READ_SEARCH",
+	"CAP_FOWNER",
+	"CAP_FSETID",
+	"CAP_IPC_LOCK",
+	"CAP_IPC_OWNER",
+	"CAP_KILL",
+	"CAP_LEASE",
+	"CAP_LINUX_IMMUTABLE",
+	"CAP_MAC_ADMIN",
+	"CAP_MAC_OVERRIDE",
+	"CAP_MKNOD",
+	"CAP_NET_ADMIN",
+	"CAP_NET_BIND_SERVICE",
+	"CAP_NET_BROADCAST",
+	"CAP_NET_RAW",
+	"CAP_SETGID",
+	"CAP_SETFCAP",
+	"CAP_SETPCAP",
+	"CAP_SETUID",
+	"CAP_SYS_ADMIN",
+	"CAP_SYS_BOOT",
+	"CAP_SYS_CHROOT",
+	"CAP_SYS_MODULE",
+	"CAP_SYS_NICE",
+	"CAP_SYS_PACCT",
+	"CAP_SYS_PTRACE",
+	"CAP_SYS_RAWIO",
+	"CAP_SYS_RESOURCE",
+	"CAP_SYS_TIME",
+	"CAP_SYS_TTY_CONFIG",
+	"CAP_SYSLOG",
+	"CAP_WAKE_ALARM",
+}
+
+// These are the maximum capabilities a non-root user gets whether privileged or unprivileged
+// In other words in a privileged container a non-root user still only gets the unprivileged set
+// plus CAP_SYS_ADMIN.
+var NonRootMaxCaps = append(UnprivilegedMaxCaps, "CAP_SYS_ADMIN")
 
 var PrivilegedContainerNamespaces = []specs.Namespace{
 	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace,
@@ -463,7 +513,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		goci.RuncBinary(runcPath),
 		dadooPath,
 		runcPath,
-		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir),
+		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps),
 		runrunc.NewExecRunner(cmd.wireUidGenerator(), goci.RuncBinary(runcPath),
 			process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", cmd.Server.Tag), "processes"), iodaemonPath, commandRunner, pidFileReader),
 			&runrunc.Watcher{}),
@@ -513,7 +563,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 	}
 
 	baseProcess := specs.Process{
-		Capabilities: DefaultCapabilities,
+		Capabilities: UnprivilegedMaxCaps,
 		Args:         []string{"/tmp/garden-init"},
 		Cwd:          "/",
 	}
@@ -533,7 +583,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).
-		WithCapabilities(append(DefaultCapabilities, "CAP_SYS_ADMIN")...)
+		WithCapabilities(PrivilegedMaxCaps...)
 
 	template := &rundmc.BundleTemplate{
 		Rules: []rundmc.BundlerRule{

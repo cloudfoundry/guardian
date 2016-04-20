@@ -142,13 +142,16 @@ type ExecPreparer struct {
 	bundleLoader BundleLoader
 	users        UserLookupper
 	mkdirer      Mkdirer
+
+	nonRootMaxCaps []string
 }
 
-func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdirer Mkdirer) *ExecPreparer {
+func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdirer Mkdirer, nonRootMaxCaps []string) *ExecPreparer {
 	return &ExecPreparer{
-		bundleLoader: bundleLoader,
-		users:        userlookup,
-		mkdirer:      mkdirer,
+		bundleLoader:   bundleLoader,
+		users:          userlookup,
+		mkdirer:        mkdirer,
+		nonRootMaxCaps: nonRootMaxCaps,
 	}
 }
 
@@ -181,6 +184,11 @@ func (r *ExecPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		return nil, err
 	}
 
+	caps := bndl.Capabilities()
+	if u.containerUid != 0 {
+		caps = intersect(caps, r.nonRootMaxCaps)
+	}
+
 	return &specs.Process{
 		Args: append([]string{spec.Path}, spec.Args...),
 		Env:  envFor(u.containerUid, bndl, spec),
@@ -189,7 +197,7 @@ func (r *ExecPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 			GID: uint32(u.containerGid),
 		},
 		Cwd:          cwd,
-		Capabilities: bndl.Capabilities(),
+		Capabilities: caps,
 		Rlimits:      toRlimits(spec.Limits),
 		Terminal:     spec.TTY != nil,
 	}, nil
@@ -262,4 +270,16 @@ func (files RemoveFiles) Run(log lager.Logger) {
 			log.Error("cleanup-process-json-failed", err)
 		}
 	}
+}
+
+func intersect(l1 []string, l2 []string) (result []string) {
+	for _, a := range l1 {
+		for _, b := range l2 {
+			if a == b {
+				result = append(result, a)
+			}
+		}
+	}
+
+	return result
 }
