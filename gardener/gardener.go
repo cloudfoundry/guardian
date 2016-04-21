@@ -45,7 +45,6 @@ type Containerizer interface {
 	Destroy(log lager.Logger, handle string) error
 
 	Info(log lager.Logger, handle string) (ActualContainerSpec, error)
-	CPULimit(log lager.Logger, handle string) (garden.CPULimits, error)
 	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
 }
 
@@ -132,6 +131,9 @@ type ActualContainerSpec struct {
 
 	// Events (e.g. OOM) which have occured in the container
 	Events []string
+
+	// Applied limits
+	Limits garden.Limits
 }
 
 type ActualContainerMetrics struct {

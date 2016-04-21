@@ -390,10 +390,47 @@ var _ = Describe("Rundmc", func() {
 	})
 
 	Describe("Info", func() {
+		BeforeEach(func() {
+			fakeBundleLoader.LoadStub = func(bundlePath string) (*goci.Bndl, error) {
+				if bundlePath != "/path/to/some-handle" {
+					return nil, errors.New("cannot find bundle")
+				}
+
+				var limit uint64 = 10
+				var shares uint64 = 20
+				return &goci.Bndl{
+					Spec: specs.Spec{
+						Linux: specs.Linux{
+							Resources: &specs.Resources{
+								Memory: &specs.Memory{
+									Limit: &limit,
+								},
+								CPU: &specs.CPU{
+									Shares: &shares,
+								},
+							},
+						},
+					},
+				}, nil
+			}
+		})
+
 		It("should return the ActualContainerSpec with the correct bundlePath", func() {
 			actualSpec, err := containerizer.Info(logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualSpec.BundlePath).To(Equal("/path/to/some-handle"))
+		})
+
+		It("should return the ActualContainerSpec with the correct CPU limits", func() {
+			actualSpec, err := containerizer.Info(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualSpec.Limits.CPU.LimitInShares).To(BeEquivalentTo(20))
+		})
+
+		It("should return the ActualContainerSpec with the correct memory limits", func() {
+			actualSpec, err := containerizer.Info(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualSpec.Limits.Memory.LimitInBytes).To(BeEquivalentTo(10))
 		})
 
 		Context("when looking up the bundle path fails", func() {
@@ -401,6 +438,14 @@ var _ = Describe("Rundmc", func() {
 				fakeDepot.LookupReturns("", errors.New("spiderman-error"))
 				_, err := containerizer.Info(logger, "some-handle")
 				Expect(err).To(MatchError("spiderman-error"))
+			})
+		})
+
+		Context("when loading the bundle fails", func() {
+			It("should return the error", func() {
+				fakeBundleLoader.LoadReturns(nil, errors.New("aquaman-error"))
+				_, err := containerizer.Info(logger, "some-handle")
+				Expect(err).To(MatchError("aquaman-error"))
 			})
 		})
 
@@ -449,57 +494,6 @@ var _ = Describe("Rundmc", func() {
 			It("should return the error", func() {
 				_, err := containerizer.Metrics(logger, "foo")
 				Expect(err).To(MatchError("banana"))
-			})
-		})
-	})
-
-	Describe("CPULimit", func() {
-		BeforeEach(func() {
-			fakeBundleLoader.LoadStub = func(bundlePath string) (*goci.Bndl, error) {
-				if bundlePath != "/path/to/some-handle" {
-					return nil, errors.New("cannot find bundle")
-				}
-
-				var shares uint64 = 10
-				return &goci.Bndl{
-					Spec: specs.Spec{
-						Linux: specs.Linux{
-							Resources: &specs.Resources{
-								CPU: &specs.CPU{
-									Shares: &shares,
-								},
-							},
-						},
-					},
-				}, nil
-			}
-		})
-
-		It("should return the limit", func() {
-			cpuLimit, err := containerizer.CPULimit(logger, "some-handle")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(cpuLimit.LimitInShares).To(BeEquivalentTo(10))
-		})
-
-		Context("when the container does not exist", func() {
-			BeforeEach(func() {
-				fakeDepot.LookupReturns("", errors.New("aaa"))
-			})
-
-			It("returns an error", func() {
-				_, err := containerizer.CPULimit(logger, "some-handle")
-				Expect(err).To(MatchError("looking up container: aaa"))
-			})
-		})
-
-		Context("when the bundle is not found", func() {
-			BeforeEach(func() {
-				fakeBundleLoader.LoadReturns(nil, errors.New("banana"))
-			})
-
-			It("returns an error", func() {
-				_, err := containerizer.CPULimit(logger, "some-handle")
-				Expect(err).To(MatchError("loading bundle: banana"))
 			})
 		})
 	})

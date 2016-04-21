@@ -105,7 +105,8 @@ func (c *container) LimitCPU(limits garden.CPULimits) error {
 }
 
 func (c *container) CurrentCPULimits() (garden.CPULimits, error) {
-	return c.containerizer.CPULimit(c.logger, c.handle)
+	info, err := c.containerizer.Info(c.logger, c.handle)
+	return info.Limits.CPU, err
 }
 
 func (c *container) LimitDisk(limits garden.DiskLimits) error {
@@ -121,7 +122,8 @@ func (c *container) LimitMemory(limits garden.MemoryLimits) error {
 }
 
 func (c *container) CurrentMemoryLimits() (garden.MemoryLimits, error) {
-	return garden.MemoryLimits{}, nil
+	info, err := c.containerizer.Info(c.logger, c.handle)
+	return info.Limits.Memory, err
 }
 
 func (c *container) NetIn(hostPort, containerPort uint32) (uint32, uint32, error) {

@@ -250,35 +250,28 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 		return gardener.ActualContainerSpec{}, err
 	}
 
+	bundle, err := c.loader.Load(bundlePath)
+	if err != nil {
+		return gardener.ActualContainerSpec{}, err
+	}
+
 	return gardener.ActualContainerSpec{
 		BundlePath: bundlePath,
 		Events:     c.events.Events(handle),
 		Stopped:    c.states.IsStopped(handle),
+		Limits: garden.Limits{
+			CPU: garden.CPULimits{
+				LimitInShares: *bundle.Resources().CPU.Shares,
+			},
+			Memory: garden.MemoryLimits{
+				LimitInBytes: *bundle.Resources().Memory.Limit,
+			},
+		},
 	}, nil
 }
 
 func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error) {
 	return c.runner.Stats(log, handle)
-}
-
-func (c *Containerizer) CPULimit(log lager.Logger, handle string) (garden.CPULimits, error) {
-	log = log.Session("containerizer-cpulimit", lager.Data{"handle": handle})
-
-	bundlePath, err := c.depot.Lookup(log, handle)
-	if err != nil {
-		log.Error("looking-up-container", err)
-		return garden.CPULimits{}, fmt.Errorf("looking up container: %s", err)
-	}
-
-	bndl, err := c.loader.Load(bundlePath)
-	if err != nil {
-		log.Error("loading-bundle", err)
-		return garden.CPULimits{}, fmt.Errorf("loading bundle: %s", err)
-	}
-
-	return garden.CPULimits{
-		LimitInShares: *(bndl.Resources().CPU.Shares),
-	}, nil
 }
 
 // Handles returns a list of all container handles
