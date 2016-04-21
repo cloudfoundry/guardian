@@ -546,24 +546,44 @@ var _ = Describe("Gardener", func() {
 			containerizer.HandlesReturns(containers, nil)
 		})
 
-		It("calls destroy on the existing containers", func() {
-			err = gdnr.Start()
-			Expect(err).NotTo(HaveOccurred())
+		Context("when DestroyContainersOnStartup is true", func() {
+			BeforeEach(func() {
+				gdnr.DestroyContainersOnStartup = true
+			})
 
-			Expect(containerizer.DestroyCallCount()).To(Equal(2))
+			It("calls destroy on the existing containers", func() {
+				err = gdnr.Start()
+				Expect(err).NotTo(HaveOccurred())
 
-			_, handle := containerizer.DestroyArgsForCall(0)
-			Expect(handle).To(Equal("container1"))
+				Expect(containerizer.DestroyCallCount()).To(Equal(2))
 
-			_, handle = containerizer.DestroyArgsForCall(1)
-			Expect(handle).To(Equal("container2"))
+				_, handle := containerizer.DestroyArgsForCall(0)
+				Expect(handle).To(Equal("container1"))
+
+				_, handle = containerizer.DestroyArgsForCall(1)
+				Expect(handle).To(Equal("container2"))
+			})
+
+			It("returns an error when failing to destroy", func() {
+				containerizer.DestroyReturns(errors.New("containerized deletion failed"))
+				err = gdnr.Start()
+				Expect(err).To(MatchError("cleaning up containers: containerized deletion failed"))
+			})
 		})
 
-		It("returns an error when failing to destroy", func() {
-			containerizer.DestroyReturns(errors.New("containerized deletion failed"))
-			err = gdnr.Start()
-			Expect(err).To(MatchError("cleaning up containers: containerized deletion failed"))
+		Context("when DestroyContainersOnStartup is false", func() {
+			BeforeEach(func() {
+				gdnr.DestroyContainersOnStartup = false
+			})
+
+			It("does not call destroy on the existing containers", func() {
+				err = gdnr.Start()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(containerizer.DestroyCallCount()).To(Equal(0))
+			})
 		})
+
 	})
 
 	Describe("listing containers", func() {

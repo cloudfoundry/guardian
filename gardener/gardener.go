@@ -166,6 +166,9 @@ type Gardener struct {
 
 	// MaxContainers limits the advertised container capacity
 	MaxContainers uint64
+
+	// Destroy the existing containers at startup
+	DestroyContainersOnStartup bool
 }
 
 // Create creates a container by combining the results of networker.Network,
@@ -440,8 +443,11 @@ func (g *Gardener) Start() error {
 
 	log.Info("starting")
 
-	if err := g.cleanupContainers(log); err != nil {
-		return fmt.Errorf("cleaning up containers: %s", err)
+	if g.DestroyContainersOnStartup {
+		log.Info("destroying the existing containers")
+		if err := g.cleanupContainers(log); err != nil {
+			return fmt.Errorf("cleaning up containers: %s", err)
+		}
 	}
 
 	for _, starter := range g.Starters {

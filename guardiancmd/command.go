@@ -142,8 +142,9 @@ type GuardianCommand struct {
 	Containers struct {
 		Dir DirFlag `long:"depot" required:"true" description:"Directory in which to store container data."`
 
-		DefaultRootFSDir DirFlag       `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
-		DefaultGraceTime time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
+		DefaultRootFSDir           DirFlag       `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
+		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
+		DestroyContainersOnStartup bool          `long:"destroy-containers-on-startup" description:"Clean up all the existing containers on startup."`
 	} `group:"Container Lifecycle"`
 
 	Bin struct {
@@ -260,14 +261,15 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	networker := cmd.wireNetworker(logger, cmd.Bin.Kawasaki.Path(), cmd.Server.Tag, cmd.Network.Pool.CIDR(), externalIPAddr, dnsIPs, ipt, interfacePrefix, chainPrefix, propManager, networkHookers)
 
 	backend := &gardener.Gardener{
-		UidGenerator:    cmd.wireUidGenerator(),
-		Starters:        cmd.wireStarter(logger, ipt, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList),
-		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
-		Networker:       networker,
-		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
-		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), propManager),
-		PropertyManager: propManager,
-		MaxContainers:   cmd.Limits.MaxContainers,
+		UidGenerator:               cmd.wireUidGenerator(),
+		Starters:                   cmd.wireStarter(logger, ipt, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList),
+		SysInfoProvider:            sysinfo.NewProvider(cmd.Containers.Dir.Path()),
+		Networker:                  networker,
+		VolumeCreator:              cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
+		Containerizer:              cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), propManager),
+		PropertyManager:            propManager,
+		MaxContainers:              cmd.Limits.MaxContainers,
+		DestroyContainersOnStartup: cmd.Containers.DestroyContainersOnStartup,
 
 		Logger: logger,
 	}
