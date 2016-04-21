@@ -189,6 +189,7 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, 
 	gardenArgs = appendDefaultFlag(gardenArgs, "--depot", depotDir)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--graph", graphPath)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
+	gardenArgs = appendDefaultFlag(gardenArgs, "--network-pool", fmt.Sprintf("10.254.%d.0/22", 4*GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--init-bin", initBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--iodaemon-bin", iodaemonBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--dadoo-bin", dadooBin)
