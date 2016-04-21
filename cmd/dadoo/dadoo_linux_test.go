@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/cloudfoundry-incubator/goci"
@@ -33,6 +34,8 @@ var _ = Describe("Dadoo", func() {
 		bundlePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
+		Expect(syscall.Mount("tmpfs", bundlePath, "tmpfs", 0, "")).To(Succeed())
+
 		cmd := exec.Command("runc", "spec")
 		cmd.Dir = bundlePath
 		Expect(cmd.Run()).To(Succeed())
@@ -57,7 +60,7 @@ var _ = Describe("Dadoo", func() {
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(bundlePath)).To(Succeed())
+		Expect(syscall.Unmount(bundlePath, syscall.MNT_DETACH)).To(Succeed())
 	})
 
 	It("should return the exit code of the container process", func() {
