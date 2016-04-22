@@ -3,9 +3,11 @@ package runrunc
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
@@ -167,7 +169,14 @@ func (r *ExecPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		return nil, err
 	}
 
-	rootFsPath := bndl.RootFS()
+	pidBytes, err := ioutil.ReadFile(filepath.Join(bundlePath, "pidfile"))
+	if err != nil {
+		log.Error("read-pidfile-failed", err)
+		return nil, err
+	}
+
+	pid := string(pidBytes)
+	rootFsPath := filepath.Join("/proc", pid, "root")
 	u, err := r.lookupUser(bndl, rootFsPath, spec.User)
 	if err != nil {
 		log.Error("lookup-user-failed", err)

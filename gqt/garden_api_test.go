@@ -136,7 +136,6 @@ var _ = Describe("Garden API", func() {
 				})
 
 				It("can still run processes in surviving containers", func() {
-
 					out := gbytes.NewBuffer()
 					proc, err := container.Run(
 						garden.ProcessSpec{

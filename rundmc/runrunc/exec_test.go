@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
@@ -73,11 +74,12 @@ var _ = Describe("Exec", func() {
 
 		bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
 			bndl := &goci.Bndl{}
-			bndl.Spec.Root.Path = rootfsPath(path)
 			return bndl, nil
 		}
 
 		users.LookupReturns(&user.ExecUser{}, nil)
+
+		Expect(ioutil.WriteFile(filepath.Join(bundlePath, "pidfile"), []byte("999"), 0644)).To(Succeed())
 
 		runcBinary.ExecCommandStub = func(id, processJSONPath, pidFilePath string) *exec.Cmd {
 			return exec.Command("funC", "exec", id, processJSONPath, "--pid-file", pidFilePath)
@@ -238,12 +240,12 @@ var _ = Describe("ExecPreparer", func() {
 
 		bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
 			bndl := &goci.Bndl{}
-			bndl.Spec.Root.Path = rootfsPath(path)
 			return bndl, nil
 		}
 
 		users.LookupReturns(&user.ExecUser{}, nil)
 
+		Expect(ioutil.WriteFile(filepath.Join(bundlePath, "pidfile"), []byte("999"), 0644)).To(Succeed())
 		preparer = runrunc.NewExecPreparer(bundleLoader, users, mkdirer, []string{"foo", "bar", "brains"})
 	})
 
@@ -330,7 +332,7 @@ var _ = Describe("ExecPreparer", func() {
 			It("looks up the user and group IDs of the user in the right rootfs", func() {
 				Expect(users.LookupCallCount()).To(Equal(1))
 				actualRootfsPath, actualUserName := users.LookupArgsForCall(0)
-				Expect(actualRootfsPath).To(Equal(rootfsPath(bundlePath)))
+				Expect(actualRootfsPath).To(Equal("/proc/999/root"))
 				Expect(actualUserName).To(Equal("spiderman"))
 			})
 
@@ -357,6 +359,15 @@ var _ = Describe("ExecPreparer", func() {
 
 				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
 				Expect(err).To(MatchError(ContainSubstring("bang")))
+			})
+		})
+
+		Context("when the pidfile can't be read", func() {
+			It("returns an appropriate error", func() {
+				Expect(os.Remove(filepath.Join(bundlePath, "pidfile"))).To(Succeed())
+
+				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
+				Expect(err).To(MatchError(ContainSubstring("pidfile")))
 			})
 		})
 	})
@@ -464,7 +475,6 @@ var _ = Describe("ExecPreparer", func() {
 
 		JustBeforeEach(func() {
 			bndl = &goci.Bndl{}
-			bndl.Spec.Root.Path = "/some/rootfs/path"
 			bndl.Spec.Process.Env = containerEnv
 			bundleLoader.LoadReturns(bndl, nil)
 
@@ -558,7 +568,7 @@ var _ = Describe("ExecPreparer", func() {
 					It("creates the working directory", func() {
 						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 						rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
-						Expect(rootfs).To(Equal(rootfsPath(bundlePath)))
+						Expect(rootfs).To(Equal("/proc/999/root"))
 						Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
 						Expect(mode).To(BeNumerically("==", 0755))
 						Expect(recreate).To(BeFalse())
@@ -571,7 +581,6 @@ var _ = Describe("ExecPreparer", func() {
 					BeforeEach(func() {
 						bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
 							bndl := &goci.Bndl{}
-							bndl.Spec.Root.Path = "/rootfs/of/bundle" + path
 							bndl.Spec.Linux.UIDMappings = []specs.IDMapping{{
 								HostID:      1712,
 								ContainerID: 1012,
@@ -589,7 +598,7 @@ var _ = Describe("ExecPreparer", func() {
 					It("creates the working directory as the mapped user", func() {
 						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 						rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
-						Expect(rootfs).To(Equal(rootfsPath(bundlePath)))
+						Expect(rootfs).To(Equal("/proc/999/root"))
 						Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
 						Expect(mode).To(BeEquivalentTo(0755))
 						Expect(recreate).To(BeFalse())
@@ -659,16 +668,11 @@ var _ = Describe("RemoveFiles", func() {
 	It("removes all the paths", func() {
 		a := tmpFile("testremovefiles")
 		b := tmpFile("testremovefiles")
-
 		runrunc.RemoveFiles([]string{a, b}).Run(lagertest.NewTestLogger("test"))
 		Expect(a).NotTo(BeAnExistingFile())
 		Expect(b).NotTo(BeAnExistingFile())
 	})
 })
-
-func rootfsPath(bundlePath string) string {
-	return "/rootfs/of/bundle" + bundlePath
-}
 
 func tmpFile(name string) string {
 	tmp, err := ioutil.TempFile("", name)
