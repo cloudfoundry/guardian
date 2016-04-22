@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
 
@@ -37,6 +38,9 @@ func main() {
 
 	// we need to be the subreaper so we can wait on the detached container process
 	system.SetSubreaper(os.Getpid())
+
+	// listen to an exit socket early so waiters can wait for dadoo
+	dadoo.Listen(filepath.Join(bundlePath, "exit.sock"))
 
 	runcStartCmd := exec.Command(runtime, "-debug", "-log", logFile, "start", "-d", "-pid-file", pidFilePath, containerId)
 	runcStartCmd.Dir = bundlePath

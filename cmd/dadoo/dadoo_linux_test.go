@@ -13,6 +13,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -115,6 +116,50 @@ var _ = Describe("Dadoo", func() {
 				}()
 
 				Eventually(fd3).Should(Receive(BeEquivalentTo(0)))
+			})
+
+			Context("when running a long-running command", func() {
+				BeforeEach(func() {
+					bundle = bundle.WithProcess(specs.Process{
+						Args: []string{
+							"/bin/sh", "-c", "sleep 60",
+						},
+						Cwd: "/",
+					})
+				})
+
+				It("should be able to be watched by WaitWatcher", func() {
+					cmd := exec.Command(dadooBinPath, "run", "runc", bundlePath, filepath.Base(bundlePath))
+					cmd.ExtraFiles = []*os.File{
+						pipeW,
+					}
+
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+
+					fd3 := make(chan byte)
+					go func() {
+						b := make([]byte, 1)
+						pipeR.Read(b)
+
+						fd3 <- b[0]
+					}()
+					Eventually(fd3).Should(Receive(BeEquivalentTo(0)))
+
+					ww := &dadoo.WaitWatcher{}
+					ch, err := ww.Wait(filepath.Join(bundlePath, "exit.sock"))
+					Expect(err).NotTo(HaveOccurred())
+					Consistently(ch).ShouldNot(BeClosed())
+
+					killCmd := exec.Command("runc", "kill", filepath.Base(bundlePath), "KILL")
+					killCmd.Dir = bundlePath
+					killSess, err := gexec.Start(killCmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(killSess).Should(gexec.Exit(0))
+
+					Eventually(ch).Should(BeClosed())
+					Expect(sess).NotTo(gexec.Exit(0))
+				})
 			})
 		})
 

@@ -27,7 +27,7 @@ var _ = Describe("Rundmc", func() {
 		fakeContainerRunner *fakes.FakeBundleRunner
 		fakeNstarRunner     *fakes.FakeNstarRunner
 		fakeStopper         *fakes.FakeStopper
-		fakeExitStore       *fakes.FakeExitStore
+		fakeExitWaiter      *fakes.FakeExitWaiter
 		fakeEventStore      *fakes.FakeEventStore
 		fakeStateStore      *fakes.FakeStateStore
 
@@ -42,7 +42,7 @@ var _ = Describe("Rundmc", func() {
 		fakeBundleLoader = new(fakes.FakeBundleLoader)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeStopper = new(fakes.FakeStopper)
-		fakeExitStore = new(fakes.FakeExitStore)
+		fakeExitWaiter = new(fakes.FakeExitWaiter)
 		fakeEventStore = new(fakes.FakeEventStore)
 		fakeStateStore = new(fakes.FakeStateStore)
 		logger = lagertest.NewTestLogger("test")
@@ -51,7 +51,13 @@ var _ = Describe("Rundmc", func() {
 			return "/path/to/" + handle, nil
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeExitStore, fakeEventStore, fakeStateStore)
+		fakeExitWaiter.WaitStub = func(path string) (<-chan struct{}, error) {
+			ch := make(chan struct{})
+			close(ch)
+			return ch, nil
+		}
+
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeExitWaiter, fakeEventStore, fakeStateStore)
 	})
 
 	Describe("Create", func() {
@@ -102,26 +108,12 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when the container fails to start", func() {
 			BeforeEach(func() {
-				fakeContainerRunner.StartReturns(nil, errors.New("banana"))
+				fakeContainerRunner.StartReturns(errors.New("banana"))
 			})
 
 			It("should return an error", func() {
 				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).NotTo(Succeed())
 			})
-		})
-
-		It("stores the exit channel in the exit store", func() {
-			ch := make(<-chan struct{})
-			fakeContainerRunner.StartReturns(ch, nil)
-
-			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
-				Handle: "potato",
-			})).To(Succeed())
-			Expect(fakeExitStore.StoreCallCount()).To(Equal(1))
-
-			storedHandle, storedCh := fakeExitStore.StoreArgsForCall(0)
-			Expect(storedCh).To(Equal(ch))
-			Expect(storedHandle).To(Equal("potato"))
 		})
 
 		It("should watch for events in a goroutine", func() {
@@ -343,21 +335,31 @@ var _ = Describe("Rundmc", func() {
 
 			Context("when kill succeeds", func() {
 				It("does not destroy the depot directory until the container has exited", func() {
-					fakeExitStore.WaitStub = func(handle string) {
+					waitDone := make(chan struct{})
+					fakeExitWaiter.WaitStub = func(path string) (<-chan struct{}, error) {
 						Expect(fakeContainerRunner.KillCallCount()).To(Equal(1))
 						Expect(fakeDepot.DestroyCallCount()).To(Equal(0))
-						Expect(fakeExitStore.UnstoreCallCount()).To(Equal(0))
+						return waitDone, nil
 					}
 
-					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-					Expect(fakeExitStore.WaitCallCount()).To(Equal(1))
+					destroyDone := make(chan struct{})
+					go func() {
+						defer GinkgoRecover()
+
+						Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
+						close(destroyDone)
+					}()
+					Consistently(destroyDone).ShouldNot(BeClosed())
+
+					close(waitDone)
+					Eventually(destroyDone).Should(BeClosed())
 				})
 
-				It("unstores the exit channel once the deletion is complete", func() {
+				It("does not block if dadoo's exit socket is not found", func(done Done) {
+					fakeExitWaiter.WaitReturns(nil, errors.New("my banana is not found!"))
 					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-					Expect(fakeExitStore.UnstoreCallCount()).To(Equal(1))
-					Expect(fakeExitStore.UnstoreArgsForCall(0)).To(Equal("some-handle"))
-				})
+					close(done)
+				}, 1.0)
 
 				It("destroys the depot directory", func() {
 					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())

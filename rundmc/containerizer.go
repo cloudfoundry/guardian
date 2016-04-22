@@ -3,6 +3,7 @@ package rundmc
 import (
 	"fmt"
 	"io"
+	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/goci"
@@ -18,7 +19,7 @@ import (
 //go:generate counterfeiter . NstarRunner
 //go:generate counterfeiter . EventStore
 //go:generate counterfeiter . BundleLoader
-//go:generate counterfeiter . ExitStore
+//go:generate counterfeiter . ExitWaiter
 //go:generate counterfeiter . Stopper
 //go:generate counterfeiter . StateStore
 
@@ -38,7 +39,7 @@ type BundleLoader interface {
 }
 
 type BundleRunner interface {
-	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) (exit <-chan struct{}, err error)
+	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 	Exec(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
@@ -65,36 +66,34 @@ type StateStore interface {
 	IsStopped(handle string) bool
 }
 
-type ExitStore interface {
-	Store(handle string, exit <-chan struct{})
-	Unstore(handle string)
-	Wait(handle string)
+type ExitWaiter interface {
+	Wait(path string) (<-chan struct{}, error)
 }
 
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
-	depot   Depot
-	bundler BundleGenerator
-	loader  BundleLoader
-	runner  BundleRunner
-	stopper Stopper
-	nstar   NstarRunner
-	exits   ExitStore
-	events  EventStore
-	states  StateStore
+	depot      Depot
+	bundler    BundleGenerator
+	loader     BundleLoader
+	runner     BundleRunner
+	stopper    Stopper
+	nstar      NstarRunner
+	exitWaiter ExitWaiter
+	events     EventStore
+	states     StateStore
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, exitStore ExitStore, events EventStore, states StateStore) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, exitWaiter ExitWaiter, events EventStore, states StateStore) *Containerizer {
 	return &Containerizer{
-		depot:   depot,
-		bundler: bundler,
-		runner:  runner,
-		loader:  loader,
-		nstar:   nstarRunner,
-		stopper: stopper,
-		events:  events,
-		exits:   exitStore,
-		states:  states,
+		depot:      depot,
+		bundler:    bundler,
+		runner:     runner,
+		loader:     loader,
+		nstar:      nstarRunner,
+		stopper:    stopper,
+		events:     events,
+		exitWaiter: exitWaiter,
+		states:     states,
 	}
 }
 
@@ -116,13 +115,10 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		return err
 	}
 
-	exitCh, err := c.runner.Start(log, path, spec.Handle, garden.ProcessIO{})
-	if err != nil {
+	if err = c.runner.Start(log, path, spec.Handle, garden.ProcessIO{}); err != nil {
 		log.Error("start", err)
 		return err
 	}
-
-	c.exits.Store(spec.Handle, exitCh)
 
 	go func() {
 		if err := c.runner.WatchEvents(log, spec.Handle, c.events); err != nil {
@@ -237,11 +233,23 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 		}
 	}
 
-	// wait for container to exit as a result of kill
-	c.exits.Wait(handle)
-	c.exits.Unstore(handle)
+	bundlePath, err := c.depot.Lookup(log, handle)
+	if err != nil {
+		return nil
+	}
 
+	c.waitForContainerToExit(log, bundlePath)
 	return c.depot.Destroy(log, handle)
+}
+
+func (c *Containerizer) waitForContainerToExit(log lager.Logger, bundlePath string) {
+	ch, err := c.exitWaiter.Wait(filepath.Join(bundlePath, "exit.sock"))
+	if err != nil {
+		log.Debug("failed-to-wait-for-dadoo", lager.Data{"error": err, "socketPath": filepath.Join(bundlePath, "exit.sock")})
+		return
+	}
+
+	<-ch
 }
 
 func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualContainerSpec, error) {

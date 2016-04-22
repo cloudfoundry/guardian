@@ -25,7 +25,7 @@ func NewStarter(dadooPath, runcPath string, commandRunner command_runner.Command
 }
 
 // Starts a bundle by running 'dadoo run runc' in the bundle directory
-func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.ProcessIO) (exit <-chan struct{}, theErr error) {
+func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.ProcessIO) (theErr error) {
 	log = log.Session("start", lager.Data{"bundle": bundlePath})
 
 	log.Info("started")
@@ -33,7 +33,7 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 
 	runcExitStatusR, runcExitStatusW, err := os.Pipe()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	defer runcExitStatusR.Close()
@@ -46,18 +46,14 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 	}
 
 	if err := s.commandRunner.Start(cmd); err != nil {
-		return nil, fmt.Errorf("dadoo: %s", err)
+		return fmt.Errorf("dadoo: %s", err)
 	}
 
-	exitCh := make(chan struct{})
-	go func() {
-		s.commandRunner.Wait(cmd) // avoid zombies, but we don't care about the exit status
-		close(exitCh)
-	}()
+	go s.commandRunner.Wait(cmd) // avoid zombies, but we don't care about the exit status
 
 	b := make([]byte, 1)
 	if _, err := runcExitStatusR.Read(b); err != nil {
-		return nil, fmt.Errorf("dadoo: read fd3: %s", err)
+		return fmt.Errorf("dadoo: read fd3: %s", err)
 	}
 
 	defer func() {
@@ -65,10 +61,10 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 	}()
 
 	if b[0] != 0 {
-		return nil, fmt.Errorf("exit status %d", b[0])
+		return fmt.Errorf("exit status %d", b[0])
 	}
 
-	return exitCh, nil
+	return nil
 }
 
 func processLogs(log lager.Logger, logFile string, err error) error {
