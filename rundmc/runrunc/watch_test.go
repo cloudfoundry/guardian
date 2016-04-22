@@ -58,13 +58,13 @@ var _ = Describe("Watching for Events", func() {
 			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "funC-events",
 			}, func(cmd *exec.Cmd) error {
-				go func(stdoutW io.WriteCloser) {
+				go func(eventsCh chan string, stdoutW io.WriteCloser) {
 					defer stdoutW.Close()
 
 					for eventJSON := range eventsCh {
 						stdoutW.Write([]byte(eventJSON))
 					}
-				}(cmd.Stdout.(io.WriteCloser))
+				}(eventsCh, cmd.Stdout.(io.WriteCloser))
 
 				return nil
 			})
