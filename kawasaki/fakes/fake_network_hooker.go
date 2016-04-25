@@ -4,19 +4,18 @@ package fakes
 import (
 	"sync"
 
+	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/pivotal-golang/lager"
 )
 
 type FakeNetworkHooker struct {
-	HooksStub        func(log lager.Logger, handle, spec, externalNetworkSpec string) (gardener.Hooks, error)
+	HooksStub        func(log lager.Logger, containerSpec garden.ContainerSpec) (gardener.Hooks, error)
 	hooksMutex       sync.RWMutex
 	hooksArgsForCall []struct {
-		log                 lager.Logger
-		handle              string
-		spec                string
-		externalNetworkSpec string
+		log           lager.Logger
+		containerSpec garden.ContainerSpec
 	}
 	hooksReturns struct {
 		result1 gardener.Hooks
@@ -24,17 +23,15 @@ type FakeNetworkHooker struct {
 	}
 }
 
-func (fake *FakeNetworkHooker) Hooks(log lager.Logger, handle string, spec string, externalNetworkSpec string) (gardener.Hooks, error) {
+func (fake *FakeNetworkHooker) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) (gardener.Hooks, error) {
 	fake.hooksMutex.Lock()
 	fake.hooksArgsForCall = append(fake.hooksArgsForCall, struct {
-		log                 lager.Logger
-		handle              string
-		spec                string
-		externalNetworkSpec string
-	}{log, handle, spec, externalNetworkSpec})
+		log           lager.Logger
+		containerSpec garden.ContainerSpec
+	}{log, containerSpec})
 	fake.hooksMutex.Unlock()
 	if fake.HooksStub != nil {
-		return fake.HooksStub(log, handle, spec, externalNetworkSpec)
+		return fake.HooksStub(log, containerSpec)
 	} else {
 		return fake.hooksReturns.result1, fake.hooksReturns.result2
 	}
@@ -46,10 +43,10 @@ func (fake *FakeNetworkHooker) HooksCallCount() int {
 	return len(fake.hooksArgsForCall)
 }
 
-func (fake *FakeNetworkHooker) HooksArgsForCall(i int) (lager.Logger, string, string, string) {
+func (fake *FakeNetworkHooker) HooksArgsForCall(i int) (lager.Logger, garden.ContainerSpec) {
 	fake.hooksMutex.RLock()
 	defer fake.hooksMutex.RUnlock()
-	return fake.hooksArgsForCall[i].log, fake.hooksArgsForCall[i].handle, fake.hooksArgsForCall[i].spec, fake.hooksArgsForCall[i].externalNetworkSpec
+	return fake.hooksArgsForCall[i].log, fake.hooksArgsForCall[i].containerSpec
 }
 
 func (fake *FakeNetworkHooker) HooksReturns(result1 gardener.Hooks, result2 error) {

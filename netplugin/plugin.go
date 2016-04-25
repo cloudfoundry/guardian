@@ -1,6 +1,7 @@
 package netplugin
 
 import (
+	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/pivotal-golang/lager"
 )
@@ -17,8 +18,13 @@ func New(path string, extraArg ...string) *Plugin {
 	}
 }
 
-func (p Plugin) Hooks(log lager.Logger, handle, spec, externalSpec string) (gardener.Hooks, error) {
+func (p Plugin) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) (gardener.Hooks, error) {
 	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
+
+	handle := containerSpec.Handle
+	spec := containerSpec.Network
+	externalSpec := containerSpec.Properties[gardener.ExternalNetworkSpecKey]
+
 	networkPluginFlags := []string{"--handle", handle, "--network", spec, "--external-network", externalSpec}
 
 	upArgs := append(pathAndExtraArgs, "--action", "up")

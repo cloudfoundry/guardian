@@ -85,14 +85,14 @@ type FirewallOpener interface {
 //go:generate counterfeiter . NetworkHooker
 
 type NetworkHooker interface {
-	Hooks(log lager.Logger, handle, spec, externalNetworkSpec string) (gardener.Hooks, error)
+	Hooks(log lager.Logger, containerSpec garden.ContainerSpec) (gardener.Hooks, error)
 }
 
 //go:generate counterfeiter . Networker
 
 type Networker interface {
 	Capacity() uint64
-	Hooks(log lager.Logger, handle, spec, externalNetworkSpec string) ([]gardener.Hooks, error)
+	Hooks(log lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error)
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, externalPort, containerPort uint32) (uint32, uint32, error)
 	NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error
@@ -141,16 +141,16 @@ func New(
 
 // Hooks provides path and appropriate arguments to the kawasaki executable that
 // applies the network configuration after the network namesapce creation.
-func (n *networker) Hooks(log lager.Logger, handle, spec, externalNetworkSpec string) ([]gardener.Hooks, error) {
+func (n *networker) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error) {
 	log = log.Session("network", lager.Data{
-		"handle": handle,
-		"spec":   spec,
+		"handle": containerSpec.Handle,
+		"spec":   containerSpec.Network,
 	})
 
 	log.Info("started")
 	defer log.Info("finished")
 
-	subnetReq, ipReq, err := n.specParser.Parse(log, spec)
+	subnetReq, ipReq, err := n.specParser.Parse(log, containerSpec.Network)
 	if err != nil {
 		log.Error("parse-failed", err)
 		return nil, err
@@ -162,14 +162,14 @@ func (n *networker) Hooks(log lager.Logger, handle, spec, externalNetworkSpec st
 		return nil, err
 	}
 
-	config, err := n.configCreator.Create(log, handle, subnet, ip)
+	config, err := n.configCreator.Create(log, containerSpec.Handle, subnet, ip)
 	if err != nil {
 		log.Error("create-config-failed", err)
 		return nil, fmt.Errorf("create network config: %s", err)
 	}
 	log.Info("config-create", lager.Data{"config": config})
 
-	err = save(n.configStore, handle, config)
+	err = save(n.configStore, containerSpec.Handle, config)
 	if err != nil {
 		return nil, err
 	}

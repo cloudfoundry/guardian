@@ -28,6 +28,7 @@ var _ = Describe("Networker", func() {
 		fakePortPool       *fakes.FakePortPool
 		fakeFirewallOpener *fakes.FakeFirewallOpener
 		fakeConfigurer     *fakes.FakeConfigurer
+		containerSpec      garden.ContainerSpec
 		networker          kawasaki.Networker
 		logger             lager.Logger
 		networkConfig      kawasaki.NetworkConfig
@@ -44,6 +45,14 @@ var _ = Describe("Networker", func() {
 		fakeFirewallOpener = new(fakes.FakeFirewallOpener)
 		fakeConfigurer = new(fakes.FakeConfigurer)
 		fakeConfigurer = new(fakes.FakeConfigurer)
+
+		containerSpec = garden.ContainerSpec{
+			Handle:  "some-handle",
+			Network: "1.2.3.4/30",
+			Properties: garden.Properties{
+				gardener.ExternalNetworkSpecKey: "external-network-spec",
+			},
+		}
 
 		logger = lagertest.NewTestLogger("test")
 		networker = kawasaki.New(
@@ -105,7 +114,7 @@ var _ = Describe("Networker", func() {
 
 	Describe("Hooks", func() {
 		It("parses the spec", func() {
-			networker.Hooks(logger, "some-handle", "1.2.3.4/30", "external-network-spec")
+			networker.Hooks(logger, containerSpec)
 			Expect(fakeSpecParser.ParseCallCount()).To(Equal(1))
 			_, spec := fakeSpecParser.ParseArgsForCall(0)
 			Expect(spec).To(Equal("1.2.3.4/30"))
@@ -113,7 +122,7 @@ var _ = Describe("Networker", func() {
 
 		It("returns an error if the spec can't be parsed", func() {
 			fakeSpecParser.ParseReturns(nil, nil, errors.New("no parsey"))
-			_, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30", "external-network-spec")
+			_, err := networker.Hooks(logger, containerSpec)
 			Expect(err).To(MatchError("no parsey"))
 		})
 
@@ -122,7 +131,7 @@ var _ = Describe("Networker", func() {
 			someIpRequest := subnets.DynamicIPSelector
 			fakeSpecParser.ParseReturns(someSubnetRequest, someIpRequest, nil)
 
-			networker.Hooks(logger, "some-handle", "1.2.3.4/30", "external-network-spec")
+			networker.Hooks(logger, containerSpec)
 			Expect(fakeSubnetPool.AcquireCallCount()).To(Equal(1))
 			_, sr, ir := fakeSubnetPool.AcquireArgsForCall(0)
 			Expect(sr).To(Equal(someSubnetRequest))
@@ -133,7 +142,7 @@ var _ = Describe("Networker", func() {
 			someIp, someSubnet, err := net.ParseCIDR("1.2.3.4/5")
 			fakeSubnetPool.AcquireReturns(someSubnet, someIp, err)
 
-			networker.Hooks(logger, "some-handle", "1.2.3.4/30", "external-network-spec")
+			networker.Hooks(logger, containerSpec)
 			Expect(fakeConfigCreator.CreateCallCount()).To(Equal(1))
 			_, handle, subnet, ip := fakeConfigCreator.CreateArgsForCall(0)
 			Expect(handle).To(Equal("some-handle"))
@@ -148,7 +157,7 @@ var _ = Describe("Networker", func() {
 				config[name] = value
 			}
 
-			_, err := networker.Hooks(logger, "some-handle", "1.2.3.4/30", "external-network-spec")
+			_, err := networker.Hooks(logger, containerSpec)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config["kawasaki.host-interface"]).To(Equal(networkConfig.HostIntf))
@@ -165,16 +174,12 @@ var _ = Describe("Networker", func() {
 		})
 
 		Context("configuring Hooks", func() {
-			var (
-				handle string
-				hooks  []gardener.Hooks
-			)
+			var hooks []gardener.Hooks
 
 			BeforeEach(func() {
 				var err error
 
-				handle = "some-handle"
-				hooks, err = networker.Hooks(logger, handle, "1.2.3.4/30", "external-network-spec")
+				hooks, err = networker.Hooks(logger, containerSpec)
 				Expect(err).NotTo(HaveOccurred())
 			})
 

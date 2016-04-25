@@ -10,13 +10,11 @@ import (
 )
 
 type FakeNetworker struct {
-	HooksStub        func(log lager.Logger, handle, spec, externalSpec string) ([]gardener.Hooks, error)
+	HooksStub        func(log lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error)
 	hooksMutex       sync.RWMutex
 	hooksArgsForCall []struct {
-		log          lager.Logger
-		handle       string
-		spec         string
-		externalSpec string
+		log           lager.Logger
+		containerSpec garden.ContainerSpec
 	}
 	hooksReturns struct {
 		result1 []gardener.Hooks
@@ -71,17 +69,15 @@ type FakeNetworker struct {
 	}
 }
 
-func (fake *FakeNetworker) Hooks(log lager.Logger, handle string, spec string, externalSpec string) ([]gardener.Hooks, error) {
+func (fake *FakeNetworker) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error) {
 	fake.hooksMutex.Lock()
 	fake.hooksArgsForCall = append(fake.hooksArgsForCall, struct {
-		log          lager.Logger
-		handle       string
-		spec         string
-		externalSpec string
-	}{log, handle, spec, externalSpec})
+		log           lager.Logger
+		containerSpec garden.ContainerSpec
+	}{log, containerSpec})
 	fake.hooksMutex.Unlock()
 	if fake.HooksStub != nil {
-		return fake.HooksStub(log, handle, spec, externalSpec)
+		return fake.HooksStub(log, containerSpec)
 	} else {
 		return fake.hooksReturns.result1, fake.hooksReturns.result2
 	}
@@ -93,10 +89,10 @@ func (fake *FakeNetworker) HooksCallCount() int {
 	return len(fake.hooksArgsForCall)
 }
 
-func (fake *FakeNetworker) HooksArgsForCall(i int) (lager.Logger, string, string, string) {
+func (fake *FakeNetworker) HooksArgsForCall(i int) (lager.Logger, garden.ContainerSpec) {
 	fake.hooksMutex.RLock()
 	defer fake.hooksMutex.RUnlock()
-	return fake.hooksArgsForCall[i].log, fake.hooksArgsForCall[i].handle, fake.hooksArgsForCall[i].spec, fake.hooksArgsForCall[i].externalSpec
+	return fake.hooksArgsForCall[i].log, fake.hooksArgsForCall[i].containerSpec
 }
 
 func (fake *FakeNetworker) HooksReturns(result1 []gardener.Hooks, result2 error) {

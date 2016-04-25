@@ -52,7 +52,7 @@ type Containerizer interface {
 }
 
 type Networker interface {
-	Hooks(log lager.Logger, handle, spec, externalSpec string) ([]Hooks, error)
+	Hooks(log lager.Logger, containerSpec garden.ContainerSpec) ([]Hooks, error)
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error)
@@ -208,7 +208,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		}
 	}()
 
-	networkHooks, err := g.Networker.Hooks(log, spec.Handle, spec.Network, spec.Properties[ExternalNetworkSpecKey])
+	networkHooks, err := g.Networker.Hooks(log, spec)
 	if err != nil {
 		return nil, err
 	}
