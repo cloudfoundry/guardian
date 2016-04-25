@@ -49,9 +49,6 @@ var _ = Describe("Networker", func() {
 		containerSpec = garden.ContainerSpec{
 			Handle:  "some-handle",
 			Network: "1.2.3.4/30",
-			Properties: garden.Properties{
-				gardener.ExternalNetworkSpecKey: "external-network-spec",
-			},
 		}
 
 		logger = lagertest.NewTestLogger("test")

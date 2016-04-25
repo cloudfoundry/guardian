@@ -2,7 +2,6 @@ package netplugin_test
 
 import (
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/netplugin"
 	"github.com/pivotal-golang/lager/lagertest"
 
@@ -19,7 +18,10 @@ var _ = Describe("Plugin", func() {
 				Handle:  "some-handle",
 				Network: "potato",
 				Properties: garden.Properties{
-					gardener.ExternalNetworkSpecKey: "strawberry",
+					"some-key":               "some-value",
+					"some-other-key":         "some-other-value",
+					"network.some-key":       "some-network-value",
+					"network.some-other-key": "some-other-network-value",
 				},
 			}
 		})
@@ -47,45 +49,52 @@ var _ = Describe("Plugin", func() {
 			hooks, err := plugin.Hooks(lagertest.NewTestLogger("test"), containerSpec)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(hooks.Prestart.Args).To(Equal([]string{
+			Expect(hooks.Prestart.Args[:7]).To(Equal([]string{
 				"some/path",
 				"--action", "up",
 				"--handle", "some-handle",
 				"--network", "potato",
-				"--external-network", "strawberry",
 			}))
-			Expect(hooks.Poststop.Args).To(Equal([]string{
+
+			Expect(hooks.Prestart.Args[7]).To(Equal("--properties"))
+			Expect(hooks.Prestart.Args[8]).To(MatchJSON(`{
+					"some-key":       "some-network-value",
+					"some-other-key": "some-other-network-value"
+			}`))
+
+			Expect(hooks.Poststop.Args[:7]).To(Equal([]string{
 				"some/path",
 				"--action", "down",
 				"--handle", "some-handle",
 				"--network", "potato",
-				"--external-network", "strawberry",
 			}))
+
+			Expect(hooks.Poststop.Args[7]).To(Equal("--properties"))
+			Expect(hooks.Poststop.Args[8]).To(MatchJSON(`{
+					"some-key":       "some-network-value",
+					"some-other-key": "some-other-network-value"
+			}`))
 		})
 
 		Context("when there are extra args", func() {
 			It("prepends the extra args before the standard hook parameters", func() {
-				plugin := netplugin.New("some/path", "arg1", "arg2")
+				plugin := netplugin.New("some/path", "arg1", "arg2", "arg3")
 				hooks, err := plugin.Hooks(lagertest.NewTestLogger("test"), containerSpec)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(hooks.Prestart.Args).To(Equal([]string{
+				Expect(hooks.Prestart.Args[:6]).To(Equal([]string{
 					"some/path",
 					"arg1",
 					"arg2",
+					"arg3",
 					"--action", "up",
-					"--handle", "some-handle",
-					"--network", "potato",
-					"--external-network", "strawberry",
 				}))
-				Expect(hooks.Poststop.Args).To(Equal([]string{
+				Expect(hooks.Poststop.Args[:6]).To(Equal([]string{
 					"some/path",
 					"arg1",
 					"arg2",
+					"arg3",
 					"--action", "down",
-					"--handle", "some-handle",
-					"--network", "potato",
-					"--external-network", "strawberry",
 				}))
 			})
 		})

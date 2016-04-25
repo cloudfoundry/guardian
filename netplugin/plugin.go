@@ -1,10 +1,16 @@
 package netplugin
 
 import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/pivotal-golang/lager"
 )
+
+const NetworkPropertyPrefix = "network."
 
 type Plugin struct {
 	path     string
@@ -18,14 +24,32 @@ func New(path string, extraArg ...string) *Plugin {
 	}
 }
 
+func networkProperties(containerProperties garden.Properties) garden.Properties {
+	properties := garden.Properties{}
+
+	for k, value := range containerProperties {
+		if strings.HasPrefix(k, NetworkPropertyPrefix) {
+			key := strings.TrimPrefix(k, NetworkPropertyPrefix)
+			properties[key] = value
+		}
+	}
+
+	return properties
+}
+
 func (p Plugin) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) (gardener.Hooks, error) {
 	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
 
-	handle := containerSpec.Handle
-	spec := containerSpec.Network
-	externalSpec := containerSpec.Properties[gardener.ExternalNetworkSpecKey]
+	propertiesJSON, err := json.Marshal(networkProperties(containerSpec.Properties))
+	if err != nil {
+		return gardener.Hooks{}, fmt.Errorf("marshaling network properties: %s", err) // not tested
+	}
 
-	networkPluginFlags := []string{"--handle", handle, "--network", spec, "--external-network", externalSpec}
+	networkPluginFlags := []string{
+		"--handle", containerSpec.Handle,
+		"--network", containerSpec.Network,
+		"--properties", string(propertiesJSON),
+	}
 
 	upArgs := append(pathAndExtraArgs, "--action", "up")
 	upArgs = append(upArgs, networkPluginFlags...)

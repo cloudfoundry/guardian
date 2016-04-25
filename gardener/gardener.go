@@ -26,7 +26,6 @@ const BridgeIPKey = "garden.network.host-ip"
 const ExternalIPKey = "garden.network.external-ip"
 const MappedPortsKey = "garden.network.mapped-ports"
 const GraceTimeKey = "garden.grace-time"
-const ExternalNetworkSpecKey = "garden.external.network-spec"
 
 const RawRootFSScheme = "raw"
 
