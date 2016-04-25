@@ -1,6 +1,7 @@
 package properties
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -25,6 +26,14 @@ func (m *Manager) DestroyKeySpace(handle string) error {
 	delete(m.prop, handle)
 
 	return nil
+}
+
+func (m *Manager) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.prop)
+}
+
+func (m *Manager) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &(m.prop))
 }
 
 func (m *Manager) Set(handle string, name string, value string) {

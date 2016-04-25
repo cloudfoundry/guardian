@@ -141,7 +141,8 @@ type GuardianCommand struct {
 	} `group:"Server Configuration"`
 
 	Containers struct {
-		Dir DirFlag `long:"depot" required:"true" description:"Directory in which to store container data."`
+		Dir            DirFlag `long:"depot" required:"true" description:"Directory in which to store container data."`
+		PropertiesPath string  `long:"properties-path" description:"Path in which to store properties."`
 
 		DefaultRootFSDir           DirFlag       `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
 		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
@@ -247,7 +248,11 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
 	ipt := cmd.wireIptables(logger, chainPrefix)
 
-	propManager := properties.NewManager()
+	propManager, err := properties.Load(cmd.Containers.PropertiesPath)
+	if err != nil {
+		logger.Error("failed-to-load-properties", err, lager.Data{"propertiesPath": cmd.Containers.PropertiesPath})
+		return err
+	}
 
 	dnsIPs := make([]net.IP, len(cmd.Network.DNSServers))
 	for i, ip := range cmd.Network.DNSServers {
@@ -314,6 +319,13 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	<-signals
 
 	gardenServer.Stop()
+
+	if cmd.Containers.PropertiesPath != "" {
+		err := properties.Save(cmd.Containers.PropertiesPath, propManager)
+		if err != nil {
+			logger.Error("failed-to-save-properties", err, lager.Data{"propertiesPath": cmd.Containers.PropertiesPath})
+		}
+	}
 
 	return nil
 }
