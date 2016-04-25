@@ -258,11 +258,4 @@ var _ = Describe("graph flags", func() {
 			})
 		})
 	})
-
 })
-
-func restartGarden(client *runner.RunningGarden, argv ...string) {
-	Expect(client.Ping()).To(Succeed(), "tried to restart garden while it was not running")
-	Expect(client.Stop()).To(Succeed())
-	client = startGarden(argv...)
-}

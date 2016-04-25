@@ -25,6 +25,7 @@ var _ = Describe("Gardener", func() {
 		uidGenerator    *fakes.FakeUidGenerator
 		sysinfoProvider *fakes.FakeSysInfoProvider
 		propertyManager *fakes.FakePropertyManager
+		restorer        *fakes.FakeRestorer
 
 		logger lager.Logger
 
@@ -39,6 +40,7 @@ var _ = Describe("Gardener", func() {
 		volumeCreator = new(fakes.FakeVolumeCreator)
 		sysinfoProvider = new(fakes.FakeSysInfoProvider)
 		propertyManager = new(fakes.FakePropertyManager)
+		restorer = new(fakes.FakeRestorer)
 
 		propertyManager.GetReturns("", true)
 		containerizer.HandlesReturns([]string{"some-handle"}, nil)
@@ -51,6 +53,7 @@ var _ = Describe("Gardener", func() {
 			VolumeCreator:   volumeCreator,
 			Logger:          logger,
 			PropertyManager: propertyManager,
+			Restorer:        restorer,
 		}
 	})
 
@@ -539,51 +542,64 @@ var _ = Describe("Gardener", func() {
 	})
 
 	Describe("starting up gardener", func() {
-		var err error
-
 		BeforeEach(func() {
 			containers := []string{"container1", "container2"}
 			containerizer.HandlesReturns(containers, nil)
 		})
 
-		Context("when DestroyContainersOnStartup is true", func() {
+		Context("when it has starters", func() {
+			var (
+				starterA, starterB *fakes.FakeStarter
+			)
+
 			BeforeEach(func() {
-				gdnr.DestroyContainersOnStartup = true
+				starterA = new(fakes.FakeStarter)
+				starterB = new(fakes.FakeStarter)
+				gdnr.Starters = []gardener.Starter{starterA, starterB}
 			})
 
-			It("calls destroy on the existing containers", func() {
-				err = gdnr.Start()
-				Expect(err).NotTo(HaveOccurred())
+			It("calls the provided starters", func() {
+				Expect(gdnr.Start()).To(Succeed())
 
-				Expect(containerizer.DestroyCallCount()).To(Equal(2))
-
-				_, handle := containerizer.DestroyArgsForCall(0)
-				Expect(handle).To(Equal("container1"))
-
-				_, handle = containerizer.DestroyArgsForCall(1)
-				Expect(handle).To(Equal("container2"))
+				Expect(starterA.StartCallCount()).To(Equal(1))
+				Expect(starterB.StartCallCount()).To(Equal(1))
 			})
 
-			It("returns an error when failing to destroy", func() {
-				containerizer.DestroyReturns(errors.New("containerized deletion failed"))
-				err = gdnr.Start()
-				Expect(err).To(MatchError("cleaning up containers: containerized deletion failed"))
+			Context("when a starter fails", func() {
+				BeforeEach(func() {
+					starterB.StartReturns(errors.New("boom"))
+				})
+
+				It("returns the error", func() {
+					Expect(gdnr.Start()).To(MatchError(ContainSubstring("boom")))
+				})
+
+				It("does not restore the containers", func() {
+					Expect(gdnr.Start()).NotTo(Succeed())
+					Expect(restorer.RestoreCallCount()).To(Equal(0))
+				})
 			})
 		})
 
-		Context("when DestroyContainersOnStartup is false", func() {
-			BeforeEach(func() {
-				gdnr.DestroyContainersOnStartup = false
-			})
-
-			It("does not call destroy on the existing containers", func() {
-				err = gdnr.Start()
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(containerizer.DestroyCallCount()).To(Equal(0))
-			})
+		It("should restore the containers", func() {
+			Expect(gdnr.Start()).To(Succeed())
+			Expect(restorer.RestoreCallCount()).To(Equal(1))
+			_, handles := restorer.RestoreArgsForCall(0)
+			Expect(handles).To(Equal([]string{"container1", "container2"}))
 		})
 
+		It("should blow up containers that couldn't restore", func() {
+			restorer.RestoreReturns([]string{"container2"})
+			Expect(gdnr.Start()).To(Succeed())
+			Expect(containerizer.DestroyCallCount()).To(Equal(1))
+			_, handle := containerizer.DestroyArgsForCall(0)
+			Expect(handle).To(Equal("container2"))
+		})
+
+		It("should return the error when it failes to get a list of handles", func() {
+			containerizer.HandlesReturns([]string{}, errors.New("banana"))
+			Expect(gdnr.Start()).To(MatchError("banana"))
+		})
 	})
 
 	Describe("listing containers", func() {

@@ -23,6 +23,7 @@ import (
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/factory"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/ports"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
@@ -266,16 +267,21 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	networker := cmd.wireNetworker(logger, cmd.Bin.Kawasaki.Path(), cmd.Server.Tag, cmd.Network.Pool.CIDR(), externalIPAddr, dnsIPs, ipt, interfacePrefix, chainPrefix, propManager, networkHookers)
 
+	restorer := gardener.NewRestorer(networker)
+	if cmd.Containers.DestroyContainersOnStartup {
+		restorer = &gardener.NoopRestorer{}
+	}
+
 	backend := &gardener.Gardener{
-		UidGenerator:               cmd.wireUidGenerator(),
-		Starters:                   cmd.wireStarter(logger, ipt, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList),
-		SysInfoProvider:            sysinfo.NewProvider(cmd.Containers.Dir.Path()),
-		Networker:                  networker,
-		VolumeCreator:              cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
-		Containerizer:              cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), propManager),
-		PropertyManager:            propManager,
-		MaxContainers:              cmd.Limits.MaxContainers,
-		DestroyContainersOnStartup: cmd.Containers.DestroyContainersOnStartup,
+		UidGenerator:    cmd.wireUidGenerator(),
+		Starters:        cmd.wireStarter(logger, ipt, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList),
+		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
+		Networker:       networker,
+		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
+		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), propManager),
+		PropertyManager: propManager,
+		MaxContainers:   cmd.Limits.MaxContainers,
+		Restorer:        restorer,
 
 		Logger: logger,
 	}
@@ -378,6 +384,7 @@ func (cmd *GuardianCommand) wireNetworker(
 		subnets.NewPool(networkPoolCIDR),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
 		propManager,
+		factory.NewDefaultConfigurer(iptables.New(linux_command_runner.New(), chainPrefix)),
 		portPool,
 		iptables.NewPortForwarder(ipt),
 		iptables.NewFirewallOpener(ipt),

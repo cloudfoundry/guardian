@@ -27,6 +27,7 @@ var _ = Describe("Networker", func() {
 		fakePortForwarder  *fakes.FakePortForwarder
 		fakePortPool       *fakes.FakePortPool
 		fakeFirewallOpener *fakes.FakeFirewallOpener
+		fakeConfigurer     *fakes.FakeConfigurer
 		networker          kawasaki.Networker
 		logger             lager.Logger
 		networkConfig      kawasaki.NetworkConfig
@@ -41,6 +42,8 @@ var _ = Describe("Networker", func() {
 		fakePortForwarder = new(fakes.FakePortForwarder)
 		fakePortPool = new(fakes.FakePortPool)
 		fakeFirewallOpener = new(fakes.FakeFirewallOpener)
+		fakeConfigurer = new(fakes.FakeConfigurer)
+		fakeConfigurer = new(fakes.FakeConfigurer)
 
 		logger = lagertest.NewTestLogger("test")
 		networker = kawasaki.New(
@@ -49,6 +52,7 @@ var _ = Describe("Networker", func() {
 			fakeSubnetPool,
 			fakeConfigCreator,
 			fakeConfigStore,
+			fakeConfigurer,
 			fakePortPool,
 			fakePortForwarder,
 			fakeFirewallOpener,
@@ -425,6 +429,25 @@ var _ = Describe("Networker", func() {
 				_, _, err := networker.NetIn(logger, "nonexistent", 0, 0)
 				Expect(err).To(MatchError(ContainSubstring("property not found")))
 			})
+		})
+	})
+
+	Describe("Restore", func() {
+		It("returns an error when the config couldn't be loaded", func() {
+			config = nil
+			Expect(networker.Restore(logger, "some-handle")).To(MatchError(ContainSubstring("restoring some-handle")))
+		})
+
+		It("returns an error when the configurer fails to restore", func() {
+			fakeConfigurer.RestoreReturns(errors.New("banana"))
+			Expect(networker.Restore(logger, "some-handle")).To(MatchError("restoring some-handle: banana"))
+		})
+
+		It("restores the configuration", func() {
+			networker.Restore(logger, "some-handle")
+			Expect(fakeConfigurer.RestoreCallCount()).To(Equal(1))
+			_, actualNetworkConfig := fakeConfigurer.RestoreArgsForCall(0)
+			Expect(actualNetworkConfig).To(Equal(networkConfig))
 		})
 	})
 })

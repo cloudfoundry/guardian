@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
@@ -33,16 +35,23 @@ var _ = Describe("Surviving Restarts", func() {
 	})
 
 	const (
-		bridgePrefix string = "m"
-		subnetName   string = "177-100-10-0"
+		subnetName string = "177-100-10-0"
 	)
 
-	BeforeEach(func() {
-		args = append(args, "--tag", "m")
-	})
-
 	Describe("destruction of container resources", func() {
-		var container garden.Container
+		var (
+			container     garden.Container
+			hostNetInPort uint32
+			externalIP    string
+			propertiesDir string
+		)
+
+		BeforeEach(func() {
+			var err error
+			propertiesDir, err = ioutil.TempDir("", "props")
+			Expect(err).NotTo(HaveOccurred())
+			args = append(args, "--properties-path", path.Join(propertiesDir, "props.json"))
+		})
 
 		JustBeforeEach(func() {
 			var err error
@@ -51,8 +60,19 @@ var _ = Describe("Surviving Restarts", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
+			hostNetInPort, _, err = container.NetIn(hostNetInPort, 8080)
+			Expect(err).NotTo(HaveOccurred())
+
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+			externalIP = info.ExternalIP
+
 			Expect(client.Stop()).To(Succeed())
 			client = startGarden(args...)
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(propertiesDir)).To(Succeed())
 		})
 
 		Context("when the destroy-containers-on-startup flag is passed", func() {
@@ -67,14 +87,14 @@ var _ = Describe("Surviving Restarts", func() {
 			It("destroys the remaining containers' iptables", func() {
 				out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(out)).NotTo(MatchRegexp("w-m-instance.* 177.100.10.0/24"))
+				Expect(string(out)).NotTo(MatchRegexp(fmt.Sprintf("w-%d-instance.* 177.100.10.0/24", GinkgoParallelNode())))
 			})
 
 			It("destroys the remaining containers' bridges", func() {
 				out, err := exec.Command("ifconfig").CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
 
-				pattern := fmt.Sprintf(".*w%s%s.*", bridgePrefix, subnetName)
+				pattern := fmt.Sprintf(".*w%d%s.*", GinkgoParallelNode(), subnetName)
 				Expect(string(out)).NotTo(MatchRegexp(pattern))
 			})
 
@@ -120,6 +140,10 @@ var _ = Describe("Surviving Restarts", func() {
 
 			It("can still destroy the container", func() {
 				Expect(client.Destroy(container.Handle())).To(Succeed())
+			})
+
+			It("should still be able to access the internet", func() {
+				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
 			})
 		})
 	})

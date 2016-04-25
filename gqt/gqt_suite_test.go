@@ -104,6 +104,12 @@ func startGarden(argv ...string) *runner.RunningGarden {
 	return runner.Start(gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, true, argv...)
 }
 
+func restartGarden(client *runner.RunningGarden, argv ...string) {
+	Expect(client.Ping()).To(Succeed(), "tried to restart garden while it was not running")
+	Expect(client.Stop()).To(Succeed())
+	client = startGarden(argv...)
+}
+
 func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
 	return runner.Start(gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, false, argv...)
 }

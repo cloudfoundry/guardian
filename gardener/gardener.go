@@ -18,6 +18,8 @@ import (
 //go:generate counterfeiter . VolumeCreator
 //go:generate counterfeiter . UidGenerator
 //go:generate counterfeiter . PropertyManager
+//go:generate counterfeiter . Restorer
+//go:generate counterfeiter . Starter
 
 const ContainerIPKey = "garden.network.container-ip"
 const BridgeIPKey = "garden.network.host-ip"
@@ -54,6 +56,7 @@ type Networker interface {
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error)
 	NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error
+	Restore(log lager.Logger, handle string) error
 }
 
 type VolumeCreator interface {
@@ -78,6 +81,10 @@ type PropertyManager interface {
 
 type Starter interface {
 	Start() error
+}
+
+type Restorer interface {
+	Restore(logger lager.Logger, handles []string) []string
 }
 
 type UidGeneratorFunc func() string
@@ -169,8 +176,7 @@ type Gardener struct {
 	// MaxContainers limits the advertised container capacity
 	MaxContainers uint64
 
-	// Destroy the existing containers at startup
-	DestroyContainersOnStartup bool
+	Restorer Restorer
 }
 
 // Create creates a container by combining the results of networker.Network,
@@ -448,17 +454,26 @@ func (g *Gardener) Start() error {
 
 	log.Info("starting")
 
-	if g.DestroyContainersOnStartup {
-		log.Info("destroying the existing containers")
-		if err := g.cleanupContainers(log); err != nil {
-			return fmt.Errorf("cleaning up containers: %s", err)
-		}
-	}
-
 	for _, starter := range g.Starters {
 		if err := starter.Start(); err != nil {
 			return fmt.Errorf("starting starter: %s", err)
 		}
+	}
+
+	handles, err := g.Containerizer.Handles()
+	if err != nil {
+		return err
+	}
+
+	for _, handle := range g.Restorer.Restore(log, handles) {
+		destroyLog := log.Session("cleaning-up-container", lager.Data{"handle": handle})
+
+		destroyLog.Info("starting")
+		if err := g.destroy(destroyLog, handle); err != nil {
+			destroyLog.Error("failed-to-destroy", err)
+			continue
+		}
+		destroyLog.Info("completed")
 	}
 
 	log.Info("completed")

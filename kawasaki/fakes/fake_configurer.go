@@ -19,6 +19,15 @@ type FakeConfigurer struct {
 	applyReturns struct {
 		result1 error
 	}
+	RestoreStub        func(log lager.Logger, cfg kawasaki.NetworkConfig) error
+	restoreMutex       sync.RWMutex
+	restoreArgsForCall []struct {
+		log lager.Logger
+		cfg kawasaki.NetworkConfig
+	}
+	restoreReturns struct {
+		result1 error
+	}
 	DestroyStub        func(log lager.Logger, cfg kawasaki.NetworkConfig) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
@@ -60,6 +69,39 @@ func (fake *FakeConfigurer) ApplyArgsForCall(i int) (lager.Logger, kawasaki.Netw
 func (fake *FakeConfigurer) ApplyReturns(result1 error) {
 	fake.ApplyStub = nil
 	fake.applyReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeConfigurer) Restore(log lager.Logger, cfg kawasaki.NetworkConfig) error {
+	fake.restoreMutex.Lock()
+	fake.restoreArgsForCall = append(fake.restoreArgsForCall, struct {
+		log lager.Logger
+		cfg kawasaki.NetworkConfig
+	}{log, cfg})
+	fake.restoreMutex.Unlock()
+	if fake.RestoreStub != nil {
+		return fake.RestoreStub(log, cfg)
+	} else {
+		return fake.restoreReturns.result1
+	}
+}
+
+func (fake *FakeConfigurer) RestoreCallCount() int {
+	fake.restoreMutex.RLock()
+	defer fake.restoreMutex.RUnlock()
+	return len(fake.restoreArgsForCall)
+}
+
+func (fake *FakeConfigurer) RestoreArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig) {
+	fake.restoreMutex.RLock()
+	defer fake.restoreMutex.RUnlock()
+	return fake.restoreArgsForCall[i].log, fake.restoreArgsForCall[i].cfg
+}
+
+func (fake *FakeConfigurer) RestoreReturns(result1 error) {
+	fake.RestoreStub = nil
+	fake.restoreReturns = struct {
 		result1 error
 	}{result1}
 }

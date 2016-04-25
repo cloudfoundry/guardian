@@ -44,6 +44,7 @@ type ConfigCreator interface {
 
 type Configurer interface {
 	Apply(log lager.Logger, cfg NetworkConfig, nsPath string) error
+	Restore(log lager.Logger, cfg NetworkConfig) error
 	Destroy(log lager.Logger, cfg NetworkConfig) error
 }
 
@@ -95,6 +96,7 @@ type Networker interface {
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, externalPort, containerPort uint32) (uint32, uint32, error)
 	NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error
+	Restore(log lager.Logger, handle string) error
 }
 
 type networker struct {
@@ -107,6 +109,7 @@ type networker struct {
 	portForwarder  PortForwarder
 	portPool       PortPool
 	firewallOpener FirewallOpener
+	configurer     Configurer
 }
 
 func New(
@@ -115,6 +118,7 @@ func New(
 	subnetPool subnets.Pool,
 	configCreator ConfigCreator,
 	configStore ConfigStore,
+	configurer Configurer,
 	portPool PortPool,
 	portForwarder PortForwarder,
 	firewallOpener FirewallOpener,
@@ -126,6 +130,7 @@ func New(
 		subnetPool:    subnetPool,
 		configCreator: configCreator,
 		configStore:   configStore,
+		configurer:    configurer,
 
 		portForwarder: portForwarder,
 		portPool:      portPool,
@@ -283,6 +288,19 @@ func (n *networker) Destroy(log lager.Logger, handle string) error {
 		for _, m := range mappings {
 			n.portPool.Release(m.HostPort)
 		}
+	}
+
+	return nil
+}
+
+func (n *networker) Restore(log lager.Logger, handle string) error {
+	config, err := load(n.configStore, handle)
+	if err == nil {
+		err = n.configurer.Restore(log, config)
+	}
+
+	if err != nil {
+		return fmt.Errorf("restoring %s: %s", handle, err)
 	}
 
 	return nil
