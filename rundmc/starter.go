@@ -166,5 +166,7 @@ func (s *CgroupStarter) mountCgroup(logger lager.Logger, cgroupPath, subsystems 
 }
 
 func (s *CgroupStarter) isMountPoint(path string) bool {
-	return s.CommandRunner.Run(exec.Command("mountpoint", "-q", path)) == nil
+	// append trailing slash to force symlink traversal; symlinking e.g. 'cpu'
+	// to 'cpu,cpuacct' is common
+	return s.CommandRunner.Run(exec.Command("mountpoint", "-q", path+"/")) == nil
 }

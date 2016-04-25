@@ -59,7 +59,7 @@ var _ = Describe("CgroupStarter", func() {
 		BeforeEach(func() {
 			runner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "mountpoint",
-				Args: []string{"-q", path.Join(tmpDir, "cgroup")},
+				Args: []string{"-q", path.Join(tmpDir, "cgroup") + "/"},
 			}, func(cmd *exec.Cmd) error {
 				return errors.New("not a mountpoint")
 			})
@@ -105,7 +105,7 @@ var _ = Describe("CgroupStarter", func() {
 			for _, notMounted := range []string{"devices", "cpu", "cpuacct"} {
 				runner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "mountpoint",
-					Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted)},
+					Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted) + "/"},
 				}, func(cmd *exec.Cmd) error {
 					return errors.New("not a mountpoint")
 				})
@@ -152,7 +152,7 @@ var _ = Describe("CgroupStarter", func() {
 
 				runner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "mountpoint",
-					Args: []string{"-q", path.Join(tmpDir, "cgroup", "freezer")},
+					Args: []string{"-q", path.Join(tmpDir, "cgroup", "freezer") + "/"},
 				}, func(cmd *exec.Cmd) error {
 					return errors.New("not a mountpoint")
 				})
@@ -175,7 +175,7 @@ var _ = Describe("CgroupStarter", func() {
 
 				runner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "mountpoint",
-					Args: []string{"-q", path.Join(tmpDir, "cgroup", "freezer")},
+					Args: []string{"-q", path.Join(tmpDir, "cgroup", "freezer") + "/"},
 				}, func(cmd *exec.Cmd) error {
 					return errors.New("not a mountpoint")
 				})
@@ -213,7 +213,7 @@ var _ = Describe("CgroupStarter", func() {
 			for _, notMounted := range []string{"devices", "cpu", "cpuacct"} {
 				runner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "mountpoint",
-					Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted)},
+					Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted) + "/"},
 				}, func(cmd *exec.Cmd) error {
 					return errors.New("not a mountpoint")
 				})
