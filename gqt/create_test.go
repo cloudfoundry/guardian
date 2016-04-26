@@ -81,6 +81,10 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		It("cleans up the graph", func() {
+			// pre-warm cache to avoid test pollution
+			_, err := client.Create(garden.ContainerSpec{})
+			Expect(err).To(HaveOccurred())
+
 			prev, err := ioutil.ReadDir(filepath.Join(client.GraphPath, "aufs", "mnt"))
 			Expect(err).NotTo(HaveOccurred())
 
