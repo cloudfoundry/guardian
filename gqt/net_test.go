@@ -29,6 +29,8 @@ var _ = Describe("Net", func() {
 		args             []string
 
 		exampleDotCom net.IP
+
+		extraProperties garden.Properties
 	)
 
 	BeforeEach(func() {
@@ -51,7 +53,8 @@ var _ = Describe("Net", func() {
 		client = startGarden(args...)
 
 		container, err = client.Create(garden.ContainerSpec{
-			Network: containerNetwork,
+			Network:    containerNetwork,
+			Properties: extraProperties,
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -403,6 +406,34 @@ var _ = Describe("Net", func() {
 				),
 			)
 		})
+
+		Context("when the container spec has properties that start with 'network.'", func() {
+			var expectedJSON string
+
+			BeforeEach(func() {
+				extraProperties = garden.Properties{
+					"network.some-key":       "some-value",
+					"network.some-other-key": "some-other-value",
+					"some-other-key":         "do-not-propagate",
+					"garden.whatever":        "do-not-propagate",
+					"kawasaki.nope":          "do-not-propagate",
+				}
+				expectedJSON = `{ "some-key": "some-value", "some-other-key": "some-other-value" }`
+			})
+
+			It("propagates those properties as JSON to the network plugin up action", func() {
+				Eventually(getFlagValue(tmpFile, "--properties")).Should(MatchJSON(expectedJSON))
+			})
+
+			It("propagates those properties as JSON to the network plugin down action", func() {
+				containerHandle := container.Handle()
+
+				Expect(client.Destroy(containerHandle)).To(Succeed())
+				Expect(tmpFile).To(BeAnExistingFile())
+
+				Eventually(getFlagValue(tmpFile, "--properties")).Should(MatchJSON(expectedJSON))
+			})
+		})
 	})
 
 	Describe("MTU size", func() {
@@ -528,4 +559,14 @@ func hostIfName(container garden.Container) string {
 	properties, err := container.Properties()
 	Expect(err).NotTo(HaveOccurred())
 	return properties["kawasaki.host-interface"]
+}
+
+func getFlagValue(contentFile, flagName string) func() []byte {
+	re := regexp.MustCompile(fmt.Sprintf("%s (.*)", flagName))
+	return func() []byte {
+		content := getContent(contentFile)()
+		matches := re.FindSubmatch(content)
+		Expect(matches).To(HaveLen(2))
+		return matches[1]
+	}
 }
