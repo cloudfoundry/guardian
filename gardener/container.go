@@ -28,6 +28,10 @@ func (c *container) Run(spec garden.ProcessSpec, io garden.ProcessIO) (garden.Pr
 	return c.containerizer.Run(c.logger, c.handle, spec, io)
 }
 
+func (c *container) Attach(processID string, io garden.ProcessIO) (garden.Process, error) {
+	return c.containerizer.Attach(c.logger, c.handle, processID, io)
+}
+
 func (c *container) Stop(kill bool) error {
 	return c.containerizer.Stop(c.logger, c.handle, kill)
 }
@@ -132,10 +136,6 @@ func (c *container) NetIn(hostPort, containerPort uint32) (uint32, uint32, error
 
 func (c *container) NetOut(netOutRule garden.NetOutRule) error {
 	return c.networker.NetOut(c.logger, c.handle, netOutRule)
-}
-
-func (c *container) Attach(processID string, io garden.ProcessIO) (garden.Process, error) {
-	return nil, nil
 }
 
 func (c *container) Metrics() (garden.Metrics, error) {

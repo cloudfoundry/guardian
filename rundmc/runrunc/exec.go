@@ -50,7 +50,8 @@ type Process interface {
 }
 
 type ProcessTracker interface {
-	Run(id string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, pidFile string) (garden.Process, error)
+	Run(processID string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, pidFile string) (garden.Process, error)
+	Attach(processID string, io garden.ProcessIO, pidFilePath string) (garden.Process, error)
 }
 
 type Execer struct {
@@ -61,8 +62,7 @@ type Execer struct {
 func NewExecer(execPreparer *ExecPreparer, runner *ExecRunner) *Execer {
 	return &Execer{
 		preparer: execPreparer,
-
-		runner: runner,
+		runner:   runner,
 	}
 }
 
@@ -81,6 +81,12 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, id string, spec garden.Proce
 
 	processesPath := path.Join(bundlePath, "processes")
 	return e.runner.Run(log, preparedSpec, processesPath, id, spec.TTY, io)
+}
+
+// Attach attaches to an already running process by guid
+func (e *Execer) Attach(log lager.Logger, bundlePath, id, processID string, io garden.ProcessIO) (garden.Process, error) {
+	processesPath := path.Join(bundlePath, "processes")
+	return e.runner.Attach(log, processID, io, processesPath)
 }
 
 type ExecRunner struct {
@@ -138,6 +144,16 @@ func (e *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, i
 	go e.waitWatcher.OnExit(log, process, RemoveFiles([]string{processJson.Name(), pidFilePath}))
 
 	return process, nil
+}
+
+func (e *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
+	log = log.Session("attach", lager.Data{"process-id": processID})
+
+	log.Info("start")
+	defer log.Info("finished")
+
+	pidFilePath := path.Join(processesPath, fmt.Sprintf("%s.pid", processID))
+	return e.tracker.Attach(processID, io, pidFilePath)
 }
 
 type ExecPreparer struct {

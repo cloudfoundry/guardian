@@ -44,6 +44,7 @@ var _ = Describe("Surviving Restarts", func() {
 			hostNetInPort uint32
 			externalIP    string
 			propertiesDir string
+			existingProc  garden.Process
 		)
 
 		BeforeEach(func() {
@@ -55,6 +56,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 		JustBeforeEach(func() {
 			var err error
+
 			container, err = client.Create(garden.ContainerSpec{
 				Network: "177.100.10.30/24",
 			})
@@ -66,6 +68,18 @@ var _ = Describe("Surviving Restarts", func() {
 			info, err := container.Info()
 			Expect(err).NotTo(HaveOccurred())
 			externalIP = info.ExternalIP
+
+			out := gbytes.NewBuffer()
+			existingProc, err = container.Run(
+				garden.ProcessSpec{
+					Path: "/bin/sh",
+					Args: []string{"-c", "while true; do echo hello; sleep 1; done;"},
+				},
+				garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, out),
+					Stderr: io.MultiWriter(GinkgoWriter, out),
+				})
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(client.Stop()).To(Succeed())
 			client = startGarden(args...)
@@ -130,12 +144,32 @@ var _ = Describe("Surviving Restarts", func() {
 						Stderr: io.MultiWriter(GinkgoWriter, out),
 					})
 				Expect(err).NotTo(HaveOccurred())
-
 				exitCode, err := proc.Wait()
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(exitCode).To(Equal(12))
 				Expect(out).To(gbytes.Say("hello"))
+			})
+
+			It("can reattach to processes that are still running", func() {
+				out := gbytes.NewBuffer()
+				procId := existingProc.ID()
+				process, err := container.Attach(procId, garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, out),
+					Stderr: io.MultiWriter(GinkgoWriter, out),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(out).Should(gbytes.Say("hello"))
+
+				Expect(process.Signal(garden.SignalKill)).To(Succeed())
+
+				exited := make(chan struct{})
+				go func() {
+					process.Wait()
+					close(exited)
+				}()
+
+				Eventually(exited).Should(BeClosed())
 			})
 
 			It("can still destroy the container", func() {

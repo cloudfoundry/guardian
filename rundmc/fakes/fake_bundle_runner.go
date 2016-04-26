@@ -36,6 +36,19 @@ type FakeBundleRunner struct {
 		result1 garden.Process
 		result2 error
 	}
+	AttachStub        func(log lager.Logger, id, bundlePath, processId string, io garden.ProcessIO) (garden.Process, error)
+	attachMutex       sync.RWMutex
+	attachArgsForCall []struct {
+		log        lager.Logger
+		id         string
+		bundlePath string
+		processId  string
+		io         garden.ProcessIO
+	}
+	attachReturns struct {
+		result1 garden.Process
+		result2 error
+	}
 	KillStub        func(log lager.Logger, bundlePath string) error
 	killMutex       sync.RWMutex
 	killArgsForCall []struct {
@@ -144,6 +157,43 @@ func (fake *FakeBundleRunner) ExecArgsForCall(i int) (lager.Logger, string, stri
 func (fake *FakeBundleRunner) ExecReturns(result1 garden.Process, result2 error) {
 	fake.ExecStub = nil
 	fake.execReturns = struct {
+		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBundleRunner) Attach(log lager.Logger, id string, bundlePath string, processId string, io garden.ProcessIO) (garden.Process, error) {
+	fake.attachMutex.Lock()
+	fake.attachArgsForCall = append(fake.attachArgsForCall, struct {
+		log        lager.Logger
+		id         string
+		bundlePath string
+		processId  string
+		io         garden.ProcessIO
+	}{log, id, bundlePath, processId, io})
+	fake.attachMutex.Unlock()
+	if fake.AttachStub != nil {
+		return fake.AttachStub(log, id, bundlePath, processId, io)
+	} else {
+		return fake.attachReturns.result1, fake.attachReturns.result2
+	}
+}
+
+func (fake *FakeBundleRunner) AttachCallCount() int {
+	fake.attachMutex.RLock()
+	defer fake.attachMutex.RUnlock()
+	return len(fake.attachArgsForCall)
+}
+
+func (fake *FakeBundleRunner) AttachArgsForCall(i int) (lager.Logger, string, string, string, garden.ProcessIO) {
+	fake.attachMutex.RLock()
+	defer fake.attachMutex.RUnlock()
+	return fake.attachArgsForCall[i].log, fake.attachArgsForCall[i].id, fake.attachArgsForCall[i].bundlePath, fake.attachArgsForCall[i].processId, fake.attachArgsForCall[i].io
+}
+
+func (fake *FakeBundleRunner) AttachReturns(result1 garden.Process, result2 error) {
+	fake.AttachStub = nil
+	fake.attachReturns = struct {
 		result1 garden.Process
 		result2 error
 	}{result1, result2}

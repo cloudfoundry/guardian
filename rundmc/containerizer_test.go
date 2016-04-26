@@ -164,7 +164,33 @@ var _ = Describe("Rundmc", func() {
 			It("does not attempt to exec the process", func() {
 				fakeDepot.LookupReturns("", errors.New("blam"))
 				containerizer.Run(logger, "some-handle", garden.ProcessSpec{}, garden.ProcessIO{})
-				Expect(fakeContainerRunner.StartCallCount()).To(Equal(0))
+				Expect(fakeContainerRunner.ExecCallCount()).To(Equal(0))
+			})
+		})
+	})
+
+	Describe("Attach", func() {
+		It("should ask the execer to attach a process in the container", func() {
+			containerizer.Attach(logger, "some-handle", "123", garden.ProcessIO{})
+			Expect(fakeContainerRunner.AttachCallCount()).To(Equal(1))
+
+			_, path, id, processId, _ := fakeContainerRunner.AttachArgsForCall(0)
+			Expect(path).To(Equal("/path/to/some-handle"))
+			Expect(id).To(Equal("some-handle"))
+			Expect(processId).To(Equal("123"))
+		})
+
+		Context("when looking up the container fails", func() {
+			It("returns an error", func() {
+				fakeDepot.LookupReturns("", errors.New("blam"))
+				_, err := containerizer.Attach(logger, "some-handle", "123", garden.ProcessIO{})
+				Expect(err).To(HaveOccurred())
+			})
+
+			It("does not attempt to exec the process", func() {
+				fakeDepot.LookupReturns("", errors.New("blam"))
+				containerizer.Attach(logger, "some-handle", "123", garden.ProcessIO{})
+				Expect(fakeContainerRunner.AttachCallCount()).To(Equal(0))
 			})
 		})
 	})

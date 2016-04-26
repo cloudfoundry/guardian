@@ -177,8 +177,8 @@ func (p *Process) Spawn(cmd *exec.Cmd, tty *garden.TTYSpec) (ready, active chan 
 	return
 }
 
-func (p *Process) Link() {
-	p.runningLink.Do(p.runLinker)
+func (p *Process) Link(completionCallback func(processID string)) {
+	p.runningLink.Do(func() { p.runLinker(completionCallback) })
 }
 
 func (p *Process) Attach(processIO garden.ProcessIO) {
@@ -196,8 +196,10 @@ func (p *Process) Attach(processIO garden.ProcessIO) {
 }
 
 // This is guarded by runningLink so will only run once per Process per garden.
-func (p *Process) runLinker() {
+func (p *Process) runLinker(cb func(string)) {
 	processSock := path.Join(p.containerPath, "processes", fmt.Sprintf("%s.sock", p.ID()))
+
+	defer cb(p.ID())
 
 	link, err := link.Create(processSock, p.stdout, p.stderr)
 	if err != nil {

@@ -60,6 +60,18 @@ type FakeContainerizer struct {
 		result1 garden.Process
 		result2 error
 	}
+	AttachStub        func(log lager.Logger, handle string, processGUID string, io garden.ProcessIO) (garden.Process, error)
+	attachMutex       sync.RWMutex
+	attachArgsForCall []struct {
+		log         lager.Logger
+		handle      string
+		processGUID string
+		io          garden.ProcessIO
+	}
+	attachReturns struct {
+		result1 garden.Process
+		result2 error
+	}
 	StopStub        func(log lager.Logger, handle string, kill bool) error
 	stopMutex       sync.RWMutex
 	stopArgsForCall []struct {
@@ -259,6 +271,42 @@ func (fake *FakeContainerizer) RunArgsForCall(i int) (lager.Logger, string, gard
 func (fake *FakeContainerizer) RunReturns(result1 garden.Process, result2 error) {
 	fake.RunStub = nil
 	fake.runReturns = struct {
+		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeContainerizer) Attach(log lager.Logger, handle string, processGUID string, io garden.ProcessIO) (garden.Process, error) {
+	fake.attachMutex.Lock()
+	fake.attachArgsForCall = append(fake.attachArgsForCall, struct {
+		log         lager.Logger
+		handle      string
+		processGUID string
+		io          garden.ProcessIO
+	}{log, handle, processGUID, io})
+	fake.attachMutex.Unlock()
+	if fake.AttachStub != nil {
+		return fake.AttachStub(log, handle, processGUID, io)
+	} else {
+		return fake.attachReturns.result1, fake.attachReturns.result2
+	}
+}
+
+func (fake *FakeContainerizer) AttachCallCount() int {
+	fake.attachMutex.RLock()
+	defer fake.attachMutex.RUnlock()
+	return len(fake.attachArgsForCall)
+}
+
+func (fake *FakeContainerizer) AttachArgsForCall(i int) (lager.Logger, string, string, garden.ProcessIO) {
+	fake.attachMutex.RLock()
+	defer fake.attachMutex.RUnlock()
+	return fake.attachArgsForCall[i].log, fake.attachArgsForCall[i].handle, fake.attachArgsForCall[i].processGUID, fake.attachArgsForCall[i].io
+}
+
+func (fake *FakeContainerizer) AttachReturns(result1 garden.Process, result2 error) {
+	fake.AttachStub = nil
+	fake.attachReturns = struct {
 		result1 garden.Process
 		result2 error
 	}{result1, result2}

@@ -50,11 +50,7 @@ func New(
 }
 
 func (t *ProcessTracker) Run(processID string, cmd *exec.Cmd, processIO garden.ProcessIO, tty *garden.TTYSpec, pidFilePath string) (garden.Process, error) {
-	t.processesMutex.Lock()
-	process := NewProcess(t.containerPath, t.iodaemonBin, t.runner, t.pidGetter, processID, pidFilePath)
-	t.processes[processID] = process
-	t.processesMutex.Unlock()
-
+	process := t.getOrCreateProcess(processID, pidFilePath)
 	ready, active := process.Spawn(cmd, tty)
 
 	err := <-ready
@@ -64,7 +60,7 @@ func (t *ProcessTracker) Run(processID string, cmd *exec.Cmd, processIO garden.P
 
 	process.Attach(processIO)
 
-	go t.link(process.ID())
+	go process.Link(t.unregister)
 
 	err = <-active
 	if err != nil {
@@ -74,63 +70,26 @@ func (t *ProcessTracker) Run(processID string, cmd *exec.Cmd, processIO garden.P
 	return process, nil
 }
 
-func (t *ProcessTracker) Attach(processID string, processIO garden.ProcessIO) (garden.Process, error) {
-	t.processesMutex.RLock()
-	process, ok := t.processes[processID]
-	t.processesMutex.RUnlock()
-
-	if !ok {
-		return nil, UnknownProcessError{processID}
-	}
+func (t *ProcessTracker) Attach(processID string, processIO garden.ProcessIO, pidFilePath string) (garden.Process, error) {
+	process := t.getOrCreateProcess(processID, pidFilePath)
+	go process.Link(t.unregister)
 
 	process.Attach(processIO)
-
-	go t.link(processID)
 
 	return process, nil
 }
 
-func (t *ProcessTracker) Restore(processID string) {
+func (t *ProcessTracker) getOrCreateProcess(processID string, pidFilePath string) *Process {
 	t.processesMutex.Lock()
+	defer t.processesMutex.Unlock()
 
-	process := NewProcess(t.containerPath, t.iodaemonBin, t.runner, t.pidGetter, processID, "")
-
-	t.processes[processID] = process
-
-	go t.link(processID)
-
-	t.processesMutex.Unlock()
-}
-
-func (t *ProcessTracker) ActiveProcesses() []garden.Process {
-	t.processesMutex.RLock()
-	defer t.processesMutex.RUnlock()
-
-	processes := make([]garden.Process, len(t.processes))
-
-	i := 0
-	for _, process := range t.processes {
-		processes[i] = process
-		i++
-	}
-
-	return processes
-}
-
-func (t *ProcessTracker) link(processID string) {
-	t.processesMutex.RLock()
 	process, ok := t.processes[processID]
-	t.processesMutex.RUnlock()
-
 	if !ok {
-		return
+		process = NewProcess(t.containerPath, t.iodaemonBin, t.runner, t.pidGetter, processID, pidFilePath)
+		t.processes[processID] = process
 	}
 
-	defer t.unregister(processID)
-
-	process.Link()
-
-	return
+	return process
 }
 
 func (t *ProcessTracker) unregister(processID string) {

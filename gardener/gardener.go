@@ -43,6 +43,7 @@ type Containerizer interface {
 	StreamOut(log lager.Logger, handle string, spec garden.StreamOutSpec) (io.ReadCloser, error)
 
 	Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Attach(log lager.Logger, handle string, processGUID string, io garden.ProcessIO) (garden.Process, error)
 	Stop(log lager.Logger, handle string, kill bool) error
 	Destroy(log lager.Logger, handle string) error
 

@@ -41,6 +41,7 @@ type BundleLoader interface {
 type BundleRunner interface {
 	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 	Exec(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Attach(log lager.Logger, id, bundlePath, processId string, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
 	Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
@@ -143,6 +144,21 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	}
 
 	return c.runner.Exec(log, path, handle, spec, io)
+}
+
+func (c *Containerizer) Attach(log lager.Logger, handle string, processID string, io garden.ProcessIO) (garden.Process, error) {
+	log = log.Session("attach", lager.Data{"handle": handle, "process-id": processID})
+
+	log.Info("started")
+	defer log.Info("finished")
+
+	path, err := c.depot.Lookup(log, handle)
+	if err != nil {
+		log.Error("lookup", err)
+		return nil, err
+	}
+
+	return c.runner.Attach(log, path, handle, processID, io)
 }
 
 // StreamIn streams files in to the container

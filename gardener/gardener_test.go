@@ -517,6 +517,33 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
+		Describe("attaching to an existing process in a container", func() {
+			It("asks the containerizer to attach to the process", func() {
+				origIO := garden.ProcessIO{
+					Stdout: gbytes.NewBuffer(),
+				}
+				_, err := container.Attach("123", origIO)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(containerizer.AttachCallCount()).To(Equal(1))
+				_, id, processId, io := containerizer.AttachArgsForCall(0)
+				Expect(id).To(Equal("banana"))
+				Expect(processId).To(Equal("123"))
+				Expect(io).To(Equal(origIO))
+			})
+
+			Context("when the containerizer fails to attach to a process", func() {
+				BeforeEach(func() {
+					containerizer.AttachReturns(nil, errors.New("lost my banana"))
+				})
+
+				It("returns the error", func() {
+					_, err := container.Attach("123", garden.ProcessIO{})
+					Expect(err).To(MatchError("lost my banana"))
+				})
+			})
+		})
+
 		Describe("streaming files in to the container", func() {
 			It("asks the containerizer to stream in the tar stream", func() {
 				spec := garden.StreamInSpec{Path: "potato", User: "chef", TarStream: gbytes.NewBuffer()}
