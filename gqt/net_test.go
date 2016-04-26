@@ -10,12 +10,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
-	"github.com/eapache/go-resiliency/retrier"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -104,29 +102,6 @@ var _ = Describe("Net", func() {
 		out, err := exec.Command("/bin/ping", "-c 2", ipAddress(containerNetwork, 2)).Output()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(out).To(ContainSubstring(" 0% packet loss"))
-	})
-
-	Context("when starting a container using runC after it has been killed", func() {
-		It("should come back up", func() {
-			containerInfo, err := container.Info()
-			Expect(err).NotTo(HaveOccurred())
-
-			cmd := exec.Command("runc", "kill", container.Handle(), "KILL")
-			Expect(cmd.Run()).To(Succeed())
-
-			retry := retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil)
-			Expect(retry.Run(func() error {
-				if err := exec.Command("runc", "state", container.Handle()).Run(); err == nil {
-					return fmt.Errorf("container '%s' still running", container.Handle())
-				}
-
-				return nil
-			})).To(Succeed())
-
-			cmd = exec.Command("runc", "start", "-d", container.Handle())
-			cmd.Dir = containerInfo.ContainerPath
-			Expect(cmd.Run()).To(Succeed())
-		})
 	})
 
 	Context("a second container", func() {
