@@ -235,36 +235,16 @@ func (cmd *GuardianCommand) Execute([]string) error {
 func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
 
-	var denyNetworksList []string
-	for _, network := range cmd.Network.DenyNetworks {
-		denyNetworksList = append(denyNetworksList, network.String())
-	}
-
-	externalIPAddr, err := defaultExternalIP(cmd.Network.ExternalIP)
-	if err != nil {
-		return err
-	}
-
-	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
-	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
-	ipt := cmd.wireIptables(logger, chainPrefix)
-
 	propManager, err := cmd.loadProperties(logger, cmd.Containers.PropertiesPath)
 	if err != nil {
 		return err
 	}
 
-	dnsIPs := make([]net.IP, len(cmd.Network.DNSServers))
-	for i, ip := range cmd.Network.DNSServers {
-		dnsIPs[i] = ip.IP()
+	networker, iptablesStarter, err := cmd.wireNetworker(logger, propManager)
+	if err != nil {
+		logger.Error("failed-to-wire-networker", err)
+		return err
 	}
-
-	var networkHookers []kawasaki.NetworkHooker
-	if cmd.Network.Plugin.Path() != "" {
-		networkHookers = append(networkHookers, netplugin.New(cmd.Network.Plugin.Path(), cmd.Network.PluginExtraArgs...))
-	}
-
-	networker := cmd.wireNetworker(logger, cmd.Bin.Kawasaki.Path(), cmd.Server.Tag, cmd.Network.Pool.CIDR(), externalIPAddr, dnsIPs, ipt, interfacePrefix, chainPrefix, propManager, networkHookers)
 
 	restorer := gardener.NewRestorer(networker)
 	if cmd.Containers.DestroyContainersOnStartup {
@@ -273,7 +253,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
-		Starters:        cmd.wireStarter(logger, ipt, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList),
+		Starters:        []gardener.Starter{cmd.wireRunDMCStarter(logger), iptablesStarter},
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
 		Networker:       networker,
 		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
@@ -353,7 +333,7 @@ func (cmd *GuardianCommand) wireUidGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
-func (cmd *GuardianCommand) wireStarter(logger lager.Logger, ipt *iptables.IPTables, allowHostAccess bool, nicPrefix string, denyNetworks []string) []gardener.Starter {
+func (cmd *GuardianCommand) wireRunDMCStarter(logger lager.Logger) gardener.Starter {
 	var cgroupsMountpoint string
 	if cmd.Server.Tag != "" {
 		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
@@ -361,52 +341,65 @@ func (cmd *GuardianCommand) wireStarter(logger lager.Logger, ipt *iptables.IPTab
 		cgroupsMountpoint = "/sys/fs/cgroup"
 	}
 
-	return []gardener.Starter{
-		rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, linux_command_runner.New()),
-		iptables.NewStarter(ipt, allowHostAccess, nicPrefix, denyNetworks),
+	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, linux_command_runner.New())
+}
+
+func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore) (gardener.Networker, gardener.Starter, error) {
+	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
+	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
+
+	var denyNetworksList []string
+	for _, network := range cmd.Network.DenyNetworks {
+		denyNetworksList = append(denyNetworksList, network.String())
 	}
-}
 
-func (cmd *GuardianCommand) wireIptables(logger lager.Logger, prefix string) *iptables.IPTables {
-	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger.Session("iptables-runner")}
-	return iptables.New(runner, prefix)
-}
-
-func (cmd *GuardianCommand) wireNetworker(
-	log lager.Logger,
-	kawasakiBin string,
-	tag string,
-	networkPoolCIDR *net.IPNet,
-	externalIP net.IP,
-	dnsServers []net.IP,
-	ipt *iptables.IPTables,
-	interfacePrefix string,
-	chainPrefix string,
-	propManager *properties.Manager,
-	networkHookers []kawasaki.NetworkHooker,
-) gardener.Networker {
-	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
-	portPool, err := ports.NewPool(cmd.Network.PortPoolStart, cmd.Network.PortPoolSize, ports.State{})
+	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
-		log.Fatal("invalid pool range", err)
+		return nil, nil, err
+	}
+
+	dnsServers := make([]net.IP, len(cmd.Network.DNSServers))
+	for i, ip := range cmd.Network.DNSServers {
+		dnsServers[i] = ip.IP()
+	}
+
+	var networkHookers []kawasaki.NetworkHooker
+	if cmd.Network.Plugin.Path() != "" {
+		networkHookers = append(networkHookers, netplugin.New(cmd.Network.Plugin.Path(), cmd.Network.PluginExtraArgs...))
+	}
+
+	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
+	ipTables := iptables.New(iptRunner, chainPrefix)
+	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList)
+
+	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
+
+	portPool, err := ports.NewPool(
+		cmd.Network.PortPoolStart,
+		cmd.Network.PortPoolSize,
+		ports.State{})
+	if err != nil {
+		return nil, nil, fmt.Errorf("invalid pool range: %s", err)
 	}
 
 	kawasakiNetworker := kawasaki.New(
-		kawasakiBin,
+		cmd.Bin.Kawasaki.Path(),
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
-		subnets.NewPool(networkPoolCIDR),
+		subnets.NewPool(cmd.Network.Pool.CIDR()),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
 		propManager,
 		factory.NewDefaultConfigurer(iptables.New(linux_command_runner.New(), chainPrefix)),
 		portPool,
-		iptables.NewPortForwarder(ipt),
-		iptables.NewFirewallOpener(ipt),
+		iptables.NewPortForwarder(ipTables),
+		iptables.NewFirewallOpener(ipTables),
 	)
 
-	return &kawasaki.CompositeNetworker{
+	networker := &kawasaki.CompositeNetworker{
 		Networker:  kawasakiNetworker,
 		ExtraHooks: networkHookers,
 	}
+
+	return networker, ipTablesStarter, nil
 }
 
 func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
