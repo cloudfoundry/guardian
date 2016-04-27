@@ -38,13 +38,14 @@ var _ = Describe("Surviving Restarts", func() {
 		subnetName string = "177-100-10-0"
 	)
 
-	Describe("destruction of container resources", func() {
+	Context("when a container is created and then garden is restarted", func() {
 		var (
 			container     garden.Container
 			hostNetInPort uint32
 			externalIP    string
 			propertiesDir string
 			existingProc  garden.Process
+			containerSpec garden.ContainerSpec
 		)
 
 		BeforeEach(func() {
@@ -52,14 +53,15 @@ var _ = Describe("Surviving Restarts", func() {
 			propertiesDir, err = ioutil.TempDir("", "props")
 			Expect(err).NotTo(HaveOccurred())
 			args = append(args, "--properties-path", path.Join(propertiesDir, "props.json"))
+
+			containerSpec = garden.ContainerSpec{
+				Network: "177.100.10.30/30",
+			}
 		})
 
 		JustBeforeEach(func() {
 			var err error
-
-			container, err = client.Create(garden.ContainerSpec{
-				Network: "177.100.10.30/24",
-			})
+			container, err = client.Create(containerSpec)
 			Expect(err).NotTo(HaveOccurred())
 
 			hostNetInPort, _, err = container.NetIn(hostNetInPort, 8080)
@@ -101,7 +103,7 @@ var _ = Describe("Surviving Restarts", func() {
 			It("destroys the remaining containers' iptables", func() {
 				out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(out)).NotTo(MatchRegexp(fmt.Sprintf("w-%d-instance.* 177.100.10.0/24", GinkgoParallelNode())))
+				Expect(string(out)).NotTo(MatchRegexp(fmt.Sprintf("w-%d-instance.* 177.100.10.0/30", GinkgoParallelNode())))
 			})
 
 			It("destroys the remaining containers' bridges", func() {
@@ -117,6 +119,13 @@ var _ = Describe("Surviving Restarts", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(string(processes)).NotTo(ContainSubstring(fmt.Sprintf("run runc /tmp/test-garden-%d/containers/%s", GinkgoParallelNode(), container.Handle())))
+			})
+
+			Context("when a container is created after restart", func() {
+				It("can be created with the same network reservation", func() {
+					_, err := client.Create(containerSpec)
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 		})
 
@@ -179,21 +188,47 @@ var _ = Describe("Surviving Restarts", func() {
 			It("should still be able to access the internet", func() {
 				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
 			})
-		})
-	})
 
-	Describe("successful operations after restart", func() {
-		It("can still create container", func() {
-			spec := garden.ContainerSpec{
-				Network: "177.100.10.30/24",
-			}
-			_, err := client.Create(spec)
-			Expect(err).NotTo(HaveOccurred())
+			Context("when creating a container after restart", func() {
+				It("should not allocate ports used before restart", func() {
+					secondContainer, err := client.Create(garden.ContainerSpec{})
+					secondContainerHostPort, _, err := secondContainer.NetIn(0, 8080)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(hostNetInPort).NotTo(Equal(secondContainerHostPort))
+				})
 
-			Expect(client.Stop()).To(Succeed())
-			client = startGarden(args...)
-			_, err = client.Create(spec)
-			Expect(err).NotTo(HaveOccurred())
+				Context("with a subnet used before restart", func() {
+					It("will not allocate an IP", func() {
+						_, err := client.Create(containerSpec)
+						Expect(err).To(MatchError("the requested IP is already allocated"))
+					})
+				})
+
+				Context("with an IP used before restart", func() {
+					BeforeEach(func() {
+						containerSpec = garden.ContainerSpec{
+							// Specifying a CIDR of < 30 will make garden give us exactly 177.100.10.5
+							Network: "177.100.10.5/29",
+						}
+					})
+
+					It("should not allocate the IP", func() {
+						_, err := client.Create(containerSpec)
+						Expect(err).To(MatchError("the requested IP is already allocated"))
+					})
+				})
+
+				Context("with no network specified", func() {
+					BeforeEach(func() {
+						containerSpec = garden.ContainerSpec{}
+					})
+
+					It("successfully creates another container with no network specified", func() {
+						_, err := client.Create(containerSpec)
+						Expect(err).NotTo(HaveOccurred())
+					})
+				})
+			})
 		})
 	})
 })

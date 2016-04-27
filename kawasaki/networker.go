@@ -60,6 +60,7 @@ type ConfigStore interface {
 type PortPool interface {
 	Acquire() (uint32, error)
 	Release(uint32)
+	Remove(uint32) error
 }
 
 //go:generate counterfeiter . PortForwarder
@@ -294,13 +295,35 @@ func (n *networker) Destroy(log lager.Logger, handle string) error {
 }
 
 func (n *networker) Restore(log lager.Logger, handle string) error {
-	config, err := load(n.configStore, handle)
-	if err == nil {
-		err = n.configurer.Restore(log, config)
+	networkConfig, err := load(n.configStore, handle)
+	if err != nil {
+		return fmt.Errorf("loading %s: %v", handle, err)
 	}
 
+	err = n.configurer.Restore(log, networkConfig)
 	if err != nil {
-		return fmt.Errorf("restoring %s: %s", handle, err)
+		return fmt.Errorf("restoring %s: %v", handle, err)
+	}
+
+	err = n.subnetPool.Remove(networkConfig.Subnet, networkConfig.ContainerIP)
+	if err != nil {
+		return fmt.Errorf("subnet pool removing %s: %v", handle, err)
+	}
+
+	currentMappingsJson, ok := n.configStore.Get(handle, gardener.MappedPortsKey)
+	if !ok {
+		return nil
+	}
+
+	currentMappings, err := portsFromJson(currentMappingsJson)
+	if err != nil {
+		return fmt.Errorf("unmarshaling port mappings %s: %v", handle, err)
+	}
+
+	for _, mapping := range currentMappings {
+		if err = n.portPool.Remove(mapping.HostPort); err != nil {
+			return fmt.Errorf("port pool removing %s: %v", handle, err)
+		}
 	}
 
 	return nil

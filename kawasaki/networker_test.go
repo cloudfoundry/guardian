@@ -1,6 +1,7 @@
 package kawasaki_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -85,6 +86,14 @@ var _ = Describe("Networker", func() {
 
 		fakeConfigCreator.CreateReturns(networkConfig, nil)
 
+		portMappings, err := json.Marshal([]garden.PortMapping{
+			garden.PortMapping{
+				HostPort:      60000,
+				ContainerPort: 8080,
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
 		config = map[string]string{
 			gardener.ContainerIPKey:        networkConfig.ContainerIP.String(),
 			"kawasaki.host-interface":      networkConfig.HostIntf,
@@ -97,6 +106,7 @@ var _ = Describe("Networker", func() {
 			"kawasaki.iptable-inst":        networkConfig.IPTableInstance,
 			"kawasaki.mtu":                 strconv.Itoa(networkConfig.Mtu),
 			"kawasaki.dns-servers":         "8.8.8.8, 8.8.4.4",
+			gardener.MappedPortsKey:        string(portMappings),
 		}
 
 		fakeConfigStore.GetStub = func(handle, name string) (string, bool) {
@@ -265,9 +275,15 @@ var _ = Describe("Networker", func() {
 		})
 
 		Describe("releasing ports", func() {
-			It("does nothing when no ports are stored in the config", func() {
-				Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakePortPool.ReleaseCallCount()).To(Equal(0))
+			Context("when there are no ports stored in the config", func() {
+				BeforeEach(func() {
+					delete(config, gardener.MappedPortsKey)
+				})
+
+				It("does nothing when no ports are stored in the config", func() {
+					Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
+					Expect(fakePortPool.ReleaseCallCount()).To(Equal(0))
+				})
 			})
 
 			It("destroys any ports named in the config", func() {
@@ -387,7 +403,7 @@ var _ = Describe("Networker", func() {
 			actualHandle, actualName, actualValue := fakeConfigStore.SetArgsForCall(0)
 			Expect(actualHandle).To(Equal(handle))
 			Expect(actualName).To(Equal(gardener.MappedPortsKey))
-			Expect(actualValue).To(Equal(`[{"HostPort":123,"ContainerPort":456}]`))
+			Expect(actualValue).To(Equal(`[{"HostPort":60000,"ContainerPort":8080},{"HostPort":123,"ContainerPort":456}]`))
 		})
 
 		It("stores a list of port mappings in ConfigStore", func() {
@@ -435,21 +451,78 @@ var _ = Describe("Networker", func() {
 	})
 
 	Describe("Restore", func() {
-		It("returns an error when the config couldn't be loaded", func() {
-			config = nil
-			Expect(networker.Restore(logger, "some-handle")).To(MatchError(ContainSubstring("restoring some-handle")))
-		})
-
-		It("returns an error when the configurer fails to restore", func() {
-			fakeConfigurer.RestoreReturns(errors.New("banana"))
-			Expect(networker.Restore(logger, "some-handle")).To(MatchError("restoring some-handle: banana"))
-		})
-
 		It("restores the configuration", func() {
-			networker.Restore(logger, "some-handle")
+			Expect(networker.Restore(logger, "some-handle")).To(Succeed())
 			Expect(fakeConfigurer.RestoreCallCount()).To(Equal(1))
 			_, actualNetworkConfig := fakeConfigurer.RestoreArgsForCall(0)
 			Expect(actualNetworkConfig).To(Equal(networkConfig))
+		})
+
+		It("removes the subnet from the the subnet pool", func() {
+			Expect(networker.Restore(logger, "some-handle")).To(Succeed())
+			Expect(fakeSubnetPool.RemoveCallCount()).To(Equal(1))
+			calledSubnet, calledContainerIP := fakeSubnetPool.RemoveArgsForCall(0)
+			Expect(calledSubnet.String()).To(Equal("123.123.123.0/24"))
+			Expect(calledContainerIP.String()).To(Equal("123.123.123.12"))
+		})
+
+		It("removes the port from port mapping list", func() {
+			Expect(networker.Restore(logger, "some-handle")).To(Succeed())
+			Expect(fakePortPool.RemoveCallCount()).To(Equal(1))
+			calledPort := fakePortPool.RemoveArgsForCall(0)
+			Expect(calledPort).To(BeEquivalentTo(60000))
+		})
+
+		Context("when the config couldn't be loaded", func() {
+			It("returns an appropriate error", func() {
+				config = nil
+				Expect(networker.Restore(logger, "some-handle")).To(MatchError(ContainSubstring("loading some-handle")))
+			})
+		})
+
+		Context("when the configurer fails to restore", func() {
+			It("returns an appropriate error", func() {
+				fakeConfigurer.RestoreReturns(errors.New("banana"))
+				Expect(networker.Restore(logger, "some-handle")).To(MatchError("restoring some-handle: banana"))
+			})
+		})
+
+		Context("when removing the IP from the subnet pool errors", func() {
+			BeforeEach(func() {
+				fakeSubnetPool.RemoveReturns(errors.New("failed-to-remove-from-subnet-pool"))
+			})
+			It("returns an appropriate error", func() {
+				Expect(networker.Restore(logger, "some-handle")).To(MatchError("subnet pool removing some-handle: failed-to-remove-from-subnet-pool"))
+			})
+		})
+
+		Context("when there are no port mappings", func() {
+			BeforeEach(func() {
+				delete(config, gardener.MappedPortsKey)
+			})
+
+			It("completes successfully", func() {
+				Expect(networker.Restore(logger, "some-handle")).To(Succeed())
+			})
+		})
+
+		Context("when the port mapping json can't be marshaled", func() {
+			BeforeEach(func() {
+				config[gardener.MappedPortsKey] = "not-json"
+			})
+
+			It("returns an appropriate erorr", func() {
+				Expect(networker.Restore(logger, "some-handle")).To(MatchError("unmarshaling port mappings some-handle: invalid character 'o' in literal null (expecting 'u')"))
+			})
+		})
+
+		Context("when removing the port from the port pool errors", func() {
+			BeforeEach(func() {
+				fakePortPool.RemoveReturns(errors.New("failed-to-remove-from-port-pool"))
+			})
+			It("returns an appropriate error", func() {
+				Expect(networker.Restore(logger, "some-handle")).To(MatchError("port pool removing some-handle: failed-to-remove-from-port-pool"))
+			})
 		})
 	})
 })
