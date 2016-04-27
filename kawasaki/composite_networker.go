@@ -1,6 +1,7 @@
 package kawasaki
 
 import (
+	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/pivotal-golang/lager"
 )
@@ -10,14 +11,14 @@ type CompositeNetworker struct {
 	ExtraHooks []NetworkHooker
 }
 
-func (c *CompositeNetworker) Hooks(log lager.Logger, handle, spec, externalNetworkSpec string) ([]gardener.Hooks, error) {
-	hooks, err := c.Networker.Hooks(log, handle, spec, externalNetworkSpec)
+func (c *CompositeNetworker) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error) {
+	hooks, err := c.Networker.Hooks(log, containerSpec)
 	if err != nil {
 		return []gardener.Hooks{}, err
 	}
 
 	for _, hooker := range c.ExtraHooks {
-		hook, err := hooker.Hooks(log, handle, spec, externalNetworkSpec)
+		hook, err := hooker.Hooks(log, containerSpec)
 		if err != nil {
 			return []gardener.Hooks{}, err
 		}

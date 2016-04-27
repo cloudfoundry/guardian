@@ -110,16 +110,16 @@ var _ = Describe("Gardener", func() {
 
 		Context("when the networker provides hooks", func() {
 			BeforeEach(func() {
-				networker.HooksStub = func(_ lager.Logger, handle, spec, externalSpec string) ([]gardener.Hooks, error) {
+				networker.HooksStub = func(_ lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error) {
 					return []gardener.Hooks{
 						gardener.Hooks{
 							Prestart: gardener.Hook{
 								Path: "/path/to/banana/exe",
-								Args: []string{"--handle", handle, "--spec", spec},
+								Args: []string{"--handle", containerSpec.Handle, "--spec", containerSpec.Network},
 							},
 							Poststop: gardener.Hook{
 								Path: "/path/to/bananana/exe",
-								Args: []string{"--handle", handle, "--spec", spec},
+								Args: []string{"--handle", containerSpec.Handle, "--spec", containerSpec.Network},
 							},
 						},
 					}, nil
