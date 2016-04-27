@@ -9,5 +9,10 @@ type Hostname struct {
 }
 
 func (l Hostname) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
-	return bndl.WithHostname(spec.Hostname)
+	hostname := spec.Hostname
+	if len(hostname) > 49 {
+		hostname = hostname[len(hostname)-49:]
+	}
+
+	return bndl.WithHostname(hostname)
 }
