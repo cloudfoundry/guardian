@@ -1,6 +1,10 @@
 package gqt_test
 
 import (
+	"io/ioutil"
+	"os"
+	"path"
+
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
@@ -10,16 +14,22 @@ import (
 
 var _ = Describe("Properties", func() {
 	var (
-		client    *runner.RunningGarden
-		container garden.Container
-		props     garden.Properties
+		args          []string
+		client        *runner.RunningGarden
+		container     garden.Container
+		props         garden.Properties
+		propertiesDir string
 	)
 
 	BeforeEach(func() {
-		client = startGarden()
+		var err error
+		propertiesDir, err = ioutil.TempDir("", "props")
+		Expect(err).NotTo(HaveOccurred())
+		args = append(args, "--properties-path", path.Join(propertiesDir, "props.json"))
+
+		client = startGarden(args...)
 		props = garden.Properties{"somename": "somevalue"}
 
-		var err error
 		container, err = client.Create(garden.ContainerSpec{
 			Properties: props,
 		})
@@ -28,6 +38,7 @@ var _ = Describe("Properties", func() {
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
+		Expect(os.RemoveAll(propertiesDir)).To(Succeed())
 	})
 
 	It("can get properties", func() {
@@ -96,5 +107,20 @@ var _ = Describe("Properties", func() {
 		Expect(props).To(HaveKey("kawasaki.container-interface"))
 		Expect(props).To(HaveKey(gardener.ExternalIPKey))
 		Expect(props).To(HaveKey("kawasaki.mtu"))
+	})
+
+	Context("after a server restart", func() {
+		It("can still get the container's properties", func() {
+			beforeProps, err := container.Properties()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(client.Stop()).To(Succeed())
+			client = startGarden(args...)
+
+			afterProps, err := container.Properties()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(beforeProps).To(Equal(afterProps))
+		})
 	})
 })

@@ -249,9 +249,8 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
 	ipt := cmd.wireIptables(logger, chainPrefix)
 
-	propManager, err := properties.Load(cmd.Containers.PropertiesPath)
+	propManager, err := cmd.loadProperties(logger, cmd.Containers.PropertiesPath)
 	if err != nil {
-		logger.Error("failed-to-load-properties", err, lager.Data{"propertiesPath": cmd.Containers.PropertiesPath})
 		return err
 	}
 
@@ -326,14 +325,28 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	gardenServer.Stop()
 
-	if cmd.Containers.PropertiesPath != "" {
-		err := properties.Save(cmd.Containers.PropertiesPath, propManager)
-		if err != nil {
-			logger.Error("failed-to-save-properties", err, lager.Data{"propertiesPath": cmd.Containers.PropertiesPath})
-		}
-	}
+	cmd.saveProperties(logger, cmd.Containers.PropertiesPath, propManager)
 
 	return nil
+}
+
+func (cmd *GuardianCommand) loadProperties(logger lager.Logger, propertiesPath string) (*properties.Manager, error) {
+	propManager, err := properties.Load(propertiesPath)
+	if err != nil {
+		logger.Error("failed-to-load-properties", err, lager.Data{"propertiesPath": propertiesPath})
+		return &properties.Manager{}, err
+	}
+
+	return propManager, nil
+}
+
+func (cmd *GuardianCommand) saveProperties(logger lager.Logger, propertiesPath string, propManager *properties.Manager) {
+	if propertiesPath != "" {
+		err := properties.Save(propertiesPath, propManager)
+		if err != nil {
+			logger.Error("failed-to-save-properties", err, lager.Data{"propertiesPath": propertiesPath})
+		}
+	}
 }
 
 func (cmd *GuardianCommand) wireUidGenerator() gardener.UidGeneratorFunc {
