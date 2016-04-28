@@ -29,7 +29,7 @@ var _ = Describe("Destroying a Container", func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
-	Context("when running a process", func() {
+	Context("when destroying the container", func() {
 		var (
 			process         garden.Process
 			initProcPid     int
@@ -81,7 +81,7 @@ var _ = Describe("Destroying a Container", func() {
 		})
 	})
 
-	Context("when using a static subnet", func() {
+	Context("cleaning up networking after destroy", func() {
 		var (
 			contIfaceName     string
 			contHandle        string
@@ -104,10 +104,6 @@ var _ = Describe("Destroying a Container", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		JustBeforeEach(func() {
-			Expect(client.Destroy(container.Handle())).To(Succeed())
-		})
-
 		AfterEach(func() {
 			err := client.Destroy(existingContainer.Handle())
 			if err != nil {
@@ -115,52 +111,84 @@ var _ = Describe("Destroying a Container", func() {
 			}
 		})
 
-		It("should remove iptable entries", func() {
-			out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(out)).NotTo(MatchRegexp("w-%d-instance.* 177.100.10.0/24", GinkgoParallelNode()))
-			Expect(string(out)).To(ContainSubstring("168.100.20.0/24"))
-		})
-
-		It("should remove virtual ethernet cards", func() {
-			ifconfigExits := func() int {
-				session, err := gexec.Start(exec.Command("ifconfig", contIfaceName), GinkgoWriter, GinkgoWriter)
+		var itCleansUpTheNetwork = func() {
+			It("should remove iptable entries", func() {
+				out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
+				Expect(string(out)).NotTo(MatchRegexp("w-%d-instance.* 177.100.10.0/24", GinkgoParallelNode()))
+				Expect(string(out)).To(ContainSubstring("168.100.20.0/24"))
+			})
 
-				return session.Wait().ExitCode()
-			}
-			Eventually(ifconfigExits).ShouldNot(Equal(0))
+			It("should remove virtual ethernet cards", func() {
+				ifconfigExits := func() int {
+					session, err := gexec.Start(exec.Command("ifconfig", contIfaceName), GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
 
-			ifaceName := ethInterfaceName(existingContainer)
-			session, err := gexec.Start(exec.Command("ifconfig", ifaceName), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
-		})
+					return session.Wait().ExitCode()
+				}
+				Eventually(ifconfigExits).ShouldNot(Equal(0))
 
-		It("should remove the network bridge", func() {
-			Expect(client.Destroy(existingContainer.Handle())).To(Succeed())
-
-			// ifconfig can be flakey when it runs while parallel tests are destroying
-			// interfaces, so run it a few times to minimize chance of problems
-			var session *gexec.Session
-			for i := 0; i < 30; i++ {
-				var err error
-				session, err = gexec.Start(
-					exec.Command("ifconfig"),
-					GinkgoWriter, GinkgoWriter,
-				)
+				ifaceName := ethInterfaceName(existingContainer)
+				session, err := gexec.Start(exec.Command("ifconfig", ifaceName), GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
+				Eventually(session).Should(gexec.Exit(0))
+			})
 
-				session.Wait()
-				if session.ExitCode() == 0 {
-					break
+			It("should remove the network bridge", func() {
+				Expect(client.Destroy(existingContainer.Handle())).To(Succeed())
+
+				// ifconfig can be flakey when it runs while parallel tests are destroying
+				// interfaces, so run it a few times to minimize chance of problems
+				var session *gexec.Session
+				for i := 0; i < 30; i++ {
+					var err error
+					session, err = gexec.Start(
+						exec.Command("ifconfig"),
+						GinkgoWriter, GinkgoWriter,
+					)
+					Expect(err).NotTo(HaveOccurred())
+
+					session.Wait()
+					if session.ExitCode() == 0 {
+						break
+					}
+
+					time.Sleep(1 * time.Second)
 				}
 
-				time.Sleep(1 * time.Second)
-			}
+				Expect(session.ExitCode()).To(Equal(0))
+				Expect(session).NotTo(gbytes.Say("w%dbrdg-", GinkgoParallelNode()))
+			})
+		}
 
-			Expect(session.ExitCode()).To(Equal(0))
-			Expect(session).NotTo(gbytes.Say("w%dbrdg-", GinkgoParallelNode()))
+		Context("after Destroy is called", func() {
+			JustBeforeEach(func() {
+				Expect(client.Destroy(container.Handle())).To(Succeed())
+			})
+
+			itCleansUpTheNetwork()
+		})
+
+		Context("when runc kill is called directly", func() {
+			JustBeforeEach(func() {
+				sess, err := gexec.Start(exec.Command("runc", "kill", container.Handle(), "KILL"), GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+
+				Eventually(func() int {
+					sess, err := gexec.Start(exec.Command("runc", "state", container.Handle()), GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					sess.Wait()
+
+					return sess.ExitCode()
+				}).ShouldNot(Equal(0))
+
+				// runc deletes state BEFORE running post-stop hooks, so we have no choice
+				// but to wait a bit longer for the deletes to have happened
+				time.Sleep(3 * time.Second)
+			})
+
+			itCleansUpTheNetwork()
 		})
 	})
 
