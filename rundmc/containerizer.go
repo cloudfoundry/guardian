@@ -117,7 +117,7 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 	}
 
 	if err = c.runner.Start(log, path, spec.Handle, garden.ProcessIO{}); err != nil {
-		log.Error("start", err)
+		log.Error("start-failed", err)
 		return err
 	}
 
@@ -139,7 +139,7 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 
 	path, err := c.depot.Lookup(log, handle)
 	if err != nil {
-		log.Error("lookup", err)
+		log.Error("lookup-failed", err)
 		return nil, err
 	}
 
@@ -154,7 +154,7 @@ func (c *Containerizer) Attach(log lager.Logger, handle string, processID string
 
 	path, err := c.depot.Lookup(log, handle)
 	if err != nil {
-		log.Error("lookup", err)
+		log.Error("lookup-failed", err)
 		return nil, err
 	}
 
@@ -218,6 +218,7 @@ func (c *Containerizer) Stop(log lager.Logger, handle string, kill bool) error {
 	}
 
 	if err = c.stopper.StopAll(log, handle, []int{state.Pid}, kill); err != nil {
+		log.Error("stop-all-failed", err, lager.Data{"pid": state.Pid})
 		return fmt.Errorf("stop: %s", err)
 	}
 

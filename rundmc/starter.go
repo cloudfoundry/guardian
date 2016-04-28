@@ -109,10 +109,10 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 
 func (s *CgroupStarter) mountTmpfsOnCgroupPath(log lager.Logger, path string) {
 	log = log.Session("cgroups-tmpfs-mounting", lager.Data{"path": path})
-
 	log.Info("started")
+
 	if err := s.CommandRunner.Run(exec.Command("mount", "-t", "tmpfs", "-o", "uid=0,gid=0,mode=0755", "cgroup", path)); err != nil {
-		log.Error("failed-to-mount", err)
+		log.Error("mount-failed-continuing-anyway", err)
 	} else {
 		log.Info("finished")
 	}

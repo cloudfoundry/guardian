@@ -195,12 +195,17 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	log.Info("start")
 	defer func() {
 		if err != nil {
-			log := log.Session("create-failed-cleaningup")
+			log := log.Session("create-failed-cleaningup", lager.Data{
+				"cause": err,
+			})
+
 			log.Info("start")
+
 			err := g.destroy(log, spec.Handle)
 			if err != nil {
 				log.Error("destroy-failed", err)
 			}
+
 			log.Info("cleanedup")
 		} else {
 			log.Info("created")
@@ -293,7 +298,7 @@ func (g *Gardener) Destroy(handle string) error {
 	log := g.Logger.Session("destroy", lager.Data{"handle": handle})
 
 	log.Info("start")
-	defer log.Info("destroyed")
+	defer log.Info("finished")
 
 	handles, err := g.Containerizer.Handles()
 	if err != nil {
@@ -453,6 +458,7 @@ func (g *Gardener) Start() error {
 	log := g.Logger.Session("start")
 
 	log.Info("starting")
+	defer log.Info("completed")
 
 	for _, starter := range g.Starters {
 		if err := starter.Start(); err != nil {
@@ -466,29 +472,15 @@ func (g *Gardener) Start() error {
 	}
 
 	for _, handle := range g.Restorer.Restore(log, handles) {
-		destroyLog := log.Session("cleaning-up-container", lager.Data{"handle": handle})
+		destroyLog := log.Session("clean-up-container", lager.Data{"handle": handle})
+		destroyLog.Info("start")
 
-		destroyLog.Info("starting")
 		if err := g.destroy(destroyLog, handle); err != nil {
-			destroyLog.Error("failed-to-destroy", err)
+			destroyLog.Error("failed", err)
 			continue
 		}
-		destroyLog.Info("completed")
-	}
 
-	log.Info("completed")
-
-	return nil
-}
-
-func (g *Gardener) cleanupContainers(log lager.Logger) error {
-	handles, _ := g.Containerizer.Handles()
-
-	for _, handle := range handles {
-		log.Info("cleaningup-container", lager.Data{"handle": handle})
-		if err := g.Destroy(handle); err != nil {
-			return err
-		}
+		destroyLog.Info("cleaned-up")
 	}
 
 	return nil

@@ -106,13 +106,13 @@ func NewExecRunner(pidGen UidGenerator, runc RuncBinary, tracker ProcessTracker,
 }
 
 // runrunc saves a process.json and invokes runc exec
-func (e *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, id string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
+func (e *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
 	pid := e.pidGenerator.Generate()
 
-	log = log.Session("runrunc", lager.Data{"pid": pid})
+	log = log.Session("execrunner", lager.Data{"pid": pid})
 
-	log.Debug("start")
-	defer log.Debug("finished")
+	log.Info("start")
+	defer log.Info("finished")
 
 	if err := os.MkdirAll(processesPath, 0755); err != nil {
 		log.Error("mk-processes-dir-failed", err)
@@ -131,7 +131,7 @@ func (e *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, i
 	}
 
 	pidFilePath := path.Join(processesPath, fmt.Sprintf("%s.pid", pid))
-	cmd := e.runc.ExecCommand(id, processJson.Name(), pidFilePath)
+	cmd := e.runc.ExecCommand(handle, processJson.Name(), pidFilePath)
 
 	process, err := e.tracker.Run(pid, cmd, io, tty, pidFilePath)
 	if err != nil {
