@@ -477,7 +477,6 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 	}
 
 	rootFSNamespacer := &rootfs_provider.UidNamespacer{
-		Logger: logger,
 		Translator: rootfs_provider.NewUidTranslator(
 			idMappings, // uid
 			idMappings, // gid
