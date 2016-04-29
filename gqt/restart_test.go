@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -46,6 +47,7 @@ var _ = Describe("Surviving Restarts", func() {
 			propertiesDir string
 			existingProc  garden.Process
 			containerSpec garden.ContainerSpec
+			restartArgs   []string
 		)
 
 		BeforeEach(func() {
@@ -57,6 +59,8 @@ var _ = Describe("Surviving Restarts", func() {
 			containerSpec = garden.ContainerSpec{
 				Network: "177.100.10.30/30",
 			}
+
+			restartArgs = []string{}
 		})
 
 		JustBeforeEach(func() {
@@ -66,6 +70,12 @@ var _ = Describe("Surviving Restarts", func() {
 
 			hostNetInPort, _, err = container.NetIn(hostNetInPort, 8080)
 			Expect(err).NotTo(HaveOccurred())
+
+			container.NetOut(garden.NetOutRule{
+				Networks: []garden.IPRange{
+					garden.IPRangeFromIP(net.ParseIP("8.8.8.8")),
+				},
+			})
 
 			info, err := container.Info()
 			Expect(err).NotTo(HaveOccurred())
@@ -84,7 +94,11 @@ var _ = Describe("Surviving Restarts", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(client.Stop()).To(Succeed())
-			client = startGarden(args...)
+
+			if len(restartArgs) == 0 {
+				restartArgs = args
+			}
+			client = startGarden(restartArgs...)
 		})
 
 		AfterEach(func() {
@@ -203,6 +217,32 @@ var _ = Describe("Surviving Restarts", func() {
 						session := sendRequest(externalIP, hostNetInPort)
 						return session.Wait().ExitCode()
 					}).Should(Equal(0))
+				})
+
+				Context("when the server denies all the networks", func() {
+					BeforeEach(func() {
+						args = append(args, "--deny-network", "0.0.0.0/0")
+					})
+
+					It("still can't access disallowed IPs", func() {
+						Expect(checkConnection(container, "8.8.4.4", 53)).NotTo(Succeed())
+					})
+
+					It("can still be able to access the allowed IPs", func() {
+						Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+					})
+				})
+
+				Context("when the server is restarted without deny networks applied", func() {
+					BeforeEach(func() {
+						restartArgs = args[:]
+						args = append(args, "--deny-network", "0.0.0.0/0")
+					})
+
+					It("is able to access the internet", func() {
+						Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+						Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+					})
 				})
 			})
 
