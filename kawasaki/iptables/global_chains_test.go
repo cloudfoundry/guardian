@@ -1,6 +1,7 @@
 package iptables_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -32,9 +33,7 @@ var _ = Describe("Setup", func() {
 		)
 	})
 
-	It("runs the setup script, passing the environment variables", func() {
-		Expect(starter.Start()).To(Succeed())
-
+	itSetsUpGlobalChains := func() {
 		Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
 			Path: "bash",
 			Args: []string{"-c", iptables.SetupScript},
@@ -53,66 +52,177 @@ var _ = Describe("Setup", func() {
 				"GARDEN_IPTABLES_ALLOW_HOST_ACCESS=true",
 			},
 		}))
-	})
+	}
 
-	Context("when running the setup script fails", func() {
-		BeforeEach(func() {
-			fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
-				Path: "bash",
-				Args: []string{"-c", iptables.SetupScript},
-			}, func(cmd *exec.Cmd) error {
-				cmd.Stderr.Write([]byte("oh no!"))
-				return fmt.Errorf("exit status something")
-			})
-		})
+	itDoesNotSetUpGlobalChains := func() {
+		Expect(fakeRunner).NotTo(HaveExecutedSerially(fake_command_runner.CommandSpec{
+			Path: "bash",
+			Args: []string{"-c", iptables.SetupScript},
+		}))
+	}
 
-		It("returns the error", func() {
-			Expect(starter.Start()).To(MatchError(ContainSubstring("oh no!")))
-		})
-	})
+	itRejectsNetwork := func(network string) {
+		Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+			Path: "iptables",
+			Args: []string{"-w", "-A", "prefix-default", "--destination", network, "--jump", "REJECT"},
+		}))
+	}
 
-	Context("when denyNetworks is set", func() {
-		BeforeEach(func() {
-			denyNetworks = []string{"1.2.3.4/11", "5.6.7.8/33"}
-		})
+	itFlushesChain := func(chain string) {
+		Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+			Path: "iptables",
+			Args: []string{"-w", "-F", chain},
+		}))
+	}
 
-		It("runs IPTables to deny networks", func() {
-			Expect(starter.Start()).To(Succeed())
+	itAppendsRule := func(chain string, args ...string) {
+		Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
+			Path: "iptables",
+			Args: append([]string{"-w", "-A", chain}, args...),
+		}))
+	}
 
-			Expect(fakeRunner).To(HaveExecutedSerially(
-				fake_command_runner.CommandSpec{
-					Path: "bash",
-					Args: []string{"-c", iptables.SetupScript},
-				},
-				fake_command_runner.CommandSpec{
-					Path: "/sbin/iptables",
-					Args: []string{"-w", "-A", "prefix-default", "--destination", "1.2.3.4/11", "--jump", "REJECT"},
-				},
-				fake_command_runner.CommandSpec{
-					Path: "/sbin/iptables",
-					Args: []string{"-w", "-A", "prefix-default", "--destination", "5.6.7.8/33", "--jump", "REJECT"},
-				},
-			))
-		})
-
-		Context("when the first command fails", func() {
+	Describe("Global chains setup", func() {
+		Context("when the input chain does not exist", func() {
 			BeforeEach(func() {
 				fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "/sbin/iptables",
-				}, func(cmd *exec.Cmd) error {
-					cmd.Stderr.Write([]byte("oh banana error!"))
-					return fmt.Errorf("exit status something")
+					Path: "iptables",
+					Args: []string{"-w", "-L", "prefix-input"},
+				}, func(_ *exec.Cmd) error {
+					return errors.New("exit status 1")
 				})
 			})
 
-			It("returns the error", func() {
-				Expect(starter.Start()).To(MatchError(ContainSubstring("oh banana error!")))
+			It("runs the setup script, passing the environment variables", func() {
+				Expect(starter.Start()).To(Succeed())
+
+				itSetsUpGlobalChains()
 			})
 
-			It("does not try to apply the rest of the deny rules", func() {
-				starter.Start()
+			Context("when running the setup script fails", func() {
+				BeforeEach(func() {
+					fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
+						Path: "bash",
+						Args: []string{"-c", iptables.SetupScript},
+					}, func(cmd *exec.Cmd) error {
+						cmd.Stderr.Write([]byte("oh no!"))
+						return fmt.Errorf("exit status something")
+					})
+				})
 
-				Expect(fakeRunner.ExecutedCommands()).To(HaveLen(2))
+				It("returns the error", func() {
+					Expect(starter.Start()).To(MatchError(ContainSubstring("oh no!")))
+				})
+			})
+
+			Describe("DenyNetwork rules", func() {
+				BeforeEach(func() {
+					denyNetworks = []string{"1.2.3.4/11", "5.6.7.8/33"}
+				})
+
+				It("runs IPTables to deny networks", func() {
+					Expect(starter.Start()).To(Succeed())
+
+					itRejectsNetwork("1.2.3.4/11")
+					itRejectsNetwork("5.6.7.8/33")
+				})
+
+				Context("when the first command fails", func() {
+					BeforeEach(func() {
+						fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
+							Path: "iptables",
+							Args: []string{"-w", "-A", "prefix-default", "--destination", "1.2.3.4/11", "--jump", "REJECT"},
+						}, func(cmd *exec.Cmd) error {
+							cmd.Stderr.Write([]byte("oh banana error!"))
+							return fmt.Errorf("exit status something")
+						})
+					})
+
+					It("returns the error", func() {
+						Expect(starter.Start()).To(MatchError(ContainSubstring("oh banana error!")))
+					})
+
+					It("does not try to apply the rest of the deny rules", func() {
+						starter.Start()
+
+						Expect(fakeRunner.ExecutedCommands()).To(HaveLen(5))
+					})
+				})
+			})
+		})
+
+		Context("when the input chain exists", func() {
+			BeforeEach(func() {
+				fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
+					Path: "iptables",
+					Args: []string{"-w", "-L", "prefix-input"},
+				}, func(_ *exec.Cmd) error {
+					return nil
+				})
+			})
+
+			It("does not run the setup script", func() {
+				Expect(starter.Start()).To(Succeed())
+
+				itDoesNotSetUpGlobalChains()
+			})
+		})
+
+		Describe("DenyNetwork rules", func() {
+			Context("and previous deny networks are applied", func() {
+				BeforeEach(func() {
+					denyNetworks = []string{"4.3.2.1/11", "8.7.6.5/33"}
+				})
+
+				It("removes the old rules", func() {
+					Expect(starter.Start()).To(Succeed())
+
+					itFlushesChain("prefix-default")
+					itAppendsRule("prefix-default", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "--jump", "ACCEPT")
+				})
+
+				It("adds the new rules", func() {
+					Expect(starter.Start()).To(Succeed())
+
+					itRejectsNetwork("4.3.2.1/11")
+					itRejectsNetwork("8.7.6.5/33")
+				})
+
+				Context("when resetting deny netoworks fail", func() {
+					Context("when flushing the chain fails", func() {
+						BeforeEach(func() {
+							fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
+								Path: "iptables",
+								Args: []string{"-w", "-F", "prefix-default"},
+							}, func(cmd *exec.Cmd) error {
+								cmd.Stderr.Write([]byte("cannot-flush"))
+								return errors.New("cannot-flush")
+							})
+						})
+
+						It("returns the error", func() {
+							err := starter.Start()
+							Expect(err).To(MatchError(ContainSubstring("cannot-flush")))
+						})
+					})
+
+					Context("when appending the default chain fails", func() {
+						BeforeEach(func() {
+							fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
+								Path: "iptables",
+								Args: []string{"-w", "-A", "prefix-default", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "--jump", "ACCEPT"},
+							}, func(cmd *exec.Cmd) error {
+								cmd.Stderr.Write([]byte("cannot-apply-conntrack"))
+								return errors.New("cannot-apply-conntrack")
+							})
+						})
+
+						It("returns the error", func() {
+							err := starter.Start()
+							Expect(err).To(MatchError(ContainSubstring("cannot-apply-conntrack")))
+						})
+					})
+				})
 			})
 		})
 	})

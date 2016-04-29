@@ -45,10 +45,6 @@ func NewConfigurer(hostConfigurer HostConfigurer, containerApplier ContainerAppl
 	}
 }
 
-func (c *configurer) Restore(log lager.Logger, cfg NetworkConfig) error {
-	return c.instanceChainCreator.Create(log, cfg.IPTableInstance, cfg.BridgeName, cfg.ContainerIP, cfg.Subnet)
-}
-
 func (c *configurer) Apply(log lager.Logger, cfg NetworkConfig, nsPath string) error {
 	fd, err := os.Open(nsPath)
 	if err != nil {

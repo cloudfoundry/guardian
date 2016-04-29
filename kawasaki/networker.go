@@ -44,7 +44,6 @@ type ConfigCreator interface {
 
 type Configurer interface {
 	Apply(log lager.Logger, cfg NetworkConfig, nsPath string) error
-	Restore(log lager.Logger, cfg NetworkConfig) error
 	Destroy(log lager.Logger, cfg NetworkConfig) error
 }
 
@@ -298,11 +297,6 @@ func (n *networker) Restore(log lager.Logger, handle string) error {
 	networkConfig, err := load(n.configStore, handle)
 	if err != nil {
 		return fmt.Errorf("loading %s: %v", handle, err)
-	}
-
-	err = n.configurer.Restore(log, networkConfig)
-	if err != nil {
-		return fmt.Errorf("restoring %s: %v", handle, err)
 	}
 
 	err = n.subnetPool.Remove(networkConfig.Subnet, networkConfig.ContainerIP)

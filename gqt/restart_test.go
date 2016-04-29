@@ -130,63 +130,80 @@ var _ = Describe("Surviving Restarts", func() {
 		})
 
 		Context("when the destroy-containers-on-startup flag is not passed", func() {
-			It("does not destroy the remaining containers in the depotDir", func() {
-				Expect(filepath.Join(client.DepotDir, container.Handle())).To(BeADirectory())
-			})
+			Describe("on th pre-existing VM", func() {
+				It("does not destroy the depot", func() {
+					Expect(filepath.Join(client.DepotDir, container.Handle())).To(BeADirectory())
+				})
 
-			It("does not kill the container processes", func() {
-				processes, err := exec.Command("ps", "aux").CombinedOutput()
-				Expect(err).NotTo(HaveOccurred())
+				It("does not kill the container processes", func() {
+					processes, err := exec.Command("ps", "aux").CombinedOutput()
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(string(processes)).To(ContainSubstring(fmt.Sprintf("run runc /tmp/test-garden-%d/containers/%s", GinkgoParallelNode(), container.Handle())))
-			})
+					Expect(string(processes)).To(ContainSubstring(fmt.Sprintf("run runc /tmp/test-garden-%d/containers/%s", GinkgoParallelNode(), container.Handle())))
+				})
 
-			It("can still run processes in surviving containers", func() {
-				out := gbytes.NewBuffer()
-				proc, err := container.Run(
-					garden.ProcessSpec{
-						Path: "/bin/sh",
-						Args: []string{"-c", "echo hello; exit 12"},
-					},
-					garden.ProcessIO{
+				It("can still run processes", func() {
+					out := gbytes.NewBuffer()
+					proc, err := container.Run(
+						garden.ProcessSpec{
+							Path: "/bin/sh",
+							Args: []string{"-c", "echo hello; exit 12"},
+						},
+						garden.ProcessIO{
+							Stdout: io.MultiWriter(GinkgoWriter, out),
+							Stderr: io.MultiWriter(GinkgoWriter, out),
+						})
+					Expect(err).NotTo(HaveOccurred())
+					exitCode, err := proc.Wait()
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(exitCode).To(Equal(12))
+					Expect(out).To(gbytes.Say("hello"))
+				})
+
+				It("can reattach to processes that are still running", func() {
+					out := gbytes.NewBuffer()
+					procId := existingProc.ID()
+					process, err := container.Attach(procId, garden.ProcessIO{
 						Stdout: io.MultiWriter(GinkgoWriter, out),
 						Stderr: io.MultiWriter(GinkgoWriter, out),
 					})
-				Expect(err).NotTo(HaveOccurred())
-				exitCode, err := proc.Wait()
-				Expect(err).NotTo(HaveOccurred())
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(out).Should(gbytes.Say("hello"))
 
-				Expect(exitCode).To(Equal(12))
-				Expect(out).To(gbytes.Say("hello"))
-			})
+					Expect(process.Signal(garden.SignalKill)).To(Succeed())
 
-			It("can reattach to processes that are still running", func() {
-				out := gbytes.NewBuffer()
-				procId := existingProc.ID()
-				process, err := container.Attach(procId, garden.ProcessIO{
-					Stdout: io.MultiWriter(GinkgoWriter, out),
-					Stderr: io.MultiWriter(GinkgoWriter, out),
+					exited := make(chan struct{})
+					go func() {
+						process.Wait()
+						close(exited)
+					}()
+
+					Eventually(exited).Should(BeClosed())
 				})
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(out).Should(gbytes.Say("hello"))
 
-				Expect(process.Signal(garden.SignalKill)).To(Succeed())
+				It("can still destroy the container", func() {
+					Expect(client.Destroy(container.Handle())).To(Succeed())
+				})
 
-				exited := make(chan struct{})
-				go func() {
-					process.Wait()
-					close(exited)
-				}()
+				It("can still be able to access the internet", func() {
+					Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+				})
 
-				Eventually(exited).Should(BeClosed())
-			})
+				It("can still be accessible from the outside", func() {
+					Expect(listenInContainer(container, 8080)).To(Succeed())
 
-			It("can still destroy the container", func() {
-				Expect(client.Destroy(container.Handle())).To(Succeed())
-			})
+					info, err := container.Info()
+					Expect(err).NotTo(HaveOccurred())
+					externalIP := info.ExternalIP
 
-			It("should still be able to access the internet", func() {
-				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+					// retry because listener process inside other container
+					// may not start immediately
+					Eventually(func() int {
+						session := sendRequest(externalIP, hostNetInPort)
+						return session.Wait().ExitCode()
+					}).Should(Equal(0))
+				})
 			})
 
 			Context("when creating a container after restart", func() {

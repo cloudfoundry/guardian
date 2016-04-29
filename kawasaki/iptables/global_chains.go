@@ -213,29 +213,57 @@ func NewStarter(iptables *IPTables, allowHostAccess bool, nicPrefix string, deny
 }
 
 func (s Starter) Start() error {
-	cmd := exec.Command("bash", "-c", SetupScript)
-	cmd.Env = []string{
-		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
-		"ACTION=setup",
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s", s.iptables.inputChain),
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s", s.iptables.forwardChain),
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=%s", s.iptables.defaultChain),
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=%s", s.iptables.instanceChainPrefix),
-		fmt.Sprintf("GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=%s", s.iptables.preroutingChain),
-		fmt.Sprintf("GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=%s", s.iptables.postroutingChain),
-		fmt.Sprintf("GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=%s", s.iptables.instanceChainPrefix),
-		fmt.Sprintf("GARDEN_NETWORK_INTERFACE_PREFIX=%s", s.nicPrefix),
-		fmt.Sprintf("GARDEN_IPTABLES_ALLOW_HOST_ACCESS=%t", s.allowHostAccess),
+	if !s.chainExists(s.iptables.inputChain) {
+		cmd := exec.Command("bash", "-c", SetupScript)
+		cmd.Env = []string{
+			fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
+			"ACTION=setup",
+			fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s", s.iptables.inputChain),
+			fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s", s.iptables.forwardChain),
+			fmt.Sprintf("GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=%s", s.iptables.defaultChain),
+			fmt.Sprintf("GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=%s", s.iptables.instanceChainPrefix),
+			fmt.Sprintf("GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=%s", s.iptables.preroutingChain),
+			fmt.Sprintf("GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=%s", s.iptables.postroutingChain),
+			fmt.Sprintf("GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=%s", s.iptables.instanceChainPrefix),
+			fmt.Sprintf("GARDEN_NETWORK_INTERFACE_PREFIX=%s", s.nicPrefix),
+			fmt.Sprintf("GARDEN_IPTABLES_ALLOW_HOST_ACCESS=%t", s.allowHostAccess),
+		}
+
+		if err := s.iptables.run("setup-global-chains", cmd); err != nil {
+			return fmt.Errorf("setting up default chains: %s", err)
+		}
 	}
 
-	if err := s.iptables.run("setup-global-chains", cmd); err != nil {
-		return fmt.Errorf("setting up default chains: %s", err)
+	if err := s.resetDenyNetworks(); err != nil {
+		return err
 	}
 
 	for _, n := range s.denyNetworks {
 		if err := s.iptables.appendRule(s.iptables.defaultChain, rejectRule(n)); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func (s Starter) chainExists(chainName string) bool {
+	cmd := exec.Command("iptables", "-w", "-L", chainName)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
+	return s.iptables.run("checking-chain-exists", cmd) == nil
+}
+
+func (s Starter) resetDenyNetworks() error {
+	cmd := exec.Command("iptables", "-w", "-F", s.iptables.defaultChain)
+	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
+	if err := s.iptables.run("flushing-default-chain", cmd); err != nil {
+		return err
+	}
+
+	cmd = exec.Command("iptables", "-w", "-A", s.iptables.defaultChain, "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "--jump", "ACCEPT")
+	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
+	if err := s.iptables.run("appending-default-chain", cmd); err != nil {
+		return err
 	}
 
 	return nil

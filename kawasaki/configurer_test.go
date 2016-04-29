@@ -226,32 +226,4 @@ var _ = Describe("Configurer", func() {
 			})
 		})
 	})
-
-	Describe("Restore", func() {
-		It("should restore the iptables chains", func() {
-			_, subnet, _ := net.ParseCIDR("1.2.3.4/5")
-			cfg := kawasaki.NetworkConfig{
-				IPTablePrefix:   "the-iptable",
-				IPTableInstance: "instance",
-				BridgeName:      "the-bridge-name",
-				ContainerIP:     net.ParseIP("1.2.3.4"),
-				Subnet:          subnet,
-			}
-
-			Expect(configurer.Restore(logger, cfg)).To(Succeed())
-			Expect(fakeInstanceChainCreator.CreateCallCount()).To(Equal(1))
-			_, instanceChain, bridgeName, ip, subnet := fakeInstanceChainCreator.CreateArgsForCall(0)
-			Expect(instanceChain).To(Equal("instance"))
-			Expect(bridgeName).To(Equal("the-bridge-name"))
-			Expect(ip).To(Equal(net.ParseIP("1.2.3.4")))
-			Expect(subnet).To(Equal(subnet))
-		})
-
-		Context("when applying IPTables configuration fails", func() {
-			It("returns the error", func() {
-				fakeInstanceChainCreator.CreateReturns(errors.New("banana"))
-				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name())).To(MatchError("banana"))
-			})
-		})
-	})
 })

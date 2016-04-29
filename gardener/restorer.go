@@ -16,10 +16,11 @@ func (r *restorer) Restore(logger lager.Logger, handles []string) []string {
 	failedHandles := []string{}
 
 	for _, handle := range handles {
-		logger.Info("restoring-container", lager.Data{"handle": handle})
+		log := logger.Session("looking-for-properties", lager.Data{"handle": handle})
+
 		err := r.networker.Restore(logger, handle)
 		if err != nil {
-			logger.Error("failed-restoring-container", err, lager.Data{"handle": handle})
+			log.Error("failed-restoring-container", err)
 			failedHandles = append(failedHandles, handle)
 		}
 	}

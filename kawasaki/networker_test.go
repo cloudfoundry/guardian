@@ -451,13 +451,6 @@ var _ = Describe("Networker", func() {
 	})
 
 	Describe("Restore", func() {
-		It("restores the configuration", func() {
-			Expect(networker.Restore(logger, "some-handle")).To(Succeed())
-			Expect(fakeConfigurer.RestoreCallCount()).To(Equal(1))
-			_, actualNetworkConfig := fakeConfigurer.RestoreArgsForCall(0)
-			Expect(actualNetworkConfig).To(Equal(networkConfig))
-		})
-
 		It("removes the subnet from the the subnet pool", func() {
 			Expect(networker.Restore(logger, "some-handle")).To(Succeed())
 			Expect(fakeSubnetPool.RemoveCallCount()).To(Equal(1))
@@ -477,13 +470,6 @@ var _ = Describe("Networker", func() {
 			It("returns an appropriate error", func() {
 				config = nil
 				Expect(networker.Restore(logger, "some-handle")).To(MatchError(ContainSubstring("loading some-handle")))
-			})
-		})
-
-		Context("when the configurer fails to restore", func() {
-			It("returns an appropriate error", func() {
-				fakeConfigurer.RestoreReturns(errors.New("banana"))
-				Expect(networker.Restore(logger, "some-handle")).To(MatchError("restoring some-handle: banana"))
 			})
 		})
 

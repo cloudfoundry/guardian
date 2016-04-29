@@ -29,7 +29,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 	BeforeEach(func() {
 		container = nil
-		args = []string{"--destroy-containers-on-startup"}
+		args = []string{}
 	})
 
 	JustBeforeEach(func() {
