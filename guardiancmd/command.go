@@ -240,7 +240,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 		return err
 	}
 
-	networker, iptablesStarter, err := cmd.wireNetworker(logger, propManager)
+	networker, err := cmd.wireNetworker(logger, propManager)
 	if err != nil {
 		logger.Error("failed-to-wire-networker", err)
 		return err
@@ -253,7 +253,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
-		Starters:        []gardener.Starter{cmd.wireRunDMCStarter(logger), iptablesStarter},
+		Starters:        []gardener.Starter{cmd.wireRunDMCStarter(logger)},
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
 		Networker:       networker,
 		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
@@ -344,7 +344,7 @@ func (cmd *GuardianCommand) wireRunDMCStarter(logger lager.Logger) gardener.Star
 	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, linux_command_runner.New())
 }
 
-func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore) (gardener.Networker, gardener.Starter, error) {
+func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore) (gardener.Networker, error) {
 	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
 	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
 
@@ -355,7 +355,7 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 
 	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	dnsServers := make([]net.IP, len(cmd.Network.DNSServers))
@@ -371,6 +371,9 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
 	ipTables := iptables.New(iptRunner, chainPrefix)
 	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList)
+	if err := ipTablesStarter.Start(); err != nil {
+		return nil, fmt.Errorf("iptables starter: %s", err)
+	}
 
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 
@@ -379,7 +382,7 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 		cmd.Network.PortPoolSize,
 		ports.State{})
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid pool range: %s", err)
+		return nil, fmt.Errorf("invalid pool range: %s", err)
 	}
 
 	kawasakiNetworker := kawasaki.New(
@@ -399,7 +402,7 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 		ExtraHooks: networkHookers,
 	}
 
-	return networker, ipTablesStarter, nil
+	return networker, nil
 }
 
 func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
@@ -519,7 +522,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		ovenCleaner)
 }
 
-func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodaemonPath, dadooPath, runcPath, nstarPath, tarPath, defaultRootFSPath string, properties gardener.PropertyManager) *rundmc.Containerizer {
+func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodaemonPath, dadooPath, runcPath, nstarPath, tarPath, defaultRootFSPath string, properties rundmc.Properties) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
 	commandRunner := linux_command_runner.New()
