@@ -52,6 +52,7 @@ import (
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/localip"
 	"github.com/tedsuo/ifrit"
+	"github.com/tedsuo/ifrit/grouper"
 	"github.com/tedsuo/ifrit/sigmon"
 )
 
@@ -224,18 +225,37 @@ func init() {
 	}
 }
 
+type GuardianRunner struct {
+	*GuardianCommand
+
+	GetPropertyManager func() (*properties.Manager, error)
+}
+
 func (cmd *GuardianCommand) Execute([]string) error {
 	if reexec.Init() {
 		return nil
 	}
 
-	return <-ifrit.Invoke(sigmon.New(cmd)).Wait()
+	propertyManagerRunner := &PropertyManagerRunner{
+		Logger: cmd.Logger,
+		Path:   cmd.Containers.PropertiesPath,
+	}
+	guardianRunner := &GuardianRunner{
+		GuardianCommand:    cmd,
+		GetPropertyManager: propertyManagerRunner.GetManager,
+	}
+	orderedGroup := grouper.NewOrdered(os.Interrupt, grouper.Members{
+		{"property-manager", propertyManagerRunner},
+		{"guardian", guardianRunner},
+	})
+
+	return <-ifrit.Invoke(sigmon.New(orderedGroup)).Wait()
 }
 
-func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+func (cmd *GuardianRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
 
-	propManager, err := cmd.loadProperties(logger, cmd.Containers.PropertiesPath)
+	propManager, err := cmd.GetPropertyManager()
 	if err != nil {
 		return err
 	}
@@ -305,28 +325,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	gardenServer.Stop()
 
-	cmd.saveProperties(logger, cmd.Containers.PropertiesPath, propManager)
-
 	return nil
-}
-
-func (cmd *GuardianCommand) loadProperties(logger lager.Logger, propertiesPath string) (*properties.Manager, error) {
-	propManager, err := properties.Load(propertiesPath)
-	if err != nil {
-		logger.Error("failed-to-load-properties", err, lager.Data{"propertiesPath": propertiesPath})
-		return &properties.Manager{}, err
-	}
-
-	return propManager, nil
-}
-
-func (cmd *GuardianCommand) saveProperties(logger lager.Logger, propertiesPath string, propManager *properties.Manager) {
-	if propertiesPath != "" {
-		err := properties.Save(propertiesPath, propManager)
-		if err != nil {
-			logger.Error("failed-to-save-properties", err, lager.Data{"propertiesPath": propertiesPath})
-		}
-	}
 }
 
 func (cmd *GuardianCommand) wireUidGenerator() gardener.UidGeneratorFunc {
