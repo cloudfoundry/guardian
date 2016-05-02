@@ -22,14 +22,8 @@ import (
 	"github.com/cloudfoundry-incubator/garden/server"
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/factory"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/ports"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry-incubator/guardian/metrics"
-	"github.com/cloudfoundry-incubator/guardian/netplugin"
 	"github.com/cloudfoundry-incubator/guardian/properties"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules"
@@ -172,24 +166,7 @@ type GuardianCommand struct {
 		InsecureRegistries []string `long:"insecure-docker-registry" description:"Docker registry to allow connecting to even if not secure. Can be specified multiple times."`
 	} `group:"Docker Image Fetching"`
 
-	Network struct {
-		Pool CIDRFlag `long:"network-pool" default:"10.254.0.0/22" description:"Network range to use for dynamically allocated container subnets."`
-
-		AllowHostAccess bool       `long:"allow-host-access" description:"Allow network access to the host machine."`
-		DenyNetworks    []CIDRFlag `long:"deny-network"      description:"Network ranges to which traffic from containers will be denied. Can be specified multiple times."`
-		AllowNetworks   []CIDRFlag `long:"allow-network"     description:"Network ranges to which traffic from containers will be allowed. Can be specified multiple times."`
-
-		DNSServers []IPFlag `long:"dns-server" description:"DNS server IP address to use instead of automatically determined servers. Can be specified multiple times."`
-
-		ExternalIP    IPFlag `long:"external-ip"                     description:"IP address to use to reach container's mapped ports. Autodetected if not specified."`
-		PortPoolStart uint32 `long:"port-pool-start" default:"60000" description:"Start of the ephemeral port range used for mapped container ports."`
-		PortPoolSize  uint32 `long:"port-pool-size"  default:"5000"  description:"Size of the port pool used for mapped container ports."`
-
-		Mtu int `long:"mtu" default:"1500" description:"MTU size for container network interfaces."`
-
-		Plugin          FileFlag `long:"network-plugin"           description:"Path to network plugin binary."`
-		PluginExtraArgs []string `long:"network-plugin-extra-arg" description:"Extra argument to pass to the network plugin. Can be specified multiple times."`
-	} `group:"Container Networking"`
+	Network NetworkCommand `group:"Container Networking"`
 
 	Limits struct {
 		MaxContainers uint64 `long:"max-containers" default:"0" description:"Maximum number of containers that can be created."`
@@ -229,6 +206,7 @@ type GuardianRunner struct {
 	*GuardianCommand
 
 	GetPropertyManager func() (*properties.Manager, error)
+	GetNetworker       func() (gardener.Networker, error)
 }
 
 func (cmd *GuardianCommand) Execute([]string) error {
@@ -240,12 +218,21 @@ func (cmd *GuardianCommand) Execute([]string) error {
 		Logger: cmd.Logger,
 		Path:   cmd.Containers.PropertiesPath,
 	}
+	networkRunner := &NetworkRunner{
+		NetworkCommand:     &cmd.Network,
+		Logger:             cmd.Logger,
+		ServerTag:          cmd.Server.Tag,
+		KawasakiBin:        cmd.Bin.Kawasaki,
+		GetPropertyManager: propertyManagerRunner.GetManager,
+	}
 	guardianRunner := &GuardianRunner{
 		GuardianCommand:    cmd,
 		GetPropertyManager: propertyManagerRunner.GetManager,
+		GetNetworker:       networkRunner.GetNetworker,
 	}
 	orderedGroup := grouper.NewOrdered(os.Interrupt, grouper.Members{
 		{"property-manager", propertyManagerRunner},
+		{"networker", networkRunner},
 		{"guardian", guardianRunner},
 	})
 
@@ -260,9 +247,8 @@ func (cmd *GuardianRunner) Run(signals <-chan os.Signal, ready chan<- struct{}) 
 		return err
 	}
 
-	networker, err := cmd.wireNetworker(logger, propManager)
+	networker, err := cmd.GetNetworker()
 	if err != nil {
-		logger.Error("failed-to-wire-networker", err)
 		return err
 	}
 
@@ -341,67 +327,6 @@ func (cmd *GuardianCommand) wireRunDMCStarter(logger lager.Logger) gardener.Star
 	}
 
 	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, linux_command_runner.New())
-}
-
-func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore) (gardener.Networker, error) {
-	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
-	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
-
-	var denyNetworksList []string
-	for _, network := range cmd.Network.DenyNetworks {
-		denyNetworksList = append(denyNetworksList, network.String())
-	}
-
-	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
-	if err != nil {
-		return nil, err
-	}
-
-	dnsServers := make([]net.IP, len(cmd.Network.DNSServers))
-	for i, ip := range cmd.Network.DNSServers {
-		dnsServers[i] = ip.IP()
-	}
-
-	var networkHookers []kawasaki.NetworkHooker
-	if cmd.Network.Plugin.Path() != "" {
-		networkHookers = append(networkHookers, netplugin.New(cmd.Network.Plugin.Path(), cmd.Network.PluginExtraArgs...))
-	}
-
-	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
-	ipTables := iptables.New(iptRunner, chainPrefix)
-	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList)
-	if err := ipTablesStarter.Start(); err != nil {
-		return nil, fmt.Errorf("iptables starter: %s", err)
-	}
-
-	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
-
-	portPool, err := ports.NewPool(
-		cmd.Network.PortPoolStart,
-		cmd.Network.PortPoolSize,
-		ports.State{})
-	if err != nil {
-		return nil, fmt.Errorf("invalid pool range: %s", err)
-	}
-
-	kawasakiNetworker := kawasaki.New(
-		cmd.Bin.Kawasaki.Path(),
-		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
-		subnets.NewPool(cmd.Network.Pool.CIDR()),
-		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
-		propManager,
-		factory.NewDefaultConfigurer(iptables.New(linux_command_runner.New(), chainPrefix)),
-		portPool,
-		iptables.NewPortForwarder(ipTables),
-		iptables.NewFirewallOpener(ipTables),
-	)
-
-	networker := &kawasaki.CompositeNetworker{
-		Networker:  kawasakiNetworker,
-		ExtraHooks: networkHookers,
-	}
-
-	return networker, nil
 }
 
 func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
