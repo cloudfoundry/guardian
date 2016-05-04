@@ -48,7 +48,7 @@ var _ = Describe("Create", func() {
 		BeforeEach(func() {
 			specs = []fake_command_runner.CommandSpec{
 				{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"--wait", "--table", "nat", "-N", "prefix-instance-some-id"},
 				},
 				{
@@ -66,7 +66,7 @@ var _ = Describe("Create", func() {
 				},
 				{
 					Path: "iptables",
-					Args: []string{"--wait", "-N", "prefix-instance-some-id"},
+					Args: []string{"--wait", "--table", "filter", "-N", "prefix-instance-some-id"},
 				},
 				{
 					Path: "iptables",
@@ -142,11 +142,11 @@ var _ = Describe("Create", func() {
 					},
 					{
 						Path: "sh",
-						Args: []string{"-c", fmt.Sprintf("iptables --wait -F %s 2> /dev/null || true", "prefix-instance-some-id")},
+						Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -F %s 2> /dev/null || true", "prefix-instance-some-id")},
 					},
 					{
 						Path: "sh",
-						Args: []string{"-c", fmt.Sprintf("iptables --wait -X %s 2> /dev/null || true", "prefix-instance-some-id")},
+						Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -X %s 2> /dev/null || true", "prefix-instance-some-id")},
 					},
 				}
 			})
@@ -165,9 +165,9 @@ var _ = Describe("Create", func() {
 
 					Expect(creator.Destroy(logger, "some-id")).To(MatchError(errorString))
 				},
-				Entry("prune prerouting chain", 0, "iptables destroy-instance-chains: iptables failed"),
-				Entry("flush instance chain", 1, "iptables destroy-instance-chains: iptables failed"),
-				Entry("delete instance chain", 2, "iptables destroy-instance-chains: iptables failed"),
+				Entry("prune prerouting chain", 0, "iptables prune-prerouting-chain: iptables failed"),
+				Entry("flush instance chain", 1, "iptables flush-instance-chains: iptables failed"),
+				Entry("delete instance chain", 2, "iptables delete-instance-chains: iptables failed"),
 			)
 		})
 	})

@@ -38,6 +38,34 @@ func New(runner command_runner.CommandRunner, chainPrefix string) *IPTables {
 	}
 }
 
+func (iptables *IPTables) CreateChain(table, chain string) error {
+	return iptables.run("create-instance-chains", exec.Command("/sbin/iptables", "--wait", "--table", table, "-N", chain))
+}
+
+func (iptables *IPTables) DeleteChain(table, chain string) error {
+	shellCmd := fmt.Sprintf(
+		`iptables --wait --table %s -X %s 2> /dev/null || true`,
+		table, chain,
+	)
+	return iptables.run("delete-instance-chains", exec.Command("sh", "-c", shellCmd))
+}
+
+func (iptables *IPTables) FlushChain(table, chain string) error {
+	shellCmd := fmt.Sprintf(
+		`iptables --wait --table %s -F %s 2> /dev/null || true`,
+		table, chain,
+	)
+	return iptables.run("flush-instance-chains", exec.Command("sh", "-c", shellCmd))
+}
+
+func (iptables *IPTables) DeleteChainReferences(table, targetChain, referencedChain string) error {
+	shellCmd := fmt.Sprintf(
+		`set -e; /sbin/iptables --wait --table %s -S %s | grep "%s" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 iptables -w -t %s`,
+		table, targetChain, referencedChain, table,
+	)
+	return iptables.run("delete-referenced-chains", exec.Command("sh", "-c", shellCmd))
+}
+
 type rule interface {
 	flags(chain string) []string
 }
