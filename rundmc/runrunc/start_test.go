@@ -54,6 +54,22 @@ var _ = Describe("Start", func() {
 		))
 	})
 
+	It("it does not hang if fd3 is never written to by the child process", func() {
+		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
+			Path: "dadoo",
+		}, func(cmd *exec.Cmd) error {
+			return nil
+		})
+
+		e := make(chan error)
+		go func() {
+			err := runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})
+			e <- err
+		}()
+
+		Eventually(e).Should(Receive(MatchError(ContainSubstring("read container launch status"))))
+	})
+
 	It("returns as soon as runc's exit status is returned on fd3", func() {
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "dadoo",
@@ -156,7 +172,7 @@ var _ = Describe("Start", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("dadoo: read fd3: EOF"))
+				Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("dadoo: read container launch status: EOF"))
 			})
 		})
 

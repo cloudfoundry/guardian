@@ -37,7 +37,6 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 	}
 
 	defer runcExitStatusR.Close()
-	defer runcExitStatusW.Close()
 
 	logFile := filepath.Join(bundlePath, "start.log")
 	cmd := exec.Command(s.dadooPath, "-log", logFile, "run", s.runcPath, bundlePath, id)
@@ -49,11 +48,13 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 		return fmt.Errorf("dadoo: %s", err)
 	}
 
+	runcExitStatusW.Close()
+
 	go s.commandRunner.Wait(cmd) // avoid zombies, but we don't care about the exit status
 
 	b := make([]byte, 1)
 	if _, err := runcExitStatusR.Read(b); err != nil {
-		return fmt.Errorf("dadoo: read fd3: %s", err)
+		return fmt.Errorf("dadoo: read container launch status: %s", err)
 	}
 
 	defer func() {
