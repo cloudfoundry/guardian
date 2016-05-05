@@ -175,6 +175,10 @@ var _ = Describe("graph flags", func() {
 							persistentImages = []string{"/var/vcap/packages/busybox"}
 						})
 
+						AfterEach(func() {
+							Expect(os.RemoveAll("/var/vcap/packages")).To(Succeed())
+						})
+
 						It("keeps the rootfs in the graph", func() {
 							container, err := client.Create(garden.ContainerSpec{
 								RootFSPath: persistentImages[0],
