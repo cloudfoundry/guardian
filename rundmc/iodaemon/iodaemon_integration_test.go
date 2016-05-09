@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"time"
 
 	"io"
 
@@ -16,6 +17,10 @@ import (
 )
 
 var _ = Describe("Iodaemon integration tests", func() {
+	BeforeEach(func() {
+		SetDefaultEventuallyTimeout(5 * time.Second)
+	})
+
 	It("can read stdin", func() {
 		spawnS, err := gexec.Start(exec.Command(
 			iodaemonBinPath,
