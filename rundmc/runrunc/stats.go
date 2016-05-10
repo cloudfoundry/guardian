@@ -18,18 +18,16 @@ type StatsNotifier interface {
 
 type runcStats struct {
 	Data struct {
-		CgroupStats struct {
-			CPUStats struct {
-				CPUUsage struct {
-					Usage  uint64 `json:"total_usage"`
-					System uint64 `json:"usage_in_kernelmode"`
-					User   uint64 `json:"usage_in_usermode"`
-				} `json:"cpu_usage"`
-			} `json:"cpu_stats"`
-			MemoryStats struct {
-				Stats garden.ContainerMemoryStat `json:"stats"`
-			} `json:"memory_stats"`
-		} `json:"CgroupStats"`
+		CPUStats struct {
+			CPUUsage struct {
+				Usage  uint64 `json:"total"`
+				System uint64 `json:"kernel"`
+				User   uint64 `json:"user"`
+			} `json:"usage"`
+		} `json:"cpu"`
+		MemoryStats struct {
+			Stats garden.ContainerMemoryStat `json:"raw"`
+		} `json:"memory"`
 	}
 }
 
@@ -61,11 +59,11 @@ func (r *Statser) Stats(log lager.Logger, id string) (gardener.ActualContainerMe
 	}
 
 	stats := gardener.ActualContainerMetrics{
-		Memory: data.Data.CgroupStats.MemoryStats.Stats,
+		Memory: data.Data.MemoryStats.Stats,
 		CPU: garden.ContainerCPUStat{
-			Usage:  data.Data.CgroupStats.CPUStats.CPUUsage.Usage,
-			System: data.Data.CgroupStats.CPUStats.CPUUsage.System,
-			User:   data.Data.CgroupStats.CPUStats.CPUUsage.User,
+			Usage:  data.Data.CPUStats.CPUUsage.Usage,
+			System: data.Data.CPUStats.CPUUsage.System,
+			User:   data.Data.CPUStats.CPUUsage.User,
 		},
 	}
 

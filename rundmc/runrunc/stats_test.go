@@ -50,49 +50,47 @@ var _ = Describe("Stats", func() {
 				cmd.Stdout.Write([]byte(`{
 					"type": "stats",
 					"data": {
-						"CgroupStats": {
-							"cpu_stats": {
-								"cpu_usage": {
-									"total_usage": 1,
-									"usage_in_kernelmode": 2,
-									"usage_in_usermode": 3
-								}
-							},
-							"memory_stats": {
-								"stats": {
-									"active_anon": 1,
-									"active_file": 2,
-									"cache": 3,
-									"hierarchical_memory_limit": 4,
-									"inactive_anon": 5,
-									"inactive_file": 6,
-									"mapped_file": 7,
-									"pgfault": 8,
-									"pgmajfault": 9,
-									"pgpgin": 10,
-									"pgpgout": 11,
-									"rss": 12,
-									"rss_huge": 13,
-									"total_active_anon": 14,
-									"total_active_file": 15,
-									"total_cache": 16,
-									"total_inactive_anon": 17,
-									"total_inactive_file": 18,
-									"total_mapped_file": 19,
-									"total_pgfault": 20,
-									"total_pgmajfault": 21,
-									"total_pgpgin": 22,
-									"total_pgpgout": 23,
-									"total_rss": 24,
-									"total_rss_huge": 25,
-									"total_unevictable": 26,
-									"total_writeback": 27,
-									"unevictable": 28,
-									"writeback": 29,
-									"swap": 30,
-									"hierarchical_memsw_limit": 31,
-									"total_swap": 32
-								}
+						"cpu": {
+							"usage": {
+								"total": 1,
+								"kernel": 2,
+								"user": 3
+							}
+						},
+						"memory": {
+							"raw": {
+								"active_anon": 1,
+								"active_file": 2,
+								"cache": 3,
+								"hierarchical_memory_limit": 4,
+								"inactive_anon": 5,
+								"inactive_file": 6,
+								"mapped_file": 7,
+								"pgfault": 8,
+								"pgmajfault": 9,
+								"pgpgin": 10,
+								"pgpgout": 11,
+								"rss": 12,
+								"rss_huge": 13,
+								"total_active_anon": 14,
+								"total_active_file": 15,
+								"total_cache": 16,
+								"total_inactive_anon": 17,
+								"total_inactive_file": 18,
+								"total_mapped_file": 19,
+								"total_pgfault": 20,
+								"total_pgmajfault": 21,
+								"total_pgpgin": 22,
+								"total_pgpgout": 23,
+								"total_rss": 24,
+								"total_rss_huge": 25,
+								"total_unevictable": 26,
+								"total_writeback": 27,
+								"unevictable": 28,
+								"writeback": 29,
+								"swap": 30,
+								"hierarchical_memsw_limit": 31,
+								"total_swap": 32
 							}
 						}
 					}
