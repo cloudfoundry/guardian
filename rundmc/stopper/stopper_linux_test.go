@@ -83,18 +83,19 @@ var _ = Describe("CgroupStopper", func() {
 			Expect(fakeKiller).To(HaveKilled(0, syscall.SIGTERM, 1, 3, 5, 9))
 		})
 
-		It("repeatedly sends TERM to the remaining processes until the retrier gives up", func() {
+		It("repeatedly sends TERM and KILL to the remaining processes until the retrier gives up", func() {
 			fakeRetrier.RunStub = func(fn func() error) error {
 				Expect(ioutil.WriteFile(filepath.Join(devicesCgroupPath, "cgroup.procs"), []byte(`3
 9`), 0700)).To(Succeed())
 				err := fn()
-
-				Expect(fakeKiller).To(HaveKilled(0, syscall.SIGTERM, 3))
 				return err
 			}
 
 			Expect(subject.StopAll(lagertest.NewTestLogger("test"), "foo", []int{9}, false)).To(Succeed())
-			Expect(fakeRetrier.RunCallCount()).To(Equal(1))
+
+			Expect(fakeKiller).To(HaveKilled(0, syscall.SIGTERM, 3))
+			Expect(fakeKiller).To(HaveKilled(1, syscall.SIGKILL, 3))
+			Expect(fakeRetrier.RunCallCount()).To(Equal(2))
 		})
 
 		Describe("telling the retrier whether it should continue", func() {
@@ -107,7 +108,8 @@ var _ = Describe("CgroupStopper", func() {
 				}
 
 				Expect(subject.StopAll(lagertest.NewTestLogger("test"), "foo", []int{9}, false)).To(Succeed())
-				Expect(fakeRetrier.RunCallCount()).To(Equal(1))
+
+				Expect(fakeRetrier.RunCallCount()).To(Equal(2))
 			})
 
 			It("tells the retrier that it is not yet done if there are processes left", func() {
@@ -117,7 +119,10 @@ var _ = Describe("CgroupStopper", func() {
 				}
 
 				Expect(subject.StopAll(lagertest.NewTestLogger("test"), "foo", []int{9}, false)).To(Succeed())
-				Expect(fakeRetrier.RunCallCount()).To(Equal(1))
+
+				Expect(fakeKiller).To(HaveKilled(0, syscall.SIGTERM, 1, 3, 5))
+				Expect(fakeKiller).To(HaveKilled(1, syscall.SIGKILL, 1, 3, 5))
+				Expect(fakeRetrier.RunCallCount()).To(Equal(2))
 			})
 		})
 

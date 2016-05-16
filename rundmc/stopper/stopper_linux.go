@@ -27,7 +27,10 @@ func (stopper *CgroupStopper) StopAll(log lager.Logger, cgroupName string, excep
 		})
 	}
 
-	stopper.killAllRemaining(syscall.SIGKILL, devicesSubsystemPath, exceptions)
+	stopper.retrier.Run(func() error {
+		return stopper.killAllRemaining(syscall.SIGKILL, devicesSubsystemPath, exceptions)
+	})
+
 	return nil // we killed, so everything must die
 }
 
