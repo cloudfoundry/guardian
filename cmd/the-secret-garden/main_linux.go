@@ -83,5 +83,6 @@ func mustRun(cmd *exec.Cmd) string {
 	if err != nil {
 		panic(fmt.Sprintf("%s: %s: %s", cmd.Path, err, string(out)))
 	}
+
 	return string(out)
 }
