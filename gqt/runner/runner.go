@@ -29,8 +29,8 @@ import (
 const MNT_DETACH = 0x2
 
 var RootFSPath = os.Getenv("GARDEN_TEST_ROOTFS")
-var GraphRoot = os.Getenv("GARDEN_TEST_GRAPHPATH")
-var TarPath = os.Getenv("GARDEN_TAR_PATH")
+var DataDir = os.Getenv("GARDEN_TEST_GRAPHPATH")
+var TarBin = os.Getenv("GARDEN_TAR_PATH")
 
 type RunningGarden struct {
 	client.Client
@@ -46,7 +46,7 @@ type RunningGarden struct {
 	Tmpdir string
 
 	DepotDir  string
-	GraphRoot string
+	DataDir   string
 	GraphPath string
 
 	logger lager.Logger
@@ -60,14 +60,14 @@ func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin string, su
 		fmt.Sprintf("test-garden-%d", ginkgo.GinkgoParallelNode()),
 	)
 
-	if GraphRoot == "" {
+	if DataDir == "" {
 		// This must be set outside of the Ginkgo node directory (tmpDir) because
 		// otherwise the Concourse worker may run into one of the AUFS kernel
 		// module bugs that cause the VM to become unresponsive.
-		GraphRoot = "/tmp/aufs_mount"
+		DataDir = "/tmp/aufs_mount"
 	}
 
-	graphPath := filepath.Join(GraphRoot, fmt.Sprintf("node-%d", ginkgo.GinkgoParallelNode()))
+	graphPath := filepath.Join(DataDir, fmt.Sprintf("node-%d", ginkgo.GinkgoParallelNode()))
 	depotDir := filepath.Join(tmpDir, "containers")
 
 	MustMountTmpfs(graphPath)
@@ -75,7 +75,7 @@ func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin string, su
 	r := &RunningGarden{
 		DepotDir: depotDir,
 
-		GraphRoot: GraphRoot,
+		DataDir:   DataDir,
 		GraphPath: graphPath,
 		Tmpdir:    tmpDir,
 		logger:    lagertest.NewTestLogger("garden-runner"),
@@ -83,7 +83,7 @@ func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin string, su
 		Client: client.New(connection.New(network, addr)),
 	}
 
-	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, TarPath, supplyDefaultRootfs, argv...)
+	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, TarBin, supplyDefaultRootfs, argv...)
 	c.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", tmpDir))
 	r.runner = ginkgomon.New(ginkgomon.Config{
 		Name:              "guardian",
@@ -93,7 +93,6 @@ func Start(bin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin string, su
 		StartCheckTimeout: 30 * time.Second,
 	})
 	r.process = ifrit.Invoke(r.runner)
-
 	r.Pid = c.Process.Pid
 
 	for i, arg := range c.Args {
