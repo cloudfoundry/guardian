@@ -236,6 +236,10 @@ var _ = Describe("The Secret Garden", func() {
 			Expect(ioutil.WriteFile(stubProcess, []byte(processes), 0777)).To(Succeed())
 		})
 
+		AfterEach(func() {
+			Expect(exec.Command("killall", "sleep").Run()).To(Succeed())
+		})
+
 		It("should kill the underlying process", func() {
 			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, stubProcess, sharedDir)
 			Eventually(session.Out).Should(gbytes.Say("sleeping"))
@@ -258,6 +262,10 @@ var _ = Describe("The Secret Garden", func() {
 			stubProcess = filepath.Join(fakeDataDir, "spawn-processes.sh")
 			sharedDir = filepath.Join(fakeDataDir, "shared")
 			Expect(ioutil.WriteFile(stubProcess, []byte(processes), 0777)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(exec.Command("killall", "sleep").Run()).To(Succeed())
 		})
 
 		It("should kill the underlying process", func() {
