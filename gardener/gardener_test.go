@@ -295,6 +295,12 @@ var _ = Describe("Gardener", func() {
 			})
 
 			ItDestroysEverything("")
+
+			It("logs the underlying error", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				Expect(err).To(HaveOccurred())
+				Eventually(logger).Should(gbytes.Say("failed to create the banana"))
+			})
 		})
 
 		Context("when a disk limit is provided", func() {

@@ -196,7 +196,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	defer func() {
 		if err != nil {
 			log := log.Session("create-failed-cleaningup", lager.Data{
-				"cause": err,
+				"cause": err.Error(),
 			})
 
 			log.Info("start")
