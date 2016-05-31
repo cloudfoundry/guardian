@@ -37,7 +37,7 @@ var _ = Describe("The Secret Garden", func() {
 
 	BeforeEach(func() {
 		var err error
-		fakeDataDir, err = ioutil.TempDir("", "data")
+		fakeDataDir, err = ioutil.TempDir("", fmt.Sprintf("data-%d", GinkgoParallelNode()))
 		Expect(err).NotTo(HaveOccurred())
 
 		realGraphDir = filepath.Join(fakeDataDir, "realgraph")
@@ -175,50 +175,6 @@ var _ = Describe("The Secret Garden", func() {
 		})
 	})
 
-	Context("when a mount is created outside the namespace", func() {
-		const accessSharedMount = `#!/bin/bash
-			set -x
-			for i in $(seq 1 10); do
-				echo trying $i
-				sleep 1
-				stat ${1}/myfile
-				if [[ $? -eq 0 ]]; then
-					exit
-				fi
-			done
-		`
-		var sharedDir string
-
-		BeforeEach(func() {
-			stubProcess = filepath.Join(fakeDataDir, "access-mount.sh")
-			sharedDir = filepath.Join(fakeDataDir, "shared")
-			Expect(ioutil.WriteFile(stubProcess, []byte(accessSharedMount), 0777)).To(Succeed())
-		})
-
-		AfterEach(func() {
-			exec.Command("umount", sharedDir).Run()
-			os.Remove(stubProcess)
-		})
-
-		It("is visible inside the unshared namespace", func() {
-			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, stubProcess, sharedDir)
-			Eventually(func() string {
-				out, err := exec.Command("mount").CombinedOutput()
-				Expect(err).NotTo(HaveOccurred())
-				return string(out)
-			}).Should(ContainSubstring(fmt.Sprintf("%s on %s type none (rw,bind)", fakeDataDir, fakeDataDir)))
-
-			Expect(exec.Command("mkdir", sharedDir).Run()).To(Succeed())
-			Expect(exec.Command("mount", "-t", "tmpfs", "tmpfs", sharedDir).Run()).To(Succeed())
-
-			Expect(exec.Command("touch", filepath.Join(sharedDir, "myfile")).Run()).To(Succeed())
-			Expect(exec.Command("stat", filepath.Join(sharedDir, "myfile")).Run()).To(Succeed())
-
-			Eventually(session, "10s").Should(gexec.Exit(0))
-			Expect(session.Out).To(gbytes.Say("shared/myfile"))
-		})
-	})
-
 	Context("when the secret garden is terminated", func() {
 		var sharedDir string
 
@@ -226,18 +182,16 @@ var _ = Describe("The Secret Garden", func() {
 			trap "echo terminating; exit 0" SIGTERM
 
 			echo 'sleeping'
-			sleep 1000 &
-			wait
+			for i in $(seq 1 1000); do
+			  sleep 1
+			done
+
 		`
 
 		BeforeEach(func() {
 			stubProcess = filepath.Join(fakeDataDir, "spawn-processes.sh")
 			sharedDir = filepath.Join(fakeDataDir, "shared")
 			Expect(ioutil.WriteFile(stubProcess, []byte(processes), 0777)).To(Succeed())
-		})
-
-		AfterEach(func() {
-			Expect(exec.Command("killall", "sleep").Run()).To(Succeed())
 		})
 
 		It("should kill the underlying process", func() {
@@ -246,7 +200,7 @@ var _ = Describe("The Secret Garden", func() {
 
 			session.Terminate()
 
-			Eventually(session.Out).Should(gbytes.Say("terminating"))
+			Eventually(session.Out, "3s").Should(gbytes.Say("terminating"))
 		})
 	})
 
@@ -255,17 +209,13 @@ var _ = Describe("The Secret Garden", func() {
 
 		const processes = `#!/bin/bash
 			echo "PID: $$"
-			sleep 1000
+			read
 		`
 
 		BeforeEach(func() {
 			stubProcess = filepath.Join(fakeDataDir, "spawn-processes.sh")
 			sharedDir = filepath.Join(fakeDataDir, "shared")
 			Expect(ioutil.WriteFile(stubProcess, []byte(processes), 0777)).To(Succeed())
-		})
-
-		AfterEach(func() {
-			Expect(exec.Command("killall", "sleep").Run()).To(Succeed())
 		})
 
 		It("should kill the underlying process", func() {
