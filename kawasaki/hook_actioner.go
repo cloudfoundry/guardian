@@ -21,5 +21,5 @@ func (h *HookActioner) Run(logger lager.Logger, action string, cfg NetworkConfig
 		return h.Configurer.Apply(logger, cfg, nsPath)
 	}
 
-	return h.Configurer.Destroy(logger, cfg)
+	return h.Configurer.DestroyIPTablesRules(logger, cfg)
 }

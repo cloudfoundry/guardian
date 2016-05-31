@@ -45,7 +45,6 @@ var _ = Describe("Networker", func() {
 		fakePortPool = new(fakes.FakePortPool)
 		fakeFirewallOpener = new(fakes.FakeFirewallOpener)
 		fakeConfigurer = new(fakes.FakeConfigurer)
-		fakeConfigurer = new(fakes.FakeConfigurer)
 
 		containerSpec = garden.ContainerSpec{
 			Handle:  "some-handle",
@@ -298,6 +297,39 @@ var _ = Describe("Networker", func() {
 			It("returns an error if the ports property is not valid JSON", func() {
 				config[gardener.MappedPortsKey] = `potato`
 				Expect(networker.Destroy(logger, "some-handle")).To(MatchError(ContainSubstring("invalid")))
+			})
+		})
+
+		Describe("destroying network configuration", func() {
+			Context("when the subnet pool has allocated an IP from the subnet", func() {
+				BeforeEach(func() {
+					fakeSubnetPool.RunIfFreeStub = func(_ *net.IPNet, _ func() error) error {
+						return nil
+					}
+				})
+
+				It("doesn't destroy the bridge", func() {
+					Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
+					Expect(fakeConfigurer.DestroyBridgeCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("when the subnet pool has released all IPs from the subnet", func() {
+				BeforeEach(func() {
+					fakeSubnetPool.RunIfFreeStub = func(_ *net.IPNet, cb func() error) error {
+						cb()
+						return nil
+					}
+				})
+
+				It("destroys all network configuration", func() {
+					Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
+					Expect(fakeConfigurer.DestroyBridgeCallCount()).To(Equal(1))
+
+					loggerArg, networkConfigArg := fakeConfigurer.DestroyBridgeArgsForCall(0)
+					Expect(loggerArg).To(Equal(logger))
+					Expect(networkConfigArg).To(Equal(networkConfig))
+				})
 			})
 		})
 	})

@@ -176,13 +176,34 @@ var _ = Describe("Configurer", func() {
 
 	})
 
-	Describe("Destroy", func() {
+	Describe("DestroyBridge", func() {
+		It("should destroy the host configuration", func() {
+			cfg := kawasaki.NetworkConfig{
+				ContainerIntf: "banana",
+			}
+			Expect(configurer.DestroyBridge(logger, cfg)).To(Succeed())
+
+			Expect(fakeHostConfigurer.DestroyCallCount()).To(Equal(1))
+			Expect(fakeHostConfigurer.DestroyArgsForCall(0)).To(Equal(cfg))
+		})
+
+		Context("when it fails to destroy the host configuration", func() {
+			It("should return the error", func() {
+				fakeHostConfigurer.DestroyReturns(errors.New("spiderman-error"))
+
+				err := configurer.DestroyBridge(logger, kawasaki.NetworkConfig{})
+				Expect(err).To(MatchError(ContainSubstring("spiderman-error")))
+			})
+		})
+	})
+
+	Describe("DestroyIPTablesRules", func() {
 		It("should tear down the IP tables chains", func() {
 			cfg := kawasaki.NetworkConfig{
 				IPTablePrefix:   "chain-of-",
 				IPTableInstance: "sausages",
 			}
-			Expect(configurer.Destroy(logger, cfg)).To(Succeed())
+			Expect(configurer.DestroyIPTablesRules(logger, cfg)).To(Succeed())
 
 			Expect(fakeInstanceChainCreator.DestroyCallCount()).To(Equal(1))
 			_, instance := fakeInstanceChainCreator.DestroyArgsForCall(0)
@@ -196,33 +217,7 @@ var _ = Describe("Configurer", func() {
 
 			It("should return the error", func() {
 				cfg := kawasaki.NetworkConfig{}
-				Expect(configurer.Destroy(logger, cfg)).To(MatchError(ContainSubstring("ananas is the best")))
-			})
-
-			It("should not destroy the host configuration", func() {
-				cfg := kawasaki.NetworkConfig{}
-				Expect(configurer.Destroy(logger, cfg)).NotTo(Succeed())
-
-				Expect(fakeHostConfigurer.DestroyCallCount()).To(Equal(0))
-			})
-		})
-
-		It("should destroy the host configuration", func() {
-			cfg := kawasaki.NetworkConfig{
-				ContainerIntf: "banana",
-			}
-			Expect(configurer.Destroy(logger, cfg)).To(Succeed())
-
-			Expect(fakeHostConfigurer.DestroyCallCount()).To(Equal(1))
-			Expect(fakeHostConfigurer.DestroyArgsForCall(0)).To(Equal(cfg))
-		})
-
-		Context("when it fails to destroy the host configuration", func() {
-			It("should return the error", func() {
-				fakeHostConfigurer.DestroyReturns(errors.New("spiderman-error"))
-
-				err := configurer.Destroy(logger, kawasaki.NetworkConfig{})
-				Expect(err).To(MatchError(ContainSubstring("spiderman-error")))
+				Expect(configurer.DestroyIPTablesRules(logger, cfg)).To(MatchError(ContainSubstring("ananas is the best")))
 			})
 		})
 	})

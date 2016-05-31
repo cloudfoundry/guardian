@@ -15,14 +15,11 @@ import (
 type Pool interface {
 	// Allocates an IP address and associates it with a subnet. The subnet is selected by the given SubnetSelector.
 	// The IP address is selected by the given IPSelector.
-	// Returns a subnet, an IP address, and a boolean which is true if and only if this is the
-	// first IP address to be associated with this subnet.
-	// If either selector fails, an error is returned.
+	// Returns a subnet, an IP address, and if either selector fails, an error is returned.
 	Acquire(lager.Logger, SubnetSelector, IPSelector) (*net.IPNet, net.IP, error)
 
 	// Releases an IP address associated with an allocated subnet. If the subnet has no other IP
 	// addresses associated with it, it is deallocated.
-	// Returns a boolean which is true if and only if the subnet was deallocated.
 	// Returns an error if the given combination is not already in the pool.
 	Release(*net.IPNet, net.IP) error
 
@@ -31,6 +28,9 @@ type Pool interface {
 
 	// Returns the number of /30 subnets which can be Acquired by a DynamicSubnetSelector.
 	Capacity() int
+
+	// Run the provided callback if the given subnet is not in use
+	RunIfFree(*net.IPNet, func() error) error
 }
 
 type pool struct {
@@ -126,6 +126,17 @@ func (p *pool) Release(subnet *net.IPNet, ip net.IP) error {
 func (m *pool) Capacity() int {
 	masked, total := m.dynamicRange.Mask.Size()
 	return int(math.Pow(2, float64(total-masked)) / 4)
+}
+
+func (p *pool) RunIfFree(subnet *net.IPNet, cb func() error) error {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if _, ok := p.allocated[subnet.String()]; ok {
+		return nil
+	}
+
+	return cb()
 }
 
 // Returns the gateway IP of a given subnet, which is always the maximum valid IP

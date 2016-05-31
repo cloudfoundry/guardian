@@ -108,11 +108,11 @@ var _ = Describe("Net", func() {
 	})
 
 	Context("a second container", func() {
-		var originContainer garden.Container
+		var originalContainer garden.Container
 
 		JustBeforeEach(func() {
 			var err error
-			originContainer = container
+			originalContainer = container
 			container, err = client.Create(garden.ContainerSpec{
 				Network: containerNetwork,
 			})
@@ -121,7 +121,7 @@ var _ = Describe("Net", func() {
 		})
 
 		AfterEach(func() {
-			Expect(client.Destroy(originContainer.Handle())).To(Succeed())
+			Expect(client.Destroy(originalContainer.Handle())).To(Succeed())
 		})
 
 		It("should have the next IP address", func() {

@@ -65,10 +65,10 @@ func (c *configurer) Apply(log lager.Logger, cfg NetworkConfig, nsPath string) e
 	})
 }
 
-func (c *configurer) Destroy(log lager.Logger, cfg NetworkConfig) error {
-	if err := c.instanceChainCreator.Destroy(log, cfg.IPTableInstance); err != nil {
-		return err
-	}
-
+func (c *configurer) DestroyBridge(log lager.Logger, cfg NetworkConfig) error {
 	return c.hostConfigurer.Destroy(cfg)
+}
+
+func (c *configurer) DestroyIPTablesRules(log lager.Logger, cfg NetworkConfig) error {
+	return c.instanceChainCreator.Destroy(log, cfg.IPTableInstance)
 }

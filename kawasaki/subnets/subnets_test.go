@@ -1,6 +1,7 @@
 package subnets_test
 
 import (
+	"errors"
 	"net"
 	"runtime"
 
@@ -662,9 +663,44 @@ var _ = Describe("Subnet Pool", func() {
 					Expect(err).To(Equal(subnets.ErrInsufficientSubnets))
 				})
 			})
+		})
+	})
 
+	Describe("RunIfFree", func() {
+		BeforeEach(func() {
+			defaultSubnetPool = subnetPool("192.0.2.0/24")
 		})
 
+		It("should call the callback when the subnet is not allocated", func() {
+			callCount := 0
+			_, network := networkParms("192.0.2.0/24")
+			Expect(subnetpool.RunIfFree(network, func() error {
+				callCount++
+				return nil
+			})).To(Succeed())
+
+			Expect(callCount).To(Equal(1))
+		})
+
+		It("should not call the callback when the subnet is used", func() {
+			acquiredSubnet, _, err := subnetpool.Acquire(logger, subnets.DynamicSubnetSelector, subnets.DynamicIPSelector)
+			Expect(err).NotTo(HaveOccurred())
+
+			callCount := 0
+			Expect(subnetpool.RunIfFree(acquiredSubnet, func() error {
+				callCount++
+				return nil
+			})).To(Succeed())
+
+			Expect(callCount).To(Equal(0))
+		})
+
+		It("should return the error produced by the callback", func() {
+			_, network := networkParms("192.0.2.0/24")
+			Expect(subnetpool.RunIfFree(network, func() error {
+				return errors.New("banana")
+			})).To(MatchError("banana"))
+		})
 	})
 })
 

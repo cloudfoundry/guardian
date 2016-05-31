@@ -73,21 +73,23 @@ var _ = Describe("HookActioner", func() {
 	})
 
 	Context("when action 'destroy' is provided", func() {
-		It("should destroy the configuration", func() {
+		It("should destroy the container's iptables rules", func() {
 			cfg := kawasaki.NetworkConfig{
 				IPTableInstance: "ba-",
 				BridgeName:      "nana",
 			}
 			Expect(hookActioner.Run(log, "destroy", cfg, "/path/to/nspath")).To(Succeed())
 
-			Expect(fakeConfigurer.DestroyCallCount()).To(Equal(1))
+			Expect(fakeConfigurer.DestroyIPTablesRulesCallCount()).To(Equal(1))
+			_, actualCfg := fakeConfigurer.DestroyIPTablesRulesArgsForCall(0)
+			Expect(actualCfg).To(Equal(cfg))
 		})
 
-		Context("when applying the configuration fails", func() {
+		Context("when destroying the container's iptables rules fails", func() {
 			It("should return the error", func() {
-				fakeConfigurer.DestroyReturns(errors.New("I lost my banana"))
+				fakeConfigurer.DestroyIPTablesRulesReturns(errors.New("I lost my banana"))
 
-				Expect(hookActioner.Run(log, "destroy", kawasaki.NetworkConfig{}, "")).To(MatchError("I lost my banana"))
+				Expect(hookActioner.Run(log, "destroy", kawasaki.NetworkConfig{}, "/path/to/nspath")).To(MatchError("I lost my banana"))
 			})
 		})
 	})

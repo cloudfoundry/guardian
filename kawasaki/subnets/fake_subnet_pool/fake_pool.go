@@ -46,6 +46,15 @@ type FakePool struct {
 	capacityReturns     struct {
 		result1 int
 	}
+	RunIfFreeStub        func(*net.IPNet, func() error) error
+	runIfFreeMutex       sync.RWMutex
+	runIfFreeArgsForCall []struct {
+		arg1 *net.IPNet
+		arg2 func() error
+	}
+	runIfFreeReturns struct {
+		result1 error
+	}
 }
 
 func (fake *FakePool) Acquire(arg1 lager.Logger, arg2 subnets.SubnetSelector, arg3 subnets.IPSelector) (*net.IPNet, net.IP, error) {
@@ -171,6 +180,39 @@ func (fake *FakePool) CapacityReturns(result1 int) {
 	fake.CapacityStub = nil
 	fake.capacityReturns = struct {
 		result1 int
+	}{result1}
+}
+
+func (fake *FakePool) RunIfFree(arg1 *net.IPNet, arg2 func() error) error {
+	fake.runIfFreeMutex.Lock()
+	fake.runIfFreeArgsForCall = append(fake.runIfFreeArgsForCall, struct {
+		arg1 *net.IPNet
+		arg2 func() error
+	}{arg1, arg2})
+	fake.runIfFreeMutex.Unlock()
+	if fake.RunIfFreeStub != nil {
+		return fake.RunIfFreeStub(arg1, arg2)
+	} else {
+		return fake.runIfFreeReturns.result1
+	}
+}
+
+func (fake *FakePool) RunIfFreeCallCount() int {
+	fake.runIfFreeMutex.RLock()
+	defer fake.runIfFreeMutex.RUnlock()
+	return len(fake.runIfFreeArgsForCall)
+}
+
+func (fake *FakePool) RunIfFreeArgsForCall(i int) (*net.IPNet, func() error) {
+	fake.runIfFreeMutex.RLock()
+	defer fake.runIfFreeMutex.RUnlock()
+	return fake.runIfFreeArgsForCall[i].arg1, fake.runIfFreeArgsForCall[i].arg2
+}
+
+func (fake *FakePool) RunIfFreeReturns(result1 error) {
+	fake.RunIfFreeStub = nil
+	fake.runIfFreeReturns = struct {
+		result1 error
 	}{result1}
 }
 

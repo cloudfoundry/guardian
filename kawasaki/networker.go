@@ -44,7 +44,8 @@ type ConfigCreator interface {
 
 type Configurer interface {
 	Apply(log lager.Logger, cfg NetworkConfig, nsPath string) error
-	Destroy(log lager.Logger, cfg NetworkConfig) error
+	DestroyBridge(log lager.Logger, cfg NetworkConfig) error
+	DestroyIPTablesRules(log lager.Logger, cfg NetworkConfig) error
 }
 
 //go:generate counterfeiter . ConfigStore
@@ -289,6 +290,11 @@ func (n *networker) Destroy(log lager.Logger, handle string) error {
 			n.portPool.Release(m.HostPort)
 		}
 	}
+
+	n.subnetPool.RunIfFree(cfg.Subnet, func() error {
+		n.configurer.DestroyBridge(log, cfg)
+		return nil
+	})
 
 	return nil
 }
