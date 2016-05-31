@@ -55,11 +55,11 @@ type ProcessTracker interface {
 }
 
 type Execer struct {
-	preparer *ExecPreparer
-	runner   *ExecRunner
+	preparer ExecPreparer
+	runner   ExecRunner
 }
 
-func NewExecer(execPreparer *ExecPreparer, runner *ExecRunner) *Execer {
+func NewExecer(execPreparer ExecPreparer, runner ExecRunner) *Execer {
 	return &Execer{
 		preparer: execPreparer,
 		runner:   runner,
@@ -89,15 +89,21 @@ func (e *Execer) Attach(log lager.Logger, bundlePath, id, processID string, io g
 	return e.runner.Attach(log, processID, io, processesPath)
 }
 
-type ExecRunner struct {
+//go:generate counterfeiter . ExecRunner
+type ExecRunner interface {
+	Run(log lager.Logger, spec *specs.Process, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
+	Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
+}
+
+type IodaemonExecRunner struct {
 	pidGenerator UidGenerator
 	runc         RuncBinary
 	tracker      ProcessTracker
 	waitWatcher  WaitWatcher
 }
 
-func NewExecRunner(pidGen UidGenerator, runc RuncBinary, tracker ProcessTracker, waitWatcher WaitWatcher) *ExecRunner {
-	return &ExecRunner{
+func NewIodaemonExecRunner(pidGen UidGenerator, runc RuncBinary, tracker ProcessTracker, waitWatcher WaitWatcher) *IodaemonExecRunner {
+	return &IodaemonExecRunner{
 		pidGenerator: pidGen,
 		runc:         runc,
 		tracker:      tracker,
@@ -106,7 +112,7 @@ func NewExecRunner(pidGen UidGenerator, runc RuncBinary, tracker ProcessTracker,
 }
 
 // runrunc saves a process.json and invokes runc exec
-func (e *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
+func (e *IodaemonExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
 	pid := e.pidGenerator.Generate()
 
 	log = log.Session("execrunner", lager.Data{"pid": pid})
@@ -146,7 +152,7 @@ func (e *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 	return process, nil
 }
 
-func (e *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
+func (e *IodaemonExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	log = log.Session("attach", lager.Data{"process-id": processID})
 
 	log.Info("start")
@@ -156,7 +162,12 @@ func (e *ExecRunner) Attach(log lager.Logger, processID string, io garden.Proces
 	return e.tracker.Attach(processID, io, pidFilePath)
 }
 
-type ExecPreparer struct {
+//go:generate counterfeiter . ExecPreparer
+type ExecPreparer interface {
+	Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*specs.Process, error)
+}
+
+type execPreparer struct {
 	bundleLoader BundleLoader
 	users        UserLookupper
 	mkdirer      Mkdirer
@@ -164,8 +175,8 @@ type ExecPreparer struct {
 	nonRootMaxCaps []string
 }
 
-func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdirer Mkdirer, nonRootMaxCaps []string) *ExecPreparer {
-	return &ExecPreparer{
+func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdirer Mkdirer, nonRootMaxCaps []string) ExecPreparer {
+	return &execPreparer{
 		bundleLoader:   bundleLoader,
 		users:          userlookup,
 		mkdirer:        mkdirer,
@@ -173,7 +184,7 @@ func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdire
 	}
 }
 
-func (r *ExecPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*specs.Process, error) {
+func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*specs.Process, error) {
 	log = log.Session("prepare")
 
 	log.Info("start")
@@ -234,7 +245,7 @@ type usr struct {
 	home                       string
 }
 
-func (r *ExecPreparer) lookupUser(bndl *goci.Bndl, rootfsPath, username string) (*usr, error) {
+func (r *execPreparer) lookupUser(bndl *goci.Bndl, rootfsPath, username string) (*usr, error) {
 	u, err := r.users.Lookup(rootfsPath, username)
 	if err != nil {
 		return nil, err
@@ -255,7 +266,7 @@ func (r *ExecPreparer) lookupUser(bndl *goci.Bndl, rootfsPath, username string) 
 	}, nil
 }
 
-func (r *ExecPreparer) ensureDirExists(rootfsPath, dir string, uid, gid int) error {
+func (r *execPreparer) ensureDirExists(rootfsPath, dir string, uid, gid int) error {
 	if err := r.mkdirer.MkdirAs(rootfsPath, uid, gid, 0755, false, dir); err != nil {
 		return fmt.Errorf("create working directory: %s", err)
 	}

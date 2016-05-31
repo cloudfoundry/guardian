@@ -541,7 +541,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		dadooPath,
 		runcPath,
 		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps),
-		runrunc.NewExecRunner(cmd.wireUidGenerator(), goci.RuncBinary(runcPath),
+		runrunc.NewIodaemonExecRunner(cmd.wireUidGenerator(), goci.RuncBinary(runcPath),
 			process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", cmd.Server.Tag), "processes"), iodaemonPath, commandRunner, pidFileReader),
 			&runrunc.Watcher{}),
 	)
