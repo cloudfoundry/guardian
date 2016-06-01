@@ -78,6 +78,11 @@ var _ = Describe("Run", func() {
 			ttySpec("test", "-t", "1"),
 			should(gexec.Exit(0)),
 		),
+
+		Entry("using dadoo exec",
+			withDadoo(spec("/bin/sh", "-c", "echo hello; exit 12")),
+			should(gbytes.Say("hello"), gexec.Exit(12)),
+		),
 	)
 
 	It("cleans up any files by the time the process exits", func() {
@@ -336,6 +341,11 @@ func spec(path string, args ...string) garden.ProcessSpec {
 		Path: path,
 		Args: args,
 	}
+}
+
+func withDadoo(spec garden.ProcessSpec) garden.ProcessSpec {
+	spec.Env = append(spec.Env, "USE_DADOO=true")
+	return spec
 }
 
 func filesInDir(path string) []string {

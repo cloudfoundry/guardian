@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,19 +16,18 @@ import (
 )
 
 func main() {
-	var logFile string
+	var logFile, stdoutPath, stdinPath, stderrPath string
 	flag.StringVar(&logFile, "log", "dadoo.log", "dadoo log file path")
+	flag.StringVar(&stdoutPath, "stdout", "", "path to stdout")
+	flag.StringVar(&stdinPath, "stdin", "", "path to stdin")
+	flag.StringVar(&stderrPath, "stderr", "", "path to stderr")
+
 	flag.Parse()
 
 	command := flag.Args()[0] // e.g. run
 	runtime := flag.Args()[1] // e.g. runc
 	bundlePath := flag.Args()[2]
 	containerId := flag.Args()[3]
-
-	if command != "run" {
-		fmt.Fprintf(os.Stderr, "unknown command: %s", command)
-		os.Exit(127)
-	}
 
 	fd3 := os.NewFile(3, "/proc/self/fd/3")
 
@@ -36,14 +36,27 @@ func main() {
 
 	pidFilePath := filepath.Join(bundlePath, "pidfile")
 
+	var runcStartCmd *exec.Cmd
+	switch command {
+	case "run":
+		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "start", "-d", "-pid-file", pidFilePath, containerId)
+		runcStartCmd.Dir = bundlePath
+
+		// listen to an exit socket early so waiters can wait for dadoo
+		dadoo.Listen(filepath.Join(bundlePath, "exit.sock"))
+	case "exec":
+		check(os.MkdirAll(bundlePath, 0700))
+		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
+		runcStartCmd.Stdin = forwardReadFIFO(stdinPath)
+		runcStartCmd.Stdout = forwardWriteFIFO(stdoutPath)
+		runcStartCmd.Stderr = forwardWriteFIFO(stderrPath)
+	default:
+		fmt.Fprintf(os.Stderr, "unknown command: %s", command)
+		os.Exit(127)
+	}
+
 	// we need to be the subreaper so we can wait on the detached container process
 	system.SetSubreaper(os.Getpid())
-
-	// listen to an exit socket early so waiters can wait for dadoo
-	dadoo.Listen(filepath.Join(bundlePath, "exit.sock"))
-
-	runcStartCmd := exec.Command(runtime, "-debug", "-log", logFile, "start", "-d", "-pid-file", pidFilePath, containerId)
-	runcStartCmd.Dir = bundlePath
 
 	if err := runcStartCmd.Start(); err != nil {
 		fd3.Write([]byte{2})
@@ -104,4 +117,26 @@ func readPid(pidFile string) (int, error) {
 	}
 
 	return pid, nil
+}
+
+func forwardReadFIFO(path string) io.Reader {
+	if path == "" {
+		return nil
+	}
+
+	r, err := os.Open(path)
+	check(err)
+
+	return r
+}
+
+func forwardWriteFIFO(path string) io.Writer {
+	if path == "" {
+		return nil
+	}
+
+	w, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0600)
+	check(err)
+
+	return w
 }
