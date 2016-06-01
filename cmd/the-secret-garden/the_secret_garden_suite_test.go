@@ -3,6 +3,7 @@ package main_test
 import (
 	"encoding/json"
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -47,6 +48,7 @@ func TestThesecretGarden(t *testing.T) {
 		if skip {
 			Skip("the-secret-garden requires linux")
 		}
+		SetDefaultEventuallyTimeout(5 * time.Second)
 	})
 
 	RunSpecs(t, "The Secret Garden Suite")

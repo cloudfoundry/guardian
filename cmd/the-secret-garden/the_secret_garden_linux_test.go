@@ -172,7 +172,7 @@ var _ = Describe("The Secret Garden", func() {
 				return fileInfo
 			}, time.Second*3).Should(BeEmpty())
 
-			Eventually(session, "3s").Should(gexec.Exit(0))
+			Eventually(session).Should(gexec.Exit(0))
 		})
 	})
 
@@ -234,7 +234,7 @@ var _ = Describe("The Secret Garden", func() {
 
 			session.Terminate()
 
-			Eventually(session.Out, "3s").Should(gbytes.Say("terminating"))
+			Eventually(session.Out).Should(gbytes.Say("terminating"))
 		})
 	})
 
