@@ -47,11 +47,6 @@ var _ = Describe("The Secret Garden", func() {
 		Expect(os.MkdirAll(secretGraphDir, 0777)).To(Succeed())
 	})
 
-	AfterEach(func() {
-		exec.Command("umount", fakeDataDir).Run()
-		os.RemoveAll(fakeDataDir)
-	})
-
 	It("makes sure the data dir is mounted exactly once", func() {
 		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "mount")
 		Eventually(session).Should(gexec.Exit(0))
@@ -114,6 +109,45 @@ var _ = Describe("The Secret Garden", func() {
 		Eventually(session).ShouldNot(gexec.Exit(0))
 	})
 
+	Context("when a mount is created outside the namespace", func() {
+		const accessSharedMount = `#!/bin/bash
+			set -x
+			for i in $(seq 1 10); do
+				echo trying $i
+				sleep 1
+				stat ${1}/myfile
+				if [[ $? -eq 0 ]]; then
+					exit
+				fi
+			done
+		`
+		var sharedDir string
+
+		BeforeEach(func() {
+			stubProcess = filepath.Join(fakeDataDir, "access-mount.sh")
+			sharedDir = filepath.Join(fakeDataDir, "shared")
+			Expect(ioutil.WriteFile(stubProcess, []byte(accessSharedMount), 0777)).To(Succeed())
+		})
+
+		It("is visible inside the unshared namespace", func() {
+			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, stubProcess, sharedDir)
+			Eventually(func() string {
+				out, err := exec.Command("mount").CombinedOutput()
+				Expect(err).NotTo(HaveOccurred())
+				return string(out)
+			}).Should(ContainSubstring(fmt.Sprintf("%s on %s type none (rw,bind)", fakeDataDir, fakeDataDir)))
+
+			Expect(exec.Command("mkdir", sharedDir).Run()).To(Succeed())
+			Expect(exec.Command("mount", "-t", "tmpfs", "tmpfs", sharedDir).Run()).To(Succeed())
+
+			Expect(exec.Command("touch", filepath.Join(sharedDir, "myfile")).Run()).To(Succeed())
+			Expect(exec.Command("stat", filepath.Join(sharedDir, "myfile")).Run()).To(Succeed())
+
+			Eventually(session, "10s").Should(gexec.Exit(0))
+			Expect(session.Out).To(gbytes.Say("shared/myfile"))
+		})
+	})
+
 	Context("when the process creates a file in the secretGraphDir", func() {
 		const makeSecretMount = `#!/bin/sh
 			set -e -x
@@ -138,7 +172,7 @@ var _ = Describe("The Secret Garden", func() {
 				return fileInfo
 			}, time.Second*3).Should(BeEmpty())
 
-			Eventually(session).Should(gexec.Exit(0))
+			Eventually(session, "3s").Should(gexec.Exit(0))
 		})
 	})
 
