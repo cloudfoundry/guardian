@@ -5,14 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry/gunk/command_runner"
+	"github.com/kr/logfmt"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pivotal-golang/lager"
 )
@@ -35,10 +38,12 @@ func NewExecRunner(dadooPath, runcPath string, pidGen runrunc.UidGenerator, ioda
 	}
 }
 
-func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, handle string, tty *garden.TTYSpec, pio garden.ProcessIO) (garden.Process, error) {
+func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, handle string, tty *garden.TTYSpec, pio garden.ProcessIO) (p garden.Process, theErr error) {
 	if !contains(spec.Env, "USE_DADOO=true") {
 		return d.iodaemonRunner.Run(log, spec, processesPath, handle, tty, pio)
 	}
+
+	log = log.Session("exec")
 
 	pid := d.pidGen.Generate()
 	path := filepath.Join(processesPath, pid)
@@ -57,15 +62,39 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 		return nil, err
 	}
 
-	cmd := exec.Command(d.dadooPath, append(pipeArgs, "exec", d.runcPath, path, handle)...)
+	fd3r, fd3w, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+
+	defer fd3r.Close()
+
+	logFile := filepath.Join(path, "log")
+	cmd := exec.Command(d.dadooPath, append(pipeArgs, "-log", logFile, "exec", d.runcPath, path, handle)...)
 	cmd.Stdin = bytes.NewReader(encodedSpec)
+	cmd.ExtraFiles = []*os.File{
+		fd3w,
+	}
 
 	if err := d.commandRunner.Start(cmd); err != nil {
 		return nil, err
 	}
 
+	fd3w.Close()
+
 	if err := pipes.start(); err != nil {
 		return nil, err
+	}
+
+	runcExitStatus := make([]byte, 1)
+	fd3r.Read(runcExitStatus)
+
+	defer func() {
+		theErr = processLogs(log, logFile, theErr)
+	}()
+
+	if runcExitStatus[0] != 0 {
+		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])
 	}
 
 	return d.newProcess(cmd), nil
@@ -185,4 +214,41 @@ func contains(envVars []string, envVar string) bool {
 		}
 	}
 	return false
+}
+
+func processLogs(log lager.Logger, logFile string, err error) error {
+	logFileR, openErr := os.Open(logFile)
+	if openErr != nil {
+		return fmt.Errorf("start: read log file: %s", openErr)
+	}
+
+	buff, readErr := ioutil.ReadAll(logFileR)
+	if readErr != nil {
+		return fmt.Errorf("start: read log file: %s", readErr)
+	}
+
+	forwardRuncLogsToLager(log, buff)
+
+	if err != nil {
+		return wrapWithErrorFromRuncLog(log, err, buff)
+	}
+
+	return nil
+}
+
+func forwardRuncLogsToLager(log lager.Logger, buff []byte) {
+	parsedLogLine := struct{ Msg string }{}
+	for _, logLine := range strings.Split(string(buff), "\n") {
+		if err := logfmt.Unmarshal([]byte(logLine), &parsedLogLine); err == nil {
+			log.Debug("runc", lager.Data{
+				"message": parsedLogLine.Msg,
+			})
+		}
+	}
+}
+
+func wrapWithErrorFromRuncLog(log lager.Logger, originalError error, buff []byte) error {
+	parsedLogLine := struct{ Msg string }{}
+	logfmt.Unmarshal(buff, &parsedLogLine)
+	return fmt.Errorf("runc exec: %s: %s", originalError, parsedLogLine.Msg)
 }

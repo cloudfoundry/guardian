@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
@@ -31,8 +32,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		runner                *dadoo.ExecRunner
 		processPath           string
 		receivedStdinContents []byte
+		runcReturns           byte
 		dadooReturns          error
-		log                   lager.Logger
+		dadooWritesLogs       string
+		log                   *lagertest.TestLogger
 	)
 
 	BeforeEach(func() {
@@ -50,6 +53,9 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		log = lagertest.NewTestLogger("test")
 
 		dadooReturns = nil
+		dadooWritesLogs = `time="2016-03-02T13:56:38Z" level=warning msg="signal: potato"
+				time="2016-03-02T13:56:38Z" level=error msg="fork/exec POTATO: no such file or directory"
+				time="2016-03-02T13:56:38Z" level=fatal msg="Container start failed: [10] System error: fork/exec POTATO: no such file or directory"`
 
 		// dadoo should open up its end of the named pipes
 		fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
@@ -59,16 +65,24 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			receivedStdinContents, err = ioutil.ReadAll(cmd.Stdin)
 			Expect(err).NotTo(HaveOccurred())
 
+			// dup the fd so that the runner is allowed to close it
+			// in a real fork/exec this'd happen as part of the fork
+			fd3fd, err := syscall.Dup(int(cmd.ExtraFiles[0].Fd()))
+			Expect(err).NotTo(HaveOccurred())
+			fd3 := os.NewFile(uintptr(fd3fd), "fd3dup")
+
 			go func(cmd *exec.Cmd) {
 				defer GinkgoRecover()
 
 				fs := flag.NewFlagSet("something", flag.PanicOnError)
+				logFile := fs.String("log", "", "")
 				stdin := fs.String("stdin", "", "")
 				stdout := fs.String("stdout", "", "")
 				stderr := fs.String("stderr", "", "")
 				fs.String("waitSock", "", "")
 				fs.Parse(cmd.Args[1:])
 
+				// open all the IO pipes
 				si, err := os.Open(*stdin)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -78,8 +92,16 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				se, err := os.OpenFile(*stderr, os.O_APPEND|os.O_WRONLY, 0600)
 				Expect(err).NotTo(HaveOccurred())
 
-				so.WriteString("hello stdout")
+				// write to log file
+				Expect(ioutil.WriteFile(*logFile, []byte(dadooWritesLogs), 0700)).To(Succeed())
 
+				// return exit status on fd3
+				_, err = fd3.Write([]byte{runcReturns})
+				Expect(err).NotTo(HaveOccurred())
+				fd3.Close()
+
+				// do some test IO (directly write to stdout and copy stdin->stderr)
+				so.WriteString("hello stdout")
 				_, err = io.Copy(se, si)
 				Expect(err).NotTo(HaveOccurred())
 			}(cmd)
@@ -115,6 +137,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 						"-stdin", filepath.Join(processPath, "the-pid", "stdin"),
 						"-stdout", filepath.Join(processPath, "the-pid", "stdout"),
 						"-stderr", filepath.Join(processPath, "the-pid", "stderr"),
+						"-log", filepath.Join(processPath, "the-pid", "log"),
 						"exec", "path-to-runc", filepath.Join(processPath, "the-pid"), "some-handle",
 					),
 				)
@@ -153,6 +176,46 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 					_, err := runner.Run(log, &specs.Process{Env: []string{"USE_DADOO=true"}, Args: []string{"Banana", "rama"}}, processPath, "some-handle", nil, garden.ProcessIO{})
 					Expect(err).To(MatchError(ContainSubstring("boom")))
+				})
+			})
+
+			Describe("Logging", func() {
+				It("sends all the logs to the logger", func() {
+					_, err := runner.Run(log, &specs.Process{Env: []string{"USE_DADOO=true"}, Args: []string{"Banana", "rama"}}, processPath, "some-handle", nil, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+
+					runcLogs := make([]lager.LogFormat, 0)
+					for _, log := range log.Logs() {
+						if log.Message == "test.exec.runc" {
+							runcLogs = append(runcLogs, log)
+						}
+					}
+
+					Expect(runcLogs).To(HaveLen(3))
+					Expect(runcLogs[0].Data).To(HaveKeyWithValue("message", "signal: potato"))
+				})
+
+				Context("when `runC exec` fails", func() {
+					BeforeEach(func() {
+						runcReturns = 3
+					})
+
+					It("return an error including parsed logs when runC fails to start the container", func() {
+						_, err := runner.Run(log, &specs.Process{Env: []string{"USE_DADOO=true"}, Args: []string{"Banana", "rama"}}, processPath, "some-handle", nil, garden.ProcessIO{})
+						Expect(err).To(MatchError("runc exec: exit status 3: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
+					})
+
+					Context("when the log messages can't be parsed", func() {
+						BeforeEach(func() {
+							dadooWritesLogs = `foo="'
+					`
+						})
+
+						It("returns an error with only the exit status if the log can't be parsed", func() {
+							_, err := runner.Run(log, &specs.Process{Env: []string{"USE_DADOO=true"}, Args: []string{"Banana", "rama"}}, processPath, "some-handle", nil, garden.ProcessIO{})
+							Expect(err).To(MatchError("runc exec: exit status 3: "))
+						})
+					})
 				})
 			})
 

@@ -85,6 +85,20 @@ var _ = Describe("Run", func() {
 		),
 	)
 
+	It("forwards runc logs to lager when exec fails, and gives proper error messages", func() {
+		client = startGarden("--log-level", "debug")
+		container, err := client.Create(garden.ContainerSpec{})
+		Expect(err).NotTo(HaveOccurred())
+
+		_, err = container.Run(garden.ProcessSpec{
+			Env:  []string{"USE_DADOO=true"},
+			Path: "does-not-exit",
+		}, garden.ProcessIO{})
+		Expect(err).To(MatchError(ContainSubstring("executable file not found")))
+
+		Eventually(client).Should(gbytes.Say(`exec.runc`))
+	})
+
 	It("cleans up any files by the time the process exits", func() {
 		client = startGarden()
 		container, err := client.Create(garden.ContainerSpec{})
