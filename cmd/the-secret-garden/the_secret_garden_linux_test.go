@@ -75,7 +75,7 @@ var _ = Describe("The Secret Garden", func() {
 
 	It("exits non-zero when it fails to mount --make-shared", func() {
 		session = runSecretGarden("nnonexistent-dir", realGraphDir, secretGraphDir, "pwd")
-		Eventually(session).ShouldNot(gexec.Exit(0))
+		Eventually(session).Should(gexec.Exit(1))
 	})
 
 	It("changes the realGraphDir's permission accordingly", func() {
@@ -88,25 +88,20 @@ var _ = Describe("The Secret Garden", func() {
 		Expect(session.Out).To(gbytes.Say(exp))
 	})
 
-	It("exits non-zero when the realGraphDir is not a valid folder", func() {
-		session = runSecretGarden(fakeDataDir, "spiderman-kaput-dir", secretGraphDir, "ls")
-		Eventually(session).ShouldNot(gexec.Exit(0))
-	})
-
 	It("exits non-zero when it fails to mount the graph", func() {
 		session = runSecretGarden(fakeDataDir, realGraphDir, "no-such-dir", secretGraphDir, "mount")
-		Eventually(session).ShouldNot(gexec.Exit(0))
+		Eventually(session).Should(gexec.Exit(1))
 	})
 
 	It("exits non-zero when the command it execs fails", func() {
 		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "no-such-cmd")
-		Eventually(session).ShouldNot(gexec.Exit(0))
+		Eventually(session).Should(gexec.Exit(1))
 	})
 
 	It("passes the correct environment to the final process", func() {
 		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "sh", "-c", "echo $BAR")
 		Eventually(session.Out).Should(gbytes.Say("foo"))
-		Eventually(session).ShouldNot(gexec.Exit(0))
+		Eventually(session).Should(gexec.Exit(0))
 	})
 
 	Context("when a mount is created outside the namespace", func() {

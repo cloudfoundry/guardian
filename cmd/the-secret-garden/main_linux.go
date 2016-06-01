@@ -93,7 +93,8 @@ func run(cmd *exec.Cmd) error {
 func mustRun(cmd *exec.Cmd) string {
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		panic(fmt.Sprintf("%s: %s: %s", cmd.Path, err, string(out)))
+		fmt.Printf("%s: %s: %s", cmd.Path, err, string(out))
+		os.Exit(1)
 	}
 
 	return string(out)
