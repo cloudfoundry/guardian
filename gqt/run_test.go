@@ -85,20 +85,6 @@ var _ = Describe("Run", func() {
 		),
 	)
 
-	It("forwards runc logs to lager when exec fails, and gives proper error messages", func() {
-		client = startGarden("--log-level", "debug")
-		container, err := client.Create(garden.ContainerSpec{})
-		Expect(err).NotTo(HaveOccurred())
-
-		_, err = container.Run(garden.ProcessSpec{
-			Env:  []string{"USE_DADOO=true"},
-			Path: "does-not-exit",
-		}, garden.ProcessIO{})
-		Expect(err).To(MatchError(ContainSubstring("executable file not found")))
-
-		Eventually(client).Should(gbytes.Say(`exec.runc`))
-	})
-
 	It("cleans up any files by the time the process exits", func() {
 		client = startGarden()
 		container, err := client.Create(garden.ContainerSpec{})
@@ -297,6 +283,57 @@ var _ = Describe("Run", func() {
 			Entry("for empty user", "", []string{}, []string{"USER=ppp", "HOME=/home/ppp"}),
 			Entry("when we specify the env in processSpec", "alice", []string{"USER=alice", "HI=YO"}, []string{"USER=alice", "HOME=/home/ppp", "HI=YO"}),
 		)
+	})
+
+	Describe("dadoo exec", func() {
+		It("forwards runc logs to lager when exec fails, and gives proper error messages", func() {
+			client = startGarden("--log-level", "debug")
+			container, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = container.Run(garden.ProcessSpec{
+				Env:  []string{"USE_DADOO=true"},
+				Path: "does-not-exit",
+			}, garden.ProcessIO{})
+			Expect(err).To(MatchError(ContainSubstring("executable file not found")))
+
+			Eventually(client).Should(gbytes.Say(`exec.runc`))
+		})
+
+		Describe("Signalling", func() {
+			It("should forward SIGTERM to the process", func(done Done) {
+				client = startGarden()
+
+				container, err := client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				buffer := gbytes.NewBuffer()
+				proc, err := container.Run(garden.ProcessSpec{
+					Path: "sh",
+					Args: []string{"-c", `
+					trap 'exit 42' TERM
+
+					while true; do
+					  echo 'sleeping'
+					  sleep 1
+					done
+				`},
+					Env: []string{"USE_DADOO=true"},
+				}, garden.ProcessIO{
+					Stdout: buffer,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(buffer).Should(gbytes.Say("sleeping"))
+
+				err = proc.Signal(garden.SignalTerminate)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(proc.Wait()).To(Equal(42))
+
+				close(done)
+			}, 20.0)
+		})
 	})
 
 	Describe("Signalling", func() {

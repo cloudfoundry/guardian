@@ -3,6 +3,7 @@ package dadoo
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -20,19 +21,26 @@ import (
 	"github.com/pivotal-golang/lager"
 )
 
+//go:generate counterfeiter . PidGetter
+type PidGetter interface {
+	Pid(pidFilePath string) (int, error)
+}
+
 type ExecRunner struct {
 	dadooPath      string
 	runcPath       string
-	pidGen         runrunc.UidGenerator
+	processIDGen   runrunc.UidGenerator
+	pidGetter      PidGetter
 	iodaemonRunner runrunc.ExecRunner
 	commandRunner  command_runner.CommandRunner
 }
 
-func NewExecRunner(dadooPath, runcPath string, pidGen runrunc.UidGenerator, iodaemonRunner runrunc.ExecRunner, commandRunner command_runner.CommandRunner) *ExecRunner {
+func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, iodaemonRunner runrunc.ExecRunner, commandRunner command_runner.CommandRunner) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:      dadooPath,
 		runcPath:       runcPath,
-		pidGen:         pidGen,
+		processIDGen:   processIDGen,
+		pidGetter:      pidGetter,
 		iodaemonRunner: iodaemonRunner,
 		commandRunner:  commandRunner,
 	}
@@ -45,19 +53,19 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 
 	log = log.Session("exec")
 
-	pid := d.pidGen.Generate()
-	path := filepath.Join(processesPath, pid)
+	processID := d.processIDGen.Generate()
+	processPath := filepath.Join(processesPath, processID)
 
 	encodedSpec, err := json.Marshal(spec)
 	if err != nil {
 		return nil, err // this could *almost* be a panic: a valid spec should always encode (but out of caution we'll error)
 	}
 
-	if err := os.MkdirAll(path, 0700); err != nil {
+	if err := os.MkdirAll(processPath, 0700); err != nil {
 		return nil, err
 	}
 
-	pipes, pipeArgs, err := mkFifos(pio, filepath.Join(path, "stdin"), filepath.Join(path, "stdout"), filepath.Join(path, "stderr"))
+	pipes, pipeArgs, err := mkFifos(pio, filepath.Join(processPath, "stdin"), filepath.Join(processPath, "stdout"), filepath.Join(processPath, "stderr"))
 	if err != nil {
 		return nil, err
 	}
@@ -69,8 +77,8 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 
 	defer fd3r.Close()
 
-	logFile := filepath.Join(path, "log")
-	cmd := exec.Command(d.dadooPath, append(pipeArgs, "-log", logFile, "exec", d.runcPath, path, handle)...)
+	logFile := filepath.Join(processPath, "log")
+	cmd := exec.Command(d.dadooPath, append(pipeArgs, "-log", logFile, "exec", d.runcPath, processPath, handle)...)
 	cmd.Stdin = bytes.NewReader(encodedSpec)
 	cmd.ExtraFiles = []*os.File{
 		fd3w,
@@ -97,18 +105,31 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])
 	}
 
-	return d.newProcess(cmd), nil
+	return d.newProcess(cmd, filepath.Join(processPath, "pidfile")), nil
 }
 
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	return d.iodaemonRunner.Attach(log, processID, io, processesPath)
 }
 
-type process struct {
-	wait func() error
+type osSignal garden.Signal
+
+func (s osSignal) OsSignal() syscall.Signal {
+	switch garden.Signal(s) {
+	case garden.SignalTerminate:
+		return syscall.SIGTERM
+	default:
+		return syscall.SIGKILL
+	}
 }
 
-func (d *ExecRunner) newProcess(cmd *exec.Cmd) *process {
+type process struct {
+	pidFilePath string
+	pidGetter   PidGetter
+	wait        func() error
+}
+
+func (d *ExecRunner) newProcess(cmd *exec.Cmd, pidFilePath string) *process {
 	exitCh := make(chan struct{})
 	var exitErr error
 	go func() {
@@ -121,6 +142,8 @@ func (d *ExecRunner) newProcess(cmd *exec.Cmd) *process {
 			<-exitCh
 			return exitErr
 		},
+		pidFilePath: pidFilePath,
+		pidGetter:   d.pidGetter,
 	}
 }
 
@@ -150,8 +173,18 @@ func (p *process) SetTTY(garden.TTYSpec) error {
 	return nil
 }
 
-func (p *process) Signal(garden.Signal) error {
-	return nil
+func (p *process) Signal(signal garden.Signal) error {
+	pid, err := p.pidGetter.Pid(p.pidFilePath)
+	if err != nil {
+		return errors.New(fmt.Sprintf("fetching-pid: %s", err))
+	}
+
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return errors.New(fmt.Sprintf("finding-process: %s", err))
+	}
+
+	return process.Signal(osSignal(signal).OsSignal())
 }
 
 type ExitError interface {

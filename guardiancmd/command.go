@@ -545,6 +545,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 			dadooPath,
 			runcPath,
 			cmd.wireUidGenerator(),
+			pidFileReader,
 			runrunc.NewIodaemonExecRunner(cmd.wireUidGenerator(), goci.RuncBinary(runcPath),
 				process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", cmd.Server.Tag), "processes"), iodaemonPath, commandRunner, pidFileReader),
 				&runrunc.Watcher{}), linux_command_runner.New()),

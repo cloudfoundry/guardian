@@ -14,11 +14,13 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
+	dadoofakes "github.com/cloudfoundry-incubator/guardian/rundmc/dadoo/fakes"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/fakes"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
@@ -26,32 +28,38 @@ import (
 
 var _ = Describe("Dadoo ExecRunner", func() {
 	var (
-		fakeIodaemonRunner    *fakes.FakeExecRunner
-		fakeCommandRunner     *fake_command_runner.FakeCommandRunner
-		fakePidGenerator      *fakes.FakeUidGenerator
-		runner                *dadoo.ExecRunner
-		processPath           string
-		receivedStdinContents []byte
-		runcReturns           byte
-		dadooReturns          error
-		dadooWritesLogs       string
-		log                   *lagertest.TestLogger
+		fakeIodaemonRunner     *fakes.FakeExecRunner
+		fakeCommandRunner      *fake_command_runner.FakeCommandRunner
+		fakeProcessIDGenerator *fakes.FakeUidGenerator
+		fakePidGetter          *dadoofakes.FakePidGetter
+		runner                 *dadoo.ExecRunner
+		processPath            string
+		pidPath                string
+		receivedStdinContents  []byte
+		runcReturns            byte
+		dadooReturns           error
+		dadooWritesLogs        string
+		log                    *lagertest.TestLogger
 	)
 
 	BeforeEach(func() {
 		fakeIodaemonRunner = new(fakes.FakeExecRunner)
 		fakeCommandRunner = fake_command_runner.New()
-		fakePidGenerator = new(fakes.FakeUidGenerator)
+		fakeProcessIDGenerator = new(fakes.FakeUidGenerator)
+		fakePidGetter = new(dadoofakes.FakePidGetter)
 
-		fakePidGenerator.GenerateReturns("the-pid")
+		fakeProcessIDGenerator.GenerateReturns("the-pid")
+		fakePidGetter.PidReturns(0, nil)
 
 		bundlePath, err := ioutil.TempDir("", "dadooexecrunnerbundle")
 		Expect(err).NotTo(HaveOccurred())
 		processPath = filepath.Join(bundlePath, "the-process")
+		pidPath = filepath.Join(processPath, "0.pid")
 
-		runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakePidGenerator, fakeIodaemonRunner, fakeCommandRunner)
+		runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeIodaemonRunner, fakeCommandRunner)
 		log = lagertest.NewTestLogger("test")
 
+		runcReturns = 0
 		dadooReturns = nil
 		dadooWritesLogs = `time="2016-03-02T13:56:38Z" level=warning msg="signal: potato"
 				time="2016-03-02T13:56:38Z" level=error msg="fork/exec POTATO: no such file or directory"
@@ -220,6 +228,79 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 
 			Describe("the returned garden.Process", func() {
+				Describe("Signal", func() {
+					It("reads the PID from the pid file", func() {
+						process, err := runner.Run(log, &specs.Process{Env: []string{"USE_DADOO=true"}, Args: []string{"Banana", "rama"}}, processPath, "some-handle", nil, garden.ProcessIO{})
+						Expect(err).NotTo(HaveOccurred())
+
+						process.Signal(garden.SignalTerminate)
+						Expect(fakePidGetter.PidArgsForCall(0)).To(Equal(filepath.Join(processPath, "the-pid", "pidfile")))
+					})
+
+					Context("when the pidGetter returns an error", func() {
+						BeforeEach(func() {
+							fakePidGetter.PidReturns(0, errors.New("Unable to get PID"))
+						})
+
+						It("returns an appropriate error", func() {
+							process, err := runner.Run(log, &specs.Process{Env: []string{"USE_DADOO=true"}, Args: []string{"Banana", "rama"}}, processPath, "some-handle", nil, garden.ProcessIO{})
+							Expect(err).NotTo(HaveOccurred())
+
+							Expect(process.Signal(garden.SignalTerminate)).To(MatchError("fetching-pid: Unable to get PID"))
+						})
+					})
+
+					Context("when there is a process running", func() {
+						var (
+							cmd  *exec.Cmd
+							sess *gexec.Session
+						)
+
+						BeforeEach(func() {
+							var err error
+
+							cmd = exec.Command("sh", "-c", "trap 'exit 41' TERM; while true; do echo trapping; sleep 1; done")
+							sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+							Expect(err).NotTo(HaveOccurred())
+
+							Eventually(sess).Should(gbytes.Say("trapping"))
+						})
+
+						It("gets signalled", func() {
+							process, err := runner.Run(
+								log,
+								&specs.Process{
+									Env:  []string{"USE_DADOO=true"},
+									Args: []string{"echo", "This won't actually do anything as the command runner is faked"},
+								},
+								processPath,
+								"some-handle",
+								nil,
+								garden.ProcessIO{},
+							)
+							Expect(err).NotTo(HaveOccurred())
+
+							fakePidGetter.PidReturns(cmd.Process.Pid, nil)
+							Expect(process.Signal(garden.SignalTerminate)).To(Succeed())
+
+							Eventually(sess, "5s").Should(gexec.Exit(41))
+						})
+					})
+
+					Context("when os.Signal returns an error", func() {
+						BeforeEach(func() {
+							fakePidGetter.PidReturns(0, nil)
+						})
+
+						It("forwards the error", func() {
+							process, err := runner.Run(log, &specs.Process{Env: []string{"USE_DADOO=true"}, Args: []string{"echo", ""}}, processPath, "some-handle", nil, garden.ProcessIO{})
+							Expect(err).NotTo(HaveOccurred())
+
+							Expect(process.Signal(garden.SignalTerminate)).To(MatchError("os: process not initialized"))
+						})
+					})
+				})
+
 				Describe("Wait", func() {
 					It("returns the exit code of the dadoo process", func() {
 						fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: "path-to-dadoo"}, func(cmd *exec.Cmd) error {

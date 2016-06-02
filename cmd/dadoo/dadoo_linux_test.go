@@ -37,6 +37,8 @@ var _ = Describe("Dadoo", func() {
 		bundlePath, err = ioutil.TempDir("", "dadoobundlepath")
 		Expect(err).NotTo(HaveOccurred())
 
+		Expect(syscall.Mount("tmpfs", bundlePath, "tmpfs", 0, "")).To(Succeed())
+
 		cmd := exec.Command("runc", "spec")
 		cmd.Dir = bundlePath
 		Expect(cmd.Run()).To(Succeed())
@@ -61,6 +63,8 @@ var _ = Describe("Dadoo", func() {
 	})
 
 	AfterEach(func() {
+		// Note: We're not umounting the tmpfs here as it can cause a bug in AUFS
+		// to surface and lock up the VM running the test
 		os.RemoveAll(filepath.Join(bundlePath, "root"))
 		os.RemoveAll(bundlePath)
 	})
