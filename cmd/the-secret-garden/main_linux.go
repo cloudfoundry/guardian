@@ -50,7 +50,7 @@ func main() {
 
 	mustRun(exec.Command("mkdir", "-p", graphDir))
 
-	mustBindMountOnce(dataDir, dataDir)
+	mustRBindMountOnce(dataDir, dataDir)
 	mustRun(exec.Command("mount", "--make-shared", dataDir))
 
 	reexecInNamespace(os.Args[1:]...)
@@ -74,11 +74,19 @@ func reexecInNamespace(args ...string) {
 }
 
 func mustBindMountOnce(srcDir, dstDir string) {
+	mustMountOnce(srcDir, dstDir, "--bind")
+}
+
+func mustRBindMountOnce(srcDir, dstDir string) {
+	mustMountOnce(srcDir, dstDir, "--rbind")
+}
+
+func mustMountOnce(srcDir, dstDir, option string) {
 	mounts := mustRun(exec.Command("mount"))
 	alreadyMounted := strings.Contains(mounts, fmt.Sprintf("%s on %s", srcDir, dstDir))
 
 	if !alreadyMounted {
-		mustRun(exec.Command("mount", "--bind", srcDir, dstDir))
+		mustRun(exec.Command("mount", option, srcDir, dstDir))
 	}
 }
 
