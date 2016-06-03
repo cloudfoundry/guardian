@@ -69,37 +69,29 @@ func run() int {
 		return 2
 	}
 
-	containerPid := -2
+	var status syscall.WaitStatus
+	var rusage syscall.Rusage
+	_, err := syscall.Wait4(runcStartCmd.Process.Pid, &status, 0, &rusage)
+	check(err) // Start succeeded but Wait4 failed, this can only be a programmer error
+
+	fd3.Write([]byte{byte(status.ExitStatus())})
+	if status.ExitStatus() != 0 {
+		return 3 // nothing to wait for, container didn't launch
+	}
+
+	containerPid, err := readPid(pidFilePath)
+	check(err)
+
 	for range signals {
-
-		exits := make(map[int]int)
 		for {
-			var status syscall.WaitStatus
-			var rusage syscall.Rusage
 			wpid, err := syscall.Wait4(-1, &status, syscall.WNOHANG, &rusage)
-
 			if err != nil || wpid <= 0 {
 				break // wait for next SIGCHLD
 			}
 
-			if wpid == runcStartCmd.Process.Pid {
-				fd3.Write([]byte{byte(status.ExitStatus())})
-
-				if status.ExitStatus() != 0 {
-					return 3 // nothing to wait for, container didn't launch
-				}
-
-				containerPid, err = readPid(pidFilePath)
-				check(err)
-			}
-
-			if wpid == containerPid || containerPid < 0 {
-				exits[wpid] = status.ExitStatus()
-			}
-
-			if status, ok := exits[containerPid]; ok {
+			if wpid == containerPid {
 				check(exec.Command(runtime, "delete", containerId).Run())
-				return status
+				return status.ExitStatus()
 			}
 		}
 	}
