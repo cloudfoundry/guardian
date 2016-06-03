@@ -162,6 +162,31 @@ var _ = Describe("Dadoo", func() {
 
 				Expect(string(stdout)).To(Equal("hello"))
 			})
+
+			It("should remove the process directory when it exits", func() {
+				spec := specs.Process{
+					Args: []string{"/bin/sh", "-c", "cat <&0"},
+					Cwd:  "/",
+				}
+
+				encSpec, err := json.Marshal(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				cmd := exec.Command(dadooBinPath, "-stdin", stdinPipe, "exec", "runc", path.Join(bundlePath, "processes", "abc"), filepath.Base(bundlePath))
+				cmd.Stdin = bytes.NewReader(encSpec)
+				_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				stdinP, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(path.Join(bundlePath, "processes", "abc")).Should(BeADirectory())
+				Consistently(path.Join(bundlePath, "processes", "abc")).Should(BeADirectory())
+
+				Expect(stdinP.Close()).To(Succeed()) // close stdin so process exits
+
+				Eventually(path.Join(bundlePath, "processes", "abc")).ShouldNot(BeADirectory())
+			})
 		})
 	})
 

@@ -16,6 +16,10 @@ import (
 )
 
 func main() {
+	os.Exit(run())
+}
+
+func run() int {
 	var logFile, stdoutPath, stdinPath, stderrPath string
 	flag.StringVar(&logFile, "log", "dadoo.log", "dadoo log file path")
 	flag.StringVar(&stdoutPath, "stdout", "", "path to stdout")
@@ -26,7 +30,7 @@ func main() {
 
 	command := flag.Args()[0] // e.g. run
 	runtime := flag.Args()[1] // e.g. runc
-	bundlePath := flag.Args()[2]
+	dir := flag.Args()[2]     // bundlePath for run, processPath for exec
 	containerId := flag.Args()[3]
 
 	fd3 := os.NewFile(3, "/proc/self/fd/3")
@@ -34,25 +38,27 @@ func main() {
 	signals := make(chan os.Signal, 100)
 	signal.Notify(signals, syscall.SIGCHLD)
 
-	pidFilePath := filepath.Join(bundlePath, "pidfile")
+	pidFilePath := filepath.Join(dir, "pidfile")
 
 	var runcStartCmd *exec.Cmd
 	switch command {
 	case "run":
 		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "start", "-d", "-pid-file", pidFilePath, containerId)
-		runcStartCmd.Dir = bundlePath
+		runcStartCmd.Dir = dir
 
 		// listen to an exit socket early so waiters can wait for dadoo
-		dadoo.Listen(filepath.Join(bundlePath, "exit.sock"))
+		dadoo.Listen(filepath.Join(dir, "exit.sock"))
 	case "exec":
-		check(os.MkdirAll(bundlePath, 0700))
+		check(os.MkdirAll(dir, 0700))
+		defer os.RemoveAll(dir) // for exec dadoo is responsible for creating & cleaning up
+
 		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
 		runcStartCmd.Stdin = forwardReadFIFO(stdinPath)
 		runcStartCmd.Stdout = forwardWriteFIFO(stdoutPath)
 		runcStartCmd.Stderr = forwardWriteFIFO(stderrPath)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s", command)
-		os.Exit(127)
+		return 127
 	}
 
 	// we need to be the subreaper so we can wait on the detached container process
@@ -60,7 +66,7 @@ func main() {
 
 	if err := runcStartCmd.Start(); err != nil {
 		fd3.Write([]byte{2})
-		os.Exit(2)
+		return 2
 	}
 
 	containerPid := -2
@@ -80,7 +86,7 @@ func main() {
 				fd3.Write([]byte{byte(status.ExitStatus())})
 
 				if status.ExitStatus() != 0 {
-					os.Exit(3) // nothing to wait for, container didn't launch
+					return 3 // nothing to wait for, container didn't launch
 				}
 
 				containerPid, err = readPid(pidFilePath)
@@ -93,10 +99,12 @@ func main() {
 
 			if status, ok := exits[containerPid]; ok {
 				check(exec.Command(runtime, "delete", containerId).Run())
-				os.Exit(status)
+				return status
 			}
 		}
 	}
+
+	return 0
 }
 
 func check(err error) {
