@@ -42,7 +42,7 @@ func (fn LookupFunc) Lookup(rootfsPath, user string) (*user.ExecUser, error) {
 }
 
 type BundleLoader interface {
-	Load(path string) (*goci.Bndl, error)
+	Load(path string) (goci.Bndl, error)
 }
 
 type Process interface {
@@ -245,7 +245,7 @@ type usr struct {
 	home                       string
 }
 
-func (r *execPreparer) lookupUser(bndl *goci.Bndl, rootfsPath, username string) (*usr, error) {
+func (r *execPreparer) lookupUser(bndl goci.Bndl, rootfsPath, username string) (*usr, error) {
 	u, err := r.users.Lookup(rootfsPath, username)
 	if err != nil {
 		return nil, err

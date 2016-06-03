@@ -10,7 +10,7 @@ import (
 
 var _ = Describe("Env Rule", func() {
 	var (
-		newBndl *goci.Bndl
+		newBndl goci.Bndl
 		rule    bundlerules.Env
 	)
 

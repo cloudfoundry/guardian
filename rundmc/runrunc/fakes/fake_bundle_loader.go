@@ -9,18 +9,18 @@ import (
 )
 
 type FakeBundleLoader struct {
-	LoadStub        func(path string) (*goci.Bndl, error)
+	LoadStub        func(path string) (goci.Bndl, error)
 	loadMutex       sync.RWMutex
 	loadArgsForCall []struct {
 		path string
 	}
 	loadReturns struct {
-		result1 *goci.Bndl
+		result1 goci.Bndl
 		result2 error
 	}
 }
 
-func (fake *FakeBundleLoader) Load(path string) (*goci.Bndl, error) {
+func (fake *FakeBundleLoader) Load(path string) (goci.Bndl, error) {
 	fake.loadMutex.Lock()
 	fake.loadArgsForCall = append(fake.loadArgsForCall, struct {
 		path string
@@ -45,10 +45,10 @@ func (fake *FakeBundleLoader) LoadArgsForCall(i int) string {
 	return fake.loadArgsForCall[i].path
 }
 
-func (fake *FakeBundleLoader) LoadReturns(result1 *goci.Bndl, result2 error) {
+func (fake *FakeBundleLoader) LoadReturns(result1 goci.Bndl, result2 error) {
 	fake.LoadStub = nil
 	fake.loadReturns = struct {
-		result1 *goci.Bndl
+		result1 goci.Bndl
 		result2 error
 	}{result1, result2}
 }

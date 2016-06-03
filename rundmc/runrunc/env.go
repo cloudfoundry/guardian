@@ -31,7 +31,7 @@ func envWithUser(env []string, user string) []string {
 	}
 }
 
-func envFor(uid int, bndl *goci.Bndl, spec garden.ProcessSpec) []string {
+func envFor(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string {
 	requestedEnv := append(bndl.Spec.Process.Env, spec.Env...)
 
 	defaultPath := DefaultPath

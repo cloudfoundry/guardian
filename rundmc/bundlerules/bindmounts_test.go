@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("BindMountsRule", func() {
-	var newBndl *goci.Bndl
+	var newBndl goci.Bndl
 
 	BeforeEach(func() {
 		newBndl = bundlerules.BindMounts{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{

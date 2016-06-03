@@ -22,7 +22,7 @@ var _ = Describe("RootFS", func() {
 		commandRunner *fake_command_runner.FakeCommandRunner
 
 		rootfsPath     string
-		returnedBundle *goci.Bndl
+		returnedBundle goci.Bndl
 		privileged     bool
 	)
 

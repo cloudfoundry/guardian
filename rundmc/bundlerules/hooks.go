@@ -13,7 +13,7 @@ type Hooks struct {
 	LogFilePattern string
 }
 
-func (r Hooks) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
+func (r Hooks) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
 	env := []string{fmt.Sprintf(
 		"GARDEN_LOG_FILE="+r.LogFilePattern, spec.Handle),
 		"PATH=" + os.Getenv("PATH"),

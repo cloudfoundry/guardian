@@ -10,17 +10,17 @@ import (
 )
 
 type FakeBundleGenerator struct {
-	GenerateStub        func(spec gardener.DesiredContainerSpec) *goci.Bndl
+	GenerateStub        func(spec gardener.DesiredContainerSpec) goci.Bndl
 	generateMutex       sync.RWMutex
 	generateArgsForCall []struct {
 		spec gardener.DesiredContainerSpec
 	}
 	generateReturns struct {
-		result1 *goci.Bndl
+		result1 goci.Bndl
 	}
 }
 
-func (fake *FakeBundleGenerator) Generate(spec gardener.DesiredContainerSpec) *goci.Bndl {
+func (fake *FakeBundleGenerator) Generate(spec gardener.DesiredContainerSpec) goci.Bndl {
 	fake.generateMutex.Lock()
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
 		spec gardener.DesiredContainerSpec
@@ -45,10 +45,10 @@ func (fake *FakeBundleGenerator) GenerateArgsForCall(i int) gardener.DesiredCont
 	return fake.generateArgsForCall[i].spec
 }
 
-func (fake *FakeBundleGenerator) GenerateReturns(result1 *goci.Bndl) {
+func (fake *FakeBundleGenerator) GenerateReturns(result1 goci.Bndl) {
 	fake.GenerateStub = nil
 	fake.generateReturns = struct {
-		result1 *goci.Bndl
+		result1 goci.Bndl
 	}{result1}
 }
 

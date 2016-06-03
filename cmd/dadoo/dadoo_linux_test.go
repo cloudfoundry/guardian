@@ -27,7 +27,7 @@ import (
 var _ = Describe("Dadoo", func() {
 	var (
 		bundlePath string
-		bundle     *goci.Bndl
+		bundle     goci.Bndl
 	)
 
 	BeforeEach(func() {

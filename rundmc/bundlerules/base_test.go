@@ -11,7 +11,7 @@ import (
 
 var _ = Describe("Base", func() {
 	var (
-		privilegeBndl, unprivilegeBndl *goci.Bndl
+		privilegeBndl, unprivilegeBndl goci.Bndl
 
 		rule bundlerules.Base
 	)
@@ -28,7 +28,7 @@ var _ = Describe("Base", func() {
 
 	Context("when it is privileged", func() {
 		It("should use the correct base", func() {
-			retBndl := rule.Apply(nil, gardener.DesiredContainerSpec{
+			retBndl := rule.Apply(goci.Bndl{}, gardener.DesiredContainerSpec{
 				Privileged: true,
 			})
 
@@ -38,7 +38,7 @@ var _ = Describe("Base", func() {
 
 	Context("when it is not privileged", func() {
 		It("should use the correct base", func() {
-			retBndl := rule.Apply(nil, gardener.DesiredContainerSpec{
+			retBndl := rule.Apply(goci.Bndl{}, gardener.DesiredContainerSpec{
 				Privileged: false,
 			})
 

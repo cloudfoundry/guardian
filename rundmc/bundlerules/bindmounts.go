@@ -10,7 +10,7 @@ import (
 type BindMounts struct {
 }
 
-func (b BindMounts) Apply(bndl *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
+func (b BindMounts) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
 	var mounts []specs.Mount
 	for _, m := range spec.BindMounts {
 		modeOpt := "ro"

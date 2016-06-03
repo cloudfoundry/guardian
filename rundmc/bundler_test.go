@@ -25,7 +25,7 @@ var _ = Describe("BundleTemplate", func() {
 
 		It("returns the bundle from the first rule", func() {
 			returnedSpec := goci.Bndl{}.WithRootFS("something")
-			rule.ApplyStub = func(bndle *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
+			rule.ApplyStub = func(bndle goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
 				Expect(spec.RootFSPath).To(Equal("the-rootfs"))
 				return returnedSpec
 			}
@@ -34,11 +34,11 @@ var _ = Describe("BundleTemplate", func() {
 			Expect(result).To(Equal(returnedSpec))
 		})
 
-		It("passes nil as the bundle to the first rule", func() {
+		It("passes an empty bundle to the first rule", func() {
 			bundler.Generate(gardener.DesiredContainerSpec{})
 
 			bndl, _ := rule.ApplyArgsForCall(0)
-			Expect(bndl).To(BeNil())
+			Expect(bndl).To(Equal(goci.Bndl{}))
 		})
 	})
 

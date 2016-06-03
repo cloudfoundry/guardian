@@ -74,7 +74,7 @@ func (d *DirectoryDepot) Destroy(log lager.Logger, handle string) error {
 
 //go:generate counterfeiter . BundleLoader
 type BundleLoader interface {
-	Load(bundleDir string) (*goci.Bndl, error)
+	Load(bundleDir string) (goci.Bndl, error)
 }
 
 func (d *DirectoryDepot) Handles() ([]string, error) {

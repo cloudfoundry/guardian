@@ -62,8 +62,8 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("Create", func() {
 		It("should ask the depot to create a container", func() {
-			var returnedBundle *goci.Bndl
-			fakeBundler.GenerateStub = func(spec gardener.DesiredContainerSpec) *goci.Bndl {
+			var returnedBundle goci.Bndl
+			fakeBundler.GenerateStub = func(spec gardener.DesiredContainerSpec) goci.Bndl {
 				return returnedBundle
 			}
 
@@ -419,14 +419,14 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("Info", func() {
 		BeforeEach(func() {
-			fakeBundleLoader.LoadStub = func(bundlePath string) (*goci.Bndl, error) {
+			fakeBundleLoader.LoadStub = func(bundlePath string) (goci.Bndl, error) {
 				if bundlePath != "/path/to/some-handle" {
-					return nil, errors.New("cannot find bundle")
+					return goci.Bundle(), errors.New("cannot find bundle")
 				}
 
 				var limit uint64 = 10
 				var shares uint64 = 20
-				return &goci.Bndl{
+				return goci.Bndl{
 					Spec: specs.Spec{
 						Linux: specs.Linux{
 							Resources: &specs.Resources{
@@ -471,7 +471,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when loading the bundle fails", func() {
 			It("should return the error", func() {
-				fakeBundleLoader.LoadReturns(nil, errors.New("aquaman-error"))
+				fakeBundleLoader.LoadReturns(goci.Bundle(), errors.New("aquaman-error"))
 				_, err := containerizer.Info(logger, "some-handle")
 				Expect(err).To(MatchError("aquaman-error"))
 			})

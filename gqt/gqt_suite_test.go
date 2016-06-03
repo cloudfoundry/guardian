@@ -38,7 +38,7 @@ func TestGqt(t *testing.T) {
 		}
 
 		if bins["oci_runtime_path"] != "" {
-			bins["garden_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/guardian", "-tags", "daemon")
+			bins["garden_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/guardian", "-tags", "daemon", "-race")
 			Expect(err).NotTo(HaveOccurred())
 
 			bins["kawasaki_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/kawasaki")

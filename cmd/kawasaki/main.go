@@ -93,7 +93,7 @@ func main() {
 	}
 }
 
-func extractRootIds(bndl *goci.Bndl) (int, int) {
+func extractRootIds(bndl goci.Bndl) (int, int) {
 	rootUid := 0
 	for _, mapping := range bndl.Spec.Linux.UIDMappings {
 		if mapping.ContainerID == 0 && mapping.Size >= 1 {

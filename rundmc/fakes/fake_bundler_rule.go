@@ -10,21 +10,21 @@ import (
 )
 
 type FakeBundlerRule struct {
-	ApplyStub        func(bndle *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl
+	ApplyStub        func(bndle goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
-		bndle *goci.Bndl
+		bndle goci.Bndl
 		spec  gardener.DesiredContainerSpec
 	}
 	applyReturns struct {
-		result1 *goci.Bndl
+		result1 goci.Bndl
 	}
 }
 
-func (fake *FakeBundlerRule) Apply(bndle *goci.Bndl, spec gardener.DesiredContainerSpec) *goci.Bndl {
+func (fake *FakeBundlerRule) Apply(bndle goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
 	fake.applyMutex.Lock()
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
-		bndle *goci.Bndl
+		bndle goci.Bndl
 		spec  gardener.DesiredContainerSpec
 	}{bndle, spec})
 	fake.applyMutex.Unlock()
@@ -41,16 +41,16 @@ func (fake *FakeBundlerRule) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
-func (fake *FakeBundlerRule) ApplyArgsForCall(i int) (*goci.Bndl, gardener.DesiredContainerSpec) {
+func (fake *FakeBundlerRule) ApplyArgsForCall(i int) (goci.Bndl, gardener.DesiredContainerSpec) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
 	return fake.applyArgsForCall[i].bndle, fake.applyArgsForCall[i].spec
 }
 
-func (fake *FakeBundlerRule) ApplyReturns(result1 *goci.Bndl) {
+func (fake *FakeBundlerRule) ApplyReturns(result1 goci.Bndl) {
 	fake.ApplyStub = nil
 	fake.applyReturns = struct {
-		result1 *goci.Bndl
+		result1 goci.Bndl
 	}{result1}
 }
 

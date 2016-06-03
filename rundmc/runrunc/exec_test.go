@@ -100,8 +100,8 @@ var _ = Describe("IodaemonExecRunner", func() {
 			waitWatcher,
 		)
 
-		bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
-			bndl := &goci.Bndl{}
+		bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
+			bndl := goci.Bndl{}
 			return bndl, nil
 		}
 
@@ -271,8 +271,8 @@ var _ = Describe("ExecPreparer", func() {
 		bundlePath, err = ioutil.TempDir("", "bundle")
 		Expect(err).NotTo(HaveOccurred())
 
-		bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
-			bndl := &goci.Bndl{}
+		bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
+			bndl := goci.Bndl{}
 			return bndl, nil
 		}
 
@@ -376,7 +376,7 @@ var _ = Describe("ExecPreparer", func() {
 
 		Context("when the bundle can't be loaded", func() {
 			BeforeEach(func() {
-				bundleLoader.LoadReturns(nil, errors.New("whoa! Hold them horses!"))
+				bundleLoader.LoadReturns(goci.Bndl{}, errors.New("whoa! Hold them horses!"))
 			})
 
 			It("fails", func() {
@@ -496,7 +496,7 @@ var _ = Describe("ExecPreparer", func() {
 		var (
 			processEnv   []string
 			containerEnv []string
-			bndl         *goci.Bndl
+			bndl         goci.Bndl
 
 			spec *specs.Process
 		)
@@ -507,7 +507,7 @@ var _ = Describe("ExecPreparer", func() {
 		})
 
 		JustBeforeEach(func() {
-			bndl = &goci.Bndl{}
+			bndl = goci.Bndl{}
 			bndl.Spec.Process.Env = containerEnv
 			bundleLoader.LoadReturns(bndl, nil)
 
@@ -551,7 +551,7 @@ var _ = Describe("ExecPreparer", func() {
 
 	Context("when the container has capabilities", func() {
 		BeforeEach(func() {
-			bndl := &goci.Bndl{}
+			bndl := goci.Bndl{}
 			bndl.Spec.Process.Capabilities = []string{"foo", "bar", "baz"}
 			bundleLoader.LoadReturns(bndl, nil)
 		})
@@ -612,8 +612,8 @@ var _ = Describe("ExecPreparer", func() {
 
 				Context("when the container is unprivileged", func() {
 					BeforeEach(func() {
-						bundleLoader.LoadStub = func(path string) (*goci.Bndl, error) {
-							bndl := &goci.Bndl{}
+						bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
+							bndl := goci.Bndl{}
 							bndl.Spec.Linux.UIDMappings = []specs.IDMapping{{
 								HostID:      1712,
 								ContainerID: 1012,

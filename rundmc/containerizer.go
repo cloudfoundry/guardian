@@ -31,11 +31,11 @@ type Depot interface {
 }
 
 type BundleGenerator interface {
-	Generate(spec gardener.DesiredContainerSpec) *goci.Bndl
+	Generate(spec gardener.DesiredContainerSpec) goci.Bndl
 }
 
 type BundleLoader interface {
-	Load(path string) (*goci.Bndl, error)
+	Load(path string) (goci.Bndl, error)
 }
 
 type BundleRunner interface {
