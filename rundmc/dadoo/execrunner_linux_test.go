@@ -1,6 +1,7 @@
 package dadoo_test
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -78,12 +79,14 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			fd3fd, err := syscall.Dup(int(cmd.ExtraFiles[0].Fd()))
 			Expect(err).NotTo(HaveOccurred())
 			fd3 := os.NewFile(uintptr(fd3fd), "fd3dup")
+			fd4fd, err := syscall.Dup(int(cmd.ExtraFiles[1].Fd()))
+			Expect(err).NotTo(HaveOccurred())
+			fd4 := os.NewFile(uintptr(fd4fd), "fd4dup")
 
 			go func(cmd *exec.Cmd) {
 				defer GinkgoRecover()
 
 				fs := flag.NewFlagSet("something", flag.PanicOnError)
-				logFile := fs.String("log", "", "")
 				stdin := fs.String("stdin", "", "")
 				stdout := fs.String("stdout", "", "")
 				stderr := fs.String("stderr", "", "")
@@ -100,8 +103,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				se, err := os.OpenFile(*stderr, os.O_APPEND|os.O_WRONLY, 0600)
 				Expect(err).NotTo(HaveOccurred())
 
-				// write to log file
-				Expect(ioutil.WriteFile(*logFile, []byte(dadooWritesLogs), 0700)).To(Succeed())
+				// write log file to fd4
+				_, err = io.Copy(fd4, bytes.NewReader([]byte(dadooWritesLogs)))
+				Expect(err).NotTo(HaveOccurred())
+				fd4.Close()
 
 				// return exit status on fd3
 				_, err = fd3.Write([]byte{runcReturns})
@@ -145,7 +150,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 						"-stdin", filepath.Join(processPath, "the-pid", "stdin"),
 						"-stdout", filepath.Join(processPath, "the-pid", "stdout"),
 						"-stderr", filepath.Join(processPath, "the-pid", "stderr"),
-						"-log", filepath.Join(processPath, "the-pid", "log"),
 						"exec", "path-to-runc", filepath.Join(processPath, "the-pid"), "some-handle",
 					),
 				)

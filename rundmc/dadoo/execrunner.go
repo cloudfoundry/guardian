@@ -75,13 +75,19 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 		return nil, err
 	}
 
-	defer fd3r.Close()
+	logr, logw, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
 
-	logFile := filepath.Join(processPath, "log")
-	cmd := exec.Command(d.dadooPath, append(pipeArgs, "-log", logFile, "exec", d.runcPath, processPath, handle)...)
+	defer fd3r.Close()
+	defer logr.Close()
+
+	cmd := exec.Command(d.dadooPath, append(pipeArgs, "exec", d.runcPath, processPath, handle)...)
 	cmd.Stdin = bytes.NewReader(encodedSpec)
 	cmd.ExtraFiles = []*os.File{
 		fd3w,
+		logw,
 	}
 
 	if err := d.commandRunner.Start(cmd); err != nil {
@@ -89,6 +95,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 	}
 
 	fd3w.Close()
+	logw.Close()
 
 	if err := pipes.start(); err != nil {
 		return nil, err
@@ -98,7 +105,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 	fd3r.Read(runcExitStatus)
 
 	defer func() {
-		theErr = processLogs(log, logFile, theErr)
+		theErr = processLogs(log, logr, theErr)
 	}()
 
 	if runcExitStatus[0] != 0 {
@@ -249,13 +256,8 @@ func contains(envVars []string, envVar string) bool {
 	return false
 }
 
-func processLogs(log lager.Logger, logFile string, err error) error {
-	logFileR, openErr := os.Open(logFile)
-	if openErr != nil {
-		return fmt.Errorf("start: read log file: %s", openErr)
-	}
-
-	buff, readErr := ioutil.ReadAll(logFileR)
+func processLogs(log lager.Logger, logs io.Reader, err error) error {
+	buff, readErr := ioutil.ReadAll(logs)
 	if readErr != nil {
 		return fmt.Errorf("start: read log file: %s", readErr)
 	}

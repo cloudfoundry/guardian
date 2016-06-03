@@ -21,7 +21,7 @@ func main() {
 
 func run() int {
 	var logFile, stdoutPath, stdinPath, stderrPath string
-	flag.StringVar(&logFile, "log", "dadoo.log", "dadoo log file path")
+	flag.StringVar(&logFile, "log", fmt.Sprintf("/proc/%d/fd/4", os.Getpid()), "dadoo log file path")
 	flag.StringVar(&stdoutPath, "stdout", "", "path to stdout")
 	flag.StringVar(&stdinPath, "stdin", "", "path to stdin")
 	flag.StringVar(&stderrPath, "stderr", "", "path to stderr")
