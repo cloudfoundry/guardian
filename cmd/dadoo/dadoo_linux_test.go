@@ -55,7 +55,7 @@ var _ = Describe("Dadoo", func() {
 			WithProcess(specs.Process{Args: []string{"/bin/sh", "-c", "exit 12"}, Cwd: "/"}).
 			WithRootFS(path.Join(bundlePath, "root"))
 
-		SetDefaultEventuallyTimeout(5 * time.Second)
+		SetDefaultEventuallyTimeout(10 * time.Second)
 	})
 
 	JustBeforeEach(func() {
