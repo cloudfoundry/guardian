@@ -34,6 +34,7 @@ func run() int {
 	containerId := flag.Args()[3]
 
 	fd3 := os.NewFile(3, "/proc/self/fd/3")
+	fd4 := os.NewFile(4, "/proc/self/fd/4")
 
 	signals := make(chan os.Signal, 100)
 	signal.Notify(signals, syscall.SIGCHLD)
@@ -72,7 +73,8 @@ func run() int {
 	var status syscall.WaitStatus
 	var rusage syscall.Rusage
 	_, err := syscall.Wait4(runcStartCmd.Process.Pid, &status, 0, &rusage)
-	check(err) // Start succeeded but Wait4 failed, this can only be a programmer error
+	check(err)  // Start succeeded but Wait4 failed, this can only be a programmer error
+	fd4.Close() // No more logs from runc so close fd
 
 	fd3.Write([]byte{byte(status.ExitStatus())})
 	if status.ExitStatus() != 0 {

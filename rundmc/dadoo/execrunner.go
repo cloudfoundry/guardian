@@ -51,7 +51,9 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 		return d.iodaemonRunner.Run(log, spec, processesPath, handle, tty, pio)
 	}
 
-	log = log.Session("exec")
+	log = log.Session("execrunner")
+	log.Info("start")
+	defer log.Info("done")
 
 	processID := d.processIDGen.Generate()
 	processPath := filepath.Join(processesPath, processID)
@@ -97,12 +99,18 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 	fd3w.Close()
 	logw.Close()
 
+	log.Info("open-pipes")
+
 	if err := pipes.start(); err != nil {
 		return nil, err
 	}
 
+	log.Info("read-exit-fd")
+
 	runcExitStatus := make([]byte, 1)
 	fd3r.Read(runcExitStatus)
+
+	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
 
 	defer func() {
 		theErr = processLogs(log, logr, theErr)
