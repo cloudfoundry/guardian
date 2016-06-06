@@ -307,6 +307,21 @@ var _ = Describe("Net", func() {
 
 				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
 			})
+
+			Context("when the dropped packets should get logged", func() {
+				It("should access internet", func() {
+					Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
+
+					Expect(container.NetOut(garden.NetOutRule{
+						Protocol: garden.ProtocolTCP,
+						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+						Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+						Log:      true,
+					})).To(Succeed())
+
+					Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+				})
+			})
 		})
 
 		Context("external addresses", func() {

@@ -3,13 +3,13 @@ package iptables_test
 import (
 	"errors"
 	"net"
-	"os/exec"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables/fakes"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
-	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
@@ -17,310 +17,41 @@ import (
 
 var _ = Describe("FirewallOpenner", func() {
 	var (
-		fakeRunner *fake_command_runner.FakeCommandRunner
-		opener     *iptables.FirewallOpener
-		logger     lager.Logger
+		logger                 lager.Logger
+		fakeRunner             *fake_command_runner.FakeCommandRunner
+		fakeIPTablesController *fakes.FakeIPTables
+		opener                 *iptables.FirewallOpener
 	)
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test")
 		fakeRunner = fake_command_runner.New()
 
+		fakeIPTablesController = new(fakes.FakeIPTables)
+		fakeIPTablesController.InstanceChainStub = func(chain string) string {
+			return "prefix-" + chain
+		}
+
 		opener = iptables.NewFirewallOpener(
-			iptables.New(fakeRunner, "prefix-"),
+			fakeIPTablesController,
 		)
 	})
 
 	Describe("Open", func() {
-		Context("when all parameters are defaulted", func() {
-			It("runs iptables with appropriate parameters", func() {
-				Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{})).To(Succeed())
-				Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-					Path: "/sbin/iptables",
-					Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "all", "--jump", "RETURN"},
-				}))
-			})
+		It("uses the correct chain name", func() {
+			Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{})).To(Succeed())
+
+			Expect(fakeIPTablesController.PrependRuleCallCount()).To(Equal(1))
+			chainName, _ := fakeIPTablesController.PrependRuleArgsForCall(0)
+			Expect(chainName).To(Equal("prefix-foo-bar-baz"))
 		})
 
-		Describe("Network", func() {
-			Context("when an empty IPRange is specified", func() {
-				It("does not limit the range", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Networks: []garden.IPRange{
-							{},
-						},
-					})).To(Succeed())
+		It("applies the default rule", func() {
+			Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{})).To(Succeed())
 
-					Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "all", "--jump", "RETURN"},
-					}))
-				})
-			})
-
-			Context("when a single destination IP is specified", func() {
-				It("opens only that IP", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Networks: []garden.IPRange{
-							{
-								Start: net.ParseIP("1.2.3.4"),
-							},
-						},
-					})).To(Succeed())
-
-					Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "all", "--destination", "1.2.3.4", "--jump", "RETURN"},
-					}))
-				})
-			})
-
-			Context("when a multiple destination networks are specified", func() {
-				It("opens only that IP", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Networks: []garden.IPRange{
-							{
-								Start: net.ParseIP("1.2.3.4"),
-							},
-							{
-								Start: net.ParseIP("2.2.3.4"),
-								End:   net.ParseIP("2.2.3.9"),
-							},
-						},
-					})).To(Succeed())
-
-					Expect(fakeRunner.ExecutedCommands()).To(HaveLen(2))
-					Expect(fakeRunner).To(HaveExecutedSerially(
-						fake_command_runner.CommandSpec{
-							Path: "/sbin/iptables",
-							Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "all", "--destination", "1.2.3.4", "--jump", "RETURN"},
-						},
-						fake_command_runner.CommandSpec{
-							Path: "/sbin/iptables",
-							Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "all", "-m", "iprange", "--dst-range", "2.2.3.4-2.2.3.9", "--jump", "RETURN"},
-						},
-					))
-				})
-			})
-
-			Context("when a EndIP is specified without a StartIP", func() {
-				It("opens only that IP", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Networks: []garden.IPRange{
-							{
-								End: net.ParseIP("1.2.3.4"),
-							},
-						},
-					})).To(Succeed())
-
-					Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "all", "--destination", "1.2.3.4", "--jump", "RETURN"},
-					}))
-				})
-			})
-
-			Context("when a range of IPs is specified", func() {
-				It("opens only the range", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Networks: []garden.IPRange{
-							{
-								net.ParseIP("1.2.3.4"), net.ParseIP("2.3.4.5"),
-							},
-						},
-					})).To(Succeed())
-
-					Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "all", "-m", "iprange", "--dst-range", "1.2.3.4-2.3.4.5", "--jump", "RETURN"},
-					}))
-				})
-			})
-		})
-
-		Describe("Ports", func() {
-			Context("when a single port is specified", func() {
-				It("opens only that port", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Protocol: garden.ProtocolTCP,
-						Ports: []garden.PortRange{
-							garden.PortRangeFromPort(22),
-						},
-					})).To(Succeed())
-
-					Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "tcp", "--destination-port", "22", "--jump", "RETURN"},
-					}))
-				})
-			})
-
-			Context("when a port range is specified", func() {
-				It("opens that port range", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Protocol: garden.ProtocolTCP,
-						Ports: []garden.PortRange{
-							{12, 24},
-						},
-					})).To(Succeed())
-
-					Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "tcp", "--destination-port", "12:24", "--jump", "RETURN"},
-					}))
-				})
-			})
-
-			Context("when multiple port ranges are specified", func() {
-				It("opens those port ranges", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Protocol: garden.ProtocolTCP,
-						Ports: []garden.PortRange{
-							{12, 24},
-							{64, 942},
-						},
-					})).To(Succeed())
-
-					Expect(fakeRunner).To(HaveExecutedSerially(
-						fake_command_runner.CommandSpec{
-							Path: "/sbin/iptables",
-							Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "tcp", "--destination-port", "12:24", "--jump", "RETURN"},
-						},
-						fake_command_runner.CommandSpec{
-							Path: "/sbin/iptables",
-							Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "tcp", "--destination-port", "64:942", "--jump", "RETURN"},
-						},
-					))
-				})
-			})
-		})
-
-		Describe("Protocol", func() {
-			Context("when tcp protocol is specified", func() {
-				It("passes tcp protocol to iptables", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Protocol: garden.ProtocolTCP,
-					})).To(Succeed())
-
-					Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "tcp", "--jump", "RETURN"},
-					}))
-				})
-			})
-
-			Context("when udp protocol is specified", func() {
-				It("passes udp protocol to iptables", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Protocol: garden.ProtocolUDP,
-					})).To(Succeed())
-
-					Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "udp", "--jump", "RETURN"},
-					}))
-				})
-			})
-
-			Context("when icmp protocol is specified", func() {
-				It("passes icmp protocol to iptables", func() {
-					Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-						Protocol: garden.ProtocolICMP,
-					})).To(Succeed())
-
-					Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "icmp", "--jump", "RETURN"},
-					}))
-				})
-
-				Context("when icmp type is specified", func() {
-					It("passes icmp protcol type to iptables", func() {
-						Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-							Protocol: garden.ProtocolICMP,
-							ICMPs: &garden.ICMPControl{
-								Type: 99,
-							},
-						})).To(Succeed())
-
-						Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-							Path: "/sbin/iptables",
-							Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "icmp", "--icmp-type", "99", "--jump", "RETURN"},
-						}))
-					})
-				})
-
-				Context("when icmp type and code are specified", func() {
-					It("passes icmp protcol type and code to iptables", func() {
-						Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-							Protocol: garden.ProtocolICMP,
-							ICMPs: &garden.ICMPControl{
-								Type: 99,
-								Code: garden.ICMPControlCode(11),
-							},
-						})).To(Succeed())
-
-						Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-							Path: "/sbin/iptables",
-							Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "icmp", "--icmp-type", "99/11", "--jump", "RETURN"},
-						}))
-					})
-				})
-			})
-		})
-
-		Describe("Log", func() {
-			It("redirects via the log chain if log is specified", func() {
-				Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-					Log: true,
-				})).To(Succeed())
-
-				Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-					Path: "/sbin/iptables",
-					Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "all", "--goto", "prefix-instance-foo-bar-baz-log"},
-				}))
-			})
-		})
-
-		Context("when multiple port ranges and multiple networks are specified", func() {
-			It("opens the permutations of those port ranges and networks", func() {
-				Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-					Protocol: garden.ProtocolTCP,
-					Networks: []garden.IPRange{
-						{
-							Start: net.ParseIP("1.2.3.4"),
-						},
-						{
-							Start: net.ParseIP("2.2.3.4"),
-							End:   net.ParseIP("2.2.3.9"),
-						},
-					},
-					Ports: []garden.PortRange{
-						{12, 24},
-						{64, 942},
-					},
-				})).To(Succeed())
-
-				Expect(fakeRunner.ExecutedCommands()).To(HaveLen(4))
-				Expect(fakeRunner).To(HaveExecutedSerially(
-					fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "tcp", "--destination", "1.2.3.4", "--destination-port", "12:24", "--jump", "RETURN"},
-					},
-					fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "tcp", "--destination", "1.2.3.4", "--destination-port", "64:942", "--jump", "RETURN"},
-					},
-					fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "tcp", "-m", "iprange", "--dst-range", "2.2.3.4-2.2.3.9", "--destination-port", "12:24", "--jump", "RETURN"},
-					},
-					fake_command_runner.CommandSpec{
-						Path: "/sbin/iptables",
-						Args: []string{"-w", "-I", "prefix-instance-foo-bar-baz", "1", "--protocol", "tcp", "-m", "iprange", "--dst-range", "2.2.3.4-2.2.3.9", "--destination-port", "64:942", "--jump", "RETURN"},
-					},
-				))
-			})
+			Expect(fakeIPTablesController.PrependRuleCallCount()).To(Equal(1))
+			_, rule := fakeIPTablesController.PrependRuleArgsForCall(0)
+			Expect(rule).To(Equal(iptables.SingleFilterRule{}))
 		})
 
 		Context("when a portrange is specified for ProtocolALL", func() {
@@ -332,39 +63,153 @@ var _ = Describe("FirewallOpenner", func() {
 			})
 		})
 
-		Context("when a portrange is specified for ProtocolICMP", func() {
-			It("returns a nice error message", func() {
-				Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
-					Protocol: garden.ProtocolICMP,
-					Ports:    []garden.PortRange{{Start: 1, End: 5}},
-				})).To(MatchError("Ports cannot be specified for Protocol ICMP"))
-			})
-		})
-
 		Context("when an invaild protocol is specified", func() {
 			It("returns an error", func() {
-				err := opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
+				Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
 					Protocol: garden.Protocol(52),
-				})
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError("invalid protocol: 52"))
+				})).To(MatchError("invalid protocol: 52"))
 			})
 		})
 
-		Context("when the command returns an error", func() {
-			It("returns a wrapped error, including stderr", func() {
-				someError := errors.New("badly laid iptable")
-				fakeRunner.WhenRunning(
-					fake_command_runner.CommandSpec{Path: "/sbin/iptables"},
-					func(cmd *exec.Cmd) error {
-						cmd.Stderr.Write([]byte("stderr contents"))
-						return someError
+		It("sets the protocol in the rule", func() {
+			Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
+				Protocol: garden.ProtocolTCP,
+			})).To(Succeed())
+
+			Expect(fakeIPTablesController.PrependRuleCallCount()).To(Equal(1))
+			_, rule := fakeIPTablesController.PrependRuleArgsForCall(0)
+			Expect(rule).To(Equal(iptables.SingleFilterRule{
+				Protocol: garden.ProtocolTCP,
+			}))
+		})
+
+		It("sets the IMCP control in the rule", func() {
+			icmpControl := &garden.ICMPControl{
+				Type: garden.ICMPType(1),
+			}
+
+			Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
+				ICMPs: icmpControl,
+			})).To(Succeed())
+
+			Expect(fakeIPTablesController.PrependRuleCallCount()).To(Equal(1))
+			_, rule := fakeIPTablesController.PrependRuleArgsForCall(0)
+			Expect(rule).To(Equal(iptables.SingleFilterRule{
+				ICMPs: icmpControl,
+			}))
+		})
+
+		Describe("Log", func() {
+			It("sets the log flag to the rule", func() {
+				Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{
+					Log: true,
+				})).To(Succeed())
+
+				Expect(fakeIPTablesController.PrependRuleCallCount()).To(Equal(1))
+				_, rule := fakeIPTablesController.PrependRuleArgsForCall(0)
+				Expect(rule).To(Equal(iptables.SingleFilterRule{
+					Log: true,
+				}))
+			})
+		})
+
+		Context("when prepending the rule fails", func() {
+			BeforeEach(func() {
+				fakeIPTablesController.PrependRuleReturns(errors.New("i-lost-my-banana"))
+			})
+
+			It("returns the error", func() {
+				Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{})).To(MatchError("i-lost-my-banana"))
+			})
+		})
+
+		DescribeTable("networks and ports",
+			func(netOut garden.NetOutRule, rules []iptables.SingleFilterRule) {
+				Expect(opener.Open(logger, "foo-bar-baz", netOut)).To(Succeed())
+
+				n := fakeIPTablesController.PrependRuleCallCount()
+				Expect(n).To(Equal(len(rules)))
+
+				for i := 0; i < n; i++ {
+					_, appliedRule := fakeIPTablesController.PrependRuleArgsForCall(i)
+					Expect(appliedRule).To(Equal(rules[i]))
+				}
+			},
+			Entry("with a single destination IP specified",
+				garden.NetOutRule{Networks: []garden.IPRange{{Start: net.ParseIP("1.2.3.4")}}},
+				[]iptables.SingleFilterRule{
+					{Networks: &garden.IPRange{Start: net.ParseIP("1.2.3.4")}},
+				},
+			),
+			Entry("with multiple destination networks specified",
+				garden.NetOutRule{Networks: []garden.IPRange{
+					{Start: net.ParseIP("1.2.3.4")},
+					{Start: net.ParseIP("2.2.3.4"), End: net.ParseIP("2.2.3.9")},
+				}},
+				[]iptables.SingleFilterRule{
+					{Networks: &garden.IPRange{Start: net.ParseIP("1.2.3.4")}},
+					{Networks: &garden.IPRange{Start: net.ParseIP("2.2.3.4"), End: net.ParseIP("2.2.3.9")}},
+				},
+			),
+			Entry("with a single port specified",
+				garden.NetOutRule{
+					Protocol: garden.ProtocolTCP,
+					Ports: []garden.PortRange{
+						garden.PortRangeFromPort(22),
 					},
-				)
-
-				Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{})).
-					To(MatchError("iptables prepend: stderr contents"))
-			})
-		})
+				},
+				[]iptables.SingleFilterRule{
+					{Protocol: garden.ProtocolTCP, Ports: &garden.PortRange{Start: 22, End: 22}},
+				},
+			),
+			Entry("with multiple ports specified",
+				garden.NetOutRule{
+					Protocol: garden.ProtocolTCP,
+					Ports: []garden.PortRange{
+						garden.PortRangeFromPort(22),
+						garden.PortRange{Start: 1000, End: 10000},
+					},
+				},
+				[]iptables.SingleFilterRule{
+					{Protocol: garden.ProtocolTCP, Ports: &garden.PortRange{Start: 22, End: 22}},
+					{Protocol: garden.ProtocolTCP, Ports: &garden.PortRange{Start: 1000, End: 10000}},
+				},
+			),
+			Entry("with both networks and ports specified",
+				garden.NetOutRule{
+					Protocol: garden.ProtocolTCP,
+					Networks: []garden.IPRange{
+						{Start: net.ParseIP("1.2.3.4")},
+						{Start: net.ParseIP("2.2.3.4"), End: net.ParseIP("2.2.3.9")},
+					},
+					Ports: []garden.PortRange{
+						garden.PortRangeFromPort(22),
+						garden.PortRange{Start: 1000, End: 10000},
+					},
+				},
+				[]iptables.SingleFilterRule{
+					{
+						Protocol: garden.ProtocolTCP,
+						Networks: &garden.IPRange{Start: net.ParseIP("1.2.3.4")},
+						Ports:    &garden.PortRange{Start: 22, End: 22},
+					},
+					{
+						Protocol: garden.ProtocolTCP,
+						Networks: &garden.IPRange{Start: net.ParseIP("2.2.3.4"), End: net.ParseIP("2.2.3.9")},
+						Ports:    &garden.PortRange{Start: 22, End: 22},
+					},
+					{
+						Protocol: garden.ProtocolTCP,
+						Networks: &garden.IPRange{Start: net.ParseIP("1.2.3.4")},
+						Ports:    &garden.PortRange{Start: 1000, End: 10000},
+					},
+					{
+						Protocol: garden.ProtocolTCP,
+						Networks: &garden.IPRange{Start: net.ParseIP("2.2.3.4"), End: net.ParseIP("2.2.3.9")},
+						Ports:    &garden.PortRange{Start: 1000, End: 10000},
+					},
+				},
+			),
+		)
 	})
 })

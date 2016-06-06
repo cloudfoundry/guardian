@@ -9,17 +9,17 @@ import (
 )
 
 type InstanceChainCreator struct {
-	iptables *IPTables
+	iptables *IPTablesController
 }
 
-func NewInstanceChainCreator(iptables *IPTables) *InstanceChainCreator {
+func NewInstanceChainCreator(iptables *IPTablesController) *InstanceChainCreator {
 	return &InstanceChainCreator{
 		iptables: iptables,
 	}
 }
 
 func (cc *InstanceChainCreator) Create(logger lager.Logger, instanceId, bridgeName string, ip net.IP, network *net.IPNet) error {
-	instanceChain := cc.iptables.instanceChain(instanceId)
+	instanceChain := cc.iptables.InstanceChain(instanceId)
 
 	if err := cc.iptables.CreateChain("nat", instanceChain); err != nil {
 		return err
@@ -64,11 +64,33 @@ func (cc *InstanceChainCreator) Create(logger lager.Logger, instanceId, bridgeNa
 		return err
 	}
 
+	// Create Logging Chain
+	return cc.createLoggingChain(logger, instanceId)
+}
+
+func (cc *InstanceChainCreator) createLoggingChain(logger lager.Logger, instanceId string) error {
+	instanceChain := cc.iptables.InstanceChain(instanceId)
+	loggingChain := fmt.Sprintf("%s-log", instanceChain)
+
+	if err := cc.iptables.CreateChain("filter", loggingChain); err != nil {
+		return err
+	}
+
+	cmd := exec.Command("iptables", "--wait", "-A", loggingChain, "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID", "--protocol", "tcp", "--jump", "LOG", "--log-prefix", instanceId)
+	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
+		return err
+	}
+
+	cmd = exec.Command("iptables", "--wait", "-A", loggingChain, "--jump", "RETURN")
+	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (cc *InstanceChainCreator) Destroy(logger lager.Logger, instanceId string) error {
-	instanceChain := cc.iptables.instanceChain(instanceId)
+	instanceChain := cc.iptables.InstanceChain(instanceId)
 
 	// Prune nat prerouting chain
 	cmd := exec.Command("sh", "-c", fmt.Sprintf(
@@ -99,14 +121,15 @@ func (cc *InstanceChainCreator) Destroy(logger lager.Logger, instanceId string) 
 	}
 
 	// Flush instance chain
-	if err := cc.iptables.FlushChain("filter", instanceChain); err != nil {
-		return nil
-	}
+	cc.iptables.FlushChain("filter", instanceChain)
 
 	// delete instance chain
-	if err := cc.iptables.DeleteChain("filter", instanceChain); err != nil {
-		return nil
-	}
+	cc.iptables.DeleteChain("filter", instanceChain)
+
+	// delete the logging chain
+	instanceLoggingChain := fmt.Sprintf("%s-log", instanceChain)
+	cc.iptables.FlushChain("filter", instanceLoggingChain)
+	cc.iptables.DeleteChain("filter", instanceLoggingChain)
 
 	return nil
 }

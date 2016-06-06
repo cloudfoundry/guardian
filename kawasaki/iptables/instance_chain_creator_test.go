@@ -42,7 +42,7 @@ var _ = Describe("Create", func() {
 		)
 	})
 
-	Describe("Create", func() {
+	Describe("Container Creation", func() {
 		var specs []fake_command_runner.CommandSpec
 
 		BeforeEach(func() {
@@ -83,6 +83,19 @@ var _ = Describe("Create", func() {
 					Args: []string{"--wait", "-I", "prefix-forward", "2", "--in-interface", bridgeName,
 						"--source", ip.String(), "--goto", "prefix-instance-some-id"},
 				},
+				{
+					Path: "iptables",
+					Args: []string{"--wait", "--table", "filter", "-N", "prefix-instance-some-id-log"},
+				},
+				{
+					Path: "iptables",
+					Args: []string{"--wait", "-A", "prefix-instance-some-id-log", "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID",
+						"--protocol", "tcp", "--jump", "LOG", "--log-prefix", "some-id"},
+				},
+				{
+					Path: "iptables",
+					Args: []string{"--wait", "-A", "prefix-instance-some-id-log", "--jump", "RETURN"},
+				},
 			}
 		})
 
@@ -103,72 +116,78 @@ var _ = Describe("Create", func() {
 			Entry("create nat instance chain", 0, "iptables create-instance-chains: iptables failed"),
 			Entry("bind nat instance chain to nat prerouting chain", 1, "iptables create-instance-chains: iptables failed"),
 			Entry("enable NAT for traffic coming from containers", 2, "iptables create-instance-chains: iptables failed"),
+			Entry("create logging instance chain", 7, "iptables create-instance-chains: iptables failed"),
+			Entry("append logging to instance chain", 8, "iptables create-instance-chains: iptables failed"),
+			Entry("return from logging instance chain", 9, "iptables create-instance-chains: iptables failed"),
 		)
 	})
 
 	Describe("ContainerTeardown", func() {
 		var specs []fake_command_runner.CommandSpec
 
-		Describe("nat chain", func() {
-			BeforeEach(func() {
-				specs = []fake_command_runner.CommandSpec{
-					{
-						Path: "sh",
-						Args: []string{"-c", fmt.Sprintf(
-							`iptables --wait --table nat -S %s 2> /dev/null | grep "\-j %s\b" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 iptables --wait --table nat`,
-							"prefix-prerouting", "prefix-instance-some-id",
-						)},
-					},
-					{
-						Path: "sh",
-						Args: []string{"-c", fmt.Sprintf(
-							`iptables --wait --table nat -F %s 2> /dev/null || true`,
-							"prefix-instance-some-id",
-						)},
-					},
-					{
-						Path: "sh",
-						Args: []string{"-c", fmt.Sprintf(
-							`iptables --wait --table nat -X %s 2> /dev/null || true`,
-							"prefix-instance-some-id",
-						)},
-					},
-					{
-						Path: "sh",
-						Args: []string{"-c", fmt.Sprintf(
-							`iptables --wait -S %s 2> /dev/null | grep "\-g %s\b" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 iptables --wait`,
-							"prefix-forward", "prefix-instance-some-id",
-						)},
-					},
-					{
-						Path: "sh",
-						Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -F %s 2> /dev/null || true", "prefix-instance-some-id")},
-					},
-					{
-						Path: "sh",
-						Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -X %s 2> /dev/null || true", "prefix-instance-some-id")},
-					},
-				}
-			})
-
-			It("should tear down the chain", func() {
-				Expect(creator.Destroy(logger, "some-id")).To(Succeed())
-				Expect(fakeRunner).To(HaveExecutedSerially(specs...))
-			})
-
-			DescribeTable("iptables failures",
-				func(specIndex int, errorString string) {
-					fakeRunner.WhenRunning(specs[specIndex], func(cmd *exec.Cmd) error {
-						cmd.Stderr.Write([]byte("iptables failed"))
-						return errors.New("exit status foo")
-					})
-
-					Expect(creator.Destroy(logger, "some-id")).To(MatchError(errorString))
+		BeforeEach(func() {
+			specs = []fake_command_runner.CommandSpec{
+				{
+					Path: "sh",
+					Args: []string{"-c", fmt.Sprintf(
+						`iptables --wait --table nat -S %s 2> /dev/null | grep "\-j %s\b" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 iptables --wait --table nat`,
+						"prefix-prerouting", "prefix-instance-some-id",
+					)},
 				},
-				Entry("prune prerouting chain", 0, "iptables prune-prerouting-chain: iptables failed"),
-				Entry("flush instance chain", 1, "iptables flush-instance-chains: iptables failed"),
-				Entry("delete instance chain", 2, "iptables delete-instance-chains: iptables failed"),
-			)
+				{
+					Path: "sh",
+					Args: []string{"-c", fmt.Sprintf(
+						`iptables --wait --table nat -F %s 2> /dev/null || true`,
+						"prefix-instance-some-id",
+					)},
+				},
+				{
+					Path: "sh",
+					Args: []string{"-c", fmt.Sprintf(
+						`iptables --wait --table nat -X %s 2> /dev/null || true`,
+						"prefix-instance-some-id",
+					)},
+				},
+				{
+					Path: "sh",
+					Args: []string{"-c", fmt.Sprintf(
+						`iptables --wait -S %s 2> /dev/null | grep "\-g %s\b" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 iptables --wait`,
+						"prefix-forward", "prefix-instance-some-id",
+					)},
+				},
+				{
+					Path: "sh",
+					Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -F %s 2> /dev/null || true", "prefix-instance-some-id")},
+				},
+				{
+					Path: "sh",
+					Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -X %s 2> /dev/null || true", "prefix-instance-some-id")},
+				},
+				{
+					Path: "sh",
+					Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -F %s 2> /dev/null || true", "prefix-instance-some-id-log")},
+				},
+				{
+					Path: "sh",
+					Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -X %s 2> /dev/null || true", "prefix-instance-some-id-log")},
+				},
+			}
+		})
+
+		It("should tear down the chain", func() {
+			Expect(creator.Destroy(logger, "some-id")).To(Succeed())
+			Expect(fakeRunner).To(HaveExecutedSerially(specs...))
+		})
+
+		Describe("iptables failure", func() {
+			It("returns an error", func() {
+				fakeRunner.WhenRunning(specs[0], func(cmd *exec.Cmd) error {
+					cmd.Stderr.Write([]byte("iptables failed"))
+					return errors.New("exit status foo")
+				})
+
+				Expect(creator.Destroy(logger, "some-id")).To(MatchError("iptables prune-prerouting-chain: iptables failed"))
+			})
 		})
 	})
 })

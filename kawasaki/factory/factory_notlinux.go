@@ -7,6 +7,6 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
 )
 
-func NewDefaultConfigurer(ipt *iptables.IPTables) kawasaki.Configurer {
+func NewDefaultConfigurer(ipt *iptables.IPTablesController) kawasaki.Configurer {
 	panic("not supported on this platform")
 }

@@ -195,14 +195,14 @@ const SetupScript = `
 `
 
 type Starter struct {
-	iptables        *IPTables
+	iptables        *IPTablesController
 	allowHostAccess bool
 	nicPrefix       string
 
 	denyNetworks []string
 }
 
-func NewStarter(iptables *IPTables, allowHostAccess bool, nicPrefix string, denyNetworks []string) *Starter {
+func NewStarter(iptables *IPTablesController, allowHostAccess bool, nicPrefix string, denyNetworks []string) *Starter {
 	return &Starter{
 		iptables:        iptables,
 		allowHostAccess: allowHostAccess,
