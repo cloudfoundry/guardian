@@ -2,10 +2,10 @@ package runrunc
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry/gunk/command_runner"
@@ -36,12 +36,18 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 		return err
 	}
 
-	defer runcExitStatusR.Close()
+	logR, logW, err := os.Pipe()
+	if err != nil {
+		return err
+	}
 
-	logFile := filepath.Join(bundlePath, "start.log")
-	cmd := exec.Command(s.dadooPath, "-log", logFile, "run", s.runcPath, bundlePath, id)
+	defer runcExitStatusR.Close()
+	defer logR.Close()
+
+	cmd := exec.Command(s.dadooPath, "run", s.runcPath, bundlePath, id)
 	cmd.ExtraFiles = []*os.File{
 		runcExitStatusW,
+		logW,
 	}
 
 	if err := s.commandRunner.Start(cmd); err != nil {
@@ -49,6 +55,7 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 	}
 
 	runcExitStatusW.Close()
+	logW.Close()
 
 	go s.commandRunner.Wait(cmd) // avoid zombies, but we don't care about the exit status
 
@@ -58,7 +65,7 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 	}
 
 	defer func() {
-		theErr = processLogs(log, logFile, theErr)
+		theErr = processLogs(log, logR, theErr)
 	}()
 
 	if b[0] != 0 {
@@ -68,13 +75,8 @@ func (s *Starter) Start(log lager.Logger, bundlePath, id string, _ garden.Proces
 	return nil
 }
 
-func processLogs(log lager.Logger, logFile string, err error) error {
-	logFileR, openErr := os.Open(logFile)
-	if openErr != nil {
-		return fmt.Errorf("start: read log file: %s", openErr)
-	}
-
-	buff, readErr := ioutil.ReadAll(logFileR)
+func processLogs(log lager.Logger, logs io.Reader, err error) error {
+	buff, readErr := ioutil.ReadAll(logs)
 	if readErr != nil {
 		return fmt.Errorf("start: read log file: %s", readErr)
 	}

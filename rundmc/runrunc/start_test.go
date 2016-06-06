@@ -1,10 +1,11 @@
 package runrunc_test
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"io/ioutil"
 	"os/exec"
-	"path"
 	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
@@ -50,7 +51,7 @@ var _ = Describe("Start", func() {
 
 		Expect(commandRunner.StartedCommands()[0].Path).To(Equal("dadoo"))
 		Expect(commandRunner.StartedCommands()[0].Args).To(ConsistOf(
-			"dadoo", "-log", path.Join(bundlePath, "start.log"), "run", "runc", bundlePath, "some-id",
+			"dadoo", "run", "runc", bundlePath, "some-id",
 		))
 	})
 
@@ -102,18 +103,6 @@ var _ = Describe("Start", func() {
 		Eventually(done).Should(BeClosed(), "should not block on dadoo")
 	})
 
-	It("returns an error if the log file from start can't be read", func() {
-		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
-			Path: "dadoo",
-		}, func(cmd *exec.Cmd) error {
-			_, err := cmd.ExtraFiles[0].Write([]byte{0})
-			Expect(err).NotTo(HaveOccurred())
-			return nil
-		})
-
-		Expect(runner.Start(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError(ContainSubstring("start: read log file")))
-	})
-
 	Describe("forwarding logs from runC", func() {
 		var (
 			runcExitStatus  []byte
@@ -133,8 +122,9 @@ var _ = Describe("Start", func() {
 			commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "dadoo",
 			}, func(cmd *exec.Cmd) error {
-				Expect(ioutil.WriteFile(cmd.Args[2], []byte(logs), 0700)).To(Succeed())
-				_, err := cmd.ExtraFiles[0].Write(runcExitStatus)
+				_, err := io.Copy(cmd.ExtraFiles[1], bytes.NewReader([]byte(logs)))
+				Expect(err).NotTo(HaveOccurred())
+				_, err = cmd.ExtraFiles[0].Write(runcExitStatus)
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd.ExtraFiles[0].Close()

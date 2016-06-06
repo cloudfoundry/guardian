@@ -20,8 +20,7 @@ func main() {
 }
 
 func run() int {
-	var logFile, stdoutPath, stdinPath, stderrPath string
-	flag.StringVar(&logFile, "log", fmt.Sprintf("/proc/%d/fd/4", os.Getpid()), "dadoo log file path")
+	var stdoutPath, stdinPath, stderrPath string
 	flag.StringVar(&stdoutPath, "stdout", "", "path to stdout")
 	flag.StringVar(&stdinPath, "stdin", "", "path to stdin")
 	flag.StringVar(&stderrPath, "stderr", "", "path to stderr")
@@ -34,10 +33,12 @@ func run() int {
 	containerId := flag.Args()[3]
 
 	fd3 := os.NewFile(3, "/proc/self/fd/3")
-	fd4 := os.NewFile(4, "/proc/self/fd/4")
 
 	signals := make(chan os.Signal, 100)
 	signal.Notify(signals, syscall.SIGCHLD)
+
+	logFile := fmt.Sprintf("/proc/%d/fd/4", os.Getpid())
+	logFD := os.NewFile(4, "/proc/self/fd/4")
 
 	pidFilePath := filepath.Join(dir, "pidfile")
 
@@ -73,8 +74,8 @@ func run() int {
 	var status syscall.WaitStatus
 	var rusage syscall.Rusage
 	_, err := syscall.Wait4(runcStartCmd.Process.Pid, &status, 0, &rusage)
-	check(err)  // Start succeeded but Wait4 failed, this can only be a programmer error
-	fd4.Close() // No more logs from runc so close fd
+	check(err)    // Start succeeded but Wait4 failed, this can only be a programmer error
+	logFD.Close() // No more logs from runc so close fd
 
 	fd3.Write([]byte{byte(status.ExitStatus())})
 	if status.ExitStatus() != 0 {
@@ -92,7 +93,10 @@ func run() int {
 			}
 
 			if wpid == containerPid {
-				check(exec.Command(runtime, "delete", containerId).Run())
+				if command == "run" {
+					check(exec.Command(runtime, "delete", containerId).Run())
+				}
+
 				return status.ExitStatus()
 			}
 		}
