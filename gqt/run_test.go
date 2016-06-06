@@ -291,11 +291,11 @@ var _ = Describe("Run", func() {
 			}, garden.ProcessIO{})
 			Expect(err).To(MatchError(ContainSubstring("executable file not found")))
 
-			Eventually(client).Should(gbytes.Say(`exec.runc`))
+			Eventually(client).Should(gbytes.Say(`execrunner.runc`))
 		})
 
 		Describe("Signalling", func() {
-			It("should forward SIGTERM to the process", func(done Done) {
+			It("should forward SIGTERM to the process", func() {
 				client = startGarden()
 
 				container, err := client.Create(garden.ContainerSpec{})
