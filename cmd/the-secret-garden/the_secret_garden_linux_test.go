@@ -20,6 +20,7 @@ import (
 var _ = Describe("The Secret Garden", func() {
 	var (
 		stubProcess    string
+		pidFile        string
 		fakeDataDir    string
 		realGraphDir   string
 		secretGraphDir string
@@ -40,6 +41,8 @@ var _ = Describe("The Secret Garden", func() {
 		fakeDataDir, err = ioutil.TempDir("", fmt.Sprintf("data-%d", GinkgoParallelNode()))
 		Expect(err).NotTo(HaveOccurred())
 
+		pidFile = filepath.Join(fakeDataDir, "pidfile")
+
 		realGraphDir = filepath.Join(fakeDataDir, "realgraph")
 		Expect(os.MkdirAll(realGraphDir, 0777)).To(Succeed())
 
@@ -47,39 +50,58 @@ var _ = Describe("The Secret Garden", func() {
 		Expect(os.MkdirAll(secretGraphDir, 0777)).To(Succeed())
 	})
 
+	It("writes the namespaced process id to a pidfile", func() {
+		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "sh", "-c", "echo $$")
+
+		Eventually(session).Should(gexec.Exit(0))
+		Expect(pidFile).To(BeARegularFile())
+
+		actualPid := strings.TrimSpace(string(session.Out.Contents()))
+
+		pidBuf, err := ioutil.ReadFile(pidFile)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(string(pidBuf)).To(Equal(actualPid))
+	})
+
+	It("blows up when bad pidfile is passed", func() {
+		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "some/bad/pid", "pwd")
+		Eventually(session).Should(gexec.Exit(1))
+	})
+
 	It("makes sure the data dir is mounted exactly once", func() {
-		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "mount")
+		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "mount")
 		Eventually(session).Should(gexec.Exit(0))
 
 		exp := fmt.Sprintf("%s on %s", fakeDataDir, fakeDataDir)
 		Expect(session.Out).To(gbytes.Say(exp))
 
-		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "mount")
+		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "mount")
 		Eventually(session).Should(gexec.Exit(0))
 
 		Expect(regexp.MustCompile(exp).FindAll(session.Out.Contents(), -1)).To(HaveLen(1))
 	})
 
 	It("mounts the realgraph/graph on the graph path exactly once", func() {
-		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "mount")
+		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "mount")
 		Eventually(session).Should(gexec.Exit(0))
 
 		exp := fmt.Sprintf("%s on %s", filepath.Join(realGraphDir, "graph"), secretGraphDir)
 		Expect(session.Out).To(gbytes.Say(exp))
 
-		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "mount")
+		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "mount")
 		Eventually(session).Should(gexec.Exit(0))
 
 		Expect(regexp.MustCompile(exp).FindAll(session.Out.Contents(), -1)).To(HaveLen(1))
 	})
 
 	It("exits non-zero when it fails to mount --make-shared", func() {
-		session = runSecretGarden("nnonexistent-dir", realGraphDir, secretGraphDir, "pwd")
+		session = runSecretGarden("nnonexistent-dir", realGraphDir, secretGraphDir, pidFile, "pwd")
 		Eventually(session).Should(gexec.Exit(1))
 	})
 
 	It("changes the realGraphDir's permission accordingly", func() {
-		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "sh", "-c", fmt.Sprintf("stat -c %%A %s", realGraphDir))
+		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "sh", "-c", fmt.Sprintf("stat -c %%A %s", realGraphDir))
 		Eventually(session).Should(gexec.Exit(0))
 
 		// Checking if the x's are removed from the group and other
@@ -89,17 +111,17 @@ var _ = Describe("The Secret Garden", func() {
 	})
 
 	It("exits non-zero when it fails to mount the graph", func() {
-		session = runSecretGarden(fakeDataDir, realGraphDir, "no-such-dir", secretGraphDir, "mount")
+		session = runSecretGarden(fakeDataDir, realGraphDir, "no-such-dir", secretGraphDir, pidFile, "mount")
 		Eventually(session).Should(gexec.Exit(1))
 	})
 
 	It("exits non-zero when the command it execs fails", func() {
-		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "no-such-cmd")
+		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "no-such-cmd")
 		Eventually(session).Should(gexec.Exit(1))
 	})
 
 	It("passes the correct environment to the final process", func() {
-		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, "sh", "-c", "echo $BAR")
+		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "sh", "-c", "echo $BAR")
 		Eventually(session.Out).Should(gbytes.Say("foo"))
 		Eventually(session).Should(gexec.Exit(0))
 	})
@@ -125,7 +147,7 @@ var _ = Describe("The Secret Garden", func() {
 		})
 
 		It("is visible inside the unshared namespace", func() {
-			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, stubProcess, sharedDir)
+			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, stubProcess, sharedDir)
 			Eventually(func() string {
 				out, err := exec.Command("mount").CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
@@ -170,7 +192,7 @@ var _ = Describe("The Secret Garden", func() {
 			Expect(exec.Command("touch", filepath.Join(sharedDir, "myfile")).Run()).To(Succeed())
 			Expect(exec.Command("stat", filepath.Join(sharedDir, "myfile")).Run()).To(Succeed())
 
-			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, stubProcess, sharedDir)
+			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, stubProcess, sharedDir)
 			Eventually(func() string {
 				out, err := exec.Command("mount").CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
@@ -199,7 +221,7 @@ var _ = Describe("The Secret Garden", func() {
 		})
 
 		It("prevents the file to be seen from outside the namespace", func() {
-			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, stubProcess, secretGraphDir)
+			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, stubProcess, secretGraphDir)
 
 			Consistently(func() []os.FileInfo {
 				fileInfo, _ := ioutil.ReadDir(secretGraphDir)
@@ -232,7 +254,7 @@ var _ = Describe("The Secret Garden", func() {
 		})
 
 		It("prevents the mount to be seen from outside the namespace", func() {
-			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, stubProcess, secretDir)
+			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, stubProcess, secretDir)
 
 			Consistently(func() []os.FileInfo {
 				fileInfo, _ := ioutil.ReadDir(secretDir)
@@ -240,35 +262,6 @@ var _ = Describe("The Secret Garden", func() {
 			}).Should(BeEmpty())
 
 			Eventually(session).Should(gexec.Exit(0))
-		})
-	})
-
-	Context("when the secret garden is terminated", func() {
-		var sharedDir string
-
-		const processes = `#!/bin/bash
-			trap "echo terminating; exit 0" SIGTERM
-
-			echo 'sleeping'
-			for i in $(seq 1 1000); do
-			  sleep 1
-			done
-
-		`
-
-		BeforeEach(func() {
-			stubProcess = filepath.Join(fakeDataDir, "spawn-processes.sh")
-			sharedDir = filepath.Join(fakeDataDir, "shared")
-			Expect(ioutil.WriteFile(stubProcess, []byte(processes), 0777)).To(Succeed())
-		})
-
-		It("should kill the underlying process", func() {
-			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, stubProcess, sharedDir)
-			Eventually(session.Out).Should(gbytes.Say("sleeping"))
-
-			session.Terminate()
-
-			Eventually(session.Out).Should(gbytes.Say("terminating"))
 		})
 	})
 
@@ -287,7 +280,7 @@ var _ = Describe("The Secret Garden", func() {
 		})
 
 		It("should kill the underlying process", func() {
-			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, stubProcess, sharedDir)
+			session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, stubProcess, sharedDir)
 			Eventually(session.Out).Should(gbytes.Say("PID: "))
 
 			contents, err := ioutil.ReadAll(session.Out)

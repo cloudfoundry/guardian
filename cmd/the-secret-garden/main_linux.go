@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
-	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -25,19 +26,28 @@ func namespaced() {
 	realGraphDir := os.Args[2]
 	graphDir := filepath.Join(realGraphDir, "graph")
 	secretGraphDir := os.Args[3]
+	pidFile := os.Args[4]
 
 	mustRun(exec.Command("mount", "--make-slave", dataDir))
 	mustRun(exec.Command("chmod", "go-x", realGraphDir))
 
 	mustBindMountOnce(graphDir, secretGraphDir)
 
-	programPath, err := exec.LookPath(os.Args[4])
+	programPath, err := exec.LookPath(os.Args[5])
 	if err != nil {
 		fmt.Printf("failed to look path in namespace : %s\n", err)
 		os.Exit(1)
 	}
 
-	if err := syscall.Exec(programPath, os.Args[4:], os.Environ()); err != nil {
+	pid := strconv.Itoa(os.Getpid())
+	err = ioutil.WriteFile(pidFile, []byte(pid), 0644)
+	if err != nil {
+		fmt.Printf("failed writing pidfile: %s\n", err)
+		os.Exit(1)
+	}
+
+	err = syscall.Exec(programPath, os.Args[5:], os.Environ())
+	if err != nil {
 		fmt.Printf("exec failed in namespace: %s\n", err)
 		os.Exit(1)
 	}
@@ -63,9 +73,7 @@ func reexecInNamespace(args ...string) {
 	cmd.Stderr = os.Stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Cloneflags: syscall.CLONE_NEWNS,
-		Pdeathsig:  syscall.SIGKILL,
 	}
-	forwardSignals(cmd, syscall.SIGTERM)
 
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("secret garden exec failed: %s\n", err)
@@ -106,12 +114,4 @@ func mustRun(cmd *exec.Cmd) string {
 	}
 
 	return string(out)
-}
-
-func forwardSignals(cmd *exec.Cmd, signals ...os.Signal) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, signals...)
-	go func() {
-		cmd.Process.Signal(<-c)
-	}()
 }
