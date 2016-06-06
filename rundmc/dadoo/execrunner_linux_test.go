@@ -198,7 +198,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 					runcLogs := make([]lager.LogFormat, 0)
 					for _, log := range log.Logs() {
-						if log.Message == "test.exec.runc" {
+						if log.Message == "test.execrunner.runc" {
 							runcLogs = append(runcLogs, log)
 						}
 					}
