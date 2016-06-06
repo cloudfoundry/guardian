@@ -180,9 +180,10 @@ type GuardianCommand struct {
 
 		DNSServers []IPFlag `long:"dns-server" description:"DNS server IP address to use instead of automatically determined servers. Can be specified multiple times."`
 
-		ExternalIP    IPFlag `long:"external-ip"                     description:"IP address to use to reach container's mapped ports. Autodetected if not specified."`
-		PortPoolStart uint32 `long:"port-pool-start" default:"60000" description:"Start of the ephemeral port range used for mapped container ports."`
-		PortPoolSize  uint32 `long:"port-pool-size"  default:"5000"  description:"Size of the port pool used for mapped container ports."`
+		ExternalIP             IPFlag `long:"external-ip"                     description:"IP address to use to reach container's mapped ports. Autodetected if not specified."`
+		PortPoolStart          uint32 `long:"port-pool-start" default:"60000" description:"Start of the ephemeral port range used for mapped container ports."`
+		PortPoolSize           uint32 `long:"port-pool-size"  default:"5000"  description:"Size of the port pool used for mapped container ports."`
+		PortPoolPropertiesPath string `long:"port-pool-properties-path" description:"Path in which to store port pool properties."`
 
 		Mtu int `long:"mtu" default:"1500" description:"MTU size for container network interfaces."`
 
@@ -240,7 +241,21 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 		return err
 	}
 
-	networker, iptablesStarter, err := cmd.wireNetworker(logger, propManager)
+	portPoolState, err := ports.LoadState(cmd.Network.PortPoolPropertiesPath)
+	if err != nil {
+		logger.Error("failed-to-parse-port-pool-properties", err)
+	}
+
+	portPool, err := ports.NewPool(
+		cmd.Network.PortPoolStart,
+		cmd.Network.PortPoolSize,
+		portPoolState,
+	)
+	if err != nil {
+		return fmt.Errorf("invalid pool range: %s", err)
+	}
+
+	networker, iptablesStarter, err := cmd.wireNetworker(logger, propManager, portPool)
 	if err != nil {
 		logger.Error("failed-to-wire-networker", err)
 		return err
@@ -307,6 +322,9 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	cmd.saveProperties(logger, cmd.Containers.PropertiesPath, propManager)
 
+	portPoolState = portPool.RefreshState()
+	ports.SaveState(cmd.Network.PortPoolPropertiesPath, portPoolState)
+
 	return nil
 }
 
@@ -344,7 +362,7 @@ func (cmd *GuardianCommand) wireRunDMCStarter(logger lager.Logger) gardener.Star
 	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, linux_command_runner.New())
 }
 
-func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore) (gardener.Networker, gardener.Starter, error) {
+func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
 	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
 	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
 
@@ -373,14 +391,6 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList)
 
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
-
-	portPool, err := ports.NewPool(
-		cmd.Network.PortPoolStart,
-		cmd.Network.PortPoolSize,
-		ports.State{})
-	if err != nil {
-		return nil, nil, fmt.Errorf("invalid pool range: %s", err)
-	}
 
 	kawasakiNetworker := kawasaki.New(
 		cmd.Bin.Kawasaki.Path(),
