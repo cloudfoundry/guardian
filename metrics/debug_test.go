@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/cloudfoundry-incubator/guardian/metrics"
-	"github.com/cloudfoundry-incubator/guardian/metrics/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/metrics/metricsfakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/tedsuo/ifrit"
 

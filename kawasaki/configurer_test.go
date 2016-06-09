@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 

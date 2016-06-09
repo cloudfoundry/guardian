@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc/stopper"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/stopper/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/stopper/stopperfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager/lagertest"

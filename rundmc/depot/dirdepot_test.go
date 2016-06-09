@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/depot/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/depot/depotfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"
@@ -18,7 +18,7 @@ import (
 var _ = Describe("Depot", func() {
 	var (
 		depotDir   string
-		fakeBundle *fakes.FakeBundleCreator
+		fakeBundle *fakes.FakeBundleSaver
 		dirdepot   *depot.DirectoryDepot
 		logger     lager.Logger
 	)
@@ -31,7 +31,7 @@ var _ = Describe("Depot", func() {
 
 		logger = lagertest.NewTestLogger("test")
 
-		fakeBundle = new(fakes.FakeBundleCreator)
+		fakeBundle = new(fakes.FakeBundleSaver)
 		dirdepot = depot.New(depotDir)
 	})
 

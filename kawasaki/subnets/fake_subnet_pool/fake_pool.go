@@ -55,6 +55,8 @@ type FakePool struct {
 	runIfFreeReturns struct {
 		result1 error
 	}
+	invocations      map[string][][]interface{}
+	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakePool) Acquire(arg1 lager.Logger, arg2 subnets.SubnetSelector, arg3 subnets.IPSelector) (*net.IPNet, net.IP, error) {
@@ -64,6 +66,7 @@ func (fake *FakePool) Acquire(arg1 lager.Logger, arg2 subnets.SubnetSelector, ar
 		arg2 subnets.SubnetSelector
 		arg3 subnets.IPSelector
 	}{arg1, arg2, arg3})
+	fake.recordInvocation("Acquire", []interface{}{arg1, arg2, arg3})
 	fake.acquireMutex.Unlock()
 	if fake.AcquireStub != nil {
 		return fake.AcquireStub(arg1, arg2, arg3)
@@ -99,6 +102,7 @@ func (fake *FakePool) Release(arg1 *net.IPNet, arg2 net.IP) error {
 		arg1 *net.IPNet
 		arg2 net.IP
 	}{arg1, arg2})
+	fake.recordInvocation("Release", []interface{}{arg1, arg2})
 	fake.releaseMutex.Unlock()
 	if fake.ReleaseStub != nil {
 		return fake.ReleaseStub(arg1, arg2)
@@ -132,6 +136,7 @@ func (fake *FakePool) Remove(arg1 *net.IPNet, arg2 net.IP) error {
 		arg1 *net.IPNet
 		arg2 net.IP
 	}{arg1, arg2})
+	fake.recordInvocation("Remove", []interface{}{arg1, arg2})
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
 		return fake.RemoveStub(arg1, arg2)
@@ -162,6 +167,7 @@ func (fake *FakePool) RemoveReturns(result1 error) {
 func (fake *FakePool) Capacity() int {
 	fake.capacityMutex.Lock()
 	fake.capacityArgsForCall = append(fake.capacityArgsForCall, struct{}{})
+	fake.recordInvocation("Capacity", []interface{}{})
 	fake.capacityMutex.Unlock()
 	if fake.CapacityStub != nil {
 		return fake.CapacityStub()
@@ -189,6 +195,7 @@ func (fake *FakePool) RunIfFree(arg1 *net.IPNet, arg2 func() error) error {
 		arg1 *net.IPNet
 		arg2 func() error
 	}{arg1, arg2})
+	fake.recordInvocation("RunIfFree", []interface{}{arg1, arg2})
 	fake.runIfFreeMutex.Unlock()
 	if fake.RunIfFreeStub != nil {
 		return fake.RunIfFreeStub(arg1, arg2)
@@ -214,6 +221,34 @@ func (fake *FakePool) RunIfFreeReturns(result1 error) {
 	fake.runIfFreeReturns = struct {
 		result1 error
 	}{result1}
+}
+
+func (fake *FakePool) Invocations() map[string][][]interface{} {
+	fake.invocationsMutex.RLock()
+	defer fake.invocationsMutex.RUnlock()
+	fake.acquireMutex.RLock()
+	defer fake.acquireMutex.RUnlock()
+	fake.releaseMutex.RLock()
+	defer fake.releaseMutex.RUnlock()
+	fake.removeMutex.RLock()
+	defer fake.removeMutex.RUnlock()
+	fake.capacityMutex.RLock()
+	defer fake.capacityMutex.RUnlock()
+	fake.runIfFreeMutex.RLock()
+	defer fake.runIfFreeMutex.RUnlock()
+	return fake.invocations
+}
+
+func (fake *FakePool) recordInvocation(key string, args []interface{}) {
+	fake.invocationsMutex.Lock()
+	defer fake.invocationsMutex.Unlock()
+	if fake.invocations == nil {
+		fake.invocations = map[string][][]interface{}{}
+	}
+	if fake.invocations[key] == nil {
+		fake.invocations[key] = [][]interface{}{}
+	}
+	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
 var _ subnets.Pool = new(FakePool)

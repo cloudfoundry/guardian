@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"

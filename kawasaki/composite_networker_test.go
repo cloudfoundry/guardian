@@ -6,7 +6,7 @@ import (
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

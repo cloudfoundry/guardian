@@ -5,7 +5,7 @@ import (
 	"os/exec"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/runruncfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"

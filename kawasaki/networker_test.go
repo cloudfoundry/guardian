@@ -10,7 +10,7 @@ import (
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets/fake_subnet_pool"
 	. "github.com/onsi/ginkgo"

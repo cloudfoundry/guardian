@@ -9,7 +9,7 @@ import (
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/rundmcfakes"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

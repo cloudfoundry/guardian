@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/guardian/metrics"
-	"github.com/cloudfoundry-incubator/guardian/metrics/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/metrics/metricsfakes"
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	dropsonde_metrics "github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/pivotal-golang/clock/fakeclock"

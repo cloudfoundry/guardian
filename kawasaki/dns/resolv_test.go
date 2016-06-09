@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/dns/dnsfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/lager"

@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/rundmcfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

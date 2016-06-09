@@ -15,8 +15,8 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
-	dadoofakes "github.com/cloudfoundry-incubator/guardian/rundmc/dadoo/fakes"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/fakes"
+	dadoofakes "github.com/cloudfoundry-incubator/guardian/rundmc/dadoo/dadoofakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/runruncfakes"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

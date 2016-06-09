@@ -6,7 +6,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/iptables/iptablesfakes"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

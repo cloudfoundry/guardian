@@ -10,7 +10,7 @@ import (
 	"github.com/pivotal-golang/lager/lagertest"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/runruncfakes"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 )
 

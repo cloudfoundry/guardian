@@ -15,7 +15,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker/fakes"
+	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker/process_trackerfakes"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 )
 
