@@ -34,7 +34,7 @@ var _ = Describe("Create", func() {
 		fakeRunner = fake_command_runner.New()
 		logger = lagertest.NewTestLogger("test")
 
-		handle = "some-handle"
+		handle = "some-handle-that-is-longer-than-29-characters-long"
 		bridgeName = "some-bridge"
 		ip, network, err = net.ParseCIDR("1.2.3.4/28")
 		Expect(err).NotTo(HaveOccurred())
@@ -92,7 +92,7 @@ var _ = Describe("Create", func() {
 				{
 					Path: "iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id-log", "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID",
-						"--protocol", "tcp", "--jump", "LOG", "--log-prefix", "some-handle"},
+						"--protocol", "tcp", "--jump", "LOG", "--log-prefix", "some-handle-that-is-longer-th"},
 				},
 				{
 					Path: "iptables",
