@@ -18,7 +18,7 @@ func NewInstanceChainCreator(iptables *IPTablesController) *InstanceChainCreator
 	}
 }
 
-func (cc *InstanceChainCreator) Create(logger lager.Logger, instanceId, bridgeName string, ip net.IP, network *net.IPNet) error {
+func (cc *InstanceChainCreator) Create(logger lager.Logger, handle, instanceId, bridgeName string, ip net.IP, network *net.IPNet) error {
 	instanceChain := cc.iptables.InstanceChain(instanceId)
 
 	if err := cc.iptables.CreateChain("nat", instanceChain); err != nil {
@@ -65,10 +65,10 @@ func (cc *InstanceChainCreator) Create(logger lager.Logger, instanceId, bridgeNa
 	}
 
 	// Create Logging Chain
-	return cc.createLoggingChain(logger, instanceId)
+	return cc.createLoggingChain(logger, handle, instanceId)
 }
 
-func (cc *InstanceChainCreator) createLoggingChain(logger lager.Logger, instanceId string) error {
+func (cc *InstanceChainCreator) createLoggingChain(logger lager.Logger, handle, instanceId string) error {
 	instanceChain := cc.iptables.InstanceChain(instanceId)
 	loggingChain := fmt.Sprintf("%s-log", instanceChain)
 
@@ -76,7 +76,7 @@ func (cc *InstanceChainCreator) createLoggingChain(logger lager.Logger, instance
 		return err
 	}
 
-	cmd := exec.Command("iptables", "--wait", "-A", loggingChain, "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID", "--protocol", "tcp", "--jump", "LOG", "--log-prefix", instanceId)
+	cmd := exec.Command("iptables", "--wait", "-A", loggingChain, "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID", "--protocol", "tcp", "--jump", "LOG", "--log-prefix", handle)
 	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
 		return err
 	}

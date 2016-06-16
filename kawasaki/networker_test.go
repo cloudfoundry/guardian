@@ -190,6 +190,7 @@ var _ = Describe("Networker", func() {
 			})
 
 			itPassesTheNetworkConfig := func(args []string) {
+				Expect(args).To(ContainElement("--handle=some-handle"))
 				Expect(args).To(ContainElement("--host-interface=" + networkConfig.HostIntf))
 				Expect(args).To(ContainElement("--container-interface=" + networkConfig.ContainerIntf))
 				Expect(args).To(ContainElement("--bridge-interface=" + networkConfig.BridgeName))

@@ -176,6 +176,7 @@ func (n *networker) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) 
 	}
 
 	netCfgArgs := []string{
+		fmt.Sprintf("--handle=%s", containerSpec.Handle),
 		fmt.Sprintf("--host-interface=%s", config.HostIntf),
 		fmt.Sprintf("--container-interface=%s", config.ContainerIntf),
 		fmt.Sprintf("--bridge-interface=%s", config.BridgeName),

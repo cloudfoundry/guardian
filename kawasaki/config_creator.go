@@ -21,6 +21,7 @@ type IDGenerator interface {
 }
 
 type NetworkConfig struct {
+	ContainerHandle string
 	HostIntf        string
 	ContainerIntf   string
 	IPTablePrefix   string

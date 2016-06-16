@@ -10,10 +10,11 @@ import (
 )
 
 type FakeInstanceChainCreator struct {
-	CreateStub        func(logger lager.Logger, instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error
+	CreateStub        func(logger lager.Logger, handle, instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		logger        lager.Logger
+		handle        string
 		instanceChain string
 		bridgeName    string
 		ip            net.IP
@@ -35,19 +36,20 @@ type FakeInstanceChainCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeInstanceChainCreator) Create(logger lager.Logger, instanceChain string, bridgeName string, ip net.IP, network *net.IPNet) error {
+func (fake *FakeInstanceChainCreator) Create(logger lager.Logger, handle string, instanceChain string, bridgeName string, ip net.IP, network *net.IPNet) error {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		logger        lager.Logger
+		handle        string
 		instanceChain string
 		bridgeName    string
 		ip            net.IP
 		network       *net.IPNet
-	}{logger, instanceChain, bridgeName, ip, network})
-	fake.recordInvocation("Create", []interface{}{logger, instanceChain, bridgeName, ip, network})
+	}{logger, handle, instanceChain, bridgeName, ip, network})
+	fake.recordInvocation("Create", []interface{}{logger, handle, instanceChain, bridgeName, ip, network})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(logger, instanceChain, bridgeName, ip, network)
+		return fake.CreateStub(logger, handle, instanceChain, bridgeName, ip, network)
 	} else {
 		return fake.createReturns.result1
 	}
@@ -59,10 +61,10 @@ func (fake *FakeInstanceChainCreator) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeInstanceChainCreator) CreateArgsForCall(i int) (lager.Logger, string, string, net.IP, *net.IPNet) {
+func (fake *FakeInstanceChainCreator) CreateArgsForCall(i int) (lager.Logger, string, string, string, net.IP, *net.IPNet) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].instanceChain, fake.createArgsForCall[i].bridgeName, fake.createArgsForCall[i].ip, fake.createArgsForCall[i].network
+	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].instanceChain, fake.createArgsForCall[i].bridgeName, fake.createArgsForCall[i].ip, fake.createArgsForCall[i].network
 }
 
 func (fake *FakeInstanceChainCreator) CreateReturns(result1 error) {

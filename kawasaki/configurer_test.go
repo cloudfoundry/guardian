@@ -105,12 +105,14 @@ var _ = Describe("Configurer", func() {
 					IPTableInstance: "instance",
 					BridgeName:      "the-bridge-name",
 					ContainerIP:     net.ParseIP("1.2.3.4"),
+					ContainerHandle: "some-handle",
 					Subnet:          subnet,
 				}
 
 				Expect(configurer.Apply(logger, cfg, netnsFD.Name())).To(Succeed())
 				Expect(fakeInstanceChainCreator.CreateCallCount()).To(Equal(1))
-				_, instanceChain, bridgeName, ip, subnet := fakeInstanceChainCreator.CreateArgsForCall(0)
+				_, handle, instanceChain, bridgeName, ip, subnet := fakeInstanceChainCreator.CreateArgsForCall(0)
+				Expect(handle).To(Equal("some-handle"))
 				Expect(instanceChain).To(Equal("instance"))
 				Expect(bridgeName).To(Equal("the-bridge-name"))
 				Expect(ip).To(Equal(net.ParseIP("1.2.3.4")))

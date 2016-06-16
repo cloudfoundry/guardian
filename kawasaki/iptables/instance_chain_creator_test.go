@@ -25,6 +25,7 @@ var _ = Describe("Create", func() {
 		ip         net.IP
 		network    *net.IPNet
 		logger     lager.Logger
+		handle     string
 	)
 
 	BeforeEach(func() {
@@ -33,6 +34,7 @@ var _ = Describe("Create", func() {
 		fakeRunner = fake_command_runner.New()
 		logger = lagertest.NewTestLogger("test")
 
+		handle = "some-handle"
 		bridgeName = "some-bridge"
 		ip, network, err = net.ParseCIDR("1.2.3.4/28")
 		Expect(err).NotTo(HaveOccurred())
@@ -90,7 +92,7 @@ var _ = Describe("Create", func() {
 				{
 					Path: "iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id-log", "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID",
-						"--protocol", "tcp", "--jump", "LOG", "--log-prefix", "some-id"},
+						"--protocol", "tcp", "--jump", "LOG", "--log-prefix", "some-handle"},
 				},
 				{
 					Path: "iptables",
@@ -100,7 +102,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("should set up the chain", func() {
-			Expect(creator.Create(logger, "some-id", bridgeName, ip, network)).To(Succeed())
+			Expect(creator.Create(logger, handle, "some-id", bridgeName, ip, network)).To(Succeed())
 			Expect(fakeRunner).To(HaveExecutedSerially(specs...))
 		})
 
@@ -111,7 +113,7 @@ var _ = Describe("Create", func() {
 					return errors.New("Exit status blah")
 				})
 
-				Expect(creator.Create(logger, "some-id", bridgeName, ip, network)).To(MatchError(errorString))
+				Expect(creator.Create(logger, handle, "some-id", bridgeName, ip, network)).To(MatchError(errorString))
 			},
 			Entry("create nat instance chain", 0, "iptables create-instance-chains: iptables failed"),
 			Entry("bind nat instance chain to nat prerouting chain", 1, "iptables create-instance-chains: iptables failed"),

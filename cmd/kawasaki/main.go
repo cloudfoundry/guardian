@@ -56,6 +56,7 @@ func main() {
 	var action string
 
 	flag.StringVar(&action, "action", "create", "the action to take (either 'create' or 'destroy')")
+	flag.StringVar(&config.ContainerHandle, "handle", "", "the container handle")
 	flag.StringVar(&config.HostIntf, "host-interface", "", "the host interface to create")
 	flag.StringVar(&config.ContainerIntf, "container-interface", "", "the container interface to create")
 	flag.StringVar(&config.BridgeName, "bridge-interface", "", "the bridge interface to create or use")

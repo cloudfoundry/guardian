@@ -27,7 +27,7 @@ type HostConfigurer interface {
 
 //go:generate counterfeiter . InstanceChainCreator
 type InstanceChainCreator interface {
-	Create(logger lager.Logger, instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error
+	Create(logger lager.Logger, handle, instanceChain, bridgeName string, ip net.IP, network *net.IPNet) error
 	Destroy(logger lager.Logger, instanceChain string) error
 }
 
@@ -56,7 +56,7 @@ func (c *configurer) Apply(log lager.Logger, cfg NetworkConfig, nsPath string) e
 		return err
 	}
 
-	if err := c.instanceChainCreator.Create(log, cfg.IPTableInstance, cfg.BridgeName, cfg.ContainerIP, cfg.Subnet); err != nil {
+	if err := c.instanceChainCreator.Create(log, cfg.ContainerHandle, cfg.IPTableInstance, cfg.BridgeName, cfg.ContainerIP, cfg.Subnet); err != nil {
 		return err
 	}
 
