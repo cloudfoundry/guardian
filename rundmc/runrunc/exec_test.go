@@ -44,9 +44,13 @@ var _ = Describe("Execer", func() {
 	})
 
 	It("runs the execRunner with the prepared process spec", func() {
-		execPreparer.PrepareStub = func(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*specs.Process, error) {
-			return &specs.Process{
-				Args: []string{spec.Path, bundlePath},
+		execPreparer.PrepareStub = func(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*runrunc.PreparedSpec, error) {
+			return &runrunc.PreparedSpec{
+				Process: specs.Process{
+					Args: []string{spec.Path, bundlePath},
+				},
+				HostUID: 10,
+				HostGID: 10,
 			}, nil
 		}
 
@@ -116,7 +120,7 @@ var _ = Describe("IodaemonExecRunner", func() {
 		It("runs exec against the injected runC binary using process tracker", func() {
 			pidGenerator.GenerateReturns("another-process-guid")
 			ttyspec := &garden.TTYSpec{WindowSize: &garden.WindowSize{Rows: 1}}
-			runner.Run(logger, &specs.Process{},
+			runner.Run(logger, &runrunc.PreparedSpec{},
 				processesPath, "some-id", ttyspec, garden.ProcessIO{Stdout: GinkgoWriter})
 
 			Expect(tracker.RunCallCount()).To(Equal(1))
@@ -128,14 +132,14 @@ var _ = Describe("IodaemonExecRunner", func() {
 		})
 
 		It("creates the processes directory if it does not exist", func() {
-			runner.Run(logger, &specs.Process{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
+			runner.Run(logger, &runrunc.PreparedSpec{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(processesPath).To(BeADirectory())
 		})
 
 		Context("When creating the processes directory fails", func() {
 			It("returns a helpful error", func() {
 				Expect(ioutil.WriteFile(processesPath, []byte(""), 0700)).To(Succeed())
-				_, err := runner.Run(logger, &specs.Process{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
+				_, err := runner.Run(logger, &runrunc.PreparedSpec{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
 				Expect(err).To(MatchError(MatchRegexp("mkdir .*: .*")))
 			})
 		})
@@ -143,7 +147,7 @@ var _ = Describe("IodaemonExecRunner", func() {
 		It("asks for the pid file to be placed in processes/$guid.pid", func() {
 			pidGenerator.GenerateReturns("another-process-guid")
 			tracker.RunReturns(&process_tracker.Process{}, nil)
-			runner.Run(logger, &specs.Process{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
+			runner.Run(logger, &runrunc.PreparedSpec{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			_, cmd, _, _, _ := tracker.RunArgsForCall(0)
@@ -153,7 +157,7 @@ var _ = Describe("IodaemonExecRunner", func() {
 		It("tells process tracker that it can find the pid-file at processes/$guid.pid", func() {
 			pidGenerator.GenerateReturns("another-process-guid")
 			tracker.RunReturns(&process_tracker.Process{}, nil)
-			runner.Run(logger, &specs.Process{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
+			runner.Run(logger, &runrunc.PreparedSpec{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
 			Expect(tracker.RunCallCount()).To(Equal(1))
 
 			_, _, _, _, pidFile := tracker.RunArgsForCall(0)
@@ -163,7 +167,7 @@ var _ = Describe("IodaemonExecRunner", func() {
 		It("tells runc that the process.json is in /processes/$guid.json", func() {
 			pidGenerator.GenerateReturns("another-process-guid")
 			tracker.RunReturns(&process_tracker.Process{}, nil)
-			runner.Run(logger, &specs.Process{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
+			runner.Run(logger, &runrunc.PreparedSpec{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
 
 			_, cmd, _, _, _ := tracker.RunArgsForCall(0)
 			Expect(cmd.Args[3]).To(Equal(path.Join(processesPath, "another-process-guid.json")))
@@ -190,8 +194,10 @@ var _ = Describe("IodaemonExecRunner", func() {
 						return fakeProcess, nil
 					}
 
-					_, err := runner.Run(logger, &specs.Process{
-						Args: []string{"potato", "boom"},
+					_, err := runner.Run(logger, &runrunc.PreparedSpec{
+						Process: specs.Process{
+							Args: []string{"potato", "boom"},
+						},
 					}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -226,7 +232,10 @@ var _ = Describe("IodaemonExecRunner", func() {
 						return nil, errors.New("Boom")
 					}
 
-					_, err := runner.Run(logger, &specs.Process{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
+					preparedSpec := &runrunc.PreparedSpec{
+						Process: specs.Process{},
+					}
+					_, err := runner.Run(logger, preparedSpec, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
 					Expect(err).To(MatchError(ContainSubstring("Boom")))
 
 					Expect(processJsonPath).NotTo(BeAnExistingFile())
@@ -251,7 +260,7 @@ var _ = Describe("IodaemonExecRunner", func() {
 
 var _ = Describe("ExecPreparer", func() {
 	var (
-		spec         *specs.Process
+		spec         *runrunc.PreparedSpec
 		bundleLoader *fakes.FakeBundleLoader
 		users        *fakes.FakeUserLookupper
 		mkdirer      *fakes.FakeMkdirer
@@ -289,6 +298,16 @@ var _ = Describe("ExecPreparer", func() {
 		Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
 	})
 
+	It("returns the HostUID and HostGID in the returned spec", func() {
+		users.LookupReturns(&user.ExecUser{Uid: 234, Gid: 567}, nil)
+
+		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{}})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(spec.HostUID).To(BeEquivalentTo(234))
+		Expect(spec.HostGID).To(BeEquivalentTo(567))
+	})
+
 	It("sets the rlimits correctly", func() {
 		ptr := func(n uint64) *uint64 { return &n }
 		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
@@ -312,7 +331,7 @@ var _ = Describe("ExecPreparer", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(spec.Rlimits).To(ConsistOf(
+		Expect(spec.Process.Rlimits).To(ConsistOf(
 			specs.Rlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
 			specs.Rlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
 			specs.Rlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
@@ -342,14 +361,14 @@ var _ = Describe("ExecPreparer", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(spec.Terminal).To(BeTrue())
+		Expect(spec.Process.Terminal).To(BeTrue())
 
 		spec, err = preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
 			TTY: nil,
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(spec.Terminal).To(BeFalse())
+		Expect(spec.Process.Terminal).To(BeFalse())
 	})
 
 	Describe("passing the correct uid and gid", func() {
@@ -370,7 +389,7 @@ var _ = Describe("ExecPreparer", func() {
 			})
 
 			It("passes a process.json with the correct user and group ids", func() {
-				Expect(spec.User).To(Equal(specs.User{UID: 9, GID: 7}))
+				Expect(spec.Process.User).To(Equal(specs.User{UID: 9, GID: 7}))
 			})
 		})
 
@@ -414,7 +433,7 @@ var _ = Describe("ExecPreparer", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(spec.Env).To(ConsistOf("a=1", "b=3", "c=4", "PATH=a", "USER=spiderman", "HOME=/spidermanhome"))
+				Expect(spec.Process.Env).To(ConsistOf("a=1", "b=3", "c=4", "PATH=a", "USER=spiderman", "HOME=/spidermanhome"))
 			})
 		})
 
@@ -426,7 +445,7 @@ var _ = Describe("ExecPreparer", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=superman"}))
+				Expect(spec.Process.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=superman"}))
 			})
 		})
 	})
@@ -439,7 +458,7 @@ var _ = Describe("ExecPreparer", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
+				Expect(spec.Process.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
 			})
 		})
 
@@ -450,7 +469,7 @@ var _ = Describe("ExecPreparer", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=yo"}))
+				Expect(spec.Process.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=yo"}))
 			})
 		})
 	})
@@ -462,7 +481,7 @@ var _ = Describe("ExecPreparer", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
+			Expect(spec.Process.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
 		})
 	})
 
@@ -475,7 +494,7 @@ var _ = Describe("ExecPreparer", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
+			Expect(spec.Process.Env).To(Equal([]string{"a=1", "b=3", "c=4",
 				"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=root"}))
 		})
 
@@ -487,7 +506,7 @@ var _ = Describe("ExecPreparer", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(spec.Env).To(Equal([]string{"a=1", "b=3", "c=4",
+			Expect(spec.Process.Env).To(Equal([]string{"a=1", "b=3", "c=4",
 				"PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"}))
 		})
 	})
@@ -498,7 +517,7 @@ var _ = Describe("ExecPreparer", func() {
 			containerEnv []string
 			bndl         goci.Bndl
 
-			spec *specs.Process
+			spec *runrunc.PreparedSpec
 		)
 
 		BeforeEach(func() {
@@ -519,8 +538,8 @@ var _ = Describe("ExecPreparer", func() {
 		})
 
 		It("appends the process vars into container vars", func() {
-			envWContainer := make([]string, len(spec.Env))
-			copy(envWContainer, spec.Env)
+			envWContainer := make([]string, len(spec.Process.Env))
+			copy(envWContainer, spec.Process.Env)
 
 			bndl.Spec.Process.Env = []string{}
 			bundleLoader.LoadReturns(bndl, nil)
@@ -530,7 +549,7 @@ var _ = Describe("ExecPreparer", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(envWContainer).To(Equal(append(containerEnv, spec.Env...)))
+			Expect(envWContainer).To(Equal(append(containerEnv, spec.Process.Env...)))
 		})
 
 		Context("and the container environment contains PATH", func() {
@@ -539,7 +558,7 @@ var _ = Describe("ExecPreparer", func() {
 			})
 
 			It("should not apply the default PATH", func() {
-				Expect(spec.Env).To(Equal([]string{
+				Expect(spec.Process.Env).To(Equal([]string{
 					"ENV_CONTAINER_NAME=garden",
 					"PATH=/test",
 					"ENV_PROCESS_ID=1",
@@ -560,7 +579,7 @@ var _ = Describe("ExecPreparer", func() {
 			It("passes them on to the process", func() {
 				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(spec.Capabilities).To(Equal([]string{"foo", "bar", "baz"}))
+				Expect(spec.Process.Capabilities).To(Equal([]string{"foo", "bar", "baz"}))
 			})
 		})
 
@@ -570,7 +589,7 @@ var _ = Describe("ExecPreparer", func() {
 				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(spec.Capabilities).To(Equal([]string{"foo", "bar"}))
+				Expect(spec.Process.Capabilities).To(Equal([]string{"foo", "bar"}))
 			})
 		})
 	})
@@ -584,7 +603,7 @@ var _ = Describe("ExecPreparer", func() {
 				)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(spec.Cwd).To(Equal("/home/dir"))
+				Expect(spec.Process.Cwd).To(Equal("/home/dir"))
 			})
 
 			Describe("Creating the working directory", func() {
@@ -652,7 +671,7 @@ var _ = Describe("ExecPreparer", func() {
 				)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(spec.Cwd).To(Equal("/the/home/dir"))
+				Expect(spec.Process.Cwd).To(Equal("/the/home/dir"))
 			})
 
 			It("creates the directory", func() {

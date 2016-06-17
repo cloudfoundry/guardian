@@ -6,12 +6,11 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pivotal-golang/lager"
 )
 
 type FakeExecPreparer struct {
-	PrepareStub        func(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*specs.Process, error)
+	PrepareStub        func(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*runrunc.PreparedSpec, error)
 	prepareMutex       sync.RWMutex
 	prepareArgsForCall []struct {
 		log        lager.Logger
@@ -19,14 +18,14 @@ type FakeExecPreparer struct {
 		spec       garden.ProcessSpec
 	}
 	prepareReturns struct {
-		result1 *specs.Process
+		result1 *runrunc.PreparedSpec
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeExecPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*specs.Process, error) {
+func (fake *FakeExecPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*runrunc.PreparedSpec, error) {
 	fake.prepareMutex.Lock()
 	fake.prepareArgsForCall = append(fake.prepareArgsForCall, struct {
 		log        lager.Logger
@@ -54,10 +53,10 @@ func (fake *FakeExecPreparer) PrepareArgsForCall(i int) (lager.Logger, string, g
 	return fake.prepareArgsForCall[i].log, fake.prepareArgsForCall[i].bundlePath, fake.prepareArgsForCall[i].spec
 }
 
-func (fake *FakeExecPreparer) PrepareReturns(result1 *specs.Process, result2 error) {
+func (fake *FakeExecPreparer) PrepareReturns(result1 *runrunc.PreparedSpec, result2 error) {
 	fake.PrepareStub = nil
 	fake.prepareReturns = struct {
-		result1 *specs.Process
+		result1 *runrunc.PreparedSpec
 		result2 error
 	}{result1, result2}
 }

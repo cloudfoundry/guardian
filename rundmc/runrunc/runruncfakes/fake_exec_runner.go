@@ -6,16 +6,15 @@ import (
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pivotal-golang/lager"
 )
 
 type FakeExecRunner struct {
-	RunStub        func(log lager.Logger, spec *specs.Process, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
+	RunStub        func(log lager.Logger, spec *runrunc.PreparedSpec, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
 	runMutex       sync.RWMutex
 	runArgsForCall []struct {
 		log           lager.Logger
-		spec          *specs.Process
+		spec          *runrunc.PreparedSpec
 		processesPath string
 		handle        string
 		tty           *garden.TTYSpec
@@ -41,11 +40,11 @@ type FakeExecRunner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath string, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processesPath string, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
 	fake.runMutex.Lock()
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
 		log           lager.Logger
-		spec          *specs.Process
+		spec          *runrunc.PreparedSpec
 		processesPath string
 		handle        string
 		tty           *garden.TTYSpec
@@ -66,7 +65,7 @@ func (fake *FakeExecRunner) RunCallCount() int {
 	return len(fake.runArgsForCall)
 }
 
-func (fake *FakeExecRunner) RunArgsForCall(i int) (lager.Logger, *specs.Process, string, string, *garden.TTYSpec, garden.ProcessIO) {
+func (fake *FakeExecRunner) RunArgsForCall(i int) (lager.Logger, *runrunc.PreparedSpec, string, string, *garden.TTYSpec, garden.ProcessIO) {
 	fake.runMutex.RLock()
 	defer fake.runMutex.RUnlock()
 	return fake.runArgsForCall[i].log, fake.runArgsForCall[i].spec, fake.runArgsForCall[i].processesPath, fake.runArgsForCall[i].handle, fake.runArgsForCall[i].tty, fake.runArgsForCall[i].io

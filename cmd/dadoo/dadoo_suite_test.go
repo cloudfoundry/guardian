@@ -12,7 +12,7 @@ import (
 
 var dadooBinPath string
 
-func TestReap(t *testing.T) {
+func TestDadoo(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	skip := os.Getenv("GARDEN_TEST_ROOTFS") == ""
@@ -49,5 +49,5 @@ func TestReap(t *testing.T) {
 		}
 	})
 
-	RunSpecs(t, "Reap Suite")
+	RunSpecs(t, "Dadoo Suite")
 }

@@ -48,6 +48,7 @@ var _ = Describe("Run", func() {
 			}
 		},
 
+		// iodaemon tests
 		Entry("with an absolute path",
 			spec("/bin/sh", "-c", "echo hello; exit 12"),
 			should(gbytes.Say("hello"), gexec.Exit(12)),
@@ -73,9 +74,25 @@ var _ = Describe("Run", func() {
 			should(gexec.Exit(0)),
 		),
 
-		Entry("using dadoo exec",
+		// dadoo tests
+		Entry("with an absolute path using dadoo exec",
 			withDadoo(spec("/bin/sh", "-c", "echo hello; exit 12")),
 			should(gbytes.Say("hello"), gexec.Exit(12)),
+		),
+
+		Entry("with a path to be found in a regular user's path using dadoo exec",
+			withDadoo(spec("sh", "-c", "echo potato; exit 24")),
+			should(gbytes.Say("potato"), gexec.Exit(24)),
+		),
+
+		Entry("without a TTY",
+			withDadoo(spec("test", "-t", "1")),
+			should(gexec.Exit(1)),
+		),
+
+		Entry("with a TTY",
+			withDadoo(ttySpec("test", "-t", "1")),
+			should(gexec.Exit(0)),
 		),
 	)
 
@@ -288,6 +305,26 @@ var _ = Describe("Run", func() {
 			_, err = container.Run(garden.ProcessSpec{
 				Env:  []string{"USE_DADOO=true"},
 				Path: "does-not-exit",
+			}, garden.ProcessIO{})
+			Expect(err).To(MatchError(ContainSubstring("executable file not found")))
+
+			Eventually(client).Should(gbytes.Say(`execrunner.runc`))
+		})
+
+		It("forwards runc logs to lager when exec fails, and gives proper error messages when requesting a TTY", func() {
+			client = startGarden("--log-level", "debug")
+			container, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = container.Run(garden.ProcessSpec{
+				Env:  []string{"USE_DADOO=true"},
+				Path: "does-not-exit",
+				TTY: &garden.TTYSpec{
+					WindowSize: &garden.WindowSize{
+						Columns: 1,
+						Rows:    1,
+					},
+				},
 			}, garden.ProcessIO{})
 			Expect(err).To(MatchError(ContainSubstring("executable file not found")))
 

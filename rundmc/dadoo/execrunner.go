@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 
@@ -17,7 +18,6 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/kr/logfmt"
-	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pivotal-golang/lager"
 )
 
@@ -46,7 +46,7 @@ func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator
 	}
 }
 
-func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, handle string, tty *garden.TTYSpec, pio garden.ProcessIO) (p garden.Process, theErr error) {
+func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processesPath, handle string, tty *garden.TTYSpec, pio garden.ProcessIO) (p garden.Process, theErr error) {
 	if !contains(spec.Env, "USE_DADOO=true") {
 		return d.iodaemonRunner.Run(log, spec, processesPath, handle, tty, pio)
 	}
@@ -58,7 +58,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 	processID := d.processIDGen.Generate()
 	processPath := filepath.Join(processesPath, processID)
 
-	encodedSpec, err := json.Marshal(spec)
+	encodedSpec, err := json.Marshal(spec.Process)
 	if err != nil {
 		return nil, err // this could *almost* be a panic: a valid spec should always encode (but out of caution we'll error)
 	}
@@ -67,7 +67,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 		return nil, err
 	}
 
-	pipes, pipeArgs, err := mkFifos(pio, filepath.Join(processPath, "stdin"), filepath.Join(processPath, "stdout"), filepath.Join(processPath, "stderr"))
+	pipes, err := mkFifos(pio, filepath.Join(processPath, "stdin"), filepath.Join(processPath, "stdout"), filepath.Join(processPath, "stderr"))
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,13 @@ func (d *ExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, h
 	defer fd3r.Close()
 	defer logr.Close()
 
-	cmd := exec.Command(d.dadooPath, append(pipeArgs, "exec", d.runcPath, processPath, handle)...)
+	var cmd *exec.Cmd
+	if tty != nil {
+		cmd = exec.Command(d.dadooPath, "-tty", "-uid", strconv.Itoa(spec.HostUID), "-gid", strconv.Itoa(spec.HostGID), "exec", d.runcPath, processPath, handle)
+	} else {
+		cmd = exec.Command(d.dadooPath, "exec", d.runcPath, processPath, handle)
+	}
+
 	cmd.Stdin = bytes.NewReader(encodedSpec)
 	cmd.ExtraFiles = []*os.File{
 		fd3w,
@@ -218,22 +224,20 @@ type fifos [3]struct {
 	Open     func(p string) (*os.File, error)
 }
 
-func mkFifos(pio garden.ProcessIO, stdin, stdout, stderr string) (fifos, []string, error) {
+func mkFifos(pio garden.ProcessIO, stdin, stdout, stderr string) (fifos, error) {
 	pipes := fifos{
 		{Name: "stdin", Path: stdin, CopyFrom: pio.Stdin, Open: func(p string) (*os.File, error) { return os.OpenFile(p, os.O_WRONLY, 0600) }},
 		{Name: "stdout", Path: stdout, CopyTo: pio.Stdout, Open: os.Open},
 		{Name: "stderr", Path: stderr, CopyTo: pio.Stderr, Open: os.Open},
 	}
 
-	pipeArgs := []string{}
 	for _, pipe := range pipes {
-		pipeArgs = append(pipeArgs, fmt.Sprintf("-%s", pipe.Name), pipe.Path)
 		if err := syscall.Mkfifo(pipe.Path, 0); err != nil {
-			return pipes, nil, err
+			return pipes, err
 		}
 	}
 
-	return pipes, pipeArgs, nil
+	return pipes, nil
 }
 
 func (f fifos) start() error {

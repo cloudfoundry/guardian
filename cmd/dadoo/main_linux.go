@@ -12,6 +12,7 @@ import (
 	"syscall"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
+	"github.com/kr/pty"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
 
@@ -20,10 +21,11 @@ func main() {
 }
 
 func run() int {
-	var stdoutPath, stdinPath, stderrPath string
-	flag.StringVar(&stdoutPath, "stdout", "", "path to stdout")
-	flag.StringVar(&stdinPath, "stdin", "", "path to stdin")
-	flag.StringVar(&stderrPath, "stderr", "", "path to stderr")
+	var uid, gid int
+	var tty bool
+	flag.IntVar(&uid, "uid", 0, "uid to chown console to")
+	flag.IntVar(&gid, "gid", 0, "gid to chown console to")
+	flag.BoolVar(&tty, "tty", false, "tty requested")
 
 	flag.Parse()
 
@@ -54,10 +56,20 @@ func run() int {
 		check(os.MkdirAll(dir, 0700))
 		defer os.RemoveAll(dir) // for exec dadoo is responsible for creating & cleaning up
 
-		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
-		runcStartCmd.Stdin = forwardReadFIFO(stdinPath)
-		runcStartCmd.Stdout = forwardWriteFIFO(stdoutPath)
-		runcStartCmd.Stderr = forwardWriteFIFO(stderrPath)
+		stdin := forwardReadFIFO(filepath.Join(dir, "stdin"))
+		stdout := forwardWriteFIFO(filepath.Join(dir, "stdout"))
+		stderr := forwardWriteFIFO(filepath.Join(dir, "stderr"))
+
+		if tty {
+			ttyFile := setupTty(stdin, stdout)
+			check(ttyFile.Chown(uid, gid))
+			runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console", ttyFile.Name(), "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
+		} else {
+			runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
+			runcStartCmd.Stdin = stdin
+			runcStartCmd.Stdout = stdout
+			runcStartCmd.Stderr = stderr
+		}
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s", command)
 		return 127
@@ -126,23 +138,36 @@ func readPid(pidFile string) (int, error) {
 }
 
 func forwardReadFIFO(path string) io.Reader {
-	if path == "" {
+	r, err := os.Open(path)
+	if os.IsNotExist(err) {
 		return nil
 	}
 
-	r, err := os.Open(path)
 	check(err)
-
 	return r
 }
 
 func forwardWriteFIFO(path string) io.Writer {
-	if path == "" {
+	w, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0600)
+	if os.IsNotExist(err) {
 		return nil
 	}
 
-	w, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0600)
 	check(err)
-
 	return w
+}
+
+func setupTty(stdin io.Reader, stdout io.Writer) *os.File {
+	m, s, err := pty.Open()
+	if err != nil {
+		check(err)
+	}
+
+	go io.Copy(stdout, m)
+	go func() {
+		io.Copy(m, stdin)
+		m.Close()
+	}()
+
+	return s
 }

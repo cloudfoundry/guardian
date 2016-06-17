@@ -50,9 +50,16 @@ var _ = Describe("Dadoo", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(cp, "2m").Should(gexec.Exit(0))
 
+		chown, err := gexec.Start(exec.Command("chown", "-R", "1:1", filepath.Join(bundlePath, "root")), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(chown, "2m").Should(gexec.Exit(0))
+
 		bundle = bundle.
 			WithProcess(specs.Process{Args: []string{"/bin/sh", "-c", "exit 12"}, Cwd: "/"}).
-			WithRootFS(path.Join(bundlePath, "root"))
+			WithRootFS(path.Join(bundlePath, "root")).
+			WithNamespace(goci.UserNamespace).
+			WithUIDMappings(specs.IDMapping{HostID: 1, ContainerID: 0, Size: 100}).
+			WithGIDMappings(specs.IDMapping{HostID: 1, ContainerID: 0, Size: 100})
 
 		SetDefaultEventuallyTimeout(10 * time.Second)
 	})
@@ -69,8 +76,14 @@ var _ = Describe("Dadoo", func() {
 	})
 
 	Describe("Exec", func() {
+		var (
+			processDir string
+		)
+
 		BeforeEach(func() {
 			bundle = bundle.WithProcess(specs.Process{Args: []string{"/bin/sh", "-c", "sleep 9999"}, Cwd: "/"})
+			processDir = filepath.Join(bundlePath, "processes", "abc")
+			Expect(os.MkdirAll(processDir, 0777)).To(Succeed())
 		})
 
 		JustBeforeEach(func() {
@@ -96,7 +109,7 @@ var _ = Describe("Dadoo", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			cmd := exec.Command(dadooBinPath, "exec", "runc", path.Join(bundlePath, "processes", "abc"), filepath.Base(bundlePath))
+			cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 			cmd.Stdin = bytes.NewReader(processSpec)
 			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
 
@@ -113,7 +126,7 @@ var _ = Describe("Dadoo", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			cmd := exec.Command(dadooBinPath, "exec", "runc", path.Join(bundlePath, "processes", "abc"), filepath.Base(bundlePath))
+			cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 			cmd.Stdin = bytes.NewReader(processSpec)
 			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
 
@@ -132,26 +145,17 @@ var _ = Describe("Dadoo", func() {
 			var stdinPipe, stdoutPipe, stderrPipe string
 
 			BeforeEach(func() {
-				tmp, err := ioutil.TempDir("", "dadoopipetest")
-				Expect(err).NotTo(HaveOccurred())
-
-				stdoutPipe = filepath.Join(tmp, "stdout.pipe")
+				stdoutPipe = filepath.Join(processDir, "stdout")
 				Expect(syscall.Mkfifo(stdoutPipe, 0)).To(Succeed())
 
-				stderrPipe = filepath.Join(tmp, "stderr.pipe")
+				stderrPipe = filepath.Join(processDir, "stderr")
 				Expect(syscall.Mkfifo(stderrPipe, 0)).To(Succeed())
 
-				stdinPipe = filepath.Join(tmp, "stdin.pipe")
+				stdinPipe = filepath.Join(processDir, "stdin")
 				Expect(syscall.Mkfifo(stdinPipe, 0)).To(Succeed())
 			})
 
-			AfterEach(func() {
-				Expect(os.Remove(stdoutPipe)).To(Succeed())
-				Expect(os.Remove(stderrPipe)).To(Succeed())
-				Expect(os.Remove(stdinPipe)).To(Succeed())
-			})
-
-			It("should write the container's output to the named pipes at -stdout/stderr if specified", func() {
+			It("should write the container's output to the named pipes inside the process dir", func() {
 				spec := specs.Process{
 					Args: []string{"/bin/sh", "-c", "cat <&0"},
 					Cwd:  "/",
@@ -160,9 +164,8 @@ var _ = Describe("Dadoo", func() {
 				encSpec, err := json.Marshal(spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				cmd := exec.Command(dadooBinPath, "-stdout", stdoutPipe, "-stdin", stdinPipe, "-stderr", stderrPipe, "exec", "runc", path.Join(bundlePath, "processes", "abc"), filepath.Base(bundlePath))
+				cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 				cmd.Stdin = bytes.NewReader(encSpec)
-
 				_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -194,7 +197,7 @@ var _ = Describe("Dadoo", func() {
 				encSpec, err := json.Marshal(spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				cmd := exec.Command(dadooBinPath, "-stdin", stdinPipe, "exec", "runc", path.Join(bundlePath, "processes", "abc"), filepath.Base(bundlePath))
+				cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 				cmd.Stdin = bytes.NewReader(encSpec)
 				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
 
@@ -204,12 +207,98 @@ var _ = Describe("Dadoo", func() {
 				stdinP, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
 				Expect(err).NotTo(HaveOccurred())
 
-				Eventually(path.Join(bundlePath, "processes", "abc")).Should(BeADirectory())
-				Consistently(path.Join(bundlePath, "processes", "abc")).Should(BeADirectory())
+				_, err = os.Open(stdoutPipe)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = os.Open(stderrPipe)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(processDir).Should(BeADirectory())
+				Consistently(processDir).Should(BeADirectory())
 
 				Expect(stdinP.Close()).To(Succeed()) // close stdin so process exits
 
-				Eventually(path.Join(bundlePath, "processes", "abc")).ShouldNot(BeADirectory())
+				Eventually(processDir).ShouldNot(BeADirectory())
+			})
+		})
+
+		Context("requesting a TTY", func() {
+			var stdoutPipe, stderrPipe, stdinPipe string
+
+			BeforeEach(func() {
+				stdinPipe = filepath.Join(processDir, "stdin")
+				Expect(syscall.Mkfifo(stdinPipe, 0)).To(Succeed())
+
+				stdoutPipe = filepath.Join(processDir, "stdout")
+				Expect(syscall.Mkfifo(stdoutPipe, 0)).To(Succeed())
+
+				stderrPipe = filepath.Join(processDir, "stderr")
+				Expect(syscall.Mkfifo(stderrPipe, 0)).To(Succeed())
+			})
+
+			It("should connect the process to a TTY", func() {
+				spec := specs.Process{
+					Args:     []string{"/bin/sh", "-c", `test -t 1`},
+					Cwd:      "/",
+					Terminal: true,
+				}
+
+				encSpec, err := json.Marshal(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				cmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
+				cmd.Stdin = bytes.NewReader(encSpec)
+
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = os.Open(stdoutPipe)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = os.Open(stderrPipe)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(sess).Should(gexec.Exit(0))
+			})
+
+			It("should forward IO", func() {
+				spec := specs.Process{
+					Args:     []string{"/bin/sh", "-c", `read x; echo "x=$x"`},
+					Cwd:      "/",
+					Terminal: true,
+				}
+
+				encSpec, err := json.Marshal(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				cmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
+				cmd.Stdin = bytes.NewReader(encSpec)
+
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				stdin, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
+				Expect(err).NotTo(HaveOccurred())
+
+				stdout, err := os.Open(stdoutPipe)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = os.Open(stderrPipe)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = stdin.WriteString("banana\n")
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(sess).Should(gexec.Exit(0))
+
+				data, err := ioutil.ReadAll(stdout)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(data)).To(ContainSubstring("x=banana"))
 			})
 		})
 	})

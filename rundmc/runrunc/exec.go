@@ -91,7 +91,7 @@ func (e *Execer) Attach(log lager.Logger, bundlePath, id, processID string, io g
 
 //go:generate counterfeiter . ExecRunner
 type ExecRunner interface {
-	Run(log lager.Logger, spec *specs.Process, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
+	Run(log lager.Logger, spec *PreparedSpec, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
 }
 
@@ -112,7 +112,7 @@ func NewIodaemonExecRunner(pidGen UidGenerator, runc RuncBinary, tracker Process
 }
 
 // runrunc saves a process.json and invokes runc exec
-func (e *IodaemonExecRunner) Run(log lager.Logger, spec *specs.Process, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
+func (e *IodaemonExecRunner) Run(log lager.Logger, spec *PreparedSpec, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
 	pid := e.pidGenerator.Generate()
 
 	log = log.Session("execrunner", lager.Data{"pid": pid})
@@ -162,9 +162,15 @@ func (e *IodaemonExecRunner) Attach(log lager.Logger, processID string, io garde
 	return e.tracker.Attach(processID, io, pidFilePath)
 }
 
+type PreparedSpec struct {
+	specs.Process
+	HostUID int
+	HostGID int
+}
+
 //go:generate counterfeiter . ExecPreparer
 type ExecPreparer interface {
-	Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*specs.Process, error)
+	Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*PreparedSpec, error)
 }
 
 type execPreparer struct {
@@ -184,7 +190,7 @@ func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdire
 	}
 }
 
-func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*specs.Process, error) {
+func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*PreparedSpec, error) {
 	log = log.Session("prepare")
 
 	log.Info("start")
@@ -225,17 +231,21 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		caps = intersect(caps, r.nonRootMaxCaps)
 	}
 
-	return &specs.Process{
-		Args: append([]string{spec.Path}, spec.Args...),
-		Env:  envFor(u.containerUid, bndl, spec),
-		User: specs.User{
-			UID: uint32(u.containerUid),
-			GID: uint32(u.containerGid),
+	return &PreparedSpec{
+		HostUID: u.hostUid,
+		HostGID: u.hostGid,
+		Process: specs.Process{
+			Args: append([]string{spec.Path}, spec.Args...),
+			Env:  envFor(u.containerUid, bndl, spec),
+			User: specs.User{
+				UID: uint32(u.containerUid),
+				GID: uint32(u.containerGid),
+			},
+			Cwd:          cwd,
+			Capabilities: caps,
+			Rlimits:      toRlimits(spec.Limits),
+			Terminal:     spec.TTY != nil,
 		},
-		Cwd:          cwd,
-		Capabilities: caps,
-		Rlimits:      toRlimits(spec.Limits),
-		Terminal:     spec.TTY != nil,
 	}, nil
 }
 
