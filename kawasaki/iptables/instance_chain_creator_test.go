@@ -40,7 +40,7 @@ var _ = Describe("Create", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		creator = iptables.NewInstanceChainCreator(
-			iptables.New(fakeRunner, "prefix-"),
+			iptables.New("/sbin/iptables", fakeRunner, "prefix-"),
 		)
 	})
 
@@ -61,41 +61,41 @@ var _ = Describe("Create", func() {
 				{
 					Path: "sh",
 					Args: []string{"-c", fmt.Sprintf(
-						`(iptables --wait --table nat -S %s | grep "\-j MASQUERADE\b" | grep -q -F -- "-s %s") || iptables --wait --table nat -A %s --source %s ! --destination %s --jump MASQUERADE`,
+						`(/sbin/iptables --wait --table nat -S %s | grep "\-j MASQUERADE\b" | grep -q -F -- "-s %s") || /sbin/iptables --wait --table nat -A %s --source %s ! --destination %s --jump MASQUERADE`,
 						"prefix-postrouting", network.String(), "prefix-postrouting",
 						network.String(), network.String(),
 					)},
 				},
 				{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"--wait", "--table", "filter", "-N", "prefix-instance-some-id"},
 				},
 				{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id",
 						"-s", network.String(), "-d", network.String(), "-j", "ACCEPT"},
 				},
 				{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id",
 						"--goto", "prefix-default"},
 				},
 				{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"--wait", "-I", "prefix-forward", "2", "--in-interface", bridgeName,
 						"--source", ip.String(), "--goto", "prefix-instance-some-id"},
 				},
 				{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"--wait", "--table", "filter", "-N", "prefix-instance-some-id-log"},
 				},
 				{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id-log", "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID",
 						"--protocol", "tcp", "--jump", "LOG", "--log-prefix", "some-handle-that-is-longer-th"},
 				},
 				{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id-log", "--jump", "RETURN"},
 				},
 			}
@@ -115,12 +115,12 @@ var _ = Describe("Create", func() {
 
 				Expect(creator.Create(logger, handle, "some-id", bridgeName, ip, network)).To(MatchError(errorString))
 			},
-			Entry("create nat instance chain", 0, "iptables create-instance-chains: iptables failed"),
-			Entry("bind nat instance chain to nat prerouting chain", 1, "iptables create-instance-chains: iptables failed"),
-			Entry("enable NAT for traffic coming from containers", 2, "iptables create-instance-chains: iptables failed"),
-			Entry("create logging instance chain", 7, "iptables create-instance-chains: iptables failed"),
-			Entry("append logging to instance chain", 8, "iptables create-instance-chains: iptables failed"),
-			Entry("return from logging instance chain", 9, "iptables create-instance-chains: iptables failed"),
+			Entry("create nat instance chain", 0, "/sbin/iptables create-instance-chains: iptables failed"),
+			Entry("bind nat instance chain to nat prerouting chain", 1, "/sbin/iptables create-instance-chains: iptables failed"),
+			Entry("enable NAT for traffic coming from containers", 2, "/sbin/iptables create-instance-chains: iptables failed"),
+			Entry("create logging instance chain", 7, "/sbin/iptables create-instance-chains: iptables failed"),
+			Entry("append logging to instance chain", 8, "/sbin/iptables create-instance-chains: iptables failed"),
+			Entry("return from logging instance chain", 9, "/sbin/iptables create-instance-chains: iptables failed"),
 		)
 	})
 
@@ -132,46 +132,46 @@ var _ = Describe("Create", func() {
 				{
 					Path: "sh",
 					Args: []string{"-c", fmt.Sprintf(
-						`iptables --wait --table nat -S %s 2> /dev/null | grep "\-j %s\b" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 iptables --wait --table nat`,
+						`/sbin/iptables --wait --table nat -S %s 2> /dev/null | grep "\-j %s\b" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 /sbin/iptables --wait --table nat`,
 						"prefix-prerouting", "prefix-instance-some-id",
 					)},
 				},
 				{
 					Path: "sh",
 					Args: []string{"-c", fmt.Sprintf(
-						`iptables --wait --table nat -F %s 2> /dev/null || true`,
+						`/sbin/iptables --wait --table nat -F %s 2> /dev/null || true`,
 						"prefix-instance-some-id",
 					)},
 				},
 				{
 					Path: "sh",
 					Args: []string{"-c", fmt.Sprintf(
-						`iptables --wait --table nat -X %s 2> /dev/null || true`,
+						`/sbin/iptables --wait --table nat -X %s 2> /dev/null || true`,
 						"prefix-instance-some-id",
 					)},
 				},
 				{
 					Path: "sh",
 					Args: []string{"-c", fmt.Sprintf(
-						`iptables --wait -S %s 2> /dev/null | grep "\-g %s\b" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 iptables --wait`,
+						`/sbin/iptables --wait -S %s 2> /dev/null | grep "\-g %s\b" | sed -e "s/-A/-D/" | xargs --no-run-if-empty --max-lines=1 /sbin/iptables --wait`,
 						"prefix-forward", "prefix-instance-some-id",
 					)},
 				},
 				{
 					Path: "sh",
-					Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -F %s 2> /dev/null || true", "prefix-instance-some-id")},
+					Args: []string{"-c", fmt.Sprintf("/sbin/iptables --wait --table filter -F %s 2> /dev/null || true", "prefix-instance-some-id")},
 				},
 				{
 					Path: "sh",
-					Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -X %s 2> /dev/null || true", "prefix-instance-some-id")},
+					Args: []string{"-c", fmt.Sprintf("/sbin/iptables --wait --table filter -X %s 2> /dev/null || true", "prefix-instance-some-id")},
 				},
 				{
 					Path: "sh",
-					Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -F %s 2> /dev/null || true", "prefix-instance-some-id-log")},
+					Args: []string{"-c", fmt.Sprintf("/sbin/iptables --wait --table filter -F %s 2> /dev/null || true", "prefix-instance-some-id-log")},
 				},
 				{
 					Path: "sh",
-					Args: []string{"-c", fmt.Sprintf("iptables --wait --table filter -X %s 2> /dev/null || true", "prefix-instance-some-id-log")},
+					Args: []string{"-c", fmt.Sprintf("/sbin/iptables --wait --table filter -X %s 2> /dev/null || true", "prefix-instance-some-id-log")},
 				},
 			}
 		})
@@ -188,7 +188,7 @@ var _ = Describe("Create", func() {
 					return errors.New("exit status foo")
 				})
 
-				Expect(creator.Destroy(logger, "some-id")).To(MatchError("iptables prune-prerouting-chain: iptables failed"))
+				Expect(creator.Destroy(logger, "some-id")).To(MatchError("/sbin/iptables prune-prerouting-chain: iptables failed"))
 			})
 		})
 	})

@@ -26,7 +26,7 @@ var _ = Describe("Setup", func() {
 
 	JustBeforeEach(func() {
 		starter = iptables.NewStarter(
-			iptables.New(fakeRunner, "prefix-"),
+			iptables.New("/sbin/iptables", fakeRunner, "prefix-"),
 			true,
 			"the-nic-prefix",
 			denyNetworks,
@@ -41,6 +41,7 @@ var _ = Describe("Setup", func() {
 				fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 				"ACTION=setup",
 
+				"GARDEN_IPTABLES_BIN=/sbin/iptables",
 				"GARDEN_IPTABLES_FILTER_INPUT_CHAIN=prefix-input",
 				"GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=prefix-forward",
 				"GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=prefix-default",
@@ -63,21 +64,21 @@ var _ = Describe("Setup", func() {
 
 	itRejectsNetwork := func(network string) {
 		Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-			Path: "iptables",
+			Path: "/sbin/iptables",
 			Args: []string{"-w", "-A", "prefix-default", "--destination", network, "--jump", "REJECT"},
 		}))
 	}
 
 	itFlushesChain := func(chain string) {
 		Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-			Path: "iptables",
+			Path: "/sbin/iptables",
 			Args: []string{"-w", "-F", chain},
 		}))
 	}
 
 	itAppendsRule := func(chain string, args ...string) {
 		Expect(fakeRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
-			Path: "iptables",
+			Path: "/sbin/iptables",
 			Args: append([]string{"-w", "-A", chain}, args...),
 		}))
 	}
@@ -86,7 +87,7 @@ var _ = Describe("Setup", func() {
 		Context("when the input chain does not exist", func() {
 			BeforeEach(func() {
 				fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"-w", "-L", "prefix-input"},
 				}, func(_ *exec.Cmd) error {
 					return errors.New("exit status 1")
@@ -130,7 +131,7 @@ var _ = Describe("Setup", func() {
 				Context("when the first command fails", func() {
 					BeforeEach(func() {
 						fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
-							Path: "iptables",
+							Path: "/sbin/iptables",
 							Args: []string{"-w", "-A", "prefix-default", "--destination", "1.2.3.4/11", "--jump", "REJECT"},
 						}, func(cmd *exec.Cmd) error {
 							cmd.Stderr.Write([]byte("oh banana error!"))
@@ -154,7 +155,7 @@ var _ = Describe("Setup", func() {
 		Context("when the input chain exists", func() {
 			BeforeEach(func() {
 				fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"-w", "-L", "prefix-input"},
 				}, func(_ *exec.Cmd) error {
 					return nil
@@ -192,7 +193,7 @@ var _ = Describe("Setup", func() {
 					Context("when flushing the chain fails", func() {
 						BeforeEach(func() {
 							fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
-								Path: "iptables",
+								Path: "/sbin/iptables",
 								Args: []string{"-w", "-F", "prefix-default"},
 							}, func(cmd *exec.Cmd) error {
 								cmd.Stderr.Write([]byte("cannot-flush"))
@@ -209,7 +210,7 @@ var _ = Describe("Setup", func() {
 					Context("when appending the default chain fails", func() {
 						BeforeEach(func() {
 							fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
-								Path: "iptables",
+								Path: "/sbin/iptables",
 								Args: []string{"-w", "-A", "prefix-default", "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "--jump", "ACCEPT"},
 							}, func(cmd *exec.Cmd) error {
 								cmd.Stderr.Write([]byte("cannot-apply-conntrack"))

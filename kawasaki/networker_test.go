@@ -54,6 +54,7 @@ var _ = Describe("Networker", func() {
 		logger = lagertest.NewTestLogger("test")
 		networker = kawasaki.New(
 			"/path/to/kawasaki",
+			"/sbin/iptables",
 			fakeSpecParser,
 			fakeSubnetPool,
 			fakeConfigCreator,

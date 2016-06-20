@@ -156,6 +156,7 @@ type GuardianCommand struct {
 		NSTar    FileFlag `long:"nstar-bin"    required:"true" description:"Path to the 'nstar' binary."`
 		Tar      FileFlag `long:"tar-bin"      required:"true" description:"Path to the 'tar' binary."`
 		Kawasaki FileFlag `long:"kawasaki-bin" required:"true" description:"Path to the 'kawasaki' network hook binary."`
+		IPTables FileFlag `long:"iptables-bin" default:"/sbin/iptables" description:"path to the the iptables binary"`
 		Init     FileFlag `long:"init-bin"     required:"true" description:"Path execute as pid 1 inside each container."`
 		Runc     string   `long:"runc-bin"     default:"runc" description:"Path to the 'runc' binary."`
 	} `group:"Binary Tools"`
@@ -387,18 +388,19 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 	}
 
 	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
-	ipTables := iptables.New(iptRunner, chainPrefix)
+	ipTables := iptables.New(cmd.Bin.IPTables.Path(), iptRunner, chainPrefix)
 	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList)
 
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 
 	kawasakiNetworker := kawasaki.New(
 		cmd.Bin.Kawasaki.Path(),
+		cmd.Bin.IPTables.Path(),
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(cmd.Network.Pool.CIDR()),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
 		propManager,
-		factory.NewDefaultConfigurer(iptables.New(linux_command_runner.New(), chainPrefix)),
+		factory.NewDefaultConfigurer(ipTables),
 		portPool,
 		iptables.NewPortForwarder(ipTables),
 		iptables.NewFirewallOpener(ipTables),

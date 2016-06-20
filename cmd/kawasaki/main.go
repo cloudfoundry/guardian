@@ -53,10 +53,11 @@ func main() {
 	cf_debug_server.AddFlags(flag.CommandLine)
 
 	var config kawasaki.NetworkConfig
-	var action string
+	var action, ipTablesBinPath string
 
 	flag.StringVar(&action, "action", "create", "the action to take (either 'create' or 'destroy')")
 	flag.StringVar(&config.ContainerHandle, "handle", "", "the container handle")
+	flag.StringVar(&ipTablesBinPath, "iptables-bin", "", "path to the the iptables binary")
 	flag.StringVar(&config.HostIntf, "host-interface", "", "the host interface to create")
 	flag.StringVar(&config.ContainerIntf, "container-interface", "", "the container interface to create")
 	flag.StringVar(&config.BridgeName, "bridge-interface", "", "the bridge interface to create or use")
@@ -82,7 +83,7 @@ func main() {
 
 	logger.Info("start")
 
-	configurer := factory.NewDefaultConfigurer(iptables.New(linux_command_runner.New(), config.IPTablePrefix))
+	configurer := factory.NewDefaultConfigurer(iptables.New(ipTablesBinPath, linux_command_runner.New(), config.IPTablePrefix))
 	dnsResolvConfigurer := wireDNSResolvConfigurer(state, config)
 	hookActioner := &kawasaki.HookActioner{
 		Configurer:          configurer,

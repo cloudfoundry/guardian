@@ -102,6 +102,7 @@ type Networker interface {
 
 type networker struct {
 	kawasakiBinPath string // path to a binary that will apply the configuration
+	iptablesBin     string
 
 	specParser     SpecParser
 	subnetPool     subnets.Pool
@@ -115,6 +116,7 @@ type networker struct {
 
 func New(
 	kawasakiBinPath string,
+	iptablesBin string,
 	specParser SpecParser,
 	subnetPool subnets.Pool,
 	configCreator ConfigCreator,
@@ -126,6 +128,7 @@ func New(
 ) *networker {
 	return &networker{
 		kawasakiBinPath: kawasakiBinPath,
+		iptablesBin:     iptablesBin,
 
 		specParser:    specParser,
 		subnetPool:    subnetPool,
@@ -185,6 +188,7 @@ func (n *networker) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) 
 		fmt.Sprintf("--external-ip=%s", config.ExternalIP),
 		fmt.Sprintf("--subnet=%s", config.Subnet.String()),
 		fmt.Sprintf("--mtu=%d", config.Mtu),
+		fmt.Sprintf("--iptables-bin=%s", n.iptablesBin),
 		fmt.Sprintf("--iptable-prefix=%s", config.IPTablePrefix),
 		fmt.Sprintf("--iptable-instance=%s", config.IPTableInstance),
 	}

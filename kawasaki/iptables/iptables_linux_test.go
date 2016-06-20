@@ -32,7 +32,7 @@ var _ = Describe("IPTables controller", func() {
 		)
 
 		prefix = fmt.Sprintf("g-%d", GinkgoParallelNode())
-		iptablesController = iptables.New(fakeRunner, prefix)
+		iptablesController = iptables.New("/sbin/iptables", fakeRunner, prefix)
 	})
 
 	AfterEach(func() {
