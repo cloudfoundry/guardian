@@ -47,7 +47,7 @@ func run() int {
 	var runcStartCmd *exec.Cmd
 	switch command {
 	case "run":
-		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "start", "-d", "-pid-file", pidFilePath, containerId)
+		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "run", "-d", "-pid-file", pidFilePath, containerId)
 		runcStartCmd.Dir = dir
 
 		// listen to an exit socket early so waiters can wait for dadoo
