@@ -95,7 +95,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 			It("succesfully creates the container", func() {
 				var err error
 
-				container, err = client.Create(garden.ContainerSpec{RootFSPath: "docker:///cloudfoundry/garden-busybox"})
+				container, err = client.Create(garden.ContainerSpec{RootFSPath: "docker:///cfgarden/garden-busybox"})
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -133,7 +133,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 				It("creates the container successfully", func() {
 					var err error
 
-					container, err = client.Create(garden.ContainerSpec{RootFSPath: "docker://registry-1.docker.io/cloudfoundry/garden-busybox"})
+					container, err = client.Create(garden.ContainerSpec{RootFSPath: "docker://registry-1.docker.io/cfgarden/garden-busybox"})
 					Expect(err).ToNot(HaveOccurred())
 				})
 			})

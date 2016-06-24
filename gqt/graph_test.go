@@ -230,7 +230,7 @@ var _ = Describe("graph flags", func() {
 				Describe("graph cleanup for a rootfs not on the whitelist", func() {
 					It("cleans up all unused images from the graph", func() {
 						container, err := client.Create(garden.ContainerSpec{
-							RootFSPath: "docker:///cloudfoundry/garden-busybox",
+							RootFSPath: "docker:///cfgarden/garden-busybox",
 						})
 						Expect(err).ToNot(HaveOccurred())
 						Expect(client.Destroy(container.Handle())).To(Succeed())
