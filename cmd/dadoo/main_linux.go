@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -10,8 +11,10 @@ import (
 	"os/signal"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
+	"github.com/eapache/go-resiliency/retrier"
 	"github.com/kr/pty"
 	"github.com/opencontainers/runc/libcontainer/system"
 )
@@ -42,6 +45,8 @@ func run() int {
 	logFile := fmt.Sprintf("/proc/%d/fd/4", os.Getpid())
 	logFD := os.NewFile(4, "/proc/self/fd/4")
 
+	ttyWindowSizeFD := os.NewFile(5, "/proc/self/fd/5")
+
 	pidFilePath := filepath.Join(dir, "pidfile")
 
 	var runcStartCmd *exec.Cmd
@@ -61,9 +66,9 @@ func run() int {
 		stderr := forwardWriteFIFO(filepath.Join(dir, "stderr"))
 
 		if tty {
-			ttyFile := setupTty(stdin, stdout)
-			check(ttyFile.Chown(uid, gid))
-			runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console", ttyFile.Name(), "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
+			ttySlave := setupTty(stdin, stdout, ttyWindowSizeFD, pidFilePath)
+			check(ttySlave.Chown(uid, gid))
+			runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console", ttySlave.Name(), "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
 		} else {
 			runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
 			runcStartCmd.Stdin = stdin
@@ -94,7 +99,7 @@ func run() int {
 		return 3 // nothing to wait for, container didn't launch
 	}
 
-	containerPid, err := readPid(pidFilePath)
+	containerPid, err := parsePid(pidFilePath)
 	check(err)
 
 	for range signals {
@@ -123,20 +128,6 @@ func check(err error) {
 	}
 }
 
-func readPid(pidFile string) (int, error) {
-	b, err := ioutil.ReadFile(pidFile)
-	if err != nil {
-		return -1, err
-	}
-
-	var pid int
-	if _, err := fmt.Sscanf(string(b), "%d", &pid); err != nil {
-		return -1, err
-	}
-
-	return pid, nil
-}
-
 func forwardReadFIFO(path string) io.Reader {
 	r, err := os.Open(path)
 	if os.IsNotExist(err) {
@@ -157,17 +148,69 @@ func forwardWriteFIFO(path string) io.Writer {
 	return w
 }
 
-func setupTty(stdin io.Reader, stdout io.Writer) *os.File {
+func setupTty(stdin io.Reader, stdout io.Writer, ttyWindowSizeFD io.Reader, pidFilePath string) *os.File {
 	m, s, err := pty.Open()
 	if err != nil {
 		check(err)
 	}
 
 	go io.Copy(stdout, m)
+
 	go func() {
 		io.Copy(m, stdin)
 		m.Close()
 	}()
 
+	go func() {
+		setWinSize(m, ttyWindowSizeFD)
+
+		pid, err := readPid(pidFilePath)
+		if err != nil {
+			println("Timed out trying to open pidfile: ", err.Error())
+			return
+		}
+
+		for {
+			setWinSize(m, ttyWindowSizeFD)
+
+			p, _ := os.FindProcess(pid)
+			p.Signal(syscall.SIGWINCH)
+		}
+	}()
+
 	return s
+}
+
+func setWinSize(m *os.File, ttyWindowSizeFD io.Reader) {
+	ttySize := &dadoo.TtySize{}
+	json.NewDecoder(ttyWindowSizeFD).Decode(ttySize)
+	dadoo.SetWinSize(m, ttySize)
+}
+
+func readPid(pidFilePath string) (int, error) {
+	retrier := retrier.New(retrier.ConstantBackoff(20, 500*time.Millisecond), nil)
+	var (
+		pid int = -1
+		err error
+	)
+	retrier.Run(func() error {
+		pid, err = parsePid(pidFilePath)
+		return err
+	})
+
+	return pid, err
+}
+
+func parsePid(pidFile string) (int, error) {
+	b, err := ioutil.ReadFile(pidFile)
+	if err != nil {
+		return -1, err
+	}
+
+	var pid int
+	if _, err := fmt.Sscanf(string(b), "%d", &pid); err != nil {
+		return -1, err
+	}
+
+	return pid, nil
 }

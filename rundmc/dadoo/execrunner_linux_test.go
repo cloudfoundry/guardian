@@ -2,6 +2,7 @@ package dadoo_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -42,9 +43,15 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		dadooReturns           error
 		dadooWritesLogs        string
 		log                    *lagertest.TestLogger
+		receivedWinSize        dadoo.TtySize
+		readWindowSize         bool
+		readWindowSizeCh       chan struct{}
 	)
 
 	BeforeEach(func() {
+		readWindowSize = false
+		readWindowSizeCh = make(chan struct{})
+
 		fakeIodaemonRunner = new(fakes.FakeExecRunner)
 		fakeCommandRunner = fake_command_runner.New()
 		fakeProcessIDGenerator = new(fakes.FakeUidGenerator)
@@ -80,9 +87,14 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			fd3fd, err := syscall.Dup(int(cmd.ExtraFiles[0].Fd()))
 			Expect(err).NotTo(HaveOccurred())
 			fd3 := os.NewFile(uintptr(fd3fd), "fd3dup")
+
 			fd4fd, err := syscall.Dup(int(cmd.ExtraFiles[1].Fd()))
 			Expect(err).NotTo(HaveOccurred())
 			fd4 := os.NewFile(uintptr(fd4fd), "fd4dup")
+
+			fd5fd, err := syscall.Dup(int(cmd.ExtraFiles[2].Fd()))
+			Expect(err).NotTo(HaveOccurred())
+			fd5 := os.NewFile(uintptr(fd5fd), "fd5dup")
 
 			go func(cmd *exec.Cmd) {
 				defer GinkgoRecover()
@@ -105,6 +117,15 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				se, err := os.OpenFile(filepath.Join(dir, "stderr"), os.O_APPEND|os.O_WRONLY, 0600)
 				Expect(err).NotTo(HaveOccurred())
 
+				if readWindowSize {
+					go func() {
+						for {
+							json.NewDecoder(fd5).Decode(&receivedWinSize)
+							readWindowSizeCh <- struct{}{}
+						}
+					}()
+				}
+
 				// write log file to fd4
 				_, err = io.Copy(fd4, bytes.NewReader([]byte(dadooWritesLogs)))
 				Expect(err).NotTo(HaveOccurred())
@@ -119,6 +140,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				so.WriteString("hello stdout")
 				_, err = io.Copy(se, si)
 				Expect(err).NotTo(HaveOccurred())
+
 			}(cmd)
 
 			return dadooReturns
@@ -178,6 +200,34 @@ var _ = Describe("Dadoo ExecRunner", func() {
 							"exec", "path-to-runc", filepath.Join(processPath, "the-pid"), "some-handle",
 						}),
 					)
+				})
+
+				It("sends the initial window size via the winsz pipe", func() {
+					readWindowSize = true
+
+					runner.Run(log, &runrunc.PreparedSpec{
+						HostUID: 123,
+						HostGID: 456,
+						Process: specs.Process{
+							Env: []string{"USE_DADOO=true"},
+						},
+					},
+						processPath,
+						"some-handle",
+						&garden.TTYSpec{
+							&garden.WindowSize{
+								Columns: 13,
+								Rows:    17,
+							},
+						},
+						garden.ProcessIO{},
+					)
+
+					<-readWindowSizeCh
+					Eventually(receivedWinSize).Should(Equal(dadoo.TtySize{
+						Cols: 13,
+						Rows: 17,
+					}))
 				})
 			})
 
@@ -259,6 +309,47 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 
 			Describe("the returned garden.Process", func() {
+				Describe("SetTTY", func() {
+					It("sends the new window size via the winsz pipe", func() {
+						readWindowSize = true
+
+						process, err := runner.Run(log, &runrunc.PreparedSpec{
+							HostUID: 123,
+							HostGID: 456,
+							Process: specs.Process{
+								Env: []string{"USE_DADOO=true"},
+							},
+						},
+							processPath,
+							"some-handle",
+							&garden.TTYSpec{
+								&garden.WindowSize{
+									Columns: 13,
+									Rows:    17,
+								},
+							},
+							garden.ProcessIO{},
+						)
+						Expect(err).NotTo(HaveOccurred())
+
+						<-readWindowSizeCh
+
+						process.SetTTY(garden.TTYSpec{
+							&garden.WindowSize{
+								Columns: 53,
+								Rows:    59,
+							},
+						})
+
+						<-readWindowSizeCh
+						Eventually(receivedWinSize, "5s").Should(Equal(dadoo.TtySize{
+							Cols: 53,
+							Rows: 59,
+						}))
+
+					})
+				})
+
 				Describe("Signal", func() {
 					It("reads the PID from the pid file", func() {
 						process, err := runner.Run(log, &runrunc.PreparedSpec{Process: specs.Process{Env: []string{"USE_DADOO=true"}, Args: []string{"Banana", "rama"}}}, processPath, "some-handle", nil, garden.ProcessIO{})

@@ -91,7 +91,7 @@ var _ = Describe("Dadoo", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := exec.Command(dadooBinPath, "run", "runc", bundlePath, filepath.Base(bundlePath))
-			cmd.ExtraFiles = []*os.File{pipeW, devNull()}
+			cmd.ExtraFiles = []*os.File{pipeW, devNull(), devNull()}
 
 			_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -111,7 +111,7 @@ var _ = Describe("Dadoo", func() {
 
 			cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 			cmd.Stdin = bytes.NewReader(processSpec)
-			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
+			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -128,7 +128,7 @@ var _ = Describe("Dadoo", func() {
 
 			cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 			cmd.Stdin = bytes.NewReader(processSpec)
-			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
+			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -199,7 +199,7 @@ var _ = Describe("Dadoo", func() {
 
 				cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 				cmd.Stdin = bytes.NewReader(encSpec)
-				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 
 				_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
@@ -247,7 +247,7 @@ var _ = Describe("Dadoo", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
-				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 				cmd.Stdin = bytes.NewReader(encSpec)
 
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -276,7 +276,7 @@ var _ = Describe("Dadoo", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
-				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 				cmd.Stdin = bytes.NewReader(encSpec)
 
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -300,13 +300,133 @@ var _ = Describe("Dadoo", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(data)).To(ContainSubstring("x=banana"))
 			})
+
+			Context("when defining the window size", func() {
+				It("should set initial window size", func() {
+					spec := specs.Process{
+						Args: []string{
+							"/bin/sh",
+							"-c",
+							`
+						# The mechanism that is used to set TTY size (ioctl) is
+						# asynchronous. Hence, stty does not return the correct result
+						# right after the process is launched.
+						for i in $(seq 10); do
+						  sleep 1
+						  stty -a
+							echo ------------------------------
+						done
+					`,
+						},
+						Cwd:      "/",
+						Terminal: true,
+					}
+
+					winszR, winszW, err := os.Pipe()
+					Expect(err).NotTo(HaveOccurred())
+					defer winszW.Close()
+
+					encSpec, err := json.Marshal(spec)
+					Expect(err).NotTo(HaveOccurred())
+
+					cmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
+					cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), winszR}
+					cmd.Stdin = bytes.NewReader(encSpec)
+
+					json.NewEncoder(winszW).Encode(dadoo.TtySize{
+						Rows: 17,
+						Cols: 13,
+					})
+
+					_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+
+					winszR.Close()
+
+					_, err = os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
+					Expect(err).NotTo(HaveOccurred())
+
+					stdout, err := os.Open(stdoutPipe)
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = os.Open(stderrPipe)
+					Expect(err).NotTo(HaveOccurred())
+
+					time.Sleep(5 * time.Second)
+					data, err := ioutil.ReadAll(stdout)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(data)).To(ContainSubstring("rows 17; columns 13;"))
+				})
+
+				It("should update window size", func() {
+					spec := specs.Process{
+						Args: []string{
+							"/bin/sh",
+							"-c",
+							`
+						trap "stty -a" SIGWINCH
+
+						echo hello
+						# continuously block so that the trap can keep firing
+						for i in $(seq 10); do
+						  sleep 1&
+						  wait
+						done
+					`,
+						},
+						Cwd:      "/",
+						Terminal: true,
+					}
+
+					winszR, winszW, err := os.Pipe()
+					Expect(err).NotTo(HaveOccurred())
+					defer winszW.Close()
+
+					encSpec, err := json.Marshal(spec)
+					Expect(err).NotTo(HaveOccurred())
+
+					cmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
+					cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), winszR}
+					cmd.Stdin = bytes.NewReader(encSpec)
+
+					json.NewEncoder(winszW).Encode(dadoo.TtySize{
+						Rows: 17,
+						Cols: 13,
+					})
+
+					_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+
+					winszR.Close()
+
+					_, err = os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
+					Expect(err).NotTo(HaveOccurred())
+
+					stdout, err := os.Open(stdoutPipe)
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = os.Open(stderrPipe)
+					Expect(err).NotTo(HaveOccurred())
+
+					buf := make([]byte, len("hello"))
+					stdout.Read(buf)
+					Expect(string(buf)).To(Equal("hello"))
+					json.NewEncoder(winszW).Encode(dadoo.TtySize{
+						Rows: 53,
+						Cols: 60,
+					})
+					data, err := ioutil.ReadAll(stdout)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(data)).To(ContainSubstring("rows 53; columns 60;"))
+				})
+			})
 		})
 	})
 
 	Describe("Run", func() {
 		It("should return the exit code of the container process", func() {
 			cmd := exec.Command(dadooBinPath, "run", "runc", bundlePath, filepath.Base(bundlePath))
-			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
+			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -339,6 +459,7 @@ var _ = Describe("Dadoo", func() {
 					cmd.ExtraFiles = []*os.File{
 						pipeW,
 						devNull(),
+						devNull(),
 					}
 
 					_, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -369,6 +490,7 @@ var _ = Describe("Dadoo", func() {
 						cmd := exec.Command(dadooBinPath, "run", "runc", bundlePath, filepath.Base(bundlePath))
 						cmd.ExtraFiles = []*os.File{
 							pipeW,
+							devNull(),
 							devNull(),
 						}
 
@@ -411,6 +533,7 @@ var _ = Describe("Dadoo", func() {
 					cmd.ExtraFiles = []*os.File{
 						pipeW,
 						devNull(),
+						devNull(),
 					}
 
 					_, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -432,6 +555,7 @@ var _ = Describe("Dadoo", func() {
 				cmd := exec.Command(dadooBinPath, "run", "some-binary-that-doesnt-exist", bundlePath, filepath.Base(bundlePath))
 				cmd.ExtraFiles = []*os.File{
 					pipeW,
+					devNull(),
 					devNull(),
 				}
 

@@ -82,12 +82,18 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 		return nil, err
 	}
 
+	winszr, winszw, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+
 	defer fd3r.Close()
 	defer logr.Close()
 
 	var cmd *exec.Cmd
 	if tty != nil {
 		cmd = exec.Command(d.dadooPath, "-tty", "-uid", strconv.Itoa(spec.HostUID), "-gid", strconv.Itoa(spec.HostGID), "exec", d.runcPath, processPath, handle)
+		sendWindowSize(winszw, tty.WindowSize)
 	} else {
 		cmd = exec.Command(d.dadooPath, "exec", d.runcPath, processPath, handle)
 	}
@@ -96,6 +102,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 	cmd.ExtraFiles = []*os.File{
 		fd3w,
 		logw,
+		winszr,
 	}
 
 	if err := d.commandRunner.Start(cmd); err != nil {
@@ -104,6 +111,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 
 	fd3w.Close()
 	logw.Close()
+	winszr.Close()
 
 	log.Info("open-pipes")
 
@@ -126,7 +134,19 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])
 	}
 
-	return d.newProcess(cmd, filepath.Join(processPath, "pidfile")), nil
+	return d.newProcess(cmd, filepath.Join(processPath, "pidfile"), winszw), nil
+}
+
+func sendWindowSize(winszw io.Writer, winSize *garden.WindowSize) {
+	if winSize == nil {
+		return
+	}
+
+	initialSize := TtySize{
+		Cols: uint16(winSize.Columns),
+		Rows: uint16(winSize.Rows),
+	}
+	json.NewEncoder(winszw).Encode(initialSize)
 }
 
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
@@ -145,12 +165,13 @@ func (s osSignal) OsSignal() syscall.Signal {
 }
 
 type process struct {
-	pidFilePath string
-	pidGetter   PidGetter
-	wait        func() error
+	pidFilePath   string
+	pidGetter     PidGetter
+	wait          func() error
+	winSizeWriter io.WriteCloser
 }
 
-func (d *ExecRunner) newProcess(cmd *exec.Cmd, pidFilePath string) *process {
+func (d *ExecRunner) newProcess(cmd *exec.Cmd, pidFilePath string, winszw io.WriteCloser) *process {
 	exitCh := make(chan struct{})
 	var exitErr error
 	go func() {
@@ -163,8 +184,9 @@ func (d *ExecRunner) newProcess(cmd *exec.Cmd, pidFilePath string) *process {
 			<-exitCh
 			return exitErr
 		},
-		pidFilePath: pidFilePath,
-		pidGetter:   d.pidGetter,
+		pidFilePath:   pidFilePath,
+		pidGetter:     d.pidGetter,
+		winSizeWriter: winszw,
 	}
 }
 
@@ -173,6 +195,8 @@ func (p *process) ID() string {
 }
 
 func (p *process) Wait() (int, error) {
+	defer p.winSizeWriter.Close()
+
 	if err := p.wait(); err != nil {
 		exitError, ok := err.(ExitError)
 		if !ok {
@@ -190,7 +214,8 @@ func (p *process) Wait() (int, error) {
 	return 0, nil
 }
 
-func (p *process) SetTTY(garden.TTYSpec) error {
+func (p *process) SetTTY(tty garden.TTYSpec) error {
+	sendWindowSize(p.winSizeWriter, tty.WindowSize)
 	return nil
 }
 
