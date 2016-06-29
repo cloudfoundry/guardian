@@ -3,6 +3,7 @@ package bundlerules
 import (
 	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
+	"github.com/mitchellh/copystructure"
 )
 
 type Base struct {
@@ -12,8 +13,16 @@ type Base struct {
 
 func (r Base) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
 	if spec.Privileged {
-		return r.PrivilegedBase
+		copiedBndl, err := copystructure.Copy(r.PrivilegedBase)
+		if err != nil {
+			panic(err)
+		}
+		return copiedBndl.(goci.Bndl)
 	} else {
-		return r.UnprivilegedBase
+		copiedBndl, err := copystructure.Copy(r.UnprivilegedBase)
+		if err != nil {
+			panic(err)
+		}
+		return copiedBndl.(goci.Bndl)
 	}
 }
