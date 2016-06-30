@@ -7,7 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cloudfoundry-incubator/goci"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"github.com/pivotal-golang/lager"
 )
 

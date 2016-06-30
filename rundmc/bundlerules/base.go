@@ -1,8 +1,8 @@
 package bundlerules
 
 import (
-	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"github.com/mitchellh/copystructure"
 )
 

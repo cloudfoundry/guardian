@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/pivotal-golang/lager"
 )

@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/goci"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 )
 
 func envWithDefaultPath(defaultPath string, env []string) []string {

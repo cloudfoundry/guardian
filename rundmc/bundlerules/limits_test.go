@@ -6,9 +6,9 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 )
 
 var _ = Describe("LimitsRule", func() {

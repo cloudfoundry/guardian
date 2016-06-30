@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/rundmcfakes"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	. "github.com/onsi/ginkgo"

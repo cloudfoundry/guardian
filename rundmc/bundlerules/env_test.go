@@ -1,9 +1,9 @@
 package bundlerules_test
 
 import (
-	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/bundlerules"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

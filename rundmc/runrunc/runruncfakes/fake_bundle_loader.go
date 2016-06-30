@@ -4,7 +4,7 @@ package runruncfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/goci"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 )
 

@@ -12,9 +12,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cloudfoundry-incubator/goci"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
