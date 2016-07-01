@@ -87,19 +87,8 @@ var _ = Describe("Dadoo", func() {
 		})
 
 		JustBeforeEach(func() {
-			pipeR, pipeW, err := os.Pipe()
-			Expect(err).NotTo(HaveOccurred())
-
-			cmd := exec.Command(dadooBinPath, "run", "runc", bundlePath, filepath.Base(bundlePath))
-			cmd.ExtraFiles = []*os.File{pipeW, devNull(), devNull()}
-
-			_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			buff := make([]byte, 1)
-			_, err = pipeR.Read(buff)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(buff[0]).To(BeEquivalentTo(0))
+			cmd := exec.Command("runc", "create", "--bundle", bundlePath, filepath.Base(bundlePath))
+			Expect(cmd.Run()).To(Succeed())
 		})
 
 		It("should return the exit code of the container process", func() {
@@ -311,7 +300,7 @@ var _ = Describe("Dadoo", func() {
 						# The mechanism that is used to set TTY size (ioctl) is
 						# asynchronous. Hence, stty does not return the correct result
 						# right after the process is launched.
-						for i in $(seq 10); do
+						for i in $(seq 3); do
 						  sleep 1
 						  stty -a
 							echo ------------------------------
@@ -368,7 +357,7 @@ var _ = Describe("Dadoo", func() {
 
 						echo hello
 						# continuously block so that the trap can keep firing
-						for i in $(seq 10); do
+						for i in $(seq 3); do
 						  sleep 1&
 						  wait
 						done
@@ -419,160 +408,6 @@ var _ = Describe("Dadoo", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(data)).To(ContainSubstring("rows 53; columns 60;"))
 				})
-			})
-		})
-	})
-
-	Describe("Run", func() {
-		It("should return the exit code of the container process", func() {
-			cmd := exec.Command(dadooBinPath, "run", "runc", bundlePath, filepath.Base(bundlePath))
-			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
-
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(sess).Should(gexec.Exit(12))
-		})
-
-		It("should delete the container state correctly when it exits", func() {
-			sess, err := gexec.Start(exec.Command(dadooBinPath, "run", "runc", bundlePath, filepath.Base(bundlePath)), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit())
-
-			state, err := gexec.Start(exec.Command("runc", "state", filepath.Base(bundlePath)), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(state).Should(gexec.Exit(1))
-		})
-
-		Describe("returning runc's exit code on fd3", func() {
-			var pipeR, pipeW *os.File
-
-			BeforeEach(func() {
-				var err error
-				pipeR, pipeW, err = os.Pipe()
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			Context("when launching succeeds", func() {
-				It("should return 0 on fd3", func() {
-					cmd := exec.Command(dadooBinPath, "run", "runc", bundlePath, filepath.Base(bundlePath))
-					cmd.ExtraFiles = []*os.File{
-						pipeW,
-						devNull(),
-						devNull(),
-					}
-
-					_, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-
-					fd3 := make(chan byte)
-					go func() {
-						b := make([]byte, 1)
-						pipeR.Read(b)
-
-						fd3 <- b[0]
-					}()
-
-					Eventually(fd3).Should(Receive(BeEquivalentTo(0)))
-				})
-
-				Context("when running a long-running command", func() {
-					BeforeEach(func() {
-						bundle = bundle.WithProcess(specs.Process{
-							Args: []string{
-								"/bin/sh", "-c", "sleep 60",
-							},
-							Cwd: "/",
-						})
-					})
-
-					It("should be able to be watched by WaitWatcher", func() {
-						cmd := exec.Command(dadooBinPath, "run", "runc", bundlePath, filepath.Base(bundlePath))
-						cmd.ExtraFiles = []*os.File{
-							pipeW,
-							devNull(),
-							devNull(),
-						}
-
-						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-						Expect(err).NotTo(HaveOccurred())
-
-						fd3 := make(chan byte)
-						go func() {
-							b := make([]byte, 1)
-							pipeR.Read(b)
-
-							fd3 <- b[0]
-						}()
-						Eventually(fd3).Should(Receive(BeEquivalentTo(0)))
-
-						ww := &dadoo.WaitWatcher{}
-						ch, err := ww.Wait(filepath.Join(bundlePath, "exit.sock"))
-						Expect(err).NotTo(HaveOccurred())
-						Consistently(ch).ShouldNot(BeClosed())
-
-						killCmd := exec.Command("runc", "kill", filepath.Base(bundlePath), "KILL")
-						killCmd.Dir = bundlePath
-						killSess, err := gexec.Start(killCmd, GinkgoWriter, GinkgoWriter)
-						Expect(err).NotTo(HaveOccurred())
-						Eventually(killSess).Should(gexec.Exit(0))
-
-						Eventually(ch).Should(BeClosed())
-						Expect(sess).NotTo(gexec.Exit(0))
-					})
-				})
-			})
-
-			Context("when launching fails", func() {
-				BeforeEach(func() {
-					bundle = bundle.WithRootFS("/path/to/nothing/at/all/potato")
-				})
-
-				It("should return runc's exit status on fd3", func() {
-					cmd := exec.Command(dadooBinPath, "run", "runc", bundlePath, filepath.Base(bundlePath))
-					cmd.ExtraFiles = []*os.File{
-						pipeW,
-						devNull(),
-						devNull(),
-					}
-
-					_, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-
-					fd3 := make(chan byte)
-					go func() {
-						b := make([]byte, 1)
-						pipeR.Read(b)
-
-						fd3 <- b[0]
-					}()
-
-					Eventually(fd3).Should(Receive(BeEquivalentTo(1)))
-				})
-			})
-
-			It("it exits 2 and writes an error to fd3 if runc start fails", func() {
-				cmd := exec.Command(dadooBinPath, "run", "some-binary-that-doesnt-exist", bundlePath, filepath.Base(bundlePath))
-				cmd.ExtraFiles = []*os.File{
-					pipeW,
-					devNull(),
-					devNull(),
-				}
-
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(sess).Should(gexec.Exit(2))
-
-				fd3 := make(chan byte)
-				go func() {
-					b := make([]byte, 1)
-					pipeR.Read(b)
-
-					fd3 <- b[0]
-				}()
-
-				Eventually(fd3).Should(Receive(BeEquivalentTo(2)))
 			})
 		})
 	})

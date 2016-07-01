@@ -15,11 +15,12 @@ type RunRunc struct {
 	runc          RuncBinary
 
 	*Execer
-	*Starter
+	*Creator
 	*OomWatcher
 	*Statser
 	*Stater
 	*Killer
+	*Deleter
 }
 
 //go:generate counterfeiter . RuncBinary
@@ -29,16 +30,18 @@ type RuncBinary interface {
 	StateCommand(id, logFile string) *exec.Cmd
 	StatsCommand(id, logFile string) *exec.Cmd
 	KillCommand(id, signal, logFile string) *exec.Cmd
+	DeleteCommand(id, logFile string) *exec.Cmd
 }
 
 func New(runner command_runner.CommandRunner, runcCmdRunner RuncCmdRunner, runc RuncBinary, dadooPath, runcPath string, execPreparer ExecPreparer, execRunner ExecRunner) *RunRunc {
 	return &RunRunc{
-		Starter: NewStarter(dadooPath, runcPath, runner),
+		Creator: NewCreator(runcPath, runner),
 		Execer:  NewExecer(execPreparer, execRunner),
 
 		OomWatcher: NewOomWatcher(runner, runc),
 		Statser:    NewStatser(runcCmdRunner, runc),
 		Stater:     NewStater(runcCmdRunner, runc),
 		Killer:     NewKiller(runcCmdRunner, runc),
+		Deleter:    NewDeleter(runcCmdRunner, runc),
 	}
 }

@@ -55,6 +55,15 @@ type FakeRuncBinary struct {
 	killCommandReturns struct {
 		result1 *exec.Cmd
 	}
+	DeleteCommandStub        func(id, logFile string) *exec.Cmd
+	deleteCommandMutex       sync.RWMutex
+	deleteCommandArgsForCall []struct {
+		id      string
+		logFile string
+	}
+	deleteCommandReturns struct {
+		result1 *exec.Cmd
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -230,6 +239,40 @@ func (fake *FakeRuncBinary) KillCommandReturns(result1 *exec.Cmd) {
 	}{result1}
 }
 
+func (fake *FakeRuncBinary) DeleteCommand(id string, logFile string) *exec.Cmd {
+	fake.deleteCommandMutex.Lock()
+	fake.deleteCommandArgsForCall = append(fake.deleteCommandArgsForCall, struct {
+		id      string
+		logFile string
+	}{id, logFile})
+	fake.recordInvocation("DeleteCommand", []interface{}{id, logFile})
+	fake.deleteCommandMutex.Unlock()
+	if fake.DeleteCommandStub != nil {
+		return fake.DeleteCommandStub(id, logFile)
+	} else {
+		return fake.deleteCommandReturns.result1
+	}
+}
+
+func (fake *FakeRuncBinary) DeleteCommandCallCount() int {
+	fake.deleteCommandMutex.RLock()
+	defer fake.deleteCommandMutex.RUnlock()
+	return len(fake.deleteCommandArgsForCall)
+}
+
+func (fake *FakeRuncBinary) DeleteCommandArgsForCall(i int) (string, string) {
+	fake.deleteCommandMutex.RLock()
+	defer fake.deleteCommandMutex.RUnlock()
+	return fake.deleteCommandArgsForCall[i].id, fake.deleteCommandArgsForCall[i].logFile
+}
+
+func (fake *FakeRuncBinary) DeleteCommandReturns(result1 *exec.Cmd) {
+	fake.DeleteCommandStub = nil
+	fake.deleteCommandReturns = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
 func (fake *FakeRuncBinary) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -243,6 +286,8 @@ func (fake *FakeRuncBinary) Invocations() map[string][][]interface{} {
 	defer fake.statsCommandMutex.RUnlock()
 	fake.killCommandMutex.RLock()
 	defer fake.killCommandMutex.RUnlock()
+	fake.deleteCommandMutex.RLock()
+	defer fake.deleteCommandMutex.RUnlock()
 	return fake.invocations
 }
 

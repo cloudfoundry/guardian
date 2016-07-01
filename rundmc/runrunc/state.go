@@ -11,7 +11,7 @@ import (
 
 type Status string
 
-const RunningStatus Status = "running"
+const CreatedStatus Status = "created"
 
 type State struct {
 	Pid    int

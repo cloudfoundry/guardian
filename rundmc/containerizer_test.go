@@ -21,15 +21,14 @@ import (
 
 var _ = Describe("Rundmc", func() {
 	var (
-		fakeDepot           *fakes.FakeDepot
-		fakeBundler         *fakes.FakeBundleGenerator
-		fakeBundleLoader    *fakes.FakeBundleLoader
-		fakeContainerRunner *fakes.FakeBundleRunner
-		fakeNstarRunner     *fakes.FakeNstarRunner
-		fakeStopper         *fakes.FakeStopper
-		fakeExitWaiter      *fakes.FakeExitWaiter
-		fakeEventStore      *fakes.FakeEventStore
-		fakeStateStore      *fakes.FakeStateStore
+		fakeDepot        *fakes.FakeDepot
+		fakeBundler      *fakes.FakeBundleGenerator
+		fakeBundleLoader *fakes.FakeBundleLoader
+		fakeOCIRuntime   *fakes.FakeOCIRuntime
+		fakeNstarRunner  *fakes.FakeNstarRunner
+		fakeStopper      *fakes.FakeStopper
+		fakeEventStore   *fakes.FakeEventStore
+		fakeStateStore   *fakes.FakeStateStore
 
 		logger        lager.Logger
 		containerizer *rundmc.Containerizer
@@ -37,12 +36,11 @@ var _ = Describe("Rundmc", func() {
 
 	BeforeEach(func() {
 		fakeDepot = new(fakes.FakeDepot)
-		fakeContainerRunner = new(fakes.FakeBundleRunner)
+		fakeOCIRuntime = new(fakes.FakeOCIRuntime)
 		fakeBundler = new(fakes.FakeBundleGenerator)
 		fakeBundleLoader = new(fakes.FakeBundleLoader)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeStopper = new(fakes.FakeStopper)
-		fakeExitWaiter = new(fakes.FakeExitWaiter)
 		fakeEventStore = new(fakes.FakeEventStore)
 		fakeStateStore = new(fakes.FakeStateStore)
 		logger = lagertest.NewTestLogger("test")
@@ -51,13 +49,7 @@ var _ = Describe("Rundmc", func() {
 			return "/path/to/" + handle, nil
 		}
 
-		fakeExitWaiter.WaitStub = func(path string) (<-chan struct{}, error) {
-			ch := make(chan struct{})
-			close(ch)
-			return ch, nil
-		}
-
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeContainerRunner, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeExitWaiter, fakeEventStore, fakeStateStore)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore)
 	})
 
 	Describe("Create", func() {
@@ -87,14 +79,14 @@ var _ = Describe("Rundmc", func() {
 			})
 		})
 
-		It("should start a container in the created directory", func() {
+		It("should create a container in the given directory", func() {
 			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
 				Handle: "exuberant!",
 			})).To(Succeed())
 
-			Expect(fakeContainerRunner.StartCallCount()).To(Equal(1))
+			Expect(fakeOCIRuntime.CreateCallCount()).To(Equal(1))
 
-			_, path, id, _ := fakeContainerRunner.StartArgsForCall(0)
+			_, path, id, _ := fakeOCIRuntime.CreateArgsForCall(0)
 			Expect(path).To(Equal("/path/to/exuberant!"))
 			Expect(id).To(Equal("exuberant!"))
 		})
@@ -106,9 +98,9 @@ var _ = Describe("Rundmc", func() {
 
 		})
 
-		Context("when the container fails to start", func() {
+		Context("when the container creation fails", func() {
 			BeforeEach(func() {
-				fakeContainerRunner.StartReturns(errors.New("banana"))
+				fakeOCIRuntime.CreateReturns(errors.New("banana"))
 			})
 
 			It("should return an error", func() {
@@ -117,7 +109,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should watch for events in a goroutine", func() {
-			fakeContainerRunner.WatchEventsStub = func(_ lager.Logger, _ string, _ runrunc.EventsNotifier) error {
+			fakeOCIRuntime.WatchEventsStub = func(_ lager.Logger, _ string, _ runrunc.EventsNotifier) error {
 				time.Sleep(10 * time.Second)
 				return nil
 			}
@@ -135,9 +127,9 @@ var _ = Describe("Rundmc", func() {
 			case <-created:
 			}
 
-			Eventually(fakeContainerRunner.WatchEventsCallCount).Should(Equal(1))
+			Eventually(fakeOCIRuntime.WatchEventsCallCount).Should(Equal(1))
 
-			_, handle, eventsNotifier := fakeContainerRunner.WatchEventsArgsForCall(0)
+			_, handle, eventsNotifier := fakeOCIRuntime.WatchEventsArgsForCall(0)
 			Expect(handle).To(Equal("some-container"))
 			Expect(eventsNotifier).To(Equal(fakeEventStore))
 		})
@@ -146,9 +138,9 @@ var _ = Describe("Rundmc", func() {
 	Describe("Run", func() {
 		It("should ask the execer to exec a process in the container", func() {
 			containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
-			Expect(fakeContainerRunner.ExecCallCount()).To(Equal(1))
+			Expect(fakeOCIRuntime.ExecCallCount()).To(Equal(1))
 
-			_, path, id, spec, _ := fakeContainerRunner.ExecArgsForCall(0)
+			_, path, id, spec, _ := fakeOCIRuntime.ExecArgsForCall(0)
 			Expect(path).To(Equal("/path/to/some-handle"))
 			Expect(id).To(Equal("some-handle"))
 			Expect(spec.Path).To(Equal("hello"))
@@ -164,7 +156,7 @@ var _ = Describe("Rundmc", func() {
 			It("does not attempt to exec the process", func() {
 				fakeDepot.LookupReturns("", errors.New("blam"))
 				containerizer.Run(logger, "some-handle", garden.ProcessSpec{}, garden.ProcessIO{})
-				Expect(fakeContainerRunner.ExecCallCount()).To(Equal(0))
+				Expect(fakeOCIRuntime.ExecCallCount()).To(Equal(0))
 			})
 		})
 	})
@@ -172,9 +164,9 @@ var _ = Describe("Rundmc", func() {
 	Describe("Attach", func() {
 		It("should ask the execer to attach a process in the container", func() {
 			containerizer.Attach(logger, "some-handle", "123", garden.ProcessIO{})
-			Expect(fakeContainerRunner.AttachCallCount()).To(Equal(1))
+			Expect(fakeOCIRuntime.AttachCallCount()).To(Equal(1))
 
-			_, path, id, processId, _ := fakeContainerRunner.AttachArgsForCall(0)
+			_, path, id, processId, _ := fakeOCIRuntime.AttachArgsForCall(0)
 			Expect(path).To(Equal("/path/to/some-handle"))
 			Expect(id).To(Equal("some-handle"))
 			Expect(processId).To(Equal("123"))
@@ -190,14 +182,14 @@ var _ = Describe("Rundmc", func() {
 			It("does not attempt to exec the process", func() {
 				fakeDepot.LookupReturns("", errors.New("blam"))
 				containerizer.Attach(logger, "some-handle", "123", garden.ProcessIO{})
-				Expect(fakeContainerRunner.AttachCallCount()).To(Equal(0))
+				Expect(fakeOCIRuntime.AttachCallCount()).To(Equal(0))
 			})
 		})
 	})
 
 	Describe("StreamIn", func() {
 		It("should execute the NSTar command with the container PID", func() {
-			fakeContainerRunner.StateReturns(runrunc.State{
+			fakeOCIRuntime.StateReturns(runrunc.State{
 				Pid: 12,
 			}, nil)
 
@@ -216,7 +208,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("returns an error if the PID cannot be found", func() {
-			fakeContainerRunner.StateReturns(runrunc.State{}, errors.New("pid not found"))
+			fakeOCIRuntime.StateReturns(runrunc.State{}, errors.New("pid not found"))
 			Expect(containerizer.StreamIn(logger, "some-handle", garden.StreamInSpec{})).To(MatchError("stream-in: pid not found for container"))
 		})
 
@@ -228,7 +220,7 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("StreamOut", func() {
 		It("should execute the NSTar command with the container PID", func() {
-			fakeContainerRunner.StateReturns(runrunc.State{
+			fakeOCIRuntime.StateReturns(runrunc.State{
 				Pid: 12,
 			}, nil)
 
@@ -249,7 +241,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("returns an error if the PID cannot be found", func() {
-			fakeContainerRunner.StateReturns(runrunc.State{}, errors.New("pid not found"))
+			fakeOCIRuntime.StateReturns(runrunc.State{}, errors.New("pid not found"))
 			tarStream, err := containerizer.StreamOut(logger, "some-handle", garden.StreamOutSpec{})
 
 			Expect(tarStream).To(BeNil())
@@ -274,7 +266,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when the stop succeeds", func() {
 			BeforeEach(func() {
-				fakeContainerRunner.StateReturns(runrunc.State{
+				fakeOCIRuntime.StateReturns(runrunc.State{
 					Pid: 1234,
 				}, nil)
 
@@ -314,7 +306,7 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when getting runc's state fails", func() {
 			BeforeEach(func() {
-				fakeContainerRunner.StateReturns(runrunc.State{}, errors.New("boom"))
+				fakeOCIRuntime.StateReturns(runrunc.State{}, errors.New("boom"))
 			})
 
 			It("does not stop the processes", func() {
@@ -328,15 +320,15 @@ var _ = Describe("Rundmc", func() {
 		})
 	})
 
-	Describe("destroy", func() {
+	Describe("Destroy", func() {
 		Context("when getting state fails", func() {
 			BeforeEach(func() {
-				fakeContainerRunner.StateReturns(runrunc.State{}, errors.New("pid not found"))
+				fakeOCIRuntime.StateReturns(runrunc.State{}, errors.New("pid not found"))
 			})
 
-			It("should NOT run kill", func() {
+			It("should NOT run delete", func() {
 				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakeContainerRunner.KillCallCount()).To(Equal(0))
+				Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(0))
 			})
 
 			It("should destroy the depot directory", func() {
@@ -346,46 +338,20 @@ var _ = Describe("Rundmc", func() {
 			})
 		})
 
-		Context("when state is running", func() {
+		Context("when state is 'created'", func() {
 			BeforeEach(func() {
-				fakeContainerRunner.StateReturns(runrunc.State{
-					Status: "running",
+				fakeOCIRuntime.StateReturns(runrunc.State{
+					Status: "created",
 				}, nil)
 			})
 
-			It("should run kill", func() {
+			It("should run delete", func() {
 				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakeContainerRunner.KillCallCount()).To(Equal(1))
-				Expect(arg2(fakeContainerRunner.KillArgsForCall(0))).To(Equal("some-handle"))
+				Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(1))
+				Expect(arg2(fakeOCIRuntime.DeleteArgsForCall(0))).To(Equal("some-handle"))
 			})
 
-			Context("when kill succeeds", func() {
-				It("does not destroy the depot directory until the container has exited", func() {
-					waitDone := make(chan struct{})
-					fakeExitWaiter.WaitStub = func(path string) (<-chan struct{}, error) {
-						Expect(fakeContainerRunner.KillCallCount()).To(Equal(1))
-						Expect(fakeDepot.DestroyCallCount()).To(Equal(0))
-						return waitDone, nil
-					}
-
-					destroyDone := make(chan struct{})
-					go func() {
-						defer GinkgoRecover()
-
-						Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-						close(destroyDone)
-					}()
-					Consistently(destroyDone).ShouldNot(BeClosed())
-
-					close(waitDone)
-					Eventually(destroyDone).Should(BeClosed())
-				})
-
-				It("does not block if dadoo's exit socket is not found", func(done Done) {
-					fakeExitWaiter.WaitReturns(nil, errors.New("my banana is not found!"))
-					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-					close(done)
-				}, 1.0)
+			Context("when delete succeeds", func() {
 
 				It("destroys the depot directory", func() {
 					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
@@ -394,25 +360,25 @@ var _ = Describe("Rundmc", func() {
 				})
 			})
 
-			Context("when kill fails", func() {
+			Context("when delete fails", func() {
 				It("does not destroy the depot directory", func() {
-					fakeContainerRunner.KillReturns(errors.New("killing is wrong"))
+					fakeOCIRuntime.DeleteReturns(errors.New("delete failed"))
 					containerizer.Destroy(logger, "some-handle")
 					Expect(fakeDepot.DestroyCallCount()).To(Equal(0))
 				})
 			})
 		})
 
-		Context("when state is not running", func() {
+		Context("when state is different from 'created'", func() {
 			BeforeEach(func() {
-				fakeContainerRunner.StateReturns(runrunc.State{
+				fakeOCIRuntime.StateReturns(runrunc.State{
 					Status: "potato",
 				}, nil)
 			})
 
-			It("should not run kill", func() {
+			It("should not run delete", func() {
 				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakeContainerRunner.KillCallCount()).To(Equal(0))
+				Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(0))
 			})
 		})
 	})
@@ -510,13 +476,13 @@ var _ = Describe("Rundmc", func() {
 				},
 			}
 
-			fakeContainerRunner.StatsReturns(metrics, nil)
+			fakeOCIRuntime.StatsReturns(metrics, nil)
 			Expect(containerizer.Metrics(logger, "foo")).To(Equal(metrics))
 		})
 
 		Context("when container fails to provide stats", func() {
 			BeforeEach(func() {
-				fakeContainerRunner.StatsReturns(gardener.ActualContainerMetrics{}, errors.New("banana"))
+				fakeOCIRuntime.StatsReturns(gardener.ActualContainerMetrics{}, errors.New("banana"))
 			})
 
 			It("should return the error", func() {

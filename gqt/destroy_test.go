@@ -136,28 +136,6 @@ var _ = Describe("Destroying a Container", func() {
 			})
 		}
 
-		Context("when runc kill is called directly", func() {
-			JustBeforeEach(func() {
-				sess, err := gexec.Start(exec.Command("runc", "kill", container.Handle(), "KILL"), GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
-
-				Eventually(func() int {
-					sess, err := gexec.Start(exec.Command("runc", "state", container.Handle()), GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					sess.Wait()
-
-					return sess.ExitCode()
-				}).ShouldNot(Equal(0))
-
-				// runc deletes state BEFORE running post-stop hooks, so we have no choice
-				// but to wait a bit longer for the deletes to have happened
-				time.Sleep(3 * time.Second)
-			})
-
-			itCleansUpPerContainerNetworkingResources()
-		})
-
 		var itRemovesTheNetworkBridge = func() {
 			It("should remove the network bridge", func() {
 				session, err := gexec.Start(

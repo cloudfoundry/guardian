@@ -95,11 +95,6 @@ var _ = Describe("Creating a Container", func() {
 		})
 	})
 
-	It("returns an error (rather than hanging) if the container handle is too long", func() {
-		_, err := client.Create(garden.ContainerSpec{Handle: "this-handle-is-incredibly-stupidly-supercalifragalistically-long-no-seriously-way-too-long-way-way-waaaaaaaay-too-long-you-get-the-idea-dot-dot-dot-really-long"})
-		Expect(err).To(MatchError(ContainSubstring("read container launch status")))
-	})
-
 	Context("after creating a container without a specified handle", func() {
 		var (
 			privileged bool

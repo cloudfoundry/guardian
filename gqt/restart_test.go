@@ -149,13 +149,6 @@ var _ = Describe("Surviving Restarts", func() {
 					Expect(filepath.Join(client.DepotDir, container.Handle())).To(BeADirectory())
 				})
 
-				It("does not kill the container processes", func() {
-					processes, err := exec.Command("ps", "aux").CombinedOutput()
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(string(processes)).To(ContainSubstring(fmt.Sprintf("run runc /tmp/test-garden-%d/containers/%s", GinkgoParallelNode(), container.Handle())))
-				})
-
 				It("can still run processes", func() {
 					out := gbytes.NewBuffer()
 					proc, err := container.Run(

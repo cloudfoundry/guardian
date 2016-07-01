@@ -3,7 +3,6 @@ package rundmc
 import (
 	"fmt"
 	"io"
-	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
@@ -15,11 +14,10 @@ import (
 
 //go:generate counterfeiter . Depot
 //go:generate counterfeiter . BundleGenerator
-//go:generate counterfeiter . BundleRunner
+//go:generate counterfeiter . OCIRuntime
 //go:generate counterfeiter . NstarRunner
 //go:generate counterfeiter . EventStore
 //go:generate counterfeiter . BundleLoader
-//go:generate counterfeiter . ExitWaiter
 //go:generate counterfeiter . Stopper
 //go:generate counterfeiter . StateStore
 
@@ -38,11 +36,12 @@ type BundleLoader interface {
 	Load(path string) (goci.Bndl, error)
 }
 
-type BundleRunner interface {
-	Start(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
+type OCIRuntime interface {
+	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 	Exec(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, id, bundlePath, processId string, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
+	Delete(log lager.Logger, bundlePath string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
 	Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
 	WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
@@ -67,34 +66,28 @@ type StateStore interface {
 	IsStopped(handle string) bool
 }
 
-type ExitWaiter interface {
-	Wait(path string) (<-chan struct{}, error)
-}
-
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
-	depot      Depot
-	bundler    BundleGenerator
-	loader     BundleLoader
-	runner     BundleRunner
-	stopper    Stopper
-	nstar      NstarRunner
-	exitWaiter ExitWaiter
-	events     EventStore
-	states     StateStore
+	depot   Depot
+	bundler BundleGenerator
+	loader  BundleLoader
+	runtime OCIRuntime
+	stopper Stopper
+	nstar   NstarRunner
+	events  EventStore
+	states  StateStore
 }
 
-func New(depot Depot, bundler BundleGenerator, runner BundleRunner, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, exitWaiter ExitWaiter, events EventStore, states StateStore) *Containerizer {
+func New(depot Depot, bundler BundleGenerator, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore) *Containerizer {
 	return &Containerizer{
-		depot:      depot,
-		bundler:    bundler,
-		runner:     runner,
-		loader:     loader,
-		nstar:      nstarRunner,
-		stopper:    stopper,
-		events:     events,
-		exitWaiter: exitWaiter,
-		states:     states,
+		depot:   depot,
+		bundler: bundler,
+		runtime: runtime,
+		loader:  loader,
+		nstar:   nstarRunner,
+		stopper: stopper,
+		events:  events,
+		states:  states,
 	}
 }
 
@@ -116,13 +109,13 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		return err
 	}
 
-	if err = c.runner.Start(log, path, spec.Handle, garden.ProcessIO{}); err != nil {
-		log.Error("start-failed", err)
+	if err = c.runtime.Create(log, path, spec.Handle, garden.ProcessIO{}); err != nil {
+		log.Error("create-failed", err)
 		return err
 	}
 
 	go func() {
-		if err := c.runner.WatchEvents(log, spec.Handle, c.events); err != nil {
+		if err := c.runtime.WatchEvents(log, spec.Handle, c.events); err != nil {
 			log.Error("watch-failed", err)
 		}
 	}()
@@ -143,7 +136,7 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 		return nil, err
 	}
 
-	return c.runner.Exec(log, path, handle, spec, io)
+	return c.runtime.Exec(log, path, handle, spec, io)
 }
 
 func (c *Containerizer) Attach(log lager.Logger, handle string, processID string, io garden.ProcessIO) (garden.Process, error) {
@@ -158,7 +151,7 @@ func (c *Containerizer) Attach(log lager.Logger, handle string, processID string
 		return nil, err
 	}
 
-	return c.runner.Attach(log, path, handle, processID, io)
+	return c.runtime.Attach(log, path, handle, processID, io)
 }
 
 // StreamIn streams files in to the container
@@ -168,7 +161,7 @@ func (c *Containerizer) StreamIn(log lager.Logger, handle string, spec garden.St
 	log.Info("started")
 	defer log.Info("finished")
 
-	state, err := c.runner.State(log, handle)
+	state, err := c.runtime.State(log, handle)
 	if err != nil {
 		log.Error("check-pid-failed", err)
 		return fmt.Errorf("stream-in: pid not found for container")
@@ -189,7 +182,7 @@ func (c *Containerizer) StreamOut(log lager.Logger, handle string, spec garden.S
 	log.Info("started")
 	defer log.Info("finished")
 
-	state, err := c.runner.State(log, handle)
+	state, err := c.runtime.State(log, handle)
 	if err != nil {
 		log.Error("check-pid-failed", err)
 		return nil, fmt.Errorf("stream-out: pid not found for container")
@@ -211,7 +204,7 @@ func (c *Containerizer) Stop(log lager.Logger, handle string, kill bool) error {
 	log.Info("started")
 	defer log.Info("finished")
 
-	state, err := c.runner.State(log, handle)
+	state, err := c.runtime.State(log, handle)
 	if err != nil {
 		log.Error("check-pid-failed", err)
 		return fmt.Errorf("stop: pid not found for container: %s", err)
@@ -226,16 +219,16 @@ func (c *Containerizer) Stop(log lager.Logger, handle string, kill bool) error {
 	return nil
 }
 
-// Destroy kills any container processes and deletes the bundle directory
+// Destroy deletes the container and the bundle directory
 func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 	log = log.Session("destroy", lager.Data{"handle": handle})
 
 	log.Info("started")
 	defer log.Info("finished")
 
-	state, err := c.runner.State(log, handle)
+	state, err := c.runtime.State(log, handle)
 	if err != nil {
-		log.Info("state-failed-skipping-kill", lager.Data{"error": err.Error()})
+		log.Info("state-failed-skipping-delete", lager.Data{"error": err.Error()})
 		return c.depot.Destroy(log, handle)
 	}
 
@@ -243,30 +236,14 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 		"state": state,
 	})
 
-	if state.Status == runrunc.RunningStatus {
-		if err := c.runner.Kill(log, handle); err != nil {
-			log.Error("kill-failed", err)
+	if state.Status == runrunc.CreatedStatus {
+		if err := c.runtime.Delete(log, handle); err != nil {
+			log.Error("delete-failed", err)
 			return err
 		}
 	}
 
-	bundlePath, err := c.depot.Lookup(log, handle)
-	if err != nil {
-		return nil
-	}
-
-	c.waitForContainerToExit(log, bundlePath)
 	return c.depot.Destroy(log, handle)
-}
-
-func (c *Containerizer) waitForContainerToExit(log lager.Logger, bundlePath string) {
-	ch, err := c.exitWaiter.Wait(filepath.Join(bundlePath, "exit.sock"))
-	if err != nil {
-		log.Debug("failed-to-wait-for-dadoo", lager.Data{"error": err, "socketPath": filepath.Join(bundlePath, "exit.sock")})
-		return
-	}
-
-	<-ch
 }
 
 func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualContainerSpec, error) {
@@ -296,7 +273,7 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 }
 
 func (c *Containerizer) Metrics(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error) {
-	return c.runner.Stats(log, handle)
+	return c.runtime.Stats(log, handle)
 }
 
 // Handles returns a list of all container handles

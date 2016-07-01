@@ -32,7 +32,7 @@ func run() int {
 
 	flag.Parse()
 
-	command := flag.Args()[0] // e.g. run
+	command := flag.Args()[0] // e.g. exec
 	runtime := flag.Args()[1] // e.g. runc
 	dir := flag.Args()[2]     // bundlePath for run, processPath for exec
 	containerId := flag.Args()[3]
@@ -49,35 +49,23 @@ func run() int {
 
 	pidFilePath := filepath.Join(dir, "pidfile")
 
+	check(os.MkdirAll(dir, 0700))
+	defer os.RemoveAll(dir) // for exec dadoo is responsible for creating & cleaning up
+
+	stdin := forwardReadFIFO(filepath.Join(dir, "stdin"))
+	stdout := forwardWriteFIFO(filepath.Join(dir, "stdout"))
+	stderr := forwardWriteFIFO(filepath.Join(dir, "stderr"))
+
 	var runcStartCmd *exec.Cmd
-	switch command {
-	case "run":
-		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "run", "-d", "-pid-file", pidFilePath, containerId)
-		runcStartCmd.Dir = dir
-
-		// listen to an exit socket early so waiters can wait for dadoo
-		dadoo.Listen(filepath.Join(dir, "exit.sock"))
-	case "exec":
-		check(os.MkdirAll(dir, 0700))
-		defer os.RemoveAll(dir) // for exec dadoo is responsible for creating & cleaning up
-
-		stdin := forwardReadFIFO(filepath.Join(dir, "stdin"))
-		stdout := forwardWriteFIFO(filepath.Join(dir, "stdout"))
-		stderr := forwardWriteFIFO(filepath.Join(dir, "stderr"))
-
-		if tty {
-			ttySlave := setupTty(stdin, stdout, ttyWindowSizeFD, pidFilePath)
-			check(ttySlave.Chown(uid, gid))
-			runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console", ttySlave.Name(), "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
-		} else {
-			runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
-			runcStartCmd.Stdin = stdin
-			runcStartCmd.Stdout = stdout
-			runcStartCmd.Stderr = stderr
-		}
-	default:
-		fmt.Fprintf(os.Stderr, "unknown command: %s", command)
-		return 127
+	if tty {
+		ttySlave := setupTty(stdin, stdout, ttyWindowSizeFD, pidFilePath)
+		check(ttySlave.Chown(uid, gid))
+		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console", ttySlave.Name(), "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
+	} else {
+		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
+		runcStartCmd.Stdin = stdin
+		runcStartCmd.Stdout = stdout
+		runcStartCmd.Stderr = stderr
 	}
 
 	// we need to be the subreaper so we can wait on the detached container process
