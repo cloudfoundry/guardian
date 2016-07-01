@@ -625,6 +625,8 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		WithGIDMappings(idMappings...).
 		WithMounts(unprivilegedMounts...)
 
+	unprivilegedBundle.Spec.Linux.Seccomp = seccomp
+
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).
 		WithCapabilities(PrivilegedMaxCaps...)
