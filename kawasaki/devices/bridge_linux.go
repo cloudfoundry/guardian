@@ -2,11 +2,15 @@ package devices
 
 import (
 	"fmt"
+	"math/rand"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/vishvananda/netlink"
 )
+
+var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 // netlink is not thread-safe, all calls to netlink should be guarded by this mutex
 var netlinkMu *sync.Mutex = new(sync.Mutex)
@@ -19,10 +23,20 @@ func (Bridge) Create(name string, ip net.IP, subnet *net.IPNet) (intf *net.Inter
 	netlinkMu.Lock()
 	defer netlinkMu.Unlock()
 
+	if intf, _ := net.InterfaceByName(name); intf != nil {
+		return intf, nil
+	}
+
 	link := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: name}}
 
 	if err := netlink.LinkAdd(link); err != nil && err.Error() != "file exists" {
 		return nil, fmt.Errorf("devices: create bridge: %v", err)
+	}
+
+	hAddr, _ := net.ParseMAC(randMacAddr())
+	err = netlink.LinkSetHardwareAddr(link, hAddr)
+	if err != nil {
+		return nil, fmt.Errorf("devices: set hardware address: %v", err)
 	}
 
 	if intf, err = net.InterfaceByName(name); err != nil {
@@ -69,4 +83,14 @@ func (Bridge) Destroy(bridge string) error {
 	}
 
 	return nil
+}
+
+func randMacAddr() string {
+	hw := make(net.HardwareAddr, 6)
+	for i := 0; i < 6; i++ {
+		hw[i] = byte(rnd.Intn(255))
+	}
+	hw[0] &^= 0x1 // clear multicast bit
+	hw[0] |= 0x2  // set local assignment bit (IEEE802)
+	return hw.String()
 }

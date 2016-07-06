@@ -2,6 +2,7 @@ package devices_test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices"
@@ -43,6 +44,16 @@ var _ = Describe("Bridge Management", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(bridge.Name).To(Equal(name))
+			})
+
+			It("assigns a mac address so that the bridge address does not change", func() {
+				_, err := b.Create(name, ip, subnet)
+				Expect(err).ToNot(HaveOccurred())
+
+				// 1 means the kernel auto-assigns a mac address based on the lowest-attached
+				// device. This is bad because it can change (!) when devices are added/removed
+				// and mess stuff up. 3 means we assigned an explicit address so this shouldnt happen.
+				Expect(ioutil.ReadFile(fmt.Sprintf("/sys/class/net/%s/addr_assign_type", name))).To(Equal([]byte("3\n")))
 			})
 
 			It("sets the bridge address", func() {
