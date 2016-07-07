@@ -173,6 +173,15 @@ func (b Bndl) Mounts() []specs.Mount {
 	return b.Spec.Mounts
 }
 
+func (b Bndl) WithMaskedPaths(maskedPaths []string) Bndl {
+	b.Spec.Linux.MaskedPaths = maskedPaths
+	return b
+}
+
+func (b Bndl) MaskedPaths() []string {
+	return b.Spec.Linux.MaskedPaths
+}
+
 type NamespaceSlice []specs.Namespace
 
 func (slice NamespaceSlice) Set(ns specs.Namespace) NamespaceSlice {

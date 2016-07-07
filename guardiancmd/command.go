@@ -619,7 +619,8 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		WithResources(&specs.Resources{Devices: append([]specs.DeviceCgroup{denyAll}, allowedDevices...)}).
 		WithRootFS(defaultRootFSPath).
 		WithDevices(fuseDevice).
-		WithProcess(baseProcess)
+		WithProcess(baseProcess).
+		WithMaskedPaths(defaultMaskedPaths())
 
 	unprivilegedBundle := baseBundle.
 		WithNamespace(goci.UserNamespace).
@@ -701,6 +702,15 @@ func defaultExternalIP(ip IPFlag) (net.IP, error) {
 	}
 
 	return net.ParseIP(localIP), nil
+}
+
+func defaultMaskedPaths() []string {
+	return []string{
+		"/proc/kcore",
+		"/proc/latency_stats",
+		"/proc/timer_stats",
+		"/proc/sched_debug",
+	}
 }
 
 func mustStringify(s interface{}, e error) string {

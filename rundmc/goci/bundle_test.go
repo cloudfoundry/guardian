@@ -289,4 +289,15 @@ var _ = Describe("Bundle", func() {
 			})
 		})
 	})
+
+	Describe("WithMaskedPaths", func() {
+		It("sets the MaskedPaths in the bundle", func() {
+			returnedBundle := initialBundle.WithMaskedPaths([]string{"path1", "path2"})
+			paths := returnedBundle.MaskedPaths()
+			Expect(len(paths)).To(Equal(2))
+			Expect(paths[0]).To(Equal("path1"))
+			Expect(paths[1]).To(Equal("path2"))
+		})
+	})
+
 })
