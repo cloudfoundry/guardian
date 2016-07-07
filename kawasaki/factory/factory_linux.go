@@ -20,6 +20,7 @@ func NewDefaultConfigurer(ipt *iptables.IPTablesController) kawasaki.Configurer 
 	}
 
 	return kawasaki.NewConfigurer(
+		&kawasaki.ResolvFactory{},
 		hostConfigurer,
 		containerCfgApplier,
 		iptables.NewInstanceChainCreator(ipt),

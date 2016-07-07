@@ -108,62 +108,6 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		Context("when the networker provides hooks", func() {
-			BeforeEach(func() {
-				networker.HooksStub = func(_ lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error) {
-					return []gardener.Hooks{
-						gardener.Hooks{
-							Prestart: gardener.Hook{
-								Path: "/path/to/banana/exe",
-								Args: []string{"--handle", containerSpec.Handle, "--spec", containerSpec.Network},
-							},
-							Poststop: gardener.Hook{
-								Path: "/path/to/bananana/exe",
-								Args: []string{"--handle", containerSpec.Handle, "--spec", containerSpec.Network},
-							},
-						},
-					}, nil
-				}
-			})
-
-			It("passes the network hooks to the containerizer", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{
-					Handle:  "bob",
-					Network: "10.0.0.2/30",
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.NetworkHooks).To(HaveLen(1))
-				Expect(spec.NetworkHooks[0].Prestart).To(Equal(gardener.Hook{
-					Path: "/path/to/banana/exe",
-					Args: []string{"--handle", "bob", "--spec", "10.0.0.2/30"},
-				}))
-
-				Expect(spec.NetworkHooks[0].Poststop).To(Equal(gardener.Hook{
-					Path: "/path/to/bananana/exe",
-					Args: []string{"--handle", "bob", "--spec", "10.0.0.2/30"},
-				}))
-			})
-		})
-
-		Context("when networker fails generating hooks", func() {
-			BeforeEach(func() {
-				networker.HooksReturns([]gardener.Hooks{}, errors.New("booom!"))
-			})
-
-			It("returns an error", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
-				Expect(err).To(MatchError("booom!"))
-			})
-
-			It("should not create the volume", func() {
-				gdnr.Create(garden.ContainerSpec{Handle: "bob"})
-				Expect(volumeCreator.CreateCallCount()).To(Equal(0))
-			})
-		})
-
 		It("runs the graph cleanup", func() {
 			_, err := gdnr.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
@@ -319,6 +263,42 @@ var _ = Describe("Gardener", func() {
 				_, _, rpSpec := volumeCreator.CreateArgsForCall(0)
 				Expect(rpSpec.QuotaSize).To(BeEquivalentTo(spec.Limits.Disk.ByteHard))
 				Expect(rpSpec.QuotaScope).To(Equal(garden.DiskLimitScopeTotal))
+			})
+		})
+
+		It("should ask the networker to configure the network", func() {
+			containerizer.InfoReturns(gardener.ActualContainerSpec{
+				Pid:        42,
+				BundlePath: "bndl",
+			}, nil)
+			_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(networker.NetworkCallCount()).To(Equal(1))
+			_, spec, pid, bundlePath := networker.NetworkArgsForCall(0)
+			Expect(spec).To(Equal(garden.ContainerSpec{
+				Handle: "bob",
+			}))
+			Expect(pid).To(Equal(42))
+			Expect(bundlePath).To(Equal("bndl"))
+		})
+
+		Context("when container info cannot be retrieved", func() {
+			It("errors", func() {
+				containerizer.InfoReturns(gardener.ActualContainerSpec{}, errors.New("boom"))
+
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				Expect(err).To(MatchError("boom"))
+
+			})
+		})
+
+		Context("when networker fails to configure network", func() {
+			It("errors", func() {
+				networker.NetworkReturns(errors.New("network-failed"))
+
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				Expect(err).To(MatchError("network-failed"))
 			})
 		})
 

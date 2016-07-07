@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
 	. "github.com/onsi/ginkgo"
@@ -14,14 +13,17 @@ import (
 var _ = Describe("CompositeNetworker", func() {
 	var (
 		compositeNetworker kawasaki.Networker
-		fakeNetworker      *fakes.FakeNetworker
-		extraHooks         []kawasaki.NetworkHooker
+		fakeNetworkers     []*fakes.FakeNetworker
 		containerSpec      garden.ContainerSpec
 	)
 
 	BeforeEach(func() {
-		fakeNetworker = new(fakes.FakeNetworker)
-		extraHooks = []kawasaki.NetworkHooker{}
+		fakeNetworkers = []*fakes.FakeNetworker{
+			new(fakes.FakeNetworker),
+			new(fakes.FakeNetworker),
+			new(fakes.FakeNetworker),
+		}
+
 		containerSpec = garden.ContainerSpec{
 			Handle:  "handle",
 			Network: "spec",
@@ -33,103 +35,153 @@ var _ = Describe("CompositeNetworker", func() {
 
 	JustBeforeEach(func() {
 		compositeNetworker = &kawasaki.CompositeNetworker{
-			Networker:  fakeNetworker,
-			ExtraHooks: extraHooks,
+			Networkers: []kawasaki.Networker{
+				fakeNetworkers[0],
+				fakeNetworkers[1],
+				fakeNetworkers[2],
+			},
 		}
 	})
 
-	It("delegates to the netwoker", func() {
-		_, err := compositeNetworker.Hooks(nil, containerSpec)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(fakeNetworker.HooksCallCount()).To(Equal(1))
-
-		_, spec := fakeNetworker.HooksArgsForCall(0)
-		Expect(spec).To(Equal(containerSpec))
-	})
-
-	It("returns the hooks from the networker", func() {
-		fakeNetworker.HooksReturns([]gardener.Hooks{
-			gardener.Hooks{},
-		}, nil)
-
-		hooks, err := compositeNetworker.Hooks(nil, containerSpec)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(hooks).To(Equal([]gardener.Hooks{
-			gardener.Hooks{},
-		}))
-	})
-
-	Context("when the networker fails", func() {
-		It("returns the error", func() {
-			fakeNetworker.HooksReturns(nil, errors.New("kaput-hook"))
-
-			_, err := compositeNetworker.Hooks(nil, containerSpec)
-			Expect(err).To(MatchError("kaput-hook"))
+	Describe("Capacity", func() {
+		It("Returns the min of all networkers' capacities", func() {
+			fakeNetworkers[0].CapacityReturns(3)
+			fakeNetworkers[1].CapacityReturns(7)
+			fakeNetworkers[2].CapacityReturns(5)
+			Expect(compositeNetworker.Capacity()).To(BeNumerically("==", 3))
 		})
 	})
 
-	Context("when extra hooks are supplied", func() {
-		var hooker *fakes.FakeNetworkHooker
+	Describe("NetIn", func() {
+		It("delegates to the first networker", func() {
+			fakeNetworkers[0].NetInReturns(1, 2, nil)
 
-		BeforeEach(func() {
-			hooker = new(fakes.FakeNetworkHooker)
-			extraHooks = append(extraHooks, hooker)
+			hostPort, containerPort, err := compositeNetworker.NetIn(nil, "some-handle", 1, 2)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(hostPort).To(BeEquivalentTo(1))
+			Expect(containerPort).To(BeEquivalentTo(2))
 
-			fakeNetworker.HooksReturns(
-				[]gardener.Hooks{
-					gardener.Hooks{
-						Prestart: gardener.Hook{
-							Path: "/some/prestaaaarthooook",
-							Args: []string{"spiderman"},
-						},
-					},
-				}, nil)
+			Expect(fakeNetworkers[0].NetInCallCount()).To(Equal(1))
+			Expect(fakeNetworkers[1].NetInCallCount()).To(Equal(0))
+			Expect(fakeNetworkers[2].NetInCallCount()).To(Equal(0))
 
-			hooker.HooksReturns(
-				gardener.Hooks{
-					Prestart: gardener.Hook{
-						Path: "/some/prestarthook",
-						Args: []string{"yo"},
-					},
-				}, nil)
-
+			_, handle, p1, p2 := fakeNetworkers[0].NetInArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+			Expect(p1).To(BeEquivalentTo(1))
+			Expect(p2).To(BeEquivalentTo(2))
 		})
+	})
 
-		It("delegates the correct arguments to the extra hooks", func() {
-			_, err := compositeNetworker.Hooks(nil, containerSpec)
+	Describe("NetOut", func() {
+		It("delegates to the first networker", func() {
+			err := compositeNetworker.NetOut(nil, "some-handle", garden.NetOutRule{})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(hooker.HooksCallCount()).To(Equal(1))
-			_, spec := hooker.HooksArgsForCall(0)
-			Expect(spec).To(Equal(containerSpec))
+			Expect(fakeNetworkers[0].NetOutCallCount()).To(Equal(1))
+			Expect(fakeNetworkers[1].NetOutCallCount()).To(Equal(0))
+			Expect(fakeNetworkers[2].NetOutCallCount()).To(Equal(0))
+
+			_, handle, rule := fakeNetworkers[0].NetOutArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+			Expect(rule).To(Equal(garden.NetOutRule{}))
+		})
+	})
+
+	Describe("Destroy", func() {
+		shouldDelegateTo := func(fakeNetworker []*fakes.FakeNetworker) {
+			for _, fakeNetworker := range fakeNetworkers {
+				Expect(fakeNetworker.DestroyCallCount()).To(Equal(1))
+				_, handle := fakeNetworker.DestroyArgsForCall(0)
+				Expect(handle).To(Equal("some-handle"))
+			}
+		}
+
+		It("should delegate to all networkers", func() {
+			Expect(compositeNetworker.Destroy(nil, "some-handle")).To(Succeed())
+
+			shouldDelegateTo(fakeNetworkers)
 		})
 
-		It("returns the netwokrs hooks followed by any extra hooks", func() {
-			hooks, err := compositeNetworker.Hooks(nil, containerSpec)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(hooks).To(ContainElement(gardener.Hooks{
-				Prestart: gardener.Hook{
-					Path: "/some/prestaaaarthooook",
-					Args: []string{"spiderman"},
-				},
-			}))
-
-			Expect(hooks).To(ContainElement(gardener.Hooks{
-				Prestart: gardener.Hook{
-					Path: "/some/prestarthook",
-					Args: []string{"yo"},
-				},
-			}))
-		})
-
-		Context("when the hook returns an error", func() {
+		Context("when a networker fails", func() {
 			It("returns the error", func() {
-				hooker.HooksReturns(gardener.Hooks{}, errors.New("kaput-hook-2"))
-				_, err := compositeNetworker.Hooks(nil, containerSpec)
+				fakeNetworkers[1].DestroyReturns(errors.New("haha"))
 
-				Expect(err).To(MatchError("kaput-hook-2"))
+				Expect(compositeNetworker.Destroy(nil, "my-container")).To(MatchError("haha"))
 			})
 		})
 	})
+
+	Describe("Restore", func() {
+		shouldDelegateTo := func(fakeNetworker []*fakes.FakeNetworker) {
+			for _, fakeNetworker := range fakeNetworkers {
+				Expect(fakeNetworker.RestoreCallCount()).To(Equal(1))
+				_, handle := fakeNetworker.RestoreArgsForCall(0)
+				Expect(handle).To(Equal("some-handle"))
+			}
+		}
+
+		It("should delegate to all networkers", func() {
+			Expect(compositeNetworker.Restore(nil, "some-handle")).To(Succeed())
+
+			shouldDelegateTo(fakeNetworkers)
+		})
+
+		Context("when a networker fails", func() {
+			It("returns the error", func() {
+				fakeNetworkers[1].RestoreReturns(errors.New("haha"))
+
+				Expect(compositeNetworker.Restore(nil, "my-container")).To(MatchError("haha"))
+			})
+		})
+	})
+
+	Describe("Destroy", func() {
+		shouldDelegateTo := func(fakeNetworker []*fakes.FakeNetworker) {
+			for _, fakeNetworker := range fakeNetworkers {
+				Expect(fakeNetworker.DestroyCallCount()).To(Equal(1))
+				_, handle := fakeNetworker.DestroyArgsForCall(0)
+				Expect(handle).To(Equal("some-handle"))
+			}
+		}
+
+		It("should delegate to all networkers", func() {
+			Expect(compositeNetworker.Destroy(nil, "some-handle")).To(Succeed())
+
+			shouldDelegateTo(fakeNetworkers)
+		})
+
+		Context("when a networker fails", func() {
+			It("returns the error", func() {
+				fakeNetworkers[1].DestroyReturns(errors.New("haha"))
+
+				Expect(compositeNetworker.Destroy(nil, "my-container")).To(MatchError("haha"))
+			})
+		})
+	})
+
+	Describe("Network", func() {
+		shouldDelegateTo := func(fakeNetworker []*fakes.FakeNetworker) {
+			for _, fakeNetworker := range fakeNetworkers {
+				Expect(fakeNetworker.NetworkCallCount()).To(Equal(1))
+				_, spec, pid, bundlePath := fakeNetworker.NetworkArgsForCall(0)
+				Expect(spec).To(Equal(containerSpec))
+				Expect(pid).To(Equal(42))
+				Expect(bundlePath).To(Equal("bndl"))
+			}
+		}
+
+		It("delegates to all netwokers", func() {
+			err := compositeNetworker.Network(nil, containerSpec, 42, "bndl")
+			Expect(err).NotTo(HaveOccurred())
+			shouldDelegateTo(fakeNetworkers)
+		})
+
+		Context("when a networker fails", func() {
+			It("returns the error", func() {
+				fakeNetworkers[1].NetworkReturns(errors.New("kaput"))
+				Expect(compositeNetworker.Network(nil, containerSpec, 42, "bndl")).To(MatchError("kaput"))
+			})
+		})
+	})
+
 })

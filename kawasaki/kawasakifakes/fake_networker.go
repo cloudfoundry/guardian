@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/pivotal-golang/lager"
 )
@@ -17,15 +16,16 @@ type FakeNetworker struct {
 	capacityReturns     struct {
 		result1 uint64
 	}
-	HooksStub        func(log lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error)
-	hooksMutex       sync.RWMutex
-	hooksArgsForCall []struct {
-		log           lager.Logger
-		containerSpec garden.ContainerSpec
+	NetworkStub        func(log lager.Logger, spec garden.ContainerSpec, pid int, bundlePath string) error
+	networkMutex       sync.RWMutex
+	networkArgsForCall []struct {
+		log        lager.Logger
+		spec       garden.ContainerSpec
+		pid        int
+		bundlePath string
 	}
-	hooksReturns struct {
-		result1 []gardener.Hooks
-		result2 error
+	networkReturns struct {
+		result1 error
 	}
 	DestroyStub        func(log lager.Logger, handle string) error
 	destroyMutex       sync.RWMutex
@@ -97,39 +97,40 @@ func (fake *FakeNetworker) CapacityReturns(result1 uint64) {
 	}{result1}
 }
 
-func (fake *FakeNetworker) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error) {
-	fake.hooksMutex.Lock()
-	fake.hooksArgsForCall = append(fake.hooksArgsForCall, struct {
-		log           lager.Logger
-		containerSpec garden.ContainerSpec
-	}{log, containerSpec})
-	fake.recordInvocation("Hooks", []interface{}{log, containerSpec})
-	fake.hooksMutex.Unlock()
-	if fake.HooksStub != nil {
-		return fake.HooksStub(log, containerSpec)
+func (fake *FakeNetworker) Network(log lager.Logger, spec garden.ContainerSpec, pid int, bundlePath string) error {
+	fake.networkMutex.Lock()
+	fake.networkArgsForCall = append(fake.networkArgsForCall, struct {
+		log        lager.Logger
+		spec       garden.ContainerSpec
+		pid        int
+		bundlePath string
+	}{log, spec, pid, bundlePath})
+	fake.recordInvocation("Network", []interface{}{log, spec, pid, bundlePath})
+	fake.networkMutex.Unlock()
+	if fake.NetworkStub != nil {
+		return fake.NetworkStub(log, spec, pid, bundlePath)
 	} else {
-		return fake.hooksReturns.result1, fake.hooksReturns.result2
+		return fake.networkReturns.result1
 	}
 }
 
-func (fake *FakeNetworker) HooksCallCount() int {
-	fake.hooksMutex.RLock()
-	defer fake.hooksMutex.RUnlock()
-	return len(fake.hooksArgsForCall)
+func (fake *FakeNetworker) NetworkCallCount() int {
+	fake.networkMutex.RLock()
+	defer fake.networkMutex.RUnlock()
+	return len(fake.networkArgsForCall)
 }
 
-func (fake *FakeNetworker) HooksArgsForCall(i int) (lager.Logger, garden.ContainerSpec) {
-	fake.hooksMutex.RLock()
-	defer fake.hooksMutex.RUnlock()
-	return fake.hooksArgsForCall[i].log, fake.hooksArgsForCall[i].containerSpec
+func (fake *FakeNetworker) NetworkArgsForCall(i int) (lager.Logger, garden.ContainerSpec, int, string) {
+	fake.networkMutex.RLock()
+	defer fake.networkMutex.RUnlock()
+	return fake.networkArgsForCall[i].log, fake.networkArgsForCall[i].spec, fake.networkArgsForCall[i].pid, fake.networkArgsForCall[i].bundlePath
 }
 
-func (fake *FakeNetworker) HooksReturns(result1 []gardener.Hooks, result2 error) {
-	fake.HooksStub = nil
-	fake.hooksReturns = struct {
-		result1 []gardener.Hooks
-		result2 error
-	}{result1, result2}
+func (fake *FakeNetworker) NetworkReturns(result1 error) {
+	fake.NetworkStub = nil
+	fake.networkReturns = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeNetworker) Destroy(log lager.Logger, handle string) error {
@@ -278,8 +279,8 @@ func (fake *FakeNetworker) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.capacityMutex.RLock()
 	defer fake.capacityMutex.RUnlock()
-	fake.hooksMutex.RLock()
-	defer fake.hooksMutex.RUnlock()
+	fake.networkMutex.RLock()
+	defer fake.networkMutex.RUnlock()
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
 	fake.netInMutex.RLock()

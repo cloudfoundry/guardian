@@ -51,7 +51,7 @@ type Containerizer interface {
 }
 
 type Networker interface {
-	Hooks(log lager.Logger, containerSpec garden.ContainerSpec) ([]Hooks, error)
+	Network(log lager.Logger, spec garden.ContainerSpec, pid int, bundlePath string) error
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error)
@@ -127,6 +127,9 @@ type DesiredContainerSpec struct {
 }
 
 type ActualContainerSpec struct {
+	// The PID of the container's init process
+	Pid int
+
 	// The path to the container's bundle directory
 	BundlePath string
 
@@ -212,11 +215,6 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		}
 	}()
 
-	networkHooks, err := g.Networker.Hooks(log, spec)
-	if err != nil {
-		return nil, err
-	}
-
 	rootFSURL, err := url.Parse(spec.RootFSPath)
 	if err != nil {
 		return nil, err
@@ -245,15 +243,22 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	}
 
 	if err := g.Containerizer.Create(log, DesiredContainerSpec{
-		Handle:       spec.Handle,
-		RootFSPath:   rootFSPath,
-		NetworkHooks: networkHooks,
-		Hostname:     spec.Handle,
-		Privileged:   spec.Privileged,
-		BindMounts:   spec.BindMounts,
-		Limits:       spec.Limits,
-		Env:          append(env, spec.Env...),
+		Handle:     spec.Handle,
+		RootFSPath: rootFSPath,
+		Hostname:   spec.Handle,
+		Privileged: spec.Privileged,
+		BindMounts: spec.BindMounts,
+		Limits:     spec.Limits,
+		Env:        append(env, spec.Env...),
 	}); err != nil {
+		return nil, err
+	}
+
+	actualSpec, err := g.Containerizer.Info(log, spec.Handle)
+	if err != nil {
+		return nil, err
+	}
+	if err = g.Networker.Network(log, spec, actualSpec.Pid, actualSpec.BundlePath); err != nil {
 		return nil, err
 	}
 

@@ -7,7 +7,6 @@ import (
 	"net"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -112,13 +111,6 @@ var _ = Describe("Net", func() {
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
-	})
-
-	It("should include logs from the kawasaki network hook in the main logging output", func() {
-		Expect(filepath.Join(client.DepotDir, container.Handle(), "network.log")).To(BeAnExistingFile())
-		log, err := ioutil.ReadFile(filepath.Join(client.DepotDir, container.Handle(), "network.log"))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(gbytes.BufferWithBytes(log)).To(gbytes.Say("kawasaki.hook.start"))
 	})
 
 	It("should have a loopback interface", func() {
@@ -446,7 +438,7 @@ var _ = Describe("Net", func() {
 
 			Eventually(getContent(tmpFile)).Should(
 				ContainSubstring(
-					fmt.Sprintf("%s --action down --handle %s --network %s", tmpFile, containerHandle, containerNetwork),
+					fmt.Sprintf("%s --action down --handle %s", tmpFile, containerHandle),
 				),
 			)
 		})
@@ -466,15 +458,6 @@ var _ = Describe("Net", func() {
 			})
 
 			It("propagates those properties as JSON to the network plugin up action", func() {
-				Eventually(getFlagValue(tmpFile, "--properties")).Should(MatchJSON(expectedJSON))
-			})
-
-			It("propagates those properties as JSON to the network plugin down action", func() {
-				containerHandle := container.Handle()
-
-				Expect(client.Destroy(containerHandle)).To(Succeed())
-				Expect(tmpFile).To(BeAnExistingFile())
-
 				Eventually(getFlagValue(tmpFile, "--properties")).Should(MatchJSON(expectedJSON))
 			})
 		})

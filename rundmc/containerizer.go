@@ -257,7 +257,10 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 		return gardener.ActualContainerSpec{}, err
 	}
 
+	state, _ := c.runtime.State(log, handle)
+
 	return gardener.ActualContainerSpec{
+		Pid:        state.Pid,
 		BundlePath: bundlePath,
 		Events:     c.events.Events(handle),
 		Stopped:    c.states.IsStopped(handle),

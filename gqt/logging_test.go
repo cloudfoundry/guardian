@@ -23,8 +23,7 @@ var _ = Describe("runC Logging", func() {
 		containerSpec := garden.ContainerSpec{}
 
 		client = startGarden("--runc-bin", binPath, "--log-level", logLevel)
-		_, err = client.Create(containerSpec)
-		Expect(err).ToNot(HaveOccurred())
+		client.Create(containerSpec)
 	})
 
 	AfterEach(func() {

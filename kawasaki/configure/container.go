@@ -64,26 +64,3 @@ func (c *Container) configureContainerIntf(log lager.Logger, name string, ip, ga
 	cLog.Debug("done")
 	return nil
 }
-
-func (c *Container) configureLoopbackIntf() (err error) {
-	var found bool
-	var lo *net.Interface
-	if lo, found, err = c.Link.InterfaceByName("lo"); !found || err != nil {
-		return &FindLinkError{err, "loopback", "lo"}
-	}
-
-	ip, subnet, err := net.ParseCIDR("127.0.0.1/8")
-	if err != nil {
-		panic("can't parse 127.0.0.1/8 as a CIDR") // cant happen
-	}
-
-	if err := c.Link.AddIP(lo, ip, subnet); err != nil {
-		return &ConfigureLinkError{err, "loopback", lo, ip, subnet}
-	}
-
-	if err := c.Link.SetUp(lo); err != nil {
-		return &LinkUpError{err, lo, "loopback"}
-	}
-
-	return nil
-}

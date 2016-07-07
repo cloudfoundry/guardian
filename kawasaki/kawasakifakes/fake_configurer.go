@@ -9,12 +9,13 @@ import (
 )
 
 type FakeConfigurer struct {
-	ApplyStub        func(log lager.Logger, cfg kawasaki.NetworkConfig, nsPath string) error
+	ApplyStub        func(log lager.Logger, cfg kawasaki.NetworkConfig, nsPath, bundlePath string) error
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
-		log    lager.Logger
-		cfg    kawasaki.NetworkConfig
-		nsPath string
+		log        lager.Logger
+		cfg        kawasaki.NetworkConfig
+		nsPath     string
+		bundlePath string
 	}
 	applyReturns struct {
 		result1 error
@@ -41,17 +42,18 @@ type FakeConfigurer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeConfigurer) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, nsPath string) error {
+func (fake *FakeConfigurer) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, nsPath string, bundlePath string) error {
 	fake.applyMutex.Lock()
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
-		log    lager.Logger
-		cfg    kawasaki.NetworkConfig
-		nsPath string
-	}{log, cfg, nsPath})
-	fake.recordInvocation("Apply", []interface{}{log, cfg, nsPath})
+		log        lager.Logger
+		cfg        kawasaki.NetworkConfig
+		nsPath     string
+		bundlePath string
+	}{log, cfg, nsPath, bundlePath})
+	fake.recordInvocation("Apply", []interface{}{log, cfg, nsPath, bundlePath})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(log, cfg, nsPath)
+		return fake.ApplyStub(log, cfg, nsPath, bundlePath)
 	} else {
 		return fake.applyReturns.result1
 	}
@@ -63,10 +65,10 @@ func (fake *FakeConfigurer) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
-func (fake *FakeConfigurer) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, string) {
+func (fake *FakeConfigurer) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, string, string) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
-	return fake.applyArgsForCall[i].log, fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].nsPath
+	return fake.applyArgsForCall[i].log, fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].nsPath, fake.applyArgsForCall[i].bundlePath
 }
 
 func (fake *FakeConfigurer) ApplyReturns(result1 error) {

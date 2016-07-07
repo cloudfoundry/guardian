@@ -49,32 +49,18 @@ var _ = Describe("Creating a Container", func() {
 	})
 
 	Context("when creating fails", func() {
-		var bogusPlugin *os.File
-
-		BeforeEach(func() {
-			var err error
-			bogusPlugin, err = ioutil.TempFile("", "POTATO")
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(bogusPlugin.Close()).To(Succeed())
-
-			args = []string{
-				// force it to fail by specifying invalid network plugin
-				"--network-plugin", bogusPlugin.Name(),
-			}
-		})
-
-		AfterEach(func() {
-			Expect(os.Remove(bogusPlugin.Name())).To(Succeed())
-		})
+		// cause Create to fail by specifying an invalid network CIDR address
+		var containerSpec = garden.ContainerSpec{
+			Network: "not-a-valid-network",
+		}
 
 		It("returns a nice error rather than timing out", func() {
-			_, err := client.Create(garden.ContainerSpec{})
-			Expect(err).To(MatchError(ContainSubstring("permission denied")))
+			_, err := client.Create(containerSpec)
+			Expect(err).To(MatchError(ContainSubstring("invalid CIDR address")))
 		})
 
 		It("cleans up the depot directory", func() {
-			_, err := client.Create(garden.ContainerSpec{})
+			_, err := client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
 			Expect(ioutil.ReadDir(client.DepotDir)).To(BeEmpty())
@@ -82,13 +68,14 @@ var _ = Describe("Creating a Container", func() {
 
 		It("cleans up the graph", func() {
 			// pre-warm cache to avoid test pollution
-			_, err := client.Create(garden.ContainerSpec{})
+			// i.e. ensure base layers that are never removed are already in the graph
+			_, err := client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
 			prev, err := ioutil.ReadDir(filepath.Join(client.GraphPath, "aufs", "mnt"))
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = client.Create(garden.ContainerSpec{})
+			_, err = client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
 			Expect(ioutil.ReadDir(filepath.Join(client.GraphPath, "aufs", "mnt"))).To(HaveLen(len(prev)))

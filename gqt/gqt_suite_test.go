@@ -23,7 +23,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, inspectorGardenBin string
+var ociRuntimeBin, gardenBin, initBin, iodaemonBin, nstarBin, dadooBin, inspectorGardenBin string
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -39,9 +39,6 @@ func TestGqt(t *testing.T) {
 
 		if bins["oci_runtime_path"] != "" {
 			bins["garden_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/guardian", "-tags", "daemon", "-race")
-			Expect(err).NotTo(HaveOccurred())
-
-			bins["kawasaki_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/kawasaki")
 			Expect(err).NotTo(HaveOccurred())
 
 			bins["iodaemon_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/cmd/iodaemon")
@@ -77,7 +74,6 @@ func TestGqt(t *testing.T) {
 		iodaemonBin = bins["iodaemon_bin_path"]
 		nstarBin = bins["nstar_bin_path"]
 		dadooBin = bins["dadoo_bin_bin_bin"]
-		kawasakiBin = bins["kawasaki_bin_path"]
 		initBin = bins["init_bin_path"]
 		inspectorGardenBin = bins["inspector-garden_bin_path"]
 	})
@@ -101,7 +97,7 @@ func TestGqt(t *testing.T) {
 }
 
 func startGarden(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, true, argv...)
+	return runner.Start(gardenBin, initBin, iodaemonBin, nstarBin, dadooBin, true, argv...)
 }
 
 func restartGarden(client *runner.RunningGarden, argv ...string) {
@@ -111,5 +107,5 @@ func restartGarden(client *runner.RunningGarden, argv ...string) {
 }
 
 func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, kawasakiBin, iodaemonBin, nstarBin, dadooBin, false, argv...)
+	return runner.Start(gardenBin, initBin, iodaemonBin, nstarBin, dadooBin, false, argv...)
 }

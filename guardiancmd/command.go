@@ -155,7 +155,6 @@ type GuardianCommand struct {
 		Dadoo    FileFlag `long:"dadoo-bin" required:"true" description:"Path to the 'dadoo' binary."`
 		NSTar    FileFlag `long:"nstar-bin"    required:"true" description:"Path to the 'nstar' binary."`
 		Tar      FileFlag `long:"tar-bin"      required:"true" description:"Path to the 'tar' binary."`
-		Kawasaki FileFlag `long:"kawasaki-bin" required:"true" description:"Path to the 'kawasaki' network hook binary."`
 		IPTables FileFlag `long:"iptables-bin" default:"/sbin/iptables" description:"path to the the iptables binary"`
 		Init     FileFlag `long:"init-bin"     required:"true" description:"Path execute as pid 1 inside each container."`
 		Runc     string   `long:"runc-bin"     default:"runc" description:"Path to the 'runc' binary."`
@@ -382,11 +381,6 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 		dnsServers[i] = ip.IP()
 	}
 
-	var networkHookers []kawasaki.NetworkHooker
-	if cmd.Network.Plugin.Path() != "" {
-		networkHookers = append(networkHookers, netplugin.New(cmd.Network.Plugin.Path(), cmd.Network.PluginExtraArgs...))
-	}
-
 	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
 	ipTables := iptables.New(cmd.Bin.IPTables.Path(), iptRunner, chainPrefix)
 	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList)
@@ -394,7 +388,6 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 
 	kawasakiNetworker := kawasaki.New(
-		cmd.Bin.Kawasaki.Path(),
 		cmd.Bin.IPTables.Path(),
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(cmd.Network.Pool.CIDR()),
@@ -406,9 +399,17 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 		iptables.NewFirewallOpener(ipTables),
 	)
 
+	networkers := []kawasaki.Networker{kawasakiNetworker}
+	if cmd.Network.Plugin.Path() != "" {
+		networkers = append(networkers, netplugin.New(
+			linux_command_runner.New(),
+			cmd.Network.Plugin.Path(),
+			cmd.Network.PluginExtraArgs...,
+		))
+	}
+
 	networker := &kawasaki.CompositeNetworker{
-		Networker:  kawasakiNetworker,
-		ExtraHooks: networkHookers,
+		Networkers: networkers,
 	}
 
 	return networker, ipTablesStarter, nil

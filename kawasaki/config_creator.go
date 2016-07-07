@@ -66,8 +66,9 @@ func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix stri
 func (c *Creator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip net.IP) (NetworkConfig, error) {
 	id := c.idGenerator.Generate()
 	return NetworkConfig{
-		HostIntf:      fmt.Sprintf("%s%s-0", c.interfacePrefix, id),
-		ContainerIntf: fmt.Sprintf("%s%s-1", c.interfacePrefix, id),
+		ContainerHandle: handle,
+		HostIntf:        fmt.Sprintf("%s%s-0", c.interfacePrefix, id),
+		ContainerIntf:   fmt.Sprintf("%s%s-1", c.interfacePrefix, id),
 
 		BridgeName: fmt.Sprintf("%s%s%s", c.interfacePrefix, "brdg-", hex.EncodeToString(subnet.IP)),
 

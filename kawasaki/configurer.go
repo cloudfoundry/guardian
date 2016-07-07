@@ -13,6 +13,7 @@ type NetnsExecer interface {
 }
 
 type configurer struct {
+	resolvConfFactory    DnsResolvConfFactory
 	hostConfigurer       HostConfigurer
 	containerApplier     ContainerApplier
 	instanceChainCreator InstanceChainCreator
@@ -36,8 +37,19 @@ type ContainerApplier interface {
 	Apply(logger lager.Logger, cfg NetworkConfig) error
 }
 
-func NewConfigurer(hostConfigurer HostConfigurer, containerApplier ContainerApplier, instanceChainCreator InstanceChainCreator, nsExecer NetnsExecer) *configurer {
+//go:generate counterfeiter . DnsResolvConfigurer
+type DnsResolvConfigurer interface {
+	Configure(log lager.Logger) error
+}
+
+//go:generate counterfeiter . DnsResolvConfFactory
+type DnsResolvConfFactory interface {
+	CreateDNSResolvConfigurer(bundlePath string, cfg NetworkConfig) DnsResolvConfigurer
+}
+
+func NewConfigurer(resolvConfFactory DnsResolvConfFactory, hostConfigurer HostConfigurer, containerApplier ContainerApplier, instanceChainCreator InstanceChainCreator, nsExecer NetnsExecer) *configurer {
 	return &configurer{
+		resolvConfFactory:    resolvConfFactory,
 		hostConfigurer:       hostConfigurer,
 		containerApplier:     containerApplier,
 		instanceChainCreator: instanceChainCreator,
@@ -45,7 +57,12 @@ func NewConfigurer(hostConfigurer HostConfigurer, containerApplier ContainerAppl
 	}
 }
 
-func (c *configurer) Apply(log lager.Logger, cfg NetworkConfig, nsPath string) error {
+func (c *configurer) Apply(log lager.Logger, cfg NetworkConfig, nsPath string, bundlePath string) error {
+	dnsResolvConfigurer := c.resolvConfFactory.CreateDNSResolvConfigurer(bundlePath, cfg)
+	if err := dnsResolvConfigurer.Configure(log); err != nil {
+		return err
+	}
+
 	fd, err := os.Open(nsPath)
 	if err != nil {
 		return err

@@ -43,7 +43,7 @@ type ConfigCreator interface {
 //go:generate counterfeiter . Configurer
 
 type Configurer interface {
-	Apply(log lager.Logger, cfg NetworkConfig, nsPath string) error
+	Apply(log lager.Logger, cfg NetworkConfig, nsPath, bundlePath string) error
 	DestroyBridge(log lager.Logger, cfg NetworkConfig) error
 	DestroyIPTablesRules(log lager.Logger, cfg NetworkConfig) error
 }
@@ -83,17 +83,11 @@ type FirewallOpener interface {
 	Open(log lager.Logger, instance string, rule garden.NetOutRule) error
 }
 
-//go:generate counterfeiter . NetworkHooker
-
-type NetworkHooker interface {
-	Hooks(log lager.Logger, containerSpec garden.ContainerSpec) (gardener.Hooks, error)
-}
-
 //go:generate counterfeiter . Networker
 
 type Networker interface {
 	Capacity() uint64
-	Hooks(log lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error)
+	Network(log lager.Logger, spec garden.ContainerSpec, pid int, bundlePath string) error
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, externalPort, containerPort uint32) (uint32, uint32, error)
 	NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error
@@ -101,8 +95,7 @@ type Networker interface {
 }
 
 type networker struct {
-	kawasakiBinPath string // path to a binary that will apply the configuration
-	iptablesBin     string
+	iptablesBin string
 
 	specParser     SpecParser
 	subnetPool     subnets.Pool
@@ -115,7 +108,6 @@ type networker struct {
 }
 
 func New(
-	kawasakiBinPath string,
 	iptablesBin string,
 	specParser SpecParser,
 	subnetPool subnets.Pool,
@@ -127,8 +119,7 @@ func New(
 	firewallOpener FirewallOpener,
 ) *networker {
 	return &networker{
-		kawasakiBinPath: kawasakiBinPath,
-		iptablesBin:     iptablesBin,
+		iptablesBin: iptablesBin,
 
 		specParser:    specParser,
 		subnetPool:    subnetPool,
@@ -143,9 +134,7 @@ func New(
 	}
 }
 
-// Hooks provides path and appropriate arguments to the kawasaki executable that
-// applies the network configuration after the network namesapce creation.
-func (n *networker) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) ([]gardener.Hooks, error) {
+func (n *networker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int, bundlePath string) error {
 	log = log.Session("network", lager.Data{
 		"handle": containerSpec.Handle,
 		"spec":   containerSpec.Network,
@@ -157,67 +146,30 @@ func (n *networker) Hooks(log lager.Logger, containerSpec garden.ContainerSpec) 
 	subnetReq, ipReq, err := n.specParser.Parse(log, containerSpec.Network)
 	if err != nil {
 		log.Error("parse-failed", err)
-		return nil, err
+		return err
 	}
 
 	subnet, ip, err := n.subnetPool.Acquire(log, subnetReq, ipReq)
 	if err != nil {
 		log.Error("acquire-failed", err)
-		return nil, err
+		return err
 	}
 
 	config, err := n.configCreator.Create(log, containerSpec.Handle, subnet, ip)
 	if err != nil {
 		log.Error("create-config-failed", err)
-		return nil, fmt.Errorf("create network config: %s", err)
+		return fmt.Errorf("create network config: %s", err)
 	}
 	log.Info("config-create", lager.Data{"config": config})
 
-	err = save(n.configStore, containerSpec.Handle, config)
-	if err != nil {
-		return nil, err
+	if err := save(n.configStore, containerSpec.Handle, config); err != nil {
+		return err
 	}
 
-	netCfgArgs := []string{
-		fmt.Sprintf("--handle=%s", containerSpec.Handle),
-		fmt.Sprintf("--host-interface=%s", config.HostIntf),
-		fmt.Sprintf("--container-interface=%s", config.ContainerIntf),
-		fmt.Sprintf("--bridge-interface=%s", config.BridgeName),
-		fmt.Sprintf("--bridge-ip=%s", config.BridgeIP),
-		fmt.Sprintf("--container-ip=%s", config.ContainerIP),
-		fmt.Sprintf("--external-ip=%s", config.ExternalIP),
-		fmt.Sprintf("--subnet=%s", config.Subnet.String()),
-		fmt.Sprintf("--mtu=%d", config.Mtu),
-		fmt.Sprintf("--iptables-bin=%s", n.iptablesBin),
-		fmt.Sprintf("--iptable-prefix=%s", config.IPTablePrefix),
-		fmt.Sprintf("--iptable-instance=%s", config.IPTableInstance),
+	if err := n.configurer.Apply(log, config, fmt.Sprintf("/proc/%d/ns/net", pid), bundlePath); err != nil {
+		return err
 	}
-	for _, dnsServer := range config.DNSServers {
-		netCfgArgs = append(netCfgArgs, fmt.Sprintf("--dns-server=%s", dnsServer.String()))
-	}
-
-	preStartArgs := append([]string{
-		n.kawasakiBinPath,
-		"--action=create",
-	}, netCfgArgs...)
-
-	postStopArgs := append([]string{
-		n.kawasakiBinPath,
-		"--action=destroy",
-	}, netCfgArgs...)
-
-	kawasakiHooks := gardener.Hooks{
-		Prestart: gardener.Hook{
-			Path: n.kawasakiBinPath,
-			Args: preStartArgs,
-		},
-		Poststop: gardener.Hook{
-			Path: n.kawasakiBinPath,
-			Args: postStopArgs,
-		},
-	}
-
-	return []gardener.Hooks{kawasakiHooks}, nil
+	return nil
 }
 
 // Capacity returns the number of subnets this network can host
@@ -294,6 +246,10 @@ func (n *networker) Destroy(log lager.Logger, handle string) error {
 		for _, m := range mappings {
 			n.portPool.Release(m.HostPort)
 		}
+	}
+
+	if err := n.configurer.DestroyIPTablesRules(log, cfg); err != nil {
+		return err
 	}
 
 	n.subnetPool.RunIfFree(cfg.Subnet, func() error {

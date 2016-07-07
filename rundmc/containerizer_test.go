@@ -407,6 +407,8 @@ var _ = Describe("Rundmc", func() {
 					},
 				}, nil
 			}
+
+			fakeOCIRuntime.StateReturns(runrunc.State{Pid: 42}, nil)
 		})
 
 		It("should return the ActualContainerSpec with the correct bundlePath", func() {
@@ -425,6 +427,12 @@ var _ = Describe("Rundmc", func() {
 			actualSpec, err := containerizer.Info(logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualSpec.Limits.Memory.LimitInBytes).To(BeEquivalentTo(10))
+		})
+
+		It("should return the ActualContainerSpec with the correct pid", func() {
+			actualSpec, err := containerizer.Info(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualSpec.Pid).To(Equal(42))
 		})
 
 		Context("when looking up the bundle path fails", func() {

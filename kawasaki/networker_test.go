@@ -53,7 +53,6 @@ var _ = Describe("Networker", func() {
 
 		logger = lagertest.NewTestLogger("test")
 		networker = kawasaki.New(
-			"/path/to/kawasaki",
 			"/sbin/iptables",
 			fakeSpecParser,
 			fakeSubnetPool,
@@ -119,9 +118,9 @@ var _ = Describe("Networker", func() {
 		}
 	})
 
-	Describe("Hooks", func() {
+	Describe("Network", func() {
 		It("parses the spec", func() {
-			networker.Hooks(logger, containerSpec)
+			networker.Network(logger, containerSpec, 42, "bndl")
 			Expect(fakeSpecParser.ParseCallCount()).To(Equal(1))
 			_, spec := fakeSpecParser.ParseArgsForCall(0)
 			Expect(spec).To(Equal("1.2.3.4/30"))
@@ -129,7 +128,7 @@ var _ = Describe("Networker", func() {
 
 		It("returns an error if the spec can't be parsed", func() {
 			fakeSpecParser.ParseReturns(nil, nil, errors.New("no parsey"))
-			_, err := networker.Hooks(logger, containerSpec)
+			err := networker.Network(logger, containerSpec, 42, "bndl")
 			Expect(err).To(MatchError("no parsey"))
 		})
 
@@ -138,7 +137,7 @@ var _ = Describe("Networker", func() {
 			someIpRequest := subnets.DynamicIPSelector
 			fakeSpecParser.ParseReturns(someSubnetRequest, someIpRequest, nil)
 
-			networker.Hooks(logger, containerSpec)
+			networker.Network(logger, containerSpec, 42, "bndl")
 			Expect(fakeSubnetPool.AcquireCallCount()).To(Equal(1))
 			_, sr, ir := fakeSubnetPool.AcquireArgsForCall(0)
 			Expect(sr).To(Equal(someSubnetRequest))
@@ -149,7 +148,7 @@ var _ = Describe("Networker", func() {
 			someIp, someSubnet, err := net.ParseCIDR("1.2.3.4/5")
 			fakeSubnetPool.AcquireReturns(someSubnet, someIp, err)
 
-			networker.Hooks(logger, containerSpec)
+			networker.Network(logger, containerSpec, 42, "bndl")
 			Expect(fakeConfigCreator.CreateCallCount()).To(Equal(1))
 			_, handle, subnet, ip := fakeConfigCreator.CreateArgsForCall(0)
 			Expect(handle).To(Equal("some-handle"))
@@ -164,7 +163,7 @@ var _ = Describe("Networker", func() {
 				config[name] = value
 			}
 
-			_, err := networker.Hooks(logger, containerSpec)
+			err := networker.Network(logger, containerSpec, 42, "bndl")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config["kawasaki.host-interface"]).To(Equal(networkConfig.HostIntf))
@@ -180,50 +179,22 @@ var _ = Describe("Networker", func() {
 			Expect(config["kawasaki.dns-servers"]).To(Equal("8.8.8.8, 8.8.4.4"))
 		})
 
-		Context("configuring Hooks", func() {
-			var hooks []gardener.Hooks
+		It("applies the right configuration", func() {
+			err := networker.Network(logger, containerSpec, 42, "bndl")
+			Expect(err).NotTo(HaveOccurred())
 
-			BeforeEach(func() {
-				var err error
+			Expect(fakeConfigurer.ApplyCallCount()).To(Equal(1))
+			_, actualNetConfig, nsPath, bundlePath := fakeConfigurer.ApplyArgsForCall(0)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualNetConfig).To(Equal(networkConfig))
+			Expect(nsPath).To(Equal("/proc/42/ns/net"))
+			Expect(bundlePath).To(Equal("bndl"))
+		})
 
-				hooks, err = networker.Hooks(logger, containerSpec)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			itPassesTheNetworkConfig := func(args []string) {
-				Expect(args).To(ContainElement("--handle=some-handle"))
-				Expect(args).To(ContainElement("--host-interface=" + networkConfig.HostIntf))
-				Expect(args).To(ContainElement("--container-interface=" + networkConfig.ContainerIntf))
-				Expect(args).To(ContainElement("--bridge-interface=" + networkConfig.BridgeName))
-				Expect(args).To(ContainElement("--bridge-ip=" + networkConfig.BridgeIP.String()))
-				Expect(args).To(ContainElement("--container-ip=" + networkConfig.ContainerIP.String()))
-				Expect(args).To(ContainElement("--external-ip=" + networkConfig.ExternalIP.String()))
-				Expect(args).To(ContainElement("--subnet=" + networkConfig.Subnet.String()))
-				Expect(args).To(ContainElement("--iptable-instance=" + networkConfig.IPTableInstance))
-				Expect(args).To(ContainElement("--iptable-prefix=" + networkConfig.IPTablePrefix))
-				Expect(args).To(ContainElement("--mtu=" + strconv.Itoa(networkConfig.Mtu)))
-				for _, dnsServer := range networkConfig.DNSServers {
-					Expect(args).To(ContainElement("--dns-server=" + dnsServer.String()))
-				}
-			}
-
-			It("passes the correct args to the prestart hook", func() {
-				Expect(hooks).To(HaveLen(1))
-				Expect(hooks[0].Prestart.Args[0]).To(Equal("/path/to/kawasaki"))
-				Expect(hooks[0].Prestart.Args).To(ContainElement("--action=create"))
-				itPassesTheNetworkConfig(hooks[0].Prestart.Args)
-			})
-
-			It("passes the correct args to the poststop hook", func() {
-				Expect(hooks).To(HaveLen(1))
-				Expect(hooks[0].Poststop.Args[0]).To(Equal("/path/to/kawasaki"))
-				Expect(hooks[0].Poststop.Args).To(ContainElement("--action=destroy"))
-				itPassesTheNetworkConfig(hooks[0].Poststop.Args)
-			})
-
-			It("returns the path to the kawasaki binary", func() {
-				Expect(hooks[0].Prestart.Path).To(Equal("/path/to/kawasaki"))
-				Expect(hooks[0].Poststop.Path).To(Equal("/path/to/kawasaki"))
+		Context("when the configurer fails to apply the config", func() {
+			It("errors", func() {
+				fakeConfigurer.ApplyReturns(errors.New("wont-apply"))
+				Expect(networker.Network(logger, containerSpec, 42, "bndl")).To(MatchError("wont-apply"))
 			})
 		})
 	})
@@ -303,6 +274,20 @@ var _ = Describe("Networker", func() {
 		})
 
 		Describe("destroying network configuration", func() {
+			It("destroys iptables rules", func() {
+				Expect(networker.Destroy(logger, "some-handle")).To(Succeed())
+				Expect(fakeConfigurer.DestroyIPTablesRulesCallCount()).To(Equal(1))
+				_, actualNetCfg := fakeConfigurer.DestroyIPTablesRulesArgsForCall(0)
+				Expect(actualNetCfg).To(Equal(networkConfig))
+			})
+
+			Context("when configurer fails to destroy iptables rules", func() {
+				It("errors", func() {
+					fakeConfigurer.DestroyIPTablesRulesReturns(errors.New("boom"))
+					Expect(networker.Destroy(logger, "some-handle")).To(MatchError("boom"))
+				})
+			})
+
 			Context("when the subnet pool has allocated an IP from the subnet", func() {
 				BeforeEach(func() {
 					fakeSubnetPool.RunIfFreeStub = func(_ *net.IPNet, _ func() error) error {
