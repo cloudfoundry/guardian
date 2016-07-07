@@ -241,10 +241,11 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 				UID: uint32(u.containerUid),
 				GID: uint32(u.containerGid),
 			},
-			Cwd:          cwd,
-			Capabilities: caps,
-			Rlimits:      toRlimits(spec.Limits),
-			Terminal:     spec.TTY != nil,
+			Cwd:             cwd,
+			Capabilities:    caps,
+			Rlimits:         toRlimits(spec.Limits),
+			Terminal:        spec.TTY != nil,
+			ApparmorProfile: bndl.Process().ApparmorProfile,
 		},
 	}, nil
 }

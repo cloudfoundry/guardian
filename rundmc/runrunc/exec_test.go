@@ -694,6 +694,25 @@ var _ = Describe("ExecPreparer", func() {
 			})
 		})
 	})
+
+	Context("when an ApparmorProfile is defined in the base process", func() {
+		BeforeEach(func() {
+			bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
+				bndl := goci.Bndl{}
+				bndl = bndl.WithProcess(specs.Process{
+					ApparmorProfile: "default-profile",
+				})
+				return bndl, nil
+			}
+		})
+
+		It("should pass it to the process spec", func() {
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.Process.ApparmorProfile).To(Equal("default-profile"))
+		})
+	})
 })
 
 var _ = Describe("WaitWatcher", func() {
