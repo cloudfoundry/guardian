@@ -613,9 +613,6 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		Args:         []string{"/tmp/garden-init"},
 		Cwd:          "/",
 	}
-	if appArmorProfile != "" {
-		baseProcess.ApparmorProfile = appArmorProfile
-	}
 
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
@@ -631,6 +628,9 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		WithMounts(unprivilegedMounts...)
 
 	unprivilegedBundle.Spec.Linux.Seccomp = seccomp
+	if appArmorProfile != "" {
+		unprivilegedBundle.Spec.Process.ApparmorProfile = appArmorProfile
+	}
 
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).

@@ -34,7 +34,7 @@ var _ = Describe("Security", func() {
 				args = append(args, "--apparmor", "garden-default")
 			})
 
-			It("should enforce the policy when running processes", func() {
+			It("should enforce the policy when running processes in unprivileged containers", func() {
 				container, err := client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -50,6 +50,26 @@ var _ = Describe("Security", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(buffer).Should(gbytes.Say("garden-default"))
+			})
+
+			It("should not enforce the policy when running processes in privileged containers", func() {
+				container, err := client.Create(garden.ContainerSpec{
+					Privileged: true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				buffer := gbytes.NewBuffer()
+
+				_, err = container.Run(garden.ProcessSpec{
+					Path: "cat",
+					Args: []string{"/proc/self/attr/current"},
+				}, garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, buffer),
+					Stderr: GinkgoWriter,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(buffer).Should(gbytes.Say("unconfined"))
 			})
 		})
 
