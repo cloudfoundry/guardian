@@ -163,15 +163,14 @@ var _ = Describe("CompositeNetworker", func() {
 		shouldDelegateTo := func(fakeNetworker []*fakes.FakeNetworker) {
 			for _, fakeNetworker := range fakeNetworkers {
 				Expect(fakeNetworker.NetworkCallCount()).To(Equal(1))
-				_, spec, pid, bundlePath := fakeNetworker.NetworkArgsForCall(0)
+				_, spec, pid := fakeNetworker.NetworkArgsForCall(0)
 				Expect(spec).To(Equal(containerSpec))
 				Expect(pid).To(Equal(42))
-				Expect(bundlePath).To(Equal("bndl"))
 			}
 		}
 
 		It("delegates to all netwokers", func() {
-			err := compositeNetworker.Network(nil, containerSpec, 42, "bndl")
+			err := compositeNetworker.Network(nil, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
 			shouldDelegateTo(fakeNetworkers)
 		})
@@ -179,7 +178,7 @@ var _ = Describe("CompositeNetworker", func() {
 		Context("when a networker fails", func() {
 			It("returns the error", func() {
 				fakeNetworkers[1].NetworkReturns(errors.New("kaput"))
-				Expect(compositeNetworker.Network(nil, containerSpec, 42, "bndl")).To(MatchError("kaput"))
+				Expect(compositeNetworker.Network(nil, containerSpec, 42)).To(MatchError("kaput"))
 			})
 		})
 	})

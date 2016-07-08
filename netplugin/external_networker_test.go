@@ -36,7 +36,7 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 	Describe("Network", func() {
 		It("executes the external plugin with the correct args", func() {
 			plugin := netplugin.New(fakeCommandRunner, "some/path")
-			err := plugin.Network(lagertest.NewTestLogger("test"), containerSpec, 42, "bndl")
+			err := plugin.Network(lagertest.NewTestLogger("test"), containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := fakeCommandRunner.ExecutedCommands()[0]
@@ -59,7 +59,7 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 		Context("when there are extra args", func() {
 			It("prepends the extra args before the standard hook parameters", func() {
 				plugin := netplugin.New(fakeCommandRunner, "some/path", "arg1", "arg2", "arg3")
-				err := plugin.Network(lagertest.NewTestLogger("test"), containerSpec, 42, "bndl")
+				err := plugin.Network(lagertest.NewTestLogger("test"), containerSpec, 42)
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd := fakeCommandRunner.ExecutedCommands()[0]
@@ -83,7 +83,7 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 				})
 
 				plugin := netplugin.New(fakeCommandRunner, "some/path")
-				Expect(plugin.Network(nil, containerSpec, 42, "bndl")).To(MatchError("boom"))
+				Expect(plugin.Network(nil, containerSpec, 42)).To(MatchError("boom"))
 			})
 		})
 	})
@@ -130,7 +130,7 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 				})
 
 				plugin := netplugin.New(fakeCommandRunner, "some/path")
-				Expect(plugin.Network(nil, containerSpec, 42, "bndl")).To(MatchError("boom"))
+				Expect(plugin.Network(nil, containerSpec, 42)).To(MatchError("boom"))
 			})
 		})
 	})

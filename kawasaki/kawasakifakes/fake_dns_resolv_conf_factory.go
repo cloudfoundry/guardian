@@ -8,31 +8,32 @@ import (
 )
 
 type FakeDnsResolvConfFactory struct {
-	CreateDNSResolvConfigurerStub        func(bundlePath string, cfg kawasaki.NetworkConfig) kawasaki.DnsResolvConfigurer
+	CreateDNSResolvConfigurerStub        func(pid int, cfg kawasaki.NetworkConfig) (kawasaki.DnsResolvConfigurer, error)
 	createDNSResolvConfigurerMutex       sync.RWMutex
 	createDNSResolvConfigurerArgsForCall []struct {
-		bundlePath string
-		cfg        kawasaki.NetworkConfig
+		pid int
+		cfg kawasaki.NetworkConfig
 	}
 	createDNSResolvConfigurerReturns struct {
 		result1 kawasaki.DnsResolvConfigurer
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDnsResolvConfFactory) CreateDNSResolvConfigurer(bundlePath string, cfg kawasaki.NetworkConfig) kawasaki.DnsResolvConfigurer {
+func (fake *FakeDnsResolvConfFactory) CreateDNSResolvConfigurer(pid int, cfg kawasaki.NetworkConfig) (kawasaki.DnsResolvConfigurer, error) {
 	fake.createDNSResolvConfigurerMutex.Lock()
 	fake.createDNSResolvConfigurerArgsForCall = append(fake.createDNSResolvConfigurerArgsForCall, struct {
-		bundlePath string
-		cfg        kawasaki.NetworkConfig
-	}{bundlePath, cfg})
-	fake.recordInvocation("CreateDNSResolvConfigurer", []interface{}{bundlePath, cfg})
+		pid int
+		cfg kawasaki.NetworkConfig
+	}{pid, cfg})
+	fake.recordInvocation("CreateDNSResolvConfigurer", []interface{}{pid, cfg})
 	fake.createDNSResolvConfigurerMutex.Unlock()
 	if fake.CreateDNSResolvConfigurerStub != nil {
-		return fake.CreateDNSResolvConfigurerStub(bundlePath, cfg)
+		return fake.CreateDNSResolvConfigurerStub(pid, cfg)
 	} else {
-		return fake.createDNSResolvConfigurerReturns.result1
+		return fake.createDNSResolvConfigurerReturns.result1, fake.createDNSResolvConfigurerReturns.result2
 	}
 }
 
@@ -42,17 +43,18 @@ func (fake *FakeDnsResolvConfFactory) CreateDNSResolvConfigurerCallCount() int {
 	return len(fake.createDNSResolvConfigurerArgsForCall)
 }
 
-func (fake *FakeDnsResolvConfFactory) CreateDNSResolvConfigurerArgsForCall(i int) (string, kawasaki.NetworkConfig) {
+func (fake *FakeDnsResolvConfFactory) CreateDNSResolvConfigurerArgsForCall(i int) (int, kawasaki.NetworkConfig) {
 	fake.createDNSResolvConfigurerMutex.RLock()
 	defer fake.createDNSResolvConfigurerMutex.RUnlock()
-	return fake.createDNSResolvConfigurerArgsForCall[i].bundlePath, fake.createDNSResolvConfigurerArgsForCall[i].cfg
+	return fake.createDNSResolvConfigurerArgsForCall[i].pid, fake.createDNSResolvConfigurerArgsForCall[i].cfg
 }
 
-func (fake *FakeDnsResolvConfFactory) CreateDNSResolvConfigurerReturns(result1 kawasaki.DnsResolvConfigurer) {
+func (fake *FakeDnsResolvConfFactory) CreateDNSResolvConfigurerReturns(result1 kawasaki.DnsResolvConfigurer, result2 error) {
 	fake.CreateDNSResolvConfigurerStub = nil
 	fake.createDNSResolvConfigurerReturns = struct {
 		result1 kawasaki.DnsResolvConfigurer
-	}{result1}
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeDnsResolvConfFactory) Invocations() map[string][][]interface{} {

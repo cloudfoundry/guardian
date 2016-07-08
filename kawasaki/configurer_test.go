@@ -11,6 +11,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
 	"github.com/pivotal-golang/lager"
 	"github.com/pivotal-golang/lager/lagertest"
 
@@ -27,6 +28,8 @@ var _ = Describe("Configurer", func() {
 		fakeInstanceChainCreator   *fakes.FakeInstanceChainCreator
 		fakeNsExecer               *fakes.FakeNetnsExecer
 
+		dummyFileOpener netns.Opener
+
 		netnsFD *os.File
 
 		configurer kawasaki.Configurer
@@ -37,7 +40,7 @@ var _ = Describe("Configurer", func() {
 	BeforeEach(func() {
 		fakeResolvConfFactory = new(fakes.FakeDnsResolvConfFactory)
 		fakeDnsResolvConfigurer = new(fakes.FakeDnsResolvConfigurer)
-		fakeResolvConfFactory.CreateDNSResolvConfigurerReturns(fakeDnsResolvConfigurer)
+		fakeResolvConfFactory.CreateDNSResolvConfigurerReturns(fakeDnsResolvConfigurer, nil)
 
 		fakeHostConfigurer = new(fakes.FakeHostConfigurer)
 		fakeContainerConfigApplier = new(fakes.FakeContainerApplier)
@@ -48,7 +51,12 @@ var _ = Describe("Configurer", func() {
 		var err error
 		netnsFD, err = ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
-		configurer = kawasaki.NewConfigurer(fakeResolvConfFactory, fakeHostConfigurer, fakeContainerConfigApplier, fakeInstanceChainCreator, fakeNsExecer)
+
+		dummyFileOpener = func(path string) (*os.File, error) {
+			return netnsFD, nil
+		}
+
+		configurer = kawasaki.NewConfigurer(fakeResolvConfFactory, fakeHostConfigurer, fakeContainerConfigApplier, fakeInstanceChainCreator, dummyFileOpener, fakeNsExecer)
 
 		logger = lagertest.NewTestLogger("test")
 	})
@@ -59,14 +67,24 @@ var _ = Describe("Configurer", func() {
 
 	Describe("Apply", func() {
 		It("configures dns", func() {
-			Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name(), "bundle-path")).To(Succeed())
+			Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(Succeed())
 			Expect(fakeDnsResolvConfigurer.ConfigureCallCount()).To(Equal(1))
 		})
 
-		Context("when dns configuration fails", func() {
+		Context("when CreateDNSResolvConfigurer returns an error", func() {
+			BeforeEach(func() {
+				fakeResolvConfFactory.CreateDNSResolvConfigurerReturns(nil, errors.New("baboom"))
+			})
+
+			It("returns the error", func() {
+				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("baboom"))
+			})
+		})
+
+		Context("when resolv configuration fails", func() {
 			It("returns the error", func() {
 				fakeDnsResolvConfigurer.ConfigureReturns(errors.New("baboom"))
-				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name(), "bundle-path")).To(MatchError("baboom"))
+				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("baboom"))
 			})
 		})
 
@@ -76,11 +94,15 @@ var _ = Describe("Configurer", func() {
 					ContainerIntf: "banana",
 				}
 
-				Expect(configurer.Apply(logger, cfg, netnsFD.Name(), "bundle-path")).To(Succeed())
 				command := fmt.Sprintf("lsof %s | wc -l", netnsFD.Name())
 				output, err := exec.Command("sh", "-c", command).Output()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(strings.TrimSpace(string(output))).To(Equal("2"))
+
+				Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
+				output, err = exec.Command("sh", "-c", command).Output()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(strings.TrimSpace(string(output))).To(Equal("0"))
 			})
 
 			It("applies the configuration in the host", func() {
@@ -88,7 +110,7 @@ var _ = Describe("Configurer", func() {
 					ContainerIntf: "banana",
 				}
 
-				Expect(configurer.Apply(logger, cfg, netnsFD.Name(), "bundle-path")).To(Succeed())
+				Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
 
 				Expect(fakeHostConfigurer.ApplyCallCount()).To(Equal(1))
 				_, appliedCfg, fd := fakeHostConfigurer.ApplyArgsForCall(0)
@@ -102,16 +124,16 @@ var _ = Describe("Configurer", func() {
 				})
 
 				It("returns the error", func() {
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name(), "bundle-path")).To(MatchError("boom"))
+					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
 				})
 
 				It("does not configure the container", func() {
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name(), "bundle-path")).To(MatchError("boom"))
+					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
 					Expect(fakeContainerConfigApplier.ApplyCallCount()).To(Equal(0))
 				})
 
 				It("does not configure IPTables", func() {
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name(), "bundle-path")).To(MatchError("boom"))
+					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
 					Expect(fakeInstanceChainCreator.CreateCallCount()).To(Equal(0))
 				})
 			})
@@ -127,7 +149,7 @@ var _ = Describe("Configurer", func() {
 					Subnet:          subnet,
 				}
 
-				Expect(configurer.Apply(logger, cfg, netnsFD.Name(), "bundle-path")).To(Succeed())
+				Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
 				Expect(fakeInstanceChainCreator.CreateCallCount()).To(Equal(1))
 				_, handle, instanceChain, bridgeName, ip, subnet := fakeInstanceChainCreator.CreateArgsForCall(0)
 				Expect(handle).To(Equal("some-handle"))
@@ -140,7 +162,7 @@ var _ = Describe("Configurer", func() {
 			Context("when applying IPTables configuration fails", func() {
 				It("returns the error", func() {
 					fakeInstanceChainCreator.CreateReturns(errors.New("oh no"))
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name(), "bundle-path")).To(MatchError("oh no"))
+					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("oh no"))
 				})
 			})
 
@@ -149,7 +171,7 @@ var _ = Describe("Configurer", func() {
 					ContainerIntf: "banana",
 				}
 
-				Expect(configurer.Apply(logger, cfg, netnsFD.Name(), "bundle-path")).To(Succeed())
+				Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
 
 				Expect(fakeNsExecer.ExecCallCount()).To(Equal(1))
 				fd, cb := fakeNsExecer.ExecArgsForCall(0)
@@ -166,7 +188,7 @@ var _ = Describe("Configurer", func() {
 			Context("if entering the namespace fails", func() {
 				It("returns the error", func() {
 					fakeNsExecer.ExecReturns(errors.New("boom"))
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name(), "bundle-path")).To(MatchError("boom"))
+					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
 				})
 			})
 
@@ -177,19 +199,25 @@ var _ = Describe("Configurer", func() {
 					}
 
 					fakeContainerConfigApplier.ApplyReturns(errors.New("banana"))
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, netnsFD.Name(), "bundle-path")).To(MatchError("banana"))
+					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("banana"))
 				})
 			})
 		})
 
 		Context("when the ns path cannot be opened", func() {
+			BeforeEach(func() {
+				dummyFileOpener = func(path string) (*os.File, error) {
+					return nil, errors.New("boom")
+				}
+				configurer = kawasaki.NewConfigurer(fakeResolvConfFactory, fakeHostConfigurer, fakeContainerConfigApplier, fakeInstanceChainCreator, dummyFileOpener, fakeNsExecer)
+			})
+
 			It("returns an error", func() {
-				err := configurer.Apply(logger, kawasaki.NetworkConfig{}, "DOESNOTEXIST", "bundle-path")
-				Expect(err).To(HaveOccurred())
+				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 13)).To(MatchError("boom"))
 			})
 
 			It("does not configure anything", func() {
-				configurer.Apply(logger, kawasaki.NetworkConfig{}, "DOESNOTEXIST", "bundle-path")
+				configurer.Apply(logger, kawasaki.NetworkConfig{}, 13)
 				Expect(fakeHostConfigurer.ApplyCallCount()).To(Equal(0))
 			})
 		})

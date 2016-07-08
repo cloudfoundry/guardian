@@ -2,6 +2,8 @@ package dns_test
 
 import (
 	"errors"
+	"io/ioutil"
+	"os"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
 	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/dns/dnsfakes"
@@ -104,6 +106,81 @@ var _ = Describe("ResolvConfigurer", func() {
 
 			It("should return an error", func() {
 				Expect(dnsResolv.Configure(log)).To(MatchError("writting file '/etc/resolv.conf': banana write error"))
+			})
+		})
+	})
+})
+
+var _ = Describe("IdMapReader", func() {
+	Describe("readId", func() {
+		var (
+			mappings              []byte
+			idMapReader           dns.RootIdMapReader
+			testIdMappingFileName string
+		)
+
+		BeforeEach(func() {
+			mappings = []byte(`
+					1       1001          1
+				  0       1000          1
+					2       1002          1
+				`)
+		})
+
+		JustBeforeEach(func() {
+			idMapReader = dns.RootIdMapReader{}
+
+			testIdMappingFile, err := ioutil.TempFile("", "fakeMappings")
+			testIdMappingFileName = testIdMappingFile.Name()
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = testIdMappingFile.Write(mappings)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(testIdMappingFile.Close()).To(Succeed())
+		})
+
+		AfterEach(func() {
+			os.Remove(testIdMappingFileName)
+		})
+
+		Context("when the file cannot be opened", func() {
+			It("errors", func() {
+				_, err := idMapReader.ReadRootId("blah")
+				Expect(err.Error()).To(ContainSubstring("no such file or directory"))
+			})
+		})
+
+		Context("when there is a root id", func() {
+			It("reads the root id from the given path", func() {
+				id, err := idMapReader.ReadRootId(testIdMappingFileName)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(id).To(Equal(1000))
+			})
+
+			Context("when the mapped id is not a number", func() {
+				BeforeEach(func() {
+					mappings = []byte(`
+				  0       NaN          1
+				`)
+				})
+
+				It("erorrs", func() {
+					_, err := idMapReader.ReadRootId(testIdMappingFileName)
+					Expect(err.Error()).To(ContainSubstring("invalid syntax"))
+				})
+			})
+		})
+
+		Context("when there is no root id", func() {
+			BeforeEach(func() {
+				mappings = []byte(`
+					1       1001          1
+					2       1002          1
+				`)
+			})
+			It("errors", func() {
+				_, err := idMapReader.ReadRootId(testIdMappingFileName)
+				Expect(err.Error()).To(ContainSubstring("no root mapping"))
 			})
 		})
 	})

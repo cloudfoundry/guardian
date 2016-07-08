@@ -120,7 +120,7 @@ var _ = Describe("Networker", func() {
 
 	Describe("Network", func() {
 		It("parses the spec", func() {
-			networker.Network(logger, containerSpec, 42, "bndl")
+			networker.Network(logger, containerSpec, 42)
 			Expect(fakeSpecParser.ParseCallCount()).To(Equal(1))
 			_, spec := fakeSpecParser.ParseArgsForCall(0)
 			Expect(spec).To(Equal("1.2.3.4/30"))
@@ -128,7 +128,7 @@ var _ = Describe("Networker", func() {
 
 		It("returns an error if the spec can't be parsed", func() {
 			fakeSpecParser.ParseReturns(nil, nil, errors.New("no parsey"))
-			err := networker.Network(logger, containerSpec, 42, "bndl")
+			err := networker.Network(logger, containerSpec, 42)
 			Expect(err).To(MatchError("no parsey"))
 		})
 
@@ -137,7 +137,7 @@ var _ = Describe("Networker", func() {
 			someIpRequest := subnets.DynamicIPSelector
 			fakeSpecParser.ParseReturns(someSubnetRequest, someIpRequest, nil)
 
-			networker.Network(logger, containerSpec, 42, "bndl")
+			networker.Network(logger, containerSpec, 42)
 			Expect(fakeSubnetPool.AcquireCallCount()).To(Equal(1))
 			_, sr, ir := fakeSubnetPool.AcquireArgsForCall(0)
 			Expect(sr).To(Equal(someSubnetRequest))
@@ -148,7 +148,7 @@ var _ = Describe("Networker", func() {
 			someIp, someSubnet, err := net.ParseCIDR("1.2.3.4/5")
 			fakeSubnetPool.AcquireReturns(someSubnet, someIp, err)
 
-			networker.Network(logger, containerSpec, 42, "bndl")
+			networker.Network(logger, containerSpec, 42)
 			Expect(fakeConfigCreator.CreateCallCount()).To(Equal(1))
 			_, handle, subnet, ip := fakeConfigCreator.CreateArgsForCall(0)
 			Expect(handle).To(Equal("some-handle"))
@@ -163,7 +163,7 @@ var _ = Describe("Networker", func() {
 				config[name] = value
 			}
 
-			err := networker.Network(logger, containerSpec, 42, "bndl")
+			err := networker.Network(logger, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config["kawasaki.host-interface"]).To(Equal(networkConfig.HostIntf))
@@ -180,21 +180,20 @@ var _ = Describe("Networker", func() {
 		})
 
 		It("applies the right configuration", func() {
-			err := networker.Network(logger, containerSpec, 42, "bndl")
+			err := networker.Network(logger, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeConfigurer.ApplyCallCount()).To(Equal(1))
-			_, actualNetConfig, nsPath, bundlePath := fakeConfigurer.ApplyArgsForCall(0)
+			_, actualNetConfig, pid := fakeConfigurer.ApplyArgsForCall(0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualNetConfig).To(Equal(networkConfig))
-			Expect(nsPath).To(Equal("/proc/42/ns/net"))
-			Expect(bundlePath).To(Equal("bndl"))
+			Expect(pid).To(Equal(42))
 		})
 
 		Context("when the configurer fails to apply the config", func() {
 			It("errors", func() {
 				fakeConfigurer.ApplyReturns(errors.New("wont-apply"))
-				Expect(networker.Network(logger, containerSpec, 42, "bndl")).To(MatchError("wont-apply"))
+				Expect(networker.Network(logger, containerSpec, 42)).To(MatchError("wont-apply"))
 			})
 		})
 	})

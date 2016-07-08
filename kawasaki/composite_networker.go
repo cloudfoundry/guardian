@@ -46,9 +46,9 @@ func (c *CompositeNetworker) Restore(log lager.Logger, handle string) error {
 	return nil
 }
 
-func (c *CompositeNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int, bundlePath string) error {
+func (c *CompositeNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
 	for _, networker := range c.Networkers {
-		if err := networker.Network(log, containerSpec, pid, bundlePath); err != nil {
+		if err := networker.Network(log, containerSpec, pid); err != nil {
 			return err
 		}
 	}

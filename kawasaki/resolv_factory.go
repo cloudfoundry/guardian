@@ -1,20 +1,25 @@
 package kawasaki
 
 import (
+	"fmt"
+
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 )
 
-type ResolvFactory struct{}
+type ResolvFactory struct {
+	idMapReader dns.RootIdMapReader
+}
 
-func (r *ResolvFactory) CreateDNSResolvConfigurer(bundlePath string, config NetworkConfig) DnsResolvConfigurer {
-	bundleLoader := &goci.BndlLoader{}
-	bndl, err := bundleLoader.Load(bundlePath)
+func (r *ResolvFactory) CreateDNSResolvConfigurer(pid int, config NetworkConfig) (DnsResolvConfigurer, error) {
+	rootUid, err := r.idMapReader.ReadRootId(fmt.Sprintf("/proc/%d/uid_map", pid))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	rootUid, rootGid := extractRootIds(bndl)
+	rootGid, err := r.idMapReader.ReadRootId(fmt.Sprintf("/proc/%d/gid_map", pid))
+	if err != nil {
+		return nil, err
+	}
 
 	configurer := &dns.ResolvConfigurer{
 		HostsFileCompiler: &dns.HostsFileCompiler{
@@ -27,31 +32,11 @@ func (r *ResolvFactory) CreateDNSResolvConfigurer(bundlePath string, config Netw
 			OverrideServers:    config.DNSServers,
 		},
 		FileWriter: &dns.RootfsWriter{
-			RootfsPath: bndl.Spec.Root.Path,
+			RootfsPath: fmt.Sprintf("/proc/%d/root", pid),
 			RootUid:    rootUid,
 			RootGid:    rootGid,
 		},
 	}
 
-	return configurer
-}
-
-func extractRootIds(bndl goci.Bndl) (int, int) {
-	rootUid := 0
-	for _, mapping := range bndl.Spec.Linux.UIDMappings {
-		if mapping.ContainerID == 0 && mapping.Size >= 1 {
-			rootUid = int(mapping.HostID)
-			break
-		}
-	}
-
-	rootGid := 0
-	for _, mapping := range bndl.Spec.Linux.GIDMappings {
-		if mapping.ContainerID == 0 && mapping.Size >= 1 {
-			rootGid = int(mapping.HostID)
-			break
-		}
-	}
-
-	return rootUid, rootGid
+	return configurer, nil
 }

@@ -42,7 +42,7 @@ func networkProperties(containerProperties garden.Properties) garden.Properties 
 	return properties
 }
 
-func (p *ExternalBinaryNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int, bundlePath string) error {
+func (p *ExternalBinaryNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
 	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
 	propertiesJSON, err := json.Marshal(networkProperties(containerSpec.Properties))
 	if err != nil {

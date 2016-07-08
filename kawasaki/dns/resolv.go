@@ -1,7 +1,12 @@
 package dns
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 
 	"github.com/pivotal-golang/lager"
 )
@@ -20,6 +25,36 @@ type ResolvConfigurer struct {
 	HostsFileCompiler  Compiler
 	ResolvFileCompiler Compiler
 	FileWriter         FileWriter
+}
+
+type RootIdMapReader struct{}
+
+// Reads /proc/<pid>/{uid_map|gid_map} and retrieves the mapped user id
+// for the container root user. Map format is the following:
+// containerId hostId mappingSize
+// 0           1000   1
+func (r *RootIdMapReader) ReadRootId(path string) (int, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return -1, err
+	}
+	defer file.Close()
+
+	reader := bufio.NewReader(file)
+
+	for {
+		line, err := reader.ReadString('\n')
+		fields := strings.Fields(line)
+
+		if len(fields) > 1 && fields[0] == "0" {
+			return strconv.Atoi(fields[1])
+		}
+
+		if err != nil {
+			break
+		}
+	}
+	return -1, errors.New("no root mapping")
 }
 
 func (d *ResolvConfigurer) Configure(log lager.Logger) error {

@@ -16,13 +16,12 @@ type FakeNetworker struct {
 	capacityReturns     struct {
 		result1 uint64
 	}
-	NetworkStub        func(log lager.Logger, spec garden.ContainerSpec, pid int, bundlePath string) error
+	NetworkStub        func(log lager.Logger, spec garden.ContainerSpec, pid int) error
 	networkMutex       sync.RWMutex
 	networkArgsForCall []struct {
-		log        lager.Logger
-		spec       garden.ContainerSpec
-		pid        int
-		bundlePath string
+		log  lager.Logger
+		spec garden.ContainerSpec
+		pid  int
 	}
 	networkReturns struct {
 		result1 error
@@ -97,18 +96,17 @@ func (fake *FakeNetworker) CapacityReturns(result1 uint64) {
 	}{result1}
 }
 
-func (fake *FakeNetworker) Network(log lager.Logger, spec garden.ContainerSpec, pid int, bundlePath string) error {
+func (fake *FakeNetworker) Network(log lager.Logger, spec garden.ContainerSpec, pid int) error {
 	fake.networkMutex.Lock()
 	fake.networkArgsForCall = append(fake.networkArgsForCall, struct {
-		log        lager.Logger
-		spec       garden.ContainerSpec
-		pid        int
-		bundlePath string
-	}{log, spec, pid, bundlePath})
-	fake.recordInvocation("Network", []interface{}{log, spec, pid, bundlePath})
+		log  lager.Logger
+		spec garden.ContainerSpec
+		pid  int
+	}{log, spec, pid})
+	fake.recordInvocation("Network", []interface{}{log, spec, pid})
 	fake.networkMutex.Unlock()
 	if fake.NetworkStub != nil {
-		return fake.NetworkStub(log, spec, pid, bundlePath)
+		return fake.NetworkStub(log, spec, pid)
 	} else {
 		return fake.networkReturns.result1
 	}
@@ -120,10 +118,10 @@ func (fake *FakeNetworker) NetworkCallCount() int {
 	return len(fake.networkArgsForCall)
 }
 
-func (fake *FakeNetworker) NetworkArgsForCall(i int) (lager.Logger, garden.ContainerSpec, int, string) {
+func (fake *FakeNetworker) NetworkArgsForCall(i int) (lager.Logger, garden.ContainerSpec, int) {
 	fake.networkMutex.RLock()
 	defer fake.networkMutex.RUnlock()
-	return fake.networkArgsForCall[i].log, fake.networkArgsForCall[i].spec, fake.networkArgsForCall[i].pid, fake.networkArgsForCall[i].bundlePath
+	return fake.networkArgsForCall[i].log, fake.networkArgsForCall[i].spec, fake.networkArgsForCall[i].pid
 }
 
 func (fake *FakeNetworker) NetworkReturns(result1 error) {

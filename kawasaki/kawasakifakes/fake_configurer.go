@@ -9,13 +9,12 @@ import (
 )
 
 type FakeConfigurer struct {
-	ApplyStub        func(log lager.Logger, cfg kawasaki.NetworkConfig, nsPath, bundlePath string) error
+	ApplyStub        func(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
-		log        lager.Logger
-		cfg        kawasaki.NetworkConfig
-		nsPath     string
-		bundlePath string
+		log lager.Logger
+		cfg kawasaki.NetworkConfig
+		pid int
 	}
 	applyReturns struct {
 		result1 error
@@ -42,18 +41,17 @@ type FakeConfigurer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeConfigurer) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, nsPath string, bundlePath string) error {
+func (fake *FakeConfigurer) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
 	fake.applyMutex.Lock()
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
-		log        lager.Logger
-		cfg        kawasaki.NetworkConfig
-		nsPath     string
-		bundlePath string
-	}{log, cfg, nsPath, bundlePath})
-	fake.recordInvocation("Apply", []interface{}{log, cfg, nsPath, bundlePath})
+		log lager.Logger
+		cfg kawasaki.NetworkConfig
+		pid int
+	}{log, cfg, pid})
+	fake.recordInvocation("Apply", []interface{}{log, cfg, pid})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(log, cfg, nsPath, bundlePath)
+		return fake.ApplyStub(log, cfg, pid)
 	} else {
 		return fake.applyReturns.result1
 	}
@@ -65,10 +63,10 @@ func (fake *FakeConfigurer) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
-func (fake *FakeConfigurer) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, string, string) {
+func (fake *FakeConfigurer) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, int) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
-	return fake.applyArgsForCall[i].log, fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].nsPath, fake.applyArgsForCall[i].bundlePath
+	return fake.applyArgsForCall[i].log, fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].pid
 }
 
 func (fake *FakeConfigurer) ApplyReturns(result1 error) {

@@ -51,7 +51,7 @@ type Containerizer interface {
 }
 
 type Networker interface {
-	Network(log lager.Logger, spec garden.ContainerSpec, pid int, bundlePath string) error
+	Network(log lager.Logger, spec garden.ContainerSpec, pid int) error
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error)
@@ -258,7 +258,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	if err != nil {
 		return nil, err
 	}
-	if err = g.Networker.Network(log, spec, actualSpec.Pid, actualSpec.BundlePath); err != nil {
+	if err = g.Networker.Network(log, spec, actualSpec.Pid); err != nil {
 		return nil, err
 	}
 

@@ -275,12 +275,11 @@ var _ = Describe("Gardener", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(networker.NetworkCallCount()).To(Equal(1))
-			_, spec, pid, bundlePath := networker.NetworkArgsForCall(0)
+			_, spec, pid := networker.NetworkArgsForCall(0)
 			Expect(spec).To(Equal(garden.ContainerSpec{
 				Handle: "bob",
 			}))
 			Expect(pid).To(Equal(42))
-			Expect(bundlePath).To(Equal("bndl"))
 		})
 
 		Context("when container info cannot be retrieved", func() {
