@@ -19,58 +19,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("IPTables Flags", func() {
-	var (
-		client *runner.RunningGarden
-		args   []string
-	)
-
-	BeforeEach(func() {
-		args = []string{}
-	})
-
-	JustBeforeEach(func() {
-		client = startGarden(args...)
-	})
-
-	Describe("--iptables-bin flag", func() {
-		Context("when the path is valid", func() {
-			BeforeEach(func() {
-				args = append(args, "--iptables-bin", "/sbin/iptables")
-			})
-
-			AfterEach(func() {
-				Expect(client.DestroyAndStop()).To(Succeed())
-			})
-
-			It("should succeed to start the server", func() {
-				Expect(client.Ping()).To(Succeed())
-			})
-		})
-
-		Context("when the path is invalid", func() {
-			BeforeEach(func() {
-				args = append(args, "--iptables-bin", "/path/to/iptables/bin")
-			})
-
-			It("should fail to start the server", func() {
-				Expect(client.Ping()).To(HaveOccurred())
-			})
-		})
-
-		Context("when the path is valid but it's not iptables", func() {
-			BeforeEach(func() {
-				args = append(args, "--iptables-bin", "/bin/ls")
-			})
-
-			It("should fail to start the server", func() {
-				Expect(client.Ping()).To(HaveOccurred())
-			})
-		})
-	})
-})
-
-var _ = Describe("Net", func() {
+var _ = Describe("Networking", func() {
 	var (
 		client    *runner.RunningGarden
 		container garden.Container
@@ -144,19 +93,29 @@ var _ = Describe("Net", func() {
 		Expect(buffer).To(gbytes.Say(ipAddress(containerNetwork, 2)))
 	})
 
+	Context("when default network pool is changed", func() {
+		BeforeEach(func() {
+			args = []string{"--network-pool", "10.253.0.0/29"}
+			containerNetwork = ""
+		})
+
+		It("vends IPs from the given network pool", func() {
+			Expect(containerIP(container)).To(ContainSubstring("10.253."))
+		})
+	})
+
 	It("should be pingable", func() {
 		out, err := exec.Command("/bin/ping", "-c 2", ipAddress(containerNetwork, 2)).Output()
 		Expect(err).ToNot(HaveOccurred())
 		Expect(out).To(ContainSubstring(" 0% packet loss"))
 	})
 
-	Context("a second container", func() {
-		var originalContainer garden.Container
+	Describe("a second container", func() {
+		var otherContainer garden.Container
 
 		JustBeforeEach(func() {
 			var err error
-			originalContainer = container
-			container, err = client.Create(garden.ContainerSpec{
+			otherContainer, err = client.Create(garden.ContainerSpec{
 				Network: containerNetwork,
 			})
 
@@ -164,12 +123,12 @@ var _ = Describe("Net", func() {
 		})
 
 		AfterEach(func() {
-			Expect(client.Destroy(originalContainer.Handle())).To(Succeed())
+			Expect(client.Destroy(otherContainer.Handle())).To(Succeed())
 		})
 
 		It("should have the next IP address", func() {
 			buffer := gbytes.NewBuffer()
-			proc, err := container.Run(
+			proc, err := otherContainer.Run(
 				garden.ProcessSpec{
 					Path: "ifconfig",
 					User: "root",
@@ -183,64 +142,52 @@ var _ = Describe("Net", func() {
 		})
 
 		It("should be pingable", func() {
-			out, err := exec.Command("/bin/ping", "-c 2", ipAddress(containerNetwork, 2)).Output()
+			out, err := exec.Command("/bin/ping", "-c 2", ipAddress(containerNetwork, 3)).Output()
 			Expect(out).To(ContainSubstring(" 0% packet loss"))
 			Expect(err).ToNot(HaveOccurred())
+		})
 
-			out, err = exec.Command("/bin/ping", "-c 2", ipAddress(containerNetwork, 3)).Output()
-			Expect(out).To(ContainSubstring(" 0% packet loss"))
-			Expect(err).ToNot(HaveOccurred())
+		Describe("the first container", func() {
+			It("should still be pingable", func() {
+				out, err := exec.Command("/bin/ping", "-c 2", ipAddress(containerNetwork, 2)).Output()
+				Expect(out).To(ContainSubstring(" 0% packet loss"))
+				Expect(err).ToNot(HaveOccurred())
+			})
 		})
 
 		It("should access internet", func() {
-			Expect(checkConnection(container, exampleDotCom.String(), 80)).To(Succeed())
+			Expect(checkConnection(otherContainer, exampleDotCom.String(), 80)).To(Succeed())
 		})
 	})
 
-	Context("when default network pool is changed", func() {
-		var (
-			otherContainer   garden.Container
-			otherContainerIP string
-		)
-
-		BeforeEach(func() {
-			args = []string{"--network-pool", "10.253.0.0/29"}
-			containerNetwork = ""
-		})
+	Context("when it is recreated", func() {
+		var contIP string
 
 		JustBeforeEach(func() {
 			var err error
-			otherContainer, err = client.Create(garden.ContainerSpec{})
+
+			contIP = containerIP(container)
+
+			Expect(client.Destroy(container.Handle())).To(Succeed())
+
+			container, err = client.Create(garden.ContainerSpec{
+				Network: containerNetwork,
+			})
 			Expect(err).ToNot(HaveOccurred())
-
-			otherContainerIP = containerIP(otherContainer)
-
-			Expect(client.Destroy(otherContainer.Handle())).To(Succeed())
-
-			otherContainer, err = client.Create(garden.ContainerSpec{})
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			Expect(client.Destroy(otherContainer.Handle())).To(Succeed())
 		})
 
 		It("reuses IP addresses", func() {
-			newIpAddress := containerIP(otherContainer)
-			Expect(newIpAddress).To(Equal(otherContainerIP))
-		})
-
-		It("vends IPs from the given network pool", func() {
-			Expect(containerIP(otherContainer)).To(ContainSubstring("10.253."))
+			newIpAddress := containerIP(container)
+			Expect(newIpAddress).To(Equal(contIP))
 		})
 
 		It("is accessible from the outside", func() {
-			hostPort, containerPort, err := otherContainer.NetIn(0, 4321)
+			hostPort, containerPort, err := container.NetIn(0, 4321)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(listenInContainer(otherContainer, containerPort)).To(Succeed())
+			Expect(listenInContainer(container, containerPort)).To(Succeed())
 
-			externalIP := externalIP(otherContainer)
+			externalIP := externalIP(container)
 
 			// retry because listener process inside other container
 			// may not start immediately
@@ -248,6 +195,41 @@ var _ = Describe("Net", func() {
 				session := sendRequest(externalIP, hostPort)
 				return session.Wait().ExitCode()
 			}).Should(Equal(0))
+		})
+	})
+
+	Describe("NetIn", func() {
+		It("maps the provided host port to the container port", func() {
+			const (
+				hostPort      uint32 = 9888
+				containerPort uint32 = 9080
+			)
+
+			actualHostPort, actualContainerPort, err := container.NetIn(hostPort, containerPort)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(actualHostPort).To(Equal(hostPort))
+			Expect(actualContainerPort).To(Equal(containerPort))
+			Expect(listenInContainer(container, containerPort)).To(Succeed())
+
+			externalIP := externalIP(container)
+
+			Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait() }).
+				Should(gbytes.Say(fmt.Sprintf("%d", containerPort)))
+		})
+
+		It("maps the random host port to a container port", func() {
+			actualHostPort, actualContainerPort, err := container.NetIn(0, 0)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(actualHostPort).NotTo(Equal(0))
+			Expect(actualContainerPort).NotTo(Equal(0))
+			Expect(listenInContainer(container, actualContainerPort)).To(Succeed())
+
+			externalIP := externalIP(container)
+
+			Eventually(func() *gexec.Session { return sendRequest(externalIP, actualHostPort).Wait() }).
+				Should(gbytes.Say(fmt.Sprintf("%d", actualContainerPort)))
 		})
 	})
 
@@ -276,50 +258,17 @@ var _ = Describe("Net", func() {
 		})
 	})
 
-	Describe("NetIn", func() {
-		It("maps the provided host port to the container port", func() {
-			const (
-				hostPort      uint32 = 9888
-				containerPort uint32 = 9080
-			)
-
-			actualHostPort, actualContainerPort, err := container.NetIn(hostPort, containerPort)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(actualHostPort).To(Equal(hostPort))
-			Expect(actualContainerPort).To(Equal(containerPort))
-			Expect(listenInContainer(container, containerPort)).To(Succeed())
-
-			externalIP := externalIP(container)
-
-			Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait() }).
-				Should(gbytes.Say(fmt.Sprintf("%d", containerPort)))
-		})
-
-		It("maps the provided host port to the container port", func() {
-			actualHostPort, actualContainerPort, err := container.NetIn(0, 0)
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(actualHostPort).NotTo(Equal(0))
-			Expect(actualContainerPort).NotTo(Equal(0))
-			Expect(listenInContainer(container, actualContainerPort)).To(Succeed())
-
-			externalIP := externalIP(container)
-
-			Eventually(func() *gexec.Session { return sendRequest(externalIP, actualHostPort).Wait() }).
-				Should(gbytes.Say(fmt.Sprintf("%d", actualContainerPort)))
-		})
-	})
-
 	Describe("NetOut", func() {
 		Context("when an IP within the denied network range is permitted", func() {
 			BeforeEach(func() {
 				args = append(args, "--deny-network", "0.0.0.0/0")
 			})
 
-			It("should access internet", func() {
+			JustBeforeEach(func() {
 				Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
+			})
 
+			It("should access internet", func() {
 				Expect(container.NetOut(garden.NetOutRule{
 					Protocol: garden.ProtocolTCP,
 					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
@@ -331,8 +280,6 @@ var _ = Describe("Net", func() {
 
 			Context("when the dropped packets should get logged", func() {
 				It("should access internet", func() {
-					Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
-
 					Expect(container.NetOut(garden.NetOutRule{
 						Protocol: garden.ProtocolTCP,
 						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
@@ -341,62 +288,6 @@ var _ = Describe("Net", func() {
 					})).To(Succeed())
 
 					Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
-				})
-			})
-		})
-
-		Context("external addresses", func() {
-			var (
-				ByAllowingTCP, ByRejectingTCP func()
-			)
-
-			BeforeEach(func() {
-				ByAllowingTCP = func() {
-					By("allowing outbound tcp traffic", func() {
-						Expect(checkConnection(container, exampleDotCom.String(), 80)).To(Succeed())
-					})
-				}
-
-				ByRejectingTCP = func() {
-					By("rejecting outbound tcp traffic", func() {
-						Expect(checkConnection(container, exampleDotCom.String(), 80)).NotTo(Succeed())
-					})
-				}
-			})
-
-			Context("when the target address is inside DENY_NETWORKS", func() {
-				//The target address is the ip addr of www.example.com in these tests
-				BeforeEach(func() {
-					args = append(args, "--deny-network", "0.0.0.0/0")
-					containerNetwork = fmt.Sprintf("10.1%d.0.0/24", GinkgoParallelNode())
-				})
-
-				It("disallows TCP connections", func() {
-					ByRejectingTCP()
-				})
-
-				Context("when a rule that allows all traffic to the target is added", func() {
-					It("allows TCP traffic to the target", func() {
-						err := container.NetOut(garden.NetOutRule{
-							Networks: []garden.IPRange{
-								garden.IPRangeFromIP(exampleDotCom),
-							},
-						})
-						Expect(err).ToNot(HaveOccurred())
-
-						ByAllowingTCP()
-					})
-				})
-			})
-
-			Context("when the target address is not in DENY_NETWORKS", func() {
-				BeforeEach(func() {
-					args = append(args, "--deny-network", "4.4.4.4/30")
-					containerNetwork = fmt.Sprintf("10.1%d.0.0/24", GinkgoParallelNode())
-				})
-
-				It("allows connections", func() {
-					ByAllowingTCP()
 				})
 			})
 		})
@@ -501,6 +392,57 @@ var _ = Describe("Net", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(out).To(ContainSubstring(" MTU:6789 "))
+			})
+		})
+	})
+})
+
+var _ = Describe("IPTables Binary Flags", func() {
+	var (
+		client *runner.RunningGarden
+		args   []string
+	)
+
+	BeforeEach(func() {
+		args = []string{}
+	})
+
+	JustBeforeEach(func() {
+		client = startGarden(args...)
+	})
+
+	Describe("--iptables-bin flag", func() {
+		Context("when the path is valid", func() {
+			BeforeEach(func() {
+				args = append(args, "--iptables-bin", "/sbin/iptables")
+			})
+
+			AfterEach(func() {
+				Expect(client.DestroyAndStop()).To(Succeed())
+			})
+
+			It("should succeed to start the server", func() {
+				Expect(client.Ping()).To(Succeed())
+			})
+		})
+
+		Context("when the path is invalid", func() {
+			BeforeEach(func() {
+				args = append(args, "--iptables-bin", "/path/to/iptables/bin")
+			})
+
+			It("should fail to start the server", func() {
+				Expect(client.Ping()).To(HaveOccurred())
+			})
+		})
+
+		Context("when the path is valid but it's not iptables", func() {
+			BeforeEach(func() {
+				args = append(args, "--iptables-bin", "/bin/ls")
+			})
+
+			It("should fail to start the server", func() {
+				Expect(client.Ping()).To(HaveOccurred())
 			})
 		})
 	})
