@@ -404,6 +404,7 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 	if cmd.Network.Plugin.Path() != "" {
 		networkers = append(networkers, netplugin.New(
 			linux_command_runner.New(),
+			propManager,
 			cmd.Network.Plugin.Path(),
 			cmd.Network.PluginExtraArgs...,
 		))

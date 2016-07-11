@@ -297,16 +297,13 @@ var _ = Describe("Networking", func() {
 		var tmpFile string
 
 		BeforeEach(func() {
-			binPath, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/gqt/cmd/networkplugin")
-			Expect(err).NotTo(HaveOccurred())
-
 			tmpDir, err := ioutil.TempDir("", "netplugtest")
 			Expect(err).NotTo(HaveOccurred())
 
 			tmpFile = path.Join(tmpDir, "iwasrun.log")
 
 			args = []string{
-				"--network-plugin", binPath,
+				"--network-plugin", testNetPluginBin,
 				"--network-plugin-extra-arg", tmpFile,
 			}
 		})
@@ -350,6 +347,45 @@ var _ = Describe("Networking", func() {
 
 			It("propagates those properties as JSON to the network plugin up action", func() {
 				Eventually(getFlagValue(tmpFile, "--properties")).Should(MatchJSON(expectedJSON))
+			})
+		})
+
+		Context("when the network plugin returns properties", func() {
+			BeforeEach(func() {
+				pluginReturn := `{"properties":{"foo":"bar","kawasaki.mtu":"1499"}}`
+				args = append(args, "--network-plugin-extra-arg", pluginReturn)
+			})
+
+			It("persits the returned properties to the container's properties", func() {
+				info, err := container.Info()
+				Expect(err).NotTo(HaveOccurred())
+
+				containerProperties := info.Properties
+
+				Expect(containerProperties["foo"]).To(Equal("bar"))
+			})
+
+			It("doesn't remove default properties", func() {
+				info, err := container.Info()
+				Expect(err).NotTo(HaveOccurred())
+
+				containerProperties := info.Properties
+				Expect(containerProperties).To(HaveKey("kawasaki.bridge-interface"))
+				Expect(containerProperties).To(HaveKey(gardener.BridgeIPKey))
+				Expect(containerProperties).To(HaveKey(gardener.ContainerIPKey))
+				Expect(containerProperties).To(HaveKey("kawasaki.host-interface"))
+				Expect(containerProperties).To(HaveKey("kawasaki.iptable-inst"))
+				Expect(containerProperties).To(HaveKey("kawasaki.subnet"))
+				Expect(containerProperties).To(HaveKey("kawasaki.container-interface"))
+				Expect(containerProperties).To(HaveKey(gardener.ExternalIPKey))
+			})
+
+			It("allows returned properties to overwrite default properties", func() {
+				info, err := container.Info()
+				Expect(err).NotTo(HaveOccurred())
+
+				containerProperties := info.Properties
+				Expect(containerProperties["kawasaki.mtu"]).To(Equal("1499"))
 			})
 		})
 	})

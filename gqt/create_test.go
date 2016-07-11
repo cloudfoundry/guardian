@@ -334,6 +334,46 @@ var _ = Describe("Creating a Container", func() {
 			checkCPUSharesInContainer(container, client.Pid, 2)
 		})
 	})
+
+	Context("when running with an external network plugin", func() {
+		BeforeEach(func() {
+			tmpDir, err := ioutil.TempDir("", "netplugtest")
+			Expect(err).NotTo(HaveOccurred())
+
+			tmpFile := path.Join(tmpDir, "iwasrun.log")
+
+			args = []string{
+				"--network-plugin", testNetPluginBin,
+				"--network-plugin-extra-arg", tmpFile,
+			}
+		})
+
+		Context("when the external network plugin returns invalid JSON", func() {
+			BeforeEach(func() {
+				pluginOutput := "invalid-json"
+				args = append(args, "--network-plugin-extra-arg", pluginOutput)
+
+			})
+
+			It("returns a useful error message", func() {
+				_, err := client.Create(garden.ContainerSpec{})
+				Expect(err).To(MatchError(ContainSubstring("network plugin returned invalid JSON")))
+			})
+		})
+
+		Context("when the external network plugin returns JSON without the 'properties' key", func() {
+			BeforeEach(func() {
+				pluginOutput := `{"not-properties-key":{"foo":"bar"}}`
+				args = append(args, "--network-plugin-extra-arg", pluginOutput)
+
+			})
+
+			It("returns a useful error message", func() {
+				_, err := client.Create(garden.ContainerSpec{})
+				Expect(err).To(MatchError(ContainSubstring("network plugin returned JSON without a properties key")))
+			})
+		})
+	})
 })
 
 func initProcessPID(handle string) int {

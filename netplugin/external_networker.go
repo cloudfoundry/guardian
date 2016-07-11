@@ -1,6 +1,7 @@
 package netplugin
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -17,13 +18,15 @@ const NetworkPropertyPrefix = "network."
 
 type ExternalBinaryNetworker struct {
 	commandRunner command_runner.CommandRunner
+	configStore   kawasaki.ConfigStore
 	path          string
 	extraArg      []string
 }
 
-func New(commandRunner command_runner.CommandRunner, path string, extraArg ...string) kawasaki.Networker {
+func New(commandRunner command_runner.CommandRunner, configStore kawasaki.ConfigStore, path string, extraArg ...string) kawasaki.Networker {
 	return &ExternalBinaryNetworker{
 		commandRunner: commandRunner,
+		configStore:   configStore,
 		path:          path,
 		extraArg:      extraArg,
 	}
@@ -60,7 +63,33 @@ func (p *ExternalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 
 	cmd := exec.Command(p.path)
 	cmd.Args = upArgs
-	return p.commandRunner.Run(cmd)
+	cmdOutput := &bytes.Buffer{}
+	cmd.Stdout = cmdOutput
+
+	err = p.commandRunner.Run(cmd)
+	if err != nil {
+		return err
+	}
+
+	if len(cmdOutput.Bytes()) == 0 {
+		return nil
+	}
+
+	var properties map[string]map[string]string
+
+	if err := json.Unmarshal(cmdOutput.Bytes(), &properties); err != nil {
+		return fmt.Errorf("network plugin returned invalid JSON: %s", err)
+	}
+
+	if _, ok := properties["properties"]; !ok {
+		return fmt.Errorf("network plugin returned JSON without a properties key")
+	}
+
+	for k, v := range properties["properties"] {
+		p.configStore.Set(containerSpec.Handle, k, v)
+	}
+
+	return nil
 }
 
 func (p *ExternalBinaryNetworker) Destroy(log lager.Logger, handle string) error {
