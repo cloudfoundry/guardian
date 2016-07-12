@@ -232,6 +232,10 @@ func (n *networker) Destroy(log lager.Logger, handle string) error {
 		return nil
 	}
 
+	if err := n.configurer.DestroyIPTablesRules(log, cfg); err != nil {
+		return err
+	}
+
 	if err := n.subnetPool.Release(cfg.Subnet, cfg.ContainerIP); err != nil && err != subnets.ErrReleasedUnallocatedSubnet {
 		log.Error("release-failed", err)
 		return err
@@ -246,10 +250,6 @@ func (n *networker) Destroy(log lager.Logger, handle string) error {
 		for _, m := range mappings {
 			n.portPool.Release(m.HostPort)
 		}
-	}
-
-	if err := n.configurer.DestroyIPTablesRules(log, cfg); err != nil {
-		return err
 	}
 
 	n.subnetPool.RunIfFree(cfg.Subnet, func() error {
