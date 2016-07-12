@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os/exec"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
-	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . StatsNotifier

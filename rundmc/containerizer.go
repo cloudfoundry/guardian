@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"io"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . Depot

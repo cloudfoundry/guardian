@@ -5,8 +5,8 @@ import (
 	"os"
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 )
 
 type FakeHostConfigurer struct {

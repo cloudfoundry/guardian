@@ -5,13 +5,13 @@ import (
 	"os/exec"
 	"time"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

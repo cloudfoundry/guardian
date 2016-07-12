@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/cloudfoundry/gunk/command_runner"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 //go:generate counterfeiter . EventsNotifier

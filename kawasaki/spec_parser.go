@@ -4,8 +4,8 @@ import (
 	"net"
 	"strings"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 )
 
 type SpecParserFunc func(spec string) (subnets.SubnetSelector, subnets.IPSelector, error)

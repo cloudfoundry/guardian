@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
@@ -20,7 +21,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("Dadoo", func() {

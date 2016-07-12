@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
 	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/iptables/iptablesfakes"
@@ -11,8 +13,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("FirewallOpenner", func() {

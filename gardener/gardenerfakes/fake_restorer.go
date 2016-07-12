@@ -4,8 +4,8 @@ package gardenerfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/guardian/gardener"
 )
 
 type FakeRestorer struct {

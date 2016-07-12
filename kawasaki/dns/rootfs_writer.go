@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/docker/docker/pkg/reexec"
 	"code.cloudfoundry.org/lager"
+	"github.com/docker/docker/pkg/reexec"
 )
 
 type RootfsWriter struct {

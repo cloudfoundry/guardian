@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
-	"code.cloudfoundry.org/lager"
 )
 
 // generic gardener properties

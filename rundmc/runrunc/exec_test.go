@@ -9,6 +9,8 @@ import (
 	"path"
 	"path/filepath"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
@@ -19,8 +21,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("Execer", func() {

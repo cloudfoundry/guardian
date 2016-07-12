@@ -5,6 +5,8 @@ import (
 	"os"
 	"time"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
@@ -15,8 +17,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("Rundmc", func() {

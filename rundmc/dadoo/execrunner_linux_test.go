@@ -14,6 +14,8 @@ import (
 	"strings"
 	"syscall"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
 	dadoofakes "github.com/cloudfoundry-incubator/guardian/rundmc/dadoo/dadoofakes"
@@ -25,8 +27,6 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("Dadoo ExecRunner", func() {

@@ -7,12 +7,12 @@ import (
 	"path"
 	"path/filepath"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/depot/depotfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("Depot", func() {

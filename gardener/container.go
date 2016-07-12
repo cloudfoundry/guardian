@@ -6,8 +6,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/cloudfoundry-incubator/garden"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/garden"
 )
 
 type container struct {

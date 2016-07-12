@@ -4,10 +4,10 @@ import (
 	"errors"
 	"os/exec"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"

@@ -7,11 +7,11 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/stopper"
 	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/stopper/stopperfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("CgroupStopper", func() {

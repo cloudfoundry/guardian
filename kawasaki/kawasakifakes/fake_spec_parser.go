@@ -4,9 +4,9 @@ package kawasakifakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
-	"code.cloudfoundry.org/lager"
 )
 
 type FakeSpecParser struct {

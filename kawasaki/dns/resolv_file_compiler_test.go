@@ -5,9 +5,9 @@ import (
 	"net"
 	"os"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

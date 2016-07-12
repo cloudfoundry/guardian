@@ -3,12 +3,12 @@ package kawasaki_test
 import (
 	"net"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("ConfigCreator", func() {

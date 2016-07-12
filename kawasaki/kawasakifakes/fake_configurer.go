@@ -4,8 +4,8 @@ package kawasakifakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 )
 
 type FakeConfigurer struct {

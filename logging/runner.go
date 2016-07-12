@@ -7,8 +7,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cloudfoundry/gunk/command_runner"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 type Runner struct {

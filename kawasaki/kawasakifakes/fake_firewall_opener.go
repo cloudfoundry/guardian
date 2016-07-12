@@ -4,9 +4,9 @@ package kawasakifakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"code.cloudfoundry.org/lager"
 )
 
 type FakeFirewallOpener struct {

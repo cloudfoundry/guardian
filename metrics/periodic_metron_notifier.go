@@ -3,9 +3,9 @@ package metrics
 import (
 	"time"
 
+	"code.cloudfoundry.org/lager"
 	dropsonde_metrics "github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/pivotal-golang/clock"
-	"code.cloudfoundry.org/lager"
 )
 
 type Metric string

@@ -14,11 +14,11 @@ import (
 	"strings"
 	"syscall"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/kr/logfmt"
-	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . PidGetter

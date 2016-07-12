@@ -9,11 +9,11 @@ import (
 	"os/exec"
 	"strings"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

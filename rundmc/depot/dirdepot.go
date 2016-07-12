@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 )
 
 var ErrDoesNotExist = errors.New("does not exist")

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kr/logfmt"
 	"code.cloudfoundry.org/lager"
+	"github.com/kr/logfmt"
 )
 
 func forwardRuncLogsToLager(log lager.Logger, buff []byte) {

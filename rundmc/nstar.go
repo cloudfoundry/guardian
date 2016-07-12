@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/cloudfoundry/gunk/command_runner"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 type nstar struct {

@@ -5,9 +5,9 @@ import (
 	"net"
 	"runtime"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

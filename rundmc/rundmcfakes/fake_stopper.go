@@ -4,8 +4,8 @@ package rundmcfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/guardian/rundmc"
 )
 
 type FakeStopper struct {

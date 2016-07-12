@@ -4,10 +4,10 @@ package gardenerfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
-	"code.cloudfoundry.org/lager"
 )
 
 type FakeVolumeCreator struct {

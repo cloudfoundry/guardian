@@ -13,6 +13,8 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/garden/client"
 	"github.com/cloudfoundry-incubator/garden/client/connection"
 	"github.com/eapache/go-resiliency/retrier"
@@ -20,8 +22,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )

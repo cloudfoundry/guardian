@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"time"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
-	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . SysInfoProvider

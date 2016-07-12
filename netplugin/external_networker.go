@@ -8,10 +8,10 @@ import (
 	"os/exec"
 	"strings"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry/gunk/command_runner"
-	"code.cloudfoundry.org/lager"
 )
 
 const NetworkPropertyPrefix = "network."

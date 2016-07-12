@@ -3,14 +3,14 @@ package runrunc_test
 import (
 	"os/exec"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/runruncfakes"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("Delete", func() {

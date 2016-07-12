@@ -5,12 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
 	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/dns/dnsfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("ResolvConfigurer", func() {

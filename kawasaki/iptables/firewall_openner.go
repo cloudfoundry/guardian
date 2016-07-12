@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/cloudfoundry-incubator/garden"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/garden"
 )
 
 type FirewallOpener struct {

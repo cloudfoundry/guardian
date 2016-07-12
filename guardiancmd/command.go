@@ -12,6 +12,7 @@ import (
 	"github.com/nu7hatch/gouuid"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/garden-shed/distclient"
 	quotaed_aufs "github.com/cloudfoundry-incubator/garden-shed/docker_drivers/aufs"
 	"github.com/cloudfoundry-incubator/garden-shed/layercake"
@@ -49,7 +50,6 @@ import (
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/pivotal-golang/clock"
-	"code.cloudfoundry.org/lager"
 	"github.com/pivotal-golang/localip"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/sigmon"

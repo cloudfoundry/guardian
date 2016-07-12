@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
 )
 
 const (

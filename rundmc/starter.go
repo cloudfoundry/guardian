@@ -9,9 +9,9 @@ import (
 	"path"
 	"strings"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry/gunk/command_runner"
-	"code.cloudfoundry.org/lager"
 )
 
 type Starter struct {

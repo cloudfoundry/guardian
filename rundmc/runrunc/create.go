@@ -7,9 +7,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry/gunk/command_runner"
-	"code.cloudfoundry.org/lager"
 )
 
 type Creator struct {

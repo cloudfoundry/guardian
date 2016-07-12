@@ -4,11 +4,11 @@ import (
 	"errors"
 	"net"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices/fakedevices"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

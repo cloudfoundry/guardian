@@ -7,6 +7,8 @@ import (
 	"net"
 	"strconv"
 
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/gardener"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
@@ -15,8 +17,6 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets/fake_subnet_pool"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("Networker", func() {

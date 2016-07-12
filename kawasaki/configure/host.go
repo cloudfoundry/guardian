@@ -4,8 +4,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 )
 
 type Host struct {
