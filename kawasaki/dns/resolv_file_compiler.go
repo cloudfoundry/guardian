@@ -8,7 +8,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type ResolvFileCompiler struct {

@@ -12,8 +12,8 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
-	"github.com/pivotal-golang/lager"
-	"github.com/pivotal-golang/lager/lagertest"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

@@ -8,7 +8,7 @@ import (
 	"net"
 	"sync"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter -o fake_subnet_pool/fake_pool.go . Pool

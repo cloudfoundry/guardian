@@ -14,7 +14,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . UidGenerator

@@ -1,6 +1,6 @@
 package logging
 
-import "github.com/pivotal-golang/lager"
+import "code.cloudfoundry.org/lager"
 
 type writer struct {
 	lager.Logger

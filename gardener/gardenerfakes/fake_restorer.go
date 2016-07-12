@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/gardener"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeRestorer struct {

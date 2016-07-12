@@ -7,7 +7,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/lager/lagertest"
+	"code.cloudfoundry.org/lager/lagertest"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/runruncfakes"

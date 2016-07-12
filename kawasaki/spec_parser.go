@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type SpecParserFunc func(spec string) (subnets.SubnetSelector, subnets.IPSelector, error)

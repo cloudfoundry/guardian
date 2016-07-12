@@ -49,7 +49,7 @@ import (
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/pivotal-golang/clock"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 	"github.com/pivotal-golang/localip"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/sigmon"

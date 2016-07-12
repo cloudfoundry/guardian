@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 var ErrDoesNotExist = errors.New("does not exist")

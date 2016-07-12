@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/cloudfoundry-incubator/cf-debug-server"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/debugserver"
+	"code.cloudfoundry.org/lager"
+
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/http_server"
 )
@@ -43,7 +44,7 @@ func StartDebugServer(address string, sink *lager.ReconfigurableSink, metrics Me
 }
 
 func handler(sink *lager.ReconfigurableSink) http.Handler {
-	pprofHandler := cf_debug_server.Handler(sink)
+	pprofHandler := debugserver.Handler(sink)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/debug/vars") {
 			http.DefaultServeMux.ServeHTTP(w, r)

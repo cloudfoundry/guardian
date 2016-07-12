@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . NetnsExecer

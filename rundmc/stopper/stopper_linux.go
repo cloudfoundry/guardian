@@ -5,7 +5,7 @@ import (
 	"syscall"
 
 	"github.com/opencontainers/runc/libcontainer/cgroups"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 func (stopper *CgroupStopper) StopAll(log lager.Logger, cgroupName string, exceptions []int, kill bool) error {

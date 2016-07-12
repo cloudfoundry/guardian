@@ -9,8 +9,8 @@ import (
 	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/dns/dnsfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/pivotal-golang/lager"
-	"github.com/pivotal-golang/lager/lagertest"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("ResolvConfigurer", func() {

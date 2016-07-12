@@ -5,7 +5,7 @@ import (
 
 	dropsonde_metrics "github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/pivotal-golang/clock"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type Metric string

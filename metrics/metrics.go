@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . Metrics

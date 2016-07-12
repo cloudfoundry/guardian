@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeContainerApplier struct {

@@ -3,7 +3,7 @@ package runrunc
 import (
 	"os/exec"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type Deleter struct {

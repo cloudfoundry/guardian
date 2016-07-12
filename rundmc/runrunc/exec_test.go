@@ -19,8 +19,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pivotal-golang/lager"
-	"github.com/pivotal-golang/lager/lagertest"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("Execer", func() {

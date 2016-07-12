@@ -9,7 +9,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/netplugin"
 	"github.com/cloudfoundry-incubator/guardian/properties"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
-	"github.com/pivotal-golang/lager/lagertest"
+	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

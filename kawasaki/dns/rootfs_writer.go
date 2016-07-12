@@ -10,7 +10,7 @@ import (
 	"syscall"
 
 	"github.com/docker/docker/pkg/reexec"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type RootfsWriter struct {

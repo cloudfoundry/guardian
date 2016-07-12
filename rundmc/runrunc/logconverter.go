@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/kr/logfmt"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 func forwardRuncLogsToLager(log lager.Logger, buff []byte) {

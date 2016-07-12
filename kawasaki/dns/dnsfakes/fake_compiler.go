@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeCompiler struct {

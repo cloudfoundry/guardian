@@ -4,7 +4,7 @@ import (
 	"net"
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type Container struct {

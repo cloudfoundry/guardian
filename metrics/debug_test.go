@@ -7,7 +7,7 @@ import (
 
 	"github.com/cloudfoundry-incubator/guardian/metrics"
 	fakes "github.com/cloudfoundry-incubator/guardian/metrics/metricsfakes"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 	"github.com/tedsuo/ifrit"
 
 	. "github.com/onsi/ginkgo"

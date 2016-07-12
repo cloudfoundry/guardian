@@ -7,7 +7,7 @@ import (
 	"os/exec"
 
 	"github.com/cloudfoundry/gunk/command_runner"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . RuncCmdRunner

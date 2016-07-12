@@ -6,7 +6,7 @@ import (
 	"sync"
 
 	"github.com/cloudfoundry-incubator/guardian/rundmc"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeNstarRunner struct {

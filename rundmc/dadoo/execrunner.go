@@ -18,7 +18,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/kr/logfmt"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . PidGetter

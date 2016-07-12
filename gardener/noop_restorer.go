@@ -1,6 +1,6 @@
 package gardener
 
-import "github.com/pivotal-golang/lager"
+import "code.cloudfoundry.org/lager"
 
 type NoopRestorer struct{}
 

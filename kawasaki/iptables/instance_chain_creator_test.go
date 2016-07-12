@@ -8,8 +8,8 @@ import (
 
 	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
-	"github.com/pivotal-golang/lager"
-	"github.com/pivotal-golang/lager/lagertest"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"

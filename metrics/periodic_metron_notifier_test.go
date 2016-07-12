@@ -8,7 +8,7 @@ import (
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	dropsonde_metrics "github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/pivotal-golang/clock/fakeclock"
-	"github.com/pivotal-golang/lager/lagertest"
+	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

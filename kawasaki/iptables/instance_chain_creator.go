@@ -5,7 +5,7 @@ import (
 	"net"
 	"os/exec"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 type InstanceChainCreator struct {

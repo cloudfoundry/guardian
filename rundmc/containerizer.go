@@ -9,7 +9,7 @@ import (
 	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . Depot
