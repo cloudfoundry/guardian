@@ -252,12 +252,11 @@ func (n *networker) Destroy(log lager.Logger, handle string) error {
 		}
 	}
 
-	n.subnetPool.RunIfFree(cfg.Subnet, func() error {
-		n.configurer.DestroyBridge(log, cfg)
-		return nil
+	err = n.subnetPool.RunIfFree(cfg.Subnet, func() error {
+		return n.configurer.DestroyBridge(log, cfg)
 	})
 
-	return nil
+	return err
 }
 
 func (n *networker) Restore(log lager.Logger, handle string) error {

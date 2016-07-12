@@ -316,6 +316,15 @@ var _ = Describe("Networker", func() {
 					Expect(loggerArg).To(Equal(logger))
 					Expect(networkConfigArg).To(Equal(networkConfig))
 				})
+
+				Context("when the DestroyBridge func returns an error", func() {
+					It("returns the error", func() {
+						fakeSubnetPool.RunIfFreeReturns(errors.New("error-destroying-bridge"))
+
+						err := networker.Destroy(logger, "some-handle")
+						Expect(err).To(MatchError("error-destroying-bridge"))
+					})
+				})
 			})
 		})
 	})
