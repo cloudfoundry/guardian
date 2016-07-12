@@ -338,38 +338,73 @@ var _ = Describe("Rundmc", func() {
 			})
 		})
 
-		Context("when state is 'created'", func() {
-			BeforeEach(func() {
+		Context("when in a state that should result in a delete", func() {
+			var status runrunc.Status
+
+			JustBeforeEach(func() {
 				fakeOCIRuntime.StateReturns(runrunc.State{
-					Status: "created",
+					Status: status,
 				}, nil)
 			})
 
-			It("should run delete", func() {
-				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(1))
-				Expect(arg2(fakeOCIRuntime.DeleteArgsForCall(0))).To(Equal("some-handle"))
-			})
+			Context("when in the 'created' state", func() {
+				BeforeEach(func() {
+					status = "created"
+				})
 
-			Context("when delete succeeds", func() {
-
-				It("destroys the depot directory", func() {
+				It("should run delete", func() {
 					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-					Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
-					Expect(arg2(fakeDepot.DestroyArgsForCall(0))).To(Equal("some-handle"))
+					Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(1))
+					Expect(arg2(fakeOCIRuntime.DeleteArgsForCall(0))).To(Equal("some-handle"))
+				})
+
+				Context("when delete succeeds", func() {
+					It("destroys the depot directory", func() {
+						Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
+						Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
+						Expect(arg2(fakeDepot.DestroyArgsForCall(0))).To(Equal("some-handle"))
+					})
+				})
+
+				Context("when delete fails", func() {
+					It("does not destroy the depot directory", func() {
+						fakeOCIRuntime.DeleteReturns(errors.New("delete failed"))
+						containerizer.Destroy(logger, "some-handle")
+						Expect(fakeDepot.DestroyCallCount()).To(Equal(0))
+					})
 				})
 			})
 
-			Context("when delete fails", func() {
-				It("does not destroy the depot directory", func() {
-					fakeOCIRuntime.DeleteReturns(errors.New("delete failed"))
-					containerizer.Destroy(logger, "some-handle")
-					Expect(fakeDepot.DestroyCallCount()).To(Equal(0))
+			Context("when in the 'stopped' state", func() {
+				BeforeEach(func() {
+					status = "stopped"
+				})
+
+				It("should run delete", func() {
+					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
+					Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(1))
+					Expect(arg2(fakeOCIRuntime.DeleteArgsForCall(0))).To(Equal("some-handle"))
+				})
+
+				Context("when delete succeeds", func() {
+					It("destroys the depot directory", func() {
+						Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
+						Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
+						Expect(arg2(fakeDepot.DestroyArgsForCall(0))).To(Equal("some-handle"))
+					})
+				})
+
+				Context("when delete fails", func() {
+					It("does not destroy the depot directory", func() {
+						fakeOCIRuntime.DeleteReturns(errors.New("delete failed"))
+						containerizer.Destroy(logger, "some-handle")
+						Expect(fakeDepot.DestroyCallCount()).To(Equal(0))
+					})
 				})
 			})
 		})
 
-		Context("when state is different from 'created'", func() {
+		Context("when state that should not result in a delete", func() {
 			BeforeEach(func() {
 				fakeOCIRuntime.StateReturns(runrunc.State{
 					Status: "potato",

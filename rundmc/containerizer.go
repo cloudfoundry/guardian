@@ -236,7 +236,7 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 		"state": state,
 	})
 
-	if state.Status == runrunc.CreatedStatus {
+	if state.Status == runrunc.CreatedStatus || state.Status == runrunc.StoppedStatus {
 		if err := c.runtime.Delete(log, handle); err != nil {
 			log.Error("delete-failed", err)
 			return err

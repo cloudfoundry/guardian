@@ -12,6 +12,7 @@ import (
 type Status string
 
 const CreatedStatus Status = "created"
+const StoppedStatus Status = "stopped"
 
 type State struct {
 	Pid    int
