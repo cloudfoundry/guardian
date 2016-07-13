@@ -43,15 +43,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		dadooReturns           error
 		dadooWritesLogs        string
 		log                    *lagertest.TestLogger
-		receivedWinSize        dadoo.TtySize
-		readWindowSize         bool
-		readWindowSizeCh       chan struct{}
+		receiveWinSize         func(winSizeFD *os.File)
 	)
 
 	BeforeEach(func() {
-		readWindowSize = false
-		readWindowSizeCh = make(chan struct{})
-
 		fakeIodaemonRunner = new(fakes.FakeExecRunner)
 		fakeCommandRunner = fake_command_runner.New()
 		fakeProcessIDGenerator = new(fakes.FakeUidGenerator)
@@ -74,6 +69,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				time="2016-03-02T13:56:38Z" level=error msg="fork/exec POTATO: no such file or directory"
 				time="2016-03-02T13:56:38Z" level=fatal msg="Container start failed: [10] System error: fork/exec POTATO: no such file or directory"`
 
+		dadooFlags := flag.NewFlagSet("something", flag.PanicOnError)
+		dadooFlags.Bool("tty", false, "")
+		dadooFlags.Int("uid", 0, "")
+		dadooFlags.Int("gid", 0, "")
+
+		receiveWinSize = func(_ *os.File) {}
+
 		// dadoo should open up its end of the named pipes
 		fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "path-to-dadoo",
@@ -84,47 +86,19 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 			// dup the fd so that the runner is allowed to close it
 			// in a real fork/exec this'd happen as part of the fork
-			fd3fd, err := syscall.Dup(int(cmd.ExtraFiles[0].Fd()))
-			Expect(err).NotTo(HaveOccurred())
-			fd3 := os.NewFile(uintptr(fd3fd), "fd3dup")
+			fd3 := dup(cmd.ExtraFiles[0])
+			fd4 := dup(cmd.ExtraFiles[1])
+			fd5 := dup(cmd.ExtraFiles[2])
 
-			fd4fd, err := syscall.Dup(int(cmd.ExtraFiles[1].Fd()))
-			Expect(err).NotTo(HaveOccurred())
-			fd4 := os.NewFile(uintptr(fd4fd), "fd4dup")
-
-			fd5fd, err := syscall.Dup(int(cmd.ExtraFiles[2].Fd()))
-			Expect(err).NotTo(HaveOccurred())
-			fd5 := os.NewFile(uintptr(fd5fd), "fd5dup")
+			go receiveWinSize(fd5)
 
 			go func(cmd *exec.Cmd) {
 				defer GinkgoRecover()
 
-				fs := flag.NewFlagSet("something", flag.PanicOnError)
-				fs.Bool("tty", false, "")
-				fs.Int("uid", 0, "")
-				fs.Int("gid", 0, "")
-				fs.String("waitSock", "", "")
-				fs.Parse(cmd.Args[1:])
-				dir := fs.Arg(2)
-
-				// open all the IO pipes
-				si, err := os.Open(filepath.Join(dir, "stdin"))
-				Expect(err).NotTo(HaveOccurred())
-
-				so, err := os.OpenFile(filepath.Join(dir, "stdout"), os.O_APPEND|os.O_WRONLY, 0600)
-				Expect(err).NotTo(HaveOccurred())
-
-				se, err := os.OpenFile(filepath.Join(dir, "stderr"), os.O_APPEND|os.O_WRONLY, 0600)
-				Expect(err).NotTo(HaveOccurred())
-
-				if readWindowSize {
-					go func() {
-						for {
-							json.NewDecoder(fd5).Decode(&receivedWinSize)
-							readWindowSizeCh <- struct{}{}
-						}
-					}()
-				}
+				// parse flags to get bundle dir argument so we can open stdin/out/err pipes
+				dadooFlags.Parse(cmd.Args[1:])
+				processDir := dadooFlags.Arg(2)
+				si, so, se := openPipes(processDir)
 
 				// write log file to fd4
 				_, err = io.Copy(fd4, bytes.NewReader([]byte(dadooWritesLogs)))
@@ -140,7 +114,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				so.WriteString("hello stdout")
 				_, err = io.Copy(se, si)
 				Expect(err).NotTo(HaveOccurred())
-
 			}(cmd)
 
 			return dadooReturns
@@ -203,7 +176,12 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				})
 
 				It("sends the initial window size via the winsz pipe", func() {
-					readWindowSize = true
+					var receivedWinSize dadoo.TtySize
+					received := make(chan struct{})
+					receiveWinSize = func(winSizeFD *os.File) {
+						json.NewDecoder(winSizeFD).Decode(&receivedWinSize)
+						close(received)
+					}
 
 					runner.Run(log, &runrunc.PreparedSpec{
 						HostUID: 123,
@@ -223,8 +201,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 						garden.ProcessIO{},
 					)
 
-					<-readWindowSizeCh
-					Eventually(receivedWinSize).Should(Equal(dadoo.TtySize{
+					Eventually(received).Should(BeClosed())
+					Expect(receivedWinSize).To(Equal(dadoo.TtySize{
 						Cols: 13,
 						Rows: 17,
 					}))
@@ -311,7 +289,14 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			Describe("the returned garden.Process", func() {
 				Describe("SetTTY", func() {
 					It("sends the new window size via the winsz pipe", func() {
-						readWindowSize = true
+						var receivedWinSize dadoo.TtySize
+						received := make(chan bool)
+						receiveWinSize = func(winSizeFD *os.File) {
+							json.NewDecoder(winSizeFD).Decode(&receivedWinSize)
+							received <- true
+							json.NewDecoder(winSizeFD).Decode(&receivedWinSize)
+							received <- true
+						}
 
 						process, err := runner.Run(log, &runrunc.PreparedSpec{
 							HostUID: 123,
@@ -332,17 +317,11 @@ var _ = Describe("Dadoo ExecRunner", func() {
 						)
 						Expect(err).NotTo(HaveOccurred())
 
-						<-readWindowSizeCh
+						Eventually(received).Should(Receive())
+						process.SetTTY(garden.TTYSpec{&garden.WindowSize{Columns: 53, Rows: 59}})
 
-						process.SetTTY(garden.TTYSpec{
-							&garden.WindowSize{
-								Columns: 53,
-								Rows:    59,
-							},
-						})
-
-						<-readWindowSizeCh
-						Eventually(receivedWinSize, "5s").Should(Equal(dadoo.TtySize{
+						Eventually(received, "5s").Should(Receive())
+						Expect(receivedWinSize).To(Equal(dadoo.TtySize{
 							Cols: 53,
 							Rows: 59,
 						}))
@@ -500,4 +479,23 @@ func (e fakeExitError) Sys() interface{} {
 
 func (w fakeWaitStatus) ExitStatus() int {
 	return int(w)
+}
+
+func dup(f *os.File) *os.File {
+	dupped, err := syscall.Dup(int(f.Fd()))
+	Expect(err).NotTo(HaveOccurred())
+	return os.NewFile(uintptr(dupped), f.Name()+"dup")
+}
+
+func openPipes(dir string) (stdin, stdout, stderr *os.File) {
+	si, err := os.Open(filepath.Join(dir, "stdin"))
+	Expect(err).NotTo(HaveOccurred())
+
+	so, err := os.OpenFile(filepath.Join(dir, "stdout"), os.O_APPEND|os.O_WRONLY, 0600)
+	Expect(err).NotTo(HaveOccurred())
+
+	se, err := os.OpenFile(filepath.Join(dir, "stderr"), os.O_APPEND|os.O_WRONLY, 0600)
+	Expect(err).NotTo(HaveOccurred())
+
+	return si, so, se
 }
