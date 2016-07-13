@@ -1,7 +1,6 @@
 package gardener
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -443,7 +442,7 @@ func (g *Gardener) checkDuplicateHandle(handle string) error {
 	}
 
 	if g.exists(handles, handle) {
-		return errors.New(fmt.Sprintf("Handle '%s' already in use", handle))
+		return fmt.Errorf("Handle '%s' already in use", handle)
 	}
 
 	return nil

@@ -10,9 +10,11 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
+	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/kr/pty"
@@ -25,14 +27,16 @@ func main() {
 
 func run() int {
 	var uid, gid int
+	var rows, cols int
 	var tty bool
 	flag.IntVar(&uid, "uid", 0, "uid to chown console to")
 	flag.IntVar(&gid, "gid", 0, "gid to chown console to")
+	flag.IntVar(&rows, "rows", 0, "rows for tty")
+	flag.IntVar(&cols, "cols", 0, "cols for tty")
 	flag.BoolVar(&tty, "tty", false, "tty requested")
 
 	flag.Parse()
 
-	command := flag.Args()[0] // e.g. exec
 	runtime := flag.Args()[1] // e.g. runc
 	dir := flag.Args()[2]     // bundlePath for run, processPath for exec
 	containerId := flag.Args()[3]
@@ -45,20 +49,21 @@ func run() int {
 	logFile := fmt.Sprintf("/proc/%d/fd/4", os.Getpid())
 	logFD := os.NewFile(4, "/proc/self/fd/4")
 
-	ttyWindowSizeFD := os.NewFile(5, "/proc/self/fd/5")
-
 	pidFilePath := filepath.Join(dir, "pidfile")
 
 	check(os.MkdirAll(dir, 0700))
-	defer os.RemoveAll(dir) // for exec dadoo is responsible for creating & cleaning up
 
-	stdin := forwardReadFIFO(filepath.Join(dir, "stdin"))
-	stdout := forwardWriteFIFO(filepath.Join(dir, "stdout"))
-	stderr := forwardWriteFIFO(filepath.Join(dir, "stderr"))
+	stdin := forwardFIFO(filepath.Join(dir, "stdin"), os.O_RDONLY)
+	stdout := forwardFIFO(filepath.Join(dir, "stdout"), os.O_WRONLY|os.O_APPEND)
+	stderr := forwardFIFO(filepath.Join(dir, "stderr"), os.O_WRONLY|os.O_APPEND)
+	winsz := forwardFIFO(filepath.Join(dir, "winsz"), os.O_RDWR)
+
+	// open so it'll be closed when we exit
+	forwardFIFO(filepath.Join(dir, "exit"), os.O_RDWR)
 
 	var runcStartCmd *exec.Cmd
 	if tty {
-		ttySlave := setupTty(stdin, stdout, ttyWindowSizeFD, pidFilePath)
+		ttySlave := setupTty(stdin, stdout, pidFilePath, winsz, garden.WindowSize{Rows: rows, Columns: cols})
 		check(ttySlave.Chown(uid, gid))
 		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console", ttySlave.Name(), "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
 	} else {
@@ -98,11 +103,13 @@ func run() int {
 			}
 
 			if wpid == containerPid {
-				if command == "run" {
-					check(exec.Command(runtime, "delete", containerId).Run())
+				exitCode := status.ExitStatus()
+				if status.Signaled() {
+					exitCode = 128 + int(status.Signal())
 				}
 
-				return status.ExitStatus()
+				check(ioutil.WriteFile(filepath.Join(dir, "exitcode"), []byte(strconv.Itoa(exitCode)), 0700))
+				return exitCode
 			}
 		}
 	}
@@ -116,8 +123,8 @@ func check(err error) {
 	}
 }
 
-func forwardReadFIFO(path string) io.Reader {
-	r, err := os.Open(path)
+func forwardFIFO(path string, flags int) io.ReadWriter {
+	r, err := os.OpenFile(path, flags, 0600)
 	if os.IsNotExist(err) {
 		return nil
 	}
@@ -136,7 +143,7 @@ func forwardWriteFIFO(path string) io.Writer {
 	return w
 }
 
-func setupTty(stdin io.Reader, stdout io.Writer, ttyWindowSizeFD io.Reader, pidFilePath string) *os.File {
+func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader, defaultWinSize garden.WindowSize) *os.File {
 	m, s, err := pty.Open()
 	if err != nil {
 		check(err)
@@ -149,30 +156,31 @@ func setupTty(stdin io.Reader, stdout io.Writer, ttyWindowSizeFD io.Reader, pidF
 		m.Close()
 	}()
 
+	dadoo.SetWinSize(m, defaultWinSize)
+
 	go func() {
-		setWinSize(m, ttyWindowSizeFD)
-
-		pid, err := readPid(pidFilePath)
-		if err != nil {
-			println("Timed out trying to open pidfile: ", err.Error())
-			return
-		}
-
 		for {
-			setWinSize(m, ttyWindowSizeFD)
+			pid, err := readPid(pidFilePath)
+			if err != nil {
+				println("Timed out trying to open pidfile: ", err.Error())
+				return
+			}
 
-			p, _ := os.FindProcess(pid)
+			p, err := os.FindProcess(pid)
+			check(err) // cant happen on linux
+
+			var winSize garden.WindowSize
+			if err := json.NewDecoder(winszFifo).Decode(&winSize); err != nil {
+				println("invalid winsz event", err)
+				continue // not much we can do here..
+			}
+
+			dadoo.SetWinSize(m, winSize)
 			p.Signal(syscall.SIGWINCH)
 		}
 	}()
 
 	return s
-}
-
-func setWinSize(m *os.File, ttyWindowSizeFD io.Reader) {
-	ttySize := &dadoo.TtySize{}
-	json.NewDecoder(ttyWindowSizeFD).Decode(ttySize)
-	dadoo.SetWinSize(m, ttySize)
 }
 
 func readPid(pidFilePath string) (int, error) {

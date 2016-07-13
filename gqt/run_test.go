@@ -59,11 +59,6 @@ var _ = Describe("Run", func() {
 			should(gbytes.Say("potato"), gexec.Exit(24)),
 		),
 
-		Entry("with a path that doesn't exist",
-			spec("potato"),
-			shouldNot(gexec.Exit(0)),
-		),
-
 		Entry("without a TTY",
 			spec("test", "-t", "1"),
 			should(gexec.Exit(1)),
@@ -179,14 +174,12 @@ var _ = Describe("Run", func() {
 				container, err := client.Create(garden.ContainerSpec{RootFSPath: rootfs})
 				Expect(err).NotTo(HaveOccurred())
 
-				process, err := container.Run(garden.ProcessSpec{
+				_, err = container.Run(garden.ProcessSpec{
 					Path: "echo",
 					Args: []string{"hello"},
 					Dir:  "/symlink/foo/bar",
 				}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(process.Wait()).ToNot(Equal(0)) // `echo` wont exist in the fake rootfs. This is fine.
+				Expect(err).To(HaveOccurred()) // echo won't be in the rootfs
 				Expect(path.Join(target, "foo")).NotTo(BeADirectory())
 			})
 		})

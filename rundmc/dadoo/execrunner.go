@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 
 	"code.cloudfoundry.org/lager"
@@ -47,28 +48,15 @@ func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator
 }
 
 func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processesPath, handle string, tty *garden.TTYSpec, pio garden.ProcessIO) (p garden.Process, theErr error) {
-	if !contains(spec.Env, "USE_DADOO=true") {
-		return d.iodaemonRunner.Run(log, spec, processesPath, handle, tty, pio)
-	}
-
 	log = log.Session("execrunner")
+
 	log.Info("start")
 	defer log.Info("done")
 
 	processID := d.processIDGen.Generate()
+
 	processPath := filepath.Join(processesPath, processID)
-
-	encodedSpec, err := json.Marshal(spec.Process)
-	if err != nil {
-		return nil, err // this could *almost* be a panic: a valid spec should always encode (but out of caution we'll error)
-	}
-
 	if err := os.MkdirAll(processPath, 0700); err != nil {
-		return nil, err
-	}
-
-	pipes, err := mkFifos(pio, filepath.Join(processPath, "stdin"), filepath.Join(processPath, "stdout"), filepath.Join(processPath, "stderr"))
-	if err != nil {
 		return nil, err
 	}
 
@@ -82,40 +70,49 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 		return nil, err
 	}
 
-	winszr, winszw, err := os.Pipe()
+	defer fd3r.Close()
+	defer logr.Close()
+
+	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
+	process.mkfifos()
 	if err != nil {
 		return nil, err
 	}
 
-	defer fd3r.Close()
-	defer logr.Close()
-
 	var cmd *exec.Cmd
 	if tty != nil {
-		cmd = exec.Command(d.dadooPath, "-tty", "-uid", strconv.Itoa(spec.HostUID), "-gid", strconv.Itoa(spec.HostGID), "exec", d.runcPath, processPath, handle)
-		sendWindowSize(winszw, tty.WindowSize)
+		var rows, cols int
+		if tty.WindowSize != nil {
+			rows = tty.WindowSize.Rows
+			cols = tty.WindowSize.Columns
+		}
+
+		cmd = exec.Command(d.dadooPath, "-tty", "-rows", strconv.Itoa(rows), "-cols", strconv.Itoa(cols), "-uid", strconv.Itoa(spec.HostUID), "-gid", strconv.Itoa(spec.HostGID), "exec", d.runcPath, processPath, handle)
 	} else {
 		cmd = exec.Command(d.dadooPath, "exec", d.runcPath, processPath, handle)
 	}
 
-	cmd.Stdin = bytes.NewReader(encodedSpec)
 	cmd.ExtraFiles = []*os.File{
 		fd3w,
 		logw,
-		winszr,
 	}
 
+	encodedSpec, err := json.Marshal(spec.Process)
+	if err != nil {
+		return nil, err // this could *almost* be a panic: a valid spec should always encode (but out of caution we'll error)
+	}
+
+	cmd.Stdin = bytes.NewReader(encodedSpec)
 	if err := d.commandRunner.Start(cmd); err != nil {
 		return nil, err
 	}
 
+	go d.commandRunner.Wait(cmd) // wait on spawned process to avoid zombies
+
 	fd3w.Close()
 	logw.Close()
-	winszr.Close()
 
-	log.Info("open-pipes")
-
-	if err := pipes.start(); err != nil {
+	if err := process.start(pio, tty); err != nil {
 		return nil, err
 	}
 
@@ -134,23 +131,17 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])
 	}
 
-	return d.newProcess(cmd, filepath.Join(processPath, "pidfile"), winszw), nil
-}
-
-func sendWindowSize(winszw io.Writer, winSize *garden.WindowSize) {
-	if winSize == nil {
-		return
-	}
-
-	initialSize := TtySize{
-		Cols: uint16(winSize.Columns),
-		Rows: uint16(winSize.Rows),
-	}
-	json.NewEncoder(winszw).Encode(initialSize)
+	return process, nil
 }
 
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
-	return d.iodaemonRunner.Attach(log, processID, io, processesPath)
+	processPath := filepath.Join(processesPath, processID)
+	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
+	if err := process.start(io, &garden.TTYSpec{}); err != nil {
+		return nil, err
+	}
+
+	return process, nil
 }
 
 type osSignal garden.Signal
@@ -165,132 +156,153 @@ func (s osSignal) OsSignal() syscall.Signal {
 }
 
 type process struct {
-	pidFilePath   string
-	pidGetter     PidGetter
-	wait          func() error
-	winSizeWriter io.WriteCloser
+	id                                           string
+	stdin, stdout, stderr, exit, winsz, exitcode string
+	ioWg                                         *sync.WaitGroup
+	winszCh                                      chan garden.WindowSize
+	cleanup                                      func() error
+
+	*signaller
 }
 
-func (d *ExecRunner) newProcess(cmd *exec.Cmd, pidFilePath string, winszw io.WriteCloser) *process {
-	exitCh := make(chan struct{})
-	var exitErr error
-	go func() {
-		exitErr = d.commandRunner.Wait(cmd)
-		close(exitCh)
-	}()
+func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter) *process {
+	stdin, stdout, stderr, winsz, exit, exitcode := filepath.Join(dir, "stdin"),
+		filepath.Join(dir, "stdout"),
+		filepath.Join(dir, "stderr"),
+		filepath.Join(dir, "winsz"),
+		filepath.Join(dir, "exit"),
+		filepath.Join(dir, "exitcode")
 
 	return &process{
-		wait: func() error {
-			<-exitCh
-			return exitErr
+		id:       id,
+		stdin:    stdin,
+		stdout:   stdout,
+		stderr:   stderr,
+		winsz:    winsz,
+		exit:     exit,
+		exitcode: exitcode,
+		ioWg:     &sync.WaitGroup{},
+		winszCh:  make(chan garden.WindowSize, 5),
+		cleanup: func() error {
+			return os.RemoveAll(dir)
 		},
-		pidFilePath:   pidFilePath,
-		pidGetter:     d.pidGetter,
-		winSizeWriter: winszw,
+		signaller: &signaller{
+			pidFilePath: pidFilePath,
+			pidGetter:   pidGetter,
+		},
 	}
 }
 
 func (p *process) ID() string {
-	return ""
+	return p.id
 }
 
-func (p *process) Wait() (int, error) {
-	defer p.winSizeWriter.Close()
-
-	if err := p.wait(); err != nil {
-		exitError, ok := err.(ExitError)
-		if !ok {
-			return 255, err
-		}
-
-		waitStatus, ok := exitError.Sys().(ExitStatuser)
-		if !ok {
-			return 255, err
-		}
-
-		return waitStatus.ExitStatus(), nil
-	}
-
-	return 0, nil
-}
-
-func (p *process) SetTTY(tty garden.TTYSpec) error {
-	sendWindowSize(p.winSizeWriter, tty.WindowSize)
-	return nil
-}
-
-func (p *process) Signal(signal garden.Signal) error {
-	pid, err := p.pidGetter.Pid(p.pidFilePath)
-	if err != nil {
-		return errors.New(fmt.Sprintf("fetching-pid: %s", err))
-	}
-
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		return errors.New(fmt.Sprintf("finding-process: %s", err))
-	}
-
-	return process.Signal(osSignal(signal).OsSignal())
-}
-
-type ExitError interface {
-	Sys() interface{}
-}
-
-type ExitStatuser interface {
-	ExitStatus() int
-}
-
-type fifos [3]struct {
-	Name     string
-	Path     string
-	CopyTo   io.Writer
-	CopyFrom io.Reader
-	Open     func(p string) (*os.File, error)
-}
-
-func mkFifos(pio garden.ProcessIO, stdin, stdout, stderr string) (fifos, error) {
-	pipes := fifos{
-		{Name: "stdin", Path: stdin, CopyFrom: pio.Stdin, Open: func(p string) (*os.File, error) { return os.OpenFile(p, os.O_WRONLY, 0600) }},
-		{Name: "stdout", Path: stdout, CopyTo: pio.Stdout, Open: os.Open},
-		{Name: "stderr", Path: stderr, CopyTo: pio.Stderr, Open: os.Open},
-	}
-
-	for _, pipe := range pipes {
-		if err := syscall.Mkfifo(pipe.Path, 0); err != nil {
-			return pipes, err
-		}
-	}
-
-	return pipes, nil
-}
-
-func (f fifos) start() error {
-	for _, pipe := range f {
-		r, err := pipe.Open(pipe.Path)
-		if err != nil {
+func (p *process) mkfifos() error {
+	for _, pipe := range []string{p.stdin, p.stdout, p.stderr, p.winsz, p.exit} {
+		if err := syscall.Mkfifo(pipe, 0); err != nil {
 			return err
 		}
-
-		if pipe.CopyFrom != nil {
-			go io.Copy(r, pipe.CopyFrom)
-		}
-
-		if pipe.CopyTo != nil {
-			go io.Copy(pipe.CopyTo, r)
-		}
 	}
 
 	return nil
 }
 
-func contains(envVars []string, envVar string) bool {
-	for _, e := range envVars {
-		if e == envVar {
-			return true
-		}
+func (p process) start(pio garden.ProcessIO, ttySize *garden.TTYSpec) error {
+	stdin, err := os.OpenFile(p.stdin, os.O_WRONLY, 0600)
+	if err != nil {
+		return err
 	}
-	return false
+
+	if pio.Stdin != nil {
+		go func() {
+			io.Copy(stdin, pio.Stdin)
+			stdin.Close()
+		}()
+	}
+
+	stdout, err := os.Open(p.stdout)
+	if err != nil {
+		return err
+	}
+
+	if pio.Stdout != nil {
+		p.ioWg.Add(1)
+		go func() {
+			io.Copy(pio.Stdout, stdout)
+			p.ioWg.Done()
+		}()
+	}
+
+	stderr, err := os.Open(p.stderr)
+	if err != nil {
+		return err
+	}
+
+	if pio.Stderr != nil {
+		p.ioWg.Add(1)
+		go func() {
+			io.Copy(pio.Stderr, stderr)
+			p.ioWg.Done()
+		}()
+	}
+
+	return nil
+}
+
+func (p process) Wait() (int, error) {
+	// open non-blocking incase exit pipe is already closed
+	exit, err := os.OpenFile(p.exit, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+	if err != nil {
+		return 1, err
+	}
+
+	// go back to blocking mode so Read below blocks
+	if err := syscall.SetNonblock(int(exit.Fd()), false); err != nil {
+		return 1, err
+	}
+
+	buf := make([]byte, 1)
+	exit.Read(buf)
+
+	p.ioWg.Wait()
+
+	if _, err := os.Stat(p.exitcode); os.IsNotExist(err) {
+		return 1, fmt.Errorf("could not find the exitcode file for the process: %s", err.Error())
+	}
+
+	exitcode, err := ioutil.ReadFile(p.exitcode)
+	if err != nil {
+		return 1, err
+	}
+
+	if len(exitcode) == 0 {
+		return 1, fmt.Errorf("the exitcode file is empty")
+	}
+
+	code, err := strconv.Atoi(string(exitcode))
+	if err != nil {
+		return 1, fmt.Errorf("failed to parse exit code: %s", err.Error())
+	}
+
+	if err := p.cleanup(); err != nil {
+		return 1, err
+	}
+
+	return code, nil
+}
+
+func (p process) SetTTY(spec garden.TTYSpec) error {
+	if spec.WindowSize == nil {
+		return nil
+	}
+
+	winSize, err := os.OpenFile(p.winsz, os.O_WRONLY|syscall.O_NONBLOCK, 0600)
+	if err != nil {
+		return err
+	}
+
+	defer winSize.Close()
+	return json.NewEncoder(winSize).Encode(spec.WindowSize)
 }
 
 func processLogs(log lager.Logger, logs io.Reader, err error) error {
@@ -323,4 +335,23 @@ func wrapWithErrorFromRuncLog(log lager.Logger, originalError error, buff []byte
 	parsedLogLine := struct{ Msg string }{}
 	logfmt.Unmarshal(buff, &parsedLogLine)
 	return fmt.Errorf("runc exec: %s: %s", originalError, parsedLogLine.Msg)
+}
+
+type signaller struct {
+	pidFilePath string
+	pidGetter   PidGetter
+}
+
+func (s *signaller) Signal(signal garden.Signal) error {
+	pid, err := s.pidGetter.Pid(s.pidFilePath)
+	if err != nil {
+		return errors.New(fmt.Sprintf("fetching-pid: %s", err))
+	}
+
+	process, err := os.FindProcess(pid)
+	if err != nil {
+		return errors.New(fmt.Sprintf("finding-process: %s", err))
+	}
+
+	return process.Signal(osSignal(signal).OsSignal())
 }
