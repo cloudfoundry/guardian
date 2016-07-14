@@ -1,7 +1,6 @@
 package runrunc
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -93,73 +92,6 @@ func (e *Execer) Attach(log lager.Logger, bundlePath, id, processID string, io g
 type ExecRunner interface {
 	Run(log lager.Logger, spec *PreparedSpec, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
-}
-
-type IodaemonExecRunner struct {
-	pidGenerator UidGenerator
-	runc         RuncBinary
-	tracker      ProcessTracker
-	waitWatcher  WaitWatcher
-}
-
-func NewIodaemonExecRunner(pidGen UidGenerator, runc RuncBinary, tracker ProcessTracker, waitWatcher WaitWatcher) *IodaemonExecRunner {
-	return &IodaemonExecRunner{
-		pidGenerator: pidGen,
-		runc:         runc,
-		tracker:      tracker,
-		waitWatcher:  waitWatcher,
-	}
-}
-
-// runrunc saves a process.json and invokes runc exec
-func (e *IodaemonExecRunner) Run(log lager.Logger, spec *PreparedSpec, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
-	pid := e.pidGenerator.Generate()
-
-	log = log.Session("execrunner", lager.Data{"pid": pid})
-
-	log.Info("start")
-	defer log.Info("finished")
-
-	if err := os.MkdirAll(processesPath, 0755); err != nil {
-		log.Error("mk-processes-dir-failed", err)
-		return nil, err
-	}
-
-	processJson, err := os.Create(path.Join(processesPath, fmt.Sprintf("%s.json", pid)))
-	if err != nil {
-		log.Error("create-process-json-failed", err)
-		return nil, err
-	}
-
-	if err := json.NewEncoder(processJson).Encode(spec); err != nil {
-		log.Error("json-encode-failed", err)
-		return nil, err
-	}
-
-	pidFilePath := path.Join(processesPath, fmt.Sprintf("%s.pid", pid))
-	cmd := e.runc.ExecCommand(handle, processJson.Name(), pidFilePath)
-
-	process, err := e.tracker.Run(pid, cmd, io, tty, pidFilePath)
-	if err != nil {
-		log.Error("run-failed", err)
-		RemoveFiles([]string{processJson.Name(), pidFilePath}).Run(log)
-
-		return nil, err
-	}
-
-	go e.waitWatcher.OnExit(log, process, RemoveFiles([]string{processJson.Name(), pidFilePath}))
-
-	return process, nil
-}
-
-func (e *IodaemonExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
-	log = log.Session("attach", lager.Data{"process-id": processID})
-
-	log.Info("start")
-	defer log.Info("finished")
-
-	pidFilePath := path.Join(processesPath, fmt.Sprintf("%s.pid", processID))
-	return e.tracker.Attach(processID, io, pidFilePath)
 }
 
 type PreparedSpec struct {

@@ -1,22 +1,21 @@
 package runrunc_test
 
 import (
-	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"path"
 	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"code.cloudfoundry.org/guardian/rundmc/process_tracker"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
+	"github.com/cloudfoundry-incubator/garden"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
+	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
+	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/runrunc/runruncfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runc/libcontainer/user"
@@ -63,198 +62,6 @@ var _ = Describe("Execer", func() {
 		Expect(spec.Args).To(ConsistOf("potato", "some-bundle-path"))
 		Expect(processesPath).To(Equal("some-bundle-path/processes"))
 		Expect(id).To(Equal("some-id"))
-	})
-})
-
-var _ = Describe("IodaemonExecRunner", func() {
-	var (
-		tracker       *fakes.FakeProcessTracker
-		commandRunner *fake_command_runner.FakeCommandRunner
-		pidGenerator  *fakes.FakeUidGenerator
-		runcBinary    *fakes.FakeRuncBinary
-		bundleLoader  *fakes.FakeBundleLoader
-		users         *fakes.FakeUserLookupper
-		mkdirer       *fakes.FakeMkdirer
-		processesPath string
-		logger        *lagertest.TestLogger
-		waitWatcher   *fakes.FakeWaitWatcher
-
-		runner *runrunc.IodaemonExecRunner
-	)
-
-	BeforeEach(func() {
-		tracker = new(fakes.FakeProcessTracker)
-		pidGenerator = new(fakes.FakeUidGenerator)
-		runcBinary = new(fakes.FakeRuncBinary)
-		commandRunner = fake_command_runner.New()
-		logger = lagertest.NewTestLogger("test")
-		bundleLoader = new(fakes.FakeBundleLoader)
-		users = new(fakes.FakeUserLookupper)
-		mkdirer = new(fakes.FakeMkdirer)
-		waitWatcher = new(fakes.FakeWaitWatcher)
-
-		bundlePath, err := ioutil.TempDir("", "bundle")
-		Expect(err).NotTo(HaveOccurred())
-		processesPath = path.Join(bundlePath, "processes")
-
-		runner = runrunc.NewIodaemonExecRunner(
-			pidGenerator,
-			runcBinary,
-			tracker,
-			waitWatcher,
-		)
-
-		bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
-			bndl := goci.Bndl{}
-			return bndl, nil
-		}
-
-		users.LookupReturns(&user.ExecUser{}, nil)
-
-		runcBinary.ExecCommandStub = func(id, processJSONPath, pidFilePath string) *exec.Cmd {
-			return exec.Command("funC", "exec", id, processJSONPath, "--pid-file", pidFilePath)
-		}
-	})
-
-	Describe("Run", func() {
-		It("runs exec against the injected runC binary using process tracker", func() {
-			pidGenerator.GenerateReturns("another-process-guid")
-			ttyspec := &garden.TTYSpec{WindowSize: &garden.WindowSize{Rows: 1}}
-			runner.Run(logger, &runrunc.PreparedSpec{},
-				processesPath, "some-id", ttyspec, garden.ProcessIO{Stdout: GinkgoWriter})
-
-			Expect(tracker.RunCallCount()).To(Equal(1))
-			pid, cmd, io, tty, _ := tracker.RunArgsForCall(0)
-			Expect(pid).To(Equal("another-process-guid"))
-			Expect(cmd.Args[:3]).To(Equal([]string{"funC", "exec", "some-id"}))
-			Expect(io.Stdout).To(Equal(GinkgoWriter))
-			Expect(tty).To(Equal(ttyspec))
-		})
-
-		It("creates the processes directory if it does not exist", func() {
-			runner.Run(logger, &runrunc.PreparedSpec{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
-			Expect(processesPath).To(BeADirectory())
-		})
-
-		Context("When creating the processes directory fails", func() {
-			It("returns a helpful error", func() {
-				Expect(ioutil.WriteFile(processesPath, []byte(""), 0700)).To(Succeed())
-				_, err := runner.Run(logger, &runrunc.PreparedSpec{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
-				Expect(err).To(MatchError(MatchRegexp("mkdir .*: .*")))
-			})
-		})
-
-		It("asks for the pid file to be placed in processes/$guid.pid", func() {
-			pidGenerator.GenerateReturns("another-process-guid")
-			tracker.RunReturns(&process_tracker.Process{}, nil)
-			runner.Run(logger, &runrunc.PreparedSpec{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
-			Expect(tracker.RunCallCount()).To(Equal(1))
-
-			_, cmd, _, _, _ := tracker.RunArgsForCall(0)
-			Expect(cmd.Args[4:]).To(Equal([]string{"--pid-file", path.Join(processesPath, "another-process-guid.pid")}))
-		})
-
-		It("tells process tracker that it can find the pid-file at processes/$guid.pid", func() {
-			pidGenerator.GenerateReturns("another-process-guid")
-			tracker.RunReturns(&process_tracker.Process{}, nil)
-			runner.Run(logger, &runrunc.PreparedSpec{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
-			Expect(tracker.RunCallCount()).To(Equal(1))
-
-			_, _, _, _, pidFile := tracker.RunArgsForCall(0)
-			Expect(pidFile).To(Equal(path.Join(processesPath, "another-process-guid.pid")))
-		})
-
-		It("tells runc that the process.json is in /processes/$guid.json", func() {
-			pidGenerator.GenerateReturns("another-process-guid")
-			tracker.RunReturns(&process_tracker.Process{}, nil)
-			runner.Run(logger, &runrunc.PreparedSpec{}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
-
-			_, cmd, _, _, _ := tracker.RunArgsForCall(0)
-			Expect(cmd.Args[3]).To(Equal(path.Join(processesPath, "another-process-guid.json")))
-		})
-
-		Describe("process-related files", func() {
-			Context("when process tracker succeeds", func() {
-				var spec specs.Process
-				var processJsonPath, pidFilePath string
-				var fakeProcess *fakes.FakeProcess
-
-				BeforeEach(func() {
-					pidGenerator.GenerateReturns("another-process-guid")
-
-					fakeProcess = new(fakes.FakeProcess)
-					tracker.RunStub = func(_ string, cmd *exec.Cmd, _ garden.ProcessIO, _ *garden.TTYSpec, pidPath string) (garden.Process, error) {
-						processJsonPath = cmd.Args[3]
-						pidFilePath = pidPath
-
-						f, err := os.Open(processJsonPath)
-						Expect(err).NotTo(HaveOccurred())
-
-						json.NewDecoder(f).Decode(&spec)
-						return fakeProcess, nil
-					}
-
-					_, err := runner.Run(logger, &runrunc.PreparedSpec{
-						Process: specs.Process{
-							Args: []string{"potato", "boom"},
-						},
-					}, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				Describe("the process.json file passed to 'runc exec'", func() {
-					It("is the encoded version of the config", func() {
-						Expect(spec.Args).To(ConsistOf("potato", "boom"))
-					})
-				})
-
-				It("defers cleanup of the process.json and pid file until the process has completed", func() {
-					Eventually(waitWatcher.OnExitCallCount).Should(Equal(1))
-
-					_, process, callback := waitWatcher.OnExitArgsForCall(0)
-					Expect(process).To(Equal(fakeProcess))
-					Expect(callback).To(ConsistOf(
-						processJsonPath, pidFilePath,
-					))
-				})
-			})
-
-			Context("when process tracker fails", func() {
-				It("immediately cleans up the process.json and pid file ", func() {
-					var processJsonPath, pidFilePath string
-					tracker.RunStub = func(_ string, cmd *exec.Cmd, _ garden.ProcessIO, _ *garden.TTYSpec, pidPath string) (garden.Process, error) {
-						processJsonPath = cmd.Args[3]
-						pidFilePath = pidPath
-
-						Expect(ioutil.WriteFile(processJsonPath, []byte{}, 0700)).To(Succeed())
-						Expect(ioutil.WriteFile(pidFilePath, []byte{}, 0700)).To(Succeed())
-
-						return nil, errors.New("Boom")
-					}
-
-					preparedSpec := &runrunc.PreparedSpec{
-						Process: specs.Process{},
-					}
-					_, err := runner.Run(logger, preparedSpec, processesPath, "some-id", &garden.TTYSpec{}, garden.ProcessIO{Stdout: GinkgoWriter})
-					Expect(err).To(MatchError(ContainSubstring("Boom")))
-
-					Expect(processJsonPath).NotTo(BeAnExistingFile())
-					Expect(pidFilePath).NotTo(BeAnExistingFile())
-				})
-			})
-		})
-	})
-
-	Describe("Attach", func() {
-		It("attaches to a process with the process tracker", func() {
-			runner.Attach(logger, "some-process-guid", garden.ProcessIO{Stdout: GinkgoWriter}, processesPath)
-			Expect(tracker.AttachCallCount()).To(Equal(1))
-
-			id, io, pidFile := tracker.AttachArgsForCall(0)
-			Expect(id).To(Equal("some-process-guid"))
-			Expect(io.Stdout).To(Equal(GinkgoWriter))
-			Expect(pidFile).To(Equal(path.Join(processesPath, "some-process-guid.pid")))
-		})
 	})
 })
 

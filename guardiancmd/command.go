@@ -5,7 +5,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"path"
 	"path/filepath"
 	"time"
 
@@ -38,7 +37,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
-	"code.cloudfoundry.org/guardian/rundmc/process_tracker"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
@@ -153,7 +151,6 @@ type GuardianCommand struct {
 	} `group:"Container Lifecycle"`
 
 	Bin struct {
-		IODaemon FileFlag `long:"iodaemon-bin" required:"true" description:"Path to the 'iodaemon' binary."`
 		Dadoo    FileFlag `long:"dadoo-bin" required:"true" description:"Path to the 'dadoo' binary."`
 		NSTar    FileFlag `long:"nstar-bin"    required:"true" description:"Path to the 'nstar' binary."`
 		Tar      FileFlag `long:"tar-bin"      required:"true" description:"Path to the 'tar' binary."`
@@ -274,7 +271,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
 		Networker:       networker,
 		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
-		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.IODaemon.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), cmd.Containers.ApparmorProfile, propManager),
+		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), cmd.Containers.ApparmorProfile, propManager),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
@@ -535,7 +532,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		ovenCleaner)
 }
 
-func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodaemonPath, dadooPath, runcPath, nstarPath, tarPath, defaultRootFSPath, appArmorProfile string, properties gardener.PropertyManager) *rundmc.Containerizer {
+func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadooPath, runcPath, nstarPath, tarPath, defaultRootFSPath, appArmorProfile string, properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
 	commandRunner := linux_command_runner.New()
@@ -544,7 +541,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 		CommandRunner: commandRunner,
 	}
 
-	pidFileReader := &process_tracker.PidFileReader{
+	pidFileReader := &dadoo.PidFileReader{
 		Clock:         clock.NewClock(),
 		Timeout:       10 * time.Second,
 		SleepInterval: time.Millisecond * 100,
@@ -562,9 +559,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, iodae
 			runcPath,
 			cmd.wireUidGenerator(),
 			pidFileReader,
-			runrunc.NewIodaemonExecRunner(cmd.wireUidGenerator(), goci.RuncBinary(runcPath),
-				process_tracker.New(path.Join(os.TempDir(), fmt.Sprintf("garden-%s", cmd.Server.Tag), "processes"), iodaemonPath, commandRunner, pidFileReader),
-				&runrunc.Watcher{}), linux_command_runner.New()),
+			linux_command_runner.New()),
 	)
 
 	mounts := []specs.Mount{

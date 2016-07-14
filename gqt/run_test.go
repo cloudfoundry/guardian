@@ -18,7 +18,7 @@ import (
 	"github.com/onsi/gomega/types"
 )
 
-var _ = Describe("Run", func() {
+var _ = FDescribe("Run", func() {
 	var client *runner.RunningGarden
 
 	AfterEach(func() {
@@ -48,7 +48,6 @@ var _ = Describe("Run", func() {
 			}
 		},
 
-		// iodaemon tests
 		Entry("with an absolute path",
 			spec("/bin/sh", "-c", "echo hello; exit 12"),
 			should(gbytes.Say("hello"), gexec.Exit(12)),
@@ -66,27 +65,6 @@ var _ = Describe("Run", func() {
 
 		Entry("with a TTY",
 			ttySpec("test", "-t", "1"),
-			should(gexec.Exit(0)),
-		),
-
-		// dadoo tests
-		Entry("with an absolute path using dadoo exec",
-			withDadoo(spec("/bin/sh", "-c", "echo hello; exit 12")),
-			should(gbytes.Say("hello"), gexec.Exit(12)),
-		),
-
-		Entry("with a path to be found in a regular user's path using dadoo exec",
-			withDadoo(spec("sh", "-c", "echo potato; exit 24")),
-			should(gbytes.Say("potato"), gexec.Exit(24)),
-		),
-
-		Entry("without a TTY",
-			withDadoo(spec("test", "-t", "1")),
-			should(gexec.Exit(1)),
-		),
-
-		Entry("with a TTY",
-			withDadoo(ttySpec("test", "-t", "1")),
 			should(gexec.Exit(0)),
 		),
 	)
@@ -296,7 +274,6 @@ var _ = Describe("Run", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = container.Run(garden.ProcessSpec{
-				Env:  []string{"USE_DADOO=true"},
 				Path: "does-not-exit",
 			}, garden.ProcessIO{})
 			Expect(err).To(MatchError(ContainSubstring("executable file not found")))
@@ -310,7 +287,6 @@ var _ = Describe("Run", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = container.Run(garden.ProcessSpec{
-				Env:  []string{"USE_DADOO=true"},
 				Path: "does-not-exit",
 				TTY: &garden.TTYSpec{
 					WindowSize: &garden.WindowSize{
@@ -342,7 +318,6 @@ var _ = Describe("Run", func() {
 					  sleep 1
 					done
 				`},
-					Env: []string{"USE_DADOO=true"},
 				}, garden.ProcessIO{
 					Stdout: buffer,
 				})
@@ -421,11 +396,6 @@ func spec(path string, args ...string) garden.ProcessSpec {
 		Path: path,
 		Args: args,
 	}
-}
-
-func withDadoo(spec garden.ProcessSpec) garden.ProcessSpec {
-	spec.Env = append(spec.Env, "USE_DADOO=true")
-	return spec
 }
 
 func filesInDir(path string) []string {

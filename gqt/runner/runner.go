@@ -52,7 +52,7 @@ type RunningGarden struct {
 	logger lager.Logger
 }
 
-func Start(bin, initBin, iodaemonBin, nstarBin, dadooBin string, supplyDefaultRootfs bool, argv ...string) *RunningGarden {
+func Start(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootfs bool, argv ...string) *RunningGarden {
 	network := "unix"
 	addr := fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
 	tmpDir := filepath.Join(
@@ -83,7 +83,7 @@ func Start(bin, initBin, iodaemonBin, nstarBin, dadooBin string, supplyDefaultRo
 		Client: client.New(connection.New(network, addr)),
 	}
 
-	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, iodaemonBin, nstarBin, dadooBin, TarBin, supplyDefaultRootfs, argv...)
+	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dadooBin, TarBin, supplyDefaultRootfs, argv...)
 	c.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", tmpDir))
 	r.runner = ginkgomon.New(ginkgomon.Config{
 		Name:              "guardian",
@@ -148,7 +148,7 @@ func (r *RunningGarden) Stop() error {
 	return err
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, iodaemonBin, nstarBin, dadooBin, tarBin string, supplyDefaultRootfs bool, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dadooBin, tarBin string, supplyDefaultRootfs bool, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -190,7 +190,6 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, iodaemonBin, 
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--network-pool", fmt.Sprintf("10.254.%d.0/22", 4*GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--init-bin", initBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--iodaemon-bin", iodaemonBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--dadoo-bin", dadooBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--nstar-bin", nstarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", tarBin)

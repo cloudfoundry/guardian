@@ -28,22 +28,20 @@ type PidGetter interface {
 }
 
 type ExecRunner struct {
-	dadooPath      string
-	runcPath       string
-	processIDGen   runrunc.UidGenerator
-	pidGetter      PidGetter
-	iodaemonRunner runrunc.ExecRunner
-	commandRunner  command_runner.CommandRunner
+	dadooPath     string
+	runcPath      string
+	processIDGen  runrunc.UidGenerator
+	pidGetter     PidGetter
+	commandRunner command_runner.CommandRunner
 }
 
-func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, iodaemonRunner runrunc.ExecRunner, commandRunner command_runner.CommandRunner) *ExecRunner {
+func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, commandRunner command_runner.CommandRunner) *ExecRunner {
 	return &ExecRunner{
-		dadooPath:      dadooPath,
-		runcPath:       runcPath,
-		processIDGen:   processIDGen,
-		pidGetter:      pidGetter,
-		iodaemonRunner: iodaemonRunner,
-		commandRunner:  commandRunner,
+		dadooPath:     dadooPath,
+		runcPath:      runcPath,
+		processIDGen:  processIDGen,
+		pidGetter:     pidGetter,
+		commandRunner: commandRunner,
 	}
 }
 
