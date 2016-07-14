@@ -25,7 +25,7 @@ func TestDadoo(t *testing.T) {
 			return nil
 		}
 
-		bins["dadoo_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/dadoo")
+		bins["dadoo_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
 		Expect(err).NotTo(HaveOccurred())
 
 		data, err := json.Marshal(bins)

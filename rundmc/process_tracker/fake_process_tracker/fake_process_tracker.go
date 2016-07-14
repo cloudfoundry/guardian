@@ -5,8 +5,8 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/process_tracker"
 )
 
 type FakeProcessTracker struct {

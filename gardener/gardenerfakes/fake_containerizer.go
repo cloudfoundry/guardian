@@ -5,9 +5,9 @@ import (
 	"io"
 	"sync"
 
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/gardener"
 )
 
 type FakeContainerizer struct {

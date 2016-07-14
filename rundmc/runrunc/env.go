@@ -3,8 +3,8 @@ package runrunc
 import (
 	"strings"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 func envWithDefaultPath(defaultPath string, env []string) []string {

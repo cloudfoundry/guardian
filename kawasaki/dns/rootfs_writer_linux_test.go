@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"code.cloudfoundry.org/guardian/kawasaki/dns"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
 	"github.com/docker/docker/pkg/reexec"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

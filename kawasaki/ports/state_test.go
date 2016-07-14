@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/ports"
+	"code.cloudfoundry.org/guardian/kawasaki/ports"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

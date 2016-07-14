@@ -3,9 +3,9 @@ package metrics_test
 import (
 	"time"
 
+	"code.cloudfoundry.org/guardian/metrics"
+	fakes "code.cloudfoundry.org/guardian/metrics/metricsfakes"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/guardian/metrics"
-	fakes "github.com/cloudfoundry-incubator/guardian/metrics/metricsfakes"
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	dropsonde_metrics "github.com/cloudfoundry/dropsonde/metrics"
 	"github.com/pivotal-golang/clock/fakeclock"

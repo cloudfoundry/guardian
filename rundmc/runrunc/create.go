@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/garden"
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 

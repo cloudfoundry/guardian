@@ -4,11 +4,11 @@ import (
 	"errors"
 	"os/exec"
 
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/kawasaki"
+	"code.cloudfoundry.org/guardian/netplugin"
+	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/netplugin"
-	"github.com/cloudfoundry-incubator/guardian/properties"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 
 	. "github.com/onsi/ginkgo"

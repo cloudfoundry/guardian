@@ -3,10 +3,10 @@ package gardener_test
 import (
 	"errors"
 
+	"code.cloudfoundry.org/guardian/gardener"
+	fakes "code.cloudfoundry.org/guardian/gardener/gardenerfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/guardian/gardener"
-	fakes "github.com/cloudfoundry-incubator/guardian/gardener/gardenerfakes"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

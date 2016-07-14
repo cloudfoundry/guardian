@@ -5,8 +5,8 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/properties"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/properties"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

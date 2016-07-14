@@ -4,7 +4,7 @@ package process_trackerfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
+	"code.cloudfoundry.org/guardian/rundmc/process_tracker"
 )
 
 type FakePidGetter struct {

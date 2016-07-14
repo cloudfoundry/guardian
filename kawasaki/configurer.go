@@ -5,8 +5,8 @@ import (
 	"net"
 	"os"
 
+	"code.cloudfoundry.org/guardian/kawasaki/netns"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
 )
 
 //go:generate counterfeiter . NetnsExecer

@@ -1,8 +1,8 @@
 package gqt_test
 
 import (
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/runner"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,7 +17,7 @@ var _ = Describe("runC Logging", func() {
 	)
 
 	JustBeforeEach(func() {
-		binPath, err := gexec.Build("github.com/cloudfoundry-incubator/guardian/gqt/cmd/fake_runc")
+		binPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc")
 		Expect(err).NotTo(HaveOccurred())
 
 		containerSpec := garden.ContainerSpec{}

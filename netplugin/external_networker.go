@@ -8,9 +8,9 @@ import (
 	"os/exec"
 	"strings"
 
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 

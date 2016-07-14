@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
-	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/iptables/iptablesfakes"
+	"code.cloudfoundry.org/guardian/kawasaki/iptables"
+	fakes "code.cloudfoundry.org/guardian/kawasaki/iptables/iptablesfakes"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

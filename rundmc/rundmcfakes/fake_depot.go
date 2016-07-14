@@ -4,9 +4,9 @@ package rundmcfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/guardian/rundmc"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
 )
 
 type FakeDepot struct {

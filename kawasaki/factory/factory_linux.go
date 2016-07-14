@@ -3,11 +3,11 @@ package factory
 import (
 	"os"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/netns"
+	"code.cloudfoundry.org/guardian/kawasaki"
+	"code.cloudfoundry.org/guardian/kawasaki/configure"
+	"code.cloudfoundry.org/guardian/kawasaki/devices"
+	"code.cloudfoundry.org/guardian/kawasaki/iptables"
+	"code.cloudfoundry.org/guardian/kawasaki/netns"
 )
 
 func NewDefaultConfigurer(ipt *iptables.IPTablesController) kawasaki.Configurer {

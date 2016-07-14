@@ -27,7 +27,7 @@ type CompiledAssets struct {
 var _ = SynchronizedBeforeSuite(func() []byte {
 	var err error
 	assets := CompiledAssets{}
-	assets.IoDaemonBinPath, err = gexec.Build("github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/cmd/iodaemon", "-race")
+	assets.IoDaemonBinPath, err = gexec.Build("code.cloudfoundry.org/guardian/rundmc/iodaemon/cmd/iodaemon", "-race")
 	Expect(err).ToNot(HaveOccurred())
 
 	marshalledAssets, err := json.Marshal(assets)

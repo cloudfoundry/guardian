@@ -13,10 +13,10 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/garden/client"
+	"code.cloudfoundry.org/garden/client/connection"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/garden/client"
-	"github.com/cloudfoundry-incubator/garden/client/connection"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo"

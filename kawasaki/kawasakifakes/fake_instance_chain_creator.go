@@ -5,8 +5,8 @@ import (
 	"net"
 	"sync"
 
+	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 )
 
 type FakeInstanceChainCreator struct {

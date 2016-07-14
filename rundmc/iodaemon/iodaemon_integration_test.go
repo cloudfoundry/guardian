@@ -8,8 +8,8 @@ import (
 
 	"io"
 
-	"github.com/cloudfoundry-incubator/garden"
-	linkpkg "github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/link"
+	"code.cloudfoundry.org/garden"
+	linkpkg "code.cloudfoundry.org/guardian/rundmc/iodaemon/link"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"

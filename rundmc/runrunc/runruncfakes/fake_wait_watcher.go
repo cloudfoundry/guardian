@@ -4,8 +4,8 @@ package runruncfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 )
 
 type FakeWaitWatcher struct {

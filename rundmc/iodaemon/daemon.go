@@ -6,8 +6,8 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/link"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/iodaemon/link"
 )
 
 type Daemon struct {

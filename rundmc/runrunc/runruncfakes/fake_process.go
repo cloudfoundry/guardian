@@ -4,8 +4,8 @@ package runruncfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 )
 
 type FakeProcess struct {

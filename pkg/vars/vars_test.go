@@ -3,7 +3,7 @@ package vars_test
 import (
 	"net"
 
-	"github.com/cloudfoundry-incubator/guardian/pkg/vars"
+	"code.cloudfoundry.org/guardian/pkg/vars"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

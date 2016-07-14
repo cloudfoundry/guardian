@@ -3,8 +3,8 @@ package configure
 import (
 	"net"
 
+	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
 )
 
 type Container struct {

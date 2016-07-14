@@ -3,8 +3,8 @@ package rundmc_test
 import (
 	"fmt"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc"
-	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/rundmcfakes"
+	"code.cloudfoundry.org/guardian/rundmc"
+	fakes "code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

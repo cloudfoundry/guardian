@@ -4,7 +4,7 @@ package depotfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
 )
 
 type FakeBundleSaver struct {

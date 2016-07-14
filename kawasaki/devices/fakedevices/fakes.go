@@ -1,7 +1,7 @@
 package fakedevices
 
 import "net"
-import "github.com/cloudfoundry-incubator/garden"
+import "code.cloudfoundry.org/garden"
 
 type FaveVethCreator struct {
 	CreateCalledWith struct {

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"code.cloudfoundry.org/guardian/metrics"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/guardian/metrics"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

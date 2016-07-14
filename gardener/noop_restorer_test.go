@@ -1,7 +1,7 @@
 package gardener_test
 
 import (
-	"github.com/cloudfoundry-incubator/guardian/gardener"
+	"code.cloudfoundry.org/guardian/gardener"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

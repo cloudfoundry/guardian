@@ -1,8 +1,8 @@
 package rundmc
 
 import (
-	"github.com/cloudfoundry-incubator/guardian/gardener"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 //go:generate counterfeiter . BundlerRule

@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"net"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices"
+	"code.cloudfoundry.org/guardian/kawasaki/devices"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

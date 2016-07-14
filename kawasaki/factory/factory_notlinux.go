@@ -3,8 +3,8 @@
 package factory
 
 import (
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
+	"code.cloudfoundry.org/guardian/kawasaki"
+	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 )
 
 func NewDefaultConfigurer(ipt *iptables.IPTablesController) kawasaki.Configurer {

@@ -6,11 +6,11 @@ import (
 	"net"
 	"os"
 
+	"code.cloudfoundry.org/guardian/kawasaki"
+	"code.cloudfoundry.org/guardian/kawasaki/configure"
+	"code.cloudfoundry.org/guardian/kawasaki/devices/fakedevices"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/configure"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/devices/fakedevices"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

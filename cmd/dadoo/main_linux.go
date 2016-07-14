@@ -14,8 +14,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/dadoo"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/dadoo"
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/kr/pty"
 	"github.com/opencontainers/runc/libcontainer/system"

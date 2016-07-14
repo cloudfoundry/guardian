@@ -1,7 +1,7 @@
 package goci_test
 
 import (
-	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runtime-spec/specs-go"

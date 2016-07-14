@@ -4,8 +4,8 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/cloudfoundry-incubator/guardian/gardener"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 

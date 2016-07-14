@@ -1,7 +1,7 @@
 package kawasaki_test
 
 import (
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
+	"code.cloudfoundry.org/guardian/kawasaki"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

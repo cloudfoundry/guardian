@@ -3,10 +3,10 @@ package kawasaki_test
 import (
 	"net"
 
+	"code.cloudfoundry.org/guardian/kawasaki"
+	fakes "code.cloudfoundry.org/guardian/kawasaki/kawasakifakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

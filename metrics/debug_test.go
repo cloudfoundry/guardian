@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"os"
 
+	"code.cloudfoundry.org/guardian/metrics"
+	fakes "code.cloudfoundry.org/guardian/metrics/metricsfakes"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/guardian/metrics"
-	fakes "github.com/cloudfoundry-incubator/guardian/metrics/metricsfakes"
 	"github.com/tedsuo/ifrit"
 
 	. "github.com/onsi/ginkgo"

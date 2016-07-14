@@ -9,8 +9,8 @@ import (
 	"path"
 	"strings"
 
+	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/guardian/logging"
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 

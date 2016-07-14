@@ -1,10 +1,10 @@
 package gardener_test
 
 import (
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/garden-shed/rootfs_provider"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
-	"github.com/cloudfoundry-incubator/guardian/gardener"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

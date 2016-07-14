@@ -4,8 +4,8 @@ package depotfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 type FakeBundleLoader struct {

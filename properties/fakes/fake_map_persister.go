@@ -4,7 +4,7 @@ package fakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/properties"
+	"code.cloudfoundry.org/guardian/properties"
 )
 
 type FakeMapPersister struct {

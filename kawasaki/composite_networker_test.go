@@ -3,9 +3,9 @@ package kawasaki_test
 import (
 	"errors"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/kawasakifakes"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/kawasaki"
+	fakes "code.cloudfoundry.org/guardian/kawasaki/kawasakifakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

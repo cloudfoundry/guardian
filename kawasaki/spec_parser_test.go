@@ -3,8 +3,8 @@ package kawasaki_test
 import (
 	"net"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/subnets"
+	"code.cloudfoundry.org/guardian/kawasaki"
+	"code.cloudfoundry.org/guardian/kawasaki/subnets"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

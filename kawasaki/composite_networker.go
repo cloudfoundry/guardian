@@ -3,8 +3,8 @@ package kawasaki
 import (
 	"math"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/garden"
 )
 
 type CompositeNetworker struct {

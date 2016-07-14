@@ -3,7 +3,7 @@ package iptables
 import (
 	"fmt"
 
-	"github.com/cloudfoundry-incubator/garden"
+	"code.cloudfoundry.org/garden"
 )
 
 type iptablesFlags []string

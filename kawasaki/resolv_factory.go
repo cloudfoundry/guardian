@@ -3,7 +3,7 @@ package kawasaki
 import (
 	"fmt"
 
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
+	"code.cloudfoundry.org/guardian/kawasaki/dns"
 )
 
 type ResolvFactory struct {

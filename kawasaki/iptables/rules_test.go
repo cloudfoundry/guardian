@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/iptables"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"

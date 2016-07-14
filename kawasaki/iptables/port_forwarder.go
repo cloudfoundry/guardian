@@ -1,6 +1,6 @@
 package iptables
 
-import "github.com/cloudfoundry-incubator/guardian/kawasaki"
+import "code.cloudfoundry.org/guardian/kawasaki"
 
 type PortForwarder struct {
 	iptables *IPTablesController

@@ -9,10 +9,10 @@ import (
 	"path"
 	"path/filepath"
 
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/garden-shed/rootfs_provider"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/garden-shed/rootfs_provider"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/goci"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )

@@ -1,7 +1,7 @@
 package gqt_test
 
 import (
-	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
+	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

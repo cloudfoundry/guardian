@@ -4,7 +4,7 @@ package gardenerfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/gardener"
+	"code.cloudfoundry.org/guardian/gardener"
 )
 
 type FakeSysInfoProvider struct {

@@ -5,7 +5,7 @@ import (
 	"os/exec"
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 )
 
 type FakeRuncBinary struct {

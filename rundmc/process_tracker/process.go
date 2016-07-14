@@ -9,9 +9,9 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/link"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker/writer"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/iodaemon/link"
+	"code.cloudfoundry.org/guardian/rundmc/process_tracker/writer"
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 

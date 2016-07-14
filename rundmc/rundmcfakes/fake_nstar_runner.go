@@ -5,8 +5,8 @@ import (
 	"io"
 	"sync"
 
+	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/guardian/rundmc"
 )
 
 type FakeNstarRunner struct {

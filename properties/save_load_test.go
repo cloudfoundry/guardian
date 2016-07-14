@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/cloudfoundry-incubator/guardian/properties"
+	"code.cloudfoundry.org/guardian/properties"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

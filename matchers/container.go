@@ -3,7 +3,7 @@ package matchers
 import (
 	"io"
 
-	"github.com/cloudfoundry-incubator/garden"
+	"code.cloudfoundry.org/garden"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/types"

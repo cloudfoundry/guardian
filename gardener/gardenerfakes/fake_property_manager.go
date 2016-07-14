@@ -4,8 +4,8 @@ package gardenerfakes
 import (
 	"sync"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/gardener"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gardener"
 )
 
 type FakePropertyManager struct {

@@ -5,7 +5,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 )
 
 type FakeMkdirer struct {

@@ -4,8 +4,8 @@ package dnsfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/guardian/kawasaki/dns"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
 )
 
 type FakeFileWriter struct {

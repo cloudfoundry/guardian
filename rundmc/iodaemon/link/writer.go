@@ -4,7 +4,7 @@ import (
 	"encoding/gob"
 	"net"
 
-	"github.com/cloudfoundry-incubator/garden"
+	"code.cloudfoundry.org/garden"
 )
 
 type Input struct {

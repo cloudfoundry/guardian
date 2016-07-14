@@ -5,10 +5,10 @@ import (
 	"io/ioutil"
 	"os"
 
+	"code.cloudfoundry.org/guardian/kawasaki/dns"
+	fakes "code.cloudfoundry.org/guardian/kawasaki/dns/dnsfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/guardian/kawasaki/dns"
-	fakes "github.com/cloudfoundry-incubator/guardian/kawasaki/dns/dnsfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

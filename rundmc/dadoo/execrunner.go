@@ -15,9 +15,9 @@ import (
 	"sync"
 	"syscall"
 
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/runrunc"
 	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/kr/logfmt"
 )

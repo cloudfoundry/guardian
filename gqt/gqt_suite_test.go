@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/gqt/runner"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -38,22 +38,22 @@ func TestGqt(t *testing.T) {
 		}
 
 		if bins["oci_runtime_path"] != "" {
-			bins["garden_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/guardian", "-tags", "daemon", "-race")
+			bins["garden_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/guardian", "-tags", "daemon", "-race")
 			Expect(err).NotTo(HaveOccurred())
 
-			bins["iodaemon_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/rundmc/iodaemon/cmd/iodaemon")
+			bins["iodaemon_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/rundmc/iodaemon/cmd/iodaemon")
 			Expect(err).NotTo(HaveOccurred())
 
-			bins["dadoo_bin_bin_bin"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/dadoo")
+			bins["dadoo_bin_bin_bin"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
 			Expect(err).NotTo(HaveOccurred())
 
-			bins["init_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/init")
+			bins["init_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/init")
 			Expect(err).NotTo(HaveOccurred())
 
-			bins["inspector-garden_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/cmd/inspector-garden")
+			bins["inspector-garden_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/inspector-garden")
 			Expect(err).NotTo(HaveOccurred())
 
-			bins["test_net_plugin_bin_path"], err = gexec.Build("github.com/cloudfoundry-incubator/guardian/gqt/cmd/networkplugin")
+			bins["test_net_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/networkplugin")
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := exec.Command("make")

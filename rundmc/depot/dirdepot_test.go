@@ -7,10 +7,10 @@ import (
 	"path"
 	"path/filepath"
 
+	"code.cloudfoundry.org/guardian/rundmc/depot"
+	fakes "code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/depot"
-	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/depot/depotfakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

@@ -1,7 +1,7 @@
 package runrunc
 
 import (
-	"github.com/cloudfoundry-incubator/garden"
+	"code.cloudfoundry.org/garden"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 

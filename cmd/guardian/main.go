@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/cloudfoundry-incubator/guardian/guardiancmd"
+	"code.cloudfoundry.org/guardian/guardiancmd"
 	"github.com/jessevdk/go-flags"
 )
 

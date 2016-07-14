@@ -3,7 +3,7 @@ package writer_test
 import (
 	"strings"
 
-	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker/writer"
+	"code.cloudfoundry.org/guardian/rundmc/process_tracker/writer"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

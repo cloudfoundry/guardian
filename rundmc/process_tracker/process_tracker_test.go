@@ -13,9 +13,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 
-	"github.com/cloudfoundry-incubator/garden"
-	"github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker"
-	fakes "github.com/cloudfoundry-incubator/guardian/rundmc/process_tracker/process_trackerfakes"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/rundmc/process_tracker"
+	fakes "code.cloudfoundry.org/guardian/rundmc/process_tracker/process_trackerfakes"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 )
 
