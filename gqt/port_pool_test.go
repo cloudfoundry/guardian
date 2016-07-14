@@ -17,18 +17,20 @@ var _ = Describe("Port Pool", func() {
 	Context("when the port pool is exhausted by container creation", func() {
 		const (
 			numContainers int = 5
-			portPoolStart int = 50000
 		)
+
 		var (
-			containers   []garden.Container
-			client       *runner.RunningGarden
-			expectedPort uint32
-			args         []string
-			propsPoolDir string
+			portPoolStart int
+			containers    []garden.Container
+			client        *runner.RunningGarden
+			expectedPort  uint32
+			args          []string
+			propsPoolDir  string
 		)
 
 		BeforeEach(func() {
 			var err error
+			portPoolStart = GinkgoParallelNode() * 10000
 			propsPoolDir, err = ioutil.TempDir("", "portpool")
 			Expect(err).NotTo(HaveOccurred())
 			args = []string{
