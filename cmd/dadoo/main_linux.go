@@ -21,50 +21,36 @@ import (
 	"github.com/opencontainers/runc/libcontainer/system"
 )
 
+var uid = flag.Int("uid", 0, "uid to chown console to")
+var gid = flag.Int("gid", 0, "gid to chown console to")
+var rows = flag.Int("rows", 0, "rows for tty")
+var cols = flag.Int("cols", 0, "cols for tty")
+var tty = flag.Bool("tty", false, "tty requested")
+
 func main() {
 	os.Exit(run())
 }
 
 func run() int {
-	var uid, gid int
-	var rows, cols int
-	var tty bool
-	flag.IntVar(&uid, "uid", 0, "uid to chown console to")
-	flag.IntVar(&gid, "gid", 0, "gid to chown console to")
-	flag.IntVar(&rows, "rows", 0, "rows for tty")
-	flag.IntVar(&cols, "cols", 0, "cols for tty")
-	flag.BoolVar(&tty, "tty", false, "tty requested")
-
 	flag.Parse()
 
 	runtime := flag.Args()[1] // e.g. runc
 	dir := flag.Args()[2]     // bundlePath for run, processPath for exec
 	containerId := flag.Args()[3]
 
-	fd3 := os.NewFile(3, "/proc/self/fd/3")
-
 	signals := make(chan os.Signal, 100)
 	signal.Notify(signals, syscall.SIGCHLD)
 
+	fd3 := os.NewFile(3, "/proc/self/fd/3")
 	logFile := fmt.Sprintf("/proc/%d/fd/4", os.Getpid())
 	logFD := os.NewFile(4, "/proc/self/fd/4")
-
 	pidFilePath := filepath.Join(dir, "pidfile")
 
-	check(os.MkdirAll(dir, 0700))
-
-	stdin := forwardFIFO(filepath.Join(dir, "stdin"), os.O_RDONLY)
-	stdout := forwardFIFO(filepath.Join(dir, "stdout"), os.O_WRONLY|os.O_APPEND)
-	stderr := forwardFIFO(filepath.Join(dir, "stderr"), os.O_WRONLY|os.O_APPEND)
-	winsz := forwardFIFO(filepath.Join(dir, "winsz"), os.O_RDWR)
-
-	// open so it'll be closed when we exit
-	forwardFIFO(filepath.Join(dir, "exit"), os.O_RDWR)
+	stdin, stdout, stderr, winsz := openPipes(dir)
 
 	var runcStartCmd *exec.Cmd
-	if tty {
-		ttySlave := setupTty(stdin, stdout, pidFilePath, winsz, garden.WindowSize{Rows: rows, Columns: cols})
-		check(ttySlave.Chown(uid, gid))
+	if *tty {
+		ttySlave := setupTty(stdin, stdout, pidFilePath, winsz, garden.WindowSize{Rows: *rows, Columns: *cols})
 		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console", ttySlave.Name(), "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
 	} else {
 		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
@@ -95,15 +81,21 @@ func run() int {
 	containerPid, err := parsePid(pidFilePath)
 	check(err)
 
+	return waitForContainerToExit(dir, containerPid, signals)
+}
+
+func waitForContainerToExit(dir string, containerPid int, signals chan os.Signal) (exitCode int) {
 	for range signals {
 		for {
+			var status syscall.WaitStatus
+			var rusage syscall.Rusage
 			wpid, err := syscall.Wait4(-1, &status, syscall.WNOHANG, &rusage)
 			if err != nil || wpid <= 0 {
 				break // wait for next SIGCHLD
 			}
 
 			if wpid == containerPid {
-				exitCode := status.ExitStatus()
+				exitCode = status.ExitStatus()
 				if status.Signaled() {
 					exitCode = 128 + int(status.Signal())
 				}
@@ -114,16 +106,20 @@ func run() int {
 		}
 	}
 
-	return 0
+	panic("ran out of signals") // cant happen
 }
 
-func check(err error) {
-	if err != nil {
-		panic(err)
-	}
+func openPipes(dir string) (io.Reader, io.Writer, io.Writer, io.Reader) {
+	stdin := openFifo(filepath.Join(dir, "stdin"), os.O_RDONLY)
+	stdout := openFifo(filepath.Join(dir, "stdout"), os.O_WRONLY|os.O_APPEND)
+	stderr := openFifo(filepath.Join(dir, "stderr"), os.O_WRONLY|os.O_APPEND)
+	winsz := openFifo(filepath.Join(dir, "winsz"), os.O_RDWR)
+	openFifo(filepath.Join(dir, "exit"), os.O_RDWR) // open just so guardian can detect it being closed when we exit
+
+	return stdin, stdout, stderr, winsz
 }
 
-func forwardFIFO(path string, flags int) io.ReadWriter {
+func openFifo(path string, flags int) io.ReadWriter {
 	r, err := os.OpenFile(path, flags, 0600)
 	if os.IsNotExist(err) {
 		return nil
@@ -131,16 +127,6 @@ func forwardFIFO(path string, flags int) io.ReadWriter {
 
 	check(err)
 	return r
-}
-
-func forwardWriteFIFO(path string) io.Writer {
-	w, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0600)
-	if os.IsNotExist(err) {
-		return nil
-	}
-
-	check(err)
-	return w
 }
 
 func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader, defaultWinSize garden.WindowSize) *os.File {
@@ -180,6 +166,7 @@ func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo i
 		}
 	}()
 
+	check(s.Chown(*uid, *gid))
 	return s
 }
 
@@ -209,4 +196,10 @@ func parsePid(pidFile string) (int, error) {
 	}
 
 	return pid, nil
+}
+
+func check(err error) {
+	if err != nil {
+		panic(err)
+	}
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/onsi/gomega/types"
 )
 
-var _ = FDescribe("Run", func() {
+var _ = Describe("Run", func() {
 	var client *runner.RunningGarden
 
 	AfterEach(func() {
