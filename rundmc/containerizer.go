@@ -99,7 +99,7 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 	defer log.Info("finished")
 
 	if err := c.depot.Create(log, spec.Handle, c.bundler.Generate(spec)); err != nil {
-		log.Error("create-failed", err)
+		log.Error("depot-create-failed", err)
 		return err
 	}
 
@@ -110,7 +110,7 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 	}
 
 	if err = c.runtime.Create(log, path, spec.Handle, garden.ProcessIO{}); err != nil {
-		log.Error("create-failed", err)
+		log.Error("runtime-create-failed", err)
 		return err
 	}
 
