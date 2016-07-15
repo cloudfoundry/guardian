@@ -2,18 +2,20 @@
 package kawasakifakes
 
 import (
+	"os"
 	"sync"
 
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/lager"
 )
 
-type FakeContainerApplier struct {
-	ApplyStub        func(logger lager.Logger, cfg kawasaki.NetworkConfig) error
+type FakeContainerConfigurer struct {
+	ApplyStub        func(logger lager.Logger, cfg kawasaki.NetworkConfig, netnsFD *os.File) error
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
-		logger lager.Logger
-		cfg    kawasaki.NetworkConfig
+		logger  lager.Logger
+		cfg     kawasaki.NetworkConfig
+		netnsFD *os.File
 	}
 	applyReturns struct {
 		result1 error
@@ -22,41 +24,42 @@ type FakeContainerApplier struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeContainerApplier) Apply(logger lager.Logger, cfg kawasaki.NetworkConfig) error {
+func (fake *FakeContainerConfigurer) Apply(logger lager.Logger, cfg kawasaki.NetworkConfig, netnsFD *os.File) error {
 	fake.applyMutex.Lock()
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
-		logger lager.Logger
-		cfg    kawasaki.NetworkConfig
-	}{logger, cfg})
-	fake.recordInvocation("Apply", []interface{}{logger, cfg})
+		logger  lager.Logger
+		cfg     kawasaki.NetworkConfig
+		netnsFD *os.File
+	}{logger, cfg, netnsFD})
+	fake.recordInvocation("Apply", []interface{}{logger, cfg, netnsFD})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(logger, cfg)
+		return fake.ApplyStub(logger, cfg, netnsFD)
 	} else {
 		return fake.applyReturns.result1
 	}
 }
 
-func (fake *FakeContainerApplier) ApplyCallCount() int {
+func (fake *FakeContainerConfigurer) ApplyCallCount() int {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
 	return len(fake.applyArgsForCall)
 }
 
-func (fake *FakeContainerApplier) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig) {
+func (fake *FakeContainerConfigurer) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, *os.File) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
-	return fake.applyArgsForCall[i].logger, fake.applyArgsForCall[i].cfg
+	return fake.applyArgsForCall[i].logger, fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].netnsFD
 }
 
-func (fake *FakeContainerApplier) ApplyReturns(result1 error) {
+func (fake *FakeContainerConfigurer) ApplyReturns(result1 error) {
 	fake.ApplyStub = nil
 	fake.applyReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeContainerApplier) Invocations() map[string][][]interface{} {
+func (fake *FakeContainerConfigurer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.applyMutex.RLock()
@@ -64,7 +67,7 @@ func (fake *FakeContainerApplier) Invocations() map[string][][]interface{} {
 	return fake.invocations
 }
 
-func (fake *FakeContainerApplier) recordInvocation(key string, args []interface{}) {
+func (fake *FakeContainerConfigurer) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -76,4 +79,4 @@ func (fake *FakeContainerApplier) recordInvocation(key string, args []interface{
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ kawasaki.ContainerApplier = new(FakeContainerApplier)
+var _ kawasaki.ContainerConfigurer = new(FakeContainerConfigurer)

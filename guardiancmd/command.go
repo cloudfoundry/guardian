@@ -225,10 +225,6 @@ func init() {
 }
 
 func (cmd *GuardianCommand) Execute([]string) error {
-	if reexec.Init() {
-		return nil
-	}
-
 	return <-ifrit.Invoke(sigmon.New(cmd)).Wait()
 }
 

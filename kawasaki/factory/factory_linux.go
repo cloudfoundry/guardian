@@ -7,7 +7,6 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki/configure"
 	"code.cloudfoundry.org/guardian/kawasaki/devices"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
-	"code.cloudfoundry.org/guardian/kawasaki/netns"
 )
 
 func NewDefaultConfigurer(ipt *iptables.IPTablesController) kawasaki.Configurer {
@@ -17,16 +16,13 @@ func NewDefaultConfigurer(ipt *iptables.IPTablesController) kawasaki.Configurer 
 		Bridge: &devices.Bridge{},
 	}
 
-	containerCfgApplier := &configure.Container{
-		Link: &devices.Link{},
-	}
+	containerConfigurer := &configure.Container{}
 
 	return kawasaki.NewConfigurer(
 		&kawasaki.ResolvFactory{},
 		hostConfigurer,
-		containerCfgApplier,
+		containerConfigurer,
 		iptables.NewInstanceChainCreator(ipt),
 		os.Open,
-		&netns.Execer{},
 	)
 }

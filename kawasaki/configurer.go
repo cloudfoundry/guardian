@@ -17,10 +17,9 @@ type NetnsExecer interface {
 type configurer struct {
 	resolvConfFactory    DnsResolvConfFactory
 	hostConfigurer       HostConfigurer
-	containerApplier     ContainerApplier
+	containerConfigurer  ContainerConfigurer
 	instanceChainCreator InstanceChainCreator
 	fileOpener           netns.Opener
-	nsExecer             NetnsExecer
 }
 
 //go:generate counterfeiter . HostConfigurer
@@ -35,9 +34,9 @@ type InstanceChainCreator interface {
 	Destroy(logger lager.Logger, instanceChain string) error
 }
 
-//go:generate counterfeiter . ContainerApplier
-type ContainerApplier interface {
-	Apply(logger lager.Logger, cfg NetworkConfig) error
+//go:generate counterfeiter . ContainerConfigurer
+type ContainerConfigurer interface {
+	Apply(logger lager.Logger, cfg NetworkConfig, netnsFD *os.File) error
 }
 
 //go:generate counterfeiter . DnsResolvConfigurer
@@ -50,14 +49,13 @@ type DnsResolvConfFactory interface {
 	CreateDNSResolvConfigurer(pid int, cfg NetworkConfig) (DnsResolvConfigurer, error)
 }
 
-func NewConfigurer(resolvConfFactory DnsResolvConfFactory, hostConfigurer HostConfigurer, containerApplier ContainerApplier, instanceChainCreator InstanceChainCreator, fileOpener netns.Opener, nsExecer NetnsExecer) *configurer {
+func NewConfigurer(resolvConfFactory DnsResolvConfFactory, hostConfigurer HostConfigurer, containerConfigurer ContainerConfigurer, instanceChainCreator InstanceChainCreator, fileOpener netns.Opener) *configurer {
 	return &configurer{
 		resolvConfFactory:    resolvConfFactory,
 		hostConfigurer:       hostConfigurer,
-		containerApplier:     containerApplier,
+		containerConfigurer:  containerConfigurer,
 		instanceChainCreator: instanceChainCreator,
 		fileOpener:           fileOpener,
-		nsExecer:             nsExecer,
 	}
 }
 
@@ -85,9 +83,7 @@ func (c *configurer) Apply(log lager.Logger, cfg NetworkConfig, pid int) error {
 		return err
 	}
 
-	return c.nsExecer.Exec(fd, func() error {
-		return c.containerApplier.Apply(log, cfg)
-	})
+	return c.containerConfigurer.Apply(log, cfg, fd)
 }
 
 func (c *configurer) DestroyBridge(log lager.Logger, cfg NetworkConfig) error {

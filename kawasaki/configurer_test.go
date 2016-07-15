@@ -21,12 +21,11 @@ import (
 
 var _ = Describe("Configurer", func() {
 	var (
-		fakeResolvConfFactory      *fakes.FakeDnsResolvConfFactory
-		fakeDnsResolvConfigurer    *fakes.FakeDnsResolvConfigurer
-		fakeHostConfigurer         *fakes.FakeHostConfigurer
-		fakeContainerConfigApplier *fakes.FakeContainerApplier
-		fakeInstanceChainCreator   *fakes.FakeInstanceChainCreator
-		fakeNsExecer               *fakes.FakeNetnsExecer
+		fakeResolvConfFactory    *fakes.FakeDnsResolvConfFactory
+		fakeDnsResolvConfigurer  *fakes.FakeDnsResolvConfigurer
+		fakeHostConfigurer       *fakes.FakeHostConfigurer
+		fakeContainerConfigurer  *fakes.FakeContainerConfigurer
+		fakeInstanceChainCreator *fakes.FakeInstanceChainCreator
 
 		dummyFileOpener netns.Opener
 
@@ -43,10 +42,8 @@ var _ = Describe("Configurer", func() {
 		fakeResolvConfFactory.CreateDNSResolvConfigurerReturns(fakeDnsResolvConfigurer, nil)
 
 		fakeHostConfigurer = new(fakes.FakeHostConfigurer)
-		fakeContainerConfigApplier = new(fakes.FakeContainerApplier)
+		fakeContainerConfigurer = new(fakes.FakeContainerConfigurer)
 		fakeInstanceChainCreator = new(fakes.FakeInstanceChainCreator)
-
-		fakeNsExecer = new(fakes.FakeNetnsExecer)
 
 		var err error
 		netnsFD, err = ioutil.TempFile("", "")
@@ -56,7 +53,7 @@ var _ = Describe("Configurer", func() {
 			return netnsFD, nil
 		}
 
-		configurer = kawasaki.NewConfigurer(fakeResolvConfFactory, fakeHostConfigurer, fakeContainerConfigApplier, fakeInstanceChainCreator, dummyFileOpener, fakeNsExecer)
+		configurer = kawasaki.NewConfigurer(fakeResolvConfFactory, fakeHostConfigurer, fakeContainerConfigurer, fakeInstanceChainCreator, dummyFileOpener)
 
 		logger = lagertest.NewTestLogger("test")
 	})
@@ -129,7 +126,7 @@ var _ = Describe("Configurer", func() {
 
 				It("does not configure the container", func() {
 					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
-					Expect(fakeContainerConfigApplier.ApplyCallCount()).To(Equal(0))
+					Expect(fakeContainerConfigurer.ApplyCallCount()).To(Equal(0))
 				})
 
 				It("does not configure IPTables", func() {
@@ -166,39 +163,25 @@ var _ = Describe("Configurer", func() {
 				})
 			})
 
-			It("calls the namespace execer and applies the configuration in the container", func() {
+			It("applies the configuration in the container", func() {
 				cfg := kawasaki.NetworkConfig{
 					ContainerIntf: "banana",
 				}
 
 				Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
 
-				Expect(fakeNsExecer.ExecCallCount()).To(Equal(1))
-				fd, cb := fakeNsExecer.ExecArgsForCall(0)
-				Expect(fd.Name()).To(Equal(netnsFD.Name()))
-
-				Expect(fakeContainerConfigApplier.ApplyCallCount()).To(Equal(0))
-				cb()
-				Expect(fakeContainerConfigApplier.ApplyCallCount()).To(Equal(1))
-
-				_, cfgArg := fakeContainerConfigApplier.ApplyArgsForCall(0)
+				Expect(fakeContainerConfigurer.ApplyCallCount()).To(Equal(1))
+				_, cfgArg, fd := fakeContainerConfigurer.ApplyArgsForCall(0)
 				Expect(cfgArg).To(Equal(cfg))
-			})
-
-			Context("if entering the namespace fails", func() {
-				It("returns the error", func() {
-					fakeNsExecer.ExecReturns(errors.New("boom"))
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
-				})
+				Expect(fd.Name()).To(Equal(netnsFD.Name()))
 			})
 
 			Context("if container configuration fails", func() {
-				It("returns the error", func() {
-					fakeNsExecer.ExecStub = func(_ *os.File, cb func() error) error {
-						return cb()
-					}
+				BeforeEach(func() {
+					fakeContainerConfigurer.ApplyReturns(errors.New("banana"))
+				})
 
-					fakeContainerConfigApplier.ApplyReturns(errors.New("banana"))
+				It("returns the error", func() {
 					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("banana"))
 				})
 			})
@@ -209,7 +192,7 @@ var _ = Describe("Configurer", func() {
 				dummyFileOpener = func(path string) (*os.File, error) {
 					return nil, errors.New("boom")
 				}
-				configurer = kawasaki.NewConfigurer(fakeResolvConfFactory, fakeHostConfigurer, fakeContainerConfigApplier, fakeInstanceChainCreator, dummyFileOpener, fakeNsExecer)
+				configurer = kawasaki.NewConfigurer(fakeResolvConfFactory, fakeHostConfigurer, fakeContainerConfigurer, fakeInstanceChainCreator, dummyFileOpener)
 			})
 
 			It("returns an error", func() {
@@ -221,7 +204,6 @@ var _ = Describe("Configurer", func() {
 				Expect(fakeHostConfigurer.ApplyCallCount()).To(Equal(0))
 			})
 		})
-
 	})
 
 	Describe("DestroyBridge", func() {
