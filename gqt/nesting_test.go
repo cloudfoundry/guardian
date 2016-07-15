@@ -31,9 +31,6 @@ var _ = Describe("When nested", func() {
 		absoluteRuncPath, err := filepath.Abs("/usr/local/bin/runc")
 		Expect(err).ToNot(HaveOccurred())
 
-		absoluteIODaemonPath, err := filepath.Abs(iodaemonBin)
-		Expect(err).ToNot(HaveOccurred())
-
 		absoluteDadooPath, err := filepath.Abs(dadooBin)
 		Expect(err).ToNot(HaveOccurred())
 
@@ -64,11 +61,6 @@ var _ = Describe("When nested", func() {
 				{
 					SrcPath: filepath.Dir(absoluteRuncPath),
 					DstPath: "/tmp/runc/",
-					Mode:    garden.BindMountModeRO,
-				},
-				{
-					SrcPath: filepath.Dir(absoluteIODaemonPath),
-					DstPath: "/tmp/iodaemon/",
 					Mode:    garden.BindMountModeRO,
 				},
 				{
@@ -128,7 +120,6 @@ var _ = Describe("When nested", func() {
 					--network-pool 10.254.6.0/22 \
 					--runc-bin /tmp/runc/runc \
 					--init-bin /tmp/init/init \
-					--iodaemon-bin /tmp/iodaemon/iodaemon \
 					--dadoo-bin /tmp/dadoo/dadoo \
 					--nstar-bin /tmp/nstar/nstar \
 					--port-pool-properties-path /tmp/network.props \
