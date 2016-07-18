@@ -15,10 +15,6 @@ import (
 var _ = Describe("Port Pool", func() {
 
 	Context("when the port pool is exhausted by container creation", func() {
-		const (
-			numContainers int = 5
-		)
-
 		var (
 			portPoolStart int
 			containers    []garden.Container
@@ -26,9 +22,10 @@ var _ = Describe("Port Pool", func() {
 			expectedPort  uint32
 			args          []string
 			propsPoolDir  string
+			numContainers int = 2
 		)
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			var err error
 			portPoolStart = GinkgoParallelNode() * 10000
 			propsPoolDir, err = ioutil.TempDir("", "portpool")
@@ -73,8 +70,11 @@ var _ = Describe("Port Pool", func() {
 		})
 
 		Context("and then all containers are destroyed", func() {
-
 			BeforeEach(func() {
+				numContainers = 3
+			})
+
+			JustBeforeEach(func() {
 				// Destroy containers in reverse order
 				for i := numContainers - 1; i >= 0; i-- {
 					Expect(client.Destroy(containers[i].Handle())).To(Succeed())
@@ -94,6 +94,10 @@ var _ = Describe("Port Pool", func() {
 
 			Context("when guardian is restarted", func() {
 				BeforeEach(func() {
+					numContainers = 3
+				})
+
+				JustBeforeEach(func() {
 					client.Stop()
 					client = startGarden(args...)
 				})

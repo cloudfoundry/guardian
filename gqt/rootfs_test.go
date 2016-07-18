@@ -191,7 +191,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 								RootFSPath: fmt.Sprintf("docker://%s:%s/busybox", dockerRegistryIP,
 									dockerRegistryPort),
 								// This container does not need to be privileged. However,
-								// Guardian cannot create non-privileged containers that use
+								// Garden-Runc cannot create non-privileged containers that use
 								// docker:///busybox. It turns out that runC fails to create
 								// `/proc` inside the container.
 								Privileged: true,

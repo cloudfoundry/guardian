@@ -225,9 +225,9 @@ var _ = Describe("Creating a Container", func() {
 
 		It("provides the containers with the right rootfs", func() {
 			Expect(container).To(HaveFile("/my-file"))
-		})
 
-		It("isolates the filesystem properly for multiple containers", func() {
+			By("Isolating the filesystem propertly for multiple containers")
+
 			runCommand(container, "touch", []string{"/somedir/created-file"})
 			Expect(container).To(HaveFile("/somedir/created-file"))
 

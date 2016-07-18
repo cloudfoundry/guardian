@@ -92,9 +92,6 @@ var _ = Describe("Properties", func() {
 	})
 
 	It("can get the default properties", func() {
-		container, err := client.Create(garden.ContainerSpec{})
-		Expect(err).ToNot(HaveOccurred())
-
 		props, err := container.Properties()
 		Expect(err).ToNot(HaveOccurred())
 
