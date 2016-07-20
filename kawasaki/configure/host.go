@@ -1,6 +1,7 @@
 package configure
 
 import (
+	"fmt"
 	"net"
 	"os"
 
@@ -25,9 +26,13 @@ type Host struct {
 		Add(bridge, slave *net.Interface) error
 		Destroy(bridgeName string) error
 	}
+
+	FileOpener interface {
+		Open(path string) (*os.File, error)
+	}
 }
 
-func (c *Host) Apply(logger lager.Logger, config kawasaki.NetworkConfig, netns *os.File) error {
+func (c *Host) Apply(logger lager.Logger, config kawasaki.NetworkConfig, pid int) error {
 	var (
 		err       error
 		host      *net.Interface
@@ -42,7 +47,7 @@ func (c *Host) Apply(logger lager.Logger, config kawasaki.NetworkConfig, netns *
 		"containerIface": config.ContainerIntf,
 		"hostIface":      config.HostIntf,
 		"mtu":            config.Mtu,
-		"netns":          netns,
+		"pid":            pid,
 	})
 
 	cLog.Debug("configuring")
@@ -58,6 +63,12 @@ func (c *Host) Apply(logger lager.Logger, config kawasaki.NetworkConfig, netns *
 	if err = c.configureHostIntf(cLog, host, bridge, config.Mtu); err != nil {
 		return err
 	}
+
+	netns, err := c.FileOpener.Open(fmt.Sprintf("/proc/%d/ns/net", pid))
+	if err != nil {
+		return err
+	}
+	defer netns.Close()
 
 	// move container end in to container
 	if err = c.Link.SetNs(container, int(netns.Fd())); err != nil {

@@ -9,10 +9,12 @@ import (
 )
 
 type FakeDnsResolvConfigurer struct {
-	ConfigureStub        func(log lager.Logger) error
+	ConfigureStub        func(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error
 	configureMutex       sync.RWMutex
 	configureArgsForCall []struct {
 		log lager.Logger
+		cfg kawasaki.NetworkConfig
+		pid int
 	}
 	configureReturns struct {
 		result1 error
@@ -21,15 +23,17 @@ type FakeDnsResolvConfigurer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDnsResolvConfigurer) Configure(log lager.Logger) error {
+func (fake *FakeDnsResolvConfigurer) Configure(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
 	fake.configureMutex.Lock()
 	fake.configureArgsForCall = append(fake.configureArgsForCall, struct {
 		log lager.Logger
-	}{log})
-	fake.recordInvocation("Configure", []interface{}{log})
+		cfg kawasaki.NetworkConfig
+		pid int
+	}{log, cfg, pid})
+	fake.recordInvocation("Configure", []interface{}{log, cfg, pid})
 	fake.configureMutex.Unlock()
 	if fake.ConfigureStub != nil {
-		return fake.ConfigureStub(log)
+		return fake.ConfigureStub(log, cfg, pid)
 	} else {
 		return fake.configureReturns.result1
 	}
@@ -41,10 +45,10 @@ func (fake *FakeDnsResolvConfigurer) ConfigureCallCount() int {
 	return len(fake.configureArgsForCall)
 }
 
-func (fake *FakeDnsResolvConfigurer) ConfigureArgsForCall(i int) lager.Logger {
+func (fake *FakeDnsResolvConfigurer) ConfigureArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, int) {
 	fake.configureMutex.RLock()
 	defer fake.configureMutex.RUnlock()
-	return fake.configureArgsForCall[i].log
+	return fake.configureArgsForCall[i].log, fake.configureArgsForCall[i].cfg, fake.configureArgsForCall[i].pid
 }
 
 func (fake *FakeDnsResolvConfigurer) ConfigureReturns(result1 error) {

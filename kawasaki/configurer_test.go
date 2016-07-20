@@ -2,12 +2,9 @@ package kawasaki_test
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
-	"os/exec"
-	"strings"
 
 	"code.cloudfoundry.org/guardian/kawasaki"
 	fakes "code.cloudfoundry.org/guardian/kawasaki/kawasakifakes"
@@ -21,7 +18,6 @@ import (
 
 var _ = Describe("Configurer", func() {
 	var (
-		fakeResolvConfFactory    *fakes.FakeDnsResolvConfFactory
 		fakeDnsResolvConfigurer  *fakes.FakeDnsResolvConfigurer
 		fakeHostConfigurer       *fakes.FakeHostConfigurer
 		fakeContainerConfigurer  *fakes.FakeContainerConfigurer
@@ -37,9 +33,7 @@ var _ = Describe("Configurer", func() {
 	)
 
 	BeforeEach(func() {
-		fakeResolvConfFactory = new(fakes.FakeDnsResolvConfFactory)
 		fakeDnsResolvConfigurer = new(fakes.FakeDnsResolvConfigurer)
-		fakeResolvConfFactory.CreateDNSResolvConfigurerReturns(fakeDnsResolvConfigurer, nil)
 
 		fakeHostConfigurer = new(fakes.FakeHostConfigurer)
 		fakeContainerConfigurer = new(fakes.FakeContainerConfigurer)
@@ -53,7 +47,7 @@ var _ = Describe("Configurer", func() {
 			return netnsFD, nil
 		}
 
-		configurer = kawasaki.NewConfigurer(fakeResolvConfFactory, fakeHostConfigurer, fakeContainerConfigurer, fakeInstanceChainCreator, dummyFileOpener)
+		configurer = kawasaki.NewConfigurer(fakeDnsResolvConfigurer, fakeHostConfigurer, fakeContainerConfigurer, fakeInstanceChainCreator)
 
 		logger = lagertest.NewTestLogger("test")
 	})
@@ -64,18 +58,11 @@ var _ = Describe("Configurer", func() {
 
 	Describe("Apply", func() {
 		It("configures dns", func() {
-			Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(Succeed())
+			Expect(configurer.Apply(logger, kawasaki.NetworkConfig{ContainerHandle: "h"}, 42)).To(Succeed())
 			Expect(fakeDnsResolvConfigurer.ConfigureCallCount()).To(Equal(1))
-		})
-
-		Context("when CreateDNSResolvConfigurer returns an error", func() {
-			BeforeEach(func() {
-				fakeResolvConfFactory.CreateDNSResolvConfigurerReturns(nil, errors.New("baboom"))
-			})
-
-			It("returns the error", func() {
-				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("baboom"))
-			})
+			_, cfg, pid := fakeDnsResolvConfigurer.ConfigureArgsForCall(0)
+			Expect(cfg).To(Equal(kawasaki.NetworkConfig{ContainerHandle: "h"}))
+			Expect(pid).To(Equal(42))
 		})
 
 		Context("when resolv configuration fails", func() {
@@ -85,123 +72,87 @@ var _ = Describe("Configurer", func() {
 			})
 		})
 
-		Context("when the ns path can be opened", func() {
-			It("closes the file descriptor of the ns path", func() {
-				cfg := kawasaki.NetworkConfig{
-					ContainerIntf: "banana",
-				}
+		It("applies the configuration in the host", func() {
+			cfg := kawasaki.NetworkConfig{
+				ContainerIntf: "banana",
+			}
 
-				command := fmt.Sprintf("lsof %s | wc -l", netnsFD.Name())
-				output, err := exec.Command("sh", "-c", command).Output()
-				Expect(err).NotTo(HaveOccurred())
+			Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
 
-				Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
-				output, err = exec.Command("sh", "-c", command).Output()
-				Expect(err).NotTo(HaveOccurred())
+			Expect(fakeHostConfigurer.ApplyCallCount()).To(Equal(1))
+			_, appliedCfg, pid := fakeHostConfigurer.ApplyArgsForCall(0)
+			Expect(appliedCfg).To(Equal(cfg))
+			Expect(pid).To(Equal(42))
+		})
 
-				Expect(strings.TrimSpace(string(output))).To(Equal("0"))
+		Context("if applying the host config fails", func() {
+			BeforeEach(func() {
+				fakeHostConfigurer.ApplyReturns(errors.New("boom"))
 			})
 
-			It("applies the configuration in the host", func() {
-				cfg := kawasaki.NetworkConfig{
-					ContainerIntf: "banana",
-				}
-
-				Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
-
-				Expect(fakeHostConfigurer.ApplyCallCount()).To(Equal(1))
-				_, appliedCfg, fd := fakeHostConfigurer.ApplyArgsForCall(0)
-				Expect(appliedCfg).To(Equal(cfg))
-				Expect(fd.Name()).To(Equal(netnsFD.Name()))
+			It("returns the error", func() {
+				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
 			})
 
-			Context("if applying the host config fails", func() {
-				BeforeEach(func() {
-					fakeHostConfigurer.ApplyReturns(errors.New("boom"))
-				})
-
-				It("returns the error", func() {
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
-				})
-
-				It("does not configure the container", func() {
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
-					Expect(fakeContainerConfigurer.ApplyCallCount()).To(Equal(0))
-				})
-
-				It("does not configure IPTables", func() {
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
-					Expect(fakeInstanceChainCreator.CreateCallCount()).To(Equal(0))
-				})
+			It("does not configure the container", func() {
+				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
+				Expect(fakeContainerConfigurer.ApplyCallCount()).To(Equal(0))
 			})
 
-			It("applies the iptable configuration", func() {
-				_, subnet, _ := net.ParseCIDR("1.2.3.4/5")
-				cfg := kawasaki.NetworkConfig{
-					IPTablePrefix:   "the-iptable",
-					IPTableInstance: "instance",
-					BridgeName:      "the-bridge-name",
-					ContainerIP:     net.ParseIP("1.2.3.4"),
-					ContainerHandle: "some-handle",
-					Subnet:          subnet,
-				}
-
-				Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
-				Expect(fakeInstanceChainCreator.CreateCallCount()).To(Equal(1))
-				_, handle, instanceChain, bridgeName, ip, subnet := fakeInstanceChainCreator.CreateArgsForCall(0)
-				Expect(handle).To(Equal("some-handle"))
-				Expect(instanceChain).To(Equal("instance"))
-				Expect(bridgeName).To(Equal("the-bridge-name"))
-				Expect(ip).To(Equal(net.ParseIP("1.2.3.4")))
-				Expect(subnet).To(Equal(subnet))
-			})
-
-			Context("when applying IPTables configuration fails", func() {
-				It("returns the error", func() {
-					fakeInstanceChainCreator.CreateReturns(errors.New("oh no"))
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("oh no"))
-				})
-			})
-
-			It("applies the configuration in the container", func() {
-				cfg := kawasaki.NetworkConfig{
-					ContainerIntf: "banana",
-				}
-
-				Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
-
-				Expect(fakeContainerConfigurer.ApplyCallCount()).To(Equal(1))
-				_, cfgArg, fd := fakeContainerConfigurer.ApplyArgsForCall(0)
-				Expect(cfgArg).To(Equal(cfg))
-				Expect(fd.Name()).To(Equal(netnsFD.Name()))
-			})
-
-			Context("if container configuration fails", func() {
-				BeforeEach(func() {
-					fakeContainerConfigurer.ApplyReturns(errors.New("banana"))
-				})
-
-				It("returns the error", func() {
-					Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("banana"))
-				})
+			It("does not configure IPTables", func() {
+				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("boom"))
+				Expect(fakeInstanceChainCreator.CreateCallCount()).To(Equal(0))
 			})
 		})
 
-		Context("when the ns path cannot be opened", func() {
+		It("applies the iptable configuration", func() {
+			_, subnet, _ := net.ParseCIDR("1.2.3.4/5")
+			cfg := kawasaki.NetworkConfig{
+				IPTablePrefix:   "the-iptable",
+				IPTableInstance: "instance",
+				BridgeName:      "the-bridge-name",
+				ContainerIP:     net.ParseIP("1.2.3.4"),
+				ContainerHandle: "some-handle",
+				Subnet:          subnet,
+			}
+
+			Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
+			Expect(fakeInstanceChainCreator.CreateCallCount()).To(Equal(1))
+			_, handle, instanceChain, bridgeName, ip, subnet := fakeInstanceChainCreator.CreateArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+			Expect(instanceChain).To(Equal("instance"))
+			Expect(bridgeName).To(Equal("the-bridge-name"))
+			Expect(ip).To(Equal(net.ParseIP("1.2.3.4")))
+			Expect(subnet).To(Equal(subnet))
+		})
+
+		Context("when applying IPTables configuration fails", func() {
+			It("returns the error", func() {
+				fakeInstanceChainCreator.CreateReturns(errors.New("oh no"))
+				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("oh no"))
+			})
+		})
+
+		It("applies the configuration in the container", func() {
+			cfg := kawasaki.NetworkConfig{
+				ContainerIntf: "banana",
+			}
+
+			Expect(configurer.Apply(logger, cfg, 42)).To(Succeed())
+
+			Expect(fakeContainerConfigurer.ApplyCallCount()).To(Equal(1))
+			_, cfgArg, pid := fakeContainerConfigurer.ApplyArgsForCall(0)
+			Expect(cfgArg).To(Equal(cfg))
+			Expect(pid).To(Equal(42))
+		})
+
+		Context("if container configuration fails", func() {
 			BeforeEach(func() {
-				dummyFileOpener = func(path string) (*os.File, error) {
-					return nil, errors.New("boom")
-				}
-				configurer = kawasaki.NewConfigurer(fakeResolvConfFactory, fakeHostConfigurer, fakeContainerConfigurer, fakeInstanceChainCreator, dummyFileOpener)
+				fakeContainerConfigurer.ApplyReturns(errors.New("banana"))
 			})
 
-			It("returns an error", func() {
-				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 13)).To(MatchError("boom"))
-			})
-
-			It("does not configure anything", func() {
-				configurer.Apply(logger, kawasaki.NetworkConfig{}, 13)
-				Expect(fakeHostConfigurer.ApplyCallCount()).To(Equal(0))
+			It("returns the error", func() {
+				Expect(configurer.Apply(logger, kawasaki.NetworkConfig{}, 42)).To(MatchError("banana"))
 			})
 		})
 	})

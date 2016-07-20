@@ -18,18 +18,15 @@ var _ = Describe("ResolvFileCompiler", func() {
 		hostResolvConfPath string
 
 		log      lager.Logger
+		hostIp   net.IP
 		compiler *dns.ResolvFileCompiler
 	)
 
 	BeforeEach(func() {
 		log = lagertest.NewTestLogger("test")
-	})
+		hostIp = net.ParseIP("254.253.252.251")
 
-	JustBeforeEach(func() {
-		compiler = &dns.ResolvFileCompiler{
-			HostResolvConfPath: hostResolvConfPath,
-			HostIP:             net.ParseIP("254.253.252.251"),
-		}
+		compiler = &dns.ResolvFileCompiler{}
 	})
 
 	writeFile := func(filePath, contents string) {
@@ -47,7 +44,7 @@ var _ = Describe("ResolvFileCompiler", func() {
 		})
 
 		It("should return an error", func() {
-			_, err := compiler.Compile(log)
+			_, err := compiler.Compile(log, hostResolvConfPath, hostIp, nil)
 			Expect(err).To(MatchError(ContainSubstring(("reading file '/does/not/exist.conf'"))))
 		})
 	})
@@ -65,13 +62,12 @@ var _ = Describe("ResolvFileCompiler", func() {
 
 		Context("and explicit overrides are given", func() {
 			It("should make the container use given DNS servers", func() {
-				compiler.OverrideServers = []net.IP{
+				overrideServers := []net.IP{
 					net.ParseIP("8.8.8.8"),
 					net.ParseIP("8.8.4.4"),
 				}
 
-				Expect(compiler.OverrideServers).NotTo(BeEmpty())
-				contents, err := compiler.Compile(log)
+				contents, err := compiler.Compile(log, hostResolvConfPath, hostIp, overrideServers)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(string(contents)).To(Equal("nameserver 8.8.8.8\nnameserver 8.8.4.4\n"))
@@ -84,7 +80,7 @@ var _ = Describe("ResolvFileCompiler", func() {
 			})
 
 			It("should make the container use host DNS", func() {
-				contents, err := compiler.Compile(log)
+				contents, err := compiler.Compile(log, hostResolvConfPath, hostIp, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(string(contents)).To(Equal("nameserver 254.253.252.251\n"))
@@ -100,7 +96,7 @@ var _ = Describe("ResolvFileCompiler", func() {
 			})
 
 			It("should copy the host's resolv.conf", func() {
-				contents, err := compiler.Compile(log)
+				contents, err := compiler.Compile(log, hostResolvConfPath, hostIp, nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(string(contents)).To(Equal(resolvConfContents))

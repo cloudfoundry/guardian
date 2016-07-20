@@ -11,35 +11,31 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type ResolvFileCompiler struct {
-	HostResolvConfPath string
-	HostIP             net.IP
-	OverrideServers    []net.IP
-}
+type ResolvFileCompiler struct{}
 
-func (r *ResolvFileCompiler) Compile(log lager.Logger) ([]byte, error) {
+func (r *ResolvFileCompiler) Compile(log lager.Logger, resolvConfPath string, hostIP net.IP, overrideServers []net.IP) ([]byte, error) {
 	log = log.Session("resolv-file-compile", lager.Data{
-		"HostResolvConfPath": r.HostResolvConfPath,
-		"HostIP":             r.HostIP,
-		"OverrideServers":    r.OverrideServers,
+		"HostResolvConfPath": resolvConfPath,
+		"HostIP":             hostIP,
+		"OverrideServers":    overrideServers,
 	})
 
-	f, err := os.Open(r.HostResolvConfPath)
+	f, err := os.Open(resolvConfPath)
 	if err != nil {
 		log.Error("reading-host-resolv-conf", err)
-		return nil, fmt.Errorf("reading file '%s': %s", r.HostResolvConfPath, err)
+		return nil, fmt.Errorf("reading file '%s': %s", resolvConfPath, err)
 	}
 	defer f.Close()
 
 	contents, err := ioutil.ReadAll(f)
 	if err != nil {
 		log.Error("reading-host-resolv-conf", err)
-		return nil, fmt.Errorf("reading file '%s': %s", r.HostResolvConfPath, err)
+		return nil, fmt.Errorf("reading file '%s': %s", resolvConfPath, err)
 	}
 
-	if len(r.OverrideServers) > 0 {
+	if len(overrideServers) > 0 {
 		var buf bytes.Buffer
-		for _, name := range r.OverrideServers {
+		for _, name := range overrideServers {
 			fmt.Fprintf(&buf, "nameserver %s\n", name.String())
 		}
 		return buf.Bytes(), nil
@@ -52,7 +48,7 @@ func (r *ResolvFileCompiler) Compile(log lager.Logger) ([]byte, error) {
 	}
 
 	if matches {
-		return []byte(fmt.Sprintf("nameserver %s\n", r.HostIP.String())), nil
+		return []byte(fmt.Sprintf("nameserver %s\n", hostIP.String())), nil
 	}
 	return contents, nil
 }

@@ -86,9 +86,16 @@ func init() {
 }
 
 type Container struct {
+	FileOpener netns.Opener
 }
 
-func (c *Container) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, netns *os.File) error {
+func (c *Container) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
+	netns, err := c.FileOpener.Open(fmt.Sprintf("/proc/%d/ns/net", pid))
+	if err != nil {
+		return err
+	}
+	defer netns.Close()
+
 	log = log.Session("configure-container-netns", lager.Data{
 		"networkConfig": cfg,
 		"netNsPath":     netns.Name(),

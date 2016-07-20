@@ -34,14 +34,8 @@ var _ = Describe("RootfsWriter", func() {
 	BeforeEach(func() {
 		rootUid = 40000
 		rootGid = 40001
-	})
 
-	JustBeforeEach(func() {
-		rootfsWriter = &dns.RootfsWriter{
-			RootfsPath: rootfsPath,
-			RootUid:    rootUid,
-			RootGid:    rootGid,
-		}
+		rootfsWriter = &dns.RootfsWriter{}
 
 		log = lagertest.NewTestLogger("test")
 	})
@@ -60,7 +54,7 @@ var _ = Describe("RootfsWriter", func() {
 			})
 
 			It("should write the file there", func() {
-				Expect(rootfsWriter.WriteFile(log, "/test/file.txt", []byte("Hello world"))).To(Succeed())
+				Expect(rootfsWriter.WriteFile(log, "/test/file.txt", []byte("Hello world"), rootfsPath, rootUid, rootGid)).To(Succeed())
 
 				filePath := filepath.Join(rootfsPath, "test/file.txt")
 				Expect(filePath).To(BeARegularFile())
@@ -74,12 +68,12 @@ var _ = Describe("RootfsWriter", func() {
 
 			It("should apply the correct ownership", func() {
 				filePath := filepath.Join(rootfsPath, "/test/file.txt")
-				Expect(rootfsWriter.WriteFile(log, "/test/file.txt", []byte("Hello world"))).To(Succeed())
+				Expect(rootfsWriter.WriteFile(log, "/test/file.txt", []byte("Hello world"), rootfsPath, rootUid, rootGid)).To(Succeed())
 
 				stat, err := os.Stat(filePath)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(BeEquivalentTo(40000))
-				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(BeEquivalentTo(40001))
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(BeEquivalentTo(rootUid))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(BeEquivalentTo(rootGid))
 			})
 
 			Context("when the file path is a symlink", func() {
@@ -97,7 +91,7 @@ var _ = Describe("RootfsWriter", func() {
 				})
 
 				It("is resolved relative to the root path", func() {
-					Expect(rootfsWriter.WriteFile(log, "/symlink/file.txt", []byte("Hello world"))).To(Succeed())
+					Expect(rootfsWriter.WriteFile(log, "/symlink/file.txt", []byte("Hello world"), rootfsPath, rootUid, rootGid)).To(Succeed())
 					Expect(filepath.Join(target, "file.txt")).NotTo(BeAnExistingFile())
 				})
 			})
