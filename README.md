@@ -1,5 +1,7 @@
 # Guardian
 
+**Note**: This repository should be imported as `code.cloudfoundry.org/guardian`.
+
 A simple single-host OCI container manager.
 
 ## Developing and Deploying Guardian
