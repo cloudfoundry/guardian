@@ -13,11 +13,7 @@ import (
 	"github.com/docker/docker/pkg/reexec"
 )
 
-type RootfsWriter struct {
-	RootfsPath string
-	RootUid    int
-	RootGid    int
-}
+type RootfsWriter struct{}
 
 func init() {
 	reexec.Register("chrootwrite", func() {
@@ -42,24 +38,19 @@ func init() {
 			panic(err)
 		}
 
-		w := RootfsWriter{
-			RootfsPath: rootfs,
-			RootUid:    uid,
-			RootGid:    gid,
-		}
-
-		if err := w.writeFile(lager.NewLogger("chroot-write"), path, contents.Bytes()); err != nil {
+		w := RootfsWriter{}
+		if err := w.writeFile(lager.NewLogger("chroot-write"), path, contents.Bytes(), rootfs, uid, gid); err != nil {
 			panic(err)
 		}
 	})
 }
 
-func (r *RootfsWriter) WriteFile(log lager.Logger, filePath string, contents []byte) error {
+func (r *RootfsWriter) WriteFile(log lager.Logger, filePath string, contents []byte, rootfsPath string, rootUid, rootGid int) error {
 	cmd := reexec.Command("chrootwrite",
-		"-rootfs", r.RootfsPath,
+		"-rootfs", rootfsPath,
 		"-path", filePath,
-		"-uid", strconv.Itoa(r.RootUid),
-		"-gid", strconv.Itoa(r.RootGid),
+		"-uid", strconv.Itoa(rootUid),
+		"-gid", strconv.Itoa(rootGid),
 	)
 
 	stdin, err := cmd.StdinPipe()
@@ -82,12 +73,12 @@ func (r *RootfsWriter) WriteFile(log lager.Logger, filePath string, contents []b
 	return cmd.Wait()
 }
 
-func (r *RootfsWriter) writeFile(log lager.Logger, filePath string, contents []byte) error {
+func (r *RootfsWriter) writeFile(log lager.Logger, filePath string, contents []byte, rootfs string, uid, gid int) error {
 	log = log.Session("rootfs-write-file", lager.Data{
-		"rootfs":  r.RootfsPath,
+		"rootfs":  rootfs,
 		"path":    filePath,
-		"rootUid": r.RootUid,
-		"rootGit": r.RootGid,
+		"rootUid": uid,
+		"rootGit": gid,
 	})
 
 	log.Info("write")
@@ -109,7 +100,7 @@ func (r *RootfsWriter) writeFile(log lager.Logger, filePath string, contents []b
 		return err
 	}
 
-	if err := os.Chown(filePath, r.RootUid, r.RootGid); err != nil {
+	if err := os.Chown(filePath, uid, gid); err != nil {
 		log.Error("chowing-file", err)
 		return err
 	}

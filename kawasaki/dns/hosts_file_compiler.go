@@ -8,11 +8,9 @@ import (
 )
 
 type HostsFileCompiler struct {
-	Handle string
-	IP     net.IP
 }
 
-func (h *HostsFileCompiler) Compile(log lager.Logger) ([]byte, error) {
-	contents := fmt.Sprintf("127.0.0.1 localhost\n%s %s\n", h.IP, h.Handle)
+func (h *HostsFileCompiler) Compile(log lager.Logger, ip net.IP, handle string) ([]byte, error) {
+	contents := fmt.Sprintf("127.0.0.1 localhost\n%s %s\n", ip, handle)
 	return []byte(contents), nil
 }

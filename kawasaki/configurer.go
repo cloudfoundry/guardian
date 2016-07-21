@@ -1,7 +1,6 @@
 package kawasaki
 
 import (
-	"fmt"
 	"net"
 	"os"
 
@@ -15,7 +14,7 @@ type NetnsExecer interface {
 }
 
 type configurer struct {
-	resolvConfFactory    DnsResolvConfFactory
+	dnsResolvConfigurer  DnsResolvConfigurer
 	hostConfigurer       HostConfigurer
 	containerConfigurer  ContainerConfigurer
 	instanceChainCreator InstanceChainCreator
@@ -24,7 +23,7 @@ type configurer struct {
 
 //go:generate counterfeiter . HostConfigurer
 type HostConfigurer interface {
-	Apply(logger lager.Logger, cfg NetworkConfig, netnsFD *os.File) error
+	Apply(logger lager.Logger, cfg NetworkConfig, pid int) error
 	Destroy(cfg NetworkConfig) error
 }
 
@@ -36,46 +35,29 @@ type InstanceChainCreator interface {
 
 //go:generate counterfeiter . ContainerConfigurer
 type ContainerConfigurer interface {
-	Apply(logger lager.Logger, cfg NetworkConfig, netnsFD *os.File) error
+	Apply(logger lager.Logger, cfg NetworkConfig, pid int) error
 }
 
 //go:generate counterfeiter . DnsResolvConfigurer
 type DnsResolvConfigurer interface {
-	Configure(log lager.Logger) error
+	Configure(log lager.Logger, cfg NetworkConfig, pid int) error
 }
 
-//go:generate counterfeiter . DnsResolvConfFactory
-type DnsResolvConfFactory interface {
-	CreateDNSResolvConfigurer(pid int, cfg NetworkConfig) (DnsResolvConfigurer, error)
-}
-
-func NewConfigurer(resolvConfFactory DnsResolvConfFactory, hostConfigurer HostConfigurer, containerConfigurer ContainerConfigurer, instanceChainCreator InstanceChainCreator, fileOpener netns.Opener) *configurer {
+func NewConfigurer(resolvConfigurer DnsResolvConfigurer, hostConfigurer HostConfigurer, containerConfigurer ContainerConfigurer, instanceChainCreator InstanceChainCreator) *configurer {
 	return &configurer{
-		resolvConfFactory:    resolvConfFactory,
+		dnsResolvConfigurer:  resolvConfigurer,
 		hostConfigurer:       hostConfigurer,
 		containerConfigurer:  containerConfigurer,
 		instanceChainCreator: instanceChainCreator,
-		fileOpener:           fileOpener,
 	}
 }
 
 func (c *configurer) Apply(log lager.Logger, cfg NetworkConfig, pid int) error {
-	dnsResolvConfigurer, err := c.resolvConfFactory.CreateDNSResolvConfigurer(pid, cfg)
-	if err != nil {
+	if err := c.dnsResolvConfigurer.Configure(log, cfg, pid); err != nil {
 		return err
 	}
 
-	if err := dnsResolvConfigurer.Configure(log); err != nil {
-		return err
-	}
-
-	fd, err := c.fileOpener.Open(fmt.Sprintf("/proc/%d/ns/net", pid))
-	if err != nil {
-		return err
-	}
-	defer fd.Close()
-
-	if err := c.hostConfigurer.Apply(log, cfg, fd); err != nil {
+	if err := c.hostConfigurer.Apply(log, cfg, pid); err != nil {
 		return err
 	}
 
@@ -83,7 +65,7 @@ func (c *configurer) Apply(log lager.Logger, cfg NetworkConfig, pid int) error {
 		return err
 	}
 
-	return c.containerConfigurer.Apply(log, cfg, fd)
+	return c.containerConfigurer.Apply(log, cfg, pid)
 }
 
 func (c *configurer) DestroyBridge(log lager.Logger, cfg NetworkConfig) error {

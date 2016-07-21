@@ -2,7 +2,6 @@
 package kawasakifakes
 
 import (
-	"os"
 	"sync"
 
 	"code.cloudfoundry.org/guardian/kawasaki"
@@ -10,12 +9,12 @@ import (
 )
 
 type FakeContainerConfigurer struct {
-	ApplyStub        func(logger lager.Logger, cfg kawasaki.NetworkConfig, netnsFD *os.File) error
+	ApplyStub        func(logger lager.Logger, cfg kawasaki.NetworkConfig, pid int) error
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
-		logger  lager.Logger
-		cfg     kawasaki.NetworkConfig
-		netnsFD *os.File
+		logger lager.Logger
+		cfg    kawasaki.NetworkConfig
+		pid    int
 	}
 	applyReturns struct {
 		result1 error
@@ -24,17 +23,17 @@ type FakeContainerConfigurer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeContainerConfigurer) Apply(logger lager.Logger, cfg kawasaki.NetworkConfig, netnsFD *os.File) error {
+func (fake *FakeContainerConfigurer) Apply(logger lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
 	fake.applyMutex.Lock()
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
-		logger  lager.Logger
-		cfg     kawasaki.NetworkConfig
-		netnsFD *os.File
-	}{logger, cfg, netnsFD})
-	fake.recordInvocation("Apply", []interface{}{logger, cfg, netnsFD})
+		logger lager.Logger
+		cfg    kawasaki.NetworkConfig
+		pid    int
+	}{logger, cfg, pid})
+	fake.recordInvocation("Apply", []interface{}{logger, cfg, pid})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(logger, cfg, netnsFD)
+		return fake.ApplyStub(logger, cfg, pid)
 	} else {
 		return fake.applyReturns.result1
 	}
@@ -46,10 +45,10 @@ func (fake *FakeContainerConfigurer) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
-func (fake *FakeContainerConfigurer) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, *os.File) {
+func (fake *FakeContainerConfigurer) ApplyArgsForCall(i int) (lager.Logger, kawasaki.NetworkConfig, int) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
-	return fake.applyArgsForCall[i].logger, fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].netnsFD
+	return fake.applyArgsForCall[i].logger, fake.applyArgsForCall[i].cfg, fake.applyArgsForCall[i].pid
 }
 
 func (fake *FakeContainerConfigurer) ApplyReturns(result1 error) {

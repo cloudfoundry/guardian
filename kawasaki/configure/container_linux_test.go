@@ -12,6 +12,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/configure"
+	"code.cloudfoundry.org/guardian/kawasaki/netns"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -59,7 +60,11 @@ var _ = Describe("Container", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 
-		configurer = &configure.Container{}
+		configurer = &configure.Container{
+			FileOpener: netns.Opener(func(path string) (*os.File, error) {
+				return netNsFd, nil
+			}),
+		}
 
 		logger = lagertest.NewTestLogger("container")
 
@@ -81,25 +86,25 @@ var _ = Describe("Container", func() {
 	})
 
 	It("sets the container IP", func() {
-		Expect(configurer.Apply(logger, networkConfig, netNsFd)).To(Succeed())
+		Expect(configurer.Apply(logger, networkConfig, 42)).To(Succeed())
 
 		Expect(linkIP(netNsName, linkName)).To(Equal(networkConfig.ContainerIP.String()))
 	})
 
 	It("brings the link up", func() {
-		Expect(configurer.Apply(logger, networkConfig, netNsFd)).To(Succeed())
+		Expect(configurer.Apply(logger, networkConfig, 42)).To(Succeed())
 
 		Expect(linkUp(netNsName, linkName)).To(BeTrue())
 	})
 
 	It("sets the default gateway", func() {
-		Expect(configurer.Apply(logger, networkConfig, netNsFd)).To(Succeed())
+		Expect(configurer.Apply(logger, networkConfig, 42)).To(Succeed())
 
 		Expect(linkDefaultGW(netNsName, linkName)).To(Equal(networkConfig.BridgeIP.String()))
 	})
 
 	It("sets the MTU", func() {
-		Expect(configurer.Apply(logger, networkConfig, netNsFd)).To(Succeed())
+		Expect(configurer.Apply(logger, networkConfig, 42)).To(Succeed())
 
 		Expect(linkMTU(netNsName, linkName)).To(Equal(networkConfig.Mtu))
 	})
@@ -114,7 +119,7 @@ var _ = Describe("Container", func() {
 		})
 
 		It("returns the error", func() {
-			err := configurer.Apply(logger, networkConfig, netNsFd)
+			err := configurer.Apply(logger, networkConfig, 42)
 			Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("opening netns `%s`", netNsFd.Name()))))
 		})
 	})
@@ -127,7 +132,7 @@ var _ = Describe("Container", func() {
 		})
 
 		It("returns the error", func() {
-			err := configurer.Apply(logger, networkConfig, netNsFd)
+			err := configurer.Apply(logger, networkConfig, 42)
 			Expect(err).To(MatchError(ContainSubstring("set netns")))
 		})
 	})
@@ -138,7 +143,7 @@ var _ = Describe("Container", func() {
 		})
 
 		It("returns the error", func() {
-			err := configurer.Apply(logger, networkConfig, netNsFd)
+			err := configurer.Apply(logger, networkConfig, 42)
 			Expect(err).To(MatchError("interface `not-a-link` was not found"))
 		})
 	})

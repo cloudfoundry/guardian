@@ -92,24 +92,11 @@ func (fn UidGeneratorFunc) Generate() string {
 	return fn()
 }
 
-type Hooks struct {
-	Prestart Hook
-	Poststop Hook
-}
-
-type Hook struct {
-	Path string
-	Args []string
-}
-
 type DesiredContainerSpec struct {
 	Handle string
 
 	// Path to the Root Filesystem for the container
 	RootFSPath string
-
-	// Network hook
-	NetworkHooks []Hooks
 
 	// Container hostname
 	Hostname string
