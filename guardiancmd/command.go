@@ -642,7 +642,6 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadoo
 				MkdirChown:       chrootMkdir,
 			},
 			bundlerules.Limits{},
-			bundlerules.Hooks{LogFilePattern: filepath.Join(depotPath, "%s", "network.log")},
 			bundlerules.BindMounts{},
 			bundlerules.Env{},
 			bundlerules.Hostname{},
