@@ -29,13 +29,13 @@ import (
 const MNT_DETACH = 0x2
 
 var RootFSPath = os.Getenv("GARDEN_TEST_ROOTFS")
-var DataDir = os.Getenv("GARDEN_TEST_GRAPHPATH")
+var DataDir string
 var TarBin = os.Getenv("GARDEN_TAR_PATH")
 
 type RunningGarden struct {
 	client.Client
 
-	runner  *ginkgomon.Runner
+	runner  GardenRunner
 	process ifrit.Process
 
 	debugIP   string
@@ -52,57 +52,86 @@ type RunningGarden struct {
 	logger lager.Logger
 }
 
-func Start(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootfs bool, argv ...string) *RunningGarden {
-	network := "unix"
-	addr := fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
-	tmpDir := filepath.Join(
-		os.TempDir(),
-		fmt.Sprintf("test-garden-%d", ginkgo.GinkgoParallelNode()),
-	)
+type GardenRunner struct {
+	*ginkgomon.Runner
+	Cmd           *exec.Cmd
+	TmpDir        string
+	GraphPath     string
+	DepotDir      string
+	DebugIp       string
+	DebugPort     int
+	Network, Addr string
+}
 
+func init() {
+	DataDir = os.Getenv("GARDEN_TEST_GRAPHPATH")
 	if DataDir == "" {
 		// This must be set outside of the Ginkgo node directory (tmpDir) because
 		// otherwise the Concourse worker may run into one of the AUFS kernel
 		// module bugs that cause the VM to become unresponsive.
 		DataDir = "/tmp/aufs_mount"
 	}
+}
 
-	graphPath := filepath.Join(DataDir, fmt.Sprintf("node-%d", ginkgo.GinkgoParallelNode()))
-	depotDir := filepath.Join(tmpDir, "containers")
+func NewGardenRunner(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootfs bool, argv ...string) GardenRunner {
+	r := GardenRunner{}
 
-	MustMountTmpfs(graphPath)
+	r.Network = "unix"
+	r.Addr = fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
 
-	r := &RunningGarden{
-		DepotDir: depotDir,
+	r.TmpDir = filepath.Join(
+		os.TempDir(),
+		fmt.Sprintf("test-garden-%d", ginkgo.GinkgoParallelNode()),
+	)
 
-		DataDir:   DataDir,
-		GraphPath: graphPath,
-		Tmpdir:    tmpDir,
-		logger:    lagertest.NewTestLogger("garden-runner"),
+	r.GraphPath = filepath.Join(DataDir, fmt.Sprintf("node-%d", ginkgo.GinkgoParallelNode()))
+	r.DepotDir = filepath.Join(r.TmpDir, "containers")
 
-		Client: client.New(connection.New(network, addr)),
+	MustMountTmpfs(r.GraphPath)
+
+	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, TarBin, supplyDefaultRootfs, argv...)
+	r.Cmd.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", r.TmpDir))
+
+	for i, arg := range r.Cmd.Args {
+		if arg == "--debug-bind-ip" {
+			r.DebugIp = r.Cmd.Args[i+1]
+		}
+		if arg == "--debug-bind-port" {
+			r.DebugPort, _ = strconv.Atoi(r.Cmd.Args[i+1])
+		}
 	}
 
-	c := cmd(tmpDir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dadooBin, TarBin, supplyDefaultRootfs, argv...)
-	c.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", tmpDir))
-	r.runner = ginkgomon.New(ginkgomon.Config{
+	r.Runner = ginkgomon.New(ginkgomon.Config{
 		Name:              "guardian",
-		Command:           c,
+		Command:           r.Cmd,
 		AnsiColorCode:     "31m",
 		StartCheck:        "guardian.started",
 		StartCheckTimeout: 30 * time.Second,
 	})
-	r.process = ifrit.Invoke(r.runner)
-	r.Pid = c.Process.Pid
 
-	for i, arg := range c.Args {
-		if arg == "--debug-bind-ip" {
-			r.debugIP = c.Args[i+1]
-		}
-		if arg == "--debug-bind-port" {
-			r.debugPort, _ = strconv.Atoi(c.Args[i+1])
-		}
+	return r
+}
+
+func Start(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootfs bool, argv ...string) *RunningGarden {
+	runner := NewGardenRunner(bin, initBin, nstarBin, dadooBin, supplyDefaultRootfs, argv...)
+
+	r := &RunningGarden{
+		runner:   runner,
+		DepotDir: runner.DepotDir,
+
+		DataDir:   DataDir,
+		GraphPath: runner.GraphPath,
+		Tmpdir:    runner.TmpDir,
+		logger:    lagertest.NewTestLogger("garden-runner"),
+
+		debugIP:   runner.DebugIp,
+		debugPort: runner.DebugPort,
+
+		Client: client.New(connection.New(runner.Network, runner.Addr)),
 	}
+
+	r.process = ifrit.Invoke(r.runner)
+	r.Pid = runner.Cmd.Process.Pid
 
 	return r
 }
@@ -262,10 +291,10 @@ type debugVars struct {
 func (r *RunningGarden) NumGoroutines() (int, error) {
 	debugURL := fmt.Sprintf("http://%s:%d/debug/vars", r.debugIP, r.debugPort)
 	res, err := http.Get(debugURL)
-	defer res.Body.Close()
 	if err != nil {
 		return 0, err
 	}
+	defer res.Body.Close()
 
 	decoder := json.NewDecoder(res.Body)
 	var debugVarsData debugVars
