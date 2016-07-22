@@ -9,7 +9,7 @@
 [by](https://creativecommons.org/licenses/by-nc-nd/3.0/) [chattanooga-choochoo](http://chattanooga-choochoo.deviantart.com/art/Groot-584361210)
 
 GrootFS is a [Cloud Foundry](https://www.cloudfoundry.org) component to satisfy
-[Garden runC's](https://github.com/cloudfoundry/garden-runc-release)
+[garden-runc's](https://github.com/cloudfoundry/garden-runc-release)
 requirements for handling container images.
 
 It is currently under development.
