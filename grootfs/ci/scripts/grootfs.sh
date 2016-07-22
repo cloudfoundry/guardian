@@ -6,4 +6,4 @@ echo "I AM GROOT"
 echo
 
 export GOPATH=/root/go:$PWD
-ginkgo -r
+ginkgo -r -p .

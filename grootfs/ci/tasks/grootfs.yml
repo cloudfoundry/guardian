@@ -8,4 +8,4 @@ inputs:
   path: src/code.cloudfoundry.org/grootfs
 
 run:
-  path: src/code.cloudfoundry.org/grootfs/ci/scripts/unit-test.sh
+  path: src/code.cloudfoundry.org/grootfs/ci/scripts/grootfs.sh

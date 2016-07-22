@@ -21,13 +21,13 @@ resources:
     token: {{garden-tracker-token}}
 
 jobs:
-- name: i-am-groot
+- name: grootfs
   public: true
   plan:
   - get: grootfs-git-repo
     trigger: true
   - task: unit-test
-    file: grootfs-git-repo/ci/tasks/unit-test.yml
+    file: grootfs-git-repo/ci/tasks/grootfs.yml
     on_failure:
       put: slack-alert
       params:
