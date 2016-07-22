@@ -2,6 +2,7 @@ package netplugin_test
 
 import (
 	"errors"
+	"io/ioutil"
 	"os/exec"
 
 	"code.cloudfoundry.org/garden"
@@ -49,6 +50,18 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 				cmd.Stdout.Write([]byte(pluginOutput))
 				return pluginErr
 			})
+		})
+
+		It("passes the pid of the container to the external plugin's stdin", func() {
+			plugin := netplugin.New(fakeCommandRunner, configStore, "some/path")
+			err := plugin.Network(lagertest.NewTestLogger("test"), containerSpec, 42)
+			Expect(err).NotTo(HaveOccurred())
+
+			cmd := fakeCommandRunner.ExecutedCommands()[0]
+			input, err := ioutil.ReadAll(cmd.Stdin)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(input)).To(ContainSubstring("42"))
 		})
 
 		It("executes the external plugin with the correct args", func() {

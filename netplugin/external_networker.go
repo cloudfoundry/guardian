@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"os/exec"
 	"strings"
@@ -65,6 +66,17 @@ func (p *ExternalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 	cmd.Args = upArgs
 	cmdOutput := &bytes.Buffer{}
 	cmd.Stdout = cmdOutput
+
+	input, err := cmd.StdinPipe()
+	if err != nil {
+		return err
+	}
+
+	_, err = io.WriteString(input, fmt.Sprintf("{\"PID\":%d}", pid))
+	if err != nil {
+		return err
+	}
+	input.Close()
 
 	err = p.commandRunner.Run(cmd)
 	if err != nil {

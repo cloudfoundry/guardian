@@ -345,6 +345,7 @@ var _ = Describe("Creating a Container", func() {
 			args = []string{
 				"--network-plugin", testNetPluginBin,
 				"--network-plugin-extra-arg", tmpFile,
+				"--network-plugin-extra-arg", "/dev/null",
 			}
 		})
 

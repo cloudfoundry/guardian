@@ -294,27 +294,36 @@ var _ = Describe("Networking", func() {
 	})
 
 	Context("when a network plugin path is provided at startup", func() {
-		var tmpFile string
+		var argsFile string
+		var stdinFile string
 
 		BeforeEach(func() {
 			tmpDir, err := ioutil.TempDir("", "netplugtest")
 			Expect(err).NotTo(HaveOccurred())
 
-			tmpFile = path.Join(tmpDir, "iwasrun.log")
+			argsFile = path.Join(tmpDir, "args.log")
+			stdinFile = path.Join(tmpDir, "stdin.log")
 
 			args = []string{
 				"--network-plugin", testNetPluginBin,
-				"--network-plugin-extra-arg", tmpFile,
+				"--network-plugin-extra-arg", argsFile,
+				"--network-plugin-extra-arg", stdinFile,
 			}
 		})
 
 		It("executes the network plugin during container creation", func() {
 			containerHandle := container.Handle()
 
-			Eventually(getContent(tmpFile)).Should(
+			Eventually(getContent(argsFile)).Should(
 				ContainSubstring(
-					fmt.Sprintf("%s --action up --handle %s --network %s", tmpFile, containerHandle, containerNetwork),
+					fmt.Sprintf("%s %s --action up --handle %s --network %s", argsFile, stdinFile, containerHandle, containerNetwork),
 				),
+			)
+		})
+
+		It("passes the container pid to plugin's stdin", func() {
+			Eventually(getContent(stdinFile)).Should(
+				MatchRegexp(`.*{"PID":[0-9]+}.*`),
 			)
 		})
 
@@ -322,11 +331,11 @@ var _ = Describe("Networking", func() {
 			containerHandle := container.Handle()
 
 			Expect(client.Destroy(containerHandle)).To(Succeed())
-			Expect(tmpFile).To(BeAnExistingFile())
+			Expect(argsFile).To(BeAnExistingFile())
 
-			Eventually(getContent(tmpFile)).Should(
+			Eventually(getContent(argsFile)).Should(
 				ContainSubstring(
-					fmt.Sprintf("%s --action down --handle %s", tmpFile, containerHandle),
+					fmt.Sprintf("%s %s --action down --handle %s", argsFile, stdinFile, containerHandle),
 				),
 			)
 		})
@@ -346,7 +355,7 @@ var _ = Describe("Networking", func() {
 			})
 
 			It("propagates those properties as JSON to the network plugin up action", func() {
-				Eventually(getFlagValue(tmpFile, "--properties")).Should(MatchJSON(expectedJSON))
+				Eventually(getFlagValue(argsFile, "--properties")).Should(MatchJSON(expectedJSON))
 			})
 		})
 
