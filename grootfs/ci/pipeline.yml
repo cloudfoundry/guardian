@@ -26,7 +26,7 @@ jobs:
   plan:
   - get: grootfs-git-repo
     trigger: true
-  - task: unit-test
+  - task: grootfs
     file: grootfs-git-repo/ci/tasks/grootfs.yml
     on_failure:
       put: slack-alert
