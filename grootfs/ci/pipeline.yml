@@ -1,0 +1,47 @@
+---
+resources:
+- name: grootfs-git-repo
+  type: git
+  source:
+    uri: https://github.com/cloudfoundry/grootfs
+    branch: master
+    ignore_paths:
+    - ci/pipeline.yml
+
+- name: slack-alert
+  type: slack-notification-docker
+  source:
+    url: {{slack-alert-url}}
+
+- name: grootfs-tracker
+  type: tracker
+  source:
+    tracker_url: https://www.pivotaltracker.com
+    project_id: "1661239"
+    token: {{garden-tracker-token}}
+
+jobs:
+- name: i-am-groot
+  plan:
+  - get: grootfs-git-repo
+    trigger: true
+  - task: unit-test
+    file: grootfs-git-repo/ci/tasks/unit-test.yml
+    on_failure:
+      put: slack-alert
+      params:
+        username: GROOT
+        icon_url: http://orig13.deviantart.net/a24b/f/2014/225/c/a/grumpygroot_by_theopticnerve-d7v1ovu.jpg
+        channel: "#garden"
+        text: "<!subteam^S1U0HSJ9E|grootfsteam>: :disappointed: GROOOOOT :cry:"
+  - put: grootfs-tracker
+    params:
+      repos:
+      - grootfs-git-repo
+
+
+resource_types:
+- name: slack-notification-docker
+  type: docker-image
+  source:
+    repository: cfcommunity/slack-notification-resource

@@ -1,0 +1,11 @@
+---
+platform: linux
+
+image: docker:///cfgarden/golang-ci
+
+inputs:
+- name: grootfs-git-repo
+  path: src/code.cloudfoundry.org/grootfs
+
+run:
+  path: src/code.cloudfoundry.org/grootfs/ci/scripts/unit-test.sh
