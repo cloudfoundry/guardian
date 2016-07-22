@@ -1,0 +1,14 @@
+hash: a9a9ccbbb644b92a63f3c3af869e0141fbc590669744dad5749abfc85327ec67
+updated: 2016-07-22T10:31:17.108790064+01:00
+imports:
+- name: code.cloudfoundry.org/lager
+  version: 62951a8009ab331bb21dc418074fa54e66eb9b6a
+- name: github.com/onsi/ginkgo
+  version: 09289bfe14b68884754576c1d8cd01c7f630b40b
+- name: github.com/onsi/gomega
+  version: 9ed8da19f2156b87a803a8fdf6d126f627a12db1
+- name: github.com/urfave/cli
+  version: 11c134509d89c2018675f369955218a180dc7428
+- name: gopkg.in/yaml.v2
+  version: e4d366fc3c7938e2958e662b4258c7a89e1f0e3e
+testImports: []
