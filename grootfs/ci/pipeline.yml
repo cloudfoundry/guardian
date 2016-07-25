@@ -31,10 +31,10 @@ jobs:
     on_failure:
       put: slack-alert
       params:
-        username: GROOT
-        icon_url: http://orig13.deviantart.net/a24b/f/2014/225/c/a/grumpygroot_by_theopticnerve-d7v1ovu.jpg
+        username: Thanos
+        icon_url: http://www.comicsblend.com/wp-content/uploads/2013/04/thanos.jpg
         channel: "#garden"
-        text: "<!subteam^S1U0HSJ9E|grootfsteam>: :disappointed: GROOOOOT :cry:"
+        text: "<!subteam^S1U0HSJ9E|grootfsteam>: I've destroyed your build. Come and get me!"
   - put: grootfs-tracker
     params:
       repos:
