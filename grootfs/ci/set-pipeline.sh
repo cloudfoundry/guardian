@@ -3,8 +3,8 @@
 cd $(dirname $0)/..
 
 if [ -z $1 ]; then
-  echo "No target passed, using 'garden-ci'"
-  FLYRC_TARGET="garden-ci"
+  echo "No target passed, using 'grootfs-ci'"
+  FLYRC_TARGET="grootfs-ci"
 else
   FLYRC_TARGET=$1
 fi
