@@ -20,12 +20,36 @@ resources:
     project_id: "1661239"
     token: {{garden-tracker-token}}
 
+- name: grootfs-version
+  type: semver
+  source:
+    bucket: grootfs-ci-meta
+    key: grootfs/version
+    access_key_id: {{aws-access-key-id}}
+    secret_access_key: {{aws-secret-access-key}}
+    region_name: eu-west-1
+    initial_version: 0.1.0-dev.1
+    driver: s3
+
+- name: grootfs-gh-release
+  type: github-release
+  source:
+    user: {{gr-github-release-username}}
+    repository: grootfs
+    access_token: {{github-access-token}}
+    drafts: true
+
 jobs:
 - name: grootfs
   public: true
   plan:
-  - get: grootfs-git-repo
-    trigger: true
+  - aggregate:
+    - get: grootfs-version
+      params: { pre: 'dev' }
+    - get: grootfs-git-repo
+      trigger: true
+  - put: grootfs-version
+    params: { file: grootfs-version/number }
   - task: grootfs
     file: grootfs-git-repo/ci/tasks/grootfs.yml
     on_failure:
@@ -39,6 +63,24 @@ jobs:
     params:
       repos:
       - grootfs-git-repo
+
+- name: create-release
+  plan:
+  - get: grootfs-git-repo
+    passed: [grootfs]
+  - get: grootfs-version
+    passed: [grootfs]
+    params: { bump: final }
+  - task: build-grootfs
+    file: grootfs-git-repo/ci/tasks/build-grootfs.yml
+  - put: grootfs-gh-release
+    params:
+      name: grootfs-version/number
+      tag: grootfs-version/number
+      tag_prefix: v
+      globs: build-grootfs/grootfs.tgz
+  - put: grootfs-version
+    params: { file: grootfs-version/number }
 
 
 resource_types:
