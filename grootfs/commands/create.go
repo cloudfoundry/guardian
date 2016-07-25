@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 
 	"code.cloudfoundry.org/grootfs/graph"
@@ -11,7 +12,7 @@ import (
 
 var CreateCommand = cli.Command{
 	Name:        "create",
-	Usage:       "create --image <image>",
+	Usage:       "create --image <image> <id>",
 	Description: "Creates a root filesystem for the provided image.",
 
 	Flags: []cli.Flag{
@@ -23,14 +24,21 @@ var CreateCommand = cli.Command{
 	},
 
 	Action: func(ctx *cli.Context) error {
-		graphPath := ctx.GlobalString("graph")
-		imagePath := ctx.String("image")
-
-		grph := graph.NewGraph(graphPath)
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 
-		bundlePath, err := grph.MakeBundle(logger, imagePath)
+		graphPath := ctx.GlobalString("graph")
+		imagePath := ctx.String("image")
+		if ctx.NArg() != 1 {
+			logger.Error("parsing-command", errors.New("id was not specified"))
+			return cli.NewExitError("id was not specified", 1)
+		}
+		id := ctx.Args().First()
+
+		grph := graph.NewGraph(graphPath)
+
+		bundlePath, err := grph.MakeBundle(logger, imagePath, id)
 		if err != nil {
+			logger.Error("making-bundle", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 

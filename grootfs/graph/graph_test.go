@@ -46,13 +46,13 @@ var _ = Describe("Graph", func() {
 
 	Describe("MakeBundle", func() {
 		It("should return a bundle directory", func() {
-			bundlePath, err := grph.MakeBundle(logger, imagePath)
+			bundlePath, err := grph.MakeBundle(logger, imagePath, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bundlePath).To(BeADirectory())
 		})
 
 		It("should have the image contents in the rootfs directory of the bundle", func() {
-			bundlePath, err := grph.MakeBundle(logger, imagePath)
+			bundlePath, err := grph.MakeBundle(logger, imagePath, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 
 			filePath := path.Join(bundlePath, "rootfs", "a_file")
@@ -62,9 +62,32 @@ var _ = Describe("Graph", func() {
 			Expect(string(contents)).To(Equal("hello-world"))
 		})
 
+		Context("when calling it with two different ids", func() {
+			It("should return two different bundle paths", func() {
+				bundlePath, err := grph.MakeBundle(logger, imagePath, "some-id")
+				Expect(err).NotTo(HaveOccurred())
+
+				anotherBundlePath, err := grph.MakeBundle(logger, imagePath, "another-id")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(bundlePath).NotTo(Equal(anotherBundlePath))
+			})
+
+			It("should isolate the rootfses when the same image is used", func() {
+				bundlePath, err := grph.MakeBundle(logger, imagePath, "some-id")
+				Expect(err).NotTo(HaveOccurred())
+
+				anotherBundlePath, err := grph.MakeBundle(logger, imagePath, "another-id")
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(ioutil.WriteFile(path.Join(bundlePath, "rootfs", "bar"), []byte("hello-world"), 0644)).To(Succeed())
+				Expect(path.Join(anotherBundlePath, "rootfs", "bar")).NotTo(BeARegularFile())
+			})
+		})
+
 		Context("when the image path does not exist", func() {
 			It("should return an error", func() {
-				_, err := grph.MakeBundle(logger, "/does/not/exist")
+				_, err := grph.MakeBundle(logger, "/does/not/exist", "some-id")
 				Expect(err).To(MatchError(ContainSubstring("image path `/does/not/exist` was not found")))
 			})
 		})
@@ -75,18 +98,27 @@ var _ = Describe("Graph", func() {
 			})
 
 			It("should return an error", func() {
-				_, err := grph.MakeBundle(logger, imagePath)
+				_, err := grph.MakeBundle(logger, imagePath, "some-id")
 				Expect(err).To(MatchError(ContainSubstring("making bundle path")))
 			})
 		})
 
-		Context("when rootfs is already configured in the bundle directory", func() {
+		Context("when using the same id twice", func() {
 			It("should return an error", func() {
-				_, err := grph.MakeBundle(logger, imagePath)
+				_, err := grph.MakeBundle(logger, imagePath, "some-id")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = grph.MakeBundle(logger, imagePath)
-				Expect(err).To(MatchError(ContainSubstring("making bundle rootfs")))
+				_, err = grph.MakeBundle(logger, imagePath, "some-id")
+				Expect(err).To(MatchError("bundle for id `some-id` already exists"))
+			})
+		})
+
+		Context("when the image contains files that can only be read by root", func() {
+			It("should return an error", func() {
+				Expect(ioutil.WriteFile(path.Join(imagePath, "a-file"), []byte("hello-world"), 0000)).To(Succeed())
+
+				_, err := grph.MakeBundle(logger, imagePath, "some-id")
+				Expect(err).To(MatchError(ContainSubstring("copying the image in the bundle")))
 			})
 		})
 	})

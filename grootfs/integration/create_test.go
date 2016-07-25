@@ -13,19 +13,21 @@ import (
 )
 
 var _ = Describe("Create", func() {
-	It("creates a root filesystem given a local directory", func() {
-		imagePath, err := ioutil.TempDir("", "")
+	var imagePath string
+	BeforeEach(func() {
+		var err error
+		imagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		defer os.RemoveAll(imagePath)
 
 		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+	})
 
-		cmd := exec.Command(GrootFSBin, "--graph", GraphPath, "create", "--image", imagePath)
-		sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
+	AfterEach(func() {
+		Expect(os.RemoveAll(imagePath)).To(Succeed())
+	})
 
-		bundlePath := strings.TrimSpace(string(sess.Out.Contents()))
+	It("creates a root filesystem given a local directory", func() {
+		bundlePath := createBundle(imagePath, "random-id")
 		Expect(path.Join(bundlePath, "rootfs", "foo")).To(BeARegularFile())
 		fooContents, err := ioutil.ReadFile(path.Join(bundlePath, "rootfs", "foo"))
 		Expect(err).NotTo(HaveOccurred())
@@ -40,4 +42,31 @@ var _ = Describe("Create", func() {
 			Eventually(sess).Should(gexec.Exit(1))
 		})
 	})
+
+	Context("when two rootfses are using the same image", func() {
+		It("isolates them", func() {
+			bundlePath := createBundle(imagePath, "random-id")
+			anotherBundlePath := createBundle(imagePath, "another-random-id")
+			Expect(ioutil.WriteFile(path.Join(bundlePath, "rootfs", "bar"), []byte("hello-world"), 0644)).To(Succeed())
+			Expect(path.Join(anotherBundlePath, "rootfs", "bar")).NotTo(BeARegularFile())
+		})
+	})
+
+	Context("when the id is not provided", func() {
+		It("fails", func() {
+			cmd := exec.Command(GrootFSBin, "--graph", GraphPath, "create", "--image", imagePath)
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(1))
+		})
+	})
 })
+
+func createBundle(imagePath, id string) string {
+	cmd := exec.Command(GrootFSBin, "--graph", GraphPath, "create", "--image", imagePath, id)
+	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(sess).Should(gexec.Exit(0))
+
+	return strings.TrimSpace(string(sess.Out.Contents()))
+}
