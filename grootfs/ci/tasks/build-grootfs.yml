@@ -16,5 +16,3 @@ outputs:
 
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/build-grootfs.sh
-  user: groot
-
