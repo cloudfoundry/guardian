@@ -51,6 +51,15 @@ var _ = Describe("Graph", func() {
 			Expect(bundlePath).To(BeADirectory())
 		})
 
+		It("should keep the images in the same bundle directory", func() {
+			Expect(grph.MakeBundle(logger, imagePath, "some-id")).NotTo(BeEmpty())
+			Expect(grph.MakeBundle(logger, imagePath, "another-id")).NotTo(BeEmpty())
+
+			bundles, err := ioutil.ReadDir(path.Join(graphPath, graph.BUNDLES_DIR_NAME))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(bundles)).To(Equal(2))
+		})
+
 		It("should have the image contents in the rootfs directory of the bundle", func() {
 			bundlePath, err := grph.MakeBundle(logger, imagePath, "some-id")
 			Expect(err).NotTo(HaveOccurred())

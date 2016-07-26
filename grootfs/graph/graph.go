@@ -9,6 +9,8 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
+const BUNDLES_DIR_NAME = "bundles"
+
 type Graph struct {
 	path string
 }
@@ -28,7 +30,7 @@ func (g *Graph) MakeBundle(logger lager.Logger, imagePath, id string) (string, e
 		return "", fmt.Errorf("image path `%s` was not found: %s", imagePath, err)
 	}
 
-	bundlePath := path.Join(g.path, "bundle", id)
+	bundlePath := path.Join(g.path, BUNDLES_DIR_NAME, id)
 	if _, err := os.Stat(bundlePath); err == nil {
 		return "", fmt.Errorf("bundle for id `%s` already exists", id)
 	}
