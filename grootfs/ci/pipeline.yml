@@ -4,7 +4,7 @@ resources:
   type: git
   source:
     uri: git@github.com:cloudfoundry/grootfs.git
-    branch: ci-test
+    branch: master
     private_key: {{gnome-private-key}}
     ignore_paths:
     - ci/pipeline.yml
