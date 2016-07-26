@@ -3,8 +3,9 @@ resources:
 - name: grootfs-git-repo
   type: git
   source:
-    uri: https://github.com/cloudfoundry/grootfs
-    branch: master
+    uri: git@github.com:cloudfoundry/grootfs.git
+    branch: ci-test
+    private_key: {{gnome-private-key}}
     ignore_paths:
     - ci/pipeline.yml
 
@@ -34,7 +35,7 @@ resources:
 - name: grootfs-gh-release
   type: github-release
   source:
-    user: {{gr-github-release-username}}
+    user: cloudfoundry
     repository: grootfs
     access_token: {{github-access-token}}
     drafts: true
@@ -66,22 +67,35 @@ jobs:
 
 - name: create-release
   plan:
-  - get: grootfs-git-repo
-    passed: [grootfs]
-  - get: grootfs-version
-    passed: [grootfs]
-    params: { bump: final }
+  - aggregate:
+    - get: grootfs-git-repo
+      passed: [grootfs]
+    - get: grootfs-version
+      passed: [grootfs]
+      params: { bump: final }
+
   - task: build-grootfs
     file: grootfs-git-repo/ci/tasks/build-grootfs.yml
+
+  - put: grootfs-git-repo
+    params:
+      tag: grootfs-version/number
+      tag_prefix: v
+      repository: build-grootfs
   - put: grootfs-gh-release
     params:
       name: grootfs-version/number
       tag: grootfs-version/number
       tag_prefix: v
-      globs: build-grootfs/grootfs.tgz
-  - put: grootfs-version
-    params: { file: grootfs-version/number }
+      globs:
+      - build-grootfs/grootfs.tgz
 
+  - get: grootfs-next-dev-version
+    resource: grootfs-version
+    params: { bump: minor, pre: dev }
+  - put: grootfs-next-dev-version
+    resource: grootfs-version
+    params: { file: grootfs-next-dev-version/number }
 
 resource_types:
 - name: slack-notification-docker

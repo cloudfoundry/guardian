@@ -21,4 +21,4 @@ check_fly_alias_exists() {
 
 check_fly_alias_exists
 
-fly --target="$FLYRC_TARGET" set-pipeline --pipeline=grootfs --config=ci/pipeline.yml --load-vars-from=/Users/pivotal/workspace/garden-ci/ci/vars/aws.yml
+fly --target="$FLYRC_TARGET" set-pipeline --pipeline=grootfs --config=ci/pipeline.yml --load-vars-from=/Users/pivotal/workspace/grootfs-ci-secrets/vars/aws.yml
