@@ -5,7 +5,6 @@
 help:
 	@echo '    all ................................. builds the grootfs cli'
 	@echo '    concourse-test ...................... runs tests in concourse-lite'
-	@echo '    docker-test ......................... runs tests in a docker container'
 	@echo '    image ............................... builds a docker image'
 	@echo '    push-image .......................... pushes image to docker-hub'
 	@echo '    test ................................ runs tests locally'
