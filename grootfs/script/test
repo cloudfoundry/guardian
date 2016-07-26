@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+ARGS=$@
+
+if egrep -q integration <(echo "$ARGS"); then
+  fly -t lite execute -c ci/tasks/grootfs.yml -i grootfs-git-repo="$PWD"
+else
+  ginkgo -r -p -- $ARGS
+fi

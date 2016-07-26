@@ -13,4 +13,4 @@ inputs:
 
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/grootfs.sh
-  user: groot
+  user: root

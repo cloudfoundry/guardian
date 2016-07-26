@@ -18,16 +18,10 @@ all:
 ###### Testing ################################################################
 
 test:
-	ginkgo -r -p .
+	ginkgo -r -p -skipPackage integration .
 
 concourse-test:
 	fly -t lite e -c ci/tasks/grootfs.yml -i grootfs-git-repo=${PWD}
-
-docker-test:
-	docker run --rm --name grootfs-test \
-		-v ${PWD}:/go/src/code.cloudfoundry.org/grootfs \
-		cfgarden/grootfs-ci \
-		make test
 
 ###### Docker #################################################################
 

@@ -1,11 +1,12 @@
-package integration_test
+package groot_test
 
 import (
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
-	"strings"
+
+	"code.cloudfoundry.org/grootfs/integration"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -27,7 +28,7 @@ var _ = Describe("Create", func() {
 	})
 
 	It("creates a root filesystem given a local directory", func() {
-		bundlePath := createBundle(imagePath, "random-id")
+		bundlePath := integration.CreateBundle(GrootFSBin, GraphPath, imagePath, "random-id")
 		Expect(path.Join(bundlePath, "rootfs", "foo")).To(BeARegularFile())
 		fooContents, err := ioutil.ReadFile(path.Join(bundlePath, "rootfs", "foo"))
 		Expect(err).NotTo(HaveOccurred())
@@ -45,8 +46,8 @@ var _ = Describe("Create", func() {
 
 	Context("when two rootfses are using the same image", func() {
 		It("isolates them", func() {
-			bundlePath := createBundle(imagePath, "random-id")
-			anotherBundlePath := createBundle(imagePath, "another-random-id")
+			bundlePath := integration.CreateBundle(GrootFSBin, GraphPath, imagePath, "random-id")
+			anotherBundlePath := integration.CreateBundle(GrootFSBin, GraphPath, imagePath, "another-random-id")
 			Expect(ioutil.WriteFile(path.Join(bundlePath, "rootfs", "bar"), []byte("hello-world"), 0644)).To(Succeed())
 			Expect(path.Join(anotherBundlePath, "rootfs", "bar")).NotTo(BeARegularFile())
 		})
@@ -61,12 +62,3 @@ var _ = Describe("Create", func() {
 		})
 	})
 })
-
-func createBundle(imagePath, id string) string {
-	cmd := exec.Command(GrootFSBin, "--graph", GraphPath, "create", "--image", imagePath, id)
-	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
-
-	return strings.TrimSpace(string(sess.Out.Contents()))
-}

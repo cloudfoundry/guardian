@@ -1,4 +1,4 @@
-package integration_test
+package groot_test
 
 import (
 	"fmt"
@@ -18,7 +18,7 @@ var (
 	GraphPath string
 )
 
-func TestIntegration(t *testing.T) {
+func TestGroot(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	SynchronizedBeforeSuite(func() []byte {
@@ -44,5 +44,5 @@ func TestIntegration(t *testing.T) {
 		Expect(os.RemoveAll(GraphPath)).To(Succeed())
 	})
 
-	RunSpecs(t, "Integration Suite")
+	RunSpecs(t, "GrootFS Integration Suite - Running as groot")
 }
