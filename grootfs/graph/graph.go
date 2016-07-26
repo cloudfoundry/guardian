@@ -39,7 +39,7 @@ func (g *Graph) MakeBundle(logger lager.Logger, imagePath, id string) (string, e
 		return "", fmt.Errorf("making bundle path: %s", err)
 	}
 
-	cmd := exec.Command("cp", "-rn", imagePath, path.Join(bundlePath, "rootfs"))
+	cmd := exec.Command("cp", "-ran", imagePath, path.Join(bundlePath, "rootfs"))
 	if err := cmd.Run(); err != nil {
 		return "", fmt.Errorf("copying the image in the bundle: %s", err)
 	}
