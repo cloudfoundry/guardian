@@ -1,6 +1,9 @@
 FROM cloudfoundry/golang-ci
 MAINTAINER https://github.com/cloudfoundry/grootfs
 
+## Install uidmap utils
+RUN apt-get install -y uidmap
+
 ## Add groot user
 RUN useradd -U groot
 
