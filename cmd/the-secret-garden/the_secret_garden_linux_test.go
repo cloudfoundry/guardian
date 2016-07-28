@@ -73,7 +73,7 @@ var _ = Describe("The Secret Garden", func() {
 		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "mount")
 		Eventually(session).Should(gexec.Exit(0))
 
-		exp := fmt.Sprintf("%s on %s", fakeDataDir, fakeDataDir)
+		exp := fmt.Sprintf("on %s type", fakeDataDir)
 		Expect(session.Out).To(gbytes.Say(exp))
 
 		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "mount")
@@ -86,8 +86,10 @@ var _ = Describe("The Secret Garden", func() {
 		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "mount")
 		Eventually(session).Should(gexec.Exit(0))
 
-		exp := fmt.Sprintf("%s on %s", filepath.Join(realGraphDir, "graph"), secretGraphDir)
-		Expect(session.Out).To(gbytes.Say(exp))
+		exp := fmt.Sprintf("on %s type", secretGraphDir)
+		output := session.Out.Contents()
+		Expect(output).To(ContainSubstring(exp))
+		Expect(output).To(ContainSubstring(realGraphDir))
 
 		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "mount")
 		Eventually(session).Should(gexec.Exit(0))
@@ -152,7 +154,7 @@ var _ = Describe("The Secret Garden", func() {
 				out, err := exec.Command("mount").CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
 				return string(out)
-			}).Should(ContainSubstring(fmt.Sprintf("%s on %s type none (rw,bind)", fakeDataDir, fakeDataDir)))
+			}).Should(ContainSubstring(fmt.Sprintf("on %s type", fakeDataDir)))
 
 			Expect(exec.Command("mkdir", sharedDir).Run()).To(Succeed())
 			Expect(exec.Command("mount", "-t", "tmpfs", "tmpfs", sharedDir).Run()).To(Succeed())
@@ -197,7 +199,7 @@ var _ = Describe("The Secret Garden", func() {
 				out, err := exec.Command("mount").CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
 				return string(out)
-			}).Should(ContainSubstring(fmt.Sprintf("%s on %s type none (rw,bind)", fakeDataDir, fakeDataDir)))
+			}).Should(ContainSubstring(fmt.Sprintf("on %s type", fakeDataDir)))
 
 			Eventually(session, "11s").Should(gexec.Exit(0))
 			Expect(session.Out).To(gbytes.Say("shared/myfile"))

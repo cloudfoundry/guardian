@@ -91,7 +91,7 @@ func mustRBindMountOnce(srcDir, dstDir string) {
 
 func mustMountOnce(srcDir, dstDir, option string) {
 	mounts := mustRun(exec.Command("mount"))
-	alreadyMounted := strings.Contains(mounts, fmt.Sprintf("%s on %s", srcDir, dstDir))
+	alreadyMounted := strings.Contains(mounts, fmt.Sprintf("on %s type", dstDir))
 
 	if !alreadyMounted {
 		mustRun(exec.Command("mount", option, srcDir, dstDir))
