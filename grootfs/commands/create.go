@@ -4,7 +4,9 @@ import (
 	"errors"
 	"fmt"
 
-	"code.cloudfoundry.org/grootfs/graph"
+	clonerpkg "code.cloudfoundry.org/grootfs/cloner"
+	graphpkg "code.cloudfoundry.org/grootfs/graph"
+	grootpkg "code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 
 	"github.com/urfave/cli"
@@ -34,9 +36,14 @@ var CreateCommand = cli.Command{
 		}
 		id := ctx.Args().First()
 
-		grph := graph.NewGraph(graphPath)
+		graph := graphpkg.NewGraph(graphPath)
+		cloner := clonerpkg.NewTarCloner()
+		groot := grootpkg.IamGroot(graph, cloner)
 
-		bundlePath, err := grph.MakeBundle(logger, imagePath, id)
+		bundlePath, err := groot.Create(logger, grootpkg.CreateSpec{
+			ID:        id,
+			ImagePath: imagePath,
+		})
 		if err != nil {
 			logger.Error("making-bundle", err)
 			return cli.NewExitError(err.Error(), 1)

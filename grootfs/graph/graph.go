@@ -3,7 +3,6 @@ package graph
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 
 	"code.cloudfoundry.org/lager"
@@ -21,14 +20,10 @@ func NewGraph(path string) *Graph {
 	}
 }
 
-func (g *Graph) MakeBundle(logger lager.Logger, imagePath, id string) (string, error) {
-	logger = logger.Session("making-bundle", lager.Data{"graphPath": g.path, "imagePath": imagePath})
+func (g *Graph) MakeBundle(logger lager.Logger, id string) (string, error) {
+	logger = logger.Session("making-bundle", lager.Data{"graphPath": g.path})
 	logger.Debug("start")
 	defer logger.Debug("end")
-
-	if _, err := os.Stat(imagePath); err != nil {
-		return "", fmt.Errorf("image path `%s` was not found: %s", imagePath, err)
-	}
 
 	bundlePath := path.Join(g.path, BUNDLES_DIR_NAME, id)
 	if _, err := os.Stat(bundlePath); err == nil {
@@ -37,11 +32,6 @@ func (g *Graph) MakeBundle(logger lager.Logger, imagePath, id string) (string, e
 
 	if err := os.MkdirAll(bundlePath, 0700); err != nil {
 		return "", fmt.Errorf("making bundle path: %s", err)
-	}
-
-	cmd := exec.Command("cp", "-ran", imagePath, path.Join(bundlePath, "rootfs"))
-	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("copying the image in the bundle: %s", err)
 	}
 
 	return bundlePath, nil
