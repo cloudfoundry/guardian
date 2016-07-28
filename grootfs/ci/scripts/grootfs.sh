@@ -11,5 +11,5 @@ rmdir $grootfsPath
 ln -s $PWD/src/code.cloudfoundry.org/grootfs $grootfsPath
 cd $grootfsPath
 
-su groot -c "PATH=$PATH ginkgo -p -r ."
+su groot -c "PATH=$PATH ginkgo -p -r . $@"
 ginkgo -p -r integration/root
