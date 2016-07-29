@@ -3,10 +3,10 @@
 ARGS=$@
 
 if egrep -q integration <(echo "$ARGS"); then
-  fly -t lite execute -c ci/tasks/grootfs.yml -i grootfs-git-repo="$PWD" -- $ARGS
+  fly -t lite execute -c ci/tasks/grootfs.yml -p -i grootfs-git-repo="$PWD" -- $ARGS
 elif [ -d $ARGS ] &&
      [ "$(find $ARGS -maxdepth 1 -name '*_linux_test.go')" != "" ]; then
-  fly -t lite execute -c ci/tasks/grootfs.yml -i grootfs-git-repo="$PWD" -- $ARGS
+  fly -t lite execute -c ci/tasks/grootfs.yml -p -i grootfs-git-repo="$PWD" -- $ARGS
 else
   ginkgo -r -p $ARGS
 fi

@@ -20,7 +20,7 @@ func CreateBundle(grootFSBin, graphPath, imagePath, id string) string {
 }
 
 func FindUID(user string) uint32 {
-	sess, err := gexec.Start(exec.Command("id", "-u", user), GinkgoWriter, GinkgoWriter)
+	sess, err := gexec.Start(exec.Command("id", "-u", user), nil, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))
 
@@ -31,7 +31,7 @@ func FindUID(user string) uint32 {
 }
 
 func FindGID(group string) uint32 {
-	sess, err := gexec.Start(exec.Command("id", "-g", group), GinkgoWriter, GinkgoWriter)
+	sess, err := gexec.Start(exec.Command("id", "-g", group), nil, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))
 

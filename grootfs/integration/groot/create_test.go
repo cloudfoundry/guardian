@@ -61,4 +61,34 @@ var _ = Describe("Create", func() {
 			Eventually(sess).Should(gexec.Exit(1))
 		})
 	})
+
+	Context("when the mappings are invalid", func() {
+		It("should fail when the uid mapping is invalid", func() {
+			cmd := exec.Command(
+				GrootFSBin, "--graph", GraphPath,
+				"--debug",
+				"create", "--image", imagePath,
+				"--uid-mapping", "1:hello:65000",
+				"some-id",
+			)
+
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sess.Wait()).NotTo(gexec.Exit(0))
+		})
+
+		It("should fail when the gid mapping is invalid", func() {
+			cmd := exec.Command(
+				GrootFSBin, "--graph", GraphPath,
+				"--debug",
+				"create", "--image", imagePath,
+				"--gid-mapping", "1:groot:65000",
+				"some-id",
+			)
+
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sess.Wait()).NotTo(gexec.Exit(0))
+		})
+	})
 })

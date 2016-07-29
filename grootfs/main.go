@@ -15,6 +15,7 @@ const GraphPath = "/tmp/grootfs"
 func main() {
 	grootfs := cli.NewApp()
 	grootfs.Name = "grootfs"
+	grootfs.Usage = "I am Groot!"
 	grootfs.Version = "0.0.0"
 
 	grootfs.Flags = []cli.Flag{
@@ -31,6 +32,7 @@ func main() {
 
 	grootfs.Commands = []cli.Command{
 		commands.CreateCommand,
+		commands.UntarCommand,
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {

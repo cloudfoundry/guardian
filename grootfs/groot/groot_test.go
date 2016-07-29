@@ -59,8 +59,13 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 		It("clones the image", func() {
 			graph.MakeBundleReturns("/path/to/bundle", nil)
 
+			uidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
+			gidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}
+
 			_, err := groot.Create(logger, grootpkg.CreateSpec{
-				ImagePath: "/path/to/image",
+				ImagePath:   "/path/to/image",
+				UIDMappings: uidMappings,
+				GIDMappings: gidMappings,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -68,6 +73,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			_, cloneSpec := cloner.CloneArgsForCall(0)
 			Expect(cloneSpec.FromDir).To(Equal("/path/to/image"))
 			Expect(cloneSpec.ToDir).To(Equal("/path/to/bundle/rootfs"))
+			Expect(cloneSpec.UIDMappings).To(Equal(uidMappings))
+			Expect(cloneSpec.GIDMappings).To(Equal(gidMappings))
 		})
 
 		Context("when cloning fails", func() {
