@@ -52,6 +52,7 @@ jobs:
   - put: grootfs-version
     params: { file: grootfs-version/number }
   - task: grootfs
+    privileged: true
     file: grootfs-git-repo/ci/tasks/grootfs.yml
     on_failure:
       put: slack-alert
