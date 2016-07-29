@@ -8,8 +8,12 @@ image_resource:
     tag: latest
 
 inputs:
-- name: grootfs-git-repo
-  path: src/code.cloudfoundry.org/grootfs
+  - name: grootfs-git-repo
+    path: src/code.cloudfoundry.org/grootfs
+
+params:
+  ROOT_ONLY:
+  GROOT_ONLY:
 
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/grootfs.sh
