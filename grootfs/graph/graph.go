@@ -21,7 +21,7 @@ func NewGraph(path string) *Graph {
 }
 
 func (g *Graph) MakeBundle(logger lager.Logger, id string) (string, error) {
-	logger = logger.Session("making-bundle", lager.Data{"graphPath": g.path})
+	logger = logger.Session("making-bundle", lager.Data{"graphPath": g.path, "id": id})
 	logger.Debug("start")
 	defer logger.Debug("end")
 
@@ -35,4 +35,22 @@ func (g *Graph) MakeBundle(logger lager.Logger, id string) (string, error) {
 	}
 
 	return bundlePath, nil
+}
+
+func (g *Graph) DeleteBundle(logger lager.Logger, id string) error {
+	logger = logger.Session("delete-bundle", lager.Data{"graphPath": g.path, "id": id})
+	logger.Debug("start")
+	defer logger.Debug("end")
+
+	bundlePath := path.Join(g.path, BUNDLES_DIR_NAME, id)
+
+	if _, err := os.Stat(bundlePath); err != nil {
+		return fmt.Errorf("bundle path not found: %s", err)
+	}
+
+	if err := os.RemoveAll(bundlePath); err != nil {
+		return fmt.Errorf("deleting bundle path: %s", err)
+	}
+
+	return nil
 }

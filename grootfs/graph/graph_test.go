@@ -87,4 +87,42 @@ var _ = Describe("Graph", func() {
 			})
 		})
 	})
+
+	Describe("DeleteBundle", func() {
+		var bundlePath string
+
+		BeforeEach(func() {
+			bundlePath = path.Join(graphPath, graph.BUNDLES_DIR_NAME, "some-id")
+			Expect(os.MkdirAll(bundlePath, 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(bundlePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		})
+
+		It("deletes an existing bundle", func() {
+			Expect(grph.DeleteBundle(logger, "some-id")).To(Succeed())
+			Expect(bundlePath).NotTo(BeAnExistingFile())
+		})
+
+		Context("when bundle does not exist", func() {
+			It("returns an error", func() {
+				err := grph.DeleteBundle(logger, "cake")
+				Expect(err).To(MatchError(ContainSubstring("bundle path not found")))
+			})
+		})
+
+		Context("when deleting the folder fails", func() {
+			BeforeEach(func() {
+				Expect(os.Chmod(bundlePath, 0666)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				// we need to revert permissions because of the outer AfterEach
+				Expect(os.Chmod(bundlePath, 0755)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				err := grph.DeleteBundle(logger, "some-id")
+				Expect(err).To(MatchError(ContainSubstring("deleting bundle path")))
+			})
+		})
+	})
 })

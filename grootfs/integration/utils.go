@@ -19,6 +19,14 @@ func CreateBundle(grootFSBin, graphPath, imagePath, id string) string {
 	return strings.TrimSpace(string(sess.Out.Contents()))
 }
 
+func DeleteBundle(grootFSBin, graphPath, id string) string {
+	cmd := exec.Command(grootFSBin, "--graph", graphPath, "delete", id)
+	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	Expect(err).ToNot(HaveOccurred())
+	Eventually(sess).Should(gexec.Exit(0))
+	return string(sess.Out.Contents())
+}
+
 func FindUID(user string) uint32 {
 	sess, err := gexec.Start(exec.Command("id", "-u", user), nil, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
