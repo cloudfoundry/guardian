@@ -66,7 +66,6 @@ var _ = Describe("Create", func() {
 		It("should fail when the uid mapping is invalid", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--graph", GraphPath,
-				"--debug",
 				"create", "--image", imagePath,
 				"--uid-mapping", "1:hello:65000",
 				"some-id",
@@ -80,7 +79,6 @@ var _ = Describe("Create", func() {
 		It("should fail when the gid mapping is invalid", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--graph", GraphPath,
-				"--debug",
 				"create", "--image", imagePath,
 				"--gid-mapping", "1:groot:65000",
 				"some-id",

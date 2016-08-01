@@ -25,8 +25,8 @@ func main() {
 			Value: GraphPath,
 		},
 		cli.BoolFlag{
-			Name:  "debug",
-			Usage: "Set for verbose logging",
+			Name:  "verbose",
+			Usage: "Toggles logging",
 		},
 	}
 
@@ -38,10 +38,11 @@ func main() {
 
 	grootfs.Before = func(ctx *cli.Context) error {
 		graphPath := ctx.String("graph")
+		cli.ErrWriter = os.Stdout
 
 		logger := lager.NewLogger("grootfs")
-		logLevel := lager.INFO
-		if ctx.Bool("debug") {
+		logLevel := lager.FATAL
+		if ctx.Bool("verbose") {
 			logLevel = lager.DEBUG
 		}
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, logLevel))

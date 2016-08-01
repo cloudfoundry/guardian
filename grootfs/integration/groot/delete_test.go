@@ -38,7 +38,7 @@ var _ = Describe("Delete", func() {
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
-			Eventually(sess.Err).Should(gbytes.Say("bundle path not found"))
+			Eventually(sess.Out).Should(gbytes.Say("bundle path not found"))
 		})
 	})
 
@@ -48,7 +48,7 @@ var _ = Describe("Delete", func() {
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
-			Eventually(sess.Err).Should(gbytes.Say("id was not specified"))
+			Eventually(sess.Out).Should(gbytes.Say("id was not specified"))
 		})
 	})
 })
