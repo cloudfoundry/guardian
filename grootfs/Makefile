@@ -20,7 +20,7 @@ test:
 	ginkgo -r -p -skipPackage integration .
 
 concourse-test:
-	fly -t lite e -c ci/tasks/grootfs.yml -i grootfs-git-repo=${PWD}
+	fly -t lite e -c ci/tasks/grootfs.yml -p -i grootfs-git-repo=${PWD}
 
 ###### Docker #################################################################
 
