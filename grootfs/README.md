@@ -23,6 +23,6 @@ invitation.
 
 * [Garden project](https://github.com/cloudfoundry/garden)
 * [GrootFS Pivotal tracker](https://www.pivotaltracker.com/n/projects/1661239)
-* [GrootFS CI](https://garden.ci.cf-app.com/pipelines/grootfs)
+* [GrootFS CI](https://grootfs.ci.cf-app.com)
 * [Cloud Foundry Slack - Invitation](https://slack.cloudfoundry.org/)
 * [Cloud Foundry Slack](https://cloudfoundry.slack.com/)
