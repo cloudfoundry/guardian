@@ -28,6 +28,10 @@ func main() {
 			Name:  "verbose",
 			Usage: "Toggles logging",
 		},
+		cli.StringFlag{
+			Name:  "log-file",
+			Usage: "Forward logs to file",
+		},
 	}
 
 	grootfs.Commands = []cli.Command{
@@ -38,19 +42,36 @@ func main() {
 
 	grootfs.Before = func(ctx *cli.Context) error {
 		graphPath := ctx.String("graph")
+
 		cli.ErrWriter = os.Stdout
 
-		logger := lager.NewLogger("grootfs")
-		logLevel := lager.FATAL
-		if ctx.Bool("verbose") {
-			logLevel = lager.DEBUG
-		}
-		logger.RegisterSink(lager.NewWriterSink(os.Stderr, logLevel))
-		ctx.App.Metadata["logger"] = logger
+		logger := configureLog(ctx)
 
 		configurer := graph.NewConfigurer()
 		return configurer.Ensure(logger, graphPath)
 	}
 
 	grootfs.Run(os.Args)
+}
+
+func configureLog(ctx *cli.Context) lager.Logger {
+	logFile := ctx.GlobalString("log-file")
+	verbose := ctx.Bool("verbose")
+	logWriter := os.Stderr
+
+	if logFile != "" {
+		logWriter, _ = os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
+		verbose = true
+	}
+
+	logger := lager.NewLogger("grootfs")
+	logLevel := lager.FATAL
+	if verbose {
+		logLevel = lager.DEBUG
+	}
+
+	logger.RegisterSink(lager.NewWriterSink(logWriter, logLevel))
+	ctx.App.Metadata["logger"] = logger
+
+	return logger
 }
