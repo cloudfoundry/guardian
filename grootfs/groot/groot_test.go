@@ -13,14 +13,21 @@ import (
 )
 
 var _ = Describe("I AM GROOT, the Orchestrator", func() {
-	var cloner *grootfakes.FakeCloner
-	var graph *grootfakes.FakeGraph
-	var groot *grootpkg.Groot
-	var logger lager.Logger
+	var (
+		cloner     *grootfakes.FakeCloner
+		graph      *grootfakes.FakeGraph
+		fakeBundle *grootfakes.FakeBundle
+		groot      *grootpkg.Groot
+		logger     lager.Logger
+	)
 
 	BeforeEach(func() {
 		cloner = new(grootfakes.FakeCloner)
 		graph = new(grootfakes.FakeGraph)
+		fakeBundle = new(grootfakes.FakeBundle)
+
+		graph.MakeBundleReturns(fakeBundle, nil)
+
 		logger = lagertest.NewTestLogger("groot")
 		groot = grootpkg.IamGroot(graph, cloner)
 	})
@@ -38,16 +45,16 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 		})
 
 		It("returns the bundle path", func() {
-			graph.MakeBundleReturns("/path/to/bundle", nil)
+			fakeBundle.PathReturns("/path/to/bundle")
 
-			bundlePath, err := groot.Create(logger, grootpkg.CreateSpec{})
+			bundle, err := groot.Create(logger, grootpkg.CreateSpec{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(bundlePath).To(Equal("/path/to/bundle"))
+			Expect(bundle.Path()).To(Equal("/path/to/bundle"))
 		})
 
 		Context("when creating the bundle fails", func() {
 			BeforeEach(func() {
-				graph.MakeBundleReturns("", errors.New("Failed to make bundle"))
+				graph.MakeBundleReturns(nil, errors.New("Failed to make bundle"))
 			})
 
 			It("returns the error", func() {
@@ -57,7 +64,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 		})
 
 		It("clones the image", func() {
-			graph.MakeBundleReturns("/path/to/bundle", nil)
+			fakeBundle.PathReturns("/path/to/bundle")
+			fakeBundle.RootFsPathReturns("/path/to/bundle/rootfs")
 
 			uidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
 			gidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}

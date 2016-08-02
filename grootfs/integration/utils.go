@@ -5,18 +5,20 @@ import (
 	"strconv"
 	"strings"
 
+	"code.cloudfoundry.org/grootfs/groot"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )
 
-func CreateBundle(grootFSBin, graphPath, imagePath, id string) string {
+func CreateBundle(grootFSBin, graphPath, imagePath, id string) groot.Bundle {
 	cmd := exec.Command(grootFSBin, "--graph", graphPath, "create", "--image", imagePath, id)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))
 
-	return strings.TrimSpace(string(sess.Out.Contents()))
+	return groot.NewBundle(strings.TrimSpace(string(sess.Out.Contents())))
 }
 
 func DeleteBundle(grootFSBin, graphPath, id string) string {

@@ -9,21 +9,21 @@ import (
 )
 
 type FakeGraph struct {
-	MakeBundleStub        func(lager.Logger, string) (string, error)
+	MakeBundleStub        func(lager.Logger, string) (groot.Bundle, error)
 	makeBundleMutex       sync.RWMutex
 	makeBundleArgsForCall []struct {
 		arg1 lager.Logger
 		arg2 string
 	}
 	makeBundleReturns struct {
-		result1 string
+		result1 groot.Bundle
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGraph) MakeBundle(arg1 lager.Logger, arg2 string) (string, error) {
+func (fake *FakeGraph) MakeBundle(arg1 lager.Logger, arg2 string) (groot.Bundle, error) {
 	fake.makeBundleMutex.Lock()
 	fake.makeBundleArgsForCall = append(fake.makeBundleArgsForCall, struct {
 		arg1 lager.Logger
@@ -50,10 +50,10 @@ func (fake *FakeGraph) MakeBundleArgsForCall(i int) (lager.Logger, string) {
 	return fake.makeBundleArgsForCall[i].arg1, fake.makeBundleArgsForCall[i].arg2
 }
 
-func (fake *FakeGraph) MakeBundleReturns(result1 string, result2 error) {
+func (fake *FakeGraph) MakeBundleReturns(result1 groot.Bundle, result2 error) {
 	fake.MakeBundleStub = nil
 	fake.makeBundleReturns = struct {
-		result1 string
+		result1 groot.Bundle
 		result2 error
 	}{result1, result2}
 }

@@ -61,7 +61,7 @@ var CreateCommand = cli.Command{
 		cloner := clonerpkg.NewTarCloner(runner, clonerpkg.NewIDMapper(runner))
 		groot := grootpkg.IamGroot(graph, cloner)
 
-		bundlePath, err := groot.Create(logger, grootpkg.CreateSpec{
+		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
 			ID:          id,
 			ImagePath:   imagePath,
 			UIDMappings: uidMappings,
@@ -72,7 +72,7 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		fmt.Println(bundlePath)
+		fmt.Println(bundle.Path())
 		return nil
 	},
 }

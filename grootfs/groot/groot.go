@@ -2,7 +2,6 @@ package groot
 
 import (
 	"fmt"
-	"path"
 
 	"code.cloudfoundry.org/lager"
 )
@@ -11,7 +10,7 @@ import (
 //go:generate counterfeiter . Cloner
 
 type Graph interface {
-	MakeBundle(lager.Logger, string) (string, error)
+	MakeBundle(lager.Logger, string) (Bundle, error)
 }
 
 type CloneSpec struct {
@@ -46,21 +45,21 @@ type CreateSpec struct {
 	GIDMappings []IDMappingSpec
 }
 
-func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (string, error) {
-	bundlePath, err := g.graph.MakeBundle(logger, spec.ID)
+func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
+	bundle, err := g.graph.MakeBundle(logger, spec.ID)
 	if err != nil {
-		return "", fmt.Errorf("making bundle: %s", err)
+		return nil, fmt.Errorf("making bundle: %s", err)
 	}
 
 	err = g.cloner.Clone(logger, CloneSpec{
 		FromDir:     spec.ImagePath,
-		ToDir:       path.Join(bundlePath, "rootfs"),
+		ToDir:       bundle.RootFsPath(),
 		UIDMappings: spec.UIDMappings,
 		GIDMappings: spec.GIDMappings,
 	})
 	if err != nil {
-		return "", fmt.Errorf("cloning: %s", err)
+		return nil, fmt.Errorf("cloning: %s", err)
 	}
 
-	return bundlePath, nil
+	return bundle, nil
 }

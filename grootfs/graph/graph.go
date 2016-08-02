@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -20,21 +21,21 @@ func NewGraph(path string) *Graph {
 	}
 }
 
-func (g *Graph) MakeBundle(logger lager.Logger, id string) (string, error) {
+func (g *Graph) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error) {
 	logger = logger.Session("making-bundle", lager.Data{"graphPath": g.path, "id": id})
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	bundlePath := path.Join(g.path, BUNDLES_DIR_NAME, id)
-	if _, err := os.Stat(bundlePath); err == nil {
-		return "", fmt.Errorf("bundle for id `%s` already exists", id)
+	bundle := groot.NewBundle(path.Join(g.path, BUNDLES_DIR_NAME, id))
+	if _, err := os.Stat(bundle.Path()); err == nil {
+		return nil, fmt.Errorf("bundle for id `%s` already exists", id)
 	}
 
-	if err := os.MkdirAll(bundlePath, 0700); err != nil {
-		return "", fmt.Errorf("making bundle path: %s", err)
+	if err := os.MkdirAll(bundle.Path(), 0700); err != nil {
+		return nil, fmt.Errorf("making bundle path: %s", err)
 	}
 
-	return bundlePath, nil
+	return bundle, nil
 }
 
 func (g *Graph) DeleteBundle(logger lager.Logger, id string) error {
@@ -42,13 +43,12 @@ func (g *Graph) DeleteBundle(logger lager.Logger, id string) error {
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	bundlePath := path.Join(g.path, BUNDLES_DIR_NAME, id)
-
-	if _, err := os.Stat(bundlePath); err != nil {
+	bundle := groot.NewBundle(path.Join(g.path, BUNDLES_DIR_NAME, id))
+	if _, err := os.Stat(bundle.Path()); err != nil {
 		return fmt.Errorf("bundle path not found: %s", err)
 	}
 
-	if err := os.RemoveAll(bundlePath); err != nil {
+	if err := os.RemoveAll(bundle.Path()); err != nil {
 		return fmt.Errorf("deleting bundle path: %s", err)
 	}
 

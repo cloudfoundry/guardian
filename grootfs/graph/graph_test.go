@@ -40,14 +40,19 @@ var _ = Describe("Graph", func() {
 
 	Describe("MakeBundle", func() {
 		It("should return a bundle directory", func() {
-			bundlePath, err := grph.MakeBundle(logger, "some-id")
+			bundle, err := grph.MakeBundle(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(bundlePath).To(BeADirectory())
+			Expect(bundle.Path()).To(BeADirectory())
 		})
 
 		It("should keep the bundles in the same bundle directory", func() {
-			Expect(grph.MakeBundle(logger, "some-id")).NotTo(BeEmpty())
-			Expect(grph.MakeBundle(logger, "another-id")).NotTo(BeEmpty())
+			someBundle, err := grph.MakeBundle(logger, "some-id")
+			Expect(err).NotTo(HaveOccurred())
+			anotherBundle, err := grph.MakeBundle(logger, "another-id")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(someBundle.Path()).NotTo(BeEmpty())
+			Expect(anotherBundle.Path()).NotTo(BeEmpty())
 
 			bundles, err := ioutil.ReadDir(path.Join(graphPath, graph.BUNDLES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
@@ -56,13 +61,13 @@ var _ = Describe("Graph", func() {
 
 		Context("when calling it with two different ids", func() {
 			It("should return two different bundle paths", func() {
-				bundlePath, err := grph.MakeBundle(logger, "some-id")
+				bundle, err := grph.MakeBundle(logger, "some-id")
 				Expect(err).NotTo(HaveOccurred())
 
-				anotherBundlePath, err := grph.MakeBundle(logger, "another-id")
+				anotherBundle, err := grph.MakeBundle(logger, "another-id")
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(bundlePath).NotTo(Equal(anotherBundlePath))
+				Expect(bundle.Path()).NotTo(Equal(anotherBundle.Path()))
 			})
 		})
 
