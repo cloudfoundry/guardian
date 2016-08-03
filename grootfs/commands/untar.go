@@ -30,7 +30,7 @@ var UntarCommand = cli.Command{
 		cloner := clonerpkg.NewTarCloner(clonerpkg.NewIDMapper(runner))
 
 		ctrlPipeR := os.NewFile(3, "/ctrl/pipe")
-		if err := cloner.Untar(logger, ctrlPipeR, toDir); err != nil {
+		if err := cloner.Untar(logger, ctrlPipeR, os.Stdin, toDir); err != nil {
 			return cli.NewExitError("tar failed", 1)
 		}
 

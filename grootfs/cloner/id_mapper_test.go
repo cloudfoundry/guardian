@@ -5,6 +5,8 @@ import (
 
 	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,10 +17,16 @@ var _ = Describe("IDMapper", func() {
 		cmdPath       string
 		fakeCmdRunner *fake_command_runner.FakeCommandRunner
 		idMapper      *cloner.CommandIDMapper
+		logger        lager.Logger
 	)
 
-	JustBeforeEach(func() {
+	BeforeEach(func() {
 		fakeCmdRunner = fake_command_runner.New()
+		idMapper = cloner.NewIDMapper(fakeCmdRunner)
+		logger = lagertest.NewTestLogger("idmapper")
+	})
+
+	JustBeforeEach(func() {
 		fakeCmdRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: cmdPath,
 		}, func(cmd *exec.Cmd) error {
@@ -33,9 +41,7 @@ var _ = Describe("IDMapper", func() {
 		})
 
 		It("uses the newuidmap correctly", func() {
-			idMapper = cloner.NewIDMapper(fakeCmdRunner)
-
-			Expect(idMapper.MapUIDs(1000, []groot.IDMappingSpec{
+			Expect(idMapper.MapUIDs(logger, 1000, []groot.IDMappingSpec{
 				groot.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 30},
 				groot.IDMappingSpec{HostID: 100, NamespaceID: 200, Size: 300},
 			})).To(Succeed())
@@ -55,9 +61,7 @@ var _ = Describe("IDMapper", func() {
 		})
 
 		It("uses the newgidmap correctly", func() {
-			idMapper = cloner.NewIDMapper(fakeCmdRunner)
-
-			Expect(idMapper.MapGIDs(1000, []groot.IDMappingSpec{
+			Expect(idMapper.MapGIDs(logger, 1000, []groot.IDMappingSpec{
 				groot.IDMappingSpec{HostID: 50, NamespaceID: 60, Size: 70},
 				groot.IDMappingSpec{HostID: 400, NamespaceID: 500, Size: 600},
 			})).To(Succeed())

@@ -6,21 +6,24 @@ import (
 
 	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeIDMapper struct {
-	MapUIDsStub        func(pid int, mappings []groot.IDMappingSpec) error
+	MapUIDsStub        func(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error
 	mapUIDsMutex       sync.RWMutex
 	mapUIDsArgsForCall []struct {
+		logger   lager.Logger
 		pid      int
 		mappings []groot.IDMappingSpec
 	}
 	mapUIDsReturns struct {
 		result1 error
 	}
-	MapGIDsStub        func(pid int, mappings []groot.IDMappingSpec) error
+	MapGIDsStub        func(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error
 	mapGIDsMutex       sync.RWMutex
 	mapGIDsArgsForCall []struct {
+		logger   lager.Logger
 		pid      int
 		mappings []groot.IDMappingSpec
 	}
@@ -31,7 +34,7 @@ type FakeIDMapper struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeIDMapper) MapUIDs(pid int, mappings []groot.IDMappingSpec) error {
+func (fake *FakeIDMapper) MapUIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error {
 	var mappingsCopy []groot.IDMappingSpec
 	if mappings != nil {
 		mappingsCopy = make([]groot.IDMappingSpec, len(mappings))
@@ -39,13 +42,14 @@ func (fake *FakeIDMapper) MapUIDs(pid int, mappings []groot.IDMappingSpec) error
 	}
 	fake.mapUIDsMutex.Lock()
 	fake.mapUIDsArgsForCall = append(fake.mapUIDsArgsForCall, struct {
+		logger   lager.Logger
 		pid      int
 		mappings []groot.IDMappingSpec
-	}{pid, mappingsCopy})
-	fake.recordInvocation("MapUIDs", []interface{}{pid, mappingsCopy})
+	}{logger, pid, mappingsCopy})
+	fake.recordInvocation("MapUIDs", []interface{}{logger, pid, mappingsCopy})
 	fake.mapUIDsMutex.Unlock()
 	if fake.MapUIDsStub != nil {
-		return fake.MapUIDsStub(pid, mappings)
+		return fake.MapUIDsStub(logger, pid, mappings)
 	} else {
 		return fake.mapUIDsReturns.result1
 	}
@@ -57,10 +61,10 @@ func (fake *FakeIDMapper) MapUIDsCallCount() int {
 	return len(fake.mapUIDsArgsForCall)
 }
 
-func (fake *FakeIDMapper) MapUIDsArgsForCall(i int) (int, []groot.IDMappingSpec) {
+func (fake *FakeIDMapper) MapUIDsArgsForCall(i int) (lager.Logger, int, []groot.IDMappingSpec) {
 	fake.mapUIDsMutex.RLock()
 	defer fake.mapUIDsMutex.RUnlock()
-	return fake.mapUIDsArgsForCall[i].pid, fake.mapUIDsArgsForCall[i].mappings
+	return fake.mapUIDsArgsForCall[i].logger, fake.mapUIDsArgsForCall[i].pid, fake.mapUIDsArgsForCall[i].mappings
 }
 
 func (fake *FakeIDMapper) MapUIDsReturns(result1 error) {
@@ -70,7 +74,7 @@ func (fake *FakeIDMapper) MapUIDsReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeIDMapper) MapGIDs(pid int, mappings []groot.IDMappingSpec) error {
+func (fake *FakeIDMapper) MapGIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error {
 	var mappingsCopy []groot.IDMappingSpec
 	if mappings != nil {
 		mappingsCopy = make([]groot.IDMappingSpec, len(mappings))
@@ -78,13 +82,14 @@ func (fake *FakeIDMapper) MapGIDs(pid int, mappings []groot.IDMappingSpec) error
 	}
 	fake.mapGIDsMutex.Lock()
 	fake.mapGIDsArgsForCall = append(fake.mapGIDsArgsForCall, struct {
+		logger   lager.Logger
 		pid      int
 		mappings []groot.IDMappingSpec
-	}{pid, mappingsCopy})
-	fake.recordInvocation("MapGIDs", []interface{}{pid, mappingsCopy})
+	}{logger, pid, mappingsCopy})
+	fake.recordInvocation("MapGIDs", []interface{}{logger, pid, mappingsCopy})
 	fake.mapGIDsMutex.Unlock()
 	if fake.MapGIDsStub != nil {
-		return fake.MapGIDsStub(pid, mappings)
+		return fake.MapGIDsStub(logger, pid, mappings)
 	} else {
 		return fake.mapGIDsReturns.result1
 	}
@@ -96,10 +101,10 @@ func (fake *FakeIDMapper) MapGIDsCallCount() int {
 	return len(fake.mapGIDsArgsForCall)
 }
 
-func (fake *FakeIDMapper) MapGIDsArgsForCall(i int) (int, []groot.IDMappingSpec) {
+func (fake *FakeIDMapper) MapGIDsArgsForCall(i int) (lager.Logger, int, []groot.IDMappingSpec) {
 	fake.mapGIDsMutex.RLock()
 	defer fake.mapGIDsMutex.RUnlock()
-	return fake.mapGIDsArgsForCall[i].pid, fake.mapGIDsArgsForCall[i].mappings
+	return fake.mapGIDsArgsForCall[i].logger, fake.mapGIDsArgsForCall[i].pid, fake.mapGIDsArgsForCall[i].mappings
 }
 
 func (fake *FakeIDMapper) MapGIDsReturns(result1 error) {

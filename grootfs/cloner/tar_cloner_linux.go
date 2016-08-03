@@ -13,8 +13,8 @@ import (
 
 //go:generate counterfeiter . IDMapper
 type IDMapper interface {
-	MapUIDs(pid int, mappings []groot.IDMappingSpec) error
-	MapGIDs(pid int, mappings []groot.IDMappingSpec) error
+	MapUIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error
+	MapGIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error
 }
 
 type TarCloner struct {
@@ -67,18 +67,8 @@ func (c *TarCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 		return fmt.Errorf("starting untar: %s", err)
 	}
 
-	if len(spec.UIDMappings) > 0 {
-		if err = c.idMapper.MapUIDs(untarCmd.Process.Pid, spec.UIDMappings); err != nil {
-			return fmt.Errorf("setting uid mapping: %s", err)
-		}
-		logger.Debug("uid-mappings-are-set")
-	}
-
-	if len(spec.GIDMappings) > 0 {
-		if err = c.idMapper.MapGIDs(untarCmd.Process.Pid, spec.GIDMappings); err != nil {
-			return fmt.Errorf("setting gid mapping: %s", err)
-		}
-		logger.Debug("gid-mappings-are-set")
+	if err := c.setIDMappings(logger, spec, untarCmd.Process.Pid); err != nil {
+		return err
 	}
 
 	if _, err := untarPipeW.Write([]byte{0}); err != nil {
@@ -98,11 +88,31 @@ func (c *TarCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 	return nil
 }
 
-func (c *TarCloner) Untar(logger lager.Logger, ctrlPipeR io.Reader, toDir string) error {
-	ctrlPipeR.Read(make([]byte, 1))
+func (c *TarCloner) setIDMappings(logger lager.Logger, spec groot.CloneSpec, untarPid int) error {
+	if len(spec.UIDMappings) > 0 {
+		if err := c.idMapper.MapUIDs(logger, untarPid, spec.UIDMappings); err != nil {
+			return fmt.Errorf("setting uid mapping: %s", err)
+		}
+		logger.Debug("uid-mappings-are-set")
+	}
+
+	if len(spec.GIDMappings) > 0 {
+		if err := c.idMapper.MapGIDs(logger, untarPid, spec.GIDMappings); err != nil {
+			return fmt.Errorf("setting gid mapping: %s", err)
+		}
+		logger.Debug("gid-mappings-are-set")
+	}
+
+	return nil
+}
+
+func (c *TarCloner) Untar(logger lager.Logger, ctrlPipeR io.Reader, reader io.Reader, toDir string) error {
+	if _, err := ctrlPipeR.Read(make([]byte, 1)); err != nil {
+		return nil
+	}
 
 	cmd := exec.Command("tar", "-xp", "-C", toDir)
-	cmd.Stdin = os.Stdin
+	cmd.Stdin = reader
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 

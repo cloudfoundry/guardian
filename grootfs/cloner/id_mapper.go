@@ -9,6 +9,7 @@ import (
 	"github.com/cloudfoundry/gunk/command_runner"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/lager"
 )
 
 type CommandIDMapper struct {
@@ -21,11 +22,11 @@ func NewIDMapper(cmdRunner command_runner.CommandRunner) *CommandIDMapper {
 	}
 }
 
-func (im *CommandIDMapper) MapUIDs(pid int, mappings []groot.IDMappingSpec) error {
+func (im *CommandIDMapper) MapUIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error {
 	return im.execute("newuidmap", pid, mappings)
 }
 
-func (im *CommandIDMapper) MapGIDs(pid int, mappings []groot.IDMappingSpec) error {
+func (im *CommandIDMapper) MapGIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error {
 	return im.execute("newgidmap", pid, mappings)
 }
 
