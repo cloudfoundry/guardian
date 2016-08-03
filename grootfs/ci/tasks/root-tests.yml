@@ -11,10 +11,6 @@ inputs:
   - name: grootfs-git-repo
     path: src/code.cloudfoundry.org/grootfs
 
-params:
-  ROOT_ONLY:
-  GROOT_ONLY:
-
 run:
-  path: src/code.cloudfoundry.org/grootfs/ci/scripts/grootfs.sh
+  path: src/code.cloudfoundry.org/grootfs/hack/run-root-tests.sh
   user: root
