@@ -27,7 +27,7 @@ var _ = Describe("Create", func() {
 
 		It("creates a root filesystem", func() {
 			bundle := integration.CreateBundle(GrootFSBin, GraphPath, imagePath, "random-id")
-			bundleContentPath := path.Join(bundle.RootFsPath(), "foo")
+			bundleContentPath := path.Join(bundle.RootFSPath(), "foo")
 			Expect(bundleContentPath).To(BeARegularFile())
 			fooContents, err := ioutil.ReadFile(bundleContentPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -47,8 +47,8 @@ var _ = Describe("Create", func() {
 			It("isolates them", func() {
 				bundle := integration.CreateBundle(GrootFSBin, GraphPath, imagePath, "random-id")
 				anotherBundle := integration.CreateBundle(GrootFSBin, GraphPath, imagePath, "another-random-id")
-				Expect(ioutil.WriteFile(path.Join(bundle.RootFsPath(), "bar"), []byte("hello-world"), 0644)).To(Succeed())
-				Expect(path.Join(anotherBundle.RootFsPath(), "bar")).NotTo(BeARegularFile())
+				Expect(ioutil.WriteFile(path.Join(bundle.RootFSPath(), "bar"), []byte("hello-world"), 0644)).To(Succeed())
+				Expect(path.Join(anotherBundle.RootFSPath(), "bar")).NotTo(BeARegularFile())
 			})
 		})
 

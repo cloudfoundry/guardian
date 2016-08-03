@@ -65,7 +65,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 		It("clones the image", func() {
 			fakeBundle.PathReturns("/path/to/bundle")
-			fakeBundle.RootFsPathReturns("/path/to/bundle/rootfs")
+			fakeBundle.RootFSPathReturns("/path/to/bundle/rootfs")
 
 			uidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
 			gidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}

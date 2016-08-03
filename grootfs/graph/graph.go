@@ -26,7 +26,7 @@ func (g *Graph) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error)
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	bundle := groot.NewBundle(path.Join(g.path, BUNDLES_DIR_NAME, id))
+	bundle := NewBundle(path.Join(g.path, BUNDLES_DIR_NAME, id))
 	if _, err := os.Stat(bundle.Path()); err == nil {
 		return nil, fmt.Errorf("bundle for id `%s` already exists", id)
 	}
@@ -43,7 +43,7 @@ func (g *Graph) DeleteBundle(logger lager.Logger, id string) error {
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	bundle := groot.NewBundle(path.Join(g.path, BUNDLES_DIR_NAME, id))
+	bundle := NewBundle(path.Join(g.path, BUNDLES_DIR_NAME, id))
 	if _, err := os.Stat(bundle.Path()); err != nil {
 		return fmt.Errorf("bundle path not found: %s", err)
 	}

@@ -1,12 +1,6 @@
-package groot
+package graph
 
 import "path"
-
-//go:generate counterfeiter . Bundle
-type Bundle interface {
-	Path() string
-	RootFsPath() string
-}
 
 type bundle struct {
 	path string
@@ -22,6 +16,6 @@ func (bdl *bundle) Path() string {
 	return bdl.path
 }
 
-func (bdl *bundle) RootFsPath() string {
+func (bdl *bundle) RootFSPath() string {
 	return path.Join(bdl.path, "rootfs")
 }

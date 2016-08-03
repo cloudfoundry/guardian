@@ -44,7 +44,7 @@ var _ = Describe("Create", func() {
 	It("keeps the ownership and permissions", func() {
 		bundle := integration.CreateBundle(GrootFSBin, GraphPath, imagePath, "random-id")
 
-		stat, err := os.Stat(path.Join(bundle.RootFsPath(), "foo"))
+		stat, err := os.Stat(path.Join(bundle.RootFSPath(), "foo"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(stat.Sys().(*syscall.Stat_t).Uid).To(BeEquivalentTo(rootUID))
 		Expect(stat.Sys().(*syscall.Stat_t).Gid).To(BeEquivalentTo(rootGID))

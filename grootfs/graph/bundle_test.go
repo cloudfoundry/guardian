@@ -1,9 +1,10 @@
-package groot_test
+package graph_test
 
 import (
 	"io/ioutil"
 	"path"
 
+	"code.cloudfoundry.org/grootfs/graph"
 	"code.cloudfoundry.org/grootfs/groot"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -19,7 +20,7 @@ var _ = Describe("Bundle", func() {
 	BeforeEach(func() {
 		bundlePath, err = ioutil.TempDir("", "bundle")
 		Expect(err).NotTo(HaveOccurred())
-		bundle = groot.NewBundle(bundlePath)
+		bundle = graph.NewBundle(bundlePath)
 	})
 
 	Describe("Path", func() {
@@ -28,9 +29,9 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
-	Describe("RootFsPath", func() {
+	Describe("RootFSPath", func() {
 		It("returns the bundle rootfs path", func() {
-			Expect(bundle.RootFsPath()).To(Equal(path.Join(bundlePath, "rootfs")))
+			Expect(bundle.RootFSPath()).To(Equal(path.Join(bundlePath, "rootfs")))
 		})
 	})
 })

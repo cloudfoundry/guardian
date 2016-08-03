@@ -7,10 +7,16 @@ import (
 )
 
 //go:generate counterfeiter . Graph
+//go:generate counterfeiter . Bundle
 //go:generate counterfeiter . Cloner
 
 type Graph interface {
 	MakeBundle(lager.Logger, string) (Bundle, error)
+}
+
+type Bundle interface {
+	Path() string
+	RootFSPath() string
 }
 
 type CloneSpec struct {
@@ -53,7 +59,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 
 	err = g.cloner.Clone(logger, CloneSpec{
 		FromDir:     spec.ImagePath,
-		ToDir:       bundle.RootFsPath(),
+		ToDir:       bundle.RootFSPath(),
 		UIDMappings: spec.UIDMappings,
 		GIDMappings: spec.GIDMappings,
 	})

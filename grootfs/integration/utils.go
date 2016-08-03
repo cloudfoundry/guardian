@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"code.cloudfoundry.org/grootfs/graph"
 	"code.cloudfoundry.org/grootfs/groot"
 
 	. "github.com/onsi/ginkgo"
@@ -18,7 +19,7 @@ func CreateBundle(grootFSBin, graphPath, imagePath, id string) groot.Bundle {
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))
 
-	return groot.NewBundle(strings.TrimSpace(string(sess.Out.Contents())))
+	return graph.NewBundle(strings.TrimSpace(string(sess.Out.Contents())))
 }
 
 func DeleteBundle(grootFSBin, graphPath, id string) string {
