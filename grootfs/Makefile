@@ -1,5 +1,5 @@
 .PHONY: all \
-	test remote-test docker-test \
+	test concourse-groot-test concourse-root-test concourse-test \
 	image push-image
 
 all:
@@ -19,9 +19,13 @@ help:
 test:
 	ginkgo -r -p -skipPackage integration .
 
-concourse-test:
+concourse-groot-test:
 	fly -t lite e -c ci/tasks/groot-tests.yml -p -i grootfs-git-repo=${PWD}
+
+concourse-root-test:
 	fly -t lite e -c ci/tasks/root-tests.yml -p -i grootfs-git-repo=${PWD}
+
+concourse-test: concourse-groot-test concourse-root-test
 
 ###### Docker #################################################################
 
