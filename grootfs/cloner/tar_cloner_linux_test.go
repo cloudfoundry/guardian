@@ -30,6 +30,7 @@ func init() {
 
 		toDir := os.Args[2]
 		if path.Base(toDir) == "fail-to-untar" {
+			fmt.Fprintf(os.Stdout, "failed to untar")
 			os.Exit(1)
 		}
 
@@ -84,7 +85,7 @@ var _ = Describe("TarCloner", func() {
 			Expect(os.RemoveAll(fromDir)).To(Succeed())
 		})
 
-		It("should have the image contents in the rootfs directory", func() {
+		It("does have the image contents in the rootfs directory", func() {
 			Expect(tarCloner.Clone(logger, groot.CloneSpec{
 				FromDir: fromDir,
 				ToDir:   toDir,
@@ -99,7 +100,7 @@ var _ = Describe("TarCloner", func() {
 
 		Context("when using mapping users", func() {
 			Describe("UIDMappings", func() {
-				It("should use the uid provided", func() {
+				It("uses the uid provided", func() {
 					Expect(tarCloner.Clone(logger, groot.CloneSpec{
 						FromDir: fromDir,
 						ToDir:   toDir,
@@ -121,7 +122,7 @@ var _ = Describe("TarCloner", func() {
 						fakeIDMapper.MapUIDsReturns(errors.New("Boom!"))
 					})
 
-					It("should return an error", func() {
+					It("returns an error", func() {
 						Expect(tarCloner.Clone(logger, groot.CloneSpec{
 							FromDir: fromDir,
 							ToDir:   toDir,
@@ -134,7 +135,7 @@ var _ = Describe("TarCloner", func() {
 			})
 
 			Describe("GIDMappings", func() {
-				It("should use the uid provided", func() {
+				It("uses the uid provided", func() {
 					Expect(tarCloner.Clone(logger, groot.CloneSpec{
 						FromDir: fromDir,
 						ToDir:   toDir,
@@ -156,7 +157,7 @@ var _ = Describe("TarCloner", func() {
 						fakeIDMapper.MapGIDsReturns(errors.New("Boom!"))
 					})
 
-					It("should return an error", func() {
+					It("returns an error", func() {
 						Expect(tarCloner.Clone(logger, groot.CloneSpec{
 							FromDir: fromDir,
 							ToDir:   toDir,
@@ -170,7 +171,7 @@ var _ = Describe("TarCloner", func() {
 		})
 
 		Context("when the image path does not exist", func() {
-			It("should return an error", func() {
+			It("returns an error", func() {
 				Expect(tarCloner.Clone(logger, groot.CloneSpec{
 					FromDir: "/does/not/exist",
 					ToDir:   toDir,
@@ -181,9 +182,11 @@ var _ = Describe("TarCloner", func() {
 		})
 
 		Context("when the image contains files that can only be read by root", func() {
-			It("should return an error", func() {
+			BeforeEach(func() {
 				Expect(ioutil.WriteFile(path.Join(fromDir, "a-file"), []byte("hello-world"), 0000)).To(Succeed())
+			})
 
+			It("returns an error", func() {
 				Expect(tarCloner.Clone(logger, groot.CloneSpec{
 					FromDir: fromDir,
 					ToDir:   toDir,
@@ -191,16 +194,35 @@ var _ = Describe("TarCloner", func() {
 					MatchError(ContainSubstring(fmt.Sprintf("reading from `%s`", fromDir))),
 				)
 			})
+
+			It("forwards tar's stderr", func() {
+				Expect(tarCloner.Clone(logger, groot.CloneSpec{
+					FromDir: fromDir,
+					ToDir:   toDir,
+				})).To(
+					MatchError(ContainSubstring("Permission denied")),
+				)
+			})
 		})
 
 		Context("when untarring fails for reasons", func() {
-			It("should return an error", func() {
+			It("returns an error", func() {
 				toDir := path.Join(bundleDir, "fail-to-untar")
 				Expect(tarCloner.Clone(logger, groot.CloneSpec{
 					FromDir: fromDir,
 					ToDir:   toDir,
 				})).To(
 					MatchError(ContainSubstring(fmt.Sprintf("writing to `%s`", toDir))),
+				)
+			})
+
+			It("returns the command output", func() {
+				toDir := path.Join(bundleDir, "fail-to-untar")
+				Expect(tarCloner.Clone(logger, groot.CloneSpec{
+					FromDir: fromDir,
+					ToDir:   toDir,
+				})).To(
+					MatchError(ContainSubstring("failed to untar")),
 				)
 			})
 		})
@@ -242,7 +264,7 @@ var _ = Describe("TarCloner", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should untar given an input stream", func() {
+		It("untars given an input stream", func() {
 			_, err := ctrlPipeW.Write([]byte{0})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -250,7 +272,7 @@ var _ = Describe("TarCloner", func() {
 			Expect(path.Join(toDir, "a_file")).To(BeARegularFile())
 		})
 
-		It("should wait for the control pipe to continue", func() {
+		It("waits for the control pipe to continue", func() {
 			untarFinishedChan := make(chan struct{})
 
 			go func() {
@@ -273,6 +295,26 @@ var _ = Describe("TarCloner", func() {
 
 				emptyBuffer := gbytes.NewBuffer()
 				Expect(tarCloner.Untar(logger, ctrlPipeR, emptyBuffer, toDir)).To(Succeed())
+			})
+		})
+
+		Context("when untar fails", func() {
+			var emptyBuffer *gbytes.Buffer
+
+			BeforeEach(func() {
+				_, err := ctrlPipeW.Write([]byte{0})
+				Expect(err).NotTo(HaveOccurred())
+				emptyBuffer = gbytes.NewBuffer()
+			})
+
+			It("returns an error", func() {
+				emptyBuffer := gbytes.NewBuffer()
+				Expect(tarCloner.Untar(logger, ctrlPipeR, emptyBuffer, toDir)).To(MatchError(ContainSubstring("untaring")))
+			})
+
+			It("forwards tar's output", func() {
+				emptyBuffer := gbytes.NewBuffer()
+				Expect(tarCloner.Untar(logger, ctrlPipeR, emptyBuffer, toDir)).To(MatchError(ContainSubstring("This does not look like a tar archive")))
 			})
 		})
 	})

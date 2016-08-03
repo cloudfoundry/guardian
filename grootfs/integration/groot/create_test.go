@@ -9,6 +9,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -89,6 +90,22 @@ var _ = Describe("Create", func() {
 		})
 
 		Context("when groot does not have permissions to apply the requested mapping", func() {
+			It("returns the newgidmap output in the stdout", func() {
+				cmd := exec.Command(
+					GrootFSBin, "--graph", GraphPath,
+					"create", "--image", imagePath,
+					"--uid-mapping", "1:1:65000",
+					"some-id",
+				)
+
+				buffer := gbytes.NewBuffer()
+				sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(sess.Wait()).NotTo(gexec.Exit(0))
+
+				Eventually(buffer).Should(gbytes.Say(`range [\[\)0-9\-]* -> [\[\)0-9\-]* not allowed`))
+			})
+
 			It("does not leak the bundle directory", func() {
 				cmd := exec.Command(
 					GrootFSBin, "--graph", GraphPath,

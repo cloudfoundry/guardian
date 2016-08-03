@@ -1,8 +1,8 @@
 package cloner
 
 import (
+	"bytes"
 	"fmt"
-	"os"
 	"os/exec"
 	"strconv"
 
@@ -33,11 +33,13 @@ func (im *CommandIDMapper) MapGIDs(logger lager.Logger, pid int, mappings []groo
 func (im *CommandIDMapper) execute(command string, pid int, mappings []groot.IDMappingSpec) error {
 	mappingArgs := append([]string{strconv.Itoa(pid)}, im.idMappingsToArgs(mappings)...)
 	mapCmd := exec.Command(command, mappingArgs...)
-	mapCmd.Stdout = os.Stderr
-	mapCmd.Stderr = os.Stderr
+
+	buffer := bytes.NewBuffer([]byte{})
+	mapCmd.Stdout = buffer
+	mapCmd.Stderr = buffer
 
 	if err := im.cmdRunner.Run(mapCmd); err != nil {
-		return fmt.Errorf("%s: %s", command, err)
+		return fmt.Errorf("%s %s: %s", command, err, buffer.String())
 	}
 
 	return nil
