@@ -565,13 +565,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				// attach again, this exit pipe already closed, should not block
 				var process garden.Process
 				attach := make(chan struct{})
-				go func() {
+				go func(log lager.Logger, processPath string, runner *dadoo.ExecRunner) {
 					defer close(attach)
 
 					var err error
 					process, err = runner.Attach(log, "some-process-id", garden.ProcessIO{}, processPath)
 					Expect(err).NotTo(HaveOccurred())
-				}()
+				}(log, processPath, runner)
 
 				Eventually(attach).Should(BeClosed())
 
