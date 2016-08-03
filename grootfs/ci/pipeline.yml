@@ -51,19 +51,27 @@ jobs:
       trigger: true
   - put: grootfs-version
     params: { file: grootfs-version/number }
-  - task: groot-tests
-    privileged: true
-    file: grootfs-git-repo/ci/tasks/groot-tests.yml
-  - task: root-tests
-    privileged: true
-    file: grootfs-git-repo/ci/tasks/root-tests.yml
-    on_failure:
-      put: slack-alert
-      params:
-        username: Thanos
-        icon_url: http://www.comicsblend.com/wp-content/uploads/2013/04/thanos.jpg
-        channel: "#garden"
-        text: "<!subteam^S1U0HSJ9E|grootfsteam>: I've destroyed your build. Come and get me!"
+  - aggregate:
+    - task: groot-tests
+      privileged: true
+      file: grootfs-git-repo/ci/tasks/groot-tests.yml
+      on_failure:
+        put: slack-alert
+        params:
+          username: Thanos
+          icon_url: http://www.comicsblend.com/wp-content/uploads/2013/04/thanos.jpg
+          channel: "#garden"
+          text: "<!subteam^S1U0HSJ9E|grootfsteam>: I've destroyed your build (groot tests are dead). Come and get me!"
+    - task: root-tests
+      privileged: true
+      file: grootfs-git-repo/ci/tasks/root-tests.yml
+      on_failure:
+        put: slack-alert
+        params:
+          username: Thanos
+          icon_url: http://www.comicsblend.com/wp-content/uploads/2013/04/thanos.jpg
+          channel: "#garden"
+          text: "<!subteam^S1U0HSJ9E|grootfsteam>: I've destroyed your build (root tests are dead). Come and get me!"
   - put: grootfs-tracker
     params:
       repos:
