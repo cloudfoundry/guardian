@@ -58,7 +58,7 @@ var CreateCommand = cli.Command{
 
 		graph := graphpkg.NewGraph(graphPath)
 		runner := linux_command_runner.New()
-		cloner := clonerpkg.NewTarCloner(runner, clonerpkg.NewIDMapper(runner))
+		cloner := clonerpkg.NewTarCloner(clonerpkg.NewIDMapper(runner))
 		groot := grootpkg.IamGroot(graph, cloner)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{

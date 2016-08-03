@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 
 	"code.cloudfoundry.org/grootfs/cloner"
@@ -13,63 +12,63 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+func init() {
+	if os.Args[1] == "untar" {
+		fakeIDMapper := new(clonerfakes.FakeIDMapper)
+		tarCloner := cloner.NewTarCloner(fakeIDMapper)
+
+		logger := lagertest.NewTestLogger("test-tar-cloner-untar")
+		ctrlPipeR := os.NewFile(3, "/ctrl/pipe")
+
+		toDir := os.Args[2]
+		if path.Base(toDir) == "fail-to-untar" {
+			os.Exit(1)
+		}
+
+		if err := tarCloner.Untar(logger, ctrlPipeR, toDir); err != nil {
+			os.Exit(1)
+		}
+
+		os.Exit(0)
+	}
+}
 
 var _ = Describe("TarCloner", func() {
 	var (
 		logger lager.Logger
 
-		fromDir string
-		toDir   string
+		fromDir   string
+		bundleDir string
+		toDir     string
 
-		fakeCmdRunner *fake_command_runner.FakeCommandRunner
-		fakeIDMapper  *clonerfakes.FakeIDMapper
-		tarCloner     *cloner.TarCloner
-		realTar       *exec.Cmd
-		err           error
+		fakeIDMapper *clonerfakes.FakeIDMapper
+		tarCloner    *cloner.TarCloner
 	)
 
 	BeforeEach(func() {
+		var err error
+
 		fromDir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(fromDir, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
 
-		tempDir, err := ioutil.TempDir("", "")
+		bundleDir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		toDir = path.Join(tempDir, "rootfs")
+		toDir = path.Join(bundleDir, "rootfs")
 
-		fakeCmdRunner = fake_command_runner.New()
 		fakeIDMapper = new(clonerfakes.FakeIDMapper)
+		tarCloner = cloner.NewTarCloner(fakeIDMapper)
 
-		fakeCmdRunner.WhenRunning(fake_command_runner.CommandSpec{
-			Path: os.Args[0],
-		}, func(cmd *exec.Cmd) error {
-			realTar = exec.Command("tar", cmd.Args[3:]...)
-			realTar.Stdin = cmd.Stdin
-			realTar.Stdout = cmd.Stdout
-			realTar.Stderr = cmd.Stderr
-			err := realTar.Start()
-			cmd.Process = realTar.Process
-			return err
-		})
-		fakeCmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
-			Path: os.Args[0],
-		}, func(cmd *exec.Cmd) error {
-			return realTar.Wait()
-		})
-	})
-
-	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-graph")
-		tarCloner = cloner.NewTarCloner(fakeCmdRunner, fakeIDMapper)
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(fromDir)).To(Succeed())
-		Expect(os.RemoveAll(toDir)).To(Succeed())
+		Expect(os.RemoveAll(bundleDir)).To(Succeed())
 	})
 
 	It("should have the image contents in the rootfs directory", func() {
@@ -97,9 +96,8 @@ var _ = Describe("TarCloner", func() {
 				})).To(Succeed())
 
 				Expect(fakeIDMapper.MapUIDsCallCount()).To(Equal(1))
-				pid, mappings := fakeIDMapper.MapUIDsArgsForCall(0)
+				_, mappings := fakeIDMapper.MapUIDsArgsForCall(0)
 
-				Expect(pid).To(Equal(realTar.Process.Pid))
 				Expect(mappings).To(Equal([]groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 				}))
@@ -117,7 +115,7 @@ var _ = Describe("TarCloner", func() {
 						UIDMappings: []groot.IDMappingSpec{
 							groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 						},
-					})).To(MatchError("uid mapping: Boom!"))
+					})).To(MatchError(ContainSubstring("Boom!")))
 				})
 			})
 		})
@@ -133,9 +131,8 @@ var _ = Describe("TarCloner", func() {
 				})).To(Succeed())
 
 				Expect(fakeIDMapper.MapGIDsCallCount()).To(Equal(1))
-				pid, mappings := fakeIDMapper.MapGIDsArgsForCall(0)
+				_, mappings := fakeIDMapper.MapGIDsArgsForCall(0)
 
-				Expect(pid).To(Equal(realTar.Process.Pid))
 				Expect(mappings).To(Equal([]groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 				}))
@@ -153,7 +150,7 @@ var _ = Describe("TarCloner", func() {
 						GIDMappings: []groot.IDMappingSpec{
 							groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 						},
-					})).To(MatchError("gid mapping: Boom!"))
+					})).To(MatchError(ContainSubstring("Boom!")))
 				})
 			})
 		})
@@ -184,17 +181,25 @@ var _ = Describe("TarCloner", func() {
 	})
 
 	Context("when untarring fails for reasons", func() {
-		BeforeEach(func() {
-			toDir = "/random/dir"
-		})
-
 		It("should return an error", func() {
+			toDir := path.Join(bundleDir, "fail-to-untar")
 			Expect(tarCloner.Clone(logger, groot.CloneSpec{
 				FromDir: fromDir,
 				ToDir:   toDir,
 			})).To(
-				MatchError(ContainSubstring(fmt.Sprintf("writing to `%s`: %s", toDir, "exit status 2"))),
+				MatchError(ContainSubstring(fmt.Sprintf("writing to `%s`", toDir))),
 			)
+		})
+	})
+
+	Context("when creating the target directory fails", func() {
+		It("returns an error", func() {
+			err := tarCloner.Clone(logger, groot.CloneSpec{
+				FromDir: fromDir,
+				ToDir:   "/tmp/some-destination/bundles/1000",
+			})
+
+			Expect(err).To(MatchError(ContainSubstring("making destination directory")))
 		})
 	})
 })

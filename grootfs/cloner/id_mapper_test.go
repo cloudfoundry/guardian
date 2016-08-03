@@ -14,7 +14,7 @@ var _ = Describe("IDMapper", func() {
 	var (
 		cmdPath       string
 		fakeCmdRunner *fake_command_runner.FakeCommandRunner
-		idMapper      cloner.IDMapper
+		idMapper      *cloner.CommandIDMapper
 	)
 
 	JustBeforeEach(func() {
