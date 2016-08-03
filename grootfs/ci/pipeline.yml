@@ -72,6 +72,15 @@ jobs:
           icon_url: http://www.comicsblend.com/wp-content/uploads/2013/04/thanos.jpg
           channel: "#garden"
           text: "<!subteam^S1U0HSJ9E|grootfsteam>: I've destroyed your build (root tests are dead). Come and get me!"
+    - task: go-vet
+      file: grootfs-git-repo/ci/tasks/go-vet.yml
+      on_failure:
+        put: slack-alert
+        params:
+          username: Thanos
+          icon_url: http://www.comicsblend.com/wp-content/uploads/2013/04/thanos.jpg
+          channel: "#garden"
+          text: "<!subteam^S1U0HSJ9E|grootfsteam>: Dear the most awesome team in the world. Your code sucks. However, it is not urgent. Go play ping pong and you can pretend you are fixing it later."
   - put: grootfs-tracker
     params:
       repos:
