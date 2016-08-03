@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"time"
 
@@ -421,6 +422,10 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 
 	if err := os.MkdirAll(graphRoot, 0755); err != nil {
 		logger.Fatal("failed-to-create-graph-directory", err)
+	}
+
+	if err := exec.Command("modprobe", "aufs").Run(); err != nil {
+		logger.Error("unable-to-load-aufs", err)
 	}
 
 	dockerGraphDriver, err := graphdriver.New(graphRoot, nil)
