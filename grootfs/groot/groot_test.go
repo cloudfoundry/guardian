@@ -94,6 +94,17 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				_, err := groot.Create(logger, grootpkg.CreateSpec{})
 				Expect(err).To(MatchError("cloning: Failed to clone"))
 			})
+
+			It("deletes the bundle", func() {
+				_, err := groot.Create(logger, grootpkg.CreateSpec{
+					ID: "some-id",
+				})
+				Expect(err).To(HaveOccurred())
+
+				Expect(graph.DeleteBundleCallCount()).To(Equal(1))
+				_, id := graph.DeleteBundleArgsForCall(0)
+				Expect(id).To(Equal("some-id"))
+			})
 		})
 	})
 })

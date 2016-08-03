@@ -13,7 +13,6 @@ import (
 )
 
 var _ = Describe("Create", func() {
-
 	Context("when `--image` is a local directory", func() {
 		var imagePath string
 
@@ -61,8 +60,8 @@ var _ = Describe("Create", func() {
 			})
 		})
 
-		Context("when the mappings are invalid", func() {
-			It("should fail when the uid mapping is invalid", func() {
+		Context("when a mappings flag is invalid", func() {
+			It("fails when the uid mapping is invalid", func() {
 				cmd := exec.Command(
 					GrootFSBin, "--graph", GraphPath,
 					"create", "--image", imagePath,
@@ -75,7 +74,7 @@ var _ = Describe("Create", func() {
 				Expect(sess.Wait()).NotTo(gexec.Exit(0))
 			})
 
-			It("should fail when the gid mapping is invalid", func() {
+			It("fails when the gid mapping is invalid", func() {
 				cmd := exec.Command(
 					GrootFSBin, "--graph", GraphPath,
 					"create", "--image", imagePath,
@@ -86,6 +85,23 @@ var _ = Describe("Create", func() {
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(sess.Wait()).NotTo(gexec.Exit(0))
+			})
+		})
+
+		Context("when groot does not have permissions to apply the requested mapping", func() {
+			It("does not leak the bundle directory", func() {
+				cmd := exec.Command(
+					GrootFSBin, "--graph", GraphPath,
+					"create", "--image", imagePath,
+					"--uid-mapping", "1:1:65000",
+					"some-id",
+				)
+
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(sess.Wait()).NotTo(gexec.Exit(0))
+
+				Expect(path.Join(GraphPath, "bundles", "some-id")).ToNot(BeAnExistingFile())
 			})
 		})
 	})

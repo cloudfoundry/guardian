@@ -12,6 +12,7 @@ import (
 
 type Graph interface {
 	MakeBundle(lager.Logger, string) (Bundle, error)
+	DeleteBundle(logger lager.Logger, id string) error
 }
 
 type Bundle interface {
@@ -64,6 +65,9 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		GIDMappings: spec.GIDMappings,
 	})
 	if err != nil {
+		if err := g.graph.DeleteBundle(logger.Session("cleaning-up-bundle"), spec.ID); err != nil {
+			logger.Error("cleaning-up-bundle", err)
+		}
 		return nil, fmt.Errorf("cloning: %s", err)
 	}
 

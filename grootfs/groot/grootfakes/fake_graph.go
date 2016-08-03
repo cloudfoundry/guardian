@@ -19,6 +19,15 @@ type FakeGraph struct {
 		result1 groot.Bundle
 		result2 error
 	}
+	DeleteBundleStub        func(logger lager.Logger, id string) error
+	deleteBundleMutex       sync.RWMutex
+	deleteBundleArgsForCall []struct {
+		logger lager.Logger
+		id     string
+	}
+	deleteBundleReturns struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -58,11 +67,47 @@ func (fake *FakeGraph) MakeBundleReturns(result1 groot.Bundle, result2 error) {
 	}{result1, result2}
 }
 
+func (fake *FakeGraph) DeleteBundle(logger lager.Logger, id string) error {
+	fake.deleteBundleMutex.Lock()
+	fake.deleteBundleArgsForCall = append(fake.deleteBundleArgsForCall, struct {
+		logger lager.Logger
+		id     string
+	}{logger, id})
+	fake.recordInvocation("DeleteBundle", []interface{}{logger, id})
+	fake.deleteBundleMutex.Unlock()
+	if fake.DeleteBundleStub != nil {
+		return fake.DeleteBundleStub(logger, id)
+	} else {
+		return fake.deleteBundleReturns.result1
+	}
+}
+
+func (fake *FakeGraph) DeleteBundleCallCount() int {
+	fake.deleteBundleMutex.RLock()
+	defer fake.deleteBundleMutex.RUnlock()
+	return len(fake.deleteBundleArgsForCall)
+}
+
+func (fake *FakeGraph) DeleteBundleArgsForCall(i int) (lager.Logger, string) {
+	fake.deleteBundleMutex.RLock()
+	defer fake.deleteBundleMutex.RUnlock()
+	return fake.deleteBundleArgsForCall[i].logger, fake.deleteBundleArgsForCall[i].id
+}
+
+func (fake *FakeGraph) DeleteBundleReturns(result1 error) {
+	fake.DeleteBundleStub = nil
+	fake.deleteBundleReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeGraph) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.makeBundleMutex.RLock()
 	defer fake.makeBundleMutex.RUnlock()
+	fake.deleteBundleMutex.RLock()
+	defer fake.deleteBundleMutex.RUnlock()
 	return fake.invocations
 }
 

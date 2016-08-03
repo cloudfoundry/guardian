@@ -50,7 +50,7 @@ var _ = Describe("Create", func() {
 		Expect(stat.Sys().(*syscall.Stat_t).Gid).To(BeEquivalentTo(rootGID))
 	})
 
-	Context("when a uid mapping is provided", func() {
+	Context("when mappings are provided", func() {
 		// This test is in the root suite not because `grootfs` is run by root, but
 		// because we need to write a file as root to test the translation.
 		It("should translate the rootfs accordingly", func() {

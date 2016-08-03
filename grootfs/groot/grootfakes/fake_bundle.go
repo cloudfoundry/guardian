@@ -15,9 +15,9 @@ type FakeBundle struct {
 		result1 string
 	}
 	RootFSPathStub        func() string
-	rootFsPathMutex       sync.RWMutex
-	rootFsPathArgsForCall []struct{}
-	rootFsPathReturns     struct {
+	rootFSPathMutex       sync.RWMutex
+	rootFSPathArgsForCall []struct{}
+	rootFSPathReturns     struct {
 		result1 string
 	}
 	invocations      map[string][][]interface{}
@@ -50,26 +50,26 @@ func (fake *FakeBundle) PathReturns(result1 string) {
 }
 
 func (fake *FakeBundle) RootFSPath() string {
-	fake.rootFsPathMutex.Lock()
-	fake.rootFsPathArgsForCall = append(fake.rootFsPathArgsForCall, struct{}{})
+	fake.rootFSPathMutex.Lock()
+	fake.rootFSPathArgsForCall = append(fake.rootFSPathArgsForCall, struct{}{})
 	fake.recordInvocation("RootFSPath", []interface{}{})
-	fake.rootFsPathMutex.Unlock()
+	fake.rootFSPathMutex.Unlock()
 	if fake.RootFSPathStub != nil {
 		return fake.RootFSPathStub()
 	} else {
-		return fake.rootFsPathReturns.result1
+		return fake.rootFSPathReturns.result1
 	}
 }
 
 func (fake *FakeBundle) RootFSPathCallCount() int {
-	fake.rootFsPathMutex.RLock()
-	defer fake.rootFsPathMutex.RUnlock()
-	return len(fake.rootFsPathArgsForCall)
+	fake.rootFSPathMutex.RLock()
+	defer fake.rootFSPathMutex.RUnlock()
+	return len(fake.rootFSPathArgsForCall)
 }
 
 func (fake *FakeBundle) RootFSPathReturns(result1 string) {
 	fake.RootFSPathStub = nil
-	fake.rootFsPathReturns = struct {
+	fake.rootFSPathReturns = struct {
 		result1 string
 	}{result1}
 }
@@ -79,8 +79,8 @@ func (fake *FakeBundle) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.pathMutex.RLock()
 	defer fake.pathMutex.RUnlock()
-	fake.rootFsPathMutex.RLock()
-	defer fake.rootFsPathMutex.RUnlock()
+	fake.rootFSPathMutex.RLock()
+	defer fake.rootFSPathMutex.RUnlock()
 	return fake.invocations
 }
 
