@@ -3,16 +3,17 @@ package diegonats
 import (
 	"time"
 
-	"github.com/apcera/nats"
+	"github.com/nats-io/nats"
 )
 
 type NATSClient interface {
 	Connect(urls []string) (chan struct{}, error)
+	SetPingInterval(interval time.Duration)
 	Close()
 	Ping() bool
 	Unsubscribe(sub *nats.Subscription) error
 
-	// Via apcera/nats.Conn
+	// Via nats-io/nats.Conn
 	Publish(subject string, data []byte) error
 	PublishRequest(subj, reply string, data []byte) error
 	Request(subj string, data []byte, timeout time.Duration) (m *nats.Msg, err error)
@@ -22,10 +23,17 @@ type NATSClient interface {
 
 type natsClient struct {
 	*nats.Conn
+	pingInterval time.Duration
 }
 
 func NewClient() NATSClient {
-	return &natsClient{}
+	return &natsClient{
+		pingInterval: nats.DefaultPingInterval,
+	}
+}
+
+func (nc *natsClient) SetPingInterval(interval time.Duration) {
+	nc.pingInterval = interval
 }
 
 func (nc *natsClient) Connect(urls []string) (chan struct{}, error) {
@@ -33,6 +41,7 @@ func (nc *natsClient) Connect(urls []string) (chan struct{}, error) {
 	options.Servers = urls
 	options.ReconnectWait = 500 * time.Millisecond
 	options.MaxReconnect = -1
+	options.PingInterval = nc.pingInterval
 
 	closedChan := make(chan struct{})
 	options.ClosedCB = func(*nats.Conn) {

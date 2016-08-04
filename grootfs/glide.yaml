@@ -1,8 +1,101 @@
 package: code.cloudfoundry.org/grootfs
 import:
-- package: github.com/onsi/ginkgo
-- package: github.com/onsi/gomega
-- package: gopkg.in/yaml.v2
-- package: github.com/urfave/cli
 - package: code.cloudfoundry.org/lager
 - package: github.com/cloudfoundry/gunk
+  subpackages:
+  - command_runner
+  - command_runner/linux_command_runner
+- package: github.com/containers/image
+  subpackages:
+  - docker
+  - docker/policyconfiguration
+  - image
+  - manifest
+  - types
+- package: github.com/onsi/ginkgo
+  subpackages:
+  - config
+  - internal/codelocation
+  - internal/containernode
+  - internal/failer
+  - internal/leafnodes
+  - internal/remote
+  - internal/spec
+  - internal/specrunner
+  - internal/suite
+  - internal/testingtproxy
+  - internal/writer
+  - reporters
+  - reporters/stenographer
+  - types
+- package: github.com/onsi/gomega
+  subpackages:
+  - gexec
+  - format
+  - gbytes
+  - internal/assertion
+  - internal/asyncassertion
+  - internal/oraclematcher
+  - internal/testingtsupport
+  - matchers
+  - matchers/support/goraph/bipartitegraph
+  - matchers/support/goraph/edge
+  - matchers/support/goraph/node
+  - matchers/support/goraph/util
+  - types
+- package: github.com/urfave/cli
+- package: github.com/Sirupsen/logrus
+- package: github.com/docker/distribution
+  subpackages:
+  - context
+  - digest
+  - reference
+  - uuid
+  - vendor/github.com/Sirupsen/logrus
+  - vendor/github.com/gorilla/context
+  - vendor/github.com/gorilla/mux
+  - vendor/golang.org/x/net/context
+- package: github.com/docker/docker
+  subpackages:
+  - daemon/graphdriver
+  - image
+  - image/v1
+  - layer
+  - pkg/archive
+  - pkg/chrootarchive
+  - pkg/fileutils
+  - pkg/homedir
+  - pkg/idtools
+  - pkg/ioutils
+  - pkg/pools
+  - pkg/promise
+  - pkg/random
+  - pkg/reexec
+  - pkg/stringid
+  - pkg/system
+  - reference
+- package: github.com/docker/engine-api
+  subpackages:
+  - types/blkiodev
+  - types/container
+  - types/strslice
+  - types/versions
+- package: github.com/docker/go-connections
+  subpackages:
+  - nat
+- package: github.com/docker/go-units
+- package: github.com/docker/libtrust
+- package: github.com/opencontainers/runc
+  subpackages:
+  - libcontainer/user
+- package: github.com/vbatts/tar-split
+  subpackages:
+  - archive/tar
+  - tar/asm
+  - tar/storage
+- package: golang.org/x/net
+  subpackages:
+  - context
+- package: gopkg.in/yaml.v2
+- package: github.com/gorilla/mux
+- package: github.com/gorilla/context

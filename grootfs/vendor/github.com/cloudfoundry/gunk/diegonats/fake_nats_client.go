@@ -4,7 +4,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apcera/nats"
+	"github.com/nats-io/nats"
 	"github.com/nu7hatch/gouuid"
 )
 
@@ -22,6 +22,7 @@ type FakeNATSClient struct {
 
 	onPing       func() bool
 	pingResponse bool
+	pingInterval time.Duration
 
 	sync.RWMutex
 }
@@ -43,6 +44,7 @@ func (f *FakeNATSClient) Reset() {
 
 	f.connectError = nil
 	f.unsubscribeError = nil
+	f.pingInterval = -1
 
 	f.whenSubscribing = map[string]func(nats.MsgHandler) error{}
 	f.whenPublishing = map[string]func(*nats.Msg) error{}
@@ -55,6 +57,13 @@ func (f *FakeNATSClient) Connect(urls []string) (chan struct{}, error) {
 	defer f.Unlock()
 
 	return nil, f.connectError
+}
+
+func (f *FakeNATSClient) SetPingInterval(interval time.Duration) {
+	f.Lock()
+	defer f.Unlock()
+
+	f.pingInterval = interval
 }
 
 func (f *FakeNATSClient) Close() {
