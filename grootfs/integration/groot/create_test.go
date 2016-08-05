@@ -61,6 +61,20 @@ var _ = Describe("Create", func() {
 			})
 		})
 
+		Context("when the id is already being used", func() {
+			BeforeEach(func() {
+				Expect(integration.CreateBundle(GrootFSBin, GraphPath, imagePath, "random-id")).NotTo(BeNil())
+			})
+
+			It("fails and produces a useful error", func() {
+				cmd := exec.Command(GrootFSBin, "--graph", GraphPath, "create", "--image", imagePath, "random-id")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Eventually(sess.Out).Should(gbytes.Say("bundle for id `random-id` already exists"))
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(1))
+			})
+		})
+
 		Context("when a mappings flag is invalid", func() {
 			It("fails when the uid mapping is invalid", func() {
 				cmd := exec.Command(
