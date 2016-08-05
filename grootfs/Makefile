@@ -48,3 +48,8 @@ image:
 
 push-image:
 	docker push cfgarden/grootfs-ci
+
+update-deps:
+	./script/update-deps.sh
+
+

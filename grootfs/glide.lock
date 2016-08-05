@@ -1,15 +1,19 @@
-hash: 544c00509dcac823f7ae42adb898d36237d8f3aa20bf17d294bc3fb511f644d4
-updated: 2016-07-29T16:34:18.338581245+01:00
+hash: 7232043a60d79b9d2a0eda3cf38621a43372f63d43cc7f40ea93ab0a05f5f077
+updated: 2016-08-05T14:20:37.051857535+01:00
 imports:
 - name: code.cloudfoundry.org/lager
-  version: c2896bd6597d2e37652a4ca5d030e391d642957d
+  version: 62951a8009ab331bb21dc418074fa54e66eb9b6a
 - name: github.com/cloudfoundry/gunk
-  version: a0892a27ef66d8b2262119010e23c7272d759670
+  version: ac2c54e112e4465612ad74698aff7e31faf54d9a
   subpackages:
   - command_runner
   - command_runner/linux_command_runner
+- name: github.com/containers/image
+  version: 32b7b502443dc09000698169c7ce877096a2c1d2
+  subpackages:
+  - types
 - name: github.com/onsi/ginkgo
-  version: c2896bd6597d2e37652a4ca5d030e391d642957d
+  version: 74c678d97c305753605c338c6c78c49ec104b5e7
   subpackages:
   - config
   - internal/codelocation
@@ -26,27 +30,27 @@ imports:
   - internal/spec
   - internal/specrunner
 - name: github.com/onsi/gomega
-  version: c2896bd6597d2e37652a4ca5d030e391d642957d
+  version: 9ed8da19f2156b87a803a8fdf6d126f627a12db1
   subpackages:
   - gexec
+  - format
+  - gbytes
   - internal/assertion
   - internal/asyncassertion
   - internal/testingtsupport
   - matchers
   - types
-  - format
-  - gbytes
   - internal/oraclematcher
   - matchers/support/goraph/bipartitegraph
   - matchers/support/goraph/edge
   - matchers/support/goraph/node
   - matchers/support/goraph/util
 - name: github.com/urfave/cli
-  version: c2896bd6597d2e37652a4ca5d030e391d642957d
+  version: 168c95418e66e019fe17b8f4f5c45aa62ff80e23
 - name: golang.org/x/sys
   version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
   subpackages:
   - unix
 - name: gopkg.in/yaml.v2
-  version: c2896bd6597d2e37652a4ca5d030e391d642957d
+  version: e4d366fc3c7938e2958e662b4258c7a89e1f0e3e
 testImports: []

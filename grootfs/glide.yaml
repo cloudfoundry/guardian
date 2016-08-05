@@ -1,8 +1,15 @@
 package: code.cloudfoundry.org/grootfs
 import:
-- package: github.com/onsi/ginkgo
-- package: github.com/onsi/gomega
-- package: gopkg.in/yaml.v2
-- package: github.com/urfave/cli
 - package: code.cloudfoundry.org/lager
 - package: github.com/cloudfoundry/gunk
+  subpackages:
+  - command_runner
+  - command_runner/linux_command_runner
+- package: github.com/containers/image
+  subpackages:
+  - types
+- package: github.com/onsi/ginkgo
+- package: github.com/onsi/gomega
+  subpackages:
+  - gexec
+- package: github.com/urfave/cli
