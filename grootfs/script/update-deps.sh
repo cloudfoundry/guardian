@@ -6,7 +6,7 @@ function main {
   remove_existing_submodules
   glide install
   add_required_submodules
-	commit_warning
+  commit_warning
 }
 
 RED=1
