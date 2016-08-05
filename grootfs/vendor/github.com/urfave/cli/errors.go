@@ -88,11 +88,5 @@ func HandleExitCoder(err error) {
 		for _, merr := range multiErr.Errors {
 			HandleExitCoder(merr)
 		}
-		return
 	}
-
-	if err.Error() != "" {
-		fmt.Fprintln(ErrWriter, err)
-	}
-	OsExiter(1)
 }

@@ -31,7 +31,7 @@ applications in an expressive way.
     + [Placeholder Values](#placeholder-values)
     + [Alternate Names](#alternate-names)
     + [Values from the Environment](#values-from-the-environment)
-    + [Values from alternate input sources (YAML, TOML, and others)](#values-from-alternate-input-sources-yaml-toml-and-others)
+    + [Values from alternate input sources (YAML and others)](#values-from-alternate-input-sources-yaml-and-others)
   * [Subcommands](#subcommands)
   * [Subcommands categories](#subcommands-categories)
   * [Exit code](#exit-code)
@@ -513,14 +513,10 @@ func main() {
 }
 ```
 
-#### Values from alternate input sources (YAML, TOML, and others)
+#### Values from alternate input sources (YAML and others)
 
 There is a separate package altsrc that adds support for getting flag values
-from other file input sources.
-
-Currently supported input source formats:
-* YAML
-* TOML
+from other input sources like YAML.
 
 In order to get values for a flag from an alternate input source the following
 code would be added to wrap an existing cli.Flag like below:
@@ -542,9 +538,9 @@ the yaml input source for any flags that are defined on that command.  As a note
 the "load" flag used would also have to be defined on the command flags in order
 for this code snipped to work.
 
-Currently only the aboved specified formats are supported but developers can
-add support for other input sources by implementing the
-altsrc.InputSourceContext for their given sources.
+Currently only YAML files are supported but developers can add support for other
+input sources by implementing the altsrc.InputSourceContext for their given
+sources.
 
 Here is a more complete sample of a command using YAML support:
 
@@ -957,7 +953,7 @@ setting `cli.VersionFlag`, e.g.:
 
 <!-- {
   "args": ["&#45;&#45print-version"],
-  "output": "partay version 19\\.99\\.0"
+  "output": "partay version v19\\.99\\.0"
 } -->
 ``` go
 package main
@@ -976,7 +972,7 @@ func main() {
 
   app := cli.NewApp()
   app.Name = "partay"
-  app.Version = "19.99.0"
+  app.Version = "v19.99.0"
   app.Run(os.Args)
 }
 ```
@@ -985,7 +981,7 @@ Alternatively, the version printer at `cli.VersionPrinter` may be overridden, e.
 
 <!-- {
   "args": ["&#45;&#45version"],
-  "output": "version=19\\.99\\.0 revision=fafafaf"
+  "output": "version=v19\\.99\\.0 revision=fafafaf"
 } -->
 ``` go
 package main
@@ -1008,7 +1004,7 @@ func main() {
 
   app := cli.NewApp()
   app.Name = "partay"
-  app.Version = "19.99.0"
+  app.Version = "v19.99.0"
   app.Run(os.Args)
 }
 ```
@@ -1087,7 +1083,7 @@ func (g *genericType) String() string {
 func main() {
   app := cli.NewApp()
   app.Name = "kənˈtrīv"
-  app.Version = "19.99.0"
+  app.Version = "v19.99.0"
   app.Compiled = time.Now()
   app.Authors = []cli.Author{
     cli.Author{

@@ -3,8 +3,8 @@ package diegonats_test
 import (
 	"fmt"
 
+	"github.com/apcera/nats"
 	. "github.com/cloudfoundry/gunk/diegonats"
-	"github.com/nats-io/nats"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -28,7 +28,7 @@ var _ = Describe("NatsClient", func() {
 			_, err := natsClient.Connect([]string{"nats://cats:bats@127.0.0.1:4223"})
 
 			Expect(err).Should(HaveOccurred())
-			Expect(err.Error()).To(Equal("nats: no servers available for connection"))
+			Expect(err.Error()).To(Equal("nats: No servers available for connection"))
 		})
 	})
 
