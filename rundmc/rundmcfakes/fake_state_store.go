@@ -8,11 +8,10 @@ import (
 )
 
 type FakeStateStore struct {
-	StoreStub        func(handle string, stopped bool)
-	storeMutex       sync.RWMutex
-	storeArgsForCall []struct {
-		handle  string
-		stopped bool
+	StoreStoppedStub        func(handle string)
+	storeStoppedMutex       sync.RWMutex
+	storeStoppedArgsForCall []struct {
+		handle string
 	}
 	IsStoppedStub        func(handle string) bool
 	isStoppedMutex       sync.RWMutex
@@ -26,29 +25,28 @@ type FakeStateStore struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStateStore) Store(handle string, stopped bool) {
-	fake.storeMutex.Lock()
-	fake.storeArgsForCall = append(fake.storeArgsForCall, struct {
-		handle  string
-		stopped bool
-	}{handle, stopped})
-	fake.recordInvocation("Store", []interface{}{handle, stopped})
-	fake.storeMutex.Unlock()
-	if fake.StoreStub != nil {
-		fake.StoreStub(handle, stopped)
+func (fake *FakeStateStore) StoreStopped(handle string) {
+	fake.storeStoppedMutex.Lock()
+	fake.storeStoppedArgsForCall = append(fake.storeStoppedArgsForCall, struct {
+		handle string
+	}{handle})
+	fake.recordInvocation("StoreStopped", []interface{}{handle})
+	fake.storeStoppedMutex.Unlock()
+	if fake.StoreStoppedStub != nil {
+		fake.StoreStoppedStub(handle)
 	}
 }
 
-func (fake *FakeStateStore) StoreCallCount() int {
-	fake.storeMutex.RLock()
-	defer fake.storeMutex.RUnlock()
-	return len(fake.storeArgsForCall)
+func (fake *FakeStateStore) StoreStoppedCallCount() int {
+	fake.storeStoppedMutex.RLock()
+	defer fake.storeStoppedMutex.RUnlock()
+	return len(fake.storeStoppedArgsForCall)
 }
 
-func (fake *FakeStateStore) StoreArgsForCall(i int) (string, bool) {
-	fake.storeMutex.RLock()
-	defer fake.storeMutex.RUnlock()
-	return fake.storeArgsForCall[i].handle, fake.storeArgsForCall[i].stopped
+func (fake *FakeStateStore) StoreStoppedArgsForCall(i int) string {
+	fake.storeStoppedMutex.RLock()
+	defer fake.storeStoppedMutex.RUnlock()
+	return fake.storeStoppedArgsForCall[i].handle
 }
 
 func (fake *FakeStateStore) IsStopped(handle string) bool {
@@ -87,8 +85,8 @@ func (fake *FakeStateStore) IsStoppedReturns(result1 bool) {
 func (fake *FakeStateStore) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.storeMutex.RLock()
-	defer fake.storeMutex.RUnlock()
+	fake.storeStoppedMutex.RLock()
+	defer fake.storeStoppedMutex.RUnlock()
 	fake.isStoppedMutex.RLock()
 	defer fake.isStoppedMutex.RUnlock()
 	return fake.invocations

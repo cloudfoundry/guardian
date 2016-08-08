@@ -62,7 +62,7 @@ type EventStore interface {
 }
 
 type StateStore interface {
-	Store(handle string, stopped bool)
+	StoreStopped(handle string)
 	IsStopped(handle string) bool
 }
 
@@ -215,7 +215,7 @@ func (c *Containerizer) Stop(log lager.Logger, handle string, kill bool) error {
 		return fmt.Errorf("stop: %s", err)
 	}
 
-	c.states.Store(handle, true)
+	c.states.StoreStopped(handle)
 	return nil
 }
 

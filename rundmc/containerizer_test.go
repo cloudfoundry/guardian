@@ -286,10 +286,9 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("transitions the stored state", func() {
-				Expect(fakeStateStore.StoreCallCount()).To(Equal(1))
-				handle, stopped := fakeStateStore.StoreArgsForCall(0)
+				Expect(fakeStateStore.StoreStoppedCallCount()).To(Equal(1))
+				handle := fakeStateStore.StoreStoppedArgsForCall(0)
 				Expect(handle).To(Equal("some-handle"))
-				Expect(stopped).To(Equal(true))
 			})
 		})
 
@@ -300,7 +299,7 @@ var _ = Describe("Rundmc", func() {
 
 			It("does not transition to the stopped state", func() {
 				Expect(containerizer.Stop(logger, "some-handle", true)).To(MatchError(ContainSubstring("boom")))
-				Expect(fakeStateStore.StoreCallCount()).To(Equal(0))
+				Expect(fakeStateStore.StoreStoppedCallCount()).To(Equal(0))
 			})
 		})
 
@@ -315,7 +314,7 @@ var _ = Describe("Rundmc", func() {
 
 			It("does not transition to the stopped state", func() {
 				Expect(containerizer.Stop(logger, "some-handle", true)).To(MatchError(ContainSubstring("boom")))
-				Expect(fakeStateStore.StoreCallCount()).To(Equal(0))
+				Expect(fakeStateStore.StoreStoppedCallCount()).To(Equal(0))
 			})
 		})
 	})

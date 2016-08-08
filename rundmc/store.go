@@ -50,7 +50,7 @@ func NewStateStore(props Properties) *states {
 	}
 }
 
-func (s *states) Store(handle string, stopped bool) {
+func (s *states) StoreStopped(handle string) {
 	s.props.Set(handle, "rundmc.state", "stopped")
 }
 

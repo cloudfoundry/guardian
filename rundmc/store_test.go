@@ -78,7 +78,7 @@ var _ = Describe("States Store", func() {
 
 	It("stashes the state on the property manager under the 'rundmc.state' key", func() {
 		states := rundmc.NewStateStore(props)
-		states.Store("foo", true)
+		states.StoreStopped("foo")
 
 		Expect(props.SetCallCount()).To(Equal(1))
 
