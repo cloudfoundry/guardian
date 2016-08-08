@@ -244,6 +244,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	if err != nil {
 		return nil, err
 	}
+
 	if err = g.Networker.Network(log, spec, actualSpec.Pid); err != nil {
 		return nil, err
 	}
@@ -254,17 +255,19 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	}
 
 	if spec.GraceTime != 0 {
-		err := container.SetGraceTime(spec.GraceTime)
-		if err != nil {
+		if err := container.SetGraceTime(spec.GraceTime); err != nil {
 			return nil, err
 		}
 	}
 
 	for name, value := range spec.Properties {
-		err := container.SetProperty(name, value)
-		if err != nil {
+		if err := container.SetProperty(name, value); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := container.SetProperty("garden.state", "created"); err != nil {
+		return nil, err
 	}
 
 	return container, nil
@@ -373,6 +376,11 @@ func (g *Gardener) Containers(props garden.Properties) ([]garden.Container, erro
 		log.Error("handles-failed", err)
 		return []garden.Container{}, err
 	}
+
+	if props == nil {
+		props = garden.Properties{}
+	}
+	props["garden.state"] = "created"
 
 	var containers []garden.Container
 	for _, handle := range handles {

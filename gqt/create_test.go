@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -374,6 +375,28 @@ var _ = Describe("Creating a Container", func() {
 				Expect(err).To(MatchError(ContainSubstring("network plugin returned JSON without a properties key")))
 			})
 		})
+	})
+
+	It("does not make containers available to lookup until creation is completed", func() {
+		go func() {
+			defer GinkgoRecover()
+
+			_, err := client.Create(garden.ContainerSpec{
+				Handle:     "handlecake",
+				Properties: garden.Properties{"somename": "somevalue"},
+			})
+			Expect(err).NotTo(HaveOccurred())
+		}()
+
+		var lookupContainer garden.Container
+		Eventually(func() error {
+			var err error
+			lookupContainer, err = client.Lookup("handlecake")
+			return err
+		}, time.Second*10).ShouldNot(HaveOccurred())
+
+		// Properties used to be set after containers were available from lookup
+		Expect(lookupContainer.Properties()).To(HaveKeyWithValue("somename", "somevalue"))
 	})
 })
 

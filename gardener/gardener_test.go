@@ -309,8 +309,6 @@ var _ = Describe("Gardener", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(propertyManager.SetCallCount()).To(Equal(1))
-
 				handle, name, value := propertyManager.SetArgsForCall(0)
 				Expect(handle).To(Equal("something"))
 				Expect(name).To(Equal(gardener.GraceTimeKey))
@@ -419,8 +417,6 @@ var _ = Describe("Gardener", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(propertyManager.SetCallCount()).To(Equal(2))
-
 				var allProps = make(map[string]string)
 				for i := 0; i < 2; i++ {
 					handle, name, value := propertyManager.SetArgsForCall(i)
@@ -433,6 +429,19 @@ var _ = Describe("Gardener", func() {
 					"thingy": "thing",
 				}))
 			})
+		})
+
+		It("sets the container state to created", func() {
+			_, err := gdnr.Create(garden.ContainerSpec{
+				Handle: "something",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(propertyManager.SetCallCount()).To(Equal(1))
+			handle, name, value := propertyManager.SetArgsForCall(0)
+			Expect(handle).To(Equal("something"))
+			Expect(name).To(Equal("garden.state"))
+			Expect(value).To(Equal("created"))
 		})
 
 		Context("when bind mounts are specified", func() {
@@ -619,18 +628,36 @@ var _ = Describe("Gardener", func() {
 			containerizer.HandlesReturns([]string{"banana", "banana2", "cola"}, nil)
 		})
 
-		It("should return matching containers", func() {
-			propertyManager.MatchesAllStub = func(handle string, props garden.Properties) bool {
-				return handle != "banana"
-			}
+		itOnlyMatchesFullyCreatedContainers := func(props garden.Properties) {
+			It("only matches fully created containers", func() {
+				_, err := gdnr.Containers(props)
+				Expect(err).NotTo(HaveOccurred())
 
-			c, err := gdnr.Containers(garden.Properties{
-				"somename": "somevalue",
+				_, props := propertyManager.MatchesAllArgsForCall(0)
+				Expect(props).To(HaveKeyWithValue("garden.state", "created"))
 			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(c).To(HaveLen(2))
-			Expect(c[0].Handle()).To(Equal("banana2"))
-			Expect(c[1].Handle()).To(Equal("cola"))
+		}
+
+		Context("when passed nil properties to match against", func() {
+			itOnlyMatchesFullyCreatedContainers(nil)
+		})
+
+		Context("when garden.Properties are passed", func() {
+			props := garden.Properties{"somename": "somevalue"}
+
+			It("only returns matching containers", func() {
+				propertyManager.MatchesAllStub = func(handle string, props garden.Properties) bool {
+					return handle != "banana"
+				}
+
+				c, err := gdnr.Containers(props)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(c).To(HaveLen(2))
+				Expect(c[0].Handle()).To(Equal("banana2"))
+				Expect(c[1].Handle()).To(Equal("cola"))
+			})
+
+			itOnlyMatchesFullyCreatedContainers(props)
 		})
 	})
 
