@@ -17,7 +17,7 @@ func CreateBundle(grootFSBin, graphPath, imagePath, id string) groot.Bundle {
 	cmd := exec.Command(grootFSBin, "--graph", graphPath, "create", "--image", imagePath, id)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	Expect(sess.Wait()).To(gexec.Exit(0))
 
 	return graph.NewBundle(strings.TrimSpace(string(sess.Out.Contents())))
 }
