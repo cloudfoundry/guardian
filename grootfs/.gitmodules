@@ -1,24 +1,3 @@
-[submodule "vendor/code.cloudfoundry.org/lager"]
-	path = vendor/code.cloudfoundry.org/lager
-	url = https://github.com/cloudfoundry/lager
-[submodule "vendor/github.com/cloudfoundry/gunk"]
-	path = vendor/github.com/cloudfoundry/gunk
-	url = https://github.com/cloudfoundry/gunk
-[submodule "vendor/github.com/containers/image"]
-	path = vendor/github.com/containers/image
-	url = https://github.com/containers/image
-[submodule "vendor/github.com/onsi/ginkgo"]
-	path = vendor/github.com/onsi/ginkgo
-	url = https://github.com/onsi/ginkgo
-[submodule "vendor/github.com/onsi/gomega"]
-	path = vendor/github.com/onsi/gomega
-	url = https://github.com/onsi/gomega
-[submodule "vendor/github.com/urfave/cli"]
-	path = vendor/github.com/urfave/cli
-	url = https://github.com/urfave/cli
 [submodule "vendor/golang.org/x/sys"]
 	path = vendor/golang.org/x/sys
 	url = https://go.googlesource.com/sys
-[submodule "vendor/gopkg.in/yaml.v2"]
-	path = vendor/gopkg.in/yaml.v2
-	url = https://gopkg.in/yaml.v2
