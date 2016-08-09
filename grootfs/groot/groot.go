@@ -2,6 +2,7 @@ package groot
 
 import (
 	"fmt"
+	"net/url"
 
 	"code.cloudfoundry.org/lager"
 )
@@ -10,60 +11,76 @@ import (
 //go:generate counterfeiter . Bundle
 //go:generate counterfeiter . Cloner
 
-type Graph interface {
-	MakeBundle(lager.Logger, string) (Bundle, error)
-	DeleteBundle(logger lager.Logger, id string) error
-}
-
 type Bundle interface {
 	Path() string
 	RootFSPath() string
 }
 
-type CloneSpec struct {
-	FromDir, ToDir           string
-	UIDMappings, GIDMappings []IDMappingSpec
+type Graph interface {
+	MakeBundle(logger lager.Logger, id string) (Bundle, error)
+	DeleteBundle(logger lager.Logger, id string) error
 }
 
 type IDMappingSpec struct {
-	HostID, NamespaceID, Size int
+	HostID      int
+	NamespaceID int
+	Size        int
+}
+
+type CloneSpec struct {
+	Image       string
+	RootFSPath  string
+	UIDMappings []IDMappingSpec
+	GIDMappings []IDMappingSpec
 }
 
 type Cloner interface {
-	Clone(lager.Logger, CloneSpec) error
+	Clone(logger lager.Logger, spec CloneSpec) error
 }
 
 type Groot struct {
-	graph  Graph
-	cloner Cloner
+	graph        Graph
+	localCloner  Cloner
+	remoteCloner Cloner
 }
 
-func IamGroot(graph Graph, cloner Cloner) *Groot {
+func IamGroot(graph Graph, localCloner, remoteCloner Cloner) *Groot {
 	return &Groot{
-		graph:  graph,
-		cloner: cloner,
+		graph:        graph,
+		localCloner:  localCloner,
+		remoteCloner: remoteCloner,
 	}
 }
 
 type CreateSpec struct {
 	ID          string
-	ImagePath   string
+	Image       string
 	UIDMappings []IDMappingSpec
 	GIDMappings []IDMappingSpec
 }
 
 func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
+	parsedURL, err := url.Parse(spec.Image)
+	if err != nil {
+		return nil, fmt.Errorf("parsing image url: %s", err)
+	}
+
 	bundle, err := g.graph.MakeBundle(logger, spec.ID)
 	if err != nil {
 		return nil, fmt.Errorf("making bundle: %s", err)
 	}
 
-	err = g.cloner.Clone(logger, CloneSpec{
-		FromDir:     spec.ImagePath,
-		ToDir:       bundle.RootFSPath(),
+	cloneSpec := CloneSpec{
+		Image:       spec.Image,
+		RootFSPath:  bundle.RootFSPath(),
 		UIDMappings: spec.UIDMappings,
 		GIDMappings: spec.GIDMappings,
-	})
+	}
+	if parsedURL.Scheme == "" {
+		err = g.localCloner.Clone(logger, cloneSpec)
+	} else {
+		err = g.remoteCloner.Clone(logger, cloneSpec)
+	}
 	if err != nil {
 		if err := g.graph.DeleteBundle(logger.Session("cleaning-up-bundle"), spec.ID); err != nil {
 			logger.Error("cleaning-up-bundle", err)

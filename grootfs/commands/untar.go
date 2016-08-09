@@ -4,9 +4,9 @@ import (
 	"errors"
 	"os"
 
+	unpackerpkg "code.cloudfoundry.org/grootfs/cloner/unpacker"
 	"code.cloudfoundry.org/lager"
 
-	clonerpkg "code.cloudfoundry.org/grootfs/cloner"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/urfave/cli"
 )
@@ -27,10 +27,10 @@ var UntarCommand = cli.Command{
 		toDir := ctx.Args().Get(0)
 
 		runner := linux_command_runner.New()
-		cloner := clonerpkg.NewTarCloner(clonerpkg.NewIDMapper(runner))
+		unpacker := unpackerpkg.NewTarUnpacker(unpackerpkg.NewIDMapper(runner))
 
 		ctrlPipeR := os.NewFile(3, "/ctrl/pipe")
-		if err := cloner.Untar(logger, ctrlPipeR, os.Stdin, toDir); err != nil {
+		if err := unpacker.Untar(logger, ctrlPipeR, os.Stdin, toDir); err != nil {
 			return cli.NewExitError("tar failed", 1)
 		}
 

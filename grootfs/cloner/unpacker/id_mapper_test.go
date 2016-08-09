@@ -1,10 +1,10 @@
-package cloner_test
+package unpacker_test
 
 import (
 	"errors"
 	"os/exec"
 
-	"code.cloudfoundry.org/grootfs/cloner"
+	"code.cloudfoundry.org/grootfs/cloner/unpacker"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -16,13 +16,13 @@ import (
 var _ = Describe("IDMapper", func() {
 	var (
 		fakeCmdRunner *fake_command_runner.FakeCommandRunner
-		idMapper      *cloner.CommandIDMapper
+		idMapper      *unpacker.CommandIDMapper
 		logger        lager.Logger
 	)
 
 	BeforeEach(func() {
 		fakeCmdRunner = fake_command_runner.New()
-		idMapper = cloner.NewIDMapper(fakeCmdRunner)
+		idMapper = unpacker.NewIDMapper(fakeCmdRunner)
 		logger = lagertest.NewTestLogger("idmapper")
 	})
 

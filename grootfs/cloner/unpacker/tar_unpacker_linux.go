@@ -1,4 +1,4 @@
-package cloner
+package unpacker
 
 import (
 	"bytes"
@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"syscall"
 
+	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 )
@@ -18,33 +19,31 @@ type IDMapper interface {
 	MapGIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error
 }
 
-type TarCloner struct {
+type TarUnpacker struct {
 	idMapper IDMapper
 }
 
-func NewTarCloner(idMapper IDMapper) *TarCloner {
-	return &TarCloner{
+func NewTarUnpacker(idMapper IDMapper) *TarUnpacker {
+	return &TarUnpacker{
 		idMapper: idMapper,
 	}
 }
 
-func (c *TarCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
+func (u *TarUnpacker) Unpack(logger lager.Logger, spec cloner.UnpackSpec) error {
 	logger = logger.Session("cloning-with-tar", lager.Data{"spec": spec})
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	if err := c.prepare(spec); err != nil {
+	if err := u.prepare(spec); err != nil {
 		return err
 	}
-
-	tarBuffer, tarCmd := c.makeTarCmd(spec)
 
 	untarPipeR, untarPipeW, err := os.Pipe()
 	if err != nil {
 		return fmt.Errorf("creating tar control pipe: %s", err)
 	}
 
-	untarBuffer, untarCmd, err := c.makeUntarCmd(spec, tarCmd, untarPipeR)
+	untarBuffer, untarCmd, err := u.makeUntarCmd(spec, spec.Stream, untarPipeR)
 	if err != nil {
 		return err
 	}
@@ -53,7 +52,7 @@ func (c *TarCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 		return fmt.Errorf("starting untar: %s", err)
 	}
 
-	if err := c.setIDMappings(logger, spec, untarCmd.Process.Pid); err != nil {
+	if err := u.setIDMappings(logger, spec, untarCmd.Process.Pid); err != nil {
 		return err
 	}
 
@@ -62,19 +61,14 @@ func (c *TarCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 	}
 	logger.Debug("untar-is-signaled-to-continue")
 
-	if err := tarCmd.Run(); err != nil {
-		return fmt.Errorf("reading from `%s` %s: %s", spec.FromDir, err, tarBuffer.String())
-	}
-	logger.Debug("tar-is-done")
-
 	if err := untarCmd.Wait(); err != nil {
-		return fmt.Errorf("writing to `%s` %s: %s", spec.ToDir, err, untarBuffer.String())
+		return fmt.Errorf("writing to `%s` %s: %s", spec.RootFSPath, err, untarBuffer.String())
 	}
 
 	return nil
 }
 
-func (c *TarCloner) Untar(logger lager.Logger, ctrlPipeR io.Reader, reader io.Reader, toDir string) error {
+func (u *TarUnpacker) Untar(logger lager.Logger, ctrlPipeR io.Reader, reader io.Reader, toDir string) error {
 	if _, err := ctrlPipeR.Read(make([]byte, 1)); err != nil {
 		return nil
 	}
@@ -82,46 +76,30 @@ func (c *TarCloner) Untar(logger lager.Logger, ctrlPipeR io.Reader, reader io.Re
 	cmd := exec.Command("tar", "-xp", "-C", toDir)
 	cmd.Stdin = reader
 
-	if err := c.runAndLog(cmd); err != nil {
+	if err := u.runAndLog(cmd); err != nil {
 		return fmt.Errorf("untaring: %s", err)
 	}
 
 	return nil
 }
 
-func (c *TarCloner) prepare(spec groot.CloneSpec) error {
-	if _, err := os.Stat(spec.FromDir); err != nil {
-		return fmt.Errorf("image path `%s` was not found: %s", spec.FromDir, err)
-	}
-
-	if err := os.Mkdir(spec.ToDir, 0755); err != nil {
+func (u *TarUnpacker) prepare(spec cloner.UnpackSpec) error {
+	if err := os.Mkdir(spec.RootFSPath, 0755); err != nil {
 		return fmt.Errorf("making destination directory: %s", err)
 	}
 
 	return nil
 }
 
-func (c *TarCloner) makeTarCmd(spec groot.CloneSpec) (*bytes.Buffer, *exec.Cmd) {
-	tarCmd := exec.Command("tar", "-cp", "-C", spec.FromDir, ".")
-	tarBuffer := bytes.NewBuffer([]byte{})
-	tarCmd.Stderr = tarBuffer
-
-	return tarBuffer, tarCmd
-}
-
-func (c *TarCloner) makeUntarCmd(spec groot.CloneSpec, tarCmd *exec.Cmd, untarPipeR *os.File) (*bytes.Buffer, *exec.Cmd, error) {
-	untarCmd := exec.Command(os.Args[0], "untar", spec.ToDir)
+func (u *TarUnpacker) makeUntarCmd(spec cloner.UnpackSpec, tarStream io.ReadCloser, untarPipeR *os.File) (*bytes.Buffer, *exec.Cmd, error) {
+	untarCmd := exec.Command(os.Args[0], "untar", spec.RootFSPath)
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
 		untarCmd.SysProcAttr = &syscall.SysProcAttr{
 			Cloneflags: syscall.CLONE_NEWUSER,
 		}
 	}
 
-	var err error
-	untarCmd.Stdin, err = tarCmd.StdoutPipe()
-	if err != nil {
-		return nil, nil, fmt.Errorf("creating tar stdout pipe: %s", err)
-	}
+	untarCmd.Stdin = tarStream
 
 	untarBuffer := bytes.NewBuffer([]byte{})
 	untarCmd.Stdout = untarBuffer
@@ -131,16 +109,16 @@ func (c *TarCloner) makeUntarCmd(spec groot.CloneSpec, tarCmd *exec.Cmd, untarPi
 	return untarBuffer, untarCmd, nil
 }
 
-func (c *TarCloner) setIDMappings(logger lager.Logger, spec groot.CloneSpec, untarPid int) error {
+func (u *TarUnpacker) setIDMappings(logger lager.Logger, spec cloner.UnpackSpec, untarPid int) error {
 	if len(spec.UIDMappings) > 0 {
-		if err := c.idMapper.MapUIDs(logger, untarPid, spec.UIDMappings); err != nil {
+		if err := u.idMapper.MapUIDs(logger, untarPid, spec.UIDMappings); err != nil {
 			return fmt.Errorf("setting uid mapping: %s", err)
 		}
 		logger.Debug("uid-mappings-are-set")
 	}
 
 	if len(spec.GIDMappings) > 0 {
-		if err := c.idMapper.MapGIDs(logger, untarPid, spec.GIDMappings); err != nil {
+		if err := u.idMapper.MapGIDs(logger, untarPid, spec.GIDMappings); err != nil {
 			return fmt.Errorf("setting gid mapping: %s", err)
 		}
 		logger.Debug("gid-mappings-are-set")
@@ -149,7 +127,7 @@ func (c *TarCloner) setIDMappings(logger lager.Logger, spec groot.CloneSpec, unt
 	return nil
 }
 
-func (c *TarCloner) runAndLog(cmd *exec.Cmd) error {
+func (u *TarUnpacker) runAndLog(cmd *exec.Cmd) error {
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		return nil

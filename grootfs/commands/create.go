@@ -5,6 +5,8 @@ import (
 	"fmt"
 
 	clonerpkg "code.cloudfoundry.org/grootfs/cloner"
+	streamerpkg "code.cloudfoundry.org/grootfs/cloner/streamer"
+	unpackerpkg "code.cloudfoundry.org/grootfs/cloner/unpacker"
 	graphpkg "code.cloudfoundry.org/grootfs/graph"
 	grootpkg "code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
@@ -37,7 +39,7 @@ var CreateCommand = cli.Command{
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 
 		graphPath := ctx.GlobalString("graph")
-		imagePath := ctx.String("image")
+		image := ctx.String("image")
 		if ctx.NArg() != 1 {
 			logger.Error("parsing-command", errors.New("id was not specified"))
 			return cli.NewExitError("id was not specified", 1)
@@ -58,12 +60,15 @@ var CreateCommand = cli.Command{
 
 		graph := graphpkg.NewGraph(graphPath)
 		runner := linux_command_runner.New()
-		cloner := clonerpkg.NewTarCloner(clonerpkg.NewIDMapper(runner))
-		groot := grootpkg.IamGroot(graph, cloner)
+		idMapper := unpackerpkg.NewIDMapper(runner)
+		tarUnpacker := unpackerpkg.NewTarUnpacker(idMapper)
+		tarStreamer := streamerpkg.NewTarStreamer()
+		localCloner := clonerpkg.NewLocalCloner(tarStreamer, tarUnpacker)
+		groot := grootpkg.IamGroot(graph, localCloner, nil)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
 			ID:          id,
-			ImagePath:   imagePath,
+			Image:       image,
 			UIDMappings: uidMappings,
 			GIDMappings: gidMappings,
 		})
