@@ -361,8 +361,17 @@ var _ = Describe("Networking", func() {
 
 		Context("when the network plugin returns properties", func() {
 			BeforeEach(func() {
-				pluginReturn := `{"properties":{"foo":"bar","kawasaki.mtu":"1499"}}`
+				pluginReturn := `{"properties":{
+					"foo":"bar",
+					"kawasaki.mtu":"1499",
+					"garden.network.container-ip":"10.10.10.10",
+					"garden.network.host-ip":"11.11.11.11",
+					"garden.network.external-ip":"12.12.12.12"
+				}}`
 				args = append(args, "--network-plugin-extra-arg", pluginReturn)
+				extraProperties = garden.Properties{
+					"some-property-on-the-spec": "some-value",
+				}
 			})
 
 			It("persits the returned properties to the container's properties", func() {
@@ -374,27 +383,11 @@ var _ = Describe("Networking", func() {
 				Expect(containerProperties["foo"]).To(Equal("bar"))
 			})
 
-			It("doesn't remove default properties", func() {
+			It("doesn't remove existing properties", func() {
 				info, err := container.Info()
 				Expect(err).NotTo(HaveOccurred())
 
-				containerProperties := info.Properties
-				Expect(containerProperties).To(HaveKey("kawasaki.bridge-interface"))
-				Expect(containerProperties).To(HaveKey(gardener.BridgeIPKey))
-				Expect(containerProperties).To(HaveKey(gardener.ContainerIPKey))
-				Expect(containerProperties).To(HaveKey("kawasaki.host-interface"))
-				Expect(containerProperties).To(HaveKey("kawasaki.iptable-inst"))
-				Expect(containerProperties).To(HaveKey("kawasaki.subnet"))
-				Expect(containerProperties).To(HaveKey("kawasaki.container-interface"))
-				Expect(containerProperties).To(HaveKey(gardener.ExternalIPKey))
-			})
-
-			It("allows returned properties to overwrite default properties", func() {
-				info, err := container.Info()
-				Expect(err).NotTo(HaveOccurred())
-
-				containerProperties := info.Properties
-				Expect(containerProperties["kawasaki.mtu"]).To(Equal("1499"))
+				Expect(info.Properties).To(HaveKey("some-property-on-the-spec"))
 			})
 		})
 	})
