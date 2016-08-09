@@ -2,10 +2,14 @@ FROM cloudfoundry/golang-ci
 MAINTAINER https://github.com/cloudfoundry/grootfs
 
 ## Install uidmap utils
-RUN apt-get install -y uidmap
+RUN apt-get install -y uidmap btrfs-tools
+
+RUN dd bs=1024 count=100000 if=/dev/zero of=/btrfs_volume
+RUN mkfs.btrfs /btrfs_volume
 
 ## Add groot user
-RUN useradd -U groot
+RUN useradd -d /home/groot -m -U groot
+RUN echo "groot ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers
 
 RUN mkdir /go && \
 	mkdir -p /go/src/code.cloudfoundry.org/grootfs && \
