@@ -75,6 +75,4 @@ func streamTar(r *tar.Reader) []tarEntry {
 			contents: contents,
 		})
 	}
-
-	return nil
 }
