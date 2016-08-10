@@ -25,7 +25,7 @@ var _ = Describe("grootfs global flags", func() {
 
 		Context("when setting --verbose", func() {
 			It("forwards non-human logs to stderr", func() {
-				cmd := exec.Command(GrootFSBin, "--verbose", "--graph", GraphPath, "create", "--image", "my-image")
+				cmd := exec.Command(GrootFSBin, "--log-level", "error", "--graph", GraphPath, "create", "--image", "my-image")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
@@ -49,7 +49,7 @@ var _ = Describe("grootfs global flags", func() {
 			})
 
 			It("forwards logs to the given file", func() {
-				cmd := exec.Command(GrootFSBin, "--log-file", logFile.Name(), "--graph", GraphPath, "create", "--image", "my-image")
+				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--log-file", logFile.Name(), "--graph", GraphPath, "create", "--image", "my-image")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))

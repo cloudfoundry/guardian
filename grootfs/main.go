@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strings"
 
 	"code.cloudfoundry.org/grootfs/commands"
 	"code.cloudfoundry.org/grootfs/graph"
@@ -24,9 +25,10 @@ func main() {
 			Usage: "Path to the graph directory",
 			Value: GraphPath,
 		},
-		cli.BoolFlag{
-			Name:  "verbose",
-			Usage: "Toggles logging",
+		cli.StringFlag{
+			Name:  "log-level",
+			Usage: "Set logging level. <info|debug|error|fatal>",
+			Value: "fatal",
 		},
 		cli.StringFlag{
 			Name:  "log-file",
@@ -56,22 +58,33 @@ func main() {
 
 func configureLog(ctx *cli.Context) lager.Logger {
 	logFile := ctx.GlobalString("log-file")
-	verbose := ctx.Bool("verbose")
+	logLevel := ctx.String("log-level")
 	logWriter := os.Stderr
 
 	if logFile != "" {
 		logWriter, _ = os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-		verbose = true
 	}
 
 	logger := lager.NewLogger("grootfs")
-	logLevel := lager.FATAL
-	if verbose {
-		logLevel = lager.DEBUG
-	}
+	lagerLogLevel := translateLogLevel(logLevel)
 
-	logger.RegisterSink(lager.NewWriterSink(logWriter, logLevel))
+	logger.RegisterSink(lager.NewWriterSink(logWriter, lagerLogLevel))
 	ctx.App.Metadata["logger"] = logger
 
 	return logger
+}
+
+func translateLogLevel(logLevel string) lager.LogLevel {
+	switch strings.ToUpper(logLevel) {
+	case "FATAL":
+		return lager.FATAL
+	case "DEBUG":
+		return lager.DEBUG
+	case "INFO":
+		return lager.INFO
+	case "ERROR":
+		return lager.ERROR
+	}
+
+	return lager.FATAL
 }
