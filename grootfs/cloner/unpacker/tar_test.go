@@ -20,7 +20,8 @@ var _ = Describe("Tar", func() {
 	var (
 		logger lager.Logger
 
-		bundleDir  string
+		imgPath    string
+		bundlePath string
 		rootFSPath string
 
 		tarUnpacker *unpacker.TarUnpacker
@@ -31,26 +32,29 @@ var _ = Describe("Tar", func() {
 	BeforeEach(func() {
 		var err error
 
-		bundleDir, err = ioutil.TempDir("", "")
+		bundlePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		rootFSPath = path.Join(bundleDir, "rootfs")
+		rootFSPath = path.Join(bundlePath, "rootfs")
 
 		tarUnpacker = unpacker.NewTarUnpacker()
 
 		logger = lagertest.NewTestLogger("test-graph")
 
-		tempDir, err := ioutil.TempDir("", "")
+		imgPath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(tempDir, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(imgPath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+	})
 
+	JustBeforeEach(func() {
 		stream = gbytes.NewBuffer()
-		sess, err := gexec.Start(exec.Command("tar", "-c", "-C", tempDir, "."), stream, nil)
+		sess, err := gexec.Start(exec.Command("tar", "-c", "-C", imgPath, "."), stream, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(bundleDir)).To(Succeed())
+		Expect(os.RemoveAll(imgPath)).To(Succeed())
+		Expect(os.RemoveAll(bundlePath)).To(Succeed())
 	})
 
 	It("does write the image contents in the rootfs directory", func() {
@@ -66,8 +70,57 @@ var _ = Describe("Tar", func() {
 		Expect(string(contents)).To(Equal("hello-world"))
 	})
 
-	Context("when it fails to untar", func() {
+	Context("when it has whiteout files", func() {
 		BeforeEach(func() {
+			Expect(os.Mkdir(rootFSPath, 0755)).To(Succeed())
+
+			// Add some pre-existing files in the rootfs
+			Expect(ioutil.WriteFile(path.Join(rootFSPath, "b_file"), []byte(""), 0600)).To(Succeed())
+			Expect(os.Mkdir(path.Join(rootFSPath, "a_dir"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(rootFSPath, "a_dir", "a_file"), []byte(""), 0600)).To(Succeed())
+			Expect(os.Mkdir(path.Join(rootFSPath, "b_dir"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(rootFSPath, "b_dir", "a_file"), []byte(""), 0600)).To(Succeed())
+
+			// Add some whiteouts
+			Expect(ioutil.WriteFile(path.Join(imgPath, ".wh.b_file"), []byte(""), 0600)).To(Succeed())
+			Expect(os.Mkdir(path.Join(imgPath, "a_dir"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(imgPath, "a_dir", ".wh.a_file"), []byte(""), 0600)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(imgPath, ".wh.b_dir"), []byte(""), 0600)).To(Succeed())
+		})
+
+		It("deletes the pre-existing files", func() {
+			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
+				Stream:     stream,
+				RootFSPath: rootFSPath,
+			})).To(Succeed())
+
+			Expect(path.Join(rootFSPath, "b_file")).NotTo(BeAnExistingFile())
+			Expect(path.Join(rootFSPath, "a_dir", "a_file")).NotTo(BeAnExistingFile())
+		})
+
+		It("deletes the pre-existing directories", func() {
+			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
+				Stream:     stream,
+				RootFSPath: rootFSPath,
+			})).To(Succeed())
+
+			Expect(path.Join(rootFSPath, "b_dir")).NotTo(BeAnExistingFile())
+		})
+
+		It("does not leak the whiteout files", func() {
+			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
+				Stream:     stream,
+				RootFSPath: rootFSPath,
+			})).To(Succeed())
+
+			Expect(path.Join(rootFSPath, ".wh.b_file")).NotTo(BeAnExistingFile())
+			Expect(path.Join(rootFSPath, "a_dir", ".wh.a_file")).NotTo(BeAnExistingFile())
+			Expect(path.Join(rootFSPath, ".wh.b_dir")).NotTo(BeAnExistingFile())
+		})
+	})
+
+	Context("when it fails to untar", func() {
+		JustBeforeEach(func() {
 			stream = gbytes.NewBuffer()
 			stream.Write([]byte("not-a-tar"))
 		})
