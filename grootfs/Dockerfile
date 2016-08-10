@@ -27,3 +27,5 @@ WORKDIR /go/src/code.cloudfoundry.org/grootfs
 ## Install Ginkgo
 RUN go get github.com/onsi/ginkgo/ginkgo
 RUN go install github.com/onsi/ginkgo/ginkgo
+
+RUN go get github.com/fouralarmfire/grootsay
