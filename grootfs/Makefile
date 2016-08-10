@@ -37,10 +37,10 @@ concourse-test: concourse-groot-test concourse-root-test
 ###### Go tools ###############################################################
 
 go-vet:
-	GOOS=linux go vet $(go list ./... | grep -v vendor)
+	GOOS=linux go vet `go list ./... | grep -v vendor`
 
 go-generate:
-	GOOS=linux go generate $(go list ./... | grep -v vendor)
+	GOOS=linux go generate `go list ./... | grep -v vendor`
 
 ###### Docker #################################################################
 
