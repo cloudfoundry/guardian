@@ -27,10 +27,10 @@ test:
 	ginkgo -r -p -race -skipPackage integration .
 
 concourse-groot-test:
-	fly -t lite e -c ci/tasks/groot-tests.yml -p -i grootfs-git-repo=${PWD}
+	fly -t lite e -x -c ci/tasks/groot-tests.yml -p -i grootfs-git-repo=${PWD}
 
 concourse-root-test:
-	fly -t lite e -c ci/tasks/root-tests.yml -p -i grootfs-git-repo=${PWD}
+	fly -t lite e -x -c ci/tasks/root-tests.yml -p -i grootfs-git-repo=${PWD}
 
 concourse-test: concourse-groot-test concourse-root-test
 
