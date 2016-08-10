@@ -3,6 +3,7 @@ set -e
 
 function main {
   check_clean_status
+  update_glide
   remove_existing_submodules
   glide install
   add_required_submodules
@@ -25,6 +26,11 @@ function check_clean_status {
   else
     print_message "STATUS CLEAN, wait for it ... GROOT TO GO!" $GREEN
   fi
+}
+
+function update_glide {
+  print_message "UPDATING GLIDE DEPENDENCIES" $GREEN
+  glide update
 }
 
 function remove_existing_submodules {
