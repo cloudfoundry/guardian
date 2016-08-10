@@ -11,4 +11,4 @@ rmdir $grootfsPath
 ln -s $PWD/src/code.cloudfoundry.org/grootfs $grootfsPath
 cd $grootfsPath
 
-ginkgo -p -r $@
+ginkgo -p -r -race $@

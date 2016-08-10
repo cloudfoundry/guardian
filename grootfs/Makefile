@@ -24,7 +24,7 @@ help:
 ###### Testing ################################################################
 
 test:
-	ginkgo -r -p -skipPackage integration .
+	ginkgo -r -p -race -skipPackage integration .
 
 concourse-groot-test:
 	fly -t lite e -c ci/tasks/groot-tests.yml -p -i grootfs-git-repo=${PWD}
