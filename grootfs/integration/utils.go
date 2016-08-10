@@ -4,6 +4,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/graph"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -14,10 +15,10 @@ import (
 )
 
 func CreateBundle(grootFSBin, graphPath, imagePath, id string) groot.Bundle {
-	cmd := exec.Command(grootFSBin, "--graph", graphPath, "create", "--image", imagePath, id)
+	cmd := exec.Command(grootFSBin, "--log-level", "debug", "--graph", graphPath, "create", "--image", imagePath, id)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(sess.Wait()).To(gexec.Exit(0))
+	Expect(sess.Wait(10 * time.Second)).To(gexec.Exit(0))
 
 	return graph.NewBundle(strings.TrimSpace(string(sess.Out.Contents())))
 }

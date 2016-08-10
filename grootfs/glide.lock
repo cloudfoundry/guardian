@@ -1,8 +1,10 @@
-hash: 7232043a60d79b9d2a0eda3cf38621a43372f63d43cc7f40ea93ab0a05f5f077
-updated: 2016-08-05T14:20:37.051857535+01:00
+hash: 31bea6e6d875826414e870864b6d8efb2848ca32d1e258e9d33278257b4d5430
+updated: 2016-08-10T17:30:38.603812092+01:00
 imports:
 - name: code.cloudfoundry.org/lager
   version: 62951a8009ab331bb21dc418074fa54e66eb9b6a
+  subpackages:
+  - lagertest
 - name: github.com/cloudfoundry/gunk
   version: ac2c54e112e4465612ad74698aff7e31faf54d9a
   subpackages:
@@ -11,7 +13,65 @@ imports:
 - name: github.com/containers/image
   version: 32b7b502443dc09000698169c7ce877096a2c1d2
   subpackages:
+  - docker
   - types
+  - docker/policyconfiguration
+  - image
+  - manifest
+- name: github.com/docker/distribution
+  version: 9000745401d186602c2ae63ffca12ed4233a968b
+  subpackages:
+  - digest
+  - reference
+  - context
+  - uuid
+- name: github.com/docker/docker
+  version: 8eab29edd820017901796eb60d4bea28d760f16f
+  subpackages:
+  - pkg/homedir
+  - reference
+  - image
+  - image/v1
+  - pkg/ioutils
+  - layer
+  - pkg/longpath
+  - daemon/graphdriver
+  - pkg/archive
+  - pkg/idtools
+  - pkg/stringid
+  - pkg/chrootarchive
+  - pkg/mount
+  - pkg/plugins
+  - pkg/fileutils
+  - pkg/pools
+  - pkg/promise
+  - pkg/system
+  - pkg/random
+  - pkg/reexec
+  - pkg/plugins/transport
+- name: github.com/docker/engine-api
+  version: fc564829f64e3a820d7b896611ede92c8744d752
+  subpackages:
+  - types/container
+  - types/versions
+  - types/blkiodev
+  - types/strslice
+- name: github.com/docker/go-connections
+  version: 0bad1a3951398f88ef4dd75fdb42af374430be89
+  subpackages:
+  - nat
+  - sockets
+  - tlsconfig
+- name: github.com/docker/go-units
+  version: eb879ae3e2b84e2a142af415b679ddeda47ec71c
+- name: github.com/docker/libtrust
+  version: aabc10ec26b754e797f9028f4589c5b7bd90dc20
+- name: github.com/gorilla/context
+  version: 14f550f51af52180c2eefed15e5fd18d63c0a64a
+- name: github.com/gorilla/mux
+  version: e444e69cbd2e2e3e0749a2f3c717cec491552bbf
+- name: github.com/Microsoft/go-winio
+  version: ce2922f643c8fd76b46cadc7f404a06282678b34
 - name: github.com/onsi/ginkgo
   version: 74c678d97c305753605c338c6c78c49ec104b5e7
   subpackages:
@@ -32,25 +92,48 @@ imports:
 - name: github.com/onsi/gomega
   version: 9ed8da19f2156b87a803a8fdf6d126f627a12db1
   subpackages:
-  - gexec
-  - format
   - gbytes
+  - gexec
   - internal/assertion
   - internal/asyncassertion
   - internal/testingtsupport
   - matchers
   - types
+  - format
   - internal/oraclematcher
   - matchers/support/goraph/bipartitegraph
   - matchers/support/goraph/edge
   - matchers/support/goraph/node
   - matchers/support/goraph/util
+- name: github.com/opencontainers/runc
+  version: 0f764571384a3ff16c6fed25ace5b7c83f0f0379
+  subpackages:
+  - libcontainer/user
+- name: github.com/Sirupsen/logrus
+  version: a283a10442df8dc09befd873fab202bf8a253d6a
 - name: github.com/urfave/cli
   version: 168c95418e66e019fe17b8f4f5c45aa62ff80e23
+- name: github.com/vbatts/tar-split
+  version: 6810cedb21b2c3d0b9bb8f9af12ff2dc7a2f14df
+  subpackages:
+  - tar/asm
+  - tar/storage
+  - archive/tar
+- name: golang.org/x/net
+  version: 4876518f9e71663000c348837735820161a42df7
+  subpackages:
+  - context
+  - context/ctxhttp
+  - http2
+  - http2/hpack
+  - internal/timeseries
+  - trace
+  - proxy
 - name: golang.org/x/sys
   version: a646d33e2ee3172a661fc09bca23bb4889a41bc8
   subpackages:
   - unix
+  - windows
 - name: gopkg.in/yaml.v2
   version: e4d366fc3c7938e2958e662b4258c7a89e1f0e3e
 testImports: []

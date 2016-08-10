@@ -1,15 +1,24 @@
 package: code.cloudfoundry.org/grootfs
+os:
+  - linux
 import:
 - package: code.cloudfoundry.org/lager
+  subpackages:
+  - lagertest
 - package: github.com/cloudfoundry/gunk
   subpackages:
   - command_runner
-  - command_runner/linux_command_runner
 - package: github.com/containers/image
   subpackages:
+  - docker
   - types
 - package: github.com/onsi/ginkgo
 - package: github.com/onsi/gomega
   subpackages:
+  - gbytes
   - gexec
 - package: github.com/urfave/cli
+- package: github.com/docker/docker
+  version: 8eab29edd820017901796eb60d4bea28d760f16f
+- package: github.com/docker/go-units
+  version: eb879ae3e2b84e2a142af415b679ddeda47ec71c

@@ -7,6 +7,7 @@ import (
 	clonerpkg "code.cloudfoundry.org/grootfs/cloner"
 	streamerpkg "code.cloudfoundry.org/grootfs/cloner/streamer"
 	unpackerpkg "code.cloudfoundry.org/grootfs/cloner/unpacker"
+	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
 	graphpkg "code.cloudfoundry.org/grootfs/graph"
 	grootpkg "code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
@@ -67,7 +68,10 @@ var CreateCommand = cli.Command{
 
 		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker)
 
-		groot := grootpkg.IamGroot(graph, localCloner, nil)
+		remoteFetcher := fetcherpkg.NewFetcher()
+		remoteCloner := clonerpkg.NewRemoteCloner(remoteFetcher, namespacedCmdUnpacker)
+
+		groot := grootpkg.IamGroot(graph, localCloner, remoteCloner)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
 			ID:          id,
@@ -76,7 +80,7 @@ var CreateCommand = cli.Command{
 			GIDMappings: gidMappings,
 		})
 		if err != nil {
-			logger.Error("making-bundle", err)
+			logger.Error("creating", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
