@@ -59,11 +59,14 @@ var CreateCommand = cli.Command{
 		}
 
 		graph := graphpkg.NewGraph(graphPath)
+
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(runner)
-		tarUnpacker := unpackerpkg.NewTarUnpacker(idMapper)
+		namespacedCmdUnpacker := unpackerpkg.NewNamespacedCmdUnpacker(runner, idMapper, "unpack")
 		tarStreamer := streamerpkg.NewTarStreamer()
-		localCloner := clonerpkg.NewLocalCloner(tarStreamer, tarUnpacker)
+
+		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker)
+
 		groot := grootpkg.IamGroot(graph, localCloner, nil)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{

@@ -39,7 +39,7 @@ func main() {
 	grootfs.Commands = []cli.Command{
 		commands.CreateCommand,
 		commands.DeleteCommand,
-		commands.UntarCommand,
+		commands.UnpackCommand,
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
