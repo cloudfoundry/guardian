@@ -9,11 +9,11 @@ import (
 )
 
 type FakeGraph struct {
-	MakeBundleStub        func(lager.Logger, string) (groot.Bundle, error)
+	MakeBundleStub        func(logger lager.Logger, id string) (groot.Bundle, error)
 	makeBundleMutex       sync.RWMutex
 	makeBundleArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 string
+		logger lager.Logger
+		id     string
 	}
 	makeBundleReturns struct {
 		result1 groot.Bundle
@@ -32,16 +32,16 @@ type FakeGraph struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGraph) MakeBundle(arg1 lager.Logger, arg2 string) (groot.Bundle, error) {
+func (fake *FakeGraph) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error) {
 	fake.makeBundleMutex.Lock()
 	fake.makeBundleArgsForCall = append(fake.makeBundleArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 string
-	}{arg1, arg2})
-	fake.recordInvocation("MakeBundle", []interface{}{arg1, arg2})
+		logger lager.Logger
+		id     string
+	}{logger, id})
+	fake.recordInvocation("MakeBundle", []interface{}{logger, id})
 	fake.makeBundleMutex.Unlock()
 	if fake.MakeBundleStub != nil {
-		return fake.MakeBundleStub(arg1, arg2)
+		return fake.MakeBundleStub(logger, id)
 	} else {
 		return fake.makeBundleReturns.result1, fake.makeBundleReturns.result2
 	}
@@ -56,7 +56,7 @@ func (fake *FakeGraph) MakeBundleCallCount() int {
 func (fake *FakeGraph) MakeBundleArgsForCall(i int) (lager.Logger, string) {
 	fake.makeBundleMutex.RLock()
 	defer fake.makeBundleMutex.RUnlock()
-	return fake.makeBundleArgsForCall[i].arg1, fake.makeBundleArgsForCall[i].arg2
+	return fake.makeBundleArgsForCall[i].logger, fake.makeBundleArgsForCall[i].id
 }
 
 func (fake *FakeGraph) MakeBundleReturns(result1 groot.Bundle, result2 error) {

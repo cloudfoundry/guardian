@@ -9,11 +9,11 @@ import (
 )
 
 type FakeCloner struct {
-	CloneStub        func(lager.Logger, groot.CloneSpec) error
+	CloneStub        func(logger lager.Logger, spec groot.CloneSpec) error
 	cloneMutex       sync.RWMutex
 	cloneArgsForCall []struct {
-		arg1 lager.Logger
-		arg2 groot.CloneSpec
+		logger lager.Logger
+		spec   groot.CloneSpec
 	}
 	cloneReturns struct {
 		result1 error
@@ -22,16 +22,16 @@ type FakeCloner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCloner) Clone(arg1 lager.Logger, arg2 groot.CloneSpec) error {
+func (fake *FakeCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 	fake.cloneMutex.Lock()
 	fake.cloneArgsForCall = append(fake.cloneArgsForCall, struct {
-		arg1 lager.Logger
-		arg2 groot.CloneSpec
-	}{arg1, arg2})
-	fake.recordInvocation("Clone", []interface{}{arg1, arg2})
+		logger lager.Logger
+		spec   groot.CloneSpec
+	}{logger, spec})
+	fake.recordInvocation("Clone", []interface{}{logger, spec})
 	fake.cloneMutex.Unlock()
 	if fake.CloneStub != nil {
-		return fake.CloneStub(arg1, arg2)
+		return fake.CloneStub(logger, spec)
 	} else {
 		return fake.cloneReturns.result1
 	}
@@ -46,7 +46,7 @@ func (fake *FakeCloner) CloneCallCount() int {
 func (fake *FakeCloner) CloneArgsForCall(i int) (lager.Logger, groot.CloneSpec) {
 	fake.cloneMutex.RLock()
 	defer fake.cloneMutex.RUnlock()
-	return fake.cloneArgsForCall[i].arg1, fake.cloneArgsForCall[i].arg2
+	return fake.cloneArgsForCall[i].logger, fake.cloneArgsForCall[i].spec
 }
 
 func (fake *FakeCloner) CloneReturns(result1 error) {
