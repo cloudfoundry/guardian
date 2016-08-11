@@ -3,6 +3,7 @@ set -e
 
 function main {
   check_clean_status
+  check_docker_sha
   update_glide
   remove_existing_submodules
   glide install
@@ -24,13 +25,35 @@ function check_clean_status {
     print_message "STATUS NOT CLEAN, COMMIT FIRST" $RED
     exit 1
   else
-    print_message "STATUS CLEAN, wait for it ... GROOT TO GO!" $GREEN
+    print_message "STATUS CLEAN, CARRYING ON..." $GREEN
   fi
+}
+
+function check_docker_sha {
+  print_message "CHECKING DOCKER SHA" $GREEN
+  current_commit_sha=$(grep -A 1 'docker/docker' glide.yaml | awk '/version/ {print $2}')
+  echo "The current commit sha for github.com/docker/docker is: ${current_commit_sha}"
+  read -n 1 -p "Is this correct? (y/n) " choice
+  echo
+  case $choice in
+    "y")
+      print_message "GROOT TO GO!" $GREEN
+      ;;
+    "n")
+      print_message "You should probably sort that out..." $RED
+      exit 1
+      ;;
+    *)
+      print_message "LEARN HOW TO TYPE" $RED
+      exit 1
+      ;;
+  esac
 }
 
 function update_glide {
   print_message "UPDATING GLIDE DEPENDENCIES" $GREEN
   glide update
+  print_message "DONE" $GREEN
 }
 
 function remove_existing_submodules {
@@ -39,6 +62,7 @@ function remove_existing_submodules {
     rm -rf vendor/
     git rm -rf vendor/ &> /dev/null
     git submodule deinit --all -f
+    print_message "DONE" $GREEN
   fi
 }
 
@@ -70,10 +94,11 @@ function add_required_submodules {
 
     add_submodule $submodule
   done
+  print_message "DONE" $GREEN
 }
 
 function commit_warning {
-	echo "Dependencies updated. Commit now."
+  print_message "Dependencies updated. Test & commit." $RED
 }
 
 main
