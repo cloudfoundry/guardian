@@ -12,5 +12,5 @@ inputs:
     path: src/code.cloudfoundry.org/grootfs
 
 run:
-  path: src/code.cloudfoundry.org/grootfs/hack/run-root-tests.sh
+  path: src/code.cloudfoundry.org/grootfs/ci/scripts/root-tests.sh
   user: root

@@ -3,10 +3,8 @@ set -e
 
 grootsay
 
-grootfsPath=/go/src/code.cloudfoundry.org/grootfs
-rmdir $grootfsPath
-ln -s $PWD/src/code.cloudfoundry.org/grootfs $grootfsPath
-cd $grootfsPath
+source $(dirname $BASH_SOURCE)/test/utils.sh
+move_to_gopath
 
 # containers/image gets angry when the home is wrong because it's trying to
 # read $HOME/.docker

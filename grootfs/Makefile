@@ -1,6 +1,6 @@
 .PHONY: all \
 	test concourse-groot-test concourse-root-test concourse-test \
-	go-vet \
+	go-vet concourse-go-vet go-generate \
 	image push-image \
 	update-deps
 
@@ -16,6 +16,7 @@ help:
 	@echo '    concourse-root-test ................. runs root tests in concourse-lite'
 	@echo '    concourse-test ...................... runs tests in concourse-lite'
 	@echo '    go-vet .............................. runs go vet in grootfs source code'
+	@echo '    concourse-go-vet .................... runs go vet in concourse-lite'
 	@echo '    go-generate ......................... runs go generate in grootfs source code'
 	@echo '    image ............................... builds a docker image'
 	@echo '    push-image .......................... pushes image to docker-hub'
@@ -38,6 +39,9 @@ concourse-test: concourse-groot-test concourse-root-test
 
 go-vet:
 	GOOS=linux go vet `go list ./... | grep -v vendor`
+
+concourse-go-vet:
+	fly -t lite e -x -c ci/tasks/go-vet.yml -i grootfs-git-repo=${PWD}
 
 go-generate:
 	GOOS=linux go generate `go list ./... | grep -v vendor`
