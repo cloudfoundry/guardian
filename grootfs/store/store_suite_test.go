@@ -1,4 +1,4 @@
-package graph_test
+package store_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestGraph(t *testing.T) {
+func TestStore(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Graph Suite")
+	RunSpecs(t, "Store Suite")
 }

@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type FakeGraph struct {
+type FakeStore struct {
 	MakeBundleStub        func(logger lager.Logger, id string) (groot.Bundle, error)
 	makeBundleMutex       sync.RWMutex
 	makeBundleArgsForCall []struct {
@@ -32,7 +32,7 @@ type FakeGraph struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGraph) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error) {
+func (fake *FakeStore) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error) {
 	fake.makeBundleMutex.Lock()
 	fake.makeBundleArgsForCall = append(fake.makeBundleArgsForCall, struct {
 		logger lager.Logger
@@ -47,19 +47,19 @@ func (fake *FakeGraph) MakeBundle(logger lager.Logger, id string) (groot.Bundle,
 	}
 }
 
-func (fake *FakeGraph) MakeBundleCallCount() int {
+func (fake *FakeStore) MakeBundleCallCount() int {
 	fake.makeBundleMutex.RLock()
 	defer fake.makeBundleMutex.RUnlock()
 	return len(fake.makeBundleArgsForCall)
 }
 
-func (fake *FakeGraph) MakeBundleArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeStore) MakeBundleArgsForCall(i int) (lager.Logger, string) {
 	fake.makeBundleMutex.RLock()
 	defer fake.makeBundleMutex.RUnlock()
 	return fake.makeBundleArgsForCall[i].logger, fake.makeBundleArgsForCall[i].id
 }
 
-func (fake *FakeGraph) MakeBundleReturns(result1 groot.Bundle, result2 error) {
+func (fake *FakeStore) MakeBundleReturns(result1 groot.Bundle, result2 error) {
 	fake.MakeBundleStub = nil
 	fake.makeBundleReturns = struct {
 		result1 groot.Bundle
@@ -67,7 +67,7 @@ func (fake *FakeGraph) MakeBundleReturns(result1 groot.Bundle, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeGraph) DeleteBundle(logger lager.Logger, id string) error {
+func (fake *FakeStore) DeleteBundle(logger lager.Logger, id string) error {
 	fake.deleteBundleMutex.Lock()
 	fake.deleteBundleArgsForCall = append(fake.deleteBundleArgsForCall, struct {
 		logger lager.Logger
@@ -82,26 +82,26 @@ func (fake *FakeGraph) DeleteBundle(logger lager.Logger, id string) error {
 	}
 }
 
-func (fake *FakeGraph) DeleteBundleCallCount() int {
+func (fake *FakeStore) DeleteBundleCallCount() int {
 	fake.deleteBundleMutex.RLock()
 	defer fake.deleteBundleMutex.RUnlock()
 	return len(fake.deleteBundleArgsForCall)
 }
 
-func (fake *FakeGraph) DeleteBundleArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeStore) DeleteBundleArgsForCall(i int) (lager.Logger, string) {
 	fake.deleteBundleMutex.RLock()
 	defer fake.deleteBundleMutex.RUnlock()
 	return fake.deleteBundleArgsForCall[i].logger, fake.deleteBundleArgsForCall[i].id
 }
 
-func (fake *FakeGraph) DeleteBundleReturns(result1 error) {
+func (fake *FakeStore) DeleteBundleReturns(result1 error) {
 	fake.DeleteBundleStub = nil
 	fake.deleteBundleReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeGraph) Invocations() map[string][][]interface{} {
+func (fake *FakeStore) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.makeBundleMutex.RLock()
@@ -111,7 +111,7 @@ func (fake *FakeGraph) Invocations() map[string][][]interface{} {
 	return fake.invocations
 }
 
-func (fake *FakeGraph) recordInvocation(key string, args []interface{}) {
+func (fake *FakeStore) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -123,4 +123,4 @@ func (fake *FakeGraph) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ groot.Graph = new(FakeGraph)
+var _ groot.Store = new(FakeStore)

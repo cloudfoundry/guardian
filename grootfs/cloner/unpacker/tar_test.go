@@ -38,7 +38,7 @@ var _ = Describe("Tar", func() {
 
 		tarUnpacker = unpacker.NewTarUnpacker()
 
-		logger = lagertest.NewTestLogger("test-graph")
+		logger = lagertest.NewTestLogger("test-store")
 
 		imgPath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())

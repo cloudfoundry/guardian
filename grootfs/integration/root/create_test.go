@@ -45,7 +45,7 @@ var _ = Describe("Create", func() {
 	})
 
 	It("keeps the ownership and permissions", func() {
-		bundle := integration.CreateBundle(GrootFSBin, GraphPath, imagePath, "random-id")
+		bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id")
 
 		grootFi, err := os.Stat(path.Join(bundle.RootFSPath(), "foo"))
 		Expect(err).NotTo(HaveOccurred())
@@ -63,7 +63,7 @@ var _ = Describe("Create", func() {
 		// because we need to write a file as root to test the translation.
 		It("should translate the rootfs accordingly", func() {
 			cmd := exec.Command(
-				GrootFSBin, "--graph", GraphPath,
+				GrootFSBin, "--store", StorePath,
 				"create", "--image", imagePath,
 				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
 				"--uid-mapping", "1:100000:65000",

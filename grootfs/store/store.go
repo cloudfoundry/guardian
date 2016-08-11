@@ -1,4 +1,4 @@
-package graph
+package store
 
 import (
 	"fmt"
@@ -11,18 +11,18 @@ import (
 
 const BUNDLES_DIR_NAME = "bundles"
 
-type Graph struct {
+type Store struct {
 	path string
 }
 
-func NewGraph(path string) *Graph {
-	return &Graph{
+func NewStore(path string) *Store {
+	return &Store{
 		path: path,
 	}
 }
 
-func (g *Graph) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error) {
-	logger = logger.Session("making-bundle", lager.Data{"graphPath": g.path, "id": id})
+func (g *Store) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error) {
+	logger = logger.Session("making-bundle", lager.Data{"storePath": g.path, "id": id})
 	logger.Debug("start")
 	defer logger.Debug("end")
 
@@ -38,8 +38,8 @@ func (g *Graph) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error)
 	return bundle, nil
 }
 
-func (g *Graph) DeleteBundle(logger lager.Logger, id string) error {
-	logger = logger.Session("delete-bundle", lager.Data{"graphPath": g.path, "id": id})
+func (g *Store) DeleteBundle(logger lager.Logger, id string) error {
+	logger = logger.Session("delete-bundle", lager.Data{"storePath": g.path, "id": id})
 	logger.Debug("start")
 	defer logger.Debug("end")
 

@@ -7,7 +7,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-//go:generate counterfeiter . Graph
+//go:generate counterfeiter . Store
 //go:generate counterfeiter . Bundle
 //go:generate counterfeiter . Cloner
 
@@ -16,7 +16,7 @@ type Bundle interface {
 	RootFSPath() string
 }
 
-type Graph interface {
+type Store interface {
 	MakeBundle(logger lager.Logger, id string) (Bundle, error)
 	DeleteBundle(logger lager.Logger, id string) error
 }
@@ -39,14 +39,14 @@ type Cloner interface {
 }
 
 type Groot struct {
-	graph        Graph
+	store        Store
 	localCloner  Cloner
 	remoteCloner Cloner
 }
 
-func IamGroot(graph Graph, localCloner, remoteCloner Cloner) *Groot {
+func IamGroot(store Store, localCloner, remoteCloner Cloner) *Groot {
 	return &Groot{
-		graph:        graph,
+		store:        store,
 		localCloner:  localCloner,
 		remoteCloner: remoteCloner,
 	}
@@ -65,7 +65,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		return nil, fmt.Errorf("parsing image url: %s", err)
 	}
 
-	bundle, err := g.graph.MakeBundle(logger, spec.ID)
+	bundle, err := g.store.MakeBundle(logger, spec.ID)
 	if err != nil {
 		return nil, fmt.Errorf("making bundle: %s", err)
 	}
@@ -82,7 +82,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		err = g.remoteCloner.Clone(logger, cloneSpec)
 	}
 	if err != nil {
-		if err := g.graph.DeleteBundle(logger.Session("cleaning-up-bundle"), spec.ID); err != nil {
+		if err := g.store.DeleteBundle(logger.Session("cleaning-up-bundle"), spec.ID); err != nil {
 			logger.Error("cleaning-up-bundle", err)
 		}
 		return nil, fmt.Errorf("cloning: %s", err)

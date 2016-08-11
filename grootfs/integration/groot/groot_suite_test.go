@@ -15,7 +15,7 @@ import (
 var (
 	GrootFSBin string
 
-	GraphPath string
+	StorePath string
 )
 
 func TestGroot(t *testing.T) {
@@ -36,12 +36,12 @@ func TestGroot(t *testing.T) {
 	})
 
 	BeforeEach(func() {
-		GraphPath = path.Join(os.TempDir(), fmt.Sprintf("test-graph-%d", GinkgoParallelNode()))
-		Expect(os.Mkdir(GraphPath, 0700)).NotTo(HaveOccurred())
+		StorePath = path.Join(os.TempDir(), fmt.Sprintf("test-store-%d", GinkgoParallelNode()))
+		Expect(os.Mkdir(StorePath, 0700)).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(GraphPath)).To(Succeed())
+		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
 	RunSpecs(t, "GrootFS Integration Suite - Running as groot")

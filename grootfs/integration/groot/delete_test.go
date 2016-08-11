@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path"
 
-	"code.cloudfoundry.org/grootfs/graph"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/integration"
 
 	. "github.com/onsi/ginkgo"
@@ -21,20 +21,20 @@ var _ = Describe("Delete", func() {
 	)
 
 	BeforeEach(func() {
-		bundlePath = path.Join(GraphPath, graph.BUNDLES_DIR_NAME, "random-id")
+		bundlePath = path.Join(StorePath, store.BUNDLES_DIR_NAME, "random-id")
 		Expect(os.MkdirAll(bundlePath, 0755)).To(Succeed())
 		Expect(ioutil.WriteFile(path.Join(bundlePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
 	It("deletes an existing bundle", func() {
-		result := integration.DeleteBundle(GrootFSBin, GraphPath, "random-id")
+		result := integration.DeleteBundle(GrootFSBin, StorePath, "random-id")
 		Expect(result).To(Equal("Bundle random-id deleted\n"))
 		Expect(path.Join(bundlePath)).NotTo(BeAnExistingFile())
 	})
 
 	Context("when the bundle ID doesn't exist", func() {
 		It("returns an error", func() {
-			cmd := exec.Command(GrootFSBin, "--graph", GraphPath, "delete", "non-existing-id")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", "non-existing-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
@@ -44,7 +44,7 @@ var _ = Describe("Delete", func() {
 
 	Context("when the id is not provided", func() {
 		It("fails", func() {
-			cmd := exec.Command(GrootFSBin, "--graph", GraphPath, "delete")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))

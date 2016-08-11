@@ -8,7 +8,7 @@ import (
 	streamerpkg "code.cloudfoundry.org/grootfs/cloner/streamer"
 	unpackerpkg "code.cloudfoundry.org/grootfs/cloner/unpacker"
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
-	graphpkg "code.cloudfoundry.org/grootfs/graph"
+	storepkg "code.cloudfoundry.org/grootfs/store"
 	grootpkg "code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 
@@ -39,7 +39,7 @@ var CreateCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 
-		graphPath := ctx.GlobalString("graph")
+		storePath := ctx.GlobalString("store")
 		image := ctx.String("image")
 		if ctx.NArg() != 1 {
 			logger.Error("parsing-command", errors.New("id was not specified"))
@@ -59,7 +59,7 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		graph := graphpkg.NewGraph(graphPath)
+		store := storepkg.NewStore(storePath)
 
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(runner)
@@ -71,7 +71,7 @@ var CreateCommand = cli.Command{
 		remoteFetcher := fetcherpkg.NewFetcher()
 		remoteCloner := clonerpkg.NewRemoteCloner(remoteFetcher, namespacedCmdUnpacker)
 
-		groot := grootpkg.IamGroot(graph, localCloner, remoteCloner)
+		groot := grootpkg.IamGroot(store, localCloner, remoteCloner)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
 			ID:          id,

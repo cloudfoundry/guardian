@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/graph"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/groot"
 
 	. "github.com/onsi/ginkgo"
@@ -14,17 +14,17 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-func CreateBundle(grootFSBin, graphPath, imagePath, id string) groot.Bundle {
-	cmd := exec.Command(grootFSBin, "--log-level", "debug", "--graph", graphPath, "create", "--image", imagePath, id)
+func CreateBundle(grootFSBin, storePath, imagePath, id string) groot.Bundle {
+	cmd := exec.Command(grootFSBin, "--log-level", "debug", "--store", storePath, "create", "--image", imagePath, id)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(sess.Wait(10 * time.Second)).To(gexec.Exit(0))
 
-	return graph.NewBundle(strings.TrimSpace(string(sess.Out.Contents())))
+	return store.NewBundle(strings.TrimSpace(string(sess.Out.Contents())))
 }
 
-func DeleteBundle(grootFSBin, graphPath, id string) string {
-	cmd := exec.Command(grootFSBin, "--graph", graphPath, "delete", id)
+func DeleteBundle(grootFSBin, storePath, id string) string {
+	cmd := exec.Command(grootFSBin, "--store", storePath, "delete", id)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).ToNot(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))

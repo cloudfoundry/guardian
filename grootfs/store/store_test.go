@@ -1,11 +1,11 @@
-package graph_test
+package store_test
 
 import (
 	"io/ioutil"
 	"os"
 	"path"
 
-	"code.cloudfoundry.org/grootfs/graph"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -13,29 +13,29 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Graph", func() {
+var _ = Describe("Store", func() {
 	var (
 		logger lager.Logger
 
-		graphPath string
+		storePath string
 
-		grph *graph.Graph
+		grph *store.Store
 	)
 
 	BeforeEach(func() {
 		var err error
 
-		graphPath, err = ioutil.TempDir("", "")
+		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	JustBeforeEach(func() {
-		logger = lagertest.NewTestLogger("test-graph")
-		grph = graph.NewGraph(graphPath)
+		logger = lagertest.NewTestLogger("test-store")
+		grph = store.NewStore(storePath)
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(graphPath)).To(Succeed())
+		Expect(os.RemoveAll(storePath)).To(Succeed())
 	})
 
 	Describe("MakeBundle", func() {
@@ -54,7 +54,7 @@ var _ = Describe("Graph", func() {
 			Expect(someBundle.Path()).NotTo(BeEmpty())
 			Expect(anotherBundle.Path()).NotTo(BeEmpty())
 
-			bundles, err := ioutil.ReadDir(path.Join(graphPath, graph.BUNDLES_DIR_NAME))
+			bundles, err := ioutil.ReadDir(path.Join(storePath, store.BUNDLES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(bundles)).To(Equal(2))
 		})
@@ -81,9 +81,9 @@ var _ = Describe("Graph", func() {
 			})
 		})
 
-		Context("when the graph path does not exist", func() {
+		Context("when the store path does not exist", func() {
 			BeforeEach(func() {
-				graphPath = "/non/existing/graph"
+				storePath = "/non/existing/store"
 			})
 
 			It("should return an error", func() {
@@ -97,7 +97,7 @@ var _ = Describe("Graph", func() {
 		var bundlePath string
 
 		BeforeEach(func() {
-			bundlePath = path.Join(graphPath, graph.BUNDLES_DIR_NAME, "some-id")
+			bundlePath = path.Join(storePath, store.BUNDLES_DIR_NAME, "some-id")
 			Expect(os.MkdirAll(bundlePath, 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(path.Join(bundlePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 		})

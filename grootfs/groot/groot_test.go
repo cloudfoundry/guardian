@@ -16,7 +16,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 	var (
 		localCloner  *grootfakes.FakeCloner
 		remoteCloner *grootfakes.FakeCloner
-		graph        *grootfakes.FakeGraph
+		store        *grootfakes.FakeStore
 		groot        *grootpkg.Groot
 		bundle       *grootfakes.FakeBundle
 		logger       lager.Logger
@@ -26,11 +26,11 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 		localCloner = new(grootfakes.FakeCloner)
 		remoteCloner = new(grootfakes.FakeCloner)
 		bundle = new(grootfakes.FakeBundle)
-		graph = new(grootfakes.FakeGraph)
-		graph.MakeBundleReturns(bundle, nil)
+		store = new(grootfakes.FakeStore)
+		store.MakeBundleReturns(bundle, nil)
 
 		logger = lagertest.NewTestLogger("groot")
-		groot = grootpkg.IamGroot(graph, localCloner, remoteCloner)
+		groot = grootpkg.IamGroot(store, localCloner, remoteCloner)
 	})
 
 	Describe("Create", func() {
@@ -40,8 +40,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(graph.MakeBundleCallCount()).To(Equal(1))
-			_, id := graph.MakeBundleArgsForCall(0)
+			Expect(store.MakeBundleCallCount()).To(Equal(1))
+			_, id := store.MakeBundleArgsForCall(0)
 			Expect(id).To(Equal("some-id"))
 		})
 
@@ -55,7 +55,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 		Context("when creating the bundle fails", func() {
 			BeforeEach(func() {
-				graph.MakeBundleReturns(nil, errors.New("Failed to make bundle"))
+				store.MakeBundleReturns(nil, errors.New("Failed to make bundle"))
 			})
 
 			It("returns the error", func() {
@@ -107,8 +107,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 					})
 					Expect(err).To(HaveOccurred())
 
-					Expect(graph.DeleteBundleCallCount()).To(Equal(1))
-					_, id := graph.DeleteBundleArgsForCall(0)
+					Expect(store.DeleteBundleCallCount()).To(Equal(1))
+					_, id := store.DeleteBundleArgsForCall(0)
 					Expect(id).To(Equal("some-id"))
 				})
 			})
@@ -157,8 +157,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 					})
 					Expect(err).To(HaveOccurred())
 
-					Expect(graph.DeleteBundleCallCount()).To(Equal(1))
-					_, id := graph.DeleteBundleArgsForCall(0)
+					Expect(store.DeleteBundleCallCount()).To(Equal(1))
+					_, id := store.DeleteBundleArgsForCall(0)
 					Expect(id).To(Equal("some-id"))
 				})
 			})
@@ -178,7 +178,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(graph.MakeBundleCallCount()).To(Equal(0))
+				Expect(store.MakeBundleCallCount()).To(Equal(0))
 			})
 		})
 	})

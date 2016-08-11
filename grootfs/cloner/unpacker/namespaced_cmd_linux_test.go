@@ -41,7 +41,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 			fakeCommandRunner, fakeIDMapper, "ginkgo-unpack",
 		)
 
-		logger = lagertest.NewTestLogger("test-graph")
+		logger = lagertest.NewTestLogger("test-store")
 
 		bundlePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())

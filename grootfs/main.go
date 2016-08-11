@@ -5,13 +5,13 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/commands"
-	"code.cloudfoundry.org/grootfs/graph"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 
 	"github.com/urfave/cli"
 )
 
-const GraphPath = "/tmp/grootfs"
+const StorePath = "/tmp/grootfs"
 
 func main() {
 	grootfs := cli.NewApp()
@@ -21,9 +21,9 @@ func main() {
 
 	grootfs.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "graph",
-			Usage: "Path to the graph directory",
-			Value: GraphPath,
+			Name:  "store",
+			Usage: "Path to the store directory",
+			Value: StorePath,
 		},
 		cli.StringFlag{
 			Name:  "log-level",
@@ -43,14 +43,14 @@ func main() {
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
-		graphPath := ctx.String("graph")
+		storePath := ctx.String("store")
 
 		cli.ErrWriter = os.Stdout
 
 		logger := configureLog(ctx)
 
-		configurer := graph.NewConfigurer()
-		return configurer.Ensure(logger, graphPath)
+		configurer := store.NewConfigurer()
+		return configurer.Ensure(logger, storePath)
 	}
 
 	grootfs.Run(os.Args)

@@ -20,7 +20,7 @@ var (
 	GrootUID uint32
 	GrootGID uint32
 
-	GraphPath string
+	StorePath string
 )
 
 func TestRoot(t *testing.T) {
@@ -49,13 +49,13 @@ func TestRoot(t *testing.T) {
 			Skip("This suite is only running as root")
 		}
 
-		GraphPath = path.Join(os.TempDir(), fmt.Sprintf("test-graph-%d", GinkgoParallelNode()))
-		Expect(os.Mkdir(GraphPath, 0700)).To(Succeed())
-		Expect(os.Chown(GraphPath, int(GrootUID), int(GrootGID))).To(Succeed())
+		StorePath = path.Join(os.TempDir(), fmt.Sprintf("test-store-%d", GinkgoParallelNode()))
+		Expect(os.Mkdir(StorePath, 0700)).To(Succeed())
+		Expect(os.Chown(StorePath, int(GrootUID), int(GrootGID))).To(Succeed())
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(GraphPath)).To(Succeed())
+		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
 	RunSpecs(t, "GrootFS Integration Suite - Running as root")
