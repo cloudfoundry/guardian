@@ -16,7 +16,6 @@ type RemoteFetcher interface {
 
 type RemoteCloner struct {
 	remoteFetcher RemoteFetcher
-	cache         Streamer
 	unpacker      Unpacker
 }
 

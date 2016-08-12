@@ -2,17 +2,47 @@ package unpacker
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"syscall"
 
 	"github.com/cloudfoundry/gunk/command_runner"
+	"github.com/docker/docker/pkg/reexec"
 
 	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 )
+
+func init() {
+	reexec.Register("unpack", func() {
+		logger := lager.NewLogger("unpack")
+
+		if len(os.Args) != 2 {
+			logger.Error("parsing-command", errors.New("destination directory was not specified"))
+			os.Exit(1)
+		}
+		rootFSPath := os.Args[1]
+
+		ctrlPipeR := os.NewFile(3, "/ctrl/pipe")
+		buffer := make([]byte, 1)
+		_, err := ctrlPipeR.Read(buffer)
+		if err != nil {
+			logger.Error("reading-control-pipe", err)
+			os.Exit(1)
+		}
+
+		unpacker := NewTarUnpacker()
+		if err := unpacker.Unpack(logger, cloner.UnpackSpec{
+			Stream:     os.Stdin,
+			RootFSPath: rootFSPath,
+		}); err != nil {
+			logger.Error("unpacking", err)
+			os.Exit(1)
+		}
+	})
+}
 
 //go:generate counterfeiter . IDMapper
 type IDMapper interface {
@@ -44,7 +74,7 @@ func (u *NamespacedCmdUnpacker) Unpack(logger lager.Logger, spec cloner.UnpackSp
 		return fmt.Errorf("creating tar control pipe: %s", err)
 	}
 
-	unpackCmd := exec.Command(os.Args[0], u.unpackCmdName, spec.RootFSPath)
+	unpackCmd := reexec.Command(u.unpackCmdName, spec.RootFSPath)
 	unpackCmd.Stdin = spec.Stream
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
 		unpackCmd.SysProcAttr = &syscall.SysProcAttr{

@@ -52,7 +52,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 	JustBeforeEach(func() {
 		fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-			Path: os.Args[0],
+			Path: "/proc/self/exe",
 		}, func(cmd *exec.Cmd) error {
 			cmd.Process = &os.Process{
 				Pid: 12, // don't panic
@@ -72,10 +72,9 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 		commands := fakeCommandRunner.StartedCommands()
 		Expect(commands).To(HaveLen(1))
-		expectedPath := os.Args[0]
-		Expect(commands[0].Path).To(Equal(expectedPath))
+		Expect(commands[0].Path).To(Equal("/proc/self/exe"))
 		Expect(commands[0].Args).To(Equal([]string{
-			expectedPath, "ginkgo-unpack", rootFSPath,
+			"ginkgo-unpack", rootFSPath,
 		}))
 	})
 
@@ -121,7 +120,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 			commands := fakeCommandRunner.StartedCommands()
 			Expect(commands).To(HaveLen(1))
-			Expect(commands[0].SysProcAttr).To(BeNil())
+			Expect(commands[0].SysProcAttr.Cloneflags).To(Equal(uintptr(0)))
 		})
 	})
 
@@ -252,7 +251,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 	Context("when it fails to unpack", func() {
 		BeforeEach(func() {
 			fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
-				Path: os.Args[0],
+				Path: "/proc/self/exe",
 			}, func(cmd *exec.Cmd) error {
 				cmd.Stdout.Write([]byte("hello-world"))
 				return errors.New("exit status 1")

@@ -8,10 +8,17 @@ import (
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 
+	"github.com/docker/docker/pkg/reexec"
 	"github.com/urfave/cli"
 )
 
 const StorePath = "/tmp/grootfs"
+
+func init() {
+	if reexec.Init() {
+		os.Exit(0)
+	}
+}
 
 func main() {
 	grootfs := cli.NewApp()
@@ -39,7 +46,6 @@ func main() {
 	grootfs.Commands = []cli.Command{
 		commands.CreateCommand,
 		commands.DeleteCommand,
-		commands.UnpackCommand,
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
