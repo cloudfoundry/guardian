@@ -7,7 +7,7 @@ A simple single-host OCI container manager.
 ## Developing and Deploying Guardian
 
 For details on how to get started with developing or deploying Guardian please check out the
-[Guardian Release repo](https://github.com/cloudfoundry/guardian-release/blob/master/README.md)
+[Garden-runC release repo](https://github.com/cloudfoundry/garden-runc-release/blob/master/README.md)
 
 ## Components
 
