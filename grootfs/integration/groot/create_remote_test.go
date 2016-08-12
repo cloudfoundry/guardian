@@ -35,7 +35,7 @@ var _ = Describe("Create with remote images", func() {
 			Expect(blobPath).To(BeARegularFile())
 		})
 
-		FIt("uses the cached image from the store", func() {
+		It("uses the cached image from the store", func() {
 			integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id")
 
 			// change the cache
