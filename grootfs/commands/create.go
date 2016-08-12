@@ -3,6 +3,8 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 
 	clonerpkg "code.cloudfoundry.org/grootfs/cloner"
 	streamerpkg "code.cloudfoundry.org/grootfs/cloner/streamer"
@@ -68,7 +70,13 @@ var CreateCommand = cli.Command{
 
 		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker)
 
-		remoteFetcher := fetcherpkg.NewFetcher()
+		cachePath := filepath.Join(storePath, "cache", "blobs")
+		if err := os.MkdirAll(cachePath, 0755); err != nil {
+			logger.Error("creating-cache-directory", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		remoteFetcher := fetcherpkg.NewFetcher(cachePath)
 		remoteCloner := clonerpkg.NewRemoteCloner(remoteFetcher, namespacedCmdUnpacker)
 
 		groot := grootpkg.IamGroot(store, localCloner, remoteCloner)

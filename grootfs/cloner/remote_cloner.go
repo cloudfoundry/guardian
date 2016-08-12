@@ -2,6 +2,7 @@ package cloner
 
 import (
 	"fmt"
+	"io"
 	"net/url"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -14,8 +15,15 @@ type RemoteFetcher interface {
 	Streamer(logger lager.Logger, imageURL *url.URL) (Streamer, error)
 }
 
+//go:generate counterfeiter . Cache
+type CacheWriter interface {
+	CachingReader(logger lager.Logger, digest string, reader io.ReadCloser) (io.ReadCloser, error)
+}
+
 type RemoteCloner struct {
 	remoteFetcher RemoteFetcher
+	cache         Streamer
+	cacheWriter   CacheWriter
 	unpacker      Unpacker
 }
 

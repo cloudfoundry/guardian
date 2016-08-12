@@ -11,10 +11,13 @@ import (
 )
 
 type Fetcher struct {
+	cachePath string
 }
 
-func NewFetcher() *Fetcher {
-	return &Fetcher{}
+func NewFetcher(cachePath string) *Fetcher {
+	return &Fetcher{
+		cachePath: cachePath,
+	}
 }
 
 func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]string, error) {
@@ -47,5 +50,6 @@ func (f *Fetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Strea
 		return nil, fmt.Errorf("creating image source: %s", err)
 	}
 
-	return NewRemoteStreamer(imgSrc), nil
+	remoteStreamer := NewRemoteStreamer(imgSrc)
+	return NewCachedStreamer(f.cachePath, remoteStreamer), nil
 }

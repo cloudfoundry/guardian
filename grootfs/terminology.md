@@ -5,7 +5,7 @@
 Is a set of layers that compose a file system which can be used by a container
 as its root file system.
 
-## Root file system
+## Root file system (rootfs)
 
 Is the `/` of a container.
 
@@ -23,7 +23,11 @@ Is an identifier (hash) which uniquely describes the contents of a layer.
 
 Is a server that stores and distributes images.
 
-# Operation
+## Store
+
+The directory that contains the bundles and cached layers.
+
+# Operations
 
 ## Clone
 

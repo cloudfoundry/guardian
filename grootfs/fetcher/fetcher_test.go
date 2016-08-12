@@ -17,7 +17,7 @@ var _ = Describe("Fetcher", func() {
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-fetcher")
-		fetcher = fetcherpkg.NewFetcher()
+		fetcher = fetcherpkg.NewFetcher("/cache-path")
 	})
 
 	Describe("LayersDigest", func() {
