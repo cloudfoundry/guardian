@@ -12,13 +12,13 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("CommandReader", func() {
+var _ = Describe("Callback Reader", func() {
 	var (
-		pipeR         io.ReadCloser
-		pipeW         io.WriteCloser
-		logger        lager.Logger
-		commandReader *streamerpkg.CommandReader
-		waitFunction  func() error
+		pipeR          io.ReadCloser
+		pipeW          io.WriteCloser
+		logger         lager.Logger
+		callbackReader *streamerpkg.CallbackReader
+		waitFunction   func() error
 	)
 
 	BeforeEach(func() {
@@ -27,7 +27,7 @@ var _ = Describe("CommandReader", func() {
 		pipeR, pipeW, err = os.Pipe()
 		Expect(err).ToNot(HaveOccurred())
 
-		logger = lagertest.NewTestLogger("command-streamer")
+		logger = lagertest.NewTestLogger("callback-reader")
 
 		waitFunction = func() error {
 			return nil
@@ -35,7 +35,7 @@ var _ = Describe("CommandReader", func() {
 	})
 
 	JustBeforeEach(func() {
-		commandReader = streamerpkg.NewCommandReader(logger, waitFunction, pipeR)
+		callbackReader = streamerpkg.NewCallbackReader(logger, waitFunction, pipeR)
 	})
 
 	Describe("Read", func() {
@@ -46,14 +46,14 @@ var _ = Describe("CommandReader", func() {
 
 		It("streams using the internal streamer", func() {
 			buffer := make([]byte, 1024)
-			_, err := commandReader.Read(buffer)
+			_, err := callbackReader.Read(buffer)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(buffer[:5])).To(Equal("hello"))
 		})
 
 		It("returns the size of the internal streamer stream", func() {
 			buffer := make([]byte, 1024)
-			n, err := commandReader.Read(buffer)
+			n, err := callbackReader.Read(buffer)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(n).To(Equal(5))
 		})
@@ -62,7 +62,7 @@ var _ = Describe("CommandReader", func() {
 			It("returns an error", func() {
 				Expect(pipeR.Close()).To(Succeed())
 
-				_, err := commandReader.Read([]byte{})
+				_, err := callbackReader.Read([]byte{})
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -70,10 +70,10 @@ var _ = Describe("CommandReader", func() {
 
 	Describe("Close", func() {
 		It("closes the streamer", func(done Done) {
-			Expect(commandReader.Close()).To(Succeed())
+			Expect(callbackReader.Close()).To(Succeed())
 
 			buffer := make([]byte, 1024)
-			_, err := commandReader.Read(buffer)
+			_, err := callbackReader.Read(buffer)
 			Expect(err).To(HaveOccurred())
 
 			close(done)
@@ -95,7 +95,7 @@ var _ = Describe("CommandReader", func() {
 				go func() {
 					defer GinkgoRecover()
 
-					Expect(commandReader.Close()).To(Succeed())
+					Expect(callbackReader.Close()).To(Succeed())
 					close(done)
 				}()
 

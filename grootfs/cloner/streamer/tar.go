@@ -31,5 +31,5 @@ func (tr *TarStreamer) Stream(logger lager.Logger, source string) (io.ReadCloser
 		return nil, 0, fmt.Errorf("starting command: %s", err)
 	}
 
-	return NewCommandReader(nil, tarCmd.Wait, stdoutPipe), 0, nil
+	return NewCallbackReader(nil, tarCmd.Wait, stdoutPipe), 0, nil
 }
