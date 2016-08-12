@@ -24,39 +24,12 @@ var _ = Describe("Create", func() {
 		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
-	It("creates a root filesystem", func() {
-		bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id")
-		bundleContentPath := path.Join(bundle.RootFSPath(), "foo")
-		Expect(bundleContentPath).To(BeARegularFile())
-		fooContents, err := ioutil.ReadFile(bundleContentPath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(fooContents)).To(Equal("hello-world"))
-	})
-
-	Context("when local directory does not exist", func() {
-		It("returns an error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--image", "/invalid/image")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
-		})
-	})
-
 	Context("when two rootfses are using the same image", func() {
 		It("isolates them", func() {
 			bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id")
 			anotherBundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "another-random-id")
 			Expect(ioutil.WriteFile(path.Join(bundle.RootFSPath(), "bar"), []byte("hello-world"), 0644)).To(Succeed())
 			Expect(path.Join(anotherBundle.RootFSPath(), "bar")).NotTo(BeARegularFile())
-		})
-	})
-
-	Context("when the id is not provided", func() {
-		It("fails", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--image", imagePath)
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
 		})
 	})
 
@@ -71,34 +44,6 @@ var _ = Describe("Create", func() {
 			Eventually(sess.Out).Should(gbytes.Say("bundle for id `random-id` already exists"))
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
-		})
-	})
-
-	Context("when a mappings flag is invalid", func() {
-		It("fails when the uid mapping is invalid", func() {
-			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
-				"create", "--image", imagePath,
-				"--uid-mapping", "1:hello:65000",
-				"some-id",
-			)
-
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(sess.Wait()).NotTo(gexec.Exit(0))
-		})
-
-		It("fails when the gid mapping is invalid", func() {
-			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
-				"create", "--image", imagePath,
-				"--gid-mapping", "1:groot:65000",
-				"some-id",
-			)
-
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(sess.Wait()).NotTo(gexec.Exit(0))
 		})
 	})
 
@@ -134,15 +79,40 @@ var _ = Describe("Create", func() {
 			Expect(path.Join(StorePath, "bundles", "some-id")).ToNot(BeAnExistingFile())
 		})
 	})
+	Context("when the id is not provided", func() {
+		It("fails", func() {
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--image", imagePath)
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(1))
+		})
+	})
 
-	Context("when `--image` is a remote scheme url", func() {
-		Context("when it uses docker registry", func() {
-			It("creates a root filesystem based on the image provided", func() {
-				imageURL := "docker:///cfgarden/empty:v0.1.0"
-				bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id")
+	Context("when a mappings flag is invalid", func() {
+		It("fails when the uid mapping is invalid", func() {
+			cmd := exec.Command(
+				GrootFSBin, "--store", StorePath,
+				"create", "--image", imagePath,
+				"--uid-mapping", "1:hello:65000",
+				"some-id",
+			)
 
-				Expect(path.Join(bundle.RootFSPath(), "hello")).To(BeARegularFile())
-			})
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sess.Wait()).NotTo(gexec.Exit(0))
+		})
+
+		It("fails when the gid mapping is invalid", func() {
+			cmd := exec.Command(
+				GrootFSBin, "--store", StorePath,
+				"create", "--image", imagePath,
+				"--gid-mapping", "1:groot:65000",
+				"some-id",
+			)
+
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sess.Wait()).NotTo(gexec.Exit(0))
 		})
 	})
 })
