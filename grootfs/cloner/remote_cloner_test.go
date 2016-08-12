@@ -74,77 +74,60 @@ var _ = Describe("RemoteCloner", func() {
 		Expect(imgURL.String()).To(Equal(image))
 	})
 
-	It("uses a streamer to stream the blobs", func() {
-		Expect(remote.Clone(logger, groot.CloneSpec{
-			Image:      image,
-			RootFSPath: rootFSPath,
-		})).To(Succeed())
+	Describe("unpacking", func() {
+		It("unpacks the blobs", func() {
+			Expect(remote.Clone(logger, groot.CloneSpec{
+				Image:      image,
+				RootFSPath: rootFSPath,
+			})).To(Succeed())
 
-		Expect(fakeRemoteFetcher.StreamerCallCount()).To(Equal(1))
-		_, imgURL := fakeRemoteFetcher.StreamerArgsForCall(0)
-		Expect(imgURL.String()).To(Equal(image))
+			Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
+			_, unpack := fakeUnpacker.UnpackArgsForCall(0)
+			contents, err := ioutil.ReadAll(unpack.Stream)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(Equal("layer-contents"))
+		})
 
-		Expect(fakeStreamer.StreamCallCount()).To(Equal(3))
-		_, layerA := fakeStreamer.StreamArgsForCall(0)
-		Expect(layerA).To(Equal("i-am-a-layer"))
-		_, layerB := fakeStreamer.StreamArgsForCall(1)
-		Expect(layerB).To(Equal("i-am-another-layer"))
-		_, layerC := fakeStreamer.StreamArgsForCall(2)
-		Expect(layerC).To(Equal("i-am-the-last-layer"))
-	})
+		It("unpacks the blobs in the same rootfs path", func() {
+			spec := groot.CloneSpec{
+				Image:      image,
+				RootFSPath: rootFSPath,
+			}
 
-	It("unpacks the blobs", func() {
-		Expect(remote.Clone(logger, groot.CloneSpec{
-			Image:      image,
-			RootFSPath: rootFSPath,
-		})).To(Succeed())
+			Expect(remote.Clone(logger, spec)).To(Succeed())
 
-		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
-		_, unpack := fakeUnpacker.UnpackArgsForCall(0)
-		contents, err := ioutil.ReadAll(unpack.Stream)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(contents)).To(Equal("layer-contents"))
-	})
+			Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
+			_, unpack := fakeUnpacker.UnpackArgsForCall(0)
+			Expect(unpack.RootFSPath).To(Equal(rootFSPath))
+		})
 
-	It("unpacks the blobs in the same rootfs path", func() {
-		spec := groot.CloneSpec{
-			Image:      image,
-			RootFSPath: rootFSPath,
-		}
-
-		Expect(remote.Clone(logger, spec)).To(Succeed())
-
-		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
-		_, unpack := fakeUnpacker.UnpackArgsForCall(0)
-		Expect(unpack.RootFSPath).To(Equal(rootFSPath))
-	})
-
-	It("applies the UID and GID mappings in the unpacked blobs", func() {
-		spec := groot.CloneSpec{
-			Image:      image,
-			RootFSPath: rootFSPath,
-			UIDMappings: []groot.IDMappingSpec{
-				groot.IDMappingSpec{
-					HostID:      1,
-					NamespaceID: 1,
-					Size:        1,
+		It("applies the UID and GID mappings in the unpacked blobs", func() {
+			spec := groot.CloneSpec{
+				Image:      image,
+				RootFSPath: rootFSPath,
+				UIDMappings: []groot.IDMappingSpec{
+					groot.IDMappingSpec{
+						HostID:      1,
+						NamespaceID: 1,
+						Size:        1,
+					},
 				},
-			},
-			GIDMappings: []groot.IDMappingSpec{
-				groot.IDMappingSpec{
-					HostID:      100,
-					NamespaceID: 100,
-					Size:        100,
+				GIDMappings: []groot.IDMappingSpec{
+					groot.IDMappingSpec{
+						HostID:      100,
+						NamespaceID: 100,
+						Size:        100,
+					},
 				},
-			},
-		}
+			}
 
-		Expect(remote.Clone(logger, spec)).To(Succeed())
+			Expect(remote.Clone(logger, spec)).To(Succeed())
 
-		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
-		_, unpack := fakeUnpacker.UnpackArgsForCall(0)
-		Expect(unpack.UIDMappings).To(Equal(spec.UIDMappings))
-		Expect(unpack.GIDMappings).To(Equal(spec.GIDMappings))
+			Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
+			_, unpack := fakeUnpacker.UnpackArgsForCall(0)
+			Expect(unpack.UIDMappings).To(Equal(spec.UIDMappings))
+			Expect(unpack.GIDMappings).To(Equal(spec.GIDMappings))
+		})
 	})
 
 	Context("when passing an invalid URL", func() {

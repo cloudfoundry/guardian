@@ -8,8 +8,8 @@ import (
 	streamerpkg "code.cloudfoundry.org/grootfs/cloner/streamer"
 	unpackerpkg "code.cloudfoundry.org/grootfs/cloner/unpacker"
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
-	storepkg "code.cloudfoundry.org/grootfs/store"
 	grootpkg "code.cloudfoundry.org/grootfs/groot"
+	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"

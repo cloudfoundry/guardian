@@ -36,22 +36,22 @@ func (c *RemoteCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 		return fmt.Errorf("parsing URL: %s", err)
 	}
 
-	layers, err := c.remoteFetcher.LayersDigest(logger, imageURL)
+	digests, err := c.remoteFetcher.LayersDigest(logger, imageURL)
 	if err != nil {
-		return fmt.Errorf("fetching list of layers: %s", err)
+		return fmt.Errorf("fetching list of digests: %s", err)
 	}
-	logger.Debug("fetched-layers-digest", lager.Data{"layers": layers})
+	logger.Debug("fetched-layers-digest", lager.Data{"digests": digests})
 
 	streamer, err := c.remoteFetcher.Streamer(logger, imageURL)
 	if err != nil {
 		return fmt.Errorf("initializing streamer: %s", err)
 	}
-	for _, layer := range layers {
-		stream, _, err := streamer.Stream(logger, layer)
+	for _, digest := range digests {
+		stream, _, err := streamer.Stream(logger, digest)
 		if err != nil {
-			return fmt.Errorf("streaming blob `%s`: %s", layer, err)
+			return fmt.Errorf("streaming blob `%s`: %s", digest, err)
 		}
-		logger.Debug("got-stream-for-layer", lager.Data{"layer": layer})
+		logger.Debug("got-stream-for-digest", lager.Data{"digest": digest})
 
 		unpackSpec := UnpackSpec{
 			Stream:      stream,
@@ -59,14 +59,14 @@ func (c *RemoteCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 			UIDMappings: spec.UIDMappings,
 			GIDMappings: spec.GIDMappings,
 		}
-		logger.Debug("layer-unpacking", lager.Data{
-			"spec":  unpackSpec,
-			"layer": layer,
+		logger.Debug("blob-unpacking", lager.Data{
+			"spec":   unpackSpec,
+			"digest": digest,
 		})
 		if err := c.unpacker.Unpack(logger, unpackSpec); err != nil {
-			return fmt.Errorf("unpacking blob `%s`: %s", layer, err)
+			return fmt.Errorf("unpacking blob `%s`: %s", digest, err)
 		}
-		logger.Debug("layer-unpacked", lager.Data{"layer": layer})
+		logger.Debug("blob-unpacked", lager.Data{"digest": digest})
 	}
 
 	return nil
