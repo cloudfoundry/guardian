@@ -70,6 +70,23 @@ var _ = Describe("Tar", func() {
 		Expect(string(contents)).To(Equal("hello-world"))
 	})
 
+	Context("when there are /dev files", func() {
+		BeforeEach(func() {
+			Expect(os.Mkdir(path.Join(imgPath, "dev"), 0777)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(imgPath, "dev", "foo"), []byte("hello-world"), 0600)).To(Succeed())
+		})
+
+		It("excludes them", func() {
+			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
+				Stream:     stream,
+				RootFSPath: rootFSPath,
+			})).To(Succeed())
+
+			filePath := path.Join(rootFSPath, "dev", "foo")
+			Expect(filePath).ToNot(BeARegularFile())
+		})
+	})
+
 	Context("when it has whiteout files", func() {
 		BeforeEach(func() {
 			Expect(os.Mkdir(rootFSPath, 0755)).To(Succeed())

@@ -29,7 +29,7 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec cloner.UnpackSpec) error 
 		}
 	}
 
-	cmd := exec.Command("tar", "-xp", "-C", spec.RootFSPath)
+	cmd := exec.Command("tar", "--exclude", "dev/*", "-xp", "-C", spec.RootFSPath)
 	cmd.Stdin = spec.Stream
 	if err := u.runAndLog(cmd); err != nil {
 		return err
