@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/cloner"
-	"code.cloudfoundry.org/grootfs/cloner/streamer"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -45,7 +44,7 @@ func (s *CachedStreamer) Stream(logger lager.Logger, digest string) (io.ReadClos
 	}
 
 	logger.Debug("stream-local-cache")
-	reader, err := s.cachedReader(logger, digest)
+	reader, err := s.cachedReader(digest)
 	return reader, 0, err
 }
 
@@ -66,9 +65,8 @@ func (s *CachedStreamer) cache(logger lager.Logger, digest string, reader io.Rea
 	return err
 }
 
-func (s *CachedStreamer) cachedReader(logger lager.Logger, digest string) (io.ReadCloser, error) {
-	reader, err := os.Open(s.cachedBlobPath(digest))
-	return streamer.NewCallbackReader(logger, reader.Close, reader), err
+func (s *CachedStreamer) cachedReader(digest string) (io.ReadCloser, error) {
+	return os.OpenFile(s.cachedBlobPath(digest), os.O_RDONLY, 0600)
 }
 
 func (s *CachedStreamer) cachedLookup(digest string) bool {
