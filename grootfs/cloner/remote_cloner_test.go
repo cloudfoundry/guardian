@@ -39,11 +39,11 @@ var _ = Describe("RemoteCloner", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		fakeRemoteFetcher = new(clonerfakes.FakeRemoteFetcher)
-		fakeRemoteFetcher.LayersDigestStub = func(_ lager.Logger, _ *url.URL) ([]string, error) {
-			return []string{
-				"i-am-a-layer",
-				"i-am-another-layer",
-				"i-am-the-last-layer",
+		fakeRemoteFetcher.LayersDigestStub = func(_ lager.Logger, _ *url.URL) ([]cloner.LayerDigest, error) {
+			return []cloner.LayerDigest{
+				cloner.LayerDigest{LayerID: "i-am-a-layer"},
+				cloner.LayerDigest{LayerID: "i-am-another-layer"},
+				cloner.LayerDigest{LayerID: "i-am-the-last-layer"},
 			}, nil
 		}
 
@@ -141,7 +141,7 @@ var _ = Describe("RemoteCloner", func() {
 
 	Context("when fetching the list of layers fails", func() {
 		BeforeEach(func() {
-			fakeRemoteFetcher.LayersDigestReturns([]string{}, errors.New("KABOM!"))
+			fakeRemoteFetcher.LayersDigestReturns([]cloner.LayerDigest{}, errors.New("KABOM!"))
 		})
 
 		It("returns an error", func() {

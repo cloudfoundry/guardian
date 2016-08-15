@@ -8,9 +8,15 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
+type LayerDigest struct {
+	LayerID string
+	DiffID  string
+	ChainID string
+}
+
 //go:generate counterfeiter . RemoteFetcher
 type RemoteFetcher interface {
-	LayersDigest(logger lager.Logger, imageURL *url.URL) ([]string, error)
+	LayersDigest(logger lager.Logger, imageURL *url.URL) ([]LayerDigest, error)
 	Streamer(logger lager.Logger, imageURL *url.URL) (Streamer, error)
 }
 
@@ -47,7 +53,7 @@ func (c *RemoteCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 		return fmt.Errorf("initializing streamer: %s", err)
 	}
 	for _, digest := range digests {
-		stream, _, err := streamer.Stream(logger, digest)
+		stream, _, err := streamer.Stream(logger, digest.LayerID)
 		if err != nil {
 			return fmt.Errorf("streaming blob `%s`: %s", digest, err)
 		}

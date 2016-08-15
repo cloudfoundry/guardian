@@ -10,14 +10,14 @@ import (
 )
 
 type FakeRemoteFetcher struct {
-	LayersDigestStub        func(logger lager.Logger, imageURL *url.URL) ([]string, error)
+	LayersDigestStub        func(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error)
 	layersDigestMutex       sync.RWMutex
 	layersDigestArgsForCall []struct {
 		logger   lager.Logger
 		imageURL *url.URL
 	}
 	layersDigestReturns struct {
-		result1 []string
+		result1 []cloner.LayerDigest
 		result2 error
 	}
 	StreamerStub        func(logger lager.Logger, imageURL *url.URL) (cloner.Streamer, error)
@@ -34,7 +34,7 @@ type FakeRemoteFetcher struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRemoteFetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]string, error) {
+func (fake *FakeRemoteFetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error) {
 	fake.layersDigestMutex.Lock()
 	fake.layersDigestArgsForCall = append(fake.layersDigestArgsForCall, struct {
 		logger   lager.Logger
@@ -61,10 +61,10 @@ func (fake *FakeRemoteFetcher) LayersDigestArgsForCall(i int) (lager.Logger, *ur
 	return fake.layersDigestArgsForCall[i].logger, fake.layersDigestArgsForCall[i].imageURL
 }
 
-func (fake *FakeRemoteFetcher) LayersDigestReturns(result1 []string, result2 error) {
+func (fake *FakeRemoteFetcher) LayersDigestReturns(result1 []cloner.LayerDigest, result2 error) {
 	fake.LayersDigestStub = nil
 	fake.layersDigestReturns = struct {
-		result1 []string
+		result1 []cloner.LayerDigest
 		result2 error
 	}{result1, result2}
 }

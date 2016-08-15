@@ -3,6 +3,7 @@ package fetcher_test
 import (
 	"net/url"
 
+	clonerpkg "code.cloudfoundry.org/grootfs/cloner"
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -22,11 +23,20 @@ var _ = Describe("Fetcher", func() {
 
 	Describe("LayersDigest", func() {
 		It("returns the correct list of layer digests", func() {
-			expectedDigests := []string{
-				"sha256:6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a",
+			expectedDigests := []clonerpkg.LayerDigest{
+				clonerpkg.LayerDigest{
+					LayerID: "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
+					DiffID:  "sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
+					ChainID: "sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
+				},
+				clonerpkg.LayerDigest{
+					LayerID: "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
+					DiffID:  "sha256:d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0",
+					ChainID: "sha256:9242945d3c9c7cf5f127f9352fea38b1d3efe62ee76e25f70a3e6db63a14c233",
+				},
 			}
 
-			imageURL, err := url.Parse("docker:///cfgarden/empty:v0.1.0")
+			imageURL, err := url.Parse("docker:///cfgarden/empty:v0.1.1")
 			Expect(err).NotTo(HaveOccurred())
 
 			digests, err := fetcher.LayersDigest(logger, imageURL)

@@ -1,10 +1,15 @@
 package fetcher
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/containers/image/docker"
+	"github.com/containers/image/types"
 
 	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/lager"
@@ -20,7 +25,7 @@ func NewFetcher(cachePath string) *Fetcher {
 	}
 }
 
-func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]string, error) {
+func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error) {
 	ref, err := docker.ParseReference("/" + imageURL.Path)
 	if err != nil {
 		return nil, fmt.Errorf("parsing url failed: %s", err)
@@ -31,12 +36,27 @@ func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]string
 		return nil, fmt.Errorf("creating an image: %s", err)
 	}
 
+	imgSrc, err := ref.NewImageSource("", true)
+	if err != nil {
+		return nil, fmt.Errorf("creating image source: %s", err)
+	}
+
 	inspectInfo, err := img.Inspect()
 	if err != nil {
 		return nil, fmt.Errorf("inspecting image: %s", err)
 	}
 
-	return inspectInfo.Layers, nil
+	imgManifest, err := f.parsedManifest(img)
+	if err != nil {
+		return nil, fmt.Errorf("parsing manifest: %s", err)
+	}
+
+	imgConfig, err := f.parsedConfig(imgSrc, imgManifest)
+	if err != nil {
+		return nil, fmt.Errorf("parsing config: %s", err)
+	}
+
+	return f.createLayersDigest(imgConfig, inspectInfo.Layers), nil
 }
 
 func (f *Fetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Streamer, error) {
@@ -52,4 +72,79 @@ func (f *Fetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Strea
 
 	remoteStreamer := NewRemoteStreamer(imgSrc)
 	return NewCachedStreamer(f.cachePath, remoteStreamer), nil
+}
+
+type imageManifest struct {
+	Config map[string]interface{} `json:"config"`
+}
+
+type imageConfig struct {
+	Rootfs imageRootfs `json:"rootfs"`
+}
+
+type imageRootfs struct {
+	DiffIds []string `json:"diff_ids"`
+}
+
+func (f *Fetcher) parsedManifest(img types.Image) (imageManifest, error) {
+	manifest := new(imageManifest)
+	manifestData, _, err := img.Manifest()
+	if err != nil {
+		return *manifest, fmt.Errorf("fetching manifest: %s", err)
+	}
+
+	if err := json.Unmarshal(manifestData, manifest); err != nil {
+		return *manifest, fmt.Errorf("parsing image manifest: %s", err)
+	}
+
+	return *manifest, nil
+}
+
+func (f *Fetcher) parsedConfig(imgSrc types.ImageSource, manifest imageManifest) (imageConfig, error) {
+	imageConfig := new(imageConfig)
+	configReader, _, err := imgSrc.GetBlob(manifest.Config["digest"].(string))
+	if err != nil {
+		return *imageConfig, fmt.Errorf("fetching config blob: %s", err)
+	}
+
+	if err := json.NewDecoder(configReader).Decode(imageConfig); err != nil {
+		return *imageConfig, fmt.Errorf("parsing image config: %s", err)
+	}
+
+	return *imageConfig, nil
+}
+
+func (f *Fetcher) createLayersDigest(config imageConfig, layers []string) []cloner.LayerDigest {
+	layersDigest := []cloner.LayerDigest{}
+	var parentChainID string
+	for i, layerID := range layers {
+		if i == 0 {
+			parentChainID = ""
+		}
+
+		diffID := config.Rootfs.DiffIds[i]
+		chainID := f.chainID(diffID, parentChainID)
+
+		layersDigest = append(layersDigest, cloner.LayerDigest{
+			LayerID: layerID,
+			DiffID:  diffID,
+			ChainID: chainID,
+		})
+
+		parentChainID = chainID
+	}
+	return layersDigest
+}
+
+func (f *Fetcher) chainID(diffID string, parentChainID string) string {
+	diffID = strings.Split(diffID, ":")[1]
+	chainID := diffID
+
+	if parentChainID != "" {
+		parentChainID = strings.Split(parentChainID, ":")[1]
+		chainIDSha := sha256.Sum256([]byte(fmt.Sprintf("%s %s", parentChainID, diffID)))
+		chainID = hex.EncodeToString(chainIDSha[:32])
+	}
+
+	return "sha256:" + chainID
 }
