@@ -4,6 +4,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"syscall"
@@ -88,6 +89,45 @@ var _ = Describe("Run", func() {
 		after := filesInDir(filepath.Join(client.DepotDir, container.Handle()))
 
 		Expect(after).To(ConsistOf(before))
+	})
+
+	lsofFileHandlesOnProcessPipes := func(processID string) string {
+
+		grepProcID := exec.Command("grep", processID)
+		lsof := exec.Command("lsof")
+
+		lsofOutPipe, err := lsof.StdoutPipe()
+		defer lsofOutPipe.Close()
+		Expect(err).NotTo(HaveOccurred())
+
+		stdoutBuf := gbytes.NewBuffer()
+		grepProcID.Stdin = lsofOutPipe
+		grepProcID.Stdout = stdoutBuf
+		Expect(grepProcID.Start()).To(Succeed())
+
+		Expect(lsof.Run()).To(Succeed())
+
+		grepProcID.Wait()
+
+		return string(stdoutBuf.Contents())
+	}
+
+	It("cleans up file handles when the process exits", func() {
+		client = startGarden()
+
+		container, err := client.Create(garden.ContainerSpec{})
+		Expect(err).NotTo(HaveOccurred())
+
+		process, err := container.Run(garden.ProcessSpec{
+			Path: "echo",
+			Args: []string{
+				"ohai",
+			},
+		}, garden.ProcessIO{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(process.Wait()).To(Equal(0))
+
+		Expect(lsofFileHandlesOnProcessPipes(process.ID())).To(BeEmpty())
 	})
 
 	Describe("security", func() {

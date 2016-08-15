@@ -227,6 +227,7 @@ func (p process) start(pio garden.ProcessIO, ttySize *garden.TTYSpec) error {
 		p.ioWg.Add(1)
 		go func() {
 			io.Copy(pio.Stdout, stdout)
+			stdout.Close()
 			p.ioWg.Done()
 		}()
 	}
@@ -240,6 +241,7 @@ func (p process) start(pio garden.ProcessIO, ttySize *garden.TTYSpec) error {
 		p.ioWg.Add(1)
 		go func() {
 			io.Copy(pio.Stderr, stderr)
+			stderr.Close()
 			p.ioWg.Done()
 		}()
 	}
@@ -250,6 +252,7 @@ func (p process) start(pio garden.ProcessIO, ttySize *garden.TTYSpec) error {
 func (p process) Wait() (int, error) {
 	// open non-blocking incase exit pipe is already closed
 	exit, err := os.OpenFile(p.exit, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+	defer exit.Close()
 	if err != nil {
 		return 1, err
 	}
