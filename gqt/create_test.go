@@ -351,16 +351,32 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		It("does not run kawasaki", func() {
-			oldIPTables, err := exec.Command("iptables", "-S").CombinedOutput()
+			container, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
-			_, err = client.Create(garden.ContainerSpec{})
+			out := gbytes.NewBuffer()
+			process, err := container.Run(garden.ProcessSpec{
+				Path: "ip",
+				Args: []string{
+					"-o",
+					"link",
+					"show",
+				},
+			}, garden.ProcessIO{
+				Stdout: io.MultiWriter(GinkgoWriter, out),
+			})
 			Expect(err).NotTo(HaveOccurred())
 
-			newIPTables, err := exec.Command("iptables", "-S").CombinedOutput()
+			exitCode, err := process.Wait()
 			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(BeZero())
 
-			Expect(oldIPTables).To(Equal(newIPTables))
+			// ip link appends a new line on the end so let's trim that first
+			contents := strings.TrimRight(string(out.Contents()), "\n")
+
+			// Check that we only have 1 interface, the loopback interface
+			Expect(strings.Split(contents, "\n")).To(HaveLen(1))
+			Expect(contents).To(ContainSubstring("LOOPBACK"))
 		})
 
 		Context("when the external network plugin returns invalid JSON", func() {
