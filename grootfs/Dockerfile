@@ -10,6 +10,7 @@ RUN mkfs.btrfs /btrfs_volume
 ## Add groot user
 RUN useradd -d /home/groot -m -U groot
 RUN echo "groot ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers
+RUN echo "root ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
 RUN mkdir /go && \
 	mkdir -p /go/src/code.cloudfoundry.org/grootfs && \
