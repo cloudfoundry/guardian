@@ -383,30 +383,26 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 
-	kawasakiNetworker := kawasaki.New(
-		cmd.Bin.IPTables.Path(),
-		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
-		subnets.NewPool(cmd.Network.Pool.CIDR()),
-		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
-		propManager,
-		factory.NewDefaultConfigurer(ipTables),
-		portPool,
-		iptables.NewPortForwarder(ipTables),
-		iptables.NewFirewallOpener(ipTables),
-	)
-
-	networkers := []kawasaki.Networker{kawasakiNetworker}
+	var networker kawasaki.Networker
 	if cmd.Network.Plugin.Path() != "" {
-		networkers = append(networkers, netplugin.New(
+		networker = netplugin.New(
 			linux_command_runner.New(),
 			propManager,
 			cmd.Network.Plugin.Path(),
 			cmd.Network.PluginExtraArgs...,
-		))
-	}
-
-	networker := &kawasaki.CompositeNetworker{
-		Networkers: networkers,
+		)
+	} else {
+		networker = kawasaki.New(
+			cmd.Bin.IPTables.Path(),
+			kawasaki.SpecParserFunc(kawasaki.ParseSpec),
+			subnets.NewPool(cmd.Network.Pool.CIDR()),
+			kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
+			propManager,
+			factory.NewDefaultConfigurer(ipTables),
+			portPool,
+			iptables.NewPortForwarder(ipTables),
+			iptables.NewFirewallOpener(ipTables),
+		)
 	}
 
 	return networker, ipTablesStarter, nil

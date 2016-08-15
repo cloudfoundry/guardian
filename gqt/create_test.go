@@ -350,6 +350,19 @@ var _ = Describe("Creating a Container", func() {
 			}
 		})
 
+		It("does not run kawasaki", func() {
+			oldIPTables, err := exec.Command("iptables", "-S").CombinedOutput()
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			newIPTables, err := exec.Command("iptables", "-S").CombinedOutput()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(oldIPTables).To(Equal(newIPTables))
+		})
+
 		Context("when the external network plugin returns invalid JSON", func() {
 			BeforeEach(func() {
 				pluginOutput := "invalid-json"
