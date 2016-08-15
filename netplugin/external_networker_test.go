@@ -14,6 +14,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("ExternalBinaryNetworker", func() {
@@ -21,6 +22,7 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 		containerSpec     garden.ContainerSpec
 		configStore       kawasaki.ConfigStore
 		fakeCommandRunner *fake_command_runner.FakeCommandRunner
+		logger            *lagertest.TestLogger
 	)
 
 	BeforeEach(func() {
@@ -36,6 +38,7 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 				"network.some-other-key": "some-other-network-value",
 			},
 		}
+		logger = lagertest.NewTestLogger("test")
 	})
 
 	Describe("Network", func() {
@@ -48,13 +51,14 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 				Path: "some/path",
 			}, func(cmd *exec.Cmd) error {
 				cmd.Stdout.Write([]byte(pluginOutput))
+				cmd.Stderr.Write([]byte("some-stderr-bytes"))
 				return pluginErr
 			})
 		})
 
 		It("passes the pid of the container to the external plugin's stdin", func() {
 			plugin := netplugin.New(fakeCommandRunner, configStore, "some/path")
-			err := plugin.Network(lagertest.NewTestLogger("test"), containerSpec, 42)
+			err := plugin.Network(logger, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := fakeCommandRunner.ExecutedCommands()[0]
@@ -66,7 +70,7 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 
 		It("executes the external plugin with the correct args", func() {
 			plugin := netplugin.New(fakeCommandRunner, configStore, "some/path")
-			err := plugin.Network(lagertest.NewTestLogger("test"), containerSpec, 42)
+			err := plugin.Network(logger, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := fakeCommandRunner.ExecutedCommands()[0]
@@ -86,10 +90,18 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 			}`))
 		})
 
+		It("collects and logs the stderr from the plugin", func() {
+			plugin := netplugin.New(fakeCommandRunner, configStore, "some/path")
+			err := plugin.Network(logger, containerSpec, 42)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(logger).To(gbytes.Say("result.*some-stderr-bytes"))
+		})
+
 		Context("when there are extra args", func() {
 			It("prepends the extra args before the standard hook parameters", func() {
 				plugin := netplugin.New(fakeCommandRunner, configStore, "some/path", "arg1", "arg2", "arg3")
-				err := plugin.Network(lagertest.NewTestLogger("test"), containerSpec, 42)
+				err := plugin.Network(logger, containerSpec, 42)
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd := fakeCommandRunner.ExecutedCommands()[0]
@@ -105,11 +117,19 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 		})
 
 		Context("when the external plugin errors", func() {
-			It("returns the error", func() {
+			BeforeEach(func() {
 				pluginErr = errors.New("external-plugin-error")
+			})
 
+			It("returns the error", func() {
 				plugin := netplugin.New(fakeCommandRunner, configStore, "some/path")
-				Expect(plugin.Network(nil, containerSpec, 42)).To(MatchError("external-plugin-error"))
+				Expect(plugin.Network(logger, containerSpec, 42)).To(MatchError("external-plugin-error"))
+			})
+
+			It("collects and logs the stderr from the plugin", func() {
+				plugin := netplugin.New(fakeCommandRunner, configStore, "some/path")
+				plugin.Network(logger, containerSpec, 42)
+				Expect(logger).To(gbytes.Say("result.*error.*some-stderr-bytes"))
 			})
 		})
 
@@ -118,7 +138,7 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 				pluginOutput = `{"properties":{"foo":"bar","ping":"pong"}}`
 
 				plugin := netplugin.New(fakeCommandRunner, configStore, "some/path")
-				err := plugin.Network(lagertest.NewTestLogger("test"), containerSpec, 42)
+				err := plugin.Network(logger, containerSpec, 42)
 				Expect(err).NotTo(HaveOccurred())
 
 				persistedPropertyValue, _ := configStore.Get("some-handle", "foo")
@@ -131,7 +151,7 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 				pluginOutput = "invalid-json"
 
 				plugin := netplugin.New(fakeCommandRunner, configStore, "some/path")
-				err := plugin.Network(lagertest.NewTestLogger("test"), containerSpec, 42)
+				err := plugin.Network(logger, containerSpec, 42)
 				Expect(err).To(MatchError(ContainSubstring("network plugin returned invalid JSON")))
 			})
 		})
@@ -190,7 +210,7 @@ var _ = Describe("ExternalBinaryNetworker", func() {
 				})
 
 				plugin := netplugin.New(fakeCommandRunner, configStore, "some/path")
-				Expect(plugin.Network(nil, containerSpec, 42)).To(MatchError("boom"))
+				Expect(plugin.Destroy(logger, "my-handle")).To(MatchError("boom"))
 			})
 		})
 	})
