@@ -1,19 +1,31 @@
 function mount_btrfs {
-  sudo mount -tcgroup -odevices cgroup:devices /sys/fs/cgroup
+  # Configure cgroup
+  mount -tcgroup -odevices cgroup:devices /sys/fs/cgroup
   devices_mount_info=$(cat /proc/self/cgroup | grep devices)
   devices_subdir=$(echo $devices_mount_info | cut -d: -f3)
-  sudo su -c "echo 'b 7:* rwm' > /sys/fs/cgroup/devices.allow"
-  sudo su -c "echo 'b 7:* rwm' > /sys/fs/cgroup${devices_subdir}/devices.allow"
+  echo 'b 7:* rwm' > /sys/fs/cgroup/devices.allow
+  echo 'b 7:* rwm' > /sys/fs/cgroup${devices_subdir}/devices.allow
+
+  # Setup loop devices
   for i in {0..256}
   do
-    sudo mknod -m777 /dev/loop$i b 7 $i
+    mknod -m777 /dev/loop$i b 7 $i
   done
-  sudo mkdir /mnt/btrfs
-  sudo mount -t btrfs -o user_subvol_rm_allowed,rw /btrfs_volume /mnt/btrfs
-  sudo chmod 777 -R /mnt/btrfs
-  sudo btrfs quota enable /mnt/btrfs
-  sudo mkdir -p /mnt/btrfs/bundles
-  sudo chown 1000:1000 /mnt/btrfs/bundles
+
+  # Make BTRFS volume
+  truncate -s 1G /btrfs_volume
+  mkfs.btrfs /btrfs_volume
+
+  # Mount BTRFS
+  mkdir /mnt/btrfs
+  mount -t btrfs -o user_subvol_rm_allowed,rw /btrfs_volume /mnt/btrfs
+  chmod 777 -R /mnt/btrfs
+  btrfs quota enable /mnt/btrfs
+}
+
+function sudo_mount_btrfs {
+  local MOUNT_BTRFS_FUNC=$(declare -f mount_btrfs)
+  sudo bash -c "$MOUNT_BTRFS_FUNC; mount_btrfs"
 }
 
 function show_groot_banner {

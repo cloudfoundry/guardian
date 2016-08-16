@@ -5,7 +5,7 @@ grootsay
 
 source $(dirname $BASH_SOURCE)/test/utils.sh
 move_to_gopath
-mount_btrfs
+sudo_mount_btrfs
 
 # containers/image gets angry when the home is wrong because it's trying to
 # read $HOME/.docker
