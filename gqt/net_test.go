@@ -364,9 +364,8 @@ var _ = Describe("Networking", func() {
 				pluginReturn := `{"properties":{
 					"foo":"bar",
 					"kawasaki.mtu":"1499",
-					"garden.network.container-ip":"10.10.10.10",
-					"garden.network.host-ip":"11.11.11.11",
-					"garden.network.external-ip":"12.12.12.12"
+					"garden.network.container-ip":"10.255.10.10",
+					"garden.network.host-ip":"255.255.255.255"
 				}}`
 				args = append(args, "--network-plugin-extra-arg", pluginReturn)
 				extraProperties = garden.Properties{
@@ -374,13 +373,15 @@ var _ = Describe("Networking", func() {
 				}
 			})
 
-			It("persits the returned properties to the container's properties", func() {
+			It("persists the returned properties to the container's properties", func() {
 				info, err := container.Info()
 				Expect(err).NotTo(HaveOccurred())
 
 				containerProperties := info.Properties
 
 				Expect(containerProperties["foo"]).To(Equal("bar"))
+				Expect(containerProperties["garden.network.container-ip"]).To(Equal("10.255.10.10"))
+				Expect(containerProperties["garden.network.host-ip"]).To(Equal("255.255.255.255"))
 			})
 
 			It("doesn't remove existing properties", func() {
@@ -388,6 +389,14 @@ var _ = Describe("Networking", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(info.Properties).To(HaveKey("some-property-on-the-spec"))
+			})
+
+			It("sets the ExternalIP and ContainerIP fields on the container.Info()", func() {
+				info, err := container.Info()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(info.ExternalIP).NotTo(BeEmpty())
+				Expect(info.ContainerIP).To(Equal("10.255.10.10"))
 			})
 		})
 	})

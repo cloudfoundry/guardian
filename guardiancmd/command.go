@@ -24,6 +24,7 @@ import (
 	"code.cloudfoundry.org/garden/server"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
+	"code.cloudfoundry.org/guardian/kawasaki/dns"
 	"code.cloudfoundry.org/guardian/kawasaki/factory"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	"code.cloudfoundry.org/guardian/kawasaki/ports"
@@ -359,14 +360,6 @@ func (cmd *GuardianCommand) wireRunDMCStarter(logger lager.Logger) gardener.Star
 }
 
 func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
-	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
-	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
-
-	var denyNetworksList []string
-	for _, network := range cmd.Network.DenyNetworks {
-		denyNetworksList = append(denyNetworksList, network.String())
-	}
-
 	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
 		return nil, nil, err
@@ -377,33 +370,49 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 		dnsServers[i] = ip.IP()
 	}
 
+	if cmd.Network.Plugin.Path() != "" {
+		resolvConfigurer := &kawasaki.ResolvConfigurer{
+			HostsFileCompiler:  &dns.HostsFileCompiler{},
+			ResolvFileCompiler: &dns.ResolvFileCompiler{},
+			FileWriter:         &dns.RootfsWriter{},
+			IDMapReader:        &kawasaki.RootIdMapReader{},
+		}
+		externalNetworker := netplugin.New(
+			linux_command_runner.New(),
+			propManager,
+			portPool,
+			externalIP,
+			dnsServers,
+			resolvConfigurer,
+			cmd.Network.Plugin.Path(),
+			cmd.Network.PluginExtraArgs,
+		)
+		return externalNetworker, externalNetworker, nil
+	}
+
+	var denyNetworksList []string
+	for _, network := range cmd.Network.DenyNetworks {
+		denyNetworksList = append(denyNetworksList, network.String())
+	}
+
+	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
+	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
+	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
 	ipTables := iptables.New(cmd.Bin.IPTables.Path(), iptRunner, chainPrefix)
 	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList)
 
-	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
-
-	var networker kawasaki.Networker
-	if cmd.Network.Plugin.Path() != "" {
-		networker = netplugin.New(
-			linux_command_runner.New(),
-			propManager,
-			cmd.Network.Plugin.Path(),
-			cmd.Network.PluginExtraArgs...,
-		)
-	} else {
-		networker = kawasaki.New(
-			cmd.Bin.IPTables.Path(),
-			kawasaki.SpecParserFunc(kawasaki.ParseSpec),
-			subnets.NewPool(cmd.Network.Pool.CIDR()),
-			kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
-			propManager,
-			factory.NewDefaultConfigurer(ipTables),
-			portPool,
-			iptables.NewPortForwarder(ipTables),
-			iptables.NewFirewallOpener(ipTables),
-		)
-	}
+	networker := kawasaki.New(
+		cmd.Bin.IPTables.Path(),
+		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
+		subnets.NewPool(cmd.Network.Pool.CIDR()),
+		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
+		propManager,
+		factory.NewDefaultConfigurer(ipTables),
+		portPool,
+		iptables.NewPortForwarder(ipTables),
+		iptables.NewFirewallOpener(ipTables),
+	)
 
 	return networker, ipTablesStarter, nil
 }

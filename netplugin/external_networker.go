@@ -4,34 +4,60 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"math"
+	"net"
 	"os/exec"
 	"strings"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 const NetworkPropertyPrefix = "network."
+const NetOutKey = NetworkPropertyPrefix + "external-networker.net-out"
 
-type ExternalBinaryNetworker struct {
-	commandRunner command_runner.CommandRunner
-	configStore   kawasaki.ConfigStore
-	path          string
-	extraArg      []string
+type externalBinaryNetworker struct {
+	commandRunner    command_runner.CommandRunner
+	configStore      kawasaki.ConfigStore
+	portPool         kawasaki.PortPool
+	externalIP       net.IP
+	dnsServers       []net.IP
+	resolvConfigurer kawasaki.DnsResolvConfigurer
+	path             string
+	extraArg         []string
 }
 
-func New(commandRunner command_runner.CommandRunner, configStore kawasaki.ConfigStore, path string, extraArg ...string) kawasaki.Networker {
-	return &ExternalBinaryNetworker{
-		commandRunner: commandRunner,
-		configStore:   configStore,
-		path:          path,
-		extraArg:      extraArg,
+func New(
+	commandRunner command_runner.CommandRunner,
+	configStore kawasaki.ConfigStore,
+	portPool kawasaki.PortPool,
+	externalIP net.IP,
+	dnsServers []net.IP,
+	resolvConfigurer kawasaki.DnsResolvConfigurer,
+	path string,
+	extraArg []string,
+) ExternalNetworker {
+	return &externalBinaryNetworker{
+		commandRunner:    commandRunner,
+		configStore:      configStore,
+		portPool:         portPool,
+		externalIP:       externalIP,
+		dnsServers:       dnsServers,
+		resolvConfigurer: resolvConfigurer,
+		path:             path,
+		extraArg:         extraArg,
 	}
 }
+
+type ExternalNetworker interface {
+	gardener.Networker
+	gardener.Starter
+}
+
+func (p *externalBinaryNetworker) Start() error { return nil }
 
 func networkProperties(containerProperties garden.Properties) garden.Properties {
 	properties := garden.Properties{}
@@ -46,7 +72,9 @@ func networkProperties(containerProperties garden.Properties) garden.Properties 
 	return properties
 }
 
-func (p *ExternalBinaryNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
+func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
+	p.configStore.Set(containerSpec.Handle, gardener.ExternalIPKey, p.externalIP.String())
+
 	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
 	propertiesJSON, err := json.Marshal(networkProperties(containerSpec.Properties))
 	if err != nil {
@@ -68,17 +96,7 @@ func (p *ExternalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 	cmd.Stdout = cmdOutput
 	cmdStderr := &bytes.Buffer{}
 	cmd.Stderr = cmdStderr
-
-	input, err := cmd.StdinPipe()
-	if err != nil {
-		return err
-	}
-
-	_, err = io.WriteString(input, fmt.Sprintf("{\"PID\":%d}", pid))
-	if err != nil {
-		return err
-	}
-	input.Close()
+	cmd.Stdin = strings.NewReader(fmt.Sprintf("{\"PID\":%d}", pid))
 
 	err = p.commandRunner.Run(cmd)
 	if err != nil {
@@ -106,10 +124,30 @@ func (p *ExternalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 		p.configStore.Set(containerSpec.Handle, k, v)
 	}
 
+	containerIP, ok := p.configStore.Get(containerSpec.Handle, gardener.ContainerIPKey)
+	if !ok {
+		return fmt.Errorf("no container ip")
+	}
+
+	log.Info("external-binary-write-dns-to-config", lager.Data{
+		"dnsServers": p.dnsServers,
+	})
+	cfg := kawasaki.NetworkConfig{
+		ContainerIP:     net.ParseIP(containerIP),
+		BridgeIP:        net.ParseIP(containerIP),
+		ContainerHandle: containerSpec.Handle,
+		DNSServers:      p.dnsServers,
+	}
+
+	err = p.resolvConfigurer.Configure(log, cfg, pid)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (p *ExternalBinaryNetworker) Destroy(log lager.Logger, handle string) error {
+func (p *externalBinaryNetworker) Destroy(log lager.Logger, handle string) error {
 	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
 
 	networkPluginFlags := []string{
@@ -124,18 +162,52 @@ func (p *ExternalBinaryNetworker) Destroy(log lager.Logger, handle string) error
 	return p.commandRunner.Run(cmd)
 }
 
-func (p *ExternalBinaryNetworker) Restore(log lager.Logger, handle string) error {
+func (p *externalBinaryNetworker) Restore(log lager.Logger, handle string) error {
 	return nil
 }
 
-func (p *ExternalBinaryNetworker) Capacity() (m uint64) {
+func (p *externalBinaryNetworker) Capacity() (m uint64) {
 	return math.MaxUint64
 }
 
-func (p *ExternalBinaryNetworker) NetIn(log lager.Logger, handle string, externalPort, containerPort uint32) (uint32, uint32, error) {
-	return 0, 0, nil
+func (p *externalBinaryNetworker) NetIn(log lager.Logger, handle string, externalPort, containerPort uint32) (uint32, uint32, error) {
+	var err error
+	if externalPort == 0 {
+		externalPort, err = p.portPool.Acquire()
+		if err != nil {
+			return 0, 0, err
+		}
+	}
+
+	if containerPort == 0 {
+		containerPort = externalPort
+	}
+
+	if err := kawasaki.AddPortMapping(log, p.configStore, handle, garden.PortMapping{
+		HostPort:      externalPort,
+		ContainerPort: containerPort,
+	}); err != nil {
+		return 0, 0, err
+	}
+	return externalPort, containerPort, nil
 }
 
-func (p *ExternalBinaryNetworker) NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error {
+func (p *externalBinaryNetworker) NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error {
+	rules := []garden.NetOutRule{}
+	value, ok := p.configStore.Get(handle, NetOutKey)
+	if ok {
+		err := json.Unmarshal([]byte(value), &rules)
+		if err != nil {
+			return fmt.Errorf("store net-out invalid JSON: %s", err)
+		}
+	}
+
+	rules = append(rules, rule)
+	ruleJSON, err := json.Marshal(rules)
+	if err != nil {
+		return err
+	}
+
+	p.configStore.Set(handle, NetOutKey, string(ruleJSON))
 	return nil
 }
