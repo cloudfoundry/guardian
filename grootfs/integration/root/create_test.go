@@ -64,6 +64,7 @@ var _ = Describe("Create", func() {
 		It("should translate the rootfs accordingly", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
+				"--log-level", "debug",
 				"create", "--image", imagePath,
 				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
 				"--uid-mapping", "1:100000:65000",
