@@ -15,8 +15,11 @@ import (
 var (
 	GrootFSBin string
 
+	testIdx   int
 	StorePath string
 )
+
+const btrfsMountPath = "/mnt/btrfs"
 
 func TestGroot(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -28,6 +31,7 @@ func TestGroot(t *testing.T) {
 		return []byte(grootFSBin)
 	}, func(data []byte) {
 		GrootFSBin = string(data)
+		testIdx = 0
 	})
 
 	SynchronizedAfterSuite(func() {
@@ -36,12 +40,12 @@ func TestGroot(t *testing.T) {
 	})
 
 	BeforeEach(func() {
-		StorePath = path.Join(os.TempDir(), fmt.Sprintf("test-store-%d", GinkgoParallelNode()))
+		StorePath = path.Join(
+			btrfsMountPath,
+			fmt.Sprintf("test-store-%d-%d", GinkgoParallelNode(), testIdx),
+		)
 		Expect(os.Mkdir(StorePath, 0700)).NotTo(HaveOccurred())
-	})
-
-	AfterEach(func() {
-		Expect(os.RemoveAll(StorePath)).To(Succeed())
+		testIdx += 1
 	})
 
 	RunSpecs(t, "GrootFS Integration Suite - Running as groot")
