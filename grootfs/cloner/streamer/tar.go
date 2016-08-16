@@ -3,6 +3,7 @@ package streamer
 import (
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 
 	"code.cloudfoundry.org/lager"
@@ -20,6 +21,10 @@ func (tr *TarStreamer) Stream(logger lager.Logger, source string) (io.ReadCloser
 	logger = logger.Session("tar-streaming", lager.Data{"source": source})
 	logger.Debug("start")
 	defer logger.Debug("end")
+
+	if _, err := os.Stat(source); err != nil {
+		return nil, 0, fmt.Errorf("source image not found: `%s` %s", source, err)
+	}
 
 	tarCmd := exec.Command(TarBin, "-cp", "-C", source, ".")
 	stdoutPipe, err := tarCmd.StdoutPipe()

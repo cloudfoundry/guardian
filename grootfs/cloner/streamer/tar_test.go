@@ -43,6 +43,14 @@ var _ = Describe("TarStreamer", func() {
 			Expect(string(entries[1].contents)).To(Equal("hello-world"))
 		})
 
+		Context("when the source does not exist", func() {
+			It("returns an error", func() {
+				_, _, err := tarStreamer.Stream(logger, "/nothing/here")
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("source image not found")))
+			})
+		})
+
 		Context("when tar does not exist", func() {
 			It("returns an error", func() {
 				streamerpkg.TarBin = "non-existent-tar"
