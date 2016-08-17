@@ -1,5 +1,5 @@
-hash: 31bea6e6d875826414e870864b6d8efb2848ca32d1e258e9d33278257b4d5430
-updated: 2016-08-10T17:30:38.603812092+01:00
+hash: a450d59d079c8cd2c600cda38431a8a730cb941837c7e0beb53bdb4317f7333d
+updated: 2016-08-17T16:58:58.599514138+01:00
 imports:
 - name: code.cloudfoundry.org/lager
   version: 62951a8009ab331bb21dc418074fa54e66eb9b6a
@@ -28,6 +28,7 @@ imports:
 - name: github.com/docker/docker
   version: 8eab29edd820017901796eb60d4bea28d760f16f
   subpackages:
+  - pkg/reexec
   - pkg/homedir
   - reference
   - image
@@ -47,7 +48,6 @@ imports:
   - pkg/promise
   - pkg/system
   - pkg/random
-  - pkg/reexec
   - pkg/plugins/transport
 - name: github.com/docker/engine-api
   version: fc564829f64e3a820d7b896611ede92c8744d752
@@ -111,6 +111,8 @@ imports:
   - libcontainer/user
 - name: github.com/Sirupsen/logrus
   version: a283a10442df8dc09befd873fab202bf8a253d6a
+- name: github.com/st3v/glager
+  version: fe6a6cbb8868988ac5fe52ad2a2faffb008e9def
 - name: github.com/urfave/cli
   version: 168c95418e66e019fe17b8f4f5c45aa62ff80e23
 - name: github.com/vbatts/tar-split

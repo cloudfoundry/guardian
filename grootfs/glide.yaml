@@ -1,6 +1,4 @@
 package: code.cloudfoundry.org/grootfs
-os:
-  - linux
 import:
 - package: code.cloudfoundry.org/lager
   subpackages:
@@ -22,3 +20,4 @@ import:
   version: 8eab29edd820017901796eb60d4bea28d760f16f
 - package: github.com/docker/go-units
   version: eb879ae3e2b84e2a142af415b679ddeda47ec71c
+- package: github.com/st3v/glager
