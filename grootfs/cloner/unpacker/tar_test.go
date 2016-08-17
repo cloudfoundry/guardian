@@ -43,6 +43,9 @@ var _ = Describe("Tar", func() {
 		imgPath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(imgPath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+		Expect(os.Mkdir(path.Join(imgPath, "subdir"), 0700)).To(Succeed())
+		Expect(os.Mkdir(path.Join(imgPath, "subdir", "subdir2"), 0711)).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(imgPath, "subdir", "subdir2", "another_file"), []byte("goodbye-world"), 0600)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
@@ -68,6 +71,45 @@ var _ = Describe("Tar", func() {
 		contents, err := ioutil.ReadFile(filePath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("hello-world"))
+	})
+
+	It("creates files in subdirectories", func() {
+		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
+			Stream:     stream,
+			RootFSPath: rootFSPath,
+		})).To(Succeed())
+
+		filePath := path.Join(rootFSPath, "subdir", "subdir2", "another_file")
+		Expect(filePath).To(BeARegularFile())
+		contents, err := ioutil.ReadFile(filePath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(contents)).To(Equal("goodbye-world"))
+	})
+
+	It("keeps file permissions", func() {
+		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
+			Stream:     stream,
+			RootFSPath: rootFSPath,
+		})).To(Succeed())
+
+		filePath := path.Join(rootFSPath, "a_file")
+		stat, err := os.Stat(filePath)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0600)))
+	})
+
+	It("keeps directory permission", func() {
+		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
+			Stream:     stream,
+			RootFSPath: rootFSPath,
+		})).To(Succeed())
+
+		filePath := path.Join(rootFSPath, "subdir", "subdir2")
+		stat, err := os.Stat(filePath)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0711)))
 	})
 
 	Context("when there are /dev files", func() {
