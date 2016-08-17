@@ -22,7 +22,7 @@ var _ = Describe("Tar", func() {
 
 		imgPath    string
 		bundlePath string
-		rootFSPath string
+		targetPath string
 
 		tarUnpacker *unpacker.TarUnpacker
 
@@ -34,7 +34,7 @@ var _ = Describe("Tar", func() {
 
 		bundlePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		rootFSPath = path.Join(bundlePath, "rootfs")
+		targetPath = path.Join(bundlePath, "rootfs")
 
 		tarUnpacker = unpacker.NewTarUnpacker()
 
@@ -63,10 +63,10 @@ var _ = Describe("Tar", func() {
 	It("does write the image contents in the rootfs directory", func() {
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 			Stream:     stream,
-			TargetPath: rootFSPath,
+			TargetPath: targetPath,
 		})).To(Succeed())
 
-		filePath := path.Join(rootFSPath, "a_file")
+		filePath := path.Join(targetPath, "a_file")
 		Expect(filePath).To(BeARegularFile())
 		contents, err := ioutil.ReadFile(filePath)
 		Expect(err).NotTo(HaveOccurred())
@@ -76,10 +76,10 @@ var _ = Describe("Tar", func() {
 	It("creates files in subdirectories", func() {
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 			Stream:     stream,
-			RootFSPath: rootFSPath,
+			TargetPath: targetPath,
 		})).To(Succeed())
 
-		filePath := path.Join(rootFSPath, "subdir", "subdir2", "another_file")
+		filePath := path.Join(targetPath, "subdir", "subdir2", "another_file")
 		Expect(filePath).To(BeARegularFile())
 		contents, err := ioutil.ReadFile(filePath)
 		Expect(err).NotTo(HaveOccurred())
@@ -89,10 +89,10 @@ var _ = Describe("Tar", func() {
 	It("keeps file permissions", func() {
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 			Stream:     stream,
-			RootFSPath: rootFSPath,
+			TargetPath: targetPath,
 		})).To(Succeed())
 
-		filePath := path.Join(rootFSPath, "a_file")
+		filePath := path.Join(targetPath, "a_file")
 		stat, err := os.Stat(filePath)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -102,10 +102,10 @@ var _ = Describe("Tar", func() {
 	It("keeps directory permission", func() {
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 			Stream:     stream,
-			RootFSPath: rootFSPath,
+			TargetPath: targetPath,
 		})).To(Succeed())
 
-		filePath := path.Join(rootFSPath, "subdir", "subdir2")
+		filePath := path.Join(targetPath, "subdir", "subdir2")
 		stat, err := os.Stat(filePath)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -121,24 +121,24 @@ var _ = Describe("Tar", func() {
 		It("excludes them", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).To(Succeed())
 
-			filePath := path.Join(rootFSPath, "dev", "foo")
+			filePath := path.Join(targetPath, "dev", "foo")
 			Expect(filePath).ToNot(BeARegularFile())
 		})
 	})
 
 	Context("when it has whiteout files", func() {
 		BeforeEach(func() {
-			Expect(os.Mkdir(rootFSPath, 0755)).To(Succeed())
+			Expect(os.Mkdir(targetPath, 0755)).To(Succeed())
 
 			// Add some pre-existing files in the rootfs
-			Expect(ioutil.WriteFile(path.Join(rootFSPath, "b_file"), []byte(""), 0600)).To(Succeed())
-			Expect(os.Mkdir(path.Join(rootFSPath, "a_dir"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(path.Join(rootFSPath, "a_dir", "a_file"), []byte(""), 0600)).To(Succeed())
-			Expect(os.Mkdir(path.Join(rootFSPath, "b_dir"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(path.Join(rootFSPath, "b_dir", "a_file"), []byte(""), 0600)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(targetPath, "b_file"), []byte(""), 0600)).To(Succeed())
+			Expect(os.Mkdir(path.Join(targetPath, "a_dir"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(targetPath, "a_dir", "a_file"), []byte(""), 0600)).To(Succeed())
+			Expect(os.Mkdir(path.Join(targetPath, "b_dir"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(targetPath, "b_dir", "a_file"), []byte(""), 0600)).To(Succeed())
 
 			// Add some whiteouts
 			Expect(ioutil.WriteFile(path.Join(imgPath, ".wh.b_file"), []byte(""), 0600)).To(Succeed())
@@ -150,31 +150,31 @@ var _ = Describe("Tar", func() {
 		It("deletes the pre-existing files", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).To(Succeed())
 
-			Expect(path.Join(rootFSPath, "b_file")).NotTo(BeAnExistingFile())
-			Expect(path.Join(rootFSPath, "a_dir", "a_file")).NotTo(BeAnExistingFile())
+			Expect(path.Join(targetPath, "b_file")).NotTo(BeAnExistingFile())
+			Expect(path.Join(targetPath, "a_dir", "a_file")).NotTo(BeAnExistingFile())
 		})
 
 		It("deletes the pre-existing directories", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).To(Succeed())
 
-			Expect(path.Join(rootFSPath, "b_dir")).NotTo(BeAnExistingFile())
+			Expect(path.Join(targetPath, "b_dir")).NotTo(BeAnExistingFile())
 		})
 
 		It("does not leak the whiteout files", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).To(Succeed())
 
-			Expect(path.Join(rootFSPath, ".wh.b_file")).NotTo(BeAnExistingFile())
-			Expect(path.Join(rootFSPath, "a_dir", ".wh.a_file")).NotTo(BeAnExistingFile())
-			Expect(path.Join(rootFSPath, ".wh.b_dir")).NotTo(BeAnExistingFile())
+			Expect(path.Join(targetPath, ".wh.b_file")).NotTo(BeAnExistingFile())
+			Expect(path.Join(targetPath, "a_dir", ".wh.a_file")).NotTo(BeAnExistingFile())
+			Expect(path.Join(targetPath, ".wh.b_dir")).NotTo(BeAnExistingFile())
 		})
 	})
 
@@ -187,14 +187,14 @@ var _ = Describe("Tar", func() {
 		It("returns an error", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).NotTo(Succeed())
 		})
 
 		It("returns the command output", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).To(
 				MatchError(ContainSubstring("tar:")),
 			)
@@ -214,11 +214,11 @@ var _ = Describe("Tar", func() {
 
 	Context("when the target directory exists", func() {
 		It("still works", func() {
-			Expect(os.Mkdir(rootFSPath, 0770)).To(Succeed())
+			Expect(os.Mkdir(targetPath, 0770)).To(Succeed())
 
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).To(Succeed())
 		})
 	})
