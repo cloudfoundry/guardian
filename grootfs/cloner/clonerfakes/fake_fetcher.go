@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type FakeRemoteFetcher struct {
+type FakeFetcher struct {
 	LayersDigestStub        func(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error)
 	layersDigestMutex       sync.RWMutex
 	layersDigestArgsForCall []struct {
@@ -34,7 +34,7 @@ type FakeRemoteFetcher struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRemoteFetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error) {
+func (fake *FakeFetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error) {
 	fake.layersDigestMutex.Lock()
 	fake.layersDigestArgsForCall = append(fake.layersDigestArgsForCall, struct {
 		logger   lager.Logger
@@ -49,19 +49,19 @@ func (fake *FakeRemoteFetcher) LayersDigest(logger lager.Logger, imageURL *url.U
 	}
 }
 
-func (fake *FakeRemoteFetcher) LayersDigestCallCount() int {
+func (fake *FakeFetcher) LayersDigestCallCount() int {
 	fake.layersDigestMutex.RLock()
 	defer fake.layersDigestMutex.RUnlock()
 	return len(fake.layersDigestArgsForCall)
 }
 
-func (fake *FakeRemoteFetcher) LayersDigestArgsForCall(i int) (lager.Logger, *url.URL) {
+func (fake *FakeFetcher) LayersDigestArgsForCall(i int) (lager.Logger, *url.URL) {
 	fake.layersDigestMutex.RLock()
 	defer fake.layersDigestMutex.RUnlock()
 	return fake.layersDigestArgsForCall[i].logger, fake.layersDigestArgsForCall[i].imageURL
 }
 
-func (fake *FakeRemoteFetcher) LayersDigestReturns(result1 []cloner.LayerDigest, result2 error) {
+func (fake *FakeFetcher) LayersDigestReturns(result1 []cloner.LayerDigest, result2 error) {
 	fake.LayersDigestStub = nil
 	fake.layersDigestReturns = struct {
 		result1 []cloner.LayerDigest
@@ -69,7 +69,7 @@ func (fake *FakeRemoteFetcher) LayersDigestReturns(result1 []cloner.LayerDigest,
 	}{result1, result2}
 }
 
-func (fake *FakeRemoteFetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Streamer, error) {
+func (fake *FakeFetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Streamer, error) {
 	fake.streamerMutex.Lock()
 	fake.streamerArgsForCall = append(fake.streamerArgsForCall, struct {
 		logger   lager.Logger
@@ -84,19 +84,19 @@ func (fake *FakeRemoteFetcher) Streamer(logger lager.Logger, imageURL *url.URL) 
 	}
 }
 
-func (fake *FakeRemoteFetcher) StreamerCallCount() int {
+func (fake *FakeFetcher) StreamerCallCount() int {
 	fake.streamerMutex.RLock()
 	defer fake.streamerMutex.RUnlock()
 	return len(fake.streamerArgsForCall)
 }
 
-func (fake *FakeRemoteFetcher) StreamerArgsForCall(i int) (lager.Logger, *url.URL) {
+func (fake *FakeFetcher) StreamerArgsForCall(i int) (lager.Logger, *url.URL) {
 	fake.streamerMutex.RLock()
 	defer fake.streamerMutex.RUnlock()
 	return fake.streamerArgsForCall[i].logger, fake.streamerArgsForCall[i].imageURL
 }
 
-func (fake *FakeRemoteFetcher) StreamerReturns(result1 cloner.Streamer, result2 error) {
+func (fake *FakeFetcher) StreamerReturns(result1 cloner.Streamer, result2 error) {
 	fake.StreamerStub = nil
 	fake.streamerReturns = struct {
 		result1 cloner.Streamer
@@ -104,7 +104,7 @@ func (fake *FakeRemoteFetcher) StreamerReturns(result1 cloner.Streamer, result2 
 	}{result1, result2}
 }
 
-func (fake *FakeRemoteFetcher) Invocations() map[string][][]interface{} {
+func (fake *FakeFetcher) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.layersDigestMutex.RLock()
@@ -114,7 +114,7 @@ func (fake *FakeRemoteFetcher) Invocations() map[string][][]interface{} {
 	return fake.invocations
 }
 
-func (fake *FakeRemoteFetcher) recordInvocation(key string, args []interface{}) {
+func (fake *FakeFetcher) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -126,4 +126,4 @@ func (fake *FakeRemoteFetcher) recordInvocation(key string, args []interface{}) 
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ cloner.RemoteFetcher = new(FakeRemoteFetcher)
+var _ cloner.Fetcher = new(FakeFetcher)

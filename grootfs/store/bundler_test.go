@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
@@ -13,13 +14,13 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Store", func() {
+var _ = Describe("Bundle", func() {
 	var (
 		logger lager.Logger
 
 		storePath string
 
-		grph *store.Store
+		bundler *store.Bundler
 	)
 
 	BeforeEach(func() {
@@ -27,11 +28,13 @@ var _ = Describe("Store", func() {
 
 		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
+
+		Expect(os.Mkdir(filepath.Join(storePath, "bundles"), 0777)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
-		logger = lagertest.NewTestLogger("test-store")
-		grph = store.NewStore(storePath)
+		logger = lagertest.NewTestLogger("test-bunlder")
+		bundler = store.NewBundler(storePath)
 	})
 
 	AfterEach(func() {
@@ -40,15 +43,15 @@ var _ = Describe("Store", func() {
 
 	Describe("MakeBundle", func() {
 		It("should return a bundle directory", func() {
-			bundle, err := grph.MakeBundle(logger, "some-id")
+			bundle, err := bundler.MakeBundle(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bundle.Path()).To(BeADirectory())
 		})
 
 		It("should keep the bundles in the same bundle directory", func() {
-			someBundle, err := grph.MakeBundle(logger, "some-id")
+			someBundle, err := bundler.MakeBundle(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
-			anotherBundle, err := grph.MakeBundle(logger, "another-id")
+			anotherBundle, err := bundler.MakeBundle(logger, "another-id")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(someBundle.Path()).NotTo(BeEmpty())
@@ -61,10 +64,10 @@ var _ = Describe("Store", func() {
 
 		Context("when calling it with two different ids", func() {
 			It("should return two different bundle paths", func() {
-				bundle, err := grph.MakeBundle(logger, "some-id")
+				bundle, err := bundler.MakeBundle(logger, "some-id")
 				Expect(err).NotTo(HaveOccurred())
 
-				anotherBundle, err := grph.MakeBundle(logger, "another-id")
+				anotherBundle, err := bundler.MakeBundle(logger, "another-id")
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(bundle.Path()).NotTo(Equal(anotherBundle.Path()))
@@ -73,10 +76,10 @@ var _ = Describe("Store", func() {
 
 		Context("when using the same id twice", func() {
 			It("should return an error", func() {
-				_, err := grph.MakeBundle(logger, "some-id")
+				_, err := bundler.MakeBundle(logger, "some-id")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = grph.MakeBundle(logger, "some-id")
+				_, err = bundler.MakeBundle(logger, "some-id")
 				Expect(err).To(MatchError("bundle for id `some-id` already exists"))
 			})
 		})
@@ -87,7 +90,7 @@ var _ = Describe("Store", func() {
 			})
 
 			It("should return an error", func() {
-				_, err := grph.MakeBundle(logger, "some-id")
+				_, err := bundler.MakeBundle(logger, "some-id")
 				Expect(err).To(MatchError(ContainSubstring("making bundle path")))
 			})
 		})
@@ -103,13 +106,13 @@ var _ = Describe("Store", func() {
 		})
 
 		It("deletes an existing bundle", func() {
-			Expect(grph.DeleteBundle(logger, "some-id")).To(Succeed())
+			Expect(bundler.DeleteBundle(logger, "some-id")).To(Succeed())
 			Expect(bundlePath).NotTo(BeAnExistingFile())
 		})
 
 		Context("when bundle does not exist", func() {
 			It("returns an error", func() {
-				err := grph.DeleteBundle(logger, "cake")
+				err := bundler.DeleteBundle(logger, "cake")
 				Expect(err).To(MatchError(ContainSubstring("bundle path not found")))
 			})
 		})
@@ -125,7 +128,7 @@ var _ = Describe("Store", func() {
 			})
 
 			It("returns an error", func() {
-				err := grph.DeleteBundle(logger, "some-id")
+				err := bundler.DeleteBundle(logger, "some-id")
 				Expect(err).To(MatchError(ContainSubstring("deleting bundle path")))
 			})
 		})

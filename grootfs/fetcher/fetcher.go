@@ -117,7 +117,7 @@ func (f *Fetcher) parsedConfig(imgSrc types.ImageSource, manifest imageManifest)
 func (f *Fetcher) createLayersDigest(config imageConfig, layers []string) []cloner.LayerDigest {
 	layersDigest := []cloner.LayerDigest{}
 	var parentChainID string
-	for i, layerID := range layers {
+	for i, blobID := range layers {
 		if i == 0 {
 			parentChainID = ""
 		}
@@ -126,9 +126,10 @@ func (f *Fetcher) createLayersDigest(config imageConfig, layers []string) []clon
 		chainID := f.chainID(diffID, parentChainID)
 
 		layersDigest = append(layersDigest, cloner.LayerDigest{
-			LayerID: layerID,
-			DiffID:  diffID,
-			ChainID: chainID,
+			BlobID:        blobID,
+			DiffID:        diffID,
+			ChainID:       chainID,
+			ParentChainID: parentChainID,
 		})
 
 		parentChainID = chainID

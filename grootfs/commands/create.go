@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	clonerpkg "code.cloudfoundry.org/grootfs/cloner"
@@ -12,6 +11,7 @@ import (
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
 	grootpkg "code.cloudfoundry.org/grootfs/groot"
 	storepkg "code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
@@ -61,25 +61,23 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		store := storepkg.NewStore(storePath)
+		bundler := storepkg.NewBundler(storePath)
 
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(runner)
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedCmdUnpacker(runner, idMapper, "unpack")
+
 		tarStreamer := streamerpkg.NewTarStreamer()
 
 		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker)
 
 		cachePath := filepath.Join(storePath, "cache", "blobs")
-		if err := os.MkdirAll(cachePath, 0755); err != nil {
-			logger.Error("creating-cache-directory", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
-
 		remoteFetcher := fetcherpkg.NewFetcher(cachePath)
-		remoteCloner := clonerpkg.NewRemoteCloner(remoteFetcher, namespacedCmdUnpacker)
 
-		groot := grootpkg.IamGroot(store, localCloner, remoteCloner)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
+		remoteCloner := clonerpkg.NewRemoteCloner(remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
+
+		groot := grootpkg.IamGroot(bundler, localCloner, remoteCloner)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
 			ID:          id,

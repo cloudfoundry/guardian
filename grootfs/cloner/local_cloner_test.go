@@ -56,7 +56,7 @@ var _ = Describe("LocalCloner", func() {
 
 			Expect(unpacker.UnpackCallCount()).To(Equal(1))
 			_, writeSpec := unpacker.UnpackArgsForCall(0)
-			Expect(writeSpec.RootFSPath).To(Equal("/someplace"))
+			Expect(writeSpec.TargetPath).To(Equal("/someplace"))
 			Expect(writeSpec.UIDMappings).To(Equal(uidMappings))
 			Expect(writeSpec.GIDMappings).To(Equal(gidMappings))
 		})

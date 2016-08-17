@@ -50,7 +50,7 @@ func init() {
 		unpacker := NewTarUnpacker()
 		if err := unpacker.Unpack(logger, cloner.UnpackSpec{
 			Stream:     os.Stdin,
-			RootFSPath: rootFSPath,
+			TargetPath: rootFSPath,
 		}); err != nil {
 			logger.Error("untar", err)
 			os.Exit(1)
@@ -88,7 +88,7 @@ func (u *NamespacedCmdUnpacker) Unpack(logger lager.Logger, spec cloner.UnpackSp
 		return fmt.Errorf("creating tar control pipe: %s", err)
 	}
 
-	unpackCmd := reexec.Command(u.unpackCmdName, spec.RootFSPath)
+	unpackCmd := reexec.Command(u.unpackCmdName, spec.TargetPath)
 	unpackCmd.Stdin = spec.Stream
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
 		unpackCmd.SysProcAttr = &syscall.SysProcAttr{

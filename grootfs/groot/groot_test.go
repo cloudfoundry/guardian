@@ -16,7 +16,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 	var (
 		localCloner  *grootfakes.FakeCloner
 		remoteCloner *grootfakes.FakeCloner
-		store        *grootfakes.FakeStore
+		bundler      *grootfakes.FakeBundler
 		groot        *grootpkg.Groot
 		bundle       *grootfakes.FakeBundle
 		logger       lager.Logger
@@ -26,11 +26,11 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 		localCloner = new(grootfakes.FakeCloner)
 		remoteCloner = new(grootfakes.FakeCloner)
 		bundle = new(grootfakes.FakeBundle)
-		store = new(grootfakes.FakeStore)
-		store.MakeBundleReturns(bundle, nil)
+		bundler = new(grootfakes.FakeBundler)
+		bundler.MakeBundleReturns(bundle, nil)
 
 		logger = lagertest.NewTestLogger("groot")
-		groot = grootpkg.IamGroot(store, localCloner, remoteCloner)
+		groot = grootpkg.IamGroot(bundler, localCloner, remoteCloner)
 	})
 
 	Describe("Create", func() {
@@ -40,8 +40,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(store.MakeBundleCallCount()).To(Equal(1))
-			_, id := store.MakeBundleArgsForCall(0)
+			Expect(bundler.MakeBundleCallCount()).To(Equal(1))
+			_, id := bundler.MakeBundleArgsForCall(0)
 			Expect(id).To(Equal("some-id"))
 		})
 
@@ -55,7 +55,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 		Context("when creating the bundle fails", func() {
 			BeforeEach(func() {
-				store.MakeBundleReturns(nil, errors.New("Failed to make bundle"))
+				bundler.MakeBundleReturns(nil, errors.New("Failed to make bundle"))
 			})
 
 			It("returns the error", func() {
@@ -107,8 +107,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 					})
 					Expect(err).To(HaveOccurred())
 
-					Expect(store.DeleteBundleCallCount()).To(Equal(1))
-					_, id := store.DeleteBundleArgsForCall(0)
+					Expect(bundler.DeleteBundleCallCount()).To(Equal(1))
+					_, id := bundler.DeleteBundleArgsForCall(0)
 					Expect(id).To(Equal("some-id"))
 				})
 			})
@@ -157,8 +157,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 					})
 					Expect(err).To(HaveOccurred())
 
-					Expect(store.DeleteBundleCallCount()).To(Equal(1))
-					_, id := store.DeleteBundleArgsForCall(0)
+					Expect(bundler.DeleteBundleCallCount()).To(Equal(1))
+					_, id := bundler.DeleteBundleArgsForCall(0)
 					Expect(id).To(Equal("some-id"))
 				})
 			})
@@ -178,7 +178,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(store.MakeBundleCallCount()).To(Equal(0))
+				Expect(bundler.MakeBundleCallCount()).To(Equal(0))
 			})
 		})
 	})

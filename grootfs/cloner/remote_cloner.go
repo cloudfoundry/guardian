@@ -8,27 +8,17 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type LayerDigest struct {
-	LayerID string
-	DiffID  string
-	ChainID string
-}
-
-//go:generate counterfeiter . RemoteFetcher
-type RemoteFetcher interface {
-	LayersDigest(logger lager.Logger, imageURL *url.URL) ([]LayerDigest, error)
-	Streamer(logger lager.Logger, imageURL *url.URL) (Streamer, error)
-}
-
 type RemoteCloner struct {
-	remoteFetcher RemoteFetcher
-	unpacker      Unpacker
+	fetcher      Fetcher
+	unpacker     Unpacker
+	volumeDriver VolumeDriver
 }
 
-func NewRemoteCloner(remoteFetcher RemoteFetcher, unpacker Unpacker) *RemoteCloner {
+func NewRemoteCloner(fetcher Fetcher, unpacker Unpacker, volumizer VolumeDriver) *RemoteCloner {
 	return &RemoteCloner{
-		remoteFetcher: remoteFetcher,
-		unpacker:      unpacker,
+		fetcher:      fetcher,
+		unpacker:     unpacker,
+		volumeDriver: volumizer,
 	}
 }
 
@@ -42,38 +32,94 @@ func (c *RemoteCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 		return fmt.Errorf("parsing URL: %s", err)
 	}
 
-	digests, err := c.remoteFetcher.LayersDigest(logger, imageURL)
+	digests, err := c.fetcher.LayersDigest(logger, imageURL)
 	if err != nil {
 		return fmt.Errorf("fetching list of digests: %s", err)
 	}
-	logger.Debug("fetched-layers-digest", lager.Data{"digests": digests})
+	logger.Debug("fetched-layers-digests", lager.Data{"digests": digests})
 
-	streamer, err := c.remoteFetcher.Streamer(logger, imageURL)
+	streamer, err := c.fetcher.Streamer(logger, imageURL)
 	if err != nil {
 		return fmt.Errorf("initializing streamer: %s", err)
 	}
+
 	for _, digest := range digests {
-		stream, _, err := streamer.Stream(logger, digest.LayerID)
-		if err != nil {
-			return fmt.Errorf("streaming blob `%s`: %s", digest, err)
+		volumePath, err := c.volumeDriver.Path(logger, wrapVolumeID(spec, digest.ChainID))
+		if err == nil {
+			logger.Debug("volume-exists", lager.Data{
+				"volumePath":    volumePath,
+				"blobID":        digest.BlobID,
+				"diffID":        digest.DiffID,
+				"chainID":       digest.ChainID,
+				"parentChainID": digest.ParentChainID,
+			})
+			continue
 		}
-		logger.Debug("got-stream-for-digest", lager.Data{"digest": digest})
+
+		volumePath, err = c.volumeDriver.Create(logger,
+			wrapVolumeID(spec, digest.ParentChainID),
+			wrapVolumeID(spec, digest.ChainID),
+		)
+		if err != nil {
+			return fmt.Errorf("creating volume for layer `%s`: %s", digest.DiffID, err)
+		}
+		logger.Debug("volume-created", lager.Data{
+			"volumePath":    volumePath,
+			"blobID":        digest.BlobID,
+			"diffID":        digest.DiffID,
+			"chainID":       digest.ChainID,
+			"parentChainID": digest.ParentChainID,
+		})
+
+		stream, size, err := streamer.Stream(logger, digest.BlobID)
+		if err != nil {
+			return fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
+		}
+		logger.Debug("got-stream-for-blob", lager.Data{
+			"size":          size,
+			"blobID":        digest.BlobID,
+			"diffID":        digest.DiffID,
+			"chainID":       digest.ChainID,
+			"parentChainID": digest.ParentChainID,
+		})
 
 		unpackSpec := UnpackSpec{
+			TargetPath:  volumePath,
 			Stream:      stream,
-			RootFSPath:  spec.RootFSPath,
 			UIDMappings: spec.UIDMappings,
 			GIDMappings: spec.GIDMappings,
 		}
-		logger.Debug("blob-unpacking", lager.Data{
-			"spec":   unpackSpec,
-			"digest": digest,
-		})
 		if err := c.unpacker.Unpack(logger, unpackSpec); err != nil {
-			return fmt.Errorf("unpacking blob `%s`: %s", digest, err)
+			return fmt.Errorf("unpacking layer `%s`: %s", digest.DiffID, err)
 		}
-		logger.Debug("blob-unpacked", lager.Data{"digest": digest})
+		logger.Debug("layer-unpacked", lager.Data{
+			"blobID":        digest.BlobID,
+			"diffID":        digest.DiffID,
+			"chainID":       digest.ChainID,
+			"parentChainID": digest.ParentChainID,
+		})
 	}
 
+	lastVolumeID := wrapVolumeID(spec, digests[len(digests)-1].ChainID)
+	if err := c.volumeDriver.Snapshot(logger, lastVolumeID, spec.RootFSPath); err != nil {
+		return fmt.Errorf("snapshoting the image to path `%s`: %s", spec.RootFSPath, err)
+	}
+	logger.Debug("last-volume-got-snapshoted", lager.Data{
+		"lastVolumeID": lastVolumeID,
+		"rootFSPath":   spec.RootFSPath,
+	})
+
 	return nil
+}
+
+func wrapVolumeID(spec groot.CloneSpec, volumeID string) string {
+	if volumeID == "" {
+		return ""
+	}
+
+	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
+		return fmt.Sprintf("%s-namespaced", volumeID)
+	}
+
+	return volumeID
 }

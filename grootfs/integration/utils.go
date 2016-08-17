@@ -1,13 +1,14 @@
 package integration
 
 import (
+	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/store"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -15,7 +16,24 @@ import (
 )
 
 func CreateBundle(grootFSBin, storePath, imagePath, id string) groot.Bundle {
-	cmd := exec.Command(grootFSBin, "--log-level", "debug", "--store", storePath, "create", "--image", imagePath, id)
+	return CreateBundleWSpec(grootFSBin, storePath, groot.CreateSpec{
+		ID:    id,
+		Image: imagePath,
+	})
+}
+
+func CreateBundleWSpec(grootFSBin, storePath string, spec groot.CreateSpec) groot.Bundle {
+	args := []string{"--store", storePath, "create"}
+	args = append(args, "--image", spec.Image)
+	for _, mapping := range spec.UIDMappings {
+		args = append(args, "--uid-mapping", fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size))
+	}
+	for _, mapping := range spec.GIDMappings {
+		args = append(args, "--gid-mapping", fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size))
+	}
+	args = append(args, spec.ID)
+
+	cmd := exec.Command(grootFSBin, args...)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(sess.Wait(10 * time.Second)).To(gexec.Exit(0))

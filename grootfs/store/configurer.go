@@ -3,6 +3,7 @@ package store
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/lager"
 )
@@ -19,16 +20,26 @@ func (c *Configurer) Ensure(logger lager.Logger, storePath string) error {
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	if info, err := os.Stat(storePath); err == nil {
-		if !info.IsDir() {
-			return fmt.Errorf("store path `%s` is not a directory", storePath)
-		}
-
-		return nil
+	requiredPaths := []string{
+		storePath,
+		filepath.Join(storePath, "bundles"),
+		filepath.Join(storePath, "volumes"),
+		filepath.Join(storePath, "cache"),
+		filepath.Join(storePath, "cache", "blobs"),
 	}
 
-	if err := os.Mkdir(storePath, 0700); err != nil {
-		return fmt.Errorf("making store directory `%s`: %s", storePath, err)
+	for _, requiredPath := range requiredPaths {
+		if info, err := os.Stat(requiredPath); err == nil {
+			if !info.IsDir() {
+				return fmt.Errorf("path `%s` is not a directory", requiredPath)
+			}
+
+			continue
+		}
+
+		if err := os.Mkdir(requiredPath, 0700); err != nil {
+			return fmt.Errorf("making directory `%s`: %s", requiredPath, err)
+		}
 	}
 
 	return nil

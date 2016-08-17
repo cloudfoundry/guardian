@@ -60,7 +60,7 @@ var _ = Describe("Tar", func() {
 	It("does write the image contents in the rootfs directory", func() {
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 			Stream:     stream,
-			RootFSPath: rootFSPath,
+			TargetPath: rootFSPath,
 		})).To(Succeed())
 
 		filePath := path.Join(rootFSPath, "a_file")
@@ -79,7 +79,7 @@ var _ = Describe("Tar", func() {
 		It("excludes them", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).To(Succeed())
 
 			filePath := path.Join(rootFSPath, "dev", "foo")
@@ -108,7 +108,7 @@ var _ = Describe("Tar", func() {
 		It("deletes the pre-existing files", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).To(Succeed())
 
 			Expect(path.Join(rootFSPath, "b_file")).NotTo(BeAnExistingFile())
@@ -118,7 +118,7 @@ var _ = Describe("Tar", func() {
 		It("deletes the pre-existing directories", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).To(Succeed())
 
 			Expect(path.Join(rootFSPath, "b_dir")).NotTo(BeAnExistingFile())
@@ -127,7 +127,7 @@ var _ = Describe("Tar", func() {
 		It("does not leak the whiteout files", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).To(Succeed())
 
 			Expect(path.Join(rootFSPath, ".wh.b_file")).NotTo(BeAnExistingFile())
@@ -145,14 +145,14 @@ var _ = Describe("Tar", func() {
 		It("returns an error", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).NotTo(Succeed())
 		})
 
 		It("returns the command output", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).To(
 				MatchError(ContainSubstring("tar:")),
 			)
@@ -163,7 +163,7 @@ var _ = Describe("Tar", func() {
 		It("returns an error", func() {
 			err := tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				RootFSPath: "/some-destination/bundles/1000",
+				TargetPath: "/some-destination/bundles/1000",
 			})
 
 			Expect(err).To(MatchError(ContainSubstring("making destination directory")))
@@ -176,7 +176,7 @@ var _ = Describe("Tar", func() {
 
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 				Stream:     stream,
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).To(Succeed())
 		})
 	})

@@ -3,9 +3,9 @@ package cloner_test
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
 
 	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/grootfs/cloner/clonerfakes"
@@ -18,93 +18,138 @@ import (
 
 var _ = Describe("RemoteCloner", func() {
 	var (
-		rootFSPath string
-		image      string
-
-		logger            lager.Logger
-		remote            *cloner.RemoteCloner
-		fakeRemoteFetcher *clonerfakes.FakeRemoteFetcher
-		fakeStreamer      *clonerfakes.FakeStreamer
-		fakeUnpacker      *clonerfakes.FakeUnpacker
+		logger           lager.Logger
+		remote           *cloner.RemoteCloner
+		fakeFetcher      *clonerfakes.FakeFetcher
+		fakeStreamer     *clonerfakes.FakeStreamer
+		fakeUnpacker     *clonerfakes.FakeUnpacker
+		fakeVolumeDriver *clonerfakes.FakeVolumeDriver
 	)
 
 	BeforeEach(func() {
-		var err error
-
-		image = "docker:///cfgarden/image"
-
-		rootFSPath, err = ioutil.TempDir("", "rootfs")
-		Expect(err).NotTo(HaveOccurred())
-		logger = lagertest.NewTestLogger("remote-cloner")
-		Expect(err).NotTo(HaveOccurred())
-
-		fakeRemoteFetcher = new(clonerfakes.FakeRemoteFetcher)
-		fakeRemoteFetcher.LayersDigestStub = func(_ lager.Logger, _ *url.URL) ([]cloner.LayerDigest, error) {
-			return []cloner.LayerDigest{
-				cloner.LayerDigest{LayerID: "i-am-a-layer"},
-				cloner.LayerDigest{LayerID: "i-am-another-layer"},
-				cloner.LayerDigest{LayerID: "i-am-the-last-layer"},
-			}, nil
-		}
-
+		fakeFetcher = new(clonerfakes.FakeFetcher)
 		fakeStreamer = new(clonerfakes.FakeStreamer)
-		fakeStreamer.StreamStub = func(_ lager.Logger, _ string) (io.ReadCloser, int64, error) {
-			stream := bytes.NewBuffer([]byte("layer-contents"))
-			return ioutil.NopCloser(stream), 0, nil
-		}
+		fakeFetcher.StreamerReturns(fakeStreamer, nil)
+		fakeFetcher.LayersDigestReturns(
+			[]cloner.LayerDigest{
+				cloner.LayerDigest{BlobID: "i-am-a-layer", DiffID: "layer-111", ChainID: "layer-111", ParentChainID: ""},
+				cloner.LayerDigest{BlobID: "i-am-another-layer", DiffID: "layer-222", ChainID: "chain-222", ParentChainID: "layer-111"},
+				cloner.LayerDigest{BlobID: "i-am-the-last-layer", DiffID: "layer-333", ChainID: "chain-333", ParentChainID: "chain-222"},
+			}, nil,
+		)
 
-		fakeRemoteFetcher.StreamerStub = func(_ lager.Logger, imageURL *url.URL) (cloner.Streamer, error) {
-			Expect(imageURL.String()).To(Equal(image))
-			return fakeStreamer, nil
-		}
+		fakeVolumeDriver = new(clonerfakes.FakeVolumeDriver)
+		fakeVolumeDriver.PathReturns("", errors.New("volume does not exist"))
 
 		fakeUnpacker = new(clonerfakes.FakeUnpacker)
 
-		remote = cloner.NewRemoteCloner(fakeRemoteFetcher, fakeUnpacker)
+		remote = cloner.NewRemoteCloner(fakeFetcher, fakeUnpacker, fakeVolumeDriver)
+		logger = lagertest.NewTestLogger("remote-cloner")
 	})
 
-	It("fetches the list of blobs", func() {
+	Context("when passing an invalid URL", func() {
+		It("returns an error", func() {
+			Expect(remote.Clone(logger, groot.CloneSpec{
+				Image: "%%!!#@!^&",
+			})).To(MatchError(ContainSubstring("parsing URL")))
+		})
+	})
+
+	Context("when fetching the list of layers fails", func() {
+		BeforeEach(func() {
+			fakeFetcher.LayersDigestReturns([]cloner.LayerDigest{}, errors.New("KABOM!"))
+		})
+
+		It("returns an error", func() {
+			Expect(remote.Clone(logger, groot.CloneSpec{
+				Image: "docker:///cfgarden/image",
+			})).To(MatchError(ContainSubstring("KABOM!")))
+		})
+	})
+
+	Context("when getting a streamer fails", func() {
+		BeforeEach(func() {
+			fakeFetcher.StreamerReturns(nil, errors.New("KABOM!"))
+		})
+
+		It("returns an error", func() {
+			Expect(remote.Clone(logger, groot.CloneSpec{
+				Image: "docker:///cfgarden/image",
+			})).To(MatchError(ContainSubstring("KABOM!")))
+		})
+	})
+
+	It("creates volumes for all the layers", func() {
 		Expect(remote.Clone(logger, groot.CloneSpec{
-			Image:      image,
-			RootFSPath: rootFSPath,
+			Image: "docker:///cfgarden/image",
 		})).To(Succeed())
 
-		Expect(fakeRemoteFetcher.LayersDigestCallCount()).To(Equal(1))
-		_, imgURL := fakeRemoteFetcher.LayersDigestArgsForCall(0)
-		Expect(imgURL.String()).To(Equal(image))
+		Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(3))
+		_, parentChainID, chainID := fakeVolumeDriver.CreateArgsForCall(0)
+		Expect(parentChainID).To(BeEmpty())
+		Expect(chainID).To(Equal("layer-111"))
+
+		_, parentChainID, chainID = fakeVolumeDriver.CreateArgsForCall(1)
+		Expect(parentChainID).To(Equal("layer-111"))
+		Expect(chainID).To(Equal("chain-222"))
+
+		_, parentChainID, chainID = fakeVolumeDriver.CreateArgsForCall(2)
+		Expect(parentChainID).To(Equal("chain-222"))
+		Expect(chainID).To(Equal("chain-333"))
 	})
 
-	Describe("unpacking", func() {
-		It("unpacks the blobs", func() {
-			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image:      image,
-				RootFSPath: rootFSPath,
-			})).To(Succeed())
+	It("unpacks the layers to the respective volumes", func() {
+		fakeVolumeDriver.CreateStub = func(_ lager.Logger, _, id string) (string, error) {
+			return fmt.Sprintf("/volume/%s", id), nil
+		}
 
-			Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
-			_, unpack := fakeUnpacker.UnpackArgsForCall(0)
-			contents, err := ioutil.ReadAll(unpack.Stream)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(contents)).To(Equal("layer-contents"))
-		})
+		Expect(remote.Clone(logger, groot.CloneSpec{
+			Image: "docker:///cfgarden/image",
+		})).To(Succeed())
 
-		It("unpacks the blobs in the same rootfs path", func() {
-			spec := groot.CloneSpec{
-				Image:      image,
-				RootFSPath: rootFSPath,
-			}
+		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
+		_, unpackSpec := fakeUnpacker.UnpackArgsForCall(0)
+		Expect(unpackSpec.TargetPath).To(Equal("/volume/layer-111"))
+		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(1)
+		Expect(unpackSpec.TargetPath).To(Equal("/volume/chain-222"))
+		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
+		Expect(unpackSpec.TargetPath).To(Equal("/volume/chain-333"))
+	})
 
-			Expect(remote.Clone(logger, spec)).To(Succeed())
+	It("unpacks the layers got from the provided streamer", func() {
+		fakeStreamer.StreamStub = func(_ lager.Logger, source string) (io.ReadCloser, int64, error) {
+			stream := bytes.NewBuffer([]byte(fmt.Sprintf("layer-%s-contents", source)))
+			return ioutil.NopCloser(stream), 0, nil
+		}
 
-			Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
-			_, unpack := fakeUnpacker.UnpackArgsForCall(0)
-			Expect(unpack.RootFSPath).To(Equal(rootFSPath))
-		})
+		Expect(remote.Clone(logger, groot.CloneSpec{
+			Image: "docker:///cfgarden/image",
+		})).To(Succeed())
 
-		It("applies the UID and GID mappings in the unpacked blobs", func() {
-			spec := groot.CloneSpec{
-				Image:      image,
-				RootFSPath: rootFSPath,
+		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
+
+		_, unpackSpec := fakeUnpacker.UnpackArgsForCall(0)
+		contents, err := ioutil.ReadAll(unpackSpec.Stream)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(contents)).To(Equal("layer-i-am-a-layer-contents"))
+
+		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(1)
+		contents, err = ioutil.ReadAll(unpackSpec.Stream)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(contents)).To(Equal("layer-i-am-another-layer-contents"))
+
+		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
+		contents, err = ioutil.ReadAll(unpackSpec.Stream)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(string(contents)).To(Equal("layer-i-am-the-last-layer-contents"))
+	})
+
+	Context("when UID and GID mappings are provided", func() {
+		var spec groot.CloneSpec
+
+		BeforeEach(func() {
+			spec = groot.CloneSpec{
+				Image: "docker:///cfgarden/image",
 				UIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{
 						HostID:      1,
@@ -120,47 +165,79 @@ var _ = Describe("RemoteCloner", func() {
 					},
 				},
 			}
+		})
 
+		It("applies the UID and GID mappings in the unpacked blobs", func() {
 			Expect(remote.Clone(logger, spec)).To(Succeed())
 
 			Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
-			_, unpack := fakeUnpacker.UnpackArgsForCall(0)
-			Expect(unpack.UIDMappings).To(Equal(spec.UIDMappings))
-			Expect(unpack.GIDMappings).To(Equal(spec.GIDMappings))
+			_, unpackSpec := fakeUnpacker.UnpackArgsForCall(0)
+			Expect(unpackSpec.UIDMappings).To(Equal(spec.UIDMappings))
+			Expect(unpackSpec.GIDMappings).To(Equal(spec.GIDMappings))
+
+			_, unpackSpec = fakeUnpacker.UnpackArgsForCall(1)
+			Expect(unpackSpec.UIDMappings).To(Equal(spec.UIDMappings))
+			Expect(unpackSpec.GIDMappings).To(Equal(spec.GIDMappings))
+
+			_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
+			Expect(unpackSpec.UIDMappings).To(Equal(spec.UIDMappings))
+			Expect(unpackSpec.GIDMappings).To(Equal(spec.GIDMappings))
+		})
+
+		It("appends a -namespaced suffix in all volume IDs", func() {
+			Expect(remote.Clone(logger, spec)).To(Succeed())
+
+			Expect(fakeVolumeDriver.PathCallCount()).To(Equal(3))
+			_, chainID := fakeVolumeDriver.PathArgsForCall(0)
+			Expect(chainID).To(Equal("layer-111-namespaced"))
+
+			_, chainID = fakeVolumeDriver.PathArgsForCall(1)
+			Expect(chainID).To(Equal("chain-222-namespaced"))
+
+			_, chainID = fakeVolumeDriver.PathArgsForCall(2)
+			Expect(chainID).To(Equal("chain-333-namespaced"))
+
+			Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(3))
+			_, parentChainID, chainID := fakeVolumeDriver.CreateArgsForCall(0)
+			Expect(parentChainID).To(BeEmpty())
+			Expect(chainID).To(Equal("layer-111-namespaced"))
+
+			_, parentChainID, chainID = fakeVolumeDriver.CreateArgsForCall(1)
+			Expect(parentChainID).To(Equal("layer-111-namespaced"))
+			Expect(chainID).To(Equal("chain-222-namespaced"))
+
+			_, parentChainID, chainID = fakeVolumeDriver.CreateArgsForCall(2)
+			Expect(parentChainID).To(Equal("chain-222-namespaced"))
+			Expect(chainID).To(Equal("chain-333-namespaced"))
+
+			Expect(fakeVolumeDriver.SnapshotCallCount()).To(Equal(1))
+			_, id, _ := fakeVolumeDriver.SnapshotArgsForCall(0)
+			Expect(id).To(Equal("chain-333-namespaced"))
 		})
 	})
 
-	Context("when passing an invalid URL", func() {
-		It("returns an error", func() {
-			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image:      "%%!!#@!^&",
-				RootFSPath: rootFSPath,
-			})).To(MatchError(ContainSubstring("parsing URL")))
-		})
-	})
-
-	Context("when fetching the list of layers fails", func() {
+	Context("when a volume exists", func() {
 		BeforeEach(func() {
-			fakeRemoteFetcher.LayersDigestReturns([]cloner.LayerDigest{}, errors.New("KABOM!"))
+			fakeVolumeDriver.PathReturns("/path/to/volume", nil)
 		})
 
-		It("returns an error", func() {
+		It("does not try to create any layer", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image:      image,
-				RootFSPath: rootFSPath,
-			})).To(MatchError(ContainSubstring("KABOM!")))
+				Image: "docker:///cfgarden/image",
+			})).To(Succeed())
+
+			Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(0))
 		})
 	})
 
-	Context("when getting a streamer fails", func() {
+	Context("when creating a volume fails", func() {
 		BeforeEach(func() {
-			fakeRemoteFetcher.StreamerReturns(nil, errors.New("KABOM!"))
+			fakeVolumeDriver.CreateReturns("", errors.New("KABOM!"))
 		})
 
 		It("returns an error", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image:      image,
-				RootFSPath: rootFSPath,
+				Image: "docker:///cfgarden/image",
 			})).To(MatchError(ContainSubstring("KABOM!")))
 		})
 	})
@@ -172,8 +249,7 @@ var _ = Describe("RemoteCloner", func() {
 
 		It("returns an error", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image:      image,
-				RootFSPath: rootFSPath,
+				Image: "docker:///cfgarden/image",
 			})).To(MatchError(ContainSubstring("KABOM!")))
 		})
 	})
@@ -185,8 +261,32 @@ var _ = Describe("RemoteCloner", func() {
 
 		It("returns an error", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image:      image,
-				RootFSPath: rootFSPath,
+				Image: "docker:///cfgarden/image",
+			})).To(MatchError(ContainSubstring("KABOM!")))
+		})
+	})
+
+	It("snapshots the last layer to the rootFSPath", func() {
+		Expect(remote.Clone(logger, groot.CloneSpec{
+			Image:      "docker:///cfgarden/image",
+			RootFSPath: "/path/to/rootfs",
+		})).To(Succeed())
+
+		Expect(fakeVolumeDriver.SnapshotCallCount()).To(Equal(1))
+
+		_, id, targetPath := fakeVolumeDriver.SnapshotArgsForCall(0)
+		Expect(id).To(Equal("chain-333"))
+		Expect(targetPath).To(Equal("/path/to/rootfs"))
+	})
+
+	Context("when creating rootfs snapshot fails", func() {
+		BeforeEach(func() {
+			fakeVolumeDriver.SnapshotReturns(errors.New("KABOM!"))
+		})
+
+		It("returns an error", func() {
+			Expect(remote.Clone(logger, groot.CloneSpec{
+				Image: "docker:///cfgarden/image",
 			})).To(MatchError(ContainSubstring("KABOM!")))
 		})
 	})

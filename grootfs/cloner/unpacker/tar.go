@@ -24,9 +24,9 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec cloner.UnpackSpec) error 
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	if _, err := os.Stat(spec.RootFSPath); err != nil {
-		if err := os.Mkdir(spec.RootFSPath, 0755); err != nil {
-			return fmt.Errorf("making destination directory `%s`: %s", spec.RootFSPath, err)
+	if _, err := os.Stat(spec.TargetPath); err != nil {
+		if err := os.Mkdir(spec.TargetPath, 0755); err != nil {
+			return fmt.Errorf("making destination directory `%s`: %s", spec.TargetPath, err)
 		}
 	}
 
@@ -48,7 +48,7 @@ func (u *TarUnpacker) unTar(spec cloner.UnpackSpec) error {
 			return err
 		}
 
-		path := filepath.Join(spec.RootFSPath, header.Name)
+		path := filepath.Join(spec.TargetPath, header.Name)
 		info := header.FileInfo()
 
 		switch u.fileType(path, info) {

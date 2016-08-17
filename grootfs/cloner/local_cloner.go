@@ -31,7 +31,7 @@ func (c *LocalCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 
 	if err := c.unpacker.Unpack(logger, UnpackSpec{
 		Stream:      stream,
-		RootFSPath:  spec.RootFSPath,
+		TargetPath:  spec.RootFSPath,
 		UIDMappings: spec.UIDMappings,
 		GIDMappings: spec.GIDMappings,
 	}); err != nil {

@@ -25,8 +25,8 @@ var DeleteCommand = cli.Command{
 		}
 		id := ctx.Args().First()
 
-		grp := store.NewStore(storePath)
-		err := grp.DeleteBundle(logger, id)
+		bundler := store.NewBundler(storePath)
+		err := bundler.DeleteBundle(logger, id)
 		if err != nil {
 			logger.Error("deleting-bundle", err)
 			return cli.NewExitError(err.Error(), 1)

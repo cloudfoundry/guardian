@@ -67,7 +67,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 	It("passes the rootfs path to the provided command", func() {
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-			RootFSPath: rootFSPath,
+			TargetPath: rootFSPath,
 		})).To(Succeed())
 
 		commands := fakeCommandRunner.StartedCommands()
@@ -84,7 +84,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 			Stream:     streamR,
-			RootFSPath: rootFSPath,
+			TargetPath: rootFSPath,
 		})).To(Succeed())
 
 		commands := fakeCommandRunner.StartedCommands()
@@ -104,7 +104,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 			UIDMappings: []groot.IDMappingSpec{
 				groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 			},
-			RootFSPath: rootFSPath,
+			TargetPath: rootFSPath,
 		})).To(Succeed())
 
 		commands := fakeCommandRunner.StartedCommands()
@@ -115,7 +115,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 	Context("when no mappings are provided", func() {
 		It("starts the provided command in the same namespaces", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).To(Succeed())
 
 			commands := fakeCommandRunner.StartedCommands()
@@ -126,7 +126,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 	It("signals the namespaced command to continue using the contol pipe", func(done Done) {
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-			RootFSPath: rootFSPath,
+			TargetPath: rootFSPath,
 		})).To(Succeed())
 
 		commands := fakeCommandRunner.StartedCommands()
@@ -141,7 +141,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 	Describe("UIDMappings", func() {
 		It("uses the provided uid mapping", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 				UIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 				},
@@ -162,7 +162,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 			It("returns an error", func() {
 				Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-					RootFSPath: rootFSPath,
+					TargetPath: rootFSPath,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
@@ -171,7 +171,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 			It("closes the control pipe", func() {
 				Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-					RootFSPath: rootFSPath,
+					TargetPath: rootFSPath,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
@@ -189,7 +189,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 	Describe("GIDMappings", func() {
 		It("uses the provided gid mapping", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 				GIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 				},
@@ -210,7 +210,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 			It("returns an error", func() {
 				Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-					RootFSPath: rootFSPath,
+					TargetPath: rootFSPath,
 					GIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
@@ -219,7 +219,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 			It("closes the control pipe", func() {
 				Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-					RootFSPath: rootFSPath,
+					TargetPath: rootFSPath,
 					GIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
@@ -241,7 +241,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 		It("returns an error", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).To(
 				MatchError(ContainSubstring("failed to start unpack")),
 			)
@@ -260,13 +260,13 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 		It("returns an error", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).NotTo(Succeed())
 		})
 
 		It("returns the command output", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				RootFSPath: rootFSPath,
+				TargetPath: rootFSPath,
 			})).To(
 				MatchError(ContainSubstring("hello-world")),
 			)
