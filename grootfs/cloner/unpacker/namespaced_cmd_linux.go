@@ -17,13 +17,12 @@ import (
 
 func init() {
 	reexec.Register("unpack", func() {
-		logger := lager.NewLogger("unpack")
+		logger := lager.NewLogger("unpacking")
 
 		if len(os.Args) != 2 {
 			logger.Error("parsing-command", errors.New("destination directory was not specified"))
 			os.Exit(1)
 		}
-		rootFSPath := os.Args[1]
 
 		ctrlPipeR := os.NewFile(3, "/ctrl/pipe")
 		buffer := make([]byte, 1)
@@ -33,12 +32,27 @@ func init() {
 			os.Exit(1)
 		}
 
+		// Once all id mappings are set, we need to spawn the untar function
+		// in a child proccess, so it can make use of it
+		cmd := reexec.Command("untar", os.Args[1])
+		cmd.Stdout = os.Stderr
+		cmd.Stderr = os.Stderr
+		cmd.Stdin = os.Stdin
+		if err := cmd.Run(); err != nil {
+			os.Exit(1)
+		}
+	})
+
+	reexec.Register("untar", func() {
+		logger := lager.NewLogger("untaring")
+
+		rootFSPath := os.Args[1]
 		unpacker := NewTarUnpacker()
 		if err := unpacker.Unpack(logger, cloner.UnpackSpec{
 			Stream:     os.Stdin,
 			RootFSPath: rootFSPath,
 		}); err != nil {
-			logger.Error("unpacking", err)
+			logger.Error("untar", err)
 			os.Exit(1)
 		}
 	})

@@ -1,9 +1,10 @@
 package unpacker
 
 import (
+	"archive/tar"
 	"fmt"
+	"io"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -29,47 +30,81 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec cloner.UnpackSpec) error 
 		}
 	}
 
-	cmd := exec.Command("tar", "--exclude", "dev/*", "-xp", "-C", spec.RootFSPath)
-	cmd.Stdin = spec.Stream
-	if err := u.runAndLog(cmd); err != nil {
-		return err
+	if err := u.unTar(spec); err != nil {
+		return fmt.Errorf("failed to untar: %s", err)
 	}
 
-	return u.cleanWhiteout(logger, spec.RootFSPath)
+	return nil
 }
 
-func (u *TarUnpacker) runAndLog(cmd *exec.Cmd) error {
-	output, err := cmd.CombinedOutput()
-	if err == nil {
-		return nil
-	}
+func (u *TarUnpacker) unTar(spec cloner.UnpackSpec) error {
+	tarReader := tar.NewReader(spec.Stream)
 
-	return fmt.Errorf("%s: %s", err, string(output))
-}
-
-func (u *TarUnpacker) cleanWhiteout(logger lager.Logger, rootFSPath string) error {
-	toBeDeleted := []string{}
-
-	if err := filepath.Walk(rootFSPath, func(entryPath string, info os.FileInfo, err error) error {
-		if err != nil {
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			break
+		} else if err != nil {
 			return err
 		}
 
-		if strings.HasPrefix(info.Name(), ".wh.") {
-			tbdPath := strings.Replace(entryPath, ".wh.", "", 1)
-			toBeDeleted = append(toBeDeleted, entryPath, tbdPath)
-		}
+		path := filepath.Join(spec.RootFSPath, header.Name)
+		info := header.FileInfo()
 
-		return nil
-	}); err != nil {
-		return fmt.Errorf("walking the root file system: %s", err)
+		switch u.fileType(path, info) {
+		case "DEVICE":
+			continue
+		case "DIRECTORY":
+			if err = os.MkdirAll(path, info.Mode()); err != nil {
+				return fmt.Errorf("creating directory `%s`: %s", path, err)
+			}
+		case "WHITEOUT":
+			tbdPath := strings.Replace(path, ".wh.", "", 1)
+			if err := os.RemoveAll(tbdPath); err != nil {
+				return fmt.Errorf("deleting whiteout file: %s", err)
+			}
+		case "REGULAR_FILE":
+			if err := u.createRegularFile(path, header, tarReader); err != nil {
+				return err
+			}
+		}
 	}
-	logger.Debug("got-enties-to-be-deleted", lager.Data{"toBeDeleted": toBeDeleted})
 
-	for _, path := range toBeDeleted {
-		if err := os.RemoveAll(path); err != nil {
-			return fmt.Errorf("deleting whiteout path: %s", err)
+	return nil
+}
+
+func (u *TarUnpacker) fileType(path string, info os.FileInfo) string {
+	if info.IsDir() {
+		return "DIRECTORY"
+	}
+
+	if strings.Contains(path, "/dev/") {
+		return "DEVICE"
+	}
+
+	if strings.Contains(path, ".wh.") {
+		return "WHITEOUT"
+	}
+
+	return "REGULAR_FILE"
+}
+
+func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarReader *tar.Reader) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(tarHeader.Mode))
+	if err != nil {
+		return fmt.Errorf("creating file `%s`: %s", path, err)
+	}
+	defer file.Close()
+
+	if os.Getuid() == 0 {
+		if err := os.Chown(path, tarHeader.Uid, tarHeader.Gid); err != nil {
+			return fmt.Errorf("chowning file %d:%d `%s`: %s", tarHeader.Uid, tarHeader.Gid, path, err)
 		}
+	}
+
+	_, err = io.Copy(file, tarReader)
+	if err != nil {
+		return fmt.Errorf("writing to file `%s`: %s", path, err)
 	}
 
 	return nil
