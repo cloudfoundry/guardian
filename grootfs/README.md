@@ -25,8 +25,9 @@ _Because grootfs depends on Linux kernel features, you can only build it from or
 to a Linux machine._
 
 ```
-git clone code.cloudfoundry.org/grootfs $GOPATH/src/code.cloudfoundry.or/grootfs
-cd $GOPATH/src/code.cloudfoundry.or/grootfs
+mkdir -p $GOPATH/src/code.cloudfoundry.org
+git clone https://github.com/cloudfoundry/grootfs.git $GOPATH/src/code.cloudfoundry.org/grootfs
+cd $GOPATH/src/code.cloudfoundry.org/grootfs
 git submodule update --init --recursive
 make
 ```
@@ -41,8 +42,8 @@ _Using `go get code.cloudfoundry.org/grootfs` is discouraged because of the depe
 (btrfs-tools package on ubuntu) for layering images.
 
   ```
-  apt-get install btrfs-tools
-  modprobe btrfs # if not loaded
+  sudo apt-get install btrfs-tools
+  sudo modprobe btrfs # if not loaded
   ```
 
 * By default all operations will happen in `/var/lib/grootfs` folder, you can
@@ -52,12 +53,12 @@ btrfs as follows:
 
   ```
   # create a btrfs block device
-  truncate -s 1G /btrfs_volume
-  mkfs.btrfs /btrfs_volume
+  truncate -s 1G ~/btrfs_volume
+  mkfs.btrfs ~/btrfs_volume
 
   # mount the block device
-  mkdir -p /mnt/btrfs
-  mount -t btrfs -o user_subvol_rm_allowed /btrfs_volume /mnt/btrfs
+  sudo mkdir -p /mnt/btrfs
+  sudo mount -t btrfs -o user_subvol_rm_allowed ~/btrfs_volume /mnt/btrfs
   # you might need to chmod/chown the mount point if you'll not run grootfs as root
   ```
 
@@ -65,7 +66,7 @@ btrfs as follows:
 installed (uidmap package on ubuntu)
 
   ```
-  apt-get install uidmap
+  sudo apt-get install uidmap
   ```
 
 
