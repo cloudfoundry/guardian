@@ -13,6 +13,9 @@ RUN mkdir /go && \
 	mkdir -p /go/src/code.cloudfoundry.org/grootfs && \
 	chown -R groot:groot /go
 
+## Make /root writable (e.g. /root/.docker/...)
+RUN chmod 777 /root
+
 ## Run as groot
 USER groot
 
