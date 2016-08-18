@@ -23,14 +23,19 @@ func NewIDMapper(cmdRunner command_runner.CommandRunner) *CommandIDMapper {
 }
 
 func (im *CommandIDMapper) MapUIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error {
-	return im.execute("newuidmap", pid, mappings)
+	logger = logger.Session("mapUID")
+	return im.execute(logger, "newuidmap", pid, mappings)
 }
 
 func (im *CommandIDMapper) MapGIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error {
-	return im.execute("newgidmap", pid, mappings)
+	logger = logger.Session("mapGID")
+	return im.execute(logger, "newgidmap", pid, mappings)
 }
 
-func (im *CommandIDMapper) execute(command string, pid int, mappings []groot.IDMappingSpec) error {
+func (im *CommandIDMapper) execute(logger lager.Logger, command string, pid int, mappings []groot.IDMappingSpec) error {
+	logger.Debug("start")
+	defer logger.Debug("end")
+
 	mappingArgs := append([]string{strconv.Itoa(pid)}, im.idMappingsToArgs(mappings)...)
 	mapCmd := exec.Command(command, mappingArgs...)
 
@@ -38,6 +43,7 @@ func (im *CommandIDMapper) execute(command string, pid int, mappings []groot.IDM
 	mapCmd.Stdout = buffer
 	mapCmd.Stderr = buffer
 
+	logger.Debug("starting-id-map", lager.Data{"path": mapCmd.Path, "args": mapCmd.Args})
 	if err := im.cmdRunner.Run(mapCmd); err != nil {
 		return fmt.Errorf("%s %s: %s", command, err, buffer.String())
 	}

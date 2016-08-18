@@ -12,11 +12,10 @@ import (
 	"code.cloudfoundry.org/grootfs/cloner/unpacker"
 	"code.cloudfoundry.org/grootfs/cloner/unpacker/unpackerfakes"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/st3v/glager"
 )
 
 var _ = Describe("NamespacedCmdUnpacker", func() {
@@ -25,9 +24,9 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 		fakeCommandRunner *fake_command_runner.FakeCommandRunner
 		tarUnpacker       *unpacker.NamespacedCmdUnpacker
 
-		logger     lager.Logger
+		logger     *TestLogger
 		bundlePath string
-		rootFSPath string
+		targetPath string
 
 		commandError error
 	)
@@ -41,11 +40,11 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 			fakeCommandRunner, fakeIDMapper, "ginkgo-unpack",
 		)
 
-		logger = lagertest.NewTestLogger("test-store")
+		logger = NewLogger("test-store")
 
 		bundlePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		rootFSPath = filepath.Join(bundlePath, "rootfs")
+		targetPath = filepath.Join(bundlePath, "rootfs")
 
 		commandError = nil
 	})
@@ -67,14 +66,14 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 	It("passes the rootfs path to the provided command", func() {
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-			TargetPath: rootFSPath,
+			TargetPath: targetPath,
 		})).To(Succeed())
 
 		commands := fakeCommandRunner.StartedCommands()
 		Expect(commands).To(HaveLen(1))
 		Expect(commands[0].Path).To(Equal("/proc/self/exe"))
 		Expect(commands[0].Args).To(Equal([]string{
-			"ginkgo-unpack", rootFSPath,
+			"ginkgo-unpack", targetPath,
 		}))
 	})
 
@@ -84,7 +83,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
 			Stream:     streamR,
-			TargetPath: rootFSPath,
+			TargetPath: targetPath,
 		})).To(Succeed())
 
 		commands := fakeCommandRunner.StartedCommands()
@@ -104,7 +103,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 			UIDMappings: []groot.IDMappingSpec{
 				groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 			},
-			TargetPath: rootFSPath,
+			TargetPath: targetPath,
 		})).To(Succeed())
 
 		commands := fakeCommandRunner.StartedCommands()
@@ -112,10 +111,24 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 		Expect(commands[0].SysProcAttr.Cloneflags).To(Equal(uintptr(syscall.CLONE_NEWUSER)))
 	})
 
+	It("logs the provided command", func() {
+		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
+			TargetPath: targetPath,
+		})).To(Succeed())
+
+		Expect(logger).To(ContainSequence(
+			Debug(
+				Message("test-store.unpacked-with-namespaced-cmd.starting-unpack"),
+				Data("path", "/proc/self/exe"),
+				Data("args", []string{"ginkgo-unpack", targetPath}),
+			),
+		))
+	})
+
 	Context("when no mappings are provided", func() {
 		It("starts the provided command in the same namespaces", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).To(Succeed())
 
 			commands := fakeCommandRunner.StartedCommands()
@@ -126,7 +139,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 	It("signals the namespaced command to continue using the contol pipe", func(done Done) {
 		Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-			TargetPath: rootFSPath,
+			TargetPath: targetPath,
 		})).To(Succeed())
 
 		commands := fakeCommandRunner.StartedCommands()
@@ -141,7 +154,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 	Describe("UIDMappings", func() {
 		It("uses the provided uid mapping", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 				UIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 				},
@@ -162,7 +175,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 			It("returns an error", func() {
 				Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-					TargetPath: rootFSPath,
+					TargetPath: targetPath,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
@@ -171,7 +184,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 			It("closes the control pipe", func() {
 				Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-					TargetPath: rootFSPath,
+					TargetPath: targetPath,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
@@ -189,7 +202,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 	Describe("GIDMappings", func() {
 		It("uses the provided gid mapping", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 				GIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 				},
@@ -210,7 +223,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 			It("returns an error", func() {
 				Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-					TargetPath: rootFSPath,
+					TargetPath: targetPath,
 					GIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
@@ -219,7 +232,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 			It("closes the control pipe", func() {
 				Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-					TargetPath: rootFSPath,
+					TargetPath: targetPath,
 					GIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
@@ -241,7 +254,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 		It("returns an error", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).To(
 				MatchError(ContainSubstring("failed to start unpack")),
 			)
@@ -260,13 +273,13 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 		It("returns an error", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).NotTo(Succeed())
 		})
 
 		It("returns the command output", func() {
 			Expect(tarUnpacker.Unpack(logger, cloner.UnpackSpec{
-				TargetPath: rootFSPath,
+				TargetPath: targetPath,
 			})).To(
 				MatchError(ContainSubstring("hello-world")),
 			)

@@ -14,7 +14,7 @@ type CallbackReader struct {
 
 func NewCallbackReader(logger lager.Logger, callback func() error, reader io.ReadCloser) *CallbackReader {
 	return &CallbackReader{
-		logger:         logger,
+		logger:         logger.Session("callback-reader"),
 		callback:       callback,
 		internalReader: reader,
 	}

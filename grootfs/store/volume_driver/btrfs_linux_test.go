@@ -10,9 +10,9 @@ import (
 
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
-	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/st3v/glager"
 )
 
 var _ = Describe("Btrfs", func() {
@@ -20,7 +20,7 @@ var _ = Describe("Btrfs", func() {
 
 	var (
 		btrfs     *volume_driver.Btrfs
-		logger    *lagertest.TestLogger
+		logger    *TestLogger
 		storePath string
 	)
 
@@ -33,7 +33,7 @@ var _ = Describe("Btrfs", func() {
 
 		btrfs = volume_driver.NewBtrfs(storePath)
 
-		logger = lagertest.NewTestLogger("btrfs")
+		logger = NewLogger("btrfs")
 	})
 
 	Describe("Path", func() {
@@ -56,27 +56,67 @@ var _ = Describe("Btrfs", func() {
 	})
 
 	Describe("Create", func() {
-		It("creates a BTRFS subvolume when parent is empty", func() {
-			volID := randVolID()
-			volPath, err := btrfs.Create(logger, "", volID)
-			Expect(err).NotTo(HaveOccurred())
+		Context("when the parent is empty", func() {
+			It("creates a BTRFS subvolume", func() {
+				volID := randVolID()
+				volPath, err := btrfs.Create(logger, "", volID)
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(volPath).To(BeADirectory())
+				Expect(volPath).To(BeADirectory())
+			})
+
+			It("logs the correct btrfs command", func() {
+				volID := randVolID()
+				volumePath, err := btrfs.Create(logger, "", volID)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(logger).To(ContainSequence(
+					Debug(
+						Message("btrfs.btrfs-creating-volume.starting-btrfs"),
+						Data("path", "/sbin/btrfs"),
+						Data("args", []string{"btrfs", "subvolume", "create", volumePath}),
+						Data("id", volID),
+					),
+				))
+			})
 		})
 
-		It("creates a BTRFS snapshot when parent is not empty", func() {
-			srcVolID := randVolID()
-			destVolID := randVolID()
+		Context("when the parent is not empty", func() {
+			It("creates a BTRFS snapshot", func() {
+				srcVolID := randVolID()
+				destVolID := randVolID()
 
-			srcVolPath, err := btrfs.Create(logger, "", srcVolID)
-			Expect(err).NotTo(HaveOccurred())
+				srcVolPath, err := btrfs.Create(logger, "", srcVolID)
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(ioutil.WriteFile(filepath.Join(srcVolPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(srcVolPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
 
-			destVolPath, err := btrfs.Create(logger, srcVolID, destVolID)
-			Expect(err).NotTo(HaveOccurred())
+				destVolPath, err := btrfs.Create(logger, srcVolID, destVolID)
+				Expect(err).NotTo(HaveOccurred())
 
-			Expect(filepath.Join(destVolPath, "a_file")).To(BeARegularFile())
+				Expect(filepath.Join(destVolPath, "a_file")).To(BeARegularFile())
+			})
+
+			It("logs the correct btrfs command", func() {
+				srcVolID := randVolID()
+				destVolID := randVolID()
+
+				srcVolPath, err := btrfs.Create(logger, "", srcVolID)
+				Expect(err).NotTo(HaveOccurred())
+
+				destVolPath, err := btrfs.Create(logger, srcVolID, destVolID)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(logger).To(ContainSequence(
+					Debug(
+						Message("btrfs.btrfs-creating-volume.starting-btrfs"),
+						Data("path", "/sbin/btrfs"),
+						Data("args", []string{"btrfs", "subvolume", "snapshot", srcVolPath, destVolPath}),
+						Data("id", destVolID),
+						Data("parentID", srcVolID),
+					),
+				))
+			})
 		})
 
 		Context("when the volume exists", func() {
@@ -120,6 +160,26 @@ var _ = Describe("Btrfs", func() {
 			Expect(btrfs.Snapshot(logger, srcVolID, destPath)).To(Succeed())
 
 			Expect(filepath.Join(destPath, "a_file")).To(BeARegularFile())
+		})
+
+		It("logs the correct btrfs command", func() {
+			srcVolID := randVolID()
+
+			srcVolPath, err := btrfs.Create(logger, "", srcVolID)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(ioutil.WriteFile(filepath.Join(srcVolPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
+
+			Expect(btrfs.Snapshot(logger, srcVolID, destPath)).To(Succeed())
+
+			Expect(logger).To(ContainSequence(
+				Debug(
+					Message("btrfs.btrfs-creating-snapshot.starting-btrfs"),
+					Data("path", "/sbin/btrfs"),
+					Data("args", []string{"btrfs", "subvolume", "snapshot", srcVolPath, destPath}),
+					Data("id", srcVolID),
+				),
+			))
 		})
 
 		Context("when the parent does not exist", func() {

@@ -60,6 +60,10 @@ type CreateSpec struct {
 }
 
 func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
+	logger = logger.Session("groot-creating", lager.Data{"spec": spec})
+	logger.Debug("start")
+	defer logger.Debug("end")
+
 	parsedURL, err := url.Parse(spec.Image)
 	if err != nil {
 		return nil, fmt.Errorf("parsing image url: %s", err)

@@ -44,6 +44,7 @@ func (d *Btrfs) Create(logger lager.Logger, parentID, id string) (string, error)
 		cmd = exec.Command("btrfs", "subvolume", "snapshot", parentVolPath, volPath)
 	}
 
+	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf(
 			"creating btrfs volume `%s` (%s): %s",
@@ -62,6 +63,7 @@ func (d *Btrfs) Snapshot(logger lager.Logger, id, targetPath string) error {
 	volPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
 	cmd := exec.Command("btrfs", "subvolume", "snapshot", volPath, targetPath)
 
+	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf(
 			"creating btrfs snapshot to `%s` (%s): %s",

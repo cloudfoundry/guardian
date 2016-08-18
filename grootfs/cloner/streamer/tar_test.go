@@ -7,10 +7,10 @@ import (
 	"path"
 
 	streamerpkg "code.cloudfoundry.org/grootfs/cloner/streamer"
-	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/st3v/glager"
 )
 
 var _ = Describe("TarStreamer", func() {
@@ -18,7 +18,7 @@ var _ = Describe("TarStreamer", func() {
 		var (
 			sourcePath  string
 			tarStreamer *streamerpkg.TarStreamer
-			logger      *lagertest.TestLogger
+			logger      *TestLogger
 		)
 
 		BeforeEach(func() {
@@ -29,7 +29,7 @@ var _ = Describe("TarStreamer", func() {
 			Expect(ioutil.WriteFile(path.Join(sourcePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
 
 			tarStreamer = streamerpkg.NewTarStreamer()
-			logger = lagertest.NewTestLogger("TarStreamer")
+			logger = NewLogger("TarStreamer")
 		})
 
 		It("returns the contents of the source directory as a Tar stream", func() {
@@ -41,6 +41,18 @@ var _ = Describe("TarStreamer", func() {
 			Expect(entries[1].header.Name).To(Equal("./a_file"))
 			Expect(entries[1].header.Mode).To(Equal(int64(0600)))
 			Expect(string(entries[1].contents)).To(Equal("hello-world"))
+		})
+
+		It("logs the tar command", func() {
+			_, _, err := tarStreamer.Stream(logger, sourcePath)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(logger).To(ContainSequence(
+				Debug(
+					Message("TarStreamer.tar-streaming.starting-tar"),
+					Data("args", []string{"tar", "-cp", "-C", sourcePath, "."}),
+				),
+			))
 		})
 
 		Context("when the source does not exist", func() {

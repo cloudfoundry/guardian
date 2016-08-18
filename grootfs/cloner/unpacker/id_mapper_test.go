@@ -6,27 +6,27 @@ import (
 
 	"code.cloudfoundry.org/grootfs/cloner/unpacker"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/st3v/glager"
 )
 
 var _ = Describe("IDMapper", func() {
 	var (
 		fakeCmdRunner *fake_command_runner.FakeCommandRunner
 		idMapper      *unpacker.CommandIDMapper
-		logger        lager.Logger
+		logger        *TestLogger
 	)
 
 	BeforeEach(func() {
 		fakeCmdRunner = fake_command_runner.New()
 		idMapper = unpacker.NewIDMapper(fakeCmdRunner)
-		logger = lagertest.NewTestLogger("idmapper")
+		logger = NewLogger("idmapper")
 	})
 
 	Describe("MapUIDs", func() {
+
 		Context("when mapping is successful", func() {
 			BeforeEach(func() {
 				fakeCmdRunner.WhenRunning(fake_command_runner.CommandSpec{
@@ -35,6 +35,21 @@ var _ = Describe("IDMapper", func() {
 					// Avoid calling the OS command
 					return nil
 				})
+			})
+
+			It("logs when running newuidmap", func() {
+				Expect(idMapper.MapUIDs(logger, 1000, []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 30},
+					groot.IDMappingSpec{HostID: 100, NamespaceID: 200, Size: 300},
+				})).To(Succeed())
+
+				Expect(logger).To(ContainSequence(
+					Debug(
+						Message("idmapper.mapUID.starting-id-map"),
+						Data("path", "/usr/bin/newuidmap"),
+						Data("args", []string{"newuidmap", "1000", "20", "10", "30", "200", "100", "300"}),
+					),
+				))
 			})
 
 			It("uses the newuidmap correctly", func() {
@@ -86,6 +101,22 @@ var _ = Describe("IDMapper", func() {
 					return nil
 				})
 			})
+
+			It("logs when running newuidmap", func() {
+				Expect(idMapper.MapGIDs(logger, 1000, []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 30},
+					groot.IDMappingSpec{HostID: 100, NamespaceID: 200, Size: 300},
+				})).To(Succeed())
+
+				Expect(logger).To(ContainSequence(
+					Debug(
+						Message("idmapper.mapGID.starting-id-map"),
+						Data("path", "/usr/bin/newgidmap"),
+						Data("args", []string{"newgidmap", "1000", "20", "10", "30", "200", "100", "300"}),
+					),
+				))
+			})
+
 			It("uses the newgidmap correctly", func() {
 				Expect(idMapper.MapGIDs(logger, 1000, []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 50, NamespaceID: 60, Size: 70},

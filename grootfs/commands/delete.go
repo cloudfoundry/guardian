@@ -17,6 +17,7 @@ var DeleteCommand = cli.Command{
 
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
+		logger = logger.Session("delete")
 
 		storePath := ctx.GlobalString("store")
 		if ctx.NArg() != 1 {

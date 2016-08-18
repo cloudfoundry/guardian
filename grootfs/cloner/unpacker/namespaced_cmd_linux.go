@@ -101,6 +101,7 @@ func (u *NamespacedCmdUnpacker) Unpack(logger lager.Logger, spec cloner.UnpackSp
 	unpackCmd.Stderr = outBuffer
 	unpackCmd.ExtraFiles = []*os.File{ctrlPipeR}
 
+	logger.Debug("starting-unpack", lager.Data{"path": unpackCmd.Path, "args": unpackCmd.Args})
 	if err := u.commandRunner.Start(unpackCmd); err != nil {
 		return fmt.Errorf("starting unpack command: %s", err)
 	}

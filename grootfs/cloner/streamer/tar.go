@@ -32,9 +32,10 @@ func (tr *TarStreamer) Stream(logger lager.Logger, source string) (io.ReadCloser
 		return nil, 0, fmt.Errorf("creating pipe: %s", err)
 	}
 
+	logger.Debug("starting-tar", lager.Data{"path": tarCmd.Path, "args": tarCmd.Args})
 	if err := tarCmd.Start(); err != nil {
 		return nil, 0, fmt.Errorf("starting command: %s", err)
 	}
 
-	return NewCallbackReader(nil, tarCmd.Wait, stdoutPipe), 0, nil
+	return NewCallbackReader(logger, tarCmd.Wait, stdoutPipe), 0, nil
 }

@@ -26,31 +26,41 @@ func NewFetcher(cachePath string) *Fetcher {
 }
 
 func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error) {
+	logger = logger.Session("layers-digest", lager.Data{"imageURL": imageURL})
+	logger.Debug("start")
+	logger.Debug("end")
+
+	logger.Debug("parsing-reference")
 	ref, err := docker.ParseReference("/" + imageURL.Path)
 	if err != nil {
 		return nil, fmt.Errorf("parsing url failed: %s", err)
 	}
 
+	logger.Debug("parsing-image-metadata")
 	img, err := ref.NewImage("", true)
 	if err != nil {
 		return nil, fmt.Errorf("creating an image: %s", err)
 	}
 
+	logger.Debug("parsing-image-source")
 	imgSrc, err := ref.NewImageSource("", true)
 	if err != nil {
 		return nil, fmt.Errorf("creating image source: %s", err)
 	}
 
+	logger.Debug("inspecting-image")
 	inspectInfo, err := img.Inspect()
 	if err != nil {
 		return nil, fmt.Errorf("inspecting image: %s", err)
 	}
 
+	logger.Debug("fetching-image-manifest")
 	imgManifest, err := f.parsedManifest(img)
 	if err != nil {
 		return nil, fmt.Errorf("parsing manifest: %s", err)
 	}
 
+	logger.Debug("fetching-image-config")
 	imgConfig, err := f.parsedConfig(imgSrc, imgManifest)
 	if err != nil {
 		return nil, fmt.Errorf("parsing config: %s", err)
@@ -60,11 +70,17 @@ func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner
 }
 
 func (f *Fetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Streamer, error) {
+	logger = logger.Session("streaming", lager.Data{"imageURL": imageURL})
+	logger.Debug("start")
+	defer logger.Debug("end")
+
+	logger.Debug("parsing-reference")
 	ref, err := docker.ParseReference("/" + imageURL.Path)
 	if err != nil {
 		return nil, fmt.Errorf("parsing url failed: %s", err)
 	}
 
+	logger.Debug("parsing-image-source")
 	imgSrc, err := ref.NewImageSource("", true)
 	if err != nil {
 		return nil, fmt.Errorf("creating image source: %s", err)

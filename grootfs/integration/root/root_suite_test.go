@@ -63,10 +63,6 @@ func TestRoot(t *testing.T) {
 		Expect(os.Chown(StorePath, int(GrootUID), int(GrootGID))).To(Succeed())
 	})
 
-	AfterEach(func() {
-		Expect(os.RemoveAll(StorePath)).To(Succeed())
-	})
-
 	RunSpecs(t, "GrootFS Integration Suite - Running as root")
 }
 

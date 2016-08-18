@@ -31,7 +31,7 @@ var _ = Describe("grootfs global flags", func() {
 				Eventually(sess).Should(gexec.Exit(1))
 
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess.Err).Should(gbytes.Say(`"data":{"error":"id was not specified"}`))
+				Eventually(sess.Err).Should(gbytes.Say(`"error":"id was not specified"`))
 			})
 		})
 
