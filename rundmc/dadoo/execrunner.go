@@ -110,7 +110,8 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 	fd3w.Close()
 	logw.Close()
 
-	if err := process.start(pio, tty); err != nil {
+	stdin, stdout, stderr, err := process.openPipes(pio)
+	if err != nil {
 		return nil, err
 	}
 
@@ -118,6 +119,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 
 	runcExitStatus := make([]byte, 1)
 	fd3r.Read(runcExitStatus)
+	process.streamData(pio, stdin, stdout, stderr)
 
 	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
 
@@ -135,7 +137,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	processPath := filepath.Join(processesPath, processID)
 	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
-	if err := process.start(io, &garden.TTYSpec{}); err != nil {
+	if err := process.start(io); err != nil {
 		return nil, err
 	}
 
@@ -205,8 +207,60 @@ func (p *process) mkfifos() error {
 	return nil
 }
 
-func (p process) start(pio garden.ProcessIO, ttySize *garden.TTYSpec) error {
-	stdin, err := os.OpenFile(p.stdin, os.O_WRONLY, 0600)
+func (p process) openPipes(pio garden.ProcessIO) (stdin, stdout, stderr *os.File, err error) {
+	stdin, err = os.OpenFile(p.stdin, os.O_RDWR, 0600)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	stdout, err = os.OpenFile(p.stdout, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err = syscall.SetNonblock(int(stdout.Fd()), false); err != nil {
+		return nil, nil, nil, err
+	}
+
+	stderr, err = os.OpenFile(p.stderr, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	if err = syscall.SetNonblock(int(stderr.Fd()), false); err != nil {
+		return nil, nil, nil, err
+	}
+
+	return stdin, stdout, stderr, nil
+}
+
+func (p process) streamData(pio garden.ProcessIO, stdin, stdout, stderr *os.File) {
+	if pio.Stdin != nil {
+		go func() {
+			io.Copy(stdin, pio.Stdin)
+			stdin.Close()
+		}()
+	}
+
+	if pio.Stdout != nil {
+		p.ioWg.Add(1)
+		go func() {
+			io.Copy(pio.Stdout, stdout)
+			stdout.Close()
+			p.ioWg.Done()
+		}()
+	}
+
+	if pio.Stderr != nil {
+		p.ioWg.Add(1)
+		go func() {
+			io.Copy(pio.Stderr, stderr)
+			stderr.Close()
+			p.ioWg.Done()
+		}()
+	}
+}
+
+func (p process) start(pio garden.ProcessIO) error {
+	stdin, err := os.OpenFile(p.stdin, os.O_RDWR, 0600)
 	if err != nil {
 		return err
 	}
@@ -218,8 +272,12 @@ func (p process) start(pio garden.ProcessIO, ttySize *garden.TTYSpec) error {
 		}()
 	}
 
-	stdout, err := os.Open(p.stdout)
+	stdout, err := os.OpenFile(p.stdout, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
 	if err != nil {
+		return err
+	}
+
+	if err := syscall.SetNonblock(int(stdout.Fd()), false); err != nil {
 		return err
 	}
 
@@ -232,8 +290,12 @@ func (p process) start(pio garden.ProcessIO, ttySize *garden.TTYSpec) error {
 		}()
 	}
 
-	stderr, err := os.Open(p.stderr)
+	stderr, err := os.OpenFile(p.stderr, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
 	if err != nil {
+		return err
+	}
+
+	if err := syscall.SetNonblock(int(stderr.Fd()), false); err != nil {
 		return err
 	}
 

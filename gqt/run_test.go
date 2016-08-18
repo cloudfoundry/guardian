@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"code.cloudfoundry.org/garden"
@@ -413,6 +414,106 @@ var _ = Describe("Run", func() {
 			close(done)
 		}, 20.0)
 	})
+})
+
+var _ = Describe("Attach", func() {
+	var (
+		client    *runner.RunningGarden
+		container garden.Container
+		processID string
+		args      []string
+	)
+
+	BeforeEach(func() {
+		// we need to pass --properties-path to prevent guardian from deleting containers
+		// after restarting the server
+		propertiesDir, err := ioutil.TempDir("", "props")
+		Expect(err).NotTo(HaveOccurred())
+		args = []string{"--properties-path", path.Join(propertiesDir, "props.json")}
+
+		client = startGarden(args...)
+	})
+
+	AfterEach(func() {
+		Expect(client.DestroyAndStop()).To(Succeed())
+	})
+
+	Context("when the process exits after calling .Attach", func() {
+		BeforeEach(func() {
+			var err error
+			container, err = client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			process, err := container.Run(garden.ProcessSpec{
+				Path: "sh",
+				Args: []string{"-c", "sleep 10; exit 13"},
+			}, garden.ProcessIO{})
+
+			Expect(err).NotTo(HaveOccurred())
+			processID = process.ID()
+
+			restartGarden(client, args...)
+		})
+
+		It("returns the exit code", func() {
+			attachedProcess, err := container.Attach(processID, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := attachedProcess.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(13))
+		})
+	})
+
+	Context("when the process exits before calling .Attach", func() {
+		BeforeEach(func() {
+			var err error
+			container, err = client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			process, err := container.Run(garden.ProcessSpec{
+				Path: "sh",
+				Args: []string{"-c", `
+					while true; do
+						echo 'sleeping'
+					  sleep 1
+					done
+				`},
+			}, garden.ProcessIO{})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			processID = process.ID()
+			hostProcessDir := filepath.Join(client.DepotDir, container.Handle(), "processes", processID)
+			hostPidFilePath := filepath.Join(hostProcessDir, "pidfile")
+
+			// Finds the pid on the host.
+			pidBytes, err := ioutil.ReadFile(hostPidFilePath)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(client.Stop()).To(Succeed())
+
+			pid, err := strconv.Atoi(string(pidBytes))
+			Expect(err).NotTo(HaveOccurred())
+
+			hostProcess, err := os.FindProcess(pid)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(hostProcess.Kill()).To(Succeed())
+
+			client = startGarden(args...)
+		})
+
+		It("returns the exit code (and doesn't hang!)", func() {
+			attachedProcess, err := container.Attach(processID, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := attachedProcess.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(137)) // 137 = exit code when a process is KILLed
+		})
+	})
+
 })
 
 func should(matchers ...types.GomegaMatcher) func(actual interface{}) {
