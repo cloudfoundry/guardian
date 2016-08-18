@@ -25,16 +25,13 @@ _Because grootfs depends on Linux kernel features, you can only build it from or
 to a Linux machine._
 
 ```
-go get code.cloudfoundry.org/grootfs
-```
-
-or
-
-```
 git clone code.cloudfoundry.org/grootfs $GOPATH/src/code.cloudfoundry.or/grootfs
 cd $GOPATH/src/code.cloudfoundry.or/grootfs
+git submodule update --init --recursive
 make
 ```
+
+_Using `go get code.cloudfoundry.org/grootfs` is discouraged because of the dependecies versions, it might not work_
 
 ## Instructions
 
@@ -42,21 +39,34 @@ make
 
 * Grootfs requires btrfs to be enabled in the kernel, it also makes use of the brtfs-progs
 (btrfs-tools package on ubuntu) for layering images.
-* All grootfs operations happen inside the `--store` path given, it must be inside
-a mounted btrfs volume.
+
+  ```
+  apt-get install btrfs-tools
+  modprobe btrfs # if not loaded
+  ```
+
+* By default all operations will happen in `/var/lib/grootfs` folder, you can
+change it by passing the `--store` flag to the binary. The store folder is expected
+to be inside a mounted btrfs volume. If you don't have one, you can create a loop mounted
+btrfs as follows:
+
+  ```
+  # create a btrfs block device
+  truncate -s 1G /btrfs_volume
+  mkfs.btrfs /btrfs_volume
+
+  # mount the block device
+  mkdir -p /mnt/btrfs
+  mount -t btrfs -o user_subvol_rm_allowed /btrfs_volume /mnt/btrfs
+  # you might need to chmod/chown the mount point if you'll not run grootfs as root
+  ```
+
 * For user/group id mapping, you'll also require newuidmap and newgidmap to be
 installed (uidmap package on ubuntu)
 
-```
-apt-get install uidmap
-apt-get install btrfs-tools
-modprobe btrfs # if not loaded
-
-truncate -s 1G /btrfs_volume
-mkdir -p /mnt/btrfs
-mount -t btrfs -o user_subvol_rm_allowed /btrfs_volume /mnt/btrfs
-# you might need to chmod/chown the mount point if you'll not run grootfs as root
-```
+  ```
+  apt-get install uidmap
+  ```
 
 
 ### Creating a bundle
@@ -91,7 +101,7 @@ grootfs --store /mnt/btrfs create \
 ```
 
 Some important notes:
-* If you're not running as root, you'll always need to map root (`0:--your-user-id:1`)
+* If you're not running as root, and you want to use mappings, you'll always need to map root too (`0:--your-user-id:1`)
 * Your id mappings can't overlap (e.g. 1:100000:65000 and 100:1000:200)
 * You need to have these [mappings allowed](http://man7.org/linux/man-pages/man5/subuid.5.html) in the `/etc/subuid` and `/etc/subgid` files
 
@@ -110,13 +120,13 @@ By default grootfs will not emit any logging, you can set the log level with the
 `--log-level` flag:
 
 ```
-grootfs --store /mnt/btrfs --log-level debug create ...`
+grootfs --log-level debug create ...
 ```
 
 It also supports redirecting the logs to a log file:
 
 ```
-grootfs --store /mnt/btrfs --log-level debug --log-file /var/log/grootfs.log create ...`
+grootfs --log-level debug --log-file /var/log/grootfs.log create ...
 ```
 
 ## Links
