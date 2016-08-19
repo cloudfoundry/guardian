@@ -32,8 +32,8 @@ func (d *Btrfs) Path(logger lager.Logger, id string) (string, error) {
 
 func (d *Btrfs) Create(logger lager.Logger, parentID, id string) (string, error) {
 	logger = logger.Session("btrfs-creating-volume", lager.Data{"parentID": parentID, "id": id})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	var cmd *exec.Cmd
 	volPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
@@ -57,8 +57,8 @@ func (d *Btrfs) Create(logger lager.Logger, parentID, id string) (string, error)
 
 func (d *Btrfs) Snapshot(logger lager.Logger, id, targetPath string) error {
 	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"id": id, "targetPath": targetPath})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	volPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
 	cmd := exec.Command("btrfs", "subvolume", "snapshot", volPath, targetPath)

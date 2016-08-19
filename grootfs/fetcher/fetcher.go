@@ -27,8 +27,8 @@ func NewFetcher(cachePath string) *Fetcher {
 
 func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error) {
 	logger = logger.Session("layers-digest", lager.Data{"imageURL": imageURL})
-	logger.Debug("start")
-	logger.Debug("end")
+	logger.Info("start")
+	logger.Info("end")
 
 	logger.Debug("parsing-reference")
 	refString := "/"
@@ -77,8 +77,8 @@ func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner
 
 func (f *Fetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Streamer, error) {
 	logger = logger.Session("streaming", lager.Data{"imageURL": imageURL})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	logger.Debug("parsing-reference")
 	ref, err := docker.ParseReference("/" + imageURL.Path)

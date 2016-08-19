@@ -80,8 +80,8 @@ func NewNamespacedCmdUnpacker(commandRunner command_runner.CommandRunner, idMapp
 
 func (u *NamespacedCmdUnpacker) Unpack(logger lager.Logger, spec cloner.UnpackSpec) error {
 	logger = logger.Session("unpacked-with-namespaced-cmd", lager.Data{"spec": spec})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	ctrlPipeR, ctrlPipeW, err := os.Pipe()
 	if err != nil {

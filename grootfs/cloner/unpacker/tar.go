@@ -21,8 +21,8 @@ func NewTarUnpacker() *TarUnpacker {
 
 func (u *TarUnpacker) Unpack(logger lager.Logger, spec cloner.UnpackSpec) error {
 	logger = logger.Session("unpacking-with-tar", lager.Data{"spec": spec})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	if _, err := os.Stat(spec.TargetPath); err != nil {
 		if err := os.Mkdir(spec.TargetPath, 0755); err != nil {

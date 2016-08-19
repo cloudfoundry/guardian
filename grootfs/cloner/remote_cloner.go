@@ -24,8 +24,8 @@ func NewRemoteCloner(fetcher Fetcher, unpacker Unpacker, volumizer VolumeDriver)
 
 func (c *RemoteCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 	logger = logger.Session("remote-cloning", lager.Data{"spec": spec})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	imageURL, err := url.Parse(spec.Image)
 	if err != nil {

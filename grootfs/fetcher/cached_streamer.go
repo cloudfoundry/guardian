@@ -26,8 +26,8 @@ func NewCachedStreamer(cachePath string, streamer cloner.Streamer) *CachedStream
 
 func (s *CachedStreamer) Stream(logger lager.Logger, digest string) (io.ReadCloser, int64, error) {
 	logger = logger.Session("cached-streaming", lager.Data{"digest": digest})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	logger.Debug("lookup-cache")
 	if !s.cachedLookup(digest) {
@@ -50,8 +50,8 @@ func (s *CachedStreamer) Stream(logger lager.Logger, digest string) (io.ReadClos
 
 func (s *CachedStreamer) cache(logger lager.Logger, digest string, reader io.ReadCloser) error {
 	logger = logger.Session("creating-cache", lager.Data{"digest": digest})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	writer, err := os.Create(s.cachedBlobPath(digest))
 	if err != nil {

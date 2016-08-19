@@ -21,8 +21,8 @@ func NewBundler(path string) *Bundler {
 
 func (g *Bundler) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error) {
 	logger = logger.Session("making-bundle", lager.Data{"storePath": g.path, "id": id})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	bundle := NewBundle(path.Join(g.path, BUNDLES_DIR_NAME, id))
 	if _, err := os.Stat(bundle.Path()); err == nil {
@@ -38,8 +38,8 @@ func (g *Bundler) MakeBundle(logger lager.Logger, id string) (groot.Bundle, erro
 
 func (g *Bundler) DeleteBundle(logger lager.Logger, id string) error {
 	logger = logger.Session("delete-bundle", lager.Data{"storePath": g.path, "id": id})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	bundle := NewBundle(path.Join(g.path, BUNDLES_DIR_NAME, id))
 	if _, err := os.Stat(bundle.Path()); err != nil {

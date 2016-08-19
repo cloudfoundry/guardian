@@ -21,8 +21,8 @@ func NewLocalCloner(streamer Streamer, unpacker Unpacker) *LocalCloner {
 
 func (c *LocalCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 	logger = logger.Session("local-cloning", lager.Data{"spec": spec})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	stream, _, err := c.streamer.Stream(logger, spec.Image)
 	if err != nil {

@@ -33,8 +33,8 @@ func (im *CommandIDMapper) MapGIDs(logger lager.Logger, pid int, mappings []groo
 }
 
 func (im *CommandIDMapper) execute(logger lager.Logger, command string, pid int, mappings []groot.IDMappingSpec) error {
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	mappingArgs := append([]string{strconv.Itoa(pid)}, im.idMappingsToArgs(mappings)...)
 	mapCmd := exec.Command(command, mappingArgs...)

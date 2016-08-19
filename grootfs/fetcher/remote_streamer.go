@@ -24,8 +24,8 @@ func NewRemoteStreamer(imgSource types.ImageSource) *RemoteStreamer {
 func (s *RemoteStreamer) Stream(logger lager.Logger, digest string) (io.ReadCloser, int64, error) {
 	logrus.SetOutput(os.Stderr)
 	logger = logger.Session("layer-streaming", lager.Data{"digest": digest})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Info("start")
+	defer logger.Info("end")
 
 	stream, size, err := s.imgSource.GetBlob(digest)
 	if err != nil {
