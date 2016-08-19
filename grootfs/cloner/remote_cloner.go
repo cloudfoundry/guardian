@@ -102,9 +102,9 @@ func (c *RemoteCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 
 	lastVolumeID := wrapVolumeID(spec, digests[len(digests)-1].ChainID)
 	if err := c.volumeDriver.Snapshot(logger, lastVolumeID, spec.RootFSPath); err != nil {
-		return fmt.Errorf("snapshoting the image to path `%s`: %s", spec.RootFSPath, err)
+		return fmt.Errorf("snapshotting the image to path `%s`: %s", spec.RootFSPath, err)
 	}
-	logger.Debug("last-volume-got-snapshoted", lager.Data{
+	logger.Debug("last-volume-got-snapshotted", lager.Data{
 		"lastVolumeID": lastVolumeID,
 		"rootFSPath":   spec.RootFSPath,
 	})

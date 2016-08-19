@@ -69,13 +69,13 @@ var CreateCommand = cli.Command{
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedCmdUnpacker(runner, idMapper, "unpack")
 
 		tarStreamer := streamerpkg.NewTarStreamer()
+		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
 
-		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker)
+		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker, btrfsVolumeDriver)
 
 		cachePath := filepath.Join(storePath, "cache", "blobs")
 		remoteFetcher := fetcherpkg.NewFetcher(cachePath)
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
 		remoteCloner := clonerpkg.NewRemoteCloner(remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
 
 		groot := grootpkg.IamGroot(bundler, localCloner, remoteCloner)

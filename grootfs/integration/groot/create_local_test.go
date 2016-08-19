@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/integration"
 
@@ -30,6 +31,20 @@ var _ = Describe("Create with local images", func() {
 		fooContents, err := ioutil.ReadFile(bundleContentPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(fooContents)).To(Equal("hello-world"))
+	})
+
+	Describe("unpacked volume caching", func() {
+		It("caches the unpacked image in a subvolume with snapshots", func() {
+			integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id")
+
+			volumeID := integration.ImagePathToVolumeID(imagePath)
+			layerSnapshotPath := filepath.Join(StorePath, "volumes", volumeID)
+			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
+
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id-2")
+			Expect(path.Join(bundle.RootFSPath(), "foo")).To(BeARegularFile())
+			Expect(path.Join(bundle.RootFSPath(), "injected-file")).To(BeARegularFile())
+		})
 	})
 
 	Context("when local directory does not exist", func() {

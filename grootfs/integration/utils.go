@@ -1,7 +1,10 @@
 package integration
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -69,4 +72,12 @@ func FindGID(group string) uint32 {
 	Expect(err).NotTo(HaveOccurred())
 
 	return uint32(i)
+}
+
+func ImagePathToVolumeID(imagePath string) string {
+	stat, err := os.Stat(imagePath)
+	Expect(err).ToNot(HaveOccurred())
+
+	imagePathSha := sha256.Sum256([]byte(imagePath))
+	return fmt.Sprintf("%s-%d", hex.EncodeToString(imagePathSha[:32]), stat.ModTime().Unix())
 }
