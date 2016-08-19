@@ -212,24 +212,27 @@ func (p process) openPipes(pio garden.ProcessIO) (stdin, stdout, stderr *os.File
 	if err != nil {
 		return nil, nil, nil, err
 	}
-
-	stdout, err = os.OpenFile(p.stdout, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+	stdout, err = openNonBlocking(p.stdout)
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	if err = syscall.SetNonblock(int(stdout.Fd()), false); err != nil {
-		return nil, nil, nil, err
-	}
-
-	stderr, err = os.OpenFile(p.stderr, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+	stderr, err = openNonBlocking(p.stderr)
 	if err != nil {
-		return nil, nil, nil, err
-	}
-	if err = syscall.SetNonblock(int(stderr.Fd()), false); err != nil {
 		return nil, nil, nil, err
 	}
 
 	return stdin, stdout, stderr, nil
+}
+
+func openNonBlocking(fileName string) (*os.File, error) {
+	file, err := os.OpenFile(fileName, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+	if err != nil {
+		return nil, err
+	}
+	if err = syscall.SetNonblock(int(file.Fd()), false); err != nil {
+		return nil, err
+	}
+	return file, nil
 }
 
 func (p process) streamData(pio garden.ProcessIO, stdin, stdout, stderr *os.File) {
@@ -260,69 +263,23 @@ func (p process) streamData(pio garden.ProcessIO, stdin, stdout, stderr *os.File
 }
 
 func (p process) start(pio garden.ProcessIO) error {
-	stdin, err := os.OpenFile(p.stdin, os.O_RDWR, 0600)
+	stdin, stdout, stderr, err := p.openPipes(pio)
 	if err != nil {
 		return err
 	}
 
-	if pio.Stdin != nil {
-		go func() {
-			io.Copy(stdin, pio.Stdin)
-			stdin.Close()
-		}()
-	}
-
-	stdout, err := os.OpenFile(p.stdout, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
-	if err != nil {
-		return err
-	}
-
-	if err := syscall.SetNonblock(int(stdout.Fd()), false); err != nil {
-		return err
-	}
-
-	if pio.Stdout != nil {
-		p.ioWg.Add(1)
-		go func() {
-			io.Copy(pio.Stdout, stdout)
-			stdout.Close()
-			p.ioWg.Done()
-		}()
-	}
-
-	stderr, err := os.OpenFile(p.stderr, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
-	if err != nil {
-		return err
-	}
-
-	if err := syscall.SetNonblock(int(stderr.Fd()), false); err != nil {
-		return err
-	}
-
-	if pio.Stderr != nil {
-		p.ioWg.Add(1)
-		go func() {
-			io.Copy(pio.Stderr, stderr)
-			stderr.Close()
-			p.ioWg.Done()
-		}()
-	}
+	p.streamData(pio, stdin, stdout, stderr)
 
 	return nil
 }
 
 func (p process) Wait() (int, error) {
 	// open non-blocking incase exit pipe is already closed
-	exit, err := os.OpenFile(p.exit, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
-	defer exit.Close()
+	exit, err := openNonBlocking(p.exit)
 	if err != nil {
 		return 1, err
 	}
-
-	// go back to blocking mode so Read below blocks
-	if err := syscall.SetNonblock(int(exit.Fd()), false); err != nil {
-		return 1, err
-	}
+	defer exit.Close()
 
 	buf := make([]byte, 1)
 	exit.Read(buf)
