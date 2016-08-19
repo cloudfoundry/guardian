@@ -31,19 +31,25 @@ func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner
 	logger.Debug("end")
 
 	logger.Debug("parsing-reference")
-	ref, err := docker.ParseReference("/" + imageURL.Path)
+	refString := "/"
+	if imageURL.Host != "" {
+		refString += "/" + imageURL.Host
+	}
+	refString += imageURL.Path
+
+	ref, err := docker.ParseReference(refString)
 	if err != nil {
 		return nil, fmt.Errorf("parsing url failed: %s", err)
 	}
 
 	logger.Debug("parsing-image-metadata")
-	img, err := ref.NewImage("", true)
+	img, err := ref.NewImage("", false)
 	if err != nil {
 		return nil, fmt.Errorf("creating an image: %s", err)
 	}
 
 	logger.Debug("parsing-image-source")
-	imgSrc, err := ref.NewImageSource("", true)
+	imgSrc, err := ref.NewImageSource("", false)
 	if err != nil {
 		return nil, fmt.Errorf("creating image source: %s", err)
 	}
