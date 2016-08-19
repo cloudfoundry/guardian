@@ -206,10 +206,6 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		return nil, err
 	}
 
-	if err := g.VolumeCreator.GC(log); err != nil {
-		log.Error("graph-cleanup-failed", err)
-	}
-
 	var rootFSPath string
 	var env []string
 

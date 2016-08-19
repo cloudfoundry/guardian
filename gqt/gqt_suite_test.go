@@ -23,7 +23,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, inspectorGardenBin, testNetPluginBin string
+var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, grootfsBin, inspectorGardenBin, testNetPluginBin string
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -53,6 +53,9 @@ func TestGqt(t *testing.T) {
 			bins["test_net_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/networkplugin")
 			Expect(err).NotTo(HaveOccurred())
 
+			bins["test_grootfs_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_grootfs")
+			Expect(err).NotTo(HaveOccurred())
+
 			cmd := exec.Command("make")
 			cmd.Dir = "../rundmc/nstar"
 			cmd.Stdout = GinkgoWriter
@@ -73,6 +76,7 @@ func TestGqt(t *testing.T) {
 		gardenBin = bins["garden_bin_path"]
 		nstarBin = bins["nstar_bin_path"]
 		dadooBin = bins["dadoo_bin_bin_bin"]
+		grootfsBin = bins["test_grootfs_bin_path"]
 		initBin = bins["init_bin_path"]
 		inspectorGardenBin = bins["inspector-garden_bin_path"]
 		testNetPluginBin = bins["test_net_plugin_bin_path"]
@@ -97,7 +101,7 @@ func TestGqt(t *testing.T) {
 }
 
 func startGarden(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, true, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, grootfsBin, true, argv...)
 }
 
 func restartGarden(client *runner.RunningGarden, argv ...string) {
@@ -107,5 +111,5 @@ func restartGarden(client *runner.RunningGarden, argv ...string) {
 }
 
 func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, false, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, grootfsBin, false, argv...)
 }

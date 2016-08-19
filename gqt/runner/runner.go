@@ -73,7 +73,7 @@ func init() {
 	}
 }
 
-func NewGardenRunner(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootfs bool, argv ...string) GardenRunner {
+func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin string, supplyDefaultRootfs bool, argv ...string) GardenRunner {
 	r := GardenRunner{}
 
 	r.Network = "unix"
@@ -89,7 +89,7 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootf
 
 	MustMountTmpfs(r.GraphPath)
 
-	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, TarBin, supplyDefaultRootfs, argv...)
+	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, TarBin, grootfsBin, supplyDefaultRootfs, argv...)
 	r.Cmd.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", r.TmpDir))
 
 	for i, arg := range r.Cmd.Args {
@@ -112,8 +112,8 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootf
 	return r
 }
 
-func Start(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootfs bool, argv ...string) *RunningGarden {
-	runner := NewGardenRunner(bin, initBin, nstarBin, dadooBin, supplyDefaultRootfs, argv...)
+func Start(bin, initBin, nstarBin, dadooBin, grootfsBin string, supplyDefaultRootfs bool, argv ...string) *RunningGarden {
+	runner := NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, supplyDefaultRootfs, argv...)
 
 	r := &RunningGarden{
 		runner:   runner,
@@ -177,7 +177,7 @@ func (r *RunningGarden) Stop() error {
 	return err
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dadooBin, tarBin string, supplyDefaultRootfs bool, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dadooBin, tarBin, grootfsBin string, supplyDefaultRootfs bool, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -222,6 +222,7 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dad
 	gardenArgs = appendDefaultFlag(gardenArgs, "--dadoo-bin", dadooBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--nstar-bin", nstarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", tarBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--oci-image-bin", grootfsBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--port-pool-start", fmt.Sprintf("%d", GinkgoParallelNode()*10000))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--debug-bind-ip", "0.0.0.0")
 	gardenArgs = appendDefaultFlag(gardenArgs, "--debug-bind-port", fmt.Sprintf("%d", 8080+ginkgo.GinkgoParallelNode()))
