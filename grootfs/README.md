@@ -9,7 +9,7 @@
 [by](https://creativecommons.org/licenses/by-nc-nd/3.0/) [chattanooga-choochoo](http://chattanooga-choochoo.deviantart.com/art/Groot-584361210)
 
 GrootFS is a [Cloud Foundry](https://www.cloudfoundry.org) component to satisfy
-[garden-runc's](https://github.com/cloudfoundry/garden-runc-release)
+[garden-runc](https://github.com/cloudfoundry/garden-runc-release)'s
 requirements for handling container images.
 
 It is currently under development.
@@ -32,7 +32,7 @@ git submodule update --init --recursive
 make
 ```
 
-_Using `go get code.cloudfoundry.org/grootfs` is discouraged because of the dependecies versions, it might not work_
+_Using `go get code.cloudfoundry.org/grootfs` is discouraged because it might not work due to our versioned dependencies._
 
 ## Instructions
 
@@ -59,7 +59,7 @@ btrfs as follows:
   # mount the block device
   sudo mkdir -p /mnt/btrfs
   sudo mount -t btrfs -o user_subvol_rm_allowed ~/btrfs_volume /mnt/btrfs
-  # you might need to chmod/chown the mount point if you'll not run grootfs as root
+  # you might need to chmod/chown the mount point if you don't want to run grootfs as root
   ```
 
 * For user/group id mapping, you'll also require newuidmap and newgidmap to be
@@ -76,7 +76,7 @@ installed (uidmap package on ubuntu)
 grootfs --store /mnt/btrfs create --image docker:///ubuntu:latest my-image-id
 ```
 
-It also supports local folders as source of the image:
+It also supports local folders as an image source:
 
 ```
 grootfs --store /mnt/btrfs create --image /my-folder my-image-id
@@ -87,7 +87,7 @@ contents of `--image`.
 
 #### User/Group ID Mapping
 
-You might want to apply some user and group id mappings to the content of the
+You might want to apply some user and group id mappings to the contents of the
 `rootfs` folder. Grootfs supports the `--uid-mapping` and `--gid-mapping` arguments.
 Suppose you are user with uid/gid 1000:
 
@@ -102,7 +102,7 @@ grootfs --store /mnt/btrfs create \
 ```
 
 Some important notes:
-* If you're not running as root, and you want to use mappings, you'll always need to map root too (`0:--your-user-id:1`)
+* If you're not running as root, and you want to use mappings, you'll also need to map root (`0:--your-user-id:1`)
 * Your id mappings can't overlap (e.g. 1:100000:65000 and 100:1000:200)
 * You need to have these [mappings allowed](http://man7.org/linux/man-pages/man5/subuid.5.html) in the `/etc/subuid` and `/etc/subgid` files
 
