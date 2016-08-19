@@ -25,6 +25,9 @@
 [submodule "vendor/github.com/docker/libtrust"]
 	path = vendor/github.com/docker/libtrust
 	url = https://github.com/docker/libtrust
+[submodule "vendor/github.com/golang/protobuf"]
+	path = vendor/github.com/golang/protobuf
+	url = https://github.com/golang/protobuf
 [submodule "vendor/github.com/gorilla/context"]
 	path = vendor/github.com/gorilla/context
 	url = https://github.com/gorilla/context

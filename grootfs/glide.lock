@@ -1,5 +1,5 @@
-hash: a450d59d079c8cd2c600cda38431a8a730cb941837c7e0beb53bdb4317f7333d
-updated: 2016-08-17T16:58:58.599514138+01:00
+hash: e6c9e1af5db905a215a178989e1b7f73d542b543a4e6777c0319c0fe2fea1514
+updated: 2016-08-19T10:23:21.529624715+01:00
 imports:
 - name: code.cloudfoundry.org/lager
   version: 62951a8009ab331bb21dc418074fa54e66eb9b6a
@@ -11,7 +11,7 @@ imports:
   - command_runner
   - command_runner/linux_command_runner
 - name: github.com/containers/image
-  version: 32b7b502443dc09000698169c7ce877096a2c1d2
+  version: 8de80f2af39a7eb57eee4055530412d1bb1545ef
   subpackages:
   - docker
   - types
@@ -19,7 +19,7 @@ imports:
   - image
   - manifest
 - name: github.com/docker/distribution
-  version: 9000745401d186602c2ae63ffca12ed4233a968b
+  version: 010e063270be37cfa8547ccfb9717e5d874c88a8
   subpackages:
   - digest
   - reference
@@ -50,11 +50,12 @@ imports:
   - pkg/random
   - pkg/plugins/transport
 - name: github.com/docker/engine-api
-  version: fc564829f64e3a820d7b896611ede92c8744d752
+  version: c9fd33c91008b9c558a6ed1cb11a68dbe4db0493
   subpackages:
   - types/container
   - types/versions
   - types/blkiodev
+  - types/mount
   - types/strslice
 - name: github.com/docker/go-connections
   version: 0bad1a3951398f88ef4dd75fdb42af374430be89
@@ -66,6 +67,10 @@ imports:
   version: eb879ae3e2b84e2a142af415b679ddeda47ec71c
 - name: github.com/docker/libtrust
   version: aabc10ec26b754e797f9028f4589c5b7bd90dc20
+- name: github.com/golang/protobuf
+  version: f592bd283e9ef86337a432eb50e592278c3d534d
+  subpackages:
+  - ptypes/any
 - name: github.com/gorilla/context
   version: 14f550f51af52180c2eefed15e5fd18d63c0a64a
 - name: github.com/gorilla/mux
@@ -73,7 +78,7 @@ imports:
 - name: github.com/Microsoft/go-winio
   version: ce2922f643c8fd76b46cadc7f404a06282678b34
 - name: github.com/onsi/ginkgo
-  version: 74c678d97c305753605c338c6c78c49ec104b5e7
+  version: 43e2af1f01ace55adbb6d7d0f30416476db1baae
   subpackages:
   - config
   - internal/codelocation
@@ -93,6 +98,7 @@ imports:
   version: 9ed8da19f2156b87a803a8fdf6d126f627a12db1
   subpackages:
   - gbytes
+  - ghttp
   - gexec
   - internal/assertion
   - internal/asyncassertion
@@ -106,11 +112,11 @@ imports:
   - matchers/support/goraph/node
   - matchers/support/goraph/util
 - name: github.com/opencontainers/runc
-  version: 0f764571384a3ff16c6fed25ace5b7c83f0f0379
+  version: 6df383c2f881fbdeb85060fd27d8bf61afedacd9
   subpackages:
   - libcontainer/user
 - name: github.com/Sirupsen/logrus
-  version: a283a10442df8dc09befd873fab202bf8a253d6a
+  version: 08a8a7c27e3d058a8989316a850daad1c10bf4ab
 - name: github.com/st3v/glager
   version: fe6a6cbb8868988ac5fe52ad2a2faffb008e9def
 - name: github.com/urfave/cli
