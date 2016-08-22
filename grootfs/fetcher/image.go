@@ -25,7 +25,7 @@ func (i *ContainersImage) Manifest(logger lager.Logger) (specsv1.Manifest, error
 
 	contents, _, err := img.Manifest()
 	if err != nil {
-		return specsv1.Manifest{}, err
+		return specsv1.Manifest{}, fmt.Errorf("fetching manifest: %s", err)
 	}
 
 	var manifest specsv1.Manifest

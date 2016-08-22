@@ -48,7 +48,7 @@ var _ = Describe("Image", func() {
 
 			It("retuns an error", func() {
 				_, err := image.Manifest(logger)
-				Expect(err).To(MatchError(ContainSubstring("manifest unknown")))
+				Expect(err).To(MatchError(ContainSubstring("fetching manifest")))
 			})
 		})
 	})
@@ -72,7 +72,7 @@ var _ = Describe("Image", func() {
 
 			It("retuns an error", func() {
 				_, err := image.Config(logger)
-				Expect(err).To(MatchError(ContainSubstring("manifest unknown")))
+				Expect(err).To(MatchError(ContainSubstring("fetching manifest")))
 			})
 		})
 	})
