@@ -14,25 +14,26 @@ import (
 
 var _ = Describe("I AM GROOT, the Orchestrator", func() {
 	var (
-		localCloner      *grootfakes.FakeCloner
-		remoteCloner     *grootfakes.FakeCloner
-		bundler          *grootfakes.FakeBundler
-		groot            *grootpkg.Groot
-		bundle           *grootfakes.FakeBundle
+		fakeBundle       *grootfakes.FakeBundle
+		fakeBundler      *grootfakes.FakeBundler
+		fakeLocalCloner  *grootfakes.FakeCloner
+		fakeRemoteCloner *grootfakes.FakeCloner
 		fakeVolumeDriver *grootfakes.FakeVolumeDriver
-		logger           lager.Logger
+
+		groot  *grootpkg.Groot
+		logger lager.Logger
 	)
 
 	BeforeEach(func() {
-		localCloner = new(grootfakes.FakeCloner)
-		remoteCloner = new(grootfakes.FakeCloner)
-		bundle = new(grootfakes.FakeBundle)
-		bundler = new(grootfakes.FakeBundler)
+		fakeBundle = new(grootfakes.FakeBundle)
+		fakeBundler = new(grootfakes.FakeBundler)
+		fakeLocalCloner = new(grootfakes.FakeCloner)
+		fakeRemoteCloner = new(grootfakes.FakeCloner)
 		fakeVolumeDriver = new(grootfakes.FakeVolumeDriver)
-		bundler.MakeBundleReturns(bundle, nil)
+		fakeBundler.MakeBundleReturns(fakeBundle, nil)
 
 		logger = lagertest.NewTestLogger("groot")
-		groot = grootpkg.IamGroot(bundler, localCloner, remoteCloner, fakeVolumeDriver)
+		groot = grootpkg.IamGroot(fakeBundler, fakeLocalCloner, fakeRemoteCloner, fakeVolumeDriver)
 	})
 
 	Describe("Create", func() {
@@ -42,13 +43,13 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(bundler.MakeBundleCallCount()).To(Equal(1))
-			_, id := bundler.MakeBundleArgsForCall(0)
+			Expect(fakeBundler.MakeBundleCallCount()).To(Equal(1))
+			_, id := fakeBundler.MakeBundleArgsForCall(0)
 			Expect(id).To(Equal("some-id"))
 		})
 
 		It("returns the bundle path", func() {
-			bundle.PathReturns("/path/to/bundle")
+			fakeBundle.PathReturns("/path/to/bundle")
 
 			bundle, err := groot.Create(logger, grootpkg.CreateSpec{})
 			Expect(err).NotTo(HaveOccurred())
@@ -57,7 +58,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 		Context("when creating the bundle fails", func() {
 			BeforeEach(func() {
-				bundler.MakeBundleReturns(nil, errors.New("Failed to make bundle"))
+				fakeBundler.MakeBundleReturns(nil, errors.New("Failed to make bundle"))
 			})
 
 			It("returns the error", func() {
@@ -68,8 +69,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 		Context("when using a local image", func() {
 			It("clones the image", func() {
-				bundle.PathReturns("/path/to/bundle")
-				bundle.RootFSPathReturns("/path/to/bundle/rootfs")
+				fakeBundle.PathReturns("/path/to/bundle")
+				fakeBundle.RootFSPathReturns("/path/to/bundle/rootfs")
 
 				uidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
 				gidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}
@@ -81,9 +82,9 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(localCloner.CloneCallCount()).To(Equal(1))
-				Expect(remoteCloner.CloneCallCount()).To(Equal(0))
-				_, cloneSpec := localCloner.CloneArgsForCall(0)
+				Expect(fakeLocalCloner.CloneCallCount()).To(Equal(1))
+				Expect(fakeRemoteCloner.CloneCallCount()).To(Equal(0))
+				_, cloneSpec := fakeLocalCloner.CloneArgsForCall(0)
 				Expect(cloneSpec.Image).To(Equal("/path/to/image"))
 				Expect(cloneSpec.RootFSPath).To(Equal("/path/to/bundle/rootfs"))
 				Expect(cloneSpec.UIDMappings).To(Equal(uidMappings))
@@ -92,7 +93,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 			Context("when cloning fails", func() {
 				BeforeEach(func() {
-					localCloner.CloneReturns(errors.New("Failed to clone"))
+					fakeLocalCloner.CloneReturns(errors.New("Failed to clone"))
 				})
 
 				It("returns the error", func() {
@@ -109,8 +110,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 					})
 					Expect(err).To(HaveOccurred())
 
-					Expect(bundler.DeleteBundleCallCount()).To(Equal(1))
-					_, id := bundler.DeleteBundleArgsForCall(0)
+					Expect(fakeBundler.DeleteBundleCallCount()).To(Equal(1))
+					_, id := fakeBundler.DeleteBundleArgsForCall(0)
 					Expect(id).To(Equal("some-id"))
 				})
 			})
@@ -118,8 +119,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 		Context("when using a remote image", func() {
 			It("clones the image", func() {
-				bundle.PathReturns("/path/to/bundle")
-				bundle.RootFSPathReturns("/path/to/bundle/rootfs")
+				fakeBundle.PathReturns("/path/to/bundle")
+				fakeBundle.RootFSPathReturns("/path/to/bundle/rootfs")
 
 				uidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
 				gidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}
@@ -131,9 +132,9 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(localCloner.CloneCallCount()).To(Equal(0))
-				Expect(remoteCloner.CloneCallCount()).To(Equal(1))
-				_, cloneSpec := remoteCloner.CloneArgsForCall(0)
+				Expect(fakeLocalCloner.CloneCallCount()).To(Equal(0))
+				Expect(fakeRemoteCloner.CloneCallCount()).To(Equal(1))
+				_, cloneSpec := fakeRemoteCloner.CloneArgsForCall(0)
 				Expect(cloneSpec.Image).To(Equal("docker:///path/to/image"))
 				Expect(cloneSpec.RootFSPath).To(Equal("/path/to/bundle/rootfs"))
 				Expect(cloneSpec.UIDMappings).To(Equal(uidMappings))
@@ -142,7 +143,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 			Context("when cloning fails", func() {
 				BeforeEach(func() {
-					remoteCloner.CloneReturns(errors.New("Failed to clone"))
+					fakeRemoteCloner.CloneReturns(errors.New("Failed to clone"))
 				})
 
 				It("returns the error", func() {
@@ -159,8 +160,8 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 					})
 					Expect(err).To(HaveOccurred())
 
-					Expect(bundler.DeleteBundleCallCount()).To(Equal(1))
-					_, id := bundler.DeleteBundleArgsForCall(0)
+					Expect(fakeBundler.DeleteBundleCallCount()).To(Equal(1))
+					_, id := fakeBundler.DeleteBundleArgsForCall(0)
 					Expect(id).To(Equal("some-id"))
 				})
 			})
@@ -180,30 +181,30 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(bundler.MakeBundleCallCount()).To(Equal(0))
+				Expect(fakeBundler.MakeBundleCallCount()).To(Equal(0))
 			})
 		})
 	})
 
 	Describe("Delete", func() {
 		BeforeEach(func() {
-			bundler.BundleReturns(bundle)
-			bundle.RootFSPathReturns("/path/to/bundle/rootfs")
+			fakeBundler.BundleReturns(fakeBundle)
+			fakeBundle.RootFSPathReturns("/path/to/bundle/rootfs")
 		})
 
 		It("deletes a bundle", func() {
 			Expect(groot.Delete(logger, "some-id")).To(Succeed())
 
-			_, bundleId := bundler.DeleteBundleArgsForCall(0)
+			_, bundleId := fakeBundler.DeleteBundleArgsForCall(0)
 			Expect(bundleId).To(Equal("some-id"))
 
 			_, bundlePath := fakeVolumeDriver.DestroyArgsForCall(0)
-			Expect(bundlePath).To(Equal(bundle.RootFSPath()))
+			Expect(bundlePath).To(Equal(fakeBundle.RootFSPath()))
 		})
 
 		Context("when deleting a bundle fails", func() {
 			BeforeEach(func() {
-				bundler.DeleteBundleReturns(errors.New("Boom!"))
+				fakeBundler.DeleteBundleReturns(errors.New("Boom!"))
 			})
 
 			It("returns an error", func() {
