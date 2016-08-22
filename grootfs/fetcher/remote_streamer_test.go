@@ -17,7 +17,6 @@ import (
 )
 
 var _ = Describe("Streamer", func() {
-
 	var (
 		tmpDir   string
 		logger   *lagertest.TestLogger

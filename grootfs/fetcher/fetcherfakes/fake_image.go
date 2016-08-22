@@ -2,102 +2,100 @@
 package fetcherfakes
 
 import (
-	"io"
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/lager"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type FakeImage struct {
-	LayersDigestStub        func(logger lager.Logger) ([]string, error)
-	layersDigestMutex       sync.RWMutex
-	layersDigestArgsForCall []struct {
+	ManifestStub        func(logger lager.Logger) (specsv1.Manifest, error)
+	manifestMutex       sync.RWMutex
+	manifestArgsForCall []struct {
 		logger lager.Logger
 	}
-	layersDigestReturns struct {
-		result1 []string
+	manifestReturns struct {
+		result1 specsv1.Manifest
 		result2 error
 	}
-	PullLayerStub        func(logger lager.Logger, layer string) (io.ReadCloser, error)
-	pullLayerMutex       sync.RWMutex
-	pullLayerArgsForCall []struct {
+	ConfigStub        func(logger lager.Logger) (specsv1.Image, error)
+	configMutex       sync.RWMutex
+	configArgsForCall []struct {
 		logger lager.Logger
-		layer  string
 	}
-	pullLayerReturns struct {
-		result1 io.ReadCloser
+	configReturns struct {
+		result1 specsv1.Image
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImage) LayersDigest(logger lager.Logger) ([]string, error) {
-	fake.layersDigestMutex.Lock()
-	fake.layersDigestArgsForCall = append(fake.layersDigestArgsForCall, struct {
+func (fake *FakeImage) Manifest(logger lager.Logger) (specsv1.Manifest, error) {
+	fake.manifestMutex.Lock()
+	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
-	fake.recordInvocation("LayersDigest", []interface{}{logger})
-	fake.layersDigestMutex.Unlock()
-	if fake.LayersDigestStub != nil {
-		return fake.LayersDigestStub(logger)
+	fake.recordInvocation("Manifest", []interface{}{logger})
+	fake.manifestMutex.Unlock()
+	if fake.ManifestStub != nil {
+		return fake.ManifestStub(logger)
 	} else {
-		return fake.layersDigestReturns.result1, fake.layersDigestReturns.result2
+		return fake.manifestReturns.result1, fake.manifestReturns.result2
 	}
 }
 
-func (fake *FakeImage) LayersDigestCallCount() int {
-	fake.layersDigestMutex.RLock()
-	defer fake.layersDigestMutex.RUnlock()
-	return len(fake.layersDigestArgsForCall)
+func (fake *FakeImage) ManifestCallCount() int {
+	fake.manifestMutex.RLock()
+	defer fake.manifestMutex.RUnlock()
+	return len(fake.manifestArgsForCall)
 }
 
-func (fake *FakeImage) LayersDigestArgsForCall(i int) lager.Logger {
-	fake.layersDigestMutex.RLock()
-	defer fake.layersDigestMutex.RUnlock()
-	return fake.layersDigestArgsForCall[i].logger
+func (fake *FakeImage) ManifestArgsForCall(i int) lager.Logger {
+	fake.manifestMutex.RLock()
+	defer fake.manifestMutex.RUnlock()
+	return fake.manifestArgsForCall[i].logger
 }
 
-func (fake *FakeImage) LayersDigestReturns(result1 []string, result2 error) {
-	fake.LayersDigestStub = nil
-	fake.layersDigestReturns = struct {
-		result1 []string
+func (fake *FakeImage) ManifestReturns(result1 specsv1.Manifest, result2 error) {
+	fake.ManifestStub = nil
+	fake.manifestReturns = struct {
+		result1 specsv1.Manifest
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeImage) PullLayer(logger lager.Logger, layer string) (io.ReadCloser, error) {
-	fake.pullLayerMutex.Lock()
-	fake.pullLayerArgsForCall = append(fake.pullLayerArgsForCall, struct {
+func (fake *FakeImage) Config(logger lager.Logger) (specsv1.Image, error) {
+	fake.configMutex.Lock()
+	fake.configArgsForCall = append(fake.configArgsForCall, struct {
 		logger lager.Logger
-		layer  string
-	}{logger, layer})
-	fake.recordInvocation("PullLayer", []interface{}{logger, layer})
-	fake.pullLayerMutex.Unlock()
-	if fake.PullLayerStub != nil {
-		return fake.PullLayerStub(logger, layer)
+	}{logger})
+	fake.recordInvocation("Config", []interface{}{logger})
+	fake.configMutex.Unlock()
+	if fake.ConfigStub != nil {
+		return fake.ConfigStub(logger)
 	} else {
-		return fake.pullLayerReturns.result1, fake.pullLayerReturns.result2
+		return fake.configReturns.result1, fake.configReturns.result2
 	}
 }
 
-func (fake *FakeImage) PullLayerCallCount() int {
-	fake.pullLayerMutex.RLock()
-	defer fake.pullLayerMutex.RUnlock()
-	return len(fake.pullLayerArgsForCall)
+func (fake *FakeImage) ConfigCallCount() int {
+	fake.configMutex.RLock()
+	defer fake.configMutex.RUnlock()
+	return len(fake.configArgsForCall)
 }
 
-func (fake *FakeImage) PullLayerArgsForCall(i int) (lager.Logger, string) {
-	fake.pullLayerMutex.RLock()
-	defer fake.pullLayerMutex.RUnlock()
-	return fake.pullLayerArgsForCall[i].logger, fake.pullLayerArgsForCall[i].layer
+func (fake *FakeImage) ConfigArgsForCall(i int) lager.Logger {
+	fake.configMutex.RLock()
+	defer fake.configMutex.RUnlock()
+	return fake.configArgsForCall[i].logger
 }
 
-func (fake *FakeImage) PullLayerReturns(result1 io.ReadCloser, result2 error) {
-	fake.PullLayerStub = nil
-	fake.pullLayerReturns = struct {
-		result1 io.ReadCloser
+func (fake *FakeImage) ConfigReturns(result1 specsv1.Image, result2 error) {
+	fake.ConfigStub = nil
+	fake.configReturns = struct {
+		result1 specsv1.Image
 		result2 error
 	}{result1, result2}
 }
@@ -105,10 +103,10 @@ func (fake *FakeImage) PullLayerReturns(result1 io.ReadCloser, result2 error) {
 func (fake *FakeImage) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.layersDigestMutex.RLock()
-	defer fake.layersDigestMutex.RUnlock()
-	fake.pullLayerMutex.RLock()
-	defer fake.pullLayerMutex.RUnlock()
+	fake.manifestMutex.RLock()
+	defer fake.manifestMutex.RUnlock()
+	fake.configMutex.RLock()
+	defer fake.configMutex.RUnlock()
 	return fake.invocations
 }
 

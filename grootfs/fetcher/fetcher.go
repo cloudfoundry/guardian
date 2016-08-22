@@ -3,7 +3,6 @@ package fetcher
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
@@ -13,15 +12,27 @@ import (
 
 	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/lager"
+
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-type Fetcher struct {
-	cachePath string
+//go:generate counterfeiter . Image
+type Image interface {
+	Manifest(logger lager.Logger) (specsv1.Manifest, error)
+	Config(logger lager.Logger) (specsv1.Image, error)
 }
 
-func NewFetcher(cachePath string) *Fetcher {
+type ImageProvider func(ref types.ImageReference) Image
+
+type Fetcher struct {
+	cachePath     string
+	imageProvider ImageProvider
+}
+
+func NewFetcher(cachePath string, imageProvider ImageProvider) *Fetcher {
 	return &Fetcher{
-		cachePath: cachePath,
+		cachePath:     cachePath,
+		imageProvider: imageProvider,
 	}
 }
 
@@ -42,37 +53,21 @@ func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner
 		return nil, fmt.Errorf("parsing url failed: %s", err)
 	}
 
-	logger.Debug("parsing-image-metadata")
-	img, err := ref.NewImage("", false)
-	if err != nil {
-		return nil, fmt.Errorf("creating an image: %s", err)
-	}
-
-	logger.Debug("parsing-image-source")
-	imgSrc, err := ref.NewImageSource("", false)
-	if err != nil {
-		return nil, fmt.Errorf("creating image source: %s", err)
-	}
-
-	logger.Debug("inspecting-image")
-	inspectInfo, err := img.Inspect()
-	if err != nil {
-		return nil, fmt.Errorf("inspecting image: %s", err)
-	}
+	img := f.imageProvider(ref)
 
 	logger.Debug("fetching-image-manifest")
-	imgManifest, err := f.parsedManifest(img)
+	manifest, err := img.Manifest(logger)
 	if err != nil {
-		return nil, fmt.Errorf("parsing manifest: %s", err)
+		return nil, fmt.Errorf("getting image manifest: %s", err)
 	}
 
 	logger.Debug("fetching-image-config")
-	imgConfig, err := f.parsedConfig(imgSrc, imgManifest)
+	config, err := img.Config(logger)
 	if err != nil {
-		return nil, fmt.Errorf("parsing config: %s", err)
+		return nil, fmt.Errorf("getting image config: %s", err)
 	}
 
-	return f.createLayersDigest(imgConfig, inspectInfo.Layers), nil
+	return f.createLayersDigest(logger, manifest, config), nil
 }
 
 func (f *Fetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Streamer, error) {
@@ -96,66 +91,26 @@ func (f *Fetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Strea
 	return NewCachedStreamer(f.cachePath, remoteStreamer), nil
 }
 
-type imageManifest struct {
-	Config map[string]interface{} `json:"config"`
-}
-
-type imageConfig struct {
-	Rootfs imageRootfs `json:"rootfs"`
-}
-
-type imageRootfs struct {
-	DiffIds []string `json:"diff_ids"`
-}
-
-func (f *Fetcher) parsedManifest(img types.Image) (imageManifest, error) {
-	manifest := new(imageManifest)
-	manifestData, _, err := img.Manifest()
-	if err != nil {
-		return *manifest, fmt.Errorf("fetching manifest: %s", err)
-	}
-
-	if err := json.Unmarshal(manifestData, manifest); err != nil {
-		return *manifest, fmt.Errorf("parsing image manifest: %s", err)
-	}
-
-	return *manifest, nil
-}
-
-func (f *Fetcher) parsedConfig(imgSrc types.ImageSource, manifest imageManifest) (imageConfig, error) {
-	imageConfig := new(imageConfig)
-	configReader, _, err := imgSrc.GetBlob(manifest.Config["digest"].(string))
-	if err != nil {
-		return *imageConfig, fmt.Errorf("fetching config blob: %s", err)
-	}
-
-	if err := json.NewDecoder(configReader).Decode(imageConfig); err != nil {
-		return *imageConfig, fmt.Errorf("parsing image config: %s", err)
-	}
-
-	return *imageConfig, nil
-}
-
-func (f *Fetcher) createLayersDigest(config imageConfig, layers []string) []cloner.LayerDigest {
+func (f *Fetcher) createLayersDigest(logger lager.Logger, manifest specsv1.Manifest, config specsv1.Image) []cloner.LayerDigest {
 	layersDigest := []cloner.LayerDigest{}
+
 	var parentChainID string
-	for i, blobID := range layers {
+	for i, blobDesc := range manifest.Layers {
 		if i == 0 {
 			parentChainID = ""
 		}
 
-		diffID := config.Rootfs.DiffIds[i]
+		diffID := config.RootFS.DiffIDs[i]
 		chainID := f.chainID(diffID, parentChainID)
-
 		layersDigest = append(layersDigest, cloner.LayerDigest{
-			BlobID:        blobID,
+			BlobID:        blobDesc.Digest,
 			DiffID:        diffID,
 			ChainID:       chainID,
 			ParentChainID: parentChainID,
 		})
-
 		parentChainID = chainID
 	}
+
 	return layersDigest
 }
 

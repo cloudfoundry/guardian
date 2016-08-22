@@ -15,6 +15,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
+	"github.com/containers/image/types"
 	"github.com/urfave/cli"
 )
 
@@ -74,7 +75,9 @@ var CreateCommand = cli.Command{
 		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker, btrfsVolumeDriver)
 
 		cachePath := filepath.Join(storePath, "cache", "blobs")
-		remoteFetcher := fetcherpkg.NewFetcher(cachePath)
+		remoteFetcher := fetcherpkg.NewFetcher(cachePath, func(ref types.ImageReference) fetcherpkg.Image {
+			return fetcherpkg.NewContainersImage(ref)
+		})
 
 		remoteCloner := clonerpkg.NewRemoteCloner(remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
 
