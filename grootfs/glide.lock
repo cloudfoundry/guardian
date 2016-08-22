@@ -1,5 +1,5 @@
-hash: e6c9e1af5db905a215a178989e1b7f73d542b543a4e6777c0319c0fe2fea1514
-updated: 2016-08-19T10:23:21.529624715+01:00
+hash: fee93862ca72f1563aca6d7f9b788ce67211a6b747b654411ed59d4209a02d70
+updated: 2016-08-22T11:55:31.861511991+01:00
 imports:
 - name: code.cloudfoundry.org/lager
   version: 62951a8009ab331bb21dc418074fa54e66eb9b6a
@@ -111,6 +111,8 @@ imports:
   - matchers/support/goraph/edge
   - matchers/support/goraph/node
   - matchers/support/goraph/util
+- name: github.com/opencontainers/image-spec
+  version: 3ec97bf8efcded3f49f588c971169754f7505074
 - name: github.com/opencontainers/runc
   version: 6df383c2f881fbdeb85060fd27d8bf61afedacd9
   subpackages:

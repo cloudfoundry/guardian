@@ -25,3 +25,4 @@ import:
 - package: github.com/golang/protobuf
   subpackages:
   - ptypes/any
+- package: github.com/opencontainers/image-spec
