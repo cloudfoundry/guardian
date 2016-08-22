@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
@@ -34,11 +35,11 @@ func (c *LocalCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 		return fmt.Errorf("checking image source: %s", err)
 	}
 
-	volumeID := c.generateVolumeID(spec.Image, stat.ModTime().Unix())
+	sys := stat.Sys().(*syscall.Stat_t)
+	volumeID := c.generateVolumeID(spec.Image, sys.Mtim.Nsec)
+	logger.Debug("checking-volumeid", lager.Data{"volumeID": volumeID})
 
 	if _, err := c.volumeDriver.Path(logger, volumeID); err != nil {
-		logger.Debug("volume-not-cached", lager.Data{"volumeID": volumeID})
-
 		logger.Debug("creating-volume", lager.Data{"volumeID": volumeID})
 		volumePath, err := c.volumeDriver.Create(logger, "", volumeID)
 		if err != nil {
