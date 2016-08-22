@@ -221,9 +221,18 @@ var _ = Describe("Btrfs", func() {
 			))
 		})
 
+		Context("when destroying a non existant volume", func() {
+			It("returns an error", func() {
+				err := btrfs.Destroy(logger, "non-existant")
+
+				Expect(err).To(MatchError(ContainSubstring("bundle path not found")))
+			})
+		})
+
 		Context("when destroying the volume fails", func() {
 			It("returns an error", func() {
-				err := btrfs.Destroy(logger, "/nooo")
+				tmpDir, _ := ioutil.TempDir("", "")
+				err := btrfs.Destroy(logger, tmpDir)
 
 				Expect(err).To(MatchError(ContainSubstring("destroying volume")))
 			})

@@ -8,6 +8,7 @@ import (
 	clonerpkg "code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/grootfs/cloner/clonerfakes"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -19,7 +20,7 @@ var _ = Describe("LocalCloner", func() {
 	var (
 		streamer   *clonerfakes.FakeStreamer
 		unpacker   *clonerfakes.FakeUnpacker
-		volDriver  *clonerfakes.FakeVolumeDriver
+		volDriver  *grootfakes.FakeVolumeDriver
 		cloner     *clonerpkg.LocalCloner
 		logger     lager.Logger
 		volumePath string
@@ -32,7 +33,7 @@ var _ = Describe("LocalCloner", func() {
 		Expect(err).ToNot(HaveOccurred())
 		volumePath = "/path/to/cached/volume"
 		streamer = new(clonerfakes.FakeStreamer)
-		volDriver = new(clonerfakes.FakeVolumeDriver)
+		volDriver = new(grootfakes.FakeVolumeDriver)
 		unpacker = new(clonerfakes.FakeUnpacker)
 		cloner = clonerpkg.NewLocalCloner(streamer, unpacker, volDriver)
 		logger = lagertest.NewTestLogger("cloner")

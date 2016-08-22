@@ -11,10 +11,10 @@ import (
 type RemoteCloner struct {
 	fetcher      Fetcher
 	unpacker     Unpacker
-	volumeDriver VolumeDriver
+	volumeDriver groot.VolumeDriver
 }
 
-func NewRemoteCloner(fetcher Fetcher, unpacker Unpacker, volumizer VolumeDriver) *RemoteCloner {
+func NewRemoteCloner(fetcher Fetcher, unpacker Unpacker, volumizer groot.VolumeDriver) *RemoteCloner {
 	return &RemoteCloner{
 		fetcher:      fetcher,
 		unpacker:     unpacker,

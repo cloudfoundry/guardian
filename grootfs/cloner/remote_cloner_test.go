@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/grootfs/cloner/clonerfakes"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -23,7 +24,7 @@ var _ = Describe("RemoteCloner", func() {
 		fakeFetcher      *clonerfakes.FakeFetcher
 		fakeStreamer     *clonerfakes.FakeStreamer
 		fakeUnpacker     *clonerfakes.FakeUnpacker
-		fakeVolumeDriver *clonerfakes.FakeVolumeDriver
+		fakeVolumeDriver *grootfakes.FakeVolumeDriver
 	)
 
 	BeforeEach(func() {
@@ -38,7 +39,7 @@ var _ = Describe("RemoteCloner", func() {
 			}, nil,
 		)
 
-		fakeVolumeDriver = new(clonerfakes.FakeVolumeDriver)
+		fakeVolumeDriver = new(grootfakes.FakeVolumeDriver)
 		fakeVolumeDriver.PathReturns("", errors.New("volume does not exist"))
 
 		fakeUnpacker = new(clonerfakes.FakeUnpacker)

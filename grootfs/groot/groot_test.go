@@ -14,12 +14,13 @@ import (
 
 var _ = Describe("I AM GROOT, the Orchestrator", func() {
 	var (
-		localCloner  *grootfakes.FakeCloner
-		remoteCloner *grootfakes.FakeCloner
-		bundler      *grootfakes.FakeBundler
-		groot        *grootpkg.Groot
-		bundle       *grootfakes.FakeBundle
-		logger       lager.Logger
+		localCloner      *grootfakes.FakeCloner
+		remoteCloner     *grootfakes.FakeCloner
+		bundler          *grootfakes.FakeBundler
+		groot            *grootpkg.Groot
+		bundle           *grootfakes.FakeBundle
+		fakeVolumeDriver *grootfakes.FakeVolumeDriver
+		logger           lager.Logger
 	)
 
 	BeforeEach(func() {
@@ -27,10 +28,11 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 		remoteCloner = new(grootfakes.FakeCloner)
 		bundle = new(grootfakes.FakeBundle)
 		bundler = new(grootfakes.FakeBundler)
+		fakeVolumeDriver = new(grootfakes.FakeVolumeDriver)
 		bundler.MakeBundleReturns(bundle, nil)
 
 		logger = lagertest.NewTestLogger("groot")
-		groot = grootpkg.IamGroot(bundler, localCloner, remoteCloner)
+		groot = grootpkg.IamGroot(bundler, localCloner, remoteCloner, fakeVolumeDriver)
 	})
 
 	Describe("Create", func() {
@@ -179,6 +181,45 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				Expect(err).To(HaveOccurred())
 
 				Expect(bundler.MakeBundleCallCount()).To(Equal(0))
+			})
+		})
+	})
+
+	Describe("Delete", func() {
+		BeforeEach(func() {
+			bundler.BundleReturns(bundle)
+			bundle.RootFSPathReturns("/path/to/bundle/rootfs")
+		})
+
+		It("deletes a bundle", func() {
+			Expect(groot.Delete(logger, "some-id")).To(Succeed())
+
+			_, bundleId := bundler.DeleteBundleArgsForCall(0)
+			Expect(bundleId).To(Equal("some-id"))
+
+			_, bundlePath := fakeVolumeDriver.DestroyArgsForCall(0)
+			Expect(bundlePath).To(Equal(bundle.RootFSPath()))
+		})
+
+		Context("when deleting a bundle fails", func() {
+			BeforeEach(func() {
+				bundler.DeleteBundleReturns(errors.New("Boom!"))
+			})
+
+			It("returns an error", func() {
+				err := groot.Delete(logger, "some-id")
+				Expect(err).To(MatchError("deleting bundle: Boom!"))
+			})
+		})
+
+		Context("when destroying the volume fails", func() {
+			BeforeEach(func() {
+				fakeVolumeDriver.DestroyReturns(errors.New("Boom!"))
+			})
+
+			It("returns an error", func() {
+				err := groot.Delete(logger, "some-id")
+				Expect(err).To(MatchError("Boom!"))
 			})
 		})
 	})

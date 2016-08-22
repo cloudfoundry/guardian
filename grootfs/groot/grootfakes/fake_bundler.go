@@ -9,6 +9,14 @@ import (
 )
 
 type FakeBundler struct {
+	BundleStub        func(id string) groot.Bundle
+	bundleMutex       sync.RWMutex
+	bundleArgsForCall []struct {
+		id string
+	}
+	bundleReturns struct {
+		result1 groot.Bundle
+	}
 	MakeBundleStub        func(logger lager.Logger, id string) (groot.Bundle, error)
 	makeBundleMutex       sync.RWMutex
 	makeBundleArgsForCall []struct {
@@ -30,6 +38,39 @@ type FakeBundler struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *FakeBundler) Bundle(id string) groot.Bundle {
+	fake.bundleMutex.Lock()
+	fake.bundleArgsForCall = append(fake.bundleArgsForCall, struct {
+		id string
+	}{id})
+	fake.recordInvocation("Bundle", []interface{}{id})
+	fake.bundleMutex.Unlock()
+	if fake.BundleStub != nil {
+		return fake.BundleStub(id)
+	} else {
+		return fake.bundleReturns.result1
+	}
+}
+
+func (fake *FakeBundler) BundleCallCount() int {
+	fake.bundleMutex.RLock()
+	defer fake.bundleMutex.RUnlock()
+	return len(fake.bundleArgsForCall)
+}
+
+func (fake *FakeBundler) BundleArgsForCall(i int) string {
+	fake.bundleMutex.RLock()
+	defer fake.bundleMutex.RUnlock()
+	return fake.bundleArgsForCall[i].id
+}
+
+func (fake *FakeBundler) BundleReturns(result1 groot.Bundle) {
+	fake.BundleStub = nil
+	fake.bundleReturns = struct {
+		result1 groot.Bundle
+	}{result1}
 }
 
 func (fake *FakeBundler) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error) {
@@ -104,6 +145,8 @@ func (fake *FakeBundler) DeleteBundleReturns(result1 error) {
 func (fake *FakeBundler) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.bundleMutex.RLock()
+	defer fake.bundleMutex.RUnlock()
 	fake.makeBundleMutex.RLock()
 	defer fake.makeBundleMutex.RUnlock()
 	fake.deleteBundleMutex.RLock()

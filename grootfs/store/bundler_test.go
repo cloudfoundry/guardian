@@ -1,13 +1,11 @@
 package store_test
 
 import (
-	"errors"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 
-	"code.cloudfoundry.org/grootfs/cloner/clonerfakes"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -18,12 +16,9 @@ import (
 
 var _ = Describe("Bundle", func() {
 	var (
-		logger lager.Logger
-
+		logger    lager.Logger
 		storePath string
-
-		bundler      *store.Bundler
-		volumeDriver *clonerfakes.FakeVolumeDriver
+		bundler   *store.Bundler
 	)
 
 	BeforeEach(func() {
@@ -32,17 +27,23 @@ var _ = Describe("Bundle", func() {
 		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		volumeDriver = new(clonerfakes.FakeVolumeDriver)
 		Expect(os.Mkdir(filepath.Join(storePath, "bundles"), 0777)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-bunlder")
-		bundler = store.NewBundler(storePath, volumeDriver)
+		bundler = store.NewBundler(storePath)
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(storePath)).To(Succeed())
+	})
+
+	Describe("Bundle", func() {
+		It("returns a bundle", func() {
+			bundle := bundler.Bundle("some-id")
+			Expect(bundle.RootFSPath()).To(ContainSubstring("/bundles/some-id/rootfs"))
+		})
 	})
 
 	Describe("MakeBundle", func() {
@@ -110,35 +111,9 @@ var _ = Describe("Bundle", func() {
 			Expect(ioutil.WriteFile(path.Join(bundlePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 		})
 
-		It("uses the bundle rootfs destroyer to delete the rootfs snapshot", func() {
-			Expect(bundler.DeleteBundle(logger, "some-id")).To(Succeed())
-			Expect(volumeDriver.DestroyCallCount()).To(Equal(1))
-
-			expectedBundle := store.NewBundle(bundlePath)
-			_, rootfsPath := volumeDriver.DestroyArgsForCall(0)
-			Expect(rootfsPath).To(Equal(expectedBundle.RootFSPath()))
-		})
-
 		It("deletes an existing bundle", func() {
 			Expect(bundler.DeleteBundle(logger, "some-id")).To(Succeed())
 			Expect(bundlePath).NotTo(BeAnExistingFile())
-		})
-
-		Context("when the rootfs path doesn't exist", func() {
-			It("doesnt use the bundle rootfs destroyer", func() {
-				Expect(os.RemoveAll(path.Join(bundlePath, "rootfs"))).To(Succeed())
-				Expect(bundler.DeleteBundle(logger, "some-id")).To(Succeed())
-				Expect(volumeDriver.DestroyCallCount()).To(Equal(0))
-			})
-		})
-
-		Context("when the bundle rootfs destroyer fails", func() {
-			It("returns an error", func() {
-				volumeDriver.DestroyReturns(errors.New("failed"))
-
-				err := bundler.DeleteBundle(logger, "some-id")
-				Expect(err).To(MatchError(ContainSubstring("failed")))
-			})
 		})
 
 		Context("when bundle does not exist", func() {

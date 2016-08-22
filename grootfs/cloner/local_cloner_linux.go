@@ -14,10 +14,10 @@ import (
 type LocalCloner struct {
 	unpacker     Unpacker
 	streamer     Streamer
-	volumeDriver VolumeDriver
+	volumeDriver groot.VolumeDriver
 }
 
-func NewLocalCloner(streamer Streamer, unpacker Unpacker, volumizer VolumeDriver) *LocalCloner {
+func NewLocalCloner(streamer Streamer, unpacker Unpacker, volumizer groot.VolumeDriver) *LocalCloner {
 	return &LocalCloner{
 		streamer:     streamer,
 		unpacker:     unpacker,

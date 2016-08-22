@@ -64,7 +64,7 @@ var CreateCommand = cli.Command{
 		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
-		bundler := storepkg.NewBundler(storePath, btrfsVolumeDriver)
+		bundler := storepkg.NewBundler(storePath)
 
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(runner)
@@ -81,7 +81,7 @@ var CreateCommand = cli.Command{
 
 		remoteCloner := clonerpkg.NewRemoteCloner(remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
 
-		groot := grootpkg.IamGroot(bundler, localCloner, remoteCloner)
+		groot := grootpkg.IamGroot(bundler, localCloner, remoteCloner, btrfsVolumeDriver)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
 			ID:          id,

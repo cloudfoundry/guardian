@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	grootpkg "code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
@@ -28,8 +29,11 @@ var DeleteCommand = cli.Command{
 		id := ctx.Args().First()
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
-		bundler := store.NewBundler(storePath, btrfsVolumeDriver)
-		err := bundler.DeleteBundle(logger, id)
+
+		bundler := store.NewBundler(storePath)
+		groot := grootpkg.IamGroot(bundler, nil, nil, btrfsVolumeDriver)
+
+		err := groot.Delete(logger, id)
 		if err != nil {
 			logger.Error("deleting-bundle", err)
 			return cli.NewExitError(err.Error(), 1)

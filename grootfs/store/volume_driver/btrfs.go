@@ -79,6 +79,10 @@ func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
 	logger.Info("start")
 	defer logger.Info("end")
 
+	if _, err := os.Stat(path); err != nil {
+		return fmt.Errorf("bundle path not found: %s", err)
+	}
+
 	cmd := exec.Command("btrfs", "subvolume", "delete", path)
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {

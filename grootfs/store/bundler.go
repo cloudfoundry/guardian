@@ -5,21 +5,22 @@ import (
 	"os"
 	"path"
 
-	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 )
 
 type Bundler struct {
-	path         string
-	volumeDriver cloner.VolumeDriver
+	path string
 }
 
-func NewBundler(path string, volumeDriver cloner.VolumeDriver) *Bundler {
+func NewBundler(path string) *Bundler {
 	return &Bundler{
-		path:         path,
-		volumeDriver: volumeDriver,
+		path: path,
 	}
+}
+
+func (b *Bundler) Bundle(id string) groot.Bundle {
+	return NewBundle(path.Join(b.path, BUNDLES_DIR_NAME, id))
 }
 
 func (b *Bundler) MakeBundle(logger lager.Logger, id string) (groot.Bundle, error) {
@@ -27,7 +28,7 @@ func (b *Bundler) MakeBundle(logger lager.Logger, id string) (groot.Bundle, erro
 	logger.Info("start")
 	defer logger.Info("end")
 
-	bundle := NewBundle(path.Join(b.path, BUNDLES_DIR_NAME, id))
+	bundle := b.Bundle(id)
 	if _, err := os.Stat(bundle.Path()); err == nil {
 		return nil, fmt.Errorf("bundle for id `%s` already exists", id)
 	}
@@ -44,15 +45,9 @@ func (b *Bundler) DeleteBundle(logger lager.Logger, id string) error {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	bundle := NewBundle(path.Join(b.path, BUNDLES_DIR_NAME, id))
+	bundle := b.Bundle(id)
 	if _, err := os.Stat(bundle.Path()); err != nil {
 		return fmt.Errorf("bundle path not found: %s", err)
-	}
-
-	if _, err := os.Stat(bundle.RootFSPath()); err == nil {
-		if err := b.volumeDriver.Destroy(logger, bundle.RootFSPath()); err != nil {
-			return fmt.Errorf("deleting rootfs: %s", err)
-		}
 	}
 
 	if err := os.RemoveAll(bundle.Path()); err != nil {
