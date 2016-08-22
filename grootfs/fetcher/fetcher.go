@@ -28,7 +28,7 @@ func NewFetcher(cachePath string) *Fetcher {
 func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error) {
 	logger = logger.Session("layers-digest", lager.Data{"imageURL": imageURL})
 	logger.Info("start")
-	logger.Info("end")
+	defer logger.Info("end")
 
 	logger.Debug("parsing-reference")
 	refString := "/"
