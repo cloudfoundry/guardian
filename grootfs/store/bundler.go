@@ -10,12 +10,19 @@ import (
 )
 
 type Bundler struct {
-	path string
+	path            string
+	rootFSDestroyer BundleRootFSDestroyer
 }
 
-func NewBundler(path string) *Bundler {
+//go:generate counterfeiter . BundleRootFSDestroyer
+type BundleRootFSDestroyer interface {
+	Destroy(logger lager.Logger, fullPath string) error
+}
+
+func NewBundler(path string, rootFSDestroyer BundleRootFSDestroyer) *Bundler {
 	return &Bundler{
-		path: path,
+		path:            path,
+		rootFSDestroyer: rootFSDestroyer,
 	}
 }
 
@@ -44,6 +51,12 @@ func (g *Bundler) DeleteBundle(logger lager.Logger, id string) error {
 	bundle := NewBundle(path.Join(g.path, BUNDLES_DIR_NAME, id))
 	if _, err := os.Stat(bundle.Path()); err != nil {
 		return fmt.Errorf("bundle path not found: %s", err)
+	}
+
+	if _, err := os.Stat(bundle.RootFSPath()); err == nil {
+		if err := g.rootFSDestroyer.Destroy(logger, bundle.RootFSPath()); err != nil {
+			return fmt.Errorf("deleting rootfs: %s", err)
+		}
 	}
 
 	if err := os.RemoveAll(bundle.Path()); err != nil {

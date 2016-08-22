@@ -73,3 +73,19 @@ func (d *Btrfs) Snapshot(logger lager.Logger, id, targetPath string) error {
 
 	return nil
 }
+
+func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
+	logger = logger.Session("btrfs-destroying", lager.Data{"path": path})
+	logger.Info("start")
+	defer logger.Info("end")
+
+	cmd := exec.Command("btrfs", "subvolume", "delete", path)
+	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
+	if contents, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf(
+			"destroying volume `%s` (%s): %s",
+			path, err, string(contents),
+		)
+	}
+	return nil
+}

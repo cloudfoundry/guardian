@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 
 	"github.com/urfave/cli"
@@ -26,7 +27,8 @@ var DeleteCommand = cli.Command{
 		}
 		id := ctx.Args().First()
 
-		bundler := store.NewBundler(storePath)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
+		bundler := store.NewBundler(storePath, btrfsVolumeDriver)
 		err := bundler.DeleteBundle(logger, id)
 		if err != nil {
 			logger.Error("deleting-bundle", err)

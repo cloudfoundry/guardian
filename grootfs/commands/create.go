@@ -62,14 +62,14 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		bundler := storepkg.NewBundler(storePath)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
+		bundler := storepkg.NewBundler(storePath, btrfsVolumeDriver)
 
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(runner)
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedCmdUnpacker(runner, idMapper, "unpack")
 
 		tarStreamer := streamerpkg.NewTarStreamer()
-		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
 
 		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker, btrfsVolumeDriver)
 

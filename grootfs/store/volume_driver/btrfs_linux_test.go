@@ -190,6 +190,45 @@ var _ = Describe("Btrfs", func() {
 			})
 		})
 	})
+
+	Describe("Destroy", func() {
+		var volumePath string
+
+		BeforeEach(func() {
+			var err error
+			volumePath, err = btrfs.Create(logger, "", randVolID())
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("deletes the btrfs volume", func() {
+			Expect(volumePath).To(BeADirectory())
+
+			Expect(btrfs.Destroy(logger, volumePath)).To(Succeed())
+			Expect(volumePath).ToNot(BeAnExistingFile())
+		})
+
+		It("logs the correct btrfs command", func() {
+			Expect(volumePath).To(BeADirectory())
+
+			Expect(btrfs.Destroy(logger, volumePath)).To(Succeed())
+
+			Expect(logger).To(ContainSequence(
+				Debug(
+					Message("btrfs.btrfs-destroying.starting-btrfs"),
+					Data("path", "/sbin/btrfs"),
+					Data("args", []string{"btrfs", "subvolume", "delete", volumePath}),
+				),
+			))
+		})
+
+		Context("when destroying the volume fails", func() {
+			It("returns an error", func() {
+				err := btrfs.Destroy(logger, "/nooo")
+
+				Expect(err).To(MatchError(ContainSubstring("destroying volume")))
+			})
+		})
+	})
 })
 
 func randVolID() string {

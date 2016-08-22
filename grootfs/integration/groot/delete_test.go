@@ -2,11 +2,10 @@ package groot_test
 
 import (
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path"
 
-	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 
 	. "github.com/onsi/ginkgo"
@@ -17,19 +16,22 @@ import (
 
 var _ = Describe("Delete", func() {
 	var (
-		bundlePath string
+		imagePath string
+		bundle    groot.Bundle
 	)
 
 	BeforeEach(func() {
-		bundlePath = path.Join(StorePath, store.BUNDLES_DIR_NAME, "random-id")
-		Expect(os.MkdirAll(bundlePath, 0755)).To(Succeed())
-		Expect(ioutil.WriteFile(path.Join(bundlePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		var err error
+		imagePath, err = ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		bundle = integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id")
 	})
 
 	It("deletes an existing bundle", func() {
 		result := integration.DeleteBundle(GrootFSBin, StorePath, "random-id")
 		Expect(result).To(Equal("Bundle random-id deleted\n"))
-		Expect(path.Join(bundlePath)).NotTo(BeAnExistingFile())
+		Expect(bundle.Path()).NotTo(BeAnExistingFile())
 	})
 
 	Context("when the bundle ID doesn't exist", func() {

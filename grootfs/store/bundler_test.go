@@ -1,12 +1,14 @@
 package store_test
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/storefakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -20,7 +22,8 @@ var _ = Describe("Bundle", func() {
 
 		storePath string
 
-		bundler *store.Bundler
+		bundler         *store.Bundler
+		rootfsDestroyer *storefakes.FakeBundleRootFSDestroyer
 	)
 
 	BeforeEach(func() {
@@ -29,12 +32,13 @@ var _ = Describe("Bundle", func() {
 		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
+		rootfsDestroyer = new(storefakes.FakeBundleRootFSDestroyer)
 		Expect(os.Mkdir(filepath.Join(storePath, "bundles"), 0777)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-bunlder")
-		bundler = store.NewBundler(storePath)
+		bundler = store.NewBundler(storePath, rootfsDestroyer)
 	})
 
 	AfterEach(func() {
@@ -102,12 +106,39 @@ var _ = Describe("Bundle", func() {
 		BeforeEach(func() {
 			bundlePath = path.Join(storePath, store.BUNDLES_DIR_NAME, "some-id")
 			Expect(os.MkdirAll(bundlePath, 0755)).To(Succeed())
+			Expect(os.MkdirAll(path.Join(bundlePath, "rootfs"), 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(path.Join(bundlePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		})
+
+		It("uses the bundle rootfs destroyer to delete the rootfs snapshot", func() {
+			Expect(bundler.DeleteBundle(logger, "some-id")).To(Succeed())
+			Expect(rootfsDestroyer.DestroyCallCount()).To(Equal(1))
+
+			expectedBundle := store.NewBundle(bundlePath)
+			_, rootfsPath := rootfsDestroyer.DestroyArgsForCall(0)
+			Expect(rootfsPath).To(Equal(expectedBundle.RootFSPath()))
 		})
 
 		It("deletes an existing bundle", func() {
 			Expect(bundler.DeleteBundle(logger, "some-id")).To(Succeed())
 			Expect(bundlePath).NotTo(BeAnExistingFile())
+		})
+
+		Context("when the rootfs path doesn't exist", func() {
+			It("doesnt use the bundle rootfs destroyer", func() {
+				Expect(os.RemoveAll(path.Join(bundlePath, "rootfs"))).To(Succeed())
+				Expect(bundler.DeleteBundle(logger, "some-id")).To(Succeed())
+				Expect(rootfsDestroyer.DestroyCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when the bundle rootfs destroyer fails", func() {
+			It("returns an error", func() {
+				rootfsDestroyer.DestroyReturns(errors.New("failed"))
+
+				err := bundler.DeleteBundle(logger, "some-id")
+				Expect(err).To(MatchError(ContainSubstring("failed")))
+			})
 		})
 
 		Context("when bundle does not exist", func() {
