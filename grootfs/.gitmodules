@@ -43,6 +43,9 @@
 [submodule "vendor/github.com/onsi/gomega"]
 	path = vendor/github.com/onsi/gomega
 	url = https://github.com/onsi/gomega
+[submodule "vendor/github.com/opencontainers/image-spec"]
+	path = vendor/github.com/opencontainers/image-spec
+	url = https://github.com/opencontainers/image-spec
 [submodule "vendor/github.com/opencontainers/runc"]
 	path = vendor/github.com/opencontainers/runc
 	url = https://github.com/opencontainers/runc

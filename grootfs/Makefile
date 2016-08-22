@@ -57,4 +57,4 @@ push-image:
 ###### Depedency management ###################################################
 
 update-deps:
-	./hack/update-deps.sh
+	./hack/update-deps

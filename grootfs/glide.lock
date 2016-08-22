@@ -1,5 +1,5 @@
 hash: fee93862ca72f1563aca6d7f9b788ce67211a6b747b654411ed59d4209a02d70
-updated: 2016-08-22T11:55:31.861511991+01:00
+updated: 2016-08-22T15:59:31.680501935+01:00
 imports:
 - name: code.cloudfoundry.org/lager
   version: 62951a8009ab331bb21dc418074fa54e66eb9b6a
@@ -29,8 +29,8 @@ imports:
   version: 8eab29edd820017901796eb60d4bea28d760f16f
   subpackages:
   - pkg/reexec
-  - pkg/homedir
   - reference
+  - pkg/homedir
   - image
   - image/v1
   - pkg/ioutils
@@ -66,7 +66,7 @@ imports:
 - name: github.com/docker/go-units
   version: eb879ae3e2b84e2a142af415b679ddeda47ec71c
 - name: github.com/docker/libtrust
-  version: aabc10ec26b754e797f9028f4589c5b7bd90dc20
+  version: fa567046d9b14f6aa788882a950d69651d230b21
 - name: github.com/golang/protobuf
   version: f592bd283e9ef86337a432eb50e592278c3d534d
   subpackages:
@@ -113,6 +113,9 @@ imports:
   - matchers/support/goraph/util
 - name: github.com/opencontainers/image-spec
   version: 3ec97bf8efcded3f49f588c971169754f7505074
+  subpackages:
+  - specs-go/v1
+  - specs-go
 - name: github.com/opencontainers/runc
   version: 6df383c2f881fbdeb85060fd27d8bf61afedacd9
   subpackages:
