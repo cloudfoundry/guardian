@@ -7,8 +7,8 @@ import (
 	"path"
 	"path/filepath"
 
+	"code.cloudfoundry.org/grootfs/cloner/clonerfakes"
 	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/storefakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -22,8 +22,8 @@ var _ = Describe("Bundle", func() {
 
 		storePath string
 
-		bundler         *store.Bundler
-		rootfsDestroyer *storefakes.FakeBundleRootFSDestroyer
+		bundler      *store.Bundler
+		volumeDriver *clonerfakes.FakeVolumeDriver
 	)
 
 	BeforeEach(func() {
@@ -32,13 +32,13 @@ var _ = Describe("Bundle", func() {
 		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		rootfsDestroyer = new(storefakes.FakeBundleRootFSDestroyer)
+		volumeDriver = new(clonerfakes.FakeVolumeDriver)
 		Expect(os.Mkdir(filepath.Join(storePath, "bundles"), 0777)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-bunlder")
-		bundler = store.NewBundler(storePath, rootfsDestroyer)
+		bundler = store.NewBundler(storePath, volumeDriver)
 	})
 
 	AfterEach(func() {
@@ -112,10 +112,10 @@ var _ = Describe("Bundle", func() {
 
 		It("uses the bundle rootfs destroyer to delete the rootfs snapshot", func() {
 			Expect(bundler.DeleteBundle(logger, "some-id")).To(Succeed())
-			Expect(rootfsDestroyer.DestroyCallCount()).To(Equal(1))
+			Expect(volumeDriver.DestroyCallCount()).To(Equal(1))
 
 			expectedBundle := store.NewBundle(bundlePath)
-			_, rootfsPath := rootfsDestroyer.DestroyArgsForCall(0)
+			_, rootfsPath := volumeDriver.DestroyArgsForCall(0)
 			Expect(rootfsPath).To(Equal(expectedBundle.RootFSPath()))
 		})
 
@@ -128,13 +128,13 @@ var _ = Describe("Bundle", func() {
 			It("doesnt use the bundle rootfs destroyer", func() {
 				Expect(os.RemoveAll(path.Join(bundlePath, "rootfs"))).To(Succeed())
 				Expect(bundler.DeleteBundle(logger, "some-id")).To(Succeed())
-				Expect(rootfsDestroyer.DestroyCallCount()).To(Equal(0))
+				Expect(volumeDriver.DestroyCallCount()).To(Equal(0))
 			})
 		})
 
 		Context("when the bundle rootfs destroyer fails", func() {
 			It("returns an error", func() {
-				rootfsDestroyer.DestroyReturns(errors.New("failed"))
+				volumeDriver.DestroyReturns(errors.New("failed"))
 
 				err := bundler.DeleteBundle(logger, "some-id")
 				Expect(err).To(MatchError(ContainSubstring("failed")))

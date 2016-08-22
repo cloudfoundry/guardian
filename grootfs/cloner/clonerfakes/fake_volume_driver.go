@@ -40,6 +40,15 @@ type FakeVolumeDriver struct {
 	snapshotReturns struct {
 		result1 error
 	}
+	DestroyStub        func(logger lager.Logger, path string) error
+	destroyMutex       sync.RWMutex
+	destroyArgsForCall []struct {
+		logger lager.Logger
+		path   string
+	}
+	destroyReturns struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -150,6 +159,40 @@ func (fake *FakeVolumeDriver) SnapshotReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeVolumeDriver) Destroy(logger lager.Logger, path string) error {
+	fake.destroyMutex.Lock()
+	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
+		logger lager.Logger
+		path   string
+	}{logger, path})
+	fake.recordInvocation("Destroy", []interface{}{logger, path})
+	fake.destroyMutex.Unlock()
+	if fake.DestroyStub != nil {
+		return fake.DestroyStub(logger, path)
+	} else {
+		return fake.destroyReturns.result1
+	}
+}
+
+func (fake *FakeVolumeDriver) DestroyCallCount() int {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return len(fake.destroyArgsForCall)
+}
+
+func (fake *FakeVolumeDriver) DestroyArgsForCall(i int) (lager.Logger, string) {
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
+	return fake.destroyArgsForCall[i].logger, fake.destroyArgsForCall[i].path
+}
+
+func (fake *FakeVolumeDriver) DestroyReturns(result1 error) {
+	fake.DestroyStub = nil
+	fake.destroyReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeVolumeDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -159,6 +202,8 @@ func (fake *FakeVolumeDriver) Invocations() map[string][][]interface{} {
 	defer fake.createMutex.RUnlock()
 	fake.snapshotMutex.RLock()
 	defer fake.snapshotMutex.RUnlock()
+	fake.destroyMutex.RLock()
+	defer fake.destroyMutex.RUnlock()
 	return fake.invocations
 }
 

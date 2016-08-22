@@ -33,6 +33,7 @@ type VolumeDriver interface {
 	Path(logger lager.Logger, id string) (string, error)
 	Create(logger lager.Logger, parentID, id string) (string, error)
 	Snapshot(logger lager.Logger, id, path string) error
+	Destroy(logger lager.Logger, path string) error
 }
 
 //go:generate counterfeiter . Streamer
