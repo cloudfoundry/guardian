@@ -39,7 +39,7 @@ func CreateBundleWSpec(grootFSBin, storePath string, spec groot.CreateSpec) groo
 	cmd := exec.Command(grootFSBin, args...)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(sess.Wait(10 * time.Second)).To(gexec.Exit(0))
+	Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
 
 	return store.NewBundle(strings.TrimSpace(string(sess.Out.Contents())))
 }
