@@ -33,7 +33,7 @@ concourse-groot-test:
 concourse-root-test:
 	fly -t lite e -x -c ci/tasks/root-tests.yml -p -i grootfs-git-repo=${PWD}
 
-concourse-test: concourse-groot-test concourse-root-test
+concourse-test: concourse-groot-test concourse-root-test go-vet
 
 ###### Go tools ###############################################################
 
