@@ -4,10 +4,10 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/cloner/clonerfakes"
 	"code.cloudfoundry.org/grootfs/fetcher"
+	"code.cloudfoundry.org/grootfs/fetcher/fetcherfakes"
 	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
@@ -22,16 +22,18 @@ var _ = Describe("CachedStreamer", func() {
 		logger           *lagertest.TestLogger
 		streamer         *fetcher.CachedStreamer
 		internalStreamer *clonerfakes.FakeStreamer
+		cacheDriver      *fetcherfakes.FakeCacheDriver
 	)
 
 	BeforeEach(func() {
 		var err error
+		cacheDriver = new(fetcherfakes.FakeCacheDriver)
 		logger = lagertest.NewTestLogger("Streamer")
 		cacheDir, err = ioutil.TempDir("", "streamer-cache")
 		Expect(err).NotTo(HaveOccurred())
 
 		internalStreamer = new(clonerfakes.FakeStreamer)
-		streamer = fetcher.NewCachedStreamer(cacheDir, internalStreamer)
+		streamer = fetcher.NewCachedStreamer(cacheDriver, internalStreamer)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -43,75 +45,51 @@ var _ = Describe("CachedStreamer", func() {
 		BeforeEach(func() {
 			buffer := gbytes.NewBuffer()
 			buffer.Write([]byte("hello world"))
-
 			internalStreamer.StreamReturns(buffer, 0, nil)
 		})
 
-		Context("when the object is not cached", func() {
-			It("returns a correct reader to the object", func() {
-				reader, _, err := streamer.Stream(logger, "hello")
-				Expect(err).ToNot(HaveOccurred())
+		It("returns returns the same reader that the cache driver returns", func() {
+			buffer := gbytes.NewBuffer()
+			buffer.Write([]byte("hello world"))
+			cacheDriver.BlobReturns(buffer, nil)
 
-				readerContent := make([]byte, 11)
-				reader.Read(readerContent)
-				Expect(readerContent).To(Equal([]byte("hello world")))
-			})
+			reader, _, err := streamer.Stream(logger, "hello")
+			Expect(err).ToNot(HaveOccurred())
 
-			It("caches the object properly", func() {
-				cachedBlobPath := filepath.Join(cacheDir, "hello")
-				Expect(cachedBlobPath).ToNot(BeAnExistingFile())
-
-				_, _, err := streamer.Stream(logger, "hello")
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(cachedBlobPath).To(BeAnExistingFile())
-				cachedContent, err := ioutil.ReadFile(cachedBlobPath)
-				Expect(err).ToNot(HaveOccurred())
-
-				Expect(cachedContent).To(Equal([]byte("hello world")))
-			})
-
-			Context("when creating the cache fails", func() {
-				It("returns an error", func() {
-					os.RemoveAll(cacheDir)
-					_, _, err := streamer.Stream(logger, "hello")
-					Expect(err).To(MatchError(ContainSubstring("creating cache:")))
-				})
-			})
-
-			Context("when reading from the internal streamer fails", func() {
-				BeforeEach(func() {
-					internalStreamer.StreamReturns(nil, 0, errors.New("internal streamer exploded"))
-				})
-
-				It("returns an error", func() {
-					_, _, err := streamer.Stream(logger, "hello")
-					Expect(err).To(MatchError(ContainSubstring("internal streamer exploded")))
-				})
-			})
+			readerContent := make([]byte, 11)
+			reader.Read(readerContent)
+			Expect(readerContent).To(Equal([]byte("hello world")))
 		})
 
-		Context("when the object is cached", func() {
-			var cachedBlobPath string
+		It("calls the cache driver with the correct digest", func() {
+			_, _, err := streamer.Stream(logger, "hello")
+			Expect(err).ToNot(HaveOccurred())
 
-			BeforeEach(func() {
-				cachedBlobPath = filepath.Join(cacheDir, "hello")
-				Expect(ioutil.WriteFile(cachedBlobPath, []byte("cached content"), 0666)).To(Succeed())
-			})
+			Expect(cacheDriver.BlobCallCount()).To(Equal(1))
 
-			It("returns a reader to the cached object", func() {
-				reader, _, err := streamer.Stream(logger, "hello")
-				Expect(err).ToNot(HaveOccurred())
+			_, receivedId, _ := cacheDriver.BlobArgsForCall(0)
+			Expect(receivedId).To(Equal("hello"))
+		})
 
-				readerContent := make([]byte, 14)
-				reader.Read(readerContent)
-				Expect(readerContent).To(Equal([]byte("cached content")))
-			})
+		It("forwards the correct streamer to the cache driver", func() {
+			_, _, err := streamer.Stream(logger, "hello")
+			Expect(err).ToNot(HaveOccurred())
 
-			It("doesn't use the internal streamer to stream the original object", func() {
+			Expect(cacheDriver.BlobCallCount()).To(Equal(1))
+
+			_, _, streamBlobFunc := cacheDriver.BlobArgsForCall(0)
+
+			contentReader, err := streamBlobFunc(logger)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(contentReader).Should(gbytes.Say("hello world"))
+		})
+
+		Context("the cache driver fails", func() {
+			It("returns an error", func() {
+				cacheDriver.BlobReturns(nil, errors.New("super failure"))
 				_, _, err := streamer.Stream(logger, "hello")
-				Expect(err).ToNot(HaveOccurred())
-				Expect(internalStreamer.StreamCallCount()).To(BeZero())
+				Expect(err).To(MatchError(ContainSubstring("super failure")))
 			})
 		})
 	})

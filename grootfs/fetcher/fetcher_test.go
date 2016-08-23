@@ -22,9 +22,11 @@ var _ = Describe("Fetcher", func() {
 		fakeImageProvider fetcherpkg.ImageProvider
 		fetcher           *fetcherpkg.Fetcher
 		logger            *lagertest.TestLogger
+		cacheDriver       *fetcherfakes.FakeCacheDriver
 	)
 
 	BeforeEach(func() {
+		cacheDriver = new(fetcherfakes.FakeCacheDriver)
 		fakeImage = new(fetcherfakes.FakeImage)
 		fakeImage.ManifestReturns(specsv1.Manifest{
 			Layers: []specs.Descriptor{
@@ -54,7 +56,7 @@ var _ = Describe("Fetcher", func() {
 			return fakeImage
 		}
 
-		fetcher = fetcherpkg.NewFetcher("/cache-path", fakeImageProvider)
+		fetcher = fetcherpkg.NewFetcher(cacheDriver, fakeImageProvider)
 
 		logger = lagertest.NewTestLogger("test-fetcher")
 	})

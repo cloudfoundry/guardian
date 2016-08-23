@@ -3,7 +3,6 @@ package commands
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 
 	clonerpkg "code.cloudfoundry.org/grootfs/cloner"
 	streamerpkg "code.cloudfoundry.org/grootfs/cloner/streamer"
@@ -73,9 +72,8 @@ var CreateCommand = cli.Command{
 
 		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker, btrfsVolumeDriver)
 
-		cachePath := filepath.Join(storePath, "cache", "blobs")
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
-		remoteFetcher := fetcherpkg.NewFetcher(cachePath, func(ref types.ImageReference) fetcherpkg.Image {
+		remoteFetcher := fetcherpkg.NewFetcher(cacheDriver, func(ref types.ImageReference) fetcherpkg.Image {
 			return fetcherpkg.NewContainersImage(ref, cacheDriver)
 		})
 

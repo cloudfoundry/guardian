@@ -1,26 +1,22 @@
 package fetcher
 
 import (
-	"bufio"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
-	"strings"
 
 	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/lager"
 )
 
 type CachedStreamer struct {
-	cachePath string
-	streamer  cloner.Streamer
+	cacheDriver CacheDriver
+	streamer    cloner.Streamer
 }
 
-func NewCachedStreamer(cachePath string, streamer cloner.Streamer) *CachedStreamer {
+func NewCachedStreamer(cacheDriver CacheDriver, streamer cloner.Streamer) *CachedStreamer {
 	return &CachedStreamer{
-		cachePath: cachePath,
-		streamer:  streamer,
+		cacheDriver: cacheDriver,
+		streamer:    streamer,
 	}
 }
 
@@ -29,52 +25,18 @@ func (s *CachedStreamer) Stream(logger lager.Logger, digest string) (io.ReadClos
 	logger.Info("start")
 	defer logger.Info("end")
 
-	logger.Debug("lookup-cache")
-	if !s.cachedLookup(digest) {
-		logger.Debug("cache-not-found")
-
+	content, err := s.cacheDriver.Blob(logger, digest, func(logger lager.Logger) (io.ReadCloser, error) {
 		content, _, err := s.streamer.Stream(logger, digest)
 		if err != nil {
-			return nil, 0, fmt.Errorf("reading internal streamer: %s", err)
+			return nil, fmt.Errorf("reading internal streamer: %s", err)
 		}
 
-		if err := s.cache(logger, digest, content); err != nil {
-			return nil, 0, fmt.Errorf("creating cache: %s", err)
-		}
-	}
+		return content, nil
+	})
 
-	logger.Debug("stream-local-cache")
-	reader, err := s.cachedReader(digest)
-	return reader, 0, err
-}
-
-func (s *CachedStreamer) cache(logger lager.Logger, digest string, reader io.ReadCloser) error {
-	logger = logger.Session("creating-cache", lager.Data{"digest": digest})
-	logger.Info("start")
-	defer logger.Info("end")
-
-	writer, err := os.Create(s.cachedBlobPath(digest))
 	if err != nil {
-		return err
+		return nil, 0, fmt.Errorf("fetching blob from cache driver: ", err)
 	}
 
-	defer writer.Close()
-	bufferedReader := bufio.NewReader(reader)
-	_, err = bufferedReader.WriteTo(writer)
-
-	return err
-}
-
-func (s *CachedStreamer) cachedReader(digest string) (io.ReadCloser, error) {
-	return os.OpenFile(s.cachedBlobPath(digest), os.O_RDONLY, 0600)
-}
-
-func (s *CachedStreamer) cachedLookup(digest string) bool {
-	_, err := os.Stat(s.cachedBlobPath(digest))
-	return !os.IsNotExist(err)
-}
-
-func (s *CachedStreamer) cachedBlobPath(digest string) string {
-	parsedDigest := strings.Replace(digest, ":", "-", -1)
-	return filepath.Join(s.cachePath, parsedDigest)
+	return content, 0, nil
 }

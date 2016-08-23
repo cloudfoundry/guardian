@@ -25,13 +25,13 @@ type Image interface {
 type ImageProvider func(ref types.ImageReference) Image
 
 type Fetcher struct {
-	cachePath     string
+	cacheDriver   CacheDriver
 	imageProvider ImageProvider
 }
 
-func NewFetcher(cachePath string, imageProvider ImageProvider) *Fetcher {
+func NewFetcher(cacheDriver CacheDriver, imageProvider ImageProvider) *Fetcher {
 	return &Fetcher{
-		cachePath:     cachePath,
+		cacheDriver:   cacheDriver,
 		imageProvider: imageProvider,
 	}
 }
@@ -90,7 +90,7 @@ func (f *Fetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Strea
 	}
 
 	remoteStreamer := NewRemoteStreamer(imgSrc)
-	return NewCachedStreamer(f.cachePath, remoteStreamer), nil
+	return NewCachedStreamer(f.cacheDriver, remoteStreamer), nil
 }
 
 func (f *Fetcher) createLayersDigest(logger lager.Logger, manifest specsv1.Manifest, config specsv1.Image) []cloner.LayerDigest {

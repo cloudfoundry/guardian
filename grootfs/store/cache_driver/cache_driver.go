@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/grootfs/store"
@@ -70,6 +71,7 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 }
 
 func (c *CacheDriver) blobPath(id string) string {
+	id = strings.Replace(id, ":", "-", 1)
 	return filepath.Join(c.storePath, store.CACHE_DIR_NAME, "blobs", id)
 }
 
