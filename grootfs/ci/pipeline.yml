@@ -40,6 +40,18 @@ resources:
     access_token: {{github-access-token}}
     drafts: true
 
+- name: golang-ci-image
+  type: docker-image
+  source:
+    repository: cloudfoundry/golang-ci
+
+- name: grootfs-ci-image
+  type: docker-image
+  source:
+    repository: cfgarden/grootfs-ci
+    username: {{dockerhub-username}}
+    password: {{dockerhub-password}}
+
 jobs:
 - name: grootfs
   public: true
@@ -94,10 +106,8 @@ jobs:
     - get: grootfs-version
       passed: [grootfs]
       params: { bump: final }
-
   - task: build-grootfs
     file: grootfs-git-repo/ci/tasks/build-grootfs.yml
-
   - put: grootfs-git-repo
     params:
       tag: grootfs-version/number
@@ -110,13 +120,22 @@ jobs:
       tag_prefix: v
       globs:
       - build-grootfs/grootfs.tgz
-
   - get: grootfs-next-dev-version
     resource: grootfs-version
     params: { bump: minor, pre: dev }
   - put: grootfs-next-dev-version
     resource: grootfs-version
     params: { file: grootfs-next-dev-version/number }
+
+- name: build-ci-image
+  plan:
+  - aggregate:
+    - get: grootfs-git-repo
+    - get: golang-ci-image
+      trigger: true
+  - put: grootfs-ci-image
+    params:
+      build: grootfs-git-repo
 
 resource_types:
 - name: slack-notification-docker
