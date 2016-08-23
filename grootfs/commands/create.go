@@ -11,6 +11,7 @@ import (
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
 	grootpkg "code.cloudfoundry.org/grootfs/groot"
 	storepkg "code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 
@@ -73,8 +74,9 @@ var CreateCommand = cli.Command{
 		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker, btrfsVolumeDriver)
 
 		cachePath := filepath.Join(storePath, "cache", "blobs")
+		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		remoteFetcher := fetcherpkg.NewFetcher(cachePath, func(ref types.ImageReference) fetcherpkg.Image {
-			return fetcherpkg.NewContainersImage(ref)
+			return fetcherpkg.NewContainersImage(ref, cacheDriver)
 		})
 
 		remoteCloner := clonerpkg.NewRemoteCloner(remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)

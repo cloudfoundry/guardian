@@ -60,12 +60,14 @@ func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner
 	if err != nil {
 		return nil, fmt.Errorf("getting image manifest: %s", err)
 	}
+	logger.Debug("image-manifest", lager.Data{"manifest": manifest})
 
 	logger.Debug("fetching-image-config")
 	config, err := img.Config(logger)
 	if err != nil {
 		return nil, fmt.Errorf("getting image config: %s", err)
 	}
+	logger.Debug("image-config", lager.Data{"config": config})
 
 	return f.createLayersDigest(logger, manifest, config), nil
 }
