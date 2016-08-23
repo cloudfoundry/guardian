@@ -12,7 +12,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-const StorePath = "/tmp/grootfs"
+const DefaultStorePath = "/var/lib/grootfs"
 
 func init() {
 	if reexec.Init() {
@@ -30,7 +30,7 @@ func main() {
 		cli.StringFlag{
 			Name:  "store",
 			Usage: "Path to the store directory",
-			Value: StorePath,
+			Value: DefaultStorePath,
 		},
 		cli.StringFlag{
 			Name:  "log-level",

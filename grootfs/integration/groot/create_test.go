@@ -81,6 +81,7 @@ var _ = Describe("Create", func() {
 			Expect(path.Join(StorePath, "bundles", "some-id")).ToNot(BeAnExistingFile())
 		})
 	})
+
 	Context("when the id is not provided", func() {
 		It("fails", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", imagePath)
