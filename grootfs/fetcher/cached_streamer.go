@@ -35,7 +35,7 @@ func (s *CachedStreamer) Stream(logger lager.Logger, digest string) (io.ReadClos
 	})
 
 	if err != nil {
-		return nil, 0, fmt.Errorf("fetching blob from cache driver: ", err)
+		return nil, 0, fmt.Errorf("fetching blob from cache driver: %s", err)
 	}
 
 	return content, 0, nil
