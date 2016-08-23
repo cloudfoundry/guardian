@@ -85,7 +85,11 @@ int mkdir_p_as(const char *dir, uid_t uid, gid_t gid) {
  * We need to define execveat here since glibc does not provide a wrapper
  * for this syscall yet. This code will not run once glibc implements this.
  */
+#if defined (__PPC64__)
+#define EXECVEAT_CODE 362
+#else
 #define EXECVEAT_CODE 322
+#endif
 int execveat(int fd, const char *path, char **argv, char **envp, int flags) {
     return syscall(EXECVEAT_CODE, fd, path, argv, envp, flags);
 }
