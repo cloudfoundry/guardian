@@ -21,14 +21,10 @@ import (
 
 var CreateCommand = cli.Command{
 	Name:        "create",
-	Usage:       "create --image <image> <id>",
+	Usage:       "create [options] <image> <id>",
 	Description: "Creates a root filesystem for the provided image.",
 
 	Flags: []cli.Flag{
-		cli.StringFlag{
-			Name:  "image",
-			Usage: "Local path or URL to the image",
-		},
 		cli.StringSliceFlag{
 			Name:  "uid-mapping",
 			Usage: "UID mapping for image translation, e.g.: <Namespace UID>:<Host UID>:<Size>",
@@ -43,13 +39,15 @@ var CreateCommand = cli.Command{
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("create")
 
-		storePath := ctx.GlobalString("store")
-		image := ctx.String("image")
-		if ctx.NArg() != 1 {
-			logger.Error("parsing-command", errors.New("id was not specified"))
-			return cli.NewExitError("id was not specified", 1)
+		if ctx.NArg() != 2 {
+			logger.Error("parsing-command", errors.New("invalid arguments"))
+			return cli.NewExitError("invalid arguments", 1)
 		}
-		id := ctx.Args().First()
+
+		storePath := ctx.GlobalString("store")
+		image := ctx.Args().First()
+		id := ctx.Args().Tail()[0]
+
 		uidMappings, err := parseIDMappings(ctx.StringSlice("uid-mapping"))
 		if err != nil {
 			err = fmt.Errorf("parsing uid-mapping: %s", err)

@@ -14,24 +14,24 @@ import (
 var _ = Describe("grootfs global flags", func() {
 	Describe("logs", func() {
 		It("forwards human logs to stdout", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--image", "my-image")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "my-image")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
 
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess.Out).Should(gbytes.Say("id was not specified"))
+			Eventually(sess.Out).Should(gbytes.Say("invalid arguments"))
 		})
 
 		Context("when setting --verbose", func() {
 			It("forwards non-human logs to stderr", func() {
-				cmd := exec.Command(GrootFSBin, "--log-level", "error", "--store", StorePath, "create", "--image", "my-image")
+				cmd := exec.Command(GrootFSBin, "--log-level", "error", "--store", StorePath, "create", "my-image")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
 
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess.Err).Should(gbytes.Say(`"error":"id was not specified"`))
+				Eventually(sess.Err).Should(gbytes.Say(`"error":"invalid arguments"`))
 			})
 		})
 
@@ -49,14 +49,14 @@ var _ = Describe("grootfs global flags", func() {
 			})
 
 			It("forwards logs to the given file", func() {
-				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--log-file", logFile.Name(), "--store", StorePath, "create", "--image", "my-image")
+				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--log-file", logFile.Name(), "--store", StorePath, "create", "my-image")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
 
 				log, err := ioutil.ReadFile(logFile.Name())
 				Expect(err).NotTo(HaveOccurred())
-				Expect(log).To(ContainSubstring("id was not specified"))
+				Expect(log).To(ContainSubstring("invalid arguments"))
 			})
 		})
 	})

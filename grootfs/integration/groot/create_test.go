@@ -39,7 +39,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("fails and produces a useful error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--image", imagePath, "random-id")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", imagePath, "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Eventually(sess.Out).Should(gbytes.Say("bundle for id `random-id` already exists"))
 			Expect(err).NotTo(HaveOccurred())
@@ -51,8 +51,9 @@ var _ = Describe("Create", func() {
 		It("returns the newuidmap output in the stdout", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
-				"create", "--image", imagePath,
+				"create",
 				"--uid-mapping", "1:1:65000",
+				imagePath,
 				"some-id",
 			)
 
@@ -67,8 +68,9 @@ var _ = Describe("Create", func() {
 		It("does not leak the bundle directory", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
-				"create", "--image", imagePath,
+				"create",
 				"--uid-mapping", "1:1:65000",
+				imagePath,
 				"some-id",
 			)
 
@@ -81,7 +83,7 @@ var _ = Describe("Create", func() {
 	})
 	Context("when the id is not provided", func() {
 		It("fails", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--image", imagePath)
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", imagePath)
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
@@ -92,7 +94,7 @@ var _ = Describe("Create", func() {
 		It("fails when the uid mapping is invalid", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
-				"create", "--image", imagePath,
+				"create", imagePath,
 				"--uid-mapping", "1:hello:65000",
 				"some-id",
 			)
@@ -105,7 +107,7 @@ var _ = Describe("Create", func() {
 		It("fails when the gid mapping is invalid", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
-				"create", "--image", imagePath,
+				"create", imagePath,
 				"--gid-mapping", "1:groot:65000",
 				"some-id",
 			)

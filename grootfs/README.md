@@ -73,17 +73,17 @@ installed (uidmap package on ubuntu)
 ### Creating a bundle
 
 ```
-grootfs --store /mnt/btrfs create --image docker:///ubuntu:latest my-image-id
+grootfs --store /mnt/btrfs create docker:///ubuntu:latest my-image-id
 ```
 
 It also supports local folders as an image source:
 
 ```
-grootfs --store /mnt/btrfs create --image /my-folder my-image-id
+grootfs --store /mnt/btrfs create /my-folder my-image-id
 ```
 
 This will create a `/mnt/btrfs/bundles/my-image-id/rootfs` directory with the
-contents of `--image`.
+contents of the image provided.
 
 #### User/Group ID Mapping
 
@@ -97,7 +97,7 @@ grootfs --store /mnt/btrfs create \
         --uid-mapping 1:100000:650000 \
         --gid-mapping 0:1000:1 \
         --gid-mapping 1:100000:650000 \
-        --image docker:///ubuntu:latest \
+        docker:///ubuntu:latest \
         my-image-id
 ```
 

@@ -77,11 +77,12 @@ var _ = Describe("Create", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
 				"--log-level", "debug",
-				"create", "--image", imagePath,
+				"create",
 				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
 				"--uid-mapping", "1:100000:65000",
 				"--gid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
 				"--gid-mapping", "1:100000:65000",
+				imagePath,
 				"some-id",
 			)
 			cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -122,11 +123,12 @@ var _ = Describe("Create", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
 				"--log-level", "debug",
-				"create", "--image", imagePath,
+				"create",
 				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
 				"--uid-mapping", "1:100000:65000",
 				"--gid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
 				"--gid-mapping", "1:100000:65000",
+				imagePath,
 				"some-id",
 			)
 			cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -150,11 +152,12 @@ var _ = Describe("Create", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
 				"--log-level", "debug",
-				"create", "--image", "docker:///cfgarden/empty:v0.1.0",
+				"create",
 				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
 				"--uid-mapping", "1:100000:65000",
 				"--gid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
 				"--gid-mapping", "1:100000:65000",
+				"docker:///cfgarden/empty:v0.1.0",
 				"some-id",
 			)
 			cmd.SysProcAttr = &syscall.SysProcAttr{

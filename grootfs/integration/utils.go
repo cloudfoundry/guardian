@@ -28,14 +28,13 @@ func CreateBundle(grootFSBin, storePath, imagePath, id string) groot.Bundle {
 
 func CreateBundleWSpec(grootFSBin, storePath string, spec groot.CreateSpec) groot.Bundle {
 	args := []string{"--store", storePath, "create"}
-	args = append(args, "--image", spec.Image)
 	for _, mapping := range spec.UIDMappings {
 		args = append(args, "--uid-mapping", fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size))
 	}
 	for _, mapping := range spec.GIDMappings {
 		args = append(args, "--gid-mapping", fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size))
 	}
-	args = append(args, spec.ID)
+	args = append(args, spec.Image, spec.ID)
 
 	cmd := exec.Command(grootFSBin, args...)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)

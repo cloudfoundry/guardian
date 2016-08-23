@@ -10,6 +10,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -31,6 +32,16 @@ var _ = Describe("Create with local images", func() {
 		fooContents, err := ioutil.ReadFile(bundleContentPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(fooContents)).To(Equal("hello-world"))
+	})
+
+	Context("when required args are not provided", func() {
+		It("returns an error", func() {
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(1))
+			Eventually(sess.Out).Should(gbytes.Say("invalid arguments"))
+		})
 	})
 
 	Context("when image content changes", func() {
@@ -69,7 +80,7 @@ var _ = Describe("Create with local images", func() {
 
 	Context("when local directory does not exist", func() {
 		It("returns an error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--image", "/invalid/image", "random-id")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "/invalid/image", "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
