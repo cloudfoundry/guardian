@@ -73,7 +73,7 @@ var _ = Describe("Btrfs", func() {
 				Expect(logger).To(ContainSequence(
 					Debug(
 						Message("btrfs.btrfs-creating-volume.starting-btrfs"),
-						Data("path", "/sbin/btrfs"),
+						Data("path", "/bin/btrfs"),
 						Data("args", []string{"btrfs", "subvolume", "create", volumePath}),
 						Data("id", volID),
 					),
@@ -110,7 +110,7 @@ var _ = Describe("Btrfs", func() {
 				Expect(logger).To(ContainSequence(
 					Debug(
 						Message("btrfs.btrfs-creating-volume.starting-btrfs"),
-						Data("path", "/sbin/btrfs"),
+						Data("path", "/bin/btrfs"),
 						Data("args", []string{"btrfs", "subvolume", "snapshot", srcVolPath, destVolPath}),
 						Data("id", destVolID),
 						Data("parentID", srcVolID),
@@ -175,7 +175,7 @@ var _ = Describe("Btrfs", func() {
 			Expect(logger).To(ContainSequence(
 				Debug(
 					Message("btrfs.btrfs-creating-snapshot.starting-btrfs"),
-					Data("path", "/sbin/btrfs"),
+					Data("path", "/bin/btrfs"),
 					Data("args", []string{"btrfs", "subvolume", "snapshot", srcVolPath, destPath}),
 					Data("id", srcVolID),
 				),
@@ -215,7 +215,7 @@ var _ = Describe("Btrfs", func() {
 			Expect(logger).To(ContainSequence(
 				Debug(
 					Message("btrfs.btrfs-destroying.starting-btrfs"),
-					Data("path", "/sbin/btrfs"),
+					Data("path", "/bin/btrfs"),
 					Data("args", []string{"btrfs", "subvolume", "delete", volumePath}),
 				),
 			))
