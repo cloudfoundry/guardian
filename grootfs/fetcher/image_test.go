@@ -18,6 +18,7 @@ import (
 	"github.com/containers/image/types"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/ghttp"
 )
 
@@ -79,9 +80,17 @@ var _ = Describe("Image", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("retuns an error", func() {
+			It("wraps the containers/image with an useful error", func() {
 				_, err := image.Manifest(logger)
-				Expect(err).To(MatchError(ContainSubstring("fetching manifest")))
+				Expect(err).To(MatchError(ContainSubstring("image does not exist or you do not have permissions to see it")))
+			})
+
+			It("logs the original error message", func() {
+				_, err := image.Manifest(logger)
+				Expect(err).To(HaveOccurred())
+
+				Expect(logger).To(gbytes.Say("fetching-manifest-failed"))
+				Expect(logger).To(gbytes.Say("error fetching manifest: status code:"))
 			})
 		})
 	})

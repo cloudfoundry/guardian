@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"strings"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/containers/image/types"
@@ -31,7 +32,8 @@ func NewContainersImage(ref types.ImageReference, cacheDriver CacheDriver) *Cont
 }
 
 func (i *ContainersImage) Manifest(logger lager.Logger) (specsv1.Manifest, error) {
-	logger = logger.Session("fetching-image-manifest")
+	imgName := i.ref.DockerReference().RemoteName()
+	logger = logger.Session("fetching-image-manifest", lager.Data{"reference": imgName})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -41,17 +43,22 @@ func (i *ContainersImage) Manifest(logger lager.Logger) (specsv1.Manifest, error
 
 	img, err := i.ref.NewImage("", false)
 	if err != nil {
-		return specsv1.Manifest{}, fmt.Errorf("creating image: %s", err)
+		return specsv1.Manifest{}, fmt.Errorf("creating image `%s`: %s", imgName, err)
 	}
 
 	contents, _, err := img.Manifest()
 	if err != nil {
-		return specsv1.Manifest{}, fmt.Errorf("fetching manifest: %s", err)
+		if strings.Contains(err.Error(), "error fetching manifest: status code:") {
+			logger.Error("fetching-manifest-failed", err)
+			return specsv1.Manifest{}, fmt.Errorf("fetching manifest `%s`: image does not exist or you do not have permissions to see it", imgName)
+		}
+
+		return specsv1.Manifest{}, fmt.Errorf("fetching manifest `%s`: %s", imgName, err)
 	}
 
 	var manifest specsv1.Manifest
 	if err := json.Unmarshal(contents, &manifest); err != nil {
-		return specsv1.Manifest{}, fmt.Errorf("parsing manifest: %s", err)
+		return specsv1.Manifest{}, fmt.Errorf("parsing manifest `%s`: %s", imgName, err)
 	}
 	i.cachedManifest = &manifest
 
