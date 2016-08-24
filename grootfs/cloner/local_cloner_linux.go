@@ -59,16 +59,16 @@ func (c *LocalCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 			UIDMappings: spec.UIDMappings,
 			GIDMappings: spec.GIDMappings,
 		}); err != nil {
-			return fmt.Errorf("writing to `%s`: %s", spec.RootFSPath, err)
+			return fmt.Errorf("writing to `%s`: %s", spec.Bundle.RootFSPath(), err)
 		}
 	}
 
-	logger.Debug("snapshotting-to-rootfs", lager.Data{"volumeID": volumeID, "rootfsPath": spec.RootFSPath})
-	if err := c.volumeDriver.Snapshot(logger, volumeID, spec.RootFSPath); err != nil {
-		return fmt.Errorf("snapshotting the image `%s` to path `%s`: %s", volumeID, spec.RootFSPath, err)
+	logger.Debug("snapshotting-to-rootfs", lager.Data{"volumeID": volumeID, "rootfsPath": spec.Bundle.RootFSPath()})
+	if err := c.volumeDriver.Snapshot(logger, volumeID, spec.Bundle.RootFSPath()); err != nil {
+		return fmt.Errorf("snapshotting the image `%s` to path `%s`: %s", volumeID, spec.Bundle.RootFSPath(), err)
 	}
 
-	logger.Debug("volume-snapshotted-to-rootfs", lager.Data{"volumeID": volumeID, "rootfsPath": spec.RootFSPath})
+	logger.Debug("volume-snapshotted-to-rootfs", lager.Data{"volumeID": volumeID, "rootfsPath": spec.Bundle.RootFSPath()})
 	return nil
 }
 

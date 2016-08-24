@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -25,10 +26,12 @@ var _ = Describe("LocalCloner", func() {
 		logger     lager.Logger
 		volumePath string
 		imagePath  string
+		bundle     *store.Bundle
 	)
 
 	BeforeEach(func() {
 		var err error
+		bundle = store.NewBundle("/bundle/path")
 		imagePath, err = ioutil.TempDir("", "image-path")
 		Expect(err).ToNot(HaveOccurred())
 		volumePath = "/path/to/cached/volume"
@@ -47,8 +50,8 @@ var _ = Describe("LocalCloner", func() {
 
 		It("snapshots the volume path to the rootfs path", func() {
 			Expect(cloner.Clone(logger, groot.CloneSpec{
-				Image:      imagePath,
-				RootFSPath: "/rootfs-destination",
+				Image:  imagePath,
+				Bundle: bundle,
 			})).To(Succeed())
 
 			Expect(volDriver.SnapshotCallCount()).To(Equal(1))
@@ -57,12 +60,12 @@ var _ = Describe("LocalCloner", func() {
 
 			calculatedVolID := integration.ImagePathToVolumeID(imagePath)
 			Expect(volumeID).To(Equal(calculatedVolID))
-			Expect(rootfsPath).To(Equal("/rootfs-destination"))
+			Expect(rootfsPath).To(Equal("/bundle/path/rootfs"))
 		})
 
 		Context("when the image path doesn't exist", func() {
 			It("returns an error", func() {
-				err := cloner.Clone(logger, groot.CloneSpec{Image: "/not-here/sorry"})
+				err := cloner.Clone(logger, groot.CloneSpec{Image: "/not-here/sorry", Bundle: bundle})
 				Expect(err).To(MatchError(ContainSubstring("checking image source")))
 			})
 		})
@@ -73,7 +76,7 @@ var _ = Describe("LocalCloner", func() {
 			})
 
 			It("returns an error", func() {
-				err := cloner.Clone(logger, groot.CloneSpec{Image: imagePath})
+				err := cloner.Clone(logger, groot.CloneSpec{Image: imagePath, Bundle: bundle})
 				Expect(err).To(MatchError(ContainSubstring("failed")))
 			})
 		})
@@ -86,7 +89,8 @@ var _ = Describe("LocalCloner", func() {
 
 			It("creates a new volume using sha of the image path + its timestamp", func() {
 				Expect(cloner.Clone(logger, groot.CloneSpec{
-					Image: imagePath,
+					Image:  imagePath,
+					Bundle: bundle,
 				})).To(Succeed())
 
 				Expect(volDriver.CreateCallCount()).To(Equal(1))
@@ -99,7 +103,8 @@ var _ = Describe("LocalCloner", func() {
 
 			It("reads the correct source", func() {
 				Expect(cloner.Clone(logger, groot.CloneSpec{
-					Image: imagePath,
+					Image:  imagePath,
+					Bundle: bundle,
 				})).To(Succeed())
 
 				Expect(streamer.StreamCallCount()).To(Equal(1))
@@ -117,7 +122,7 @@ var _ = Describe("LocalCloner", func() {
 
 				Expect(cloner.Clone(logger, groot.CloneSpec{
 					Image:       imagePath,
-					RootFSPath:  "/someplace",
+					Bundle:      bundle,
 					UIDMappings: uidMappings,
 					GIDMappings: gidMappings,
 				})).To(Succeed())
@@ -135,7 +140,7 @@ var _ = Describe("LocalCloner", func() {
 
 				streamer.StreamReturns(pipeR, 0, nil)
 
-				Expect(cloner.Clone(logger, groot.CloneSpec{Image: imagePath})).To(Succeed())
+				Expect(cloner.Clone(logger, groot.CloneSpec{Image: imagePath, Bundle: bundle})).To(Succeed())
 
 				Expect(unpacker.UnpackCallCount()).To(Equal(1))
 				_, writeSpec := unpacker.UnpackArgsForCall(0)
@@ -156,7 +161,8 @@ var _ = Describe("LocalCloner", func() {
 
 				It("returns an error", func() {
 					err := cloner.Clone(logger, groot.CloneSpec{
-						Image: imagePath,
+						Image:  imagePath,
+						Bundle: bundle,
 					})
 
 					Expect(err).To(MatchError(ContainSubstring("failed")))
@@ -168,7 +174,7 @@ var _ = Describe("LocalCloner", func() {
 					streamer.StreamReturns(nil, 0, errors.New("cannot read"))
 
 					Expect(
-						cloner.Clone(logger, groot.CloneSpec{Image: imagePath}),
+						cloner.Clone(logger, groot.CloneSpec{Image: imagePath, Bundle: bundle}),
 					).To(MatchError(ContainSubstring("cannot read")))
 				})
 			})
@@ -178,7 +184,7 @@ var _ = Describe("LocalCloner", func() {
 					unpacker.UnpackReturns(errors.New("cannot write"))
 
 					Expect(
-						cloner.Clone(logger, groot.CloneSpec{Image: imagePath}),
+						cloner.Clone(logger, groot.CloneSpec{Image: imagePath, Bundle: bundle}),
 					).To(MatchError(ContainSubstring("cannot write")))
 				})
 			})
@@ -191,7 +197,8 @@ var _ = Describe("LocalCloner", func() {
 
 			It("doesn't create a new volume", func() {
 				Expect(cloner.Clone(logger, groot.CloneSpec{
-					Image: imagePath,
+					Image:  imagePath,
+					Bundle: bundle,
 				})).To(Succeed())
 
 				Expect(volDriver.CreateCallCount()).To(BeZero())
@@ -199,7 +206,8 @@ var _ = Describe("LocalCloner", func() {
 
 			It("doesn't stream", func() {
 				Expect(cloner.Clone(logger, groot.CloneSpec{
-					Image: imagePath,
+					Image:  imagePath,
+					Bundle: bundle,
 				})).To(Succeed())
 
 				Expect(streamer.StreamCallCount()).To(BeZero())
@@ -207,7 +215,8 @@ var _ = Describe("LocalCloner", func() {
 
 			It("doesn't unpack", func() {
 				Expect(cloner.Clone(logger, groot.CloneSpec{
-					Image: imagePath,
+					Image:  imagePath,
+					Bundle: bundle,
 				})).To(Succeed())
 
 				Expect(unpacker.UnpackCallCount()).To(BeZero())

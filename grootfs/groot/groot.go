@@ -31,7 +31,7 @@ type IDMappingSpec struct {
 
 type CloneSpec struct {
 	Image       string
-	RootFSPath  string
+	Bundle      Bundle
 	UIDMappings []IDMappingSpec
 	GIDMappings []IDMappingSpec
 }
@@ -87,7 +87,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 
 	cloneSpec := CloneSpec{
 		Image:       spec.Image,
-		RootFSPath:  bundle.RootFSPath(),
+		Bundle:      bundle,
 		UIDMappings: spec.UIDMappings,
 		GIDMappings: spec.GIDMappings,
 	}

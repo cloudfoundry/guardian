@@ -2,20 +2,20 @@ package store
 
 import "path"
 
-type bundle struct {
+type Bundle struct {
 	path string
 }
 
-func NewBundle(path string) *bundle {
-	return &bundle{
+func NewBundle(path string) *Bundle {
+	return &Bundle{
 		path: path,
 	}
 }
 
-func (bdl *bundle) Path() string {
+func (bdl *Bundle) Path() string {
 	return bdl.path
 }
 
-func (bdl *bundle) RootFSPath() string {
+func (bdl *Bundle) RootFSPath() string {
 	return path.Join(bdl.path, "rootfs")
 }

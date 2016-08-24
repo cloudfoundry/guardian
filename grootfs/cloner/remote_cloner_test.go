@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/grootfs/cloner/clonerfakes"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -25,9 +26,11 @@ var _ = Describe("RemoteCloner", func() {
 		fakeStreamer     *clonerfakes.FakeStreamer
 		fakeUnpacker     *clonerfakes.FakeUnpacker
 		fakeVolumeDriver *grootfakes.FakeVolumeDriver
+		bundle           *store.Bundle
 	)
 
 	BeforeEach(func() {
+		bundle = store.NewBundle("/bundle/path")
 		fakeFetcher = new(clonerfakes.FakeFetcher)
 		fakeStreamer = new(clonerfakes.FakeStreamer)
 		fakeFetcher.StreamerReturns(fakeStreamer, nil)
@@ -51,7 +54,8 @@ var _ = Describe("RemoteCloner", func() {
 	Context("when passing an invalid URL", func() {
 		It("returns an error", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image: "%%!!#@!^&",
+				Bundle: bundle,
+				Image:  "%%!!#@!^&",
 			})).To(MatchError(ContainSubstring("parsing URL")))
 		})
 	})
@@ -63,7 +67,8 @@ var _ = Describe("RemoteCloner", func() {
 
 		It("returns an error", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image: "docker:///cfgarden/image",
+				Bundle: bundle,
+				Image:  "docker:///cfgarden/image",
 			})).To(MatchError(ContainSubstring("KABOM!")))
 		})
 	})
@@ -75,14 +80,16 @@ var _ = Describe("RemoteCloner", func() {
 
 		It("returns an error", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image: "docker:///cfgarden/image",
+				Bundle: bundle,
+				Image:  "docker:///cfgarden/image",
 			})).To(MatchError(ContainSubstring("KABOM!")))
 		})
 	})
 
 	It("creates volumes for all the layers", func() {
 		Expect(remote.Clone(logger, groot.CloneSpec{
-			Image: "docker:///cfgarden/image",
+			Bundle: bundle,
+			Image:  "docker:///cfgarden/image",
 		})).To(Succeed())
 
 		Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(3))
@@ -105,7 +112,8 @@ var _ = Describe("RemoteCloner", func() {
 		}
 
 		Expect(remote.Clone(logger, groot.CloneSpec{
-			Image: "docker:///cfgarden/image",
+			Bundle: bundle,
+			Image:  "docker:///cfgarden/image",
 		})).To(Succeed())
 
 		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
@@ -124,7 +132,8 @@ var _ = Describe("RemoteCloner", func() {
 		}
 
 		Expect(remote.Clone(logger, groot.CloneSpec{
-			Image: "docker:///cfgarden/image",
+			Bundle: bundle,
+			Image:  "docker:///cfgarden/image",
 		})).To(Succeed())
 
 		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
@@ -150,7 +159,8 @@ var _ = Describe("RemoteCloner", func() {
 
 		BeforeEach(func() {
 			spec = groot.CloneSpec{
-				Image: "docker:///cfgarden/image",
+				Bundle: bundle,
+				Image:  "docker:///cfgarden/image",
 				UIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{
 						HostID:      1,
@@ -224,7 +234,8 @@ var _ = Describe("RemoteCloner", func() {
 
 		It("does not try to create any layer", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image: "docker:///cfgarden/image",
+				Bundle: bundle,
+				Image:  "docker:///cfgarden/image",
 			})).To(Succeed())
 
 			Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(0))
@@ -238,7 +249,8 @@ var _ = Describe("RemoteCloner", func() {
 
 		It("returns an error", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image: "docker:///cfgarden/image",
+				Bundle: bundle,
+				Image:  "docker:///cfgarden/image",
 			})).To(MatchError(ContainSubstring("KABOM!")))
 		})
 	})
@@ -250,7 +262,8 @@ var _ = Describe("RemoteCloner", func() {
 
 		It("returns an error", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image: "docker:///cfgarden/image",
+				Bundle: bundle,
+				Image:  "docker:///cfgarden/image",
 			})).To(MatchError(ContainSubstring("KABOM!")))
 		})
 	})
@@ -262,22 +275,23 @@ var _ = Describe("RemoteCloner", func() {
 
 		It("returns an error", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image: "docker:///cfgarden/image",
+				Bundle: bundle,
+				Image:  "docker:///cfgarden/image",
 			})).To(MatchError(ContainSubstring("KABOM!")))
 		})
 	})
 
 	It("snapshots the last layer to the rootFSPath", func() {
 		Expect(remote.Clone(logger, groot.CloneSpec{
-			Image:      "docker:///cfgarden/image",
-			RootFSPath: "/path/to/rootfs",
+			Bundle: bundle,
+			Image:  "docker:///cfgarden/image",
 		})).To(Succeed())
 
 		Expect(fakeVolumeDriver.SnapshotCallCount()).To(Equal(1))
 
 		_, id, targetPath := fakeVolumeDriver.SnapshotArgsForCall(0)
 		Expect(id).To(Equal("chain-333"))
-		Expect(targetPath).To(Equal("/path/to/rootfs"))
+		Expect(targetPath).To(Equal("/bundle/path/rootfs"))
 	})
 
 	Context("when creating rootfs snapshot fails", func() {
@@ -287,7 +301,8 @@ var _ = Describe("RemoteCloner", func() {
 
 		It("returns an error", func() {
 			Expect(remote.Clone(logger, groot.CloneSpec{
-				Image: "docker:///cfgarden/image",
+				Bundle: bundle,
+				Image:  "docker:///cfgarden/image",
 			})).To(MatchError(ContainSubstring("KABOM!")))
 		})
 	})
