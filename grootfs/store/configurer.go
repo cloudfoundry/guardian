@@ -17,8 +17,8 @@ func NewConfigurer() *Configurer {
 
 func (c *Configurer) Ensure(logger lager.Logger, storePath string) error {
 	logger = logger.Session("ensuring-store", lager.Data{"storePath": storePath})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Debug("start")
+	defer logger.Debug("end")
 
 	requiredPaths := []string{
 		storePath,
