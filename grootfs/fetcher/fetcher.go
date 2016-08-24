@@ -37,7 +37,7 @@ func NewFetcher(cacheDriver CacheDriver, imageProvider ImageProvider) *Fetcher {
 }
 
 func (f *Fetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (cloner.ImageInfo, error) {
-	logger = logger.Session("layers-digest", lager.Data{"imageURL": imageURL})
+	logger = logger.Session("image-info", lager.Data{"imageURL": imageURL})
 	logger.Info("start")
 	defer logger.Info("end")
 

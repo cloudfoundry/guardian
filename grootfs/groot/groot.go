@@ -71,7 +71,7 @@ type CreateSpec struct {
 }
 
 func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
-	logger = logger.Session("groot-creating", lager.Data{"spec": spec})
+	logger = logger.Session("groot-creating", lager.Data{"bundleID": spec.ID, "spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
 

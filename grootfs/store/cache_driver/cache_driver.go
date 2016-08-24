@@ -25,7 +25,7 @@ func NewCacheDriver(storePath string) *CacheDriver {
 func (c *CacheDriver) Blob(logger lager.Logger, id string,
 	streamBlob fetcher.StreamBlob,
 ) (io.ReadCloser, error) {
-	logger = logger.Session("streaming-blob-from-cache", lager.Data{"id": id})
+	logger = logger.Session("streaming-blob-from-cache", lager.Data{"blobID": id})
 	logger.Info("start")
 	defer logger.Info("end")
 

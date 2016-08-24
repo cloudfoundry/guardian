@@ -1,11 +1,11 @@
 #!/bin/bash -e
 
 apt-get update
-apt-get install -y btrfs-tools uidmap
+apt-get install -y btrfs-tools uidmap vim
 modprobe btrfs
 truncate -s 1G ~/btrfs_volume
 mkfs.btrfs ~/btrfs_volume
 mkdir -p /mnt/btrfs
 mount -t btrfs -o user_subvol_rm_allowed ~/btrfs_volume /mnt/btrfs
 echo "Setup complete. Example command:"
-echo "./grootfs --store /mnt/btrfs create --image docker:///ubuntu:latest my-image-id"
+echo "./grootfs --store /mnt/btrfs create docker:///ubuntu:latest my-bundle-id"
