@@ -176,7 +176,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					processPath,
 					"some-handle",
 					&garden.TTYSpec{
-						&garden.WindowSize{
+						WindowSize: &garden.WindowSize{
 							Rows:    12,
 							Columns: 13,
 						},
@@ -324,7 +324,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 						processPath,
 						"some-handle",
 						&garden.TTYSpec{
-							&garden.WindowSize{
+							WindowSize: &garden.WindowSize{
 								Columns: 13,
 								Rows:    17,
 							},
@@ -333,7 +333,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					)
 					Expect(err).NotTo(HaveOccurred())
 
-					process.SetTTY(garden.TTYSpec{&garden.WindowSize{Columns: 53, Rows: 59}})
+					process.SetTTY(garden.TTYSpec{WindowSize: &garden.WindowSize{Columns: 53, Rows: 59}})
 
 					Eventually(received, "5s").Should(BeClosed())
 					Expect(receivedWinSize).To(Equal(
