@@ -10,6 +10,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -28,7 +29,6 @@ import (
 
 const MNT_DETACH = 0x2
 
-var RootFSPath = os.Getenv("GARDEN_TEST_ROOTFS")
 var DataDir string
 var TarBin = os.Getenv("GARDEN_TAR_PATH")
 
@@ -73,12 +73,11 @@ func init() {
 	}
 }
 
-func NewGardenRunner(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootfs bool, argv ...string) GardenRunner {
+func NewGardenRunner(bin, initBin, nstarBin, dadooBin, rootfs, tarBin, network, address string, argv ...string) GardenRunner {
 	r := GardenRunner{}
 
-	r.Network = "unix"
-	r.Addr = fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
-
+	r.Network = network
+	r.Addr = address
 	r.TmpDir = filepath.Join(
 		os.TempDir(),
 		fmt.Sprintf("test-garden-%d", ginkgo.GinkgoParallelNode()),
@@ -89,7 +88,7 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootf
 
 	MustMountTmpfs(r.GraphPath)
 
-	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, TarBin, supplyDefaultRootfs, argv...)
+	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, tarBin, rootfs, argv...)
 	r.Cmd.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", r.TmpDir))
 
 	for i, arg := range r.Cmd.Args {
@@ -112,8 +111,8 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootf
 	return r
 }
 
-func Start(bin, initBin, nstarBin, dadooBin string, supplyDefaultRootfs bool, argv ...string) *RunningGarden {
-	runner := NewGardenRunner(bin, initBin, nstarBin, dadooBin, supplyDefaultRootfs, argv...)
+func Start(bin, initBin, nstarBin, dadooBin, rootfs, tarBin string, argv ...string) *RunningGarden {
+	runner := NewGardenRunner(bin, initBin, nstarBin, dadooBin, rootfs, tarBin, "unix", fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode()), argv...)
 
 	r := &RunningGarden{
 		runner:   runner,
@@ -177,7 +176,7 @@ func (r *RunningGarden) Stop() error {
 	return err
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dadooBin, tarBin string, supplyDefaultRootfs bool, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dadooBin, tarBin string, rootfs string, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -205,13 +204,14 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dad
 
 	switch network {
 	case "tcp":
-		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-ip", addr)
+		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-ip", strings.Split(addr, ":")[0])
+		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-port", strings.Split(addr, ":")[1])
 	case "unix":
 		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-socket", addr)
 	}
 
-	if supplyDefaultRootfs {
-		gardenArgs = appendDefaultFlag(gardenArgs, "--default-rootfs", RootFSPath)
+	if rootfs != "" {
+		gardenArgs = appendDefaultFlag(gardenArgs, "--default-rootfs", rootfs)
 	}
 
 	gardenArgs = appendDefaultFlag(gardenArgs, "--depot", depotDir)
