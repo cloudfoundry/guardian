@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type UnpackSpec struct {
@@ -24,7 +25,7 @@ type LayerDigest struct {
 
 //go:generate counterfeiter . Fetcher
 type Fetcher interface {
-	LayersDigest(logger lager.Logger, imageURL *url.URL) ([]LayerDigest, error)
+	LayersDigest(logger lager.Logger, imageURL *url.URL) ([]LayerDigest, specsv1.Image, error)
 	Streamer(logger lager.Logger, imageURL *url.URL) (Streamer, error)
 }
 

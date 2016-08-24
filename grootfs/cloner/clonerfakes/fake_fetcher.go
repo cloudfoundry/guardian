@@ -7,10 +7,11 @@ import (
 
 	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/lager"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type FakeFetcher struct {
-	LayersDigestStub        func(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error)
+	LayersDigestStub        func(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, specsv1.Image, error)
 	layersDigestMutex       sync.RWMutex
 	layersDigestArgsForCall []struct {
 		logger   lager.Logger
@@ -18,7 +19,8 @@ type FakeFetcher struct {
 	}
 	layersDigestReturns struct {
 		result1 []cloner.LayerDigest
-		result2 error
+		result2 specsv1.Image
+		result3 error
 	}
 	StreamerStub        func(logger lager.Logger, imageURL *url.URL) (cloner.Streamer, error)
 	streamerMutex       sync.RWMutex
@@ -34,7 +36,7 @@ type FakeFetcher struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeFetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, error) {
+func (fake *FakeFetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, specsv1.Image, error) {
 	fake.layersDigestMutex.Lock()
 	fake.layersDigestArgsForCall = append(fake.layersDigestArgsForCall, struct {
 		logger   lager.Logger
@@ -45,7 +47,7 @@ func (fake *FakeFetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([
 	if fake.LayersDigestStub != nil {
 		return fake.LayersDigestStub(logger, imageURL)
 	} else {
-		return fake.layersDigestReturns.result1, fake.layersDigestReturns.result2
+		return fake.layersDigestReturns.result1, fake.layersDigestReturns.result2, fake.layersDigestReturns.result3
 	}
 }
 
@@ -61,12 +63,13 @@ func (fake *FakeFetcher) LayersDigestArgsForCall(i int) (lager.Logger, *url.URL)
 	return fake.layersDigestArgsForCall[i].logger, fake.layersDigestArgsForCall[i].imageURL
 }
 
-func (fake *FakeFetcher) LayersDigestReturns(result1 []cloner.LayerDigest, result2 error) {
+func (fake *FakeFetcher) LayersDigestReturns(result1 []cloner.LayerDigest, result2 specsv1.Image, result3 error) {
 	fake.LayersDigestStub = nil
 	fake.layersDigestReturns = struct {
 		result1 []cloner.LayerDigest
-		result2 error
-	}{result1, result2}
+		result2 specsv1.Image
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *FakeFetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Streamer, error) {

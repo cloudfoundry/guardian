@@ -1,11 +1,15 @@
 package cloner
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
+	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type RemoteCloner struct {
@@ -32,11 +36,15 @@ func (c *RemoteCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 		return fmt.Errorf("parsing URL: %s", err)
 	}
 
-	digests, err := c.fetcher.LayersDigest(logger, imageURL)
+	digests, config, err := c.fetcher.LayersDigest(logger, imageURL)
 	if err != nil {
 		return fmt.Errorf("fetching list of digests: %s", err)
 	}
 	logger.Debug("fetched-layers-digests", lager.Data{"digests": digests})
+
+	if err := c.writeImageJSON(logger, spec.Bundle, config); err != nil {
+		return fmt.Errorf("creating image.json: %s", err)
+	}
 
 	streamer, err := c.fetcher.Streamer(logger, imageURL)
 	if err != nil {
@@ -122,4 +130,19 @@ func wrapVolumeID(spec groot.CloneSpec, volumeID string) string {
 	}
 
 	return volumeID
+}
+
+func (c *RemoteCloner) writeImageJSON(logger lager.Logger, bundle groot.Bundle, config specsv1.Image) error {
+	logger = logger.Session("writing-image-json")
+	logger.Info("start")
+	defer logger.Info("end")
+
+	configWriter, err := os.OpenFile(filepath.Join(bundle.Path(), "image.json"), os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+	if err != nil {
+		return err
+	}
+	if err = json.NewEncoder(configWriter).Encode(config); err != nil {
+		return err
+	}
+	return nil
 }

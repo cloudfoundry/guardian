@@ -2,10 +2,13 @@ package cloner_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/cloner"
 	"code.cloudfoundry.org/grootfs/cloner/clonerfakes"
@@ -16,6 +19,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var _ = Describe("RemoteCloner", func() {
@@ -26,11 +30,18 @@ var _ = Describe("RemoteCloner", func() {
 		fakeStreamer     *clonerfakes.FakeStreamer
 		fakeUnpacker     *clonerfakes.FakeUnpacker
 		fakeVolumeDriver *grootfakes.FakeVolumeDriver
+		expectedConfig   specsv1.Image
 		bundle           *store.Bundle
+		bundlePath       string
 	)
 
 	BeforeEach(func() {
-		bundle = store.NewBundle("/bundle/path")
+		var err error
+		bundlePath, err = ioutil.TempDir("", "bundle-path")
+		Expect(err).NotTo(HaveOccurred())
+		bundle = store.NewBundle(bundlePath)
+
+		expectedConfig = specsv1.Image{Author: "Groot"}
 		fakeFetcher = new(clonerfakes.FakeFetcher)
 		fakeStreamer = new(clonerfakes.FakeStreamer)
 		fakeFetcher.StreamerReturns(fakeStreamer, nil)
@@ -39,7 +50,7 @@ var _ = Describe("RemoteCloner", func() {
 				cloner.LayerDigest{BlobID: "i-am-a-layer", DiffID: "layer-111", ChainID: "layer-111", ParentChainID: ""},
 				cloner.LayerDigest{BlobID: "i-am-another-layer", DiffID: "layer-222", ChainID: "chain-222", ParentChainID: "layer-111"},
 				cloner.LayerDigest{BlobID: "i-am-the-last-layer", DiffID: "layer-333", ChainID: "chain-333", ParentChainID: "chain-222"},
-			}, nil,
+			}, expectedConfig, nil,
 		)
 
 		fakeVolumeDriver = new(grootfakes.FakeVolumeDriver)
@@ -62,7 +73,7 @@ var _ = Describe("RemoteCloner", func() {
 
 	Context("when fetching the list of layers fails", func() {
 		BeforeEach(func() {
-			fakeFetcher.LayersDigestReturns([]cloner.LayerDigest{}, errors.New("KABOM!"))
+			fakeFetcher.LayersDigestReturns([]cloner.LayerDigest{}, specsv1.Image{}, errors.New("KABOM!"))
 		})
 
 		It("returns an error", func() {
@@ -152,6 +163,36 @@ var _ = Describe("RemoteCloner", func() {
 		contents, err = ioutil.ReadAll(unpackSpec.Stream)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("layer-i-am-the-last-layer-contents"))
+	})
+
+	It("writes the correct image.json to the bundle path", func() {
+		Expect(remote.Clone(logger, groot.CloneSpec{
+			Bundle: bundle,
+			Image:  "docker:///cfgarden/image",
+		})).To(Succeed())
+
+		imageJsonPath := filepath.Join(bundlePath, "image.json")
+		Expect(imageJsonPath).To(BeAnExistingFile())
+
+		imageJson, err := os.Open(imageJsonPath)
+		Expect(err).NotTo(HaveOccurred())
+
+		var imageJsonContent specsv1.Image
+		Expect(json.NewDecoder(imageJson).Decode(&imageJsonContent)).To(Succeed())
+		Expect(imageJsonContent).To(Equal(expectedConfig))
+	})
+
+	Context("when it fails to write the image.json", func() {
+		It("returns an error", func() {
+			imageJsonPath := filepath.Join(bundlePath, "image.json")
+			Expect(os.Mkdir(imageJsonPath, 0777)).To(Succeed())
+
+			err := remote.Clone(logger, groot.CloneSpec{
+				Bundle: bundle,
+				Image:  "docker:///cfgarden/image",
+			})
+			Expect(err).To(MatchError(ContainSubstring("creating image.json")))
+		})
 	})
 
 	Context("when UID and GID mappings are provided", func() {
@@ -291,7 +332,7 @@ var _ = Describe("RemoteCloner", func() {
 
 		_, id, targetPath := fakeVolumeDriver.SnapshotArgsForCall(0)
 		Expect(id).To(Equal("chain-333"))
-		Expect(targetPath).To(Equal("/bundle/path/rootfs"))
+		Expect(targetPath).To(Equal(bundle.RootFSPath()))
 	})
 
 	Context("when creating rootfs snapshot fails", func() {

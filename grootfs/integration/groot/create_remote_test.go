@@ -2,6 +2,7 @@ package groot_test
 
 import (
 	"archive/tar"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/ghttp"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var _ = Describe("Create with remote images", func() {
@@ -32,6 +34,23 @@ var _ = Describe("Create with remote images", func() {
 			bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id")
 
 			Expect(path.Join(bundle.RootFSPath(), "hello")).To(BeARegularFile())
+		})
+
+		It("saves the image.json to the bundle folder", func() {
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id")
+
+			imageJsonPath := path.Join(bundle.Path(), "image.json")
+			Expect(imageJsonPath).To(BeARegularFile())
+
+			imageJsonReader, err := os.Open(imageJsonPath)
+			Expect(err).ToNot(HaveOccurred())
+			var imageJson specsv1.Image
+			Expect(json.NewDecoder(imageJsonReader).Decode(&imageJson)).To(Succeed())
+
+			Expect(imageJson.Created).To(Equal("2016-08-03T16:50:55.797615406Z"))
+			Expect(imageJson.RootFS.DiffIDs).To(Equal([]string{
+				"sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca",
+			}))
 		})
 
 		Describe("OCI image caching", func() {
