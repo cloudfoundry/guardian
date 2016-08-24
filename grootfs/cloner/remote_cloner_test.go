@@ -45,12 +45,15 @@ var _ = Describe("RemoteCloner", func() {
 		fakeFetcher = new(clonerfakes.FakeFetcher)
 		fakeStreamer = new(clonerfakes.FakeStreamer)
 		fakeFetcher.StreamerReturns(fakeStreamer, nil)
-		fakeFetcher.LayersDigestReturns(
-			[]cloner.LayerDigest{
-				cloner.LayerDigest{BlobID: "i-am-a-layer", DiffID: "layer-111", ChainID: "layer-111", ParentChainID: ""},
-				cloner.LayerDigest{BlobID: "i-am-another-layer", DiffID: "layer-222", ChainID: "chain-222", ParentChainID: "layer-111"},
-				cloner.LayerDigest{BlobID: "i-am-the-last-layer", DiffID: "layer-333", ChainID: "chain-333", ParentChainID: "chain-222"},
-			}, expectedConfig, nil,
+		fakeFetcher.ImageInfoReturns(
+			cloner.ImageInfo{
+				LayersDigest: []cloner.LayerDigest{
+					cloner.LayerDigest{BlobID: "i-am-a-layer", DiffID: "layer-111", ChainID: "layer-111", ParentChainID: ""},
+					cloner.LayerDigest{BlobID: "i-am-another-layer", DiffID: "layer-222", ChainID: "chain-222", ParentChainID: "layer-111"},
+					cloner.LayerDigest{BlobID: "i-am-the-last-layer", DiffID: "layer-333", ChainID: "chain-333", ParentChainID: "chain-222"},
+				},
+				Config: expectedConfig,
+			}, nil,
 		)
 
 		fakeVolumeDriver = new(grootfakes.FakeVolumeDriver)
@@ -73,7 +76,10 @@ var _ = Describe("RemoteCloner", func() {
 
 	Context("when fetching the list of layers fails", func() {
 		BeforeEach(func() {
-			fakeFetcher.LayersDigestReturns([]cloner.LayerDigest{}, specsv1.Image{}, errors.New("KABOM!"))
+			fakeFetcher.ImageInfoReturns(cloner.ImageInfo{
+				LayersDigest: []cloner.LayerDigest{},
+				Config:       specsv1.Image{},
+			}, errors.New("KABOM!"))
 		})
 
 		It("returns an error", func() {

@@ -63,12 +63,12 @@ var _ = Describe("Fetcher", func() {
 		logger = lagertest.NewTestLogger("test-fetcher")
 	})
 
-	Describe("LayersDigest", func() {
+	Describe("ImageInfo", func() {
 		It("creates an image with the correct ref", func() {
 			imageURL, err := url.Parse("docker:///cfgarden/empty:v0.1.1")
 			Expect(err).NotTo(HaveOccurred())
 
-			_, _, err = fetcher.LayersDigest(logger, imageURL)
+			_, err = fetcher.ImageInfo(logger, imageURL)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(usedRef.DockerReference().String()).To(Equal("cfgarden/empty:v0.1.1"))
@@ -77,18 +77,18 @@ var _ = Describe("Fetcher", func() {
 		It("returns the correct image config", func() {
 			imageURL, err := url.Parse("docker:///cfgarden/empty:v0.1.1")
 			Expect(err).NotTo(HaveOccurred())
-			_, config, err := fetcher.LayersDigest(logger, imageURL)
+			imageInfo, err := fetcher.ImageInfo(logger, imageURL)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config).To(Equal(expectedConfig))
+			Expect(imageInfo.Config).To(Equal(expectedConfig))
 		})
 
 		It("returns the correct list of layer digests", func() {
 			imageURL, err := url.Parse("docker:///cfgarden/empty:v0.1.1")
 			Expect(err).NotTo(HaveOccurred())
 
-			digests, _, err := fetcher.LayersDigest(logger, imageURL)
+			imageInfo, err := fetcher.ImageInfo(logger, imageURL)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(digests).To(Equal([]clonerpkg.LayerDigest{
+			Expect(imageInfo.LayersDigest).To(Equal([]clonerpkg.LayerDigest{
 				clonerpkg.LayerDigest{
 					BlobID:        "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
 					DiffID:        "sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
@@ -109,7 +109,7 @@ var _ = Describe("Fetcher", func() {
 				imageURL, err := url.Parse("docker:cfgarden/empty:v0.1.0")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, _, err = fetcher.LayersDigest(logger, imageURL)
+				_, err = fetcher.ImageInfo(logger, imageURL)
 				Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
 			})
 		})
@@ -119,7 +119,7 @@ var _ = Describe("Fetcher", func() {
 				imageURL, err := url.Parse("docker://my-private-registry.org/cfgarden/empty:v0.1.1")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, _, err = fetcher.LayersDigest(logger, imageURL)
+				_, err = fetcher.ImageInfo(logger, imageURL)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(usedRef.DockerReference().String()).To(Equal("my-private-registry.org/cfgarden/empty:v0.1.1"))
@@ -135,7 +135,7 @@ var _ = Describe("Fetcher", func() {
 				imageURL, err := url.Parse("docker:///non-existing/image")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, _, err = fetcher.LayersDigest(logger, imageURL)
+				_, err = fetcher.ImageInfo(logger, imageURL)
 				Expect(err).To(MatchError(ContainSubstring("image does not exist!")))
 			})
 		})
@@ -149,7 +149,7 @@ var _ = Describe("Fetcher", func() {
 				imageURL, err := url.Parse("docker:///image/with-invalid-config")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, _, err = fetcher.LayersDigest(logger, imageURL)
+				_, err = fetcher.ImageInfo(logger, imageURL)
 				Expect(err).To(MatchError(ContainSubstring("parsing config failed")))
 			})
 		})

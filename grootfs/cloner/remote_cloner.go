@@ -36,13 +36,13 @@ func (c *RemoteCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 		return fmt.Errorf("parsing URL: %s", err)
 	}
 
-	digests, config, err := c.fetcher.LayersDigest(logger, imageURL)
+	imageInfo, err := c.fetcher.ImageInfo(logger, imageURL)
 	if err != nil {
 		return fmt.Errorf("fetching list of digests: %s", err)
 	}
-	logger.Debug("fetched-layers-digests", lager.Data{"digests": digests})
+	logger.Debug("fetched-layers-digests", lager.Data{"digests": imageInfo.LayersDigest})
 
-	if err := c.writeImageJSON(logger, spec.Bundle, config); err != nil {
+	if err := c.writeImageJSON(logger, spec.Bundle, imageInfo.Config); err != nil {
 		return fmt.Errorf("creating image.json: %s", err)
 	}
 
@@ -51,7 +51,7 @@ func (c *RemoteCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 		return fmt.Errorf("initializing streamer: %s", err)
 	}
 
-	for _, digest := range digests {
+	for _, digest := range imageInfo.LayersDigest {
 		volumePath, err := c.volumeDriver.Path(logger, wrapVolumeID(spec, digest.ChainID))
 		if err == nil {
 			logger.Debug("volume-exists", lager.Data{
@@ -108,7 +108,7 @@ func (c *RemoteCloner) Clone(logger lager.Logger, spec groot.CloneSpec) error {
 		})
 	}
 
-	lastVolumeID := wrapVolumeID(spec, digests[len(digests)-1].ChainID)
+	lastVolumeID := wrapVolumeID(spec, imageInfo.LayersDigest[len(imageInfo.LayersDigest)-1].ChainID)
 	if err := c.volumeDriver.Snapshot(logger, lastVolumeID, spec.Bundle.RootFSPath()); err != nil {
 		return fmt.Errorf("snapshotting the image to path `%s`: %s", spec.Bundle.RootFSPath(), err)
 	}

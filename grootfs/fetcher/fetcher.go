@@ -36,7 +36,7 @@ func NewFetcher(cacheDriver CacheDriver, imageProvider ImageProvider) *Fetcher {
 	}
 }
 
-func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner.LayerDigest, specsv1.Image, error) {
+func (f *Fetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (cloner.ImageInfo, error) {
 	logger = logger.Session("layers-digest", lager.Data{"imageURL": imageURL})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -50,7 +50,7 @@ func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner
 
 	ref, err := docker.ParseReference(refString)
 	if err != nil {
-		return nil, specsv1.Image{}, fmt.Errorf("parsing url failed: %s", err)
+		return cloner.ImageInfo{}, fmt.Errorf("parsing url failed: %s", err)
 	}
 
 	img := f.imageProvider(ref)
@@ -58,18 +58,21 @@ func (f *Fetcher) LayersDigest(logger lager.Logger, imageURL *url.URL) ([]cloner
 	logger.Debug("fetching-image-manifest")
 	manifest, err := img.Manifest(logger)
 	if err != nil {
-		return nil, specsv1.Image{}, fmt.Errorf("getting image manifest: %s", err)
+		return cloner.ImageInfo{}, fmt.Errorf("getting image manifest: %s", err)
 	}
 	logger.Debug("image-manifest", lager.Data{"manifest": manifest})
 
 	logger.Debug("fetching-image-config")
 	config, err := img.Config(logger)
 	if err != nil {
-		return nil, specsv1.Image{}, fmt.Errorf("getting image config: %s", err)
+		return cloner.ImageInfo{}, fmt.Errorf("getting image config: %s", err)
 	}
 	logger.Debug("image-config", lager.Data{"config": config})
 
-	return f.createLayersDigest(logger, manifest, config), config, nil
+	return cloner.ImageInfo{
+		LayersDigest: f.createLayersDigest(logger, manifest, config),
+		Config:       config,
+	}, nil
 }
 
 func (f *Fetcher) Streamer(logger lager.Logger, imageURL *url.URL) (cloner.Streamer, error) {

@@ -16,6 +16,11 @@ type UnpackSpec struct {
 	GIDMappings []groot.IDMappingSpec
 }
 
+type ImageInfo struct {
+	LayersDigest []LayerDigest
+	Config       specsv1.Image
+}
+
 type LayerDigest struct {
 	BlobID        string
 	DiffID        string
@@ -25,7 +30,7 @@ type LayerDigest struct {
 
 //go:generate counterfeiter . Fetcher
 type Fetcher interface {
-	LayersDigest(logger lager.Logger, imageURL *url.URL) ([]LayerDigest, specsv1.Image, error)
+	ImageInfo(logger lager.Logger, imageURL *url.URL) (ImageInfo, error)
 	Streamer(logger lager.Logger, imageURL *url.URL) (Streamer, error)
 }
 
