@@ -9,7 +9,6 @@ import (
 	"code.cloudfoundry.org/grootfs/cloner/clonerfakes"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
-	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -58,7 +57,7 @@ var _ = Describe("LocalCloner", func() {
 
 			_, volumeID, rootfsPath := volDriver.SnapshotArgsForCall(0)
 
-			calculatedVolID := integration.ImagePathToVolumeID(imagePath)
+			calculatedVolID := ImagePathToVolumeID(imagePath)
 			Expect(volumeID).To(Equal(calculatedVolID))
 			Expect(rootfsPath).To(Equal("/bundle/path/rootfs"))
 		})
@@ -95,7 +94,7 @@ var _ = Describe("LocalCloner", func() {
 
 				Expect(volDriver.CreateCallCount()).To(Equal(1))
 
-				calculatedVolID := integration.ImagePathToVolumeID(imagePath)
+				calculatedVolID := ImagePathToVolumeID(imagePath)
 				_, parentID, volumeID := volDriver.CreateArgsForCall(0)
 				Expect(parentID).To(BeEmpty())
 				Expect(volumeID).To(Equal(calculatedVolID))
