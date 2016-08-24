@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -78,7 +77,6 @@ func ImagePathToVolumeID(imagePath string) string {
 	stat, err := os.Stat(imagePath)
 	Expect(err).ToNot(HaveOccurred())
 
-	sys := stat.Sys().(*syscall.Stat_t)
 	imagePathSha := sha256.Sum256([]byte(imagePath))
-	return fmt.Sprintf("%s-%d", hex.EncodeToString(imagePathSha[:32]), sys.Mtim.Nsec)
+	return fmt.Sprintf("%s-%d", hex.EncodeToString(imagePathSha[:32]), stat.ModTime().Nanosecond())
 }

@@ -52,9 +52,6 @@ var _ = Describe("Create with local images", func() {
 		It("uses the new content for the new bundle", func() {
 			Expect(ioutil.WriteFile(path.Join(imagePath, "bar"), []byte("this-is-a-bar-content"), 0644)).To(Succeed())
 
-			barImageContentPath := path.Join(imagePath, "bar")
-			Eventually(barImageContentPath, "5s").Should(BeARegularFile())
-
 			bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id-2")
 
 			bundleContentPath := path.Join(bundle.RootFSPath(), "foo")
