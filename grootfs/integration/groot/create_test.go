@@ -24,6 +24,19 @@ var _ = Describe("Create", func() {
 		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
+	Context("when no --store option is given", func() {
+		It("uses the default store path", func() {
+			Expect("/var/lib/grootfs/bundles").ToNot(BeAnExistingFile())
+
+			cmd := exec.Command(GrootFSBin, "create", imagePath, "random-id")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Eventually(sess).Should(gbytes.Say("making directory `/var/lib/grootfs`"))
+			Expect(err).NotTo(HaveOccurred())
+			// It will fail at this point, because /var/lib/grootfs doesn't exist
+			Eventually(sess).Should(gexec.Exit(1))
+		})
+	})
+
 	Context("when two rootfses are using the same image", func() {
 		It("isolates them", func() {
 			bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id")
