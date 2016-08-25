@@ -193,21 +193,33 @@ func (p *externalBinaryNetworker) NetIn(log lager.Logger, handle string, externa
 }
 
 func (p *externalBinaryNetworker) NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error {
-	rules := []garden.NetOutRule{}
-	value, ok := p.configStore.Get(handle, NetOutKey)
-	if ok {
-		err := json.Unmarshal([]byte(value), &rules)
-		if err != nil {
-			return fmt.Errorf("store net-out invalid JSON: %s", err)
-		}
+	containerIP, ok := p.configStore.Get(handle, gardener.ContainerIPKey)
+	if !ok {
+		return fmt.Errorf("cannot find container [%s]\n", handle)
 	}
 
-	rules = append(rules, rule)
-	ruleJSON, err := json.Marshal(rules)
+	var props = struct {
+		ContainerIP string            `json:"container_ip"`
+		NetOutRule  garden.NetOutRule `json:"netout_rule"`
+	}{
+		ContainerIP: containerIP,
+		NetOutRule:  rule,
+	}
+
+	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
+	propertiesJSON, err := json.Marshal(props)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshaling netout rule: %s", err)
+	}
+	networkPluginFlags := []string{
+		"--handle", handle,
+		"--properties", string(propertiesJSON),
 	}
 
-	p.configStore.Set(handle, NetOutKey, string(ruleJSON))
-	return nil
+	args := append(pathAndExtraArgs, "--action", "net-out")
+	args = append(args, networkPluginFlags...)
+
+	cmd := exec.Command(p.path)
+	cmd.Args = args
+	return p.commandRunner.Run(cmd)
 }

@@ -322,75 +322,36 @@ var _ = Describe("ExternalNetworker", func() {
 
 	Describe("NetOut", func() {
 		handle := "my-handle"
+		BeforeEach(func() {
+			configStore.Set(handle, gardener.ContainerIPKey, "169.254.1.2")
+		})
 
-		It("writes to the config store", func() {
-			netOutRules := []garden.NetOutRule{{
+		It("executes the external plugin with the correct args", func() {
+			rule := garden.NetOutRule{
 				Protocol: garden.ProtocolTCP,
 				Networks: []garden.IPRange{{
-					Start: net.IPv4(10, 10, 10, 2),
-					End:   net.IPv4(10, 10, 10, 2),
+					Start: net.ParseIP("1.1.1.1"),
+					End:   net.ParseIP("2.2.2.2"),
 				}},
-			}}
+				Ports: []garden.PortRange{{
+					Start: uint16(9000),
+					End:   uint16(9999),
+				}},
+			}
+			Expect(plugin.NetOut(logger, handle, rule)).To(Succeed())
 
-			expectedJSON, err := json.Marshal(netOutRules)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(plugin.NetOut(logger, handle, netOutRules[0])).To(Succeed())
-			v, ok := configStore.Get(handle, netplugin.NetOutKey)
-			Expect(ok).To(BeTrue())
-			Expect(v).To(MatchJSON(expectedJSON))
+			cmd := fakeCommandRunner.ExecutedCommands()[0]
+			Expect(cmd.Path).To(Equal("some/path"))
+			Expect(cmd.Args).To(Equal([]string{
+				"some/path",
+				"arg1",
+				"arg2",
+				"arg3",
+				"--action", "net-out",
+				"--handle", handle,
+				"--properties", `{"container_ip":"169.254.1.2","netout_rule":{"protocol":1,"networks":[{"start":"1.1.1.1","end":"2.2.2.2"}],"ports":[{"start":9000,"end":9999}]}}`,
+			}))
 		})
 
-		Context("when config store has existing net-out rule", func() {
-			var oldNetOutRule garden.NetOutRule
-
-			BeforeEach(func() {
-				oldNetOutRule = garden.NetOutRule{
-					Protocol: garden.ProtocolTCP,
-					Networks: []garden.IPRange{{
-						Start: net.IPv4(10, 10, 10, 2),
-						End:   net.IPv4(10, 10, 10, 2),
-					}},
-				}
-
-				netOutRules := []garden.NetOutRule{oldNetOutRule}
-				r, _ := json.Marshal(netOutRules)
-				configStore.Set(handle, netplugin.NetOutKey, string(r))
-			})
-
-			It("adds another net-out rule", func() {
-				newNetOutRule := garden.NetOutRule{
-					Protocol: garden.ProtocolTCP,
-					Networks: []garden.IPRange{{
-						Start: net.IPv4(10, 10, 10, 3),
-						End:   net.IPv4(10, 10, 10, 3),
-					}},
-				}
-				Expect(plugin.NetOut(logger, handle, newNetOutRule)).To(Succeed())
-
-				expectedJSON, err := json.Marshal([]garden.NetOutRule{oldNetOutRule, newNetOutRule})
-				Expect(err).NotTo(HaveOccurred())
-				v, ok := configStore.Get(handle, netplugin.NetOutKey)
-				Expect(ok).To(BeTrue())
-				Expect(v).To(MatchJSON(expectedJSON))
-			})
-		})
-
-		Context("when config store has bad net-out rule data", func() {
-			BeforeEach(func() {
-				configStore.Set(handle, netplugin.NetOutKey, "bad-data")
-			})
-
-			It("returns an error", func() {
-				newNetOutRule := garden.NetOutRule{
-					Protocol: garden.ProtocolTCP,
-					Networks: []garden.IPRange{{
-						Start: net.IPv4(10, 10, 10, 3),
-						End:   net.IPv4(10, 10, 10, 3),
-					}},
-				}
-				err := plugin.NetOut(logger, handle, newNetOutRule)
-				Expect(err).To(MatchError(ContainSubstring("store net-out invalid JSON")))
-			})
-		})
 	})
 })
