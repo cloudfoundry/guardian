@@ -28,7 +28,7 @@ var rows = flag.Int("rows", 0, "rows for tty")
 var cols = flag.Int("cols", 0, "cols for tty")
 var tty = flag.Bool("tty", false, "tty requested")
 
-var ioWg sync.WaitGroup = sync.WaitGroup{}
+var ioWg *sync.WaitGroup = &sync.WaitGroup{}
 
 func main() {
 	os.Exit(run())
