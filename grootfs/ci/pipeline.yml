@@ -9,6 +9,13 @@ resources:
     ignore_paths:
     - ci/pipeline.yml
 
+- name: grootfs-bench-git-repo
+  type: git
+  source:
+    uri: git@github.com:cloudfoundry/grootfs-bench.git
+    branch: master
+    private_key: {{gnome-private-key}}
+
 - name: slack-alert
   type: slack-notification-docker
   source:
@@ -126,6 +133,26 @@ jobs:
   - put: grootfs-next-dev-version
     resource: grootfs-version
     params: { file: grootfs-next-dev-version/number }
+
+- name: grootfs-bench
+  public: true
+  plan:
+  - aggregate:
+    - get: grootfs-bench-git-repo
+      trigger: true
+  - task: grootfs-bench-tests
+    file: grootfs-bench-git-repo/ci/grootfs-bench-tests.yml
+    on_failure:
+      put: slack-alert
+      params:
+        username: Thanos
+        icon_url: http://www.comicsblend.com/wp-content/uploads/2013/04/thanos.jpg
+        channel: "#garden"
+        text: "<!subteam^S1U0HSJ9E|grootfsteam>: I've destroyed your build (grootfs-bench tests are dead). Come and get me!"
+  - put: grootfs-tracker
+    params:
+      repos:
+      - grootfs-bench-git-repo
 
 - name: build-ci-image
   plan:
