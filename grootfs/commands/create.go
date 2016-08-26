@@ -3,12 +3,14 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"net/url"
 
-	clonerpkg "code.cloudfoundry.org/grootfs/cloner"
-	streamerpkg "code.cloudfoundry.org/grootfs/cloner/streamer"
-	unpackerpkg "code.cloudfoundry.org/grootfs/cloner/unpacker"
-	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
+	"code.cloudfoundry.org/grootfs/fetcher/local"
+	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	grootpkg "code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/image_puller"
+	"code.cloudfoundry.org/grootfs/image_puller/streamer"
+	unpackerpkg "code.cloudfoundry.org/grootfs/image_puller/unpacker"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
@@ -62,24 +64,34 @@ var CreateCommand = cli.Command{
 		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
-		bundler := storepkg.NewBundler(storePath)
+		bundler := storepkg.NewBundler(btrfsVolumeDriver, storePath)
 
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(runner)
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedCmdUnpacker(runner, idMapper, "unpack")
 
-		tarStreamer := streamerpkg.NewTarStreamer()
-
-		localCloner := clonerpkg.NewLocalCloner(tarStreamer, namespacedCmdUnpacker, btrfsVolumeDriver)
-
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
-		remoteFetcher := fetcherpkg.NewFetcher(cacheDriver, func(ref types.ImageReference) fetcherpkg.Image {
-			return fetcherpkg.NewContainersImage(ref, cacheDriver)
+		remoteFetcher := remote.NewRemoteFetcher(cacheDriver, func(ref types.ImageReference) remote.Image {
+			return remote.NewContainersImage(ref, cacheDriver)
 		})
 
-		remoteCloner := clonerpkg.NewRemoteCloner(remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
+		tarStreamer := streamer.NewTarStreamer()
+		localFetcher := local.NewLocalFetcher(tarStreamer)
 
-		groot := grootpkg.IamGroot(bundler, localCloner, remoteCloner, btrfsVolumeDriver)
+		parsedImageURL, _ := url.Parse(image)
+		// if err != nil {
+		// 	return nil, fmt.Errorf("parsing image url: %s", err)
+		// }
+
+		var imageFetcher image_puller.Fetcher
+		if parsedImageURL.Scheme == "" {
+			imageFetcher = localFetcher
+		} else {
+			imageFetcher = remoteFetcher
+		}
+
+		imgPuller := image_puller.NewImagePuller(imageFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
+		groot := grootpkg.IamGroot(bundler, imgPuller)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
 			ID:          id,

@@ -4,16 +4,23 @@ import (
 	"fmt"
 	"io"
 
-	"code.cloudfoundry.org/grootfs/cloner"
+	"code.cloudfoundry.org/grootfs/image_puller"
 	"code.cloudfoundry.org/lager"
 )
 
 type CachedStreamer struct {
 	cacheDriver CacheDriver
-	streamer    cloner.Streamer
+	streamer    image_puller.Streamer
 }
 
-func NewCachedStreamer(cacheDriver CacheDriver, streamer cloner.Streamer) *CachedStreamer {
+type StreamBlob func(logger lager.Logger) (io.ReadCloser, error)
+
+//go:generate counterfeiter . CacheDriver
+type CacheDriver interface {
+	Blob(logger lager.Logger, id string, streamBlob StreamBlob) (io.ReadCloser, error)
+}
+
+func NewCachedStreamer(cacheDriver CacheDriver, streamer image_puller.Streamer) *CachedStreamer {
 	return &CachedStreamer{
 		cacheDriver: cacheDriver,
 		streamer:    streamer,

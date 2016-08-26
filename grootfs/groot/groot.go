@@ -18,8 +18,8 @@ type Bundle interface {
 }
 
 type BundleSpec struct {
-	VolumePath  string
-	ImageConfig specsv1.Image
+	VolumePath string
+	Image      specsv1.Image
 }
 
 type Bundler interface {
@@ -45,16 +45,14 @@ type ImagePuller interface {
 }
 
 type Groot struct {
-	bundler           Bundler
-	localImagePuller  ImagePuller
-	remoteImagePuller ImagePuller
+	bundler     Bundler
+	imagePuller ImagePuller
 }
 
-func IamGroot(bundler Bundler, localImagePuller, remoteImagePuller ImagePuller) *Groot {
+func IamGroot(bundler Bundler, imagePuller ImagePuller) *Groot {
 	return &Groot{
-		bundler:           bundler,
-		localImagePuller:  localImagePuller,
-		remoteImagePuller: remoteImagePuller,
+		bundler:     bundler,
+		imagePuller: imagePuller,
 	}
 }
 
@@ -80,7 +78,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		return nil, fmt.Errorf("checking id exists: %s", err)
 	}
 	if ok {
-		return nil, fmt.Errorf("id already exists")
+		return nil, fmt.Errorf("bundle for id `%s` already exists", spec.ID)
 	}
 
 	imageSpec := ImageSpec{
@@ -88,12 +86,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		UIDMappings: spec.UIDMappings,
 		GIDMappings: spec.GIDMappings,
 	}
-	var bundleSpec BundleSpec
-	if parsedURL.Scheme == "" {
-		bundleSpec, err = g.localImagePuller.Pull(logger, imageSpec)
-	} else {
-		bundleSpec, err = g.remoteImagePuller.Pull(logger, imageSpec)
-	}
+	bundleSpec, err := g.imagePuller.Pull(logger, imageSpec)
 	if err != nil {
 		return nil, fmt.Errorf("pulling the image: %s", err)
 	}

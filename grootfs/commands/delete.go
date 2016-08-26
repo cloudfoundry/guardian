@@ -30,8 +30,8 @@ var DeleteCommand = cli.Command{
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
 
-		bundler := store.NewBundler(storePath)
-		groot := grootpkg.IamGroot(bundler, nil, nil, btrfsVolumeDriver)
+		bundler := store.NewBundler(btrfsVolumeDriver, storePath)
+		groot := grootpkg.IamGroot(bundler, nil)
 
 		err := groot.Delete(logger, id)
 		if err != nil {

@@ -55,19 +55,18 @@ func (d *Btrfs) Create(logger lager.Logger, parentID, id string) (string, error)
 	return volPath, nil
 }
 
-func (d *Btrfs) Snapshot(logger lager.Logger, id, targetPath string) error {
-	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"id": id, "targetPath": targetPath})
+func (d *Btrfs) Snapshot(logger lager.Logger, fromPath, toPath string) error {
+	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"fromPath": fromPath, "toPath": toPath})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	volPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
-	cmd := exec.Command("btrfs", "subvolume", "snapshot", volPath, targetPath)
+	cmd := exec.Command("btrfs", "subvolume", "snapshot", fromPath, toPath)
 
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf(
-			"creating btrfs snapshot to `%s` (%s): %s",
-			targetPath, err, string(contents),
+			"creating btrfs snapshot from `%s` to `%s` (%s): %s",
+			fromPath, toPath, err, string(contents),
 		)
 	}
 
@@ -91,5 +90,9 @@ func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
 			path, err, string(contents),
 		)
 	}
+	return nil
+}
+
+func (d *Btrfs) ApplyDiskLimit(loggaer lager.Logger, path string, diskLimit int64) error {
 	return nil
 }

@@ -5,9 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 
-	"code.cloudfoundry.org/grootfs/cloner/clonerfakes"
 	"code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/fetcherfakes"
+	"code.cloudfoundry.org/grootfs/image_puller/image_pullerfakes"
 	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
@@ -21,7 +21,7 @@ var _ = Describe("CachedStreamer", func() {
 		cacheDir         string
 		logger           *lagertest.TestLogger
 		streamer         *fetcher.CachedStreamer
-		internalStreamer *clonerfakes.FakeStreamer
+		internalStreamer *image_pullerfakes.FakeStreamer
 		cacheDriver      *fetcherfakes.FakeCacheDriver
 	)
 
@@ -32,7 +32,7 @@ var _ = Describe("CachedStreamer", func() {
 		cacheDir, err = ioutil.TempDir("", "streamer-cache")
 		Expect(err).NotTo(HaveOccurred())
 
-		internalStreamer = new(clonerfakes.FakeStreamer)
+		internalStreamer = new(image_pullerfakes.FakeStreamer)
 		streamer = fetcher.NewCachedStreamer(cacheDriver, internalStreamer)
 		Expect(err).NotTo(HaveOccurred())
 	})

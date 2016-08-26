@@ -38,7 +38,7 @@ var _ = Describe("Btrfs", func() {
 
 	Describe("Path", func() {
 		It("returns the volume path when it exists", func() {
-			volID := randVolID()
+			volID := randVolumeID()
 			volPath, err := btrfs.Create(logger, "", volID)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -58,7 +58,7 @@ var _ = Describe("Btrfs", func() {
 	Describe("Create", func() {
 		Context("when the parent is empty", func() {
 			It("creates a BTRFS subvolume", func() {
-				volID := randVolID()
+				volID := randVolumeID()
 				volPath, err := btrfs.Create(logger, "", volID)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -66,7 +66,7 @@ var _ = Describe("Btrfs", func() {
 			})
 
 			It("logs the correct btrfs command", func() {
-				volID := randVolID()
+				volID := randVolumeID()
 				volumePath, err := btrfs.Create(logger, "", volID)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -83,37 +83,37 @@ var _ = Describe("Btrfs", func() {
 
 		Context("when the parent is not empty", func() {
 			It("creates a BTRFS snapshot", func() {
-				srcVolID := randVolID()
-				destVolID := randVolID()
+				volumeID := randVolumeID()
+				destVolID := randVolumeID()
 
-				srcVolPath, err := btrfs.Create(logger, "", srcVolID)
+				fromPath, err := btrfs.Create(logger, "", volumeID)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(ioutil.WriteFile(filepath.Join(srcVolPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(fromPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
 
-				destVolPath, err := btrfs.Create(logger, srcVolID, destVolID)
+				destVolPath, err := btrfs.Create(logger, volumeID, destVolID)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(filepath.Join(destVolPath, "a_file")).To(BeARegularFile())
 			})
 
 			It("logs the correct btrfs command", func() {
-				srcVolID := randVolID()
-				destVolID := randVolID()
+				volumeID := randVolumeID()
+				destVolID := randVolumeID()
 
-				srcVolPath, err := btrfs.Create(logger, "", srcVolID)
+				fromPath, err := btrfs.Create(logger, "", volumeID)
 				Expect(err).NotTo(HaveOccurred())
 
-				destVolPath, err := btrfs.Create(logger, srcVolID, destVolID)
+				destVolPath, err := btrfs.Create(logger, volumeID, destVolID)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger).To(ContainSequence(
 					Debug(
 						Message("btrfs.btrfs-creating-volume.starting-btrfs"),
 						Data("path", "/bin/btrfs"),
-						Data("args", []string{"btrfs", "subvolume", "snapshot", srcVolPath, destVolPath}),
+						Data("args", []string{"btrfs", "subvolume", "snapshot", fromPath, destVolPath}),
 						Data("id", destVolID),
-						Data("parentID", srcVolID),
+						Data("parentID", volumeID),
 					),
 				))
 			})
@@ -121,7 +121,7 @@ var _ = Describe("Btrfs", func() {
 
 		Context("when the volume exists", func() {
 			It("returns an error", func() {
-				volID := randVolID()
+				volID := randVolumeID()
 				volPath := filepath.Join(storePath, store.VOLUMES_DIR_NAME, volID)
 				Expect(os.MkdirAll(volPath, 0777)).To(Succeed())
 
@@ -132,7 +132,7 @@ var _ = Describe("Btrfs", func() {
 
 		Context("when the parent does not exist", func() {
 			It("returns an error", func() {
-				volID := randVolID()
+				volID := randVolumeID()
 
 				_, err := btrfs.Create(logger, "non-existent-parent", volID)
 				Expect(err).To(MatchError(ContainSubstring("creating btrfs volume")))
@@ -141,43 +141,44 @@ var _ = Describe("Btrfs", func() {
 	})
 
 	Describe("Snapshot", func() {
-		var destPath string
+		var toPath string
 
 		BeforeEach(func() {
 			bundlePath, err := ioutil.TempDir(storePath, "")
 			Expect(err).NotTo(HaveOccurred())
-			destPath = filepath.Join(bundlePath, "rootfs")
+			toPath = filepath.Join(bundlePath, "rootfs")
 		})
 
 		It("creates a BTRFS snapshot", func() {
-			srcVolID := randVolID()
+			volumeID := randVolumeID()
 
-			srcVolPath, err := btrfs.Create(logger, "", srcVolID)
+			fromPath, err := btrfs.Create(logger, "", volumeID)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(ioutil.WriteFile(filepath.Join(srcVolPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(fromPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
 
-			Expect(btrfs.Snapshot(logger, srcVolID, destPath)).To(Succeed())
+			Expect(btrfs.Snapshot(logger, fromPath, toPath)).To(Succeed())
 
-			Expect(filepath.Join(destPath, "a_file")).To(BeARegularFile())
+			Expect(filepath.Join(toPath, "a_file")).To(BeARegularFile())
 		})
 
 		It("logs the correct btrfs command", func() {
-			srcVolID := randVolID()
+			volumeID := randVolumeID()
 
-			srcVolPath, err := btrfs.Create(logger, "", srcVolID)
+			fromPath, err := btrfs.Create(logger, "", volumeID)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(ioutil.WriteFile(filepath.Join(srcVolPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(fromPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
 
-			Expect(btrfs.Snapshot(logger, srcVolID, destPath)).To(Succeed())
+			Expect(btrfs.Snapshot(logger, fromPath, toPath)).To(Succeed())
 
 			Expect(logger).To(ContainSequence(
 				Debug(
 					Message("btrfs.btrfs-creating-snapshot.starting-btrfs"),
 					Data("path", "/bin/btrfs"),
-					Data("args", []string{"btrfs", "subvolume", "snapshot", srcVolPath, destPath}),
-					Data("id", srcVolID),
+					Data("fromPath", fromPath),
+					Data("toPath", toPath),
+					Data("args", []string{"btrfs", "subvolume", "snapshot", fromPath, toPath}),
 				),
 			))
 		})
@@ -185,7 +186,7 @@ var _ = Describe("Btrfs", func() {
 		Context("when the parent does not exist", func() {
 			It("returns an error", func() {
 				Expect(
-					btrfs.Snapshot(logger, "non-existent-parent", destPath),
+					btrfs.Snapshot(logger, "non-existent-parent", toPath),
 				).To(MatchError(ContainSubstring("creating btrfs snapshot")))
 			})
 		})
@@ -196,7 +197,7 @@ var _ = Describe("Btrfs", func() {
 
 		BeforeEach(func() {
 			var err error
-			volumePath, err = btrfs.Create(logger, "", randVolID())
+			volumePath, err = btrfs.Create(logger, "", randVolumeID())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -240,7 +241,7 @@ var _ = Describe("Btrfs", func() {
 	})
 })
 
-func randVolID() string {
+func randVolumeID() string {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return fmt.Sprintf("volume-%d", r.Int())
 }

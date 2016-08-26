@@ -16,18 +16,16 @@ import (
 
 var _ = Describe("I AM GROOT, the Orchestrator", func() {
 	var (
-		fakeBundler           *grootfakes.FakeBundler
-		fakeLocalImagePuller  *grootfakes.FakeImagePuller
-		fakeRemoteImagePuller *grootfakes.FakeImagePuller
-		groot                 *grootpkg.Groot
-		logger                lager.Logger
+		fakeBundler     *grootfakes.FakeBundler
+		fakeImagePuller *grootfakes.FakeImagePuller
+		groot           *grootpkg.Groot
+		logger          lager.Logger
 	)
 
 	BeforeEach(func() {
 		fakeBundler = new(grootfakes.FakeBundler)
-		fakeLocalImagePuller = new(grootfakes.FakeImagePuller)
-		fakeRemoteImagePuller = new(grootfakes.FakeImagePuller)
-		groot = grootpkg.IamGroot(fakeBundler, fakeLocalImagePuller, fakeRemoteImagePuller)
+		fakeImagePuller = new(grootfakes.FakeImagePuller)
+		groot = grootpkg.IamGroot(fakeBundler, fakeImagePuller)
 		logger = lagertest.NewTestLogger("groot")
 	})
 
@@ -58,22 +56,23 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			It("returns an error", func() {
 				_, err := groot.Create(logger, grootpkg.CreateSpec{
 					Image: "/path/to/image",
+					ID:    "some-id",
 				})
 				Expect(err).To(HaveOccurred())
 
 				Expect(fakeBundler.CreateCallCount()).To(Equal(0))
-				Expect(err).To(MatchError(ContainSubstring("id already exists")))
+				Expect(err).To(MatchError(ContainSubstring("bundle for id `some-id` already exists")))
 			})
 
 			It("does not pull the image", func() {
 				_, err := groot.Create(logger, grootpkg.CreateSpec{
 					Image: "/path/to/image",
+					ID:    "some-id",
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(fakeLocalImagePuller.PullCallCount()).To(Equal(0))
-				Expect(fakeRemoteImagePuller.PullCallCount()).To(Equal(0))
-				Expect(err).To(MatchError(ContainSubstring("id already exists")))
+				Expect(fakeImagePuller.PullCallCount()).To(Equal(0))
+				Expect(err).To(MatchError(ContainSubstring("bundle for id `some-id` already exists")))
 			})
 		})
 
@@ -98,106 +97,58 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(fakeLocalImagePuller.PullCallCount()).To(Equal(0))
-				Expect(fakeRemoteImagePuller.PullCallCount()).To(Equal(0))
+				Expect(fakeImagePuller.PullCallCount()).To(Equal(0))
 				Expect(err).To(MatchError(ContainSubstring("Checking if the bundle ID exists")))
 			})
 		})
 
-		Context("when using a local image", func() {
-			It("pulls the image", func() {
-				uidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
-				gidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}
+		It("pulls the image", func() {
+			uidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
+			gidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}
 
-				_, err := groot.Create(logger, grootpkg.CreateSpec{
-					Image:       "/path/to/image",
-					UIDMappings: uidMappings,
-					GIDMappings: gidMappings,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(fakeLocalImagePuller.PullCallCount()).To(Equal(1))
-				Expect(fakeRemoteImagePuller.PullCallCount()).To(Equal(0))
-				_, imageSpec := fakeLocalImagePuller.PullArgsForCall(0)
-				imageURL, err := url.Parse("/path/to/image")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(imageSpec.ImageSrc).To(Equal(imageURL))
-				Expect(imageSpec.UIDMappings).To(Equal(uidMappings))
-				Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
+			_, err := groot.Create(logger, grootpkg.CreateSpec{
+				Image:       "/path/to/image",
+				UIDMappings: uidMappings,
+				GIDMappings: gidMappings,
 			})
+			Expect(err).NotTo(HaveOccurred())
 
-			Context("when pulling the image fails", func() {
-				BeforeEach(func() {
-					fakeLocalImagePuller.PullReturns(grootpkg.BundleSpec{}, errors.New("Failed to pull image"))
-				})
-
-				It("returns the error", func() {
-					_, err := groot.Create(logger, grootpkg.CreateSpec{
-						Image: "/path/to/image",
-					})
-					Expect(err).To(MatchError("pulling the image: Failed to pull image"))
-				})
-
-				It("does not create a bundle", func() {
-					groot.Create(logger, grootpkg.CreateSpec{
-						Image: "/path/to/image",
-					})
-					Expect(fakeBundler.CreateCallCount()).To(Equal(0))
-				})
-			})
+			imageURL, err := url.Parse("/path/to/image")
+			Expect(err).NotTo(HaveOccurred())
+			_, imageSpec := fakeImagePuller.PullArgsForCall(0)
+			Expect(imageSpec.ImageSrc).To(Equal(imageURL))
+			Expect(imageSpec.UIDMappings).To(Equal(uidMappings))
+			Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
 		})
 
-		Context("when using a remote image", func() {
-			It("pulls the image", func() {
-				uidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
-				gidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}
-
-				_, err := groot.Create(logger, grootpkg.CreateSpec{
-					Image:       "docker:///path/to/image",
-					UIDMappings: uidMappings,
-					GIDMappings: gidMappings,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(fakeLocalImagePuller.PullCallCount()).To(Equal(0))
-				Expect(fakeRemoteImagePuller.PullCallCount()).To(Equal(1))
-				_, imageSpec := fakeRemoteImagePuller.PullArgsForCall(0)
-				imageURL, err := url.Parse("docker:///path/to/image")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(imageSpec.ImageSrc).To(Equal(imageURL))
-				Expect(imageSpec.UIDMappings).To(Equal(uidMappings))
-				Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
+		Context("when pulling the image fails", func() {
+			BeforeEach(func() {
+				fakeImagePuller.PullReturns(grootpkg.BundleSpec{}, errors.New("Failed to pull image"))
 			})
 
-			Context("when pulling the image fails", func() {
-				BeforeEach(func() {
-					fakeRemoteImagePuller.PullReturns(grootpkg.BundleSpec{}, errors.New("Failed to pull image"))
+			It("returns the error", func() {
+				_, err := groot.Create(logger, grootpkg.CreateSpec{
+					Image: "/path/to/image",
 				})
+				Expect(err).To(MatchError("pulling the image: Failed to pull image"))
+			})
 
-				It("returns the error", func() {
-					_, err := groot.Create(logger, grootpkg.CreateSpec{
-						Image: "docker:///path/to/image",
-					})
-					Expect(err).To(MatchError("pulling the image: Failed to pull image"))
+			It("does not create a bundle", func() {
+				groot.Create(logger, grootpkg.CreateSpec{
+					Image: "/path/to/image",
 				})
-
-				It("does not create a bundle", func() {
-					groot.Create(logger, grootpkg.CreateSpec{
-						Image: "docker:///path/to/image",
-					})
-					Expect(fakeBundler.CreateCallCount()).To(Equal(0))
-				})
+				Expect(fakeBundler.CreateCallCount()).To(Equal(0))
 			})
 		})
 
 		It("makes a bundle", func() {
 			bundleSpec := grootpkg.BundleSpec{
 				VolumePath: "/path/to/volume",
-				ImageConfig: specsv1.Image{
+				Image: specsv1.Image{
 					Author: "Groot",
 				},
 			}
-			fakeLocalImagePuller.PullReturns(bundleSpec, nil)
+			fakeImagePuller.PullReturns(bundleSpec, nil)
 
 			_, err := groot.Create(logger, grootpkg.CreateSpec{
 				ID:    "some-id",

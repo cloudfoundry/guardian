@@ -78,5 +78,5 @@ func ImagePathToVolumeID(imagePath string) string {
 	Expect(err).ToNot(HaveOccurred())
 
 	imagePathSha := sha256.Sum256([]byte(imagePath))
-	return fmt.Sprintf("%s-%d", hex.EncodeToString(imagePathSha[:32]), stat.ModTime().Nanosecond())
+	return fmt.Sprintf("%s-%d", hex.EncodeToString(imagePathSha[:32]), stat.ModTime().UnixNano())
 }
