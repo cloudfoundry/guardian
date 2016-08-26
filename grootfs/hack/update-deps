@@ -43,6 +43,22 @@ function print_message {
   printf "\r\033[00;3${colour}m[${message}]\033[0m\n"
 }
 
+check_glide_version() {
+  gv=$(glide --version | awk '{print $3}')
+  if [ $gv != "0.11.1" ]; then
+    print_message "YOUR GLIDE VERSION IS $gv" $RED
+    print_message "THIS SCRIPT REQUIRES GLIDE 0.11.1" $RED
+    if [[ $(uname) == "Darwin" ]]; then
+      print_message "SWITCHING NOW..." $RED
+      brew switch glide 0.11.1 &> /dev/null
+    else
+      print_message "GO FIX IT" $RED
+      exit 1
+    fi
+  fi
+  print_message "GLIDE VERSION OK" $GREEN
+}
+
 check_clean_status() {
   print_message "CHECKING IF STATUS IS CLEAN" $GREEN
   if ! [ -z "$(git status --porcelain)" ]; then
@@ -149,6 +165,8 @@ test_warning() {
   print_message "Dependencies updated." $RED
   print_message "TEST NOW." $RED
 }
+
+check_glide_version
 
 while getopts "a:d:h" OPTION
 do
