@@ -242,6 +242,7 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 		})
 	})
+
 	Describe("NetIn", func() {
 		It("adds the port mapping", func() {
 			externalPort, containerPort, err := plugin.NetIn(logger, handle, 22, 33)
@@ -321,13 +322,12 @@ var _ = Describe("ExternalNetworker", func() {
 	})
 
 	Describe("NetOut", func() {
-		handle := "my-handle"
+		var handle = "my-handle"
+		var rule garden.NetOutRule
+
 		BeforeEach(func() {
 			configStore.Set(handle, gardener.ContainerIPKey, "169.254.1.2")
-		})
-
-		It("executes the external plugin with the correct args", func() {
-			rule := garden.NetOutRule{
+			rule = garden.NetOutRule{
 				Protocol: garden.ProtocolTCP,
 				Networks: []garden.IPRange{{
 					Start: net.ParseIP("1.1.1.1"),
@@ -338,6 +338,9 @@ var _ = Describe("ExternalNetworker", func() {
 					End:   uint16(9999),
 				}},
 			}
+		})
+
+		It("executes the external plugin with the correct args", func() {
 			Expect(plugin.NetOut(logger, handle, rule)).To(Succeed())
 
 			cmd := fakeCommandRunner.ExecutedCommands()[0]
@@ -353,5 +356,22 @@ var _ = Describe("ExternalNetworker", func() {
 			}))
 		})
 
+		Context("when the handle cannot be found in the config store", func() {
+			It("returns the error", func() {
+				Expect(plugin.NetOut(logger, "missing-handle", rule)).To(MatchError("cannot find container [missing-handle]\n"))
+			})
+		})
+
+		Context("when the external plugin errors", func() {
+			It("returns the error", func() {
+				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
+					Path: "some/path",
+				}, func(cmd *exec.Cmd) error {
+					return errors.New("boom")
+				})
+
+				Expect(plugin.NetOut(logger, handle, rule)).To(MatchError("external networker: boom"))
+			})
+		})
 	})
 })

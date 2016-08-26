@@ -192,6 +192,27 @@ func (p *externalBinaryNetworker) NetIn(log lager.Logger, handle string, externa
 	return externalPort, containerPort, nil
 }
 
+func (p *externalBinaryNetworker) exec(log lager.Logger, action, handle, stdin string, cmdArgs ...string) ([]byte, error) {
+	args := append([]string{p.path}, p.extraArg...)
+	args = append(args, "--action", action, "--handle", handle)
+	cmd := exec.Command(p.path)
+	cmd.Args = append(args, cmdArgs...)
+	stdout := &bytes.Buffer{}
+	cmd.Stdout = stdout
+	stderr := &bytes.Buffer{}
+	cmd.Stderr = stderr
+	cmd.Stdin = strings.NewReader(stdin)
+
+	err := p.commandRunner.Run(cmd)
+	logData := lager.Data{"stderr": stderr.String(), "stdout": stdout.String()}
+	if err != nil {
+		log.Error("external-networker-result", err, logData)
+		return stdout.Bytes(), fmt.Errorf("external networker: %s", err)
+	}
+	log.Info("external-networker-result", logData)
+	return stdout.Bytes(), nil
+}
+
 func (p *externalBinaryNetworker) NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error {
 	containerIP, ok := p.configStore.Get(handle, gardener.ContainerIPKey)
 	if !ok {
@@ -205,21 +226,15 @@ func (p *externalBinaryNetworker) NetOut(log lager.Logger, handle string, rule g
 		ContainerIP: containerIP,
 		NetOutRule:  rule,
 	}
-
-	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
 	propertiesJSON, err := json.Marshal(props)
 	if err != nil {
-		return fmt.Errorf("marshaling netout rule: %s", err)
-	}
-	networkPluginFlags := []string{
-		"--handle", handle,
-		"--properties", string(propertiesJSON),
+		return fmt.Errorf("marshaling netout rule: %s", err) // not tested
 	}
 
-	args := append(pathAndExtraArgs, "--action", "net-out")
-	args = append(args, networkPluginFlags...)
+	_, err = p.exec(log, "net-out", handle, "", []string{"--properties", string(propertiesJSON)}...)
+	if err != nil {
+		return err
+	}
 
-	cmd := exec.Command(p.path)
-	cmd.Args = args
-	return p.commandRunner.Run(cmd)
+	return nil
 }
