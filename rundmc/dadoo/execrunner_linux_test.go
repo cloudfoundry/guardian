@@ -26,7 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/opencontainers/runtime-spec/specs-go"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("Dadoo ExecRunner", func() {
@@ -102,15 +102,13 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			fd4 := dup(cmd.ExtraFiles[1])
 
 			if dadooReturns != nil {
-				// dadoo would error - clean up & bail out
-				os.RemoveAll(bundlePath)
+				// dadoo would error - bail out
 				return dadooReturns
 			}
 
 			// dadoo would not error - simulate dadoo operation
 			go func(cmd *exec.Cmd, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File)) {
 				defer GinkgoRecover()
-				defer os.RemoveAll(bundlePath)
 
 				// parse flags to get bundle dir argument so we can open stdin/out/err pipes
 				dadooFlags.Parse(cmd.Args[1:])
@@ -566,9 +564,40 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Context("when dadoo is running", func() {
 
 			var stdin, stdout, stderr, exit *os.File
+			var gstdin, gstdout, gstderr *os.File
+
+			var openNonBlocking = func(fileName string) (*os.File, error) {
+				file, err := os.OpenFile(fileName, os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+				if err != nil {
+					return nil, err
+				}
+				if err = syscall.SetNonblock(int(file.Fd()), false); err != nil {
+					return nil, err
+				}
+				return file, nil
+			}
 
 			JustBeforeEach(func() {
+
+				var err error
+				// pretend we opened pipes on garden
+				gstdin, err = os.OpenFile(filepath.Join(processPath, "some-process-id", "stdin"), os.O_RDWR, 0600)
+				Expect(err).NotTo(HaveOccurred())
+
+				gstdout, err = openNonBlocking(filepath.Join(processPath, "some-process-id", "stdout"))
+				Expect(err).NotTo(HaveOccurred())
+
+				gstderr, err = openNonBlocking(filepath.Join(processPath, "some-process-id", "stderr"))
+				Expect(err).NotTo(HaveOccurred())
+
+				// open dadoo pipes
 				stdin, stdout, stderr, _, exit = openPipes(filepath.Join(processPath, "some-process-id"))
+			})
+
+			AfterEach(func() {
+				Expect(gstdin.Close()).To(Succeed())
+				Expect(gstdout.Close()).To(Succeed())
+				Expect(gstderr.Close()).To(Succeed())
 			})
 
 			Context("and the process doesn't immediately write to stdout or stderr", func() {
@@ -681,10 +710,8 @@ func dup(f *os.File) *os.File {
 }
 
 func openPipes(dir string) (stdin, stdout, stderr, winsz, exit *os.File) {
-	si, err := os.OpenFile(filepath.Join(dir, "stdin"), os.O_RDONLY|syscall.O_NONBLOCK, 0600)
+	si, err := os.OpenFile(filepath.Join(dir, "stdin"), os.O_RDONLY, 0600)
 	Expect(err).NotTo(HaveOccurred())
-
-	Expect(syscall.SetNonblock(int(si.Fd()), false)).To(Succeed())
 
 	so, err := os.OpenFile(filepath.Join(dir, "stdout"), os.O_APPEND|os.O_RDWR, 0600)
 	Expect(err).NotTo(HaveOccurred())
