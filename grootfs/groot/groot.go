@@ -5,22 +5,27 @@ import (
 	"net/url"
 
 	"code.cloudfoundry.org/lager"
+	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 //go:generate counterfeiter . Bundler
 //go:generate counterfeiter . Bundle
-//go:generate counterfeiter . Cloner
-//go:generate counterfeiter . VolumeDriver
+//go:generate counterfeiter . ImagePuller
 
 type Bundle interface {
 	Path() string
 	RootFSPath() string
 }
 
+type BundleSpec struct {
+	VolumePath  string
+	ImageConfig specsv1.Image
+}
+
 type Bundler interface {
-	Bundle(id string) Bundle
-	MakeBundle(logger lager.Logger, id string) (Bundle, error)
-	DeleteBundle(logger lager.Logger, id string) error
+	Exists(id string) (bool, error)
+	Create(logger lager.Logger, id string, spec BundleSpec) (Bundle, error)
+	Destroy(logger lager.Logger, id string) error
 }
 
 type IDMappingSpec struct {
@@ -29,37 +34,27 @@ type IDMappingSpec struct {
 	Size        int
 }
 
-type CloneSpec struct {
-	Image       string
-	Bundle      Bundle
+type ImageSpec struct {
+	ImageSrc    *url.URL
 	UIDMappings []IDMappingSpec
 	GIDMappings []IDMappingSpec
 }
 
-type Cloner interface {
-	Clone(logger lager.Logger, spec CloneSpec) error
-}
-
-type VolumeDriver interface {
-	Path(logger lager.Logger, id string) (string, error)
-	Create(logger lager.Logger, parentID, id string) (string, error)
-	Snapshot(logger lager.Logger, id, path string) error
-	Destroy(logger lager.Logger, path string) error
+type ImagePuller interface {
+	Pull(logger lager.Logger, spec ImageSpec) (BundleSpec, error)
 }
 
 type Groot struct {
-	bundler      Bundler
-	localCloner  Cloner
-	remoteCloner Cloner
-	volumeDriver VolumeDriver
+	bundler           Bundler
+	localImagePuller  ImagePuller
+	remoteImagePuller ImagePuller
 }
 
-func IamGroot(bundler Bundler, localCloner, remoteCloner Cloner, volumeDriver VolumeDriver) *Groot {
+func IamGroot(bundler Bundler, localImagePuller, remoteImagePuller ImagePuller) *Groot {
 	return &Groot{
-		bundler:      bundler,
-		localCloner:  localCloner,
-		remoteCloner: remoteCloner,
-		volumeDriver: volumeDriver,
+		bundler:           bundler,
+		localImagePuller:  localImagePuller,
+		remoteImagePuller: remoteImagePuller,
 	}
 }
 
@@ -80,42 +75,37 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		return nil, fmt.Errorf("parsing image url: %s", err)
 	}
 
-	bundle, err := g.bundler.MakeBundle(logger, spec.ID)
+	ok, err := g.bundler.Exists(spec.ID)
 	if err != nil {
-		return nil, fmt.Errorf("making bundle: %s", err)
+		return nil, fmt.Errorf("checking id exists: %s", err)
+	}
+	if ok {
+		return nil, fmt.Errorf("id already exists")
 	}
 
-	cloneSpec := CloneSpec{
-		Image:       spec.Image,
-		Bundle:      bundle,
+	imageSpec := ImageSpec{
+		ImageSrc:    parsedURL,
 		UIDMappings: spec.UIDMappings,
 		GIDMappings: spec.GIDMappings,
 	}
+	var bundleSpec BundleSpec
 	if parsedURL.Scheme == "" {
-		err = g.localCloner.Clone(logger, cloneSpec)
+		bundleSpec, err = g.localImagePuller.Pull(logger, imageSpec)
 	} else {
-		err = g.remoteCloner.Clone(logger, cloneSpec)
+		bundleSpec, err = g.remoteImagePuller.Pull(logger, imageSpec)
 	}
 	if err != nil {
-		if err := g.bundler.DeleteBundle(logger.Session("cleaning-up-bundle"), spec.ID); err != nil {
-			logger.Error("cleaning-up-bundle", err)
-		}
-		return nil, fmt.Errorf("cloning: %s", err)
+		return nil, fmt.Errorf("pulling the image: %s", err)
+	}
+
+	bundle, err := g.bundler.Create(logger, spec.ID, bundleSpec)
+	if err != nil {
+		return nil, fmt.Errorf("making bundle: %s", err)
 	}
 
 	return bundle, nil
 }
 
 func (g *Groot) Delete(logger lager.Logger, id string) error {
-	bundle := g.bundler.Bundle(id)
-
-	if err := g.volumeDriver.Destroy(logger, bundle.RootFSPath()); err != nil {
-		return err
-	}
-
-	if err := g.bundler.DeleteBundle(logger, id); err != nil {
-		return fmt.Errorf("deleting bundle: %s", err)
-	}
-
-	return nil
+	return g.bundler.Destroy(logger, id)
 }
