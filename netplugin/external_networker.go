@@ -72,61 +72,34 @@ func networkProperties(containerProperties garden.Properties) garden.Properties 
 	return properties
 }
 
+type UpInputs struct {
+	Pid        int
+	Properties map[string]string
+}
+type UpOutputs struct {
+	Properties map[string]string
+}
+
 func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
 	p.configStore.Set(containerSpec.Handle, gardener.ExternalIPKey, p.externalIP.String())
 
-	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
-	propertiesJSON, err := json.Marshal(networkProperties(containerSpec.Properties))
-	if err != nil {
-		return fmt.Errorf("marshaling network properties: %s", err) // not tested
+	inputs := UpInputs{
+		Pid:        pid,
+		Properties: networkProperties(containerSpec.Properties),
 	}
-
-	networkPluginFlags := []string{
-		"--handle", containerSpec.Handle,
-		"--network", containerSpec.Network,
-		"--properties", string(propertiesJSON),
-	}
-
-	upArgs := append(pathAndExtraArgs, "--action", "up")
-	upArgs = append(upArgs, networkPluginFlags...)
-
-	cmd := exec.Command(p.path)
-	cmd.Args = upArgs
-	cmdOutput := &bytes.Buffer{}
-	cmd.Stdout = cmdOutput
-	cmdStderr := &bytes.Buffer{}
-	cmd.Stderr = cmdStderr
-	cmd.Stdin = strings.NewReader(fmt.Sprintf("{\"PID\":%d}", pid))
-
-	err = p.commandRunner.Run(cmd)
+	outputs := UpOutputs{}
+	err := p.exec2(log, "up", containerSpec.Handle, inputs, &outputs)
 	if err != nil {
-		log.Error("external-networker-result", err, lager.Data{"output": cmdStderr.String()})
 		return err
 	}
 
-	log.Info("external-networker-result", lager.Data{"output": cmdStderr.String()})
-
-	if len(cmdOutput.Bytes()) == 0 {
-		return nil
-	}
-
-	var properties map[string]map[string]string
-
-	if err := json.Unmarshal(cmdOutput.Bytes(), &properties); err != nil {
-		return fmt.Errorf("network plugin returned invalid JSON: %s", err)
-	}
-
-	if _, ok := properties["properties"]; !ok {
-		return fmt.Errorf("network plugin returned JSON without a properties key")
-	}
-
-	for k, v := range properties["properties"] {
+	for k, v := range outputs.Properties {
 		p.configStore.Set(containerSpec.Handle, k, v)
 	}
 
 	containerIP, ok := p.configStore.Get(containerSpec.Handle, gardener.ContainerIPKey)
 	if !ok {
-		return fmt.Errorf("no container ip")
+		return fmt.Errorf("plugin failed to set a container ip")
 	}
 
 	log.Info("external-binary-write-dns-to-config", lager.Data{
@@ -170,47 +143,52 @@ func (p *externalBinaryNetworker) Capacity() (m uint64) {
 	return math.MaxUint64
 }
 
-func (p *externalBinaryNetworker) NetIn(log lager.Logger, handle string, externalPort, containerPort uint32) (uint32, uint32, error) {
-	var err error
-	if externalPort == 0 {
-		externalPort, err = p.portPool.Acquire()
-		if err != nil {
-			return 0, 0, err
-		}
-	}
-
-	if containerPort == 0 {
-		containerPort = externalPort
-	}
-
-	if err := kawasaki.AddPortMapping(log, p.configStore, handle, garden.PortMapping{
-		HostPort:      externalPort,
-		ContainerPort: containerPort,
-	}); err != nil {
-		return 0, 0, err
-	}
-	return externalPort, containerPort, nil
+type NetInInputs struct {
+	HostIP        string
+	HostPort      uint32
+	ContainerIP   string
+	ContainerPort uint32
 }
 
-func (p *externalBinaryNetworker) exec(log lager.Logger, action, handle, stdin string, cmdArgs ...string) ([]byte, error) {
-	args := append([]string{p.path}, p.extraArg...)
-	args = append(args, "--action", action, "--handle", handle)
-	cmd := exec.Command(p.path)
-	cmd.Args = append(args, cmdArgs...)
-	stdout := &bytes.Buffer{}
-	cmd.Stdout = stdout
-	stderr := &bytes.Buffer{}
-	cmd.Stderr = stderr
-	cmd.Stdin = strings.NewReader(stdin)
+type NetInOutputs struct {
+	HostPort      uint32 `json:"host_port"`
+	ContainerPort uint32 `json:"container_port"`
+}
 
-	err := p.commandRunner.Run(cmd)
-	logData := lager.Data{"stderr": stderr.String(), "stdout": stdout.String()}
-	if err != nil {
-		log.Error("external-networker-result", err, logData)
-		return stdout.Bytes(), fmt.Errorf("external networker: %s", err)
+func (p *externalBinaryNetworker) NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error) {
+	containerIP, ok := p.configStore.Get(handle, gardener.ContainerIPKey)
+	if !ok {
+		return 0, 0, fmt.Errorf("cannot find container [%s]\n", handle)
 	}
-	log.Info("external-networker-result", logData)
-	return stdout.Bytes(), nil
+
+	inputs := NetInInputs{
+		HostIP:        p.externalIP.String(),
+		ContainerIP:   containerIP,
+		HostPort:      hostPort,
+		ContainerPort: containerPort,
+	}
+
+	var outputs NetInOutputs
+
+	err := p.exec2(log, "net-in", handle, inputs, &outputs)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	err = kawasaki.AddPortMapping(log, p.configStore, handle, garden.PortMapping{
+		HostPort:      outputs.HostPort,
+		ContainerPort: outputs.ContainerPort,
+	})
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return outputs.HostPort, outputs.ContainerPort, err
+}
+
+type NetOutInputs struct {
+	ContainerIP string            `json:"container_ip"`
+	NetOutRule  garden.NetOutRule `json:"netout_rule"`
 }
 
 func (p *externalBinaryNetworker) NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error {
@@ -219,22 +197,51 @@ func (p *externalBinaryNetworker) NetOut(log lager.Logger, handle string, rule g
 		return fmt.Errorf("cannot find container [%s]\n", handle)
 	}
 
-	var props = struct {
-		ContainerIP string            `json:"container_ip"`
-		NetOutRule  garden.NetOutRule `json:"netout_rule"`
-	}{
+	inputs := NetOutInputs{
 		ContainerIP: containerIP,
 		NetOutRule:  rule,
 	}
-	propertiesJSON, err := json.Marshal(props)
-	if err != nil {
-		return fmt.Errorf("marshaling netout rule: %s", err) // not tested
-	}
 
-	_, err = p.exec(log, "net-out", handle, "", []string{"--properties", string(propertiesJSON)}...)
+	err := p.exec2(log, "net-out", handle, inputs, nil)
 	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (p *externalBinaryNetworker) exec2(log lager.Logger, action, handle string,
+	inputData interface{}, outputData interface{}) error {
+
+	stdinBytes, err := json.Marshal(inputData)
+	if err != nil {
+		return err
+	}
+
+	args := append(p.extraArg, "--action", action, "--handle", handle)
+	cmd := exec.Command(p.path, args...)
+	stdout := &bytes.Buffer{}
+	cmd.Stdout = stdout
+	stderr := &bytes.Buffer{}
+	cmd.Stderr = stderr
+	cmd.Stdin = bytes.NewReader(stdinBytes)
+
+	err = p.commandRunner.Run(cmd)
+
+	logData := lager.Data{"stderr": stderr.String(), "stdout": stdout.String()}
+	if err != nil {
+		log.Error("external-networker-result", err, logData)
+		return fmt.Errorf("external networker: %s", err)
+	}
+
+	if outputData != nil {
+		err = json.Unmarshal(stdout.Bytes(), outputData)
+		if err != nil {
+			log.Error("external-networker-result", err, logData)
+			return fmt.Errorf("unmarshaling result from external networker: %s", err)
+		}
+	}
+
+	log.Debug("external-networker-result", logData)
 	return nil
 }
