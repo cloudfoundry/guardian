@@ -17,7 +17,6 @@ import (
 )
 
 const NetworkPropertyPrefix = "network."
-const NetOutKey = NetworkPropertyPrefix + "external-networker.net-out"
 
 type externalBinaryNetworker struct {
 	commandRunner    command_runner.CommandRunner
