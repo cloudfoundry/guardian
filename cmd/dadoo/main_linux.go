@@ -134,7 +134,7 @@ func openFifo(path string, flags int) io.ReadWriter {
 	return r
 }
 
-func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader, defaultWinSize garden.WindowSize) *os.File {
+func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader, initialWinSize garden.WindowSize) *os.File {
 	m, s, err := pty.Open()
 	if err != nil {
 		check(err)
@@ -148,7 +148,7 @@ func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo i
 
 	go io.Copy(m, stdin)
 
-	dadoo.SetWinSize(m, defaultWinSize)
+	dadoo.SetWinSize(m, initialWinSize)
 
 	go func() {
 		for {
