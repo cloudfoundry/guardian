@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"syscall"
 	"time"
 
@@ -26,6 +27,8 @@ var gid = flag.Int("gid", 0, "gid to chown console to")
 var rows = flag.Int("rows", 0, "rows for tty")
 var cols = flag.Int("cols", 0, "cols for tty")
 var tty = flag.Bool("tty", false, "tty requested")
+
+var ioWg *sync.WaitGroup = &sync.WaitGroup{}
 
 func main() {
 	os.Exit(run())
@@ -100,6 +103,8 @@ func waitForContainerToExit(dir string, containerPid int, signals chan os.Signal
 					exitCode = 128 + int(status.Signal())
 				}
 
+				ioWg.Wait() // wait for full output to be collected
+
 				check(ioutil.WriteFile(filepath.Join(dir, "exitcode"), []byte(strconv.Itoa(exitCode)), 0700))
 				return exitCode
 			}
@@ -129,20 +134,21 @@ func openFifo(path string, flags int) io.ReadWriter {
 	return r
 }
 
-func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader, defaultWinSize garden.WindowSize) *os.File {
+func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader, initialWinSize garden.WindowSize) *os.File {
 	m, s, err := pty.Open()
 	if err != nil {
 		check(err)
 	}
 
-	go io.Copy(stdout, m)
-
+	ioWg.Add(1)
 	go func() {
-		io.Copy(m, stdin)
-		m.Close()
+		defer ioWg.Done()
+		io.Copy(stdout, m)
 	}()
 
-	dadoo.SetWinSize(m, defaultWinSize)
+	go io.Copy(m, stdin)
+
+	dadoo.SetWinSize(m, initialWinSize)
 
 	go func() {
 		for {
@@ -151,6 +157,9 @@ func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo i
 				println("Timed out trying to open pidfile: ", err.Error())
 				return
 			}
+
+			// free up slave fd as soon as container process is running to avoid hanging
+			s.Close()
 
 			p, err := os.FindProcess(pid)
 			check(err) // cant happen on linux

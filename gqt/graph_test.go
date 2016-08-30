@@ -152,7 +152,7 @@ var _ = Describe("graph flags", func() {
 
 			Context("and local images are used", func() {
 				BeforeEach(func() {
-					persistentImages = []string{runner.RootFSPath}
+					persistentImages = []string{os.Getenv("GARDEN_TEST_ROOTFS")}
 				})
 
 				Describe("graph cleanup for a rootfs on the whitelist", func() {
@@ -169,7 +169,7 @@ var _ = Describe("graph flags", func() {
 					Context("which is a symlink", func() {
 						BeforeEach(func() {
 							Expect(os.MkdirAll("/var/vcap/packages", 0755)).To(Succeed())
-							err := exec.Command("ln", "-s", runner.RootFSPath, "/var/vcap/packages/busybox").Run()
+							err := exec.Command("ln", "-s", os.Getenv("GARDEN_TEST_ROOTFS"), "/var/vcap/packages/busybox").Run()
 							Expect(err).ToNot(HaveOccurred())
 
 							persistentImages = []string{"/var/vcap/packages/busybox"}

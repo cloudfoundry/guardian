@@ -137,7 +137,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	processPath := filepath.Join(processesPath, processID)
 	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
-	if err := process.start(io); err != nil {
+	if err := process.attach(io); err != nil {
 		return nil, err
 	}
 
@@ -262,7 +262,7 @@ func (p process) streamData(pio garden.ProcessIO, stdin, stdout, stderr *os.File
 	}
 }
 
-func (p process) start(pio garden.ProcessIO) error {
+func (p process) attach(pio garden.ProcessIO) error {
 	stdin, stdout, stderr, err := p.openPipes(pio)
 	if err != nil {
 		return err

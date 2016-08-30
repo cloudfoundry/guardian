@@ -62,14 +62,14 @@ var _ = Describe("Rootfs container create parameter", func() {
 		It("creates successfully if a rootfs is supplied in container spec", func() {
 			var err error
 
-			container, err = client.Create(garden.ContainerSpec{RootFSPath: runner.RootFSPath})
+			container, err = client.Create(garden.ContainerSpec{RootFSPath: os.Getenv("GARDEN_TEST_ROOTFS")})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	Context("with a default rootfs", func() {
 		BeforeEach(func() {
-			args = append(args, "--default-rootfs", runner.RootFSPath)
+			args = append(args, "--default-rootfs", os.Getenv("GARDEN_TEST_ROOTFS"))
 		})
 
 		It("the container is created successfully", func() {

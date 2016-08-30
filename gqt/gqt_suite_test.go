@@ -23,7 +23,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, grootfsBin, inspectorGardenBin, testNetPluginBin string
+var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, grootfsBin, inspectorGardenBin, testNetPluginBin, tarBin string
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -80,6 +80,8 @@ func TestGqt(t *testing.T) {
 		initBin = bins["init_bin_path"]
 		inspectorGardenBin = bins["inspector-garden_bin_path"]
 		testNetPluginBin = bins["test_net_plugin_bin_path"]
+
+		tarBin = os.Getenv("GARDEN_TAR_PATH")
 	})
 
 	BeforeEach(func() {
@@ -101,7 +103,8 @@ func TestGqt(t *testing.T) {
 }
 
 func startGarden(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, grootfsBin, true, argv...)
+	rootfs := os.Getenv("GARDEN_TEST_ROOTFS")
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin, argv...)
 }
 
 func restartGarden(client *runner.RunningGarden, argv ...string) {
@@ -111,5 +114,5 @@ func restartGarden(client *runner.RunningGarden, argv ...string) {
 }
 
 func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, grootfsBin, false, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, grootfsBin, "", tarBin, argv...)
 }

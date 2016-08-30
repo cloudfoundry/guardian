@@ -9,6 +9,14 @@ import (
 )
 
 func SetWinSize(f *os.File, ws garden.WindowSize) error {
+	// set defaults
+	if ws.Columns == 0 {
+		ws.Columns = 80
+	}
+	if ws.Rows == 0 {
+		ws.Rows = 24
+	}
+
 	_, _, e := syscall.Syscall6(
 		syscall.SYS_IOCTL,
 		uintptr(f.Fd()),
