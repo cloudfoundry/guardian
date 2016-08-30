@@ -41,6 +41,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
+	"code.cloudfoundry.org/guardian/volplugin"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/docker/docker/daemon/graphdriver"
@@ -152,12 +153,13 @@ type GuardianCommand struct {
 	} `group:"Container Lifecycle"`
 
 	Bin struct {
-		Dadoo    FileFlag `long:"dadoo-bin" required:"true" description:"Path to the 'dadoo' binary."`
-		NSTar    FileFlag `long:"nstar-bin"    required:"true" description:"Path to the 'nstar' binary."`
-		Tar      FileFlag `long:"tar-bin"      required:"true" description:"Path to the 'tar' binary."`
-		IPTables FileFlag `long:"iptables-bin" default:"/sbin/iptables" description:"path to the the iptables binary"`
-		Init     FileFlag `long:"init-bin"     required:"true" description:"Path execute as pid 1 inside each container."`
-		Runc     string   `long:"runc-bin"     default:"runc" description:"Path to the 'runc' binary."`
+		Dadoo    FileFlag `long:"dadoo-bin"     required:"true" description:"Path to the 'dadoo' binary."`
+		NSTar    FileFlag `long:"nstar-bin"     required:"true" description:"Path to the 'nstar' binary."`
+		Tar      FileFlag `long:"tar-bin"       required:"true" description:"Path to the 'tar' binary."`
+		IPTables FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the the iptables binary"`
+		Init     FileFlag `long:"init-bin"      required:"true" description:"Path execute as pid 1 inside each container."`
+		Runc     string   `long:"runc-bin"      default:"runc" description:"Path to the 'runc' binary."`
+		OCI      FileFlag `long:"oci-image-bin" required:"false" description:"Path to binary for fetching oci images."`
 	} `group:"Binary Tools"`
 
 	Graph struct {
@@ -262,12 +264,18 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 		restorer = &gardener.NoopRestorer{}
 	}
 
+	volumeCreator := volplugin.NewCompositeVolumeCreator(
+		volplugin.NewGrootfsVC(cmd.Bin.OCI.Path(), cmd.Graph.Dir.Path(), linux_command_runner.New()),
+		cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
+		propManager,
+	)
+
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
 		Starters:        []gardener.Starter{cmd.wireRunDMCStarter(logger), iptablesStarter},
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
 		Networker:       networker,
-		VolumeCreator:   cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
+		VolumeCreator:   volumeCreator,
 		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), cmd.Containers.ApparmorProfile, propManager),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,

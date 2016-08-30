@@ -277,7 +277,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 							It("still works using the default host", func() {
 								_, err := client.Create(garden.ContainerSpec{
-									RootFSPath: fmt.Sprintf("docker:///busybox"),
+									RootFSPath: "docker:///busybox",
 									// This container does not need to be privileged. However,
 									// Guardian cannot create non-privileged containers that use
 									// docker:///busybox. It turns out that runC fails to create
@@ -300,6 +300,39 @@ var _ = Describe("Rootfs container create parameter", func() {
 						Expect(err).To(HaveOccurred())
 					})
 				})
+			})
+		})
+	})
+
+	Context("when the rootfs has a grootfs scheme", func() {
+		It("creates the rootfs using the grootfs binary and the right arguments", func() {
+			_, err := client.Create(garden.ContainerSpec{
+				RootFSPath: "grootfs+docker:///busybox",
+				Handle:     "grootfs-image-id",
+				Privileged: false,
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			args, err := ioutil.ReadFile(filepath.Join(client.GraphPath, "bundles/grootfs-image-id/rootfs/args"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(args)).To(Equal(
+				fmt.Sprintf("[%s --store %s create %s %s]",
+					grootfsBin,
+					client.GraphPath,
+					"docker:///busybox",
+					"grootfs-image-id",
+				),
+			))
+		})
+
+		Context("when grootfs fails", func() {
+			It("fails", func() {
+				_, err := client.Create(garden.ContainerSpec{
+					RootFSPath: "grootfs+docker:///busybox",
+					Handle:     "make-it-fail",
+					Privileged: false,
+				})
+				Expect(err).To(MatchError(ContainSubstring("running grootfs create")))
 			})
 		})
 	})
