@@ -380,7 +380,6 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 		externalNetworker := netplugin.New(
 			linux_command_runner.New(),
 			propManager,
-			portPool,
 			externalIP,
 			dnsServers,
 			resolvConfigurer,

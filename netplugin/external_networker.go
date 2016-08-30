@@ -22,7 +22,6 @@ const NetworkPropertyPrefix = "network."
 type externalBinaryNetworker struct {
 	commandRunner    command_runner.CommandRunner
 	configStore      kawasaki.ConfigStore
-	portPool         kawasaki.PortPool
 	externalIP       net.IP
 	dnsServers       []net.IP
 	resolvConfigurer kawasaki.DnsResolvConfigurer
@@ -33,7 +32,6 @@ type externalBinaryNetworker struct {
 func New(
 	commandRunner command_runner.CommandRunner,
 	configStore kawasaki.ConfigStore,
-	portPool kawasaki.PortPool,
 	externalIP net.IP,
 	dnsServers []net.IP,
 	resolvConfigurer kawasaki.DnsResolvConfigurer,
@@ -43,7 +41,6 @@ func New(
 	return &externalBinaryNetworker{
 		commandRunner:    commandRunner,
 		configStore:      configStore,
-		portPool:         portPool,
 		externalIP:       externalIP,
 		dnsServers:       dnsServers,
 		resolvConfigurer: resolvConfigurer,
@@ -125,18 +122,7 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 }
 
 func (p *externalBinaryNetworker) Destroy(log lager.Logger, handle string) error {
-	pathAndExtraArgs := append([]string{p.path}, p.extraArg...)
-
-	networkPluginFlags := []string{
-		"--handle", handle,
-	}
-
-	downArgs := append(pathAndExtraArgs, "--action", "down")
-	downArgs = append(downArgs, networkPluginFlags...)
-
-	cmd := exec.Command(p.path)
-	cmd.Args = downArgs
-	return p.commandRunner.Run(cmd)
+	return p.exec(log, "down", handle, nil, nil)
 }
 
 func (p *externalBinaryNetworker) Restore(log lager.Logger, handle string) error {
@@ -231,10 +217,10 @@ func (p *externalBinaryNetworker) exec(log lager.Logger, action, handle string,
 
 	err = p.commandRunner.Run(cmd)
 
-	logData := lager.Data{"stderr": stderr.String(), "stdout": stdout.String()}
+	logData := lager.Data{"action": action, "stderr": stderr.String(), "stdout": stdout.String()}
 	if err != nil {
 		log.Error("external-networker-result", err, logData)
-		return fmt.Errorf("external networker: %s", err)
+		return fmt.Errorf("external networker %s: %s", action, err)
 	}
 
 	if outputData != nil {

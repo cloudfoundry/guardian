@@ -36,7 +36,6 @@ var _ = Describe("ExternalNetworker", func() {
 		plugin            netplugin.ExternalNetworker
 		handle            string
 		resolvConfigurer  *kawasakifakes.FakeDnsResolvConfigurer
-		portPool          *kawasakifakes.FakePortPool
 		pluginOutput      string
 		pluginErr         error
 	)
@@ -57,32 +56,31 @@ var _ = Describe("ExternalNetworker", func() {
 			Properties: inputProperties,
 		}
 		logger = lagertest.NewTestLogger("test")
-		portPool = &kawasakifakes.FakePortPool{}
 		externalIP := net.ParseIP("1.2.3.4")
 		dnsServers := []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("9.9.9.9")}
 		resolvConfigurer = &kawasakifakes.FakeDnsResolvConfigurer{}
 		plugin = netplugin.New(
 			fakeCommandRunner,
 			configStore,
-			portPool,
 			externalIP,
 			dnsServers,
 			resolvConfigurer,
 			"some/path",
 			[]string{"arg1", "arg2", "arg3"},
 		)
+
+		pluginErr = nil
+		fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
+			Path: "some/path",
+		}, func(cmd *exec.Cmd) error {
+			cmd.Stdout.Write([]byte(pluginOutput))
+			cmd.Stderr.Write([]byte("some-stderr-bytes"))
+			return pluginErr
+		})
 	})
 
 	Describe("Network", func() {
 		BeforeEach(func() {
-			pluginErr = nil
-			fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-				Path: "some/path",
-			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte(pluginOutput))
-				cmd.Stderr.Write([]byte("some-stderr-bytes"))
-				return pluginErr
-			})
 			pluginOutput = `{ "properties": {
 					"garden.network.container-ip": "10.255.1.2"
 					}
@@ -175,7 +173,7 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(plugin.Network(logger, containerSpec, 42)).To(MatchError("external networker: external-plugin-error"))
+				Expect(plugin.Network(logger, containerSpec, 42)).To(MatchError("external networker up: external-plugin-error"))
 			})
 
 			It("collects and logs the stderr from the plugin", func() {
@@ -233,14 +231,11 @@ var _ = Describe("ExternalNetworker", func() {
 		})
 
 		Context("when the external plugin errors", func() {
+			BeforeEach(func() {
+				pluginErr = errors.New("boom")
+			})
 			It("returns the error", func() {
-				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "some/path",
-				}, func(cmd *exec.Cmd) error {
-					return errors.New("boom")
-				})
-
-				Expect(plugin.Destroy(logger, "my-handle")).To(MatchError("boom"))
+				Expect(plugin.Destroy(logger, "my-handle")).To(MatchError("external networker down: boom"))
 			})
 		})
 	})
@@ -248,15 +243,6 @@ var _ = Describe("ExternalNetworker", func() {
 	Describe("NetIn", func() {
 		BeforeEach(func() {
 			configStore.Set(handle, gardener.ContainerIPKey, "5.6.7.8")
-
-			pluginErr = nil
-			fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-				Path: "some/path",
-			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte(pluginOutput))
-				cmd.Stderr.Write([]byte("some-stderr-bytes"))
-				return pluginErr
-			})
 			pluginOutput = `{
 					"host_port": 1234,
 					"container_port": 5555
@@ -305,6 +291,23 @@ var _ = Describe("ExternalNetworker", func() {
 			Expect(containerPort).To(Equal(uint32(5555)))
 		})
 
+		Context("when the handle cannot be found in the store", func() {
+			It("returns an error", func() {
+				_, _, err := plugin.NetIn(logger, "some-nonexistent-handle", 22, 33)
+				Expect(err).To(MatchError("cannot find container [some-nonexistent-handle]\n"))
+			})
+		})
+
+		Context("when the external plugin errors", func() {
+			BeforeEach(func() {
+				pluginErr = errors.New("potato")
+			})
+			It("returns the error", func() {
+				_, _, err := plugin.NetIn(logger, handle, 22, 33)
+				Expect(err).To(MatchError("external networker net-in: potato"))
+			})
+		})
+
 		Context("when adding the port mapping fails", func() {
 			BeforeEach(func() {
 				configStore.Set(handle, gardener.MappedPortsKey, "%%%%%%")
@@ -313,6 +316,13 @@ var _ = Describe("ExternalNetworker", func() {
 				_, _, err := plugin.NetIn(logger, handle, 123, 543)
 				Expect(err).To(MatchError(ContainSubstring("invalid character")))
 			})
+		})
+
+		It("collects and logs the stderr from the plugin", func() {
+			_, _, err := plugin.NetIn(logger, handle, 22, 33)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(logger).To(gbytes.Say("result.*some-stderr-bytes"))
 		})
 	})
 
@@ -374,15 +384,18 @@ var _ = Describe("ExternalNetworker", func() {
 		})
 
 		Context("when the external plugin errors", func() {
-			It("returns the error", func() {
-				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "some/path",
-				}, func(cmd *exec.Cmd) error {
-					return errors.New("boom")
-				})
-
-				Expect(plugin.NetOut(logger, handle, rule)).To(MatchError("external networker: boom"))
+			BeforeEach(func() {
+				pluginErr = errors.New("boom")
 			})
+			It("returns the error", func() {
+				Expect(plugin.NetOut(logger, handle, rule)).To(MatchError("external networker net-out: boom"))
+			})
+		})
+
+		It("collects and logs the stderr from the plugin", func() {
+			Expect(plugin.NetOut(logger, handle, rule)).To(Succeed())
+
+			Expect(logger).To(gbytes.Say("result.*some-stderr-bytes"))
 		})
 	})
 })
