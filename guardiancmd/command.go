@@ -159,7 +159,7 @@ type GuardianCommand struct {
 		IPTables FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the the iptables binary"`
 		Init     FileFlag `long:"init-bin"      required:"true" description:"Path execute as pid 1 inside each container."`
 		Runc     string   `long:"runc-bin"      default:"runc" description:"Path to the 'runc' binary."`
-		OCI      FileFlag `long:"oci-image-bin" required:"false" description:"Path to binary for fetching oci images."`
+		OCI      string   `long:"oci-image-bin" default:"grootfs" description:"Path to binary for fetching oci images."`
 	} `group:"Binary Tools"`
 
 	Graph struct {
@@ -265,7 +265,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	}
 
 	volumeCreator := volplugin.NewCompositeVolumeCreator(
-		volplugin.NewGrootfsVC(cmd.Bin.OCI.Path(), cmd.Graph.Dir.Path(), linux_command_runner.New()),
+		volplugin.NewGrootfsVC(cmd.Bin.OCI, cmd.Graph.Dir.Path(), linux_command_runner.New()),
 		cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
 		propManager,
 	)
