@@ -3,6 +3,7 @@ package netplugin
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -87,9 +88,13 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 		Properties: networkProperties(containerSpec.Properties),
 	}
 	outputs := UpOutputs{}
-	err := p.exec2(log, "up", containerSpec.Handle, inputs, &outputs)
+	err := p.exec(log, "up", containerSpec.Handle, inputs, &outputs)
 	if err != nil {
 		return err
+	}
+
+	if outputs.Properties == nil {
+		return errors.New("network plugin returned JSON without a properties key")
 	}
 
 	for k, v := range outputs.Properties {
@@ -166,10 +171,9 @@ func (p *externalBinaryNetworker) NetIn(log lager.Logger, handle string, hostPor
 		HostPort:      hostPort,
 		ContainerPort: containerPort,
 	}
+	outputs := NetInOutputs{}
 
-	var outputs NetInOutputs
-
-	err := p.exec2(log, "net-in", handle, inputs, &outputs)
+	err := p.exec(log, "net-in", handle, inputs, &outputs)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -201,7 +205,7 @@ func (p *externalBinaryNetworker) NetOut(log lager.Logger, handle string, rule g
 		NetOutRule:  rule,
 	}
 
-	err := p.exec2(log, "net-out", handle, inputs, nil)
+	err := p.exec(log, "net-out", handle, inputs, nil)
 	if err != nil {
 		return err
 	}
@@ -209,7 +213,7 @@ func (p *externalBinaryNetworker) NetOut(log lager.Logger, handle string, rule g
 	return nil
 }
 
-func (p *externalBinaryNetworker) exec2(log lager.Logger, action, handle string,
+func (p *externalBinaryNetworker) exec(log lager.Logger, action, handle string,
 	inputData interface{}, outputData interface{}) error {
 
 	stdinBytes, err := json.Marshal(inputData)
