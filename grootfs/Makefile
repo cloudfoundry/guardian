@@ -5,7 +5,8 @@
 	update-deps
 
 all:
-	GOOS=linux go build .
+	GOOS=linux go build -o grootfs .
+	GOOS=linux go build -o drax ./store/volume_driver/drax
 
 ###### Help ###################################################################
 
