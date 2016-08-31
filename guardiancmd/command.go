@@ -234,6 +234,10 @@ func (cmd *GuardianCommand) Execute([]string) error {
 func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
 
+	if err := exec.Command("modprobe", "aufs").Run(); err != nil {
+		logger.Error("unable-to-load-aufs", err)
+	}
+
 	propManager, err := cmd.loadProperties(logger, cmd.Containers.PropertiesPath)
 	if err != nil {
 		return err
@@ -426,10 +430,6 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 
 	if err := os.MkdirAll(graphRoot, 0755); err != nil {
 		logger.Fatal("failed-to-create-graph-directory", err)
-	}
-
-	if err := exec.Command("modprobe", "aufs").Run(); err != nil {
-		logger.Error("unable-to-load-aufs", err)
 	}
 
 	dockerGraphDriver, err := graphdriver.New(graphRoot, nil)
