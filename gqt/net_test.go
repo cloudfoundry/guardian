@@ -296,6 +296,7 @@ var _ = Describe("Networking", func() {
 	Context("when a network plugin path is provided at startup", func() {
 		var argsFile string
 		var stdinFile string
+		var pluginReturn string
 
 		BeforeEach(func() {
 			tmpDir, err := ioutil.TempDir("", "netplugtest")
@@ -303,6 +304,7 @@ var _ = Describe("Networking", func() {
 
 			argsFile = path.Join(tmpDir, "args.log")
 			stdinFile = path.Join(tmpDir, "stdin.log")
+			args = append(args, "--network-plugin-extra-arg", pluginReturn)
 
 			args = []string{
 				"--network-plugin", testNetPluginBin,
@@ -311,57 +313,9 @@ var _ = Describe("Networking", func() {
 			}
 		})
 
-		It("executes the network plugin during container creation", func() {
-			containerHandle := container.Handle()
-
-			Eventually(getContent(argsFile)).Should(
-				ContainSubstring(
-					fmt.Sprintf("%s %s --action up --handle %s --network %s", argsFile, stdinFile, containerHandle, containerNetwork),
-				),
-			)
-		})
-
-		It("passes the container pid to plugin's stdin", func() {
-			Eventually(getContent(stdinFile)).Should(
-				MatchRegexp(`.*{"PID":[0-9]+}.*`),
-			)
-		})
-
-		It("executes the network plugin during container destroy", func() {
-			containerHandle := container.Handle()
-
-			Expect(client.Destroy(containerHandle)).To(Succeed())
-			Expect(argsFile).To(BeAnExistingFile())
-
-			Eventually(getContent(argsFile)).Should(
-				ContainSubstring(
-					fmt.Sprintf("%s %s --action down --handle %s", argsFile, stdinFile, containerHandle),
-				),
-			)
-		})
-
-		Context("when the container spec has properties that start with 'network.'", func() {
-			var expectedJSON string
-
-			BeforeEach(func() {
-				extraProperties = garden.Properties{
-					"network.some-key":       "some-value",
-					"network.some-other-key": "some-other-value",
-					"some-other-key":         "do-not-propagate",
-					"garden.whatever":        "do-not-propagate",
-					"kawasaki.nope":          "do-not-propagate",
-				}
-				expectedJSON = `{ "some-key": "some-value", "some-other-key": "some-other-value" }`
-			})
-
-			It("propagates those properties as JSON to the network plugin up action", func() {
-				Eventually(getFlagValue(argsFile, "--properties")).Should(MatchJSON(expectedJSON))
-			})
-		})
-
 		Context("when the network plugin returns properties", func() {
 			BeforeEach(func() {
-				pluginReturn := `{"properties":{
+				pluginReturn = `{"properties":{
 					"foo":"bar",
 					"kawasaki.mtu":"1499",
 					"garden.network.container-ip":"10.255.10.10",
@@ -370,7 +324,50 @@ var _ = Describe("Networking", func() {
 				args = append(args, "--network-plugin-extra-arg", pluginReturn)
 				extraProperties = garden.Properties{
 					"some-property-on-the-spec": "some-value",
+					"network.some-key":          "some-value",
+					"network.some-other-key":    "some-other-value",
+					"some-other-key":            "do-not-propagate",
+					"garden.whatever":           "do-not-propagate",
+					"kawasaki.nope":             "do-not-propagate",
 				}
+			})
+
+			Context("when the container spec has properties that start with 'network.'", func() {
+				var expectedJSON string
+
+				BeforeEach(func() {
+					expectedJSON = `"some-key":"some-value","some-other-key":"some-other-value"}`
+				})
+
+				It("propagates those properties as JSON to the network plugin up action", func() {
+					Eventually(getContent(stdinFile)).Should(ContainSubstring(expectedJSON))
+				})
+			})
+
+			It("executes the network plugin during container destroy", func() {
+				containerHandle := container.Handle()
+
+				Expect(client.Destroy(containerHandle)).To(Succeed())
+				Expect(argsFile).To(BeAnExistingFile())
+
+				Eventually(getContent(argsFile)).Should(ContainSubstring(fmt.Sprintf("%s %s", argsFile, stdinFile)))
+				Eventually(getContent(argsFile)).Should(ContainSubstring(fmt.Sprintf("--action down --handle %s", containerHandle)))
+			})
+
+			It("passes the container pid to plugin's stdin", func() {
+				Eventually(getContent(stdinFile)).Should(
+					MatchRegexp(`.*{"Pid":[0-9]+.*}.*`),
+				)
+			})
+
+			It("executes the network plugin during container creation", func() {
+				containerHandle := container.Handle()
+
+				Eventually(getContent(argsFile)).Should(
+					ContainSubstring(
+						fmt.Sprintf("%s %s %s --action up --handle %s", argsFile, stdinFile, pluginReturn, containerHandle),
+					),
+				)
 			})
 
 			It("persists the returned properties to the container's properties", func() {
