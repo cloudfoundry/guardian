@@ -37,7 +37,7 @@ var _ = Describe("Delete", func() {
 
 	It("destroys the quota group associated with the volume", func() {
 		rootIDBuffer := gbytes.NewBuffer()
-		sess, err := gexec.Start(exec.Command("btrfs", "inspect-internal", "rootid", bundle.RootFSPath()), rootIDBuffer, GinkgoWriter)
+		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", bundle.RootFSPath()), rootIDBuffer, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 		rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
