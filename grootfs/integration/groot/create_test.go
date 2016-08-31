@@ -1,9 +1,11 @@
 package groot_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/integration"
 
@@ -24,23 +26,57 @@ var _ = Describe("Create", func() {
 		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
+	Context("when inclusive disk limit is provided", func() {
+		BeforeEach(func() {
+			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(imagePath, "fatfile")), "bs=1048576", "count=5")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+		})
+
+		It("creates a bundle with supplied limit", func() {
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", int64(10*1024*1024))
+
+			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath(), "hello")), "bs=1048576", "count=4")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+
+			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath(), "hello2")), "bs=1048576", "count=2")
+			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(1))
+			Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
+		})
+
+		Context("and it's invalid", func() {
+			It("fails with a helpful error", func() {
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "-200", imagePath, "random-id")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(1))
+				Eventually(sess).Should(gbytes.Say("disk limit cannot be negative"))
+			})
+		})
+	})
+
 	Context("when no --store option is given", func() {
 		It("uses the default store path", func() {
 			Expect("/var/lib/grootfs/bundles").ToNot(BeAnExistingFile())
 
 			cmd := exec.Command(GrootFSBin, "create", imagePath, "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Eventually(sess).Should(gbytes.Say("making directory `/var/lib/grootfs`"))
 			Expect(err).NotTo(HaveOccurred())
 			// It will fail at this point, because /var/lib/grootfs doesn't exist
 			Eventually(sess).Should(gexec.Exit(1))
+			Eventually(sess).Should(gbytes.Say("making directory `/var/lib/grootfs`"))
 		})
 	})
 
 	Context("when two rootfses are using the same image", func() {
 		It("isolates them", func() {
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id")
-			anotherBundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "another-random-id")
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", 0)
+			anotherBundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "another-random-id", 0)
 			Expect(ioutil.WriteFile(path.Join(bundle.RootFSPath(), "bar"), []byte("hello-world"), 0644)).To(Succeed())
 			Expect(path.Join(anotherBundle.RootFSPath(), "bar")).NotTo(BeARegularFile())
 		})
@@ -48,7 +84,7 @@ var _ = Describe("Create", func() {
 
 	Context("when the id is already being used", func() {
 		BeforeEach(func() {
-			Expect(integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id")).NotTo(BeNil())
+			Expect(integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", 0)).NotTo(BeNil())
 		})
 
 		It("fails and produces a useful error", func() {

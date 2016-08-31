@@ -18,6 +18,7 @@ type Bundle interface {
 }
 
 type BundleSpec struct {
+	DiskLimit  int64
 	VolumePath string
 	Image      specsv1.Image
 }
@@ -59,6 +60,7 @@ func IamGroot(bundler Bundler, imagePuller ImagePuller) *Groot {
 type CreateSpec struct {
 	ID          string
 	Image       string
+	DiskLimit   int64
 	UIDMappings []IDMappingSpec
 	GIDMappings []IDMappingSpec
 }
@@ -91,6 +93,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		return nil, fmt.Errorf("pulling the image: %s", err)
 	}
 
+	bundleSpec.DiskLimit = spec.DiskLimit
 	bundle, err := g.bundler.Create(logger, spec.ID, bundleSpec)
 	if err != nil {
 		return nil, fmt.Errorf("making bundle: %s", err)

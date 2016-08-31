@@ -68,6 +68,10 @@ func (b *Bundler) Create(logger lager.Logger, id string, spec groot.BundleSpec) 
 			if err = b.deleteBundleDir(bundle); err != nil {
 				log.Error("deleting bundle path: %s", err)
 			}
+
+			if err = b.snapshotDriver.Destroy(logger, bundle.RootFSPath()); err != nil {
+				log.Error("destroying rootfs snapshot: %s", err)
+			}
 		}
 	}()
 
@@ -82,6 +86,12 @@ func (b *Bundler) Create(logger lager.Logger, id string, spec groot.BundleSpec) 
 
 	if err = b.snapshotDriver.Snapshot(logger, spec.VolumePath, bundle.RootFSPath()); err != nil {
 		return nil, fmt.Errorf("creating snapshot: %s", err)
+	}
+
+	if spec.DiskLimit > 0 {
+		if err = b.snapshotDriver.ApplyDiskLimit(logger, bundle.RootFSPath(), spec.DiskLimit); err != nil {
+			return nil, fmt.Errorf("appling disk limit: %s", err)
+		}
 	}
 
 	return bundle, nil

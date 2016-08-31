@@ -197,6 +197,11 @@ var _ = Describe("Bundle", func() {
 				}
 			})
 
+			AfterEach(func() {
+				// needs to reasign the correct method after running the test
+				store.OF = os.OpenFile
+			})
+
 			It("returns an error", func() {
 				_, err := bundler.Create(logger, "some-id", groot.BundleSpec{})
 				Expect(err).To(MatchError(ContainSubstring("permission denied: can't write stuff")))
@@ -210,25 +215,42 @@ var _ = Describe("Bundle", func() {
 			})
 		})
 
-		// Context("when a disk limit is set", func() {
-		// 	It("applies the disk limit", func() {
+		Context("when a disk limit is set", func() {
+			It("applies the disk limit", func() {
+				bundle, err := bundler.Create(logger, "some-id", groot.BundleSpec{
+					DiskLimit: int64(1024),
+				})
+				Expect(err).NotTo(HaveOccurred())
 
-		// 	})
+				_, path, diskLimit := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
+				Expect(path).To(Equal(bundle.RootFSPath()))
+				Expect(diskLimit).To(Equal(int64(1024)))
+			})
 
-		// 	Context("when applying the disk limit fails", func() {
-		// 		It("returns an error", func() {
+			Context("when applying the disk limit fails", func() {
+				BeforeEach(func() {
+					fakeSnapshotDriver.ApplyDiskLimitReturns(errors.New("failed to apply disk limit"))
+				})
 
-		// 		})
+				It("returns an error", func() {
+					_, err := bundler.Create(logger, "some-id", groot.BundleSpec{
+						DiskLimit: int64(1024),
+					})
 
-		// 		It("removes the snapshot", func() {
+					Expect(err).To(MatchError(ContainSubstring("failed to apply disk limit")))
+				})
 
-		// 		})
-
-		// 		It("removes the bundle", func() {
-
-		// 		})
-		// 	})
-		// })
+				It("removes the snapshot", func() {
+					_, err := bundler.Create(logger, "some-id", groot.BundleSpec{
+						DiskLimit: int64(1024),
+					})
+					Expect(err).To(HaveOccurred())
+					Expect(fakeSnapshotDriver.DestroyCallCount()).To(Equal(1))
+					_, bundlePath := fakeSnapshotDriver.DestroyArgsForCall(0)
+					Expect(bundlePath).To(Equal(bundlePath))
+				})
+			})
+		})
 	})
 
 	Describe("Destroy", func() {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -49,4 +50,18 @@ func TestGroot(t *testing.T) {
 	})
 
 	RunSpecs(t, "GrootFS Integration Suite - Running as groot")
+}
+
+func FolderSize(path string) (int64, error) {
+	var size int64
+
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if !info.IsDir() {
+			size += info.Size()
+		}
+
+		return err
+	})
+
+	return size, err
 }

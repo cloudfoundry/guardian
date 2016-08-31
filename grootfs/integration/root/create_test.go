@@ -57,7 +57,7 @@ var _ = Describe("Create", func() {
 	})
 
 	It("keeps the ownership and permissions", func() {
-		bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id")
+		bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", 0)
 
 		grootFi, err := os.Stat(path.Join(bundle.RootFSPath(), "foo"))
 		Expect(err).NotTo(HaveOccurred())

@@ -18,10 +18,11 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-func CreateBundle(grootFSBin, storePath, imagePath, id string) groot.Bundle {
+func CreateBundle(grootFSBin, storePath, imagePath, id string, diskLimit int64) groot.Bundle {
 	return CreateBundleWSpec(grootFSBin, storePath, groot.CreateSpec{
-		ID:    id,
-		Image: imagePath,
+		ID:        id,
+		Image:     imagePath,
+		DiskLimit: diskLimit,
 	})
 }
 
@@ -33,7 +34,7 @@ func CreateBundleWSpec(grootFSBin, storePath string, spec groot.CreateSpec) groo
 	for _, mapping := range spec.GIDMappings {
 		args = append(args, "--gid-mapping", fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size))
 	}
-	args = append(args, spec.Image, spec.ID)
+	args = append(args, "--disk-limit-size-bytes", strconv.FormatInt(spec.DiskLimit, 10), spec.Image, spec.ID)
 
 	cmd := exec.Command(grootFSBin, args...)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)

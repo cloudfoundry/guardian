@@ -27,6 +27,10 @@ var CreateCommand = cli.Command{
 	Description: "Creates a root filesystem for the provided image.",
 
 	Flags: []cli.Flag{
+		cli.Int64Flag{
+			Name:  "disk-limit-size-bytes",
+			Usage: "Inclusive disk limit (i.e: includes all layers in the filesystem)",
+		},
 		cli.StringSliceFlag{
 			Name:  "uid-mapping",
 			Usage: "UID mapping for image translation, e.g.: <Namespace UID>:<Host UID>:<Size>",
@@ -42,13 +46,20 @@ var CreateCommand = cli.Command{
 		logger = logger.Session("create")
 
 		if ctx.NArg() != 2 {
-			logger.Error("parsing-command", errors.New("invalid arguments"))
-			return cli.NewExitError("invalid arguments", 1)
+			logger.Error("parsing-command", errors.New("invalid arguments"), lager.Data{"args": ctx.Args()})
+			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
 		storePath := ctx.GlobalString("store")
 		image := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
+
+		diskLimit := ctx.Int64("disk-limit-size-bytes")
+		if diskLimit < 0 {
+			err := errors.New("invalid argument: disk limit cannot be negative")
+			logger.Error("parsing-command", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
 
 		uidMappings, err := parseIDMappings(ctx.StringSlice("uid-mapping"))
 		if err != nil {
@@ -96,6 +107,7 @@ var CreateCommand = cli.Command{
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
 			ID:          id,
 			Image:       image,
+			DiskLimit:   diskLimit,
 			UIDMappings: uidMappings,
 			GIDMappings: gidMappings,
 		})

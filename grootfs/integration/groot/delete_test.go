@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path"
+	"strings"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -25,13 +26,33 @@ var _ = Describe("Delete", func() {
 		imagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
-		bundle = integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id")
+		bundle = integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", 0)
 	})
 
 	It("deletes an existing bundle", func() {
 		result := integration.DeleteBundle(GrootFSBin, StorePath, "random-id")
 		Expect(result).To(Equal("Bundle random-id deleted\n"))
 		Expect(bundle.Path()).NotTo(BeAnExistingFile())
+	})
+
+	It("destroys the quota group associated with the volume", func() {
+		rootIDBuffer := gbytes.NewBuffer()
+		sess, err := gexec.Start(exec.Command("btrfs", "inspect-internal", "rootid", bundle.RootFSPath()), rootIDBuffer, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(sess).Should(gexec.Exit(0))
+		rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
+
+		sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(sess).Should(gexec.Exit(0))
+		Expect(sess).To(gbytes.Say(rootID))
+
+		integration.DeleteBundle(GrootFSBin, StorePath, "random-id")
+
+		sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(sess).Should(gexec.Exit(0))
+		Expect(sess).ToNot(gbytes.Say(rootID))
 	})
 
 	Context("when the bundle ID doesn't exist", func() {

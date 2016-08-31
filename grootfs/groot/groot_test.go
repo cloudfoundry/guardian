@@ -182,6 +182,31 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				Expect(err).To(MatchError("making bundle: Failed to make bundle"))
 			})
 		})
+
+		Context("when disk limit is given", func() {
+			It("applies the disk limit", func() {
+				bundleSpec := grootpkg.BundleSpec{
+					DiskLimit:  int64(1024),
+					VolumePath: "/path/to/volume",
+					Image: specsv1.Image{
+						Author: "Groot",
+					},
+				}
+				fakeImagePuller.PullReturns(bundleSpec, nil)
+
+				_, err := groot.Create(logger, grootpkg.CreateSpec{
+					ID:        "some-id",
+					DiskLimit: int64(1024),
+					Image:     "/path/to/image",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeBundler.CreateCallCount()).To(Equal(1))
+				_, id, createBundlerSpec := fakeBundler.CreateArgsForCall(0)
+				Expect(id).To(Equal("some-id"))
+				Expect(createBundlerSpec).To(Equal(bundleSpec))
+			})
+		})
 	})
 
 	Describe("Delete", func() {
@@ -194,11 +219,11 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 		Context("when destroying a bundle fails", func() {
 			BeforeEach(func() {
-				fakeBundler.DestroyReturns(errors.New("Boom!"))
+				fakeBundler.DestroyReturns(errors.New("failed to destroy bundle"))
 			})
 
 			It("returns an error", func() {
-				Expect(groot.Delete(logger, "some-id")).To(MatchError(ContainSubstring("Boom!")))
+				Expect(groot.Delete(logger, "some-id")).To(MatchError(ContainSubstring("failed to destroy bundle")))
 			})
 		})
 	})

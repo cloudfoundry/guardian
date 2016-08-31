@@ -5,13 +5,17 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 	. "github.com/st3v/glager"
 )
 
@@ -208,6 +212,26 @@ var _ = Describe("Btrfs", func() {
 			Expect(volumePath).ToNot(BeAnExistingFile())
 		})
 
+		It("deletes the quota group for the volume", func() {
+			rootIDBuffer := gbytes.NewBuffer()
+			sess, err := gexec.Start(exec.Command("btrfs", "inspect-internal", "rootid", volumePath), rootIDBuffer, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+			rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
+
+			sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", storePath), GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+			Expect(sess).To(gbytes.Say(rootID))
+
+			Expect(btrfs.Destroy(logger, volumePath)).To(Succeed())
+
+			sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", storePath), GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+			Expect(sess).ToNot(gbytes.Say(rootID))
+		})
+
 		It("logs the correct btrfs command", func() {
 			Expect(volumePath).To(BeADirectory())
 
@@ -235,7 +259,53 @@ var _ = Describe("Btrfs", func() {
 				tmpDir, _ := ioutil.TempDir("", "")
 				err := btrfs.Destroy(logger, tmpDir)
 
-				Expect(err).To(MatchError(ContainSubstring("destroying volume")))
+				Expect(err).To(MatchError(ContainSubstring("destroying quota group")))
+			})
+		})
+	})
+
+	Describe("ApplyDiskLimit", func() {
+		var toPath string
+
+		BeforeEach(func() {
+			bundlePath, err := ioutil.TempDir(storePath, "")
+			Expect(err).NotTo(HaveOccurred())
+			toPath = filepath.Join(bundlePath, "rootfs")
+		})
+
+		It("applies the disk limit", func() {
+			volID := randVolumeID()
+			volPath, err := btrfs.Create(logger, "", volID)
+			Expect(err).NotTo(HaveOccurred())
+
+			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(volPath, "vol-file")), "bs=1048576", "count=5")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+
+			Expect(btrfs.Snapshot(logger, volPath, toPath)).To(Succeed())
+
+			Expect(btrfs.ApplyDiskLimit(logger, toPath, 10*1024*1024)).To(Succeed())
+
+			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(toPath, "hello")), "bs=1048576", "count=4")
+			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+
+			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(toPath, "hello2")), "bs=1048576", "count=2")
+			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(1))
+			Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
+		})
+
+		Context("when the provided path is not a volume", func() {
+			It("should return an error", func() {
+				Expect(os.MkdirAll(toPath, 0777)).To(Succeed())
+
+				Expect(
+					btrfs.ApplyDiskLimit(logger, toPath, 10*1024*1024),
+				).To(MatchError(ContainSubstring("is not a subvolume")))
 			})
 		})
 	})
