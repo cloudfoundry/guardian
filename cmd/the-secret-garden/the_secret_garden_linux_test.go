@@ -89,7 +89,6 @@ var _ = Describe("The Secret Garden", func() {
 		exp := fmt.Sprintf("on %s type", secretGraphDir)
 		output := session.Out.Contents()
 		Expect(output).To(ContainSubstring(exp))
-		Expect(output).To(ContainSubstring(realGraphDir))
 
 		session = runSecretGarden(fakeDataDir, realGraphDir, secretGraphDir, pidFile, "mount")
 		Eventually(session).Should(gexec.Exit(0))
