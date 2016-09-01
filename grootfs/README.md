@@ -107,6 +107,27 @@ Some important notes:
 * You need to have these [mappings allowed](http://man7.org/linux/man-pages/man5/subuid.5.html) in the `/etc/subuid` and `/etc/subgid` files
 
 
+#### Disk Quotas & Drax
+
+Grootfs supports per-filesystem disk-quotas through the Drax binary.
+BTRFS disk-quotas can only be enabled by a root user, therefore Drax must be owned by root, with the user bit set, and moved somewhere in the $PATH.
+
+```
+make
+chown root drax
+chmod u+s drax
+mv drax /usr/local/bin/
+```
+
+Once Drax is configured, you can apply a quota to the rootfs:
+
+```
+grootfs --store /mnt/btrfs create \
+        --disk-limit-size-bytes 10485760 \
+        docker:///ubuntu:latest \
+        my-image-id
+```
+
 ### Deleting a bundle
 
 You can destroy a created bundle/rootfs by calling grootfs with the image-id:
