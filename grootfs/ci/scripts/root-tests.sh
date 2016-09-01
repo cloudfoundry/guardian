@@ -7,4 +7,6 @@ source $(dirname $BASH_SOURCE)/test/utils.sh
 move_to_gopath
 mount_btrfs
 
-ginkgo -p -r -race integration/root
+args=$@
+[ "$args" == "" ] && args="integration/root"
+ginkgo -p -r -race $args
