@@ -140,6 +140,23 @@ var _ = Describe("Create", func() {
 		})
 	})
 
+	Context("when the image is invalid", func() {
+		It("fails", func() {
+			cmd := exec.Command(
+				GrootFSBin, "--store", StorePath,
+				"create",
+				"*@#%^!&",
+				"some-id",
+			)
+
+			buffer := gbytes.NewBuffer()
+			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sess.Wait()).To(gexec.Exit(1))
+			Eventually(sess).Should(gbytes.Say("invalid image"))
+		})
+	})
+
 	Context("when a mappings flag is invalid", func() {
 		It("fails when the uid mapping is invalid", func() {
 			cmd := exec.Command(

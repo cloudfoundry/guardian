@@ -94,10 +94,11 @@ var CreateCommand = cli.Command{
 		tarStreamer := streamer.NewTarStreamer()
 		localFetcher := local.NewLocalFetcher(tarStreamer)
 
-		parsedImageURL, _ := url.Parse(image)
-		// if err != nil {
-		// 	return nil, fmt.Errorf("parsing image url: %s", err)
-		// }
+		parsedImageURL, err := url.Parse(image)
+		if err != nil {
+			err = fmt.Errorf("invalid image: %s", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
 
 		var imageFetcher image_puller.Fetcher
 		if parsedImageURL.Scheme == "" {
