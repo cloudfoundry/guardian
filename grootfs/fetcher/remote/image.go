@@ -15,15 +15,17 @@ import (
 type StreamBlob func(logger lager.Logger) (io.ReadCloser, error)
 
 type ContainersImage struct {
-	ref            types.ImageReference
-	cacheDriver    fetcher.CacheDriver
-	cachedManifest *specsv1.Manifest
+	ref               types.ImageReference
+	cacheDriver       fetcher.CacheDriver
+	cachedManifest    *specsv1.Manifest
+	trustedRegistries []string
 }
 
-func NewContainersImage(ref types.ImageReference, cacheDriver fetcher.CacheDriver) *ContainersImage {
+func NewContainersImage(ref types.ImageReference, cacheDriver fetcher.CacheDriver, trustedRegistries []string) *ContainersImage {
 	return &ContainersImage{
-		ref:         ref,
-		cacheDriver: cacheDriver,
+		ref:               ref,
+		cacheDriver:       cacheDriver,
+		trustedRegistries: trustedRegistries,
 	}
 }
 
@@ -37,7 +39,7 @@ func (i *ContainersImage) Manifest(logger lager.Logger) (specsv1.Manifest, error
 		return *i.cachedManifest, nil
 	}
 
-	img, err := i.ref.NewImage("", false)
+	img, err := i.ref.NewImage("", i.tlsVerify())
 	if err != nil {
 		return specsv1.Manifest{}, fmt.Errorf("creating image `%s`: %s", imgName, err)
 	}
@@ -49,6 +51,10 @@ func (i *ContainersImage) Manifest(logger lager.Logger) (specsv1.Manifest, error
 			return specsv1.Manifest{}, fmt.Errorf("fetching manifest `%s`: image does not exist or you do not have permissions to see it", imgName)
 		}
 
+		if strings.Contains(err.Error(), "malformed HTTP response") {
+			logger.Error("fetching-manifest-failed", err)
+			return specsv1.Manifest{}, fmt.Errorf("fetching manifest `%s`: TLS validation of insecure registry failed - %s", imgName, err)
+		}
 		return specsv1.Manifest{}, fmt.Errorf("fetching manifest `%s`: %s", imgName, err)
 	}
 
@@ -71,7 +77,7 @@ func (i *ContainersImage) Config(logger lager.Logger) (specsv1.Image, error) {
 		return specsv1.Image{}, fmt.Errorf("fetching manifest: %s", err)
 	}
 
-	imgSrc, err := i.ref.NewImageSource("", false)
+	imgSrc, err := i.ref.NewImageSource("", i.tlsVerify())
 	if err != nil {
 		return specsv1.Image{}, fmt.Errorf("creating image source: %s", err)
 	}
@@ -97,4 +103,13 @@ func (i *ContainersImage) Config(logger lager.Logger) (specsv1.Image, error) {
 	}
 
 	return config, nil
+}
+
+func (i *ContainersImage) tlsVerify() bool {
+	for _, trustedRegistry := range i.trustedRegistries {
+		if strings.HasPrefix(i.ref.StringWithinTransport(), "//"+trustedRegistry) {
+			return false
+		}
+	}
+	return true
 }

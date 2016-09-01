@@ -9,15 +9,20 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
+	"strings"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 	"github.com/onsi/gomega/ghttp"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -144,10 +149,25 @@ var _ = Describe("Create with remote images", func() {
 			proxy.Close()
 		})
 
-		It("should create a root filesystem based on the image provided by the private registry", func() {
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id", 0)
-			Expect(path.Join(bundle.RootFSPath(), "hello")).To(BeARegularFile())
-			Expect(proxy.ReceivedRequests()).NotTo(BeEmpty())
+		It("fails to fetch the image", func() {
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", imageURL, "random-id")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
+			Eventually(sess).Should(gbytes.Say("TLS validation of insecure registry failed"))
+		})
+
+		Context("when it's provided as a valid insecure registry", func() {
+			It("should create a root filesystem based on the image provided by the private registry", func() {
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", proxy.Addr(), imageURL, "random-id")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
+
+				rootFSPath := strings.TrimSpace(string(sess.Out.Contents())) + "/rootfs"
+				Expect(path.Join(rootFSPath, "hello")).To(BeARegularFile())
+				Expect(proxy.ReceivedRequests()).NotTo(BeEmpty())
+			})
 		})
 	})
 })

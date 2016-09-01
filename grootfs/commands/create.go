@@ -39,6 +39,10 @@ var CreateCommand = cli.Command{
 			Name:  "gid-mapping",
 			Usage: "GID mapping for image translation, e.g.: <Namespace UID>:<Host UID>:<Size>",
 		},
+		cli.StringSliceFlag{
+			Name:  "insecure-registry",
+			Usage: "Whitelist a private registry",
+		},
 	},
 
 	Action: func(ctx *cli.Context) error {
@@ -81,9 +85,10 @@ var CreateCommand = cli.Command{
 		idMapper := unpackerpkg.NewIDMapper(runner)
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedCmdUnpacker(runner, idMapper, "unpack")
 
+		trustedRegistries := ctx.StringSlice("insecure-registry")
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		remoteFetcher := remote.NewRemoteFetcher(cacheDriver, func(ref types.ImageReference) remote.Image {
-			return remote.NewContainersImage(ref, cacheDriver)
+			return remote.NewContainersImage(ref, cacheDriver, trustedRegistries)
 		})
 
 		tarStreamer := streamer.NewTarStreamer()
