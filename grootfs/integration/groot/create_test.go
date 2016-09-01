@@ -27,18 +27,16 @@ var _ = Describe("Create", func() {
 	})
 
 	Context("when inclusive disk limit is provided", func() {
-		BeforeEach(func() {
+		It("creates a bundle with supplied limit", func() {
 			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(imagePath, "fatfile")), "bs=1048576", "count=5")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
-		})
 
-		It("creates a bundle with supplied limit", func() {
 			bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", int64(10*1024*1024))
 
-			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath(), "hello")), "bs=1048576", "count=4")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath(), "hello")), "bs=1048576", "count=4")
+			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 
