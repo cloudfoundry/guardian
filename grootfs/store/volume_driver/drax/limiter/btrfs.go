@@ -21,12 +21,12 @@ func NewBtrfsLimiter(commandRunner command_runner.CommandRunner) *BtrfsLimiter {
 	}
 }
 
-func (i *BtrfsLimiter) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64) error {
+func (i *BtrfsLimiter) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusiveLimit bool) error {
 	logger = logger.Session("btrfs-appling-quotas", lager.Data{"path": path})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	cmd := exec.Command("btrfs", "qgroup", "limit", strconv.FormatInt(diskLimit, 10), path)
+	cmd := exec.Command("btrfs", i.argsForLimit(path, strconv.FormatInt(diskLimit, 10), exclusiveLimit)...)
 	combinedBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = combinedBuffer
 	cmd.Stderr = combinedBuffer
@@ -55,4 +55,13 @@ func (i *BtrfsLimiter) DestroyQuotaGroup(logger lager.Logger, path string) error
 	}
 
 	return nil
+}
+
+func (i *BtrfsLimiter) argsForLimit(path, diskLimit string, exclusiveLimit bool) []string {
+	args := []string{"qgroup", "limit"}
+	if exclusiveLimit {
+		args = append(args, "-e")
+	}
+
+	return append(args, diskLimit, path)
 }

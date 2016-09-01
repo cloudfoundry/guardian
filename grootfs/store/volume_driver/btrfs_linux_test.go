@@ -285,7 +285,7 @@ var _ = Describe("Btrfs", func() {
 
 			Expect(btrfs.Snapshot(logger, volPath, toPath)).To(Succeed())
 
-			Expect(btrfs.ApplyDiskLimit(logger, toPath, 10*1024*1024)).To(Succeed())
+			Expect(btrfs.ApplyDiskLimit(logger, toPath, 10*1024*1024, false)).To(Succeed())
 
 			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(toPath, "hello")), "bs=1048576", "count=4")
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -299,12 +299,40 @@ var _ = Describe("Btrfs", func() {
 			Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
 		})
 
+		Context("when exclusive limit is active", func() {
+			It("applies the disk limit with the exclusive flag", func() {
+				volID := randVolumeID()
+				volPath, err := btrfs.Create(logger, "", volID)
+				Expect(err).NotTo(HaveOccurred())
+
+				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(volPath, "vol-file")), "bs=1048576", "count=5")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+
+				Expect(btrfs.Snapshot(logger, volPath, toPath)).To(Succeed())
+
+				Expect(btrfs.ApplyDiskLimit(logger, toPath, 10*1024*1024, true)).To(Succeed())
+
+				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(toPath, "hello")), "bs=1048576", "count=6")
+				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+
+				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(toPath, "hello2")), "bs=1048576", "count=5")
+				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(1))
+				Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
+			})
+		})
+
 		Context("when the provided path is not a volume", func() {
 			It("should return an error", func() {
 				Expect(os.MkdirAll(toPath, 0777)).To(Succeed())
 
 				Expect(
-					btrfs.ApplyDiskLimit(logger, toPath, 10*1024*1024),
+					btrfs.ApplyDiskLimit(logger, toPath, 10*1024*1024, false),
 				).To(MatchError(ContainSubstring("is not a subvolume")))
 			})
 		})

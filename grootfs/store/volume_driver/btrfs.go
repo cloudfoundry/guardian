@@ -110,16 +110,22 @@ func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
 	return nil
 }
 
-func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64) error {
+func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusiveLimit bool) error {
 	logger = logger.Session("btrfs-appling-quotas", lager.Data{"path": path})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	cmd := exec.Command("drax", "limit",
+	args := []string{
+		"limit",
 		"--volume-path", path,
 		"--disk-limit-bytes", strconv.FormatInt(diskLimit, 10),
-	)
+	}
 
+	if exclusiveLimit {
+		args = append(args, "--exclude-image-from-quota")
+	}
+
+	cmd := exec.Command("drax", args...)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = stdoutBuffer
 	stderrBuffer := bytes.NewBuffer([]byte{})

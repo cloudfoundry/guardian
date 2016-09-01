@@ -47,13 +47,34 @@ var _ = Describe("Create", func() {
 			Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
 		})
 
-		Context("and it's invalid", func() {
+		Context("when the disk limit value is invalid", func() {
 			It("fails with a helpful error", func() {
 				cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "-200", imagePath, "random-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
 				Eventually(sess).Should(gbytes.Say("disk limit cannot be negative"))
+			})
+		})
+
+		Context("when the exclude-image-from-quota is also provided", func() {
+			It("creates a bundle with supplied limit, but doesn't take into account the base image size", func() {
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "10485760", "--exclude-image-from-quota", imagePath, "random-id")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+
+				rootfsPath := filepath.Join(StorePath, "bundles/random-id/rootfs")
+				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(rootfsPath, "hello")), "bs=1048576", "count=6")
+				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+
+				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(rootfsPath, "hello2")), "bs=1048576", "count=5")
+				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(1))
+				Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
 			})
 		})
 	})

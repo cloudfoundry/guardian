@@ -16,7 +16,7 @@ import (
 
 type SnapshotDriver interface {
 	Snapshot(logger lager.Logger, fromPath, toPath string) error
-	ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64) error
+	ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusive bool) error
 	Destroy(logger lager.Logger, path string) error
 }
 
@@ -89,7 +89,7 @@ func (b *Bundler) Create(logger lager.Logger, id string, spec groot.BundleSpec) 
 	}
 
 	if spec.DiskLimit > 0 {
-		if err = b.snapshotDriver.ApplyDiskLimit(logger, bundle.RootFSPath(), spec.DiskLimit); err != nil {
+		if err = b.snapshotDriver.ApplyDiskLimit(logger, bundle.RootFSPath(), spec.DiskLimit, spec.ExclusiveLimit); err != nil {
 			return nil, fmt.Errorf("appling disk limit: %s", err)
 		}
 	}

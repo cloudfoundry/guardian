@@ -43,6 +43,10 @@ var CreateCommand = cli.Command{
 			Name:  "insecure-registry",
 			Usage: "Whitelist a private registry",
 		},
+		cli.BoolFlag{
+			Name:  "exclude-image-from-quota",
+			Usage: "Set disk limit to be exclusive (i.e.: exluding image layers)",
+		},
 	},
 
 	Action: func(ctx *cli.Context) error {
@@ -111,11 +115,12 @@ var CreateCommand = cli.Command{
 		groot := grootpkg.IamGroot(bundler, imgPuller)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
-			ID:          id,
-			Image:       image,
-			DiskLimit:   diskLimit,
-			UIDMappings: uidMappings,
-			GIDMappings: gidMappings,
+			ID:             id,
+			Image:          image,
+			DiskLimit:      diskLimit,
+			ExclusiveLimit: ctx.Bool("exclude-image-from-quota"),
+			UIDMappings:    uidMappings,
+			GIDMappings:    gidMappings,
 		})
 		if err != nil {
 			logger.Error("creating", err)

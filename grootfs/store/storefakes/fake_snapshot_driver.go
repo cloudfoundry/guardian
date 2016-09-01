@@ -19,12 +19,13 @@ type FakeSnapshotDriver struct {
 	snapshotReturns struct {
 		result1 error
 	}
-	ApplyDiskLimitStub        func(logger lager.Logger, path string, diskLimit int64) error
+	ApplyDiskLimitStub        func(logger lager.Logger, path string, diskLimit int64, exclusive bool) error
 	applyDiskLimitMutex       sync.RWMutex
 	applyDiskLimitArgsForCall []struct {
 		logger    lager.Logger
 		path      string
 		diskLimit int64
+		exclusive bool
 	}
 	applyDiskLimitReturns struct {
 		result1 error
@@ -77,17 +78,18 @@ func (fake *FakeSnapshotDriver) SnapshotReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeSnapshotDriver) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64) error {
+func (fake *FakeSnapshotDriver) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusive bool) error {
 	fake.applyDiskLimitMutex.Lock()
 	fake.applyDiskLimitArgsForCall = append(fake.applyDiskLimitArgsForCall, struct {
 		logger    lager.Logger
 		path      string
 		diskLimit int64
-	}{logger, path, diskLimit})
-	fake.recordInvocation("ApplyDiskLimit", []interface{}{logger, path, diskLimit})
+		exclusive bool
+	}{logger, path, diskLimit, exclusive})
+	fake.recordInvocation("ApplyDiskLimit", []interface{}{logger, path, diskLimit, exclusive})
 	fake.applyDiskLimitMutex.Unlock()
 	if fake.ApplyDiskLimitStub != nil {
-		return fake.ApplyDiskLimitStub(logger, path, diskLimit)
+		return fake.ApplyDiskLimitStub(logger, path, diskLimit, exclusive)
 	} else {
 		return fake.applyDiskLimitReturns.result1
 	}
@@ -99,10 +101,10 @@ func (fake *FakeSnapshotDriver) ApplyDiskLimitCallCount() int {
 	return len(fake.applyDiskLimitArgsForCall)
 }
 
-func (fake *FakeSnapshotDriver) ApplyDiskLimitArgsForCall(i int) (lager.Logger, string, int64) {
+func (fake *FakeSnapshotDriver) ApplyDiskLimitArgsForCall(i int) (lager.Logger, string, int64, bool) {
 	fake.applyDiskLimitMutex.RLock()
 	defer fake.applyDiskLimitMutex.RUnlock()
-	return fake.applyDiskLimitArgsForCall[i].logger, fake.applyDiskLimitArgsForCall[i].path, fake.applyDiskLimitArgsForCall[i].diskLimit
+	return fake.applyDiskLimitArgsForCall[i].logger, fake.applyDiskLimitArgsForCall[i].path, fake.applyDiskLimitArgsForCall[i].diskLimit, fake.applyDiskLimitArgsForCall[i].exclusive
 }
 
 func (fake *FakeSnapshotDriver) ApplyDiskLimitReturns(result1 error) {

@@ -32,12 +32,23 @@ var _ = Describe("Btrfs", func() {
 	Describe("ApplyDiskLimit", func() {
 
 		It("limits the provided volume", func() {
-			Expect(limiter.ApplyDiskLimit(logger, "/full/path/to/volume", 1024*1024)).To(Succeed())
+			Expect(limiter.ApplyDiskLimit(logger, "/full/path/to/volume", 1024*1024, false)).To(Succeed())
 
 			Expect(fakeCommandRunner).Should(HaveExecutedSerially(fake_command_runner.CommandSpec{
 				Path: "btrfs",
 				Args: []string{"qgroup", "limit", "1048576", "/full/path/to/volume"},
 			}))
+		})
+
+		Context("when the exclusive limit flag is provided", func() {
+			It("applies the quota exclusively", func() {
+				Expect(limiter.ApplyDiskLimit(logger, "/full/path/to/volume", 1024*1024, true)).To(Succeed())
+
+				Expect(fakeCommandRunner).Should(HaveExecutedSerially(fake_command_runner.CommandSpec{
+					Path: "btrfs",
+					Args: []string{"qgroup", "limit", "-e", "1048576", "/full/path/to/volume"},
+				}))
+			})
 		})
 
 		Context("when setting the limit fails", func() {
@@ -53,7 +64,7 @@ var _ = Describe("Btrfs", func() {
 			})
 
 			It("forwards the stdout and stderr", func() {
-				err := limiter.ApplyDiskLimit(logger, "/full/path/to/volume", 1024*1024)
+				err := limiter.ApplyDiskLimit(logger, "/full/path/to/volume", 1024*1024, false)
 
 				Expect(err).To(MatchError(ContainSubstring("failed to set btrfs limit")))
 				Expect(err).To(MatchError(ContainSubstring("some stderr text")))

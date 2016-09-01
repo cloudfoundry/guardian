@@ -23,6 +23,10 @@ var LimitCommand = cli.Command{
 			Name:  "disk-limit-bytes",
 			Usage: "Disk limit in bytes",
 		},
+		cli.BoolFlag{
+			Name:  "exclude-image-from-quota",
+			Usage: "Exclude base image from disk quota",
+		},
 	},
 
 	Action: func(ctx *cli.Context) error {
@@ -32,7 +36,10 @@ var LimitCommand = cli.Command{
 		commandRunner := linux_command_runner.New()
 		limiter := limiterpkg.NewBtrfsLimiter(commandRunner)
 		err := limiter.ApplyDiskLimit(
-			logger, ctx.String("volume-path"), ctx.Int64("disk-limit-bytes"),
+			logger,
+			ctx.String("volume-path"),
+			ctx.Int64("disk-limit-bytes"),
+			ctx.Bool("exclude-image-from-quota"),
 		)
 		if err != nil {
 			logger.Error("applying-limit", err)
