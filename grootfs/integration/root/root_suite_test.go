@@ -20,7 +20,7 @@ var (
 	GrootUID uint32
 	GrootGID uint32
 
-	testIdx   int
+	storeName string
 	StorePath string
 )
 
@@ -40,7 +40,6 @@ func TestRoot(t *testing.T) {
 		GrootUID = integration.FindUID("groot")
 		GrootGID = integration.FindGID("groot")
 		GrootFSBin = string(data)
-		testIdx = 0
 	})
 
 	SynchronizedAfterSuite(func() {
@@ -53,14 +52,16 @@ func TestRoot(t *testing.T) {
 			Skip("This suite is only running as root")
 		}
 
-		StorePath = path.Join(
-			btrfsMountPath,
-			fmt.Sprintf("test-store-%d-%d", GinkgoParallelNode(), testIdx),
-		)
+		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
+		StorePath = path.Join(btrfsMountPath, storeName)
 		Expect(os.Mkdir(StorePath, 0700)).NotTo(HaveOccurred())
-		testIdx += 1
 
 		Expect(os.Chown(StorePath, int(GrootUID), int(GrootGID))).To(Succeed())
+	})
+
+	AfterEach(func() {
+		integration.CleanUpSubvolumes(btrfsMountPath, storeName)
+		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
 	RunSpecs(t, "GrootFS Integration Suite - Running as root")

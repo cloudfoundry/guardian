@@ -73,7 +73,7 @@ var _ = Describe("Create", func() {
 	Context("when mappings are provided", func() {
 		// This test is in the root suite not because `grootfs` is run by root, but
 		// because we need to write a file as root to test the translation.
-		It("should translate the rootfs accordingly", func() {
+		It("translates the rootfs accordingly", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
 				"--log-level", "debug",

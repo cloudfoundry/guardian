@@ -1,11 +1,13 @@
 package integration
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -56,7 +58,6 @@ func FindUID(user string) uint32 {
 	sess, err := gexec.Start(exec.Command("id", "-u", user), nil, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))
-
 	i, err := strconv.ParseInt(strings.TrimSpace(string(sess.Out.Contents())), 10, 32)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -80,4 +81,24 @@ func ImagePathToVolumeID(imagePath string) string {
 
 	imagePathSha := sha256.Sum256([]byte(imagePath))
 	return fmt.Sprintf("%s-%d", hex.EncodeToString(imagePathSha[:32]), stat.ModTime().UnixNano())
+}
+
+func CleanUpSubvolumes(btrfsPath string, storeName string) {
+	cmd := exec.Command("sudo", "btrfs", "subvolume", "list", btrfsPath)
+	cmdOutput, err := cmd.CombinedOutput()
+	Expect(err).NotTo(HaveOccurred())
+
+	scanner := bufio.NewScanner(strings.NewReader(string(cmdOutput)))
+
+	for scanner.Scan() {
+		subvolumeFields := strings.Fields(scanner.Text())
+		subvolumePath := subvolumeFields[len(subvolumeFields)-1]
+		if !strings.HasPrefix(subvolumePath, storeName) {
+			continue
+		}
+
+		subvolumeAbsPath := filepath.Join(btrfsPath, subvolumePath)
+		cmd = exec.Command("sudo", "btrfs", "subvolume", "delete", subvolumeAbsPath)
+		Expect(cmd.Run()).To(Succeed(), fmt.Sprintf("deleting volume `%s`", subvolumeAbsPath))
+	}
 }

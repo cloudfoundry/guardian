@@ -6,6 +6,8 @@ import (
 	"path"
 	"path/filepath"
 
+	"code.cloudfoundry.org/grootfs/integration"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -15,9 +17,8 @@ import (
 
 var (
 	GrootFSBin string
-
-	testIdx   int
-	StorePath string
+	storeName  string
+	StorePath  string
 )
 
 const btrfsMountPath = "/mnt/btrfs"
@@ -32,7 +33,6 @@ func TestGroot(t *testing.T) {
 		return []byte(grootFSBin)
 	}, func(data []byte) {
 		GrootFSBin = string(data)
-		testIdx = 0
 	})
 
 	SynchronizedAfterSuite(func() {
@@ -41,12 +41,14 @@ func TestGroot(t *testing.T) {
 	})
 
 	BeforeEach(func() {
-		StorePath = path.Join(
-			btrfsMountPath,
-			fmt.Sprintf("test-store-%d-%d", GinkgoParallelNode(), testIdx),
-		)
+		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
+		StorePath = path.Join(btrfsMountPath, storeName)
 		Expect(os.Mkdir(StorePath, 0700)).NotTo(HaveOccurred())
-		testIdx += 1
+	})
+
+	AfterEach(func() {
+		integration.CleanUpSubvolumes(btrfsMountPath, storeName)
+		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
 	RunSpecs(t, "GrootFS Integration Suite - Running as groot")
