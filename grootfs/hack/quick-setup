@@ -8,6 +8,7 @@ mkfs.btrfs ~/btrfs_volume
 mkdir -p /var/lib/grootfs
 mount -t btrfs -o user_subvol_rm_allowed ~/btrfs_volume /var/lib/grootfs
 chmod 777 /var/lib/grootfs
+btrfs quota enable /var/lib/grootfs
 
 echo "Setup complete. Example command:"
 echo "./grootfs create docker:///ubuntu:latest rootfs-id"

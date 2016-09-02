@@ -59,6 +59,7 @@ btrfs as follows:
   # mount the block device
   sudo mkdir -p /mnt/btrfs
   sudo mount -t btrfs -o user_subvol_rm_allowed ~/btrfs_volume /mnt/btrfs
+  sudo btrfs quota enable /mnt/btrfs
   # you might need to chmod/chown the mount point if you don't want to run grootfs as root
   ```
 
