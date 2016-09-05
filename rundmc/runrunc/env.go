@@ -1,15 +1,17 @@
 package runrunc
 
 import (
-	"strings"
+	"regexp"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 func envWithDefaultPath(defaultPath string, env []string) []string {
+	pathRegexp := regexp.MustCompile("^PATH=.*$")
+
 	for _, envVar := range env {
-		if strings.Contains(envVar, "PATH=") {
+		if pathRegexp.MatchString(envVar) {
 			return env
 		}
 	}
@@ -18,8 +20,9 @@ func envWithDefaultPath(defaultPath string, env []string) []string {
 }
 
 func envWithUser(env []string, user string) []string {
+	userRegexp := regexp.MustCompile("^USER=.*$")
 	for _, envVar := range env {
-		if strings.Contains(envVar, "USER=") {
+		if userRegexp.MatchString(envVar) {
 			return env
 		}
 	}

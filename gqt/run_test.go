@@ -242,13 +242,14 @@ var _ = Describe("Run", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		DescribeTable("contains the correct default values", func(user, path string) {
+		DescribeTable("contains the correct values", func(user, path string, env []string) {
 			out := gbytes.NewBuffer()
 			proc, err := container.Run(
 				garden.ProcessSpec{
 					Path: "sh",
 					Args: []string{"-c", "echo $PATH"},
 					User: user,
+					Env:  env,
 				},
 				garden.ProcessIO{
 					Stdout: io.MultiWriter(GinkgoWriter, out),
@@ -262,13 +263,16 @@ var _ = Describe("Run", func() {
 
 			Expect(out).To(gbytes.Say(path))
 		},
-			Entry("for a non-root user", "alice", `^/usr/local/bin:/usr/bin:/bin\n$`),
-			Entry("for the root user", "root",
-				`^/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n$`),
+			Entry("for a non-root user",
+				"alice", `^/usr/local/bin:/usr/bin:/bin\n$`, []string{}),
+			Entry("for the root user",
+				"root", `^/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\n$`, []string{}),
+			Entry("with an env variable matching the string .*PATH.*",
+				"alice", `^/usr/local/bin:/usr/bin:/bin\n$`, []string{"APATH=foo"}),
 		)
 	})
 
-	Describe("user env variable", func() {
+	Describe("USER env variable", func() {
 		var container garden.Container
 
 		BeforeEach(func() {
@@ -303,8 +307,18 @@ var _ = Describe("Run", func() {
 				Expect(out).To(gbytes.Say(path))
 			}
 		},
-			Entry("for empty user", "", []string{}, []string{"USER=ppp", "HOME=/home/ppp"}),
-			Entry("when we specify the env in processSpec", "alice", []string{"USER=alice", "HI=YO"}, []string{"USER=alice", "HOME=/home/ppp", "HI=YO"}),
+			Entry(
+				"for empty user",
+				"", []string{}, []string{"USER=ppp", "HOME=/home/ppp"},
+			),
+			Entry(
+				"when we specify the USER env in processSpec",
+				"alice", []string{"USER=alice", "HI=YO"}, []string{"USER=alice", "HOME=/home/ppp", "HI=YO"},
+			),
+			Entry(
+				"with an env variable matching the string .*USER.*",
+				"alice", []string{"USER=alice", "HI=YO", "AUSER=foo"}, []string{"USER=alice", "HOME=/home/ppp", "HI=YO", "AUSER=foo"},
+			),
 		)
 	})
 
