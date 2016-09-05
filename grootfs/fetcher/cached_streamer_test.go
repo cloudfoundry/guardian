@@ -16,7 +16,6 @@ import (
 )
 
 var _ = Describe("CachedStreamer", func() {
-
 	var (
 		cacheDir         string
 		logger           *lagertest.TestLogger

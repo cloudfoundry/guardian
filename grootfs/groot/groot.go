@@ -3,14 +3,18 @@ package groot
 import (
 	"fmt"
 	"net/url"
+	"os"
 
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+const GLOBAL_LOCK_KEY = "global-groot-lock"
+
 //go:generate counterfeiter . Bundler
 //go:generate counterfeiter . Bundle
 //go:generate counterfeiter . ImagePuller
+//go:generate counterfeiter . Locksmith
 
 type Bundle interface {
 	Path() string
@@ -28,6 +32,11 @@ type Bundler interface {
 	Exists(id string) (bool, error)
 	Create(logger lager.Logger, id string, spec BundleSpec) (Bundle, error)
 	Destroy(logger lager.Logger, id string) error
+}
+
+type Locksmith interface {
+	Lock(key string) (*os.File, error)
+	Unlock(lockFile *os.File) error
 }
 
 type IDMappingSpec struct {
@@ -49,12 +58,14 @@ type ImagePuller interface {
 type Groot struct {
 	bundler     Bundler
 	imagePuller ImagePuller
+	locksmith   Locksmith
 }
 
-func IamGroot(bundler Bundler, imagePuller ImagePuller) *Groot {
+func IamGroot(bundler Bundler, imagePuller ImagePuller, locksmith Locksmith) *Groot {
 	return &Groot{
 		bundler:     bundler,
 		imagePuller: imagePuller,
+		locksmith:   locksmith,
 	}
 }
 
@@ -90,9 +101,23 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		UIDMappings: spec.UIDMappings,
 		GIDMappings: spec.GIDMappings,
 	}
+
+	lockFile, err := g.locksmith.Lock(GLOBAL_LOCK_KEY)
+	if err != nil {
+		return nil, err
+	}
+
 	bundleSpec, err := g.imagePuller.Pull(logger, imageSpec)
 	if err != nil {
+		if err := g.locksmith.Unlock(lockFile); err != nil {
+			logger.Error("failed-to-unlock", err)
+		}
+
 		return nil, fmt.Errorf("pulling the image: %s", err)
+	}
+
+	if err := g.locksmith.Unlock(lockFile); err != nil {
+		logger.Error("failed-to-unlock", err)
 	}
 
 	bundleSpec.DiskLimit = spec.DiskLimit

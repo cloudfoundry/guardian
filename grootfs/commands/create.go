@@ -13,6 +13,7 @@ import (
 	unpackerpkg "code.cloudfoundry.org/grootfs/image_puller/unpacker"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
+	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 
@@ -111,8 +112,9 @@ var CreateCommand = cli.Command{
 			imageFetcher = remoteFetcher
 		}
 
+		locksmith := locksmithpkg.NewFileSystem(storePath)
 		imgPuller := image_puller.NewImagePuller(imageFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
-		groot := grootpkg.IamGroot(bundler, imgPuller)
+		groot := grootpkg.IamGroot(bundler, imgPuller, locksmith)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
 			ID:             id,
