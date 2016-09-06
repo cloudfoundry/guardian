@@ -337,6 +337,7 @@ var _ = Describe("Creating a Container", func() {
 	})
 
 	Context("when running with an external network plugin", func() {
+		var pluginOutput string
 		BeforeEach(func() {
 			tmpDir, err := ioutil.TempDir("", "netplugtest")
 			Expect(err).NotTo(HaveOccurred())
@@ -350,51 +351,57 @@ var _ = Describe("Creating a Container", func() {
 			}
 		})
 
-		It("does not run kawasaki", func() {
-			container, err := client.Create(garden.ContainerSpec{})
-			Expect(err).NotTo(HaveOccurred())
-
-			out := gbytes.NewBuffer()
-			process, err := container.Run(garden.ProcessSpec{
-				Path: "ip",
-				Args: []string{
-					"-o",
-					"link",
-					"show",
-				},
-			}, garden.ProcessIO{
-				Stdout: io.MultiWriter(GinkgoWriter, out),
+		Context("when the plugin returns a properties key", func() {
+			BeforeEach(func() {
+				pluginOutput = `{"properties": {"key":"value", "garden.network.container-ip":"10.10.24.3"}}`
+				args = append(args, "--network-plugin-extra-arg", pluginOutput)
 			})
-			Expect(err).NotTo(HaveOccurred())
 
-			exitCode, err := process.Wait()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitCode).To(BeZero())
+			It("does not run kawasaki", func() {
+				container, err := client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
 
-			// ip link appends a new line on the end so let's trim that first
-			contents := strings.TrimRight(string(out.Contents()), "\n")
+				out := gbytes.NewBuffer()
+				process, err := container.Run(garden.ProcessSpec{
+					Path: "ip",
+					Args: []string{
+						"-o",
+						"link",
+						"show",
+					},
+				}, garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, out),
+				})
+				Expect(err).NotTo(HaveOccurred())
 
-			// Check that we only have 1 interface, the loopback interface
-			Expect(strings.Split(contents, "\n")).To(HaveLen(1))
-			Expect(contents).To(ContainSubstring("LOOPBACK"))
+				exitCode, err := process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(exitCode).To(BeZero())
+
+				// ip link appends a new line on the end so let's trim that first
+				contents := strings.TrimRight(string(out.Contents()), "\n")
+
+				// Check that we only have 1 interface, the loopback interface
+				Expect(strings.Split(contents, "\n")).To(HaveLen(1))
+				Expect(contents).To(ContainSubstring("LOOPBACK"))
+			})
 		})
 
 		Context("when the external network plugin returns invalid JSON", func() {
 			BeforeEach(func() {
-				pluginOutput := "invalid-json"
+				pluginOutput = "invalid-json"
 				args = append(args, "--network-plugin-extra-arg", pluginOutput)
-
 			})
 
 			It("returns a useful error message", func() {
 				_, err := client.Create(garden.ContainerSpec{})
-				Expect(err).To(MatchError(ContainSubstring("network plugin returned invalid JSON")))
+				Expect(err).To(MatchError(ContainSubstring("unmarshaling result from external networker: invalid character")))
 			})
 		})
 
 		Context("when the external network plugin returns JSON without the 'properties' key", func() {
 			BeforeEach(func() {
-				pluginOutput := `{"not-properties-key":{"foo":"bar"}}`
+				pluginOutput = `{"not-properties-key":{"foo":"bar"}}`
 				args = append(args, "--network-plugin-extra-arg", pluginOutput)
 
 			})

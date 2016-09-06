@@ -206,7 +206,7 @@ func (n *networker) NetIn(log lager.Logger, handle string, externalPort, contain
 		return 0, 0, err
 	}
 
-	if err := addPortMapping(log, n.configStore, handle, garden.PortMapping{
+	if err := AddPortMapping(log, n.configStore, handle, garden.PortMapping{
 		HostPort:      externalPort,
 		ContainerPort: containerPort,
 	}); err != nil {
@@ -289,7 +289,7 @@ func (n *networker) Restore(log lager.Logger, handle string) error {
 	return nil
 }
 
-func addPortMapping(logger lager.Logger, configStore ConfigStore, handle string, newMapping garden.PortMapping) error {
+func AddPortMapping(logger lager.Logger, configStore ConfigStore, handle string, newMapping garden.PortMapping) error {
 	var currentMappings portMappingList
 	if currentMappingsJson, ok := configStore.Get(handle, gardener.MappedPortsKey); ok {
 		var err error
