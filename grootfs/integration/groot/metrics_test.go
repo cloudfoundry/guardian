@@ -26,7 +26,7 @@ var _ = Describe("Metrics", func() {
 		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
-	It("creates a bundle with supplied limit", func() {
+	It("returns the metrics for given bundle", func() {
 		cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(imagePath, "fatfile")), "bs=1048576", "count=5")
 		sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
@@ -47,7 +47,7 @@ var _ = Describe("Metrics", func() {
 		Eventually(sess.Out).Should(gbytes.Say(`{"disk_usage":{"total_bytes_used":9453568,"exclusive_bytes_used":4210688}}`))
 	})
 
-	Context("when the id doesn't exist", func() {
+	Context("when the bundle id doesn't exist", func() {
 		It("returns an error", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics", "--force-sync", "invalid-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -57,7 +57,7 @@ var _ = Describe("Metrics", func() {
 		})
 	})
 
-	Context("when the id is not provided", func() {
+	Context("when the bundle id is not provided", func() {
 		It("returns an error", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics", "--force-sync")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)

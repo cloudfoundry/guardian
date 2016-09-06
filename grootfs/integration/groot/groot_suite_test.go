@@ -5,7 +5,7 @@ import (
 	"os"
 	"path"
 
-	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -46,7 +46,7 @@ func TestGroot(t *testing.T) {
 	})
 
 	AfterEach(func() {
-		integration.CleanUpSubvolumes(btrfsMountPath, storeName)
+		testhelpers.CleanUpSubvolumes(btrfsMountPath, storeName)
 		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
