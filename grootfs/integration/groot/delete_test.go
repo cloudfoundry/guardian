@@ -74,4 +74,17 @@ var _ = Describe("Delete", func() {
 			Eventually(sess.Out).Should(gbytes.Say("id was not specified"))
 		})
 	})
+
+	Context("when drax is not in PATH", func() {
+		It("returns a warning", func() {
+			cmd := exec.Command(GrootFSBin, "--log-level", "info", "--store", StorePath, "delete", "random-id")
+			cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+
+			Eventually(sess.Err).Should(gbytes.Say("could not delete quota group"))
+			Eventually(sess.Out).Should(gbytes.Say("Bundle random-id deleted"))
+		})
+	})
 })

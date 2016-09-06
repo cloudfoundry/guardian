@@ -83,15 +83,13 @@ func configureLog(ctx *cli.Context) lager.Logger {
 
 func translateLogLevel(logLevel string) lager.LogLevel {
 	switch strings.ToUpper(logLevel) {
-	case "FATAL":
-		return lager.FATAL
 	case "DEBUG":
 		return lager.DEBUG
 	case "INFO":
 		return lager.INFO
 	case "ERROR":
 		return lager.ERROR
+	default:
+		return lager.FATAL
 	}
-
-	return lager.FATAL
 }

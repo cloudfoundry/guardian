@@ -90,18 +90,25 @@ func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
 		return fmt.Errorf("bundle path not found: %s", err)
 	}
 
-	cmd := exec.Command("drax", "destroy", "--volume-path", path)
-	stdoutBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stdout = stdoutBuffer
-	stderrBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stderr = stderrBuffer
+	var cmd *exec.Cmd
+	if _, err := exec.LookPath("drax"); err != nil {
+		logger.Info("drax-command-not-found", lager.Data{
+			"warning": "could not delete quota group",
+		})
+	} else {
+		cmd = exec.Command("drax", "destroy", "--volume-path", path)
+		stdoutBuffer := bytes.NewBuffer([]byte{})
+		cmd.Stdout = stdoutBuffer
+		stderrBuffer := bytes.NewBuffer([]byte{})
+		cmd.Stderr = stderrBuffer
 
-	logger.Debug("starting-drax", lager.Data{"path": cmd.Path, "args": cmd.Args})
-	err := cmd.Run()
-	d.relogStream(logger, stderrBuffer)
-	if err != nil {
-		logger.Error("drax-failed", err)
-		return fmt.Errorf("destroying quota group (%s): %s", err, strings.TrimSpace(stdoutBuffer.String()))
+		logger.Debug("starting-drax", lager.Data{"path": cmd.Path, "args": cmd.Args})
+		err := cmd.Run()
+		d.relogStream(logger, stderrBuffer)
+		if err != nil {
+			logger.Error("drax-failed", err)
+			return fmt.Errorf("destroying quota group (%s): %s", err, strings.TrimSpace(stdoutBuffer.String()))
+		}
 	}
 
 	cmd = exec.Command("btrfs", "subvolume", "delete", path)
@@ -159,21 +166,19 @@ func (d *Btrfs) FetchMetrics(logger lager.Logger, path string, forceSync bool) (
 		args = append(args, "--force-sync")
 	}
 
-	//TODO:
 	cmd := exec.Command("drax", args...)
-	outputBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stdout = outputBuffer
-	if err := cmd.Run(); err != nil {
+	output, err := cmd.Output()
+	if err != nil {
 		logger.Error("drax-failed", err)
-		return groot.VolumeMetrics{}, fmt.Errorf("%s: %s", err, strings.TrimSpace(outputBuffer.String()))
+		return groot.VolumeMetrics{}, fmt.Errorf("%s: %s", err, strings.TrimSpace(string(output)))
 	}
 
 	usageRegexp := regexp.MustCompile(`.*\s+(\d+)\s+(\d+)$`)
-	usage := usageRegexp.FindStringSubmatch(strings.TrimSpace(outputBuffer.String()))
+	usage := usageRegexp.FindStringSubmatch(strings.TrimSpace(string(output)))
 
 	var metrics groot.VolumeMetrics
 	if len(usage) != 3 {
-		logger.Error("parsing-metrics-failed", fmt.Errorf("raw metrics: %s", outputBuffer.String()))
+		logger.Error("parsing-metrics-failed", fmt.Errorf("raw metrics: %s", string(output)))
 		return metrics, errors.New("could not parse metrics")
 	}
 
