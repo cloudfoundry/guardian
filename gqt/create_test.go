@@ -403,7 +403,6 @@ var _ = Describe("Creating a Container", func() {
 			BeforeEach(func() {
 				pluginOutput = `{"not-properties-key":{"foo":"bar"}}`
 				args = append(args, "--network-plugin-extra-arg", pluginOutput)
-
 			})
 
 			It("returns a useful error message", func() {

@@ -211,6 +211,16 @@ var _ = Describe("ExternalNetworker", func() {
 				Expect(err).To(MatchError(ContainSubstring("network plugin returned JSON without a properties key")))
 			})
 		})
+
+		Context("when the external network plugin returns nothing", func() {
+			It("returns a useful error message", func() {
+				pluginOutput = ""
+
+				err := plugin.Network(logger, containerSpec, 42)
+				Expect(err).To(MatchError(ContainSubstring("unmarshaling result from external networker")))
+			})
+		})
+
 	})
 
 	Describe("Destroy", func() {
