@@ -152,6 +152,10 @@ It also supports redirecting the logs to a log file:
 grootfs --log-level debug --log-file /var/log/grootfs.log create ...
 ```
 
+## Misc
+
+* All devices inside a image are ignored.
+
 ## Links
 
 * [Garden project](https://github.com/cloudfoundry/garden)
