@@ -42,7 +42,7 @@ var MetricsCommand = cli.Command{
 		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
 		bundler := storepkg.NewBundler(btrfsVolumeDriver, storePath)
 
-		groot := grootpkg.IamGroot(bundler, nil)
+		groot := grootpkg.IamGroot(bundler, nil, nil)
 		metrics, err := groot.Metrics(logger, id, forceSync)
 		if err != nil {
 			logger.Error("fetching-metrics", err)
