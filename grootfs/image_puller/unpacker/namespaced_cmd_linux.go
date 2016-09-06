@@ -10,8 +10,8 @@ import (
 	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/docker/docker/pkg/reexec"
 
-	"code.cloudfoundry.org/grootfs/image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/image_puller"
 	"code.cloudfoundry.org/lager"
 )
 

@@ -38,6 +38,17 @@ type FakeBundler struct {
 	destroyReturns struct {
 		result1 error
 	}
+	MetricsStub        func(logger lager.Logger, id string, forceSync bool) (groot.VolumeMetrics, error)
+	metricsMutex       sync.RWMutex
+	metricsArgsForCall []struct {
+		logger    lager.Logger
+		id        string
+		forceSync bool
+	}
+	metricsReturns struct {
+		result1 groot.VolumeMetrics
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -146,6 +157,42 @@ func (fake *FakeBundler) DestroyReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeBundler) Metrics(logger lager.Logger, id string, forceSync bool) (groot.VolumeMetrics, error) {
+	fake.metricsMutex.Lock()
+	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
+		logger    lager.Logger
+		id        string
+		forceSync bool
+	}{logger, id, forceSync})
+	fake.recordInvocation("Metrics", []interface{}{logger, id, forceSync})
+	fake.metricsMutex.Unlock()
+	if fake.MetricsStub != nil {
+		return fake.MetricsStub(logger, id, forceSync)
+	} else {
+		return fake.metricsReturns.result1, fake.metricsReturns.result2
+	}
+}
+
+func (fake *FakeBundler) MetricsCallCount() int {
+	fake.metricsMutex.RLock()
+	defer fake.metricsMutex.RUnlock()
+	return len(fake.metricsArgsForCall)
+}
+
+func (fake *FakeBundler) MetricsArgsForCall(i int) (lager.Logger, string, bool) {
+	fake.metricsMutex.RLock()
+	defer fake.metricsMutex.RUnlock()
+	return fake.metricsArgsForCall[i].logger, fake.metricsArgsForCall[i].id, fake.metricsArgsForCall[i].forceSync
+}
+
+func (fake *FakeBundler) MetricsReturns(result1 groot.VolumeMetrics, result2 error) {
+	fake.MetricsStub = nil
+	fake.metricsReturns = struct {
+		result1 groot.VolumeMetrics
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeBundler) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -155,6 +202,8 @@ func (fake *FakeBundler) Invocations() map[string][][]interface{} {
 	defer fake.createMutex.RUnlock()
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
+	fake.metricsMutex.RLock()
+	defer fake.metricsMutex.RUnlock()
 	return fake.invocations
 }
 

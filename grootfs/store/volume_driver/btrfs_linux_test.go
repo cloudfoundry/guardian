@@ -337,6 +337,66 @@ var _ = Describe("Btrfs", func() {
 			})
 		})
 	})
+
+	Describe("FetchMetrics", func() {
+		var toPath string
+
+		BeforeEach(func() {
+			bundlePath, err := ioutil.TempDir(storePath, "")
+			Expect(err).NotTo(HaveOccurred())
+			toPath = filepath.Join(bundlePath, "rootfs")
+		})
+
+		It("returns the correct metrics", func() {
+			volID := randVolumeID()
+			volPath, err := btrfs.Create(logger, "", volID)
+			Expect(err).NotTo(HaveOccurred())
+
+			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(volPath, "vol-file")), "bs=4210688", "count=1")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+
+			Expect(btrfs.Snapshot(logger, volPath, toPath)).To(Succeed())
+
+			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(toPath, "hello")), "bs=4210688", "count=1")
+			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).ToNot(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+
+			metrics, err := btrfs.FetchMetrics(logger, toPath, true)
+			Expect(err).ToNot(HaveOccurred())
+
+			// Block math craziness -> 1* 4210688 ~= 4227072
+			Expect(metrics.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(4227072)))
+			// Block math craziness -> 2* 4227072 ~= 8437760
+			Expect(metrics.DiskUsage.TotalBytesUsed).To(Equal(int64(8437760)))
+		})
+
+		Context("when the provided path is not a volume", func() {
+			BeforeEach(func() {
+				Expect(os.MkdirAll(toPath, 0777)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				_, err := btrfs.FetchMetrics(logger, toPath, true)
+				Expect(err).To(MatchError(ContainSubstring("is not a btrfs volume")))
+			})
+		})
+
+		Context("when path does not exist", func() {
+			BeforeEach(func() {
+				toPath = "/tmp/not-here"
+			})
+
+			It("returns an error", func() {
+				_, err := btrfs.FetchMetrics(logger, toPath, true)
+				Expect(err).To(MatchError(ContainSubstring("No such file or directory")))
+			})
+
+		})
+	})
+
 })
 
 func randVolumeID() string {

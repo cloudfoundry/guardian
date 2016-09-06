@@ -32,6 +32,7 @@ type Bundler interface {
 	Exists(id string) (bool, error)
 	Create(logger lager.Logger, id string, spec BundleSpec) (Bundle, error)
 	Destroy(logger lager.Logger, id string) error
+	Metrics(logger lager.Logger, id string, forceSync bool) (VolumeMetrics, error)
 }
 
 type Locksmith interface {
@@ -59,6 +60,14 @@ type Groot struct {
 	bundler     Bundler
 	imagePuller ImagePuller
 	locksmith   Locksmith
+}
+
+type DiskUsage struct {
+	TotalBytesUsed     int64 `json:"total_bytes_used"`
+	ExclusiveBytesUsed int64 `json:"exclusive_bytes_used"`
+}
+type VolumeMetrics struct {
+	DiskUsage DiskUsage `json:"disk_usage"`
 }
 
 func IamGroot(bundler Bundler, imagePuller ImagePuller, locksmith Locksmith) *Groot {
@@ -132,4 +141,17 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 
 func (g *Groot) Delete(logger lager.Logger, id string) error {
 	return g.bundler.Destroy(logger, id)
+}
+
+func (g *Groot) Metrics(logger lager.Logger, id string, forceSync bool) (VolumeMetrics, error) {
+	logger = logger.Session("groot-metrics", lager.Data{"bundleID": id, "forceSync": forceSync})
+	logger.Info("start")
+	defer logger.Info("end")
+
+	metrics, err := g.bundler.Metrics(logger, id, forceSync)
+	if err != nil {
+		return VolumeMetrics{}, fmt.Errorf("fetching metrics for `%s`: %s", id, err)
+	}
+
+	return metrics, nil
 }

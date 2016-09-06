@@ -4,6 +4,7 @@ package storefakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 )
@@ -29,6 +30,17 @@ type FakeSnapshotDriver struct {
 	}
 	applyDiskLimitReturns struct {
 		result1 error
+	}
+	FetchMetricsStub        func(logger lager.Logger, path string, forceSync bool) (groot.VolumeMetrics, error)
+	fetchMetricsMutex       sync.RWMutex
+	fetchMetricsArgsForCall []struct {
+		logger    lager.Logger
+		path      string
+		forceSync bool
+	}
+	fetchMetricsReturns struct {
+		result1 groot.VolumeMetrics
+		result2 error
 	}
 	DestroyStub        func(logger lager.Logger, path string) error
 	destroyMutex       sync.RWMutex
@@ -114,6 +126,42 @@ func (fake *FakeSnapshotDriver) ApplyDiskLimitReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeSnapshotDriver) FetchMetrics(logger lager.Logger, path string, forceSync bool) (groot.VolumeMetrics, error) {
+	fake.fetchMetricsMutex.Lock()
+	fake.fetchMetricsArgsForCall = append(fake.fetchMetricsArgsForCall, struct {
+		logger    lager.Logger
+		path      string
+		forceSync bool
+	}{logger, path, forceSync})
+	fake.recordInvocation("FetchMetrics", []interface{}{logger, path, forceSync})
+	fake.fetchMetricsMutex.Unlock()
+	if fake.FetchMetricsStub != nil {
+		return fake.FetchMetricsStub(logger, path, forceSync)
+	} else {
+		return fake.fetchMetricsReturns.result1, fake.fetchMetricsReturns.result2
+	}
+}
+
+func (fake *FakeSnapshotDriver) FetchMetricsCallCount() int {
+	fake.fetchMetricsMutex.RLock()
+	defer fake.fetchMetricsMutex.RUnlock()
+	return len(fake.fetchMetricsArgsForCall)
+}
+
+func (fake *FakeSnapshotDriver) FetchMetricsArgsForCall(i int) (lager.Logger, string, bool) {
+	fake.fetchMetricsMutex.RLock()
+	defer fake.fetchMetricsMutex.RUnlock()
+	return fake.fetchMetricsArgsForCall[i].logger, fake.fetchMetricsArgsForCall[i].path, fake.fetchMetricsArgsForCall[i].forceSync
+}
+
+func (fake *FakeSnapshotDriver) FetchMetricsReturns(result1 groot.VolumeMetrics, result2 error) {
+	fake.FetchMetricsStub = nil
+	fake.fetchMetricsReturns = struct {
+		result1 groot.VolumeMetrics
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeSnapshotDriver) Destroy(logger lager.Logger, path string) error {
 	fake.destroyMutex.Lock()
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
@@ -155,6 +203,8 @@ func (fake *FakeSnapshotDriver) Invocations() map[string][][]interface{} {
 	defer fake.snapshotMutex.RUnlock()
 	fake.applyDiskLimitMutex.RLock()
 	defer fake.applyDiskLimitMutex.RUnlock()
+	fake.fetchMetricsMutex.RLock()
+	defer fake.fetchMetricsMutex.RUnlock()
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
 	return fake.invocations

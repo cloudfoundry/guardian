@@ -3,14 +3,17 @@ package volume_driver
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 )
@@ -111,7 +114,7 @@ func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
 }
 
 func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusiveLimit bool) error {
-	logger = logger.Session("btrfs-appling-quotas", lager.Data{"path": path})
+	logger = logger.Session("btrfs-applying-quotas", lager.Data{"path": path})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -141,6 +144,43 @@ func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64
 	}
 
 	return nil
+}
+
+func (d *Btrfs) FetchMetrics(logger lager.Logger, path string, forceSync bool) (groot.VolumeMetrics, error) {
+	logger = logger.Session("btrfs-fetching-metrics", lager.Data{"path": path})
+	logger.Info("start")
+	defer logger.Info("end")
+
+	args := []string{
+		"metrics",
+		"--volume-path", path,
+	}
+	if forceSync {
+		args = append(args, "--force-sync")
+	}
+
+	//TODO:
+	cmd := exec.Command("drax", args...)
+	outputBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = outputBuffer
+	if err := cmd.Run(); err != nil {
+		logger.Error("drax-failed", err)
+		return groot.VolumeMetrics{}, fmt.Errorf("%s: %s", err, strings.TrimSpace(outputBuffer.String()))
+	}
+
+	usageRegexp := regexp.MustCompile(`.*\s+(\d+)\s+(\d+)$`)
+	usage := usageRegexp.FindStringSubmatch(strings.TrimSpace(outputBuffer.String()))
+
+	var metrics groot.VolumeMetrics
+	if len(usage) != 3 {
+		logger.Error("parsing-metrics-failed", fmt.Errorf("raw metrics: %s", outputBuffer.String()))
+		return metrics, errors.New("could not parse metrics")
+	}
+
+	fmt.Sscanf(usage[1], "%d", &metrics.DiskUsage.TotalBytesUsed)
+	fmt.Sscanf(usage[2], "%d", &metrics.DiskUsage.ExclusiveBytesUsed)
+
+	return metrics, nil
 }
 
 func (d *Btrfs) relogStream(logger lager.Logger, stream io.Reader) {

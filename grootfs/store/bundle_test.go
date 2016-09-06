@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"path"
 
-	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/store"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

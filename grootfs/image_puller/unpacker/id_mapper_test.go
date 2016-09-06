@@ -4,8 +4,8 @@ import (
 	"errors"
 	"os/exec"
 
-	"code.cloudfoundry.org/grootfs/image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/image_puller/unpacker"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

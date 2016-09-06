@@ -298,4 +298,40 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			})
 		})
 	})
+
+	Describe("Metrics", func() {
+		It("asks for metrics from the bundler", func() {
+			fakeBundler.MetricsReturns(grootpkg.VolumeMetrics{}, nil)
+			_, err := groot.Metrics(logger, "some-id", true)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(fakeBundler.MetricsCallCount()).To(Equal(1))
+			_, id, forceSync := fakeBundler.MetricsArgsForCall(0)
+			Expect(id).To(Equal("some-id"))
+			Expect(forceSync).To(BeTrue())
+		})
+
+		It("asks for metrics from the bundler", func() {
+			metrics := grootpkg.VolumeMetrics{
+				DiskUsage: grootpkg.DiskUsage{
+					TotalBytesUsed:     1024,
+					ExclusiveBytesUsed: 512,
+				},
+			}
+			fakeBundler.MetricsReturns(metrics, nil)
+
+			returnedMetrics, err := groot.Metrics(logger, "some-id", true)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(returnedMetrics).To(Equal(metrics))
+		})
+
+		Context("when bundler fails", func() {
+			It("returns an error", func() {
+				fakeBundler.MetricsReturns(grootpkg.VolumeMetrics{}, errors.New("sorry"))
+
+				_, err := groot.Metrics(logger, "some-id", true)
+				Expect(err).To(MatchError(ContainSubstring("sorry")))
+			})
+		})
+	})
 })

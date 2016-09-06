@@ -23,6 +23,7 @@ func main() {
 	drax.Commands = []cli.Command{
 		commands.LimitCommand,
 		commands.DestroyCommand,
+		commands.MetricsCommand,
 	}
 
 	drax.Run(os.Args)
