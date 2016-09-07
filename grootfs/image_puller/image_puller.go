@@ -12,7 +12,6 @@ import (
 
 //go:generate counterfeiter . VolumeDriver
 //go:generate counterfeiter . Fetcher
-//go:generate counterfeiter . Streamer
 //go:generate counterfeiter . Unpacker
 
 type UnpackSpec struct {
@@ -41,11 +40,7 @@ type VolumeDriver interface {
 
 type Fetcher interface {
 	ImageInfo(logger lager.Logger, imageURL *url.URL) (ImageInfo, error)
-	Streamer(logger lager.Logger, imageURL *url.URL) (Streamer, error)
-}
-
-type Streamer interface {
-	Stream(logger lager.Logger, source string) (io.ReadCloser, int64, error)
+	StreamBlob(logger lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error)
 }
 
 type Unpacker interface {
@@ -78,11 +73,6 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 	}
 	logger.Debug("fetched-layers-digests", lager.Data{"digests": imageInfo.LayersDigest})
 
-	streamer, err := p.fetcher.Streamer(logger, spec.ImageSrc)
-	if err != nil {
-		return groot.BundleSpec{}, fmt.Errorf("initializing streamer: %s", err)
-	}
-
 	var volumePath string
 	for _, digest := range imageInfo.LayersDigest {
 		volumePath, err = p.volumeDriver.Path(logger, wrapVolumeID(spec, digest.ChainID))
@@ -112,7 +102,7 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 			"parentChainID": digest.ParentChainID,
 		})
 
-		stream, size, err := streamer.Stream(logger, digest.BlobID)
+		stream, size, err := p.fetcher.StreamBlob(logger, spec.ImageSrc, digest.BlobID)
 		if err != nil {
 			return groot.BundleSpec{}, fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
 		}

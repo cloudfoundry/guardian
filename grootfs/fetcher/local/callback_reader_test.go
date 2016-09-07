@@ -1,10 +1,10 @@
-package streamer_test
+package local_test
 
 import (
 	"io"
 	"os"
 
-	streamerpkg "code.cloudfoundry.org/grootfs/image_puller/streamer"
+	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -17,7 +17,7 @@ var _ = Describe("Callback Reader", func() {
 		pipeR          io.ReadCloser
 		pipeW          io.WriteCloser
 		logger         lager.Logger
-		callbackReader *streamerpkg.CallbackReader
+		callbackReader *local.CallbackReader
 		waitFunction   func() error
 	)
 
@@ -35,7 +35,7 @@ var _ = Describe("Callback Reader", func() {
 	})
 
 	JustBeforeEach(func() {
-		callbackReader = streamerpkg.NewCallbackReader(logger, waitFunction, pipeR)
+		callbackReader = local.NewCallbackReader(logger, waitFunction, pipeR)
 	})
 
 	Describe("Read", func() {

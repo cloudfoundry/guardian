@@ -26,7 +26,6 @@ var _ = Describe("Image Puller", func() {
 		fakeImagePuller  *grootfakes.FakeImagePuller
 		fakeUnpacker     *image_pullerfakes.FakeUnpacker
 		fakeVolumeDriver *image_pullerfakes.FakeVolumeDriver
-		fakeStreamer     *image_pullerfakes.FakeStreamer
 		expectedImgDesc  specsv1.Image
 
 		imagePuller *image_puller.ImagePuller
@@ -36,10 +35,10 @@ var _ = Describe("Image Puller", func() {
 
 	BeforeEach(func() {
 		fakeImagePuller = new(grootfakes.FakeImagePuller)
+
 		fakeUnpacker = new(image_pullerfakes.FakeUnpacker)
+
 		fakeFetcher = new(image_pullerfakes.FakeFetcher)
-		fakeStreamer = new(image_pullerfakes.FakeStreamer)
-		fakeFetcher.StreamerReturns(fakeStreamer, nil)
 		expectedImgDesc = specsv1.Image{Author: "Groot"}
 		fakeFetcher.ImageInfoReturns(
 			image_puller.ImageInfo{
@@ -100,19 +99,6 @@ var _ = Describe("Image Puller", func() {
 		})
 	})
 
-	Context("when getting a streamer fails", func() {
-		BeforeEach(func() {
-			fakeFetcher.StreamerReturns(nil, errors.New("failed to make streamer"))
-		})
-
-		It("returns an error", func() {
-			_, err := imagePuller.Pull(logger, groot.ImageSpec{
-				ImageSrc: imageSrc,
-			})
-			Expect(err).To(MatchError(ContainSubstring("failed to make streamer")))
-		})
-	})
-
 	It("creates volumes for all the layers", func() {
 		_, err := imagePuller.Pull(logger, groot.ImageSpec{
 			ImageSrc: imageSrc,
@@ -153,7 +139,9 @@ var _ = Describe("Image Puller", func() {
 	})
 
 	It("unpacks the layers got from the provided streamer", func() {
-		fakeStreamer.StreamStub = func(_ lager.Logger, source string) (io.ReadCloser, int64, error) {
+		fakeFetcher.StreamBlobStub = func(_ lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error) {
+			Expect(imageURL).To(Equal(imageSrc))
+
 			stream := bytes.NewBuffer([]byte(fmt.Sprintf("layer-%s-contents", source)))
 			return ioutil.NopCloser(stream), 0, nil
 		}
@@ -281,7 +269,7 @@ var _ = Describe("Image Puller", func() {
 
 	Context("when streaming a blob fails", func() {
 		BeforeEach(func() {
-			fakeStreamer.StreamReturns(nil, 0, errors.New("failed to stream blob"))
+			fakeFetcher.StreamBlobReturns(nil, 0, errors.New("failed to stream blob"))
 		})
 
 		It("returns an error", func() {

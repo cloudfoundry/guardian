@@ -9,7 +9,6 @@ import (
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	grootpkg "code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/image_puller"
-	"code.cloudfoundry.org/grootfs/image_puller/streamer"
 	unpackerpkg "code.cloudfoundry.org/grootfs/image_puller/unpacker"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
@@ -18,7 +17,6 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
-	"github.com/containers/image/types"
 	"github.com/urfave/cli"
 )
 
@@ -91,13 +89,12 @@ var CreateCommand = cli.Command{
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedCmdUnpacker(runner, idMapper, "unpack")
 
 		trustedRegistries := ctx.StringSlice("insecure-registry")
-		cacheDriver := cache_driver.NewCacheDriver(storePath)
-		remoteFetcher := remote.NewRemoteFetcher(cacheDriver, func(ref types.ImageReference) remote.Image {
-			return remote.NewContainersImage(ref, cacheDriver, trustedRegistries)
-		})
+		dockerSrc := remote.NewDockerSource(trustedRegistries)
 
-		tarStreamer := streamer.NewTarStreamer()
-		localFetcher := local.NewLocalFetcher(tarStreamer)
+		cacheDriver := cache_driver.NewCacheDriver(storePath)
+		remoteFetcher := remote.NewRemoteFetcher(dockerSrc, cacheDriver)
+
+		localFetcher := local.NewLocalFetcher()
 
 		parsedImageURL, err := url.Parse(image)
 		if err != nil {

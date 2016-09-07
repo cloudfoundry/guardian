@@ -3,12 +3,12 @@ package remote
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
+	"os"
 	"strings"
-
-	"github.com/containers/image/docker"
-	"github.com/containers/image/types"
 
 	"code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/grootfs/image_puller"
@@ -17,24 +17,22 @@ import (
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-//go:generate counterfeiter . Image
-type Image interface {
-	Manifest(logger lager.Logger) (specsv1.Manifest, error)
-	//TODO: rename to ImageDesc
-	Config(logger lager.Logger) (specsv1.Image, error)
+//go:generate counterfeiter . Source
+type Source interface {
+	Manifest(logger lager.Logger, imageURL *url.URL) (specsv1.Manifest, error)
+	Config(logger lager.Logger, imageURL *url.URL, configDigest string) (specsv1.Image, error)
+	StreamBlob(logger lager.Logger, imageURL *url.URL, digest string) (io.ReadCloser, int64, error)
 }
-
-type ImageProvider func(ref types.ImageReference) Image
 
 type RemoteFetcher struct {
-	cacheDriver   fetcher.CacheDriver
-	imageProvider ImageProvider
+	source      Source
+	cacheDriver fetcher.CacheDriver
 }
 
-func NewRemoteFetcher(cacheDriver fetcher.CacheDriver, imageProvider ImageProvider) *RemoteFetcher {
+func NewRemoteFetcher(source Source, cacheDriver fetcher.CacheDriver) *RemoteFetcher {
 	return &RemoteFetcher{
-		cacheDriver:   cacheDriver,
-		imageProvider: imageProvider,
+		source:      source,
+		cacheDriver: cacheDriver,
 	}
 }
 
@@ -43,31 +41,40 @@ func (f *RemoteFetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (image
 	logger.Info("start")
 	defer logger.Info("end")
 
-	logger.Debug("parsing-reference")
-	refString := "/"
-	if imageURL.Host != "" {
-		refString += "/" + imageURL.Host
-	}
-	refString += imageURL.Path
-
-	ref, err := docker.ParseReference(refString)
-	if err != nil {
-		return image_puller.ImageInfo{}, fmt.Errorf("parsing url failed: %s", err)
-	}
-
-	img := f.imageProvider(ref)
-
 	logger.Debug("fetching-image-manifest")
-	manifest, err := img.Manifest(logger)
+	manifest, err := f.source.Manifest(logger, imageURL)
 	if err != nil {
-		return image_puller.ImageInfo{}, fmt.Errorf("getting image manifest: %s", err)
+		return image_puller.ImageInfo{}, err
 	}
 	logger.Debug("image-manifest", lager.Data{"manifest": manifest})
 
 	logger.Debug("fetching-image-config")
-	config, err := img.Config(logger)
+	configStream, err := f.cacheDriver.Blob(logger, manifest.Config.Digest,
+		func(logger lager.Logger) (io.ReadCloser, error) {
+			config, err := f.source.Config(logger, imageURL, manifest.Config.Digest)
+			if err != nil {
+				return nil, err
+			}
+
+			rEnd, wEnd, err := os.Pipe()
+			if err != nil {
+				return nil, fmt.Errorf("making pipe: %s", err)
+			}
+
+			if err := json.NewEncoder(wEnd).Encode(config); err != nil {
+				return nil, fmt.Errorf("encoding config to JSON: %s", err)
+			}
+
+			return rEnd, nil
+		},
+	)
 	if err != nil {
-		return image_puller.ImageInfo{}, fmt.Errorf("getting image config: %s", err)
+		return image_puller.ImageInfo{}, err
+	}
+
+	var config specsv1.Image
+	if err := json.NewDecoder(configStream).Decode(&config); err != nil {
+		return image_puller.ImageInfo{}, fmt.Errorf("decoding config from JSON: %s", err)
 	}
 	logger.Debug("image-config", lager.Data{"config": config})
 
@@ -77,28 +84,31 @@ func (f *RemoteFetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (image
 	}, nil
 }
 
-func (f *RemoteFetcher) Streamer(logger lager.Logger, imageURL *url.URL) (image_puller.Streamer, error) {
+func (f *RemoteFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error) {
 	logger = logger.Session("streaming", lager.Data{"imageURL": imageURL})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	logger.Debug("parsing-reference")
-	ref, err := docker.ParseReference("/" + imageURL.Path)
+	stream, err := f.cacheDriver.Blob(logger, source,
+		func(logger lager.Logger) (io.ReadCloser, error) {
+			stream, _, err := f.source.StreamBlob(logger, imageURL, source)
+			if err != nil {
+				return nil, err
+			}
+
+			return stream, nil
+		},
+	)
 	if err != nil {
-		return nil, fmt.Errorf("parsing url failed: %s", err)
+		return nil, 0, err
 	}
 
-	logger.Debug("parsing-image-source")
-	imgSrc, err := ref.NewImageSource("", true)
-	if err != nil {
-		return nil, fmt.Errorf("creating image source: %s", err)
-	}
-
-	remoteStreamer := NewRemoteStreamer(imgSrc)
-	return fetcher.NewCachedStreamer(f.cacheDriver, remoteStreamer), nil
+	return stream, 0, nil
 }
 
-func (f *RemoteFetcher) createLayersDigest(logger lager.Logger, manifest specsv1.Manifest, config specsv1.Image) []image_puller.LayerDigest {
+func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
+	manifest specsv1.Manifest, config specsv1.Image,
+) []image_puller.LayerDigest {
 	layersDigest := []image_puller.LayerDigest{}
 
 	var parentChainID string

@@ -1,89 +1,89 @@
 package local_test
 
 import (
+	"archive/tar"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/image_puller"
-	"code.cloudfoundry.org/grootfs/image_puller/image_pullerfakes"
-	"code.cloudfoundry.org/lager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	. "github.com/st3v/glager"
 )
 
 var _ = Describe("Local Fetcher", func() {
 	var (
-		fakeStreamer *image_pullerfakes.FakeStreamer
+		fetcher *local.LocalFetcher
 
-		fetcher   *local.LocalFetcher
 		imagePath string
-		imageSrc  *url.URL
-		logger    lager.Logger
+		logger    *TestLogger
+		imageURL  *url.URL
 	)
 
 	BeforeEach(func() {
-		var err error
-		logger = lager.NewLogger("local-fetcher-test")
+		fetcher = local.NewLocalFetcher()
 
+		var err error
 		imagePath, err = ioutil.TempDir("", "image")
 		Expect(err).NotTo(HaveOccurred())
+		Expect(ioutil.WriteFile(path.Join(imagePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
 
-		imageSrc, err = url.Parse(imagePath)
+		imageURL, err = url.Parse(imagePath)
 		Expect(err).NotTo(HaveOccurred())
 
-		fakeStreamer = new(image_pullerfakes.FakeStreamer)
-
-		fetcher = local.NewLocalFetcher(fakeStreamer)
+		logger = NewLogger("local-fetcher")
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(imagePath)).To(Succeed())
 	})
 
-	Describe("Streamer", func() {
-		It("returns a streamer", func() {
-			streamer, err := fetcher.Streamer(logger, imageSrc)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(streamer).NotTo(BeNil())
+	Describe("StreamBlob", func() {
+		It("returns the contents of the source directory as a Tar stream", func() {
+			stream, _, err := fetcher.StreamBlob(logger, imageURL, "")
+			Expect(err).ToNot(HaveOccurred())
+
+			entries := streamTar(tar.NewReader(stream))
+			Expect(entries).To(HaveLen(2))
+			Expect(entries[1].header.Name).To(Equal("./a_file"))
+			Expect(entries[1].header.Mode).To(Equal(int64(0600)))
+			Expect(string(entries[1].contents)).To(Equal("hello-world"))
 		})
 
-		Context("when the image path does not exist", func() {
-			BeforeEach(func() {
-				var err error
-				imageSrc, err = url.Parse("invalid-path")
-				Expect(err).NotTo(HaveOccurred())
-			})
+		It("logs the tar command", func() {
+			_, _, err := fetcher.StreamBlob(logger, imageURL, "")
+			Expect(err).ToNot(HaveOccurred())
 
+			Expect(logger).To(ContainSequence(
+				Debug(
+					Message("local-fetcher.stream-blob.starting-tar"),
+					Data("args", []string{"tar", "-cp", "-C", imagePath, "."}),
+				),
+			))
+		})
+
+		Context("when the source does not exist", func() {
 			It("returns an error", func() {
-				_, err := fetcher.Streamer(logger, imageSrc)
-				Expect(err).To(MatchError(ContainSubstring("image source does not exist")))
+				nonExistentImageURL, _ := url.Parse("/nothing/here")
+
+				_, _, err := fetcher.StreamBlob(logger, nonExistentImageURL, "")
+				Expect(err).To(MatchError(ContainSubstring("local image not found in `/nothing/here`")))
 			})
 		})
 
-		Context("when fails to access image path", func() {
-			var noPermImageURL *url.URL
-
-			JustBeforeEach(func() {
-				var err error
-				noPermImagePath := filepath.Join(imagePath, "no-perm-dir")
-				Expect(os.Mkdir(noPermImagePath, 0000)).To(Succeed())
-				Expect(os.Chmod(imagePath, 0000)).To(Succeed())
-				noPermImageURL, err = url.Parse(noPermImagePath)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			AfterEach(func() {
-				Expect(os.Chmod(imagePath, 0700)).To(Succeed())
-			})
-
+		Context("when tar does not exist", func() {
 			It("returns an error", func() {
-				_, err := fetcher.Streamer(logger, noPermImageURL)
-				Expect(err).To(MatchError(ContainSubstring("failed to access image path")))
+				local.TarBin = "non-existent-tar"
+
+				_, _, err := fetcher.StreamBlob(logger, imageURL, "")
+				Expect(err).To(MatchError(ContainSubstring("reading local image")))
 			})
 		})
 	})
@@ -93,7 +93,7 @@ var _ = Describe("Local Fetcher", func() {
 
 		BeforeEach(func() {
 			var err error
-			imageInfo, err = fetcher.ImageInfo(logger, imageSrc)
+			imageInfo, err = fetcher.ImageInfo(logger, imageURL)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -116,7 +116,7 @@ var _ = Describe("Local Fetcher", func() {
 			})
 
 			It("generates another volume id", func() {
-				newImageInfo, err := fetcher.ImageInfo(logger, imageSrc)
+				newImageInfo, err := fetcher.ImageInfo(logger, imageURL)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(imageInfo.LayersDigest[0].ChainID).NotTo(Equal(newImageInfo.LayersDigest[0].ChainID))
 			})
@@ -125,14 +125,37 @@ var _ = Describe("Local Fetcher", func() {
 		Context("when the image doesn't exist", func() {
 			BeforeEach(func() {
 				var err error
-				imageSrc, err = url.Parse("/not-here")
+				imageURL, err = url.Parse("/not-here")
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("returns an error", func() {
-				_, err := fetcher.ImageInfo(logger, imageSrc)
+				_, err := fetcher.ImageInfo(logger, imageURL)
 				Expect(err).To(MatchError(ContainSubstring("fetching image timestamp")))
 			})
 		})
 	})
 })
+
+type tarEntry struct {
+	header   *tar.Header
+	contents []byte
+}
+
+func streamTar(r *tar.Reader) []tarEntry {
+	l := []tarEntry{}
+	for {
+		header, err := r.Next()
+		if err != nil {
+			Expect(err).To(Equal(io.EOF))
+			return l
+		}
+
+		contents := make([]byte, header.Size)
+		r.Read(contents)
+		l = append(l, tarEntry{
+			header:   header,
+			contents: contents,
+		})
+	}
+}

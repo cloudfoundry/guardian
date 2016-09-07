@@ -35,6 +35,7 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 	}
 
 	if hasBlob {
+		logger.Debug("cache-hit")
 		reader, err := os.Open(c.blobPath(id))
 		if err != nil {
 			return nil, fmt.Errorf("accessing the cached blob: %s", err)
@@ -42,6 +43,7 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 		return reader, nil
 	}
 
+	logger.Debug("cache-miss")
 	blobFile, err := os.OpenFile(c.blobPath(id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("creating cached blob file: %s", err)

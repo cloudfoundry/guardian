@@ -1,4 +1,4 @@
-package streamer
+package local
 
 import (
 	"io"

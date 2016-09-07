@@ -121,7 +121,10 @@ var _ = Describe("Create with remote images", func() {
 	})
 
 	Context("when a private registry is used", func() {
-		var proxy *ghttp.Server
+		var (
+			proxy          *ghttp.Server
+			requestedBlobs map[string]bool
+		)
 
 		BeforeEach(func() {
 			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
@@ -129,12 +132,21 @@ var _ = Describe("Create with remote images", func() {
 
 			revProxy := httputil.NewSingleHostReverseProxy(dockerHubUrl)
 
+			requestedBlobs = make(map[string]bool)
+
 			// Dockerhub returns 503 if the host is set to localhost
 			// as it happens with the reverse proxy
 			oldDirector := revProxy.Director
 			revProxy.Director = func(req *http.Request) {
 				oldDirector(req)
 				req.Host = "registry-1.docker.io"
+
+				// log blob
+				re, _ := regexp.Compile(`\/v2\/cfgarden\/empty\/blobs\/sha256:([a-f0-9]*)`)
+				match := re.FindStringSubmatch(req.URL.Path)
+				if match != nil {
+					requestedBlobs[match[1]] = true
+				}
 			}
 
 			proxy = ghttp.NewTLSServer()
@@ -142,7 +154,7 @@ var _ = Describe("Create with remote images", func() {
 			Expect(err).NotTo(HaveOccurred())
 			proxy.RouteToHandler("GET", ourRegexp, revProxy.ServeHTTP)
 
-			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", proxy.Addr())
+			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", proxy.Addr())
 		})
 
 		AfterEach(func() {
@@ -167,6 +179,8 @@ var _ = Describe("Create with remote images", func() {
 				rootFSPath := strings.TrimSpace(string(sess.Out.Contents())) + "/rootfs"
 				Expect(path.Join(rootFSPath, "hello")).To(BeARegularFile())
 				Expect(proxy.ReceivedRequests()).NotTo(BeEmpty())
+
+				Expect(requestedBlobs).To(HaveLen(3))
 			})
 		})
 	})

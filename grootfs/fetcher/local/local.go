@@ -4,38 +4,51 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
+	"os/exec"
 
 	"code.cloudfoundry.org/grootfs/image_puller"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+var TarBin = "tar"
+
 type LocalFetcher struct {
-	streamer image_puller.Streamer
 }
 
-func NewLocalFetcher(streamer image_puller.Streamer) *LocalFetcher {
-	return &LocalFetcher{
-		streamer: streamer,
-	}
+func NewLocalFetcher() *LocalFetcher {
+	return &LocalFetcher{}
 }
 
-func (l *LocalFetcher) Streamer(logger lager.Logger, imageURL *url.URL) (image_puller.Streamer, error) {
-	logger = logger.Session("streamer", lager.Data{"image-url": imageURL.String()})
+func (l *LocalFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL,
+	source string) (io.ReadCloser, int64, error) {
+	logger = logger.Session("stream-blob", lager.Data{
+		"imageURL": imageURL.String(),
+		"source":   source,
+	})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	_, err := os.Stat(imageURL.String())
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("image source does not exist: %s", err)
-		}
-		return nil, fmt.Errorf("failed to access image path: %s", err)
+	imagePath := imageURL.String()
+	if _, err := os.Stat(imagePath); err != nil {
+		return nil, 0, fmt.Errorf("local image not found in `%s` %s", imagePath, err)
 	}
 
-	return l.streamer, nil
+	tarCmd := exec.Command(TarBin, "-cp", "-C", imagePath, ".")
+	stdoutPipe, err := tarCmd.StdoutPipe()
+	if err != nil {
+		return nil, 0, fmt.Errorf("creating pipe: %s", err)
+	}
+
+	logger.Debug("starting-tar", lager.Data{"path": tarCmd.Path, "args": tarCmd.Args})
+	if err := tarCmd.Start(); err != nil {
+		return nil, 0, fmt.Errorf("reading local image: %s", err)
+	}
+
+	return NewCallbackReader(logger, tarCmd.Wait, stdoutPipe), 0, nil
 }
 
 func (l *LocalFetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (image_puller.ImageInfo, error) {
