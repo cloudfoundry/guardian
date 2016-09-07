@@ -23,7 +23,6 @@ type UnpackSpec struct {
 
 type LayerDigest struct {
 	BlobID        string
-	DiffID        string
 	ChainID       string
 	ParentChainID string
 }
@@ -80,7 +79,6 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 			logger.Debug("volume-exists", lager.Data{
 				"volumePath":    volumePath,
 				"blobID":        digest.BlobID,
-				"diffID":        digest.DiffID,
 				"chainID":       digest.ChainID,
 				"parentChainID": digest.ParentChainID,
 			})
@@ -92,12 +90,11 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 			wrapVolumeID(spec, digest.ChainID),
 		)
 		if err != nil {
-			return groot.BundleSpec{}, fmt.Errorf("creating volume for layer `%s`: %s", digest.DiffID, err)
+			return groot.BundleSpec{}, fmt.Errorf("creating volume for layer `%s`: %s", digest.BlobID, err)
 		}
 		logger.Debug("volume-created", lager.Data{
 			"volumePath":    volumePath,
 			"blobID":        digest.BlobID,
-			"diffID":        digest.DiffID,
 			"chainID":       digest.ChainID,
 			"parentChainID": digest.ParentChainID,
 		})
@@ -109,7 +106,6 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 		logger.Debug("got-stream-for-blob", lager.Data{
 			"size":          size,
 			"blobID":        digest.BlobID,
-			"diffID":        digest.DiffID,
 			"chainID":       digest.ChainID,
 			"parentChainID": digest.ParentChainID,
 		})
@@ -121,11 +117,10 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 			GIDMappings: spec.GIDMappings,
 		}
 		if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
-			return groot.BundleSpec{}, fmt.Errorf("unpacking layer `%s`: %s", digest.DiffID, err)
+			return groot.BundleSpec{}, fmt.Errorf("unpacking layer `%s`: %s", digest.BlobID, err)
 		}
 		logger.Debug("layer-unpacked", lager.Data{
 			"blobID":        digest.BlobID,
-			"diffID":        digest.DiffID,
 			"chainID":       digest.ChainID,
 			"parentChainID": digest.ParentChainID,
 		})

@@ -102,7 +102,6 @@ var _ = Describe("Local Fetcher", func() {
 
 			Expect(len(layers)).To(Equal(1))
 			Expect(layers[0].BlobID).To(Equal(imagePath))
-			Expect(layers[0].DiffID).To(BeEmpty())
 			Expect(layers[0].ChainID).NotTo(BeEmpty())
 			Expect(layers[0].ParentChainID).To(BeEmpty())
 

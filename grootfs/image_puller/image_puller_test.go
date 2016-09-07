@@ -43,9 +43,9 @@ var _ = Describe("Image Puller", func() {
 		fakeFetcher.ImageInfoReturns(
 			image_puller.ImageInfo{
 				LayersDigest: []image_puller.LayerDigest{
-					image_puller.LayerDigest{BlobID: "i-am-a-layer", DiffID: "layer-111", ChainID: "layer-111", ParentChainID: ""},
-					image_puller.LayerDigest{BlobID: "i-am-another-layer", DiffID: "layer-222", ChainID: "chain-222", ParentChainID: "layer-111"},
-					image_puller.LayerDigest{BlobID: "i-am-the-last-layer", DiffID: "layer-333", ChainID: "chain-333", ParentChainID: "chain-222"},
+					image_puller.LayerDigest{BlobID: "i-am-a-layer", ChainID: "layer-111", ParentChainID: ""},
+					image_puller.LayerDigest{BlobID: "i-am-another-layer", ChainID: "chain-222", ParentChainID: "layer-111"},
+					image_puller.LayerDigest{BlobID: "i-am-the-last-layer", ChainID: "chain-333", ParentChainID: "chain-222"},
 				},
 				Config: expectedImgDesc,
 			}, nil)

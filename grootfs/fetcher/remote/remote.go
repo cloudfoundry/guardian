@@ -121,7 +121,6 @@ func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
 		chainID := f.chainID(diffID, parentChainID)
 		layersDigest = append(layersDigest, image_puller.LayerDigest{
 			BlobID:        blobDesc.Digest,
-			DiffID:        diffID,
 			ChainID:       chainID,
 			ParentChainID: parentChainID,
 		})
