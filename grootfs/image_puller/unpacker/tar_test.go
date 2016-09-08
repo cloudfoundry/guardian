@@ -112,10 +112,9 @@ var _ = Describe("Tar", func() {
 		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0711)))
 	})
 
-	Context("when there are /dev files", func() {
+	Context("when there are device files", func() {
 		BeforeEach(func() {
-			Expect(os.Mkdir(path.Join(imgPath, "dev"), 0777)).To(Succeed())
-			Expect(ioutil.WriteFile(path.Join(imgPath, "dev", "foo"), []byte("hello-world"), 0600)).To(Succeed())
+			Expect(exec.Command("sudo", "mknod", path.Join(imgPath, "somedevice"), "c", "1", "8").Run()).To(Succeed())
 		})
 
 		It("excludes them", func() {
@@ -124,8 +123,8 @@ var _ = Describe("Tar", func() {
 				TargetPath: targetPath,
 			})).To(Succeed())
 
-			filePath := path.Join(targetPath, "dev", "foo")
-			Expect(filePath).ToNot(BeARegularFile())
+			filePath := path.Join(targetPath, "somedevice")
+			Expect(filePath).ToNot(BeAnExistingFile())
 		})
 	})
 

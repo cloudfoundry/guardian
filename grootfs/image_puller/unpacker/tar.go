@@ -77,7 +77,7 @@ func (u *TarUnpacker) fileType(path string, info os.FileInfo) string {
 		return "DIRECTORY"
 	}
 
-	if strings.Contains(path, "/dev/") {
+	if (info.Mode() & os.ModeDevice) != 0 {
 		return "DEVICE"
 	}
 
