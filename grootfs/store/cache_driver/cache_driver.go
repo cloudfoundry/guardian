@@ -43,7 +43,7 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 	defer func() {
 		if err != nil {
 			logger.Debug("cleaning-up-corrupted")
-			if err = os.RemoveAll(c.blobPath(id)); err != nil {
+			if err = os.Remove(c.blobPath(id)); err != nil {
 				logger.Error("failed cleaning up corrupted state: %s", err)
 			}
 		}
