@@ -2,8 +2,10 @@ package groot_test
 
 import (
 	"archive/tar"
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
@@ -117,6 +119,82 @@ var _ = Describe("Create with remote images", func() {
 					Expect(path.Join(bundle.RootFSPath(), "injected-file")).To(BeARegularFile())
 				})
 			})
+		})
+	})
+
+	Context("when downloading the layer fails", func() {
+		var (
+			proxy    *ghttp.Server
+			layerID  string
+			requests int
+		)
+
+		BeforeEach(func() {
+			layerID = "6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a"
+			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+			Expect(err).NotTo(HaveOccurred())
+
+			revProxy := httputil.NewSingleHostReverseProxy(dockerHubUrl)
+
+			oldDirector := revProxy.Director
+			revProxy.Director = func(req *http.Request) {
+				oldDirector(req)
+				req.Host = "registry-1.docker.io"
+
+				// It matches only the first layer (ignoring manifest and config)
+				re, _ := regexp.Compile(fmt.Sprintf(`\/v2\/cfgarden\/empty\/blobs\/sha256:%s`, layerID))
+				match := re.FindStringSubmatch(req.URL.Path)
+				if match != nil {
+					req.Header.Add("X-TEST-GROOTFS", "true")
+				}
+			}
+
+			revProxy.Transport = &integration.CustomRoundTripper{
+				RoundTripFn: func(req *http.Request) (*http.Response, error) {
+					if req.Header.Get("X-TEST-GROOTFS") != "true" || requests == 1 {
+						return http.DefaultTransport.RoundTrip(req)
+					}
+
+					var body io.ReadCloser = ioutil.NopCloser(bytes.NewBufferString("i-am-groot"))
+					response := &http.Response{
+						StatusCode:    http.StatusOK,
+						Proto:         req.Proto,
+						ProtoMajor:    req.ProtoMajor,
+						ProtoMinor:    req.ProtoMinor,
+						Header:        make(map[string][]string),
+						ContentLength: int64(1024),
+						Body:          body,
+					}
+					requests++
+					return response, nil
+				},
+			}
+
+			proxy = ghttp.NewTLSServer()
+			ourRegexp, err := regexp.Compile(`.*`)
+			Expect(err).NotTo(HaveOccurred())
+			proxy.RouteToHandler("GET", ourRegexp, revProxy.ServeHTTP)
+
+			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", proxy.Addr())
+		})
+
+		AfterEach(func() {
+			proxy.Close()
+		})
+
+		It("does not leak corrupted state", func() {
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", proxy.Addr(), imageURL, "random-id")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
+			Expect(path.Join(StorePath, "cache", "blobs", fmt.Sprintf("sha256-%s", layerID))).NotTo(BeARegularFile())
+
+			// Can still be used succesfully later
+			cmd = exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", proxy.Addr(), imageURL, "random-id")
+			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
+			Expect(path.Join(StorePath, "cache", "blobs", fmt.Sprintf("sha256-%s", layerID))).To(BeARegularFile())
 		})
 	})
 

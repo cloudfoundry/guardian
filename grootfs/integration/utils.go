@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"strconv"
@@ -79,4 +80,12 @@ func ImagePathToVolumeID(imagePath string) string {
 
 	imagePathSha := sha256.Sum256([]byte(imagePath))
 	return fmt.Sprintf("%s-%d", hex.EncodeToString(imagePathSha[:32]), stat.ModTime().UnixNano())
+}
+
+type CustomRoundTripper struct {
+	RoundTripFn func(req *http.Request) (*http.Response, error)
+}
+
+func (r *CustomRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	return r.RoundTripFn(req)
 }

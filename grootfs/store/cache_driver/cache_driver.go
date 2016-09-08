@@ -34,9 +34,24 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 		return nil, fmt.Errorf("checking if the blob exists: %s", err)
 	}
 
+	var (
+		blobFile *os.File
+		reader   *os.File
+		stream   io.ReadCloser
+	)
+
+	defer func() {
+		if err != nil {
+			logger.Debug("cleaning-up-corrupted")
+			if err = os.RemoveAll(c.blobPath(id)); err != nil {
+				logger.Error("failed cleaning up corrupted state: %s", err)
+			}
+		}
+	}()
+
 	if hasBlob {
 		logger.Debug("cache-hit")
-		reader, err := os.Open(c.blobPath(id))
+		reader, err = os.Open(c.blobPath(id))
 		if err != nil {
 			return nil, fmt.Errorf("accessing the cached blob: %s", err)
 		}
@@ -44,17 +59,18 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 	}
 
 	logger.Debug("cache-miss")
-	blobFile, err := os.OpenFile(c.blobPath(id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	blobFile, err = os.OpenFile(c.blobPath(id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return nil, fmt.Errorf("creating cached blob file: %s", err)
 	}
 
-	stream, err := streamBlob(logger)
+	stream, err = streamBlob(logger)
 	if err != nil {
 		return nil, err
 	}
 
-	rEnd, wEnd, err := os.Pipe()
+	var rEnd, wEnd *os.File
+	rEnd, wEnd, err = os.Pipe()
 	if err != nil {
 		return nil, fmt.Errorf("creating pipe: %s", err)
 	}
@@ -65,7 +81,11 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 
 		_, err := io.Copy(io.MultiWriter(wEnd, blobFile), stream)
 		if err != nil {
-			logger.Error("copying-blob-to-cache", err)
+			logger.Error("failed-copying-blob-to-cache", err)
+
+			if err = os.RemoveAll(blobFile.Name()); err != nil {
+				logger.Error("failed cleaning up corrupted state: %s", err)
+			}
 		}
 	}()
 

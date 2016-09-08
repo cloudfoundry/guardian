@@ -85,6 +85,17 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 			continue
 		}
 
+		stream, size, err := p.fetcher.StreamBlob(logger, spec.ImageSrc, digest.BlobID)
+		if err != nil {
+			return groot.BundleSpec{}, fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
+		}
+		logger.Debug("got-stream-for-blob", lager.Data{
+			"size":          size,
+			"blobID":        digest.BlobID,
+			"chainID":       digest.ChainID,
+			"parentChainID": digest.ParentChainID,
+		})
+
 		volumePath, err = p.volumeDriver.Create(logger,
 			wrapVolumeID(spec, digest.ParentChainID),
 			wrapVolumeID(spec, digest.ChainID),
@@ -94,17 +105,6 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 		}
 		logger.Debug("volume-created", lager.Data{
 			"volumePath":    volumePath,
-			"blobID":        digest.BlobID,
-			"chainID":       digest.ChainID,
-			"parentChainID": digest.ParentChainID,
-		})
-
-		stream, size, err := p.fetcher.StreamBlob(logger, spec.ImageSrc, digest.BlobID)
-		if err != nil {
-			return groot.BundleSpec{}, fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
-		}
-		logger.Debug("got-stream-for-blob", lager.Data{
-			"size":          size,
 			"blobID":        digest.BlobID,
 			"chainID":       digest.ChainID,
 			"parentChainID": digest.ParentChainID,

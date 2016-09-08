@@ -104,6 +104,32 @@ var _ = Describe("CacheDriver", func() {
 				_, err := cacheDriver.Blob(logger, "my-blob", streamBlob)
 				Expect(err).To(MatchError(ContainSubstring("failed getting remote stream")))
 			})
+
+			It("cleans up corrupted stated", func() {
+				_, err := cacheDriver.Blob(logger, "my-blob", streamBlob)
+				Expect(err).To(MatchError(ContainSubstring("failed getting remote stream")))
+				theBlobPath := blobPath(storePath, "my-blob")
+				Expect(theBlobPath).NotTo(BeARegularFile())
+			})
+		})
+
+		Context("when streamBlob fails to stream all the content", func() {
+			var file *os.File
+
+			BeforeEach(func() {
+				streamBlob = func(logger lager.Logger) (io.ReadCloser, error) {
+					file = os.NewFile(uintptr(100), "my-invalid-file")
+					defer file.Close()
+					return file, nil
+				}
+			})
+
+			It("cleans up corrupted stated", func() {
+				_, err := cacheDriver.Blob(logger, "my-corrupted-blob", streamBlob)
+				Expect(err).NotTo(HaveOccurred())
+				theBlobPath := blobPath(storePath, "my-corrupted-blob")
+				Eventually(theBlobPath).ShouldNot(BeARegularFile())
+			})
 		})
 	})
 
