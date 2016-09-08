@@ -57,16 +57,16 @@ func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifes
 
 	var manifest Manifest
 	switch mimeType {
-	case manifestpkg.DockerV2Schema1MIMEType, manifestpkg.DockerV2Schema1SignedMIMEType:
+	case manifestpkg.DockerV2Schema1MediaType, manifestpkg.DockerV2Schema1SignedMediaType:
 		logger.Debug("docker-image-version-2-schema-1")
 		manifest, err = s.parseSchemaV1Manifest(logger, contents)
 
-	case specsv1.MediaTypeImageManifest, manifestpkg.DockerV2Schema2MIMEType:
+	case specsv1.MediaTypeImageManifest, manifestpkg.DockerV2Schema2MediaType:
 		logger.Debug("docker-image-version-2-schema-2")
 		manifest, err = s.parseSchemaV2Manifest(logger, contents)
 
 	default:
-		return Manifest{}, errors.New(fmt.Sprintf("unknown MIME type '%s'", mimeType))
+		return Manifest{}, errors.New(fmt.Sprintf("unknown media type '%s'", mimeType))
 	}
 
 	return manifest, nil
@@ -133,14 +133,14 @@ func (s *DockerSource) StreamBlob(logger lager.Logger, imageURL *url.URL, digest
 	return tarStream, 0, nil
 }
 
-func (s *DockerSource) tlsVerify(imageURL *url.URL) bool {
+func (s *DockerSource) skipTLSValidation(imageURL *url.URL) bool {
 	for _, trustedRegistry := range s.trustedRegistries {
 		if imageURL.Host == trustedRegistry {
-			return false
+			return true
 		}
 	}
 
-	return true
+	return false
 }
 
 func (s *DockerSource) parseSchemaV1Manifest(logger lager.Logger, rawManifest []byte) (Manifest, error) {
@@ -256,9 +256,9 @@ func (s *DockerSource) preSteamedImage(logger lager.Logger, imageURL *url.URL) (
 		return nil, err
 	}
 
-	verifyTLS := s.tlsVerify(imageURL)
-	logger.Debug("new-image", lager.Data{"verifyTLS": verifyTLS})
-	img, err := ref.NewImage("", verifyTLS)
+	skipTLSValidation := s.skipTLSValidation(imageURL)
+	logger.Debug("new-image", lager.Data{"skipTLSValidation": skipTLSValidation})
+	img, err := ref.NewImage(&types.SystemContext{DockerInsecureSkipTLSVerify: skipTLSValidation})
 	if err != nil {
 		return nil, fmt.Errorf("creating reference: %s", err)
 	}
@@ -272,12 +272,20 @@ func (s *DockerSource) preSteamedImageSource(logger lager.Logger, imageURL *url.
 		return nil, err
 	}
 
-	verifyTLS := s.tlsVerify(imageURL)
-	imgSrc, _ := ref.NewImageSource("", verifyTLS)
+	skipTLSValidation := s.skipTLSValidation(imageURL)
+
+	imgSrc, _ := ref.NewImageSource(&types.SystemContext{DockerInsecureSkipTLSVerify: skipTLSValidation}, preferedMediaTypes())
 	if err != nil {
 		return nil, fmt.Errorf("creating reference: %s", err)
 	}
-	logger.Debug("new-image", lager.Data{"verifyTLS": verifyTLS})
+	logger.Debug("new-image", lager.Data{"skipTLSValidation": skipTLSValidation})
 
 	return imgSrc, nil
+}
+
+func preferedMediaTypes() []string {
+	return []string{
+		specsv1.MediaTypeImageManifest,
+		manifestpkg.DockerV2Schema2MediaType,
+	}
 }
