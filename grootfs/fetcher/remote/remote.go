@@ -19,8 +19,8 @@ import (
 
 //go:generate counterfeiter . Source
 type Source interface {
-	Manifest(logger lager.Logger, imageURL *url.URL) (specsv1.Manifest, error)
-	Config(logger lager.Logger, imageURL *url.URL, configDigest string) (specsv1.Image, error)
+	Manifest(logger lager.Logger, imageURL *url.URL) (Manifest, error)
+	Config(logger lager.Logger, imageURL *url.URL, manifest Manifest) (specsv1.Image, error)
 	StreamBlob(logger lager.Logger, imageURL *url.URL, digest string) (io.ReadCloser, int64, error)
 }
 
@@ -49,9 +49,9 @@ func (f *RemoteFetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (image
 	logger.Debug("image-manifest", lager.Data{"manifest": manifest})
 
 	logger.Debug("fetching-image-config")
-	configStream, err := f.cacheDriver.Blob(logger, manifest.Config.Digest,
+	configStream, err := f.cacheDriver.Blob(logger, manifest.ConfigCacheKey,
 		func(logger lager.Logger) (io.ReadCloser, error) {
-			config, err := f.source.Config(logger, imageURL, manifest.Config.Digest)
+			config, err := f.source.Config(logger, imageURL, manifest)
 			if err != nil {
 				return nil, err
 			}
@@ -107,12 +107,12 @@ func (f *RemoteFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL, sourc
 }
 
 func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
-	manifest specsv1.Manifest, config specsv1.Image,
+	manifest Manifest, config specsv1.Image,
 ) []image_puller.LayerDigest {
 	layersDigest := []image_puller.LayerDigest{}
 
 	var parentChainID string
-	for i, blobDesc := range manifest.Layers {
+	for i, blobID := range manifest.Layers {
 		if i == 0 {
 			parentChainID = ""
 		}
@@ -120,7 +120,7 @@ func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
 		diffID := config.RootFS.DiffIDs[i]
 		chainID := f.chainID(diffID, parentChainID)
 		layersDigest = append(layersDigest, image_puller.LayerDigest{
-			BlobID:        blobDesc.Digest,
+			BlobID:        blobID,
 			ChainID:       chainID,
 			ParentChainID: parentChainID,
 		})

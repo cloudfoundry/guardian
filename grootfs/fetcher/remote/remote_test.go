@@ -17,7 +17,6 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/image-spec/specs-go"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -61,7 +60,7 @@ var _ = Describe("RemoteFetcher", func() {
 
 		Context("when fetching the manifest fails", func() {
 			BeforeEach(func() {
-				fakeSource.ManifestReturns(specsv1.Manifest{}, errors.New("fetching the manifest"))
+				fakeSource.ManifestReturns(remote.Manifest{}, errors.New("fetching the manifest"))
 			})
 
 			It("returns an error", func() {
@@ -71,20 +70,13 @@ var _ = Describe("RemoteFetcher", func() {
 		})
 
 		It("returns the correct list of layer digests", func() {
-			fakeSource.ManifestReturns(specsv1.Manifest{
-				Layers: []specs.Descriptor{
-					specs.Descriptor{
-						MediaType: specsv1.MediaTypeImageSerialization,
-						Size:      120,
-						Digest:    "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
-					},
-					specs.Descriptor{
-						MediaType: specsv1.MediaTypeImageSerialization,
-						Size:      210,
-						Digest:    "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
-					},
+			manifest := remote.Manifest{
+				Layers: []string{
+					"sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
+					"sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
 				},
-			}, nil)
+			}
+			fakeSource.ManifestReturns(manifest, nil)
 			fakeSource.ConfigReturns(specsv1.Image{
 				RootFS: specsv1.RootFS{
 					DiffIDs: []string{
@@ -115,19 +107,18 @@ var _ = Describe("RemoteFetcher", func() {
 		})
 
 		It("calls the source", func() {
-			fakeSource.ManifestReturns(specsv1.Manifest{
-				Config: specs.Descriptor{
-					Digest: "sha256:image-digest",
-				},
-			}, nil)
+			manifest := remote.Manifest{
+				ConfigCacheKey: "sha256:hello-world",
+			}
+			fakeSource.ManifestReturns(manifest, nil)
 
 			_, err := fetcher.ImageInfo(logger, imageURL)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeSource.ConfigCallCount()).To(Equal(1))
-			_, usedImageURL, usedDigest := fakeSource.ConfigArgsForCall(0)
+			_, usedImageURL, usedManifest := fakeSource.ConfigArgsForCall(0)
 			Expect(usedImageURL).To(Equal(imageURL))
-			Expect(usedDigest).To(Equal("sha256:image-digest"))
+			Expect(usedManifest).To(Equal(manifest))
 		})
 
 		Context("when fetching the config fails", func() {
@@ -196,11 +187,10 @@ var _ = Describe("RemoteFetcher", func() {
 			})
 
 			It("calls the cache driver", func() {
-				fakeSource.ManifestReturns(specsv1.Manifest{
-					Config: specs.Descriptor{
-						Digest: "sha256:cached-config",
-					},
-				}, nil)
+				manifest := remote.Manifest{
+					ConfigCacheKey: "sha256:cached-config",
+				}
+				fakeSource.ManifestReturns(manifest, nil)
 
 				_, err := fetcher.ImageInfo(logger, imageURL)
 				Expect(err).NotTo(HaveOccurred())

@@ -12,22 +12,22 @@ import (
 )
 
 type FakeSource struct {
-	ManifestStub        func(logger lager.Logger, imageURL *url.URL) (specsv1.Manifest, error)
+	ManifestStub        func(logger lager.Logger, imageURL *url.URL) (remote.Manifest, error)
 	manifestMutex       sync.RWMutex
 	manifestArgsForCall []struct {
 		logger   lager.Logger
 		imageURL *url.URL
 	}
 	manifestReturns struct {
-		result1 specsv1.Manifest
+		result1 remote.Manifest
 		result2 error
 	}
-	ConfigStub        func(logger lager.Logger, imageURL *url.URL, configDigest string) (specsv1.Image, error)
+	ConfigStub        func(logger lager.Logger, imageURL *url.URL, manifest remote.Manifest) (specsv1.Image, error)
 	configMutex       sync.RWMutex
 	configArgsForCall []struct {
-		logger       lager.Logger
-		imageURL     *url.URL
-		configDigest string
+		logger   lager.Logger
+		imageURL *url.URL
+		manifest remote.Manifest
 	}
 	configReturns struct {
 		result1 specsv1.Image
@@ -49,7 +49,7 @@ type FakeSource struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeSource) Manifest(logger lager.Logger, imageURL *url.URL) (specsv1.Manifest, error) {
+func (fake *FakeSource) Manifest(logger lager.Logger, imageURL *url.URL) (remote.Manifest, error) {
 	fake.manifestMutex.Lock()
 	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct {
 		logger   lager.Logger
@@ -76,25 +76,25 @@ func (fake *FakeSource) ManifestArgsForCall(i int) (lager.Logger, *url.URL) {
 	return fake.manifestArgsForCall[i].logger, fake.manifestArgsForCall[i].imageURL
 }
 
-func (fake *FakeSource) ManifestReturns(result1 specsv1.Manifest, result2 error) {
+func (fake *FakeSource) ManifestReturns(result1 remote.Manifest, result2 error) {
 	fake.ManifestStub = nil
 	fake.manifestReturns = struct {
-		result1 specsv1.Manifest
+		result1 remote.Manifest
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeSource) Config(logger lager.Logger, imageURL *url.URL, configDigest string) (specsv1.Image, error) {
+func (fake *FakeSource) Config(logger lager.Logger, imageURL *url.URL, manifest remote.Manifest) (specsv1.Image, error) {
 	fake.configMutex.Lock()
 	fake.configArgsForCall = append(fake.configArgsForCall, struct {
-		logger       lager.Logger
-		imageURL     *url.URL
-		configDigest string
-	}{logger, imageURL, configDigest})
-	fake.recordInvocation("Config", []interface{}{logger, imageURL, configDigest})
+		logger   lager.Logger
+		imageURL *url.URL
+		manifest remote.Manifest
+	}{logger, imageURL, manifest})
+	fake.recordInvocation("Config", []interface{}{logger, imageURL, manifest})
 	fake.configMutex.Unlock()
 	if fake.ConfigStub != nil {
-		return fake.ConfigStub(logger, imageURL, configDigest)
+		return fake.ConfigStub(logger, imageURL, manifest)
 	} else {
 		return fake.configReturns.result1, fake.configReturns.result2
 	}
@@ -106,10 +106,10 @@ func (fake *FakeSource) ConfigCallCount() int {
 	return len(fake.configArgsForCall)
 }
 
-func (fake *FakeSource) ConfigArgsForCall(i int) (lager.Logger, *url.URL, string) {
+func (fake *FakeSource) ConfigArgsForCall(i int) (lager.Logger, *url.URL, remote.Manifest) {
 	fake.configMutex.RLock()
 	defer fake.configMutex.RUnlock()
-	return fake.configArgsForCall[i].logger, fake.configArgsForCall[i].imageURL, fake.configArgsForCall[i].configDigest
+	return fake.configArgsForCall[i].logger, fake.configArgsForCall[i].imageURL, fake.configArgsForCall[i].manifest
 }
 
 func (fake *FakeSource) ConfigReturns(result1 specsv1.Image, result2 error) {

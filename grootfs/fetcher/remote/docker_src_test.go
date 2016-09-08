@@ -29,6 +29,7 @@ var _ = Describe("Docker source", func() {
 		configBlob           string
 		expectedLayersDigest []string
 		expectedDiffIds      []string
+		manifest             remote.Manifest
 	)
 
 	BeforeEach(func() {
@@ -42,6 +43,11 @@ var _ = Describe("Docker source", func() {
 		expectedDiffIds = []string{
 			"sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
 			"sha256:d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0",
+		}
+
+		manifest = remote.Manifest{
+			ConfigCacheKey: configBlob,
+			SchemaVersion:  2,
 		}
 
 		logger = lagertest.NewTestLogger("test-docker-source")
@@ -59,11 +65,36 @@ var _ = Describe("Docker source", func() {
 			manifest, err := dockerSrc.Manifest(logger, imageURL)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(manifest.Config.Digest).To(Equal(configBlob))
+			Expect(manifest.ConfigCacheKey).To(Equal(configBlob))
 
 			Expect(manifest.Layers).To(HaveLen(2))
-			Expect(manifest.Layers[0].Digest).To(Equal(expectedLayersDigest[0]))
-			Expect(manifest.Layers[1].Digest).To(Equal(expectedLayersDigest[1]))
+			Expect(manifest.Layers[0]).To(Equal(expectedLayersDigest[0]))
+			Expect(manifest.Layers[1]).To(Equal(expectedLayersDigest[1]))
+		})
+
+		Context("when the image schema version is 1", func() {
+			BeforeEach(func() {
+				var err error
+				imageURL, err = url.Parse("docker:///nginx:1.9")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("fetches the manifest", func() {
+				manifest, err := dockerSrc.Manifest(logger, imageURL)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(manifest.Layers).To(HaveLen(8))
+				Expect(manifest.Layers[0]).To(Equal("sha256:51f5c6a04d83efd2d45c5fd59537218924bc46705e3de6ffc8bc07b51481610b"))
+				Expect(manifest.Layers[1]).To(Equal("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"))
+				Expect(manifest.Layers[2]).To(Equal("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"))
+				Expect(manifest.Layers[3]).To(Equal("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"))
+				Expect(manifest.Layers[4]).To(Equal("sha256:640c8f3d0eb2b84205cc43e312914c4ae464d433089ee1c95042b893eb7af09b"))
+				Expect(manifest.Layers[5]).To(Equal("sha256:a4335300aa893de13a747fee474cd982c62539fd8e20e9b5eb21125996140b8a"))
+				Expect(manifest.Layers[6]).To(Equal("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"))
+				Expect(manifest.Layers[7]).To(Equal("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"))
+
+				Expect(manifest.ConfigCacheKey).To(Equal("sha256:f0f2e4b0f880c47ef68d8bca346ced37d32712b671412704524ac4162fbf944d"))
+			})
 		})
 
 		Context("when the image url is invalid", func() {
@@ -100,12 +131,25 @@ var _ = Describe("Docker source", func() {
 
 	Describe("Config", func() {
 		It("fetches the config", func() {
-			config, err := dockerSrc.Config(logger, imageURL, configBlob)
+			config, err := dockerSrc.Config(logger, imageURL, manifest)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config.RootFS.DiffIDs).To(HaveLen(2))
 			Expect(config.RootFS.DiffIDs[0]).To(Equal(expectedDiffIds[0]))
 			Expect(config.RootFS.DiffIDs[1]).To(Equal(expectedDiffIds[1]))
+		})
+
+		Context("when schema version is not supported", func() {
+			BeforeEach(func() {
+				manifest = remote.Manifest{
+					SchemaVersion: 666,
+				}
+			})
+
+			It("returns an error", func() {
+				_, err := dockerSrc.Config(logger, imageURL, manifest)
+				Expect(err).To(MatchError(ContainSubstring("schema version not supported")))
+			})
 		})
 
 		Context("when the image or the config blob does not exist", func() {
@@ -116,7 +160,7 @@ var _ = Describe("Docker source", func() {
 			})
 
 			It("retuns an error", func() {
-				_, err := dockerSrc.Config(logger, imageURL, configBlob)
+				_, err := dockerSrc.Config(logger, imageURL, manifest)
 				Expect(err).To(MatchError(ContainSubstring("fetching config blob")))
 			})
 		})
@@ -126,8 +170,61 @@ var _ = Describe("Docker source", func() {
 				imageURL, err := url.Parse("docker:cfgarden/empty:v0.1.0")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, err = dockerSrc.Config(logger, imageURL, configBlob)
+				_, err = dockerSrc.Config(logger, imageURL, manifest)
 				Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
+			})
+		})
+
+		Context("when the image schema version is 1", func() {
+			BeforeEach(func() {
+				var err error
+				imageURL, err = url.Parse("docker:///nginx:1.9")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("fetches the config", func() {
+				manifest, err := dockerSrc.Manifest(logger, imageURL)
+				Expect(err).NotTo(HaveOccurred())
+				config, err := dockerSrc.Config(logger, imageURL, manifest)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(config.RootFS.DiffIDs).To(HaveLen(8))
+				Expect(config.RootFS.DiffIDs[0]).To(Equal("sha256:ab998debe217fc9749dba7168a9e4910c1e23f839fb902358cee96c3b7f4585c"))
+				Expect(config.RootFS.DiffIDs[1]).To(Equal("sha256:c7fb0a077d24adf502a849eb20caebf5e5485bbceff66ecfe6d20221a57d8cd0"))
+				Expect(config.RootFS.DiffIDs[2]).To(Equal("sha256:1f3613e168c1d0aaa5a5e9990eddba507b0ecd97fc47545fa09e19b78229684c"))
+				Expect(config.RootFS.DiffIDs[3]).To(Equal("sha256:6f88661d681e0263f332fee3c04e3f88a3dda9f8eebf6a2f93ec4232719488e2"))
+				Expect(config.RootFS.DiffIDs[4]).To(Equal("sha256:251bbadf08c36fdae6d4907da26fcc1cbe71c7c8f0e0eb094b0115f29af372fa"))
+				Expect(config.RootFS.DiffIDs[5]).To(Equal("sha256:cc90a59ac496494827ce95c26257991d56bbb8b38556399985949b896bef7801"))
+				Expect(config.RootFS.DiffIDs[6]).To(Equal("sha256:aa527287a51f0178662d50479697b53893b65fee9383af889ece937fd02c7c56"))
+				Expect(config.RootFS.DiffIDs[7]).To(Equal("sha256:0e181a348ded1545ce2a2e84cf84017283315a9ec573959b0e3638ca95e36809"))
+			})
+
+			Context("when the manifest's v1Compatibility is empty", func() {
+				BeforeEach(func() {
+					manifest = remote.Manifest{
+						SchemaVersion:   1,
+						V1Compatibility: []string{},
+					}
+				})
+
+				It("returns an error", func() {
+					_, err := dockerSrc.Config(logger, imageURL, manifest)
+					Expect(err).To(MatchError(ContainSubstring("V1Compatibility is empty for the manifest")))
+				})
+			})
+
+			Context("when the manifest history is corrupted", func() {
+				BeforeEach(func() {
+					manifest = remote.Manifest{
+						SchemaVersion:   1,
+						V1Compatibility: []string{"not-json"},
+					}
+				})
+
+				It("returns an error", func() {
+					_, err := dockerSrc.Config(logger, imageURL, manifest)
+					Expect(err).To(MatchError(ContainSubstring("parsing manifest V1Compatibility:")))
+				})
 			})
 		})
 	})
@@ -168,7 +265,7 @@ var _ = Describe("Docker source", func() {
 		})
 
 		It("fails to fetch the Config", func() {
-			_, err := dockerSrc.Config(logger, imageURL, configBlob)
+			_, err := dockerSrc.Config(logger, imageURL, manifest)
 			Expect(err).To(MatchError(ContainSubstring("TLS validation of insecure registry failed")))
 		})
 
@@ -182,12 +279,12 @@ var _ = Describe("Docker source", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(manifest.Layers).To(HaveLen(2))
-				Expect(manifest.Layers[0].Digest).To(Equal(expectedLayersDigest[0]))
-				Expect(manifest.Layers[1].Digest).To(Equal(expectedLayersDigest[1]))
+				Expect(manifest.Layers[0]).To(Equal(expectedLayersDigest[0]))
+				Expect(manifest.Layers[1]).To(Equal(expectedLayersDigest[1]))
 			})
 
 			It("fetches the config", func() {
-				config, err := dockerSrc.Config(logger, imageURL, configBlob)
+				config, err := dockerSrc.Config(logger, imageURL, manifest)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(config.RootFS.DiffIDs).To(HaveLen(2))

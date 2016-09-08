@@ -120,6 +120,17 @@ var _ = Describe("Create with remote images", func() {
 				})
 			})
 		})
+
+		Context("when the image has a version 1 manifest schema", func() {
+			BeforeEach(func() {
+				imageURL = "docker:///nginx:1.9"
+			})
+
+			It("creates a root filesystem based on the image provided", func() {
+				bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id", 0)
+				Expect(path.Join(bundle.RootFSPath(), "etc/nginx")).To(BeADirectory())
+			})
+		})
 	})
 
 	Context("when downloading the layer fails", func() {
