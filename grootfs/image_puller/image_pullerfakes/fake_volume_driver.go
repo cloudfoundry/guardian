@@ -30,6 +30,15 @@ type FakeVolumeDriver struct {
 		result1 string
 		result2 error
 	}
+	DestroyVolumeStub        func(logger lager.Logger, id string) error
+	destroyVolumeMutex       sync.RWMutex
+	destroyVolumeArgsForCall []struct {
+		logger lager.Logger
+		id     string
+	}
+	destroyVolumeReturns struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -105,6 +114,40 @@ func (fake *FakeVolumeDriver) CreateReturns(result1 string, result2 error) {
 	}{result1, result2}
 }
 
+func (fake *FakeVolumeDriver) DestroyVolume(logger lager.Logger, id string) error {
+	fake.destroyVolumeMutex.Lock()
+	fake.destroyVolumeArgsForCall = append(fake.destroyVolumeArgsForCall, struct {
+		logger lager.Logger
+		id     string
+	}{logger, id})
+	fake.recordInvocation("DestroyVolume", []interface{}{logger, id})
+	fake.destroyVolumeMutex.Unlock()
+	if fake.DestroyVolumeStub != nil {
+		return fake.DestroyVolumeStub(logger, id)
+	} else {
+		return fake.destroyVolumeReturns.result1
+	}
+}
+
+func (fake *FakeVolumeDriver) DestroyVolumeCallCount() int {
+	fake.destroyVolumeMutex.RLock()
+	defer fake.destroyVolumeMutex.RUnlock()
+	return len(fake.destroyVolumeArgsForCall)
+}
+
+func (fake *FakeVolumeDriver) DestroyVolumeArgsForCall(i int) (lager.Logger, string) {
+	fake.destroyVolumeMutex.RLock()
+	defer fake.destroyVolumeMutex.RUnlock()
+	return fake.destroyVolumeArgsForCall[i].logger, fake.destroyVolumeArgsForCall[i].id
+}
+
+func (fake *FakeVolumeDriver) DestroyVolumeReturns(result1 error) {
+	fake.DestroyVolumeStub = nil
+	fake.destroyVolumeReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeVolumeDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -112,6 +155,8 @@ func (fake *FakeVolumeDriver) Invocations() map[string][][]interface{} {
 	defer fake.pathMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
+	fake.destroyVolumeMutex.RLock()
+	defer fake.destroyVolumeMutex.RUnlock()
 	return fake.invocations
 }
 

@@ -35,6 +35,7 @@ type ImageInfo struct {
 type VolumeDriver interface {
 	Path(logger lager.Logger, id string) (string, error)
 	Create(logger lager.Logger, parentID, id string) (string, error)
+	DestroyVolume(logger lager.Logger, id string) error
 }
 
 type Fetcher interface {
@@ -117,6 +118,13 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 			GIDMappings: spec.GIDMappings,
 		}
 		if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
+			if err := p.volumeDriver.DestroyVolume(logger, digest.ChainID); err != nil {
+				logger.Error("volume-cleanup-failed", err, lager.Data{
+					"blobID":        digest.BlobID,
+					"chainID":       digest.ChainID,
+					"parentChainID": digest.ParentChainID,
+				})
+			}
 			return groot.BundleSpec{}, fmt.Errorf("unpacking layer `%s`: %s", digest.BlobID, err)
 		}
 		logger.Debug("layer-unpacked", lager.Data{

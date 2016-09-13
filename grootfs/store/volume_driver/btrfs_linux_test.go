@@ -201,6 +201,27 @@ var _ = Describe("Btrfs", func() {
 		})
 	})
 
+	Describe("DestroyVolume", func() {
+		var (
+			volumeID   string
+			volumePath string
+		)
+
+		BeforeEach(func() {
+			volumeID = randVolumeID()
+			var err error
+			volumePath, err = btrfs.Create(logger, "", volumeID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("deletes the btrfs volume by id", func() {
+			Expect(volumePath).To(BeADirectory())
+
+			Expect(btrfs.DestroyVolume(logger, volumeID)).To(Succeed())
+			Expect(volumePath).ToNot(BeAnExistingFile())
+		})
+	})
+
 	Describe("Destroy", func() {
 		var volumePath string
 

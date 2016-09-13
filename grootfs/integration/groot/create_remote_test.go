@@ -118,6 +118,27 @@ var _ = Describe("Create with remote images", func() {
 					Expect(path.Join(bundle.RootFSPath(), "hello")).To(BeARegularFile())
 					Expect(path.Join(bundle.RootFSPath(), "injected-file")).To(BeARegularFile())
 				})
+
+				Describe("when unpacking the image fails", func() {
+					It("deletes the layer volume cache", func() {
+						// write an invalid cached layer blob
+						blobPath := path.Join(
+							StorePath, "cache", "blobs",
+							"sha256-6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a",
+						)
+						Expect(os.MkdirAll(path.Join(StorePath, "cache", "blobs"), 0755)).To(Succeed())
+						Expect(ioutil.WriteFile(blobPath, []byte("corrupted"), 0666)).To(Succeed())
+
+						layerSnapshotPath := filepath.Join(StorePath, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
+						cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", imageURL, "random-id-2")
+						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+						Expect(err).ToNot(HaveOccurred())
+						Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
+
+						// layer should be cleaned up
+						Expect(layerSnapshotPath).ToNot(BeAnExistingFile())
+					})
+				})
 			})
 		})
 

@@ -273,9 +273,7 @@ var _ = Describe("Image Puller", func() {
 		})
 
 		It("returns an error", func() {
-			_, err := imagePuller.Pull(logger, groot.ImageSpec{
-				ImageSrc: imageSrc,
-			})
+			_, err := imagePuller.Pull(logger, groot.ImageSpec{ImageSrc: imageSrc})
 			Expect(err).To(MatchError(ContainSubstring("failed to stream blob")))
 		})
 	})
@@ -286,10 +284,17 @@ var _ = Describe("Image Puller", func() {
 		})
 
 		It("returns an error", func() {
-			_, err := imagePuller.Pull(logger, groot.ImageSpec{
-				ImageSrc: imageSrc,
-			})
+			_, err := imagePuller.Pull(logger, groot.ImageSpec{ImageSrc: imageSrc})
 			Expect(err).To(MatchError(ContainSubstring("failed to unpack the blob")))
+		})
+
+		It("deletes the volume", func() {
+			_, err := imagePuller.Pull(logger, groot.ImageSpec{ImageSrc: imageSrc})
+			Expect(err).To(HaveOccurred())
+
+			Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
+			_, path := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
+			Expect(path).To(Equal("layer-111"))
 		})
 	})
 })

@@ -81,6 +81,14 @@ func (d *Btrfs) Snapshot(logger lager.Logger, fromPath, toPath string) error {
 	return nil
 }
 
+func (d *Btrfs) DestroyVolume(logger lager.Logger, id string) error {
+	logger = logger.Session("btrfs-destroying-volume", lager.Data{"volumeID": id})
+	logger.Info("start")
+	defer logger.Info("end")
+
+	return d.Destroy(logger, filepath.Join(d.storePath, "volumes", id))
+}
+
 func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
 	logger = logger.Session("btrfs-destroying", lager.Data{"path": path})
 	logger.Info("start")
