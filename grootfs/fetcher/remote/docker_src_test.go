@@ -2,20 +2,17 @@ package remote_test
 
 import (
 	"fmt"
-	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os/exec"
-	"regexp"
 
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
+	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/onsi/gomega/ghttp"
 )
 
 var _ = Describe("Docker source", func() {
@@ -230,33 +227,20 @@ var _ = Describe("Docker source", func() {
 	})
 
 	Context("when a private registry is used", func() {
-		var proxy *ghttp.Server
+		var fakeRegistry *testhelpers.FakeRegistry
 
 		BeforeEach(func() {
 			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
 			Expect(err).NotTo(HaveOccurred())
+			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+			Expect(fakeRegistry.Start()).To(Succeed())
 
-			revProxy := httputil.NewSingleHostReverseProxy(dockerHubUrl)
-
-			// Dockerhub returns 503 if the host is set to localhost
-			// as it happens with the reverse proxy
-			oldDirector := revProxy.Director
-			revProxy.Director = func(req *http.Request) {
-				oldDirector(req)
-				req.Host = "registry-1.docker.io"
-			}
-
-			proxy = ghttp.NewTLSServer()
-			ourRegexp, err := regexp.Compile(`.*`)
-			Expect(err).NotTo(HaveOccurred())
-			proxy.RouteToHandler("GET", ourRegexp, revProxy.ServeHTTP)
-
-			imageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", proxy.Addr()))
+			imageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
-			proxy.Close()
+			fakeRegistry.Stop()
 		})
 
 		It("fails to fetch the manifest", func() {
@@ -271,7 +255,7 @@ var _ = Describe("Docker source", func() {
 
 		Context("when the private registry is whitelisted", func() {
 			BeforeEach(func() {
-				trustedRegistries = []string{proxy.Addr()}
+				trustedRegistries = []string{fakeRegistry.Addr()}
 			})
 
 			It("fetches the manifest", func() {

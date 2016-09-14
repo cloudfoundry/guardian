@@ -8,24 +8,22 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"github.com/onsi/gomega/ghttp"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -157,73 +155,48 @@ var _ = Describe("Create with remote images", func() {
 
 	Context("when downloading the layer fails", func() {
 		var (
-			proxy    *ghttp.Server
-			layerID  string
-			requests int
+			fakeRegistry *testhelpers.FakeRegistry
+			layerID      string
 		)
 
 		BeforeEach(func() {
-			layerID = "6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a"
 			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
 			Expect(err).NotTo(HaveOccurred())
+			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
 
-			revProxy := httputil.NewSingleHostReverseProxy(dockerHubUrl)
-
-			oldDirector := revProxy.Director
-			revProxy.Director = func(req *http.Request) {
-				oldDirector(req)
-				req.Host = "registry-1.docker.io"
-
-				// It matches only the first layer (ignoring manifest and config)
-				re, _ := regexp.Compile(fmt.Sprintf(`\/v2\/cfgarden\/empty\/blobs\/sha256:%s`, layerID))
-				match := re.FindStringSubmatch(req.URL.Path)
-				if match != nil {
-					req.Header.Add("X-TEST-GROOTFS", "true")
+			layerID = "6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a"
+			fakeRegistry.WhenGettingBlob(layerID, 1, func(rw http.ResponseWriter, req *http.Request) {
+				var body io.ReadCloser = ioutil.NopCloser(bytes.NewBufferString("i-am-groot"))
+				response := &http.Response{
+					StatusCode:    http.StatusOK,
+					Proto:         req.Proto,
+					ProtoMajor:    req.ProtoMajor,
+					ProtoMinor:    req.ProtoMinor,
+					Header:        make(map[string][]string),
+					ContentLength: int64(1024),
+					Body:          body,
 				}
-			}
+				response.Write(rw)
+			})
 
-			revProxy.Transport = &integration.CustomRoundTripper{
-				RoundTripFn: func(req *http.Request) (*http.Response, error) {
-					if req.Header.Get("X-TEST-GROOTFS") != "true" || requests == 1 {
-						return http.DefaultTransport.RoundTrip(req)
-					}
+			Expect(fakeRegistry.Start()).To(Succeed())
 
-					var body io.ReadCloser = ioutil.NopCloser(bytes.NewBufferString("i-am-groot"))
-					response := &http.Response{
-						StatusCode:    http.StatusOK,
-						Proto:         req.Proto,
-						ProtoMajor:    req.ProtoMajor,
-						ProtoMinor:    req.ProtoMinor,
-						Header:        make(map[string][]string),
-						ContentLength: int64(1024),
-						Body:          body,
-					}
-					requests++
-					return response, nil
-				},
-			}
-
-			proxy = ghttp.NewTLSServer()
-			ourRegexp, err := regexp.Compile(`.*`)
-			Expect(err).NotTo(HaveOccurred())
-			proxy.RouteToHandler("GET", ourRegexp, revProxy.ServeHTTP)
-
-			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", proxy.Addr())
+			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", fakeRegistry.Addr())
 		})
 
 		AfterEach(func() {
-			proxy.Close()
+			fakeRegistry.Stop()
 		})
 
 		It("does not leak corrupted state", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", proxy.Addr(), imageURL, "random-id")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
 			Expect(path.Join(StorePath, "cache", "blobs", fmt.Sprintf("sha256-%s", layerID))).NotTo(BeARegularFile())
 
 			// Can still be used succesfully later
-			cmd = exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", proxy.Addr(), imageURL, "random-id")
+			cmd = exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
@@ -233,43 +206,20 @@ var _ = Describe("Create with remote images", func() {
 
 	Context("when a private registry is used", func() {
 		var (
-			proxy          *ghttp.Server
-			requestedBlobs map[string]bool
+			fakeRegistry *testhelpers.FakeRegistry
 		)
 
 		BeforeEach(func() {
 			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
 			Expect(err).NotTo(HaveOccurred())
+			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+			Expect(fakeRegistry.Start()).To(Succeed())
 
-			revProxy := httputil.NewSingleHostReverseProxy(dockerHubUrl)
-
-			requestedBlobs = make(map[string]bool)
-
-			// Dockerhub returns 503 if the host is set to localhost
-			// as it happens with the reverse proxy
-			oldDirector := revProxy.Director
-			revProxy.Director = func(req *http.Request) {
-				oldDirector(req)
-				req.Host = "registry-1.docker.io"
-
-				// log blob
-				re, _ := regexp.Compile(`\/v2\/cfgarden\/empty\/blobs\/sha256:([a-f0-9]*)`)
-				match := re.FindStringSubmatch(req.URL.Path)
-				if match != nil {
-					requestedBlobs[match[1]] = true
-				}
-			}
-
-			proxy = ghttp.NewTLSServer()
-			ourRegexp, err := regexp.Compile(`.*`)
-			Expect(err).NotTo(HaveOccurred())
-			proxy.RouteToHandler("GET", ourRegexp, revProxy.ServeHTTP)
-
-			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", proxy.Addr())
+			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr())
 		})
 
 		AfterEach(func() {
-			proxy.Close()
+			fakeRegistry.Stop()
 		})
 
 		It("fails to fetch the image", func() {
@@ -282,16 +232,15 @@ var _ = Describe("Create with remote images", func() {
 
 		Context("when it's provided as a valid insecure registry", func() {
 			It("should create a root filesystem based on the image provided by the private registry", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", proxy.Addr(), imageURL, "random-id")
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
 
 				rootFSPath := strings.TrimSpace(string(sess.Out.Contents())) + "/rootfs"
 				Expect(path.Join(rootFSPath, "hello")).To(BeARegularFile())
-				Expect(proxy.ReceivedRequests()).NotTo(BeEmpty())
 
-				Expect(requestedBlobs).To(HaveLen(3))
+				Expect(fakeRegistry.RequestedBlobs()).To(HaveLen(3))
 			})
 		})
 	})
