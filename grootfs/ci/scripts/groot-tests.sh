@@ -20,4 +20,4 @@ cleanup_drax $drax_path
 # read $HOME/.docker
 export HOME=/home/groot
 
-ginkgo -p -r -race $@
+ginkgo -p -race $@

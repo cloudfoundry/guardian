@@ -9,4 +9,4 @@ mount_btrfs
 
 args=$@
 [ "$args" == "" ] && args="integration/root"
-ginkgo -p -r -race $args
+ginkgo -p -race $args
