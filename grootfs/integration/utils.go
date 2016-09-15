@@ -9,10 +9,11 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,29 +21,37 @@ import (
 )
 
 func CreateBundle(grootFSBin, storePath, imagePath, id string, diskLimit int64) groot.Bundle {
-	return CreateBundleWSpec(grootFSBin, storePath, groot.CreateSpec{
-		ID:        id,
-		Image:     imagePath,
-		DiskLimit: diskLimit,
-	})
+	cmd := runner.CreateCmd{
+		GrootFSBin: grootFSBin,
+		StorePath:  storePath,
+		Spec: groot.CreateSpec{
+			ID:        id,
+			Image:     imagePath,
+			DiskLimit: diskLimit,
+		},
+		LogLevel: lager.DEBUG,
+		LogFile:  GinkgoWriter,
+	}
+
+	bundlePath, err := cmd.Run()
+	Expect(err).NotTo(HaveOccurred())
+
+	return store.NewBundle(bundlePath)
 }
 
 func CreateBundleWSpec(grootFSBin, storePath string, spec groot.CreateSpec) groot.Bundle {
-	args := []string{"--store", storePath, "create"}
-	for _, mapping := range spec.UIDMappings {
-		args = append(args, "--uid-mapping", fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size))
+	cmd := runner.CreateCmd{
+		GrootFSBin: grootFSBin,
+		StorePath:  storePath,
+		Spec:       spec,
+		LogLevel:   lager.DEBUG,
+		LogFile:    GinkgoWriter,
 	}
-	for _, mapping := range spec.GIDMappings {
-		args = append(args, "--gid-mapping", fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size))
-	}
-	args = append(args, "--disk-limit-size-bytes", strconv.FormatInt(spec.DiskLimit, 10), spec.Image, spec.ID)
 
-	cmd := exec.Command(grootFSBin, args...)
-	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	bundlePath, err := cmd.Run()
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
 
-	return store.NewBundle(strings.TrimSpace(string(sess.Out.Contents())))
+	return store.NewBundle(bundlePath)
 }
 
 func DeleteBundle(grootFSBin, storePath, id string) string {
