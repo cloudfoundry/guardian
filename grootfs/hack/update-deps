@@ -1,4 +1,5 @@
 #!/bin/bash -e
+source hack/utils.sh
 
 usage() {
   colour=$1
@@ -33,14 +34,6 @@ remove_dep() {
   check_clean_status
   update_glide_yaml $dep
   update_and_commit Remove $dep
-}
-
-RED=1
-GREEN=2
-function print_message {
-  message=$1
-  colour=$2
-  printf "\r\033[00;3${colour}m[${message}]\033[0m\n"
 }
 
 check_glide_version() {
@@ -193,4 +186,3 @@ done
 if [ -z $OPTARG ]; then
   update_deps
 fi
-

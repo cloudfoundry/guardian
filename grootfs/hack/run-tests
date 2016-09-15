@@ -1,0 +1,153 @@
+#!/bin/bash -e
+source hack/utils.sh
+
+# Default fly target
+[ -z $FLY_TARGET ] && FLY_TARGET="lite"
+[ -z $FLY_ARGS ] && FLY_ARGS="-x -p"
+
+usage() {
+  colour=$1
+  print_message "Usage:" $colour
+  print_message "run-tests --- run all the tests" $colour
+  print_message "run-tests -p <test path> --- only run tests bellow given path" $colour
+  print_message "run-tests -g <Ginkgo arguments> --- pass custom parameters to Ginkgo" $colour
+  print_message "run-tests -r --- run test suites under the provided path recursively" $colour
+  print_message "run-tests -h --- print help menu" $colour
+}
+
+function compile_fly_cmd {
+  task_path=$1
+
+  cmd="fly -t $FLY_TARGET"
+  cmd=$cmd" e -c $task_path"
+  cmd=$cmd" -i grootfs-git-repo=${PWD}"
+  cmd=$cmd" $FLY_ARGS"
+  cmd=$cmd" --"
+
+  echo $cmd
+}
+
+function compile_ginkgo_args {
+  recursive=${1:-0}
+  test_path=${2:-""}
+  ginkgo_args=${3:-""}
+
+  args=""
+  [ "$ginkgo_args" != "" ] && args=$args" $ginkgo_args"
+  [ $recursive -eq 1 ] && args=$args" -r"
+  [ "$test_path" != "" ] && args=$args" $test_path"
+
+  echo $args
+}
+
+function fly_groot_tests {
+  cmd=$(compile_fly_cmd ci/tasks/groot-tests.yml)
+  cmd=$cmd" "$(compile_ginkgo_args $@)
+  eval $cmd
+}
+
+function fly_root_tests {
+  cmd=$(compile_fly_cmd ci/tasks/root-tests.yml)
+  cmd=$cmd" "$(compile_ginkgo_args $@)
+  eval $cmd
+}
+
+function run_integration_tests {
+  recursive=${1:-0}
+  test_path=${2:-""}
+  ginkgo_args=${3:-""}
+
+  case $test_path in
+    # run tests as user groot
+    integration/groot*)
+      fly_groot_tests $recursive $test_path $ginkgo_args
+      ;;
+
+    # run tests as user root
+    integration/root*)
+      fly_root_tests $recursive $test_path $ginkgo_args
+      ;;
+
+    # both
+    *)
+      fly_groot_tests 1 $test_path $ginkgo_args
+      fly_root_tests 1 $test_path $ginkgo_args
+      ;;
+  esac
+}
+
+function run_unit_tests {
+  recursive=${1:-0}
+  test_path=${2:-""}
+  ginkgo_args=${3:-""}
+
+  # if it has Linux tests it should run through fly
+  find_cmd="find $test_path -name '*_linux_test.go'"
+  [ $recursive -eq 0 ] && find_cmd=$find_cmd" -maxdepth 1"
+  if [ "$(eval $find_cmd)" != "" ]; then
+    fly_groot_tests $@
+    return
+  fi
+
+  # run locally
+  cmd="ginkgo -p --race"
+  cmd=$cmd" "$(compile_ginkgo_args $@)
+  eval $cmd
+}
+
+function run_all_tests {
+  ginkgo_args=${1:-""}
+
+  fly_groot_tests 1 "" "$ginkgo_args"
+  fly_root_tests 1 "integration/root" "$ginkgo_args"
+}
+
+function run_tests {
+  recursive=${1:-0}
+  test_path=${2:-""}
+  ginkgo_args=${3:-""}
+
+  case $test_path in
+    integration*)
+      run_integration_tests $recursive $test_path $ginkgo_args
+      ;;
+
+    # no path - run all the tests
+    "")
+      run_all_tests $ginkgo_args
+      ;;
+
+    # test_path is not empty
+    *)
+      run_unit_tests $recursive $test_path $ginkgo_args
+      ;;
+    esac
+}
+
+test_path=""
+ginkgo_args=""
+recursive=0
+while getopts "p:g:rh" OPTION
+do
+  case $OPTION in
+    p)
+      test_path=$OPTARG
+      ;;
+    g)
+      ginkgo_args=$OPTARG
+      ;;
+    h)
+      usage $GREEN
+      exit
+      ;;
+    r)
+      recursive=1
+      ;;
+    *)
+      usage $RED
+      exit
+      ;;
+  esac
+done
+
+run_tests $recursive $test_path $ginkgo_args
