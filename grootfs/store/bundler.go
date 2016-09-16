@@ -90,7 +90,7 @@ func (b *Bundler) Create(logger lager.Logger, id string, spec groot.BundleSpec) 
 	}
 
 	if spec.DiskLimit > 0 {
-		if err = b.snapshotDriver.ApplyDiskLimit(logger, bundle.RootFSPath(), spec.DiskLimit, spec.ExclusiveLimit); err != nil {
+		if err = b.snapshotDriver.ApplyDiskLimit(logger, bundle.RootFSPath(), spec.DiskLimit, spec.ExcludeImageFromQuota); err != nil {
 			return nil, fmt.Errorf("appling disk limit: %s", err)
 		}
 	}

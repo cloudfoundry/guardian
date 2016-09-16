@@ -105,6 +105,33 @@ var _ = Describe("Create with remote images", func() {
 				Expect(path.Join(bundle.RootFSPath(), "i-hacked-your-cache")).To(BeARegularFile())
 			})
 
+			Context("when image size exceeds disk quota", func() {
+				BeforeEach(func() {
+					imageURL = "docker:///cfgarden/empty:v0.1.1"
+				})
+
+				Context("when the image is not accounted for in the quota", func() {
+					It("succeeds", func() {
+						cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "10", "--exclude-image-from-quota", imageURL, "random-id")
+						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+						Expect(err).NotTo(HaveOccurred())
+						Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
+					})
+				})
+
+				Context("when the image is accounted for in the quota", func() {
+					It("returns an error", func() {
+						cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "10", imageURL, "random-id")
+
+						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+						Expect(err).NotTo(HaveOccurred())
+						Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
+
+						Eventually(sess).Should(gbytes.Say("exceeded disk quota"))
+					})
+				})
+			})
+
 			Describe("Unpacked layer caching", func() {
 				It("caches the unpacked image in a subvolume with snapshots", func() {
 					integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id", 0)
@@ -231,7 +258,7 @@ var _ = Describe("Create with remote images", func() {
 		})
 
 		Context("when it's provided as a valid insecure registry", func() {
-			It("should create a root filesystem based on the image provided by the private registry", func() {
+			It("creates a root filesystem based on the image provided by the private registry", func() {
 				cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())

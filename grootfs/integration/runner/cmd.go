@@ -93,7 +93,7 @@ func (c *CreateCmd) makeCmd() *exec.Cmd {
 		args = append(args, "--disk-limit-size-bytes",
 			strconv.FormatInt(c.Spec.DiskLimit, 10),
 		)
-		if c.Spec.ExclusiveLimit {
+		if c.Spec.ExcludeImageFromQuota {
 			args = append(args, "--exclude-image-from-quota")
 		}
 	}

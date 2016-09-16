@@ -130,7 +130,7 @@ func (s *DockerSource) StreamBlob(logger lager.Logger, imageURL *url.URL, digest
 		return nil, 0, fmt.Errorf("reading gzip: %s", err)
 	}
 
-	return tarStream, 0, nil
+	return tarStream, size, nil
 }
 
 func (s *DockerSource) skipTLSValidation(imageURL *url.URL) bool {

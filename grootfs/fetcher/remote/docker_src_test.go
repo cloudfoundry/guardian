@@ -279,8 +279,8 @@ var _ = Describe("Docker source", func() {
 	})
 
 	Describe("StreamBlob", func() {
-		It("steams a blob", func() {
-			reader, _, err := dockerSrc.StreamBlob(logger, imageURL, expectedLayersDigest[0])
+		It("streams a blob", func() {
+			reader, size, err := dockerSrc.StreamBlob(logger, imageURL, expectedLayersDigest[0])
 			Expect(err).NotTo(HaveOccurred())
 
 			buffer := gbytes.NewBuffer()
@@ -288,6 +288,7 @@ var _ = Describe("Docker source", func() {
 			cmd.Stdin = reader
 			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(size).To(Equal(int64(90)))
 
 			Eventually(buffer).Should(gbytes.Say("hello"))
 			Eventually(sess).Should(gexec.Exit(0))

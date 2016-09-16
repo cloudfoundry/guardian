@@ -24,20 +24,19 @@ func NewCacheDriver(storePath string) *CacheDriver {
 
 func (c *CacheDriver) Blob(logger lager.Logger, id string,
 	streamBlob fetcher.StreamBlob,
-) (io.ReadCloser, error) {
+) (io.ReadCloser, int64, error) {
 	logger = logger.Session("streaming-blob-from-cache", lager.Data{"blobID": id})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	hasBlob, err := c.hasBlob(id)
 	if err != nil {
-		return nil, fmt.Errorf("checking if the blob exists: %s", err)
+		return nil, 0, fmt.Errorf("checking if the blob exists: %s", err)
 	}
 
 	var (
 		blobFile *os.File
 		reader   *os.File
-		stream   io.ReadCloser
 	)
 
 	defer func() {
@@ -53,26 +52,30 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 		logger.Debug("cache-hit")
 		reader, err = os.Open(c.blobPath(id))
 		if err != nil {
-			return nil, fmt.Errorf("accessing the cached blob: %s", err)
+			return nil, 0, fmt.Errorf("accessing the cached blob: %s", err)
 		}
-		return reader, nil
+		stat, err := os.Stat(c.blobPath(id))
+		if err != nil {
+			return nil, 0, fmt.Errorf("acessing cached blob stat: %s", err)
+		}
+		return reader, stat.Size(), nil
 	}
 
 	logger.Debug("cache-miss")
 	blobFile, err = os.OpenFile(c.blobPath(id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return nil, fmt.Errorf("creating cached blob file: %s", err)
+		return nil, 0, fmt.Errorf("creating cached blob file: %s", err)
 	}
 
-	stream, err = streamBlob(logger)
+	stream, size, err := streamBlob(logger)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
 	var rEnd, wEnd *os.File
 	rEnd, wEnd, err = os.Pipe()
 	if err != nil {
-		return nil, fmt.Errorf("creating pipe: %s", err)
+		return nil, 0, fmt.Errorf("creating pipe: %s", err)
 	}
 	go func() {
 		defer wEnd.Close()
@@ -89,7 +92,7 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 		}
 	}()
 
-	return rEnd, nil
+	return rEnd, size, nil
 }
 
 func (c *CacheDriver) blobPath(id string) string {

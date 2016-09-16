@@ -222,10 +222,10 @@ var _ = Describe("Bundle", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, path, diskLimit, exclusiveLimit := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
+				_, path, diskLimit, excludeImageFromQuota := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
 				Expect(path).To(Equal(bundle.RootFSPath()))
 				Expect(diskLimit).To(Equal(int64(1024)))
-				Expect(exclusiveLimit).To(BeFalse())
+				Expect(excludeImageFromQuota).To(BeFalse())
 			})
 
 			Context("when applying the disk limit fails", func() {
@@ -255,12 +255,12 @@ var _ = Describe("Bundle", func() {
 			Context("when the exclusive flag is set", func() {
 				It("enforces the exclusive limit", func() {
 					_, err := bundler.Create(logger, "some-id", groot.BundleSpec{
-						DiskLimit:      int64(1024),
-						ExclusiveLimit: true,
+						DiskLimit:             int64(1024),
+						ExcludeImageFromQuota: true,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					_, _, _, exclusiveLimit := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
-					Expect(exclusiveLimit).To(BeTrue())
+					_, _, _, excludeImageFromQuota := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
+					Expect(excludeImageFromQuota).To(BeTrue())
 				})
 			})
 		})

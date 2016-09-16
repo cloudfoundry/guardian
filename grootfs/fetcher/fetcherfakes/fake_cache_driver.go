@@ -10,7 +10,7 @@ import (
 )
 
 type FakeCacheDriver struct {
-	BlobStub        func(logger lager.Logger, id string, streamBlob fetcher.StreamBlob) (io.ReadCloser, error)
+	BlobStub        func(logger lager.Logger, id string, streamBlob fetcher.StreamBlob) (io.ReadCloser, int64, error)
 	blobMutex       sync.RWMutex
 	blobArgsForCall []struct {
 		logger     lager.Logger
@@ -19,13 +19,14 @@ type FakeCacheDriver struct {
 	}
 	blobReturns struct {
 		result1 io.ReadCloser
-		result2 error
+		result2 int64
+		result3 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCacheDriver) Blob(logger lager.Logger, id string, streamBlob fetcher.StreamBlob) (io.ReadCloser, error) {
+func (fake *FakeCacheDriver) Blob(logger lager.Logger, id string, streamBlob fetcher.StreamBlob) (io.ReadCloser, int64, error) {
 	fake.blobMutex.Lock()
 	fake.blobArgsForCall = append(fake.blobArgsForCall, struct {
 		logger     lager.Logger
@@ -37,7 +38,7 @@ func (fake *FakeCacheDriver) Blob(logger lager.Logger, id string, streamBlob fet
 	if fake.BlobStub != nil {
 		return fake.BlobStub(logger, id, streamBlob)
 	} else {
-		return fake.blobReturns.result1, fake.blobReturns.result2
+		return fake.blobReturns.result1, fake.blobReturns.result2, fake.blobReturns.result3
 	}
 }
 
@@ -53,12 +54,13 @@ func (fake *FakeCacheDriver) BlobArgsForCall(i int) (lager.Logger, string, fetch
 	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].id, fake.blobArgsForCall[i].streamBlob
 }
 
-func (fake *FakeCacheDriver) BlobReturns(result1 io.ReadCloser, result2 error) {
+func (fake *FakeCacheDriver) BlobReturns(result1 io.ReadCloser, result2 int64, result3 error) {
 	fake.BlobStub = nil
 	fake.blobReturns = struct {
 		result1 io.ReadCloser
-		result2 error
-	}{result1, result2}
+		result2 int64
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *FakeCacheDriver) Invocations() map[string][][]interface{} {

@@ -83,22 +83,6 @@ var _ = Describe("Image Puller", func() {
 		Expect(bundle.VolumePath).To(Equal("/path/to/volume/chain-333"))
 	})
 
-	Context("when fetching the list of layers fails", func() {
-		BeforeEach(func() {
-			fakeFetcher.ImageInfoReturns(image_puller.ImageInfo{
-				LayersDigest: []image_puller.LayerDigest{},
-				Config:       specsv1.Image{},
-			}, errors.New("failed to get list of layers"))
-		})
-
-		It("returns an error", func() {
-			_, err := imagePuller.Pull(logger, groot.ImageSpec{
-				ImageSrc: imageSrc,
-			})
-			Expect(err).To(MatchError(ContainSubstring("failed to get list of layers")))
-		})
-	})
-
 	It("creates volumes for all the layers", func() {
 		_, err := imagePuller.Pull(logger, groot.ImageSpec{
 			ImageSrc: imageSrc,
@@ -138,12 +122,12 @@ var _ = Describe("Image Puller", func() {
 		Expect(unpackSpec.TargetPath).To(Equal("/volume/chain-333"))
 	})
 
-	It("unpacks the layers got from the provided streamer", func() {
+	It("unpacks the layers got from the fetcher", func() {
 		fakeFetcher.StreamBlobStub = func(_ lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error) {
 			Expect(imageURL).To(Equal(imageSrc))
 
 			stream := bytes.NewBuffer([]byte(fmt.Sprintf("layer-%s-contents", source)))
-			return ioutil.NopCloser(stream), 0, nil
+			return ioutil.NopCloser(stream), 1200, nil
 		}
 
 		_, err := imagePuller.Pull(logger, groot.ImageSpec{
@@ -167,6 +151,52 @@ var _ = Describe("Image Puller", func() {
 		contents, err = ioutil.ReadAll(unpackSpec.Stream)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("layer-i-am-the-last-layer-contents"))
+	})
+
+	Context("when the sum of layers exceed the limit", func() {
+		Context("when including the image size in the limit", func() {
+			It("returns an error", func() {
+				fakeFetcher.StreamBlobReturns(nil, 512, nil)
+
+				_, err := imagePuller.Pull(logger, groot.ImageSpec{
+					ImageSrc:              imageSrc,
+					DiskLimit:             1200,
+					ExcludeImageFromQuota: false,
+				})
+
+				Expect(err).To(MatchError(ContainSubstring("exceeded disk quota")))
+			})
+		})
+
+		Context("when not including the image size in the limit", func() {
+			It("doesn't fail", func() {
+				fakeFetcher.StreamBlobReturns(nil, 1048, nil)
+
+				_, err := imagePuller.Pull(logger, groot.ImageSpec{
+					ImageSrc:              imageSrc,
+					DiskLimit:             1024,
+					ExcludeImageFromQuota: true,
+				})
+
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+	})
+
+	Context("when fetching the list of layers fails", func() {
+		BeforeEach(func() {
+			fakeFetcher.ImageInfoReturns(image_puller.ImageInfo{
+				LayersDigest: []image_puller.LayerDigest{},
+				Config:       specsv1.Image{},
+			}, errors.New("failed to get list of layers"))
+		})
+
+		It("returns an error", func() {
+			_, err := imagePuller.Pull(logger, groot.ImageSpec{
+				ImageSrc: imageSrc,
+			})
+			Expect(err).To(MatchError(ContainSubstring("failed to get list of layers")))
+		})
 	})
 
 	Context("when UID and GID mappings are provided", func() {

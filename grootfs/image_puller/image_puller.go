@@ -73,7 +73,10 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 	}
 	logger.Debug("fetched-layers-digests", lager.Data{"digests": imageInfo.LayersDigest})
 
-	var volumePath string
+	var (
+		volumePath string
+		totalSize  int64
+	)
 	for _, digest := range imageInfo.LayersDigest {
 		volumePath, err = p.volumeDriver.Path(logger, wrapVolumeID(spec, digest.ChainID))
 		if err == nil {
@@ -90,11 +93,25 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 		if err != nil {
 			return groot.BundleSpec{}, fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
 		}
+		totalSize += size
+		if !spec.ExcludeImageFromQuota && spec.DiskLimit != 0 && spec.DiskLimit < totalSize {
+			err := fmt.Errorf("exceeded disk quota, using %d out of %d bytes", totalSize, spec.DiskLimit)
+			logger.Error("blob-streaming-failed", err, lager.Data{
+				"totalSize":             totalSize,
+				"diskLimit":             spec.DiskLimit,
+				"excludeImageFromQuota": spec.ExcludeImageFromQuota,
+				"blobID":                digest.BlobID,
+			})
+			return groot.BundleSpec{}, err
+		}
+
 		logger.Debug("got-stream-for-blob", lager.Data{
-			"size":          size,
-			"blobID":        digest.BlobID,
-			"chainID":       digest.ChainID,
-			"parentChainID": digest.ParentChainID,
+			"size":                  size,
+			"diskLimit":             spec.DiskLimit,
+			"excludeImageFromQuota": spec.ExcludeImageFromQuota,
+			"blobID":                digest.BlobID,
+			"chainID":               digest.ChainID,
+			"parentChainID":         digest.ParentChainID,
 		})
 
 		volumePath, err = p.volumeDriver.Create(logger,

@@ -49,23 +49,23 @@ func (f *RemoteFetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (image
 	logger.Debug("image-manifest", lager.Data{"manifest": manifest})
 
 	logger.Debug("fetching-image-config")
-	configStream, err := f.cacheDriver.Blob(logger, manifest.ConfigCacheKey,
-		func(logger lager.Logger) (io.ReadCloser, error) {
+	configStream, _, err := f.cacheDriver.Blob(logger, manifest.ConfigCacheKey,
+		func(logger lager.Logger) (io.ReadCloser, int64, error) {
 			config, err := f.source.Config(logger, imageURL, manifest)
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 
 			rEnd, wEnd, err := os.Pipe()
 			if err != nil {
-				return nil, fmt.Errorf("making pipe: %s", err)
+				return nil, 0, fmt.Errorf("making pipe: %s", err)
 			}
 
 			if err := json.NewEncoder(wEnd).Encode(config); err != nil {
-				return nil, fmt.Errorf("encoding config to JSON: %s", err)
+				return nil, 0, fmt.Errorf("encoding config to JSON: %s", err)
 			}
 
-			return rEnd, nil
+			return rEnd, 0, nil
 		},
 	)
 	if err != nil {
@@ -89,21 +89,21 @@ func (f *RemoteFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL, sourc
 	logger.Info("start")
 	defer logger.Info("end")
 
-	stream, err := f.cacheDriver.Blob(logger, source,
-		func(logger lager.Logger) (io.ReadCloser, error) {
-			stream, _, err := f.source.StreamBlob(logger, imageURL, source)
+	stream, size, err := f.cacheDriver.Blob(logger, source,
+		func(logger lager.Logger) (io.ReadCloser, int64, error) {
+			stream, size, err := f.source.StreamBlob(logger, imageURL, source)
 			if err != nil {
-				return nil, err
+				return nil, 0, err
 			}
 
-			return stream, nil
+			return stream, size, nil
 		},
 	)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return stream, 0, nil
+	return stream, size, nil
 }
 
 func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
