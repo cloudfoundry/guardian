@@ -19,6 +19,7 @@ usage() {
   print_message "run-tests -p <test path> --- only run tests below given path" $colour
   print_message "run-tests -g <Ginkgo arguments> --- pass custom parameters to Ginkgo" $colour
   print_message "run-tests -r --- run test suites under the provided path recursively" $colour
+  print_message "run-tests -f --- run all tests in Concourse" $colour
   print_message "run-tests -h --- print help menu" $colour
 }
 
@@ -89,20 +90,27 @@ run_integration_tests() {
 
 run_unit_tests() {
   recursive=${1:-0}
-  test_path=${2:-""}
-  ginkgo_args=${3:-""}
+  force_fly=${2:-0}
+  test_path=${3:-""}
+  ginkgo_args=${4:-""}
+
+  # if force_fly is true
+  if [ $force_fly -eq 1 ]; then
+    fly_groot_tests $recursive $test_path $ginkgo_args
+    return
+  fi
 
   # if it has Linux tests it should run through fly
   find_cmd="find $test_path -name '*_linux_test.go'"
   [ $recursive -eq 0 ] && find_cmd=$find_cmd" -maxdepth 1"
   if [ "$(eval $find_cmd)" != "" ]; then
-    fly_groot_tests $@
+    fly_groot_tests $recursive $test_path $ginkgo_args
     return
   fi
 
   # run locally
   cmd="ginkgo -p --race"
-  cmd=$cmd" "$(compile_ginkgo_args $@)
+  cmd=$cmd" "$(compile_ginkgo_args $recursive $test_path $ginkgo_args)
   eval $cmd
 }
 
@@ -115,8 +123,9 @@ run_all_tests() {
 
 run_tests() {
   recursive=${1:-0}
-  test_path=${2:-""}
-  ginkgo_args=${3:-""}
+  force_fly=${2:-0}
+  test_path=${3:-""}
+  ginkgo_args=${4:-""}
 
   case $test_path in
     integration*)
@@ -130,7 +139,7 @@ run_tests() {
 
     # test_path is not empty
     *)
-      run_unit_tests $recursive $test_path $ginkgo_args
+      run_unit_tests $recursive $force_fly $test_path $ginkgo_args
       ;;
     esac
 }
@@ -138,7 +147,8 @@ run_tests() {
 test_path=""
 ginkgo_args=""
 recursive=0
-while getopts "p:g:rh" OPTION
+force_fly=0
+while getopts "p:g:rhf" OPTION
 do
   case $OPTION in
     p)
@@ -151,6 +161,9 @@ do
       usage $GREEN
       exit
       ;;
+    f)
+      force_fly=1
+      ;;
     r)
       recursive=1
       ;;
@@ -161,4 +174,8 @@ do
   esac
 done
 
-run_tests $recursive $test_path $ginkgo_args
+print_message "test_path='$test_path'" $GREEN
+print_message "ginkgo_args='$ginkgo_args'" $GREEN
+print_message "recursive=$recursive" $GREEN
+print_message "force_fly=$force_fly" $GREEN
+run_tests $recursive $force_fly $test_path $ginkgo_args
