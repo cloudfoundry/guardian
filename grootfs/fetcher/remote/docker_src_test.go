@@ -1,9 +1,12 @@
 package remote_test
 
 import (
+	"bytes"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os/exec"
+	"strings"
 
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -278,14 +281,14 @@ var _ = Describe("Docker source", func() {
 		})
 	})
 
-	Describe("StreamBlob", func() {
-		It("streams a blob", func() {
-			reader, size, err := dockerSrc.StreamBlob(logger, imageURL, expectedLayersDigest[0])
+	Describe("Blob", func() {
+		It("downloads a blob", func() {
+			blobContents, size, err := dockerSrc.Blob(logger, imageURL, expectedLayersDigest[0])
 			Expect(err).NotTo(HaveOccurred())
 
 			buffer := gbytes.NewBuffer()
-			cmd := exec.Command("tar", "tv")
-			cmd.Stdin = reader
+			cmd := exec.Command("tar", "tzv")
+			cmd.Stdin = bytes.NewBuffer(blobContents)
 			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(size).To(Equal(int64(90)))
@@ -299,22 +302,44 @@ var _ = Describe("Docker source", func() {
 				imageURL, err := url.Parse("docker:cfgarden/empty:v0.1.0")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, _, err = dockerSrc.StreamBlob(logger, imageURL, expectedLayersDigest[0])
+				_, _, err = dockerSrc.Blob(logger, imageURL, expectedLayersDigest[0])
 				Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
 			})
 		})
 
 		Context("when the blob does not exist", func() {
 			It("returns an error", func() {
-				_, _, err := dockerSrc.StreamBlob(logger, imageURL, "sha256:steamed-blob")
+				_, _, err := dockerSrc.Blob(logger, imageURL, "sha256:steamed-blob")
 				Expect(err).To(MatchError(ContainSubstring("fetching blob 404")))
 			})
 		})
 
-		Context("when the blob is not a gzip", func() {
+		Context("when the blob is corrupted", func() {
+			var fakeRegistry *testhelpers.FakeRegistry
+
+			BeforeEach(func() {
+				dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+				Expect(err).NotTo(HaveOccurred())
+				fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+				layerDigest := strings.Split(expectedLayersDigest[1], ":")[1]
+				fakeRegistry.WhenGettingBlob(layerDigest, 2, func(rw http.ResponseWriter, req *http.Request) {
+					rw.Write([]byte("bad-blob"))
+				})
+				Expect(fakeRegistry.Start()).To(Succeed())
+
+				imageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
+				Expect(err).NotTo(HaveOccurred())
+
+				trustedRegistries = []string{fakeRegistry.Addr()}
+			})
+
+			AfterEach(func() {
+				fakeRegistry.Stop()
+			})
+
 			It("returns an error", func() {
-				_, _, err := dockerSrc.StreamBlob(logger, imageURL, configBlob)
-				Expect(err).To(MatchError(ContainSubstring("reading gzip")))
+				_, _, err := dockerSrc.Blob(logger, imageURL, expectedLayersDigest[1])
+				Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
 			})
 		})
 	})

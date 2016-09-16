@@ -10,14 +10,14 @@ import (
 )
 
 type FakeCacheDriver struct {
-	BlobStub        func(logger lager.Logger, id string, streamBlob fetcher.StreamBlob) (io.ReadCloser, int64, error)
-	blobMutex       sync.RWMutex
-	blobArgsForCall []struct {
-		logger     lager.Logger
-		id         string
-		streamBlob fetcher.StreamBlob
+	StreamBlobStub        func(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) (io.ReadCloser, int64, error)
+	streamBlobMutex       sync.RWMutex
+	streamBlobArgsForCall []struct {
+		logger         lager.Logger
+		id             string
+		remoteBlobFunc fetcher.RemoteBlobFunc
 	}
-	blobReturns struct {
+	streamBlobReturns struct {
 		result1 io.ReadCloser
 		result2 int64
 		result3 error
@@ -26,37 +26,37 @@ type FakeCacheDriver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCacheDriver) Blob(logger lager.Logger, id string, streamBlob fetcher.StreamBlob) (io.ReadCloser, int64, error) {
-	fake.blobMutex.Lock()
-	fake.blobArgsForCall = append(fake.blobArgsForCall, struct {
-		logger     lager.Logger
-		id         string
-		streamBlob fetcher.StreamBlob
-	}{logger, id, streamBlob})
-	fake.recordInvocation("Blob", []interface{}{logger, id, streamBlob})
-	fake.blobMutex.Unlock()
-	if fake.BlobStub != nil {
-		return fake.BlobStub(logger, id, streamBlob)
+func (fake *FakeCacheDriver) StreamBlob(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) (io.ReadCloser, int64, error) {
+	fake.streamBlobMutex.Lock()
+	fake.streamBlobArgsForCall = append(fake.streamBlobArgsForCall, struct {
+		logger         lager.Logger
+		id             string
+		remoteBlobFunc fetcher.RemoteBlobFunc
+	}{logger, id, remoteBlobFunc})
+	fake.recordInvocation("StreamBlob", []interface{}{logger, id, remoteBlobFunc})
+	fake.streamBlobMutex.Unlock()
+	if fake.StreamBlobStub != nil {
+		return fake.StreamBlobStub(logger, id, remoteBlobFunc)
 	} else {
-		return fake.blobReturns.result1, fake.blobReturns.result2, fake.blobReturns.result3
+		return fake.streamBlobReturns.result1, fake.streamBlobReturns.result2, fake.streamBlobReturns.result3
 	}
 }
 
-func (fake *FakeCacheDriver) BlobCallCount() int {
-	fake.blobMutex.RLock()
-	defer fake.blobMutex.RUnlock()
-	return len(fake.blobArgsForCall)
+func (fake *FakeCacheDriver) StreamBlobCallCount() int {
+	fake.streamBlobMutex.RLock()
+	defer fake.streamBlobMutex.RUnlock()
+	return len(fake.streamBlobArgsForCall)
 }
 
-func (fake *FakeCacheDriver) BlobArgsForCall(i int) (lager.Logger, string, fetcher.StreamBlob) {
-	fake.blobMutex.RLock()
-	defer fake.blobMutex.RUnlock()
-	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].id, fake.blobArgsForCall[i].streamBlob
+func (fake *FakeCacheDriver) StreamBlobArgsForCall(i int) (lager.Logger, string, fetcher.RemoteBlobFunc) {
+	fake.streamBlobMutex.RLock()
+	defer fake.streamBlobMutex.RUnlock()
+	return fake.streamBlobArgsForCall[i].logger, fake.streamBlobArgsForCall[i].id, fake.streamBlobArgsForCall[i].remoteBlobFunc
 }
 
-func (fake *FakeCacheDriver) BlobReturns(result1 io.ReadCloser, result2 int64, result3 error) {
-	fake.BlobStub = nil
-	fake.blobReturns = struct {
+func (fake *FakeCacheDriver) StreamBlobReturns(result1 io.ReadCloser, result2 int64, result3 error) {
+	fake.StreamBlobStub = nil
+	fake.streamBlobReturns = struct {
 		result1 io.ReadCloser
 		result2 int64
 		result3 error
@@ -66,8 +66,8 @@ func (fake *FakeCacheDriver) BlobReturns(result1 io.ReadCloser, result2 int64, r
 func (fake *FakeCacheDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.blobMutex.RLock()
-	defer fake.blobMutex.RUnlock()
+	fake.streamBlobMutex.RLock()
+	defer fake.streamBlobMutex.RUnlock()
 	return fake.invocations
 }
 

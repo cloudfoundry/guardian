@@ -1,13 +1,12 @@
 package remote
 
 import (
-	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/url"
 	"os"
 	"strings"
@@ -105,7 +104,7 @@ func (s *DockerSource) Config(logger lager.Logger, imageURL *url.URL, manifest M
 	return config, nil
 }
 
-func (s *DockerSource) StreamBlob(logger lager.Logger, imageURL *url.URL, digest string) (io.ReadCloser, int64, error) {
+func (s *DockerSource) Blob(logger lager.Logger, imageURL *url.URL, digest string) ([]byte, int64, error) {
 	logrus.SetOutput(os.Stderr)
 	logger = logger.Session("streaming-blob", lager.Data{
 		"imageURL": imageURL,
@@ -119,18 +118,44 @@ func (s *DockerSource) StreamBlob(logger lager.Logger, imageURL *url.URL, digest
 		return nil, 0, err
 	}
 
-	stream, size, err := imgSrc.GetBlob(digest)
+	blob, size, err := imgSrc.GetBlob(digest)
 	if err != nil {
 		return nil, 0, err
 	}
-	logger.Debug("got-blob-stream", lager.Data{"size": size})
+	logger.Debug("got-blob-stream", lager.Data{"digest": digest, "size": size})
 
-	tarStream, err := gzip.NewReader(stream)
+	blobContents, err := ioutil.ReadAll(blob)
 	if err != nil {
-		return nil, 0, fmt.Errorf("reading gzip: %s", err)
+		return nil, 0, err
+	}
+	logger.Debug("got-blob", lager.Data{"actualSize": blobContents})
+
+	if !s.checkCheckSum(logger, blobContents, digest) {
+		return nil, 0, fmt.Errorf("invalid checksum: layer is corrupted `%s`", digest)
 	}
 
-	return tarStream, size, nil
+	return blobContents, size, nil
+}
+
+func (s *DockerSource) checkCheckSum(logger lager.Logger, blobContents []byte, digest string) bool {
+	hash := sha256.New()
+	if _, err := hash.Write(blobContents); err != nil {
+		logger.Error("writing-blob-contents", err)
+		return false
+	}
+
+	digestID := strings.Split(digest, ":")[1]
+	blobContentsSha := hex.EncodeToString(hash.Sum(nil))
+	logger.Debug("checking-checksum", lager.Data{
+		"digestIDChecksum":   digestID,
+		"downloadedChecksum": blobContentsSha,
+	})
+
+	if digestID != blobContentsSha {
+		return false
+	}
+
+	return true
 }
 
 func (s *DockerSource) skipTLSValidation(imageURL *url.URL) bool {

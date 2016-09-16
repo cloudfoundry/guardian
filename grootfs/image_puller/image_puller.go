@@ -134,9 +134,10 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 			UIDMappings: spec.UIDMappings,
 			GIDMappings: spec.GIDMappings,
 		}
+
 		if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
-			if err := p.volumeDriver.DestroyVolume(logger, digest.ChainID); err != nil {
-				logger.Error("volume-cleanup-failed", err, lager.Data{
+			if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
+				logger.Error("volume-cleanup-failed", errD, lager.Data{
 					"blobID":        digest.BlobID,
 					"chainID":       digest.ChainID,
 					"parentChainID": digest.ParentChainID,

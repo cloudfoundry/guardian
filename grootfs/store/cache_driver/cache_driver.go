@@ -1,6 +1,7 @@
 package cache_driver
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -22,10 +23,10 @@ func NewCacheDriver(storePath string) *CacheDriver {
 	}
 }
 
-func (c *CacheDriver) Blob(logger lager.Logger, id string,
-	streamBlob fetcher.StreamBlob,
+func (c *CacheDriver) StreamBlob(logger lager.Logger, id string,
+	blobFunc fetcher.RemoteBlobFunc,
 ) (io.ReadCloser, int64, error) {
-	logger = logger.Session("streaming-blob-from-cache", lager.Data{"blobID": id})
+	logger = logger.Session("getting-blob-from-cache", lager.Data{"blobID": id})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -62,14 +63,15 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 	}
 
 	logger.Debug("cache-miss")
+
+	blobContent, size, err := blobFunc(logger)
+	if err != nil {
+		return nil, 0, err
+	}
+
 	blobFile, err = os.OpenFile(c.blobPath(id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return nil, 0, fmt.Errorf("creating cached blob file: %s", err)
-	}
-
-	stream, size, err := streamBlob(logger)
-	if err != nil {
-		return nil, 0, err
 	}
 
 	var rEnd, wEnd *os.File
@@ -80,9 +82,8 @@ func (c *CacheDriver) Blob(logger lager.Logger, id string,
 	go func() {
 		defer wEnd.Close()
 		defer blobFile.Close()
-		defer stream.Close()
 
-		_, err := io.Copy(io.MultiWriter(wEnd, blobFile), stream)
+		_, err := io.Copy(io.MultiWriter(wEnd, blobFile), bytes.NewReader(blobContent))
 		if err != nil {
 			logger.Error("failed-copying-blob-to-cache", err)
 

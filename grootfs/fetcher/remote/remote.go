@@ -1,13 +1,13 @@
 package remote
 
 import (
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
-	"os"
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/fetcher"
@@ -21,7 +21,7 @@ import (
 type Source interface {
 	Manifest(logger lager.Logger, imageURL *url.URL) (Manifest, error)
 	Config(logger lager.Logger, imageURL *url.URL, manifest Manifest) (specsv1.Image, error)
-	StreamBlob(logger lager.Logger, imageURL *url.URL, digest string) (io.ReadCloser, int64, error)
+	Blob(logger lager.Logger, imageURL *url.URL, digest string) ([]byte, int64, error)
 }
 
 type RemoteFetcher struct {
@@ -49,23 +49,19 @@ func (f *RemoteFetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (image
 	logger.Debug("image-manifest", lager.Data{"manifest": manifest})
 
 	logger.Debug("fetching-image-config")
-	configStream, _, err := f.cacheDriver.Blob(logger, manifest.ConfigCacheKey,
-		func(logger lager.Logger) (io.ReadCloser, int64, error) {
+	configStream, _, err := f.cacheDriver.StreamBlob(logger, manifest.ConfigCacheKey,
+		func(logger lager.Logger) ([]byte, int64, error) {
 			config, err := f.source.Config(logger, imageURL, manifest)
 			if err != nil {
 				return nil, 0, err
 			}
 
-			rEnd, wEnd, err := os.Pipe()
+			configJSON, err := json.Marshal(config)
 			if err != nil {
-				return nil, 0, fmt.Errorf("making pipe: %s", err)
-			}
-
-			if err := json.NewEncoder(wEnd).Encode(config); err != nil {
 				return nil, 0, fmt.Errorf("encoding config to JSON: %s", err)
 			}
 
-			return rEnd, 0, nil
+			return configJSON, 0, nil
 		},
 	)
 	if err != nil {
@@ -89,21 +85,25 @@ func (f *RemoteFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL, sourc
 	logger.Info("start")
 	defer logger.Info("end")
 
-	stream, size, err := f.cacheDriver.Blob(logger, source,
-		func(logger lager.Logger) (io.ReadCloser, int64, error) {
-			stream, size, err := f.source.StreamBlob(logger, imageURL, source)
+	stream, size, err := f.cacheDriver.StreamBlob(logger, source,
+		func(logger lager.Logger) ([]byte, int64, error) {
+			blobContents, size, err := f.source.Blob(logger, imageURL, source)
 			if err != nil {
 				return nil, 0, err
 			}
 
-			return stream, size, nil
+			return blobContents, size, nil
 		},
 	)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return stream, size, nil
+	reader, err := gzip.NewReader(stream)
+	if err != nil {
+		return nil, 0, fmt.Errorf("creating gzip reader: %s", err)
+	}
+	return reader, size, nil
 }
 
 func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,

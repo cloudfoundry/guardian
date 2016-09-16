@@ -2,6 +2,7 @@ package image_puller_test
 
 import (
 	"bytes"
+	"compress/gzip"
 	"errors"
 	"fmt"
 	"io"
@@ -49,6 +50,13 @@ var _ = Describe("Image Puller", func() {
 				},
 				Config: expectedImgDesc,
 			}, nil)
+
+		fakeFetcher.StreamBlobStub = func(_ lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error) {
+			buffer := bytes.NewBuffer([]byte{})
+			stream := gzip.NewWriter(buffer)
+			defer stream.Close()
+			return ioutil.NopCloser(buffer), 0, nil
+		}
 
 		fakeVolumeDriver = new(image_pullerfakes.FakeVolumeDriver)
 		fakeVolumeDriver.PathReturns("", errors.New("volume does not exist"))
@@ -126,8 +134,11 @@ var _ = Describe("Image Puller", func() {
 		fakeFetcher.StreamBlobStub = func(_ lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error) {
 			Expect(imageURL).To(Equal(imageSrc))
 
-			stream := bytes.NewBuffer([]byte(fmt.Sprintf("layer-%s-contents", source)))
-			return ioutil.NopCloser(stream), 1200, nil
+			buffer := bytes.NewBuffer([]byte{})
+			stream := gzip.NewWriter(buffer)
+			defer stream.Close()
+			stream.Write([]byte(fmt.Sprintf("layer-%s-contents", source)))
+			return ioutil.NopCloser(buffer), 1200, nil
 		}
 
 		_, err := imagePuller.Pull(logger, groot.ImageSpec{
@@ -137,20 +148,18 @@ var _ = Describe("Image Puller", func() {
 
 		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
 
-		_, unpackSpec := fakeUnpacker.UnpackArgsForCall(0)
-		contents, err := ioutil.ReadAll(unpackSpec.Stream)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(contents)).To(Equal("layer-i-am-a-layer-contents"))
+		validateLayer := func(idx int, expected string) {
+			_, unpackSpec := fakeUnpacker.UnpackArgsForCall(idx)
+			gzipReader, err := gzip.NewReader(unpackSpec.Stream)
+			Expect(err).NotTo(HaveOccurred())
+			contents, err := ioutil.ReadAll(gzipReader)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(Equal(expected))
+		}
 
-		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(1)
-		contents, err = ioutil.ReadAll(unpackSpec.Stream)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(contents)).To(Equal("layer-i-am-another-layer-contents"))
-
-		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
-		contents, err = ioutil.ReadAll(unpackSpec.Stream)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(contents)).To(Equal("layer-i-am-the-last-layer-contents"))
+		validateLayer(0, "layer-i-am-a-layer-contents")
+		validateLayer(1, "layer-i-am-another-layer-contents")
+		validateLayer(2, "layer-i-am-the-last-layer-contents")
 	})
 
 	Context("when the sum of layers exceed the limit", func() {

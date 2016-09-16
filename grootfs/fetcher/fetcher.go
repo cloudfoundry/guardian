@@ -6,9 +6,9 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type StreamBlob func(logger lager.Logger) (io.ReadCloser, int64, error)
+type RemoteBlobFunc func(logger lager.Logger) ([]byte, int64, error)
 
 //go:generate counterfeiter . CacheDriver
 type CacheDriver interface {
-	Blob(logger lager.Logger, id string, streamBlob StreamBlob) (io.ReadCloser, int64, error)
+	StreamBlob(logger lager.Logger, id string, remoteBlobFunc RemoteBlobFunc) (io.ReadCloser, int64, error)
 }

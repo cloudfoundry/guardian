@@ -2,7 +2,6 @@
 package remotefakes
 
 import (
-	"io"
 	"net/url"
 	"sync"
 
@@ -33,15 +32,15 @@ type FakeSource struct {
 		result1 specsv1.Image
 		result2 error
 	}
-	StreamBlobStub        func(logger lager.Logger, imageURL *url.URL, digest string) (io.ReadCloser, int64, error)
-	streamBlobMutex       sync.RWMutex
-	streamBlobArgsForCall []struct {
+	BlobStub        func(logger lager.Logger, imageURL *url.URL, digest string) ([]byte, int64, error)
+	blobMutex       sync.RWMutex
+	blobArgsForCall []struct {
 		logger   lager.Logger
 		imageURL *url.URL
 		digest   string
 	}
-	streamBlobReturns struct {
-		result1 io.ReadCloser
+	blobReturns struct {
+		result1 []byte
 		result2 int64
 		result3 error
 	}
@@ -120,38 +119,38 @@ func (fake *FakeSource) ConfigReturns(result1 specsv1.Image, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeSource) StreamBlob(logger lager.Logger, imageURL *url.URL, digest string) (io.ReadCloser, int64, error) {
-	fake.streamBlobMutex.Lock()
-	fake.streamBlobArgsForCall = append(fake.streamBlobArgsForCall, struct {
+func (fake *FakeSource) Blob(logger lager.Logger, imageURL *url.URL, digest string) ([]byte, int64, error) {
+	fake.blobMutex.Lock()
+	fake.blobArgsForCall = append(fake.blobArgsForCall, struct {
 		logger   lager.Logger
 		imageURL *url.URL
 		digest   string
 	}{logger, imageURL, digest})
-	fake.recordInvocation("StreamBlob", []interface{}{logger, imageURL, digest})
-	fake.streamBlobMutex.Unlock()
-	if fake.StreamBlobStub != nil {
-		return fake.StreamBlobStub(logger, imageURL, digest)
+	fake.recordInvocation("Blob", []interface{}{logger, imageURL, digest})
+	fake.blobMutex.Unlock()
+	if fake.BlobStub != nil {
+		return fake.BlobStub(logger, imageURL, digest)
 	} else {
-		return fake.streamBlobReturns.result1, fake.streamBlobReturns.result2, fake.streamBlobReturns.result3
+		return fake.blobReturns.result1, fake.blobReturns.result2, fake.blobReturns.result3
 	}
 }
 
-func (fake *FakeSource) StreamBlobCallCount() int {
-	fake.streamBlobMutex.RLock()
-	defer fake.streamBlobMutex.RUnlock()
-	return len(fake.streamBlobArgsForCall)
+func (fake *FakeSource) BlobCallCount() int {
+	fake.blobMutex.RLock()
+	defer fake.blobMutex.RUnlock()
+	return len(fake.blobArgsForCall)
 }
 
-func (fake *FakeSource) StreamBlobArgsForCall(i int) (lager.Logger, *url.URL, string) {
-	fake.streamBlobMutex.RLock()
-	defer fake.streamBlobMutex.RUnlock()
-	return fake.streamBlobArgsForCall[i].logger, fake.streamBlobArgsForCall[i].imageURL, fake.streamBlobArgsForCall[i].digest
+func (fake *FakeSource) BlobArgsForCall(i int) (lager.Logger, *url.URL, string) {
+	fake.blobMutex.RLock()
+	defer fake.blobMutex.RUnlock()
+	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].imageURL, fake.blobArgsForCall[i].digest
 }
 
-func (fake *FakeSource) StreamBlobReturns(result1 io.ReadCloser, result2 int64, result3 error) {
-	fake.StreamBlobStub = nil
-	fake.streamBlobReturns = struct {
-		result1 io.ReadCloser
+func (fake *FakeSource) BlobReturns(result1 []byte, result2 int64, result3 error) {
+	fake.BlobStub = nil
+	fake.blobReturns = struct {
+		result1 []byte
 		result2 int64
 		result3 error
 	}{result1, result2, result3}
@@ -164,8 +163,8 @@ func (fake *FakeSource) Invocations() map[string][][]interface{} {
 	defer fake.manifestMutex.RUnlock()
 	fake.configMutex.RLock()
 	defer fake.configMutex.RUnlock()
-	fake.streamBlobMutex.RLock()
-	defer fake.streamBlobMutex.RUnlock()
+	fake.blobMutex.RLock()
+	defer fake.blobMutex.RUnlock()
 	return fake.invocations
 }
 

@@ -3,9 +3,9 @@ package groot_test
 import (
 	"archive/tar"
 	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -18,6 +18,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo"
@@ -89,17 +90,25 @@ var _ = Describe("Create with remote images", func() {
 					"sha256-6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a",
 				)
 
-				blob, err := os.OpenFile(blobPath, os.O_WRONLY, 0666)
-				Expect(err).NotTo(HaveOccurred())
-				tarWriter := tar.NewWriter(blob)
+				buffer := bytes.NewBuffer([]byte{})
+				tarWriter := tar.NewWriter(buffer)
 				Expect(tarWriter.WriteHeader(&tar.Header{
 					Name: "i-hacked-your-cache",
 					Mode: 0666,
 					Size: int64(len([]byte("cache-hit!"))),
 				})).To(Succeed())
-				_, err = tarWriter.Write([]byte("cache-hit!"))
+				_, err := tarWriter.Write([]byte("cache-hit!"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(tarWriter.Close()).To(Succeed())
+
+				blob, err := os.OpenFile(blobPath, os.O_WRONLY, 0666)
+				Expect(err).NotTo(HaveOccurred())
+				gzip := gzip.NewWriter(blob)
+				blobContents, err := ioutil.ReadAll(buffer)
+				Expect(err).NotTo(HaveOccurred())
+				_, err = gzip.Write(blobContents)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(gzip.Close()).To(Succeed())
 
 				bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id-2", 0)
 				Expect(path.Join(bundle.RootFSPath(), "i-hacked-your-cache")).To(BeARegularFile())
@@ -180,57 +189,6 @@ var _ = Describe("Create with remote images", func() {
 		})
 	})
 
-	Context("when downloading the layer fails", func() {
-		var (
-			fakeRegistry *testhelpers.FakeRegistry
-			layerID      string
-		)
-
-		BeforeEach(func() {
-			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
-			Expect(err).NotTo(HaveOccurred())
-			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
-
-			layerID = "6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a"
-			fakeRegistry.WhenGettingBlob(layerID, 1, func(rw http.ResponseWriter, req *http.Request) {
-				var body io.ReadCloser = ioutil.NopCloser(bytes.NewBufferString("i-am-groot"))
-				response := &http.Response{
-					StatusCode:    http.StatusOK,
-					Proto:         req.Proto,
-					ProtoMajor:    req.ProtoMajor,
-					ProtoMinor:    req.ProtoMinor,
-					Header:        make(map[string][]string),
-					ContentLength: int64(1024),
-					Body:          body,
-				}
-				response.Write(rw)
-			})
-
-			Expect(fakeRegistry.Start()).To(Succeed())
-
-			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", fakeRegistry.Addr())
-		})
-
-		AfterEach(func() {
-			fakeRegistry.Stop()
-		})
-
-		It("does not leak corrupted state", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
-			Expect(path.Join(StorePath, "cache", "blobs", fmt.Sprintf("sha256-%s", layerID))).NotTo(BeARegularFile())
-
-			// Can still be used succesfully later
-			cmd = exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
-			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
-			Expect(path.Join(StorePath, "cache", "blobs", fmt.Sprintf("sha256-%s", layerID))).To(BeARegularFile())
-		})
-	})
-
 	Context("when a private registry is used", func() {
 		var (
 			fakeRegistry *testhelpers.FakeRegistry
@@ -258,7 +216,7 @@ var _ = Describe("Create with remote images", func() {
 		})
 
 		Context("when it's provided as a valid insecure registry", func() {
-			It("creates a root filesystem based on the image provided by the private registry", func() {
+			It("should create a root filesystem based on the image provided by the private registry", func() {
 				cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
@@ -269,6 +227,97 @@ var _ = Describe("Create with remote images", func() {
 
 				Expect(fakeRegistry.RequestedBlobs()).To(HaveLen(3))
 			})
+		})
+	})
+
+	Context("when downloading the layer fails", func() {
+		var (
+			fakeRegistry *testhelpers.FakeRegistry
+			layerID      string
+		)
+
+		BeforeEach(func() {
+			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+			Expect(err).NotTo(HaveOccurred())
+			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+
+			layerID = "6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a"
+			fakeRegistry.WhenGettingBlob(layerID, 1, func(rw http.ResponseWriter, req *http.Request) {
+				rw.Write([]byte("i-am-groot"))
+			})
+
+			Expect(fakeRegistry.Start()).To(Succeed())
+
+			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", fakeRegistry.Addr())
+		})
+
+		AfterEach(func() {
+			fakeRegistry.Stop()
+		})
+
+		It("does not leak corrupted state", func() {
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
+			Expect(path.Join(StorePath, "cache", "blobs", fmt.Sprintf("sha256-%s", layerID))).NotTo(BeARegularFile())
+
+			// Can still be used succesfully later
+			cmd = exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
+			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
+			Expect(path.Join(StorePath, "cache", "blobs", fmt.Sprintf("sha256-%s", layerID))).To(BeARegularFile())
+		})
+	})
+
+	Context("when a layer is corrupted", func() {
+		var (
+			fakeRegistry *testhelpers.FakeRegistry
+			layerID      string
+		)
+
+		BeforeEach(func() {
+			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+			Expect(err).NotTo(HaveOccurred())
+			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+
+			tarBuffer := bytes.NewBuffer([]byte{})
+			tarWriter := tar.NewWriter(tarBuffer)
+			Expect(tarWriter.WriteHeader(&tar.Header{
+				Name: "a_file",
+				Size: 11,
+			})).To(Succeed())
+			_, err = tarWriter.Write([]byte("hello-world"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(tarWriter.Close()).To(Succeed())
+			tarContents := tarBuffer.Bytes()
+
+			layerID = "6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a"
+			fakeRegistry.WhenGettingBlob(layerID, 2, func(rw http.ResponseWriter, req *http.Request) {
+				gzipWriter := gzip.NewWriter(rw)
+				_, err = gzipWriter.Write(tarContents)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(gzipWriter.Close()).To(Succeed())
+			})
+
+			Expect(fakeRegistry.Start()).To(Succeed())
+
+			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", fakeRegistry.Addr())
+		})
+
+		AfterEach(func() {
+			fakeRegistry.Stop()
+		})
+
+		It("does not leak corrupted state", func() {
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
+
+			Expect(path.Join(StorePath, "cache", "blobs", fmt.Sprintf("sha256-%s", layerID))).NotTo(BeARegularFile())
+			Expect(path.Join(StorePath, store.BUNDLES_DIR_NAME, "random-id")).NotTo(BeADirectory())
 		})
 	})
 })
