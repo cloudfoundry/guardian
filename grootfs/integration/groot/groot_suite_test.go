@@ -40,6 +40,10 @@ func TestGroot(t *testing.T) {
 	})
 
 	BeforeEach(func() {
+		if os.Getuid() == 0 {
+			Skip("This suite is only running as groot")
+		}
+
 		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
 		StorePath = path.Join(btrfsMountPath, storeName)
 		Expect(os.Mkdir(StorePath, 0700)).NotTo(HaveOccurred())
