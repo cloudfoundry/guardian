@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-grootsay
+echo "I AM GROOT" | grootsay
 
 source $(dirname $BASH_SOURCE)/test/utils.sh
 

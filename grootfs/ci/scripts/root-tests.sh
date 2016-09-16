@@ -1,12 +1,12 @@
 #!/bin/bash
 set -e
 
-grootsay I AM ROOT
+echo "I AM ROOT" | grootsay
 
 source $(dirname $BASH_SOURCE)/test/utils.sh
 move_to_gopath
 mount_btrfs
 
 args=$@
-[ "$args" == "" ] && args="integration/root"
+[ "$args" == "" ] && args="-r integration/root"
 ginkgo -p -race $args
