@@ -31,12 +31,11 @@ type FakeSnapshotDriver struct {
 	applyDiskLimitReturns struct {
 		result1 error
 	}
-	FetchMetricsStub        func(logger lager.Logger, path string, forceSync bool) (groot.VolumeMetrics, error)
+	FetchMetricsStub        func(logger lager.Logger, path string) (groot.VolumeMetrics, error)
 	fetchMetricsMutex       sync.RWMutex
 	fetchMetricsArgsForCall []struct {
-		logger    lager.Logger
-		path      string
-		forceSync bool
+		logger lager.Logger
+		path   string
 	}
 	fetchMetricsReturns struct {
 		result1 groot.VolumeMetrics
@@ -126,17 +125,16 @@ func (fake *FakeSnapshotDriver) ApplyDiskLimitReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeSnapshotDriver) FetchMetrics(logger lager.Logger, path string, forceSync bool) (groot.VolumeMetrics, error) {
+func (fake *FakeSnapshotDriver) FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetrics, error) {
 	fake.fetchMetricsMutex.Lock()
 	fake.fetchMetricsArgsForCall = append(fake.fetchMetricsArgsForCall, struct {
-		logger    lager.Logger
-		path      string
-		forceSync bool
-	}{logger, path, forceSync})
-	fake.recordInvocation("FetchMetrics", []interface{}{logger, path, forceSync})
+		logger lager.Logger
+		path   string
+	}{logger, path})
+	fake.recordInvocation("FetchMetrics", []interface{}{logger, path})
 	fake.fetchMetricsMutex.Unlock()
 	if fake.FetchMetricsStub != nil {
-		return fake.FetchMetricsStub(logger, path, forceSync)
+		return fake.FetchMetricsStub(logger, path)
 	} else {
 		return fake.fetchMetricsReturns.result1, fake.fetchMetricsReturns.result2
 	}
@@ -148,10 +146,10 @@ func (fake *FakeSnapshotDriver) FetchMetricsCallCount() int {
 	return len(fake.fetchMetricsArgsForCall)
 }
 
-func (fake *FakeSnapshotDriver) FetchMetricsArgsForCall(i int) (lager.Logger, string, bool) {
+func (fake *FakeSnapshotDriver) FetchMetricsArgsForCall(i int) (lager.Logger, string) {
 	fake.fetchMetricsMutex.RLock()
 	defer fake.fetchMetricsMutex.RUnlock()
-	return fake.fetchMetricsArgsForCall[i].logger, fake.fetchMetricsArgsForCall[i].path, fake.fetchMetricsArgsForCall[i].forceSync
+	return fake.fetchMetricsArgsForCall[i].logger, fake.fetchMetricsArgsForCall[i].path
 }
 
 func (fake *FakeSnapshotDriver) FetchMetricsReturns(result1 groot.VolumeMetrics, result2 error) {

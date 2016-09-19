@@ -161,7 +161,7 @@ func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64
 	return nil
 }
 
-func (d *Btrfs) FetchMetrics(logger lager.Logger, path string, forceSync bool) (groot.VolumeMetrics, error) {
+func (d *Btrfs) FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetrics, error) {
 	logger = logger.Session("btrfs-fetching-metrics", lager.Data{"path": path})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -169,9 +169,7 @@ func (d *Btrfs) FetchMetrics(logger lager.Logger, path string, forceSync bool) (
 	args := []string{
 		"metrics",
 		"--volume-path", path,
-	}
-	if forceSync {
-		args = append(args, "--force-sync")
+		"--force-sync",
 	}
 
 	cmd := exec.Command("drax", args...)

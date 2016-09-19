@@ -17,7 +17,7 @@ import (
 type SnapshotDriver interface {
 	Snapshot(logger lager.Logger, fromPath, toPath string) error
 	ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusive bool) error
-	FetchMetrics(logger lager.Logger, path string, forceSync bool) (groot.VolumeMetrics, error)
+	FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetrics, error)
 	Destroy(logger lager.Logger, path string) error
 }
 
@@ -119,13 +119,13 @@ func (b *Bundler) Destroy(logger lager.Logger, id string) error {
 	return nil
 }
 
-func (b *Bundler) Metrics(logger lager.Logger, id string, forceSync bool) (groot.VolumeMetrics, error) {
-	logger = logger.Session("bundle-metrics", lager.Data{"id": id, "forceSync": forceSync})
+func (b *Bundler) Metrics(logger lager.Logger, id string) (groot.VolumeMetrics, error) {
+	logger = logger.Session("bundle-metrics", lager.Data{"id": id})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	bundle := NewBundle(path.Join(b.storePath, BUNDLES_DIR_NAME, id))
-	return b.snapshotDriver.FetchMetrics(logger, bundle.RootFSPath(), forceSync)
+	return b.snapshotDriver.FetchMetrics(logger, bundle.RootFSPath())
 }
 
 func (b *Bundler) deleteBundleDir(bundle *Bundle) error {

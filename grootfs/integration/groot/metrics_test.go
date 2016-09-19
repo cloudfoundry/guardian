@@ -39,7 +39,7 @@ var _ = Describe("Metrics", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 
-		cmd = exec.Command(GrootFSBin, "--store", StorePath, "metrics", "--force-sync", "random-id")
+		cmd = exec.Command(GrootFSBin, "--store", StorePath, "metrics", "random-id")
 		sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
@@ -49,7 +49,7 @@ var _ = Describe("Metrics", func() {
 
 	Context("when the bundle id doesn't exist", func() {
 		It("returns an error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics", "--force-sync", "invalid-id")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics", "invalid-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
@@ -59,7 +59,7 @@ var _ = Describe("Metrics", func() {
 
 	Context("when the bundle id is not provided", func() {
 		It("returns an error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics", "--force-sync")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))

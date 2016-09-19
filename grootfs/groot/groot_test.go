@@ -302,13 +302,12 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 	Describe("Metrics", func() {
 		It("asks for metrics from the bundler", func() {
 			fakeBundler.MetricsReturns(grootpkg.VolumeMetrics{}, nil)
-			_, err := groot.Metrics(logger, "some-id", true)
+			_, err := groot.Metrics(logger, "some-id")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fakeBundler.MetricsCallCount()).To(Equal(1))
-			_, id, forceSync := fakeBundler.MetricsArgsForCall(0)
+			_, id := fakeBundler.MetricsArgsForCall(0)
 			Expect(id).To(Equal("some-id"))
-			Expect(forceSync).To(BeTrue())
 		})
 
 		It("asks for metrics from the bundler", func() {
@@ -320,7 +319,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			}
 			fakeBundler.MetricsReturns(metrics, nil)
 
-			returnedMetrics, err := groot.Metrics(logger, "some-id", true)
+			returnedMetrics, err := groot.Metrics(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(returnedMetrics).To(Equal(metrics))
 		})
@@ -329,7 +328,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			It("returns an error", func() {
 				fakeBundler.MetricsReturns(grootpkg.VolumeMetrics{}, errors.New("sorry"))
 
-				_, err := groot.Metrics(logger, "some-id", true)
+				_, err := groot.Metrics(logger, "some-id")
 				Expect(err).To(MatchError(ContainSubstring("sorry")))
 			})
 		})

@@ -32,7 +32,7 @@ type Bundler interface {
 	Exists(id string) (bool, error)
 	Create(logger lager.Logger, id string, spec BundleSpec) (Bundle, error)
 	Destroy(logger lager.Logger, id string) error
-	Metrics(logger lager.Logger, id string, forceSync bool) (VolumeMetrics, error)
+	Metrics(logger lager.Logger, id string) (VolumeMetrics, error)
 }
 
 type Locksmith interface {
@@ -147,12 +147,12 @@ func (g *Groot) Delete(logger lager.Logger, id string) error {
 	return g.bundler.Destroy(logger, id)
 }
 
-func (g *Groot) Metrics(logger lager.Logger, id string, forceSync bool) (VolumeMetrics, error) {
-	logger = logger.Session("groot-metrics", lager.Data{"bundleID": id, "forceSync": forceSync})
+func (g *Groot) Metrics(logger lager.Logger, id string) (VolumeMetrics, error) {
+	logger = logger.Session("groot-metrics", lager.Data{"bundleID": id})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	metrics, err := g.bundler.Metrics(logger, id, forceSync)
+	metrics, err := g.bundler.Metrics(logger, id)
 	if err != nil {
 		return VolumeMetrics{}, fmt.Errorf("fetching metrics for `%s`: %s", id, err)
 	}

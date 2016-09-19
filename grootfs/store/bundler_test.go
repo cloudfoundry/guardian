@@ -344,7 +344,7 @@ var _ = Describe("Bundle", func() {
 		})
 
 		It("fetches the metrics", func() {
-			_, err := bundler.Metrics(logger, "some-id", true)
+			_, err := bundler.Metrics(logger, "some-id")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fakeSnapshotDriver.FetchMetricsCallCount()).To(Equal(1))
@@ -353,19 +353,17 @@ var _ = Describe("Bundle", func() {
 		It("returns the metrics", func() {
 			fakeSnapshotDriver.FetchMetricsReturns(metrics, nil)
 
-			m, err := bundler.Metrics(logger, "some-id", false)
-			_, _, forceSync := fakeSnapshotDriver.FetchMetricsArgsForCall(0)
+			m, err := bundler.Metrics(logger, "some-id")
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(m).To(Equal(metrics))
-			Expect(forceSync).To(BeFalse())
 		})
 
 		Context("when the snapshot driver fails", func() {
 			It("returns an error", func() {
 				fakeSnapshotDriver.FetchMetricsReturns(groot.VolumeMetrics{}, errors.New("failed"))
 
-				_, err := bundler.Metrics(logger, "some-id", true)
+				_, err := bundler.Metrics(logger, "some-id")
 				Expect(err).To(MatchError("failed"))
 			})
 		})

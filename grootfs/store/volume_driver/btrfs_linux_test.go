@@ -390,7 +390,7 @@ var _ = Describe("Btrfs", func() {
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 
-			metrics, err := btrfs.FetchMetrics(logger, toPath, true)
+			metrics, err := btrfs.FetchMetrics(logger, toPath)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Block math craziness -> 1* 4210688 ~= 4227072
@@ -405,7 +405,7 @@ var _ = Describe("Btrfs", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := btrfs.FetchMetrics(logger, toPath, true)
+				_, err := btrfs.FetchMetrics(logger, toPath)
 				Expect(err).To(MatchError(ContainSubstring("is not a btrfs volume")))
 			})
 		})
@@ -416,13 +416,11 @@ var _ = Describe("Btrfs", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := btrfs.FetchMetrics(logger, toPath, true)
+				_, err := btrfs.FetchMetrics(logger, toPath)
 				Expect(err).To(MatchError(ContainSubstring("No such file or directory")))
 			})
-
 		})
 	})
-
 })
 
 func randVolumeID() string {

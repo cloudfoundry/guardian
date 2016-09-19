@@ -38,12 +38,11 @@ type FakeBundler struct {
 	destroyReturns struct {
 		result1 error
 	}
-	MetricsStub        func(logger lager.Logger, id string, forceSync bool) (groot.VolumeMetrics, error)
+	MetricsStub        func(logger lager.Logger, id string) (groot.VolumeMetrics, error)
 	metricsMutex       sync.RWMutex
 	metricsArgsForCall []struct {
-		logger    lager.Logger
-		id        string
-		forceSync bool
+		logger lager.Logger
+		id     string
 	}
 	metricsReturns struct {
 		result1 groot.VolumeMetrics
@@ -157,17 +156,16 @@ func (fake *FakeBundler) DestroyReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeBundler) Metrics(logger lager.Logger, id string, forceSync bool) (groot.VolumeMetrics, error) {
+func (fake *FakeBundler) Metrics(logger lager.Logger, id string) (groot.VolumeMetrics, error) {
 	fake.metricsMutex.Lock()
 	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
-		logger    lager.Logger
-		id        string
-		forceSync bool
-	}{logger, id, forceSync})
-	fake.recordInvocation("Metrics", []interface{}{logger, id, forceSync})
+		logger lager.Logger
+		id     string
+	}{logger, id})
+	fake.recordInvocation("Metrics", []interface{}{logger, id})
 	fake.metricsMutex.Unlock()
 	if fake.MetricsStub != nil {
-		return fake.MetricsStub(logger, id, forceSync)
+		return fake.MetricsStub(logger, id)
 	} else {
 		return fake.metricsReturns.result1, fake.metricsReturns.result2
 	}
@@ -179,10 +177,10 @@ func (fake *FakeBundler) MetricsCallCount() int {
 	return len(fake.metricsArgsForCall)
 }
 
-func (fake *FakeBundler) MetricsArgsForCall(i int) (lager.Logger, string, bool) {
+func (fake *FakeBundler) MetricsArgsForCall(i int) (lager.Logger, string) {
 	fake.metricsMutex.RLock()
 	defer fake.metricsMutex.RUnlock()
-	return fake.metricsArgsForCall[i].logger, fake.metricsArgsForCall[i].id, fake.metricsArgsForCall[i].forceSync
+	return fake.metricsArgsForCall[i].logger, fake.metricsArgsForCall[i].id
 }
 
 func (fake *FakeBundler) MetricsReturns(result1 groot.VolumeMetrics, result2 error) {

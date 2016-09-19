@@ -19,13 +19,6 @@ var MetricsCommand = cli.Command{
 	Usage:       "metrics [options] <id>",
 	Description: "Return filesystem metrics",
 
-	Flags: []cli.Flag{
-		cli.BoolFlag{
-			Name:  "force-sync",
-			Usage: "Force BTRFS sync to update metrics immediately",
-		},
-	},
-
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("create")
@@ -37,13 +30,12 @@ var MetricsCommand = cli.Command{
 
 		storePath := ctx.GlobalString("store")
 		id := ctx.Args().First()
-		forceSync := ctx.Bool("force-sync")
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
 		bundler := storepkg.NewBundler(btrfsVolumeDriver, storePath)
 
 		groot := grootpkg.IamGroot(bundler, nil, nil)
-		metrics, err := groot.Metrics(logger, id, forceSync)
+		metrics, err := groot.Metrics(logger, id)
 		if err != nil {
 			logger.Error("fetching-metrics", err)
 			return cli.NewExitError(err.Error(), 1)
