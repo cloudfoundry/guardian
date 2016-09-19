@@ -173,24 +173,29 @@ func (d *Btrfs) FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetr
 	}
 
 	cmd := exec.Command("drax", args...)
-	output, err := cmd.Output()
+	stdoutBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = stdoutBuffer
+	stderrBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stderr = stderrBuffer
+	err := cmd.Run()
 	if err != nil {
 		logger.Error("drax-failed", err)
-		return groot.VolumeMetrics{}, fmt.Errorf("%s: %s", err, strings.TrimSpace(string(output)))
+		return groot.VolumeMetrics{}, fmt.Errorf("%s: %s", err, strings.TrimSpace(stdoutBuffer.String()))
 	}
 
 	usageRegexp := regexp.MustCompile(`.*\s+(\d+)\s+(\d+)$`)
-	usage := usageRegexp.FindStringSubmatch(strings.TrimSpace(string(output)))
+	usage := usageRegexp.FindStringSubmatch(strings.TrimSpace(stdoutBuffer.String()))
 
 	var metrics groot.VolumeMetrics
 	if len(usage) != 3 {
-		logger.Error("parsing-metrics-failed", fmt.Errorf("raw metrics: %s", string(output)))
+		logger.Error("parsing-metrics-failed", fmt.Errorf("raw metrics: %s", stdoutBuffer.String()))
 		return metrics, errors.New("could not parse metrics")
 	}
 
 	fmt.Sscanf(usage[1], "%d", &metrics.DiskUsage.TotalBytesUsed)
 	fmt.Sscanf(usage[2], "%d", &metrics.DiskUsage.ExclusiveBytesUsed)
 
+	d.relogStream(logger, stderrBuffer)
 	return metrics, nil
 }
 

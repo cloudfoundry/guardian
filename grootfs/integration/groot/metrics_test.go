@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os/exec"
-	"path"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/integration"
@@ -22,8 +21,6 @@ var _ = Describe("Metrics", func() {
 		var err error
 		imagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-
-		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
 	It("returns the metrics for given bundle", func() {

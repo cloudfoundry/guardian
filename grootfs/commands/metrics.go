@@ -21,7 +21,7 @@ var MetricsCommand = cli.Command{
 
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
-		logger = logger.Session("create")
+		logger = logger.Session("metrics")
 
 		if ctx.NArg() != 1 {
 			logger.Error("parsing-command", errors.New("invalid arguments"), lager.Data{"args": ctx.Args()})

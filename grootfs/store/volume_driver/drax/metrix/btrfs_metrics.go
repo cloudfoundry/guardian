@@ -54,6 +54,7 @@ func (m *BtrfsMetrics) VolumeMetrics(logger lager.Logger, path string, forceSync
 			strings.TrimSpace(errorBuffer.String()))
 	}
 
+	logger.Debug("btrfs-output", lager.Data{"output": outputBuffer.String()})
 	return outputBuffer.Bytes(), nil
 }
 
