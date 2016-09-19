@@ -49,20 +49,33 @@ func (u *TarUnpacker) unTar(spec image_puller.UnpackSpec) error {
 		}
 
 		path := filepath.Join(spec.TargetPath, header.Name)
-		info := header.FileInfo()
 
-		switch u.fileType(path, info) {
-		case "DEVICE":
-			continue
-		case "DIRECTORY":
-			if err := u.createDirectory(path, header); err != nil {
-				return err
-			}
-		case "WHITEOUT":
+		if strings.Contains(path, ".wh.") {
 			if err := u.removeWhiteout(path); err != nil {
 				return err
 			}
-		case "REGULAR_FILE":
+			continue
+		}
+		switch header.Typeflag {
+		case tar.TypeBlock, tar.TypeChar:
+			continue
+
+		case tar.TypeLink:
+			if err := u.createLink(spec.TargetPath, path, header); err != nil {
+				return err
+			}
+
+		case tar.TypeSymlink:
+			if err := u.createSymlink(path, header); err != nil {
+				return err
+			}
+
+		case tar.TypeDir:
+			if err := u.createDirectory(path, header); err != nil {
+				return err
+			}
+
+		case tar.TypeReg, tar.TypeRegA:
 			if err := u.createRegularFile(path, header, tarReader); err != nil {
 				return err
 			}
@@ -70,22 +83,6 @@ func (u *TarUnpacker) unTar(spec image_puller.UnpackSpec) error {
 	}
 
 	return nil
-}
-
-func (u *TarUnpacker) fileType(path string, info os.FileInfo) string {
-	if info.IsDir() {
-		return "DIRECTORY"
-	}
-
-	if (info.Mode() & os.ModeDevice) != 0 {
-		return "DEVICE"
-	}
-
-	if strings.Contains(path, ".wh.") {
-		return "WHITEOUT"
-	}
-
-	return "REGULAR_FILE"
 }
 
 func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error {
@@ -111,6 +108,14 @@ func (u *TarUnpacker) removeWhiteout(path string) error {
 	}
 
 	return nil
+}
+
+func (u *TarUnpacker) createSymlink(path string, tarHeader *tar.Header) error {
+	return os.Symlink(tarHeader.Linkname, path)
+}
+
+func (u *TarUnpacker) createLink(targetPath, path string, tarHeader *tar.Header) error {
+	return os.Link(filepath.Join(targetPath, tarHeader.Linkname), path)
 }
 
 func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarReader *tar.Reader) error {

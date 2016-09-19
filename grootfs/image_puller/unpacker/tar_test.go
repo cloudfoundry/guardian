@@ -23,6 +23,7 @@ var _ = Describe("Tar", func() {
 		imgPath    string
 		bundlePath string
 		targetPath string
+		aFilePath  string
 
 		tarUnpacker *unpacker.TarUnpacker
 
@@ -42,7 +43,8 @@ var _ = Describe("Tar", func() {
 
 		imgPath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(imgPath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+		aFilePath = path.Join(imgPath, "a_file")
+		Expect(ioutil.WriteFile(aFilePath, []byte("hello-world"), 0600)).To(Succeed())
 		Expect(os.Mkdir(path.Join(imgPath, "subdir"), 0700)).To(Succeed())
 		Expect(os.Mkdir(path.Join(imgPath, "subdir", "subdir2"), 0711)).To(Succeed())
 		Expect(ioutil.WriteFile(path.Join(imgPath, "subdir", "subdir2", "another_file"), []byte("goodbye-world"), 0600)).To(Succeed())
@@ -84,6 +86,49 @@ var _ = Describe("Tar", func() {
 		contents, err := ioutil.ReadFile(filePath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("goodbye-world"))
+	})
+
+	Context("when the image has links", func() {
+		BeforeEach(func() {
+			Expect(os.Symlink(aFilePath, path.Join(imgPath, "symlink"))).To(Succeed())
+			Expect(os.Link(aFilePath, path.Join(imgPath, "hardlink"))).To(Succeed())
+		})
+
+		It("unpacks the symlinks", func() {
+			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})).To(Succeed())
+
+			symlinkPath := path.Join(targetPath, "symlink")
+			Expect(symlinkPath).To(BeARegularFile())
+
+			stat, err := os.Stat(symlinkPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(stat.Mode() & os.ModeSymlink).NotTo(Equal(0))
+		})
+
+		It("unpacks the hardlinks", func() {
+			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})).To(Succeed())
+
+			hardLinkPath := path.Join(targetPath, "hardlink")
+			Expect(hardLinkPath).To(BeAnExistingFile())
+
+			hlStat, err := os.Stat(hardLinkPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			origPath := path.Join(targetPath, "a_file")
+			Expect(err).NotTo(HaveOccurred())
+
+			origStat, err := os.Stat(origPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.SameFile(hlStat, origStat)).To(BeTrue())
+		})
 	})
 
 	It("keeps file permissions", func() {

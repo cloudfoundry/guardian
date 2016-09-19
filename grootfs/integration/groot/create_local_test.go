@@ -2,6 +2,7 @@ package groot_test
 
 import (
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
@@ -27,7 +28,12 @@ var _ = Describe("Create with local images", func() {
 	})
 
 	It("creates a root filesystem", func() {
-		bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", 0)
+		bundle, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+			ID:    "random-id",
+			Image: imagePath,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
 		bundleContentPath := path.Join(bundle.RootFSPath(), "foo")
 		Expect(bundleContentPath).To(BeARegularFile())
 		fooContents, err := ioutil.ReadFile(bundleContentPath)
@@ -78,11 +84,28 @@ var _ = Describe("Create with local images", func() {
 
 	Context("when local directory does not exist", func() {
 		It("returns an error", func() {
-			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "/invalid/image", "random-id")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(1))
+		})
+	})
+
+	Context("when the image has links", func() {
+		BeforeEach(func() {
+			Expect(os.Symlink(filepath.Join(imagePath, "foo"), filepath.Join(imagePath, "bar"))).To(Succeed())
+		})
+
+		It("unpacks the symlinks", func() {
+			bundle, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
 				ID:    "random-id",
-				Image: "/invalid/image",
+				Image: imagePath,
 			})
-			Expect(err).To(HaveOccurred())
+			Expect(err).NotTo(HaveOccurred())
+
+			content, err := ioutil.ReadFile(filepath.Join(bundle.RootFSPath(), "bar"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(content)).To(Equal("hello-world"))
 		})
 	})
 })
