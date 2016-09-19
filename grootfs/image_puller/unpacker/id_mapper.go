@@ -6,17 +6,17 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/cloudfoundry/gunk/command_runner"
+	"code.cloudfoundry.org/commandrunner"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 )
 
 type CommandIDMapper struct {
-	cmdRunner command_runner.CommandRunner
+	cmdRunner commandrunner.CommandRunner
 }
 
-func NewIDMapper(cmdRunner command_runner.CommandRunner) *CommandIDMapper {
+func NewIDMapper(cmdRunner commandrunner.CommandRunner) *CommandIDMapper {
 	return &CommandIDMapper{
 		cmdRunner: cmdRunner,
 	}

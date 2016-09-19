@@ -7,15 +7,16 @@ import (
 	"strconv"
 	"strings"
 
+	"code.cloudfoundry.org/commandrunner"
+
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 type BtrfsLimiter struct {
-	commandRunner command_runner.CommandRunner
+	commandRunner commandrunner.CommandRunner
 }
 
-func NewBtrfsLimiter(commandRunner command_runner.CommandRunner) *BtrfsLimiter {
+func NewBtrfsLimiter(commandRunner commandrunner.CommandRunner) *BtrfsLimiter {
 	return &BtrfsLimiter{
 		commandRunner: commandRunner,
 	}

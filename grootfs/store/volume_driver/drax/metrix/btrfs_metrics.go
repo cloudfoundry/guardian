@@ -6,15 +6,15 @@ import (
 	"os/exec"
 	"strings"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 type BtrfsMetrics struct {
-	commandRunner command_runner.CommandRunner
+	commandRunner commandrunner.CommandRunner
 }
 
-func NewBtrfsMetrics(commandRunner command_runner.CommandRunner) *BtrfsMetrics {
+func NewBtrfsMetrics(commandRunner commandrunner.CommandRunner) *BtrfsMetrics {
 	return &BtrfsMetrics{
 		commandRunner: commandRunner,
 	}

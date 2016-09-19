@@ -1,9 +1,6 @@
 [submodule "vendor/code.cloudfoundry.org/lager"]
 	path = vendor/code.cloudfoundry.org/lager
 	url = https://github.com/cloudfoundry/lager
-[submodule "vendor/github.com/cloudfoundry/gunk"]
-	path = vendor/github.com/cloudfoundry/gunk
-	url = https://github.com/cloudfoundry/gunk
 [submodule "vendor/github.com/containers/image"]
 	path = vendor/github.com/containers/image
 	url = https://github.com/containers/image
@@ -70,3 +67,6 @@
 [submodule "vendor/gopkg.in/yaml.v2"]
 	path = vendor/gopkg.in/yaml.v2
 	url = https://gopkg.in/yaml.v2
+[submodule "vendor/code.cloudfoundry.org/commandrunner"]
+	path = vendor/code.cloudfoundry.org/commandrunner
+	url = https://github.com/cloudfoundry/commandrunner

@@ -1,8 +1,6 @@
 # Artifacts
-grootfs
-drax
-
-!store/volume_driver/drax/
+/grootfs
+/drax
 
 # OSX
 .DS_Store

@@ -7,7 +7,7 @@ import (
 	"os"
 	"syscall"
 
-	"github.com/cloudfoundry/gunk/command_runner"
+	"code.cloudfoundry.org/commandrunner"
 	"github.com/docker/docker/pkg/reexec"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -65,12 +65,12 @@ type IDMapper interface {
 }
 
 type NamespacedCmdUnpacker struct {
-	commandRunner command_runner.CommandRunner
+	commandRunner commandrunner.CommandRunner
 	idMapper      IDMapper
 	unpackCmdName string
 }
 
-func NewNamespacedCmdUnpacker(commandRunner command_runner.CommandRunner, idMapper IDMapper, unpackCmdName string) *NamespacedCmdUnpacker {
+func NewNamespacedCmdUnpacker(commandRunner commandrunner.CommandRunner, idMapper IDMapper, unpackCmdName string) *NamespacedCmdUnpacker {
 	return &NamespacedCmdUnpacker{
 		commandRunner: commandRunner,
 		idMapper:      idMapper,

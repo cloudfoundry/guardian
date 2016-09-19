@@ -5,11 +5,10 @@ imports:
   version: 62951a8009ab331bb21dc418074fa54e66eb9b6a
   subpackages:
   - lagertest
-- name: github.com/cloudfoundry/gunk
-  version: ac2c54e112e4465612ad74698aff7e31faf54d9a
+- name: code.cloudfoundry.org/commandrunner
+  version: 9e33dc88ba33c6c4bbe6901485b3bb9721021c33
   subpackages:
-  - command_runner
-  - command_runner/linux_command_runner
+  - linux_command_runner
 - name: github.com/containers/image
   version: 8de80f2af39a7eb57eee4055530412d1bb1545ef
   subpackages:

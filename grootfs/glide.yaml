@@ -3,9 +3,7 @@ import:
 - package: code.cloudfoundry.org/lager
   subpackages:
   - lagertest
-- package: github.com/cloudfoundry/gunk
-  subpackages:
-  - command_runner
+- package: code.cloudfoundry.org/commandrunner
 - package: github.com/containers/image
   subpackages:
   - docker

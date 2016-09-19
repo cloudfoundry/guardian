@@ -3,9 +3,9 @@ package commands
 import (
 	"os"
 
+	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/grootfs/store/volume_driver/drax/metrix"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/urfave/cli"
 )
 
