@@ -29,7 +29,7 @@ test:
 	ginkgo -r -p -race -skipPackage integration .
 
 concourse-test:
-	./hack/run-tests -r
+	./hack/run-tests -r -g "-p"
 
 ###### Go tools ###############################################################
 
