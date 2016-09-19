@@ -141,9 +141,9 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, 10*time.Second).Should(gexec.Exit(0))
 
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.unpacked-with-namespaced-cmd.starting-unpack"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.unpacked-with-namespaced-cmd.mapUID.starting-id-map"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.unpacked-with-namespaced-cmd.mapGID.starting-id-map"))
+			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.starting-unpack-wrapper-command"))
+			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.mapUID.starting-id-map"))
+			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.mapGID.starting-id-map"))
 		})
 	})
 
@@ -171,9 +171,10 @@ var _ = Describe("Create", func() {
 			Eventually(sess, 10*time.Second).Should(gexec.Exit(0))
 
 			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.btrfs-creating-volume.starting-btrfs"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.unpacked-with-namespaced-cmd.starting-unpack"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.unpacked-with-namespaced-cmd.mapUID.starting-id-map"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.unpacked-with-namespaced-cmd.mapGID.starting-id-map"))
+			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.starting-unpack-wrapper-command"))
+			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.mapUID.starting-id-map"))
+			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.mapGID.starting-id-map"))
+			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.unpack-wrapper.starting-unpack"))
 			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.making-bundle.btrfs-creating-snapshot.starting-btrfs"))
 		})
 	})

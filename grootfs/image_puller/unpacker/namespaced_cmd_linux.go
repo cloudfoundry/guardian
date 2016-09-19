@@ -2,13 +2,16 @@ package unpacker
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"syscall"
 
 	"code.cloudfoundry.org/commandrunner"
 	"github.com/docker/docker/pkg/reexec"
+	"github.com/urfave/cli"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/image_puller"
@@ -16,8 +19,10 @@ import (
 )
 
 func init() {
-	reexec.Register("unpack", func() {
-		logger := lager.NewLogger("unpacking")
+	reexec.Register("unpack-wrapper", func() {
+		cli.ErrWriter = os.Stdout
+		logger := lager.NewLogger("unpack-wrapper")
+		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		if len(os.Args) != 2 {
 			logger.Error("parsing-command", errors.New("destination directory was not specified"))
@@ -26,25 +31,36 @@ func init() {
 
 		ctrlPipeR := os.NewFile(3, "/ctrl/pipe")
 		buffer := make([]byte, 1)
+		logger.Debug("waiting-for-control-pipe")
 		_, err := ctrlPipeR.Read(buffer)
 		if err != nil {
 			logger.Error("reading-control-pipe", err)
 			os.Exit(1)
 		}
+		logger.Debug("got-back-from-control-pipe")
 
 		// Once all id mappings are set, we need to spawn the untar function
 		// in a child proccess, so it can make use of it
-		cmd := reexec.Command("untar", os.Args[1])
-		cmd.Stdout = os.Stderr
+		cmd := reexec.Command("unpack", os.Args[1])
+		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
+
+		logger.Debug("starting-unpack", lager.Data{
+			"path": cmd.Path,
+			"args": cmd.Args,
+		})
 		if err := cmd.Run(); err != nil {
+			logger.Error("unpack-command-failed", err)
 			os.Exit(1)
 		}
+		logger.Debug("unpack-command-done")
 	})
 
-	reexec.Register("untar", func() {
-		logger := lager.NewLogger("untaring")
+	reexec.Register("unpack", func() {
+		cli.ErrWriter = os.Stdout
+		logger := lager.NewLogger("unpack")
+		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		rootFSPath := os.Args[1]
 		unpacker := NewTarUnpacker()
@@ -52,7 +68,8 @@ func init() {
 			Stream:     os.Stdin,
 			TargetPath: rootFSPath,
 		}); err != nil {
-			logger.Error("untar", err)
+			logger.Error("unpacking-failed", err)
+			fmt.Println(err.Error())
 			os.Exit(1)
 		}
 	})
@@ -64,22 +81,20 @@ type IDMapper interface {
 	MapGIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error
 }
 
-type NamespacedCmdUnpacker struct {
+type NamespacedUnpacker struct {
 	commandRunner commandrunner.CommandRunner
 	idMapper      IDMapper
-	unpackCmdName string
 }
 
-func NewNamespacedCmdUnpacker(commandRunner commandrunner.CommandRunner, idMapper IDMapper, unpackCmdName string) *NamespacedCmdUnpacker {
-	return &NamespacedCmdUnpacker{
+func NewNamespacedUnpacker(commandRunner commandrunner.CommandRunner, idMapper IDMapper) *NamespacedUnpacker {
+	return &NamespacedUnpacker{
 		commandRunner: commandRunner,
 		idMapper:      idMapper,
-		unpackCmdName: unpackCmdName,
 	}
 }
 
-func (u *NamespacedCmdUnpacker) Unpack(logger lager.Logger, spec image_puller.UnpackSpec) error {
-	logger = logger.Session("unpacked-with-namespaced-cmd", lager.Data{"spec": spec})
+func (u *NamespacedUnpacker) Unpack(logger lager.Logger, spec image_puller.UnpackSpec) error {
+	logger = logger.Session("namespaced-unpacking", lager.Data{"spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -88,7 +103,7 @@ func (u *NamespacedCmdUnpacker) Unpack(logger lager.Logger, spec image_puller.Un
 		return fmt.Errorf("creating tar control pipe: %s", err)
 	}
 
-	unpackCmd := reexec.Command(u.unpackCmdName, spec.TargetPath)
+	unpackCmd := reexec.Command("unpack-wrapper", spec.TargetPath)
 	unpackCmd.Stdin = spec.Stream
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
 		unpackCmd.SysProcAttr = &syscall.SysProcAttr{
@@ -98,14 +113,18 @@ func (u *NamespacedCmdUnpacker) Unpack(logger lager.Logger, spec image_puller.Un
 
 	outBuffer := bytes.NewBuffer([]byte{})
 	unpackCmd.Stdout = outBuffer
-	unpackCmd.Stderr = outBuffer
+	logBuffer := bytes.NewBuffer([]byte{})
+	unpackCmd.Stderr = logBuffer
 	unpackCmd.ExtraFiles = []*os.File{ctrlPipeR}
 
-	logger.Debug("starting-unpack", lager.Data{"path": unpackCmd.Path, "args": unpackCmd.Args})
+	logger.Debug("starting-unpack-wrapper-command", lager.Data{
+		"path": unpackCmd.Path,
+		"args": unpackCmd.Args,
+	})
 	if err := u.commandRunner.Start(unpackCmd); err != nil {
 		return fmt.Errorf("starting unpack command: %s", err)
 	}
-	logger.Debug("command-is-started")
+	logger.Debug("unpack-wrapper-command-is-started")
 
 	if err := u.setIDMappings(logger, spec, unpackCmd.Process.Pid); err != nil {
 		ctrlPipeW.Close()
@@ -115,17 +134,19 @@ func (u *NamespacedCmdUnpacker) Unpack(logger lager.Logger, spec image_puller.Un
 	if _, err := ctrlPipeW.Write([]byte{0}); err != nil {
 		return fmt.Errorf("writing to tar control pipe: %s", err)
 	}
-	logger.Debug("command-is-signaled-to-continue")
+	logger.Debug("unpack-wrapper-command-is-signaled-to-continue")
 
-	logger.Debug("waiting-for-command")
+	logger.Debug("waiting-for-unpack-wrapper-command")
 	if err := u.commandRunner.Wait(unpackCmd); err != nil {
 		return fmt.Errorf(outBuffer.String())
 	}
+	logger.Debug("unpack-wrapper-command-done")
+	u.relogStream(logger, logBuffer)
 
 	return nil
 }
 
-func (u *NamespacedCmdUnpacker) setIDMappings(logger lager.Logger, spec image_puller.UnpackSpec, untarPid int) error {
+func (u *NamespacedUnpacker) setIDMappings(logger lager.Logger, spec image_puller.UnpackSpec, untarPid int) error {
 	if len(spec.UIDMappings) > 0 {
 		if err := u.idMapper.MapUIDs(logger, untarPid, spec.UIDMappings); err != nil {
 			return fmt.Errorf("setting uid mapping: %s", err)
@@ -141,4 +162,22 @@ func (u *NamespacedCmdUnpacker) setIDMappings(logger lager.Logger, spec image_pu
 	}
 
 	return nil
+}
+
+func (u *NamespacedUnpacker) relogStream(logger lager.Logger, stream io.Reader) {
+	decoder := json.NewDecoder(stream)
+	var logFormat lager.LogFormat
+
+	for {
+		if err := decoder.Decode(&logFormat); err != nil {
+			break
+		}
+
+		logger.Debug(logFormat.Message, lager.Data{
+			"timestamp": logFormat.Timestamp,
+			"source":    logFormat.Source,
+			"log_level": logFormat.LogLevel,
+			"data":      logFormat.Data,
+		})
+	}
 }

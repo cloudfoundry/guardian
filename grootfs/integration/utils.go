@@ -39,7 +39,7 @@ func CreateBundle(grootFSBin, storePath, imagePath, id string, diskLimit int64) 
 	return store.NewBundle(bundlePath)
 }
 
-func CreateBundleWSpec(grootFSBin, storePath string, spec groot.CreateSpec) groot.Bundle {
+func CreateBundleWSpec(grootFSBin, storePath string, spec groot.CreateSpec) (groot.Bundle, error) {
 	cmd := runner.CreateCmd{
 		GrootFSBin: grootFSBin,
 		StorePath:  storePath,
@@ -49,9 +49,11 @@ func CreateBundleWSpec(grootFSBin, storePath string, spec groot.CreateSpec) groo
 	}
 
 	bundlePath, err := cmd.Run()
-	Expect(err).NotTo(HaveOccurred())
+	if err != nil {
+		return nil, err
+	}
 
-	return store.NewBundle(bundlePath)
+	return store.NewBundle(bundlePath), nil
 }
 
 func DeleteBundle(grootFSBin, storePath, id string) string {

@@ -71,7 +71,7 @@ var _ = Describe("Create with remote images", func() {
 			})
 
 			It("uses the cached image from the store", func() {
-				integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+				_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
 					ID:    "random-id",
 					Image: imageURL,
 					UIDMappings: []groot.IDMappingSpec{
@@ -83,6 +83,7 @@ var _ = Describe("Create with remote images", func() {
 						groot.IDMappingSpec{NamespaceID: 1, HostID: 100000, Size: 65000},
 					},
 				})
+				Expect(err).NotTo(HaveOccurred())
 
 				// change the cache
 				blobPath := path.Join(
@@ -97,7 +98,7 @@ var _ = Describe("Create with remote images", func() {
 					Mode: 0666,
 					Size: int64(len([]byte("cache-hit!"))),
 				})).To(Succeed())
-				_, err := tarWriter.Write([]byte("cache-hit!"))
+				_, err = tarWriter.Write([]byte("cache-hit!"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(tarWriter.Close()).To(Succeed())
 

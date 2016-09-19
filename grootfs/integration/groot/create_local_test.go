@@ -6,6 +6,7 @@ import (
 	"path"
 	"path/filepath"
 
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 
 	. "github.com/onsi/ginkgo"
@@ -77,10 +78,11 @@ var _ = Describe("Create with local images", func() {
 
 	Context("when local directory does not exist", func() {
 		It("returns an error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "/invalid/image", "random-id")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
+			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+				ID:    "random-id",
+				Image: "/invalid/image",
+			})
+			Expect(err).To(HaveOccurred())
 		})
 	})
 })

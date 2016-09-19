@@ -11,18 +11,19 @@ import (
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/image_puller"
-	"code.cloudfoundry.org/grootfs/image_puller/unpacker"
+	unpackerpkg "code.cloudfoundry.org/grootfs/image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/image_puller/unpacker/unpackerfakes"
+	"code.cloudfoundry.org/lager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/st3v/glager"
 )
 
-var _ = Describe("NamespacedCmdUnpacker", func() {
+var _ = Describe("NamespacedUnpacker", func() {
 	var (
 		fakeIDMapper      *unpackerfakes.FakeIDMapper
 		fakeCommandRunner *fake_command_runner.FakeCommandRunner
-		tarUnpacker       *unpacker.NamespacedCmdUnpacker
+		unpacker          *unpackerpkg.NamespacedUnpacker
 
 		logger     *TestLogger
 		bundlePath string
@@ -36,9 +37,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 
 		fakeIDMapper = new(unpackerfakes.FakeIDMapper)
 		fakeCommandRunner = fake_command_runner.New()
-		tarUnpacker = unpacker.NewNamespacedCmdUnpacker(
-			fakeCommandRunner, fakeIDMapper, "ginkgo-unpack",
-		)
+		unpacker = unpackerpkg.NewNamespacedUnpacker(fakeCommandRunner, fakeIDMapper)
 
 		logger = NewLogger("test-store")
 
@@ -64,8 +63,8 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 		Expect(os.RemoveAll(bundlePath)).To(Succeed())
 	})
 
-	It("passes the rootfs path to the provided command", func() {
-		Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+	It("passes the rootfs path to the unpack-wrapper command", func() {
+		Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 			TargetPath: targetPath,
 		})).To(Succeed())
 
@@ -73,33 +72,33 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 		Expect(commands).To(HaveLen(1))
 		Expect(commands[0].Path).To(Equal("/proc/self/exe"))
 		Expect(commands[0].Args).To(Equal([]string{
-			"ginkgo-unpack", targetPath,
+			"unpack-wrapper", targetPath,
 		}))
 	})
 
-	It("uses the provided stream", func() {
+	It("passes the provided stream to the unpack-wrapper command", func() {
 		streamR, streamW, err := os.Pipe()
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+		Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 			Stream:     streamR,
 			TargetPath: targetPath,
 		})).To(Succeed())
 
-		commands := fakeCommandRunner.StartedCommands()
-		Expect(commands).To(HaveLen(1))
-
 		_, err = streamW.WriteString("hello-world")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(streamW.Close()).To(Succeed())
+
+		commands := fakeCommandRunner.StartedCommands()
+		Expect(commands).To(HaveLen(1))
 
 		contents, err := ioutil.ReadAll(commands[0].Stdin)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("hello-world"))
 	})
 
-	It("starts the provided command in a user namespace", func() {
-		Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+	It("starts the unpack-wrapper command in a user namespace", func() {
+		Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 			UIDMappings: []groot.IDMappingSpec{
 				groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
 			},
@@ -111,23 +110,30 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 		Expect(commands[0].SysProcAttr.Cloneflags).To(Equal(uintptr(syscall.CLONE_NEWUSER)))
 	})
 
-	It("logs the provided command", func() {
-		Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+	It("re-logs the log lines emitted by the unpack-wrapper command", func() {
+		fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
+			Path: "/proc/self/exe",
+		}, func(cmd *exec.Cmd) error {
+			logger := lager.NewLogger("fake-unpack-wrapper")
+			logger.RegisterSink(lager.NewWriterSink(cmd.Stderr, lager.DEBUG))
+			logger.Debug("foo")
+			return nil
+		})
+
+		Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 			TargetPath: targetPath,
 		})).To(Succeed())
 
 		Expect(logger).To(ContainSequence(
 			Debug(
-				Message("test-store.unpacked-with-namespaced-cmd.starting-unpack"),
-				Data("path", "/proc/self/exe"),
-				Data("args", []string{"ginkgo-unpack", targetPath}),
+				Message("test-store.namespaced-unpacking.fake-unpack-wrapper.foo"),
 			),
 		))
 	})
 
 	Context("when no mappings are provided", func() {
-		It("starts the provided command in the same namespaces", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+		It("starts the unpack-wrapper command in the same namespaces", func() {
+			Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 				TargetPath: targetPath,
 			})).To(Succeed())
 
@@ -137,8 +143,8 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 		})
 	})
 
-	It("signals the namespaced command to continue using the contol pipe", func(done Done) {
-		Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+	It("signals the unpack-wrapper command to continue using the contol pipe", func(done Done) {
+		Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 			TargetPath: targetPath,
 		})).To(Succeed())
 
@@ -152,8 +158,8 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 	}, 1.0)
 
 	Describe("UIDMappings", func() {
-		It("uses the provided uid mapping", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+		It("applies the provided uid mappings", func() {
+			Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 				TargetPath: targetPath,
 				UIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
@@ -168,13 +174,13 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 			}))
 		})
 
-		Context("when mapping fails", func() {
+		Context("when applying the mappings fails", func() {
 			BeforeEach(func() {
 				fakeIDMapper.MapUIDsReturns(errors.New("Boom!"))
 			})
 
 			It("returns an error", func() {
-				Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+				Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 					TargetPath: targetPath,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
@@ -183,7 +189,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 			})
 
 			It("closes the control pipe", func() {
-				Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+				Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 					TargetPath: targetPath,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
@@ -200,8 +206,8 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 	})
 
 	Describe("GIDMappings", func() {
-		It("uses the provided gid mapping", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+		It("applies the provided gid mappings", func() {
+			Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 				TargetPath: targetPath,
 				GIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
@@ -216,13 +222,13 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 			}))
 		})
 
-		Context("when mapping fails", func() {
+		Context("when applying the mappings fails", func() {
 			BeforeEach(func() {
 				fakeIDMapper.MapGIDsReturns(errors.New("Boom!"))
 			})
 
 			It("returns an error", func() {
-				Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+				Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 					TargetPath: targetPath,
 					GIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
@@ -231,7 +237,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 			})
 
 			It("closes the control pipe", func() {
-				Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+				Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 					TargetPath: targetPath,
 					GIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
@@ -247,13 +253,13 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 		})
 	})
 
-	Context("when it fails to start unpacking", func() {
+	Context("when it fails to start the unpack-wrapper command", func() {
 		BeforeEach(func() {
 			commandError = errors.New("failed to start unpack")
 		})
 
 		It("returns an error", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 				TargetPath: targetPath,
 			})).To(
 				MatchError(ContainSubstring("failed to start unpack")),
@@ -261,7 +267,7 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 		})
 	})
 
-	Context("when it fails to unpack", func() {
+	Context("when the unpack-wrapper command fails", func() {
 		BeforeEach(func() {
 			fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
 				Path: "/proc/self/exe",
@@ -272,13 +278,13 @@ var _ = Describe("NamespacedCmdUnpacker", func() {
 		})
 
 		It("returns an error", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 				TargetPath: targetPath,
 			})).NotTo(Succeed())
 		})
 
 		It("returns the command output", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(unpacker.Unpack(logger, image_puller.UnpackSpec{
 				TargetPath: targetPath,
 			})).To(
 				MatchError(ContainSubstring("hello-world")),

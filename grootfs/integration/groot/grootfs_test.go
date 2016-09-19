@@ -11,19 +11,9 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("grootfs global flags", func() {
-	Describe("logs", func() {
-		It("forwards human logs to stdout", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "my-image")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
-
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess.Out).Should(gbytes.Say("invalid arguments"))
-		})
-
-		Context("when setting --verbose", func() {
+var _ = Describe("GrootFS global flags", func() {
+	Describe("logging", func() {
+		Context("when setting the --log-level", func() {
 			It("forwards non-human logs to stderr", func() {
 				cmd := exec.Command(GrootFSBin, "--log-level", "error", "--store", StorePath, "create", "my-image")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)

@@ -86,7 +86,7 @@ var CreateCommand = cli.Command{
 
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(runner)
-		namespacedCmdUnpacker := unpackerpkg.NewNamespacedCmdUnpacker(runner, idMapper, "unpack")
+		namespacedCmdUnpacker := unpackerpkg.NewNamespacedUnpacker(runner, idMapper)
 
 		trustedRegistries := ctx.StringSlice("insecure-registry")
 		dockerSrc := remote.NewDockerSource(trustedRegistries)
