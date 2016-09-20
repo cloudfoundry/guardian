@@ -2,7 +2,6 @@ package volume_driver
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -16,6 +15,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/chug"
 )
 
 type Btrfs struct {
@@ -200,19 +200,17 @@ func (d *Btrfs) FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetr
 }
 
 func (d *Btrfs) relogStream(logger lager.Logger, stream io.Reader) {
-	decoder := json.NewDecoder(stream)
+	entries := make(chan chug.Entry, 1000)
+	chug.Chug(stream, entries)
 
-	var logFormat lager.LogFormat
-	for {
-		if err := decoder.Decode(&logFormat); err != nil {
-			break
+	for entry := range entries {
+		if entry.IsLager {
+			logger.Debug(entry.Log.Message, lager.Data{
+				"timestamp": entry.Log.Timestamp,
+				"source":    entry.Log.Source,
+				"log_level": entry.Log.LogLevel,
+				"data":      entry.Log.Data,
+			})
 		}
-
-		logger.Debug(logFormat.Message, lager.Data{
-			"timestamp": logFormat.Timestamp,
-			"source":    logFormat.Source,
-			"logLevel":  logFormat.LogLevel,
-			"data":      logFormat.Data,
-		})
 	}
 }

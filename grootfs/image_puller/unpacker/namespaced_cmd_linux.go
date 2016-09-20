@@ -2,7 +2,6 @@ package unpacker
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +9,7 @@ import (
 	"syscall"
 
 	"code.cloudfoundry.org/commandrunner"
+	"code.cloudfoundry.org/lager/chug"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/urfave/cli"
 
@@ -165,19 +165,17 @@ func (u *NamespacedUnpacker) setIDMappings(logger lager.Logger, spec image_pulle
 }
 
 func (u *NamespacedUnpacker) relogStream(logger lager.Logger, stream io.Reader) {
-	decoder := json.NewDecoder(stream)
-	var logFormat lager.LogFormat
+	entries := make(chan chug.Entry, 1000)
+	chug.Chug(stream, entries)
 
-	for {
-		if err := decoder.Decode(&logFormat); err != nil {
-			break
+	for entry := range entries {
+		if entry.IsLager {
+			logger.Debug(entry.Log.Message, lager.Data{
+				"timestamp": entry.Log.Timestamp,
+				"source":    entry.Log.Source,
+				"log_level": entry.Log.LogLevel,
+				"data":      entry.Log.Data,
+			})
 		}
-
-		logger.Debug(logFormat.Message, lager.Data{
-			"timestamp": logFormat.Timestamp,
-			"source":    logFormat.Source,
-			"log_level": logFormat.LogLevel,
-			"data":      logFormat.Data,
-		})
 	}
 }
