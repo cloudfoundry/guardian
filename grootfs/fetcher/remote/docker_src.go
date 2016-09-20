@@ -177,7 +177,7 @@ func (s *DockerSource) parseSchemaV1Manifest(logger lager.Logger, rawManifest []
 
 	manifest := Manifest{}
 	for _, layer := range dockerManifest.FSLayers {
-		manifest.Layers = append([]string{layer["blobSum"]}, manifest.Layers...)
+		manifest.Layers = append([]Layer{Layer{BlobID: layer["blobSum"]}}, manifest.Layers...)
 	}
 
 	for _, history := range dockerManifest.History {
@@ -203,7 +203,7 @@ func (s *DockerSource) parseSchemaV2Manifest(logger lager.Logger, rawManifest []
 		ConfigCacheKey: ociManifest.Config.Digest,
 	}
 	for _, layer := range ociManifest.Layers {
-		manifest.Layers = append(manifest.Layers, layer.Digest)
+		manifest.Layers = append(manifest.Layers, Layer{BlobID: layer.Digest, Size: layer.Size})
 	}
 
 	manifest.SchemaVersion = 2

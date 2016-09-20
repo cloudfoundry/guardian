@@ -25,6 +25,7 @@ type LayerDigest struct {
 	BlobID        string
 	ChainID       string
 	ParentChainID string
+	Size          int64
 }
 
 type ImageInfo struct {
@@ -73,10 +74,11 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 	}
 	logger.Debug("fetched-layers-digests", lager.Data{"digests": imageInfo.LayersDigest})
 
-	var (
-		volumePath string
-		totalSize  int64
-	)
+	if err := p.quotaExceeded(logger, imageInfo.LayersDigest, spec); err != nil {
+		return groot.BundleSpec{}, err
+	}
+
+	var volumePath string
 	for _, digest := range imageInfo.LayersDigest {
 		volumePath, err = p.volumeDriver.Path(logger, wrapVolumeID(spec, digest.ChainID))
 		if err == nil {
@@ -92,17 +94,6 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 		stream, size, err := p.fetcher.StreamBlob(logger, spec.ImageSrc, digest.BlobID)
 		if err != nil {
 			return groot.BundleSpec{}, fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
-		}
-		totalSize += size
-		if !spec.ExcludeImageFromQuota && spec.DiskLimit != 0 && spec.DiskLimit < totalSize {
-			err := fmt.Errorf("exceeded disk quota, using %d out of %d bytes", totalSize, spec.DiskLimit)
-			logger.Error("blob-streaming-failed", err, lager.Data{
-				"totalSize":             totalSize,
-				"diskLimit":             spec.DiskLimit,
-				"excludeImageFromQuota": spec.ExcludeImageFromQuota,
-				"blobID":                digest.BlobID,
-			})
-			return groot.BundleSpec{}, err
 		}
 
 		logger.Debug("got-stream-for-blob", lager.Data{
@@ -157,6 +148,33 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 		VolumePath: volumePath,
 	}
 	return bundleSpec, nil
+}
+
+func (p *ImagePuller) quotaExceeded(logger lager.Logger, layersDigest []LayerDigest, spec groot.ImageSpec) error {
+
+	if spec.ExcludeImageFromQuota || spec.DiskLimit == 0 {
+		return nil
+	}
+	totalSize := p.layersSize(layersDigest)
+	if totalSize > spec.DiskLimit {
+		err := fmt.Errorf("layers exceed disk quota %d/%d bytes", totalSize, spec.DiskLimit)
+		logger.Error("blob-manifest-size-check-failed", err, lager.Data{
+			"totalSize":             totalSize,
+			"diskLimit":             spec.DiskLimit,
+			"excludeImageFromQuota": spec.ExcludeImageFromQuota,
+		})
+		return err
+	}
+
+	return nil
+}
+
+func (p *ImagePuller) layersSize(layerDigests []LayerDigest) int64 {
+	var totalSize int64
+	for _, digest := range layerDigests {
+		totalSize += digest.Size
+	}
+	return totalSize
 }
 
 func wrapVolumeID(spec groot.ImageSpec, volumeID string) string {

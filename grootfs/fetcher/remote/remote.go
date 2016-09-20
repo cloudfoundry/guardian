@@ -112,7 +112,7 @@ func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
 	layersDigest := []image_puller.LayerDigest{}
 
 	var parentChainID string
-	for i, blobID := range manifest.Layers {
+	for i, layer := range manifest.Layers {
 		if i == 0 {
 			parentChainID = ""
 		}
@@ -120,7 +120,8 @@ func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
 		diffID := config.RootFS.DiffIDs[i]
 		chainID := f.chainID(diffID, parentChainID)
 		layersDigest = append(layersDigest, image_puller.LayerDigest{
-			BlobID:        blobID,
+			BlobID:        layer.BlobID,
+			Size:          layer.Size,
 			ChainID:       chainID,
 			ParentChainID: parentChainID,
 		})

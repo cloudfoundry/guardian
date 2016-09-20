@@ -137,7 +137,7 @@ var _ = Describe("Create with remote images", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
 
-						Eventually(sess).Should(gbytes.Say("exceeded disk quota"))
+						Eventually(sess).Should(gbytes.Say("layers exceed disk quota"))
 					})
 				})
 			})

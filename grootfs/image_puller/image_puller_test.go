@@ -162,24 +162,52 @@ var _ = Describe("Image Puller", func() {
 		validateLayer(2, "layer-i-am-the-last-layer-contents")
 	})
 
-	Context("when the sum of layers exceed the limit", func() {
+	Context("when the layers size in the manifest will exceed the limit", func() {
 		Context("when including the image size in the limit", func() {
 			It("returns an error", func() {
-				fakeFetcher.StreamBlobReturns(nil, 512, nil)
+				fakeFetcher.ImageInfoReturns(image_puller.ImageInfo{
+					LayersDigest: []image_puller.LayerDigest{
+						image_puller.LayerDigest{Size: 1000},
+						image_puller.LayerDigest{Size: 201},
+					},
+				}, nil)
 
 				_, err := imagePuller.Pull(logger, groot.ImageSpec{
 					ImageSrc:              imageSrc,
 					DiskLimit:             1200,
 					ExcludeImageFromQuota: false,
 				})
+				Expect(err).To(MatchError(ContainSubstring("layers exceed disk quota")))
+			})
 
-				Expect(err).To(MatchError(ContainSubstring("exceeded disk quota")))
+			Context("when the disk limit is zero", func() {
+				It("doesn't fail", func() {
+					fakeFetcher.ImageInfoReturns(image_puller.ImageInfo{
+						LayersDigest: []image_puller.LayerDigest{
+							image_puller.LayerDigest{Size: 1000},
+							image_puller.LayerDigest{Size: 201},
+						},
+					}, nil)
+
+					_, err := imagePuller.Pull(logger, groot.ImageSpec{
+						ImageSrc:              imageSrc,
+						DiskLimit:             0,
+						ExcludeImageFromQuota: false,
+					})
+
+					Expect(err).ToNot(HaveOccurred())
+				})
 			})
 		})
 
 		Context("when not including the image size in the limit", func() {
 			It("doesn't fail", func() {
-				fakeFetcher.StreamBlobReturns(nil, 1048, nil)
+				fakeFetcher.ImageInfoReturns(image_puller.ImageInfo{
+					LayersDigest: []image_puller.LayerDigest{
+						image_puller.LayerDigest{Size: 1000},
+						image_puller.LayerDigest{Size: 201},
+					},
+				}, nil)
 
 				_, err := imagePuller.Pull(logger, groot.ImageSpec{
 					ImageSrc:              imageSrc,

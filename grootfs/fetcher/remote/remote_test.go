@@ -86,9 +86,9 @@ var _ = Describe("RemoteFetcher", func() {
 
 		It("returns the correct list of layer digests", func() {
 			manifest := remote.Manifest{
-				Layers: []string{
-					"sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
-					"sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
+				Layers: []remote.Layer{
+					remote.Layer{BlobID: "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58", Size: 1024},
+					remote.Layer{BlobID: "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76", Size: 2048},
 				},
 			}
 			fakeSource.ManifestReturns(manifest, nil)
@@ -112,11 +112,13 @@ var _ = Describe("RemoteFetcher", func() {
 					BlobID:        "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
 					ChainID:       "sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
 					ParentChainID: "",
+					Size:          1024,
 				},
 				image_puller.LayerDigest{
 					BlobID:        "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
 					ChainID:       "sha256:9242945d3c9c7cf5f127f9352fea38b1d3efe62ee76e25f70a3e6db63a14c233",
 					ParentChainID: "sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
+					Size:          2048,
 				},
 			}))
 		})

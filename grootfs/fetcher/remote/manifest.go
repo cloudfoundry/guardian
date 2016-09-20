@@ -2,9 +2,14 @@ package remote
 
 type Manifest struct {
 	SchemaVersion   int
-	Layers          []string
+	Layers          []Layer
 	ConfigCacheKey  string
 	V1Compatibility []string
+}
+
+type Layer struct {
+	BlobID string
+	Size   int64
 }
 
 type SchemaV1Manifest struct {

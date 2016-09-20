@@ -27,7 +27,7 @@ var _ = Describe("Docker source", func() {
 		imageURL *url.URL
 
 		configBlob           string
-		expectedLayersDigest []string
+		expectedLayersDigest []remote.Layer
 		expectedDiffIds      []string
 		manifest             remote.Manifest
 	)
@@ -36,9 +36,15 @@ var _ = Describe("Docker source", func() {
 		trustedRegistries = []string{}
 
 		configBlob = "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d"
-		expectedLayersDigest = []string{
-			"sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
-			"sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
+		expectedLayersDigest = []remote.Layer{
+			remote.Layer{
+				BlobID: "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
+				Size:   90,
+			},
+			remote.Layer{
+				BlobID: "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
+				Size:   88,
+			},
 		}
 		expectedDiffIds = []string{
 			"sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
@@ -84,14 +90,14 @@ var _ = Describe("Docker source", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(manifest.Layers).To(HaveLen(8))
-				Expect(manifest.Layers[0]).To(Equal("sha256:51f5c6a04d83efd2d45c5fd59537218924bc46705e3de6ffc8bc07b51481610b"))
-				Expect(manifest.Layers[1]).To(Equal("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"))
-				Expect(manifest.Layers[2]).To(Equal("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"))
-				Expect(manifest.Layers[3]).To(Equal("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"))
-				Expect(manifest.Layers[4]).To(Equal("sha256:640c8f3d0eb2b84205cc43e312914c4ae464d433089ee1c95042b893eb7af09b"))
-				Expect(manifest.Layers[5]).To(Equal("sha256:a4335300aa893de13a747fee474cd982c62539fd8e20e9b5eb21125996140b8a"))
-				Expect(manifest.Layers[6]).To(Equal("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"))
-				Expect(manifest.Layers[7]).To(Equal("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"))
+				Expect(manifest.Layers[0]).To(Equal(remote.Layer{BlobID: "sha256:51f5c6a04d83efd2d45c5fd59537218924bc46705e3de6ffc8bc07b51481610b"}))
+				Expect(manifest.Layers[1]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
+				Expect(manifest.Layers[2]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
+				Expect(manifest.Layers[3]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
+				Expect(manifest.Layers[4]).To(Equal(remote.Layer{BlobID: "sha256:640c8f3d0eb2b84205cc43e312914c4ae464d433089ee1c95042b893eb7af09b"}))
+				Expect(manifest.Layers[5]).To(Equal(remote.Layer{BlobID: "sha256:a4335300aa893de13a747fee474cd982c62539fd8e20e9b5eb21125996140b8a"}))
+				Expect(manifest.Layers[6]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
+				Expect(manifest.Layers[7]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
 
 				Expect(manifest.ConfigCacheKey).To(Equal("sha256:f0f2e4b0f880c47ef68d8bca346ced37d32712b671412704524ac4162fbf944d"))
 			})
@@ -283,7 +289,7 @@ var _ = Describe("Docker source", func() {
 
 	Describe("Blob", func() {
 		It("downloads a blob", func() {
-			blobContents, size, err := dockerSrc.Blob(logger, imageURL, expectedLayersDigest[0])
+			blobContents, size, err := dockerSrc.Blob(logger, imageURL, expectedLayersDigest[0].BlobID)
 			Expect(err).NotTo(HaveOccurred())
 
 			buffer := gbytes.NewBuffer()
@@ -302,7 +308,7 @@ var _ = Describe("Docker source", func() {
 				imageURL, err := url.Parse("docker:cfgarden/empty:v0.1.0")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, _, err = dockerSrc.Blob(logger, imageURL, expectedLayersDigest[0])
+				_, _, err = dockerSrc.Blob(logger, imageURL, expectedLayersDigest[0].BlobID)
 				Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
 			})
 		})
@@ -321,7 +327,7 @@ var _ = Describe("Docker source", func() {
 				dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
 				Expect(err).NotTo(HaveOccurred())
 				fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
-				layerDigest := strings.Split(expectedLayersDigest[1], ":")[1]
+				layerDigest := strings.Split(expectedLayersDigest[1].BlobID, ":")[1]
 				fakeRegistry.WhenGettingBlob(layerDigest, 2, func(rw http.ResponseWriter, req *http.Request) {
 					rw.Write([]byte("bad-blob"))
 				})
@@ -338,7 +344,7 @@ var _ = Describe("Docker source", func() {
 			})
 
 			It("returns an error", func() {
-				_, _, err := dockerSrc.Blob(logger, imageURL, expectedLayersDigest[1])
+				_, _, err := dockerSrc.Blob(logger, imageURL, expectedLayersDigest[1].BlobID)
 				Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
 			})
 		})
