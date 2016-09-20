@@ -104,7 +104,6 @@ jobs:
     params:
       repos:
       - grootfs-git-repo
-
 - name: create-release
   plan:
   - aggregate:
@@ -115,6 +114,11 @@ jobs:
       params: { bump: final }
   - task: build-grootfs
     file: grootfs-git-repo/ci/tasks/build-grootfs.yml
+  - put: grootfs-ci-image
+    params:
+      build: grootfs-git-repo
+      tag_prefix: v
+      tag: grootfs-version/number
   - put: grootfs-git-repo
     params:
       tag: grootfs-version/number
