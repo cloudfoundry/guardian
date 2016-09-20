@@ -48,7 +48,7 @@ func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifes
 
 		if strings.Contains(err.Error(), "malformed HTTP response") {
 			logger.Error("fetching-manifest-failed", err)
-			return Manifest{}, fmt.Errorf("TLS validation of insecure registry failed: %s", err)
+			return Manifest{}, errors.New("This registry is insecure. To pull images from this registry, please use the --insecure-registry option.")
 		}
 
 		return Manifest{}, err
@@ -220,7 +220,7 @@ func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, imageURL *url.UR
 	if err != nil {
 		if strings.Contains(err.Error(), "malformed HTTP response") {
 			logger.Error("fetching-config-failed", err)
-			return specsv1.Image{}, fmt.Errorf("TLS validation of insecure registry failed: %s", err)
+			return specsv1.Image{}, errors.New("This registry is insecure. To pull images from this registry, please use the --insecure-registry option.")
 		}
 		return specsv1.Image{}, fmt.Errorf("fetching config blob: %s", err)
 	}

@@ -254,12 +254,12 @@ var _ = Describe("Docker source", func() {
 
 		It("fails to fetch the manifest", func() {
 			_, err := dockerSrc.Manifest(logger, imageURL)
-			Expect(err).To(MatchError(ContainSubstring("TLS validation of insecure registry failed")))
+			Expect(err).To(MatchError(ContainSubstring("This registry is insecure. To pull images from this registry, please use the --insecure-registry option")))
 		})
 
 		It("fails to fetch the Config", func() {
 			_, err := dockerSrc.Config(logger, imageURL, manifest)
-			Expect(err).To(MatchError(ContainSubstring("TLS validation of insecure registry failed")))
+			Expect(err).To(MatchError(ContainSubstring("This registry is insecure. To pull images from this registry, please use the --insecure-registry option")))
 		})
 
 		Context("when the private registry is whitelisted", func() {

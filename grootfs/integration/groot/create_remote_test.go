@@ -213,7 +213,7 @@ var _ = Describe("Create with remote images", func() {
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
-			Eventually(sess).Should(gbytes.Say("TLS validation of insecure registry failed"))
+			Eventually(sess).Should(gbytes.Say("This registry is insecure. To pull images from this registry, please use the --insecure-registry option"))
 		})
 
 		Context("when it's provided as a valid insecure registry", func() {
