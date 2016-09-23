@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	errorspkg "github.com/pkg/errors"
 )
 
 const GLOBAL_LOCK_KEY = "global-groot-lock"
@@ -126,7 +127,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 			logger.Error("failed-to-unlock", err)
 		}
 
-		return nil, fmt.Errorf("pulling the image: %s", err)
+		return nil, errorspkg.Wrap(err, "pulling the image")
 	}
 
 	if err := g.locksmith.Unlock(lockFile); err != nil {

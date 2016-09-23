@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	"github.com/Sirupsen/logrus"
 	"github.com/containers/image/docker"
@@ -43,12 +44,12 @@ func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifes
 	if err != nil {
 		if strings.Contains(err.Error(), "error fetching manifest: status code:") {
 			logger.Error("fetching-manifest-failed", err)
-			return Manifest{}, fmt.Errorf("image does not exist or you do not have permissions to see it: %s", err)
+			return Manifest{}, groot.NewImageNotFoundErr(err)
 		}
 
 		if strings.Contains(err.Error(), "malformed HTTP response") {
 			logger.Error("fetching-manifest-failed", err)
-			return Manifest{}, errors.New("This registry is insecure. To pull images from this registry, please use the --insecure-registry option.")
+			return Manifest{}, groot.NewInsecureDockerRegistryErr(err)
 		}
 
 		return Manifest{}, err
@@ -220,8 +221,9 @@ func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, imageURL *url.UR
 	if err != nil {
 		if strings.Contains(err.Error(), "malformed HTTP response") {
 			logger.Error("fetching-config-failed", err)
-			return specsv1.Image{}, errors.New("This registry is insecure. To pull images from this registry, please use the --insecure-registry option.")
+			return specsv1.Image{}, groot.NewInsecureDockerRegistryErr(err)
 		}
+
 		return specsv1.Image{}, fmt.Errorf("fetching config blob: %s", err)
 	}
 

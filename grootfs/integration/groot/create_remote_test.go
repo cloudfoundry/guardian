@@ -209,11 +209,12 @@ var _ = Describe("Create with remote images", func() {
 		})
 
 		It("fails to fetch the image", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", imageURL, "random-id")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
-			Eventually(sess).Should(gbytes.Say("This registry is insecure. To pull images from this registry, please use the --insecure-registry option"))
+			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+				ID:    "random-id",
+				Image: imageURL,
+			})
+
+			Eventually(err).Should(MatchError("This registry is insecure. To pull images from this registry, please use the --insecure-registry option."))
 		})
 
 		Context("when it's provided as a valid insecure registry", func() {
@@ -228,6 +229,17 @@ var _ = Describe("Create with remote images", func() {
 
 				Expect(fakeRegistry.RequestedBlobs()).To(HaveLen(3))
 			})
+		})
+	})
+
+	Context("when the image does not exist", func() {
+		It("returns a useful error", func() {
+			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+				ID:    "random-id",
+				Image: "docker:///cfgaren/sorry-not-here",
+			})
+
+			Eventually(err).Should(MatchError("Image does not exist or you do not have permissions to see it."))
 		})
 	})
 

@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	errorspkg "github.com/pkg/errors"
 )
 
 //go:generate counterfeiter . VolumeDriver
@@ -70,7 +71,7 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 
 	imageInfo, err := p.fetcher.ImageInfo(logger, spec.ImageSrc)
 	if err != nil {
-		return groot.BundleSpec{}, fmt.Errorf("fetching list of digests: %s", err)
+		return groot.BundleSpec{}, errorspkg.Wrap(err, "fetching list of digests")
 	}
 	logger.Debug("fetched-layers-digests", lager.Data{"digests": imageInfo.LayersDigest})
 

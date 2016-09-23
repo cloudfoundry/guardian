@@ -42,10 +42,12 @@ func (c *CreateCmd) Run() (string, error) {
 
 	return c.wait(errChan, func(runErr error) (string, error) {
 		if runErr != nil {
-			errStr := fmt.Sprintf("command existed with %s", runErr)
+			var errStr string
 			stdout := strings.TrimSpace(stdoutBuffer.String())
 			if stdout != "" {
-				errStr = errStr + fmt.Sprintf(": %s", stdout)
+				errStr = stdout
+			} else {
+				errStr = fmt.Sprintf("command existed with %s", runErr)
 			}
 
 			return "", errors.New(errStr)

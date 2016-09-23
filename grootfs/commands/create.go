@@ -17,6 +17,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
+	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -123,7 +124,9 @@ var CreateCommand = cli.Command{
 		})
 		if err != nil {
 			logger.Error("creating", err)
-			return cli.NewExitError(err.Error(), 1)
+
+			humanizedError := tryHumanize(err)
+			return cli.NewExitError(humanizedError, 1)
 		}
 
 		fmt.Println(bundle.Path())
@@ -144,4 +147,15 @@ func parseIDMappings(args []string) ([]grootpkg.IDMappingSpec, error) {
 	}
 
 	return mappings, nil
+}
+
+func tryHumanize(err error) string {
+	switch errorspkg.Cause(err).(type) {
+	case *grootpkg.InsecureDockerRegistryErr:
+		return "This registry is insecure. To pull images from this registry, please use the --insecure-registry option."
+	case *grootpkg.ImageNotFoundErr:
+		return "Image does not exist or you do not have permissions to see it."
+	default:
+		return err.Error()
+	}
 }
