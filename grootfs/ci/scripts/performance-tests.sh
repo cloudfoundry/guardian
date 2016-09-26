@@ -16,6 +16,10 @@ cd $grootfs_bench_path
 install_dependencies
 make
 
-echo "I AM GROOT" | grootsay
+perf_test_image="docker:///busybox"
+# warm the cache
+../grootfs/grootfs --store /mnt/btrfs create $perf_test_image my-warm-box > /dev/null
 
-./grootfs-bench --gbin ../grootfs/grootfs --store /mnt/btrfs --concurrency 5
+echo "RUNNING PERFORMANCE TESTS, STAND BY..." | grootsay
+
+./grootfs-bench --gbin ../grootfs/grootfs --store /mnt/btrfs --concurrency 5 --image $perf_test_image --nospin $@
