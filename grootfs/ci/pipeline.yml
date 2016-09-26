@@ -104,6 +104,19 @@ jobs:
     params:
       repos:
       - grootfs-git-repo
+
+- name: performance-tests
+  public: true
+  plan:
+  - aggregate:
+    - get: grootfs-git-repo
+      trigger: true
+      passed: [grootfs]
+    - get: grootfs-bench-git-repo
+  - task: benchmark-stuff
+    privileged: true
+    file: grootfs-git-repo/ci/tasks/performance-tests.yml
+
 - name: create-release
   plan:
   - aggregate:

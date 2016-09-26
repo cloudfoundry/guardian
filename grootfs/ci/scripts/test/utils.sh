@@ -53,20 +53,22 @@ sudo_setup_drax() {
 }
 
 move_to_gopath() {
-  grootfsPath=/go/src/code.cloudfoundry.org/grootfs
+  thing_i_want_moved=$1
+  dest_path=/go/src/code.cloudfoundry.org/${thing_i_want_moved}
 
   # remove the original grootfs package path
-  rmdir $grootfsPath
+  [ -d $dest_path ] && rmdir $dest_path
 
   # link the uploaded source (from build) to the GOPATH
-  ln -s $PWD/src/code.cloudfoundry.org/grootfs $grootfsPath
-
-  # get there...
-  cd $grootfsPath
+  ln -s $PWD/src/code.cloudfoundry.org/${thing_i_want_moved} $dest_path
 
   # because the uploaded source is owned by the user that runs fly, we need
   # to chown
-  sudo chown -R groot:groot .
+  pushd $dest_path
+    sudo chown -R groot:groot .
+  popd
+
+  echo $dest_path
 }
 
 install_dependencies() {
