@@ -2,11 +2,11 @@
 
 # Default fly target
 [ -z $FLY_TARGET ] && FLY_TARGET="lite"
-[ -z $FLY_ARGS ] && FLY_ARGS="-x -p"
+[ -z $FLY_ARGS ] && FLY_ARGS="-p"
 
 RED=1
 GREEN=2
-function print_message {
+print_message() {
   message=$1
   colour=$2
   printf "\r\033[00;3${colour}m[${message}]\033[0m\n"

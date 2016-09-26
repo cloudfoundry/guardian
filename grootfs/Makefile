@@ -12,16 +12,23 @@ all:
 
 help:
 	@echo '    all ................................. builds the grootfs cli'
+	@echo '    deps ................................ installs dependencies'
+	@echo '    update-deps ......................... updates dependencies'
 	@echo '    test ................................ runs tests locally'
-	@echo '    concourse-groot-test ................ runs groot tests in concourse-lite'
-	@echo '    concourse-root-test ................. runs root tests in concourse-lite'
 	@echo '    concourse-test ...................... runs tests in concourse-lite'
 	@echo '    go-vet .............................. runs go vet in grootfs source code'
 	@echo '    concourse-go-vet .................... runs go vet in concourse-lite'
 	@echo '    go-generate ......................... runs go generate in grootfs source code'
 	@echo '    image ............................... builds a docker image'
 	@echo '    push-image .......................... pushes image to docker-hub'
-	@echo '    update-deps ......................... update the depedencies'
+
+###### Dependencies ###########################################################
+
+deps:
+	glide install
+
+update-deps:
+	glide update
 
 ###### Testing ################################################################
 
@@ -49,8 +56,3 @@ image:
 
 push-image:
 	docker push cfgarden/grootfs-ci
-
-###### Depedency management ###################################################
-
-update-deps:
-	./hack/update-deps

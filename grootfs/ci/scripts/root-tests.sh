@@ -1,11 +1,12 @@
 #!/bin/bash
 set -e
 
-echo "I AM ROOT" | grootsay
-
 source $(dirname $BASH_SOURCE)/test/utils.sh
 move_to_gopath
+install_dependencies
 mount_btrfs
+
+echo "I AM ROOT" | grootsay
 
 args=$@
 [ "$args" == "" ] && args="-r integration/root"

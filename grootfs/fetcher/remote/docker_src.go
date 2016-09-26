@@ -47,7 +47,7 @@ func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifes
 			return Manifest{}, groot.NewImageNotFoundErr(err)
 		}
 
-		if strings.Contains(err.Error(), "malformed HTTP response") {
+		if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
 			logger.Error("fetching-manifest-failed", err)
 			return Manifest{}, groot.NewInsecureDockerRegistryErr(err)
 		}
@@ -219,7 +219,7 @@ func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, imageURL *url.UR
 
 	stream, _, err := imgSrc.GetBlob(configDigest)
 	if err != nil {
-		if strings.Contains(err.Error(), "malformed HTTP response") {
+		if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
 			logger.Error("fetching-config-failed", err)
 			return specsv1.Image{}, groot.NewInsecureDockerRegistryErr(err)
 		}

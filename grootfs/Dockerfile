@@ -25,8 +25,8 @@ ENV GOPATH=/go
 ENV PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 WORKDIR /go/src/code.cloudfoundry.org/grootfs
 
-## Install Ginkgo
+## Install stuff
 RUN go get github.com/onsi/ginkgo/ginkgo
 RUN go install github.com/onsi/ginkgo/ginkgo
-
+RUN go get github.com/Masterminds/glide
 RUN go get github.com/fouralarmfire/grootsay

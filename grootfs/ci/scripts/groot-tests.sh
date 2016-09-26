@@ -1,15 +1,12 @@
 #!/bin/bash
 set -e
 
-echo "I AM GROOT" | grootsay
-
 source $(dirname $BASH_SOURCE)/test/utils.sh
-
-# Setup groot package
 move_to_gopath
-
-# Setup BTRFS
+install_dependencies
 sudo_mount_btrfs
+
+echo "I AM GROOT" | grootsay
 
 # Setup drax
 drax_path=$(compile_drax)
