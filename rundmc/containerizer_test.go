@@ -329,12 +329,6 @@ var _ = Describe("Rundmc", func() {
 				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
 				Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(0))
 			})
-
-			It("should destroy the depot directory", func() {
-				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-				Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
-				Expect(arg2(fakeDepot.DestroyArgsForCall(0))).To(Equal("some-handle"))
-			})
 		})
 
 		Context("when in a state that should result in a delete", func() {
@@ -345,14 +339,6 @@ var _ = Describe("Rundmc", func() {
 					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
 					Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(1))
 					Expect(arg2(fakeOCIRuntime.DeleteArgsForCall(0))).To(Equal("some-handle"))
-				})
-
-				Context("when delete succeeds", func() {
-					It("destroys the depot directory", func() {
-						Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
-						Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
-						Expect(arg2(fakeDepot.DestroyArgsForCall(0))).To(Equal("some-handle"))
-					})
 				})
 
 				Context("when delete fails", func() {
@@ -397,6 +383,25 @@ var _ = Describe("Rundmc", func() {
 			It("should not run delete", func() {
 				Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
 				Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(0))
+			})
+		})
+	})
+
+	Describe("RemoveBundle", func() {
+		It("removes the bundle from the depot", func() {
+			Expect(containerizer.RemoveBundle(logger, "some-handle")).To(Succeed())
+			Expect(fakeDepot.DestroyCallCount()).To(Equal(1))
+			_, handle := fakeDepot.DestroyArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+		})
+
+		Context("when removing bundle from depot fails", func() {
+			BeforeEach(func() {
+				fakeDepot.DestroyReturns(errors.New("destroy failed"))
+			})
+
+			It("returns an error", func() {
+				Expect(containerizer.RemoveBundle(logger, "some-handle")).To(MatchError(ContainSubstring("destroy failed")))
 			})
 		})
 	})

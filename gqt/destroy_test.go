@@ -2,7 +2,9 @@ package gqt_test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -17,11 +19,16 @@ import (
 
 var _ = Describe("Destroying a Container", func() {
 	var (
+		args   []string
 		client *runner.RunningGarden
 	)
 
 	BeforeEach(func() {
-		client = startGarden()
+		args = []string{}
+	})
+
+	JustBeforeEach(func() {
+		client = startGarden(args...)
 	})
 
 	AfterEach(func() {
@@ -96,6 +103,55 @@ var _ = Describe("Destroying a Container", func() {
 		Eventually(killExitCode).Should(Equal(1))
 	})
 
+	Context("when container destroy is interrupted half way through", func() {
+		// simulate this scenario by starting guardian with a network plugin which
+		// kill -9s <guardian pid> on 'down' (i.e. half way through a container delete)
+		// then, start the guardian server backup without the plugin, and ensuring that
+		// --destroy-containers-on-startup=false
+		var netPluginArgs []string
+
+		BeforeEach(func() {
+			tmpDir, err := ioutil.TempDir("", "netplugtest")
+			Expect(err).NotTo(HaveOccurred())
+
+			argsFile := path.Join(tmpDir, "args.log")
+			stdinFile := path.Join(tmpDir, "stdin.log")
+
+			pluginReturn := `{"properties":{
+					"garden.network.container-ip":"10.255.10.10",
+					"garden.network.host-ip":"255.255.255.255"
+				}}`
+
+			netPluginArgs = []string{
+				"--properties-path", path.Join(tmpDir, "props.json"),
+				"--network-plugin", testNetPluginBin,
+				"--network-plugin-extra-arg", argsFile,
+				"--network-plugin-extra-arg", stdinFile,
+				"--network-plugin-extra-arg", pluginReturn,
+			}
+
+			args = append(netPluginArgs, []string{"--network-plugin-extra-arg", "kill-garden-server"}...)
+		})
+
+		It("leaves the bundle dir in the depot", func() {
+			container, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(client.Destroy(container.Handle())).NotTo(Succeed())
+
+			// start guardian back up with the 'kill -9 <guardian pid> on down' behaviour disabled
+			client = startGarden(netPluginArgs...)
+
+			bundleDir := filepath.Join(client.DepotDir, container.Handle())
+			Expect(bundleDir).To(BeADirectory())
+
+			Expect(client.Destroy(container.Handle())).To(Succeed())
+
+			bundleDir = filepath.Join(client.DepotDir, container.Handle())
+			Expect(bundleDir).NotTo(BeADirectory())
+		})
+	})
+
 	Describe("networking resources", func() {
 		var (
 			container         garden.Container
@@ -104,7 +160,7 @@ var _ = Describe("Destroying a Container", func() {
 			networkBridgeName string
 		)
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			var err error
 
 			networkSpec = fmt.Sprintf("177.100.%d.0/24", GinkgoParallelNode())
@@ -160,7 +216,7 @@ var _ = Describe("Destroying a Container", func() {
 			Context("and there was more than one containers in the same subnet", func() {
 				var otherContainer garden.Container
 
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					var err error
 
 					otherContainer, err = client.Create(garden.ContainerSpec{

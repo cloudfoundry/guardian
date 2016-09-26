@@ -44,6 +44,7 @@ type Containerizer interface {
 	Attach(log lager.Logger, handle string, processGUID string, io garden.ProcessIO) (garden.Process, error)
 	Stop(log lager.Logger, handle string, kill bool) error
 	Destroy(log lager.Logger, handle string) error
+	RemoveBundle(log lager.Logger, handle string) error
 
 	Info(log lager.Logger, handle string) (ActualContainerSpec, error)
 	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
@@ -316,7 +317,11 @@ func (g *Gardener) destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	return g.PropertyManager.DestroyKeySpace(handle)
+	if err := g.PropertyManager.DestroyKeySpace(handle); err != nil {
+		return err
+	}
+
+	return g.Containerizer.RemoveBundle(g.Logger, handle)
 }
 
 func (g *Gardener) Stop() {}

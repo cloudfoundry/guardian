@@ -758,7 +758,7 @@ var _ = Describe("Gardener", func() {
 		})
 	})
 
-	Describe("destroying a container", func() {
+	Describe("Destroy", func() {
 		It("returns garden.ContainreNotFoundError if the container handle isn't in the depot", func() {
 			containerizer.HandlesReturns([]string{}, nil)
 			Expect(gdnr.Destroy("cake!")).To(MatchError(garden.ContainerNotFoundError{Handle: "cake!"}))
@@ -793,6 +793,12 @@ var _ = Describe("Gardener", func() {
 			Expect(propertyManager.DestroyKeySpaceArgsForCall(0)).To(Equal("some-handle"))
 		})
 
+		It("asks the containerizer to remove the bundle from the depot", func() {
+			Expect(gdnr.Destroy("some-handle")).To(Succeed())
+			_, handle := containerizer.RemoveBundleArgsForCall(0)
+			Expect(handle).To(Equal("some-handle"))
+		})
+
 		Context("when containerizer fails to destroy the container", func() {
 			BeforeEach(func() {
 				containerizer.DestroyReturns(errors.New("containerized deletion failed"))
@@ -808,6 +814,17 @@ var _ = Describe("Gardener", func() {
 				Expect(err).To(HaveOccurred())
 
 				Expect(networker.DestroyCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when containerizer fails to remove the bundle from the depot", func() {
+			BeforeEach(func() {
+				containerizer.DestroyReturns(errors.New("containerized deletion failed"))
+			})
+
+			It("return the error", func() {
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(MatchError("containerized deletion failed"))
 			})
 		})
 
@@ -837,6 +854,28 @@ var _ = Describe("Gardener", func() {
 			It("returns the error", func() {
 				err := gdnr.Destroy("some-handle")
 				Expect(err).To(MatchError("rootfs deletion failed"))
+			})
+		})
+
+		Context("when destroying key space fails", func() {
+			BeforeEach(func() {
+				propertyManager.DestroyKeySpaceReturns(errors.New("key space destruction failed"))
+			})
+
+			It("returns the error", func() {
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(MatchError("key space destruction failed"))
+			})
+		})
+
+		Context("when containerizer fails to remove the bundle from the depot", func() {
+			BeforeEach(func() {
+				containerizer.RemoveBundleReturns(errors.New("bundle removal failed"))
+			})
+
+			It("return the error", func() {
+				err := gdnr.Destroy("some-handle")
+				Expect(err).To(MatchError("bundle removal failed"))
 			})
 		})
 	})

@@ -91,6 +91,15 @@ type FakeContainerizer struct {
 	destroyReturns struct {
 		result1 error
 	}
+	RemoveBundleStub        func(log lager.Logger, handle string) error
+	removeBundleMutex       sync.RWMutex
+	removeBundleArgsForCall []struct {
+		log    lager.Logger
+		handle string
+	}
+	removeBundleReturns struct {
+		result1 error
+	}
 	InfoStub        func(log lager.Logger, handle string) (gardener.ActualContainerSpec, error)
 	infoMutex       sync.RWMutex
 	infoArgsForCall []struct {
@@ -389,6 +398,40 @@ func (fake *FakeContainerizer) DestroyReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeContainerizer) RemoveBundle(log lager.Logger, handle string) error {
+	fake.removeBundleMutex.Lock()
+	fake.removeBundleArgsForCall = append(fake.removeBundleArgsForCall, struct {
+		log    lager.Logger
+		handle string
+	}{log, handle})
+	fake.recordInvocation("RemoveBundle", []interface{}{log, handle})
+	fake.removeBundleMutex.Unlock()
+	if fake.RemoveBundleStub != nil {
+		return fake.RemoveBundleStub(log, handle)
+	} else {
+		return fake.removeBundleReturns.result1
+	}
+}
+
+func (fake *FakeContainerizer) RemoveBundleCallCount() int {
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
+	return len(fake.removeBundleArgsForCall)
+}
+
+func (fake *FakeContainerizer) RemoveBundleArgsForCall(i int) (lager.Logger, string) {
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
+	return fake.removeBundleArgsForCall[i].log, fake.removeBundleArgsForCall[i].handle
+}
+
+func (fake *FakeContainerizer) RemoveBundleReturns(result1 error) {
+	fake.RemoveBundleStub = nil
+	fake.removeBundleReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeContainerizer) Info(log lager.Logger, handle string) (gardener.ActualContainerSpec, error) {
 	fake.infoMutex.Lock()
 	fake.infoArgsForCall = append(fake.infoArgsForCall, struct {
@@ -478,6 +521,8 @@ func (fake *FakeContainerizer) Invocations() map[string][][]interface{} {
 	defer fake.stopMutex.RUnlock()
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
+	fake.removeBundleMutex.RLock()
+	defer fake.removeBundleMutex.RUnlock()
 	fake.infoMutex.RLock()
 	defer fake.infoMutex.RUnlock()
 	fake.metricsMutex.RLock()

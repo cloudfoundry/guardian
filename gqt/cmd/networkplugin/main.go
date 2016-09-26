@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -23,6 +24,21 @@ func main() {
 	}
 	if err := ioutil.WriteFile(os.Args[2], input, 0700); err != nil {
 		panic(err)
+	}
+
+	if os.Args[4] == "kill-garden-server" {
+		if os.Args[6] == "down" {
+			cmd := exec.Command("pidof", "guardian")
+			pid, err := cmd.Output()
+			if err != nil {
+				panic(err)
+			}
+
+			cmd = exec.Command("kill", "-9", strings.TrimSpace(string(pid)))
+			if err := cmd.Run(); err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	if strings.HasPrefix(os.Args[3], "--") {

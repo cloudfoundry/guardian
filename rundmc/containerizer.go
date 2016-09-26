@@ -229,7 +229,7 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 	state, err := c.runtime.State(log, handle)
 	if err != nil {
 		log.Info("state-failed-skipping-delete", lager.Data{"error": err.Error()})
-		return c.depot.Destroy(log, handle)
+		return nil
 	}
 
 	log.Info("state", lager.Data{
@@ -243,6 +243,10 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 		}
 	}
 
+	return nil
+}
+
+func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
 	return c.depot.Destroy(log, handle)
 }
 
