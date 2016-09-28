@@ -13,6 +13,9 @@ inputs:
   - name: grootfs-bench-git-repo
     path: src/code.cloudfoundry.org/grootfs-bench
 
+params:
+  DATADOG_API_KEY:
+
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/performance-tests.sh
   user: groot

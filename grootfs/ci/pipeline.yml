@@ -59,6 +59,11 @@ resources:
     username: {{dockerhub-username}}
     password: {{dockerhub-password}}
 
+- name: daily-timer
+  type: time
+  source:
+    interval: 24h
+
 jobs:
 - name: grootfs
   public: true
@@ -112,10 +117,14 @@ jobs:
     - get: grootfs-git-repo
       trigger: true
       passed: [grootfs]
+    - get: daily-timer
+      trigger: true
     - get: grootfs-bench-git-repo
   - task: benchmark-stuff
     privileged: true
     file: grootfs-git-repo/ci/tasks/performance-tests.yml
+    params:
+      DATADOG_API_KEY: {{datadog-api-key}}
 
 - name: create-release
   plan:
