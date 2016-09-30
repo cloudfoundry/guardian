@@ -140,7 +140,8 @@ type GuardianCommand struct {
 		DebugBindIP   IPFlag `long:"debug-bind-ip"                   description:"Bind the debug server on the given IP."`
 		DebugBindPort uint16 `long:"debug-bind-port" default:"17013" description:"Bind the debug server to the given port."`
 
-		Tag string `long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
+		Tag      string `long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
+		Rootless bool   `long:"rootless" description:"Run server in rootless mode."`
 	} `group:"Server Configuration"`
 
 	Containers struct {
@@ -235,6 +236,10 @@ func (cmd *GuardianCommand) Execute([]string) error {
 func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
 
+	if cmd.Server.Rootless {
+		logger.Info("rootless-mode-on")
+	}
+
 	if err := exec.Command("modprobe", "aufs").Run(); err != nil {
 		logger.Error("unable-to-load-aufs", err)
 	}
@@ -269,15 +274,23 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 		restorer = &gardener.NoopRestorer{}
 	}
 
-	volumeCreator := volplugin.NewCompositeVolumeCreator(
-		volplugin.NewGrootfsVC(cmd.Bin.OCI, cmd.Graph.Dir.Path(), linux_command_runner.New()),
-		cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
-		propManager,
-	)
+	var volumeCreator gardener.VolumeCreator = nil
+	if !cmd.Server.Rootless {
+		volumeCreator = volplugin.NewCompositeVolumeCreator(
+			volplugin.NewGrootfsVC(cmd.Bin.OCI, cmd.Graph.Dir.Path(), linux_command_runner.New()),
+			cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
+			propManager,
+		)
+	}
+
+	starters := []gardener.Starter{}
+	if !cmd.Server.Rootless {
+		starters = []gardener.Starter{cmd.wireRunDMCStarter(logger), iptablesStarter}
+	}
 
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
-		Starters:        []gardener.Starter{cmd.wireRunDMCStarter(logger), iptablesStarter},
+		Starters:        starters,
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
 		Networker:       networker,
 		VolumeCreator:   volumeCreator,
