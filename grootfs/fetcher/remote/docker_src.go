@@ -11,13 +11,13 @@ import (
 	"os"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	"github.com/Sirupsen/logrus"
 	"github.com/containers/image/docker"
 	manifestpkg "github.com/containers/image/manifest"
 	"github.com/containers/image/types"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	errorspkg "github.com/pkg/errors"
 )
 
 type DockerSource struct {
@@ -42,17 +42,8 @@ func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifes
 
 	contents, mimeType, err := img.Manifest()
 	if err != nil {
-		if strings.Contains(err.Error(), "error fetching manifest: status code:") {
-			logger.Error("fetching-manifest-failed", err)
-			return Manifest{}, groot.NewImageNotFoundErr(err)
-		}
-
-		if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
-			logger.Error("fetching-manifest-failed", err)
-			return Manifest{}, groot.NewInsecureDockerRegistryErr(err)
-		}
-
-		return Manifest{}, err
+		logger.Error("fetching-manifest-failed", err)
+		return Manifest{}, errorspkg.Wrap(err, "fetching manifest")
 	}
 
 	var manifest Manifest
@@ -219,12 +210,8 @@ func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, imageURL *url.UR
 
 	stream, _, err := imgSrc.GetBlob(configDigest)
 	if err != nil {
-		if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
-			logger.Error("fetching-config-failed", err)
-			return specsv1.Image{}, groot.NewInsecureDockerRegistryErr(err)
-		}
-
-		return specsv1.Image{}, fmt.Errorf("fetching config blob: %s", err)
+		logger.Error("fetching-config-failed", err)
+		return specsv1.Image{}, errorspkg.Wrap(err, "fetching config blob")
 	}
 
 	var config specsv1.Image

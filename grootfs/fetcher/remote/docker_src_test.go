@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
-	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -123,8 +122,7 @@ var _ = Describe("Docker source", func() {
 
 			It("wraps the containers/image with an useful error", func() {
 				_, err := dockerSrc.Manifest(logger, imageURL)
-
-				Expect(err).To(testhelpers.BeErrorType(groot.ImageNotFoundErr{}))
+				Expect(err.Error()).To(MatchRegexp("^fetching manifest"))
 			})
 
 			It("logs the original error message", func() {
@@ -254,16 +252,14 @@ var _ = Describe("Docker source", func() {
 			fakeRegistry.Stop()
 		})
 
-		It("fails to fetch the manifest with the correct error message", func() {
+		It("fails to fetch the manifest", func() {
 			_, err := dockerSrc.Manifest(logger, imageURL)
-
-			Expect(err).To(testhelpers.BeErrorType(groot.InsecureDockerRegistryErr{}))
+			Expect(err).To(HaveOccurred())
 		})
 
 		It("fails to fetch the Config", func() {
 			_, err := dockerSrc.Config(logger, imageURL, manifest)
-
-			Expect(err).To(testhelpers.BeErrorType(groot.InsecureDockerRegistryErr{}))
+			Expect(err).To(HaveOccurred())
 		})
 
 		Context("when the private registry is whitelisted", func() {

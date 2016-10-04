@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net/url"
@@ -17,6 +18,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
+	"github.com/containers/image/docker"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -150,12 +152,14 @@ func parseIDMappings(args []string) ([]grootpkg.IDMappingSpec, error) {
 }
 
 func tryHumanize(err error) string {
-	switch errorspkg.Cause(err).(type) {
-	case *grootpkg.InsecureDockerRegistryErr:
-		return "This registry is insecure. To pull images from this registry, please use the --insecure-registry option."
-	case *grootpkg.ImageNotFoundErr:
+	switch e := errorspkg.Cause(err).(type) {
+	case *url.Error:
+		if _, ok := e.Err.(x509.UnknownAuthorityError); ok {
+			return "This registry is insecure. To pull images from this registry, please use the --insecure-registry option."
+		}
+	case docker.ErrFetchManifest:
 		return "Image does not exist or you do not have permissions to see it."
-	default:
-		return err.Error()
 	}
+
+	return err.Error()
 }
