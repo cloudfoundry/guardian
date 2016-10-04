@@ -74,5 +74,6 @@ move_to_gopath() {
 install_dependencies() {
   if ! [ -d vendor ]; then
     glide install
+    mv vendor/github.com/albertoleal/ vendor/github.com/containers
   fi
 }
