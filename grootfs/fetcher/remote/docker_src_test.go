@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	errorspkg "github.com/pkg/errors"
 )
 
 var _ = Describe("Docker source", func() {
@@ -259,7 +260,9 @@ var _ = Describe("Docker source", func() {
 
 		It("fails to fetch the Config", func() {
 			_, err := dockerSrc.Config(logger, imageURL, manifest)
-			Expect(err).To(HaveOccurred())
+			e := errorspkg.Cause(err)
+			_, ok := e.(*url.Error)
+			Expect(ok).To(BeTrue())
 		})
 
 		Context("when the private registry is whitelisted", func() {
