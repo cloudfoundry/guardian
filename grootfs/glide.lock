@@ -1,5 +1,5 @@
-hash: 7c2f47bbe81ea15ec0c022a2bfc95127f93584823fddde7be28c2c9b46fe8aab
-updated: 2016-09-23T16:41:03.97273607+01:00
+hash: 0c0fce61f91d4692a4330134e2a15a1856e5d47358b94bb7a7b0042029e6dfd7
+updated: 2016-10-04T16:57:24.007198507+01:00
 imports:
 - name: code.cloudfoundry.org/commandrunner
   version: 9e33dc88ba33c6c4bbe6901485b3bb9721021c33
@@ -14,8 +14,8 @@ imports:
   - lagertest
 - name: github.com/cloudfoundry-incubator/candiedyaml
   version: 99c3df83b51532e3615f851d8c2dbb638f5313bf
-- name: github.com/albertoleal/image
-  version: dc298f6c53248dcf39c3c0b0c7a4af13bc53eddd
+- name: github.com/containers/image
+  version: f0e41ab27b9d280a6e9a151fa97ea41b01cb62e8
   subpackages:
   - docker
   - docker/policyconfiguration

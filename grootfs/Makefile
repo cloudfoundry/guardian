@@ -26,11 +26,9 @@ help:
 
 deps:
 	glide install
-	mv vendor/github.com/albertoleal/ vendor/github.com/containers
 
 update-deps:
 	glide update
-	mv vendor/github.com/albertoleal/ vendor/github.com/containers
 
 ###### Testing ################################################################
 

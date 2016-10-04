@@ -7,11 +7,6 @@ import:
   subpackages:
   - chug
 - package: github.com/Sirupsen/logrus
-- package: github.com/albertoleal/image
-  subpackages:
-  - docker
-  - manifest
-  - types
 - package: github.com/docker/docker
   version: 8eab29edd820017901796eb60d4bea28d760f16f
   subpackages:
@@ -29,5 +24,6 @@ import:
   - specs-go/v1
 - package: github.com/pkg/errors
 - package: github.com/urfave/cli
+- package: github.com/containers/image
 testImport:
 - package: github.com/st3v/glager
