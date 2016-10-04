@@ -7,7 +7,7 @@ import:
   subpackages:
   - chug
 - package: github.com/Sirupsen/logrus
-- package: github.com/containers/image
+- package: github.com/albertoleal/image
   subpackages:
   - docker
   - manifest

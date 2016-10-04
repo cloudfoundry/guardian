@@ -14,8 +14,8 @@ imports:
   - lagertest
 - name: github.com/cloudfoundry-incubator/candiedyaml
   version: 99c3df83b51532e3615f851d8c2dbb638f5313bf
-- name: github.com/containers/image
-  version: e2944685ef5d2315c255b61fe3399a2f204dbb06
+- name: github.com/albertoleal/image
+  version: dc298f6c53248dcf39c3c0b0c7a4af13bc53eddd
   subpackages:
   - docker
   - docker/policyconfiguration
