@@ -35,7 +35,7 @@ var DeleteCommand = cli.Command{
 
 		err := groot.Delete(logger, id)
 		if err != nil {
-			logger.Error("deleting-bundle", err)
+			logger.Error("deleting-bundle-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 

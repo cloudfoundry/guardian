@@ -145,6 +145,9 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 }
 
 func (g *Groot) Delete(logger lager.Logger, id string) error {
+	logger = logger.Session("groot-deleting", lager.Data{"bundleID": id})
+	logger.Info("start")
+	defer logger.Info("end")
 	return g.bundler.Destroy(logger, id)
 }
 

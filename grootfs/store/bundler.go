@@ -99,12 +99,13 @@ func (b *Bundler) Create(logger lager.Logger, id string, spec groot.BundleSpec) 
 }
 
 func (b *Bundler) Destroy(logger lager.Logger, id string) error {
-	logger = logger.Session("delete-bundle", lager.Data{"storePath": b.storePath, "id": id})
+	logger = logger.Session("deleting-bundle", lager.Data{"storePath": b.storePath, "id": id})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	if ok, err := b.Exists(id); !ok {
-		return fmt.Errorf("bundle path not found: %s", err)
+		logger.Error("checking-bundle-path-failed", err)
+		return fmt.Errorf("bundle not found: %s", id)
 	}
 
 	bundle := NewBundle(path.Join(b.storePath, BUNDLES_DIR_NAME, id))
@@ -120,7 +121,7 @@ func (b *Bundler) Destroy(logger lager.Logger, id string) error {
 }
 
 func (b *Bundler) Metrics(logger lager.Logger, id string) (groot.VolumeMetrics, error) {
-	logger = logger.Session("bundle-metrics", lager.Data{"id": id})
+	logger = logger.Session("fetching-metrics", lager.Data{"id": id})
 	logger.Info("start")
 	defer logger.Info("end")
 

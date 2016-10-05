@@ -285,7 +285,7 @@ var _ = Describe("Bundle", func() {
 		Context("when bundle does not exist", func() {
 			It("returns an error", func() {
 				err := bundler.Destroy(logger, "cake")
-				Expect(err).To(MatchError(ContainSubstring("bundle path not found")))
+				Expect(err).To(MatchError(ContainSubstring("bundle not found")))
 			})
 		})
 
