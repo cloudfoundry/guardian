@@ -116,6 +116,13 @@ jobs:
   - task: benchmark-stuff
     privileged: true
     file: grootfs-git-repo/ci/tasks/performance-tests.yml
+    on_failure:
+      put: slack-alert
+      params:
+        username: Thanos
+        icon_url: http://www.comicsblend.com/wp-content/uploads/2013/04/thanos.jpg
+        channel: "#grootfs"
+        text: "<!subteam^S1U0HSJ9E|grootfsteam>: You don't need metrics for a thing that doesn't even work! http://grootfs.ci.cf-app.com/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
     params:
       DATADOG_API_KEY: {{datadog-api-key}}
 
