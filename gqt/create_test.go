@@ -433,6 +433,28 @@ var _ = Describe("Creating a Container", func() {
 		// Properties used to be set after containers were available from lookup
 		Expect(lookupContainer.Properties()).To(HaveKeyWithValue("somename", "somevalue"))
 	})
+
+	Context("create more containers than the maxkeyring limit", func() {
+		BeforeEach(func() {
+			Expect(ioutil.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("10"), 0644)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(ioutil.WriteFile("/proc/sys/kernel/keys/maxkeys", []byte("200"), 0644)).To(Succeed())
+		})
+
+		It("works", func() {
+			containers := make([]garden.Container, 11)
+			for i := 0; i < 11; i++ {
+				c, err := client.Create(garden.ContainerSpec{})
+				Expect(err).ToNot(HaveOccurred())
+				containers[i] = c
+			}
+			for i := 0; i < 11; i++ {
+				client.Destroy(containers[i].Handle())
+			}
+		})
+	})
 })
 
 func initProcessPID(handle string) int {

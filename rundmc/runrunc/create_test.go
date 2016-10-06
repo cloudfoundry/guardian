@@ -63,7 +63,7 @@ var _ = Describe("Create", func() {
 
 		Expect(commandRunner.ExecutedCommands()[0].Path).To(Equal("funC"))
 		Expect(commandRunner.ExecutedCommands()[0].Args).To(ConsistOf(
-			"funC", "--debug", "--log", logFilePath, "create", "--bundle", bundlePath, "--pid-file", pidFilePath, "some-id",
+			"funC", "--debug", "--log", logFilePath, "create", "--no-new-keyring", "--bundle", bundlePath, "--pid-file", pidFilePath, "some-id",
 		))
 	})
 
