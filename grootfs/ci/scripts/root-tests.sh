@@ -6,7 +6,6 @@ mount_btrfs
 
 dest_path=$(move_to_gopath grootfs)
 cd $dest_path
-install_dependencies
 
 echo "I AM ROOT" | grootsay
 
