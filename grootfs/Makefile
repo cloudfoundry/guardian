@@ -25,10 +25,10 @@ help:
 ###### Dependencies ###########################################################
 
 deps:
-	glide install
+	git submodule update --init --recursive
 
 update-deps:
-	glide update
+	echo "coming soon"
 
 ###### Testing ################################################################
 

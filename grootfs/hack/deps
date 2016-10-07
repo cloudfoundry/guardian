@@ -1,0 +1,144 @@
+#!/bin/bash -e
+
+RED=1
+GREEN=2
+print_message() {
+  message=$1
+  colour=$2
+  printf "\r\033[00;3${colour}m[${message}]\033[0m\n"
+}
+
+usage() {
+  colour=$1
+  print_message "Usage:" $colour
+  print_message "deps --- update all dependencies" $colour
+  print_message "deps -a <url> --- add a new dependency" $colour
+  print_message "deps -d <url> --- remove a dependency" $colour
+  print_message "deps -h --- print help menu" $colour
+}
+
+add_dep() {
+  dep=$1
+  print_message "ADDING DEPENDENCY $dep" $GREEN
+
+  check_clean_status
+  add_submodule $dep
+  commit_changes Add $dep
+
+  print_message "DONE" $GREEN
+}
+
+remove_dep() {
+  dep=$1
+  print_message "DELETING DEPENDENCY $dep" $GREEN
+
+  check_clean_status
+  delete_submodule $dep
+  commit_changes Remove $dep
+
+  print_message "DONE" $GREEN
+}
+
+update_dep() {
+  dep=$1
+  print_message "UPDATING DEPENDENCY $dep" $GREEN
+
+  check_clean_status
+
+  pushd vendor/$dep
+    git checkout master
+    git pull -r
+  popd
+
+  commit_changes Update $dep
+  print_message "DONE" $GREEN
+  test_warning
+}
+
+check_clean_status() {
+  print_message "CHECKING IF STATUS IS CLEAN" $GREEN
+  if ! [ -z "$(git status --porcelain)" ]; then
+    print_message "STATUS NOT CLEAN, COMMIT FIRST" $RED
+    exit 1
+  else
+    print_message "STATUS CLEAN, CARRYING ON..." $GREEN
+  fi
+}
+
+commit_changes() {
+  print_message "COMMITTING CHANGES" $GREEN
+
+  action=$1
+  dep=$2
+  git add -A
+  git duet-commit -m "$action dependency $dep" &> /dev/null
+}
+
+convert_url() {
+  repoPath=$1
+  url_conversion_rules=("s/code.cloudfoundry.org/github.com\/cloudfoundry/" "s/golang.org\/x/go.googlesource.com/")
+
+  url="https://"$(echo $repoPath | sed -e 's/.\/vendor\///')
+  for rule in ${url_conversion_rules[@]}; do
+    url=$(echo $url | sed $rule)
+  done
+
+  echo $url
+}
+
+add_submodule() {
+  path=$1
+  url=$(convert_url $path)
+
+  git submodule add $url vendor/$path  &> /dev/null
+}
+
+update_gitmodules() {
+  dep=$1
+
+  echo "$(grep -v $dep .gitmodules)" > .gitmodules
+  echo "$(grep -v $dep .git/config)" > .git/config
+}
+
+delete_submodule() {
+  dep=$1
+
+  rm -rf vendor/$dep
+  rm -rf .git/modules/vendor/$dep
+  update_gitmodules $dep
+}
+
+test_warning() {
+  print_message "Dependencies updated." $RED
+  print_message "TEST NOW." $RED
+}
+
+while getopts "a:d:u:h" OPTION
+do
+  case $OPTION in
+    a)
+      add_dep $OPTARG
+      exit
+      ;;
+    d)
+      remove_dep $OPTARG
+      exit
+      ;;
+    u)
+      update_dep $OPTARG
+      exit
+      ;;
+    h)
+      usage $GREEN
+      exit
+      ;;
+    *)
+      usage $RED
+      exit
+      ;;
+  esac
+done
+
+if [ -z $OPTARG ]; then
+  usage $GREEN
+fi

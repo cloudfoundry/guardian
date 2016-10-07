@@ -1,0 +1,69 @@
+[submodule "vendor/code.cloudfoundry.org/commandrunner"]
+	path = vendor/code.cloudfoundry.org/commandrunner
+	url = git@github.com:cloudfoundry/commandrunner
+[submodule "vendor/code.cloudfoundry.org/lager"]
+	path = vendor/code.cloudfoundry.org/lager
+	url = git@github.com:cloudfoundry/lager
+[submodule "vendor/github.com/Sirupsen/logrus"]
+	path = vendor/github.com/Sirupsen/logrus
+	url = git@github.com:Sirupsen/logrus
+[submodule "vendor/github.com/containers/image"]
+	path = vendor/github.com/containers/image
+	url = git@github.com:containers/image
+[submodule "vendor/github.com/docker/docker"]
+	path = vendor/github.com/docker/docker
+	url = git@github.com:docker/docker
+[submodule "vendor/github.com/docker/go-units"]
+	path = vendor/github.com/docker/go-units
+	url = git@github.com:docker/go-units
+[submodule "vendor/github.com/onsi/ginkgo"]
+	path = vendor/github.com/onsi/ginkgo
+	url = git@github.com:onsi/ginkgo
+[submodule "vendor/github.com/onsi/gomega"]
+	path = vendor/github.com/onsi/gomega
+	url = git@github.com:onsi/gomega
+[submodule "vendor/github.com/opencontainers/image-spec"]
+	path = vendor/github.com/opencontainers/image-spec
+	url = git@github.com:opencontainers/image-spec
+[submodule "vendor/github.com/pkg/errors"]
+	path = vendor/github.com/pkg/errors
+	url = git@github.com:pkg/errors
+[submodule "vendor/github.com/urfave/cli"]
+	path = vendor/github.com/urfave/cli
+	url = git@github.com:urfave/cli
+[submodule "vendor/github.com/st3v/glager"]
+	path = vendor/github.com/st3v/glager
+	url = git@github.com:st3v/glager
+[submodule "vendor/gopkg.in/yaml.v2"]
+	path = vendor/gopkg.in/yaml.v2
+	url = https://gopkg.in/yaml.v2
+[submodule "vendor/github.com/opencontainers/runc"]
+	path = vendor/github.com/opencontainers/runc
+	url = https://github.com/opencontainers/runc
+[submodule "vendor/github.com/ghodss/yaml"]
+	path = vendor/github.com/ghodss/yaml
+	url = https://github.com/ghodss/yaml
+[submodule "vendor/github.com/docker/libtrust"]
+	path = vendor/github.com/docker/libtrust
+	url = https://github.com/docker/libtrust
+[submodule "vendor/github.com/docker/engine-api"]
+	path = vendor/github.com/docker/engine-api
+	url = https://github.com/docker/engine-api
+[submodule "vendor/github.com/docker/distribution"]
+	path = vendor/github.com/docker/distribution
+	url = https://github.com/docker/distribution
+[submodule "vendor/github.com/cloudfoundry-incubator/candiedyaml"]
+	path = vendor/github.com/cloudfoundry-incubator/candiedyaml
+	url = https://github.com/cloudfoundry-incubator/candiedyaml
+[submodule "vendor/github.com/docker/go-connections"]
+	path = vendor/github.com/docker/go-connections
+	url = https://github.com/docker/go-connections
+[submodule "vendor/github.com/vbatts/tar-split"]
+	path = vendor/github.com/vbatts/tar-split
+	url = https://github.com/vbatts/tar-split
+[submodule "vendor/golang.org/x/net"]
+	path = vendor/golang.org/x/net
+	url = https://github.com/golang/net
+[submodule "vendor/github.com/golang/protobuf"]
+	path = vendor/github.com/golang/protobuf
+	url = https://github.com/golang/protobuf
