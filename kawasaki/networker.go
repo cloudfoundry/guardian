@@ -228,7 +228,7 @@ func (n *networker) NetOut(log lager.Logger, handle string, rule garden.NetOutRu
 func (n *networker) Destroy(log lager.Logger, handle string) error {
 	cfg, err := load(n.configStore, handle)
 	if err != nil {
-		log.Debug("no-properties-for-container-skipping-destroy-network")
+		log.Error("no-properties-for-container-skipping-destroy-network", err)
 		return nil
 	}
 
