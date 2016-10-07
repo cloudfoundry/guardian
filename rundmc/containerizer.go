@@ -247,6 +247,7 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 }
 
 func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
+	log = log.Session("depot", lager.Data{"handle": handle})
 	return c.depot.Destroy(log, handle)
 }
 
