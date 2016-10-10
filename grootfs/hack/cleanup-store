@@ -13,7 +13,7 @@ get_btrfs_mountpoint() {
 
   mount_path=$store_path
   while [ "$mount_path" != "/" ]; do
-    btrfs filesystem show $mount_path > /dev/null
+    sudo btrfs filesystem show $mount_path &> /dev/null
     [ $? -eq 0 ] && break
 
     mount_path=$(cd $mount_path/..; pwd)
@@ -39,7 +39,7 @@ remove_subvolumes() {
 
   mount_path=$(get_btrfs_mountpoint $store_path)
   relpath=$(relpath $store_path $mount_path)
-  volumes=($(btrfs subvolume list $mount_path | grep $relpath | cut -d ' ' -f 9))
+  volumes=($(sudo btrfs subvolume list $mount_path | grep $relpath | cut -d ' ' -f 9))
   print_message "Will clean "${#volumes[@]}" volumes" $GREEN
 
   for volume in ${volumes[@]}; do
