@@ -228,7 +228,6 @@ jobs:
   serial: true
   plan:
   - get: grootfs-release-version
-    passed: [deploy-grootfs-release]
     params: { bump: major, pre: rc }
   - put: grootfs-release-version
     resource: grootfs-release-version
@@ -238,7 +237,6 @@ jobs:
   serial: true
   plan:
   - get: grootfs-release-version
-    passed: [deploy-grootfs-release]
     params: { bump: minor, pre: rc }
   - put: grootfs-release-version
     resource: grootfs-release-version
@@ -251,6 +249,7 @@ jobs:
     - aggregate:
       - get: grootfs-ci-secrets
       - get: grootfs-release-develop
+        passed: [deploy-grootfs-release]
       - get: grootfs-release-master
       - get: grootfs-release-version
         params:
