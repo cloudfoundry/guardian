@@ -15,6 +15,7 @@ inputs:
 
 params:
   DATADOG_API_KEY:
+  DATADOG_APPLICATION_KEY:
 
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/performance-tests.sh

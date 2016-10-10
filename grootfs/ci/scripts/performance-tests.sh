@@ -8,9 +8,11 @@ sudo_mount_btrfs
 
 grootfs_path=$(move_to_gopath grootfs)
 grootfs_bench_path=$(move_to_gopath grootfs-bench)
-grootfs_bench_performance_path="$grootfs_bench_path/performance"
+grootfs_bench_reporter_path="$grootfs_bench_path/reporter"
 
 pushd $grootfs_path
+  EVENT_TITLE=$(git log --oneline -n 1)
+  EVENT_MESSAGE=$(git log -1 --pretty=%B)
   install_dependencies
   make
 popd
@@ -20,8 +22,8 @@ pushd $grootfs_bench_path
   make
 popd
 
-pushd /go/src/code.cloudfoundry.org/grootfs-bench/performance
-  go build -o grootfs-performance-runner .
+pushd /go/src/code.cloudfoundry.org/grootfs-bench/reporter
+  go build -o grootfs-reporter .
 
   perf_test_image="docker:///busybox"
   # warm the cache
@@ -29,7 +31,13 @@ pushd /go/src/code.cloudfoundry.org/grootfs-bench/performance
 
   echo "RUNNING PERFORMANCE TESTS, STAND BY..." | grootsay
 
-  ./grootfs-performance-runner \
+  ./grootfs-reporter \
+    --mode event \
+    --eventTitle "$EVENT_TITLE" \
+    --eventMessage "$EVENT_MESSAGE"
+
+  ./grootfs-reporter \
+    --mode runner \
     --benchBinPath ../grootfs-bench \
     [--gbin ../../grootfs/grootfs \
     --store /mnt/btrfs \

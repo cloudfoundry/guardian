@@ -294,6 +294,7 @@ jobs:
         text: "<!subteam^S1U0HSJ9E|grootfsteam>: You don't need metrics for a thing that doesn't even work! http://grootfs.ci.cf-app.com/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME"
     params:
       DATADOG_API_KEY: {{datadog-api-key}}
+      DATADOG_APPLICATION_KEY: {{datadog-application-key}}
 
 - name: create-github-release
   plan:
