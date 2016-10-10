@@ -99,21 +99,8 @@ var CreateCommand = cli.Command{
 
 		localFetcher := local.NewLocalFetcher()
 
-		parsedImageURL, err := url.Parse(image)
-		if err != nil {
-			err = fmt.Errorf("invalid image: %s", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
-
-		var imageFetcher image_puller.Fetcher
-		if parsedImageURL.Scheme == "" {
-			imageFetcher = localFetcher
-		} else {
-			imageFetcher = remoteFetcher
-		}
-
 		locksmith := locksmithpkg.NewFileSystem(storePath)
-		imgPuller := image_puller.NewImagePuller(imageFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
+		imgPuller := image_puller.NewImagePuller(localFetcher, remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
 		groot := grootpkg.IamGroot(bundler, imgPuller, locksmith)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{

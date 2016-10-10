@@ -50,16 +50,18 @@ type Unpacker interface {
 }
 
 type ImagePuller struct {
-	fetcher      Fetcher
-	unpacker     Unpacker
-	volumeDriver VolumeDriver
+	localFetcher  Fetcher
+	remoteFetcher Fetcher
+	unpacker      Unpacker
+	volumeDriver  VolumeDriver
 }
 
-func NewImagePuller(fetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver) *ImagePuller {
+func NewImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver) *ImagePuller {
 	return &ImagePuller{
-		fetcher:      fetcher,
-		unpacker:     unpacker,
-		volumeDriver: volumeDriver,
+		localFetcher:  localFetcher,
+		remoteFetcher: remoteFetcher,
+		unpacker:      unpacker,
+		volumeDriver:  volumeDriver,
 	}
 }
 
@@ -69,7 +71,7 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 	defer logger.Info("end")
 	var err error
 
-	imageInfo, err := p.fetcher.ImageInfo(logger, spec.ImageSrc)
+	imageInfo, err := p.fetcher(spec.ImageSrc).ImageInfo(logger, spec.ImageSrc)
 	if err != nil {
 		return groot.BundleSpec{}, errorspkg.Wrap(err, "fetching list of digests")
 	}
@@ -92,7 +94,7 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 			continue
 		}
 
-		stream, size, err := p.fetcher.StreamBlob(logger, spec.ImageSrc, digest.BlobID)
+		stream, size, err := p.fetcher(spec.ImageSrc).StreamBlob(logger, spec.ImageSrc, digest.BlobID)
 		if err != nil {
 			return groot.BundleSpec{}, fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
 		}
@@ -149,6 +151,14 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 		VolumePath: volumePath,
 	}
 	return bundleSpec, nil
+}
+
+func (p *ImagePuller) fetcher(imageURL *url.URL) Fetcher {
+	if imageURL.Scheme == "" {
+		return p.localFetcher
+	} else {
+		return p.remoteFetcher
+	}
 }
 
 func (p *ImagePuller) quotaExceeded(logger lager.Logger, layersDigest []LayerDigest, spec groot.ImageSpec) error {

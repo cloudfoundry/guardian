@@ -172,7 +172,8 @@ var _ = Describe("Create", func() {
 			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sess.Wait()).To(gexec.Exit(1))
-			Eventually(sess).Should(gbytes.Say("invalid image"))
+			Eventually(sess).Should(gbytes.Say("parsing image url: parse"))
+			Eventually(sess).Should(gbytes.Say("invalid URL escape"))
 		})
 	})
 
