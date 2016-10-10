@@ -20,7 +20,7 @@ get_btrfs_mountpoint() {
   done
 
   if [ "$mount_path" == "/" ]; then
-    print_message "`$store_path` does not belong to a BTRFS mount" $RED
+    print_message "'$store_path' does not belong to a BTRFS mount" $RED
     exit 1
   fi
 
