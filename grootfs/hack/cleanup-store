@@ -2,13 +2,13 @@
 
 RED=1
 GREEN=2
-function print_message {
+print_message() {
   message=$1
   colour=$2
   printf "\r\033[00;3${colour}m[${message}]\033[0m\n"
 }
 
-function get_btrfs_mountpoint {
+get_btrfs_mountpoint() {
   store_path=$1
 
   mount_path=$store_path
@@ -27,14 +27,14 @@ function get_btrfs_mountpoint {
   echo $mount_path
 }
 
-function relpath {
+relpath() {
   path=$1
   start=$2
 
   python -c "import os.path; print os.path.relpath('$path', '$start')"
 }
 
-function remove_subvolumes {
+remove_subvolumes() {
   store_path=$1
 
   mount_path=$(get_btrfs_mountpoint $store_path)
@@ -47,7 +47,7 @@ function remove_subvolumes {
   done
 }
 
-function cleanup_store {
+cleanup_store() {
   store_path=$1
 
   remove_subvolumes $store_path
