@@ -9,7 +9,8 @@ install_apt_packages() {
     gcc make \
     vim-nox \
     git silversearcher-ag curl jq \
-    btrfs-tools uidmap
+    btrfs-tools uidmap \
+    python-minimal
 }
 
 install_go() {
