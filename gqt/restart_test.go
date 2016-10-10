@@ -125,7 +125,7 @@ var _ = Describe("Surviving Restarts", func() {
 			It("destroys the remaining containers' iptables", func() {
 				out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(out)).NotTo(MatchRegexp(fmt.Sprintf("w-%d-instance.* 177.100.10.0/30", GinkgoParallelNode())))
+				Expect(string(out)).NotTo(MatchRegexp(fmt.Sprintf("%sinstance.*", interfacePrefix)))
 			})
 
 			It("destroys the remaining containers' bridges", func() {
