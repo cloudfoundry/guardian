@@ -1,6 +1,8 @@
 package gqt_test
 
 import (
+	"strings"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 
@@ -96,6 +98,45 @@ var _ = Describe("garden server Logging", func() {
 
 		It("does not log at debug level", func() {
 			Consistently(client, "1s").ShouldNot(gbytes.Say(`"log_level":0`))
+		})
+
+		Context("when I have a lot of API operations", func() {
+			var handles []string
+
+			JustBeforeEach(func() {
+				handles = make([]string, 5)
+
+				for i := 0; i < 5; i++ {
+
+					container, err := client.Create(garden.ContainerSpec{})
+					Expect(err).NotTo(HaveOccurred())
+
+					handles = append(handles, container.Handle())
+					// create process
+					process, err := container.Run(garden.ProcessSpec{Path: "/bin/ls"}, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+					_, err = process.Wait()
+					Expect(err).NotTo(HaveOccurred())
+
+					// bulkinfo
+					_, err = client.BulkInfo(handles)
+					Expect(err).NotTo(HaveOccurred())
+					_, err = client.BulkMetrics(handles)
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				// destroy containers
+				Expect(client.DestroyContainers()).To(Succeed())
+			})
+
+			AfterEach(func() {
+				Expect(client.DestroyAndStop()).To(Succeed())
+			})
+
+			It("doesn't log too many messages", func() {
+				outLines := strings.Split(string(client.Buffer().Contents()), "\n")
+				Expect(len(outLines)).To(BeNumerically("<", 300))
+			})
 		})
 	})
 

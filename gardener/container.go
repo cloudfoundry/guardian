@@ -39,8 +39,8 @@ func (c *container) Stop(kill bool) error {
 func (c *container) Info() (garden.ContainerInfo, error) {
 	log := c.logger.Session("info", lager.Data{"handle": c.handle})
 
-	log.Info("starting")
-	defer log.Info("finished")
+	log.Debug("starting")
+	defer log.Debug("finished")
 
 	containerIP, ok := c.propertyManager.Get(c.handle, ContainerIPKey)
 	if !ok {

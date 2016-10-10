@@ -34,8 +34,8 @@ func NewStater(runner RuncCmdRunner, runc RuncBinary) *Stater {
 func (r *Stater) State(log lager.Logger, handle string) (state State, err error) {
 	log = log.Session("state", lager.Data{"handle": handle})
 
-	log.Info("started")
-	defer log.Info("finished")
+	log.Debug("started")
+	defer log.Debug("finished")
 
 	buf := new(bytes.Buffer)
 	err = r.runner.RunAndLog(log, func(logFile string) *exec.Cmd {

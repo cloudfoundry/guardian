@@ -53,8 +53,8 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle BundleSa
 func (d *DirectoryDepot) Lookup(log lager.Logger, handle string) (string, error) {
 	log = log.Session("lookup", lager.Data{"handle": handle})
 
-	log.Info("started")
-	defer log.Info("finished")
+	log.Debug("started")
+	defer log.Debug("finished")
 
 	if _, err := os.Stat(d.toDir(handle)); err != nil {
 		return "", ErrDoesNotExist
