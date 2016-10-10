@@ -41,13 +41,15 @@ var _ = Describe("Surviving Restarts", func() {
 
 	Context("when a container is created and then garden is restarted", func() {
 		var (
-			container     garden.Container
-			hostNetInPort uint32
-			externalIP    string
-			propertiesDir string
-			existingProc  garden.Process
-			containerSpec garden.ContainerSpec
-			restartArgs   []string
+			container        garden.Container
+			hostNetInPort    uint32
+			externalIP       string
+			interfacePrefix  string
+			propertiesDir    string
+			existingProc     garden.Process
+			containerSpec    garden.ContainerSpec
+			restartArgs      []string
+			gracefulShutdown bool
 		)
 
 		BeforeEach(func() {
@@ -61,6 +63,7 @@ var _ = Describe("Surviving Restarts", func() {
 			}
 
 			restartArgs = []string{}
+			gracefulShutdown = true
 		})
 
 		JustBeforeEach(func() {
@@ -80,6 +83,7 @@ var _ = Describe("Surviving Restarts", func() {
 			info, err := container.Info()
 			Expect(err).NotTo(HaveOccurred())
 			externalIP = info.ExternalIP
+			interfacePrefix = info.Properties["kawasaki.iptable-prefix"]
 
 			out := gbytes.NewBuffer()
 			existingProc, err = container.Run(
@@ -93,7 +97,11 @@ var _ = Describe("Surviving Restarts", func() {
 				})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(client.Stop()).To(Succeed())
+			if gracefulShutdown {
+				Expect(client.Stop()).To(Succeed())
+			} else {
+				Expect(client.Kill()).To(MatchError("exit status 137"))
+			}
 
 			if len(restartArgs) == 0 {
 				restartArgs = args
@@ -133,6 +141,24 @@ var _ = Describe("Surviving Restarts", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(string(processes)).NotTo(ContainSubstring(fmt.Sprintf("run runc /tmp/test-garden-%d/containers/%s", GinkgoParallelNode(), container.Handle())))
+			})
+
+			Context("when the garden server does not shut down gracefully", func() {
+				BeforeEach(func() {
+					gracefulShutdown = false
+				})
+
+				It("destroys orphaned containers' iptables filter rules", func() {
+					out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(out)).NotTo(MatchRegexp(fmt.Sprintf("%sinstance.*", interfacePrefix)))
+				})
+
+				It("destroys orphaned containers' iptables nat rules", func() {
+					out, err := exec.Command("iptables", "-w", "-S", "-t", "nat").CombinedOutput()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(out)).NotTo(MatchRegexp(fmt.Sprintf("%sinstance.*", interfacePrefix)))
+				})
 			})
 
 			Context("when a container is created after restart", func() {

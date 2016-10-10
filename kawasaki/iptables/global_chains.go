@@ -196,25 +196,27 @@ const SetupScript = `
 `
 
 type Starter struct {
-	iptables        *IPTablesController
-	allowHostAccess bool
-	nicPrefix       string
+	iptables                   *IPTablesController
+	allowHostAccess            bool
+	destroyContainersOnStartup bool
+	nicPrefix                  string
 
 	denyNetworks []string
 }
 
-func NewStarter(iptables *IPTablesController, allowHostAccess bool, nicPrefix string, denyNetworks []string) *Starter {
+func NewStarter(iptables *IPTablesController, allowHostAccess bool, nicPrefix string, denyNetworks []string, destroyContainersOnStartup bool) *Starter {
 	return &Starter{
-		iptables:        iptables,
-		allowHostAccess: allowHostAccess,
-		nicPrefix:       nicPrefix,
+		iptables:                   iptables,
+		allowHostAccess:            allowHostAccess,
+		destroyContainersOnStartup: destroyContainersOnStartup,
+		nicPrefix:                  nicPrefix,
 
 		denyNetworks: denyNetworks,
 	}
 }
 
 func (s Starter) Start() error {
-	if !s.chainExists(s.iptables.inputChain) {
+	if s.destroyContainersOnStartup || !s.chainExists(s.iptables.inputChain) {
 		cmd := exec.Command("bash", "-c", SetupScript)
 		cmd.Env = []string{
 			fmt.Sprintf("PATH=%s", os.Getenv("PATH")),

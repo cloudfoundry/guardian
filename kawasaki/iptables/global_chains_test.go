@@ -15,13 +15,15 @@ import (
 
 var _ = Describe("Setup", func() {
 	var (
-		fakeRunner   *fake_command_runner.FakeCommandRunner
-		denyNetworks []string
-		starter      *iptables.Starter
+		fakeRunner                 *fake_command_runner.FakeCommandRunner
+		denyNetworks               []string
+		destroyContainersOnStartup bool
+		starter                    *iptables.Starter
 	)
 
 	BeforeEach(func() {
 		fakeRunner = fake_command_runner.New()
+		destroyContainersOnStartup = false
 	})
 
 	JustBeforeEach(func() {
@@ -30,6 +32,7 @@ var _ = Describe("Setup", func() {
 			true,
 			"the-nic-prefix",
 			denyNetworks,
+			destroyContainersOnStartup,
 		)
 	})
 
@@ -149,6 +152,18 @@ var _ = Describe("Setup", func() {
 						Expect(fakeRunner.ExecutedCommands()).To(HaveLen(5))
 					})
 				})
+			})
+		})
+
+		Context("when destroy_containers_on_startup is set to true", func() {
+			BeforeEach(func() {
+				destroyContainersOnStartup = true
+			})
+
+			It("runs the setup script, passing the environment variables", func() {
+				Expect(starter.Start()).To(Succeed())
+
+				itSetsUpGlobalChains()
 			})
 		})
 
