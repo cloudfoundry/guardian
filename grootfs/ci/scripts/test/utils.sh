@@ -23,33 +23,9 @@ mount_btrfs() {
   btrfs quota enable /mnt/btrfs
 }
 
-compile_drax() {
-  tmp_dir=$(mktemp -d)
-  go build -o $tmp_dir/drax code.cloudfoundry.org/grootfs/store/volume_driver/drax
-  echo $tmp_dir/drax
-}
-
-cleanup_drax() {
-  drax_path=$1
-  rm -Rf $(dirname $drax_path)
-}
-
-setup_drax() {
-  drax_path=$1
-  cp $drax_path /usr/local/bin/drax
-  chmod u+s /usr/local/bin/drax
-}
-
 sudo_mount_btrfs() {
   local MOUNT_BTRFS_FUNC=$(declare -f mount_btrfs)
   sudo bash -c "$MOUNT_BTRFS_FUNC; mount_btrfs"
-}
-
-sudo_setup_drax() {
-  drax_path=$1
-
-  local SETUP_DRAX_FUNC=$(declare -f setup_drax)
-  sudo bash -c "$SETUP_DRAX_FUNC; setup_drax $drax_path"
 }
 
 move_to_gopath() {
