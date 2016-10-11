@@ -42,6 +42,7 @@ pushd /go/src/code.cloudfoundry.org/grootfs-bench/reporter
     [--gbin ../../grootfs/grootfs \
     --store /mnt/btrfs \
     --concurrency 5 \
+    --with-quota \
     --image $perf_test_image \
     --nospin \
     --json $@]
