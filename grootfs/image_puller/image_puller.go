@@ -1,4 +1,4 @@
-package image_puller
+package image_puller // import "code.cloudfoundry.org/grootfs/image_puller"
 
 import (
 	"fmt"

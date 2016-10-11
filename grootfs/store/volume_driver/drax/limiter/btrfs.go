@@ -1,4 +1,4 @@
-package limiter
+package limiter // import "code.cloudfoundry.org/grootfs/store/volume_driver/drax/limiter"
 
 import (
 	"bytes"

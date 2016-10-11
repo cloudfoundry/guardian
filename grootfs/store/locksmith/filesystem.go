@@ -1,4 +1,4 @@
-package locksmith
+package locksmith // import "code.cloudfoundry.org/grootfs/store/locksmith"
 
 import (
 	"fmt"

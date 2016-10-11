@@ -1,4 +1,4 @@
-package groot
+package groot // import "code.cloudfoundry.org/grootfs/groot"
 
 import (
 	"fmt"

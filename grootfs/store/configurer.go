@@ -1,4 +1,4 @@
-package store
+package store // import "code.cloudfoundry.org/grootfs/store"
 
 import (
 	"fmt"

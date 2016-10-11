@@ -1,4 +1,4 @@
-package commands
+package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"errors"

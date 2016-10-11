@@ -1,4 +1,4 @@
-package metrix
+package metrix // import "code.cloudfoundry.org/grootfs/store/volume_driver/drax/metrix"
 
 import (
 	"bytes"

@@ -1,4 +1,4 @@
-package volume_driver
+package volume_driver // import "code.cloudfoundry.org/grootfs/store/volume_driver"
 
 import (
 	"bytes"

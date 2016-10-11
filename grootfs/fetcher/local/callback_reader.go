@@ -1,4 +1,4 @@
-package local
+package local // import "code.cloudfoundry.org/grootfs/fetcher/local"
 
 import (
 	"io"

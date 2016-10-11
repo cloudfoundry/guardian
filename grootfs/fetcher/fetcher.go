@@ -1,4 +1,4 @@
-package fetcher
+package fetcher // import "code.cloudfoundry.org/grootfs/fetcher"
 
 import (
 	"io"

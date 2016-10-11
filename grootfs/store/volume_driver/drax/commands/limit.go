@@ -1,4 +1,4 @@
-package commands
+package commands // import "code.cloudfoundry.org/grootfs/store/volume_driver/drax/commands"
 
 import (
 	"os"

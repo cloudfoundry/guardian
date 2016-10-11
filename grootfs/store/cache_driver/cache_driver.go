@@ -1,4 +1,4 @@
-package cache_driver
+package cache_driver // import "code.cloudfoundry.org/grootfs/store/cache_driver"
 
 import (
 	"bytes"

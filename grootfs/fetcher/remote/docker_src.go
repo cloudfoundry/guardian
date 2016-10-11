@@ -1,4 +1,4 @@
-package remote
+package remote // import "code.cloudfoundry.org/grootfs/fetcher/remote"
 
 import (
 	"crypto/sha256"

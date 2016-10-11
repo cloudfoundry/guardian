@@ -1,4 +1,4 @@
-package remote
+package remote // import "code.cloudfoundry.org/grootfs/fetcher/remote"
 
 type Manifest struct {
 	SchemaVersion   int
