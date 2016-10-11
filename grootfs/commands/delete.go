@@ -28,7 +28,7 @@ var DeleteCommand = cli.Command{
 		}
 		id := ctx.Args().First()
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
 
 		bundler := store.NewBundler(btrfsVolumeDriver, storePath)
 		groot := grootpkg.IamGroot(bundler, nil, nil)

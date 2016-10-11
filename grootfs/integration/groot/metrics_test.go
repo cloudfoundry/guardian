@@ -29,14 +29,14 @@ var _ = Describe("Metrics", func() {
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 
-		bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", 0)
+		bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
 
 		cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath(), "hello")), "bs=1048576", "count=4")
 		sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 
-		cmd = exec.Command(GrootFSBin, "--store", StorePath, "metrics", "random-id")
+		cmd = exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics", "random-id")
 		sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
@@ -46,7 +46,7 @@ var _ = Describe("Metrics", func() {
 
 	Context("when the bundle id doesn't exist", func() {
 		It("returns an error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics", "invalid-id")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics", "invalid-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
@@ -56,7 +56,7 @@ var _ = Describe("Metrics", func() {
 
 	Context("when the bundle id is not provided", func() {
 		It("returns an error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))

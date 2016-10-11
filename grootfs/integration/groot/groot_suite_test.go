@@ -16,6 +16,7 @@ import (
 
 var (
 	GrootFSBin string
+	DraxBin    string
 	storeName  string
 	StorePath  string
 )
@@ -47,6 +48,11 @@ func TestGroot(t *testing.T) {
 		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
 		StorePath = path.Join(btrfsMountPath, storeName)
 		Expect(os.Mkdir(StorePath, 0700)).NotTo(HaveOccurred())
+
+		var err error
+		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/volume_driver/drax")
+		Expect(err).NotTo(HaveOccurred())
+		testhelpers.SuidDrax(DraxBin)
 	})
 
 	AfterEach(func() {

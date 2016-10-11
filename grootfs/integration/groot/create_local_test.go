@@ -28,7 +28,7 @@ var _ = Describe("Create with local images", func() {
 	})
 
 	It("creates a root filesystem", func() {
-		bundle, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+		bundle, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
 			ID:    "random-id",
 			Image: imagePath,
 		})
@@ -53,13 +53,13 @@ var _ = Describe("Create with local images", func() {
 
 	Context("when image content changes", func() {
 		BeforeEach(func() {
-			Expect(integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", 0)).NotTo(BeNil())
+			Expect(integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)).NotTo(BeNil())
 		})
 
 		It("uses the new content for the new bundle", func() {
 			Expect(ioutil.WriteFile(path.Join(imagePath, "bar"), []byte("this-is-a-bar-content"), 0644)).To(Succeed())
 
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id-2", 0)
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id-2", 0)
 
 			bundleContentPath := path.Join(bundle.RootFSPath(), "foo")
 			Expect(bundleContentPath).To(BeARegularFile())
@@ -70,13 +70,13 @@ var _ = Describe("Create with local images", func() {
 
 	Describe("unpacked volume caching", func() {
 		It("caches the unpacked image in a subvolume with snapshots", func() {
-			integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", 0)
+			integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
 
 			volumeID := integration.ImagePathToVolumeID(imagePath)
 			layerSnapshotPath := filepath.Join(StorePath, "volumes", volumeID)
 			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id-2", 0)
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id-2", 0)
 			Expect(path.Join(bundle.RootFSPath(), "foo")).To(BeARegularFile())
 			Expect(path.Join(bundle.RootFSPath(), "injected-file")).To(BeARegularFile())
 		})
@@ -97,7 +97,7 @@ var _ = Describe("Create with local images", func() {
 		})
 
 		It("unpacks the symlinks", func() {
-			bundle, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+			bundle, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
 				ID:    "random-id",
 				Image: imagePath,
 			})

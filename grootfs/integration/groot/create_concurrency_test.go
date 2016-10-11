@@ -27,7 +27,7 @@ var _ = Describe("Concurrent creations", func() {
 
 	It("can create multiple rootfses of the same image concurrently", func() {
 		// run this to setup the store before concurrency!
-		integration.CreateBundle(GrootFSBin, StorePath, imagePath, "test-pre-warm", 0)
+		integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "test-pre-warm", 0)
 
 		wg := new(sync.WaitGroup)
 
@@ -38,7 +38,7 @@ var _ = Describe("Concurrent creations", func() {
 				defer wg.Done()
 
 				integration.CreateBundle(
-					GrootFSBin, StorePath, "docker:///cfgarden/empty",
+					GrootFSBin, StorePath, DraxBin, "docker:///cfgarden/empty",
 					fmt.Sprintf("test-%d", idx), 0,
 				)
 			}(wg, i)

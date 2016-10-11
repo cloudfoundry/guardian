@@ -20,10 +20,11 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-func CreateBundle(grootFSBin, storePath, imagePath, id string, diskLimit int64) groot.Bundle {
+func CreateBundle(grootFSBin, storePath, draxBin, imagePath, id string, diskLimit int64) groot.Bundle {
 	cmd := runner.CreateCmd{
 		GrootFSBin: grootFSBin,
 		StorePath:  storePath,
+		DraxBin:    draxBin,
 		Spec: groot.CreateSpec{
 			ID:        id,
 			Image:     imagePath,
@@ -39,10 +40,11 @@ func CreateBundle(grootFSBin, storePath, imagePath, id string, diskLimit int64) 
 	return store.NewBundle(bundlePath)
 }
 
-func CreateBundleWSpec(grootFSBin, storePath string, spec groot.CreateSpec) (groot.Bundle, error) {
+func CreateBundleWSpec(grootFSBin, storePath, draxBin string, spec groot.CreateSpec) (groot.Bundle, error) {
 	cmd := runner.CreateCmd{
 		GrootFSBin: grootFSBin,
 		StorePath:  storePath,
+		DraxBin:    draxBin,
 		Spec:       spec,
 		LogLevel:   lager.DEBUG,
 		LogFile:    GinkgoWriter,
@@ -56,8 +58,8 @@ func CreateBundleWSpec(grootFSBin, storePath string, spec groot.CreateSpec) (gro
 	return store.NewBundle(bundlePath), nil
 }
 
-func DeleteBundle(grootFSBin, storePath, id string) string {
-	cmd := exec.Command(grootFSBin, "--store", storePath, "delete", id)
+func DeleteBundle(grootFSBin, storePath, draxBin, id string) string {
+	cmd := exec.Command(grootFSBin, "--store", storePath, "--drax-bin", draxBin, "delete", id)
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).ToNot(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))

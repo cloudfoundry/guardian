@@ -17,6 +17,7 @@ import (
 
 var (
 	GrootFSBin string
+	DraxBin    string
 
 	GrootUID uint32
 	GrootGID uint32
@@ -58,6 +59,11 @@ func TestRoot(t *testing.T) {
 		Expect(os.Mkdir(StorePath, 0700)).NotTo(HaveOccurred())
 
 		Expect(os.Chown(StorePath, int(GrootUID), int(GrootGID))).To(Succeed())
+
+		var err error
+		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/volume_driver/drax")
+		Expect(err).NotTo(HaveOccurred())
+		testhelpers.SuidDrax(DraxBin)
 	})
 
 	AfterEach(func() {

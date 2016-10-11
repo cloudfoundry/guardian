@@ -17,6 +17,7 @@ import (
 type CreateCmd struct {
 	GrootFSBin string
 	StorePath  string
+	DraxBin    string
 	Spec       groot.CreateSpec
 	Timeout    time.Duration
 	LogLevel   lager.LogLevel
@@ -80,6 +81,9 @@ func (c *CreateCmd) makeCmd() *exec.Cmd {
 
 	args = append(args, "--log-level", c.logLevel(c.LogLevel))
 	args = append(args, "--store", c.StorePath)
+	if c.DraxBin != "" {
+		args = append(args, "--drax-bin", c.DraxBin)
+	}
 	args = append(args, "create")
 	for _, mapping := range c.Spec.UIDMappings {
 		args = append(args, "--uid-mapping",

@@ -1,6 +1,7 @@
 package volume_driver_test
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -24,25 +25,35 @@ var _ = Describe("Btrfs", func() {
 	const btrfsMountPath = "/mnt/btrfs"
 
 	var (
-		btrfs     *volume_driver.Btrfs
-		logger    *TestLogger
-		storePath string
-		storeName string
+		btrfs       *volume_driver.Btrfs
+		logger      *TestLogger
+		storeName   string
+		storePath   string
+		draxBinPath string
 	)
 
 	BeforeEach(func() {
 		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
 		storePath = filepath.Join(btrfsMountPath, storeName)
+
 		volumesPath := filepath.Join(storePath, store.VOLUMES_DIR_NAME)
 		Expect(os.MkdirAll(volumesPath, 0755)).To(Succeed())
 
-		btrfs = volume_driver.NewBtrfs(storePath)
+		var err error
+		draxBinPath, err = gexec.Build("code.cloudfoundry.org/grootfs/store/volume_driver/drax")
+		Expect(err).NotTo(HaveOccurred())
+		testhelpers.SuidDrax(draxBinPath)
 
 		logger = NewLogger("btrfs")
 	})
 
+	JustBeforeEach(func() {
+		btrfs = volume_driver.NewBtrfs(draxBinPath, storePath)
+	})
+
 	AfterEach(func() {
 		testhelpers.CleanUpSubvolumes(btrfsMountPath, storeName)
+		gexec.CleanupBuildArtifacts()
 	})
 
 	Describe("Path", func() {
@@ -207,7 +218,7 @@ var _ = Describe("Btrfs", func() {
 			volumePath string
 		)
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			volumeID = randVolumeID()
 			var err error
 			volumePath, err = btrfs.Create(logger, "", volumeID)
@@ -225,51 +236,82 @@ var _ = Describe("Btrfs", func() {
 	Describe("Destroy", func() {
 		var volumePath string
 
-		BeforeEach(func() {
-			var err error
-			volumePath, err = btrfs.Create(logger, "", randVolumeID())
-			Expect(err).NotTo(HaveOccurred())
-		})
+		Context("when a volume exists", func() {
+			JustBeforeEach(func() {
+				var err error
+				volumePath, err = btrfs.Create(logger, "", randVolumeID())
+				Expect(err).NotTo(HaveOccurred())
+			})
 
-		It("deletes the btrfs volume", func() {
-			Expect(volumePath).To(BeADirectory())
+			It("deletes the btrfs volume", func() {
+				Expect(volumePath).To(BeADirectory())
 
-			Expect(btrfs.Destroy(logger, volumePath)).To(Succeed())
-			Expect(volumePath).ToNot(BeAnExistingFile())
-		})
+				Expect(btrfs.Destroy(logger, volumePath)).To(Succeed())
+				Expect(volumePath).ToNot(BeAnExistingFile())
+			})
 
-		It("deletes the quota group for the volume", func() {
-			rootIDBuffer := gbytes.NewBuffer()
-			sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", volumePath), rootIDBuffer, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-			rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
+			It("deletes the quota group for the volume", func() {
+				rootIDBuffer := gbytes.NewBuffer()
+				sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", volumePath), rootIDBuffer, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+				rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
 
-			sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", storePath), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-			Expect(sess).To(gbytes.Say(rootID))
+				sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", storePath), GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+				Expect(sess).To(gbytes.Say(rootID))
 
-			Expect(btrfs.Destroy(logger, volumePath)).To(Succeed())
+				Expect(btrfs.Destroy(logger, volumePath)).To(Succeed())
 
-			sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", storePath), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-			Expect(sess).ToNot(gbytes.Say(rootID))
-		})
+				sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", storePath), GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+				Expect(sess).ToNot(gbytes.Say(rootID))
+			})
 
-		It("logs the correct btrfs command", func() {
-			Expect(volumePath).To(BeADirectory())
+			It("logs the correct btrfs command", func() {
+				Expect(volumePath).To(BeADirectory())
 
-			Expect(btrfs.Destroy(logger, volumePath)).To(Succeed())
+				Expect(btrfs.Destroy(logger, volumePath)).To(Succeed())
 
-			Expect(logger).To(ContainSequence(
-				Debug(
-					Message("btrfs.btrfs-destroying.starting-btrfs"),
-					Data("path", "/bin/btrfs"),
-					Data("args", []string{"btrfs", "subvolume", "delete", volumePath}),
-				),
-			))
+				Expect(logger).To(ContainSequence(
+					Debug(
+						Message("btrfs.btrfs-destroying.starting-btrfs"),
+						Data("path", "/bin/btrfs"),
+						Data("args", []string{"btrfs", "subvolume", "delete", volumePath}),
+					),
+				))
+			})
+
+			Context("and drax does not exist", func() {
+				BeforeEach(func() {
+					draxBinPath = "/path/to/non-existent-drax"
+				})
+
+				It("succeeds", func() {
+					Expect(btrfs.Destroy(logger, volumePath)).To(Succeed())
+				})
+			})
+
+			Context("and drax does not have the setuid bit", func() {
+				BeforeEach(func() {
+					testhelpers.UnsuidDrax(draxBinPath)
+				})
+
+				It("doesn't fail, but logs the error", func() {
+					Expect(
+						btrfs.Destroy(logger, volumePath),
+					).To(Succeed())
+
+					Expect(logger).To(ContainSequence(
+						Error(
+							errors.New("missing the setuid bit on drax"),
+							Message("btrfs.btrfs-destroying.destroying-quota-groups-failed"),
+						),
+					))
+				})
+			})
 		})
 
 		Context("when destroying a non existant volume", func() {
@@ -285,7 +327,7 @@ var _ = Describe("Btrfs", func() {
 				tmpDir, _ := ioutil.TempDir("", "")
 				err := btrfs.Destroy(logger, tmpDir)
 
-				Expect(err).To(MatchError(ContainSubstring("destroying quota group")))
+				Expect(err).To(MatchError(ContainSubstring("destroying volume")))
 			})
 		})
 	})
@@ -299,34 +341,8 @@ var _ = Describe("Btrfs", func() {
 			snapshotPath = filepath.Join(bundlePath, "rootfs")
 		})
 
-		It("applies the disk limit", func() {
-			volID := randVolumeID()
-			volumePath, err := btrfs.Create(logger, "", volID)
-			Expect(err).NotTo(HaveOccurred())
-
-			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(volumePath, "vol-file")), "bs=1048576", "count=5")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-
-			Expect(btrfs.Snapshot(logger, volumePath, snapshotPath)).To(Succeed())
-
-			Expect(btrfs.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, false)).To(Succeed())
-
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello")), "bs=1048576", "count=4")
-			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello2")), "bs=1048576", "count=2")
-			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
-			Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
-		})
-
-		Context("when exclusive limit is active", func() {
-			It("applies the disk limit with the exclusive flag", func() {
+		Context("when the snapshot path is a volume", func() {
+			JustBeforeEach(func() {
 				volID := randVolumeID()
 				volumePath, err := btrfs.Create(logger, "", volID)
 				Expect(err).NotTo(HaveOccurred())
@@ -337,24 +353,67 @@ var _ = Describe("Btrfs", func() {
 				Eventually(sess).Should(gexec.Exit(0))
 
 				Expect(btrfs.Snapshot(logger, volumePath, snapshotPath)).To(Succeed())
+			})
 
-				Expect(btrfs.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, true)).To(Succeed())
+			It("applies the disk limit", func() {
+				Expect(btrfs.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, false)).To(Succeed())
 
-				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello")), "bs=1048576", "count=6")
-				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello")), "bs=1048576", "count=4")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
 
-				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello2")), "bs=1048576", "count=5")
+				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello2")), "bs=1048576", "count=2")
 				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
 				Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
 			})
+
+			Context("when exclusive limit is active", func() {
+				It("applies the disk limit with the exclusive flag", func() {
+					Expect(btrfs.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, true)).To(Succeed())
+
+					cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello")), "bs=1048576", "count=6")
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).ToNot(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(0))
+
+					cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello2")), "bs=1048576", "count=5")
+					sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).ToNot(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(1))
+					Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
+				})
+			})
+
+			Context("when drax does not exist", func() {
+				BeforeEach(func() {
+					draxBinPath = "/path/to/non-existent-drax"
+				})
+
+				It("returns an error", func() {
+					Expect(
+						btrfs.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, false),
+					).To(MatchError(ContainSubstring("drax was not found in the $PATH")))
+				})
+			})
+
+			Context("and drax does not have the setuid bit", func() {
+				BeforeEach(func() {
+					testhelpers.UnsuidDrax(draxBinPath)
+				})
+
+				It("returns an error", func() {
+					Expect(
+						btrfs.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, false),
+					).To(MatchError(ContainSubstring("missing the setuid bit on drax")))
+				})
+			})
 		})
 
 		Context("when the provided path is not a volume", func() {
-			It("should return an error", func() {
+			It("returns an error", func() {
 				Expect(os.MkdirAll(snapshotPath, 0777)).To(Succeed())
 
 				Expect(
@@ -373,30 +432,56 @@ var _ = Describe("Btrfs", func() {
 			toPath = filepath.Join(bundlePath, "rootfs")
 		})
 
-		It("returns the correct metrics", func() {
-			volID := randVolumeID()
-			volPath, err := btrfs.Create(logger, "", volID)
-			Expect(err).NotTo(HaveOccurred())
+		Context("when the provided path is a volume", func() {
+			JustBeforeEach(func() {
+				volID := randVolumeID()
+				volPath, err := btrfs.Create(logger, "", volID)
+				Expect(err).NotTo(HaveOccurred())
 
-			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(volPath, "vol-file")), "bs=4210688", "count=1")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(volPath, "vol-file")), "bs=4210688", "count=1")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
 
-			Expect(btrfs.Snapshot(logger, volPath, toPath)).To(Succeed())
+				Expect(btrfs.Snapshot(logger, volPath, toPath)).To(Succeed())
+			})
 
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(toPath, "hello")), "bs=4210688", "count=1")
-			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			It("returns the correct metrics", func() {
+				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(toPath, "hello")), "bs=4210688", "count=1")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
 
-			metrics, err := btrfs.FetchMetrics(logger, toPath)
-			Expect(err).ToNot(HaveOccurred())
+				metrics, err := btrfs.FetchMetrics(logger, toPath)
+				Expect(err).ToNot(HaveOccurred())
 
-			// Block math craziness -> 1* 4210688 ~= 4227072
-			Expect(metrics.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(4227072)))
-			// Block math craziness -> 2* 4227072 ~= 8437760
-			Expect(metrics.DiskUsage.TotalBytesUsed).To(Equal(int64(8437760)))
+				// Block math craziness -> 1* 4210688 ~= 4227072
+				Expect(metrics.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(4227072)))
+				// Block math craziness -> 2* 4227072 ~= 8437760
+				Expect(metrics.DiskUsage.TotalBytesUsed).To(Equal(int64(8437760)))
+			})
+
+			Context("when drax does not exist", func() {
+				BeforeEach(func() {
+					draxBinPath = "/path/to/non-existent-drax"
+				})
+
+				It("returns an error", func() {
+					_, err := btrfs.FetchMetrics(logger, toPath)
+					Expect(err).To(MatchError(ContainSubstring("drax was not found in the $PATH")))
+				})
+			})
+
+			Context("and drax does not have the setuid bit", func() {
+				BeforeEach(func() {
+					testhelpers.UnsuidDrax(draxBinPath)
+				})
+
+				It("returns an error", func() {
+					_, err := btrfs.FetchMetrics(logger, toPath)
+					Expect(err).To(MatchError(ContainSubstring("missing the setuid bit on drax")))
+				})
+			})
 		})
 
 		Context("when the provided path is not a volume", func() {

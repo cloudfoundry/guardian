@@ -31,7 +31,7 @@ var MetricsCommand = cli.Command{
 		storePath := ctx.GlobalString("store")
 		id := ctx.Args().First()
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(storePath)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
 		bundler := storepkg.NewBundler(btrfsVolumeDriver, storePath)
 
 		groot := grootpkg.IamGroot(bundler, nil, nil)

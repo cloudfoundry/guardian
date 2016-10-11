@@ -41,6 +41,11 @@ func main() {
 			Name:  "log-file",
 			Usage: "Forward logs to file",
 		},
+		cli.StringFlag{
+			Name:  "drax-bin",
+			Usage: "Path to drax bin. (If not provided will use $PATH)",
+			Value: "drax",
+		},
 	}
 
 	grootfs.Commands = []cli.Command{

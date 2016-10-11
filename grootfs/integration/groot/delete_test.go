@@ -26,11 +26,11 @@ var _ = Describe("Delete", func() {
 		imagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
-		bundle = integration.CreateBundle(GrootFSBin, StorePath, imagePath, "random-id", 0)
+		bundle = integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
 	})
 
 	It("deletes an existing bundle", func() {
-		result := integration.DeleteBundle(GrootFSBin, StorePath, "random-id")
+		result := integration.DeleteBundle(GrootFSBin, StorePath, DraxBin, "random-id")
 		Expect(result).To(Equal("Bundle random-id deleted\n"))
 		Expect(bundle.Path()).NotTo(BeAnExistingFile())
 	})
@@ -47,7 +47,7 @@ var _ = Describe("Delete", func() {
 		Eventually(sess).Should(gexec.Exit(0))
 		Expect(sess).To(gbytes.Say(rootID))
 
-		integration.DeleteBundle(GrootFSBin, StorePath, "random-id")
+		integration.DeleteBundle(GrootFSBin, StorePath, DraxBin, "random-id")
 
 		sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())

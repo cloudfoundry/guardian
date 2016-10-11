@@ -19,12 +19,14 @@ import (
 )
 
 type Btrfs struct {
-	storePath string
+	draxBinPath string
+	storePath   string
 }
 
-func NewBtrfs(storePath string) *Btrfs {
+func NewBtrfs(draxBinPath, storePath string) *Btrfs {
 	return &Btrfs{
-		storePath: storePath,
+		draxBinPath: draxBinPath,
+		storePath:   storePath,
 	}
 }
 
@@ -81,6 +83,36 @@ func (d *Btrfs) Snapshot(logger lager.Logger, fromPath, toPath string) error {
 	return nil
 }
 
+func (d *Btrfs) destroyQgroup(logger lager.Logger, path string) error {
+	if !d.draxInPath() {
+		logger.Info("drax-command-not-found", lager.Data{
+			"warning": "could not delete quota group",
+		})
+
+		return nil
+	}
+
+	if !d.hasSUID() {
+		return errors.New("missing the setuid bit on drax")
+	}
+
+	cmd := exec.Command(d.draxBinPath, "destroy", "--volume-path", path)
+	stdoutBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = stdoutBuffer
+	stderrBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stderr = stderrBuffer
+
+	logger.Debug("starting-drax", lager.Data{"path": cmd.Path, "args": cmd.Args})
+	err := cmd.Run()
+	d.relogStream(logger, stderrBuffer)
+	if err != nil {
+		logger.Error("drax-failed", err)
+		return fmt.Errorf("destroying quota group (%s): %s", err, strings.TrimSpace(stdoutBuffer.String()))
+	}
+
+	return nil
+}
+
 func (d *Btrfs) DestroyVolume(logger lager.Logger, id string) error {
 	logger = logger.Session("btrfs-destroying-volume", lager.Data{"volumeID": id})
 	logger.Info("start")
@@ -98,28 +130,11 @@ func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
 		return fmt.Errorf("bundle path not found: %s", err)
 	}
 
-	var cmd *exec.Cmd
-	if _, err := exec.LookPath("drax"); err != nil {
-		logger.Info("drax-command-not-found", lager.Data{
-			"warning": "could not delete quota group",
-		})
-	} else {
-		cmd = exec.Command("drax", "destroy", "--volume-path", path)
-		stdoutBuffer := bytes.NewBuffer([]byte{})
-		cmd.Stdout = stdoutBuffer
-		stderrBuffer := bytes.NewBuffer([]byte{})
-		cmd.Stderr = stderrBuffer
-
-		logger.Debug("starting-drax", lager.Data{"path": cmd.Path, "args": cmd.Args})
-		err := cmd.Run()
-		d.relogStream(logger, stderrBuffer)
-		if err != nil {
-			logger.Error("drax-failed", err)
-			return fmt.Errorf("destroying quota group (%s): %s", err, strings.TrimSpace(stdoutBuffer.String()))
-		}
+	if err := d.destroyQgroup(logger, path); err != nil {
+		logger.Error("destroying-quota-groups-failed", err)
 	}
 
-	cmd = exec.Command("btrfs", "subvolume", "delete", path)
+	cmd := exec.Command("btrfs", "subvolume", "delete", path)
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
 		logger.Error("btrfs-failed", err)
@@ -133,6 +148,14 @@ func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64
 	logger.Info("start")
 	defer logger.Info("end")
 
+	if !d.draxInPath() {
+		return errors.New("drax was not found in the $PATH")
+	}
+
+	if !d.hasSUID() {
+		return errors.New("missing the setuid bit on drax")
+	}
+
 	args := []string{
 		"limit",
 		"--volume-path", path,
@@ -143,7 +166,7 @@ func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64
 		args = append(args, "--exclude-image-from-quota")
 	}
 
-	cmd := exec.Command("drax", args...)
+	cmd := exec.Command(d.draxBinPath, args...)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = stdoutBuffer
 	stderrBuffer := bytes.NewBuffer([]byte{})
@@ -166,13 +189,21 @@ func (d *Btrfs) FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetr
 	logger.Info("start")
 	defer logger.Info("end")
 
+	if !d.draxInPath() {
+		return groot.VolumeMetrics{}, errors.New("drax was not found in the $PATH")
+	}
+
+	if !d.hasSUID() {
+		return groot.VolumeMetrics{}, errors.New("missing the setuid bit on drax")
+	}
+
 	args := []string{
 		"metrics",
 		"--volume-path", path,
 		"--force-sync",
 	}
 
-	cmd := exec.Command("drax", args...)
+	cmd := exec.Command(d.draxBinPath, args...)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = stdoutBuffer
 	stderrBuffer := bytes.NewBuffer([]byte{})
@@ -213,4 +244,24 @@ func (d *Btrfs) relogStream(logger lager.Logger, stream io.Reader) {
 			})
 		}
 	}
+}
+
+func (d *Btrfs) draxInPath() bool {
+	if _, err := exec.LookPath(d.draxBinPath); err != nil {
+		return false
+	}
+	return true
+}
+
+func (d *Btrfs) hasSUID() bool {
+	path, err := exec.LookPath(d.draxBinPath)
+	if err != nil {
+		return false
+	}
+	// If LookPath succeeds Stat cannot fail
+	draxInfo, _ := os.Stat(path)
+	if (draxInfo.Mode() & os.ModeSetuid) == 0 {
+		return false
+	}
+	return true
 }

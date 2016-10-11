@@ -37,13 +37,13 @@ var _ = Describe("Create with remote images", func() {
 		})
 
 		It("creates a root filesystem based on the image provided", func() {
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id", 0)
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
 
 			Expect(path.Join(bundle.RootFSPath(), "hello")).To(BeARegularFile())
 		})
 
 		It("saves the image.json to the bundle folder", func() {
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id", 0)
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
 
 			imageJsonPath := path.Join(bundle.Path(), "image.json")
 			Expect(imageJsonPath).To(BeARegularFile())
@@ -61,7 +61,7 @@ var _ = Describe("Create with remote images", func() {
 
 		Describe("OCI image caching", func() {
 			It("caches the image in the store", func() {
-				integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id", 0)
+				integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
 
 				blobPath := path.Join(
 					StorePath, "cache", "blobs",
@@ -71,7 +71,7 @@ var _ = Describe("Create with remote images", func() {
 			})
 
 			It("uses the cached image from the store", func() {
-				_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+				_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
 					ID:    "random-id",
 					Image: imageURL,
 					UIDMappings: []groot.IDMappingSpec{
@@ -111,7 +111,7 @@ var _ = Describe("Create with remote images", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(gzip.Close()).To(Succeed())
 
-				bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id-2", 0)
+				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id-2", 0)
 				Expect(path.Join(bundle.RootFSPath(), "i-hacked-your-cache")).To(BeARegularFile())
 			})
 
@@ -122,7 +122,7 @@ var _ = Describe("Create with remote images", func() {
 
 				Context("when the image is not accounted for in the quota", func() {
 					It("succeeds", func() {
-						cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "10", "--exclude-image-from-quota", imageURL, "random-id")
+						cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "create", "--disk-limit-size-bytes", "10", "--exclude-image-from-quota", imageURL, "random-id")
 						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
@@ -144,12 +144,12 @@ var _ = Describe("Create with remote images", func() {
 
 			Describe("Unpacked layer caching", func() {
 				It("caches the unpacked image in a subvolume with snapshots", func() {
-					integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id", 0)
+					integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
 
 					layerSnapshotPath := filepath.Join(StorePath, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
 					Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
-					bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id-2", 0)
+					bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id-2", 0)
 					Expect(path.Join(bundle.RootFSPath(), "hello")).To(BeARegularFile())
 					Expect(path.Join(bundle.RootFSPath(), "injected-file")).To(BeARegularFile())
 				})
@@ -183,7 +183,7 @@ var _ = Describe("Create with remote images", func() {
 			})
 
 			It("creates a root filesystem based on the image provided", func() {
-				bundle := integration.CreateBundle(GrootFSBin, StorePath, imageURL, "random-id", 0)
+				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
 				Expect(path.Join(bundle.RootFSPath(), "allo")).To(BeAnExistingFile())
 				Expect(path.Join(bundle.RootFSPath(), "hello")).To(BeAnExistingFile())
 			})
@@ -209,7 +209,7 @@ var _ = Describe("Create with remote images", func() {
 		})
 
 		It("fails to fetch the image", func() {
-			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
 				ID:    "random-id",
 				Image: imageURL,
 			})
@@ -234,7 +234,7 @@ var _ = Describe("Create with remote images", func() {
 
 	Context("when the image does not exist", func() {
 		It("returns a useful error", func() {
-			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, groot.CreateSpec{
+			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
 				ID:    "random-id",
 				Image: "docker:///cfgaren/sorry-not-here",
 			})
