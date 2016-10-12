@@ -4,7 +4,9 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -39,6 +41,7 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec image_puller.UnpackSpec) 
 
 func (u *TarUnpacker) unTar(spec image_puller.UnpackSpec) error {
 	tarReader := tar.NewReader(spec.Stream)
+	opaqueWhiteouts := []string{}
 
 	for {
 		header, err := tarReader.Next()
@@ -50,12 +53,18 @@ func (u *TarUnpacker) unTar(spec image_puller.UnpackSpec) error {
 
 		path := filepath.Join(spec.TargetPath, header.Name)
 
+		if strings.Contains(path, ".wh..wh..opq") {
+			opaqueWhiteouts = append(opaqueWhiteouts, path)
+			continue
+		}
+
 		if strings.Contains(path, ".wh.") {
 			if err := u.removeWhiteout(path); err != nil {
 				return err
 			}
 			continue
 		}
+
 		switch header.Typeflag {
 		case tar.TypeBlock, tar.TypeChar:
 			continue
@@ -82,7 +91,7 @@ func (u *TarUnpacker) unTar(spec image_puller.UnpackSpec) error {
 		}
 	}
 
-	return nil
+	return u.removeOpaqueWhiteouts(opaqueWhiteouts)
 }
 
 func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error {
@@ -95,6 +104,24 @@ func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error 
 	if os.Getuid() == 0 {
 		if err := os.Chown(path, tarHeader.Uid, tarHeader.Gid); err != nil {
 			return fmt.Errorf("chowning file %d:%d `%s`: %s", tarHeader.Uid, tarHeader.Gid, path, err)
+		}
+	}
+
+	return nil
+}
+
+func (u *TarUnpacker) removeOpaqueWhiteouts(paths []string) error {
+	for _, p := range paths {
+		folder := path.Dir(p)
+		contents, err := ioutil.ReadDir(folder)
+		if err != nil {
+			return fmt.Errorf("reading whiteout directory: %s", err)
+		}
+
+		for _, content := range contents {
+			if err := os.RemoveAll(path.Join(folder, content.Name())); err != nil {
+				return fmt.Errorf("cleaning up whiteout directory: %s", err)
+			}
 		}
 	}
 

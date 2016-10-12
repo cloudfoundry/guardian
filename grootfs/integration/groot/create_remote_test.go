@@ -115,6 +115,22 @@ var _ = Describe("Create with remote images", func() {
 				Expect(path.Join(bundle.RootFSPath(), "i-hacked-your-cache")).To(BeARegularFile())
 			})
 
+			Context("when the image has opaque white outs", func() {
+				BeforeEach(func() {
+					imageURL = "docker:///cfgarden/opq-whiteout-busybox"
+				})
+
+				It("empties the folder contents but keeps the dir", func() {
+					bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
+
+					whiteoutedDir := path.Join(bundle.RootFSPath(), "var")
+					Expect(whiteoutedDir).To(BeADirectory())
+					contents, err := ioutil.ReadDir(whiteoutedDir)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(contents).To(BeEmpty())
+				})
+			})
+
 			Context("when image size exceeds disk quota", func() {
 				BeforeEach(func() {
 					imageURL = "docker:///cfgarden/empty:v0.1.1"
