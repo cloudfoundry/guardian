@@ -120,7 +120,7 @@ func (s *DockerSource) Blob(logger lager.Logger, imageURL *url.URL, digest strin
 	if err != nil {
 		return nil, 0, err
 	}
-	logger.Debug("got-blob", lager.Data{"actualSize": blobContents})
+	logger.Debug("got-blob", lager.Data{"actualSize": len(blobContents)})
 
 	if !s.checkCheckSum(logger, blobContents, digest) {
 		return nil, 0, fmt.Errorf("invalid checksum: layer is corrupted `%s`", digest)
