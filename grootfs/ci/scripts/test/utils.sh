@@ -52,3 +52,17 @@ install_dependencies() {
     glide install
   fi
 }
+
+setup_drax() {
+  drax_path=$1
+  cp $drax_path /usr/local/bin/drax
+  chown root:root /usr/local/bin/drax
+  chmod u+s /usr/local/bin/drax
+}
+
+sudo_setup_drax() {
+  drax_path=$1
+
+  local SETUP_DRAX_FUNC=$(declare -f setup_drax)
+  sudo bash -c "$SETUP_DRAX_FUNC; setup_drax $drax_path"
+}

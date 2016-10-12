@@ -15,6 +15,7 @@ pushd $grootfs_path
   EVENT_MESSAGE=$(git log -1 --pretty=%B)
   install_dependencies
   make
+  sudo_setup_drax ./drax
 popd
 
 pushd $grootfs_bench_path
