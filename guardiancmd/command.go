@@ -23,6 +23,7 @@ import (
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/garden/server"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/dns"
 	"code.cloudfoundry.org/guardian/kawasaki/factory"
@@ -42,7 +43,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
-	"code.cloudfoundry.org/guardian/volplugin"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/docker/docker/daemon/graphdriver"
@@ -155,13 +155,13 @@ type GuardianCommand struct {
 	} `group:"Container Lifecycle"`
 
 	Bin struct {
-		Dadoo    FileFlag `long:"dadoo-bin"     required:"true" description:"Path to the 'dadoo' binary."`
-		NSTar    FileFlag `long:"nstar-bin"     required:"true" description:"Path to the 'nstar' binary."`
-		Tar      FileFlag `long:"tar-bin"       required:"true" description:"Path to the 'tar' binary."`
-		IPTables FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the the iptables binary"`
-		Init     FileFlag `long:"init-bin"      required:"true" description:"Path execute as pid 1 inside each container."`
-		Runc     string   `long:"runc-bin"      default:"runc" description:"Path to the 'runc' binary."`
-		OCI      string   `long:"oci-image-bin" default:"grootfs" description:"Path to binary for fetching oci images."`
+		Dadoo       FileFlag `long:"dadoo-bin"     required:"true" description:"Path to the 'dadoo' binary."`
+		NSTar       FileFlag `long:"nstar-bin"     required:"true" description:"Path to the 'nstar' binary."`
+		Tar         FileFlag `long:"tar-bin"       required:"true" description:"Path to the 'tar' binary."`
+		IPTables    FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the the iptables binary"`
+		Init        FileFlag `long:"init-bin"      required:"true" description:"Path execute as pid 1 inside each container."`
+		Runc        string   `long:"runc-bin"      default:"runc" description:"Path to the 'runc' binary."`
+		ImagePlugin FileFlag `long:"image-plugin"           description:"Path to image plugin binary."`
 	} `group:"Binary Tools"`
 
 	Graph struct {
@@ -276,11 +276,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	var volumeCreator gardener.VolumeCreator = nil
 	if !cmd.Server.Rootless {
-		volumeCreator = volplugin.NewCompositeVolumeCreator(
-			volplugin.NewGrootfsVC(cmd.Bin.OCI, cmd.Graph.Dir.Path(), linux_command_runner.New()),
-			cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages),
-			propManager,
-		)
+		volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
 	}
 
 	starters := []gardener.Starter{}
@@ -444,6 +440,10 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
 	if graphRoot == "" {
 		return gardener.NoopVolumeCreator{}
+	}
+
+	if cmd.Bin.ImagePlugin.Path() != "" {
+		return imageplugin.New(cmd.Bin.ImagePlugin.Path(), graphRoot, linux_command_runner.New())
 	}
 
 	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})

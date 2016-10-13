@@ -108,6 +108,21 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
+		It("runs the graph cleanup", func() {
+			_, err := gdnr.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(volumeCreator.GCCallCount()).To(Equal(1))
+		})
+
+		Context("when the graph cleanup fails", func() {
+			It("does NOT return the error", func() {
+				volumeCreator.GCReturns(errors.New("graph-cleanup-fail"))
+				_, err := gdnr.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		Context("when parsing the rootfs path fails", func() {
 			It("should return an error", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{

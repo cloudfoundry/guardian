@@ -23,7 +23,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, grootfsBin, inspectorGardenBin, testNetPluginBin, tarBin string
+var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, inspectorGardenBin, testNetPluginBin, tarBin string
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -53,7 +53,7 @@ func TestGqt(t *testing.T) {
 			bins["test_net_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/networkplugin")
 			Expect(err).NotTo(HaveOccurred())
 
-			bins["test_grootfs_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_grootfs")
+			bins["test_image_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin")
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := exec.Command("make")
@@ -76,7 +76,7 @@ func TestGqt(t *testing.T) {
 		gardenBin = bins["garden_bin_path"]
 		nstarBin = bins["nstar_bin_path"]
 		dadooBin = bins["dadoo_bin_bin_bin"]
-		grootfsBin = bins["test_grootfs_bin_path"]
+		testImagePluginBin = bins["test_image_plugin_bin_path"]
 		initBin = bins["init_bin_path"]
 		inspectorGardenBin = bins["inspector-garden_bin_path"]
 		testNetPluginBin = bins["test_net_plugin_bin_path"]
@@ -104,7 +104,7 @@ func TestGqt(t *testing.T) {
 
 func startGarden(argv ...string) *runner.RunningGarden {
 	rootfs := os.Getenv("GARDEN_TEST_ROOTFS")
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, rootfs, tarBin, argv...)
 }
 
 func restartGarden(client *runner.RunningGarden, argv ...string) {
@@ -114,5 +114,5 @@ func restartGarden(client *runner.RunningGarden, argv ...string) {
 }
 
 func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, grootfsBin, "", tarBin, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, "", tarBin, argv...)
 }

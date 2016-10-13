@@ -1,4 +1,4 @@
-package volplugin_test
+package imageplugin_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -9,5 +9,5 @@ import (
 
 func TestNetplugin(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "volplugin")
+	RunSpecs(t, "imageplugin")
 }

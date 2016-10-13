@@ -304,35 +304,63 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 	})
 
-	Context("when the rootfs has a grootfs scheme", func() {
-		It("creates the rootfs using the grootfs binary and the right arguments", func() {
+	Context("when an image plugin path is provided at startup", func() {
+		BeforeEach(func() {
+			args = append(args, "--image-plugin", testImagePluginBin)
+		})
+
+		It("executes the plugin on container creation", func() {
 			_, err := client.Create(garden.ContainerSpec{
-				RootFSPath: "grootfs+docker:///busybox",
-				Handle:     "grootfs-image-id",
+				RootFSPath: "docker:///cfgarden/empty#v0.1.0",
+				Handle:     "image-id",
 				Privileged: false,
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			args, err := ioutil.ReadFile(filepath.Join(client.GraphPath, "bundles/grootfs-image-id/rootfs/args"))
+			args, err := ioutil.ReadFile(filepath.Join(client.GraphPath, "create-args"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(args)).To(Equal(
 				fmt.Sprintf("[%s --store %s create %s %s]",
-					grootfsBin,
+					testImagePluginBin,
 					client.GraphPath,
-					"docker:///busybox",
-					"grootfs-image-id",
+					"docker:///cfgarden/empty#v0.1.0",
+					"image-id",
 				),
 			))
+
+			Expect(os.Remove(filepath.Join(client.GraphPath, "create-args"))).To(Succeed())
 		})
 
-		Context("when grootfs fails", func() {
-			It("fails", func() {
+		It("executes the plugin on container destruction", func() {
+			_, err := client.Create(garden.ContainerSpec{
+				RootFSPath: "docker:///cfgarden/empty#v0.1.0",
+				Handle:     "image-id",
+				Privileged: false,
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(client.Destroy("image-id")).To(Succeed())
+			args, err := ioutil.ReadFile(filepath.Join(client.GraphPath, "delete-args"))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(string(args)).To(Equal(
+				fmt.Sprintf("[%s --store %s delete %s]",
+					testImagePluginBin,
+					client.GraphPath,
+					"image-id",
+				),
+			))
+
+			Expect(os.Remove(filepath.Join(client.GraphPath, "delete-args"))).To(Succeed())
+		})
+
+		Context("when image plugin fails on container creation", func() {
+			It("provides a sensible error message", func() {
 				_, err := client.Create(garden.ContainerSpec{
-					RootFSPath: "grootfs+docker:///busybox",
+					RootFSPath: "docker:///cfgarden/empty#v0.1.0",
 					Handle:     "make-it-fail",
 					Privileged: false,
 				})
-				Expect(err).To(MatchError(ContainSubstring("running grootfs create")))
+				Expect(err).To(MatchError(ContainSubstring("external image manager create failed")))
 			})
 		})
 	})
