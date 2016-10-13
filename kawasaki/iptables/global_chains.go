@@ -23,13 +23,15 @@ const SetupScript = `
 
 	function teardown_deprecated_rules() {
 		# Remove jump to garden-dispatch from INPUT
-		${iptables_bin} -w -S INPUT 2> /dev/null |
+		rules=$(${iptables_bin} -w -S INPUT 2> /dev/null) || true
+		echo "$rules" |
 		grep " -j garden-dispatch" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w
 
 		# Remove jump to garden-dispatch from FORWARD
-		${iptables_bin} -w -S FORWARD 2> /dev/null |
+		rules=$(${iptables_bin} -w -S FORWARD 2> /dev/null) || true
+		echo "$rules" |
 		grep " -j garden-dispatch" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w
@@ -45,25 +47,29 @@ const SetupScript = `
 		teardown_deprecated_rules
 
 		# Prune garden-forward chain
-		${iptables_bin} -w -S ${filter_forward_chain} 2> /dev/null |
+		rules=$(${iptables_bin} -w -S ${filter_forward_chain} 2> /dev/null) || true
+		echo "$rules" |
 		grep "\-g ${filter_instance_prefix}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w
 
 		# Prune per-instance chains
-		${iptables_bin} -w -S 2> /dev/null |
+		rules=$(${iptables_bin} -w -S 2> /dev/null) || true
+		echo "$rules" |
 		grep "^-A ${filter_instance_prefix}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w
 
 		# Delete per-instance chains
-		${iptables_bin} -w -S 2> /dev/null |
+		rules=$(${iptables_bin} -w -S 2> /dev/null) || true
+		echo "$rules" |
 		grep "^-N ${filter_instance_prefix}" |
 		sed -e "s/-N/-X/" -e "s/\s\+\$//" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w || true
 
 		# Remove jump to garden-forward from FORWARD
-		${iptables_bin} -w -S FORWARD 2> /dev/null |
+		rules=$(${iptables_bin} -w -S FORWARD 2> /dev/null) || true
+		echo "$rules" |
 		grep " -j ${filter_forward_chain}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w || true
@@ -72,7 +78,8 @@ const SetupScript = `
 		${iptables_bin} -w -F ${filter_default_chain} 2> /dev/null || true
 
 		# Remove jump to filter input chain from INPUT
-		${iptables_bin} -w -S INPUT 2> /dev/null |
+		rules=$(${iptables_bin} -w -S INPUT 2> /dev/null) || true
+		echo "$rules" |
 		grep " -j ${filter_input_chain}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w || true
@@ -126,19 +133,22 @@ const SetupScript = `
 
 	function teardown_nat() {
 		# Prune prerouting chain
-		${iptables_bin} -w -t nat -S ${nat_prerouting_chain} 2> /dev/null |
+		rules=$(${iptables_bin} -w -t nat -S ${nat_prerouting_chain} 2> /dev/null) || true
+		echo "$rules" |
 		grep "\-j ${nat_instance_prefix}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w -t nat
 
 		# Prune per-instance chains
-		${iptables_bin} -w -t nat -S 2> /dev/null |
+		rules=$(${iptables_bin} -w -t nat -S 2> /dev/null) || true
+		echo "$rules" |
 		grep "^-A ${nat_instance_prefix}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w -t nat
 
 		# Delete per-instance chains
-		${iptables_bin} -w -t nat -S 2> /dev/null |
+		rules=$(${iptables_bin} -w -t nat -S 2> /dev/null) || true
+		echo "$rules" |
 		grep "^-N ${nat_instance_prefix}" |
 		sed -e "s/-N/-X/" -e "s/\s\+\$//" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w -t nat || true
