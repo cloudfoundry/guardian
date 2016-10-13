@@ -309,51 +309,84 @@ var _ = Describe("Rootfs container create parameter", func() {
 			args = append(args, "--image-plugin", testImagePluginBin)
 		})
 
-		It("executes the plugin on container creation", func() {
-			_, err := client.Create(garden.ContainerSpec{
-				RootFSPath: "docker:///cfgarden/empty#v0.1.0",
-				Handle:     "image-id",
-				Privileged: false,
+		Context("and a non-quotaed container is created", func() {
+			JustBeforeEach(func() {
+				_, err := client.Create(garden.ContainerSpec{
+					RootFSPath: "docker:///cfgarden/empty#v0.1.0",
+					Handle:     "non-quotaed-container",
+					Privileged: false,
+				})
+				Expect(err).ToNot(HaveOccurred())
 			})
-			Expect(err).ToNot(HaveOccurred())
 
-			args, err := ioutil.ReadFile(filepath.Join(client.GraphPath, "create-args"))
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(args)).To(Equal(
-				fmt.Sprintf("[%s --store %s create %s %s]",
-					testImagePluginBin,
-					client.GraphPath,
-					"docker:///cfgarden/empty#v0.1.0",
-					"image-id",
-				),
-			))
+			AfterEach(func() {
+				Expect(os.Remove(filepath.Join(client.GraphPath, "create-args"))).To(Succeed())
+			})
 
-			Expect(os.Remove(filepath.Join(client.GraphPath, "create-args"))).To(Succeed())
+			It("executes the plugin, passing only the simplest set of args", func() {
+				args, err := ioutil.ReadFile(filepath.Join(client.GraphPath, "create-args"))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(args)).To(Equal(
+					fmt.Sprintf("[%s --store %s create %s %s]",
+						testImagePluginBin,
+						client.GraphPath,
+						"docker:///cfgarden/empty#v0.1.0",
+						"non-quotaed-container",
+					),
+				))
+
+			})
+
+			Context("and that container is destroyed", func() {
+				JustBeforeEach(func() {
+					Expect(client.Destroy("non-quotaed-container")).To(Succeed())
+				})
+
+				AfterEach(func() {
+					Expect(os.Remove(filepath.Join(client.GraphPath, "delete-args"))).To(Succeed())
+				})
+
+				It("executes the plugin, passing only the simplest set of args", func() {
+					args, err := ioutil.ReadFile(filepath.Join(client.GraphPath, "delete-args"))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(args)).To(Equal(
+						fmt.Sprintf("[%s --store %s delete %s]",
+							testImagePluginBin,
+							client.GraphPath,
+							"non-quotaed-container",
+						),
+					))
+				})
+			})
 		})
 
-		It("executes the plugin on container destruction", func() {
-			_, err := client.Create(garden.ContainerSpec{
-				RootFSPath: "docker:///cfgarden/empty#v0.1.0",
-				Handle:     "image-id",
-				Privileged: false,
+		Context("and a quotaed container is created", func() {
+			JustBeforeEach(func() {
+				_, err := client.Create(garden.ContainerSpec{
+					RootFSPath: "docker:///cfgarden/empty#v0.1.0",
+					Handle:     "quotaed-container",
+					Privileged: false,
+					Limits: garden.Limits{
+						Disk: garden.DiskLimits{
+							ByteHard: 1 * 1024 * 1024,
+						},
+					},
+				})
+				Expect(err).ToNot(HaveOccurred())
 			})
-			Expect(err).ToNot(HaveOccurred())
 
-			Expect(client.Destroy("image-id")).To(Succeed())
-			args, err := ioutil.ReadFile(filepath.Join(client.GraphPath, "delete-args"))
-			Expect(err).ToNot(HaveOccurred())
-			Expect(string(args)).To(Equal(
-				fmt.Sprintf("[%s --store %s delete %s]",
-					testImagePluginBin,
-					client.GraphPath,
-					"image-id",
-				),
-			))
+			AfterEach(func() {
+				Expect(os.Remove(filepath.Join(client.GraphPath, "create-args"))).To(Succeed())
+			})
 
-			Expect(os.Remove(filepath.Join(client.GraphPath, "delete-args"))).To(Succeed())
+			It("passes the disk limit to the image plugin as an argument", func() {
+				args, err := ioutil.ReadFile(filepath.Join(client.GraphPath, "create-args"))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(args)).To(ContainSubstring("--disk-limit-size-bytes 1048576"))
+			})
 		})
 
-		Context("when image plugin fails on container creation", func() {
+		Context("when the image plugin fails during creation", func() {
 			It("provides a sensible error message", func() {
 				_, err := client.Create(garden.ContainerSpec{
 					RootFSPath: "docker:///cfgarden/empty#v0.1.0",

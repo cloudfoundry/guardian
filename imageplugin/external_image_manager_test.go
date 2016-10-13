@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/url"
 	"os/exec"
+	"strconv"
 
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/guardian/imageplugin"
@@ -34,50 +35,33 @@ var _ = Describe("ExternalImageManager", func() {
 	})
 
 	Describe("Create", func() {
-		It("uses the correct external-image-manager binary", func() {
-			_, _, err := externalImageManager.Create(logger, "hello", rootfs_provider.Spec{
-				RootFS: imageSource,
+		var (
+			returnedRootFS string
+			testQuotaSize  int64
+			err            error
+		)
+
+		BeforeEach(func() {
+			testQuotaSize = 0
+		})
+
+		JustBeforeEach(func() {
+			returnedRootFS, _, err = externalImageManager.Create(logger, "hello", rootfs_provider.Spec{
+				QuotaSize: testQuotaSize,
+				RootFS:    imageSource,
 			})
 			Expect(err).ToNot(HaveOccurred())
+		})
 
+		It("uses the correct external-image-manager binary", func() {
 			Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 			imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
 			Expect(imageManagerCmd.Path).To(Equal("/external-image-manager-bin"))
 		})
 
-		It("uses the external-image-manager binary output as the rootpath return", func() {
-			fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-				Path: "/external-image-manager-bin",
-			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte("/this-is/your-rootfs"))
-				cmd.Stderr.Write([]byte("/this-is-not/your-rootfs"))
-				return nil
-			})
-
-			rootfs, _, err := externalImageManager.Create(logger, "hello", rootfs_provider.Spec{
-				RootFS: imageSource,
-			})
-			Expect(err).ToNot(HaveOccurred())
-
-			Expect(rootfs).To(Equal("/this-is/your-rootfs"))
-		})
-
-		It("doesn't support image env yet", func() {
-			_, envs, err := externalImageManager.Create(logger, "hello", rootfs_provider.Spec{
-				RootFS: imageSource,
-			})
-			Expect(err).ToNot(HaveOccurred())
-			Expect(envs).To(Equal([]string{}))
-		})
-
-		Context("external-image-manager parameters", func() {
+		Describe("external-image-manager parameters", func() {
 			It("sets the correct external-image-manager store path", func() {
-				_, _, err := externalImageManager.Create(logger, "hello", rootfs_provider.Spec{
-					RootFS: imageSource,
-				})
-				Expect(err).ToNot(HaveOccurred())
-
 				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
@@ -86,11 +70,6 @@ var _ = Describe("ExternalImageManager", func() {
 			})
 
 			It("uses the correct external-image-manager create command", func() {
-				_, _, err := externalImageManager.Create(logger, "hello", rootfs_provider.Spec{
-					RootFS: imageSource,
-				})
-				Expect(err).ToNot(HaveOccurred())
-
 				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
@@ -98,32 +77,52 @@ var _ = Describe("ExternalImageManager", func() {
 			})
 
 			It("sets the correct image input to external-image-manager", func() {
-				_, _, err := externalImageManager.Create(logger, "hello", rootfs_provider.Spec{
-					RootFS: imageSource,
-				})
-				Expect(err).ToNot(HaveOccurred())
-
 				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-				Expect(imageManagerCmd.Args[4]).To(Equal("/hello/image"))
+				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-2]).To(Equal("/hello/image"))
 			})
 
 			It("sets the correct id to external-image-manager", func() {
-				_, _, err := externalImageManager.Create(logger, "hello", rootfs_provider.Spec{
-					RootFS: imageSource,
-				})
-				Expect(err).ToNot(HaveOccurred())
-
 				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-				Expect(imageManagerCmd.Args[5]).To(Equal("hello"))
+				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-1]).To(Equal("hello"))
+			})
+
+			Context("when a disk quota is provided in the spec", func() {
+				BeforeEach(func() {
+					testQuotaSize = 1024
+				})
+
+				It("passes the quota to the external-image-manager", func() {
+					Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+					imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+					Expect(imageManagerCmd.Args[4]).To(Equal("--disk-limit-size-bytes"))
+					Expect(imageManagerCmd.Args[5]).To(Equal(strconv.FormatInt(testQuotaSize, 10)))
+				})
+			})
+		})
+
+		Context("when the external-image-manager binary prints to stdout/stderr", func() {
+			BeforeEach(func() {
+				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
+					Path: "/external-image-manager-bin",
+				}, func(cmd *exec.Cmd) error {
+					cmd.Stdout.Write([]byte("/this-is/your-rootfs"))
+					cmd.Stderr.Write([]byte("/this-is-not/your-rootfs"))
+					return nil
+				})
+			})
+
+			It("returns stdout as the rootfs location", func() {
+				Expect(returnedRootFS).To(Equal("/this-is/your-rootfs"))
 			})
 		})
 
 		Context("when the command fails", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "/external-image-manager-bin",
 				}, func(cmd *exec.Cmd) error {

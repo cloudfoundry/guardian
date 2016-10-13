@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strconv"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
@@ -30,13 +31,13 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 	log.Debug("start")
 	defer log.Debug("end")
 
-	cmd := exec.Command(
-		p.binPath,
-		"--store", p.storePath,
-		"create",
-		spec.RootFS.String(),
-		handle,
-	)
+	args := []string{"--store", p.storePath, "create"}
+	if spec.QuotaSize != 0 {
+		args = append(args, "--disk-limit-size-bytes", strconv.FormatInt(spec.QuotaSize, 10))
+	}
+
+	args = append(args, spec.RootFS.String(), handle)
+	cmd := exec.Command(p.binPath, args...)
 
 	errBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stderr = errBuffer
