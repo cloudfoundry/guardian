@@ -12,17 +12,15 @@ import (
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 
-func New(binPath, storePath string, commandRunner command_runner.CommandRunner) *ExternalImageManager {
+func New(binPath string, commandRunner command_runner.CommandRunner) *ExternalImageManager {
 	return &ExternalImageManager{
 		binPath:       binPath,
-		storePath:     storePath,
 		commandRunner: commandRunner,
 	}
 }
 
 type ExternalImageManager struct {
 	binPath       string
-	storePath     string
 	commandRunner command_runner.CommandRunner
 }
 
@@ -31,7 +29,7 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 	log.Debug("start")
 	defer log.Debug("end")
 
-	args := []string{"--store", p.storePath, "create"}
+	args := []string{"create"}
 	if spec.QuotaSize != 0 {
 		args = append(args, "--disk-limit-size-bytes", strconv.FormatInt(spec.QuotaSize, 10))
 	}
@@ -60,7 +58,6 @@ func (p *ExternalImageManager) Destroy(log lager.Logger, handle string) error {
 
 	cmd := exec.Command(
 		p.binPath,
-		"--store", p.storePath,
 		"delete",
 		handle,
 	)
