@@ -106,7 +106,7 @@ var _ = Describe("ExternalImageManager", func() {
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "/external-image-manager-bin",
 				}, func(cmd *exec.Cmd) error {
-					cmd.Stdout.Write([]byte("/this-is/your-rootfs"))
+					cmd.Stdout.Write([]byte("/this-is/your"))
 					cmd.Stderr.Write([]byte("/this-is-not/your-rootfs"))
 					return nil
 				})
@@ -114,7 +114,7 @@ var _ = Describe("ExternalImageManager", func() {
 
 			It("returns stdout as the rootfs location", func() {
 				Expect(err).ToNot(HaveOccurred())
-				Expect(returnedRootFS).To(Equal("/this-is/your-rootfs"))
+				Expect(returnedRootFS).To(Equal("/this-is/your/rootfs"))
 			})
 		})
 

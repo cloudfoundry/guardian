@@ -48,7 +48,8 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 		return "", nil, fmt.Errorf("external image manager create failed: %s", err)
 	}
 
-	return outBuffer.String(), []string{}, nil
+	rootFS := fmt.Sprintf("%s/rootfs", outBuffer.String())
+	return rootFS, []string{}, nil
 }
 
 func (p *ExternalImageManager) Destroy(log lager.Logger, handle string) error {

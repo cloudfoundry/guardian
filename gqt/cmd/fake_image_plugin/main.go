@@ -22,6 +22,11 @@ func main() {
 		panic(err)
 	}
 
+	rootFSPath := fmt.Sprintf("%s/rootfs", storePath)
+	if err := os.MkdirAll(rootFSPath, 0777); err != nil {
+		panic(err)
+	}
+
 	argsFilepath := filepath.Join("/tmp/store-path", fmt.Sprintf("%s-args-%s", action, imageID))
 	err := ioutil.WriteFile(argsFilepath, []byte(fmt.Sprintf("%s", os.Args)), 0777)
 	if err != nil {
