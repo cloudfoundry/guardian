@@ -13,6 +13,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"code.cloudfoundry.org/guardian/sysinfo"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -306,13 +307,15 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 	Context("when an image plugin path is provided at startup", func() {
 		var (
-			imageID   string
-			storePath string
+			imageID    string
+			storePath  string
+			privileged bool
 		)
 
 		BeforeEach(func() {
 			args = append(args, "--image-plugin", testImagePluginBin)
 			storePath = "/tmp/store-path" // we can't use ioutil.TempDir as the fake image plugin needs to know the directory
+			privileged = false
 		})
 
 		AfterEach(func() {
@@ -326,7 +329,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 				_, err := client.Create(garden.ContainerSpec{
 					RootFSPath: "docker:///cfgarden/empty#v0.1.0",
 					Handle:     imageID,
-					Privileged: false,
+					Privileged: privileged,
 				})
 				Expect(err).ToNot(HaveOccurred())
 			})
@@ -336,15 +339,37 @@ var _ = Describe("Rootfs container create parameter", func() {
 			})
 
 			It("executes the plugin with the correct args", func() {
+				maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
 				args, err := ioutil.ReadFile(filepath.Join(storePath, fmt.Sprintf("create-args-%s", imageID)))
 				Expect(err).ToNot(HaveOccurred())
 				Expect(string(args)).To(Equal(
-					fmt.Sprintf("[%s create %s %s]",
+					fmt.Sprintf("[%s create %s %s %s %s %s %s %s %s %s %s]",
 						testImagePluginBin,
+						"--uid-mapping",
+						fmt.Sprintf("0:%d:1", maxId),
+						"--gid-mapping",
+						fmt.Sprintf("0:%d:1", maxId),
+						"--uid-mapping",
+						fmt.Sprintf("1:1:%d", maxId-1),
+						"--gid-mapping",
+						fmt.Sprintf("1:1:%d", maxId-1),
 						"docker:///cfgarden/empty#v0.1.0",
 						fmt.Sprintf("non-quotaed-container-%d", GinkgoParallelNode()),
 					),
 				))
+			})
+
+			Context("when the container is privileged", func() {
+				BeforeEach(func() {
+					privileged = true
+				})
+
+				It("does not pass any mappings to the plugin", func() {
+					args, err := ioutil.ReadFile(filepath.Join(storePath, fmt.Sprintf("create-args-%s", imageID)))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(args)).NotTo(ContainSubstring("--uid-mapping"))
+					Expect(string(args)).NotTo(ContainSubstring("--gid-mapping"))
+				})
 			})
 
 			Context("and that container is destroyed", func() {

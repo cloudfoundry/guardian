@@ -443,7 +443,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 	}
 
 	if cmd.Bin.ImagePlugin.Path() != "" {
-		return imageplugin.New(cmd.Bin.ImagePlugin.Path(), linux_command_runner.New())
+		return imageplugin.New(cmd.Bin.ImagePlugin.Path(), linux_command_runner.New(), idMappings)
 	}
 
 	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})

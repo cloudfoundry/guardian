@@ -2,6 +2,7 @@ package imageplugin_test
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"os/exec"
 	"strconv"
@@ -10,6 +11,7 @@ import (
 	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,12 +24,27 @@ var _ = Describe("ExternalImageManager", func() {
 		logger               *lagertest.TestLogger
 		externalImageManager *imageplugin.ExternalImageManager
 		imageSource          *url.URL
+		idMappings           []specs.IDMapping
 	)
 
 	BeforeEach(func() {
 		logger = lagertest.NewTestLogger("external-image-manager")
 		fakeCommandRunner = fake_command_runner.New()
-		externalImageManager = imageplugin.New("/external-image-manager-bin", fakeCommandRunner)
+
+		idMappings = []specs.IDMapping{
+			specs.IDMapping{
+				ContainerID: 0,
+				HostID:      100,
+				Size:        1,
+			},
+			specs.IDMapping{
+				ContainerID: 1,
+				HostID:      1,
+				Size:        99,
+			},
+		}
+
+		externalImageManager = imageplugin.New("/external-image-manager-bin", fakeCommandRunner, idMappings)
 
 		var err error
 		imageSource, err = url.Parse("/hello/image")
@@ -39,16 +56,19 @@ var _ = Describe("ExternalImageManager", func() {
 			returnedRootFS string
 			testQuotaSize  int64
 			err            error
+			namespaced     bool
 		)
 
 		BeforeEach(func() {
 			testQuotaSize = 0
+			namespaced = false
 		})
 
 		JustBeforeEach(func() {
 			returnedRootFS, _, err = externalImageManager.Create(logger, "hello", rootfs_provider.Spec{
-				QuotaSize: testQuotaSize,
-				RootFS:    imageSource,
+				QuotaSize:  testQuotaSize,
+				RootFS:     imageSource,
+				Namespaced: namespaced,
 			})
 		})
 
@@ -83,6 +103,39 @@ var _ = Describe("ExternalImageManager", func() {
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
 				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-1]).To(Equal("hello"))
+			})
+
+			Context("when namespaced is true", func() {
+				BeforeEach(func() {
+					namespaced = true
+				})
+
+				It("passes the correct uid and gid mappings to the external-image-manager", func() {
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+					imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+					firstMap := fmt.Sprintf("%d:%d:%d", idMappings[0].ContainerID, idMappings[0].HostID, idMappings[0].Size)
+					secondMap := fmt.Sprintf("%d:%d:%d", idMappings[1].ContainerID, idMappings[1].HostID, idMappings[1].Size)
+
+					Expect(imageManagerCmd.Args[2:10]).To(Equal([]string{
+						"--uid-mapping", firstMap,
+						"--gid-mapping", firstMap,
+						"--uid-mapping", secondMap,
+						"--gid-mapping", secondMap,
+					}))
+				})
+			})
+
+			Context("when namespaced is false", func() {
+				It("does not pass any uid and gid mappings to the external-image-manager", func() {
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+					imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+					Expect(imageManagerCmd.Args).NotTo(ContainElement("--uid-mapping"))
+					Expect(imageManagerCmd.Args).NotTo(ContainElement("--gid-mapping"))
+				})
 			})
 
 			Context("when a disk quota is provided in the spec", func() {
