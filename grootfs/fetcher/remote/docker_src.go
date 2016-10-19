@@ -30,6 +30,10 @@ func NewDockerSource(trustedRegistries []string) *DockerSource {
 	}
 }
 
+type ImageNotFoundErr struct {
+	error
+}
+
 func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifest, error) {
 	logger = logger.Session("fetching-image-manifest", lager.Data{"imageURL": imageURL})
 	logger.Info("start")
@@ -37,7 +41,13 @@ func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifes
 
 	img, err := s.preSteamedImage(logger, imageURL)
 	if err != nil {
-		return Manifest{}, err
+		logger.Error("fetching-image-reference-failed", err)
+
+		if strings.Contains(err.Error(), "unauthorized: authentication required") {
+			return Manifest{}, errorspkg.Wrap(ImageNotFoundErr{err}, "fetching image reference")
+		}
+
+		return Manifest{}, errorspkg.Wrap(err, "fetching image reference")
 	}
 
 	contents, mimeType, err := img.Manifest()
@@ -274,7 +284,7 @@ func (s *DockerSource) preSteamedImage(logger lager.Logger, imageURL *url.URL) (
 	logger.Debug("new-image", lager.Data{"skipTLSValidation": skipTLSValidation})
 	img, err := ref.NewImage(&types.SystemContext{DockerInsecureSkipTLSVerify: skipTLSValidation})
 	if err != nil {
-		return nil, fmt.Errorf("creating reference: %s", err)
+		return nil, errorspkg.Wrap(err, "creating reference")
 	}
 
 	return img, nil

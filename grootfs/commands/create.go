@@ -18,7 +18,6 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
-	"github.com/containers/image/docker"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -144,7 +143,7 @@ func tryHumanize(err error) string {
 		if _, ok := e.Err.(x509.UnknownAuthorityError); ok {
 			return "This registry is insecure. To pull images from this registry, please use the --insecure-registry option."
 		}
-	case docker.ErrFetchManifest:
+	case remote.ImageNotFoundErr:
 		return "Image does not exist or you do not have permissions to see it."
 	}
 

@@ -123,15 +123,15 @@ var _ = Describe("Docker source", func() {
 
 			It("wraps the containers/image with an useful error", func() {
 				_, err := dockerSrc.Manifest(logger, imageURL)
-				Expect(err.Error()).To(MatchRegexp("^fetching manifest"))
+				Expect(err.Error()).To(MatchRegexp("^fetching image reference"))
 			})
 
 			It("logs the original error message", func() {
 				_, err := dockerSrc.Manifest(logger, imageURL)
 				Expect(err).To(HaveOccurred())
 
-				Expect(logger).To(gbytes.Say("fetching-manifest-failed"))
-				Expect(logger).To(gbytes.Say("error fetching manifest: status code:"))
+				Expect(logger).To(gbytes.Say("fetching-image-reference-failed"))
+				Expect(logger).To(gbytes.Say("unauthorized: authentication required"))
 			})
 		})
 	})
