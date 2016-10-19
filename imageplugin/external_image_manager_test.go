@@ -118,6 +118,22 @@ var _ = Describe("ExternalImageManager", func() {
 			})
 		})
 
+		Context("when the external-image-manager binary prints a newline ath the end of its output", func() {
+			BeforeEach(func() {
+				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
+					Path: "/external-image-manager-bin",
+				}, func(cmd *exec.Cmd) error {
+					cmd.Stdout.Write([]byte("/this-is/your\n"))
+					return nil
+				})
+			})
+
+			It("returns the rootfs without the new line character", func() {
+				Expect(err).ToNot(HaveOccurred())
+				Expect(returnedRootFS).To(Equal("/this-is/your/rootfs"))
+			})
+		})
+
 		Context("when the command fails", func() {
 			BeforeEach(func() {
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{

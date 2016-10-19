@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strconv"
+	"strings"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
@@ -48,7 +49,8 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 		return "", nil, fmt.Errorf("external image manager create failed: %s", err)
 	}
 
-	rootFS := fmt.Sprintf("%s/rootfs", outBuffer.String())
+	trimmedOut := strings.TrimSpace(outBuffer.String())
+	rootFS := fmt.Sprintf("%s/rootfs", trimmedOut)
 	return rootFS, []string{}, nil
 }
 
