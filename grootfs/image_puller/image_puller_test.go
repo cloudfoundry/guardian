@@ -313,13 +313,13 @@ var _ = Describe("Image Puller", func() {
 
 			Expect(fakeVolumeDriver.PathCallCount()).To(Equal(3))
 			_, chainID := fakeVolumeDriver.PathArgsForCall(0)
-			Expect(chainID).To(Equal("layer-111-namespaced"))
+			Expect(chainID).To(Equal("chain-333-namespaced"))
 
 			_, chainID = fakeVolumeDriver.PathArgsForCall(1)
 			Expect(chainID).To(Equal("chain-222-namespaced"))
 
 			_, chainID = fakeVolumeDriver.PathArgsForCall(2)
-			Expect(chainID).To(Equal("chain-333-namespaced"))
+			Expect(chainID).To(Equal("layer-111-namespaced"))
 
 			Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(3))
 			_, parentChainID, chainID := fakeVolumeDriver.CreateArgsForCall(0)
@@ -336,7 +336,7 @@ var _ = Describe("Image Puller", func() {
 		})
 	})
 
-	Context("when a volume exists", func() {
+	Context("when all volumes exist", func() {
 		BeforeEach(func() {
 			fakeVolumeDriver.PathReturns("/path/to/volume", nil)
 		})
@@ -348,6 +348,28 @@ var _ = Describe("Image Puller", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(0))
+		})
+	})
+
+	Context("when one volume exists", func() {
+		BeforeEach(func() {
+			fakeVolumeDriver.PathStub = func(_ lager.Logger, id string) (string, error) {
+				if id == "chain-222" {
+					return "/path/to/chain-222", nil
+				}
+				return "", errors.New("not here")
+			}
+		})
+
+		It("only creates the children of the existing volume", func() {
+			_, err := imagePuller.Pull(logger, groot.ImageSpec{
+				ImageSrc: remoteImageSrc,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(1))
+			_, _, volID := fakeVolumeDriver.CreateArgsForCall(0)
+			Expect(volID).To(Equal("chain-333"))
 		})
 	})
 
@@ -377,7 +399,15 @@ var _ = Describe("Image Puller", func() {
 
 	Context("when unpacking a blob fails", func() {
 		BeforeEach(func() {
-			fakeUnpacker.UnpackReturns(errors.New("failed to unpack the blob"))
+			count := 0
+			fakeUnpacker.UnpackStub = func(_ lager.Logger, _ image_puller.UnpackSpec) error {
+				count++
+				if count == 3 {
+					return errors.New("failed to unpack the blob")
+				}
+
+				return nil
+			}
 		})
 
 		It("returns an error", func() {
@@ -391,7 +421,7 @@ var _ = Describe("Image Puller", func() {
 
 			Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
 			_, path := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
-			Expect(path).To(Equal("layer-111"))
+			Expect(path).To(Equal("chain-333"))
 		})
 	})
 })

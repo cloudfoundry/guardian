@@ -81,69 +81,9 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 		return groot.BundleSpec{}, err
 	}
 
-	var volumePath string
-	for _, digest := range imageInfo.LayersDigest {
-		volumePath, err = p.volumeDriver.Path(logger, wrapVolumeID(spec, digest.ChainID))
-		if err == nil {
-			logger.Debug("volume-exists", lager.Data{
-				"volumePath":    volumePath,
-				"blobID":        digest.BlobID,
-				"chainID":       digest.ChainID,
-				"parentChainID": digest.ParentChainID,
-			})
-			continue
-		}
-
-		stream, size, err := p.fetcher(spec.ImageSrc).StreamBlob(logger, spec.ImageSrc, digest.BlobID)
-		if err != nil {
-			return groot.BundleSpec{}, fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
-		}
-
-		logger.Debug("got-stream-for-blob", lager.Data{
-			"size":                  size,
-			"diskLimit":             spec.DiskLimit,
-			"excludeImageFromQuota": spec.ExcludeImageFromQuota,
-			"blobID":                digest.BlobID,
-			"chainID":               digest.ChainID,
-			"parentChainID":         digest.ParentChainID,
-		})
-
-		volumePath, err = p.volumeDriver.Create(logger,
-			wrapVolumeID(spec, digest.ParentChainID),
-			wrapVolumeID(spec, digest.ChainID),
-		)
-		if err != nil {
-			return groot.BundleSpec{}, fmt.Errorf("creating volume for layer `%s`: %s", digest.BlobID, err)
-		}
-		logger.Debug("volume-created", lager.Data{
-			"volumePath":    volumePath,
-			"blobID":        digest.BlobID,
-			"chainID":       digest.ChainID,
-			"parentChainID": digest.ParentChainID,
-		})
-
-		unpackSpec := UnpackSpec{
-			TargetPath:  volumePath,
-			Stream:      stream,
-			UIDMappings: spec.UIDMappings,
-			GIDMappings: spec.GIDMappings,
-		}
-
-		if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
-			if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
-				logger.Error("volume-cleanup-failed", errD, lager.Data{
-					"blobID":        digest.BlobID,
-					"chainID":       digest.ChainID,
-					"parentChainID": digest.ParentChainID,
-				})
-			}
-			return groot.BundleSpec{}, fmt.Errorf("unpacking layer `%s`: %s", digest.BlobID, err)
-		}
-		logger.Debug("layer-unpacked", lager.Data{
-			"blobID":        digest.BlobID,
-			"chainID":       digest.ChainID,
-			"parentChainID": digest.ParentChainID,
-		})
+	volumePath, err := p.buildLayer(logger, len(imageInfo.LayersDigest)-1, imageInfo.LayersDigest, spec)
+	if err != nil {
+		return groot.BundleSpec{}, err
 	}
 
 	bundleSpec := groot.BundleSpec{
@@ -178,6 +118,79 @@ func (p *ImagePuller) quotaExceeded(logger lager.Logger, layersDigest []LayerDig
 	}
 
 	return nil
+}
+
+func (p *ImagePuller) buildLayer(logger lager.Logger, index int, layersDigest []LayerDigest, spec groot.ImageSpec) (string, error) {
+	if index < 0 {
+		return "", nil
+	}
+
+	digest := layersDigest[index]
+	volumePath, err := p.volumeDriver.Path(logger, wrapVolumeID(spec, digest.ChainID))
+	if err == nil {
+		logger.Debug("volume-exists", lager.Data{
+			"volumePath":    volumePath,
+			"blobID":        digest.BlobID,
+			"chainID":       digest.ChainID,
+			"parentChainID": digest.ParentChainID,
+		})
+		return volumePath, nil
+	}
+
+	p.buildLayer(logger, index-1, layersDigest, spec)
+
+	stream, size, err := p.fetcher(spec.ImageSrc).StreamBlob(logger, spec.ImageSrc, digest.BlobID)
+	if err != nil {
+		return "", fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
+	}
+
+	logger.Debug("got-stream-for-blob", lager.Data{
+		"size":                  size,
+		"diskLimit":             spec.DiskLimit,
+		"excludeImageFromQuota": spec.ExcludeImageFromQuota,
+		"blobID":                digest.BlobID,
+		"chainID":               digest.ChainID,
+		"parentChainID":         digest.ParentChainID,
+	})
+
+	volumePath, err = p.volumeDriver.Create(logger,
+		wrapVolumeID(spec, digest.ParentChainID),
+		wrapVolumeID(spec, digest.ChainID),
+	)
+	if err != nil {
+		return "", fmt.Errorf("creating volume for layer `%s`: %s", digest.BlobID, err)
+	}
+	logger.Debug("volume-created", lager.Data{
+		"volumePath":    volumePath,
+		"blobID":        digest.BlobID,
+		"chainID":       digest.ChainID,
+		"parentChainID": digest.ParentChainID,
+	})
+
+	unpackSpec := UnpackSpec{
+		TargetPath:  volumePath,
+		Stream:      stream,
+		UIDMappings: spec.UIDMappings,
+		GIDMappings: spec.GIDMappings,
+	}
+
+	if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
+		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
+			logger.Error("volume-cleanup-failed", errD, lager.Data{
+				"blobID":        digest.BlobID,
+				"chainID":       digest.ChainID,
+				"parentChainID": digest.ParentChainID,
+			})
+		}
+		return "", fmt.Errorf("unpacking layer `%s`: %s", digest.BlobID, err)
+	}
+	logger.Debug("layer-unpacked", lager.Data{
+		"blobID":        digest.BlobID,
+		"chainID":       digest.ChainID,
+		"parentChainID": digest.ParentChainID,
+	})
+
+	return volumePath, nil
 }
 
 func (p *ImagePuller) layersSize(layerDigests []LayerDigest) int64 {
