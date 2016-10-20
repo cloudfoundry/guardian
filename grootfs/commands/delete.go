@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	grootpkg "code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/bundler"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
@@ -36,9 +36,9 @@ var DeleteCommand = cli.Command{
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.META_DIR_NAME, "dependencies"),
 		)
-		groot := grootpkg.IamGroot(bundler, nil, nil, dependencyManager, nil)
+		deleter := groot.IamDeleter(bundler, dependencyManager)
 
-		err := groot.Delete(logger, id)
+		err := deleter.Delete(logger, id)
 		if err != nil {
 			logger.Error("deleting-bundle-failed", err)
 			return cli.NewExitError(err.Error(), 1)

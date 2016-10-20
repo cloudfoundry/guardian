@@ -9,7 +9,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
-	grootpkg "code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/image_puller"
 	unpackerpkg "code.cloudfoundry.org/grootfs/image_puller/unpacker"
 	storepkg "code.cloudfoundry.org/grootfs/store"
@@ -106,9 +106,9 @@ var CreateCommand = cli.Command{
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
 		)
-		groot := grootpkg.IamGroot(bundler, imgPuller, locksmith, dependencyManager, nil)
+		creator := groot.IamCreator(bundler, imgPuller, locksmith, dependencyManager)
 
-		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
+		bundle, err := creator.Create(logger, groot.CreateSpec{
 			ID:                    id,
 			Image:                 image,
 			DiskLimit:             diskLimit,
@@ -128,11 +128,11 @@ var CreateCommand = cli.Command{
 	},
 }
 
-func parseIDMappings(args []string) ([]grootpkg.IDMappingSpec, error) {
-	mappings := []grootpkg.IDMappingSpec{}
+func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {
+	mappings := []groot.IDMappingSpec{}
 
 	for _, v := range args {
-		var mapping grootpkg.IDMappingSpec
+		var mapping groot.IDMappingSpec
 		_, err := fmt.Sscanf(v, "%d:%d:%d", &mapping.NamespaceID, &mapping.HostID, &mapping.Size)
 		if err != nil {
 			return nil, err

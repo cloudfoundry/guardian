@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/lager"
 
-	grootpkg "code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/groot"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	bundlerpkg "code.cloudfoundry.org/grootfs/store/bundler"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
@@ -38,8 +38,8 @@ var CleanCommand = cli.Command{
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, bundler, dependencyManager)
 
-		groot := grootpkg.IamGroot(bundler, nil, locksmith, dependencyManager, gc)
-		err := groot.Clean(logger)
+		cleaner := groot.IamCleaner(locksmith, gc)
+		err := cleaner.Clean(logger)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return cli.NewExitError(err.Error(), 1)

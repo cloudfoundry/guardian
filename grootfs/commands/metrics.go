@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	grootpkg "code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/groot"
 	bundlerpkg "code.cloudfoundry.org/grootfs/store/bundler"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
@@ -34,8 +34,8 @@ var MetricsCommand = cli.Command{
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
 		bundler := bundlerpkg.NewBundler(btrfsVolumeDriver, storePath)
 
-		groot := grootpkg.IamGroot(bundler, nil, nil, nil, nil)
-		metrics, err := groot.Metrics(logger, id)
+		metricser := groot.IamMetricser(bundler)
+		metrics, err := metricser.Metrics(logger, id)
 		if err != nil {
 			logger.Error("fetching-metrics", err)
 			return cli.NewExitError(err.Error(), 1)
