@@ -1,4 +1,4 @@
-package store // import "code.cloudfoundry.org/grootfs/store"
+package bundler // import "code.cloudfoundry.org/grootfs/store/bundler"
 
 import "path"
 

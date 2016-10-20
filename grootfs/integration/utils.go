@@ -12,7 +12,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/bundler"
 	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
@@ -21,41 +21,33 @@ import (
 )
 
 func CreateBundle(grootFSBin, storePath, draxBin, imagePath, id string, diskLimit int64) groot.Bundle {
-	cmd := runner.CreateCmd{
-		GrootFSBin: grootFSBin,
-		StorePath:  storePath,
-		DraxBin:    draxBin,
-		Spec: groot.CreateSpec{
-			ID:        id,
-			Image:     imagePath,
-			DiskLimit: diskLimit,
-		},
-		LogLevel: lager.DEBUG,
-		LogFile:  GinkgoWriter,
+	spec := groot.CreateSpec{
+		ID:        id,
+		Image:     imagePath,
+		DiskLimit: diskLimit,
 	}
 
-	bundlePath, err := cmd.Run()
+	bundle, err := CreateBundleWSpec(grootFSBin, storePath, draxBin, spec)
 	Expect(err).NotTo(HaveOccurred())
 
-	return store.NewBundle(bundlePath)
+	return bundle
 }
 
 func CreateBundleWSpec(grootFSBin, storePath, draxBin string, spec groot.CreateSpec) (groot.Bundle, error) {
-	cmd := runner.CreateCmd{
+	groot := &runner.Groot{
 		GrootFSBin: grootFSBin,
 		StorePath:  storePath,
 		DraxBin:    draxBin,
-		Spec:       spec,
 		LogLevel:   lager.DEBUG,
 		LogFile:    GinkgoWriter,
 	}
 
-	bundlePath, err := cmd.Run()
+	bundlePath, err := groot.Create(spec)
 	if err != nil {
 		return nil, err
 	}
 
-	return store.NewBundle(bundlePath), nil
+	return bundler.NewBundle(bundlePath), nil
 }
 
 func DeleteBundle(grootFSBin, storePath, draxBin, id string) string {

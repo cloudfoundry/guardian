@@ -51,6 +51,8 @@ var _ = Describe("Configurer", func() {
 			Expect(filepath.Join(storePath, "cache", "blobs")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "volumes")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "locks")).To(BeADirectory())
+			Expect(filepath.Join(storePath, "meta")).To(BeADirectory())
+			Expect(filepath.Join(storePath, "meta", "dependencies")).To(BeADirectory())
 		})
 
 		Context("when the base directory does not exist", func() {

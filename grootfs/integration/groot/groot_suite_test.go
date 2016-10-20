@@ -5,7 +5,9 @@ import (
 	"os"
 	"path"
 
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,8 +19,9 @@ import (
 var (
 	GrootFSBin string
 	DraxBin    string
-	storeName  string
 	StorePath  string
+	Groot      *runner.Groot
+	storeName  string
 )
 
 const btrfsMountPath = "/mnt/btrfs"
@@ -53,6 +56,14 @@ func TestGroot(t *testing.T) {
 		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/volume_driver/drax")
 		Expect(err).NotTo(HaveOccurred())
 		testhelpers.SuidDrax(DraxBin)
+
+		Groot = &runner.Groot{
+			GrootFSBin: GrootFSBin,
+			StorePath:  StorePath,
+			DraxBin:    DraxBin,
+			LogLevel:   lager.DEBUG,
+			LogFile:    GinkgoWriter,
+		}
 	})
 
 	AfterEach(func() {

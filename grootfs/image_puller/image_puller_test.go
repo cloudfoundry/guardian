@@ -71,26 +71,34 @@ var _ = Describe("Image Puller", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("returns the image description to the bundle spec", func() {
-		bundle, err := imagePuller.Pull(logger, groot.ImageSpec{
+	It("returns the image description", func() {
+		image, err := imagePuller.Pull(logger, groot.ImageSpec{
 			ImageSrc: remoteImageSrc,
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(bundle.Image).To(Equal(expectedImgDesc))
+		Expect(image.Image).To(Equal(expectedImgDesc))
 	})
 
-	It("returns the last volume's path to the bundle spec", func() {
+	It("returns the last volume's path", func() {
 		fakeVolumeDriver.PathStub = func(_ lager.Logger, id string) (string, error) {
 			return fmt.Sprintf("/path/to/volume/%s", id), nil
 		}
 
-		bundle, err := imagePuller.Pull(logger, groot.ImageSpec{
+		image, err := imagePuller.Pull(logger, groot.ImageSpec{
 			ImageSrc: remoteImageSrc,
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(bundle.VolumePath).To(Equal("/path/to/volume/chain-333"))
+		Expect(image.VolumePath).To(Equal("/path/to/volume/chain-333"))
+	})
+
+	It("returns the chain ids", func() {
+		image, err := imagePuller.Pull(logger, groot.ImageSpec{
+			ImageSrc: remoteImageSrc,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(image.ChainIDs).To(ConsistOf("layer-111", "chain-222", "chain-333"))
 	})
 
 	It("creates volumes for all the layers", func() {

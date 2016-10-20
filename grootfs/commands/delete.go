@@ -3,9 +3,12 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 
 	grootpkg "code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/bundler"
+	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 
@@ -29,9 +32,11 @@ var DeleteCommand = cli.Command{
 		id := ctx.Args().First()
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
-
-		bundler := store.NewBundler(btrfsVolumeDriver, storePath)
-		groot := grootpkg.IamGroot(bundler, nil, nil)
+		bundler := bundler.NewBundler(btrfsVolumeDriver, storePath)
+		dependencyManager := dependency_manager.NewDependencyManager(
+			filepath.Join(storePath, store.META_DIR_NAME, "dependencies"),
+		)
+		groot := grootpkg.IamGroot(bundler, nil, nil, dependencyManager, nil)
 
 		err := groot.Delete(logger, id)
 		if err != nil {

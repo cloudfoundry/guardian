@@ -22,6 +22,14 @@ type FakeCacheDriver struct {
 		result2 int64
 		result3 error
 	}
+	CleanStub        func(logger lager.Logger) error
+	cleanMutex       sync.RWMutex
+	cleanArgsForCall []struct {
+		logger lager.Logger
+	}
+	cleanReturns struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -63,11 +71,46 @@ func (fake *FakeCacheDriver) StreamBlobReturns(result1 io.ReadCloser, result2 in
 	}{result1, result2, result3}
 }
 
+func (fake *FakeCacheDriver) Clean(logger lager.Logger) error {
+	fake.cleanMutex.Lock()
+	fake.cleanArgsForCall = append(fake.cleanArgsForCall, struct {
+		logger lager.Logger
+	}{logger})
+	fake.recordInvocation("Clean", []interface{}{logger})
+	fake.cleanMutex.Unlock()
+	if fake.CleanStub != nil {
+		return fake.CleanStub(logger)
+	} else {
+		return fake.cleanReturns.result1
+	}
+}
+
+func (fake *FakeCacheDriver) CleanCallCount() int {
+	fake.cleanMutex.RLock()
+	defer fake.cleanMutex.RUnlock()
+	return len(fake.cleanArgsForCall)
+}
+
+func (fake *FakeCacheDriver) CleanArgsForCall(i int) lager.Logger {
+	fake.cleanMutex.RLock()
+	defer fake.cleanMutex.RUnlock()
+	return fake.cleanArgsForCall[i].logger
+}
+
+func (fake *FakeCacheDriver) CleanReturns(result1 error) {
+	fake.CleanStub = nil
+	fake.cleanReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeCacheDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.streamBlobMutex.RLock()
 	defer fake.streamBlobMutex.RUnlock()
+	fake.cleanMutex.RLock()
+	defer fake.cleanMutex.RUnlock()
 	return fake.invocations
 }
 

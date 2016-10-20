@@ -30,13 +30,14 @@ var _ = Describe("Btrfs", func() {
 		storeName   string
 		storePath   string
 		draxBinPath string
+		volumesPath string
 	)
 
 	BeforeEach(func() {
 		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
 		storePath = filepath.Join(btrfsMountPath, storeName)
 
-		volumesPath := filepath.Join(storePath, store.VOLUMES_DIR_NAME)
+		volumesPath = filepath.Join(storePath, store.VOLUMES_DIR_NAME)
 		Expect(os.MkdirAll(volumesPath, 0755)).To(Succeed())
 
 		var err error
@@ -208,6 +209,40 @@ var _ = Describe("Btrfs", func() {
 				Expect(
 					btrfs.Snapshot(logger, "non-existent-parent", toPath),
 				).To(MatchError(ContainSubstring("creating btrfs snapshot")))
+			})
+		})
+	})
+
+	Describe("Volumes", func() {
+		BeforeEach(func() {
+			Expect(os.Mkdir(filepath.Join(volumesPath, "sha256:vol-a"), 0777)).To(Succeed())
+			Expect(os.Mkdir(filepath.Join(volumesPath, "sha256:vol-b"), 0777)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(volumesPath)).To(Succeed())
+		})
+
+		It("returns a list with existing volumes id", func() {
+			volumes, err := btrfs.Volumes(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(volumes)).To(Equal(2))
+			Expect(volumes).To(ContainElement("sha256:vol-a"))
+			Expect(volumes).To(ContainElement("sha256:vol-b"))
+		})
+
+		Context("when fails to list volumes", func() {
+			BeforeEach(func() {
+				Expect(os.Chmod(volumesPath, 0666)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				Expect(os.Chmod(volumesPath, 0755)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				_, err := btrfs.Volumes(logger)
+				Expect(err).To(MatchError(ContainSubstring("failed to list volumes")))
 			})
 		})
 	})

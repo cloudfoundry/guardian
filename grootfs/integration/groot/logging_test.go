@@ -6,8 +6,6 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -32,17 +30,10 @@ var _ = Describe("Logging", func() {
 		Expect(ioutil.WriteFile(filepath.Join(imgPath, "unreadable-file"), []byte("foo bar"), 0644)).To(Succeed())
 
 		logBuffer := gbytes.NewBuffer()
-		cmd := runner.CreateCmd{
-			GrootFSBin: GrootFSBin,
-			StorePath:  StorePath,
-			Spec: groot.CreateSpec{
-				ID:    "random-id",
-				Image: imgPath,
-			},
-			LogLevel: lager.DEBUG,
-			LogFile:  logBuffer,
-		}
-		_, err = cmd.Run()
+		_, err = Groot.WithLogFile(logBuffer).Create(groot.CreateSpec{
+			ID:    "random-id",
+			Image: imgPath,
+		})
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(logBuffer).To(gbytes.Say("namespaced-unpacking.unpack"))

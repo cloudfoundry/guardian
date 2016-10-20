@@ -18,10 +18,12 @@ import (
 
 var _ = Describe("I AM GROOT, the Orchestrator", func() {
 	var (
-		fakeBundler     *grootfakes.FakeBundler
-		fakeImagePuller *grootfakes.FakeImagePuller
-		fakeLocksmith   *grootfakes.FakeLocksmith
-		lockFile        *os.File
+		fakeBundler           *grootfakes.FakeBundler
+		fakeImagePuller       *grootfakes.FakeImagePuller
+		fakeLocksmith         *grootfakes.FakeLocksmith
+		fakeDependencyManager *grootfakes.FakeDependencyManager
+		fakeGarbageCollector  *grootfakes.FakeGarbageCollector
+		lockFile              *os.File
 
 		groot  *grootpkg.Groot
 		logger lager.Logger
@@ -37,8 +39,10 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 		lockFile, err = ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
 		fakeLocksmith.LockReturns(lockFile, nil)
+		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
+		fakeGarbageCollector = new(grootfakes.FakeGarbageCollector)
 
-		groot = grootpkg.IamGroot(fakeBundler, fakeImagePuller, fakeLocksmith)
+		groot = grootpkg.IamGroot(fakeBundler, fakeImagePuller, fakeLocksmith, fakeDependencyManager, fakeGarbageCollector)
 		logger = lagertest.NewTestLogger("groot")
 	})
 
@@ -47,6 +51,99 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 	})
 
 	Describe("Create", func() {
+		It("acquires the global lock", func() {
+			_, err := groot.Create(logger, grootpkg.CreateSpec{
+				Image: "/path/to/image",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
+			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(grootpkg.GLOBAL_LOCK_KEY))
+		})
+
+		It("pulls the image", func() {
+			uidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
+			gidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}
+
+			_, err := groot.Create(logger, grootpkg.CreateSpec{
+				Image:       "/path/to/image",
+				UIDMappings: uidMappings,
+				GIDMappings: gidMappings,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			imageURL, err := url.Parse("/path/to/image")
+			Expect(err).NotTo(HaveOccurred())
+			_, imageSpec := fakeImagePuller.PullArgsForCall(0)
+			Expect(imageSpec.ImageSrc).To(Equal(imageURL))
+			Expect(imageSpec.UIDMappings).To(Equal(uidMappings))
+			Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
+		})
+
+		It("releases the global lock", func() {
+			_, err := groot.Create(logger, grootpkg.CreateSpec{
+				Image: "/path/to/image",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
+			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
+		})
+
+		It("makes a bundle", func() {
+			image := grootpkg.Image{
+				VolumePath: "/path/to/volume",
+				Image: specsv1.Image{
+					Author: "Groot",
+				},
+			}
+			fakeImagePuller.PullReturns(image, nil)
+
+			_, err := groot.Create(logger, grootpkg.CreateSpec{
+				ID:    "some-id",
+				Image: "/path/to/image",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeBundler.CreateCallCount()).To(Equal(1))
+			_, createBundlerSpec := fakeBundler.CreateArgsForCall(0)
+			Expect(createBundlerSpec).To(Equal(grootpkg.BundleSpec{
+				ID:         "some-id",
+				VolumePath: "/path/to/volume",
+				Image: specsv1.Image{
+					Author: "Groot",
+				},
+			}))
+		})
+
+		It("registers chain ids used by a bundle", func() {
+			image := grootpkg.Image{
+				ChainIDs: []string{"sha256:vol-a", "sha256:vol-b"},
+			}
+			fakeImagePuller.PullReturns(image, nil)
+
+			_, err := groot.Create(logger, grootpkg.CreateSpec{
+				ID:    "my-bundle",
+				Image: "/path/to/image",
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			bundleID, chainIDs := fakeDependencyManager.RegisterArgsForCall(0)
+			Expect(bundleID).To(Equal("my-bundle"))
+			Expect(chainIDs).To(Equal([]string{"sha256:vol-a", "sha256:vol-b"}))
+		})
+
+		It("returns the bundle", func() {
+			fakeBundle := new(grootfakes.FakeBundle)
+			fakeBundle.PathReturns("/path/to/bundle")
+			fakeBundler.CreateReturns(fakeBundle, nil)
+
+			bundle, err := groot.Create(logger, grootpkg.CreateSpec{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bundle.Path()).To(Equal("/path/to/bundle"))
+		})
+
 		Context("when the image is not a valid URL", func() {
 			It("returns an error", func() {
 				_, err := groot.Create(logger, grootpkg.CreateSpec{
@@ -119,17 +216,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			})
 		})
 
-		It("locks the image", func() {
-			_, err := groot.Create(logger, grootpkg.CreateSpec{
-				Image: "/path/to/image",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
-			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(grootpkg.GLOBAL_LOCK_KEY))
-		})
-
-		Context("when locking the image fails", func() {
+		Context("when acquiring the lock fails", func() {
 			BeforeEach(func() {
 				fakeLocksmith.LockReturns(nil, errors.New("failed to lock"))
 			})
@@ -151,28 +238,9 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			})
 		})
 
-		It("pulls the image", func() {
-			uidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
-			gidMappings := []grootpkg.IDMappingSpec{grootpkg.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}
-
-			_, err := groot.Create(logger, grootpkg.CreateSpec{
-				Image:       "/path/to/image",
-				UIDMappings: uidMappings,
-				GIDMappings: gidMappings,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			imageURL, err := url.Parse("/path/to/image")
-			Expect(err).NotTo(HaveOccurred())
-			_, imageSpec := fakeImagePuller.PullArgsForCall(0)
-			Expect(imageSpec.ImageSrc).To(Equal(imageURL))
-			Expect(imageSpec.UIDMappings).To(Equal(uidMappings))
-			Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
-		})
-
 		Context("when pulling the image fails", func() {
 			BeforeEach(func() {
-				fakeImagePuller.PullReturns(grootpkg.BundleSpec{}, errors.New("failed to pull image"))
+				fakeImagePuller.PullReturns(grootpkg.Image{}, errors.New("failed to pull image"))
 			})
 
 			It("returns the error", func() {
@@ -191,7 +259,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				Expect(fakeBundler.CreateCallCount()).To(Equal(0))
 			})
 
-			It("unlocks the lock", func() {
+			It("releases the global lock", func() {
 				_, err := groot.Create(logger, grootpkg.CreateSpec{
 					Image: "/path/to/image",
 				})
@@ -200,47 +268,6 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
 				Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
 			})
-		})
-
-		It("unlocks the lock", func() {
-			_, err := groot.Create(logger, grootpkg.CreateSpec{
-				Image: "/path/to/image",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
-			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
-		})
-
-		It("makes a bundle", func() {
-			bundleSpec := grootpkg.BundleSpec{
-				VolumePath: "/path/to/volume",
-				Image: specsv1.Image{
-					Author: "Groot",
-				},
-			}
-			fakeImagePuller.PullReturns(bundleSpec, nil)
-
-			_, err := groot.Create(logger, grootpkg.CreateSpec{
-				ID:    "some-id",
-				Image: "/path/to/image",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeBundler.CreateCallCount()).To(Equal(1))
-			_, id, createBundlerSpec := fakeBundler.CreateArgsForCall(0)
-			Expect(id).To(Equal("some-id"))
-			Expect(createBundlerSpec).To(Equal(bundleSpec))
-		})
-
-		It("returns the bundle path", func() {
-			fakeBundle := new(grootfakes.FakeBundle)
-			fakeBundle.PathReturns("/path/to/bundle")
-			fakeBundler.CreateReturns(fakeBundle, nil)
-
-			bundle, err := groot.Create(logger, grootpkg.CreateSpec{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bundle.Path()).To(Equal("/path/to/bundle"))
 		})
 
 		Context("when creating the bundle fails", func() {
@@ -254,16 +281,41 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 			})
 		})
 
+		Context("when registering dependencies fails", func() {
+			BeforeEach(func() {
+				fakeDependencyManager.RegisterReturns(errors.New("failed to register dependencies"))
+				fakeImagePuller.PullReturns(grootpkg.Image{}, nil)
+			})
+
+			It("returns an errors", func() {
+				_, err := groot.Create(logger, grootpkg.CreateSpec{
+					ID:    "my-bundle",
+					Image: "/path/to/image",
+				})
+
+				Expect(err).To(MatchError(ContainSubstring("failed to register dependencies")))
+			})
+
+			It("destroys the bundle", func() {
+				_, err := groot.Create(logger, grootpkg.CreateSpec{
+					ID:    "my-bundle",
+					Image: "/path/to/image",
+				})
+
+				Expect(err).To(HaveOccurred())
+				Expect(fakeBundler.DestroyCallCount()).To(Equal(1))
+			})
+		})
+
 		Context("when disk limit is given", func() {
 			It("applies the disk limit", func() {
-				bundleSpec := grootpkg.BundleSpec{
-					DiskLimit:  int64(1024),
+				image := grootpkg.Image{
 					VolumePath: "/path/to/volume",
 					Image: specsv1.Image{
 						Author: "Groot",
 					},
 				}
-				fakeImagePuller.PullReturns(bundleSpec, nil)
+				fakeImagePuller.PullReturns(image, nil)
 
 				_, err := groot.Create(logger, grootpkg.CreateSpec{
 					ID:        "some-id",
@@ -273,9 +325,15 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeBundler.CreateCallCount()).To(Equal(1))
-				_, id, createBundlerSpec := fakeBundler.CreateArgsForCall(0)
-				Expect(id).To(Equal("some-id"))
-				Expect(createBundlerSpec).To(Equal(bundleSpec))
+				_, createBundlerSpec := fakeBundler.CreateArgsForCall(0)
+				Expect(createBundlerSpec).To(Equal(grootpkg.BundleSpec{
+					ID:         "some-id",
+					VolumePath: "/path/to/volume",
+					Image: specsv1.Image{
+						Author: "Groot",
+					},
+					DiskLimit: int64(1024),
+				}))
 			})
 		})
 	})
@@ -286,6 +344,11 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 			_, bundleId := fakeBundler.DestroyArgsForCall(0)
 			Expect(bundleId).To(Equal("some-id"))
+		})
+
+		It("deregisters bundle dependencies", func() {
+			Expect(groot.Delete(logger, "some-id")).To(Succeed())
+			Expect(fakeDependencyManager.DeregisterCallCount()).To(Equal(1))
 		})
 
 		Context("when destroying a bundle fails", func() {
@@ -331,6 +394,53 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 				_, err := groot.Metrics(logger, "some-id")
 				Expect(err).To(MatchError(ContainSubstring("sorry")))
 			})
+		})
+	})
+
+	Describe("Clean", func() {
+		It("collects orphaned volumes", func() {
+			Expect(groot.Clean(logger)).To(Succeed())
+			Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
+		})
+
+		Context("when garbage collecting fails", func() {
+			BeforeEach(func() {
+				fakeGarbageCollector.CollectReturns(errors.New("failed to collect unused bits"))
+			})
+
+			It("returns an error", func() {
+				Expect(groot.Clean(logger)).To(MatchError(ContainSubstring("failed to collect unused bits")))
+			})
+		})
+
+		It("acquires the global lock", func() {
+			Expect(groot.Clean(logger)).To(Succeed())
+
+			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
+			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(grootpkg.GLOBAL_LOCK_KEY))
+		})
+
+		Context("when acquiring the lock fails", func() {
+			BeforeEach(func() {
+				fakeLocksmith.LockReturns(nil, errors.New("failed to acquire lock"))
+			})
+
+			It("returns the error", func() {
+				err := groot.Clean(logger)
+				Expect(err).To(MatchError(ContainSubstring("failed to acquire lock")))
+			})
+
+			It("does not collect the garbage", func() {
+				Expect(groot.Clean(logger)).NotTo(Succeed())
+				Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
+			})
+		})
+
+		It("releases the global lock", func() {
+			Expect(groot.Clean(logger)).To(Succeed())
+
+			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
+			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
 		})
 	})
 })

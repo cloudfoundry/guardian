@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/lager"
-	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type FakeSource struct {
@@ -21,7 +21,7 @@ type FakeSource struct {
 		result1 remote.Manifest
 		result2 error
 	}
-	ConfigStub        func(logger lager.Logger, imageURL *url.URL, manifest remote.Manifest) (specsv1.Image, error)
+	ConfigStub        func(logger lager.Logger, imageURL *url.URL, manifest remote.Manifest) (v1.Image, error)
 	configMutex       sync.RWMutex
 	configArgsForCall []struct {
 		logger   lager.Logger
@@ -29,7 +29,7 @@ type FakeSource struct {
 		manifest remote.Manifest
 	}
 	configReturns struct {
-		result1 specsv1.Image
+		result1 v1.Image
 		result2 error
 	}
 	BlobStub        func(logger lager.Logger, imageURL *url.URL, digest string) ([]byte, int64, error)
@@ -83,7 +83,7 @@ func (fake *FakeSource) ManifestReturns(result1 remote.Manifest, result2 error) 
 	}{result1, result2}
 }
 
-func (fake *FakeSource) Config(logger lager.Logger, imageURL *url.URL, manifest remote.Manifest) (specsv1.Image, error) {
+func (fake *FakeSource) Config(logger lager.Logger, imageURL *url.URL, manifest remote.Manifest) (v1.Image, error) {
 	fake.configMutex.Lock()
 	fake.configArgsForCall = append(fake.configArgsForCall, struct {
 		logger   lager.Logger
@@ -111,10 +111,10 @@ func (fake *FakeSource) ConfigArgsForCall(i int) (lager.Logger, *url.URL, remote
 	return fake.configArgsForCall[i].logger, fake.configArgsForCall[i].imageURL, fake.configArgsForCall[i].manifest
 }
 
-func (fake *FakeSource) ConfigReturns(result1 specsv1.Image, result2 error) {
+func (fake *FakeSource) ConfigReturns(result1 v1.Image, result2 error) {
 	fake.ConfigStub = nil
 	fake.configReturns = struct {
-		result1 specsv1.Image
+		result1 v1.Image
 		result2 error
 	}{result1, result2}
 }

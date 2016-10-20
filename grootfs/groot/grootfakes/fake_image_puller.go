@@ -9,21 +9,21 @@ import (
 )
 
 type FakeImagePuller struct {
-	PullStub        func(logger lager.Logger, spec groot.ImageSpec) (groot.BundleSpec, error)
+	PullStub        func(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error)
 	pullMutex       sync.RWMutex
 	pullArgsForCall []struct {
 		logger lager.Logger
 		spec   groot.ImageSpec
 	}
 	pullReturns struct {
-		result1 groot.BundleSpec
+		result1 groot.Image
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.BundleSpec, error) {
+func (fake *FakeImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error) {
 	fake.pullMutex.Lock()
 	fake.pullArgsForCall = append(fake.pullArgsForCall, struct {
 		logger lager.Logger
@@ -50,10 +50,10 @@ func (fake *FakeImagePuller) PullArgsForCall(i int) (lager.Logger, groot.ImageSp
 	return fake.pullArgsForCall[i].logger, fake.pullArgsForCall[i].spec
 }
 
-func (fake *FakeImagePuller) PullReturns(result1 groot.BundleSpec, result2 error) {
+func (fake *FakeImagePuller) PullReturns(result1 groot.Image, result2 error) {
 	fake.PullStub = nil
 	fake.pullReturns = struct {
-		result1 groot.BundleSpec
+		result1 groot.Image
 		result2 error
 	}{result1, result2}
 }

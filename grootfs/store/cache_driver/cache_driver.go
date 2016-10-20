@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -94,6 +96,29 @@ func (c *CacheDriver) StreamBlob(logger lager.Logger, id string,
 	}()
 
 	return rEnd, size, nil
+}
+
+func (c *CacheDriver) Clean(logger lager.Logger) error {
+	logger = logger.Session("cache-driver-clean")
+	logger.Info("start")
+	defer logger.Info("end")
+
+	blobsPath := path.Join(c.storePath, "cache", "blobs")
+	contents, err := ioutil.ReadDir(blobsPath)
+	if err != nil {
+		return fmt.Errorf("reading cache contents: %s", err.Error())
+	}
+
+	totalBlobs := len(contents)
+	for i, cachedBlob := range contents {
+		logger.Debug("cleaning-up-blob", lager.Data{"blob": cachedBlob.Name(), "count": fmt.Sprintf("%d/%d", i, totalBlobs)})
+
+		if err := os.Remove(path.Join(blobsPath, cachedBlob.Name())); err != nil {
+			return fmt.Errorf("clean up blob `%s`: %s", cachedBlob.Name(), err.Error())
+		}
+	}
+
+	return nil
 }
 
 func (c *CacheDriver) blobPath(id string) string {

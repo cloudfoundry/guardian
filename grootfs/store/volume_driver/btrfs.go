@@ -5,8 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -81,6 +83,21 @@ func (d *Btrfs) Snapshot(logger lager.Logger, fromPath, toPath string) error {
 	}
 
 	return nil
+}
+
+func (d *Btrfs) Volumes(logger lager.Logger) ([]string, error) {
+	volumes := []string{}
+
+	existingVolumes, err := ioutil.ReadDir(path.Join(d.storePath, store.VOLUMES_DIR_NAME))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list volumes: %s", err.Error())
+	}
+
+	for _, volumeInfo := range existingVolumes {
+		volumes = append(volumes, volumeInfo.Name())
+	}
+
+	return volumes, nil
 }
 
 func (d *Btrfs) destroyQgroup(logger lager.Logger, path string) error {

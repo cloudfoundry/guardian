@@ -1,4 +1,4 @@
-package store_test
+package bundler_test
 
 import (
 	"encoding/json"
@@ -10,7 +10,8 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/storefakes"
+	bundlerpkg "code.cloudfoundry.org/grootfs/store/bundler"
+	"code.cloudfoundry.org/grootfs/store/bundler/bundlerfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -24,14 +25,14 @@ var _ = Describe("Bundle", func() {
 		logger      lager.Logger
 		storePath   string
 		bundlesPath string
-		bundler     *store.Bundler
+		bundler     *bundlerpkg.Bundler
 
-		fakeSnapshotDriver *storefakes.FakeSnapshotDriver
+		fakeSnapshotDriver *bundlerfakes.FakeSnapshotDriver
 	)
 
 	BeforeEach(func() {
 		var err error
-		fakeSnapshotDriver = new(storefakes.FakeSnapshotDriver)
+		fakeSnapshotDriver = new(bundlerfakes.FakeSnapshotDriver)
 
 		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -43,62 +44,66 @@ var _ = Describe("Bundle", func() {
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-bunlder")
-		bundler = store.NewBundler(fakeSnapshotDriver, storePath)
+		bundler = bundlerpkg.NewBundler(fakeSnapshotDriver, storePath)
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(storePath)).To(Succeed())
 	})
 
-	Describe("Exists", func() {
-		BeforeEach(func() {
-			Expect(os.Mkdir(filepath.Join(bundlesPath, "some-id"), 0777)).To(Succeed())
-		})
-
-		It("returns true when bundle exists", func() {
-			ok, err := bundler.Exists("some-id")
+	Describe("BundleIDs", func() {
+		createBundle := func(name string, layers []string) {
+			bundlePath := filepath.Join(bundlesPath, name)
+			Expect(os.Mkdir(bundlePath, 0777)).To(Succeed())
+			l := struct {
+				Layers []string `json:"layers"`
+			}{
+				Layers: layers,
+			}
+			bundleJson, err := json.Marshal(l)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ok).To(BeTrue())
+			Expect(ioutil.WriteFile(filepath.Join(bundlePath, "bundle.json"), bundleJson, 0644)).To(Succeed())
+		}
+
+		BeforeEach(func() {
+			createBundle("bundle-a", []string{"sha-1", "sha-2"})
+			createBundle("bundle-b", []string{"sha-1", "sha-3", "sha-4"})
 		})
 
-		Context("when bundle does not exist", func() {
-			It("returns false", func() {
-				ok, err := bundler.Exists("invalid-id")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(ok).To(BeFalse())
+		It("returns a list with all known bundles", func() {
+			bundles, err := bundler.BundleIDs(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bundles).To(ConsistOf("bundle-a", "bundle-b"))
+		})
+
+		Context("when fails to list bundles", func() {
+			BeforeEach(func() {
+				Expect(os.Chmod(bundlesPath, 0666)).To(Succeed())
 			})
 
-			Context("when it does not have permission to check", func() {
-				JustBeforeEach(func() {
-					basePath, err := ioutil.TempDir("", "")
-					Expect(err).NotTo(HaveOccurred())
+			AfterEach(func() {
+				// we need to revert permissions because of the outer AfterEach
+				Expect(os.Chmod(bundlesPath, 0755)).To(Succeed())
+			})
 
-					noPermStorePath := filepath.Join(basePath, "no-perm-dir")
-					Expect(os.Mkdir(noPermStorePath, 0000)).To(Succeed())
-
-					bundler = store.NewBundler(fakeSnapshotDriver, noPermStorePath)
-				})
-
-				It("returns an error", func() {
-					ok, err := bundler.Exists("invalid-id")
-					Expect(err).To(MatchError(ContainSubstring("stat")))
-					Expect(ok).To(BeFalse())
-				})
+			It("returns an error", func() {
+				_, err := bundler.BundleIDs(logger)
+				Expect(err).To(MatchError(ContainSubstring("failed to read bundles dir")))
 			})
 		})
 	})
 
 	Describe("Create", func() {
 		It("returns a bundle directory", func() {
-			bundle, err := bundler.Create(logger, "some-id", groot.BundleSpec{})
+			bundle, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bundle.Path()).To(BeADirectory())
 		})
 
 		It("keeps the bundles in the same bundle directory", func() {
-			someBundle, err := bundler.Create(logger, "some-id", groot.BundleSpec{})
+			someBundle, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
 			Expect(err).NotTo(HaveOccurred())
-			anotherBundle, err := bundler.Create(logger, "another-id", groot.BundleSpec{})
+			anotherBundle, err := bundler.Create(logger, groot.BundleSpec{ID: "another-id"})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(someBundle.Path()).NotTo(BeEmpty())
@@ -111,10 +116,10 @@ var _ = Describe("Bundle", func() {
 
 		Context("when calling it with two different ids", func() {
 			It("returns two different bundle paths", func() {
-				bundle, err := bundler.Create(logger, "some-id", groot.BundleSpec{})
+				bundle, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
 				Expect(err).NotTo(HaveOccurred())
 
-				anotherBundle, err := bundler.Create(logger, "another-id", groot.BundleSpec{})
+				anotherBundle, err := bundler.Create(logger, groot.BundleSpec{ID: "another-id"})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(bundle.Path()).NotTo(Equal(anotherBundle.Path()))
@@ -127,19 +132,20 @@ var _ = Describe("Bundle", func() {
 			})
 
 			It("should return an error", func() {
-				_, err := bundler.Create(logger, "some-id", groot.BundleSpec{})
+				_, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
 				Expect(err).To(MatchError(ContainSubstring("making bundle path")))
 			})
 		})
 
 		It("creates the snapshot", func() {
 			bundleSpec := groot.BundleSpec{
+				ID:         "some-id",
 				VolumePath: "/path/to/volume",
 				Image: specsv1.Image{
 					Author: "Groot",
 				},
 			}
-			bundle, err := bundler.Create(logger, "some-id", bundleSpec)
+			bundle, err := bundler.Create(logger, bundleSpec)
 			Expect(err).NotTo(HaveOccurred())
 
 			_, fromPath, toPath := fakeSnapshotDriver.SnapshotArgsForCall(0)
@@ -153,13 +159,13 @@ var _ = Describe("Bundle", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := bundler.Create(logger, "some-id", groot.BundleSpec{})
+				_, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
 				Expect(err).To(MatchError(ContainSubstring("failed to create snapshot")))
 			})
 
 			It("removes the bundle", func() {
 				bundleID := "some-id"
-				_, err := bundler.Create(logger, bundleID, groot.BundleSpec{})
+				_, err := bundler.Create(logger, groot.BundleSpec{ID: bundleID})
 				Expect(err).To(HaveOccurred())
 				Expect(filepath.Join(bundlesPath, bundleID)).NotTo(BeADirectory())
 			})
@@ -173,7 +179,8 @@ var _ = Describe("Bundle", func() {
 				},
 			}
 
-			bundle, err := bundler.Create(logger, "some-id", groot.BundleSpec{
+			bundle, err := bundler.Create(logger, groot.BundleSpec{
+				ID:         "some-id",
 				VolumePath: "/path/to/volume",
 				Image:      image,
 			})
@@ -192,24 +199,24 @@ var _ = Describe("Bundle", func() {
 
 		Context("when writting the image.json fails", func() {
 			BeforeEach(func() {
-				store.OF = func(name string, flag int, perm os.FileMode) (*os.File, error) {
+				bundlerpkg.OF = func(name string, flag int, perm os.FileMode) (*os.File, error) {
 					return nil, errors.New("permission denied: can't write stuff")
 				}
 			})
 
 			AfterEach(func() {
 				// needs to reasign the correct method after running the test
-				store.OF = os.OpenFile
+				bundlerpkg.OF = os.OpenFile
 			})
 
 			It("returns an error", func() {
-				_, err := bundler.Create(logger, "some-id", groot.BundleSpec{})
+				_, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
 				Expect(err).To(MatchError(ContainSubstring("permission denied: can't write stuff")))
 			})
 
 			It("removes the bundle", func() {
 				bundleID := "some-id"
-				_, err := bundler.Create(logger, bundleID, groot.BundleSpec{})
+				_, err := bundler.Create(logger, groot.BundleSpec{ID: bundleID})
 				Expect(err).To(HaveOccurred())
 				Expect(filepath.Join(bundlesPath, bundleID)).NotTo(BeADirectory())
 			})
@@ -217,7 +224,8 @@ var _ = Describe("Bundle", func() {
 
 		Context("when a disk limit is set", func() {
 			It("applies the disk limit", func() {
-				bundle, err := bundler.Create(logger, "some-id", groot.BundleSpec{
+				bundle, err := bundler.Create(logger, groot.BundleSpec{
+					ID:        "some-id",
 					DiskLimit: int64(1024),
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -234,7 +242,8 @@ var _ = Describe("Bundle", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := bundler.Create(logger, "some-id", groot.BundleSpec{
+					_, err := bundler.Create(logger, groot.BundleSpec{
+						ID:        "some-id",
 						DiskLimit: int64(1024),
 					})
 
@@ -242,7 +251,8 @@ var _ = Describe("Bundle", func() {
 				})
 
 				It("removes the snapshot", func() {
-					_, err := bundler.Create(logger, "some-id", groot.BundleSpec{
+					_, err := bundler.Create(logger, groot.BundleSpec{
+						ID:        "some-id",
 						DiskLimit: int64(1024),
 					})
 					Expect(err).To(HaveOccurred())
@@ -254,7 +264,8 @@ var _ = Describe("Bundle", func() {
 
 			Context("when the exclusive flag is set", func() {
 				It("enforces the exclusive limit", func() {
-					_, err := bundler.Create(logger, "some-id", groot.BundleSpec{
+					_, err := bundler.Create(logger, groot.BundleSpec{
+						ID:                    "some-id",
 						DiskLimit:             int64(1024),
 						ExcludeImageFromQuota: true,
 					})
@@ -325,6 +336,43 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
+	Describe("Exists", func() {
+		BeforeEach(func() {
+			Expect(os.Mkdir(filepath.Join(bundlesPath, "some-id"), 0777)).To(Succeed())
+		})
+
+		It("returns true when bundle exists", func() {
+			ok, err := bundler.Exists("some-id")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ok).To(BeTrue())
+		})
+
+		Context("when bundle does not exist", func() {
+			It("returns false", func() {
+				ok, err := bundler.Exists("invalid-id")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ok).To(BeFalse())
+			})
+
+			Context("when it does not have permission to check", func() {
+				JustBeforeEach(func() {
+					basePath, err := ioutil.TempDir("", "")
+					Expect(err).NotTo(HaveOccurred())
+
+					noPermStorePath := filepath.Join(basePath, "no-perm-dir")
+					Expect(os.Mkdir(noPermStorePath, 0000)).To(Succeed())
+
+					bundler = bundlerpkg.NewBundler(fakeSnapshotDriver, noPermStorePath)
+				})
+
+				It("returns an error", func() {
+					ok, err := bundler.Exists("invalid-id")
+					Expect(err).To(MatchError(ContainSubstring("stat")))
+					Expect(ok).To(BeFalse())
+				})
+			})
+		})
+	})
 	Describe("Metrics", func() {
 		var (
 			bundlePath, bundleRootFSPath string

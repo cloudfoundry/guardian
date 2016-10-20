@@ -1,11 +1,11 @@
-package store_test
+package bundler_test
 
 import (
 	"io/ioutil"
 	"path"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/bundler"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -20,7 +20,7 @@ var _ = Describe("Bundle", func() {
 	BeforeEach(func() {
 		bundlePath, err = ioutil.TempDir("", "bundle")
 		Expect(err).NotTo(HaveOccurred())
-		bundle = store.NewBundle(bundlePath)
+		bundle = bundler.NewBundle(bundlePath)
 	})
 
 	Describe("Path", func() {

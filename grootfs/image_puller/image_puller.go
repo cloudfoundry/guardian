@@ -38,6 +38,7 @@ type VolumeDriver interface {
 	Path(logger lager.Logger, id string) (string, error)
 	Create(logger lager.Logger, parentID, id string) (string, error)
 	DestroyVolume(logger lager.Logger, id string) error
+	Volumes(logger lager.Logger) ([]string, error)
 }
 
 type Fetcher interface {
@@ -65,7 +66,7 @@ func NewImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volu
 	}
 }
 
-func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.BundleSpec, error) {
+func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error) {
 	logger = logger.Session("image-pulling", lager.Data{"spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -73,24 +74,26 @@ func (p *ImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Bun
 
 	imageInfo, err := p.fetcher(spec.ImageSrc).ImageInfo(logger, spec.ImageSrc)
 	if err != nil {
-		return groot.BundleSpec{}, errorspkg.Wrap(err, "fetching list of digests")
+		return groot.Image{}, errorspkg.Wrap(err, "fetching list of digests")
 	}
 	logger.Debug("fetched-layers-digests", lager.Data{"digests": imageInfo.LayersDigest})
 
 	if err := p.quotaExceeded(logger, imageInfo.LayersDigest, spec); err != nil {
-		return groot.BundleSpec{}, err
+		return groot.Image{}, err
 	}
 
 	volumePath, err := p.buildLayer(logger, len(imageInfo.LayersDigest)-1, imageInfo.LayersDigest, spec)
 	if err != nil {
-		return groot.BundleSpec{}, err
+		return groot.Image{}, err
 	}
+	chainIDs := p.chainIDs(imageInfo.LayersDigest)
 
-	bundleSpec := groot.BundleSpec{
+	image := groot.Image{
 		Image:      imageInfo.Config,
+		ChainIDs:   chainIDs,
 		VolumePath: volumePath,
 	}
-	return bundleSpec, nil
+	return image, nil
 }
 
 func (p *ImagePuller) fetcher(imageURL *url.URL) Fetcher {
@@ -102,10 +105,10 @@ func (p *ImagePuller) fetcher(imageURL *url.URL) Fetcher {
 }
 
 func (p *ImagePuller) quotaExceeded(logger lager.Logger, layersDigest []LayerDigest, spec groot.ImageSpec) error {
-
 	if spec.ExcludeImageFromQuota || spec.DiskLimit == 0 {
 		return nil
 	}
+
 	totalSize := p.layersSize(layersDigest)
 	if totalSize > spec.DiskLimit {
 		err := fmt.Errorf("layers exceed disk quota %d/%d bytes", totalSize, spec.DiskLimit)
@@ -118,6 +121,14 @@ func (p *ImagePuller) quotaExceeded(logger lager.Logger, layersDigest []LayerDig
 	}
 
 	return nil
+}
+
+func (p *ImagePuller) chainIDs(layersDigest []LayerDigest) []string {
+	chainIDs := []string{}
+	for _, layerDigest := range layersDigest {
+		chainIDs = append(chainIDs, layerDigest.ChainID)
+	}
+	return chainIDs
 }
 
 func (p *ImagePuller) buildLayer(logger lager.Logger, index int, layersDigest []LayerDigest, spec groot.ImageSpec) (string, error) {

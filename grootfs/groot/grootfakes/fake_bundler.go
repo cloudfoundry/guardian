@@ -18,11 +18,19 @@ type FakeBundler struct {
 		result1 bool
 		result2 error
 	}
-	CreateStub        func(logger lager.Logger, id string, spec groot.BundleSpec) (groot.Bundle, error)
+	BundleIDsStub        func(logger lager.Logger) ([]string, error)
+	bundleIDsMutex       sync.RWMutex
+	bundleIDsArgsForCall []struct {
+		logger lager.Logger
+	}
+	bundleIDsReturns struct {
+		result1 []string
+		result2 error
+	}
+	CreateStub        func(logger lager.Logger, spec groot.BundleSpec) (groot.Bundle, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		logger lager.Logger
-		id     string
 		spec   groot.BundleSpec
 	}
 	createReturns struct {
@@ -86,17 +94,50 @@ func (fake *FakeBundler) ExistsReturns(result1 bool, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeBundler) Create(logger lager.Logger, id string, spec groot.BundleSpec) (groot.Bundle, error) {
+func (fake *FakeBundler) BundleIDs(logger lager.Logger) ([]string, error) {
+	fake.bundleIDsMutex.Lock()
+	fake.bundleIDsArgsForCall = append(fake.bundleIDsArgsForCall, struct {
+		logger lager.Logger
+	}{logger})
+	fake.recordInvocation("BundleIDs", []interface{}{logger})
+	fake.bundleIDsMutex.Unlock()
+	if fake.BundleIDsStub != nil {
+		return fake.BundleIDsStub(logger)
+	} else {
+		return fake.bundleIDsReturns.result1, fake.bundleIDsReturns.result2
+	}
+}
+
+func (fake *FakeBundler) BundleIDsCallCount() int {
+	fake.bundleIDsMutex.RLock()
+	defer fake.bundleIDsMutex.RUnlock()
+	return len(fake.bundleIDsArgsForCall)
+}
+
+func (fake *FakeBundler) BundleIDsArgsForCall(i int) lager.Logger {
+	fake.bundleIDsMutex.RLock()
+	defer fake.bundleIDsMutex.RUnlock()
+	return fake.bundleIDsArgsForCall[i].logger
+}
+
+func (fake *FakeBundler) BundleIDsReturns(result1 []string, result2 error) {
+	fake.BundleIDsStub = nil
+	fake.bundleIDsReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBundler) Create(logger lager.Logger, spec groot.BundleSpec) (groot.Bundle, error) {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		logger lager.Logger
-		id     string
 		spec   groot.BundleSpec
-	}{logger, id, spec})
-	fake.recordInvocation("Create", []interface{}{logger, id, spec})
+	}{logger, spec})
+	fake.recordInvocation("Create", []interface{}{logger, spec})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(logger, id, spec)
+		return fake.CreateStub(logger, spec)
 	} else {
 		return fake.createReturns.result1, fake.createReturns.result2
 	}
@@ -108,10 +149,10 @@ func (fake *FakeBundler) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeBundler) CreateArgsForCall(i int) (lager.Logger, string, groot.BundleSpec) {
+func (fake *FakeBundler) CreateArgsForCall(i int) (lager.Logger, groot.BundleSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].id, fake.createArgsForCall[i].spec
+	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].spec
 }
 
 func (fake *FakeBundler) CreateReturns(result1 groot.Bundle, result2 error) {
@@ -196,6 +237,8 @@ func (fake *FakeBundler) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.existsMutex.RLock()
 	defer fake.existsMutex.RUnlock()
+	fake.bundleIDsMutex.RLock()
+	defer fake.bundleIDsMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	fake.destroyMutex.RLock()

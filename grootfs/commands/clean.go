@@ -1,0 +1,51 @@
+package commands // import "code.cloudfoundry.org/grootfs/commands"
+
+import (
+	"fmt"
+	"path/filepath"
+
+	"code.cloudfoundry.org/lager"
+
+	grootpkg "code.cloudfoundry.org/grootfs/groot"
+	storepkg "code.cloudfoundry.org/grootfs/store"
+	bundlerpkg "code.cloudfoundry.org/grootfs/store/bundler"
+	"code.cloudfoundry.org/grootfs/store/cache_driver"
+	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	"code.cloudfoundry.org/grootfs/store/garbage_collector"
+	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
+	"code.cloudfoundry.org/grootfs/store/volume_driver"
+
+	"github.com/urfave/cli"
+)
+
+var CleanCommand = cli.Command{
+	Name:        "clean",
+	Usage:       "clean",
+	Description: "Cleans up unused layers",
+
+	Action: func(ctx *cli.Context) error {
+		logger := ctx.App.Metadata["logger"].(lager.Logger)
+		logger = logger.Session("clean")
+
+		storePath := ctx.GlobalString("store")
+
+		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
+		bundler := bundlerpkg.NewBundler(btrfsVolumeDriver, storePath)
+		locksmith := locksmithpkg.NewFileSystem(storePath)
+		dependencyManager := dependency_manager.NewDependencyManager(
+			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
+		)
+		cacheDriver := cache_driver.NewCacheDriver(storePath)
+		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, bundler, dependencyManager)
+
+		groot := grootpkg.IamGroot(bundler, nil, locksmith, dependencyManager, gc)
+		err := groot.Clean(logger)
+		if err != nil {
+			logger.Error("cleaning-up-unused-resources", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		fmt.Println("Clean finished")
+		return nil
+	},
+}

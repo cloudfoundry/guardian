@@ -1,13 +1,15 @@
-package store // import "code.cloudfoundry.org/grootfs/store"
+package bundler // import "code.cloudfoundry.org/grootfs/store/bundler"
 
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -33,21 +35,23 @@ func NewBundler(snapshotDriver SnapshotDriver, storePath string) *Bundler {
 	}
 }
 
-func (b *Bundler) Exists(id string) (bool, error) {
-	bundlePath := path.Join(b.storePath, BUNDLES_DIR_NAME, id)
-	if _, err := os.Stat(bundlePath); err != nil {
-		if os.IsNotExist(err) {
-			return false, nil
-		}
+func (b *Bundler) BundleIDs(logger lager.Logger) ([]string, error) {
+	bundles := []string{}
 
-		return false, fmt.Errorf("checking if bundle `%s` exists: `%s`", id, err)
+	existingBundles, err := ioutil.ReadDir(path.Join(b.storePath, store.BUNDLES_DIR_NAME))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read bundles dir: %s", err.Error())
 	}
 
-	return true, nil
+	for _, bundleInfo := range existingBundles {
+		bundles = append(bundles, bundleInfo.Name())
+	}
+
+	return bundles, nil
 }
 
-func (b *Bundler) Create(logger lager.Logger, id string, spec groot.BundleSpec) (groot.Bundle, error) {
-	logger = logger.Session("making-bundle", lager.Data{"storePath": b.storePath, "id": id})
+func (b *Bundler) Create(logger lager.Logger, spec groot.BundleSpec) (groot.Bundle, error) {
+	logger = logger.Session("making-bundle", lager.Data{"storePath": b.storePath, "id": spec.ID})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -59,7 +63,7 @@ func (b *Bundler) Create(logger lager.Logger, id string, spec groot.BundleSpec) 
 	defer func() {
 		if err != nil && bundle != nil {
 			log := logger.Session("create-failed-cleaning-up", lager.Data{
-				"id":    id,
+				"id":    spec.ID,
 				"cause": err.Error(),
 			})
 
@@ -76,7 +80,7 @@ func (b *Bundler) Create(logger lager.Logger, id string, spec groot.BundleSpec) 
 		}
 	}()
 
-	bundle = NewBundle(path.Join(b.storePath, BUNDLES_DIR_NAME, id))
+	bundle = NewBundle(path.Join(b.storePath, store.BUNDLES_DIR_NAME, spec.ID))
 	if err := os.Mkdir(bundle.Path(), 0700); err != nil {
 		return nil, fmt.Errorf("making bundle path: %s", err)
 	}
@@ -108,7 +112,7 @@ func (b *Bundler) Destroy(logger lager.Logger, id string) error {
 		return fmt.Errorf("bundle not found: %s", id)
 	}
 
-	bundle := NewBundle(path.Join(b.storePath, BUNDLES_DIR_NAME, id))
+	bundle := NewBundle(path.Join(b.storePath, store.BUNDLES_DIR_NAME, id))
 	if err := b.snapshotDriver.Destroy(logger, bundle.RootFSPath()); err != nil {
 		return fmt.Errorf("destroying snapshot: %s", err)
 	}
@@ -120,12 +124,25 @@ func (b *Bundler) Destroy(logger lager.Logger, id string) error {
 	return nil
 }
 
+func (b *Bundler) Exists(id string) (bool, error) {
+	bundlePath := path.Join(b.storePath, store.BUNDLES_DIR_NAME, id)
+	if _, err := os.Stat(bundlePath); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("checking if bundle `%s` exists: `%s`", id, err)
+	}
+
+	return true, nil
+}
+
 func (b *Bundler) Metrics(logger lager.Logger, id string) (groot.VolumeMetrics, error) {
 	logger = logger.Session("fetching-metrics", lager.Data{"id": id})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	bundle := NewBundle(path.Join(b.storePath, BUNDLES_DIR_NAME, id))
+	bundle := NewBundle(path.Join(b.storePath, store.BUNDLES_DIR_NAME, id))
 	return b.snapshotDriver.FetchMetrics(logger, bundle.RootFSPath())
 }
 

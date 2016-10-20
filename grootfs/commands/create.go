@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
@@ -12,7 +13,9 @@ import (
 	"code.cloudfoundry.org/grootfs/image_puller"
 	unpackerpkg "code.cloudfoundry.org/grootfs/image_puller/unpacker"
 	storepkg "code.cloudfoundry.org/grootfs/store"
+	bundlerpkg "code.cloudfoundry.org/grootfs/store/bundler"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
+	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
@@ -84,7 +87,7 @@ var CreateCommand = cli.Command{
 		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
-		bundler := storepkg.NewBundler(btrfsVolumeDriver, storePath)
+		bundler := bundlerpkg.NewBundler(btrfsVolumeDriver, storePath)
 
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(runner)
@@ -100,7 +103,10 @@ var CreateCommand = cli.Command{
 
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		imgPuller := image_puller.NewImagePuller(localFetcher, remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
-		groot := grootpkg.IamGroot(bundler, imgPuller, locksmith)
+		dependencyManager := dependency_manager.NewDependencyManager(
+			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
+		)
+		groot := grootpkg.IamGroot(bundler, imgPuller, locksmith, dependencyManager, nil)
 
 		bundle, err := groot.Create(logger, grootpkg.CreateSpec{
 			ID:                    id,
