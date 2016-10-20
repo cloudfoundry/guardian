@@ -59,12 +59,12 @@ var _ = Describe("Create", func() {
 	It("keeps the ownership and permissions", func() {
 		bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
 
-		grootFi, err := os.Stat(path.Join(bundle.RootFSPath(), "foo"))
+		grootFi, err := os.Stat(path.Join(bundle.RootFSPath, "foo"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 		Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-		rootFi, err := os.Stat(path.Join(bundle.RootFSPath(), "bar"))
+		rootFi, err := os.Stat(path.Join(bundle.RootFSPath, "bar"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(rootUID)))
 		Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))

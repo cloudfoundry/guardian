@@ -51,53 +51,11 @@ var _ = Describe("Bundle", func() {
 		Expect(os.RemoveAll(storePath)).To(Succeed())
 	})
 
-	Describe("BundleIDs", func() {
-		createBundle := func(name string, layers []string) {
-			bundlePath := filepath.Join(bundlesPath, name)
-			Expect(os.Mkdir(bundlePath, 0777)).To(Succeed())
-			l := struct {
-				Layers []string `json:"layers"`
-			}{
-				Layers: layers,
-			}
-			bundleJson, err := json.Marshal(l)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ioutil.WriteFile(filepath.Join(bundlePath, "bundle.json"), bundleJson, 0644)).To(Succeed())
-		}
-
-		BeforeEach(func() {
-			createBundle("bundle-a", []string{"sha-1", "sha-2"})
-			createBundle("bundle-b", []string{"sha-1", "sha-3", "sha-4"})
-		})
-
-		It("returns a list with all known bundles", func() {
-			bundles, err := bundler.BundleIDs(logger)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(bundles).To(ConsistOf("bundle-a", "bundle-b"))
-		})
-
-		Context("when fails to list bundles", func() {
-			BeforeEach(func() {
-				Expect(os.Chmod(bundlesPath, 0666)).To(Succeed())
-			})
-
-			AfterEach(func() {
-				// we need to revert permissions because of the outer AfterEach
-				Expect(os.Chmod(bundlesPath, 0755)).To(Succeed())
-			})
-
-			It("returns an error", func() {
-				_, err := bundler.BundleIDs(logger)
-				Expect(err).To(MatchError(ContainSubstring("failed to read bundles dir")))
-			})
-		})
-	})
-
 	Describe("Create", func() {
 		It("returns a bundle directory", func() {
 			bundle, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(bundle.Path()).To(BeADirectory())
+			Expect(bundle.Path).To(BeADirectory())
 		})
 
 		It("keeps the bundles in the same bundle directory", func() {
@@ -106,35 +64,12 @@ var _ = Describe("Bundle", func() {
 			anotherBundle, err := bundler.Create(logger, groot.BundleSpec{ID: "another-id"})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(someBundle.Path()).NotTo(BeEmpty())
-			Expect(anotherBundle.Path()).NotTo(BeEmpty())
+			Expect(someBundle.Path).NotTo(BeEmpty())
+			Expect(anotherBundle.Path).NotTo(BeEmpty())
 
 			bundles, err := ioutil.ReadDir(path.Join(storePath, store.BUNDLES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(bundles)).To(Equal(2))
-		})
-
-		Context("when calling it with two different ids", func() {
-			It("returns two different bundle paths", func() {
-				bundle, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
-				Expect(err).NotTo(HaveOccurred())
-
-				anotherBundle, err := bundler.Create(logger, groot.BundleSpec{ID: "another-id"})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(bundle.Path()).NotTo(Equal(anotherBundle.Path()))
-			})
-		})
-
-		Context("when the store path does not exist", func() {
-			BeforeEach(func() {
-				storePath = "/non/existing/store"
-			})
-
-			It("should return an error", func() {
-				_, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
-				Expect(err).To(MatchError(ContainSubstring("making bundle path")))
-			})
 		})
 
 		It("creates the snapshot", func() {
@@ -150,7 +85,56 @@ var _ = Describe("Bundle", func() {
 
 			_, fromPath, toPath := fakeSnapshotDriver.SnapshotArgsForCall(0)
 			Expect(fromPath).To(Equal(bundleSpec.VolumePath))
-			Expect(toPath).To(Equal(bundle.RootFSPath()))
+			Expect(toPath).To(Equal(bundle.RootFSPath))
+		})
+
+		It("writes the image.json to the bundle", func() {
+			image := specsv1.Image{
+				Author: "Groot",
+				Config: specsv1.ImageConfig{
+					User: "groot",
+				},
+			}
+
+			bundle, err := bundler.Create(logger, groot.BundleSpec{
+				ID:         "some-id",
+				VolumePath: "/path/to/volume",
+				Image:      image,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			imageJsonPath := filepath.Join(bundle.Path, "image.json")
+			Expect(imageJsonPath).To(BeAnExistingFile())
+
+			imageJsonFile, err := os.Open(imageJsonPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			var imageJsonContent specsv1.Image
+			Expect(json.NewDecoder(imageJsonFile).Decode(&imageJsonContent)).To(Succeed())
+			Expect(imageJsonContent).To(Equal(image))
+		})
+
+		Context("when calling it with two different ids", func() {
+			It("returns two different bundle paths", func() {
+				bundle, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
+				Expect(err).NotTo(HaveOccurred())
+
+				anotherBundle, err := bundler.Create(logger, groot.BundleSpec{ID: "another-id"})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(bundle.Path).NotTo(Equal(anotherBundle.Path))
+			})
+		})
+
+		Context("when the store path does not exist", func() {
+			BeforeEach(func() {
+				storePath = "/non/existing/store"
+			})
+
+			It("should return an error", func() {
+				_, err := bundler.Create(logger, groot.BundleSpec{ID: "some-id"})
+				Expect(err).To(MatchError(ContainSubstring("making bundle path")))
+			})
 		})
 
 		Context("when creating the snapshot fails", func() {
@@ -169,32 +153,6 @@ var _ = Describe("Bundle", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(filepath.Join(bundlesPath, bundleID)).NotTo(BeADirectory())
 			})
-		})
-
-		It("writes the image.json to the bundle", func() {
-			image := specsv1.Image{
-				Author: "Groot",
-				Config: specsv1.ImageConfig{
-					User: "groot",
-				},
-			}
-
-			bundle, err := bundler.Create(logger, groot.BundleSpec{
-				ID:         "some-id",
-				VolumePath: "/path/to/volume",
-				Image:      image,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			imageJsonPath := filepath.Join(bundle.Path(), "image.json")
-			Expect(imageJsonPath).To(BeAnExistingFile())
-
-			imageJsonFile, err := os.Open(imageJsonPath)
-			Expect(err).NotTo(HaveOccurred())
-
-			var imageJsonContent specsv1.Image
-			Expect(json.NewDecoder(imageJsonFile).Decode(&imageJsonContent)).To(Succeed())
-			Expect(imageJsonContent).To(Equal(image))
 		})
 
 		Context("when writting the image.json fails", func() {
@@ -231,7 +189,7 @@ var _ = Describe("Bundle", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				_, path, diskLimit, excludeImageFromQuota := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
-				Expect(path).To(Equal(bundle.RootFSPath()))
+				Expect(path).To(Equal(bundle.RootFSPath))
 				Expect(diskLimit).To(Equal(int64(1024)))
 				Expect(excludeImageFromQuota).To(BeFalse())
 			})
@@ -336,6 +294,48 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
+	Describe("BundleIDs", func() {
+		createBundle := func(name string, layers []string) {
+			bundlePath := filepath.Join(bundlesPath, name)
+			Expect(os.Mkdir(bundlePath, 0777)).To(Succeed())
+			l := struct {
+				Layers []string `json:"layers"`
+			}{
+				Layers: layers,
+			}
+			bundleJson, err := json.Marshal(l)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ioutil.WriteFile(filepath.Join(bundlePath, "bundle.json"), bundleJson, 0644)).To(Succeed())
+		}
+
+		BeforeEach(func() {
+			createBundle("bundle-a", []string{"sha-1", "sha-2"})
+			createBundle("bundle-b", []string{"sha-1", "sha-3", "sha-4"})
+		})
+
+		It("returns a list with all known bundles", func() {
+			bundles, err := bundler.BundleIDs(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(bundles).To(ConsistOf("bundle-a", "bundle-b"))
+		})
+
+		Context("when fails to list bundles", func() {
+			BeforeEach(func() {
+				Expect(os.Chmod(bundlesPath, 0666)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				// we need to revert permissions because of the outer AfterEach
+				Expect(os.Chmod(bundlesPath, 0755)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				_, err := bundler.BundleIDs(logger)
+				Expect(err).To(MatchError(ContainSubstring("failed to read bundles dir")))
+			})
+		})
+	})
+
 	Describe("Exists", func() {
 		BeforeEach(func() {
 			Expect(os.Mkdir(filepath.Join(bundlesPath, "some-id"), 0777)).To(Succeed())
@@ -373,6 +373,7 @@ var _ = Describe("Bundle", func() {
 			})
 		})
 	})
+
 	Describe("Metrics", func() {
 		var (
 			bundlePath, bundleRootFSPath string

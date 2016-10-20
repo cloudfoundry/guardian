@@ -31,7 +31,7 @@ var _ = Describe("Metrics", func() {
 
 		bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
 
-		cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath(), "hello")), "bs=1048576", "count=4")
+		cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath, "hello")), "bs=1048576", "count=4")
 		sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).ToNot(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))

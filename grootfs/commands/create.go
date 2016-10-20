@@ -123,7 +123,7 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(humanizedError, 1)
 		}
 
-		fmt.Println(bundle.Path())
+		fmt.Println(bundle.Path)
 		return nil
 	},
 }

@@ -34,7 +34,7 @@ var _ = Describe("Create with local images", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		bundleContentPath := path.Join(bundle.RootFSPath(), "foo")
+		bundleContentPath := path.Join(bundle.RootFSPath, "foo")
 		Expect(bundleContentPath).To(BeARegularFile())
 		fooContents, err := ioutil.ReadFile(bundleContentPath)
 		Expect(err).NotTo(HaveOccurred())
@@ -61,9 +61,9 @@ var _ = Describe("Create with local images", func() {
 
 			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id-2", 0)
 
-			bundleContentPath := path.Join(bundle.RootFSPath(), "foo")
+			bundleContentPath := path.Join(bundle.RootFSPath, "foo")
 			Expect(bundleContentPath).To(BeARegularFile())
-			barBundleContentPath := path.Join(bundle.RootFSPath(), "bar")
+			barBundleContentPath := path.Join(bundle.RootFSPath, "bar")
 			Expect(barBundleContentPath).To(BeARegularFile())
 		})
 	})
@@ -77,8 +77,8 @@ var _ = Describe("Create with local images", func() {
 			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id-2", 0)
-			Expect(path.Join(bundle.RootFSPath(), "foo")).To(BeARegularFile())
-			Expect(path.Join(bundle.RootFSPath(), "injected-file")).To(BeARegularFile())
+			Expect(path.Join(bundle.RootFSPath, "foo")).To(BeARegularFile())
+			Expect(path.Join(bundle.RootFSPath, "injected-file")).To(BeARegularFile())
 		})
 	})
 
@@ -103,7 +103,7 @@ var _ = Describe("Create with local images", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			content, err := ioutil.ReadFile(filepath.Join(bundle.RootFSPath(), "bar"))
+			content, err := ioutil.ReadFile(filepath.Join(bundle.RootFSPath, "bar"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(Equal("hello-world"))
 		})

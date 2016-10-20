@@ -135,13 +135,13 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 		})
 
 		It("returns the bundle", func() {
-			fakeBundle := new(grootfakes.FakeBundle)
-			fakeBundle.PathReturns("/path/to/bundle")
-			fakeBundler.CreateReturns(fakeBundle, nil)
+			fakeBundler.CreateReturns(grootpkg.Bundle{
+				Path: "/path/to/bundle",
+			}, nil)
 
 			bundle, err := groot.Create(logger, grootpkg.CreateSpec{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(bundle.Path()).To(Equal("/path/to/bundle"))
+			Expect(bundle.Path).To(Equal("/path/to/bundle"))
 		})
 
 		Context("when the image is not a valid URL", func() {
@@ -272,7 +272,7 @@ var _ = Describe("I AM GROOT, the Orchestrator", func() {
 
 		Context("when creating the bundle fails", func() {
 			BeforeEach(func() {
-				fakeBundler.CreateReturns(nil, errors.New("Failed to make bundle"))
+				fakeBundler.CreateReturns(grootpkg.Bundle{}, errors.New("Failed to make bundle"))
 			})
 
 			It("returns the error", func() {

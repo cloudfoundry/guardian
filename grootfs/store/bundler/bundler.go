@@ -55,13 +55,10 @@ func (b *Bundler) Create(logger lager.Logger, spec groot.BundleSpec) (groot.Bund
 	logger.Info("start")
 	defer logger.Info("end")
 
-	var (
-		bundle *Bundle
-		err    error
-	)
-
+	var err error
+	bundle := b.createBundle(spec.ID)
 	defer func() {
-		if err != nil && bundle != nil {
+		if err != nil {
 			log := logger.Session("create-failed-cleaning-up", lager.Data{
 				"id":    spec.ID,
 				"cause": err.Error(),
@@ -70,7 +67,7 @@ func (b *Bundler) Create(logger lager.Logger, spec groot.BundleSpec) (groot.Bund
 			log.Info("start")
 			defer log.Info("end")
 
-			if err = b.snapshotDriver.Destroy(logger, bundle.RootFSPath()); err != nil {
+			if err = b.snapshotDriver.Destroy(logger, bundle.RootFSPath); err != nil {
 				log.Error("destroying-rootfs-snapshot", err)
 			}
 
@@ -80,22 +77,21 @@ func (b *Bundler) Create(logger lager.Logger, spec groot.BundleSpec) (groot.Bund
 		}
 	}()
 
-	bundle = NewBundle(path.Join(b.storePath, store.BUNDLES_DIR_NAME, spec.ID))
-	if err := os.Mkdir(bundle.Path(), 0700); err != nil {
-		return nil, fmt.Errorf("making bundle path: %s", err)
+	if err = os.Mkdir(bundle.Path, 0700); err != nil {
+		return groot.Bundle{}, fmt.Errorf("making bundle path: %s", err)
 	}
 
 	if err = b.writeImageJSON(logger, bundle, spec.Image); err != nil {
-		return nil, fmt.Errorf("creating image.json: %s", err)
+		return groot.Bundle{}, fmt.Errorf("creating image.json: %s", err)
 	}
 
-	if err = b.snapshotDriver.Snapshot(logger, spec.VolumePath, bundle.RootFSPath()); err != nil {
-		return nil, fmt.Errorf("creating snapshot: %s", err)
+	if err = b.snapshotDriver.Snapshot(logger, spec.VolumePath, bundle.RootFSPath); err != nil {
+		return groot.Bundle{}, fmt.Errorf("creating snapshot: %s", err)
 	}
 
 	if spec.DiskLimit > 0 {
-		if err = b.snapshotDriver.ApplyDiskLimit(logger, bundle.RootFSPath(), spec.DiskLimit, spec.ExcludeImageFromQuota); err != nil {
-			return nil, fmt.Errorf("applying disk limit: %s", err)
+		if err = b.snapshotDriver.ApplyDiskLimit(logger, bundle.RootFSPath, spec.DiskLimit, spec.ExcludeImageFromQuota); err != nil {
+			return groot.Bundle{}, fmt.Errorf("applying disk limit: %s", err)
 		}
 	}
 
@@ -112,8 +108,8 @@ func (b *Bundler) Destroy(logger lager.Logger, id string) error {
 		return fmt.Errorf("bundle not found: %s", id)
 	}
 
-	bundle := NewBundle(path.Join(b.storePath, store.BUNDLES_DIR_NAME, id))
-	if err := b.snapshotDriver.Destroy(logger, bundle.RootFSPath()); err != nil {
+	bundle := b.createBundle(id)
+	if err := b.snapshotDriver.Destroy(logger, bundle.RootFSPath); err != nil {
 		return fmt.Errorf("destroying snapshot: %s", err)
 	}
 
@@ -142,12 +138,13 @@ func (b *Bundler) Metrics(logger lager.Logger, id string) (groot.VolumeMetrics, 
 	logger.Info("start")
 	defer logger.Info("end")
 
-	bundle := NewBundle(path.Join(b.storePath, store.BUNDLES_DIR_NAME, id))
-	return b.snapshotDriver.FetchMetrics(logger, bundle.RootFSPath())
+	bundle := b.createBundle(id)
+
+	return b.snapshotDriver.FetchMetrics(logger, bundle.RootFSPath)
 }
 
-func (b *Bundler) deleteBundleDir(bundle *Bundle) error {
-	if err := os.RemoveAll(bundle.Path()); err != nil {
+func (b *Bundler) deleteBundleDir(bundle groot.Bundle) error {
+	if err := os.RemoveAll(bundle.Path); err != nil {
 		return fmt.Errorf("deleting bundle path: %s", err)
 	}
 
@@ -161,7 +158,7 @@ func (b *Bundler) writeImageJSON(logger lager.Logger, bundle groot.Bundle, image
 	logger.Info("start")
 	defer logger.Info("end")
 
-	imageJsonPath := filepath.Join(bundle.Path(), "image.json")
+	imageJsonPath := filepath.Join(bundle.Path, "image.json")
 	imageJsonFile, err := OF(imageJsonPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
@@ -172,4 +169,13 @@ func (b *Bundler) writeImageJSON(logger lager.Logger, bundle groot.Bundle, image
 	}
 
 	return nil
+}
+
+func (b *Bundler) createBundle(id string) groot.Bundle {
+	bundlePath := path.Join(b.storePath, store.BUNDLES_DIR_NAME, id)
+
+	return groot.Bundle{
+		Path:       bundlePath,
+		RootFSPath: filepath.Join(bundlePath, "rootfs"),
+	}
 }

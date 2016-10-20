@@ -13,7 +13,6 @@ import (
 const GLOBAL_LOCK_KEY = "global-groot-lock"
 
 //go:generate counterfeiter . Bundler
-//go:generate counterfeiter . Bundle
 //go:generate counterfeiter . ImagePuller
 //go:generate counterfeiter . Locksmith
 //go:generate counterfeiter . DependencyManager
@@ -51,9 +50,9 @@ type BundleSpec struct {
 	Image                 specsv1.Image
 }
 
-type Bundle interface {
-	Path() string
-	RootFSPath() string
+type Bundle struct {
+	Path       string
+	RootFSPath string
 }
 
 type Bundler interface {
@@ -122,15 +121,15 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 
 	parsedURL, err := url.Parse(spec.Image)
 	if err != nil {
-		return nil, fmt.Errorf("parsing image url: %s", err)
+		return Bundle{}, fmt.Errorf("parsing image url: %s", err)
 	}
 
 	ok, err := g.bundler.Exists(spec.ID)
 	if err != nil {
-		return nil, fmt.Errorf("checking id exists: %s", err)
+		return Bundle{}, fmt.Errorf("checking id exists: %s", err)
 	}
 	if ok {
-		return nil, fmt.Errorf("bundle for id `%s` already exists", spec.ID)
+		return Bundle{}, fmt.Errorf("bundle for id `%s` already exists", spec.ID)
 	}
 
 	imageSpec := ImageSpec{
@@ -143,7 +142,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 
 	lockFile, err := g.locksmith.Lock(GLOBAL_LOCK_KEY)
 	if err != nil {
-		return nil, err
+		return Bundle{}, err
 	}
 
 	image, err := g.imagePuller.Pull(logger, imageSpec)
@@ -152,7 +151,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 			logger.Error("failed-to-unlock", err)
 		}
 
-		return nil, errorspkg.Wrap(err, "pulling the image")
+		return Bundle{}, errorspkg.Wrap(err, "pulling the image")
 	}
 
 	if err := g.locksmith.Unlock(lockFile); err != nil {
@@ -168,7 +167,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 	}
 	bundle, err := g.bundler.Create(logger, bundleSpec)
 	if err != nil {
-		return nil, fmt.Errorf("making bundle: %s", err)
+		return Bundle{}, fmt.Errorf("making bundle: %s", err)
 	}
 
 	if err := g.dependencyManager.Register(spec.ID, image.ChainIDs); err != nil {
@@ -176,7 +175,7 @@ func (g *Groot) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 			logger.Error("failed-to-destroy-bundle", destroyErr)
 		}
 
-		return nil, err
+		return Bundle{}, err
 	}
 
 	return bundle, nil

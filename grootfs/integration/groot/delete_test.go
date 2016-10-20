@@ -32,12 +32,12 @@ var _ = Describe("Delete", func() {
 	It("deletes an existing bundle", func() {
 		result := integration.DeleteBundle(GrootFSBin, StorePath, DraxBin, "random-id")
 		Expect(result).To(Equal("Bundle random-id deleted\n"))
-		Expect(bundle.Path()).NotTo(BeAnExistingFile())
+		Expect(bundle.Path).NotTo(BeAnExistingFile())
 	})
 
 	It("destroys the quota group associated with the volume", func() {
 		rootIDBuffer := gbytes.NewBuffer()
-		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", bundle.RootFSPath()), rootIDBuffer, GinkgoWriter)
+		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", bundle.RootFSPath), rootIDBuffer, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 		rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))

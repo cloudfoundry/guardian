@@ -37,12 +37,12 @@ var _ = Describe("Create", func() {
 
 			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", int64(10*1024*1024))
 
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath(), "hello")), "bs=1048576", "count=4")
+			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath, "hello")), "bs=1048576", "count=4")
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath(), "hello2")), "bs=1048576", "count=2")
+			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath, "hello2")), "bs=1048576", "count=2")
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
@@ -162,8 +162,8 @@ var _ = Describe("Create", func() {
 		It("isolates them", func() {
 			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
 			anotherBundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "another-random-id", 0)
-			Expect(ioutil.WriteFile(path.Join(bundle.RootFSPath(), "bar"), []byte("hello-world"), 0644)).To(Succeed())
-			Expect(path.Join(anotherBundle.RootFSPath(), "bar")).NotTo(BeARegularFile())
+			Expect(ioutil.WriteFile(path.Join(bundle.RootFSPath, "bar"), []byte("hello-world"), 0644)).To(Succeed())
+			Expect(path.Join(anotherBundle.RootFSPath, "bar")).NotTo(BeARegularFile())
 		})
 	})
 
