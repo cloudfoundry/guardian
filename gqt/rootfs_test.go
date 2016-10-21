@@ -445,6 +445,37 @@ var _ = Describe("Rootfs container create parameter", func() {
 				Expect(err).To(MatchError(ContainSubstring("external image manager destroy failed")))
 			})
 		})
+
+		Context("and a container is created without specifying a RootFSPath", func() {
+			var fakeRootFsDir string
+
+			BeforeEach(func() {
+				var err error
+				fakeRootFsDir, err = ioutil.TempDir("", "")
+				Expect(err).NotTo(HaveOccurred())
+				args = append(args, "--default-rootfs", fakeRootFsDir)
+			})
+
+			JustBeforeEach(func() {
+				imageID = fmt.Sprintf("default-rootfs-container-%d", GinkgoParallelNode())
+
+				_, err := client.Create(garden.ContainerSpec{
+					Handle: imageID,
+				})
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(filepath.Join(storePath, imageID))).To(Succeed())
+				Expect(os.RemoveAll(fakeRootFsDir)).To(Succeed())
+			})
+
+			It("should pass the value of the --default-rootfs startup flag to the image plugin", func() {
+				args, err := ioutil.ReadFile(filepath.Join(storePath, fmt.Sprintf("create-args-%s", imageID)))
+				Expect(err).ToNot(HaveOccurred())
+				Expect(string(args)).To(ContainSubstring(fakeRootFsDir))
+			})
+		})
 	})
 
 	Context("when the modified timestamp of the rootfs top-level directory changes", func() {

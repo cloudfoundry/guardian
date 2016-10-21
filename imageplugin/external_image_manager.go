@@ -3,6 +3,7 @@ package imageplugin
 import (
 	"bytes"
 	"fmt"
+	"net/url"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -14,10 +15,11 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-func New(binPath string, commandRunner command_runner.CommandRunner, mappings []specs.IDMapping) *ExternalImageManager {
+func New(binPath string, commandRunner command_runner.CommandRunner, defaultRootFS *url.URL, mappings []specs.IDMapping) *ExternalImageManager {
 	return &ExternalImageManager{
 		binPath:       binPath,
 		commandRunner: commandRunner,
+		defaultRootFS: defaultRootFS,
 		mappings:      mappings,
 	}
 }
@@ -25,6 +27,7 @@ func New(binPath string, commandRunner command_runner.CommandRunner, mappings []
 type ExternalImageManager struct {
 	binPath       string
 	commandRunner command_runner.CommandRunner
+	defaultRootFS *url.URL
 	mappings      []specs.IDMapping
 }
 
@@ -45,7 +48,14 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 		}
 	}
 
-	args = append(args, spec.RootFS.String(), handle)
+	if spec.RootFS.String() == "" {
+		args = append(args, p.defaultRootFS.String())
+	} else {
+		args = append(args, spec.RootFS.String())
+	}
+
+	args = append(args, handle)
+
 	cmd := exec.Command(p.binPath, args...)
 
 	errBuffer := bytes.NewBuffer([]byte{})

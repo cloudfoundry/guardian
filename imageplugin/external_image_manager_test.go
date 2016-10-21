@@ -25,6 +25,7 @@ var _ = Describe("ExternalImageManager", func() {
 		externalImageManager *imageplugin.ExternalImageManager
 		imageSource          *url.URL
 		idMappings           []specs.IDMapping
+		defaultRootFS        *url.URL
 	)
 
 	BeforeEach(func() {
@@ -44,9 +45,11 @@ var _ = Describe("ExternalImageManager", func() {
 			},
 		}
 
-		externalImageManager = imageplugin.New("/external-image-manager-bin", fakeCommandRunner, idMappings)
-
 		var err error
+		defaultRootFS, err = url.Parse("/default/rootfs")
+		Expect(err).ToNot(HaveOccurred())
+		externalImageManager = imageplugin.New("/external-image-manager-bin", fakeCommandRunner, defaultRootFS, idMappings)
+
 		imageSource, err = url.Parse("/hello/image")
 		Expect(err).ToNot(HaveOccurred())
 	})
@@ -205,6 +208,20 @@ var _ = Describe("ExternalImageManager", func() {
 
 			It("returns the external-image-manager error output in the error", func() {
 				Expect(logger).To(gbytes.Say("btrfs doesn't like you"))
+			})
+		})
+
+		Context("when a RootFS is not provided in the rootfs_provider.Spec", func() {
+			BeforeEach(func() {
+				imageSource = &url.URL{}
+			})
+
+			It("passes the default rootfs to the external-image-manager", func() {
+				Expect(err).ToNot(HaveOccurred())
+				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-2]).To(Equal(defaultRootFS.String()))
 			})
 		})
 	})

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -443,7 +444,11 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 	}
 
 	if cmd.Bin.ImagePlugin.Path() != "" {
-		return imageplugin.New(cmd.Bin.ImagePlugin.Path(), linux_command_runner.New(), idMappings)
+		defaultRootFS, err := url.Parse(cmd.Containers.DefaultRootFSDir.Path())
+		if err != nil {
+			logger.Fatal("failed-to-parse-default-rootfs", err)
+		}
+		return imageplugin.New(cmd.Bin.ImagePlugin.Path(), linux_command_runner.New(), defaultRootFS, idMappings)
 	}
 
 	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})
