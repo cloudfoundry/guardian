@@ -37,5 +37,13 @@ var _ = Describe("HostsFileCompiler", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(ContainSubstring("123.124.126.128 my-handle"))
 		})
+
+		Context("when handle is longer than 49 characters", func() {
+			It("should use the last 49 characters of it", func() {
+				contents, err := compiler.Compile(log, ip, "too-looooong-haaaaaaaaaaaaaannnnnndddle-1234456787889")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(ContainSubstring("123.124.126.128 looooong-haaaaaaaaaaaaaannnnnndddle-1234456787889"))
+			})
+		})
 	})
 })

@@ -110,6 +110,43 @@ var _ = Describe("Networking", func() {
 		Expect(out).To(ContainSubstring(" 0% packet loss"))
 	})
 
+	Context("when container handle is longer than 49 chars", func() {
+		var (
+			longHandle          string = "too-looooong-haaaaaaaaaaaaaannnnnndddle-1234456787889"
+			longHandleContainer garden.Container
+		)
+
+		JustBeforeEach(func() {
+			var err error
+			longHandleContainer, err = client.Create(garden.ContainerSpec{Handle: longHandle})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			client.Destroy(longHandle)
+		})
+
+		It("should lookup container ip using last 49 chars of handle as hostname", func() {
+			buff := gbytes.NewBuffer()
+			p, err := longHandleContainer.Run(garden.ProcessSpec{
+				Path: "cat",
+				Args: []string{"/etc/hosts"},
+			}, garden.ProcessIO{
+				Stdout: buff,
+				Stderr: buff,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			code, err := p.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(code).To(Equal(0))
+
+			hostsFile := string(buff.Contents())
+			Expect(hostsFile).NotTo(ContainSubstring(longHandle))
+			Expect(hostsFile).To(ContainSubstring(longHandle[len(longHandle)-49:]))
+		})
+	})
+
 	Describe("a second container", func() {
 		var otherContainer garden.Container
 
