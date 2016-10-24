@@ -62,7 +62,7 @@ func TestGroot(t *testing.T) {
 			StorePath:  StorePath,
 			DraxBin:    DraxBin,
 			LogLevel:   lager.DEBUG,
-			LogFile:    GinkgoWriter,
+			Stderr:     GinkgoWriter,
 		}
 	})
 

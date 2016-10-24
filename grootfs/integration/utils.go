@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -39,18 +38,10 @@ func CreateBundleWSpec(grootFSBin, storePath, draxBin string, spec groot.CreateS
 		StorePath:  storePath,
 		DraxBin:    draxBin,
 		LogLevel:   lager.DEBUG,
-		LogFile:    GinkgoWriter,
+		Stderr:     GinkgoWriter,
 	}
 
-	bundlePath, err := runner.Create(spec)
-	if err != nil {
-		return groot.Bundle{}, err
-	}
-
-	return groot.Bundle{
-		Path:       bundlePath,
-		RootFSPath: filepath.Join(bundlePath, "rootfs"),
-	}, nil
+	return runner.Create(spec)
 }
 
 func DeleteBundle(grootFSBin, storePath, draxBin, id string) string {

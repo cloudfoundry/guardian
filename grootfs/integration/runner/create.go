@@ -1,51 +1,27 @@
 package runner
 
 import (
-	"bytes"
-	"errors"
 	"fmt"
+	"path/filepath"
 	"strconv"
-	"strings"
 
 	"code.cloudfoundry.org/grootfs/groot"
 )
 
-func (g *Runner) Create(spec groot.CreateSpec) (string, error) {
-	cmd := g.makeCmd("create", g.makeCreateArgs(spec)...)
-	stdoutBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stdout = stdoutBuffer
-	if g.LogFile != nil {
-		cmd.Stderr = g.LogFile
+func (r *Runner) Create(spec groot.CreateSpec) (groot.Bundle, error) {
+	args := r.makeCreateArgs(spec)
+	bundlePath, err := r.RunSubcommand("create", args...)
+	if err != nil {
+		return groot.Bundle{}, err
 	}
 
-	errChan := make(chan error)
-	go func() {
-		if err := cmd.Run(); err != nil {
-			errChan <- err
-		} else {
-			errChan <- nil
-		}
-	}()
-
-	return g.wait(errChan, func(runErr error) (string, error) {
-		if runErr != nil {
-			var errStr string
-			stdout := strings.TrimSpace(stdoutBuffer.String())
-			if stdout != "" {
-				errStr = stdout
-			} else {
-				errStr = fmt.Sprintf("command existed with %s", runErr)
-			}
-
-			return "", errors.New(errStr)
-		}
-
-		bundlePath := strings.TrimSpace(stdoutBuffer.String())
-		return bundlePath, nil
-	})
+	return groot.Bundle{
+		Path:       bundlePath,
+		RootFSPath: filepath.Join(bundlePath, "rootfs"),
+	}, nil
 }
 
-func (g *Runner) makeCreateArgs(spec groot.CreateSpec) []string {
+func (r *Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 	args := []string{}
 	for _, mapping := range spec.UIDMappings {
 		args = append(args, "--uid-mapping",

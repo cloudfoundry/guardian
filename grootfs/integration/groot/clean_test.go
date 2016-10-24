@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"path"
 
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
 	. "github.com/onsi/ginkgo"
@@ -12,7 +13,11 @@ import (
 
 var _ = Describe("Clean", func() {
 	BeforeEach(func() {
-		integration.CreateBundle(GrootFSBin, StorePath, DraxBin, "docker:///cfgarden/empty:v0.1.1", "my-bundle-1", 0)
+		_, err := Runner.Create(groot.CreateSpec{
+			ID:    "my-bundle-1",
+			Image: "docker:///cfgarden/empty:v0.1.1",
+		})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
@@ -21,7 +26,11 @@ var _ = Describe("Clean", func() {
 
 	Context("when cleaning up volumes", func() {
 		BeforeEach(func() {
-			integration.CreateBundle(GrootFSBin, StorePath, DraxBin, "docker:///busybox", "my-bundle-2", 0)
+			_, err := Runner.Create(groot.CreateSpec{
+				ID:    "my-bundle-2",
+				Image: "docker:///busybox",
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		JustBeforeEach(func() {
