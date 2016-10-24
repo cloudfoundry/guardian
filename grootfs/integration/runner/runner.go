@@ -62,23 +62,6 @@ func (r *Runner) RunSubcommand(subcommand string, args ...string) (string, error
 	return strings.TrimSpace(stdoutBuffer.String()), nil
 }
 
-func (r *Runner) wait(errChan chan error, cb func(error) (string, error)) (string, error) {
-	if r.Timeout == 0 {
-		runErr := <-errChan
-		return cb(runErr)
-	}
-
-	select {
-	case runErr := <-errChan:
-		return cb(runErr)
-
-	case <-time.After(r.Timeout):
-		return "", errors.New(
-			fmt.Sprintf("command took more than %f seconds to finish", r.Timeout.Seconds()),
-		)
-	}
-}
-
 func (r *Runner) runCmd(cmd *exec.Cmd) error {
 	if r.Timeout == 0 {
 		return cmd.Run()
