@@ -33,7 +33,7 @@ var _ = Describe("Clean", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(contents)).To(Equal(3))
 
-			Expect(Groot.Clean()).To(Succeed())
+			Expect(Runner.Clean()).To(Succeed())
 
 			contents, err = ioutil.ReadDir(path.Join(StorePath, store.VOLUMES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
@@ -49,7 +49,7 @@ var _ = Describe("Clean", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(contents)).To(BeNumerically(">", 0))
 
-			Expect(Groot.Clean()).To(Succeed())
+			Expect(Runner.Clean()).To(Succeed())
 
 			contents, err = ioutil.ReadDir(path.Join(StorePath, store.CACHE_DIR_NAME, "blobs"))
 			Expect(err).NotTo(HaveOccurred())

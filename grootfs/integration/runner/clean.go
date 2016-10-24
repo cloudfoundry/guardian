@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func (g *Groot) Clean() error {
+func (g *Runner) Clean() error {
 	cmd := g.makeCmd("clean")
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = stdoutBuffer

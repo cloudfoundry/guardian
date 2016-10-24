@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type Groot struct {
+type Runner struct {
 	GrootFSBin string
 	StorePath  string
 	DraxBin    string
@@ -21,13 +21,13 @@ type Groot struct {
 	Timeout time.Duration
 }
 
-func (g *Groot) WithLogFile(writer io.Writer) *Groot {
+func (g *Runner) WithLogFile(writer io.Writer) *Runner {
 	ng := *g
 	ng.LogFile = writer
 	return &ng
 }
 
-func (g *Groot) wait(errChan chan error, cb func(error) (string, error)) (string, error) {
+func (g *Runner) wait(errChan chan error, cb func(error) (string, error)) (string, error) {
 	if g.Timeout == 0 {
 		runErr := <-errChan
 		return cb(runErr)
@@ -44,7 +44,7 @@ func (g *Groot) wait(errChan chan error, cb func(error) (string, error)) (string
 	}
 }
 
-func (g *Groot) makeCmd(subcommand string, subcommandArgs ...string) *exec.Cmd {
+func (g *Runner) makeCmd(subcommand string, subcommandArgs ...string) *exec.Cmd {
 	args := []string{}
 	args = append(args, "--log-level", g.logLevel(g.LogLevel))
 	args = append(args, "--store", g.StorePath)
@@ -57,7 +57,7 @@ func (g *Groot) makeCmd(subcommand string, subcommandArgs ...string) *exec.Cmd {
 	return exec.Command(g.GrootFSBin, args...)
 }
 
-func (g *Groot) logLevel(ll lager.LogLevel) string {
+func (g *Runner) logLevel(ll lager.LogLevel) string {
 	switch ll {
 	case lager.DEBUG:
 		return "debug"

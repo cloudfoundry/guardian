@@ -30,7 +30,7 @@ var _ = Describe("Logging", func() {
 		Expect(ioutil.WriteFile(filepath.Join(imgPath, "unreadable-file"), []byte("foo bar"), 0644)).To(Succeed())
 
 		logBuffer := gbytes.NewBuffer()
-		_, err = Groot.WithLogFile(logBuffer).Create(groot.CreateSpec{
+		_, err = Runner.WithLogFile(logBuffer).Create(groot.CreateSpec{
 			ID:    "random-id",
 			Image: imgPath,
 		})

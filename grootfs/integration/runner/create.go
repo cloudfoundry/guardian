@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 )
 
-func (g *Groot) Create(spec groot.CreateSpec) (string, error) {
+func (g *Runner) Create(spec groot.CreateSpec) (string, error) {
 	cmd := g.makeCmd("create", g.makeCreateArgs(spec)...)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = stdoutBuffer
@@ -45,7 +45,7 @@ func (g *Groot) Create(spec groot.CreateSpec) (string, error) {
 	})
 }
 
-func (g *Groot) makeCreateArgs(spec groot.CreateSpec) []string {
+func (g *Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 	args := []string{}
 	for _, mapping := range spec.UIDMappings {
 		args = append(args, "--uid-mapping",

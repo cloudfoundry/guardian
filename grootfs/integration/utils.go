@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	grootpkg "code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/lager"
 
@@ -20,8 +20,8 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-func CreateBundle(grootFSBin, storePath, draxBin, imagePath, id string, diskLimit int64) grootpkg.Bundle {
-	spec := grootpkg.CreateSpec{
+func CreateBundle(grootFSBin, storePath, draxBin, imagePath, id string, diskLimit int64) groot.Bundle {
+	spec := groot.CreateSpec{
 		ID:        id,
 		Image:     imagePath,
 		DiskLimit: diskLimit,
@@ -33,8 +33,8 @@ func CreateBundle(grootFSBin, storePath, draxBin, imagePath, id string, diskLimi
 	return bundle
 }
 
-func CreateBundleWSpec(grootFSBin, storePath, draxBin string, spec grootpkg.CreateSpec) (grootpkg.Bundle, error) {
-	groot := &runner.Groot{
+func CreateBundleWSpec(grootFSBin, storePath, draxBin string, spec groot.CreateSpec) (groot.Bundle, error) {
+	runner := &runner.Runner{
 		GrootFSBin: grootFSBin,
 		StorePath:  storePath,
 		DraxBin:    draxBin,
@@ -42,12 +42,12 @@ func CreateBundleWSpec(grootFSBin, storePath, draxBin string, spec grootpkg.Crea
 		LogFile:    GinkgoWriter,
 	}
 
-	bundlePath, err := groot.Create(spec)
+	bundlePath, err := runner.Create(spec)
 	if err != nil {
-		return grootpkg.Bundle{}, err
+		return groot.Bundle{}, err
 	}
 
-	return grootpkg.Bundle{
+	return groot.Bundle{
 		Path:       bundlePath,
 		RootFSPath: filepath.Join(bundlePath, "rootfs"),
 	}, nil
