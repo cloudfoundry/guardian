@@ -5,7 +5,6 @@ import (
 	"path"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,7 +20,7 @@ var _ = Describe("Clean", func() {
 	})
 
 	AfterEach(func() {
-		integration.DeleteBundle(GrootFSBin, StorePath, DraxBin, "my-bundle-1")
+		Expect(Runner.Delete("my-bundle-1")).To(Succeed())
 	})
 
 	Context("when cleaning up volumes", func() {
@@ -34,7 +33,7 @@ var _ = Describe("Clean", func() {
 		})
 
 		JustBeforeEach(func() {
-			integration.DeleteBundle(GrootFSBin, StorePath, DraxBin, "my-bundle-2")
+			Expect(Runner.Delete("my-bundle-2")).To(Succeed())
 		})
 
 		It("removes volumes that are not currently linked to bundles", func() {

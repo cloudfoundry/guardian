@@ -44,14 +44,6 @@ func CreateBundleWSpec(grootFSBin, storePath, draxBin string, spec groot.CreateS
 	return runner.Create(spec)
 }
 
-func DeleteBundle(grootFSBin, storePath, draxBin, id string) string {
-	cmd := exec.Command(grootFSBin, "--store", storePath, "--drax-bin", draxBin, "delete", id)
-	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	Expect(err).ToNot(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
-	return string(sess.Out.Contents())
-}
-
 func FindUID(user string) uint32 {
 	sess, err := gexec.Start(exec.Command("id", "-u", user), nil, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
