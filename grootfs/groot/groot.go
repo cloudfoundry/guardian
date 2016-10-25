@@ -15,6 +15,7 @@ const GLOBAL_LOCK_KEY = "global-groot-lock"
 //go:generate counterfeiter . Locksmith
 //go:generate counterfeiter . DependencyManager
 //go:generate counterfeiter . GarbageCollector
+//go:generate counterfeiter . StoreMeasurer
 
 type IDMappingSpec struct {
 	HostID      int
@@ -55,20 +56,22 @@ type Bundle struct {
 
 type Bundler interface {
 	Exists(id string) (bool, error)
-	BundleIDs(logger lager.Logger) ([]string, error)
 	Create(logger lager.Logger, spec BundleSpec) (Bundle, error)
 	Destroy(logger lager.Logger, id string) error
 	Metrics(logger lager.Logger, id string) (VolumeMetrics, error)
 }
 
 type DependencyManager interface {
-	Dependencies(id string) ([]string, error)
 	Register(id string, chainIDs []string) error
 	Deregister(id string) error
 }
 
 type GarbageCollector interface {
-	Collect(lager.Logger) error
+	Collect(logger lager.Logger) error
+}
+
+type StoreMeasurer interface {
+	MeasureStore(logger lager.Logger) (uint64, error)
 }
 
 type Locksmith interface {

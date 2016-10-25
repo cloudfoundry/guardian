@@ -4,20 +4,38 @@ import (
 	"errors"
 	"fmt"
 
-	"code.cloudfoundry.org/grootfs/fetcher"
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/image_puller"
 	"code.cloudfoundry.org/lager"
 )
 
-type GarbageCollector struct {
-	cacheDriver       fetcher.CacheDriver
-	volumeDriver      image_puller.VolumeDriver
-	bundler           groot.Bundler
-	dependencyManager groot.DependencyManager
+//go:generate counterfeiter . CacheDriver
+type CacheDriver interface {
+	Clean(logger lager.Logger) error
 }
 
-func NewGC(cacheDriver fetcher.CacheDriver, volumeDriver image_puller.VolumeDriver, bundler groot.Bundler, dependencyManager groot.DependencyManager) *GarbageCollector {
+//go:generate counterfeiter . VolumeDriver
+type VolumeDriver interface {
+	DestroyVolume(logger lager.Logger, id string) error
+	Volumes(logger lager.Logger) ([]string, error)
+}
+
+//go:generate counterfeiter . Bundler
+type Bundler interface {
+	BundleIDs(logger lager.Logger) ([]string, error)
+}
+
+//go:generate counterfeiter . DependencyManager
+type DependencyManager interface {
+	Dependencies(id string) ([]string, error)
+}
+
+type GarbageCollector struct {
+	cacheDriver       CacheDriver
+	volumeDriver      VolumeDriver
+	bundler           Bundler
+	dependencyManager DependencyManager
+}
+
+func NewGC(cacheDriver CacheDriver, volumeDriver VolumeDriver, bundler Bundler, dependencyManager DependencyManager) *GarbageCollector {
 	return &GarbageCollector{
 		cacheDriver:       cacheDriver,
 		volumeDriver:      volumeDriver,

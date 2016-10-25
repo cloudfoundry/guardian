@@ -17,6 +17,7 @@ import (
 var _ = Describe("Cleaner", func() {
 	var (
 		fakeLocksmith        *grootfakes.FakeLocksmith
+		fakeStoreMeasurer    *grootfakes.FakeStoreMeasurer
 		fakeGarbageCollector *grootfakes.FakeGarbageCollector
 		lockFile             *os.File
 
@@ -30,9 +31,11 @@ var _ = Describe("Cleaner", func() {
 		lockFile, err = ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
 		fakeLocksmith.LockReturns(lockFile, nil)
+
+		fakeStoreMeasurer = new(grootfakes.FakeStoreMeasurer)
 		fakeGarbageCollector = new(grootfakes.FakeGarbageCollector)
 
-		cleaner = groot.IamCleaner(fakeLocksmith, fakeGarbageCollector)
+		cleaner = groot.IamCleaner(fakeLocksmith, fakeStoreMeasurer, fakeGarbageCollector)
 		logger = lagertest.NewTestLogger("cleaner")
 	})
 
@@ -41,8 +44,8 @@ var _ = Describe("Cleaner", func() {
 	})
 
 	Describe("Clean", func() {
-		It("collects orphaned volumes", func() {
-			Expect(cleaner.Clean(logger)).To(Succeed())
+		It("calls the garbage collector", func() {
+			Expect(cleaner.Clean(logger, 0)).To(Succeed())
 			Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 		})
 
@@ -52,12 +55,12 @@ var _ = Describe("Cleaner", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(cleaner.Clean(logger)).To(MatchError(ContainSubstring("failed to collect unused bits")))
+				Expect(cleaner.Clean(logger, 0)).To(MatchError(ContainSubstring("failed to collect unused bits")))
 			})
 		})
 
 		It("acquires the global lock", func() {
-			Expect(cleaner.Clean(logger)).To(Succeed())
+			Expect(cleaner.Clean(logger, 0)).To(Succeed())
 
 			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
 			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GLOBAL_LOCK_KEY))
@@ -69,21 +72,69 @@ var _ = Describe("Cleaner", func() {
 			})
 
 			It("returns the error", func() {
-				err := cleaner.Clean(logger)
+				err := cleaner.Clean(logger, 0)
 				Expect(err).To(MatchError(ContainSubstring("failed to acquire lock")))
 			})
 
 			It("does not collect the garbage", func() {
-				Expect(cleaner.Clean(logger)).NotTo(Succeed())
+				Expect(cleaner.Clean(logger, 0)).NotTo(Succeed())
 				Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 			})
 		})
 
 		It("releases the global lock", func() {
-			Expect(cleaner.Clean(logger)).To(Succeed())
+			Expect(cleaner.Clean(logger, 0)).To(Succeed())
 
 			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
 			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
+		})
+
+		Context("when a threshold is provided", func() {
+			var threshold uint64
+
+			Context("when the store size is under the threshold", func() {
+				BeforeEach(func() {
+					threshold = 1000000
+					fakeStoreMeasurer.MeasureStoreReturns(500000, nil)
+				})
+
+				It("does not remove anything", func() {
+					Expect(cleaner.Clean(logger, threshold)).To(Succeed())
+					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
+				})
+
+				It("does not acquire the lock", func() {
+					Expect(cleaner.Clean(logger, threshold)).To(Succeed())
+					Expect(fakeLocksmith.LockCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("when the store measurer fails", func() {
+				BeforeEach(func() {
+					fakeStoreMeasurer.MeasureStoreReturns(0, errors.New("failed to measure"))
+				})
+
+				It("returns the error", func() {
+					Expect(cleaner.Clean(logger, threshold)).To(MatchError(ContainSubstring("failed to measure")))
+				})
+
+				It("does not remove anything", func() {
+					Expect(cleaner.Clean(logger, threshold)).NotTo(Succeed())
+					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("when the store size is over the threshold", func() {
+				BeforeEach(func() {
+					threshold = 1000000
+					fakeStoreMeasurer.MeasureStoreReturns(1500000, nil)
+				})
+
+				It("calls the garbage collector", func() {
+					Expect(cleaner.Clean(logger, threshold)).To(Succeed())
+					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
+				})
+			})
 		})
 	})
 })

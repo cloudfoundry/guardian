@@ -8,15 +8,6 @@ import (
 )
 
 type FakeDependencyManager struct {
-	DependenciesStub        func(id string) ([]string, error)
-	dependenciesMutex       sync.RWMutex
-	dependenciesArgsForCall []struct {
-		id string
-	}
-	dependenciesReturns struct {
-		result1 []string
-		result2 error
-	}
 	RegisterStub        func(id string, chainIDs []string) error
 	registerMutex       sync.RWMutex
 	registerArgsForCall []struct {
@@ -36,40 +27,6 @@ type FakeDependencyManager struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeDependencyManager) Dependencies(id string) ([]string, error) {
-	fake.dependenciesMutex.Lock()
-	fake.dependenciesArgsForCall = append(fake.dependenciesArgsForCall, struct {
-		id string
-	}{id})
-	fake.recordInvocation("Dependencies", []interface{}{id})
-	fake.dependenciesMutex.Unlock()
-	if fake.DependenciesStub != nil {
-		return fake.DependenciesStub(id)
-	} else {
-		return fake.dependenciesReturns.result1, fake.dependenciesReturns.result2
-	}
-}
-
-func (fake *FakeDependencyManager) DependenciesCallCount() int {
-	fake.dependenciesMutex.RLock()
-	defer fake.dependenciesMutex.RUnlock()
-	return len(fake.dependenciesArgsForCall)
-}
-
-func (fake *FakeDependencyManager) DependenciesArgsForCall(i int) string {
-	fake.dependenciesMutex.RLock()
-	defer fake.dependenciesMutex.RUnlock()
-	return fake.dependenciesArgsForCall[i].id
-}
-
-func (fake *FakeDependencyManager) DependenciesReturns(result1 []string, result2 error) {
-	fake.DependenciesStub = nil
-	fake.dependenciesReturns = struct {
-		result1 []string
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *FakeDependencyManager) Register(id string, chainIDs []string) error {
@@ -147,8 +104,6 @@ func (fake *FakeDependencyManager) DeregisterReturns(result1 error) {
 func (fake *FakeDependencyManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.dependenciesMutex.RLock()
-	defer fake.dependenciesMutex.RUnlock()
 	fake.registerMutex.RLock()
 	defer fake.registerMutex.RUnlock()
 	fake.deregisterMutex.RLock()
