@@ -98,9 +98,10 @@ func writeFile(path string, size uint64) error {
 	}
 	sess.Wait()
 
+	out := sess.Buffer().Contents()
 	exitCode := sess.ExitCode()
 	if exitCode != 0 {
-		return fmt.Errorf("du failed with exit code %d: %s", exitCode)
+		return fmt.Errorf("du failed with exit code %d: %s", exitCode, string(out))
 	}
 
 	return nil
