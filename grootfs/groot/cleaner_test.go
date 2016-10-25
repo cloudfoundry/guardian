@@ -92,9 +92,12 @@ var _ = Describe("Cleaner", func() {
 		Context("when a threshold is provided", func() {
 			var threshold uint64
 
+			BeforeEach(func() {
+				threshold = 1000000
+			})
+
 			Context("when the store size is under the threshold", func() {
 				BeforeEach(func() {
-					threshold = 1000000
 					fakeStoreMeasurer.MeasureStoreReturns(500000, nil)
 				})
 
