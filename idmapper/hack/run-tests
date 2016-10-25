@@ -1,0 +1,142 @@
+#!/bin/bash -e
+
+# Default fly target
+[ -z $FLY_TARGET ] && FLY_TARGET="lite"
+[ -z $FLY_ARGS ] && FLY_ARGS="-p"
+
+RED=1
+GREEN=2
+print_message() {
+  message=$1
+  colour=$2
+  printf "\r\033[00;3${colour}m[${message}]\033[0m\n"
+}
+
+usage() {
+  colour=$1
+  print_message "Usage:" $colour
+  print_message "run-tests --- run all the tests" $colour
+  print_message "run-tests -p <test path> --- only run tests below given path" $colour
+  print_message "run-tests -g <Ginkgo arguments> --- pass custom parameters to Ginkgo" $colour
+  print_message "run-tests -r --- run test suites under the provided path recursively" $colour
+  print_message "run-tests -f --- run all tests in Concourse" $colour
+  print_message "run-tests -h --- print help menu" $colour
+}
+
+compile_fly_cmd() {
+  task_path=$1
+
+  cmd="fly -t $FLY_TARGET"
+  cmd=$cmd" e -c $task_path"
+  cmd=$cmd" -i idmapper-git-repo=${PWD}"
+  cmd=$cmd" $FLY_ARGS"
+  cmd=$cmd" --"
+
+  echo $cmd
+}
+
+compile_ginkgo_args() {
+  test_path=${1:-""}
+
+  args=""
+  [ "$GINKGO_ARGS" != "" ] && args=$args" $GINKGO_ARGS"
+  [ $RECURSIVE -eq 1 ] && args=$args" -r"
+  [ "$test_path" != "" ] && args=$args" $test_path"
+
+  echo $args
+}
+
+fly_root_tests() {
+  test_path=${1:-""}
+
+  cmd=$(compile_fly_cmd ci/tasks/root-tests.yml)
+  cmd=$cmd" "$(compile_ginkgo_args $test_path)
+  eval $cmd
+}
+
+run_integration_tests() {
+  test_path=${1:-""}
+  fly_root_tests $test_path
+}
+
+run_unit_tests() {
+  test_path=${1:-""}
+
+  # if it has Linux tests it should run through fly
+  find_cmd="find $test_path -name '*_linux_test.go'"
+  [ $RECURSIVE -eq 0 ] && find_cmd=$find_cmd" -maxdepth 1"
+  if [ "$(eval $find_cmd)" != "" ]; then
+    fly_root_tests $test_path
+    return
+  fi
+
+  # run locally
+  cmd="ginkgo -p --race"
+  cmd=$cmd" "$(compile_ginkgo_args $test_path)
+  eval $cmd
+}
+
+run_all_tests() {
+  if [ $RECURSIVE -ne 1 ]; then
+    print_message "No suite found in root directory. Please use -r to run suites in its subdirectories." $RED
+    return
+  fi
+
+  fly_root_tests
+}
+
+run_tests() {
+  test_path=${1:-""}
+
+  case $test_path in
+    integration*)
+      run_integration_tests $test_path
+      ;;
+
+    # no path - run all the tests
+    "")
+      run_all_tests
+      ;;
+
+    # test_path is not empty
+    *)
+      run_unit_tests $test_path
+      ;;
+    esac
+}
+
+test_path=""
+GINKGO_ARGS=""
+RECURSIVE=0
+FORCE_FLY=0
+while getopts "p:g:rhf" OPTION
+do
+  case $OPTION in
+    p)
+      test_path=$OPTARG
+      ;;
+    g)
+      GINKGO_ARGS=$OPTARG
+      ;;
+    h)
+      usage $GREEN
+      exit
+      ;;
+    f)
+      FORCE_FLY=1
+      ;;
+    r)
+      RECURSIVE=1
+      ;;
+    *)
+      usage $RED
+      exit
+      ;;
+  esac
+done
+
+print_message "ginkgo_args='$GINKGO_ARGS'" $GREEN
+print_message "recursive=$RECURSIVE" $GREEN
+print_message "force_fly=$FORCE_FLY" $GREEN
+print_message "test_path='$test_path'" $GREEN
+run_tests $test_path
