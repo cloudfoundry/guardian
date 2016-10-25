@@ -54,6 +54,23 @@ var _ = Describe("Delete", func() {
 		Expect(sess).ToNot(gbytes.Say(rootID))
 	})
 
+	Context("when a path is provided instead of an ID", func() {
+		It("deletes the bundle by the path", func() {
+			Expect(Runner.Delete(bundle.Path)).To(Succeed())
+			Expect(bundle.Path).NotTo(BeAnExistingFile())
+		})
+
+		Context("when the path provided doesn't belong to the `--store` provided", func() {
+			It("returns an error", func() {
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", "/Iamnot/in/the/storage/bundles/1234/rootfs")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(1))
+				Eventually(sess.Out).Should(gbytes.Say("path `/Iamnot/in/the/storage/bundles/1234/rootfs` is outside store path"))
+			})
+		})
+	})
+
 	Context("when the bundle ID doesn't exist", func() {
 		It("returns an error", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", "non-existing-id")

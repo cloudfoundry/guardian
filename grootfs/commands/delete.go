@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"code.cloudfoundry.org/grootfs/commands/idfinder"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/bundler"
@@ -17,7 +18,7 @@ import (
 
 var DeleteCommand = cli.Command{
 	Name:        "delete",
-	Usage:       "delete <id>",
+	Usage:       "delete <id|bundle path>",
 	Description: "Deletes a container bundle",
 
 	Action: func(ctx *cli.Context) error {
@@ -29,7 +30,11 @@ var DeleteCommand = cli.Command{
 			logger.Error("parsing-command", errors.New("id was not specified"))
 			return cli.NewExitError("id was not specified", 1)
 		}
-		id := ctx.Args().First()
+		idOrPath := ctx.Args().First()
+		id, err := idfinder.FindID(storePath, idOrPath)
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
 		bundler := bundler.NewBundler(btrfsVolumeDriver, storePath)
@@ -38,7 +43,7 @@ var DeleteCommand = cli.Command{
 		)
 		deleter := groot.IamDeleter(bundler, dependencyManager)
 
-		err := deleter.Delete(logger, id)
+		err = deleter.Delete(logger, id)
 		if err != nil {
 			logger.Error("deleting-bundle-failed", err)
 			return cli.NewExitError(err.Error(), 1)
