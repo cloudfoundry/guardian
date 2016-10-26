@@ -63,18 +63,15 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 	if err != nil {
 		return Bundle{}, err
 	}
-
-	image, err := c.imagePuller.Pull(logger, imageSpec)
-	if err != nil {
+	defer func() {
 		if err := c.locksmith.Unlock(lockFile); err != nil {
 			logger.Error("failed-to-unlock", err)
 		}
+	}()
 
+	image, err := c.imagePuller.Pull(logger, imageSpec)
+	if err != nil {
 		return Bundle{}, errorspkg.Wrap(err, "pulling the image")
-	}
-
-	if err := c.locksmith.Unlock(lockFile); err != nil {
-		logger.Error("failed-to-unlock", err)
 	}
 
 	bundleSpec := BundleSpec{

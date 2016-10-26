@@ -2,33 +2,25 @@ package groot_test
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/groot"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Concurrent creations", func() {
-	var imagePath string
-
 	BeforeEach(func() {
-		var err error
-		imagePath, err = ioutil.TempDir("", "")
+		// run this to setup the store before concurrency!
+		_, err := Runner.Create(groot.CreateSpec{
+			ID:    "test-pre-warm",
+			Image: "docker:///cfgarden/empty",
+		})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	AfterEach(func() {
-		Expect(os.RemoveAll(imagePath)).To(Succeed())
-	})
-
 	It("can create multiple rootfses of the same image concurrently", func() {
-		// run this to setup the store before concurrency!
-		integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "test-pre-warm", 0)
-
 		wg := new(sync.WaitGroup)
 
 		for i := 0; i < 3; i++ {
@@ -37,13 +29,44 @@ var _ = Describe("Concurrent creations", func() {
 				defer GinkgoRecover()
 				defer wg.Done()
 
-				integration.CreateBundle(
-					GrootFSBin, StorePath, DraxBin, "docker:///cfgarden/empty",
-					fmt.Sprintf("test-%d", idx), 0,
-				)
+				_, err := Runner.Create(groot.CreateSpec{
+					ID:    fmt.Sprintf("test-%d", idx),
+					Image: "docker:///cfgarden/empty",
+				})
+				Expect(err).NotTo(HaveOccurred())
 			}(wg, i)
 		}
 
 		wg.Wait()
+	})
+
+	Describe("parallel create and clean", func() {
+		It("works in parallel, without errors", func() {
+			wg := new(sync.WaitGroup)
+
+			wg.Add(1)
+			go func() {
+				defer GinkgoRecover()
+				defer wg.Done()
+
+				for i := 0; i < 3; i++ {
+					_, err := Runner.Create(groot.CreateSpec{
+						ID:    fmt.Sprintf("test-%d", i),
+						Image: "docker:///cfgarden/empty",
+					})
+					Expect(err).NotTo(HaveOccurred())
+				}
+			}()
+
+			wg.Add(1)
+			go func() {
+				defer GinkgoRecover()
+				defer wg.Done()
+
+				Expect(Runner.Clean(0)).To(Succeed())
+			}()
+
+			wg.Wait()
+		})
 	})
 })

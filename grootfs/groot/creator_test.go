@@ -78,16 +78,6 @@ var _ = Describe("Creator", func() {
 			Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
 		})
 
-		It("releases the global lock", func() {
-			_, err := creator.Create(logger, groot.CreateSpec{
-				Image: "/path/to/image",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
-			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
-		})
-
 		It("makes a bundle", func() {
 			image := groot.Image{
 				VolumePath: "/path/to/volume",
@@ -130,6 +120,16 @@ var _ = Describe("Creator", func() {
 			bundleID, chainIDs := fakeDependencyManager.RegisterArgsForCall(0)
 			Expect(bundleID).To(Equal("my-bundle"))
 			Expect(chainIDs).To(Equal([]string{"sha256:vol-a", "sha256:vol-b"}))
+		})
+
+		It("releases the global lock", func() {
+			_, err := creator.Create(logger, groot.CreateSpec{
+				Image: "/path/to/image",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
+			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
 		})
 
 		It("returns the bundle", func() {
@@ -256,16 +256,6 @@ var _ = Describe("Creator", func() {
 
 				Expect(fakeBundler.CreateCallCount()).To(Equal(0))
 			})
-
-			It("releases the global lock", func() {
-				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "/path/to/image",
-				})
-				Expect(err).To(HaveOccurred())
-
-				Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
-				Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
-			})
 		})
 
 		Context("when creating the bundle fails", func() {
@@ -306,7 +296,7 @@ var _ = Describe("Creator", func() {
 		})
 
 		Context("when disk limit is given", func() {
-			It("applies the disk limit", func() {
+			It("passes the disk limit to the bundler", func() {
 				image := groot.Image{
 					VolumePath: "/path/to/volume",
 					Image: specsv1.Image{
