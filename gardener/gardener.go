@@ -61,7 +61,7 @@ type Networker interface {
 
 type VolumeCreator interface {
 	Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error)
-	Destroy(log lager.Logger, handle string) error
+	Destroy(log lager.Logger, handle, rootFSPath string) error
 	Metrics(log lager.Logger, handle string) (garden.ContainerDiskStat, error)
 	GC(log lager.Logger) error
 }
@@ -119,6 +119,9 @@ type ActualContainerSpec struct {
 
 	// The path to the container's bundle directory
 	BundlePath string
+
+	// The path to the container's rootfs
+	RootFSPath string
 
 	// Whether the container is stopped
 	Stopped bool
@@ -309,6 +312,11 @@ func (g *Gardener) Destroy(handle string) error {
 
 // destroy idempotently destroys any resources associated with the given handle
 func (g *Gardener) destroy(log lager.Logger, handle string) error {
+	actualContainerSpec, err := g.Containerizer.Info(log, handle)
+	if err != nil {
+		return err
+	}
+
 	if err := g.Containerizer.Destroy(g.Logger, handle); err != nil {
 		return err
 	}
@@ -317,7 +325,7 @@ func (g *Gardener) destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	if err := g.VolumeCreator.Destroy(g.Logger, handle); err != nil {
+	if err := g.VolumeCreator.Destroy(g.Logger, handle, actualContainerSpec.RootFSPath); err != nil {
 		return err
 	}
 

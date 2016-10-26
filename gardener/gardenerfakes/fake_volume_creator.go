@@ -23,11 +23,12 @@ type FakeVolumeCreator struct {
 		result2 []string
 		result3 error
 	}
-	DestroyStub        func(log lager.Logger, handle string) error
+	DestroyStub        func(log lager.Logger, handle, rootFSPath string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
-		log    lager.Logger
-		handle string
+		log        lager.Logger
+		handle     string
+		rootFSPath string
 	}
 	destroyReturns struct {
 		result1 error
@@ -91,16 +92,17 @@ func (fake *FakeVolumeCreator) CreateReturns(result1 string, result2 []string, r
 	}{result1, result2, result3}
 }
 
-func (fake *FakeVolumeCreator) Destroy(log lager.Logger, handle string) error {
+func (fake *FakeVolumeCreator) Destroy(log lager.Logger, handle string, rootFSPath string) error {
 	fake.destroyMutex.Lock()
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
-		log    lager.Logger
-		handle string
-	}{log, handle})
-	fake.recordInvocation("Destroy", []interface{}{log, handle})
+		log        lager.Logger
+		handle     string
+		rootFSPath string
+	}{log, handle, rootFSPath})
+	fake.recordInvocation("Destroy", []interface{}{log, handle, rootFSPath})
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
-		return fake.DestroyStub(log, handle)
+		return fake.DestroyStub(log, handle, rootFSPath)
 	} else {
 		return fake.destroyReturns.result1
 	}
@@ -112,10 +114,10 @@ func (fake *FakeVolumeCreator) DestroyCallCount() int {
 	return len(fake.destroyArgsForCall)
 }
 
-func (fake *FakeVolumeCreator) DestroyArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeVolumeCreator) DestroyArgsForCall(i int) (lager.Logger, string, string) {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
-	return fake.destroyArgsForCall[i].log, fake.destroyArgsForCall[i].handle
+	return fake.destroyArgsForCall[i].log, fake.destroyArgsForCall[i].handle, fake.destroyArgsForCall[i].rootFSPath
 }
 
 func (fake *FakeVolumeCreator) DestroyReturns(result1 error) {

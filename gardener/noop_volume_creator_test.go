@@ -30,7 +30,7 @@ var _ = Describe("NoopVolumeCreator", func() {
 
 	Describe("Destroy", func() {
 		It("succeeds, as destroying is idempotent and may be actually called redundantly", func() {
-			Expect(volumeCreator.Destroy(logger, "some-handle")).To(BeNil())
+			Expect(volumeCreator.Destroy(logger, "some-handle", "rootfs")).To(BeNil())
 		})
 	})
 

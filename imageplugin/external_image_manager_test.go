@@ -128,6 +128,15 @@ var _ = Describe("ExternalImageManager", func() {
 						"--gid-mapping", secondMap,
 					}))
 				})
+
+				It("runs the external-image-manager as the container root user", func() {
+					Expect(err).ToNot(HaveOccurred())
+					Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+					imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+					Expect(imageManagerCmd.SysProcAttr.Credential.Uid).To(Equal(idMappings[0].HostID))
+					Expect(imageManagerCmd.SysProcAttr.Credential.Gid).To(Equal(idMappings[0].HostID))
+				})
 			})
 
 			Context("when namespaced is false", func() {
@@ -230,7 +239,7 @@ var _ = Describe("ExternalImageManager", func() {
 		var err error
 
 		JustBeforeEach(func() {
-			err = externalImageManager.Destroy(logger, "hello")
+			err = externalImageManager.Destroy(logger, "hello", "rootfs")
 		})
 
 		It("uses the correct external-image-manager binary", func() {
@@ -250,12 +259,12 @@ var _ = Describe("ExternalImageManager", func() {
 				Expect(imageManagerCmd.Args[1]).To(Equal("delete"))
 			})
 
-			It("sets the correct id to external-image-manager", func() {
+			It("passes the correct rootfs to delete to external-image-manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-1]).To(Equal("hello"))
+				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-1]).To(Equal("rootfs"))
 			})
 		})
 

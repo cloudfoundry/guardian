@@ -16,7 +16,7 @@ func (NoopVolumeCreator) Create(lager.Logger, string, rootfs_provider.Spec) (str
 	return "", nil, ErrGraphDisabled
 }
 
-func (NoopVolumeCreator) Destroy(lager.Logger, string) error {
+func (NoopVolumeCreator) Destroy(lager.Logger, string, string) error {
 	return nil
 }
 

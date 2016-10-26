@@ -267,6 +267,7 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 	return gardener.ActualContainerSpec{
 		Pid:        state.Pid,
 		BundlePath: bundlePath,
+		RootFSPath: bundle.RootFS(),
 		Events:     c.events.Events(handle),
 		Stopped:    c.states.IsStopped(handle),
 		Limits: garden.Limits{

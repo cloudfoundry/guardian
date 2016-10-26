@@ -44,6 +44,7 @@ var _ = Describe("Gardener", func() {
 
 		propertyManager.GetReturns("", true)
 		containerizer.HandlesReturns([]string{"some-handle"}, nil)
+		containerizer.InfoReturns(gardener.ActualContainerSpec{RootFSPath: "rootfs"}, nil)
 
 		gdnr = &gardener.Gardener{
 			SysInfoProvider: sysinfoProvider,
@@ -75,8 +76,9 @@ var _ = Describe("Gardener", func() {
 
 			It("should clean up any created volumes", func() {
 				Expect(volumeCreator.DestroyCallCount()).To(Equal(1))
-				_, handle := volumeCreator.DestroyArgsForCall(0)
+				_, handle, rootFSPath := volumeCreator.DestroyArgsForCall(0)
 				Expect(handle).To(Equal("poor-banana"))
+				Expect(rootFSPath).To(Equal("rootfs"))
 			})
 
 			It("should destroy any container state", func() {
@@ -797,8 +799,9 @@ var _ = Describe("Gardener", func() {
 		It("asks the volume creator to destroy the container rootfs", func() {
 			gdnr.Destroy("some-handle")
 			Expect(volumeCreator.DestroyCallCount()).To(Equal(1))
-			_, handleToDestroy := volumeCreator.DestroyArgsForCall(0)
+			_, handleToDestroy, rootFSPathToDestroy := volumeCreator.DestroyArgsForCall(0)
 			Expect(handleToDestroy).To(Equal("some-handle"))
+			Expect(rootFSPathToDestroy).To(Equal("rootfs"))
 		})
 
 		It("should destroy the key space of the property manager", func() {

@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
@@ -63,6 +64,15 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 	outBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = outBuffer
 
+	if spec.Namespaced {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Credential: &syscall.Credential{
+				Uid: p.mappings[0].HostID,
+				Gid: p.mappings[0].HostID,
+			},
+		}
+	}
+
 	if err := p.commandRunner.Run(cmd); err != nil {
 		logData := lager.Data{"action": "create", "stderr": errBuffer.String(), "stdout": outBuffer.String()}
 		log.Error("external-image-manager-result", err, logData)
@@ -78,7 +88,7 @@ func stringifyMapping(mapping specs.IDMapping) string {
 	return fmt.Sprintf("%d:%d:%d", mapping.ContainerID, mapping.HostID, mapping.Size)
 }
 
-func (p *ExternalImageManager) Destroy(log lager.Logger, handle string) error {
+func (p *ExternalImageManager) Destroy(log lager.Logger, handle, rootfs string) error {
 	log = log.Session("image-plugin-destroy")
 	log.Debug("start")
 	defer log.Debug("end")
@@ -86,7 +96,7 @@ func (p *ExternalImageManager) Destroy(log lager.Logger, handle string) error {
 	cmd := exec.Command(
 		p.binPath,
 		"delete",
-		handle,
+		rootfs,
 	)
 
 	errBuffer := bytes.NewBuffer([]byte{})

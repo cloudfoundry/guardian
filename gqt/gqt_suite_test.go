@@ -3,7 +3,7 @@ package gqt_test
 import (
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -93,9 +93,13 @@ func TestGqt(t *testing.T) {
 			Skip("No Garden RootFS")
 		}
 
-		Expect(os.Chmod(initBin, 0755)).To(Succeed())
-		Expect(os.Chmod(path.Dir(initBin), 0755)).To(Succeed())
-		Expect(os.Chmod(path.Dir(path.Dir(initBin)), 0755)).To(Succeed())
+		// chmod all the artifacts
+		Expect(os.Chmod(filepath.Join(initBin, "..", ".."), 0755)).To(Succeed())
+		filepath.Walk(filepath.Join(initBin, "..", ".."), func(path string, info os.FileInfo, err error) error {
+			Expect(err).NotTo(HaveOccurred())
+			Expect(os.Chmod(path, 0755)).To(Succeed())
+			return nil
+		})
 	})
 
 	SetDefaultEventuallyTimeout(5 * time.Second)
