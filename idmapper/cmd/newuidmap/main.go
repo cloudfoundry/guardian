@@ -3,17 +3,20 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"code.cloudfoundry.org/idmapper/cmd"
 )
 
-const SUBUID_FILE_PATH = "/var/vcap/jobs/grootfs/subuid"
-
 func main() {
-	pid := os.Args[1]
-	procUIDMap := fmt.Sprintf("/proc/%s/uid_map", pid)
+	pid, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 
-	if err := cmd.MapIds(SUBUID_FILE_PATH, procUIDMap, os.Args[2:]); err != nil {
+	procUIDMap := fmt.Sprintf("/proc/%d/uid_map", pid)
+	if err := cmd.MapIds(procUIDMap); err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}

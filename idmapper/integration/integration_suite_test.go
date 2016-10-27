@@ -3,11 +3,10 @@ package integration_test
 import (
 	"encoding/json"
 	"os"
-	"os/user"
+	"os/exec"
 	"path"
-	"strconv"
 
-	"code.cloudfoundry.org/idmapper/testhelpers"
+	"code.cloudfoundry.org/idmapper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,11 +19,10 @@ var (
 	NewuidmapBin        string
 	NewgidmapBin        string
 	NamespaceWrapperBin string
-	GrootUID            uint32
-	GrootGID            uint32
 
-	RootID   = 0
-	NobodyID = 65534
+	RootID    = uint32(0)
+	NobodyID  = uint32(65534)
+	MaximusID uint32
 )
 
 func TestIntegration(t *testing.T) {
@@ -37,13 +35,13 @@ func TestIntegration(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 		bins["newuidmapBin"] = newuidmapBin
 		fixPermission(path.Dir(newuidmapBin))
-		testhelpers.Suid(newuidmapBin)
+		suid(newuidmapBin)
 
 		newgidmapBin, err := gexec.Build("code.cloudfoundry.org/idmapper/cmd/newgidmap")
 		Expect(err).NotTo(HaveOccurred())
 		bins["newgidmapBin"] = newgidmapBin
 		fixPermission(path.Dir(newgidmapBin))
-		testhelpers.Suid(newgidmapBin)
+		suid(newgidmapBin)
 
 		namespaceWrapperBin, err := gexec.Build("code.cloudfoundry.org/idmapper/integration/wrapper")
 		Expect(err).NotTo(HaveOccurred())
@@ -57,20 +55,11 @@ func TestIntegration(t *testing.T) {
 		bins := make(map[string]string)
 		Expect(json.Unmarshal(data, &bins)).To(Succeed())
 
-		grootUser, err := user.Lookup("groot")
-		Expect(err).NotTo(HaveOccurred())
-
-		grootUID, err := strconv.ParseInt(grootUser.Uid, 10, 32)
-		Expect(err).NotTo(HaveOccurred())
-		GrootUID = uint32(grootUID)
-
-		grootGID, err := strconv.ParseInt(grootUser.Gid, 10, 32)
-		Expect(err).NotTo(HaveOccurred())
-		GrootGID = uint32(grootGID)
-
 		NewuidmapBin = bins["newuidmapBin"]
 		NewgidmapBin = bins["newgidmapBin"]
 		NamespaceWrapperBin = bins["namespaceWrapperBin"]
+
+		MaximusID = uint32(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID()))
 	})
 
 	RunSpecs(t, "Integration Suite")
@@ -92,4 +81,20 @@ func fixPermission(dirPath string) {
 		return
 	}
 	fixPermission(path.Dir(dirPath))
+}
+
+func suid(binPath string) {
+	sess, err := gexec.Start(
+		exec.Command("sudo", "chown", "root:root", binPath),
+		GinkgoWriter, GinkgoWriter,
+	)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(sess).Should(gexec.Exit(0))
+
+	sess, err = gexec.Start(
+		exec.Command("sudo", "chmod", "u+s", binPath),
+		GinkgoWriter, GinkgoWriter,
+	)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(sess).Should(gexec.Exit(0))
 }

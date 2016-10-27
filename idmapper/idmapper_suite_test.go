@@ -1,4 +1,4 @@
-package mapper_test
+package idmapper_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestMappings(t *testing.T) {
+func TestIdmapper(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Mapper Suite")
+	RunSpecs(t, "Idmapper Suite")
 }
