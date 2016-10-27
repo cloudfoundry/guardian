@@ -18,9 +18,10 @@ import (
 var _ = Describe("Newuidmap", func() {
 
 	var (
-		sourcePath    string
-		grootFilePath string
-		rootFilePath  string
+		sourcePath      string
+		grootFilePath   string
+		rootFilePath    string
+		user102FilePath string
 	)
 
 	BeforeEach(func() {
@@ -31,11 +32,15 @@ var _ = Describe("Newuidmap", func() {
 		Expect(os.MkdirAll("/var/vcap/jobs/grootfs", 755)).To(Succeed())
 		Expect(ioutil.WriteFile("/var/vcap/jobs/grootfs/subuid", []byte("groot:100000:65000"), 0644)).To(Succeed())
 
-		grootFilePath = path.Join(sourcePath, "foo")
+		grootFilePath = path.Join(sourcePath, "groot")
 		Expect(ioutil.WriteFile(grootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 		Expect(os.Chown(grootFilePath, int(GrootUID), int(GrootGID))).To(Succeed())
 
-		rootFilePath = path.Join(sourcePath, "bar")
+		user102FilePath = path.Join(sourcePath, "102")
+		Expect(ioutil.WriteFile(user102FilePath, []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.Chown(user102FilePath, 100101, 100101)).To(Succeed())
+
+		rootFilePath = path.Join(sourcePath, "root")
 		Expect(ioutil.WriteFile(rootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 	})
 
@@ -44,6 +49,7 @@ var _ = Describe("Newuidmap", func() {
 		statCmd.SysProcAttr = &syscall.SysProcAttr{
 			Cloneflags: syscall.CLONE_NEWUSER,
 		}
+		statCmd.Stderr = GinkgoWriter
 
 		buffer := gbytes.NewBuffer()
 		statCmd.Stdout = buffer
@@ -71,11 +77,15 @@ var _ = Describe("Newuidmap", func() {
 	}
 
 	It("correctly maps groot user id", func() {
-		shouldMapFileOwnerToUID(grootFilePath, fmt.Sprintf("%d", GrootUID+99999))
+		shouldMapFileOwnerToUID(grootFilePath, fmt.Sprintf("%d", RootID))
 	})
 
-	It("correctly maps root user id", func() {
-		shouldMapFileOwnerToUID(rootFilePath, fmt.Sprintf("%d", GrootUID))
+	It("correctly maps root user id to nobody", func() {
+		shouldMapFileOwnerToUID(rootFilePath, fmt.Sprintf("%d", NobodyID))
+	})
+
+	It("correctly maps user 102 id", func() {
+		shouldMapFileOwnerToUID(user102FilePath, fmt.Sprintf("%d", 102))
 	})
 
 	Context("validating subuid range", func() {

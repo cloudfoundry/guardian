@@ -16,11 +16,11 @@ import (
 )
 
 var _ = Describe("Newgidmap", func() {
-
 	var (
-		sourcePath    string
-		grootFilePath string
-		rootFilePath  string
+		sourcePath      string
+		grootFilePath   string
+		rootFilePath    string
+		user102FilePath string
 	)
 
 	BeforeEach(func() {
@@ -31,11 +31,15 @@ var _ = Describe("Newgidmap", func() {
 		Expect(os.MkdirAll("/var/vcap/jobs/grootfs", 755)).To(Succeed())
 		Expect(ioutil.WriteFile("/var/vcap/jobs/grootfs/subgid", []byte("groot:100000:65000"), 0644)).To(Succeed())
 
-		grootFilePath = path.Join(sourcePath, "foo")
+		grootFilePath = path.Join(sourcePath, "groot")
 		Expect(ioutil.WriteFile(grootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 		Expect(os.Chown(grootFilePath, int(GrootUID), int(GrootGID))).To(Succeed())
 
-		rootFilePath = path.Join(sourcePath, "bar")
+		user102FilePath = path.Join(sourcePath, "102")
+		Expect(ioutil.WriteFile(user102FilePath, []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.Chown(user102FilePath, 100101, 100101)).To(Succeed())
+
+		rootFilePath = path.Join(sourcePath, "root")
 		Expect(ioutil.WriteFile(rootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 	})
 
@@ -44,6 +48,7 @@ var _ = Describe("Newgidmap", func() {
 		statCmd.SysProcAttr = &syscall.SysProcAttr{
 			Cloneflags: syscall.CLONE_NEWUSER,
 		}
+		statCmd.Stderr = GinkgoWriter
 
 		buffer := gbytes.NewBuffer()
 		statCmd.Stdout = buffer
@@ -71,12 +76,17 @@ var _ = Describe("Newgidmap", func() {
 	}
 
 	It("correctly maps groot user id", func() {
-		shouldMapFileGroupToGID(grootFilePath, fmt.Sprintf("%d", GrootGID+99999))
+		shouldMapFileGroupToGID(grootFilePath, fmt.Sprintf("%d", RootID))
 	})
 
 	It("correctly maps root user id", func() {
-		shouldMapFileGroupToGID(rootFilePath, fmt.Sprintf("%d", GrootGID))
+		shouldMapFileGroupToGID(rootFilePath, fmt.Sprintf("%d", NobodyID))
 	})
+
+	It("correctly maps user 102 id", func() {
+		shouldMapFileGroupToGID(user102FilePath, fmt.Sprintf("%d", 102))
+	})
+
 	Context("validating subgid range", func() {
 		var (
 			statCmd *exec.Cmd

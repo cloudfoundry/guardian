@@ -18,7 +18,11 @@ var _ = Describe("Mapper", func() {
 
 	BeforeEach(func() {
 		desiredMappings = []mapper.Mapping{
-			mapper.Mapping{HostID: 0, ContainerID: 1000, Size: 1},
+			mapper.Mapping{
+				ContainerID: 0,
+				HostID:      1000,
+				Size:        1,
+			},
 		}
 
 		owner = &user.User{
@@ -40,11 +44,11 @@ var _ = Describe("Mapper", func() {
 
 	Describe("Parse", func() {
 		It("returns a list of mapping", func() {
-			mappings := mapper.Parse([]string{"1000", "1", "6500"})
+			mappings := mapper.Parse([]string{"1", "1000", "6500"})
 
 			Expect(mappings).To(ConsistOf(mapper.Mapping{
-				HostID:      1000,
 				ContainerID: 1,
+				HostID:      1000,
 				Size:        6500,
 			}))
 		})
@@ -53,12 +57,17 @@ var _ = Describe("Mapper", func() {
 	Describe("Map", func() {
 		BeforeEach(func() {
 			desiredMappings = append(desiredMappings,
-				mapper.Mapping{HostID: 1002, ContainerID: 100000, Size: 65000})
+				mapper.Mapping{
+					ContainerID: 1002,
+					HostID:      100000,
+					Size:        65000,
+				},
+			)
 		})
 
 		It("returns desired mappings in the correct format", func() {
 			data := idMapper.Map()
-			Expect(data).To(Equal([]byte("      1000          0          1\n    100000       1002      65000\n")))
+			Expect(string(data)).To(Equal("         0       1000          1\n      1002     100000      65000\n"))
 		})
 	})
 
@@ -70,7 +79,13 @@ var _ = Describe("Mapper", func() {
 
 		Context("when range is inside the allowed subids list", func() {
 			BeforeEach(func() {
-				desiredMappings = append(desiredMappings, mapper.Mapping{HostID: 1002, ContainerID: 100000, Size: 65000})
+				desiredMappings = append(desiredMappings,
+					mapper.Mapping{
+						ContainerID: 1002,
+						HostID:      100000,
+						Size:        65000,
+					},
+				)
 			})
 
 			It("is allowed", func() {
@@ -81,9 +96,13 @@ var _ = Describe("Mapper", func() {
 
 		Context("when the range is zero", func() {
 			BeforeEach(func() {
-				desiredMappings = []mapper.Mapping{
-					mapper.Mapping{HostID: 1, ContainerID: 1001, Size: 0},
-				}
+				desiredMappings = append(desiredMappings,
+					mapper.Mapping{
+						ContainerID: 1,
+						HostID:      1001,
+						Size:        0,
+					},
+				)
 			})
 
 			It("is not allowed", func() {
@@ -95,7 +114,12 @@ var _ = Describe("Mapper", func() {
 		Context("when the owner isn't listed in the allowed ranges", func() {
 			BeforeEach(func() {
 				desiredMappings = append(desiredMappings,
-					mapper.Mapping{HostID: 1002, ContainerID: 200000, Size: 65000})
+					mapper.Mapping{
+						ContainerID: 1002,
+						HostID:      200000,
+						Size:        65000,
+					},
+				)
 			})
 
 			It("is not allowed", func() {
@@ -106,7 +130,13 @@ var _ = Describe("Mapper", func() {
 
 		Context("when the desired range is not allowed", func() {
 			BeforeEach(func() {
-				desiredMappings = append(desiredMappings, mapper.Mapping{HostID: 1002, ContainerID: 100001, Size: 65000})
+				desiredMappings = append(desiredMappings,
+					mapper.Mapping{
+						ContainerID: 1002,
+						HostID:      100001,
+						Size:        65000,
+					},
+				)
 			})
 
 			It("is not allowed", func() {

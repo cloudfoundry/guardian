@@ -22,6 +22,9 @@ var (
 	NamespaceWrapperBin string
 	GrootUID            uint32
 	GrootGID            uint32
+
+	RootID   = 0
+	NobodyID = 65534
 )
 
 func TestIntegration(t *testing.T) {

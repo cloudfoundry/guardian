@@ -17,13 +17,13 @@ func Parse(args []string) []Mapping {
 	m := []Mapping{}
 
 	for i := 0; i < len(args)/3; i++ {
-		hostID, _ := strconv.Atoi(args[i*3+0])
-		containerID, _ := strconv.Atoi(args[i*3+1])
+		containerID, _ := strconv.Atoi(args[i*3+0])
+		hostID, _ := strconv.Atoi(args[i*3+1])
 		size, _ := strconv.Atoi(args[i*3+2])
 
 		mapping := Mapping{
-			HostID:      hostID,
 			ContainerID: containerID,
+			HostID:      hostID,
 			Size:        size,
 		}
 		m = append(m, mapping)
@@ -61,13 +61,13 @@ func (m *IDMapper) validateMapping(mapping Mapping) error {
 		return m.errorMessage(mapping, "size can't be zero")
 	}
 
-	containerID := strconv.Itoa(mapping.ContainerID)
-	if mapping.Size == 1 && containerID == m.Owner.Uid {
+	hostID := strconv.Itoa(mapping.HostID)
+	if mapping.Size == 1 && hostID == m.Owner.Uid {
 		return nil
 	}
 
 	if subidRange, ok := m.AllowedSubids[m.Owner.Username]; ok {
-		if mapping.ContainerID >= subidRange.Start && mapping.ContainerID+mapping.Size-1 <= (subidRange.Start+subidRange.Size)-1 {
+		if mapping.HostID >= subidRange.Start && mapping.HostID+mapping.Size-1 <= (subidRange.Start+subidRange.Size)-1 {
 			return nil
 		}
 	}
@@ -87,8 +87,8 @@ func (m *IDMapper) Map() []byte {
 
 func (m *IDMapper) errorMessage(mapping Mapping, message string) error {
 	return fmt.Errorf("mapping %d:%d:%d invalid: %s",
-		mapping.HostID,
 		mapping.ContainerID,
+		mapping.HostID,
 		mapping.Size,
 		message,
 	)
