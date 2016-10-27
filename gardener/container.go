@@ -138,6 +138,16 @@ func (c *container) NetOut(netOutRule garden.NetOutRule) error {
 	return c.networker.NetOut(c.logger, c.handle, netOutRule)
 }
 
+func (c *container) BulkNetOut(netOutRules []garden.NetOutRule) error {
+	for _, netOutRule := range netOutRules {
+		if err := c.networker.NetOut(c.logger, c.handle, netOutRule); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (c *container) Metrics() (garden.Metrics, error) {
 	actualContainerMetrics, err := c.containerizer.Metrics(c.logger, c.handle)
 	if err != nil {

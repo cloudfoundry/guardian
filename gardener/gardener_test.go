@@ -701,7 +701,7 @@ var _ = Describe("Gardener", func() {
 		})
 	})
 
-	Describe("NetOut", func() {
+	Describe("NetOuts", func() {
 		var (
 			container garden.Container
 			rule      garden.NetOutRule
@@ -731,6 +731,61 @@ var _ = Describe("Gardener", func() {
 			It("return the error", func() {
 				networker.NetOutReturns(fmt.Errorf("banana republic"))
 				Expect(container.NetOut(rule)).To(MatchError("banana republic"))
+			})
+		})
+
+		Describe("BulkNetOut", func() {
+			var rules []garden.NetOutRule
+
+			Context("when called with 0 rules", func() {
+				BeforeEach(func() {
+					rules = []garden.NetOutRule{}
+				})
+
+				It("doesn't call NetOut", func() {
+					Expect(container.BulkNetOut(rules)).To(Succeed())
+					Expect(networker.NetOutCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("when called with 1 rule", func() {
+				BeforeEach(func() {
+					rules = []garden.NetOutRule{rule}
+				})
+
+				It("calls netout for each rule", func() {
+					Expect(container.BulkNetOut(rules)).To(Succeed())
+					Expect(networker.NetOutCallCount()).To(Equal(1))
+
+					_, handle, actualRule := networker.NetOutArgsForCall(0)
+					Expect(handle).To(Equal("banana"))
+					Expect(actualRule).To(Equal(rule))
+				})
+			})
+
+			Context("when called with > 1 rule", func() {
+				BeforeEach(func() {
+					rules = []garden.NetOutRule{rule, rule, rule}
+				})
+
+				It("calls netout for each rule", func() {
+					Expect(container.BulkNetOut(rules)).To(Succeed())
+					Expect(networker.NetOutCallCount()).To(Equal(3))
+
+					_, handle, actualRule := networker.NetOutArgsForCall(0)
+					Expect(handle).To(Equal("banana"))
+					Expect(actualRule).To(Equal(rule))
+				})
+			})
+
+			Context("when a NetOut rule errors", func() {
+				BeforeEach(func() {
+					networker.NetOutReturns(fmt.Errorf("failed to apply rule"))
+				})
+
+				It("returns the error", func() {
+					Expect(container.BulkNetOut(rules)).To(MatchError("failed to apply rule"))
+				})
 			})
 		})
 	})
