@@ -58,6 +58,16 @@ type FakeNetworker struct {
 	netOutReturns struct {
 		result1 error
 	}
+	BulkNetOutStub        func(log lager.Logger, handle string, rules []garden.NetOutRule) error
+	bulkNetOutMutex       sync.RWMutex
+	bulkNetOutArgsForCall []struct {
+		log    lager.Logger
+		handle string
+		rules  []garden.NetOutRule
+	}
+	bulkNetOutReturns struct {
+		result1 error
+	}
 	RestoreStub        func(log lager.Logger, handle string) error
 	restoreMutex       sync.RWMutex
 	restoreArgsForCall []struct {
@@ -238,6 +248,46 @@ func (fake *FakeNetworker) NetOutReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeNetworker) BulkNetOut(log lager.Logger, handle string, rules []garden.NetOutRule) error {
+	var rulesCopy []garden.NetOutRule
+	if rules != nil {
+		rulesCopy = make([]garden.NetOutRule, len(rules))
+		copy(rulesCopy, rules)
+	}
+	fake.bulkNetOutMutex.Lock()
+	fake.bulkNetOutArgsForCall = append(fake.bulkNetOutArgsForCall, struct {
+		log    lager.Logger
+		handle string
+		rules  []garden.NetOutRule
+	}{log, handle, rulesCopy})
+	fake.recordInvocation("BulkNetOut", []interface{}{log, handle, rulesCopy})
+	fake.bulkNetOutMutex.Unlock()
+	if fake.BulkNetOutStub != nil {
+		return fake.BulkNetOutStub(log, handle, rules)
+	} else {
+		return fake.bulkNetOutReturns.result1
+	}
+}
+
+func (fake *FakeNetworker) BulkNetOutCallCount() int {
+	fake.bulkNetOutMutex.RLock()
+	defer fake.bulkNetOutMutex.RUnlock()
+	return len(fake.bulkNetOutArgsForCall)
+}
+
+func (fake *FakeNetworker) BulkNetOutArgsForCall(i int) (lager.Logger, string, []garden.NetOutRule) {
+	fake.bulkNetOutMutex.RLock()
+	defer fake.bulkNetOutMutex.RUnlock()
+	return fake.bulkNetOutArgsForCall[i].log, fake.bulkNetOutArgsForCall[i].handle, fake.bulkNetOutArgsForCall[i].rules
+}
+
+func (fake *FakeNetworker) BulkNetOutReturns(result1 error) {
+	fake.BulkNetOutStub = nil
+	fake.bulkNetOutReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeNetworker) Restore(log lager.Logger, handle string) error {
 	fake.restoreMutex.Lock()
 	fake.restoreArgsForCall = append(fake.restoreArgsForCall, struct {
@@ -285,6 +335,8 @@ func (fake *FakeNetworker) Invocations() map[string][][]interface{} {
 	defer fake.netInMutex.RUnlock()
 	fake.netOutMutex.RLock()
 	defer fake.netOutMutex.RUnlock()
+	fake.bulkNetOutMutex.RLock()
+	defer fake.bulkNetOutMutex.RUnlock()
 	fake.restoreMutex.RLock()
 	defer fake.restoreMutex.RUnlock()
 	return fake.invocations

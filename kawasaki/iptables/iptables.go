@@ -4,17 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strings"
 
-	"code.cloudfoundry.org/garden"
 	"github.com/cloudfoundry/gunk/command_runner"
 )
-
-var protocols = map[garden.Protocol]string{
-	garden.ProtocolAll:  "all",
-	garden.ProtocolTCP:  "tcp",
-	garden.ProtocolICMP: "icmp",
-	garden.ProtocolUDP:  "udp",
-}
 
 //go:generate counterfeiter . Rule
 type Rule interface {
@@ -28,6 +21,7 @@ type IPTables interface {
 	FlushChain(table, chain string) error
 	DeleteChainReferences(table, targetChain, referencedChain string) error
 	PrependRule(chain string, rule Rule) error
+	AppendRules(chain string, rule []Rule) error
 	InstanceChain(instanceId string) string
 }
 
@@ -87,12 +81,29 @@ func (iptables *IPTablesController) PrependRule(chain string, rule Rule) error {
 	return iptables.run("prepend", exec.Command(iptables.binPath, append([]string{"-w", "-I", chain, "1"}, rule.Flags(chain)...)...))
 }
 
+func (iptables *IPTablesController) AppendRules(chain string, rules []Rule) error {
+	in := bytes.NewBuffer([]byte{})
+	in.WriteString("*filter\n")
+	for _, r := range rules {
+		in.WriteString(fmt.Sprintf("-A %s ", chain))
+		in.WriteString(strings.Join(r.Flags(chain), " "))
+		in.WriteString("\n")
+	}
+	in.WriteString("COMMIT\n")
+
+	cmd := exec.Command("iptables-restore", "--noflush")
+	cmd.Stdin = in
+
+	return iptables.run("append-rules", cmd)
+}
+
 func (iptables *IPTablesController) InstanceChain(instanceId string) string {
 	return iptables.instanceChainPrefix + instanceId
 }
 
 func (iptables *IPTablesController) run(action string, cmd *exec.Cmd) error {
 	var buff bytes.Buffer
+	cmd.Stdout = &buff
 	cmd.Stderr = &buff
 
 	if err := iptables.runner.Run(cmd); err != nil {

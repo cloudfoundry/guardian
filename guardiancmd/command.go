@@ -422,6 +422,7 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
 	ipTables := iptables.New(cmd.Bin.IPTables.Path(), iptRunner, chainPrefix)
 	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup)
+	ruleTranslator := iptables.NewRuleTranslator()
 
 	networker := kawasaki.New(
 		cmd.Bin.IPTables.Path(),
@@ -432,7 +433,7 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 		factory.NewDefaultConfigurer(ipTables),
 		portPool,
 		iptables.NewPortForwarder(ipTables),
-		iptables.NewFirewallOpener(ipTables),
+		iptables.NewFirewallOpener(ruleTranslator, ipTables),
 	)
 
 	return networker, ipTablesStarter, nil

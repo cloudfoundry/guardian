@@ -408,4 +408,10 @@ var _ = Describe("ExternalNetworker", func() {
 			Expect(logger).To(gbytes.Say("result.*some-stderr-bytes"))
 		})
 	})
+
+	Describe("BulkNetOut", func() {
+		It("returns an error stating this is not implemented", func() {
+			Expect(plugin.BulkNetOut(logger, "handle", []garden.NetOutRule{})).To(MatchError("not implemented"))
+		})
+	})
 })

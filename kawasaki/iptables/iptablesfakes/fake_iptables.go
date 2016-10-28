@@ -54,6 +54,15 @@ type FakeIPTables struct {
 	prependRuleReturns struct {
 		result1 error
 	}
+	AppendRulesStub        func(chain string, rule []iptables.Rule) error
+	appendRulesMutex       sync.RWMutex
+	appendRulesArgsForCall []struct {
+		chain string
+		rule  []iptables.Rule
+	}
+	appendRulesReturns struct {
+		result1 error
+	}
 	InstanceChainStub        func(instanceId string) string
 	instanceChainMutex       sync.RWMutex
 	instanceChainArgsForCall []struct {
@@ -237,6 +246,45 @@ func (fake *FakeIPTables) PrependRuleReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeIPTables) AppendRules(chain string, rule []iptables.Rule) error {
+	var ruleCopy []iptables.Rule
+	if rule != nil {
+		ruleCopy = make([]iptables.Rule, len(rule))
+		copy(ruleCopy, rule)
+	}
+	fake.appendRulesMutex.Lock()
+	fake.appendRulesArgsForCall = append(fake.appendRulesArgsForCall, struct {
+		chain string
+		rule  []iptables.Rule
+	}{chain, ruleCopy})
+	fake.recordInvocation("AppendRules", []interface{}{chain, ruleCopy})
+	fake.appendRulesMutex.Unlock()
+	if fake.AppendRulesStub != nil {
+		return fake.AppendRulesStub(chain, rule)
+	} else {
+		return fake.appendRulesReturns.result1
+	}
+}
+
+func (fake *FakeIPTables) AppendRulesCallCount() int {
+	fake.appendRulesMutex.RLock()
+	defer fake.appendRulesMutex.RUnlock()
+	return len(fake.appendRulesArgsForCall)
+}
+
+func (fake *FakeIPTables) AppendRulesArgsForCall(i int) (string, []iptables.Rule) {
+	fake.appendRulesMutex.RLock()
+	defer fake.appendRulesMutex.RUnlock()
+	return fake.appendRulesArgsForCall[i].chain, fake.appendRulesArgsForCall[i].rule
+}
+
+func (fake *FakeIPTables) AppendRulesReturns(result1 error) {
+	fake.AppendRulesStub = nil
+	fake.appendRulesReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeIPTables) InstanceChain(instanceId string) string {
 	fake.instanceChainMutex.Lock()
 	fake.instanceChainArgsForCall = append(fake.instanceChainArgsForCall, struct {
@@ -283,6 +331,8 @@ func (fake *FakeIPTables) Invocations() map[string][][]interface{} {
 	defer fake.deleteChainReferencesMutex.RUnlock()
 	fake.prependRuleMutex.RLock()
 	defer fake.prependRuleMutex.RUnlock()
+	fake.appendRulesMutex.RLock()
+	defer fake.appendRulesMutex.RUnlock()
 	fake.instanceChainMutex.RLock()
 	defer fake.instanceChainMutex.RUnlock()
 	return fake.invocations

@@ -139,13 +139,7 @@ func (c *container) NetOut(netOutRule garden.NetOutRule) error {
 }
 
 func (c *container) BulkNetOut(netOutRules []garden.NetOutRule) error {
-	for _, netOutRule := range netOutRules {
-		if err := c.networker.NetOut(c.logger, c.handle, netOutRule); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return c.networker.BulkNetOut(c.logger, c.handle, netOutRules)
 }
 
 func (c *container) Metrics() (garden.Metrics, error) {

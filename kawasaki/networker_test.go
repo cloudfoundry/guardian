@@ -342,6 +342,22 @@ var _ = Describe("Networker", func() {
 		})
 	})
 
+	Describe("BulkNetOut", func() {
+		It("delegates to FirewallOpener", func() {
+			rules := []garden.NetOutRule{
+				{Protocol: garden.ProtocolICMP},
+				{Protocol: garden.ProtocolTCP},
+			}
+
+			fakeFirewallOpener.BulkOpenReturns(errors.New("potato"))
+			Expect(networker.BulkNetOut(lagertest.NewTestLogger(""), "some-handle", rules)).To(MatchError("potato"))
+
+			_, chainArg, rulesArg := fakeFirewallOpener.BulkOpenArgsForCall(0)
+			Expect(chainArg).To(Equal(networkConfig.IPTableInstance))
+			Expect(rulesArg).To(Equal(rules))
+		})
+	})
+
 	Describe("NetIn", func() {
 		var (
 			externalPort  uint32
