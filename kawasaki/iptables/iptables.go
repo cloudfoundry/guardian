@@ -21,7 +21,7 @@ type IPTables interface {
 	FlushChain(table, chain string) error
 	DeleteChainReferences(table, targetChain, referencedChain string) error
 	PrependRule(chain string, rule Rule) error
-	AppendRules(chain string, rule []Rule) error
+	BulkPrependRules(chain string, rules []Rule) error
 	InstanceChain(instanceId string) string
 }
 
@@ -81,11 +81,11 @@ func (iptables *IPTablesController) PrependRule(chain string, rule Rule) error {
 	return iptables.run("prepend", exec.Command(iptables.binPath, append([]string{"-w", "-I", chain, "1"}, rule.Flags(chain)...)...))
 }
 
-func (iptables *IPTablesController) AppendRules(chain string, rules []Rule) error {
+func (iptables *IPTablesController) BulkPrependRules(chain string, rules []Rule) error {
 	in := bytes.NewBuffer([]byte{})
 	in.WriteString("*filter\n")
 	for _, r := range rules {
-		in.WriteString(fmt.Sprintf("-A %s ", chain))
+		in.WriteString(fmt.Sprintf("-I %s 1 ", chain))
 		in.WriteString(strings.Join(r.Flags(chain), " "))
 		in.WriteString("\n")
 	}

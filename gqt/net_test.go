@@ -370,18 +370,18 @@ var _ = Describe("Networking", func() {
 				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
 				Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
 			})
-		})
 
-		Context("when the dropped packets should get logged", func() {
-			BeforeEach(func() {
-				rule1.Log = true
-				rule2.Log = true
-			})
+			Context("when the dropped packets should get logged", func() {
+				BeforeEach(func() {
+					rule1.Log = true
+					rule2.Log = true
+				})
 
-			It("should access internet", func() {
-				Expect(container.BulkNetOut([]garden.NetOutRule{rule1, rule2})).To(Succeed())
-				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
-				Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+				It("should access internet", func() {
+					Expect(container.BulkNetOut([]garden.NetOutRule{rule1, rule2})).To(Succeed())
+					Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+					Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+				})
 			})
 		})
 	})

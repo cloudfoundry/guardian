@@ -104,13 +104,16 @@ var _ = Describe("FirewallOpenner", func() {
 			}
 		})
 
-		It("builds the correct rules", func() {
+		It("translates the rules", func() {
 			Expect(opener.BulkOpen(logger, "foo-bar-baz", rules)).To(Succeed())
-			Expect(fakeRuleTranslator.TranslateRuleArgsForCall(0)).To(Equal(rules[0]))
-			Expect(fakeRuleTranslator.TranslateRuleArgsForCall(1)).To(Equal(rules[1]))
+			allArgs := []garden.NetOutRule{}
+			for i := 0; i < fakeRuleTranslator.TranslateRuleCallCount(); i++ {
+				allArgs = append(allArgs, fakeRuleTranslator.TranslateRuleArgsForCall(i))
+			}
+			Expect(allArgs).To(ConsistOf(rules))
 		})
 
-		Context("when building the rules fails", func() {
+		Context("when translating a rule fails", func() {
 			BeforeEach(func() {
 				fakeRuleTranslator.TranslateRuleReturns(nil, errors.New("failed to build rules"))
 			})
@@ -120,43 +123,53 @@ var _ = Describe("FirewallOpenner", func() {
 			})
 		})
 
-		It("prepends the built rules", func() {
-			iptablesRules := []iptables.Rule{
-				iptables.SingleFilterRule{
-					Protocol: garden.ProtocolTCP,
+		It("prepends them in bulk", func() {
+			iptablesRules := [][]iptables.Rule{
+				{
+					iptables.SingleFilterRule{
+						Protocol: garden.ProtocolTCP,
+					},
+					iptables.SingleFilterRule{
+						Protocol: garden.ProtocolUDP,
+					},
 				},
-				iptables.SingleFilterRule{
-					Protocol: garden.ProtocolUDP,
+				{
+					iptables.SingleFilterRule{
+						Protocol: garden.ProtocolICMP,
+					},
+					iptables.SingleFilterRule{
+						Protocol: garden.ProtocolAll,
+					},
 				},
 			}
-			fakeRuleTranslator.TranslateRuleReturns(iptablesRules, nil)
+
+			i := 0
+			fakeRuleTranslator.TranslateRuleStub = func(gardenRule garden.NetOutRule) ([]iptables.Rule, error) {
+				defer func() { i++ }()
+				return iptablesRules[i], nil
+			}
 
 			Expect(opener.BulkOpen(logger, "foo-bar-baz", rules)).To(Succeed())
 
-			Expect(fakeIPTablesController.PrependRuleCallCount()).To(Equal(4))
-			_, ruleA := fakeIPTablesController.PrependRuleArgsForCall(0)
-			Expect(ruleA).To(Equal(iptablesRules[0]))
-			_, ruleB := fakeIPTablesController.PrependRuleArgsForCall(1)
-			Expect(ruleB).To(Equal(iptablesRules[1]))
-			_, ruleA = fakeIPTablesController.PrependRuleArgsForCall(2)
-			Expect(ruleA).To(Equal(iptablesRules[0]))
-			_, ruleB = fakeIPTablesController.PrependRuleArgsForCall(3)
-			Expect(ruleB).To(Equal(iptablesRules[1]))
+			Expect(fakeIPTablesController.BulkPrependRulesCallCount()).To(Equal(1))
+			_, appendedIPTablesRules := fakeIPTablesController.BulkPrependRulesArgsForCall(0)
+			Expect(appendedIPTablesRules).To(HaveLen(4))
+			Expect(appendedIPTablesRules[0]).To(Equal(iptablesRules[0][0]))
+			Expect(appendedIPTablesRules[1]).To(Equal(iptablesRules[0][1]))
+			Expect(appendedIPTablesRules[2]).To(Equal(iptablesRules[1][0]))
+			Expect(appendedIPTablesRules[3]).To(Equal(iptablesRules[1][1]))
 		})
 
-		It("uses the correct chain name", func() {
+		It("prepends to the correct chain name", func() {
 			Expect(opener.BulkOpen(logger, "foo-bar-baz", rules)).To(Succeed())
-
-			Expect(fakeIPTablesController.PrependRuleCallCount()).To(Equal(2))
-			chainName, _ := fakeIPTablesController.PrependRuleArgsForCall(0)
-			Expect(chainName).To(Equal("prefix-foo-bar-baz"))
-			chainName, _ = fakeIPTablesController.PrependRuleArgsForCall(1)
+			Expect(fakeIPTablesController.BulkPrependRulesCallCount()).To(Equal(1))
+			chainName, _ := fakeIPTablesController.BulkPrependRulesArgsForCall(0)
 			Expect(chainName).To(Equal("prefix-foo-bar-baz"))
 		})
 
-		Context("when prepending a rule fails", func() {
+		Context("when prepending the rules fails", func() {
 			BeforeEach(func() {
-				fakeIPTablesController.PrependRuleReturns(errors.New("i-lost-my-banana"))
+				fakeIPTablesController.BulkPrependRulesReturns(errors.New("i-lost-my-banana"))
 			})
 
 			It("returns the error", func() {

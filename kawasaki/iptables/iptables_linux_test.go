@@ -96,7 +96,7 @@ var _ = Describe("IPTables controller", func() {
 		})
 	})
 
-	Describe("AppendRules", func() {
+	Describe("BulkPrependRules", func() {
 		It("appends the rules", func() {
 			fakeTCPRule := new(fakes.FakeRule)
 			fakeTCPRule.FlagsReturns([]string{"--protocol", "tcp"})
@@ -104,7 +104,7 @@ var _ = Describe("IPTables controller", func() {
 			fakeUDPRule.FlagsReturns([]string{"--protocol", "udp"})
 
 			Expect(iptablesController.CreateChain("filter", "test-chain")).To(Succeed())
-			Expect(iptablesController.AppendRules("test-chain", []iptables.Rule{
+			Expect(iptablesController.BulkPrependRules("test-chain", []iptables.Rule{
 				fakeTCPRule,
 				fakeUDPRule,
 			})).To(Succeed())
@@ -113,14 +113,14 @@ var _ = Describe("IPTables controller", func() {
 			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-S", "test-chain")), buff, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
-			Expect(buff).To(gbytes.Say("-A test-chain -p tcp\n-A test-chain -p udp"))
+			Expect(buff).To(gbytes.Say("-A test-chain -p udp\n-A test-chain -p tcp"))
 		})
 
 		It("returns an error when the chain does not exist", func() {
 			fakeRule := new(fakes.FakeRule)
 			fakeRule.FlagsReturns([]string{"--protocol", "tcp"})
 
-			Expect(iptablesController.AppendRules("test-chain", []iptables.Rule{fakeRule})).NotTo(Succeed())
+			Expect(iptablesController.BulkPrependRules("test-chain", []iptables.Rule{fakeRule})).NotTo(Succeed())
 		})
 	})
 

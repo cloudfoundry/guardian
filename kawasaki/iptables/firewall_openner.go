@@ -30,6 +30,7 @@ func (f *FirewallOpener) Open(logger lager.Logger, instance string, rule garden.
 		"chain":    chain,
 	})
 	logger.Debug("started")
+	defer logger.Debug("ending")
 
 	iptableRules, err := f.ruleTranslator.TranslateRule(rule)
 	if err != nil {
@@ -42,7 +43,6 @@ func (f *FirewallOpener) Open(logger lager.Logger, instance string, rule garden.
 		}
 	}
 
-	logger.Debug("ending")
 	return nil
 }
 
@@ -54,20 +54,17 @@ func (f *FirewallOpener) BulkOpen(logger lager.Logger, instance string, rules []
 		"chain":    chain,
 	})
 	logger.Debug("started")
+	defer logger.Debug("ending")
 
+	collatedIPTablesRules := []Rule{}
 	for _, rule := range rules {
-		iptableRules, err := f.ruleTranslator.TranslateRule(rule)
+		iptablesRules, err := f.ruleTranslator.TranslateRule(rule)
 		if err != nil {
 			return err
 		}
 
-		for _, iptableRules := range iptableRules {
-			if err := f.iptables.PrependRule(chain, iptableRules); err != nil {
-				return err
-			}
-		}
+		collatedIPTablesRules = append(collatedIPTablesRules, iptablesRules...)
 	}
 
-	logger.Debug("ending")
-	return nil
+	return f.iptables.BulkPrependRules(chain, collatedIPTablesRules)
 }

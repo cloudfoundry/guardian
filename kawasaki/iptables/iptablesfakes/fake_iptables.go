@@ -54,13 +54,13 @@ type FakeIPTables struct {
 	prependRuleReturns struct {
 		result1 error
 	}
-	AppendRulesStub        func(chain string, rule []iptables.Rule) error
-	appendRulesMutex       sync.RWMutex
-	appendRulesArgsForCall []struct {
+	BulkPrependRulesStub        func(chain string, rules []iptables.Rule) error
+	bulkPrependRulesMutex       sync.RWMutex
+	bulkPrependRulesArgsForCall []struct {
 		chain string
-		rule  []iptables.Rule
+		rules []iptables.Rule
 	}
-	appendRulesReturns struct {
+	bulkPrependRulesReturns struct {
 		result1 error
 	}
 	InstanceChainStub        func(instanceId string) string
@@ -246,41 +246,41 @@ func (fake *FakeIPTables) PrependRuleReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeIPTables) AppendRules(chain string, rule []iptables.Rule) error {
-	var ruleCopy []iptables.Rule
-	if rule != nil {
-		ruleCopy = make([]iptables.Rule, len(rule))
-		copy(ruleCopy, rule)
+func (fake *FakeIPTables) BulkPrependRules(chain string, rules []iptables.Rule) error {
+	var rulesCopy []iptables.Rule
+	if rules != nil {
+		rulesCopy = make([]iptables.Rule, len(rules))
+		copy(rulesCopy, rules)
 	}
-	fake.appendRulesMutex.Lock()
-	fake.appendRulesArgsForCall = append(fake.appendRulesArgsForCall, struct {
+	fake.bulkPrependRulesMutex.Lock()
+	fake.bulkPrependRulesArgsForCall = append(fake.bulkPrependRulesArgsForCall, struct {
 		chain string
-		rule  []iptables.Rule
-	}{chain, ruleCopy})
-	fake.recordInvocation("AppendRules", []interface{}{chain, ruleCopy})
-	fake.appendRulesMutex.Unlock()
-	if fake.AppendRulesStub != nil {
-		return fake.AppendRulesStub(chain, rule)
+		rules []iptables.Rule
+	}{chain, rulesCopy})
+	fake.recordInvocation("BulkPrependRules", []interface{}{chain, rulesCopy})
+	fake.bulkPrependRulesMutex.Unlock()
+	if fake.BulkPrependRulesStub != nil {
+		return fake.BulkPrependRulesStub(chain, rules)
 	} else {
-		return fake.appendRulesReturns.result1
+		return fake.bulkPrependRulesReturns.result1
 	}
 }
 
-func (fake *FakeIPTables) AppendRulesCallCount() int {
-	fake.appendRulesMutex.RLock()
-	defer fake.appendRulesMutex.RUnlock()
-	return len(fake.appendRulesArgsForCall)
+func (fake *FakeIPTables) BulkPrependRulesCallCount() int {
+	fake.bulkPrependRulesMutex.RLock()
+	defer fake.bulkPrependRulesMutex.RUnlock()
+	return len(fake.bulkPrependRulesArgsForCall)
 }
 
-func (fake *FakeIPTables) AppendRulesArgsForCall(i int) (string, []iptables.Rule) {
-	fake.appendRulesMutex.RLock()
-	defer fake.appendRulesMutex.RUnlock()
-	return fake.appendRulesArgsForCall[i].chain, fake.appendRulesArgsForCall[i].rule
+func (fake *FakeIPTables) BulkPrependRulesArgsForCall(i int) (string, []iptables.Rule) {
+	fake.bulkPrependRulesMutex.RLock()
+	defer fake.bulkPrependRulesMutex.RUnlock()
+	return fake.bulkPrependRulesArgsForCall[i].chain, fake.bulkPrependRulesArgsForCall[i].rules
 }
 
-func (fake *FakeIPTables) AppendRulesReturns(result1 error) {
-	fake.AppendRulesStub = nil
-	fake.appendRulesReturns = struct {
+func (fake *FakeIPTables) BulkPrependRulesReturns(result1 error) {
+	fake.BulkPrependRulesStub = nil
+	fake.bulkPrependRulesReturns = struct {
 		result1 error
 	}{result1}
 }
@@ -331,8 +331,8 @@ func (fake *FakeIPTables) Invocations() map[string][][]interface{} {
 	defer fake.deleteChainReferencesMutex.RUnlock()
 	fake.prependRuleMutex.RLock()
 	defer fake.prependRuleMutex.RUnlock()
-	fake.appendRulesMutex.RLock()
-	defer fake.appendRulesMutex.RUnlock()
+	fake.bulkPrependRulesMutex.RLock()
+	defer fake.bulkPrependRulesMutex.RUnlock()
 	fake.instanceChainMutex.RLock()
 	defer fake.instanceChainMutex.RUnlock()
 	return fake.invocations
