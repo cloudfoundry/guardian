@@ -25,13 +25,13 @@ var _ = Describe("Clean", func() {
 	})
 
 	It("removes the cached blobs", func() {
-		preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME, "blobs"))
+		preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(preContents)).To(BeNumerically(">", 0))
 
 		Expect(Runner.Clean(0)).To(Succeed())
 
-		afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME, "blobs"))
+		afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(afterContents).To(HaveLen(0))
 	})
@@ -48,17 +48,17 @@ var _ = Describe("Clean", func() {
 		})
 
 		It("removes unused volumes", func() {
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preContents).To(HaveLen(3))
 
 			Expect(Runner.Clean(0)).To(Succeed())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(afterContents).To(HaveLen(2))
 			for _, layer := range testhelpers.EmptyImageV011.Layers {
-				Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+				Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
 			}
 		})
 
@@ -79,23 +79,23 @@ var _ = Describe("Clean", func() {
 				})
 
 				It("does not remove the cached blobs", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME, "blobs"))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(Runner.Clean(cleanupThresholdInBytes)).To(Succeed())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME, "blobs"))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(len(preContents)))
 				})
 
 				It("does not remove the unused volumes", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(Runner.Clean(cleanupThresholdInBytes)).To(Succeed())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(len(preContents)))
 				})
@@ -107,29 +107,29 @@ var _ = Describe("Clean", func() {
 				})
 
 				It("removes the cached blobs", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME, "blobs"))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(5))
 
 					Expect(Runner.Clean(cleanupThresholdInBytes)).To(Succeed())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME, "blobs"))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(0))
 				})
 
 				It("removes the unused volumes", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(3))
 
 					Expect(Runner.Clean(cleanupThresholdInBytes)).To(Succeed())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(2))
 					for _, layer := range testhelpers.EmptyImageV011.Layers {
-						Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+						Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
 					}
 				})
 			})

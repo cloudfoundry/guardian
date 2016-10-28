@@ -3,6 +3,7 @@ package groot_test
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path"
 
 	"code.cloudfoundry.org/grootfs/integration/runner"
@@ -22,6 +23,8 @@ var (
 	StorePath  string
 	Runner     *runner.Runner
 	storeName  string
+
+	CurrentUserID string
 )
 
 const btrfsMountPath = "/mnt/btrfs"
@@ -35,6 +38,10 @@ func TestGroot(t *testing.T) {
 
 		return []byte(grootFSBin)
 	}, func(data []byte) {
+		user, err := user.Current()
+		Expect(err).NotTo(HaveOccurred())
+
+		CurrentUserID = user.Uid
 		GrootFSBin = string(data)
 	})
 

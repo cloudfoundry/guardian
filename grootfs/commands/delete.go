@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/commands/idfinder"
+	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/bundler"
@@ -30,10 +31,20 @@ var DeleteCommand = cli.Command{
 			logger.Error("parsing-command", errors.New("id was not specified"))
 			return cli.NewExitError("id was not specified", 1)
 		}
+
 		idOrPath := ctx.Args().First()
 		id, err := idfinder.FindID(storePath, idOrPath)
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
+		}
+
+		if id == idOrPath {
+			storePath, err = storepath.UserBased(storePath)
+		} else {
+			storePath, err = idfinder.FindSubStorePath(storePath, idOrPath)
+		}
+		if err != nil {
+			return cli.NewExitError(fmt.Sprintf("can't determine the store path: %s", err.Error()), 1)
 		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)

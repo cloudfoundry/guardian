@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/commands"
+	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 
@@ -56,7 +57,10 @@ func main() {
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
-		storePath := ctx.String("store")
+		storePath, err := storepath.UserBased(ctx.String("store"))
+		if err != nil {
+			return err
+		}
 
 		cli.ErrWriter = os.Stdout
 

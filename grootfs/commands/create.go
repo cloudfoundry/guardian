@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"path/filepath"
 
+	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -62,7 +63,11 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
-		storePath := ctx.GlobalString("store")
+		storePath, err := storepath.UserBased(ctx.GlobalString("store"))
+		if err != nil {
+			return cli.NewExitError(fmt.Sprintf("can't determine the store path: %s", err.Error()), 1)
+		}
+
 		image := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
 

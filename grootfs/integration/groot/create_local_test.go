@@ -73,7 +73,7 @@ var _ = Describe("Create with local images", func() {
 			integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
 
 			volumeID := integration.ImagePathToVolumeID(imagePath)
-			layerSnapshotPath := filepath.Join(StorePath, "volumes", volumeID)
+			layerSnapshotPath := filepath.Join(StorePath, CurrentUserID, "volumes", volumeID)
 			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id-2", 0)

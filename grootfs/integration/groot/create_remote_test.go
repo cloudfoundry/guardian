@@ -64,7 +64,7 @@ var _ = Describe("Create with remote images", func() {
 				integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
 
 				blobPath := path.Join(
-					StorePath, "cache", "blobs",
+					StorePath, CurrentUserID, "cache", "blobs",
 					"sha256-6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a",
 				)
 				Expect(blobPath).To(BeARegularFile())
@@ -87,7 +87,7 @@ var _ = Describe("Create with remote images", func() {
 
 				// change the cache
 				blobPath := path.Join(
-					StorePath, "cache", "blobs",
+					StorePath, CurrentUserID, "cache", "blobs",
 					"sha256-6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a",
 				)
 
@@ -162,7 +162,7 @@ var _ = Describe("Create with remote images", func() {
 				It("caches the unpacked image in a subvolume with snapshots", func() {
 					integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
 
-					layerSnapshotPath := filepath.Join(StorePath, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
+					layerSnapshotPath := filepath.Join(StorePath, CurrentUserID, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
 					Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 					bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id-2", 0)
@@ -174,10 +174,10 @@ var _ = Describe("Create with remote images", func() {
 					It("deletes the layer volume cache", func() {
 						// write an invalid cached layer blob
 						blobPath := path.Join(
-							StorePath, "cache", "blobs",
+							StorePath, CurrentUserID, "cache", "blobs",
 							"sha256-6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a",
 						)
-						Expect(os.MkdirAll(path.Join(StorePath, "cache", "blobs"), 0755)).To(Succeed())
+						Expect(os.MkdirAll(path.Join(StorePath, CurrentUserID, "cache", "blobs"), 0755)).To(Succeed())
 						Expect(ioutil.WriteFile(blobPath, []byte("corrupted"), 0666)).To(Succeed())
 
 						layerSnapshotPath := filepath.Join(StorePath, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
@@ -296,7 +296,7 @@ var _ = Describe("Create with remote images", func() {
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
-			Expect(path.Join(StorePath, "cache", "blobs", fmt.Sprintf("sha256-%s", layerID))).To(BeARegularFile())
+			Expect(path.Join(StorePath, CurrentUserID, "cache", "blobs", fmt.Sprintf("sha256-%s", layerID))).To(BeARegularFile())
 		})
 	})
 

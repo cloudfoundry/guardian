@@ -66,7 +66,7 @@ var _ = Describe("Create", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
 
-				rootfsPath := filepath.Join(StorePath, "bundles/random-id/rootfs")
+				rootfsPath := filepath.Join(StorePath, CurrentUserID, "bundles/random-id/rootfs")
 				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(rootfsPath, "hello")), "bs=1048576", "count=6")
 				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
@@ -122,7 +122,7 @@ var _ = Describe("Create", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(sess).Should(gexec.Exit(1))
 
-						bundlePath := path.Join(StorePath, "bundles", "random-id")
+						bundlePath := path.Join(StorePath, CurrentUserID, "bundles", "random-id")
 						Expect(bundlePath).ToNot(BeAnExistingFile())
 					})
 				})
@@ -154,7 +154,7 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 			// It will fail at this point, because /var/lib/grootfs doesn't exist
 			Eventually(sess).Should(gexec.Exit(1))
-			Eventually(sess).Should(gbytes.Say("making directory `/var/lib/grootfs`"))
+			Eventually(sess).Should(gbytes.Say("making directory `/var/lib/grootfs/" + CurrentUserID + "`"))
 		})
 	})
 
@@ -212,7 +212,7 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sess.Wait()).NotTo(gexec.Exit(0))
 
-			Expect(path.Join(StorePath, "bundles", "some-id")).ToNot(BeAnExistingFile())
+			Expect(path.Join(StorePath, CurrentUserID, "bundles", "some-id")).ToNot(BeAnExistingFile())
 		})
 	})
 
