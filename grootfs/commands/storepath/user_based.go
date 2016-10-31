@@ -1,16 +1,12 @@
 package storepath
 
 import (
-	"fmt"
-	"os/user"
+	"os"
 	"path/filepath"
+	"strconv"
 )
 
 func UserBased(storePath string) (string, error) {
-	currentUser, err := user.Current()
-	if err != nil {
-		return "", fmt.Errorf("fetching current user: %s", err)
-	}
-
-	return filepath.Join(storePath, currentUser.Uid), nil
+	userID := os.Getuid()
+	return filepath.Join(storePath, strconv.Itoa(userID)), nil
 }

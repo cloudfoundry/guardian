@@ -3,8 +3,8 @@ package groot_test
 import (
 	"fmt"
 	"os"
-	"os/user"
 	"path"
+	"strconv"
 
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -38,10 +38,8 @@ func TestGroot(t *testing.T) {
 
 		return []byte(grootFSBin)
 	}, func(data []byte) {
-		user, err := user.Current()
-		Expect(err).NotTo(HaveOccurred())
-
-		CurrentUserID = user.Uid
+		userID := os.Getuid()
+		CurrentUserID = strconv.Itoa(userID)
 		GrootFSBin = string(data)
 	})
 
