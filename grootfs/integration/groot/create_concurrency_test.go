@@ -63,7 +63,8 @@ var _ = Describe("Concurrent creations", func() {
 				defer GinkgoRecover()
 				defer wg.Done()
 
-				Expect(Runner.Clean(0)).To(Succeed())
+				_, err := Runner.Clean(0)
+				Expect(err).To(Succeed())
 			}()
 
 			wg.Wait()

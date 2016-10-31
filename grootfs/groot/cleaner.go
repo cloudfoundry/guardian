@@ -16,7 +16,7 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer, gc GarbageCollector) *Cle
 	}
 }
 
-func (c *Cleaner) Clean(logger lager.Logger, threshold uint64) error {
+func (c *Cleaner) Clean(logger lager.Logger, threshold uint64) (bool, error) {
 	logger = logger.Session("groot-cleaning")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -24,17 +24,17 @@ func (c *Cleaner) Clean(logger lager.Logger, threshold uint64) error {
 	if threshold > 0 {
 		storeSize, err := c.storeMeasurer.MeasureStore(logger)
 		if err != nil {
-			return err
+			return true, err
 		}
 
 		if threshold >= storeSize {
-			return nil
+			return true, nil
 		}
 	}
 
 	lockFile, err := c.locksmith.Lock(GLOBAL_LOCK_KEY)
 	if err != nil {
-		return err
+		return false, err
 	}
 	defer func() {
 		if err := c.locksmith.Unlock(lockFile); err != nil {
@@ -42,5 +42,5 @@ func (c *Cleaner) Clean(logger lager.Logger, threshold uint64) error {
 		}
 	}()
 
-	return c.garbageCollector.Collect(logger)
+	return false, c.garbageCollector.Collect(logger)
 }

@@ -45,7 +45,8 @@ var _ = Describe("Cleaner", func() {
 
 	Describe("Clean", func() {
 		It("calls the garbage collector", func() {
-			Expect(cleaner.Clean(logger, 0)).To(Succeed())
+			_, err := cleaner.Clean(logger, 0)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 		})
 
@@ -55,12 +56,14 @@ var _ = Describe("Cleaner", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(cleaner.Clean(logger, 0)).To(MatchError(ContainSubstring("failed to collect unused bits")))
+				_, err := cleaner.Clean(logger, 0)
+				Expect(err).To(MatchError(ContainSubstring("failed to collect unused bits")))
 			})
 		})
 
 		It("acquires the global lock", func() {
-			Expect(cleaner.Clean(logger, 0)).To(Succeed())
+			_, err := cleaner.Clean(logger, 0)
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
 			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GLOBAL_LOCK_KEY))
@@ -72,18 +75,20 @@ var _ = Describe("Cleaner", func() {
 			})
 
 			It("returns the error", func() {
-				err := cleaner.Clean(logger, 0)
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).To(MatchError(ContainSubstring("failed to acquire lock")))
 			})
 
 			It("does not collect the garbage", func() {
-				Expect(cleaner.Clean(logger, 0)).NotTo(Succeed())
+				_, err := cleaner.Clean(logger, 0)
+				Expect(err).To(HaveOccurred())
 				Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 			})
 		})
 
 		It("releases the global lock", func() {
-			Expect(cleaner.Clean(logger, 0)).To(Succeed())
+			_, err := cleaner.Clean(logger, 0)
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
 			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
@@ -102,13 +107,21 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("does not remove anything", func() {
-					Expect(cleaner.Clean(logger, threshold)).To(Succeed())
+					_, err := cleaner.Clean(logger, threshold)
+					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 				})
 
 				It("does not acquire the lock", func() {
-					Expect(cleaner.Clean(logger, threshold)).To(Succeed())
+					_, err := cleaner.Clean(logger, threshold)
+					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeLocksmith.LockCallCount()).To(Equal(0))
+				})
+
+				It("sets noop to `true`", func() {
+					noop, err := cleaner.Clean(logger, threshold)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(noop).To(BeTrue())
 				})
 			})
 
@@ -118,11 +131,13 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("returns the error", func() {
-					Expect(cleaner.Clean(logger, threshold)).To(MatchError(ContainSubstring("failed to measure")))
+					_, err := cleaner.Clean(logger, threshold)
+					Expect(err).To(MatchError(ContainSubstring("failed to measure")))
 				})
 
 				It("does not remove anything", func() {
-					Expect(cleaner.Clean(logger, threshold)).NotTo(Succeed())
+					_, err := cleaner.Clean(logger, threshold)
+					Expect(err).To(HaveOccurred())
 					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 				})
 			})
@@ -134,7 +149,8 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("calls the garbage collector", func() {
-					Expect(cleaner.Clean(logger, threshold)).To(Succeed())
+					_, err := cleaner.Clean(logger, threshold)
+					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 				})
 			})

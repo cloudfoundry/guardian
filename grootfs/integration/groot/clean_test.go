@@ -29,7 +29,8 @@ var _ = Describe("Clean", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(preContents)).To(BeNumerically(">", 0))
 
-		Expect(Runner.Clean(0)).To(Succeed())
+		_, err = Runner.Clean(0)
+		Expect(err).NotTo(HaveOccurred())
 
 		afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 		Expect(err).NotTo(HaveOccurred())
@@ -52,7 +53,8 @@ var _ = Describe("Clean", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preContents).To(HaveLen(3))
 
-			Expect(Runner.Clean(0)).To(Succeed())
+			_, err = Runner.Clean(0)
+			Expect(err).NotTo(HaveOccurred())
 
 			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
@@ -82,7 +84,8 @@ var _ = Describe("Clean", func() {
 					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(Runner.Clean(cleanupThresholdInBytes)).To(Succeed())
+					_, err = Runner.Clean(cleanupThresholdInBytes)
+					Expect(err).NotTo(HaveOccurred())
 
 					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 					Expect(err).NotTo(HaveOccurred())
@@ -93,11 +96,18 @@ var _ = Describe("Clean", func() {
 					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(Runner.Clean(cleanupThresholdInBytes)).To(Succeed())
+					_, err = Runner.Clean(cleanupThresholdInBytes)
+					Expect(err).NotTo(HaveOccurred())
 
 					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(len(preContents)))
+				})
+
+				It("reports that it was a no-op", func() {
+					output, err := Runner.Clean(cleanupThresholdInBytes)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(output).To(ContainSubstring("threshold not reached: skipping clean"))
 				})
 			})
 
@@ -111,7 +121,8 @@ var _ = Describe("Clean", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(5))
 
-					Expect(Runner.Clean(cleanupThresholdInBytes)).To(Succeed())
+					_, err = Runner.Clean(cleanupThresholdInBytes)
+					Expect(err).NotTo(HaveOccurred())
 
 					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 					Expect(err).NotTo(HaveOccurred())
@@ -123,7 +134,8 @@ var _ = Describe("Clean", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(3))
 
-					Expect(Runner.Clean(cleanupThresholdInBytes)).To(Succeed())
+					_, err = Runner.Clean(cleanupThresholdInBytes)
+					Expect(err).NotTo(HaveOccurred())
 
 					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())

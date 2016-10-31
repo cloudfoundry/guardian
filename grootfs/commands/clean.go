@@ -48,13 +48,18 @@ var CleanCommand = cli.Command{
 		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, bundler, dependencyManager)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc)
-		err := cleaner.Clean(logger, ctx.Uint64("threshold-bytes"))
+		noop, err := cleaner.Clean(logger, ctx.Uint64("threshold-bytes"))
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		fmt.Println("Clean finished")
+		if noop {
+			fmt.Println("threshold not reached: skipping clean")
+			return nil
+		}
+
+		fmt.Println("clean completed")
 		return nil
 	},
 }
