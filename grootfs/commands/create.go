@@ -63,11 +63,7 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
-		storePath, err := storepath.UserBased(ctx.GlobalString("store"))
-		if err != nil {
-			return cli.NewExitError(fmt.Sprintf("can't determine the store path: %s", err.Error()), 1)
-		}
-
+		storePath := storepath.UserBased(ctx.GlobalString("store"))
 		image := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
 

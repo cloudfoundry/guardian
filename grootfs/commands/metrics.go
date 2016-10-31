@@ -38,12 +38,12 @@ var MetricsCommand = cli.Command{
 		}
 
 		if id == idOrPath {
-			storePath, err = storepath.UserBased(storePath)
+			storePath = storepath.UserBased(storePath)
 		} else {
 			storePath, err = idfinder.FindSubStorePath(storePath, idOrPath)
-		}
-		if err != nil {
-			return cli.NewExitError(fmt.Sprintf("can't determine the store path: %s", err.Error()), 1)
+			if err != nil {
+				return cli.NewExitError(fmt.Sprintf("can't determine the store path: %s", err.Error()), 1)
+			}
 		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)

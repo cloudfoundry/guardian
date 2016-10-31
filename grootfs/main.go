@@ -57,11 +57,7 @@ func main() {
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
-		storePath, err := storepath.UserBased(ctx.String("store"))
-		if err != nil {
-			return err
-		}
-
+		storePath := storepath.UserBased(ctx.String("store"))
 		cli.ErrWriter = os.Stdout
 
 		logger := configureLog(ctx)

@@ -35,10 +35,7 @@ var CleanCommand = cli.Command{
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("clean")
 
-		storePath, err := storepath.UserBased(ctx.GlobalString("store"))
-		if err != nil {
-			return cli.NewExitError(fmt.Sprintf("can't determine the store path: %s", err.Error()), 1)
-		}
+		storePath := storepath.UserBased(ctx.GlobalString("store"))
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
 		bundler := bundlerpkg.NewBundler(btrfsVolumeDriver, storePath)
@@ -51,7 +48,7 @@ var CleanCommand = cli.Command{
 		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, bundler, dependencyManager)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc)
-		err = cleaner.Clean(logger, ctx.Uint64("threshold-bytes"))
+		err := cleaner.Clean(logger, ctx.Uint64("threshold-bytes"))
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return cli.NewExitError(err.Error(), 1)

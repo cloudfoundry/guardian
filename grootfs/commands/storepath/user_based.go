@@ -6,7 +6,7 @@ import (
 	"strconv"
 )
 
-func UserBased(storePath string) (string, error) {
+func UserBased(storePath string) string {
 	userID := os.Getuid()
-	return filepath.Join(storePath, strconv.Itoa(userID)), nil
+	return filepath.Join(storePath, strconv.Itoa(userID))
 }
