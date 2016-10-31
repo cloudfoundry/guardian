@@ -3,6 +3,7 @@ package remote_test
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -30,6 +31,8 @@ var _ = Describe("RemoteFetcher", func() {
 		logger            *lagertest.TestLogger
 		imageURL          *url.URL
 		gzipedBlobContent []byte
+		cancelCalled      bool
+		cancelFunc        context.CancelFunc
 	)
 
 	BeforeEach(func() {
@@ -44,16 +47,23 @@ var _ = Describe("RemoteFetcher", func() {
 		gzipedBlobContent, err = ioutil.ReadAll(gzipBuffer)
 		Expect(err).NotTo(HaveOccurred())
 
+		cancelCalled = false
+		cancelFunc = func() { cancelCalled = true }
+
 		// by default, the cache driver does not do any caching
 		fakeCacheDriver.StreamBlobStub = func(logger lager.Logger, id string,
 			remoteBlobFunc fetcherpkg.RemoteBlobFunc,
-		) (io.ReadCloser, int64, error) {
+		) (image_puller.Stream, error) {
 			contents, size, err := remoteBlobFunc(logger)
 			if err != nil {
-				return nil, 0, err
+				return image_puller.Stream{Cancel: cancelFunc}, err
 			}
 
-			return ioutil.NopCloser(bytes.NewBuffer(contents)), size, nil
+			return image_puller.Stream{
+				Reader: ioutil.NopCloser(bytes.NewBuffer(contents)),
+				Size:   size,
+				Cancel: nil,
+			}, nil
 		}
 
 		fetcher = remote.NewRemoteFetcher(fakeSource, fakeCacheDriver)
@@ -181,8 +191,11 @@ var _ = Describe("RemoteFetcher", func() {
 
 				configReader, configWriter, err = os.Pipe()
 				Expect(err).NotTo(HaveOccurred())
-
-				fakeCacheDriver.StreamBlobReturns(configReader, 0, nil)
+				fakeCacheDriver.StreamBlobReturns(image_puller.Stream{
+					Reader: configReader,
+					Size:   0,
+					Cancel: cancelFunc,
+				}, nil)
 
 				expectedConfig = specsv1.Image{
 					RootFS: specsv1.RootFS{
@@ -234,13 +247,25 @@ var _ = Describe("RemoteFetcher", func() {
 					_, err := fetcher.ImageInfo(logger, imageURL)
 					Expect(err).To(MatchError(ContainSubstring("decoding config from JSON")))
 				})
+
+				It("calls the cancel function", func() {
+					_, err := fetcher.ImageInfo(logger, imageURL)
+					Expect(err).To(HaveOccurred())
+					Eventually(func() bool { return cancelCalled }).Should(BeTrue())
+				})
 			})
 		})
 
 		Context("when the cache fails", func() {
-			It("returns the error", func() {
-				fakeCacheDriver.StreamBlobReturns(nil, 0, errors.New("failed to return"))
+			BeforeEach(func() {
+				fakeCacheDriver.StreamBlobReturns(image_puller.Stream{
+					Reader: nil,
+					Size:   0,
+					Cancel: cancelFunc,
+				}, errors.New("failed to return"))
+			})
 
+			It("returns the error", func() {
 				_, err := fetcher.ImageInfo(logger, imageURL)
 				Expect(err).To(MatchError(ContainSubstring("failed to return")))
 			})
@@ -253,7 +278,7 @@ var _ = Describe("RemoteFetcher", func() {
 		})
 
 		It("uses the source", func() {
-			_, _, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
+			_, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeSource.BlobCallCount()).To(Equal(1))
@@ -263,10 +288,10 @@ var _ = Describe("RemoteFetcher", func() {
 		})
 
 		It("returns the stream from the source", func(done Done) {
-			stream, _, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
+			stream, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
 			Expect(err).NotTo(HaveOccurred())
 
-			contents, err := ioutil.ReadAll(stream)
+			contents, err := ioutil.ReadAll(stream.Reader)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("hello-world"))
 
@@ -279,16 +304,16 @@ var _ = Describe("RemoteFetcher", func() {
 			gzipWriter.Close()
 			fakeSource.BlobReturns(buffer.Bytes(), 1024, nil)
 
-			_, size, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
+			stream, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(size).To(Equal(int64(1024)))
+			Expect(stream.Size).To(Equal(int64(1024)))
 		})
 
 		Context("when the source fails to stream the blob", func() {
 			It("returns an error", func() {
 				fakeSource.BlobReturns(nil, 0, errors.New("failed to stream blob"))
 
-				_, _, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
+				_, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
 				Expect(err).To(MatchError(ContainSubstring("failed to stream blob")))
 			})
 		})
@@ -307,7 +332,11 @@ var _ = Describe("RemoteFetcher", func() {
 				blobReader, blobWriter, err = os.Pipe()
 				Expect(err).NotTo(HaveOccurred())
 
-				fakeCacheDriver.StreamBlobReturns(blobReader, 1200, nil)
+				fakeCacheDriver.StreamBlobReturns(image_puller.Stream{
+					Reader: blobReader,
+					Size:   1200,
+					Cancel: nil,
+				}, nil)
 			})
 
 			JustBeforeEach(func() {
@@ -318,7 +347,7 @@ var _ = Describe("RemoteFetcher", func() {
 			})
 
 			It("calls the cache driver", func() {
-				_, _, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
+				_, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeCacheDriver.StreamBlobCallCount()).To(Equal(1))
@@ -327,10 +356,10 @@ var _ = Describe("RemoteFetcher", func() {
 			})
 
 			It("returns the cached blob", func(done Done) {
-				stream, _, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
+				stream, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
 				Expect(err).NotTo(HaveOccurred())
 
-				contents, err := ioutil.ReadAll(stream)
+				contents, err := ioutil.ReadAll(stream.Reader)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("hello-world"))
 
@@ -338,17 +367,19 @@ var _ = Describe("RemoteFetcher", func() {
 			}, 2.0)
 
 			It("returns the size of the cached blob", func() {
-				_, size, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
+				stream, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
 				Expect(err).NotTo(HaveOccurred())
-				Expect(size).To(Equal(int64(1200)))
+				Expect(stream.Size).To(Equal(int64(1200)))
 			})
 		})
 
 		Context("when the cache fails", func() {
-			It("returns the error", func() {
-				fakeCacheDriver.StreamBlobReturns(nil, 0, errors.New("failed to return"))
+			BeforeEach(func() {
+				fakeCacheDriver.StreamBlobReturns(image_puller.Stream{}, errors.New("failed to return"))
+			})
 
-				_, _, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
+			It("returns the error", func() {
+				_, err := fetcher.StreamBlob(logger, imageURL, "sha256:layer-digest")
 				Expect(err).To(MatchError(ContainSubstring("failed to return")))
 			})
 		})

@@ -1,6 +1,7 @@
 package image_puller // import "code.cloudfoundry.org/grootfs/image_puller"
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -40,9 +41,15 @@ type VolumeDriver interface {
 	DestroyVolume(logger lager.Logger, id string) error
 }
 
+type Stream struct {
+	Reader io.ReadCloser
+	Size   int64
+	Cancel context.CancelFunc
+}
+
 type Fetcher interface {
 	ImageInfo(logger lager.Logger, imageURL *url.URL) (ImageInfo, error)
-	StreamBlob(logger lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error)
+	StreamBlob(logger lager.Logger, imageURL *url.URL, source string) (Stream, error)
 }
 
 type Unpacker interface {
@@ -149,13 +156,13 @@ func (p *ImagePuller) buildLayer(logger lager.Logger, index int, layersDigest []
 
 	p.buildLayer(logger, index-1, layersDigest, spec)
 
-	stream, size, err := p.fetcher(spec.ImageSrc).StreamBlob(logger, spec.ImageSrc, digest.BlobID)
+	stream, err := p.fetcher(spec.ImageSrc).StreamBlob(logger, spec.ImageSrc, digest.BlobID)
 	if err != nil {
 		return "", fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
 	}
 
 	logger.Debug("got-stream-for-blob", lager.Data{
-		"size":                  size,
+		"size":                  stream.Size,
 		"diskLimit":             spec.DiskLimit,
 		"excludeImageFromQuota": spec.ExcludeImageFromQuota,
 		"blobID":                digest.BlobID,
@@ -168,6 +175,7 @@ func (p *ImagePuller) buildLayer(logger lager.Logger, index int, layersDigest []
 		wrapVolumeID(spec, digest.ChainID),
 	)
 	if err != nil {
+		stream.Cancel()
 		return "", fmt.Errorf("creating volume for layer `%s`: %s", digest.BlobID, err)
 	}
 	logger.Debug("volume-created", lager.Data{
@@ -179,12 +187,13 @@ func (p *ImagePuller) buildLayer(logger lager.Logger, index int, layersDigest []
 
 	unpackSpec := UnpackSpec{
 		TargetPath:  volumePath,
-		Stream:      stream,
+		Stream:      stream.Reader,
 		UIDMappings: spec.UIDMappings,
 		GIDMappings: spec.GIDMappings,
 	}
 
 	if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
+		stream.Cancel()
 		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
 			logger.Error("volume-cleanup-failed", errD, lager.Data{
 				"blobID":        digest.BlobID,

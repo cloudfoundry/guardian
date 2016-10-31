@@ -52,16 +52,16 @@ var _ = Describe("CacheDriver", func() {
 	Describe("StreamBlob", func() {
 		Context("when the blob is not cached", func() {
 			It("calls the blobFunc function", func() {
-				_, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+				_, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(blobFuncCallCount).To(Equal(1))
 			})
 
 			It("returns the content returned by blobFunc", func() {
-				blob, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+				stream, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 				Expect(err).ToNot(HaveOccurred())
 
-				contents, err := ioutil.ReadAll(blob)
+				contents, err := ioutil.ReadAll(stream.Reader)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("hello world"))
 			})
@@ -73,9 +73,9 @@ var _ = Describe("CacheDriver", func() {
 					return buffer.Contents(), 1024, nil
 				}
 
-				_, size, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+				stream, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(size).To(Equal(int64(1024)))
+				Expect(stream.Size).To(Equal(int64(1024)))
 			})
 
 			Context("when the store does not exist", func() {
@@ -84,25 +84,38 @@ var _ = Describe("CacheDriver", func() {
 				})
 
 				It("returns an error", func() {
-					_, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+					_, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 					Expect(err).To(MatchError(ContainSubstring("creating cached blob file")))
 				})
 			})
 
 			It("stores the blob returned by blobFunc in the cache", func() {
-				blobContent, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+				stream, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 				Expect(err).ToNot(HaveOccurred())
 
 				theBlobPath := blobPath(storePath, "my-blob")
 				Expect(theBlobPath).To(BeARegularFile())
 
 				// consume the blob first
-				_, err = ioutil.ReadAll(blobContent)
+				_, err = ioutil.ReadAll(stream.Reader)
 				Expect(err).NotTo(HaveOccurred())
 
 				cachedBlobContents, err := ioutil.ReadFile(theBlobPath)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(cachedBlobContents)).To(Equal("hello world"))
+			})
+
+			Context("when the cancelFunc is called", func() {
+				It("removes the cached file", func() {
+					stream, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+					Expect(err).ToNot(HaveOccurred())
+
+					theBlobPath := blobPath(storePath, "my-blob")
+					Expect(theBlobPath).To(BeARegularFile())
+
+					stream.Cancel()
+					Eventually(theBlobPath).ShouldNot(BeARegularFile())
+				})
 			})
 
 			Context("when blobFunc fails", func() {
@@ -113,17 +126,17 @@ var _ = Describe("CacheDriver", func() {
 				})
 
 				It("returns the error", func() {
-					_, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+					_, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 					Expect(err).To(MatchError(ContainSubstring("failed getting remote stream")))
 				})
 
 				It("cleans up corrupted stated", func() {
-					_, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+					_, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 					Expect(err).To(MatchError(ContainSubstring("failed getting remote stream")))
 				})
 
 				It("cleans up corrupted stated", func() {
-					_, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+					_, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 					Expect(err).To(MatchError(ContainSubstring("failed getting remote stream")))
 					theBlobPath := blobPath(storePath, "my-blob")
 					Expect(theBlobPath).NotTo(BeARegularFile())
@@ -133,11 +146,11 @@ var _ = Describe("CacheDriver", func() {
 
 		Context("when the blob is cached", func() {
 			BeforeEach(func() {
-				stream, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+				stream, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 				Expect(err).ToNot(HaveOccurred())
 
 				// consume the stream first
-				_, err = ioutil.ReadAll(stream)
+				_, err = ioutil.ReadAll(stream.Reader)
 				Expect(err).NotTo(HaveOccurred())
 
 				// reset the test counter
@@ -145,17 +158,17 @@ var _ = Describe("CacheDriver", func() {
 			})
 
 			It("does not call blobFunc", func() {
-				_, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+				_, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(blobFuncCallCount).To(Equal(0))
 			})
 
 			It("returns the correct blob size", func() {
-				_, size, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+				stream, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 
 				Expect(err).ToNot(HaveOccurred())
-				Expect(size).To(Equal(int64(len("hello world"))))
+				Expect(stream.Size).To(Equal(int64(len("hello world"))))
 			})
 
 			Context("but the cached file is not a file", func() {
@@ -166,7 +179,7 @@ var _ = Describe("CacheDriver", func() {
 				})
 
 				It("returns an error", func() {
-					_, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+					_, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 					Expect(err).To(MatchError(ContainSubstring("exists but it's not a regular file")))
 				})
 			})
@@ -178,7 +191,7 @@ var _ = Describe("CacheDriver", func() {
 				})
 
 				It("returns an error", func() {
-					_, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+					_, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 					Expect(err).To(MatchError(ContainSubstring("checking if the blob exists")))
 				})
 			})
@@ -191,7 +204,7 @@ var _ = Describe("CacheDriver", func() {
 				})
 
 				It("returns an error", func() {
-					_, _, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
+					_, err := cacheDriver.StreamBlob(logger, "my-blob", blobFunc)
 					Expect(err).To(MatchError(ContainSubstring("accessing the cached blob")))
 				})
 			})

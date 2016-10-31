@@ -172,7 +172,6 @@ var _ = Describe("Create with remote images", func() {
 
 				Describe("when unpacking the image fails", func() {
 					It("deletes the layer volume cache", func() {
-						// write an invalid cached layer blob
 						blobPath := path.Join(
 							StorePath, CurrentUserID, "cache", "blobs",
 							"sha256-6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a",
@@ -188,6 +187,22 @@ var _ = Describe("Create with remote images", func() {
 
 						// layer should be cleaned up
 						Expect(layerSnapshotPath).ToNot(BeAnExistingFile())
+					})
+
+					It("deletes the blob from the cache", func() {
+						blobPath := path.Join(
+							StorePath, CurrentUserID, "cache", "blobs",
+							"sha256-6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a",
+						)
+						Expect(os.MkdirAll(path.Join(StorePath, CurrentUserID, "cache", "blobs"), 0755)).To(Succeed())
+						Expect(ioutil.WriteFile(blobPath, []byte("corrupted"), 0666)).To(Succeed())
+
+						cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create", imageURL, "random-id-2")
+						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+						Expect(err).ToNot(HaveOccurred())
+						Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
+
+						Eventually(blobPath).ShouldNot(BeAnExistingFile())
 					})
 				})
 			})

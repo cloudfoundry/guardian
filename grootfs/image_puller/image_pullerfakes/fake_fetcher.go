@@ -2,7 +2,6 @@
 package image_pullerfakes
 
 import (
-	"io"
 	"net/url"
 	"sync"
 
@@ -21,7 +20,7 @@ type FakeFetcher struct {
 		result1 image_puller.ImageInfo
 		result2 error
 	}
-	StreamBlobStub        func(logger lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error)
+	StreamBlobStub        func(logger lager.Logger, imageURL *url.URL, source string) (image_puller.Stream, error)
 	streamBlobMutex       sync.RWMutex
 	streamBlobArgsForCall []struct {
 		logger   lager.Logger
@@ -29,9 +28,8 @@ type FakeFetcher struct {
 		source   string
 	}
 	streamBlobReturns struct {
-		result1 io.ReadCloser
-		result2 int64
-		result3 error
+		result1 image_puller.Stream
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -72,7 +70,7 @@ func (fake *FakeFetcher) ImageInfoReturns(result1 image_puller.ImageInfo, result
 	}{result1, result2}
 }
 
-func (fake *FakeFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error) {
+func (fake *FakeFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL, source string) (image_puller.Stream, error) {
 	fake.streamBlobMutex.Lock()
 	fake.streamBlobArgsForCall = append(fake.streamBlobArgsForCall, struct {
 		logger   lager.Logger
@@ -84,7 +82,7 @@ func (fake *FakeFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL, sour
 	if fake.StreamBlobStub != nil {
 		return fake.StreamBlobStub(logger, imageURL, source)
 	} else {
-		return fake.streamBlobReturns.result1, fake.streamBlobReturns.result2, fake.streamBlobReturns.result3
+		return fake.streamBlobReturns.result1, fake.streamBlobReturns.result2
 	}
 }
 
@@ -100,13 +98,12 @@ func (fake *FakeFetcher) StreamBlobArgsForCall(i int) (lager.Logger, *url.URL, s
 	return fake.streamBlobArgsForCall[i].logger, fake.streamBlobArgsForCall[i].imageURL, fake.streamBlobArgsForCall[i].source
 }
 
-func (fake *FakeFetcher) StreamBlobReturns(result1 io.ReadCloser, result2 int64, result3 error) {
+func (fake *FakeFetcher) StreamBlobReturns(result1 image_puller.Stream, result2 error) {
 	fake.StreamBlobStub = nil
 	fake.streamBlobReturns = struct {
-		result1 io.ReadCloser
-		result2 int64
-		result3 error
-	}{result1, result2, result3}
+		result1 image_puller.Stream
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeFetcher) Invocations() map[string][][]interface{} {

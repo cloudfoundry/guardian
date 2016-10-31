@@ -2,15 +2,15 @@
 package fetcherfakes
 
 import (
-	"io"
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/fetcher"
+	"code.cloudfoundry.org/grootfs/image_puller"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeCacheDriver struct {
-	StreamBlobStub        func(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) (io.ReadCloser, int64, error)
+	StreamBlobStub        func(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) (image_puller.Stream, error)
 	streamBlobMutex       sync.RWMutex
 	streamBlobArgsForCall []struct {
 		logger         lager.Logger
@@ -18,15 +18,14 @@ type FakeCacheDriver struct {
 		remoteBlobFunc fetcher.RemoteBlobFunc
 	}
 	streamBlobReturns struct {
-		result1 io.ReadCloser
-		result2 int64
-		result3 error
+		result1 image_puller.Stream
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCacheDriver) StreamBlob(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) (io.ReadCloser, int64, error) {
+func (fake *FakeCacheDriver) StreamBlob(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) (image_puller.Stream, error) {
 	fake.streamBlobMutex.Lock()
 	fake.streamBlobArgsForCall = append(fake.streamBlobArgsForCall, struct {
 		logger         lager.Logger
@@ -38,7 +37,7 @@ func (fake *FakeCacheDriver) StreamBlob(logger lager.Logger, id string, remoteBl
 	if fake.StreamBlobStub != nil {
 		return fake.StreamBlobStub(logger, id, remoteBlobFunc)
 	} else {
-		return fake.streamBlobReturns.result1, fake.streamBlobReturns.result2, fake.streamBlobReturns.result3
+		return fake.streamBlobReturns.result1, fake.streamBlobReturns.result2
 	}
 }
 
@@ -54,13 +53,12 @@ func (fake *FakeCacheDriver) StreamBlobArgsForCall(i int) (lager.Logger, string,
 	return fake.streamBlobArgsForCall[i].logger, fake.streamBlobArgsForCall[i].id, fake.streamBlobArgsForCall[i].remoteBlobFunc
 }
 
-func (fake *FakeCacheDriver) StreamBlobReturns(result1 io.ReadCloser, result2 int64, result3 error) {
+func (fake *FakeCacheDriver) StreamBlobReturns(result1 image_puller.Stream, result2 error) {
 	fake.StreamBlobStub = nil
 	fake.streamBlobReturns = struct {
-		result1 io.ReadCloser
-		result2 int64
-		result3 error
-	}{result1, result2, result3}
+		result1 image_puller.Stream
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeCacheDriver) Invocations() map[string][][]interface{} {
