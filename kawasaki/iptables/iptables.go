@@ -6,8 +6,16 @@ import (
 	"os/exec"
 	"strings"
 
+	"code.cloudfoundry.org/guardian/pkg/locksmith"
+
 	"github.com/cloudfoundry/gunk/command_runner"
 )
+
+const LockKey = "/var/run/garden-iptables.lock"
+
+type Locksmith interface {
+	Lock(key string) (locksmith.Unlocker, error)
+}
 
 //go:generate counterfeiter . Rule
 type Rule interface {
@@ -27,6 +35,7 @@ type IPTables interface {
 
 type IPTablesController struct {
 	runner                                                                                         command_runner.CommandRunner
+	locksmith                                                                                      Locksmith
 	binPath                                                                                        string
 	preroutingChain, postroutingChain, inputChain, forwardChain, defaultChain, instanceChainPrefix string
 }
@@ -35,10 +44,11 @@ type Chains struct {
 	Prerouting, Postrouting, Input, Forward, Default string
 }
 
-func New(binPath string, runner command_runner.CommandRunner, chainPrefix string) *IPTablesController {
+func New(binPath string, runner command_runner.CommandRunner, locksmith Locksmith, chainPrefix string) *IPTablesController {
 	return &IPTablesController{
-		runner:  runner,
-		binPath: binPath,
+		runner:    runner,
+		locksmith: locksmith,
+		binPath:   binPath,
 
 		preroutingChain:     chainPrefix + "prerouting",
 		postroutingChain:    chainPrefix + "postrouting",
@@ -106,11 +116,19 @@ func (iptables *IPTablesController) run(action string, cmd *exec.Cmd) error {
 	cmd.Stdout = &buff
 	cmd.Stderr = &buff
 
-	if err := iptables.runner.Run(cmd); err != nil {
-		return fmt.Errorf("%s %s: %s", iptables.binPath, action, buff.String())
+	u, err := iptables.locksmith.Lock(LockKey)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	if err := iptables.runner.Run(cmd); err != nil {
+		err := fmt.Errorf("%s %s: %s", iptables.binPath, action, buff.String())
+		if unlockErr := u.Unlock(); unlockErr != nil {
+			err = fmt.Errorf("%s and then %s", err, unlockErr)
+		}
+		return err
+	}
+	return u.Unlock()
 }
 
 func (iptables *IPTablesController) appendRule(chain string, rule Rule) error {

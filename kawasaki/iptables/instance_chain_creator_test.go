@@ -39,8 +39,9 @@ var _ = Describe("Create", func() {
 		ip, network, err = net.ParseCIDR("1.2.3.4/28")
 		Expect(err).NotTo(HaveOccurred())
 
+		fakeLocksmith := NewFakeLocksmith()
 		creator = iptables.NewInstanceChainCreator(
-			iptables.New("/sbin/iptables", fakeRunner, "prefix-"),
+			iptables.New("/sbin/iptables", fakeRunner, fakeLocksmith, "prefix-"),
 		)
 	})
 
