@@ -19,6 +19,14 @@ channel](https://cloudfoundry.slack.com). Use
 [https://slack.cloudfoundry.org](https://slack.cloudfoundry.org) to get an
 invitation.
 
+
+# Index
+* [Installation](#installation)
+* [Create a Bundle](#creating-a-bundle)
+* [Delete a Bundle](#deleting-a-bundle)
+* [Logging](#logging)
+* [Clean up](#clean-up)
+
 ## Installation
 
 _Because grootfs depends on Linux kernel features, you can only build it from or
@@ -34,9 +42,9 @@ make
 
 _Using `go get code.cloudfoundry.org/grootfs` is discouraged because it might not work due to our versioned dependencies._
 
-## Instructions
+### Instructions
 
-### Requirements
+#### Requirements
 
 * Grootfs requires btrfs to be enabled in the kernel, it also makes use of the brtfs-progs
 (btrfs-tools package on ubuntu) for layering images.
@@ -151,6 +159,57 @@ It also supports redirecting the logs to a log file:
 ```
 grootfs --log-level debug --log-file /var/log/grootfs.log create ...
 ```
+
+### Clean up
+
+```
+grootfs --store /mnt/btrfs clean
+```
+
+
+When `clean` is called, any layers that aren't being used by a rootfs that
+currently exists are deleted from the store\*.
+
+For example: Imagine that we create two bundles from different images, `Bundle
+A` and `Bundle B`:
+
+```
+- Bundle A
+  Layers:
+    - layer-1
+    - layer-2
+    - layer-3
+
+- Bundle B
+  Layers:
+    - layer-1
+    - layer-4
+    - layer-5
+
+```
+
+They have a layer in common, `layer-1`. And after deleting `Bundle B`,
+`layer-4` and `layer-5` can be collected by `clean`, but not `layer-1` because
+`Bundle A` still uses that layer.
+
+It is safe to run the command in parallel, it does not interfere with other
+creations or deletions.
+
+The `clean` command has an optional integer parameter, `threshold-bytes`, and
+when the store\* size is under that `clean` is a no-op, it does not remove
+anything. On the other hand, if the store\* is over the threshold it cleans up
+any resource that is not being used.  If 0 is provided it will behave the same
+way as if the flag wasn't specified, it will clean up everything that's not
+being used.  If a non integer or negative integer is provided, the command
+fails without cleaning up anything.
+
+
+**Caveats:**
+
+The store is based on the effective user running the command. If the user tries
+to clean up a store that does not belong to her/him the command fails.
+
+\* It takes only into account the cache and volumes folders in the store.
 
 ## Misc
 
