@@ -1,6 +1,10 @@
 package groot
 
-import "code.cloudfoundry.org/lager"
+import (
+	"fmt"
+
+	"code.cloudfoundry.org/lager"
+)
 
 type Deleter struct {
 	bundler           Bundler
@@ -20,7 +24,8 @@ func (d *Deleter) Delete(logger lager.Logger, id string) error {
 	defer logger.Info("end")
 
 	err := d.bundler.Destroy(logger, id)
-	if derErr := d.dependencyManager.Deregister(id); derErr != nil {
+	bundleRefName := fmt.Sprintf(BundleReferenceFormat, id)
+	if derErr := d.dependencyManager.Deregister(bundleRefName); derErr != nil {
 		logger.Error("failed-to-deregister-dependencies", derErr)
 	}
 

@@ -118,7 +118,26 @@ var _ = Describe("Creator", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			bundleID, chainIDs := fakeDependencyManager.RegisterArgsForCall(0)
-			Expect(bundleID).To(Equal("my-bundle"))
+			Expect(bundleID).To(Equal("bundle:my-bundle"))
+			Expect(chainIDs).To(Equal([]string{"sha256:vol-a", "sha256:vol-b"}))
+		})
+
+		It("registers image name with chain ids used by a bundle", func() {
+			image := groot.Image{
+				ChainIDs: []string{"sha256:vol-a", "sha256:vol-b"},
+			}
+			fakeImagePuller.PullReturns(image, nil)
+
+			_, err := creator.Create(logger, groot.CreateSpec{
+				ID:    "my-bundle",
+				Image: "docker:///ubuntu",
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeDependencyManager.RegisterCallCount()).To(Equal(2))
+			imageName, chainIDs := fakeDependencyManager.RegisterArgsForCall(1)
+			Expect(imageName).To(Equal("image:ubuntu"))
 			Expect(chainIDs).To(Equal([]string{"sha256:vol-a", "sha256:vol-b"}))
 		})
 
@@ -140,6 +159,27 @@ var _ = Describe("Creator", func() {
 			bundle, err := creator.Create(logger, groot.CreateSpec{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(bundle.Path).To(Equal("/path/to/bundle"))
+		})
+
+		Context("when the image has a tag", func() {
+			It("registers image name with chain ids used by a bundle", func() {
+				image := groot.Image{
+					ChainIDs: []string{"sha256:vol-a", "sha256:vol-b"},
+				}
+				fakeImagePuller.PullReturns(image, nil)
+
+				_, err := creator.Create(logger, groot.CreateSpec{
+					ID:    "my-bundle",
+					Image: "docker:///ubuntu:latest",
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeDependencyManager.RegisterCallCount()).To(Equal(2))
+				imageName, chainIDs := fakeDependencyManager.RegisterArgsForCall(1)
+				Expect(imageName).To(Equal("image:ubuntu:latest"))
+				Expect(chainIDs).To(Equal([]string{"sha256:vol-a", "sha256:vol-b"}))
+			})
 		})
 
 		Context("when the image is not a valid URL", func() {

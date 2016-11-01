@@ -16,7 +16,7 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer, gc GarbageCollector) *Cle
 	}
 }
 
-func (c *Cleaner) Clean(logger lager.Logger, threshold uint64) (bool, error) {
+func (c *Cleaner) Clean(logger lager.Logger, threshold uint64, keepImages []string) (bool, error) {
 	logger = logger.Session("groot-cleaning")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -42,5 +42,5 @@ func (c *Cleaner) Clean(logger lager.Logger, threshold uint64) (bool, error) {
 		}
 	}()
 
-	return false, c.garbageCollector.Collect(logger)
+	return false, c.garbageCollector.Collect(logger, keepImages)
 }

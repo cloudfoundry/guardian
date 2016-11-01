@@ -9,10 +9,11 @@ import (
 )
 
 type FakeGarbageCollector struct {
-	CollectStub        func(logger lager.Logger) error
+	CollectStub        func(logger lager.Logger, keepImages []string) error
 	collectMutex       sync.RWMutex
 	collectArgsForCall []struct {
-		logger lager.Logger
+		logger     lager.Logger
+		keepImages []string
 	}
 	collectReturns struct {
 		result1 error
@@ -21,15 +22,21 @@ type FakeGarbageCollector struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGarbageCollector) Collect(logger lager.Logger) error {
+func (fake *FakeGarbageCollector) Collect(logger lager.Logger, keepImages []string) error {
+	var keepImagesCopy []string
+	if keepImages != nil {
+		keepImagesCopy = make([]string, len(keepImages))
+		copy(keepImagesCopy, keepImages)
+	}
 	fake.collectMutex.Lock()
 	fake.collectArgsForCall = append(fake.collectArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("Collect", []interface{}{logger})
+		logger     lager.Logger
+		keepImages []string
+	}{logger, keepImagesCopy})
+	fake.recordInvocation("Collect", []interface{}{logger, keepImagesCopy})
 	fake.collectMutex.Unlock()
 	if fake.CollectStub != nil {
-		return fake.CollectStub(logger)
+		return fake.CollectStub(logger, keepImages)
 	} else {
 		return fake.collectReturns.result1
 	}
@@ -41,10 +48,10 @@ func (fake *FakeGarbageCollector) CollectCallCount() int {
 	return len(fake.collectArgsForCall)
 }
 
-func (fake *FakeGarbageCollector) CollectArgsForCall(i int) lager.Logger {
+func (fake *FakeGarbageCollector) CollectArgsForCall(i int) (lager.Logger, []string) {
 	fake.collectMutex.RLock()
 	defer fake.collectMutex.RUnlock()
-	return fake.collectArgsForCall[i].logger
+	return fake.collectArgsForCall[i].logger, fake.collectArgsForCall[i].keepImages
 }
 
 func (fake *FakeGarbageCollector) CollectReturns(result1 error) {

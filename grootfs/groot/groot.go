@@ -67,7 +67,7 @@ type DependencyManager interface {
 }
 
 type GarbageCollector interface {
-	Collect(logger lager.Logger) error
+	Collect(logger lager.Logger, keepImages []string) error
 }
 
 type StoreMeasurer interface {

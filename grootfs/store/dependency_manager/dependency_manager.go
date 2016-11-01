@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type DependencyManager struct {
@@ -49,5 +50,6 @@ func (d *DependencyManager) Dependencies(id string) ([]string, error) {
 }
 
 func (d *DependencyManager) filePath(id string) string {
-	return filepath.Join(d.dependenciesPath, fmt.Sprintf("%s.json", id))
+	escapedId := strings.Replace(id, "/", "__", -1)
+	return filepath.Join(d.dependenciesPath, fmt.Sprintf("%s.json", escapedId))
 }

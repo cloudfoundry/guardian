@@ -46,8 +46,9 @@ var _ = Describe("Gc", func() {
 
 			fakeDependencyManager.DependenciesStub = func(id string) ([]string, error) {
 				return map[string][]string{
-					"idA": []string{"sha256:vol-a", "sha256:vol-b"},
-					"idB": []string{"sha256:vol-a", "sha256:vol-c"},
+					"bundle:idA":   []string{"sha256:vol-a", "sha256:vol-b"},
+					"bundle:idB":   []string{"sha256:vol-a", "sha256:vol-c"},
+					"image:ubuntu": []string{"sha256:vol-d"},
 				}[id], nil
 			}
 
@@ -55,7 +56,7 @@ var _ = Describe("Gc", func() {
 		})
 
 		It("collects unused volumes", func() {
-			Expect(garbageCollector.Collect(logger)).To(Succeed())
+			Expect(garbageCollector.Collect(logger, []string{})).To(Succeed())
 
 			Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(2))
 			volumes := []string{}
@@ -69,8 +70,18 @@ var _ = Describe("Gc", func() {
 		})
 
 		It("collects blobs from the cache", func() {
-			Expect(garbageCollector.Collect(logger)).To(Succeed())
+			Expect(garbageCollector.Collect(logger, []string{})).To(Succeed())
 			Expect(fakeCacheDriver.CleanCallCount()).To(Equal(1))
+		})
+
+		Context("when a list of images to keep is provided", func() {
+			It("does not collect the unused volumes for those listed", func() {
+				Expect(garbageCollector.Collect(logger, []string{"ubuntu"})).To(Succeed())
+
+				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
+				_, volID := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
+				Expect(volID).To(Equal("sha256:vol-e"))
+			})
 		})
 
 		Context("when destroying a volume fails", func() {
@@ -85,7 +96,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("does not stop cleaning up remainging volumes", func() {
-				Expect(garbageCollector.Collect(logger)).To(MatchError(ContainSubstring("destroying volumes failed")))
+				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(ContainSubstring("destroying volumes failed")))
 				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(2))
 			})
 		})
@@ -96,7 +107,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.Collect(logger)).To(MatchError(ContainSubstring("failed to retrieve volume list")))
+				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(ContainSubstring("failed to retrieve volume list")))
 			})
 		})
 
@@ -106,7 +117,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.Collect(logger)).To(MatchError(ContainSubstring("failed to retrieve bundles")))
+				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(ContainSubstring("failed to retrieve bundles")))
 			})
 		})
 
@@ -116,7 +127,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.Collect(logger)).To(MatchError(
+				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(
 					ContainSubstring("failed to access deps"),
 				))
 			})
@@ -132,7 +143,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.Collect(logger)).To(MatchError(ContainSubstring("failed to clean up cache")))
+				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(ContainSubstring("failed to clean up cache")))
 			})
 		})
 	})

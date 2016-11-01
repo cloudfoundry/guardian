@@ -3,10 +3,14 @@ package groot
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 )
+
+const ImageReferenceFormat = "image:%s"
+const BundleReferenceFormat = "bundle:%s"
 
 type CreateSpec struct {
 	ID                    string
@@ -86,11 +90,17 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		return Bundle{}, fmt.Errorf("making bundle: %s", err)
 	}
 
-	if err := c.dependencyManager.Register(spec.ID, image.ChainIDs); err != nil {
+	bundleRefName := fmt.Sprintf(BundleReferenceFormat, spec.ID)
+	if err := c.dependencyManager.Register(bundleRefName, image.ChainIDs); err != nil {
 		if destroyErr := c.bundler.Destroy(logger, spec.ID); destroyErr != nil {
 			logger.Error("failed-to-destroy-bundle", destroyErr)
 		}
 
+		return Bundle{}, err
+	}
+
+	imageRefName := fmt.Sprintf(ImageReferenceFormat, strings.TrimPrefix(parsedURL.Path, "/"))
+	if err := c.dependencyManager.Register(imageRefName, image.ChainIDs); err != nil {
 		return Bundle{}, err
 	}
 

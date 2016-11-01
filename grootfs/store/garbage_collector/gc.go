@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -44,24 +45,24 @@ func NewGC(cacheDriver CacheDriver, volumeDriver VolumeDriver, bundler Bundler, 
 	}
 }
 
-func (g *GarbageCollector) Collect(logger lager.Logger) error {
+func (g *GarbageCollector) Collect(logger lager.Logger, keepImages []string) error {
 	logger = logger.Session("garbage-collector-collect")
 	logger.Info("start")
 	defer logger.Info("end")
 
-	if err := g.collectVolumes(logger); err != nil {
+	if err := g.collectVolumes(logger, keepImages); err != nil {
 		return err
 	}
 
 	return g.collectBlobs(logger)
 }
 
-func (g *GarbageCollector) collectVolumes(logger lager.Logger) error {
+func (g *GarbageCollector) collectVolumes(logger lager.Logger, keepImages []string) error {
 	logger = logger.Session("collect-volumes")
 	logger.Info("start")
 	defer logger.Info("end")
 
-	unusedVolumes, err := g.unusedVolumes(logger)
+	unusedVolumes, err := g.unusedVolumes(logger, keepImages)
 	if err != nil {
 		return fmt.Errorf("listing volumes: %s", err.Error())
 	}
@@ -86,7 +87,7 @@ func (g *GarbageCollector) collectBlobs(logger lager.Logger) error {
 	return g.cacheDriver.Clean(logger)
 }
 
-func (g *GarbageCollector) unusedVolumes(logger lager.Logger) (map[string]bool, error) {
+func (g *GarbageCollector) unusedVolumes(logger lager.Logger, keepImages []string) (map[string]bool, error) {
 	logger = logger.Session("unused-volumes")
 	logger.Info("start")
 	defer logger.Info("end")
@@ -107,15 +108,31 @@ func (g *GarbageCollector) unusedVolumes(logger lager.Logger) (map[string]bool, 
 	}
 
 	for _, bundleID := range bundleIDs {
-		usedVolumes, err := g.dependencyManager.Dependencies(bundleID)
-		if err != nil {
+		bundleRefName := fmt.Sprintf(groot.BundleReferenceFormat, bundleID)
+		if err := g.removeDependencies(orphanedVolumes, bundleRefName); err != nil {
 			return nil, err
 		}
+	}
 
-		for _, volumeID := range usedVolumes {
-			delete(orphanedVolumes, volumeID)
+	for _, keepImage := range keepImages {
+		imageRefName := fmt.Sprintf(groot.ImageReferenceFormat, keepImage)
+		if err := g.removeDependencies(orphanedVolumes, imageRefName); err != nil {
+			logger.Error("failed-to-find-white-listed-image-dependencies", err, lager.Data{"imageRefName": imageRefName})
 		}
 	}
 
 	return orphanedVolumes, nil
+}
+
+func (g *GarbageCollector) removeDependencies(volumesList map[string]bool, refId string) error {
+	usedVolumes, err := g.dependencyManager.Dependencies(refId)
+	if err != nil {
+		return err
+	}
+
+	for _, volumeID := range usedVolumes {
+		delete(volumesList, volumeID)
+	}
+
+	return nil
 }
