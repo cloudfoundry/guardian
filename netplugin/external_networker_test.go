@@ -342,17 +342,7 @@ var _ = Describe("ExternalNetworker", func() {
 
 		BeforeEach(func() {
 			configStore.Set(handle, gardener.ContainerIPKey, "169.254.1.2")
-			rule = garden.NetOutRule{
-				Protocol: garden.ProtocolTCP,
-				Networks: []garden.IPRange{{
-					Start: net.ParseIP("1.1.1.1"),
-					End:   net.ParseIP("2.2.2.2"),
-				}},
-				Ports: []garden.PortRange{{
-					Start: uint16(9000),
-					End:   uint16(9999),
-				}},
-			}
+			rule = createRule("1.1.1.1", "2.2.2.2", 9000, 9999)
 		})
 
 		It("executes the external plugin with the correct args and input", func() {
@@ -369,22 +359,7 @@ var _ = Describe("ExternalNetworker", func() {
 				"--handle", handle,
 			}))
 
-			pluginInput, err := ioutil.ReadAll(cmd.Stdin)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(pluginInput).To(MatchJSON(`{
-				"container_ip": "169.254.1.2",
-				"netout_rule": {
-					"protocol": 1,
-					"networks": [{
-						"start": "1.1.1.1",
-						"end":	"2.2.2.2"
-					}],
-					"ports": [{
-						"start": 9000,
-						"end": 9999
-					}]
-				}
-			}`))
+			checkPluginArgs(cmd, rule)
 		})
 
 		Context("when the handle cannot be found in the config store", func() {
@@ -410,8 +385,53 @@ var _ = Describe("ExternalNetworker", func() {
 	})
 
 	Describe("BulkNetOut", func() {
-		It("returns an error stating this is not implemented", func() {
-			Expect(plugin.BulkNetOut(logger, "handle", []garden.NetOutRule{})).To(MatchError("not implemented"))
+		It("calls NetOut for each rule", func() {
+			configStore.Set(handle, gardener.ContainerIPKey, "169.254.1.2")
+			rules := []garden.NetOutRule{
+				createRule("1.1.1.1", "2.2.2.2", 1111, 2222),
+				createRule("3.3.3.3", "4.4.4.4", 3333, 4444),
+			}
+			Expect(plugin.BulkNetOut(logger, handle, rules)).To(Succeed())
+
+			for i := 0; i < len(rules); i++ {
+				checkPluginArgs(fakeCommandRunner.ExecutedCommands()[i], rules[i])
+			}
+		})
+	})
+
+	Context("when the external plugin errors", func() {
+		var rule garden.NetOutRule
+
+		BeforeEach(func() {
+			pluginErr = errors.New("boom")
+			configStore.Set(handle, gardener.ContainerIPKey, "169.254.1.2")
+			rule = createRule("1.1.1.1", "2.2.2.2", 1111, 2222)
+		})
+
+		It("returns the error", func() {
+			Expect(plugin.BulkNetOut(logger, handle, []garden.NetOutRule{rule})).To(MatchError("external networker net-out: boom"))
 		})
 	})
 })
+
+func createRule(netStart, netEnd string, portStart, portEnd int) garden.NetOutRule {
+	return garden.NetOutRule{
+		Protocol: garden.ProtocolTCP,
+		Networks: []garden.IPRange{{
+			Start: net.ParseIP(netStart),
+			End:   net.ParseIP(netEnd),
+		}},
+		Ports: []garden.PortRange{{
+			Start: uint16(portStart),
+			End:   uint16(portEnd),
+		}},
+	}
+}
+
+func checkPluginArgs(cmd *exec.Cmd, rule garden.NetOutRule) {
+	pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+	Expect(err).NotTo(HaveOccurred())
+	r := &netplugin.NetOutInputs{}
+	json.Unmarshal(pluginInput, r)
+	Expect(r.NetOutRule).To(Equal(rule))
+}

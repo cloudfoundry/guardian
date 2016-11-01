@@ -488,6 +488,26 @@ var _ = Describe("Networking", func() {
 				Expect(info.ExternalIP).NotTo(BeEmpty())
 				Expect(info.ContainerIP).To(Equal("10.255.10.10"))
 			})
+
+			Context("when BulkNetOut is called", func() {
+				It("calls NetOut for each rule", func() {
+					rules := []garden.NetOutRule{
+						garden.NetOutRule{
+							Protocol: garden.ProtocolTCP,
+						},
+						garden.NetOutRule{
+							Protocol: garden.ProtocolUDP,
+						},
+					}
+					fmt.Println(rules)
+					container.BulkNetOut(rules)
+
+					Eventually(getContent(stdinFile)).Should(
+						ContainSubstring(`{"container_ip":"10.255.10.10","netout_rule":{"protocol":2}}`),
+					)
+				})
+			})
+
 		})
 	})
 

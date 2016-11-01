@@ -200,7 +200,12 @@ func (p *externalBinaryNetworker) NetOut(log lager.Logger, handle string, rule g
 }
 
 func (p *externalBinaryNetworker) BulkNetOut(log lager.Logger, handle string, rules []garden.NetOutRule) error {
-	return errors.New("not implemented")
+	for _, rule := range rules {
+		if err := p.NetOut(log, handle, rule); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p *externalBinaryNetworker) exec(log lager.Logger, action, handle string,
