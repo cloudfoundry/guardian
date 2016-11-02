@@ -93,6 +93,7 @@ func (p *ExternalImageManager) Destroy(log lager.Logger, handle, rootfs string) 
 	log.Debug("start")
 	defer log.Debug("end")
 
+	rootfs = strings.TrimRight(rootfs, "/rootfs")
 	cmd := exec.Command(
 		p.binPath,
 		"delete",
