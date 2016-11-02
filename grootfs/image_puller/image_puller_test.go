@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/url"
 
@@ -52,15 +53,11 @@ var _ = Describe("Image Puller", func() {
 				Config: expectedImgDesc,
 			}, nil)
 
-		fakeRemoteFetcher.StreamBlobStub = func(_ lager.Logger, imageURL *url.URL, source string) (image_puller.Stream, error) {
+		fakeRemoteFetcher.StreamBlobStub = func(_ lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error) {
 			buffer := bytes.NewBuffer([]byte{})
 			stream := gzip.NewWriter(buffer)
 			defer stream.Close()
-			return image_puller.Stream{
-				Reader: ioutil.NopCloser(buffer),
-				Size:   0,
-				Cancel: nil,
-			}, nil
+			return ioutil.NopCloser(buffer), 0, nil
 		}
 
 		fakeVolumeDriver = new(image_pullerfakes.FakeVolumeDriver)
@@ -144,18 +141,14 @@ var _ = Describe("Image Puller", func() {
 	})
 
 	It("unpacks the layers got from the fetcher", func() {
-		fakeRemoteFetcher.StreamBlobStub = func(_ lager.Logger, imageURL *url.URL, source string) (image_puller.Stream, error) {
+		fakeRemoteFetcher.StreamBlobStub = func(_ lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error) {
 			Expect(imageURL).To(Equal(remoteImageSrc))
 
 			buffer := bytes.NewBuffer([]byte{})
 			stream := gzip.NewWriter(buffer)
 			defer stream.Close()
 			stream.Write([]byte(fmt.Sprintf("layer-%s-contents", source)))
-			return image_puller.Stream{
-				Reader: ioutil.NopCloser(buffer),
-				Size:   1200,
-				Cancel: nil,
-			}, nil
+			return ioutil.NopCloser(buffer), 1200, nil
 		}
 
 		_, err := imagePuller.Pull(logger, groot.ImageSpec{
@@ -389,16 +382,8 @@ var _ = Describe("Image Puller", func() {
 	})
 
 	Context("when creating a volume fails", func() {
-		var cancelCalled bool
-
 		BeforeEach(func() {
 			fakeVolumeDriver.CreateReturns("", errors.New("failed to create volume"))
-
-			cancelCalled = false
-			cancelFunc := func() {
-				cancelCalled = true
-			}
-			fakeRemoteFetcher.StreamBlobReturns(image_puller.Stream{Cancel: cancelFunc}, nil)
 		})
 
 		It("returns an error", func() {
@@ -407,17 +392,11 @@ var _ = Describe("Image Puller", func() {
 			})
 			Expect(err).To(MatchError(ContainSubstring("failed to create volume")))
 		})
-
-		It("calls the fetcher cancel function", func() {
-			_, err := imagePuller.Pull(logger, groot.ImageSpec{ImageSrc: remoteImageSrc})
-			Expect(err).To(HaveOccurred())
-			Eventually(func() bool { return cancelCalled }).Should(BeTrue())
-		})
 	})
 
 	Context("when streaming a blob fails", func() {
 		BeforeEach(func() {
-			fakeRemoteFetcher.StreamBlobReturns(image_puller.Stream{}, errors.New("failed to stream blob"))
+			fakeRemoteFetcher.StreamBlobReturns(nil, 0, errors.New("failed to stream blob"))
 		})
 
 		It("returns an error", func() {
@@ -427,13 +406,7 @@ var _ = Describe("Image Puller", func() {
 	})
 
 	Context("when unpacking a blob fails", func() {
-		var cancelCalled bool
 		BeforeEach(func() {
-			cancelCalled = false
-			cancelFunc := func() {
-				cancelCalled = true
-			}
-			fakeRemoteFetcher.StreamBlobReturns(image_puller.Stream{Cancel: cancelFunc}, nil)
 			count := 0
 			fakeUnpacker.UnpackStub = func(_ lager.Logger, _ image_puller.UnpackSpec) error {
 				count++
@@ -457,12 +430,6 @@ var _ = Describe("Image Puller", func() {
 			Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
 			_, path := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
 			Expect(path).To(Equal("chain-333"))
-		})
-
-		It("calls the fetcher cancel function", func() {
-			_, err := imagePuller.Pull(logger, groot.ImageSpec{ImageSrc: remoteImageSrc})
-			Expect(err).To(HaveOccurred())
-			Eventually(func() bool { return cancelCalled }).Should(BeTrue())
 		})
 	})
 })

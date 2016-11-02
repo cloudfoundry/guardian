@@ -121,7 +121,7 @@ var _ = Describe("Docker source", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 
-			It("wraps the containers/image with an useful error", func() {
+			It("wraps the containers/image with a useful error", func() {
 				_, err := dockerSrc.Manifest(logger, imageURL)
 				Expect(err.Error()).To(MatchRegexp("^fetching image reference"))
 			})

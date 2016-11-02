@@ -47,10 +47,10 @@ var _ = Describe("Local Fetcher", func() {
 
 	Describe("StreamBlob", func() {
 		It("returns the contents of the source directory as a Tar stream", func() {
-			stream, err := fetcher.StreamBlob(logger, imageURL, "")
+			stream, _, err := fetcher.StreamBlob(logger, imageURL, "")
 			Expect(err).ToNot(HaveOccurred())
 
-			entries := streamTar(tar.NewReader(stream.Reader))
+			entries := streamTar(tar.NewReader(stream))
 			Expect(entries).To(HaveLen(2))
 			Expect(entries[1].header.Name).To(Equal("./a_file"))
 			Expect(entries[1].header.Mode).To(Equal(int64(0600)))
@@ -58,7 +58,7 @@ var _ = Describe("Local Fetcher", func() {
 		})
 
 		It("logs the tar command", func() {
-			_, err := fetcher.StreamBlob(logger, imageURL, "")
+			_, _, err := fetcher.StreamBlob(logger, imageURL, "")
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(logger).To(ContainSequence(
@@ -73,7 +73,7 @@ var _ = Describe("Local Fetcher", func() {
 			It("returns an error", func() {
 				nonExistentImageURL, _ := url.Parse("/nothing/here")
 
-				_, err := fetcher.StreamBlob(logger, nonExistentImageURL, "")
+				_, _, err := fetcher.StreamBlob(logger, nonExistentImageURL, "")
 				Expect(err).To(MatchError(ContainSubstring("local image not found in `/nothing/here`")))
 			})
 		})
@@ -82,7 +82,7 @@ var _ = Describe("Local Fetcher", func() {
 			It("returns an error", func() {
 				local.TarBin = "non-existent-tar"
 
-				_, err := fetcher.StreamBlob(logger, imageURL, "")
+				_, _, err := fetcher.StreamBlob(logger, imageURL, "")
 				Expect(err).To(MatchError(ContainSubstring("reading local image")))
 			})
 		})

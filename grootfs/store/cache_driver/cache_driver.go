@@ -11,7 +11,6 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/fetcher"
-	"code.cloudfoundry.org/grootfs/image_puller"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 )
@@ -26,16 +25,16 @@ func NewCacheDriver(storePath string) *CacheDriver {
 	}
 }
 
-func (c *CacheDriver) StreamBlob(logger lager.Logger, id string,
+func (c *CacheDriver) FetchBlob(logger lager.Logger, id string,
 	blobFunc fetcher.RemoteBlobFunc,
-) (image_puller.Stream, error) {
+) ([]byte, int64, error) {
 	logger = logger.Session("getting-blob-from-cache", lager.Data{"blobID": id})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	hasBlob, err := c.hasBlob(id)
 	if err != nil {
-		return image_puller.Stream{}, fmt.Errorf("checking if the blob exists: %s", err)
+		return nil, 0, fmt.Errorf("checking if the blob exists: %s", err)
 	}
 
 	var (
@@ -49,63 +48,45 @@ func (c *CacheDriver) StreamBlob(logger lager.Logger, id string,
 		}
 	}()
 
-	cancelFunc := func() {
-		logger.Debug("context-got-cancelled")
-		c.cleanupCorrupted(logger, id)
-	}
-
 	if hasBlob {
 		logger.Debug("cache-hit")
+
 		reader, err = os.Open(c.blobPath(id))
 		if err != nil {
-			return image_puller.Stream{}, fmt.Errorf("accessing the cached blob: %s", err)
+			return nil, 0, fmt.Errorf("accessing the cached blob: %s", err)
 		}
 		stat, err := os.Stat(c.blobPath(id))
 		if err != nil {
-			return image_puller.Stream{}, fmt.Errorf("acessing cached blob stat: %s", err)
+			return nil, 0, fmt.Errorf("acessing cached blob stat: %s", err)
 		}
-		return image_puller.Stream{
-			Reader: reader,
-			Size:   stat.Size(),
-			Cancel: cancelFunc,
-		}, nil
+
+		blobContents, err := ioutil.ReadAll(reader)
+		if err != nil {
+			return nil, 0, fmt.Errorf("reading cached blob: %s", err)
+		}
+
+		return blobContents, stat.Size(), nil
 	}
 
 	logger.Debug("cache-miss")
 
 	blobContent, size, err := blobFunc(logger)
 	if err != nil {
-		return image_puller.Stream{}, err
+		return nil, 0, err
 	}
 
 	blobFile, err = os.OpenFile(c.blobPath(id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return image_puller.Stream{}, fmt.Errorf("creating cached blob file: %s", err)
+		return nil, 0, fmt.Errorf("creating cached blob file: %s", err)
 	}
 
-	var rEnd, wEnd *os.File
-	rEnd, wEnd, err = os.Pipe()
+	_, err = io.Copy(blobFile, bytes.NewReader(blobContent))
 	if err != nil {
-		cancelFunc()
-		return image_puller.Stream{}, fmt.Errorf("creating pipe: %s", err)
+		logger.Error("failed-copying-blob-to-cache", err)
+		c.cleanupCorrupted(logger, id)
 	}
 
-	go func() {
-		defer wEnd.Close()
-		defer blobFile.Close()
-
-		_, err := io.Copy(io.MultiWriter(wEnd, blobFile), bytes.NewReader(blobContent))
-		if err != nil {
-			logger.Error("failed-copying-blob-to-cache", err)
-			c.cleanupCorrupted(logger, id)
-		}
-	}()
-
-	return image_puller.Stream{
-		Reader: rEnd,
-		Size:   size,
-		Cancel: cancelFunc,
-	}, nil
+	return blobContent, size, nil
 }
 
 func (c *CacheDriver) cleanupCorrupted(logger lager.Logger, id string) {

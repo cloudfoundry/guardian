@@ -135,7 +135,7 @@ var _ = Describe("Clean", func() {
 				It("removes the cached blobs", func() {
 					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
 					Expect(err).NotTo(HaveOccurred())
-					Expect(preContents).To(HaveLen(5))
+					Expect(preContents).To(HaveLen(2))
 
 					_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
 					Expect(err).NotTo(HaveOccurred())

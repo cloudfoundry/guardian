@@ -5,67 +5,68 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/fetcher"
-	"code.cloudfoundry.org/grootfs/image_puller"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeCacheDriver struct {
-	StreamBlobStub        func(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) (image_puller.Stream, error)
-	streamBlobMutex       sync.RWMutex
-	streamBlobArgsForCall []struct {
+	FetchBlobStub        func(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) ([]byte, int64, error)
+	fetchBlobMutex       sync.RWMutex
+	fetchBlobArgsForCall []struct {
 		logger         lager.Logger
 		id             string
 		remoteBlobFunc fetcher.RemoteBlobFunc
 	}
-	streamBlobReturns struct {
-		result1 image_puller.Stream
-		result2 error
+	fetchBlobReturns struct {
+		result1 []byte
+		result2 int64
+		result3 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCacheDriver) StreamBlob(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) (image_puller.Stream, error) {
-	fake.streamBlobMutex.Lock()
-	fake.streamBlobArgsForCall = append(fake.streamBlobArgsForCall, struct {
+func (fake *FakeCacheDriver) FetchBlob(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) ([]byte, int64, error) {
+	fake.fetchBlobMutex.Lock()
+	fake.fetchBlobArgsForCall = append(fake.fetchBlobArgsForCall, struct {
 		logger         lager.Logger
 		id             string
 		remoteBlobFunc fetcher.RemoteBlobFunc
 	}{logger, id, remoteBlobFunc})
-	fake.recordInvocation("StreamBlob", []interface{}{logger, id, remoteBlobFunc})
-	fake.streamBlobMutex.Unlock()
-	if fake.StreamBlobStub != nil {
-		return fake.StreamBlobStub(logger, id, remoteBlobFunc)
+	fake.recordInvocation("FetchBlob", []interface{}{logger, id, remoteBlobFunc})
+	fake.fetchBlobMutex.Unlock()
+	if fake.FetchBlobStub != nil {
+		return fake.FetchBlobStub(logger, id, remoteBlobFunc)
 	} else {
-		return fake.streamBlobReturns.result1, fake.streamBlobReturns.result2
+		return fake.fetchBlobReturns.result1, fake.fetchBlobReturns.result2, fake.fetchBlobReturns.result3
 	}
 }
 
-func (fake *FakeCacheDriver) StreamBlobCallCount() int {
-	fake.streamBlobMutex.RLock()
-	defer fake.streamBlobMutex.RUnlock()
-	return len(fake.streamBlobArgsForCall)
+func (fake *FakeCacheDriver) FetchBlobCallCount() int {
+	fake.fetchBlobMutex.RLock()
+	defer fake.fetchBlobMutex.RUnlock()
+	return len(fake.fetchBlobArgsForCall)
 }
 
-func (fake *FakeCacheDriver) StreamBlobArgsForCall(i int) (lager.Logger, string, fetcher.RemoteBlobFunc) {
-	fake.streamBlobMutex.RLock()
-	defer fake.streamBlobMutex.RUnlock()
-	return fake.streamBlobArgsForCall[i].logger, fake.streamBlobArgsForCall[i].id, fake.streamBlobArgsForCall[i].remoteBlobFunc
+func (fake *FakeCacheDriver) FetchBlobArgsForCall(i int) (lager.Logger, string, fetcher.RemoteBlobFunc) {
+	fake.fetchBlobMutex.RLock()
+	defer fake.fetchBlobMutex.RUnlock()
+	return fake.fetchBlobArgsForCall[i].logger, fake.fetchBlobArgsForCall[i].id, fake.fetchBlobArgsForCall[i].remoteBlobFunc
 }
 
-func (fake *FakeCacheDriver) StreamBlobReturns(result1 image_puller.Stream, result2 error) {
-	fake.StreamBlobStub = nil
-	fake.streamBlobReturns = struct {
-		result1 image_puller.Stream
-		result2 error
-	}{result1, result2}
+func (fake *FakeCacheDriver) FetchBlobReturns(result1 []byte, result2 int64, result3 error) {
+	fake.FetchBlobStub = nil
+	fake.fetchBlobReturns = struct {
+		result1 []byte
+		result2 int64
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *FakeCacheDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.streamBlobMutex.RLock()
-	defer fake.streamBlobMutex.RUnlock()
+	fake.fetchBlobMutex.RLock()
+	defer fake.fetchBlobMutex.RUnlock()
 	return fake.invocations
 }
 
