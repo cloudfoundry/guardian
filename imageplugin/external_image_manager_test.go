@@ -239,7 +239,7 @@ var _ = Describe("ExternalImageManager", func() {
 		var err error
 
 		JustBeforeEach(func() {
-			err = externalImageManager.Destroy(logger, "hello", "rootfs")
+			err = externalImageManager.Destroy(logger, "hello", "/store/0/bundles/123/rootfs")
 		})
 
 		It("uses the correct external-image-manager binary", func() {
@@ -259,12 +259,12 @@ var _ = Describe("ExternalImageManager", func() {
 				Expect(imageManagerCmd.Args[1]).To(Equal("delete"))
 			})
 
-			It("passes the correct rootfs to delete to external-image-manager", func() {
+			It("passes the correct bundle path to delete to/ the external-image-manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-1]).To(Equal("rootfs"))
+				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-1]).To(Equal("/store/0/bundles/123"))
 			})
 		})
 
