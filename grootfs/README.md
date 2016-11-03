@@ -81,18 +81,34 @@ installed (uidmap package on ubuntu)
 
 ### Creating a bundle
 
+You can create a bundle based on a remote docker image:
+
 ```
 grootfs --store /mnt/btrfs create docker:///ubuntu:latest my-image-id
 ```
 
-It also supports local folders as an image source:
+Or from local folders as an image source:
 
 ```
 grootfs --store /mnt/btrfs create /my-folder my-image-id
 ```
 
-This will create a `/mnt/btrfs/bundles/my-image-id/rootfs` directory with the
-contents of the image provided.
+
+#### Output
+
+The output of this command is a bundle path (`/mnt/btrfs/bundles/<uid>/my-image-id`) which has the following structure:
+
+* The `<uid>` is the effective user id running the command.
+
+```
+<Returned directory>
+|____ rootfs/
+|____ image.json
+```
+
+* The `rootfs` folder is where the root filesystem lives.
+* The `image.json` file follows the [OCI image description](https://github.com/opencontainers/image-spec/blob/master/serialization.md#image-json-description) schema.
+
 
 #### User/Group ID Mapping
 
@@ -139,11 +155,22 @@ grootfs --store /mnt/btrfs create \
 
 ### Deleting a bundle
 
-You can destroy a created bundle/rootfs by calling grootfs with the image-id:
+You can destroy a created bundle by calling `grootfs delete` with the image-id:
 
 ```
 grootfs --store /mnt/btrfs delete my-image-id
 ```
+
+Or the bundle path:
+
+```
+grootfs --store /mnt/btrfs delete /mnt/btrfs/bundles/<uid>/my-image-id
+```
+
+**Caveats:**
+
+The store is based on the effective user running the command. If the user tries
+to delete a bundle that does not belong to her/him the command fails.
 
 ### Logging
 
