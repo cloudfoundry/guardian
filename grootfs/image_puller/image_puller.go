@@ -185,7 +185,7 @@ func (p *ImagePuller) buildLayer(logger lager.Logger, index int, layersDigest []
 	}
 
 	if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
-		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
+		if errD := p.volumeDriver.DestroyVolume(logger, wrapVolumeID(spec, digest.ChainID)); errD != nil {
 			logger.Error("volume-cleanup-failed", errD, lager.Data{
 				"blobID":        digest.BlobID,
 				"chainID":       digest.ChainID,

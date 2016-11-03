@@ -34,13 +34,15 @@ var _ = Describe("Btrfs", func() {
 	)
 
 	BeforeEach(func() {
+		var err error
 		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
-		storePath = filepath.Join(btrfsMountPath, storeName)
+		Expect(os.MkdirAll(filepath.Join(btrfsMountPath, storeName), 0755)).To(Succeed())
+		storePath, err = ioutil.TempDir(filepath.Join(btrfsMountPath, storeName), "")
+		Expect(err).NotTo(HaveOccurred())
 
 		volumesPath = filepath.Join(storePath, store.VOLUMES_DIR_NAME)
 		Expect(os.MkdirAll(volumesPath, 0755)).To(Succeed())
 
-		var err error
 		draxBinPath, err = gexec.Build("code.cloudfoundry.org/grootfs/store/volume_driver/drax")
 		Expect(err).NotTo(HaveOccurred())
 		testhelpers.SuidDrax(draxBinPath)

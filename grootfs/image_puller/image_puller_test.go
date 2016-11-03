@@ -431,5 +431,38 @@ var _ = Describe("Image Puller", func() {
 			_, path := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
 			Expect(path).To(Equal("chain-333"))
 		})
+
+		Context("when UID and GID mappings are provided", func() {
+			var spec groot.ImageSpec
+
+			BeforeEach(func() {
+				spec = groot.ImageSpec{
+					ImageSrc: remoteImageSrc,
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{
+							HostID:      1,
+							NamespaceID: 1,
+							Size:        1,
+						},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{
+							HostID:      100,
+							NamespaceID: 100,
+							Size:        100,
+						},
+					},
+				}
+			})
+
+			It("deletes the namespaced volume", func() {
+				_, err := imagePuller.Pull(logger, spec)
+				Expect(err).To(HaveOccurred())
+
+				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
+				_, path := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
+				Expect(path).To(Equal("chain-333-namespaced"))
+			})
+		})
 	})
 })
