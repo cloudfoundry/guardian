@@ -137,7 +137,7 @@ var _ = Describe("Creator", func() {
 
 			Expect(fakeDependencyManager.RegisterCallCount()).To(Equal(2))
 			imageName, chainIDs := fakeDependencyManager.RegisterArgsForCall(1)
-			Expect(imageName).To(Equal("image:ubuntu"))
+			Expect(imageName).To(Equal("image:docker:///ubuntu"))
 			Expect(chainIDs).To(Equal([]string{"sha256:vol-a", "sha256:vol-b"}))
 		})
 
@@ -177,7 +177,7 @@ var _ = Describe("Creator", func() {
 
 				Expect(fakeDependencyManager.RegisterCallCount()).To(Equal(2))
 				imageName, chainIDs := fakeDependencyManager.RegisterArgsForCall(1)
-				Expect(imageName).To(Equal("image:ubuntu:latest"))
+				Expect(imageName).To(Equal("image:docker:///ubuntu:latest"))
 				Expect(chainIDs).To(Equal([]string{"sha256:vol-a", "sha256:vol-b"}))
 			})
 		})

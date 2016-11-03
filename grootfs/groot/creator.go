@@ -3,7 +3,6 @@ package groot
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
@@ -99,7 +98,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		return Bundle{}, err
 	}
 
-	imageRefName := fmt.Sprintf(ImageReferenceFormat, strings.TrimPrefix(parsedURL.Path, "/"))
+	imageRefName := fmt.Sprintf(ImageReferenceFormat, spec.Image)
 	if err := c.dependencyManager.Register(imageRefName, image.ChainIDs); err != nil {
 		return Bundle{}, err
 	}

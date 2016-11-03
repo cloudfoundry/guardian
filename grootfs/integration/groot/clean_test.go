@@ -2,6 +2,7 @@ package groot_test
 
 import (
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -64,19 +65,45 @@ var _ = Describe("Clean", func() {
 			}
 		})
 
-		Context("when a list of ignored images is given", func() {
-			It("doesn't delete their layers", func() {
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(3))
+		Context("when ignored images flag is given", func() {
+			var preContents []os.FileInfo
 
-				_, err = Runner.Clean(0, []string{"busybox"})
+			JustBeforeEach(func() {
+				var err error
+				preContents, err = ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("doesn't delete their layers", func() {
+				_, err := Runner.Clean(0, []string{"docker:///busybox"})
 				Expect(err).NotTo(HaveOccurred())
 
 				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(afterContents).To(Equal(preContents))
+			})
+
+			Context("when more than one image is to be ignored", func() {
+				BeforeEach(func() {
+					_, err := Runner.Create(groot.CreateSpec{
+						ID:    "my-bundle-3",
+						Image: "docker:///cfgarden/empty:v0.1.0",
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(Runner.Delete("my-bundle-3")).To(Succeed())
+				})
+
+				It("doesn't delete their layers", func() {
+					_, err := Runner.Clean(0, []string{"docker:///busybox", "docker:///cfgarden/empty:v0.1.0"})
+					Expect(err).NotTo(HaveOccurred())
+
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(afterContents).To(Equal(preContents))
+				})
 			})
 		})
 

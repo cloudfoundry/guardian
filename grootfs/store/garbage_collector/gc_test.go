@@ -46,9 +46,10 @@ var _ = Describe("Gc", func() {
 
 			fakeDependencyManager.DependenciesStub = func(id string) ([]string, error) {
 				return map[string][]string{
-					"bundle:idA":   []string{"sha256:vol-a", "sha256:vol-b"},
-					"bundle:idB":   []string{"sha256:vol-a", "sha256:vol-c"},
-					"image:ubuntu": []string{"sha256:vol-d"},
+					"bundle:idA":                    []string{"sha256:vol-a", "sha256:vol-b"},
+					"bundle:idB":                    []string{"sha256:vol-a", "sha256:vol-c"},
+					"image:docker:///ubuntu":        []string{"sha256:vol-d"},
+					"image:docker://private/ubuntu": []string{"sha256:vol-e"},
 				}[id], nil
 			}
 
@@ -76,11 +77,21 @@ var _ = Describe("Gc", func() {
 
 		Context("when a list of images to keep is provided", func() {
 			It("does not collect the unused volumes for those listed", func() {
-				Expect(garbageCollector.Collect(logger, []string{"ubuntu"})).To(Succeed())
+				Expect(garbageCollector.Collect(logger, []string{"docker:///ubuntu"})).To(Succeed())
 
 				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
 				_, volID := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
 				Expect(volID).To(Equal("sha256:vol-e"))
+			})
+
+			Context("when the image to keep is from a private registry", func() {
+				It("does not collect the unused volumes for those listed", func() {
+					Expect(garbageCollector.Collect(logger, []string{"docker://private/ubuntu"})).To(Succeed())
+
+					Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
+					_, volID := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
+					Expect(volID).To(Equal("sha256:vol-d"))
+				})
 			})
 		})
 
