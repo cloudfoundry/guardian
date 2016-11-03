@@ -3,6 +3,7 @@
 all:
 		GOOS=linux go build -o newuidmap ./cmd/newuidmap
 		GOOS=linux go build -o newgidmap ./cmd/newgidmap
+		GOOS=linux go build -o maximus ./cmd/maximus
 
 ###### Help ###################################################################
 

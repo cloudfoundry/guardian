@@ -18,6 +18,7 @@ import (
 var (
 	NewuidmapBin        string
 	NewgidmapBin        string
+	MaximusBin          string
 	NamespaceWrapperBin string
 
 	RootID    = uint32(0)
@@ -43,6 +44,10 @@ func TestIntegration(t *testing.T) {
 		fixPermission(path.Dir(newgidmapBin))
 		suid(newgidmapBin)
 
+		maximusBin, err := gexec.Build("code.cloudfoundry.org/idmapper/cmd/maximus")
+		Expect(err).NotTo(HaveOccurred())
+		bins["maximusBin"] = maximusBin
+
 		namespaceWrapperBin, err := gexec.Build("code.cloudfoundry.org/idmapper/integration/wrapper")
 		Expect(err).NotTo(HaveOccurred())
 		bins["namespaceWrapperBin"] = namespaceWrapperBin
@@ -57,6 +62,7 @@ func TestIntegration(t *testing.T) {
 
 		NewuidmapBin = bins["newuidmapBin"]
 		NewgidmapBin = bins["newgidmapBin"]
+		MaximusBin = bins["maximusBin"]
 		NamespaceWrapperBin = bins["namespaceWrapperBin"]
 
 		MaximusID = uint32(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID()))
