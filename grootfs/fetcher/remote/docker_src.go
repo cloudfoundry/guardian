@@ -30,24 +30,16 @@ func NewDockerSource(trustedRegistries []string) *DockerSource {
 	}
 }
 
-type ImageNotFoundErr struct {
-	error
-}
-
 func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifest, error) {
 	logger = logger.Session("fetching-image-manifest", lager.Data{"imageURL": imageURL})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	img, err := s.preSteamedImage(logger, imageURL)
+	img, err := s.image(logger, imageURL)
 	if err != nil {
 		logger.Error("fetching-image-reference-failed", err)
 
-		if strings.Contains(err.Error(), "unauthorized: authentication required") {
-			return Manifest{}, errorspkg.Wrap(ImageNotFoundErr{err}, "fetching image reference")
-		}
-
-		return Manifest{}, errorspkg.Wrap(err, "fetching image reference")
+		return Manifest{}, errorspkg.Wrap(err, "fetching image reference dfksjghdv")
 	}
 
 	contents, mimeType, err := img.Manifest()
@@ -115,7 +107,7 @@ func (s *DockerSource) Blob(logger lager.Logger, imageURL *url.URL, digest strin
 	logger.Info("start")
 	defer logger.Info("end")
 
-	imgSrc, err := s.preSteamedImageSource(logger, imageURL)
+	imgSrc, err := s.imageSource(logger, imageURL)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -213,7 +205,7 @@ func (s *DockerSource) parseSchemaV2Manifest(logger lager.Logger, rawManifest []
 }
 
 func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, imageURL *url.URL, configDigest string) (specsv1.Image, error) {
-	imgSrc, err := s.preSteamedImageSource(logger, imageURL)
+	imgSrc, err := s.imageSource(logger, imageURL)
 	if err != nil {
 		return specsv1.Image{}, err
 	}
@@ -258,7 +250,7 @@ func (s *DockerSource) parseSchemaV1Config(logger lager.Logger, manifest Manifes
 	return config, nil
 }
 
-func (s *DockerSource) preSteamedReference(logger lager.Logger, imageURL *url.URL) (types.ImageReference, error) {
+func (s *DockerSource) reference(logger lager.Logger, imageURL *url.URL) (types.ImageReference, error) {
 	refString := "/"
 	if imageURL.Host != "" {
 		refString += "/" + imageURL.Host
@@ -274,8 +266,8 @@ func (s *DockerSource) preSteamedReference(logger lager.Logger, imageURL *url.UR
 	return ref, nil
 }
 
-func (s *DockerSource) preSteamedImage(logger lager.Logger, imageURL *url.URL) (types.Image, error) {
-	ref, err := s.preSteamedReference(logger, imageURL)
+func (s *DockerSource) image(logger lager.Logger, imageURL *url.URL) (types.Image, error) {
+	ref, err := s.reference(logger, imageURL)
 	if err != nil {
 		return nil, err
 	}
@@ -290,8 +282,8 @@ func (s *DockerSource) preSteamedImage(logger lager.Logger, imageURL *url.URL) (
 	return img, nil
 }
 
-func (s *DockerSource) preSteamedImageSource(logger lager.Logger, imageURL *url.URL) (types.ImageSource, error) {
-	ref, err := s.preSteamedReference(logger, imageURL)
+func (s *DockerSource) imageSource(logger lager.Logger, imageURL *url.URL) (types.ImageSource, error) {
+	ref, err := s.reference(logger, imageURL)
 	if err != nil {
 		return nil, err
 	}

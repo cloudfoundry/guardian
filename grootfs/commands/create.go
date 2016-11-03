@@ -22,6 +22,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
+	"github.com/docker/distribution/registry/api/errcode"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -144,14 +145,33 @@ func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {
 	return mappings, nil
 }
 
+func containsDockerError(errorsList errcode.Errors, errCode errcode.ErrorCode) bool {
+	for _, err := range errorsList {
+		if e, ok := err.(errcode.Error); ok && e.ErrorCode() == errCode {
+			return true
+		}
+	}
+
+	return false
+}
+
+func tryHumanizeDockerErrorsList(err errcode.Errors) string {
+	if containsDockerError(err, errcode.ErrorCodeUnauthorized) {
+		return "Image does not exist or you do not have permissions to see it."
+	}
+
+	return err.Error()
+}
+
 func tryHumanize(err error) string {
 	switch e := errorspkg.Cause(err).(type) {
 	case *url.Error:
 		if _, ok := e.Err.(x509.UnknownAuthorityError); ok {
 			return "This registry is insecure. To pull images from this registry, please use the --insecure-registry option."
 		}
-	case remote.ImageNotFoundErr:
-		return "Image does not exist or you do not have permissions to see it."
+
+	case errcode.Errors:
+		return tryHumanizeDockerErrorsList(e)
 	}
 
 	return err.Error()
