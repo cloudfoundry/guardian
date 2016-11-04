@@ -51,7 +51,7 @@ install_groot() {
 
   source /root/.go_env
   # Install Management Dependendy tool
-  curl -s https://glide.sh/get | sh
+  go get github.com/Masterminds/glide
 
   # Install awesome grootsay, I gotta say
   go get github.com/fouralarmfire/grootsay
