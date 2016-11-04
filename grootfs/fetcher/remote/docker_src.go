@@ -39,7 +39,7 @@ func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifes
 	if err != nil {
 		logger.Error("fetching-image-reference-failed", err)
 
-		return Manifest{}, errorspkg.Wrap(err, "fetching image reference dfksjghdv")
+		return Manifest{}, errorspkg.Wrap(err, "fetching image reference")
 	}
 
 	contents, mimeType, err := img.Manifest()
