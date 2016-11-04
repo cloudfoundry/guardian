@@ -249,3 +249,11 @@ to clean up a store that does not belong to her/him the command fails.
 * [GrootFS CI](https://grootfs.ci.cf-app.com)
 * [Cloud Foundry Slack - Invitation](https://slack.cloudfoundry.org/)
 * [Cloud Foundry Slack](https://cloudfoundry.slack.com/)
+
+## Known Issues
+
+* GrootFS cannot use `docker:///centos` when run as a non-root user without
+  UID/GID mappings. CentOS sets the `/root` permissions to 0550 (i.e.:
+  `r-xr-x---`) and therefore, when GrootFS runs as a non-root user it cannot
+  write files into the rootfs `/root`. You can work around this by either
+  running as root or [using a UID/GID mapping](#usergroup-id-mapping).
