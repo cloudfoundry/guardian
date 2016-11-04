@@ -313,180 +313,196 @@ var _ = Describe("Rootfs container create parameter", func() {
 			privileged bool
 		)
 
-		BeforeEach(func() {
-			args = append(args, "--image-plugin", testImagePluginBin)
-			storePath = "/tmp/unpriv-store-path" // we can't use ioutil.TempDir as the fake image plugin needs to know the directory
-			privileged = false
-		})
-
 		AfterEach(func() {
 			Expect(os.RemoveAll(imagePath)).To(Succeed())
 		})
 
-		Context("and a non-quotaed container is created and destroyed", func() {
-			JustBeforeEach(func() {
-				imageID = fmt.Sprintf("non-quotaed-container-%d", GinkgoParallelNode())
-				imagePath = filepath.Join(storePath, imageID)
-				//ioutil.WriteFile("/tmp"+imageID, []byte(imagePath), 0777)
-
-				c, err := client.Create(garden.ContainerSpec{
-					RootFSPath: "docker:///cfgarden/empty#v0.1.0",
-					Handle:     imageID,
-					Privileged: privileged,
-				})
-				Expect(err).ToNot(HaveOccurred())
-				client.Destroy(c.Handle())
+		Context("and the container is privileged", func() {
+			BeforeEach(func() {
+				args = append(args, "--image-plugin", testImagePluginBin)
+				storePath = "/tmp/store-path" // we can't use ioutil.TempDir as the fake image plugin needs to know the directory
+				privileged = true
 			})
 
-			Context("when the container is privileged", func() {
-				BeforeEach(func() {
-					storePath = "/tmp/store-path" // we can't use ioutil.TempDir as the fake image plugin needs to know the directory
-					privileged = true
+			Context("and a non-quoter ed container is created and destroyed", func() {
+				JustBeforeEach(func() {
+					imageID = fmt.Sprintf("non-quotaed-container-%d", GinkgoParallelNode())
+					imagePath = filepath.Join(storePath, imageID)
+
+					c, err := client.Create(garden.ContainerSpec{
+						RootFSPath: "docker:///cfgarden/empty#v0.1.0",
+						Handle:     imageID,
+						Privileged: privileged,
+					})
+					Expect(err).ToNot(HaveOccurred())
+					client.Destroy(c.Handle())
 				})
 
-				It("executes the plugin as the host root user", func() {
+				Context("when the container is privileged", func() {
+
+					It("executes the plugin as the host root user", func() {
+						whoamiOutput, err := ioutil.ReadFile(filepath.Join(imagePath, "create-whoami"))
+						Expect(err).ToNot(HaveOccurred())
+						Expect(string(whoamiOutput)).To(ContainSubstring("0 - 0"))
+					})
+
+					It("does not pass any mappings to the plugin", func() {
+						args, err := ioutil.ReadFile(filepath.Join(imagePath, "create-args"))
+						Expect(err).ToNot(HaveOccurred())
+						Expect(string(args)).NotTo(ContainSubstring("--uid-mapping"))
+						Expect(string(args)).NotTo(ContainSubstring("--gid-mapping"))
+					})
+				})
+			})
+		})
+
+		Context("when the container is unprivileged", func() {
+			BeforeEach(func() {
+				args = append(args, "--image-plugin", testImagePluginBin)
+				storePath = "/tmp/unpriv-store-path" // we can't use ioutil.TempDir as the fake image plugin needs to know the directory
+				privileged = false
+			})
+
+			Context("and a non-quotaed container is created and destroyed", func() {
+				JustBeforeEach(func() {
+					imageID = fmt.Sprintf("non-quotaed-container-%d", GinkgoParallelNode())
+					imagePath = filepath.Join(storePath, imageID)
+
+					c, err := client.Create(garden.ContainerSpec{
+						RootFSPath: "docker:///cfgarden/empty#v0.1.0",
+						Handle:     imageID,
+						Privileged: privileged,
+					})
+					Expect(err).ToNot(HaveOccurred())
+					client.Destroy(c.Handle())
+				})
+
+				It("executes plugin create with the correct args", func() {
+					maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
+					args, err := ioutil.ReadFile(filepath.Join(imagePath, "create-args"))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(args)).To(Equal(
+						fmt.Sprintf("[%s create %s %s %s %s %s %s %s %s %s %s]",
+							testImagePluginBin,
+							"--uid-mapping",
+							fmt.Sprintf("0:%d:1", maxId),
+							"--gid-mapping",
+							fmt.Sprintf("0:%d:1", maxId),
+							"--uid-mapping",
+							fmt.Sprintf("1:1:%d", maxId-1),
+							"--gid-mapping",
+							fmt.Sprintf("1:1:%d", maxId-1),
+							"docker:///cfgarden/empty#v0.1.0",
+							fmt.Sprintf("non-quotaed-container-%d", GinkgoParallelNode()),
+						),
+					))
+				})
+
+				It("executes plugin create as the container user", func() {
+					maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
 					whoamiOutput, err := ioutil.ReadFile(filepath.Join(imagePath, "create-whoami"))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(whoamiOutput)).To(ContainSubstring(fmt.Sprintf("%d - %d", maxId, maxId)))
+				})
+
+				It("executes plugin delete with the correct args", func() {
+					args, err := ioutil.ReadFile(filepath.Join(imagePath, "delete-args"))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(args)).To(Equal(
+						fmt.Sprintf("[%s delete %s]",
+							testImagePluginBin,
+							filepath.Join(storePath, imageID),
+						),
+					))
+				})
+
+				It("executes plugin delete as the host root user", func() {
+					whoamiOutput, err := ioutil.ReadFile(filepath.Join(imagePath, "delete-whoami"))
 					Expect(err).ToNot(HaveOccurred())
 					Expect(string(whoamiOutput)).To(ContainSubstring("0 - 0"))
 				})
 
-				It("does not pass any mappings to the plugin", func() {
+			})
+
+			Context("and a quotaed container is created", func() {
+				JustBeforeEach(func() {
+					imageID = fmt.Sprintf("quotaed-container-%d", GinkgoParallelNode())
+					imagePath = filepath.Join(storePath, imageID)
+					_, err := client.Create(garden.ContainerSpec{
+						RootFSPath: "docker:///cfgarden/empty#v0.1.0",
+						Handle:     imageID,
+						Privileged: false,
+						Limits: garden.Limits{
+							Disk: garden.DiskLimits{
+								ByteHard: 1 * 1024 * 1024,
+							},
+						},
+					})
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("passes the disk limit to the image plugin as an argument", func() {
+					args, err := ioutil.ReadFile(filepath.Join(imagePath, fmt.Sprintf("create-args")))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(args)).To(ContainSubstring("--disk-limit-size-bytes 1048576"))
+				})
+			})
+
+			Context("when the image plugin fails during creation", func() {
+				It("provides a sensible error message", func() {
+					_, err := client.Create(garden.ContainerSpec{
+						RootFSPath: "docker:///cfgarden/empty#v0.1.0",
+						Handle:     "make-it-fail",
+						Privileged: false,
+					})
+					Expect(err).To(MatchError(ContainSubstring("external image manager create failed")))
+				})
+			})
+
+			Context("when the image plugin fails during destruction", func() {
+				It("provides a sensible error message", func() {
+					_, err := client.Create(garden.ContainerSpec{
+						RootFSPath: "docker:///cfgarden/empty#v0.1.0",
+						Handle:     "make-it-fail-on-destruction",
+						Privileged: false,
+					})
+					Expect(err).ToNot(HaveOccurred())
+
+					err = client.Destroy("make-it-fail-on-destruction")
+					Expect(err).To(MatchError(ContainSubstring("external image manager destroy failed")))
+				})
+			})
+
+			Context("and a container is created without specifying a RootFSPath", func() {
+				var fakeRootFsDir string
+
+				BeforeEach(func() {
+					var err error
+					fakeRootFsDir, err = ioutil.TempDir("", "")
+					Expect(err).NotTo(HaveOccurred())
+					args = append(args, "--default-rootfs", fakeRootFsDir)
+				})
+
+				JustBeforeEach(func() {
+					imageID = fmt.Sprintf("default-rootfs-container-%d", GinkgoParallelNode())
+					imagePath = filepath.Join(storePath, imageID)
+
+					_, err := client.Create(garden.ContainerSpec{
+						Handle: imageID,
+					})
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				AfterEach(func() {
+					Expect(os.RemoveAll(filepath.Join(storePath, imageID))).To(Succeed())
+					Expect(os.RemoveAll(fakeRootFsDir)).To(Succeed())
+				})
+
+				It("should pass the value of the --default-rootfs startup flag to the image plugin", func() {
 					args, err := ioutil.ReadFile(filepath.Join(imagePath, "create-args"))
 					Expect(err).ToNot(HaveOccurred())
-					Expect(string(args)).NotTo(ContainSubstring("--uid-mapping"))
-					Expect(string(args)).NotTo(ContainSubstring("--gid-mapping"))
+					Expect(string(args)).To(ContainSubstring(fakeRootFsDir))
 				})
-			})
-
-			It("executes plugin create with the correct args", func() {
-				maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
-				args, err := ioutil.ReadFile(filepath.Join(imagePath, "create-args"))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(args)).To(Equal(
-					fmt.Sprintf("[%s create %s %s %s %s %s %s %s %s %s %s]",
-						testImagePluginBin,
-						"--uid-mapping",
-						fmt.Sprintf("0:%d:1", maxId),
-						"--gid-mapping",
-						fmt.Sprintf("0:%d:1", maxId),
-						"--uid-mapping",
-						fmt.Sprintf("1:1:%d", maxId-1),
-						"--gid-mapping",
-						fmt.Sprintf("1:1:%d", maxId-1),
-						"docker:///cfgarden/empty#v0.1.0",
-						fmt.Sprintf("non-quotaed-container-%d", GinkgoParallelNode()),
-					),
-				))
-			})
-
-			It("executes plugin create as the container user", func() {
-				maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
-				whoamiOutput, err := ioutil.ReadFile(filepath.Join(imagePath, "create-whoami"))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(whoamiOutput)).To(ContainSubstring(fmt.Sprintf("%d - %d", maxId, maxId)))
-			})
-
-			It("executes plugin delete with the correct args", func() {
-				args, err := ioutil.ReadFile(filepath.Join(imagePath, "delete-args"))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(args)).To(Equal(
-					fmt.Sprintf("[%s delete %s]",
-						testImagePluginBin,
-						filepath.Join(storePath, imageID, "rootfs"),
-					),
-				))
-			})
-
-			It("executes plugin delete as the host root user", func() {
-				whoamiOutput, err := ioutil.ReadFile(filepath.Join(imagePath, "delete-whoami"))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(whoamiOutput)).To(ContainSubstring("0 - 0"))
-			})
-
-		})
-
-		Context("and a quotaed container is created", func() {
-			JustBeforeEach(func() {
-				imageID = fmt.Sprintf("quotaed-container-%d", GinkgoParallelNode())
-				imagePath = filepath.Join(storePath, imageID)
-				_, err := client.Create(garden.ContainerSpec{
-					RootFSPath: "docker:///cfgarden/empty#v0.1.0",
-					Handle:     imageID,
-					Privileged: false,
-					Limits: garden.Limits{
-						Disk: garden.DiskLimits{
-							ByteHard: 1 * 1024 * 1024,
-						},
-					},
-				})
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			AfterEach(func() {
-				//Expect(os.RemoveAll(filepath.Join(storePath, imageID))).To(Succeed())
-			})
-
-			It("passes the disk limit to the image plugin as an argument", func() {
-				args, err := ioutil.ReadFile(filepath.Join(imagePath, fmt.Sprintf("create-args")))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(args)).To(ContainSubstring("--disk-limit-size-bytes 1048576"))
-			})
-		})
-
-		Context("when the image plugin fails during creation", func() {
-			It("provides a sensible error message", func() {
-				_, err := client.Create(garden.ContainerSpec{
-					RootFSPath: "docker:///cfgarden/empty#v0.1.0",
-					Handle:     "make-it-fail",
-					Privileged: false,
-				})
-				Expect(err).To(MatchError(ContainSubstring("external image manager create failed")))
-			})
-		})
-
-		Context("when the image plugin fails during destruction", func() {
-			It("provides a sensible error message", func() {
-				_, err := client.Create(garden.ContainerSpec{
-					RootFSPath: "docker:///cfgarden/empty#v0.1.0",
-					Handle:     "make-it-fail-on-destruction",
-					Privileged: false,
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				err = client.Destroy("make-it-fail-on-destruction")
-				Expect(err).To(MatchError(ContainSubstring("external image manager destroy failed")))
-			})
-		})
-
-		Context("and a container is created without specifying a RootFSPath", func() {
-			var fakeRootFsDir string
-
-			BeforeEach(func() {
-				var err error
-				fakeRootFsDir, err = ioutil.TempDir("", "")
-				Expect(err).NotTo(HaveOccurred())
-				args = append(args, "--default-rootfs", fakeRootFsDir)
-			})
-
-			JustBeforeEach(func() {
-				imageID = fmt.Sprintf("default-rootfs-container-%d", GinkgoParallelNode())
-				imagePath = filepath.Join(storePath, imageID)
-
-				_, err := client.Create(garden.ContainerSpec{
-					Handle: imageID,
-				})
-				Expect(err).ToNot(HaveOccurred())
-			})
-
-			AfterEach(func() {
-				Expect(os.RemoveAll(filepath.Join(storePath, imageID))).To(Succeed())
-				Expect(os.RemoveAll(fakeRootFsDir)).To(Succeed())
-			})
-
-			It("should pass the value of the --default-rootfs startup flag to the image plugin", func() {
-				args, err := ioutil.ReadFile(filepath.Join(imagePath, "create-args"))
-				Expect(err).ToNot(HaveOccurred())
-				Expect(string(args)).To(ContainSubstring(fakeRootFsDir))
 			})
 		})
 	})

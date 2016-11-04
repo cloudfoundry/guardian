@@ -9,5 +9,5 @@ import (
 
 func TestNetplugin(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "imageplugin")
+	RunSpecs(t, "Imageplugin Suite")
 }

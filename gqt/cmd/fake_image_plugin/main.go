@@ -29,37 +29,37 @@ func main() {
 		panic(err)
 	}
 
-	var imagePath string
+	var bundlePath string
 	if strings.TrimSpace(string(uid)) == "0" {
-		imagePath = fmt.Sprintf("/tmp/store-path/%s", imageID)
+		bundlePath = filepath.Join("/tmp/store-path", imageID)
 	} else {
-		imagePath = fmt.Sprintf("/tmp/unpriv-store-path/%s", imageID)
+		bundlePath = filepath.Join("/tmp/unpriv-store-path", imageID)
 	}
 	if action == "delete" {
-		imagePath = filepath.Dir(imageID)
+		bundlePath = imageID
 	}
 
 	if action == "create" {
-		rootFSPath := fmt.Sprintf("%s/rootfs", imagePath)
+		rootFSPath := filepath.Join(bundlePath, "rootfs")
 		if err := os.MkdirAll(rootFSPath, 0777); err != nil {
 			ioutil.WriteFile("/tmp/error", []byte("greshkaaa"+string(uid)+string(gid)+err.Error()), 0755)
 			panic(err)
 		}
 	}
 
-	whoamiPath := filepath.Join(imagePath, fmt.Sprintf("%s-whoami", action))
+	whoamiPath := filepath.Join(bundlePath, fmt.Sprintf("%s-whoami", action))
 	err = ioutil.WriteFile(whoamiPath, []byte(fmt.Sprintf("%s - %s\n", strings.TrimSpace(string(uid)), strings.TrimSpace(string(gid)))), 0755)
 	if err != nil {
 		ioutil.WriteFile("/tmp/error", []byte("greshkaaa"+string(uid)+string(gid)+err.Error()), 0755)
 		panic(err)
 	}
 
-	argsFilepath := filepath.Join(imagePath, fmt.Sprintf("%s-args", action))
+	argsFilepath := filepath.Join(bundlePath, fmt.Sprintf("%s-args", action))
 	err = ioutil.WriteFile(argsFilepath, []byte(fmt.Sprintf("%s", os.Args)), 0777)
 	if err != nil {
 		ioutil.WriteFile("/tmp/error", []byte("greshkaaa"+string(uid)+string(gid)+err.Error()), 0755)
 		panic(err)
 	}
 
-	fmt.Printf(imagePath)
+	fmt.Printf(bundlePath)
 }

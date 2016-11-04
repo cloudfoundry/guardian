@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -93,10 +94,11 @@ func (p *ExternalImageManager) Destroy(log lager.Logger, handle, rootfs string) 
 	log.Debug("start")
 	defer log.Debug("end")
 
+	bundlePath := filepath.Dir(rootfs)
 	cmd := exec.Command(
 		p.binPath,
 		"delete",
-		rootfs,
+		bundlePath,
 	)
 
 	errBuffer := bytes.NewBuffer([]byte{})
