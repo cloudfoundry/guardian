@@ -34,6 +34,7 @@ import (
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/metrics"
 	"code.cloudfoundry.org/guardian/netplugin"
+	locksmithpkg "code.cloudfoundry.org/guardian/pkg/locksmith"
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
@@ -420,8 +421,10 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
-	ipTables := iptables.New(cmd.Bin.IPTables.Path(), iptRunner, chainPrefix)
+	locksmith := &locksmithpkg.FileSystem{}
+	ipTables := iptables.New(cmd.Bin.IPTables.Path(), iptRunner, locksmith, chainPrefix)
 	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup)
+	ruleTranslator := iptables.NewRuleTranslator()
 
 	networker := kawasaki.New(
 		cmd.Bin.IPTables.Path(),
@@ -432,7 +435,7 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 		factory.NewDefaultConfigurer(ipTables),
 		portPool,
 		iptables.NewPortForwarder(ipTables),
-		iptables.NewFirewallOpener(ipTables),
+		iptables.NewFirewallOpener(ruleTranslator, ipTables),
 	)
 
 	return networker, ipTablesStarter, nil

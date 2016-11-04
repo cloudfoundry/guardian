@@ -54,6 +54,15 @@ type FakeIPTables struct {
 	prependRuleReturns struct {
 		result1 error
 	}
+	BulkPrependRulesStub        func(chain string, rules []iptables.Rule) error
+	bulkPrependRulesMutex       sync.RWMutex
+	bulkPrependRulesArgsForCall []struct {
+		chain string
+		rules []iptables.Rule
+	}
+	bulkPrependRulesReturns struct {
+		result1 error
+	}
 	InstanceChainStub        func(instanceId string) string
 	instanceChainMutex       sync.RWMutex
 	instanceChainArgsForCall []struct {
@@ -237,6 +246,45 @@ func (fake *FakeIPTables) PrependRuleReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeIPTables) BulkPrependRules(chain string, rules []iptables.Rule) error {
+	var rulesCopy []iptables.Rule
+	if rules != nil {
+		rulesCopy = make([]iptables.Rule, len(rules))
+		copy(rulesCopy, rules)
+	}
+	fake.bulkPrependRulesMutex.Lock()
+	fake.bulkPrependRulesArgsForCall = append(fake.bulkPrependRulesArgsForCall, struct {
+		chain string
+		rules []iptables.Rule
+	}{chain, rulesCopy})
+	fake.recordInvocation("BulkPrependRules", []interface{}{chain, rulesCopy})
+	fake.bulkPrependRulesMutex.Unlock()
+	if fake.BulkPrependRulesStub != nil {
+		return fake.BulkPrependRulesStub(chain, rules)
+	} else {
+		return fake.bulkPrependRulesReturns.result1
+	}
+}
+
+func (fake *FakeIPTables) BulkPrependRulesCallCount() int {
+	fake.bulkPrependRulesMutex.RLock()
+	defer fake.bulkPrependRulesMutex.RUnlock()
+	return len(fake.bulkPrependRulesArgsForCall)
+}
+
+func (fake *FakeIPTables) BulkPrependRulesArgsForCall(i int) (string, []iptables.Rule) {
+	fake.bulkPrependRulesMutex.RLock()
+	defer fake.bulkPrependRulesMutex.RUnlock()
+	return fake.bulkPrependRulesArgsForCall[i].chain, fake.bulkPrependRulesArgsForCall[i].rules
+}
+
+func (fake *FakeIPTables) BulkPrependRulesReturns(result1 error) {
+	fake.BulkPrependRulesStub = nil
+	fake.bulkPrependRulesReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeIPTables) InstanceChain(instanceId string) string {
 	fake.instanceChainMutex.Lock()
 	fake.instanceChainArgsForCall = append(fake.instanceChainArgsForCall, struct {
@@ -283,6 +331,8 @@ func (fake *FakeIPTables) Invocations() map[string][][]interface{} {
 	defer fake.deleteChainReferencesMutex.RUnlock()
 	fake.prependRuleMutex.RLock()
 	defer fake.prependRuleMutex.RUnlock()
+	fake.bulkPrependRulesMutex.RLock()
+	defer fake.bulkPrependRulesMutex.RUnlock()
 	fake.instanceChainMutex.RLock()
 	defer fake.instanceChainMutex.RUnlock()
 	return fake.invocations

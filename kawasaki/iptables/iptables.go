@@ -4,16 +4,17 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"strings"
 
-	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/pkg/locksmith"
+
 	"github.com/cloudfoundry/gunk/command_runner"
 )
 
-var protocols = map[garden.Protocol]string{
-	garden.ProtocolAll:  "all",
-	garden.ProtocolTCP:  "tcp",
-	garden.ProtocolICMP: "icmp",
-	garden.ProtocolUDP:  "udp",
+const LockKey = "/var/run/garden-iptables.lock"
+
+type Locksmith interface {
+	Lock(key string) (locksmith.Unlocker, error)
 }
 
 //go:generate counterfeiter . Rule
@@ -28,11 +29,13 @@ type IPTables interface {
 	FlushChain(table, chain string) error
 	DeleteChainReferences(table, targetChain, referencedChain string) error
 	PrependRule(chain string, rule Rule) error
+	BulkPrependRules(chain string, rules []Rule) error
 	InstanceChain(instanceId string) string
 }
 
 type IPTablesController struct {
 	runner                                                                                         command_runner.CommandRunner
+	locksmith                                                                                      Locksmith
 	binPath                                                                                        string
 	preroutingChain, postroutingChain, inputChain, forwardChain, defaultChain, instanceChainPrefix string
 }
@@ -41,10 +44,11 @@ type Chains struct {
 	Prerouting, Postrouting, Input, Forward, Default string
 }
 
-func New(binPath string, runner command_runner.CommandRunner, chainPrefix string) *IPTablesController {
+func New(binPath string, runner command_runner.CommandRunner, locksmith Locksmith, chainPrefix string) *IPTablesController {
 	return &IPTablesController{
-		runner:  runner,
-		binPath: binPath,
+		runner:    runner,
+		locksmith: locksmith,
+		binPath:   binPath,
 
 		preroutingChain:     chainPrefix + "prerouting",
 		postroutingChain:    chainPrefix + "postrouting",
@@ -87,19 +91,44 @@ func (iptables *IPTablesController) PrependRule(chain string, rule Rule) error {
 	return iptables.run("prepend", exec.Command(iptables.binPath, append([]string{"-w", "-I", chain, "1"}, rule.Flags(chain)...)...))
 }
 
+func (iptables *IPTablesController) BulkPrependRules(chain string, rules []Rule) error {
+	in := bytes.NewBuffer([]byte{})
+	in.WriteString("*filter\n")
+	for _, r := range rules {
+		in.WriteString(fmt.Sprintf("-I %s 1 ", chain))
+		in.WriteString(strings.Join(r.Flags(chain), " "))
+		in.WriteString("\n")
+	}
+	in.WriteString("COMMIT\n")
+
+	cmd := exec.Command("iptables-restore", "--noflush")
+	cmd.Stdin = in
+
+	return iptables.run("append-rules", cmd)
+}
+
 func (iptables *IPTablesController) InstanceChain(instanceId string) string {
 	return iptables.instanceChainPrefix + instanceId
 }
 
 func (iptables *IPTablesController) run(action string, cmd *exec.Cmd) error {
 	var buff bytes.Buffer
+	cmd.Stdout = &buff
 	cmd.Stderr = &buff
 
-	if err := iptables.runner.Run(cmd); err != nil {
-		return fmt.Errorf("%s %s: %s", iptables.binPath, action, buff.String())
+	u, err := iptables.locksmith.Lock(LockKey)
+	if err != nil {
+		return err
 	}
 
-	return nil
+	if err := iptables.runner.Run(cmd); err != nil {
+		err := fmt.Errorf("%s %s: %s", iptables.binPath, action, buff.String())
+		if unlockErr := u.Unlock(); unlockErr != nil {
+			err = fmt.Errorf("%s and then %s", err, unlockErr)
+		}
+		return err
+	}
+	return u.Unlock()
 }
 
 func (iptables *IPTablesController) appendRule(chain string, rule Rule) error {

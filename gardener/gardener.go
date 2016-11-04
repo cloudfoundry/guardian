@@ -55,6 +55,7 @@ type Networker interface {
 	Capacity() uint64
 	Destroy(log lager.Logger, handle string) error
 	NetIn(log lager.Logger, handle string, hostPort, containerPort uint32) (uint32, uint32, error)
+	BulkNetOut(log lager.Logger, handle string, rules []garden.NetOutRule) error
 	NetOut(log lager.Logger, handle string, rule garden.NetOutRule) error
 	Restore(log lager.Logger, handle string) error
 }

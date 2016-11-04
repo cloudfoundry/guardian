@@ -27,8 +27,9 @@ var _ = Describe("Setup", func() {
 	})
 
 	JustBeforeEach(func() {
+		fakeLocksmith := NewFakeLocksmith()
 		starter = iptables.NewStarter(
-			iptables.New("/sbin/iptables", fakeRunner, "prefix-"),
+			iptables.New("/sbin/iptables", fakeRunner, fakeLocksmith, "prefix-"),
 			true,
 			"the-nic-prefix",
 			denyNetworks,
@@ -204,7 +205,7 @@ var _ = Describe("Setup", func() {
 					itRejectsNetwork("8.7.6.5/33")
 				})
 
-				Context("when resetting deny netoworks fail", func() {
+				Context("when resetting deny networks fail", func() {
 					Context("when flushing the chain fails", func() {
 						BeforeEach(func() {
 							fakeRunner.WhenRunning(fake_command_runner.CommandSpec{

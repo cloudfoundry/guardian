@@ -20,6 +20,16 @@ type FakeFirewallOpener struct {
 	openReturns struct {
 		result1 error
 	}
+	BulkOpenStub        func(log lager.Logger, instance string, rule []garden.NetOutRule) error
+	bulkOpenMutex       sync.RWMutex
+	bulkOpenArgsForCall []struct {
+		log      lager.Logger
+		instance string
+		rule     []garden.NetOutRule
+	}
+	bulkOpenReturns struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -59,11 +69,53 @@ func (fake *FakeFirewallOpener) OpenReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeFirewallOpener) BulkOpen(log lager.Logger, instance string, rule []garden.NetOutRule) error {
+	var ruleCopy []garden.NetOutRule
+	if rule != nil {
+		ruleCopy = make([]garden.NetOutRule, len(rule))
+		copy(ruleCopy, rule)
+	}
+	fake.bulkOpenMutex.Lock()
+	fake.bulkOpenArgsForCall = append(fake.bulkOpenArgsForCall, struct {
+		log      lager.Logger
+		instance string
+		rule     []garden.NetOutRule
+	}{log, instance, ruleCopy})
+	fake.recordInvocation("BulkOpen", []interface{}{log, instance, ruleCopy})
+	fake.bulkOpenMutex.Unlock()
+	if fake.BulkOpenStub != nil {
+		return fake.BulkOpenStub(log, instance, rule)
+	} else {
+		return fake.bulkOpenReturns.result1
+	}
+}
+
+func (fake *FakeFirewallOpener) BulkOpenCallCount() int {
+	fake.bulkOpenMutex.RLock()
+	defer fake.bulkOpenMutex.RUnlock()
+	return len(fake.bulkOpenArgsForCall)
+}
+
+func (fake *FakeFirewallOpener) BulkOpenArgsForCall(i int) (lager.Logger, string, []garden.NetOutRule) {
+	fake.bulkOpenMutex.RLock()
+	defer fake.bulkOpenMutex.RUnlock()
+	return fake.bulkOpenArgsForCall[i].log, fake.bulkOpenArgsForCall[i].instance, fake.bulkOpenArgsForCall[i].rule
+}
+
+func (fake *FakeFirewallOpener) BulkOpenReturns(result1 error) {
+	fake.BulkOpenStub = nil
+	fake.bulkOpenReturns = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeFirewallOpener) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.openMutex.RLock()
 	defer fake.openMutex.RUnlock()
+	fake.bulkOpenMutex.RLock()
+	defer fake.bulkOpenMutex.RUnlock()
 	return fake.invocations
 }
 

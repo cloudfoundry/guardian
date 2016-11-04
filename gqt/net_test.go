@@ -296,6 +296,18 @@ var _ = Describe("Networking", func() {
 	})
 
 	Describe("NetOut", func() {
+		var (
+			rule garden.NetOutRule
+		)
+
+		BeforeEach(func() {
+			rule = garden.NetOutRule{
+				Protocol: garden.ProtocolTCP,
+				Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+				Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+			}
+		})
+
 		Context("when an IP within the denied network range is permitted", func() {
 			BeforeEach(func() {
 				args = append(args, "--deny-network", "0.0.0.0/0")
@@ -306,25 +318,69 @@ var _ = Describe("Networking", func() {
 			})
 
 			It("should access internet", func() {
-				Expect(container.NetOut(garden.NetOutRule{
-					Protocol: garden.ProtocolTCP,
-					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
-					Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
-				})).To(Succeed())
-
+				Expect(container.NetOut(rule)).To(Succeed())
 				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
 			})
 
 			Context("when the dropped packets should get logged", func() {
-				It("should access internet", func() {
-					Expect(container.NetOut(garden.NetOutRule{
-						Protocol: garden.ProtocolTCP,
-						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
-						Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
-						Log:      true,
-					})).To(Succeed())
+				BeforeEach(func() {
+					rule.Log = true
+				})
 
+				It("should access internet", func() {
+					Expect(container.NetOut(rule)).To(Succeed())
 					Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+				})
+			})
+		})
+	})
+
+	Describe("BulkNetOut", func() {
+		var (
+			rule1 garden.NetOutRule
+			rule2 garden.NetOutRule
+		)
+
+		BeforeEach(func() {
+			rule1 = garden.NetOutRule{
+				Protocol: garden.ProtocolTCP,
+				Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+				Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+			}
+			rule2 = garden.NetOutRule{
+				Protocol: garden.ProtocolTCP,
+				Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.4.4"))},
+				Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+			}
+		})
+
+		Context("when an IP within the denied network range is permitted", func() {
+			BeforeEach(func() {
+				args = append(args, "--deny-network", "0.0.0.0/0")
+			})
+
+			JustBeforeEach(func() {
+				Expect(checkConnection(container, "8.8.8.8", 53)).To(MatchError("Request failed. Process exited with code 1"))
+				Expect(checkConnection(container, "8.8.4.4", 53)).To(MatchError("Request failed. Process exited with code 1"))
+			})
+
+			It("should access internet", func() {
+				Expect(container.BulkNetOut([]garden.NetOutRule{rule1, rule2})).To(Succeed())
+
+				Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+				Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+			})
+
+			Context("when the dropped packets should get logged", func() {
+				BeforeEach(func() {
+					rule1.Log = true
+					rule2.Log = true
+				})
+
+				It("should access internet", func() {
+					Expect(container.BulkNetOut([]garden.NetOutRule{rule1, rule2})).To(Succeed())
+					Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+					Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
 				})
 			})
 		})
@@ -432,6 +488,26 @@ var _ = Describe("Networking", func() {
 				Expect(info.ExternalIP).NotTo(BeEmpty())
 				Expect(info.ContainerIP).To(Equal("10.255.10.10"))
 			})
+
+			Context("when BulkNetOut is called", func() {
+				It("calls NetOut for each rule", func() {
+					rules := []garden.NetOutRule{
+						garden.NetOutRule{
+							Protocol: garden.ProtocolTCP,
+						},
+						garden.NetOutRule{
+							Protocol: garden.ProtocolUDP,
+						},
+					}
+					fmt.Println(rules)
+					container.BulkNetOut(rules)
+
+					Eventually(getContent(stdinFile)).Should(
+						ContainSubstring(`{"container_ip":"10.255.10.10","netout_rule":{"protocol":2}}`),
+					)
+				})
+			})
+
 		})
 	})
 

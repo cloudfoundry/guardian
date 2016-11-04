@@ -20,8 +20,9 @@ var _ = Describe("PortForwarder", func() {
 
 	BeforeEach(func() {
 		fakeRunner = fake_command_runner.New()
+		fakeLocksmith := NewFakeLocksmith()
 		forwarder = iptables.NewPortForwarder(
-			iptables.New("/sbin/iptables", fakeRunner, "prefix-"),
+			iptables.New("/sbin/iptables", fakeRunner, fakeLocksmith, "prefix-"),
 		)
 	})
 

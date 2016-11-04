@@ -562,6 +562,96 @@ var _ = Describe("Gardener", func() {
 				Expect(specArg).To(Equal(spec))
 			})
 		})
+
+		Describe("NetIn", func() {
+			const (
+				externalPort  uint32 = 8888
+				contianerPort uint32 = 8080
+			)
+
+			It("asks the netwoker to forward the correct ports", func() {
+				_, _, err := container.NetIn(externalPort, contianerPort)
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(networker.NetInCallCount()).To(Equal(1))
+
+				actualLogger, actualHandle, actualExtPort, actualContainerPort := networker.NetInArgsForCall(0)
+				Expect(actualLogger).To(Equal(logger))
+				Expect(actualHandle).To(Equal(container.Handle()))
+				Expect(actualExtPort).To(Equal(externalPort))
+				Expect(actualContainerPort).To(Equal(contianerPort))
+			})
+
+			Context("when networker returns an error", func() {
+				It("returns the error", func() {
+					networker.NetInReturns(uint32(0), uint32(0), fmt.Errorf("error"))
+
+					_, _, err := container.NetIn(externalPort, contianerPort)
+
+					Expect(err).To(MatchError("error"))
+				})
+			})
+		})
+
+		Describe("NetOut", func() {
+			var rule garden.NetOutRule
+
+			BeforeEach(func() {
+				rule = garden.NetOutRule{
+					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.2.3.4"))},
+					Ports:    []garden.PortRange{garden.PortRangeFromPort(9321)},
+				}
+			})
+
+			It("asks the networker to apply the provided netout rule", func() {
+				Expect(container.NetOut(rule)).To(Succeed())
+				Expect(networker.NetOutCallCount()).To(Equal(1))
+
+				_, handle, actualRule := networker.NetOutArgsForCall(0)
+				Expect(handle).To(Equal("banana"))
+				Expect(actualRule).To(Equal(rule))
+			})
+
+			Context("when networker returns an error", func() {
+				It("return the error", func() {
+					networker.NetOutReturns(fmt.Errorf("banana republic"))
+					Expect(container.NetOut(rule)).To(MatchError("banana republic"))
+				})
+			})
+		})
+
+		Describe("BulkNetOut", func() {
+			var rules []garden.NetOutRule
+
+			BeforeEach(func() {
+				rules = []garden.NetOutRule{
+					{
+						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.2.3.4"))},
+						Ports:    []garden.PortRange{garden.PortRangeFromPort(9321)},
+					},
+					{
+						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("6.1.2.3"))},
+						Ports:    []garden.PortRange{garden.PortRangeFromPort(7654)},
+					},
+				}
+			})
+
+			It("asks the networker to apply the provided netout rule", func() {
+				Expect(container.BulkNetOut(rules)).To(Succeed())
+				Expect(networker.BulkNetOutCallCount()).To(Equal(1))
+
+				_, handle, actualRules := networker.BulkNetOutArgsForCall(0)
+				Expect(handle).To(Equal("banana"))
+				Expect(actualRules).To(ConsistOf(rules))
+			})
+
+			Context("when networker returns an error", func() {
+				It("return the error", func() {
+					networker.BulkNetOutReturns(fmt.Errorf("banana republic"))
+					Expect(container.BulkNetOut(rules)).To(MatchError("banana republic"))
+				})
+			})
+		})
 	})
 
 	Describe("starting up gardener", func() {
@@ -660,78 +750,6 @@ var _ = Describe("Gardener", func() {
 			})
 
 			itOnlyMatchesFullyCreatedContainers(props)
-		})
-	})
-
-	Describe("NetIn", func() {
-		var container garden.Container
-
-		const (
-			externalPort  uint32 = 8888
-			contianerPort uint32 = 8080
-		)
-
-		BeforeEach(func() {
-			var err error
-			container, err = gdnr.Lookup("banana")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("asks the netwoker to forward the correct ports", func() {
-			_, _, err := container.NetIn(externalPort, contianerPort)
-
-			Expect(err).NotTo(HaveOccurred())
-			Expect(networker.NetInCallCount()).To(Equal(1))
-
-			actualLogger, actualHandle, actualExtPort, actualContainerPort := networker.NetInArgsForCall(0)
-			Expect(actualLogger).To(Equal(logger))
-			Expect(actualHandle).To(Equal(container.Handle()))
-			Expect(actualExtPort).To(Equal(externalPort))
-			Expect(actualContainerPort).To(Equal(contianerPort))
-		})
-
-		Context("when networker returns an error", func() {
-			It("returns the error", func() {
-				networker.NetInReturns(uint32(0), uint32(0), fmt.Errorf("error"))
-
-				_, _, err := container.NetIn(externalPort, contianerPort)
-
-				Expect(err).To(MatchError("error"))
-			})
-		})
-	})
-
-	Describe("NetOut", func() {
-		var (
-			container garden.Container
-			rule      garden.NetOutRule
-		)
-
-		BeforeEach(func() {
-			var err error
-			container, err = gdnr.Lookup("banana")
-			Expect(err).NotTo(HaveOccurred())
-
-			rule = garden.NetOutRule{
-				Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.2.3.4"))},
-				Ports:    []garden.PortRange{garden.PortRangeFromPort(9321)},
-			}
-		})
-
-		It("asks the networker to apply the provided netout rule", func() {
-			Expect(container.NetOut(rule)).To(Succeed())
-			Expect(networker.NetOutCallCount()).To(Equal(1))
-
-			_, handle, actualRule := networker.NetOutArgsForCall(0)
-			Expect(handle).To(Equal("banana"))
-			Expect(actualRule).To(Equal(rule))
-		})
-
-		Context("when networker returns an error", func() {
-			It("return the error", func() {
-				networker.NetOutReturns(fmt.Errorf("banana republic"))
-				Expect(container.NetOut(rule)).To(MatchError("banana republic"))
-			})
 		})
 	})
 
