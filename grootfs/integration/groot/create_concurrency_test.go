@@ -15,7 +15,7 @@ var _ = Describe("Concurrent creations", func() {
 		// run this to setup the store before concurrency!
 		_, err := Runner.Create(groot.CreateSpec{
 			ID:    "test-pre-warm",
-			Image: "docker:///cfgarden/empty",
+			BaseImage: "docker:///cfgarden/empty",
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -31,7 +31,7 @@ var _ = Describe("Concurrent creations", func() {
 
 				_, err := Runner.Create(groot.CreateSpec{
 					ID:    fmt.Sprintf("test-%d", idx),
-					Image: "docker:///cfgarden/empty",
+					BaseImage: "docker:///cfgarden/empty",
 				})
 				Expect(err).NotTo(HaveOccurred())
 			}(wg, i)
@@ -52,7 +52,7 @@ var _ = Describe("Concurrent creations", func() {
 				for i := 0; i < 3; i++ {
 					_, err := Runner.Create(groot.CreateSpec{
 						ID:    fmt.Sprintf("test-%d", i),
-						Image: "docker:///cfgarden/empty",
+						BaseImage: "docker:///cfgarden/empty",
 					})
 					Expect(err).NotTo(HaveOccurred())
 				}

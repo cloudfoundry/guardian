@@ -17,16 +17,16 @@ import (
 
 var _ = Describe("Delete", func() {
 	var (
-		imagePath string
+		baseImagePath string
 		bundle    groot.Bundle
 	)
 
 	BeforeEach(func() {
 		var err error
-		imagePath, err = ioutil.TempDir("", "")
+		baseImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
-		bundle = integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
+		Expect(ioutil.WriteFile(path.Join(baseImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		bundle = integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
 	})
 
 	It("deletes an existing bundle", func() {

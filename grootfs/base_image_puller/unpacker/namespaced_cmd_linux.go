@@ -1,4 +1,4 @@
-package unpacker // import "code.cloudfoundry.org/grootfs/image_puller/unpacker"
+package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 	"github.com/urfave/cli"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/image_puller"
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -64,7 +64,7 @@ func init() {
 
 		rootFSPath := os.Args[1]
 		unpacker := NewTarUnpacker()
-		if err := unpacker.Unpack(logger, image_puller.UnpackSpec{
+		if err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			Stream:     os.Stdin,
 			TargetPath: rootFSPath,
 		}); err != nil {
@@ -93,7 +93,7 @@ func NewNamespacedUnpacker(commandRunner commandrunner.CommandRunner, idMapper I
 	}
 }
 
-func (u *NamespacedUnpacker) Unpack(logger lager.Logger, spec image_puller.UnpackSpec) error {
+func (u *NamespacedUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) error {
 	logger = logger.Session("namespaced-unpacking", lager.Data{"spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -146,7 +146,7 @@ func (u *NamespacedUnpacker) Unpack(logger lager.Logger, spec image_puller.Unpac
 	return nil
 }
 
-func (u *NamespacedUnpacker) setIDMappings(logger lager.Logger, spec image_puller.UnpackSpec, untarPid int) error {
+func (u *NamespacedUnpacker) setIDMappings(logger lager.Logger, spec base_image_puller.UnpackSpec, untarPid int) error {
 	if len(spec.UIDMappings) > 0 {
 		if err := u.idMapper.MapUIDs(logger, untarPid, spec.UIDMappings); err != nil {
 			return fmt.Errorf("setting uid mapping: %s", err)

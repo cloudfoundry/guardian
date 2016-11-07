@@ -81,7 +81,7 @@ func (b *Bundler) Create(logger lager.Logger, spec groot.BundleSpec) (groot.Bund
 		return groot.Bundle{}, fmt.Errorf("making bundle path: %s", err)
 	}
 
-	if err = b.writeImageJSON(logger, bundle, spec.Image); err != nil {
+	if err = b.writeBaseImageJSON(logger, bundle, spec.BaseImage); err != nil {
 		return groot.Bundle{}, fmt.Errorf("creating image.json: %s", err)
 	}
 
@@ -90,7 +90,7 @@ func (b *Bundler) Create(logger lager.Logger, spec groot.BundleSpec) (groot.Bund
 	}
 
 	if spec.DiskLimit > 0 {
-		if err = b.snapshotDriver.ApplyDiskLimit(logger, bundle.RootFSPath, spec.DiskLimit, spec.ExcludeImageFromQuota); err != nil {
+		if err = b.snapshotDriver.ApplyDiskLimit(logger, bundle.RootFSPath, spec.DiskLimit, spec.ExcludeBaseImageFromQuota); err != nil {
 			return groot.Bundle{}, fmt.Errorf("applying disk limit: %s", err)
 		}
 	}
@@ -153,7 +153,7 @@ func (b *Bundler) deleteBundleDir(bundle groot.Bundle) error {
 
 var OF = os.OpenFile
 
-func (b *Bundler) writeImageJSON(logger lager.Logger, bundle groot.Bundle, image specsv1.Image) error {
+func (b *Bundler) writeBaseImageJSON(logger lager.Logger, bundle groot.Bundle, image specsv1.Image) error {
 	logger = logger.Session("writing-image-json")
 	logger.Info("start")
 	defer logger.Info("end")

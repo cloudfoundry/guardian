@@ -4,8 +4,8 @@ package unpackerfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/image_puller/unpacker"
 	"code.cloudfoundry.org/lager"
 )
 

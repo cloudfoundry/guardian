@@ -37,11 +37,11 @@ func (r *Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 		args = append(args, "--disk-limit-size-bytes",
 			strconv.FormatInt(spec.DiskLimit, 10),
 		)
-		if spec.ExcludeImageFromQuota {
+		if spec.ExcludeBaseImageFromQuota {
 			args = append(args, "--exclude-image-from-quota")
 		}
 	}
-	args = append(args, spec.Image)
+	args = append(args, spec.BaseImage)
 	args = append(args, spec.ID)
 
 	return args

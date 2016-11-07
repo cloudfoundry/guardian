@@ -16,7 +16,7 @@ var _ = Describe("Clean", func() {
 	BeforeEach(func() {
 		_, err := Runner.Create(groot.CreateSpec{
 			ID:    "my-bundle-1",
-			Image: "docker:///cfgarden/empty:v0.1.1",
+			BaseImage: "docker:///cfgarden/empty:v0.1.1",
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -42,7 +42,7 @@ var _ = Describe("Clean", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:    "my-bundle-2",
-				Image: "docker:///busybox",
+				BaseImage: "docker:///busybox",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -60,7 +60,7 @@ var _ = Describe("Clean", func() {
 			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(afterContents).To(HaveLen(2))
-			for _, layer := range testhelpers.EmptyImageV011.Layers {
+			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
 				Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
 			}
 		})
@@ -88,7 +88,7 @@ var _ = Describe("Clean", func() {
 				BeforeEach(func() {
 					_, err := Runner.Create(groot.CreateSpec{
 						ID:    "my-bundle-3",
-						Image: "docker:///cfgarden/empty:v0.1.0",
+						BaseImage: "docker:///cfgarden/empty:v0.1.0",
 					})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -183,7 +183,7 @@ var _ = Describe("Clean", func() {
 					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(2))
-					for _, layer := range testhelpers.EmptyImageV011.Layers {
+					for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
 						Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
 					}
 				})

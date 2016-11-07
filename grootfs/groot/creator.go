@@ -12,25 +12,25 @@ const ImageReferenceFormat = "image:%s"
 const BundleReferenceFormat = "bundle:%s"
 
 type CreateSpec struct {
-	ID                    string
-	Image                 string
-	DiskLimit             int64
-	ExcludeImageFromQuota bool
-	UIDMappings           []IDMappingSpec
-	GIDMappings           []IDMappingSpec
+	ID                        string
+	BaseImage                 string
+	DiskLimit                 int64
+	ExcludeBaseImageFromQuota bool
+	UIDMappings               []IDMappingSpec
+	GIDMappings               []IDMappingSpec
 }
 
 type Creator struct {
 	bundler           Bundler
-	imagePuller       ImagePuller
+	baseImagePuller   BaseImagePuller
 	locksmith         Locksmith
 	dependencyManager DependencyManager
 }
 
-func IamCreator(bundler Bundler, imagePuller ImagePuller, locksmith Locksmith, dependencyManager DependencyManager) *Creator {
+func IamCreator(bundler Bundler, baseImagePuller BaseImagePuller, locksmith Locksmith, dependencyManager DependencyManager) *Creator {
 	return &Creator{
 		bundler:           bundler,
-		imagePuller:       imagePuller,
+		baseImagePuller:   baseImagePuller,
 		locksmith:         locksmith,
 		dependencyManager: dependencyManager,
 	}
@@ -41,7 +41,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	parsedURL, err := url.Parse(spec.Image)
+	parsedURL, err := url.Parse(spec.BaseImage)
 	if err != nil {
 		return Bundle{}, fmt.Errorf("parsing image url: %s", err)
 	}
@@ -54,12 +54,12 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		return Bundle{}, fmt.Errorf("bundle for id `%s` already exists", spec.ID)
 	}
 
-	imageSpec := ImageSpec{
-		ImageSrc:              parsedURL,
-		DiskLimit:             spec.DiskLimit,
-		ExcludeImageFromQuota: spec.ExcludeImageFromQuota,
-		UIDMappings:           spec.UIDMappings,
-		GIDMappings:           spec.GIDMappings,
+	imageSpec := BaseImageSpec{
+		BaseImageSrc:              parsedURL,
+		DiskLimit:                 spec.DiskLimit,
+		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
+		UIDMappings:               spec.UIDMappings,
+		GIDMappings:               spec.GIDMappings,
 	}
 
 	lockFile, err := c.locksmith.Lock(GLOBAL_LOCK_KEY)
@@ -72,17 +72,17 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		}
 	}()
 
-	image, err := c.imagePuller.Pull(logger, imageSpec)
+	baseImage, err := c.baseImagePuller.Pull(logger, imageSpec)
 	if err != nil {
 		return Bundle{}, errorspkg.Wrap(err, "pulling the image")
 	}
 
 	bundleSpec := BundleSpec{
-		ID:                    spec.ID,
-		DiskLimit:             spec.DiskLimit,
-		ExcludeImageFromQuota: spec.ExcludeImageFromQuota,
-		VolumePath:            image.VolumePath,
-		Image:                 image.Image,
+		ID:                        spec.ID,
+		DiskLimit:                 spec.DiskLimit,
+		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
+		VolumePath:                baseImage.VolumePath,
+		BaseImage:                 baseImage.BaseImage,
 	}
 	bundle, err := c.bundler.Create(logger, bundleSpec)
 	if err != nil {
@@ -90,7 +90,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 	}
 
 	bundleRefName := fmt.Sprintf(BundleReferenceFormat, spec.ID)
-	if err := c.dependencyManager.Register(bundleRefName, image.ChainIDs); err != nil {
+	if err := c.dependencyManager.Register(bundleRefName, baseImage.ChainIDs); err != nil {
 		if destroyErr := c.bundler.Destroy(logger, spec.ID); destroyErr != nil {
 			logger.Error("failed-to-destroy-bundle", destroyErr)
 		}
@@ -98,8 +98,8 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		return Bundle{}, err
 	}
 
-	imageRefName := fmt.Sprintf(ImageReferenceFormat, spec.Image)
-	if err := c.dependencyManager.Register(imageRefName, image.ChainIDs); err != nil {
+	imageRefName := fmt.Sprintf(ImageReferenceFormat, spec.BaseImage)
+	if err := c.dependencyManager.Register(imageRefName, baseImage.ChainIDs); err != nil {
 		return Bundle{}, err
 	}
 

@@ -1,4 +1,4 @@
-package unpacker // import "code.cloudfoundry.org/grootfs/image_puller/unpacker"
+package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 
 import (
 	"bytes"

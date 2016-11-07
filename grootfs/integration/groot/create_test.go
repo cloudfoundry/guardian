@@ -18,24 +18,24 @@ import (
 )
 
 var _ = Describe("Create", func() {
-	var imagePath string
+	var baseImagePath string
 
 	BeforeEach(func() {
 		var err error
-		imagePath, err = ioutil.TempDir("", "")
+		baseImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(ioutil.WriteFile(path.Join(imagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(baseImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
 	Context("when inclusive disk limit is provided", func() {
 		It("creates a bundle with supplied limit", func() {
-			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(imagePath, "fatfile")), "bs=1048576", "count=5")
+			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "fatfile")), "bs=1048576", "count=5")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", int64(10*1024*1024))
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", int64(10*1024*1024))
 
 			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath, "hello")), "bs=1048576", "count=4")
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -51,7 +51,7 @@ var _ = Describe("Create", func() {
 
 		Context("when the disk limit value is invalid", func() {
 			It("fails with a helpful error", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "create", "--disk-limit-size-bytes", "-200", imagePath, "random-id")
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "create", "--disk-limit-size-bytes", "-200", baseImagePath, "random-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
@@ -61,7 +61,7 @@ var _ = Describe("Create", func() {
 
 		Context("when the exclude-image-from-quota is also provided", func() {
 			It("creates a bundle with supplied limit, but doesn't take into account the base image size", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "create", "--disk-limit-size-bytes", "10485760", "--exclude-image-from-quota", imagePath, "random-id")
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "create", "--disk-limit-size-bytes", "10485760", "--exclude-image-from-quota", baseImagePath, "random-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
@@ -104,7 +104,7 @@ var _ = Describe("Create", func() {
 
 			Context("when it's provided", func() {
 				It("uses the provided drax", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", draxBin.Name(), "create", "--disk-limit-size-bytes", "104857600", imagePath, "random-id")
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", draxBin.Name(), "create", "--disk-limit-size-bytes", "104857600", baseImagePath, "random-id")
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
 					Eventually(sess).Should(gexec.Exit(0))
@@ -117,7 +117,7 @@ var _ = Describe("Create", func() {
 				Context("when the drax bin doesn't have uid bit set", func() {
 					It("doesn't leak the bundle dir", func() {
 						testhelpers.UnsuidDrax(draxBin.Name())
-						cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "--drax-bin", draxBin.Name(), "create", "--disk-limit-size-bytes", "104857600", imagePath, "random-id")
+						cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "--drax-bin", draxBin.Name(), "create", "--disk-limit-size-bytes", "104857600", baseImagePath, "random-id")
 						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(sess).Should(gexec.Exit(1))
@@ -131,7 +131,7 @@ var _ = Describe("Create", func() {
 			Context("when it's not provided", func() {
 				It("uses drax from $PATH", func() {
 					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "104857600", imagePath, "random-id")
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "104857600", baseImagePath, "random-id")
 					cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
@@ -149,7 +149,7 @@ var _ = Describe("Create", func() {
 		It("uses the default store path", func() {
 			Expect("/var/lib/grootfs/bundles").ToNot(BeAnExistingFile())
 
-			cmd := exec.Command(GrootFSBin, "create", imagePath, "random-id")
+			cmd := exec.Command(GrootFSBin, "create", baseImagePath, "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			// It will fail at this point, because /var/lib/grootfs doesn't exist
@@ -160,8 +160,8 @@ var _ = Describe("Create", func() {
 
 	Context("when two rootfses are using the same image", func() {
 		It("isolates them", func() {
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
-			anotherBundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "another-random-id", 0)
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
+			anotherBundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "another-random-id", 0)
 			Expect(ioutil.WriteFile(path.Join(bundle.RootFSPath, "bar"), []byte("hello-world"), 0644)).To(Succeed())
 			Expect(path.Join(anotherBundle.RootFSPath, "bar")).NotTo(BeARegularFile())
 		})
@@ -169,11 +169,11 @@ var _ = Describe("Create", func() {
 
 	Context("when the id is already being used", func() {
 		BeforeEach(func() {
-			Expect(integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)).NotTo(BeNil())
+			Expect(integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)).NotTo(BeNil())
 		})
 
 		It("fails and produces a useful error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", imagePath, "random-id")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath, "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Eventually(sess.Out).Should(gbytes.Say("bundle for id `random-id` already exists"))
 			Expect(err).NotTo(HaveOccurred())
@@ -187,7 +187,7 @@ var _ = Describe("Create", func() {
 				GrootFSBin, "--store", StorePath,
 				"create",
 				"--uid-mapping", "1:1:65000",
-				imagePath,
+				baseImagePath,
 				"some-id",
 			)
 
@@ -204,7 +204,7 @@ var _ = Describe("Create", func() {
 				GrootFSBin, "--store", StorePath,
 				"create",
 				"--uid-mapping", "1:1:65000",
-				imagePath,
+				baseImagePath,
 				"some-id",
 			)
 
@@ -218,7 +218,7 @@ var _ = Describe("Create", func() {
 
 	Context("when the id is not provided", func() {
 		It("fails", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", imagePath)
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath)
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
@@ -247,7 +247,7 @@ var _ = Describe("Create", func() {
 		It("fails when the uid mapping is invalid", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
-				"create", imagePath,
+				"create", baseImagePath,
 				"--uid-mapping", "1:hello:65000",
 				"some-id",
 			)
@@ -260,7 +260,7 @@ var _ = Describe("Create", func() {
 		It("fails when the gid mapping is invalid", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
-				"create", imagePath,
+				"create", baseImagePath,
 				"--gid-mapping", "1:groot:65000",
 				"some-id",
 			)

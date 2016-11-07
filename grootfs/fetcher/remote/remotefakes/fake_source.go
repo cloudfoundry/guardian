@@ -11,33 +11,33 @@ import (
 )
 
 type FakeSource struct {
-	ManifestStub        func(logger lager.Logger, imageURL *url.URL) (remote.Manifest, error)
+	ManifestStub        func(logger lager.Logger, baseImageURL *url.URL) (remote.Manifest, error)
 	manifestMutex       sync.RWMutex
 	manifestArgsForCall []struct {
-		logger   lager.Logger
-		imageURL *url.URL
+		logger       lager.Logger
+		baseImageURL *url.URL
 	}
 	manifestReturns struct {
 		result1 remote.Manifest
 		result2 error
 	}
-	ConfigStub        func(logger lager.Logger, imageURL *url.URL, manifest remote.Manifest) (v1.Image, error)
+	ConfigStub        func(logger lager.Logger, baseImageURL *url.URL, manifest remote.Manifest) (v1.Image, error)
 	configMutex       sync.RWMutex
 	configArgsForCall []struct {
-		logger   lager.Logger
-		imageURL *url.URL
-		manifest remote.Manifest
+		logger       lager.Logger
+		baseImageURL *url.URL
+		manifest     remote.Manifest
 	}
 	configReturns struct {
 		result1 v1.Image
 		result2 error
 	}
-	BlobStub        func(logger lager.Logger, imageURL *url.URL, digest string) ([]byte, int64, error)
+	BlobStub        func(logger lager.Logger, baseImageURL *url.URL, digest string) ([]byte, int64, error)
 	blobMutex       sync.RWMutex
 	blobArgsForCall []struct {
-		logger   lager.Logger
-		imageURL *url.URL
-		digest   string
+		logger       lager.Logger
+		baseImageURL *url.URL
+		digest       string
 	}
 	blobReturns struct {
 		result1 []byte
@@ -48,16 +48,16 @@ type FakeSource struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeSource) Manifest(logger lager.Logger, imageURL *url.URL) (remote.Manifest, error) {
+func (fake *FakeSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (remote.Manifest, error) {
 	fake.manifestMutex.Lock()
 	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct {
-		logger   lager.Logger
-		imageURL *url.URL
-	}{logger, imageURL})
-	fake.recordInvocation("Manifest", []interface{}{logger, imageURL})
+		logger       lager.Logger
+		baseImageURL *url.URL
+	}{logger, baseImageURL})
+	fake.recordInvocation("Manifest", []interface{}{logger, baseImageURL})
 	fake.manifestMutex.Unlock()
 	if fake.ManifestStub != nil {
-		return fake.ManifestStub(logger, imageURL)
+		return fake.ManifestStub(logger, baseImageURL)
 	} else {
 		return fake.manifestReturns.result1, fake.manifestReturns.result2
 	}
@@ -72,7 +72,7 @@ func (fake *FakeSource) ManifestCallCount() int {
 func (fake *FakeSource) ManifestArgsForCall(i int) (lager.Logger, *url.URL) {
 	fake.manifestMutex.RLock()
 	defer fake.manifestMutex.RUnlock()
-	return fake.manifestArgsForCall[i].logger, fake.manifestArgsForCall[i].imageURL
+	return fake.manifestArgsForCall[i].logger, fake.manifestArgsForCall[i].baseImageURL
 }
 
 func (fake *FakeSource) ManifestReturns(result1 remote.Manifest, result2 error) {
@@ -83,17 +83,17 @@ func (fake *FakeSource) ManifestReturns(result1 remote.Manifest, result2 error) 
 	}{result1, result2}
 }
 
-func (fake *FakeSource) Config(logger lager.Logger, imageURL *url.URL, manifest remote.Manifest) (v1.Image, error) {
+func (fake *FakeSource) Config(logger lager.Logger, baseImageURL *url.URL, manifest remote.Manifest) (v1.Image, error) {
 	fake.configMutex.Lock()
 	fake.configArgsForCall = append(fake.configArgsForCall, struct {
-		logger   lager.Logger
-		imageURL *url.URL
-		manifest remote.Manifest
-	}{logger, imageURL, manifest})
-	fake.recordInvocation("Config", []interface{}{logger, imageURL, manifest})
+		logger       lager.Logger
+		baseImageURL *url.URL
+		manifest     remote.Manifest
+	}{logger, baseImageURL, manifest})
+	fake.recordInvocation("Config", []interface{}{logger, baseImageURL, manifest})
 	fake.configMutex.Unlock()
 	if fake.ConfigStub != nil {
-		return fake.ConfigStub(logger, imageURL, manifest)
+		return fake.ConfigStub(logger, baseImageURL, manifest)
 	} else {
 		return fake.configReturns.result1, fake.configReturns.result2
 	}
@@ -108,7 +108,7 @@ func (fake *FakeSource) ConfigCallCount() int {
 func (fake *FakeSource) ConfigArgsForCall(i int) (lager.Logger, *url.URL, remote.Manifest) {
 	fake.configMutex.RLock()
 	defer fake.configMutex.RUnlock()
-	return fake.configArgsForCall[i].logger, fake.configArgsForCall[i].imageURL, fake.configArgsForCall[i].manifest
+	return fake.configArgsForCall[i].logger, fake.configArgsForCall[i].baseImageURL, fake.configArgsForCall[i].manifest
 }
 
 func (fake *FakeSource) ConfigReturns(result1 v1.Image, result2 error) {
@@ -119,17 +119,17 @@ func (fake *FakeSource) ConfigReturns(result1 v1.Image, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeSource) Blob(logger lager.Logger, imageURL *url.URL, digest string) ([]byte, int64, error) {
+func (fake *FakeSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string) ([]byte, int64, error) {
 	fake.blobMutex.Lock()
 	fake.blobArgsForCall = append(fake.blobArgsForCall, struct {
-		logger   lager.Logger
-		imageURL *url.URL
-		digest   string
-	}{logger, imageURL, digest})
-	fake.recordInvocation("Blob", []interface{}{logger, imageURL, digest})
+		logger       lager.Logger
+		baseImageURL *url.URL
+		digest       string
+	}{logger, baseImageURL, digest})
+	fake.recordInvocation("Blob", []interface{}{logger, baseImageURL, digest})
 	fake.blobMutex.Unlock()
 	if fake.BlobStub != nil {
-		return fake.BlobStub(logger, imageURL, digest)
+		return fake.BlobStub(logger, baseImageURL, digest)
 	} else {
 		return fake.blobReturns.result1, fake.blobReturns.result2, fake.blobReturns.result3
 	}
@@ -144,7 +144,7 @@ func (fake *FakeSource) BlobCallCount() int {
 func (fake *FakeSource) BlobArgsForCall(i int) (lager.Logger, *url.URL, string) {
 	fake.blobMutex.RLock()
 	defer fake.blobMutex.RUnlock()
-	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].imageURL, fake.blobArgsForCall[i].digest
+	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].baseImageURL, fake.blobArgsForCall[i].digest
 }
 
 func (fake *FakeSource) BlobReturns(result1 []byte, result2 int64, result3 error) {

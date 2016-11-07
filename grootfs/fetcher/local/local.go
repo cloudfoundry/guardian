@@ -9,7 +9,7 @@ import (
 	"os"
 	"os/exec"
 
-	"code.cloudfoundry.org/grootfs/image_puller"
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -23,21 +23,21 @@ func NewLocalFetcher() *LocalFetcher {
 	return &LocalFetcher{}
 }
 
-func (l *LocalFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL,
+func (l *LocalFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
 	source string) (io.ReadCloser, int64, error) {
 	logger = logger.Session("stream-blob", lager.Data{
-		"imageURL": imageURL.String(),
-		"source":   source,
+		"baseImageURL": baseImageURL.String(),
+		"source":       source,
 	})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	imagePath := imageURL.String()
-	if _, err := os.Stat(imagePath); err != nil {
-		return nil, 0, fmt.Errorf("local image not found in `%s` %s", imagePath, err)
+	baseImagePath := baseImageURL.String()
+	if _, err := os.Stat(baseImagePath); err != nil {
+		return nil, 0, fmt.Errorf("local image not found in `%s` %s", baseImagePath, err)
 	}
 
-	tarCmd := exec.Command(TarBin, "-cp", "-C", imagePath, ".")
+	tarCmd := exec.Command(TarBin, "-cp", "-C", baseImagePath, ".")
 	stdoutPipe, err := tarCmd.StdoutPipe()
 	if err != nil {
 		return nil, 0, fmt.Errorf("creating pipe: %s", err)
@@ -51,30 +51,30 @@ func (l *LocalFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL,
 	return NewCallbackReader(logger, tarCmd.Wait, stdoutPipe), 0, nil
 }
 
-func (l *LocalFetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (image_puller.ImageInfo, error) {
-	logger = logger.Session("layers-digest", lager.Data{"image-url": imageURL.String()})
+func (l *LocalFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {
+	logger = logger.Session("layers-digest", lager.Data{"baseImageURL": baseImageURL.String()})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	stat, err := os.Stat(imageURL.String())
+	stat, err := os.Stat(baseImageURL.String())
 	if err != nil {
-		return image_puller.ImageInfo{},
+		return base_image_puller.BaseImageInfo{},
 			fmt.Errorf("fetching image timestamp: %s", err)
 	}
 
-	return image_puller.ImageInfo{
-		LayersDigest: []image_puller.LayerDigest{
-			image_puller.LayerDigest{
-				BlobID:        imageURL.String(),
+	return base_image_puller.BaseImageInfo{
+		LayersDigest: []base_image_puller.LayerDigest{
+			base_image_puller.LayerDigest{
+				BlobID:        baseImageURL.String(),
 				ParentChainID: "",
-				ChainID:       l.generateChainID(imageURL.String(), stat.ModTime().UnixNano()),
+				ChainID:       l.generateChainID(baseImageURL.String(), stat.ModTime().UnixNano()),
 			},
 		},
 		Config: specsv1.Image{},
 	}, nil
 }
 
-func (l *LocalFetcher) generateChainID(imagePath string, timestamp int64) string {
-	imagePathSha := sha256.Sum256([]byte(imagePath))
-	return fmt.Sprintf("%s-%d", hex.EncodeToString(imagePathSha[:32]), timestamp)
+func (l *LocalFetcher) generateChainID(baseImagePath string, timestamp int64) string {
+	baseImagePathSha := sha256.Sum256([]byte(baseImagePath))
+	return fmt.Sprintf("%s-%d", hex.EncodeToString(baseImagePathSha[:32]), timestamp)
 }

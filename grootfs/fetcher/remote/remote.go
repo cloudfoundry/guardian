@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/fetcher"
-	"code.cloudfoundry.org/grootfs/image_puller"
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -20,9 +20,9 @@ import (
 
 //go:generate counterfeiter . Source
 type Source interface {
-	Manifest(logger lager.Logger, imageURL *url.URL) (Manifest, error)
-	Config(logger lager.Logger, imageURL *url.URL, manifest Manifest) (specsv1.Image, error)
-	Blob(logger lager.Logger, imageURL *url.URL, digest string) ([]byte, int64, error)
+	Manifest(logger lager.Logger, baseImageURL *url.URL) (Manifest, error)
+	Config(logger lager.Logger, baseImageURL *url.URL, manifest Manifest) (specsv1.Image, error)
+	Blob(logger lager.Logger, baseImageURL *url.URL, digest string) ([]byte, int64, error)
 }
 
 type RemoteFetcher struct {
@@ -37,22 +37,22 @@ func NewRemoteFetcher(source Source, cacheDriver fetcher.CacheDriver) *RemoteFet
 	}
 }
 
-func (f *RemoteFetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (image_puller.ImageInfo, error) {
-	logger = logger.Session("layers-digest", lager.Data{"imageURL": imageURL})
+func (f *RemoteFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {
+	logger = logger.Session("layers-digest", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	logger.Debug("fetching-image-manifest")
-	manifest, err := f.source.Manifest(logger, imageURL)
+	manifest, err := f.source.Manifest(logger, baseImageURL)
 	if err != nil {
-		return image_puller.ImageInfo{}, err
+		return base_image_puller.BaseImageInfo{}, err
 	}
 	logger.Debug("image-manifest", lager.Data{"manifest": manifest})
 
 	logger.Debug("fetching-image-config")
 	contents, _, err := f.cacheDriver.FetchBlob(logger, manifest.ConfigCacheKey,
 		func(logger lager.Logger) ([]byte, int64, error) {
-			config, err := f.source.Config(logger, imageURL, manifest)
+			config, err := f.source.Config(logger, baseImageURL, manifest)
 			if err != nil {
 				return nil, 0, err
 			}
@@ -66,27 +66,27 @@ func (f *RemoteFetcher) ImageInfo(logger lager.Logger, imageURL *url.URL) (image
 		},
 	)
 	if err != nil {
-		return image_puller.ImageInfo{}, err
+		return base_image_puller.BaseImageInfo{}, err
 	}
 
 	var config specsv1.Image
 	if err := json.Unmarshal(contents, &config); err != nil {
-		return image_puller.ImageInfo{}, fmt.Errorf("decoding config from JSON: %s", err)
+		return base_image_puller.BaseImageInfo{}, fmt.Errorf("decoding config from JSON: %s", err)
 	}
 	logger.Debug("image-config", lager.Data{"config": config})
 
-	return image_puller.ImageInfo{
+	return base_image_puller.BaseImageInfo{
 		LayersDigest: f.createLayersDigest(logger, manifest, config),
 		Config:       config,
 	}, nil
 }
 
-func (f *RemoteFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL, source string) (io.ReadCloser, int64, error) {
-	logger = logger.Session("streaming", lager.Data{"imageURL": imageURL})
+func (f *RemoteFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error) {
+	logger = logger.Session("streaming", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	blobContents, size, err := f.source.Blob(logger, imageURL, source)
+	blobContents, size, err := f.source.Blob(logger, baseImageURL, source)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -101,8 +101,8 @@ func (f *RemoteFetcher) StreamBlob(logger lager.Logger, imageURL *url.URL, sourc
 
 func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
 	manifest Manifest, config specsv1.Image,
-) []image_puller.LayerDigest {
-	layersDigest := []image_puller.LayerDigest{}
+) []base_image_puller.LayerDigest {
+	layersDigest := []base_image_puller.LayerDigest{}
 
 	var parentChainID string
 	for i, layer := range manifest.Layers {
@@ -112,7 +112,7 @@ func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
 
 		diffID := config.RootFS.DiffIDs[i]
 		chainID := f.chainID(diffID, parentChainID)
-		layersDigest = append(layersDigest, image_puller.LayerDigest{
+		layersDigest = append(layersDigest, base_image_puller.LayerDigest{
 			BlobID:        layer.BlobID,
 			Size:          layer.Size,
 			ChainID:       chainID,

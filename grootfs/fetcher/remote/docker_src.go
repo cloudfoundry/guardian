@@ -30,12 +30,12 @@ func NewDockerSource(trustedRegistries []string) *DockerSource {
 	}
 }
 
-func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifest, error) {
-	logger = logger.Session("fetching-image-manifest", lager.Data{"imageURL": imageURL})
+func (s *DockerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (Manifest, error) {
+	logger = logger.Session("fetching-image-manifest", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	img, err := s.image(logger, imageURL)
+	img, err := s.image(logger, baseImageURL)
 	if err != nil {
 		logger.Error("fetching-image-reference-failed", err)
 
@@ -65,9 +65,9 @@ func (s *DockerSource) Manifest(logger lager.Logger, imageURL *url.URL) (Manifes
 	return manifest, nil
 }
 
-func (s *DockerSource) Config(logger lager.Logger, imageURL *url.URL, manifest Manifest) (specsv1.Image, error) {
+func (s *DockerSource) Config(logger lager.Logger, baseImageURL *url.URL, manifest Manifest) (specsv1.Image, error) {
 	logger = logger.Session("fetching-image-config", lager.Data{
-		"imageURL":     imageURL,
+		"baseImageURL": baseImageURL,
 		"configDigest": manifest.ConfigCacheKey,
 	})
 	logger.Info("start")
@@ -87,7 +87,7 @@ func (s *DockerSource) Config(logger lager.Logger, imageURL *url.URL, manifest M
 		}
 	case 2:
 		logger.Debug("docker-image-version-2-schema-2")
-		config, err = s.parseSchemaV2Config(logger, imageURL, manifest.ConfigCacheKey)
+		config, err = s.parseSchemaV2Config(logger, baseImageURL, manifest.ConfigCacheKey)
 		if err != nil {
 			return specsv1.Image{}, err
 		}
@@ -98,16 +98,16 @@ func (s *DockerSource) Config(logger lager.Logger, imageURL *url.URL, manifest M
 	return config, nil
 }
 
-func (s *DockerSource) Blob(logger lager.Logger, imageURL *url.URL, digest string) ([]byte, int64, error) {
+func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string) ([]byte, int64, error) {
 	logrus.SetOutput(os.Stderr)
 	logger = logger.Session("streaming-blob", lager.Data{
-		"imageURL": imageURL,
-		"digest":   digest,
+		"baseImageURL": baseImageURL,
+		"digest":       digest,
 	})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	imgSrc, err := s.imageSource(logger, imageURL)
+	imgSrc, err := s.imageSource(logger, baseImageURL)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -152,9 +152,9 @@ func (s *DockerSource) checkCheckSum(logger lager.Logger, blobContents []byte, d
 	return true
 }
 
-func (s *DockerSource) skipTLSValidation(imageURL *url.URL) bool {
+func (s *DockerSource) skipTLSValidation(baseImageURL *url.URL) bool {
 	for _, trustedRegistry := range s.trustedRegistries {
-		if imageURL.Host == trustedRegistry {
+		if baseImageURL.Host == trustedRegistry {
 			return true
 		}
 	}
@@ -204,8 +204,8 @@ func (s *DockerSource) parseSchemaV2Manifest(logger lager.Logger, rawManifest []
 	return manifest, nil
 }
 
-func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, imageURL *url.URL, configDigest string) (specsv1.Image, error) {
-	imgSrc, err := s.imageSource(logger, imageURL)
+func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, baseImageURL *url.URL, configDigest string) (specsv1.Image, error) {
+	imgSrc, err := s.imageSource(logger, baseImageURL)
 	if err != nil {
 		return specsv1.Image{}, err
 	}
@@ -250,12 +250,12 @@ func (s *DockerSource) parseSchemaV1Config(logger lager.Logger, manifest Manifes
 	return config, nil
 }
 
-func (s *DockerSource) reference(logger lager.Logger, imageURL *url.URL) (types.ImageReference, error) {
+func (s *DockerSource) reference(logger lager.Logger, baseImageURL *url.URL) (types.ImageReference, error) {
 	refString := "/"
-	if imageURL.Host != "" {
-		refString += "/" + imageURL.Host
+	if baseImageURL.Host != "" {
+		refString += "/" + baseImageURL.Host
 	}
-	refString += imageURL.Path
+	refString += baseImageURL.Path
 
 	logger.Debug("parsing-reference", lager.Data{"refString": refString})
 	ref, err := docker.ParseReference(refString)
@@ -266,13 +266,13 @@ func (s *DockerSource) reference(logger lager.Logger, imageURL *url.URL) (types.
 	return ref, nil
 }
 
-func (s *DockerSource) image(logger lager.Logger, imageURL *url.URL) (types.Image, error) {
-	ref, err := s.reference(logger, imageURL)
+func (s *DockerSource) image(logger lager.Logger, baseImageURL *url.URL) (types.Image, error) {
+	ref, err := s.reference(logger, baseImageURL)
 	if err != nil {
 		return nil, err
 	}
 
-	skipTLSValidation := s.skipTLSValidation(imageURL)
+	skipTLSValidation := s.skipTLSValidation(baseImageURL)
 	logger.Debug("new-image", lager.Data{"skipTLSValidation": skipTLSValidation})
 	img, err := ref.NewImage(&types.SystemContext{DockerInsecureSkipTLSVerify: skipTLSValidation})
 	if err != nil {
@@ -282,13 +282,13 @@ func (s *DockerSource) image(logger lager.Logger, imageURL *url.URL) (types.Imag
 	return img, nil
 }
 
-func (s *DockerSource) imageSource(logger lager.Logger, imageURL *url.URL) (types.ImageSource, error) {
-	ref, err := s.reference(logger, imageURL)
+func (s *DockerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (types.ImageSource, error) {
+	ref, err := s.reference(logger, baseImageURL)
 	if err != nil {
 		return nil, err
 	}
 
-	skipTLSValidation := s.skipTLSValidation(imageURL)
+	skipTLSValidation := s.skipTLSValidation(baseImageURL)
 
 	imgSrc, _ := ref.NewImageSource(&types.SystemContext{DockerInsecureSkipTLSVerify: skipTLSValidation}, preferedMediaTypes())
 	if err != nil {

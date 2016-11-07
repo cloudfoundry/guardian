@@ -19,10 +19,10 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-func CreateBundle(grootFSBin, storePath, draxBin, imagePath, id string, diskLimit int64) groot.Bundle {
+func CreateBundle(grootFSBin, storePath, draxBin, baseImagePath, id string, diskLimit int64) groot.Bundle {
 	spec := groot.CreateSpec{
 		ID:        id,
-		Image:     imagePath,
+		BaseImage:     baseImagePath,
 		DiskLimit: diskLimit,
 	}
 
@@ -65,12 +65,12 @@ func FindGID(group string) uint32 {
 	return uint32(i)
 }
 
-func ImagePathToVolumeID(imagePath string) string {
-	stat, err := os.Stat(imagePath)
+func BaseImagePathToVolumeID(baseImagePath string) string {
+	stat, err := os.Stat(baseImagePath)
 	Expect(err).ToNot(HaveOccurred())
 
-	imagePathSha := sha256.Sum256([]byte(imagePath))
-	return fmt.Sprintf("%s-%d", hex.EncodeToString(imagePathSha[:32]), stat.ModTime().UnixNano())
+	baseImagePathSha := sha256.Sum256([]byte(baseImagePath))
+	return fmt.Sprintf("%s-%d", hex.EncodeToString(baseImagePathSha[:32]), stat.ModTime().UnixNano())
 }
 
 type CustomRoundTripper struct {

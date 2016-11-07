@@ -1,4 +1,4 @@
-package unpacker // import "code.cloudfoundry.org/grootfs/image_puller/unpacker"
+package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 
 import (
 	"archive/tar"
@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/image_puller"
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -21,7 +21,7 @@ func NewTarUnpacker() *TarUnpacker {
 	return &TarUnpacker{}
 }
 
-func (u *TarUnpacker) Unpack(logger lager.Logger, spec image_puller.UnpackSpec) error {
+func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) error {
 	logger = logger.Session("unpacking-with-tar", lager.Data{"spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -39,7 +39,7 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec image_puller.UnpackSpec) 
 	return nil
 }
 
-func (u *TarUnpacker) unTar(spec image_puller.UnpackSpec) error {
+func (u *TarUnpacker) unTar(spec base_image_puller.UnpackSpec) error {
 	tarReader := tar.NewReader(spec.Stream)
 	opaqueWhiteouts := []string{}
 

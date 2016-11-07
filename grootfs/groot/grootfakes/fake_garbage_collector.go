@@ -9,11 +9,11 @@ import (
 )
 
 type FakeGarbageCollector struct {
-	CollectStub        func(logger lager.Logger, keepImages []string) error
+	CollectStub        func(logger lager.Logger, keepBaseImages []string) error
 	collectMutex       sync.RWMutex
 	collectArgsForCall []struct {
-		logger     lager.Logger
-		keepImages []string
+		logger         lager.Logger
+		keepBaseImages []string
 	}
 	collectReturns struct {
 		result1 error
@@ -22,21 +22,21 @@ type FakeGarbageCollector struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGarbageCollector) Collect(logger lager.Logger, keepImages []string) error {
-	var keepImagesCopy []string
-	if keepImages != nil {
-		keepImagesCopy = make([]string, len(keepImages))
-		copy(keepImagesCopy, keepImages)
+func (fake *FakeGarbageCollector) Collect(logger lager.Logger, keepBaseImages []string) error {
+	var keepBaseImagesCopy []string
+	if keepBaseImages != nil {
+		keepBaseImagesCopy = make([]string, len(keepBaseImages))
+		copy(keepBaseImagesCopy, keepBaseImages)
 	}
 	fake.collectMutex.Lock()
 	fake.collectArgsForCall = append(fake.collectArgsForCall, struct {
-		logger     lager.Logger
-		keepImages []string
-	}{logger, keepImagesCopy})
-	fake.recordInvocation("Collect", []interface{}{logger, keepImagesCopy})
+		logger         lager.Logger
+		keepBaseImages []string
+	}{logger, keepBaseImagesCopy})
+	fake.recordInvocation("Collect", []interface{}{logger, keepBaseImagesCopy})
 	fake.collectMutex.Unlock()
 	if fake.CollectStub != nil {
-		return fake.CollectStub(logger, keepImages)
+		return fake.CollectStub(logger, keepBaseImages)
 	} else {
 		return fake.collectReturns.result1
 	}
@@ -51,7 +51,7 @@ func (fake *FakeGarbageCollector) CollectCallCount() int {
 func (fake *FakeGarbageCollector) CollectArgsForCall(i int) (lager.Logger, []string) {
 	fake.collectMutex.RLock()
 	defer fake.collectMutex.RUnlock()
-	return fake.collectArgsForCall[i].logger, fake.collectArgsForCall[i].keepImages
+	return fake.collectArgsForCall[i].logger, fake.collectArgsForCall[i].keepBaseImages
 }
 
 func (fake *FakeGarbageCollector) CollectReturns(result1 error) {

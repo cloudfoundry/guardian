@@ -7,12 +7,12 @@ import (
 	"net/url"
 	"path/filepath"
 
+	"code.cloudfoundry.org/grootfs/base_image_puller"
+	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/image_puller"
-	unpackerpkg "code.cloudfoundry.org/grootfs/image_puller/unpacker"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	bundlerpkg "code.cloudfoundry.org/grootfs/store/bundler"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
@@ -65,7 +65,7 @@ var CreateCommand = cli.Command{
 		}
 
 		storePath := storepath.UserBased(ctx.GlobalString("store"))
-		image := ctx.Args().First()
+		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
 
 		diskLimit := ctx.Int64("disk-limit-size-bytes")
@@ -104,19 +104,19 @@ var CreateCommand = cli.Command{
 		localFetcher := local.NewLocalFetcher()
 
 		locksmith := locksmithpkg.NewFileSystem(storePath)
-		imgPuller := image_puller.NewImagePuller(localFetcher, remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
+		baseImagePuller := base_image_puller.NewBaseImagePuller(localFetcher, remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
 		)
-		creator := groot.IamCreator(bundler, imgPuller, locksmith, dependencyManager)
+		creator := groot.IamCreator(bundler, baseImagePuller, locksmith, dependencyManager)
 
 		bundle, err := creator.Create(logger, groot.CreateSpec{
-			ID:                    id,
-			Image:                 image,
-			DiskLimit:             diskLimit,
-			ExcludeImageFromQuota: ctx.Bool("exclude-image-from-quota"),
-			UIDMappings:           uidMappings,
-			GIDMappings:           gidMappings,
+			ID:                        id,
+			BaseImage:                 baseImage,
+			DiskLimit:                 diskLimit,
+			ExcludeBaseImageFromQuota: ctx.Bool("exclude-image-from-quota"),
+			UIDMappings:               uidMappings,
+			GIDMappings:               gidMappings,
 		})
 		if err != nil {
 			logger.Error("creating", err)
@@ -157,7 +157,7 @@ func containsDockerError(errorsList errcode.Errors, errCode errcode.ErrorCode) b
 
 func tryHumanizeDockerErrorsList(err errcode.Errors) string {
 	if containsDockerError(err, errcode.ErrorCodeUnauthorized) {
-		return "Image does not exist or you do not have permissions to see it."
+		return "BaseImage does not exist or you do not have permissions to see it."
 	}
 
 	return err.Error()

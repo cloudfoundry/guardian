@@ -6,12 +6,12 @@ type Layer struct {
 	ChainID string
 }
 
-type Image struct {
+type BaseImage struct {
 	ConfigBlobID string
 	Layers       []Layer
 }
 
-var EmptyImageV01 = Image{
+var EmptyBaseImageV01 = BaseImage{
 	ConfigBlobID: "sha256:798d0b171b05f1cb0cf6f52d11cd39722182f2272b66488873bcfb8350917d2b",
 	Layers: []Layer{
 		{
@@ -22,7 +22,7 @@ var EmptyImageV01 = Image{
 	},
 }
 
-var EmptyImageV011 = Image{
+var EmptyBaseImageV011 = BaseImage{
 	ConfigBlobID: "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d",
 	Layers: []Layer{
 		{

@@ -32,7 +32,7 @@ var _ = Describe("Logging", func() {
 		logBuffer := gbytes.NewBuffer()
 		_, err = Runner.WithStderr(logBuffer).Create(groot.CreateSpec{
 			ID:    "random-id",
-			Image: imgPath,
+			BaseImage: imgPath,
 		})
 		Expect(err).NotTo(HaveOccurred())
 

@@ -76,7 +76,7 @@ var _ = Describe("Bundle", func() {
 			bundleSpec := groot.BundleSpec{
 				ID:         "some-id",
 				VolumePath: "/path/to/volume",
-				Image: specsv1.Image{
+				BaseImage: specsv1.Image{
 					Author: "Groot",
 				},
 			}
@@ -89,7 +89,7 @@ var _ = Describe("Bundle", func() {
 		})
 
 		It("writes the image.json to the bundle", func() {
-			image := specsv1.Image{
+			baseImage := specsv1.Image{
 				Author: "Groot",
 				Config: specsv1.ImageConfig{
 					User: "groot",
@@ -99,7 +99,7 @@ var _ = Describe("Bundle", func() {
 			bundle, err := bundler.Create(logger, groot.BundleSpec{
 				ID:         "some-id",
 				VolumePath: "/path/to/volume",
-				Image:      image,
+				BaseImage:  baseImage,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -111,7 +111,7 @@ var _ = Describe("Bundle", func() {
 
 			var imageJsonContent specsv1.Image
 			Expect(json.NewDecoder(imageJsonFile).Decode(&imageJsonContent)).To(Succeed())
-			Expect(imageJsonContent).To(Equal(image))
+			Expect(imageJsonContent).To(Equal(baseImage))
 		})
 
 		Context("when calling it with two different ids", func() {
@@ -188,10 +188,10 @@ var _ = Describe("Bundle", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, path, diskLimit, excludeImageFromQuota := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
+				_, path, diskLimit, excludeBaseImageFromQuota := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
 				Expect(path).To(Equal(bundle.RootFSPath))
 				Expect(diskLimit).To(Equal(int64(1024)))
-				Expect(excludeImageFromQuota).To(BeFalse())
+				Expect(excludeBaseImageFromQuota).To(BeFalse())
 			})
 
 			Context("when applying the disk limit fails", func() {
@@ -223,13 +223,13 @@ var _ = Describe("Bundle", func() {
 			Context("when the exclusive flag is set", func() {
 				It("enforces the exclusive limit", func() {
 					_, err := bundler.Create(logger, groot.BundleSpec{
-						ID:                    "some-id",
-						DiskLimit:             int64(1024),
-						ExcludeImageFromQuota: true,
+						ID:                        "some-id",
+						DiskLimit:                 int64(1024),
+						ExcludeBaseImageFromQuota: true,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					_, _, _, excludeImageFromQuota := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
-					Expect(excludeImageFromQuota).To(BeTrue())
+					_, _, _, excludeBaseImageFromQuota := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
+					Expect(excludeBaseImageFromQuota).To(BeTrue())
 				})
 			})
 		})

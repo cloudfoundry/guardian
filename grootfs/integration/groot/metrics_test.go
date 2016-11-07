@@ -18,24 +18,24 @@ import (
 
 var _ = Describe("Metrics", func() {
 	var (
-		imagePath string
+		baseImagePath string
 		bundle    groot.Bundle
 	)
 
 	BeforeEach(func() {
 		var err error
-		imagePath, err = ioutil.TempDir("", "")
+		baseImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Context("when bundle exists", func() {
 		BeforeEach(func() {
-			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(imagePath, "fatfile")), "bs=1048576", "count=5")
+			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "fatfile")), "bs=1048576", "count=5")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 
-			bundle = integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
+			bundle = integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
 			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath, "hello")), "bs=1048576", "count=4")
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())

@@ -8,26 +8,26 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type FakeImagePuller struct {
-	PullStub        func(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error)
+type FakeBaseImagePuller struct {
+	PullStub        func(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImage, error)
 	pullMutex       sync.RWMutex
 	pullArgsForCall []struct {
 		logger lager.Logger
-		spec   groot.ImageSpec
+		spec   groot.BaseImageSpec
 	}
 	pullReturns struct {
-		result1 groot.Image
+		result1 groot.BaseImage
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error) {
+func (fake *FakeBaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImage, error) {
 	fake.pullMutex.Lock()
 	fake.pullArgsForCall = append(fake.pullArgsForCall, struct {
 		logger lager.Logger
-		spec   groot.ImageSpec
+		spec   groot.BaseImageSpec
 	}{logger, spec})
 	fake.recordInvocation("Pull", []interface{}{logger, spec})
 	fake.pullMutex.Unlock()
@@ -38,27 +38,27 @@ func (fake *FakeImagePuller) Pull(logger lager.Logger, spec groot.ImageSpec) (gr
 	}
 }
 
-func (fake *FakeImagePuller) PullCallCount() int {
+func (fake *FakeBaseImagePuller) PullCallCount() int {
 	fake.pullMutex.RLock()
 	defer fake.pullMutex.RUnlock()
 	return len(fake.pullArgsForCall)
 }
 
-func (fake *FakeImagePuller) PullArgsForCall(i int) (lager.Logger, groot.ImageSpec) {
+func (fake *FakeBaseImagePuller) PullArgsForCall(i int) (lager.Logger, groot.BaseImageSpec) {
 	fake.pullMutex.RLock()
 	defer fake.pullMutex.RUnlock()
 	return fake.pullArgsForCall[i].logger, fake.pullArgsForCall[i].spec
 }
 
-func (fake *FakeImagePuller) PullReturns(result1 groot.Image, result2 error) {
+func (fake *FakeBaseImagePuller) PullReturns(result1 groot.BaseImage, result2 error) {
 	fake.PullStub = nil
 	fake.pullReturns = struct {
-		result1 groot.Image
+		result1 groot.BaseImage
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeImagePuller) Invocations() map[string][][]interface{} {
+func (fake *FakeBaseImagePuller) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.pullMutex.RLock()
@@ -66,7 +66,7 @@ func (fake *FakeImagePuller) Invocations() map[string][][]interface{} {
 	return fake.invocations
 }
 
-func (fake *FakeImagePuller) recordInvocation(key string, args []interface{}) {
+func (fake *FakeBaseImagePuller) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -78,4 +78,4 @@ func (fake *FakeImagePuller) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ groot.ImagePuller = new(FakeImagePuller)
+var _ groot.BaseImagePuller = new(FakeBaseImagePuller)

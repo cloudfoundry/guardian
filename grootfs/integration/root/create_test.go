@@ -20,7 +20,7 @@ import (
 
 var _ = Describe("Create", func() {
 	var (
-		imagePath string
+		baseImagePath string
 		rootUID   int
 		rootGID   int
 	)
@@ -30,34 +30,34 @@ var _ = Describe("Create", func() {
 		rootGID = 0
 
 		var err error
-		imagePath, err = ioutil.TempDir("", "")
+		baseImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(os.Chown(imagePath, rootUID, rootGID)).To(Succeed())
-		Expect(os.Chmod(imagePath, 0755)).To(Succeed())
+		Expect(os.Chown(baseImagePath, rootUID, rootGID)).To(Succeed())
+		Expect(os.Chmod(baseImagePath, 0755)).To(Succeed())
 
-		grootFilePath := path.Join(imagePath, "foo")
+		grootFilePath := path.Join(baseImagePath, "foo")
 		Expect(ioutil.WriteFile(grootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 		Expect(os.Chown(grootFilePath, int(GrootUID), int(GrootGID))).To(Succeed())
 
-		grootFolder := path.Join(imagePath, "groot-folder")
+		grootFolder := path.Join(baseImagePath, "groot-folder")
 		Expect(os.Mkdir(grootFolder, 0777)).To(Succeed())
 		Expect(os.Chown(grootFolder, int(GrootUID), int(GrootGID))).To(Succeed())
 		Expect(ioutil.WriteFile(path.Join(grootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
 
-		rootFilePath := path.Join(imagePath, "bar")
+		rootFilePath := path.Join(baseImagePath, "bar")
 		Expect(ioutil.WriteFile(rootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 
-		rootFolder := path.Join(imagePath, "root-folder")
+		rootFolder := path.Join(baseImagePath, "root-folder")
 		Expect(os.Mkdir(rootFolder, 0777)).To(Succeed())
 		Expect(ioutil.WriteFile(path.Join(rootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(imagePath)).To(Succeed())
+		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
 	})
 
 	It("keeps the ownership and permissions", func() {
-		bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imagePath, "random-id", 0)
+		bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
 
 		grootFi, err := os.Stat(path.Join(bundle.RootFSPath, "foo"))
 		Expect(err).NotTo(HaveOccurred())
@@ -82,7 +82,7 @@ var _ = Describe("Create", func() {
 				"--uid-mapping", "1:100000:65000",
 				"--gid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
 				"--gid-mapping", "1:100000:65000",
-				imagePath,
+				baseImagePath,
 				"some-id",
 			)
 			cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -128,7 +128,7 @@ var _ = Describe("Create", func() {
 				"--uid-mapping", "1:100000:65000",
 				"--gid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
 				"--gid-mapping", "1:100000:65000",
-				imagePath,
+				baseImagePath,
 				"some-id",
 			)
 			cmd.SysProcAttr = &syscall.SysProcAttr{

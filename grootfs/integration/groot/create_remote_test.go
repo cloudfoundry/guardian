@@ -25,21 +25,21 @@ import (
 )
 
 var _ = Describe("Create with remote images", func() {
-	var imageURL string
+	var baseImageURL string
 
 	Context("when using the default registry", func() {
 		BeforeEach(func() {
-			imageURL = "docker:///cfgarden/empty:v0.1.0"
+			baseImageURL = "docker:///cfgarden/empty:v0.1.0"
 		})
 
 		It("creates a root filesystem based on the image provided", func() {
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 
 			Expect(path.Join(bundle.RootFSPath, "hello")).To(BeARegularFile())
 		})
 
 		It("saves the image.json to the bundle folder", func() {
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
+			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 
 			imageJsonPath := path.Join(bundle.Path, "image.json")
 			Expect(imageJsonPath).To(BeARegularFile())
@@ -57,11 +57,11 @@ var _ = Describe("Create with remote images", func() {
 
 		Context("when the image has opaque white outs", func() {
 			BeforeEach(func() {
-				imageURL = "docker:///cfgarden/opq-whiteout-busybox"
+				baseImageURL = "docker:///cfgarden/opq-whiteout-busybox"
 			})
 
 			It("empties the folder contents but keeps the dir", func() {
-				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
+				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 
 				whiteoutedDir := path.Join(bundle.RootFSPath, "var")
 				Expect(whiteoutedDir).To(BeADirectory())
@@ -73,12 +73,12 @@ var _ = Describe("Create with remote images", func() {
 
 		Context("when image size exceeds disk quota", func() {
 			BeforeEach(func() {
-				imageURL = "docker:///cfgarden/empty:v0.1.1"
+				baseImageURL = "docker:///cfgarden/empty:v0.1.1"
 			})
 
 			Context("when the image is not accounted for in the quota", func() {
 				It("succeeds", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "create", "--disk-limit-size-bytes", "10", "--exclude-image-from-quota", imageURL, "random-id")
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "create", "--disk-limit-size-bytes", "10", "--exclude-image-from-quota", baseImageURL, "random-id")
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
 					Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
@@ -87,7 +87,7 @@ var _ = Describe("Create with remote images", func() {
 
 			Context("when the image is accounted for in the quota", func() {
 				It("returns an error", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "10", imageURL, "random-id")
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "10", baseImageURL, "random-id")
 
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
@@ -100,12 +100,12 @@ var _ = Describe("Create with remote images", func() {
 
 		Describe("Unpacked layer caching", func() {
 			It("caches the unpacked image in a subvolume with snapshots", func() {
-				integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
+				integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 
 				layerSnapshotPath := filepath.Join(StorePath, CurrentUserID, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
 				Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
-				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id-2", 0)
+				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id-2", 0)
 				Expect(path.Join(bundle.RootFSPath, "hello")).To(BeARegularFile())
 				Expect(path.Join(bundle.RootFSPath, "injected-file")).To(BeARegularFile())
 			})
@@ -122,7 +122,7 @@ var _ = Describe("Create with remote images", func() {
 					})
 					Expect(fakeRegistry.Start()).To(Succeed())
 
-					imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", fakeRegistry.Addr())
+					baseImageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", fakeRegistry.Addr())
 				})
 
 				AfterEach(func() {
@@ -130,7 +130,7 @@ var _ = Describe("Create with remote images", func() {
 				})
 
 				It("deletes the layer volume cache", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id-2")
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), baseImageURL, "random-id-2")
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
 					Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
@@ -145,11 +145,11 @@ var _ = Describe("Create with remote images", func() {
 
 		Context("when the image has a version 1 manifest schema", func() {
 			BeforeEach(func() {
-				imageURL = "docker:///cfgarden/empty:schemaV1"
+				baseImageURL = "docker:///cfgarden/empty:schemaV1"
 			})
 
 			It("creates a root filesystem based on the image provided", func() {
-				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, imageURL, "random-id", 0)
+				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 				Expect(path.Join(bundle.RootFSPath, "allo")).To(BeAnExistingFile())
 				Expect(path.Join(bundle.RootFSPath, "hello")).To(BeAnExistingFile())
 			})
@@ -167,7 +167,7 @@ var _ = Describe("Create with remote images", func() {
 			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
 			Expect(fakeRegistry.Start()).To(Succeed())
 
-			imageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr())
+			baseImageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr())
 		})
 
 		AfterEach(func() {
@@ -177,7 +177,7 @@ var _ = Describe("Create with remote images", func() {
 		It("fails to fetch the image", func() {
 			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
 				ID:    "random-id",
-				Image: imageURL,
+				BaseImage: baseImageURL,
 			})
 
 			Eventually(err).Should(MatchError("This registry is insecure. To pull images from this registry, please use the --insecure-registry option."))
@@ -185,7 +185,7 @@ var _ = Describe("Create with remote images", func() {
 
 		Context("when it's provided as a valid insecure registry", func() {
 			It("should create a root filesystem based on the image provided by the private registry", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), imageURL, "random-id")
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--insecure-registry", fakeRegistry.Addr(), baseImageURL, "random-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
@@ -202,10 +202,10 @@ var _ = Describe("Create with remote images", func() {
 		It("returns a useful error", func() {
 			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
 				ID:    "random-id",
-				Image: "docker:///cfgaren/sorry-not-here",
+				BaseImage: "docker:///cfgaren/sorry-not-here",
 			})
 
-			Eventually(err).Should(MatchError("Image does not exist or you do not have permissions to see it."))
+			Eventually(err).Should(MatchError("BaseImage does not exist or you do not have permissions to see it."))
 		})
 	})
 })

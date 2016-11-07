@@ -11,7 +11,7 @@ import (
 const GLOBAL_LOCK_KEY = "global-groot-lock"
 
 //go:generate counterfeiter . Bundler
-//go:generate counterfeiter . ImagePuller
+//go:generate counterfeiter . BaseImagePuller
 //go:generate counterfeiter . Locksmith
 //go:generate counterfeiter . DependencyManager
 //go:generate counterfeiter . GarbageCollector
@@ -23,30 +23,30 @@ type IDMappingSpec struct {
 	Size        int
 }
 
-type ImageSpec struct {
+type BaseImageSpec struct {
 	DiskLimit             int64
-	ExcludeImageFromQuota bool
-	ImageSrc              *url.URL
+	ExcludeBaseImageFromQuota bool
+	BaseImageSrc              *url.URL
 	UIDMappings           []IDMappingSpec
 	GIDMappings           []IDMappingSpec
 }
 
-type Image struct {
+type BaseImage struct {
 	VolumePath string
-	Image      specsv1.Image
+	BaseImage      specsv1.Image
 	ChainIDs   []string
 }
 
-type ImagePuller interface {
-	Pull(logger lager.Logger, spec ImageSpec) (Image, error)
+type BaseImagePuller interface {
+	Pull(logger lager.Logger, spec BaseImageSpec) (BaseImage, error)
 }
 
 type BundleSpec struct {
 	ID                    string
 	DiskLimit             int64
-	ExcludeImageFromQuota bool
+	ExcludeBaseImageFromQuota bool
 	VolumePath            string
-	Image                 specsv1.Image
+	BaseImage                 specsv1.Image
 }
 
 type Bundle struct {
@@ -67,7 +67,7 @@ type DependencyManager interface {
 }
 
 type GarbageCollector interface {
-	Collect(logger lager.Logger, keepImages []string) error
+	Collect(logger lager.Logger, keepBaseImages []string) error
 }
 
 type StoreMeasurer interface {

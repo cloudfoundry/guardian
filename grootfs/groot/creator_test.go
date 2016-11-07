@@ -19,7 +19,7 @@ import (
 var _ = Describe("Creator", func() {
 	var (
 		fakeBundler           *grootfakes.FakeBundler
-		fakeImagePuller       *grootfakes.FakeImagePuller
+		fakeBaseImagePuller   *grootfakes.FakeBaseImagePuller
 		fakeLocksmith         *grootfakes.FakeLocksmith
 		fakeDependencyManager *grootfakes.FakeDependencyManager
 		lockFile              *os.File
@@ -32,7 +32,7 @@ var _ = Describe("Creator", func() {
 		var err error
 
 		fakeBundler = new(grootfakes.FakeBundler)
-		fakeImagePuller = new(grootfakes.FakeImagePuller)
+		fakeBaseImagePuller = new(grootfakes.FakeBaseImagePuller)
 
 		fakeLocksmith = new(grootfakes.FakeLocksmith)
 		lockFile, err = ioutil.TempFile("", "")
@@ -40,7 +40,7 @@ var _ = Describe("Creator", func() {
 		fakeLocksmith.LockReturns(lockFile, nil)
 		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
 
-		creator = groot.IamCreator(fakeBundler, fakeImagePuller, fakeLocksmith, fakeDependencyManager)
+		creator = groot.IamCreator(fakeBundler, fakeBaseImagePuller, fakeLocksmith, fakeDependencyManager)
 		logger = lagertest.NewTestLogger("creator")
 	})
 
@@ -51,7 +51,7 @@ var _ = Describe("Creator", func() {
 	Describe("Create", func() {
 		It("acquires the global lock", func() {
 			_, err := creator.Create(logger, groot.CreateSpec{
-				Image: "/path/to/image",
+				BaseImage: "/path/to/image",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -64,32 +64,32 @@ var _ = Describe("Creator", func() {
 			gidMappings := []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}
 
 			_, err := creator.Create(logger, groot.CreateSpec{
-				Image:       "/path/to/image",
+				BaseImage:   "/path/to/image",
 				UIDMappings: uidMappings,
 				GIDMappings: gidMappings,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			imageURL, err := url.Parse("/path/to/image")
+			baseImageURL, err := url.Parse("/path/to/image")
 			Expect(err).NotTo(HaveOccurred())
-			_, imageSpec := fakeImagePuller.PullArgsForCall(0)
-			Expect(imageSpec.ImageSrc).To(Equal(imageURL))
+			_, imageSpec := fakeBaseImagePuller.PullArgsForCall(0)
+			Expect(imageSpec.BaseImageSrc).To(Equal(baseImageURL))
 			Expect(imageSpec.UIDMappings).To(Equal(uidMappings))
 			Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
 		})
 
 		It("makes a bundle", func() {
-			image := groot.Image{
+			baseImage := groot.BaseImage{
 				VolumePath: "/path/to/volume",
-				Image: specsv1.Image{
+				BaseImage: specsv1.Image{
 					Author: "Groot",
 				},
 			}
-			fakeImagePuller.PullReturns(image, nil)
+			fakeBaseImagePuller.PullReturns(baseImage, nil)
 
 			_, err := creator.Create(logger, groot.CreateSpec{
-				ID:    "some-id",
-				Image: "/path/to/image",
+				ID:        "some-id",
+				BaseImage: "/path/to/image",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -98,21 +98,21 @@ var _ = Describe("Creator", func() {
 			Expect(createBundlerSpec).To(Equal(groot.BundleSpec{
 				ID:         "some-id",
 				VolumePath: "/path/to/volume",
-				Image: specsv1.Image{
+				BaseImage: specsv1.Image{
 					Author: "Groot",
 				},
 			}))
 		})
 
 		It("registers chain ids used by a bundle", func() {
-			image := groot.Image{
+			baseImage := groot.BaseImage{
 				ChainIDs: []string{"sha256:vol-a", "sha256:vol-b"},
 			}
-			fakeImagePuller.PullReturns(image, nil)
+			fakeBaseImagePuller.PullReturns(baseImage, nil)
 
 			_, err := creator.Create(logger, groot.CreateSpec{
-				ID:    "my-bundle",
-				Image: "/path/to/image",
+				ID:        "my-bundle",
+				BaseImage: "/path/to/image",
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -123,14 +123,14 @@ var _ = Describe("Creator", func() {
 		})
 
 		It("registers image name with chain ids used by a bundle", func() {
-			image := groot.Image{
+			baseImage := groot.BaseImage{
 				ChainIDs: []string{"sha256:vol-a", "sha256:vol-b"},
 			}
-			fakeImagePuller.PullReturns(image, nil)
+			fakeBaseImagePuller.PullReturns(baseImage, nil)
 
 			_, err := creator.Create(logger, groot.CreateSpec{
-				ID:    "my-bundle",
-				Image: "docker:///ubuntu",
+				ID:        "my-bundle",
+				BaseImage: "docker:///ubuntu",
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -143,7 +143,7 @@ var _ = Describe("Creator", func() {
 
 		It("releases the global lock", func() {
 			_, err := creator.Create(logger, groot.CreateSpec{
-				Image: "/path/to/image",
+				BaseImage: "/path/to/image",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -163,14 +163,14 @@ var _ = Describe("Creator", func() {
 
 		Context("when the image has a tag", func() {
 			It("registers image name with chain ids used by a bundle", func() {
-				image := groot.Image{
+				baseImage := groot.BaseImage{
 					ChainIDs: []string{"sha256:vol-a", "sha256:vol-b"},
 				}
-				fakeImagePuller.PullReturns(image, nil)
+				fakeBaseImagePuller.PullReturns(baseImage, nil)
 
 				_, err := creator.Create(logger, groot.CreateSpec{
-					ID:    "my-bundle",
-					Image: "docker:///ubuntu:latest",
+					ID:        "my-bundle",
+					BaseImage: "docker:///ubuntu:latest",
 				})
 
 				Expect(err).NotTo(HaveOccurred())
@@ -185,14 +185,14 @@ var _ = Describe("Creator", func() {
 		Context("when the image is not a valid URL", func() {
 			It("returns an error", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "%%!!#@!^&",
+					BaseImage: "%%!!#@!^&",
 				})
 				Expect(err).To(MatchError(ContainSubstring("parsing image url")))
 			})
 
 			It("does not create a bundle", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "%%!!#@!^&",
+					BaseImage: "%%!!#@!^&",
 				})
 				Expect(err).To(HaveOccurred())
 
@@ -207,8 +207,8 @@ var _ = Describe("Creator", func() {
 
 			It("returns an error", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "/path/to/image",
-					ID:    "some-id",
+					BaseImage: "/path/to/image",
+					ID:        "some-id",
 				})
 				Expect(err).To(HaveOccurred())
 
@@ -218,12 +218,12 @@ var _ = Describe("Creator", func() {
 
 			It("does not pull the image", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "/path/to/image",
-					ID:    "some-id",
+					BaseImage: "/path/to/image",
+					ID:        "some-id",
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(fakeImagePuller.PullCallCount()).To(Equal(0))
+				Expect(fakeBaseImagePuller.PullCallCount()).To(Equal(0))
 				Expect(err).To(MatchError(ContainSubstring("bundle for id `some-id` already exists")))
 			})
 		})
@@ -235,7 +235,7 @@ var _ = Describe("Creator", func() {
 
 			It("returns an error", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "/path/to/image",
+					BaseImage: "/path/to/image",
 				})
 				Expect(err).To(HaveOccurred())
 
@@ -245,11 +245,11 @@ var _ = Describe("Creator", func() {
 
 			It("does not pull the image", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "/path/to/image",
+					BaseImage: "/path/to/image",
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(fakeImagePuller.PullCallCount()).To(Equal(0))
+				Expect(fakeBaseImagePuller.PullCallCount()).To(Equal(0))
 				Expect(err).To(MatchError(ContainSubstring("Checking if the bundle ID exists")))
 			})
 		})
@@ -261,36 +261,36 @@ var _ = Describe("Creator", func() {
 
 			It("returns the error", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "/path/to/image",
+					BaseImage: "/path/to/image",
 				})
 				Expect(err).To(MatchError(ContainSubstring("failed to lock")))
 			})
 
 			It("does not pull the image", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "/path/to/image",
+					BaseImage: "/path/to/image",
 				})
 				Expect(err).To(HaveOccurred())
 
-				Expect(fakeImagePuller.PullCallCount()).To(BeZero())
+				Expect(fakeBaseImagePuller.PullCallCount()).To(BeZero())
 			})
 		})
 
 		Context("when pulling the image fails", func() {
 			BeforeEach(func() {
-				fakeImagePuller.PullReturns(groot.Image{}, errors.New("failed to pull image"))
+				fakeBaseImagePuller.PullReturns(groot.BaseImage{}, errors.New("failed to pull image"))
 			})
 
 			It("returns the error", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "/path/to/image",
+					BaseImage: "/path/to/image",
 				})
 				Expect(err).To(MatchError(ContainSubstring("failed to pull image")))
 			})
 
 			It("does not create a bundle", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					Image: "/path/to/image",
+					BaseImage: "/path/to/image",
 				})
 				Expect(err).To(HaveOccurred())
 
@@ -312,13 +312,13 @@ var _ = Describe("Creator", func() {
 		Context("when registering dependencies fails", func() {
 			BeforeEach(func() {
 				fakeDependencyManager.RegisterReturns(errors.New("failed to register dependencies"))
-				fakeImagePuller.PullReturns(groot.Image{}, nil)
+				fakeBaseImagePuller.PullReturns(groot.BaseImage{}, nil)
 			})
 
 			It("returns an errors", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					ID:    "my-bundle",
-					Image: "/path/to/image",
+					ID:        "my-bundle",
+					BaseImage: "/path/to/image",
 				})
 
 				Expect(err).To(MatchError(ContainSubstring("failed to register dependencies")))
@@ -326,8 +326,8 @@ var _ = Describe("Creator", func() {
 
 			It("destroys the bundle", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					ID:    "my-bundle",
-					Image: "/path/to/image",
+					ID:        "my-bundle",
+					BaseImage: "/path/to/image",
 				})
 
 				Expect(err).To(HaveOccurred())
@@ -337,18 +337,18 @@ var _ = Describe("Creator", func() {
 
 		Context("when disk limit is given", func() {
 			It("passes the disk limit to the bundler", func() {
-				image := groot.Image{
+				baseImage := groot.BaseImage{
 					VolumePath: "/path/to/volume",
-					Image: specsv1.Image{
+					BaseImage: specsv1.Image{
 						Author: "Groot",
 					},
 				}
-				fakeImagePuller.PullReturns(image, nil)
+				fakeBaseImagePuller.PullReturns(baseImage, nil)
 
 				_, err := creator.Create(logger, groot.CreateSpec{
 					ID:        "some-id",
 					DiskLimit: int64(1024),
-					Image:     "/path/to/image",
+					BaseImage: "/path/to/image",
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -357,7 +357,7 @@ var _ = Describe("Creator", func() {
 				Expect(createBundlerSpec).To(Equal(groot.BundleSpec{
 					ID:         "some-id",
 					VolumePath: "/path/to/volume",
-					Image: specsv1.Image{
+					BaseImage: specsv1.Image{
 						Author: "Groot",
 					},
 					DiskLimit: int64(1024),

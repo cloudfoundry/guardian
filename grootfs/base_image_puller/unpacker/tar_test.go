@@ -6,8 +6,8 @@ import (
 	"os/exec"
 	"path"
 
-	"code.cloudfoundry.org/grootfs/image_puller"
-	"code.cloudfoundry.org/grootfs/image_puller/unpacker"
+	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -63,7 +63,7 @@ var _ = Describe("Tar", func() {
 	})
 
 	It("does write the image contents in the rootfs directory", func() {
-		Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			Stream:     stream,
 			TargetPath: targetPath,
 		})).To(Succeed())
@@ -76,7 +76,7 @@ var _ = Describe("Tar", func() {
 	})
 
 	It("creates files in subdirectories", func() {
-		Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			Stream:     stream,
 			TargetPath: targetPath,
 		})).To(Succeed())
@@ -95,7 +95,7 @@ var _ = Describe("Tar", func() {
 		})
 
 		It("unpacks the symlinks", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})).To(Succeed())
@@ -110,7 +110,7 @@ var _ = Describe("Tar", func() {
 		})
 
 		It("unpacks the hardlinks", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})).To(Succeed())
@@ -132,7 +132,7 @@ var _ = Describe("Tar", func() {
 	})
 
 	It("keeps file permissions", func() {
-		Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			Stream:     stream,
 			TargetPath: targetPath,
 		})).To(Succeed())
@@ -145,7 +145,7 @@ var _ = Describe("Tar", func() {
 	})
 
 	It("keeps directory permission", func() {
-		Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			Stream:     stream,
 			TargetPath: targetPath,
 		})).To(Succeed())
@@ -163,7 +163,7 @@ var _ = Describe("Tar", func() {
 		})
 
 		It("excludes them", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})).To(Succeed())
@@ -192,7 +192,7 @@ var _ = Describe("Tar", func() {
 		})
 
 		It("deletes the pre-existing files", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})).To(Succeed())
@@ -202,7 +202,7 @@ var _ = Describe("Tar", func() {
 		})
 
 		It("deletes the pre-existing directories", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})).To(Succeed())
@@ -211,7 +211,7 @@ var _ = Describe("Tar", func() {
 		})
 
 		It("does not leak the whiteout files", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})).To(Succeed())
@@ -230,7 +230,7 @@ var _ = Describe("Tar", func() {
 			})
 
 			It("cleans up the folder", func() {
-				Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
 				})).To(Succeed())
@@ -240,7 +240,7 @@ var _ = Describe("Tar", func() {
 			})
 
 			It("keeps the parent directory", func() {
-				Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
 				})).To(Succeed())
@@ -249,7 +249,7 @@ var _ = Describe("Tar", func() {
 			})
 
 			It("does not leak the whiteout file", func() {
-				Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
 				})).To(Succeed())
@@ -266,14 +266,14 @@ var _ = Describe("Tar", func() {
 		})
 
 		It("returns an error", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})).NotTo(Succeed())
 		})
 
 		It("returns the command output", func() {
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})).To(
@@ -284,7 +284,7 @@ var _ = Describe("Tar", func() {
 
 	Context("when creating the target directory fails", func() {
 		It("returns an error", func() {
-			err := tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: "/some-destination/bundles/1000",
 			})
@@ -297,7 +297,7 @@ var _ = Describe("Tar", func() {
 		It("still works", func() {
 			Expect(os.Mkdir(targetPath, 0770)).To(Succeed())
 
-			Expect(tarUnpacker.Unpack(logger, image_puller.UnpackSpec{
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})).To(Succeed())
