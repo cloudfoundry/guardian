@@ -146,11 +146,20 @@ func (u *TarUnpacker) createLink(targetPath, path string, tarHeader *tar.Header)
 }
 
 func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarReader *tar.Reader) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, os.FileMode(tarHeader.Mode))
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, tarHeader.FileInfo().Mode())
 	if err != nil {
 		return fmt.Errorf("creating file `%s`: %s", path, err)
 	}
-	defer file.Close()
+
+	_, err = io.Copy(file, tarReader)
+	if err != nil {
+		file.Close()
+		return fmt.Errorf("writing to file `%s`: %s", path, err)
+	}
+
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("closing file `%s`: %s", path, err)
+	}
 
 	if os.Getuid() == 0 {
 		if err := os.Chown(path, tarHeader.Uid, tarHeader.Gid); err != nil {
@@ -158,9 +167,8 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 		}
 	}
 
-	_, err = io.Copy(file, tarReader)
-	if err != nil {
-		return fmt.Errorf("writing to file `%s`: %s", path, err)
+	if err := os.Chmod(path, tarHeader.FileInfo().Mode()); err != nil {
+		return fmt.Errorf("chmoding file `%s`: %s", path, err)
 	}
 
 	return nil

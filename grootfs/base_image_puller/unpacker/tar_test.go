@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
@@ -45,6 +46,7 @@ var _ = Describe("Tar", func() {
 		Expect(err).NotTo(HaveOccurred())
 		aFilePath = path.Join(imgPath, "a_file")
 		Expect(ioutil.WriteFile(aFilePath, []byte("hello-world"), 0600)).To(Succeed())
+		Expect(os.Chmod(aFilePath, 0777)).To(Succeed())
 		Expect(os.Mkdir(path.Join(imgPath, "subdir"), 0700)).To(Succeed())
 		Expect(os.Mkdir(path.Join(imgPath, "subdir", "subdir2"), 0711)).To(Succeed())
 		Expect(ioutil.WriteFile(path.Join(imgPath, "subdir", "subdir2", "another_file"), []byte("goodbye-world"), 0600)).To(Succeed())
@@ -141,7 +143,29 @@ var _ = Describe("Tar", func() {
 		stat, err := os.Stat(filePath)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0600)))
+		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
+	})
+
+	Context("setuid and setgid permissions", func() {
+		BeforeEach(func() {
+			setuidFilePath := filepath.Join(imgPath, "setuid_file")
+			Expect(ioutil.WriteFile(setuidFilePath, []byte("hello-world"), 0755)).To(Succeed())
+			Expect(os.Chmod(setuidFilePath, 0755|os.ModeSetuid|os.ModeSetgid)).To(Succeed())
+		})
+
+		It("keeps setuid and setgid permission", func() {
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})).To(Succeed())
+
+			filePath := path.Join(targetPath, "setuid_file")
+			stat, err := os.Stat(filePath)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(stat.Mode() & os.ModeSetuid).To(Equal(os.ModeSetuid))
+			Expect(stat.Mode() & os.ModeSetgid).To(Equal(os.ModeSetgid))
+		})
 	})
 
 	It("keeps directory permission", func() {

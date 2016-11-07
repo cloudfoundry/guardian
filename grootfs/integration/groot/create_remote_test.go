@@ -71,6 +71,24 @@ var _ = Describe("Create with remote images", func() {
 			})
 		})
 
+		Context("when the image has files with the setuid on", func() {
+			BeforeEach(func() {
+				baseImageURL = "docker:///cfgarden/garden-busybox"
+			})
+
+			It("correctly applies the user bit", func() {
+				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
+
+				setuidFilePath := path.Join(bundle.RootFSPath, "bin", "busybox")
+				stat, err := os.Stat(setuidFilePath)
+				Expect(err).NotTo(HaveOccurred())
+
+				fmt.Fprintln(GinkgoWriter, stat.Mode())
+				Expect(stat.Mode() & os.ModeSetuid).To(Equal(os.ModeSetuid))
+
+			})
+		})
+
 		Context("when image size exceeds disk quota", func() {
 			BeforeEach(func() {
 				baseImageURL = "docker:///cfgarden/empty:v0.1.1"
@@ -176,7 +194,7 @@ var _ = Describe("Create with remote images", func() {
 
 		It("fails to fetch the image", func() {
 			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
-				ID:    "random-id",
+				ID:        "random-id",
 				BaseImage: baseImageURL,
 			})
 
@@ -201,7 +219,7 @@ var _ = Describe("Create with remote images", func() {
 	Context("when the image does not exist", func() {
 		It("returns a useful error", func() {
 			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
-				ID:    "random-id",
+				ID:        "random-id",
 				BaseImage: "docker:///cfgaren/sorry-not-here",
 			})
 
