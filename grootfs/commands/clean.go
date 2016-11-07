@@ -9,10 +9,10 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/groot"
 	storepkg "code.cloudfoundry.org/grootfs/store"
-	bundlerpkg "code.cloudfoundry.org/grootfs/store/bundler"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
+	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 
@@ -42,14 +42,14 @@ var CleanCommand = cli.Command{
 		storePath := storepath.UserBased(ctx.GlobalString("store"))
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
-		bundler := bundlerpkg.NewBundler(btrfsVolumeDriver, storePath)
+		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
 		)
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		sm := garbage_collector.NewStoreMeasurer(storePath)
-		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, bundler, dependencyManager)
+		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, imageCloner, dependencyManager)
 
 		ignoredImages := ctx.StringSlice("ignore-image")
 		cleaner := groot.IamCleaner(locksmith, sm, gc)

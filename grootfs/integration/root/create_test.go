@@ -57,14 +57,14 @@ var _ = Describe("Create", func() {
 	})
 
 	It("keeps the ownership and permissions", func() {
-		bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
+		image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
 
-		grootFi, err := os.Stat(path.Join(bundle.RootFSPath, "foo"))
+		grootFi, err := os.Stat(path.Join(image.RootFSPath, "foo"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 		Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-		rootFi, err := os.Stat(path.Join(bundle.RootFSPath, "bar"))
+		rootFi, err := os.Stat(path.Join(image.RootFSPath, "bar"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(rootUID)))
 		Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))
@@ -94,24 +94,24 @@ var _ = Describe("Create", func() {
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
-			bundle := strings.TrimSpace(string(sess.Out.Contents()))
+			image := strings.TrimSpace(string(sess.Out.Contents()))
 
-			grootFi, err := os.Stat(path.Join(bundle, "rootfs", "foo"))
+			grootFi, err := os.Stat(path.Join(image, "rootfs", "foo"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			grootDir, err := os.Stat(path.Join(bundle, "rootfs", "groot-folder"))
+			grootDir, err := os.Stat(path.Join(image, "rootfs", "groot-folder"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			rootFi, err := os.Stat(path.Join(bundle, "rootfs", "bar"))
+			rootFi, err := os.Stat(path.Join(image, "rootfs", "bar"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-			rootDir, err := os.Stat(path.Join(bundle, "rootfs", "root-folder"))
+			rootDir, err := os.Stat(path.Join(image, "rootfs", "root-folder"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
@@ -175,7 +175,7 @@ var _ = Describe("Create", func() {
 			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.mapUID.starting-id-map"))
 			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.mapGID.starting-id-map"))
 			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.unpack-wrapper.starting-unpack"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.making-bundle.btrfs-creating-snapshot.starting-btrfs"))
+			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.making-image.btrfs-creating-snapshot.starting-btrfs"))
 		})
 	})
 })

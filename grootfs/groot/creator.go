@@ -8,8 +8,8 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
+const BaseImageReferenceFormat = "baseimage:%s"
 const ImageReferenceFormat = "image:%s"
-const BundleReferenceFormat = "bundle:%s"
 
 type CreateSpec struct {
 	ID                        string
@@ -21,40 +21,40 @@ type CreateSpec struct {
 }
 
 type Creator struct {
-	bundler           Bundler
+	imageCloner       ImageCloner
 	baseImagePuller   BaseImagePuller
 	locksmith         Locksmith
 	dependencyManager DependencyManager
 }
 
-func IamCreator(bundler Bundler, baseImagePuller BaseImagePuller, locksmith Locksmith, dependencyManager DependencyManager) *Creator {
+func IamCreator(imageCloner ImageCloner, baseImagePuller BaseImagePuller, locksmith Locksmith, dependencyManager DependencyManager) *Creator {
 	return &Creator{
-		bundler:           bundler,
+		imageCloner:       imageCloner,
 		baseImagePuller:   baseImagePuller,
 		locksmith:         locksmith,
 		dependencyManager: dependencyManager,
 	}
 }
 
-func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
-	logger = logger.Session("groot-creating", lager.Data{"bundleID": spec.ID, "spec": spec})
+func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
+	logger = logger.Session("groot-creating", lager.Data{"imageID": spec.ID, "spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	parsedURL, err := url.Parse(spec.BaseImage)
 	if err != nil {
-		return Bundle{}, fmt.Errorf("parsing image url: %s", err)
+		return Image{}, fmt.Errorf("parsing image url: %s", err)
 	}
 
-	ok, err := c.bundler.Exists(spec.ID)
+	ok, err := c.imageCloner.Exists(spec.ID)
 	if err != nil {
-		return Bundle{}, fmt.Errorf("checking id exists: %s", err)
+		return Image{}, fmt.Errorf("checking id exists: %s", err)
 	}
 	if ok {
-		return Bundle{}, fmt.Errorf("bundle for id `%s` already exists", spec.ID)
+		return Image{}, fmt.Errorf("image for id `%s` already exists", spec.ID)
 	}
 
-	imageSpec := BaseImageSpec{
+	baseImageSpec := BaseImageSpec{
 		BaseImageSrc:              parsedURL,
 		DiskLimit:                 spec.DiskLimit,
 		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
@@ -64,7 +64,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 
 	lockFile, err := c.locksmith.Lock(GLOBAL_LOCK_KEY)
 	if err != nil {
-		return Bundle{}, err
+		return Image{}, err
 	}
 	defer func() {
 		if err := c.locksmith.Unlock(lockFile); err != nil {
@@ -72,36 +72,36 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Bundle, error) {
 		}
 	}()
 
-	baseImage, err := c.baseImagePuller.Pull(logger, imageSpec)
+	baseImage, err := c.baseImagePuller.Pull(logger, baseImageSpec)
 	if err != nil {
-		return Bundle{}, errorspkg.Wrap(err, "pulling the image")
+		return Image{}, errorspkg.Wrap(err, "pulling the image")
 	}
 
-	bundleSpec := BundleSpec{
+	imageSpec := ImageSpec{
 		ID:                        spec.ID,
 		DiskLimit:                 spec.DiskLimit,
 		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
 		VolumePath:                baseImage.VolumePath,
 		BaseImage:                 baseImage.BaseImage,
 	}
-	bundle, err := c.bundler.Create(logger, bundleSpec)
+	image, err := c.imageCloner.Create(logger, imageSpec)
 	if err != nil {
-		return Bundle{}, fmt.Errorf("making bundle: %s", err)
+		return Image{}, fmt.Errorf("making image: %s", err)
 	}
 
-	bundleRefName := fmt.Sprintf(BundleReferenceFormat, spec.ID)
-	if err := c.dependencyManager.Register(bundleRefName, baseImage.ChainIDs); err != nil {
-		if destroyErr := c.bundler.Destroy(logger, spec.ID); destroyErr != nil {
-			logger.Error("failed-to-destroy-bundle", destroyErr)
+	imageRefName := fmt.Sprintf(ImageReferenceFormat, spec.ID)
+	if err := c.dependencyManager.Register(imageRefName, baseImage.ChainIDs); err != nil {
+		if destroyErr := c.imageCloner.Destroy(logger, spec.ID); destroyErr != nil {
+			logger.Error("failed-to-destroy-image", destroyErr)
 		}
 
-		return Bundle{}, err
+		return Image{}, err
 	}
 
-	imageRefName := fmt.Sprintf(ImageReferenceFormat, spec.BaseImage)
-	if err := c.dependencyManager.Register(imageRefName, baseImage.ChainIDs); err != nil {
-		return Bundle{}, err
+	baseImageRefName := fmt.Sprintf(BaseImageReferenceFormat, spec.BaseImage)
+	if err := c.dependencyManager.Register(baseImageRefName, baseImage.ChainIDs); err != nil {
+		return Image{}, err
 	}
 
-	return bundle, nil
+	return image, nil
 }

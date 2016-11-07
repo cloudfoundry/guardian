@@ -22,7 +22,7 @@ var _ = Describe("Tar", func() {
 		logger lager.Logger
 
 		imgPath    string
-		bundlePath string
+		imagePath string
 		targetPath string
 		aFilePath  string
 
@@ -34,9 +34,9 @@ var _ = Describe("Tar", func() {
 	BeforeEach(func() {
 		var err error
 
-		bundlePath, err = ioutil.TempDir("", "")
+		imagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		targetPath = path.Join(bundlePath, "rootfs")
+		targetPath = path.Join(imagePath, "rootfs")
 
 		tarUnpacker = unpacker.NewTarUnpacker()
 
@@ -61,7 +61,7 @@ var _ = Describe("Tar", func() {
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(imgPath)).To(Succeed())
-		Expect(os.RemoveAll(bundlePath)).To(Succeed())
+		Expect(os.RemoveAll(imagePath)).To(Succeed())
 	})
 
 	It("does write the image contents in the rootfs directory", func() {
@@ -310,7 +310,7 @@ var _ = Describe("Tar", func() {
 		It("returns an error", func() {
 			err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
-				TargetPath: "/some-destination/bundles/1000",
+				TargetPath: "/some-destination/images/1000",
 			})
 
 			Expect(err).To(MatchError(ContainSubstring("making destination directory")))

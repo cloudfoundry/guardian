@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type FakeBundler struct {
+type FakeImageCloner struct {
 	ExistsStub        func(id string) (bool, error)
 	existsMutex       sync.RWMutex
 	existsArgsForCall []struct {
@@ -18,14 +18,14 @@ type FakeBundler struct {
 		result1 bool
 		result2 error
 	}
-	CreateStub        func(logger lager.Logger, spec groot.BundleSpec) (groot.Bundle, error)
+	CreateStub        func(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		logger lager.Logger
-		spec   groot.BundleSpec
+		spec   groot.ImageSpec
 	}
 	createReturns struct {
-		result1 groot.Bundle
+		result1 groot.Image
 		result2 error
 	}
 	DestroyStub        func(logger lager.Logger, id string) error
@@ -51,7 +51,7 @@ type FakeBundler struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBundler) Exists(id string) (bool, error) {
+func (fake *FakeImageCloner) Exists(id string) (bool, error) {
 	fake.existsMutex.Lock()
 	fake.existsArgsForCall = append(fake.existsArgsForCall, struct {
 		id string
@@ -65,19 +65,19 @@ func (fake *FakeBundler) Exists(id string) (bool, error) {
 	}
 }
 
-func (fake *FakeBundler) ExistsCallCount() int {
+func (fake *FakeImageCloner) ExistsCallCount() int {
 	fake.existsMutex.RLock()
 	defer fake.existsMutex.RUnlock()
 	return len(fake.existsArgsForCall)
 }
 
-func (fake *FakeBundler) ExistsArgsForCall(i int) string {
+func (fake *FakeImageCloner) ExistsArgsForCall(i int) string {
 	fake.existsMutex.RLock()
 	defer fake.existsMutex.RUnlock()
 	return fake.existsArgsForCall[i].id
 }
 
-func (fake *FakeBundler) ExistsReturns(result1 bool, result2 error) {
+func (fake *FakeImageCloner) ExistsReturns(result1 bool, result2 error) {
 	fake.ExistsStub = nil
 	fake.existsReturns = struct {
 		result1 bool
@@ -85,11 +85,11 @@ func (fake *FakeBundler) ExistsReturns(result1 bool, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeBundler) Create(logger lager.Logger, spec groot.BundleSpec) (groot.Bundle, error) {
+func (fake *FakeImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error) {
 	fake.createMutex.Lock()
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		logger lager.Logger
-		spec   groot.BundleSpec
+		spec   groot.ImageSpec
 	}{logger, spec})
 	fake.recordInvocation("Create", []interface{}{logger, spec})
 	fake.createMutex.Unlock()
@@ -100,27 +100,27 @@ func (fake *FakeBundler) Create(logger lager.Logger, spec groot.BundleSpec) (gro
 	}
 }
 
-func (fake *FakeBundler) CreateCallCount() int {
+func (fake *FakeImageCloner) CreateCallCount() int {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeBundler) CreateArgsForCall(i int) (lager.Logger, groot.BundleSpec) {
+func (fake *FakeImageCloner) CreateArgsForCall(i int) (lager.Logger, groot.ImageSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].spec
 }
 
-func (fake *FakeBundler) CreateReturns(result1 groot.Bundle, result2 error) {
+func (fake *FakeImageCloner) CreateReturns(result1 groot.Image, result2 error) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
-		result1 groot.Bundle
+		result1 groot.Image
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeBundler) Destroy(logger lager.Logger, id string) error {
+func (fake *FakeImageCloner) Destroy(logger lager.Logger, id string) error {
 	fake.destroyMutex.Lock()
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
 		logger lager.Logger
@@ -135,26 +135,26 @@ func (fake *FakeBundler) Destroy(logger lager.Logger, id string) error {
 	}
 }
 
-func (fake *FakeBundler) DestroyCallCount() int {
+func (fake *FakeImageCloner) DestroyCallCount() int {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
 	return len(fake.destroyArgsForCall)
 }
 
-func (fake *FakeBundler) DestroyArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeImageCloner) DestroyArgsForCall(i int) (lager.Logger, string) {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
 	return fake.destroyArgsForCall[i].logger, fake.destroyArgsForCall[i].id
 }
 
-func (fake *FakeBundler) DestroyReturns(result1 error) {
+func (fake *FakeImageCloner) DestroyReturns(result1 error) {
 	fake.DestroyStub = nil
 	fake.destroyReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeBundler) Metrics(logger lager.Logger, id string) (groot.VolumeMetrics, error) {
+func (fake *FakeImageCloner) Metrics(logger lager.Logger, id string) (groot.VolumeMetrics, error) {
 	fake.metricsMutex.Lock()
 	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
 		logger lager.Logger
@@ -169,19 +169,19 @@ func (fake *FakeBundler) Metrics(logger lager.Logger, id string) (groot.VolumeMe
 	}
 }
 
-func (fake *FakeBundler) MetricsCallCount() int {
+func (fake *FakeImageCloner) MetricsCallCount() int {
 	fake.metricsMutex.RLock()
 	defer fake.metricsMutex.RUnlock()
 	return len(fake.metricsArgsForCall)
 }
 
-func (fake *FakeBundler) MetricsArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeImageCloner) MetricsArgsForCall(i int) (lager.Logger, string) {
 	fake.metricsMutex.RLock()
 	defer fake.metricsMutex.RUnlock()
 	return fake.metricsArgsForCall[i].logger, fake.metricsArgsForCall[i].id
 }
 
-func (fake *FakeBundler) MetricsReturns(result1 groot.VolumeMetrics, result2 error) {
+func (fake *FakeImageCloner) MetricsReturns(result1 groot.VolumeMetrics, result2 error) {
 	fake.MetricsStub = nil
 	fake.metricsReturns = struct {
 		result1 groot.VolumeMetrics
@@ -189,7 +189,7 @@ func (fake *FakeBundler) MetricsReturns(result1 groot.VolumeMetrics, result2 err
 	}{result1, result2}
 }
 
-func (fake *FakeBundler) Invocations() map[string][][]interface{} {
+func (fake *FakeImageCloner) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.existsMutex.RLock()
@@ -203,7 +203,7 @@ func (fake *FakeBundler) Invocations() map[string][][]interface{} {
 	return fake.invocations
 }
 
-func (fake *FakeBundler) recordInvocation(key string, args []interface{}) {
+func (fake *FakeImageCloner) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -215,4 +215,4 @@ func (fake *FakeBundler) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ groot.Bundler = new(FakeBundler)
+var _ groot.ImageCloner = new(FakeImageCloner)

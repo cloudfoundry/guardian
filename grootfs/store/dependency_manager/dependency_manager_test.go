@@ -31,21 +31,21 @@ var _ = Describe("DependencyManager", func() {
 	})
 
 	Describe("Register", func() {
-		It("register the dependencies for given bundle id", func() {
-			bundleID := "my-bundle"
+		It("register the dependencies for given image id", func() {
+			imageID := "my-image"
 			chainIDs := []string{"sha256:vol-1", "sha256:vol-2"}
-			Expect(manager.Register(bundleID, chainIDs)).To(Succeed())
+			Expect(manager.Register(imageID, chainIDs)).To(Succeed())
 
-			dependencies, err := manager.Dependencies(bundleID)
+			dependencies, err := manager.Dependencies(imageID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dependencies).To(ConsistOf(chainIDs))
 		})
 
 		It("escapes the id", func() {
-			bundleID := "my/bundle"
+			imageID := "my/image"
 			chainIDs := []string{"sha256:vol-1", "sha256:vol-2"}
-			Expect(manager.Register(bundleID, chainIDs)).To(Succeed())
-			Expect(path.Join(depsPath, "my__bundle.json")).To(BeAnExistingFile())
+			Expect(manager.Register(imageID, chainIDs)).To(Succeed())
+			Expect(path.Join(depsPath, "my__image.json")).To(BeAnExistingFile())
 		})
 
 		Context("when the base path does not exist", func() {
@@ -62,29 +62,29 @@ var _ = Describe("DependencyManager", func() {
 	})
 
 	Describe("Deregister", func() {
-		It("deregisters the dependencies for a given bundle", func() {
-			bundleID := "my-bundle"
+		It("deregisters the dependencies for a given image", func() {
+			imageID := "my-image"
 			chainIDs := []string{"sha256:vol-1", "sha256:vol-2"}
-			Expect(manager.Register(bundleID, chainIDs)).To(Succeed())
+			Expect(manager.Register(imageID, chainIDs)).To(Succeed())
 
-			Expect(manager.Deregister(bundleID)).To(Succeed())
+			Expect(manager.Deregister(imageID)).To(Succeed())
 
-			_, err := manager.Dependencies(bundleID)
-			Expect(err).To(MatchError(ContainSubstring("bundle `my-bundle` not found")))
+			_, err := manager.Dependencies(imageID)
+			Expect(err).To(MatchError(ContainSubstring("image `my-image` not found")))
 		})
 
 		It("escapes the id", func() {
-			bundleID := "my/bundle"
+			imageID := "my/image"
 			chainIDs := []string{"sha256:vol-1", "sha256:vol-2"}
-			Expect(manager.Register(bundleID, chainIDs)).To(Succeed())
+			Expect(manager.Register(imageID, chainIDs)).To(Succeed())
 
-			Expect(manager.Deregister(bundleID)).To(Succeed())
-			Expect(path.Join(depsPath, "my__bundle.json")).ToNot(BeAnExistingFile())
+			Expect(manager.Deregister(imageID)).To(Succeed())
+			Expect(path.Join(depsPath, "my__image.json")).ToNot(BeAnExistingFile())
 		})
 
-		Context("when the bundle does not exist", func() {
+		Context("when the image does not exist", func() {
 			It("returns an error", func() {
-				Expect(manager.Deregister("my-bundle")).To(MatchError(ContainSubstring("no such file or directory")))
+				Expect(manager.Deregister("my-image")).To(MatchError(ContainSubstring("no such file or directory")))
 			})
 		})
 	})

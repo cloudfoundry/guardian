@@ -33,15 +33,15 @@ var _ = Describe("Create with remote images", func() {
 		})
 
 		It("creates a root filesystem based on the image provided", func() {
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
+			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 
-			Expect(path.Join(bundle.RootFSPath, "hello")).To(BeARegularFile())
+			Expect(path.Join(image.RootFSPath, "hello")).To(BeARegularFile())
 		})
 
-		It("saves the image.json to the bundle folder", func() {
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
+		It("saves the image.json to the image folder", func() {
+			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 
-			imageJsonPath := path.Join(bundle.Path, "image.json")
+			imageJsonPath := path.Join(image.Path, "image.json")
 			Expect(imageJsonPath).To(BeARegularFile())
 
 			imageJsonReader, err := os.Open(imageJsonPath)
@@ -61,9 +61,9 @@ var _ = Describe("Create with remote images", func() {
 			})
 
 			It("empties the folder contents but keeps the dir", func() {
-				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
+				image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 
-				whiteoutedDir := path.Join(bundle.RootFSPath, "var")
+				whiteoutedDir := path.Join(image.RootFSPath, "var")
 				Expect(whiteoutedDir).To(BeADirectory())
 				contents, err := ioutil.ReadDir(whiteoutedDir)
 				Expect(err).NotTo(HaveOccurred())
@@ -77,9 +77,9 @@ var _ = Describe("Create with remote images", func() {
 			})
 
 			It("correctly applies the user bit", func() {
-				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
+				image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 
-				setuidFilePath := path.Join(bundle.RootFSPath, "bin", "busybox")
+				setuidFilePath := path.Join(image.RootFSPath, "bin", "busybox")
 				stat, err := os.Stat(setuidFilePath)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -118,14 +118,14 @@ var _ = Describe("Create with remote images", func() {
 
 		Describe("Unpacked layer caching", func() {
 			It("caches the unpacked image in a subvolume with snapshots", func() {
-				integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
+				integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 
 				layerSnapshotPath := filepath.Join(StorePath, CurrentUserID, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
 				Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
-				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id-2", 0)
-				Expect(path.Join(bundle.RootFSPath, "hello")).To(BeARegularFile())
-				Expect(path.Join(bundle.RootFSPath, "injected-file")).To(BeARegularFile())
+				image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id-2", 0)
+				Expect(path.Join(image.RootFSPath, "hello")).To(BeARegularFile())
+				Expect(path.Join(image.RootFSPath, "injected-file")).To(BeARegularFile())
 			})
 
 			Describe("when unpacking the image fails", func() {
@@ -167,9 +167,9 @@ var _ = Describe("Create with remote images", func() {
 			})
 
 			It("creates a root filesystem based on the image provided", func() {
-				bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
-				Expect(path.Join(bundle.RootFSPath, "allo")).To(BeAnExistingFile())
-				Expect(path.Join(bundle.RootFSPath, "hello")).To(BeAnExistingFile())
+				image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
+				Expect(path.Join(image.RootFSPath, "allo")).To(BeAnExistingFile())
+				Expect(path.Join(image.RootFSPath, "hello")).To(BeAnExistingFile())
 			})
 		})
 	})
@@ -193,7 +193,7 @@ var _ = Describe("Create with remote images", func() {
 		})
 
 		It("fails to fetch the image", func() {
-			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
+			_, err := integration.CreateImageWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: baseImageURL,
 			})
@@ -218,7 +218,7 @@ var _ = Describe("Create with remote images", func() {
 
 	Context("when the image does not exist", func() {
 		It("returns a useful error", func() {
-			_, err := integration.CreateBundleWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
+			_, err := integration.CreateImageWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: "docker:///cfgaren/sorry-not-here",
 			})

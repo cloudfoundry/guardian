@@ -46,7 +46,7 @@ var _ = Describe("Configurer", func() {
 		It("creates the correct internal structure", func() {
 			Expect(configurer.Ensure(logger, storePath)).To(Succeed())
 
-			Expect(filepath.Join(storePath, "bundles")).To(BeADirectory())
+			Expect(filepath.Join(storePath, "images")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "cache")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "cache", "blobs")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "volumes")).To(BeADirectory())

@@ -19,7 +19,7 @@ import (
 var _ = Describe("Metrics", func() {
 	var (
 		baseImagePath string
-		bundle    groot.Bundle
+		image    groot.Image
 	)
 
 	BeforeEach(func() {
@@ -28,22 +28,22 @@ var _ = Describe("Metrics", func() {
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	Context("when bundle exists", func() {
+	Context("when image exists", func() {
 		BeforeEach(func() {
 			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "fatfile")), "bs=1048576", "count=5")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 
-			bundle = integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath, "hello")), "bs=1048576", "count=4")
+			image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
+			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=4")
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 		})
 
-		Context("when the last parameter is the bundle ID", func() {
-			It("returns the metrics for given bundle id", func() {
+		Context("when the last parameter is the image ID", func() {
+			It("returns the metrics for given image id", func() {
 				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics", "random-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
@@ -53,9 +53,9 @@ var _ = Describe("Metrics", func() {
 			})
 		})
 
-		Context("when the last parameter is the bundle path", func() {
-			It("returns the metrics for given bundle path", func() {
-				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "--drax-bin", DraxBin, "metrics", bundle.Path)
+		Context("when the last parameter is the image path", func() {
+			It("returns the metrics for given image path", func() {
+				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "--drax-bin", DraxBin, "metrics", image.Path)
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
@@ -65,8 +65,8 @@ var _ = Describe("Metrics", func() {
 		})
 	})
 
-	Context("when the bundle id doesn't exist", func() {
-		Context("when the last parameter is a bundle id", func() {
+	Context("when the image id doesn't exist", func() {
+		Context("when the last parameter is a image id", func() {
 			It("returns an error", func() {
 				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics", "invalid-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -78,8 +78,8 @@ var _ = Describe("Metrics", func() {
 
 		Context("when the last parameter is a path", func() {
 			It("returns an error", func() {
-				bundlePath := filepath.Join(StorePath, CurrentUserID, store.BUNDLES_DIR_NAME, "not-here")
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics", bundlePath)
+				imagePath := filepath.Join(StorePath, CurrentUserID, store.IMAGES_DIR_NAME, "not-here")
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics", imagePath)
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
@@ -88,17 +88,17 @@ var _ = Describe("Metrics", func() {
 
 			Context("when the path provided doesn't belong to the `--store` provided", func() {
 				It("returns an error", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics", "/Iamnot/in/the/storage/bundles/1234/rootfs")
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics", "/Iamnot/in/the/storage/images/1234/rootfs")
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
 					Eventually(sess).Should(gexec.Exit(1))
-					Eventually(sess.Out).Should(gbytes.Say("path `/Iamnot/in/the/storage/bundles/1234/rootfs` is outside store path"))
+					Eventually(sess.Out).Should(gbytes.Say("path `/Iamnot/in/the/storage/images/1234/rootfs` is outside store path"))
 				})
 			})
 		})
 	})
 
-	Context("when the bundle id is not provided", func() {
+	Context("when the image id is not provided", func() {
 		It("returns an error", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)

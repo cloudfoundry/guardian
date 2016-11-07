@@ -144,7 +144,7 @@ func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
 	defer logger.Info("end")
 
 	if _, err := os.Stat(path); err != nil {
-		return fmt.Errorf("bundle path not found: %s", err)
+		return fmt.Errorf("image path not found: %s", err)
 	}
 
 	if err := d.destroyQgroup(logger, path); err != nil {

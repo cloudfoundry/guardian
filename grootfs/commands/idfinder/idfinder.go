@@ -14,7 +14,7 @@ func FindID(storePath, pathOrID string) (string, error) {
 		return pathOrID, nil
 	}
 
-	pathRegexp := regexp.MustCompile(filepath.Join(storePath, "[0-9]*", store.BUNDLES_DIR_NAME, "(.*)"))
+	pathRegexp := regexp.MustCompile(filepath.Join(storePath, "[0-9]*", store.IMAGES_DIR_NAME, "(.*)"))
 	matches := pathRegexp.FindStringSubmatch(pathOrID)
 
 	if len(matches) != 2 {
@@ -25,7 +25,7 @@ func FindID(storePath, pathOrID string) (string, error) {
 }
 
 func FindSubStorePath(storePath, path string) (string, error) {
-	pathRegexp := regexp.MustCompile(filepath.Join(storePath, "([0-9]*)", store.BUNDLES_DIR_NAME, ".*"))
+	pathRegexp := regexp.MustCompile(filepath.Join(storePath, "([0-9]*)", store.IMAGES_DIR_NAME, ".*"))
 	matches := pathRegexp.FindStringSubmatch(path)
 
 	if len(matches) != 2 {

@@ -52,7 +52,7 @@ cleanup_store() {
 
   remove_subvolumes $store_path
   rm -Rf $store_path/cache/*
-  rm -Rf $store_path/bundles/*
+  rm -Rf $store_path/images/*
   rm -Rf $store_path/locks/*
 }
 

@@ -9,7 +9,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/idfinder"
 	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/groot"
-	bundlerpkg "code.cloudfoundry.org/grootfs/store/bundler"
+	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 
@@ -47,9 +47,9 @@ var MetricsCommand = cli.Command{
 		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
-		bundler := bundlerpkg.NewBundler(btrfsVolumeDriver, storePath)
+		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
-		metricser := groot.IamMetricser(bundler)
+		metricser := groot.IamMetricser(imageCloner)
 		metrics, err := metricser.Metrics(logger, id)
 		if err != nil {
 			logger.Error("fetching-metrics", err)

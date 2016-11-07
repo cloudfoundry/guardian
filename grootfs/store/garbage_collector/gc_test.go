@@ -20,16 +20,16 @@ var _ = Describe("Gc", func() {
 		fakeCacheDriver       *garbage_collectorfakes.FakeCacheDriver
 		fakeVolumeDriver      *garbage_collectorfakes.FakeVolumeDriver
 		fakeDependencyManager *garbage_collectorfakes.FakeDependencyManager
-		fakeBundler           *garbage_collectorfakes.FakeBundler
+		fakeImageCloner       *garbage_collectorfakes.FakeImageCloner
 	)
 
 	BeforeEach(func() {
-		fakeBundler = new(garbage_collectorfakes.FakeBundler)
+		fakeImageCloner = new(garbage_collectorfakes.FakeImageCloner)
 		fakeCacheDriver = new(garbage_collectorfakes.FakeCacheDriver)
 		fakeVolumeDriver = new(garbage_collectorfakes.FakeVolumeDriver)
 		fakeDependencyManager = new(garbage_collectorfakes.FakeDependencyManager)
 
-		garbageCollector = garbage_collector.NewGC(fakeCacheDriver, fakeVolumeDriver, fakeBundler, fakeDependencyManager)
+		garbageCollector = garbage_collector.NewGC(fakeCacheDriver, fakeVolumeDriver, fakeImageCloner, fakeDependencyManager)
 
 		logger = lagertest.NewTestLogger("garbage_collector")
 	})
@@ -46,14 +46,14 @@ var _ = Describe("Gc", func() {
 
 			fakeDependencyManager.DependenciesStub = func(id string) ([]string, error) {
 				return map[string][]string{
-					"bundle:idA":                    []string{"sha256:vol-a", "sha256:vol-b"},
-					"bundle:idB":                    []string{"sha256:vol-a", "sha256:vol-c"},
-					"image:docker:///ubuntu":        []string{"sha256:vol-d"},
-					"image:docker://private/ubuntu": []string{"sha256:vol-e"},
+					"image:idA":                         []string{"sha256:vol-a", "sha256:vol-b"},
+					"image:idB":                         []string{"sha256:vol-a", "sha256:vol-c"},
+					"baseimage:docker:///ubuntu":        []string{"sha256:vol-d"},
+					"baseimage:docker://private/ubuntu": []string{"sha256:vol-e"},
 				}[id], nil
 			}
 
-			fakeBundler.BundleIDsReturns([]string{"idA", "idB"}, nil)
+			fakeImageCloner.ImageIDsReturns([]string{"idA", "idB"}, nil)
 		})
 
 		It("collects unused volumes", func() {
@@ -122,17 +122,17 @@ var _ = Describe("Gc", func() {
 			})
 		})
 
-		Context("when retrieving bundles fails", func() {
+		Context("when retrieving images fails", func() {
 			BeforeEach(func() {
-				fakeBundler.BundleIDsReturns(nil, errors.New("failed to retrieve bundles"))
+				fakeImageCloner.ImageIDsReturns(nil, errors.New("failed to retrieve images"))
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(ContainSubstring("failed to retrieve bundles")))
+				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(ContainSubstring("failed to retrieve images")))
 			})
 		})
 
-		Context("when getting the dependencies of a bundle fails", func() {
+		Context("when getting the dependencies of a image fails", func() {
 			BeforeEach(func() {
 				fakeDependencyManager.DependenciesReturns(nil, errors.New("failed to access deps"))
 			})

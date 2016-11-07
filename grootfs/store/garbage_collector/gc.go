@@ -19,9 +19,9 @@ type VolumeDriver interface {
 	Volumes(logger lager.Logger) ([]string, error)
 }
 
-//go:generate counterfeiter . Bundler
-type Bundler interface {
-	BundleIDs(logger lager.Logger) ([]string, error)
+//go:generate counterfeiter . ImageCloner
+type ImageCloner interface {
+	ImageIDs(logger lager.Logger) ([]string, error)
 }
 
 //go:generate counterfeiter . DependencyManager
@@ -32,15 +32,15 @@ type DependencyManager interface {
 type GarbageCollector struct {
 	cacheDriver       CacheDriver
 	volumeDriver      VolumeDriver
-	bundler           Bundler
+	imageCloner       ImageCloner
 	dependencyManager DependencyManager
 }
 
-func NewGC(cacheDriver CacheDriver, volumeDriver VolumeDriver, bundler Bundler, dependencyManager DependencyManager) *GarbageCollector {
+func NewGC(cacheDriver CacheDriver, volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager) *GarbageCollector {
 	return &GarbageCollector{
 		cacheDriver:       cacheDriver,
 		volumeDriver:      volumeDriver,
-		bundler:           bundler,
+		imageCloner:       imageCloner,
 		dependencyManager: dependencyManager,
 	}
 }
@@ -102,20 +102,20 @@ func (g *GarbageCollector) unusedVolumes(logger lager.Logger, keepImages []strin
 		orphanedVolumes[vol] = true
 	}
 
-	bundleIDs, err := g.bundler.BundleIDs(logger)
+	imageIDs, err := g.imageCloner.ImageIDs(logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve bundles: %s", err.Error())
+		return nil, fmt.Errorf("failed to retrieve images: %s", err.Error())
 	}
 
-	for _, bundleID := range bundleIDs {
-		bundleRefName := fmt.Sprintf(groot.BundleReferenceFormat, bundleID)
-		if err := g.removeDependencies(orphanedVolumes, bundleRefName); err != nil {
+	for _, imageID := range imageIDs {
+		imageRefName := fmt.Sprintf(groot.ImageReferenceFormat, imageID)
+		if err := g.removeDependencies(orphanedVolumes, imageRefName); err != nil {
 			return nil, err
 		}
 	}
 
 	for _, keepImage := range keepImages {
-		imageRefName := fmt.Sprintf(groot.ImageReferenceFormat, keepImage)
+		imageRefName := fmt.Sprintf(groot.BaseImageReferenceFormat, keepImage)
 		if err := g.removeDependencies(orphanedVolumes, imageRefName); err != nil {
 			logger.Error("failed-to-find-white-listed-image-dependencies", err, lager.Data{"imageRefName": imageRefName})
 		}

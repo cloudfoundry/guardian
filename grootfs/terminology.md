@@ -25,7 +25,7 @@ Is a server that stores and distributes images.
 
 ## Store
 
-The directory that contains the bundles and cached layers.
+The directory that contains the rootfs images and cached layers.
 
 # Operations
 

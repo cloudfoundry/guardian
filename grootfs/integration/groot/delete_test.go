@@ -18,7 +18,7 @@ import (
 var _ = Describe("Delete", func() {
 	var (
 		baseImagePath string
-		bundle    groot.Bundle
+		image    groot.Image
 	)
 
 	BeforeEach(func() {
@@ -26,17 +26,17 @@ var _ = Describe("Delete", func() {
 		baseImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(baseImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
-		bundle = integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
+		image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
 	})
 
-	It("deletes an existing bundle", func() {
+	It("deletes an existing image", func() {
 		Expect(Runner.Delete("random-id")).To(Succeed())
-		Expect(bundle.Path).NotTo(BeAnExistingFile())
+		Expect(image.Path).NotTo(BeAnExistingFile())
 	})
 
 	It("destroys the quota group associated with the volume", func() {
 		rootIDBuffer := gbytes.NewBuffer()
-		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", bundle.RootFSPath), rootIDBuffer, GinkgoWriter)
+		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", image.RootFSPath), rootIDBuffer, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 		rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
@@ -55,29 +55,29 @@ var _ = Describe("Delete", func() {
 	})
 
 	Context("when a path is provided instead of an ID", func() {
-		It("deletes the bundle by the path", func() {
-			Expect(Runner.Delete(bundle.Path)).To(Succeed())
-			Expect(bundle.Path).NotTo(BeAnExistingFile())
+		It("deletes the image by the path", func() {
+			Expect(Runner.Delete(image.Path)).To(Succeed())
+			Expect(image.Path).NotTo(BeAnExistingFile())
 		})
 
 		Context("when the path provided doesn't belong to the `--store` provided", func() {
 			It("returns an error", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", "/Iamnot/in/the/storage/bundles/1234/rootfs")
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", "/Iamnot/in/the/storage/images/1234/rootfs")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
-				Eventually(sess.Out).Should(gbytes.Say("path `/Iamnot/in/the/storage/bundles/1234/rootfs` is outside store path"))
+				Eventually(sess.Out).Should(gbytes.Say("path `/Iamnot/in/the/storage/images/1234/rootfs` is outside store path"))
 			})
 		})
 	})
 
-	Context("when the bundle ID doesn't exist", func() {
+	Context("when the image ID doesn't exist", func() {
 		It("returns an error", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", "non-existing-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
-			Eventually(sess.Out).Should(gbytes.Say("bundle not found"))
+			Eventually(sess.Out).Should(gbytes.Say("image not found"))
 		})
 	})
 
@@ -100,7 +100,7 @@ var _ = Describe("Delete", func() {
 			Eventually(sess).Should(gexec.Exit(0))
 
 			Eventually(sess.Err).Should(gbytes.Say("could not delete quota group"))
-			Eventually(sess.Out).Should(gbytes.Say("Bundle random-id deleted"))
+			Eventually(sess.Out).Should(gbytes.Say("Image random-id deleted"))
 		})
 	})
 })

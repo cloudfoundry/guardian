@@ -35,7 +35,7 @@ var _ = Describe("Threshold", func() {
 			filepath.Join(storePath, store.VOLUMES_DIR_NAME), 0744,
 		)).To(Succeed())
 		Expect(os.MkdirAll(
-			filepath.Join(storePath, store.BUNDLES_DIR_NAME), 0744,
+			filepath.Join(storePath, store.IMAGES_DIR_NAME), 0744,
 		)).To(Succeed())
 
 		storeMeasurer = garbage_collector.NewStoreMeasurer(storePath)
@@ -55,9 +55,9 @@ var _ = Describe("Threshold", func() {
 		Expect(os.MkdirAll(volPath, 0744)).To(Succeed())
 		Expect(writeFile(filepath.Join(volPath, "my-file"), 256*1024)).To(Succeed())
 
-		bundlePath := filepath.Join(storePath, store.BUNDLES_DIR_NAME, "my-bundle")
-		Expect(os.MkdirAll(bundlePath, 0744)).To(Succeed())
-		Expect(writeFile(filepath.Join(bundlePath, "my-file"), 256*1024)).To(Succeed())
+		imagePath := filepath.Join(storePath, store.IMAGES_DIR_NAME, "my-image")
+		Expect(os.MkdirAll(imagePath, 0744)).To(Succeed())
+		Expect(writeFile(filepath.Join(imagePath, "my-file"), 256*1024)).To(Succeed())
 
 		storeSize, err := storeMeasurer.MeasureStore(logger)
 		Expect(err).NotTo(HaveOccurred())

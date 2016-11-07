@@ -7,21 +7,21 @@ import (
 )
 
 type Metricser struct {
-	bundler Bundler
+	imageCloner ImageCloner
 }
 
-func IamMetricser(bundler Bundler) *Metricser {
+func IamMetricser(imageCloner ImageCloner) *Metricser {
 	return &Metricser{
-		bundler: bundler,
+		imageCloner: imageCloner,
 	}
 }
 
 func (m *Metricser) Metrics(logger lager.Logger, id string) (VolumeMetrics, error) {
-	logger = logger.Session("groot-metrics", lager.Data{"bundleID": id})
+	logger = logger.Session("groot-metrics", lager.Data{"imageID": id})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	metrics, err := m.bundler.Metrics(logger, id)
+	metrics, err := m.imageCloner.Metrics(logger, id)
 	if err != nil {
 		return VolumeMetrics{}, fmt.Errorf("fetching metrics for `%s`: %s", id, err)
 	}

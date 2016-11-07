@@ -19,20 +19,20 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-func CreateBundle(grootFSBin, storePath, draxBin, baseImagePath, id string, diskLimit int64) groot.Bundle {
+func CreateImage(grootFSBin, storePath, draxBin, baseImagePath, id string, diskLimit int64) groot.Image {
 	spec := groot.CreateSpec{
 		ID:        id,
 		BaseImage:     baseImagePath,
 		DiskLimit: diskLimit,
 	}
 
-	bundle, err := CreateBundleWSpec(grootFSBin, storePath, draxBin, spec)
+	image, err := CreateImageWSpec(grootFSBin, storePath, draxBin, spec)
 	Expect(err).NotTo(HaveOccurred())
 
-	return bundle
+	return image
 }
 
-func CreateBundleWSpec(grootFSBin, storePath, draxBin string, spec groot.CreateSpec) (groot.Bundle, error) {
+func CreateImageWSpec(grootFSBin, storePath, draxBin string, spec groot.CreateSpec) (groot.Image, error) {
 	runner := &runner.Runner{
 		GrootFSBin: grootFSBin,
 		StorePath:  storePath,

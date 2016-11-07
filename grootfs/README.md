@@ -22,8 +22,8 @@ invitation.
 
 # Index
 * [Installation](#installation)
-* [Create a Bundle](#creating-a-bundle)
-* [Delete a Bundle](#deleting-a-bundle)
+* [Create a RootFS Image](#creating-a-rootfs-image)
+* [Delete a RootFS Image](#deleting-a-rootfs-image)
 * [Logging](#logging)
 * [Clean up](#clean-up)
 
@@ -79,9 +79,9 @@ installed (uidmap package on ubuntu)
   ```
 
 
-### Creating a bundle
+### Creating a RootFS Image
 
-You can create a bundle based on a remote docker image:
+You can create a rootfs image based on a remote docker image:
 
 ```
 grootfs --store /mnt/btrfs create docker:///ubuntu:latest my-image-id
@@ -96,7 +96,7 @@ grootfs --store /mnt/btrfs create /my-folder my-image-id
 
 #### Output
 
-The output of this command is a bundle path (`/mnt/btrfs/bundles/<uid>/my-image-id`) which has the following structure:
+The output of this command is a rootfs image path (`/mnt/btrfs/images/<uid>/my-image-id`) which has the following structure:
 
 * The `<uid>` is the effective user id running the command.
 
@@ -153,24 +153,24 @@ grootfs --store /mnt/btrfs create \
         my-image-id
 ```
 
-### Deleting a bundle
+### Deleting a RootFS Image
 
-You can destroy a created bundle by calling `grootfs delete` with the image-id:
+You can destroy a created rootfs image by calling `grootfs delete` with the image-id:
 
 ```
 grootfs --store /mnt/btrfs delete my-image-id
 ```
 
-Or the bundle path:
+Or the rootfs image path:
 
 ```
-grootfs --store /mnt/btrfs delete /mnt/btrfs/bundles/<uid>/my-image-id
+grootfs --store /mnt/btrfs delete /mnt/btrfs/images/<uid>/my-image-id
 ```
 
 **Caveats:**
 
 The store is based on the effective user running the command. If the user tries
-to delete a bundle that does not belong to her/him the command fails.
+to delete a rootfs image that does not belong to her/him the command fails.
 
 ### Logging
 
@@ -197,17 +197,17 @@ grootfs --store /mnt/btrfs clean
 When `clean` is called, any layers that aren't being used by a rootfs that
 currently exists are deleted from the store\*.
 
-For example: Imagine that we create two bundles from different images, `Bundle
-A` and `Bundle B`:
+For example: Imagine that we create two rootfs images from different base images, `Image
+A` and `Image B`:
 
 ```
-- Bundle A
+- Image A
   Layers:
     - layer-1
     - layer-2
     - layer-3
 
-- Bundle B
+- Image B
   Layers:
     - layer-1
     - layer-4
@@ -215,9 +215,9 @@ A` and `Bundle B`:
 
 ```
 
-They have a layer in common, `layer-1`. And after deleting `Bundle B`,
+They have a layer in common, `layer-1`. And after deleting `Image B`,
 `layer-4` and `layer-5` can be collected by `clean`, but not `layer-1` because
-`Bundle A` still uses that layer.
+`Image A` still uses that layer.
 
 It is safe to run the command in parallel, it does not interfere with other
 creations or deletions.

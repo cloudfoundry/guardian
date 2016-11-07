@@ -26,7 +26,7 @@ var _ = Describe("NamespacedUnpacker", func() {
 		unpacker          *unpackerpkg.NamespacedUnpacker
 
 		logger     *TestLogger
-		bundlePath string
+		imagePath string
 		targetPath string
 
 		commandError error
@@ -41,9 +41,9 @@ var _ = Describe("NamespacedUnpacker", func() {
 
 		logger = NewLogger("test-store")
 
-		bundlePath, err = ioutil.TempDir("", "")
+		imagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		targetPath = filepath.Join(bundlePath, "rootfs")
+		targetPath = filepath.Join(imagePath, "rootfs")
 
 		commandError = nil
 	})
@@ -60,7 +60,7 @@ var _ = Describe("NamespacedUnpacker", func() {
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(bundlePath)).To(Succeed())
+		Expect(os.RemoveAll(imagePath)).To(Succeed())
 	})
 
 	It("passes the rootfs path to the unpack-wrapper command", func() {

@@ -17,7 +17,7 @@ import (
 var _ = Describe("Delete", func() {
 	var (
 		baseImagePath string
-		bundle    groot.Bundle
+		image    groot.Image
 	)
 
 	BeforeEach(func() {
@@ -25,10 +25,10 @@ var _ = Describe("Delete", func() {
 		baseImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(baseImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
-		bundle = integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
+		image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
 	})
 
-	Context("when trying to delete a bundle from a different user", func() {
+	Context("when trying to delete a image from a different user", func() {
 		It("returns an error", func() {
 			deleteCmd := exec.Command(
 				GrootFSBin,
@@ -36,7 +36,7 @@ var _ = Describe("Delete", func() {
 				"--store", StorePath,
 				"--drax-bin", DraxBin,
 				"delete",
-				bundle.Path,
+				image.Path,
 			)
 			deleteCmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
@@ -48,7 +48,7 @@ var _ = Describe("Delete", func() {
 			session, err := gexec.Start(deleteCmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(session).Should(gexec.Exit(1))
-			Expect(bundle.Path).To(BeADirectory())
+			Expect(image.Path).To(BeADirectory())
 		})
 	})
 })

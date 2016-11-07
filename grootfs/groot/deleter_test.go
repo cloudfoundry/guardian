@@ -14,40 +14,40 @@ import (
 
 var _ = Describe("Deleter", func() {
 	var (
-		fakeBundler           *grootfakes.FakeBundler
+		fakeImageCloner           *grootfakes.FakeImageCloner
 		fakeDependencyManager *grootfakes.FakeDependencyManager
 		groot                 *grootpkg.Deleter
 		logger                lager.Logger
 	)
 
 	BeforeEach(func() {
-		fakeBundler = new(grootfakes.FakeBundler)
+		fakeImageCloner = new(grootfakes.FakeImageCloner)
 		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
 
-		groot = grootpkg.IamDeleter(fakeBundler, fakeDependencyManager)
+		groot = grootpkg.IamDeleter(fakeImageCloner, fakeDependencyManager)
 		logger = lagertest.NewTestLogger("groot-deleter")
 	})
 
 	Describe("Delete", func() {
-		It("destroys a bundle", func() {
+		It("destroys a image", func() {
 			Expect(groot.Delete(logger, "some-id")).To(Succeed())
 
-			_, bundleId := fakeBundler.DestroyArgsForCall(0)
-			Expect(bundleId).To(Equal("some-id"))
+			_, imageId := fakeImageCloner.DestroyArgsForCall(0)
+			Expect(imageId).To(Equal("some-id"))
 		})
 
-		It("deregisters bundle dependencies", func() {
+		It("deregisters image dependencies", func() {
 			Expect(groot.Delete(logger, "some-id")).To(Succeed())
 			Expect(fakeDependencyManager.DeregisterCallCount()).To(Equal(1))
 		})
 
-		Context("when destroying a bundle fails", func() {
+		Context("when destroying a image fails", func() {
 			BeforeEach(func() {
-				fakeBundler.DestroyReturns(errors.New("failed to destroy bundle"))
+				fakeImageCloner.DestroyReturns(errors.New("failed to destroy image"))
 			})
 
 			It("returns an error", func() {
-				Expect(groot.Delete(logger, "some-id")).To(MatchError(ContainSubstring("failed to destroy bundle")))
+				Expect(groot.Delete(logger, "some-id")).To(MatchError(ContainSubstring("failed to destroy image")))
 			})
 		})
 	})

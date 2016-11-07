@@ -22,7 +22,7 @@ func (c *Configurer) Ensure(logger lager.Logger, storePath string) error {
 
 	requiredPaths := []string{
 		storePath,
-		filepath.Join(storePath, BUNDLES_DIR_NAME),
+		filepath.Join(storePath, IMAGES_DIR_NAME),
 		filepath.Join(storePath, VOLUMES_DIR_NAME),
 		filepath.Join(storePath, CACHE_DIR_NAME),
 		filepath.Join(storePath, CACHE_DIR_NAME, "blobs"),

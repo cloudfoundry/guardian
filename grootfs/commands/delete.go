@@ -9,8 +9,8 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/bundler"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 
@@ -19,8 +19,8 @@ import (
 
 var DeleteCommand = cli.Command{
 	Name:        "delete",
-	Usage:       "delete <id|bundle path>",
-	Description: "Deletes a container bundle",
+	Usage:       "delete <id|image path>",
+	Description: "Deletes a container image",
 
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
@@ -48,19 +48,19 @@ var DeleteCommand = cli.Command{
 		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
-		bundler := bundler.NewBundler(btrfsVolumeDriver, storePath)
+		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.META_DIR_NAME, "dependencies"),
 		)
-		deleter := groot.IamDeleter(bundler, dependencyManager)
+		deleter := groot.IamDeleter(imageCloner, dependencyManager)
 
 		err = deleter.Delete(logger, id)
 		if err != nil {
-			logger.Error("deleting-bundle-failed", err)
+			logger.Error("deleting-image-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		fmt.Printf("Bundle %s deleted\n", id)
+		fmt.Printf("Image %s deleted\n", id)
 		return nil
 	},
 }

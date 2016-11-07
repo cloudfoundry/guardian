@@ -167,9 +167,9 @@ var _ = Describe("Btrfs", func() {
 		var toPath string
 
 		BeforeEach(func() {
-			bundlePath, err := ioutil.TempDir(storePath, "")
+			imagePath, err := ioutil.TempDir(storePath, "")
 			Expect(err).NotTo(HaveOccurred())
-			toPath = filepath.Join(bundlePath, "rootfs")
+			toPath = filepath.Join(imagePath, "rootfs")
 		})
 
 		It("creates a BTRFS snapshot", func() {
@@ -355,7 +355,7 @@ var _ = Describe("Btrfs", func() {
 			It("returns an error", func() {
 				err := btrfs.Destroy(logger, "non-existant")
 
-				Expect(err).To(MatchError(ContainSubstring("bundle path not found")))
+				Expect(err).To(MatchError(ContainSubstring("image path not found")))
 			})
 		})
 
@@ -373,9 +373,9 @@ var _ = Describe("Btrfs", func() {
 		var snapshotPath string
 
 		BeforeEach(func() {
-			bundlePath, err := ioutil.TempDir(storePath, "")
+			imagePath, err := ioutil.TempDir(storePath, "")
 			Expect(err).NotTo(HaveOccurred())
-			snapshotPath = filepath.Join(bundlePath, "rootfs")
+			snapshotPath = filepath.Join(imagePath, "rootfs")
 		})
 
 		Context("when the snapshot path is a volume", func() {
@@ -464,9 +464,9 @@ var _ = Describe("Btrfs", func() {
 		var toPath string
 
 		BeforeEach(func() {
-			bundlePath, err := ioutil.TempDir(storePath, "")
+			imagePath, err := ioutil.TempDir(storePath, "")
 			Expect(err).NotTo(HaveOccurred())
-			toPath = filepath.Join(bundlePath, "rootfs")
+			toPath = filepath.Join(imagePath, "rootfs")
 		})
 
 		Context("when the provided path is a volume", func() {

@@ -29,20 +29,20 @@ var _ = Describe("Create", func() {
 	})
 
 	Context("when inclusive disk limit is provided", func() {
-		It("creates a bundle with supplied limit", func() {
+		It("creates a image with supplied limit", func() {
 			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "fatfile")), "bs=1048576", "count=5")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", int64(10*1024*1024))
+			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", int64(10*1024*1024))
 
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath, "hello")), "bs=1048576", "count=4")
+			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=4")
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(bundle.RootFSPath, "hello2")), "bs=1048576", "count=2")
+			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello2")), "bs=1048576", "count=2")
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
@@ -60,13 +60,13 @@ var _ = Describe("Create", func() {
 		})
 
 		Context("when the exclude-image-from-quota is also provided", func() {
-			It("creates a bundle with supplied limit, but doesn't take into account the base image size", func() {
+			It("creates a image with supplied limit, but doesn't take into account the base image size", func() {
 				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "create", "--disk-limit-size-bytes", "10485760", "--exclude-image-from-quota", baseImagePath, "random-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
 
-				rootfsPath := filepath.Join(StorePath, CurrentUserID, "bundles/random-id/rootfs")
+				rootfsPath := filepath.Join(StorePath, CurrentUserID, "images/random-id/rootfs")
 				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(rootfsPath, "hello")), "bs=1048576", "count=6")
 				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
@@ -115,15 +115,15 @@ var _ = Describe("Create", func() {
 				})
 
 				Context("when the drax bin doesn't have uid bit set", func() {
-					It("doesn't leak the bundle dir", func() {
+					It("doesn't leak the image dir", func() {
 						testhelpers.UnsuidDrax(draxBin.Name())
 						cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "--drax-bin", draxBin.Name(), "create", "--disk-limit-size-bytes", "104857600", baseImagePath, "random-id")
 						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(sess).Should(gexec.Exit(1))
 
-						bundlePath := path.Join(StorePath, CurrentUserID, "bundles", "random-id")
-						Expect(bundlePath).ToNot(BeAnExistingFile())
+						imagePath := path.Join(StorePath, CurrentUserID, "images", "random-id")
+						Expect(imagePath).ToNot(BeAnExistingFile())
 					})
 				})
 			})
@@ -147,7 +147,7 @@ var _ = Describe("Create", func() {
 
 	Context("when no --store option is given", func() {
 		It("uses the default store path", func() {
-			Expect("/var/lib/grootfs/bundles").ToNot(BeAnExistingFile())
+			Expect("/var/lib/grootfs/images").ToNot(BeAnExistingFile())
 
 			cmd := exec.Command(GrootFSBin, "create", baseImagePath, "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -160,22 +160,22 @@ var _ = Describe("Create", func() {
 
 	Context("when two rootfses are using the same image", func() {
 		It("isolates them", func() {
-			bundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
-			anotherBundle := integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "another-random-id", 0)
-			Expect(ioutil.WriteFile(path.Join(bundle.RootFSPath, "bar"), []byte("hello-world"), 0644)).To(Succeed())
-			Expect(path.Join(anotherBundle.RootFSPath, "bar")).NotTo(BeARegularFile())
+			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
+			anotherImage := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "another-random-id", 0)
+			Expect(ioutil.WriteFile(path.Join(image.RootFSPath, "bar"), []byte("hello-world"), 0644)).To(Succeed())
+			Expect(path.Join(anotherImage.RootFSPath, "bar")).NotTo(BeARegularFile())
 		})
 	})
 
 	Context("when the id is already being used", func() {
 		BeforeEach(func() {
-			Expect(integration.CreateBundle(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)).NotTo(BeNil())
+			Expect(integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)).NotTo(BeNil())
 		})
 
 		It("fails and produces a useful error", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath, "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Eventually(sess.Out).Should(gbytes.Say("bundle for id `random-id` already exists"))
+			Eventually(sess.Out).Should(gbytes.Say("image for id `random-id` already exists"))
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
 		})
@@ -199,7 +199,7 @@ var _ = Describe("Create", func() {
 			Eventually(buffer).Should(gbytes.Say(`range [\[\)0-9\-]* -> [\[\)0-9\-]* not allowed`))
 		})
 
-		It("does not leak the bundle directory", func() {
+		It("does not leak the image directory", func() {
 			cmd := exec.Command(
 				GrootFSBin, "--store", StorePath,
 				"create",
@@ -212,7 +212,7 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sess.Wait()).NotTo(gexec.Exit(0))
 
-			Expect(path.Join(StorePath, CurrentUserID, "bundles", "some-id")).ToNot(BeAnExistingFile())
+			Expect(path.Join(StorePath, CurrentUserID, "images", "some-id")).ToNot(BeAnExistingFile())
 		})
 	})
 

@@ -8,16 +8,16 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 )
 
-func (r *Runner) Create(spec groot.CreateSpec) (groot.Bundle, error) {
+func (r *Runner) Create(spec groot.CreateSpec) (groot.Image, error) {
 	args := r.makeCreateArgs(spec)
-	bundlePath, err := r.RunSubcommand("create", args...)
+	imagePath, err := r.RunSubcommand("create", args...)
 	if err != nil {
-		return groot.Bundle{}, err
+		return groot.Image{}, err
 	}
 
-	return groot.Bundle{
-		Path:       bundlePath,
-		RootFSPath: filepath.Join(bundlePath, "rootfs"),
+	return groot.Image{
+		Path:       imagePath,
+		RootFSPath: filepath.Join(imagePath, "rootfs"),
 	}, nil
 }
 

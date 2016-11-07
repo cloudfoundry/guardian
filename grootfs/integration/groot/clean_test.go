@@ -15,14 +15,14 @@ import (
 var _ = Describe("Clean", func() {
 	BeforeEach(func() {
 		_, err := Runner.Create(groot.CreateSpec{
-			ID:    "my-bundle-1",
+			ID:    "my-image-1",
 			BaseImage: "docker:///cfgarden/empty:v0.1.1",
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
-		Expect(Runner.Delete("my-bundle-1")).To(Succeed())
+		Expect(Runner.Delete("my-image-1")).To(Succeed())
 	})
 
 	It("removes the cached blobs", func() {
@@ -41,12 +41,12 @@ var _ = Describe("Clean", func() {
 	Context("when there are unused layers", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
-				ID:    "my-bundle-2",
+				ID:    "my-image-2",
 				BaseImage: "docker:///busybox",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(Runner.Delete("my-bundle-2")).To(Succeed())
+			Expect(Runner.Delete("my-image-2")).To(Succeed())
 		})
 
 		It("removes unused volumes", func() {
@@ -87,12 +87,12 @@ var _ = Describe("Clean", func() {
 			Context("when more than one image is to be ignored", func() {
 				BeforeEach(func() {
 					_, err := Runner.Create(groot.CreateSpec{
-						ID:    "my-bundle-3",
+						ID:    "my-image-3",
 						BaseImage: "docker:///cfgarden/empty:v0.1.0",
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(Runner.Delete("my-bundle-3")).To(Succeed())
+					Expect(Runner.Delete("my-image-3")).To(Succeed())
 				})
 
 				It("doesn't delete their layers", func() {

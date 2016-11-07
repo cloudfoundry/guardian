@@ -10,7 +10,7 @@ import (
 
 const GLOBAL_LOCK_KEY = "global-groot-lock"
 
-//go:generate counterfeiter . Bundler
+//go:generate counterfeiter . ImageCloner
 //go:generate counterfeiter . BaseImagePuller
 //go:generate counterfeiter . Locksmith
 //go:generate counterfeiter . DependencyManager
@@ -41,7 +41,7 @@ type BaseImagePuller interface {
 	Pull(logger lager.Logger, spec BaseImageSpec) (BaseImage, error)
 }
 
-type BundleSpec struct {
+type ImageSpec struct {
 	ID                    string
 	DiskLimit             int64
 	ExcludeBaseImageFromQuota bool
@@ -49,14 +49,14 @@ type BundleSpec struct {
 	BaseImage                 specsv1.Image
 }
 
-type Bundle struct {
+type Image struct {
 	Path       string
 	RootFSPath string
 }
 
-type Bundler interface {
+type ImageCloner interface {
 	Exists(id string) (bool, error)
-	Create(logger lager.Logger, spec BundleSpec) (Bundle, error)
+	Create(logger lager.Logger, spec ImageSpec) (Image, error)
 	Destroy(logger lager.Logger, id string) error
 	Metrics(logger lager.Logger, id string) (VolumeMetrics, error)
 }
