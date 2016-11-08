@@ -15,7 +15,7 @@ import (
 var _ = Describe("Clean", func() {
 	BeforeEach(func() {
 		_, err := Runner.Create(groot.CreateSpec{
-			ID:    "my-image-1",
+			ID:        "my-image-1",
 			BaseImage: "docker:///cfgarden/empty:v0.1.1",
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -26,14 +26,14 @@ var _ = Describe("Clean", func() {
 	})
 
 	It("removes the cached blobs", func() {
-		preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
+		preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(preContents)).To(BeNumerically(">", 0))
 
 		_, err = Runner.Clean(0, []string{})
 		Expect(err).NotTo(HaveOccurred())
 
-		afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
+		afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(afterContents).To(HaveLen(0))
 	})
@@ -41,7 +41,7 @@ var _ = Describe("Clean", func() {
 	Context("when there are unused layers", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
-				ID:    "my-image-2",
+				ID:        "my-image-2",
 				BaseImage: "docker:///busybox",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -87,7 +87,7 @@ var _ = Describe("Clean", func() {
 			Context("when more than one image is to be ignored", func() {
 				BeforeEach(func() {
 					_, err := Runner.Create(groot.CreateSpec{
-						ID:    "my-image-3",
+						ID:        "my-image-3",
 						BaseImage: "docker:///cfgarden/empty:v0.1.0",
 					})
 					Expect(err).NotTo(HaveOccurred())
@@ -124,13 +124,13 @@ var _ = Describe("Clean", func() {
 				})
 
 				It("does not remove the cached blobs", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(len(preContents)))
 				})
@@ -160,14 +160,14 @@ var _ = Describe("Clean", func() {
 				})
 
 				It("removes the cached blobs", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(2))
 
 					_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME, "blobs"))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(0))
 				})

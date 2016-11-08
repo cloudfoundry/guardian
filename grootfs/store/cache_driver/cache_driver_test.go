@@ -32,7 +32,7 @@ var _ = Describe("CacheDriver", func() {
 		var err error
 		storePath, err = ioutil.TempDir("", "store")
 		Expect(err).ToNot(HaveOccurred())
-		cachePath = filepath.Join(storePath, "cache", "blobs")
+		cachePath = filepath.Join(storePath, "cache")
 		Expect(os.MkdirAll(cachePath, 0755)).To(Succeed())
 
 		logger = lagertest.NewTestLogger("cacheDriver")
@@ -193,7 +193,7 @@ var _ = Describe("CacheDriver", func() {
 			Expect(ioutil.WriteFile(path.Join(cachePath, "cached-2"), []byte{}, 0666)).To(Succeed())
 		})
 
-		It("cleans up the cache/blobs contents", func() {
+		It("cleans up the cache contents", func() {
 			contents, err := ioutil.ReadDir(cachePath)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(contents)).To(Equal(2))
@@ -223,5 +223,5 @@ var _ = Describe("CacheDriver", func() {
 })
 
 func blobPath(storePath, id string) string {
-	return filepath.Join(storePath, store.CACHE_DIR_NAME, "blobs", id)
+	return filepath.Join(storePath, store.CACHE_DIR_NAME, id)
 }

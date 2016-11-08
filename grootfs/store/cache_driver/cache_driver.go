@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 
 	"code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/grootfs/store"
@@ -101,8 +100,8 @@ func (c *CacheDriver) Clean(logger lager.Logger) error {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	blobsPath := path.Join(c.storePath, "cache", "blobs")
-	contents, err := ioutil.ReadDir(blobsPath)
+	cachePath := path.Join(c.storePath, "cache")
+	contents, err := ioutil.ReadDir(cachePath)
 	if err != nil {
 		return fmt.Errorf("reading cache contents: %s", err.Error())
 	}
@@ -111,7 +110,7 @@ func (c *CacheDriver) Clean(logger lager.Logger) error {
 	for i, cachedBlob := range contents {
 		logger.Debug("cleaning-up-blob", lager.Data{"blob": cachedBlob.Name(), "count": fmt.Sprintf("%d/%d", i, totalBlobs)})
 
-		if err := os.Remove(path.Join(blobsPath, cachedBlob.Name())); err != nil {
+		if err := os.Remove(path.Join(cachePath, cachedBlob.Name())); err != nil {
 			return fmt.Errorf("clean up blob `%s`: %s", cachedBlob.Name(), err.Error())
 		}
 	}
@@ -120,8 +119,7 @@ func (c *CacheDriver) Clean(logger lager.Logger) error {
 }
 
 func (c *CacheDriver) blobPath(id string) string {
-	id = strings.Replace(id, ":", "-", 1)
-	return filepath.Join(c.storePath, store.CACHE_DIR_NAME, "blobs", id)
+	return filepath.Join(c.storePath, store.CACHE_DIR_NAME, id)
 }
 
 func (c *CacheDriver) hasBlob(id string) (bool, error) {

@@ -29,7 +29,7 @@ var _ = Describe("Threshold", func() {
 		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.MkdirAll(
-			filepath.Join(storePath, store.CACHE_DIR_NAME, "blobs"), 0744,
+			filepath.Join(storePath, store.CACHE_DIR_NAME), 0744,
 		)).To(Succeed())
 		Expect(os.MkdirAll(
 			filepath.Join(storePath, store.VOLUMES_DIR_NAME), 0744,
@@ -48,8 +48,8 @@ var _ = Describe("Threshold", func() {
 	})
 
 	It("measures space used by the blobs cache and volumes", func() {
-		blobsPath := filepath.Join(storePath, store.CACHE_DIR_NAME, "blobs")
-		Expect(writeFile(filepath.Join(blobsPath, "sha256-fake"), 256*1024)).To(Succeed())
+		blobsPath := filepath.Join(storePath, store.CACHE_DIR_NAME)
+		Expect(writeFile(filepath.Join(blobsPath, "sha256:fake"), 256*1024)).To(Succeed())
 
 		volPath := filepath.Join(storePath, store.VOLUMES_DIR_NAME, "sha256:fake")
 		Expect(os.MkdirAll(volPath, 0744)).To(Succeed())
