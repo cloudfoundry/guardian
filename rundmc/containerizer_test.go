@@ -417,12 +417,12 @@ var _ = Describe("Rundmc", func() {
 				var shares uint64 = 20
 				return goci.Bndl{
 					Spec: specs.Spec{
-						Linux: specs.Linux{
-							Resources: &specs.Resources{
-								Memory: &specs.Memory{
+						Linux: &specs.Linux{
+							Resources: &specs.LinuxResources{
+								Memory: &specs.LinuxMemory{
 									Limit: &limit,
 								},
-								CPU: &specs.CPU{
+								CPU: &specs.LinuxCPU{
 									Shares: &shares,
 								},
 							},

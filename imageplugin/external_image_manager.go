@@ -17,7 +17,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-func New(binPath string, commandRunner command_runner.CommandRunner, defaultRootFS *url.URL, mappings []specs.IDMapping) *ExternalImageManager {
+func New(binPath string, commandRunner command_runner.CommandRunner, defaultRootFS *url.URL, mappings []specs.LinuxIDMapping) *ExternalImageManager {
 	return &ExternalImageManager{
 		binPath:       binPath,
 		commandRunner: commandRunner,
@@ -30,7 +30,7 @@ type ExternalImageManager struct {
 	binPath       string
 	commandRunner command_runner.CommandRunner
 	defaultRootFS *url.URL
-	mappings      []specs.IDMapping
+	mappings      []specs.LinuxIDMapping
 }
 
 func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error) {
@@ -85,7 +85,7 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 	return rootFS, []string{}, nil
 }
 
-func stringifyMapping(mapping specs.IDMapping) string {
+func stringifyMapping(mapping specs.LinuxIDMapping) string {
 	return fmt.Sprintf("%d:%d:%d", mapping.ContainerID, mapping.HostID, mapping.Size)
 }
 

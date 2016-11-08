@@ -85,7 +85,7 @@ var _ = Describe("ExecPreparer", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
-			bndl := goci.Bndl{}
+			bndl := goci.Bundle()
 			return bndl, nil
 		}
 
@@ -136,21 +136,21 @@ var _ = Describe("ExecPreparer", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(spec.Process.Rlimits).To(ConsistOf(
-			specs.Rlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
-			specs.Rlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
-			specs.Rlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
-			specs.Rlimit{Type: "RLIMIT_DATA", Hard: 99, Soft: 99},
-			specs.Rlimit{Type: "RLIMIT_FSIZE", Hard: 101, Soft: 101},
-			specs.Rlimit{Type: "RLIMIT_LOCKS", Hard: 111, Soft: 111},
-			specs.Rlimit{Type: "RLIMIT_MEMLOCK", Hard: 987, Soft: 987},
-			specs.Rlimit{Type: "RLIMIT_MSGQUEUE", Hard: 777, Soft: 777},
-			specs.Rlimit{Type: "RLIMIT_NICE", Hard: 111, Soft: 111},
-			specs.Rlimit{Type: "RLIMIT_NOFILE", Hard: 222, Soft: 222},
-			specs.Rlimit{Type: "RLIMIT_NPROC", Hard: 1234, Soft: 1234},
-			specs.Rlimit{Type: "RLIMIT_RSS", Hard: 888, Soft: 888},
-			specs.Rlimit{Type: "RLIMIT_RTPRIO", Hard: 254, Soft: 254},
-			specs.Rlimit{Type: "RLIMIT_SIGPENDING", Hard: 101, Soft: 101},
-			specs.Rlimit{Type: "RLIMIT_STACK", Hard: 44, Soft: 44},
+			specs.LinuxRlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
+			specs.LinuxRlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
+			specs.LinuxRlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
+			specs.LinuxRlimit{Type: "RLIMIT_DATA", Hard: 99, Soft: 99},
+			specs.LinuxRlimit{Type: "RLIMIT_FSIZE", Hard: 101, Soft: 101},
+			specs.LinuxRlimit{Type: "RLIMIT_LOCKS", Hard: 111, Soft: 111},
+			specs.LinuxRlimit{Type: "RLIMIT_MEMLOCK", Hard: 987, Soft: 987},
+			specs.LinuxRlimit{Type: "RLIMIT_MSGQUEUE", Hard: 777, Soft: 777},
+			specs.LinuxRlimit{Type: "RLIMIT_NICE", Hard: 111, Soft: 111},
+			specs.LinuxRlimit{Type: "RLIMIT_NOFILE", Hard: 222, Soft: 222},
+			specs.LinuxRlimit{Type: "RLIMIT_NPROC", Hard: 1234, Soft: 1234},
+			specs.LinuxRlimit{Type: "RLIMIT_RSS", Hard: 888, Soft: 888},
+			specs.LinuxRlimit{Type: "RLIMIT_RTPRIO", Hard: 254, Soft: 254},
+			specs.LinuxRlimit{Type: "RLIMIT_SIGPENDING", Hard: 101, Soft: 101},
+			specs.LinuxRlimit{Type: "RLIMIT_STACK", Hard: 44, Soft: 44},
 		))
 	})
 
@@ -199,7 +199,7 @@ var _ = Describe("ExecPreparer", func() {
 
 		Context("when the bundle can't be loaded", func() {
 			BeforeEach(func() {
-				bundleLoader.LoadReturns(goci.Bndl{}, errors.New("whoa! Hold them horses!"))
+				bundleLoader.LoadReturns(goci.Bundle(), errors.New("whoa! Hold them horses!"))
 			})
 
 			It("fails", func() {
@@ -443,7 +443,7 @@ var _ = Describe("ExecPreparer", func() {
 		})
 
 		JustBeforeEach(func() {
-			bndl = goci.Bndl{}
+			bndl = goci.Bundle()
 			bndl.Spec.Process.Env = containerEnv
 			bundleLoader.LoadReturns(bndl, nil)
 
@@ -487,7 +487,7 @@ var _ = Describe("ExecPreparer", func() {
 
 	Context("when the container has capabilities", func() {
 		BeforeEach(func() {
-			bndl := goci.Bndl{}
+			bndl := goci.Bundle()
 			bndl.Spec.Process.Capabilities = []string{"foo", "bar", "baz"}
 			bundleLoader.LoadReturns(bndl, nil)
 		})
@@ -549,13 +549,13 @@ var _ = Describe("ExecPreparer", func() {
 				Context("when the container is unprivileged", func() {
 					BeforeEach(func() {
 						bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
-							bndl := goci.Bndl{}
-							bndl.Spec.Linux.UIDMappings = []specs.IDMapping{{
+							bndl := goci.Bundle()
+							bndl.Spec.Linux.UIDMappings = []specs.LinuxIDMapping{{
 								HostID:      1712,
 								ContainerID: 1012,
 								Size:        1,
 							}}
-							bndl.Spec.Linux.GIDMappings = []specs.IDMapping{{
+							bndl.Spec.Linux.GIDMappings = []specs.LinuxIDMapping{{
 								HostID:      1713,
 								ContainerID: 1013,
 								Size:        1,
@@ -615,7 +615,7 @@ var _ = Describe("ExecPreparer", func() {
 	Context("when an ApparmorProfile is defined in the base process", func() {
 		BeforeEach(func() {
 			bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
-				bndl := goci.Bndl{}
+				bndl := goci.Bundle()
 				bndl = bndl.WithProcess(specs.Process{
 					ApparmorProfile: "default-profile",
 				})

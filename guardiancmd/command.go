@@ -126,7 +126,7 @@ var PrivilegedMaxCaps = []string{
 // plus CAP_SYS_ADMIN.
 var NonRootMaxCaps = append(UnprivilegedMaxCaps, "CAP_SYS_ADMIN")
 
-var PrivilegedContainerNamespaces = []specs.Namespace{
+var PrivilegedContainerNamespaces = []specs.LinuxNamespace{
 	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace,
 }
 
@@ -619,7 +619,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadoo
 	}
 
 	var worldReadWrite os.FileMode = 0666
-	fuseDevice := specs.Device{
+	fuseDevice := specs.LinuxDevice{
 		Path:     "/dev/fuse",
 		Type:     "c",
 		Major:    10,
@@ -627,8 +627,8 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadoo
 		FileMode: &worldReadWrite,
 	}
 
-	denyAll := specs.DeviceCgroup{Allow: false, Access: &rwm}
-	allowedDevices := []specs.DeviceCgroup{
+	denyAll := specs.LinuxDeviceCgroup{Allow: false, Access: &rwm}
+	allowedDevices := []specs.LinuxDeviceCgroup{
 		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(3), Allow: true},
 		{Access: &rwm, Type: &character, Major: majorMinor(5), Minor: majorMinor(0), Allow: true},
 		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(8), Allow: true},
@@ -647,7 +647,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadoo
 
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
-		WithResources(&specs.Resources{Devices: append([]specs.DeviceCgroup{denyAll}, allowedDevices...)}).
+		WithResources(&specs.LinuxResources{Devices: append([]specs.LinuxDeviceCgroup{denyAll}, allowedDevices...)}).
 		WithRootFS(defaultRootFSPath).
 		WithDevices(fuseDevice).
 		WithProcess(baseProcess)

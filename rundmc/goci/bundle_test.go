@@ -143,11 +143,11 @@ var _ = Describe("Bundle", func() {
 		var t = true
 
 		BeforeEach(func() {
-			returnedBundle = initialBundle.WithResources(&specs.Resources{DisableOOMKiller: &t})
+			returnedBundle = initialBundle.WithResources(&specs.LinuxResources{DisableOOMKiller: &t})
 		})
 
 		It("returns a bundle with the resources added to the runtime spec", func() {
-			Expect(returnedBundle.Resources()).To(Equal(&specs.Resources{DisableOOMKiller: &t}))
+			Expect(returnedBundle.Resources()).To(Equal(&specs.LinuxResources{DisableOOMKiller: &t}))
 		})
 
 		It("does not modify the original bundle", func() {
@@ -160,18 +160,18 @@ var _ = Describe("Bundle", func() {
 		var shares uint64 = 10
 
 		BeforeEach(func() {
-			returnedBundle = initialBundle.WithCPUShares(specs.CPU{Shares: &shares})
+			returnedBundle = initialBundle.WithCPUShares(specs.LinuxCPU{Shares: &shares})
 		})
 
 		It("returns a bundle with the cpu shares added to the runtime spec", func() {
-			Expect(returnedBundle.Resources().CPU).To(Equal(&specs.CPU{Shares: &shares}))
+			Expect(returnedBundle.Resources().CPU).To(Equal(&specs.LinuxCPU{Shares: &shares}))
 		})
 	})
 
 	Describe("WithNamespace", func() {
 		It("does not change any namespaces other than the one with the given type", func() {
-			colin := specs.Namespace{Type: "colin", Path: ""}
-			potato := specs.Namespace{Type: "potato", Path: "pan"}
+			colin := specs.LinuxNamespace{Type: "colin", Path: ""}
+			potato := specs.LinuxNamespace{Type: "potato", Path: "pan"}
 
 			initialBundle = initialBundle.WithNamespace(colin)
 			returnedBundle = initialBundle.WithNamespace(potato)
@@ -180,7 +180,7 @@ var _ = Describe("Bundle", func() {
 
 		Context("when the namespace isnt already in the spec", func() {
 			It("adds the namespace", func() {
-				ns := specs.Namespace{Type: "potato", Path: "pan"}
+				ns := specs.LinuxNamespace{Type: "potato", Path: "pan"}
 				returnedBundle = initialBundle.WithNamespace(ns)
 				Expect(returnedBundle.Namespaces()).To(ConsistOf(ns))
 			})
@@ -188,8 +188,8 @@ var _ = Describe("Bundle", func() {
 
 		Context("when the namespace is already in the spec", func() {
 			It("overrides the namespace", func() {
-				initialBundle = initialBundle.WithNamespace(specs.Namespace{Type: "potato", Path: "should-be-overridden"})
-				ns := specs.Namespace{Type: "potato", Path: "pan"}
+				initialBundle = initialBundle.WithNamespace(specs.LinuxNamespace{Type: "potato", Path: "should-be-overridden"})
+				ns := specs.LinuxNamespace{Type: "potato", Path: "pan"}
 				returnedBundle = initialBundle.WithNamespace(ns)
 				Expect(returnedBundle.Namespaces()).To(ConsistOf(ns))
 			})
@@ -198,24 +198,24 @@ var _ = Describe("Bundle", func() {
 
 	Describe("WithNamespaces", func() {
 		BeforeEach(func() {
-			returnedBundle = initialBundle.WithNamespaces(specs.Namespace{Type: specs.NetworkNamespace})
+			returnedBundle = initialBundle.WithNamespaces(specs.LinuxNamespace{Type: specs.NetworkNamespace})
 		})
 
 		It("returns a bundle with the namespaces added to the runtime spec", func() {
-			Expect(returnedBundle.Namespaces()).To(ConsistOf(specs.Namespace{Type: specs.NetworkNamespace}))
+			Expect(returnedBundle.Namespaces()).To(ConsistOf(specs.LinuxNamespace{Type: specs.NetworkNamespace}))
 		})
 
 		Context("when the spec already contains namespaces", func() {
 			It("replaces them", func() {
-				overridenBundle := returnedBundle.WithNamespaces(specs.Namespace{Type: "mynamespace"})
-				Expect(overridenBundle.Namespaces()).To(ConsistOf(specs.Namespace{Type: "mynamespace"}))
+				overridenBundle := returnedBundle.WithNamespaces(specs.LinuxNamespace{Type: "mynamespace"})
+				Expect(overridenBundle.Namespaces()).To(ConsistOf(specs.LinuxNamespace{Type: "mynamespace"}))
 			})
 		})
 	})
 
 	Describe("WithUIDMappings", func() {
 		It("returns a bundle with the provided uid mappings added to the runtime spec", func() {
-			uidMappings := []specs.IDMapping{
+			uidMappings := []specs.LinuxIDMapping{
 				{
 					HostID:      40000,
 					ContainerID: 0,
@@ -235,7 +235,7 @@ var _ = Describe("Bundle", func() {
 
 	Describe("WithGIDMappings", func() {
 		It("returns a bundle with the provided gid mappings added to the runtime spec", func() {
-			gidMappings := []specs.IDMapping{
+			gidMappings := []specs.LinuxIDMapping{
 				{
 					HostID:      40000,
 					ContainerID: 0,
@@ -255,17 +255,17 @@ var _ = Describe("Bundle", func() {
 
 	Describe("WithDevices", func() {
 		BeforeEach(func() {
-			returnedBundle = initialBundle.WithDevices(specs.Device{Path: "test/path"})
+			returnedBundle = initialBundle.WithDevices(specs.LinuxDevice{Path: "test/path"})
 		})
 
 		It("returns a bundle with the namespaces added to the runtime spec", func() {
-			Expect(returnedBundle.Spec.Linux.Devices).To(ConsistOf(specs.Device{Path: "test/path"}))
+			Expect(returnedBundle.Spec.Linux.Devices).To(ConsistOf(specs.LinuxDevice{Path: "test/path"}))
 		})
 
 		Context("when the spec already contains namespaces", func() {
 			It("replaces them", func() {
-				overridenBundle := returnedBundle.WithDevices(specs.Device{Path: "new-device"})
-				Expect(overridenBundle.Devices()).To(ConsistOf(specs.Device{Path: "new-device"}))
+				overridenBundle := returnedBundle.WithDevices(specs.LinuxDevice{Path: "new-device"})
+				Expect(overridenBundle.Devices()).To(ConsistOf(specs.LinuxDevice{Path: "new-device"}))
 			})
 		})
 	})
@@ -273,7 +273,7 @@ var _ = Describe("Bundle", func() {
 	Describe("NamespaceSlice", func() {
 		Context("when the namespace isnt already in the slice", func() {
 			It("adds the namespace", func() {
-				ns := specs.Namespace{Type: "potato", Path: "pan"}
+				ns := specs.LinuxNamespace{Type: "potato", Path: "pan"}
 				nsl := goci.NamespaceSlice{}
 				nsl = nsl.Set(ns)
 				Expect(nsl).To(ConsistOf(ns))
@@ -282,8 +282,8 @@ var _ = Describe("Bundle", func() {
 
 		Context("when the namespace is already in the slice", func() {
 			It("overrides the namespace", func() {
-				ns := specs.Namespace{Type: "potato", Path: "pan"}
-				nsl := goci.NamespaceSlice{specs.Namespace{Type: "potato", Path: "chips"}}
+				ns := specs.LinuxNamespace{Type: "potato", Path: "pan"}
+				nsl := goci.NamespaceSlice{specs.LinuxNamespace{Type: "potato", Path: "chips"}}
 				nsl = nsl.Set(ns)
 				Expect(nsl).To(ConsistOf(ns))
 			})

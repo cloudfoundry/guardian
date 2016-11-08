@@ -24,7 +24,7 @@ var _ = Describe("ExternalImageManager", func() {
 		logger               *lagertest.TestLogger
 		externalImageManager *imageplugin.ExternalImageManager
 		imageSource          *url.URL
-		idMappings           []specs.IDMapping
+		idMappings           []specs.LinuxIDMapping
 		defaultRootFS        *url.URL
 	)
 
@@ -32,13 +32,13 @@ var _ = Describe("ExternalImageManager", func() {
 		logger = lagertest.NewTestLogger("external-image-manager")
 		fakeCommandRunner = fake_command_runner.New()
 
-		idMappings = []specs.IDMapping{
-			specs.IDMapping{
+		idMappings = []specs.LinuxIDMapping{
+			specs.LinuxIDMapping{
 				ContainerID: 0,
 				HostID:      100,
 				Size:        1,
 			},
-			specs.IDMapping{
+			specs.LinuxIDMapping{
 				ContainerID: 1,
 				HostID:      1,
 				Size:        99,

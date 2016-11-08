@@ -36,8 +36,8 @@ var _ = Describe("LimitsRule", func() {
 	It("does not clobber other fields of the resources sections", func() {
 		foo := "foo"
 		bndl := goci.Bundle().WithResources(
-			&specs.Resources{
-				Devices: []specs.DeviceCgroup{{Access: &foo}},
+			&specs.LinuxResources{
+				Devices: []specs.LinuxDeviceCgroup{{Access: &foo}},
 			},
 		)
 

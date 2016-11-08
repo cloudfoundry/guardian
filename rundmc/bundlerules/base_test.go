@@ -19,8 +19,8 @@ var _ = Describe("Base", func() {
 
 	BeforeEach(func() {
 		t := true
-		privilegeBndl = goci.Bndl{Spec: specs.Spec{Linux: specs.Linux{Resources: &specs.Resources{DisableOOMKiller: &t}}}}.WithNamespace(goci.NetworkNamespace)
-		unprivilegeBndl = goci.Bndl{Spec: specs.Spec{Linux: specs.Linux{Resources: &specs.Resources{DisableOOMKiller: &t}}}}.WithNamespace(goci.UserNamespace)
+		privilegeBndl = goci.Bndl{Spec: specs.Spec{Linux: &specs.Linux{Resources: &specs.LinuxResources{DisableOOMKiller: &t}}}}.WithNamespace(goci.NetworkNamespace)
+		unprivilegeBndl = goci.Bndl{Spec: specs.Spec{Linux: &specs.Linux{Resources: &specs.LinuxResources{DisableOOMKiller: &t}}}}.WithNamespace(goci.UserNamespace)
 
 		rule = bundlerules.Base{
 			PrivilegedBase:   privilegeBndl,
