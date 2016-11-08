@@ -23,8 +23,11 @@ var _ = Describe("Create with local images", func() {
 		var err error
 		baseImagePath, err = ioutil.TempDir("", "local-image-dir")
 		Expect(err).NotTo(HaveOccurred())
-
 		Expect(ioutil.WriteFile(path.Join(baseImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.MkdirAll(path.Join(baseImagePath, "permissive-folder"), 0777)).To(Succeed())
+
+		// we need to explicitly apply perms because mkdir is subject to umask
+		Expect(os.Chmod(path.Join(baseImagePath, "permissive-folder"), 0777)).To(Succeed())
 	})
 
 	It("creates a root filesystem", func() {
@@ -39,6 +42,19 @@ var _ = Describe("Create with local images", func() {
 		fooContents, err := ioutil.ReadFile(imageContentPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(fooContents)).To(Equal("hello-world"))
+	})
+
+	It("keeps folders original permissions", func() {
+		image, err := integration.CreateImageWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
+			ID:        "random-id",
+			BaseImage: baseImagePath,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		permissiveFolderPath := path.Join(image.RootFSPath, "permissive-folder")
+		stat, err := os.Stat(permissiveFolderPath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
 	})
 
 	Context("when required args are not provided", func() {

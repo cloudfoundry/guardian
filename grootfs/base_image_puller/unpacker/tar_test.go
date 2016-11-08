@@ -22,7 +22,7 @@ var _ = Describe("Tar", func() {
 		logger lager.Logger
 
 		imgPath    string
-		imagePath string
+		imagePath  string
 		targetPath string
 		aFilePath  string
 
@@ -46,10 +46,17 @@ var _ = Describe("Tar", func() {
 		Expect(err).NotTo(HaveOccurred())
 		aFilePath = path.Join(imgPath, "a_file")
 		Expect(ioutil.WriteFile(aFilePath, []byte("hello-world"), 0600)).To(Succeed())
-		Expect(os.Chmod(aFilePath, 0777)).To(Succeed())
 		Expect(os.Mkdir(path.Join(imgPath, "subdir"), 0700)).To(Succeed())
-		Expect(os.Mkdir(path.Join(imgPath, "subdir", "subdir2"), 0711)).To(Succeed())
+		Expect(os.Mkdir(path.Join(imgPath, "subdir", "subdir2"), 0777)).To(Succeed())
 		Expect(ioutil.WriteFile(path.Join(imgPath, "subdir", "subdir2", "another_file"), []byte("goodbye-world"), 0600)).To(Succeed())
+
+		// We have to chmod it because creat and mkdir syscalls take the umask into
+		// account when applying the permissions. This means that only permissions
+		// less permissive than the umask can be applied to files and directories.
+		// By calling chmod we explicitly apply the permissions without being
+		// subject to the umask.
+		Expect(os.Chmod(aFilePath, 0777)).To(Succeed())
+		Expect(os.Chmod(path.Join(imgPath, "subdir", "subdir2"), 0777)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
@@ -64,7 +71,7 @@ var _ = Describe("Tar", func() {
 		Expect(os.RemoveAll(imagePath)).To(Succeed())
 	})
 
-	It("does write the image contents in the rootfs directory", func() {
+	It("writes the image contents in the rootfs directory", func() {
 		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			Stream:     stream,
 			TargetPath: targetPath,
@@ -88,6 +95,32 @@ var _ = Describe("Tar", func() {
 		contents, err := ioutil.ReadFile(filePath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(contents)).To(Equal("goodbye-world"))
+	})
+
+	It("keeps file permissions", func() {
+		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			Stream:     stream,
+			TargetPath: targetPath,
+		})).To(Succeed())
+
+		filePath := path.Join(targetPath, "a_file")
+		stat, err := os.Stat(filePath)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
+	})
+
+	It("keeps directory permissions", func() {
+		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			Stream:     stream,
+			TargetPath: targetPath,
+		})).To(Succeed())
+
+		filePath := path.Join(targetPath, "subdir", "subdir2")
+		stat, err := os.Stat(filePath)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
 	})
 
 	Context("when the image has links", func() {
@@ -133,19 +166,6 @@ var _ = Describe("Tar", func() {
 		})
 	})
 
-	It("keeps file permissions", func() {
-		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-			Stream:     stream,
-			TargetPath: targetPath,
-		})).To(Succeed())
-
-		filePath := path.Join(targetPath, "a_file")
-		stat, err := os.Stat(filePath)
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
-	})
-
 	Context("setuid and setgid permissions", func() {
 		BeforeEach(func() {
 			setuidFilePath := filepath.Join(imgPath, "setuid_file")
@@ -166,19 +186,6 @@ var _ = Describe("Tar", func() {
 			Expect(stat.Mode() & os.ModeSetuid).To(Equal(os.ModeSetuid))
 			Expect(stat.Mode() & os.ModeSetgid).To(Equal(os.ModeSetgid))
 		})
-	})
-
-	It("keeps directory permission", func() {
-		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-			Stream:     stream,
-			TargetPath: targetPath,
-		})).To(Succeed())
-
-		filePath := path.Join(targetPath, "subdir", "subdir2")
-		stat, err := os.Stat(filePath)
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0711)))
 	})
 
 	Context("when there are device files", func() {

@@ -83,9 +83,7 @@ var _ = Describe("Create with remote images", func() {
 				stat, err := os.Stat(setuidFilePath)
 				Expect(err).NotTo(HaveOccurred())
 
-				fmt.Fprintln(GinkgoWriter, stat.Mode())
 				Expect(stat.Mode() & os.ModeSetuid).To(Equal(os.ModeSetuid))
-
 			})
 		})
 

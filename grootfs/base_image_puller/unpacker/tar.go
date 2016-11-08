@@ -96,15 +96,20 @@ func (u *TarUnpacker) unTar(spec base_image_puller.UnpackSpec) error {
 
 func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error {
 	if _, err := os.Stat(path); err != nil {
-		if err = os.Mkdir(path, os.FileMode(tarHeader.Mode)); err != nil {
+		if err = os.Mkdir(path, tarHeader.FileInfo().Mode()); err != nil {
 			return fmt.Errorf("creating directory `%s`: %s", path, err)
 		}
 	}
 
 	if os.Getuid() == 0 {
 		if err := os.Chown(path, tarHeader.Uid, tarHeader.Gid); err != nil {
-			return fmt.Errorf("chowning file %d:%d `%s`: %s", tarHeader.Uid, tarHeader.Gid, path, err)
+			return fmt.Errorf("chowning directory %d:%d `%s`: %s", tarHeader.Uid, tarHeader.Gid, path, err)
 		}
+	}
+
+	// we need to explicitly apply perms because mkdir is subject to umask
+	if err := os.Chmod(path, tarHeader.FileInfo().Mode()); err != nil {
+		return fmt.Errorf("chmoding directory `%s`: %s", path, err)
 	}
 
 	return nil
@@ -167,6 +172,7 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 		}
 	}
 
+	// we need to explicitly apply perms because mkdir is subject to umask
 	if err := os.Chmod(path, tarHeader.FileInfo().Mode()); err != nil {
 		return fmt.Errorf("chmoding file `%s`: %s", path, err)
 	}
