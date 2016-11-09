@@ -24,7 +24,7 @@ var _ = Describe("Image", func() {
 	var (
 		logger      lager.Logger
 		storePath   string
-		imagesPath string
+		imagesPath  string
 		imageCloner *imageClonerpkg.ImageCloner
 
 		fakeSnapshotDriver *image_clonerfakes.FakeSnapshotDriver
@@ -377,7 +377,7 @@ var _ = Describe("Image", func() {
 	Describe("Metrics", func() {
 		var (
 			imagePath, imageRootFSPath string
-			metrics                      groot.VolumeMetrics
+			metrics                    groot.VolumeMetrics
 		)
 
 		BeforeEach(func() {

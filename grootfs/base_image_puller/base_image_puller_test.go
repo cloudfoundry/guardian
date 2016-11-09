@@ -22,13 +22,14 @@ import (
 
 var _ = Describe("Base Image Puller", func() {
 	var (
-		logger              lager.Logger
-		fakeLocalFetcher    *base_image_pullerfakes.FakeFetcher
-		fakeRemoteFetcher   *base_image_pullerfakes.FakeFetcher
-		fakeBaseImagePuller *grootfakes.FakeBaseImagePuller
-		fakeUnpacker        *base_image_pullerfakes.FakeUnpacker
-		fakeVolumeDriver    *base_image_pullerfakes.FakeVolumeDriver
-		expectedImgDesc     specsv1.Image
+		logger                   lager.Logger
+		fakeLocalFetcher         *base_image_pullerfakes.FakeFetcher
+		fakeRemoteFetcher        *base_image_pullerfakes.FakeFetcher
+		fakeBaseImagePuller      *grootfakes.FakeBaseImagePuller
+		fakeUnpacker             *base_image_pullerfakes.FakeUnpacker
+		fakeVolumeDriver         *base_image_pullerfakes.FakeVolumeDriver
+		fakeDependencyRegisterer *base_image_pullerfakes.FakeDependencyRegisterer
+		expectedImgDesc          specsv1.Image
 
 		baseImagePuller *base_image_puller.BaseImagePuller
 
@@ -63,7 +64,9 @@ var _ = Describe("Base Image Puller", func() {
 		fakeVolumeDriver = new(base_image_pullerfakes.FakeVolumeDriver)
 		fakeVolumeDriver.PathReturns("", errors.New("volume does not exist"))
 
-		baseImagePuller = base_image_puller.NewBaseImagePuller(fakeLocalFetcher, fakeRemoteFetcher, fakeUnpacker, fakeVolumeDriver)
+		fakeDependencyRegisterer = new(base_image_pullerfakes.FakeDependencyRegisterer)
+
+		baseImagePuller = base_image_puller.NewBaseImagePuller(fakeLocalFetcher, fakeRemoteFetcher, fakeUnpacker, fakeVolumeDriver, fakeDependencyRegisterer)
 		logger = lagertest.NewTestLogger("image-puller")
 
 		var err error
@@ -170,6 +173,31 @@ var _ = Describe("Base Image Puller", func() {
 		validateLayer(0, "layer-i-am-a-layer-contents")
 		validateLayer(1, "layer-i-am-another-layer-contents")
 		validateLayer(2, "layer-i-am-the-last-layer-contents")
+	})
+
+	It("registers chain ids used by a image", func() {
+		_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+			BaseImageSrc: remoteBaseImageSrc,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(fakeDependencyRegisterer.RegisterCallCount()).To(Equal(1))
+		imageID, chainIDs := fakeDependencyRegisterer.RegisterArgsForCall(0)
+		Expect(imageID).To(Equal("baseimage:docker:///an/image"))
+		Expect(chainIDs).To(ConsistOf("layer-111", "chain-222", "chain-333"))
+	})
+
+	Context("when registration fails", func() {
+		It("returns an error", func() {
+			fakeDependencyRegisterer.RegisterReturns(
+				errors.New("failed to register base image dependencies"),
+			)
+
+			_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+				BaseImageSrc: remoteBaseImageSrc,
+			})
+			Expect(err).To(MatchError(ContainSubstring("failed to register base image dependencies")))
+		})
 	})
 
 	Context("deciding between local and remote fetcher", func() {

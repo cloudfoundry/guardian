@@ -21,6 +21,7 @@ var _ = Describe("Creator", func() {
 		fakeImageCloner       *grootfakes.FakeImageCloner
 		fakeBaseImagePuller   *grootfakes.FakeBaseImagePuller
 		fakeLocksmith         *grootfakes.FakeLocksmith
+		fakeRootFSConfigurer  *grootfakes.FakeRootFSConfigurer
 		fakeDependencyManager *grootfakes.FakeDependencyManager
 		lockFile              *os.File
 
@@ -38,9 +39,13 @@ var _ = Describe("Creator", func() {
 		lockFile, err = ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
 		fakeLocksmith.LockReturns(lockFile, nil)
+		fakeRootFSConfigurer = new(grootfakes.FakeRootFSConfigurer)
 		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
 
-		creator = groot.IamCreator(fakeImageCloner, fakeBaseImagePuller, fakeLocksmith, fakeDependencyManager)
+		creator = groot.IamCreator(
+			fakeImageCloner, fakeBaseImagePuller, fakeLocksmith,
+			fakeRootFSConfigurer, fakeDependencyManager,
+		)
 		logger = lagertest.NewTestLogger("creator")
 	})
 
@@ -104,41 +109,28 @@ var _ = Describe("Creator", func() {
 			}))
 		})
 
-		It("registers chain ids used by a image", func() {
-			baseImage := groot.BaseImage{
-				ChainIDs: []string{"sha256:vol-a", "sha256:vol-b"},
+		It("configures the rootfs", func() {
+			injectedBaseImage := specsv1.Image{
+				Config: specsv1.ImageConfig{
+					Volumes: map[string]struct{}{
+						"/path/to/volume": struct{}{},
+					},
+				},
 			}
-			fakeBaseImagePuller.PullReturns(baseImage, nil)
+			fakeBaseImagePuller.PullReturns(groot.BaseImage{
+				BaseImage: injectedBaseImage,
+			}, nil)
 
-			_, err := creator.Create(logger, groot.CreateSpec{
-				ID:        "my-image",
-				BaseImage: "/path/to/image",
-			})
-
-			Expect(err).NotTo(HaveOccurred())
-
-			imageID, chainIDs := fakeDependencyManager.RegisterArgsForCall(0)
-			Expect(imageID).To(Equal("image:my-image"))
-			Expect(chainIDs).To(Equal([]string{"sha256:vol-a", "sha256:vol-b"}))
-		})
-
-		It("registers image name with chain ids used by a image", func() {
-			baseImage := groot.BaseImage{
-				ChainIDs: []string{"sha256:vol-a", "sha256:vol-b"},
-			}
-			fakeBaseImagePuller.PullReturns(baseImage, nil)
-
-			_, err := creator.Create(logger, groot.CreateSpec{
+			i, err := creator.Create(logger, groot.CreateSpec{
 				ID:        "my-image",
 				BaseImage: "docker:///ubuntu",
 			})
-
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeDependencyManager.RegisterCallCount()).To(Equal(2))
-			imageName, chainIDs := fakeDependencyManager.RegisterArgsForCall(1)
-			Expect(imageName).To(Equal("baseimage:docker:///ubuntu"))
-			Expect(chainIDs).To(Equal([]string{"sha256:vol-a", "sha256:vol-b"}))
+			Expect(fakeRootFSConfigurer.ConfigureCallCount()).To(Equal(1))
+			rootFSPath, baseImage := fakeRootFSConfigurer.ConfigureArgsForCall(0)
+			Expect(rootFSPath).To(Equal(i.RootFSPath))
+			Expect(baseImage).To(Equal(injectedBaseImage))
 		})
 
 		It("releases the global lock", func() {
@@ -159,27 +151,6 @@ var _ = Describe("Creator", func() {
 			image, err := creator.Create(logger, groot.CreateSpec{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(image.Path).To(Equal("/path/to/image"))
-		})
-
-		Context("when the image has a tag", func() {
-			It("registers image name with chain ids used by a image", func() {
-				baseImage := groot.BaseImage{
-					ChainIDs: []string{"sha256:vol-a", "sha256:vol-b"},
-				}
-				fakeBaseImagePuller.PullReturns(baseImage, nil)
-
-				_, err := creator.Create(logger, groot.CreateSpec{
-					ID:        "my-image",
-					BaseImage: "docker:///ubuntu:latest",
-				})
-
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(fakeDependencyManager.RegisterCallCount()).To(Equal(2))
-				imageName, chainIDs := fakeDependencyManager.RegisterArgsForCall(1)
-				Expect(imageName).To(Equal("baseimage:docker:///ubuntu:latest"))
-				Expect(chainIDs).To(Equal([]string{"sha256:vol-a", "sha256:vol-b"}))
-			})
 		})
 
 		Context("when the image is not a valid URL", func() {
@@ -298,7 +269,7 @@ var _ = Describe("Creator", func() {
 			})
 		})
 
-		Context("when creating the image fails", func() {
+		Context("when cloning the image fails", func() {
 			BeforeEach(func() {
 				fakeImageCloner.CreateReturns(groot.Image{}, errors.New("Failed to make image"))
 			})
@@ -329,8 +300,42 @@ var _ = Describe("Creator", func() {
 					ID:        "my-image",
 					BaseImage: "/path/to/image",
 				})
-
 				Expect(err).To(HaveOccurred())
+
+				Expect(fakeImageCloner.DestroyCallCount()).To(Equal(1))
+			})
+
+			It("does not configure the rootfs", func() {
+				_, err := creator.Create(logger, groot.CreateSpec{
+					ID:        "my-image",
+					BaseImage: "/path/to/image",
+				})
+				Expect(err).To(HaveOccurred())
+
+				Expect(fakeRootFSConfigurer.ConfigureCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when configuring the rootfs fails", func() {
+			BeforeEach(func() {
+				fakeRootFSConfigurer.ConfigureReturns(errors.New("failed to configure rootfs"))
+			})
+
+			It("returns an error", func() {
+				_, err := creator.Create(logger, groot.CreateSpec{
+					ID:        "my-image",
+					BaseImage: "docker:///ubuntu",
+				})
+				Expect(err).To(MatchError(ContainSubstring("failed to configure rootfs")))
+			})
+
+			It("destroys the image", func() {
+				_, err := creator.Create(logger, groot.CreateSpec{
+					ID:        "my-image",
+					BaseImage: "docker:///ubuntu",
+				})
+				Expect(err).To(HaveOccurred())
+
 				Expect(fakeImageCloner.DestroyCallCount()).To(Equal(1))
 			})
 		})

@@ -8,7 +8,6 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
-const BaseImageReferenceFormat = "baseimage:%s"
 const ImageReferenceFormat = "image:%s"
 
 type CreateSpec struct {
@@ -24,14 +23,16 @@ type Creator struct {
 	imageCloner       ImageCloner
 	baseImagePuller   BaseImagePuller
 	locksmith         Locksmith
+	rootFSConfigurer  RootFSConfigurer
 	dependencyManager DependencyManager
 }
 
-func IamCreator(imageCloner ImageCloner, baseImagePuller BaseImagePuller, locksmith Locksmith, dependencyManager DependencyManager) *Creator {
+func IamCreator(imageCloner ImageCloner, baseImagePuller BaseImagePuller, locksmith Locksmith, rootFSConfigurer RootFSConfigurer, dependencyManager DependencyManager) *Creator {
 	return &Creator{
 		imageCloner:       imageCloner,
 		baseImagePuller:   baseImagePuller,
 		locksmith:         locksmith,
+		rootFSConfigurer:  rootFSConfigurer,
 		dependencyManager: dependencyManager,
 	}
 }
@@ -98,8 +99,11 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 		return Image{}, err
 	}
 
-	baseImageRefName := fmt.Sprintf(BaseImageReferenceFormat, spec.BaseImage)
-	if err := c.dependencyManager.Register(baseImageRefName, baseImage.ChainIDs); err != nil {
+	if err := c.rootFSConfigurer.Configure(image.RootFSPath, baseImage.BaseImage); err != nil {
+		if destroyErr := c.imageCloner.Destroy(logger, spec.ID); destroyErr != nil {
+			logger.Error("failed-to-destroy-image", destroyErr)
+		}
+
 		return Image{}, err
 	}
 

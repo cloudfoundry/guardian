@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 )
@@ -115,7 +116,7 @@ func (g *GarbageCollector) unusedVolumes(logger lager.Logger, keepImages []strin
 	}
 
 	for _, keepImage := range keepImages {
-		imageRefName := fmt.Sprintf(groot.BaseImageReferenceFormat, keepImage)
+		imageRefName := fmt.Sprintf(base_image_puller.BaseImageReferenceFormat, keepImage)
 		if err := g.removeDependencies(orphanedVolumes, imageRefName); err != nil {
 			logger.Error("failed-to-find-white-listed-image-dependencies", err, lager.Data{"imageRefName": imageRefName})
 		}

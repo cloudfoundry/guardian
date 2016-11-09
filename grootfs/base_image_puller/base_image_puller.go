@@ -11,9 +11,12 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
+const BaseImageReferenceFormat = "baseimage:%s"
+
 //go:generate counterfeiter . VolumeDriver
 //go:generate counterfeiter . Fetcher
 //go:generate counterfeiter . Unpacker
+//go:generate counterfeiter . DependencyRegisterer
 
 type UnpackSpec struct {
 	Stream      io.ReadCloser
@@ -45,23 +48,29 @@ type Fetcher interface {
 	StreamBlob(logger lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error)
 }
 
+type DependencyRegisterer interface {
+	Register(id string, chainIDs []string) error
+}
+
 type Unpacker interface {
 	Unpack(logger lager.Logger, spec UnpackSpec) error
 }
 
 type BaseImagePuller struct {
-	localFetcher  Fetcher
-	remoteFetcher Fetcher
-	unpacker      Unpacker
-	volumeDriver  VolumeDriver
+	localFetcher         Fetcher
+	remoteFetcher        Fetcher
+	unpacker             Unpacker
+	volumeDriver         VolumeDriver
+	dependencyRegisterer DependencyRegisterer
 }
 
-func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver) *BaseImagePuller {
+func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer) *BaseImagePuller {
 	return &BaseImagePuller{
-		localFetcher:  localFetcher,
-		remoteFetcher: remoteFetcher,
-		unpacker:      unpacker,
-		volumeDriver:  volumeDriver,
+		localFetcher:         localFetcher,
+		remoteFetcher:        remoteFetcher,
+		unpacker:             unpacker,
+		volumeDriver:         volumeDriver,
+		dependencyRegisterer: dependencyRegisterer,
 	}
 }
 
@@ -86,6 +95,11 @@ func (p *BaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (g
 		return groot.BaseImage{}, err
 	}
 	chainIDs := p.chainIDs(baseImageInfo.LayersDigest)
+
+	baseImageRefName := fmt.Sprintf(BaseImageReferenceFormat, spec.BaseImageSrc.String())
+	if err := p.dependencyRegisterer.Register(baseImageRefName, chainIDs); err != nil {
+		return groot.BaseImage{}, err
+	}
 
 	baseImage := groot.BaseImage{
 		BaseImage:  baseImageInfo.Config,

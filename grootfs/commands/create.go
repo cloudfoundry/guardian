@@ -104,11 +104,12 @@ var CreateCommand = cli.Command{
 		localFetcher := local.NewLocalFetcher()
 
 		locksmith := locksmithpkg.NewFileSystem(storePath)
-		baseImagePuller := base_image_puller.NewBaseImagePuller(localFetcher, remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
 		)
-		creator := groot.IamCreator(imageCloner, baseImagePuller, locksmith, dependencyManager)
+		baseImagePuller := base_image_puller.NewBaseImagePuller(localFetcher, remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver, dependencyManager)
+		rootFSConfigurer := storepkg.NewRootFSConfigurer()
+		creator := groot.IamCreator(imageCloner, baseImagePuller, locksmith, rootFSConfigurer, dependencyManager)
 
 		image, err := creator.Create(logger, groot.CreateSpec{
 			ID:                        id,

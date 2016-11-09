@@ -55,6 +55,18 @@ var _ = Describe("Create with remote images", func() {
 			}))
 		})
 
+		Context("when the image has volumes", func() {
+			BeforeEach(func() {
+				baseImageURL = "docker:///cfgarden/with-volume"
+			})
+
+			It("creates the volume folders", func() {
+				image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
+				volumeFolder := path.Join(image.RootFSPath, "foo")
+				Expect(volumeFolder).To(BeADirectory())
+			})
+		})
+
 		Context("when the image has opaque white outs", func() {
 			BeforeEach(func() {
 				baseImageURL = "docker:///cfgarden/opq-whiteout-busybox"

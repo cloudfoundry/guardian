@@ -16,6 +16,7 @@ const GLOBAL_LOCK_KEY = "global-groot-lock"
 //go:generate counterfeiter . DependencyManager
 //go:generate counterfeiter . GarbageCollector
 //go:generate counterfeiter . StoreMeasurer
+//go:generate counterfeiter . RootFSConfigurer
 
 type IDMappingSpec struct {
 	HostID      int
@@ -24,16 +25,16 @@ type IDMappingSpec struct {
 }
 
 type BaseImageSpec struct {
-	DiskLimit             int64
+	DiskLimit                 int64
 	ExcludeBaseImageFromQuota bool
 	BaseImageSrc              *url.URL
-	UIDMappings           []IDMappingSpec
-	GIDMappings           []IDMappingSpec
+	UIDMappings               []IDMappingSpec
+	GIDMappings               []IDMappingSpec
 }
 
 type BaseImage struct {
 	VolumePath string
-	BaseImage      specsv1.Image
+	BaseImage  specsv1.Image
 	ChainIDs   []string
 }
 
@@ -42,10 +43,10 @@ type BaseImagePuller interface {
 }
 
 type ImageSpec struct {
-	ID                    string
-	DiskLimit             int64
+	ID                        string
+	DiskLimit                 int64
 	ExcludeBaseImageFromQuota bool
-	VolumePath            string
+	VolumePath                string
 	BaseImage                 specsv1.Image
 }
 
@@ -59,6 +60,10 @@ type ImageCloner interface {
 	Create(logger lager.Logger, spec ImageSpec) (Image, error)
 	Destroy(logger lager.Logger, id string) error
 	Metrics(logger lager.Logger, id string) (VolumeMetrics, error)
+}
+
+type RootFSConfigurer interface {
+	Configure(rootFSPath string, baseImage specsv1.Image) error
 }
 
 type DependencyManager interface {
