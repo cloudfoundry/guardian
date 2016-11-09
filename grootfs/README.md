@@ -26,6 +26,7 @@ invitation.
 * [Installation](#installation)
 * [Create an image](#creating-an-image)
 * [Delete an image](#deleting-an-image)
+* [Metrics](#metrics)
 * [Logging](#logging)
 * [Clean up](#clean-up)
 * [Known Issues](#known-issues)
@@ -195,6 +196,37 @@ It also supports redirecting the logs to a log file:
 ```
 grootfs --log-level debug --log-file /var/log/grootfs.log create ...
 ```
+
+
+### Metrics
+
+You can get metrics from an image by calling `grootfs metrics` with the
+image-id:
+
+```
+grootfs --store /mnt/btrfs metrics my-image-id
+```
+
+Or the image path:
+
+```
+grootfs --store /mnt/btrfs delete /mnt/btrfs/images/<uid>/my-image-id
+```
+
+This will result in a JSON object of the following form:
+
+```
+{
+  "disk_usage": {
+    "total_bytes_used": 132169728,
+    "exclusive_bytes_used": 16384
+  }
+}
+```
+
+`total_bytes_used` refers to the total space the image takes.
+`exclusive_bytes_used` is the amount of space the image takes excluding the
+base image, i.e.: just the container data.
 
 ### Clean up
 
