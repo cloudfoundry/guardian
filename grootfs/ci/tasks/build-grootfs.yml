@@ -8,9 +8,8 @@ image_resource:
     tag: latest
 
 inputs:
-- name: grootfs-git-repo
-  path: src/code.cloudfoundry.org/grootfs
-- name: grootfs-version
+- name: grootfs-release-master
+- name: grootfs-release-version
 
 outputs:
 - name: build-grootfs
