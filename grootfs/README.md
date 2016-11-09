@@ -26,6 +26,7 @@ invitation.
 * [Delete a RootFS Image](#deleting-a-rootfs-image)
 * [Logging](#logging)
 * [Clean up](#clean-up)
+* [Known Issues](#known-issues)
 
 ## Installation
 
@@ -252,8 +253,21 @@ to clean up a store that does not belong to her/him the command fails.
 
 ## Known Issues
 
+#### Restrictions when running as a non-root user
+
 * GrootFS cannot use `docker:///centos` when run as a non-root user without
   UID/GID mappings. CentOS sets the `/root` permissions to 0550 (i.e.:
   `r-xr-x---`) and therefore, when GrootFS runs as a non-root user it cannot
   write files into the rootfs `/root`. You can work around this by either
   running as root or [using a UID/GID mapping](#usergroup-id-mapping).
+
+* Files not visible to the calling user in the base image won't be in the resulting rootfs.
+
+* The store must have the right permissions or ownership for the calling user
+  otherwise the command will fail.
+
+* The calling user can only delete the rootfs that it owns.
+
+* The calling user can only cleanup the cached volumes that it owns.
+
+* The calling user can only request metrics for the rootfs that it owns.
