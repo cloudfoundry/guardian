@@ -499,7 +499,6 @@ var _ = Describe("Networking", func() {
 							Protocol: garden.ProtocolUDP,
 						},
 					}
-					fmt.Println(rules)
 					container.BulkNetOut(rules)
 
 					Eventually(getContent(stdinFile)).Should(
