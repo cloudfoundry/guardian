@@ -2,11 +2,13 @@
 
 [![slack.cloudfoundry.org](http://slack.cloudfoundry.org/badge.svg)](http://slack.cloudfoundry.org)
 
-**Note:** This repository should be imported as `code.cloudfoundry.org/grootfs`.
+**Note:** This repository should be imported as
+`code.cloudfoundry.org/grootfs`.
 
 ![Groot](assets/groot.png)
 
-[by](https://creativecommons.org/licenses/by-nc-nd/3.0/) [chattanooga-choochoo](http://chattanooga-choochoo.deviantart.com/art/Groot-584361210)
+[by](https://creativecommons.org/licenses/by-nc-nd/3.0/)
+[chattanooga-choochoo](http://chattanooga-choochoo.deviantart.com/art/Groot-584361210)
 
 GrootFS is a [Cloud Foundry](https://www.cloudfoundry.org) component to satisfy
 [garden-runc](https://github.com/cloudfoundry/garden-runc-release)'s
@@ -22,16 +24,16 @@ invitation.
 
 # Index
 * [Installation](#installation)
-* [Create a RootFS Image](#creating-a-rootfs-image)
-* [Delete a RootFS Image](#deleting-a-rootfs-image)
+* [Create an image](#creating-an-image)
+* [Delete an image](#deleting-an-image)
 * [Logging](#logging)
 * [Clean up](#clean-up)
 * [Known Issues](#known-issues)
 
 ## Installation
 
-_Because grootfs depends on Linux kernel features, you can only build it from or
-to a Linux machine._
+_Because GrootFS depends on Linux kernel features, you can only build it from
+or to a Linux machine._
 
 ```
 mkdir -p $GOPATH/src/code.cloudfoundry.org
@@ -41,46 +43,46 @@ git submodule update --init --recursive
 make
 ```
 
-_Using `go get code.cloudfoundry.org/grootfs` is discouraged because it might not work due to our versioned dependencies._
+_Using `go get code.cloudfoundry.org/grootfs` is discouraged because it might
+not work due to our versioned dependencies._
 
 ### Instructions
 
 #### Requirements
 
-* Grootfs requires btrfs to be enabled in the kernel, it also makes use of the brtfs-progs
-(btrfs-tools package on ubuntu) for layering images.
+* GrootFS requires BTRFS to be enabled in the kernel, it also makes use of the
+  brtfs-progs (btrfs-tools package on Ubuntu) for layering images.
 
-  ```
-  sudo apt-get install btrfs-tools
-  sudo modprobe btrfs # if not loaded
-  ```
+```
+sudo apt-get install btrfs-tools
+sudo modprobe btrfs # if not loaded
+```
 
 * By default all operations will happen in `/var/lib/grootfs` folder, you can
-change it by passing the `--store` flag to the binary. The store folder is expected
-to be inside a mounted btrfs volume. If you don't have one, you can create a loop mounted
-btrfs as follows:
+  change it by passing the `--store` flag to the binary. The store folder is
+  expected to be inside a mounted BTRFS volume. If you don't have one, you can
+  create a loop mounted BTRFS as follows:
 
-  ```
-  # create a btrfs block device
-  truncate -s 1G ~/btrfs_volume
-  mkfs.btrfs ~/btrfs_volume
+```
+# create a btrfs block device
+truncate -s 1G ~/btrfs_volume
+mkfs.btrfs ~/btrfs_volume
 
-  # mount the block device
-  sudo mkdir -p /mnt/btrfs
-  sudo mount -t btrfs -o user_subvol_rm_allowed ~/btrfs_volume /mnt/btrfs
-  sudo btrfs quota enable /mnt/btrfs
-  # you might need to chmod/chown the mount point if you don't want to run grootfs as root
-  ```
+# mount the block device
+sudo mkdir -p /mnt/btrfs
+sudo mount -t btrfs -o user_subvol_rm_allowed ~/btrfs_volume /mnt/btrfs
+sudo btrfs quota enable /mnt/btrfs
+# you might need to chmod/chown the mount point if you don't want to run grootfs as root
+```
 
 * For user/group id mapping, you'll also require newuidmap and newgidmap to be
-installed (uidmap package on ubuntu)
+  installed (uidmap package on Ubuntu)
 
-  ```
-  sudo apt-get install uidmap
-  ```
+```
+sudo apt-get install uidmap
+```
 
-
-### Creating a RootFS Image
+### Creating an image
 
 You can create a rootfs image based on a remote docker image:
 
@@ -94,10 +96,10 @@ Or from local folders as an image source:
 grootfs --store /mnt/btrfs create /my-folder my-image-id
 ```
 
-
 #### Output
 
-The output of this command is a rootfs image path (`/mnt/btrfs/images/<uid>/my-image-id`) which has the following structure:
+The output of this command is a rootfs image path
+(`/mnt/btrfs/images/<uid>/my-image-id`) which has the following structure:
 
 * The `<uid>` is the effective user id running the command.
 
@@ -108,14 +110,15 @@ The output of this command is a rootfs image path (`/mnt/btrfs/images/<uid>/my-i
 ```
 
 * The `rootfs` folder is where the root filesystem lives.
-* The `image.json` file follows the [OCI image description](https://github.com/opencontainers/image-spec/blob/master/serialization.md#image-json-description) schema.
-
+* The `image.json` file follows the [OCI image
+  description](https://github.com/opencontainers/image-spec/blob/master/serialization.md#image-json-description)
+  schema.
 
 #### User/Group ID Mapping
 
 You might want to apply some user and group id mappings to the contents of the
-`rootfs` folder. Grootfs supports the `--uid-mapping` and `--gid-mapping` arguments.
-Suppose you are user with uid/gid 1000:
+`rootfs` folder. GrootFS supports the `--uid-mapping` and `--gid-mapping`
+arguments.  Suppose you are user with UID/GID 1000:
 
 ```
 grootfs --store /mnt/btrfs create \
@@ -128,15 +131,19 @@ grootfs --store /mnt/btrfs create \
 ```
 
 Some important notes:
-* If you're not running as root, and you want to use mappings, you'll also need to map root (`0:--your-user-id:1`)
-* Your id mappings can't overlap (e.g. 1:100000:65000 and 100:1000:200)
-* You need to have these [mappings allowed](http://man7.org/linux/man-pages/man5/subuid.5.html) in the `/etc/subuid` and `/etc/subgid` files
 
+* If you're not running as root, and you want to use mappings, you'll also need
+  to map root (`0:--your-user-id:1`)
+* Your id mappings can't overlap (e.g. 1:100000:65000 and 100:1000:200)
+* You need to have these [mappings
+  allowed](http://man7.org/linux/man-pages/man5/subuid.5.html) in the
+  `/etc/subuid` and `/etc/subgid` files
 
 #### Disk Quotas & Drax
 
-Grootfs supports per-filesystem disk-quotas through the Drax binary.
-BTRFS disk-quotas can only be enabled by a root user, therefore Drax must be owned by root, with the user bit set, and moved somewhere in the $PATH.
+GrootFS supports per-filesystem disk-quotas through the Drax binary. BTRFS
+disk-quotas can only be enabled by a root user, therefore Drax must be owned by
+root, with the user bit set, and moved somewhere in the $PATH.
 
 ```
 make
@@ -154,9 +161,10 @@ grootfs --store /mnt/btrfs create \
         my-image-id
 ```
 
-### Deleting a RootFS Image
+### Deleting an image
 
-You can destroy a created rootfs image by calling `grootfs delete` with the image-id:
+You can destroy a created rootfs image by calling `grootfs delete` with the
+image-id:
 
 ```
 grootfs --store /mnt/btrfs delete my-image-id
@@ -175,8 +183,8 @@ to delete a rootfs image that does not belong to her/him the command fails.
 
 ### Logging
 
-By default grootfs will not emit any logging, you can set the log level with the
-`--log-level` flag:
+By default GrootFS will not emit any logging, you can set the log level with
+the `--log-level` flag:
 
 ```
 grootfs --log-level debug create ...
@@ -194,12 +202,11 @@ grootfs --log-level debug --log-file /var/log/grootfs.log create ...
 grootfs --store /mnt/btrfs clean
 ```
 
-
 When `clean` is called, any layers that aren't being used by a rootfs that
 currently exists are deleted from the store\*.
 
-For example: Imagine that we create two rootfs images from different base images, `Image
-A` and `Image B`:
+For example: Imagine that we create two rootfs images from different base
+images, `Image A` and `Image B`:
 
 ```
 - Image A
@@ -231,7 +238,6 @@ way as if the flag wasn't specified, it will clean up everything that's not
 being used.  If a non integer or negative integer is provided, the command
 fails without cleaning up anything.
 
-
 **Caveats:**
 
 The store is based on the effective user running the command. If the user tries
@@ -261,7 +267,8 @@ to clean up a store that does not belong to her/him the command fails.
   write files into the rootfs `/root`. You can work around this by either
   running as root or [using a UID/GID mapping](#usergroup-id-mapping).
 
-* Files not visible to the calling user in the base image won't be in the resulting rootfs.
+* Files not visible to the calling user in the base image won't be in the
+  resulting rootfs.
 
 * The store must have the right permissions or ownership for the calling user
   otherwise the command will fail.
