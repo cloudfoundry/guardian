@@ -136,7 +136,7 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 	}
 
 	digest := layersDigest[index]
-	volumePath, err := p.volumeDriver.Path(logger, wrapVolumeID(spec, digest.ChainID))
+	volumePath, err := p.volumeDriver.Path(logger, digest.ChainID)
 	if err == nil {
 		logger.Debug("volume-exists", lager.Data{
 			"volumePath":    volumePath,
@@ -164,8 +164,8 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 	})
 
 	volumePath, err = p.volumeDriver.Create(logger,
-		wrapVolumeID(spec, digest.ParentChainID),
-		wrapVolumeID(spec, digest.ChainID),
+		digest.ParentChainID,
+		digest.ChainID,
 	)
 	if err != nil {
 		return "", fmt.Errorf("creating volume for layer `%s`: %s", digest.BlobID, err)
@@ -185,7 +185,7 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 	}
 
 	if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
-		if errD := p.volumeDriver.DestroyVolume(logger, wrapVolumeID(spec, digest.ChainID)); errD != nil {
+		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
 			logger.Error("volume-cleanup-failed", errD, lager.Data{
 				"blobID":        digest.BlobID,
 				"chainID":       digest.ChainID,
@@ -209,16 +209,4 @@ func (p *BaseImagePuller) layersSize(layerDigests []LayerDigest) int64 {
 		totalSize += digest.Size
 	}
 	return totalSize
-}
-
-func wrapVolumeID(spec groot.BaseImageSpec, volumeID string) string {
-	if volumeID == "" {
-		return ""
-	}
-
-	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
-		return fmt.Sprintf("%s-namespaced", volumeID)
-	}
-
-	return volumeID
 }

@@ -314,34 +314,6 @@ var _ = Describe("Base Image Puller", func() {
 			Expect(unpackSpec.UIDMappings).To(Equal(spec.UIDMappings))
 			Expect(unpackSpec.GIDMappings).To(Equal(spec.GIDMappings))
 		})
-
-		It("appends a -namespaced suffix in all volume IDs", func() {
-			_, err := baseImagePuller.Pull(logger, spec)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeVolumeDriver.PathCallCount()).To(Equal(3))
-			_, chainID := fakeVolumeDriver.PathArgsForCall(0)
-			Expect(chainID).To(Equal("chain-333-namespaced"))
-
-			_, chainID = fakeVolumeDriver.PathArgsForCall(1)
-			Expect(chainID).To(Equal("chain-222-namespaced"))
-
-			_, chainID = fakeVolumeDriver.PathArgsForCall(2)
-			Expect(chainID).To(Equal("layer-111-namespaced"))
-
-			Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(3))
-			_, parentChainID, chainID := fakeVolumeDriver.CreateArgsForCall(0)
-			Expect(parentChainID).To(BeEmpty())
-			Expect(chainID).To(Equal("layer-111-namespaced"))
-
-			_, parentChainID, chainID = fakeVolumeDriver.CreateArgsForCall(1)
-			Expect(parentChainID).To(Equal("layer-111-namespaced"))
-			Expect(chainID).To(Equal("chain-222-namespaced"))
-
-			_, parentChainID, chainID = fakeVolumeDriver.CreateArgsForCall(2)
-			Expect(parentChainID).To(Equal("chain-222-namespaced"))
-			Expect(chainID).To(Equal("chain-333-namespaced"))
-		})
 	})
 
 	Context("when all volumes exist", func() {
@@ -461,7 +433,7 @@ var _ = Describe("Base Image Puller", func() {
 
 				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
 				_, path := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
-				Expect(path).To(Equal("chain-333-namespaced"))
+				Expect(path).To(Equal("chain-333"))
 			})
 		})
 	})
