@@ -40,7 +40,10 @@ func (c *Configurer) Ensure(logger lager.Logger, storePath string) error {
 		}
 
 		if err := os.Mkdir(requiredPath, 0700); err != nil {
-			return fmt.Errorf("making directory `%s`: %s", requiredPath, err)
+			dir, err1 := os.Lstat(requiredPath)
+			if err1 != nil || !dir.IsDir() {
+				return fmt.Errorf("making directory `%s`: %s", requiredPath, err)
+			}
 		}
 	}
 
