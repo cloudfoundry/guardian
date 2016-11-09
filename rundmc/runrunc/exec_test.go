@@ -193,7 +193,7 @@ var _ = Describe("ExecPreparer", func() {
 			})
 
 			It("passes a process.json with the correct user and group ids", func() {
-				Expect(spec.Process.User).To(Equal(specs.User{UID: 9, GID: 7}))
+				Expect(spec.Process.User).To(Equal(specs.User{UID: 9, GID: 7, AdditionalGids: []uint32{}}))
 			})
 		})
 

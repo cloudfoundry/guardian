@@ -170,8 +170,9 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 			Args: append([]string{spec.Path}, spec.Args...),
 			Env:  envFor(u.containerUid, bndl, spec),
 			User: specs.User{
-				UID: uint32(u.containerUid),
-				GID: uint32(u.containerGid),
+				UID:            uint32(u.containerUid),
+				GID:            uint32(u.containerGid),
+				AdditionalGids: []uint32{},
 			},
 			Cwd:             cwd,
 			Capabilities:    caps,

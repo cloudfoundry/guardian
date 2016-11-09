@@ -58,8 +58,8 @@ var _ = Describe("Dadoo", func() {
 			WithProcess(specs.Process{Args: []string{"/bin/sh", "-c", "exit 12"}, Cwd: "/"}).
 			WithRootFS(path.Join(bundlePath, "root")).
 			WithNamespace(goci.UserNamespace).
-			WithUIDMappings(specs.IDMapping{HostID: 1, ContainerID: 0, Size: 100}).
-			WithGIDMappings(specs.IDMapping{HostID: 1, ContainerID: 0, Size: 100})
+			WithUIDMappings(specs.LinuxIDMapping{HostID: 1, ContainerID: 0, Size: 100}).
+			WithGIDMappings(specs.LinuxIDMapping{HostID: 1, ContainerID: 0, Size: 100})
 
 		SetDefaultEventuallyTimeout(10 * time.Second)
 	})
