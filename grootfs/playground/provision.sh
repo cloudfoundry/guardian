@@ -65,6 +65,7 @@ install_groot() {
     make deps
     make
     cp {grootfs,drax} /usr/local/bin
+    chmod u+s /usr/local/bin/drax
     cp hack/{quick-setup,cleanup-store} /usr/local/bin
   popd
 }
