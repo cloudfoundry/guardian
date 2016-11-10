@@ -311,6 +311,7 @@ var _ = Describe("ExternalImageManager", func() {
 					Path: "/external-image-manager-bin",
 				}, func(cmd *exec.Cmd) error {
 					cmd.Stderr.Write([]byte("btrfs doesn't like you"))
+					cmd.Stdout.Write([]byte("could not find drax"))
 
 					return errors.New("external-image-manager failure")
 				})
@@ -320,6 +321,7 @@ var _ = Describe("ExternalImageManager", func() {
 				err := externalImageManager.GC(logger)
 				Expect(err).To(MatchError(ContainSubstring("external image manager clean failed")))
 				Expect(err).To(MatchError(ContainSubstring("external-image-manager failure")))
+				Expect(err).To(MatchError(ContainSubstring("could not find drax")))
 			})
 
 			It("forwards the external-image-manager error output", func() {
