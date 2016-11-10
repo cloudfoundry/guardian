@@ -140,6 +140,23 @@ var _ = Describe("Logging", func() {
 					Expect(string(allTheLogs)).To(ContainSubstring("\"log_level\":1"))
 				})
 			})
+
+			Context("and the log file cannot be created", func() {
+				It("returns an error to stdout", func() {
+					buffer := gbytes.NewBuffer()
+
+					_, err := Runner.
+						WithStdout(buffer).
+						WithLogFile("/path/to/log_file.log").
+						Create(groot.CreateSpec{
+							ID:        "my-image",
+							BaseImage: "/non/existent/rootfs",
+						})
+					Expect(err).To(HaveOccurred())
+
+					Expect(buffer).To(gbytes.Say("no such file or directory"))
+				})
+			})
 		})
 	})
 })

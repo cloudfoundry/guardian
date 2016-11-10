@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -67,7 +66,10 @@ func main() {
 		cli.ErrWriter = os.Stdout
 
 		lagerLogLevel := translateLogLevel(logLevel)
-		logger, _ := configureLogger(lagerLogLevel, logFile)
+		logger, err := configureLogger(lagerLogLevel, logFile)
+		if err != nil {
+			return err
+		}
 		ctx.App.Metadata["logger"] = logger
 
 		configurer := store.NewConfigurer()
@@ -97,7 +99,7 @@ func configureLogger(logLevel lager.LogLevel, logFile string) (lager.Logger, err
 		var err error
 		logWriter, err = os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
 		if err != nil {
-			return nil, fmt.Errorf("cannot create log file `%s`: %s", logFile, err)
+			return nil, err
 		}
 
 		if logLevel == lager.FATAL {
