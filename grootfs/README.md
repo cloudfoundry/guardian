@@ -79,6 +79,10 @@ sudo btrfs quota enable /mnt/btrfs
 * For user/group id mapping, you'll also require newuidmap and newgidmap to be
   installed (uidmap package on Ubuntu)
 
+**IMPORTANT**: The btrfs options `user_subvol_rm_allowed` is mandatory. Otherwise
+grootfs won't be able to delete btrfs volumes/snapshots, causing volume leaks and
+unexpected behaviour.
+
 ```
 sudo apt-get install uidmap
 ```
@@ -298,6 +302,9 @@ to clean up a store that does not belong to her/him the command fails.
   `r-xr-x---`) and therefore, when GrootFS runs as a non-root user it cannot
   write files into the rootfs `/root`. You can work around this by either
   running as root or [using a UID/GID mapping](#usergroup-id-mapping).
+
+* You must mount the btrfs volume with `-o user_subvol_rm_allowed` or you
+  won't be able to delete images or clean up after failure scenarios.
 
 * Files not visible to the calling user in the base image won't be in the
   resulting rootfs.
