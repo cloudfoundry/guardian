@@ -23,7 +23,7 @@ func NewBtrfsLimiter(commandRunner commandrunner.CommandRunner) *BtrfsLimiter {
 }
 
 func (i *BtrfsLimiter) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusiveLimit bool) error {
-	logger = logger.Session("btrfs-applying-quotas", lager.Data{"path": path})
+	logger = logger.Session("btrfs-applying-quotas", lager.Data{"path": path, "diskLimit": diskLimit, "exclusiveLimit": exclusiveLimit})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -32,8 +32,9 @@ func (i *BtrfsLimiter) ApplyDiskLimit(logger lager.Logger, path string, diskLimi
 	cmd.Stdout = combinedBuffer
 	cmd.Stderr = combinedBuffer
 
+	logger.Debug("starting-btrfs-command", lager.Data{"cmd": cmd.Path, "args": cmd.Args})
 	if err := i.commandRunner.Run(cmd); err != nil {
-		logger.Error("command-failed", err)
+		logger.Error("command-failed", err, lager.Data{"commandOutput": combinedBuffer.String()})
 		return fmt.Errorf(strings.TrimSpace(combinedBuffer.String()))
 	}
 

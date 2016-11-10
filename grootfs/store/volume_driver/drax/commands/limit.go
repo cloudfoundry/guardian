@@ -42,7 +42,7 @@ var LimitCommand = cli.Command{
 			ctx.Bool("exclude-image-from-quota"),
 		)
 		if err != nil {
-			logger.Error("applying-limit", err)
+			logger.Error("applying-limit-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
