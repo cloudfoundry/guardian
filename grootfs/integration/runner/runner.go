@@ -17,13 +17,27 @@ type Runner struct {
 	StorePath  string
 	DraxBin    string
 
-	LogLevel lager.LogLevel
-	LogFile  string
+	LogLevelSet bool
+	LogLevel    lager.LogLevel
+	LogFile     string
 
 	Stdout io.Writer
 	Stderr io.Writer
 
 	Timeout time.Duration
+}
+
+func (r *Runner) WithLogLevel(level lager.LogLevel) *Runner {
+	nr := *r
+	nr.LogLevel = level
+	nr.LogLevelSet = true
+	return &nr
+}
+
+func (r *Runner) WithoutLogLevel() *Runner {
+	nr := *r
+	nr.LogLevelSet = false
+	return &nr
 }
 
 func (r *Runner) WithLogFile(path string) *Runner {
@@ -86,7 +100,9 @@ func (r *Runner) runCmd(cmd *exec.Cmd) error {
 
 func (r *Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	allArgs := []string{}
-	allArgs = append(allArgs, "--log-level", r.logLevel(r.LogLevel))
+	if r.LogLevelSet {
+		allArgs = append(allArgs, "--log-level", r.logLevel(r.LogLevel))
+	}
 	if r.LogFile != "" {
 		allArgs = append(allArgs, "--log-file", r.LogFile)
 	}
