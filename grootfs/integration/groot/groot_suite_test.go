@@ -62,13 +62,12 @@ func TestGroot(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 		testhelpers.SuidDrax(DraxBin)
 
-		Runner = &runner.Runner{
+		r := &runner.Runner{
 			GrootFSBin: GrootFSBin,
 			StorePath:  StorePath,
 			DraxBin:    DraxBin,
-			LogLevel:   lager.DEBUG,
-			Stderr:     GinkgoWriter,
 		}
+		Runner = r.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter)
 	})
 
 	AfterEach(func() {
