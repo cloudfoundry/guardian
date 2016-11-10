@@ -289,4 +289,43 @@ var _ = Describe("ExternalImageManager", func() {
 			})
 		})
 	})
+
+	Describe("GC", func() {
+		var imageManagerCmd *exec.Cmd
+
+		It("uses the correct external-image-manager binary", func() {
+			Expect(externalImageManager.GC(logger)).NotTo(HaveOccurred())
+			imageManagerCmd = fakeCommandRunner.ExecutedCommands()[0]
+			Expect(imageManagerCmd.Path).To(Equal("/external-image-manager-bin"))
+		})
+
+		It("calls external image clean command", func() {
+			Expect(externalImageManager.GC(logger)).NotTo(HaveOccurred())
+			imageManagerCmd = fakeCommandRunner.ExecutedCommands()[0]
+			Expect(imageManagerCmd.Args[1]).To(Equal("clean"))
+		})
+
+		Context("when the command fails", func() {
+			BeforeEach(func() {
+				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
+					Path: "/external-image-manager-bin",
+				}, func(cmd *exec.Cmd) error {
+					cmd.Stderr.Write([]byte("btrfs doesn't like you"))
+
+					return errors.New("external-image-manager failure")
+				})
+			})
+
+			It("returns an error", func() {
+				err := externalImageManager.GC(logger)
+				Expect(err).To(MatchError(ContainSubstring("external image manager clean failed")))
+				Expect(err).To(MatchError(ContainSubstring("external-image-manager failure")))
+			})
+
+			It("forwards the external-image-manager error output", func() {
+				externalImageManager.GC(logger)
+				Expect(logger).To(gbytes.Say("btrfs doesn't like you"))
+			})
+		})
+	})
 })
