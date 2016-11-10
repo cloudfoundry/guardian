@@ -77,7 +77,7 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 	if err := p.commandRunner.Run(cmd); err != nil {
 		logData := lager.Data{"action": "create", "stderr": errBuffer.String(), "stdout": outBuffer.String()}
 		log.Error("external-image-manager-result", err, logData)
-		return "", nil, fmt.Errorf("external image manager create failed: %s", err)
+		return "", nil, fmt.Errorf("external image manager create failed: %s (%s)", outBuffer.String(), err)
 	}
 
 	trimmedOut := strings.TrimSpace(outBuffer.String())
@@ -103,11 +103,13 @@ func (p *ExternalImageManager) Destroy(log lager.Logger, handle, rootfs string) 
 
 	errBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stderr = errBuffer
+	outBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = outBuffer
 
 	if err := p.commandRunner.Run(cmd); err != nil {
 		logData := lager.Data{"action": "delete", "stderr": errBuffer.String()}
 		log.Error("external-image-manager-result", err, logData)
-		return fmt.Errorf("external image manager destroy failed: %s", err)
+		return fmt.Errorf("external image manager destroy failed: %s (%s)", outBuffer.String(), err)
 	}
 
 	return nil
