@@ -60,9 +60,17 @@ func (r *Runner) WithStderr(stderr io.Writer) *Runner {
 
 func (r *Runner) RunSubcommand(subcommand string, args ...string) (string, error) {
 	stdoutBuffer := bytes.NewBuffer([]byte{})
-	cmd := r.WithStdout(stdoutBuffer).makeCmd(subcommand, args)
-	runErr := r.runCmd(cmd)
+	var stdout io.Writer
+	if r.Stdout != nil {
+		stdout = io.MultiWriter(r.Stdout, stdoutBuffer)
+	} else {
+		stdout = stdoutBuffer
+	}
+	r = r.WithStdout(stdout)
 
+	cmd := r.makeCmd(subcommand, args)
+
+	runErr := r.runCmd(cmd)
 	if runErr != nil {
 		errStr := fmt.Sprintf("command existed with %s", runErr)
 		stdoutContents := strings.TrimSpace(stdoutBuffer.String())
