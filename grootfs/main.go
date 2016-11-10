@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -35,7 +36,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "log-level",
-			Usage: "Set logging level. <info|debug|error|fatal>",
+			Usage: "Set logging level <debug|info|error|fatal>",
 			Value: "fatal",
 		},
 		cli.StringFlag{
@@ -57,34 +58,24 @@ func main() {
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
-		storePath := storepath.UserBased(ctx.String("store"))
+		storePath := ctx.GlobalString("store")
+		logFile := ctx.GlobalString("log-file")
+		logLevel := ctx.String("log-level")
+
+		// Sadness. We need to do that becuase we use stderr for logs so user
+		// errors need to end up in stdout.
 		cli.ErrWriter = os.Stdout
 
-		logger := configureLog(ctx)
+		lagerLogLevel := translateLogLevel(logLevel)
+		logger, _ := configureLogger(lagerLogLevel, logFile)
+		ctx.App.Metadata["logger"] = logger
 
 		configurer := store.NewConfigurer()
+		storePath = storepath.UserBased(storePath)
 		return configurer.Ensure(logger, storePath)
 	}
 
 	grootfs.Run(os.Args)
-}
-
-func configureLog(ctx *cli.Context) lager.Logger {
-	logFile := ctx.GlobalString("log-file")
-	logLevel := ctx.String("log-level")
-	logWriter := os.Stderr
-
-	if logFile != "" {
-		logWriter, _ = os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0666)
-	}
-
-	logger := lager.NewLogger("grootfs")
-	lagerLogLevel := translateLogLevel(logLevel)
-
-	logger.RegisterSink(lager.NewWriterSink(logWriter, lagerLogLevel))
-	ctx.App.Metadata["logger"] = logger
-
-	return logger
 }
 
 func translateLogLevel(logLevel string) lager.LogLevel {
@@ -98,4 +89,24 @@ func translateLogLevel(logLevel string) lager.LogLevel {
 	default:
 		return lager.FATAL
 	}
+}
+
+func configureLogger(logLevel lager.LogLevel, logFile string) (lager.Logger, error) {
+	logWriter := os.Stderr
+	if logFile != "" {
+		var err error
+		logWriter, err = os.OpenFile(logFile, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+		if err != nil {
+			return nil, fmt.Errorf("cannot create log file `%s`: %s", logFile, err)
+		}
+
+		if logLevel == lager.FATAL {
+			logLevel = lager.INFO
+		}
+	}
+
+	logger := lager.NewLogger("grootfs")
+	logger.RegisterSink(lager.NewWriterSink(logWriter, logLevel))
+
+	return logger, nil
 }

@@ -65,6 +65,23 @@ var _ = Describe("Logging", func() {
 					Expect(buffer).To(gbytes.Say(`"error":".*no such file or directory"`))
 				})
 			})
+
+			Context("and --log-level is not set", func() {
+				It("does not write anything to stderr", func() {
+					buffer := gbytes.NewBuffer()
+
+					_, err := Runner.
+						WithStderr(buffer).
+						WithoutLogLevel().
+						Create(groot.CreateSpec{
+							ID:        "my-image",
+							BaseImage: "/non/existent/rootfs",
+						})
+					Expect(err).To(HaveOccurred())
+
+					Expect(buffer.Contents()).To(BeEmpty())
+				})
+			})
 		})
 
 		Context("when the --log-file is set", func() {
@@ -102,6 +119,25 @@ var _ = Describe("Logging", func() {
 					allTheLogs, err := ioutil.ReadAll(logReader)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(allTheLogs)).To(ContainSubstring("\"log_level\":0"))
+				})
+			})
+
+			Context("and --log-level is not set", func() {
+				It("forwards logs to the given file with the log level set to INFO", func() {
+					_, err := Runner.
+						WithLogFile(logFilePath).
+						WithoutLogLevel().
+						Create(groot.CreateSpec{
+							ID:        "my-image",
+							BaseImage: "/non/existent/rootfs",
+						})
+					Expect(err).To(HaveOccurred())
+
+					Expect(logWriter.Close()).To(Succeed())
+					allTheLogs, err := ioutil.ReadAll(logReader)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(allTheLogs)).NotTo(ContainSubstring("\"log_level\":0"))
+					Expect(string(allTheLogs)).To(ContainSubstring("\"log_level\":1"))
 				})
 			})
 		})
