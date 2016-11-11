@@ -2,6 +2,7 @@ package imageplugin
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os/exec"
@@ -113,12 +114,33 @@ func (p *ExternalImageManager) Destroy(log lager.Logger, handle, rootfs string) 
 	return nil
 }
 
-func (p *ExternalImageManager) Metrics(log lager.Logger, handle string) (garden.ContainerDiskStat, error) {
-	log = log.Session("image-plugin-metrics")
+func (p *ExternalImageManager) Metrics(log lager.Logger, _, rootfs string) (garden.ContainerDiskStat, error) {
+	log = log.Session("image-plugin-metrics", lager.Data{"rootfs": rootfs})
 	log.Debug("start")
 	defer log.Debug("end")
 
-	return garden.ContainerDiskStat{}, nil
+	imagePath := filepath.Dir(rootfs)
+	cmd := exec.Command(p.binPath, "metrics", imagePath)
+	errBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stderr = errBuffer
+	outBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = outBuffer
+
+	if err := p.commandRunner.Run(cmd); err != nil {
+		logData := lager.Data{"action": "metrics", "stderr": errBuffer.String()}
+		log.Error("external-image-manager-result", err, logData)
+		return garden.ContainerDiskStat{}, fmt.Errorf("external image manager metrics failed: %s (%s)", outBuffer.String(), err)
+	}
+
+	var metrics map[string]map[string]uint64
+	if err := json.NewDecoder(outBuffer).Decode(&metrics); err != nil {
+		return garden.ContainerDiskStat{}, fmt.Errorf("parsing metrics: %s", err)
+	}
+
+	return garden.ContainerDiskStat{
+		TotalBytesUsed:     metrics["disk_usage"]["total_bytes_used"],
+		ExclusiveBytesUsed: metrics["disk_usage"]["exclusive_bytes_used"],
+	}, nil
 }
 
 func (p *ExternalImageManager) GC(log lager.Logger) error {

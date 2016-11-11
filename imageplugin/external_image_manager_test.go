@@ -330,4 +330,70 @@ var _ = Describe("ExternalImageManager", func() {
 			})
 		})
 	})
+
+	Describe("Metrics", func() {
+		var (
+			fakeCmdRunnerErr    error
+			fakeCmdRunnerStdout string
+			fakeCmdRunnerStderr string
+		)
+		BeforeEach(func() {
+			fakeCmdRunnerErr = nil
+			fakeCmdRunnerStdout = `{"disk_usage": {"total_bytes_used": 1000, "exclusive_bytes_used": 2000}}`
+			fakeCmdRunnerStderr = ""
+
+			fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "/external-image-manager-bin",
+			}, func(cmd *exec.Cmd) error {
+				cmd.Stdout.Write([]byte(fakeCmdRunnerStdout))
+				cmd.Stderr.Write([]byte(fakeCmdRunnerStderr))
+				return fakeCmdRunnerErr
+			})
+		})
+
+		It("uses the correct external-image-manager binary", func() {
+			_, err := externalImageManager.Metrics(logger, "", "/store/0/bundles/123/rootfs")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+			imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+			Expect(imageManagerCmd.Path).To(Equal("/external-image-manager-bin"))
+		})
+
+		It("calls external-image-manager with the correct arguments", func() {
+			_, err := externalImageManager.Metrics(logger, "", "/store/0/bundles/123/rootfs")
+			Expect(err).ToNot(HaveOccurred())
+			Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+			imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+			Expect(imageManagerCmd.Args[1]).To(Equal("metrics"))
+			Expect(imageManagerCmd.Args[2]).To(Equal("/store/0/bundles/123"))
+		})
+
+		It("returns the correct ContainerDiskStat", func() {
+			stats, err := externalImageManager.Metrics(logger, "", "/store/0/bundles/123/rootfs")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(stats.TotalBytesUsed).To(Equal(uint64(1000)))
+			Expect(stats.ExclusiveBytesUsed).To(Equal(uint64(2000)))
+		})
+
+		Context("when the image plugin fails", func() {
+			It("returns an error", func() {
+				fakeCmdRunnerStdout = "could not find drax"
+				fakeCmdRunnerErr = errors.New("failed to get metrics")
+				_, err := externalImageManager.Metrics(logger, "", "/store/0/bundles/123/rootfs")
+				Expect(err).To(MatchError(ContainSubstring("failed to get metrics")))
+				Expect(err).To(MatchError(ContainSubstring("could not find drax")))
+			})
+		})
+
+		Context("when the image plugin output parsing fails", func() {
+			It("returns an error", func() {
+				fakeCmdRunnerStdout = `{"silly" "json":"formating}"}}"`
+				_, err := externalImageManager.Metrics(logger, "", "/store/0/bundles/123/rootfs")
+				Expect(err).To(MatchError(ContainSubstring("parsing metrics")))
+			})
+		})
+	})
 })

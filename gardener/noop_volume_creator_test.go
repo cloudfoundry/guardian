@@ -36,7 +36,7 @@ var _ = Describe("NoopVolumeCreator", func() {
 
 	Describe("Metrics", func() {
 		It("successfully returns an empty set of metrics", func() {
-			Expect(volumeCreator.Metrics(logger, "some-handle")).To(Equal(garden.ContainerDiskStat{}))
+			Expect(volumeCreator.Metrics(logger, "some-handle", "rootfs")).To(Equal(garden.ContainerDiskStat{}))
 		})
 	})
 
