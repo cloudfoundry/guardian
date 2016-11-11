@@ -380,9 +380,11 @@ var _ = Describe("ExternalImageManager", func() {
 
 		Context("when the image plugin fails", func() {
 			It("returns an error", func() {
+				fakeCmdRunnerStdout = "could not find drax"
 				fakeCmdRunnerErr = errors.New("failed to get metrics")
 				_, err := externalImageManager.Metrics(logger, "", "/store/0/bundles/123/rootfs")
 				Expect(err).To(MatchError(ContainSubstring("failed to get metrics")))
+				Expect(err).To(MatchError(ContainSubstring("could not find drax")))
 			})
 		})
 

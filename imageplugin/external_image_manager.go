@@ -129,7 +129,7 @@ func (p *ExternalImageManager) Metrics(log lager.Logger, _, rootfs string) (gard
 	if err := p.commandRunner.Run(cmd); err != nil {
 		logData := lager.Data{"action": "metrics", "stderr": errBuffer.String()}
 		log.Error("external-image-manager-result", err, logData)
-		return garden.ContainerDiskStat{}, fmt.Errorf("external image manager metrics failed: %s", err)
+		return garden.ContainerDiskStat{}, fmt.Errorf("external image manager metrics failed: %s (%s)", outBuffer.String(), err)
 	}
 
 	var metrics map[string]map[string]uint64
