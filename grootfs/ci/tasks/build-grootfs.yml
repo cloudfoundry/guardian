@@ -15,4 +15,4 @@ outputs:
 - name: build-grootfs
 
 run:
-  path: src/code.cloudfoundry.org/grootfs/ci/scripts/build-grootfs.sh
+  path: grootfs-release-master/src/code.cloudfoundry.org/grootfs/ci/scripts/build-grootfs.sh
