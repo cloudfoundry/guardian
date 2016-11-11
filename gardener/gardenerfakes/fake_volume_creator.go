@@ -33,11 +33,12 @@ type FakeVolumeCreator struct {
 	destroyReturns struct {
 		result1 error
 	}
-	MetricsStub        func(log lager.Logger, handle string) (garden.ContainerDiskStat, error)
+	MetricsStub        func(log lager.Logger, handle, rootFSPath string) (garden.ContainerDiskStat, error)
 	metricsMutex       sync.RWMutex
 	metricsArgsForCall []struct {
-		log    lager.Logger
-		handle string
+		log        lager.Logger
+		handle     string
+		rootFSPath string
 	}
 	metricsReturns struct {
 		result1 garden.ContainerDiskStat
@@ -127,16 +128,17 @@ func (fake *FakeVolumeCreator) DestroyReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeVolumeCreator) Metrics(log lager.Logger, handle string) (garden.ContainerDiskStat, error) {
+func (fake *FakeVolumeCreator) Metrics(log lager.Logger, handle string, rootFSPath string) (garden.ContainerDiskStat, error) {
 	fake.metricsMutex.Lock()
 	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
-		log    lager.Logger
-		handle string
-	}{log, handle})
-	fake.recordInvocation("Metrics", []interface{}{log, handle})
+		log        lager.Logger
+		handle     string
+		rootFSPath string
+	}{log, handle, rootFSPath})
+	fake.recordInvocation("Metrics", []interface{}{log, handle, rootFSPath})
 	fake.metricsMutex.Unlock()
 	if fake.MetricsStub != nil {
-		return fake.MetricsStub(log, handle)
+		return fake.MetricsStub(log, handle, rootFSPath)
 	} else {
 		return fake.metricsReturns.result1, fake.metricsReturns.result2
 	}
@@ -148,10 +150,10 @@ func (fake *FakeVolumeCreator) MetricsCallCount() int {
 	return len(fake.metricsArgsForCall)
 }
 
-func (fake *FakeVolumeCreator) MetricsArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeVolumeCreator) MetricsArgsForCall(i int) (lager.Logger, string, string) {
 	fake.metricsMutex.RLock()
 	defer fake.metricsMutex.RUnlock()
-	return fake.metricsArgsForCall[i].log, fake.metricsArgsForCall[i].handle
+	return fake.metricsArgsForCall[i].log, fake.metricsArgsForCall[i].handle, fake.metricsArgsForCall[i].rootFSPath
 }
 
 func (fake *FakeVolumeCreator) MetricsReturns(result1 garden.ContainerDiskStat, result2 error) {

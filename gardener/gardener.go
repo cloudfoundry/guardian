@@ -63,7 +63,7 @@ type Networker interface {
 type VolumeCreator interface {
 	Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error)
 	Destroy(log lager.Logger, handle, rootFSPath string) error
-	Metrics(log lager.Logger, handle string) (garden.ContainerDiskStat, error)
+	Metrics(log lager.Logger, handle, rootFSPath string) (garden.ContainerDiskStat, error)
 	GC(log lager.Logger) error
 }
 

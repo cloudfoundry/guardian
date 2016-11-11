@@ -1317,6 +1317,17 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
+		Context("when fails to get container info", func() {
+			BeforeEach(func() {
+				containerizer.InfoReturns(gardener.ActualContainerSpec{}, errors.New("banana"))
+			})
+
+			It("returns an error", func() {
+				_, err := container.Metrics()
+				Expect(err).To(MatchError("banana"))
+			})
+		})
+
 		Context("when disk metrics cannot be acquired", func() {
 			BeforeEach(func() {
 				volumeCreator.MetricsReturns(garden.ContainerDiskStat{}, errors.New("banana"))

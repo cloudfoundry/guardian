@@ -20,7 +20,7 @@ func (NoopVolumeCreator) Destroy(lager.Logger, string, string) error {
 	return nil
 }
 
-func (NoopVolumeCreator) Metrics(lager.Logger, string) (garden.ContainerDiskStat, error) {
+func (NoopVolumeCreator) Metrics(lager.Logger, string, string) (garden.ContainerDiskStat, error) {
 	return garden.ContainerDiskStat{}, nil
 }
 
