@@ -126,5 +126,17 @@ func (p *ExternalImageManager) GC(log lager.Logger) error {
 	log.Debug("start")
 	defer log.Debug("end")
 
+	cmd := exec.Command(p.binPath, "clean")
+	errBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stderr = errBuffer
+	outBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = outBuffer
+
+	if err := p.commandRunner.Run(cmd); err != nil {
+		logData := lager.Data{"action": "clean", "stderr": errBuffer.String()}
+		log.Error("external-image-manager-result", err, logData)
+		return fmt.Errorf("external image manager clean failed: %s (%s)", outBuffer.String(), err)
+	}
+
 	return nil
 }
