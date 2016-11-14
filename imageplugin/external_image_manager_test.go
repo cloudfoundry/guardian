@@ -23,9 +23,9 @@ var _ = Describe("ExternalImageManager", func() {
 		fakeCommandRunner    *fake_command_runner.FakeCommandRunner
 		logger               *lagertest.TestLogger
 		externalImageManager *imageplugin.ExternalImageManager
-		imageSource          *url.URL
+		baseImage            *url.URL
 		idMappings           []specs.LinuxIDMapping
-		defaultRootFS        *url.URL
+		defaultBaseImage     *url.URL
 	)
 
 	BeforeEach(func() {
@@ -46,11 +46,11 @@ var _ = Describe("ExternalImageManager", func() {
 		}
 
 		var err error
-		defaultRootFS, err = url.Parse("/default/rootfs")
+		defaultBaseImage, err = url.Parse("/default/image")
 		Expect(err).ToNot(HaveOccurred())
-		externalImageManager = imageplugin.New("/external-image-manager-bin", fakeCommandRunner, defaultRootFS, idMappings)
+		externalImageManager = imageplugin.New("/external-image-manager-bin", fakeCommandRunner, defaultBaseImage, idMappings)
 
-		imageSource, err = url.Parse("/hello/image")
+		baseImage, err = url.Parse("/hello/image")
 		Expect(err).ToNot(HaveOccurred())
 	})
 
@@ -70,7 +70,7 @@ var _ = Describe("ExternalImageManager", func() {
 		JustBeforeEach(func() {
 			returnedRootFS, _, err = externalImageManager.Create(logger, "hello", rootfs_provider.Spec{
 				QuotaSize:  testQuotaSize,
-				RootFS:     imageSource,
+				RootFS:     baseImage,
 				Namespaced: namespaced,
 			})
 		})
@@ -224,7 +224,7 @@ var _ = Describe("ExternalImageManager", func() {
 
 		Context("when a RootFS is not provided in the rootfs_provider.Spec", func() {
 			BeforeEach(func() {
-				imageSource = &url.URL{}
+				baseImage = &url.URL{}
 			})
 
 			It("passes the default rootfs to the external-image-manager", func() {
@@ -232,7 +232,7 @@ var _ = Describe("ExternalImageManager", func() {
 				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-2]).To(Equal(defaultRootFS.String()))
+				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-2]).To(Equal(defaultBaseImage.String()))
 			})
 		})
 	})
@@ -241,7 +241,7 @@ var _ = Describe("ExternalImageManager", func() {
 		var err error
 
 		JustBeforeEach(func() {
-			err = externalImageManager.Destroy(logger, "hello", "/store/0/bundles/123/rootfs")
+			err = externalImageManager.Destroy(logger, "hello", "/store/0/images/123/rootfs")
 		})
 
 		It("uses the correct external-image-manager binary", func() {
@@ -261,12 +261,12 @@ var _ = Describe("ExternalImageManager", func() {
 				Expect(imageManagerCmd.Args[1]).To(Equal("delete"))
 			})
 
-			It("passes the correct bundle path to delete to/ the external-image-manager", func() {
+			It("passes the correct image path to delete to/ the external-image-manager", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-1]).To(Equal("/store/0/bundles/123"))
+				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-1]).To(Equal("/store/0/images/123"))
 			})
 		})
 
