@@ -43,14 +43,17 @@ var _ = Describe("Create", func() {
 		logFilePath = filepath.Join(bundlePath, "create.log")
 		pidFilePath = filepath.Join(bundlePath, "pidfile")
 
-		runner = runrunc.NewCreator("funC", commandRunner)
+		configFilePath := filepath.Join(bundlePath, "config.json")
+		Expect(ioutil.WriteFile(configFilePath, []byte(`{"root": {"path": "graph/aufs/mnt/rootfslayer"}}`), 0644)).To(Succeed())
+
+		runner = runrunc.NewCreator("funC", "yabadabadoo", commandRunner)
 	})
 
 	JustBeforeEach(func() {
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
-			Path: "funC",
+			Path: "yabadabadoo",
 		}, func(cmd *exec.Cmd) error {
-			logFile, err := os.Create(cmd.Args[3])
+			logFile, err := os.Create(cmd.Args[8])
 			Expect(err).NotTo(HaveOccurred())
 			_, err = io.Copy(logFile, bytes.NewReader([]byte(logs)))
 			Expect(err).NotTo(HaveOccurred())
@@ -61,9 +64,9 @@ var _ = Describe("Create", func() {
 	It("creates the container with runC create", func() {
 		Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
 
-		Expect(commandRunner.ExecutedCommands()[0].Path).To(Equal("funC"))
+		Expect(commandRunner.ExecutedCommands()[0].Path).To(Equal("yabadabadoo"))
 		Expect(commandRunner.ExecutedCommands()[0].Args).To(ConsistOf(
-			"funC", "--debug", "--log", logFilePath, "create", "--no-new-keyring", "--bundle", bundlePath, "--pid-file", pidFilePath, "some-id",
+			"yabadabadoo", "-log-file", logFilePath, "graph/aufs", "rootfslayer", "funC", "--debug", "--log", logFilePath, "create", "--no-new-keyring", "--bundle", bundlePath, "--pid-file", pidFilePath, "some-id",
 		))
 	})
 
@@ -90,7 +93,7 @@ var _ = Describe("Create", func() {
 
 			runcLogs := make([]lager.LogFormat, 0)
 			for _, log := range logger.Logs() {
-				if log.Message == "test.create.runc" {
+				if log.Message == "test.create.runc-log" {
 					runcLogs = append(runcLogs, log)
 				}
 			}
@@ -99,12 +102,12 @@ var _ = Describe("Create", func() {
 			Expect(runcLogs[0].Data).To(HaveKeyWithValue("message", "signal: potato"))
 		})
 
-		Context("when `runC create` fails", func() {
+		Context("when `undoo` fails", func() {
 			BeforeEach(func() {
 				runcExitStatus = errors.New("boom")
 			})
 
-			It("return an error including parsed logs when runC fails to start the container", func() {
+			It("return an error including parsed logs", func() {
 				Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc create: boom: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
 			})
 
