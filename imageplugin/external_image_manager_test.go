@@ -1,10 +1,14 @@
 package imageplugin_test
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/url"
+	"os"
 	"os/exec"
+	"path/filepath"
 
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/guardian/imageplugin"
@@ -31,7 +35,7 @@ var _ = Describe("ExternalImageManager", func() {
 	)
 
 	BeforeEach(func() {
-		fakeCmdRunnerStdout = "/this-is/your\n"
+		fakeCmdRunnerStdout = ""
 		fakeCmdRunnerStderr = ""
 		fakeCmdRunnerErr = nil
 
@@ -74,6 +78,10 @@ var _ = Describe("ExternalImageManager", func() {
 	})
 
 	Describe("Create", func() {
+		BeforeEach(func() {
+			fakeCmdRunnerStdout = "/this-is/your\n"
+		})
+
 		It("uses the correct external-image-manager binary", func() {
 			_, _, err := externalImageManager.Create(
 				logger, "hello", rootfs_provider.Spec{
@@ -86,6 +94,74 @@ var _ = Describe("ExternalImageManager", func() {
 			imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
 			Expect(imageManagerCmd.Path).To(Equal("/external-image-manager-bin"))
+		})
+
+		It("returns the env variables defined in the image configuration", func() {
+			imagePath, err := ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+			fakeCmdRunnerStdout = imagePath
+
+			imageConfig := imageplugin.Image{
+				Config: imageplugin.ImageConfig{
+					Env: []string{"HELLO=there", "PATH=/my-path/bin"},
+				},
+			}
+
+			imageConfigFile, err := os.Create(filepath.Join(imagePath, "image.json"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(json.NewEncoder(imageConfigFile).Encode(imageConfig)).To(Succeed())
+
+			_, envVariables, err := externalImageManager.Create(
+				logger, "hello", rootfs_provider.Spec{
+					RootFS: baseImage,
+				},
+			)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(envVariables).To(ConsistOf([]string{"HELLO=there", "PATH=/my-path/bin"}))
+		})
+
+		Context("when the image configuration file is inaccessible", func() {
+			It("returns an error", func() {
+				imagePath, err := ioutil.TempDir("", "")
+				Expect(err).NotTo(HaveOccurred())
+				fakeCmdRunnerStdout = imagePath
+				Expect(ioutil.WriteFile(filepath.Join(imagePath, "image.json"), []byte("{}"), 0000)).To(Succeed())
+
+				_, _, err = externalImageManager.Create(
+					logger, "hello", rootfs_provider.Spec{
+						RootFS: baseImage,
+					},
+				)
+				Expect(err).To(MatchError(ContainSubstring("could not open image configuration")))
+			})
+		})
+
+		Context("when the image configuration is not defined", func() {
+			It("returns an empty list of environment variables", func() {
+				_, envVariables, err := externalImageManager.Create(
+					logger, "hello", rootfs_provider.Spec{
+						RootFS: baseImage,
+					},
+				)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(envVariables).To(BeEmpty())
+			})
+		})
+
+		Context("when the image configuration is not valid json", func() {
+			It("returns an error", func() {
+				imagePath, err := ioutil.TempDir("", "")
+				Expect(err).NotTo(HaveOccurred())
+				fakeCmdRunnerStdout = imagePath
+				Expect(ioutil.WriteFile(filepath.Join(imagePath, "image.json"), []byte("what-image: is this: no"), 0666)).To(Succeed())
+
+				_, _, err = externalImageManager.Create(
+					logger, "hello", rootfs_provider.Spec{
+						RootFS: baseImage,
+					},
+				)
+				Expect(err).To(MatchError(ContainSubstring("parsing image config")))
+			})
 		})
 
 		Describe("external-image-manager parameters", func() {

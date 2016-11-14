@@ -18,6 +18,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/types"
 )
 
@@ -364,17 +365,23 @@ var _ = Describe("Rootfs container create parameter", func() {
 			})
 
 			Context("and a non-quotaed container is created and destroyed", func() {
+				var container garden.Container
+
 				JustBeforeEach(func() {
 					imageID = fmt.Sprintf("non-quotaed-container-%d", GinkgoParallelNode())
 					imagePath = filepath.Join(storePath, imageID)
 
-					c, err := client.Create(garden.ContainerSpec{
+					var err error
+					container, err = client.Create(garden.ContainerSpec{
 						RootFSPath: "docker:///cfgarden/empty#v0.1.0",
 						Handle:     imageID,
 						Privileged: privileged,
 					})
 					Expect(err).ToNot(HaveOccurred())
-					client.Destroy(c.Handle())
+				})
+
+				AfterEach(func() {
+					client.Destroy(container.Handle())
 				})
 
 				It("executes plugin create with the correct args", func() {
@@ -406,7 +413,23 @@ var _ = Describe("Rootfs container create parameter", func() {
 					Expect(string(whoamiOutput)).To(ContainSubstring(fmt.Sprintf("%d - %d", maxId, maxId)))
 				})
 
+				It("loads the image.json env variables", func() {
+					buffer := gbytes.NewBuffer()
+					process, err := container.Run(garden.ProcessSpec{
+						Path: "/env",
+						Dir:  "/",
+					}, garden.ProcessIO{Stdout: buffer, Stderr: buffer})
+					Expect(err).NotTo(HaveOccurred())
+					exitCode, err := process.Wait()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(exitCode).To(BeZero())
+
+					Eventually(buffer).Should(gbytes.Say("BLA=BLE"))
+					Eventually(buffer).Should(gbytes.Say("HELLO=world"))
+				})
+
 				It("executes plugin delete with the correct args", func() {
+					Expect(client.Destroy(container.Handle())).To(Succeed())
 					userArgsStr, err := ioutil.ReadFile(filepath.Join(imagePath, "delete-args"))
 					Expect(err).ToNot(HaveOccurred())
 
@@ -419,6 +442,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 				})
 
 				It("executes plugin delete as the host root user", func() {
+					Expect(client.Destroy(container.Handle())).To(Succeed())
 					whoamiOutput, err := ioutil.ReadFile(filepath.Join(imagePath, "delete-whoami"))
 					Expect(err).ToNot(HaveOccurred())
 					Expect(string(whoamiOutput)).To(ContainSubstring("0 - 0"))
