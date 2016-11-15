@@ -191,6 +191,25 @@ var _ = Describe("ExternalImageManager", func() {
 				Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-1]).To(Equal("hello"))
 			})
 
+			Context("when the base image is a remote image", func() {
+				It("sets the correct image input to external-image-manager", func() {
+					baseImage, err := url.Parse("docker:///ubuntu#14.04")
+					Expect(err).NotTo(HaveOccurred())
+
+					_, _, err = externalImageManager.Create(
+						logger, "hello", rootfs_provider.Spec{
+							RootFS: baseImage,
+						},
+					)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+					imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+					Expect(imageManagerCmd.Args[len(imageManagerCmd.Args)-2]).To(Equal("docker:///ubuntu:14.04"))
+				})
+			})
+
 			Context("when namespaced is true", func() {
 				It("passes the correct uid and gid mappings to the external-image-manager", func() {
 					_, _, err := externalImageManager.Create(

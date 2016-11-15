@@ -55,7 +55,7 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 	if spec.RootFS == nil || spec.RootFS.String() == "" {
 		args = append(args, p.defaultBaseImage.String())
 	} else {
-		args = append(args, spec.RootFS.String())
+		args = append(args, strings.Replace(spec.RootFS.String(), "#", ":", 1))
 	}
 
 	args = append(args, handle)
