@@ -120,22 +120,6 @@ var _ = Describe("ExternalImageManager", func() {
 			Expect(envVariables).To(ConsistOf([]string{"HELLO=there", "PATH=/my-path/bin"}))
 		})
 
-		Context("when the image configuration file is inaccessible", func() {
-			It("returns an error", func() {
-				imagePath, err := ioutil.TempDir("", "")
-				Expect(err).NotTo(HaveOccurred())
-				fakeCmdRunnerStdout = imagePath
-				Expect(ioutil.WriteFile(filepath.Join(imagePath, "image.json"), []byte("{}"), 0000)).To(Succeed())
-
-				_, _, err = externalImageManager.Create(
-					logger, "hello", rootfs_provider.Spec{
-						RootFS: baseImage,
-					},
-				)
-				Expect(err).To(MatchError(ContainSubstring("could not open image configuration")))
-			})
-		})
-
 		Context("when the image configuration is not defined", func() {
 			It("returns an empty list of environment variables", func() {
 				_, envVariables, err := externalImageManager.Create(
