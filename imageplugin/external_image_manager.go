@@ -17,6 +17,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/gunk/command_runner"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/tscolari/lagregator"
 )
 
 func New(binPath string, commandRunner command_runner.CommandRunner, defaultBaseImage *url.URL, mappings []specs.LinuxIDMapping) *ExternalImageManager {
@@ -62,8 +63,7 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 
 	cmd := exec.Command(p.binPath, args...)
 
-	errBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stderr = errBuffer
+	cmd.Stderr = lagregator.NewRelogger(log)
 	outBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = outBuffer
 
@@ -77,7 +77,7 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 	}
 
 	if err := p.commandRunner.Run(cmd); err != nil {
-		logData := lager.Data{"action": "create", "stderr": errBuffer.String(), "stdout": outBuffer.String()}
+		logData := lager.Data{"action": "create", "stdout": outBuffer.String()}
 		log.Error("external-image-manager-result", err, logData)
 		return "", nil, fmt.Errorf("external image manager create failed: %s (%s)", outBuffer.String(), err)
 	}
@@ -122,13 +122,12 @@ func (p *ExternalImageManager) Destroy(log lager.Logger, handle, rootFSPath stri
 	imagePath := filepath.Dir(rootFSPath)
 	cmd := exec.Command(p.binPath, "delete", imagePath)
 
-	errBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stderr = errBuffer
+	cmd.Stderr = lagregator.NewRelogger(log)
 	outBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = outBuffer
 
 	if err := p.commandRunner.Run(cmd); err != nil {
-		logData := lager.Data{"action": "delete", "stderr": errBuffer.String()}
+		logData := lager.Data{"action": "delete", "stdout": outBuffer.String()}
 		log.Error("external-image-manager-result", err, logData)
 		return fmt.Errorf("external image manager destroy failed: %s (%s)", outBuffer.String(), err)
 	}
@@ -143,13 +142,12 @@ func (p *ExternalImageManager) Metrics(log lager.Logger, _, rootfs string) (gard
 
 	imagePath := filepath.Dir(rootfs)
 	cmd := exec.Command(p.binPath, "metrics", imagePath)
-	errBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stderr = errBuffer
+	cmd.Stderr = lagregator.NewRelogger(log)
 	outBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = outBuffer
 
 	if err := p.commandRunner.Run(cmd); err != nil {
-		logData := lager.Data{"action": "metrics", "stderr": errBuffer.String()}
+		logData := lager.Data{"action": "metrics", "stdout": outBuffer.String()}
 		log.Error("external-image-manager-result", err, logData)
 		return garden.ContainerDiskStat{}, fmt.Errorf("external image manager metrics failed: %s (%s)", outBuffer.String(), err)
 	}
@@ -171,13 +169,12 @@ func (p *ExternalImageManager) GC(log lager.Logger) error {
 	defer log.Debug("end")
 
 	cmd := exec.Command(p.binPath, "clean")
-	errBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stderr = errBuffer
+	cmd.Stderr = lagregator.NewRelogger(log)
 	outBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = outBuffer
 
 	if err := p.commandRunner.Run(cmd); err != nil {
-		logData := lager.Data{"action": "clean", "stderr": errBuffer.String()}
+		logData := lager.Data{"action": "clean", "stdout": outBuffer.String()}
 		log.Error("external-image-manager-result", err, logData)
 		return fmt.Errorf("external image manager clean failed: %s (%s)", outBuffer.String(), err)
 	}
