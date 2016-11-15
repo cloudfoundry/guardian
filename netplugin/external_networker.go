@@ -199,13 +199,23 @@ func (p *externalBinaryNetworker) NetOut(log lager.Logger, handle string, rule g
 	return nil
 }
 
+type BulkNetOutInputs struct {
+	ContainerIP string              `json:"container_ip"`
+	NetOutRules []garden.NetOutRule `json:"netout_rules"`
+}
+
 func (p *externalBinaryNetworker) BulkNetOut(log lager.Logger, handle string, rules []garden.NetOutRule) error {
-	for _, rule := range rules {
-		if err := p.NetOut(log, handle, rule); err != nil {
-			return err
-		}
+	containerIP, ok := p.configStore.Get(handle, gardener.ContainerIPKey)
+	if !ok {
+		return fmt.Errorf("cannot find container [%s]\n", handle)
 	}
-	return nil
+
+	inputs := BulkNetOutInputs{
+		ContainerIP: containerIP,
+		NetOutRules: rules,
+	}
+
+	return p.exec(log, "bulk-net-out", handle, inputs, nil)
 }
 
 func (p *externalBinaryNetworker) exec(log lager.Logger, action, handle string,

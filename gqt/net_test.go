@@ -490,7 +490,7 @@ var _ = Describe("Networking", func() {
 			})
 
 			Context("when BulkNetOut is called", func() {
-				It("calls NetOut for each rule", func() {
+				It("passes down the bulk net out rules to the external networker", func() {
 					rules := []garden.NetOutRule{
 						garden.NetOutRule{
 							Protocol: garden.ProtocolTCP,
@@ -502,7 +502,7 @@ var _ = Describe("Networking", func() {
 					container.BulkNetOut(rules)
 
 					Eventually(getContent(stdinFile)).Should(
-						ContainSubstring(`{"container_ip":"10.255.10.10","netout_rule":{"protocol":2}}`),
+						ContainSubstring(`{"container_ip":"10.255.10.10","netout_rules":[{"protocol":1},{"protocol":2}]}`),
 					)
 				})
 			})

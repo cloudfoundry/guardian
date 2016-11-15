@@ -385,31 +385,44 @@ var _ = Describe("ExternalNetworker", func() {
 	})
 
 	Describe("BulkNetOut", func() {
-		It("calls NetOut for each rule", func() {
+		var handle = "my-handle"
+		var rules []garden.NetOutRule
+
+		BeforeEach(func() {
 			configStore.Set(handle, gardener.ContainerIPKey, "169.254.1.2")
-			rules := []garden.NetOutRule{
+			rules = []garden.NetOutRule{
 				createRule("1.1.1.1", "2.2.2.2", 1111, 2222),
 				createRule("3.3.3.3", "4.4.4.4", 3333, 4444),
 			}
+		})
+
+		It("calls NetOut for each rule", func() {
 			Expect(plugin.BulkNetOut(logger, handle, rules)).To(Succeed())
 
-			for i := 0; i < len(rules); i++ {
-				checkPluginArgs(fakeCommandRunner.ExecutedCommands()[i], rules[i])
-			}
-		})
-	})
-
-	Context("when the external plugin errors", func() {
-		var rule garden.NetOutRule
-
-		BeforeEach(func() {
-			pluginErr = errors.New("boom")
-			configStore.Set(handle, gardener.ContainerIPKey, "169.254.1.2")
-			rule = createRule("1.1.1.1", "2.2.2.2", 1111, 2222)
+			Expect(fakeCommandRunner.ExecutedCommands()).To(HaveLen(1))
+			checkBulkPluginArgs(fakeCommandRunner.ExecutedCommands()[0], rules)
 		})
 
-		It("returns the error", func() {
-			Expect(plugin.BulkNetOut(logger, handle, []garden.NetOutRule{rule})).To(MatchError("external networker net-out: boom"))
+		Context("when the handle cannot be found in the config store", func() {
+			It("returns the error", func() {
+				Expect(plugin.BulkNetOut(logger, "missing-handle", rules)).To(MatchError("cannot find container [missing-handle]\n"))
+			})
+		})
+
+		Context("when the external plugin errors", func() {
+			BeforeEach(func() {
+				pluginErr = errors.New("boom")
+			})
+
+			It("returns the error", func() {
+				Expect(plugin.BulkNetOut(logger, handle, rules)).To(MatchError("external networker bulk-net-out: boom"))
+			})
+		})
+
+		It("collects and logs the stderr from the plugin", func() {
+			Expect(plugin.BulkNetOut(logger, handle, rules)).To(Succeed())
+
+			Expect(logger).To(gbytes.Say("result.*some-stderr-bytes"))
 		})
 	})
 })
@@ -434,4 +447,12 @@ func checkPluginArgs(cmd *exec.Cmd, rule garden.NetOutRule) {
 	r := &netplugin.NetOutInputs{}
 	json.Unmarshal(pluginInput, r)
 	Expect(r.NetOutRule).To(Equal(rule))
+}
+
+func checkBulkPluginArgs(cmd *exec.Cmd, rules []garden.NetOutRule) {
+	pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+	Expect(err).NotTo(HaveOccurred())
+	r := &netplugin.BulkNetOutInputs{}
+	json.Unmarshal(pluginInput, r)
+	Expect(r.NetOutRules).To(Equal(rules))
 }
