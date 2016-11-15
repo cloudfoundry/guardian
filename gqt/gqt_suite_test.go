@@ -23,7 +23,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, inspectorGardenBin, testNetPluginBin, tarBin string
+var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, undooBin, testImagePluginBin, inspectorGardenBin, testNetPluginBin, tarBin string
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -41,7 +41,10 @@ func TestGqt(t *testing.T) {
 			bins["garden_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/guardian", "-tags", "daemon", "-race", "-ldflags", "-extldflags '-static'")
 			Expect(err).NotTo(HaveOccurred())
 
-			bins["dadoo_bin_bin_bin"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
+			bins["dadoo_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
+			Expect(err).NotTo(HaveOccurred())
+
+			bins["undoo_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/undoo")
 			Expect(err).NotTo(HaveOccurred())
 
 			bins["init_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/init")
@@ -75,7 +78,8 @@ func TestGqt(t *testing.T) {
 		ociRuntimeBin = bins["oci_runtime_path"]
 		gardenBin = bins["garden_bin_path"]
 		nstarBin = bins["nstar_bin_path"]
-		dadooBin = bins["dadoo_bin_bin_bin"]
+		dadooBin = bins["dadoo_bin_path"]
+		undooBin = bins["undoo_bin_path"]
 		testImagePluginBin = bins["test_image_plugin_bin_path"]
 		initBin = bins["init_bin_path"]
 		inspectorGardenBin = bins["inspector-garden_bin_path"]
@@ -108,7 +112,7 @@ func TestGqt(t *testing.T) {
 
 func startGarden(argv ...string) *runner.RunningGarden {
 	rootfs := os.Getenv("GARDEN_TEST_ROOTFS")
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, rootfs, tarBin, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, undooBin, testImagePluginBin, rootfs, tarBin, argv...)
 }
 
 func restartGarden(client *runner.RunningGarden, argv ...string) {
@@ -118,5 +122,5 @@ func restartGarden(client *runner.RunningGarden, argv ...string) {
 }
 
 func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, "", tarBin, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, undooBin, testImagePluginBin, "", tarBin, argv...)
 }

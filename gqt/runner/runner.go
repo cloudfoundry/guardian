@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime/pprof"
 	"strconv"
 	"strings"
 	"syscall"
@@ -73,7 +74,7 @@ func init() {
 	}
 }
 
-func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin, network, address string, argv ...string) GardenRunner {
+func NewGardenRunner(bin, initBin, nstarBin, dadooBin, undooBin, grootfsBin, rootfs, tarBin, network, address string, argv ...string) GardenRunner {
 	r := GardenRunner{}
 
 	r.Network = network
@@ -88,7 +89,7 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBi
 
 	MustMountTmpfs(r.GraphPath)
 
-	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs, argv...)
+	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, undooBin, grootfsBin, tarBin, rootfs, argv...)
 	r.Cmd.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", r.TmpDir))
 
 	for i, arg := range r.Cmd.Args {
@@ -111,8 +112,8 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBi
 	return r
 }
 
-func Start(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin string, argv ...string) *RunningGarden {
-	runner := NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin, "unix", fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode()), argv...)
+func Start(bin, initBin, nstarBin, dadooBin, undooBin, grootfsBin, rootfs, tarBin string, argv ...string) *RunningGarden {
+	runner := NewGardenRunner(bin, initBin, nstarBin, dadooBin, undooBin, grootfsBin, rootfs, tarBin, "unix", fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode()), argv...)
 
 	r := &RunningGarden{
 		runner:   runner,
@@ -167,6 +168,7 @@ func (r *RunningGarden) Stop() error {
 		case err := <-r.process.Wait():
 			return err
 		case <-time.After(time.Second * 5):
+			go pprof.Lookup("goroutine").WriteTo(os.Stdout, 1)
 			r.process.Signal(syscall.SIGTERM)
 			err = errors.New("timed out waiting for garden to shutdown after 5 seconds")
 		}
@@ -176,7 +178,7 @@ func (r *RunningGarden) Stop() error {
 	return err
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs string, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dadooBin, undooBin, grootfsBin, tarBin, rootfs string, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -220,6 +222,7 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dad
 	gardenArgs = appendDefaultFlag(gardenArgs, "--network-pool", fmt.Sprintf("10.254.%d.0/22", 4*GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--init-bin", initBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--dadoo-bin", dadooBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--undoo-bin", undooBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--nstar-bin", nstarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", tarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--port-pool-start", fmt.Sprintf("%d", GinkgoParallelNode()*10000))
