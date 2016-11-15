@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -264,6 +265,26 @@ var _ = Describe("ExternalImageManager", func() {
 
 					Expect(imageManagerCmd.Args[2]).To(Equal("--disk-limit-size-bytes"))
 					Expect(imageManagerCmd.Args[3]).To(Equal("1024"))
+				})
+			})
+
+			Context("when quota scope is exclusive", func() {
+				It("passes the quota to the external-image-manager with the exclusive flag", func() {
+					_, _, err := externalImageManager.Create(
+						logger, "hello", rootfs_provider.Spec{
+							RootFS:     baseImage,
+							QuotaSize:  1024,
+							QuotaScope: garden.DiskLimitScopeExclusive,
+						},
+					)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+					imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+					Expect(imageManagerCmd.Args[2]).To(Equal("--exclude-image-from-quota"))
+					Expect(imageManagerCmd.Args[3]).To(Equal("--disk-limit-size-bytes"))
+					Expect(imageManagerCmd.Args[4]).To(Equal("1024"))
 				})
 			})
 		})

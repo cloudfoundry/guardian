@@ -42,6 +42,9 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 
 	args := []string{"create"}
 	if spec.QuotaSize != 0 {
+		if spec.QuotaScope == garden.DiskLimitScopeExclusive {
+			args = append(args, "--exclude-image-from-quota")
+		}
 		args = append(args, "--disk-limit-size-bytes", strconv.FormatInt(spec.QuotaSize, 10))
 	}
 
