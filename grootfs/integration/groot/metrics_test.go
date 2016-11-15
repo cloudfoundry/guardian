@@ -19,7 +19,7 @@ import (
 var _ = Describe("Metrics", func() {
 	var (
 		baseImagePath string
-		image    groot.Image
+		image         groot.Image
 	)
 
 	BeforeEach(func() {
@@ -72,7 +72,7 @@ var _ = Describe("Metrics", func() {
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
-				Eventually(sess.Out).Should(gbytes.Say("No such file or directory"))
+				Eventually(sess.Out).Should(gbytes.Say("image not found: invalid-id"))
 			})
 		})
 
@@ -83,7 +83,7 @@ var _ = Describe("Metrics", func() {
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
-				Eventually(sess.Out).Should(gbytes.Say("No such file or directory"))
+				Eventually(sess.Out).Should(gbytes.Say("image not found: not-here"))
 			})
 
 			Context("when the path provided doesn't belong to the `--store` provided", func() {

@@ -15,8 +15,8 @@ import (
 var _ = Describe("Metricser", func() {
 	var (
 		fakeImageCloner *grootfakes.FakeImageCloner
-		metricser   *groot.Metricser
-		logger      lager.Logger
+		metricser       *groot.Metricser
+		logger          lager.Logger
 	)
 
 	BeforeEach(func() {

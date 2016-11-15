@@ -390,6 +390,8 @@ var _ = Describe("Image", func() {
 
 			imagePath = path.Join(storePath, store.IMAGES_DIR_NAME, "some-id")
 			imageRootFSPath = path.Join(imagePath, "rootfs")
+			Expect(os.MkdirAll(imagePath, 0755)).To(Succeed())
+			Expect(os.MkdirAll(imageRootFSPath, 0755)).To(Succeed())
 		})
 
 		It("fetches the metrics", func() {
@@ -406,6 +408,13 @@ var _ = Describe("Image", func() {
 
 			Expect(err).ToNot(HaveOccurred())
 			Expect(m).To(Equal(metrics))
+		})
+
+		Context("when image does not exist", func() {
+			It("returns an error", func() {
+				_, err := imageCloner.Metrics(logger, "cake")
+				Expect(err).To(MatchError(ContainSubstring("image not found")))
+			})
 		})
 
 		Context("when the snapshot driver fails", func() {

@@ -1,10 +1,6 @@
 package groot
 
-import (
-	"fmt"
-
-	"code.cloudfoundry.org/lager"
-)
+import "code.cloudfoundry.org/lager"
 
 type Metricser struct {
 	imageCloner ImageCloner
@@ -23,7 +19,8 @@ func (m *Metricser) Metrics(logger lager.Logger, id string) (VolumeMetrics, erro
 
 	metrics, err := m.imageCloner.Metrics(logger, id)
 	if err != nil {
-		return VolumeMetrics{}, fmt.Errorf("fetching metrics for `%s`: %s", id, err)
+		logger.Error("fetching-metrics", err, lager.Data{"id": id})
+		return VolumeMetrics{}, err
 	}
 
 	return metrics, nil

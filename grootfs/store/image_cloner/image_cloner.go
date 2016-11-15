@@ -138,6 +138,11 @@ func (b *ImageCloner) Metrics(logger lager.Logger, id string) (groot.VolumeMetri
 	logger.Info("start")
 	defer logger.Info("end")
 
+	if ok, err := b.Exists(id); !ok {
+		logger.Error("checking-image-path-failed", err)
+		return groot.VolumeMetrics{}, fmt.Errorf("image not found: %s", id)
+	}
+
 	image := b.createImage(id)
 
 	return b.snapshotDriver.FetchMetrics(logger, image.RootFSPath)
