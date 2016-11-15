@@ -1,6 +1,8 @@
 # Artifacts
 /grootfs
 /drax
+playground/grootfs
+playground/drax
 
 # OSX
 .DS_Store
