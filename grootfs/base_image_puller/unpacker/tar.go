@@ -32,66 +32,64 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackS
 		}
 	}
 
-	if err := u.unTar(spec); err != nil {
-		return fmt.Errorf("failed to untar: %s", err)
-	}
-
-	return nil
-}
-
-func (u *TarUnpacker) unTar(spec base_image_puller.UnpackSpec) error {
 	tarReader := tar.NewReader(spec.Stream)
 	opaqueWhiteouts := []string{}
-
 	for {
-		header, err := tarReader.Next()
+		tarHeader, err := tarReader.Next()
 		if err == io.EOF {
 			break
 		} else if err != nil {
 			return err
 		}
+		entryPath := filepath.Join(spec.TargetPath, tarHeader.Name)
 
-		path := filepath.Join(spec.TargetPath, header.Name)
-
-		if strings.Contains(path, ".wh..wh..opq") {
-			opaqueWhiteouts = append(opaqueWhiteouts, path)
+		if strings.Contains(entryPath, ".wh..wh..opq") {
+			opaqueWhiteouts = append(opaqueWhiteouts, entryPath)
+			continue
+		}
+		if strings.Contains(entryPath, ".wh.") {
+			if err := u.removeWhiteout(entryPath); err != nil {
+				return err
+			}
 			continue
 		}
 
-		if strings.Contains(path, ".wh.") {
-			if err := u.removeWhiteout(path); err != nil {
-				return err
-			}
-			continue
-		}
-
-		switch header.Typeflag {
-		case tar.TypeBlock, tar.TypeChar:
-			continue
-
-		case tar.TypeLink:
-			if err := u.createLink(spec.TargetPath, path, header); err != nil {
-				return err
-			}
-
-		case tar.TypeSymlink:
-			if err := u.createSymlink(path, header); err != nil {
-				return err
-			}
-
-		case tar.TypeDir:
-			if err := u.createDirectory(path, header); err != nil {
-				return err
-			}
-
-		case tar.TypeReg, tar.TypeRegA:
-			if err := u.createRegularFile(path, header, tarReader); err != nil {
-				return err
-			}
+		if err := u.handleEntry(spec.TargetPath, entryPath, tarReader, tarHeader); err != nil {
+			return err
 		}
 	}
 
 	return u.removeOpaqueWhiteouts(opaqueWhiteouts)
+}
+
+func (u *TarUnpacker) handleEntry(targetPath, entryPath string, tarReader *tar.Reader, tarHeader *tar.Header) error {
+	switch tarHeader.Typeflag {
+	case tar.TypeBlock, tar.TypeChar:
+		// ignore devices
+		return nil
+
+	case tar.TypeLink:
+		if err := u.createLink(targetPath, entryPath, tarHeader); err != nil {
+			return err
+		}
+
+	case tar.TypeSymlink:
+		if err := u.createSymlink(entryPath, tarHeader); err != nil {
+			return err
+		}
+
+	case tar.TypeDir:
+		if err := u.createDirectory(entryPath, tarHeader); err != nil {
+			return err
+		}
+
+	case tar.TypeReg, tar.TypeRegA:
+		if err := u.createRegularFile(entryPath, tarHeader, tarReader); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error {

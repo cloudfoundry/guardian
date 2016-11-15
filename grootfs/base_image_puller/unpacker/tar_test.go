@@ -17,116 +17,127 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("Tar", func() {
+var _ = Describe("Tar unpacker", func() {
 	var (
-		logger lager.Logger
-
-		imgPath    string
-		imagePath  string
-		targetPath string
-		aFilePath  string
-
-		tarUnpacker *unpacker.TarUnpacker
-
-		stream *gbytes.Buffer
+		tarUnpacker   *unpacker.TarUnpacker
+		logger        lager.Logger
+		baseImagePath string
+		stream        *gbytes.Buffer
+		targetPath    string
 	)
 
 	BeforeEach(func() {
-		var err error
-
-		imagePath, err = ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
-		targetPath = path.Join(imagePath, "rootfs")
-
 		tarUnpacker = unpacker.NewTarUnpacker()
 
-		logger = lagertest.NewTestLogger("test-store")
-
-		imgPath, err = ioutil.TempDir("", "")
+		var err error
+		targetPath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		aFilePath = path.Join(imgPath, "a_file")
-		Expect(ioutil.WriteFile(aFilePath, []byte("hello-world"), 0600)).To(Succeed())
-		Expect(os.Mkdir(path.Join(imgPath, "subdir"), 0700)).To(Succeed())
-		Expect(os.Mkdir(path.Join(imgPath, "subdir", "subdir2"), 0777)).To(Succeed())
-		Expect(ioutil.WriteFile(path.Join(imgPath, "subdir", "subdir2", "another_file"), []byte("goodbye-world"), 0600)).To(Succeed())
 
-		// We have to chmod it because creat and mkdir syscalls take the umask into
-		// account when applying the permissions. This means that only permissions
-		// less permissive than the umask can be applied to files and directories.
-		// By calling chmod we explicitly apply the permissions without being
-		// subject to the umask.
-		Expect(os.Chmod(aFilePath, 0777)).To(Succeed())
-		Expect(os.Chmod(path.Join(imgPath, "subdir", "subdir2"), 0777)).To(Succeed())
+		baseImagePath, err = ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+
+		logger = lagertest.NewTestLogger("test-store")
 	})
 
 	JustBeforeEach(func() {
 		stream = gbytes.NewBuffer()
-		sess, err := gexec.Start(exec.Command("tar", "-c", "-C", imgPath, "."), stream, nil)
+		sess, err := gexec.Start(exec.Command("tar", "-c", "-C", baseImagePath, "."), stream, nil)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(imgPath)).To(Succeed())
-		Expect(os.RemoveAll(imagePath)).To(Succeed())
+		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+		Expect(os.RemoveAll(targetPath)).To(Succeed())
 	})
 
-	It("writes the image contents in the rootfs directory", func() {
-		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-			Stream:     stream,
-			TargetPath: targetPath,
-		})).To(Succeed())
+	Describe("regular files", func() {
+		BeforeEach(func() {
+			Expect(ioutil.WriteFile(path.Join(baseImagePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+		})
 
-		filePath := path.Join(targetPath, "a_file")
-		Expect(filePath).To(BeARegularFile())
-		contents, err := ioutil.ReadFile(filePath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(contents)).To(Equal("hello-world"))
+		It("creates regular files", func() {
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})).To(Succeed())
+
+			filePath := path.Join(targetPath, "a_file")
+			Expect(filePath).To(BeARegularFile())
+			contents, err := ioutil.ReadFile(filePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(Equal("hello-world"))
+		})
 	})
 
-	It("creates files in subdirectories", func() {
-		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-			Stream:     stream,
-			TargetPath: targetPath,
-		})).To(Succeed())
+	Describe("directories", func() {
+		BeforeEach(func() {
+			Expect(os.Mkdir(path.Join(baseImagePath, "subdir"), 0700)).To(Succeed())
+			Expect(os.Mkdir(path.Join(baseImagePath, "subdir", "subdir2"), 0777)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(baseImagePath, "subdir", "subdir2", "another_file"), []byte("goodbye-world"), 0600)).To(Succeed())
+		})
 
-		filePath := path.Join(targetPath, "subdir", "subdir2", "another_file")
-		Expect(filePath).To(BeARegularFile())
-		contents, err := ioutil.ReadFile(filePath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(string(contents)).To(Equal("goodbye-world"))
+		It("creates files in subdirectories", func() {
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})).To(Succeed())
+
+			filePath := path.Join(targetPath, "subdir", "subdir2", "another_file")
+			Expect(filePath).To(BeARegularFile())
+			contents, err := ioutil.ReadFile(filePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(Equal("goodbye-world"))
+		})
 	})
 
-	It("keeps file permissions", func() {
-		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-			Stream:     stream,
-			TargetPath: targetPath,
-		})).To(Succeed())
+	Describe("permissions", func() {
+		BeforeEach(func() {
+			Expect(ioutil.WriteFile(path.Join(baseImagePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+			Expect(os.Mkdir(path.Join(baseImagePath, "a_dir"), 0700)).To(Succeed())
 
-		filePath := path.Join(targetPath, "a_file")
-		stat, err := os.Stat(filePath)
-		Expect(err).NotTo(HaveOccurred())
+			// We have to chmod it because creat and mkdir syscalls take the umask into
+			// account when applying the permissions. This means that only permissions
+			// less permissive than the umask can be applied to files and directories.
+			// By calling chmod we explicitly apply the permissions without being
+			// subject to the umask.
+			Expect(os.Chmod(path.Join(baseImagePath, "a_file"), 0777)).To(Succeed())
+			Expect(os.Chmod(path.Join(baseImagePath, "a_dir"), 0777)).To(Succeed())
+		})
 
-		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
-	})
+		It("keeps file permissions", func() {
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})).To(Succeed())
 
-	It("keeps directory permissions", func() {
-		Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-			Stream:     stream,
-			TargetPath: targetPath,
-		})).To(Succeed())
+			filePath := path.Join(targetPath, "a_file")
+			stat, err := os.Stat(filePath)
+			Expect(err).NotTo(HaveOccurred())
 
-		filePath := path.Join(targetPath, "subdir", "subdir2")
-		stat, err := os.Stat(filePath)
-		Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
+		})
 
-		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
+		It("keeps directory permissions", func() {
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})).To(Succeed())
+
+			dirPath := path.Join(targetPath, "a_dir")
+			stat, err := os.Stat(dirPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
+		})
 	})
 
 	Context("when the image has links", func() {
 		BeforeEach(func() {
-			Expect(os.Symlink(aFilePath, path.Join(imgPath, "symlink"))).To(Succeed())
-			Expect(os.Link(aFilePath, path.Join(imgPath, "hardlink"))).To(Succeed())
+			aFilePath := path.Join(baseImagePath, "a_file")
+			Expect(ioutil.WriteFile(aFilePath, []byte("hello-world"), 0600)).To(Succeed())
+			Expect(os.Symlink(aFilePath, path.Join(baseImagePath, "symlink"))).To(Succeed())
+			Expect(os.Link(aFilePath, path.Join(baseImagePath, "hardlink"))).To(Succeed())
 		})
 
 		It("unpacks the symlinks", func() {
@@ -168,7 +179,7 @@ var _ = Describe("Tar", func() {
 
 	Context("setuid and setgid permissions", func() {
 		BeforeEach(func() {
-			setuidFilePath := filepath.Join(imgPath, "setuid_file")
+			setuidFilePath := filepath.Join(baseImagePath, "setuid_file")
 			Expect(ioutil.WriteFile(setuidFilePath, []byte("hello-world"), 0755)).To(Succeed())
 			Expect(os.Chmod(setuidFilePath, 0755|os.ModeSetuid|os.ModeSetgid)).To(Succeed())
 		})
@@ -188,26 +199,8 @@ var _ = Describe("Tar", func() {
 		})
 	})
 
-	Context("when there are device files", func() {
-		BeforeEach(func() {
-			Expect(exec.Command("sudo", "mknod", path.Join(imgPath, "somedevice"), "c", "1", "8").Run()).To(Succeed())
-		})
-
-		It("excludes them", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-				Stream:     stream,
-				TargetPath: targetPath,
-			})).To(Succeed())
-
-			filePath := path.Join(targetPath, "somedevice")
-			Expect(filePath).ToNot(BeAnExistingFile())
-		})
-	})
-
 	Context("when it has whiteout files", func() {
 		BeforeEach(func() {
-			Expect(os.Mkdir(targetPath, 0755)).To(Succeed())
-
 			// Add some pre-existing files in the rootfs
 			Expect(ioutil.WriteFile(path.Join(targetPath, "b_file"), []byte(""), 0600)).To(Succeed())
 			Expect(os.Mkdir(path.Join(targetPath, "a_dir"), 0755)).To(Succeed())
@@ -216,10 +209,10 @@ var _ = Describe("Tar", func() {
 			Expect(ioutil.WriteFile(path.Join(targetPath, "b_dir", "a_file"), []byte(""), 0600)).To(Succeed())
 
 			// Add some whiteouts
-			Expect(ioutil.WriteFile(path.Join(imgPath, ".wh.b_file"), []byte(""), 0600)).To(Succeed())
-			Expect(os.Mkdir(path.Join(imgPath, "a_dir"), 0755)).To(Succeed())
-			Expect(ioutil.WriteFile(path.Join(imgPath, "a_dir", ".wh.a_file"), []byte(""), 0600)).To(Succeed())
-			Expect(ioutil.WriteFile(path.Join(imgPath, ".wh.b_dir"), []byte(""), 0600)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(baseImagePath, ".wh.b_file"), []byte(""), 0600)).To(Succeed())
+			Expect(os.Mkdir(path.Join(baseImagePath, "a_dir"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(baseImagePath, "a_dir", ".wh.a_file"), []byte(""), 0600)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(baseImagePath, ".wh.b_dir"), []byte(""), 0600)).To(Succeed())
 		})
 
 		It("deletes the pre-existing files", func() {
@@ -254,10 +247,10 @@ var _ = Describe("Tar", func() {
 
 		Context("when there are opaque whiteouts", func() {
 			BeforeEach(func() {
-				Expect(os.Mkdir(path.Join(imgPath, "whiteout_dir"), 0755)).To(Succeed())
-				Expect(ioutil.WriteFile(path.Join(imgPath, "whiteout_dir", "a_file"), []byte(""), 0600)).To(Succeed())
-				Expect(ioutil.WriteFile(path.Join(imgPath, "whiteout_dir", "b_file"), []byte(""), 0600)).To(Succeed())
-				Expect(ioutil.WriteFile(path.Join(imgPath, "whiteout_dir", ".wh..wh..opq"), []byte(""), 0600)).To(Succeed())
+				Expect(os.Mkdir(path.Join(baseImagePath, "whiteout_dir"), 0755)).To(Succeed())
+				Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", "a_file"), []byte(""), 0600)).To(Succeed())
+				Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", "b_file"), []byte(""), 0600)).To(Succeed())
+				Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", ".wh..wh..opq"), []byte(""), 0600)).To(Succeed())
 			})
 
 			It("cleans up the folder", func() {
@@ -296,20 +289,11 @@ var _ = Describe("Tar", func() {
 			stream.Write([]byte("not-a-tar"))
 		})
 
-		It("returns an error", func() {
+		It("returns the error", func() {
 			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).NotTo(Succeed())
-		})
-
-		It("returns the command output", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-				Stream:     stream,
-				TargetPath: targetPath,
-			})).To(
-				MatchError(ContainSubstring("tar:")),
-			)
+			})).To(MatchError(ContainSubstring("unexpected EOF")))
 		})
 	})
 
@@ -324,9 +308,9 @@ var _ = Describe("Tar", func() {
 		})
 	})
 
-	Context("when the target directory exists", func() {
+	Context("when the target does not exist", func() {
 		It("still works", func() {
-			Expect(os.Mkdir(targetPath, 0770)).To(Succeed())
+			Expect(os.RemoveAll(targetPath)).To(Succeed())
 
 			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
