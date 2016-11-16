@@ -3,6 +3,7 @@ package groot
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
@@ -45,6 +46,10 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 	parsedURL, err := url.Parse(spec.BaseImage)
 	if err != nil {
 		return Image{}, fmt.Errorf("parsing image url: %s", err)
+	}
+
+	if strings.ContainsAny(spec.ID, "/") {
+		return Image{}, fmt.Errorf("id `%s` contains invalid characters: `/`", spec.ID)
 	}
 
 	ok, err := c.imageCloner.Exists(spec.ID)

@@ -225,6 +225,19 @@ var _ = Describe("Creator", func() {
 			})
 		})
 
+		Context("when the id contains invalid characters", func() {
+			It("returns an error", func() {
+				_, err := creator.Create(logger, groot.CreateSpec{
+					BaseImage: "/path/to/image",
+					ID:        "some/id",
+				})
+				Expect(err).To(HaveOccurred())
+
+				Expect(fakeImageCloner.CreateCallCount()).To(Equal(0))
+				Expect(err).To(MatchError(ContainSubstring("id `some/id` contains invalid characters: `/`")))
+			})
+		})
+
 		Context("when acquiring the lock fails", func() {
 			BeforeEach(func() {
 				fakeLocksmith.LockReturns(nil, errors.New("failed to lock"))

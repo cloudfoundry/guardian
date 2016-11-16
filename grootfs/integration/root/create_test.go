@@ -21,8 +21,8 @@ import (
 var _ = Describe("Create", func() {
 	var (
 		baseImagePath string
-		rootUID   int
-		rootGID   int
+		rootUID       int
+		rootGID       int
 	)
 
 	BeforeEach(func() {

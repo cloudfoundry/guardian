@@ -181,6 +181,25 @@ var _ = Describe("Create", func() {
 		})
 	})
 
+	Context("when the id is not provided", func() {
+		It("fails", func() {
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath)
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(1))
+		})
+	})
+
+	Context("when the id contains invalid characters", func() {
+		It("fails", func() {
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath, "this/is/not/okay")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(1))
+			Eventually(sess.Out).Should(gbytes.Say("id `this/is/not/okay` contains invalid characters: `/`"))
+		})
+	})
+
 	Context("when groot does not have permissions to apply the requested mapping", func() {
 		It("returns the newuidmap output in the stdout", func() {
 			cmd := exec.Command(
@@ -213,15 +232,6 @@ var _ = Describe("Create", func() {
 			Expect(sess.Wait()).NotTo(gexec.Exit(0))
 
 			Expect(path.Join(StorePath, CurrentUserID, "images", "some-id")).ToNot(BeAnExistingFile())
-		})
-	})
-
-	Context("when the id is not provided", func() {
-		It("fails", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath)
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
 		})
 	})
 
