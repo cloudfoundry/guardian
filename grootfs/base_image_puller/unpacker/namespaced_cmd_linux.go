@@ -4,17 +4,16 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"syscall"
 
 	"code.cloudfoundry.org/commandrunner"
-	"code.cloudfoundry.org/lager/chug"
 	"github.com/docker/docker/pkg/reexec"
+	"github.com/tscolari/lagregator"
 	"github.com/urfave/cli"
 
-	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -113,8 +112,7 @@ func (u *NamespacedUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 
 	outBuffer := bytes.NewBuffer([]byte{})
 	unpackCmd.Stdout = outBuffer
-	logBuffer := bytes.NewBuffer([]byte{})
-	unpackCmd.Stderr = logBuffer
+	unpackCmd.Stderr = lagregator.NewRelogger(logger)
 	unpackCmd.ExtraFiles = []*os.File{ctrlPipeR}
 
 	logger.Debug("starting-unpack-wrapper-command", lager.Data{
@@ -141,7 +139,6 @@ func (u *NamespacedUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 		return fmt.Errorf(outBuffer.String())
 	}
 	logger.Debug("unpack-wrapper-command-done")
-	u.relogStream(logger, logBuffer)
 
 	return nil
 }
@@ -162,20 +159,4 @@ func (u *NamespacedUnpacker) setIDMappings(logger lager.Logger, spec base_image_
 	}
 
 	return nil
-}
-
-func (u *NamespacedUnpacker) relogStream(logger lager.Logger, stream io.Reader) {
-	entries := make(chan chug.Entry, 1000)
-	chug.Chug(stream, entries)
-
-	for entry := range entries {
-		if entry.IsLager {
-			logger.Debug(entry.Log.Message, lager.Data{
-				"timestamp": entry.Log.Timestamp,
-				"source":    entry.Log.Source,
-				"log_level": entry.Log.LogLevel,
-				"data":      entry.Log.Data,
-			})
-		}
-	}
 }

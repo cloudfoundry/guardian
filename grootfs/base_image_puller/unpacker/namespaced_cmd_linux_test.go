@@ -9,10 +9,10 @@ import (
 	"syscall"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
-	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker/unpackerfakes"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,7 +26,7 @@ var _ = Describe("NamespacedUnpacker", func() {
 		unpacker          *unpackerpkg.NamespacedUnpacker
 
 		logger     *TestLogger
-		imagePath string
+		imagePath  string
 		targetPath string
 
 		commandError error
@@ -117,6 +117,7 @@ var _ = Describe("NamespacedUnpacker", func() {
 			logger := lager.NewLogger("fake-unpack-wrapper")
 			logger.RegisterSink(lager.NewWriterSink(cmd.Stderr, lager.DEBUG))
 			logger.Debug("foo")
+			logger.Info("bar")
 			return nil
 		})
 
@@ -127,6 +128,9 @@ var _ = Describe("NamespacedUnpacker", func() {
 		Expect(logger).To(ContainSequence(
 			Debug(
 				Message("test-store.namespaced-unpacking.fake-unpack-wrapper.foo"),
+			),
+			Info(
+				Message("test-store.namespaced-unpacking.fake-unpack-wrapper.bar"),
 			),
 		))
 	})

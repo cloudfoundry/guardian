@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -14,10 +13,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tscolari/lagregator"
+
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/chug"
 )
 
 type Btrfs struct {
@@ -116,12 +116,10 @@ func (d *Btrfs) destroyQgroup(logger lager.Logger, path string) error {
 	cmd := exec.Command(d.draxBinPath, "destroy", "--volume-path", path)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = stdoutBuffer
-	stderrBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stderr = stderrBuffer
+	cmd.Stderr = lagregator.NewRelogger(logger)
 
 	logger.Debug("starting-drax", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	err := cmd.Run()
-	d.relogStream(logger, stderrBuffer)
 	if err != nil {
 		logger.Error("drax-failed", err)
 		return fmt.Errorf("destroying quota group (%s): %s", err, strings.TrimSpace(stdoutBuffer.String()))
@@ -186,12 +184,10 @@ func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64
 	cmd := exec.Command(d.draxBinPath, args...)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = stdoutBuffer
-	stderrBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stderr = stderrBuffer
+	cmd.Stderr = lagregator.NewRelogger(logger)
 
 	logger.Debug("starting-drax", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	err := cmd.Run()
-	d.relogStream(logger, stderrBuffer)
 
 	if err != nil {
 		logger.Error("drax-failed", err)
@@ -223,8 +219,7 @@ func (d *Btrfs) FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetr
 	cmd := exec.Command(d.draxBinPath, args...)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = stdoutBuffer
-	stderrBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stderr = stderrBuffer
+	cmd.Stderr = lagregator.NewRelogger(logger)
 	err := cmd.Run()
 	if err != nil {
 		logger.Error("drax-failed", err)
@@ -243,24 +238,7 @@ func (d *Btrfs) FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetr
 	fmt.Sscanf(usage[1], "%d", &metrics.DiskUsage.TotalBytesUsed)
 	fmt.Sscanf(usage[2], "%d", &metrics.DiskUsage.ExclusiveBytesUsed)
 
-	d.relogStream(logger, stderrBuffer)
 	return metrics, nil
-}
-
-func (d *Btrfs) relogStream(logger lager.Logger, stream io.Reader) {
-	entries := make(chan chug.Entry, 1000)
-	chug.Chug(stream, entries)
-
-	for entry := range entries {
-		if entry.IsLager {
-			logger.Debug(entry.Log.Message, lager.Data{
-				"timestamp": entry.Log.Timestamp,
-				"source":    entry.Log.Source,
-				"log_level": entry.Log.LogLevel,
-				"data":      entry.Log.Data,
-			})
-		}
-	}
 }
 
 func (d *Btrfs) draxInPath() bool {

@@ -67,3 +67,6 @@
 [submodule "vendor/github.com/st3v/glager"]
 	path = vendor/github.com/st3v/glager
 	url = https://github.com/st3v/glager
+[submodule "vendor/github.com/tscolari/lagregator"]
+	path = vendor/github.com/tscolari/lagregator
+	url = https://github.com/tscolari/lagregator.git
