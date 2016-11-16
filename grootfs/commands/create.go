@@ -111,18 +111,19 @@ var CreateCommand = cli.Command{
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()
 		creator := groot.IamCreator(imageCloner, baseImagePuller, locksmith, rootFSConfigurer, dependencyManager)
 
-		image, err := creator.Create(logger, groot.CreateSpec{
+		createSpec := groot.CreateSpec{
 			ID:                        id,
 			BaseImage:                 baseImage,
 			DiskLimit:                 diskLimit,
 			ExcludeBaseImageFromQuota: ctx.Bool("exclude-image-from-quota"),
 			UIDMappings:               uidMappings,
 			GIDMappings:               gidMappings,
-		})
+		}
+		image, err := creator.Create(logger, createSpec)
 		if err != nil {
 			logger.Error("creating", err)
 
-			humanizedError := tryHumanize(err)
+			humanizedError := tryHumanize(err, createSpec)
 			return cli.NewExitError(humanizedError, 1)
 		}
 
@@ -156,15 +157,15 @@ func containsDockerError(errorsList errcode.Errors, errCode errcode.ErrorCode) b
 	return false
 }
 
-func tryHumanizeDockerErrorsList(err errcode.Errors) string {
+func tryHumanizeDockerErrorsList(err errcode.Errors, spec groot.CreateSpec) string {
 	if containsDockerError(err, errcode.ErrorCodeUnauthorized) {
-		return "BaseImage does not exist or you do not have permissions to see it."
+		return fmt.Sprintf("%s does not exist or you do not have permissions to see it.", spec.BaseImage)
 	}
 
 	return err.Error()
 }
 
-func tryHumanize(err error) string {
+func tryHumanize(err error, spec groot.CreateSpec) string {
 	switch e := errorspkg.Cause(err).(type) {
 	case *url.Error:
 		if _, ok := e.Err.(x509.UnknownAuthorityError); ok {
@@ -172,7 +173,7 @@ func tryHumanize(err error) string {
 		}
 
 	case errcode.Errors:
-		return tryHumanizeDockerErrorsList(e)
+		return tryHumanizeDockerErrorsList(e, spec)
 	}
 
 	return err.Error()

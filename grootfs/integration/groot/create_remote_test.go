@@ -233,7 +233,7 @@ var _ = Describe("Create with remote images", func() {
 				BaseImage: "docker:///cfgaren/sorry-not-here",
 			})
 
-			Eventually(err).Should(MatchError("BaseImage does not exist or you do not have permissions to see it."))
+			Eventually(err).Should(MatchError("docker:///cfgaren/sorry-not-here does not exist or you do not have permissions to see it."))
 		})
 	})
 })
