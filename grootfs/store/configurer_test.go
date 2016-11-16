@@ -5,7 +5,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
@@ -59,24 +58,28 @@ var _ = Describe("Configurer", func() {
 			for i := 0; i < 50; i++ {
 				storePath, err := ioutil.TempDir("", "")
 				Expect(err).NotTo(HaveOccurred())
-				start1 := make(chan bool, 1)
-				start2 := make(chan bool, 1)
+				start1 := make(chan bool)
+				start2 := make(chan bool)
 
 				go func() {
 					defer GinkgoRecover()
 					<-start1
 					Expect(configurer.Ensure(logger, storePath)).To(Succeed())
+					close(start1)
 				}()
 
 				go func() {
 					defer GinkgoRecover()
 					<-start2
 					Expect(configurer.Ensure(logger, storePath)).To(Succeed())
+					close(start2)
 				}()
 
-				time.Sleep(1 * time.Millisecond)
 				start1 <- true
 				start2 <- true
+
+				Eventually(start1).Should(BeClosed())
+				Eventually(start2).Should(BeClosed())
 			}
 		})
 
