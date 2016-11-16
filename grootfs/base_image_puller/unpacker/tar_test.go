@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
@@ -88,6 +89,49 @@ var _ = Describe("Tar unpacker", func() {
 			contents, err := ioutil.ReadFile(filePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("goodbye-world"))
+		})
+	})
+
+	Describe("modification time", func() {
+		var (
+			fileModTime time.Time
+			dirModTime  time.Time
+		)
+
+		BeforeEach(func() {
+			location := time.FixedZone("foo", 0)
+
+			fileModTime = time.Date(2014, 10, 14, 22, 8, 32, 0, location)
+			filePath := path.Join(baseImagePath, "old-file")
+			Expect(ioutil.WriteFile(filePath, []byte("hello-world"), 0600)).To(Succeed())
+			Expect(os.Chtimes(filePath, time.Now(), fileModTime)).To(Succeed())
+
+			dirModTime = time.Date(2014, 9, 3, 22, 8, 32, 0, location)
+			dirPath := path.Join(baseImagePath, "old-dir")
+			Expect(os.Mkdir(dirPath, 0700)).To(Succeed())
+			Expect(os.Chtimes(dirPath, time.Now(), dirModTime)).To(Succeed())
+		})
+
+		It("preserves the modtime for files", func() {
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})).To(Succeed())
+
+			fi, err := os.Stat(path.Join(targetPath, "old-file"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fi.ModTime().Unix()).To(Equal(fileModTime.Unix()))
+		})
+
+		It("preserves the modtime for directories", func() {
+			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})).To(Succeed())
+
+			fi, err := os.Stat(path.Join(targetPath, "old-dir"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fi.ModTime().Unix()).To(Equal(dirModTime.Unix()))
 		})
 	})
 

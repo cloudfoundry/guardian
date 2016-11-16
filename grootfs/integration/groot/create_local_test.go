@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -55,6 +56,26 @@ var _ = Describe("Create with local images", func() {
 		stat, err := os.Stat(permissiveFolderPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
+	})
+
+	It("preserves the timestamps", func() {
+		location := time.FixedZone("foo", 0)
+		modTime := time.Date(2014, 10, 14, 22, 8, 32, 0, location)
+
+		oldFilePath := path.Join(baseImagePath, "old-file")
+		Expect(ioutil.WriteFile(oldFilePath, []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.Chtimes(oldFilePath, time.Now(), modTime)).To(Succeed())
+
+		image, err := integration.CreateImageWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
+			ID:        "random-id",
+			BaseImage: baseImagePath,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		imageOldFilePath := path.Join(image.RootFSPath, "old-file")
+		fi, err := os.Stat(imageOldFilePath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(fi.ModTime().Unix()).To(Equal(modTime.Unix()))
 	})
 
 	Context("when required args are not provided", func() {

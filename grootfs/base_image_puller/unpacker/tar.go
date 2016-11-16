@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
@@ -110,6 +111,10 @@ func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error 
 		return fmt.Errorf("chmoding directory `%s`: %s", path, err)
 	}
 
+	if err := os.Chtimes(path, time.Now(), tarHeader.ModTime); err != nil {
+		return fmt.Errorf("setting the modtime for directory `%s`: %s", path, err)
+	}
+
 	return nil
 }
 
@@ -173,6 +178,10 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 	// we need to explicitly apply perms because mkdir is subject to umask
 	if err := os.Chmod(path, tarHeader.FileInfo().Mode()); err != nil {
 		return fmt.Errorf("chmoding file `%s`: %s", path, err)
+	}
+
+	if err := os.Chtimes(path, time.Now(), tarHeader.ModTime); err != nil {
+		return fmt.Errorf("setting the modtime for file `%s`: %s", path, err)
 	}
 
 	return nil
