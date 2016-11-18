@@ -70,3 +70,12 @@
 [submodule "vendor/github.com/tscolari/lagregator"]
 	path = vendor/github.com/tscolari/lagregator
 	url = https://github.com/tscolari/lagregator.git
+[submodule "vendor/github.com/cloudfoundry/sonde-go"]
+	path = vendor/github.com/cloudfoundry/sonde-go
+	url = https://github.com/cloudfoundry/sonde-go
+[submodule "vendor/github.com/cloudfoundry/dropsonde"]
+	path = vendor/github.com/cloudfoundry/dropsonde
+	url = https://github.com/cloudfoundry/dropsonde
+[submodule "vendor/github.com/gogo/protobuf"]
+	path = vendor/github.com/gogo/protobuf
+	url = https://github.com/gogo/protobuf
