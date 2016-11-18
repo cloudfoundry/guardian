@@ -130,7 +130,13 @@ var _ = Describe("Create with local images", func() {
 
 	Context("when the image has links", func() {
 		BeforeEach(func() {
-			Expect(os.Symlink(filepath.Join(baseImagePath, "foo"), filepath.Join(baseImagePath, "bar"))).To(Succeed())
+			Expect(ioutil.WriteFile(
+				path.Join(baseImagePath, "symlink-target"), []byte("hello-world"), 0644),
+			).To(Succeed())
+			Expect(os.Symlink(
+				filepath.Join(baseImagePath, "symlink-target"),
+				filepath.Join(baseImagePath, "symlink"),
+			)).To(Succeed())
 		})
 
 		It("unpacks the symlinks", func() {
@@ -140,9 +146,37 @@ var _ = Describe("Create with local images", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			content, err := ioutil.ReadFile(filepath.Join(image.RootFSPath, "bar"))
+			content, err := ioutil.ReadFile(filepath.Join(image.RootFSPath, "symlink"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(Equal("hello-world"))
+		})
+
+		It("preserves the timestamps", func() {
+			cmd := exec.Command("touch", "-h", "-d", "2014-01-01", path.Join(baseImagePath, "symlink"))
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess.Wait()).Should(gexec.Exit(0))
+
+			image, err := integration.CreateImageWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
+				ID:        "random-id",
+				BaseImage: baseImagePath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			symlinkTargetFilePath := path.Join(image.RootFSPath, "symlink-target")
+			symlinkTargetFi, err := os.Stat(symlinkTargetFilePath)
+			Expect(err).NotTo(HaveOccurred())
+
+			symlinkFilePath := path.Join(image.RootFSPath, "symlink")
+			symlinkFi, err := os.Lstat(symlinkFilePath)
+			Expect(err).NotTo(HaveOccurred())
+
+			location := time.FixedZone("foo", 0)
+			modTime := time.Date(2014, 01, 01, 0, 0, 0, 0, location)
+			Expect(symlinkTargetFi.ModTime().Unix()).ToNot(
+				Equal(symlinkFi.ModTime().Unix()),
+			)
+			Expect(symlinkFi.ModTime().Unix()).To(Equal(modTime.Unix()))
 		})
 	})
 })

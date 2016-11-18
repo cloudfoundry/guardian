@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
@@ -111,7 +110,7 @@ func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error 
 		return fmt.Errorf("chmoding directory `%s`: %s", path, err)
 	}
 
-	if err := os.Chtimes(path, time.Now(), tarHeader.ModTime); err != nil {
+	if err := changeModTime(path, tarHeader.ModTime); err != nil {
 		return fmt.Errorf("setting the modtime for directory `%s`: %s", path, err)
 	}
 
@@ -146,7 +145,15 @@ func (u *TarUnpacker) removeWhiteout(path string) error {
 }
 
 func (u *TarUnpacker) createSymlink(path string, tarHeader *tar.Header) error {
-	return os.Symlink(tarHeader.Linkname, path)
+	if err := os.Symlink(tarHeader.Linkname, path); err != nil {
+		return fmt.Errorf("create symlink `%s` -> `%s`: %s", tarHeader.Linkname, path, err)
+	}
+
+	if err := changeModTime(path, tarHeader.ModTime); err != nil {
+		return fmt.Errorf("setting the modtime for the symlink `%s`: %s", path, err)
+	}
+
+	return nil
 }
 
 func (u *TarUnpacker) createLink(targetPath, path string, tarHeader *tar.Header) error {
@@ -180,7 +187,7 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 		return fmt.Errorf("chmoding file `%s`: %s", path, err)
 	}
 
-	if err := os.Chtimes(path, time.Now(), tarHeader.ModTime); err != nil {
+	if err := changeModTime(path, tarHeader.ModTime); err != nil {
 		return fmt.Errorf("setting the modtime for file `%s`: %s", path, err)
 	}
 
