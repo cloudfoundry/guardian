@@ -8,7 +8,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 )
 
-func (r *Runner) Create(spec groot.CreateSpec) (groot.Image, error) {
+func (r Runner) Create(spec groot.CreateSpec) (groot.Image, error) {
 	args := r.makeCreateArgs(spec)
 	imagePath, err := r.RunSubcommand("create", args...)
 	if err != nil {
@@ -21,7 +21,7 @@ func (r *Runner) Create(spec groot.CreateSpec) (groot.Image, error) {
 	}, nil
 }
 
-func (r *Runner) makeCreateArgs(spec groot.CreateSpec) []string {
+func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 	args := []string{}
 	for _, mapping := range spec.UIDMappings {
 		args = append(args, "--uid-mapping",

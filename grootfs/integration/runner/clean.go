@@ -2,7 +2,7 @@ package runner
 
 import "strconv"
 
-func (r *Runner) Clean(threshold uint64, ignoredImages []string) (string, error) {
+func (r Runner) Clean(threshold uint64, ignoredImages []string) (string, error) {
 	args := []string{}
 	if threshold > 0 {
 		args = append(args, "--threshold-bytes", strconv.FormatUint(threshold, 10))

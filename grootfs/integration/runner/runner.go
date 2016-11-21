@@ -27,38 +27,38 @@ type Runner struct {
 	Timeout time.Duration
 }
 
-func (r *Runner) WithLogLevel(level lager.LogLevel) *Runner {
-	nr := *r
+func (r Runner) WithLogLevel(level lager.LogLevel) Runner {
+	nr := r
 	nr.LogLevel = level
 	nr.LogLevelSet = true
-	return &nr
+	return nr
 }
 
-func (r *Runner) WithoutLogLevel() *Runner {
-	nr := *r
+func (r Runner) WithoutLogLevel() Runner {
+	nr := r
 	nr.LogLevelSet = false
-	return &nr
+	return nr
 }
 
-func (r *Runner) WithLogFile(path string) *Runner {
-	nr := *r
+func (r Runner) WithLogFile(path string) Runner {
+	nr := r
 	nr.LogFile = path
-	return &nr
+	return nr
 }
 
-func (r *Runner) WithStdout(stdout io.Writer) *Runner {
-	nr := *r
+func (r Runner) WithStdout(stdout io.Writer) Runner {
+	nr := r
 	nr.Stdout = stdout
-	return &nr
+	return nr
 }
 
-func (r *Runner) WithStderr(stderr io.Writer) *Runner {
-	nr := *r
+func (r Runner) WithStderr(stderr io.Writer) Runner {
+	nr := r
 	nr.Stderr = stderr
-	return &nr
+	return nr
 }
 
-func (r *Runner) RunSubcommand(subcommand string, args ...string) (string, error) {
+func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error) {
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	var stdout io.Writer
 	if r.Stdout != nil {
@@ -84,7 +84,7 @@ func (r *Runner) RunSubcommand(subcommand string, args ...string) (string, error
 	return strings.TrimSpace(stdoutBuffer.String()), nil
 }
 
-func (r *Runner) runCmd(cmd *exec.Cmd) error {
+func (r Runner) runCmd(cmd *exec.Cmd) error {
 	if r.Timeout == 0 {
 		return cmd.Run()
 	}
@@ -106,7 +106,7 @@ func (r *Runner) runCmd(cmd *exec.Cmd) error {
 	}
 }
 
-func (r *Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
+func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	allArgs := []string{}
 	if r.LogLevelSet {
 		allArgs = append(allArgs, "--log-level", r.logLevel(r.LogLevel))
@@ -133,7 +133,7 @@ func (r *Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	return cmd
 }
 
-func (r *Runner) logLevel(ll lager.LogLevel) string {
+func (r Runner) logLevel(ll lager.LogLevel) string {
 	switch ll {
 	case lager.DEBUG:
 		return "debug"

@@ -21,7 +21,7 @@ var (
 	GrootFSBin string
 	DraxBin    string
 	StorePath  string
-	Runner     *runner.Runner
+	Runner     runner.Runner
 	storeName  string
 
 	CurrentUserID string
@@ -62,7 +62,7 @@ func TestGroot(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 		testhelpers.SuidDrax(DraxBin)
 
-		r := &runner.Runner{
+		r := runner.Runner{
 			GrootFSBin: GrootFSBin,
 			StorePath:  StorePath,
 			DraxBin:    DraxBin,
