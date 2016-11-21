@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands"
 	"code.cloudfoundry.org/grootfs/commands/storepath"
+	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 
@@ -13,7 +14,9 @@ import (
 	"github.com/urfave/cli"
 )
 
-const DefaultStorePath = "/var/lib/grootfs"
+const (
+	defaultStorePath = "/var/lib/grootfs"
+)
 
 func init() {
 	if reexec.Init() {
@@ -31,7 +34,7 @@ func main() {
 		cli.StringFlag{
 			Name:  "store",
 			Usage: "Path to the store directory",
-			Value: DefaultStorePath,
+			Value: defaultStorePath,
 		},
 		cli.StringFlag{
 			Name:  "log-level",
@@ -47,6 +50,11 @@ func main() {
 			Usage: "Path to drax bin. (If not provided will use $PATH)",
 			Value: "drax",
 		},
+		cli.StringFlag{
+			Name:  "metron-endpoint",
+			Usage: "Metron endpoint used to send metrics",
+			Value: "",
+		},
 	}
 
 	grootfs.Commands = []cli.Command{
@@ -60,6 +68,7 @@ func main() {
 		storePath := ctx.GlobalString("store")
 		logFile := ctx.GlobalString("log-file")
 		logLevel := ctx.String("log-level")
+		metronEndpoint := ctx.String("metron-endpoint")
 
 		// Sadness. We need to do that becuase we use stderr for logs so user
 		// errors need to end up in stdout.
@@ -74,10 +83,20 @@ func main() {
 
 		configurer := store.NewConfigurer()
 		storePath = storepath.UserBased(storePath)
-		return configurer.Ensure(logger, storePath)
+		if err := configurer.Ensure(logger, storePath); err != nil {
+			return err
+		}
+
+		metricsEmitter, err := metrics.NewEmitter(metronEndpoint)
+		if err != nil {
+			logger.Error("failed-to-initialize-emitter", err)
+		}
+		ctx.App.Metadata["metricsEmitter"] = metricsEmitter
+
+		return nil
 	}
 
-	grootfs.Run(os.Args)
+	_ = grootfs.Run(os.Args)
 }
 
 func translateLogLevel(logLevel string) lager.LogLevel {

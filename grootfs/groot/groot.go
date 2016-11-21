@@ -3,12 +3,16 @@ package groot // import "code.cloudfoundry.org/grootfs/groot"
 import (
 	"net/url"
 	"os"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-const GlobalLockKey = "global-groot-lock"
+const (
+	GlobalLockKey           = "global-groot-lock"
+	MetricImageCreationTime = "ImageCreationTime"
+)
 
 //go:generate counterfeiter . ImageCloner
 //go:generate counterfeiter . BaseImagePuller
@@ -17,6 +21,7 @@ const GlobalLockKey = "global-groot-lock"
 //go:generate counterfeiter . GarbageCollector
 //go:generate counterfeiter . StoreMeasurer
 //go:generate counterfeiter . RootFSConfigurer
+//go:generate counterfeiter . MetricsEmitter
 
 type IDMappingSpec struct {
 	HostID      int
@@ -82,6 +87,10 @@ type StoreMeasurer interface {
 type Locksmith interface {
 	Lock(key string) (*os.File, error)
 	Unlock(lockFile *os.File) error
+}
+
+type MetricsEmitter interface {
+	EmitDuration(name string, duration time.Duration) error
 }
 
 type DiskUsage struct {

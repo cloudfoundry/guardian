@@ -14,6 +14,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	. "github.com/st3v/glager"
 )
 
 var _ = Describe("Creator", func() {
@@ -23,6 +24,7 @@ var _ = Describe("Creator", func() {
 		fakeLocksmith         *grootfakes.FakeLocksmith
 		fakeRootFSConfigurer  *grootfakes.FakeRootFSConfigurer
 		fakeDependencyManager *grootfakes.FakeDependencyManager
+		fakeMetricsEmitter    *grootfakes.FakeMetricsEmitter
 		lockFile              *os.File
 
 		creator *groot.Creator
@@ -30,23 +32,24 @@ var _ = Describe("Creator", func() {
 	)
 
 	BeforeEach(func() {
-		var err error
-
 		fakeImageCloner = new(grootfakes.FakeImageCloner)
 		fakeBaseImagePuller = new(grootfakes.FakeBaseImagePuller)
-
 		fakeLocksmith = new(grootfakes.FakeLocksmith)
+		fakeRootFSConfigurer = new(grootfakes.FakeRootFSConfigurer)
+		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
+		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
+
+		var err error
 		lockFile, err = ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
 		fakeLocksmith.LockReturns(lockFile, nil)
-		fakeRootFSConfigurer = new(grootfakes.FakeRootFSConfigurer)
-		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
+
+		logger = lagertest.NewTestLogger("creator")
 
 		creator = groot.IamCreator(
 			fakeImageCloner, fakeBaseImagePuller, fakeLocksmith,
-			fakeRootFSConfigurer, fakeDependencyManager,
+			fakeRootFSConfigurer, fakeDependencyManager, fakeMetricsEmitter,
 		)
-		logger = lagertest.NewTestLogger("creator")
 	})
 
 	AfterEach(func() {
@@ -151,6 +154,18 @@ var _ = Describe("Creator", func() {
 			image, err := creator.Create(logger, groot.CreateSpec{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(image.Path).To(Equal("/path/to/image"))
+		})
+
+		It("emits metrics for creation", func() {
+			_, err := creator.Create(logger, groot.CreateSpec{
+				BaseImage: "/path/to/image",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeMetricsEmitter.EmitDurationCallCount()).To(Equal(1))
+			name, duration := fakeMetricsEmitter.EmitDurationArgsForCall(0)
+			Expect(name).To(Equal(groot.MetricImageCreationTime))
+			Expect(duration).NotTo(BeZero())
 		})
 
 		Context("when the image is not a valid URL", func() {
@@ -380,6 +395,49 @@ var _ = Describe("Creator", func() {
 					},
 					DiskLimit: int64(1024),
 				}))
+			})
+		})
+
+		Context("when emitting metrics fails", func() {
+			var emitError error
+
+			BeforeEach(func() {
+				emitError = errors.New("failed to emit metric")
+				fakeMetricsEmitter.EmitDurationReturns(emitError)
+			})
+
+			It("does not fail but log the error", func() {
+				_, err := creator.Create(logger, groot.CreateSpec{
+					BaseImage: "/path/to/image",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(logger).To(ContainSequence(
+					Error(
+						emitError,
+						Message("creator.groot-creating.failed-to-emit-metric"),
+						Data(
+							"key", groot.MetricImageCreationTime,
+						),
+					),
+				))
+			})
+		})
+
+		Context("when an emitter is not passed", func() {
+			BeforeEach(func() {
+				creator = groot.IamCreator(
+					fakeImageCloner, fakeBaseImagePuller, fakeLocksmith,
+					fakeRootFSConfigurer, fakeDependencyManager, nil,
+				)
+			})
+
+			It("does not expode", func() {
+				_, err := creator.Create(logger, groot.CreateSpec{
+					ID:        "some-id",
+					BaseImage: "/path/to/image",
+				})
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

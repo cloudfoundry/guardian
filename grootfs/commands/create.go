@@ -13,6 +13,7 @@ import (
 	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
@@ -58,6 +59,18 @@ var CreateCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("create")
+
+		var metricsEmitter groot.MetricsEmitter
+		ctxMetricsEmitter := ctx.App.Metadata["metricsEmitter"]
+		// We have to check nil like that because of how interfaces and reflection
+		// work. It turns out that ctxMetricsEmitter is at this point of type
+		// interface{} and an interface stores two pieces of information: the
+		// actual value and the type.  Therefore, a simple `ctxMetricsEmitter ==
+		// nil` does not really do the trick because plain `nil` is untyped.
+		// ...sorry :(
+		if ctxMetricsEmitter != (*metrics.Emitter)(nil) {
+			metricsEmitter = ctxMetricsEmitter.(groot.MetricsEmitter)
+		}
 
 		if ctx.NArg() != 2 {
 			logger.Error("parsing-command", errors.New("invalid arguments"), lager.Data{"args": ctx.Args()})
@@ -107,9 +120,15 @@ var CreateCommand = cli.Command{
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
 		)
-		baseImagePuller := base_image_puller.NewBaseImagePuller(localFetcher, remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver, dependencyManager)
+		baseImagePuller := base_image_puller.NewBaseImagePuller(
+			localFetcher, remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver,
+			dependencyManager,
+		)
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()
-		creator := groot.IamCreator(imageCloner, baseImagePuller, locksmith, rootFSConfigurer, dependencyManager)
+		creator := groot.IamCreator(
+			imageCloner, baseImagePuller, locksmith, rootFSConfigurer,
+			dependencyManager, metricsEmitter,
+		)
 
 		createSpec := groot.CreateSpec{
 			ID:                        id,

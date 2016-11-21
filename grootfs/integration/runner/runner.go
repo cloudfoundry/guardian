@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"os/exec"
 	"strings"
 	"time"
@@ -20,11 +21,20 @@ type Runner struct {
 	LogLevelSet bool
 	LogLevel    lager.LogLevel
 	LogFile     string
+	MetronHost  net.IP
+	MetronPort  uint16
 
 	Stdout io.Writer
 	Stderr io.Writer
 
 	Timeout time.Duration
+}
+
+func (r Runner) WithMetronEndpoint(host net.IP, port uint16) Runner {
+	nr := r
+	nr.MetronHost = host
+	nr.MetronPort = port
+	return nr
 }
 
 func (r Runner) WithLogLevel(level lager.LogLevel) Runner {
@@ -117,6 +127,10 @@ func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	allArgs = append(allArgs, "--store", r.StorePath)
 	if r.DraxBin != "" {
 		allArgs = append(allArgs, "--drax-bin", r.DraxBin)
+	}
+	if r.MetronHost != nil && r.MetronPort != 0 {
+		metronEndpoint := fmt.Sprintf("%s:%d", r.MetronHost.String(), r.MetronPort)
+		allArgs = append(allArgs, "--metron-endpoint", metronEndpoint)
 	}
 
 	allArgs = append(allArgs, subcommand)

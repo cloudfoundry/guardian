@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
@@ -26,19 +27,26 @@ type Creator struct {
 	locksmith         Locksmith
 	rootFSConfigurer  RootFSConfigurer
 	dependencyManager DependencyManager
+	metricsEmitter    MetricsEmitter
 }
 
-func IamCreator(imageCloner ImageCloner, baseImagePuller BaseImagePuller, locksmith Locksmith, rootFSConfigurer RootFSConfigurer, dependencyManager DependencyManager) *Creator {
+func IamCreator(
+	imageCloner ImageCloner, baseImagePuller BaseImagePuller,
+	locksmith Locksmith, rootFSConfigurer RootFSConfigurer,
+	dependencyManager DependencyManager, metricsEmitter MetricsEmitter,
+) *Creator {
 	return &Creator{
 		imageCloner:       imageCloner,
 		baseImagePuller:   baseImagePuller,
 		locksmith:         locksmith,
 		rootFSConfigurer:  rootFSConfigurer,
 		dependencyManager: dependencyManager,
+		metricsEmitter:    metricsEmitter,
 	}
 }
 
 func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
+	startTime := time.Now()
 	logger = logger.Session("groot-creating", lager.Data{"imageID": spec.ID, "spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -110,6 +118,16 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 		}
 
 		return Image{}, err
+	}
+
+	if c.metricsEmitter != nil {
+		duration := time.Since(startTime)
+		if err := c.metricsEmitter.EmitDuration(MetricImageCreationTime, duration); err != nil {
+			logger.Error("failed-to-emit-metric", err, lager.Data{
+				"key":      MetricImageCreationTime,
+				"duration": duration,
+			})
+		}
 	}
 
 	return image, nil
