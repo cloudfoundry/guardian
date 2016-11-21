@@ -32,7 +32,7 @@ func (c *Cleaner) Clean(logger lager.Logger, threshold uint64, keepImages []stri
 		}
 	}
 
-	lockFile, err := c.locksmith.Lock(GLOBAL_LOCK_KEY)
+	lockFile, err := c.locksmith.Lock(GlobalLockKey)
 	if err != nil {
 		return false, err
 	}

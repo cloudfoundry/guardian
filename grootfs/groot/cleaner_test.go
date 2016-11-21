@@ -66,7 +66,7 @@ var _ = Describe("Cleaner", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
-			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GLOBAL_LOCK_KEY))
+			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GlobalLockKey))
 		})
 
 		Context("when acquiring the lock fails", func() {

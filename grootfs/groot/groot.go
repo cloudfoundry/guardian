@@ -8,7 +8,7 @@ import (
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-const GLOBAL_LOCK_KEY = "global-groot-lock"
+const GlobalLockKey = "global-groot-lock"
 
 //go:generate counterfeiter . ImageCloner
 //go:generate counterfeiter . BaseImagePuller

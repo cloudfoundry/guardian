@@ -68,7 +68,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 		GIDMappings:               spec.GIDMappings,
 	}
 
-	lockFile, err := c.locksmith.Lock(GLOBAL_LOCK_KEY)
+	lockFile, err := c.locksmith.Lock(GlobalLockKey)
 	if err != nil {
 		return Image{}, err
 	}
