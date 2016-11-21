@@ -35,7 +35,7 @@ update-deps:
 test:
 	ginkgo -r -p -race -skipPackage integration .
 
-concourse-test:
+concourse-test: go-vet
 	./hack/run-tests -r -g "-p"
 
 ###### Go tools ###############################################################
