@@ -65,8 +65,6 @@ func (m *FakeMetron) Run() error {
 			m.mtx.Unlock()
 		}
 	}
-
-	return nil
 }
 
 func (m *FakeMetron) isStopped() bool {
