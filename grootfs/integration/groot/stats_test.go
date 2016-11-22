@@ -43,8 +43,8 @@ var _ = Describe("Stats", func() {
 		})
 
 		Context("when the last parameter is the image ID", func() {
-			It("returns the metrics for given image id", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics", "random-id")
+			It("returns the stats for given image id", func() {
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "stats", "random-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
@@ -54,8 +54,8 @@ var _ = Describe("Stats", func() {
 		})
 
 		Context("when the last parameter is the image path", func() {
-			It("returns the metrics for given image path", func() {
-				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "--drax-bin", DraxBin, "metrics", image.Path)
+			It("returns the stats for given image path", func() {
+				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "--drax-bin", DraxBin, "stats", image.Path)
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
@@ -68,7 +68,7 @@ var _ = Describe("Stats", func() {
 	Context("when the image id doesn't exist", func() {
 		Context("when the last parameter is a image id", func() {
 			It("returns an error", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics", "invalid-id")
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "stats", "invalid-id")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
@@ -79,7 +79,7 @@ var _ = Describe("Stats", func() {
 		Context("when the last parameter is a path", func() {
 			It("returns an error", func() {
 				imagePath := filepath.Join(StorePath, CurrentUserID, store.IMAGES_DIR_NAME, "not-here")
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics", imagePath)
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "stats", imagePath)
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
@@ -88,7 +88,7 @@ var _ = Describe("Stats", func() {
 
 			Context("when the path provided doesn't belong to the `--store` provided", func() {
 				It("returns an error", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "metrics", "/Iamnot/in/the/storage/images/1234/rootfs")
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "stats", "/Iamnot/in/the/storage/images/1234/rootfs")
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
 					Eventually(sess).Should(gexec.Exit(1))
@@ -100,7 +100,7 @@ var _ = Describe("Stats", func() {
 
 	Context("when the image id is not provided", func() {
 		It("returns an error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "metrics")
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "stats")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))

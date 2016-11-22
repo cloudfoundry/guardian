@@ -17,14 +17,14 @@ import (
 	"github.com/urfave/cli"
 )
 
-var MetricsCommand = cli.Command{
-	Name:        "metrics",
-	Usage:       "metrics [options] <id>",
-	Description: "Return filesystem metrics",
+var StatsCommand = cli.Command{
+	Name:        "stats",
+	Usage:       "stats [options] <id>",
+	Description: "Return filesystem stats",
 
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
-		logger = logger.Session("metrics")
+		logger = logger.Session("stats")
 
 		storePath := ctx.GlobalString("store")
 		if ctx.NArg() != 1 {
@@ -51,14 +51,14 @@ var MetricsCommand = cli.Command{
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
 		metricsEmitter := metrics.NewEmitter()
-		metricser := groot.IamMetricser(imageCloner, metricsEmitter)
-		metrics, err := metricser.Metrics(logger, id)
+		statser := groot.IamStatser(imageCloner, metricsEmitter)
+		stats, err := statser.Stats(logger, id)
 		if err != nil {
-			logger.Error("fetching-metrics", err)
+			logger.Error("fetching-stats", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		json.NewEncoder(os.Stdout).Encode(metrics)
+		json.NewEncoder(os.Stdout).Encode(stats)
 		return nil
 	},
 }

@@ -19,7 +19,7 @@ import (
 type SnapshotDriver interface {
 	Snapshot(logger lager.Logger, fromPath, toPath string) error
 	ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusive bool) error
-	FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetrics, error)
+	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
 	Destroy(logger lager.Logger, path string) error
 }
 
@@ -133,19 +133,19 @@ func (b *ImageCloner) Exists(id string) (bool, error) {
 	return true, nil
 }
 
-func (b *ImageCloner) Metrics(logger lager.Logger, id string) (groot.VolumeMetrics, error) {
-	logger = logger.Session("fetching-metrics", lager.Data{"id": id})
+func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, error) {
+	logger = logger.Session("fetching-stats", lager.Data{"id": id})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	if ok, err := b.Exists(id); !ok {
 		logger.Error("checking-image-path-failed", err)
-		return groot.VolumeMetrics{}, fmt.Errorf("image not found: %s", id)
+		return groot.VolumeStats{}, fmt.Errorf("image not found: %s", id)
 	}
 
 	image := b.createImage(id)
 
-	return b.snapshotDriver.FetchMetrics(logger, image.RootFSPath)
+	return b.snapshotDriver.FetchStats(logger, image.RootFSPath)
 }
 
 func (b *ImageCloner) deleteImageDir(image groot.Image) error {

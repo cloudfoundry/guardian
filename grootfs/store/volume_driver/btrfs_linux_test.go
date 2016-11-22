@@ -460,7 +460,7 @@ var _ = Describe("Btrfs", func() {
 		})
 	})
 
-	Describe("FetchMetrics", func() {
+	Describe("FetchStats", func() {
 		var toPath string
 
 		BeforeEach(func() {
@@ -483,19 +483,19 @@ var _ = Describe("Btrfs", func() {
 				Expect(btrfs.Snapshot(logger, volPath, toPath)).To(Succeed())
 			})
 
-			It("returns the correct metrics", func() {
+			It("returns the correct stats", func() {
 				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(toPath, "hello")), "bs=4210688", "count=1")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
 
-				metrics, err := btrfs.FetchMetrics(logger, toPath)
+				stats, err := btrfs.FetchStats(logger, toPath)
 				Expect(err).ToNot(HaveOccurred())
 
 				// Block math craziness -> 1* 4210688 ~= 4227072
-				Expect(metrics.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(4227072)))
+				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(4227072)))
 				// Block math craziness -> 2* 4227072 ~= 8437760
-				Expect(metrics.DiskUsage.TotalBytesUsed).To(Equal(int64(8437760)))
+				Expect(stats.DiskUsage.TotalBytesUsed).To(Equal(int64(8437760)))
 			})
 
 			Context("when drax does not exist", func() {
@@ -504,7 +504,7 @@ var _ = Describe("Btrfs", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := btrfs.FetchMetrics(logger, toPath)
+					_, err := btrfs.FetchStats(logger, toPath)
 					Expect(err).To(MatchError(ContainSubstring("drax was not found in the $PATH")))
 				})
 			})
@@ -515,7 +515,7 @@ var _ = Describe("Btrfs", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := btrfs.FetchMetrics(logger, toPath)
+					_, err := btrfs.FetchStats(logger, toPath)
 					Expect(err).To(MatchError(ContainSubstring("missing the setuid bit on drax")))
 				})
 			})
@@ -527,7 +527,7 @@ var _ = Describe("Btrfs", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := btrfs.FetchMetrics(logger, toPath)
+				_, err := btrfs.FetchStats(logger, toPath)
 				Expect(err).To(MatchError(ContainSubstring("is not a btrfs volume")))
 			})
 		})
@@ -538,7 +538,7 @@ var _ = Describe("Btrfs", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := btrfs.FetchMetrics(logger, toPath)
+				_, err := btrfs.FetchStats(logger, toPath)
 				Expect(err).To(MatchError(ContainSubstring("No such file or directory")))
 			})
 		})

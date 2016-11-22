@@ -197,21 +197,21 @@ func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64
 	return nil
 }
 
-func (d *Btrfs) FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetrics, error) {
-	logger = logger.Session("btrfs-fetching-metrics", lager.Data{"path": path})
+func (d *Btrfs) FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error) {
+	logger = logger.Session("btrfs-fetching-stats", lager.Data{"path": path})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	if !d.draxInPath() {
-		return groot.VolumeMetrics{}, errors.New("drax was not found in the $PATH")
+		return groot.VolumeStats{}, errors.New("drax was not found in the $PATH")
 	}
 
 	if !d.hasSUID() {
-		return groot.VolumeMetrics{}, errors.New("missing the setuid bit on drax")
+		return groot.VolumeStats{}, errors.New("missing the setuid bit on drax")
 	}
 
 	args := []string{
-		"metrics",
+		"stats",
 		"--volume-path", path,
 		"--force-sync",
 	}
@@ -223,22 +223,22 @@ func (d *Btrfs) FetchMetrics(logger lager.Logger, path string) (groot.VolumeMetr
 	err := cmd.Run()
 	if err != nil {
 		logger.Error("drax-failed", err)
-		return groot.VolumeMetrics{}, fmt.Errorf("%s: %s", err, strings.TrimSpace(stdoutBuffer.String()))
+		return groot.VolumeStats{}, fmt.Errorf("%s: %s", err, strings.TrimSpace(stdoutBuffer.String()))
 	}
 
 	usageRegexp := regexp.MustCompile(`.*\s+(\d+)\s+(\d+)$`)
 	usage := usageRegexp.FindStringSubmatch(strings.TrimSpace(stdoutBuffer.String()))
 
-	var metrics groot.VolumeMetrics
+	var stats groot.VolumeStats
 	if len(usage) != 3 {
-		logger.Error("parsing-metrics-failed", fmt.Errorf("raw metrics: %s", stdoutBuffer.String()))
-		return metrics, errors.New("could not parse metrics")
+		logger.Error("parsing-stats-failed", fmt.Errorf("raw stats: %s", stdoutBuffer.String()))
+		return stats, errors.New("could not parse stats")
 	}
 
-	fmt.Sscanf(usage[1], "%d", &metrics.DiskUsage.TotalBytesUsed)
-	fmt.Sscanf(usage[2], "%d", &metrics.DiskUsage.ExclusiveBytesUsed)
+	fmt.Sscanf(usage[1], "%d", &stats.DiskUsage.TotalBytesUsed)
+	fmt.Sscanf(usage[2], "%d", &stats.DiskUsage.ExclusiveBytesUsed)
 
-	return metrics, nil
+	return stats, nil
 }
 
 func (d *Btrfs) draxInPath() bool {

@@ -104,7 +104,7 @@ var _ = Describe("Metrics", func() {
 		})
 	})
 
-	Describe("Metrics", func() {
+	Describe("Stats", func() {
 		BeforeEach(func() {
 			_, err := Runner.
 				Create(groot.CreateSpec{
@@ -117,7 +117,7 @@ var _ = Describe("Metrics", func() {
 		It("emits the total time for metrics command", func() {
 			err := Runner.
 				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Metrics("my-id")
+				Stats("my-id")
 			Expect(err).NotTo(HaveOccurred())
 
 			var metrics []events.ValueMetric

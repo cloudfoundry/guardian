@@ -374,14 +374,14 @@ var _ = Describe("Image", func() {
 		})
 	})
 
-	Describe("Metrics", func() {
+	Describe("Stats", func() {
 		var (
 			imagePath, imageRootFSPath string
-			metrics                    groot.VolumeMetrics
+			stats                      groot.VolumeStats
 		)
 
 		BeforeEach(func() {
-			metrics = groot.VolumeMetrics{
+			stats = groot.VolumeStats{
 				DiskUsage: groot.DiskUsage{
 					TotalBytesUsed:     int64(1024),
 					ExclusiveBytesUsed: int64(1024),
@@ -394,34 +394,34 @@ var _ = Describe("Image", func() {
 			Expect(os.MkdirAll(imageRootFSPath, 0755)).To(Succeed())
 		})
 
-		It("fetches the metrics", func() {
-			_, err := imageCloner.Metrics(logger, "some-id")
+		It("fetches the stats", func() {
+			_, err := imageCloner.Stats(logger, "some-id")
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(fakeSnapshotDriver.FetchMetricsCallCount()).To(Equal(1))
+			Expect(fakeSnapshotDriver.FetchStatsCallCount()).To(Equal(1))
 		})
 
-		It("returns the metrics", func() {
-			fakeSnapshotDriver.FetchMetricsReturns(metrics, nil)
+		It("returns the stats", func() {
+			fakeSnapshotDriver.FetchStatsReturns(stats, nil)
 
-			m, err := imageCloner.Metrics(logger, "some-id")
+			m, err := imageCloner.Stats(logger, "some-id")
 
 			Expect(err).ToNot(HaveOccurred())
-			Expect(m).To(Equal(metrics))
+			Expect(m).To(Equal(stats))
 		})
 
 		Context("when image does not exist", func() {
 			It("returns an error", func() {
-				_, err := imageCloner.Metrics(logger, "cake")
+				_, err := imageCloner.Stats(logger, "cake")
 				Expect(err).To(MatchError(ContainSubstring("image not found")))
 			})
 		})
 
 		Context("when the snapshot driver fails", func() {
 			It("returns an error", func() {
-				fakeSnapshotDriver.FetchMetricsReturns(groot.VolumeMetrics{}, errors.New("failed"))
+				fakeSnapshotDriver.FetchStatsReturns(groot.VolumeStats{}, errors.New("failed"))
 
-				_, err := imageCloner.Metrics(logger, "some-id")
+				_, err := imageCloner.Stats(logger, "some-id")
 				Expect(err).To(MatchError("failed"))
 			})
 		})

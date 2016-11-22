@@ -37,14 +37,14 @@ type FakeImageCloner struct {
 	destroyReturns struct {
 		result1 error
 	}
-	MetricsStub        func(logger lager.Logger, id string) (groot.VolumeMetrics, error)
-	metricsMutex       sync.RWMutex
-	metricsArgsForCall []struct {
+	StatsStub        func(logger lager.Logger, id string) (groot.VolumeStats, error)
+	statsMutex       sync.RWMutex
+	statsArgsForCall []struct {
 		logger lager.Logger
 		id     string
 	}
-	metricsReturns struct {
-		result1 groot.VolumeMetrics
+	statsReturns struct {
+		result1 groot.VolumeStats
 		result2 error
 	}
 	invocations      map[string][][]interface{}
@@ -154,37 +154,37 @@ func (fake *FakeImageCloner) DestroyReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeImageCloner) Metrics(logger lager.Logger, id string) (groot.VolumeMetrics, error) {
-	fake.metricsMutex.Lock()
-	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
+func (fake *FakeImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, error) {
+	fake.statsMutex.Lock()
+	fake.statsArgsForCall = append(fake.statsArgsForCall, struct {
 		logger lager.Logger
 		id     string
 	}{logger, id})
-	fake.recordInvocation("Metrics", []interface{}{logger, id})
-	fake.metricsMutex.Unlock()
-	if fake.MetricsStub != nil {
-		return fake.MetricsStub(logger, id)
+	fake.recordInvocation("Stats", []interface{}{logger, id})
+	fake.statsMutex.Unlock()
+	if fake.StatsStub != nil {
+		return fake.StatsStub(logger, id)
 	} else {
-		return fake.metricsReturns.result1, fake.metricsReturns.result2
+		return fake.statsReturns.result1, fake.statsReturns.result2
 	}
 }
 
-func (fake *FakeImageCloner) MetricsCallCount() int {
-	fake.metricsMutex.RLock()
-	defer fake.metricsMutex.RUnlock()
-	return len(fake.metricsArgsForCall)
+func (fake *FakeImageCloner) StatsCallCount() int {
+	fake.statsMutex.RLock()
+	defer fake.statsMutex.RUnlock()
+	return len(fake.statsArgsForCall)
 }
 
-func (fake *FakeImageCloner) MetricsArgsForCall(i int) (lager.Logger, string) {
-	fake.metricsMutex.RLock()
-	defer fake.metricsMutex.RUnlock()
-	return fake.metricsArgsForCall[i].logger, fake.metricsArgsForCall[i].id
+func (fake *FakeImageCloner) StatsArgsForCall(i int) (lager.Logger, string) {
+	fake.statsMutex.RLock()
+	defer fake.statsMutex.RUnlock()
+	return fake.statsArgsForCall[i].logger, fake.statsArgsForCall[i].id
 }
 
-func (fake *FakeImageCloner) MetricsReturns(result1 groot.VolumeMetrics, result2 error) {
-	fake.MetricsStub = nil
-	fake.metricsReturns = struct {
-		result1 groot.VolumeMetrics
+func (fake *FakeImageCloner) StatsReturns(result1 groot.VolumeStats, result2 error) {
+	fake.StatsStub = nil
+	fake.statsReturns = struct {
+		result1 groot.VolumeStats
 		result2 error
 	}{result1, result2}
 }
@@ -198,8 +198,8 @@ func (fake *FakeImageCloner) Invocations() map[string][][]interface{} {
 	defer fake.createMutex.RUnlock()
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
-	fake.metricsMutex.RLock()
-	defer fake.metricsMutex.RUnlock()
+	fake.statsMutex.RLock()
+	defer fake.statsMutex.RUnlock()
 	return fake.invocations
 }
 

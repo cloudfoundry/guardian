@@ -10,18 +10,18 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type BtrfsMetrics struct {
+type BtrfsStats struct {
 	commandRunner commandrunner.CommandRunner
 }
 
-func NewBtrfsMetrics(commandRunner commandrunner.CommandRunner) *BtrfsMetrics {
-	return &BtrfsMetrics{
+func NewBtrfsStats(commandRunner commandrunner.CommandRunner) *BtrfsStats {
+	return &BtrfsStats{
 		commandRunner: commandRunner,
 	}
 }
 
-func (m *BtrfsMetrics) VolumeMetrics(logger lager.Logger, path string, forceSync bool) ([]byte, error) {
-	logger = logger.Session("btrfs-fetching-volume-metrics", lager.Data{"path": path, "forceSync": forceSync})
+func (m *BtrfsStats) VolumeStats(logger lager.Logger, path string, forceSync bool) ([]byte, error) {
+	logger = logger.Session("btrfs-fetching-volume-stats", lager.Data{"path": path, "forceSync": forceSync})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -58,7 +58,7 @@ func (m *BtrfsMetrics) VolumeMetrics(logger lager.Logger, path string, forceSync
 	return outputBuffer.Bytes(), nil
 }
 
-func (m *BtrfsMetrics) isSubvolume(logger lager.Logger, path string) error {
+func (m *BtrfsStats) isSubvolume(logger lager.Logger, path string) error {
 	cmd := exec.Command("btrfs", "subvolume", "show", path)
 	combinedBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stderr = combinedBuffer

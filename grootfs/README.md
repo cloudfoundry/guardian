@@ -26,7 +26,7 @@ invitation.
 * [Installation](#installation)
 * [Create an image](#creating-an-image)
 * [Delete an image](#deleting-an-image)
-* [Metrics](#metrics)
+* [Stats](#stats)
 * [Logging](#logging)
 * [Clean up](#clean-up)
 * [Known Issues](#known-issues)
@@ -202,13 +202,13 @@ grootfs --log-level debug --log-file /var/log/grootfs.log create ...
 ```
 
 
-### Metrics
+### Stats
 
-You can get metrics from an image by calling `grootfs metrics` with the
+You can get stats from an image by calling `grootfs stats` with the
 image-id:
 
 ```
-grootfs --store /mnt/btrfs metrics my-image-id
+grootfs --store /mnt/btrfs stats my-image-id
 ```
 
 Or the image path:
@@ -316,4 +316,4 @@ to clean up a store that does not belong to her/him the command fails.
 
 * The calling user can only cleanup the cached volumes that it owns.
 
-* The calling user can only request metrics for the rootfs that it owns.
+* The calling user can only request stats for the rootfs that it owns.

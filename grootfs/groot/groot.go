@@ -67,7 +67,7 @@ type ImageCloner interface {
 	Exists(id string) (bool, error)
 	Create(logger lager.Logger, spec ImageSpec) (Image, error)
 	Destroy(logger lager.Logger, id string) error
-	Metrics(logger lager.Logger, id string) (VolumeMetrics, error)
+	Stats(logger lager.Logger, id string) (VolumeStats, error)
 }
 
 type RootFSConfigurer interface {
@@ -101,6 +101,6 @@ type DiskUsage struct {
 	ExclusiveBytesUsed int64 `json:"exclusive_bytes_used"`
 }
 
-type VolumeMetrics struct {
+type VolumeStats struct {
 	DiskUsage DiskUsage `json:"disk_usage"`
 }

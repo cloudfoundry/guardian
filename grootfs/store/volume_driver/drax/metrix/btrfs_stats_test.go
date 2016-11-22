@@ -14,43 +14,43 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Metrics", func() {
+var _ = Describe("Stats", func() {
 	var (
-		metrics []byte
+		stats []byte
 
 		fakeCommandRunner *fake_command_runner.FakeCommandRunner
-		btrfsMetrics      *metrix.BtrfsMetrics
+		btrfsStats        *metrix.BtrfsStats
 		logger            lager.Logger
 	)
 
 	BeforeEach(func() {
-		metrics = []byte(`qgroupid         rfer         excl\n--------         ----         ----\n0/259         2113536      1064960`)
+		stats = []byte(`qgroupid         rfer         excl\n--------         ----         ----\n0/259         2113536      1064960`)
 
 		fakeCommandRunner = fake_command_runner.New()
-		btrfsMetrics = metrix.NewBtrfsMetrics(fakeCommandRunner)
+		btrfsStats = metrix.NewBtrfsStats(fakeCommandRunner)
 		logger = lagertest.NewTestLogger("drax-limiter")
 	})
 
-	Describe("VolumeMetrics", func() {
+	Describe("VolumeStats", func() {
 		BeforeEach(func() {
 			fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "btrfs",
 				Args: []string{"qgroup", "show", "--raw", "-F", "/full/path/to/volume"},
 			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write(metrics)
+				cmd.Stdout.Write(stats)
 				return nil
 			})
 		})
 
 		It("returns the parsed output", func() {
-			m, err := btrfsMetrics.VolumeMetrics(logger, "/full/path/to/volume", false)
+			m, err := btrfsStats.VolumeStats(logger, "/full/path/to/volume", false)
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(m).To(Equal(metrics))
+			Expect(m).To(Equal(stats))
 		})
 
 		It("runs the correct btrfs command", func() {
-			_, err := btrfsMetrics.VolumeMetrics(logger, "/full/path/to/volume", false)
+			_, err := btrfsStats.VolumeStats(logger, "/full/path/to/volume", false)
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fakeCommandRunner).Should(HaveExecutedSerially(fake_command_runner.CommandSpec{
@@ -61,7 +61,7 @@ var _ = Describe("Metrics", func() {
 
 		Context("when force-sync is not given", func() {
 			It("does not sync the filesystem", func() {
-				_, err := btrfsMetrics.VolumeMetrics(logger, "/full/path/to/volume", false)
+				_, err := btrfsStats.VolumeStats(logger, "/full/path/to/volume", false)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(fakeCommandRunner).ShouldNot(HaveExecutedSerially(
@@ -75,7 +75,7 @@ var _ = Describe("Metrics", func() {
 
 		Context("when force-sync is given", func() {
 			It("forces the filesystem to sync", func() {
-				_, err := btrfsMetrics.VolumeMetrics(logger, "/full/path/to/volume", true)
+				_, err := btrfsStats.VolumeStats(logger, "/full/path/to/volume", true)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(fakeCommandRunner).Should(HaveExecutedSerially(
@@ -103,7 +103,7 @@ var _ = Describe("Metrics", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := btrfsMetrics.VolumeMetrics(logger, "/full/path/to/volume", true)
+					_, err := btrfsStats.VolumeStats(logger, "/full/path/to/volume", true)
 					Expect(err).To(MatchError(ContainSubstring("failed to sync stuff")))
 					Expect(err).To(MatchError(ContainSubstring("some stderr text")))
 				})
@@ -123,7 +123,7 @@ var _ = Describe("Metrics", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := btrfsMetrics.VolumeMetrics(logger, "/full/path/to/volume", true)
+				_, err := btrfsStats.VolumeStats(logger, "/full/path/to/volume", true)
 				Expect(err).To(MatchError(ContainSubstring("failed to show stuff")))
 				Expect(err).To(MatchError(ContainSubstring("some stderr text")))
 			})
@@ -142,7 +142,7 @@ var _ = Describe("Metrics", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := btrfsMetrics.VolumeMetrics(logger, "/full/path/to/volume", true)
+				_, err := btrfsStats.VolumeStats(logger, "/full/path/to/volume", true)
 				Expect(err).To(MatchError(ContainSubstring("is not a btrfs volume")))
 			})
 		})
@@ -150,7 +150,7 @@ var _ = Describe("Metrics", func() {
 		Context("when qgroup fails", func() {
 			BeforeEach(func() {
 				fakeCommandRunner = fake_command_runner.New()
-				btrfsMetrics = metrix.NewBtrfsMetrics(fakeCommandRunner)
+				btrfsStats = metrix.NewBtrfsStats(fakeCommandRunner)
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "btrfs",
 					Args: []string{"qgroup", "show", "--raw", "-F", "/full/path/to/volume"},
@@ -162,7 +162,7 @@ var _ = Describe("Metrics", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := btrfsMetrics.VolumeMetrics(logger, "/full/path/to/volume", true)
+				_, err := btrfsStats.VolumeStats(logger, "/full/path/to/volume", true)
 				Expect(err).To(MatchError(ContainSubstring("some stderr text")))
 				Expect(err).To(MatchError(ContainSubstring("failed to sync stuff")))
 			})

@@ -12,48 +12,48 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Metricser", func() {
+var _ = Describe("Statser", func() {
 	var (
 		fakeImageCloner    *grootfakes.FakeImageCloner
 		fakeMetricsEmitter *grootfakes.FakeMetricsEmitter
-		metricser          *groot.Metricser
+		statser            *groot.Statser
 		logger             lager.Logger
 	)
 
 	BeforeEach(func() {
 		fakeImageCloner = new(grootfakes.FakeImageCloner)
 		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
-		metricser = groot.IamMetricser(fakeImageCloner, fakeMetricsEmitter)
-		logger = lagertest.NewTestLogger("metricser")
+		statser = groot.IamStatser(fakeImageCloner, fakeMetricsEmitter)
+		logger = lagertest.NewTestLogger("statser")
 	})
 
-	Describe("Metrics", func() {
-		It("asks for metrics from the imageCloner", func() {
-			fakeImageCloner.MetricsReturns(groot.VolumeMetrics{}, nil)
-			_, err := metricser.Metrics(logger, "some-id")
+	Describe("Stats", func() {
+		It("asks for stats from the imageCloner", func() {
+			fakeImageCloner.StatsReturns(groot.VolumeStats{}, nil)
+			_, err := statser.Stats(logger, "some-id")
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(fakeImageCloner.MetricsCallCount()).To(Equal(1))
-			_, id := fakeImageCloner.MetricsArgsForCall(0)
+			Expect(fakeImageCloner.StatsCallCount()).To(Equal(1))
+			_, id := fakeImageCloner.StatsArgsForCall(0)
 			Expect(id).To(Equal("some-id"))
 		})
 
-		It("asks for metrics from the imageCloner", func() {
-			metrics := groot.VolumeMetrics{
+		It("asks for stats from the imageCloner", func() {
+			stats := groot.VolumeStats{
 				DiskUsage: groot.DiskUsage{
 					TotalBytesUsed:     1024,
 					ExclusiveBytesUsed: 512,
 				},
 			}
-			fakeImageCloner.MetricsReturns(metrics, nil)
+			fakeImageCloner.StatsReturns(stats, nil)
 
-			returnedMetrics, err := metricser.Metrics(logger, "some-id")
+			returnedStats, err := statser.Stats(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
-			Expect(returnedMetrics).To(Equal(metrics))
+			Expect(returnedStats).To(Equal(stats))
 		})
 
-		It("emits metrics for metrics", func() {
-			_, err := metricser.Metrics(logger, "some-id")
+		It("emits metrics for stats", func() {
+			_, err := statser.Stats(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeMetricsEmitter.TryEmitDurationCallCount()).To(Equal(1))
@@ -64,9 +64,9 @@ var _ = Describe("Metricser", func() {
 
 		Context("when imageCloner fails", func() {
 			It("returns an error", func() {
-				fakeImageCloner.MetricsReturns(groot.VolumeMetrics{}, errors.New("sorry"))
+				fakeImageCloner.StatsReturns(groot.VolumeStats{}, errors.New("sorry"))
 
-				_, err := metricser.Metrics(logger, "some-id")
+				_, err := statser.Stats(logger, "some-id")
 				Expect(err).To(MatchError(ContainSubstring("sorry")))
 			})
 		})
