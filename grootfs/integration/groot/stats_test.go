@@ -29,6 +29,8 @@ var _ = Describe("Stats", func() {
 	})
 
 	Context("when image exists", func() {
+		var expectedStats groot.VolumeStats
+
 		BeforeEach(func() {
 			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "fatfile")), "bs=1048576", "count=5")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -40,27 +42,29 @@ var _ = Describe("Stats", func() {
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
+			expectedStats = groot.VolumeStats{
+				DiskUsage: groot.DiskUsage{
+					TotalBytesUsed:     9453568,
+					ExclusiveBytesUsed: 4210688,
+				},
+			}
 		})
 
 		Context("when the last parameter is the image ID", func() {
 			It("returns the stats for given image id", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "stats", "random-id")
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
+				stats, err := Runner.Stats("random-id")
+				Expect(err).NotTo(HaveOccurred())
 
-				Eventually(sess.Out).Should(gbytes.Say(`{"disk_usage":{"total_bytes_used":9453568,"exclusive_bytes_used":4210688}}`))
+				Expect(stats).To(Equal(expectedStats))
 			})
 		})
 
 		Context("when the last parameter is the image path", func() {
 			It("returns the stats for given image path", func() {
-				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "--drax-bin", DraxBin, "stats", image.Path)
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
+				stats, err := Runner.Stats(image.Path)
+				Expect(err).NotTo(HaveOccurred())
 
-				Eventually(sess.Out).Should(gbytes.Say(`{"disk_usage":{"total_bytes_used":9453568,"exclusive_bytes_used":4210688}}`))
+				Expect(stats).To(Equal(expectedStats))
 			})
 		})
 	})
@@ -68,31 +72,22 @@ var _ = Describe("Stats", func() {
 	Context("when the image id doesn't exist", func() {
 		Context("when the last parameter is a image id", func() {
 			It("returns an error", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "stats", "invalid-id")
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(1))
-				Eventually(sess.Out).Should(gbytes.Say("image not found: invalid-id"))
+				_, err := Runner.Stats("invalid-id")
+				Expect(err).To(MatchError(ContainSubstring("image not found: invalid-id")))
 			})
 		})
 
 		Context("when the last parameter is a path", func() {
 			It("returns an error", func() {
-				imagePath := filepath.Join(StorePath, CurrentUserID, store.IMAGES_DIR_NAME, "not-here")
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "stats", imagePath)
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(1))
-				Eventually(sess.Out).Should(gbytes.Say("image not found: not-here"))
+				invalidImagePath := filepath.Join(StorePath, CurrentUserID, store.IMAGES_DIR_NAME, "not-here")
+				_, err := Runner.Stats(invalidImagePath)
+				Expect(err).To(MatchError(ContainSubstring("image not found: not-here")))
 			})
 
 			Context("when the path provided doesn't belong to the `--store` provided", func() {
 				It("returns an error", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "stats", "/Iamnot/in/the/storage/images/1234/rootfs")
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).ToNot(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(1))
-					Eventually(sess.Out).Should(gbytes.Say("path `/Iamnot/in/the/storage/images/1234/rootfs` is outside store path"))
+					_, err := Runner.Stats("/Iamnot/in/the/storage/images/1234/rootfs")
+					Expect(err).To(MatchError(ContainSubstring("path `/Iamnot/in/the/storage/images/1234/rootfs` is outside store path")))
 				})
 			})
 		})
