@@ -155,7 +155,7 @@ var _ = Describe("Creator", func() {
 			Expect(image.Path).To(Equal("/path/to/image"))
 		})
 
-		It("emits metrics for deletion", func() {
+		It("emits metrics for creation", func() {
 			_, err := creator.Create(logger, groot.CreateSpec{
 				ID:        "some-id",
 				BaseImage: "/path/to/image",

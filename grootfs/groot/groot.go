@@ -14,6 +14,7 @@ const (
 	MetricImageCreationTime = "ImageCreationTime"
 	MetricImageDeletionTime = "ImageDeletionTime"
 	MetricImageStatsTime    = "ImageStatsTime"
+	MetricImageCleanTime    = "ImageCleanTime"
 )
 
 //go:generate counterfeiter . ImageCloner

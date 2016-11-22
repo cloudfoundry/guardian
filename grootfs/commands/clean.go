@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
@@ -52,7 +53,8 @@ var CleanCommand = cli.Command{
 		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, imageCloner, dependencyManager)
 
 		ignoredImages := ctx.StringSlice("ignore-image")
-		cleaner := groot.IamCleaner(locksmith, sm, gc)
+		metricsEmitter := metrics.NewEmitter()
+		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 		noop, err := cleaner.Clean(logger, ctx.Uint64("threshold-bytes"), ignoredImages)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)

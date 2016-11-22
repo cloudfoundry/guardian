@@ -1,22 +1,33 @@
 package groot
 
-import "code.cloudfoundry.org/lager"
+import (
+	"time"
+
+	"code.cloudfoundry.org/lager"
+)
 
 type Cleaner struct {
 	storeMeasurer    StoreMeasurer
 	garbageCollector GarbageCollector
 	locksmith        Locksmith
+	metricsEmitter   MetricsEmitter
 }
 
-func IamCleaner(locksmith Locksmith, sm StoreMeasurer, gc GarbageCollector) *Cleaner {
+func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
+	gc GarbageCollector, metricsEmitter MetricsEmitter,
+) *Cleaner {
 	return &Cleaner{
 		locksmith:        locksmith,
 		storeMeasurer:    sm,
 		garbageCollector: gc,
+		metricsEmitter:   metricsEmitter,
 	}
 }
 
 func (c *Cleaner) Clean(logger lager.Logger, threshold uint64, keepImages []string) (bool, error) {
+	startTime := time.Now()
+	defer c.metricsEmitter.TryEmitDuration(logger, MetricImageCleanTime, time.Since(startTime))
+
 	logger = logger.Session("groot-cleaning")
 	logger.Info("start")
 	defer logger.Info("end")

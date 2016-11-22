@@ -48,15 +48,15 @@ var _ = Describe("Metrics", func() {
 				})
 			Expect(err).NotTo(HaveOccurred())
 
-			var imageCreationTimeMetrics []events.ValueMetric
+			var metrics []events.ValueMetric
 			Eventually(func() []events.ValueMetric {
-				imageCreationTimeMetrics = fakeMetron.ValueMetricsFor("ImageCreationTime")
-				return imageCreationTimeMetrics
+				metrics = fakeMetron.ValueMetricsFor("ImageCreationTime")
+				return metrics
 			}).Should(HaveLen(1))
 
-			Expect(*imageCreationTimeMetrics[0].Name).To(Equal("ImageCreationTime"))
-			Expect(*imageCreationTimeMetrics[0].Unit).To(Equal("nanos"))
-			Expect(*imageCreationTimeMetrics[0].Value).NotTo(BeZero())
+			Expect(*metrics[0].Name).To(Equal("ImageCreationTime"))
+			Expect(*metrics[0].Unit).To(Equal("nanos"))
+			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
 		Context("when the metron endpoint is not provided", func() {
@@ -92,15 +92,15 @@ var _ = Describe("Metrics", func() {
 				Delete("my-id")
 			Expect(err).NotTo(HaveOccurred())
 
-			var imageDeletionTimeMetrics []events.ValueMetric
+			var metrics []events.ValueMetric
 			Eventually(func() []events.ValueMetric {
-				imageDeletionTimeMetrics = fakeMetron.ValueMetricsFor("ImageDeletionTime")
-				return imageDeletionTimeMetrics
+				metrics = fakeMetron.ValueMetricsFor("ImageDeletionTime")
+				return metrics
 			}).Should(HaveLen(1))
 
-			Expect(*imageDeletionTimeMetrics[0].Name).To(Equal("ImageDeletionTime"))
-			Expect(*imageDeletionTimeMetrics[0].Unit).To(Equal("nanos"))
-			Expect(*imageDeletionTimeMetrics[0].Value).NotTo(BeZero())
+			Expect(*metrics[0].Name).To(Equal("ImageDeletionTime"))
+			Expect(*metrics[0].Unit).To(Equal("nanos"))
+			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 	})
 
@@ -120,15 +120,43 @@ var _ = Describe("Metrics", func() {
 				Metrics("my-id")
 			Expect(err).NotTo(HaveOccurred())
 
-			var imageMetricTimeMetrics []events.ValueMetric
+			var metrics []events.ValueMetric
 			Eventually(func() []events.ValueMetric {
-				imageMetricTimeMetrics = fakeMetron.ValueMetricsFor("ImageStatsTime")
-				return imageMetricTimeMetrics
+				metrics = fakeMetron.ValueMetricsFor("ImageStatsTime")
+				return metrics
 			}).Should(HaveLen(1))
 
-			Expect(*imageMetricTimeMetrics[0].Name).To(Equal("ImageStatsTime"))
-			Expect(*imageMetricTimeMetrics[0].Unit).To(Equal("nanos"))
-			Expect(*imageMetricTimeMetrics[0].Value).NotTo(BeZero())
+			Expect(*metrics[0].Name).To(Equal("ImageStatsTime"))
+			Expect(*metrics[0].Unit).To(Equal("nanos"))
+			Expect(*metrics[0].Value).NotTo(BeZero())
+		})
+	})
+
+	Describe("Clean", func() {
+		BeforeEach(func() {
+			_, err := Runner.
+				Create(groot.CreateSpec{
+					ID:        "my-id",
+					BaseImage: "docker:///cfgarden/empty:v0.1.0",
+				})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("emits the total clean time", func() {
+			_, err := Runner.
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+				Clean(0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("ImageCleanTime")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("ImageCleanTime"))
+			Expect(*metrics[0].Unit).To(Equal("nanos"))
+			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 	})
 })

@@ -19,6 +19,7 @@ var _ = Describe("Cleaner", func() {
 		fakeLocksmith        *grootfakes.FakeLocksmith
 		fakeStoreMeasurer    *grootfakes.FakeStoreMeasurer
 		fakeGarbageCollector *grootfakes.FakeGarbageCollector
+		fakeMetricsEmitter   *grootfakes.FakeMetricsEmitter
 		lockFile             *os.File
 
 		cleaner *groot.Cleaner
@@ -34,8 +35,10 @@ var _ = Describe("Cleaner", func() {
 
 		fakeStoreMeasurer = new(grootfakes.FakeStoreMeasurer)
 		fakeGarbageCollector = new(grootfakes.FakeGarbageCollector)
+		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
 
-		cleaner = groot.IamCleaner(fakeLocksmith, fakeStoreMeasurer, fakeGarbageCollector)
+		cleaner = groot.IamCleaner(fakeLocksmith, fakeStoreMeasurer,
+			fakeGarbageCollector, fakeMetricsEmitter)
 		logger = lagertest.NewTestLogger("cleaner")
 	})
 
@@ -67,6 +70,16 @@ var _ = Describe("Cleaner", func() {
 
 			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
 			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GlobalLockKey))
+		})
+
+		It("emits metrics for clean", func() {
+			_, err := cleaner.Clean(logger, 0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeMetricsEmitter.TryEmitDurationCallCount()).To(Equal(1))
+			_, name, duration := fakeMetricsEmitter.TryEmitDurationArgsForCall(0)
+			Expect(name).To(Equal(groot.MetricImageCleanTime))
+			Expect(duration).NotTo(BeZero())
 		})
 
 		Context("when acquiring the lock fails", func() {
