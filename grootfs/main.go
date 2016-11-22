@@ -6,17 +6,15 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands"
 	"code.cloudfoundry.org/grootfs/commands/storepath"
-	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/urfave/cli"
 )
 
-const (
-	defaultStorePath = "/var/lib/grootfs"
-)
+const defaultStorePath = "/var/lib/grootfs"
 
 func init() {
 	if reexec.Init() {
@@ -87,11 +85,10 @@ func main() {
 			return err
 		}
 
-		metricsEmitter, err := metrics.NewEmitter(metronEndpoint)
-		if err != nil {
-			logger.Error("failed-to-initialize-emitter", err)
+		dropsondeOrigin := grootfs.Name
+		if err := dropsonde.Initialize(metronEndpoint, dropsondeOrigin); err != nil {
+			logger.Error("failed-to-initialize-metrics-emitter", err)
 		}
-		ctx.App.Metadata["metricsEmitter"] = metricsEmitter
 
 		return nil
 	}

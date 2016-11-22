@@ -3,23 +3,23 @@ package metrics
 import (
 	"time"
 
-	"github.com/cloudfoundry/dropsonde"
+	"code.cloudfoundry.org/lager"
+
 	"github.com/cloudfoundry/dropsonde/metrics"
 )
-
-const dropsondeOrigin = "grootfs"
 
 type Emitter struct {
 }
 
-func NewEmitter(metronEndpoint string) (*Emitter, error) {
-	if err := dropsonde.Initialize(metronEndpoint, dropsondeOrigin); err != nil {
-		return nil, err
-	}
-
-	return &Emitter{}, nil
+func NewEmitter() *Emitter {
+	return &Emitter{}
 }
 
-func (e *Emitter) EmitDuration(name string, duration time.Duration) error {
-	return metrics.SendValue(name, float64(duration), "nanos")
+func (e *Emitter) TryEmitDuration(logger lager.Logger, name string, duration time.Duration) {
+	if err := metrics.SendValue(name, float64(duration), "nanos"); err != nil {
+		logger.Error("failed-to-emit-metric", err, lager.Data{
+			"key":      name,
+			"duration": duration,
+		})
+	}
 }

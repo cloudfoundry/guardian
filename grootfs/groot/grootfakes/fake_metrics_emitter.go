@@ -6,61 +6,52 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/lager"
 )
 
 type FakeMetricsEmitter struct {
-	EmitDurationStub        func(name string, duration time.Duration) error
-	emitDurationMutex       sync.RWMutex
-	emitDurationArgsForCall []struct {
+	TryEmitDurationStub        func(logger lager.Logger, name string, duration time.Duration)
+	tryEmitDurationMutex       sync.RWMutex
+	tryEmitDurationArgsForCall []struct {
+		logger   lager.Logger
 		name     string
 		duration time.Duration
-	}
-	emitDurationReturns struct {
-		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeMetricsEmitter) EmitDuration(name string, duration time.Duration) error {
-	fake.emitDurationMutex.Lock()
-	fake.emitDurationArgsForCall = append(fake.emitDurationArgsForCall, struct {
+func (fake *FakeMetricsEmitter) TryEmitDuration(logger lager.Logger, name string, duration time.Duration) {
+	fake.tryEmitDurationMutex.Lock()
+	fake.tryEmitDurationArgsForCall = append(fake.tryEmitDurationArgsForCall, struct {
+		logger   lager.Logger
 		name     string
 		duration time.Duration
-	}{name, duration})
-	fake.recordInvocation("EmitDuration", []interface{}{name, duration})
-	fake.emitDurationMutex.Unlock()
-	if fake.EmitDurationStub != nil {
-		return fake.EmitDurationStub(name, duration)
-	} else {
-		return fake.emitDurationReturns.result1
+	}{logger, name, duration})
+	fake.recordInvocation("TryEmitDuration", []interface{}{logger, name, duration})
+	fake.tryEmitDurationMutex.Unlock()
+	if fake.TryEmitDurationStub != nil {
+		fake.TryEmitDurationStub(logger, name, duration)
 	}
 }
 
-func (fake *FakeMetricsEmitter) EmitDurationCallCount() int {
-	fake.emitDurationMutex.RLock()
-	defer fake.emitDurationMutex.RUnlock()
-	return len(fake.emitDurationArgsForCall)
+func (fake *FakeMetricsEmitter) TryEmitDurationCallCount() int {
+	fake.tryEmitDurationMutex.RLock()
+	defer fake.tryEmitDurationMutex.RUnlock()
+	return len(fake.tryEmitDurationArgsForCall)
 }
 
-func (fake *FakeMetricsEmitter) EmitDurationArgsForCall(i int) (string, time.Duration) {
-	fake.emitDurationMutex.RLock()
-	defer fake.emitDurationMutex.RUnlock()
-	return fake.emitDurationArgsForCall[i].name, fake.emitDurationArgsForCall[i].duration
-}
-
-func (fake *FakeMetricsEmitter) EmitDurationReturns(result1 error) {
-	fake.EmitDurationStub = nil
-	fake.emitDurationReturns = struct {
-		result1 error
-	}{result1}
+func (fake *FakeMetricsEmitter) TryEmitDurationArgsForCall(i int) (lager.Logger, string, time.Duration) {
+	fake.tryEmitDurationMutex.RLock()
+	defer fake.tryEmitDurationMutex.RUnlock()
+	return fake.tryEmitDurationArgsForCall[i].logger, fake.tryEmitDurationArgsForCall[i].name, fake.tryEmitDurationArgsForCall[i].duration
 }
 
 func (fake *FakeMetricsEmitter) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.emitDurationMutex.RLock()
-	defer fake.emitDurationMutex.RUnlock()
+	fake.tryEmitDurationMutex.RLock()
+	defer fake.tryEmitDurationMutex.RUnlock()
 	return fake.invocations
 }
 

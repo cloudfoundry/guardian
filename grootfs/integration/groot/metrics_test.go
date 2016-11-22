@@ -1,6 +1,7 @@
 package groot_test
 
 import (
+	"io"
 	"net"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -8,6 +9,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Metrics", func() {
@@ -55,6 +57,22 @@ var _ = Describe("Metrics", func() {
 			Expect(*imageCreationTimeMetrics[0].Name).To(Equal("ImageCreationTime"))
 			Expect(*imageCreationTimeMetrics[0].Unit).To(Equal("nanos"))
 			Expect(*imageCreationTimeMetrics[0].Value).NotTo(BeZero())
+		})
+
+		Context("when the metron endpoint is not provided", func() {
+			It("complaints but succeeds", func() {
+				buffer := gbytes.NewBuffer()
+
+				_, err := Runner.
+					WithStderr(io.MultiWriter(GinkgoWriter, buffer)).
+					Create(groot.CreateSpec{
+						ID:        "my-id",
+						BaseImage: "docker:///cfgarden/empty:v0.1.0",
+					})
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(buffer).Should(gbytes.Say("failed-to-initialize-metrics-emitter"))
+			})
 		})
 	})
 

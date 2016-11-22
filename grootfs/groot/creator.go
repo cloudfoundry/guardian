@@ -47,6 +47,8 @@ func IamCreator(
 
 func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 	startTime := time.Now()
+	defer c.metricsEmitter.TryEmitDuration(logger, MetricImageCreationTime, time.Since(startTime))
+
 	logger = logger.Session("groot-creating", lager.Data{"imageID": spec.ID, "spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -118,16 +120,6 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 		}
 
 		return Image{}, err
-	}
-
-	if c.metricsEmitter != nil {
-		duration := time.Since(startTime)
-		if err := c.metricsEmitter.EmitDuration(MetricImageCreationTime, duration); err != nil {
-			logger.Error("failed-to-emit-metric", err, lager.Data{
-				"key":      MetricImageCreationTime,
-				"duration": duration,
-			})
-		}
 	}
 
 	return image, nil

@@ -6,6 +6,8 @@ import (
 
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/lager/lagertest"
+	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/sonde-go/events"
 
 	. "github.com/onsi/ginkgo"
@@ -13,21 +15,13 @@ import (
 )
 
 var _ = Describe("Emitter", func() {
-	Describe("NewEmitter", func() {
-		Context("when the metron endpoint is not provided", func() {
-			It("returns an error", func() {
-				_, err := metrics.NewEmitter("")
-				Expect(err).To(MatchError(ContainSubstring("destination variable not set")))
-			})
-		})
-	})
-
-	Describe("EmitDuration", func() {
+	Describe("TryEmitDuration", func() {
 		var (
 			fakeMetronPort   uint16
 			fakeMetron       *testhelpers.FakeMetron
 			fakeMetronClosed chan struct{}
 			emitter          *metrics.Emitter
+			logger           *lagertest.TestLogger
 		)
 
 		BeforeEach(func() {
@@ -36,11 +30,9 @@ var _ = Describe("Emitter", func() {
 			fakeMetron = testhelpers.NewFakeMetron(fakeMetronPort)
 			Expect(fakeMetron.Listen()).To(Succeed())
 
-			var err error
-			emitter, err = metrics.NewEmitter(
-				fmt.Sprintf("127.0.0.1:%d", fakeMetronPort),
-			)
-			Expect(err).NotTo(HaveOccurred())
+			Expect(
+				dropsonde.Initialize(fmt.Sprintf("127.0.0.1:%d", fakeMetronPort), "foo"),
+			).To(Succeed())
 
 			fakeMetronClosed = make(chan struct{})
 			go func() {
@@ -48,6 +40,10 @@ var _ = Describe("Emitter", func() {
 				Expect(fakeMetron.Run()).To(Succeed())
 				close(fakeMetronClosed)
 			}()
+
+			emitter = metrics.NewEmitter()
+
+			logger = lagertest.NewTestLogger("emitter")
 		})
 
 		AfterEach(func() {
@@ -56,7 +52,7 @@ var _ = Describe("Emitter", func() {
 		})
 
 		It("emits metrics", func() {
-			Expect(emitter.EmitDuration("foo", time.Second)).To(Succeed())
+			emitter.TryEmitDuration(logger, "foo", time.Second)
 
 			var fooMetrics []events.ValueMetric
 			Eventually(func() []events.ValueMetric {

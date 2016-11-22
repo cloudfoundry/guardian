@@ -10,7 +10,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/st3v/glager"
 )
 
 var _ = Describe("Deleter", func() {
@@ -57,43 +56,10 @@ var _ = Describe("Deleter", func() {
 		It("emits metrics for deletion", func() {
 			Expect(deleter.Delete(logger, "some-id")).To(Succeed())
 
-			Expect(fakeMetricsEmitter.EmitDurationCallCount()).To(Equal(1))
-			name, duration := fakeMetricsEmitter.EmitDurationArgsForCall(0)
+			Expect(fakeMetricsEmitter.TryEmitDurationCallCount()).To(Equal(1))
+			_, name, duration := fakeMetricsEmitter.TryEmitDurationArgsForCall(0)
 			Expect(name).To(Equal(groot.MetricImageDeletionTime))
 			Expect(duration).NotTo(BeZero())
-		})
-
-		Context("when emitting metrics fails", func() {
-			var emitError error
-
-			BeforeEach(func() {
-				emitError = errors.New("failed to emit metric")
-				fakeMetricsEmitter.EmitDurationReturns(emitError)
-			})
-
-			It("does not fail but log the error", func() {
-				Expect(deleter.Delete(logger, "some-id")).To(Succeed())
-
-				Expect(logger).To(ContainSequence(
-					Error(
-						emitError,
-						Message("deleter.groot-deleting.failed-to-emit-metric"),
-						Data(
-							"key", groot.MetricImageDeletionTime,
-						),
-					),
-				))
-			})
-		})
-
-		Context("when an emitter is not passed", func() {
-			BeforeEach(func() {
-				deleter = groot.IamDeleter(fakeImageCloner, fakeDependencyManager, nil)
-			})
-
-			It("does not expode", func() {
-				Expect(deleter.Delete(logger, "some-id")).To(Succeed())
-			})
 		})
 	})
 })

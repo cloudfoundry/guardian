@@ -14,7 +14,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/st3v/glager"
 )
 
 var _ = Describe("Creator", func() {
@@ -156,14 +155,15 @@ var _ = Describe("Creator", func() {
 			Expect(image.Path).To(Equal("/path/to/image"))
 		})
 
-		It("emits metrics for creation", func() {
+		It("emits metrics for deletion", func() {
 			_, err := creator.Create(logger, groot.CreateSpec{
+				ID:        "some-id",
 				BaseImage: "/path/to/image",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeMetricsEmitter.EmitDurationCallCount()).To(Equal(1))
-			name, duration := fakeMetricsEmitter.EmitDurationArgsForCall(0)
+			Expect(fakeMetricsEmitter.TryEmitDurationCallCount()).To(Equal(1))
+			_, name, duration := fakeMetricsEmitter.TryEmitDurationArgsForCall(0)
 			Expect(name).To(Equal(groot.MetricImageCreationTime))
 			Expect(duration).NotTo(BeZero())
 		})
@@ -395,49 +395,6 @@ var _ = Describe("Creator", func() {
 					},
 					DiskLimit: int64(1024),
 				}))
-			})
-		})
-
-		Context("when emitting metrics fails", func() {
-			var emitError error
-
-			BeforeEach(func() {
-				emitError = errors.New("failed to emit metric")
-				fakeMetricsEmitter.EmitDurationReturns(emitError)
-			})
-
-			It("does not fail but log the error", func() {
-				_, err := creator.Create(logger, groot.CreateSpec{
-					BaseImage: "/path/to/image",
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(logger).To(ContainSequence(
-					Error(
-						emitError,
-						Message("creator.groot-creating.failed-to-emit-metric"),
-						Data(
-							"key", groot.MetricImageCreationTime,
-						),
-					),
-				))
-			})
-		})
-
-		Context("when an emitter is not passed", func() {
-			BeforeEach(func() {
-				creator = groot.IamCreator(
-					fakeImageCloner, fakeBaseImagePuller, fakeLocksmith,
-					fakeRootFSConfigurer, fakeDependencyManager, nil,
-				)
-			})
-
-			It("does not expode", func() {
-				_, err := creator.Create(logger, groot.CreateSpec{
-					ID:        "some-id",
-					BaseImage: "/path/to/image",
-				})
-				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

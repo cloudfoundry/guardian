@@ -60,18 +60,6 @@ var CreateCommand = cli.Command{
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("create")
 
-		var metricsEmitter groot.MetricsEmitter
-		ctxMetricsEmitter := ctx.App.Metadata["metricsEmitter"]
-		// We have to check nil like that because of how interfaces and reflection
-		// work. It turns out that ctxMetricsEmitter is at this point of type
-		// interface{} and an interface stores two pieces of information: the
-		// actual value and the type.  Therefore, a simple `ctxMetricsEmitter ==
-		// nil` does not really do the trick because plain `nil` is untyped.
-		// ...sorry :(
-		if ctxMetricsEmitter != (*metrics.Emitter)(nil) {
-			metricsEmitter = ctxMetricsEmitter.(groot.MetricsEmitter)
-		}
-
 		if ctx.NArg() != 2 {
 			logger.Error("parsing-command", errors.New("invalid arguments"), lager.Data{"args": ctx.Args()})
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
@@ -125,6 +113,7 @@ var CreateCommand = cli.Command{
 			dependencyManager,
 		)
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()
+		metricsEmitter := metrics.NewEmitter()
 		creator := groot.IamCreator(
 			imageCloner, baseImagePuller, locksmith, rootFSConfigurer,
 			dependencyManager, metricsEmitter,

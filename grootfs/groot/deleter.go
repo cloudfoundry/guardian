@@ -23,24 +23,17 @@ func IamDeleter(imageCloner ImageCloner, dependencyManager DependencyManager, me
 
 func (d *Deleter) Delete(logger lager.Logger, id string) error {
 	startTime := time.Now()
+	defer d.metricsEmitter.TryEmitDuration(logger, MetricImageDeletionTime, time.Since(startTime))
+
 	logger = logger.Session("groot-deleting", lager.Data{"imageID": id})
 	logger.Info("start")
 	defer logger.Info("end")
 
 	err := d.imageCloner.Destroy(logger, id)
+
 	imageRefName := fmt.Sprintf(ImageReferenceFormat, id)
 	if derErr := d.dependencyManager.Deregister(imageRefName); derErr != nil {
 		logger.Error("failed-to-deregister-dependencies", derErr)
-	}
-
-	if d.metricsEmitter != nil {
-		duration := time.Since(startTime)
-		if err := d.metricsEmitter.EmitDuration(MetricImageDeletionTime, duration); err != nil {
-			logger.Error("failed-to-emit-metric", err, lager.Data{
-				"key":      MetricImageDeletionTime,
-				"duration": duration,
-			})
-		}
 	}
 
 	return err
