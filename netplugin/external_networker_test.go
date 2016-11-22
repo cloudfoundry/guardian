@@ -396,7 +396,7 @@ var _ = Describe("ExternalNetworker", func() {
 			}
 		})
 
-		It("calls NetOut for each rule", func() {
+		It("calls BulkNetOut passing all the rules", func() {
 			Expect(plugin.BulkNetOut(logger, handle, rules)).To(Succeed())
 
 			Expect(fakeCommandRunner.ExecutedCommands()).To(HaveLen(1))
