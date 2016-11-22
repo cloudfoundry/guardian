@@ -12,6 +12,7 @@ import (
 const (
 	GlobalLockKey           = "global-groot-lock"
 	MetricImageCreationTime = "ImageCreationTime"
+	MetricImageDeletionTime = "ImageDeletionTime"
 )
 
 //go:generate counterfeiter . ImageCloner

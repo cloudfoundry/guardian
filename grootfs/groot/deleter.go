@@ -2,6 +2,7 @@ package groot
 
 import (
 	"fmt"
+	"time"
 
 	"code.cloudfoundry.org/lager"
 )
@@ -9,16 +10,19 @@ import (
 type Deleter struct {
 	imageCloner       ImageCloner
 	dependencyManager DependencyManager
+	metricsEmitter    MetricsEmitter
 }
 
-func IamDeleter(imageCloner ImageCloner, dependencyManager DependencyManager) *Deleter {
+func IamDeleter(imageCloner ImageCloner, dependencyManager DependencyManager, metricsEmitter MetricsEmitter) *Deleter {
 	return &Deleter{
 		imageCloner:       imageCloner,
 		dependencyManager: dependencyManager,
+		metricsEmitter:    metricsEmitter,
 	}
 }
 
 func (d *Deleter) Delete(logger lager.Logger, id string) error {
+	startTime := time.Now()
 	logger = logger.Session("groot-deleting", lager.Data{"imageID": id})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -27,6 +31,16 @@ func (d *Deleter) Delete(logger lager.Logger, id string) error {
 	imageRefName := fmt.Sprintf(ImageReferenceFormat, id)
 	if derErr := d.dependencyManager.Deregister(imageRefName); derErr != nil {
 		logger.Error("failed-to-deregister-dependencies", derErr)
+	}
+
+	if d.metricsEmitter != nil {
+		duration := time.Since(startTime)
+		if err := d.metricsEmitter.EmitDuration(MetricImageDeletionTime, duration); err != nil {
+			logger.Error("failed-to-emit-metric", err, lager.Data{
+				"key":      MetricImageDeletionTime,
+				"duration": duration,
+			})
+		}
 	}
 
 	return err

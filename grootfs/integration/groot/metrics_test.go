@@ -57,4 +57,32 @@ var _ = Describe("Metrics", func() {
 			Expect(*imageCreationTimeMetrics[0].Value).NotTo(BeZero())
 		})
 	})
+
+	Describe("Delete", func() {
+		BeforeEach(func() {
+			_, err := Runner.
+				Create(groot.CreateSpec{
+					ID:        "my-id",
+					BaseImage: "docker:///cfgarden/empty:v0.1.0",
+				})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("emits the total deletion time", func() {
+			err := Runner.
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+				Delete("my-id")
+			Expect(err).NotTo(HaveOccurred())
+
+			var imageDeletionTimeMetrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				imageDeletionTimeMetrics = fakeMetron.ValueMetricsFor("ImageDeletionTime")
+				return imageDeletionTimeMetrics
+			}).Should(HaveLen(1))
+
+			Expect(*imageDeletionTimeMetrics[0].Name).To(Equal("ImageDeletionTime"))
+			Expect(*imageDeletionTimeMetrics[0].Unit).To(Equal("nanos"))
+			Expect(*imageDeletionTimeMetrics[0].Value).NotTo(BeZero())
+		})
+	})
 })
