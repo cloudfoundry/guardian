@@ -1,18 +1,27 @@
 package groot
 
-import "code.cloudfoundry.org/lager"
+import (
+	"time"
+
+	"code.cloudfoundry.org/lager"
+)
 
 type Metricser struct {
-	imageCloner ImageCloner
+	imageCloner    ImageCloner
+	metricsEmitter MetricsEmitter
 }
 
-func IamMetricser(imageCloner ImageCloner) *Metricser {
+func IamMetricser(imageCloner ImageCloner, metricsEmitter MetricsEmitter) *Metricser {
 	return &Metricser{
-		imageCloner: imageCloner,
+		imageCloner:    imageCloner,
+		metricsEmitter: metricsEmitter,
 	}
 }
 
 func (m *Metricser) Metrics(logger lager.Logger, id string) (VolumeMetrics, error) {
+	startTime := time.Now()
+	defer m.metricsEmitter.TryEmitDuration(logger, MetricImageStatsTime, time.Since(startTime))
+
 	logger = logger.Session("groot-metrics", lager.Data{"imageID": id})
 	logger.Info("start")
 	defer logger.Info("end")

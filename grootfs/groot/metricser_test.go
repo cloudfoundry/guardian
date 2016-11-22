@@ -14,14 +14,16 @@ import (
 
 var _ = Describe("Metricser", func() {
 	var (
-		fakeImageCloner *grootfakes.FakeImageCloner
-		metricser       *groot.Metricser
-		logger          lager.Logger
+		fakeImageCloner    *grootfakes.FakeImageCloner
+		fakeMetricsEmitter *grootfakes.FakeMetricsEmitter
+		metricser          *groot.Metricser
+		logger             lager.Logger
 	)
 
 	BeforeEach(func() {
 		fakeImageCloner = new(grootfakes.FakeImageCloner)
-		metricser = groot.IamMetricser(fakeImageCloner)
+		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
+		metricser = groot.IamMetricser(fakeImageCloner, fakeMetricsEmitter)
 		logger = lagertest.NewTestLogger("metricser")
 	})
 
@@ -48,6 +50,16 @@ var _ = Describe("Metricser", func() {
 			returnedMetrics, err := metricser.Metrics(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(returnedMetrics).To(Equal(metrics))
+		})
+
+		It("emits metrics for metrics", func() {
+			_, err := metricser.Metrics(logger, "some-id")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeMetricsEmitter.TryEmitDurationCallCount()).To(Equal(1))
+			_, name, duration := fakeMetricsEmitter.TryEmitDurationArgsForCall(0)
+			Expect(name).To(Equal(groot.MetricImageStatsTime))
+			Expect(duration).NotTo(BeZero())
 		})
 
 		Context("when imageCloner fails", func() {

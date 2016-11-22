@@ -103,4 +103,32 @@ var _ = Describe("Metrics", func() {
 			Expect(*imageDeletionTimeMetrics[0].Value).NotTo(BeZero())
 		})
 	})
+
+	Describe("Metrics", func() {
+		BeforeEach(func() {
+			_, err := Runner.
+				Create(groot.CreateSpec{
+					ID:        "my-id",
+					BaseImage: "docker:///cfgarden/empty:v0.1.0",
+				})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("emits the total time for metrics command", func() {
+			err := Runner.
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+				Metrics("my-id")
+			Expect(err).NotTo(HaveOccurred())
+
+			var imageMetricTimeMetrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				imageMetricTimeMetrics = fakeMetron.ValueMetricsFor("ImageStatsTime")
+				return imageMetricTimeMetrics
+			}).Should(HaveLen(1))
+
+			Expect(*imageMetricTimeMetrics[0].Name).To(Equal("ImageStatsTime"))
+			Expect(*imageMetricTimeMetrics[0].Unit).To(Equal("nanos"))
+			Expect(*imageMetricTimeMetrics[0].Value).NotTo(BeZero())
+		})
+	})
 })
