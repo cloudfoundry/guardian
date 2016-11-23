@@ -405,7 +405,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 						fmt.Sprintf("1:1:%d", maxId-1),
 						"--gid-mapping",
 						fmt.Sprintf("1:1:%d", maxId-1),
-						"docker:///cfgarden/empty#v0.1.0",
+						"docker:///cfgarden/empty:v0.1.0",
 						fmt.Sprintf("non-quotaed-container-%d", GinkgoParallelNode()),
 					}))
 				})
