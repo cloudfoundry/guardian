@@ -13,9 +13,10 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/guardian/imageplugin"
-	"code.cloudfoundry.org/lager/lagertest"
+	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"github.com/st3v/glager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -25,7 +26,7 @@ import (
 var _ = Describe("ExternalImageManager", func() {
 	var (
 		fakeCommandRunner    *fake_command_runner.FakeCommandRunner
-		logger               *lagertest.TestLogger
+		logger               lager.Logger
 		externalImageManager *imageplugin.ExternalImageManager
 		baseImage            *url.URL
 		idMappings           []specs.LinuxIDMapping
@@ -40,7 +41,7 @@ var _ = Describe("ExternalImageManager", func() {
 		fakeCmdRunnerStderr = ""
 		fakeCmdRunnerErr = nil
 
-		logger = lagertest.NewTestLogger("external-image-manager")
+		logger = glager.NewLogger("external-image-manager")
 		fakeCommandRunner = fake_command_runner.New()
 
 		idMappings = []specs.LinuxIDMapping{
@@ -303,7 +304,6 @@ var _ = Describe("ExternalImageManager", func() {
 		Context("when the command fails", func() {
 			BeforeEach(func() {
 				fakeCmdRunnerStdout = "could not find drax"
-				fakeCmdRunnerStderr = "btrfs doesn't like you"
 				fakeCmdRunnerErr = errors.New("external-image-manager failure")
 			})
 
@@ -327,7 +327,7 @@ var _ = Describe("ExternalImageManager", func() {
 				)
 				Expect(err).To(HaveOccurred())
 
-				Expect(logger).To(gbytes.Say("btrfs doesn't like you"))
+				Expect(logger).To(gbytes.Say("could not find drax"))
 			})
 		})
 
@@ -382,7 +382,6 @@ var _ = Describe("ExternalImageManager", func() {
 		Context("when the command fails", func() {
 			BeforeEach(func() {
 				fakeCmdRunnerStdout = "could not find drax"
-				fakeCmdRunnerStderr = "btrfs doesn't like you"
 				fakeCmdRunnerErr = errors.New("external-image-manager failure")
 			})
 
@@ -399,7 +398,7 @@ var _ = Describe("ExternalImageManager", func() {
 					logger, "hello", "/store/0/images/123/rootfs",
 				)).NotTo(Succeed())
 
-				Expect(logger).To(gbytes.Say("btrfs doesn't like you"))
+				Expect(logger).To(gbytes.Say("could not find drax"))
 			})
 		})
 	})
@@ -422,7 +421,6 @@ var _ = Describe("ExternalImageManager", func() {
 		Context("when the command fails", func() {
 			BeforeEach(func() {
 				fakeCmdRunnerErr = errors.New("external-image-manager failure")
-				fakeCmdRunnerStderr = "btrfs doesn't like you"
 				fakeCmdRunnerStdout = "could not find drax"
 			})
 
@@ -435,7 +433,7 @@ var _ = Describe("ExternalImageManager", func() {
 
 			It("forwards the external-image-manager error output", func() {
 				externalImageManager.GC(logger)
-				Expect(logger).To(gbytes.Say("btrfs doesn't like you"))
+				Expect(logger).To(gbytes.Say("could not find drax"))
 			})
 		})
 	})
@@ -489,6 +487,125 @@ var _ = Describe("ExternalImageManager", func() {
 				fakeCmdRunnerStdout = `{"silly" "json":"formating}"}}"`
 				_, err := externalImageManager.Metrics(logger, "", "/store/0/bundles/123/rootfs")
 				Expect(err).To(MatchError(ContainSubstring("parsing metrics")))
+			})
+		})
+	})
+
+	Describe("logging", func() {
+		BeforeEach(func() {
+			buffer := gbytes.NewBuffer()
+			externalLogger := lager.NewLogger("external-plugin")
+			externalLogger.RegisterSink(lager.NewWriterSink(buffer, lager.DEBUG))
+			externalLogger.Debug("debug-message", lager.Data{"type": "debug"})
+			externalLogger.Info("info-message", lager.Data{"type": "info"})
+			externalLogger.Error("error-message", errors.New("failed!"), lager.Data{"type": "error"})
+
+			fakeCmdRunnerStderr = string(buffer.Contents())
+		})
+
+		Context("Create", func() {
+
+			It("relogs the image plugin logs", func() {
+				_, _, err := externalImageManager.Create(
+					logger, "hello", rootfs_provider.Spec{
+						RootFS: baseImage,
+					},
+				)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(logger).To(glager.ContainSequence(
+					glager.Debug(
+						glager.Message("external-image-manager.image-plugin-create.external-plugin.debug-message"),
+						glager.Data("type", "debug"),
+					),
+					glager.Info(
+						glager.Message("external-image-manager.image-plugin-create.external-plugin.info-message"),
+						glager.Data("type", "info"),
+					),
+					glager.Error(
+						errors.New("failed!"),
+						glager.Message("external-image-manager.image-plugin-create.external-plugin.error-message"),
+						glager.Data("type", "error"),
+					),
+				))
+			})
+		})
+
+		Context("Destroy", func() {
+			It("relogs the image plugin logs", func() {
+				err := externalImageManager.Destroy(
+					logger, "hello", "/store/0/images/123/rootfs",
+				)
+
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(logger).To(glager.ContainSequence(
+					glager.Debug(
+						glager.Message("external-image-manager.image-plugin-destroy.external-plugin.debug-message"),
+						glager.Data("type", "debug"),
+					),
+					glager.Info(
+						glager.Message("external-image-manager.image-plugin-destroy.external-plugin.info-message"),
+						glager.Data("type", "info"),
+					),
+					glager.Error(
+						errors.New("failed!"),
+						glager.Message("external-image-manager.image-plugin-destroy.external-plugin.error-message"),
+						glager.Data("type", "error"),
+					),
+				))
+			})
+		})
+
+		Context("Metrics", func() {
+			It("relogs the image plugin logs", func() {
+				fakeCmdRunnerStdout = `{}`
+
+				_, err := externalImageManager.Metrics(
+					logger, "hello", "/store/0/images/123/rootfs",
+				)
+
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(logger).To(glager.ContainSequence(
+					glager.Debug(
+						glager.Message("external-image-manager.image-plugin-metrics.external-plugin.debug-message"),
+						glager.Data("type", "debug"),
+					),
+					glager.Info(
+						glager.Message("external-image-manager.image-plugin-metrics.external-plugin.info-message"),
+						glager.Data("type", "info"),
+					),
+					glager.Error(
+						errors.New("failed!"),
+						glager.Message("external-image-manager.image-plugin-metrics.external-plugin.error-message"),
+						glager.Data("type", "error"),
+					),
+				))
+			})
+		})
+
+		Context("GC", func() {
+			It("relogs the image plugin logs", func() {
+				err := externalImageManager.GC(logger)
+
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(logger).To(glager.ContainSequence(
+					glager.Debug(
+						glager.Message("external-image-manager.image-plugin-gc.external-plugin.debug-message"),
+						glager.Data("type", "debug"),
+					),
+					glager.Info(
+						glager.Message("external-image-manager.image-plugin-gc.external-plugin.info-message"),
+						glager.Data("type", "info"),
+					),
+					glager.Error(
+						errors.New("failed!"),
+						glager.Message("external-image-manager.image-plugin-gc.external-plugin.error-message"),
+						glager.Data("type", "error"),
+					),
+				))
 			})
 		})
 	})
