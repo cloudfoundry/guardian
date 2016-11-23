@@ -441,7 +441,7 @@ var _ = Describe("ExternalImageManager", func() {
 			Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 			imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-			Expect(imageManagerCmd.Args[1]).To(Equal("metrics"))
+			Expect(imageManagerCmd.Args[1]).To(Equal("stats"))
 			Expect(imageManagerCmd.Args[2]).To(Equal("/store/0/bundles/123"))
 		})
 

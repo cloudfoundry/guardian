@@ -92,28 +92,6 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 	return rootFSPath, envVars, nil
 }
 
-func stringifyMapping(mapping specs.LinuxIDMapping) string {
-	return fmt.Sprintf("%d:%d:%d", mapping.ContainerID, mapping.HostID, mapping.Size)
-}
-
-func (p *ExternalImageManager) readEnvVars(imagePath string) ([]string, error) {
-	imageConfigFile, err := os.Open(filepath.Join(imagePath, "image.json"))
-	if err != nil {
-		if os.IsNotExist(err) {
-			return []string{}, nil
-		}
-
-		return nil, fmt.Errorf("could not open image configuration: %s", err)
-	}
-
-	var imageConfig Image
-	if err := json.NewDecoder(imageConfigFile).Decode(&imageConfig); err != nil {
-		return nil, fmt.Errorf("parsing image config: %s", err)
-	}
-
-	return imageConfig.Config.Env, nil
-}
-
 func (p *ExternalImageManager) Destroy(log lager.Logger, handle, rootFSPath string) error {
 	log = log.Session("image-plugin-destroy")
 	log.Debug("start")
@@ -142,14 +120,14 @@ func (p *ExternalImageManager) Metrics(log lager.Logger, _, rootfs string) (gard
 	defer log.Debug("end")
 
 	imagePath := filepath.Dir(rootfs)
-	cmd := exec.Command(p.binPath, "metrics", imagePath)
+	cmd := exec.Command(p.binPath, "stats", imagePath)
 	errBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stderr = errBuffer
 	outBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = outBuffer
 
 	if err := p.commandRunner.Run(cmd); err != nil {
-		logData := lager.Data{"action": "metrics", "stderr": errBuffer.String()}
+		logData := lager.Data{"action": "stats", "stderr": errBuffer.String()}
 		log.Error("external-image-manager-result", err, logData)
 		return garden.ContainerDiskStat{}, fmt.Errorf("external image manager metrics failed: %s (%s)", outBuffer.String(), err)
 	}
@@ -183,4 +161,26 @@ func (p *ExternalImageManager) GC(log lager.Logger) error {
 	}
 
 	return nil
+}
+
+func stringifyMapping(mapping specs.LinuxIDMapping) string {
+	return fmt.Sprintf("%d:%d:%d", mapping.ContainerID, mapping.HostID, mapping.Size)
+}
+
+func (p *ExternalImageManager) readEnvVars(imagePath string) ([]string, error) {
+	imageConfigFile, err := os.Open(filepath.Join(imagePath, "image.json"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+
+		return nil, fmt.Errorf("could not open image configuration: %s", err)
+	}
+
+	var imageConfig Image
+	if err := json.NewDecoder(imageConfigFile).Decode(&imageConfig); err != nil {
+		return nil, fmt.Errorf("parsing image config: %s", err)
+	}
+
+	return imageConfig.Config.Env, nil
 }
