@@ -320,6 +320,10 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 
 		AfterEach(func() {
+			if container != nil {
+				client.Destroy(container.Handle())
+				container = nil
+			}
 			Expect(os.RemoveAll(imagePath)).To(Succeed())
 		})
 
@@ -450,16 +454,24 @@ var _ = Describe("Rootfs container create parameter", func() {
 			})
 
 			Context("and a quotaed container is created", func() {
+				var diskLimitScope garden.DiskLimitScope
+
+				BeforeEach(func() {
+					diskLimitScope = garden.DiskLimitScopeTotal
+				})
+
 				JustBeforeEach(func() {
 					imageID = fmt.Sprintf("quotaed-container-%d", GinkgoParallelNode())
 					imagePath = filepath.Join(storePath, imageID)
-					_, err := client.Create(garden.ContainerSpec{
+					var err error
+					container, err = client.Create(garden.ContainerSpec{
 						RootFSPath: "docker:///cfgarden/empty#v0.1.0",
 						Handle:     imageID,
 						Privileged: false,
 						Limits: garden.Limits{
 							Disk: garden.DiskLimits{
 								ByteHard: 1 * 1024 * 1024,
+								Scope:    diskLimitScope,
 							},
 						},
 					})
@@ -470,6 +482,18 @@ var _ = Describe("Rootfs container create parameter", func() {
 					args, err := ioutil.ReadFile(filepath.Join(imagePath, fmt.Sprintf("create-args")))
 					Expect(err).ToNot(HaveOccurred())
 					Expect(string(args)).To(ContainSubstring("--disk-limit-size-bytes 1048576"))
+				})
+
+				Context("and the quota is exclusive", func() {
+					BeforeEach(func() {
+						diskLimitScope = garden.DiskLimitScopeExclusive
+					})
+
+					It("passes the disk limit to the image plugin as an argument", func() {
+						args, err := ioutil.ReadFile(filepath.Join(imagePath, fmt.Sprintf("create-args")))
+						Expect(err).ToNot(HaveOccurred())
+						Expect(string(args)).To(ContainSubstring("--exclude-image-from-quota --disk-limit-size-bytes 1048576"))
+					})
 				})
 			})
 
