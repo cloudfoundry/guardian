@@ -320,6 +320,10 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 
 		AfterEach(func() {
+			if container != nil {
+				client.Destroy(container.Handle())
+				container = nil
+			}
 			Expect(os.RemoveAll(imagePath)).To(Succeed())
 		})
 
@@ -459,7 +463,8 @@ var _ = Describe("Rootfs container create parameter", func() {
 				JustBeforeEach(func() {
 					imageID = fmt.Sprintf("quotaed-container-%d", GinkgoParallelNode())
 					imagePath = filepath.Join(storePath, imageID)
-					_, err := client.Create(garden.ContainerSpec{
+					var err error
+					container, err = client.Create(garden.ContainerSpec{
 						RootFSPath: "docker:///cfgarden/empty#v0.1.0",
 						Handle:     imageID,
 						Privileged: false,
