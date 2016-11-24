@@ -60,6 +60,7 @@ func main() {
 		commands.DeleteCommand,
 		commands.StatsCommand,
 		commands.CleanCommand,
+		commands.ListCommand,
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {

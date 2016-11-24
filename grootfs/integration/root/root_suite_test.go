@@ -6,7 +6,9 @@ import (
 	"path"
 
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,6 +20,7 @@ import (
 var (
 	GrootFSBin string
 	DraxBin    string
+	Runner     runner.Runner
 
 	GrootUID uint32
 	GrootGID uint32
@@ -64,6 +67,13 @@ func TestRoot(t *testing.T) {
 		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/volume_driver/drax")
 		Expect(err).NotTo(HaveOccurred())
 		testhelpers.SuidDrax(DraxBin)
+
+		r := runner.Runner{
+			GrootFSBin: GrootFSBin,
+			StorePath:  StorePath,
+			DraxBin:    DraxBin,
+		}
+		Runner = r.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter)
 	})
 
 	AfterEach(func() {

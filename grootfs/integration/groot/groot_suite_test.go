@@ -55,7 +55,7 @@ func TestGroot(t *testing.T) {
 
 		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
 		StorePath = path.Join(btrfsMountPath, storeName)
-		Expect(os.Mkdir(StorePath, 0700)).NotTo(HaveOccurred())
+		Expect(os.Mkdir(StorePath, 0755)).NotTo(HaveOccurred())
 
 		var err error
 		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/volume_driver/drax")
