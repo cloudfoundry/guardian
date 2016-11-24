@@ -65,7 +65,7 @@ var _ = Describe("RunAndLog", func() {
 
 		runcLogs := make([]lager.LogFormat, 0)
 		for _, log := range logger.Logs() {
-			if log.Message == "test.run.runc-log" {
+			if log.Message == "test.run.runc" {
 				runcLogs = append(runcLogs, log)
 			}
 		}

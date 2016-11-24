@@ -12,11 +12,9 @@ func forwardRuncLogsToLager(log lager.Logger, buff []byte) {
 	parsedLogLine := struct{ Msg string }{}
 	for _, logLine := range strings.Split(string(buff), "\n") {
 		if err := logfmt.Unmarshal([]byte(logLine), &parsedLogLine); err == nil {
-			if parsedLogLine.Msg != "" {
-				log.Debug("runc-log", lager.Data{
-					"message": parsedLogLine.Msg,
-				})
-			}
+			log.Debug("runc", lager.Data{
+				"message": parsedLogLine.Msg,
+			})
 		}
 	}
 }
