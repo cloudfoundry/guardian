@@ -29,6 +29,7 @@ invitation.
 * [Stats](#stats)
 * [Logging](#logging)
 * [Clean up](#clean-up)
+* [Running tests in Concourse](#running-tests-in-concourse)
 * [Known Issues](#known-issues)
 
 ## Installation
@@ -281,17 +282,25 @@ to clean up a store that does not belong to her/him the command fails.
 
 \* It takes only into account the cache and volumes folders in the store.
 
-## Misc
+## Running tests in Concourse
 
-* All devices inside a image are ignored.
+GrootFS uses [Concourse](http://concourse.ci/) for both Continuous Integration
+(CI) and testing. One way of running tests locally is with
+`concourse-lite`, which is a [Vagrant](https://www.vagrantup.com/) box.
 
-## Links
+### Starting Concourse Lite
+```
+vagrant box add concourse/lite
+vagrant init concourse/lite
+vagrant up
+```
 
-* [Garden project](https://github.com/cloudfoundry/garden)
-* [GrootFS Pivotal tracker](https://www.pivotaltracker.com/n/projects/1661239)
-* [GrootFS CI](https://grootfs.ci.cf-app.com)
-* [Cloud Foundry Slack - Invitation](https://slack.cloudfoundry.org/)
-* [Cloud Foundry Slack](https://cloudfoundry.slack.com/)
+### Running tests
+
+```
+make concourse-test
+```
+
 
 ## Known Issues
 
@@ -317,3 +326,16 @@ to clean up a store that does not belong to her/him the command fails.
 * The calling user can only cleanup the cached volumes that it owns.
 
 * The calling user can only request stats for the rootfs that it owns.
+
+## Misc
+
+* All devices inside a image are ignored.
+
+## Links
+
+* [Garden project](https://github.com/cloudfoundry/garden)
+* [GrootFS Pivotal tracker](https://www.pivotaltracker.com/n/projects/1661239)
+* [GrootFS CI](https://grootfs.ci.cf-app.com)
+* [Cloud Foundry Slack - Invitation](https://slack.cloudfoundry.org/)
+* [Cloud Foundry Slack](https://cloudfoundry.slack.com/)
+
