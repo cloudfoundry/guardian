@@ -383,6 +383,16 @@ var _ = Describe("Networking", func() {
 					Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
 				})
 			})
+
+			Context("when --iptables-restore-bin=/bin/false", func() {
+				BeforeEach(func() {
+					args = append(args, "--iptables-restore-bin", "/bin/false")
+				})
+
+				It("should fail on BulkNetOut", func() {
+					Expect(container.BulkNetOut([]garden.NetOutRule{rule1, rule2})).To(MatchError("iptables: bulk-prepend-rules: "))
+				})
+			})
 		})
 	})
 

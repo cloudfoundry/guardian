@@ -157,13 +157,14 @@ type GuardianCommand struct {
 	} `group:"Container Lifecycle"`
 
 	Bin struct {
-		Dadoo       FileFlag `long:"dadoo-bin"     required:"true" description:"Path to the 'dadoo' binary."`
-		NSTar       FileFlag `long:"nstar-bin"     required:"true" description:"Path to the 'nstar' binary."`
-		Tar         FileFlag `long:"tar-bin"       required:"true" description:"Path to the 'tar' binary."`
-		IPTables    FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the the iptables binary"`
-		Init        FileFlag `long:"init-bin"      required:"true" description:"Path execute as pid 1 inside each container."`
-		Runc        string   `long:"runc-bin"      default:"runc" description:"Path to the 'runc' binary."`
-		ImagePlugin FileFlag `long:"image-plugin"           description:"Path to image plugin binary."`
+		Dadoo           FileFlag `long:"dadoo-bin"     required:"true" description:"Path to the 'dadoo' binary."`
+		NSTar           FileFlag `long:"nstar-bin"     required:"true" description:"Path to the 'nstar' binary."`
+		Tar             FileFlag `long:"tar-bin"       required:"true" description:"Path to the 'tar' binary."`
+		IPTables        FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the iptables binary"`
+		IPTablesRestore FileFlag `long:"iptables-restore-bin"  default:"/sbin/iptables-restore" description:"path to the iptables-restore binary"`
+		Init            FileFlag `long:"init-bin"      required:"true" description:"Path execute as pid 1 inside each container."`
+		Runc            string   `long:"runc-bin"      default:"runc" description:"Path to the 'runc' binary."`
+		ImagePlugin     FileFlag `long:"image-plugin"           description:"Path to image plugin binary."`
 	} `group:"Binary Tools"`
 
 	Graph struct {
@@ -422,12 +423,11 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
 	locksmith := &locksmithpkg.FileSystem{}
-	ipTables := iptables.New(cmd.Bin.IPTables.Path(), iptRunner, locksmith, chainPrefix)
+	ipTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), iptRunner, locksmith, chainPrefix)
 	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup)
 	ruleTranslator := iptables.NewRuleTranslator()
 
 	networker := kawasaki.New(
-		cmd.Bin.IPTables.Path(),
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(cmd.Network.Pool.CIDR()),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),

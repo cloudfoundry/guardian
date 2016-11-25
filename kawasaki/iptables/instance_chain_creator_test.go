@@ -41,7 +41,7 @@ var _ = Describe("Create", func() {
 
 		fakeLocksmith := NewFakeLocksmith()
 		creator = iptables.NewInstanceChainCreator(
-			iptables.New("/sbin/iptables", fakeRunner, fakeLocksmith, "prefix-"),
+			iptables.New("/sbin/iptables", "/sbin/iptables-restore", fakeRunner, fakeLocksmith, "prefix-"),
 		)
 	})
 
@@ -116,12 +116,12 @@ var _ = Describe("Create", func() {
 
 				Expect(creator.Create(logger, handle, "some-id", bridgeName, ip, network)).To(MatchError(errorString))
 			},
-			Entry("create nat instance chain", 0, "/sbin/iptables create-instance-chains: iptables failed"),
-			Entry("bind nat instance chain to nat prerouting chain", 1, "/sbin/iptables create-instance-chains: iptables failed"),
-			Entry("enable NAT for traffic coming from containers", 2, "/sbin/iptables create-instance-chains: iptables failed"),
-			Entry("create logging instance chain", 7, "/sbin/iptables create-instance-chains: iptables failed"),
-			Entry("append logging to instance chain", 8, "/sbin/iptables create-instance-chains: iptables failed"),
-			Entry("return from logging instance chain", 9, "/sbin/iptables create-instance-chains: iptables failed"),
+			Entry("create nat instance chain", 0, "iptables: create-instance-chains: iptables failed"),
+			Entry("bind nat instance chain to nat prerouting chain", 1, "iptables: create-instance-chains: iptables failed"),
+			Entry("enable NAT for traffic coming from containers", 2, "iptables: create-instance-chains: iptables failed"),
+			Entry("create logging instance chain", 7, "iptables: create-instance-chains: iptables failed"),
+			Entry("append logging to instance chain", 8, "iptables: create-instance-chains: iptables failed"),
+			Entry("return from logging instance chain", 9, "iptables: create-instance-chains: iptables failed"),
 		)
 	})
 
@@ -189,7 +189,7 @@ var _ = Describe("Create", func() {
 					return errors.New("exit status foo")
 				})
 
-				Expect(creator.Destroy(logger, "some-id")).To(MatchError("/sbin/iptables prune-prerouting-chain: iptables failed"))
+				Expect(creator.Destroy(logger, "some-id")).To(MatchError("iptables: prune-prerouting-chain: iptables failed"))
 			})
 		})
 	})

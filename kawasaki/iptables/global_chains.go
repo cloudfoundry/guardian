@@ -231,7 +231,7 @@ func (s Starter) Start() error {
 		cmd.Env = []string{
 			fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
 			"ACTION=setup",
-			fmt.Sprintf("GARDEN_IPTABLES_BIN=%s", s.iptables.binPath),
+			fmt.Sprintf("GARDEN_IPTABLES_BIN=%s", s.iptables.iptablesBinPath),
 			fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s", s.iptables.inputChain),
 			fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s", s.iptables.forwardChain),
 			fmt.Sprintf("GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=%s", s.iptables.defaultChain),
@@ -262,19 +262,19 @@ func (s Starter) Start() error {
 }
 
 func (s Starter) chainExists(chainName string) bool {
-	cmd := exec.Command(s.iptables.binPath, "-w", "-L", chainName)
+	cmd := exec.Command(s.iptables.iptablesBinPath, "-w", "-L", chainName)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
 	return s.iptables.run("checking-chain-exists", cmd) == nil
 }
 
 func (s Starter) resetDenyNetworks() error {
-	cmd := exec.Command(s.iptables.binPath, "-w", "-F", s.iptables.defaultChain)
+	cmd := exec.Command(s.iptables.iptablesBinPath, "-w", "-F", s.iptables.defaultChain)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
 	if err := s.iptables.run("flushing-default-chain", cmd); err != nil {
 		return err
 	}
 
-	cmd = exec.Command(s.iptables.binPath, "-w", "-A", s.iptables.defaultChain, "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "--jump", "ACCEPT")
+	cmd = exec.Command(s.iptables.iptablesBinPath, "-w", "-A", s.iptables.defaultChain, "-m", "conntrack", "--ctstate", "ESTABLISHED,RELATED", "--jump", "ACCEPT")
 	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
 	if err := s.iptables.run("appending-default-chain", cmd); err != nil {
 		return err

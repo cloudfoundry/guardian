@@ -37,7 +37,7 @@ var _ = Describe("IPTables controller", func() {
 		fakeLocksmith = NewFakeLocksmith()
 
 		prefix = fmt.Sprintf("g-%d", GinkgoParallelNode())
-		iptablesController = iptables.New("/sbin/iptables", fakeRunner, fakeLocksmith, prefix)
+		iptablesController = iptables.New("/sbin/iptables", "/sbin/iptables-restore", fakeRunner, fakeLocksmith, prefix)
 	})
 
 	AfterEach(func() {

@@ -97,8 +97,6 @@ type Networker interface {
 }
 
 type networker struct {
-	iptablesBin string
-
 	specParser     SpecParser
 	subnetPool     subnets.Pool
 	configCreator  ConfigCreator
@@ -110,7 +108,6 @@ type networker struct {
 }
 
 func New(
-	iptablesBin string,
 	specParser SpecParser,
 	subnetPool subnets.Pool,
 	configCreator ConfigCreator,
@@ -121,8 +118,6 @@ func New(
 	firewallOpener FirewallOpener,
 ) *networker {
 	return &networker{
-		iptablesBin: iptablesBin,
-
 		specParser:    specParser,
 		subnetPool:    subnetPool,
 		configCreator: configCreator,

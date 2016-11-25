@@ -22,7 +22,7 @@ var _ = Describe("PortForwarder", func() {
 		fakeRunner = fake_command_runner.New()
 		fakeLocksmith := NewFakeLocksmith()
 		forwarder = iptables.NewPortForwarder(
-			iptables.New("/sbin/iptables", fakeRunner, fakeLocksmith, "prefix-"),
+			iptables.New("/sbin/iptables", "/sbin/iptables-restore", fakeRunner, fakeLocksmith, "prefix-"),
 		)
 	})
 

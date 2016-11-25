@@ -29,7 +29,7 @@ var _ = Describe("Setup", func() {
 	JustBeforeEach(func() {
 		fakeLocksmith := NewFakeLocksmith()
 		starter = iptables.NewStarter(
-			iptables.New("/sbin/iptables", fakeRunner, fakeLocksmith, "prefix-"),
+			iptables.New("/sbin/iptables", "/sbin/iptables-restore", fakeRunner, fakeLocksmith, "prefix-"),
 			true,
 			"the-nic-prefix",
 			denyNetworks,
