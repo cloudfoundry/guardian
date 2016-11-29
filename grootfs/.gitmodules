@@ -85,3 +85,6 @@
 [submodule "vendor/github.com/nu7hatch/gouuid"]
 	path = vendor/github.com/nu7hatch/gouuid
 	url = https://github.com/nu7hatch/gouuid
+[submodule "vendor/github.com/go-yaml/yaml"]
+	path = vendor/github.com/go-yaml/yaml
+	url = https://github.com/go-yaml/yaml

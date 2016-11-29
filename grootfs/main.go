@@ -30,6 +30,10 @@ func main() {
 
 	grootfs.Flags = []cli.Flag{
 		cli.StringFlag{
+			Name:  "config",
+			Usage: "Path to config file",
+		},
+		cli.StringFlag{
 			Name:  "store",
 			Usage: "Path to the store directory",
 			Value: defaultStorePath,

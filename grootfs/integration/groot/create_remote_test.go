@@ -13,6 +13,9 @@ import (
 	"strings"
 	"time"
 
+	yaml "gopkg.in/yaml.v2"
+
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -222,6 +225,49 @@ var _ = Describe("Create with remote images", func() {
 				Expect(path.Join(rootFSPath, "hello")).To(BeARegularFile())
 
 				Expect(fakeRegistry.RequestedBlobs()).To(HaveLen(3))
+			})
+		})
+
+		Context("when --config global flag is given", func() {
+			Describe("with an insecure registries list", func() {
+				var configFilePath string
+
+				BeforeEach(func() {
+					configDir, err := ioutil.TempDir("", "")
+					Expect(err).NotTo(HaveOccurred())
+
+					cfg := config.Config{
+						InsecureRegistries: []string{fakeRegistry.Addr()},
+					}
+
+					configYaml, err := yaml.Marshal(cfg)
+					Expect(err).NotTo(HaveOccurred())
+					configFilePath = path.Join(configDir, "config.yaml")
+
+					Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+				})
+
+				It("creates a root filesystem based on the image provided by the private registry", func() {
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--config", configFilePath, "create", baseImageURL, "random-id")
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
+
+					rootFSPath := strings.TrimSpace(string(sess.Out.Contents())) + "/rootfs"
+					Expect(path.Join(rootFSPath, "hello")).To(BeARegularFile())
+
+					Expect(fakeRegistry.RequestedBlobs()).To(HaveLen(3))
+				})
+			})
+
+			Context("when config path is invalid", func() {
+				It("returns a useful error", func() {
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--config", "invalid-config-path", "create", baseImageURL, "random-id")
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(1))
+					Eventually(sess).Should(gbytes.Say("invalid config path"))
+				})
 			})
 		})
 	})

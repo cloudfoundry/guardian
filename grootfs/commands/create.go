@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
@@ -96,7 +97,12 @@ var CreateCommand = cli.Command{
 		idMapper := unpackerpkg.NewIDMapper(runner)
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedUnpacker(runner, idMapper)
 
-		trustedRegistries := ctx.StringSlice("insecure-registry")
+		cfg, err := loadConfig(ctx.GlobalString("config"))
+		if err != nil {
+			logger.Error("failed-loading-config-file", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+		trustedRegistries := append(ctx.StringSlice("insecure-registry"), cfg.InsecureRegistries...)
 		dockerSrc := remote.NewDockerSource(trustedRegistries)
 
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
@@ -138,6 +144,20 @@ var CreateCommand = cli.Command{
 		fmt.Println(image.Path)
 		return nil
 	},
+}
+
+func loadConfig(configPath string) (config.Config, error) {
+	var cfg config.Config
+
+	if configPath != "" {
+		var err error
+		cfg, err = config.Load(configPath)
+		if err != nil {
+			return cfg, err
+		}
+	}
+
+	return cfg, nil
 }
 
 func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {
