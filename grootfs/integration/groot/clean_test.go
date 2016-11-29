@@ -3,8 +3,12 @@ package groot_test
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 
+	yaml "gopkg.in/yaml.v2"
+
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -103,6 +107,74 @@ var _ = Describe("Clean", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(afterContents).To(Equal(preContents))
+				})
+			})
+		})
+
+		Context("when --config global flag is given", func() {
+			Describe("with a list of images to be ignored", func() {
+				var (
+					configDir      string
+					configFilePath string
+					preContents    []os.FileInfo
+				)
+
+				BeforeEach(func() {
+					var err error
+					configDir, err = ioutil.TempDir("", "")
+					Expect(err).NotTo(HaveOccurred())
+
+					cfg := config.Config{
+						IgnoreBaseImages: []string{"docker:///busybox"},
+					}
+
+					configYaml, err := yaml.Marshal(cfg)
+					Expect(err).NotTo(HaveOccurred())
+					configFilePath = path.Join(configDir, "config.yaml")
+
+					Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+				})
+
+				JustBeforeEach(func() {
+					var err error
+					preContents, err = ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				AfterEach(func() {
+					Expect(os.RemoveAll(configDir)).To(Succeed())
+				})
+
+				It("doesn't delete their layers", func() {
+					_, err := Runner.WithConfig(configFilePath).Clean(0, []string{})
+					Expect(err).NotTo(HaveOccurred())
+
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(afterContents).To(Equal(preContents))
+				})
+
+				Context("when the ignore image flag is also given", func() {
+					BeforeEach(func() {
+						_, err := Runner.Create(groot.CreateSpec{
+							ID:        "my-image-3",
+							BaseImage: "docker:///cfgarden/empty:v0.1.0",
+						})
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(Runner.Delete("my-image-3")).To(Succeed())
+					})
+
+					It("doesn't delete their layers", func() {
+						_, err := Runner.WithConfig(configFilePath).Clean(0, []string{"docker:///cfgarden/empty:v0.1.0"})
+						Expect(err).NotTo(HaveOccurred())
+
+						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(afterContents).To(Equal(preContents))
+					})
 				})
 			})
 		})

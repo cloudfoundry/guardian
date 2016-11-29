@@ -17,6 +17,7 @@ type Runner struct {
 	GrootFSBin string
 	StorePath  string
 	DraxBin    string
+	ConfigPath string
 
 	LogLevelSet bool
 	LogLevel    lager.LogLevel
@@ -65,6 +66,12 @@ func (r Runner) WithStdout(stdout io.Writer) Runner {
 func (r Runner) WithStderr(stderr io.Writer) Runner {
 	nr := r
 	nr.Stderr = stderr
+	return nr
+}
+
+func (r Runner) WithConfig(path string) Runner {
+	nr := r
+	nr.ConfigPath = path
 	return nr
 }
 
@@ -131,6 +138,9 @@ func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	if r.MetronHost != nil && r.MetronPort != 0 {
 		metronEndpoint := fmt.Sprintf("%s:%d", r.MetronHost.String(), r.MetronPort)
 		allArgs = append(allArgs, "--metron-endpoint", metronEndpoint)
+	}
+	if r.ConfigPath != "" {
+		allArgs = append(allArgs, "--config", r.ConfigPath)
 	}
 
 	allArgs = append(allArgs, subcommand)

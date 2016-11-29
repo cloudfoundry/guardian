@@ -97,11 +97,7 @@ var CreateCommand = cli.Command{
 		idMapper := unpackerpkg.NewIDMapper(runner)
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedUnpacker(runner, idMapper)
 
-		cfg, err := loadConfig(ctx.GlobalString("config"))
-		if err != nil {
-			logger.Error("failed-loading-config-file", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
+		cfg := ctx.App.Metadata["config"].(config.Config)
 		trustedRegistries := append(ctx.StringSlice("insecure-registry"), cfg.InsecureRegistries...)
 		dockerSrc := remote.NewDockerSource(trustedRegistries)
 
@@ -144,20 +140,6 @@ var CreateCommand = cli.Command{
 		fmt.Println(image.Path)
 		return nil
 	},
-}
-
-func loadConfig(configPath string) (config.Config, error) {
-	var cfg config.Config
-
-	if configPath != "" {
-		var err error
-		cfg, err = config.Load(configPath)
-		if err != nil {
-			return cfg, err
-		}
-	}
-
-	return cfg, nil
 }
 
 func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {

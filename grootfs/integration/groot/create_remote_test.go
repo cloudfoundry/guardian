@@ -230,10 +230,14 @@ var _ = Describe("Create with remote images", func() {
 
 		Context("when --config global flag is given", func() {
 			Describe("with an insecure registries list", func() {
-				var configFilePath string
+				var (
+					configDir      string
+					configFilePath string
+				)
 
 				BeforeEach(func() {
-					configDir, err := ioutil.TempDir("", "")
+					var err error
+					configDir, err = ioutil.TempDir("", "")
 					Expect(err).NotTo(HaveOccurred())
 
 					cfg := config.Config{
@@ -245,6 +249,10 @@ var _ = Describe("Create with remote images", func() {
 					configFilePath = path.Join(configDir, "config.yaml")
 
 					Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+				})
+
+				AfterEach(func() {
+					Expect(os.RemoveAll(configDir)).To(Succeed())
 				})
 
 				It("creates a root filesystem based on the image provided by the private registry", func() {

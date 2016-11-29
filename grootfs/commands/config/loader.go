@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	InsecureRegistries []string `yaml:"insecure_registries"`
+	IgnoreBaseImages   []string `yaml:"ignore_base_images"`
 }
 
 func Load(configPath string) (Config, error) {

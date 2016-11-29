@@ -25,6 +25,7 @@ var _ = Describe("Load", func() {
 
 		cfg := config.Config{
 			InsecureRegistries: []string{"http://example.org"},
+			IgnoreBaseImages:   []string{"docker:///busybox"},
 		}
 
 		configYaml, err := yaml.Marshal(cfg)
@@ -42,6 +43,7 @@ var _ = Describe("Load", func() {
 		config, err := config.Load(configFilePath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(config.InsecureRegistries).To(ConsistOf([]string{"http://example.org"}))
+		Expect(config.IgnoreBaseImages).To(ConsistOf([]string{"docker:///busybox"}))
 	})
 
 	Context("when filepath is invalid", func() {

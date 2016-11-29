@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/lager"
 
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
@@ -52,7 +53,8 @@ var CleanCommand = cli.Command{
 		sm := garbage_collector.NewStoreMeasurer(storePath)
 		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, imageCloner, dependencyManager)
 
-		ignoredImages := ctx.StringSlice("ignore-image")
+		cfg := ctx.App.Metadata["config"].(config.Config)
+		ignoredImages := append(ctx.StringSlice("ignore-image"), cfg.IgnoreBaseImages...)
 		metricsEmitter := metrics.NewEmitter()
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 		noop, err := cleaner.Clean(logger, ctx.Uint64("threshold-bytes"), ignoredImages)
