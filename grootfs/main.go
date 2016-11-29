@@ -87,8 +87,10 @@ func main() {
 		}
 
 		dropsondeOrigin := grootfs.Name
-		if err := dropsonde.Initialize(metronEndpoint, dropsondeOrigin); err != nil {
-			logger.Error("failed-to-initialize-metrics-emitter", err)
+		if metronEndpoint != "" {
+			if err := dropsonde.Initialize(metronEndpoint, dropsondeOrigin); err != nil {
+				logger.Error("failed-to-initialize-metrics-emitter", err)
+			}
 		}
 
 		return nil
