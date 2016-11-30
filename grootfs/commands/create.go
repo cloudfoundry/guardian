@@ -186,5 +186,5 @@ func tryHumanize(err error, spec groot.CreateSpec) string {
 		return tryHumanizeDockerErrorsList(e, spec)
 	}
 
-	return err.Error()
+	return errorspkg.Cause(err).Error()
 }

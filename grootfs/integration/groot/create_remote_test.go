@@ -290,4 +290,18 @@ var _ = Describe("Create with remote images", func() {
 			Eventually(err).Should(MatchError("docker:///cfgaren/sorry-not-here does not exist or you do not have permissions to see it."))
 		})
 	})
+
+	Context("when the image has folders that are not writable to their owner", func() {
+		BeforeEach(func() {
+			baseImageURL = "docker:///cfgarden/non-writable-folder"
+		})
+
+		It("fails with a sensible message", func() {
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImageURL, "random-id")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, "10s").Should(gexec.Exit(1))
+			Eventually(string(sess.Out.Contents())).Should(MatchRegexp("^Directory '/test' does not give write permission to its owner. This image can only be unpacked by root."))
+		})
+	})
 })

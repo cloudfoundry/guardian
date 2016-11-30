@@ -163,7 +163,14 @@ func (u *TarUnpacker) createLink(targetPath, path string, tarHeader *tar.Header)
 func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarReader *tar.Reader) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, tarHeader.FileInfo().Mode())
 	if err != nil {
-		return fmt.Errorf("creating file `%s`: %s", path, err)
+		newErr := fmt.Errorf("creating file `%s`: %s", path, err)
+
+		if os.IsPermission(err) {
+			dirName := filepath.Dir(tarHeader.Name)
+			return fmt.Errorf("Directory '/%s' does not give write permission to its owner. This image can only be unpacked by root.", dirName)
+		}
+
+		return newErr
 	}
 
 	_, err = io.Copy(file, tarReader)

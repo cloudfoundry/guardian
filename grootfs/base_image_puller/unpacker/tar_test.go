@@ -69,6 +69,28 @@ var _ = Describe("Tar unpacker", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("hello-world"))
 		})
+
+		Context("when parent dir does not have writting permission", func() {
+			var folderPath string
+
+			BeforeEach(func() {
+				folderPath = path.Join(baseImagePath, "root", "that-stuff")
+				Expect(os.MkdirAll(folderPath, 0777)).To(Succeed())
+				Expect(ioutil.WriteFile(path.Join(folderPath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+				Expect(os.Chmod(folderPath, 0555)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				Expect(os.Chmod(folderPath, 0777)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})).To(MatchError(ContainSubstring("Directory '/root/that-stuff' does not give write permission to its owner. This image can only be unpacked by root.")))
+			})
+		})
 	})
 
 	Describe("directories", func() {

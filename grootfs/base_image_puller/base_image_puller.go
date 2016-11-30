@@ -161,7 +161,9 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 		return volumePath, nil
 	}
 
-	p.buildLayer(logger, index-1, layersDigest, spec)
+	if _, err := p.buildLayer(logger, index-1, layersDigest, spec); err != nil {
+		return "", err
+	}
 
 	stream, size, err := p.fetcher(spec.BaseImageSrc).StreamBlob(logger, spec.BaseImageSrc, digest.BlobID)
 	if err != nil {
@@ -206,7 +208,7 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 				"parentChainID": digest.ParentChainID,
 			})
 		}
-		return "", fmt.Errorf("unpacking layer `%s`: %s", digest.BlobID, err)
+		return "", errorspkg.Wrapf(err, "unpacking layer `%s`", digest.BlobID)
 	}
 	logger.Debug("layer-unpacked", lager.Data{
 		"blobID":        digest.BlobID,
