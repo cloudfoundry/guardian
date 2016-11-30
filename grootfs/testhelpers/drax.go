@@ -21,7 +21,7 @@ func SuidDrax(draxBinPath string) {
 		GinkgoWriter, GinkgoWriter,
 	)
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	Eventually(sess, "5s").Should(gexec.Exit(0))
 }
 
 func UnsuidDrax(draxBinPath string) {
