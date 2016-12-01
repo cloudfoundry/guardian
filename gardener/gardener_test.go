@@ -268,6 +268,23 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
+		Context("when a pid limit is provided", func() {
+			var spec garden.ContainerSpec
+
+			BeforeEach(func() {
+				spec.Limits.Pid = garden.PidLimits{Limit: 1}
+			})
+
+			It("should delegate the limit to the containerizer", func() {
+				_, err := gdnr.Create(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(containerizer.CreateCallCount()).To(Equal(1))
+				_, desiredSpec := containerizer.CreateArgsForCall(0)
+				Expect(desiredSpec.Limits.Pid.Limit).To(BeNumerically("==", 1))
+			})
+		})
+
 		It("should ask the networker to configure the network", func() {
 			containerizer.InfoReturns(gardener.ActualContainerSpec{
 				Pid:        42,
