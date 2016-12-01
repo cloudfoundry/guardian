@@ -95,7 +95,14 @@ func (u *TarUnpacker) handleEntry(targetPath, entryPath string, tarReader *tar.R
 func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error {
 	if _, err := os.Stat(path); err != nil {
 		if err = os.Mkdir(path, tarHeader.FileInfo().Mode()); err != nil {
-			return fmt.Errorf("creating directory `%s`: %s", path, err)
+			newErr := fmt.Errorf("creating directory `%s`: %s", path, err)
+
+			if os.IsPermission(err) {
+				dirName := filepath.Dir(tarHeader.Name)
+				return fmt.Errorf("'/%s' does not give write permission to its owner. This image can only be unpacked using uid and gid mappings, or by running as root.", dirName)
+			}
+
+			return newErr
 		}
 	}
 
@@ -167,7 +174,7 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 
 		if os.IsPermission(err) {
 			dirName := filepath.Dir(tarHeader.Name)
-			return fmt.Errorf("Directory '/%s' does not give write permission to its owner. This image can only be unpacked by root.", dirName)
+			return fmt.Errorf("'/%s' does not give write permission to its owner. This image can only be unpacked using uid and gid mappings, or by running as root.", dirName)
 		}
 
 		return newErr

@@ -291,6 +291,37 @@ var _ = Describe("Create with remote images", func() {
 		})
 	})
 
+	Context("when the image has files that are not writable to their owner", func() {
+		BeforeEach(func() {
+			baseImageURL = "docker:///cfgarden/non-writable-file"
+		})
+
+		It("fails with a sensible message", func() {
+			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImageURL, "random-id")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, "10s").Should(gexec.Exit(1))
+			Eventually(string(sess.Out.Contents())).Should(MatchRegexp("^'/test' does not give write permission to its owner. This image can only be unpacked using uid and gid mappings, or by running as root."))
+		})
+
+		Context("when providing id mappings", func() {
+			It("works", func() {
+				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create",
+					"--uid-mapping", fmt.Sprintf("0:%s:1", CurrentUserID),
+					"--gid-mapping", fmt.Sprintf("0:%s:1", CurrentUserID),
+					"--gid-mapping", "1:100000:65000",
+					"--uid-mapping", "1:100000:65000",
+					baseImageURL, "random-id")
+
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess, "10s").Should(gexec.Exit(0))
+				rootFSPath := strings.TrimSpace(string(sess.Out.Contents())) + "/rootfs"
+				Expect(path.Join(rootFSPath, "test", "hello")).To(BeARegularFile())
+			})
+		})
+	})
+
 	Context("when the image has folders that are not writable to their owner", func() {
 		BeforeEach(func() {
 			baseImageURL = "docker:///cfgarden/non-writable-folder"
@@ -301,7 +332,24 @@ var _ = Describe("Create with remote images", func() {
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, "10s").Should(gexec.Exit(1))
-			Eventually(string(sess.Out.Contents())).Should(MatchRegexp("^Directory '/test' does not give write permission to its owner. This image can only be unpacked by root."))
+			Eventually(string(sess.Out.Contents())).Should(MatchRegexp("^'/test' does not give write permission to its owner. This image can only be unpacked using uid and gid mappings, or by running as root."))
+		})
+
+		Context("when providing id mappings", func() {
+			It("works", func() {
+				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create",
+					"--uid-mapping", fmt.Sprintf("0:%s:1", CurrentUserID),
+					"--gid-mapping", fmt.Sprintf("0:%s:1", CurrentUserID),
+					"--gid-mapping", "1:100000:65000",
+					"--uid-mapping", "1:100000:65000",
+					baseImageURL, "random-id")
+
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess, "10s").Should(gexec.Exit(0))
+				rootFSPath := strings.TrimSpace(string(sess.Out.Contents())) + "/rootfs"
+				Expect(path.Join(rootFSPath, "test", "hello")).To(BeARegularFile())
+			})
 		})
 	})
 })
