@@ -51,9 +51,9 @@ cleanup_store() {
   store_path=$1
 
   remove_subvolumes $store_path
-  rm -Rf $store_path/cache/*
-  rm -Rf $store_path/images/*
-  rm -Rf $store_path/locks/*
+  rm -Rf $store_path/**/cache/*
+  rm -Rf $store_path/**/images/*
+  rm -Rf $store_path/**/locks/*
 }
 
 store_path=${1:-"/var/lib/grootfs"}
