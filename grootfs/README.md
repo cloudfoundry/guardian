@@ -51,42 +51,20 @@ not work due to our versioned dependencies._
 ### Instructions
 
 #### Requirements
+```
+sudo hack/quick-setup
+```
+
+This will ensure the following requirements are in place:
 
 * GrootFS requires BTRFS to be enabled in the kernel, it also makes use of the
   brtfs-progs (btrfs-tools package on Ubuntu) for layering images.
-
-```
-sudo apt-get install btrfs-tools
-sudo modprobe btrfs # if not loaded
-```
-
 * By default all operations will happen in `/var/lib/grootfs` folder, you can
   change it by passing the `--store` flag to the binary. The store folder is
   expected to be inside a mounted BTRFS volume. If you don't have one, you can
-  create a loop mounted BTRFS as follows:
-
-```
-# create a btrfs block device
-truncate -s 1G ~/btrfs_volume
-mkfs.btrfs ~/btrfs_volume
-
-# mount the block device
-sudo mkdir -p /mnt/btrfs
-sudo mount -t btrfs -o user_subvol_rm_allowed ~/btrfs_volume /mnt/btrfs
-sudo btrfs quota enable /mnt/btrfs
-# you might need to chmod/chown the mount point if you don't want to run grootfs as root
-```
-
+  create a loop mounted BTRFS.
 * For user/group id mapping, you'll also require newuidmap and newgidmap to be
   installed (uidmap package on Ubuntu)
-
-**IMPORTANT**: The btrfs options `user_subvol_rm_allowed` is mandatory. Otherwise
-grootfs won't be able to delete btrfs volumes/snapshots, causing volume leaks and
-unexpected behaviour.
-
-```
-sudo apt-get install uidmap
-```
 
 ### Creating an image
 
