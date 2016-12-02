@@ -27,7 +27,6 @@ func main() {
 	grootfs := cli.NewApp()
 	grootfs.Name = "grootfs"
 	grootfs.Usage = "I am Groot!"
-	grootfs.Version = "0.1.0"
 
 	grootfs.Flags = []cli.Flag{
 		cli.StringFlag{
