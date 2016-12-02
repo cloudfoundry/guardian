@@ -57,7 +57,7 @@ install_groot() {
   go get github.com/fouralarmfire/grootsay
 
   # Clone them all
-  [ ! -d $HOME/go/src/code.cloudfoundry.or/grootfs ] && go get code.cloudfoundry.org/grootfs
+  [ ! -d $HOME/go/src/code.cloudfoundry.org/grootfs ] && go get code.cloudfoundry.org/grootfs
   go get code.cloudfoundry.org/grootfs-bench
 
   # Build grootfs and move binaries around
