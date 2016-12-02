@@ -36,7 +36,7 @@ var _ = Describe("LimitsRule", func() {
 	It("sets the correct PID limit in bundle resources", func() {
 		newBndl := bundlerules.Limits{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			Limits: garden.Limits{
-				Pid: garden.PidLimits{Limit: 1},
+				Pid: garden.PidLimits{Max: 1},
 			},
 		})
 

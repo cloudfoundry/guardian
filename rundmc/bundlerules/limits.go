@@ -14,6 +14,6 @@ func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 	bndl = bndl.WithMemoryLimit(specs.LinuxMemory{Limit: &limit, Swap: &limit})
 	shares := uint64(spec.Limits.CPU.LimitInShares)
 	bndl = bndl.WithCPUShares(specs.LinuxCPU{Shares: &shares})
-	pids := int64(spec.Limits.Pid.Limit)
+	pids := int64(spec.Limits.Pid.Max)
 	return bndl.WithPidLimit(specs.LinuxPids{Limit: pids})
 }

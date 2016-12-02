@@ -272,7 +272,7 @@ var _ = Describe("Gardener", func() {
 			var spec garden.ContainerSpec
 
 			BeforeEach(func() {
-				spec.Limits.Pid = garden.PidLimits{Limit: 1}
+				spec.Limits.Pid = garden.PidLimits{Max: 1}
 			})
 
 			It("should delegate the limit to the containerizer", func() {
@@ -281,7 +281,7 @@ var _ = Describe("Gardener", func() {
 
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
 				_, desiredSpec := containerizer.CreateArgsForCall(0)
-				Expect(desiredSpec.Limits.Pid.Limit).To(BeNumerically("==", 1))
+				Expect(desiredSpec.Limits.Pid.Max).To(BeNumerically("==", 1))
 			})
 		})
 
