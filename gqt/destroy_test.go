@@ -24,7 +24,7 @@ var _ = Describe("Destroying a Container", func() {
 	)
 
 	BeforeEach(func() {
-		args = []string{}
+		args = []string{"--debug-bind-ip", "0.0.0.0", "--debug-bind-port", fmt.Sprintf("%d", 8080+GinkgoParallelNode())}
 	})
 
 	JustBeforeEach(func() {

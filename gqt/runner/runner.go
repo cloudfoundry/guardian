@@ -223,8 +223,6 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dad
 	gardenArgs = appendDefaultFlag(gardenArgs, "--nstar-bin", nstarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", tarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--port-pool-start", fmt.Sprintf("%d", GinkgoParallelNode()*10000))
-	gardenArgs = appendDefaultFlag(gardenArgs, "--debug-bind-ip", "0.0.0.0")
-	gardenArgs = appendDefaultFlag(gardenArgs, "--debug-bind-port", fmt.Sprintf("%d", 8080+ginkgo.GinkgoParallelNode()))
 
 	return exec.Command(bin, gardenArgs...)
 }
