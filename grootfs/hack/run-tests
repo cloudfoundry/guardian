@@ -2,7 +2,7 @@
 
 # Default fly target
 [ -z $FLY_TARGET ] && FLY_TARGET="lite"
-[ -z $FLY_ARGS ] && FLY_ARGS="-p"
+[ -z $FLY_ARGS ] && FLY_ARGS="-p -x"
 
 RED=1
 GREEN=2
