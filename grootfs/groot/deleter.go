@@ -23,7 +23,9 @@ func IamDeleter(imageCloner ImageCloner, dependencyManager DependencyManager, me
 
 func (d *Deleter) Delete(logger lager.Logger, id string) error {
 	startTime := time.Now()
-	defer d.metricsEmitter.TryEmitDuration(logger, MetricImageDeletionTime, time.Since(startTime))
+	defer func() {
+		d.metricsEmitter.TryEmitDuration(logger, MetricImageDeletionTime, time.Since(startTime))
+	}()
 
 	logger = logger.Session("groot-deleting", lager.Data{"imageID": id})
 	logger.Info("start")

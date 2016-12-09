@@ -47,7 +47,9 @@ func IamCreator(
 
 func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 	startTime := time.Now()
-	defer c.metricsEmitter.TryEmitDuration(logger, MetricImageCreationTime, time.Since(startTime))
+	defer func() {
+		c.metricsEmitter.TryEmitDuration(logger, MetricImageCreationTime, time.Since(startTime))
+	}()
 
 	logger = logger.Session("groot-creating", lager.Data{"imageID": spec.ID, "spec": spec})
 	logger.Info("start")

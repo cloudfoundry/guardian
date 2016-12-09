@@ -26,7 +26,9 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 
 func (c *Cleaner) Clean(logger lager.Logger, threshold uint64, keepImages []string) (bool, error) {
 	startTime := time.Now()
-	defer c.metricsEmitter.TryEmitDuration(logger, MetricImageCleanTime, time.Since(startTime))
+	defer func() {
+		c.metricsEmitter.TryEmitDuration(logger, MetricImageCleanTime, time.Since(startTime))
+	}()
 
 	logger = logger.Session("groot-cleaning")
 	logger.Info("start")
