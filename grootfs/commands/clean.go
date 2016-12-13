@@ -42,6 +42,9 @@ var CleanCommand = cli.Command{
 		logger = logger.Session("clean")
 
 		storePath := storepath.UserBased(ctx.GlobalString("store"))
+		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
+		configBuilder.WithIgnoreBaseImages(ctx.StringSlice("ignore-image"))
+		cfg := configBuilder.Build()
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
@@ -53,11 +56,10 @@ var CleanCommand = cli.Command{
 		sm := garbage_collector.NewStoreMeasurer(storePath)
 		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, imageCloner, dependencyManager)
 
-		cfg := ctx.App.Metadata["config"].(config.Config)
-		ignoredImages := append(ctx.StringSlice("ignore-image"), cfg.IgnoreBaseImages...)
 		metricsEmitter := metrics.NewEmitter()
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
-		noop, err := cleaner.Clean(logger, ctx.Uint64("threshold-bytes"), ignoredImages)
+
+		noop, err := cleaner.Clean(logger, ctx.Uint64("threshold-bytes"), cfg.IgnoreBaseImages)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return cli.NewExitError(err.Error(), 1)

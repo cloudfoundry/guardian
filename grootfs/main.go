@@ -73,16 +73,23 @@ func main() {
 		logLevel := ctx.String("log-level")
 		metronEndpoint := ctx.String("metron-endpoint")
 
-		// Sadness. We need to do that becuase we use stderr for logs so user
-		// errors need to end up in stdout.
-		cli.ErrWriter = os.Stdout
-
 		lagerLogLevel := translateLogLevel(logLevel)
 		logger, err := configureLogger(lagerLogLevel, logFile)
 		if err != nil {
 			return err
 		}
 		ctx.App.Metadata["logger"] = logger
+
+		cfgBuilder, err := newConfigBuilder(ctx.GlobalString("config"))
+		if err != nil {
+			logger.Error("failed-loading-config-file", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+		ctx.App.Metadata["configBuilder"] = cfgBuilder
+
+		// Sadness. We need to do that becuase we use stderr for logs so user
+		// errors need to end up in stdout.
+		cli.ErrWriter = os.Stdout
 
 		configurer := store.NewConfigurer()
 		storePath = storepath.UserBased(storePath)
@@ -96,13 +103,6 @@ func main() {
 				logger.Error("failed-to-initialize-metrics-emitter", err)
 			}
 		}
-
-		cfg, err := loadConfig(ctx.GlobalString("config"))
-		if err != nil {
-			logger.Error("failed-loading-config-file", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
-		ctx.App.Metadata["config"] = cfg
 
 		return nil
 	}
@@ -155,4 +155,17 @@ func loadConfig(configPath string) (config.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func newConfigBuilder(configPath string) (*config.Builder, error) {
+	if configPath != "" {
+		cfgBuilder, err := config.NewBuilderFromFile(configPath)
+		if err != nil {
+			return cfgBuilder, err
+		}
+
+		return cfgBuilder, nil
+	}
+
+	return config.NewBuilder(), nil
 }

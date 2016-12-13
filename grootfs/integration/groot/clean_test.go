@@ -166,14 +166,14 @@ var _ = Describe("Clean", func() {
 						Expect(Runner.Delete("my-image-3")).To(Succeed())
 					})
 
-					It("doesn't delete their layers", func() {
+					It("does not ignore images provided in the config file", func() {
 						_, err := Runner.WithConfig(configFilePath).Clean(0, []string{"docker:///cfgarden/empty:v0.1.0"})
 						Expect(err).NotTo(HaveOccurred())
 
 						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 						Expect(err).NotTo(HaveOccurred())
 
-						Expect(afterContents).To(Equal(preContents))
+						Expect(afterContents).NotTo(Equal(preContents))
 					})
 				})
 			})

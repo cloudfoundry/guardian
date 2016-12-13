@@ -67,6 +67,10 @@ var CreateCommand = cli.Command{
 		}
 
 		storePath := storepath.UserBased(ctx.GlobalString("store"))
+		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
+		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry"))
+		cfg := configBuilder.Build()
+
 		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
 
@@ -97,9 +101,7 @@ var CreateCommand = cli.Command{
 		idMapper := unpackerpkg.NewIDMapper(runner)
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedUnpacker(runner, idMapper)
 
-		cfg := ctx.App.Metadata["config"].(config.Config)
-		trustedRegistries := append(ctx.StringSlice("insecure-registry"), cfg.InsecureRegistries...)
-		dockerSrc := remote.NewDockerSource(trustedRegistries)
+		dockerSrc := remote.NewDockerSource(cfg.InsecureRegistries)
 
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		remoteFetcher := remote.NewRemoteFetcher(dockerSrc, cacheDriver)
