@@ -6,7 +6,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands"
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 
@@ -68,7 +67,6 @@ func main() {
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
-		storePath := ctx.GlobalString("store")
 		logFile := ctx.GlobalString("log-file")
 		logLevel := ctx.String("log-level")
 		metronEndpoint := ctx.String("metron-endpoint")
@@ -85,6 +83,7 @@ func main() {
 			logger.Error("failed-loading-config-file", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
+		cfgBuilder = cfgBuilder.WithStorePath(ctx.GlobalString("store"), defaultStorePath)
 		ctx.App.Metadata["configBuilder"] = cfgBuilder
 
 		// Sadness. We need to do that becuase we use stderr for logs so user
@@ -92,8 +91,8 @@ func main() {
 		cli.ErrWriter = os.Stdout
 
 		configurer := store.NewConfigurer()
-		storePath = storepath.UserBased(storePath)
-		if err := configurer.Ensure(logger, storePath); err != nil {
+		cfg := cfgBuilder.Build()
+		if err := configurer.Ensure(logger, cfg.UserBasedStorePath); err != nil {
 			return err
 		}
 

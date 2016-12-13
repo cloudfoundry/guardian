@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/commands/idfinder"
-	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store"
@@ -32,7 +32,10 @@ var DeleteCommand = cli.Command{
 			return cli.NewExitError("id was not specified", 1)
 		}
 
-		storePath := ctx.GlobalString("store")
+		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
+		cfg := configBuilder.Build()
+
+		storePath := cfg.BaseStorePath
 		idOrPath := ctx.Args().First()
 		id, err := idfinder.FindID(storePath, idOrPath)
 		if err != nil {
@@ -40,7 +43,7 @@ var DeleteCommand = cli.Command{
 		}
 
 		if id == idOrPath {
-			storePath = storepath.UserBased(storePath)
+			storePath = cfg.UserBasedStorePath
 		} else {
 			storePath, err = idfinder.FindSubStorePath(storePath, idOrPath)
 			if err != nil {

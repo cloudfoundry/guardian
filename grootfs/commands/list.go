@@ -3,6 +3,7 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 import (
 	"fmt"
 
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 
@@ -18,7 +19,9 @@ var ListCommand = cli.Command{
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("list")
 
-		storePath := ctx.GlobalString("store")
+		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
+		cfg := configBuilder.Build()
+		storePath := cfg.BaseStorePath
 
 		lister := groot.IamLister()
 		images, err := lister.List(logger, storePath)

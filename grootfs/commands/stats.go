@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"os"
 
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/commands/idfinder"
-	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
@@ -26,12 +26,15 @@ var StatsCommand = cli.Command{
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("stats")
 
-		storePath := ctx.GlobalString("store")
 		if ctx.NArg() != 1 {
 			logger.Error("parsing-command", errors.New("invalid arguments"), lager.Data{"args": ctx.Args()})
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
+		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
+		cfg := configBuilder.Build()
+
+		storePath := cfg.BaseStorePath
 		idOrPath := ctx.Args().First()
 		id, err := idfinder.FindID(storePath, idOrPath)
 		if err != nil {
@@ -39,7 +42,7 @@ var StatsCommand = cli.Command{
 		}
 
 		if id == idOrPath {
-			storePath = storepath.UserBased(storePath)
+			storePath = cfg.UserBasedStorePath
 		} else {
 			storePath, err = idfinder.FindSubStorePath(storePath, idOrPath)
 			if err != nil {

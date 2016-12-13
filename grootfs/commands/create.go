@@ -10,7 +10,6 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -66,11 +65,11 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
-		storePath := storepath.UserBased(ctx.GlobalString("store"))
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry"))
 		cfg := configBuilder.Build()
 
+		storePath := cfg.UserBasedStorePath
 		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
 

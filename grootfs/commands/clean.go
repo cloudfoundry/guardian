@@ -7,7 +7,6 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/commands/storepath"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
@@ -41,10 +40,10 @@ var CleanCommand = cli.Command{
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("clean")
 
-		storePath := storepath.UserBased(ctx.GlobalString("store"))
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithIgnoreBaseImages(ctx.StringSlice("ignore-image"))
 		cfg := configBuilder.Build()
+		storePath := cfg.UserBasedStorePath
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)

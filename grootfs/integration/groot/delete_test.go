@@ -2,12 +2,18 @@ package groot_test
 
 import (
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"strings"
 
+	yaml "gopkg.in/yaml.v2"
+
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,7 +24,7 @@ import (
 var _ = Describe("Delete", func() {
 	var (
 		baseImagePath string
-		image    groot.Image
+		image         groot.Image
 	)
 
 	BeforeEach(func() {
@@ -67,6 +73,55 @@ var _ = Describe("Delete", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
 				Eventually(sess.Out).Should(gbytes.Say("path `/Iamnot/in/the/storage/images/1234/rootfs` is outside store path"))
+			})
+		})
+	})
+
+	Describe("--config global flag", func() {
+		var (
+			configDir       string
+			configFilePath  string
+			configStorePath string
+		)
+
+		BeforeEach(func() {
+			var err error
+			configDir, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+			configFilePath = path.Join(configDir, "config.yaml")
+			configStorePath = StorePath
+		})
+
+		JustBeforeEach(func() {
+			cfg := config.Config{
+				BaseStorePath: configStorePath,
+			}
+
+			configYaml, err := yaml.Marshal(cfg)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(configDir)).To(Succeed())
+		})
+
+		Describe("store path", func() {
+			var (
+				runner runnerpkg.Runner
+			)
+
+			BeforeEach(func() {
+				runner = runnerpkg.Runner{
+					GrootFSBin: GrootFSBin,
+					DraxBin:    DraxBin,
+				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+			})
+
+			It("uses the store path from the config file", func() {
+				err := runner.Delete("random-id")
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

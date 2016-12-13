@@ -10,8 +10,10 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/lager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -112,37 +114,48 @@ var _ = Describe("Clean", func() {
 		})
 
 		Context("when --config global flag is given", func() {
+			var (
+				configStorePath   string
+				configDir         string
+				configFilePath    string
+				ignoredImagesList []string
+			)
+
+			BeforeEach(func() {
+				var err error
+				configDir, err = ioutil.TempDir("", "")
+				Expect(err).NotTo(HaveOccurred())
+				configFilePath = path.Join(configDir, "config.yaml")
+				configStorePath = StorePath
+				ignoredImagesList = []string{}
+			})
+
+			JustBeforeEach(func() {
+				cfg := config.Config{
+					BaseStorePath:    configStorePath,
+					IgnoreBaseImages: ignoredImagesList,
+				}
+
+				configYaml, err := yaml.Marshal(cfg)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(configDir)).To(Succeed())
+			})
+
 			Describe("with a list of images to be ignored", func() {
-				var (
-					configDir      string
-					configFilePath string
-					preContents    []os.FileInfo
-				)
+				var preContents []os.FileInfo
 
 				BeforeEach(func() {
-					var err error
-					configDir, err = ioutil.TempDir("", "")
-					Expect(err).NotTo(HaveOccurred())
-
-					cfg := config.Config{
-						IgnoreBaseImages: []string{"docker:///busybox"},
-					}
-
-					configYaml, err := yaml.Marshal(cfg)
-					Expect(err).NotTo(HaveOccurred())
-					configFilePath = path.Join(configDir, "config.yaml")
-
-					Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+					ignoredImagesList = []string{"docker:///busybox"}
 				})
 
 				JustBeforeEach(func() {
 					var err error
 					preContents, err = ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
-				})
-
-				AfterEach(func() {
-					Expect(os.RemoveAll(configDir)).To(Succeed())
 				})
 
 				It("doesn't delete their layers", func() {
@@ -175,6 +188,30 @@ var _ = Describe("Clean", func() {
 
 						Expect(afterContents).NotTo(Equal(preContents))
 					})
+				})
+			})
+
+			Describe("store path", func() {
+				var runner runnerpkg.Runner
+
+				BeforeEach(func() {
+					runner = runnerpkg.Runner{
+						GrootFSBin: GrootFSBin,
+						DraxBin:    DraxBin,
+					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(preContents).To(HaveLen(3))
+				})
+
+				It("uses the store path from the config file", func() {
+					_, err := runner.Clean(0, []string{})
+					Expect(err).NotTo(HaveOccurred())
+
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(afterContents).To(HaveLen(2))
 				})
 			})
 		})

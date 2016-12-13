@@ -22,7 +22,7 @@ import (
 func CreateImage(grootFSBin, storePath, draxBin, baseImagePath, id string, diskLimit int64) groot.Image {
 	spec := groot.CreateSpec{
 		ID:        id,
-		BaseImage:     baseImagePath,
+		BaseImage: baseImagePath,
 		DiskLimit: diskLimit,
 	}
 

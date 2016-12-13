@@ -75,6 +75,12 @@ func (r Runner) WithConfig(path string) Runner {
 	return nr
 }
 
+func (r Runner) WithStore(path string) Runner {
+	nr := r
+	nr.StorePath = path
+	return nr
+}
+
 func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error) {
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	var stdout io.Writer
@@ -131,7 +137,9 @@ func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	if r.LogFile != "" {
 		allArgs = append(allArgs, "--log-file", r.LogFile)
 	}
-	allArgs = append(allArgs, "--store", r.StorePath)
+	if r.StorePath != "" {
+		allArgs = append(allArgs, "--store", r.StorePath)
+	}
 	if r.DraxBin != "" {
 		allArgs = append(allArgs, "--drax-bin", r.DraxBin)
 	}

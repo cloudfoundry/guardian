@@ -1,17 +1,20 @@
-package root_test
+package groot_test
 
 import (
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
-	"syscall"
 
+	yaml "gopkg.in/yaml.v2"
+
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 
+	"githFub.com/onsi/gomega/gbytes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -37,19 +40,41 @@ var _ = Describe("List", func() {
 		Expect(images[0].Path).To(Equal(image.Path))
 	})
 
-	Context("when the user is groot", func() {
-		It("lists all images in the store", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "list")
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				Credential: &syscall.Credential{
-					Uid: GrootUID,
-					Gid: GrootGID,
-				},
-			}
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	Describe("--config global flag", func() {
+		var (
+			configDir      string
+			configFilePath string
+		)
+
+		BeforeEach(func() {
+			var err error
+			configDir, err = ioutil.TempDir("", "")
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-			Expect(sess.Out).To(gbytes.Say(image.Path))
+			configFilePath = path.Join(configDir, "config.yaml")
+
+			cfg := config.Config{
+				BaseStorePath: StorePath,
+			}
+
+			configYaml, err := yaml.Marshal(cfg)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(configDir)).To(Succeed())
+		})
+
+		Describe("store path", func() {
+			It("uses the store path from the config file", func() {
+				cmd := exec.Command(GrootFSBin, "--config", configFilePath, "list")
+
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+				Expect(sess.Out).To(gbytes.Say(image.Path))
+			})
 		})
 	})
 

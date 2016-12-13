@@ -1,5 +1,7 @@
 package config
 
+import "code.cloudfoundry.org/grootfs/commands/storepath"
+
 type Builder struct {
 	config *Config
 }
@@ -16,9 +18,11 @@ func NewBuilderFromFile(pathToYaml string) (*Builder, error) {
 		return nil, err
 	}
 
-	return &Builder{
+	b := &Builder{
 		config: &config,
-	}, nil
+	}
+
+	return b.WithStorePath(config.BaseStorePath, ""), nil
 }
 
 func (b *Builder) Build() Config {
@@ -40,5 +44,16 @@ func (b *Builder) WithIgnoreBaseImages(ignoreBaseImages []string) *Builder {
 	}
 
 	b.config.IgnoreBaseImages = ignoreBaseImages
+	return b
+}
+
+func (b *Builder) WithStorePath(storePath, defaultStorePath string) *Builder {
+	if b.config.BaseStorePath != "" && storePath == defaultStorePath {
+		b.config.UserBasedStorePath = storepath.UserBased(b.config.BaseStorePath)
+		return b
+	}
+
+	b.config.BaseStorePath = storePath
+	b.config.UserBasedStorePath = storepath.UserBased(storePath)
 	return b
 }

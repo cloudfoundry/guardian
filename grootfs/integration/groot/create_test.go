@@ -8,8 +8,14 @@ import (
 	"path"
 	"path/filepath"
 
+	yaml "gopkg.in/yaml.v2"
+
+	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -77,6 +83,61 @@ var _ = Describe("Create", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
 				Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
+			})
+		})
+
+		Describe("--config global flag", func() {
+			var (
+				configDir       string
+				configFilePath  string
+				configStorePath string
+			)
+
+			BeforeEach(func() {
+				var err error
+				configStorePath, err = ioutil.TempDir(StorePath, "")
+				Expect(err).NotTo(HaveOccurred())
+
+				configDir, err = ioutil.TempDir("", "")
+				Expect(err).NotTo(HaveOccurred())
+
+				cfg := config.Config{
+					BaseStorePath: configStorePath,
+				}
+
+				configYaml, err := yaml.Marshal(cfg)
+				Expect(err).NotTo(HaveOccurred())
+				configFilePath = path.Join(configDir, "config.yaml")
+
+				Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(configDir)).To(Succeed())
+			})
+
+			Describe("store path", func() {
+				var (
+					runner runnerpkg.Runner
+					spec   groot.CreateSpec
+				)
+
+				BeforeEach(func() {
+					runner = runnerpkg.Runner{
+						GrootFSBin: GrootFSBin,
+						DraxBin:    DraxBin,
+					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+					spec = groot.CreateSpec{
+						ID:        "random-id",
+						BaseImage: baseImagePath,
+					}
+				})
+
+				It("uses the store path from the config file", func() {
+					image, err := runner.Create(spec)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(image.Path).To(Equal(filepath.Join(configStorePath, CurrentUserID, "images/random-id")))
+				})
 			})
 		})
 

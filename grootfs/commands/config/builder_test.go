@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	yaml "gopkg.in/yaml.v2"
@@ -14,12 +15,17 @@ import (
 
 var _ = Describe("Builder", func() {
 	var (
-		configDir      string
-		configFilePath string
-		builder        *config.Builder
+		configDir       string
+		configFilePath  string
+		builder         *config.Builder
+		configStorePath string
 	)
 
 	BeforeEach(func() {
+		configStorePath = "/hello"
+	})
+
+	JustBeforeEach(func() {
 		var err error
 		configDir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -27,6 +33,7 @@ var _ = Describe("Builder", func() {
 		cfg := config.Config{
 			InsecureRegistries: []string{"http://example.org"},
 			IgnoreBaseImages:   []string{"docker:///busybox"},
+			BaseStorePath:      configStorePath,
 		}
 
 		configYaml, err := yaml.Marshal(cfg)
@@ -34,10 +41,6 @@ var _ = Describe("Builder", func() {
 		configFilePath = path.Join(configDir, "config.yaml")
 
 		Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
-	})
-
-	JustBeforeEach(func() {
-		var err error
 		builder, err = config.NewBuilderFromFile(configFilePath)
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -51,6 +54,8 @@ var _ = Describe("Builder", func() {
 			config := builder.Build()
 			Expect(config.InsecureRegistries).To(Equal([]string{"http://example.org"}))
 			Expect(config.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
+			Expect(config.BaseStorePath).To(Equal("/hello"))
+			Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/hello", CurrentUserID)))
 		})
 	})
 
@@ -102,4 +107,37 @@ var _ = Describe("Builder", func() {
 		})
 	})
 
+	Describe("WithStorePath", func() {
+		Context("when provided store path and default store path are different", func() {
+			It("overrides the config's store path entry with the provided store path with user ID postfix", func() {
+				builder = builder.WithStorePath("/mnt/grootfs/data", "/var/lib/grootfs/data")
+				config := builder.Build()
+				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/mnt/grootfs/data", CurrentUserID)))
+				Expect(config.BaseStorePath).To(Equal("/mnt/grootfs/data"))
+			})
+		})
+
+		Context("when provided store path and default store path are the same", func() {
+			It("uses the config's store path with user ID postfix", func() {
+				builder = builder.WithStorePath("/var/lib/grootfs/data", "/var/lib/grootfs/data")
+				config := builder.Build()
+				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/hello", CurrentUserID)))
+				Expect(config.BaseStorePath).To(Equal("/hello"))
+			})
+
+		})
+
+		Context("when config doesn't have a store path property", func() {
+			BeforeEach(func() {
+				configStorePath = ""
+			})
+
+			It("uses the provided store path with user ID postfix", func() {
+				builder = builder.WithStorePath("/var/lib/grootfs/data", "/var/lib/grootfs/data")
+				config := builder.Build()
+				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/var/lib/grootfs/data", CurrentUserID)))
+				Expect(config.BaseStorePath).To(Equal("/var/lib/grootfs/data"))
+			})
+		})
+	})
 })
