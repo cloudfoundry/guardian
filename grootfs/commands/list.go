@@ -21,6 +21,7 @@ var ListCommand = cli.Command{
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		cfg := configBuilder.Build()
+		logger.Debug("list-config", lager.Data{"currentConfig": cfg})
 		storePath := cfg.BaseStorePath
 
 		lister := groot.IamLister()

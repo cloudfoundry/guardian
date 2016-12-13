@@ -33,6 +33,7 @@ var StatsCommand = cli.Command{
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		cfg := configBuilder.Build()
+		logger.Debug("stats-config", lager.Data{"currentConfig": cfg})
 
 		storePath := cfg.BaseStorePath
 		idOrPath := ctx.Args().First()

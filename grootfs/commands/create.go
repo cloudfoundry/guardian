@@ -68,6 +68,7 @@ var CreateCommand = cli.Command{
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry"))
 		cfg := configBuilder.Build()
+		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
 
 		storePath := cfg.UserBasedStorePath
 		baseImage := ctx.Args().First()

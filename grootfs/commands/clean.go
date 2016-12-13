@@ -43,6 +43,7 @@ var CleanCommand = cli.Command{
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithIgnoreBaseImages(ctx.StringSlice("ignore-image"))
 		cfg := configBuilder.Build()
+		logger.Debug("clean-config", lager.Data{"currentConfig": cfg})
 		storePath := cfg.UserBasedStorePath
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.DraxBin, storePath)
