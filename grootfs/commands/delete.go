@@ -51,7 +51,7 @@ var DeleteCommand = cli.Command{
 			}
 		}
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.META_DIR_NAME, "dependencies"),

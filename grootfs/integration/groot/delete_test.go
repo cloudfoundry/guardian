@@ -79,9 +79,10 @@ var _ = Describe("Delete", func() {
 
 	Describe("--config global flag", func() {
 		var (
-			configDir       string
-			configFilePath  string
-			configStorePath string
+			configDir         string
+			configFilePath    string
+			configStorePath   string
+			configDraxBinPath string
 		)
 
 		BeforeEach(func() {
@@ -90,11 +91,13 @@ var _ = Describe("Delete", func() {
 			Expect(err).NotTo(HaveOccurred())
 			configFilePath = path.Join(configDir, "config.yaml")
 			configStorePath = StorePath
+			configDraxBinPath = ""
 		})
 
 		JustBeforeEach(func() {
 			cfg := config.Config{
 				BaseStorePath: configStorePath,
+				DraxBin:       configDraxBinPath,
 			}
 
 			configYaml, err := yaml.Marshal(cfg)
@@ -122,6 +125,35 @@ var _ = Describe("Delete", func() {
 			It("uses the store path from the config file", func() {
 				err := runner.Delete("random-id")
 				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Describe("drax bin", func() {
+			var (
+				runner         runnerpkg.Runner
+				draxCalledFile *os.File
+				draxBin        *os.File
+				tempFolder     string
+			)
+
+			BeforeEach(func() {
+				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
+				configDraxBinPath = draxBin.Name()
+			})
+
+			JustBeforeEach(func() {
+				runner = runnerpkg.Runner{
+					GrootFSBin: GrootFSBin,
+					StorePath:  StorePath,
+				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+			})
+
+			It("uses the drax bin from the config file", func() {
+				Expect(runner.Delete("random-id")).To(Succeed())
+
+				contents, err := ioutil.ReadFile(draxCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot"))
 			})
 		})
 	})

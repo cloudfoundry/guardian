@@ -77,8 +77,9 @@ var _ = Describe("Stats", func() {
 
 		Describe("--config global flag", func() {
 			var (
-				configDir      string
-				configFilePath string
+				configDir         string
+				configFilePath    string
+				configDraxBinPath string
 			)
 
 			BeforeEach(func() {
@@ -86,11 +87,13 @@ var _ = Describe("Stats", func() {
 				configDir, err = ioutil.TempDir("", "")
 				Expect(err).NotTo(HaveOccurred())
 				configFilePath = path.Join(configDir, "config.yaml")
+				configDraxBinPath = ""
 			})
 
 			JustBeforeEach(func() {
 				cfg := config.Config{
 					BaseStorePath: StorePath,
+					DraxBin:       configDraxBinPath,
 				}
 
 				configYaml, err := yaml.Marshal(cfg)
@@ -120,6 +123,36 @@ var _ = Describe("Stats", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(stats).To(Equal(expectedStats))
+				})
+			})
+
+			Describe("drax bin", func() {
+				var (
+					runner         runnerpkg.Runner
+					draxCalledFile *os.File
+					draxBin        *os.File
+					tempFolder     string
+				)
+
+				BeforeEach(func() {
+					tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
+					configDraxBinPath = draxBin.Name()
+				})
+
+				JustBeforeEach(func() {
+					runner = runnerpkg.Runner{
+						GrootFSBin: GrootFSBin,
+						StorePath:  StorePath,
+					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				})
+
+				It("uses the drax bin from the config file", func() {
+					_, err := runner.Stats("random-id")
+					Expect(err).To(MatchError("could not parse stats"))
+
+					contents, err := ioutil.ReadFile(draxCalledFile.Name())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(contents)).To(Equal("I'm groot"))
 				})
 			})
 		})

@@ -93,7 +93,7 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
 		runner := linux_command_runner.New()

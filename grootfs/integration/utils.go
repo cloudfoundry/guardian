@@ -4,14 +4,17 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"strconv"
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration/runner"
+	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
@@ -63,6 +66,22 @@ func FindGID(group string) uint32 {
 	Expect(err).NotTo(HaveOccurred())
 
 	return uint32(i)
+}
+
+func CreateFakeDrax() (string, *os.File, *os.File) {
+	draxCalledFile, err := ioutil.TempFile("", "drax-called")
+	Expect(err).NotTo(HaveOccurred())
+	draxCalledFile.Close()
+
+	tempFolder, err := ioutil.TempDir("", "")
+	draxBin, err := os.Create(path.Join(tempFolder, "drax"))
+	Expect(err).NotTo(HaveOccurred())
+	draxBin.WriteString("#!/bin/bash\necho -n \"I'm groot\" > " + draxCalledFile.Name())
+	draxBin.Chmod(0777)
+	draxBin.Close()
+	testhelpers.SuidDrax(draxBin.Name())
+
+	return tempFolder, draxBin, draxCalledFile
 }
 
 func BaseImagePathToVolumeID(baseImagePath string) string {

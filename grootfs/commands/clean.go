@@ -45,7 +45,7 @@ var CleanCommand = cli.Command{
 		cfg := configBuilder.Build()
 		storePath := cfg.UserBasedStorePath
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(

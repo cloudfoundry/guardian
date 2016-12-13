@@ -19,10 +19,12 @@ var _ = Describe("Builder", func() {
 		configFilePath  string
 		builder         *config.Builder
 		configStorePath string
+		configDraxBin   string
 	)
 
 	BeforeEach(func() {
 		configStorePath = "/hello"
+		configDraxBin = "/config/drax"
 	})
 
 	JustBeforeEach(func() {
@@ -34,6 +36,7 @@ var _ = Describe("Builder", func() {
 			InsecureRegistries: []string{"http://example.org"},
 			IgnoreBaseImages:   []string{"docker:///busybox"},
 			BaseStorePath:      configStorePath,
+			DraxBin:            configDraxBin,
 		}
 
 		configYaml, err := yaml.Marshal(cfg)
@@ -137,6 +140,37 @@ var _ = Describe("Builder", func() {
 				config := builder.Build()
 				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/var/lib/grootfs/data", CurrentUserID)))
 				Expect(config.BaseStorePath).To(Equal("/var/lib/grootfs/data"))
+			})
+		})
+	})
+
+	Describe("WithDraxBin", func() {
+		Context("when provided drax bin and default drax bin are different", func() {
+			It("overrides the config's drax bin entry", func() {
+				builder = builder.WithDraxBin("/my/drax", "/default/drax")
+				config := builder.Build()
+				Expect(config.DraxBin).To(Equal("/my/drax"))
+			})
+		})
+
+		Context("when provided drax bin and default drax bin are the same", func() {
+			It("uses the config's drax bin", func() {
+				builder = builder.WithDraxBin("/default/drax", "/default/drax")
+				config := builder.Build()
+				Expect(config.DraxBin).To(Equal("/config/drax"))
+			})
+
+		})
+
+		Context("when config doesn't have a drax bin property", func() {
+			BeforeEach(func() {
+				configDraxBin = ""
+			})
+
+			It("uses the provided drax bin", func() {
+				builder = builder.WithDraxBin("/default/drax", "/default/drax")
+				config := builder.Build()
+				Expect(config.DraxBin).To(Equal("/default/drax"))
 			})
 		})
 	})

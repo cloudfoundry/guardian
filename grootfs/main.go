@@ -15,6 +15,7 @@ import (
 )
 
 const defaultStorePath = "/var/lib/grootfs"
+const defaultDraxBin = "drax"
 
 func init() {
 	if reexec.Init() {
@@ -49,7 +50,7 @@ func main() {
 		cli.StringFlag{
 			Name:  "drax-bin",
 			Usage: "Path to drax bin. (If not provided will use $PATH)",
-			Value: "drax",
+			Value: defaultDraxBin,
 		},
 		cli.StringFlag{
 			Name:  "metron-endpoint",
@@ -84,6 +85,7 @@ func main() {
 			return cli.NewExitError(err.Error(), 1)
 		}
 		cfgBuilder = cfgBuilder.WithStorePath(ctx.GlobalString("store"), defaultStorePath)
+		cfgBuilder = cfgBuilder.WithDraxBin(ctx.GlobalString("drax-bin"), defaultDraxBin)
 		ctx.App.Metadata["configBuilder"] = cfgBuilder
 
 		// Sadness. We need to do that becuase we use stderr for logs so user

@@ -57,3 +57,12 @@ func (b *Builder) WithStorePath(storePath, defaultStorePath string) *Builder {
 	b.config.UserBasedStorePath = storepath.UserBased(storePath)
 	return b
 }
+
+func (b *Builder) WithDraxBin(draxBin, defaultDraxBin string) *Builder {
+	if b.config.DraxBin != "" && draxBin == defaultDraxBin {
+		return b
+	}
+
+	b.config.DraxBin = draxBin
+	return b
+}

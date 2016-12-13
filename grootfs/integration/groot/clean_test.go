@@ -10,6 +10,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -118,6 +119,7 @@ var _ = Describe("Clean", func() {
 				configStorePath   string
 				configDir         string
 				configFilePath    string
+				configDraxBinPath string
 				ignoredImagesList []string
 			)
 
@@ -128,12 +130,14 @@ var _ = Describe("Clean", func() {
 				configFilePath = path.Join(configDir, "config.yaml")
 				configStorePath = StorePath
 				ignoredImagesList = []string{}
+				configDraxBinPath = ""
 			})
 
 			JustBeforeEach(func() {
 				cfg := config.Config{
 					BaseStorePath:    configStorePath,
 					IgnoreBaseImages: ignoredImagesList,
+					DraxBin:          configDraxBinPath,
 				}
 
 				configYaml, err := yaml.Marshal(cfg)
@@ -212,6 +216,36 @@ var _ = Describe("Clean", func() {
 					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(2))
+				})
+			})
+
+			Describe("drax bin", func() {
+				var (
+					runner         runnerpkg.Runner
+					draxCalledFile *os.File
+					draxBin        *os.File
+					tempFolder     string
+				)
+
+				BeforeEach(func() {
+					tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
+					configDraxBinPath = draxBin.Name()
+				})
+
+				JustBeforeEach(func() {
+					runner = runnerpkg.Runner{
+						GrootFSBin: GrootFSBin,
+						StorePath:  StorePath,
+					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				})
+
+				It("uses the drax bin from the config file", func() {
+					_, err := runner.Clean(0, []string{})
+					Expect(err).NotTo(HaveOccurred())
+
+					contents, err := ioutil.ReadFile(draxCalledFile.Name())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(contents)).To(Equal("I'm groot"))
 				})
 			})
 		})

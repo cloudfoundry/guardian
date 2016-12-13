@@ -50,7 +50,7 @@ var StatsCommand = cli.Command{
 			}
 		}
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(ctx.GlobalString("drax-bin"), storePath)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
 		metricsEmitter := metrics.NewEmitter()

@@ -88,21 +88,25 @@ var _ = Describe("Create", func() {
 
 		Describe("--config global flag", func() {
 			var (
-				configDir       string
-				configFilePath  string
-				configStorePath string
+				configDir         string
+				configFilePath    string
+				configStorePath   string
+				configDraxBinPath string
 			)
 
 			BeforeEach(func() {
-				var err error
-				configStorePath, err = ioutil.TempDir(StorePath, "")
-				Expect(err).NotTo(HaveOccurred())
+				configStorePath = StorePath
+				configDraxBinPath = ""
+			})
 
+			JustBeforeEach(func() {
+				var err error
 				configDir, err = ioutil.TempDir("", "")
 				Expect(err).NotTo(HaveOccurred())
 
 				cfg := config.Config{
 					BaseStorePath: configStorePath,
+					DraxBin:       configDraxBinPath,
 				}
 
 				configYaml, err := yaml.Marshal(cfg)
@@ -123,6 +127,12 @@ var _ = Describe("Create", func() {
 				)
 
 				BeforeEach(func() {
+					var err error
+					configStorePath, err = ioutil.TempDir(StorePath, "")
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				JustBeforeEach(func() {
 					runner = runnerpkg.Runner{
 						GrootFSBin: GrootFSBin,
 						DraxBin:    DraxBin,
@@ -139,6 +149,40 @@ var _ = Describe("Create", func() {
 					Expect(image.Path).To(Equal(filepath.Join(configStorePath, CurrentUserID, "images/random-id")))
 				})
 			})
+
+			Describe("drax bin", func() {
+				var (
+					runner         runnerpkg.Runner
+					draxCalledFile *os.File
+					draxBin        *os.File
+					tempFolder     string
+				)
+
+				BeforeEach(func() {
+					tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
+					configDraxBinPath = draxBin.Name()
+				})
+
+				JustBeforeEach(func() {
+					runner = runnerpkg.Runner{
+						GrootFSBin: GrootFSBin,
+						StorePath:  StorePath,
+					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				})
+
+				It("uses the drax bin from the config file", func() {
+					_, err := runner.Create(groot.CreateSpec{
+						BaseImage: baseImagePath,
+						ID:        "random-id",
+						DiskLimit: 104857600,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					contents, err := ioutil.ReadFile(draxCalledFile.Name())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(contents)).To(Equal("I'm groot"))
+				})
+			})
 		})
 
 		Describe("--drax-bin global flag", func() {
@@ -149,18 +193,7 @@ var _ = Describe("Create", func() {
 			)
 
 			BeforeEach(func() {
-				var err error
-				draxCalledFile, err = ioutil.TempFile("", "drax-called")
-				Expect(err).NotTo(HaveOccurred())
-				draxCalledFile.Close()
-
-				tempFolder, err = ioutil.TempDir("", "")
-				draxBin, err = os.Create(path.Join(tempFolder, "drax"))
-				Expect(err).NotTo(HaveOccurred())
-				draxBin.WriteString("#!/bin/bash\necho -n \"I'm groot\" > " + draxCalledFile.Name())
-				draxBin.Chmod(0777)
-				draxBin.Close()
-				testhelpers.SuidDrax(draxBin.Name())
+				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
 			})
 
 			Context("when it's provided", func() {
