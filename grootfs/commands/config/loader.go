@@ -15,6 +15,7 @@ type Config struct {
 	DraxBin            string   `yaml:"drax_bin"`
 	MetronEndpoint     string   `yaml:"metron_endpoint"`
 	UIDMappings        []string `yaml:"uid_mappings"`
+	GIDMappings        []string `yaml:"gid_mappings"`
 }
 
 func Load(configPath string) (Config, error) {

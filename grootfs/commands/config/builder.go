@@ -84,3 +84,12 @@ func (b *Builder) WithUIDMappings(uidMappings []string) *Builder {
 	b.config.UIDMappings = uidMappings
 	return b
 }
+
+func (b *Builder) WithGIDMappings(gidMappings []string) *Builder {
+	if gidMappings == nil || len(gidMappings) == 0 {
+		return b
+	}
+
+	b.config.GIDMappings = gidMappings
+	return b
+}

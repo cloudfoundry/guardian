@@ -93,12 +93,22 @@ var _ = Describe("Create", func() {
 				configStorePath   string
 				configDraxBinPath string
 				configUIDMappings []string
+				configGIDMappings []string
+
+				runner runnerpkg.Runner
+				spec   groot.CreateSpec
 			)
 
 			BeforeEach(func() {
 				configStorePath = StorePath
 				configDraxBinPath = ""
 				configUIDMappings = nil
+				configGIDMappings = nil
+
+				spec = groot.CreateSpec{
+					ID:        "random-id",
+					BaseImage: baseImagePath,
+				}
 			})
 
 			JustBeforeEach(func() {
@@ -110,6 +120,7 @@ var _ = Describe("Create", func() {
 					BaseStorePath: configStorePath,
 					DraxBin:       configDraxBinPath,
 					UIDMappings:   configUIDMappings,
+					GIDMappings:   configGIDMappings,
 				}
 
 				configYaml, err := yaml.Marshal(cfg)
@@ -124,11 +135,6 @@ var _ = Describe("Create", func() {
 			})
 
 			Describe("store path", func() {
-				var (
-					runner runnerpkg.Runner
-					spec   groot.CreateSpec
-				)
-
 				BeforeEach(func() {
 					var err error
 					configStorePath, err = ioutil.TempDir(StorePath, "")
@@ -140,10 +146,6 @@ var _ = Describe("Create", func() {
 						GrootFSBin: GrootFSBin,
 						DraxBin:    DraxBin,
 					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
-					spec = groot.CreateSpec{
-						ID:        "random-id",
-						BaseImage: baseImagePath,
-					}
 				})
 
 				It("uses the store path from the config file", func() {
@@ -155,7 +157,6 @@ var _ = Describe("Create", func() {
 
 			Describe("drax bin", func() {
 				var (
-					runner         runnerpkg.Runner
 					draxCalledFile *os.File
 					draxBin        *os.File
 					tempFolder     string
@@ -188,11 +189,6 @@ var _ = Describe("Create", func() {
 			})
 
 			Describe("uid mappings", func() {
-				var (
-					runner runnerpkg.Runner
-					spec   groot.CreateSpec
-				)
-
 				BeforeEach(func() {
 					configUIDMappings = []string{"1:1:65990"}
 				})
@@ -203,10 +199,6 @@ var _ = Describe("Create", func() {
 						DraxBin:    DraxBin,
 						StorePath:  StorePath,
 					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
-					spec = groot.CreateSpec{
-						ID:        "some-id",
-						BaseImage: baseImagePath,
-					}
 				})
 
 				It("uses the uid mappings from the config file", func() {
@@ -214,6 +206,27 @@ var _ = Describe("Create", func() {
 					_, err := runner.WithStdout(buffer).Create(spec)
 					Expect(err).To(HaveOccurred())
 					Expect(buffer.Contents()).To(ContainSubstring("uid range [1-65991) -> [1-65991) not allowed"))
+				})
+			})
+
+			Describe("gid mappings", func() {
+				BeforeEach(func() {
+					configGIDMappings = []string{"1:1:65990"}
+				})
+
+				JustBeforeEach(func() {
+					runner = runnerpkg.Runner{
+						GrootFSBin: GrootFSBin,
+						DraxBin:    DraxBin,
+						StorePath:  StorePath,
+					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				})
+
+				It("uses the gid mappings from the config file", func() {
+					buffer := gbytes.NewBuffer()
+					_, err := runner.WithStdout(buffer).Create(spec)
+					Expect(err).To(HaveOccurred())
+					Expect(buffer.Contents()).To(ContainSubstring("gid range [1-65991) -> [1-65991) not allowed"))
 				})
 			})
 		})

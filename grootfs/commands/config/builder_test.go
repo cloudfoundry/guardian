@@ -22,6 +22,7 @@ var _ = Describe("Builder", func() {
 		configDraxBin        string
 		configMetronEndpoint string
 		configUIDMappings    []string
+		configGIDMappings    []string
 	)
 
 	BeforeEach(func() {
@@ -29,6 +30,7 @@ var _ = Describe("Builder", func() {
 		configDraxBin = "/config/drax"
 		configMetronEndpoint = "config_endpoint:1111"
 		configUIDMappings = []string{"config-uid-mapping"}
+		configGIDMappings = []string{"config-gid-mapping"}
 	})
 
 	JustBeforeEach(func() {
@@ -43,6 +45,7 @@ var _ = Describe("Builder", func() {
 			DraxBin:            configDraxBin,
 			MetronEndpoint:     configMetronEndpoint,
 			UIDMappings:        configUIDMappings,
+			GIDMappings:        configGIDMappings,
 		}
 
 		configYaml, err := yaml.Marshal(cfg)
@@ -217,6 +220,30 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithUIDMappings(nil)
 				config := builder.Build()
 				Expect(config.UIDMappings).To(Equal([]string{"config-uid-mapping"}))
+			})
+		})
+	})
+
+	Describe("WithGIDMappings", func() {
+		It("overrides the config's GIDMappings entry", func() {
+			builder = builder.WithGIDMappings([]string{"1", "2"})
+			config := builder.Build()
+			Expect(config.GIDMappings).To(Equal([]string{"1", "2"}))
+		})
+
+		Context("when empty", func() {
+			It("doesn't override the config's GIDMappings entry", func() {
+				builder = builder.WithGIDMappings([]string{})
+				config := builder.Build()
+				Expect(config.GIDMappings).To(Equal([]string{"config-gid-mapping"}))
+			})
+		})
+
+		Context("when nil", func() {
+			It("doesn't override the config's GIDMappings entry", func() {
+				builder = builder.WithGIDMappings(nil)
+				config := builder.Build()
+				Expect(config.GIDMappings).To(Equal([]string{"config-gid-mapping"}))
 			})
 		})
 	})
