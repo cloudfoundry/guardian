@@ -12,8 +12,9 @@ type Config struct {
 	IgnoreBaseImages   []string `yaml:"ignore_base_images"`
 	BaseStorePath      string   `yaml:"store_path"`
 	UserBasedStorePath string
-	DraxBin            string `yaml:"drax_bin"`
-	MetronEndpoint     string `yaml:"metron_endpoint"`
+	DraxBin            string   `yaml:"drax_bin"`
+	MetronEndpoint     string   `yaml:"metron_endpoint"`
+	UIDMappings        []string `yaml:"uid_mappings"`
 }
 
 func Load(configPath string) (Config, error) {

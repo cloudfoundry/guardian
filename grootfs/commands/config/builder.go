@@ -75,3 +75,12 @@ func (b *Builder) WithMetronEndpoint(metronEndpoint string) *Builder {
 	b.config.MetronEndpoint = metronEndpoint
 	return b
 }
+
+func (b *Builder) WithUIDMappings(uidMappings []string) *Builder {
+	if uidMappings == nil || len(uidMappings) == 0 {
+		return b
+	}
+
+	b.config.UIDMappings = uidMappings
+	return b
+}

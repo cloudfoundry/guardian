@@ -66,7 +66,8 @@ var CreateCommand = cli.Command{
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
-		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry"))
+		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry")).
+			WithUIDMappings(ctx.StringSlice("uid-mapping"))
 		cfg := configBuilder.Build()
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
 
@@ -81,7 +82,7 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		uidMappings, err := parseIDMappings(ctx.StringSlice("uid-mapping"))
+		uidMappings, err := parseIDMappings(cfg.UIDMappings)
 		if err != nil {
 			err = fmt.Errorf("parsing uid-mapping: %s", err)
 			logger.Error("parsing-command", err)
