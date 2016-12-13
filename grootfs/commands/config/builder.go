@@ -66,3 +66,12 @@ func (b *Builder) WithDraxBin(draxBin, defaultDraxBin string) *Builder {
 	b.config.DraxBin = draxBin
 	return b
 }
+
+func (b *Builder) WithMetronEndpoint(metronEndpoint string) *Builder {
+	if metronEndpoint == "" {
+		return b
+	}
+
+	b.config.MetronEndpoint = metronEndpoint
+	return b
+}

@@ -1,8 +1,15 @@
 package groot_test
 
 import (
+	"fmt"
+	"io/ioutil"
 	"net"
+	"os"
+	"path"
 
+	yaml "gopkg.in/yaml.v2"
+
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -139,6 +146,54 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Name).To(Equal("ImageCleanTime"))
 			Expect(*metrics[0].Unit).To(Equal("nanos"))
 			Expect(*metrics[0].Value).NotTo(BeZero())
+		})
+	})
+
+	Describe("--config global flag", func() {
+		var (
+			configDir      string
+			configFilePath string
+		)
+
+		BeforeEach(func() {
+			var err error
+			configDir, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+			configFilePath = path.Join(configDir, "config.yaml")
+
+			cfg := config.Config{
+				MetronEndpoint: fmt.Sprintf("127.0.0.1:%d", fakeMetronPort),
+			}
+
+			configYaml, err := yaml.Marshal(cfg)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(configDir)).To(Succeed())
+		})
+
+		Describe("metron endpoint", func() {
+			It("uses the metron agent from the config file", func() {
+				_, err := Runner.
+					WithConfig(configFilePath).
+					Create(groot.CreateSpec{
+						ID:        "my-id",
+						BaseImage: "docker:///cfgarden/empty:v0.1.0",
+					})
+				Expect(err).NotTo(HaveOccurred())
+
+				var metrics []events.ValueMetric
+				Eventually(func() []events.ValueMetric {
+					metrics = fakeMetron.ValueMetricsFor("ImageCreationTime")
+					return metrics
+				}).Should(HaveLen(1))
+
+				Expect(*metrics[0].Name).To(Equal("ImageCreationTime"))
+				Expect(*metrics[0].Unit).To(Equal("nanos"))
+				Expect(*metrics[0].Value).NotTo(BeZero())
+			})
 		})
 	})
 })

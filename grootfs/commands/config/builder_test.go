@@ -15,16 +15,18 @@ import (
 
 var _ = Describe("Builder", func() {
 	var (
-		configDir       string
-		configFilePath  string
-		builder         *config.Builder
-		configStorePath string
-		configDraxBin   string
+		configDir            string
+		configFilePath       string
+		builder              *config.Builder
+		configStorePath      string
+		configDraxBin        string
+		configMetronEndpoint string
 	)
 
 	BeforeEach(func() {
 		configStorePath = "/hello"
 		configDraxBin = "/config/drax"
+		configMetronEndpoint = "config_endpoint:1111"
 	})
 
 	JustBeforeEach(func() {
@@ -37,6 +39,7 @@ var _ = Describe("Builder", func() {
 			IgnoreBaseImages:   []string{"docker:///busybox"},
 			BaseStorePath:      configStorePath,
 			DraxBin:            configDraxBin,
+			MetronEndpoint:     configMetronEndpoint,
 		}
 
 		configYaml, err := yaml.Marshal(cfg)
@@ -171,6 +174,22 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithDraxBin("/default/drax", "/default/drax")
 				config := builder.Build()
 				Expect(config.DraxBin).To(Equal("/default/drax"))
+			})
+		})
+	})
+
+	Describe("WithMetronEndpoint", func() {
+		It("overrides the config's metron endpoint entry", func() {
+			builder = builder.WithMetronEndpoint("127.0.0.1:5555")
+			config := builder.Build()
+			Expect(config.MetronEndpoint).To(Equal("127.0.0.1:5555"))
+		})
+
+		Context("when empty", func() {
+			It("doesn't override the config's metron endpoint entry", func() {
+				builder = builder.WithMetronEndpoint("")
+				config := builder.Build()
+				Expect(config.MetronEndpoint).To(Equal("config_endpoint:1111"))
 			})
 		})
 	})

@@ -70,7 +70,6 @@ func main() {
 	grootfs.Before = func(ctx *cli.Context) error {
 		logFile := ctx.GlobalString("log-file")
 		logLevel := ctx.String("log-level")
-		metronEndpoint := ctx.String("metron-endpoint")
 
 		lagerLogLevel := translateLogLevel(logLevel)
 		logger, err := configureLogger(lagerLogLevel, logFile)
@@ -84,8 +83,9 @@ func main() {
 			logger.Error("failed-loading-config-file", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
-		cfgBuilder = cfgBuilder.WithStorePath(ctx.GlobalString("store"), defaultStorePath)
-		cfgBuilder = cfgBuilder.WithDraxBin(ctx.GlobalString("drax-bin"), defaultDraxBin)
+		cfgBuilder.WithStorePath(ctx.GlobalString("store"), defaultStorePath).
+			WithDraxBin(ctx.GlobalString("drax-bin"), defaultDraxBin).
+			WithMetronEndpoint(ctx.GlobalString("metron-endpoint"))
 		ctx.App.Metadata["configBuilder"] = cfgBuilder
 
 		// Sadness. We need to do that becuase we use stderr for logs so user
@@ -99,8 +99,8 @@ func main() {
 		}
 
 		dropsondeOrigin := grootfs.Name
-		if metronEndpoint != "" {
-			if err := dropsonde.Initialize(metronEndpoint, dropsondeOrigin); err != nil {
+		if cfg.MetronEndpoint != "" {
+			if err := dropsonde.Initialize(cfg.MetronEndpoint, dropsondeOrigin); err != nil {
 				logger.Error("failed-to-initialize-metrics-emitter", err)
 			}
 		}

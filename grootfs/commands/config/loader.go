@@ -13,6 +13,7 @@ type Config struct {
 	BaseStorePath      string   `yaml:"store_path"`
 	UserBasedStorePath string
 	DraxBin            string `yaml:"drax_bin"`
+	MetronEndpoint     string `yaml:"metron_endpoint"`
 }
 
 func Load(configPath string) (Config, error) {
