@@ -93,7 +93,12 @@ func main() {
 		cli.ErrWriter = os.Stdout
 
 		configurer := store.NewConfigurer()
-		cfg := cfgBuilder.Build()
+		cfg, err := cfgBuilder.Build()
+		if err != nil {
+			logger.Error("config-builder-failed", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+
 		if err := configurer.Ensure(logger, cfg.UserBasedStorePath); err != nil {
 			return err
 		}
@@ -159,14 +164,10 @@ func loadConfig(configPath string) (config.Config, error) {
 }
 
 func newConfigBuilder(configPath string) (*config.Builder, error) {
-	if configPath != "" {
-		cfgBuilder, err := config.NewBuilderFromFile(configPath)
-		if err != nil {
-			return cfgBuilder, err
-		}
-
-		return cfgBuilder, nil
+	cfgBuilder, err := config.NewBuilder(configPath)
+	if err != nil {
+		return cfgBuilder, err
 	}
 
-	return config.NewBuilder(), nil
+	return cfgBuilder, nil
 }

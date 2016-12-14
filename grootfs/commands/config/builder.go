@@ -1,21 +1,29 @@
 package config
 
-import "code.cloudfoundry.org/grootfs/commands/storepath"
+import (
+	"errors"
+
+	"code.cloudfoundry.org/grootfs/commands/storepath"
+)
 
 type Builder struct {
 	config *Config
 }
 
-func NewBuilder() *Builder {
-	return &Builder{
-		config: &Config{},
-	}
-}
+func NewBuilder(pathToYaml string) (*Builder, error) {
+	config := Config{}
 
-func NewBuilderFromFile(pathToYaml string) (*Builder, error) {
-	config, err := Load(pathToYaml)
-	if err != nil {
-		return nil, err
+	if pathToYaml != "" {
+		var err error
+		config, err = Load(pathToYaml)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if config.DiskLimitSizeBytes == nil {
+		defaultDiskLimit := int64(0)
+		config.DiskLimitSizeBytes = &defaultDiskLimit
 	}
 
 	b := &Builder{
@@ -25,8 +33,12 @@ func NewBuilderFromFile(pathToYaml string) (*Builder, error) {
 	return b.WithStorePath(config.BaseStorePath, ""), nil
 }
 
-func (b *Builder) Build() Config {
-	return *b.config
+func (b *Builder) Build() (Config, error) {
+	if *b.config.DiskLimitSizeBytes < 0 {
+		return *b.config, errors.New("invalid argument: disk limit cannot be negative")
+	}
+
+	return *b.config, nil
 }
 
 func (b *Builder) WithInsecureRegistries(insecureRegistries []string) *Builder {
@@ -91,5 +103,13 @@ func (b *Builder) WithGIDMappings(gidMappings []string) *Builder {
 	}
 
 	b.config.GIDMappings = gidMappings
+	return b
+}
+
+func (b *Builder) WithDiskLimitSizeBytes(limit *int64) *Builder {
+	if limit != nil {
+		b.config.DiskLimitSizeBytes = limit
+	}
+
 	return b
 }

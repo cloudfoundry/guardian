@@ -88,12 +88,13 @@ var _ = Describe("Create", func() {
 
 		Describe("--config global flag", func() {
 			var (
-				configDir         string
-				configFilePath    string
-				configStorePath   string
-				configDraxBinPath string
-				configUIDMappings []string
-				configGIDMappings []string
+				configDir                string
+				configFilePath           string
+				configStorePath          string
+				configDraxBinPath        string
+				configUIDMappings        []string
+				configGIDMappings        []string
+				configDiskLimitSizeBytes int64
 
 				runner runnerpkg.Runner
 				spec   groot.CreateSpec
@@ -104,6 +105,7 @@ var _ = Describe("Create", func() {
 				configDraxBinPath = ""
 				configUIDMappings = nil
 				configGIDMappings = nil
+				configDiskLimitSizeBytes = 0
 
 				spec = groot.CreateSpec{
 					ID:        "random-id",
@@ -117,10 +119,11 @@ var _ = Describe("Create", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				cfg := config.Config{
-					BaseStorePath: configStorePath,
-					DraxBin:       configDraxBinPath,
-					UIDMappings:   configUIDMappings,
-					GIDMappings:   configGIDMappings,
+					BaseStorePath:      configStorePath,
+					DraxBin:            configDraxBinPath,
+					UIDMappings:        configUIDMappings,
+					GIDMappings:        configGIDMappings,
+					DiskLimitSizeBytes: &configDiskLimitSizeBytes,
 				}
 
 				configYaml, err := yaml.Marshal(cfg)
@@ -227,6 +230,31 @@ var _ = Describe("Create", func() {
 					_, err := runner.WithStdout(buffer).Create(spec)
 					Expect(err).To(HaveOccurred())
 					Expect(buffer.Contents()).To(ContainSubstring("gid range [1-65991) -> [1-65991) not allowed"))
+				})
+			})
+
+			Describe("disk limit size bytes", func() {
+				BeforeEach(func() {
+					configDiskLimitSizeBytes = int64(10 * 1024 * 1024)
+				})
+
+				JustBeforeEach(func() {
+					runner = runnerpkg.Runner{
+						GrootFSBin: GrootFSBin,
+						DraxBin:    DraxBin,
+						StorePath:  StorePath,
+					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				})
+
+				It("creates a image with limit from the config file", func() {
+					image, err := runner.Create(spec)
+					Expect(err).ToNot(HaveOccurred())
+
+					cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=11")
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).ToNot(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(1))
+					Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
 				})
 			})
 		})

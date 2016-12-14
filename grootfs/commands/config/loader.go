@@ -16,6 +16,7 @@ type Config struct {
 	MetronEndpoint     string   `yaml:"metron_endpoint"`
 	UIDMappings        []string `yaml:"uid_mappings"`
 	GIDMappings        []string `yaml:"gid_mappings"`
+	DiskLimitSizeBytes *int64   `yaml:"disk_limit_size_bytes"`
 }
 
 func Load(configPath string) (Config, error) {

@@ -33,8 +33,12 @@ var DeleteCommand = cli.Command{
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
-		cfg := configBuilder.Build()
+		cfg, err := configBuilder.Build()
 		logger.Debug("delete-config", lager.Data{"currentConfig": cfg})
+		if err != nil {
+			logger.Error("config-builder-failed", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
 
 		storePath := cfg.BaseStorePath
 		idOrPath := ctx.Args().First()

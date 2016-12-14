@@ -20,8 +20,13 @@ var ListCommand = cli.Command{
 		logger = logger.Session("list")
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
-		cfg := configBuilder.Build()
+		cfg, err := configBuilder.Build()
 		logger.Debug("list-config", lager.Data{"currentConfig": cfg})
+		if err != nil {
+			logger.Error("config-builder-failed", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+
 		storePath := cfg.BaseStorePath
 
 		lister := groot.IamLister()

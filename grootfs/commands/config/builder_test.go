@@ -15,14 +15,15 @@ import (
 
 var _ = Describe("Builder", func() {
 	var (
-		configDir            string
-		configFilePath       string
-		builder              *config.Builder
-		configStorePath      string
-		configDraxBin        string
-		configMetronEndpoint string
-		configUIDMappings    []string
-		configGIDMappings    []string
+		configDir                string
+		configFilePath           string
+		builder                  *config.Builder
+		configStorePath          string
+		configDraxBin            string
+		configMetronEndpoint     string
+		configUIDMappings        []string
+		configGIDMappings        []string
+		configDiskLimitSizeBytes *int64
 	)
 
 	BeforeEach(func() {
@@ -31,6 +32,8 @@ var _ = Describe("Builder", func() {
 		configMetronEndpoint = "config_endpoint:1111"
 		configUIDMappings = []string{"config-uid-mapping"}
 		configGIDMappings = []string{"config-gid-mapping"}
+		diskLimit := int64(1000)
+		configDiskLimitSizeBytes = &diskLimit
 	})
 
 	JustBeforeEach(func() {
@@ -46,6 +49,7 @@ var _ = Describe("Builder", func() {
 			MetronEndpoint:     configMetronEndpoint,
 			UIDMappings:        configUIDMappings,
 			GIDMappings:        configGIDMappings,
+			DiskLimitSizeBytes: configDiskLimitSizeBytes,
 		}
 
 		configYaml, err := yaml.Marshal(cfg)
@@ -53,7 +57,7 @@ var _ = Describe("Builder", func() {
 		configFilePath = path.Join(configDir, "config.yaml")
 
 		Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
-		builder, err = config.NewBuilderFromFile(configFilePath)
+		builder, err = config.NewBuilder(configFilePath)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -63,25 +67,40 @@ var _ = Describe("Builder", func() {
 
 	Describe("Build", func() {
 		It("returns the values read from the config yaml", func() {
-			config := builder.Build()
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
 			Expect(config.InsecureRegistries).To(Equal([]string{"http://example.org"}))
 			Expect(config.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
 			Expect(config.BaseStorePath).To(Equal("/hello"))
 			Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/hello", CurrentUserID)))
+		})
+
+		Context("when disk limit property is invalid", func() {
+			BeforeEach(func() {
+				diskLimit := int64(-1)
+				configDiskLimitSizeBytes = &diskLimit
+			})
+
+			It("returns an error", func() {
+				_, err := builder.Build()
+				Expect(err).To(MatchError("invalid argument: disk limit cannot be negative"))
+			})
 		})
 	})
 
 	Describe("WithInsecureRegistries", func() {
 		It("overrides the config's InsecureRegistries entry", func() {
 			builder = builder.WithInsecureRegistries([]string{"1", "2"})
-			config := builder.Build()
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
 			Expect(config.InsecureRegistries).To(Equal([]string{"1", "2"}))
 		})
 
 		Context("when empty", func() {
 			It("doesn't override the config's InsecureRegistries entry", func() {
 				builder = builder.WithInsecureRegistries([]string{})
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.InsecureRegistries).To(Equal([]string{"http://example.org"}))
 			})
 		})
@@ -89,7 +108,8 @@ var _ = Describe("Builder", func() {
 		Context("when nil", func() {
 			It("doesn't override the config's InsecureRegistries entry", func() {
 				builder = builder.WithInsecureRegistries(nil)
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.InsecureRegistries).To(Equal([]string{"http://example.org"}))
 			})
 		})
@@ -98,14 +118,16 @@ var _ = Describe("Builder", func() {
 	Describe("WithIgnoreBaseImages", func() {
 		It("overrides the config's IgnoreBaseImages entry", func() {
 			builder = builder.WithIgnoreBaseImages([]string{"1", "2"})
-			config := builder.Build()
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
 			Expect(config.IgnoreBaseImages).To(Equal([]string{"1", "2"}))
 		})
 
 		Context("when empty", func() {
 			It("doesn't override the config's IgnoreBaseImages entry", func() {
 				builder = builder.WithIgnoreBaseImages([]string{})
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
 			})
 		})
@@ -113,7 +135,8 @@ var _ = Describe("Builder", func() {
 		Context("when nil", func() {
 			It("doesn't override the config's IgnoreBaseImages entry", func() {
 				builder = builder.WithIgnoreBaseImages(nil)
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
 			})
 		})
@@ -123,7 +146,8 @@ var _ = Describe("Builder", func() {
 		Context("when provided store path and default store path are different", func() {
 			It("overrides the config's store path entry with the provided store path with user ID postfix", func() {
 				builder = builder.WithStorePath("/mnt/grootfs/data", "/var/lib/grootfs/data")
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/mnt/grootfs/data", CurrentUserID)))
 				Expect(config.BaseStorePath).To(Equal("/mnt/grootfs/data"))
 			})
@@ -132,7 +156,8 @@ var _ = Describe("Builder", func() {
 		Context("when provided store path and default store path are the same", func() {
 			It("uses the config's store path with user ID postfix", func() {
 				builder = builder.WithStorePath("/var/lib/grootfs/data", "/var/lib/grootfs/data")
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/hello", CurrentUserID)))
 				Expect(config.BaseStorePath).To(Equal("/hello"))
 			})
@@ -146,7 +171,8 @@ var _ = Describe("Builder", func() {
 
 			It("uses the provided store path with user ID postfix", func() {
 				builder = builder.WithStorePath("/var/lib/grootfs/data", "/var/lib/grootfs/data")
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/var/lib/grootfs/data", CurrentUserID)))
 				Expect(config.BaseStorePath).To(Equal("/var/lib/grootfs/data"))
 			})
@@ -157,7 +183,8 @@ var _ = Describe("Builder", func() {
 		Context("when provided drax bin and default drax bin are different", func() {
 			It("overrides the config's drax bin entry", func() {
 				builder = builder.WithDraxBin("/my/drax", "/default/drax")
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.DraxBin).To(Equal("/my/drax"))
 			})
 		})
@@ -165,7 +192,8 @@ var _ = Describe("Builder", func() {
 		Context("when provided drax bin and default drax bin are the same", func() {
 			It("uses the config's drax bin", func() {
 				builder = builder.WithDraxBin("/default/drax", "/default/drax")
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.DraxBin).To(Equal("/config/drax"))
 			})
 
@@ -178,7 +206,8 @@ var _ = Describe("Builder", func() {
 
 			It("uses the provided drax bin", func() {
 				builder = builder.WithDraxBin("/default/drax", "/default/drax")
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.DraxBin).To(Equal("/default/drax"))
 			})
 		})
@@ -187,14 +216,16 @@ var _ = Describe("Builder", func() {
 	Describe("WithMetronEndpoint", func() {
 		It("overrides the config's metron endpoint entry", func() {
 			builder = builder.WithMetronEndpoint("127.0.0.1:5555")
-			config := builder.Build()
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
 			Expect(config.MetronEndpoint).To(Equal("127.0.0.1:5555"))
 		})
 
 		Context("when empty", func() {
 			It("doesn't override the config's metron endpoint entry", func() {
 				builder = builder.WithMetronEndpoint("")
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.MetronEndpoint).To(Equal("config_endpoint:1111"))
 			})
 		})
@@ -203,14 +234,16 @@ var _ = Describe("Builder", func() {
 	Describe("WithUIDMappings", func() {
 		It("overrides the config's UIDMappings entry", func() {
 			builder = builder.WithUIDMappings([]string{"1", "2"})
-			config := builder.Build()
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
 			Expect(config.UIDMappings).To(Equal([]string{"1", "2"}))
 		})
 
 		Context("when empty", func() {
 			It("doesn't override the config's UIDMappings entry", func() {
 				builder = builder.WithUIDMappings([]string{})
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.UIDMappings).To(Equal([]string{"config-uid-mapping"}))
 			})
 		})
@@ -218,7 +251,8 @@ var _ = Describe("Builder", func() {
 		Context("when nil", func() {
 			It("doesn't override the config's UIDMappings entry", func() {
 				builder = builder.WithUIDMappings(nil)
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.UIDMappings).To(Equal([]string{"config-uid-mapping"}))
 			})
 		})
@@ -227,14 +261,16 @@ var _ = Describe("Builder", func() {
 	Describe("WithGIDMappings", func() {
 		It("overrides the config's GIDMappings entry", func() {
 			builder = builder.WithGIDMappings([]string{"1", "2"})
-			config := builder.Build()
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
 			Expect(config.GIDMappings).To(Equal([]string{"1", "2"}))
 		})
 
 		Context("when empty", func() {
 			It("doesn't override the config's GIDMappings entry", func() {
 				builder = builder.WithGIDMappings([]string{})
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.GIDMappings).To(Equal([]string{"config-gid-mapping"}))
 			})
 		})
@@ -242,8 +278,50 @@ var _ = Describe("Builder", func() {
 		Context("when nil", func() {
 			It("doesn't override the config's GIDMappings entry", func() {
 				builder = builder.WithGIDMappings(nil)
-				config := builder.Build()
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(config.GIDMappings).To(Equal([]string{"config-gid-mapping"}))
+			})
+		})
+	})
+
+	Describe("WithDiskLimitSizeBytes", func() {
+		It("overrides the config's DiskLimitSizeBytes entry", func() {
+			diskLimit := int64(3000)
+			builder = builder.WithDiskLimitSizeBytes(&diskLimit)
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(*config.DiskLimitSizeBytes).To(Equal(diskLimit))
+		})
+
+		Context("when negative", func() {
+			It("returns an error", func() {
+				diskLimit := int64(-300)
+				builder = builder.WithDiskLimitSizeBytes(&diskLimit)
+				_, err := builder.Build()
+				Expect(err).To(MatchError("invalid argument: disk limit cannot be negative"))
+			})
+		})
+
+		Context("when nil", func() {
+			It("doesn't override the config's DiskLimitSizeBytes entry", func() {
+				builder = builder.WithDiskLimitSizeBytes(nil)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*config.DiskLimitSizeBytes).To(Equal(*configDiskLimitSizeBytes))
+			})
+		})
+
+		Context("when neither the config file or flag values are specified", func() {
+			BeforeEach(func() {
+				configDiskLimitSizeBytes = nil
+			})
+
+			It("defaults the limit to 0", func() {
+				builder = builder.WithDiskLimitSizeBytes(nil)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(*config.DiskLimitSizeBytes).To(Equal(int64(0)))
 			})
 		})
 	})

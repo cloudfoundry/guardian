@@ -34,7 +34,7 @@ var CreateCommand = cli.Command{
 	Description: "Creates a root filesystem for the provided image.",
 
 	Flags: []cli.Flag{
-		cli.Int64Flag{
+		cli.Int64SliceFlag{
 			Name:  "disk-limit-size-bytes",
 			Usage: "Inclusive disk limit (i.e: includes all layers in the filesystem)",
 		},
@@ -52,7 +52,7 @@ var CreateCommand = cli.Command{
 		},
 		cli.BoolFlag{
 			Name:  "exclude-image-from-quota",
-			Usage: "Set disk limit to be exclusive (i.e.: exluding image layers)",
+			Usage: "Set disk limit to be exclusive (i.e.: excluding image layers)",
 		},
 	},
 
@@ -69,19 +69,22 @@ var CreateCommand = cli.Command{
 		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry")).
 			WithUIDMappings(ctx.StringSlice("uid-mapping")).
 			WithGIDMappings(ctx.StringSlice("gid-mapping"))
-		cfg := configBuilder.Build()
+
+		diskLimit := ctx.Int64Slice("disk-limit-size-bytes")
+		if len(diskLimit) > 0 {
+			configBuilder.WithDiskLimitSizeBytes(&diskLimit[0])
+		}
+
+		cfg, err := configBuilder.Build()
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
+		if err != nil {
+			logger.Error("config-builder-failed", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
 
 		storePath := cfg.UserBasedStorePath
 		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
-
-		diskLimit := ctx.Int64("disk-limit-size-bytes")
-		if diskLimit < 0 {
-			err := errors.New("invalid argument: disk limit cannot be negative")
-			logger.Error("parsing-command", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
 
 		uidMappings, err := parseIDMappings(cfg.UIDMappings)
 		if err != nil {
@@ -128,7 +131,7 @@ var CreateCommand = cli.Command{
 		createSpec := groot.CreateSpec{
 			ID:                        id,
 			BaseImage:                 baseImage,
-			DiskLimit:                 diskLimit,
+			DiskLimit:                 *cfg.DiskLimitSizeBytes,
 			ExcludeBaseImageFromQuota: ctx.Bool("exclude-image-from-quota"),
 			UIDMappings:               uidMappings,
 			GIDMappings:               gidMappings,
