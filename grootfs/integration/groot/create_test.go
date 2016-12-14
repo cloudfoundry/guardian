@@ -86,179 +86,6 @@ var _ = Describe("Create", func() {
 			})
 		})
 
-		Describe("--config global flag", func() {
-			var (
-				configDir                string
-				configFilePath           string
-				configStorePath          string
-				configDraxBinPath        string
-				configUIDMappings        []string
-				configGIDMappings        []string
-				configDiskLimitSizeBytes int64
-
-				runner runnerpkg.Runner
-				spec   groot.CreateSpec
-			)
-
-			BeforeEach(func() {
-				configStorePath = StorePath
-				configDraxBinPath = ""
-				configUIDMappings = nil
-				configGIDMappings = nil
-				configDiskLimitSizeBytes = 0
-
-				spec = groot.CreateSpec{
-					ID:        "random-id",
-					BaseImage: baseImagePath,
-				}
-			})
-
-			JustBeforeEach(func() {
-				var err error
-				configDir, err = ioutil.TempDir("", "")
-				Expect(err).NotTo(HaveOccurred())
-
-				cfg := config.Config{
-					BaseStorePath:      configStorePath,
-					DraxBin:            configDraxBinPath,
-					UIDMappings:        configUIDMappings,
-					GIDMappings:        configGIDMappings,
-					DiskLimitSizeBytes: &configDiskLimitSizeBytes,
-				}
-
-				configYaml, err := yaml.Marshal(cfg)
-				Expect(err).NotTo(HaveOccurred())
-				configFilePath = path.Join(configDir, "config.yaml")
-
-				Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
-			})
-
-			AfterEach(func() {
-				Expect(os.RemoveAll(configDir)).To(Succeed())
-			})
-
-			Describe("store path", func() {
-				BeforeEach(func() {
-					var err error
-					configStorePath, err = ioutil.TempDir(StorePath, "")
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				JustBeforeEach(func() {
-					runner = runnerpkg.Runner{
-						GrootFSBin: GrootFSBin,
-						DraxBin:    DraxBin,
-					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
-				})
-
-				It("uses the store path from the config file", func() {
-					image, err := runner.Create(spec)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(image.Path).To(Equal(filepath.Join(configStorePath, CurrentUserID, "images/random-id")))
-				})
-			})
-
-			Describe("drax bin", func() {
-				var (
-					draxCalledFile *os.File
-					draxBin        *os.File
-					tempFolder     string
-				)
-
-				BeforeEach(func() {
-					tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
-					configDraxBinPath = draxBin.Name()
-				})
-
-				JustBeforeEach(func() {
-					runner = runnerpkg.Runner{
-						GrootFSBin: GrootFSBin,
-						StorePath:  StorePath,
-					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
-				})
-
-				It("uses the drax bin from the config file", func() {
-					_, err := runner.Create(groot.CreateSpec{
-						BaseImage: baseImagePath,
-						ID:        "random-id",
-						DiskLimit: 104857600,
-					})
-					Expect(err).NotTo(HaveOccurred())
-
-					contents, err := ioutil.ReadFile(draxCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot"))
-				})
-			})
-
-			Describe("uid mappings", func() {
-				BeforeEach(func() {
-					configUIDMappings = []string{"1:1:65990"}
-				})
-
-				JustBeforeEach(func() {
-					runner = runnerpkg.Runner{
-						GrootFSBin: GrootFSBin,
-						DraxBin:    DraxBin,
-						StorePath:  StorePath,
-					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
-				})
-
-				It("uses the uid mappings from the config file", func() {
-					buffer := gbytes.NewBuffer()
-					_, err := runner.WithStdout(buffer).Create(spec)
-					Expect(err).To(HaveOccurred())
-					Expect(buffer.Contents()).To(ContainSubstring("uid range [1-65991) -> [1-65991) not allowed"))
-				})
-			})
-
-			Describe("gid mappings", func() {
-				BeforeEach(func() {
-					configGIDMappings = []string{"1:1:65990"}
-				})
-
-				JustBeforeEach(func() {
-					runner = runnerpkg.Runner{
-						GrootFSBin: GrootFSBin,
-						DraxBin:    DraxBin,
-						StorePath:  StorePath,
-					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
-				})
-
-				It("uses the gid mappings from the config file", func() {
-					buffer := gbytes.NewBuffer()
-					_, err := runner.WithStdout(buffer).Create(spec)
-					Expect(err).To(HaveOccurred())
-					Expect(buffer.Contents()).To(ContainSubstring("gid range [1-65991) -> [1-65991) not allowed"))
-				})
-			})
-
-			Describe("disk limit size bytes", func() {
-				BeforeEach(func() {
-					configDiskLimitSizeBytes = int64(10 * 1024 * 1024)
-				})
-
-				JustBeforeEach(func() {
-					runner = runnerpkg.Runner{
-						GrootFSBin: GrootFSBin,
-						DraxBin:    DraxBin,
-						StorePath:  StorePath,
-					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
-				})
-
-				It("creates a image with limit from the config file", func() {
-					image, err := runner.Create(spec)
-					Expect(err).ToNot(HaveOccurred())
-
-					cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=11")
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).ToNot(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(1))
-					Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
-				})
-			})
-		})
-
 		Describe("--drax-bin global flag", func() {
 			var (
 				draxCalledFile *os.File
@@ -446,6 +273,179 @@ var _ = Describe("Create", func() {
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sess.Wait()).NotTo(gexec.Exit(0))
+		})
+	})
+
+	Describe("--config global flag", func() {
+		var (
+			configDir                string
+			configFilePath           string
+			configStorePath          string
+			configDraxBinPath        string
+			configUIDMappings        []string
+			configGIDMappings        []string
+			configDiskLimitSizeBytes int64
+
+			runner runnerpkg.Runner
+			spec   groot.CreateSpec
+		)
+
+		BeforeEach(func() {
+			configStorePath = StorePath
+			configDraxBinPath = ""
+			configUIDMappings = nil
+			configGIDMappings = nil
+			configDiskLimitSizeBytes = 0
+
+			spec = groot.CreateSpec{
+				ID:        "random-id",
+				BaseImage: baseImagePath,
+			}
+		})
+
+		JustBeforeEach(func() {
+			var err error
+			configDir, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			cfg := config.Config{
+				BaseStorePath:      configStorePath,
+				DraxBin:            configDraxBinPath,
+				UIDMappings:        configUIDMappings,
+				GIDMappings:        configGIDMappings,
+				DiskLimitSizeBytes: configDiskLimitSizeBytes,
+			}
+
+			configYaml, err := yaml.Marshal(cfg)
+			Expect(err).NotTo(HaveOccurred())
+			configFilePath = path.Join(configDir, "config.yaml")
+
+			Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(configDir)).To(Succeed())
+		})
+
+		Describe("store path", func() {
+			BeforeEach(func() {
+				var err error
+				configStorePath, err = ioutil.TempDir(StorePath, "")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			JustBeforeEach(func() {
+				runner = runnerpkg.Runner{
+					GrootFSBin: GrootFSBin,
+					DraxBin:    DraxBin,
+				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+			})
+
+			It("uses the store path from the config file", func() {
+				image, err := runner.Create(spec)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(image.Path).To(Equal(filepath.Join(configStorePath, CurrentUserID, "images/random-id")))
+			})
+		})
+
+		Describe("drax bin", func() {
+			var (
+				draxCalledFile *os.File
+				draxBin        *os.File
+				tempFolder     string
+			)
+
+			BeforeEach(func() {
+				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
+				configDraxBinPath = draxBin.Name()
+			})
+
+			JustBeforeEach(func() {
+				runner = runnerpkg.Runner{
+					GrootFSBin: GrootFSBin,
+					StorePath:  StorePath,
+				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+			})
+
+			It("uses the drax bin from the config file", func() {
+				_, err := runner.Create(groot.CreateSpec{
+					BaseImage: baseImagePath,
+					ID:        "random-id",
+					DiskLimit: 104857600,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(draxCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot"))
+			})
+		})
+
+		Describe("uid mappings", func() {
+			BeforeEach(func() {
+				configUIDMappings = []string{"1:1:65990"}
+			})
+
+			JustBeforeEach(func() {
+				runner = runnerpkg.Runner{
+					GrootFSBin: GrootFSBin,
+					DraxBin:    DraxBin,
+					StorePath:  StorePath,
+				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+			})
+
+			It("uses the uid mappings from the config file", func() {
+				buffer := gbytes.NewBuffer()
+				_, err := runner.WithStdout(buffer).Create(spec)
+				Expect(err).To(HaveOccurred())
+				Expect(buffer.Contents()).To(ContainSubstring("uid range [1-65991) -> [1-65991) not allowed"))
+			})
+		})
+
+		Describe("gid mappings", func() {
+			BeforeEach(func() {
+				configGIDMappings = []string{"1:1:65990"}
+			})
+
+			JustBeforeEach(func() {
+				runner = runnerpkg.Runner{
+					GrootFSBin: GrootFSBin,
+					DraxBin:    DraxBin,
+					StorePath:  StorePath,
+				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+			})
+
+			It("uses the gid mappings from the config file", func() {
+				buffer := gbytes.NewBuffer()
+				_, err := runner.WithStdout(buffer).Create(spec)
+				Expect(err).To(HaveOccurred())
+				Expect(buffer.Contents()).To(ContainSubstring("gid range [1-65991) -> [1-65991) not allowed"))
+			})
+		})
+
+		Describe("disk limit size bytes", func() {
+			BeforeEach(func() {
+				configDiskLimitSizeBytes = int64(10 * 1024 * 1024)
+			})
+
+			JustBeforeEach(func() {
+				runner = runnerpkg.Runner{
+					GrootFSBin: GrootFSBin,
+					DraxBin:    DraxBin,
+					StorePath:  StorePath,
+				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+			})
+
+			It("creates a image with limit from the config file", func() {
+				image, err := runner.Create(spec)
+				Expect(err).ToNot(HaveOccurred())
+
+				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=11")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(1))
+				Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
+			})
 		})
 	})
 })

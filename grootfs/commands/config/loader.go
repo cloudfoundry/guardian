@@ -8,15 +8,16 @@ import (
 )
 
 type Config struct {
-	InsecureRegistries []string `yaml:"insecure_registries"`
-	IgnoreBaseImages   []string `yaml:"ignore_base_images"`
-	BaseStorePath      string   `yaml:"store_path"`
-	UserBasedStorePath string
-	DraxBin            string   `yaml:"drax_bin"`
-	MetronEndpoint     string   `yaml:"metron_endpoint"`
-	UIDMappings        []string `yaml:"uid_mappings"`
-	GIDMappings        []string `yaml:"gid_mappings"`
-	DiskLimitSizeBytes *int64   `yaml:"disk_limit_size_bytes"`
+	BaseStorePath             string   `yaml:"store_path"`
+	DiskLimitSizeBytes        int64    `yaml:"disk_limit_size_bytes"`
+	DraxBin                   string   `yaml:"drax_bin"`
+	ExcludeBaseImageFromQuota bool     `yaml:"exclude_base_image_from_quota"`
+	GIDMappings               []string `yaml:"gid_mappings"`
+	UIDMappings               []string `yaml:"uid_mappings"`
+	IgnoreBaseImages          []string `yaml:"ignore_base_images"`
+	InsecureRegistries        []string `yaml:"insecure_registries"`
+	MetronEndpoint            string   `yaml:"metron_endpoint"`
+	UserBasedStorePath        string
 }
 
 func Load(configPath string) (Config, error) {

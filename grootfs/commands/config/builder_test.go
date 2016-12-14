@@ -15,15 +15,16 @@ import (
 
 var _ = Describe("Builder", func() {
 	var (
-		configDir                string
-		configFilePath           string
-		builder                  *config.Builder
-		configStorePath          string
-		configDraxBin            string
-		configMetronEndpoint     string
-		configUIDMappings        []string
-		configGIDMappings        []string
-		configDiskLimitSizeBytes *int64
+		configDir                   string
+		configFilePath              string
+		builder                     *config.Builder
+		configStorePath             string
+		configDraxBin               string
+		configMetronEndpoint        string
+		configUIDMappings           []string
+		configGIDMappings           []string
+		configDiskLimitSizeBytes    int64
+		configExcludeImageFromQuota bool
 	)
 
 	BeforeEach(func() {
@@ -32,8 +33,8 @@ var _ = Describe("Builder", func() {
 		configMetronEndpoint = "config_endpoint:1111"
 		configUIDMappings = []string{"config-uid-mapping"}
 		configGIDMappings = []string{"config-gid-mapping"}
-		diskLimit := int64(1000)
-		configDiskLimitSizeBytes = &diskLimit
+		configDiskLimitSizeBytes = int64(1000)
+		configExcludeImageFromQuota = true
 	})
 
 	JustBeforeEach(func() {
@@ -42,14 +43,15 @@ var _ = Describe("Builder", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		cfg := config.Config{
-			InsecureRegistries: []string{"http://example.org"},
-			IgnoreBaseImages:   []string{"docker:///busybox"},
-			BaseStorePath:      configStorePath,
-			DraxBin:            configDraxBin,
-			MetronEndpoint:     configMetronEndpoint,
-			UIDMappings:        configUIDMappings,
-			GIDMappings:        configGIDMappings,
-			DiskLimitSizeBytes: configDiskLimitSizeBytes,
+			InsecureRegistries:        []string{"http://example.org"},
+			IgnoreBaseImages:          []string{"docker:///busybox"},
+			BaseStorePath:             configStorePath,
+			DraxBin:                   configDraxBin,
+			MetronEndpoint:            configMetronEndpoint,
+			UIDMappings:               configUIDMappings,
+			GIDMappings:               configGIDMappings,
+			DiskLimitSizeBytes:        configDiskLimitSizeBytes,
+			ExcludeBaseImageFromQuota: configExcludeImageFromQuota,
 		}
 
 		configYaml, err := yaml.Marshal(cfg)
@@ -77,13 +79,25 @@ var _ = Describe("Builder", func() {
 
 		Context("when disk limit property is invalid", func() {
 			BeforeEach(func() {
-				diskLimit := int64(-1)
-				configDiskLimitSizeBytes = &diskLimit
+				configDiskLimitSizeBytes = int64(-1)
 			})
 
 			It("returns an error", func() {
 				_, err := builder.Build()
 				Expect(err).To(MatchError("invalid argument: disk limit cannot be negative"))
+			})
+		})
+
+		Context("when config is invalid", func() {
+			JustBeforeEach(func() {
+				configFilePath = path.Join(configDir, "invalid_config.yaml")
+				Expect(ioutil.WriteFile(configFilePath, []byte("foo-bar"), 0755)).To(Succeed())
+
+			})
+
+			It("returns an error", func() {
+				_, err := config.NewBuilder(configFilePath)
+				Expect(err).To(MatchError(ContainSubstring("invalid config file")))
 			})
 		})
 	})
@@ -288,41 +302,28 @@ var _ = Describe("Builder", func() {
 	Describe("WithDiskLimitSizeBytes", func() {
 		It("overrides the config's DiskLimitSizeBytes entry", func() {
 			diskLimit := int64(3000)
-			builder = builder.WithDiskLimitSizeBytes(&diskLimit)
+			builder = builder.WithDiskLimitSizeBytes(diskLimit)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(*config.DiskLimitSizeBytes).To(Equal(diskLimit))
+			Expect(config.DiskLimitSizeBytes).To(Equal(diskLimit))
 		})
 
 		Context("when negative", func() {
 			It("returns an error", func() {
 				diskLimit := int64(-300)
-				builder = builder.WithDiskLimitSizeBytes(&diskLimit)
+				builder = builder.WithDiskLimitSizeBytes(diskLimit)
 				_, err := builder.Build()
 				Expect(err).To(MatchError("invalid argument: disk limit cannot be negative"))
 			})
 		})
+	})
 
-		Context("when nil", func() {
-			It("doesn't override the config's DiskLimitSizeBytes entry", func() {
-				builder = builder.WithDiskLimitSizeBytes(nil)
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(*config.DiskLimitSizeBytes).To(Equal(*configDiskLimitSizeBytes))
-			})
-		})
-
-		Context("when neither the config file or flag values are specified", func() {
-			BeforeEach(func() {
-				configDiskLimitSizeBytes = nil
-			})
-
-			It("defaults the limit to 0", func() {
-				builder = builder.WithDiskLimitSizeBytes(nil)
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(*config.DiskLimitSizeBytes).To(Equal(int64(0)))
-			})
+	Describe("WithExcludeBaseImageFromQuota", func() {
+		It("overrides the config's ExcludeBaseImageFromQuota entry", func() {
+			builder = builder.WithExcludeBaseImageFromQuota(false)
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.ExcludeBaseImageFromQuota).To(BeFalse())
 		})
 	})
 })

@@ -21,11 +21,6 @@ func NewBuilder(pathToYaml string) (*Builder, error) {
 		}
 	}
 
-	if config.DiskLimitSizeBytes == nil {
-		defaultDiskLimit := int64(0)
-		config.DiskLimitSizeBytes = &defaultDiskLimit
-	}
-
 	b := &Builder{
 		config: &config,
 	}
@@ -34,7 +29,7 @@ func NewBuilder(pathToYaml string) (*Builder, error) {
 }
 
 func (b *Builder) Build() (Config, error) {
-	if *b.config.DiskLimitSizeBytes < 0 {
+	if b.config.DiskLimitSizeBytes < 0 {
 		return *b.config, errors.New("invalid argument: disk limit cannot be negative")
 	}
 
@@ -106,10 +101,12 @@ func (b *Builder) WithGIDMappings(gidMappings []string) *Builder {
 	return b
 }
 
-func (b *Builder) WithDiskLimitSizeBytes(limit *int64) *Builder {
-	if limit != nil {
-		b.config.DiskLimitSizeBytes = limit
-	}
+func (b *Builder) WithDiskLimitSizeBytes(limit int64) *Builder {
+	b.config.DiskLimitSizeBytes = limit
+	return b
+}
 
+func (b *Builder) WithExcludeBaseImageFromQuota(exclude bool) *Builder {
+	b.config.ExcludeBaseImageFromQuota = exclude
 	return b
 }

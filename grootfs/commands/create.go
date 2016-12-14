@@ -34,7 +34,7 @@ var CreateCommand = cli.Command{
 	Description: "Creates a root filesystem for the provided image.",
 
 	Flags: []cli.Flag{
-		cli.Int64SliceFlag{
+		cli.Int64Flag{
 			Name:  "disk-limit-size-bytes",
 			Usage: "Inclusive disk limit (i.e: includes all layers in the filesystem)",
 		},
@@ -70,9 +70,12 @@ var CreateCommand = cli.Command{
 			WithUIDMappings(ctx.StringSlice("uid-mapping")).
 			WithGIDMappings(ctx.StringSlice("gid-mapping"))
 
-		diskLimit := ctx.Int64Slice("disk-limit-size-bytes")
-		if len(diskLimit) > 0 {
-			configBuilder.WithDiskLimitSizeBytes(&diskLimit[0])
+		if ctx.IsSet("disk-limit-size-bytes") {
+			configBuilder.WithDiskLimitSizeBytes(ctx.Int64("disk-limit-size-bytes"))
+		}
+
+		if ctx.IsSet("exclude-image-from-quota") {
+			configBuilder.WithExcludeBaseImageFromQuota(ctx.Bool("exclude-image-from-quota"))
 		}
 
 		cfg, err := configBuilder.Build()
@@ -131,8 +134,8 @@ var CreateCommand = cli.Command{
 		createSpec := groot.CreateSpec{
 			ID:                        id,
 			BaseImage:                 baseImage,
-			DiskLimit:                 *cfg.DiskLimitSizeBytes,
-			ExcludeBaseImageFromQuota: ctx.Bool("exclude-image-from-quota"),
+			DiskLimit:                 cfg.DiskLimitSizeBytes,
+			ExcludeBaseImageFromQuota: cfg.ExcludeBaseImageFromQuota,
 			UIDMappings:               uidMappings,
 			GIDMappings:               gidMappings,
 		}
