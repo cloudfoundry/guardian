@@ -206,6 +206,46 @@ var _ = Describe("Dadoo", func() {
 			}).Should(gexec.Exit(0))
 		})
 
+		It("should write to the sync pipe when streaming pipes are open", func(done Done) {
+			processSpec, err := json.Marshal(&specs.Process{
+				Args: []string{"/bin/sh", "-c", "echo hello-world; exit 24"},
+				Cwd:  "/",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			syncPipeR, syncPipeW, err := os.Pipe()
+			Expect(err).NotTo(HaveOccurred())
+			defer syncPipeR.Close()
+			defer syncPipeW.Close()
+
+			stdoutPipe := filepath.Join(processDir, "stdout")
+			Expect(syscall.Mkfifo(stdoutPipe, 0)).To(Succeed())
+
+			cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
+			cmd.Stdin = bytes.NewReader(processSpec)
+			cmd.ExtraFiles = []*os.File{
+				mustOpen("/dev/null"),
+				mustOpen("/dev/null"),
+				syncPipeW,
+			}
+
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = os.Open(stdoutPipe)
+			Expect(err).NotTo(HaveOccurred())
+
+			// This is a weak assertion that there is a sync message when the pipes are open
+			// but does not tell us anything about the timing between the two unfortunately
+			syncMsg := make([]byte, 1)
+			_, err = syncPipeR.Read(syncMsg)
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(sess).Should(gexec.Exit(24))
+
+			close(done)
+		}, 10.0)
+
 		Context("using named pipes for stdin/out/err", func() {
 			var stdinPipe, stdoutPipe, stderrPipe string
 

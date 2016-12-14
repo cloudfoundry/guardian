@@ -46,6 +46,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		log                    *lagertest.TestLogger
 		receiveWinSize         func(*os.File)
 		closeExitPipeCh        chan struct{}
+		stderrContents         string
 
 		testFinishedCh chan bool
 	)
@@ -88,6 +89,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		closeExitPipeCh = make(chan struct{})
 		close(closeExitPipeCh) // default to immediately succeeding
 
+		stderrContents = ""
+
 		// dadoo should open up its end of the named pipes
 		fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "path-to-dadoo",
@@ -100,6 +103,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			// in a real fork/exec this'd happen as part of the fork
 			fd3 := dup(cmd.ExtraFiles[0])
 			fd4 := dup(cmd.ExtraFiles[1])
+			fd5 := dup(cmd.ExtraFiles[2])
 
 			if dadooReturns != nil {
 				// dadoo would error - bail out
@@ -107,7 +111,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			}
 
 			// dadoo would not error - simulate dadoo operation
-			go func(cmd *exec.Cmd, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File)) {
+			go func(cmd *exec.Cmd, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File), stderrContents string) {
 				defer GinkgoRecover()
 
 				// parse flags to get bundle dir argument so we can open stdin/out/err pipes
@@ -115,7 +119,17 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				processDir := dadooFlags.Arg(2)
 				si, so, se, winsz, exit := openPipes(processDir)
 
+				// notify sync pipe - must be before writting stderr
+				_, err := fd5.Write([]byte{0})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fd5.Close()).To(Succeed())
+
+				// handle window size
 				go recvWinSz(winsz)
+
+				// write stderr
+				_, err = se.WriteString(stderrContents)
+				Expect(err).NotTo(HaveOccurred())
 
 				// write log file to fd4
 				_, err = io.Copy(fd4, bytes.NewReader([]byte(logs)))
@@ -131,7 +145,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				if exitCode != nil {
 					Expect(ioutil.WriteFile(filepath.Join(processDir, "exitcode"), []byte(exitCode), 0600)).To(Succeed())
 				}
-
 				<-closeExitPipeCh
 				Expect(exit.Close()).To(Succeed())
 
@@ -144,10 +157,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				Expect(err).NotTo(HaveOccurred())
 				se.WriteString("done copying stdin")
 
+				// close streams
 				Expect(so.Close()).To(Succeed())
 				Expect(se.Close()).To(Succeed())
-
-			}(cmd, dadooWritesExitCode, []byte(dadooWritesLogs), closeExitPipeCh, receiveWinSize)
+			}(cmd, dadooWritesExitCode, []byte(dadooWritesLogs), closeExitPipeCh, receiveWinSize, stderrContents)
 
 			return nil
 		})
@@ -243,6 +256,33 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 				_, err := runner.Run(log, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, processPath, "some-handle", nil, garden.ProcessIO{})
 				Expect(err).To(MatchError(ContainSubstring("boom")))
+			})
+		})
+
+		Context("when runc exec fails", func() {
+			BeforeEach(func() {
+				runcReturns = 3
+			})
+
+			Context("when runc writes a lot of data to stderr", func() {
+				BeforeEach(func() {
+					for i := 0; i < 5000; i++ {
+						stderrContents += "I am a bad runC\n"
+					}
+				})
+
+				It("does not deadlock", func(done Done) {
+					_, err := runner.Run(log, &runrunc.PreparedSpec{
+						Process: specs.Process{
+							Args: []string{"Banana", "rama"},
+						},
+					}, processPath, "some-handle", nil, garden.ProcessIO{
+						Stderr: gbytes.NewBuffer(),
+					})
+					Expect(err).To(MatchError(ContainSubstring("exit status 3")))
+
+					close(done)
+				}, 10.0)
 			})
 		})
 

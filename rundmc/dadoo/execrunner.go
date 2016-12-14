@@ -68,8 +68,14 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 		return nil, err
 	}
 
+	syncr, syncw, err := os.Pipe()
+	if err != nil {
+		return nil, err
+	}
+
 	defer fd3r.Close()
 	defer logr.Close()
+	defer syncr.Close()
 
 	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
 	process.mkfifos()
@@ -93,6 +99,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 	cmd.ExtraFiles = []*os.File{
 		fd3w,
 		logw,
+		syncw,
 	}
 
 	encodedSpec, err := json.Marshal(spec.Process)
@@ -104,29 +111,32 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 	if err := d.commandRunner.Start(cmd); err != nil {
 		return nil, err
 	}
-
 	go d.commandRunner.Wait(cmd) // wait on spawned process to avoid zombies
 
 	fd3w.Close()
 	logw.Close()
+	syncw.Close()
 
 	stdin, stdout, stderr, err := process.openPipes(pio)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Info("read-exit-fd")
+	syncMsg := make([]byte, 1)
+	_, err = syncr.Read(syncMsg)
+	if err != nil {
+		return nil, err
+	}
 
-	runcExitStatus := make([]byte, 1)
-	fd3r.Read(runcExitStatus)
 	process.streamData(pio, stdin, stdout, stderr)
-
-	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
-
 	defer func() {
 		theErr = processLogs(log, logr, theErr)
 	}()
 
+	log.Info("read-exit-fd")
+	runcExitStatus := make([]byte, 1)
+	fd3r.Read(runcExitStatus)
+	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
 	if runcExitStatus[0] != 0 {
 		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])
 	}

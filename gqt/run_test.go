@@ -323,6 +323,42 @@ var _ = Describe("Run", func() {
 	})
 
 	Describe("dadoo exec", func() {
+		Context("when runc writes a lot of stderr before exiting", func() {
+			var (
+				container     garden.Container
+				propertiesDir string
+			)
+
+			BeforeEach(func() {
+				fakeRuncBinPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc_stderr")
+				Expect(err).NotTo(HaveOccurred())
+
+				propertiesDir, err = ioutil.TempDir("", "props")
+				Expect(err).NotTo(HaveOccurred())
+				client = startGarden("--properties-path", path.Join(propertiesDir, "props.json"))
+
+				container, err = client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				restartGarden(client, "--runc-bin", fakeRuncBinPath, "--properties-path", path.Join(propertiesDir, "props.json"))
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(propertiesDir)).To(Succeed())
+			})
+
+			It("does not deadlock", func(done Done) {
+				_, err := container.Run(garden.ProcessSpec{
+					Path: "ps",
+				}, garden.ProcessIO{
+					Stderr: gbytes.NewBuffer(),
+				})
+				Expect(err).To(MatchError(ContainSubstring("exit status 100")))
+
+				close(done)
+			}, 30.0)
+		})
+
 		It("forwards runc logs to lager when exec fails, and gives proper error messages", func() {
 			client = startGarden("--log-level", "debug")
 			container, err := client.Create(garden.ContainerSpec{})

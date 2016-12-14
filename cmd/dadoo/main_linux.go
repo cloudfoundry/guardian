@@ -47,9 +47,12 @@ func run() int {
 	fd3 := os.NewFile(3, "/proc/self/fd/3")
 	logFile := fmt.Sprintf("/proc/%d/fd/4", os.Getpid())
 	logFD := os.NewFile(4, "/proc/self/fd/4")
+	syncPipe := os.NewFile(5, "/proc/self/fd/5")
 	pidFilePath := filepath.Join(dir, "pidfile")
 
 	stdin, stdout, stderr, winsz := openPipes(dir)
+
+	syncPipe.Write([]byte{0})
 
 	var runcStartCmd *exec.Cmd
 	if *tty {
