@@ -116,11 +116,12 @@ var _ = Describe("Clean", func() {
 
 		Context("when --config global flag is given", func() {
 			var (
-				configStorePath   string
-				configDir         string
-				configFilePath    string
-				configDraxBinPath string
-				ignoredImagesList []string
+				configStorePath         string
+				configDir               string
+				configFilePath          string
+				configDraxBinPath       string
+				ignoredImagesList       []string
+				cleanupThresholdInBytes uint64
 			)
 
 			BeforeEach(func() {
@@ -130,14 +131,14 @@ var _ = Describe("Clean", func() {
 				configFilePath = path.Join(configDir, "config.yaml")
 				configStorePath = StorePath
 				ignoredImagesList = []string{}
-				configDraxBinPath = ""
 			})
 
 			JustBeforeEach(func() {
 				cfg := config.Config{
-					BaseStorePath:    configStorePath,
-					IgnoreBaseImages: ignoredImagesList,
-					DraxBin:          configDraxBinPath,
+					BaseStorePath:       configStorePath,
+					IgnoreBaseImages:    ignoredImagesList,
+					DraxBin:             configDraxBinPath,
+					CleanThresholdBytes: cleanupThresholdInBytes,
 				}
 
 				configYaml, err := yaml.Marshal(cfg)
@@ -246,6 +247,24 @@ var _ = Describe("Clean", func() {
 					contents, err := ioutil.ReadFile(draxCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(contents)).To(Equal("I'm groot"))
+				})
+			})
+
+			Describe("when threshold is not provided on the command line flag", func() {
+				BeforeEach(func() {
+					cleanupThresholdInBytes = 2500000
+				})
+
+				It("uses the threshold from the config file, and so does not clean", func() {
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = Runner.WithConfig(configFilePath).Clean(0, []string{})
+					Expect(err).NotTo(HaveOccurred())
+
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(afterContents).To(HaveLen(len(preContents)))
 				})
 			})
 		})
