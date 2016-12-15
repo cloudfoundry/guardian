@@ -24,6 +24,10 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
+const (
+	tenMegabytes = int64(10485760)
+)
+
 var _ = Describe("Create", func() {
 	var baseImagePath string
 
@@ -37,23 +41,12 @@ var _ = Describe("Create", func() {
 
 	Context("when inclusive disk limit is provided", func() {
 		It("creates a image with supplied limit", func() {
-			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "fatfile")), "bs=1048576", "count=5")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			Expect(writeMegabytes(filepath.Join(baseImagePath, "fatfile"), 5)).To(Succeed())
 
-			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", int64(10*1024*1024))
+			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", tenMegabytes)
 
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=4")
-			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello2")), "bs=1048576", "count=2")
-			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
-			Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
+			Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 4)).To(Succeed())
+			Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 2)).To(MatchError(ContainSubstring("Disk quota exceeded")))
 		})
 
 		Context("when the disk limit value is invalid", func() {
@@ -74,16 +67,8 @@ var _ = Describe("Create", func() {
 				Eventually(sess).Should(gexec.Exit(0))
 
 				rootfsPath := filepath.Join(StorePath, CurrentUserID, "images/random-id/rootfs")
-				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(rootfsPath, "hello")), "bs=1048576", "count=6")
-				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
-
-				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(rootfsPath, "hello2")), "bs=1048576", "count=5")
-				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(1))
-				Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
+				Expect(writeMegabytes(filepath.Join(rootfsPath, "hello"), 6)).To(Succeed())
+				Expect(writeMegabytes(filepath.Join(rootfsPath, "hello2"), 5)).To(MatchError(ContainSubstring("Disk quota exceeded")))
 			})
 		})
 
@@ -428,7 +413,7 @@ var _ = Describe("Create", func() {
 
 		Describe("disk limit size bytes", func() {
 			BeforeEach(func() {
-				configDiskLimitSizeBytes = int64(10 * 1024 * 1024)
+				configDiskLimitSizeBytes = tenMegabytes
 			})
 
 			JustBeforeEach(func() {
@@ -443,18 +428,14 @@ var _ = Describe("Create", func() {
 				image, err := runner.Create(spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=11")
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(1))
-				Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
+				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 11)).To(MatchError(ContainSubstring("Disk quota exceeded")))
 			})
 		})
 
 		Describe("exclude image from quota", func() {
 			BeforeEach(func() {
 				configExcludeBaseImageFromQuota = true
-				configDiskLimitSizeBytes = int64(10485760)
+				configDiskLimitSizeBytes = tenMegabytes
 			})
 
 			JustBeforeEach(func() {
@@ -469,15 +450,15 @@ var _ = Describe("Create", func() {
 				image, err := runner.Create(spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(writeMegabytes(image.RootFSPath, 6)).To(Succeed())
-				Expect(writeMegabytes(image.RootFSPath, 5)).To(MatchError(ContainSubstring("Disk quota exceeded")))
+				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 6)).To(Succeed())
+				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("Disk quota exceeded")))
 			})
 		})
 	})
 })
 
 func writeMegabytes(outputPath string, mb int) error {
-	cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(outputPath, "hello")), "bs=1048576", fmt.Sprintf("count=%d", mb))
+	cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", outputPath), "bs=1048576", fmt.Sprintf("count=%d", mb))
 	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	if err != nil {
 		return err
