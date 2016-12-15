@@ -41,7 +41,8 @@ var CleanCommand = cli.Command{
 		logger = logger.Session("clean")
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
-		configBuilder.WithIgnoreBaseImages(ctx.StringSlice("ignore-image"))
+		configBuilder.WithIgnoreBaseImages(ctx.StringSlice("ignore-image")).
+			WithCleanThresholdBytes(ctx.Uint64("threshold-bytes"))
 		cfg, err := configBuilder.Build()
 		logger.Debug("clean-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
@@ -64,7 +65,7 @@ var CleanCommand = cli.Command{
 		metricsEmitter := metrics.NewEmitter()
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
-		noop, err := cleaner.Clean(logger, ctx.Uint64("threshold-bytes"), cfg.IgnoreBaseImages)
+		noop, err := cleaner.Clean(logger, cfg.CleanThresholdBytes, cfg.IgnoreBaseImages)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return cli.NewExitError(err.Error(), 1)

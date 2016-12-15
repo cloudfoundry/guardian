@@ -9,6 +9,7 @@ import (
 
 type Config struct {
 	BaseStorePath             string   `yaml:"store_path"`
+	CleanThresholdBytes       uint64   `yaml:"clean_threshold_bytes"`
 	DiskLimitSizeBytes        int64    `yaml:"disk_limit_size_bytes"`
 	DraxBin                   string   `yaml:"drax_bin"`
 	ExcludeBaseImageFromQuota bool     `yaml:"exclude_base_image_from_quota"`

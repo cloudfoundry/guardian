@@ -110,3 +110,8 @@ func (b *Builder) WithExcludeBaseImageFromQuota(exclude bool) *Builder {
 	b.config.ExcludeBaseImageFromQuota = exclude
 	return b
 }
+
+func (b *Builder) WithCleanThresholdBytes(threshold uint64) *Builder {
+	b.config.CleanThresholdBytes = threshold
+	return b
+}

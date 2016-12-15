@@ -25,6 +25,7 @@ var _ = Describe("Builder", func() {
 		configGIDMappings           []string
 		configDiskLimitSizeBytes    int64
 		configExcludeImageFromQuota bool
+		configCleanThresholdBytes   uint64
 	)
 
 	BeforeEach(func() {
@@ -35,6 +36,7 @@ var _ = Describe("Builder", func() {
 		configGIDMappings = []string{"config-gid-mapping"}
 		configDiskLimitSizeBytes = int64(1000)
 		configExcludeImageFromQuota = true
+		configCleanThresholdBytes = 0
 	})
 
 	JustBeforeEach(func() {
@@ -52,6 +54,7 @@ var _ = Describe("Builder", func() {
 			GIDMappings:               configGIDMappings,
 			DiskLimitSizeBytes:        configDiskLimitSizeBytes,
 			ExcludeBaseImageFromQuota: configExcludeImageFromQuota,
+			CleanThresholdBytes:       configCleanThresholdBytes,
 		}
 
 		configYaml, err := yaml.Marshal(cfg)
@@ -324,6 +327,15 @@ var _ = Describe("Builder", func() {
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config.ExcludeBaseImageFromQuota).To(BeFalse())
+		})
+	})
+
+	Describe("WithCleanThresholdBytes", func() {
+		It("overrides the config's CleanThresholdBytes entry", func() {
+			builder = builder.WithCleanThresholdBytes(uint64(1024))
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.CleanThresholdBytes).To(Equal(uint64(1024)))
 		})
 	})
 })
