@@ -22,6 +22,8 @@ type Config struct {
 	IgnoreBaseImages          []string `yaml:"ignore_base_images"`
 	InsecureRegistries        []string `yaml:"insecure_registries"`
 	MetronEndpoint            string   `yaml:"metron_endpoint"`
+	LogLevel                  string   `yaml:"log_level"`
+	LogFile                   string   `yaml:"log_file"`
 	UserBasedStorePath        string
 }
 
@@ -132,6 +134,20 @@ func (b *Builder) WithExcludeBaseImageFromQuota(exclude bool) *Builder {
 
 func (b *Builder) WithCleanThresholdBytes(threshold uint64) *Builder {
 	b.config.CleanThresholdBytes = threshold
+	return b
+}
+
+func (b *Builder) WithLogLevel(level string) *Builder {
+	if level != "" {
+		b.config.LogLevel = level
+	}
+	return b
+}
+
+func (b *Builder) WithLogFile(filepath string) *Builder {
+	if filepath != "" {
+		b.config.LogFile = filepath
+	}
 	return b
 }
 

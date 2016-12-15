@@ -68,30 +68,27 @@ func main() {
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
-		logFile := ctx.GlobalString("log-file")
-		logLevel := ctx.String("log-level")
-
-		lagerLogLevel := translateLogLevel(logLevel)
-		logger, err := configureLogger(lagerLogLevel, logFile)
-		if err != nil {
-			return err
-		}
-		ctx.App.Metadata["logger"] = logger
-
 		cfgBuilder, err := config.NewBuilder(ctx.GlobalString("config"))
 		if err != nil {
-			logger.Error("failed-loading-config-file", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), defaultStorePath).
 			WithDraxBin(ctx.GlobalString("drax-bin"), defaultDraxBin).
 			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
+			WithLogLevel(ctx.String("log-level")).
+			WithLogFile(ctx.GlobalString("log-file")).
 			Build()
 		if err != nil {
-			logger.Error("config-builder-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 		ctx.App.Metadata["configBuilder"] = cfgBuilder
+
+		lagerLogLevel := translateLogLevel(cfg.LogLevel)
+		logger, err := configureLogger(lagerLogLevel, cfg.LogFile)
+		if err != nil {
+			return err
+		}
+		ctx.App.Metadata["logger"] = logger
 
 		// Sadness. We need to do that becuase we use stderr for logs so user
 		// errors need to end up in stdout.

@@ -26,6 +26,8 @@ var _ = Describe("Builder", func() {
 		configDiskLimitSizeBytes    int64
 		configExcludeImageFromQuota bool
 		configCleanThresholdBytes   uint64
+		configLogLevel              string
+		configLogFile               string
 	)
 
 	BeforeEach(func() {
@@ -37,6 +39,8 @@ var _ = Describe("Builder", func() {
 		configDiskLimitSizeBytes = int64(1000)
 		configExcludeImageFromQuota = true
 		configCleanThresholdBytes = 0
+		configLogLevel = "info"
+		configLogFile = "/path/to/a/file"
 	})
 
 	JustBeforeEach(func() {
@@ -55,6 +59,8 @@ var _ = Describe("Builder", func() {
 			DiskLimitSizeBytes:        configDiskLimitSizeBytes,
 			ExcludeBaseImageFromQuota: configExcludeImageFromQuota,
 			CleanThresholdBytes:       configCleanThresholdBytes,
+			LogLevel:                  configLogLevel,
+			LogFile:                   configLogFile,
 		}
 
 		configYaml, err := yaml.Marshal(cfg)
@@ -336,6 +342,42 @@ var _ = Describe("Builder", func() {
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config.CleanThresholdBytes).To(Equal(uint64(1024)))
+		})
+	})
+
+	Describe("WithLogLevel", func() {
+		It("overrides the config's Log Level entry", func() {
+			builder = builder.WithLogLevel("debug")
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.LogLevel).To(Equal("debug"))
+		})
+
+		Context("when empty", func() {
+			It("doesn't override the config's log level entry", func() {
+				builder = builder.WithLogLevel("")
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.LogLevel).To(Equal(configLogLevel))
+			})
+		})
+	})
+
+	Describe("WithLogFile", func() {
+		It("overrides the config's Log File entry", func() {
+			builder = builder.WithLogFile("/path/to/log-file.log")
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.LogFile).To(Equal("/path/to/log-file.log"))
+		})
+
+		Context("when empty", func() {
+			It("doesn't override the config's log file entry", func() {
+				builder = builder.WithLogFile("")
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.LogFile).To(Equal(configLogFile))
+			})
 		})
 	})
 })
