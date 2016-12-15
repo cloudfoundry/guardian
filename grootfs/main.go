@@ -78,14 +78,19 @@ func main() {
 		}
 		ctx.App.Metadata["logger"] = logger
 
-		cfgBuilder, err := newConfigBuilder(ctx.GlobalString("config"))
+		cfgBuilder, err := config.NewBuilder(ctx.GlobalString("config"))
 		if err != nil {
 			logger.Error("failed-loading-config-file", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
-		cfgBuilder.WithStorePath(ctx.GlobalString("store"), defaultStorePath).
+		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), defaultStorePath).
 			WithDraxBin(ctx.GlobalString("drax-bin"), defaultDraxBin).
-			WithMetronEndpoint(ctx.GlobalString("metron-endpoint"))
+			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
+			Build()
+		if err != nil {
+			logger.Error("config-builder-failed", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
 		ctx.App.Metadata["configBuilder"] = cfgBuilder
 
 		// Sadness. We need to do that becuase we use stderr for logs so user
@@ -93,11 +98,6 @@ func main() {
 		cli.ErrWriter = os.Stdout
 
 		configurer := store.NewConfigurer()
-		cfg, err := cfgBuilder.Build()
-		if err != nil {
-			logger.Error("config-builder-failed", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
 
 		if err := configurer.Ensure(logger, cfg.UserBasedStorePath); err != nil {
 			return err
@@ -147,27 +147,4 @@ func configureLogger(logLevel lager.LogLevel, logFile string) (lager.Logger, err
 	logger.RegisterSink(lager.NewWriterSink(logWriter, logLevel))
 
 	return logger, nil
-}
-
-func loadConfig(configPath string) (config.Config, error) {
-	var cfg config.Config
-
-	if configPath != "" {
-		var err error
-		cfg, err = config.Load(configPath)
-		if err != nil {
-			return cfg, err
-		}
-	}
-
-	return cfg, nil
-}
-
-func newConfigBuilder(configPath string) (*config.Builder, error) {
-	cfgBuilder, err := config.NewBuilder(configPath)
-	if err != nil {
-		return cfgBuilder, err
-	}
-
-	return cfgBuilder, nil
 }
