@@ -1,6 +1,7 @@
 package groot_test
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -278,13 +279,14 @@ var _ = Describe("Create", func() {
 
 	Describe("--config global flag", func() {
 		var (
-			configDir                string
-			configFilePath           string
-			configStorePath          string
-			configDraxBinPath        string
-			configUIDMappings        []string
-			configGIDMappings        []string
-			configDiskLimitSizeBytes int64
+			configDir                       string
+			configFilePath                  string
+			configStorePath                 string
+			configDraxBinPath               string
+			configUIDMappings               []string
+			configGIDMappings               []string
+			configDiskLimitSizeBytes        int64
+			configExcludeBaseImageFromQuota bool
 
 			runner runnerpkg.Runner
 			spec   groot.CreateSpec
@@ -309,11 +311,12 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			cfg := config.Config{
-				BaseStorePath:      configStorePath,
-				DraxBin:            configDraxBinPath,
-				UIDMappings:        configUIDMappings,
-				GIDMappings:        configGIDMappings,
-				DiskLimitSizeBytes: configDiskLimitSizeBytes,
+				BaseStorePath:             configStorePath,
+				DraxBin:                   configDraxBinPath,
+				UIDMappings:               configUIDMappings,
+				GIDMappings:               configGIDMappings,
+				DiskLimitSizeBytes:        configDiskLimitSizeBytes,
+				ExcludeBaseImageFromQuota: configExcludeBaseImageFromQuota,
 			}
 
 			configYaml, err := yaml.Marshal(cfg)
@@ -447,5 +450,41 @@ var _ = Describe("Create", func() {
 				Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
 			})
 		})
+
+		Describe("exclude image from quota", func() {
+			BeforeEach(func() {
+				configExcludeBaseImageFromQuota = true
+				configDiskLimitSizeBytes = int64(10485760)
+			})
+
+			JustBeforeEach(func() {
+				runner = runnerpkg.Runner{
+					GrootFSBin: GrootFSBin,
+					DraxBin:    DraxBin,
+					StorePath:  StorePath,
+				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+			})
+
+			It("excludes base image from quota when config property say so", func() {
+				image, err := runner.Create(spec)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(writeMegabytes(image.RootFSPath, 6)).To(Succeed())
+				Expect(writeMegabytes(image.RootFSPath, 5)).To(MatchError(ContainSubstring("Disk quota exceeded")))
+			})
+		})
 	})
 })
+
+func writeMegabytes(outputPath string, mb int) error {
+	cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(outputPath, "hello")), "bs=1048576", fmt.Sprintf("count=%d", mb))
+	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	if err != nil {
+		return err
+	}
+	Eventually(sess).Should(gexec.Exit())
+	if sess.ExitCode() > 0 {
+		return errors.New(string(sess.Err.Contents()))
+	}
+	return nil
+}
