@@ -4,10 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
 
 	yaml "gopkg.in/yaml.v2"
-
-	"code.cloudfoundry.org/grootfs/commands/storepath"
 )
 
 type Config struct {
@@ -74,12 +75,12 @@ func (b *Builder) WithIgnoreBaseImages(ignoreBaseImages []string) *Builder {
 
 func (b *Builder) WithStorePath(storePath, defaultStorePath string) *Builder {
 	if b.config.BaseStorePath != "" && storePath == defaultStorePath {
-		b.config.UserBasedStorePath = storepath.UserBased(b.config.BaseStorePath)
+		b.config.UserBasedStorePath = userBasedStorePath(b.config.BaseStorePath)
 		return b
 	}
 
 	b.config.BaseStorePath = storePath
-	b.config.UserBasedStorePath = storepath.UserBased(storePath)
+	b.config.UserBasedStorePath = userBasedStorePath(storePath)
 	return b
 }
 
@@ -147,4 +148,9 @@ func load(configPath string) (Config, error) {
 	}
 
 	return config, nil
+}
+
+func userBasedStorePath(storePath string) string {
+	userID := os.Getuid()
+	return filepath.Join(storePath, strconv.Itoa(userID))
 }
