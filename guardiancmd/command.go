@@ -173,6 +173,11 @@ type GuardianCommand struct {
 		PersistentImages            []string `long:"persistent-image" description:"Image that should never be garbage collected. Can be specified multiple times."`
 	} `group:"Image Graph"`
 
+	Image struct {
+		PluginExtraArgs           []string `long:"image-plugin-extra-arg" description:"Extra argument to pass to the image plugin to create unprivileged images. Can be specified multiple times."`
+		PrivilegedPluginExtraArgs []string `long:"privileged-image-plugin-extra-arg" description:"Extra argument to pass to the image plugin to create privileged images. Can be specified multiple times."`
+	} `group:"Image"`
+
 	Docker struct {
 		Registry           string   `long:"docker-registry" default:"registry-1.docker.io" description:"Docker registry API endpoint."`
 		InsecureRegistries []string `long:"insecure-docker-registry" description:"Docker registry to allow connecting to even if not secure. Can be specified multiple times."`
@@ -278,12 +283,9 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	}
 
 	var volumeCreator gardener.VolumeCreator = nil
-	if !cmd.Server.Rootless {
-		volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
-	}
-
 	starters := []gardener.Starter{}
 	if !cmd.Server.Rootless {
+		volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
 		starters = []gardener.Starter{cmd.wireRunDMCStarter(logger), iptablesStarter}
 	}
 
@@ -451,7 +453,9 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		if err != nil {
 			logger.Fatal("failed-to-parse-default-rootfs", err)
 		}
-		return imageplugin.New(cmd.Bin.ImagePlugin.Path(), linux_command_runner.New(), defaultRootFS, idMappings)
+		return imageplugin.New(cmd.Bin.ImagePlugin.Path(), linux_command_runner.New(),
+			defaultRootFS, idMappings, cmd.Image.PrivilegedPluginExtraArgs,
+			cmd.Image.PluginExtraArgs)
 	}
 
 	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})
