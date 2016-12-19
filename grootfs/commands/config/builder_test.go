@@ -83,7 +83,6 @@ var _ = Describe("Builder", func() {
 			Expect(config.InsecureRegistries).To(Equal([]string{"http://example.org"}))
 			Expect(config.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
 			Expect(config.BaseStorePath).To(Equal("/hello"))
-			Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/hello", CurrentUserID)))
 		})
 
 		Context("when disk limit property is invalid", func() {
@@ -166,72 +165,66 @@ var _ = Describe("Builder", func() {
 	})
 
 	Describe("WithStorePath", func() {
-		Context("when provided store path and default store path are different", func() {
-			It("overrides the config's store path entry with the provided store path with user ID postfix", func() {
-				builder = builder.WithStorePath("/mnt/grootfs/data", "/var/lib/grootfs/data")
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/mnt/grootfs/data", CurrentUserID)))
-				Expect(config.BaseStorePath).To(Equal("/mnt/grootfs/data"))
-			})
+		It("overrides the config's store path entry when command line flag is set", func() {
+			builder = builder.WithStorePath("/mnt/grootfs/data", true)
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/mnt/grootfs/data", CurrentUserID)))
+			Expect(config.BaseStorePath).To(Equal("/mnt/grootfs/data"))
 		})
 
-		Context("when provided store path and default store path are the same", func() {
-			It("uses the config's store path with user ID postfix", func() {
-				builder = builder.WithStorePath("/var/lib/grootfs/data", "/var/lib/grootfs/data")
+		Context("when store path is not provided via command line", func() {
+			It("uses the config's store path ", func() {
+				builder = builder.WithStorePath("/mnt/grootfs/data", false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/hello", CurrentUserID)))
+				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/hello/", CurrentUserID)))
 				Expect(config.BaseStorePath).To(Equal("/hello"))
 			})
 
-		})
+			Context("and store path is not set in the config", func() {
+				BeforeEach(func() {
+					configStorePath = ""
+				})
 
-		Context("when config doesn't have a store path property", func() {
-			BeforeEach(func() {
-				configStorePath = ""
-			})
-
-			It("uses the provided store path with user ID postfix", func() {
-				builder = builder.WithStorePath("/var/lib/grootfs/data", "/var/lib/grootfs/data")
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/var/lib/grootfs/data", CurrentUserID)))
-				Expect(config.BaseStorePath).To(Equal("/var/lib/grootfs/data"))
+				It("uses the provided store path ", func() {
+					builder = builder.WithStorePath("/mnt/grootfs/data", false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/mnt/grootfs/data", CurrentUserID)))
+					Expect(config.BaseStorePath).To(Equal("/mnt/grootfs/data"))
+				})
 			})
 		})
 	})
 
 	Describe("WithDraxBin", func() {
-		Context("when provided drax bin and default drax bin are different", func() {
-			It("overrides the config's drax bin entry", func() {
-				builder = builder.WithDraxBin("/my/drax", "/default/drax")
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.DraxBin).To(Equal("/my/drax"))
-			})
+		It("overrides the config's drax path entry when command line flag is set", func() {
+			builder = builder.WithDraxBin("/my/drax", true)
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.DraxBin).To(Equal("/my/drax"))
 		})
 
-		Context("when provided drax bin and default drax bin are the same", func() {
-			It("uses the config's drax bin", func() {
-				builder = builder.WithDraxBin("/default/drax", "/default/drax")
+		Context("when drax path is not provided via command line", func() {
+			It("uses the config's drax path ", func() {
+				builder = builder.WithDraxBin("/my/drax", false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(config.DraxBin).To(Equal("/config/drax"))
 			})
 
-		})
+			Context("and drax path is not set in the config", func() {
+				BeforeEach(func() {
+					configDraxBin = ""
+				})
 
-		Context("when config doesn't have a drax bin property", func() {
-			BeforeEach(func() {
-				configDraxBin = ""
-			})
-
-			It("uses the provided drax bin", func() {
-				builder = builder.WithDraxBin("/default/drax", "/default/drax")
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.DraxBin).To(Equal("/default/drax"))
+				It("uses the provided drax path ", func() {
+					builder = builder.WithDraxBin("/my/drax", false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.DraxBin).To(Equal("/my/drax"))
+				})
 			})
 		})
 	})
@@ -309,18 +302,27 @@ var _ = Describe("Builder", func() {
 	})
 
 	Describe("WithDiskLimitSizeBytes", func() {
-		It("overrides the config's DiskLimitSizeBytes entry", func() {
+		It("overrides the config's DiskLimitSizeBytes entry when flag is set", func() {
 			diskLimit := int64(3000)
-			builder = builder.WithDiskLimitSizeBytes(diskLimit)
+			builder = builder.WithDiskLimitSizeBytes(diskLimit, true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config.DiskLimitSizeBytes).To(Equal(diskLimit))
 		})
 
+		Context("when flag is not set", func() {
+			It("uses the config entry", func() {
+				builder = builder.WithDiskLimitSizeBytes(10, false)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.DiskLimitSizeBytes).To(Equal(configDiskLimitSizeBytes))
+			})
+		})
+
 		Context("when negative", func() {
 			It("returns an error", func() {
 				diskLimit := int64(-300)
-				builder = builder.WithDiskLimitSizeBytes(diskLimit)
+				builder = builder.WithDiskLimitSizeBytes(diskLimit, true)
 				_, err := builder.Build()
 				Expect(err).To(MatchError("invalid argument: disk limit cannot be negative"))
 			})
@@ -328,20 +330,38 @@ var _ = Describe("Builder", func() {
 	})
 
 	Describe("WithExcludeBaseImageFromQuota", func() {
-		It("overrides the config's ExcludeBaseImageFromQuota entry", func() {
-			builder = builder.WithExcludeBaseImageFromQuota(false)
+		It("overrides the config's ExcludeBaseImageFromQuota when the flag is set", func() {
+			builder = builder.WithExcludeBaseImageFromQuota(false, true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config.ExcludeBaseImageFromQuota).To(BeFalse())
 		})
+
+		Context("when flag is not set", func() {
+			It("uses the config entry", func() {
+				builder = builder.WithExcludeBaseImageFromQuota(false, false)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.ExcludeBaseImageFromQuota).To(BeTrue())
+			})
+		})
 	})
 
 	Describe("WithCleanThresholdBytes", func() {
-		It("overrides the config's CleanThresholdBytes entry", func() {
-			builder = builder.WithCleanThresholdBytes(uint64(1024))
+		It("overrides the config's CleanThresholdBytes entry when the flag is set", func() {
+			builder = builder.WithCleanThresholdBytes(uint64(1024), true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config.CleanThresholdBytes).To(Equal(uint64(1024)))
+		})
+
+		Context("when flag is not set", func() {
+			It("uses the config entry", func() {
+				builder = builder.WithCleanThresholdBytes(uint64(1024), false)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.CleanThresholdBytes).To(Equal(configCleanThresholdBytes))
+			})
 		})
 	})
 

@@ -46,7 +46,7 @@ func NewBuilder(pathToYaml string) (*Builder, error) {
 		config: &config,
 	}
 
-	return b.WithStorePath(config.BaseStorePath, ""), nil
+	return b, nil
 }
 
 func (b *Builder) Build() (Config, error) {
@@ -75,23 +75,19 @@ func (b *Builder) WithIgnoreBaseImages(ignoreBaseImages []string) *Builder {
 	return b
 }
 
-func (b *Builder) WithStorePath(storePath, defaultStorePath string) *Builder {
-	if b.config.BaseStorePath != "" && storePath == defaultStorePath {
-		b.config.UserBasedStorePath = userBasedStorePath(b.config.BaseStorePath)
-		return b
+func (b *Builder) WithStorePath(storePath string, isSet bool) *Builder {
+	if isSet || b.config.BaseStorePath == "" {
+		b.config.BaseStorePath = storePath
 	}
 
-	b.config.BaseStorePath = storePath
-	b.config.UserBasedStorePath = userBasedStorePath(storePath)
+	b.config.UserBasedStorePath = userBasedStorePath(b.config.BaseStorePath)
 	return b
 }
 
-func (b *Builder) WithDraxBin(draxBin, defaultDraxBin string) *Builder {
-	if b.config.DraxBin != "" && draxBin == defaultDraxBin {
-		return b
+func (b *Builder) WithDraxBin(draxBin string, isSet bool) *Builder {
+	if isSet || b.config.DraxBin == "" {
+		b.config.DraxBin = draxBin
 	}
-
-	b.config.DraxBin = draxBin
 	return b
 }
 
@@ -122,18 +118,25 @@ func (b *Builder) WithGIDMappings(gidMappings []string) *Builder {
 	return b
 }
 
-func (b *Builder) WithDiskLimitSizeBytes(limit int64) *Builder {
-	b.config.DiskLimitSizeBytes = limit
+func (b *Builder) WithDiskLimitSizeBytes(limit int64, isSet bool) *Builder {
+	if isSet {
+		b.config.DiskLimitSizeBytes = limit
+	}
 	return b
 }
 
-func (b *Builder) WithExcludeBaseImageFromQuota(exclude bool) *Builder {
-	b.config.ExcludeBaseImageFromQuota = exclude
+func (b *Builder) WithExcludeBaseImageFromQuota(exclude, isSet bool) *Builder {
+	if isSet {
+		b.config.ExcludeBaseImageFromQuota = exclude
+	}
 	return b
 }
 
-func (b *Builder) WithCleanThresholdBytes(threshold uint64) *Builder {
-	b.config.CleanThresholdBytes = threshold
+func (b *Builder) WithCleanThresholdBytes(threshold uint64, isSet bool) *Builder {
+	if isSet {
+		b.config.CleanThresholdBytes = threshold
+	}
+
 	return b
 }
 

@@ -70,13 +70,11 @@ var CreateCommand = cli.Command{
 			WithUIDMappings(ctx.StringSlice("uid-mapping")).
 			WithGIDMappings(ctx.StringSlice("gid-mapping"))
 
-		if ctx.IsSet("disk-limit-size-bytes") {
-			configBuilder.WithDiskLimitSizeBytes(ctx.Int64("disk-limit-size-bytes"))
-		}
+		configBuilder.WithDiskLimitSizeBytes(ctx.Int64("disk-limit-size-bytes"),
+			ctx.IsSet("disk-limit-size-bytes"))
 
-		if ctx.IsSet("exclude-image-from-quota") {
-			configBuilder.WithExcludeBaseImageFromQuota(ctx.Bool("exclude-image-from-quota"))
-		}
+		configBuilder.WithExcludeBaseImageFromQuota(ctx.Bool("exclude-image-from-quota"),
+			ctx.IsSet("exclude-image-from-quota"))
 
 		cfg, err := configBuilder.Build()
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})

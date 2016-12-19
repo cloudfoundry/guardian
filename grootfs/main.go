@@ -72,8 +72,8 @@ func main() {
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
-		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), defaultStorePath).
-			WithDraxBin(ctx.GlobalString("drax-bin"), defaultDraxBin).
+		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), ctx.IsSet("store")).
+			WithDraxBin(ctx.GlobalString("drax-bin"), ctx.IsSet("drax-bin")).
 			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
 			WithLogLevel(ctx.String("log-level")).
 			WithLogFile(ctx.GlobalString("log-file")).

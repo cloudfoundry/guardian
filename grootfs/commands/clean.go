@@ -42,9 +42,9 @@ var CleanCommand = cli.Command{
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithIgnoreBaseImages(ctx.StringSlice("ignore-image"))
-		if ctx.IsSet("threshold-bytes") {
-			configBuilder.WithCleanThresholdBytes(ctx.Uint64("threshold-bytes"))
-		}
+		configBuilder.WithCleanThresholdBytes(ctx.Uint64("threshold-bytes"),
+			ctx.IsSet("threshold-bytes"))
+
 		cfg, err := configBuilder.Build()
 		logger.Debug("clean-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
