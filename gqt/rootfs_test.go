@@ -316,7 +316,12 @@ var _ = Describe("Rootfs container create parameter", func() {
 		)
 
 		BeforeEach(func() {
-			args = append(args, "--image-plugin", testImagePluginBin)
+			args = append(args, "--image-plugin", testImagePluginBin,
+				"--image-plugin-extra-arg", "\"--bar\"",
+				"--image-plugin-extra-arg", "foo",
+				"--privileged-image-plugin-extra-arg", "\"--foo\"",
+				"--privileged-image-plugin-extra-arg", "bar",
+			)
 		})
 
 		AfterEach(func() {
@@ -360,6 +365,27 @@ var _ = Describe("Rootfs container create parameter", func() {
 					Expect(string(args)).NotTo(ContainSubstring("--gid-mapping"))
 				})
 			})
+
+			Context("and extra args flag is provided", func() {
+				JustBeforeEach(func() {
+					imageID = fmt.Sprintf("container-%d", GinkgoParallelNode())
+					imagePath = filepath.Join(storePath, imageID)
+
+					c, err := client.Create(garden.ContainerSpec{
+						RootFSPath: "docker:///cfgarden/empty#v0.1.0",
+						Handle:     imageID,
+						Privileged: privileged,
+					})
+					Expect(err).ToNot(HaveOccurred())
+					client.Destroy(c.Handle())
+				})
+
+				It("executes the plugin with global extra args", func() {
+					args, err := ioutil.ReadFile(filepath.Join(imagePath, "create-global-args"))
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(args)).To(Equal("--foo bar"))
+				})
+			})
 		})
 
 		Context("when the container is unprivileged", func() {
@@ -396,6 +422,8 @@ var _ = Describe("Rootfs container create parameter", func() {
 					userArgs := strings.Split(string(userArgsStr), " ")
 					Expect(userArgs).To(Equal([]string{
 						testImagePluginBin,
+						"--bar",
+						"foo",
 						"create",
 						"--uid-mapping",
 						fmt.Sprintf("0:%d:1", maxId),
@@ -440,6 +468,8 @@ var _ = Describe("Rootfs container create parameter", func() {
 					userArgs := strings.Split(string(userArgsStr), " ")
 					Expect(userArgs).To(Equal([]string{
 						testImagePluginBin,
+						"--bar",
+						"foo",
 						"delete",
 						filepath.Join(storePath, imageID),
 					}))

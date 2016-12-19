@@ -12,8 +12,19 @@ import (
 	"code.cloudfoundry.org/guardian/imageplugin"
 )
 
+var subcommands = []string{
+	"clean",
+	"create",
+	"delete",
+	"list",
+	"stats",
+}
+
 func main() {
-	action := os.Args[1]
+	globalArgs, _, action, err := splitArgs(os.Args)
+	if err != nil {
+		panic(err)
+	}
 	imageID := os.Args[len(os.Args)-1]
 
 	if imageID == "make-it-fail" {
@@ -51,13 +62,19 @@ func main() {
 	}
 
 	whoamiPath := filepath.Join(imagePath, fmt.Sprintf("%s-whoami", action))
-	err := ioutil.WriteFile(whoamiPath, []byte(fmt.Sprintf("%d - %d\n", uid, gid)), 0755)
+	err = ioutil.WriteFile(whoamiPath, []byte(fmt.Sprintf("%d - %d\n", uid, gid)), 0755)
 	if err != nil {
 		panic(err)
 	}
 
 	argsFilepath := filepath.Join(imagePath, fmt.Sprintf("%s-args", action))
 	err = ioutil.WriteFile(argsFilepath, []byte(strings.Join(os.Args, " ")), 0777)
+	if err != nil {
+		panic(err)
+	}
+
+	globalArgsFilepath := filepath.Join(imagePath, fmt.Sprintf("%s-global-args", action))
+	err = ioutil.WriteFile(globalArgsFilepath, []byte(strings.Join(globalArgs, " ")), 0777)
 	if err != nil {
 		panic(err)
 	}
@@ -105,4 +122,22 @@ func setEnvVars(imagePath string, env []string) error {
 	}
 
 	return json.NewEncoder(imageJson).Encode(image)
+}
+
+func splitArgs(args []string) (globalArgs []string, localArgs []string, subcommand string, err error) {
+	for i, arg := range args {
+		if isSubcommand(arg) {
+			return args[1:i], args[i+1:], arg, nil
+		}
+	}
+	return nil, nil, "", fmt.Errorf("subcommand not found")
+}
+
+func isSubcommand(arg string) bool {
+	for _, subcommand := range subcommands {
+		if arg == subcommand {
+			return true
+		}
+	}
+	return false
 }
