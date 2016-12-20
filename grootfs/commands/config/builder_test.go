@@ -20,6 +20,7 @@ var _ = Describe("Builder", func() {
 		builder                     *config.Builder
 		configStorePath             string
 		configDraxBin               string
+		configBtrfsBin              string
 		configMetronEndpoint        string
 		configUIDMappings           []string
 		configGIDMappings           []string
@@ -33,6 +34,7 @@ var _ = Describe("Builder", func() {
 	BeforeEach(func() {
 		configStorePath = "/hello"
 		configDraxBin = "/config/drax"
+		configBtrfsBin = "/config/btrfs"
 		configMetronEndpoint = "config_endpoint:1111"
 		configUIDMappings = []string{"config-uid-mapping"}
 		configGIDMappings = []string{"config-gid-mapping"}
@@ -53,6 +55,7 @@ var _ = Describe("Builder", func() {
 			IgnoreBaseImages:          []string{"docker:///busybox"},
 			BaseStorePath:             configStorePath,
 			DraxBin:                   configDraxBin,
+			BtrfsBin:                  configBtrfsBin,
 			MetronEndpoint:            configMetronEndpoint,
 			UIDMappings:               configUIDMappings,
 			GIDMappings:               configGIDMappings,
@@ -224,6 +227,37 @@ var _ = Describe("Builder", func() {
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(config.DraxBin).To(Equal("/my/drax"))
+				})
+			})
+		})
+	})
+
+	Describe("WithBtrfsBin", func() {
+		It("overrides the config's btrfs path entry when command line flag is set", func() {
+			builder = builder.WithBtrfsBin("/my/btrfs", true)
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.BtrfsBin).To(Equal("/my/btrfs"))
+		})
+
+		Context("when btrfs path is not provided via command line", func() {
+			It("uses the config's btrfs path ", func() {
+				builder = builder.WithBtrfsBin("/my/btrfs", false)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.BtrfsBin).To(Equal("/config/btrfs"))
+			})
+
+			Context("and btrfs path is not set in the config", func() {
+				BeforeEach(func() {
+					configBtrfsBin = ""
+				})
+
+				It("uses the provided btrfs path ", func() {
+					builder = builder.WithBtrfsBin("/my/btrfs", false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.BtrfsBin).To(Equal("/my/btrfs"))
 				})
 			})
 		})

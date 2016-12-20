@@ -56,8 +56,7 @@ var DeleteCommand = cli.Command{
 			}
 		}
 
-		btrfsBinPath := ctx.App.Metadata["btrfs-bin"].(string)
-		btrfsVolumeDriver := volume_driver.NewBtrfs(btrfsBinPath, cfg.DraxBin, storePath)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.META_DIR_NAME, "dependencies"),

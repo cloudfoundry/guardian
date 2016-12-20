@@ -16,6 +16,7 @@ type Config struct {
 	CleanThresholdBytes       uint64   `yaml:"clean_threshold_bytes"`
 	DiskLimitSizeBytes        int64    `yaml:"disk_limit_size_bytes"`
 	DraxBin                   string   `yaml:"drax_bin"`
+	BtrfsBin                  string   `yaml:"btrfs_bin"`
 	ExcludeBaseImageFromQuota bool     `yaml:"exclude_base_image_from_quota"`
 	GIDMappings               []string `yaml:"gid_mappings"`
 	UIDMappings               []string `yaml:"uid_mappings"`
@@ -87,6 +88,13 @@ func (b *Builder) WithStorePath(storePath string, isSet bool) *Builder {
 func (b *Builder) WithDraxBin(draxBin string, isSet bool) *Builder {
 	if isSet || b.config.DraxBin == "" {
 		b.config.DraxBin = draxBin
+	}
+	return b
+}
+
+func (b *Builder) WithBtrfsBin(btrfsBin string, isSet bool) *Builder {
+	if isSet || b.config.BtrfsBin == "" {
+		b.config.BtrfsBin = btrfsBin
 	}
 	return b
 }

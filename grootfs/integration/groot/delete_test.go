@@ -79,10 +79,12 @@ var _ = Describe("Delete", func() {
 
 	Describe("--config global flag", func() {
 		var (
-			configDir         string
-			configFilePath    string
-			configStorePath   string
-			configDraxBinPath string
+			configDir          string
+			configFilePath     string
+			configBtrfsBinPath string
+			configStorePath    string
+			configDraxBinPath  string
+			runner             runnerpkg.Runner
 		)
 
 		BeforeEach(func() {
@@ -91,6 +93,7 @@ var _ = Describe("Delete", func() {
 			Expect(err).NotTo(HaveOccurred())
 			configFilePath = path.Join(configDir, "config.yaml")
 			configStorePath = StorePath
+			configBtrfsBinPath = ""
 			configDraxBinPath = ""
 		})
 
@@ -98,6 +101,7 @@ var _ = Describe("Delete", func() {
 			cfg := config.Config{
 				BaseStorePath: configStorePath,
 				DraxBin:       configDraxBinPath,
+				BtrfsBin:      configBtrfsBinPath,
 			}
 
 			configYaml, err := yaml.Marshal(cfg)
@@ -111,10 +115,6 @@ var _ = Describe("Delete", func() {
 		})
 
 		Describe("store path", func() {
-			var (
-				runner runnerpkg.Runner
-			)
-
 			BeforeEach(func() {
 				runner = runnerpkg.Runner{
 					GrootFSBin: GrootFSBin,
@@ -130,7 +130,6 @@ var _ = Describe("Delete", func() {
 
 		Describe("drax bin", func() {
 			var (
-				runner         runnerpkg.Runner
 				draxCalledFile *os.File
 				draxBin        *os.File
 				tempFolder     string
@@ -154,6 +153,35 @@ var _ = Describe("Delete", func() {
 				contents, err := ioutil.ReadFile(draxCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("I'm groot - drax"))
+			})
+		})
+
+		Describe("btrfs bin", func() {
+			var (
+				btrfsCalledFile *os.File
+				btrfsBin        *os.File
+				tempFolder      string
+			)
+
+			BeforeEach(func() {
+				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
+				configBtrfsBinPath = btrfsBin.Name()
+			})
+
+			JustBeforeEach(func() {
+				runner = runnerpkg.Runner{
+					GrootFSBin: GrootFSBin,
+					StorePath:  StorePath,
+				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+			})
+
+			It("uses the btrfs bin from the config file", func() {
+				err := runner.Delete("random-id")
+				Expect(err).To(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - btrfs"))
 			})
 		})
 	})

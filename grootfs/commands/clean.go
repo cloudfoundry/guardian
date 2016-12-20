@@ -54,8 +54,7 @@ var CleanCommand = cli.Command{
 
 		storePath := cfg.UserBasedStorePath
 
-		btrfsBinPath := ctx.App.Metadata["btrfs-bin"].(string)
-		btrfsVolumeDriver := volume_driver.NewBtrfs(btrfsBinPath, cfg.DraxBin, storePath)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(

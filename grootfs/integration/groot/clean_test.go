@@ -120,16 +120,20 @@ var _ = Describe("Clean", func() {
 				configDir               string
 				configFilePath          string
 				configDraxBinPath       string
+				configBtrfsBinPath      string
 				ignoredImagesList       []string
 				cleanupThresholdInBytes uint64
+				runner                  runnerpkg.Runner
 			)
 
 			BeforeEach(func() {
 				var err error
+				runner = runnerpkg.Runner{}
 				configDir, err = ioutil.TempDir("", "")
 				Expect(err).NotTo(HaveOccurred())
 				configFilePath = path.Join(configDir, "config.yaml")
 				configStorePath = StorePath
+				configBtrfsBinPath = ""
 				ignoredImagesList = []string{}
 			})
 
@@ -138,6 +142,7 @@ var _ = Describe("Clean", func() {
 					BaseStorePath:       configStorePath,
 					IgnoreBaseImages:    ignoredImagesList,
 					DraxBin:             configDraxBinPath,
+					BtrfsBin:            configBtrfsBinPath,
 					CleanThresholdBytes: cleanupThresholdInBytes,
 				}
 
@@ -197,8 +202,6 @@ var _ = Describe("Clean", func() {
 			})
 
 			Describe("store path", func() {
-				var runner runnerpkg.Runner
-
 				BeforeEach(func() {
 					runner = runnerpkg.Runner{
 						GrootFSBin: GrootFSBin,
@@ -222,7 +225,6 @@ var _ = Describe("Clean", func() {
 
 			Describe("drax bin", func() {
 				var (
-					runner         runnerpkg.Runner
 					draxCalledFile *os.File
 					draxBin        *os.File
 					tempFolder     string
@@ -250,21 +252,52 @@ var _ = Describe("Clean", func() {
 				})
 			})
 
-			Describe("when threshold is not provided on the command line flag", func() {
+			Describe("btrfs bin", func() {
+				var (
+					btrfsCalledFile *os.File
+					btrfsBin        *os.File
+					tempFolder      string
+				)
+
 				BeforeEach(func() {
-					cleanupThresholdInBytes = 2500000
+					tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
+					configBtrfsBinPath = btrfsBin.Name()
 				})
 
-				It("uses the threshold from the config file, and so does not clean", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+				JustBeforeEach(func() {
+					runner = runnerpkg.Runner{
+						GrootFSBin: GrootFSBin,
+						StorePath:  StorePath,
+					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				})
+
+				It("uses the btrfs bin from the config file", func() {
+					_, err := runner.Clean(0, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					_, err = Runner.WithConfig(configFilePath).Clean(0, []string{})
+					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
+					Expect(string(contents)).To(Equal("I'm groot - btrfs"))
+				})
+			})
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(len(preContents)))
+			Describe("clean up threshold", func() {
+				Describe("when threshold is not provided on the command line flag", func() {
+					BeforeEach(func() {
+						cleanupThresholdInBytes = 2500000
+					})
+
+					It("uses the threshold from the config file, and so does not clean", func() {
+						preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+						Expect(err).NotTo(HaveOccurred())
+
+						_, err = Runner.WithConfig(configFilePath).Clean(0, []string{})
+						Expect(err).NotTo(HaveOccurred())
+
+						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+						Expect(err).NotTo(HaveOccurred())
+						Expect(afterContents).To(HaveLen(len(preContents)))
+					})
 				})
 			})
 		})

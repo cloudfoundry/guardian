@@ -77,9 +77,11 @@ var _ = Describe("Stats", func() {
 
 		Describe("--config global flag", func() {
 			var (
-				configDir         string
-				configFilePath    string
-				configDraxBinPath string
+				configDir          string
+				configFilePath     string
+				configDraxBinPath  string
+				configBtrfsBinPath string
+				runner             runnerpkg.Runner
 			)
 
 			BeforeEach(func() {
@@ -88,12 +90,14 @@ var _ = Describe("Stats", func() {
 				Expect(err).NotTo(HaveOccurred())
 				configFilePath = path.Join(configDir, "config.yaml")
 				configDraxBinPath = ""
+				configBtrfsBinPath = ""
 			})
 
 			JustBeforeEach(func() {
 				cfg := config.Config{
 					BaseStorePath: StorePath,
 					DraxBin:       configDraxBinPath,
+					BtrfsBin:      configBtrfsBinPath,
 				}
 
 				configYaml, err := yaml.Marshal(cfg)
@@ -107,10 +111,6 @@ var _ = Describe("Stats", func() {
 			})
 
 			Describe("store path", func() {
-				var (
-					runner runnerpkg.Runner
-				)
-
 				BeforeEach(func() {
 					runner = runnerpkg.Runner{
 						GrootFSBin: GrootFSBin,
@@ -128,7 +128,6 @@ var _ = Describe("Stats", func() {
 
 			Describe("drax bin", func() {
 				var (
-					runner         runnerpkg.Runner
 					draxCalledFile *os.File
 					draxBin        *os.File
 					tempFolder     string

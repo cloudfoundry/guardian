@@ -86,6 +86,7 @@ func main() {
 			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
 			WithLogLevel(ctx.String("log-level")).
 			WithLogFile(ctx.GlobalString("log-file")).
+			WithBtrfsBin(ctx.GlobalString("btrfs-bin"), ctx.IsSet("btrfs-bin")).
 			Build()
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)

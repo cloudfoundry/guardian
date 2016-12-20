@@ -318,6 +318,7 @@ var _ = Describe("Create", func() {
 			configFilePath                  string
 			configStorePath                 string
 			configDraxBinPath               string
+			configBtrfsBinPath              string
 			configUIDMappings               []string
 			configGIDMappings               []string
 			configDiskLimitSizeBytes        int64
@@ -330,6 +331,7 @@ var _ = Describe("Create", func() {
 		BeforeEach(func() {
 			configStorePath = StorePath
 			configDraxBinPath = ""
+			configBtrfsBinPath = ""
 			configUIDMappings = nil
 			configGIDMappings = nil
 			configDiskLimitSizeBytes = 0
@@ -348,6 +350,7 @@ var _ = Describe("Create", func() {
 			cfg := config.Config{
 				BaseStorePath:             configStorePath,
 				DraxBin:                   configDraxBinPath,
+				BtrfsBin:                  configBtrfsBinPath,
 				UIDMappings:               configUIDMappings,
 				GIDMappings:               configGIDMappings,
 				DiskLimitSizeBytes:        configDiskLimitSizeBytes,
@@ -416,6 +419,38 @@ var _ = Describe("Create", func() {
 				contents, err := ioutil.ReadFile(draxCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("I'm groot - drax"))
+			})
+		})
+
+		Describe("btrfs bin", func() {
+			var (
+				btrfsCalledFile *os.File
+				btrfsBin        *os.File
+				tempFolder      string
+			)
+
+			BeforeEach(func() {
+				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
+				configBtrfsBinPath = btrfsBin.Name()
+			})
+
+			JustBeforeEach(func() {
+				runner = runnerpkg.Runner{
+					GrootFSBin: GrootFSBin,
+					StorePath:  StorePath,
+				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+			})
+
+			It("uses the btrfs bin from the config file", func() {
+				_, err := runner.Create(groot.CreateSpec{
+					BaseImage: baseImagePath,
+					ID:        "random-id",
+				})
+				Expect(err).To(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - btrfs"))
 			})
 		})
 
