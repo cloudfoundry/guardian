@@ -110,10 +110,9 @@ func main() {
 			return err
 		}
 
-		if _, err := os.Stat(ctx.GlobalString("btrfs-bin")); ctx.IsSet("btrfs-bin") && os.IsNotExist(err) {
-			return cli.NewExitError(fmt.Sprintf("could not find btrfs binary in path: %s", err.Error()), 1)
+		if err := config.ValidateBinary(cfg.BtrfsBin); err != nil {
+			return cli.NewExitError(fmt.Sprintf("could not find btrfs binary: %s", err.Error()), 1)
 		}
-		ctx.App.Metadata["btrfs-bin"] = ctx.GlobalString("btrfs-bin")
 
 		dropsondeOrigin := grootfs.Name
 		if cfg.MetronEndpoint != "" {

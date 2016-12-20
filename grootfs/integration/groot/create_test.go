@@ -154,7 +154,7 @@ var _ = Describe("Create", func() {
 						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 						Expect(err).NotTo(HaveOccurred())
 						Eventually(sess).Should(gexec.Exit(1))
-						Eventually(sess).Should(gbytes.Say("could not find btrfs binary in path:"))
+						Eventually(sess).Should(gbytes.Say("could not find btrfs binary"))
 					})
 				})
 			})
