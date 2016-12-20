@@ -100,7 +100,8 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.DraxBin, storePath)
+		btrfsBinPath := ctx.App.Metadata["btrfs-bin"].(string)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(btrfsBinPath, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
 		runner := linux_command_runner.New()

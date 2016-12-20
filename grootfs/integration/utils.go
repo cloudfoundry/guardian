@@ -69,19 +69,24 @@ func FindGID(group string) uint32 {
 }
 
 func CreateFakeDrax() (string, *os.File, *os.File) {
-	draxCalledFile, err := ioutil.TempFile("", "drax-called")
+	tempFolder, bin, binCalledFile := CreateFakeBin("drax")
+	testhelpers.SuidDrax(bin.Name())
+	return tempFolder, bin, binCalledFile
+}
+
+func CreateFakeBin(binaryName string) (string, *os.File, *os.File) {
+	binCalledFile, err := ioutil.TempFile("", "bin-called")
 	Expect(err).NotTo(HaveOccurred())
-	draxCalledFile.Close()
+	binCalledFile.Close()
 
 	tempFolder, err := ioutil.TempDir("", "")
-	draxBin, err := os.Create(path.Join(tempFolder, "drax"))
+	bin, err := os.Create(path.Join(tempFolder, binaryName))
 	Expect(err).NotTo(HaveOccurred())
-	draxBin.WriteString("#!/bin/bash\necho -n \"I'm groot\" > " + draxCalledFile.Name())
-	draxBin.Chmod(0777)
-	draxBin.Close()
-	testhelpers.SuidDrax(draxBin.Name())
+	bin.WriteString("#!/bin/bash\necho -n \"I'm groot - " + binaryName + "\" > " + binCalledFile.Name())
+	bin.Chmod(0777)
+	bin.Close()
 
-	return tempFolder, draxBin, draxCalledFile
+	return tempFolder, bin, binCalledFile
 }
 
 func BaseImagePathToVolumeID(baseImagePath string) string {

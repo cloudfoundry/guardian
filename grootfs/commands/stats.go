@@ -55,7 +55,8 @@ var StatsCommand = cli.Command{
 			}
 		}
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.DraxBin, storePath)
+		btrfsBinPath := ctx.App.Metadata["btrfs-bin"].(string)
+		btrfsVolumeDriver := volume_driver.NewBtrfs(btrfsBinPath, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
 		metricsEmitter := metrics.NewEmitter()

@@ -17,6 +17,7 @@ type Runner struct {
 	GrootFSBin string
 	StorePath  string
 	DraxBin    string
+	BtrfsBin   string
 	ConfigPath string
 
 	LogLevelSet bool
@@ -29,6 +30,12 @@ type Runner struct {
 	Stderr io.Writer
 
 	Timeout time.Duration
+}
+
+func (r Runner) WithBtrfsBin(btrfsBin string) Runner {
+	nr := r
+	nr.BtrfsBin = btrfsBin
+	return nr
 }
 
 func (r Runner) WithMetronEndpoint(host net.IP, port uint16) Runner {
@@ -142,6 +149,9 @@ func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	}
 	if r.DraxBin != "" {
 		allArgs = append(allArgs, "--drax-bin", r.DraxBin)
+	}
+	if r.BtrfsBin != "" {
+		allArgs = append(allArgs, "--btrfs-bin", r.BtrfsBin)
 	}
 	if r.MetronHost != nil && r.MetronPort != 0 {
 		metronEndpoint := fmt.Sprintf("%s:%d", r.MetronHost.String(), r.MetronPort)

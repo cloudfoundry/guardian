@@ -246,7 +246,7 @@ var _ = Describe("Clean", func() {
 
 					contents, err := ioutil.ReadFile(draxCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot"))
+					Expect(string(contents)).To(Equal("I'm groot - drax"))
 				})
 			})
 

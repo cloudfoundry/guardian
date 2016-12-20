@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -14,8 +15,11 @@ import (
 	"github.com/urfave/cli"
 )
 
-const defaultStorePath = "/var/lib/grootfs"
-const defaultDraxBin = "drax"
+const (
+	defaultBtrfsBin  = "btrfs"
+	defaultDraxBin   = "drax"
+	defaultStorePath = "/var/lib/grootfs"
+)
 
 func init() {
 	if reexec.Init() {
@@ -51,6 +55,11 @@ func main() {
 			Name:  "drax-bin",
 			Usage: "Path to drax bin. (If not provided will use $PATH)",
 			Value: defaultDraxBin,
+		},
+		cli.StringFlag{
+			Name:  "btrfs-bin",
+			Usage: "Path to btrfs bin. (If not provided will use $PATH)",
+			Value: defaultBtrfsBin,
 		},
 		cli.StringFlag{
 			Name:  "metron-endpoint",
@@ -99,6 +108,11 @@ func main() {
 		if err := configurer.Ensure(logger, cfg.UserBasedStorePath); err != nil {
 			return err
 		}
+
+		if _, err := os.Stat(ctx.GlobalString("btrfs-bin")); ctx.IsSet("btrfs-bin") && os.IsNotExist(err) {
+			return cli.NewExitError(fmt.Sprintf("could not find btrfs binary in path: %s", err.Error()), 1)
+		}
+		ctx.App.Metadata["btrfs-bin"] = ctx.GlobalString("btrfs-bin")
 
 		dropsondeOrigin := grootfs.Name
 		if cfg.MetronEndpoint != "" {

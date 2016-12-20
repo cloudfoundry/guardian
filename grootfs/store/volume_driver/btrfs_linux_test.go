@@ -51,7 +51,7 @@ var _ = Describe("Btrfs", func() {
 	})
 
 	JustBeforeEach(func() {
-		btrfs = volume_driver.NewBtrfs(draxBinPath, storePath)
+		btrfs = volume_driver.NewBtrfs("btrfs", draxBinPath, storePath)
 	})
 
 	AfterEach(func() {
@@ -101,6 +101,14 @@ var _ = Describe("Btrfs", func() {
 						Data("id", volID),
 					),
 				))
+			})
+		})
+
+		Context("custom btrfs binary path", func() {
+			It("uses the custom btrfs binary given", func() {
+				btrfs = volume_driver.NewBtrfs("cool-btrfs", draxBinPath, storePath)
+				_, err := btrfs.Create(logger, "", "random-id")
+				Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
 			})
 		})
 
@@ -206,6 +214,14 @@ var _ = Describe("Btrfs", func() {
 			))
 		})
 
+		Context("custom btrfs binary path", func() {
+			It("uses the custom btrfs binary given", func() {
+				btrfs = volume_driver.NewBtrfs("cool-btrfs", draxBinPath, storePath)
+				err := btrfs.Snapshot(logger, "from", "to")
+				Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
+			})
+		})
+
 		Context("when the parent does not exist", func() {
 			It("returns an error", func() {
 				Expect(
@@ -268,6 +284,14 @@ var _ = Describe("Btrfs", func() {
 			Expect(btrfs.DestroyVolume(logger, volumeID)).To(Succeed())
 			Expect(volumePath).ToNot(BeAnExistingFile())
 		})
+
+		Context("custom btrfs binary path", func() {
+			It("uses the custom btrfs binary given", func() {
+				btrfs = volume_driver.NewBtrfs("cool-btrfs", draxBinPath, storePath)
+				err := btrfs.DestroyVolume(logger, volumeID)
+				Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
+			})
+		})
 	})
 
 	Describe("Destroy", func() {
@@ -319,6 +343,14 @@ var _ = Describe("Btrfs", func() {
 						Data("args", []string{"btrfs", "subvolume", "delete", volumePath}),
 					),
 				))
+			})
+
+			Context("custom btrfs binary path", func() {
+				It("uses the custom btrfs binary given", func() {
+					btrfs = volume_driver.NewBtrfs("cool-btrfs", draxBinPath, storePath)
+					err := btrfs.Destroy(logger, volumePath)
+					Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
+				})
 			})
 
 			Context("and drax does not exist", func() {

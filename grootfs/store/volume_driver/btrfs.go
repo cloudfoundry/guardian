@@ -21,14 +21,16 @@ import (
 )
 
 type Btrfs struct {
-	draxBinPath string
-	storePath   string
+	draxBinPath  string
+	btrfsBinPath string
+	storePath    string
 }
 
-func NewBtrfs(draxBinPath, storePath string) *Btrfs {
+func NewBtrfs(btrfsBinPath, draxBinPath, storePath string) *Btrfs {
 	return &Btrfs{
-		draxBinPath: draxBinPath,
-		storePath:   storePath,
+		btrfsBinPath: btrfsBinPath,
+		draxBinPath:  draxBinPath,
+		storePath:    storePath,
 	}
 }
 
@@ -50,10 +52,10 @@ func (d *Btrfs) Create(logger lager.Logger, parentID, id string) (string, error)
 	var cmd *exec.Cmd
 	volPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
 	if parentID == "" {
-		cmd = exec.Command("btrfs", "subvolume", "create", volPath)
+		cmd = exec.Command(d.btrfsBinPath, "subvolume", "create", volPath)
 	} else {
 		parentVolPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, parentID)
-		cmd = exec.Command("btrfs", "subvolume", "snapshot", parentVolPath, volPath)
+		cmd = exec.Command(d.btrfsBinPath, "subvolume", "snapshot", parentVolPath, volPath)
 	}
 
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
@@ -72,7 +74,7 @@ func (d *Btrfs) Snapshot(logger lager.Logger, fromPath, toPath string) error {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	cmd := exec.Command("btrfs", "subvolume", "snapshot", fromPath, toPath)
+	cmd := exec.Command(d.btrfsBinPath, "subvolume", "snapshot", fromPath, toPath)
 
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
@@ -149,7 +151,7 @@ func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
 		logger.Error("destroying-quota-groups-failed", err)
 	}
 
-	cmd := exec.Command("btrfs", "subvolume", "delete", path)
+	cmd := exec.Command(d.btrfsBinPath, "subvolume", "delete", path)
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
 		logger.Error("btrfs-failed", err)

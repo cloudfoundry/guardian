@@ -92,7 +92,7 @@ var _ = Describe("Create", func() {
 
 					contents, err := ioutil.ReadFile(draxCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot"))
+					Expect(string(contents)).To(Equal("I'm groot - drax"))
 				})
 
 				Context("when the drax bin doesn't have uid bit set", func() {
@@ -120,7 +120,57 @@ var _ = Describe("Create", func() {
 
 					contents, err := ioutil.ReadFile(draxCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot"))
+					Expect(string(contents)).To(Equal("I'm groot - drax"))
+				})
+			})
+		})
+
+		Describe("--btrfs-bin global flag", func() {
+			var (
+				btrfsCalledFile *os.File
+				btrfsBin        *os.File
+				tempFolder      string
+			)
+
+			BeforeEach(func() {
+				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
+			})
+
+			Context("when it's provided", func() {
+				It("uses calls the provided btrfs binary", func() {
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--btrfs-bin", btrfsBin.Name(), "create", baseImagePath, "random-id")
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(1))
+
+					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(contents)).To(Equal("I'm groot - btrfs"))
+				})
+
+				Context("when it doesn't exist", func() {
+					It("fails early on", func() {
+						cmd := exec.Command(GrootFSBin, "--store", StorePath, "--btrfs-bin", "/not-existent", "create", baseImagePath, "random-id")
+						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+						Expect(err).NotTo(HaveOccurred())
+						Eventually(sess).Should(gexec.Exit(1))
+						Eventually(sess).Should(gbytes.Say("could not find btrfs binary in path:"))
+					})
+				})
+			})
+
+			Context("when it's not provided", func() {
+				It("uses btrfs from $PATH", func() {
+					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
+					cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create", baseImagePath, "random-id")
+					cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(1))
+
+					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(contents)).To(Equal("I'm groot - btrfs"))
 				})
 			})
 		})
@@ -365,7 +415,7 @@ var _ = Describe("Create", func() {
 
 				contents, err := ioutil.ReadFile(draxCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot"))
+				Expect(string(contents)).To(Equal("I'm groot - drax"))
 			})
 		})
 
