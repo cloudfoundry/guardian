@@ -16,9 +16,11 @@ import (
 )
 
 const (
-	defaultBtrfsBin  = "btrfs"
-	defaultDraxBin   = "drax"
-	defaultStorePath = "/var/lib/grootfs"
+	defaultBtrfsBin     = "btrfs"
+	defaultDraxBin      = "drax"
+	defaultStorePath    = "/var/lib/grootfs"
+	defaultNewuidmapBin = "newuidmap"
+	defaultNewgidmapBin = "newgidmap"
 )
 
 func init() {
@@ -60,6 +62,16 @@ func main() {
 			Name:  "btrfs-bin",
 			Usage: "Path to btrfs bin. (If not provided will use $PATH)",
 			Value: defaultBtrfsBin,
+		},
+		cli.StringFlag{
+			Name:  "newuidmap-bin",
+			Usage: "Path to newuidmap bin. (If not provided will use $PATH)",
+			Value: defaultNewuidmapBin,
+		},
+		cli.StringFlag{
+			Name:  "newgidmap-bin",
+			Usage: "Path to newgidmap bin. (If not provided will use $PATH)",
+			Value: defaultNewgidmapBin,
 		},
 		cli.StringFlag{
 			Name:  "metron-endpoint",
