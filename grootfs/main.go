@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
@@ -120,10 +119,6 @@ func main() {
 
 		if err := configurer.Ensure(logger, cfg.UserBasedStorePath); err != nil {
 			return err
-		}
-
-		if err := config.ValidateBinary(cfg.BtrfsBin); err != nil {
-			return cli.NewExitError(fmt.Sprintf("could not find btrfs binary: %s", err.Error()), 1)
 		}
 
 		dropsondeOrigin := grootfs.Name

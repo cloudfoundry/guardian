@@ -148,16 +148,6 @@ var _ = Describe("Create", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(contents)).To(Equal("I'm groot - btrfs"))
 				})
-
-				Context("when it doesn't exist", func() {
-					It("fails early on", func() {
-						cmd := exec.Command(GrootFSBin, "--store", StorePath, "--btrfs-bin", "/not-existent", "create", baseImagePath, "random-id")
-						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-						Expect(err).NotTo(HaveOccurred())
-						Eventually(sess).Should(gexec.Exit(1))
-						Eventually(sess).Should(gbytes.Say("could not find btrfs binary"))
-					})
-				})
 			})
 
 			Context("when it's not provided", func() {
