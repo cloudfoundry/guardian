@@ -3,10 +3,7 @@ package groot_test
 import (
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
-
-	yaml "gopkg.in/yaml.v2"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -14,7 +11,6 @@ import (
 	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-	"code.cloudfoundry.org/lager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -72,7 +68,7 @@ var _ = Describe("Clean", func() {
 			}
 		})
 
-		Context("when ignored images flag is given", func() {
+		Context("and ignored images flag is given", func() {
 			var preContents []os.FileInfo
 
 			JustBeforeEach(func() {
@@ -110,194 +106,6 @@ var _ = Describe("Clean", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(afterContents).To(Equal(preContents))
-				})
-			})
-		})
-
-		Context("when --config global flag is given", func() {
-			var (
-				configStorePath         string
-				configDir               string
-				configFilePath          string
-				configDraxBinPath       string
-				configBtrfsBinPath      string
-				ignoredImagesList       []string
-				cleanupThresholdInBytes uint64
-				runner                  runnerpkg.Runner
-			)
-
-			BeforeEach(func() {
-				var err error
-				runner = runnerpkg.Runner{}
-				configDir, err = ioutil.TempDir("", "")
-				Expect(err).NotTo(HaveOccurred())
-				configFilePath = path.Join(configDir, "config.yaml")
-				configStorePath = StorePath
-				configBtrfsBinPath = ""
-				ignoredImagesList = []string{}
-			})
-
-			JustBeforeEach(func() {
-				cfg := config.Config{
-					BaseStorePath:       configStorePath,
-					IgnoreBaseImages:    ignoredImagesList,
-					DraxBin:             configDraxBinPath,
-					BtrfsBin:            configBtrfsBinPath,
-					CleanThresholdBytes: cleanupThresholdInBytes,
-				}
-
-				configYaml, err := yaml.Marshal(cfg)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
-			})
-
-			AfterEach(func() {
-				Expect(os.RemoveAll(configDir)).To(Succeed())
-			})
-
-			Describe("with a list of images to be ignored", func() {
-				var preContents []os.FileInfo
-
-				BeforeEach(func() {
-					ignoredImagesList = []string{"docker:///busybox"}
-				})
-
-				JustBeforeEach(func() {
-					var err error
-					preContents, err = ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("doesn't delete their layers", func() {
-					_, err := Runner.WithConfig(configFilePath).Clean(0, []string{})
-					Expect(err).NotTo(HaveOccurred())
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(afterContents).To(Equal(preContents))
-				})
-
-				Context("when the ignore image flag is also given", func() {
-					BeforeEach(func() {
-						_, err := Runner.Create(groot.CreateSpec{
-							ID:        "my-image-3",
-							BaseImage: "docker:///cfgarden/empty:v0.1.0",
-						})
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(Runner.Delete("my-image-3")).To(Succeed())
-					})
-
-					It("does not ignore images provided in the config file", func() {
-						_, err := Runner.WithConfig(configFilePath).Clean(0, []string{"docker:///cfgarden/empty:v0.1.0"})
-						Expect(err).NotTo(HaveOccurred())
-
-						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(afterContents).NotTo(Equal(preContents))
-					})
-				})
-			})
-
-			Describe("store path", func() {
-				BeforeEach(func() {
-					runner = runnerpkg.Runner{
-						GrootFSBin: GrootFSBin,
-						DraxBin:    DraxBin,
-					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
-
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(preContents).To(HaveLen(3))
-				})
-
-				It("uses the store path from the config file", func() {
-					_, err := runner.Clean(0, []string{})
-					Expect(err).NotTo(HaveOccurred())
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(2))
-				})
-			})
-
-			Describe("drax bin", func() {
-				var (
-					draxCalledFile *os.File
-					draxBin        *os.File
-					tempFolder     string
-				)
-
-				BeforeEach(func() {
-					tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
-					configDraxBinPath = draxBin.Name()
-				})
-
-				JustBeforeEach(func() {
-					runner = runnerpkg.Runner{
-						GrootFSBin: GrootFSBin,
-						StorePath:  StorePath,
-					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
-				})
-
-				It("uses the drax bin from the config file", func() {
-					_, err := runner.Clean(0, []string{})
-					Expect(err).NotTo(HaveOccurred())
-
-					contents, err := ioutil.ReadFile(draxCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - drax"))
-				})
-			})
-
-			Describe("btrfs bin", func() {
-				var (
-					btrfsCalledFile *os.File
-					btrfsBin        *os.File
-					tempFolder      string
-				)
-
-				BeforeEach(func() {
-					tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
-					configBtrfsBinPath = btrfsBin.Name()
-				})
-
-				JustBeforeEach(func() {
-					runner = runnerpkg.Runner{
-						GrootFSBin: GrootFSBin,
-						StorePath:  StorePath,
-					}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
-				})
-
-				It("uses the btrfs bin from the config file", func() {
-					_, err := runner.Clean(0, []string{})
-					Expect(err).NotTo(HaveOccurred())
-
-					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - btrfs"))
-				})
-			})
-
-			Describe("clean up threshold", func() {
-				Describe("when threshold is not provided on the command line flag", func() {
-					BeforeEach(func() {
-						cleanupThresholdInBytes = 2500000
-					})
-
-					It("uses the threshold from the config file, and so does not clean", func() {
-						preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-						Expect(err).NotTo(HaveOccurred())
-
-						_, err = Runner.WithConfig(configFilePath).Clean(0, []string{})
-						Expect(err).NotTo(HaveOccurred())
-
-						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-						Expect(err).NotTo(HaveOccurred())
-						Expect(afterContents).To(HaveLen(len(preContents)))
-					})
 				})
 			})
 		})
@@ -381,6 +189,158 @@ var _ = Describe("Clean", func() {
 					for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
 						Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
 					}
+				})
+			})
+		})
+	})
+
+	Context("when --config global flag is given and there are unused layers", func() {
+		var (
+			cfg              config.Config
+			runnerWithConfig *runnerpkg.Runner
+		)
+
+		BeforeEach(func() {
+			_, err := Runner.Create(groot.CreateSpec{
+				ID:        "my-image-2",
+				BaseImage: "docker:///busybox",
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(Runner.Delete("my-image-2")).To(Succeed())
+
+			cfg = config.Config{}
+		})
+
+		JustBeforeEach(func() {
+			r := Runner
+			runnerWithConfig = &r
+			Expect(runnerWithConfig.SetConfig(cfg)).To(Succeed())
+		})
+
+		Describe("with a list of images to be ignored", func() {
+			var preContents []os.FileInfo
+
+			BeforeEach(func() {
+				cfg.IgnoreBaseImages = []string{"docker:///busybox"}
+			})
+
+			JustBeforeEach(func() {
+				var err error
+				preContents, err = ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("doesn't delete their layers", func() {
+				_, err := runnerWithConfig.Clean(0, []string{})
+				Expect(err).NotTo(HaveOccurred())
+
+				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(afterContents).To(Equal(preContents))
+			})
+
+			Context("when the ignore image flag is also given", func() {
+				BeforeEach(func() {
+					_, err := runnerWithConfig.Create(groot.CreateSpec{
+						ID:        "my-image-3",
+						BaseImage: "docker:///cfgarden/empty:v0.1.0",
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(runnerWithConfig.Delete("my-image-3")).To(Succeed())
+				})
+
+				It("does not ignore images provided in the config file", func() {
+					_, err := runnerWithConfig.Clean(0, []string{"docker:///cfgarden/empty:v0.1.0"})
+					Expect(err).NotTo(HaveOccurred())
+
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(afterContents).NotTo(Equal(preContents))
+				})
+			})
+		})
+
+		Describe("store path", func() {
+			BeforeEach(func() {
+				cfg.BaseStorePath = StorePath
+				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(preContents).To(HaveLen(3))
+			})
+
+			It("uses the store path from the config file", func() {
+				_, err := runnerWithConfig.WithoutStore().Clean(0, []string{})
+				Expect(err).NotTo(HaveOccurred())
+
+				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(afterContents).To(HaveLen(2))
+			})
+		})
+
+		Describe("drax bin", func() {
+			var (
+				draxCalledFile *os.File
+				draxBin        *os.File
+				tempFolder     string
+			)
+
+			BeforeEach(func() {
+				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
+				cfg.DraxBin = draxBin.Name()
+			})
+
+			It("uses the drax bin from the config file", func() {
+				_, err := runnerWithConfig.WithoutDraxBin().Clean(0, []string{})
+				Expect(err).NotTo(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(draxCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - drax"))
+			})
+		})
+
+		Describe("btrfs bin", func() {
+			var (
+				btrfsCalledFile *os.File
+				btrfsBin        *os.File
+				tempFolder      string
+			)
+
+			BeforeEach(func() {
+				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
+				cfg.BtrfsBin = btrfsBin.Name()
+			})
+
+			It("uses the btrfs bin from the config file", func() {
+				_, err := runnerWithConfig.Clean(0, []string{})
+				Expect(err).NotTo(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - btrfs"))
+			})
+		})
+
+		Describe("clean up threshold", func() {
+			Context("when threshold is not provided on the command line flag", func() {
+				BeforeEach(func() {
+					cfg.CleanThresholdBytes = 2500000
+				})
+
+				It("uses the threshold from the config file, and so does not clean", func() {
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = runnerWithConfig.Clean(0, []string{})
+					Expect(err).NotTo(HaveOccurred())
+
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(afterContents).To(HaveLen(len(preContents)))
 				})
 			})
 		})

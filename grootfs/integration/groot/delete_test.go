@@ -7,13 +7,9 @@ import (
 	"path"
 	"strings"
 
-	yaml "gopkg.in/yaml.v2"
-
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
-	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -78,52 +74,23 @@ var _ = Describe("Delete", func() {
 	})
 
 	Describe("--config global flag", func() {
-		var (
-			configDir          string
-			configFilePath     string
-			configBtrfsBinPath string
-			configStorePath    string
-			configDraxBinPath  string
-			runner             runnerpkg.Runner
-		)
+		var cfg config.Config
 
 		BeforeEach(func() {
-			var err error
-			configDir, err = ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-			configFilePath = path.Join(configDir, "config.yaml")
-			configStorePath = StorePath
-			configBtrfsBinPath = ""
-			configDraxBinPath = ""
+			cfg = config.Config{}
 		})
 
 		JustBeforeEach(func() {
-			cfg := config.Config{
-				BaseStorePath: configStorePath,
-				DraxBin:       configDraxBinPath,
-				BtrfsBin:      configBtrfsBinPath,
-			}
-
-			configYaml, err := yaml.Marshal(cfg)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
-		})
-
-		AfterEach(func() {
-			Expect(os.RemoveAll(configDir)).To(Succeed())
+			Runner.SetConfig(cfg)
 		})
 
 		Describe("store path", func() {
 			BeforeEach(func() {
-				runner = runnerpkg.Runner{
-					GrootFSBin: GrootFSBin,
-					DraxBin:    DraxBin,
-				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				cfg.BaseStorePath = StorePath
 			})
 
 			It("uses the store path from the config file", func() {
-				err := runner.Delete("random-id")
+				err := Runner.WithoutStore().Delete("random-id")
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
@@ -137,18 +104,11 @@ var _ = Describe("Delete", func() {
 
 			BeforeEach(func() {
 				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
-				configDraxBinPath = draxBin.Name()
-			})
-
-			JustBeforeEach(func() {
-				runner = runnerpkg.Runner{
-					GrootFSBin: GrootFSBin,
-					StorePath:  StorePath,
-				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				cfg.DraxBin = draxBin.Name()
 			})
 
 			It("uses the drax bin from the config file", func() {
-				Expect(runner.Delete("random-id")).To(Succeed())
+				Expect(Runner.WithoutDraxBin().Delete("random-id")).To(Succeed())
 
 				contents, err := ioutil.ReadFile(draxCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
@@ -165,18 +125,11 @@ var _ = Describe("Delete", func() {
 
 			BeforeEach(func() {
 				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
-				configBtrfsBinPath = btrfsBin.Name()
-			})
-
-			JustBeforeEach(func() {
-				runner = runnerpkg.Runner{
-					GrootFSBin: GrootFSBin,
-					StorePath:  StorePath,
-				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				cfg.BtrfsBin = btrfsBin.Name()
 			})
 
 			It("uses the btrfs bin from the config file", func() {
-				err := runner.Delete("random-id")
+				err := Runner.Delete("random-id")
 				Expect(err).To(HaveOccurred())
 
 				contents, err := ioutil.ReadFile(btrfsCalledFile.Name())

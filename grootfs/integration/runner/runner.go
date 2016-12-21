@@ -15,77 +15,28 @@ import (
 
 type Runner struct {
 	GrootFSBin string
-	StorePath  string
-	DraxBin    string
-	BtrfsBin   string
-	ConfigPath string
 
+	// Store path
+	StorePath string
+	// Binaries
+	DraxBin      string
+	BtrfsBin     string
+	NewuidmapBin string
+	NewgidmapBin string
+	// Metrics
+	MetronHost net.IP
+	MetronPort uint16
+	// Logging
 	LogLevelSet bool
 	LogLevel    lager.LogLevel
 	LogFile     string
-	MetronHost  net.IP
-	MetronPort  uint16
-
+	// Streams
 	Stdout io.Writer
 	Stderr io.Writer
-
+	// Configuration
+	ConfigPath string
+	// Timeout
 	Timeout time.Duration
-}
-
-func (r Runner) WithBtrfsBin(btrfsBin string) Runner {
-	nr := r
-	nr.BtrfsBin = btrfsBin
-	return nr
-}
-
-func (r Runner) WithMetronEndpoint(host net.IP, port uint16) Runner {
-	nr := r
-	nr.MetronHost = host
-	nr.MetronPort = port
-	return nr
-}
-
-func (r Runner) WithLogLevel(level lager.LogLevel) Runner {
-	nr := r
-	nr.LogLevel = level
-	nr.LogLevelSet = true
-	return nr
-}
-
-func (r Runner) WithoutLogLevel() Runner {
-	nr := r
-	nr.LogLevelSet = false
-	return nr
-}
-
-func (r Runner) WithLogFile(path string) Runner {
-	nr := r
-	nr.LogFile = path
-	return nr
-}
-
-func (r Runner) WithStdout(stdout io.Writer) Runner {
-	nr := r
-	nr.Stdout = stdout
-	return nr
-}
-
-func (r Runner) WithStderr(stderr io.Writer) Runner {
-	nr := r
-	nr.Stderr = stderr
-	return nr
-}
-
-func (r Runner) WithConfig(path string) Runner {
-	nr := r
-	nr.ConfigPath = path
-	return nr
-}
-
-func (r Runner) WithStore(path string) Runner {
-	nr := r
-	nr.StorePath = path
-	return nr
 }
 
 func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error) {
@@ -149,6 +100,12 @@ func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	}
 	if r.DraxBin != "" {
 		allArgs = append(allArgs, "--drax-bin", r.DraxBin)
+	}
+	if r.NewuidmapBin != "" {
+		allArgs = append(allArgs, "--newuidmap-bin", r.NewuidmapBin)
+	}
+	if r.NewgidmapBin != "" {
+		allArgs = append(allArgs, "--newgidmap-bin", r.NewgidmapBin)
 	}
 	if r.BtrfsBin != "" {
 		allArgs = append(allArgs, "--btrfs-bin", r.BtrfsBin)

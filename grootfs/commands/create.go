@@ -68,13 +68,11 @@ var CreateCommand = cli.Command{
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry")).
 			WithUIDMappings(ctx.StringSlice("uid-mapping")).
-			WithGIDMappings(ctx.StringSlice("gid-mapping"))
-
-		configBuilder.WithDiskLimitSizeBytes(ctx.Int64("disk-limit-size-bytes"),
-			ctx.IsSet("disk-limit-size-bytes"))
-
-		configBuilder.WithExcludeBaseImageFromQuota(ctx.Bool("exclude-image-from-quota"),
-			ctx.IsSet("exclude-image-from-quota"))
+			WithGIDMappings(ctx.StringSlice("gid-mapping")).
+			WithDiskLimitSizeBytes(ctx.Int64("disk-limit-size-bytes"),
+				ctx.IsSet("disk-limit-size-bytes")).
+			WithExcludeBaseImageFromQuota(ctx.Bool("exclude-image-from-quota"),
+				ctx.IsSet("exclude-image-from-quota"))
 
 		cfg, err := configBuilder.Build()
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})

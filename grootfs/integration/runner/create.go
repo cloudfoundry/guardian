@@ -33,7 +33,7 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 			fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size),
 		)
 	}
-	if spec.DiskLimit > 0 {
+	if spec.DiskLimit != 0 {
 		args = append(args, "--disk-limit-size-bytes",
 			strconv.FormatInt(spec.DiskLimit, 10),
 		)

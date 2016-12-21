@@ -9,14 +9,10 @@ import (
 	"path"
 	"path/filepath"
 
-	yaml "gopkg.in/yaml.v2"
-
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
-	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -51,24 +47,27 @@ var _ = Describe("Create", func() {
 
 		Context("when the disk limit value is invalid", func() {
 			It("fails with a helpful error", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "create", "--disk-limit-size-bytes", "-200", baseImagePath, "random-id")
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(1))
-				Eventually(sess).Should(gbytes.Say("disk limit cannot be negative"))
+				_, err := Runner.Create(groot.CreateSpec{
+					DiskLimit: -200,
+					BaseImage: baseImagePath,
+					ID:        "random-id",
+				})
+				Expect(err).To(MatchError(ContainSubstring("disk limit cannot be negative")))
 			})
 		})
 
 		Context("when the exclude-image-from-quota is also provided", func() {
 			It("creates a image with supplied limit, but doesn't take into account the base image size", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "create", "--disk-limit-size-bytes", "10485760", "--exclude-image-from-quota", baseImagePath, "random-id")
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
+				image, err := Runner.Create(groot.CreateSpec{
+					DiskLimit:                 10485760,
+					ExcludeBaseImageFromQuota: true,
+					BaseImage:                 baseImagePath,
+					ID:                        "random-id",
+				})
+				Expect(err).ToNot(HaveOccurred())
 
-				rootfsPath := filepath.Join(StorePath, CurrentUserID, "images/random-id/rootfs")
-				Expect(writeMegabytes(filepath.Join(rootfsPath, "hello"), 6)).To(Succeed())
-				Expect(writeMegabytes(filepath.Join(rootfsPath, "hello2"), 5)).To(MatchError(ContainSubstring("Disk quota exceeded")))
+				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 6)).To(Succeed())
+				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("Disk quota exceeded")))
 			})
 		})
 
@@ -85,10 +84,12 @@ var _ = Describe("Create", func() {
 
 			Context("when it's provided", func() {
 				It("uses the provided drax", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", draxBin.Name(), "create", "--disk-limit-size-bytes", "104857600", baseImagePath, "random-id")
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					_, err := Runner.WithDraxBin(draxBin.Name()).Create(groot.CreateSpec{
+						BaseImage: baseImagePath,
+						ID:        "random-id",
+						DiskLimit: 104857600,
+					})
 					Expect(err).NotTo(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(0))
 
 					contents, err := ioutil.ReadFile(draxCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
@@ -98,10 +99,12 @@ var _ = Describe("Create", func() {
 				Context("when the drax bin doesn't have uid bit set", func() {
 					It("doesn't leak the image dir", func() {
 						testhelpers.UnsuidDrax(draxBin.Name())
-						cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "--drax-bin", draxBin.Name(), "create", "--disk-limit-size-bytes", "104857600", baseImagePath, "random-id")
-						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-						Expect(err).NotTo(HaveOccurred())
-						Eventually(sess).Should(gexec.Exit(1))
+						_, err := Runner.WithDraxBin(draxBin.Name()).Create(groot.CreateSpec{
+							BaseImage: baseImagePath,
+							ID:        "random-id",
+							DiskLimit: 104857600,
+						})
+						Expect(err).To(HaveOccurred())
 
 						imagePath := path.Join(StorePath, CurrentUserID, "images", "random-id")
 						Expect(imagePath).ToNot(BeAnExistingFile())
@@ -138,10 +141,8 @@ var _ = Describe("Create", func() {
 
 			Context("when it's provided", func() {
 				It("uses calls the provided btrfs binary", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--btrfs-bin", btrfsBin.Name(), "create", baseImagePath, "random-id")
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(1))
+					_, err := Runner.WithBtrfsBin(btrfsBin.Name()).Create(groot.CreateSpec{BaseImage: baseImagePath, ID: "random-id"})
+					Expect(err).To(HaveOccurred())
 
 					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
@@ -162,7 +163,7 @@ var _ = Describe("Create", func() {
 			Context("when it's not provided", func() {
 				It("uses btrfs from $PATH", func() {
 					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-					cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create", baseImagePath, "random-id")
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath, "random-id")
 					cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
@@ -188,10 +189,12 @@ var _ = Describe("Create", func() {
 
 			Context("when it's provided", func() {
 				It("uses calls the provided newuidmap binary", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--newuidmap-bin", newuidmapBin.Name(), "create", "--uid-mapping", "0:1000:1", baseImagePath, "random-id")
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(0))
+					_, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
+						BaseImage:   baseImagePath,
+						ID:          "random-id",
+						UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+					})
+					Expect(err).ToNot(HaveOccurred())
 
 					contents, err := ioutil.ReadFile(newuidmapCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
@@ -228,10 +231,12 @@ var _ = Describe("Create", func() {
 
 			Context("when it's provided", func() {
 				It("uses calls the provided newgidmap binary", func() {
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "--newgidmap-bin", newgidmapBin.Name(), "create", "--gid-mapping", "0:1000:1", baseImagePath, "random-id")
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(0))
+					_, err := Runner.WithNewgidmapBin(newgidmapBin.Name()).Create(groot.CreateSpec{
+						BaseImage:   baseImagePath,
+						ID:          "random-id",
+						GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+					})
+					Expect(err).ToNot(HaveOccurred())
 
 					contents, err := ioutil.ReadFile(newgidmapCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
@@ -259,13 +264,11 @@ var _ = Describe("Create", func() {
 	Context("when no --store option is given", func() {
 		It("uses the default store path", func() {
 			Expect("/var/lib/grootfs/images").ToNot(BeAnExistingFile())
-
-			cmd := exec.Command(GrootFSBin, "create", baseImagePath, "random-id")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			// It will fail at this point, because /var/lib/grootfs doesn't exist
-			Eventually(sess).Should(gexec.Exit(1))
-			Eventually(sess).Should(gbytes.Say("making directory `/var/lib/grootfs/" + CurrentUserID + "`"))
+			_, err := Runner.WithoutStore().Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+			})
+			Expect(err).To(MatchError(ContainSubstring(("making directory `/var/lib/grootfs/" + CurrentUserID + "`"))))
 		})
 	})
 
@@ -284,49 +287,43 @@ var _ = Describe("Create", func() {
 		})
 
 		It("fails and produces a useful error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath, "random-id")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Eventually(sess.Out).Should(gbytes.Say("image for id `random-id` already exists"))
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
+			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+			})
+			Expect(err).To(MatchError(ContainSubstring("image for id `random-id` already exists")))
 		})
 	})
 
 	Context("when the id is not provided", func() {
 		It("fails", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath)
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
+			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "",
+			})
+			Expect(err).To(HaveOccurred())
 		})
 	})
 
 	Context("when the id contains invalid characters", func() {
 		It("fails", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath, "this/is/not/okay")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
-			Eventually(sess.Out).Should(gbytes.Say("id `this/is/not/okay` contains invalid characters: `/`"))
+			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "this/is/not/okay",
+			})
+			Expect(err).To(MatchError(ContainSubstring("id `this/is/not/okay` contains invalid characters: `/`")))
 		})
 	})
 
 	Context("when groot does not have permissions to apply the requested mapping", func() {
 		It("returns the newuidmap output in the stdout", func() {
-			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
-				"create",
-				"--uid-mapping", "1:1:65000",
-				baseImagePath,
-				"some-id",
-			)
+			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
+				BaseImage:   baseImagePath,
+				UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1, NamespaceID: 1, Size: 65000}},
+				ID:          "some-id",
+			})
 
-			buffer := gbytes.NewBuffer()
-			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(sess.Wait()).NotTo(gexec.Exit(0))
-
-			Eventually(buffer).Should(gbytes.Say(`range [\[\)0-9\-]* -> [\[\)0-9\-]* not allowed`))
+			Expect(err).To(MatchError(MatchRegexp(`range [\[\)0-9\-]* -> [\[\)0-9\-]* not allowed`)))
 		})
 
 		It("does not leak the image directory", func() {
@@ -394,28 +391,12 @@ var _ = Describe("Create", func() {
 
 	Describe("--config global flag", func() {
 		var (
-			configDir                       string
-			configFilePath                  string
-			configStorePath                 string
-			configDraxBinPath               string
-			configBtrfsBinPath              string
-			configUIDMappings               []string
-			configGIDMappings               []string
-			configDiskLimitSizeBytes        int64
-			configExcludeBaseImageFromQuota bool
-
-			runner runnerpkg.Runner
-			spec   groot.CreateSpec
+			cfg  config.Config
+			spec groot.CreateSpec
 		)
 
 		BeforeEach(func() {
-			configStorePath = StorePath
-			configDraxBinPath = ""
-			configBtrfsBinPath = ""
-			configUIDMappings = nil
-			configGIDMappings = nil
-			configDiskLimitSizeBytes = 0
-
+			cfg = config.Config{}
 			spec = groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: baseImagePath,
@@ -423,49 +404,20 @@ var _ = Describe("Create", func() {
 		})
 
 		JustBeforeEach(func() {
-			var err error
-			configDir, err = ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			cfg := config.Config{
-				BaseStorePath:             configStorePath,
-				DraxBin:                   configDraxBinPath,
-				BtrfsBin:                  configBtrfsBinPath,
-				UIDMappings:               configUIDMappings,
-				GIDMappings:               configGIDMappings,
-				DiskLimitSizeBytes:        configDiskLimitSizeBytes,
-				ExcludeBaseImageFromQuota: configExcludeBaseImageFromQuota,
-			}
-
-			configYaml, err := yaml.Marshal(cfg)
-			Expect(err).NotTo(HaveOccurred())
-			configFilePath = path.Join(configDir, "config.yaml")
-
-			Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
-		})
-
-		AfterEach(func() {
-			Expect(os.RemoveAll(configDir)).To(Succeed())
+			Expect(Runner.SetConfig(cfg)).To(Succeed())
 		})
 
 		Describe("store path", func() {
 			BeforeEach(func() {
 				var err error
-				configStorePath, err = ioutil.TempDir(StorePath, "")
+				cfg.BaseStorePath, err = ioutil.TempDir(StorePath, "")
 				Expect(err).NotTo(HaveOccurred())
-			})
-
-			JustBeforeEach(func() {
-				runner = runnerpkg.Runner{
-					GrootFSBin: GrootFSBin,
-					DraxBin:    DraxBin,
-				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
 			})
 
 			It("uses the store path from the config file", func() {
-				image, err := runner.Create(spec)
+				image, err := Runner.WithoutStore().Create(spec)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(image.Path).To(Equal(filepath.Join(configStorePath, CurrentUserID, "images/random-id")))
+				Expect(image.Path).To(Equal(filepath.Join(cfg.BaseStorePath, CurrentUserID, "images/random-id")))
 			})
 		})
 
@@ -478,18 +430,11 @@ var _ = Describe("Create", func() {
 
 			BeforeEach(func() {
 				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
-				configDraxBinPath = draxBin.Name()
-			})
-
-			JustBeforeEach(func() {
-				runner = runnerpkg.Runner{
-					GrootFSBin: GrootFSBin,
-					StorePath:  StorePath,
-				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				cfg.DraxBin = draxBin.Name()
 			})
 
 			It("uses the drax bin from the config file", func() {
-				_, err := runner.Create(groot.CreateSpec{
+				_, err := Runner.WithoutDraxBin().Create(groot.CreateSpec{
 					BaseImage: baseImagePath,
 					ID:        "random-id",
 					DiskLimit: 104857600,
@@ -511,18 +456,11 @@ var _ = Describe("Create", func() {
 
 			BeforeEach(func() {
 				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
-				configBtrfsBinPath = btrfsBin.Name()
-			})
-
-			JustBeforeEach(func() {
-				runner = runnerpkg.Runner{
-					GrootFSBin: GrootFSBin,
-					StorePath:  StorePath,
-				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				cfg.BtrfsBin = btrfsBin.Name()
 			})
 
 			It("uses the btrfs bin from the config file", func() {
-				_, err := runner.Create(groot.CreateSpec{
+				_, err := Runner.Create(groot.CreateSpec{
 					BaseImage: baseImagePath,
 					ID:        "random-id",
 				})
@@ -536,20 +474,12 @@ var _ = Describe("Create", func() {
 
 		Describe("uid mappings", func() {
 			BeforeEach(func() {
-				configUIDMappings = []string{"1:1:65990"}
-			})
-
-			JustBeforeEach(func() {
-				runner = runnerpkg.Runner{
-					GrootFSBin: GrootFSBin,
-					DraxBin:    DraxBin,
-					StorePath:  StorePath,
-				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				cfg.UIDMappings = []string{"1:1:65990"}
 			})
 
 			It("uses the uid mappings from the config file", func() {
 				buffer := gbytes.NewBuffer()
-				_, err := runner.WithStdout(buffer).Create(spec)
+				_, err := Runner.WithStdout(buffer).Create(spec)
 				Expect(err).To(HaveOccurred())
 				Expect(buffer.Contents()).To(ContainSubstring("uid range [1-65991) -> [1-65991) not allowed"))
 			})
@@ -557,20 +487,12 @@ var _ = Describe("Create", func() {
 
 		Describe("gid mappings", func() {
 			BeforeEach(func() {
-				configGIDMappings = []string{"1:1:65990"}
-			})
-
-			JustBeforeEach(func() {
-				runner = runnerpkg.Runner{
-					GrootFSBin: GrootFSBin,
-					DraxBin:    DraxBin,
-					StorePath:  StorePath,
-				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				cfg.GIDMappings = []string{"1:1:65990"}
 			})
 
 			It("uses the gid mappings from the config file", func() {
 				buffer := gbytes.NewBuffer()
-				_, err := runner.WithStdout(buffer).Create(spec)
+				_, err := Runner.WithStdout(buffer).Create(spec)
 				Expect(err).To(HaveOccurred())
 				Expect(buffer.Contents()).To(ContainSubstring("gid range [1-65991) -> [1-65991) not allowed"))
 			})
@@ -578,19 +500,11 @@ var _ = Describe("Create", func() {
 
 		Describe("disk limit size bytes", func() {
 			BeforeEach(func() {
-				configDiskLimitSizeBytes = tenMegabytes
-			})
-
-			JustBeforeEach(func() {
-				runner = runnerpkg.Runner{
-					GrootFSBin: GrootFSBin,
-					DraxBin:    DraxBin,
-					StorePath:  StorePath,
-				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				cfg.DiskLimitSizeBytes = tenMegabytes
 			})
 
 			It("creates a image with limit from the config file", func() {
-				image, err := runner.Create(spec)
+				image, err := Runner.Create(spec)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 11)).To(MatchError(ContainSubstring("Disk quota exceeded")))
@@ -599,20 +513,12 @@ var _ = Describe("Create", func() {
 
 		Describe("exclude image from quota", func() {
 			BeforeEach(func() {
-				configExcludeBaseImageFromQuota = true
-				configDiskLimitSizeBytes = tenMegabytes
-			})
-
-			JustBeforeEach(func() {
-				runner = runnerpkg.Runner{
-					GrootFSBin: GrootFSBin,
-					DraxBin:    DraxBin,
-					StorePath:  StorePath,
-				}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).WithConfig(configFilePath)
+				cfg.ExcludeBaseImageFromQuota = true
+				cfg.DiskLimitSizeBytes = tenMegabytes
 			})
 
 			It("excludes base image from quota when config property say so", func() {
-				image, err := runner.Create(spec)
+				image, err := Runner.Create(spec)
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 6)).To(Succeed())

@@ -7,8 +7,6 @@ import (
 	"os"
 	"path"
 
-	yaml "gopkg.in/yaml.v2"
-
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -165,9 +163,7 @@ var _ = Describe("Metrics", func() {
 				MetronEndpoint: fmt.Sprintf("127.0.0.1:%d", fakeMetronPort),
 			}
 
-			configYaml, err := yaml.Marshal(cfg)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+			Runner.SetConfig(cfg)
 		})
 
 		AfterEach(func() {
@@ -176,12 +172,10 @@ var _ = Describe("Metrics", func() {
 
 		Describe("metron endpoint", func() {
 			It("uses the metron agent from the config file", func() {
-				_, err := Runner.
-					WithConfig(configFilePath).
-					Create(groot.CreateSpec{
-						ID:        "my-id",
-						BaseImage: "docker:///cfgarden/empty:v0.1.0",
-					})
+				_, err := Runner.Create(groot.CreateSpec{
+					ID:        "my-id",
+					BaseImage: "docker:///cfgarden/empty:v0.1.0",
+				})
 				Expect(err).NotTo(HaveOccurred())
 
 				var metrics []events.ValueMetric
