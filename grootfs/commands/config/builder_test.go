@@ -15,62 +15,36 @@ import (
 
 var _ = Describe("Builder", func() {
 	var (
-		configDir                   string
-		configFilePath              string
-		builder                     *config.Builder
-		configStorePath             string
-		configDraxBin               string
-		configBtrfsBin              string
-		configNewuidmapBin          string
-		configNewgidmapBin          string
-		configMetronEndpoint        string
-		configUIDMappings           []string
-		configGIDMappings           []string
-		configDiskLimitSizeBytes    int64
-		configExcludeImageFromQuota bool
-		configCleanThresholdBytes   uint64
-		configLogLevel              string
-		configLogFile               string
+		cfg            config.Config
+		configDir      string
+		configFilePath string
+		builder        *config.Builder
 	)
 
 	BeforeEach(func() {
-		configStorePath = "/hello"
-		configDraxBin = "/config/drax"
-		configBtrfsBin = "/config/btrfs"
-		configNewuidmapBin = "/config/newuidmap"
-		configNewgidmapBin = "/config/newgidmap"
-		configMetronEndpoint = "config_endpoint:1111"
-		configUIDMappings = []string{"config-uid-mapping"}
-		configGIDMappings = []string{"config-gid-mapping"}
-		configDiskLimitSizeBytes = int64(1000)
-		configExcludeImageFromQuota = true
-		configCleanThresholdBytes = 0
-		configLogLevel = "info"
-		configLogFile = "/path/to/a/file"
+		cfg = config.Config{
+			BaseStorePath:             "/hello",
+			DraxBin:                   "/config/drax",
+			BtrfsBin:                  "/config/btrfs",
+			NewuidmapBin:              "/config/newuidmap",
+			NewgidmapBin:              "/config/newgidmap",
+			MetronEndpoint:            "config_endpoint:1111",
+			UIDMappings:               []string{"config-uid-mapping"},
+			GIDMappings:               []string{"config-gid-mapping"},
+			IgnoreBaseImages:          []string{"docker:///busybox"},
+			InsecureRegistries:        []string{"http://example.org"},
+			DiskLimitSizeBytes:        int64(1000),
+			ExcludeBaseImageFromQuota: true,
+			CleanThresholdBytes:       0,
+			LogLevel:                  "info",
+			LogFile:                   "/path/to/a/file",
+		}
 	})
 
 	JustBeforeEach(func() {
 		var err error
 		configDir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-
-		cfg := config.Config{
-			InsecureRegistries:        []string{"http://example.org"},
-			IgnoreBaseImages:          []string{"docker:///busybox"},
-			BaseStorePath:             configStorePath,
-			DraxBin:                   configDraxBin,
-			BtrfsBin:                  configBtrfsBin,
-			NewuidmapBin:              configNewuidmapBin,
-			NewgidmapBin:              configNewgidmapBin,
-			MetronEndpoint:            configMetronEndpoint,
-			UIDMappings:               configUIDMappings,
-			GIDMappings:               configGIDMappings,
-			DiskLimitSizeBytes:        configDiskLimitSizeBytes,
-			ExcludeBaseImageFromQuota: configExcludeImageFromQuota,
-			CleanThresholdBytes:       configCleanThresholdBytes,
-			LogLevel:                  configLogLevel,
-			LogFile:                   configLogFile,
-		}
 
 		configYaml, err := yaml.Marshal(cfg)
 		Expect(err).NotTo(HaveOccurred())
@@ -96,7 +70,7 @@ var _ = Describe("Builder", func() {
 
 		Context("when disk limit property is invalid", func() {
 			BeforeEach(func() {
-				configDiskLimitSizeBytes = int64(-1)
+				cfg.DiskLimitSizeBytes = int64(-1)
 			})
 
 			It("returns an error", func() {
@@ -193,7 +167,7 @@ var _ = Describe("Builder", func() {
 
 			Context("and store path is not set in the config", func() {
 				BeforeEach(func() {
-					configStorePath = ""
+					cfg.BaseStorePath = ""
 				})
 
 				It("uses the provided store path ", func() {
@@ -225,7 +199,7 @@ var _ = Describe("Builder", func() {
 
 			Context("and drax path is not set in the config", func() {
 				BeforeEach(func() {
-					configDraxBin = ""
+					cfg.DraxBin = ""
 				})
 
 				It("uses the provided drax path ", func() {
@@ -256,7 +230,7 @@ var _ = Describe("Builder", func() {
 
 			Context("and newuidmap path is not set in the config", func() {
 				BeforeEach(func() {
-					configNewuidmapBin = ""
+					cfg.NewuidmapBin = ""
 				})
 
 				It("uses the provided newuidmap path ", func() {
@@ -287,7 +261,7 @@ var _ = Describe("Builder", func() {
 
 			Context("and newgidmap path is not set in the config", func() {
 				BeforeEach(func() {
-					configNewgidmapBin = ""
+					cfg.NewgidmapBin = ""
 				})
 
 				It("uses the provided newgidmap path ", func() {
@@ -318,7 +292,7 @@ var _ = Describe("Builder", func() {
 
 			Context("and btrfs path is not set in the config", func() {
 				BeforeEach(func() {
-					configBtrfsBin = ""
+					cfg.BtrfsBin = ""
 				})
 
 				It("uses the provided btrfs path ", func() {
@@ -417,7 +391,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithDiskLimitSizeBytes(10, false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.DiskLimitSizeBytes).To(Equal(configDiskLimitSizeBytes))
+				Expect(config.DiskLimitSizeBytes).To(Equal(cfg.DiskLimitSizeBytes))
 			})
 		})
 
@@ -462,7 +436,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithCleanThresholdBytes(uint64(1024), false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.CleanThresholdBytes).To(Equal(configCleanThresholdBytes))
+				Expect(config.CleanThresholdBytes).To(Equal(cfg.CleanThresholdBytes))
 			})
 		})
 	})
@@ -480,7 +454,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithLogLevel("")
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.LogLevel).To(Equal(configLogLevel))
+				Expect(config.LogLevel).To(Equal(cfg.LogLevel))
 			})
 		})
 	})
@@ -498,7 +472,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithLogFile("")
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.LogFile).To(Equal(configLogFile))
+				Expect(config.LogFile).To(Equal(cfg.LogFile))
 			})
 		})
 	})
