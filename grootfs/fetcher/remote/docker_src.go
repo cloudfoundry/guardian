@@ -16,6 +16,7 @@ import (
 	"github.com/containers/image/docker"
 	manifestpkg "github.com/containers/image/manifest"
 	"github.com/containers/image/types"
+	digestpkg "github.com/docker/distribution/digest"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	errorspkg "github.com/pkg/errors"
 )
@@ -112,7 +113,8 @@ func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest s
 		return nil, 0, err
 	}
 
-	blob, size, err := imgSrc.GetBlob(digest)
+	d := digestpkg.Digest(digest)
+	blob, size, err := imgSrc.GetBlob(types.BlobInfo{Digest: d})
 	if err != nil {
 		return nil, 0, err
 	}
@@ -210,7 +212,8 @@ func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, baseImageURL *ur
 		return specsv1.Image{}, err
 	}
 
-	stream, _, err := imgSrc.GetBlob(configDigest)
+	d := digestpkg.Digest(configDigest)
+	stream, _, err := imgSrc.GetBlob(types.BlobInfo{Digest: d})
 	if err != nil {
 		logger.Error("fetching-config-failed", err)
 		return specsv1.Image{}, errorspkg.Wrap(err, "fetching config blob")

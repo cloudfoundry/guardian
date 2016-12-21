@@ -88,3 +88,6 @@
 [submodule "vendor/github.com/go-yaml/yaml"]
 	path = vendor/github.com/go-yaml/yaml
 	url = https://github.com/go-yaml/yaml
+[submodule "vendor/github.com/containers/storage"]
+	path = vendor/github.com/containers/storage
+	url = https://github.com/containers/storage
