@@ -17,6 +17,8 @@ type Config struct {
 	DiskLimitSizeBytes        int64    `yaml:"disk_limit_size_bytes"`
 	DraxBin                   string   `yaml:"drax_bin"`
 	BtrfsBin                  string   `yaml:"btrfs_bin"`
+	NewuidmapBin              string   `yaml:"newuidmap_bin"`
+	NewgidmapBin              string   `yaml:"newgidmap_bin"`
 	ExcludeBaseImageFromQuota bool     `yaml:"exclude_base_image_from_quota"`
 	GIDMappings               []string `yaml:"gid_mappings"`
 	UIDMappings               []string `yaml:"uid_mappings"`
@@ -88,6 +90,20 @@ func (b *Builder) WithStorePath(storePath string, isSet bool) *Builder {
 func (b *Builder) WithDraxBin(draxBin string, isSet bool) *Builder {
 	if isSet || b.config.DraxBin == "" {
 		b.config.DraxBin = draxBin
+	}
+	return b
+}
+
+func (b *Builder) WithNewuidmapBin(newuidmapBin string, isSet bool) *Builder {
+	if isSet || b.config.NewuidmapBin == "" {
+		b.config.NewuidmapBin = newuidmapBin
+	}
+	return b
+}
+
+func (b *Builder) WithNewgidmapBin(newgidmapBin string, isSet bool) *Builder {
+	if isSet || b.config.NewgidmapBin == "" {
+		b.config.NewgidmapBin = newgidmapBin
 	}
 	return b
 }

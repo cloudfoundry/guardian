@@ -21,6 +21,8 @@ var _ = Describe("Builder", func() {
 		configStorePath             string
 		configDraxBin               string
 		configBtrfsBin              string
+		configNewuidmapBin          string
+		configNewgidmapBin          string
 		configMetronEndpoint        string
 		configUIDMappings           []string
 		configGIDMappings           []string
@@ -35,6 +37,8 @@ var _ = Describe("Builder", func() {
 		configStorePath = "/hello"
 		configDraxBin = "/config/drax"
 		configBtrfsBin = "/config/btrfs"
+		configNewuidmapBin = "/config/newuidmap"
+		configNewgidmapBin = "/config/newgidmap"
 		configMetronEndpoint = "config_endpoint:1111"
 		configUIDMappings = []string{"config-uid-mapping"}
 		configGIDMappings = []string{"config-gid-mapping"}
@@ -56,6 +60,8 @@ var _ = Describe("Builder", func() {
 			BaseStorePath:             configStorePath,
 			DraxBin:                   configDraxBin,
 			BtrfsBin:                  configBtrfsBin,
+			NewuidmapBin:              configNewuidmapBin,
+			NewgidmapBin:              configNewgidmapBin,
 			MetronEndpoint:            configMetronEndpoint,
 			UIDMappings:               configUIDMappings,
 			GIDMappings:               configGIDMappings,
@@ -227,6 +233,68 @@ var _ = Describe("Builder", func() {
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(config.DraxBin).To(Equal("/my/drax"))
+				})
+			})
+		})
+	})
+
+	Describe("WithNewuidmapBin", func() {
+		It("overrides the config's newuidmap path entry when command line flag is set", func() {
+			builder = builder.WithNewuidmapBin("/my/newuidmap", true)
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.NewuidmapBin).To(Equal("/my/newuidmap"))
+		})
+
+		Context("when newuidmap path is not provided via command line", func() {
+			It("uses the config's newuidmap path ", func() {
+				builder = builder.WithNewuidmapBin("/my/newuidmap", false)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.NewuidmapBin).To(Equal("/config/newuidmap"))
+			})
+
+			Context("and newuidmap path is not set in the config", func() {
+				BeforeEach(func() {
+					configNewuidmapBin = ""
+				})
+
+				It("uses the provided newuidmap path ", func() {
+					builder = builder.WithNewuidmapBin("/my/newuidmap", false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.NewuidmapBin).To(Equal("/my/newuidmap"))
+				})
+			})
+		})
+	})
+
+	Describe("WithNewgidmapBin", func() {
+		It("overrides the config's newgidmap path entry when command line flag is set", func() {
+			builder = builder.WithNewgidmapBin("/my/newgidmap", true)
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.NewgidmapBin).To(Equal("/my/newgidmap"))
+		})
+
+		Context("when newgidmap path is not provided via command line", func() {
+			It("uses the config's newgidmap path ", func() {
+				builder = builder.WithNewgidmapBin("/my/newgidmap", false)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.NewgidmapBin).To(Equal("/config/newgidmap"))
+			})
+
+			Context("and newgidmap path is not set in the config", func() {
+				BeforeEach(func() {
+					configNewgidmapBin = ""
+				})
+
+				It("uses the provided newgidmap path ", func() {
+					builder = builder.WithNewgidmapBin("/my/newgidmap", false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.NewgidmapBin).To(Equal("/my/newgidmap"))
 				})
 			})
 		})

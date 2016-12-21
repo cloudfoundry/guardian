@@ -102,7 +102,7 @@ var CreateCommand = cli.Command{
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
 		runner := linux_command_runner.New()
-		idMapper := unpackerpkg.NewIDMapper(ctx.GlobalString("newuidmap-bin"), ctx.GlobalString("newgidmap-bin"), runner)
+		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedUnpacker(runner, idMapper)
 
 		dockerSrc := remote.NewDockerSource(cfg.InsecureRegistries)

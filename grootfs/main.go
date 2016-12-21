@@ -98,6 +98,8 @@ func main() {
 			WithLogLevel(ctx.String("log-level")).
 			WithLogFile(ctx.GlobalString("log-file")).
 			WithBtrfsBin(ctx.GlobalString("btrfs-bin"), ctx.IsSet("btrfs-bin")).
+			WithNewuidmapBin(ctx.GlobalString("newuidmap-bin"), ctx.IsSet("newuidmap-bin")).
+			WithNewgidmapBin(ctx.GlobalString("newgidmap-bin"), ctx.IsSet("newgidmap-bin")).
 			Build()
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)

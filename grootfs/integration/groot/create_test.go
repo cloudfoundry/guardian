@@ -462,6 +462,58 @@ var _ = Describe("Create", func() {
 			})
 		})
 
+		Describe("newuidmap bin", func() {
+			var (
+				newuidmapCalledFile *os.File
+				newuidmapBin        *os.File
+				tempFolder          string
+			)
+
+			BeforeEach(func() {
+				tempFolder, newuidmapBin, newuidmapCalledFile = integration.CreateFakeBin("newuidmap")
+				cfg.NewuidmapBin = newuidmapBin.Name()
+			})
+
+			It("uses the newuidmap bin from the config file", func() {
+				_, err := Runner.Create(groot.CreateSpec{
+					BaseImage:   baseImagePath,
+					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+					ID:          "random-id",
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(newuidmapCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - newuidmap"))
+			})
+		})
+
+		Describe("newgidmap bin", func() {
+			var (
+				newgidmapCalledFile *os.File
+				newgidmapBin        *os.File
+				tempFolder          string
+			)
+
+			BeforeEach(func() {
+				tempFolder, newgidmapBin, newgidmapCalledFile = integration.CreateFakeBin("newgidmap")
+				cfg.NewgidmapBin = newgidmapBin.Name()
+			})
+
+			It("uses the newgidmap bin from the config file", func() {
+				_, err := Runner.Create(groot.CreateSpec{
+					BaseImage:   baseImagePath,
+					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+					ID:          "random-id",
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(newgidmapCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - newgidmap"))
+			})
+		})
+
 		Describe("uid mappings", func() {
 			BeforeEach(func() {
 				cfg.UIDMappings = []string{"1:1:65990"}
