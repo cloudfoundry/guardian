@@ -14,19 +14,18 @@ import (
 
 var _ = Describe("IDMapper", func() {
 	var (
-		fakeCmdRunner   *fake_command_runner.FakeCommandRunner
-		idMapper        *unpacker.CommandIDMapper
-		logger          *TestLogger
-		systemIDMappers unpacker.SystemIDMappers
+		fakeCmdRunner *fake_command_runner.FakeCommandRunner
+		idMapper      *unpacker.CommandIDMapper
+		logger        *TestLogger
+		newuidmapBin  string
+		newgidmapBin  string
 	)
 
 	BeforeEach(func() {
-		systemIDMappers = unpacker.SystemIDMappers{
-			UID: "newuidmap",
-			GID: "newgidmap",
-		}
+		newuidmapBin = "newuidmap"
+		newgidmapBin = "newgidmap"
 		fakeCmdRunner = fake_command_runner.New()
-		idMapper = unpacker.NewIDMapper(systemIDMappers, fakeCmdRunner)
+		idMapper = unpacker.NewIDMapper(newuidmapBin, newgidmapBin, fakeCmdRunner)
 		logger = NewLogger("idmapper")
 	})
 
@@ -58,9 +57,7 @@ var _ = Describe("IDMapper", func() {
 			})
 
 			It("uses the newuidmap from systemIDMappers correctly", func() {
-				idMapper = unpacker.NewIDMapper(unpacker.SystemIDMappers{
-					UID: "my-custom-newuidmap",
-				}, fakeCmdRunner)
+				idMapper = unpacker.NewIDMapper("my-custom-newuidmap", newgidmapBin, fakeCmdRunner)
 
 				Expect(idMapper.MapUIDs(logger, 1000, []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 30},
@@ -127,9 +124,7 @@ var _ = Describe("IDMapper", func() {
 			})
 
 			It("uses the newgidmap from systemIDMappers correctly", func() {
-				idMapper = unpacker.NewIDMapper(unpacker.SystemIDMappers{
-					GID: "my-custom-newgidmap",
-				}, fakeCmdRunner)
+				idMapper = unpacker.NewIDMapper("newuidmap", "my-custom-newgidmap", fakeCmdRunner)
 
 				Expect(idMapper.MapGIDs(logger, 1000, []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 50, NamespaceID: 60, Size: 70},

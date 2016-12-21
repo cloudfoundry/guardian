@@ -13,30 +13,27 @@ import (
 )
 
 type CommandIDMapper struct {
-	systemIDMappers SystemIDMappers
-	cmdRunner       commandrunner.CommandRunner
+	newuidmapBin string
+	newgidmapBin string
+	cmdRunner    commandrunner.CommandRunner
 }
 
-type SystemIDMappers struct {
-	UID string
-	GID string
-}
-
-func NewIDMapper(idMappers SystemIDMappers, cmdRunner commandrunner.CommandRunner) *CommandIDMapper {
+func NewIDMapper(newuidmapBin, newgidmapBin string, cmdRunner commandrunner.CommandRunner) *CommandIDMapper {
 	return &CommandIDMapper{
-		systemIDMappers: idMappers,
-		cmdRunner:       cmdRunner,
+		newuidmapBin: newuidmapBin,
+		newgidmapBin: newgidmapBin,
+		cmdRunner:    cmdRunner,
 	}
 }
 
 func (im *CommandIDMapper) MapUIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error {
 	logger = logger.Session("mapUID")
-	return im.execute(logger, im.systemIDMappers.UID, pid, mappings)
+	return im.execute(logger, im.newuidmapBin, pid, mappings)
 }
 
 func (im *CommandIDMapper) MapGIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error {
 	logger = logger.Session("mapGID")
-	return im.execute(logger, im.systemIDMappers.GID, pid, mappings)
+	return im.execute(logger, im.newgidmapBin, pid, mappings)
 }
 
 func (im *CommandIDMapper) execute(logger lager.Logger, command string, pid int, mappings []groot.IDMappingSpec) error {
