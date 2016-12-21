@@ -3,11 +3,9 @@ package groot_test
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path/filepath"
 
-	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
@@ -67,53 +65,6 @@ var _ = Describe("Stats", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(stats).To(Equal(expectedStats))
-			})
-		})
-
-		Describe("--config global flag", func() {
-			var cfg config.Config
-
-			BeforeEach(func() {
-				cfg = config.Config{}
-			})
-
-			JustBeforeEach(func() {
-				Runner.SetConfig(cfg)
-			})
-
-			Describe("store path", func() {
-				BeforeEach(func() {
-					cfg.BaseStorePath = StorePath
-				})
-
-				It("uses the store path from the config file", func() {
-					stats, err := Runner.WithoutStore().Stats("random-id")
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(stats).To(Equal(expectedStats))
-				})
-			})
-
-			Describe("drax bin", func() {
-				var (
-					draxCalledFile *os.File
-					draxBin        *os.File
-					tempFolder     string
-				)
-
-				BeforeEach(func() {
-					tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
-					cfg.DraxBin = draxBin.Name()
-				})
-
-				It("uses the drax bin from the config file", func() {
-					_, err := Runner.WithoutDraxBin().Stats("random-id")
-					Expect(err).To(MatchError("could not parse stats"))
-
-					contents, err := ioutil.ReadFile(draxCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - drax"))
-				})
 			})
 		})
 	})

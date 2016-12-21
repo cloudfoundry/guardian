@@ -7,7 +7,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
 	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -260,68 +259,6 @@ var _ = Describe("Clean", func() {
 
 					Expect(afterContents).NotTo(Equal(preContents))
 				})
-			})
-		})
-
-		Describe("store path", func() {
-			BeforeEach(func() {
-				cfg.BaseStorePath = StorePath
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(3))
-			})
-
-			It("uses the store path from the config file", func() {
-				_, err := runnerWithConfig.WithoutStore().Clean(0, []string{})
-				Expect(err).NotTo(HaveOccurred())
-
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(2))
-			})
-		})
-
-		Describe("drax bin", func() {
-			var (
-				draxCalledFile *os.File
-				draxBin        *os.File
-				tempFolder     string
-			)
-
-			BeforeEach(func() {
-				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
-				cfg.DraxBin = draxBin.Name()
-			})
-
-			It("uses the drax bin from the config file", func() {
-				_, err := runnerWithConfig.WithoutDraxBin().Clean(0, []string{})
-				Expect(err).NotTo(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(draxCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - drax"))
-			})
-		})
-
-		Describe("btrfs bin", func() {
-			var (
-				btrfsCalledFile *os.File
-				btrfsBin        *os.File
-				tempFolder      string
-			)
-
-			BeforeEach(func() {
-				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
-				cfg.BtrfsBin = btrfsBin.Name()
-			})
-
-			It("uses the btrfs bin from the config file", func() {
-				_, err := runnerWithConfig.Clean(0, []string{})
-				Expect(err).NotTo(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - btrfs"))
 			})
 		})
 

@@ -2,12 +2,10 @@ package groot_test
 
 import (
 	"io/ioutil"
-	"os"
 	"os/exec"
 	"path"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 
@@ -69,72 +67,6 @@ var _ = Describe("Delete", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
 				Eventually(sess.Out).Should(gbytes.Say("path `/Iamnot/in/the/storage/images/1234/rootfs` is outside store path"))
-			})
-		})
-	})
-
-	Describe("--config global flag", func() {
-		var cfg config.Config
-
-		BeforeEach(func() {
-			cfg = config.Config{}
-		})
-
-		JustBeforeEach(func() {
-			Runner.SetConfig(cfg)
-		})
-
-		Describe("store path", func() {
-			BeforeEach(func() {
-				cfg.BaseStorePath = StorePath
-			})
-
-			It("uses the store path from the config file", func() {
-				err := Runner.WithoutStore().Delete("random-id")
-				Expect(err).NotTo(HaveOccurred())
-			})
-		})
-
-		Describe("drax bin", func() {
-			var (
-				draxCalledFile *os.File
-				draxBin        *os.File
-				tempFolder     string
-			)
-
-			BeforeEach(func() {
-				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
-				cfg.DraxBin = draxBin.Name()
-			})
-
-			It("uses the drax bin from the config file", func() {
-				Expect(Runner.WithoutDraxBin().Delete("random-id")).To(Succeed())
-
-				contents, err := ioutil.ReadFile(draxCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - drax"))
-			})
-		})
-
-		Describe("btrfs bin", func() {
-			var (
-				btrfsCalledFile *os.File
-				btrfsBin        *os.File
-				tempFolder      string
-			)
-
-			BeforeEach(func() {
-				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
-				cfg.BtrfsBin = btrfsBin.Name()
-			})
-
-			It("uses the btrfs bin from the config file", func() {
-				err := Runner.Delete("random-id")
-				Expect(err).To(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - btrfs"))
 			})
 		})
 	})
