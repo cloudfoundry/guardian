@@ -71,12 +71,16 @@ var _ = Describe("Creator", func() {
 		Context("when clean up store is requested", func() {
 			It("cleans the store", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					BaseImage:     "/path/to/image",
-					CleanOnCreate: true,
+					BaseImage:                   "/path/to/image",
+					CleanOnCreate:               true,
+					CleanOnCreateIgnoreImages:   []string{"docker://my-image"},
+					CleanOnCreateThresholdBytes: uint64(250000),
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeCleaner.CleanCallCount()).To(Equal(1))
-				_, _, _, acquireLock := fakeCleaner.CleanArgsForCall(0)
+				_, threshold, ignoredImages, acquireLock := fakeCleaner.CleanArgsForCall(0)
+				Expect(threshold).To(Equal(uint64(250000)))
+				Expect(ignoredImages).To(ConsistOf([]string{"docker://my-image"}))
 				Expect(acquireLock).To(BeFalse())
 			})
 

@@ -139,13 +139,15 @@ var CreateCommand = cli.Command{
 		)
 
 		createSpec := groot.CreateSpec{
-			CleanOnCreate:             cfg.CleanOnCreate,
-			ID:                        id,
-			BaseImage:                 baseImage,
-			DiskLimit:                 cfg.DiskLimitSizeBytes,
-			ExcludeBaseImageFromQuota: cfg.ExcludeBaseImageFromQuota,
-			UIDMappings:               uidMappings,
-			GIDMappings:               gidMappings,
+			ID:                          id,
+			BaseImage:                   baseImage,
+			DiskLimit:                   cfg.DiskLimitSizeBytes,
+			ExcludeBaseImageFromQuota:   cfg.ExcludeBaseImageFromQuota,
+			UIDMappings:                 uidMappings,
+			GIDMappings:                 gidMappings,
+			CleanOnCreate:               cfg.CleanOnCreate,
+			CleanOnCreateThresholdBytes: cfg.CleanThresholdBytes,
+			CleanOnCreateIgnoreImages:   cfg.IgnoreBaseImages,
 		}
 		image, err := creator.Create(logger, createSpec)
 		if err != nil {

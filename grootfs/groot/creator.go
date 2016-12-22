@@ -13,13 +13,15 @@ import (
 const ImageReferenceFormat = "image:%s"
 
 type CreateSpec struct {
-	ID                        string
-	BaseImage                 string
-	DiskLimit                 int64
-	ExcludeBaseImageFromQuota bool
-	CleanOnCreate             bool
-	UIDMappings               []IDMappingSpec
-	GIDMappings               []IDMappingSpec
+	ID                          string
+	BaseImage                   string
+	DiskLimit                   int64
+	ExcludeBaseImageFromQuota   bool
+	CleanOnCreate               bool
+	CleanOnCreateThresholdBytes uint64
+	CleanOnCreateIgnoreImages   []string
+	UIDMappings                 []IDMappingSpec
+	GIDMappings                 []IDMappingSpec
 }
 
 type Creator struct {
@@ -94,8 +96,8 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 	}()
 
 	if spec.CleanOnCreate {
-		if _, err := c.cleaner.Clean(logger, 0, []string{}, false); err != nil {
-			return Image{}, fmt.Errorf("failed-to-cleanup-store", err)
+		if _, err := c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, spec.CleanOnCreateIgnoreImages, false); err != nil {
+			return Image{}, fmt.Errorf("failed-to-cleanup-store: %s", err)
 		}
 	}
 

@@ -273,9 +273,11 @@ var _ = Describe("Create", func() {
 			Expect(preContents).To(HaveLen(1))
 
 			_, err = Runner.Create(groot.CreateSpec{
-				ID:            "my-empty",
-				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
-				CleanOnCreate: true,
+				ID:                          "my-empty",
+				BaseImage:                   "docker:///cfgarden/empty:v0.1.1",
+				CleanOnCreate:               true,
+				CleanOnCreateIgnoreImages:   []string{"docker://my-image"},
+				CleanOnCreateThresholdBytes: uint64(250000),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
