@@ -24,7 +24,7 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	}
 }
 
-func (c *Cleaner) Clean(logger lager.Logger, threshold uint64, keepImages []string) (bool, error) {
+func (c *Cleaner) Clean(logger lager.Logger, threshold uint64, keepImages []string, acquireLock bool) (bool, error) {
 	startTime := time.Now()
 	defer func() {
 		c.metricsEmitter.TryEmitDuration(logger, MetricImageCleanTime, time.Since(startTime))
@@ -44,16 +44,17 @@ func (c *Cleaner) Clean(logger lager.Logger, threshold uint64, keepImages []stri
 			return true, nil
 		}
 	}
-
-	lockFile, err := c.locksmith.Lock(GlobalLockKey)
-	if err != nil {
-		return false, err
-	}
-	defer func() {
-		if err := c.locksmith.Unlock(lockFile); err != nil {
-			logger.Error("failed-to-unlock", err)
+	if acquireLock {
+		lockFile, err := c.locksmith.Lock(GlobalLockKey)
+		if err != nil {
+			return false, err
 		}
-	}()
+		defer func() {
+			if err := c.locksmith.Unlock(lockFile); err != nil {
+				logger.Error("failed-to-unlock", err)
+			}
+		}()
+	}
 
 	return false, c.garbageCollector.Collect(logger, keepImages)
 }
