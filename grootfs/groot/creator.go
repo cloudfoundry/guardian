@@ -17,7 +17,7 @@ type CreateSpec struct {
 	BaseImage                 string
 	DiskLimit                 int64
 	ExcludeBaseImageFromQuota bool
-	CleanUpStore              bool
+	CleanOnCreate             bool
 	UIDMappings               []IDMappingSpec
 	GIDMappings               []IDMappingSpec
 }
@@ -93,7 +93,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 		}
 	}()
 
-	if spec.CleanUpStore {
+	if spec.CleanOnCreate {
 		if _, err := c.cleaner.Clean(logger, 0, []string{}, false); err != nil {
 			return Image{}, fmt.Errorf("failed-to-cleanup-store", err)
 		}

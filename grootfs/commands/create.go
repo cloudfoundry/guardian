@@ -55,9 +55,9 @@ var CreateCommand = cli.Command{
 			Name:  "exclude-image-from-quota",
 			Usage: "Set disk limit to be exclusive (i.e.: excluding image layers)",
 		},
-		cli.BoolFlag{
+		cli.StringFlag{
 			Name:  "clean",
-			Usage: "Clean up unused layers before creating rootfs",
+			Usage: "Clean up unused layers before creating rootfs: true|false",
 		},
 	},
 
@@ -77,7 +77,8 @@ var CreateCommand = cli.Command{
 			WithDiskLimitSizeBytes(ctx.Int64("disk-limit-size-bytes"),
 				ctx.IsSet("disk-limit-size-bytes")).
 			WithExcludeBaseImageFromQuota(ctx.Bool("exclude-image-from-quota"),
-				ctx.IsSet("exclude-image-from-quota"))
+				ctx.IsSet("exclude-image-from-quota")).
+			WithCleanOnCreate(ctx.String("clean"), ctx.IsSet("clean"))
 
 		cfg, err := configBuilder.Build()
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
@@ -86,7 +87,6 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		cleanUpStore := ctx.Bool("clean")
 		storePath := cfg.UserBasedStorePath
 		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
@@ -139,7 +139,7 @@ var CreateCommand = cli.Command{
 		)
 
 		createSpec := groot.CreateSpec{
-			CleanUpStore:              cleanUpStore,
+			CleanOnCreate:             cfg.CleanOnCreate,
 			ID:                        id,
 			BaseImage:                 baseImage,
 			DiskLimit:                 cfg.DiskLimitSizeBytes,

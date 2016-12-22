@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	BaseStorePath             string   `yaml:"store_path"`
+	CleanOnCreate             bool     `yaml:"clean_on_create"`
 	CleanThresholdBytes       uint64   `yaml:"clean_threshold_bytes"`
 	DiskLimitSizeBytes        int64    `yaml:"disk_limit_size_bytes"`
 	DraxBin                   string   `yaml:"drax_bin"`
@@ -160,7 +161,6 @@ func (b *Builder) WithCleanThresholdBytes(threshold uint64, isSet bool) *Builder
 	if isSet {
 		b.config.CleanThresholdBytes = threshold
 	}
-
 	return b
 }
 
@@ -175,6 +175,19 @@ func (b *Builder) WithLogFile(filepath string) *Builder {
 	if filepath != "" {
 		b.config.LogFile = filepath
 	}
+	return b
+}
+
+func (b *Builder) WithCleanOnCreate(clean string, isSet bool) *Builder {
+	if isSet {
+		cleanBool, err := strconv.ParseBool(clean)
+
+		if err != nil {
+			cleanBool = false
+		}
+		b.config.CleanOnCreate = cleanBool
+	}
+
 	return b
 }
 

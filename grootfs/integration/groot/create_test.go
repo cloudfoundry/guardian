@@ -264,7 +264,7 @@ var _ = Describe("Create", func() {
 		})
 
 		AfterEach(func() {
-			Expect(Runner.Delete("my-empty")).To(Succeed())
+			Runner.Delete("my-empty")
 		})
 
 		It("cleans the store first", func() {
@@ -273,9 +273,9 @@ var _ = Describe("Create", func() {
 			Expect(preContents).To(HaveLen(1))
 
 			_, err = Runner.Create(groot.CreateSpec{
-				ID:           "my-empty",
-				BaseImage:    "docker:///cfgarden/empty:v0.1.1",
-				CleanUpStore: true,
+				ID:            "my-empty",
+				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
+				CleanOnCreate: true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -603,6 +603,69 @@ var _ = Describe("Create", func() {
 				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 6)).To(Succeed())
 				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("Disk quota exceeded")))
 			})
+		})
+
+		Describe("clean up on create", func() {
+			var createSpec groot.CreateSpec
+
+			BeforeEach(func() {
+				cfg.CleanOnCreate = true
+				createSpec = groot.CreateSpec{
+					ID:        "my-busybox",
+					BaseImage: "docker:///busybox",
+				}
+
+				_, err := Runner.Create(createSpec)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(Runner.Delete("my-busybox")).To(Succeed())
+			})
+
+			AfterEach(func() {
+				Expect(Runner.Delete(spec.ID)).To(Succeed())
+			})
+
+			It("cleans up unused layers before create", func() {
+				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(preContents).To(HaveLen(1))
+
+				spec.BaseImage = "docker:///cfgarden/empty:v0.1.1"
+				_, err = Runner.Create(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(afterContents).To(HaveLen(2))
+
+				for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
+					Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+				}
+			})
+
+			Context("when clean flag is set to false", func() {
+				It("does not clean up unused layers", func() {
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(preContents).To(HaveLen(1))
+
+					cmd := exec.Command(
+						GrootFSBin, "--store", StorePath,
+						"create",
+						"--clean", "false",
+						"docker:///cfgarden/empty:v0.1.1",
+						spec.ID,
+					)
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess, "10s").Should(gexec.Exit(0))
+
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(afterContents).To(HaveLen(3))
+				})
+			})
+
 		})
 	})
 })

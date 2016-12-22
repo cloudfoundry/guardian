@@ -36,6 +36,7 @@ var _ = Describe("Builder", func() {
 			DiskLimitSizeBytes:        int64(1000),
 			ExcludeBaseImageFromQuota: true,
 			CleanThresholdBytes:       0,
+			CleanOnCreate:             false,
 			LogLevel:                  "info",
 			LogFile:                   "/path/to/a/file",
 		}
@@ -473,6 +474,31 @@ var _ = Describe("Builder", func() {
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(config.LogFile).To(Equal(cfg.LogFile))
+			})
+		})
+
+		Describe("WithCleanOnCreate", func() {
+			It("overrides the config's entry when the flag is set", func() {
+				builder = builder.WithCleanOnCreate("true", true)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.CleanOnCreate).To(BeTrue())
+			})
+
+			It("overrides the config's entry when the flag is set", func() {
+				builder = builder.WithCleanOnCreate("false", true)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.CleanOnCreate).To(BeFalse())
+			})
+
+			Context("when flag is not valid boolean", func() {
+				It("sets the flag to false", func() {
+					builder = builder.WithCleanOnCreate("not-valid-boolean", true)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.CleanOnCreate).To(BeFalse())
+				})
 			})
 		})
 	})

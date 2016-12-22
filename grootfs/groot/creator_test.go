@@ -71,8 +71,8 @@ var _ = Describe("Creator", func() {
 		Context("when clean up store is requested", func() {
 			It("cleans the store", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					BaseImage:    "/path/to/image",
-					CleanUpStore: true,
+					BaseImage:     "/path/to/image",
+					CleanOnCreate: true,
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeCleaner.CleanCallCount()).To(Equal(1))
@@ -87,8 +87,8 @@ var _ = Describe("Creator", func() {
 
 				It("returns an error", func() {
 					_, err := creator.Create(logger, groot.CreateSpec{
-						BaseImage:    "/path/to/image",
-						CleanUpStore: true,
+						BaseImage:     "/path/to/image",
+						CleanOnCreate: true,
 					})
 					Expect(err).To(MatchError(ContainSubstring("failed to clean up store")))
 				})
