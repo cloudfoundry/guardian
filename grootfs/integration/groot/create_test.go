@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo"
@@ -248,6 +249,42 @@ var _ = Describe("Create", func() {
 					Expect(string(contents)).To(Equal("I'm groot - newgidmap"))
 				})
 			})
+		})
+	})
+
+	Context("when --clean is given", func() {
+		BeforeEach(func() {
+			_, err := Runner.Create(groot.CreateSpec{
+				ID:        "my-busybox",
+				BaseImage: "docker:///busybox",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(Runner.Delete("my-busybox")).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(Runner.Delete("my-empty")).To(Succeed())
+		})
+
+		It("cleans the store first", func() {
+			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(preContents).To(HaveLen(1))
+
+			_, err = Runner.Create(groot.CreateSpec{
+				ID:           "my-empty",
+				BaseImage:    "docker:///cfgarden/empty:v0.1.1",
+				CleanUpStore: true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(afterContents).To(HaveLen(2))
+			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
+				Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+			}
 		})
 	})
 

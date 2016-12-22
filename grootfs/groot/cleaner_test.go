@@ -22,7 +22,7 @@ var _ = Describe("Cleaner", func() {
 		fakeMetricsEmitter   *grootfakes.FakeMetricsEmitter
 		lockFile             *os.File
 
-		cleaner *groot.Cleaner
+		cleaner groot.Cleaner
 		logger  lager.Logger
 	)
 

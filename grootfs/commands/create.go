@@ -17,6 +17,7 @@ import (
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
@@ -54,6 +55,10 @@ var CreateCommand = cli.Command{
 			Name:  "exclude-image-from-quota",
 			Usage: "Set disk limit to be exclusive (i.e.: excluding image layers)",
 		},
+		cli.BoolFlag{
+			Name:  "clean",
+			Usage: "Clean up unused layers before creating rootfs",
+		},
 	},
 
 	Action: func(ctx *cli.Context) error {
@@ -81,6 +86,7 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
+		cleanUpStore := ctx.Bool("clean")
 		storePath := cfg.UserBasedStorePath
 		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
@@ -122,12 +128,18 @@ var CreateCommand = cli.Command{
 		)
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()
 		metricsEmitter := metrics.NewEmitter()
+
+		sm := garbage_collector.NewStoreMeasurer(storePath)
+		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, imageCloner, dependencyManager)
+		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
+
 		creator := groot.IamCreator(
 			imageCloner, baseImagePuller, locksmith, rootFSConfigurer,
-			dependencyManager, metricsEmitter,
+			dependencyManager, metricsEmitter, cleaner,
 		)
 
 		createSpec := groot.CreateSpec{
+			CleanUpStore:              cleanUpStore,
 			ID:                        id,
 			BaseImage:                 baseImage,
 			DiskLimit:                 cfg.DiskLimitSizeBytes,

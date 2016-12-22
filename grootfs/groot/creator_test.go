@@ -24,6 +24,7 @@ var _ = Describe("Creator", func() {
 		fakeRootFSConfigurer  *grootfakes.FakeRootFSConfigurer
 		fakeDependencyManager *grootfakes.FakeDependencyManager
 		fakeMetricsEmitter    *grootfakes.FakeMetricsEmitter
+		fakeCleaner           *grootfakes.FakeCleaner
 		lockFile              *os.File
 
 		creator *groot.Creator
@@ -37,6 +38,7 @@ var _ = Describe("Creator", func() {
 		fakeRootFSConfigurer = new(grootfakes.FakeRootFSConfigurer)
 		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
 		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
+		fakeCleaner = new(grootfakes.FakeCleaner)
 
 		var err error
 		lockFile, err = ioutil.TempFile("", "")
@@ -48,7 +50,7 @@ var _ = Describe("Creator", func() {
 		creator = groot.IamCreator(
 			fakeImageCloner, fakeBaseImagePuller, fakeLocksmith,
 			fakeRootFSConfigurer, fakeDependencyManager, fakeMetricsEmitter,
-		)
+			fakeCleaner)
 	})
 
 	AfterEach(func() {
@@ -64,6 +66,33 @@ var _ = Describe("Creator", func() {
 
 			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
 			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GlobalLockKey))
+		})
+
+		Context("when clean up store is requested", func() {
+			It("cleans the store", func() {
+				_, err := creator.Create(logger, groot.CreateSpec{
+					BaseImage:    "/path/to/image",
+					CleanUpStore: true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeCleaner.CleanCallCount()).To(Equal(1))
+				_, _, _, acquireLock := fakeCleaner.CleanArgsForCall(0)
+				Expect(acquireLock).To(BeFalse())
+			})
+
+			Context("and fails to clean up", func() {
+				BeforeEach(func() {
+					fakeCleaner.CleanReturns(true, errors.New("failed to clean up store"))
+				})
+
+				It("returns an error", func() {
+					_, err := creator.Create(logger, groot.CreateSpec{
+						BaseImage:    "/path/to/image",
+						CleanUpStore: true,
+					})
+					Expect(err).To(MatchError(ContainSubstring("failed to clean up store")))
+				})
+			})
 		})
 
 		It("pulls the image", func() {
@@ -85,7 +114,7 @@ var _ = Describe("Creator", func() {
 			Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
 		})
 
-		It("makes a image", func() {
+		It("makes an image", func() {
 			baseImage := groot.BaseImage{
 				VolumePath: "/path/to/volume",
 				BaseImage: specsv1.Image{

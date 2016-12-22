@@ -17,11 +17,13 @@ type CreateSpec struct {
 	BaseImage                 string
 	DiskLimit                 int64
 	ExcludeBaseImageFromQuota bool
+	CleanUpStore              bool
 	UIDMappings               []IDMappingSpec
 	GIDMappings               []IDMappingSpec
 }
 
 type Creator struct {
+	cleaner           Cleaner
 	imageCloner       ImageCloner
 	baseImagePuller   BaseImagePuller
 	locksmith         Locksmith
@@ -33,7 +35,7 @@ type Creator struct {
 func IamCreator(
 	imageCloner ImageCloner, baseImagePuller BaseImagePuller,
 	locksmith Locksmith, rootFSConfigurer RootFSConfigurer,
-	dependencyManager DependencyManager, metricsEmitter MetricsEmitter,
+	dependencyManager DependencyManager, metricsEmitter MetricsEmitter, cleaner Cleaner,
 ) *Creator {
 	return &Creator{
 		imageCloner:       imageCloner,
@@ -42,6 +44,7 @@ func IamCreator(
 		rootFSConfigurer:  rootFSConfigurer,
 		dependencyManager: dependencyManager,
 		metricsEmitter:    metricsEmitter,
+		cleaner:           cleaner,
 	}
 }
 
@@ -89,6 +92,12 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 			logger.Error("failed-to-unlock", err)
 		}
 	}()
+
+	if spec.CleanUpStore {
+		if _, err := c.cleaner.Clean(logger, 0, []string{}, false); err != nil {
+			return Image{}, fmt.Errorf("failed-to-cleanup-store", err)
+		}
+	}
 
 	baseImage, err := c.baseImagePuller.Pull(logger, baseImageSpec)
 	if err != nil {

@@ -6,7 +6,12 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type Cleaner struct {
+//go:generate counterfeiter . Cleaner
+type Cleaner interface {
+	Clean(logger lager.Logger, threshold uint64, keepImages []string, acquireLock bool) (bool, error)
+}
+
+type cleaner struct {
 	storeMeasurer    StoreMeasurer
 	garbageCollector GarbageCollector
 	locksmith        Locksmith
@@ -15,8 +20,8 @@ type Cleaner struct {
 
 func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	gc GarbageCollector, metricsEmitter MetricsEmitter,
-) *Cleaner {
-	return &Cleaner{
+) *cleaner {
+	return &cleaner{
 		locksmith:        locksmith,
 		storeMeasurer:    sm,
 		garbageCollector: gc,
@@ -24,7 +29,7 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	}
 }
 
-func (c *Cleaner) Clean(logger lager.Logger, threshold uint64, keepImages []string, acquireLock bool) (bool, error) {
+func (c *cleaner) Clean(logger lager.Logger, threshold uint64, keepImages []string, acquireLock bool) (bool, error) {
 	startTime := time.Now()
 	defer func() {
 		c.metricsEmitter.TryEmitDuration(logger, MetricImageCleanTime, time.Since(startTime))
