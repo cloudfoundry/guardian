@@ -30,7 +30,7 @@ var StatsCommand = cli.Command{
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		commandRunner := linux_command_runner.New()
-		metrix := metrix.NewBtrfsStats(commandRunner)
+		metrix := metrix.NewBtrfsStats(ctx.GlobalString("btrfs-bin"), commandRunner)
 		stats, err := metrix.VolumeStats(
 			logger,
 			ctx.String("volume-path"),

@@ -24,7 +24,7 @@ var _ = Describe("Btrfs", func() {
 	BeforeEach(func() {
 		fakeCommandRunner = fake_command_runner.New()
 
-		limiter = limiterpkg.NewBtrfsLimiter(fakeCommandRunner)
+		limiter = limiterpkg.NewBtrfsLimiter("custom-btrfs-bin", fakeCommandRunner)
 
 		logger = lagertest.NewTestLogger("drax-limiter")
 	})
@@ -35,7 +35,7 @@ var _ = Describe("Btrfs", func() {
 			Expect(limiter.ApplyDiskLimit(logger, "/full/path/to/volume", 1024*1024, false)).To(Succeed())
 
 			Expect(fakeCommandRunner).Should(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "btrfs",
+				Path: "custom-btrfs-bin",
 				Args: []string{"qgroup", "limit", "1048576", "/full/path/to/volume"},
 			}))
 		})
@@ -45,7 +45,7 @@ var _ = Describe("Btrfs", func() {
 				Expect(limiter.ApplyDiskLimit(logger, "/full/path/to/volume", 1024*1024, true)).To(Succeed())
 
 				Expect(fakeCommandRunner).Should(HaveExecutedSerially(fake_command_runner.CommandSpec{
-					Path: "btrfs",
+					Path: "custom-btrfs-bin",
 					Args: []string{"qgroup", "limit", "-e", "1048576", "/full/path/to/volume"},
 				}))
 			})
@@ -54,7 +54,7 @@ var _ = Describe("Btrfs", func() {
 		Context("when setting the limit fails", func() {
 			BeforeEach(func() {
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "btrfs",
+					Path: "custom-btrfs-bin",
 				}, func(cmd *exec.Cmd) error {
 					cmd.Stdout.Write([]byte("failed to set btrfs limit"))
 					cmd.Stderr.Write([]byte("some stderr text"))
@@ -77,7 +77,7 @@ var _ = Describe("Btrfs", func() {
 			Expect(limiter.DestroyQuotaGroup(logger, "/full/path/to/volume")).To(Succeed())
 
 			Expect(fakeCommandRunner).Should(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "btrfs",
+				Path: "custom-btrfs-bin",
 				Args: []string{"qgroup", "destroy", "/full/path/to/volume", "/full/path/to/volume"},
 			}))
 		})
@@ -85,7 +85,7 @@ var _ = Describe("Btrfs", func() {
 		Context("when destroying the qgroup fails", func() {
 			BeforeEach(func() {
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "btrfs",
+					Path: "custom-btrfs-bin",
 				}, func(cmd *exec.Cmd) error {
 					cmd.Stdout.Write([]byte("failed to destroy qgroup"))
 					cmd.Stderr.Write([]byte("some stderr text"))

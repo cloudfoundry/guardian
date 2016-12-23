@@ -14,11 +14,13 @@ import (
 
 type BtrfsLimiter struct {
 	commandRunner commandrunner.CommandRunner
+	btrfsBin      string
 }
 
-func NewBtrfsLimiter(commandRunner commandrunner.CommandRunner) *BtrfsLimiter {
+func NewBtrfsLimiter(btrfsBin string, commandRunner commandrunner.CommandRunner) *BtrfsLimiter {
 	return &BtrfsLimiter{
 		commandRunner: commandRunner,
+		btrfsBin:      btrfsBin,
 	}
 }
 
@@ -27,7 +29,7 @@ func (i *BtrfsLimiter) ApplyDiskLimit(logger lager.Logger, path string, diskLimi
 	logger.Info("start")
 	defer logger.Info("end")
 
-	cmd := exec.Command("btrfs", i.argsForLimit(path, strconv.FormatInt(diskLimit, 10), exclusiveLimit)...)
+	cmd := exec.Command(i.btrfsBin, i.argsForLimit(path, strconv.FormatInt(diskLimit, 10), exclusiveLimit)...)
 	combinedBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = combinedBuffer
 	cmd.Stderr = combinedBuffer
@@ -46,7 +48,7 @@ func (i *BtrfsLimiter) DestroyQuotaGroup(logger lager.Logger, path string) error
 	logger.Info("start")
 	defer logger.Info("end")
 
-	cmd := exec.Command("btrfs", "qgroup", "destroy", path, path)
+	cmd := exec.Command(i.btrfsBin, "qgroup", "destroy", path, path)
 	combinedBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = combinedBuffer
 	cmd.Stderr = combinedBuffer

@@ -12,11 +12,13 @@ import (
 
 type BtrfsStats struct {
 	commandRunner commandrunner.CommandRunner
+	btrfsBin      string
 }
 
-func NewBtrfsStats(commandRunner commandrunner.CommandRunner) *BtrfsStats {
+func NewBtrfsStats(btrfsBin string, commandRunner commandrunner.CommandRunner) *BtrfsStats {
 	return &BtrfsStats{
 		commandRunner: commandRunner,
+		btrfsBin:      btrfsBin,
 	}
 }
 
@@ -30,7 +32,7 @@ func (m *BtrfsStats) VolumeStats(logger lager.Logger, path string, forceSync boo
 	}
 
 	if forceSync {
-		cmd := exec.Command("btrfs", "filesystem", "sync", path)
+		cmd := exec.Command(m.btrfsBin, "filesystem", "sync", path)
 		combinedBuffer := bytes.NewBuffer([]byte{})
 		cmd.Stdout = combinedBuffer
 		cmd.Stderr = combinedBuffer
@@ -41,7 +43,7 @@ func (m *BtrfsStats) VolumeStats(logger lager.Logger, path string, forceSync boo
 		}
 	}
 
-	cmd := exec.Command("btrfs", "qgroup", "show", "--raw", "-F", path)
+	cmd := exec.Command(m.btrfsBin, "qgroup", "show", "--raw", "-F", path)
 	outputBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = outputBuffer
 	errorBuffer := bytes.NewBuffer([]byte{})
@@ -59,7 +61,7 @@ func (m *BtrfsStats) VolumeStats(logger lager.Logger, path string, forceSync boo
 }
 
 func (m *BtrfsStats) isSubvolume(logger lager.Logger, path string) error {
-	cmd := exec.Command("btrfs", "subvolume", "show", path)
+	cmd := exec.Command(m.btrfsBin, "subvolume", "show", path)
 	combinedBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stderr = combinedBuffer
 	cmd.Stdout = combinedBuffer

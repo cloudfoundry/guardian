@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -439,6 +440,30 @@ var _ = Describe("Btrfs", func() {
 				Expect(sess.Err).To(gbytes.Say("Disk quota exceeded"))
 			})
 
+			Context("when using a custom btrfs binary", func() {
+				var (
+					btrfsCalledFile *os.File
+					btrfsBin        *os.File
+					tempFolder      string
+				)
+
+				BeforeEach(func() {
+					tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
+				})
+
+				AfterEach(func() {
+					Expect(os.RemoveAll(tempFolder)).To(Succeed())
+				})
+
+				It("will force drax to use that binary", func() {
+					btrfs = volume_driver.NewBtrfs(btrfsBin.Name(), draxBinPath, storePath)
+					Expect(btrfs.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, true)).To(Succeed())
+					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(contents)).To(Equal("I'm groot - btrfs"))
+				})
+			})
+
 			Context("when exclusive limit is active", func() {
 				It("applies the disk limit with the exclusive flag", func() {
 					Expect(btrfs.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, true)).To(Succeed())
@@ -528,6 +553,32 @@ var _ = Describe("Btrfs", func() {
 				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(4227072)))
 				// Block math craziness -> 2* 4227072 ~= 8437760
 				Expect(stats.DiskUsage.TotalBytesUsed).To(Equal(int64(8437760)))
+			})
+
+			Context("when using a custom btrfs binary", func() {
+				var (
+					btrfsCalledFile *os.File
+					btrfsBin        *os.File
+					tempFolder      string
+				)
+
+				BeforeEach(func() {
+					tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
+				})
+
+				AfterEach(func() {
+					Expect(os.RemoveAll(tempFolder)).To(Succeed())
+				})
+
+				It("will force drax to use that binary", func() {
+					btrfs = volume_driver.NewBtrfs(btrfsBin.Name(), draxBinPath, storePath)
+					_, err := btrfs.FetchStats(logger, toPath)
+					Expect(err).To(HaveOccurred())
+
+					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(contents)).To(Equal("I'm groot - btrfs"))
+				})
 			})
 
 			Context("when drax does not exist", func() {

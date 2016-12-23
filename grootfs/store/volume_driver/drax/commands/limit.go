@@ -34,7 +34,7 @@ var LimitCommand = cli.Command{
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		commandRunner := linux_command_runner.New()
-		limiter := limiterpkg.NewBtrfsLimiter(commandRunner)
+		limiter := limiterpkg.NewBtrfsLimiter(ctx.GlobalString("btrfs-bin"), commandRunner)
 		err := limiter.ApplyDiskLimit(
 			logger,
 			ctx.String("volume-path"),

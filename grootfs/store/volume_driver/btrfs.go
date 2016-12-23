@@ -115,7 +115,7 @@ func (d *Btrfs) destroyQgroup(logger lager.Logger, path string) error {
 		return errors.New("missing the setuid bit on drax")
 	}
 
-	cmd := exec.Command(d.draxBinPath, "destroy", "--volume-path", path)
+	cmd := exec.Command(d.draxBinPath, "--btrfs-bin", d.btrfsBinPath, "destroy", "--volume-path", path)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = stdoutBuffer
 	cmd.Stderr = lagregator.NewRelogger(logger)
@@ -174,6 +174,7 @@ func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64
 	}
 
 	args := []string{
+		"--btrfs-bin", d.btrfsBinPath,
 		"limit",
 		"--volume-path", path,
 		"--disk-limit-bytes", strconv.FormatInt(diskLimit, 10),
@@ -213,6 +214,7 @@ func (d *Btrfs) FetchStats(logger lager.Logger, path string) (groot.VolumeStats,
 	}
 
 	args := []string{
+		"--btrfs-bin", d.btrfsBinPath,
 		"stats",
 		"--volume-path", path,
 		"--force-sync",

@@ -13,6 +13,13 @@ func main() {
 	drax.Name = "drax"
 	drax.Usage = "The destroyer"
 	drax.Version = "0.1.0"
+	drax.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "btrfs-bin",
+			Usage: "Path to btrfs bin. (If not provided will use $PATH)",
+			Value: "btrfs",
+		},
+	}
 
 	drax.Before = func(ctx *cli.Context) error {
 		cli.ErrWriter = os.Stdout

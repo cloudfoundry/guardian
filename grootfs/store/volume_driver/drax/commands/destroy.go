@@ -26,7 +26,7 @@ var DestroyCommand = cli.Command{
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		commandRunner := linux_command_runner.New()
-		limiter := limiterpkg.NewBtrfsLimiter(commandRunner)
+		limiter := limiterpkg.NewBtrfsLimiter(ctx.GlobalString("btrfs-bin"), commandRunner)
 		err := limiter.DestroyQuotaGroup(logger, ctx.String("volume-path"))
 		if err != nil {
 			logger.Error("destroying-qgroup", err)

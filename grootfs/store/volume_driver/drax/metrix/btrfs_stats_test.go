@@ -27,14 +27,14 @@ var _ = Describe("Stats", func() {
 		stats = []byte(`qgroupid         rfer         excl\n--------         ----         ----\n0/259         2113536      1064960`)
 
 		fakeCommandRunner = fake_command_runner.New()
-		btrfsStats = metrix.NewBtrfsStats(fakeCommandRunner)
+		btrfsStats = metrix.NewBtrfsStats("custom-btrfs-bin", fakeCommandRunner)
 		logger = lagertest.NewTestLogger("drax-limiter")
 	})
 
 	Describe("VolumeStats", func() {
 		BeforeEach(func() {
 			fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-				Path: "btrfs",
+				Path: "custom-btrfs-bin",
 				Args: []string{"qgroup", "show", "--raw", "-F", "/full/path/to/volume"},
 			}, func(cmd *exec.Cmd) error {
 				cmd.Stdout.Write(stats)
@@ -54,7 +54,7 @@ var _ = Describe("Stats", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fakeCommandRunner).Should(HaveExecutedSerially(fake_command_runner.CommandSpec{
-				Path: "btrfs",
+				Path: "custom-btrfs-bin",
 				Args: []string{"qgroup", "show", "--raw", "-F", "/full/path/to/volume"},
 			}))
 		})
@@ -66,7 +66,7 @@ var _ = Describe("Stats", func() {
 
 				Expect(fakeCommandRunner).ShouldNot(HaveExecutedSerially(
 					fake_command_runner.CommandSpec{
-						Path: "btrfs",
+						Path: "custom-btrfs-bin",
 						Args: []string{"filesystem", "sync", "/full/path/to/volume"},
 					},
 				))
@@ -80,11 +80,11 @@ var _ = Describe("Stats", func() {
 
 				Expect(fakeCommandRunner).Should(HaveExecutedSerially(
 					fake_command_runner.CommandSpec{
-						Path: "btrfs",
+						Path: "custom-btrfs-bin",
 						Args: []string{"filesystem", "sync", "/full/path/to/volume"},
 					},
 					fake_command_runner.CommandSpec{
-						Path: "btrfs",
+						Path: "custom-btrfs-bin",
 						Args: []string{"qgroup", "show", "--raw", "-F", "/full/path/to/volume"},
 					},
 				))
@@ -93,7 +93,7 @@ var _ = Describe("Stats", func() {
 			Context("when filesystem sync fails", func() {
 				BeforeEach(func() {
 					fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-						Path: "btrfs",
+						Path: "custom-btrfs-bin",
 						Args: []string{"filesystem", "sync", "/full/path/to/volume"},
 					}, func(cmd *exec.Cmd) error {
 						cmd.Stdout.Write([]byte("failed to sync stuff"))
@@ -113,7 +113,7 @@ var _ = Describe("Stats", func() {
 		Context("when checking the path fails", func() {
 			BeforeEach(func() {
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "btrfs",
+					Path: "custom-btrfs-bin",
 					Args: []string{"subvolume", "show", "/full/path/to/volume"},
 				}, func(cmd *exec.Cmd) error {
 					cmd.Stdout.Write([]byte("failed to show stuff"))
@@ -132,7 +132,7 @@ var _ = Describe("Stats", func() {
 		Context("when the path is not a volume", func() {
 			BeforeEach(func() {
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "btrfs",
+					Path: "custom-btrfs-bin",
 					Args: []string{"subvolume", "show", "/full/path/to/volume"},
 				}, func(cmd *exec.Cmd) error {
 					cmd.Stdout.Write([]byte("failed to show stuff"))
@@ -150,9 +150,9 @@ var _ = Describe("Stats", func() {
 		Context("when qgroup fails", func() {
 			BeforeEach(func() {
 				fakeCommandRunner = fake_command_runner.New()
-				btrfsStats = metrix.NewBtrfsStats(fakeCommandRunner)
+				btrfsStats = metrix.NewBtrfsStats("custom-btrfs-bin", fakeCommandRunner)
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "btrfs",
+					Path: "custom-btrfs-bin",
 					Args: []string{"qgroup", "show", "--raw", "-F", "/full/path/to/volume"},
 				}, func(cmd *exec.Cmd) error {
 					cmd.Stdout.Write([]byte("failed to sync stuff"))
