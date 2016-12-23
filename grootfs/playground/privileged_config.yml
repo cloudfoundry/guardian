@@ -1,0 +1,14 @@
+store_path: /var/lib/grootfs
+clean_on_create: false
+#clean_threshold_bytes: 0
+#disk_limit_size_bytes: 1000000
+drax_bin: /usr/local/bin/drax
+btrfs_bin: /bin/btrfs
+newuidmap_bin: /usr/local/bin/newuidmap
+newgidmap_bin: /usr/local/bin/newgidmap
+exclude_base_image_from_quota:
+ignore_base_images: []
+insecure_registries: []
+#metron_endpoint: 127.0.0.1:1234
+log_level: debug
+log_file:
