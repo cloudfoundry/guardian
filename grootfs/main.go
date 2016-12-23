@@ -95,7 +95,7 @@ func main() {
 		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), ctx.IsSet("store")).
 			WithDraxBin(ctx.GlobalString("drax-bin"), ctx.IsSet("drax-bin")).
 			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
-			WithLogLevel(ctx.String("log-level")).
+			WithLogLevel(ctx.GlobalString("log-level"), ctx.IsSet("log-level")).
 			WithLogFile(ctx.GlobalString("log-file")).
 			WithBtrfsBin(ctx.GlobalString("btrfs-bin"), ctx.IsSet("btrfs-bin")).
 			WithNewuidmapBin(ctx.GlobalString("newuidmap-bin"), ctx.IsSet("newuidmap-bin")).

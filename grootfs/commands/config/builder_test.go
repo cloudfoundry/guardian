@@ -444,7 +444,7 @@ var _ = Describe("Builder", func() {
 
 	Describe("WithLogLevel", func() {
 		It("overrides the config's Log Level entry", func() {
-			builder = builder.WithLogLevel("debug")
+			builder = builder.WithLogLevel("debug", true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config.LogLevel).To(Equal("debug"))
@@ -452,7 +452,7 @@ var _ = Describe("Builder", func() {
 
 		Context("when empty", func() {
 			It("doesn't override the config's log level entry", func() {
-				builder = builder.WithLogLevel("")
+				builder = builder.WithLogLevel("", false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(config.LogLevel).To(Equal(cfg.LogLevel))

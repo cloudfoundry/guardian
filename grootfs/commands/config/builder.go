@@ -164,8 +164,8 @@ func (b *Builder) WithCleanThresholdBytes(threshold int64, isSet bool) *Builder 
 	return b
 }
 
-func (b *Builder) WithLogLevel(level string) *Builder {
-	if level != "" {
+func (b *Builder) WithLogLevel(level string, isSet bool) *Builder {
+	if isSet {
 		b.config.LogLevel = level
 	}
 	return b
