@@ -164,7 +164,6 @@ type GuardianCommand struct {
 		IPTablesRestore FileFlag `long:"iptables-restore-bin"  default:"/sbin/iptables-restore" description:"path to the iptables-restore binary"`
 		Init            FileFlag `long:"init-bin"      required:"true" description:"Path execute as pid 1 inside each container."`
 		Runc            string   `long:"runc-bin"      default:"runc" description:"Path to the 'runc' binary."`
-		ImagePlugin     FileFlag `long:"image-plugin"           description:"Path to image plugin binary."`
 	} `group:"Binary Tools"`
 
 	Graph struct {
@@ -172,6 +171,12 @@ type GuardianCommand struct {
 		CleanupThresholdInMegabytes int      `long:"graph-cleanup-threshold-in-megabytes" default:"-1" description:"Disk usage of the graph dir at which cleanup should trigger, or -1 to disable graph cleanup."`
 		PersistentImages            []string `long:"persistent-image" description:"Image that should never be garbage collected. Can be specified multiple times."`
 	} `group:"Image Graph"`
+
+	Image struct {
+		Plugin                    FileFlag `long:"image-plugin"           description:"Path to image plugin binary."`
+		PluginExtraArgs           []string `long:"image-plugin-extra-arg" description:"Extra argument to pass to the image plugin to create unprivileged images. Can be specified multiple times."`
+		PrivilegedPluginExtraArgs []string `long:"privileged-image-plugin-extra-arg" description:"Extra argument to pass to the image plugin to create privileged images. Can be specified multiple times."`
+	} `group:"Image"`
 
 	Docker struct {
 		Registry           string   `long:"docker-registry" default:"registry-1.docker.io" description:"Docker registry API endpoint."`
@@ -278,12 +283,9 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	}
 
 	var volumeCreator gardener.VolumeCreator = nil
-	if !cmd.Server.Rootless {
-		volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
-	}
-
 	starters := []gardener.Starter{}
 	if !cmd.Server.Rootless {
+		volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
 		starters = []gardener.Starter{cmd.wireRunDMCStarter(logger), iptablesStarter}
 	}
 
@@ -446,12 +448,14 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		return gardener.NoopVolumeCreator{}
 	}
 
-	if cmd.Bin.ImagePlugin.Path() != "" {
+	if cmd.Image.Plugin.Path() != "" {
 		defaultRootFS, err := url.Parse(cmd.Containers.DefaultRootFSDir.Path())
 		if err != nil {
 			logger.Fatal("failed-to-parse-default-rootfs", err)
 		}
-		return imageplugin.New(cmd.Bin.ImagePlugin.Path(), linux_command_runner.New(), defaultRootFS, idMappings)
+		return imageplugin.New(cmd.Image.Plugin.Path(), linux_command_runner.New(),
+			defaultRootFS, idMappings, cmd.Image.PrivilegedPluginExtraArgs,
+			cmd.Image.PluginExtraArgs)
 	}
 
 	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})

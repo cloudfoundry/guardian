@@ -20,20 +20,28 @@ import (
 	"github.com/tscolari/lagregator"
 )
 
-func New(binPath string, commandRunner command_runner.CommandRunner, defaultBaseImage *url.URL, mappings []specs.LinuxIDMapping) *ExternalImageManager {
-	return &ExternalImageManager{
-		binPath:          binPath,
-		commandRunner:    commandRunner,
-		defaultBaseImage: defaultBaseImage,
-		mappings:         mappings,
-	}
+type ExternalImageManager struct {
+	binPath             string
+	commandRunner       command_runner.CommandRunner
+	defaultBaseImage    *url.URL
+	mappings            []specs.LinuxIDMapping
+	privilegedExtraArgs []string
+	extraArgs           []string
 }
 
-type ExternalImageManager struct {
-	binPath          string
-	commandRunner    command_runner.CommandRunner
-	defaultBaseImage *url.URL
-	mappings         []specs.LinuxIDMapping
+func New(binPath string, commandRunner command_runner.CommandRunner,
+	defaultBaseImage *url.URL, mappings []specs.LinuxIDMapping,
+	privilegedExtraArgs []string,
+	extraArgs []string,
+) *ExternalImageManager {
+	return &ExternalImageManager{
+		binPath:             binPath,
+		commandRunner:       commandRunner,
+		defaultBaseImage:    defaultBaseImage,
+		mappings:            mappings,
+		privilegedExtraArgs: privilegedExtraArgs,
+		extraArgs:           extraArgs,
+	}
 }
 
 func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error) {
@@ -41,7 +49,12 @@ func (p *ExternalImageManager) Create(log lager.Logger, handle string, spec root
 	log.Debug("start")
 	defer log.Debug("end")
 
-	args := []string{"create"}
+	var args []string
+	if spec.Namespaced {
+		args = append(p.extraArgs, "create")
+	} else {
+		args = append(p.privilegedExtraArgs, "create")
+	}
 	if spec.QuotaSize != 0 {
 		if spec.QuotaScope == garden.DiskLimitScopeExclusive {
 			args = append(args, "--exclude-image-from-quota")
@@ -101,7 +114,8 @@ func (p *ExternalImageManager) Destroy(log lager.Logger, handle, rootFSPath stri
 	defer log.Debug("end")
 
 	imagePath := filepath.Dir(rootFSPath)
-	cmd := exec.Command(p.binPath, "delete", imagePath)
+	args := append(p.extraArgs, "delete", imagePath)
+	cmd := exec.Command(p.binPath, args...)
 
 	cmd.Stderr = lagregator.NewRelogger(log)
 	outBuffer := bytes.NewBuffer([]byte{})
@@ -122,7 +136,8 @@ func (p *ExternalImageManager) Metrics(log lager.Logger, _, rootfs string) (gard
 	defer log.Debug("end")
 
 	imagePath := filepath.Dir(rootfs)
-	cmd := exec.Command(p.binPath, "stats", imagePath)
+	args := append(p.extraArgs, "stats", imagePath)
+	cmd := exec.Command(p.binPath, args...)
 	cmd.Stderr = lagregator.NewRelogger(log)
 	outBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = outBuffer
@@ -149,7 +164,8 @@ func (p *ExternalImageManager) GC(log lager.Logger) error {
 	log.Debug("start")
 	defer log.Debug("end")
 
-	cmd := exec.Command(p.binPath, "clean")
+	args := append(p.extraArgs, "clean")
+	cmd := exec.Command(p.binPath, args...)
 	cmd.Stderr = lagregator.NewRelogger(log)
 	outBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = outBuffer

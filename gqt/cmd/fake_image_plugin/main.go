@@ -12,8 +12,19 @@ import (
 	"code.cloudfoundry.org/guardian/imageplugin"
 )
 
+var actions = []string{
+	"clean",
+	"create",
+	"delete",
+	"list",
+	"stats",
+}
+
 func main() {
-	action := os.Args[1]
+	action, err := findAction(os.Args)
+	if err != nil {
+		panic(err)
+	}
 	imageID := os.Args[len(os.Args)-1]
 
 	if imageID == "make-it-fail" {
@@ -51,7 +62,7 @@ func main() {
 	}
 
 	whoamiPath := filepath.Join(imagePath, fmt.Sprintf("%s-whoami", action))
-	err := ioutil.WriteFile(whoamiPath, []byte(fmt.Sprintf("%d - %d\n", uid, gid)), 0755)
+	err = ioutil.WriteFile(whoamiPath, []byte(fmt.Sprintf("%d - %d\n", uid, gid)), 0755)
 	if err != nil {
 		panic(err)
 	}
@@ -105,4 +116,22 @@ func setEnvVars(imagePath string, env []string) error {
 	}
 
 	return json.NewEncoder(imageJson).Encode(image)
+}
+
+func findAction(args []string) (action string, err error) {
+	for _, arg := range args {
+		if isAction(arg) {
+			return arg, nil
+		}
+	}
+	return "", fmt.Errorf("action not found")
+}
+
+func isAction(arg string) bool {
+	for _, action := range actions {
+		if arg == action {
+			return true
+		}
+	}
+	return false
 }

@@ -34,12 +34,16 @@ var _ = Describe("ExternalImageManager", func() {
 		fakeCmdRunnerStdout  string
 		fakeCmdRunnerStderr  string
 		fakeCmdRunnerErr     error
+		privilegedExtraArgs  []string
+		extraArgs            []string
 	)
 
 	BeforeEach(func() {
 		fakeCmdRunnerStdout = ""
 		fakeCmdRunnerStderr = ""
 		fakeCmdRunnerErr = nil
+		privilegedExtraArgs = []string{"foo", "bar"}
+		extraArgs = []string{"bar", "foo"}
 
 		logger = glager.NewLogger("external-image-manager")
 		fakeCommandRunner = fake_command_runner.New()
@@ -60,7 +64,8 @@ var _ = Describe("ExternalImageManager", func() {
 		var err error
 		defaultBaseImage, err = url.Parse("/default/image")
 		Expect(err).ToNot(HaveOccurred())
-		externalImageManager = imageplugin.New("/external-image-manager-bin", fakeCommandRunner, defaultBaseImage, idMappings)
+		externalImageManager = imageplugin.New("/external-image-manager-bin",
+			fakeCommandRunner, defaultBaseImage, idMappings, privilegedExtraArgs, extraArgs)
 
 		baseImage, err = url.Parse("/hello/image")
 		Expect(err).ToNot(HaveOccurred())
@@ -162,7 +167,43 @@ var _ = Describe("ExternalImageManager", func() {
 				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-				Expect(imageManagerCmd.Args[1]).To(Equal("create"))
+				Expect(imageManagerCmd.Args[3]).To(Equal("create"))
+			})
+
+			Context("when container is privileged", func() {
+				It("sets the correct extra arguments", func() {
+					_, _, err := externalImageManager.Create(
+						logger, "hello", rootfs_provider.Spec{
+							RootFS:     baseImage,
+							Namespaced: false,
+						},
+					)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+					imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+					Expect(imageManagerCmd.Args[1]).To(Equal("foo"))
+					Expect(imageManagerCmd.Args[2]).To(Equal("bar"))
+				})
+			})
+
+			Context("when container is unprivileged", func() {
+				It("sets the correct extra arguments", func() {
+					_, _, err := externalImageManager.Create(
+						logger, "hello", rootfs_provider.Spec{
+							RootFS:     baseImage,
+							Namespaced: true,
+						},
+					)
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+					imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+					Expect(imageManagerCmd.Args[1]).To(Equal("bar"))
+					Expect(imageManagerCmd.Args[2]).To(Equal("foo"))
+				})
 			})
 
 			It("sets the correct image input to external-image-manager", func() {
@@ -228,7 +269,7 @@ var _ = Describe("ExternalImageManager", func() {
 					firstMap := fmt.Sprintf("%d:%d:%d", idMappings[0].ContainerID, idMappings[0].HostID, idMappings[0].Size)
 					secondMap := fmt.Sprintf("%d:%d:%d", idMappings[1].ContainerID, idMappings[1].HostID, idMappings[1].Size)
 
-					Expect(imageManagerCmd.Args[2:10]).To(Equal([]string{
+					Expect(imageManagerCmd.Args[4:12]).To(Equal([]string{
 						"--uid-mapping", firstMap,
 						"--gid-mapping", firstMap,
 						"--uid-mapping", secondMap,
@@ -283,8 +324,8 @@ var _ = Describe("ExternalImageManager", func() {
 					Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 					imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-					Expect(imageManagerCmd.Args[2]).To(Equal("--disk-limit-size-bytes"))
-					Expect(imageManagerCmd.Args[3]).To(Equal("1024"))
+					Expect(imageManagerCmd.Args[4]).To(Equal("--disk-limit-size-bytes"))
+					Expect(imageManagerCmd.Args[5]).To(Equal("1024"))
 				})
 			})
 
@@ -302,9 +343,9 @@ var _ = Describe("ExternalImageManager", func() {
 					Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 					imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-					Expect(imageManagerCmd.Args[2]).To(Equal("--exclude-image-from-quota"))
-					Expect(imageManagerCmd.Args[3]).To(Equal("--disk-limit-size-bytes"))
-					Expect(imageManagerCmd.Args[4]).To(Equal("1024"))
+					Expect(imageManagerCmd.Args[4]).To(Equal("--exclude-image-from-quota"))
+					Expect(imageManagerCmd.Args[5]).To(Equal("--disk-limit-size-bytes"))
+					Expect(imageManagerCmd.Args[6]).To(Equal("1024"))
 				})
 			})
 		})
@@ -376,6 +417,18 @@ var _ = Describe("ExternalImageManager", func() {
 			Expect(imageManagerCmd.Path).To(Equal("/external-image-manager-bin"))
 		})
 
+		It("sets the correct extra arguments", func() {
+			Expect(externalImageManager.Destroy(
+				logger, "hello", "/store/0/images/123/rootfs",
+			)).To(Succeed())
+
+			Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+			imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+			Expect(imageManagerCmd.Args[1]).To(Equal("bar"))
+			Expect(imageManagerCmd.Args[2]).To(Equal("foo"))
+		})
+
 		Describe("external-image-manager parameters", func() {
 			It("uses the correct external-image-manager delete command", func() {
 				Expect(externalImageManager.Destroy(
@@ -384,7 +437,7 @@ var _ = Describe("ExternalImageManager", func() {
 				Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 				imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-				Expect(imageManagerCmd.Args[1]).To(Equal("delete"))
+				Expect(imageManagerCmd.Args[3]).To(Equal("delete"))
 			})
 
 			It("passes the correct image path to delete to/ the external-image-manager", func() {
@@ -422,41 +475,6 @@ var _ = Describe("ExternalImageManager", func() {
 		})
 	})
 
-	Describe("GC", func() {
-		var imageManagerCmd *exec.Cmd
-
-		It("uses the correct external-image-manager binary", func() {
-			Expect(externalImageManager.GC(logger)).NotTo(HaveOccurred())
-			imageManagerCmd = fakeCommandRunner.ExecutedCommands()[0]
-			Expect(imageManagerCmd.Path).To(Equal("/external-image-manager-bin"))
-		})
-
-		It("calls external image clean command", func() {
-			Expect(externalImageManager.GC(logger)).NotTo(HaveOccurred())
-			imageManagerCmd = fakeCommandRunner.ExecutedCommands()[0]
-			Expect(imageManagerCmd.Args[1]).To(Equal("clean"))
-		})
-
-		Context("when the command fails", func() {
-			BeforeEach(func() {
-				fakeCmdRunnerErr = errors.New("external-image-manager failure")
-				fakeCmdRunnerStdout = "could not find drax"
-			})
-
-			It("returns an error", func() {
-				err := externalImageManager.GC(logger)
-				Expect(err).To(MatchError(ContainSubstring("external image manager clean failed")))
-				Expect(err).To(MatchError(ContainSubstring("external-image-manager failure")))
-				Expect(err).To(MatchError(ContainSubstring("could not find drax")))
-			})
-
-			It("forwards the external-image-manager error output", func() {
-				externalImageManager.GC(logger)
-				Expect(logger).To(gbytes.Say("could not find drax"))
-			})
-		})
-	})
-
 	Describe("Metrics", func() {
 		BeforeEach(func() {
 			fakeCmdRunnerErr = nil
@@ -473,14 +491,25 @@ var _ = Describe("ExternalImageManager", func() {
 			Expect(imageManagerCmd.Path).To(Equal("/external-image-manager-bin"))
 		})
 
+		It("sets the correct extra arguments", func() {
+			_, err := externalImageManager.Metrics(logger, "", "/store/0/bundles/123/rootfs")
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+			imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+			Expect(imageManagerCmd.Args[1]).To(Equal("bar"))
+			Expect(imageManagerCmd.Args[2]).To(Equal("foo"))
+		})
+
 		It("calls external-image-manager with the correct arguments", func() {
 			_, err := externalImageManager.Metrics(logger, "", "/store/0/bundles/123/rootfs")
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
 			imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
 
-			Expect(imageManagerCmd.Args[1]).To(Equal("stats"))
-			Expect(imageManagerCmd.Args[2]).To(Equal("/store/0/bundles/123"))
+			Expect(imageManagerCmd.Args[3]).To(Equal("stats"))
+			Expect(imageManagerCmd.Args[4]).To(Equal("/store/0/bundles/123"))
 		})
 
 		It("returns the correct ContainerDiskStat", func() {
@@ -510,6 +539,50 @@ var _ = Describe("ExternalImageManager", func() {
 		})
 	})
 
+	Describe("GC", func() {
+		var imageManagerCmd *exec.Cmd
+
+		It("uses the correct external-image-manager binary", func() {
+			Expect(externalImageManager.GC(logger)).NotTo(HaveOccurred())
+			imageManagerCmd = fakeCommandRunner.ExecutedCommands()[0]
+			Expect(imageManagerCmd.Path).To(Equal("/external-image-manager-bin"))
+		})
+
+		It("sets the correct extra arguments", func() {
+			Expect(externalImageManager.GC(logger)).NotTo(HaveOccurred())
+
+			Expect(len(fakeCommandRunner.ExecutedCommands())).To(Equal(1))
+			imageManagerCmd := fakeCommandRunner.ExecutedCommands()[0]
+
+			Expect(imageManagerCmd.Args[1]).To(Equal("bar"))
+			Expect(imageManagerCmd.Args[2]).To(Equal("foo"))
+		})
+
+		It("calls external image clean command", func() {
+			Expect(externalImageManager.GC(logger)).NotTo(HaveOccurred())
+			imageManagerCmd = fakeCommandRunner.ExecutedCommands()[0]
+			Expect(imageManagerCmd.Args[3]).To(Equal("clean"))
+		})
+
+		Context("when the command fails", func() {
+			BeforeEach(func() {
+				fakeCmdRunnerErr = errors.New("external-image-manager failure")
+				fakeCmdRunnerStdout = "could not find drax"
+			})
+
+			It("returns an error", func() {
+				err := externalImageManager.GC(logger)
+				Expect(err).To(MatchError(ContainSubstring("external image manager clean failed")))
+				Expect(err).To(MatchError(ContainSubstring("external-image-manager failure")))
+				Expect(err).To(MatchError(ContainSubstring("could not find drax")))
+			})
+
+			It("forwards the external-image-manager error output", func() {
+				externalImageManager.GC(logger)
+				Expect(logger).To(gbytes.Say("could not find drax"))
+			})
+		})
+	})
 	Describe("logging", func() {
 		BeforeEach(func() {
 			buffer := gbytes.NewBuffer()

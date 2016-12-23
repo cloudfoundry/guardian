@@ -316,7 +316,12 @@ var _ = Describe("Rootfs container create parameter", func() {
 		)
 
 		BeforeEach(func() {
-			args = append(args, "--image-plugin", testImagePluginBin)
+			args = append(args, "--image-plugin", testImagePluginBin,
+				"--privileged-image-plugin-extra-arg", "\"--privileged-key\"",
+				"--privileged-image-plugin-extra-arg", "privileged-value",
+				"--image-plugin-extra-arg", "\"--non-privileged-key\"",
+				"--image-plugin-extra-arg", "non-privileged-value",
+			)
 		})
 
 		AfterEach(func() {
@@ -345,6 +350,21 @@ var _ = Describe("Rootfs container create parameter", func() {
 					})
 					Expect(err).ToNot(HaveOccurred())
 					client.Destroy(c.Handle())
+				})
+
+				It("executes plugin create with the correct args", func() {
+					userArgsStr, err := ioutil.ReadFile(filepath.Join(imagePath, "create-args"))
+					Expect(err).ToNot(HaveOccurred())
+
+					userArgs := strings.Split(string(userArgsStr), " ")
+					Expect(userArgs).To(Equal([]string{
+						testImagePluginBin,
+						"--privileged-key",
+						"privileged-value",
+						"create",
+						"docker:///cfgarden/empty:v0.1.0",
+						fmt.Sprintf("non-quotaed-container-%d", GinkgoParallelNode()),
+					}))
 				})
 
 				It("executes the plugin as the host root user", func() {
@@ -396,6 +416,8 @@ var _ = Describe("Rootfs container create parameter", func() {
 					userArgs := strings.Split(string(userArgsStr), " ")
 					Expect(userArgs).To(Equal([]string{
 						testImagePluginBin,
+						"--non-privileged-key",
+						"non-privileged-value",
 						"create",
 						"--uid-mapping",
 						fmt.Sprintf("0:%d:1", maxId),
@@ -440,6 +462,8 @@ var _ = Describe("Rootfs container create parameter", func() {
 					userArgs := strings.Split(string(userArgsStr), " ")
 					Expect(userArgs).To(Equal([]string{
 						testImagePluginBin,
+						"--non-privileged-key",
+						"non-privileged-value",
 						"delete",
 						filepath.Join(storePath, imageID),
 					}))
