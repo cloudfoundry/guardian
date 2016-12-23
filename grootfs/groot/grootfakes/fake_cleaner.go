@@ -9,11 +9,11 @@ import (
 )
 
 type FakeCleaner struct {
-	CleanStub        func(logger lager.Logger, threshold uint64, keepImages []string, acquireLock bool) (bool, error)
+	CleanStub        func(logger lager.Logger, threshold int64, keepImages []string, acquireLock bool) (bool, error)
 	cleanMutex       sync.RWMutex
 	cleanArgsForCall []struct {
 		logger      lager.Logger
-		threshold   uint64
+		threshold   int64
 		keepImages  []string
 		acquireLock bool
 	}
@@ -25,7 +25,7 @@ type FakeCleaner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCleaner) Clean(logger lager.Logger, threshold uint64, keepImages []string, acquireLock bool) (bool, error) {
+func (fake *FakeCleaner) Clean(logger lager.Logger, threshold int64, keepImages []string, acquireLock bool) (bool, error) {
 	var keepImagesCopy []string
 	if keepImages != nil {
 		keepImagesCopy = make([]string, len(keepImages))
@@ -34,7 +34,7 @@ func (fake *FakeCleaner) Clean(logger lager.Logger, threshold uint64, keepImages
 	fake.cleanMutex.Lock()
 	fake.cleanArgsForCall = append(fake.cleanArgsForCall, struct {
 		logger      lager.Logger
-		threshold   uint64
+		threshold   int64
 		keepImages  []string
 		acquireLock bool
 	}{logger, threshold, keepImagesCopy, acquireLock})
@@ -53,7 +53,7 @@ func (fake *FakeCleaner) CleanCallCount() int {
 	return len(fake.cleanArgsForCall)
 }
 
-func (fake *FakeCleaner) CleanArgsForCall(i int) (lager.Logger, uint64, []string, bool) {
+func (fake *FakeCleaner) CleanArgsForCall(i int) (lager.Logger, int64, []string, bool) {
 	fake.cleanMutex.RLock()
 	defer fake.cleanMutex.RUnlock()
 	return fake.cleanArgsForCall[i].logger, fake.cleanArgsForCall[i].threshold, fake.cleanArgsForCall[i].keepImages, fake.cleanArgsForCall[i].acquireLock

@@ -14,7 +14,7 @@ import (
 type Config struct {
 	BaseStorePath             string   `yaml:"store_path"`
 	CleanOnCreate             bool     `yaml:"clean_on_create"`
-	CleanThresholdBytes       uint64   `yaml:"clean_threshold_bytes"`
+	CleanThresholdBytes       int64    `yaml:"clean_threshold_bytes"`
 	DiskLimitSizeBytes        int64    `yaml:"disk_limit_size_bytes"`
 	DraxBin                   string   `yaml:"drax_bin"`
 	BtrfsBin                  string   `yaml:"btrfs_bin"`
@@ -157,7 +157,7 @@ func (b *Builder) WithExcludeBaseImageFromQuota(exclude, isSet bool) *Builder {
 	return b
 }
 
-func (b *Builder) WithCleanThresholdBytes(threshold uint64, isSet bool) *Builder {
+func (b *Builder) WithCleanThresholdBytes(threshold int64, isSet bool) *Builder {
 	if isSet {
 		b.config.CleanThresholdBytes = threshold
 	}

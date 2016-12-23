@@ -35,7 +35,7 @@ var _ = Describe("Builder", func() {
 			InsecureRegistries:        []string{"http://example.org"},
 			DiskLimitSizeBytes:        int64(1000),
 			ExcludeBaseImageFromQuota: true,
-			CleanThresholdBytes:       0,
+			CleanThresholdBytes:       int64(0),
 			CleanOnCreate:             false,
 			LogLevel:                  "info",
 			LogFile:                   "/path/to/a/file",
@@ -426,15 +426,15 @@ var _ = Describe("Builder", func() {
 
 	Describe("WithCleanThresholdBytes", func() {
 		It("overrides the config's CleanThresholdBytes entry when the flag is set", func() {
-			builder = builder.WithCleanThresholdBytes(uint64(1024), true)
+			builder = builder.WithCleanThresholdBytes(1024, true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.CleanThresholdBytes).To(Equal(uint64(1024)))
+			Expect(config.CleanThresholdBytes).To(Equal(int64(1024)))
 		})
 
 		Context("when flag is not set", func() {
 			It("uses the config entry", func() {
-				builder = builder.WithCleanThresholdBytes(uint64(1024), false)
+				builder = builder.WithCleanThresholdBytes(1024, false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(config.CleanThresholdBytes).To(Equal(cfg.CleanThresholdBytes))

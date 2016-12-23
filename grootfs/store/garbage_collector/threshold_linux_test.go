@@ -87,7 +87,7 @@ var _ = Describe("Threshold", func() {
 	})
 })
 
-func writeFile(path string, size uint64) error {
+func writeFile(path string, size int64) error {
 	cmd := exec.Command(
 		"dd", "if=/dev/zero", fmt.Sprintf("of=%s", path),
 		"bs=1024", fmt.Sprintf("count=%d", size/1024),

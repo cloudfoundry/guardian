@@ -26,7 +26,7 @@ var CleanCommand = cli.Command{
 	Description: "Cleans up unused layers",
 
 	Flags: []cli.Flag{
-		cli.Uint64Flag{
+		cli.Int64Flag{
 			Name:  "threshold-bytes",
 			Usage: "Disk usage of the store directory at which cleanup should trigger.",
 		},
@@ -42,7 +42,7 @@ var CleanCommand = cli.Command{
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithIgnoreBaseImages(ctx.StringSlice("ignore-image"))
-		configBuilder.WithCleanThresholdBytes(ctx.Uint64("threshold-bytes"),
+		configBuilder.WithCleanThresholdBytes(ctx.Int64("threshold-bytes"),
 			ctx.IsSet("threshold-bytes"))
 
 		cfg, err := configBuilder.Build()

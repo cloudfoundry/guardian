@@ -84,7 +84,7 @@ type GarbageCollector interface {
 }
 
 type StoreMeasurer interface {
-	MeasureStore(logger lager.Logger) (uint64, error)
+	MeasureStore(logger lager.Logger) (int64, error)
 }
 
 type Locksmith interface {

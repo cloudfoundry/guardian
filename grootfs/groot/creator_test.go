@@ -74,12 +74,12 @@ var _ = Describe("Creator", func() {
 					BaseImage:                   "/path/to/image",
 					CleanOnCreate:               true,
 					CleanOnCreateIgnoreImages:   []string{"docker://my-image"},
-					CleanOnCreateThresholdBytes: uint64(250000),
+					CleanOnCreateThresholdBytes: int64(250000),
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeCleaner.CleanCallCount()).To(Equal(1))
 				_, threshold, ignoredImages, acquireLock := fakeCleaner.CleanArgsForCall(0)
-				Expect(threshold).To(Equal(uint64(250000)))
+				Expect(threshold).To(Equal(int64(250000)))
 				Expect(ignoredImages).To(ConsistOf([]string{"docker://my-image"}))
 				Expect(acquireLock).To(BeFalse())
 			})

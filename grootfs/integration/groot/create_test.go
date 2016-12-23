@@ -277,7 +277,7 @@ var _ = Describe("Create", func() {
 				BaseImage:                   "docker:///cfgarden/empty:v0.1.1",
 				CleanOnCreate:               true,
 				CleanOnCreateIgnoreImages:   []string{"docker://my-image"},
-				CleanOnCreateThresholdBytes: uint64(250000),
+				CleanOnCreateThresholdBytes: int64(250000),
 			})
 			Expect(err).NotTo(HaveOccurred())
 

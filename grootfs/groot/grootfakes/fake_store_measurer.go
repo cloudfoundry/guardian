@@ -9,20 +9,20 @@ import (
 )
 
 type FakeStoreMeasurer struct {
-	MeasureStoreStub        func(logger lager.Logger) (uint64, error)
+	MeasureStoreStub        func(logger lager.Logger) (int64, error)
 	measureStoreMutex       sync.RWMutex
 	measureStoreArgsForCall []struct {
 		logger lager.Logger
 	}
 	measureStoreReturns struct {
-		result1 uint64
+		result1 int64
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStoreMeasurer) MeasureStore(logger lager.Logger) (uint64, error) {
+func (fake *FakeStoreMeasurer) MeasureStore(logger lager.Logger) (int64, error) {
 	fake.measureStoreMutex.Lock()
 	fake.measureStoreArgsForCall = append(fake.measureStoreArgsForCall, struct {
 		logger lager.Logger
@@ -48,10 +48,10 @@ func (fake *FakeStoreMeasurer) MeasureStoreArgsForCall(i int) lager.Logger {
 	return fake.measureStoreArgsForCall[i].logger
 }
 
-func (fake *FakeStoreMeasurer) MeasureStoreReturns(result1 uint64, result2 error) {
+func (fake *FakeStoreMeasurer) MeasureStoreReturns(result1 int64, result2 error) {
 	fake.MeasureStoreStub = nil
 	fake.measureStoreReturns = struct {
-		result1 uint64
+		result1 int64
 		result2 error
 	}{result1, result2}
 }

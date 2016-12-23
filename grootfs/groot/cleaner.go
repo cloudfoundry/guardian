@@ -8,7 +8,7 @@ import (
 
 //go:generate counterfeiter . Cleaner
 type Cleaner interface {
-	Clean(logger lager.Logger, threshold uint64, keepImages []string, acquireLock bool) (bool, error)
+	Clean(logger lager.Logger, threshold int64, keepImages []string, acquireLock bool) (bool, error)
 }
 
 type cleaner struct {
@@ -29,7 +29,7 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	}
 }
 
-func (c *cleaner) Clean(logger lager.Logger, threshold uint64, keepImages []string, acquireLock bool) (bool, error) {
+func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []string, acquireLock bool) (bool, error) {
 	startTime := time.Now()
 	defer func() {
 		c.metricsEmitter.TryEmitDuration(logger, MetricImageCleanTime, time.Since(startTime))

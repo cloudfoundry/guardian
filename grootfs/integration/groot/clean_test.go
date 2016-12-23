@@ -110,7 +110,7 @@ var _ = Describe("Clean", func() {
 		})
 
 		Context("and a threshold is set", func() {
-			var cleanupThresholdInBytes uint64
+			var cleanupThresholdInBytes int64
 
 			Context("and the total is less than the threshold", func() {
 				BeforeEach(func() {

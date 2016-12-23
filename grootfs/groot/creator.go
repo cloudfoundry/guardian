@@ -18,7 +18,7 @@ type CreateSpec struct {
 	DiskLimit                   int64
 	ExcludeBaseImageFromQuota   bool
 	CleanOnCreate               bool
-	CleanOnCreateThresholdBytes uint64
+	CleanOnCreateThresholdBytes int64
 	CleanOnCreateIgnoreImages   []string
 	UIDMappings                 []IDMappingSpec
 	GIDMappings                 []IDMappingSpec

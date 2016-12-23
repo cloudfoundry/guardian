@@ -119,7 +119,7 @@ var _ = Describe("Cleaner", func() {
 		})
 
 		Context("when a threshold is provided", func() {
-			var threshold uint64
+			var threshold int64
 
 			BeforeEach(func() {
 				threshold = 1000000
