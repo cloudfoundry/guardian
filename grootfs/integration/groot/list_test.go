@@ -19,18 +19,15 @@ import (
 )
 
 var _ = Describe("List", func() {
-	var (
-		baseImagePath string
-		image         groot.Image
-	)
+	var image groot.Image
 
 	BeforeEach(func() {
-		var err error
-		baseImagePath, err = ioutil.TempDir("", "")
+		sourceImagePath, err := ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(ioutil.WriteFile(path.Join(baseImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
-		image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "root-image", 0)
+		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+		image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageFile.Name(), "root-image", 0)
 	})
 
 	It("lists all images in the store path", func() {

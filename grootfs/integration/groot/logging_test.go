@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
@@ -31,16 +32,17 @@ var _ = Describe("Logging", func() {
 	})
 
 	It("re-logs the nested unpack commands logs", func() {
-		imgPath, err := ioutil.TempDir("", "")
+		srcImgPath, err := ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(
-			filepath.Join(imgPath, "unreadable-file"), []byte("foo bar"), 0644,
+			filepath.Join(srcImgPath, "unreadable-file"), []byte("foo bar"), 0644,
 		)).To(Succeed())
 
+		baseImgFile := integration.CreateBaseImageTar(srcImgPath)
 		logBuffer := gbytes.NewBuffer()
 		_, err = Runner.WithStderr(logBuffer).Create(groot.CreateSpec{
 			ID:        "random-id",
-			BaseImage: imgPath,
+			BaseImage: baseImgFile.Name(),
 		})
 		Expect(err).NotTo(HaveOccurred())
 

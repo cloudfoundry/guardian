@@ -74,10 +74,10 @@ You can create a rootfs image based on a remote docker image:
 grootfs --store /mnt/btrfs create docker:///ubuntu:latest my-image-id
 ```
 
-Or from local folders as an image source:
+Or from a local tar file as an image source:
 
 ```
-grootfs --store /mnt/btrfs create /my-folder my-image-id
+grootfs --store /mnt/btrfs create /my-rootfs.tar my-image-id
 ```
 
 #### Output

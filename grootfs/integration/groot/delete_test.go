@@ -2,6 +2,7 @@ package groot_test
 
 import (
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path"
 	"strings"
@@ -17,15 +18,26 @@ import (
 
 var _ = Describe("Delete", func() {
 	var (
-		baseImagePath string
-		image         groot.Image
+		sourceImagePath string
+		baseImagePath   string
+		image           groot.Image
 	)
 
 	BeforeEach(func() {
 		var err error
-		baseImagePath, err = ioutil.TempDir("", "")
+		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(baseImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
+		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+	})
+
+	JustBeforeEach(func() {
+		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+		baseImagePath = baseImageFile.Name()
 		image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
 	})
 

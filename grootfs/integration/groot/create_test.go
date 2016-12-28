@@ -26,20 +26,35 @@ const (
 )
 
 var _ = Describe("Create", func() {
-	var baseImagePath string
+	var (
+		baseImagePath   string
+		sourceImagePath string
+	)
 
 	BeforeEach(func() {
 		var err error
-		baseImagePath, err = ioutil.TempDir("", "")
+		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(ioutil.WriteFile(path.Join(baseImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
+		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+	})
+
+	JustBeforeEach(func() {
+		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+		baseImagePath = baseImageFile.Name()
 	})
 
 	Context("when inclusive disk limit is provided", func() {
-		It("creates a image with supplied limit", func() {
-			Expect(writeMegabytes(filepath.Join(baseImagePath, "fatfile"), 5)).To(Succeed())
+		BeforeEach(func() {
+			Expect(writeMegabytes(filepath.Join(sourceImagePath, "fatfile"), 5)).To(Succeed())
+		})
 
+		It("creates a image with supplied limit", func() {
 			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", tenMegabytes)
 
 			Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 4)).To(Succeed())
@@ -311,7 +326,7 @@ var _ = Describe("Create", func() {
 	})
 
 	Context("when the id is already being used", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			Expect(integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)).NotTo(BeNil())
 		})
 
@@ -426,6 +441,9 @@ var _ = Describe("Create", func() {
 
 		BeforeEach(func() {
 			cfg = config.Config{}
+		})
+
+		JustBeforeEach(func() {
 			spec = groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: baseImagePath,
@@ -575,7 +593,7 @@ var _ = Describe("Create", func() {
 				buffer := gbytes.NewBuffer()
 				_, err := Runner.WithStdout(buffer).Create(spec)
 				Expect(err).To(HaveOccurred())
-				Expect(buffer.Contents()).To(ContainSubstring("gid range [1-65991) -> [1-65991) not allowed"))
+				Expect(string(buffer.Contents())).To(ContainSubstring("gid range [1-65991) -> [1-65991) not allowed"))
 			})
 		})
 

@@ -10,8 +10,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/grootfs/fetcher/local"
+	"code.cloudfoundry.org/grootfs/integration"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -22,27 +23,33 @@ var _ = Describe("Local Fetcher", func() {
 	var (
 		fetcher *local.LocalFetcher
 
-		baseImagePath string
-		logger    *TestLogger
-		baseImageURL  *url.URL
+		sourceImagePath string
+		baseImagePath   string
+		logger          *TestLogger
+		baseImageURL    *url.URL
 	)
 
 	BeforeEach(func() {
 		fetcher = local.NewLocalFetcher()
 
 		var err error
-		baseImagePath, err = ioutil.TempDir("", "image")
+		sourceImagePath, err = ioutil.TempDir("", "image")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(baseImagePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
+		logger = NewLogger("local-fetcher")
+	})
 
+	JustBeforeEach(func() {
+		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+		baseImagePath = baseImageFile.Name()
+		var err error
 		baseImageURL, err = url.Parse(baseImagePath)
 		Expect(err).NotTo(HaveOccurred())
-
-		logger = NewLogger("local-fetcher")
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+		Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
 	})
 
 	Describe("StreamBlob", func() {
@@ -63,8 +70,8 @@ var _ = Describe("Local Fetcher", func() {
 
 			Expect(logger).To(ContainSequence(
 				Debug(
-					Message("local-fetcher.stream-blob.starting-tar"),
-					Data("args", []string{"tar", "-cp", "-C", baseImagePath, "."}),
+					Message("local-fetcher.stream-blob.opening-tar"),
+					Data("baseImagePath", baseImagePath),
 				),
 			))
 		})
@@ -77,21 +84,12 @@ var _ = Describe("Local Fetcher", func() {
 				Expect(err).To(MatchError(ContainSubstring("local image not found in `/nothing/here`")))
 			})
 		})
-
-		Context("when tar does not exist", func() {
-			It("returns an error", func() {
-				local.TarBin = "non-existent-tar"
-
-				_, _, err := fetcher.StreamBlob(logger, baseImageURL, "")
-				Expect(err).To(MatchError(ContainSubstring("reading local image")))
-			})
-		})
 	})
 
 	Describe("LayersDigest", func() {
 		var baseImageInfo base_image_puller.BaseImageInfo
 
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			var err error
 			baseImageInfo, err = fetcher.BaseImageInfo(logger, baseImageURL)
 			Expect(err).NotTo(HaveOccurred())
@@ -109,9 +107,10 @@ var _ = Describe("Local Fetcher", func() {
 		})
 
 		Context("when image content gets updated", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				time.Sleep(time.Millisecond * 10)
-				Expect(ioutil.WriteFile(filepath.Join(baseImagePath, "foobar"), []byte("hello-world"), 0700)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(sourceImagePath, "foobar"), []byte("hello-world"), 0700)).To(Succeed())
+				integration.UpdateBaseImageTar(baseImagePath, sourceImagePath)
 			})
 
 			It("generates another volume id", func() {
@@ -122,7 +121,7 @@ var _ = Describe("Local Fetcher", func() {
 		})
 
 		Context("when the image doesn't exist", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				var err error
 				baseImageURL, err = url.Parse("/not-here")
 				Expect(err).ToNot(HaveOccurred())

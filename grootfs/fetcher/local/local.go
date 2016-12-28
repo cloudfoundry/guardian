@@ -7,14 +7,11 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"os/exec"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
-
-var TarBin = "tar"
 
 type LocalFetcher struct {
 }
@@ -37,18 +34,13 @@ func (l *LocalFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
 		return nil, 0, fmt.Errorf("local image not found in `%s` %s", baseImagePath, err)
 	}
 
-	tarCmd := exec.Command(TarBin, "-cp", "-C", baseImagePath, ".")
-	stdoutPipe, err := tarCmd.StdoutPipe()
+	logger.Debug("opening-tar", lager.Data{"baseImagePath": baseImagePath})
+	stream, err := os.Open(baseImagePath)
 	if err != nil {
-		return nil, 0, fmt.Errorf("creating pipe: %s", err)
-	}
-
-	logger.Debug("starting-tar", lager.Data{"path": tarCmd.Path, "args": tarCmd.Args})
-	if err := tarCmd.Start(); err != nil {
 		return nil, 0, fmt.Errorf("reading local image: %s", err)
 	}
 
-	return NewCallbackReader(logger, tarCmd.Wait, stdoutPipe), 0, nil
+	return stream, 0, nil
 }
 
 func (l *LocalFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {

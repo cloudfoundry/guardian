@@ -3,6 +3,7 @@ package groot_test
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 
@@ -18,28 +19,41 @@ import (
 
 var _ = Describe("Stats", func() {
 	var (
-		baseImagePath string
-		image         groot.Image
+		sourceImagePath string
+		baseImagePath   string
+		image           groot.Image
 	)
 
 	BeforeEach(func() {
 		var err error
-		baseImagePath, err = ioutil.TempDir("", "")
+		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
+		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+	})
+
+	JustBeforeEach(func() {
+		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+		baseImagePath = baseImageFile.Name()
 	})
 
 	Context("when image exists", func() {
 		var expectedStats groot.VolumeStats
 
 		BeforeEach(func() {
-			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "fatfile")), "bs=1048576", "count=5")
+			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(sourceImagePath, "fatfile")), "bs=1048576", "count=5")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
+		})
 
+		JustBeforeEach(func() {
 			image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
-			cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=4")
-			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=4")
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 			expectedStats = groot.VolumeStats{

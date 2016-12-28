@@ -18,17 +18,31 @@ import (
 )
 
 var _ = Describe("Create with local images", func() {
-	var baseImagePath string
+	var (
+		sourceImagePath string
+		baseImagePath   string
+		baseImageFile   *os.File
+	)
 
 	BeforeEach(func() {
 		var err error
-		baseImagePath, err = ioutil.TempDir("", "local-image-dir")
+		sourceImagePath, err = ioutil.TempDir("", "local-image-dir")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(baseImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
-		Expect(os.MkdirAll(path.Join(baseImagePath, "permissive-folder"), 0777)).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.MkdirAll(path.Join(sourceImagePath, "permissive-folder"), 0777)).To(Succeed())
 
 		// we need to explicitly apply perms because mkdir is subject to umask
-		Expect(os.Chmod(path.Join(baseImagePath, "permissive-folder"), 0777)).To(Succeed())
+		Expect(os.Chmod(path.Join(sourceImagePath, "permissive-folder"), 0777)).To(Succeed())
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
+		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+	})
+
+	JustBeforeEach(func() {
+		baseImageFile = integration.CreateBaseImageTar(sourceImagePath)
+		baseImagePath = baseImageFile.Name()
 	})
 
 	It("creates a root filesystem", func() {
@@ -58,24 +72,30 @@ var _ = Describe("Create with local images", func() {
 		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
 	})
 
-	It("preserves the timestamps", func() {
-		location := time.FixedZone("foo", 0)
-		modTime := time.Date(2014, 10, 14, 22, 8, 32, 0, location)
+	Context("timestamps", func() {
+		var modTime time.Time
 
-		oldFilePath := path.Join(baseImagePath, "old-file")
-		Expect(ioutil.WriteFile(oldFilePath, []byte("hello-world"), 0644)).To(Succeed())
-		Expect(os.Chtimes(oldFilePath, time.Now(), modTime)).To(Succeed())
+		BeforeEach(func() {
+			location := time.FixedZone("foo", 0)
+			modTime = time.Date(2014, 10, 14, 22, 8, 32, 0, location)
 
-		image, err := integration.CreateImageWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
-			ID:        "random-id",
-			BaseImage: baseImagePath,
+			oldFilePath := path.Join(sourceImagePath, "old-file")
+			Expect(ioutil.WriteFile(oldFilePath, []byte("hello-world"), 0644)).To(Succeed())
+			Expect(os.Chtimes(oldFilePath, time.Now(), modTime)).To(Succeed())
 		})
-		Expect(err).NotTo(HaveOccurred())
 
-		imageOldFilePath := path.Join(image.RootFSPath, "old-file")
-		fi, err := os.Stat(imageOldFilePath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(fi.ModTime().Unix()).To(Equal(modTime.Unix()))
+		It("preserves the timestamps", func() {
+			image, err := integration.CreateImageWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
+				ID:        "random-id",
+				BaseImage: baseImagePath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			imageOldFilePath := path.Join(image.RootFSPath, "old-file")
+			fi, err := os.Stat(imageOldFilePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fi.ModTime().Unix()).To(Equal(modTime.Unix()))
+		})
 	})
 
 	Context("when required args are not provided", func() {
@@ -89,12 +109,13 @@ var _ = Describe("Create with local images", func() {
 	})
 
 	Context("when image content changes", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			Expect(integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)).NotTo(BeNil())
 		})
 
 		It("uses the new content for the new image", func() {
-			Expect(ioutil.WriteFile(path.Join(baseImagePath, "bar"), []byte("this-is-a-bar-content"), 0644)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(sourceImagePath, "bar"), []byte("this-is-a-bar-content"), 0644)).To(Succeed())
+			integration.UpdateBaseImageTar(baseImagePath, sourceImagePath)
 
 			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id-2", 0)
 
@@ -119,7 +140,7 @@ var _ = Describe("Create with local images", func() {
 		})
 	})
 
-	Context("when local directory does not exist", func() {
+	Context("when local image does not exist", func() {
 		It("returns an error", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "/invalid/image", "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -131,11 +152,11 @@ var _ = Describe("Create with local images", func() {
 	Context("when the image has links", func() {
 		BeforeEach(func() {
 			Expect(ioutil.WriteFile(
-				path.Join(baseImagePath, "symlink-target"), []byte("hello-world"), 0644),
+				path.Join(sourceImagePath, "symlink-target"), []byte("hello-world"), 0644),
 			).To(Succeed())
 			Expect(os.Symlink(
-				filepath.Join(baseImagePath, "symlink-target"),
-				filepath.Join(baseImagePath, "symlink"),
+				filepath.Join(sourceImagePath, "symlink-target"),
+				filepath.Join(sourceImagePath, "symlink"),
 			)).To(Succeed())
 		})
 
@@ -151,32 +172,36 @@ var _ = Describe("Create with local images", func() {
 			Expect(string(content)).To(Equal("hello-world"))
 		})
 
-		It("preserves the timestamps", func() {
-			cmd := exec.Command("touch", "-h", "-d", "2014-01-01", path.Join(baseImagePath, "symlink"))
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess.Wait()).Should(gexec.Exit(0))
-
-			image, err := integration.CreateImageWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
-				ID:        "random-id",
-				BaseImage: baseImagePath,
+		Context("timestamps", func() {
+			BeforeEach(func() {
+				cmd := exec.Command("touch", "-h", "-d", "2014-01-01", path.Join(sourceImagePath, "symlink"))
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess.Wait()).Should(gexec.Exit(0))
 			})
-			Expect(err).NotTo(HaveOccurred())
 
-			symlinkTargetFilePath := path.Join(image.RootFSPath, "symlink-target")
-			symlinkTargetFi, err := os.Stat(symlinkTargetFilePath)
-			Expect(err).NotTo(HaveOccurred())
+			It("preserves the timestamps", func() {
+				image, err := integration.CreateImageWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
+					ID:        "random-id",
+					BaseImage: baseImagePath,
+				})
+				Expect(err).NotTo(HaveOccurred())
 
-			symlinkFilePath := path.Join(image.RootFSPath, "symlink")
-			symlinkFi, err := os.Lstat(symlinkFilePath)
-			Expect(err).NotTo(HaveOccurred())
+				symlinkTargetFilePath := path.Join(image.RootFSPath, "symlink-target")
+				symlinkTargetFi, err := os.Stat(symlinkTargetFilePath)
+				Expect(err).NotTo(HaveOccurred())
 
-			location := time.FixedZone("foo", 0)
-			modTime := time.Date(2014, 01, 01, 0, 0, 0, 0, location)
-			Expect(symlinkTargetFi.ModTime().Unix()).ToNot(
-				Equal(symlinkFi.ModTime().Unix()),
-			)
-			Expect(symlinkFi.ModTime().Unix()).To(Equal(modTime.Unix()))
+				symlinkFilePath := path.Join(image.RootFSPath, "symlink")
+				symlinkFi, err := os.Lstat(symlinkFilePath)
+				Expect(err).NotTo(HaveOccurred())
+
+				location := time.FixedZone("foo", 0)
+				modTime := time.Date(2014, 01, 01, 0, 0, 0, 0, location)
+				Expect(symlinkTargetFi.ModTime().Unix()).ToNot(
+					Equal(symlinkFi.ModTime().Unix()),
+				)
+				Expect(symlinkFi.ModTime().Unix()).To(Equal(modTime.Unix()))
+			})
 		})
 	})
 })

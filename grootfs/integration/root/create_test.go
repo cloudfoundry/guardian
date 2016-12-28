@@ -20,9 +20,10 @@ import (
 
 var _ = Describe("Create", func() {
 	var (
-		baseImagePath string
-		rootUID       int
-		rootGID       int
+		sourceImagePath string
+		baseImagePath   string
+		rootUID         int
+		rootGID         int
 	)
 
 	BeforeEach(func() {
@@ -30,30 +31,36 @@ var _ = Describe("Create", func() {
 		rootGID = 0
 
 		var err error
-		baseImagePath, err = ioutil.TempDir("", "")
+		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(os.Chown(baseImagePath, rootUID, rootGID)).To(Succeed())
-		Expect(os.Chmod(baseImagePath, 0755)).To(Succeed())
+		Expect(os.Chown(sourceImagePath, rootUID, rootGID)).To(Succeed())
+		Expect(os.Chmod(sourceImagePath, 0755)).To(Succeed())
 
-		grootFilePath := path.Join(baseImagePath, "foo")
+		grootFilePath := path.Join(sourceImagePath, "foo")
 		Expect(ioutil.WriteFile(grootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 		Expect(os.Chown(grootFilePath, int(GrootUID), int(GrootGID))).To(Succeed())
 
-		grootFolder := path.Join(baseImagePath, "groot-folder")
+		grootFolder := path.Join(sourceImagePath, "groot-folder")
 		Expect(os.Mkdir(grootFolder, 0777)).To(Succeed())
 		Expect(os.Chown(grootFolder, int(GrootUID), int(GrootGID))).To(Succeed())
 		Expect(ioutil.WriteFile(path.Join(grootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
 
-		rootFilePath := path.Join(baseImagePath, "bar")
+		rootFilePath := path.Join(sourceImagePath, "bar")
 		Expect(ioutil.WriteFile(rootFilePath, []byte("hello-world"), 0644)).To(Succeed())
 
-		rootFolder := path.Join(baseImagePath, "root-folder")
+		rootFolder := path.Join(sourceImagePath, "root-folder")
 		Expect(os.Mkdir(rootFolder, 0777)).To(Succeed())
 		Expect(ioutil.WriteFile(path.Join(rootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
+	JustBeforeEach(func() {
+		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+		baseImagePath = baseImageFile.Name()
+	})
+
 	AfterEach(func() {
 		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+		Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
 	})
 
 	It("keeps the ownership and permissions", func() {
