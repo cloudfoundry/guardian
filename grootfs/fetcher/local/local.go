@@ -3,6 +3,7 @@ package local // import "code.cloudfoundry.org/grootfs/fetcher/local"
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -32,6 +33,10 @@ func (l *LocalFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
 	baseImagePath := baseImageURL.String()
 	if _, err := os.Stat(baseImagePath); err != nil {
 		return nil, 0, fmt.Errorf("local image not found in `%s` %s", baseImagePath, err)
+	}
+
+	if err := l.validateBaseImage(baseImagePath); err != nil {
+		return nil, 0, fmt.Errorf("invalid base image: %s", err.Error())
 	}
 
 	logger.Debug("opening-tar", lager.Data{"baseImagePath": baseImagePath})
@@ -69,4 +74,17 @@ func (l *LocalFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL)
 func (l *LocalFetcher) generateChainID(baseImagePath string, timestamp int64) string {
 	baseImagePathSha := sha256.Sum256([]byte(baseImagePath))
 	return fmt.Sprintf("%s-%d", hex.EncodeToString(baseImagePathSha[:32]), timestamp)
+}
+
+func (l *LocalFetcher) validateBaseImage(baseImagePath string) error {
+	stat, err := os.Stat(baseImagePath)
+	if err != nil {
+		return err
+	}
+
+	if stat.IsDir() {
+		return errors.New("directory provided instead of a tar file")
+	}
+
+	return nil
 }

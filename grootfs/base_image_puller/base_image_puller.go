@@ -167,7 +167,7 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 
 	stream, size, err := p.fetcher(spec.BaseImageSrc).StreamBlob(logger, spec.BaseImageSrc, digest.BlobID)
 	if err != nil {
-		return "", fmt.Errorf("streaming blob `%s`: %s", digest.BlobID, err)
+		return "", errorspkg.Wrapf(err, "streaming blob `%s`", digest.BlobID)
 	}
 
 	logger.Debug("got-stream-for-blob", lager.Data{

@@ -76,6 +76,17 @@ var _ = Describe("Local Fetcher", func() {
 			))
 		})
 
+		Context("when the source is a directory", func() {
+			It("returns an error message", func() {
+				tempDir, err := ioutil.TempDir("", "")
+				Expect(err).NotTo(HaveOccurred())
+
+				imageURL, _ := url.Parse(tempDir)
+				_, _, err = fetcher.StreamBlob(logger, imageURL, "")
+				Expect(err).To(MatchError(ContainSubstring("invalid base image: directory provided instead of a tar file")))
+			})
+		})
+
 		Context("when the source does not exist", func() {
 			It("returns an error", func() {
 				nonExistentImageURL, _ := url.Parse("/nothing/here")

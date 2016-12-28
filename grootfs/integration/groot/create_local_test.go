@@ -98,6 +98,19 @@ var _ = Describe("Create with local images", func() {
 		})
 	})
 
+	Context("when the provided base image is a directory", func() {
+		It("returns a sensible error", func() {
+			tempDir, err := ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			_, err = integration.CreateImageWSpec(GrootFSBin, StorePath, DraxBin, groot.CreateSpec{
+				ID:        "random-id",
+				BaseImage: tempDir,
+			})
+			Expect(err).To(MatchError("invalid base image: directory provided instead of a tar file"))
+		})
+	})
+
 	Context("when required args are not provided", func() {
 		It("returns an error", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create")
