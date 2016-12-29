@@ -47,5 +47,5 @@ func (c *Configurer) Ensure(logger lager.Logger, storePath string) error {
 		}
 	}
 
-	return nil
+	return os.Chmod(storePath, 0700)
 }

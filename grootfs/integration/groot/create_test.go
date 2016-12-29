@@ -49,6 +49,19 @@ var _ = Describe("Create", func() {
 		baseImagePath = baseImageFile.Name()
 	})
 
+	Context("storage setup", func() {
+		It("creates the storage path with the correct permission", func() {
+			storePath := filepath.Join(StorePath, CurrentUserID)
+			Expect(storePath).ToNot(BeAnExistingFile())
+			integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", tenMegabytes)
+			Expect(filepath.Join(StorePath, CurrentUserID)).To(BeADirectory())
+
+			stat, err := os.Stat(storePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0700)))
+		})
+	})
+
 	Context("when inclusive disk limit is provided", func() {
 		BeforeEach(func() {
 			Expect(writeMegabytes(filepath.Join(sourceImagePath, "fatfile"), 5)).To(Succeed())

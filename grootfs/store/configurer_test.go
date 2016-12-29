@@ -54,6 +54,14 @@ var _ = Describe("Configurer", func() {
 			Expect(filepath.Join(storePath, "meta", "dependencies")).To(BeADirectory())
 		})
 
+		It("chmods the storePath to 700", func() {
+			Expect(configurer.Ensure(logger, storePath)).To(Succeed())
+
+			stat, err := os.Stat(storePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0700)))
+		})
+
 		It("doesn't fail on race conditions", func() {
 			for i := 0; i < 50; i++ {
 				storePath, err := ioutil.TempDir("", "")
