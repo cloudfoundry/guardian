@@ -22,6 +22,8 @@ type CreateSpec struct {
 	CleanOnCreateIgnoreImages   []string
 	UIDMappings                 []IDMappingSpec
 	GIDMappings                 []IDMappingSpec
+	RegistryUsername            string
+	RegistryPassword            string
 }
 
 type Creator struct {

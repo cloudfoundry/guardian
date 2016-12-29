@@ -24,7 +24,9 @@ var (
 	Runner     runner.Runner
 	storeName  string
 
-	CurrentUserID string
+	CurrentUserID    string
+	RegistryUsername string
+	RegistryPassword string
 )
 
 const btrfsMountPath = "/mnt/btrfs"
@@ -61,6 +63,9 @@ func TestGroot(t *testing.T) {
 		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/volume_driver/drax")
 		Expect(err).NotTo(HaveOccurred())
 		testhelpers.SuidDrax(DraxBin)
+
+		RegistryUsername = os.Getenv("REGISTRY_USERNAME")
+		RegistryPassword = os.Getenv("REGISTRY_PASSWORD")
 
 		r := runner.Runner{
 			GrootFSBin: GrootFSBin,

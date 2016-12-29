@@ -23,10 +23,14 @@ import (
 
 type DockerSource struct {
 	trustedRegistries []string
+	username          string
+	password          string
 }
 
-func NewDockerSource(trustedRegistries []string) *DockerSource {
+func NewDockerSource(username, password string, trustedRegistries []string) *DockerSource {
 	return &DockerSource{
+		username:          username,
+		password:          password,
 		trustedRegistries: trustedRegistries,
 	}
 }
@@ -277,7 +281,13 @@ func (s *DockerSource) image(logger lager.Logger, baseImageURL *url.URL) (types.
 
 	skipTLSValidation := s.skipTLSValidation(baseImageURL)
 	logger.Debug("new-image", lager.Data{"skipTLSValidation": skipTLSValidation})
-	img, err := ref.NewImage(&types.SystemContext{DockerInsecureSkipTLSVerify: skipTLSValidation})
+	img, err := ref.NewImage(&types.SystemContext{
+		DockerInsecureSkipTLSVerify: skipTLSValidation,
+		DockerAuthConfig: &types.DockerAuthConfig{
+			Username: s.username,
+			Password: s.password,
+		},
+	})
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "creating reference")
 	}
@@ -293,9 +303,15 @@ func (s *DockerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (
 
 	skipTLSValidation := s.skipTLSValidation(baseImageURL)
 
-	imgSrc, _ := ref.NewImageSource(&types.SystemContext{DockerInsecureSkipTLSVerify: skipTLSValidation}, preferedMediaTypes())
+	imgSrc, err := ref.NewImageSource(&types.SystemContext{
+		DockerInsecureSkipTLSVerify: skipTLSValidation,
+		DockerAuthConfig: &types.DockerAuthConfig{
+			Username: s.username,
+			Password: s.password,
+		},
+	}, preferedMediaTypes())
 	if err != nil {
-		return nil, fmt.Errorf("creating reference: %s", err)
+		return nil, errorspkg.Wrap(err, "creating reference")
 	}
 	logger.Debug("new-image", lager.Data{"skipTLSValidation": skipTLSValidation})
 

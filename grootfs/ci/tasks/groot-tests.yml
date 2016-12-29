@@ -11,6 +11,10 @@ inputs:
   - name: grootfs-git-repo
     path: src/code.cloudfoundry.org/grootfs
 
+params:
+  REGISTRY_USERNAME:
+  REGISTRY_PASSWORD:
+
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/groot-tests.sh
   user: groot

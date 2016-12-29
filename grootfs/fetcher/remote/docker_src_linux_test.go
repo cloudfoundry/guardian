@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -24,16 +25,21 @@ var _ = Describe("Docker source", func() {
 		trustedRegistries []string
 		dockerSrc         *remote.DockerSource
 
-		logger   lager.Logger
+		logger       lager.Logger
 		baseImageURL *url.URL
 
 		configBlob           string
 		expectedLayersDigest []remote.Layer
 		expectedDiffIds      []string
 		manifest             remote.Manifest
+
+		username string
+		password string
 	)
 
 	BeforeEach(func() {
+		username = ""
+		password = ""
 		trustedRegistries = []string{}
 
 		configBlob = "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d"
@@ -64,7 +70,7 @@ var _ = Describe("Docker source", func() {
 	})
 
 	JustBeforeEach(func() {
-		dockerSrc = remote.NewDockerSource(trustedRegistries)
+		dockerSrc = remote.NewDockerSource(username, password, trustedRegistries)
 	})
 
 	Describe("Manifest", func() {
@@ -101,6 +107,46 @@ var _ = Describe("Docker source", func() {
 				Expect(manifest.Layers[7]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
 
 				Expect(manifest.ConfigCacheKey).To(Equal("sha256:f0f2e4b0f880c47ef68d8bca346ced37d32712b671412704524ac4162fbf944d"))
+			})
+		})
+
+		Context("when the image is private", func() {
+			BeforeEach(func() {
+				var err error
+				baseImageURL, err = url.Parse("docker:///cfgarden/private")
+				Expect(err).NotTo(HaveOccurred())
+
+				configBlob = "sha256:c2bf00eb303023869c676f91af930a12925c24d677999917e8d52c73fa10b73a"
+				expectedLayersDigest[0].BlobID = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
+				expectedLayersDigest[1].BlobID = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
+			})
+
+			Context("when the correct credentials are provided", func() {
+				BeforeEach(func() {
+					username = os.Getenv("REGISTRY_USERNAME")
+					password = os.Getenv("REGISTRY_PASSWORD")
+				})
+
+				It("fetches the manifest", func() {
+					manifest, err := dockerSrc.Manifest(logger, baseImageURL)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(manifest.ConfigCacheKey).To(Equal(configBlob))
+
+					Expect(manifest.Layers).To(HaveLen(2))
+					Expect(manifest.Layers[0]).To(Equal(expectedLayersDigest[0]))
+					Expect(manifest.Layers[1]).To(Equal(expectedLayersDigest[1]))
+				})
+			})
+
+			Context("when invalid credentials are provided", func() {
+				It("returns an error", func() {
+					baseImageURL, err := url.Parse("docker:cfgarden/empty:v0.1.0")
+					Expect(err).NotTo(HaveOccurred())
+
+					_, err = dockerSrc.Manifest(logger, baseImageURL)
+					Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
+				})
 			})
 		})
 
@@ -144,6 +190,47 @@ var _ = Describe("Docker source", func() {
 			Expect(config.RootFS.DiffIDs).To(HaveLen(2))
 			Expect(config.RootFS.DiffIDs[0]).To(Equal(expectedDiffIds[0]))
 			Expect(config.RootFS.DiffIDs[1]).To(Equal(expectedDiffIds[1]))
+		})
+
+		Context("when the image is private", func() {
+			BeforeEach(func() {
+				var err error
+				baseImageURL, err = url.Parse("docker:///cfgarden/private")
+				Expect(err).NotTo(HaveOccurred())
+
+				manifest = remote.Manifest{
+					ConfigCacheKey: "sha256:c2bf00eb303023869c676f91af930a12925c24d677999917e8d52c73fa10b73a",
+					SchemaVersion:  2,
+				}
+
+				expectedDiffIds = []string{
+					"sha256:780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
+					"sha256:56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b",
+				}
+			})
+
+			Context("when the correct credentials are provided", func() {
+				BeforeEach(func() {
+					username = os.Getenv("REGISTRY_USERNAME")
+					password = os.Getenv("REGISTRY_PASSWORD")
+				})
+
+				It("fetches the config", func() {
+					config, err := dockerSrc.Config(logger, baseImageURL, manifest)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(config.RootFS.DiffIDs).To(HaveLen(2))
+					Expect(config.RootFS.DiffIDs[0]).To(Equal(expectedDiffIds[0]))
+					Expect(config.RootFS.DiffIDs[1]).To(Equal(expectedDiffIds[1]))
+				})
+			})
+
+			Context("when invalid credentials are provided", func() {
+				It("retuns an error", func() {
+					_, err := dockerSrc.Config(logger, baseImageURL, manifest)
+					Expect(err).To(MatchError(ContainSubstring("fetching config blob")))
+				})
+			})
 		})
 
 		Context("when schema version is not supported", func() {
@@ -287,6 +374,78 @@ var _ = Describe("Docker source", func() {
 				Expect(config.RootFS.DiffIDs[0]).To(Equal(expectedDiffIds[0]))
 				Expect(config.RootFS.DiffIDs[1]).To(Equal(expectedDiffIds[1]))
 			})
+
+			It("downloads a blob", func() {
+				blobContents, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+				Expect(err).NotTo(HaveOccurred())
+
+				buffer := gbytes.NewBuffer()
+				cmd := exec.Command("tar", "tzv")
+				cmd.Stdin = bytes.NewBuffer(blobContents)
+				sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(size).To(Equal(int64(90)))
+
+				Eventually(buffer).Should(gbytes.Say("hello"))
+				Eventually(sess).Should(gexec.Exit(0))
+			})
+
+			Context("when using private images", func() {
+				BeforeEach(func() {
+					var err error
+					baseImageURL, err = url.Parse("docker:///cfgarden/private")
+					Expect(err).NotTo(HaveOccurred())
+
+					expectedLayersDigest[0].BlobID = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
+					expectedLayersDigest[1].BlobID = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
+
+					manifest = remote.Manifest{
+						ConfigCacheKey: "sha256:c2bf00eb303023869c676f91af930a12925c24d677999917e8d52c73fa10b73a",
+						SchemaVersion:  2,
+					}
+
+					expectedDiffIds = []string{
+						"sha256:780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
+						"sha256:56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b",
+					}
+
+					username = os.Getenv("REGISTRY_USERNAME")
+					password = os.Getenv("REGISTRY_PASSWORD")
+				})
+
+				It("fetches the manifest", func() {
+					manifest, err := dockerSrc.Manifest(logger, baseImageURL)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(manifest.Layers).To(HaveLen(2))
+					Expect(manifest.Layers[0]).To(Equal(expectedLayersDigest[0]))
+					Expect(manifest.Layers[1]).To(Equal(expectedLayersDigest[1]))
+				})
+
+				It("fetches the config", func() {
+					config, err := dockerSrc.Config(logger, baseImageURL, manifest)
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(config.RootFS.DiffIDs).To(HaveLen(2))
+					Expect(config.RootFS.DiffIDs[0]).To(Equal(expectedDiffIds[0]))
+					Expect(config.RootFS.DiffIDs[1]).To(Equal(expectedDiffIds[1]))
+				})
+
+				It("downloads a blob", func() {
+					blobContents, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+					Expect(err).NotTo(HaveOccurred())
+
+					buffer := gbytes.NewBuffer()
+					cmd := exec.Command("tar", "tzv")
+					cmd.Stdin = bytes.NewBuffer(blobContents)
+					sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(size).To(Equal(int64(90)))
+
+					Eventually(buffer).Should(gbytes.Say("hello"))
+					Eventually(sess).Should(gexec.Exit(0))
+				})
+			})
 		})
 	})
 
@@ -304,6 +463,46 @@ var _ = Describe("Docker source", func() {
 
 			Eventually(buffer).Should(gbytes.Say("hello"))
 			Eventually(sess).Should(gexec.Exit(0))
+		})
+
+		Context("when the image is private", func() {
+			BeforeEach(func() {
+				var err error
+				baseImageURL, err = url.Parse("docker:///cfgarden/private")
+				Expect(err).NotTo(HaveOccurred())
+
+				expectedLayersDigest[0].BlobID = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
+				expectedLayersDigest[1].BlobID = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
+			})
+
+			Context("when the correct credentials are provided", func() {
+				BeforeEach(func() {
+					username = os.Getenv("REGISTRY_USERNAME")
+					password = os.Getenv("REGISTRY_PASSWORD")
+				})
+
+				It("fetches the config", func() {
+					blobContents, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+					Expect(err).NotTo(HaveOccurred())
+
+					buffer := gbytes.NewBuffer()
+					cmd := exec.Command("tar", "tzv")
+					cmd.Stdin = bytes.NewBuffer(blobContents)
+					sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(size).To(Equal(int64(90)))
+
+					Eventually(buffer).Should(gbytes.Say("hello"))
+					Eventually(sess).Should(gexec.Exit(0))
+				})
+			})
+
+			Context("when invalid credentials are provided", func() {
+				It("retuns an error", func() {
+					_, _, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+					Expect(err).To(MatchError(ContainSubstring("Invalid status code returned when fetching blob 401")))
+				})
+			})
 		})
 
 		Context("when the image url is invalid", func() {

@@ -102,6 +102,31 @@ var _ = Describe("Create with remote images", func() {
 			})
 		})
 
+		Context("when the image is private", func() {
+			BeforeEach(func() {
+				baseImageURL = "docker:///cfgarden/private"
+			})
+
+			Context("when the credentials are correct", func() {
+				It("succeeds", func() {
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--username", RegistryUsername, "--password", RegistryPassword, baseImageURL, "random-id")
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
+				})
+			})
+
+			Context("when the credentials are wrong", func() {
+				It("fails", func() {
+					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--username", "someuser", "--password", "invalid-pass", baseImageURL, "random-id")
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess, 12*time.Second).Should(gexec.Exit(1))
+					Eventually(sess).Should(gbytes.Say("authorization failed: username and password are invalid"))
+				})
+			})
+		})
+
 		Context("when image size exceeds disk quota", func() {
 			BeforeEach(func() {
 				baseImageURL = "docker:///cfgarden/empty:v0.1.1"

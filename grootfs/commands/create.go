@@ -59,6 +59,14 @@ var CreateCommand = cli.Command{
 			Name:  "clean",
 			Usage: "Clean up unused layers before creating rootfs: true|false",
 		},
+		cli.StringFlag{
+			Name:  "username",
+			Usage: "Username to authenticate in image registry",
+		},
+		cli.StringFlag{
+			Name:  "password",
+			Usage: "Password to authenticate in image registry",
+		},
 	},
 
 	Action: func(ctx *cli.Context) error {
@@ -111,7 +119,7 @@ var CreateCommand = cli.Command{
 		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
 		namespacedCmdUnpacker := unpackerpkg.NewNamespacedUnpacker(runner, idMapper)
 
-		dockerSrc := remote.NewDockerSource(cfg.InsecureRegistries)
+		dockerSrc := remote.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.InsecureRegistries)
 
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		remoteFetcher := remote.NewRemoteFetcher(dockerSrc, cacheDriver)
@@ -195,6 +203,14 @@ func tryHumanizeDockerErrorsList(err errcode.Errors, spec groot.CreateSpec) stri
 	return err.Error()
 }
 
+func tryParsingErrorMessage(err error) error {
+	if err.Error() == "unable to retrieve auth token: 401 unauthorized" {
+		return errors.New("authorization failed: username and password are invalid")
+	}
+
+	return err
+}
+
 func tryHumanize(err error, spec groot.CreateSpec) string {
 	switch e := errorspkg.Cause(err).(type) {
 	case *url.Error:
@@ -206,5 +222,5 @@ func tryHumanize(err error, spec groot.CreateSpec) string {
 		return tryHumanizeDockerErrorsList(e, spec)
 	}
 
-	return errorspkg.Cause(err).Error()
+	return tryParsingErrorMessage(errorspkg.Cause(err)).Error()
 }
