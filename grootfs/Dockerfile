@@ -1,32 +1,62 @@
-FROM cloudfoundry/golang-ci
-MAINTAINER https://github.com/cloudfoundry/grootfs
+FROM ubuntu:16.04
+MAINTAINER https://github.com/cloudfoundry/garden-dockerfiles
 
-## Install depedencies
-RUN apt-get install -y uidmap btrfs-tools sudo jq
+################################
+# Install system packages
+RUN apt-get update && \
+    apt-get -y install \
+        btrfs-tools \
+        build-essential \
+        curl \
+        git \
+        jq \
+        netcat \
+        sudo \
+        uidmap \
+        unzip \
+        wget && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-## Add groot user
+################################
+# Setup GO
+ENV HOME /root
+ENV GOPATH /root/go
+ENV PATH /root/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+RUN mkdir -p $GOPATH
+RUN \
+  wget -qO- https://storage.googleapis.com/golang/go1.7.4.linux-amd64.tar.gz | tar -C /usr/local -xzf -
+
+################################
+# Install Go packages
+RUN go get github.com/onsi/ginkgo/ginkgo
+RUN go install github.com/onsi/ginkgo/ginkgo
+RUN go get github.com/onsi/gomega
+RUN go get github.com/Masterminds/glide
+RUN go get github.com/fouralarmfire/grootsay
+
+################################
+# Add groot user
 RUN useradd -d /home/groot -m -U groot
 RUN echo "groot ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 
-## Setup the GOPATH
-RUN mkdir /go && \
-	mkdir -p /go/src/code.cloudfoundry.org/grootfs && \
-	chown -R groot:groot /go
+###############################
+# Setup the GOPATH
+RUN mkdir -p /go && \
+    mkdir -p /go/src/code.cloudfoundry.org/grootfs && \
+    chown -R groot:groot /go
 
-## Make /root writable (e.g. /root/.docker/...)
+################################
+# Make /root writable (e.g. /root/.docker/...)
 RUN chmod 777 /root
 
-## Run as groot
+###############################
+# Run as groot
 USER groot
 
-## Env
+###############################
+# Env
 ENV GOROOT=/usr/local/go
 ENV GOPATH=/go
 ENV PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 WORKDIR /go/src/code.cloudfoundry.org/grootfs
-
-## Install stuff
-RUN go get github.com/onsi/ginkgo/ginkgo
-RUN go install github.com/onsi/ginkgo/ginkgo
-RUN go get github.com/Masterminds/glide
-RUN go get github.com/fouralarmfire/grootsay
