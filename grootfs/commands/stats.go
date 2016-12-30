@@ -19,7 +19,7 @@ import (
 
 var StatsCommand = cli.Command{
 	Name:        "stats",
-	Usage:       "stats [options] <id>",
+	Usage:       "stats [options] <id|image path>",
 	Description: "Return filesystem stats",
 
 	Action: func(ctx *cli.Context) error {
