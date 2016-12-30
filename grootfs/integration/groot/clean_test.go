@@ -240,7 +240,7 @@ var _ = Describe("Clean", func() {
 			})
 
 			Context("when the ignore image flag is also given", func() {
-				BeforeEach(func() {
+				JustBeforeEach(func() {
 					_, err := runnerWithConfig.Create(groot.CreateSpec{
 						ID:        "my-image-3",
 						BaseImage: "docker:///cfgarden/empty:v0.1.0",
