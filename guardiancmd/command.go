@@ -150,7 +150,7 @@ type GuardianCommand struct {
 		Dir            DirFlag `long:"depot" required:"true" description:"Directory in which to store container data."`
 		PropertiesPath string  `long:"properties-path" description:"Path in which to store properties."`
 
-		DefaultRootFSDir           DirFlag       `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
+		DefaultRootFS              string        `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
 		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
 		DestroyContainersOnStartup bool          `long:"destroy-containers-on-startup" description:"Clean up all the existing containers on startup."`
 		ApparmorProfile            string        `long:"apparmor" description:"Apparmor profile to use for unprivileged container processes"`
@@ -449,7 +449,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 	}
 
 	if cmd.Image.Plugin.Path() != "" {
-		defaultRootFS, err := url.Parse(cmd.Containers.DefaultRootFSDir.Path())
+		defaultRootFS, err := url.Parse(cmd.Containers.DefaultRootFS)
 		if err != nil {
 			logger.Fatal("failed-to-parse-default-rootfs", err)
 		}
@@ -513,7 +513,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		RepositoryFetcher: &repository_fetcher.CompositeFetcher{
 			LocalFetcher: &repository_fetcher.Local{
 				Cake:              cake,
-				DefaultRootFSPath: cmd.Containers.DefaultRootFSDir.Path(),
+				DefaultRootFSPath: cmd.Containers.DefaultRootFS,
 				IDProvider:        repository_fetcher.LayerIDProvider{},
 			},
 			RemoteFetcher: repository_fetcher.NewRemote(
@@ -652,7 +652,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadoo
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
 		WithResources(&specs.LinuxResources{Devices: append([]specs.LinuxDeviceCgroup{denyAll}, allowedDevices...)}).
-		WithRootFS(cmd.Containers.DefaultRootFSDir.Path()).
+		WithRootFS(cmd.Containers.DefaultRootFS).
 		WithDevices(fuseDevice).
 		WithProcess(baseProcess)
 
