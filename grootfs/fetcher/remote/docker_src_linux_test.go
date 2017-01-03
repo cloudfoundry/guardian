@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -32,14 +31,9 @@ var _ = Describe("Docker source", func() {
 		expectedLayersDigest []remote.Layer
 		expectedDiffIds      []string
 		manifest             remote.Manifest
-
-		username string
-		password string
 	)
 
 	BeforeEach(func() {
-		username = ""
-		password = ""
 		trustedRegistries = []string{}
 
 		configBlob = "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d"
@@ -70,7 +64,7 @@ var _ = Describe("Docker source", func() {
 	})
 
 	JustBeforeEach(func() {
-		dockerSrc = remote.NewDockerSource(username, password, trustedRegistries)
+		dockerSrc = remote.NewDockerSource("", "", trustedRegistries)
 	})
 
 	Describe("Manifest", func() {
@@ -122,9 +116,8 @@ var _ = Describe("Docker source", func() {
 			})
 
 			Context("when the correct credentials are provided", func() {
-				BeforeEach(func() {
-					username = os.Getenv("REGISTRY_USERNAME")
-					password = os.Getenv("REGISTRY_PASSWORD")
+				JustBeforeEach(func() {
+					dockerSrc = remote.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
 				})
 
 				It("fetches the manifest", func() {
@@ -210,9 +203,8 @@ var _ = Describe("Docker source", func() {
 			})
 
 			Context("when the correct credentials are provided", func() {
-				BeforeEach(func() {
-					username = os.Getenv("REGISTRY_USERNAME")
-					password = os.Getenv("REGISTRY_PASSWORD")
+				JustBeforeEach(func() {
+					dockerSrc = remote.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
 				})
 
 				It("fetches the config", func() {
@@ -408,9 +400,10 @@ var _ = Describe("Docker source", func() {
 						"sha256:780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
 						"sha256:56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b",
 					}
+				})
 
-					username = os.Getenv("REGISTRY_USERNAME")
-					password = os.Getenv("REGISTRY_PASSWORD")
+				JustBeforeEach(func() {
+					dockerSrc = remote.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
 				})
 
 				It("fetches the manifest", func() {
@@ -476,9 +469,8 @@ var _ = Describe("Docker source", func() {
 			})
 
 			Context("when the correct credentials are provided", func() {
-				BeforeEach(func() {
-					username = os.Getenv("REGISTRY_USERNAME")
-					password = os.Getenv("REGISTRY_PASSWORD")
+				JustBeforeEach(func() {
+					dockerSrc = remote.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
 				})
 
 				It("fetches the config", func() {
