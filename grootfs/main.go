@@ -117,9 +117,7 @@ func main() {
 		// errors need to end up in stdout.
 		cli.ErrWriter = os.Stdout
 
-		configurer := store.NewConfigurer()
-
-		if err := configurer.Ensure(logger, cfg.UserBasedStorePath); err != nil {
+		if err := configureStore(logger, cfg.UserBasedStorePath, ctx.Args()); err != nil {
 			return err
 		}
 
@@ -134,6 +132,22 @@ func main() {
 	}
 
 	_ = grootfs.Run(os.Args)
+}
+
+func configureStore(logger lager.Logger, storePath string, args []string) error {
+	var data lager.Data
+	image := args[len(args)-1]
+	if image != args[0] {
+		data = lager.Data{"image": image}
+	}
+
+	configurer := store.NewConfigurer()
+	if err := configurer.Ensure(logger, storePath); err != nil {
+		logger.Error("failed-to-setup-store", err, data)
+		return err
+	}
+
+	return nil
 }
 
 func translateLogLevel(logLevel string) lager.LogLevel {
