@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/commands"
@@ -139,7 +140,8 @@ func configureStore(logger lager.Logger, storePath string, args []string) error 
 	if len(args) > 0 {
 		image := args[len(args)-1]
 		if image != args[0] {
-			data = lager.Data{"image": image}
+			_, imageId := filepath.Split(image)
+			data = lager.Data{"id": imageId}
 		}
 	}
 

@@ -60,7 +60,7 @@ var _ = Describe("Logging", func() {
 						DiskLimit: 12300,
 					})
 				Expect(err).To(HaveOccurred())
-				Expect(logBuffer).To(gbytes.Say(`"image":"random-id"`))
+				Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))
 			})
 		})
 
@@ -70,7 +70,7 @@ var _ = Describe("Logging", func() {
 				err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
 					Delete("/path/to/random-id")
 				Expect(err).To(HaveOccurred())
-				Expect(logBuffer).To(gbytes.Say(`"image":"/path/to/random-id"`))
+				Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))
 			})
 		})
 
@@ -80,7 +80,7 @@ var _ = Describe("Logging", func() {
 				_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
 					Stats("/path/to/random-id")
 				Expect(err).To(HaveOccurred())
-				Expect(logBuffer).To(gbytes.Say(`"image":"/path/to/random-id"`))
+				Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))
 			})
 		})
 
@@ -90,7 +90,7 @@ var _ = Describe("Logging", func() {
 				_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
 					Clean(0, []string{})
 				Expect(err).To(HaveOccurred())
-				Expect(logBuffer).ToNot(gbytes.Say(`"image"`))
+				Expect(logBuffer).ToNot(gbytes.Say(`"id":`))
 			})
 		})
 
@@ -100,7 +100,7 @@ var _ = Describe("Logging", func() {
 				_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
 					List()
 				Expect(err).To(HaveOccurred())
-				Expect(logBuffer).ToNot(gbytes.Say(`"image"`))
+				Expect(logBuffer).ToNot(gbytes.Say(`"id":`))
 			})
 		})
 	})
