@@ -25,6 +25,7 @@ const (
 //go:generate counterfeiter . StoreMeasurer
 //go:generate counterfeiter . RootFSConfigurer
 //go:generate counterfeiter . MetricsEmitter
+//go:generate counterfeiter . NamespaceChecker
 
 type IDMappingSpec struct {
 	HostID      int
@@ -68,6 +69,10 @@ type ImageCloner interface {
 	Create(logger lager.Logger, spec ImageSpec) (Image, error)
 	Destroy(logger lager.Logger, id string) error
 	Stats(logger lager.Logger, id string) (VolumeStats, error)
+}
+
+type NamespaceChecker interface {
+	Check(uidMappings, gidMappings []IDMappingSpec) (bool, error)
 }
 
 type RootFSConfigurer interface {

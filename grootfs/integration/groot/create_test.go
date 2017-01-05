@@ -1,7 +1,6 @@
 package groot_test
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -195,87 +194,114 @@ var _ = Describe("Create", func() {
 			})
 		})
 
-		Describe("--newuidmap-bin global flag", func() {
-			var (
-				newuidmapCalledFile *os.File
-				newuidmapBin        *os.File
-				tempFolder          string
-			)
+	})
 
-			BeforeEach(func() {
-				tempFolder, newuidmapBin, newuidmapCalledFile = integration.CreateFakeBin("newuidmap")
+	Describe("uid and gid mappings", func() {
+		Context("when creating two images based on the same base image", func() {
+			var newuidmapBin *os.File
+
+			JustBeforeEach(func() {
+				_, newuidmapBin, _ = integration.CreateFakeBin("newuidmap")
+				image, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
+					BaseImage:   baseImagePath,
+					ID:          "foobar",
+					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+				})
+				Expect(err).ToNot(HaveOccurred())
+				Expect(image.Path).To(BeADirectory())
 			})
 
-			Context("when it's provided", func() {
-				It("uses calls the provided newuidmap binary", func() {
-					_, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
-						BaseImage:   baseImagePath,
-						ID:          "random-id",
-						UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
-					})
-					Expect(err).ToNot(HaveOccurred())
-
-					contents, err := ioutil.ReadFile(newuidmapCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - newuidmap"))
+			It("returns a useful error message", func() {
+				_, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
+					BaseImage: baseImagePath,
+					ID:        "foobar2",
 				})
+				Expect(err).To(MatchError("store already initialized with a different mapping"))
 			})
+		})
+	})
 
-			Context("when it's not provided", func() {
-				It("uses newuidmap from $PATH", func() {
-					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-					cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create", "--uid-mapping", "0:1000:1", baseImagePath, "random-id")
-					cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(0))
+	Describe("--newuidmap-bin global flag", func() {
+		var (
+			newuidmapCalledFile *os.File
+			newuidmapBin        *os.File
+			tempFolder          string
+		)
 
-					contents, err := ioutil.ReadFile(newuidmapCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - newuidmap"))
+		BeforeEach(func() {
+			tempFolder, newuidmapBin, newuidmapCalledFile = integration.CreateFakeBin("newuidmap")
+		})
+
+		Context("when it's provided", func() {
+			It("uses calls the provided newuidmap binary", func() {
+				_, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
+					BaseImage:   baseImagePath,
+					ID:          "random-id",
+					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
 				})
+				Expect(err).ToNot(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(newuidmapCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - newuidmap"))
 			})
 		})
 
-		Describe("--newgidmap-bin global flag", func() {
-			var (
-				newgidmapCalledFile *os.File
-				newgidmapBin        *os.File
-				tempFolder          string
-			)
+		Context("when it's not provided", func() {
+			It("uses newuidmap from $PATH", func() {
+				newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
+				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create", "--uid-mapping", "0:1000:1", baseImagePath, "random-id")
+				cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
 
-			BeforeEach(func() {
-				tempFolder, newgidmapBin, newgidmapCalledFile = integration.CreateFakeBin("newgidmap")
+				contents, err := ioutil.ReadFile(newuidmapCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - newuidmap"))
 			})
+		})
+	})
 
-			Context("when it's provided", func() {
-				It("uses calls the provided newgidmap binary", func() {
-					_, err := Runner.WithNewgidmapBin(newgidmapBin.Name()).Create(groot.CreateSpec{
-						BaseImage:   baseImagePath,
-						ID:          "random-id",
-						GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
-					})
-					Expect(err).ToNot(HaveOccurred())
+	Describe("--newgidmap-bin global flag", func() {
+		var (
+			newgidmapCalledFile *os.File
+			newgidmapBin        *os.File
+			tempFolder          string
+		)
 
-					contents, err := ioutil.ReadFile(newgidmapCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - newgidmap"))
+		BeforeEach(func() {
+			tempFolder, newgidmapBin, newgidmapCalledFile = integration.CreateFakeBin("newgidmap")
+		})
+
+		Context("when it's provided", func() {
+			It("uses calls the provided newgidmap binary", func() {
+				_, err := Runner.WithNewgidmapBin(newgidmapBin.Name()).Create(groot.CreateSpec{
+					BaseImage:   baseImagePath,
+					ID:          "random-id",
+					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
 				})
+				Expect(err).ToNot(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(newgidmapCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - newgidmap"))
 			})
+		})
 
-			Context("when it's not provided", func() {
-				It("uses newgidmap from $PATH", func() {
-					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-					cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create", "--gid-mapping", "0:1000:1", baseImagePath, "random-id")
-					cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(0))
+		Context("when it's not provided", func() {
+			It("uses newgidmap from $PATH", func() {
+				newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
+				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create", "--gid-mapping", "0:1000:1", baseImagePath, "random-id")
+				cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
 
-					contents, err := ioutil.ReadFile(newgidmapCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - newgidmap"))
-				})
+				contents, err := ioutil.ReadFile(newgidmapCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - newgidmap"))
 			})
 		})
 	})
@@ -702,16 +728,3 @@ var _ = Describe("Create", func() {
 		})
 	})
 })
-
-func writeMegabytes(outputPath string, mb int) error {
-	cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", outputPath), "bs=1048576", fmt.Sprintf("count=%d", mb))
-	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	if err != nil {
-		return err
-	}
-	Eventually(sess).Should(gexec.Exit())
-	if sess.ExitCode() > 0 {
-		return errors.New(string(sess.Err.Contents()))
-	}
-	return nil
-}

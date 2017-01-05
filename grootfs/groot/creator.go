@@ -34,13 +34,14 @@ type Creator struct {
 	rootFSConfigurer  RootFSConfigurer
 	dependencyManager DependencyManager
 	metricsEmitter    MetricsEmitter
+	namespaceChecker  NamespaceChecker
 }
 
 func IamCreator(
 	imageCloner ImageCloner, baseImagePuller BaseImagePuller,
 	locksmith Locksmith, rootFSConfigurer RootFSConfigurer,
 	dependencyManager DependencyManager, metricsEmitter MetricsEmitter, cleaner Cleaner,
-) *Creator {
+	namespaceChecker NamespaceChecker) *Creator {
 	return &Creator{
 		imageCloner:       imageCloner,
 		baseImagePuller:   baseImagePuller,
@@ -49,6 +50,7 @@ func IamCreator(
 		dependencyManager: dependencyManager,
 		metricsEmitter:    metricsEmitter,
 		cleaner:           cleaner,
+		namespaceChecker:  namespaceChecker,
 	}
 }
 
@@ -96,6 +98,17 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 			logger.Error("failed-to-unlock", err)
 		}
 	}()
+
+	validNamespace, err := c.namespaceChecker.Check(spec.UIDMappings, spec.GIDMappings)
+	if err != nil {
+		logger.Error("failed-check-namespace", err)
+		return Image{}, fmt.Errorf("checking namespace failed: %s", err.Error())
+	}
+
+	if !validNamespace {
+		logger.Error("failed-check-namespace", err)
+		return Image{}, fmt.Errorf("store already initialized with a different mapping")
+	}
 
 	if spec.CleanOnCreate {
 		if _, err := c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, spec.CleanOnCreateIgnoreImages, false); err != nil {

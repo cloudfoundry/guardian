@@ -25,6 +25,7 @@ var _ = Describe("Creator", func() {
 		fakeDependencyManager *grootfakes.FakeDependencyManager
 		fakeMetricsEmitter    *grootfakes.FakeMetricsEmitter
 		fakeCleaner           *grootfakes.FakeCleaner
+		fakeNamespaceChecker  *grootfakes.FakeNamespaceChecker
 		lockFile              *os.File
 
 		creator *groot.Creator
@@ -39,18 +40,21 @@ var _ = Describe("Creator", func() {
 		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
 		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
 		fakeCleaner = new(grootfakes.FakeCleaner)
+		fakeNamespaceChecker = new(grootfakes.FakeNamespaceChecker)
 
 		var err error
 		lockFile, err = ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
+
 		fakeLocksmith.LockReturns(lockFile, nil)
+		fakeNamespaceChecker.CheckReturns(true, nil)
 
 		logger = lagertest.NewTestLogger("creator")
 
 		creator = groot.IamCreator(
 			fakeImageCloner, fakeBaseImagePuller, fakeLocksmith,
 			fakeRootFSConfigurer, fakeDependencyManager, fakeMetricsEmitter,
-			fakeCleaner)
+			fakeCleaner, fakeNamespaceChecker)
 	})
 
 	AfterEach(func() {
@@ -66,6 +70,31 @@ var _ = Describe("Creator", func() {
 
 			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
 			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GlobalLockKey))
+		})
+
+		It("configures the store based on the mappings", func() {
+			uidMappings := groot.IDMappingSpec{
+				HostID:      1000,
+				NamespaceID: 0,
+				Size:        1,
+			}
+
+			gidMappings := groot.IDMappingSpec{
+				HostID:      2000,
+				NamespaceID: 0,
+				Size:        1,
+			}
+			_, err := creator.Create(logger, groot.CreateSpec{
+				BaseImage:   "/path/to/image",
+				UIDMappings: []groot.IDMappingSpec{uidMappings},
+				GIDMappings: []groot.IDMappingSpec{gidMappings},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeNamespaceChecker.CheckCallCount()).To(Equal(1))
+			uids, gids := fakeNamespaceChecker.CheckArgsForCall(0)
+			Expect(uids).To(ConsistOf(uidMappings))
+			Expect(gids).To(ConsistOf(gidMappings))
 		})
 
 		Context("when clean up store is requested", func() {
@@ -305,6 +334,32 @@ var _ = Describe("Creator", func() {
 				Expect(err).To(HaveOccurred())
 
 				Expect(fakeBaseImagePuller.PullCallCount()).To(BeZero())
+			})
+		})
+
+		Context("when checking for namespace returns an error", func() {
+			BeforeEach(func() {
+				fakeNamespaceChecker.CheckReturns(false, errors.New("failed to check namespace"))
+			})
+
+			It("returns an error", func() {
+				_, err := creator.Create(logger, groot.CreateSpec{
+					BaseImage: "/path/to/image",
+				})
+				Expect(err).To(MatchError(ContainSubstring("failed to check namespace")))
+			})
+		})
+
+		Context("when checking for namespace returns false", func() {
+			BeforeEach(func() {
+				fakeNamespaceChecker.CheckReturns(false, nil)
+			})
+
+			It("returns an error", func() {
+				_, err := creator.Create(logger, groot.CreateSpec{
+					BaseImage: "/path/to/image",
+				})
+				Expect(err).To(MatchError(ContainSubstring("store already initialized with a different mapping")))
 			})
 		})
 

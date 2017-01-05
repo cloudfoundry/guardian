@@ -1,8 +1,10 @@
 package groot_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"strconv"
 
@@ -81,4 +83,17 @@ func TestGroot(t *testing.T) {
 	})
 
 	RunSpecs(t, "GrootFS Integration Suite - Running as groot")
+}
+
+func writeMegabytes(outputPath string, mb int) error {
+	cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", outputPath), "bs=1048576", fmt.Sprintf("count=%d", mb))
+	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	if err != nil {
+		return err
+	}
+	Eventually(sess).Should(gexec.Exit())
+	if sess.ExitCode() > 0 {
+		return errors.New(string(sess.Err.Contents()))
+	}
+	return nil
 }

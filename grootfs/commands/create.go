@@ -141,9 +141,11 @@ var CreateCommand = cli.Command{
 		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, imageCloner, dependencyManager)
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
+		namespaceChecker := groot.NewNamespaceChecker(storePath)
+
 		creator := groot.IamCreator(
 			imageCloner, baseImagePuller, locksmith, rootFSConfigurer,
-			dependencyManager, metricsEmitter, cleaner,
+			dependencyManager, metricsEmitter, cleaner, namespaceChecker,
 		)
 
 		createSpec := groot.CreateSpec{
