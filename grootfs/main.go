@@ -136,9 +136,11 @@ func main() {
 
 func configureStore(logger lager.Logger, storePath string, args []string) error {
 	var data lager.Data
-	image := args[len(args)-1]
-	if image != args[0] {
-		data = lager.Data{"image": image}
+	if len(args) > 0 {
+		image := args[len(args)-1]
+		if image != args[0] {
+			data = lager.Data{"image": image}
+		}
 	}
 
 	configurer := store.NewConfigurer()
