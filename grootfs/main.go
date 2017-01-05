@@ -18,7 +18,6 @@ import (
 const (
 	defaultBtrfsBin     = "btrfs"
 	defaultDraxBin      = "drax"
-	defaultStorePath    = "/var/lib/grootfs"
 	defaultNewuidmapBin = "newuidmap"
 	defaultNewgidmapBin = "newgidmap"
 )
@@ -42,7 +41,7 @@ func main() {
 		cli.StringFlag{
 			Name:  "store",
 			Usage: "Path to the store directory",
-			Value: defaultStorePath,
+			Value: store.DEFAULT_STORE_PATH,
 		},
 		cli.StringFlag{
 			Name:  "log-level",
@@ -89,6 +88,10 @@ func main() {
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
+		if !ctx.Args().Present() {
+			return nil
+		}
+
 		cfgBuilder, err := config.NewBuilder(ctx.GlobalString("config"))
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
