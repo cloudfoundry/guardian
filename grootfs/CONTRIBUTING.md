@@ -65,3 +65,15 @@ should include any context that will be useful to other developers
 [#tracker story id]
 ```
 
+---
+##Managing Go Dependencies
+
+Our Go package dependencies are managed as git submodules in the `vendor` directory.
+To add / remove / update dependencies, run the `script/deps` script as follows:
+
+```
+deps -a <url> --- add a new dependency
+deps -d <url> --- remove a dependency
+deps -u <url> --- update a dependency
+deps -h --- print help menu
+```
