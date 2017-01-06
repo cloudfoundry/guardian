@@ -49,7 +49,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "log-file",
-			Usage: "Forward logs to file",
+			Usage: "File to write logs to. Using this option sets the log level to `info` if --log-level is not specified.",
 		},
 		cli.StringFlag{
 			Name:  "drax-bin",
