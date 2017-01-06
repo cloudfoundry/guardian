@@ -46,7 +46,7 @@ var CreateCommand = cli.Command{
 		},
 		cli.StringSliceFlag{
 			Name:  "gid-mapping",
-			Usage: "GID mapping for image translation, e.g.: <Namespace UID>:<Host UID>:<Size>",
+			Usage: "GID mapping for image translation, e.g.: <Namespace GID>:<Host GID>:<Size>",
 		},
 		cli.StringSliceFlag{
 			Name:  "insecure-registry",
