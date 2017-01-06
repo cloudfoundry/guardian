@@ -16,3 +16,4 @@ outputs:
 
 run:
   path: grootfs-release-master/src/code.cloudfoundry.org/grootfs/ci/scripts/build-grootfs.sh
+  user: root
