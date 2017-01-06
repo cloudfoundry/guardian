@@ -40,6 +40,16 @@ var _ = Describe("Stats", func() {
 		baseImagePath = baseImageFile.Name()
 	})
 
+	Context("when the store doesn't exist", func() {
+		It("logs the image path", func() {
+			logBuffer := gbytes.NewBuffer()
+			_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
+				Stats("/path/to/random-id")
+			Expect(err).To(HaveOccurred())
+			Expect(logBuffer).To(gbytes.Say(`"id":"/path/to/random-id"`))
+		})
+	})
+
 	Context("when image exists", func() {
 		var expectedStats groot.VolumeStats
 

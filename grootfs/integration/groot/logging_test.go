@@ -49,62 +49,6 @@ var _ = Describe("Logging", func() {
 		Expect(logBuffer).To(gbytes.Say("namespaced-unpacking.unpack"))
 	})
 
-	Context("when fails to configure the store", func() {
-		Describe("create", func() {
-			It("logs the image id", func() {
-				logBuffer := gbytes.NewBuffer()
-				_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
-					Create(groot.CreateSpec{
-						ID:        "random-id",
-						BaseImage: "my-image",
-						DiskLimit: 12300,
-					})
-				Expect(err).To(HaveOccurred())
-				Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))
-			})
-		})
-
-		Describe("delete", func() {
-			It("logs the image path", func() {
-				logBuffer := gbytes.NewBuffer()
-				err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
-					Delete("/path/to/random-id")
-				Expect(err).To(HaveOccurred())
-				Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))
-			})
-		})
-
-		Describe("stats", func() {
-			It("logs the image path", func() {
-				logBuffer := gbytes.NewBuffer()
-				_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
-					Stats("/path/to/random-id")
-				Expect(err).To(HaveOccurred())
-				Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))
-			})
-		})
-
-		Describe("clean", func() {
-			It("does not log the image path", func() {
-				logBuffer := gbytes.NewBuffer()
-				_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
-					Clean(0, []string{})
-				Expect(err).To(HaveOccurred())
-				Expect(logBuffer).ToNot(gbytes.Say(`"id":`))
-			})
-		})
-
-		Describe("list", func() {
-			It("does not log the image path", func() {
-				logBuffer := gbytes.NewBuffer()
-				_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
-					List()
-				Expect(err).To(HaveOccurred())
-				Expect(logBuffer).ToNot(gbytes.Say(`"id":`))
-			})
-		})
-	})
-
 	Describe("--log-level and --log-file flags", func() {
 		Context("when the --log-file is not set", func() {
 			Context("and --log-level is set", func() {

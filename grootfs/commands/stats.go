@@ -43,6 +43,7 @@ var StatsCommand = cli.Command{
 		idOrPath := ctx.Args().First()
 		id, err := idfinder.FindID(storePath, idOrPath)
 		if err != nil {
+			logger.Error("find-id-failed", err, lager.Data{"id": idOrPath, "storePath": storePath})
 			return cli.NewExitError(err.Error(), 1)
 		}
 

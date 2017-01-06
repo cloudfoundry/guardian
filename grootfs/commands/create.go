@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
+	"code.cloudfoundry.org/grootfs/store"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
@@ -110,6 +111,10 @@ var CreateCommand = cli.Command{
 			err = fmt.Errorf("parsing gid-mapping: %s", err)
 			logger.Error("parsing-command", err)
 			return cli.NewExitError(err.Error(), 1)
+		}
+
+		if err = store.ConfigureStore(logger, storePath, id); err != nil {
+			return err
 		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)

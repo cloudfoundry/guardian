@@ -8,14 +8,22 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type Configurer struct {
+func ConfigureStore(logger lager.Logger, storePath string, imageIDOrPath string) error {
+	var data lager.Data
+	if imageIDOrPath != "" {
+		_, id := filepath.Split(imageIDOrPath)
+		data = lager.Data{"id": id}
+	}
+
+	if err := ensure(logger, storePath); err != nil {
+		logger.Error("failed-to-setup-store", err, data)
+		return err
+	}
+
+	return nil
 }
 
-func NewConfigurer() *Configurer {
-	return &Configurer{}
-}
-
-func (c *Configurer) Ensure(logger lager.Logger, storePath string) error {
+func ensure(logger lager.Logger, storePath string) error {
 	logger = logger.Session("ensuring-store", lager.Data{"storePath": storePath})
 	logger.Debug("start")
 	defer logger.Debug("end")

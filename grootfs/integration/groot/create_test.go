@@ -59,6 +59,22 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0700)))
 		})
+
+		Context("when fails to configure the store", func() {
+			Describe("create", func() {
+				It("logs the image id", func() {
+					logBuffer := gbytes.NewBuffer()
+					_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
+						Create(groot.CreateSpec{
+							ID:        "random-id",
+							BaseImage: "my-image",
+							DiskLimit: 12300,
+						})
+					Expect(err).To(HaveOccurred())
+					Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))
+				})
+			})
+		})
 	})
 
 	Context("when inclusive disk limit is provided", func() {

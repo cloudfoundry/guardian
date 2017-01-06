@@ -18,8 +18,7 @@ var _ = Describe("Configurer", func() {
 	var (
 		storePath string
 
-		logger     lager.Logger
-		configurer *store.Configurer
+		logger lager.Logger
 	)
 
 	BeforeEach(func() {
@@ -29,22 +28,21 @@ var _ = Describe("Configurer", func() {
 		storePath = path.Join(tempDir, "store")
 
 		logger = lagertest.NewTestLogger("store-configurer")
-		configurer = store.NewConfigurer()
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(path.Dir(storePath))).To(Succeed())
 	})
 
-	Describe("Ensure", func() {
+	Describe("ConfigureStore", func() {
 		It("creates the store directory", func() {
-			Expect(configurer.Ensure(logger, storePath)).To(Succeed())
+			Expect(store.ConfigureStore(logger, storePath, "random-id")).To(Succeed())
 
 			Expect(storePath).To(BeADirectory())
 		})
 
 		It("creates the correct internal structure", func() {
-			Expect(configurer.Ensure(logger, storePath)).To(Succeed())
+			Expect(store.ConfigureStore(logger, storePath, "random-id")).To(Succeed())
 
 			Expect(filepath.Join(storePath, "images")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "cache")).To(BeADirectory())
@@ -55,7 +53,7 @@ var _ = Describe("Configurer", func() {
 		})
 
 		It("chmods the storePath to 700", func() {
-			Expect(configurer.Ensure(logger, storePath)).To(Succeed())
+			Expect(store.ConfigureStore(logger, storePath, "random-id")).To(Succeed())
 
 			stat, err := os.Stat(storePath)
 			Expect(err).NotTo(HaveOccurred())
@@ -72,14 +70,14 @@ var _ = Describe("Configurer", func() {
 				go func() {
 					defer GinkgoRecover()
 					<-start1
-					Expect(configurer.Ensure(logger, storePath)).To(Succeed())
+					Expect(store.ConfigureStore(logger, storePath, "random-id")).To(Succeed())
 					close(start1)
 				}()
 
 				go func() {
 					defer GinkgoRecover()
 					<-start2
-					Expect(configurer.Ensure(logger, storePath)).To(Succeed())
+					Expect(store.ConfigureStore(logger, storePath, "random-id")).To(Succeed())
 					close(start2)
 				}()
 
@@ -93,7 +91,7 @@ var _ = Describe("Configurer", func() {
 
 		Context("when the base directory does not exist", func() {
 			It("returns an error", func() {
-				Expect(configurer.Ensure(logger, "/not/exist")).To(
+				Expect(store.ConfigureStore(logger, "/not/exist", "random-id")).To(
 					MatchError(ContainSubstring("making directory")),
 				)
 			})
@@ -102,14 +100,14 @@ var _ = Describe("Configurer", func() {
 		Context("when the store already exists", func() {
 			It("succeeds", func() {
 				Expect(os.Mkdir(storePath, 0700)).To(Succeed())
-				Expect(configurer.Ensure(logger, storePath)).To(Succeed())
+				Expect(store.ConfigureStore(logger, storePath, "random-id")).To(Succeed())
 			})
 
 			Context("and it's a regular file", func() {
 				It("returns an error", func() {
 					Expect(ioutil.WriteFile(storePath, []byte("hello"), 0600)).To(Succeed())
 
-					Expect(configurer.Ensure(logger, storePath)).To(
+					Expect(store.ConfigureStore(logger, storePath, "random-id")).To(
 						MatchError(ContainSubstring("is not a directory")),
 					)
 				})
@@ -119,7 +117,7 @@ var _ = Describe("Configurer", func() {
 		Context("when any internal directory already exists", func() {
 			It("succeeds", func() {
 				Expect(os.MkdirAll(filepath.Join(storePath, "volumes"), 0700)).To(Succeed())
-				Expect(configurer.Ensure(logger, storePath)).To(Succeed())
+				Expect(store.ConfigureStore(logger, storePath, "random-id")).To(Succeed())
 			})
 
 			Context("and it's a regular file", func() {
@@ -127,7 +125,7 @@ var _ = Describe("Configurer", func() {
 					Expect(os.Mkdir(storePath, 0700)).To(Succeed())
 					Expect(ioutil.WriteFile(filepath.Join(storePath, "volumes"), []byte("hello"), 0600)).To(Succeed())
 
-					Expect(configurer.Ensure(logger, storePath)).To(
+					Expect(store.ConfigureStore(logger, storePath, "random-id")).To(
 						MatchError(ContainSubstring("is not a directory")),
 					)
 				})

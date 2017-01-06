@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Clean", func() {
@@ -38,6 +39,16 @@ var _ = Describe("Clean", func() {
 		afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.CACHE_DIR_NAME))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(afterContents).To(HaveLen(0))
+	})
+
+	Context("when the store doesn't exist", func() {
+		It("logs an error message and exits successfully", func() {
+			logBuffer := gbytes.NewBuffer()
+			_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
+				Clean(0, []string{})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(logBuffer).To(gbytes.Say(`"error":"no store found at /invalid-store/` + CurrentUserID + `"`))
+		})
 	})
 
 	Context("when there are unused layers", func() {

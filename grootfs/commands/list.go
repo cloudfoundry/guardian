@@ -2,6 +2,7 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"fmt"
+	"os"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -28,10 +29,16 @@ var ListCommand = cli.Command{
 		}
 
 		storePath := cfg.BaseStorePath
+		if _, err := os.Stat(storePath); os.IsNotExist(err) {
+			err := fmt.Errorf("no store found at %s", storePath)
+			logger.Error("store-path-failed", err, nil)
+			return cli.NewExitError(err.Error(), 1)
+		}
 
 		lister := groot.IamLister()
 		images, err := lister.List(logger, storePath)
 		if err != nil {
+			logger.Error("listing-images", err, lager.Data{"storePath": storePath})
 			return cli.NewExitError(fmt.Sprintf("Failed to retrieve list of images: %s", err.Error()), 1)
 		}
 

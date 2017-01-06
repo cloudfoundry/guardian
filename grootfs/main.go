@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/commands"
@@ -88,10 +87,6 @@ func main() {
 	}
 
 	grootfs.Before = func(ctx *cli.Context) error {
-		if !ctx.Args().Present() {
-			return nil
-		}
-
 		cfgBuilder, err := config.NewBuilder(ctx.GlobalString("config"))
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
@@ -121,10 +116,6 @@ func main() {
 		// errors need to end up in stdout.
 		cli.ErrWriter = os.Stdout
 
-		if err := configureStore(logger, cfg.UserBasedStorePath, ctx.Args()); err != nil {
-			return err
-		}
-
 		dropsondeOrigin := grootfs.Name
 		if cfg.MetronEndpoint != "" {
 			if err := dropsonde.Initialize(cfg.MetronEndpoint, dropsondeOrigin); err != nil {
@@ -136,25 +127,6 @@ func main() {
 	}
 
 	_ = grootfs.Run(os.Args)
-}
-
-func configureStore(logger lager.Logger, storePath string, args []string) error {
-	var data lager.Data
-	if len(args) > 0 {
-		image := args[len(args)-1]
-		if image != args[0] {
-			_, imageId := filepath.Split(image)
-			data = lager.Data{"id": imageId}
-		}
-	}
-
-	configurer := store.NewConfigurer()
-	if err := configurer.Ensure(logger, storePath); err != nil {
-		logger.Error("failed-to-setup-store", err, data)
-		return err
-	}
-
-	return nil
 }
 
 func translateLogLevel(logLevel string) lager.LogLevel {

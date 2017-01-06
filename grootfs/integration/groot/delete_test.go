@@ -66,6 +66,16 @@ var _ = Describe("Delete", func() {
 		Expect(sess).ToNot(gbytes.Say(rootID))
 	})
 
+	Context("when the store doesn't exist", func() {
+		It("logs the image path", func() {
+			logBuffer := gbytes.NewBuffer()
+			err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
+				Delete("/path/to/random-id")
+			Expect(err).To(HaveOccurred())
+			Expect(logBuffer).To(gbytes.Say(`"id":"/path/to/random-id"`))
+		})
+	})
+
 	Context("when a path is provided instead of an ID", func() {
 		It("deletes the image by the path", func() {
 			Expect(Runner.Delete(image.Path)).To(Succeed())

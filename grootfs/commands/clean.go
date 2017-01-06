@@ -2,6 +2,7 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"code.cloudfoundry.org/lager"
@@ -53,6 +54,11 @@ var CleanCommand = cli.Command{
 		}
 
 		storePath := cfg.UserBasedStorePath
+		if _, err := os.Stat(storePath); os.IsNotExist(err) {
+			err := fmt.Errorf("no store found at %s", storePath)
+			logger.Error("store-path-failed", err, nil)
+			return cli.NewExitError(err.Error(), 0)
+		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)

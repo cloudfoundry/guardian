@@ -75,6 +75,16 @@ var _ = Describe("List", func() {
 		})
 	})
 
+	Context("when the store does not exist", func() {
+		It("fails and logs the error", func() {
+			logBuffer := gbytes.NewBuffer()
+			_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
+				List()
+			Expect(err).To(HaveOccurred())
+			Expect(logBuffer).To(gbytes.Say(`"error":"no store found at /invalid-store"`))
+		})
+	})
+
 	Context("when there are no existing images", func() {
 		BeforeEach(func() {
 			Runner.Delete(image.Path)
