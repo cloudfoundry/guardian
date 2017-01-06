@@ -24,6 +24,7 @@ invitation.
 
 # Index
 * [Installation](#installation)
+* [Configuration](#configuration)
 * [Create an image](#creating-an-image)
 * [Delete an image](#deleting-an-image)
 * [Stats](#stats)
@@ -65,6 +66,60 @@ This will ensure the following requirements are in place:
   create a loop mounted BTRFS.
 * For user/group id mapping, you'll also require newuidmap and newgidmap to be
   installed (uidmap package on Ubuntu)
+
+### Configuration
+
+GrootFS can optionally be configured with a YAML config file. If both a config file and command
+line arguments are provided, the command line arguments will take precedence.
+
+To use a config file:
+
+```
+grootfs --config ./my-config.yml <command> ...
+```
+
+Following is an example configuration file with all options provided:
+
+```yaml
+store_path: /var/vcap/data/grootfs/store
+btrfs_bin: /var/vcap/packages/btrfs-progs/bin/btrfs
+drax_bin: /var/vcap/packages/grootfs/bin/drax
+newuidmap_bin: /var/vcap/packages/idmapper/bin/newuidmap
+newgidmap_bin: /var/vcap/packages/idmapper/bin/newgidmap
+log_level: debug
+metron_endpoint: 127.0.0.1:8081
+insecure_registries:
+  - my-docker-registry.example.com:1234
+ignore_base_images:
+  - docker:///ubuntu
+  - docker://my-docker-registry.example.com:1234/busybox
+clean_on_create: true
+clean_threshold_bytes: 1048576
+uid_mappings:
+	- "0:4294967294:1"
+	- "1:1:4294967293"
+gid_mappings:
+	- "0:4294967294:1"
+	- "1:1:4294967293"
+```
+
+| Key | Description  |
+|---|---|
+| store_path  | Path to the store directory |
+| btrfs_bin  | Path to btrfs bin. (If not provided will use $PATH)  |
+| drax_bin | Path to drax bin. (If not provided will use $PATH) |
+| newuidmap_bin | Path to newuidmap bin. (If not provided will use $PATH) |
+| newgidmap_bin | Path to newgidmap bin. (If not provided will use $PATH) |
+| log_level | Set logging level \<debug \| info \| error \| fatal\> |
+| metron_endpoint | Metron endpoint used to send metrics |
+| insecure_registries | Whitelist a private registry |
+| ignore\_base\_images | Images to ignore during cleanup |
+| clean\_on\_create | Clean up unused layers before creating rootfs |
+| clean\_threshold\_bytes | Disk usage of the store directory at which cleanup should trigger |
+| uid_mappings | UID mapping for image translation, e.g.: \<Namespace UID\>:\<Host UID\>:\<Size\> |
+| gid_mappings | GID mapping for image translation, e.g.: \<Namespace GID\>:\<Host GID\>:\<Size\> |
+
+
 
 ### Creating an image
 
