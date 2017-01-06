@@ -34,8 +34,9 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 		)
 	}
 	if spec.CleanOnCreate {
-		clean := strconv.FormatBool(spec.CleanOnCreate)
-		args = append(args, "--clean", clean)
+		args = append(args, "--clean")
+	} else {
+		args = append(args, "--no-clean")
 	}
 	if spec.DiskLimit != 0 {
 		args = append(args, "--disk-limit-size-bytes",

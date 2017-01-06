@@ -37,3 +37,14 @@ var EmptyBaseImageV011 = BaseImage{
 		},
 	},
 }
+
+var BusyBoxImage = BaseImage{
+	ConfigBlobID: "sha256:1efc1d465fd6255396d0efd90a899f57aba2b7b294b02d5f55c6f5505ca9f3e5",
+	Layers: []Layer{
+		{
+			BlobID:  "sha256:fdab12439263ca89c449f09a489b6fbf40af8526a3dda279c8954451703641c3",
+			DiffID:  "sha256:68737f5031b303067faacb264cd3b1466973da762bd83d4381e5396e6a4b79a8",
+			ChainID: "sha256:68737f5031b303067faacb264cd3b1466973da762bd83d4381e5396e6a4b79a8",
+		},
+	},
+}

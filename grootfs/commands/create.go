@@ -56,9 +56,13 @@ var CreateCommand = cli.Command{
 			Name:  "exclude-image-from-quota",
 			Usage: "Set disk limit to be exclusive (i.e.: excluding image layers)",
 		},
-		cli.StringFlag{
+		cli.BoolFlag{
 			Name:  "clean",
-			Usage: "Clean up unused layers before creating rootfs: true|false",
+			Usage: "Clean up unused layers before creating rootfs",
+		},
+		cli.BoolFlag{
+			Name:  "no-clean",
+			Usage: "Do NOT clean up unused layers before creating rootfs",
 		},
 		cli.StringFlag{
 			Name:  "username",
@@ -79,6 +83,10 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
+		if ctx.IsSet("clean") && ctx.IsSet("no-clean") {
+			return cli.NewExitError("clean and no-clean cannot be used together", 1)
+		}
+
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry")).
 			WithUIDMappings(ctx.StringSlice("uid-mapping")).
@@ -87,7 +95,7 @@ var CreateCommand = cli.Command{
 				ctx.IsSet("disk-limit-size-bytes")).
 			WithExcludeBaseImageFromQuota(ctx.Bool("exclude-image-from-quota"),
 				ctx.IsSet("exclude-image-from-quota")).
-			WithCleanOnCreate(ctx.String("clean"), ctx.IsSet("clean"))
+			WithCleanOnCreate(ctx.IsSet("clean"), ctx.IsSet("no-clean"))
 
 		cfg, err := configBuilder.Build()
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})

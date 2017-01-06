@@ -478,26 +478,43 @@ var _ = Describe("Builder", func() {
 		})
 
 		Describe("WithCleanOnCreate", func() {
-			It("overrides the config's entry when the flag is set", func() {
-				builder = builder.WithCleanOnCreate("true", true)
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.CleanOnCreate).To(BeTrue())
-			})
+			Context("when no-clean is set, and clean is not set", func() {
+				BeforeEach(func() {
+					cfg.CleanOnCreate = true
+				})
 
-			It("overrides the config's entry when the flag is set", func() {
-				builder = builder.WithCleanOnCreate("false", true)
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.CleanOnCreate).To(BeFalse())
-			})
-
-			Context("when flag is not valid boolean", func() {
-				It("sets the flag to false", func() {
-					builder = builder.WithCleanOnCreate("not-valid-boolean", true)
+				It("overrides the config's entry", func() {
+					builder = builder.WithCleanOnCreate(false, true)
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(config.CleanOnCreate).To(BeFalse())
+				})
+			})
+
+			Context("when no-clean is not set, and clean is set", func() {
+				BeforeEach(func() {
+					cfg.CleanOnCreate = false
+				})
+
+				It("overrides the config's entry", func() {
+					builder = builder.WithCleanOnCreate(true, false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.CleanOnCreate).To(BeTrue())
+				})
+			})
+
+			Context("when no-clean is not set, and clean is not set", func() {
+				BeforeEach(func() {
+					cfg.CleanOnCreate = true
+				})
+
+				It("uses the config value", func() {
+					cfg.CleanOnCreate = true
+					builder = builder.WithCleanOnCreate(false, false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.CleanOnCreate).To(BeTrue())
 				})
 			})
 		})

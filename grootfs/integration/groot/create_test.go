@@ -360,6 +360,65 @@ var _ = Describe("Create", func() {
 		})
 	})
 
+	Context("when --no-clean is given", func() {
+		BeforeEach(func() {
+			_, err := Runner.Create(groot.CreateSpec{
+				ID:        "my-busybox",
+				BaseImage: "docker:///busybox",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(Runner.Delete("my-busybox")).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Runner.Delete("my-empty")
+		})
+
+		It("does not clean the store first", func() {
+			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(preContents).To(HaveLen(1))
+
+			_, err = Runner.Create(groot.CreateSpec{
+				ID:                          "my-empty",
+				BaseImage:                   "docker:///cfgarden/empty:v0.1.1",
+				CleanOnCreate:               false,
+				CleanOnCreateIgnoreImages:   []string{"docker://my-image"},
+				CleanOnCreateThresholdBytes: int64(250000),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(afterContents).To(HaveLen(3))
+
+			layers := append(testhelpers.EmptyBaseImageV011.Layers, testhelpers.BusyBoxImage.Layers...)
+			for _, layer := range layers {
+				Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+			}
+		})
+	})
+
+	Context("when both no-clean and clean flags are given", func() {
+		It("returns an error", func() {
+			cmd := exec.Command(
+				GrootFSBin, "--store", StorePath,
+				"--config",
+				Runner.ConfigPath,
+				"create",
+				"--clean",
+				"--no-clean",
+				"docker:///cfgarden/empty:v0.1.1",
+				"random-id",
+			)
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, "10s").Should(gexec.Exit(1))
+			Eventually(sess.Out).Should(gbytes.Say("clean and no-clean cannot be used together"))
+		})
+	})
+
 	Context("when no --store option is given", func() {
 		It("uses the default store path", func() {
 			Expect("/var/lib/grootfs/images").ToNot(BeAnExistingFile())
@@ -685,6 +744,9 @@ var _ = Describe("Create", func() {
 
 			BeforeEach(func() {
 				cfg.CleanOnCreate = true
+			})
+
+			JustBeforeEach(func() {
 				createSpec = groot.CreateSpec{
 					ID:        "my-busybox",
 					BaseImage: "docker:///busybox",
@@ -706,8 +768,17 @@ var _ = Describe("Create", func() {
 				Expect(preContents).To(HaveLen(1))
 
 				spec.BaseImage = "docker:///cfgarden/empty:v0.1.1"
-				_, err = Runner.Create(spec)
+				cmd := exec.Command(
+					GrootFSBin, "--store", StorePath,
+					"--config",
+					Runner.ConfigPath,
+					"create",
+					"docker:///cfgarden/empty:v0.1.1",
+					spec.ID,
+				)
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess, "10s").Should(gexec.Exit(0))
 
 				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 				Expect(err).NotTo(HaveOccurred())
@@ -718,7 +789,7 @@ var _ = Describe("Create", func() {
 				}
 			})
 
-			Context("when clean flag is set to false", func() {
+			Context("when no-clean flag is set", func() {
 				It("does not clean up unused layers", func() {
 					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
@@ -726,8 +797,10 @@ var _ = Describe("Create", func() {
 
 					cmd := exec.Command(
 						GrootFSBin, "--store", StorePath,
+						"--config",
+						Runner.ConfigPath,
 						"create",
-						"--clean", "false",
+						"--no-clean",
 						"docker:///cfgarden/empty:v0.1.1",
 						spec.ID,
 					)
@@ -740,7 +813,6 @@ var _ = Describe("Create", func() {
 					Expect(afterContents).To(HaveLen(3))
 				})
 			})
-
 		})
 	})
 })

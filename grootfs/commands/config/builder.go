@@ -178,14 +178,13 @@ func (b *Builder) WithLogFile(filepath string) *Builder {
 	return b
 }
 
-func (b *Builder) WithCleanOnCreate(clean string, isSet bool) *Builder {
-	if isSet {
-		cleanBool, err := strconv.ParseBool(clean)
+func (b *Builder) WithCleanOnCreate(clean bool, noClean bool) *Builder {
+	if clean {
+		b.config.CleanOnCreate = clean
+	}
 
-		if err != nil {
-			cleanBool = false
-		}
-		b.config.CleanOnCreate = cleanBool
+	if noClean {
+		b.config.CleanOnCreate = !noClean
 	}
 
 	return b

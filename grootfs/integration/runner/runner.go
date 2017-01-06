@@ -53,7 +53,7 @@ func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error)
 
 	runErr := r.runCmd(cmd)
 	if runErr != nil {
-		errStr := fmt.Sprintf("command existed with %s", runErr)
+		errStr := fmt.Sprintf("command exited with %s", runErr)
 		stdoutContents := strings.TrimSpace(stdoutBuffer.String())
 		if stdoutContents != "" {
 			errStr = stdoutContents
