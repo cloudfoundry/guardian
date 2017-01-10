@@ -22,8 +22,6 @@ type CreateSpec struct {
 	CleanOnCreateIgnoreImages   []string
 	UIDMappings                 []IDMappingSpec
 	GIDMappings                 []IDMappingSpec
-	RegistryUsername            string
-	RegistryPassword            string
 }
 
 type Creator struct {
@@ -60,16 +58,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 		c.metricsEmitter.TryEmitDuration(logger, MetricImageCreationTime, time.Since(startTime))
 	}()
 
-	logger = logger.Session("groot-creating", lager.Data{"imageID": spec.ID, "spec": map[string]interface{}{
-		"BaseImage":                   spec.BaseImage,
-		"DiskLimit":                   spec.DiskLimit,
-		"ExcludeBaseImageFromQuota":   spec.ExcludeBaseImageFromQuota,
-		"CleanOnCreate":               spec.CleanOnCreate,
-		"CleanOnCreateThresholdBytes": spec.CleanOnCreateThresholdBytes,
-		"CleanOnCreateIgnoreImages":   spec.CleanOnCreateIgnoreImages,
-		"UIDMappings":                 spec.UIDMappings,
-		"GIDMappings":                 spec.GIDMappings,
-	}})
+	logger = logger.Session("groot-creating", lager.Data{"imageID": spec.ID, "spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
 
