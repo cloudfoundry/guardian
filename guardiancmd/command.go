@@ -150,7 +150,7 @@ type GuardianCommand struct {
 		Dir            DirFlag `long:"depot" required:"true" description:"Directory in which to store container data."`
 		PropertiesPath string  `long:"properties-path" description:"Path in which to store properties."`
 
-		DefaultRootFSDir           DirFlag       `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
+		DefaultRootFS              string        `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
 		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
 		DestroyContainersOnStartup bool          `long:"destroy-containers-on-startup" description:"Clean up all the existing containers on startup."`
 		ApparmorProfile            string        `long:"apparmor" description:"Apparmor profile to use for unprivileged container processes"`
@@ -295,7 +295,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
 		Networker:       networker,
 		VolumeCreator:   volumeCreator,
-		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.DefaultRootFSDir.Path(), cmd.Containers.ApparmorProfile, propManager),
+		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.ApparmorProfile, propManager),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
@@ -449,7 +449,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 	}
 
 	if cmd.Image.Plugin.Path() != "" {
-		defaultRootFS, err := url.Parse(cmd.Containers.DefaultRootFSDir.Path())
+		defaultRootFS, err := url.Parse(cmd.Containers.DefaultRootFS)
 		if err != nil {
 			logger.Fatal("failed-to-parse-default-rootfs", err)
 		}
@@ -514,7 +514,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 			LocalFetcher: &repository_fetcher.Local{
 				Logger:            logger,
 				Cake:              cake,
-				DefaultRootFSPath: cmd.Containers.DefaultRootFSDir.Path(),
+				DefaultRootFSPath: cmd.Containers.DefaultRootFS,
 				IDProvider:        repository_fetcher.LayerIDProvider{},
 			},
 			RemoteFetcher: repository_fetcher.NewRemote(
@@ -571,7 +571,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		ovenCleaner)
 }
 
-func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadooPath, runcPath, nstarPath, tarPath, defaultRootFSPath, appArmorProfile string, properties gardener.PropertyManager) *rundmc.Containerizer {
+func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadooPath, runcPath, nstarPath, tarPath, appArmorProfile string, properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
 	commandRunner := linux_command_runner.New()
@@ -653,7 +653,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadoo
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
 		WithResources(&specs.LinuxResources{Devices: append([]specs.LinuxDeviceCgroup{denyAll}, allowedDevices...)}).
-		WithRootFS(defaultRootFSPath).
+		WithRootFS(cmd.Containers.DefaultRootFS).
 		WithDevices(fuseDevice).
 		WithProcess(baseProcess)
 
