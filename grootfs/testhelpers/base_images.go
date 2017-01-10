@@ -44,7 +44,7 @@ var BusyBoxImage = BaseImage{
 		{
 			BlobID:  "sha256:fdab12439263ca89c449f09a489b6fbf40af8526a3dda279c8954451703641c3",
 			DiffID:  "sha256:68737f5031b303067faacb264cd3b1466973da762bd83d4381e5396e6a4b79a8",
-			ChainID: "sha256:68737f5031b303067faacb264cd3b1466973da762bd83d4381e5396e6a4b79a8",
+			ChainID: "sha256:c85de82f7789ba8696cf905ea603deccc1b082db21181117e1f74d1dd77adf47",
 		},
 	},
 }
