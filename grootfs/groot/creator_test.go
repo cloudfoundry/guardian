@@ -109,7 +109,7 @@ var _ = Describe("Creator", func() {
 				Expect(fakeCleaner.CleanCallCount()).To(Equal(1))
 				_, threshold, ignoredImages, acquireLock := fakeCleaner.CleanArgsForCall(0)
 				Expect(threshold).To(Equal(int64(250000)))
-				Expect(ignoredImages).To(ConsistOf([]string{"docker://my-image"}))
+				Expect(ignoredImages).To(ConsistOf([]string{"/path/to/image", "docker://my-image"}))
 				Expect(acquireLock).To(BeFalse())
 			})
 

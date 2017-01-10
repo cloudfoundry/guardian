@@ -109,7 +109,8 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 	}
 
 	if spec.CleanOnCreate {
-		if _, err := c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, spec.CleanOnCreateIgnoreImages, false); err != nil {
+		ignoredImages := append(spec.CleanOnCreateIgnoreImages, spec.BaseImage)
+		if _, err := c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, ignoredImages, false); err != nil {
 			return Image{}, fmt.Errorf("failed-to-cleanup-store: %s", err)
 		}
 	}

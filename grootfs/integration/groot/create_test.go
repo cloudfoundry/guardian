@@ -762,10 +762,23 @@ var _ = Describe("Create", func() {
 				Expect(Runner.Delete(spec.ID)).To(Succeed())
 			})
 
-			It("cleans up unused layers before create", func() {
+			It("cleans up unused layers before create but not the one about to be created", func() {
+				createSpec = groot.CreateSpec{
+					ID:        "my-empty",
+					BaseImage: "docker:///cfgarden/empty:v0.1.1",
+				}
+				_, err := Runner.Create(createSpec)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(Runner.Delete("my-empty")).To(Succeed())
+
+				layerPath := filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
+				stat, err := os.Stat(layerPath)
+				Expect(err).NotTo(HaveOccurred())
+				preLayerTimestamp := stat.ModTime()
+
 				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(1))
+				Expect(preContents).To(HaveLen(3))
 
 				spec.BaseImage = "docker:///cfgarden/empty:v0.1.1"
 				cmd := exec.Command(
@@ -787,6 +800,10 @@ var _ = Describe("Create", func() {
 				for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
 					Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
 				}
+
+				stat, err = os.Stat(layerPath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.ModTime()).To(Equal(preLayerTimestamp))
 			})
 
 			Context("when no-clean flag is set", func() {
