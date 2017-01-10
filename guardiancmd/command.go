@@ -512,6 +512,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 	repoFetcher := repository_fetcher.Retryable{
 		RepositoryFetcher: &repository_fetcher.CompositeFetcher{
 			LocalFetcher: &repository_fetcher.Local{
+				Logger:            logger,
 				Cake:              cake,
 				DefaultRootFSPath: cmd.Containers.DefaultRootFS,
 				IDProvider:        repository_fetcher.LayerIDProvider{},
