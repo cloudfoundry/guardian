@@ -27,7 +27,7 @@ var _ = Describe("Port Pool", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			portPoolStart = GinkgoParallelNode() * 10000
+			portPoolStart = GinkgoParallelNode() * 7000
 			propsPoolDir, err = ioutil.TempDir("", "portpool")
 			Expect(err).NotTo(HaveOccurred())
 			args = []string{
