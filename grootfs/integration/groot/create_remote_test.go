@@ -125,6 +125,14 @@ var _ = Describe("Create with remote images", func() {
 					Eventually(sess).Should(gbytes.Say("authorization failed: username and password are invalid"))
 				})
 			})
+
+			It("does not log the credentials OR their references", func() {
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "--log-level", "debug", "create", "--username", RegistryUsername, "--password", RegistryPassword, baseImageURL, "random-id")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess, 12*time.Second).Should(gexec.Exit(0))
+				Eventually(sess.Err).ShouldNot(gbytes.Say("\"RegistryUsername\":\"\",\"RegistryPassword\":\"\""))
+			})
 		})
 
 		Context("when image size exceeds disk quota", func() {
