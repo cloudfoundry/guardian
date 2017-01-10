@@ -333,7 +333,7 @@ var _ = Describe("Create with remote images", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImageURL, "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess, "10s").Should(gexec.Exit(1))
+			Eventually(sess, "15s").Should(gexec.Exit(1))
 			Eventually(string(sess.Out.Contents())).Should(MatchRegexp("^'/test' does not give write permission to its owner. This image can only be unpacked using uid and gid mappings, or by running as root."))
 		})
 
@@ -348,7 +348,7 @@ var _ = Describe("Create with remote images", func() {
 
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess, "10s").Should(gexec.Exit(0))
+				Eventually(sess, "15s").Should(gexec.Exit(0))
 				rootFSPath := strings.TrimSpace(string(sess.Out.Contents())) + "/rootfs"
 				Expect(path.Join(rootFSPath, "test", "hello")).To(BeARegularFile())
 			})
@@ -364,7 +364,7 @@ var _ = Describe("Create with remote images", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImageURL, "random-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess, "10s").Should(gexec.Exit(1))
+			Eventually(sess, "15s").Should(gexec.Exit(1))
 			Eventually(string(sess.Out.Contents())).Should(MatchRegexp("^'/test' does not give write permission to its owner. This image can only be unpacked using uid and gid mappings, or by running as root."))
 		})
 
@@ -379,7 +379,7 @@ var _ = Describe("Create with remote images", func() {
 
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess, "10s").Should(gexec.Exit(0))
+				Eventually(sess, "15s").Should(gexec.Exit(0))
 				rootFSPath := strings.TrimSpace(string(sess.Out.Contents())) + "/rootfs"
 				Expect(path.Join(rootFSPath, "test", "hello")).To(BeARegularFile())
 			})

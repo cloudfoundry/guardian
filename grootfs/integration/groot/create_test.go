@@ -778,7 +778,7 @@ var _ = Describe("Create", func() {
 				)
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess, "10s").Should(gexec.Exit(0))
+				Eventually(sess, "15s").Should(gexec.Exit(0))
 
 				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 				Expect(err).NotTo(HaveOccurred())
