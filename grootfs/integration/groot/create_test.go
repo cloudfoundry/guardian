@@ -326,7 +326,7 @@ var _ = Describe("Create", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
-				BaseImage: "docker:///busybox",
+				BaseImage: "docker:///busybox:1.26.2",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -364,7 +364,7 @@ var _ = Describe("Create", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
-				BaseImage: "docker:///busybox",
+				BaseImage: "docker:///busybox:1.26.2",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -749,7 +749,7 @@ var _ = Describe("Create", func() {
 			JustBeforeEach(func() {
 				createSpec = groot.CreateSpec{
 					ID:        "my-busybox",
-					BaseImage: "docker:///busybox",
+					BaseImage: "docker:///busybox:1.26.2",
 				}
 
 				_, err := Runner.Create(createSpec)
