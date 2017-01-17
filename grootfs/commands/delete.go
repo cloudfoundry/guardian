@@ -3,6 +3,7 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
@@ -42,10 +43,12 @@ var DeleteCommand = cli.Command{
 
 		storePath := cfg.BaseStorePath
 		idOrPath := ctx.Args().First()
-		id, err := idfinder.FindID(storePath, idOrPath)
+		userID := os.Getuid()
+		id, err := idfinder.FindID(storePath, userID, idOrPath)
 		if err != nil {
 			logger.Error("find-id-failed", err, lager.Data{"id": idOrPath, "storePath": storePath})
-			return cli.NewExitError(err.Error(), 1)
+			fmt.Println(err)
+			return nil
 		}
 
 		if id == idOrPath {

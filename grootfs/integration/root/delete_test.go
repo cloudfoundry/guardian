@@ -1,6 +1,7 @@
 package root_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os/exec"
 	"path"
@@ -11,6 +12,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -26,7 +28,7 @@ var _ = Describe("Delete", func() {
 	})
 
 	Context("when trying to delete a image from a different user", func() {
-		It("returns an error", func() {
+		It("doesn't return an error but logs a warning", func() {
 			deleteCmd := exec.Command(
 				GrootFSBin,
 				"--log-level", "debug",
@@ -44,7 +46,8 @@ var _ = Describe("Delete", func() {
 
 			session, err := gexec.Start(deleteCmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(1))
+			Eventually(session).Should(gexec.Exit(0))
+			Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("path `%s` is outside store path", image.Path)))
 			Expect(image.Path).To(BeADirectory())
 		})
 	})

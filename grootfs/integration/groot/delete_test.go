@@ -71,7 +71,7 @@ var _ = Describe("Delete", func() {
 			logBuffer := gbytes.NewBuffer()
 			err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
 				Delete("/path/to/random-id")
-			Expect(err).To(HaveOccurred())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(logBuffer).To(gbytes.Say(`"id":"/path/to/random-id"`))
 		})
 	})
@@ -82,24 +82,37 @@ var _ = Describe("Delete", func() {
 			Expect(image.Path).NotTo(BeAnExistingFile())
 		})
 
+		Context("when a path to an image does not exist", func() {
+			It("succeeds but logs a warning", func() {
+				fakePath := path.Join(StorePath, CurrentUserID, "images/non_existing")
+				Expect(fakePath).NotTo(BeAnExistingFile())
+
+				cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", fakePath)
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+				Eventually(sess.Out).Should(gbytes.Say("image `non_existing` was not found"))
+			})
+		})
+
 		Context("when the path provided doesn't belong to the `--store` provided", func() {
 			It("returns an error", func() {
 				cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", "/Iamnot/in/the/storage/images/1234/rootfs")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(1))
+				Eventually(sess).Should(gexec.Exit(0))
 				Eventually(sess.Out).Should(gbytes.Say("path `/Iamnot/in/the/storage/images/1234/rootfs` is outside store path"))
 			})
 		})
 	})
 
 	Context("when the image ID doesn't exist", func() {
-		It("returns an error", func() {
+		It("succeeds but logs a warning", func() {
 			cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", "non-existing-id")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
-			Eventually(sess.Out).Should(gbytes.Say("image not found"))
+			Eventually(sess).Should(gexec.Exit(0))
+			Eventually(sess.Out).Should(gbytes.Say("image `non-existing-id` was not found"))
 		})
 	})
 
