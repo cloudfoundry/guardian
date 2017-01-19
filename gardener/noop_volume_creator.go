@@ -16,11 +16,11 @@ func (NoopVolumeCreator) Create(lager.Logger, string, rootfs_provider.Spec) (str
 	return "", nil, ErrGraphDisabled
 }
 
-func (NoopVolumeCreator) Destroy(lager.Logger, string, string) error {
+func (NoopVolumeCreator) Destroy(lager.Logger, string) error {
 	return nil
 }
 
-func (NoopVolumeCreator) Metrics(lager.Logger, string, string) (garden.ContainerDiskStat, error) {
+func (NoopVolumeCreator) Metrics(lager.Logger, string, bool) (garden.ContainerDiskStat, error) {
 	return garden.ContainerDiskStat{}, nil
 }
 

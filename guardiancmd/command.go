@@ -1,10 +1,10 @@
 package guardiancmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -173,8 +173,10 @@ type GuardianCommand struct {
 	} `group:"Image Graph"`
 
 	Image struct {
-		Plugin                    FileFlag `long:"image-plugin"           description:"Path to image plugin binary."`
-		PluginExtraArgs           []string `long:"image-plugin-extra-arg" description:"Extra argument to pass to the image plugin to create unprivileged images. Can be specified multiple times."`
+		Plugin          FileFlag `long:"image-plugin"           description:"Path to image plugin binary."`
+		PluginExtraArgs []string `long:"image-plugin-extra-arg" description:"Extra argument to pass to the image plugin to create unprivileged images. Can be specified multiple times."`
+
+		PrivilegedPlugin          FileFlag `long:"privileged-image-plugin"           description:"Path to privileged image plugin binary."`
 		PrivilegedPluginExtraArgs []string `long:"privileged-image-plugin-extra-arg" description:"Extra argument to pass to the image plugin to create privileged images. Can be specified multiple times."`
 	} `group:"Image"`
 
@@ -448,14 +450,8 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		return gardener.NoopVolumeCreator{}
 	}
 
-	if cmd.Image.Plugin.Path() != "" {
-		defaultRootFS, err := url.Parse(cmd.Containers.DefaultRootFS)
-		if err != nil {
-			logger.Fatal("failed-to-parse-default-rootfs", err)
-		}
-		return imageplugin.New(cmd.Image.Plugin.Path(), linux_command_runner.New(),
-			defaultRootFS, idMappings, cmd.Image.PrivilegedPluginExtraArgs,
-			cmd.Image.PluginExtraArgs)
+	if cmd.Image.Plugin.Path() != "" || cmd.Image.PrivilegedPlugin.Path() != "" {
+		return cmd.wireImagePlugin()
 	}
 
 	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})
@@ -569,6 +565,38 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		layerCreator,
 		rootfs_provider.NewMetricsAdapter(quotaManager.GetUsage, quotaedGraphDriver.GetMntPath),
 		ovenCleaner)
+}
+
+func (cmd *GuardianCommand) wireImagePlugin() gardener.VolumeCreator {
+	var unprivilegedCommandCreator imageplugin.CommandCreator = &imageplugin.NotImplementedCommandCreator{
+		Err: errors.New("no image_plugin provided"),
+	}
+
+	var privilegedCommandCreator imageplugin.CommandCreator = &imageplugin.NotImplementedCommandCreator{
+		Err: errors.New("no privileged_image_plugin provided"),
+	}
+
+	if cmd.Image.Plugin.Path() != "" {
+		unprivilegedCommandCreator = &imageplugin.UnprivilegedCommandCreator{
+			BinPath:    cmd.Image.Plugin.Path(),
+			ExtraArgs:  cmd.Image.PluginExtraArgs,
+			IDMappings: idMappings,
+		}
+	}
+
+	if cmd.Image.PrivilegedPlugin.Path() != "" {
+		privilegedCommandCreator = &imageplugin.PrivilegedCommandCreator{
+			BinPath:   cmd.Image.PrivilegedPlugin.Path(),
+			ExtraArgs: cmd.Image.PrivilegedPluginExtraArgs,
+		}
+	}
+
+	return &imageplugin.ImagePlugin{
+		UnprivilegedCommandCreator: unprivilegedCommandCreator,
+		PrivilegedCommandCreator:   privilegedCommandCreator,
+		CommandRunner:              linux_command_runner.New(),
+		DefaultRootfs:              cmd.Containers.DefaultRootFS,
+	}
 }
 
 func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadooPath, runcPath, nstarPath, tarPath, appArmorProfile string, properties gardener.PropertyManager) *rundmc.Containerizer {

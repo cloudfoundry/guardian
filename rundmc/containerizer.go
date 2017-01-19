@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 
+	specs "github.com/opencontainers/runtime-spec/specs-go"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
@@ -264,6 +266,14 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 
 	state, _ := c.runtime.State(log, handle)
 
+	privileged := true
+	for _, ns := range bundle.Namespaces() {
+		if ns.Type == specs.UserNamespace {
+			privileged = false
+			break
+		}
+	}
+
 	return gardener.ActualContainerSpec{
 		Pid:        state.Pid,
 		BundlePath: bundlePath,
@@ -278,6 +288,7 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 				LimitInBytes: *bundle.Resources().Memory.Limit,
 			},
 		},
+		Privileged: privileged,
 	}, nil
 }
 

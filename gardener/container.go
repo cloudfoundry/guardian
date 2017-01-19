@@ -153,7 +153,7 @@ func (c *container) Metrics() (garden.Metrics, error) {
 		return garden.Metrics{}, err
 	}
 
-	diskMetrics, err := c.volumeCreator.Metrics(c.logger, c.handle, actualContainerSpec.RootFSPath)
+	diskMetrics, err := c.volumeCreator.Metrics(c.logger, c.handle, !actualContainerSpec.Privileged)
 	if err != nil {
 		return garden.Metrics{}, err
 	}

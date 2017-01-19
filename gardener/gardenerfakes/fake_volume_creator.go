@@ -23,22 +23,21 @@ type FakeVolumeCreator struct {
 		result2 []string
 		result3 error
 	}
-	DestroyStub        func(log lager.Logger, handle, rootFSPath string) error
+	DestroyStub        func(log lager.Logger, handle string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
-		log        lager.Logger
-		handle     string
-		rootFSPath string
+		log    lager.Logger
+		handle string
 	}
 	destroyReturns struct {
 		result1 error
 	}
-	MetricsStub        func(log lager.Logger, handle, rootFSPath string) (garden.ContainerDiskStat, error)
+	MetricsStub        func(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error)
 	metricsMutex       sync.RWMutex
 	metricsArgsForCall []struct {
 		log        lager.Logger
 		handle     string
-		rootFSPath string
+		privileged bool
 	}
 	metricsReturns struct {
 		result1 garden.ContainerDiskStat
@@ -93,17 +92,16 @@ func (fake *FakeVolumeCreator) CreateReturns(result1 string, result2 []string, r
 	}{result1, result2, result3}
 }
 
-func (fake *FakeVolumeCreator) Destroy(log lager.Logger, handle string, rootFSPath string) error {
+func (fake *FakeVolumeCreator) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Lock()
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
-		log        lager.Logger
-		handle     string
-		rootFSPath string
-	}{log, handle, rootFSPath})
-	fake.recordInvocation("Destroy", []interface{}{log, handle, rootFSPath})
+		log    lager.Logger
+		handle string
+	}{log, handle})
+	fake.recordInvocation("Destroy", []interface{}{log, handle})
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
-		return fake.DestroyStub(log, handle, rootFSPath)
+		return fake.DestroyStub(log, handle)
 	} else {
 		return fake.destroyReturns.result1
 	}
@@ -115,10 +113,10 @@ func (fake *FakeVolumeCreator) DestroyCallCount() int {
 	return len(fake.destroyArgsForCall)
 }
 
-func (fake *FakeVolumeCreator) DestroyArgsForCall(i int) (lager.Logger, string, string) {
+func (fake *FakeVolumeCreator) DestroyArgsForCall(i int) (lager.Logger, string) {
 	fake.destroyMutex.RLock()
 	defer fake.destroyMutex.RUnlock()
-	return fake.destroyArgsForCall[i].log, fake.destroyArgsForCall[i].handle, fake.destroyArgsForCall[i].rootFSPath
+	return fake.destroyArgsForCall[i].log, fake.destroyArgsForCall[i].handle
 }
 
 func (fake *FakeVolumeCreator) DestroyReturns(result1 error) {
@@ -128,17 +126,17 @@ func (fake *FakeVolumeCreator) DestroyReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeVolumeCreator) Metrics(log lager.Logger, handle string, rootFSPath string) (garden.ContainerDiskStat, error) {
+func (fake *FakeVolumeCreator) Metrics(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error) {
 	fake.metricsMutex.Lock()
 	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
 		log        lager.Logger
 		handle     string
-		rootFSPath string
-	}{log, handle, rootFSPath})
-	fake.recordInvocation("Metrics", []interface{}{log, handle, rootFSPath})
+		privileged bool
+	}{log, handle, privileged})
+	fake.recordInvocation("Metrics", []interface{}{log, handle, privileged})
 	fake.metricsMutex.Unlock()
 	if fake.MetricsStub != nil {
-		return fake.MetricsStub(log, handle, rootFSPath)
+		return fake.MetricsStub(log, handle, privileged)
 	} else {
 		return fake.metricsReturns.result1, fake.metricsReturns.result2
 	}
@@ -150,10 +148,10 @@ func (fake *FakeVolumeCreator) MetricsCallCount() int {
 	return len(fake.metricsArgsForCall)
 }
 
-func (fake *FakeVolumeCreator) MetricsArgsForCall(i int) (lager.Logger, string, string) {
+func (fake *FakeVolumeCreator) MetricsArgsForCall(i int) (lager.Logger, string, bool) {
 	fake.metricsMutex.RLock()
 	defer fake.metricsMutex.RUnlock()
-	return fake.metricsArgsForCall[i].log, fake.metricsArgsForCall[i].handle, fake.metricsArgsForCall[i].rootFSPath
+	return fake.metricsArgsForCall[i].log, fake.metricsArgsForCall[i].handle, fake.metricsArgsForCall[i].privileged
 }
 
 func (fake *FakeVolumeCreator) MetricsReturns(result1 garden.ContainerDiskStat, result2 error) {

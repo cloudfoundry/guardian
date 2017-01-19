@@ -407,7 +407,9 @@ var _ = Describe("Rundmc", func() {
 	})
 
 	Describe("Info", func() {
-		BeforeEach(func() {
+		var namespaces []specs.LinuxNamespace = []specs.LinuxNamespace{}
+
+		JustBeforeEach(func() {
 			fakeBundleLoader.LoadStub = func(bundlePath string) (goci.Bndl, error) {
 				if bundlePath != "/path/to/some-handle" {
 					return goci.Bundle(), errors.New("cannot find bundle")
@@ -418,6 +420,7 @@ var _ = Describe("Rundmc", func() {
 				return goci.Bndl{
 					Spec: specs.Spec{
 						Linux: &specs.Linux{
+							Namespaces: namespaces,
 							Resources: &specs.LinuxResources{
 								Memory: &specs.LinuxMemory{
 									Limit: &limit,
@@ -494,6 +497,24 @@ var _ = Describe("Rundmc", func() {
 			actualSpec, err := containerizer.Info(logger, "some-handle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(actualSpec.Stopped).To(Equal(true))
+		})
+
+		It("should return the ActualContainerSpec with privileged by default", func() {
+			actualSpec, err := containerizer.Info(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(actualSpec.Privileged).To(BeTrue())
+		})
+
+		Context("when namespaces contains the user namespace", func() {
+			BeforeEach(func() {
+				namespaces = append(namespaces, specs.LinuxNamespace{Type: specs.UserNamespace})
+			})
+
+			It("should return the ActualContainerSpec with privileged", func() {
+				actualSpec, err := containerizer.Info(logger, "some-handle")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actualSpec.Privileged).To(BeFalse())
+			})
 		})
 	})
 

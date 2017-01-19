@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -9,71 +8,287 @@ import (
 	"path/filepath"
 	"strings"
 
-	"code.cloudfoundry.org/guardian/imageplugin"
+	"code.cloudfoundry.org/lager"
+
+	"github.com/urfave/cli"
+
+	"github.com/kardianos/osext"
 )
 
-var actions = []string{
-	"clean",
-	"create",
-	"delete",
-	"list",
-	"stats",
+func main() {
+	fakeImagePlugin := cli.NewApp()
+	fakeImagePlugin.Name = "fakeImagePlugin"
+	fakeImagePlugin.Usage = "I am FakeImagePlugin!"
+
+	fakeImagePlugin.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "image-path",
+			Usage: "Path to use as image",
+		},
+		cli.StringFlag{
+			Name:  "args-path",
+			Usage: "Path to write args to",
+		},
+		cli.StringFlag{
+			Name:  "create-whoami-path",
+			Usage: "Path to write uid/gid to on create",
+		},
+		cli.StringFlag{
+			Name:  "destroy-whoami-path",
+			Usage: "Path to write uid/gid on destroy",
+		},
+		cli.StringFlag{
+			Name:  "metrics-whoami-path",
+			Usage: "Path to write uid/gid on metrics",
+		},
+		cli.StringFlag{
+			Name:  "json-file-to-copy",
+			Usage: "Path to json file to opy as image.json",
+		},
+		cli.StringFlag{
+			Name:  "create-log-content",
+			Usage: "Fake log content to write to stderr on create",
+		},
+		cli.StringFlag{
+			Name:  "destroy-log-content",
+			Usage: "Fake log content to write to stderr on destroy",
+		},
+		cli.StringFlag{
+			Name:  "metrics-log-content",
+			Usage: "Fake log content to write to stderr on metrics",
+		},
+		cli.StringFlag{
+			Name:  "fail-on",
+			Usage: "action to fail on",
+		},
+		cli.StringFlag{
+			Name:  "metrics-output",
+			Usage: "metrics json to print on stdout on metrics",
+		},
+		cli.StringFlag{
+			Name:  "create-bin-location-path",
+			Usage: "Path to write this binary's location to on create",
+		},
+		cli.StringFlag{
+			Name:  "destroy-bin-location-path",
+			Usage: "Path to write this binary's location to on destroy",
+		},
+		cli.StringFlag{
+			Name:  "metrics-bin-location-path",
+			Usage: "Path to write this binary's location to on metrics",
+		},
+	}
+
+	fakeImagePlugin.Commands = []cli.Command{
+		CreateCommand,
+		DeleteCommand,
+		StatsCommand,
+	}
+
+	_ = fakeImagePlugin.Run(os.Args)
 }
 
-func main() {
-	action, err := findAction(os.Args)
-	if err != nil {
-		panic(err)
-	}
-	imageID := os.Args[len(os.Args)-1]
+var CreateCommand = cli.Command{
+	Name: "create",
+	Flags: []cli.Flag{
+		cli.StringSliceFlag{
+			Name:  "uid-mapping",
+			Usage: "uid mappings",
+		},
+		cli.StringSliceFlag{
+			Name:  "gid-mapping",
+			Usage: "gid mappings",
+		},
+		cli.Int64Flag{
+			Name:  "disk-limit-size-bytes",
+			Usage: "disk limit quota",
+		},
+		cli.BoolFlag{
+			Name:  "exclude-image-from-quota",
+			Usage: "exclude base image from disk quota",
+		},
+	},
 
-	if imageID == "make-it-fail" {
-		panic("image-plugin-exploded")
-	} else if strings.Contains(imageID, "make-it-fail-on-destruction") && action == "delete" {
-		panic("image-plugin-exploded-on-destruction")
-	}
-
-	uid := os.Getuid()
-	gid := os.Getgid()
-
-	var imagePath string
-	if uid == 0 {
-		imagePath = filepath.Join("/tmp/store-path", imageID)
-	} else {
-		imagePath = filepath.Join("/tmp/unpriv-store-path", imageID)
-	}
-
-	if action == "create" {
-		rootFSPath := filepath.Join(imagePath, "rootfs")
-		if err := os.MkdirAll(rootFSPath, 0777); err != nil {
-			panic(err)
+	Action: func(ctx *cli.Context) error {
+		failOn := ctx.GlobalString("fail-on")
+		if failOn == "create" {
+			fmt.Println("create failed")
+			os.Exit(10)
 		}
 
-		gardenDefaultRootfs := os.Getenv("GARDEN_TEST_ROOTFS")
-		if err := copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"), filepath.Join(rootFSPath, "env")); err != nil {
-			panic(err)
+		argsFile := ctx.GlobalString("args-path")
+		if argsFile != "" {
+			err := ioutil.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
+			if err != nil {
+				panic(err)
+			}
 		}
 
-		if err := setEnvVars(imagePath, []string{"BLA=BLE", "HELLO=world"}); err != nil {
-			panic(err)
+		whoamiFile := ctx.GlobalString("create-whoami-path")
+		if whoamiFile != "" {
+			err := ioutil.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
+			if err != nil {
+				panic(err)
+			}
 		}
-	} else if action == "delete" {
-		imagePath = imageID
-	}
 
-	whoamiPath := filepath.Join(imagePath, fmt.Sprintf("%s-whoami", action))
-	err = ioutil.WriteFile(whoamiPath, []byte(fmt.Sprintf("%d - %d\n", uid, gid)), 0755)
-	if err != nil {
-		panic(err)
-	}
+		binLocationFile := ctx.GlobalString("create-bin-location-path")
+		if binLocationFile != "" {
+			executable, err := osext.Executable()
+			if err != nil {
+				panic(err)
+			}
 
-	argsFilepath := filepath.Join(imagePath, fmt.Sprintf("%s-args", action))
-	err = ioutil.WriteFile(argsFilepath, []byte(strings.Join(os.Args, " ")), 0777)
-	if err != nil {
-		panic(err)
-	}
+			err = ioutil.WriteFile(binLocationFile, []byte(executable), 0777)
+			if err != nil {
+				panic(err)
+			}
+		}
 
-	fmt.Printf(imagePath)
+		imagePath := ctx.GlobalString("image-path")
+		if imagePath != "" {
+			rootFSPath := filepath.Join(imagePath, "rootfs")
+			if err := os.MkdirAll(rootFSPath, 0777); err != nil {
+				panic(err)
+			}
+		}
+
+		jsonFile := ctx.GlobalString("json-file-to-copy")
+		if jsonFile != "" {
+			if err := copyFile(jsonFile, filepath.Join(imagePath, "image.json")); err != nil {
+				panic(err)
+			}
+		}
+
+		logContent := ctx.GlobalString("create-log-content")
+		if logContent != "" {
+			log := lager.NewLogger("fake-image-plugin")
+			log.RegisterSink(lager.NewWriterSink(os.Stderr, lager.INFO))
+			log.Info(logContent)
+		}
+
+		fmt.Println(imagePath)
+
+		return nil
+	},
+}
+
+var DeleteCommand = cli.Command{
+	Name: "delete",
+
+	Action: func(ctx *cli.Context) error {
+		failOn := ctx.GlobalString("fail-on")
+		if failOn == "destroy" {
+			fmt.Println("destroy failed")
+			os.Exit(10)
+		}
+
+		argsFile := ctx.GlobalString("args-path")
+		if argsFile != "" {
+			err := ioutil.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		whoamiFile := ctx.GlobalString("destroy-whoami-path")
+		if whoamiFile != "" {
+			err := ioutil.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		binLocationFile := ctx.GlobalString("destroy-bin-location-path")
+		if binLocationFile != "" {
+			executable, err := osext.Executable()
+			if err != nil {
+				panic(err)
+			}
+
+			f, err := os.Create(binLocationFile)
+			if err != nil {
+				panic(err)
+			}
+			f.Close()
+
+			f, err = os.OpenFile(binLocationFile, os.O_APPEND|os.O_WRONLY, 0777)
+			if err != nil {
+				panic(err)
+			}
+
+			defer f.Close()
+
+			if _, err = f.WriteString(executable); err != nil {
+				panic(err)
+			}
+		}
+
+		logContent := ctx.GlobalString("destroy-log-content")
+		if logContent != "" {
+			log := lager.NewLogger("fake-image-plugin")
+			log.RegisterSink(lager.NewWriterSink(os.Stderr, lager.INFO))
+			log.Info(logContent)
+		}
+
+		return nil
+	},
+}
+
+var StatsCommand = cli.Command{
+	Name: "stats",
+
+	Action: func(ctx *cli.Context) error {
+		failOn := ctx.GlobalString("fail-on")
+		if failOn == "metrics" {
+			fmt.Println("metrics failed")
+			os.Exit(10)
+		}
+		argsFile := ctx.GlobalString("args-path")
+		if argsFile != "" {
+			err := ioutil.WriteFile(argsFile, []byte(strings.Join(os.Args, " ")), 0777)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		whoamiFile := ctx.GlobalString("metrics-whoami-path")
+		if whoamiFile != "" {
+			err := ioutil.WriteFile(whoamiFile, []byte(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())), 0777)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		binLocationFile := ctx.GlobalString("metrics-bin-location-path")
+		if binLocationFile != "" {
+			executable, err := osext.Executable()
+			if err != nil {
+				panic(err)
+			}
+
+			err = ioutil.WriteFile(binLocationFile, []byte(executable), 0777)
+			if err != nil {
+				panic(err)
+			}
+		}
+
+		logContent := ctx.GlobalString("metrics-log-content")
+		if logContent != "" {
+			log := lager.NewLogger("fake-image-plugin")
+			log.RegisterSink(lager.NewWriterSink(os.Stderr, lager.INFO))
+			log.Info(logContent)
+		}
+
+		metricsOutput := ctx.GlobalString("metrics-output")
+		if metricsOutput != "" {
+			fmt.Println(metricsOutput)
+		} else {
+			fmt.Println("{}")
+		}
+
+		return nil
+	},
 }
 
 func copyFile(srcPath, dstPath string) error {
@@ -102,36 +317,4 @@ func copyFile(srcPath, dstPath string) error {
 	reader.Close()
 
 	return os.Chmod(writer.Name(), 0777)
-}
-
-func setEnvVars(imagePath string, env []string) error {
-	image := imageplugin.Image{
-		Config: imageplugin.ImageConfig{
-			Env: env,
-		},
-	}
-	imageJson, err := os.Create(filepath.Join(imagePath, "image.json"))
-	if err != nil {
-		return err
-	}
-
-	return json.NewEncoder(imageJson).Encode(image)
-}
-
-func findAction(args []string) (action string, err error) {
-	for _, arg := range args {
-		if isAction(arg) {
-			return arg, nil
-		}
-	}
-	return "", fmt.Errorf("action not found")
-}
-
-func isAction(arg string) bool {
-	for _, action := range actions {
-		if arg == action {
-			return true
-		}
-	}
-	return false
 }

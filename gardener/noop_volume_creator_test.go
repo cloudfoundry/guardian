@@ -30,13 +30,13 @@ var _ = Describe("NoopVolumeCreator", func() {
 
 	Describe("Destroy", func() {
 		It("succeeds, as destroying is idempotent and may be actually called redundantly", func() {
-			Expect(volumeCreator.Destroy(logger, "some-handle", "rootfs")).To(BeNil())
+			Expect(volumeCreator.Destroy(logger, "some-handle")).To(BeNil())
 		})
 	})
 
 	Describe("Metrics", func() {
 		It("successfully returns an empty set of metrics", func() {
-			Expect(volumeCreator.Metrics(logger, "some-handle", "rootfs")).To(Equal(garden.ContainerDiskStat{}))
+			Expect(volumeCreator.Metrics(logger, "some-handle", false)).To(Equal(garden.ContainerDiskStat{}))
 		})
 	})
 
