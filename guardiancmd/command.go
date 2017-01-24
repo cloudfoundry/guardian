@@ -577,15 +577,14 @@ func (cmd *GuardianCommand) wireImagePlugin() gardener.VolumeCreator {
 	}
 
 	if cmd.Image.Plugin.Path() != "" {
-		unprivilegedCommandCreator = &imageplugin.UnprivilegedCommandCreator{
-			BinPath:    cmd.Image.Plugin.Path(),
-			ExtraArgs:  cmd.Image.PluginExtraArgs,
-			IDMappings: idMappings,
+		unprivilegedCommandCreator = &imageplugin.DefaultCommandCreator{
+			BinPath:   cmd.Image.Plugin.Path(),
+			ExtraArgs: cmd.Image.PluginExtraArgs,
 		}
 	}
 
 	if cmd.Image.PrivilegedPlugin.Path() != "" {
-		privilegedCommandCreator = &imageplugin.PrivilegedCommandCreator{
+		privilegedCommandCreator = &imageplugin.DefaultCommandCreator{
 			BinPath:   cmd.Image.PrivilegedPlugin.Path(),
 			ExtraArgs: cmd.Image.PrivilegedPluginExtraArgs,
 		}

@@ -11,9 +11,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("PrivilegedCommandCreator", func() {
+var _ = Describe("DefaultCommandCreator", func() {
 	var (
-		commandCreator *imageplugin.PrivilegedCommandCreator
+		commandCreator *imageplugin.DefaultCommandCreator
 		binPath        string
 		extraArgs      []string
 	)
@@ -24,7 +24,7 @@ var _ = Describe("PrivilegedCommandCreator", func() {
 	})
 
 	JustBeforeEach(func() {
-		commandCreator = &imageplugin.PrivilegedCommandCreator{
+		commandCreator = &imageplugin.DefaultCommandCreator{
 			BinPath:   binPath,
 			ExtraArgs: extraArgs,
 		}
@@ -39,7 +39,7 @@ var _ = Describe("PrivilegedCommandCreator", func() {
 		BeforeEach(func() {
 			rootfsURL, err := url.Parse("/fake-registry/image")
 			Expect(err).NotTo(HaveOccurred())
-			spec = rootfs_provider.Spec{RootFS: rootfsURL, Namespaced: false}
+			spec = rootfs_provider.Spec{RootFS: rootfsURL}
 		})
 
 		JustBeforeEach(func() {
@@ -123,10 +123,6 @@ var _ = Describe("PrivilegedCommandCreator", func() {
 					})
 				})
 			})
-
-			It("returns a command that runs as the current user (SysProcAttr.Credential not set)", func() {
-				Expect(createCmd.SysProcAttr).To(BeNil())
-			})
 		})
 
 		Context("when extra args are provided", func() {
@@ -139,6 +135,10 @@ var _ = Describe("PrivilegedCommandCreator", func() {
 				Expect(createCmd.Args[2]).To(Equal("bar"))
 				Expect(createCmd.Args[3]).To(Equal("create"))
 			})
+		})
+
+		It("returns a command that runs as the current user (SysProcAttr.Credential not set)", func() {
+			Expect(createCmd.SysProcAttr).To(BeNil())
 		})
 	})
 

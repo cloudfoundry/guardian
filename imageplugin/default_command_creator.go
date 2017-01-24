@@ -1,22 +1,26 @@
 package imageplugin
 
 import (
+	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
+
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/lager"
 )
 
-type PrivilegedCommandCreator struct {
+type DefaultCommandCreator struct {
 	BinPath   string
 	ExtraArgs []string
 }
 
-func (cc *PrivilegedCommandCreator) CreateCommand(log lager.Logger, handle string, spec rootfs_provider.Spec) (*exec.Cmd, error) {
+func (cc *DefaultCommandCreator) CreateCommand(log lager.Logger, handle string, spec rootfs_provider.Spec) (*exec.Cmd, error) {
 	args := append(cc.ExtraArgs, "create")
+
 	if spec.QuotaSize > 0 {
 		args = append(args, "--disk-limit-size-bytes", strconv.FormatInt(spec.QuotaSize, 10))
 
@@ -31,10 +35,14 @@ func (cc *PrivilegedCommandCreator) CreateCommand(log lager.Logger, handle strin
 	return exec.Command(cc.BinPath, args...), nil
 }
 
-func (cc *PrivilegedCommandCreator) DestroyCommand(log lager.Logger, handle string) *exec.Cmd {
+func (cc *DefaultCommandCreator) DestroyCommand(log lager.Logger, handle string) *exec.Cmd {
 	return exec.Command(cc.BinPath, append(cc.ExtraArgs, "delete", handle)...)
 }
 
-func (cc *PrivilegedCommandCreator) MetricsCommand(log lager.Logger, handle string) *exec.Cmd {
+func (cc *DefaultCommandCreator) MetricsCommand(log lager.Logger, handle string) *exec.Cmd {
 	return exec.Command(cc.BinPath, append(cc.ExtraArgs, "stats", handle)...)
+}
+
+func stringifyMapping(mapping specs.LinuxIDMapping) string {
+	return fmt.Sprintf("%d:%d:%d", mapping.ContainerID, mapping.HostID, mapping.Size)
 }

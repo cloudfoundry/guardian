@@ -12,7 +12,6 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/imageplugin"
-	"code.cloudfoundry.org/guardian/sysinfo"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -92,8 +91,6 @@ var _ = Describe("Image Plugin", func() {
 			})
 
 			It("executes the plugin, passing the correct args", func() {
-				maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
-
 				pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
 				Expect(err).ToNot(HaveOccurred())
 
@@ -104,10 +101,6 @@ var _ = Describe("Image Plugin", func() {
 					"--args-path", filepath.Join(tmpDir, "args"),
 					"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
 					"create",
-					"--uid-mapping", fmt.Sprintf("0:%d:1", maxId),
-					"--gid-mapping", fmt.Sprintf("0:%d:1", maxId),
-					"--uid-mapping", fmt.Sprintf("1:1:%d", maxId-1),
-					"--gid-mapping", fmt.Sprintf("1:1:%d", maxId-1),
 					os.Getenv("GARDEN_TEST_ROOTFS"),
 					handle,
 				}))
