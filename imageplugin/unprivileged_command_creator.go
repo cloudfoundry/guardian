@@ -5,7 +5,6 @@ import (
 	"os/exec"
 	"strconv"
 	"strings"
-	"syscall"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
@@ -39,38 +38,15 @@ func (cc *UnprivilegedCommandCreator) CreateCommand(log lager.Logger, handle str
 	rootfs := strings.Replace(spec.RootFS.String(), "#", ":", 1)
 
 	args = append(args, rootfs, handle)
-	cmd := exec.Command(cc.BinPath, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: cc.IDMappings[0].HostID,
-			Gid: cc.IDMappings[0].HostID,
-		},
-	}
-
-	return cmd, nil
+	return exec.Command(cc.BinPath, args...), nil
 }
 
 func (cc *UnprivilegedCommandCreator) DestroyCommand(log lager.Logger, handle string) *exec.Cmd {
-	cmd := exec.Command(cc.BinPath, append(cc.ExtraArgs, "delete", handle)...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: cc.IDMappings[0].HostID,
-			Gid: cc.IDMappings[0].HostID,
-		},
-	}
-
-	return cmd
+	return exec.Command(cc.BinPath, append(cc.ExtraArgs, "delete", handle)...)
 }
 
 func (cc *UnprivilegedCommandCreator) MetricsCommand(log lager.Logger, handle string) *exec.Cmd {
-	cmd := exec.Command(cc.BinPath, append(cc.ExtraArgs, "stats", handle)...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: cc.IDMappings[0].HostID,
-			Gid: cc.IDMappings[0].HostID,
-		},
-	}
-	return cmd
+	return exec.Command(cc.BinPath, append(cc.ExtraArgs, "stats", handle)...)
 }
 
 func stringifyMapping(mapping specs.LinuxIDMapping) string {

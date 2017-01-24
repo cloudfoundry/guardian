@@ -113,13 +113,11 @@ var _ = Describe("Image Plugin", func() {
 				}))
 			})
 
-			It("executes the plugin as the correct user", func() {
-				maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
-
+			It("executes the plugin as root", func() {
 				whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "create-whoami"))
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(string(whoamiBytes)).To(ContainSubstring(fmt.Sprintf("%d - %d", maxId, maxId)))
+				Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
 			})
 
 			Context("when there are env vars", func() {
@@ -278,13 +276,11 @@ var _ = Describe("Image Plugin", func() {
 					}))
 				})
 
-				It("executes the plugin as the correct user", func() {
-					maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
-
+				It("executes the plugin as root", func() {
 					whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "metrics-whoami"))
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(string(whoamiBytes)).To(ContainSubstring(fmt.Sprintf("%d - %d", maxId, maxId)))
+					Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
 				})
 
 				It("returns the plugin stdout as disk stats", func() {
@@ -359,13 +355,11 @@ var _ = Describe("Image Plugin", func() {
 					}))
 				})
 
-				It("executes the plugin as the correct user", func() {
-					maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
-
+				It("executes the plugin as root", func() {
 					whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "destroy-whoami"))
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(string(whoamiBytes)).To(ContainSubstring(fmt.Sprintf("%d - %d", maxId, maxId)))
+					Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
 				})
 
 				Context("when the plugin logs to stderr", func() {
@@ -488,11 +482,11 @@ var _ = Describe("Image Plugin", func() {
 				}))
 			})
 
-			It("executes the plugin as the garden user", func() {
+			It("executes the plugin as root", func() {
 				whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "create-whoami"))
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(string(whoamiBytes)).To(ContainSubstring(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())))
+				Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
 			})
 
 			Context("when there are env vars", func() {
@@ -637,11 +631,11 @@ var _ = Describe("Image Plugin", func() {
 					}))
 				})
 
-				It("executes the plugin as the garden user", func() {
+				It("executes the plugin as root", func() {
 					whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "metrics-whoami"))
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(string(whoamiBytes)).To(ContainSubstring(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())))
+					Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
 				})
 
 				Context("when the plugin logs to stderr", func() {
@@ -699,11 +693,11 @@ var _ = Describe("Image Plugin", func() {
 					}))
 				})
 
-				It("executes the plugin as the garden user", func() {
+				It("executes the plugin as root", func() {
 					whoamiBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "destroy-whoami"))
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(string(whoamiBytes)).To(ContainSubstring(fmt.Sprintf("%d - %d", os.Getuid(), os.Getgid())))
+					Expect(string(whoamiBytes)).To(ContainSubstring("0 - 0"))
 				})
 
 				Context("when the plugin logs to stderr", func() {

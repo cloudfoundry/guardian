@@ -164,9 +164,8 @@ var _ = Describe("UnprivilegedCommandCreator", func() {
 			})
 		})
 
-		It("returns a command that runs as an unprivileged user", func() {
-			Expect(createCmd.SysProcAttr.Credential.Uid).To(Equal(idMappings[0].HostID))
-			Expect(createCmd.SysProcAttr.Credential.Gid).To(Equal(idMappings[0].HostID))
+		It("returns a command that runs as the current user (SysProcAttr.Credential not set)", func() {
+			Expect(createCmd.SysProcAttr).To(BeNil())
 		})
 	})
 
@@ -203,9 +202,8 @@ var _ = Describe("UnprivilegedCommandCreator", func() {
 			})
 		})
 
-		It("returns a command that runs as an unprivileged user", func() {
-			Expect(destroyCmd.SysProcAttr.Credential.Uid).To(Equal(idMappings[0].HostID))
-			Expect(destroyCmd.SysProcAttr.Credential.Gid).To(Equal(idMappings[0].HostID))
+		It("returns a command that runs as the current user (SysProcAttr.Credential not set)", func() {
+			Expect(destroyCmd.SysProcAttr).To(BeNil())
 		})
 	})
 
@@ -242,9 +240,8 @@ var _ = Describe("UnprivilegedCommandCreator", func() {
 			})
 		})
 
-		It("returns a command that runs as an unprivileged user", func() {
-			Expect(metricsCmd.SysProcAttr.Credential.Uid).To(Equal(idMappings[0].HostID))
-			Expect(metricsCmd.SysProcAttr.Credential.Gid).To(Equal(idMappings[0].HostID))
+		It("returns a command that runs as the current user (SysProcAttr.Credential not set)", func() {
+			Expect(metricsCmd.SysProcAttr).To(BeNil())
 		})
 	})
 })
