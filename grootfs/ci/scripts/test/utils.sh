@@ -1,10 +1,16 @@
 mount_btrfs() {
   # Configure cgroup
-  mount -tcgroup -odevices cgroup:devices /sys/fs/cgroup
+  mount -t tmpfs cgroup_root /sys/fs/cgroup
+  mkdir -p /sys/fs/cgroup/devices
+  mkdir -p /sys/fs/cgroup/memory
+
+  mount -tcgroup -odevices cgroup:devices /sys/fs/cgroup/devices
   devices_mount_info=$(cat /proc/self/cgroup | grep devices)
   devices_subdir=$(echo $devices_mount_info | cut -d: -f3)
-  echo 'b 7:* rwm' > /sys/fs/cgroup/devices.allow
-  echo 'b 7:* rwm' > /sys/fs/cgroup${devices_subdir}/devices.allow
+  echo 'b 7:* rwm' > /sys/fs/cgroup/devices/devices.allow
+  echo 'b 7:* rwm' > /sys/fs/cgroup/devices${devices_subdir}/devices.allow
+
+  mount -tcgroup -omemory cgroup:memory /sys/fs/cgroup/memory
 
   # Setup loop devices
   for i in {0..256}

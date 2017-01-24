@@ -6,12 +6,16 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
+	yaml "gopkg.in/yaml.v2"
+
 	"code.cloudfoundry.org/grootfs/integration"
 
+	"github.com/alecthomas/units"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -183,6 +187,49 @@ var _ = Describe("Create", func() {
 			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.mapGID.starting-id-map"))
 			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.namespaced-unpacking.unpack-wrapper.starting-unpack"))
 			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.making-image.btrfs-creating-snapshot.starting-btrfs"))
+		})
+
+		Context("when the image is bigger than available memory", func() {
+			It("doesn't fail", func() {
+				cmd := exec.Command(
+					GrootFSBin,
+					"--store", StorePath,
+					"--log-level", "fatal",
+					"create",
+					"docker:///ubuntu:trusty",
+					"some-id",
+				)
+
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				go func() {
+					defer GinkgoRecover()
+
+					statsPath := path.Join("/proc", strconv.Itoa(sess.Command.Process.Pid), "status")
+					runs := 0
+					for {
+						stats, err := ioutil.ReadFile(statsPath)
+						if err != nil {
+							Expect(runs).To(BeNumerically(">", 1))
+							break
+						}
+
+						var statsMap map[string]string
+						Expect(yaml.Unmarshal(stats, &statsMap)).To(Succeed())
+
+						n, err := units.ParseBase2Bytes(strings.Replace(strings.ToUpper(statsMap["VmHWM"]), " ", "", -1))
+						Expect(err).NotTo(HaveOccurred())
+						// Biggest ubuntu:trusty layer is 65694192 bytes
+						Expect(n).To(BeNumerically("<", 50*1024*1024))
+
+						time.Sleep(200 * time.Millisecond)
+						runs++
+					}
+				}()
+
+				Eventually(sess, 45*time.Second).Should(gexec.Exit(0))
+			})
 		})
 	})
 })

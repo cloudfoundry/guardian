@@ -375,7 +375,7 @@ var _ = Describe("Create", func() {
 			Runner.Delete("my-empty")
 		})
 
-		It("does not clean the store first", func() {
+		It("does not clean the store", func() {
 			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preContents).To(HaveLen(1))

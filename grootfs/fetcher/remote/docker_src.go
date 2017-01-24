@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/url"
 	"os"
@@ -103,7 +104,7 @@ func (s *DockerSource) Config(logger lager.Logger, baseImageURL *url.URL, manife
 	return config, nil
 }
 
-func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string) ([]byte, int64, error) {
+func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error) {
 	logrus.SetOutput(os.Stderr)
 	logger = logger.Session("streaming-blob", lager.Data{
 		"baseImageURL": baseImageURL,
@@ -114,35 +115,42 @@ func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest s
 
 	imgSrc, err := s.imageSource(logger, baseImageURL)
 	if err != nil {
-		return nil, 0, err
+		return "", 0, err
 	}
 
 	d := digestpkg.Digest(digest)
 	blob, size, err := imgSrc.GetBlob(types.BlobInfo{Digest: d})
 	if err != nil {
-		return nil, 0, err
+		return "", 0, err
 	}
 	logger.Debug("got-blob-stream", lager.Data{"digest": digest, "size": size})
 
-	blobContents, err := ioutil.ReadAll(blob)
+	blobTempFile, err := ioutil.TempFile("", fmt.Sprintf("blob-%s", digest))
 	if err != nil {
-		return nil, 0, err
+		return "", 0, err
 	}
-	logger.Debug("got-blob", lager.Data{"actualSize": len(blobContents)})
+	defer blobTempFile.Close()
 
-	if !s.checkCheckSum(logger, blobContents, digest) {
-		return nil, 0, fmt.Errorf("invalid checksum: layer is corrupted `%s`", digest)
+	blobReader := io.TeeReader(blob, blobTempFile)
+	if !s.checkCheckSum(logger, blobReader, digest) {
+		return "", 0, fmt.Errorf("invalid checksum: layer is corrupted `%s`", digest)
 	}
 
-	return blobContents, size, nil
+	return blobTempFile.Name(), size, nil
 }
 
-func (s *DockerSource) checkCheckSum(logger lager.Logger, blobContents []byte, digest string) bool {
+func (s *DockerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest string) bool {
+	var (
+		actualSize int64
+		err        error
+	)
+
 	hash := sha256.New()
-	if _, err := hash.Write(blobContents); err != nil {
-		logger.Error("writing-blob-contents", err)
+	if actualSize, err = io.Copy(hash, data); err != nil {
+		logger.Error("failed-to-hash-data", err)
 		return false
 	}
+	logger.Debug("got-blob", lager.Data{"actualSize": actualSize})
 
 	digestID := strings.Split(digest, ":")[1]
 	blobContentsSha := hex.EncodeToString(hash.Sum(nil))

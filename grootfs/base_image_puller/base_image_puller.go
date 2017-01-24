@@ -169,6 +169,7 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 	if err != nil {
 		return "", errorspkg.Wrapf(err, "streaming blob `%s`", digest.BlobID)
 	}
+	defer stream.Close()
 
 	logger.Debug("got-stream-for-blob", lager.Data{
 		"size":                      size,

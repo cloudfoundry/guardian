@@ -9,11 +9,11 @@ import (
 	"io/ioutil"
 	"net/url"
 
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/fetcherfakes"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/grootfs/fetcher/remote/remotefakes"
-	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -27,7 +27,7 @@ var _ = Describe("RemoteFetcher", func() {
 		fakeSource        *remotefakes.FakeSource
 		fetcher           *remote.RemoteFetcher
 		logger            *lagertest.TestLogger
-		baseImageURL          *url.URL
+		baseImageURL      *url.URL
 		gzipedBlobContent []byte
 		cancelCalled      bool
 		cancelFunc        context.CancelFunc
@@ -243,7 +243,12 @@ var _ = Describe("RemoteFetcher", func() {
 
 	Describe("StreamBlob", func() {
 		BeforeEach(func() {
-			fakeSource.BlobReturns(gzipedBlobContent, 0, nil)
+			tmpFile, err := ioutil.TempFile("", "")
+			_, err = tmpFile.Write(gzipedBlobContent)
+			Expect(err).NotTo(HaveOccurred())
+			defer tmpFile.Close()
+
+			fakeSource.BlobReturns(tmpFile.Name(), 0, nil)
 		})
 
 		It("uses the source", func() {
@@ -268,10 +273,14 @@ var _ = Describe("RemoteFetcher", func() {
 		}, 2.0)
 
 		It("returns the size of the stream", func() {
-			buffer := bytes.NewBuffer([]byte{})
-			gzipWriter := gzip.NewWriter(buffer)
+			tmpFile, err := ioutil.TempFile("", "")
+			Expect(err).NotTo(HaveOccurred())
+			defer tmpFile.Close()
+
+			gzipWriter := gzip.NewWriter(tmpFile)
 			gzipWriter.Close()
-			fakeSource.BlobReturns(buffer.Bytes(), 1024, nil)
+
+			fakeSource.BlobReturns(tmpFile.Name(), 1024, nil)
 
 			_, size, err := fetcher.StreamBlob(logger, baseImageURL, "sha256:layer-digest")
 			Expect(err).NotTo(HaveOccurred())
@@ -280,7 +289,7 @@ var _ = Describe("RemoteFetcher", func() {
 
 		Context("when the source fails to stream the blob", func() {
 			It("returns an error", func() {
-				fakeSource.BlobReturns(nil, 0, errors.New("failed to stream blob"))
+				fakeSource.BlobReturns("", 0, errors.New("failed to stream blob"))
 
 				_, _, err := fetcher.StreamBlob(logger, baseImageURL, "sha256:layer-digest")
 				Expect(err).To(MatchError(ContainSubstring("failed to stream blob")))
