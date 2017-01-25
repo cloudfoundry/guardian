@@ -1,6 +1,7 @@
 package gardener
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -209,7 +210,14 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		}
 	}()
 
-	rootFSURL, err := url.Parse(spec.RootFSPath)
+	path := spec.Image.URI
+	if path == "" {
+		path = spec.RootFSPath
+	} else if spec.RootFSPath != "" {
+		return nil, errors.New("Cannot provide both Image.URI and RootFSPath")
+	}
+
+	rootFSURL, err := url.Parse(path)
 	if err != nil {
 		return nil, err
 	}

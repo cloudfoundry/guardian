@@ -46,6 +46,22 @@ var _ = Describe("Rootfs container create parameter", func() {
 		}
 	})
 
+	Context("with an Image URI provided", func() {
+		It("creates a container using that URI as the rootfs", func() {
+			var err error
+			container, err = client.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}})
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("when Image URI and RootFSPath are both specified", func() {
+		It("returns an informative error message", func() {
+			var err error
+			container, err = client.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}, RootFSPath: "docker:///cfgarden/garden-busybox"})
+			Expect(err).To(MatchError(ContainSubstring("Cannot provide both Image.URI and RootFSPath")))
+		})
+	})
+
 	Context("without a default rootfs", func() {
 		BeforeEach(func() {
 			supplyDefaultRootfs = false
@@ -75,7 +91,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 		It("the container is created successfully", func() {
 			var err error
 
-			container, err = client.Create(garden.ContainerSpec{RootFSPath: ""})
+			container, err = client.Create(garden.ContainerSpec{RootFSPath: "", Image: garden.ImageRef{URI: ""}})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})

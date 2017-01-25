@@ -70,6 +70,7 @@ var _ = Describe("Image Plugin", func() {
 			)
 
 			BeforeEach(func() {
+				containerSpec = garden.ContainerSpec{}
 				destroyContainer = true
 
 				args = append(args,
@@ -167,7 +168,7 @@ var _ = Describe("Image Plugin", func() {
 				})
 			})
 
-			Context("when using tagged docker images", func() {
+			Context("when passing a tagged docker image as the RootFSPath", func() {
 				BeforeEach(func() {
 					containerSpec.RootFSPath = "docker:///busybox#1.26.1"
 				})
@@ -177,6 +178,19 @@ var _ = Describe("Image Plugin", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(string(pluginArgsBytes)).To(ContainSubstring("docker:///busybox:1.26.1"))
+				})
+			})
+
+			Context("when passing an Image URI", func() {
+				BeforeEach(func() {
+					containerSpec.Image = garden.ImageRef{URI: "/some/fake/rootfs"}
+				})
+
+				It("executes the plugin, passing the Image URI", func() {
+					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(string(pluginArgsBytes)).To(ContainSubstring("/some/fake/rootfs"))
 				})
 			})
 
@@ -438,7 +452,7 @@ var _ = Describe("Image Plugin", func() {
 			)
 
 			BeforeEach(func() {
-				containerSpec.Privileged = true
+				containerSpec = garden.ContainerSpec{Privileged: true}
 				destroyContainer = false
 
 				args = append(args,
@@ -536,7 +550,7 @@ var _ = Describe("Image Plugin", func() {
 				})
 			})
 
-			Context("when using tagged docker images", func() {
+			Context("when passing a tagged docker image as the RootFSPath", func() {
 				BeforeEach(func() {
 					containerSpec.RootFSPath = "docker:///busybox#1.26.1"
 				})
@@ -546,6 +560,19 @@ var _ = Describe("Image Plugin", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(string(pluginArgsBytes)).To(ContainSubstring("docker:///busybox:1.26.1"))
+				})
+			})
+
+			Context("when passing an Image URI", func() {
+				BeforeEach(func() {
+					containerSpec.Image = garden.ImageRef{URI: "/some/fake/rootfs"}
+				})
+
+				It("executes the plugin, passing the Image URI", func() {
+					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(string(pluginArgsBytes)).To(ContainSubstring("/some/fake/rootfs"))
 				})
 			})
 

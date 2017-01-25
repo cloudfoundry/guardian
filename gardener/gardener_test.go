@@ -124,15 +124,54 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		Context("when parsing the rootfs path fails", func() {
-			It("should return an error", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{
-					RootFSPath: "://banana",
+		Context("when passing a rootfs path", func() {
+			Context("when parsing the rootfs path fails", func() {
+				It("should return an error", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						RootFSPath: "://banana",
+					})
+					Expect(err).To(HaveOccurred())
 				})
-				Expect(err).To(HaveOccurred())
+
+				ItDestroysEverything("://banana")
 			})
 
-			ItDestroysEverything("://banana")
+			It("passes the parsed rootfsURL to the volume creator", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{RootFSPath: "/some/path"})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(volumeCreator.CreateCallCount()).To(Equal(1))
+				_, _, fsSpec := volumeCreator.CreateArgsForCall(0)
+				Expect(fsSpec.RootFS.Path).To(Equal("/some/path"))
+			})
+		})
+
+		Context("when passing an ImageRef", func() {
+			Context("when parsing the rootfs path fails", func() {
+				It("should return an error", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{
+						RootFSPath: "://banana",
+					})
+					Expect(err).To(HaveOccurred())
+				})
+
+				ItDestroysEverything("://banana")
+			})
+
+			It("passes the parsed rootfsURL to the volume creator", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "/some/path"}})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(volumeCreator.CreateCallCount()).To(Equal(1))
+				_, _, fsSpec := volumeCreator.CreateArgsForCall(0)
+				Expect(fsSpec.RootFS.Path).To(Equal("/some/path"))
+			})
+		})
+
+		Context("When both ImageRef and RootFSPath is specified", func() {
+			It("returns informative error message", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{RootFSPath: "/some/path",
+					Image: garden.ImageRef{URI: "/some/path"}})
+				Expect(err).To(MatchError(ContainSubstring("Cannot provide both Image.URI and RootFSPath")))
+			})
 		})
 
 		Context("when the rootfs path is raw", func() {
