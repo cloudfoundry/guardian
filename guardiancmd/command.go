@@ -134,8 +134,8 @@ type GuardianCommand struct {
 	Logger LagerFlag
 
 	Server struct {
-		BindIP   IPFlag `long:"bind-ip"                  description:"Bind with TCP on the given IP."`
-		BindPort uint16 `long:"bind-port" default:"7777" description:"Bind with TCP on the given port."`
+		BindIP   IPFlag `long:"bind-ip"   description:"Bind with TCP on the given IP."`
+		BindPort uint16 `long:"bind-port" description:"Bind with TCP on the given port."`
 
 		BindSocket string `long:"bind-socket" default:"/tmp/garden.sock" description:"Bind with Unix on the given socket path."`
 
@@ -147,8 +147,8 @@ type GuardianCommand struct {
 	} `group:"Server Configuration"`
 
 	Containers struct {
-		Dir            DirFlag `long:"depot" required:"true" description:"Directory in which to store container data."`
-		PropertiesPath string  `long:"properties-path" description:"Path in which to store properties."`
+		Dir            string `long:"depot" default:"/var/run/gdn/depot" description:"Directory in which to store container data."`
+		PropertiesPath string `long:"properties-path" description:"Path in which to store properties."`
 
 		DefaultRootFS              string        `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
 		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
@@ -157,17 +157,18 @@ type GuardianCommand struct {
 	} `group:"Container Lifecycle"`
 
 	Bin struct {
-		Dadoo           FileFlag `long:"dadoo-bin"     required:"true" description:"Path to the 'dadoo' binary."`
-		NSTar           FileFlag `long:"nstar-bin"     required:"true" description:"Path to the 'nstar' binary."`
-		Tar             FileFlag `long:"tar-bin"       required:"true" description:"Path to the 'tar' binary."`
+		AssetsDir       string   `long:"assets-dir"     default:"/var/gdn/assets" description:"Directory in which to extract packaged assets"`
+		Dadoo           FileFlag `long:"dadoo-bin"      description:"Path to the 'dadoo' binary."`
+		NSTar           FileFlag `long:"nstar-bin"      description:"Path to the 'nstar' binary."`
+		Tar             FileFlag `long:"tar-bin"        description:"Path to the 'tar' binary."`
 		IPTables        FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the iptables binary"`
 		IPTablesRestore FileFlag `long:"iptables-restore-bin"  default:"/sbin/iptables-restore" description:"path to the iptables-restore binary"`
-		Init            FileFlag `long:"init-bin"      required:"true" description:"Path execute as pid 1 inside each container."`
+		Init            FileFlag `long:"init-bin"       description:"Path execute as pid 1 inside each container."`
 		Runc            string   `long:"runc-bin"      default:"runc" description:"Path to the 'runc' binary."`
 	} `group:"Binary Tools"`
 
 	Graph struct {
-		Dir                         DirFlag  `long:"graph"                 description:"Directory on which to store imported rootfs graph data."`
+		Dir                         string   `long:"graph"                                default:"/var/gdn/graph" description:"Directory on which to store imported rootfs graph data."`
 		CleanupThresholdInMegabytes int      `long:"graph-cleanup-threshold-in-megabytes" default:"-1" description:"Disk usage of the graph dir at which cleanup should trigger, or -1 to disable graph cleanup."`
 		PersistentImages            []string `long:"persistent-image" description:"Image that should never be garbage collected. Can be specified multiple times."`
 	} `group:"Image Graph"`
@@ -287,17 +288,17 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	var volumeCreator gardener.VolumeCreator = nil
 	starters := []gardener.Starter{}
 	if !cmd.Server.Rootless {
-		volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir.Path(), cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
+		volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
 		starters = []gardener.Starter{cmd.wireRunDMCStarter(logger), iptablesStarter}
 	}
 
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
 		Starters:        starters,
-		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir.Path()),
+		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir),
 		Networker:       networker,
 		VolumeCreator:   volumeCreator,
-		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir.Path(), cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.ApparmorProfile, propManager),
+		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.ApparmorProfile, propManager),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
@@ -318,7 +319,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 
 	cmd.initializeDropsonde(logger)
 
-	metricsProvider := cmd.wireMetricsProvider(logger, cmd.Containers.Dir.Path(), cmd.Graph.Dir.Path())
+	metricsProvider := cmd.wireMetricsProvider(logger, cmd.Containers.Dir, cmd.Graph.Dir)
 
 	metronNotifier := cmd.wireMetronNotifier(logger, metricsProvider)
 	metronNotifier.Start()
