@@ -199,8 +199,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					Equal([]string{
 						"path-to-dadoo",
 						"-tty",
-						"-rows", "12",
-						"-cols", "13",
 						"-uid", "123",
 						"-gid", "456",
 						"exec", "path-to-runc", filepath.Join(processPath, "the-pid"), "some-handle",

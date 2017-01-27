@@ -154,14 +154,34 @@ var _ = Describe("ExecPreparer", func() {
 		))
 	})
 
-	It("sets Terminal to true iff a TTY is configured", func() {
+	It("sets a default console size", func() {
+		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+			TTY: &garden.TTYSpec{},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(spec.Process.ConsoleSize.Height).To(BeEquivalentTo(24))
+		Expect(spec.Process.ConsoleSize.Width).To(BeEquivalentTo(80))
+	})
+
+	It("sets console size if a TTY is configured with a WindowSize", func() {
 		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
 			TTY: &garden.TTYSpec{
 				WindowSize: &garden.WindowSize{
-					Columns: 80,
-					Rows:    24,
+					Columns: 25,
+					Rows:    81,
 				},
 			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(spec.Process.ConsoleSize.Width).To(BeEquivalentTo(25))
+		Expect(spec.Process.ConsoleSize.Height).To(BeEquivalentTo(81))
+	})
+
+	It("sets Terminal to true iff a TTY is configured", func() {
+		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+			TTY: &garden.TTYSpec{},
 		})
 		Expect(err).ToNot(HaveOccurred())
 

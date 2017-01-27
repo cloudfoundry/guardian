@@ -15,7 +15,7 @@ type Bndl struct {
 func Bundle() Bndl {
 	return Bndl{
 		Spec: specs.Spec{
-			Version: "0.2.0",
+			Version: "1.0.0-rc3",
 			Linux:   &specs.Linux{},
 			Platform: specs.Platform{
 				OS:   runtime.GOOS,

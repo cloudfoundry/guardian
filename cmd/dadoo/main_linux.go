@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -17,15 +18,14 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/dadoo"
+
 	"github.com/eapache/go-resiliency/retrier"
-	"github.com/kr/pty"
 	"github.com/opencontainers/runc/libcontainer/system"
+	cmsg "github.com/opencontainers/runc/libcontainer/utils"
 )
 
 var uid = flag.Int("uid", 0, "uid to chown console to")
 var gid = flag.Int("gid", 0, "gid to chown console to")
-var rows = flag.Int("rows", 0, "rows for tty")
-var cols = flag.Int("cols", 0, "cols for tty")
 var tty = flag.Bool("tty", false, "tty requested")
 
 var ioWg *sync.WaitGroup = &sync.WaitGroup{}
@@ -37,8 +37,8 @@ func main() {
 func run() int {
 	flag.Parse()
 
-	runtime := flag.Args()[1] // e.g. runc
-	dir := flag.Args()[2]     // bundlePath for run, processPath for exec
+	runtime := flag.Args()[1]         // e.g. runc
+	processStateDir := flag.Args()[2] // path to a dir in which to store process state (e.g. fifos)
 	containerId := flag.Args()[3]
 
 	signals := make(chan os.Signal, 100)
@@ -48,21 +48,27 @@ func run() int {
 	logFile := fmt.Sprintf("/proc/%d/fd/4", os.Getpid())
 	logFD := os.NewFile(4, "/proc/self/fd/4")
 	syncPipe := os.NewFile(5, "/proc/self/fd/5")
-	pidFilePath := filepath.Join(dir, "pidfile")
+	pidFilePath := filepath.Join(processStateDir, "pidfile")
 
-	stdin, stdout, stderr, winsz := openPipes(dir)
+	stdin, stdout, stderr, winsz := openPipes(processStateDir)
 
 	syncPipe.Write([]byte{0})
 
 	var runcStartCmd *exec.Cmd
+	consoleReady := make(chan bool)
 	if *tty {
-		ttySlave := setupTty(stdin, stdout, pidFilePath, winsz, garden.WindowSize{Rows: *rows, Columns: *cols})
-		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console", ttySlave.Name(), "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
+		ttySocketPath, err := setupTTYSocket(stdin, stdout, pidFilePath, winsz, processStateDir, consoleReady)
+		if err != nil {
+			killProcess(pidFilePath)
+			panic(err)
+		}
+		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console-socket", ttySocketPath, "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
 	} else {
 		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
 		runcStartCmd.Stdin = stdin
 		runcStartCmd.Stdout = stdout
 		runcStartCmd.Stderr = stderr
+		close(consoleReady)
 	}
 
 	// we need to be the subreaper so we can wait on the detached container process
@@ -73,6 +79,7 @@ func run() int {
 		return 2
 	}
 
+	// <-consoleReady
 	var status syscall.WaitStatus
 	var rusage syscall.Rusage
 	_, err := syscall.Wait4(runcStartCmd.Process.Pid, &status, 0, &rusage)
@@ -87,10 +94,10 @@ func run() int {
 	containerPid, err := parsePid(pidFilePath)
 	check(err)
 
-	return waitForContainerToExit(dir, containerPid, signals)
+	return waitForContainerToExit(processStateDir, containerPid, signals)
 }
 
-func waitForContainerToExit(dir string, containerPid int, signals chan os.Signal) (exitCode int) {
+func waitForContainerToExit(processStateDir string, containerPid int, signals chan os.Signal) (exitCode int) {
 	for range signals {
 		for {
 			var status syscall.WaitStatus
@@ -108,7 +115,7 @@ func waitForContainerToExit(dir string, containerPid int, signals chan os.Signal
 
 				ioWg.Wait() // wait for full output to be collected
 
-				check(ioutil.WriteFile(filepath.Join(dir, "exitcode"), []byte(strconv.Itoa(exitCode)), 0700))
+				check(ioutil.WriteFile(filepath.Join(processStateDir, "exitcode"), []byte(strconv.Itoa(exitCode)), 0700))
 				return exitCode
 			}
 		}
@@ -117,12 +124,12 @@ func waitForContainerToExit(dir string, containerPid int, signals chan os.Signal
 	panic("ran out of signals") // cant happen
 }
 
-func openPipes(dir string) (io.Reader, io.Writer, io.Writer, io.Reader) {
-	stdin := openFifo(filepath.Join(dir, "stdin"), os.O_RDONLY)
-	stdout := openFifo(filepath.Join(dir, "stdout"), os.O_WRONLY|os.O_APPEND)
-	stderr := openFifo(filepath.Join(dir, "stderr"), os.O_WRONLY|os.O_APPEND)
-	winsz := openFifo(filepath.Join(dir, "winsz"), os.O_RDWR)
-	openFifo(filepath.Join(dir, "exit"), os.O_RDWR) // open just so guardian can detect it being closed when we exit
+func openPipes(processStateDir string) (io.Reader, io.Writer, io.Writer, io.Reader) {
+	stdin := openFifo(filepath.Join(processStateDir, "stdin"), os.O_RDONLY)
+	stdout := openFifo(filepath.Join(processStateDir, "stdout"), os.O_WRONLY|os.O_APPEND)
+	stderr := openFifo(filepath.Join(processStateDir, "stderr"), os.O_WRONLY|os.O_APPEND)
+	winsz := openFifo(filepath.Join(processStateDir, "winsz"), os.O_RDWR)
+	openFifo(filepath.Join(processStateDir, "exit"), os.O_RDWR) // open just so guardian can detect it being closed when we exit
 
 	return stdin, stdout, stderr, winsz
 }
@@ -136,12 +143,66 @@ func openFifo(path string, flags int) io.ReadWriter {
 	check(err)
 	return r
 }
+func setupTTYSocket(stdin io.Reader, stdout io.Writer, pidFilePath string,
+	winszFifo io.Reader, processStateDir string, consoleReady chan bool) (string, error) {
+	//create the socket in a unique dir in the parent dir so that it is not too long
+	// TODO: what if the container handle is ridiculously long a la diego?
+	//  WRITE A TEST
 
-func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader, initialWinSize garden.WindowSize) *os.File {
-	m, s, err := pty.Open()
+	sockDir, _ := ioutil.TempDir(filepath.Dir(processStateDir), "")
+	ttySockPath := filepath.Join(sockDir, "sock")
+	l, err := net.Listen("unix", ttySockPath)
 	if err != nil {
-		check(err)
+		return "", err
 	}
+
+	//go to the background and set master
+	go func(ln net.Listener) (err error) {
+		defer func() {
+			if err != nil {
+				killProcess(filepath.Join(processStateDir, "pidfile"))
+			}
+			close(consoleReady)
+		}()
+
+		conn, err := ln.Accept()
+		if err != nil {
+			return
+		}
+		defer conn.Close()
+
+		// Close ln, to allow for other instances to take over.
+		ln.Close()
+
+		// Get the fd of the connection.
+		unixconn, ok := conn.(*net.UnixConn)
+		if !ok {
+			return
+		}
+
+		socket, err := unixconn.File()
+		if err != nil {
+			return
+		}
+		defer socket.Close()
+
+		// Get the master file descriptor from runC.
+		master, err := cmsg.RecvFd(socket)
+		if err != nil {
+			return
+		}
+
+		os.RemoveAll(ttySockPath)
+		setupTty(master, nil, stdin, stdout, pidFilePath, winszFifo)
+
+		return
+	}(l)
+
+	return ttySockPath, nil
+}
+
+func setupTty(m, s *os.File, stdin io.Reader, stdout io.Writer, pidFilePath string,
+	winszFifo io.Reader) {
 
 	ioWg.Add(1)
 	go func() {
@@ -151,35 +212,23 @@ func setupTty(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo i
 
 	go io.Copy(m, stdin)
 
-	dadoo.SetWinSize(m, initialWinSize)
-
 	go func() {
 		for {
-			pid, err := readPid(pidFilePath)
-			if err != nil {
-				println("Timed out trying to open pidfile: ", err.Error())
-				return
-			}
-
-			// free up slave fd as soon as container process is running to avoid hanging
-			s.Close()
-
-			p, err := os.FindProcess(pid)
-			check(err) // cant happen on linux
-
 			var winSize garden.WindowSize
 			if err := json.NewDecoder(winszFifo).Decode(&winSize); err != nil {
 				println("invalid winsz event", err)
 				continue // not much we can do here..
 			}
-
 			dadoo.SetWinSize(m, winSize)
-			p.Signal(syscall.SIGWINCH)
 		}
 	}()
+}
 
-	check(s.Chown(*uid, *gid))
-	return s
+func killProcess(pidFilePath string) {
+	pid, err := readPid(pidFilePath)
+	if err == nil {
+		syscall.Kill(pid, syscall.SIGKILL)
+	}
 }
 
 func readPid(pidFilePath string) (int, error) {
