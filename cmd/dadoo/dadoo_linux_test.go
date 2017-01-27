@@ -23,7 +23,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-var _ = Describe("Dadoo", func() {
+var _ = FDescribe("Dadoo", func() {
 	var (
 		bundlePath string
 		bundle     goci.Bndl
@@ -71,6 +71,7 @@ var _ = Describe("Dadoo", func() {
 	AfterEach(func() {
 		// Note: We're not umounting the tmpfs here as it can cause a bug in AUFS
 		// to surface and lock up the VM running the test
+		//syscall.Unmount(bundlePath, 0x2) TODO: is it safe to add this unmount back in now?
 		os.RemoveAll(filepath.Join(bundlePath, "root"))
 		os.RemoveAll(bundlePath)
 	})
@@ -91,6 +92,11 @@ var _ = Describe("Dadoo", func() {
 			Expect(cmd.Run()).To(Succeed())
 		})
 
+		AfterEach(func() {
+			cmd := exec.Command("runc", "delete", filepath.Base(bundlePath))
+			Expect(cmd.Run()).To(Succeed())
+		})
+
 		It("should return the exit code of the container process", func() {
 			processSpec, err := json.Marshal(&specs.Process{
 				Args: []string{"/bin/sh", "-c", "exit 24"},
@@ -108,7 +114,7 @@ var _ = Describe("Dadoo", func() {
 			Eventually(sess).Should(gexec.Exit(24))
 		})
 
-		It("should write the exit code to a file named exitcode in the container dir", func() {
+		FIt("should write the exit code to a file named exitcode in the container dir", func() {
 			processSpec, err := json.Marshal(&specs.Process{
 				Args: []string{"/bin/sh", "-c", "exit 24"},
 				Cwd:  "/",
@@ -270,6 +276,7 @@ var _ = Describe("Dadoo", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 				cmd.Stdin = bytes.NewReader(encSpec)
 				_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
@@ -390,13 +397,17 @@ var _ = Describe("Dadoo", func() {
 						},
 						Cwd:      "/",
 						Terminal: true,
+						ConsoleSize: specs.Box{
+							Height: 17,
+							Width:  13,
+						},
 					}
 
 					encSpec, err := json.Marshal(spec)
 					Expect(err).NotTo(HaveOccurred())
 
-					cmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "-rows", "17", "-cols", "13", "exec", "runc", processDir, filepath.Base(bundlePath))
-					cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null")}
+					cmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
+					cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 					cmd.Stdin = bytes.NewReader(encSpec)
 
 					_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -417,7 +428,7 @@ var _ = Describe("Dadoo", func() {
 					data, err := ioutil.ReadAll(stdout)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(data)).To(ContainSubstring("rows 17; columns 13;"))
-				})
+				}, 5.0)
 
 				It("should update window size", func() {
 					spec := specs.Process{

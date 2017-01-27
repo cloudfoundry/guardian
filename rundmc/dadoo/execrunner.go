@@ -85,13 +85,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 
 	var cmd *exec.Cmd
 	if tty != nil {
-		var rows, cols int
-		if tty.WindowSize != nil {
-			rows = tty.WindowSize.Rows
-			cols = tty.WindowSize.Columns
-		}
-
-		cmd = exec.Command(d.dadooPath, "-tty", "-rows", strconv.Itoa(rows), "-cols", strconv.Itoa(cols), "-uid", strconv.Itoa(spec.HostUID), "-gid", strconv.Itoa(spec.HostGID), "exec", d.runcPath, processPath, handle)
+		cmd = exec.Command(d.dadooPath, "-tty", "-uid", strconv.Itoa(spec.HostUID), "-gid", strconv.Itoa(spec.HostGID), "exec", d.runcPath, processPath, handle)
 	} else {
 		cmd = exec.Command(d.dadooPath, "exec", d.runcPath, processPath, handle)
 	}
@@ -108,10 +102,13 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 	}
 
 	cmd.Stdin = bytes.NewReader(encodedSpec)
+	cmd.Stderr = os.Stderr // any dadoo panics will appear in guardian .err log
 	if err := d.commandRunner.Start(cmd); err != nil {
 		return nil, err
 	}
-	go d.commandRunner.Wait(cmd) // wait on spawned process to avoid zombies
+	go func() {
+		d.commandRunner.Wait(cmd) // wait on spawned process to avoid zombies
+	}()
 
 	fd3w.Close()
 	logw.Close()
@@ -135,6 +132,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 
 	log.Info("read-exit-fd")
 	runcExitStatus := make([]byte, 1)
+	runcExitStatus[0] = 4 // don't accidentally report runcExitStatus success on panic
 	fd3r.Read(runcExitStatus)
 	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
 	if runcExitStatus[0] != 0 {

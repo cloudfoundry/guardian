@@ -163,12 +163,22 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		caps = intersect(caps, r.nonRootMaxCaps)
 	}
 
+	consoleBox := specs.Box{
+		Width:  80,
+		Height: 24,
+	}
+	if spec.TTY != nil && spec.TTY.WindowSize != nil {
+		consoleBox.Width = uint(spec.TTY.WindowSize.Columns)
+		consoleBox.Height = uint(spec.TTY.WindowSize.Rows)
+	}
+
 	return &PreparedSpec{
 		HostUID: u.hostUid,
 		HostGID: u.hostGid,
 		Process: specs.Process{
-			Args: append([]string{spec.Path}, spec.Args...),
-			Env:  envFor(u.containerUid, bndl, spec),
+			Args:        append([]string{spec.Path}, spec.Args...),
+			ConsoleSize: consoleBox,
+			Env:         envFor(u.containerUid, bndl, spec),
 			User: specs.User{
 				UID:            uint32(u.containerUid),
 				GID:            uint32(u.containerGid),

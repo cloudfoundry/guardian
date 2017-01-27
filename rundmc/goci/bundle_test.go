@@ -16,7 +16,7 @@ var _ = Describe("Bundle", func() {
 	})
 
 	It("specifies the correct version", func() {
-		Expect(initialBundle.Spec.Version).To(Equal("0.2.0"))
+		Expect(initialBundle.Spec.Version).To(Equal("1.0.0-rc3"))
 	})
 
 	Describe("WithHostname", func() {

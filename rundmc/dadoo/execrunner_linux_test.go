@@ -41,6 +41,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		receivedStdinContents  []byte
 		runcReturns            byte
 		dadooReturns           error
+		dadooPanics            bool
 		dadooWritesLogs        string
 		dadooWritesExitCode    []byte
 		log                    *lagertest.TestLogger
@@ -199,8 +200,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					Equal([]string{
 						"path-to-dadoo",
 						"-tty",
-						"-rows", "12",
-						"-cols", "13",
 						"-uid", "123",
 						"-gid", "456",
 						"exec", "path-to-runc", filepath.Join(processPath, "the-pid"), "some-handle",
@@ -283,6 +282,16 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 					close(done)
 				}, 10.0)
+			})
+		})
+
+		Context("when dadoo panics", func() {
+			BeforeEach(func() {
+				dadooPanics = true
+			})
+
+			It("returns an exit status of 4", func() {
+
 			})
 		})
 
