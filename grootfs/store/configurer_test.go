@@ -16,12 +16,13 @@ import (
 
 var _ = Describe("Configurer", func() {
 	var (
-		storePath string
-
-		logger lager.Logger
+		storePath      string
+		originalTmpDir string
+		logger         lager.Logger
 	)
 
 	BeforeEach(func() {
+		originalTmpDir = os.TempDir()
 		tempDir, err := ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -32,6 +33,7 @@ var _ = Describe("Configurer", func() {
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(path.Dir(storePath))).To(Succeed())
+		Expect(os.Setenv("TMPDIR", originalTmpDir)).To(Succeed())
 	})
 
 	Describe("ConfigureStore", func() {
@@ -47,9 +49,18 @@ var _ = Describe("Configurer", func() {
 			Expect(filepath.Join(storePath, "images")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "cache")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "volumes")).To(BeADirectory())
+			Expect(filepath.Join(storePath, "tmp")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "locks")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "meta")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "meta", "dependencies")).To(BeADirectory())
+		})
+
+		It("creates tmp files into TMPDIR inside storePath", func() {
+
+			Expect(store.ConfigureStore(logger, storePath, "random-id")).To(Succeed())
+			file, _ := ioutil.TempFile("", "")
+			Expect(filepath.Join(storePath, store.TEMP_DIR_NAME, filepath.Base(file.Name()))).To(BeAnExistingFile())
+
 		})
 
 		It("chmods the storePath to 700", func() {

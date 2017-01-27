@@ -35,7 +35,12 @@ func ensure(logger lager.Logger, storePath string) error {
 		filepath.Join(storePath, CACHE_DIR_NAME),
 		filepath.Join(storePath, LOCKS_DIR_NAME),
 		filepath.Join(storePath, META_DIR_NAME),
+		filepath.Join(storePath, TEMP_DIR_NAME),
 		filepath.Join(storePath, META_DIR_NAME, "dependencies"),
+	}
+
+	if err := os.Setenv("TMPDIR", filepath.Join(storePath, TEMP_DIR_NAME)); err != nil {
+		return fmt.Errorf("could not set TMPDIR: %s", err.Error())
 	}
 
 	for _, requiredPath := range requiredPaths {
