@@ -29,10 +29,13 @@ var _ = Describe("Delete", func() {
 
 	Context("when trying to delete a image from a different user", func() {
 		It("doesn't return an error but logs a warning", func() {
+			storePath, err := ioutil.TempDir(StorePath, "")
+			Expect(err).NotTo(HaveOccurred())
+
 			deleteCmd := exec.Command(
 				GrootFSBin,
 				"--log-level", "debug",
-				"--store", StorePath,
+				"--store", storePath,
 				"--drax-bin", DraxBin,
 				"delete",
 				image.Path,

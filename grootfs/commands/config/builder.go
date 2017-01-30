@@ -83,7 +83,6 @@ func (b *Builder) WithStorePath(storePath string, isSet bool) *Builder {
 		b.config.StorePath = storePath
 	}
 
-	b.config.StorePath = b.config.StorePath
 	return b
 }
 

@@ -221,8 +221,8 @@ var _ = Describe("Create", func() {
 				image, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
 					BaseImage:   baseImagePath,
 					ID:          "foobar",
-					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
-					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
+					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
 				})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(image.Path).To(BeADirectory())
@@ -254,7 +254,7 @@ var _ = Describe("Create", func() {
 				_, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
 					BaseImage:   baseImagePath,
 					ID:          "random-id",
-					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
 				})
 				Expect(err).ToNot(HaveOccurred())
 
@@ -296,7 +296,7 @@ var _ = Describe("Create", func() {
 				_, err := Runner.WithNewgidmapBin(newgidmapBin.Name()).Create(groot.CreateSpec{
 					BaseImage:   baseImagePath,
 					ID:          "random-id",
-					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
 				})
 				Expect(err).ToNot(HaveOccurred())
 
@@ -477,7 +477,7 @@ var _ = Describe("Create", func() {
 		It("returns the newuidmap output in the stdout", func() {
 			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
 				BaseImage:   baseImagePath,
-				UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1, NamespaceID: 1, Size: 65000}},
+				UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1, NamespaceID: 1, Size: 65000}, groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
 				ID:          "some-id",
 			})
 
@@ -489,6 +489,7 @@ var _ = Describe("Create", func() {
 				GrootFSBin, "--store", StorePath,
 				"create",
 				"--uid-mapping", "1:1:65000",
+				"--uid-mapping", "0:1000:65000",
 				baseImagePath,
 				"some-id",
 			)
@@ -648,7 +649,7 @@ var _ = Describe("Create", func() {
 			It("uses the newuidmap bin from the config file", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					BaseImage:   baseImagePath,
-					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
 					ID:          "random-id",
 				})
 				Expect(err).ToNot(HaveOccurred())
@@ -674,7 +675,7 @@ var _ = Describe("Create", func() {
 			It("uses the newgidmap bin from the config file", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					BaseImage:   baseImagePath,
-					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 1, Size: 1}},
+					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
 					ID:          "random-id",
 				})
 				Expect(err).ToNot(HaveOccurred())
@@ -687,7 +688,7 @@ var _ = Describe("Create", func() {
 
 		Describe("uid mappings", func() {
 			BeforeEach(func() {
-				cfg.UIDMappings = []string{"1:1:65990"}
+				cfg.UIDMappings = []string{"1:1:65990", "0:" + CurrentUserID + ":1"}
 			})
 
 			It("uses the uid mappings from the config file", func() {
@@ -700,7 +701,7 @@ var _ = Describe("Create", func() {
 
 		Describe("gid mappings", func() {
 			BeforeEach(func() {
-				cfg.GIDMappings = []string{"1:1:65990"}
+				cfg.GIDMappings = []string{"1:1:65990", "0:" + CurrentUserID + ":1"}
 			})
 
 			It("uses the gid mappings from the config file", func() {

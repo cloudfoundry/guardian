@@ -8,14 +8,14 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-func ConfigureStore(logger lager.Logger, storePath string, imageIDOrPath string) error {
+func ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int, imageIDOrPath string) error {
 	var data lager.Data
 	if imageIDOrPath != "" {
 		_, id := filepath.Split(imageIDOrPath)
 		data = lager.Data{"id": id}
 	}
 
-	if err := ensure(logger, storePath); err != nil {
+	if err := ensure(logger, storePath, ownerUID, ownerGID); err != nil {
 		logger.Error("failed-to-setup-store", err, data)
 		return err
 	}
@@ -23,7 +23,7 @@ func ConfigureStore(logger lager.Logger, storePath string, imageIDOrPath string)
 	return nil
 }
 
-func ensure(logger lager.Logger, storePath string) error {
+func ensure(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
 	logger = logger.Session("ensuring-store", lager.Data{"storePath": storePath})
 	logger.Debug("start")
 	defer logger.Debug("end")
@@ -58,6 +58,16 @@ func ensure(logger lager.Logger, storePath string) error {
 				return fmt.Errorf("making directory `%s`: %s", requiredPath, err)
 			}
 		}
+
+		if err := os.Chown(requiredPath, ownerUID, ownerGID); err != nil {
+			logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
+			return fmt.Errorf("changing store owner to %d:%d for path %s: %s", ownerUID, ownerGID, requiredPath, err.Error())
+		}
+	}
+
+	if err := os.Chown(storePath, ownerUID, ownerGID); err != nil {
+		logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
+		return fmt.Errorf("changing store owner to %d:%d for path %s: %s", ownerUID, ownerGID, storePath, err.Error())
 	}
 
 	return os.Chmod(storePath, 0700)

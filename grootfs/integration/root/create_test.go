@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
@@ -14,6 +15,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/store"
 
 	"github.com/alecthomas/units"
 	. "github.com/onsi/ginkgo"
@@ -28,6 +30,7 @@ var _ = Describe("Create", func() {
 		baseImagePath   string
 		rootUID         int
 		rootGID         int
+		storePath       string
 	)
 
 	BeforeEach(func() {
@@ -39,6 +42,11 @@ var _ = Describe("Create", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Chown(sourceImagePath, rootUID, rootGID)).To(Succeed())
 		Expect(os.Chmod(sourceImagePath, 0755)).To(Succeed())
+
+		storePath, err = ioutil.TempDir(StorePath, "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chmod(storePath, 0777)).To(Succeed())
+		Expect(os.Chown(storePath, int(GrootUID), int(GrootGID))).To(Succeed())
 
 		grootFilePath := path.Join(sourceImagePath, "foo")
 		Expect(ioutil.WriteFile(grootFilePath, []byte("hello-world"), 0644)).To(Succeed())
@@ -68,7 +76,7 @@ var _ = Describe("Create", func() {
 	})
 
 	It("keeps the ownership and permissions", func() {
-		image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
+		image := integration.CreateImage(GrootFSBin, storePath, DraxBin, baseImagePath, "random-id", 0)
 
 		grootFi, err := os.Stat(path.Join(image.RootFSPath, "foo"))
 		Expect(err).NotTo(HaveOccurred())
@@ -86,7 +94,7 @@ var _ = Describe("Create", func() {
 		// because we need to write a file as root to test the translation.
 		It("translates the rootfs accordingly", func() {
 			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
+				GrootFSBin, "--store", storePath,
 				"--log-level", "debug",
 				"create",
 				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
@@ -132,7 +140,7 @@ var _ = Describe("Create", func() {
 	Context("when image is local", func() {
 		It("logs the steps taken to create the rootfs", func() {
 			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
+				GrootFSBin, "--store", storePath,
 				"--log-level", "debug",
 				"create",
 				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
@@ -161,7 +169,7 @@ var _ = Describe("Create", func() {
 	Context("when image is remote", func() {
 		It("logs the steps taken to create the rootfs", func() {
 			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
+				GrootFSBin, "--store", storePath,
 				"--log-level", "debug",
 				"create",
 				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
@@ -193,7 +201,7 @@ var _ = Describe("Create", func() {
 			It("doesn't fail", func() {
 				cmd := exec.Command(
 					GrootFSBin,
-					"--store", StorePath,
+					"--store", storePath,
 					"--log-level", "fatal",
 					"create",
 					"docker:///ubuntu:trusty",
@@ -229,6 +237,100 @@ var _ = Describe("Create", func() {
 				}()
 
 				Eventually(sess, 45*time.Second).Should(gexec.Exit(0))
+			})
+		})
+	})
+
+	Context("store configuration", func() {
+		Context("when there's no mapping", func() {
+			It("sets the onwership of the store to the caller user", func() {
+				cmd := exec.Command(
+					GrootFSBin, "--store", storePath,
+					"--log-level", "debug",
+					"create",
+					baseImagePath,
+					"some-id",
+				)
+				cmd.SysProcAttr = &syscall.SysProcAttr{
+					Credential: &syscall.Credential{
+						Uid: GrootUID,
+						Gid: GrootGID,
+					},
+				}
+
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess, 10*time.Second).Should(gexec.Exit(0))
+
+				stat, err := os.Stat(filepath.Join(storePath, store.IMAGES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+
+				stat, err = os.Stat(filepath.Join(storePath, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+
+				stat, err = os.Stat(filepath.Join(storePath, store.LOCKS_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+			})
+		})
+
+		Context("when there's mappings", func() {
+			It("sets the onwnership of the store to the mapped user", func() {
+				cmd := exec.Command(
+					GrootFSBin, "--store", storePath,
+					"--log-level", "debug",
+					"create",
+					"--uid-mapping", fmt.Sprintf("0:%d:1", 5000),
+					"--uid-mapping", "1:100000:65000",
+					"--gid-mapping", fmt.Sprintf("0:%d:1", 6000),
+					"--gid-mapping", "1:100000:65000",
+					baseImagePath,
+					"some-id",
+				)
+
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				// Fails because these mappings aren't valid
+				Eventually(sess, 10*time.Second).Should(gexec.Exit(1))
+
+				stat, err := os.Stat(filepath.Join(storePath, store.IMAGES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
+
+				stat, err = os.Stat(filepath.Join(storePath, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
+
+				stat, err = os.Stat(filepath.Join(storePath, store.LOCKS_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
+			})
+
+			Context("but there's no mapping for root or size = 1", func() {
+				It("fails fast", func() {
+					cmd := exec.Command(
+						GrootFSBin, "--store", storePath,
+						"--log-level", "debug",
+						"create",
+						"--uid-mapping", "1:100000:65000",
+						"--gid-mapping", "1:100000:65000",
+						baseImagePath,
+						"some-id",
+					)
+
+					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(1))
+					Eventually(sess).Should(gbytes.Say("couldn't determine store owner, missing root user mapping"))
+				})
 			})
 		})
 	})
