@@ -3,6 +3,7 @@ package groot
 import (
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -79,12 +80,15 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 		return Image{}, fmt.Errorf("image for id `%s` already exists", spec.ID)
 	}
 
+	ownerUid, ownerGid := c.parseOwner(spec.UIDMappings, spec.GIDMappings)
 	baseImageSpec := BaseImageSpec{
 		BaseImageSrc:              parsedURL,
 		DiskLimit:                 spec.DiskLimit,
 		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
 		UIDMappings:               spec.UIDMappings,
 		GIDMappings:               spec.GIDMappings,
+		OwnerUID:                  ownerUid,
+		OwnerGID:                  ownerGid,
 	}
 
 	lockFile, err := c.locksmith.Lock(GlobalLockKey)
@@ -126,6 +130,8 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
 		VolumePath:                baseImage.VolumePath,
 		BaseImage:                 baseImage.BaseImage,
+		OwnerUID:                  ownerUid,
+		OwnerGID:                  ownerGid,
 	}
 	image, err := c.imageCloner.Create(logger, imageSpec)
 	if err != nil {
@@ -150,4 +156,25 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 	}
 
 	return image, nil
+}
+
+func (c *Creator) parseOwner(uidMappings, gidMappings []IDMappingSpec) (int, int) {
+	uid := os.Getuid()
+	gid := os.Getgid()
+
+	for _, mapping := range uidMappings {
+		if mapping.Size == 1 && mapping.NamespaceID == 0 {
+			uid = mapping.HostID
+			break
+		}
+	}
+
+	for _, mapping := range gidMappings {
+		if mapping.Size == 1 && mapping.NamespaceID == 0 {
+			gid = mapping.HostID
+			break
+		}
+	}
+
+	return uid, gid
 }

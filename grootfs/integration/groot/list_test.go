@@ -50,7 +50,7 @@ var _ = Describe("List", func() {
 			configFilePath = path.Join(configDir, "config.yaml")
 
 			cfg := config.Config{
-				BaseStorePath: StorePath,
+				StorePath: StorePath,
 			}
 
 			configYaml, err := yaml.Marshal(cfg)

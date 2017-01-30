@@ -12,7 +12,7 @@ import (
 )
 
 type Config struct {
-	BaseStorePath             string   `yaml:"store_path"`
+	StorePath                 string   `yaml:"store_path"`
 	CleanOnCreate             bool     `yaml:"clean_on_create"`
 	CleanThresholdBytes       int64    `yaml:"clean_threshold_bytes"`
 	DiskLimitSizeBytes        int64    `yaml:"disk_limit_size_bytes"`
@@ -28,7 +28,6 @@ type Config struct {
 	MetronEndpoint            string   `yaml:"metron_endpoint"`
 	LogLevel                  string   `yaml:"log_level"`
 	LogFile                   string   `yaml:"log_file"`
-	UserBasedStorePath        string
 }
 
 type Builder struct {
@@ -80,11 +79,10 @@ func (b *Builder) WithIgnoreBaseImages(ignoreBaseImages []string) *Builder {
 }
 
 func (b *Builder) WithStorePath(storePath string, isSet bool) *Builder {
-	if isSet || b.config.BaseStorePath == "" {
-		b.config.BaseStorePath = storePath
+	if isSet || b.config.StorePath == "" {
+		b.config.StorePath = storePath
 	}
 
-	b.config.UserBasedStorePath = userBasedStorePath(b.config.BaseStorePath)
 	return b
 }
 

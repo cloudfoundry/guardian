@@ -1,8 +1,6 @@
 package remote // import "code.cloudfoundry.org/grootfs/fetcher/remote"
 
 import (
-	"bytes"
-	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -11,8 +9,8 @@ import (
 	"net/url"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/lager"
 
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -22,7 +20,7 @@ import (
 type Source interface {
 	Manifest(logger lager.Logger, baseImageURL *url.URL) (Manifest, error)
 	Config(logger lager.Logger, baseImageURL *url.URL, manifest Manifest) (specsv1.Image, error)
-	Blob(logger lager.Logger, baseImageURL *url.URL, digest string) ([]byte, int64, error)
+	Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error)
 }
 
 type RemoteFetcher struct {
@@ -86,17 +84,19 @@ func (f *RemoteFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, s
 	logger.Info("start")
 	defer logger.Info("end")
 
-	blobContents, size, err := f.source.Blob(logger, baseImageURL, source)
+	blobFilePath, size, err := f.source.Blob(logger, baseImageURL, source)
 	if err != nil {
+		logger.Error("source-blob-failed", err)
 		return nil, 0, err
 	}
 
-	reader, err := gzip.NewReader(bytes.NewBuffer(blobContents))
+	blobReader, err := NewBlobReader(blobFilePath)
 	if err != nil {
+		logger.Error("blob-reader-failed", err)
 		return nil, 0, err
 	}
 
-	return reader, size, nil
+	return blobReader, size, nil
 }
 
 func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,

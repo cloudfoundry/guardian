@@ -28,17 +28,16 @@ var ListCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		storePath := cfg.BaseStorePath
-		if _, err := os.Stat(storePath); os.IsNotExist(err) {
-			err := fmt.Errorf("no store found at %s", storePath)
+		if _, err := os.Stat(cfg.StorePath); os.IsNotExist(err) {
+			err := fmt.Errorf("no store found at %s", cfg.StorePath)
 			logger.Error("store-path-failed", err, nil)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
 		lister := groot.IamLister()
-		images, err := lister.List(logger, storePath)
+		images, err := lister.List(logger, cfg.StorePath)
 		if err != nil {
-			logger.Error("listing-images", err, lager.Data{"storePath": storePath})
+			logger.Error("listing-images", err, lager.Data{"storePath": cfg.StorePath})
 			return cli.NewExitError(fmt.Sprintf("Failed to retrieve list of images: %s", err.Error()), 1)
 		}
 

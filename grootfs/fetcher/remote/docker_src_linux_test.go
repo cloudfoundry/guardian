@@ -1,10 +1,10 @@
 package remote_test
 
 import (
-	"bytes"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -368,12 +368,15 @@ var _ = Describe("Docker source", func() {
 			})
 
 			It("downloads a blob", func() {
-				blobContents, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+				blobPath, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+				Expect(err).NotTo(HaveOccurred())
+
+				blobReader, err := os.Open(blobPath)
 				Expect(err).NotTo(HaveOccurred())
 
 				buffer := gbytes.NewBuffer()
 				cmd := exec.Command("tar", "tzv")
-				cmd.Stdin = bytes.NewBuffer(blobContents)
+				cmd.Stdin = blobReader
 				sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(size).To(Equal(int64(90)))
@@ -425,12 +428,15 @@ var _ = Describe("Docker source", func() {
 				})
 
 				It("downloads a blob", func() {
-					blobContents, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+					blobPath, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+					Expect(err).NotTo(HaveOccurred())
+
+					blobReader, err := os.Open(blobPath)
 					Expect(err).NotTo(HaveOccurred())
 
 					buffer := gbytes.NewBuffer()
 					cmd := exec.Command("tar", "tzv")
-					cmd.Stdin = bytes.NewBuffer(blobContents)
+					cmd.Stdin = blobReader
 					sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(size).To(Equal(int64(90)))
@@ -444,12 +450,15 @@ var _ = Describe("Docker source", func() {
 
 	Describe("Blob", func() {
 		It("downloads a blob", func() {
-			blobContents, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+			blobPath, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+			Expect(err).NotTo(HaveOccurred())
+
+			blobReader, err := os.Open(blobPath)
 			Expect(err).NotTo(HaveOccurred())
 
 			buffer := gbytes.NewBuffer()
 			cmd := exec.Command("tar", "tzv")
-			cmd.Stdin = bytes.NewBuffer(blobContents)
+			cmd.Stdin = blobReader
 			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(size).To(Equal(int64(90)))
@@ -474,12 +483,15 @@ var _ = Describe("Docker source", func() {
 				})
 
 				It("fetches the config", func() {
-					blobContents, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+					blobPath, size, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+					Expect(err).NotTo(HaveOccurred())
+
+					blobReader, err := os.Open(blobPath)
 					Expect(err).NotTo(HaveOccurred())
 
 					buffer := gbytes.NewBuffer()
 					cmd := exec.Command("tar", "tzv")
-					cmd.Stdin = bytes.NewBuffer(blobContents)
+					cmd.Stdin = blobReader
 					sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(size).To(Equal(int64(90)))

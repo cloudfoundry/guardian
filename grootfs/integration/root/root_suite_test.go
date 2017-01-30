@@ -2,8 +2,10 @@ package root_test
 
 import (
 	"fmt"
+	"math/rand"
 	"os"
 	"path"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
@@ -33,6 +35,7 @@ const btrfsMountPath = "/mnt/btrfs"
 
 func TestRoot(t *testing.T) {
 	RegisterFailHandler(Fail)
+	rand.Seed(time.Now().Unix())
 
 	SynchronizedBeforeSuite(func() []byte {
 		grootFSBin, err := gexec.Build("code.cloudfoundry.org/grootfs")

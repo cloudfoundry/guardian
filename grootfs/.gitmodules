@@ -91,3 +91,6 @@
 [submodule "vendor/github.com/containers/storage"]
 	path = vendor/github.com/containers/storage
 	url = https://github.com/containers/storage
+[submodule "vendor/github.com/alecthomas/units"]
+	path = vendor/github.com/alecthomas/units
+	url = https://github.com/alecthomas/units

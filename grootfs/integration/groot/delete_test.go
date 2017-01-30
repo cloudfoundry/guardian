@@ -84,7 +84,7 @@ var _ = Describe("Delete", func() {
 
 		Context("when a path to an image does not exist", func() {
 			It("succeeds but logs a warning", func() {
-				fakePath := path.Join(StorePath, CurrentUserID, "images/non_existing")
+				fakePath := path.Join(StorePath, "images/non_existing")
 				Expect(fakePath).NotTo(BeAnExistingFile())
 
 				cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", fakePath)

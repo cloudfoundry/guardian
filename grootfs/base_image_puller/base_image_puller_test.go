@@ -8,6 +8,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/url"
+	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/base_image_puller/base_image_pullerfakes"
@@ -64,6 +66,9 @@ var _ = Describe("Base Image Puller", func() {
 
 		fakeVolumeDriver = new(volume_driverfakes.FakeVolumeDriver)
 		fakeVolumeDriver.PathReturns("", errors.New("volume does not exist"))
+		fakeVolumeDriver.CreateStub = func(_ lager.Logger, _, _ string) (string, error) {
+			return ioutil.TempDir("", "volume")
+		}
 
 		fakeDependencyRegisterer = new(base_image_pullerfakes.FakeDependencyRegisterer)
 
@@ -126,22 +131,29 @@ var _ = Describe("Base Image Puller", func() {
 	})
 
 	It("unpacks the layers to the respective volumes", func() {
+		volumesDir, err := ioutil.TempDir("", "volumes")
+		Expect(err).NotTo(HaveOccurred())
+
 		fakeVolumeDriver.CreateStub = func(_ lager.Logger, _, id string) (string, error) {
-			return fmt.Sprintf("/volume/%s", id), nil
+			volumePath := filepath.Join(volumesDir, id)
+
+			Expect(os.MkdirAll(volumePath, 0777)).To(Succeed())
+			return volumePath, nil
 		}
 
-		_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+		_, err = baseImagePuller.Pull(logger, groot.BaseImageSpec{
 			BaseImageSrc: remoteBaseImageSrc,
 		})
+
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
 		_, unpackSpec := fakeUnpacker.UnpackArgsForCall(0)
-		Expect(unpackSpec.TargetPath).To(Equal("/volume/layer-111"))
+		Expect(unpackSpec.TargetPath).To(Equal(filepath.Join(volumesDir, "layer-111")))
 		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(1)
-		Expect(unpackSpec.TargetPath).To(Equal("/volume/chain-222"))
+		Expect(unpackSpec.TargetPath).To(Equal(filepath.Join(volumesDir, "chain-222")))
 		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
-		Expect(unpackSpec.TargetPath).To(Equal("/volume/chain-333"))
+		Expect(unpackSpec.TargetPath).To(Equal(filepath.Join(volumesDir, "chain-333")))
 	})
 
 	It("unpacks the layers got from the fetcher", func() {
@@ -311,8 +323,8 @@ var _ = Describe("Base Image Puller", func() {
 				BaseImageSrc: remoteBaseImageSrc,
 				UIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{
-						HostID:      1,
-						NamespaceID: 1,
+						HostID:      os.Getuid(),
+						NamespaceID: 0,
 						Size:        1,
 					},
 				},
@@ -342,6 +354,38 @@ var _ = Describe("Base Image Puller", func() {
 			_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
 			Expect(unpackSpec.UIDMappings).To(Equal(spec.UIDMappings))
 			Expect(unpackSpec.GIDMappings).To(Equal(spec.GIDMappings))
+		})
+	})
+
+	Describe("volumes ownership", func() {
+		var spec groot.BaseImageSpec
+
+		BeforeEach(func() {
+			spec = groot.BaseImageSpec{
+				BaseImageSrc: remoteBaseImageSrc,
+			}
+		})
+
+		Context("and both owner ids are 0", func() {
+			It("doesn't enforce the ownership", func() {
+				spec.OwnerUID = 0
+				spec.OwnerGID = 0
+
+				_, err := baseImagePuller.Pull(logger, spec)
+				// Normal user can't ever chown things to root
+				// The fact that this didn't fail, means it never tried
+				Expect(err).ToNot(HaveOccurred())
+			})
+		})
+
+		Context("when setting the ownership fails", func() {
+			It("returns an error", func() {
+				spec.OwnerUID = 10000
+				spec.OwnerGID = 5000
+
+				_, err := baseImagePuller.Pull(logger, spec)
+				Expect(err).To(MatchError(ContainSubstring("changing volume ownership to 10000:5000")))
+			})
 		})
 	})
 

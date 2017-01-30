@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
@@ -104,7 +105,7 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		storePath := cfg.UserBasedStorePath
+		storePath := cfg.StorePath
 		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
 
@@ -121,7 +122,11 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		if err = store.ConfigureStore(logger, storePath, id); err != nil {
+		storeOwnerUid, storeOwnerGid, err := findStoreOwner(uidMappings, gidMappings)
+		if err != nil {
+			return err
+		}
+		if err = store.ConfigureStore(logger, storePath, storeOwnerUid, storeOwnerGid, id); err != nil {
 			return err
 		}
 
@@ -129,8 +134,13 @@ var CreateCommand = cli.Command{
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
 		runner := linux_command_runner.New()
-		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
-		namespacedCmdUnpacker := unpackerpkg.NewNamespacedUnpacker(runner, idMapper)
+		var unpacker base_image_puller.Unpacker
+		if os.Getuid() == 0 {
+			unpacker = unpackerpkg.NewNSSysProcUnpacker(runner)
+		} else {
+			idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
+			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper)
+		}
 
 		dockerSrc := remote.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.InsecureRegistries)
 
@@ -144,7 +154,10 @@ var CreateCommand = cli.Command{
 			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
 		)
 		baseImagePuller := base_image_puller.NewBaseImagePuller(
-			localFetcher, remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver,
+			localFetcher,
+			remoteFetcher,
+			unpacker,
+			btrfsVolumeDriver,
 			dependencyManager,
 		)
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()
@@ -238,4 +251,35 @@ func tryHumanize(err error, spec groot.CreateSpec) string {
 	}
 
 	return tryParsingErrorMessage(errorspkg.Cause(err)).Error()
+}
+
+func findStoreOwner(uidMappings, gidMappings []groot.IDMappingSpec) (int, int, error) {
+	uid := os.Getuid()
+	gid := os.Getgid()
+
+	for _, mapping := range uidMappings {
+		if mapping.Size == 1 && mapping.NamespaceID == 0 {
+			uid = mapping.HostID
+			break
+		}
+		uid = -1
+	}
+
+	if len(uidMappings) > 0 && uid == -1 {
+		return 0, 0, errors.New("couldn't determine store owner, missing root user mapping")
+	}
+
+	for _, mapping := range gidMappings {
+		if mapping.Size == 1 && mapping.NamespaceID == 0 {
+			gid = mapping.HostID
+			break
+		}
+		gid = -1
+	}
+
+	if len(gidMappings) > 0 && gid == -1 {
+		return 0, 0, errors.New("couldn't determine store owner, missing root user mapping")
+	}
+
+	return uid, gid, nil
 }

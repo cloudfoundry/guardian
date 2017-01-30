@@ -55,23 +55,6 @@ func init() {
 		}
 		logger.Debug("unpack-command-done")
 	})
-
-	reexec.Register("unpack", func() {
-		cli.ErrWriter = os.Stdout
-		logger := lager.NewLogger("unpack")
-		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
-
-		rootFSPath := os.Args[1]
-		unpacker := NewTarUnpacker()
-		if err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
-			Stream:     os.Stdin,
-			TargetPath: rootFSPath,
-		}); err != nil {
-			logger.Error("unpacking-failed", err)
-			fmt.Println(err.Error())
-			os.Exit(1)
-		}
-	})
 }
 
 //go:generate counterfeiter . IDMapper
@@ -80,20 +63,20 @@ type IDMapper interface {
 	MapGIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error
 }
 
-type NamespacedUnpacker struct {
+type NSIdMapperUnpacker struct {
 	commandRunner commandrunner.CommandRunner
 	idMapper      IDMapper
 }
 
-func NewNamespacedUnpacker(commandRunner commandrunner.CommandRunner, idMapper IDMapper) *NamespacedUnpacker {
-	return &NamespacedUnpacker{
+func NewNSIdMapperUnpacker(commandRunner commandrunner.CommandRunner, idMapper IDMapper) *NSIdMapperUnpacker {
+	return &NSIdMapperUnpacker{
 		commandRunner: commandRunner,
 		idMapper:      idMapper,
 	}
 }
 
-func (u *NamespacedUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) error {
-	logger = logger.Session("namespaced-unpacking", lager.Data{"spec": spec})
+func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) error {
+	logger = logger.Session("ns-id-mapper-unpacking", lager.Data{"spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -143,7 +126,7 @@ func (u *NamespacedUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 	return nil
 }
 
-func (u *NamespacedUnpacker) setIDMappings(logger lager.Logger, spec base_image_puller.UnpackSpec, untarPid int) error {
+func (u *NSIdMapperUnpacker) setIDMappings(logger lager.Logger, spec base_image_puller.UnpackSpec, untarPid int) error {
 	if len(spec.UIDMappings) > 0 {
 		if err := u.idMapper.MapUIDs(logger, untarPid, spec.UIDMappings); err != nil {
 			return fmt.Errorf("setting uid mapping: %s", err)

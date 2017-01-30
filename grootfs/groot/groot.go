@@ -39,6 +39,8 @@ type BaseImageSpec struct {
 	BaseImageSrc              *url.URL
 	UIDMappings               []IDMappingSpec
 	GIDMappings               []IDMappingSpec
+	OwnerUID                  int
+	OwnerGID                  int
 }
 
 type BaseImage struct {
@@ -57,6 +59,8 @@ type ImageSpec struct {
 	ExcludeBaseImageFromQuota bool
 	VolumePath                string
 	BaseImage                 specsv1.Image
+	OwnerUID                  int
+	OwnerGID                  int
 }
 
 type Image struct {

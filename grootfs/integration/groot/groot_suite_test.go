@@ -27,6 +27,7 @@ var (
 	storeName  string
 
 	CurrentUserID    string
+	CurrentUserIDInt int
 	RegistryUsername string
 	RegistryPassword string
 )
@@ -42,8 +43,8 @@ func TestGroot(t *testing.T) {
 
 		return []byte(grootFSBin)
 	}, func(data []byte) {
-		userID := os.Getuid()
-		CurrentUserID = strconv.Itoa(userID)
+		CurrentUserIDInt = os.Getuid()
+		CurrentUserID = strconv.Itoa(CurrentUserIDInt)
 		GrootFSBin = string(data)
 	})
 

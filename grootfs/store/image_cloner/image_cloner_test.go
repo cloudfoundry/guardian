@@ -34,6 +34,10 @@ var _ = Describe("Image", func() {
 		var err error
 		fakeSnapshotDriver = new(image_clonerfakes.FakeSnapshotDriver)
 
+		fakeSnapshotDriver.SnapshotStub = func(_ lager.Logger, from, to string) error {
+			return os.Mkdir(to, 0777)
+		}
+
 		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -112,6 +116,34 @@ var _ = Describe("Image", func() {
 			var imageJsonContent specsv1.Image
 			Expect(json.NewDecoder(imageJsonFile).Decode(&imageJsonContent)).To(Succeed())
 			Expect(imageJsonContent).To(Equal(baseImage))
+		})
+
+		Describe("created files ownership", func() {
+			Context("when both owner IDs are 0", func() {
+				It("doesn't enforce any ownership", func() {
+					_, err := imageCloner.Create(logger, groot.ImageSpec{
+						ID:       "some-id",
+						OwnerUID: 0,
+						OwnerGID: 0,
+					})
+
+					// Because a normal user cannot change the onwership of a file to root
+					// the fact that this hasn't failed proves that it didn't try
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("when it fails to set the ownership", func() {
+				It("returns an error", func() {
+					_, err := imageCloner.Create(logger, groot.ImageSpec{
+						ID:       "some-id",
+						OwnerUID: 2525,
+						OwnerGID: 2626,
+					})
+
+					Expect(err).To(MatchError(ContainSubstring("ownership to 2525:2626")))
+				})
+			})
 		})
 
 		Context("when calling it with two different ids", func() {
