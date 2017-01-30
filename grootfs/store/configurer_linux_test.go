@@ -63,8 +63,7 @@ var _ = Describe("Configurer", func() {
 		})
 
 		It("creates tmp files into TMPDIR inside storePath", func() {
-
-			Expect(store.ConfigureStore(logger, storePath, "random-id")).To(Succeed())
+			Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
 			file, _ := ioutil.TempFile("", "")
 			Expect(filepath.Join(storePath, store.TEMP_DIR_NAME, filepath.Base(file.Name()))).To(BeAnExistingFile())
 
