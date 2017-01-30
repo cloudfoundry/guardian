@@ -25,9 +25,12 @@ import (
 	cmsg "github.com/opencontainers/runc/libcontainer/utils"
 )
 
+const MaxSocketDirPathLength = 80
+
 var uid = flag.Int("uid", 0, "uid to chown console to")
 var gid = flag.Int("gid", 0, "gid to chown console to")
 var tty = flag.Bool("tty", false, "tty requested")
+var socketDirPath = flag.String("socket-dir-path", "", "path to a dir in which to store console sockets")
 
 var ioWg *sync.WaitGroup = &sync.WaitGroup{}
 
@@ -57,7 +60,10 @@ func run() int {
 
 	var runcExecCmd *exec.Cmd
 	if *tty {
-		ttySocketPath := setupTTYSocket(stdin, stdout, pidFilePath, winsz, processStateDir)
+		if len(*socketDirPath) > MaxSocketDirPathLength {
+			panic(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
+		}
+		ttySocketPath := setupTTYSocket(stdin, stdout, winsz, pidFilePath, *socketDirPath)
 		runcExecCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console-socket", ttySocketPath, "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
 	} else {
 		runcExecCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
@@ -139,15 +145,11 @@ func openFifo(path string, flags int) io.ReadWriter {
 	return r
 }
 
-func setupTTYSocket(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader, processStateDir string) string {
-	//create the socket in a unique dir in the parent dir so that it is not too long
-	// TODO: what if the container handle is ridiculously long a la diego?
-	//  WRITE A TEST
-
-	sockDir, err := ioutil.TempDir(filepath.Dir(processStateDir), "")
+func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidFilePath, sockDirBase string) string {
+	sockDir, err := ioutil.TempDir(sockDirBase, "")
 	check(err)
 
-	ttySockPath := filepath.Join(sockDir, "sock")
+	ttySockPath := filepath.Join(sockDir, "tty.sock")
 	l, err := net.Listen("unix", ttySockPath)
 	check(err)
 
@@ -157,7 +159,7 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, pidFilePath string, winsz
 		// socket, so it must've started, thus we might need to kill the process
 		defer func() {
 			if err != nil {
-				killProcess(filepath.Join(processStateDir, "pidfile"))
+				killProcess(pidFilePath)
 			}
 		}()
 
@@ -188,8 +190,8 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, pidFilePath string, winsz
 			return
 		}
 
-		os.RemoveAll(ttySockPath)
-		streamProcess(master, stdin, stdout, pidFilePath, winszFifo)
+		os.RemoveAll(sockDir)
+		streamProcess(master, stdin, stdout, winszFifo)
 
 		return
 	}(l)
@@ -197,7 +199,7 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, pidFilePath string, winsz
 	return ttySockPath
 }
 
-func streamProcess(m *os.File, stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader) {
+func streamProcess(m *os.File, stdin io.Reader, stdout io.Writer, winszFifo io.Reader) {
 	ioWg.Add(1)
 	go func() {
 		defer ioWg.Done()
