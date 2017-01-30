@@ -27,12 +27,14 @@ import (
 
 const MaxSocketDirPathLength = 80
 
-var uid = flag.Int("uid", 0, "uid to chown console to")
-var gid = flag.Int("gid", 0, "gid to chown console to")
-var tty = flag.Bool("tty", false, "tty requested")
-var socketDirPath = flag.String("socket-dir-path", "", "path to a dir in which to store console sockets")
+var (
+	uid           = flag.Int("uid", 0, "uid to chown console to")
+	gid           = flag.Int("gid", 0, "gid to chown console to")
+	tty           = flag.Bool("tty", false, "tty requested")
+	socketDirPath = flag.String("socket-dir-path", "", "path to a dir in which to store console sockets")
 
-var ioWg *sync.WaitGroup = &sync.WaitGroup{}
+	ioWg *sync.WaitGroup = &sync.WaitGroup{}
+)
 
 func main() {
 	os.Exit(run())
