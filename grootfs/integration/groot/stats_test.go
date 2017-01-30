@@ -103,7 +103,7 @@ var _ = Describe("Stats", func() {
 
 		Context("when the last parameter is a path", func() {
 			It("returns an error", func() {
-				invalidImagePath := filepath.Join(StorePath, CurrentUserID, store.IMAGES_DIR_NAME, "not-here")
+				invalidImagePath := filepath.Join(StorePath, store.IMAGES_DIR_NAME, "not-here")
 				_, err := Runner.Stats(invalidImagePath)
 				Expect(err).To(MatchError(ContainSubstring("image `not-here` was not found")))
 			})

@@ -39,22 +39,12 @@ var StatsCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		storePath := cfg.BaseStorePath
+		storePath := cfg.StorePath
 		idOrPath := ctx.Args().First()
-		userID := os.Getuid()
-		id, err := idfinder.FindID(storePath, userID, idOrPath)
+		id, err := idfinder.FindID(storePath, idOrPath)
 		if err != nil {
 			logger.Error("find-id-failed", err, lager.Data{"id": idOrPath, "storePath": storePath})
 			return cli.NewExitError(err.Error(), 1)
-		}
-
-		if id == idOrPath {
-			storePath = cfg.UserBasedStorePath
-		} else {
-			storePath, err = idfinder.FindSubStorePath(storePath, idOrPath)
-			if err != nil {
-				return cli.NewExitError(fmt.Sprintf("can't determine the store path: %s", err.Error()), 1)
-			}
 		}
 
 		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)

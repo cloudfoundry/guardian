@@ -104,7 +104,7 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		storePath := cfg.UserBasedStorePath
+		storePath := cfg.StorePath
 		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
 

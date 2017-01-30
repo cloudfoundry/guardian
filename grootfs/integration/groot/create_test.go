@@ -50,10 +50,10 @@ var _ = Describe("Create", func() {
 
 	Context("storage setup", func() {
 		It("creates the storage path with the correct permission", func() {
-			storePath := filepath.Join(StorePath, CurrentUserID)
+			storePath := filepath.Join(StorePath, "new-store")
 			Expect(storePath).ToNot(BeAnExistingFile())
-			integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", tenMegabytes)
-			Expect(filepath.Join(StorePath, CurrentUserID)).To(BeADirectory())
+			integration.CreateImage(GrootFSBin, storePath, DraxBin, baseImagePath, "random-id", tenMegabytes)
+			Expect(storePath).To(BeADirectory())
 
 			stat, err := os.Stat(storePath)
 			Expect(err).NotTo(HaveOccurred())
@@ -150,7 +150,7 @@ var _ = Describe("Create", func() {
 						})
 						Expect(err).To(HaveOccurred())
 
-						imagePath := path.Join(StorePath, CurrentUserID, "images", "random-id")
+						imagePath := path.Join(StorePath, "images", "random-id")
 						Expect(imagePath).ToNot(BeAnExistingFile())
 					})
 				})
@@ -338,7 +338,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("cleans the store first", func() {
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preContents).To(HaveLen(1))
 
@@ -351,11 +351,11 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(afterContents).To(HaveLen(2))
 			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-				Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+				Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
 			}
 		})
 	})
@@ -376,7 +376,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("does not clean the store", func() {
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preContents).To(HaveLen(1))
 
@@ -389,13 +389,13 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(afterContents).To(HaveLen(3))
 
 			layers := append(testhelpers.EmptyBaseImageV011.Layers, testhelpers.BusyBoxImage.Layers...)
 			for _, layer := range layers {
-				Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+				Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
 			}
 		})
 	})
@@ -426,7 +426,7 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 			})
-			Expect(err).To(MatchError(ContainSubstring(("making directory `/var/lib/grootfs/" + CurrentUserID + "`"))))
+			Expect(err).To(MatchError(ContainSubstring(("making directory `/var/lib/grootfs`"))))
 		})
 	})
 
@@ -497,7 +497,7 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sess.Wait()).NotTo(gexec.Exit(0))
 
-			Expect(path.Join(StorePath, CurrentUserID, "images", "some-id")).ToNot(BeAnExistingFile())
+			Expect(path.Join(StorePath, "images", "some-id")).ToNot(BeAnExistingFile())
 		})
 	})
 
@@ -571,14 +571,14 @@ var _ = Describe("Create", func() {
 		Describe("store path", func() {
 			BeforeEach(func() {
 				var err error
-				cfg.BaseStorePath, err = ioutil.TempDir(StorePath, "")
+				cfg.StorePath, err = ioutil.TempDir(StorePath, "")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("uses the store path from the config file", func() {
 				image, err := Runner.WithoutStore().Create(spec)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(image.Path).To(Equal(filepath.Join(cfg.BaseStorePath, CurrentUserID, "images/random-id")))
+				Expect(image.Path).To(Equal(filepath.Join(cfg.StorePath, "images/random-id")))
 			})
 		})
 
@@ -771,12 +771,12 @@ var _ = Describe("Create", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(Runner.Delete("my-empty")).To(Succeed())
 
-				layerPath := filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
+				layerPath := filepath.Join(StorePath, store.VOLUMES_DIR_NAME, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
 				stat, err := os.Stat(layerPath)
 				Expect(err).NotTo(HaveOccurred())
 				preLayerTimestamp := stat.ModTime()
 
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preContents).To(HaveLen(3))
 
@@ -793,12 +793,12 @@ var _ = Describe("Create", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess, "15s").Should(gexec.Exit(0))
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(afterContents).To(HaveLen(2))
 
 				for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-					Expect(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+					Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
 				}
 
 				stat, err = os.Stat(layerPath)
@@ -808,7 +808,7 @@ var _ = Describe("Create", func() {
 
 			Context("when no-clean flag is set", func() {
 				It("does not clean up unused layers", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(1))
 
@@ -825,7 +825,7 @@ var _ = Describe("Create", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Eventually(sess, "10s").Should(gexec.Exit(0))
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, CurrentUserID, store.VOLUMES_DIR_NAME))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(3))
 				})

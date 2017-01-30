@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	yaml "gopkg.in/yaml.v2"
@@ -23,7 +22,7 @@ var _ = Describe("Builder", func() {
 
 	BeforeEach(func() {
 		cfg = config.Config{
-			BaseStorePath:             "/hello",
+			StorePath:                 "/hello",
 			DraxBin:                   "/config/drax",
 			BtrfsBin:                  "/config/btrfs",
 			NewuidmapBin:              "/config/newuidmap",
@@ -66,7 +65,7 @@ var _ = Describe("Builder", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config.InsecureRegistries).To(Equal([]string{"http://example.org"}))
 			Expect(config.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
-			Expect(config.BaseStorePath).To(Equal("/hello"))
+			Expect(config.StorePath).To(Equal("/hello"))
 		})
 
 		Context("when disk limit property is invalid", func() {
@@ -153,8 +152,7 @@ var _ = Describe("Builder", func() {
 			builder = builder.WithStorePath("/mnt/grootfs/data", true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/mnt/grootfs/data", CurrentUserID)))
-			Expect(config.BaseStorePath).To(Equal("/mnt/grootfs/data"))
+			Expect(config.StorePath).To(Equal("/mnt/grootfs/data"))
 		})
 
 		Context("when store path is not provided via command line", func() {
@@ -162,21 +160,19 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithStorePath("/mnt/grootfs/data", false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/hello/", CurrentUserID)))
-				Expect(config.BaseStorePath).To(Equal("/hello"))
+				Expect(config.StorePath).To(Equal("/hello"))
 			})
 
 			Context("and store path is not set in the config", func() {
 				BeforeEach(func() {
-					cfg.BaseStorePath = ""
+					cfg.StorePath = ""
 				})
 
 				It("uses the provided store path ", func() {
 					builder = builder.WithStorePath("/mnt/grootfs/data", false)
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
-					Expect(config.UserBasedStorePath).To(Equal(filepath.Join("/mnt/grootfs/data", CurrentUserID)))
-					Expect(config.BaseStorePath).To(Equal("/mnt/grootfs/data"))
+					Expect(config.StorePath).To(Equal("/mnt/grootfs/data"))
 				})
 			})
 		})

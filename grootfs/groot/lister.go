@@ -21,18 +21,9 @@ func (l *Lister) List(logger lager.Logger, storePath string) ([]string, error) {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	imagePaths := []string{}
-	subStores, err := l.listDirs(storePath)
+	imagePaths, err := l.listDirs(filepath.Join(storePath, store.IMAGES_DIR_NAME))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list store path: %s", err)
-	}
-	for _, subStore := range subStores {
-		images, err := l.listDirs(filepath.Join(subStore, store.IMAGES_DIR_NAME))
-		if err != nil {
-			return nil, fmt.Errorf("failed to list substore path: %s", err)
-		}
-
-		imagePaths = append(imagePaths, images...)
 	}
 
 	logger.Debug("list-images", lager.Data{"imagePaths": imagePaths})

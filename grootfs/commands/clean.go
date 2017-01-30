@@ -53,7 +53,7 @@ var CleanCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		storePath := cfg.UserBasedStorePath
+		storePath := cfg.StorePath
 		if _, err := os.Stat(storePath); os.IsNotExist(err) {
 			err := fmt.Errorf("no store found at %s", storePath)
 			logger.Error("store-path-failed", err, nil)

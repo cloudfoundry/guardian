@@ -144,7 +144,7 @@ var _ = Describe("Create with local images", func() {
 			integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
 
 			volumeID := integration.BaseImagePathToVolumeID(baseImagePath)
-			layerSnapshotPath := filepath.Join(StorePath, CurrentUserID, "volumes", volumeID)
+			layerSnapshotPath := filepath.Join(StorePath, "volumes", volumeID)
 			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id-2", 0)

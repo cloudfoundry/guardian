@@ -166,7 +166,7 @@ var _ = Describe("Create with remote images", func() {
 			It("caches the unpacked image in a subvolume with snapshots", func() {
 				integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id", 0)
 
-				layerSnapshotPath := filepath.Join(StorePath, CurrentUserID, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
+				layerSnapshotPath := filepath.Join(StorePath, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
 				Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 				image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageURL, "random-id-2", 0)
