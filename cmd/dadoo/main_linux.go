@@ -55,28 +55,28 @@ func run() int {
 
 	syncPipe.Write([]byte{0})
 
-	var runcStartCmd *exec.Cmd
+	var runcExecCmd *exec.Cmd
 	if *tty {
 		ttySocketPath := setupTTYSocket(stdin, stdout, pidFilePath, winsz, processStateDir)
-		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console-socket", ttySocketPath, "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
+		runcExecCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console-socket", ttySocketPath, "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
 	} else {
-		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
-		runcStartCmd.Stdin = stdin
-		runcStartCmd.Stdout = stdout
-		runcStartCmd.Stderr = stderr
+		runcExecCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
+		runcExecCmd.Stdin = stdin
+		runcExecCmd.Stdout = stdout
+		runcExecCmd.Stderr = stderr
 	}
 
 	// we need to be the subreaper so we can wait on the detached container process
 	system.SetSubreaper(os.Getpid())
 
-	if err := runcStartCmd.Start(); err != nil {
+	if err := runcExecCmd.Start(); err != nil {
 		fd3.Write([]byte{2})
 		return 2
 	}
 
 	var status syscall.WaitStatus
 	var rusage syscall.Rusage
-	_, err := syscall.Wait4(runcStartCmd.Process.Pid, &status, 0, &rusage)
+	_, err := syscall.Wait4(runcExecCmd.Process.Pid, &status, 0, &rusage)
 	check(err)    // Start succeeded but Wait4 failed, this can only be a programmer error
 	logFD.Close() // No more logs from runc so close fd
 
