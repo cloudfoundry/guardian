@@ -65,9 +65,8 @@ func (fake *FakeSnapshotDriver) Snapshot(logger lager.Logger, fromPath string, t
 	fake.snapshotMutex.Unlock()
 	if fake.SnapshotStub != nil {
 		return fake.SnapshotStub(logger, fromPath, toPath)
-	} else {
-		return fake.snapshotReturns.result1
 	}
+	return fake.snapshotReturns.result1
 }
 
 func (fake *FakeSnapshotDriver) SnapshotCallCount() int {
@@ -101,9 +100,8 @@ func (fake *FakeSnapshotDriver) ApplyDiskLimit(logger lager.Logger, path string,
 	fake.applyDiskLimitMutex.Unlock()
 	if fake.ApplyDiskLimitStub != nil {
 		return fake.ApplyDiskLimitStub(logger, path, diskLimit, exclusive)
-	} else {
-		return fake.applyDiskLimitReturns.result1
 	}
+	return fake.applyDiskLimitReturns.result1
 }
 
 func (fake *FakeSnapshotDriver) ApplyDiskLimitCallCount() int {
@@ -135,9 +133,8 @@ func (fake *FakeSnapshotDriver) FetchStats(logger lager.Logger, path string) (gr
 	fake.fetchStatsMutex.Unlock()
 	if fake.FetchStatsStub != nil {
 		return fake.FetchStatsStub(logger, path)
-	} else {
-		return fake.fetchStatsReturns.result1, fake.fetchStatsReturns.result2
 	}
+	return fake.fetchStatsReturns.result1, fake.fetchStatsReturns.result2
 }
 
 func (fake *FakeSnapshotDriver) FetchStatsCallCount() int {
@@ -170,9 +167,8 @@ func (fake *FakeSnapshotDriver) Destroy(logger lager.Logger, path string) error 
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(logger, path)
-	} else {
-		return fake.destroyReturns.result1
 	}
+	return fake.destroyReturns.result1
 }
 
 func (fake *FakeSnapshotDriver) DestroyCallCount() int {

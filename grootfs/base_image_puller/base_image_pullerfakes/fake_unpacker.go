@@ -32,9 +32,8 @@ func (fake *FakeUnpacker) Unpack(logger lager.Logger, spec base_image_puller.Unp
 	fake.unpackMutex.Unlock()
 	if fake.UnpackStub != nil {
 		return fake.UnpackStub(logger, spec)
-	} else {
-		return fake.unpackReturns.result1
 	}
+	return fake.unpackReturns.result1
 }
 
 func (fake *FakeUnpacker) UnpackCallCount() int {

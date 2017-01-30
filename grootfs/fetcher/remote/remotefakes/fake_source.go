@@ -58,9 +58,8 @@ func (fake *FakeSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (re
 	fake.manifestMutex.Unlock()
 	if fake.ManifestStub != nil {
 		return fake.ManifestStub(logger, baseImageURL)
-	} else {
-		return fake.manifestReturns.result1, fake.manifestReturns.result2
 	}
+	return fake.manifestReturns.result1, fake.manifestReturns.result2
 }
 
 func (fake *FakeSource) ManifestCallCount() int {
@@ -94,9 +93,8 @@ func (fake *FakeSource) Config(logger lager.Logger, baseImageURL *url.URL, manif
 	fake.configMutex.Unlock()
 	if fake.ConfigStub != nil {
 		return fake.ConfigStub(logger, baseImageURL, manifest)
-	} else {
-		return fake.configReturns.result1, fake.configReturns.result2
 	}
+	return fake.configReturns.result1, fake.configReturns.result2
 }
 
 func (fake *FakeSource) ConfigCallCount() int {
@@ -130,9 +128,8 @@ func (fake *FakeSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest 
 	fake.blobMutex.Unlock()
 	if fake.BlobStub != nil {
 		return fake.BlobStub(logger, baseImageURL, digest)
-	} else {
-		return fake.blobReturns.result1, fake.blobReturns.result2, fake.blobReturns.result3
 	}
+	return fake.blobReturns.result1, fake.blobReturns.result2, fake.blobReturns.result3
 }
 
 func (fake *FakeSource) BlobCallCount() int {

@@ -44,9 +44,8 @@ func (fake *FakeDependencyManager) Register(id string, chainIDs []string) error 
 	fake.registerMutex.Unlock()
 	if fake.RegisterStub != nil {
 		return fake.RegisterStub(id, chainIDs)
-	} else {
-		return fake.registerReturns.result1
 	}
+	return fake.registerReturns.result1
 }
 
 func (fake *FakeDependencyManager) RegisterCallCount() int {
@@ -77,9 +76,8 @@ func (fake *FakeDependencyManager) Deregister(id string) error {
 	fake.deregisterMutex.Unlock()
 	if fake.DeregisterStub != nil {
 		return fake.DeregisterStub(id)
-	} else {
-		return fake.deregisterReturns.result1
 	}
+	return fake.deregisterReturns.result1
 }
 
 func (fake *FakeDependencyManager) DeregisterCallCount() int {

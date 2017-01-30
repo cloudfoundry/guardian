@@ -31,9 +31,8 @@ func (fake *FakeImageCloner) ImageIDs(logger lager.Logger) ([]string, error) {
 	fake.imageIDsMutex.Unlock()
 	if fake.ImageIDsStub != nil {
 		return fake.ImageIDsStub(logger)
-	} else {
-		return fake.imageIDsReturns.result1, fake.imageIDsReturns.result2
 	}
+	return fake.imageIDsReturns.result1, fake.imageIDsReturns.result2
 }
 
 func (fake *FakeImageCloner) ImageIDsCallCount() int {

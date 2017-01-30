@@ -50,9 +50,8 @@ func (fake *FakeIDMapper) MapUIDs(logger lager.Logger, pid int, mappings []groot
 	fake.mapUIDsMutex.Unlock()
 	if fake.MapUIDsStub != nil {
 		return fake.MapUIDsStub(logger, pid, mappings)
-	} else {
-		return fake.mapUIDsReturns.result1
 	}
+	return fake.mapUIDsReturns.result1
 }
 
 func (fake *FakeIDMapper) MapUIDsCallCount() int {
@@ -90,9 +89,8 @@ func (fake *FakeIDMapper) MapGIDs(logger lager.Logger, pid int, mappings []groot
 	fake.mapGIDsMutex.Unlock()
 	if fake.MapGIDsStub != nil {
 		return fake.MapGIDsStub(logger, pid, mappings)
-	} else {
-		return fake.mapGIDsReturns.result1
 	}
+	return fake.mapGIDsReturns.result1
 }
 
 func (fake *FakeIDMapper) MapGIDsCallCount() int {

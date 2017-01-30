@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	errorspkg "github.com/pkg/errors"
@@ -13,7 +14,6 @@ import (
 
 const BaseImageReferenceFormat = "baseimage:%s"
 
-//go:generate counterfeiter . VolumeDriver
 //go:generate counterfeiter . Fetcher
 //go:generate counterfeiter . Unpacker
 //go:generate counterfeiter . DependencyRegisterer
@@ -37,12 +37,6 @@ type BaseImageInfo struct {
 	Config       specsv1.Image
 }
 
-type VolumeDriver interface {
-	Path(logger lager.Logger, id string) (string, error)
-	Create(logger lager.Logger, parentID, id string) (string, error)
-	DestroyVolume(logger lager.Logger, id string) error
-}
-
 type Fetcher interface {
 	BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (BaseImageInfo, error)
 	StreamBlob(logger lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error)
@@ -60,11 +54,11 @@ type BaseImagePuller struct {
 	localFetcher         Fetcher
 	remoteFetcher        Fetcher
 	unpacker             Unpacker
-	volumeDriver         VolumeDriver
+	volumeDriver         volume_driver.VolumeDriver
 	dependencyRegisterer DependencyRegisterer
 }
 
-func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer) *BaseImagePuller {
+func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver volume_driver.VolumeDriver, dependencyRegisterer DependencyRegisterer) *BaseImagePuller {
 	return &BaseImagePuller{
 		localFetcher:         localFetcher,
 		remoteFetcher:        remoteFetcher,

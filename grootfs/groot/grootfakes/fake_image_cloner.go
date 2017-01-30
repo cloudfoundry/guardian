@@ -60,9 +60,8 @@ func (fake *FakeImageCloner) Exists(id string) (bool, error) {
 	fake.existsMutex.Unlock()
 	if fake.ExistsStub != nil {
 		return fake.ExistsStub(id)
-	} else {
-		return fake.existsReturns.result1, fake.existsReturns.result2
 	}
+	return fake.existsReturns.result1, fake.existsReturns.result2
 }
 
 func (fake *FakeImageCloner) ExistsCallCount() int {
@@ -95,9 +94,8 @@ func (fake *FakeImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(logger, spec)
-	} else {
-		return fake.createReturns.result1, fake.createReturns.result2
 	}
+	return fake.createReturns.result1, fake.createReturns.result2
 }
 
 func (fake *FakeImageCloner) CreateCallCount() int {
@@ -130,9 +128,8 @@ func (fake *FakeImageCloner) Destroy(logger lager.Logger, id string) error {
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(logger, id)
-	} else {
-		return fake.destroyReturns.result1
 	}
+	return fake.destroyReturns.result1
 }
 
 func (fake *FakeImageCloner) DestroyCallCount() int {
@@ -164,9 +161,8 @@ func (fake *FakeImageCloner) Stats(logger lager.Logger, id string) (groot.Volume
 	fake.statsMutex.Unlock()
 	if fake.StatsStub != nil {
 		return fake.StatsStub(logger, id)
-	} else {
-		return fake.statsReturns.result1, fake.statsReturns.result2
 	}
+	return fake.statsReturns.result1, fake.statsReturns.result2
 }
 
 func (fake *FakeImageCloner) StatsCallCount() int {
