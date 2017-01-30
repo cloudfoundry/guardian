@@ -147,8 +147,9 @@ type GuardianCommand struct {
 	} `group:"Server Configuration"`
 
 	Containers struct {
-		Dir            string `long:"depot" default:"/var/run/gdn/depot" description:"Directory in which to store container data."`
-		PropertiesPath string `long:"properties-path" description:"Path in which to store properties."`
+		Dir                string `long:"depot" default:"/var/run/gdn/depot" description:"Directory in which to store container data."`
+		PropertiesPath     string `long:"properties-path" description:"Path in which to store properties."`
+		ConsoleSocketsPath string `long:"console-sockets-path" description:"Path in which to store temporary sockets"`
 
 		DefaultRootFS              string        `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
 		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`

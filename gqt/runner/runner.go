@@ -54,13 +54,14 @@ type RunningGarden struct {
 
 type GardenRunner struct {
 	*ginkgomon.Runner
-	Cmd           *exec.Cmd
-	TmpDir        string
-	GraphPath     string
-	DepotDir      string
-	DebugIp       string
-	DebugPort     int
-	Network, Addr string
+	Cmd            *exec.Cmd
+	TmpDir         string
+	GraphPath      string
+	ConsoleSockets string
+	DepotDir       string
+	DebugIp        string
+	DebugPort      int
+	Network, Addr  string
 }
 
 func init() {
@@ -85,10 +86,11 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBi
 
 	r.GraphPath = filepath.Join(DataDir, fmt.Sprintf("node-%d", ginkgo.GinkgoParallelNode()))
 	r.DepotDir = filepath.Join(r.TmpDir, "containers")
+	r.ConsoleSockets = filepath.Join(r.TmpDir, "console-sockets")
 
 	MustMountTmpfs(r.GraphPath)
 
-	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs, argv...)
+	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.ConsoleSockets, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs, argv...)
 	r.Cmd.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", r.TmpDir))
 
 	for i, arg := range r.Cmd.Args {
@@ -176,7 +178,7 @@ func (r *RunningGarden) Stop() error {
 	return err
 }
 
-func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs string, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs string, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -216,6 +218,7 @@ func cmd(tmpdir, depotDir, graphPath, network, addr, bin, initBin, nstarBin, dad
 
 	gardenArgs = appendDefaultFlag(gardenArgs, "--depot", depotDir)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--graph", graphPath)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--console-sockets-path", consoleSocketsPath)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--network-pool", fmt.Sprintf("10.254.%d.0/22", 4*GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--init-bin", initBin)
