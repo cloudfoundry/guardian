@@ -21,6 +21,7 @@ import (
 
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/opencontainers/runc/libcontainer/system"
+
 	cmsg "github.com/opencontainers/runc/libcontainer/utils"
 )
 
@@ -55,20 +56,14 @@ func run() int {
 	syncPipe.Write([]byte{0})
 
 	var runcStartCmd *exec.Cmd
-	consoleReady := make(chan bool)
 	if *tty {
-		ttySocketPath, err := setupTTYSocket(stdin, stdout, pidFilePath, winsz, processStateDir, consoleReady)
-		if err != nil {
-			killProcess(pidFilePath)
-			panic(err)
-		}
+		ttySocketPath := setupTTYSocket(stdin, stdout, pidFilePath, winsz, processStateDir)
 		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console-socket", ttySocketPath, "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
 	} else {
 		runcStartCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
 		runcStartCmd.Stdin = stdin
 		runcStartCmd.Stdout = stdout
 		runcStartCmd.Stderr = stderr
-		close(consoleReady)
 	}
 
 	// we need to be the subreaper so we can wait on the detached container process
@@ -79,13 +74,13 @@ func run() int {
 		return 2
 	}
 
-	// <-consoleReady
 	var status syscall.WaitStatus
 	var rusage syscall.Rusage
 	_, err := syscall.Wait4(runcStartCmd.Process.Pid, &status, 0, &rusage)
 	check(err)    // Start succeeded but Wait4 failed, this can only be a programmer error
 	logFD.Close() // No more logs from runc so close fd
 
+	// also check that masterFD is received and streaming or whatevs
 	fd3.Write([]byte{byte(status.ExitStatus())})
 	if status.ExitStatus() != 0 {
 		return 3 // nothing to wait for, container didn't launch
@@ -143,26 +138,27 @@ func openFifo(path string, flags int) io.ReadWriter {
 	check(err)
 	return r
 }
-func setupTTYSocket(stdin io.Reader, stdout io.Writer, pidFilePath string,
-	winszFifo io.Reader, processStateDir string, consoleReady chan bool) (string, error) {
+
+func setupTTYSocket(stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader, processStateDir string) string {
 	//create the socket in a unique dir in the parent dir so that it is not too long
 	// TODO: what if the container handle is ridiculously long a la diego?
 	//  WRITE A TEST
 
-	sockDir, _ := ioutil.TempDir(filepath.Dir(processStateDir), "")
+	sockDir, err := ioutil.TempDir(filepath.Dir(processStateDir), "")
+	check(err)
+
 	ttySockPath := filepath.Join(sockDir, "sock")
 	l, err := net.Listen("unix", ttySockPath)
-	if err != nil {
-		return "", err
-	}
+	check(err)
 
 	//go to the background and set master
 	go func(ln net.Listener) (err error) {
+		// if any of the following errors, it means runc has connected to the
+		// socket, so it must've started, thus we might need to kill the process
 		defer func() {
 			if err != nil {
 				killProcess(filepath.Join(processStateDir, "pidfile"))
 			}
-			close(consoleReady)
 		}()
 
 		conn, err := ln.Accept()
@@ -193,17 +189,15 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, pidFilePath string,
 		}
 
 		os.RemoveAll(ttySockPath)
-		setupTty(master, nil, stdin, stdout, pidFilePath, winszFifo)
+		streamProcess(master, stdin, stdout, pidFilePath, winszFifo)
 
 		return
 	}(l)
 
-	return ttySockPath, nil
+	return ttySockPath
 }
 
-func setupTty(m, s *os.File, stdin io.Reader, stdout io.Writer, pidFilePath string,
-	winszFifo io.Reader) {
-
+func streamProcess(m *os.File, stdin io.Reader, stdout io.Writer, pidFilePath string, winszFifo io.Reader) {
 	ioWg.Add(1)
 	go func() {
 		defer ioWg.Done()

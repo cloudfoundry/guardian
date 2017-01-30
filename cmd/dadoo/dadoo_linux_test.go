@@ -23,7 +23,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-var _ = Describe("Dadoo", func() {
+var _ = FDescribe("Dadoo", func() {
 	var (
 		bundlePath string
 		bundle     goci.Bndl
@@ -114,7 +114,7 @@ var _ = Describe("Dadoo", func() {
 			Eventually(sess).Should(gexec.Exit(24))
 		})
 
-		It("should write the exit code to a file named exitcode in the container dir", func() {
+		FIt("should write the exit code to a file named exitcode in the container dir", func() {
 			processSpec, err := json.Marshal(&specs.Process{
 				Args: []string{"/bin/sh", "-c", "exit 24"},
 				Cwd:  "/",
