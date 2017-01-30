@@ -212,8 +212,8 @@ var _ = Describe("Create", func() {
 
 	})
 
-	Describe("uid and gid mappings", func() {
-		Context("when creating two images based on the same base image", func() {
+	Describe("unique uid and gid mappings per store", func() {
+		Context("when creating two images with different mappings", func() {
 			var newuidmapBin *os.File
 
 			JustBeforeEach(func() {
