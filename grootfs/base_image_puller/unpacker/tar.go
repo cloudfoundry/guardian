@@ -10,9 +10,31 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/docker/docker/pkg/reexec"
+	"github.com/urfave/cli"
+
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 )
+
+func init() {
+	reexec.Register("unpack", func() {
+		cli.ErrWriter = os.Stdout
+		logger := lager.NewLogger("unpack")
+		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
+
+		rootFSPath := os.Args[1]
+		unpacker := NewTarUnpacker()
+		if err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			Stream:     os.Stdin,
+			TargetPath: rootFSPath,
+		}); err != nil {
+			logger.Error("unpacking-failed", err)
+			fmt.Println(err.Error())
+			os.Exit(1)
+		}
+	})
+}
 
 type TarUnpacker struct {
 }

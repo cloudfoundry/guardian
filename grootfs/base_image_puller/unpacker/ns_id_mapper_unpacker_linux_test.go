@@ -19,11 +19,11 @@ import (
 	. "github.com/st3v/glager"
 )
 
-var _ = Describe("NamespacedUnpacker", func() {
+var _ = Describe("NSIdMapperUnpacker", func() {
 	var (
 		fakeIDMapper      *unpackerfakes.FakeIDMapper
 		fakeCommandRunner *fake_command_runner.FakeCommandRunner
-		unpacker          *unpackerpkg.NamespacedUnpacker
+		unpacker          *unpackerpkg.NSIdMapperUnpacker
 
 		logger     *TestLogger
 		imagePath  string
@@ -37,7 +37,7 @@ var _ = Describe("NamespacedUnpacker", func() {
 
 		fakeIDMapper = new(unpackerfakes.FakeIDMapper)
 		fakeCommandRunner = fake_command_runner.New()
-		unpacker = unpackerpkg.NewNamespacedUnpacker(fakeCommandRunner, fakeIDMapper)
+		unpacker = unpackerpkg.NewNSIdMapperUnpacker(fakeCommandRunner, fakeIDMapper)
 
 		logger = NewLogger("test-store")
 
@@ -127,10 +127,10 @@ var _ = Describe("NamespacedUnpacker", func() {
 
 		Expect(logger).To(ContainSequence(
 			Debug(
-				Message("test-store.namespaced-unpacking.fake-unpack-wrapper.foo"),
+				Message("test-store.ns-id-mapper-unpacking.fake-unpack-wrapper.foo"),
 			),
 			Info(
-				Message("test-store.namespaced-unpacking.fake-unpack-wrapper.bar"),
+				Message("test-store.ns-id-mapper-unpacking.fake-unpack-wrapper.bar"),
 			),
 		))
 	})

@@ -134,8 +134,13 @@ var CreateCommand = cli.Command{
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
 		runner := linux_command_runner.New()
-		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
-		namespacedCmdUnpacker := unpackerpkg.NewNamespacedUnpacker(runner, idMapper)
+		var unpacker base_image_puller.Unpacker
+		if os.Getuid() == 0 {
+			unpacker = unpackerpkg.NewNSSysProcUnpacker(runner)
+		} else {
+			idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
+			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper)
+		}
 
 		dockerSrc := remote.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.InsecureRegistries)
 
@@ -149,7 +154,10 @@ var CreateCommand = cli.Command{
 			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
 		)
 		baseImagePuller := base_image_puller.NewBaseImagePuller(
-			localFetcher, remoteFetcher, namespacedCmdUnpacker, btrfsVolumeDriver,
+			localFetcher,
+			remoteFetcher,
+			unpacker,
+			btrfsVolumeDriver,
 			dependencyManager,
 		)
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()

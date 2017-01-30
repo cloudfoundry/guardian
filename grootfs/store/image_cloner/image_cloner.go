@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/pkg/errors"
 )
 
 //go:generate counterfeiter . SnapshotDriver
@@ -87,6 +88,14 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 
 	if err = b.snapshotDriver.Snapshot(logger, spec.VolumePath, image.RootFSPath); err != nil {
 		return groot.Image{}, fmt.Errorf("creating snapshot: %s", err)
+	}
+
+	if err := b.setOwnership(spec,
+		image.Path,
+		filepath.Join(image.Path, "image.json"),
+		image.RootFSPath,
+	); err != nil {
+		return groot.Image{}, err
 	}
 
 	if spec.DiskLimit > 0 {
@@ -183,4 +192,17 @@ func (b *ImageCloner) createImage(id string) groot.Image {
 		Path:       imagePath,
 		RootFSPath: filepath.Join(imagePath, "rootfs"),
 	}
+}
+
+func (b *ImageCloner) setOwnership(spec groot.ImageSpec, paths ...string) error {
+	if spec.OwnerUID == 0 && spec.OwnerGID == 0 {
+		return nil
+	}
+
+	for _, path := range paths {
+		if err := os.Chown(path, spec.OwnerUID, spec.OwnerGID); err != nil {
+			return errors.Wrapf(err, "changing %s ownership to %d:%d", path, spec.OwnerUID, spec.OwnerGID)
+		}
+	}
+	return nil
 }

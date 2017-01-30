@@ -129,8 +129,8 @@ var _ = Describe("Creator", func() {
 		})
 
 		It("pulls the image", func() {
-			uidMappings := []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1, NamespaceID: 2, Size: 10}}
-			gidMappings := []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 10, NamespaceID: 20, Size: 100}}
+			uidMappings := []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 2, NamespaceID: 0, Size: 1}}
+			gidMappings := []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 3, NamespaceID: 0, Size: 1}}
 
 			_, err := creator.Create(logger, groot.CreateSpec{
 				BaseImage:   "/path/to/image",
@@ -145,6 +145,8 @@ var _ = Describe("Creator", func() {
 			Expect(imageSpec.BaseImageSrc).To(Equal(baseImageURL))
 			Expect(imageSpec.UIDMappings).To(Equal(uidMappings))
 			Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
+			Expect(imageSpec.OwnerUID).To(Equal(2))
+			Expect(imageSpec.OwnerGID).To(Equal(3))
 		})
 
 		It("makes an image", func() {
@@ -156,9 +158,13 @@ var _ = Describe("Creator", func() {
 			}
 			fakeBaseImagePuller.PullReturns(baseImage, nil)
 
+			uidMappings := []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 50, NamespaceID: 0, Size: 1}}
+			gidMappings := []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 60, NamespaceID: 0, Size: 1}}
 			_, err := creator.Create(logger, groot.CreateSpec{
-				ID:        "some-id",
-				BaseImage: "/path/to/image",
+				ID:          "some-id",
+				BaseImage:   "/path/to/image",
+				UIDMappings: uidMappings,
+				GIDMappings: gidMappings,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -170,6 +176,8 @@ var _ = Describe("Creator", func() {
 				BaseImage: specsv1.Image{
 					Author: "Groot",
 				},
+				OwnerUID: 50,
+				OwnerGID: 60,
 			}))
 		})
 
@@ -228,6 +236,64 @@ var _ = Describe("Creator", func() {
 			_, name, duration := fakeMetricsEmitter.TryEmitDurationArgsForCall(0)
 			Expect(name).To(Equal(groot.MetricImageCreationTime))
 			Expect(duration).NotTo(BeZero())
+		})
+
+		Describe("store ownership", func() {
+			BeforeEach(func() {
+				baseImage := groot.BaseImage{
+					VolumePath: "/path/to/volume",
+					BaseImage: specsv1.Image{
+						Author: "Groot",
+					},
+				}
+				fakeBaseImagePuller.PullReturns(baseImage, nil)
+			})
+
+			It("is defined by the root ID mappings", func() {
+				uidMappings := []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: 50, NamespaceID: 0, Size: 1},
+					groot.IDMappingSpec{HostID: 51, NamespaceID: 1, Size: 100},
+				}
+				gidMappings := []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: 60, NamespaceID: 0, Size: 1},
+					groot.IDMappingSpec{HostID: 61, NamespaceID: 1, Size: 300},
+				}
+				_, err := creator.Create(logger, groot.CreateSpec{
+					BaseImage:   "/path/to/image",
+					UIDMappings: uidMappings,
+					GIDMappings: gidMappings,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeBaseImagePuller.PullCallCount()).To(Equal(1))
+				_, imageSpec := fakeBaseImagePuller.PullArgsForCall(0)
+				Expect(imageSpec.OwnerUID).To(Equal(50))
+				Expect(imageSpec.OwnerGID).To(Equal(60))
+
+				Expect(fakeImageCloner.CreateCallCount()).To(Equal(1))
+				_, createImagerSpec := fakeImageCloner.CreateArgsForCall(0)
+				Expect(createImagerSpec.OwnerUID).To(Equal(50))
+				Expect(createImagerSpec.OwnerGID).To(Equal(60))
+			})
+
+			Context("when there's no root mapping", func() {
+				It("sets the current user as the store owner", func() {
+					_, err := creator.Create(logger, groot.CreateSpec{
+						BaseImage: "/path/to/image",
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(fakeBaseImagePuller.PullCallCount()).To(Equal(1))
+					_, imageSpec := fakeBaseImagePuller.PullArgsForCall(0)
+					Expect(imageSpec.OwnerUID).To(Equal(os.Getuid()))
+					Expect(imageSpec.OwnerGID).To(Equal(os.Getgid()))
+
+					Expect(fakeImageCloner.CreateCallCount()).To(Equal(1))
+					_, createImagerSpec := fakeImageCloner.CreateArgsForCall(0)
+					Expect(createImagerSpec.OwnerUID).To(Equal(os.Getuid()))
+					Expect(createImagerSpec.OwnerGID).To(Equal(os.Getgid()))
+				})
+			})
 		})
 
 		Context("when the image is not a valid URL", func() {
@@ -481,6 +547,8 @@ var _ = Describe("Creator", func() {
 					BaseImage: specsv1.Image{
 						Author: "Groot",
 					},
+					OwnerUID:  os.Getuid(),
+					OwnerGID:  os.Getgid(),
 					DiskLimit: int64(1024),
 				}))
 			})

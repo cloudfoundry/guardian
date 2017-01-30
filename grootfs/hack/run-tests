@@ -92,6 +92,12 @@ run_integration_tests() {
 run_unit_tests() {
   test_path=${1:-""}
 
+  if [[ $test_path == *"roottests"* ]]
+  then
+    fly_root_tests $test_path
+    return
+  fi
+
   # if FORCE_FLY is true
   if [ $FORCE_FLY -eq 1 ]; then
     fly_groot_tests $test_path

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
@@ -193,6 +194,13 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 		"chainID":       digest.ChainID,
 		"parentChainID": digest.ParentChainID,
 	})
+
+	if spec.OwnerUID != 0 || spec.OwnerGID != 0 {
+		err = os.Chown(volumePath, spec.OwnerUID, spec.OwnerGID)
+		if err != nil {
+			return "", errorspkg.Wrapf(err, "changing volume ownership to %d:%d", spec.OwnerUID, spec.OwnerGID)
+		}
+	}
 
 	unpackSpec := UnpackSpec{
 		TargetPath:  volumePath,

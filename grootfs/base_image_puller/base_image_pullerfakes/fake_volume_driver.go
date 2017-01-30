@@ -19,7 +19,8 @@ type FakeVolumeDriver struct {
 		result1 string
 		result2 error
 	}
-	CreateStub        func(logger lager.Logger, parentID, id string) (string, error)
+	CreateStub func(logger lager.Logger, parentID, id string) (string, error)
+
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		logger   lager.Logger

@@ -10,5 +10,5 @@ cd $dest_path
 echo "I AM ROOT" | grootsay
 
 args=$@
-[ "$args" == "" ] && args="-r integration/root"
+[ "$args" == "" ] && args="-r store/image_cloner/roottests base_image_puller/roottests integration/root "
 ginkgo -p -race $args
