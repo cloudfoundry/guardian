@@ -488,10 +488,9 @@ var _ = Describe("Dadoo", func() {
 				})
 			})
 
-			Context("when the path to the parent socket dir is too long", func() {
+			Context("receiving the TTY master via unix socket", func() {
 				var (
-					encSpec                     []byte
-					longerThanAllowedSocketPath []byte
+					encSpec []byte
 				)
 
 				openIOPipes := func() {
@@ -518,27 +517,71 @@ var _ = Describe("Dadoo", func() {
 					encSpec, err = json.Marshal(spec)
 					Expect(err).NotTo(HaveOccurred())
 
-					// MaxSocketDirPathLength is defined in main_linux.go as 80
-					longerThanAllowedSocketPath = make([]byte, 81, 81)
-
-					for i, _ := range longerThanAllowedSocketPath {
-						longerThanAllowedSocketPath[i] = 'a'
-					}
 				})
 
-				It("panics", func() {
-					dadooCmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "-socket-dir-path", string(longerThanAllowedSocketPath), "exec", "runc", processDir, filepath.Base(bundlePath))
-					dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
-					dadooCmd.Stdin = bytes.NewReader(encSpec)
+				Context("when the path to the parent socket dir is too long", func() {
+					var longerThanAllowedSocketPath []byte
 
-					stderr := gbytes.NewBuffer()
-					dadooSession, err := gexec.Start(dadooCmd, GinkgoWriter, stderr)
-					Expect(err).NotTo(HaveOccurred())
+					BeforeEach(func() {
+						// MaxSocketDirPathLength is defined in main_linux.go as 80
+						longerThanAllowedSocketPath = make([]byte, 81, 81)
 
-					openIOPipes()
+						for i, _ := range longerThanAllowedSocketPath {
+							longerThanAllowedSocketPath[i] = 'a'
+						}
+					})
 
-					Eventually(dadooSession).ShouldNot(gexec.Exit(0))
-					Eventually(stderr).Should(gbytes.Say(fmt.Sprintf("value for --socket-dir-path cannot exceed 80 characters in length")))
+					It("panics", func() {
+						dadooCmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "-socket-dir-path", string(longerThanAllowedSocketPath), "exec", "runc", processDir, filepath.Base(bundlePath))
+						dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+						dadooCmd.Stdin = bytes.NewReader(encSpec)
+
+						stderr := gbytes.NewBuffer()
+						dadooSession, err := gexec.Start(dadooCmd, GinkgoWriter, stderr)
+						Expect(err).NotTo(HaveOccurred())
+
+						openIOPipes()
+
+						Eventually(dadooSession).ShouldNot(gexec.Exit(0))
+						Eventually(stderr).Should(gbytes.Say(fmt.Sprintf("value for --socket-dir-path cannot exceed 80 characters in length")))
+					})
+				})
+
+				Context("when tty setup fails", func() {
+					var (
+						fakeRuncBinPath string
+					)
+					BeforeEach(func() {
+						var err error
+						fakeRuncBinPath, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo/fake_runc")
+						Expect(err).NotTo(HaveOccurred())
+					})
+
+					It("kills the process and panics", func() {
+						dadooCmd := exec.Command(dadooBinPath, "-uid", "1", "-gid", "1", "-tty", "-socket-dir-path", os.TempDir(), "exec", fakeRuncBinPath, processDir, filepath.Base(bundlePath))
+						dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+						dadooCmd.Stdin = bytes.NewReader(encSpec)
+
+						stderr := gbytes.NewBuffer()
+						dadooSession, err := gexec.Start(dadooCmd, GinkgoWriter, stderr)
+						Expect(err).NotTo(HaveOccurred())
+
+						openIOPipes()
+
+						pidFilePath := filepath.Join(processDir, "pidfile")
+						Eventually(func() error {
+							_, err := os.Stat(pidFilePath)
+							return err
+						}).ShouldNot(HaveOccurred())
+
+						pidBytes, err := ioutil.ReadFile(pidFilePath)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(exec.Command("ps", "-p", string(pidBytes)).Run()).NotTo(Succeed())
+
+						Eventually(dadooSession).ShouldNot(gexec.Exit(0))
+						Eventually(stderr).Should(gbytes.Say(fmt.Sprintf("communication error on send")))
+					})
 				})
 			})
 		})

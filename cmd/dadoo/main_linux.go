@@ -162,6 +162,7 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidF
 		defer func() {
 			if err != nil {
 				killProcess(pidFilePath)
+				panic(err)
 			}
 		}()
 
