@@ -16,6 +16,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"github.com/urfave/cli"
+	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 )
 
 var DeleteCommand = cli.Command{
@@ -49,7 +50,7 @@ var DeleteCommand = cli.Command{
 			return nil
 		}
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
+		btrfsVolumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.META_DIR_NAME, "dependencies"),

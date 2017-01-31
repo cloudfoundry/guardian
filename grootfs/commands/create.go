@@ -29,6 +29,7 @@ import (
 	"github.com/docker/distribution/registry/api/errcode"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
+	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 )
 
 var CreateCommand = cli.Command{
@@ -130,7 +131,7 @@ var CreateCommand = cli.Command{
 			return err
 		}
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
+		btrfsVolumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
 		runner := linux_command_runner.New()

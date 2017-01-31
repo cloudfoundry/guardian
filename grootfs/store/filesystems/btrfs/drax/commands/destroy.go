@@ -1,10 +1,10 @@
-package commands // import "code.cloudfoundry.org/grootfs/store/volume_driver/drax/commands"
+package commands // import "code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax/commands"
 
 import (
 	"os"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
-	limiterpkg "code.cloudfoundry.org/grootfs/store/volume_driver/drax/limiter"
+	limiterpkg "code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax/limiter"
 	"code.cloudfoundry.org/lager"
 	"github.com/urfave/cli"
 )

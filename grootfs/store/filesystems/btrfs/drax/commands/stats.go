@@ -1,10 +1,10 @@
-package commands // import "code.cloudfoundry.org/grootfs/store/volume_driver/drax/commands"
+package commands // import "code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax/commands"
 
 import (
 	"os"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
-	"code.cloudfoundry.org/grootfs/store/volume_driver/drax/metrix"
+	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax/metrix"
 	"code.cloudfoundry.org/lager"
 	"github.com/urfave/cli"
 )

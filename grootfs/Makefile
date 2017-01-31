@@ -6,7 +6,7 @@
 
 all:
 	GOOS=linux go build -o grootfs .
-	GOOS=linux go build -o drax ./store/volume_driver/drax
+	GOOS=linux go build -o drax ./store/filesystems/btrfs/drax
 
 ###### Help ###################################################################
 

@@ -19,6 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/volume_driver"
 
 	"github.com/urfave/cli"
+	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 )
 
 var CleanCommand = cli.Command{
@@ -60,7 +61,7 @@ var CleanCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 0)
 		}
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
+		btrfsVolumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(

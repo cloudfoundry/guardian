@@ -15,6 +15,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"github.com/urfave/cli"
+	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 )
 
 var StatsCommand = cli.Command{
@@ -47,7 +48,7 @@ var StatsCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		btrfsVolumeDriver := volume_driver.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
+		btrfsVolumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
 
 		metricsEmitter := metrics.NewEmitter()

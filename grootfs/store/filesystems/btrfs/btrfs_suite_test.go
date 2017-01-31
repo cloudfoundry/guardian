@@ -1,4 +1,4 @@
-package volume_driver_test
+package btrfs
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -9,5 +9,5 @@ import (
 
 func TestVolumedriver(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Volume Driver Suite")
+	RunSpecs(t, "BTRFS Driver Suite")
 }

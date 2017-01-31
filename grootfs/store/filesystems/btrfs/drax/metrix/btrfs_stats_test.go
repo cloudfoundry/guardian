@@ -4,7 +4,7 @@ import (
 	"errors"
 	"os/exec"
 
-	"code.cloudfoundry.org/grootfs/store/volume_driver/drax/metrix"
+	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax/metrix"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 

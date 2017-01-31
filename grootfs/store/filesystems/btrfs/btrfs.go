@@ -1,4 +1,4 @@
-package volume_driver // import "code.cloudfoundry.org/grootfs/store/volume_driver"
+package btrfs // import "code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 
 import (
 	"bytes"

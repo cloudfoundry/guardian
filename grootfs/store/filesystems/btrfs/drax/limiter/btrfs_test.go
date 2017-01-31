@@ -4,7 +4,7 @@ import (
 	"errors"
 	"os/exec"
 
-	limiterpkg "code.cloudfoundry.org/grootfs/store/volume_driver/drax/limiter"
+	limiterpkg "code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax/limiter"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 

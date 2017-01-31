@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"code.cloudfoundry.org/grootfs/store/volume_driver/drax/commands"
+	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax/commands"
 
 	"github.com/urfave/cli"
 )
