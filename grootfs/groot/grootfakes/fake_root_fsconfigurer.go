@@ -32,8 +32,9 @@ func (fake *FakeRootFSConfigurer) Configure(rootFSPath string, baseImage v1.Imag
 	fake.configureMutex.Unlock()
 	if fake.ConfigureStub != nil {
 		return fake.ConfigureStub(rootFSPath, baseImage)
+	} else {
+		return fake.configureReturns.result1
 	}
-	return fake.configureReturns.result1
 }
 
 func (fake *FakeRootFSConfigurer) ConfigureCallCount() int {

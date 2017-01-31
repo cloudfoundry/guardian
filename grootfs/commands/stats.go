@@ -11,11 +11,10 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
-	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 
-	"github.com/urfave/cli"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
+	"github.com/urfave/cli"
 )
 
 var StatsCommand = cli.Command{

@@ -15,7 +15,7 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller/base_image_pullerfakes"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
-	"code.cloudfoundry.org/grootfs/store/volume_driver/volume_driverfakes"
+	"code.cloudfoundry.org/grootfs/store/storefakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -30,7 +30,7 @@ var _ = Describe("Base Image Puller", func() {
 		fakeRemoteFetcher        *base_image_pullerfakes.FakeFetcher
 		fakeBaseImagePuller      *grootfakes.FakeBaseImagePuller
 		fakeUnpacker             *base_image_pullerfakes.FakeUnpacker
-		fakeVolumeDriver         *volume_driverfakes.FakeVolumeDriver
+		fakeVolumeDriver         *storefakes.FakeVolumeDriver
 		fakeDependencyRegisterer *base_image_pullerfakes.FakeDependencyRegisterer
 		expectedImgDesc          specsv1.Image
 
@@ -64,7 +64,7 @@ var _ = Describe("Base Image Puller", func() {
 			return ioutil.NopCloser(buffer), 0, nil
 		}
 
-		fakeVolumeDriver = new(volume_driverfakes.FakeVolumeDriver)
+		fakeVolumeDriver = new(storefakes.FakeVolumeDriver)
 		fakeVolumeDriver.PathReturns("", errors.New("volume does not exist"))
 		fakeVolumeDriver.CreateStub = func(_ lager.Logger, _, _ string) (string, error) {
 			return ioutil.TempDir("", "volume")

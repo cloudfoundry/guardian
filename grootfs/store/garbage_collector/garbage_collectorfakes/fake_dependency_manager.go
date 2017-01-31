@@ -30,8 +30,9 @@ func (fake *FakeDependencyManager) Dependencies(id string) ([]string, error) {
 	fake.dependenciesMutex.Unlock()
 	if fake.DependenciesStub != nil {
 		return fake.DependenciesStub(id)
+	} else {
+		return fake.dependenciesReturns.result1, fake.dependenciesReturns.result2
 	}
-	return fake.dependenciesReturns.result1, fake.dependenciesReturns.result2
 }
 
 func (fake *FakeDependencyManager) DependenciesCallCount() int {

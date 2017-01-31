@@ -33,8 +33,9 @@ func (fake *FakeBaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageS
 	fake.pullMutex.Unlock()
 	if fake.PullStub != nil {
 		return fake.PullStub(logger, spec)
+	} else {
+		return fake.pullReturns.result1, fake.pullReturns.result2
 	}
-	return fake.pullReturns.result1, fake.pullReturns.result2
 }
 
 func (fake *FakeBaseImagePuller) PullCallCount() int {

@@ -16,10 +16,9 @@ import (
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
-	"code.cloudfoundry.org/grootfs/store/volume_driver"
 
-	"github.com/urfave/cli"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
+	"github.com/urfave/cli"
 )
 
 var CleanCommand = cli.Command{

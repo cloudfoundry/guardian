@@ -67,7 +67,7 @@ func TestRoot(t *testing.T) {
 		Expect(os.Chown(StorePath, int(GrootUID), int(GrootGID))).To(Succeed())
 
 		var err error
-		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/volume_driver/drax")
+		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
 		Expect(err).NotTo(HaveOccurred())
 		testhelpers.SuidDrax(DraxBin)
 

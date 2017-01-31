@@ -31,8 +31,9 @@ func (fake *FakeStoreMeasurer) MeasureStore(logger lager.Logger) (int64, error) 
 	fake.measureStoreMutex.Unlock()
 	if fake.MeasureStoreStub != nil {
 		return fake.MeasureStoreStub(logger)
+	} else {
+		return fake.measureStoreReturns.result1, fake.measureStoreReturns.result2
 	}
-	return fake.measureStoreReturns.result1, fake.measureStoreReturns.result2
 }
 
 func (fake *FakeStoreMeasurer) MeasureStoreCallCount() int {

@@ -5,7 +5,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector/garbage_collectorfakes"
-	"code.cloudfoundry.org/grootfs/store/volume_driver/volume_driverfakes"
+	"code.cloudfoundry.org/grootfs/store/storefakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -19,7 +19,7 @@ var _ = Describe("Gc", func() {
 		logger                lager.Logger
 		garbageCollector      *garbage_collector.GarbageCollector
 		fakeCacheDriver       *garbage_collectorfakes.FakeCacheDriver
-		fakeVolumeDriver      *volume_driverfakes.FakeVolumeDriver
+		fakeVolumeDriver      *storefakes.FakeVolumeDriver
 		fakeDependencyManager *garbage_collectorfakes.FakeDependencyManager
 		fakeImageCloner       *garbage_collectorfakes.FakeImageCloner
 	)
@@ -27,7 +27,7 @@ var _ = Describe("Gc", func() {
 	BeforeEach(func() {
 		fakeImageCloner = new(garbage_collectorfakes.FakeImageCloner)
 		fakeCacheDriver = new(garbage_collectorfakes.FakeCacheDriver)
-		fakeVolumeDriver = new(volume_driverfakes.FakeVolumeDriver)
+		fakeVolumeDriver = new(storefakes.FakeVolumeDriver)
 		fakeDependencyManager = new(garbage_collectorfakes.FakeDependencyManager)
 
 		garbageCollector = garbage_collector.NewGC(fakeCacheDriver, fakeVolumeDriver, fakeImageCloner, fakeDependencyManager)

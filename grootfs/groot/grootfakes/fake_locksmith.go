@@ -39,8 +39,9 @@ func (fake *FakeLocksmith) Lock(key string) (*os.File, error) {
 	fake.lockMutex.Unlock()
 	if fake.LockStub != nil {
 		return fake.LockStub(key)
+	} else {
+		return fake.lockReturns.result1, fake.lockReturns.result2
 	}
-	return fake.lockReturns.result1, fake.lockReturns.result2
 }
 
 func (fake *FakeLocksmith) LockCallCount() int {
@@ -72,8 +73,9 @@ func (fake *FakeLocksmith) Unlock(lockFile *os.File) error {
 	fake.unlockMutex.Unlock()
 	if fake.UnlockStub != nil {
 		return fake.UnlockStub(lockFile)
+	} else {
+		return fake.unlockReturns.result1
 	}
-	return fake.unlockReturns.result1
 }
 
 func (fake *FakeLocksmith) UnlockCallCount() int {

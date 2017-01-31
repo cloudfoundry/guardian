@@ -6,7 +6,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store/volume_driver"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -27,12 +27,12 @@ type DependencyManager interface {
 
 type GarbageCollector struct {
 	cacheDriver       CacheDriver
-	volumeDriver      volume_driver.VolumeDriver
+	volumeDriver      store.VolumeDriver
 	imageCloner       ImageCloner
 	dependencyManager DependencyManager
 }
 
-func NewGC(cacheDriver CacheDriver, volumeDriver volume_driver.VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager) *GarbageCollector {
+func NewGC(cacheDriver CacheDriver, volumeDriver store.VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager) *GarbageCollector {
 	return &GarbageCollector{
 		cacheDriver:       cacheDriver,
 		volumeDriver:      volumeDriver,

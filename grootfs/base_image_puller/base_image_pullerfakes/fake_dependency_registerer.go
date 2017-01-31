@@ -36,8 +36,9 @@ func (fake *FakeDependencyRegisterer) Register(id string, chainIDs []string) err
 	fake.registerMutex.Unlock()
 	if fake.RegisterStub != nil {
 		return fake.RegisterStub(id, chainIDs)
+	} else {
+		return fake.registerReturns.result1
 	}
-	return fake.registerReturns.result1
 }
 
 func (fake *FakeDependencyRegisterer) RegisterCallCount() int {

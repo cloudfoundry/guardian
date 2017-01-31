@@ -22,14 +22,13 @@ import (
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
-	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
+	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"github.com/docker/distribution/registry/api/errcode"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
-	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 )
 
 var CreateCommand = cli.Command{

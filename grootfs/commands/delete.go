@@ -12,11 +12,10 @@ import (
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
-	"code.cloudfoundry.org/grootfs/store/volume_driver"
 	"code.cloudfoundry.org/lager"
 
-	"github.com/urfave/cli"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
+	"github.com/urfave/cli"
 )
 
 var DeleteCommand = cli.Command{

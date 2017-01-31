@@ -1,9 +1,21 @@
 package store // import "code.cloudfoundry.org/grootfs/store"
+import "code.cloudfoundry.org/lager"
 
-const IMAGES_DIR_NAME = "images"
-const VOLUMES_DIR_NAME = "volumes"
-const CACHE_DIR_NAME = "cache"
-const LOCKS_DIR_NAME = "locks"
-const META_DIR_NAME = "meta"
-const TEMP_DIR_NAME = "tmp"
-const DEFAULT_STORE_PATH = "/var/lib/grootfs"
+const (
+	IMAGES_DIR_NAME    = "images"
+	VOLUMES_DIR_NAME   = "volumes"
+	CACHE_DIR_NAME     = "cache"
+	LOCKS_DIR_NAME     = "locks"
+	META_DIR_NAME      = "meta"
+	TEMP_DIR_NAME      = "tmp"
+	DEFAULT_STORE_PATH = "/var/lib/grootfs"
+)
+
+//go:generate counterfeiter . VolumeDriver
+
+type VolumeDriver interface {
+	Path(logger lager.Logger, id string) (string, error)
+	Create(logger lager.Logger, parentID, id string) (string, error)
+	DestroyVolume(logger lager.Logger, id string) error
+	Volumes(logger lager.Logger) ([]string, error)
+}

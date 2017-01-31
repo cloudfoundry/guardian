@@ -47,8 +47,9 @@ func (fake *FakeFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.UR
 	fake.baseImageInfoMutex.Unlock()
 	if fake.BaseImageInfoStub != nil {
 		return fake.BaseImageInfoStub(logger, baseImageURL)
+	} else {
+		return fake.baseImageInfoReturns.result1, fake.baseImageInfoReturns.result2
 	}
-	return fake.baseImageInfoReturns.result1, fake.baseImageInfoReturns.result2
 }
 
 func (fake *FakeFetcher) BaseImageInfoCallCount() int {
@@ -82,8 +83,9 @@ func (fake *FakeFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, 
 	fake.streamBlobMutex.Unlock()
 	if fake.StreamBlobStub != nil {
 		return fake.StreamBlobStub(logger, baseImageURL, source)
+	} else {
+		return fake.streamBlobReturns.result1, fake.streamBlobReturns.result2, fake.streamBlobReturns.result3
 	}
-	return fake.streamBlobReturns.result1, fake.streamBlobReturns.result2, fake.streamBlobReturns.result3
 }
 
 func (fake *FakeFetcher) StreamBlobCallCount() int {

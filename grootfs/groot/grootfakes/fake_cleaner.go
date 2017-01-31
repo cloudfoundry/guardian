@@ -42,8 +42,9 @@ func (fake *FakeCleaner) Clean(logger lager.Logger, threshold int64, keepImages 
 	fake.cleanMutex.Unlock()
 	if fake.CleanStub != nil {
 		return fake.CleanStub(logger, threshold, keepImages, acquireLock)
+	} else {
+		return fake.cleanReturns.result1, fake.cleanReturns.result2
 	}
-	return fake.cleanReturns.result1, fake.cleanReturns.result2
 }
 
 func (fake *FakeCleaner) CleanCallCount() int {

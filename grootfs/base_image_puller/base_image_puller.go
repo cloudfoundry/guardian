@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store/volume_driver"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	errorspkg "github.com/pkg/errors"
@@ -55,11 +55,11 @@ type BaseImagePuller struct {
 	localFetcher         Fetcher
 	remoteFetcher        Fetcher
 	unpacker             Unpacker
-	volumeDriver         volume_driver.VolumeDriver
+	volumeDriver         store.VolumeDriver
 	dependencyRegisterer DependencyRegisterer
 }
 
-func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver volume_driver.VolumeDriver, dependencyRegisterer DependencyRegisterer) *BaseImagePuller {
+func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver store.VolumeDriver, dependencyRegisterer DependencyRegisterer) *BaseImagePuller {
 	return &BaseImagePuller{
 		localFetcher:         localFetcher,
 		remoteFetcher:        remoteFetcher,
