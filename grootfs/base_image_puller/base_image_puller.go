@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	errorspkg "github.com/pkg/errors"
@@ -18,6 +17,7 @@ const BaseImageReferenceFormat = "baseimage:%s"
 //go:generate counterfeiter . Fetcher
 //go:generate counterfeiter . Unpacker
 //go:generate counterfeiter . DependencyRegisterer
+//go:generate counterfeiter . VolumeDriver
 
 type UnpackSpec struct {
 	Stream      io.ReadCloser
@@ -51,15 +51,22 @@ type Unpacker interface {
 	Unpack(logger lager.Logger, spec UnpackSpec) error
 }
 
+type VolumeDriver interface {
+	VolumePath(logger lager.Logger, id string) (string, error)
+	CreateVolume(logger lager.Logger, parentID, id string) (string, error)
+	DestroyVolume(logger lager.Logger, id string) error
+	Volumes(logger lager.Logger) ([]string, error)
+}
+
 type BaseImagePuller struct {
 	localFetcher         Fetcher
 	remoteFetcher        Fetcher
 	unpacker             Unpacker
-	volumeDriver         store.VolumeDriver
+	volumeDriver         VolumeDriver
 	dependencyRegisterer DependencyRegisterer
 }
 
-func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver store.VolumeDriver, dependencyRegisterer DependencyRegisterer) *BaseImagePuller {
+func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer) *BaseImagePuller {
 	return &BaseImagePuller{
 		localFetcher:         localFetcher,
 		remoteFetcher:        remoteFetcher,

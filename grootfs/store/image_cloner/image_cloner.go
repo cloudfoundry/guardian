@@ -15,9 +15,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate counterfeiter . SnapshotDriver
+//go:generate counterfeiter . ImageDriver
 
-type SnapshotDriver interface {
+type ImageDriver interface {
 	Snapshot(logger lager.Logger, fromPath, toPath string) error
 	ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusive bool) error
 	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
@@ -25,14 +25,14 @@ type SnapshotDriver interface {
 }
 
 type ImageCloner struct {
-	snapshotDriver SnapshotDriver
-	storePath      string
+	imageDriver ImageDriver
+	storePath   string
 }
 
-func NewImageCloner(snapshotDriver SnapshotDriver, storePath string) *ImageCloner {
+func NewImageCloner(imageDriver ImageDriver, storePath string) *ImageCloner {
 	return &ImageCloner{
-		snapshotDriver: snapshotDriver,
-		storePath:      storePath,
+		imageDriver: imageDriver,
+		storePath:   storePath,
 	}
 }
 
@@ -68,7 +68,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 			log.Info("start")
 			defer log.Info("end")
 
-			if err = b.snapshotDriver.Destroy(logger, image.RootFSPath); err != nil {
+			if err = b.imageDriver.Destroy(logger, image.RootFSPath); err != nil {
 				log.Error("destroying-rootfs-snapshot", err)
 			}
 
@@ -86,7 +86,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 		return groot.Image{}, fmt.Errorf("creating image.json: %s", err)
 	}
 
-	if err = b.snapshotDriver.Snapshot(logger, spec.VolumePath, image.RootFSPath); err != nil {
+	if err = b.imageDriver.Snapshot(logger, spec.VolumePath, image.RootFSPath); err != nil {
 		return groot.Image{}, fmt.Errorf("creating snapshot: %s", err)
 	}
 
@@ -99,7 +99,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 	}
 
 	if spec.DiskLimit > 0 {
-		if err = b.snapshotDriver.ApplyDiskLimit(logger, image.RootFSPath, spec.DiskLimit, spec.ExcludeBaseImageFromQuota); err != nil {
+		if err = b.imageDriver.ApplyDiskLimit(logger, image.RootFSPath, spec.DiskLimit, spec.ExcludeBaseImageFromQuota); err != nil {
 			return groot.Image{}, fmt.Errorf("applying disk limit: %s", err)
 		}
 	}
@@ -118,7 +118,7 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 	}
 
 	image := b.createImage(id)
-	if err := b.snapshotDriver.Destroy(logger, image.RootFSPath); err != nil {
+	if err := b.imageDriver.Destroy(logger, image.RootFSPath); err != nil {
 		return fmt.Errorf("destroying snapshot: %s", err)
 	}
 
@@ -154,7 +154,7 @@ func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, 
 
 	image := b.createImage(id)
 
-	return b.snapshotDriver.FetchStats(logger, image.RootFSPath)
+	return b.imageDriver.FetchStats(logger, image.RootFSPath)
 }
 
 func (b *ImageCloner) deleteImageDir(image groot.Image) error {

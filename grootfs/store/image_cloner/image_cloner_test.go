@@ -27,14 +27,14 @@ var _ = Describe("Image", func() {
 		imagesPath  string
 		imageCloner *imageClonerpkg.ImageCloner
 
-		fakeSnapshotDriver *image_clonerfakes.FakeSnapshotDriver
+		fakeImageDriver *image_clonerfakes.FakeImageDriver
 	)
 
 	BeforeEach(func() {
 		var err error
-		fakeSnapshotDriver = new(image_clonerfakes.FakeSnapshotDriver)
+		fakeImageDriver = new(image_clonerfakes.FakeImageDriver)
 
-		fakeSnapshotDriver.SnapshotStub = func(_ lager.Logger, from, to string) error {
+		fakeImageDriver.SnapshotStub = func(_ lager.Logger, from, to string) error {
 			return os.Mkdir(to, 0777)
 		}
 
@@ -48,7 +48,7 @@ var _ = Describe("Image", func() {
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-bunlder")
-		imageCloner = imageClonerpkg.NewImageCloner(fakeSnapshotDriver, storePath)
+		imageCloner = imageClonerpkg.NewImageCloner(fakeImageDriver, storePath)
 	})
 
 	AfterEach(func() {
@@ -87,7 +87,7 @@ var _ = Describe("Image", func() {
 			image, err := imageCloner.Create(logger, imageSpec)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, fromPath, toPath := fakeSnapshotDriver.SnapshotArgsForCall(0)
+			_, fromPath, toPath := fakeImageDriver.SnapshotArgsForCall(0)
 			Expect(fromPath).To(Equal(imageSpec.VolumePath))
 			Expect(toPath).To(Equal(image.RootFSPath))
 		})
@@ -171,7 +171,7 @@ var _ = Describe("Image", func() {
 
 		Context("when creating the snapshot fails", func() {
 			BeforeEach(func() {
-				fakeSnapshotDriver.SnapshotReturns(errors.New("failed to create snapshot"))
+				fakeImageDriver.SnapshotReturns(errors.New("failed to create snapshot"))
 			})
 
 			It("returns an error", func() {
@@ -220,7 +220,7 @@ var _ = Describe("Image", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, path, diskLimit, excludeBaseImageFromQuota := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
+				_, path, diskLimit, excludeBaseImageFromQuota := fakeImageDriver.ApplyDiskLimitArgsForCall(0)
 				Expect(path).To(Equal(image.RootFSPath))
 				Expect(diskLimit).To(Equal(int64(1024)))
 				Expect(excludeBaseImageFromQuota).To(BeFalse())
@@ -228,7 +228,7 @@ var _ = Describe("Image", func() {
 
 			Context("when applying the disk limit fails", func() {
 				BeforeEach(func() {
-					fakeSnapshotDriver.ApplyDiskLimitReturns(errors.New("failed to apply disk limit"))
+					fakeImageDriver.ApplyDiskLimitReturns(errors.New("failed to apply disk limit"))
 				})
 
 				It("returns an error", func() {
@@ -246,8 +246,8 @@ var _ = Describe("Image", func() {
 						DiskLimit: int64(1024),
 					})
 					Expect(err).To(HaveOccurred())
-					Expect(fakeSnapshotDriver.DestroyCallCount()).To(Equal(1))
-					_, imagePath := fakeSnapshotDriver.DestroyArgsForCall(0)
+					Expect(fakeImageDriver.DestroyCallCount()).To(Equal(1))
+					_, imagePath := fakeImageDriver.DestroyArgsForCall(0)
 					Expect(imagePath).To(Equal(imagePath))
 				})
 			})
@@ -260,7 +260,7 @@ var _ = Describe("Image", func() {
 						ExcludeBaseImageFromQuota: true,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					_, _, _, excludeBaseImageFromQuota := fakeSnapshotDriver.ApplyDiskLimitArgsForCall(0)
+					_, _, _, excludeBaseImageFromQuota := fakeImageDriver.ApplyDiskLimitArgsForCall(0)
 					Expect(excludeBaseImageFromQuota).To(BeTrue())
 				})
 			})
@@ -310,13 +310,13 @@ var _ = Describe("Image", func() {
 			err := imageCloner.Destroy(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 
-			_, path := fakeSnapshotDriver.DestroyArgsForCall(0)
+			_, path := fakeImageDriver.DestroyArgsForCall(0)
 			Expect(path).To(Equal(imageRootFSPath))
 		})
 
 		Context("when removing the snapshot fails", func() {
 			BeforeEach(func() {
-				fakeSnapshotDriver.DestroyReturns(errors.New("failed to remove snapshot"))
+				fakeImageDriver.DestroyReturns(errors.New("failed to remove snapshot"))
 			})
 
 			It("returns an error", func() {
@@ -394,7 +394,7 @@ var _ = Describe("Image", func() {
 					noPermStorePath := filepath.Join(basePath, "no-perm-dir")
 					Expect(os.Mkdir(noPermStorePath, 0000)).To(Succeed())
 
-					imageCloner = imageClonerpkg.NewImageCloner(fakeSnapshotDriver, noPermStorePath)
+					imageCloner = imageClonerpkg.NewImageCloner(fakeImageDriver, noPermStorePath)
 				})
 
 				It("returns an error", func() {
@@ -430,11 +430,11 @@ var _ = Describe("Image", func() {
 			_, err := imageCloner.Stats(logger, "some-id")
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(fakeSnapshotDriver.FetchStatsCallCount()).To(Equal(1))
+			Expect(fakeImageDriver.FetchStatsCallCount()).To(Equal(1))
 		})
 
 		It("returns the stats", func() {
-			fakeSnapshotDriver.FetchStatsReturns(stats, nil)
+			fakeImageDriver.FetchStatsReturns(stats, nil)
 
 			m, err := imageCloner.Stats(logger, "some-id")
 
@@ -451,7 +451,7 @@ var _ = Describe("Image", func() {
 
 		Context("when the snapshot driver fails", func() {
 			It("returns an error", func() {
-				fakeSnapshotDriver.FetchStatsReturns(groot.VolumeStats{}, errors.New("failed"))
+				fakeImageDriver.FetchStatsReturns(groot.VolumeStats{}, errors.New("failed"))
 
 				_, err := imageCloner.Stats(logger, "some-id")
 				Expect(err).To(MatchError("failed"))

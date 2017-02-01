@@ -23,14 +23,14 @@ var _ = Describe("Image", func() {
 		imagesPath  string
 		imageCloner *imageClonerpkg.ImageCloner
 
-		fakeSnapshotDriver *image_clonerfakes.FakeSnapshotDriver
+		fakeImageDriver *image_clonerfakes.FakeImageDriver
 	)
 
 	BeforeEach(func() {
 		var err error
-		fakeSnapshotDriver = new(image_clonerfakes.FakeSnapshotDriver)
+		fakeImageDriver = new(image_clonerfakes.FakeImageDriver)
 
-		fakeSnapshotDriver.SnapshotStub = func(_ lager.Logger, from, to string) error {
+		fakeImageDriver.SnapshotStub = func(_ lager.Logger, from, to string) error {
 			return os.Mkdir(to, 0777)
 		}
 
@@ -44,7 +44,7 @@ var _ = Describe("Image", func() {
 
 	JustBeforeEach(func() {
 		logger = lagertest.NewTestLogger("test-bunlder")
-		imageCloner = imageClonerpkg.NewImageCloner(fakeSnapshotDriver, storePath)
+		imageCloner = imageClonerpkg.NewImageCloner(fakeImageDriver, storePath)
 	})
 
 	AfterEach(func() {

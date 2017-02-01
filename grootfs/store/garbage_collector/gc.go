@@ -6,33 +6,39 @@ import (
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . CacheDriver
+//go:generate counterfeiter . ImageCloner
+//go:generate counterfeiter . DependencyManager
+//go:generate counterfeiter . VolumeDriver
+
 type CacheDriver interface {
 	Clean(logger lager.Logger) error
 }
 
-//go:generate counterfeiter . ImageCloner
 type ImageCloner interface {
 	ImageIDs(logger lager.Logger) ([]string, error)
 }
 
-//go:generate counterfeiter . DependencyManager
 type DependencyManager interface {
 	Dependencies(id string) ([]string, error)
 }
 
+type VolumeDriver interface {
+	DestroyVolume(logger lager.Logger, id string) error
+	Volumes(logger lager.Logger) ([]string, error)
+}
+
 type GarbageCollector struct {
 	cacheDriver       CacheDriver
-	volumeDriver      store.VolumeDriver
+	volumeDriver      VolumeDriver
 	imageCloner       ImageCloner
 	dependencyManager DependencyManager
 }
 
-func NewGC(cacheDriver CacheDriver, volumeDriver store.VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager) *GarbageCollector {
+func NewGC(cacheDriver CacheDriver, volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager) *GarbageCollector {
 	return &GarbageCollector{
 		cacheDriver:       cacheDriver,
 		volumeDriver:      volumeDriver,
