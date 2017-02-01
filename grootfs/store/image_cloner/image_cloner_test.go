@@ -34,7 +34,7 @@ var _ = Describe("Image", func() {
 		var err error
 		fakeImageDriver = new(image_clonerfakes.FakeImageDriver)
 
-		fakeImageDriver.SnapshotStub = func(_ lager.Logger, from, to string) error {
+		fakeImageDriver.CreateImageStub = func(_ lager.Logger, from, to string) error {
 			return os.Mkdir(to, 0777)
 		}
 
@@ -87,7 +87,7 @@ var _ = Describe("Image", func() {
 			image, err := imageCloner.Create(logger, imageSpec)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, fromPath, toPath := fakeImageDriver.SnapshotArgsForCall(0)
+			_, fromPath, toPath := fakeImageDriver.CreateImageArgsForCall(0)
 			Expect(fromPath).To(Equal(imageSpec.VolumePath))
 			Expect(toPath).To(Equal(image.RootFSPath))
 		})
@@ -171,7 +171,7 @@ var _ = Describe("Image", func() {
 
 		Context("when creating the snapshot fails", func() {
 			BeforeEach(func() {
-				fakeImageDriver.SnapshotReturns(errors.New("failed to create snapshot"))
+				fakeImageDriver.CreateImageReturns(errors.New("failed to create snapshot"))
 			})
 
 			It("returns an error", func() {
@@ -246,8 +246,8 @@ var _ = Describe("Image", func() {
 						DiskLimit: int64(1024),
 					})
 					Expect(err).To(HaveOccurred())
-					Expect(fakeImageDriver.DestroyCallCount()).To(Equal(1))
-					_, imagePath := fakeImageDriver.DestroyArgsForCall(0)
+					Expect(fakeImageDriver.DestroyImageCallCount()).To(Equal(1))
+					_, imagePath := fakeImageDriver.DestroyImageArgsForCall(0)
 					Expect(imagePath).To(Equal(imagePath))
 				})
 			})
@@ -310,13 +310,13 @@ var _ = Describe("Image", func() {
 			err := imageCloner.Destroy(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 
-			_, path := fakeImageDriver.DestroyArgsForCall(0)
+			_, path := fakeImageDriver.DestroyImageArgsForCall(0)
 			Expect(path).To(Equal(imageRootFSPath))
 		})
 
 		Context("when removing the snapshot fails", func() {
 			BeforeEach(func() {
-				fakeImageDriver.DestroyReturns(errors.New("failed to remove snapshot"))
+				fakeImageDriver.DestroyImageReturns(errors.New("failed to remove snapshot"))
 			})
 
 			It("returns an error", func() {

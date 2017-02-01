@@ -18,10 +18,10 @@ import (
 //go:generate counterfeiter . ImageDriver
 
 type ImageDriver interface {
-	Snapshot(logger lager.Logger, fromPath, toPath string) error
+	CreateImage(logger lager.Logger, fromPath, toPath string) error
+	DestroyImage(logger lager.Logger, path string) error
 	ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusive bool) error
 	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
-	Destroy(logger lager.Logger, path string) error
 }
 
 type ImageCloner struct {
@@ -68,7 +68,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 			log.Info("start")
 			defer log.Info("end")
 
-			if err = b.imageDriver.Destroy(logger, image.RootFSPath); err != nil {
+			if err = b.imageDriver.DestroyImage(logger, image.RootFSPath); err != nil {
 				log.Error("destroying-rootfs-snapshot", err)
 			}
 
@@ -86,7 +86,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 		return groot.Image{}, fmt.Errorf("creating image.json: %s", err)
 	}
 
-	if err = b.imageDriver.Snapshot(logger, spec.VolumePath, image.RootFSPath); err != nil {
+	if err = b.imageDriver.CreateImage(logger, spec.VolumePath, image.RootFSPath); err != nil {
 		return groot.Image{}, fmt.Errorf("creating snapshot: %s", err)
 	}
 
@@ -118,7 +118,7 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 	}
 
 	image := b.createImage(id)
-	if err := b.imageDriver.Destroy(logger, image.RootFSPath); err != nil {
+	if err := b.imageDriver.DestroyImage(logger, image.RootFSPath); err != nil {
 		return fmt.Errorf("destroying snapshot: %s", err)
 	}
 

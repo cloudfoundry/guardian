@@ -30,7 +30,7 @@ var _ = Describe("Image", func() {
 		var err error
 		fakeImageDriver = new(image_clonerfakes.FakeImageDriver)
 
-		fakeImageDriver.SnapshotStub = func(_ lager.Logger, from, to string) error {
+		fakeImageDriver.CreateImageStub = func(_ lager.Logger, from, to string) error {
 			return os.Mkdir(to, 0777)
 		}
 

@@ -69,7 +69,7 @@ func (d *Btrfs) CreateVolume(logger lager.Logger, parentID, id string) (string, 
 	return volPath, nil
 }
 
-func (d *Btrfs) Snapshot(logger lager.Logger, fromPath, toPath string) error {
+func (d *Btrfs) CreateImage(logger lager.Logger, fromPath, toPath string) error {
 	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"fromPath": fromPath, "toPath": toPath})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -135,10 +135,10 @@ func (d *Btrfs) DestroyVolume(logger lager.Logger, id string) error {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	return d.Destroy(logger, filepath.Join(d.storePath, "volumes", id))
+	return d.DestroyImage(logger, filepath.Join(d.storePath, "volumes", id))
 }
 
-func (d *Btrfs) Destroy(logger lager.Logger, path string) error {
+func (d *Btrfs) DestroyImage(logger lager.Logger, path string) error {
 	logger = logger.Session("btrfs-destroying", lager.Data{"path": path})
 	logger.Info("start")
 	defer logger.Info("end")

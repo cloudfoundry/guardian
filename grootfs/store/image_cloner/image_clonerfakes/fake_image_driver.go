@@ -10,14 +10,23 @@ import (
 )
 
 type FakeImageDriver struct {
-	SnapshotStub        func(logger lager.Logger, fromPath, toPath string) error
-	snapshotMutex       sync.RWMutex
-	snapshotArgsForCall []struct {
+	CreateImageStub        func(logger lager.Logger, fromPath, toPath string) error
+	createImageMutex       sync.RWMutex
+	createImageArgsForCall []struct {
 		logger   lager.Logger
 		fromPath string
 		toPath   string
 	}
-	snapshotReturns struct {
+	createImageReturns struct {
+		result1 error
+	}
+	DestroyImageStub        func(logger lager.Logger, path string) error
+	destroyImageMutex       sync.RWMutex
+	destroyImageArgsForCall []struct {
+		logger lager.Logger
+		path   string
+	}
+	destroyImageReturns struct {
 		result1 error
 	}
 	ApplyDiskLimitStub        func(logger lager.Logger, path string, diskLimit int64, exclusive bool) error
@@ -41,50 +50,75 @@ type FakeImageDriver struct {
 		result1 groot.VolumeStats
 		result2 error
 	}
-	DestroyStub        func(logger lager.Logger, path string) error
-	destroyMutex       sync.RWMutex
-	destroyArgsForCall []struct {
-		logger lager.Logger
-		path   string
-	}
-	destroyReturns struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImageDriver) Snapshot(logger lager.Logger, fromPath string, toPath string) error {
-	fake.snapshotMutex.Lock()
-	fake.snapshotArgsForCall = append(fake.snapshotArgsForCall, struct {
+func (fake *FakeImageDriver) CreateImage(logger lager.Logger, fromPath string, toPath string) error {
+	fake.createImageMutex.Lock()
+	fake.createImageArgsForCall = append(fake.createImageArgsForCall, struct {
 		logger   lager.Logger
 		fromPath string
 		toPath   string
 	}{logger, fromPath, toPath})
-	fake.recordInvocation("Snapshot", []interface{}{logger, fromPath, toPath})
-	fake.snapshotMutex.Unlock()
-	if fake.SnapshotStub != nil {
-		return fake.SnapshotStub(logger, fromPath, toPath)
+	fake.recordInvocation("CreateImage", []interface{}{logger, fromPath, toPath})
+	fake.createImageMutex.Unlock()
+	if fake.CreateImageStub != nil {
+		return fake.CreateImageStub(logger, fromPath, toPath)
 	} else {
-		return fake.snapshotReturns.result1
+		return fake.createImageReturns.result1
 	}
 }
 
-func (fake *FakeImageDriver) SnapshotCallCount() int {
-	fake.snapshotMutex.RLock()
-	defer fake.snapshotMutex.RUnlock()
-	return len(fake.snapshotArgsForCall)
+func (fake *FakeImageDriver) CreateImageCallCount() int {
+	fake.createImageMutex.RLock()
+	defer fake.createImageMutex.RUnlock()
+	return len(fake.createImageArgsForCall)
 }
 
-func (fake *FakeImageDriver) SnapshotArgsForCall(i int) (lager.Logger, string, string) {
-	fake.snapshotMutex.RLock()
-	defer fake.snapshotMutex.RUnlock()
-	return fake.snapshotArgsForCall[i].logger, fake.snapshotArgsForCall[i].fromPath, fake.snapshotArgsForCall[i].toPath
+func (fake *FakeImageDriver) CreateImageArgsForCall(i int) (lager.Logger, string, string) {
+	fake.createImageMutex.RLock()
+	defer fake.createImageMutex.RUnlock()
+	return fake.createImageArgsForCall[i].logger, fake.createImageArgsForCall[i].fromPath, fake.createImageArgsForCall[i].toPath
 }
 
-func (fake *FakeImageDriver) SnapshotReturns(result1 error) {
-	fake.SnapshotStub = nil
-	fake.snapshotReturns = struct {
+func (fake *FakeImageDriver) CreateImageReturns(result1 error) {
+	fake.CreateImageStub = nil
+	fake.createImageReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeImageDriver) DestroyImage(logger lager.Logger, path string) error {
+	fake.destroyImageMutex.Lock()
+	fake.destroyImageArgsForCall = append(fake.destroyImageArgsForCall, struct {
+		logger lager.Logger
+		path   string
+	}{logger, path})
+	fake.recordInvocation("DestroyImage", []interface{}{logger, path})
+	fake.destroyImageMutex.Unlock()
+	if fake.DestroyImageStub != nil {
+		return fake.DestroyImageStub(logger, path)
+	} else {
+		return fake.destroyImageReturns.result1
+	}
+}
+
+func (fake *FakeImageDriver) DestroyImageCallCount() int {
+	fake.destroyImageMutex.RLock()
+	defer fake.destroyImageMutex.RUnlock()
+	return len(fake.destroyImageArgsForCall)
+}
+
+func (fake *FakeImageDriver) DestroyImageArgsForCall(i int) (lager.Logger, string) {
+	fake.destroyImageMutex.RLock()
+	defer fake.destroyImageMutex.RUnlock()
+	return fake.destroyImageArgsForCall[i].logger, fake.destroyImageArgsForCall[i].path
+}
+
+func (fake *FakeImageDriver) DestroyImageReturns(result1 error) {
+	fake.DestroyImageStub = nil
+	fake.destroyImageReturns = struct {
 		result1 error
 	}{result1}
 }
@@ -160,51 +194,17 @@ func (fake *FakeImageDriver) FetchStatsReturns(result1 groot.VolumeStats, result
 	}{result1, result2}
 }
 
-func (fake *FakeImageDriver) Destroy(logger lager.Logger, path string) error {
-	fake.destroyMutex.Lock()
-	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
-		logger lager.Logger
-		path   string
-	}{logger, path})
-	fake.recordInvocation("Destroy", []interface{}{logger, path})
-	fake.destroyMutex.Unlock()
-	if fake.DestroyStub != nil {
-		return fake.DestroyStub(logger, path)
-	} else {
-		return fake.destroyReturns.result1
-	}
-}
-
-func (fake *FakeImageDriver) DestroyCallCount() int {
-	fake.destroyMutex.RLock()
-	defer fake.destroyMutex.RUnlock()
-	return len(fake.destroyArgsForCall)
-}
-
-func (fake *FakeImageDriver) DestroyArgsForCall(i int) (lager.Logger, string) {
-	fake.destroyMutex.RLock()
-	defer fake.destroyMutex.RUnlock()
-	return fake.destroyArgsForCall[i].logger, fake.destroyArgsForCall[i].path
-}
-
-func (fake *FakeImageDriver) DestroyReturns(result1 error) {
-	fake.DestroyStub = nil
-	fake.destroyReturns = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeImageDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.snapshotMutex.RLock()
-	defer fake.snapshotMutex.RUnlock()
+	fake.createImageMutex.RLock()
+	defer fake.createImageMutex.RUnlock()
+	fake.destroyImageMutex.RLock()
+	defer fake.destroyImageMutex.RUnlock()
 	fake.applyDiskLimitMutex.RLock()
 	defer fake.applyDiskLimitMutex.RUnlock()
 	fake.fetchStatsMutex.RLock()
 	defer fake.fetchStatsMutex.RUnlock()
-	fake.destroyMutex.RLock()
-	defer fake.destroyMutex.RUnlock()
 	return fake.invocations
 }
 
