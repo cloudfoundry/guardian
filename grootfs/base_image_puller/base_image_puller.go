@@ -145,7 +145,7 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 	}
 
 	digest := layersDigest[index]
-	volumePath, err := p.volumeDriver.Path(logger, digest.ChainID)
+	volumePath, err := p.volumeDriver.VolumePath(logger, digest.ChainID)
 	if err == nil {
 		logger.Debug("volume-exists", lager.Data{
 			"volumePath":    volumePath,
@@ -175,7 +175,7 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 		"parentChainID":             digest.ParentChainID,
 	})
 
-	volumePath, err = p.volumeDriver.Create(logger,
+	volumePath, err = p.volumeDriver.CreateVolume(logger,
 		digest.ParentChainID,
 		digest.ChainID,
 	)

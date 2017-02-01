@@ -9,24 +9,24 @@ import (
 )
 
 type FakeVolumeDriver struct {
-	PathStub        func(logger lager.Logger, id string) (string, error)
-	pathMutex       sync.RWMutex
-	pathArgsForCall []struct {
+	VolumePathStub        func(logger lager.Logger, id string) (string, error)
+	volumePathMutex       sync.RWMutex
+	volumePathArgsForCall []struct {
 		logger lager.Logger
 		id     string
 	}
-	pathReturns struct {
+	volumePathReturns struct {
 		result1 string
 		result2 error
 	}
-	CreateStub        func(logger lager.Logger, parentID, id string) (string, error)
-	createMutex       sync.RWMutex
-	createArgsForCall []struct {
+	CreateVolumeStub        func(logger lager.Logger, parentID, id string) (string, error)
+	createVolumeMutex       sync.RWMutex
+	createVolumeArgsForCall []struct {
 		logger   lager.Logger
 		parentID string
 		id       string
 	}
-	createReturns struct {
+	createVolumeReturns struct {
 		result1 string
 		result2 error
 	}
@@ -52,72 +52,72 @@ type FakeVolumeDriver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeVolumeDriver) Path(logger lager.Logger, id string) (string, error) {
-	fake.pathMutex.Lock()
-	fake.pathArgsForCall = append(fake.pathArgsForCall, struct {
+func (fake *FakeVolumeDriver) VolumePath(logger lager.Logger, id string) (string, error) {
+	fake.volumePathMutex.Lock()
+	fake.volumePathArgsForCall = append(fake.volumePathArgsForCall, struct {
 		logger lager.Logger
 		id     string
 	}{logger, id})
-	fake.recordInvocation("Path", []interface{}{logger, id})
-	fake.pathMutex.Unlock()
-	if fake.PathStub != nil {
-		return fake.PathStub(logger, id)
+	fake.recordInvocation("VolumePath", []interface{}{logger, id})
+	fake.volumePathMutex.Unlock()
+	if fake.VolumePathStub != nil {
+		return fake.VolumePathStub(logger, id)
 	} else {
-		return fake.pathReturns.result1, fake.pathReturns.result2
+		return fake.volumePathReturns.result1, fake.volumePathReturns.result2
 	}
 }
 
-func (fake *FakeVolumeDriver) PathCallCount() int {
-	fake.pathMutex.RLock()
-	defer fake.pathMutex.RUnlock()
-	return len(fake.pathArgsForCall)
+func (fake *FakeVolumeDriver) VolumePathCallCount() int {
+	fake.volumePathMutex.RLock()
+	defer fake.volumePathMutex.RUnlock()
+	return len(fake.volumePathArgsForCall)
 }
 
-func (fake *FakeVolumeDriver) PathArgsForCall(i int) (lager.Logger, string) {
-	fake.pathMutex.RLock()
-	defer fake.pathMutex.RUnlock()
-	return fake.pathArgsForCall[i].logger, fake.pathArgsForCall[i].id
+func (fake *FakeVolumeDriver) VolumePathArgsForCall(i int) (lager.Logger, string) {
+	fake.volumePathMutex.RLock()
+	defer fake.volumePathMutex.RUnlock()
+	return fake.volumePathArgsForCall[i].logger, fake.volumePathArgsForCall[i].id
 }
 
-func (fake *FakeVolumeDriver) PathReturns(result1 string, result2 error) {
-	fake.PathStub = nil
-	fake.pathReturns = struct {
+func (fake *FakeVolumeDriver) VolumePathReturns(result1 string, result2 error) {
+	fake.VolumePathStub = nil
+	fake.volumePathReturns = struct {
 		result1 string
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeVolumeDriver) Create(logger lager.Logger, parentID string, id string) (string, error) {
-	fake.createMutex.Lock()
-	fake.createArgsForCall = append(fake.createArgsForCall, struct {
+func (fake *FakeVolumeDriver) CreateVolume(logger lager.Logger, parentID string, id string) (string, error) {
+	fake.createVolumeMutex.Lock()
+	fake.createVolumeArgsForCall = append(fake.createVolumeArgsForCall, struct {
 		logger   lager.Logger
 		parentID string
 		id       string
 	}{logger, parentID, id})
-	fake.recordInvocation("Create", []interface{}{logger, parentID, id})
-	fake.createMutex.Unlock()
-	if fake.CreateStub != nil {
-		return fake.CreateStub(logger, parentID, id)
+	fake.recordInvocation("CreateVolume", []interface{}{logger, parentID, id})
+	fake.createVolumeMutex.Unlock()
+	if fake.CreateVolumeStub != nil {
+		return fake.CreateVolumeStub(logger, parentID, id)
 	} else {
-		return fake.createReturns.result1, fake.createReturns.result2
+		return fake.createVolumeReturns.result1, fake.createVolumeReturns.result2
 	}
 }
 
-func (fake *FakeVolumeDriver) CreateCallCount() int {
-	fake.createMutex.RLock()
-	defer fake.createMutex.RUnlock()
-	return len(fake.createArgsForCall)
+func (fake *FakeVolumeDriver) CreateVolumeCallCount() int {
+	fake.createVolumeMutex.RLock()
+	defer fake.createVolumeMutex.RUnlock()
+	return len(fake.createVolumeArgsForCall)
 }
 
-func (fake *FakeVolumeDriver) CreateArgsForCall(i int) (lager.Logger, string, string) {
-	fake.createMutex.RLock()
-	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].parentID, fake.createArgsForCall[i].id
+func (fake *FakeVolumeDriver) CreateVolumeArgsForCall(i int) (lager.Logger, string, string) {
+	fake.createVolumeMutex.RLock()
+	defer fake.createVolumeMutex.RUnlock()
+	return fake.createVolumeArgsForCall[i].logger, fake.createVolumeArgsForCall[i].parentID, fake.createVolumeArgsForCall[i].id
 }
 
-func (fake *FakeVolumeDriver) CreateReturns(result1 string, result2 error) {
-	fake.CreateStub = nil
-	fake.createReturns = struct {
+func (fake *FakeVolumeDriver) CreateVolumeReturns(result1 string, result2 error) {
+	fake.CreateVolumeStub = nil
+	fake.createVolumeReturns = struct {
 		result1 string
 		result2 error
 	}{result1, result2}
@@ -194,10 +194,10 @@ func (fake *FakeVolumeDriver) VolumesReturns(result1 []string, result2 error) {
 func (fake *FakeVolumeDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.pathMutex.RLock()
-	defer fake.pathMutex.RUnlock()
-	fake.createMutex.RLock()
-	defer fake.createMutex.RUnlock()
+	fake.volumePathMutex.RLock()
+	defer fake.volumePathMutex.RUnlock()
+	fake.createVolumeMutex.RLock()
+	defer fake.createVolumeMutex.RUnlock()
 	fake.destroyVolumeMutex.RLock()
 	defer fake.destroyVolumeMutex.RUnlock()
 	fake.volumesMutex.RLock()

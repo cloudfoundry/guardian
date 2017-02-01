@@ -49,9 +49,9 @@ var _ = Describe("Base Image Puller", func() {
 		fakeRemoteFetcher.BaseImageInfoReturns(
 			base_image_puller.BaseImageInfo{
 				LayersDigest: []base_image_puller.LayerDigest{
-					base_image_puller.LayerDigest{BlobID: "i-am-a-layer", ChainID: "layer-111", ParentChainID: ""},
-					base_image_puller.LayerDigest{BlobID: "i-am-another-layer", ChainID: "chain-222", ParentChainID: "layer-111"},
-					base_image_puller.LayerDigest{BlobID: "i-am-the-last-layer", ChainID: "chain-333", ParentChainID: "chain-222"},
+					{BlobID: "i-am-a-layer", ChainID: "layer-111", ParentChainID: ""},
+					{BlobID: "i-am-another-layer", ChainID: "chain-222", ParentChainID: "layer-111"},
+					{BlobID: "i-am-the-last-layer", ChainID: "chain-333", ParentChainID: "chain-222"},
 				},
 				Config: expectedImgDesc,
 			}, nil)
@@ -64,8 +64,8 @@ var _ = Describe("Base Image Puller", func() {
 		}
 
 		fakeVolumeDriver = new(storefakes.FakeVolumeDriver)
-		fakeVolumeDriver.PathReturns("", errors.New("volume does not exist"))
-		fakeVolumeDriver.CreateStub = func(_ lager.Logger, _, _ string) (string, error) {
+		fakeVolumeDriver.VolumePathReturns("", errors.New("volume does not exist"))
+		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, _ string) (string, error) {
 			return ioutil.TempDir("", "volume")
 		}
 
@@ -78,7 +78,7 @@ var _ = Describe("Base Image Puller", func() {
 		remoteBaseImageSrc, err = url.Parse("docker:///an/image")
 		Expect(err).NotTo(HaveOccurred())
 
-		fakeVolumeDriver.CreateStub = func(_ lager.Logger, _, chainID string) (string, error) {
+		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, chainID string) (string, error) {
 			return ioutil.TempDir("", "volume")
 		}
 	})

@@ -50,9 +50,9 @@ var _ = Describe("Base Image Puller", func() {
 		fakeRemoteFetcher.BaseImageInfoReturns(
 			base_image_puller.BaseImageInfo{
 				LayersDigest: []base_image_puller.LayerDigest{
-					base_image_puller.LayerDigest{BlobID: "i-am-a-layer", ChainID: "layer-111", ParentChainID: ""},
-					base_image_puller.LayerDigest{BlobID: "i-am-another-layer", ChainID: "chain-222", ParentChainID: "layer-111"},
-					base_image_puller.LayerDigest{BlobID: "i-am-the-last-layer", ChainID: "chain-333", ParentChainID: "chain-222"},
+					{BlobID: "i-am-a-layer", ChainID: "layer-111", ParentChainID: ""},
+					{BlobID: "i-am-another-layer", ChainID: "chain-222", ParentChainID: "layer-111"},
+					{BlobID: "i-am-the-last-layer", ChainID: "chain-333", ParentChainID: "chain-222"},
 				},
 				Config: expectedImgDesc,
 			}, nil)
@@ -65,8 +65,8 @@ var _ = Describe("Base Image Puller", func() {
 		}
 
 		fakeVolumeDriver = new(storefakes.FakeVolumeDriver)
-		fakeVolumeDriver.PathReturns("", errors.New("volume does not exist"))
-		fakeVolumeDriver.CreateStub = func(_ lager.Logger, _, _ string) (string, error) {
+		fakeVolumeDriver.VolumePathReturns("", errors.New("volume does not exist"))
+		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, _ string) (string, error) {
 			return ioutil.TempDir("", "volume")
 		}
 
@@ -90,7 +90,7 @@ var _ = Describe("Base Image Puller", func() {
 	})
 
 	It("returns the last volume's path", func() {
-		fakeVolumeDriver.PathStub = func(_ lager.Logger, id string) (string, error) {
+		fakeVolumeDriver.VolumePathStub = func(_ lager.Logger, id string) (string, error) {
 			return fmt.Sprintf("/path/to/volume/%s", id), nil
 		}
 
@@ -116,16 +116,16 @@ var _ = Describe("Base Image Puller", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(3))
-		_, parentChainID, chainID := fakeVolumeDriver.CreateArgsForCall(0)
+		Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(3))
+		_, parentChainID, chainID := fakeVolumeDriver.CreateVolumeArgsForCall(0)
 		Expect(parentChainID).To(BeEmpty())
 		Expect(chainID).To(Equal("layer-111"))
 
-		_, parentChainID, chainID = fakeVolumeDriver.CreateArgsForCall(1)
+		_, parentChainID, chainID = fakeVolumeDriver.CreateVolumeArgsForCall(1)
 		Expect(parentChainID).To(Equal("layer-111"))
 		Expect(chainID).To(Equal("chain-222"))
 
-		_, parentChainID, chainID = fakeVolumeDriver.CreateArgsForCall(2)
+		_, parentChainID, chainID = fakeVolumeDriver.CreateVolumeArgsForCall(2)
 		Expect(parentChainID).To(Equal("chain-222"))
 		Expect(chainID).To(Equal("chain-333"))
 	})
@@ -134,7 +134,7 @@ var _ = Describe("Base Image Puller", func() {
 		volumesDir, err := ioutil.TempDir("", "volumes")
 		Expect(err).NotTo(HaveOccurred())
 
-		fakeVolumeDriver.CreateStub = func(_ lager.Logger, _, id string) (string, error) {
+		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, id string) (string, error) {
 			volumePath := filepath.Join(volumesDir, id)
 
 			Expect(os.MkdirAll(volumePath, 0777)).To(Succeed())
@@ -246,8 +246,8 @@ var _ = Describe("Base Image Puller", func() {
 			It("returns an error", func() {
 				fakeRemoteFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
 					LayersDigest: []base_image_puller.LayerDigest{
-						base_image_puller.LayerDigest{Size: 1000},
-						base_image_puller.LayerDigest{Size: 201},
+						{Size: 1000},
+						{Size: 201},
 					},
 				}, nil)
 
@@ -263,8 +263,8 @@ var _ = Describe("Base Image Puller", func() {
 				It("doesn't fail", func() {
 					fakeRemoteFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
 						LayersDigest: []base_image_puller.LayerDigest{
-							base_image_puller.LayerDigest{Size: 1000},
-							base_image_puller.LayerDigest{Size: 201},
+							{Size: 1000},
+							{Size: 201},
 						},
 					}, nil)
 
@@ -283,8 +283,8 @@ var _ = Describe("Base Image Puller", func() {
 			It("doesn't fail", func() {
 				fakeRemoteFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
 					LayersDigest: []base_image_puller.LayerDigest{
-						base_image_puller.LayerDigest{Size: 1000},
-						base_image_puller.LayerDigest{Size: 201},
+						{Size: 1000},
+						{Size: 201},
 					},
 				}, nil)
 
@@ -322,14 +322,14 @@ var _ = Describe("Base Image Puller", func() {
 			spec = groot.BaseImageSpec{
 				BaseImageSrc: remoteBaseImageSrc,
 				UIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{
+					{
 						HostID:      os.Getuid(),
 						NamespaceID: 0,
 						Size:        1,
 					},
 				},
 				GIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{
+					{
 						HostID:      100,
 						NamespaceID: 100,
 						Size:        100,
@@ -391,7 +391,7 @@ var _ = Describe("Base Image Puller", func() {
 
 	Context("when all volumes exist", func() {
 		BeforeEach(func() {
-			fakeVolumeDriver.PathReturns("/path/to/volume", nil)
+			fakeVolumeDriver.VolumePathReturns("/path/to/volume", nil)
 		})
 
 		It("does not try to create any layer", func() {
@@ -400,13 +400,13 @@ var _ = Describe("Base Image Puller", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(0))
+			Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(0))
 		})
 	})
 
 	Context("when one volume exists", func() {
 		BeforeEach(func() {
-			fakeVolumeDriver.PathStub = func(_ lager.Logger, id string) (string, error) {
+			fakeVolumeDriver.VolumePathStub = func(_ lager.Logger, id string) (string, error) {
 				if id == "chain-222" {
 					return "/path/to/chain-222", nil
 				}
@@ -420,15 +420,15 @@ var _ = Describe("Base Image Puller", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeVolumeDriver.CreateCallCount()).To(Equal(1))
-			_, _, volID := fakeVolumeDriver.CreateArgsForCall(0)
+			Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(1))
+			_, _, volID := fakeVolumeDriver.CreateVolumeArgsForCall(0)
 			Expect(volID).To(Equal("chain-333"))
 		})
 	})
 
 	Context("when creating a volume fails", func() {
 		BeforeEach(func() {
-			fakeVolumeDriver.CreateReturns("", errors.New("failed to create volume"))
+			fakeVolumeDriver.CreateVolumeReturns("", errors.New("failed to create volume"))
 		})
 
 		It("returns an error", func() {
@@ -484,14 +484,14 @@ var _ = Describe("Base Image Puller", func() {
 				spec = groot.BaseImageSpec{
 					BaseImageSrc: remoteBaseImageSrc,
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{
+						{
 							HostID:      1,
 							NamespaceID: 1,
 							Size:        1,
 						},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{
+						{
 							HostID:      100,
 							NamespaceID: 100,
 							Size:        100,

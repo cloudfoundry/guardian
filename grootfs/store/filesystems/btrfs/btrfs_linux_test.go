@@ -63,17 +63,17 @@ var _ = Describe("Btrfs", func() {
 	Describe("Path", func() {
 		It("returns the volume path when it exists", func() {
 			volID := randVolumeID()
-			volPath, err := driver.Create(logger, "", volID)
+			volPath, err := driver.CreateVolume(logger, "", volID)
 			Expect(err).NotTo(HaveOccurred())
 
-			retVolPath, err := driver.Path(logger, volID)
+			retVolPath, err := driver.VolumePath(logger, volID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(retVolPath).To(Equal(volPath))
 		})
 
 		Context("when the volume does not exist", func() {
 			It("returns an error", func() {
-				_, err := driver.Path(logger, "non-existent-id")
+				_, err := driver.VolumePath(logger, "non-existent-id")
 				Expect(err).To(MatchError(ContainSubstring("volume does not exist")))
 			})
 		})
@@ -83,7 +83,7 @@ var _ = Describe("Btrfs", func() {
 		Context("when the parent is empty", func() {
 			It("creates a BTRFS subvolume", func() {
 				volID := randVolumeID()
-				volPath, err := driver.Create(logger, "", volID)
+				volPath, err := driver.CreateVolume(logger, "", volID)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(volPath).To(BeADirectory())
@@ -91,7 +91,7 @@ var _ = Describe("Btrfs", func() {
 
 			It("logs the correct btrfs command", func() {
 				volID := randVolumeID()
-				volumePath, err := driver.Create(logger, "", volID)
+				volumePath, err := driver.CreateVolume(logger, "", volID)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger).To(ContainSequence(
@@ -108,7 +108,7 @@ var _ = Describe("Btrfs", func() {
 		Context("custom btrfs binary path", func() {
 			It("uses the custom btrfs binary given", func() {
 				driver = btrfs.NewBtrfs("cool-btrfs", draxBinPath, storePath)
-				_, err := driver.Create(logger, "", "random-id")
+				_, err := driver.CreateVolume(logger, "", "random-id")
 				Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
 			})
 		})
@@ -118,12 +118,12 @@ var _ = Describe("Btrfs", func() {
 				volumeID := randVolumeID()
 				destVolID := randVolumeID()
 
-				fromPath, err := driver.Create(logger, "", volumeID)
+				fromPath, err := driver.CreateVolume(logger, "", volumeID)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(ioutil.WriteFile(filepath.Join(fromPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
 
-				destVolPath, err := driver.Create(logger, volumeID, destVolID)
+				destVolPath, err := driver.CreateVolume(logger, volumeID, destVolID)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(filepath.Join(destVolPath, "a_file")).To(BeARegularFile())
@@ -133,10 +133,10 @@ var _ = Describe("Btrfs", func() {
 				volumeID := randVolumeID()
 				destVolID := randVolumeID()
 
-				fromPath, err := driver.Create(logger, "", volumeID)
+				fromPath, err := driver.CreateVolume(logger, "", volumeID)
 				Expect(err).NotTo(HaveOccurred())
 
-				destVolPath, err := driver.Create(logger, volumeID, destVolID)
+				destVolPath, err := driver.CreateVolume(logger, volumeID, destVolID)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(logger).To(ContainSequence(
@@ -157,7 +157,7 @@ var _ = Describe("Btrfs", func() {
 				volPath := filepath.Join(storePath, store.VOLUMES_DIR_NAME, volID)
 				Expect(os.MkdirAll(volPath, 0777)).To(Succeed())
 
-				_, err := driver.Create(logger, "", volID)
+				_, err := driver.CreateVolume(logger, "", volID)
 				Expect(err).To(MatchError(ContainSubstring("creating btrfs volume")))
 			})
 		})
@@ -166,7 +166,7 @@ var _ = Describe("Btrfs", func() {
 			It("returns an error", func() {
 				volID := randVolumeID()
 
-				_, err := driver.Create(logger, "non-existent-parent", volID)
+				_, err := driver.CreateVolume(logger, "non-existent-parent", volID)
 				Expect(err).To(MatchError(ContainSubstring("creating btrfs volume")))
 			})
 		})
@@ -184,7 +184,7 @@ var _ = Describe("Btrfs", func() {
 		It("creates a driver.snapshot", func() {
 			volumeID := randVolumeID()
 
-			fromPath, err := driver.Create(logger, "", volumeID)
+			fromPath, err := driver.CreateVolume(logger, "", volumeID)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(ioutil.WriteFile(filepath.Join(fromPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
@@ -197,7 +197,7 @@ var _ = Describe("Btrfs", func() {
 		It("logs the correct btrfs command", func() {
 			volumeID := randVolumeID()
 
-			fromPath, err := driver.Create(logger, "", volumeID)
+			fromPath, err := driver.CreateVolume(logger, "", volumeID)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(ioutil.WriteFile(filepath.Join(fromPath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
@@ -275,7 +275,7 @@ var _ = Describe("Btrfs", func() {
 		JustBeforeEach(func() {
 			volumeID = randVolumeID()
 			var err error
-			volumePath, err = driver.Create(logger, "", volumeID)
+			volumePath, err = driver.CreateVolume(logger, "", volumeID)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -301,7 +301,7 @@ var _ = Describe("Btrfs", func() {
 		Context("when a volume exists", func() {
 			JustBeforeEach(func() {
 				var err error
-				volumePath, err = driver.Create(logger, "", randVolumeID())
+				volumePath, err = driver.CreateVolume(logger, "", randVolumeID())
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -414,7 +414,7 @@ var _ = Describe("Btrfs", func() {
 		Context("when the snapshot path is a volume", func() {
 			JustBeforeEach(func() {
 				volID := randVolumeID()
-				volumePath, err := driver.Create(logger, "", volID)
+				volumePath, err := driver.CreateVolume(logger, "", volID)
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(volumePath, "vol-file")), "bs=1048576", "count=5")
@@ -529,7 +529,7 @@ var _ = Describe("Btrfs", func() {
 		Context("when the provided path is a volume", func() {
 			JustBeforeEach(func() {
 				volID := randVolumeID()
-				volPath, err := driver.Create(logger, "", volID)
+				volPath, err := driver.CreateVolume(logger, "", volID)
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(volPath, "vol-file")), "bs=4210688", "count=1")

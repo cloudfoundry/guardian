@@ -34,7 +34,7 @@ func NewBtrfs(btrfsBinPath, draxBinPath, storePath string) *Btrfs {
 	}
 }
 
-func (d *Btrfs) Path(logger lager.Logger, id string) (string, error) {
+func (d *Btrfs) VolumePath(logger lager.Logger, id string) (string, error) {
 	volPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
 	_, err := os.Stat(volPath)
 	if err == nil {
@@ -44,7 +44,7 @@ func (d *Btrfs) Path(logger lager.Logger, id string) (string, error) {
 	return "", fmt.Errorf("volume does not exist `%s`: %s", id, err)
 }
 
-func (d *Btrfs) Create(logger lager.Logger, parentID, id string) (string, error) {
+func (d *Btrfs) CreateVolume(logger lager.Logger, parentID, id string) (string, error) {
 	logger = logger.Session("btrfs-creating-volume", lager.Data{"parentID": parentID, "id": id})
 	logger.Info("start")
 	defer logger.Info("end")
