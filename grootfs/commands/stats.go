@@ -47,8 +47,8 @@ var StatsCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		btrfsVolumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
-		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
+		volumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
+		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
 
 		metricsEmitter := metrics.NewEmitter()
 		statser := groot.IamStatser(imageCloner, metricsEmitter)

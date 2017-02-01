@@ -49,8 +49,8 @@ var DeleteCommand = cli.Command{
 			return nil
 		}
 
-		btrfsVolumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
-		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
+		volumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
+		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.META_DIR_NAME, "dependencies"),
 		)

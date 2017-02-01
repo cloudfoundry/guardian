@@ -130,8 +130,8 @@ var CreateCommand = cli.Command{
 			return err
 		}
 
-		btrfsVolumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
-		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
+		volumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
+		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
 
 		runner := linux_command_runner.New()
 		var unpacker base_image_puller.Unpacker
@@ -157,14 +157,14 @@ var CreateCommand = cli.Command{
 			localFetcher,
 			remoteFetcher,
 			unpacker,
-			btrfsVolumeDriver,
+			volumeDriver,
 			dependencyManager,
 		)
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()
 		metricsEmitter := metrics.NewEmitter()
 
 		sm := garbage_collector.NewStoreMeasurer(storePath)
-		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(cacheDriver, volumeDriver, imageCloner, dependencyManager)
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
 		namespaceChecker := groot.NewNamespaceChecker(storePath)

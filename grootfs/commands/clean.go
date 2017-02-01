@@ -60,15 +60,15 @@ var CleanCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 0)
 		}
 
-		btrfsVolumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
-		imageCloner := imageClonerpkg.NewImageCloner(btrfsVolumeDriver, storePath)
+		volumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
+		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
 		)
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		sm := garbage_collector.NewStoreMeasurer(storePath)
-		gc := garbage_collector.NewGC(cacheDriver, btrfsVolumeDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(cacheDriver, volumeDriver, imageCloner, dependencyManager)
 
 		metricsEmitter := metrics.NewEmitter()
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
