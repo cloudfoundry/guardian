@@ -50,7 +50,7 @@ func run() int {
 	signals := make(chan os.Signal, 100)
 	signal.Notify(signals, syscall.SIGCHLD)
 
-	fd3 := os.NewFile(3, "/proc/self/fd/3")
+	runcExitCodePipe := os.NewFile(3, "/proc/self/fd/3")
 	logFile := fmt.Sprintf("/proc/%d/fd/4", os.Getpid())
 	logFD := os.NewFile(4, "/proc/self/fd/4")
 	syncPipe := os.NewFile(5, "/proc/self/fd/5")
@@ -78,7 +78,7 @@ func run() int {
 	system.SetSubreaper(os.Getpid())
 
 	if err := runcExecCmd.Start(); err != nil {
-		fd3.Write([]byte{2})
+		runcExitCodePipe.Write([]byte{2})
 		return 2
 	}
 
@@ -89,7 +89,7 @@ func run() int {
 	logFD.Close() // No more logs from runc so close fd
 
 	// also check that masterFD is received and streaming or whatevs
-	fd3.Write([]byte{byte(status.ExitStatus())})
+	runcExitCodePipe.Write([]byte{byte(status.ExitStatus())})
 	if status.ExitStatus() != 0 {
 		return 3 // nothing to wait for, container didn't launch
 	}

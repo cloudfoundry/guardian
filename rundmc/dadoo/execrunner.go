@@ -132,8 +132,10 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 
 	log.Info("read-exit-fd")
 	runcExitStatus := make([]byte, 1)
-	runcExitStatus[0] = 4 // don't accidentally report runcExitStatus success on panic
-	fd3r.Read(runcExitStatus)
+	bytesRead, err := fd3r.Read(runcExitStatus)
+	if bytesRead == 0 || err != nil {
+		return nil, errors.New("failed to read runc exit code")
+	}
 	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
 	if runcExitStatus[0] != 0 {
 		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])

@@ -31,23 +31,23 @@ import (
 
 var _ = Describe("Dadoo ExecRunner", func() {
 	var (
-		fakeCommandRunner      *fake_command_runner.FakeCommandRunner
-		fakeProcessIDGenerator *fakes.FakeUidGenerator
-		fakePidGetter          *dadoofakes.FakePidGetter
-		runner                 *dadoo.ExecRunner
-		bundlePath             string
-		processPath            string
-		pidPath                string
-		receivedStdinContents  []byte
-		runcReturns            byte
-		dadooReturns           error
-		dadooPanics            bool
-		dadooWritesLogs        string
-		dadooWritesExitCode    []byte
-		log                    *lagertest.TestLogger
-		receiveWinSize         func(*os.File)
-		closeExitPipeCh        chan struct{}
-		stderrContents         string
+		fakeCommandRunner                      *fake_command_runner.FakeCommandRunner
+		fakeProcessIDGenerator                 *fakes.FakeUidGenerator
+		fakePidGetter                          *dadoofakes.FakePidGetter
+		runner                                 *dadoo.ExecRunner
+		bundlePath                             string
+		processPath                            string
+		pidPath                                string
+		receivedStdinContents                  []byte
+		runcReturns                            byte
+		dadooReturns                           error
+		dadooPanicsBeforeReportingRuncExitCode bool
+		dadooWritesLogs                        string
+		dadooWritesExitCode                    []byte
+		log                                    *lagertest.TestLogger
+		receiveWinSize                         func(*os.File)
+		closeExitPipeCh                        chan struct{}
+		stderrContents                         string
 
 		testFinishedCh chan bool
 	)
@@ -73,6 +73,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		runcReturns = 0
 		dadooReturns = nil
+		dadooPanicsBeforeReportingRuncExitCode = false
 		dadooWritesExitCode = []byte("0")
 		dadooWritesLogs = `time="2016-03-02T13:56:38Z" level=warning msg="signal: potato"
 				time="2016-03-02T13:56:38Z" level=error msg="fork/exec POTATO: no such file or directory"
@@ -138,10 +139,12 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				fd4.Close()
 
 				// return exit status of runc on fd3
-				_, err = fd3.Write([]byte{runcReturns})
-				Expect(err).NotTo(HaveOccurred())
+				if !dadooPanicsBeforeReportingRuncExitCode {
+					// if dadooPanics then closes the pipe without writing a value
+					_, err = fd3.Write([]byte{runcReturns})
+					Expect(err).NotTo(HaveOccurred())
+				}
 				fd3.Close()
-
 				// write exit code of actual process to $procesdir/exitcode file
 				if exitCode != nil {
 					Expect(ioutil.WriteFile(filepath.Join(processDir, "exitcode"), []byte(exitCode), 0600)).To(Succeed())
@@ -285,12 +288,15 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 		})
 
-		Context("when dadoo panics", func() {
+		Context("when dadoo panics before reporting runc's exit code", func() {
 			BeforeEach(func() {
-				dadooPanics = true
+				dadooPanicsBeforeReportingRuncExitCode = true
 			})
 
-			It("returns an exit status of 4", func() {
+			It("returns a meaningful error", func() {
+				_, err := runner.Run(log, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}},
+					processPath, "some-handle", nil, garden.ProcessIO{})
+				Expect(err).To(MatchError(ContainSubstring("failed to read runc exit code")))
 
 			})
 		})
