@@ -43,6 +43,11 @@ func main() {
 			Value: store.DEFAULT_STORE_PATH,
 		},
 		cli.StringFlag{
+			Name:  "driver",
+			Usage: "Storage driver to use",
+			Value: "btrfs",
+		},
+		cli.StringFlag{
 			Name:  "log-level",
 			Usage: "Set logging level <debug|info|error|fatal>",
 			Value: "fatal",

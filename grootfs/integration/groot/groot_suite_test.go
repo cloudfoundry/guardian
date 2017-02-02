@@ -25,6 +25,7 @@ var (
 	StorePath  string
 	Runner     runner.Runner
 	storeName  string
+	Driver     string
 
 	CurrentUserID    string
 	CurrentUserIDInt int
@@ -34,7 +35,11 @@ var (
 
 const btrfsMountPath = "/mnt/btrfs"
 
-func TestGroot(t *testing.T) {
+func TestBTRFSGroot(t *testing.T) {
+	grootTests(t, "btrfs")
+}
+
+func grootTests(t *testing.T, driver string) {
 	RegisterFailHandler(Fail)
 
 	SynchronizedBeforeSuite(func() []byte {
@@ -46,6 +51,7 @@ func TestGroot(t *testing.T) {
 		CurrentUserIDInt = os.Getuid()
 		CurrentUserID = strconv.Itoa(CurrentUserIDInt)
 		GrootFSBin = string(data)
+		Driver = driver
 	})
 
 	SynchronizedAfterSuite(func() {
@@ -74,6 +80,7 @@ func TestGroot(t *testing.T) {
 			GrootFSBin: GrootFSBin,
 			StorePath:  StorePath,
 			DraxBin:    DraxBin,
+			Driver:     driver,
 		}
 		Runner = r.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter)
 	})
@@ -83,7 +90,7 @@ func TestGroot(t *testing.T) {
 		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
-	RunSpecs(t, "GrootFS Integration Suite - Running as groot")
+	RunSpecs(t, fmt.Sprintf("%s: GrootFS Integration Suite - Running as groot", driver))
 }
 
 func writeMegabytes(outputPath string, mb int) error {

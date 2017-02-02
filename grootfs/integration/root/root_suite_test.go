@@ -23,6 +23,7 @@ var (
 	GrootFSBin string
 	DraxBin    string
 	Runner     runner.Runner
+	Driver     string
 
 	GrootUID uint32
 	GrootGID uint32
@@ -33,7 +34,11 @@ var (
 
 const btrfsMountPath = "/mnt/btrfs"
 
-func TestRoot(t *testing.T) {
+func TestBTRFSGroot(t *testing.T) {
+	grootTests(t, "btrfs")
+}
+
+func grootTests(t *testing.T, driver string) {
 	RegisterFailHandler(Fail)
 	rand.Seed(time.Now().Unix())
 
@@ -48,6 +53,7 @@ func TestRoot(t *testing.T) {
 		GrootUID = integration.FindUID("groot")
 		GrootGID = integration.FindGID("groot")
 		GrootFSBin = string(data)
+		Driver = driver
 	})
 
 	SynchronizedAfterSuite(func() {
@@ -75,6 +81,7 @@ func TestRoot(t *testing.T) {
 			GrootFSBin: GrootFSBin,
 			StorePath:  StorePath,
 			DraxBin:    DraxBin,
+			Driver:     driver,
 		}
 		Runner = r.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter)
 	})
@@ -84,7 +91,7 @@ func TestRoot(t *testing.T) {
 		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
-	RunSpecs(t, "GrootFS Integration Suite - Running as root")
+	RunSpecs(t, fmt.Sprintf("%s: GrootFS Integration Suite - Running as root", driver))
 }
 
 func fixPermission(dirPath string) {
