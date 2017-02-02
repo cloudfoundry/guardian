@@ -125,7 +125,9 @@ run_all_tests() {
   fi
 
   fly_groot_tests ""
-  fly_root_tests "integration/root"
+  fly_root_tests  "store/image_cloner/roottests"
+  fly_root_tests  "base_image_puller/roottests"
+  fly_root_tests  "integration/root"
 }
 
 run_tests() {
