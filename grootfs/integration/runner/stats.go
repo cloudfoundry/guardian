@@ -7,7 +7,17 @@ import (
 )
 
 func (r Runner) Stats(id string) (groot.VolumeStats, error) {
-	stats, err := r.RunSubcommand("stats", id)
+	var (
+		err   error
+		stats string
+	)
+
+	if id == "" {
+		stats, err = r.RunSubcommand("stats")
+	} else {
+		stats, err = r.RunSubcommand("stats", id)
+	}
+
 	if err != nil {
 		return groot.VolumeStats{}, err
 	}

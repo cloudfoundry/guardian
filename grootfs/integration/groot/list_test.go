@@ -3,7 +3,6 @@ package groot_test
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 
 	yaml "gopkg.in/yaml.v2"
@@ -15,7 +14,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("List", func() {
@@ -27,7 +25,11 @@ var _ = Describe("List", func() {
 
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
-		image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageFile.Name(), "root-image", 0)
+		image, err = Runner.Create(groot.CreateSpec{
+			BaseImage: baseImageFile.Name(),
+			ID:        "root-image",
+		})
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("lists all images in the store path", func() {
@@ -65,12 +67,11 @@ var _ = Describe("List", func() {
 
 		Describe("store path", func() {
 			It("uses the store path from the config file", func() {
-				cmd := exec.Command(GrootFSBin, "--config", configFilePath, "list")
+				outBuffer := gbytes.NewBuffer()
+				_, err := Runner.WithoutStore().WithConfig(configFilePath).WithStdout(outBuffer).List()
+				Expect(err).ToNot(HaveOccurred())
 
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
-				Expect(sess.Out).To(gbytes.Say(image.Path))
+				Expect(outBuffer).To(gbytes.Say(image.Path))
 			})
 		})
 	})
@@ -91,12 +92,11 @@ var _ = Describe("List", func() {
 		})
 
 		It("returns an informative message", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "list")
+			outBuffer := gbytes.NewBuffer()
+			_, err := Runner.WithStdout(outBuffer).List()
+			Expect(err).ToNot(HaveOccurred())
 
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-			Expect(sess.Out).To(gbytes.Say("Store empty"))
+			Expect(outBuffer).To(gbytes.Say("Store empty"))
 		})
 	})
 })

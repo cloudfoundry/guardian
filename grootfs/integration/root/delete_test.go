@@ -3,17 +3,15 @@ package root_test
 import (
 	"fmt"
 	"io/ioutil"
-	"os/exec"
 	"path"
-	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Delete", func() {
@@ -24,7 +22,11 @@ var _ = Describe("Delete", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
-		image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImageFile.Name(), "random-id", 0)
+		image, err = Runner.Create(groot.CreateSpec{
+			BaseImage: baseImageFile.Name(),
+			ID:        "random-id",
+		})
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	Context("when trying to delete a image from a different user", func() {
@@ -32,25 +34,12 @@ var _ = Describe("Delete", func() {
 			storePath, err := ioutil.TempDir(StorePath, "")
 			Expect(err).NotTo(HaveOccurred())
 
-			deleteCmd := exec.Command(
-				GrootFSBin,
-				"--log-level", "debug",
-				"--store", storePath,
-				"--drax-bin", DraxBin,
-				"delete",
-				image.Path,
-			)
-			deleteCmd.SysProcAttr = &syscall.SysProcAttr{
-				Credential: &syscall.Credential{
-					Uid: GrootUID,
-					Gid: GrootGID,
-				},
-			}
-
-			session, err := gexec.Start(deleteCmd, GinkgoWriter, GinkgoWriter)
+			outBuffer := gbytes.NewBuffer()
+			err = Runner.RunningAsUser(GrootUID, GrootGID).WithStore(storePath).WithLogLevel(lager.DEBUG).WithStdout(outBuffer).
+				Delete(image.Path)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(session).Should(gexec.Exit(0))
-			Eventually(session.Out).Should(gbytes.Say(fmt.Sprintf("path `%s` is outside store path", image.Path)))
+
+			Eventually(outBuffer).Should(gbytes.Say(fmt.Sprintf("path `%s` is outside store path", image.Path)))
 			Expect(image.Path).To(BeADirectory())
 		})
 	})

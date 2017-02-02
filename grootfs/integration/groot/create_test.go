@@ -52,9 +52,13 @@ var _ = Describe("Create", func() {
 		It("creates the storage path with the correct permission", func() {
 			storePath := filepath.Join(StorePath, "new-store")
 			Expect(storePath).ToNot(BeAnExistingFile())
-			integration.CreateImage(GrootFSBin, storePath, DraxBin, baseImagePath, "random-id", tenMegabytes)
+			_, err := Runner.WithStore(storePath).Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+				DiskLimit: tenMegabytes,
+			})
+			Expect(err).ToNot(HaveOccurred())
 			Expect(storePath).To(BeADirectory())
-
 			stat, err := os.Stat(storePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0700)))
@@ -83,7 +87,12 @@ var _ = Describe("Create", func() {
 		})
 
 		It("creates a image with supplied limit", func() {
-			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", tenMegabytes)
+			image, err := Runner.Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+				DiskLimit: tenMegabytes,
+			})
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 4)).To(Succeed())
 			Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 2)).To(MatchError(ContainSubstring("Disk quota exceeded")))
@@ -159,11 +168,12 @@ var _ = Describe("Create", func() {
 			Context("when it's not provided", func() {
 				It("uses drax from $PATH", func() {
 					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", "--disk-limit-size-bytes", "104857600", baseImagePath, "random-id")
-					cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(0))
+					_, err := Runner.WithoutDraxBin().WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(groot.CreateSpec{
+						BaseImage: baseImagePath,
+						ID:        "random-id",
+						DiskLimit: tenMegabytes,
+					})
+					Expect(err).ToNot(HaveOccurred())
 
 					contents, err := ioutil.ReadFile(draxCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
@@ -197,11 +207,12 @@ var _ = Describe("Create", func() {
 			Context("when it's not provided", func() {
 				It("uses btrfs from $PATH", func() {
 					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-					cmd := exec.Command(GrootFSBin, "--store", StorePath, "create", baseImagePath, "random-id")
-					cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(1))
+					_, err := Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(groot.CreateSpec{
+						BaseImage: baseImagePath,
+						ID:        "random-id",
+						DiskLimit: tenMegabytes,
+					})
+					Expect(err).To(HaveOccurred())
 
 					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
@@ -267,11 +278,13 @@ var _ = Describe("Create", func() {
 		Context("when it's not provided", func() {
 			It("uses newuidmap from $PATH", func() {
 				newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create", "--uid-mapping", "0:1000:1", baseImagePath, "random-id")
-				cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
+				_, err := Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(groot.CreateSpec{
+					BaseImage:   baseImagePath,
+					ID:          "random-id",
+					DiskLimit:   tenMegabytes,
+					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1}},
+				})
+				Expect(err).ToNot(HaveOccurred())
 
 				contents, err := ioutil.ReadFile(newuidmapCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
@@ -309,11 +322,13 @@ var _ = Describe("Create", func() {
 		Context("when it's not provided", func() {
 			It("uses newgidmap from $PATH", func() {
 				newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-				cmd := exec.Command(GrootFSBin, "--log-level", "debug", "--store", StorePath, "create", "--gid-mapping", "0:1000:1", baseImagePath, "random-id")
-				cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", newPATH))
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
+				_, err := Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(groot.CreateSpec{
+					BaseImage:   baseImagePath,
+					ID:          "random-id",
+					DiskLimit:   tenMegabytes,
+					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1}},
+				})
+				Expect(err).ToNot(HaveOccurred())
 
 				contents, err := ioutil.ReadFile(newgidmapCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
@@ -402,20 +417,11 @@ var _ = Describe("Create", func() {
 
 	Context("when both no-clean and clean flags are given", func() {
 		It("returns an error", func() {
-			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
-				"--config",
-				Runner.ConfigPath,
-				"create",
-				"--clean",
-				"--no-clean",
-				"docker:///cfgarden/empty:v0.1.1",
-				"random-id",
-			)
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess, "10s").Should(gexec.Exit(1))
-			Eventually(sess.Out).Should(gbytes.Say("clean and no-clean cannot be used together"))
+			_, err := Runner.WithClean().WithNoClean().Create(groot.CreateSpec{
+				ID:        "my-empty",
+				BaseImage: "docker:///cfgarden/empty:v0.1.1",
+			})
+			Expect(err).To(MatchError(ContainSubstring("clean and no-clean cannot be used together")))
 		})
 	})
 
@@ -432,16 +438,29 @@ var _ = Describe("Create", func() {
 
 	Context("when two rootfses are using the same image", func() {
 		It("isolates them", func() {
-			image := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
-			anotherImage := integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "another-random-id", 0)
-			Expect(ioutil.WriteFile(path.Join(image.RootFSPath, "bar"), []byte("hello-world"), 0644)).To(Succeed())
-			Expect(path.Join(anotherImage.RootFSPath, "bar")).NotTo(BeARegularFile())
+			image1, err := Runner.Create(groot.CreateSpec{
+				ID:        "random-id",
+				BaseImage: baseImagePath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			image2, err := Runner.Create(groot.CreateSpec{
+				ID:        "another-random-id",
+				BaseImage: baseImagePath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ioutil.WriteFile(filepath.Join(image1.RootFSPath, "bar"), []byte("hello-world"), 0644)).To(Succeed())
+			Expect(filepath.Join(image2.RootFSPath, "bar")).NotTo(BeARegularFile())
 		})
 	})
 
 	Context("when the id is already being used", func() {
 		JustBeforeEach(func() {
-			Expect(integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)).NotTo(BeNil())
+			_, err := Runner.Create(groot.CreateSpec{
+				ID:        "random-id",
+				BaseImage: baseImagePath,
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("fails and produces a useful error", func() {
@@ -485,45 +504,36 @@ var _ = Describe("Create", func() {
 		})
 
 		It("does not leak the image directory", func() {
-			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
-				"create",
-				"--uid-mapping", "1:1:65000",
-				"--uid-mapping", "0:1000:65000",
-				baseImagePath,
-				"some-id",
-			)
-
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(sess.Wait()).NotTo(gexec.Exit(0))
-
-			Expect(path.Join(StorePath, "images", "some-id")).ToNot(BeAnExistingFile())
+			_, err := Runner.Create(groot.CreateSpec{
+				ID:        "some-id",
+				BaseImage: baseImagePath,
+				UIDMappings: []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: 1, NamespaceID: 1, Size: 65000},
+					groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 65000},
+				},
+			})
+			Expect(err).To(HaveOccurred())
+			Expect(filepath.Join(StorePath, "images", "some-id")).ToNot(BeAnExistingFile())
 		})
 	})
 
 	Context("when the image is invalid", func() {
 		It("fails", func() {
-			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
-				"create",
-				"*@#%^!&",
-				"some-id",
-			)
-
-			buffer := gbytes.NewBuffer()
-			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(sess.Wait()).To(gexec.Exit(1))
-			Eventually(sess).Should(gbytes.Say("parsing image url: parse"))
-			Eventually(sess).Should(gbytes.Say("invalid URL escape"))
+			_, err := Runner.Create(groot.CreateSpec{
+				ID:        "some-id",
+				BaseImage: "*@#%^!&",
+			})
+			Expect(err).To(MatchError(ContainSubstring("parsing image url: parse")))
+			Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
 		})
 	})
 
 	Context("when a mappings flag is invalid", func() {
 		It("fails when the uid mapping is invalid", func() {
 			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
+				GrootFSBin,
+				"--store", StorePath,
+				"--driver", Driver,
 				"create", baseImagePath,
 				"--uid-mapping", "1:hello:65000",
 				"some-id",
@@ -532,11 +542,14 @@ var _ = Describe("Create", func() {
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sess.Wait()).NotTo(gexec.Exit(0))
+			Eventually(sess).Should(gbytes.Say("parsing uid-mapping: expected integer"))
 		})
 
 		It("fails when the gid mapping is invalid", func() {
 			cmd := exec.Command(
-				GrootFSBin, "--store", StorePath,
+				GrootFSBin,
+				"--store", StorePath,
+				"--driver", Driver,
 				"create", baseImagePath,
 				"--gid-mapping", "1:groot:65000",
 				"some-id",
@@ -545,6 +558,7 @@ var _ = Describe("Create", func() {
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(sess.Wait()).NotTo(gexec.Exit(0))
+			Eventually(sess).Should(gbytes.Say("parsing gid-mapping: expected integer"))
 		})
 	})
 
@@ -739,97 +753,82 @@ var _ = Describe("Create", func() {
 				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("Disk quota exceeded")))
 			})
 		})
+	})
 
-		Describe("clean up on create", func() {
-			var createSpec groot.CreateSpec
+	Describe("clean up on create", func() {
+		var (
+			imageID string
+		)
 
-			BeforeEach(func() {
-				cfg.CleanOnCreate = true
+		JustBeforeEach(func() {
+			_, err := Runner.Create(groot.CreateSpec{
+				ID:        "my-busybox",
+				BaseImage: "docker:///busybox:1.26.2",
 			})
+			Expect(err).NotTo(HaveOccurred())
 
-			JustBeforeEach(func() {
-				createSpec = groot.CreateSpec{
-					ID:        "my-busybox",
-					BaseImage: "docker:///busybox:1.26.2",
-				}
+			Expect(Runner.Delete("my-busybox")).To(Succeed())
+			imageID = "random-id"
+		})
 
-				_, err := Runner.Create(createSpec)
-				Expect(err).NotTo(HaveOccurred())
+		AfterEach(func() {
+			Expect(Runner.Delete(imageID)).To(Succeed())
+		})
 
-				Expect(Runner.Delete("my-busybox")).To(Succeed())
+		It("cleans up unused layers before create but not the one about to be created", func() {
+			runner := Runner.WithClean()
+
+			createSpec := groot.CreateSpec{
+				ID:        "my-empty",
+				BaseImage: "docker:///cfgarden/empty:v0.1.1",
+			}
+			_, err := Runner.Create(createSpec)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(runner.Delete("my-empty")).To(Succeed())
+
+			layerPath := filepath.Join(StorePath, store.VOLUMES_DIR_NAME, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
+			stat, err := os.Stat(layerPath)
+			Expect(err).NotTo(HaveOccurred())
+			preLayerTimestamp := stat.ModTime()
+
+			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(preContents).To(HaveLen(3))
+
+			_, err = runner.Create(groot.CreateSpec{
+				ID:        imageID,
+				BaseImage: "docker:///cfgarden/empty:v0.1.1",
 			})
+			Expect(err).NotTo(HaveOccurred())
 
-			AfterEach(func() {
-				Expect(Runner.Delete(spec.ID)).To(Succeed())
-			})
+			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(afterContents).To(HaveLen(2))
 
-			It("cleans up unused layers before create but not the one about to be created", func() {
-				createSpec = groot.CreateSpec{
-					ID:        "my-empty",
-					BaseImage: "docker:///cfgarden/empty:v0.1.1",
-				}
-				_, err := Runner.Create(createSpec)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(Runner.Delete("my-empty")).To(Succeed())
+			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
+				Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+			}
 
-				layerPath := filepath.Join(StorePath, store.VOLUMES_DIR_NAME, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
-				stat, err := os.Stat(layerPath)
-				Expect(err).NotTo(HaveOccurred())
-				preLayerTimestamp := stat.ModTime()
+			stat, err = os.Stat(layerPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.ModTime()).To(Equal(preLayerTimestamp))
+		})
 
+		Context("when no-clean flag is set", func() {
+			It("does not clean up unused layers", func() {
 				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(3))
+				Expect(preContents).To(HaveLen(1))
 
-				spec.BaseImage = "docker:///cfgarden/empty:v0.1.1"
-				cmd := exec.Command(
-					GrootFSBin, "--store", StorePath,
-					"--config",
-					Runner.ConfigPath,
-					"create",
-					"docker:///cfgarden/empty:v0.1.1",
-					spec.ID,
-				)
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				_, err = Runner.WithNoClean().Create(groot.CreateSpec{
+					ID:        imageID,
+					BaseImage: "docker:///cfgarden/empty:v0.1.1",
+				})
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess, "15s").Should(gexec.Exit(0))
 
 				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(2))
-
-				for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-					Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
-				}
-
-				stat, err = os.Stat(layerPath)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.ModTime()).To(Equal(preLayerTimestamp))
-			})
-
-			Context("when no-clean flag is set", func() {
-				It("does not clean up unused layers", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(preContents).To(HaveLen(1))
-
-					cmd := exec.Command(
-						GrootFSBin, "--store", StorePath,
-						"--config",
-						Runner.ConfigPath,
-						"create",
-						"--no-clean",
-						"docker:///cfgarden/empty:v0.1.1",
-						spec.ID,
-					)
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(sess, "10s").Should(gexec.Exit(0))
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(3))
-				})
+				Expect(afterContents).To(HaveLen(3))
 			})
 		})
 	})

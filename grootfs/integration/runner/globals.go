@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"syscall"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
@@ -12,6 +13,23 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/lager"
 )
+
+///////////////////////////////////////////////////////////////////////////////
+// Registry options
+///////////////////////////////////////////////////////////////////////////////
+
+func (r Runner) WithCredentials(username, password string) Runner {
+	nr := r
+	nr.RegistryUsername = username
+	nr.RegistryPassword = password
+	return nr
+}
+
+func (r Runner) WithInsecureRegistry(registry string) Runner {
+	nr := r
+	nr.InsecureRegistry = registry
+	return nr
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Store path
@@ -149,6 +167,12 @@ func (r *Runner) SetConfig(cfg config.Config) error {
 	return nil
 }
 
+func (r Runner) WithConfig(configPath string) Runner {
+	nr := r
+	nr.ConfigPath = configPath
+	return nr
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 // Timeout
 ///////////////////////////////////////////////////////////////////////////////
@@ -156,5 +180,44 @@ func (r *Runner) SetConfig(cfg config.Config) error {
 func (r Runner) WithTimeout(timeout time.Duration) Runner {
 	nr := r
 	nr.Timeout = timeout
+	return nr
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Env Variables
+///////////////////////////////////////////////////////////////////////////////
+
+func (r Runner) WithEnvVar(variable string) Runner {
+	nr := r
+	nr.EnvVars = append(nr.EnvVars, variable)
+	return nr
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Clean on Start
+///////////////////////////////////////////////////////////////////////////////
+
+func (r Runner) WithClean() Runner {
+	nr := r
+	nr.CleanOnCreate = true
+	return nr
+}
+
+func (r Runner) WithNoClean() Runner {
+	nr := r
+	nr.NoCleanOnCreate = true
+	return nr
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// SysProcAttributes
+///////////////////////////////////////////////////////////////////////////////
+
+func (r Runner) RunningAsUser(uid, gid uint32) Runner {
+	nr := r
+	nr.SysCredential = &syscall.Credential{
+		Uid: uid,
+		Gid: gid,
+	}
 	return nr
 }

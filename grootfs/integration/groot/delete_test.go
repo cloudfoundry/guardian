@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -38,7 +39,12 @@ var _ = Describe("Delete", func() {
 	JustBeforeEach(func() {
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
 		baseImagePath = baseImageFile.Name()
-		image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
+		var err error
+		image, err = Runner.Create(groot.CreateSpec{
+			BaseImage: baseImagePath,
+			ID:        "random-id",
+		})
+		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("deletes an existing image", func() {
@@ -87,55 +93,58 @@ var _ = Describe("Delete", func() {
 				fakePath := path.Join(StorePath, "images/non_existing")
 				Expect(fakePath).NotTo(BeAnExistingFile())
 
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", fakePath)
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
-				Eventually(sess.Out).Should(gbytes.Say("image `non_existing` was not found"))
+				outBuffer := gbytes.NewBuffer()
+				err := Runner.WithStdout(outBuffer).Delete(fakePath)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(outBuffer).Should(gbytes.Say("image `non_existing` was not found"))
 			})
 		})
 
 		Context("when the path provided doesn't belong to the `--store` provided", func() {
 			It("returns an error", func() {
-				cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", "/Iamnot/in/the/storage/images/1234/rootfs")
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				outBuffer := gbytes.NewBuffer()
+				err := Runner.WithStdout(outBuffer).Delete("/Iamnot/in/the/storage/images/1234/rootfs")
 				Expect(err).ToNot(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
-				Eventually(sess.Out).Should(gbytes.Say("path `/Iamnot/in/the/storage/images/1234/rootfs` is outside store path"))
+
+				Eventually(outBuffer).Should(gbytes.Say("path `/Iamnot/in/the/storage/images/1234/rootfs` is outside store path"))
 			})
 		})
 	})
 
 	Context("when the image ID doesn't exist", func() {
 		It("succeeds but logs a warning", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete", "non-existing-id")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-			Eventually(sess.Out).Should(gbytes.Say("image `non-existing-id` was not found"))
+			outBuffer := gbytes.NewBuffer()
+			err := Runner.WithStdout(outBuffer).Delete("non-existing-id")
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(outBuffer).Should(gbytes.Say("image `non-existing-id` was not found"))
 		})
 	})
 
 	Context("when the id is not provided", func() {
 		It("fails", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "delete")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
-			Eventually(sess.Out).Should(gbytes.Say("id was not specified"))
+			outBuffer := gbytes.NewBuffer()
+			err := Runner.WithStdout(outBuffer).Delete("")
+			Expect(err).To(HaveOccurred())
+
+			Eventually(outBuffer).Should(gbytes.Say("id was not specified"))
 		})
 	})
 
 	Context("when drax is not in PATH", func() {
 		It("returns a warning", func() {
-			cmd := exec.Command(GrootFSBin, "--log-level", "info", "--store", StorePath, "delete", "random-id")
-			cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin"}
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-
-			Eventually(sess.Err).Should(gbytes.Say("could not delete quota group"))
-			Eventually(sess.Out).Should(gbytes.Say("Image random-id deleted"))
+			errBuffer := gbytes.NewBuffer()
+			outBuffer := gbytes.NewBuffer()
+			err := Runner.WithoutDraxBin().
+				WithLogLevel(lager.INFO).
+				WithEnvVar("PATH=/usr/sbin:/usr/bin:/sbin:/bin").
+				WithStdout(outBuffer).
+				WithStderr(errBuffer).
+				Delete("random-id")
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(errBuffer).Should(gbytes.Say("could not delete quota group"))
+			Eventually(outBuffer).Should(gbytes.Say("Image random-id deleted"))
 		})
 	})
 })

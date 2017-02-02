@@ -12,10 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -34,31 +31,6 @@ func UpdateBaseImageTar(tarPath, sourcePath string) {
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))
 	Expect(os.Chmod(tarPath, 0666)).To(Succeed())
-}
-
-func CreateImage(grootFSBin, storePath, draxBin, baseImagePath, id string, diskLimit int64) groot.Image {
-	spec := groot.CreateSpec{
-		ID:        id,
-		BaseImage: baseImagePath,
-		DiskLimit: diskLimit,
-	}
-
-	image, err := CreateImageWSpec(grootFSBin, storePath, draxBin, spec)
-	Expect(err).NotTo(HaveOccurred())
-
-	return image
-}
-
-func CreateImageWSpec(grootFSBin, storePath, draxBin string, spec groot.CreateSpec) (groot.Image, error) {
-	runner := &runner.Runner{
-		GrootFSBin: grootFSBin,
-		StorePath:  storePath,
-		DraxBin:    draxBin,
-		LogLevel:   lager.DEBUG,
-		Stderr:     GinkgoWriter,
-	}
-
-	return runner.Create(spec)
 }
 
 func FindUID(user string) uint32 {

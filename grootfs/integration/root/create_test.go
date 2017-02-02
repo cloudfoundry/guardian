@@ -1,7 +1,6 @@
 package root_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -14,8 +13,11 @@ import (
 
 	yaml "gopkg.in/yaml.v2"
 
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/lager"
 
 	"github.com/alecthomas/units"
 	. "github.com/onsi/ginkgo"
@@ -31,6 +33,7 @@ var _ = Describe("Create", func() {
 		rootUID         int
 		rootGID         int
 		storePath       string
+		runner          runnerpkg.Runner
 	)
 
 	BeforeEach(func() {
@@ -47,6 +50,8 @@ var _ = Describe("Create", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Chmod(storePath, 0777)).To(Succeed())
 		Expect(os.Chown(storePath, int(GrootUID), int(GrootGID))).To(Succeed())
+
+		runner = Runner.WithStore(storePath)
 
 		grootFilePath := path.Join(sourceImagePath, "foo")
 		Expect(ioutil.WriteFile(grootFilePath, []byte("hello-world"), 0644)).To(Succeed())
@@ -76,7 +81,12 @@ var _ = Describe("Create", func() {
 	})
 
 	It("keeps the ownership and permissions", func() {
-		image := integration.CreateImage(GrootFSBin, storePath, DraxBin, baseImagePath, "random-id", 0)
+
+		image, err := Runner.Create(groot.CreateSpec{
+			BaseImage: baseImagePath,
+			ID:        "random-id",
+		})
+		Expect(err).ToNot(HaveOccurred())
 
 		grootFi, err := os.Stat(path.Join(image.RootFSPath, "foo"))
 		Expect(err).NotTo(HaveOccurred())
@@ -93,44 +103,38 @@ var _ = Describe("Create", func() {
 		// This test is in the root suite not because `grootfs` is run by root, but
 		// because we need to write a file as root to test the translation.
 		It("translates the rootfs accordingly", func() {
-			cmd := exec.Command(
-				GrootFSBin, "--store", storePath,
-				"--log-level", "debug",
-				"create",
-				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
-				"--uid-mapping", "1:100000:65000",
-				"--gid-mapping", fmt.Sprintf("0:%d:1", GrootGID),
-				"--gid-mapping", "1:100000:65000",
-				baseImagePath,
-				"some-id",
-			)
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				Credential: &syscall.Credential{
-					Uid: GrootUID,
-					Gid: GrootGID,
-				},
-			}
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-			image := strings.TrimSpace(string(sess.Out.Contents()))
+			image, err := runner.RunningAsUser(GrootUID, GrootGID).WithLogLevel(lager.DEBUG).
+				Create(groot.CreateSpec{
+					ID:        "some-id",
+					BaseImage: baseImagePath,
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+				})
 
-			grootFi, err := os.Stat(path.Join(image, "rootfs", "foo"))
+			Expect(err).NotTo(HaveOccurred())
+
+			grootFi, err := os.Stat(path.Join(image.RootFSPath, "foo"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			grootDir, err := os.Stat(path.Join(image, "rootfs", "groot-folder"))
+			grootDir, err := os.Stat(path.Join(image.RootFSPath, "groot-folder"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			rootFi, err := os.Stat(path.Join(image, "rootfs", "bar"))
+			rootFi, err := os.Stat(path.Join(image.RootFSPath, "bar"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-			rootDir, err := os.Stat(path.Join(image, "rootfs", "root-folder"))
+			rootDir, err := os.Stat(path.Join(image.RootFSPath, "root-folder"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
@@ -138,63 +142,60 @@ var _ = Describe("Create", func() {
 
 		Context("and it's executed as root", func() {
 			It("translates the rootfs accordingly", func() {
-				cmd := exec.Command(
-					GrootFSBin, "--store", storePath,
-					"--log-level", "debug",
-					"create",
-					"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
-					"--uid-mapping", "1:100000:65000",
-					"--gid-mapping", fmt.Sprintf("0:%d:1", GrootGID),
-					"--gid-mapping", "1:100000:65000",
-					baseImagePath,
-					"some-id",
-				)
+				image, err := runner.WithLogLevel(lager.DEBUG).
+					Create(groot.CreateSpec{
+						ID:        "some-id",
+						BaseImage: baseImagePath,
+						UIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						},
+						GIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						},
+					})
 
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
-				image := strings.TrimSpace(string(sess.Out.Contents()))
 
-				grootFi, err := os.Stat(path.Join(image, "rootfs", "foo"))
+				grootFi, err := os.Stat(path.Join(image.RootFSPath, "foo"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 				Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-				grootDir, err := os.Stat(path.Join(image, "rootfs", "groot-folder"))
+				grootDir, err := os.Stat(path.Join(image.RootFSPath, "groot-folder"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(grootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 				Expect(grootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-				rootFi, err := os.Stat(path.Join(image, "rootfs", "bar"))
+				rootFi, err := os.Stat(path.Join(image.RootFSPath, "bar"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 				Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-				rootDir, err := os.Stat(path.Join(image, "rootfs", "root-folder"))
+				rootDir, err := os.Stat(path.Join(image.RootFSPath, "root-folder"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 				Expect(rootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 			})
 
 			It("allows the mapped user to have access to the created image", func() {
-				cmd := exec.Command(
-					GrootFSBin, "--store", storePath,
-					"--log-level", "debug",
-					"create",
-					"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
-					"--uid-mapping", "1:100000:65000",
-					"--gid-mapping", fmt.Sprintf("0:%d:1", GrootGID),
-					"--gid-mapping", "1:100000:65000",
-					baseImagePath,
-					"some-id",
-				)
-
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				image, err := runner.WithLogLevel(lager.DEBUG).
+					Create(groot.CreateSpec{
+						ID:        "some-id",
+						BaseImage: baseImagePath,
+						UIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						},
+						GIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						},
+					})
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
-				image := strings.TrimSpace(string(sess.Out.Contents()))
 
-				listRootfsCmd := exec.Command("ls", filepath.Join(image, "rootfs", "root-folder"))
+				listRootfsCmd := exec.Command("ls", filepath.Join(image.RootFSPath, "root-folder"))
 				listRootfsCmd.SysProcAttr = &syscall.SysProcAttr{
 					Credential: &syscall.Credential{
 						Uid: GrootUID,
@@ -202,7 +203,7 @@ var _ = Describe("Create", func() {
 					},
 				}
 
-				sess, err = gexec.Start(listRootfsCmd, GinkgoWriter, GinkgoWriter)
+				sess, err := gexec.Start(listRootfsCmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
 			})
@@ -211,62 +212,52 @@ var _ = Describe("Create", func() {
 
 	Context("when image is local", func() {
 		It("logs the steps taken to create the rootfs", func() {
-			cmd := exec.Command(
-				GrootFSBin, "--store", storePath,
-				"--log-level", "debug",
-				"create",
-				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
-				"--uid-mapping", "1:100000:65000",
-				"--gid-mapping", fmt.Sprintf("0:%d:1", GrootGID),
-				"--gid-mapping", "1:100000:65000",
-				baseImagePath,
-				"some-id",
-			)
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				Credential: &syscall.Credential{
-					Uid: GrootUID,
-					Gid: GrootGID,
-				},
-			}
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			errBuffer := gbytes.NewBuffer()
+			_, err := runner.RunningAsUser(GrootUID, GrootGID).WithLogLevel(lager.DEBUG).WithStderr(errBuffer).
+				Create(groot.CreateSpec{
+					ID:        "some-id",
+					BaseImage: baseImagePath,
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+				})
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess, 10*time.Second).Should(gexec.Exit(0))
 
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.starting-unpack-wrapper-command"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.mapUID.starting-id-map"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.mapGID.starting-id-map"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.starting-unpack-wrapper-command"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.mapUID.starting-id-map"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.mapGID.starting-id-map"))
 		})
 	})
 
 	Context("when image is remote", func() {
 		It("logs the steps taken to create the rootfs", func() {
-			cmd := exec.Command(
-				GrootFSBin, "--store", storePath,
-				"--log-level", "debug",
-				"create",
-				"--uid-mapping", fmt.Sprintf("0:%d:1", GrootUID),
-				"--uid-mapping", "1:100000:65000",
-				"--gid-mapping", fmt.Sprintf("0:%d:1", GrootGID),
-				"--gid-mapping", "1:100000:65000",
-				"docker:///cfgarden/empty:v0.1.0",
-				"some-id",
-			)
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				Credential: &syscall.Credential{
-					Uid: GrootUID,
-					Gid: GrootGID,
-				},
-			}
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			errBuffer := gbytes.NewBuffer()
+			_, err := runner.RunningAsUser(GrootUID, GrootGID).WithLogLevel(lager.DEBUG).WithStderr(errBuffer).
+				Create(groot.CreateSpec{
+					ID:        "some-id",
+					BaseImage: "docker:///cfgarden/empty:v0.1.0",
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+				})
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess, 10*time.Second).Should(gexec.Exit(0))
 
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.btrfs-creating-volume.starting-btrfs"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.starting-unpack-wrapper-command"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.mapUID.starting-id-map"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.mapGID.starting-id-map"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.unpack-wrapper.starting-unpack"))
-			Eventually(sess.Err).Should(gbytes.Say("grootfs.create.groot-creating.making-image.btrfs-creating-snapshot.starting-btrfs"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.btrfs-creating-volume.starting-btrfs"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.starting-unpack-wrapper-command"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.mapUID.starting-id-map"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.mapGID.starting-id-map"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-id-mapper-unpacking.unpack-wrapper.starting-unpack"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.making-image.btrfs-creating-snapshot.starting-btrfs"))
 		})
 
 		Context("when the image is bigger than available memory", func() {
@@ -274,6 +265,7 @@ var _ = Describe("Create", func() {
 				cmd := exec.Command(
 					GrootFSBin,
 					"--store", storePath,
+					"--driver", Driver,
 					"--log-level", "fatal",
 					"create",
 					"docker:///ubuntu:trusty",
@@ -316,23 +308,12 @@ var _ = Describe("Create", func() {
 	Context("store configuration", func() {
 		Context("when there's no mapping", func() {
 			It("sets the onwership of the store to the caller user", func() {
-				cmd := exec.Command(
-					GrootFSBin, "--store", storePath,
-					"--log-level", "debug",
-					"create",
-					baseImagePath,
-					"some-id",
-				)
-				cmd.SysProcAttr = &syscall.SysProcAttr{
-					Credential: &syscall.Credential{
-						Uid: GrootUID,
-						Gid: GrootGID,
-					},
-				}
-
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				_, err := runner.RunningAsUser(GrootUID, GrootGID).WithLogLevel(lager.DEBUG).
+					Create(groot.CreateSpec{
+						ID:        "some-id",
+						BaseImage: baseImagePath,
+					})
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess, 10*time.Second).Should(gexec.Exit(0))
 
 				stat, err := os.Stat(filepath.Join(storePath, store.IMAGES_DIR_NAME))
 				Expect(err).NotTo(HaveOccurred())
@@ -353,22 +334,22 @@ var _ = Describe("Create", func() {
 
 		Context("when there's mappings", func() {
 			It("sets the onwnership of the store to the mapped user", func() {
-				cmd := exec.Command(
-					GrootFSBin, "--store", storePath,
-					"--log-level", "debug",
-					"create",
-					"--uid-mapping", fmt.Sprintf("0:%d:1", 5000),
-					"--uid-mapping", "1:100000:65000",
-					"--gid-mapping", fmt.Sprintf("0:%d:1", 6000),
-					"--gid-mapping", "1:100000:65000",
-					baseImagePath,
-					"some-id",
-				)
+				_, err := runner.WithLogLevel(lager.DEBUG).
+					Create(groot.CreateSpec{
+						ID:        "some-id",
+						BaseImage: baseImagePath,
+						UIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: 5000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						},
+						GIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: 6000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						},
+					})
 
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
 				// Fails because these mappings aren't valid
-				Eventually(sess, 10*time.Second).Should(gexec.Exit(1))
+				Expect(err).To(HaveOccurred())
 
 				stat, err := os.Stat(filepath.Join(storePath, store.IMAGES_DIR_NAME))
 				Expect(err).NotTo(HaveOccurred())
@@ -388,20 +369,19 @@ var _ = Describe("Create", func() {
 
 			Context("but there's no mapping for root or size = 1", func() {
 				It("fails fast", func() {
-					cmd := exec.Command(
-						GrootFSBin, "--store", storePath,
-						"--log-level", "debug",
-						"create",
-						"--uid-mapping", "1:100000:65000",
-						"--gid-mapping", "1:100000:65000",
-						baseImagePath,
-						"some-id",
-					)
+					_, err := runner.WithLogLevel(lager.DEBUG).
+						Create(groot.CreateSpec{
+							ID:        "some-id",
+							BaseImage: baseImagePath,
+							UIDMappings: []groot.IDMappingSpec{
+								groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+							},
+							GIDMappings: []groot.IDMappingSpec{
+								groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+							},
+						})
 
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					Eventually(sess).Should(gexec.Exit(1))
-					Eventually(sess).Should(gbytes.Say("couldn't determine store owner, missing root user mapping"))
+					Expect(err).To(MatchError(ContainSubstring("couldn't determine store owner, missing root user mapping")))
 				})
 			})
 		})

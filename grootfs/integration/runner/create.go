@@ -33,11 +33,34 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 			fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size),
 		)
 	}
-	if spec.CleanOnCreate {
-		args = append(args, "--clean")
+
+	if r.CleanOnCreate || r.NoCleanOnCreate {
+		if r.CleanOnCreate {
+			args = append(args, "--clean")
+		}
+		if r.NoCleanOnCreate {
+			args = append(args, "--no-clean")
+		}
 	} else {
-		args = append(args, "--no-clean")
+		if spec.CleanOnCreate {
+			args = append(args, "--clean")
+		} else {
+			args = append(args, "--no-clean")
+		}
 	}
+
+	if r.InsecureRegistry != "" {
+		args = append(args, "--insecure-registry", r.InsecureRegistry)
+	}
+
+	if r.RegistryUsername != "" {
+		args = append(args, "--username", r.RegistryUsername)
+	}
+
+	if r.RegistryPassword != "" {
+		args = append(args, "--password", r.RegistryPassword)
+	}
+
 	if spec.DiskLimit != 0 {
 		args = append(args, "--disk-limit-size-bytes",
 			strconv.FormatInt(spec.DiskLimit, 10),
@@ -46,8 +69,14 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 			args = append(args, "--exclude-image-from-quota")
 		}
 	}
-	args = append(args, spec.BaseImage)
-	args = append(args, spec.ID)
+
+	if spec.BaseImage != "" {
+		args = append(args, spec.BaseImage)
+	}
+
+	if spec.ID != "" {
+		args = append(args, spec.ID)
+	}
 
 	return args
 }

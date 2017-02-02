@@ -61,7 +61,12 @@ var _ = Describe("Stats", func() {
 		})
 
 		JustBeforeEach(func() {
-			image = integration.CreateImage(GrootFSBin, StorePath, DraxBin, baseImagePath, "random-id", 0)
+			var err error
+			image, err = Runner.Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+			})
+			Expect(err).ToNot(HaveOccurred())
 			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=4")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
@@ -119,11 +124,8 @@ var _ = Describe("Stats", func() {
 
 	Context("when the image id is not provided", func() {
 		It("returns an error", func() {
-			cmd := exec.Command(GrootFSBin, "--store", StorePath, "--drax-bin", DraxBin, "stats")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
-			Eventually(sess.Out).Should(gbytes.Say("invalid arguments"))
+			_, err := Runner.Stats("")
+			Expect(err).To(MatchError(ContainSubstring("invalid arguments")))
 		})
 	})
 })

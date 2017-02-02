@@ -8,6 +8,7 @@ import (
 	"net"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/lager"
@@ -38,6 +39,16 @@ type Runner struct {
 	ConfigPath string
 	// Timeout
 	Timeout time.Duration
+	// Registry
+	InsecureRegistry string
+	RegistryUsername string
+	RegistryPassword string
+	EnvVars          []string
+	// Clean on Create
+	CleanOnCreate   bool
+	NoCleanOnCreate bool
+
+	SysCredential *syscall.Credential
 }
 
 func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error) {
@@ -51,6 +62,13 @@ func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error)
 	r = r.WithStdout(stdout)
 
 	cmd := r.makeCmd(subcommand, args)
+	cmd.Env = r.EnvVars
+
+	if r.SysCredential != nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Credential: r.SysCredential,
+		}
+	}
 
 	runErr := r.runCmd(cmd)
 	if runErr != nil {
