@@ -181,46 +181,6 @@ var _ = Describe("Create", func() {
 				})
 			})
 		})
-
-		Describe("--btrfs-bin global flag", func() {
-			var (
-				btrfsCalledFile *os.File
-				btrfsBin        *os.File
-				tempFolder      string
-			)
-
-			BeforeEach(func() {
-				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
-			})
-
-			Context("when it's provided", func() {
-				It("uses calls the provided btrfs binary", func() {
-					_, err := Runner.WithBtrfsBin(btrfsBin.Name()).Create(groot.CreateSpec{BaseImage: baseImagePath, ID: "random-id"})
-					Expect(err).To(HaveOccurred())
-
-					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - btrfs"))
-				})
-			})
-
-			Context("when it's not provided", func() {
-				It("uses btrfs from $PATH", func() {
-					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-					_, err := Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(groot.CreateSpec{
-						BaseImage: baseImagePath,
-						ID:        "random-id",
-						DiskLimit: tenMegabytes,
-					})
-					Expect(err).To(HaveOccurred())
-
-					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - btrfs"))
-				})
-			})
-		})
-
 	})
 
 	Describe("unique uid and gid mappings per store", func() {
@@ -620,31 +580,6 @@ var _ = Describe("Create", func() {
 				contents, err := ioutil.ReadFile(draxCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("I'm groot - drax"))
-			})
-		})
-
-		Describe("btrfs bin", func() {
-			var (
-				btrfsCalledFile *os.File
-				btrfsBin        *os.File
-				tempFolder      string
-			)
-
-			BeforeEach(func() {
-				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
-				cfg.BtrfsBin = btrfsBin.Name()
-			})
-
-			It("uses the btrfs bin from the config file", func() {
-				_, err := Runner.Create(groot.CreateSpec{
-					BaseImage: baseImagePath,
-					ID:        "random-id",
-				})
-				Expect(err).To(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - btrfs"))
 			})
 		})
 

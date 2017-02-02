@@ -3,9 +3,7 @@ package groot_test
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
-	"strings"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -14,7 +12,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Delete", func() {
@@ -50,26 +47,6 @@ var _ = Describe("Delete", func() {
 	It("deletes an existing image", func() {
 		Expect(Runner.Delete("random-id")).To(Succeed())
 		Expect(image.Path).NotTo(BeAnExistingFile())
-	})
-
-	It("destroys the quota group associated with the volume", func() {
-		rootIDBuffer := gbytes.NewBuffer()
-		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", image.RootFSPath), rootIDBuffer, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
-		rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
-
-		sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
-		Expect(sess).To(gbytes.Say(rootID))
-
-		Expect(Runner.Delete("random-id")).To(Succeed())
-
-		sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
-		Expect(sess).ToNot(gbytes.Say(rootID))
 	})
 
 	Context("when the store doesn't exist", func() {

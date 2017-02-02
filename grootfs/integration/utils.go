@@ -54,6 +54,12 @@ func FindGID(group string) uint32 {
 	return uint32(i)
 }
 
+func SkipIfNotBTRFS(driver string) {
+	if driver != "btrfs" {
+		Skip("This tests are only for BTRFS driver. Skipping.")
+	}
+}
+
 func CreateFakeDrax() (string, *os.File, *os.File) {
 	tempFolder, bin, binCalledFile := CreateFakeBin("drax")
 	testhelpers.SuidDrax(bin.Name())
