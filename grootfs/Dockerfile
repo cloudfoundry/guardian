@@ -6,6 +6,7 @@ MAINTAINER https://github.com/cloudfoundry/garden-dockerfiles
 RUN apt-get update && \
     apt-get -y install \
         btrfs-tools \
+        xfsprogs \
         build-essential \
         curl \
         git \
