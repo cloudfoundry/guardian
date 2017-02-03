@@ -115,26 +115,30 @@ var _ = Describe("Link Management", func() {
 	})
 
 	Describe("SetNs", func() {
+		var netnsName string
+
 		BeforeEach(func() {
-			cmd, err := gexec.Start(exec.Command("sh", "-c", "ip netns add gdnsetnstest"), GinkgoWriter, GinkgoWriter)
+			netnsName = fmt.Sprintf("gdnsetnstest%d", GinkgoParallelNode())
+
+			cmd, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("ip netns add %s", netnsName)), GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(cmd, "5s").Should(gexec.Exit(0))
 		})
 
 		AfterEach(func() {
-			cmd, err := gexec.Start(exec.Command("sh", "-c", "ip netns delete gdnsetnstest"), GinkgoWriter, GinkgoWriter)
+			cmd, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("ip netns delete %s", netnsName)), GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(cmd, "5s").Should(gexec.Exit(0))
 		})
 
 		It("moves the interface in to the given namespace by pid", func() {
 			// look at this perfectly ordinary hat
-			netns, err := gexec.Start(exec.Command("ip", "netns", "exec", "gdnsetnstest", "sleep", "6312736"), GinkgoWriter, GinkgoWriter)
+			netns, err := gexec.Start(exec.Command("ip", "netns", "exec", netnsName, "sleep", "6312736"), GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			defer netns.Kill()
 
 			// (it has the following fd)
-			f, err := os.Open("/var/run/netns/gdnsetnstest")
+			f, err := os.Open(fmt.Sprintf("/var/run/netns/%s", netnsName))
 			Expect(err).ToNot(HaveOccurred())
 
 			// I wave the magic wand
@@ -145,7 +149,7 @@ var _ = Describe("Link Management", func() {
 			Expect(intfs).ToNot(ContainElement(intf))
 
 			// oh my word it's in the hat!
-			session, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("ip netns exec gdnsetnstest ifconfig %s", name)), GinkgoWriter, GinkgoWriter)
+			session, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("ip netns exec %s ifconfig %s", netnsName, name)), GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(session, "5s").Should(gexec.Exit(0))
 		})
