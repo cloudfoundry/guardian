@@ -371,14 +371,6 @@ var _ = Describe("Create with remote images", func() {
 			baseImageURL = "docker:///cfgarden/non-writable-file"
 		})
 
-		XIt("fails with a sensible message", func() {
-			_, err := Runner.Create(groot.CreateSpec{
-				BaseImage: baseImageURL,
-				ID:        "random-id",
-			})
-			Expect(err).To(MatchError(ContainSubstring("'/test' does not give write permission to its owner. This image can only be unpacked using uid and gid mappings, or by running as root.")))
-		})
-
 		Context("when providing id mappings", func() {
 			It("works", func() {
 				image, err := Runner.Create(groot.CreateSpec{
@@ -403,15 +395,6 @@ var _ = Describe("Create with remote images", func() {
 	Context("when the image has folders that are not writable to their owner", func() {
 		BeforeEach(func() {
 			baseImageURL = "docker:///cfgarden/non-writable-folder"
-		})
-
-		XIt("fails with a sensible message", func() {
-			_, err := Runner.Create(groot.CreateSpec{
-				BaseImage: baseImageURL,
-				ID:        "random-id",
-			})
-
-			Expect(err).To(MatchError(ContainSubstring("'/test' does not give write permission to its owner. This image can only be unpacked using uid and gid mappings, or by running as root.")))
 		})
 
 		Context("when providing id mappings", func() {

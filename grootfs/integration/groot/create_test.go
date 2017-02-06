@@ -212,94 +212,6 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	XDescribe("--newuidmap-bin global flag", func() {
-		var (
-			newuidmapCalledFile *os.File
-			newuidmapBin        *os.File
-			tempFolder          string
-		)
-
-		BeforeEach(func() {
-			tempFolder, newuidmapBin, newuidmapCalledFile = integration.CreateFakeBin("newuidmap")
-		})
-
-		Context("when it's provided", func() {
-			It("uses calls the provided newuidmap binary", func() {
-				_, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
-					BaseImage:   baseImagePath,
-					ID:          "random-id",
-					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1}},
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(newuidmapCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - newuidmap"))
-			})
-		})
-
-		Context("when it's not provided", func() {
-			It("uses newuidmap from $PATH", func() {
-				newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-				_, err := Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(groot.CreateSpec{
-					BaseImage:   baseImagePath,
-					ID:          "random-id",
-					DiskLimit:   tenMegabytes,
-					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1}},
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(newuidmapCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - newuidmap"))
-			})
-		})
-	})
-
-	XDescribe("--newgidmap-bin global flag", func() {
-		var (
-			newgidmapCalledFile *os.File
-			newgidmapBin        *os.File
-			tempFolder          string
-		)
-
-		BeforeEach(func() {
-			tempFolder, newgidmapBin, newgidmapCalledFile = integration.CreateFakeBin("newgidmap")
-		})
-
-		Context("when it's provided", func() {
-			It("uses calls the provided newgidmap binary", func() {
-				_, err := Runner.WithNewgidmapBin(newgidmapBin.Name()).Create(groot.CreateSpec{
-					BaseImage:   baseImagePath,
-					ID:          "random-id",
-					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1}},
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(newgidmapCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - newgidmap"))
-			})
-		})
-
-		Context("when it's not provided", func() {
-			It("uses newgidmap from $PATH", func() {
-				newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-				_, err := Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(groot.CreateSpec{
-					BaseImage:   baseImagePath,
-					ID:          "random-id",
-					DiskLimit:   tenMegabytes,
-					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1}},
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(newgidmapCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - newgidmap"))
-			})
-		})
-	})
-
 	Context("when --clean is given", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
@@ -456,31 +368,6 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	XContext("when groot does not have permissions to apply the requested mapping", func() {
-		It("returns the newuidmap output in the stdout", func() {
-			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
-				BaseImage:   baseImagePath,
-				UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1, NamespaceID: 1, Size: 65000}, groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1}},
-				ID:          "some-id",
-			})
-
-			Expect(err).To(MatchError(MatchRegexp(`range [\[\)0-9\-]* -> [\[\)0-9\-]* not allowed`)))
-		})
-
-		It("does not leak the image directory", func() {
-			_, err := Runner.Create(groot.CreateSpec{
-				ID:        "some-id",
-				BaseImage: baseImagePath,
-				UIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{HostID: 1, NamespaceID: 1, Size: 65000},
-					groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 65000},
-				},
-			})
-			Expect(err).To(HaveOccurred())
-			Expect(filepath.Join(StorePath, "images", "some-id")).ToNot(BeAnExistingFile())
-		})
-	})
-
 	Context("when the image is invalid", func() {
 		It("fails", func() {
 			_, err := Runner.Create(groot.CreateSpec{
@@ -584,58 +471,6 @@ var _ = Describe("Create", func() {
 				contents, err := ioutil.ReadFile(draxCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("I'm groot - drax"))
-			})
-		})
-
-		XDescribe("newuidmap bin", func() {
-			var (
-				newuidmapCalledFile *os.File
-				newuidmapBin        *os.File
-				tempFolder          string
-			)
-
-			BeforeEach(func() {
-				tempFolder, newuidmapBin, newuidmapCalledFile = integration.CreateFakeBin("newuidmap")
-				cfg.NewuidmapBin = newuidmapBin.Name()
-			})
-
-			It("uses the newuidmap bin from the config file", func() {
-				_, err := Runner.Create(groot.CreateSpec{
-					BaseImage:   baseImagePath,
-					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1}},
-					ID:          "random-id",
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(newuidmapCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - newuidmap"))
-			})
-		})
-
-		XDescribe("newgidmap bin", func() {
-			var (
-				newgidmapCalledFile *os.File
-				newgidmapBin        *os.File
-				tempFolder          string
-			)
-
-			BeforeEach(func() {
-				tempFolder, newgidmapBin, newgidmapCalledFile = integration.CreateFakeBin("newgidmap")
-				cfg.NewgidmapBin = newgidmapBin.Name()
-			})
-
-			It("uses the newgidmap bin from the config file", func() {
-				_, err := Runner.Create(groot.CreateSpec{
-					BaseImage:   baseImagePath,
-					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1}},
-					ID:          "random-id",
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(newgidmapCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - newgidmap"))
 			})
 		})
 
