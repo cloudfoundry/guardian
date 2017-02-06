@@ -68,7 +68,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 			log.Info("start")
 			defer log.Info("end")
 
-			if err = b.imageDriver.DestroyImage(logger, image.RootFSPath); err != nil {
+			if err = b.imageDriver.DestroyImage(logger, image.Path); err != nil {
 				log.Error("destroying-rootfs-snapshot", err)
 			}
 
@@ -118,7 +118,7 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 	}
 
 	image := b.createImage(id)
-	if err := b.imageDriver.DestroyImage(logger, image.RootFSPath); err != nil {
+	if err := b.imageDriver.DestroyImage(logger, image.Path); err != nil {
 		return fmt.Errorf("destroying snapshot: %s", err)
 	}
 

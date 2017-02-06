@@ -3,7 +3,6 @@ package store_test
 import (
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"syscall"
@@ -14,7 +13,6 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Configurer", func() {
@@ -117,25 +115,12 @@ var _ = Describe("Configurer", func() {
 
 		Context("it will change the owner of the created folders to the provided userID", func() {
 			It("returns an error", func() {
-				Expect(store.ConfigureStore(logger, storePath, 0, 1, "random-id")).To(
-					MatchError(ContainSubstring("changing store owner to 0:1 for path")),
-				)
-			})
-		})
+				Expect(store.ConfigureStore(logger, storePath, 2, 1, "random-id")).To(Succeed())
 
-		Context("when it can't change the store path ownership", func() {
-			BeforeEach(func() {
-				Expect(os.Mkdir(storePath, 0777)).To(Succeed())
-				Expect(os.Chmod(storePath, 0777)).To(Succeed())
-				chown := exec.Command("sudo", "chown", "5000:5000", storePath)
-				sess, err := gexec.Start(chown, GinkgoWriter, GinkgoWriter)
+				storeDir, err := os.Stat(storePath)
 				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
-			})
-
-			It("returns an error", func() {
-				err := store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")
-				Expect(err).To(MatchError(ContainSubstring("changing store owner to 1000:1000 for path")))
+				Expect(storeDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(2)))
+				Expect(storeDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1)))
 			})
 		})
 

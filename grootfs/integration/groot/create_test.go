@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"syscall"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -38,6 +39,7 @@ var _ = Describe("Create", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "root-owned"), []byte{}, 0644)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -70,7 +72,7 @@ var _ = Describe("Create", func() {
 			Describe("create", func() {
 				It("logs the image id", func() {
 					logBuffer := gbytes.NewBuffer()
-					_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
+					_, err := Runner.WithStore("/invalid/store/path").WithStderr(logBuffer).
 						Create(groot.CreateSpec{
 							ID:        "random-id",
 							BaseImage: "my-image",
@@ -160,7 +162,7 @@ var _ = Describe("Create", func() {
 						})
 						Expect(err).To(HaveOccurred())
 
-						imagePath := path.Join(StorePath, "images", "random-id")
+						imagePath := path.Join(Runner.StorePath, "images", "random-id")
 						Expect(imagePath).ToNot(BeAnExistingFile())
 					})
 				})
@@ -193,8 +195,8 @@ var _ = Describe("Create", func() {
 				image, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
 					BaseImage:   baseImagePath,
 					ID:          "foobar",
-					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
-					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
+					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1}},
+					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1}},
 				})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(image.Path).To(BeADirectory())
@@ -210,7 +212,7 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Describe("--newuidmap-bin global flag", func() {
+	XDescribe("--newuidmap-bin global flag", func() {
 		var (
 			newuidmapCalledFile *os.File
 			newuidmapBin        *os.File
@@ -226,7 +228,7 @@ var _ = Describe("Create", func() {
 				_, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
 					BaseImage:   baseImagePath,
 					ID:          "random-id",
-					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
+					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1}},
 				})
 				Expect(err).ToNot(HaveOccurred())
 
@@ -254,7 +256,7 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Describe("--newgidmap-bin global flag", func() {
+	XDescribe("--newgidmap-bin global flag", func() {
 		var (
 			newgidmapCalledFile *os.File
 			newgidmapBin        *os.File
@@ -270,7 +272,7 @@ var _ = Describe("Create", func() {
 				_, err := Runner.WithNewgidmapBin(newgidmapBin.Name()).Create(groot.CreateSpec{
 					BaseImage:   baseImagePath,
 					ID:          "random-id",
-					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
+					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1}},
 				})
 				Expect(err).ToNot(HaveOccurred())
 
@@ -393,7 +395,8 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 			})
-			Expect(err).To(MatchError(ContainSubstring(("making directory `/var/lib/grootfs`"))))
+			Expect(err).NotTo(HaveOccurred())
+			Expect("/var/lib/grootfs/images").To(BeADirectory())
 		})
 	})
 
@@ -453,11 +456,11 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Context("when groot does not have permissions to apply the requested mapping", func() {
+	XContext("when groot does not have permissions to apply the requested mapping", func() {
 		It("returns the newuidmap output in the stdout", func() {
 			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
 				BaseImage:   baseImagePath,
-				UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1, NamespaceID: 1, Size: 65000}, groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
+				UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 1, NamespaceID: 1, Size: 65000}, groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1}},
 				ID:          "some-id",
 			})
 
@@ -584,7 +587,7 @@ var _ = Describe("Create", func() {
 			})
 		})
 
-		Describe("newuidmap bin", func() {
+		XDescribe("newuidmap bin", func() {
 			var (
 				newuidmapCalledFile *os.File
 				newuidmapBin        *os.File
@@ -599,7 +602,7 @@ var _ = Describe("Create", func() {
 			It("uses the newuidmap bin from the config file", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					BaseImage:   baseImagePath,
-					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
+					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1}},
 					ID:          "random-id",
 				})
 				Expect(err).ToNot(HaveOccurred())
@@ -610,7 +613,7 @@ var _ = Describe("Create", func() {
 			})
 		})
 
-		Describe("newgidmap bin", func() {
+		XDescribe("newgidmap bin", func() {
 			var (
 				newgidmapCalledFile *os.File
 				newgidmapBin        *os.File
@@ -625,7 +628,7 @@ var _ = Describe("Create", func() {
 			It("uses the newgidmap bin from the config file", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					BaseImage:   baseImagePath,
-					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1}},
+					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1}},
 					ID:          "random-id",
 				})
 				Expect(err).ToNot(HaveOccurred())
@@ -636,29 +639,20 @@ var _ = Describe("Create", func() {
 			})
 		})
 
-		Describe("uid mappings", func() {
+		Describe("mappings", func() {
 			BeforeEach(func() {
-				cfg.UIDMappings = []string{"1:1:65990", "0:" + CurrentUserID + ":1"}
+				cfg.UIDMappings = []string{"1:1001:65990", "0:500:1"}
+				cfg.GIDMappings = []string{"1:1001:65990", "0:501:1"}
 			})
 
 			It("uses the uid mappings from the config file", func() {
-				buffer := gbytes.NewBuffer()
-				_, err := Runner.WithStdout(buffer).Create(spec)
-				Expect(err).To(HaveOccurred())
-				Expect(buffer.Contents()).To(ContainSubstring("uid range [1-65991) -> [1-65991) not allowed"))
-			})
-		})
+				image, err := Runner.Create(spec)
+				Expect(err).NotTo(HaveOccurred())
 
-		Describe("gid mappings", func() {
-			BeforeEach(func() {
-				cfg.GIDMappings = []string{"1:1:65990", "0:" + CurrentUserID + ":1"}
-			})
-
-			It("uses the gid mappings from the config file", func() {
-				buffer := gbytes.NewBuffer()
-				_, err := Runner.WithStdout(buffer).Create(spec)
-				Expect(err).To(HaveOccurred())
-				Expect(string(buffer.Contents())).To(ContainSubstring("gid range [1-65991) -> [1-65991) not allowed"))
+				rootOwnedFile, err := os.Stat(filepath.Join(image.RootFSPath, "root-owned"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(500)))
+				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(501)))
 			})
 		})
 

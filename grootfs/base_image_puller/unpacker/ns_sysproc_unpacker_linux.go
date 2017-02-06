@@ -35,7 +35,7 @@ func (u *NSSysProcUnpacker) Unpack(logger lager.Logger, spec base_image_puller.U
 		unpackCmd.SysProcAttr = &syscall.SysProcAttr{
 			Cloneflags:  syscall.CLONE_NEWUSER,
 			UidMappings: u.parseMappings(spec.UIDMappings),
-			GidMappings: u.parseMappings(spec.UIDMappings),
+			GidMappings: u.parseMappings(spec.GIDMappings),
 			Credential: &syscall.Credential{
 				Uid: 0,
 				Gid: 0,

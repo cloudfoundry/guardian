@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
 	"path"
 	"strconv"
 
@@ -28,8 +29,9 @@ var (
 	StorePath  string
 	StoreName  string
 
-	CurrentUserID    string
-	CurrentUserIDInt int
+	GrootUser        *user.User
+	GrootUID         uint32
+	GrootGID         uint32
 	RegistryUsername string
 	RegistryPassword string
 )
@@ -46,8 +48,18 @@ func TestGroot(t *testing.T) {
 
 		return []byte(grootFSBin)
 	}, func(data []byte) {
-		CurrentUserIDInt = os.Getuid()
-		CurrentUserID = strconv.Itoa(CurrentUserIDInt)
+		var err error
+		GrootUser, err = user.Lookup("groot")
+		Expect(err).NotTo(HaveOccurred())
+
+		grootUID, err := strconv.ParseUint(GrootUser.Uid, 10, 32)
+		Expect(err).NotTo(HaveOccurred())
+		GrootUID = uint32(grootUID)
+
+		grootGID, err := strconv.ParseUint(GrootUser.Gid, 10, 32)
+		Expect(err).NotTo(HaveOccurred())
+		GrootGID = uint32(grootGID)
+
 		GrootFSBin = string(data)
 		Driver = os.Getenv("VOLUME_DRIVER")
 		if Driver == "overlay-xfs" {
@@ -69,6 +81,7 @@ func TestGroot(t *testing.T) {
 		StoreName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
 		StorePath = path.Join(MountPath, StoreName)
 		Expect(os.Mkdir(StorePath, 0755)).NotTo(HaveOccurred())
+		Expect(os.Chmod(StorePath, 0777)).To(Succeed())
 
 		var err error
 		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")

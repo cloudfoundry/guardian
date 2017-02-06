@@ -30,15 +30,13 @@ var (
 
 	storeName string
 	StorePath string
+	MountPath string
 )
 
 const btrfsMountPath = "/mnt/btrfs"
+const xfsMountPath = "/mnt/xfs"
 
-func TestBTRFSGroot(t *testing.T) {
-	grootTests(t, "btrfs")
-}
-
-func grootTests(t *testing.T, driver string) {
+func TestRoot(t *testing.T) {
 	RegisterFailHandler(Fail)
 	rand.Seed(time.Now().Unix())
 
@@ -53,7 +51,15 @@ func grootTests(t *testing.T, driver string) {
 		GrootUID = integration.FindUID("groot")
 		GrootGID = integration.FindGID("groot")
 		GrootFSBin = string(data)
-		Driver = driver
+		Driver = os.Getenv("VOLUME_DRIVER")
+		if Driver == "overlay-xfs" {
+			MountPath = xfsMountPath
+		} else {
+			Driver = "btrfs"
+			MountPath = btrfsMountPath
+		}
+
+		fmt.Fprintf(os.Stderr, "============> RUNNING %s TESTS <=============", Driver)
 	})
 
 	SynchronizedAfterSuite(func() {
@@ -67,7 +73,7 @@ func grootTests(t *testing.T, driver string) {
 		}
 
 		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
-		StorePath = path.Join(btrfsMountPath, storeName)
+		StorePath = path.Join(MountPath, storeName)
 		Expect(os.Mkdir(StorePath, 0700)).NotTo(HaveOccurred())
 
 		Expect(os.Chown(StorePath, int(GrootUID), int(GrootGID))).To(Succeed())
@@ -81,17 +87,18 @@ func grootTests(t *testing.T, driver string) {
 			GrootFSBin: GrootFSBin,
 			StorePath:  StorePath,
 			DraxBin:    DraxBin,
-			Driver:     driver,
+			Driver:     Driver,
 		}
 		Runner = r.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter)
 	})
 
 	AfterEach(func() {
-		testhelpers.CleanUpSubvolumes(btrfsMountPath, storeName)
+		testhelpers.CleanUpBtrfsSubvolumes(btrfsMountPath, storeName)
+		testhelpers.CleanUpOverlayMounts(xfsMountPath, storeName)
 		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
-	RunSpecs(t, fmt.Sprintf("%s: GrootFS Integration Suite - Running as root", driver))
+	RunSpecs(t, "GrootFS Integration Suite - Running as root")
 }
 
 func fixPermission(dirPath string) {

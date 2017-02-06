@@ -105,12 +105,14 @@ var _ = Describe("StoreNamespaceChecker", func() {
 
 			Context("when it fails to read the namespace file", func() {
 				BeforeEach(func() {
-					Expect(os.Chmod(filepath.Join(storePath, store.META_DIR_NAME, "namespace.json"), 0000)).To(Succeed())
+					imageJsonPath := filepath.Join(storePath, store.META_DIR_NAME, "namespace.json")
+					Expect(os.Remove(imageJsonPath)).To(Succeed())
+					Expect(os.Mkdir(imageJsonPath, 0755)).To(Succeed())
 				})
 
 				It("returns an error", func() {
 					_, err := namespaceChecker.Check(uidMappings, gidMappings)
-					Expect(err).To(MatchError(ContainSubstring("opening namespace file")))
+					Expect(err).To(MatchError(ContainSubstring("reading namespace file")))
 				})
 			})
 		})

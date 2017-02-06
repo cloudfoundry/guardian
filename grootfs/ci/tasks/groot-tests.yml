@@ -18,4 +18,4 @@ params:
 
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/groot-tests.sh
-  user: groot
+  user: root

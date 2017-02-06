@@ -50,7 +50,7 @@ var _ = Describe("Logging", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(logBuffer).To(gbytes.Say("ns-id-mapper-unpacking.unpack"))
+		Expect(logBuffer).To(gbytes.Say("ns-sysproc-unpacking.unpack"))
 	})
 
 	Describe("--log-level and --log-file flags", func() {

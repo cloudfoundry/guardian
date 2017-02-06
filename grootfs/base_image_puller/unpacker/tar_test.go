@@ -70,7 +70,7 @@ var _ = Describe("Tar unpacker", func() {
 			Expect(string(contents)).To(Equal("hello-world"))
 		})
 
-		Context("when parent dir does not have writing permission", func() {
+		XContext("when parent dir does not have writing permission", func() {
 			var folderPath string
 
 			BeforeEach(func() {
@@ -113,7 +113,7 @@ var _ = Describe("Tar unpacker", func() {
 			Expect(string(contents)).To(Equal("goodbye-world"))
 		})
 
-		Context("when parent dir does not have writing permission", func() {
+		XContext("when parent dir does not have writing permission", func() {
 			var folderPath string
 
 			BeforeEach(func() {

@@ -371,7 +371,7 @@ var _ = Describe("Create with remote images", func() {
 			baseImageURL = "docker:///cfgarden/non-writable-file"
 		})
 
-		It("fails with a sensible message", func() {
+		XIt("fails with a sensible message", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        "random-id",
@@ -385,11 +385,11 @@ var _ = Describe("Create with remote images", func() {
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
 						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
 						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
@@ -405,7 +405,7 @@ var _ = Describe("Create with remote images", func() {
 			baseImageURL = "docker:///cfgarden/non-writable-folder"
 		})
 
-		It("fails with a sensible message", func() {
+		XIt("fails with a sensible message", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        "random-id",
@@ -420,11 +420,11 @@ var _ = Describe("Create with remote images", func() {
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
 						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: CurrentUserIDInt, NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
 						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})

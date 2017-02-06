@@ -34,8 +34,8 @@ var _ = Describe("Image", func() {
 		var err error
 		fakeImageDriver = new(image_clonerfakes.FakeImageDriver)
 
-		fakeImageDriver.CreateImageStub = func(_ lager.Logger, from, to string) error {
-			return os.Mkdir(to, 0777)
+		fakeImageDriver.CreateImageStub = func(_ lager.Logger, from, imagePath string) error {
+			return os.Mkdir(filepath.Join(imagePath, "rootfs"), 0777)
 		}
 
 		storePath, err = ioutil.TempDir("", "")
@@ -87,9 +87,9 @@ var _ = Describe("Image", func() {
 			image, err := imageCloner.Create(logger, imageSpec)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, fromPath, toPath := fakeImageDriver.CreateImageArgsForCall(0)
+			_, fromPath, imagePath := fakeImageDriver.CreateImageArgsForCall(0)
 			Expect(fromPath).To(Equal(imageSpec.VolumePath))
-			Expect(toPath).To(Equal(image.RootFSPath))
+			Expect(imagePath).To(Equal(image.Path))
 		})
 
 		It("writes the image.json to the image", func() {
@@ -311,7 +311,7 @@ var _ = Describe("Image", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			_, path := fakeImageDriver.DestroyImageArgsForCall(0)
-			Expect(path).To(Equal(imageRootFSPath))
+			Expect(path).To(Equal(imagePath))
 		})
 
 		Context("when removing the snapshot fails", func() {

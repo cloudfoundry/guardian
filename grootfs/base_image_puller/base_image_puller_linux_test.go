@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"syscall"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/base_image_puller/base_image_pullerfakes"
@@ -365,25 +366,65 @@ var _ = Describe("Base Image Puller", func() {
 			}
 		})
 
+		It("sets the ownership of the store to the spec's owner ids", func() {
+			spec.OwnerUID = 10000
+			spec.OwnerGID = 5000
+
+			image, err := baseImagePuller.Pull(logger, spec)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(image.VolumePath)
+			volumePath, err := os.Stat(image.VolumePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10000)))
+			Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(5000)))
+		})
+
 		Context("and both owner ids are 0", func() {
 			It("doesn't enforce the ownership", func() {
 				spec.OwnerUID = 0
 				spec.OwnerGID = 0
 
-				_, err := baseImagePuller.Pull(logger, spec)
-				// Normal user can't ever chown things to root
-				// The fact that this didn't fail, means it never tried
-				Expect(err).ToNot(HaveOccurred())
+				image, err := baseImagePuller.Pull(logger, spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(image.VolumePath)
+				volumePath, err := os.Stat(image.VolumePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+				Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
 			})
 		})
 
-		Context("when setting the ownership fails", func() {
-			It("returns an error", func() {
-				spec.OwnerUID = 10000
+		Context("and only owner uid mapping is 0", func() {
+			It("enforces the ownership", func() {
+				spec.OwnerUID = 0
 				spec.OwnerGID = 5000
 
-				_, err := baseImagePuller.Pull(logger, spec)
-				Expect(err).To(MatchError(ContainSubstring("changing volume ownership to 10000:5000")))
+				image, err := baseImagePuller.Pull(logger, spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(image.VolumePath)
+				volumePath, err := os.Stat(image.VolumePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+				Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(5000)))
+			})
+		})
+
+		Context("and only owner gid mapping is 0", func() {
+			It("enforces the ownership", func() {
+				spec.OwnerUID = 10000
+				spec.OwnerGID = 0
+
+				image, err := baseImagePuller.Pull(logger, spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(image.VolumePath)
+				volumePath, err := os.Stat(image.VolumePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10000)))
+				Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
 			})
 		})
 	})
