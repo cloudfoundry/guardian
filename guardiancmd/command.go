@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"os/user"
 	"path/filepath"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 	"code.cloudfoundry.org/garden-shed/repository_fetcher"
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/garden/server"
+	"code.cloudfoundry.org/guardian/bindata"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/guardian/kawasaki"
@@ -130,7 +132,12 @@ var PrivilegedContainerNamespaces = []specs.LinuxNamespace{
 	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace,
 }
 
-type GuardianCommand struct {
+type GdnCommand struct {
+	SetupCommand  *SetupCommand  `command:"setup"`
+	ServerCommand *ServerCommand `command:"server"`
+}
+
+type ServerCommand struct {
 	Logger LagerFlag
 
 	Server struct {
@@ -241,11 +248,88 @@ func init() {
 	}
 }
 
-func (cmd *GuardianCommand) Execute([]string) error {
+func (cmd *ServerCommand) Execute([]string) error {
+	// gdn can be compiled for one of two possible run "modes"
+	// 1. all-in-one    - this is meant for standalone deployments
+	// 2. bosh-deployed - this is meant for deployment via BOSH
+	// when compiling an all-in-one gdn, the bindata package will contain a
+	// number of compiled assets (e.g. iptables, runc, etc.), thus we check to
+	// see if we have any compiled assets here and perform additional setup
+	// (e.g. updating bin paths to point to the compiled assets) if required
+	if len(bindata.AssetNames()) > 0 {
+		err := checkRoot()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		depotDir := cmd.Containers.Dir
+		err = os.MkdirAll(depotDir, 0755)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		restoredAssetsDir, err := restoreUnversionedAssets(cmd.Bin.AssetsDir)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+
+		cmd.Bin.Runc = filepath.Join(restoredAssetsDir, "bin", "runc")
+		cmd.Bin.Dadoo = FileFlag(filepath.Join(restoredAssetsDir, "bin", "dadoo"))
+		cmd.Bin.Init = FileFlag(filepath.Join(restoredAssetsDir, "bin", "init"))
+		cmd.Bin.NSTar = FileFlag(filepath.Join(restoredAssetsDir, "bin", "nstar"))
+		cmd.Bin.Tar = FileFlag(filepath.Join(restoredAssetsDir, "bin", "tar"))
+		cmd.Bin.IPTables = FileFlag(filepath.Join(restoredAssetsDir, "sbin", "iptables"))
+		cmd.Bin.IPTablesRestore = FileFlag(filepath.Join(restoredAssetsDir, "sbin", "iptables-restore"))
+
+		cmd.Network.AllowHostAccess = true
+	}
+
 	return <-ifrit.Invoke(sigmon.New(cmd)).Wait()
 }
 
-func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+func checkRoot() error {
+	currentUser, err := user.Current()
+	if err != nil {
+		return err
+	}
+
+	if currentUser.Uid != "0" {
+		return errors.New("server must be run as root")
+	}
+
+	return nil
+}
+
+func restoreUnversionedAssets(assetsDir string) (string, error) {
+	okMarker := filepath.Join(assetsDir, "ok")
+
+	_, err := os.Stat(okMarker)
+	if err == nil {
+		return "", nil
+	}
+
+	err = bindata.RestoreAssets(assetsDir, "linux")
+	if err != nil {
+		return "", nil
+	}
+
+	ok, err := os.Create(okMarker)
+	if err != nil {
+		return "", nil
+	}
+
+	err = ok.Close()
+	if err != nil {
+		return "", nil
+	}
+
+	return filepath.Join(assetsDir, "linux"), nil
+}
+
+func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
 
 	if cmd.Server.Rootless {
@@ -355,7 +439,7 @@ func (cmd *GuardianCommand) Run(signals <-chan os.Signal, ready chan<- struct{})
 	return nil
 }
 
-func (cmd *GuardianCommand) loadProperties(logger lager.Logger, propertiesPath string) (*properties.Manager, error) {
+func (cmd *ServerCommand) loadProperties(logger lager.Logger, propertiesPath string) (*properties.Manager, error) {
 	propManager, err := properties.Load(propertiesPath)
 	if err != nil {
 		logger.Error("failed-to-load-properties", err, lager.Data{"propertiesPath": propertiesPath})
@@ -365,7 +449,7 @@ func (cmd *GuardianCommand) loadProperties(logger lager.Logger, propertiesPath s
 	return propManager, nil
 }
 
-func (cmd *GuardianCommand) saveProperties(logger lager.Logger, propertiesPath string, propManager *properties.Manager) {
+func (cmd *ServerCommand) saveProperties(logger lager.Logger, propertiesPath string, propManager *properties.Manager) {
 	if propertiesPath != "" {
 		err := properties.Save(propertiesPath, propManager)
 		if err != nil {
@@ -374,11 +458,11 @@ func (cmd *GuardianCommand) saveProperties(logger lager.Logger, propertiesPath s
 	}
 }
 
-func (cmd *GuardianCommand) wireUidGenerator() gardener.UidGeneratorFunc {
+func (cmd *ServerCommand) wireUidGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
-func (cmd *GuardianCommand) wireRunDMCStarter(logger lager.Logger) gardener.Starter {
+func (cmd *ServerCommand) wireRunDMCStarter(logger lager.Logger) gardener.Starter {
 	var cgroupsMountpoint string
 	if cmd.Server.Tag != "" {
 		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
@@ -389,7 +473,7 @@ func (cmd *GuardianCommand) wireRunDMCStarter(logger lager.Logger) gardener.Star
 	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, linux_command_runner.New())
 }
 
-func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
+func (cmd *ServerCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
 	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
 		return nil, nil, err
@@ -447,7 +531,7 @@ func (cmd *GuardianCommand) wireNetworker(log lager.Logger, propManager kawasaki
 	return networker, ipTablesStarter, nil
 }
 
-func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
+func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
 	if graphRoot == "" {
 		return gardener.NoopVolumeCreator{}
 	}
@@ -569,7 +653,7 @@ func (cmd *GuardianCommand) wireVolumeCreator(logger lager.Logger, graphRoot str
 		ovenCleaner)
 }
 
-func (cmd *GuardianCommand) wireImagePlugin() gardener.VolumeCreator {
+func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 	var unprivilegedCommandCreator imageplugin.CommandCreator = &imageplugin.NotImplementedCommandCreator{
 		Err: errors.New("no image_plugin provided"),
 	}
@@ -600,7 +684,7 @@ func (cmd *GuardianCommand) wireImagePlugin() gardener.VolumeCreator {
 	}
 }
 
-func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadooPath, runcPath, nstarPath, tarPath, appArmorProfile string, properties gardener.PropertyManager) *rundmc.Containerizer {
+func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPath, runcPath, nstarPath, tarPath, appArmorProfile string, properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath)
 
 	commandRunner := linux_command_runner.New()
@@ -733,7 +817,7 @@ func (cmd *GuardianCommand) wireContainerizer(log lager.Logger, depotPath, dadoo
 	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore)
 }
 
-func (cmd *GuardianCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {
+func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {
 	var backingStoresPath string
 	if graphRoot != "" {
 		backingStoresPath = filepath.Join(graphRoot, "backing_stores")
@@ -742,13 +826,13 @@ func (cmd *GuardianCommand) wireMetricsProvider(log lager.Logger, depotPath, gra
 	return metrics.NewMetrics(log, backingStoresPath, depotPath)
 }
 
-func (cmd *GuardianCommand) wireMetronNotifier(log lager.Logger, metricsProvider metrics.Metrics) *metrics.PeriodicMetronNotifier {
+func (cmd *ServerCommand) wireMetronNotifier(log lager.Logger, metricsProvider metrics.Metrics) *metrics.PeriodicMetronNotifier {
 	return metrics.NewPeriodicMetronNotifier(
 		log, metricsProvider, cmd.Metrics.EmissionInterval, clock.NewClock(),
 	)
 }
 
-func (cmd *GuardianCommand) initializeDropsonde(log lager.Logger) {
+func (cmd *ServerCommand) initializeDropsonde(log lager.Logger) {
 	err := dropsonde.Initialize(cmd.Metrics.DropsondeDestination, cmd.Metrics.DropsondeOrigin)
 	if err != nil {
 		log.Error("failed to initialize dropsonde", err)

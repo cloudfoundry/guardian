@@ -227,7 +227,7 @@ func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, in
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", tarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--port-pool-start", fmt.Sprintf("%d", GinkgoParallelNode()*7000))
 
-	return exec.Command(bin, gardenArgs...)
+	return exec.Command(bin, append([]string{"server"}, gardenArgs...)...)
 }
 
 func (r *RunningGarden) Cleanup() {
