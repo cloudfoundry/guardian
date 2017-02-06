@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"time"
 
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	fakes "code.cloudfoundry.org/guardian/kawasaki/iptables/iptablesfakes"
@@ -24,6 +25,7 @@ var _ = Describe("IPTables controller", func() {
 	)
 
 	BeforeEach(func() {
+		SetDefaultEventuallyTimeout(3 * time.Second)
 		netnsName = fmt.Sprintf("ginkgo-netns-%d", GinkgoParallelNode())
 		makeNamespace(netnsName)
 
