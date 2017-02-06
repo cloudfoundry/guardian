@@ -11,14 +11,26 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("running gdn setup before starting server", func() {
+var _ = FDescribe("gdn setup", func() {
+	BeforeEach(func() {
+		setupProcess, err := gexec.Start(exec.Command(gardenBin, "setup"), GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(setupProcess).Should(gexec.Exit(0))
+	})
+
+	It("sets up cgroups", func() {})
+
+	It("sets up iptables", func() {})
+})
+
+var _ = FDescribe("running gdn setup before starting server", func() {
 	var client *runner.RunningGarden
 
 	BeforeEach(func() {
 		setupProcess, err := gexec.Start(exec.Command(gardenBin, "setup"), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
-		client = startGarden()
+		client = startGarden("server")
 	})
 
 	AfterEach(func() {
