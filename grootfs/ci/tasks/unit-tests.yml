@@ -14,8 +14,7 @@ inputs:
 params:
   REGISTRY_USERNAME:
   REGISTRY_PASSWORD:
-  VOLUME_DRIVER:
 
 run:
-  path: src/code.cloudfoundry.org/grootfs/ci/scripts/groot-tests.sh
+  path: src/code.cloudfoundry.org/grootfs/ci/scripts/unit-tests.sh
   user: root

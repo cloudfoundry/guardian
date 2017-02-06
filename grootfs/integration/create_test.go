@@ -1,4 +1,4 @@
-package groot_test
+package integration_test
 
 import (
 	"fmt"
@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,17 +30,37 @@ var _ = Describe("Create", func() {
 	var (
 		baseImagePath   string
 		sourceImagePath string
+		rootUID         int
+		rootGID         int
 	)
 
 	BeforeEach(func() {
 		integration.SkipIfNotBTRFS(Driver)
 
+		rootUID = 0
+		rootGID = 0
+
 		var err error
 		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chown(sourceImagePath, rootUID, rootGID)).To(Succeed())
+		Expect(os.Chmod(sourceImagePath, 0755)).To(Succeed())
 
-		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
-		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "root-owned"), []byte{}, 0644)).To(Succeed())
+		grootFilePath := path.Join(sourceImagePath, "foo")
+		Expect(ioutil.WriteFile(grootFilePath, []byte("hello-world"), 0644)).To(Succeed())
+		Expect(os.Chown(grootFilePath, int(GrootUID), int(GrootGID))).To(Succeed())
+
+		grootFolder := path.Join(sourceImagePath, "groot-folder")
+		Expect(os.Mkdir(grootFolder, 0777)).To(Succeed())
+		Expect(os.Chown(grootFolder, int(GrootUID), int(GrootGID))).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(grootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
+
+		rootFilePath := path.Join(sourceImagePath, "bar")
+		Expect(ioutil.WriteFile(rootFilePath, []byte("hello-world"), 0644)).To(Succeed())
+
+		rootFolder := path.Join(sourceImagePath, "root-folder")
+		Expect(os.Mkdir(rootFolder, 0777)).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(rootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -50,6 +71,93 @@ var _ = Describe("Create", func() {
 	JustBeforeEach(func() {
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
 		baseImagePath = baseImageFile.Name()
+	})
+
+	It("keeps the ownership and permissions", func() {
+		image, err := Runner.Create(groot.CreateSpec{
+			BaseImage: baseImagePath,
+			ID:        "random-id",
+		})
+		Expect(err).ToNot(HaveOccurred())
+
+		grootFi, err := os.Stat(path.Join(image.RootFSPath, "foo"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+		Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+
+		rootFi, err := os.Stat(path.Join(image.RootFSPath, "bar"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(rootUID)))
+		Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))
+	})
+
+	Context("when mappings are provided", func() {
+		It("translates the rootfs accordingly", func() {
+			image, err := Runner.WithLogLevel(lager.DEBUG).
+				Create(groot.CreateSpec{
+					ID:        "some-id",
+					BaseImage: baseImagePath,
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+				})
+
+			Expect(err).NotTo(HaveOccurred())
+
+			grootFi, err := os.Stat(path.Join(image.RootFSPath, "foo"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
+
+			grootDir, err := os.Stat(path.Join(image.RootFSPath, "groot-folder"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(grootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(grootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
+
+			rootFi, err := os.Stat(path.Join(image.RootFSPath, "bar"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+			Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+
+			rootDir, err := os.Stat(path.Join(image.RootFSPath, "root-folder"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+			Expect(rootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+		})
+
+		It("allows the mapped user to have access to the created image", func() {
+			image, err := Runner.WithLogLevel(lager.DEBUG).
+				Create(groot.CreateSpec{
+					ID:        "some-id",
+					BaseImage: baseImagePath,
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+				})
+			Expect(err).NotTo(HaveOccurred())
+
+			listRootfsCmd := exec.Command("ls", filepath.Join(image.RootFSPath, "root-folder"))
+			listRootfsCmd.SysProcAttr = &syscall.SysProcAttr{
+				Credential: &syscall.Credential{
+					Uid: GrootUID,
+					Gid: GrootGID,
+				},
+			}
+
+			sess, err := gexec.Start(listRootfsCmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+		})
 	})
 
 	Context("storage setup", func() {
@@ -66,6 +174,85 @@ var _ = Describe("Create", func() {
 			stat, err := os.Stat(storePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0700)))
+		})
+
+		Context("when there's no mapping", func() {
+			It("sets the onwership of the store to the caller user", func() {
+				_, err := Runner.WithLogLevel(lager.DEBUG).
+					Create(groot.CreateSpec{
+						ID:        "some-id",
+						BaseImage: baseImagePath,
+					})
+				Expect(err).NotTo(HaveOccurred())
+
+				stat, err := os.Stat(filepath.Join(StorePath, store.IMAGES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+
+				stat, err = os.Stat(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+
+				stat, err = os.Stat(filepath.Join(StorePath, store.LOCKS_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+			})
+		})
+
+		Context("when there's mappings", func() {
+			It("sets the onwnership of the store to the mapped user", func() {
+				_, err := Runner.WithLogLevel(lager.DEBUG).
+					Create(groot.CreateSpec{
+						ID:        "some-id",
+						BaseImage: baseImagePath,
+						UIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: 5000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						},
+						GIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: 6000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						},
+					})
+
+				Expect(err).ToNot(HaveOccurred())
+
+				stat, err := os.Stat(filepath.Join(StorePath, store.IMAGES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
+
+				stat, err = os.Stat(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
+
+				stat, err = os.Stat(filepath.Join(StorePath, store.LOCKS_DIR_NAME))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
+			})
+
+			Context("but there's no mapping for root or size = 1", func() {
+				It("fails fast", func() {
+					_, err := Runner.WithLogLevel(lager.DEBUG).
+						Create(groot.CreateSpec{
+							ID:        "some-id",
+							BaseImage: baseImagePath,
+							UIDMappings: []groot.IDMappingSpec{
+								groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+							},
+							GIDMappings: []groot.IDMappingSpec{
+								groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+							},
+						})
+
+					Expect(err).To(MatchError(ContainSubstring("couldn't determine store owner, missing root user mapping")))
+				})
+			})
 		})
 
 		Context("when fails to configure the store", func() {
@@ -188,22 +375,29 @@ var _ = Describe("Create", func() {
 
 	Describe("unique uid and gid mappings per store", func() {
 		Context("when creating two images with different mappings", func() {
-			var newuidmapBin *os.File
-
 			JustBeforeEach(func() {
-				_, newuidmapBin, _ = integration.CreateFakeBin("newuidmap")
-				image, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
-					BaseImage:   baseImagePath,
-					ID:          "foobar",
-					UIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1}},
-					GIDMappings: []groot.IDMappingSpec{groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1}},
+				storePath, err := ioutil.TempDir(StorePath, "store")
+				Expect(err).NotTo(HaveOccurred())
+				Runner = Runner.WithStore(storePath)
+
+				image, err := Runner.Create(groot.CreateSpec{
+					BaseImage: baseImagePath,
+					ID:        "foobar",
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: int(GrootUID) + 1, NamespaceID: 1, Size: 65000},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: int(GrootGID) + 1, NamespaceID: 1, Size: 65000},
+					},
 				})
 				Expect(err).ToNot(HaveOccurred())
 				Expect(image.Path).To(BeADirectory())
 			})
 
 			It("returns a useful error message", func() {
-				_, err := Runner.WithNewuidmapBin(newuidmapBin.Name()).Create(groot.CreateSpec{
+				_, err := Runner.Create(groot.CreateSpec{
 					BaseImage: baseImagePath,
 					ID:        "foobar2",
 				})
@@ -325,8 +519,8 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ioutil.WriteFile(filepath.Join(image1.RootFSPath, "bar"), []byte("hello-world"), 0644)).To(Succeed())
-			Expect(filepath.Join(image2.RootFSPath, "bar")).NotTo(BeARegularFile())
+			Expect(ioutil.WriteFile(filepath.Join(image1.RootFSPath, "new-file"), []byte("hello-world"), 0644)).To(Succeed())
+			Expect(filepath.Join(image2.RootFSPath, "new-file")).NotTo(BeARegularFile())
 		})
 	})
 
@@ -484,7 +678,7 @@ var _ = Describe("Create", func() {
 				image, err := Runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				rootOwnedFile, err := os.Stat(filepath.Join(image.RootFSPath, "root-owned"))
+				rootOwnedFile, err := os.Stat(filepath.Join(image.RootFSPath, "bar"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(500)))
 				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(501)))

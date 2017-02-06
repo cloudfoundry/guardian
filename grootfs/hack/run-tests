@@ -46,18 +46,18 @@ compile_ginkgo_args() {
   echo $args
 }
 
-fly_groot_tests() {
+fly_unit_tests() {
   test_path=${1:-""}
 
-  cmd=$(compile_fly_cmd ci/tasks/groot-tests.yml)
+  cmd=$(compile_fly_cmd ci/tasks/unit-tests.yml)
   cmd=$cmd" "$(compile_ginkgo_args $test_path)
   eval $cmd
 }
 
-fly_root_tests() {
+fly_integration_tests() {
   test_path=${1:-""}
 
-  cmd=$(compile_fly_cmd ci/tasks/root-tests.yml)
+  cmd=$(compile_fly_cmd ci/tasks/integration-tests.yml)
   cmd=$cmd" "$(compile_ginkgo_args $test_path)
   eval $cmd
 }
@@ -66,14 +66,9 @@ run_integration_tests() {
   test_path=${1:-""}
 
   case $test_path in
-    # run tests as user groot
-    integration/groot*)
-      fly_groot_tests $test_path
-      ;;
-
     # run tests as user root
-    integration/root*)
-      fly_root_tests $test_path
+    integration*)
+      fly_integration_tests $test_path
       ;;
 
     # both
@@ -83,8 +78,7 @@ run_integration_tests() {
         return
       fi
 
-      fly_groot_tests "integration/groot"
-      fly_root_tests "integration/root"
+      fly_integration_tests "integration"
       ;;
   esac
 }
@@ -92,15 +86,9 @@ run_integration_tests() {
 run_unit_tests() {
   test_path=${1:-""}
 
-  if [[ $test_path == *"roottests"* ]]
-  then
-    fly_root_tests $test_path
-    return
-  fi
-
   # if FORCE_FLY is true
   if [ $FORCE_FLY -eq 1 ]; then
-    fly_groot_tests $test_path
+    fly_unit_tests $test_path
     return
   fi
 
@@ -108,7 +96,7 @@ run_unit_tests() {
   find_cmd="find $test_path -name '*_linux_test.go'"
   [ $RECURSIVE -eq 0 ] && find_cmd=$find_cmd" -maxdepth 1"
   if [ "$(eval $find_cmd)" != "" ]; then
-    fly_groot_tests $test_path
+    fly_unit_tests $test_path
     return
   fi
 
@@ -124,10 +112,11 @@ run_all_tests() {
     return
   fi
 
-  fly_groot_tests ""
-  fly_root_tests  "store/image_cloner/roottests"
-  fly_root_tests  "base_image_puller/roottests"
-  fly_root_tests  "integration/root"
+  fly_unit_tests ""
+  export VOLUME_DRIVER="overlay-xfs"
+  fly_integration_tests  "integration"
+  export VOLUME_DRIVER="btrfs"
+  fly_integration_tests  "integration"
 }
 
 run_tests() {

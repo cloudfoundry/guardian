@@ -12,8 +12,10 @@ inputs:
     path: src/code.cloudfoundry.org/grootfs
 
 params:
-  VOLUME_DRIVER:
+  REGISTRY_USERNAME:
+  REGISTRY_PASSWORD:
+  VOLUME_DRIVER: btrfs
 
 run:
-  path: src/code.cloudfoundry.org/grootfs/ci/scripts/root-tests.sh
+  path: src/code.cloudfoundry.org/grootfs/ci/scripts/integration-tests.sh
   user: root

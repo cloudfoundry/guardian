@@ -7,8 +7,8 @@ mount_storage
 dest_path=$(move_to_gopath grootfs)
 cd $dest_path
 
-echo "I AM ROOT" | grootsay
+echo "I AM INTEGRATION: ${VOLUME_DRIVER}" | grootsay
 
 args=$@
-[ "$args" == "" ] && args="-r store/image_cloner/roottests base_image_puller/roottests integration/root "
+[ "$args" == "" ] && args="-r integration"
 ginkgo -p -race $args

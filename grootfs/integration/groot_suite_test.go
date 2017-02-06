@@ -1,4 +1,4 @@
-package groot_test
+package integration_test
 
 import (
 	"errors"
@@ -105,7 +105,7 @@ func TestGroot(t *testing.T) {
 		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
-	RunSpecs(t, "GrootFS Integration Suite - Running as groot")
+	RunSpecs(t, "Integration Suite")
 }
 
 func writeMegabytes(outputPath string, mb int) error {

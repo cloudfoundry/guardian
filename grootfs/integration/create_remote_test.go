@@ -1,4 +1,4 @@
-package groot_test
+package integration_test
 
 import (
 	"encoding/json"
@@ -7,8 +7,12 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -18,9 +22,11 @@ import (
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
+	"github.com/alecthomas/units"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -65,6 +71,72 @@ var _ = Describe("Create with remote images", func() {
 			Expect(imageJson.RootFS.DiffIDs).To(Equal([]string{
 				"sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca",
 			}))
+		})
+
+		It("logs the steps taken to create the rootfs", func() {
+			errBuffer := gbytes.NewBuffer()
+			_, err := Runner.WithLogLevel(lager.DEBUG).WithStderr(errBuffer).
+				Create(groot.CreateSpec{
+					ID:        "some-id",
+					BaseImage: "docker:///cfgarden/empty:v0.1.0",
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+				})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.btrfs-creating-volume.starting-btrfs"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-sysproc-unpacking.starting-unpack"))
+			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.making-image.btrfs-creating-snapshot.starting-btrfs"))
+		})
+
+		Context("when the image is bigger than available memory", func() {
+			It("doesn't fail", func() {
+				cmd := exec.Command(
+					GrootFSBin,
+					"--store", StorePath,
+					"--driver", Driver,
+					"--log-level", "fatal",
+					"create",
+					"docker:///ubuntu:trusty",
+					"some-id",
+				)
+
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				go func() {
+					defer GinkgoRecover()
+
+					statsPath := path.Join("/proc", strconv.Itoa(sess.Command.Process.Pid), "status")
+					runs := 0
+					for {
+						stats, err := ioutil.ReadFile(statsPath)
+						if err != nil {
+							Expect(runs).To(BeNumerically(">", 1))
+							break
+						}
+
+						var statsMap map[string]string
+						Expect(yaml.Unmarshal(stats, &statsMap)).To(Succeed())
+
+						n, err := units.ParseBase2Bytes(strings.Replace(strings.ToUpper(statsMap["VmHWM"]), " ", "", -1))
+						Expect(err).NotTo(HaveOccurred())
+						// Biggest ubuntu:trusty layer is 65694192 bytes
+						Expect(n).To(BeNumerically("<", 50*1024*1024))
+
+						time.Sleep(200 * time.Millisecond)
+						runs++
+					}
+				}()
+
+				Eventually(sess, 45*time.Second).Should(gexec.Exit(0))
+			})
 		})
 
 		Context("when the image has volumes", func() {
