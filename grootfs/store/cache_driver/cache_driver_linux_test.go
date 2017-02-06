@@ -159,31 +159,6 @@ var _ = Describe("CacheDriver", func() {
 					Expect(err).To(MatchError(ContainSubstring("exists but it's not a regular file")))
 				})
 			})
-
-			Context("but it does not have access to the cache", func() {
-				BeforeEach(func() {
-					Expect(os.RemoveAll(cachePath)).To(Succeed())
-					Expect(os.MkdirAll(cachePath, 0000)).To(Succeed())
-				})
-
-				It("returns an error", func() {
-					_, _, err := cacheDriver.FetchBlob(logger, "my-blob", blobFunc)
-					Expect(err).To(MatchError(ContainSubstring("checking if the blob exists")))
-				})
-			})
-
-			Context("but it does not have access to the cached blob", func() {
-				BeforeEach(func() {
-					theBlobPath := blobPath(storePath, "my-blob")
-					Expect(os.RemoveAll(theBlobPath)).To(Succeed())
-					Expect(ioutil.WriteFile(theBlobPath, []byte("hello world"), 000)).To(Succeed())
-				})
-
-				It("returns an error", func() {
-					_, _, err := cacheDriver.FetchBlob(logger, "my-blob", blobFunc)
-					Expect(err).To(MatchError(ContainSubstring("accessing the cached blob")))
-				})
-			})
 		})
 	})
 
@@ -203,21 +178,6 @@ var _ = Describe("CacheDriver", func() {
 			contents, err = ioutil.ReadDir(cachePath)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(len(contents)).To(Equal(0))
-		})
-
-		Context("when reading the cache contents fails", func() {
-			BeforeEach(func() {
-				Expect(os.Chmod(cachePath, 0000)).To(Succeed())
-			})
-
-			AfterEach(func() {
-				Expect(os.Chmod(cachePath, 0777)).To(Succeed())
-			})
-
-			It("returns an error", func() {
-				err := cacheDriver.Clean(logger)
-				Expect(err).To(MatchError(ContainSubstring("reading cache contents:")))
-			})
 		})
 	})
 })

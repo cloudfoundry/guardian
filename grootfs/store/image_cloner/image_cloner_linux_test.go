@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
@@ -119,6 +120,91 @@ var _ = Describe("Image", func() {
 		})
 
 		Describe("created files ownership", func() {
+			It("will change the ownership of all artifacts it creates", func() {
+				uid := 2525
+				gid := 2525
+
+				image, err := imageCloner.Create(logger, groot.ImageSpec{
+					ID:       "some-id",
+					OwnerUID: uid,
+					OwnerGID: gid,
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(image.Path).To(BeADirectory())
+
+				imagePath, err := os.Stat(image.Path)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(imagePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(uid)))
+				Expect(imagePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(gid)))
+
+				rootfsPath, err := os.Stat(image.RootFSPath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(rootfsPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(uid)))
+				Expect(rootfsPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(gid)))
+
+				imageJsonPath, err := os.Stat(filepath.Join(image.Path, "image.json"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(imageJsonPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(uid)))
+				Expect(imageJsonPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(gid)))
+			})
+
+			Context("when only owner UID is 0", func() {
+				It("tries to enforce ownership", func() {
+					image, err := imageCloner.Create(logger, groot.ImageSpec{
+						ID:       "some-id",
+						OwnerUID: 0,
+						OwnerGID: 10000,
+					})
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(image.Path).To(BeADirectory())
+
+					imagePath, err := os.Stat(image.Path)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(imagePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+					Expect(imagePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(10000)))
+
+					rootfsPath, err := os.Stat(image.RootFSPath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(rootfsPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+					Expect(rootfsPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(10000)))
+
+					imageJsonPath, err := os.Stat(filepath.Join(image.Path, "image.json"))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(imageJsonPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+					Expect(imageJsonPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(10000)))
+				})
+			})
+
+			Context("when only owner GID is 0", func() {
+				It("tries to enforce ownership", func() {
+					image, err := imageCloner.Create(logger, groot.ImageSpec{
+						ID:       "some-id",
+						OwnerUID: 50000,
+						OwnerGID: 0,
+					})
+
+					Expect(err).NotTo(HaveOccurred())
+					Expect(image.Path).To(BeADirectory())
+
+					imagePath, err := os.Stat(image.Path)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(imagePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(50000)))
+					Expect(imagePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+
+					rootfsPath, err := os.Stat(image.RootFSPath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(rootfsPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(50000)))
+					Expect(rootfsPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+
+					imageJsonPath, err := os.Stat(filepath.Join(image.Path, "image.json"))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(imageJsonPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(50000)))
+					Expect(imageJsonPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+				})
+			})
+
 			Context("when both owner IDs are 0", func() {
 				It("doesn't enforce any ownership", func() {
 					_, err := imageCloner.Create(logger, groot.ImageSpec{
@@ -130,18 +216,6 @@ var _ = Describe("Image", func() {
 					// Because a normal user cannot change the onwership of a file to root
 					// the fact that this hasn't failed proves that it didn't try
 					Expect(err).NotTo(HaveOccurred())
-				})
-			})
-
-			Context("when it fails to set the ownership", func() {
-				It("returns an error", func() {
-					_, err := imageCloner.Create(logger, groot.ImageSpec{
-						ID:       "some-id",
-						OwnerUID: 2525,
-						OwnerGID: 2626,
-					})
-
-					Expect(err).To(MatchError(ContainSubstring("ownership to 2525:2626")))
 				})
 			})
 		})
@@ -290,22 +364,6 @@ var _ = Describe("Image", func() {
 			})
 		})
 
-		Context("when deleting the folder fails", func() {
-			BeforeEach(func() {
-				Expect(os.Chmod(imagePath, 0666)).To(Succeed())
-			})
-
-			AfterEach(func() {
-				// we need to revert permissions because of the outer AfterEach
-				Expect(os.Chmod(imagePath, 0755)).To(Succeed())
-			})
-
-			It("returns an error", func() {
-				err := imageCloner.Destroy(logger, "some-id")
-				Expect(err).To(MatchError(ContainSubstring("deleting image path")))
-			})
-		})
-
 		It("removes the snapshot", func() {
 			err := imageCloner.Destroy(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
@@ -350,22 +408,6 @@ var _ = Describe("Image", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(images).To(ConsistOf("image-a", "image-b"))
 		})
-
-		Context("when fails to list images", func() {
-			BeforeEach(func() {
-				Expect(os.Chmod(imagesPath, 0666)).To(Succeed())
-			})
-
-			AfterEach(func() {
-				// we need to revert permissions because of the outer AfterEach
-				Expect(os.Chmod(imagesPath, 0755)).To(Succeed())
-			})
-
-			It("returns an error", func() {
-				_, err := imageCloner.ImageIDs(logger)
-				Expect(err).To(MatchError(ContainSubstring("failed to read images dir")))
-			})
-		})
 	})
 
 	Describe("Exists", func() {
@@ -384,24 +426,6 @@ var _ = Describe("Image", func() {
 				ok, err := imageCloner.Exists("invalid-id")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(ok).To(BeFalse())
-			})
-
-			Context("when it does not have permission to check", func() {
-				JustBeforeEach(func() {
-					basePath, err := ioutil.TempDir("", "")
-					Expect(err).NotTo(HaveOccurred())
-
-					noPermStorePath := filepath.Join(basePath, "no-perm-dir")
-					Expect(os.Mkdir(noPermStorePath, 0000)).To(Succeed())
-
-					imageCloner = imageClonerpkg.NewImageCloner(fakeImageDriver, noPermStorePath)
-				})
-
-				It("returns an error", func() {
-					ok, err := imageCloner.Exists("invalid-id")
-					Expect(err).To(MatchError(ContainSubstring("stat")))
-					Expect(ok).To(BeFalse())
-				})
 			})
 		})
 	})

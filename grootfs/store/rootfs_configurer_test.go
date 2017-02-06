@@ -47,16 +47,6 @@ var _ = Describe("RootfsConfigurer", func() {
 			Expect(filepath.Join(rootFSPath, "volume-b")).To(BeADirectory())
 		})
 
-		Context("when rootfs path does not have permissions", func() {
-			BeforeEach(func() {
-				Expect(os.Chmod(rootFSPath, 0000)).To(Succeed())
-			})
-
-			It("returns an error", func() {
-				Expect(configurer.Configure(rootFSPath, baseImage)).To(MatchError(ContainSubstring("making volume")))
-			})
-		})
-
 		Context("when there is a file with the same volume path", func() {
 			BeforeEach(func() {
 				Expect(ioutil.WriteFile(filepath.Join(rootFSPath, "volume-b"), []byte(""), 0755)).To(Succeed())
