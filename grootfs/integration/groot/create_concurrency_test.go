@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,9 +13,11 @@ import (
 
 var _ = Describe("Concurrent creations", func() {
 	BeforeEach(func() {
+		integration.SkipIfNotBTRFS(Driver)
+
 		// run this to setup the store before concurrency!
 		_, err := Runner.Create(groot.CreateSpec{
-			ID:    "test-pre-warm",
+			ID:        "test-pre-warm",
 			BaseImage: "docker:///cfgarden/empty",
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -30,7 +33,7 @@ var _ = Describe("Concurrent creations", func() {
 				defer wg.Done()
 
 				_, err := Runner.Create(groot.CreateSpec{
-					ID:    fmt.Sprintf("test-%d", idx),
+					ID:        fmt.Sprintf("test-%d", idx),
 					BaseImage: "docker:///cfgarden/empty",
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -51,7 +54,7 @@ var _ = Describe("Concurrent creations", func() {
 
 				for i := 0; i < 3; i++ {
 					_, err := Runner.Create(groot.CreateSpec{
-						ID:    fmt.Sprintf("test-%d", i),
+						ID:        fmt.Sprintf("test-%d", i),
 						BaseImage: "docker:///cfgarden/empty",
 					})
 					Expect(err).NotTo(HaveOccurred())

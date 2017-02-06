@@ -20,16 +20,22 @@ import (
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
-	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/lager"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"github.com/docker/distribution/registry/api/errcode"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
+
+type fileSystemDriver interface {
+	image_cloner.ImageDriver
+	base_image_puller.VolumeDriver
+}
 
 var CreateCommand = cli.Command{
 	Name:        "create",
@@ -130,8 +136,11 @@ var CreateCommand = cli.Command{
 			return err
 		}
 
-		volumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
-		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
+		fsDriver, _ := createFileSystemDriver(ctx.GlobalString("driver"), cfg)
+		// if err != nil {
+		// 	return cli.NewExitError(err.Error(), 1)
+		// }
+		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
 
 		runner := linux_command_runner.New()
 		var unpacker base_image_puller.Unpacker
@@ -157,14 +166,14 @@ var CreateCommand = cli.Command{
 			localFetcher,
 			remoteFetcher,
 			unpacker,
-			volumeDriver,
+			fsDriver,
 			dependencyManager,
 		)
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()
 		metricsEmitter := metrics.NewEmitter()
 
 		sm := garbage_collector.NewStoreMeasurer(storePath)
-		gc := garbage_collector.NewGC(cacheDriver, volumeDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
 		namespaceChecker := groot.NewNamespaceChecker(storePath)
@@ -196,6 +205,19 @@ var CreateCommand = cli.Command{
 		fmt.Println(image.Path)
 		return nil
 	},
+}
+
+func createFileSystemDriver(driverName string, cfg config.Config) (fileSystemDriver, error) {
+	fmt.Fprintf(os.Stderr, "----------------------- %s ----------------- \n", driverName)
+	switch driverName {
+	case "btrfs":
+		return btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, cfg.StorePath), nil
+	case "overlay-xfs":
+		return overlayxfs.New(cfg.StorePath), nil
+
+	default:
+		return nil, fmt.Errorf("filesystem driver not supported: %s", driverName)
+	}
 }
 
 func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {

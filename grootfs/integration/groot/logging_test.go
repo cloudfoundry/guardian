@@ -17,6 +17,10 @@ import (
 )
 
 var _ = Describe("Logging", func() {
+	BeforeEach(func() {
+		integration.SkipIfNotBTRFS(Driver)
+	})
+
 	It("forwards human ouput to stdout", func() {
 		buffer := gbytes.NewBuffer()
 

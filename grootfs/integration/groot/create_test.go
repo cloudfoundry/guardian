@@ -31,6 +31,8 @@ var _ = Describe("Create", func() {
 	)
 
 	BeforeEach(func() {
+		integration.SkipIfNotBTRFS(Driver)
+
 		var err error
 		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
@@ -72,7 +74,6 @@ var _ = Describe("Create", func() {
 						Create(groot.CreateSpec{
 							ID:        "random-id",
 							BaseImage: "my-image",
-							DiskLimit: 12300,
 						})
 					Expect(err).To(HaveOccurred())
 					Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))

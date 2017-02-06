@@ -69,11 +69,12 @@ func (d *Btrfs) CreateVolume(logger lager.Logger, parentID, id string) (string, 
 	return volPath, nil
 }
 
-func (d *Btrfs) CreateImage(logger lager.Logger, fromPath, toPath string) error {
-	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"fromPath": fromPath, "toPath": toPath})
+func (d *Btrfs) CreateImage(logger lager.Logger, fromPath, imagePath string) error {
+	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"fromPath": fromPath, "imagePath": imagePath})
 	logger.Info("start")
 	defer logger.Info("end")
 
+	toPath := filepath.Join(imagePath, "rootfs")
 	cmd := exec.Command(d.btrfsBinPath, "subvolume", "snapshot", fromPath, toPath)
 
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
@@ -135,11 +136,19 @@ func (d *Btrfs) DestroyVolume(logger lager.Logger, id string) error {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	return d.DestroyImage(logger, filepath.Join(d.storePath, "volumes", id))
+	return d.destroyBtrfsVolume(logger, filepath.Join(d.storePath, "volumes", id))
 }
 
-func (d *Btrfs) DestroyImage(logger lager.Logger, path string) error {
-	logger = logger.Session("btrfs-destroying", lager.Data{"path": path})
+func (d *Btrfs) DestroyImage(logger lager.Logger, imagePath string) error {
+	logger = logger.Session("btrfs-destroying-image", lager.Data{"imagePath": imagePath})
+	logger.Info("start")
+	defer logger.Info("end")
+
+	return d.destroyBtrfsVolume(logger, filepath.Join(imagePath, "rootfs"))
+}
+
+func (d *Btrfs) destroyBtrfsVolume(logger lager.Logger, path string) error {
+	logger = logger.Session("destroying-subvolume", lager.Data{"path": path})
 	logger.Info("start")
 	defer logger.Info("end")
 

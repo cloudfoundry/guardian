@@ -34,12 +34,17 @@ var (
 )
 
 const btrfsMountPath = "/mnt/btrfs"
+const xfsMountPath = "/mnt/xfs"
 
-func TestBTRFSGroot(t *testing.T) {
-	grootTests(t, "btrfs")
+func TestOverlayXfs(t *testing.T) {
+	grootTests(t, "overlay-xfs", xfsMountPath)
 }
 
-func grootTests(t *testing.T, driver string) {
+func TestBtrfs(t *testing.T) {
+	grootTests(t, "btrfs", btrfsMountPath)
+}
+
+func grootTests(t *testing.T, driver string, mountPath string) {
 	RegisterFailHandler(Fail)
 
 	SynchronizedBeforeSuite(func() []byte {
@@ -60,12 +65,8 @@ func grootTests(t *testing.T, driver string) {
 	})
 
 	BeforeEach(func() {
-		if os.Getuid() == 0 {
-			Skip("This suite is only running as groot")
-		}
-
 		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
-		StorePath = path.Join(btrfsMountPath, storeName)
+		StorePath = path.Join(mountPath, storeName)
 		Expect(os.Mkdir(StorePath, 0755)).NotTo(HaveOccurred())
 
 		var err error
@@ -86,7 +87,13 @@ func grootTests(t *testing.T, driver string) {
 	})
 
 	AfterEach(func() {
-		testhelpers.CleanUpSubvolumes(btrfsMountPath, storeName)
+		if driver == "btrfs" {
+			testhelpers.CleanUpBtrfsSubvolumes(mountPath, storeName)
+		}
+
+		if driver == "overlay-xfs" {
+			testhelpers.CleanUpOverlayMounts(mountPath, storeName)
+		}
 		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 

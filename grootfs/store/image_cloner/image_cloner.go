@@ -86,7 +86,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 		return groot.Image{}, fmt.Errorf("creating image.json: %s", err)
 	}
 
-	if err = b.imageDriver.CreateImage(logger, spec.VolumePath, image.RootFSPath); err != nil {
+	if err = b.imageDriver.CreateImage(logger, spec.VolumePath, image.Path); err != nil {
 		return groot.Image{}, fmt.Errorf("creating snapshot: %s", err)
 	}
 

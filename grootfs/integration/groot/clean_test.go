@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -17,6 +18,7 @@ import (
 
 var _ = Describe("Clean", func() {
 	BeforeEach(func() {
+		integration.SkipIfNotBTRFS(Driver)
 		_, err := Runner.Create(groot.CreateSpec{
 			ID:        "my-image-1",
 			BaseImage: "docker:///cfgarden/empty:v0.1.1",

@@ -22,6 +22,8 @@ var _ = Describe("Delete", func() {
 	)
 
 	BeforeEach(func() {
+		integration.SkipIfNotBTRFS(Driver)
+
 		var err error
 		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())

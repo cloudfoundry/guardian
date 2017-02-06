@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
@@ -23,6 +24,8 @@ var _ = Describe("Metrics", func() {
 	)
 
 	BeforeEach(func() {
+		integration.SkipIfNotBTRFS(Driver)
+
 		fakeMetronPort = uint16(5000 + GinkgoParallelNode())
 
 		fakeMetron = testhelpers.NewFakeMetron(fakeMetronPort)
