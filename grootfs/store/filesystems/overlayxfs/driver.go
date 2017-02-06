@@ -19,7 +19,7 @@ const (
 	RootfsDir = "rootfs"
 )
 
-func New(storePath string) *Driver {
+func NewDriver(storePath string) *Driver {
 	return &Driver{
 		storePath: storePath,
 	}

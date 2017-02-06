@@ -208,12 +208,11 @@ var CreateCommand = cli.Command{
 }
 
 func createFileSystemDriver(driverName string, cfg config.Config) (fileSystemDriver, error) {
-	fmt.Fprintf(os.Stderr, "----------------------- %s ----------------- \n", driverName)
 	switch driverName {
 	case "btrfs":
 		return btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, cfg.StorePath), nil
 	case "overlay-xfs":
-		return overlayxfs.New(cfg.StorePath), nil
+		return overlayxfs.NewDriver(cfg.StorePath), nil
 
 	default:
 		return nil, fmt.Errorf("filesystem driver not supported: %s", driverName)

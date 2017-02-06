@@ -56,7 +56,7 @@ func FindGID(group string) uint32 {
 
 func SkipIfNotBTRFS(driver string) {
 	if driver != "btrfs" {
-		Skip("This tests are only for BTRFS driver. Skipping.")
+		Skip("These tests are only for BTRFS driver. Skipping.")
 	}
 }
 

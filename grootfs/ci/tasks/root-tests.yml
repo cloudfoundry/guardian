@@ -11,6 +11,9 @@ inputs:
   - name: grootfs-git-repo
     path: src/code.cloudfoundry.org/grootfs
 
+params:
+  VOLUME_DRIVER:
+
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/root-tests.sh
   user: root

@@ -2,7 +2,7 @@
 set -e
 
 source $(dirname $BASH_SOURCE)/test/utils.sh
-mount_btrfs
+mount_storage
 
 dest_path=$(move_to_gopath grootfs)
 cd $dest_path

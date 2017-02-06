@@ -1,4 +1,4 @@
-mount_btrfs() {
+mount_storage() {
   # Configure cgroup
   mount -t tmpfs cgroup_root /sys/fs/cgroup
   mkdir -p /sys/fs/cgroup/devices
@@ -27,11 +27,20 @@ mount_btrfs() {
   mount -t btrfs -o user_subvol_rm_allowed,rw /btrfs_volume /mnt/btrfs
   chmod 777 -R /mnt/btrfs
   btrfs quota enable /mnt/btrfs
+
+  # Make XFS Volume
+  truncate -s 1G /xfs_volume
+  mkfs.xfs /xfs_volume
+
+  # Mount XFS
+  mkdir /mnt/xfs
+  mount -t xfs -o pquota /xfs_volume /mnt/xfs
+  chmod 777 -R /mnt/xfs
 }
 
-sudo_mount_btrfs() {
-  local MOUNT_BTRFS_FUNC=$(declare -f mount_btrfs)
-  sudo bash -c "$MOUNT_BTRFS_FUNC; mount_btrfs"
+sudo_mount_storage() {
+  local MOUNT_STORAGE_FUNC=$(declare -f mount_storage)
+  sudo bash -c "$MOUNT_STORAGE_FUNC; mount_storage"
 }
 
 move_to_gopath() {

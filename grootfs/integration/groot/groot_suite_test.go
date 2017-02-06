@@ -22,10 +22,11 @@ import (
 var (
 	GrootFSBin string
 	DraxBin    string
-	StorePath  string
-	Runner     runner.Runner
-	storeName  string
 	Driver     string
+	MountPath  string
+	Runner     runner.Runner
+	StorePath  string
+	StoreName  string
 
 	CurrentUserID    string
 	CurrentUserIDInt int
@@ -36,15 +37,7 @@ var (
 const btrfsMountPath = "/mnt/btrfs"
 const xfsMountPath = "/mnt/xfs"
 
-func TestOverlayXfs(t *testing.T) {
-	grootTests(t, "overlay-xfs", xfsMountPath)
-}
-
-func TestBtrfs(t *testing.T) {
-	grootTests(t, "btrfs", btrfsMountPath)
-}
-
-func grootTests(t *testing.T, driver string, mountPath string) {
+func TestGroot(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	SynchronizedBeforeSuite(func() []byte {
@@ -56,7 +49,15 @@ func grootTests(t *testing.T, driver string, mountPath string) {
 		CurrentUserIDInt = os.Getuid()
 		CurrentUserID = strconv.Itoa(CurrentUserIDInt)
 		GrootFSBin = string(data)
-		Driver = driver
+		Driver = os.Getenv("VOLUME_DRIVER")
+		if Driver == "overlay-xfs" {
+			MountPath = xfsMountPath
+		} else {
+			Driver = "btrfs"
+			MountPath = btrfsMountPath
+		}
+
+		fmt.Fprintf(os.Stderr, "============> RUNNING %s TESTS <=============", Driver)
 	})
 
 	SynchronizedAfterSuite(func() {
@@ -65,8 +66,8 @@ func grootTests(t *testing.T, driver string, mountPath string) {
 	})
 
 	BeforeEach(func() {
-		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
-		StorePath = path.Join(mountPath, storeName)
+		StoreName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
+		StorePath = path.Join(MountPath, StoreName)
 		Expect(os.Mkdir(StorePath, 0755)).NotTo(HaveOccurred())
 
 		var err error
@@ -77,27 +78,21 @@ func grootTests(t *testing.T, driver string, mountPath string) {
 		RegistryUsername = os.Getenv("REGISTRY_USERNAME")
 		RegistryPassword = os.Getenv("REGISTRY_PASSWORD")
 
-		r := runner.Runner{
+		Runner = runner.Runner{
 			GrootFSBin: GrootFSBin,
 			StorePath:  StorePath,
 			DraxBin:    DraxBin,
-			Driver:     driver,
-		}
-		Runner = r.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter)
+			Driver:     Driver,
+		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter)
 	})
 
 	AfterEach(func() {
-		if driver == "btrfs" {
-			testhelpers.CleanUpBtrfsSubvolumes(mountPath, storeName)
-		}
-
-		if driver == "overlay-xfs" {
-			testhelpers.CleanUpOverlayMounts(mountPath, storeName)
-		}
+		testhelpers.CleanUpBtrfsSubvolumes(btrfsMountPath, StoreName)
+		testhelpers.CleanUpOverlayMounts(xfsMountPath, StoreName)
 		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
-	RunSpecs(t, fmt.Sprintf("%s: GrootFS Integration Suite - Running as groot", driver))
+	RunSpecs(t, "GrootFS Integration Suite - Running as groot")
 }
 
 func writeMegabytes(outputPath string, mb int) error {
