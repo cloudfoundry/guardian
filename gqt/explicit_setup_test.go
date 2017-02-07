@@ -1,7 +1,10 @@
 package gqt_test
 
 import (
+	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -11,19 +14,34 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = FDescribe("gdn setup", func() {
+var _ = Describe("gdn setup", func() {
+	var cgroupsMountpoint string
+
 	BeforeEach(func() {
-		setupProcess, err := gexec.Start(exec.Command(gardenBin, "setup"), GinkgoWriter, GinkgoWriter)
+		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%d", GinkgoParallelNode()))
+
+		args := []string{"setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
+		setupProcess, err := gexec.Start(exec.Command(gardenBin, args...), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 	})
 
-	It("sets up cgroups", func() {})
+	AfterEach(func() {
+		umountCmd := exec.Command("sh", "-c", fmt.Sprintf("umount %s/*", cgroupsMountpoint))
+		Expect(umountCmd.Run()).To(Succeed(), "unmount %s", cgroupsMountpoint)
+		umountCmd = exec.Command("sh", "-c", fmt.Sprintf("umount %s", cgroupsMountpoint))
+		Expect(umountCmd.Run()).To(Succeed(), "unmount %s", cgroupsMountpoint)
+	})
+
+	It("sets up cgroups", func() {
+		mountpointCmd := exec.Command("mountpoint", "-q", cgroupsMountpoint+"/")
+		Expect(mountpointCmd.Run()).To(Succeed())
+	})
 
 	It("sets up iptables", func() {})
 })
 
-var _ = FDescribe("running gdn setup before starting server", func() {
+var _ = Describe("running gdn setup before starting server", func() {
 	var client *runner.RunningGarden
 
 	BeforeEach(func() {
