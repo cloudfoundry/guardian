@@ -47,7 +47,7 @@ var StatsCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		volumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
+		volumeDriver := btrfs.NewDriver(cfg.BtrfsBin, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
 
 		metricsEmitter := metrics.NewEmitter()

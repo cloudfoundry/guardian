@@ -211,7 +211,7 @@ var CreateCommand = cli.Command{
 func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {
 	switch cfg.FSDriver {
 	case "btrfs":
-		return btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, cfg.StorePath), nil
+		return btrfs.NewDriver(cfg.BtrfsBin, cfg.DraxBin, cfg.StorePath), nil
 	case "overlay-xfs":
 		return overlayxfs.NewDriver(cfg.StorePath), nil
 

@@ -20,21 +20,21 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-type Btrfs struct {
+type Driver struct {
 	draxBinPath  string
 	btrfsBinPath string
 	storePath    string
 }
 
-func NewBtrfs(btrfsBinPath, draxBinPath, storePath string) *Btrfs {
-	return &Btrfs{
+func NewDriver(btrfsBinPath, draxBinPath, storePath string) *Driver {
+	return &Driver{
 		btrfsBinPath: btrfsBinPath,
 		draxBinPath:  draxBinPath,
 		storePath:    storePath,
 	}
 }
 
-func (d *Btrfs) VolumePath(logger lager.Logger, id string) (string, error) {
+func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
 	volPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
 	_, err := os.Stat(volPath)
 	if err == nil {
@@ -44,7 +44,7 @@ func (d *Btrfs) VolumePath(logger lager.Logger, id string) (string, error) {
 	return "", fmt.Errorf("volume does not exist `%s`: %s", id, err)
 }
 
-func (d *Btrfs) CreateVolume(logger lager.Logger, parentID, id string) (string, error) {
+func (d *Driver) CreateVolume(logger lager.Logger, parentID, id string) (string, error) {
 	logger = logger.Session("btrfs-creating-volume", lager.Data{"parentID": parentID, "id": id})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -69,7 +69,7 @@ func (d *Btrfs) CreateVolume(logger lager.Logger, parentID, id string) (string, 
 	return volPath, nil
 }
 
-func (d *Btrfs) CreateImage(logger lager.Logger, fromPath, imagePath string) error {
+func (d *Driver) CreateImage(logger lager.Logger, fromPath, imagePath string) error {
 	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"fromPath": fromPath, "imagePath": imagePath})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -88,7 +88,7 @@ func (d *Btrfs) CreateImage(logger lager.Logger, fromPath, imagePath string) err
 	return nil
 }
 
-func (d *Btrfs) Volumes(logger lager.Logger) ([]string, error) {
+func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 	volumes := []string{}
 
 	existingVolumes, err := ioutil.ReadDir(path.Join(d.storePath, store.VOLUMES_DIR_NAME))
@@ -103,7 +103,7 @@ func (d *Btrfs) Volumes(logger lager.Logger) ([]string, error) {
 	return volumes, nil
 }
 
-func (d *Btrfs) destroyQgroup(logger lager.Logger, path string) error {
+func (d *Driver) destroyQgroup(logger lager.Logger, path string) error {
 	if !d.draxInPath() {
 		logger.Info("drax-command-not-found", lager.Data{
 			"warning": "could not delete quota group",
@@ -131,7 +131,7 @@ func (d *Btrfs) destroyQgroup(logger lager.Logger, path string) error {
 	return nil
 }
 
-func (d *Btrfs) DestroyVolume(logger lager.Logger, id string) error {
+func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	logger = logger.Session("btrfs-destroying-volume", lager.Data{"volumeID": id})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -139,7 +139,7 @@ func (d *Btrfs) DestroyVolume(logger lager.Logger, id string) error {
 	return d.destroyBtrfsVolume(logger, filepath.Join(d.storePath, "volumes", id))
 }
 
-func (d *Btrfs) DestroyImage(logger lager.Logger, imagePath string) error {
+func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	logger = logger.Session("btrfs-destroying-image", lager.Data{"imagePath": imagePath})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -147,7 +147,7 @@ func (d *Btrfs) DestroyImage(logger lager.Logger, imagePath string) error {
 	return d.destroyBtrfsVolume(logger, filepath.Join(imagePath, "rootfs"))
 }
 
-func (d *Btrfs) destroyBtrfsVolume(logger lager.Logger, path string) error {
+func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 	logger = logger.Session("destroying-subvolume", lager.Data{"path": path})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -169,7 +169,7 @@ func (d *Btrfs) destroyBtrfsVolume(logger lager.Logger, path string) error {
 	return nil
 }
 
-func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, excludeImageFromQuota bool) error {
+func (d *Driver) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, excludeImageFromQuota bool) error {
 	logger = logger.Session("btrfs-applying-quotas", lager.Data{"path": path})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -209,7 +209,7 @@ func (d *Btrfs) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64
 	return nil
 }
 
-func (d *Btrfs) FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error) {
+func (d *Driver) FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error) {
 	logger = logger.Session("btrfs-fetching-stats", lager.Data{"path": path})
 	logger.Info("start")
 	defer logger.Info("end")
@@ -254,14 +254,14 @@ func (d *Btrfs) FetchStats(logger lager.Logger, path string) (groot.VolumeStats,
 	return stats, nil
 }
 
-func (d *Btrfs) draxInPath() bool {
+func (d *Driver) draxInPath() bool {
 	if _, err := exec.LookPath(d.draxBinPath); err != nil {
 		return false
 	}
 	return true
 }
 
-func (d *Btrfs) hasSUID() bool {
+func (d *Driver) hasSUID() bool {
 	path, err := exec.LookPath(d.draxBinPath)
 	if err != nil {
 		return false

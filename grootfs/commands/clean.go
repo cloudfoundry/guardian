@@ -60,7 +60,7 @@ var CleanCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 0)
 		}
 
-		volumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
+		volumeDriver := btrfs.NewDriver(cfg.BtrfsBin, cfg.DraxBin, storePath)
 		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
