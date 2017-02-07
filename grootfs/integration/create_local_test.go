@@ -71,6 +71,24 @@ var _ = Describe("Create with local images", func() {
 		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
 	})
 
+	Context("when two rootfses are using the same image", func() {
+		It("isolates them", func() {
+			image1, err := Runner.Create(groot.CreateSpec{
+				ID:        "random-id",
+				BaseImage: baseImagePath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			image2, err := Runner.Create(groot.CreateSpec{
+				ID:        "another-random-id",
+				BaseImage: baseImagePath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(ioutil.WriteFile(filepath.Join(image1.RootFSPath, "new-file"), []byte("hello-world"), 0644)).To(Succeed())
+			Expect(filepath.Join(image2.RootFSPath, "new-file")).NotTo(BeARegularFile())
+		})
+	})
+
 	Context("timestamps", func() {
 		var modTime time.Time
 

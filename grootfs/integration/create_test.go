@@ -506,24 +506,6 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Context("when two rootfses are using the same image", func() {
-		It("isolates them", func() {
-			image1, err := Runner.Create(groot.CreateSpec{
-				ID:        "random-id",
-				BaseImage: baseImagePath,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			image2, err := Runner.Create(groot.CreateSpec{
-				ID:        "another-random-id",
-				BaseImage: baseImagePath,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ioutil.WriteFile(filepath.Join(image1.RootFSPath, "new-file"), []byte("hello-world"), 0644)).To(Succeed())
-			Expect(filepath.Join(image2.RootFSPath, "new-file")).NotTo(BeARegularFile())
-		})
-	})
-
 	Context("when the id is already being used", func() {
 		JustBeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
