@@ -81,8 +81,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		dadooFlags := flag.NewFlagSet("something", flag.PanicOnError)
 		dadooFlags.Bool("tty", false, "")
-		dadooFlags.Int("uid", 0, "")
-		dadooFlags.Int("gid", 0, "")
 		dadooFlags.Int("rows", 0, "")
 		dadooFlags.Int("cols", 0, "")
 
@@ -203,8 +201,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					Equal([]string{
 						"path-to-dadoo",
 						"-tty",
-						"-uid", "123",
-						"-gid", "456",
 						"exec", "path-to-runc", filepath.Join(processPath, "the-pid"), "some-handle",
 					}),
 				)

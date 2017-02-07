@@ -28,8 +28,6 @@ import (
 const MaxSocketDirPathLength = 80
 
 var (
-	uid           = flag.Int("uid", 0, "uid to chown console to")
-	gid           = flag.Int("gid", 0, "gid to chown console to")
 	tty           = flag.Bool("tty", false, "tty requested")
 	socketDirPath = flag.String("socket-dir-path", "", "path to a dir in which to store console sockets")
 
