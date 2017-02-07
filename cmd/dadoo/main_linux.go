@@ -43,8 +43,8 @@ func main() {
 func run() int {
 	flag.Parse()
 
-	runtime := flag.Args()[1]         // e.g. runc
-	processStateDir := flag.Args()[2] // path to a dir in which to store process state (e.g. fifos)
+	runtime := flag.Args()[1] // e.g. runc
+	processStateDir := flag.Args()[2]
 	containerId := flag.Args()[3]
 
 	signals := make(chan os.Signal, 100)
