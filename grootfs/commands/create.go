@@ -25,8 +25,6 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
-	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
-	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"github.com/docker/distribution/registry/api/errcode"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -206,18 +204,6 @@ var CreateCommand = cli.Command{
 		fmt.Println(image.Path)
 		return nil
 	},
-}
-
-func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {
-	switch cfg.FSDriver {
-	case "btrfs":
-		return btrfs.NewDriver(cfg.BtrfsBin, cfg.DraxBin, cfg.StorePath), nil
-	case "overlay-xfs":
-		return overlayxfs.NewDriver(cfg.StorePath), nil
-
-	default:
-		return nil, fmt.Errorf("filesystem driver not supported: %s", cfg.FSDriver)
-	}
 }
 
 func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {
