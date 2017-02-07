@@ -1,6 +1,6 @@
 #!/bin/bash
 
-git clone grootfs grootfs-updated
+git clone --recursive grootfs grootfs-updated
 cd grootfs-updated
 ./script/deps -u  github.com/containers/image
 
