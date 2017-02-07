@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	StorePath                 string   `yaml:"store_path"`
+	FSDriver                  string   `yaml:"filesystem_driver"`
 	CleanOnCreate             bool     `yaml:"clean_on_create"`
 	CleanThresholdBytes       int64    `yaml:"clean_threshold_bytes"`
 	DiskLimitSizeBytes        int64    `yaml:"disk_limit_size_bytes"`
@@ -81,6 +82,14 @@ func (b *Builder) WithIgnoreBaseImages(ignoreBaseImages []string) *Builder {
 func (b *Builder) WithStorePath(storePath string, isSet bool) *Builder {
 	if isSet || b.config.StorePath == "" {
 		b.config.StorePath = storePath
+	}
+
+	return b
+}
+
+func (b *Builder) WithFSDriver(driver string, isSet bool) *Builder {
+	if isSet || b.config.FSDriver == "" {
+		b.config.FSDriver = driver
 	}
 
 	return b

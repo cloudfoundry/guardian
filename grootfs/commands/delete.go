@@ -47,7 +47,8 @@ var DeleteCommand = cli.Command{
 			return nil
 		}
 
-		fsDriver, _ := createFileSystemDriver(ctx.GlobalString("driver"), cfg)
+		fsDriver, _ := createFileSystemDriver(cfg)
+
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.META_DIR_NAME, "dependencies"),

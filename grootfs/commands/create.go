@@ -136,7 +136,7 @@ var CreateCommand = cli.Command{
 			return err
 		}
 
-		fsDriver, err := createFileSystemDriver(ctx.GlobalString("driver"), cfg)
+		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
@@ -208,15 +208,15 @@ var CreateCommand = cli.Command{
 	},
 }
 
-func createFileSystemDriver(driverName string, cfg config.Config) (fileSystemDriver, error) {
-	switch driverName {
+func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {
+	switch cfg.FSDriver {
 	case "btrfs":
 		return btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, cfg.StorePath), nil
 	case "overlay-xfs":
 		return overlayxfs.NewDriver(cfg.StorePath), nil
 
 	default:
-		return nil, fmt.Errorf("filesystem driver not supported: %s", driverName)
+		return nil, fmt.Errorf("filesystem driver not supported: %s", cfg.FSDriver)
 	}
 }
 

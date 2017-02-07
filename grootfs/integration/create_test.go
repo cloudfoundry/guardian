@@ -658,6 +658,18 @@ var _ = Describe("Create", func() {
 			})
 		})
 
+		Describe("filesystem driver", func() {
+			BeforeEach(func() {
+				cfg.FSDriver = "this-should-fail"
+			})
+
+			It("uses the filesystem driver from the config file", func() {
+				_, err := Runner.WithoutDriver().Create(spec)
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("filesystem driver not supported: this-should-fail"))
+			})
+		})
+
 		Describe("drax bin", func() {
 			var (
 				draxCalledFile *os.File
