@@ -18,21 +18,31 @@ type SetupCommand struct {
 
 func (c *SetupCommand) Execute(args []string) error {
 	logger, _ := c.Logger.Logger("guardian")
+	cgroupStarter := wireCgroupStarter(logger, c.Tag)
 
-	cgroupStarter := wireRunDMCStarter(logger, c.Tag)
-
-	starters := []gardener.Starter{cgroupStarter}
-
-	for _, s := range starters {
-		if err := s.Start(); err != nil {
-			panic(err)
-		}
+	bulkStarter := BulkStarter{
+		Starters: []gardener.Starter{
+			cgroupStarter,
+		},
 	}
 
+	return bulkStarter.StartAll()
+}
+
+type BulkStarter struct {
+	Starters []gardener.Starter
+}
+
+func (b *BulkStarter) StartAll() error {
+	for _, s := range b.Starters {
+		if err := s.Start(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
-func wireRunDMCStarter(logger lager.Logger, tag string) gardener.Starter {
+func wireCgroupStarter(logger lager.Logger, tag string) gardener.Starter {
 	var cgroupsMountpoint string
 	if tag != "" {
 		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
