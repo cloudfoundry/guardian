@@ -169,6 +169,12 @@ do
   esac
 done
 
+if [ -z "$REGISTRY_PASSWORD" ]
+then
+  export REGISTRY_USERNAME="$(lpass show 'Shared-Garden/cf-garden-docker' --username)"
+  export REGISTRY_PASSWORD="$(lpass show 'Shared-Garden/cf-garden-docker' --password)"
+fi
+
 print_message "ginkgo_args='$GINKGO_ARGS'" $GREEN
 print_message "recursive=$RECURSIVE" $GREEN
 print_message "force_fly=$FORCE_FLY" $GREEN
