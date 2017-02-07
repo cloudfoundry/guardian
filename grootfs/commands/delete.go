@@ -13,8 +13,6 @@ import (
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
-
-	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"github.com/urfave/cli"
 )
 
@@ -49,8 +47,8 @@ var DeleteCommand = cli.Command{
 			return nil
 		}
 
-		volumeDriver := btrfs.NewBtrfs(cfg.BtrfsBin, cfg.DraxBin, storePath)
-		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
+		fsDriver, _ := createFileSystemDriver(ctx.GlobalString("driver"), cfg)
+		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.META_DIR_NAME, "dependencies"),
 		)

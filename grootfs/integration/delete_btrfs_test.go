@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -66,5 +67,21 @@ var _ = Describe("Delete (btrfs only)", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 		Expect(sess).ToNot(gbytes.Say(rootID))
+	})
+
+	Context("when drax is not in PATH", func() {
+		It("returns a warning", func() {
+			errBuffer := gbytes.NewBuffer()
+			outBuffer := gbytes.NewBuffer()
+			err := Runner.WithoutDraxBin().
+				WithLogLevel(lager.INFO).
+				WithEnvVar("PATH=/usr/sbin:/usr/bin:/sbin:/bin").
+				WithStdout(outBuffer).
+				WithStderr(errBuffer).
+				Delete("random-id")
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(errBuffer).Should(gbytes.Say("could not delete quota group"))
+			Eventually(outBuffer).Should(gbytes.Say("Image random-id deleted"))
+		})
 	})
 })

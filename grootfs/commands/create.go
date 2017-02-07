@@ -137,9 +137,6 @@ var CreateCommand = cli.Command{
 		}
 
 		fsDriver, _ := createFileSystemDriver(ctx.GlobalString("driver"), cfg)
-		// if err != nil {
-		// 	return cli.NewExitError(err.Error(), 1)
-		// }
 		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
 
 		runner := linux_command_runner.New()
