@@ -35,8 +35,6 @@ var _ = Describe("Create", func() {
 	)
 
 	BeforeEach(func() {
-		integration.SkipIfNotBTRFS(Driver)
-
 		rootUID = 0
 		rootGID = 0
 
@@ -167,7 +165,6 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithStore(storePath).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
-				DiskLimit: tenMegabytes,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(storePath).To(BeADirectory())
@@ -273,6 +270,7 @@ var _ = Describe("Create", func() {
 
 	Context("when inclusive disk limit is provided", func() {
 		BeforeEach(func() {
+			integration.SkipIfNotBTRFS(Driver)
 			Expect(writeMegabytes(filepath.Join(sourceImagePath, "fatfile"), 5)).To(Succeed())
 		})
 
@@ -408,6 +406,7 @@ var _ = Describe("Create", func() {
 
 	Context("when --clean is given", func() {
 		BeforeEach(func() {
+			integration.SkipIfNotBTRFS(Driver)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///busybox:1.26.2",
@@ -446,6 +445,7 @@ var _ = Describe("Create", func() {
 
 	Context("when --no-clean is given", func() {
 		BeforeEach(func() {
+			integration.SkipIfNotBTRFS(Driver)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///busybox:1.26.2",
@@ -660,6 +660,7 @@ var _ = Describe("Create", func() {
 			)
 
 			BeforeEach(func() {
+				integration.SkipIfNotBTRFS(Driver)
 				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
 				cfg.DraxBin = draxBin.Name()
 			})
@@ -697,6 +698,7 @@ var _ = Describe("Create", func() {
 
 		Describe("disk limit size bytes", func() {
 			BeforeEach(func() {
+				integration.SkipIfNotBTRFS(Driver)
 				cfg.DiskLimitSizeBytes = tenMegabytes
 			})
 
@@ -710,6 +712,7 @@ var _ = Describe("Create", func() {
 
 		Describe("exclude image from quota", func() {
 			BeforeEach(func() {
+				integration.SkipIfNotBTRFS(Driver)
 				cfg.ExcludeBaseImageFromQuota = true
 				cfg.DiskLimitSizeBytes = tenMegabytes
 			})
@@ -728,6 +731,10 @@ var _ = Describe("Create", func() {
 		var (
 			imageID string
 		)
+
+		BeforeEach(func() {
+			integration.SkipIfNotBTRFS(Driver)
+		})
 
 		JustBeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
