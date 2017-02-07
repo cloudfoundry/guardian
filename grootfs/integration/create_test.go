@@ -562,6 +562,22 @@ var _ = Describe("Create", func() {
 		})
 	})
 
+	Context("when the requested filesystem driver is not supported", func() {
+		It("fails with a useful error message", func() {
+			cmd := exec.Command(
+				GrootFSBin,
+				"--store", StorePath,
+				"--driver", "dinosaurfs",
+				"create", baseImagePath,
+				"some-id",
+			)
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(sess.Wait()).NotTo(gexec.Exit(0))
+			Eventually(sess).Should(gbytes.Say("filesystem driver not supported: dinosaurfs"))
+		})
+	})
+
 	Context("when the image is invalid", func() {
 		It("fails", func() {
 			_, err := Runner.Create(groot.CreateSpec{

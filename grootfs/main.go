@@ -44,7 +44,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "driver",
-			Usage: "Storage driver to use",
+			Usage: "Storage driver to use <btrfs|overlay-xfs>",
 			Value: "btrfs",
 		},
 		cli.StringFlag{
