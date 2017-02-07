@@ -102,7 +102,6 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 	}
 
 	cmd.Stdin = bytes.NewReader(encodedSpec)
-	cmd.Stderr = os.Stderr // any dadoo panics will appear in guardian .err log
 	if err := d.commandRunner.Start(cmd); err != nil {
 		return nil, err
 	}
