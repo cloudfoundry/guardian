@@ -268,13 +268,13 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Context("when inclusive disk limit is provided", func() {
+	Context("when disk limit is provided", func() {
 		BeforeEach(func() {
-			integration.SkipIfNotBTRFS(Driver)
 			Expect(writeMegabytes(filepath.Join(sourceImagePath, "fatfile"), 5)).To(Succeed())
 		})
 
 		It("creates a image with supplied limit", func() {
+			integration.SkipIfNotBTRFS(Driver)
 			image, err := Runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
@@ -308,7 +308,7 @@ var _ = Describe("Create", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 6)).To(Succeed())
-				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("Disk quota exceeded")))
+				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
 			})
 		})
 
@@ -320,6 +320,7 @@ var _ = Describe("Create", func() {
 			)
 
 			BeforeEach(func() {
+				integration.SkipIfNotBTRFS(Driver)
 				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
 			})
 
@@ -706,13 +707,12 @@ var _ = Describe("Create", func() {
 				image, err := Runner.Create(spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 11)).To(MatchError(ContainSubstring("Disk quota exceeded")))
+				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 11)).To(MatchError(ContainSubstring("dd: error writing")))
 			})
 		})
 
 		Describe("exclude image from quota", func() {
 			BeforeEach(func() {
-				integration.SkipIfNotBTRFS(Driver)
 				cfg.ExcludeBaseImageFromQuota = true
 				cfg.DiskLimitSizeBytes = tenMegabytes
 			})
@@ -722,7 +722,7 @@ var _ = Describe("Create", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 6)).To(Succeed())
-				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("Disk quota exceeded")))
+				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
 			})
 		})
 	})

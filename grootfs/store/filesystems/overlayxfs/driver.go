@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/docker/docker/daemon/graphdriver/quota"
 	"github.com/pkg/errors"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -128,8 +129,29 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	return nil
 }
 
-func (d *Driver) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusive bool) error {
-	panic("not implemented")
+func (d *Driver) ApplyDiskLimit(logger lager.Logger, imagePath string, diskLimit int64, exclusive bool) error {
+	logger = logger.Session("overlayxfs-applying-quota", lager.Data{"imagePath": imagePath, "diskLimit": diskLimit, "exclusive": exclusive})
+	logger.Info("start")
+	defer logger.Info("end")
+
+	imagesPath := filepath.Join(d.storePath, store.ImageDirName)
+	quotaControl, err := quota.NewControl(imagesPath)
+	if err != nil {
+		logger.Error("creating-quota-control", err, lager.Data{"imagesPath": imagesPath})
+		return errors.Wrapf(err, "creating xfs quota control %s", imagesPath)
+	}
+
+	quota := quota.Quota{
+		Size: uint64(diskLimit),
+	}
+
+	upperDir := filepath.Join(imagePath, UpperDir)
+	if err := quotaControl.SetQuota(upperDir, quota); err != nil {
+		logger.Error("setting-quota-failed", err)
+		return errors.Wrapf(err, "setting quota to %s", upperDir)
+	}
+
+	return nil
 }
 
 func (d *Driver) FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error) {

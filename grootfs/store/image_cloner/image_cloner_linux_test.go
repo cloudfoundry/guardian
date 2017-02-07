@@ -294,8 +294,8 @@ var _ = Describe("Image", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, path, diskLimit, excludeBaseImageFromQuota := fakeImageDriver.ApplyDiskLimitArgsForCall(0)
-				Expect(path).To(Equal(image.RootFSPath))
+				_, imagePath, diskLimit, excludeBaseImageFromQuota := fakeImageDriver.ApplyDiskLimitArgsForCall(0)
+				Expect(imagePath).To(Equal(image.Path))
 				Expect(diskLimit).To(Equal(int64(1024)))
 				Expect(excludeBaseImageFromQuota).To(BeFalse())
 			})

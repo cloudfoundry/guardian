@@ -99,7 +99,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 	}
 
 	if spec.DiskLimit > 0 {
-		if err = b.imageDriver.ApplyDiskLimit(logger, image.RootFSPath, spec.DiskLimit, spec.ExcludeBaseImageFromQuota); err != nil {
+		if err = b.imageDriver.ApplyDiskLimit(logger, image.Path, spec.DiskLimit, spec.ExcludeBaseImageFromQuota); err != nil {
 			return groot.Image{}, fmt.Errorf("applying disk limit: %s", err)
 		}
 	}

@@ -432,7 +432,7 @@ var _ = Describe("Btrfs", func() {
 			})
 
 			It("applies the disk limit", func() {
-				Expect(driver.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, false)).To(Succeed())
+				Expect(driver.ApplyDiskLimit(logger, imagePath, 10*1024*1024, false)).To(Succeed())
 
 				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello")), "bs=1048576", "count=4")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -463,7 +463,7 @@ var _ = Describe("Btrfs", func() {
 
 				It("will force drax to use that binary", func() {
 					driver = btrfs.NewDriver(btrfsBin.Name(), draxBinPath, storePath)
-					Expect(driver.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, true)).To(Succeed())
+					Expect(driver.ApplyDiskLimit(logger, imagePath, 10*1024*1024, true)).To(Succeed())
 					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(contents)).To(Equal("I'm groot - btrfs"))
@@ -472,7 +472,7 @@ var _ = Describe("Btrfs", func() {
 
 			Context("when exclusive limit is active", func() {
 				It("applies the disk limit with the exclusive flag", func() {
-					Expect(driver.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, true)).To(Succeed())
+					Expect(driver.ApplyDiskLimit(logger, imagePath, 10*1024*1024, true)).To(Succeed())
 
 					cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello")), "bs=1048576", "count=6")
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -494,7 +494,7 @@ var _ = Describe("Btrfs", func() {
 
 				It("returns an error", func() {
 					Expect(
-						driver.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, false),
+						driver.ApplyDiskLimit(logger, imagePath, 10*1024*1024, false),
 					).To(MatchError(ContainSubstring("drax was not found in the $PATH")))
 				})
 			})
@@ -506,7 +506,7 @@ var _ = Describe("Btrfs", func() {
 
 				It("returns an error", func() {
 					Expect(
-						driver.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, false),
+						driver.ApplyDiskLimit(logger, imagePath, 10*1024*1024, false),
 					).To(MatchError(ContainSubstring("missing the setuid bit on drax")))
 				})
 			})
@@ -517,7 +517,7 @@ var _ = Describe("Btrfs", func() {
 				Expect(os.MkdirAll(snapshotPath, 0777)).To(Succeed())
 
 				Expect(
-					driver.ApplyDiskLimit(logger, snapshotPath, 10*1024*1024, false),
+					driver.ApplyDiskLimit(logger, imagePath, 10*1024*1024, false),
 				).To(MatchError(ContainSubstring("is not a subvolume")))
 			})
 		})

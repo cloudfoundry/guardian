@@ -1,8 +1,10 @@
 package overlayxfs_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 
@@ -11,6 +13,8 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Driver", func() {
@@ -140,6 +144,42 @@ var _ = Describe("Driver", func() {
 
 				err := driver.DestroyImage(logger, imagePath)
 				Expect(err).To(MatchError(ContainSubstring("unmounting rootfs folder")))
+			})
+		})
+	})
+
+	Describe("ApplyDiskLimit", func() {
+		var (
+			imagePath       string
+			imageRootfsPath string
+		)
+
+		BeforeEach(func() {
+			dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", volumePath), "count=5", "bs=1M")
+			sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+
+			imagePath = filepath.Join(storePath, store.ImageDirName, "random-id")
+			Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
+			Expect(driver.CreateImage(logger, volumePath, imagePath)).To(Succeed())
+			imageRootfsPath = filepath.Join(imagePath, overlayxfs.RootfsDir)
+		})
+
+		Context("exclusive quota", func() {
+			It("enforces the quota in the image", func() {
+				Expect(driver.ApplyDiskLimit(logger, imagePath, 1024*1024*10, true)).To(Succeed())
+
+				dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file-1", imageRootfsPath), "count=8", "bs=1M")
+				sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+
+				dd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file-2", imageRootfsPath), "count=3", "bs=1M")
+				sess, err = gexec.Start(dd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(1))
+				Eventually(sess.Err).Should(gbytes.Say("No space left on device"))
 			})
 		})
 	})

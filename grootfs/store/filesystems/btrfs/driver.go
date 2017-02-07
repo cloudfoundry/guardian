@@ -169,8 +169,8 @@ func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 	return nil
 }
 
-func (d *Driver) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, excludeImageFromQuota bool) error {
-	logger = logger.Session("btrfs-applying-quotas", lager.Data{"path": path})
+func (d *Driver) ApplyDiskLimit(logger lager.Logger, imagePath string, diskLimit int64, excludeImageFromQuota bool) error {
+	logger = logger.Session("btrfs-applying-quotas", lager.Data{"imagePath": imagePath})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -185,7 +185,7 @@ func (d *Driver) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int6
 	args := []string{
 		"--btrfs-bin", d.btrfsBinPath,
 		"limit",
-		"--volume-path", path,
+		"--volume-path", filepath.Join(imagePath, "rootfs"),
 		"--disk-limit-bytes", strconv.FormatInt(diskLimit, 10),
 	}
 

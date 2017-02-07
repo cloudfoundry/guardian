@@ -30,6 +30,7 @@ var _ = Describe("Driver", func() {
 		randomID = randVolumeID()
 
 		Expect(os.Mkdir(filepath.Join(storePath, store.VolumesDirName), 0777)).To(Succeed())
+		Expect(os.Mkdir(filepath.Join(storePath, store.ImageDirName), 0777)).To(Succeed())
 
 		driver = overlayxfs.NewDriver(storePath)
 		logger = lagertest.NewTestLogger("overlay+xfs")
