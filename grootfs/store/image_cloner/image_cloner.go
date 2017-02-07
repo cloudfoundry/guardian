@@ -39,7 +39,7 @@ func NewImageCloner(imageDriver ImageDriver, storePath string) *ImageCloner {
 func (b *ImageCloner) ImageIDs(logger lager.Logger) ([]string, error) {
 	images := []string{}
 
-	existingImages, err := ioutil.ReadDir(path.Join(b.storePath, store.IMAGES_DIR_NAME))
+	existingImages, err := ioutil.ReadDir(path.Join(b.storePath, store.ImageDirName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read images dir: %s", err.Error())
 	}
@@ -130,7 +130,7 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 }
 
 func (b *ImageCloner) Exists(id string) (bool, error) {
-	imagePath := path.Join(b.storePath, store.IMAGES_DIR_NAME, id)
+	imagePath := path.Join(b.storePath, store.ImageDirName, id)
 	if _, err := os.Stat(imagePath); err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -186,7 +186,7 @@ func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, image groot.Image,
 }
 
 func (b *ImageCloner) createImage(id string) groot.Image {
-	imagePath := path.Join(b.storePath, store.IMAGES_DIR_NAME, id)
+	imagePath := path.Join(b.storePath, store.ImageDirName, id)
 
 	return groot.Image{
 		Path:       imagePath,

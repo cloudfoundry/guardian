@@ -24,7 +24,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 		var err error
 		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(os.MkdirAll(filepath.Join(storePath, store.META_DIR_NAME), 0700)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(storePath, store.MetaDirName), 0700)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
@@ -54,7 +54,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 			_, err := namespaceChecker.Check(uidMappings, gidMappings)
 			Expect(err).NotTo(HaveOccurred())
 
-			namespaceFile := filepath.Join(storePath, store.META_DIR_NAME, "namespace.json")
+			namespaceFile := filepath.Join(storePath, store.MetaDirName, "namespace.json")
 			Expect(namespaceFile).To(BeAnExistingFile())
 
 			contents, err := ioutil.ReadFile(namespaceFile)
@@ -70,7 +70,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 		Context("when there's a namespace file", func() {
 			BeforeEach(func() {
 				mappings := []byte(`{"uid-mappings":["0:1000:1","1:100000:10"],"gid-mappings":["0:2000:1","1:200000:10"]}`)
-				Expect(ioutil.WriteFile(filepath.Join(storePath, store.META_DIR_NAME, "namespace.json"), mappings, 0700)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(storePath, store.MetaDirName, "namespace.json"), mappings, 0700)).To(Succeed())
 			})
 
 			It("returns true when the namespaces are the same", func() {
@@ -105,7 +105,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 
 			Context("when it fails to read the namespace file", func() {
 				BeforeEach(func() {
-					imageJsonPath := filepath.Join(storePath, store.META_DIR_NAME, "namespace.json")
+					imageJsonPath := filepath.Join(storePath, store.MetaDirName, "namespace.json")
 					Expect(os.Remove(imageJsonPath)).To(Succeed())
 					Expect(os.Mkdir(imageJsonPath, 0755)).To(Succeed())
 				})

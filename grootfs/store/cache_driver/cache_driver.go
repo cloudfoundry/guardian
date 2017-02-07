@@ -119,7 +119,7 @@ func (c *CacheDriver) Clean(logger lager.Logger) error {
 }
 
 func (c *CacheDriver) blobPath(id string) string {
-	return filepath.Join(c.storePath, store.CACHE_DIR_NAME, id)
+	return filepath.Join(c.storePath, store.CacheDirName, id)
 }
 
 func (c *CacheDriver) hasBlob(id string) (bool, error) {

@@ -31,7 +31,7 @@ func NewNamespaceChecker(storePath string) *StoreNamespaceChecker {
 }
 
 func (n *StoreNamespaceChecker) Check(uidMappings, gidMappings []IDMappingSpec) (bool, error) {
-	namespaceStorePath := filepath.Join(n.storePath, store.META_DIR_NAME, NamespaceFilename)
+	namespaceStorePath := filepath.Join(n.storePath, store.MetaDirName, NamespaceFilename)
 
 	_, err := os.Stat(namespaceStorePath)
 	if err != nil {

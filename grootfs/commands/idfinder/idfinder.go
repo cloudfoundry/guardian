@@ -18,9 +18,9 @@ func FindID(storePath string, pathOrID string) (string, error) {
 
 	if !strings.HasPrefix(pathOrID, "/") {
 		imageID = pathOrID
-		imagePath = filepath.Join(storePath, store.IMAGES_DIR_NAME, imageID)
+		imagePath = filepath.Join(storePath, store.ImageDirName, imageID)
 	} else {
-		imagePathRegex := filepath.Join(storePath, store.IMAGES_DIR_NAME, "(.*)")
+		imagePathRegex := filepath.Join(storePath, store.ImageDirName, "(.*)")
 		pathRegexp := regexp.MustCompile(imagePathRegex)
 		matches := pathRegexp.FindStringSubmatch(pathOrID)
 

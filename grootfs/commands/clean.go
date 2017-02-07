@@ -64,7 +64,7 @@ var CleanCommand = cli.Command{
 		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
-			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
+			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		sm := garbage_collector.NewStoreMeasurer(storePath)

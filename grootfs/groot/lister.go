@@ -21,7 +21,7 @@ func (l *Lister) List(logger lager.Logger, storePath string) ([]string, error) {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	imagePaths, err := l.listDirs(filepath.Join(storePath, store.IMAGES_DIR_NAME))
+	imagePaths, err := l.listDirs(filepath.Join(storePath, store.ImageDirName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list store path: %s", err)
 	}

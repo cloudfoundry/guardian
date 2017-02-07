@@ -72,7 +72,7 @@ var _ = Describe("Image", func() {
 			Expect(someImage.Path).NotTo(BeEmpty())
 			Expect(anotherImage.Path).NotTo(BeEmpty())
 
-			images, err := ioutil.ReadDir(path.Join(storePath, store.IMAGES_DIR_NAME))
+			images, err := ioutil.ReadDir(path.Join(storePath, store.ImageDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(len(images)).To(Equal(2))
 		})
@@ -345,7 +345,7 @@ var _ = Describe("Image", func() {
 		var imagePath, imageRootFSPath string
 
 		BeforeEach(func() {
-			imagePath = path.Join(storePath, store.IMAGES_DIR_NAME, "some-id")
+			imagePath = path.Join(storePath, store.ImageDirName, "some-id")
 			imageRootFSPath = path.Join(imagePath, "rootfs")
 			Expect(os.MkdirAll(imagePath, 0755)).To(Succeed())
 			Expect(os.MkdirAll(imageRootFSPath, 0755)).To(Succeed())
@@ -444,7 +444,7 @@ var _ = Describe("Image", func() {
 				},
 			}
 
-			imagePath = path.Join(storePath, store.IMAGES_DIR_NAME, "some-id")
+			imagePath = path.Join(storePath, store.ImageDirName, "some-id")
 			imageRootFSPath = path.Join(imagePath, "rootfs")
 			Expect(os.MkdirAll(imagePath, 0755)).To(Succeed())
 			Expect(os.MkdirAll(imageRootFSPath, 0755)).To(Succeed())

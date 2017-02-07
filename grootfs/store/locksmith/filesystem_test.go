@@ -53,7 +53,7 @@ var _ = Describe("Filesystem", func() {
 
 	Describe("Lock", func() {
 		It("creates the lock file in the lock path when it does not exist", func() {
-			lockFile := filepath.Join(storePath, store.LOCKS_DIR_NAME, "key.lock")
+			lockFile := filepath.Join(storePath, store.LocksDirName, "key.lock")
 
 			Expect(lockFile).ToNot(BeAnExistingFile())
 			_, err := fileSystemLock.Lock("key")
@@ -62,7 +62,7 @@ var _ = Describe("Filesystem", func() {
 		})
 
 		It("removes slashes(/) from key name", func() {
-			lockFile := filepath.Join(storePath, store.LOCKS_DIR_NAME, "/tmpkey.lock")
+			lockFile := filepath.Join(storePath, store.LocksDirName, "/tmpkey.lock")
 
 			Expect(lockFile).ToNot(BeAnExistingFile())
 			_, err := fileSystemLock.Lock("/tmp/key")

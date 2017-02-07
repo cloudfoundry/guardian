@@ -30,7 +30,7 @@ type Driver struct {
 }
 
 func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
-	volPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
+	volPath := filepath.Join(d.storePath, store.VolumesDirName, id)
 	_, err := os.Stat(volPath)
 	if err == nil {
 		return volPath, nil
@@ -44,7 +44,7 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 	logger.Info("start")
 	defer logger.Info("end")
 
-	volumePath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
+	volumePath := filepath.Join(d.storePath, store.VolumesDirName, id)
 	if err := os.Mkdir(volumePath, 0700); err != nil {
 		logger.Error("creating-volume-dir-failed", err)
 		return "", errors.Wrap(err, "creating volume")

@@ -26,13 +26,13 @@ func (s *StoreMeasurer) MeasureStore(logger lager.Logger) (int64, error) {
 	logger.Info("start")
 	defer logger.Info("end")
 
-	cacheSize, err := s.measurePath(filepath.Join(s.storePath, store.CACHE_DIR_NAME))
+	cacheSize, err := s.measurePath(filepath.Join(s.storePath, store.CacheDirName))
 	if err != nil {
 		return 0, err
 	}
 	logger.Info("got-cache-size", lager.Data{"cacheSize": cacheSize})
 
-	volumesSize, err := s.measurePath(filepath.Join(s.storePath, store.VOLUMES_DIR_NAME))
+	volumesSize, err := s.measurePath(filepath.Join(s.storePath, store.VolumesDirName))
 	if err != nil {
 		return 0, err
 	}

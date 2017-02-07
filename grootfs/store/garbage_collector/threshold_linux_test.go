@@ -29,13 +29,13 @@ var _ = Describe("Threshold", func() {
 		storePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.MkdirAll(
-			filepath.Join(storePath, store.CACHE_DIR_NAME), 0744,
+			filepath.Join(storePath, store.CacheDirName), 0744,
 		)).To(Succeed())
 		Expect(os.MkdirAll(
-			filepath.Join(storePath, store.VOLUMES_DIR_NAME), 0744,
+			filepath.Join(storePath, store.VolumesDirName), 0744,
 		)).To(Succeed())
 		Expect(os.MkdirAll(
-			filepath.Join(storePath, store.IMAGES_DIR_NAME), 0744,
+			filepath.Join(storePath, store.ImageDirName), 0744,
 		)).To(Succeed())
 
 		storeMeasurer = garbage_collector.NewStoreMeasurer(storePath)
@@ -48,14 +48,14 @@ var _ = Describe("Threshold", func() {
 	})
 
 	It("measures space used by the blobs cache and volumes", func() {
-		blobsPath := filepath.Join(storePath, store.CACHE_DIR_NAME)
+		blobsPath := filepath.Join(storePath, store.CacheDirName)
 		Expect(writeFile(filepath.Join(blobsPath, "sha256:fake"), 256*1024)).To(Succeed())
 
-		volPath := filepath.Join(storePath, store.VOLUMES_DIR_NAME, "sha256:fake")
+		volPath := filepath.Join(storePath, store.VolumesDirName, "sha256:fake")
 		Expect(os.MkdirAll(volPath, 0744)).To(Succeed())
 		Expect(writeFile(filepath.Join(volPath, "my-file"), 256*1024)).To(Succeed())
 
-		imagePath := filepath.Join(storePath, store.IMAGES_DIR_NAME, "my-image")
+		imagePath := filepath.Join(storePath, store.ImageDirName, "my-image")
 		Expect(os.MkdirAll(imagePath, 0744)).To(Succeed())
 		Expect(writeFile(filepath.Join(imagePath, "my-file"), 256*1024)).To(Succeed())
 
@@ -77,7 +77,7 @@ var _ = Describe("Threshold", func() {
 
 	Context("when the volume path does not exist", func() {
 		BeforeEach(func() {
-			Expect(os.RemoveAll(filepath.Join(storePath, store.VOLUMES_DIR_NAME))).To(Succeed())
+			Expect(os.RemoveAll(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
 		})
 
 		It("returns a useful error", func() {

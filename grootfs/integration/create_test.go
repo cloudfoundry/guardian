@@ -185,17 +185,17 @@ var _ = Describe("Create", func() {
 					})
 				Expect(err).NotTo(HaveOccurred())
 
-				stat, err := os.Stat(filepath.Join(StorePath, store.IMAGES_DIR_NAME))
+				stat, err := os.Stat(filepath.Join(StorePath, store.ImageDirName))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
 				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
 
-				stat, err = os.Stat(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+				stat, err = os.Stat(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
 				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
 
-				stat, err = os.Stat(filepath.Join(StorePath, store.LOCKS_DIR_NAME))
+				stat, err = os.Stat(filepath.Join(StorePath, store.LocksDirName))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
 				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
@@ -220,17 +220,17 @@ var _ = Describe("Create", func() {
 
 				Expect(err).ToNot(HaveOccurred())
 
-				stat, err := os.Stat(filepath.Join(StorePath, store.IMAGES_DIR_NAME))
+				stat, err := os.Stat(filepath.Join(StorePath, store.ImageDirName))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
 				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
 
-				stat, err = os.Stat(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+				stat, err = os.Stat(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
 				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
 
-				stat, err = os.Stat(filepath.Join(StorePath, store.LOCKS_DIR_NAME))
+				stat, err = os.Stat(filepath.Join(StorePath, store.LocksDirName))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
 				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
@@ -422,7 +422,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("cleans the store first", func() {
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preContents).To(HaveLen(1))
 
@@ -435,11 +435,11 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(afterContents).To(HaveLen(2))
 			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-				Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+				Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
 			}
 		})
 	})
@@ -460,7 +460,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("does not clean the store", func() {
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preContents).To(HaveLen(1))
 
@@ -473,13 +473,13 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(afterContents).To(HaveLen(3))
 
 			layers := append(testhelpers.EmptyBaseImageV011.Layers, testhelpers.BusyBoxImage.Layers...)
 			for _, layer := range layers {
-				Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+				Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
 			}
 		})
 	})
@@ -773,12 +773,12 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(runner.Delete("my-empty")).To(Succeed())
 
-			layerPath := filepath.Join(StorePath, store.VOLUMES_DIR_NAME, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
+			layerPath := filepath.Join(StorePath, store.VolumesDirName, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
 			stat, err := os.Stat(layerPath)
 			Expect(err).NotTo(HaveOccurred())
 			preLayerTimestamp := stat.ModTime()
 
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preContents).To(HaveLen(3))
 
@@ -788,12 +788,12 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(afterContents).To(HaveLen(2))
 
 			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-				Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+				Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
 			}
 
 			stat, err = os.Stat(layerPath)
@@ -803,7 +803,7 @@ var _ = Describe("Create", func() {
 
 		Context("when no-clean flag is set", func() {
 			It("does not clean up unused layers", func() {
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preContents).To(HaveLen(1))
 
@@ -813,7 +813,7 @@ var _ = Describe("Create", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(afterContents).To(HaveLen(3))
 			})

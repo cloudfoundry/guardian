@@ -29,7 +29,7 @@ var _ = Describe("Driver", func() {
 		Expect(err).NotTo(HaveOccurred())
 		randomID = randVolumeID()
 
-		Expect(os.Mkdir(filepath.Join(storePath, store.VOLUMES_DIR_NAME), 0777)).To(Succeed())
+		Expect(os.Mkdir(filepath.Join(storePath, store.VolumesDirName), 0777)).To(Succeed())
 
 		driver = overlayxfs.NewDriver(storePath)
 		logger = lagertest.NewTestLogger("overlay+xfs")
@@ -37,13 +37,13 @@ var _ = Describe("Driver", func() {
 
 	Describe("VolumePath", func() {
 		BeforeEach(func() {
-			Expect(os.MkdirAll(filepath.Join(storePath, store.VOLUMES_DIR_NAME, randomID), 0755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(storePath, store.VolumesDirName, randomID), 0755)).To(Succeed())
 		})
 
 		It("returns the volume path when it exists", func() {
 			retVolPath, err := driver.VolumePath(logger, randomID)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(retVolPath).To(Equal(filepath.Join(storePath, store.VOLUMES_DIR_NAME, randomID)))
+			Expect(retVolPath).To(Equal(filepath.Join(storePath, store.VolumesDirName, randomID)))
 		})
 
 		Context("when the volume does not exist", func() {
@@ -56,7 +56,7 @@ var _ = Describe("Driver", func() {
 
 	Describe("Create", func() {
 		It("creates a volume", func() {
-			expectedVolumePath := filepath.Join(storePath, store.VOLUMES_DIR_NAME, randomID)
+			expectedVolumePath := filepath.Join(storePath, store.VolumesDirName, randomID)
 			Expect(expectedVolumePath).NotTo(BeAnExistingFile())
 			volumePath, err := driver.CreateVolume(logger, "parent-id", randomID)
 			Expect(err).NotTo(HaveOccurred())
@@ -67,7 +67,7 @@ var _ = Describe("Driver", func() {
 
 		Context("when volume dir doesn't exist", func() {
 			BeforeEach(func() {
-				Expect(os.Remove(filepath.Join(storePath, store.VOLUMES_DIR_NAME))).To(Succeed())
+				Expect(os.Remove(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
 			})
 
 			It("returns an error", func() {
@@ -78,7 +78,7 @@ var _ = Describe("Driver", func() {
 
 		Context("when volume already exists", func() {
 			BeforeEach(func() {
-				Expect(os.Mkdir(filepath.Join(storePath, store.VOLUMES_DIR_NAME, randomID), 0755)).To(Succeed())
+				Expect(os.Mkdir(filepath.Join(storePath, store.VolumesDirName, randomID), 0755)).To(Succeed())
 			})
 
 			It("returns an error", func() {

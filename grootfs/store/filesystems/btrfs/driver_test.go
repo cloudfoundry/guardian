@@ -41,7 +41,7 @@ var _ = Describe("Btrfs", func() {
 		storePath, err = ioutil.TempDir(filepath.Join(btrfsMountPath, storeName), "")
 		Expect(err).NotTo(HaveOccurred())
 
-		volumesPath = filepath.Join(storePath, store.VOLUMES_DIR_NAME)
+		volumesPath = filepath.Join(storePath, store.VolumesDirName)
 		Expect(os.MkdirAll(volumesPath, 0755)).To(Succeed())
 
 		draxBinPath, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
@@ -154,7 +154,7 @@ var _ = Describe("Btrfs", func() {
 		Context("when the volume exists", func() {
 			It("returns an error", func() {
 				volID := randVolumeID()
-				volPath := filepath.Join(storePath, store.VOLUMES_DIR_NAME, volID)
+				volPath := filepath.Join(storePath, store.VolumesDirName, volID)
 				Expect(os.MkdirAll(volPath, 0777)).To(Succeed())
 
 				_, err := driver.CreateVolume(logger, "", volID)
@@ -299,7 +299,7 @@ var _ = Describe("Btrfs", func() {
 				volumePath, err := driver.CreateVolume(logger, "", randVolumeID())
 				Expect(err).NotTo(HaveOccurred())
 
-				imagePath = filepath.Join(storePath, store.IMAGES_DIR_NAME, "image-id")
+				imagePath = filepath.Join(storePath, store.ImageDirName, "image-id")
 				Expect(os.MkdirAll(imagePath, 0777)).To(Succeed())
 
 				Expect(driver.CreateImage(logger, volumePath, imagePath)).To(Succeed())

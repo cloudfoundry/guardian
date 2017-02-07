@@ -46,5 +46,5 @@ func (l *FileSystem) Unlock(lockFile *os.File) error {
 }
 
 func (l *FileSystem) path(key string) string {
-	return filepath.Join(l.storePath, store.LOCKS_DIR_NAME, fmt.Sprintf("%s.lock", key))
+	return filepath.Join(l.storePath, store.LocksDirName, fmt.Sprintf("%s.lock", key))
 }

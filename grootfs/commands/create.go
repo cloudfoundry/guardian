@@ -161,7 +161,7 @@ var CreateCommand = cli.Command{
 
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
-			filepath.Join(storePath, storepkg.META_DIR_NAME, "dependencies"),
+			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
 		baseImagePuller := base_image_puller.NewBaseImagePuller(
 			localFetcher,

@@ -183,5 +183,5 @@ var _ = Describe("CacheDriver", func() {
 })
 
 func blobPath(storePath, id string) string {
-	return filepath.Join(storePath, store.CACHE_DIR_NAME, id)
+	return filepath.Join(storePath, store.CacheDirName, id)
 }

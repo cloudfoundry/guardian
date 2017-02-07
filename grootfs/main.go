@@ -41,7 +41,7 @@ func main() {
 		cli.StringFlag{
 			Name:  "store",
 			Usage: "Path to the store directory",
-			Value: store.DEFAULT_STORE_PATH,
+			Value: store.DefaultStorePath,
 		},
 		cli.StringFlag{
 			Name:  "driver",

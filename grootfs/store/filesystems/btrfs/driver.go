@@ -35,7 +35,7 @@ func NewDriver(btrfsBinPath, draxBinPath, storePath string) *Driver {
 }
 
 func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
-	volPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
+	volPath := filepath.Join(d.storePath, store.VolumesDirName, id)
 	_, err := os.Stat(volPath)
 	if err == nil {
 		return volPath, nil
@@ -50,11 +50,11 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID, id string) (string,
 	defer logger.Info("end")
 
 	var cmd *exec.Cmd
-	volPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, id)
+	volPath := filepath.Join(d.storePath, store.VolumesDirName, id)
 	if parentID == "" {
 		cmd = exec.Command(d.btrfsBinPath, "subvolume", "create", volPath)
 	} else {
-		parentVolPath := filepath.Join(d.storePath, store.VOLUMES_DIR_NAME, parentID)
+		parentVolPath := filepath.Join(d.storePath, store.VolumesDirName, parentID)
 		cmd = exec.Command(d.btrfsBinPath, "subvolume", "snapshot", parentVolPath, volPath)
 	}
 
@@ -91,7 +91,7 @@ func (d *Driver) CreateImage(logger lager.Logger, fromPath, imagePath string) er
 func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 	volumes := []string{}
 
-	existingVolumes, err := ioutil.ReadDir(path.Join(d.storePath, store.VOLUMES_DIR_NAME))
+	existingVolumes, err := ioutil.ReadDir(path.Join(d.storePath, store.VolumesDirName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list volumes: %s", err.Error())
 	}

@@ -51,7 +51,7 @@ var DeleteCommand = cli.Command{
 
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
-			filepath.Join(storePath, store.META_DIR_NAME, "dependencies"),
+			filepath.Join(storePath, store.MetaDirName, "dependencies"),
 		)
 		metricsEmitter := metrics.NewEmitter()
 		deleter := groot.IamDeleter(imageCloner, dependencyManager, metricsEmitter)

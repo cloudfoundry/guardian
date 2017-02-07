@@ -26,8 +26,8 @@ var _ = Describe("Driver", func() {
 		storePath, err = ioutil.TempDir("/mnt/xfs/", "store-path")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(os.Mkdir(filepath.Join(storePath, store.VOLUMES_DIR_NAME), 0777)).To(Succeed())
-		Expect(os.Mkdir(filepath.Join(storePath, store.IMAGES_DIR_NAME), 0777)).To(Succeed())
+		Expect(os.Mkdir(filepath.Join(storePath, store.VolumesDirName), 0777)).To(Succeed())
+		Expect(os.Mkdir(filepath.Join(storePath, store.ImageDirName), 0777)).To(Succeed())
 
 		driver = overlayxfs.NewDriver(storePath)
 		logger = lagertest.NewTestLogger("overlay+xfs")
@@ -41,7 +41,7 @@ var _ = Describe("Driver", func() {
 		var imagePath string
 
 		BeforeEach(func() {
-			imagePath = filepath.Join(storePath, store.IMAGES_DIR_NAME, "random-id")
+			imagePath = filepath.Join(storePath, store.ImageDirName, "random-id")
 			Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
 
 			Expect(ioutil.WriteFile(filepath.Join(volumePath, "file-hello"), []byte("hello"), 0755)).To(Succeed())
@@ -116,7 +116,7 @@ var _ = Describe("Driver", func() {
 		var imagePath string
 
 		BeforeEach(func() {
-			imagePath = filepath.Join(storePath, store.IMAGES_DIR_NAME, "random-id")
+			imagePath = filepath.Join(storePath, store.ImageDirName, "random-id")
 			Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(volumePath, "file-hello"), []byte("hello"), 0755)).To(Succeed())
 			Expect(driver.CreateImage(logger, volumePath, imagePath)).To(Succeed())

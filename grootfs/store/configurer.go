@@ -30,16 +30,16 @@ func ensure(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
 
 	requiredPaths := []string{
 		storePath,
-		filepath.Join(storePath, IMAGES_DIR_NAME),
-		filepath.Join(storePath, VOLUMES_DIR_NAME),
-		filepath.Join(storePath, CACHE_DIR_NAME),
-		filepath.Join(storePath, LOCKS_DIR_NAME),
-		filepath.Join(storePath, META_DIR_NAME),
-		filepath.Join(storePath, TEMP_DIR_NAME),
-		filepath.Join(storePath, META_DIR_NAME, "dependencies"),
+		filepath.Join(storePath, ImageDirName),
+		filepath.Join(storePath, VolumesDirName),
+		filepath.Join(storePath, CacheDirName),
+		filepath.Join(storePath, LocksDirName),
+		filepath.Join(storePath, MetaDirName),
+		filepath.Join(storePath, TempDirName),
+		filepath.Join(storePath, MetaDirName, "dependencies"),
 	}
 
-	if err := os.Setenv("TMPDIR", filepath.Join(storePath, TEMP_DIR_NAME)); err != nil {
+	if err := os.Setenv("TMPDIR", filepath.Join(storePath, TempDirName)); err != nil {
 		return fmt.Errorf("could not set TMPDIR: %s", err.Error())
 	}
 

@@ -24,7 +24,7 @@ var _ = Describe("Idfinder", func() {
 	BeforeEach(func() {
 		imageId = "1234-my-id"
 		storePath, err = ioutil.TempDir("", "")
-		imageDir = filepath.Join(storePath, store.IMAGES_DIR_NAME)
+		imageDir = filepath.Join(storePath, store.ImageDirName)
 		Expect(os.MkdirAll(imageDir, 0777)).To(Succeed())
 		Expect(err).NotTo(HaveOccurred())
 
@@ -60,7 +60,7 @@ var _ = Describe("Idfinder", func() {
 		})
 
 		It("returns an error when the image does not exist", func() {
-			_, err := idfinder.FindID(storePath, filepath.Join(storePath, store.IMAGES_DIR_NAME, "not-here"))
+			_, err := idfinder.FindID(storePath, filepath.Join(storePath, store.ImageDirName, "not-here"))
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("image `not-here` was not found")))
 		})

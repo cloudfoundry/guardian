@@ -32,14 +32,14 @@ var _ = Describe("Clean", func() {
 	})
 
 	It("removes the cached blobs", func() {
-		preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME))
+		preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(len(preContents)).To(BeNumerically(">", 0))
 
 		_, err = Runner.Clean(0, []string{})
 		Expect(err).NotTo(HaveOccurred())
 
-		afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME))
+		afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(afterContents).To(HaveLen(0))
 	})
@@ -66,18 +66,18 @@ var _ = Describe("Clean", func() {
 		})
 
 		It("removes unused volumes", func() {
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preContents).To(HaveLen(3))
 
 			_, err = Runner.Clean(0, []string{})
 			Expect(err).NotTo(HaveOccurred())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(afterContents).To(HaveLen(2))
 			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-				Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+				Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
 			}
 		})
 
@@ -86,7 +86,7 @@ var _ = Describe("Clean", func() {
 
 			JustBeforeEach(func() {
 				var err error
-				preContents, err = ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+				preContents, err = ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -94,7 +94,7 @@ var _ = Describe("Clean", func() {
 				_, err := Runner.Clean(0, []string{"docker:///busybox"})
 				Expect(err).NotTo(HaveOccurred())
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(afterContents).To(Equal(preContents))
@@ -115,7 +115,7 @@ var _ = Describe("Clean", func() {
 					_, err := Runner.Clean(0, []string{"docker:///busybox", "docker:///cfgarden/empty:v0.1.0"})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(afterContents).To(Equal(preContents))
@@ -140,25 +140,25 @@ var _ = Describe("Clean", func() {
 				})
 
 				It("does not remove the cached blobs", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(len(preContents)))
 				})
 
 				It("does not remove the unused volumes", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(len(preContents)))
 				})
@@ -176,31 +176,31 @@ var _ = Describe("Clean", func() {
 				})
 
 				It("removes the cached blobs", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(2))
 
 					_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CACHE_DIR_NAME))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(0))
 				})
 
 				It("removes the unused volumes", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(3))
 
 					_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(2))
 					for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-						Expect(filepath.Join(StorePath, store.VOLUMES_DIR_NAME, layer.ChainID)).To(BeADirectory())
+						Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
 					}
 				})
 			})
@@ -239,7 +239,7 @@ var _ = Describe("Clean", func() {
 
 			JustBeforeEach(func() {
 				var err error
-				preContents, err = ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+				preContents, err = ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -247,7 +247,7 @@ var _ = Describe("Clean", func() {
 				_, err := runnerWithConfig.Clean(0, []string{})
 				Expect(err).NotTo(HaveOccurred())
 
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(afterContents).To(Equal(preContents))
@@ -268,7 +268,7 @@ var _ = Describe("Clean", func() {
 					_, err := runnerWithConfig.Clean(0, []string{"docker:///cfgarden/empty:v0.1.0"})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(afterContents).NotTo(Equal(preContents))
@@ -283,13 +283,13 @@ var _ = Describe("Clean", func() {
 				})
 
 				It("uses the threshold from the config file, and so does not clean", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = runnerWithConfig.Clean(0, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VOLUMES_DIR_NAME))
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(afterContents).To(HaveLen(len(preContents)))
 				})
