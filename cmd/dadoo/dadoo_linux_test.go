@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -531,19 +532,19 @@ var _ = Describe("Dadoo", func() {
 						}
 					})
 
-					It("panics", func() {
+					It("exits with non-zero exit code", func() {
 						dadooCmd := exec.Command(dadooBinPath, "-tty", "-socket-dir-path", string(longerThanAllowedSocketPath), "exec", "runc", processDir, filepath.Base(bundlePath))
 						dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 						dadooCmd.Stdin = bytes.NewReader(encSpec)
 
-						stderr := gbytes.NewBuffer()
-						dadooSession, err := gexec.Start(dadooCmd, GinkgoWriter, stderr)
+						stdout := gbytes.NewBuffer()
+						dadooSession, err := gexec.Start(dadooCmd, io.MultiWriter(stdout, GinkgoWriter), GinkgoWriter)
 						Expect(err).NotTo(HaveOccurred())
 
 						openIOPipes()
 
 						Eventually(dadooSession).ShouldNot(gexec.Exit(0))
-						Eventually(stderr).Should(gbytes.Say(fmt.Sprintf("value for --socket-dir-path cannot exceed 80 characters in length")))
+						Eventually(stdout).Should(gbytes.Say(fmt.Sprintf("value for --socket-dir-path cannot exceed 80 characters in length")))
 					})
 				})
 
@@ -557,13 +558,13 @@ var _ = Describe("Dadoo", func() {
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					It("kills the process and panics", func() {
+					It("kills the process and exits with non-zero exit code", func() {
 						dadooCmd := exec.Command(dadooBinPath, "-tty", "-socket-dir-path", os.TempDir(), "exec", fakeRuncBinPath, processDir, filepath.Base(bundlePath))
 						dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 						dadooCmd.Stdin = bytes.NewReader(encSpec)
 
-						stderr := gbytes.NewBuffer()
-						dadooSession, err := gexec.Start(dadooCmd, GinkgoWriter, stderr)
+						stdout := gbytes.NewBuffer()
+						dadooSession, err := gexec.Start(dadooCmd, io.MultiWriter(stdout, GinkgoWriter), GinkgoWriter)
 						Expect(err).NotTo(HaveOccurred())
 
 						openIOPipes()
@@ -580,7 +581,7 @@ var _ = Describe("Dadoo", func() {
 						Expect(exec.Command("ps", "-p", string(pidBytes)).Run()).NotTo(Succeed())
 
 						Eventually(dadooSession).ShouldNot(gexec.Exit(0))
-						Eventually(stderr).Should(gbytes.Say(fmt.Sprintf("communication error on send")))
+						Eventually(stdout).Should(gbytes.Say(fmt.Sprintf("communication error on send")))
 					})
 				})
 			})

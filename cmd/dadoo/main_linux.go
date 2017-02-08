@@ -61,7 +61,7 @@ func run() int {
 	var runcExecCmd *exec.Cmd
 	if *tty {
 		if len(*socketDirPath) > MaxSocketDirPathLength {
-			panic(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
+			logAndExit(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
 		}
 		ttySocketPath := setupTTYSocket(stdin, stdout, winsz, pidFilePath, *socketDirPath)
 		runcExecCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console-socket", ttySocketPath, "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
@@ -122,7 +122,8 @@ func waitForContainerToExit(processStateDir string, containerPid int, signals ch
 		}
 	}
 
-	panic("ran out of signals") // cant happen
+	logAndExit("ran out of signals") // cant happen
+	return 0                         // unreachable
 }
 
 func openPipes(processStateDir string) (io.Reader, io.Writer, io.Writer, io.Reader) {
@@ -160,7 +161,7 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidF
 		defer func() {
 			if err != nil {
 				killProcess(pidFilePath)
-				panic(err)
+				check(err)
 			}
 		}()
 
@@ -213,7 +214,7 @@ func streamProcess(m *os.File, stdin io.Reader, stdout io.Writer, winszFifo io.R
 		for {
 			var winSize garden.WindowSize
 			if err := json.NewDecoder(winszFifo).Decode(&winSize); err != nil {
-				println("invalid winsz event", err)
+				log(fmt.Sprintf("invalid winsz event: %s", err))
 				continue // not much we can do here..
 			}
 			dadoo.SetWinSize(m, winSize)
@@ -256,8 +257,18 @@ func parsePid(pidFile string) (int, error) {
 	return pid, nil
 }
 
+func log(msg string) {
+	fmt.Printf(`msg="%s"`, msg)
+}
+
+func logAndExit(msg string) {
+	log(msg)
+	os.Exit(1)
+}
+
 func check(err error) {
 	if err != nil {
-		panic(err)
+		log(err.Error())
+		os.Exit(1)
 	}
 }
