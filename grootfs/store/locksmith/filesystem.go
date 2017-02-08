@@ -14,13 +14,11 @@ var FlockSyscall = syscall.Flock
 
 type FileSystem struct {
 	storePath string
-	StorePath string
 }
 
 func NewFileSystem(storePath string) *FileSystem {
 	return &FileSystem{
 		storePath: storePath,
-		StorePath: storePath,
 	}
 }
 

@@ -17,6 +17,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -69,23 +70,23 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID, id string) (string,
 	return volPath, nil
 }
 
-func (d *Driver) CreateImage(logger lager.Logger, fromPath, imagePath string) error {
-	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"fromPath": fromPath, "imagePath": imagePath})
+func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
+	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	toPath := filepath.Join(imagePath, "rootfs")
-	cmd := exec.Command(d.btrfsBinPath, "subvolume", "snapshot", fromPath, toPath)
+	toPath := filepath.Join(spec.ImagePath, "rootfs")
+	cmd := exec.Command(d.btrfsBinPath, "subvolume", "snapshot", spec.BaseVolumePath, toPath)
 
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf(
 			"creating btrfs snapshot from `%s` to `%s` (%s): %s",
-			fromPath, toPath, err, string(contents),
+			spec.BaseVolumePath, toPath, err, string(contents),
 		)
 	}
 
-	return nil
+	return d.applyDiskLimit(logger, spec)
 }
 
 func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
@@ -169,10 +170,15 @@ func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 	return nil
 }
 
-func (d *Driver) ApplyDiskLimit(logger lager.Logger, imagePath string, diskLimit int64, excludeImageFromQuota bool) error {
-	logger = logger.Session("btrfs-applying-quotas", lager.Data{"imagePath": imagePath})
+func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
+	logger = logger.Session("applying-quotas", lager.Data{"spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
+
+	if spec.DiskLimit == 0 {
+		logger.Debug("no-need-for-quotas")
+		return nil
+	}
 
 	if !d.draxInPath() {
 		return errors.New("drax was not found in the $PATH")
@@ -185,11 +191,11 @@ func (d *Driver) ApplyDiskLimit(logger lager.Logger, imagePath string, diskLimit
 	args := []string{
 		"--btrfs-bin", d.btrfsBinPath,
 		"limit",
-		"--volume-path", filepath.Join(imagePath, "rootfs"),
-		"--disk-limit-bytes", strconv.FormatInt(diskLimit, 10),
+		"--volume-path", filepath.Join(spec.ImagePath, "rootfs"),
+		"--disk-limit-bytes", strconv.FormatInt(spec.DiskLimit, 10),
 	}
 
-	if excludeImageFromQuota {
+	if spec.ExclusiveDiskLimit {
 		args = append(args, "--exclude-image-from-quota")
 	}
 

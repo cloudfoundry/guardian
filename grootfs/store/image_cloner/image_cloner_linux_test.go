@@ -35,8 +35,8 @@ var _ = Describe("Image", func() {
 		var err error
 		fakeImageDriver = new(image_clonerfakes.FakeImageDriver)
 
-		fakeImageDriver.CreateImageStub = func(_ lager.Logger, from, imagePath string) error {
-			return os.Mkdir(filepath.Join(imagePath, "rootfs"), 0777)
+		fakeImageDriver.CreateImageStub = func(_ lager.Logger, spec imageClonerpkg.ImageDriverSpec) error {
+			return os.Mkdir(filepath.Join(spec.ImagePath, "rootfs"), 0777)
 		}
 
 		storePath, err = ioutil.TempDir("", "")
@@ -88,9 +88,9 @@ var _ = Describe("Image", func() {
 			image, err := imageCloner.Create(logger, imageSpec)
 			Expect(err).NotTo(HaveOccurred())
 
-			_, fromPath, imagePath := fakeImageDriver.CreateImageArgsForCall(0)
-			Expect(fromPath).To(Equal(imageSpec.VolumePath))
-			Expect(imagePath).To(Equal(image.Path))
+			_, spec := fakeImageDriver.CreateImageArgsForCall(0)
+			Expect(spec.BaseVolumePath).To(Equal(imageSpec.VolumePath))
+			Expect(spec.ImagePath).To(Equal(image.Path))
 		})
 
 		It("writes the image.json to the image", func() {
@@ -294,36 +294,10 @@ var _ = Describe("Image", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				_, imagePath, diskLimit, excludeBaseImageFromQuota := fakeImageDriver.ApplyDiskLimitArgsForCall(0)
-				Expect(imagePath).To(Equal(image.Path))
-				Expect(diskLimit).To(Equal(int64(1024)))
-				Expect(excludeBaseImageFromQuota).To(BeFalse())
-			})
-
-			Context("when applying the disk limit fails", func() {
-				BeforeEach(func() {
-					fakeImageDriver.ApplyDiskLimitReturns(errors.New("failed to apply disk limit"))
-				})
-
-				It("returns an error", func() {
-					_, err := imageCloner.Create(logger, groot.ImageSpec{
-						ID:        "some-id",
-						DiskLimit: int64(1024),
-					})
-
-					Expect(err).To(MatchError(ContainSubstring("failed to apply disk limit")))
-				})
-
-				It("removes the snapshot", func() {
-					_, err := imageCloner.Create(logger, groot.ImageSpec{
-						ID:        "some-id",
-						DiskLimit: int64(1024),
-					})
-					Expect(err).To(HaveOccurred())
-					Expect(fakeImageDriver.DestroyImageCallCount()).To(Equal(1))
-					_, imagePath := fakeImageDriver.DestroyImageArgsForCall(0)
-					Expect(imagePath).To(Equal(imagePath))
-				})
+				_, spec := fakeImageDriver.CreateImageArgsForCall(0)
+				Expect(spec.ImagePath).To(Equal(image.Path))
+				Expect(spec.DiskLimit).To(Equal(int64(1024)))
+				Expect(spec.ExclusiveDiskLimit).To(BeFalse())
 			})
 
 			Context("when the exclusive flag is set", func() {
@@ -334,8 +308,8 @@ var _ = Describe("Image", func() {
 						ExcludeBaseImageFromQuota: true,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					_, _, _, excludeBaseImageFromQuota := fakeImageDriver.ApplyDiskLimitArgsForCall(0)
-					Expect(excludeBaseImageFromQuota).To(BeTrue())
+					_, spec := fakeImageDriver.CreateImageArgsForCall(0)
+					Expect(spec.ExclusiveDiskLimit).To(BeTrue())
 				})
 			})
 		})

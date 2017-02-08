@@ -7,9 +7,11 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
+	"path/filepath"
 	"strconv"
 
 	"code.cloudfoundry.org/grootfs/integration/runner"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
@@ -24,7 +26,6 @@ var (
 	GrootFSBin string
 	DraxBin    string
 	Driver     string
-	MountPath  string
 	Runner     runner.Runner
 	StorePath  string
 	StoreName  string
@@ -37,7 +38,7 @@ var (
 )
 
 const btrfsMountPath = "/mnt/btrfs"
-const xfsMountPath = "/mnt/xfs"
+const xfsMountPath = "/mnt/xfs-%d"
 
 func TestGroot(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -62,12 +63,6 @@ func TestGroot(t *testing.T) {
 
 		GrootFSBin = string(data)
 		Driver = os.Getenv("VOLUME_DRIVER")
-		if Driver == "overlay-xfs" {
-			MountPath = xfsMountPath
-		} else {
-			Driver = "btrfs"
-			MountPath = btrfsMountPath
-		}
 
 		fmt.Fprintf(os.Stderr, "============> RUNNING %s TESTS <=============", Driver)
 	})
@@ -78,9 +73,15 @@ func TestGroot(t *testing.T) {
 	})
 
 	BeforeEach(func() {
-		StoreName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
-		StorePath = path.Join(MountPath, StoreName)
-		Expect(os.Mkdir(StorePath, 0755)).NotTo(HaveOccurred())
+		if Driver == "overlay-xfs" {
+			StorePath = fmt.Sprintf(xfsMountPath, GinkgoParallelNode())
+		} else {
+			Driver = "btrfs"
+			StoreName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
+			StorePath = path.Join(btrfsMountPath, StoreName)
+			Expect(os.Mkdir(StorePath, 0755)).NotTo(HaveOccurred())
+		}
+
 		Expect(os.Chmod(StorePath, 0777)).To(Succeed())
 
 		var err error
@@ -100,9 +101,19 @@ func TestGroot(t *testing.T) {
 	})
 
 	AfterEach(func() {
-		testhelpers.CleanUpBtrfsSubvolumes(btrfsMountPath, StoreName)
-		testhelpers.CleanUpOverlayMounts(xfsMountPath, StoreName)
-		Expect(os.RemoveAll(StorePath)).To(Succeed())
+		if Driver == "overlay-xfs" {
+			testhelpers.CleanUpOverlayMounts(StorePath, "images")
+		} else {
+			testhelpers.CleanUpBtrfsSubvolumes(btrfsMountPath, StoreName)
+			Expect(os.RemoveAll(StorePath)).To(Succeed())
+		}
+
+		os.RemoveAll(filepath.Join(StorePath, store.MetaDirName))
+		os.RemoveAll(filepath.Join(StorePath, store.ImageDirName))
+		os.RemoveAll(filepath.Join(StorePath, store.VolumesDirName))
+		os.RemoveAll(filepath.Join(StorePath, store.LocksDirName))
+		os.RemoveAll(filepath.Join(StorePath, store.CacheDirName))
+		os.RemoveAll(filepath.Join(StorePath, store.TempDirName))
 	})
 
 	RunSpecs(t, "Integration Suite")

@@ -10,12 +10,11 @@ import (
 )
 
 type FakeImageDriver struct {
-	CreateImageStub        func(logger lager.Logger, fromPath, toPath string) error
+	CreateImageStub        func(logger lager.Logger, spec image_cloner.ImageDriverSpec) error
 	createImageMutex       sync.RWMutex
 	createImageArgsForCall []struct {
-		logger   lager.Logger
-		fromPath string
-		toPath   string
+		logger lager.Logger
+		spec   image_cloner.ImageDriverSpec
 	}
 	createImageReturns struct {
 		result1 error
@@ -27,17 +26,6 @@ type FakeImageDriver struct {
 		path   string
 	}
 	destroyImageReturns struct {
-		result1 error
-	}
-	ApplyDiskLimitStub        func(logger lager.Logger, path string, diskLimit int64, exclusive bool) error
-	applyDiskLimitMutex       sync.RWMutex
-	applyDiskLimitArgsForCall []struct {
-		logger    lager.Logger
-		path      string
-		diskLimit int64
-		exclusive bool
-	}
-	applyDiskLimitReturns struct {
 		result1 error
 	}
 	FetchStatsStub        func(logger lager.Logger, path string) (groot.VolumeStats, error)
@@ -54,17 +42,16 @@ type FakeImageDriver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImageDriver) CreateImage(logger lager.Logger, fromPath string, toPath string) error {
+func (fake *FakeImageDriver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
 	fake.createImageMutex.Lock()
 	fake.createImageArgsForCall = append(fake.createImageArgsForCall, struct {
-		logger   lager.Logger
-		fromPath string
-		toPath   string
-	}{logger, fromPath, toPath})
-	fake.recordInvocation("CreateImage", []interface{}{logger, fromPath, toPath})
+		logger lager.Logger
+		spec   image_cloner.ImageDriverSpec
+	}{logger, spec})
+	fake.recordInvocation("CreateImage", []interface{}{logger, spec})
 	fake.createImageMutex.Unlock()
 	if fake.CreateImageStub != nil {
-		return fake.CreateImageStub(logger, fromPath, toPath)
+		return fake.CreateImageStub(logger, spec)
 	} else {
 		return fake.createImageReturns.result1
 	}
@@ -76,10 +63,10 @@ func (fake *FakeImageDriver) CreateImageCallCount() int {
 	return len(fake.createImageArgsForCall)
 }
 
-func (fake *FakeImageDriver) CreateImageArgsForCall(i int) (lager.Logger, string, string) {
+func (fake *FakeImageDriver) CreateImageArgsForCall(i int) (lager.Logger, image_cloner.ImageDriverSpec) {
 	fake.createImageMutex.RLock()
 	defer fake.createImageMutex.RUnlock()
-	return fake.createImageArgsForCall[i].logger, fake.createImageArgsForCall[i].fromPath, fake.createImageArgsForCall[i].toPath
+	return fake.createImageArgsForCall[i].logger, fake.createImageArgsForCall[i].spec
 }
 
 func (fake *FakeImageDriver) CreateImageReturns(result1 error) {
@@ -119,42 +106,6 @@ func (fake *FakeImageDriver) DestroyImageArgsForCall(i int) (lager.Logger, strin
 func (fake *FakeImageDriver) DestroyImageReturns(result1 error) {
 	fake.DestroyImageStub = nil
 	fake.destroyImageReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeImageDriver) ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusive bool) error {
-	fake.applyDiskLimitMutex.Lock()
-	fake.applyDiskLimitArgsForCall = append(fake.applyDiskLimitArgsForCall, struct {
-		logger    lager.Logger
-		path      string
-		diskLimit int64
-		exclusive bool
-	}{logger, path, diskLimit, exclusive})
-	fake.recordInvocation("ApplyDiskLimit", []interface{}{logger, path, diskLimit, exclusive})
-	fake.applyDiskLimitMutex.Unlock()
-	if fake.ApplyDiskLimitStub != nil {
-		return fake.ApplyDiskLimitStub(logger, path, diskLimit, exclusive)
-	} else {
-		return fake.applyDiskLimitReturns.result1
-	}
-}
-
-func (fake *FakeImageDriver) ApplyDiskLimitCallCount() int {
-	fake.applyDiskLimitMutex.RLock()
-	defer fake.applyDiskLimitMutex.RUnlock()
-	return len(fake.applyDiskLimitArgsForCall)
-}
-
-func (fake *FakeImageDriver) ApplyDiskLimitArgsForCall(i int) (lager.Logger, string, int64, bool) {
-	fake.applyDiskLimitMutex.RLock()
-	defer fake.applyDiskLimitMutex.RUnlock()
-	return fake.applyDiskLimitArgsForCall[i].logger, fake.applyDiskLimitArgsForCall[i].path, fake.applyDiskLimitArgsForCall[i].diskLimit, fake.applyDiskLimitArgsForCall[i].exclusive
-}
-
-func (fake *FakeImageDriver) ApplyDiskLimitReturns(result1 error) {
-	fake.ApplyDiskLimitStub = nil
-	fake.applyDiskLimitReturns = struct {
 		result1 error
 	}{result1}
 }
@@ -201,8 +152,6 @@ func (fake *FakeImageDriver) Invocations() map[string][][]interface{} {
 	defer fake.createImageMutex.RUnlock()
 	fake.destroyImageMutex.RLock()
 	defer fake.destroyImageMutex.RUnlock()
-	fake.applyDiskLimitMutex.RLock()
-	defer fake.applyDiskLimitMutex.RUnlock()
 	fake.fetchStatsMutex.RLock()
 	defer fake.fetchStatsMutex.RUnlock()
 	return fake.invocations

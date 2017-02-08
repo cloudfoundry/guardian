@@ -29,13 +29,31 @@ mount_storage() {
   btrfs quota enable /mnt/btrfs
 
   # Make XFS Volume
-  truncate -s 1G /xfs_volume
-  mkfs.xfs /xfs_volume
+  truncate -s 1G /xfs_volume_1
+  mkfs.xfs /xfs_volume_1
+  truncate -s 1G /xfs_volume_2
+  mkfs.xfs /xfs_volume_2
+  truncate -s 1G /xfs_volume_3
+  mkfs.xfs /xfs_volume_3
+  truncate -s 1G /xfs_volume_4
+  mkfs.xfs /xfs_volume_4
 
   # Mount XFS
-  mkdir /mnt/xfs
-  mount -t xfs -o pquota /xfs_volume /mnt/xfs
-  chmod 777 -R /mnt/xfs
+  mkdir /mnt/xfs-1
+  mount -t xfs -o pquota /xfs_volume_1 /mnt/xfs-1
+  chmod 777 -R /mnt/xfs-1
+
+  mkdir /mnt/xfs-2
+  mount -t xfs -o pquota /xfs_volume_2 /mnt/xfs-2
+  chmod 777 -R /mnt/xfs-2
+
+  mkdir /mnt/xfs-3
+  mount -t xfs -o pquota /xfs_volume_3 /mnt/xfs-3
+  chmod 777 -R /mnt/xfs-3
+
+  mkdir /mnt/xfs-4
+  mount -t xfs -o pquota /xfs_volume_4 /mnt/xfs-4
+  chmod 777 -R /mnt/xfs-4
 }
 
 sudo_mount_storage() {

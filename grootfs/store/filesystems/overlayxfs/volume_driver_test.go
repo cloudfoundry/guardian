@@ -2,7 +2,6 @@ package overlayxfs_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -15,36 +14,36 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("Driver", func() {
+var _ = Describe("VolumeDriver", func() {
 	var (
-		driver    *overlayxfs.Driver
-		logger    *lagertest.TestLogger
-		storePath string
-		randomID  string
+		driver   *overlayxfs.Driver
+		logger   *lagertest.TestLogger
+		randomID string
 	)
 
 	BeforeEach(func() {
-		var err error
-		storePath, err = ioutil.TempDir("/mnt/xfs/", "store-path")
-		Expect(err).NotTo(HaveOccurred())
 		randomID = randVolumeID()
+		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(StorePath, store.ImageDirName), 0777)).To(Succeed())
 
-		Expect(os.Mkdir(filepath.Join(storePath, store.VolumesDirName), 0777)).To(Succeed())
-		Expect(os.Mkdir(filepath.Join(storePath, store.ImageDirName), 0777)).To(Succeed())
-
-		driver = overlayxfs.NewDriver(storePath)
+		driver = overlayxfs.NewDriver(StorePath)
 		logger = lagertest.NewTestLogger("overlay+xfs")
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(filepath.Join(StorePath, store.VolumesDirName))).To(Succeed())
+		Expect(os.RemoveAll(filepath.Join(StorePath, store.ImageDirName))).To(Succeed())
 	})
 
 	Describe("VolumePath", func() {
 		BeforeEach(func() {
-			Expect(os.MkdirAll(filepath.Join(storePath, store.VolumesDirName, randomID), 0755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName, randomID), 0755)).To(Succeed())
 		})
 
 		It("returns the volume path when it exists", func() {
 			retVolPath, err := driver.VolumePath(logger, randomID)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(retVolPath).To(Equal(filepath.Join(storePath, store.VolumesDirName, randomID)))
+			Expect(retVolPath).To(Equal(filepath.Join(StorePath, store.VolumesDirName, randomID)))
 		})
 
 		Context("when the volume does not exist", func() {
@@ -57,7 +56,7 @@ var _ = Describe("Driver", func() {
 
 	Describe("Create", func() {
 		It("creates a volume", func() {
-			expectedVolumePath := filepath.Join(storePath, store.VolumesDirName, randomID)
+			expectedVolumePath := filepath.Join(StorePath, store.VolumesDirName, randomID)
 			Expect(expectedVolumePath).NotTo(BeAnExistingFile())
 			volumePath, err := driver.CreateVolume(logger, "parent-id", randomID)
 			Expect(err).NotTo(HaveOccurred())
@@ -68,7 +67,7 @@ var _ = Describe("Driver", func() {
 
 		Context("when volume dir doesn't exist", func() {
 			BeforeEach(func() {
-				Expect(os.Remove(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
+				Expect(os.Remove(filepath.Join(StorePath, store.VolumesDirName))).To(Succeed())
 			})
 
 			It("returns an error", func() {
@@ -79,7 +78,7 @@ var _ = Describe("Driver", func() {
 
 		Context("when volume already exists", func() {
 			BeforeEach(func() {
-				Expect(os.Mkdir(filepath.Join(storePath, store.VolumesDirName, randomID), 0755)).To(Succeed())
+				Expect(os.Mkdir(filepath.Join(StorePath, store.VolumesDirName, randomID), 0755)).To(Succeed())
 			})
 
 			It("returns an error", func() {

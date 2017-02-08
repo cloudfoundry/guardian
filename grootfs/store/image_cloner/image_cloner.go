@@ -15,12 +15,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate counterfeiter . ImageDriver
+type ImageDriverSpec struct {
+	BaseVolumePath     string
+	ImagePath          string
+	DiskLimit          int64
+	ExclusiveDiskLimit bool
+}
 
+//go:generate counterfeiter . ImageDriver
 type ImageDriver interface {
-	CreateImage(logger lager.Logger, fromPath, toPath string) error
+	CreateImage(logger lager.Logger, spec ImageDriverSpec) error
 	DestroyImage(logger lager.Logger, path string) error
-	ApplyDiskLimit(logger lager.Logger, path string, diskLimit int64, exclusive bool) error
 	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
 }
 
@@ -83,11 +88,20 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 	}
 
 	if err = b.writeBaseImageJSON(logger, image, spec.BaseImage); err != nil {
+		logger.Error("writing-image-json-failed", err)
 		return groot.Image{}, fmt.Errorf("creating image.json: %s", err)
 	}
 
-	if err = b.imageDriver.CreateImage(logger, spec.VolumePath, image.Path); err != nil {
-		return groot.Image{}, fmt.Errorf("creating snapshot: %s", err)
+	imageDriverSpec := ImageDriverSpec{
+		BaseVolumePath:     spec.VolumePath,
+		ImagePath:          image.Path,
+		DiskLimit:          spec.DiskLimit,
+		ExclusiveDiskLimit: spec.ExcludeBaseImageFromQuota,
+	}
+
+	if err = b.imageDriver.CreateImage(logger, imageDriverSpec); err != nil {
+		logger.Error("creating-image-failed", err, lager.Data{"imageDriverSpec": imageDriverSpec})
+		return groot.Image{}, fmt.Errorf("creating image: %s", err)
 	}
 
 	if err := b.setOwnership(spec,
@@ -95,13 +109,8 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 		filepath.Join(image.Path, "image.json"),
 		image.RootFSPath,
 	); err != nil {
+		logger.Error("setting-permission-failed", err, lager.Data{"imageDriverSpec": imageDriverSpec})
 		return groot.Image{}, err
-	}
-
-	if spec.DiskLimit > 0 {
-		if err = b.imageDriver.ApplyDiskLimit(logger, image.Path, spec.DiskLimit, spec.ExcludeBaseImageFromQuota); err != nil {
-			return groot.Image{}, fmt.Errorf("applying disk limit: %s", err)
-		}
 	}
 
 	return image, nil

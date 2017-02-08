@@ -11,6 +11,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -61,24 +62,28 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 	panic("not implemented")
 }
 
-func (d *Driver) CreateImage(logger lager.Logger, fromPath string, imagePath string) error {
-	logger = logger.Session("overlayxfs-creating-image", lager.Data{"fromPath": fromPath, "imagePath": imagePath})
+func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
+	logger = logger.Session("overlayxfs-creating-image", lager.Data{"spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
 
-	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
+	if _, err := os.Stat(spec.ImagePath); os.IsNotExist(err) {
 		logger.Error("image-path-not-found", err)
 		return errors.Wrap(err, "image path does not exist")
 	}
 
-	if _, err := os.Stat(fromPath); os.IsNotExist(err) {
-		logger.Error("from-path-not-found", err)
-		return errors.Wrap(err, "source path does not exist")
+	if _, err := os.Stat(spec.BaseVolumePath); os.IsNotExist(err) {
+		logger.Error("base-volume-path-not-found", err)
+		return errors.Wrap(err, "base volume path does not exist")
 	}
 
-	upperDir := filepath.Join(imagePath, UpperDir)
-	workDir := filepath.Join(imagePath, WorkDir)
-	rootfsDir := filepath.Join(imagePath, RootfsDir)
+	upperDir := filepath.Join(spec.ImagePath, UpperDir)
+	workDir := filepath.Join(spec.ImagePath, WorkDir)
+	rootfsDir := filepath.Join(spec.ImagePath, RootfsDir)
+
+	if err := d.applyDiskLimit(logger, spec); err != nil {
+		return errors.Wrap(err, "applying disk limits")
+	}
 
 	if err := os.Mkdir(upperDir, 0700); err != nil {
 		logger.Error("creating-upperdir-folder-failed", err)
@@ -95,7 +100,7 @@ func (d *Driver) CreateImage(logger lager.Logger, fromPath string, imagePath str
 		return errors.Wrap(err, "creating rootfs folder")
 	}
 
-	mountData := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", fromPath, upperDir, workDir)
+	mountData := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", spec.BaseVolumePath, upperDir, workDir)
 	if err := syscall.Mount("overlay", rootfsDir, "overlay", 0, mountData); err != nil {
 		logger.Error("mounting-overlay-to-rootfs-failed", err, lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
 		return errors.Wrap(err, "mounting overlay")
@@ -129,26 +134,30 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	return nil
 }
 
-func (d *Driver) ApplyDiskLimit(logger lager.Logger, imagePath string, diskLimit int64, exclusive bool) error {
-	logger = logger.Session("overlayxfs-applying-quota", lager.Data{"imagePath": imagePath, "diskLimit": diskLimit, "exclusive": exclusive})
+func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
+	logger = logger.Session("applying-quotas", lager.Data{"spec": spec})
 	logger.Info("start")
 	defer logger.Info("end")
+
+	if spec.DiskLimit == 0 {
+		logger.Debug("no-need-for-quotas")
+		return nil
+	}
 
 	imagesPath := filepath.Join(d.storePath, store.ImageDirName)
 	quotaControl, err := quota.NewControl(imagesPath)
 	if err != nil {
-		logger.Error("creating-quota-control", err, lager.Data{"imagesPath": imagesPath})
+		logger.Error("creating-quota-control-failed", err, lager.Data{"imagesPath": imagesPath})
 		return errors.Wrapf(err, "creating xfs quota control %s", imagesPath)
 	}
 
 	quota := quota.Quota{
-		Size: uint64(diskLimit),
+		Size: uint64(spec.DiskLimit),
 	}
 
-	upperDir := filepath.Join(imagePath, UpperDir)
-	if err := quotaControl.SetQuota(upperDir, quota); err != nil {
+	if err := quotaControl.SetQuota(spec.ImagePath, quota); err != nil {
 		logger.Error("setting-quota-failed", err)
-		return errors.Wrapf(err, "setting quota to %s", upperDir)
+		return errors.Wrapf(err, "setting quota to %s", spec.ImagePath)
 	}
 
 	return nil
