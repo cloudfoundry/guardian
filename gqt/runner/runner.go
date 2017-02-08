@@ -74,7 +74,7 @@ func init() {
 	}
 }
 
-func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin, network, address string, argv ...string) GardenRunner {
+func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin, network, address string, user *syscall.Credential, argv ...string) GardenRunner {
 	r := GardenRunner{}
 
 	r.Network = network
@@ -90,7 +90,7 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBi
 
 	MustMountTmpfs(r.GraphPath)
 
-	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.ConsoleSockets, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs, argv...)
+	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.ConsoleSockets, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs, user, argv...)
 	r.Cmd.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", r.TmpDir))
 
 	for i, arg := range r.Cmd.Args {
@@ -113,8 +113,8 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBi
 	return r
 }
 
-func Start(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin string, argv ...string) *RunningGarden {
-	runner := NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin, "unix", fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode()), argv...)
+func Start(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin string, user *syscall.Credential, argv ...string) *RunningGarden {
+	runner := NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin, "unix", fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode()), user, argv...)
 
 	r := &RunningGarden{
 		runner:   runner,
@@ -178,7 +178,7 @@ func (r *RunningGarden) Stop() error {
 	return err
 }
 
-func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs string, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs string, user *syscall.Credential, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 
 	snapshotsPath := filepath.Join(tmpdir, "snapshots")
@@ -227,7 +227,13 @@ func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, in
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", tarBin)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--port-pool-start", fmt.Sprintf("%d", GinkgoParallelNode()*7000))
 
-	return exec.Command(bin, append([]string{"server"}, gardenArgs...)...)
+	cmd := exec.Command(bin, append([]string{"server"}, gardenArgs...)...)
+	if user != nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{}
+		cmd.SysProcAttr.Credential = user
+	}
+
+	return cmd
 }
 
 func (r *RunningGarden) Cleanup() {

@@ -149,7 +149,7 @@ type ServerCommand struct {
 		DebugBindIP   IPFlag `long:"debug-bind-ip"                   description:"Bind the debug server on the given IP."`
 		DebugBindPort uint16 `long:"debug-bind-port" default:"17013" description:"Bind the debug server to the given port."`
 
-		Tag      string `long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
+		Tag      string `hidden:"true" long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
 		Rootless bool   `long:"rootless" description:"Run server in rootless mode."`
 	} `group:"Server Configuration"`
 

@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -103,8 +104,12 @@ func TestGqt(t *testing.T) {
 }
 
 func startGarden(argv ...string) *runner.RunningGarden {
+	return startGardenAsUser(nil, argv...)
+}
+
+func startGardenAsUser(user *syscall.Credential, argv ...string) *runner.RunningGarden {
 	rootfs := os.Getenv("GARDEN_TEST_ROOTFS")
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, rootfs, tarBin, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, rootfs, tarBin, nil, argv...)
 }
 
 func restartGarden(client *runner.RunningGarden, argv ...string) {
@@ -114,5 +119,5 @@ func restartGarden(client *runner.RunningGarden, argv ...string) {
 }
 
 func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, "", tarBin, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, "", tarBin, nil, argv...)
 }
