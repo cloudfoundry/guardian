@@ -77,7 +77,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 	defer logr.Close()
 	defer syncr.Close()
 
-	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
+	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter, log)
 	process.mkfifos()
 	if err != nil {
 		return nil, err
@@ -89,6 +89,13 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 	} else {
 		cmd = exec.Command(d.dadooPath, "exec", d.runcPath, processPath, handle)
 	}
+
+	dadooLogFile, err := os.Create(filepath.Join(processPath, "dadoo"))
+	if err != nil {
+		return nil, err
+	}
+	cmd.Stdout = dadooLogFile
+	cmd.Stderr = dadooLogFile
 
 	cmd.ExtraFiles = []*os.File{
 		fd3w,
@@ -126,7 +133,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 
 	process.streamData(pio, stdin, stdout, stderr)
 	defer func() {
-		theErr = processLogs(log, logr, theErr)
+		theErr = processLogs(log, logr, theErr, "runc", "runc exec")
 	}()
 
 	log.Info("read-exit-fd")
@@ -145,7 +152,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	processPath := filepath.Join(processesPath, processID)
-	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
+	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter, log)
 	if err := process.attach(io); err != nil {
 		return nil, err
 	}
@@ -174,7 +181,7 @@ type process struct {
 	*signaller
 }
 
-func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter) *process {
+func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter, logger lager.Logger) *process {
 	stdin, stdout, stderr, winsz, exit, exitcode := filepath.Join(dir, "stdin"),
 		filepath.Join(dir, "stdout"),
 		filepath.Join(dir, "stderr"),
@@ -193,6 +200,14 @@ func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter) *proces
 		ioWg:     &sync.WaitGroup{},
 		winszCh:  make(chan garden.WindowSize, 5),
 		cleanup: func() error {
+			dadooLogFile, err := os.Open(filepath.Join(dir, "dadoo"))
+			if err != nil {
+				return err
+			}
+			defer dadooLogFile.Close()
+			if err := processLogs(logger, dadooLogFile, nil, "dadoo", "dadoo"); err != nil {
+				return err
+			}
 			return os.RemoveAll(dir)
 		},
 		signaller: &signaller{
@@ -334,36 +349,37 @@ func (p process) SetTTY(spec garden.TTYSpec) error {
 	return json.NewEncoder(winSize).Encode(spec.WindowSize)
 }
 
-func processLogs(log lager.Logger, logs io.Reader, err error) error {
+func processLogs(log lager.Logger, logs io.Reader, err error, logTag, logLinePrefix string) error {
 	buff, readErr := ioutil.ReadAll(logs)
+
 	if readErr != nil {
 		return fmt.Errorf("start: read log file: %s", readErr)
 	}
 
-	forwardRuncLogsToLager(log, buff)
+	forwardLogsToLager(log, buff, logTag)
 
 	if err != nil {
-		return wrapWithErrorFromRuncLog(log, err, buff)
+		return wrapWithErrorFromLog(log, err, buff, logLinePrefix)
 	}
 
 	return nil
 }
 
-func forwardRuncLogsToLager(log lager.Logger, buff []byte) {
-	parsedLogLine := struct{ Msg string }{}
+func forwardLogsToLager(log lager.Logger, buff []byte, tag string) {
 	for _, logLine := range strings.Split(string(buff), "\n") {
+		parsedLogLine := struct{ Msg string }{}
 		if err := logfmt.Unmarshal([]byte(logLine), &parsedLogLine); err == nil {
-			log.Debug("runc", lager.Data{
+			log.Debug(tag, lager.Data{
 				"message": parsedLogLine.Msg,
 			})
 		}
 	}
 }
 
-func wrapWithErrorFromRuncLog(log lager.Logger, originalError error, buff []byte) error {
+func wrapWithErrorFromLog(log lager.Logger, originalError error, buff []byte, logLinePrefix string) error {
 	parsedLogLine := struct{ Msg string }{}
 	logfmt.Unmarshal(buff, &parsedLogLine)
-	return fmt.Errorf("runc exec: %s: %s", originalError, parsedLogLine.Msg)
+	return fmt.Errorf("%s: %s: %s", logLinePrefix, originalError, parsedLogLine.Msg)
 }
 
 type signaller struct {

@@ -114,6 +114,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			go func(cmd *exec.Cmd, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File), stderrContents string) {
 				defer GinkgoRecover()
 
+				// dadoo might talk
+				fmt.Fprintln(cmd.Stdout, `time="2016-03-02T13:56:38Z" level=warning msg="dadoo stdout"`)
+				fmt.Fprint(cmd.Stderr, `time="2016-03-02T13:56:38Z" level=warning msg="dadoo stderr"`)
+
 				// parse flags to get bundle dir argument so we can open stdin/out/err pipes
 				dadooFlags.Parse(cmd.Args[1:])
 				processDir := dadooFlags.Arg(2)
@@ -298,7 +302,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		})
 
 		Describe("Logging", func() {
-			It("sends all the logs to the logger", func() {
+			It("sends all the runc logs to the logger", func() {
 				_, err := runner.Run(log, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, processPath, "some-handle", nil, garden.ProcessIO{})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -311,6 +315,24 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 				Expect(runcLogs).To(HaveLen(3))
 				Expect(runcLogs[0].Data).To(HaveKeyWithValue("message", "signal: potato"))
+			})
+
+			It("sends all the dadoo logs to the logger after user process exits", func() {
+				process, err := runner.Run(log, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, processPath, "some-handle", nil, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+				_, err = process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+
+				dadooLogs := make([]lager.LogFormat, 0)
+				for _, log := range log.Logs() {
+					if log.Message == "test.execrunner.dadoo" {
+						dadooLogs = append(dadooLogs, log)
+					}
+				}
+
+				Expect(dadooLogs).To(HaveLen(2))
+				Expect(dadooLogs[0].Data).To(HaveKeyWithValue("message", "dadoo stdout"))
+				Expect(dadooLogs[1].Data).To(HaveKeyWithValue("message", "dadoo stderr"))
 			})
 
 			Context("when `runC exec` fails", func() {
