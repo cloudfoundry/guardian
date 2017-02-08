@@ -23,7 +23,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, inspectorGardenBin, testNetPluginBin, tarBin string
+var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, testNetPluginBin, tarBin string
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -45,9 +45,6 @@ func TestGqt(t *testing.T) {
 			Expect(err).NotTo(HaveOccurred())
 
 			bins["init_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/init")
-			Expect(err).NotTo(HaveOccurred())
-
-			bins["inspector-garden_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/inspector-garden")
 			Expect(err).NotTo(HaveOccurred())
 
 			bins["test_net_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/networkplugin")
@@ -78,7 +75,6 @@ func TestGqt(t *testing.T) {
 		dadooBin = bins["dadoo_bin_bin_bin"]
 		testImagePluginBin = bins["test_image_plugin_bin_path"]
 		initBin = bins["init_bin_path"]
-		inspectorGardenBin = bins["inspector-garden_bin_path"]
 		testNetPluginBin = bins["test_net_plugin_bin_path"]
 
 		tarBin = os.Getenv("GARDEN_TAR_PATH")
