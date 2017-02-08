@@ -94,6 +94,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 	if err != nil {
 		return nil, err
 	}
+	defer dadooLogFile.Close()
 	cmd.Stdout = dadooLogFile
 	cmd.Stderr = dadooLogFile
 
