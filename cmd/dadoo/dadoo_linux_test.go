@@ -532,7 +532,7 @@ var _ = Describe("Dadoo", func() {
 						}
 					})
 
-					It("exits with non-zero exit code", func() {
+					It("exits with 2", func() {
 						dadooCmd := exec.Command(dadooBinPath, "-tty", "-socket-dir-path", string(longerThanAllowedSocketPath), "exec", "runc", processDir, filepath.Base(bundlePath))
 						dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 						dadooCmd.Stdin = bytes.NewReader(encSpec)
@@ -543,7 +543,7 @@ var _ = Describe("Dadoo", func() {
 
 						openIOPipes()
 
-						Eventually(dadooSession).ShouldNot(gexec.Exit(0))
+						Eventually(dadooSession).Should(gexec.Exit(2))
 						Eventually(stdout).Should(gbytes.Say(fmt.Sprintf("value for --socket-dir-path cannot exceed 80 characters in length")))
 					})
 				})
@@ -558,7 +558,7 @@ var _ = Describe("Dadoo", func() {
 						Expect(err).NotTo(HaveOccurred())
 					})
 
-					It("kills the process and exits with non-zero exit code", func() {
+					It("kills the process and exits with 2", func() {
 						dadooCmd := exec.Command(dadooBinPath, "-tty", "-socket-dir-path", os.TempDir(), "exec", fakeRuncBinPath, processDir, filepath.Base(bundlePath))
 						dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
 						dadooCmd.Stdin = bytes.NewReader(encSpec)
@@ -580,7 +580,7 @@ var _ = Describe("Dadoo", func() {
 
 						Expect(exec.Command("ps", "-p", string(pidBytes)).Run()).NotTo(Succeed())
 
-						Eventually(dadooSession).ShouldNot(gexec.Exit(0))
+						Eventually(dadooSession).Should(gexec.Exit(2))
 						Eventually(stdout).Should(gbytes.Say(fmt.Sprintf("communication error on send")))
 					})
 				})

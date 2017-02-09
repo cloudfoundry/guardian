@@ -31,9 +31,8 @@ func (fake *FakeEventsNotifier) OnEvent(handle string, event string) error {
 	fake.onEventMutex.Unlock()
 	if fake.OnEventStub != nil {
 		return fake.OnEventStub(handle, event)
-	} else {
-		return fake.onEventReturns.result1
 	}
+	return fake.onEventReturns.result1
 }
 
 func (fake *FakeEventsNotifier) OnEventCallCount() int {

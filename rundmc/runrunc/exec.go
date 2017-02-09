@@ -79,7 +79,7 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, id string, spec garden.Proce
 	}
 
 	processesPath := path.Join(bundlePath, "processes")
-	return e.runner.Run(log, preparedSpec, processesPath, id, spec.TTY, io)
+	return e.runner.Run(log, preparedSpec, bundlePath, processesPath, id, spec.TTY, io)
 }
 
 // Attach attaches to an already running process by guid
@@ -90,7 +90,7 @@ func (e *Execer) Attach(log lager.Logger, bundlePath, id, processID string, io g
 
 //go:generate counterfeiter . ExecRunner
 type ExecRunner interface {
-	Run(log lager.Logger, spec *PreparedSpec, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
+	Run(log lager.Logger, spec *PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
 }
 

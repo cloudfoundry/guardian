@@ -33,9 +33,8 @@ func (fake *FakeUserLookupper) Lookup(rootFsPath string, user string) (*user.Exe
 	fake.lookupMutex.Unlock()
 	if fake.LookupStub != nil {
 		return fake.LookupStub(rootFsPath, user)
-	} else {
-		return fake.lookupReturns.result1, fake.lookupReturns.result2
 	}
+	return fake.lookupReturns.result1, fake.lookupReturns.result2
 }
 
 func (fake *FakeUserLookupper) LookupCallCount() int {

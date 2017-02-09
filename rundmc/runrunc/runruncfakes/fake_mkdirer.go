@@ -40,9 +40,8 @@ func (fake *FakeMkdirer) MkdirAs(rootfsPath string, uid int, gid int, mode os.Fi
 	fake.mkdirAsMutex.Unlock()
 	if fake.MkdirAsStub != nil {
 		return fake.MkdirAsStub(rootfsPath, uid, gid, mode, recreate, path...)
-	} else {
-		return fake.mkdirAsReturns.result1
 	}
+	return fake.mkdirAsReturns.result1
 }
 
 func (fake *FakeMkdirer) MkdirAsCallCount() int {

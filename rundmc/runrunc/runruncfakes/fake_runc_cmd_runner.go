@@ -32,9 +32,8 @@ func (fake *FakeRuncCmdRunner) RunAndLog(log lager.Logger, cmd runrunc.LoggingCm
 	fake.runAndLogMutex.Unlock()
 	if fake.RunAndLogStub != nil {
 		return fake.RunAndLogStub(log, cmd)
-	} else {
-		return fake.runAndLogReturns.result1
 	}
+	return fake.runAndLogReturns.result1
 }
 
 func (fake *FakeRuncCmdRunner) RunAndLogCallCount() int {

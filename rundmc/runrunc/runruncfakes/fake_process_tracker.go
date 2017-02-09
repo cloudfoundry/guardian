@@ -51,9 +51,8 @@ func (fake *FakeProcessTracker) Run(processID string, cmd *exec.Cmd, io garden.P
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
 		return fake.RunStub(processID, cmd, io, tty, pidFile)
-	} else {
-		return fake.runReturns.result1, fake.runReturns.result2
 	}
+	return fake.runReturns.result1, fake.runReturns.result2
 }
 
 func (fake *FakeProcessTracker) RunCallCount() int {
@@ -87,9 +86,8 @@ func (fake *FakeProcessTracker) Attach(processID string, io garden.ProcessIO, pi
 	fake.attachMutex.Unlock()
 	if fake.AttachStub != nil {
 		return fake.AttachStub(processID, io, pidFilePath)
-	} else {
-		return fake.attachReturns.result1, fake.attachReturns.result2
 	}
+	return fake.attachReturns.result1, fake.attachReturns.result2
 }
 
 func (fake *FakeProcessTracker) AttachCallCount() int {

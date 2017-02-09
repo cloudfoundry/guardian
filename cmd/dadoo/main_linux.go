@@ -214,7 +214,7 @@ func streamProcess(m *os.File, stdin io.Reader, stdout io.Writer, winszFifo io.R
 		for {
 			var winSize garden.WindowSize
 			if err := json.NewDecoder(winszFifo).Decode(&winSize); err != nil {
-				log(fmt.Sprintf("invalid winsz event: %s", err))
+				fmt.Printf("invalid winsz event: %s\n", err)
 				continue // not much we can do here..
 			}
 			dadoo.SetWinSize(m, winSize)
@@ -257,18 +257,14 @@ func parsePid(pidFile string) (int, error) {
 	return pid, nil
 }
 
-func log(msg string) {
-	fmt.Printf(`msg="%s"`, msg)
-}
-
 func logAndExit(msg string) {
-	log(msg)
-	os.Exit(1)
+	fmt.Println(msg)
+	os.Exit(2)
 }
 
 func check(err error) {
 	if err != nil {
-		log(err.Error())
-		os.Exit(1)
+		fmt.Println(err)
+		os.Exit(2)
 	}
 }

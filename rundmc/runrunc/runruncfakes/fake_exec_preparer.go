@@ -36,9 +36,8 @@ func (fake *FakeExecPreparer) Prepare(log lager.Logger, bundlePath string, spec 
 	fake.prepareMutex.Unlock()
 	if fake.PrepareStub != nil {
 		return fake.PrepareStub(log, bundlePath, spec)
-	} else {
-		return fake.prepareReturns.result1, fake.prepareReturns.result2
 	}
+	return fake.prepareReturns.result1, fake.prepareReturns.result2
 }
 
 func (fake *FakeExecPreparer) PrepareCallCount() int {

@@ -55,8 +55,9 @@ var _ = Describe("Execer", func() {
 		}, garden.ProcessIO{})
 
 		Expect(execRunner.RunCallCount()).To(Equal(1))
-		_, spec, processesPath, id, _, _ := execRunner.RunArgsForCall(0)
+		_, spec, bundlePath, processesPath, id, _, _ := execRunner.RunArgsForCall(0)
 		Expect(spec.Args).To(ConsistOf("potato", "some-bundle-path"))
+		Expect(bundlePath).To(Equal("some-bundle-path"))
 		Expect(processesPath).To(Equal("some-bundle-path/processes"))
 		Expect(id).To(Equal("some-id"))
 	})

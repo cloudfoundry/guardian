@@ -79,9 +79,8 @@ func (fake *FakeRuncBinary) ExecCommand(id string, processJSONPath string, pidFi
 	fake.execCommandMutex.Unlock()
 	if fake.ExecCommandStub != nil {
 		return fake.ExecCommandStub(id, processJSONPath, pidFilePath)
-	} else {
-		return fake.execCommandReturns.result1
 	}
+	return fake.execCommandReturns.result1
 }
 
 func (fake *FakeRuncBinary) ExecCommandCallCount() int {
@@ -112,9 +111,8 @@ func (fake *FakeRuncBinary) EventsCommand(id string) *exec.Cmd {
 	fake.eventsCommandMutex.Unlock()
 	if fake.EventsCommandStub != nil {
 		return fake.EventsCommandStub(id)
-	} else {
-		return fake.eventsCommandReturns.result1
 	}
+	return fake.eventsCommandReturns.result1
 }
 
 func (fake *FakeRuncBinary) EventsCommandCallCount() int {
@@ -146,9 +144,8 @@ func (fake *FakeRuncBinary) StateCommand(id string, logFile string) *exec.Cmd {
 	fake.stateCommandMutex.Unlock()
 	if fake.StateCommandStub != nil {
 		return fake.StateCommandStub(id, logFile)
-	} else {
-		return fake.stateCommandReturns.result1
 	}
+	return fake.stateCommandReturns.result1
 }
 
 func (fake *FakeRuncBinary) StateCommandCallCount() int {
@@ -180,9 +177,8 @@ func (fake *FakeRuncBinary) StatsCommand(id string, logFile string) *exec.Cmd {
 	fake.statsCommandMutex.Unlock()
 	if fake.StatsCommandStub != nil {
 		return fake.StatsCommandStub(id, logFile)
-	} else {
-		return fake.statsCommandReturns.result1
 	}
+	return fake.statsCommandReturns.result1
 }
 
 func (fake *FakeRuncBinary) StatsCommandCallCount() int {
@@ -215,9 +211,8 @@ func (fake *FakeRuncBinary) KillCommand(id string, signal string, logFile string
 	fake.killCommandMutex.Unlock()
 	if fake.KillCommandStub != nil {
 		return fake.KillCommandStub(id, signal, logFile)
-	} else {
-		return fake.killCommandReturns.result1
 	}
+	return fake.killCommandReturns.result1
 }
 
 func (fake *FakeRuncBinary) KillCommandCallCount() int {
@@ -249,9 +244,8 @@ func (fake *FakeRuncBinary) DeleteCommand(id string, logFile string) *exec.Cmd {
 	fake.deleteCommandMutex.Unlock()
 	if fake.DeleteCommandStub != nil {
 		return fake.DeleteCommandStub(id, logFile)
-	} else {
-		return fake.deleteCommandReturns.result1
 	}
+	return fake.deleteCommandReturns.result1
 }
 
 func (fake *FakeRuncBinary) DeleteCommandCallCount() int {

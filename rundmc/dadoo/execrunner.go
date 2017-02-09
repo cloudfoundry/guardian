@@ -45,7 +45,7 @@ func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator
 	}
 }
 
-func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processesPath, handle string, tty *garden.TTYSpec, pio garden.ProcessIO) (p garden.Process, theErr error) {
+func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, pio garden.ProcessIO) (p garden.Process, theErr error) {
 	log = log.Session("execrunner")
 
 	log.Info("start")
@@ -77,7 +77,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 	defer logr.Close()
 	defer syncr.Close()
 
-	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter, log)
+	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
 	process.mkfifos()
 	if err != nil {
 		return nil, err
@@ -90,7 +90,8 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 		cmd = exec.Command(d.dadooPath, "exec", d.runcPath, processPath, handle)
 	}
 
-	dadooLogFile, err := os.Create(filepath.Join(processPath, "dadoo"))
+	dadooLogFilePath := filepath.Join(bundlePath, fmt.Sprintf("dadoo.%s.log", processID))
+	dadooLogFile, err := os.Create(dadooLogFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +115,11 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 		return nil, err
 	}
 	go func() {
-		d.commandRunner.Wait(cmd) // wait on spawned process to avoid zombies
+		// wait on spawned process to avoid zombies
+		d.commandRunner.Wait(cmd)
+		if copyErr := copyDadooLogsToGuardianLogger(dadooLogFilePath, log); copyErr != nil {
+			log.Error("reading-dadoo-log-file", copyErr)
+		}
 	}()
 
 	fd3w.Close()
@@ -153,7 +158,7 @@ func (d *ExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, processes
 
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	processPath := filepath.Join(processesPath, processID)
-	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter, log)
+	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
 	if err := process.attach(io); err != nil {
 		return nil, err
 	}
@@ -182,7 +187,7 @@ type process struct {
 	*signaller
 }
 
-func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter, logger lager.Logger) *process {
+func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter) *process {
 	stdin, stdout, stderr, winsz, exit, exitcode := filepath.Join(dir, "stdin"),
 		filepath.Join(dir, "stdout"),
 		filepath.Join(dir, "stderr"),
@@ -201,14 +206,6 @@ func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter, logger 
 		ioWg:     &sync.WaitGroup{},
 		winszCh:  make(chan garden.WindowSize, 5),
 		cleanup: func() error {
-			dadooLogFile, err := os.Open(filepath.Join(dir, "dadoo"))
-			if err != nil {
-				return err
-			}
-			defer dadooLogFile.Close()
-			if err := processLogs(logger, dadooLogFile, nil, "dadoo", "dadoo"); err != nil {
-				return err
-			}
 			return os.RemoveAll(dir)
 		},
 		signaller: &signaller{
@@ -400,4 +397,26 @@ func (s *signaller) Signal(signal garden.Signal) error {
 	}
 
 	return process.Signal(osSignal(signal).OsSignal())
+}
+
+func copyDadooLogsToGuardianLogger(dadooLogFilePath string, logger lager.Logger) error {
+	dadooLogFileInfo, err := os.Stat(dadooLogFilePath)
+	if err != nil {
+		return fmt.Errorf("stating dadoo log file: %s", err)
+	}
+	defer func() {
+		if err := os.Remove(dadooLogFilePath); err != nil {
+			logger.Error("removing-dadoo-log-file", err)
+		}
+	}()
+	if dadooLogFileInfo.Size() == 0 {
+		return nil
+	}
+
+	dadooLogs, err := ioutil.ReadFile(dadooLogFilePath)
+	if err != nil {
+		return fmt.Errorf("failed to read dadoo log file: %s", err)
+	}
+	logger.Debug("dadoo", lager.Data{"message": string(dadooLogs)})
+	return nil
 }

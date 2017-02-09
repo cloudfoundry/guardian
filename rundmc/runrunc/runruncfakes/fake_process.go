@@ -49,9 +49,8 @@ func (fake *FakeProcess) ID() string {
 	fake.iDMutex.Unlock()
 	if fake.IDStub != nil {
 		return fake.IDStub()
-	} else {
-		return fake.iDReturns.result1
 	}
+	return fake.iDReturns.result1
 }
 
 func (fake *FakeProcess) IDCallCount() int {
@@ -74,9 +73,8 @@ func (fake *FakeProcess) Wait() (int, error) {
 	fake.waitMutex.Unlock()
 	if fake.WaitStub != nil {
 		return fake.WaitStub()
-	} else {
-		return fake.waitReturns.result1, fake.waitReturns.result2
 	}
+	return fake.waitReturns.result1, fake.waitReturns.result2
 }
 
 func (fake *FakeProcess) WaitCallCount() int {
@@ -102,9 +100,8 @@ func (fake *FakeProcess) SetTTY(arg1 garden.TTYSpec) error {
 	fake.setTTYMutex.Unlock()
 	if fake.SetTTYStub != nil {
 		return fake.SetTTYStub(arg1)
-	} else {
-		return fake.setTTYReturns.result1
 	}
+	return fake.setTTYReturns.result1
 }
 
 func (fake *FakeProcess) SetTTYCallCount() int {
@@ -135,9 +132,8 @@ func (fake *FakeProcess) Signal(arg1 garden.Signal) error {
 	fake.signalMutex.Unlock()
 	if fake.SignalStub != nil {
 		return fake.SignalStub(arg1)
-	} else {
-		return fake.signalReturns.result1
 	}
+	return fake.signalReturns.result1
 }
 
 func (fake *FakeProcess) SignalCallCount() int {

@@ -26,9 +26,8 @@ func (fake *FakeWaiter) Wait() (int, error) {
 	fake.waitMutex.Unlock()
 	if fake.WaitStub != nil {
 		return fake.WaitStub()
-	} else {
-		return fake.waitReturns.result1, fake.waitReturns.result2
 	}
+	return fake.waitReturns.result1, fake.waitReturns.result2
 }
 
 func (fake *FakeWaiter) WaitCallCount() int {

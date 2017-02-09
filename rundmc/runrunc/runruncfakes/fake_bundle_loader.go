@@ -31,9 +31,8 @@ func (fake *FakeBundleLoader) Load(path string) (goci.Bndl, error) {
 	fake.loadMutex.Unlock()
 	if fake.LoadStub != nil {
 		return fake.LoadStub(path)
-	} else {
-		return fake.loadReturns.result1, fake.loadReturns.result2
 	}
+	return fake.loadReturns.result1, fake.loadReturns.result2
 }
 
 func (fake *FakeBundleLoader) LoadCallCount() int {
