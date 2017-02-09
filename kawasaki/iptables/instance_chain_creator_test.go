@@ -55,7 +55,7 @@ var _ = Describe("Create", func() {
 					Args: []string{"--wait", "--table", "nat", "-N", "prefix-instance-some-id"},
 				},
 				{
-					Path: "iptables",
+					Path: "/sbin/iptables",
 					Args: []string{"--wait", "--table", "nat", "-A", "prefix-prerouting",
 						"--jump", "prefix-instance-some-id"},
 				},
