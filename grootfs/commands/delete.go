@@ -47,7 +47,11 @@ var DeleteCommand = cli.Command{
 			return nil
 		}
 
-		fsDriver, _ := createFileSystemDriver(cfg)
+		fsDriver, err := createFileSystemDriver(cfg)
+		if err != nil {
+			logger.Error("failed-to-initialise-driver", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
 
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
