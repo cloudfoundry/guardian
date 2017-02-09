@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-sudo apt-get update
-sudo apt-get install xfsprogs -y
 source $(dirname $BASH_SOURCE)/test/utils.sh
 sudo_mount_storage
 
