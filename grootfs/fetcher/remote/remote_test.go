@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/url"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
@@ -155,6 +156,7 @@ var _ = Describe("RemoteFetcher", func() {
 
 		It("returns the correct image config", func() {
 			expectedConfig := specsv1.Image{
+				Created: time.Time{}.In(time.UTC),
 				RootFS: specsv1.RootFS{
 					DiffIDs: []string{
 						"sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
@@ -183,6 +185,7 @@ var _ = Describe("RemoteFetcher", func() {
 
 				fakeCacheDriver.FetchBlobReturns(configContents, 0, nil)
 				expectedConfig = specsv1.Image{
+					Created: time.Time{}.In(time.UTC),
 					RootFS: specsv1.RootFS{
 						DiffIDs: []string{
 							"sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",

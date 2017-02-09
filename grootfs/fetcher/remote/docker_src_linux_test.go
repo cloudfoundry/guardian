@@ -534,7 +534,7 @@ var _ = Describe("Docker source", func() {
 				Expect(err).NotTo(HaveOccurred())
 				fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
 				layerDigest := strings.Split(expectedLayersDigest[1].BlobID, ":")[1]
-				fakeRegistry.WhenGettingBlob(layerDigest, 2, func(rw http.ResponseWriter, req *http.Request) {
+				fakeRegistry.WhenGettingBlob(layerDigest, 1, func(rw http.ResponseWriter, req *http.Request) {
 					rw.Write([]byte("bad-blob"))
 				})
 				Expect(fakeRegistry.Start()).To(Succeed())

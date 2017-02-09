@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
@@ -95,7 +96,8 @@ var _ = Describe("Image", func() {
 
 		It("writes the image.json to the image", func() {
 			baseImage := specsv1.Image{
-				Author: "Groot",
+				Author:  "Groot",
+				Created: time.Time{}.In(time.UTC),
 				Config: specsv1.ImageConfig{
 					User: "groot",
 				},

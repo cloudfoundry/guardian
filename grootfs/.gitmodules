@@ -94,3 +94,6 @@
 [submodule "vendor/github.com/alecthomas/units"]
 	path = vendor/github.com/alecthomas/units
 	url = https://github.com/alecthomas/units
+[submodule "vendor/github.com/opencontainers/go-digest"]
+	path = vendor/github.com/opencontainers/go-digest
+	url = https://github.com/opencontainers/go-digest

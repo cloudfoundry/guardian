@@ -17,7 +17,7 @@ import (
 	"github.com/containers/image/docker"
 	manifestpkg "github.com/containers/image/manifest"
 	"github.com/containers/image/types"
-	digestpkg "github.com/docker/distribution/digest"
+	digestpkg "github.com/opencontainers/go-digest"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	errorspkg "github.com/pkg/errors"
 )
@@ -83,7 +83,6 @@ func (s *DockerSource) Config(logger lager.Logger, baseImageURL *url.URL, manife
 		config specsv1.Image
 		err    error
 	)
-
 	switch manifest.SchemaVersion {
 	case 1:
 		logger.Debug("docker-image-version-2-schema-1")
@@ -135,7 +134,6 @@ func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest s
 	if !s.checkCheckSum(logger, blobReader, digest) {
 		return "", 0, fmt.Errorf("invalid checksum: layer is corrupted `%s`", digest)
 	}
-
 	return blobTempFile.Name(), size, nil
 }
 
@@ -208,10 +206,10 @@ func (s *DockerSource) parseSchemaV2Manifest(logger lager.Logger, rawManifest []
 	}
 
 	manifest := Manifest{
-		ConfigCacheKey: ociManifest.Config.Digest,
+		ConfigCacheKey: ociManifest.Config.Digest.String(),
 	}
 	for _, layer := range ociManifest.Layers {
-		manifest.Layers = append(manifest.Layers, Layer{BlobID: layer.Digest, Size: layer.Size})
+		manifest.Layers = append(manifest.Layers, Layer{BlobID: layer.Digest.String(), Size: layer.Size})
 	}
 
 	manifest.SchemaVersion = 2

@@ -41,9 +41,8 @@ func (fake *FakeVolumeDriver) DestroyVolume(logger lager.Logger, id string) erro
 	fake.destroyVolumeMutex.Unlock()
 	if fake.DestroyVolumeStub != nil {
 		return fake.DestroyVolumeStub(logger, id)
-	} else {
-		return fake.destroyVolumeReturns.result1
 	}
+	return fake.destroyVolumeReturns.result1
 }
 
 func (fake *FakeVolumeDriver) DestroyVolumeCallCount() int {
@@ -74,9 +73,8 @@ func (fake *FakeVolumeDriver) Volumes(logger lager.Logger) ([]string, error) {
 	fake.volumesMutex.Unlock()
 	if fake.VolumesStub != nil {
 		return fake.VolumesStub(logger)
-	} else {
-		return fake.volumesReturns.result1, fake.volumesReturns.result2
 	}
+	return fake.volumesReturns.result1, fake.volumesReturns.result2
 }
 
 func (fake *FakeVolumeDriver) VolumesCallCount() int {

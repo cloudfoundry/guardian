@@ -30,9 +30,8 @@ func (fake *FakeCacheDriver) Clean(logger lager.Logger) error {
 	fake.cleanMutex.Unlock()
 	if fake.CleanStub != nil {
 		return fake.CleanStub(logger)
-	} else {
-		return fake.cleanReturns.result1
 	}
+	return fake.cleanReturns.result1
 }
 
 func (fake *FakeCacheDriver) CleanCallCount() int {

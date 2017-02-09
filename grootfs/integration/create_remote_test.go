@@ -67,7 +67,7 @@ var _ = Describe("Create with remote images", func() {
 			var imageJson specsv1.Image
 			Expect(json.NewDecoder(imageJsonReader).Decode(&imageJson)).To(Succeed())
 
-			Expect(imageJson.Created).To(Equal("2016-08-03T16:50:55.797615406Z"))
+			Expect(imageJson.Created.String()).To(Equal("2016-08-03 16:50:55.797615406 +0000 UTC"))
 			Expect(imageJson.RootFS.DiffIDs).To(Equal([]string{
 				"sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca",
 			}))
