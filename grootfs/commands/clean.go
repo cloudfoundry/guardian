@@ -17,7 +17,6 @@ import (
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 
-	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"github.com/urfave/cli"
 )
 
@@ -60,15 +59,20 @@ var CleanCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 0)
 		}
 
-		volumeDriver := btrfs.NewDriver(cfg.BtrfsBin, cfg.DraxBin, storePath)
-		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
+		fsDriver, err := createFileSystemDriver(cfg)
+		if err != nil {
+			logger.Error("failed-to-initialise-driver", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		sm := garbage_collector.NewStoreMeasurer(storePath)
-		gc := garbage_collector.NewGC(cacheDriver, volumeDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
 
 		metricsEmitter := metrics.NewEmitter()
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)

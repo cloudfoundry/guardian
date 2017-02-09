@@ -2,7 +2,9 @@ package overlayxfs
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"syscall"
 
@@ -55,11 +57,27 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 }
 
 func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
-	panic("not implemented")
+	volumePath := filepath.Join(d.storePath, "volumes", id)
+	if err := os.RemoveAll(volumePath); err != nil {
+		logger.Error(fmt.Sprintf("failed to destroy volume %s", volumePath), err)
+		return errors.Wrap(err, fmt.Sprintf("destroying volume (%s)", id))
+	}
+	return nil
 }
 
 func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
-	panic("not implemented")
+	volumes := []string{}
+
+	existingVolumes, err := ioutil.ReadDir(path.Join(d.storePath, store.VolumesDirName))
+	if err != nil {
+		return nil, fmt.Errorf("failed to list volumes: %s", err.Error())
+	}
+
+	for _, volumeInfo := range existingVolumes {
+		volumes = append(volumes, volumeInfo.Name())
+	}
+
+	return volumes, nil
 }
 
 func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {

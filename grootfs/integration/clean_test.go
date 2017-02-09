@@ -1,47 +1,62 @@
 package integration_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 
-	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
-	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/testhelpers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Clean", func() {
-	BeforeEach(func() {
-		integration.SkipIfNotBTRFS(Driver)
+	var (
+		baseImagePath             string
+		anotherBaseImagePath      string
+		yetAnotherBaseImagePath   string
+		sourceImagePath           string
+		anotherSourceImagePath    string
+		yetAnotherSourceImagePath string
+	)
 
-		_, err := Runner.Create(groot.CreateSpec{
+	BeforeEach(func() {
+		var err error
+		sourceImagePath, err = ioutil.TempDir("", "")
+		sess, err := gexec.Start(exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(sourceImagePath, "foo")), "count=2", "bs=1M"), GinkgoWriter, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(sess).Should(gexec.Exit(0))
+		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+		baseImagePath = baseImageFile.Name()
+
+		anotherSourceImagePath, err = ioutil.TempDir("", "")
+		sess, err = gexec.Start(exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(anotherSourceImagePath, "foo")), "count=2", "bs=1M"), GinkgoWriter, nil)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(sess).Should(gexec.Exit(0))
+		anotherBaseImageFile := integration.CreateBaseImageTar(anotherSourceImagePath)
+		anotherBaseImagePath = anotherBaseImageFile.Name()
+
+		yetAnotherSourceImagePath, err = ioutil.TempDir("", "")
+		yetAnotherBaseImageFile := integration.CreateBaseImageTar(yetAnotherSourceImagePath)
+		yetAnotherBaseImagePath = yetAnotherBaseImageFile.Name()
+
+		_, err = Runner.Create(groot.CreateSpec{
 			ID:        "my-image-1",
-			BaseImage: "docker:///cfgarden/empty:v0.1.1",
+			BaseImage: baseImagePath,
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
 		Expect(Runner.Delete("my-image-1")).To(Succeed())
-	})
-
-	It("removes the cached blobs", func() {
-		preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(len(preContents)).To(BeNumerically(">", 0))
-
-		_, err = Runner.Clean(0, []string{})
-		Expect(err).NotTo(HaveOccurred())
-
-		afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(afterContents).To(HaveLen(0))
 	})
 
 	Context("when the store doesn't exist", func() {
@@ -54,31 +69,32 @@ var _ = Describe("Clean", func() {
 		})
 	})
 
-	Context("when there are unused layers", func() {
+	Context("when there are unused volumes", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-image-2",
-				BaseImage: "docker:///busybox",
+				BaseImage: anotherBaseImagePath,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(Runner.Delete("my-image-2")).To(Succeed())
 		})
 
-		It("removes unused volumes", func() {
+		It("removes them", func() {
 			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(preContents).To(HaveLen(3))
+			Expect(preContents).To(HaveLen(2))
 
 			_, err = Runner.Clean(0, []string{})
 			Expect(err).NotTo(HaveOccurred())
 
 			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(afterContents).To(HaveLen(2))
-			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-				Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
-			}
+			Expect(afterContents).To(HaveLen(1))
+
+			afterDir := afterContents[0].Name()
+			afterContentsSha := sha256.Sum256([]byte(baseImagePath))
+			Expect(afterDir).To(MatchRegexp(`%s-\d+`, hex.EncodeToString(afterContentsSha[:32])))
 		})
 
 		Context("and ignored images flag is given", func() {
@@ -91,7 +107,7 @@ var _ = Describe("Clean", func() {
 			})
 
 			It("doesn't delete their layers", func() {
-				_, err := Runner.Clean(0, []string{"docker:///busybox"})
+				_, err := Runner.Clean(0, []string{anotherBaseImagePath})
 				Expect(err).NotTo(HaveOccurred())
 
 				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
@@ -104,7 +120,7 @@ var _ = Describe("Clean", func() {
 				BeforeEach(func() {
 					_, err := Runner.Create(groot.CreateSpec{
 						ID:        "my-image-3",
-						BaseImage: "docker:///cfgarden/empty:v0.1.0",
+						BaseImage: yetAnotherBaseImagePath,
 					})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -112,7 +128,7 @@ var _ = Describe("Clean", func() {
 				})
 
 				It("doesn't delete their layers", func() {
-					_, err := Runner.Clean(0, []string{"docker:///busybox", "docker:///cfgarden/empty:v0.1.0"})
+					_, err := Runner.Clean(0, []string{anotherBaseImagePath, yetAnotherBaseImagePath})
 					Expect(err).NotTo(HaveOccurred())
 
 					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
@@ -128,27 +144,7 @@ var _ = Describe("Clean", func() {
 
 			Context("and the total is less than the threshold", func() {
 				BeforeEach(func() {
-					// 688128      # Blob cache
-					// 16384       # Empty layer
-					// 16384       # Empty layer
-					// 16384       # Empty rootfs
-					// 1179648     # Busybox layer
-					// ----------------------------------
-					// = 1916928 ~= 1.83 MB
-
-					cleanupThresholdInBytes = 2500000
-				})
-
-				It("does not remove the cached blobs", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
-					Expect(err).NotTo(HaveOccurred())
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(len(preContents)))
+					cleanupThresholdInBytes = 50000000
 				})
 
 				It("does not remove the unused volumes", func() {
@@ -175,123 +171,17 @@ var _ = Describe("Clean", func() {
 					cleanupThresholdInBytes = 70000
 				})
 
-				It("removes the cached blobs", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
+				It("removes the unused volumes", func() {
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(2))
 
 					_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(0))
-				})
-
-				It("removes the unused volumes", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(preContents).To(HaveLen(3))
-
-					_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
-					Expect(err).NotTo(HaveOccurred())
-
 					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(2))
-					for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-						Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
-					}
-				})
-			})
-		})
-	})
-
-	Context("when --config global flag is given and there are unused layers", func() {
-		var (
-			cfg              config.Config
-			runnerWithConfig *runnerpkg.Runner
-		)
-
-		BeforeEach(func() {
-			_, err := Runner.Create(groot.CreateSpec{
-				ID:        "my-image-2",
-				BaseImage: "docker:///busybox",
-			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.Delete("my-image-2")).To(Succeed())
-
-			cfg = config.Config{}
-		})
-
-		JustBeforeEach(func() {
-			r := Runner
-			runnerWithConfig = &r
-			Expect(runnerWithConfig.SetConfig(cfg)).To(Succeed())
-		})
-
-		Describe("with a list of images to be ignored", func() {
-			var preContents []os.FileInfo
-
-			BeforeEach(func() {
-				cfg.IgnoreBaseImages = []string{"docker:///busybox"}
-			})
-
-			JustBeforeEach(func() {
-				var err error
-				preContents, err = ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("doesn't delete their layers", func() {
-				_, err := runnerWithConfig.Clean(0, []string{})
-				Expect(err).NotTo(HaveOccurred())
-
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(afterContents).To(Equal(preContents))
-			})
-
-			Context("when the ignore image flag is also given", func() {
-				JustBeforeEach(func() {
-					_, err := runnerWithConfig.Create(groot.CreateSpec{
-						ID:        "my-image-3",
-						BaseImage: "docker:///cfgarden/empty:v0.1.0",
-					})
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(runnerWithConfig.Delete("my-image-3")).To(Succeed())
-				})
-
-				It("does not ignore images provided in the config file", func() {
-					_, err := runnerWithConfig.Clean(0, []string{"docker:///cfgarden/empty:v0.1.0"})
-					Expect(err).NotTo(HaveOccurred())
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(afterContents).NotTo(Equal(preContents))
-				})
-			})
-		})
-
-		Describe("clean up threshold", func() {
-			Context("when threshold is not provided on the command line flag", func() {
-				BeforeEach(func() {
-					cfg.CleanThresholdBytes = 2500000
-				})
-
-				It("uses the threshold from the config file, and so does not clean", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-
-					_, err = runnerWithConfig.Clean(0, []string{})
-					Expect(err).NotTo(HaveOccurred())
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(len(preContents)))
+					Expect(afterContents).To(HaveLen(1))
 				})
 			})
 		})

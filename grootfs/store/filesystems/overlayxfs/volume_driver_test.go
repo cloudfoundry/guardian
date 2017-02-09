@@ -87,6 +87,56 @@ var _ = Describe("VolumeDriver", func() {
 			})
 		})
 	})
+
+	Describe("Volumes", func() {
+		var volumesPath string
+		BeforeEach(func() {
+			volumesPath = filepath.Join(StorePath, store.VolumesDirName)
+			Expect(os.Mkdir(filepath.Join(volumesPath, "sha256:vol-a"), 0777)).To(Succeed())
+			Expect(os.Mkdir(filepath.Join(volumesPath, "sha256:vol-b"), 0777)).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(volumesPath)).To(Succeed())
+		})
+
+		It("returns a list with existing volumes id", func() {
+			volumes, err := driver.Volumes(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(len(volumes)).To(Equal(2))
+			Expect(volumes).To(ContainElement("sha256:vol-a"))
+			Expect(volumes).To(ContainElement("sha256:vol-b"))
+		})
+
+		Context("when fails to list volumes", func() {
+			It("returns an error", func() {
+				driver := overlayxfs.NewDriver("/what?")
+				_, err := driver.Volumes(logger)
+				Expect(err).To(MatchError(ContainSubstring("failed to list volumes")))
+			})
+		})
+	})
+
+	Describe("DestroyVolume", func() {
+		var (
+			volumeID   string
+			volumePath string
+		)
+
+		JustBeforeEach(func() {
+			volumeID = randVolumeID()
+			var err error
+			volumePath, err = driver.CreateVolume(logger, "", volumeID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("deletes the overlayxfs volume by id", func() {
+			Expect(volumePath).To(BeADirectory())
+
+			Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
+			Expect(volumePath).ToNot(BeAnExistingFile())
+		})
+	})
 })
 
 func randVolumeID() string {
