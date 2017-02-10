@@ -23,6 +23,7 @@ var _ = Describe("Gardener", func() {
 		volumeCreator   *fakes.FakeVolumeCreator
 		containerizer   *fakes.FakeContainerizer
 		uidGenerator    *fakes.FakeUidGenerator
+		fakeBulkStarter *fakes.FakeBulkStarter
 		sysinfoProvider *fakes.FakeSysInfoProvider
 		propertyManager *fakes.FakePropertyManager
 		restorer        *fakes.FakeRestorer
@@ -36,6 +37,7 @@ var _ = Describe("Gardener", func() {
 		logger = lagertest.NewTestLogger("test")
 		containerizer = new(fakes.FakeContainerizer)
 		uidGenerator = new(fakes.FakeUidGenerator)
+		fakeBulkStarter = new(fakes.FakeBulkStarter)
 		networker = new(fakes.FakeNetworker)
 		volumeCreator = new(fakes.FakeVolumeCreator)
 		sysinfoProvider = new(fakes.FakeSysInfoProvider)
@@ -50,6 +52,7 @@ var _ = Describe("Gardener", func() {
 			SysInfoProvider: sysinfoProvider,
 			Containerizer:   containerizer,
 			UidGenerator:    uidGenerator,
+			BulkStarter:     fakeBulkStarter,
 			Networker:       networker,
 			VolumeCreator:   volumeCreator,
 			Logger:          logger,
@@ -715,37 +718,24 @@ var _ = Describe("Gardener", func() {
 			containerizer.HandlesReturns(containers, nil)
 		})
 
-		Context("when it has starters", func() {
-			var (
-				starterA, starterB *fakes.FakeStarter
-			)
+		It("calls the bulk starter", func() {
+			Expect(gdnr.Start()).To(Succeed())
 
+			Expect(fakeBulkStarter.StartAllCallCount()).To(Equal(1))
+		})
+
+		Context("when the bulk starter fails", func() {
 			BeforeEach(func() {
-				starterA = new(fakes.FakeStarter)
-				starterB = new(fakes.FakeStarter)
-				gdnr.Starters = []gardener.Starter{starterA, starterB}
+				fakeBulkStarter.StartAllReturns(errors.New("boom"))
 			})
 
-			It("calls the provided starters", func() {
-				Expect(gdnr.Start()).To(Succeed())
-
-				Expect(starterA.StartCallCount()).To(Equal(1))
-				Expect(starterB.StartCallCount()).To(Equal(1))
+			It("returns the error", func() {
+				Expect(gdnr.Start()).To(MatchError(ContainSubstring("boom")))
 			})
 
-			Context("when a starter fails", func() {
-				BeforeEach(func() {
-					starterB.StartReturns(errors.New("boom"))
-				})
-
-				It("returns the error", func() {
-					Expect(gdnr.Start()).To(MatchError(ContainSubstring("boom")))
-				})
-
-				It("does not restore the containers", func() {
-					Expect(gdnr.Start()).NotTo(Succeed())
-					Expect(restorer.RestoreCallCount()).To(Equal(0))
-				})
+			It("does not restore the containers", func() {
+				Expect(gdnr.Start()).NotTo(Succeed())
+				Expect(restorer.RestoreCallCount()).To(Equal(0))
 			})
 		})
 

@@ -149,8 +149,9 @@ type ServerCommand struct {
 		DebugBindIP   IPFlag `long:"debug-bind-ip"                   description:"Bind the debug server on the given IP."`
 		DebugBindPort uint16 `long:"debug-bind-port" default:"17013" description:"Bind the debug server to the given port."`
 
-		Tag      string `hidden:"true" long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
-		Rootless bool   `long:"rootless" description:"Run server in rootless mode."`
+		Tag string `hidden:"true" long:"tag" description:"Optional 2-character identifier used for namespacing global configuration."`
+		// TODO add description
+		SkipSetup bool `long:"skip-setup" description:"TODO"`
 	} `group:"Server Configuration"`
 
 	Containers struct {
@@ -332,10 +333,6 @@ func restoreUnversionedAssets(assetsDir string) (string, error) {
 func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
 
-	if cmd.Server.Rootless {
-		logger.Info("rootless-mode-on")
-	}
-
 	if err := exec.Command("modprobe", "aufs").Run(); err != nil {
 		logger.Error("unable-to-load-aufs", err)
 	}
@@ -371,15 +368,19 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	}
 
 	var volumeCreator gardener.VolumeCreator = nil
-	starters := []gardener.Starter{}
-	if !cmd.Server.Rootless {
-		volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
-		starters = []gardener.Starter{cmd.wireRunDMCStarter(logger), iptablesStarter}
+	volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
+
+	var bulkStarter gardener.BulkStarter = gardener.NewBulkStarter([]gardener.Starter{
+		cmd.wireRunDMCStarter(logger),
+		iptablesStarter,
+	})
+	if cmd.Server.SkipSetup {
+		bulkStarter = gardener.NoopBulkStarter
 	}
 
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
-		Starters:        starters,
+		BulkStarter:     bulkStarter,
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir),
 		Networker:       networker,
 		VolumeCreator:   volumeCreator,

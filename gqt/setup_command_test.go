@@ -142,7 +142,7 @@ var _ = Describe("gdn setup", func() {
 	})
 })
 
-var _ = PDescribe("running gdn setup before starting server", func() {
+var _ = FDescribe("running gdn setup before starting server", func() {
 	var maximus *syscall.Credential
 
 	BeforeEach(func() {
@@ -156,6 +156,6 @@ var _ = PDescribe("running gdn setup before starting server", func() {
 
 	It("should not blow up", func() {
 		server := startGardenAsUser(maximus, "server", "--skip-setup")
-		Expect(exec.Command("ps", "-p", strconv.Itoa(server.Pid)).Run()).To(Succeed())
+		Consistently(exec.Command("ps", "-p", strconv.Itoa(server.Pid)).Run()).Should(Succeed())
 	})
 })

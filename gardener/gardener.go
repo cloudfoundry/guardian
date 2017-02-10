@@ -20,6 +20,7 @@ import (
 //go:generate counterfeiter . PropertyManager
 //go:generate counterfeiter . Restorer
 //go:generate counterfeiter . Starter
+//go:generate counterfeiter . BulkStarter
 
 const ContainerIPKey = "garden.network.container-ip"
 const BridgeIPKey = "garden.network.host-ip"
@@ -83,6 +84,10 @@ type PropertyManager interface {
 
 type Starter interface {
 	Start() error
+}
+
+type BulkStarter interface {
+	StartAll() error
 }
 
 type Restorer interface {
@@ -157,8 +162,8 @@ type Gardener struct {
 	// UidGenerator generates unique ids for containers
 	UidGenerator UidGenerator
 
-	// Starter runs any needed start-up tasks (e.g. setting up cgroups)
-	Starters []Starter
+	// BulkStarter runs any needed Starters that do start-up tasks (e.g. setting up cgroups)
+	BulkStarter BulkStarter
 
 	// Networker creates a network for containers
 	Networker Networker
@@ -479,10 +484,8 @@ func (g *Gardener) Start() error {
 	log.Info("starting")
 	defer log.Info("completed")
 
-	for _, starter := range g.Starters {
-		if err := starter.Start(); err != nil {
-			return fmt.Errorf("starting starter: %s", err)
-		}
+	if err := g.BulkStarter.StartAll(); err != nil {
+		return fmt.Errorf("bulk starter: %s", err)
 	}
 
 	handles, err := g.Containerizer.Handles()

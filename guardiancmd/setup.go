@@ -31,27 +31,12 @@ type SetupCommand struct {
 func (cmd *SetupCommand) Execute(args []string) error {
 	cmd.Logger, _ = cmd.LogLevel.Logger("guardian-setup")
 
-	bulkStarter := BulkStarter{
-		Starters: []gardener.Starter{
-			cmd.wireCgroupStarter(),
-			cmd.wireIPTablesStarter(),
-		},
-	}
+	bulkStarter := gardener.NewBulkStarter([]gardener.Starter{
+		cmd.wireCgroupStarter(),
+		cmd.wireIPTablesStarter(),
+	})
 
 	return bulkStarter.StartAll()
-}
-
-type BulkStarter struct {
-	Starters []gardener.Starter
-}
-
-func (b *BulkStarter) StartAll() error {
-	for _, s := range b.Starters {
-		if err := s.Start(); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (cmd *SetupCommand) wireCgroupStarter() gardener.Starter {
