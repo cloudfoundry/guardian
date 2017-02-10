@@ -60,6 +60,12 @@ func SkipIfNotBTRFS(driver string) {
 	}
 }
 
+func SkipIfNotXFS(driver string) {
+	if driver != "overlay-xfs" {
+		Skip("These tests are only for Overlay-XFS driver. Skipping.")
+	}
+}
+
 func CreateFakeDrax() (string, *os.File, *os.File) {
 	tempFolder, bin, binCalledFile := CreateFakeBin("drax")
 	testhelpers.SuidDrax(bin.Name())

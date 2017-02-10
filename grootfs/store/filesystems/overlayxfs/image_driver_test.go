@@ -35,7 +35,7 @@ var _ = Describe("ImageDriver", func() {
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.ImageDirName), 0777)).To(Succeed())
 
-		driver = overlayxfs.NewDriver(StorePath)
+		driver = overlayxfs.NewDriver("", StorePath)
 		logger = lagertest.NewTestLogger("overlay+xfs")
 
 		volumeID := randVolumeID()
@@ -283,6 +283,11 @@ var _ = Describe("ImageDriver", func() {
 			Eventually(sess).Should(gexec.Exit(0))
 		})
 
+		AfterEach(func() {
+			testhelpers.CleanUpOverlayMounts(StorePath, store.ImageDirName)
+			Expect(os.RemoveAll(spec.ImagePath)).To(Succeed())
+		})
+
 		It("reports the image usage correctly", func() {
 			stats, err := driver.FetchStats(logger, spec.ImagePath)
 			Expect(err).NotTo(HaveOccurred())
@@ -339,9 +344,28 @@ var _ = Describe("ImageDriver", func() {
 
 		Context("when the store path is not an XFS volume", func() {
 			It("returns an error", func() {
-				driver := overlayxfs.NewDriver("/tmp")
+				driver := overlayxfs.NewDriver("", "/tmp")
 				_, err := driver.FetchStats(logger, spec.ImagePath)
 				Expect(err).To(MatchError(ContainSubstring("cannot setup path for mount /tmp")))
+			})
+		})
+
+		Context("when using a custom xfsprogs bin path", func() {
+			It("will use binaries from that path", func() {
+				driver := overlayxfs.NewDriver(XFSProgsPath, StorePath)
+				imagePath := filepath.Join(StorePath, store.ImageDirName, fmt.Sprintf("random-id-%d", rand.Int()))
+				Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
+				spec.ImagePath = imagePath
+
+				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+
+				_, err := driver.FetchStats(logger, spec.ImagePath)
+				Expect(err).To(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("quota usage output not as expected")))
+
+				contents, err := ioutil.ReadFile(XFSQuotaCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - xfs_quota"))
 			})
 		})
 	})

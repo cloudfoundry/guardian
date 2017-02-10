@@ -26,6 +26,7 @@ var _ = Describe("Builder", func() {
 			FSDriver:                  "kitten-fs",
 			DraxBin:                   "/config/drax",
 			BtrfsBin:                  "/config/btrfs",
+			XFSProgsPath:              "/config/xfs",
 			NewuidmapBin:              "/config/newuidmap",
 			NewgidmapBin:              "/config/newgidmap",
 			MetronEndpoint:            "config_endpoint:1111",
@@ -330,6 +331,24 @@ var _ = Describe("Builder", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(config.BtrfsBin).To(Equal("/my/btrfs"))
 				})
+			})
+		})
+	})
+
+	Describe("WithXFSProgsPath", func() {
+		It("overrides the config's XFS Progs path entry when command line flag is set", func() {
+			builder = builder.WithXFSProgsPath("/my/xfs", true)
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.XFSProgsPath).To(Equal("/my/xfs"))
+		})
+
+		Context("when xfs path is not provided via command line", func() {
+			It("uses the config's xfs path ", func() {
+				builder = builder.WithXFSProgsPath("/my/xfs", false)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.XFSProgsPath).To(Equal("/config/xfs"))
 			})
 		})
 	})

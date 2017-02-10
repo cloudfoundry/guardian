@@ -23,6 +23,7 @@ type Runner struct {
 	// Binaries
 	DraxBin      string
 	BtrfsBin     string
+	XFSProgsPath string
 	NewuidmapBin string
 	NewgidmapBin string
 	// Metrics
@@ -132,6 +133,9 @@ func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	}
 	if r.BtrfsBin != "" {
 		allArgs = append(allArgs, "--btrfs-bin", r.BtrfsBin)
+	}
+	if r.XFSProgsPath != "" {
+		allArgs = append(allArgs, "--xfsprogs-path", r.XFSProgsPath)
 	}
 	if r.MetronHost != nil && r.MetronPort != 0 {
 		metronEndpoint := fmt.Sprintf("%s:%d", r.MetronHost.String(), r.MetronPort)

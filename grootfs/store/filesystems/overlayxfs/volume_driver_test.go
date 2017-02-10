@@ -26,7 +26,7 @@ var _ = Describe("VolumeDriver", func() {
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.ImageDirName), 0777)).To(Succeed())
 
-		driver = overlayxfs.NewDriver(StorePath)
+		driver = overlayxfs.NewDriver(XFSProgsPath, StorePath)
 		logger = lagertest.NewTestLogger("overlay+xfs")
 	})
 
@@ -110,7 +110,7 @@ var _ = Describe("VolumeDriver", func() {
 
 		Context("when fails to list volumes", func() {
 			It("returns an error", func() {
-				driver := overlayxfs.NewDriver("/what?")
+				driver := overlayxfs.NewDriver(XFSProgsPath, "/what?")
 				_, err := driver.Volumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to list volumes")))
 			})

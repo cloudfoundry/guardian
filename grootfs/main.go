@@ -68,6 +68,10 @@ func main() {
 			Value: defaultBtrfsBin,
 		},
 		cli.StringFlag{
+			Name:  "xfsprogs-path",
+			Usage: "Path to xfsprogs bin directory. (If not provided will use $PATH)",
+		},
+		cli.StringFlag{
 			Name:  "newuidmap-bin",
 			Usage: "Path to newuidmap bin. (If not provided will use $PATH)",
 			Value: defaultNewuidmapBin,
@@ -100,6 +104,7 @@ func main() {
 		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), ctx.IsSet("store")).
 			WithFSDriver(ctx.GlobalString("driver"), ctx.IsSet("driver")).
 			WithDraxBin(ctx.GlobalString("drax-bin"), ctx.IsSet("drax-bin")).
+			WithXFSProgsPath(ctx.GlobalString("xfsprogs-path"), ctx.IsSet("xfsprogs-path")).
 			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
 			WithLogLevel(ctx.GlobalString("log-level"), ctx.IsSet("log-level")).
 			WithLogFile(ctx.GlobalString("log-file")).

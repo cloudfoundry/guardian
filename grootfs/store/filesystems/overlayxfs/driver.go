@@ -29,14 +29,16 @@ const (
 	imageInfoName = "image_info"
 )
 
-func NewDriver(storePath string) *Driver {
+func NewDriver(xfsProgsPath, storePath string) *Driver {
 	return &Driver{
-		storePath: storePath,
+		xfsProgsPath: xfsProgsPath,
+		storePath:    storePath,
 	}
 }
 
 type Driver struct {
-	storePath string
+	xfsProgsPath string
+	storePath    string
 }
 
 func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
@@ -246,7 +248,7 @@ func (d *Driver) listQuotaUsage(logger lager.Logger, projectID uint32) (int64, e
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	quotaCmd := exec.Command("xfs_quota", "-x", "-c", fmt.Sprintf("quota -N -p %d", projectID), d.storePath)
+	quotaCmd := exec.Command(filepath.Join(d.xfsProgsPath, "xfs_quota"), "-x", "-c", fmt.Sprintf("quota -N -p %d", projectID), d.storePath)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	stderrBuffer := bytes.NewBuffer([]byte{})
 	quotaCmd.Stdout = stdoutBuffer
@@ -258,7 +260,7 @@ func (d *Driver) listQuotaUsage(logger lager.Logger, projectID uint32) (int64, e
 	output := stdoutBuffer.String()
 	parsedOutput := strings.Fields(output)
 	if len(parsedOutput) != 7 {
-		return 0, fmt.Errorf("quota usaged output not as expected: %s", output)
+		return 0, fmt.Errorf("quota usage output not as expected: %s", output)
 	}
 
 	usedBlocks, err := strconv.ParseInt(parsedOutput[1], 10, 64)
