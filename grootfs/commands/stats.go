@@ -13,7 +13,6 @@ import (
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 
-	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"github.com/urfave/cli"
 )
 
@@ -47,8 +46,11 @@ var StatsCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		volumeDriver := btrfs.NewDriver(cfg.BtrfsBin, cfg.DraxBin, storePath)
-		imageCloner := imageClonerpkg.NewImageCloner(volumeDriver, storePath)
+		fsDriver, err := createFileSystemDriver(cfg)
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
+		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 
 		metricsEmitter := metrics.NewEmitter()
 		statser := groot.IamStatser(imageCloner, metricsEmitter)

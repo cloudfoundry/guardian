@@ -163,7 +163,7 @@ func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, 
 
 	image := b.createImage(id)
 
-	return b.imageDriver.FetchStats(logger, image.RootFSPath)
+	return b.imageDriver.FetchStats(logger, image.Path)
 }
 
 func (b *ImageCloner) deleteImageDir(image groot.Image) error {

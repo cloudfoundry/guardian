@@ -20,7 +20,7 @@ mount_storage() {
 
   # Make BTRFS volume
   truncate -s 1G /btrfs_volume
-  mkfs.btrfs /btrfs_volume
+  mkfs.btrfs --nodesize 4k -s 4k /btrfs_volume
 
   # Mount BTRFS
   mkdir /mnt/btrfs
@@ -32,7 +32,7 @@ mount_storage() {
   do
     # Make XFS Volume
     truncate -s 1G /xfs_volume_${i}
-    mkfs.xfs /xfs_volume_${i}
+    mkfs.xfs -b size=4096 /xfs_volume_${i}
 
     # Mount XFS
     mkdir /mnt/xfs-${i}

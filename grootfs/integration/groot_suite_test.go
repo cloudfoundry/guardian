@@ -3,12 +3,14 @@ package integration_test
 import (
 	"errors"
 	"fmt"
+	"math/rand"
 	"os"
 	"os/exec"
 	"os/user"
 	"path"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
@@ -73,6 +75,8 @@ func TestGroot(t *testing.T) {
 	})
 
 	BeforeEach(func() {
+		rand.Seed(time.Now().UnixNano() + int64(GinkgoParallelNode()*1000))
+
 		if Driver == "overlay-xfs" {
 			StorePath = fmt.Sprintf(xfsMountPath, GinkgoParallelNode())
 		} else {

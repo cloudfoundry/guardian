@@ -3,6 +3,7 @@ package integration_test
 import (
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -22,14 +23,14 @@ var _ = Describe("Stats", func() {
 		sourceImagePath string
 		baseImagePath   string
 		image           groot.Image
+		imageID         string
 	)
 
 	BeforeEach(func() {
-		integration.SkipIfNotBTRFS(Driver)
-
 		var err error
 		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
+		imageID = fmt.Sprintf("random-id-%d", rand.Int())
 	})
 
 	AfterEach(func() {
@@ -66,7 +67,8 @@ var _ = Describe("Stats", func() {
 			var err error
 			image, err = Runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
-				ID:        "random-id",
+				ID:        imageID,
+				DiskLimit: 1024 * 1024 * 50,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=4")
@@ -75,18 +77,23 @@ var _ = Describe("Stats", func() {
 			Eventually(sess).Should(gexec.Exit(0))
 			expectedStats = groot.VolumeStats{
 				DiskUsage: groot.DiskUsage{
-					TotalBytesUsed:     9453568,
-					ExclusiveBytesUsed: 4210688,
+					TotalBytesUsed:     9441280,
+					ExclusiveBytesUsed: 4198400,
 				},
 			}
 		})
 
 		Context("when the last parameter is the image ID", func() {
 			It("returns the stats for given image id", func() {
-				stats, err := Runner.Stats("random-id")
+				stats, err := Runner.Stats(imageID)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(stats).To(Equal(expectedStats))
+				Expect(stats.DiskUsage.TotalBytesUsed).To(
+					BeNumerically("~", expectedStats.DiskUsage.TotalBytesUsed, 10),
+				)
+				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
+					BeNumerically("~", expectedStats.DiskUsage.ExclusiveBytesUsed, 10),
+				)
 			})
 		})
 
@@ -95,7 +102,12 @@ var _ = Describe("Stats", func() {
 				stats, err := Runner.Stats(image.Path)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(stats).To(Equal(expectedStats))
+				Expect(stats.DiskUsage.TotalBytesUsed).To(
+					BeNumerically("~", expectedStats.DiskUsage.TotalBytesUsed, 10),
+				)
+				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
+					BeNumerically("~", expectedStats.DiskUsage.ExclusiveBytesUsed, 10),
+				)
 			})
 		})
 	})

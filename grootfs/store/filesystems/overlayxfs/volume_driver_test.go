@@ -31,8 +31,8 @@ var _ = Describe("VolumeDriver", func() {
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(filepath.Join(StorePath, store.VolumesDirName))).To(Succeed())
-		Expect(os.RemoveAll(filepath.Join(StorePath, store.ImageDirName))).To(Succeed())
+		os.RemoveAll(filepath.Join(StorePath, store.VolumesDirName))
+		os.RemoveAll(filepath.Join(StorePath, store.ImageDirName))
 	})
 
 	Describe("VolumePath", func() {

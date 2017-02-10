@@ -215,8 +215,8 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	return nil
 }
 
-func (d *Driver) FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error) {
-	logger = logger.Session("btrfs-fetching-stats", lager.Data{"path": path})
+func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.VolumeStats, error) {
+	logger = logger.Session("btrfs-fetching-stats", lager.Data{"imagePath": imagePath})
 	logger.Info("start")
 	defer logger.Info("end")
 
@@ -231,7 +231,7 @@ func (d *Driver) FetchStats(logger lager.Logger, path string) (groot.VolumeStats
 	args := []string{
 		"--btrfs-bin", d.btrfsBinPath,
 		"stats",
-		"--volume-path", path,
+		"--volume-path", filepath.Join(imagePath, "rootfs"),
 		"--force-sync",
 	}
 

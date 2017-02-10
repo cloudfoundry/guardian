@@ -1,18 +1,22 @@
 package overlayxfs
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 
-	"github.com/docker/docker/daemon/graphdriver/quota"
 	"github.com/pkg/errors"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 )
@@ -21,6 +25,8 @@ const (
 	UpperDir  = "diff"
 	WorkDir   = "workdir"
 	RootfsDir = "rootfs"
+
+	imageInfoName = "image_info"
 )
 
 func NewDriver(storePath string) *Driver {
@@ -124,6 +130,17 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		return errors.Wrap(err, "mounting overlay")
 	}
 
+	baseVolumeSize, err := d.duUsage(logger, rootfsDir)
+	if err != nil {
+		logger.Error("calculating-base-volume-size-failed", err)
+		return errors.Wrapf(err, "calculating base volume size %s", rootfsDir)
+	}
+
+	imageInfoFileName := filepath.Join(spec.ImagePath, imageInfoName)
+	if err := ioutil.WriteFile(imageInfoFileName, []byte(strconv.FormatInt(baseVolumeSize, 10)), 0700); err != nil {
+		return errors.Wrapf(err, "writing image info %s", imageInfoFileName)
+	}
+
 	return nil
 }
 
@@ -154,11 +171,11 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 
 func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
 	logger = logger.Session("applying-quotas", lager.Data{"spec": spec})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Debug("start")
+	defer logger.Debug("end")
 
 	if spec.DiskLimit == 0 {
-		logger.Debug("no-need-for-quotas")
+		logger.Info("no-need-for-quotas")
 		return nil
 	}
 
@@ -181,6 +198,102 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	return nil
 }
 
-func (d *Driver) FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error) {
-	panic("not implemented")
+func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.VolumeStats, error) {
+	logger = logger.Session("overlayxfs-fetching-stats", lager.Data{"imagePath": imagePath})
+	logger.Info("start")
+	defer logger.Info("end")
+
+	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
+		logger.Error("image-path-not-found", err)
+		return groot.VolumeStats{}, errors.Wrapf(err, "image path (%s) doesn't exist", imagePath)
+	}
+
+	projectID, err := quota.GetProjectID(imagePath)
+	if err != nil {
+		logger.Error("fetching-project-id-failed", err)
+		return groot.VolumeStats{}, errors.Wrapf(err, "fetching project id for %s", imagePath)
+	}
+
+	if projectID == 0 {
+		logger.Error("image-path-does-not-have-quota-enabled", err)
+		return groot.VolumeStats{}, fmt.Errorf("the image doesn't have a quota applied: %s", imagePath)
+	}
+
+	exclusiveSize, err := d.listQuotaUsage(logger, projectID)
+	if err != nil {
+		logger.Error("list-quota-usage-failed", err, lager.Data{"projectID": projectID})
+		return groot.VolumeStats{}, errors.Wrapf(err, "listing quota usage %s", imagePath)
+	}
+
+	volumeSize, err := d.readImageInfo(logger, imagePath)
+	if err != nil {
+		logger.Error("reading-image-info-failed", err)
+		return groot.VolumeStats{}, errors.Wrapf(err, "reading image info %s", imagePath)
+	}
+
+	logger.Debug("usage", lager.Data{"volumeSize": volumeSize, "exclusiveSize": exclusiveSize})
+
+	return groot.VolumeStats{
+		DiskUsage: groot.DiskUsage{
+			ExclusiveBytesUsed: exclusiveSize,
+			TotalBytesUsed:     volumeSize + exclusiveSize,
+		},
+	}, nil
+}
+
+func (d *Driver) listQuotaUsage(logger lager.Logger, projectID uint32) (int64, error) {
+	logger = logger.Session("listing-quota-usage", lager.Data{"projectID": projectID})
+	logger.Debug("start")
+	defer logger.Debug("end")
+
+	quotaCmd := exec.Command("xfs_quota", "-x", "-c", fmt.Sprintf("quota -N -p %d", projectID), d.storePath)
+	stdoutBuffer := bytes.NewBuffer([]byte{})
+	stderrBuffer := bytes.NewBuffer([]byte{})
+	quotaCmd.Stdout = stdoutBuffer
+	quotaCmd.Stderr = stdoutBuffer
+	if err := quotaCmd.Run(); err != nil {
+		return 0, errors.Wrapf(err, "failed to fetch xfs quota: %s", stderrBuffer.String())
+	}
+
+	output := stdoutBuffer.String()
+	parsedOutput := strings.Fields(output)
+	if len(parsedOutput) != 7 {
+		return 0, fmt.Errorf("quota usaged output not as expected: %s", output)
+	}
+
+	usedBlocks, err := strconv.ParseInt(parsedOutput[1], 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	// xfs_quota output returns 1K-block values, so we need to multiply it for 1024
+	return usedBlocks * 1024, nil
+}
+
+func (d *Driver) duUsage(logger lager.Logger, path string) (int64, error) {
+	logger = logger.Session("du-metrics", lager.Data{"path": path})
+	logger.Debug("start")
+	defer logger.Debug("end")
+
+	cmd := exec.Command("du", "-bs", path)
+	stdoutBuffer := bytes.NewBuffer([]byte{})
+	stderrBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = stdoutBuffer
+	cmd.Stderr = stdoutBuffer
+	if err := cmd.Run(); err != nil {
+		logger.Error("du-command-failed", err, lager.Data{"stdout": stdoutBuffer.String(), "stderr": stderrBuffer.String()})
+		return 0, errors.Wrapf(err, "du failed: %s", stderrBuffer.String())
+	}
+
+	usageString := strings.Split(stdoutBuffer.String(), "\t")[0]
+	return strconv.ParseInt(usageString, 10, 64)
+}
+
+func (d *Driver) readImageInfo(logger lager.Logger, imagePath string) (int64, error) {
+	contents, err := ioutil.ReadFile(filepath.Join(imagePath, imageInfoName))
+	if err != nil {
+		return 0, err
+	}
+
+	return strconv.ParseInt(string(contents), 10, 64)
 }

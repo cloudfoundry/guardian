@@ -27,6 +27,7 @@ var _ = Describe("ImageDriver", func() {
 		driver     *overlayxfs.Driver
 		logger     *lagertest.TestLogger
 		volumePath string
+		spec       image_cloner.ImageDriverSpec
 	)
 
 	BeforeEach(func() {
@@ -46,6 +47,14 @@ var _ = Describe("ImageDriver", func() {
 		Expect(ioutil.WriteFile(filepath.Join(volumePath, "file-bye"), []byte("bye"), 0700)).To(Succeed())
 		Expect(os.Mkdir(filepath.Join(volumePath, "a-folder"), 0700)).To(Succeed())
 		Expect(ioutil.WriteFile(filepath.Join(volumePath, "a-folder", "folder-file"), []byte("in-a-folder"), 0755)).To(Succeed())
+
+		imagePath := filepath.Join(StorePath, store.ImageDirName, fmt.Sprintf("random-id-%d", rand.Int()))
+		Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
+
+		spec = image_cloner.ImageDriverSpec{
+			ImagePath:      imagePath,
+			BaseVolumePath: volumePath,
+		}
 	})
 
 	AfterEach(func() {
@@ -53,18 +62,6 @@ var _ = Describe("ImageDriver", func() {
 	})
 
 	Describe("CreateImage", func() {
-		var spec image_cloner.ImageDriverSpec
-
-		BeforeEach(func() {
-			imagePath := filepath.Join(StorePath, store.ImageDirName, fmt.Sprintf("random-id-%d", rand.Int()))
-			Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
-
-			spec = image_cloner.ImageDriverSpec{
-				ImagePath:      imagePath,
-				BaseVolumePath: volumePath,
-			}
-		})
-
 		AfterEach(func() {
 			testhelpers.CleanUpOverlayMounts(StorePath, store.ImageDirName)
 			Expect(os.RemoveAll(spec.ImagePath)).To(Succeed())
@@ -93,12 +90,39 @@ var _ = Describe("ImageDriver", func() {
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder", "folder-file")).To(BeAnExistingFile())
 		})
 
+		Context("image_info", func() {
+			BeforeEach(func() {
+				volumeID := randVolumeID()
+				var err error
+				volumePath, err = driver.CreateVolume(logger, "parent-id", volumeID)
+				Expect(err).NotTo(HaveOccurred())
+
+				dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", volumePath), "count=3", "bs=1024")
+				sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+
+				spec.BaseVolumePath = volumePath
+			})
+
+			It("creates a image info file with the total base volume size", func() {
+				Expect(filepath.Join(spec.ImagePath, "image_info")).ToNot(BeAnExistingFile())
+				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+				Expect(filepath.Join(spec.ImagePath, "image_info")).To(BeAnExistingFile())
+
+				contents, err := ioutil.ReadFile(filepath.Join(spec.ImagePath, "image_info"))
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(string(contents)).To(Equal("3078"))
+			})
+		})
+
 		It("doesn't apply any quota", func() {
 			spec.DiskLimit = 0
 			Expect(driver.CreateImage(logger, spec)).To(Succeed())
 
 			Expect(logger).To(ContainSequence(
-				Debug(
+				Info(
 					Message("overlay+xfs.overlayxfs-creating-image.applying-quotas.no-need-for-quotas"),
 				),
 			))
@@ -211,37 +235,113 @@ var _ = Describe("ImageDriver", func() {
 	})
 
 	Describe("DestroyImage", func() {
-		var imagePath string
-
 		BeforeEach(func() {
-			imagePath = filepath.Join(StorePath, store.ImageDirName, fmt.Sprintf("random-id-%d", rand.Int()))
-			Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
-
-			spec := image_cloner.ImageDriverSpec{
-				ImagePath:      imagePath,
-				BaseVolumePath: volumePath,
-			}
 			Expect(driver.CreateImage(logger, spec)).To(Succeed())
 		})
 
 		It("removes upper, work and rootfs dir from the image path", func() {
-			Expect(filepath.Join(imagePath, overlayxfs.UpperDir)).To(BeADirectory())
-			Expect(filepath.Join(imagePath, overlayxfs.WorkDir)).To(BeADirectory())
-			Expect(filepath.Join(imagePath, overlayxfs.RootfsDir)).To(BeADirectory())
+			Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).To(BeADirectory())
+			Expect(filepath.Join(spec.ImagePath, overlayxfs.WorkDir)).To(BeADirectory())
+			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).To(BeADirectory())
 
-			Expect(driver.DestroyImage(logger, imagePath)).To(Succeed())
+			Expect(driver.DestroyImage(logger, spec.ImagePath)).To(Succeed())
 
-			Expect(filepath.Join(imagePath, overlayxfs.UpperDir)).ToNot(BeAnExistingFile())
-			Expect(filepath.Join(imagePath, overlayxfs.WorkDir)).ToNot(BeAnExistingFile())
-			Expect(filepath.Join(imagePath, overlayxfs.RootfsDir)).ToNot(BeAnExistingFile())
+			Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).ToNot(BeAnExistingFile())
+			Expect(filepath.Join(spec.ImagePath, overlayxfs.WorkDir)).ToNot(BeAnExistingFile())
+			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).ToNot(BeAnExistingFile())
 		})
 
 		Context("when it fails unmount the rootfs", func() {
 			It("returns an error", func() {
-				Expect(syscall.Unmount(filepath.Join(imagePath, overlayxfs.RootfsDir), 0)).To(Succeed())
+				Expect(syscall.Unmount(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir), 0)).To(Succeed())
 
-				err := driver.DestroyImage(logger, imagePath)
+				err := driver.DestroyImage(logger, spec.ImagePath)
 				Expect(err).To(MatchError(ContainSubstring("unmounting rootfs folder")))
+			})
+		})
+	})
+
+	Describe("FetchStats", func() {
+		BeforeEach(func() {
+			volumeID := randVolumeID()
+			var err error
+			volumePath, err = driver.CreateVolume(logger, "parent-id", volumeID)
+			Expect(err).NotTo(HaveOccurred())
+
+			dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", volumePath), "count=3", "bs=1M")
+			sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+
+			spec.BaseVolumePath = volumePath
+			spec.DiskLimit = 10 * 1024 * 1024
+			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+
+			dd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/rootfs/file-1", spec.ImagePath), "count=4", "bs=1M")
+			sess, err = gexec.Start(dd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+		})
+
+		It("reports the image usage correctly", func() {
+			stats, err := driver.FetchStats(logger, spec.ImagePath)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(stats.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(4198400)))
+			Expect(stats.DiskUsage.TotalBytesUsed).To(Equal(int64(7344134)))
+		})
+
+		Context("when path does not exist", func() {
+			var imagePath string
+
+			BeforeEach(func() {
+				imagePath = "/tmp/not-here"
+			})
+
+			It("returns an error", func() {
+				_, err := driver.FetchStats(logger, imagePath)
+				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("image path (%s) doesn't exist", imagePath))))
+			})
+		})
+
+		Context("when the path doesn't have a quota", func() {
+			BeforeEach(func() {
+				tmpDir, err := ioutil.TempDir(filepath.Join(StorePath, store.ImageDirName), "")
+				Expect(err).NotTo(HaveOccurred())
+				spec.DiskLimit = 0
+				spec.ImagePath = tmpDir
+				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				_, err := driver.FetchStats(logger, spec.ImagePath)
+				Expect(err).To(MatchError(ContainSubstring("the image doesn't have a quota applied")))
+			})
+		})
+
+		Context("when the path doesn't have an `image_info` file", func() {
+			BeforeEach(func() {
+				Expect(os.Remove(filepath.Join(spec.ImagePath, "image_info"))).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				_, err := driver.FetchStats(logger, spec.ImagePath)
+				Expect(err).To(MatchError(ContainSubstring("reading image info")))
+			})
+		})
+
+		Context("when it fails to fetch XFS project ID", func() {
+			It("returns an error", func() {
+				_, err := driver.FetchStats(logger, "/tmp")
+				Expect(err).To(MatchError(ContainSubstring("Failed to get projid for")))
+			})
+		})
+
+		Context("when the store path is not an XFS volume", func() {
+			It("returns an error", func() {
+				driver := overlayxfs.NewDriver("/tmp")
+				_, err := driver.FetchStats(logger, spec.ImagePath)
+				Expect(err).To(MatchError(ContainSubstring("cannot setup path for mount /tmp")))
 			})
 		})
 	})

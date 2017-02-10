@@ -408,8 +408,9 @@ var _ = Describe("Image", func() {
 
 	Describe("Stats", func() {
 		var (
-			imagePath, imageRootFSPath string
-			stats                      groot.VolumeStats
+			imagePath       string
+			imageRootFSPath string
+			stats           groot.VolumeStats
 		)
 
 		BeforeEach(func() {
@@ -431,6 +432,8 @@ var _ = Describe("Image", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(fakeImageDriver.FetchStatsCallCount()).To(Equal(1))
+			_, receivedImagePath := fakeImageDriver.FetchStatsArgsForCall(0)
+			Expect(receivedImagePath).To(Equal(imagePath))
 		})
 
 		It("returns the stats", func() {

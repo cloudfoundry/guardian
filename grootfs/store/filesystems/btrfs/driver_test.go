@@ -554,13 +554,13 @@ var _ = Describe("Btrfs", func() {
 				Expect(err).ToNot(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
 
-				stats, err := driver.FetchStats(logger, toPath)
+				stats, err := driver.FetchStats(logger, imagePath)
 				Expect(err).ToNot(HaveOccurred())
 
-				// Block math craziness -> 1* 4210688 ~= 4227072
-				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(4227072)))
-				// Block math craziness -> 2* 4227072 ~= 8437760
-				Expect(stats.DiskUsage.TotalBytesUsed).To(Equal(int64(8437760)))
+				// Block math craziness -> 1* 4210688 ~= 4214784
+				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(BeNumerically("~", 4214784, 100))
+				// Block math craziness -> 2* 4227072 ~= 8425472
+				Expect(stats.DiskUsage.TotalBytesUsed).To(BeNumerically("~", 8425472, 100))
 			})
 
 			Context("when using a custom btrfs binary", func() {
@@ -580,7 +580,7 @@ var _ = Describe("Btrfs", func() {
 
 				It("will force drax to use that binary", func() {
 					driver = btrfs.NewDriver(btrfsBin.Name(), draxBinPath, storePath)
-					_, err := driver.FetchStats(logger, toPath)
+					_, err := driver.FetchStats(logger, imagePath)
 					Expect(err).To(HaveOccurred())
 
 					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
@@ -595,7 +595,7 @@ var _ = Describe("Btrfs", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := driver.FetchStats(logger, toPath)
+					_, err := driver.FetchStats(logger, imagePath)
 					Expect(err).To(MatchError(ContainSubstring("drax was not found in the $PATH")))
 				})
 			})
@@ -606,7 +606,7 @@ var _ = Describe("Btrfs", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := driver.FetchStats(logger, toPath)
+					_, err := driver.FetchStats(logger, imagePath)
 					Expect(err).To(MatchError(ContainSubstring("missing the setuid bit on drax")))
 				})
 			})
@@ -618,7 +618,7 @@ var _ = Describe("Btrfs", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := driver.FetchStats(logger, toPath)
+				_, err := driver.FetchStats(logger, imagePath)
 				Expect(err).To(MatchError(ContainSubstring("is not a btrfs volume")))
 			})
 		})
@@ -629,7 +629,7 @@ var _ = Describe("Btrfs", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := driver.FetchStats(logger, toPath)
+				_, err := driver.FetchStats(logger, imagePath)
 				Expect(err).To(MatchError(ContainSubstring("No such file or directory")))
 			})
 		})
