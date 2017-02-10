@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"syscall"
 
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	"code.cloudfoundry.org/guardian/sysinfo"
 
@@ -20,17 +22,17 @@ var _ = Describe("gdn setup", func() {
 	var (
 		cgroupsMountpoint string
 		iptablesPrefix    string
-		args              []string
+		setupArgs         []string
 	)
 
 	BeforeEach(func() {
 		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%d", GinkgoParallelNode()))
 		iptablesPrefix = fmt.Sprintf("w-%d", GinkgoParallelNode())
-		args = []string{"setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
+		setupArgs = []string{"setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
 	})
 
 	JustBeforeEach(func() {
-		setupProcess, err := gexec.Start(exec.Command(gardenBin, args...), GinkgoWriter, GinkgoWriter)
+		setupProcess, err := gexec.Start(exec.Command(gardenBin, setupArgs...), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 	})
@@ -81,7 +83,7 @@ var _ = Describe("gdn setup", func() {
 
 	Context("when --allow-host-access flag is passed", func() {
 		BeforeEach(func() {
-			args = append(args, []string{"--allow-host-access"}...)
+			setupArgs = append(setupArgs, []string{"--allow-host-access"}...)
 		})
 
 		It("iptables should have the relevant entry ", func() {
@@ -93,7 +95,7 @@ var _ = Describe("gdn setup", func() {
 
 	Context("when --allow-host-access flag is passed", func() {
 		BeforeEach(func() {
-			args = append(args, "--deny-network", "8.8.8.0/24")
+			setupArgs = append(setupArgs, "--deny-network", "8.8.8.0/24")
 		})
 
 		It("iptables should have the relevant entry ", func() {
@@ -106,7 +108,7 @@ var _ = Describe("gdn setup", func() {
 	Context("when a binary is passed via --iptables-bin flag", func() {
 		BeforeEach(func() {
 			// use echo instead of iptables
-			args = append(args, "--iptables-bin", "/bin/echo")
+			setupArgs = append(setupArgs, "--iptables-bin", "/bin/echo")
 		})
 
 		It("uses the binary passed instead of /sbin/iptables", func() {
@@ -134,47 +136,64 @@ var _ = Describe("gdn setup", func() {
 		})
 
 		It("iptables should have the relevant entry ", func() {
-			Expect(exec.Command(gardenBin, append(args, "--reset-iptables-rules")...).Run()).To(Succeed())
+			Expect(exec.Command(gardenBin, append(setupArgs, "--reset-iptables-rules")...).Run()).To(Succeed())
 			out, err := exec.Command("iptables", "-L").CombinedOutput()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).NotTo(ContainSubstring(instanceChain))
 		})
 	})
-})
 
-var _ = Describe("running gdn setup before starting server", func() {
-	var (
-		maximus *syscall.Credential
-		args    []string
-	)
+	Context("when start the server", func() {
+		var (
+			server     *runner.RunningGarden
+			serverArgs []string
+		)
 
-	BeforeEach(func() {
-		maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
-		maximus = &syscall.Credential{Uid: maxId, Gid: maxId}
+		BeforeEach(func() {
+			serverArgs = []string{"--skip-setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
+		})
 
-		setupArgs := []string{"setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
-		setupProcess, err := gexec.Start(exec.Command(gardenBin, setupArgs...), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(setupProcess).Should(gexec.Exit(0))
+		Context("when server is as non-root", func() {
+			var maximus *syscall.Credential
 
-		args = []string{
-			"server", "--skip-setup",
-			"--tag", fmt.Sprintf("%d", GinkgoParallelNode()),
-			"--image-plugin", testImagePluginBin,
-		}
-	})
+			BeforeEach(func() {
+				maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
+				maximus = &syscall.Credential{Uid: maxId, Gid: maxId}
+			})
 
-	It("server process should run consistently as user maximus", func() {
-		server := startGardenAsUser(maximus, args...)
-		Expect(server).NotTo(BeNil())
+			JustBeforeEach(func() {
+				serverArgs = append(serverArgs, "--image-plugin", testImagePluginBin)
+				server = startGardenAsUser(maximus, serverArgs...)
+				Expect(server).NotTo(BeNil())
+			})
 
-		out, err := exec.Command("ps", "-U", fmt.Sprintf("%d", maximus.Uid)).CombinedOutput()
-		Expect(err).NotTo(HaveOccurred(), "No process of user maximus was found")
-		Expect(out).To(ContainSubstring(fmt.Sprintf("%d", server.Pid)))
+			It("server process should run consistently as non-root user", func() {
+				out, err := exec.Command("ps", "-U", fmt.Sprintf("%d", maximus.Uid)).CombinedOutput()
+				Expect(err).NotTo(HaveOccurred(), "No process of user maximus was found")
+				Expect(out).To(ContainSubstring(fmt.Sprintf("%d", server.Pid)))
 
-		Consistently(func() error {
-			return exec.Command("ps", "-p", strconv.Itoa(server.Pid)).Run()
-		}).Should(Succeed())
+				Consistently(func() error {
+					return exec.Command("ps", "-p", strconv.Itoa(server.Pid)).Run()
+				}).Should(Succeed())
 
+			})
+		})
+
+		Context("when server is running as root", func() {
+			JustBeforeEach(func() {
+				root := &syscall.Credential{Uid: 0, Gid: 0}
+				server = startGardenAsUser(root, serverArgs...)
+				Expect(server).NotTo(BeNil())
+			})
+
+			AfterEach(func() {
+				server.DestroyAndStop()
+			})
+
+			It("should be able to create a container", func() {
+				_, err := server.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 })
