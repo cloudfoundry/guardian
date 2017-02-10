@@ -10,6 +10,7 @@ install_apt_packages() {
     vim-nox \
     git silversearcher-ag curl jq \
     btrfs-tools uidmap \
+    xfsprogs \
     python-minimal
 }
 
@@ -70,7 +71,7 @@ install_groot() {
   popd
 }
 
-setup_btrfs() {
+setup_filesystems() {
   if [ -d /var/lib/grootfs ]; then
     return
   fi
@@ -84,5 +85,5 @@ install_go
 configure_user "root"
 configure_user "ubuntu"
 install_groot
-setup_btrfs
+setup_filesystems
 echo "Groot to go. Enjoy your day."

@@ -1,30 +1,37 @@
 #!/bin/bash
 set -e
 
-install_btrfs_tools() {
+install_tools() {
   apt-get update
-  apt-get install -y btrfs-tools uidmap
+  apt-get install -y btrfs-tools uidmap xfsprogs
 }
 
-make_backing_store() {
-  truncate -s 1G /var/lib/grootfs.backing-store
-  mkfs.btrfs /var/lib/grootfs.backing-store
+make_backing_stores() {
+  truncate -s 1G /var/lib/grootfs.btrfs.backing-store
+  mkfs.btrfs /var/lib/grootfs.btrfs.backing-store
+
+  truncate -s 1G /var/lib/grootfs.xfs.backing-store
+  mkfs.xfs /var/lib/grootfs.xfs.backing-store
 }
 
-mount_btrfs() {
+mount_stores() {
   modprobe btrfs
-  mkdir -p /var/lib/grootfs
-  mount -t btrfs -o user_subvol_rm_allowed /var/lib/grootfs.backing-store /var/lib/grootfs
-  chmod 777 /var/lib/grootfs
+  mkdir -p /var/lib/grootfs/btrfs
+  mount -t btrfs -o user_subvol_rm_allowed /var/lib/grootfs.btrfs.backing-store /var/lib/grootfs/btrfs
+  chmod 777 /var/lib/grootfs/btrfs
+
+  mkdir -p /var/lib/grootfs/xfs
+  mount -t xfs /var/lib/grootfs.xfs.backing-store /var/lib/grootfs/xfs
+  chmod 777 /var/lib/grootfs/xfs
 }
 
 enable_quotas() {
-  btrfs quota enable /var/lib/grootfs
+  btrfs quota enable /var/lib/grootfs/btrfs
 }
 
-install_btrfs_tools
-make_backing_store
-mount_btrfs
+install_tools
+make_backing_stores
+mount_stores
 enable_quotas
 echo "Setup complete. Example command:"
 echo "grootfs create docker:///ubuntu:latest rootfs-id"

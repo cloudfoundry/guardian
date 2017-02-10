@@ -1,4 +1,4 @@
-store_path: /var/lib/grootfs
+store_path: /var/lib/grootfs/xfs
 clean_on_create: false
 #clean_threshold_bytes: 0
 #disk_limit_size_bytes: 1000000
