@@ -113,15 +113,15 @@ var _ = Describe("gdn setup", func() {
 			// chack all chains are empty
 			out, err := exec.Command("iptables", "-L", "INPUT").CombinedOutput()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(out).NotTo(ContainSubstring("anywhere"))
+			Expect(out).NotTo(MatchRegexp(iptablesPrefix + ".*anywhere"))
 
 			out, err = exec.Command("iptables", "-L", "FORWARD").CombinedOutput()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(out).NotTo(ContainSubstring("anywhere"))
+			Expect(out).NotTo(MatchRegexp(iptablesPrefix + ".*anywhere"))
 
 			out, err = exec.Command("iptables", "-L", "OUTPUT").CombinedOutput()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(out).NotTo(ContainSubstring("anywhere"))
+			Expect(out).NotTo(MatchRegexp(iptablesPrefix + ".*anywhere"))
 		})
 	})
 
@@ -142,20 +142,39 @@ var _ = Describe("gdn setup", func() {
 	})
 })
 
-var _ = FDescribe("running gdn setup before starting server", func() {
-	var maximus *syscall.Credential
+var _ = Describe("running gdn setup before starting server", func() {
+	var (
+		maximus *syscall.Credential
+		args    []string
+	)
 
 	BeforeEach(func() {
 		maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
 		maximus = &syscall.Credential{Uid: maxId, Gid: maxId}
 
-		setupProcess, err := gexec.Start(exec.Command(gardenBin, "setup"), GinkgoWriter, GinkgoWriter)
+		setupArgs := []string{"setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
+		setupProcess, err := gexec.Start(exec.Command(gardenBin, setupArgs...), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
+
+		args = []string{
+			"server", "--skip-setup",
+			"--tag", fmt.Sprintf("%d", GinkgoParallelNode()),
+			"--image-plugin", testImagePluginBin,
+		}
 	})
 
-	It("should not blow up", func() {
-		server := startGardenAsUser(maximus, "server", "--skip-setup")
-		Consistently(exec.Command("ps", "-p", strconv.Itoa(server.Pid)).Run()).Should(Succeed())
+	It("server process should run consistently as user maximus", func() {
+		server := startGardenAsUser(maximus, args...)
+		Expect(server).NotTo(BeNil())
+
+		out, err := exec.Command("ps", "-U", fmt.Sprintf("%d", maximus.Uid)).CombinedOutput()
+		Expect(err).NotTo(HaveOccurred(), "No process of user maximus was found")
+		Expect(out).To(ContainSubstring(fmt.Sprintf("%d", server.Pid)))
+
+		Consistently(func() error {
+			return exec.Command("ps", "-p", strconv.Itoa(server.Pid)).Run()
+		}).Should(Succeed())
+
 	})
 })

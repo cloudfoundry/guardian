@@ -109,7 +109,7 @@ func startGarden(argv ...string) *runner.RunningGarden {
 
 func startGardenAsUser(user *syscall.Credential, argv ...string) *runner.RunningGarden {
 	rootfs := os.Getenv("GARDEN_TEST_ROOTFS")
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, rootfs, tarBin, nil, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, rootfs, tarBin, user, argv...)
 }
 
 func restartGarden(client *runner.RunningGarden, argv ...string) {
