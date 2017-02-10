@@ -24,6 +24,7 @@ var _ = Describe("Networking", func() {
 		client    *runner.RunningGarden
 		container garden.Container
 
+		handle           string
 		containerNetwork string
 		args             []string
 
@@ -35,6 +36,7 @@ var _ = Describe("Networking", func() {
 	BeforeEach(func() {
 		args = []string{}
 		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
+		handle = ""
 
 		var ips []net.IP
 		Eventually(func() error {
@@ -52,6 +54,7 @@ var _ = Describe("Networking", func() {
 		client = startGarden(args...)
 
 		container, err = client.Create(garden.ContainerSpec{
+			Handle:     handle,
 			Network:    containerNetwork,
 			Properties: extraProperties,
 		})
@@ -558,6 +561,71 @@ var _ = Describe("Networking", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(out).To(ContainSubstring(" MTU:6789 "))
+			})
+		})
+	})
+
+	Describe("comments added to iptables rules", func() {
+		BeforeEach(func() {
+			handle = fmt.Sprintf("iptable-comment-handle-%d", GinkgoParallelNode())
+		})
+
+		Context("when creating a container", func() {
+			Describe("filter table", func() {
+				It("annotates rules with the container handle", func() {
+					iptablesCmd := exec.Command("iptables", "-w", "-t", "filter", "-L")
+					sess, err := gexec.Start(iptablesCmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(sess).Should(gexec.Exit(0))
+					Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`/\* %s \*/`, handle)))
+				})
+			})
+
+			Describe("nat table", func() {
+				It("annotates rules with the container handle", func() {
+					iptablesCmd := exec.Command("iptables", "-w", "-t", "nat", "-L")
+					sess, err := gexec.Start(iptablesCmd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(sess).Should(gexec.Exit(0))
+					Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`/\* %s \*/`, handle)))
+				})
+			})
+		})
+
+		Context("when adding a netin rule to a container", func() {
+			JustBeforeEach(func() {
+				_, _, err := container.NetIn(0, 0)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("annotates the rule with the container handle", func() {
+				iptablesCmd := exec.Command("iptables", "-w", "-t", "nat", "-L")
+				sess, err := gexec.Start(iptablesCmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(sess).Should(gexec.Exit(0))
+				Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`DNAT.*/\* %s \*/`, handle)))
+			})
+		})
+
+		Context("when adding a netout rule to a container", func() {
+			JustBeforeEach(func() {
+				Expect(container.NetOut(garden.NetOutRule{
+					Protocol: garden.ProtocolTCP,
+					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+					Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+				})).To(Succeed())
+			})
+
+			It("annotates the rule with the container handle", func() {
+				iptablesCmd := exec.Command("iptables", "-w", "-t", "filter", "-L")
+				sess, err := gexec.Start(iptablesCmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(sess).Should(gexec.Exit(0))
+				Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`RETURN.*tcp.*destination IP range.* /\* %s \*/`, handle)))
 			})
 		})
 	})

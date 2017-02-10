@@ -30,9 +30,8 @@ func (fake *FakeIdMapReader) ReadRootId(path string) (int, error) {
 	fake.readRootIdMutex.Unlock()
 	if fake.ReadRootIdStub != nil {
 		return fake.ReadRootIdStub(path)
-	} else {
-		return fake.readRootIdReturns.result1, fake.readRootIdReturns.result2
 	}
+	return fake.readRootIdReturns.result1, fake.readRootIdReturns.result2
 }
 
 func (fake *FakeIdMapReader) ReadRootIdCallCount() int {

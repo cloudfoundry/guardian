@@ -335,8 +335,9 @@ var _ = Describe("Networker", func() {
 			fakeFirewallOpener.OpenReturns(errors.New("potato"))
 			Expect(networker.NetOut(lagertest.NewTestLogger(""), "some-handle", rule)).To(MatchError("potato"))
 
-			_, chainArg, ruleArg := fakeFirewallOpener.OpenArgsForCall(0)
+			_, chainArg, handleArg, ruleArg := fakeFirewallOpener.OpenArgsForCall(0)
 			Expect(chainArg).To(Equal(networkConfig.IPTableInstance))
+			Expect(handleArg).To(Equal("some-handle"))
 			Expect(ruleArg).To(Equal(rule))
 		})
 	})
@@ -351,8 +352,9 @@ var _ = Describe("Networker", func() {
 			fakeFirewallOpener.BulkOpenReturns(errors.New("potato"))
 			Expect(networker.BulkNetOut(lagertest.NewTestLogger(""), "some-handle", rules)).To(MatchError("potato"))
 
-			_, chainArg, rulesArg := fakeFirewallOpener.BulkOpenArgsForCall(0)
+			_, chainArg, handleArg, rulesArg := fakeFirewallOpener.BulkOpenArgsForCall(0)
 			Expect(chainArg).To(Equal(networkConfig.IPTableInstance))
+			Expect(handleArg).To(Equal("some-handle"))
 			Expect(rulesArg).To(Equal(rules))
 		})
 	})

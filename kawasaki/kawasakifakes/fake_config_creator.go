@@ -38,9 +38,8 @@ func (fake *FakeConfigCreator) Create(log lager.Logger, handle string, subnet *n
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(log, handle, subnet, ip)
-	} else {
-		return fake.createReturns.result1, fake.createReturns.result2
 	}
+	return fake.createReturns.result1, fake.createReturns.result2
 }
 
 func (fake *FakeConfigCreator) CreateCallCount() int {

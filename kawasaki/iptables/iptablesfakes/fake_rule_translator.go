@@ -9,9 +9,10 @@ import (
 )
 
 type FakeRuleTranslator struct {
-	TranslateRuleStub        func(gardenRule garden.NetOutRule) ([]iptables.Rule, error)
+	TranslateRuleStub        func(handle string, gardenRule garden.NetOutRule) ([]iptables.Rule, error)
 	translateRuleMutex       sync.RWMutex
 	translateRuleArgsForCall []struct {
+		handle     string
 		gardenRule garden.NetOutRule
 	}
 	translateRuleReturns struct {
@@ -22,18 +23,18 @@ type FakeRuleTranslator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRuleTranslator) TranslateRule(gardenRule garden.NetOutRule) ([]iptables.Rule, error) {
+func (fake *FakeRuleTranslator) TranslateRule(handle string, gardenRule garden.NetOutRule) ([]iptables.Rule, error) {
 	fake.translateRuleMutex.Lock()
 	fake.translateRuleArgsForCall = append(fake.translateRuleArgsForCall, struct {
+		handle     string
 		gardenRule garden.NetOutRule
-	}{gardenRule})
-	fake.recordInvocation("TranslateRule", []interface{}{gardenRule})
+	}{handle, gardenRule})
+	fake.recordInvocation("TranslateRule", []interface{}{handle, gardenRule})
 	fake.translateRuleMutex.Unlock()
 	if fake.TranslateRuleStub != nil {
-		return fake.TranslateRuleStub(gardenRule)
-	} else {
-		return fake.translateRuleReturns.result1, fake.translateRuleReturns.result2
+		return fake.TranslateRuleStub(handle, gardenRule)
 	}
+	return fake.translateRuleReturns.result1, fake.translateRuleReturns.result2
 }
 
 func (fake *FakeRuleTranslator) TranslateRuleCallCount() int {
@@ -42,10 +43,10 @@ func (fake *FakeRuleTranslator) TranslateRuleCallCount() int {
 	return len(fake.translateRuleArgsForCall)
 }
 
-func (fake *FakeRuleTranslator) TranslateRuleArgsForCall(i int) garden.NetOutRule {
+func (fake *FakeRuleTranslator) TranslateRuleArgsForCall(i int) (string, garden.NetOutRule) {
 	fake.translateRuleMutex.RLock()
 	defer fake.translateRuleMutex.RUnlock()
-	return fake.translateRuleArgsForCall[i].gardenRule
+	return fake.translateRuleArgsForCall[i].handle, fake.translateRuleArgsForCall[i].gardenRule
 }
 
 func (fake *FakeRuleTranslator) TranslateRuleReturns(result1 []iptables.Rule, result2 error) {

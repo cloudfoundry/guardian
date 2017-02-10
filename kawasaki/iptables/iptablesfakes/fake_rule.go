@@ -29,9 +29,8 @@ func (fake *FakeRule) Flags(chain string) []string {
 	fake.flagsMutex.Unlock()
 	if fake.FlagsStub != nil {
 		return fake.FlagsStub(chain)
-	} else {
-		return fake.flagsReturns.result1
 	}
+	return fake.flagsReturns.result1
 }
 
 func (fake *FakeRule) FlagsCallCount() int {

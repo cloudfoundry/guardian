@@ -26,16 +26,16 @@ func (cc *InstanceChainCreator) Create(logger lager.Logger, handle, instanceId, 
 	}
 
 	// Bind nat instance chain to nat prerouting chain
-	cmd := exec.Command(cc.iptables.iptablesBinPath, "--wait", "--table", "nat", "-A", cc.iptables.preroutingChain, "--jump", instanceChain)
+	cmd := exec.Command(cc.iptables.iptablesBinPath, "--wait", "--table", "nat", "-A", cc.iptables.preroutingChain, "--jump", instanceChain, "-m", "comment", "--comment", handle)
 	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
 		return err
 	}
 
 	// Enable NAT for traffic coming from containers
 	cmd = exec.Command("sh", "-c", fmt.Sprintf(
-		`(%s --wait --table nat -S %s | grep "\-j MASQUERADE\b" | grep -q -F -- "-s %s") || %s --wait --table nat -A %s --source %s ! --destination %s --jump MASQUERADE`,
+		`(%s --wait --table nat -S %s | grep "\-j MASQUERADE\b" | grep -q -F -- "-s %s") || %s --wait --table nat -A %s --source %s ! --destination %s --jump MASQUERADE -m comment --comment %s`,
 		cc.iptables.iptablesBinPath, cc.iptables.postroutingChain, network.String(), cc.iptables.iptablesBinPath, cc.iptables.postroutingChain,
-		network.String(), network.String(),
+		network.String(), network.String(), handle,
 	))
 	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
 		return err
@@ -47,19 +47,19 @@ func (cc *InstanceChainCreator) Create(logger lager.Logger, handle, instanceId, 
 	}
 
 	// Allow intra-subnet traffic (Linux ethernet bridging goes through ip stack)
-	cmd = exec.Command(cc.iptables.iptablesBinPath, "--wait", "-A", instanceChain, "-s", network.String(), "-d", network.String(), "-j", "ACCEPT")
+	cmd = exec.Command(cc.iptables.iptablesBinPath, "--wait", "-A", instanceChain, "-s", network.String(), "-d", network.String(), "-j", "ACCEPT", "-m", "comment", "--comment", handle)
 	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
 		return err
 	}
 
 	// Otherwise, use the default filter chain
-	cmd = exec.Command(cc.iptables.iptablesBinPath, "--wait", "-A", instanceChain, "--goto", cc.iptables.defaultChain)
+	cmd = exec.Command(cc.iptables.iptablesBinPath, "--wait", "-A", instanceChain, "--goto", cc.iptables.defaultChain, "-m", "comment", "--comment", handle)
 	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
 		return err
 	}
 
 	// Bind filter instance chain to filter forward chain
-	cmd = exec.Command(cc.iptables.iptablesBinPath, "--wait", "-I", cc.iptables.forwardChain, "2", "--in-interface", bridgeName, "--source", ip.String(), "--goto", instanceChain)
+	cmd = exec.Command(cc.iptables.iptablesBinPath, "--wait", "-I", cc.iptables.forwardChain, "2", "--in-interface", bridgeName, "--source", ip.String(), "--goto", instanceChain, "-m", "comment", "--comment", handle)
 	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
 		return err
 	}
@@ -76,16 +76,17 @@ func (cc *InstanceChainCreator) createLoggingChain(logger lager.Logger, handle, 
 		return err
 	}
 
-	if len(handle) > 29 {
-		handle = handle[0:29]
+	logPrefix := handle
+	if len(logPrefix) > 29 {
+		logPrefix = logPrefix[0:29]
 	}
 
-	cmd := exec.Command(cc.iptables.iptablesBinPath, "--wait", "-A", loggingChain, "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID", "--protocol", "tcp", "--jump", "LOG", "--log-prefix", handle)
+	cmd := exec.Command(cc.iptables.iptablesBinPath, "--wait", "-A", loggingChain, "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID", "--protocol", "tcp", "--jump", "LOG", "--log-prefix", logPrefix, "-m", "comment", "--comment", handle)
 	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
 		return err
 	}
 
-	cmd = exec.Command(cc.iptables.iptablesBinPath, "--wait", "-A", loggingChain, "--jump", "RETURN")
+	cmd = exec.Command(cc.iptables.iptablesBinPath, "--wait", "-A", loggingChain, "--jump", "RETURN", "-m", "comment", "--comment", handle)
 	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
 		return err
 	}

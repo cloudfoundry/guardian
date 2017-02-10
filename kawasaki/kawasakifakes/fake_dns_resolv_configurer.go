@@ -34,9 +34,8 @@ func (fake *FakeDnsResolvConfigurer) Configure(log lager.Logger, cfg kawasaki.Ne
 	fake.configureMutex.Unlock()
 	if fake.ConfigureStub != nil {
 		return fake.ConfigureStub(log, cfg, pid)
-	} else {
-		return fake.configureReturns.result1
 	}
+	return fake.configureReturns.result1
 }
 
 func (fake *FakeDnsResolvConfigurer) ConfigureCallCount() int {

@@ -85,9 +85,8 @@ func (fake *FakeIPTables) CreateChain(table string, chain string) error {
 	fake.createChainMutex.Unlock()
 	if fake.CreateChainStub != nil {
 		return fake.CreateChainStub(table, chain)
-	} else {
-		return fake.createChainReturns.result1
 	}
+	return fake.createChainReturns.result1
 }
 
 func (fake *FakeIPTables) CreateChainCallCount() int {
@@ -119,9 +118,8 @@ func (fake *FakeIPTables) DeleteChain(table string, chain string) error {
 	fake.deleteChainMutex.Unlock()
 	if fake.DeleteChainStub != nil {
 		return fake.DeleteChainStub(table, chain)
-	} else {
-		return fake.deleteChainReturns.result1
 	}
+	return fake.deleteChainReturns.result1
 }
 
 func (fake *FakeIPTables) DeleteChainCallCount() int {
@@ -153,9 +151,8 @@ func (fake *FakeIPTables) FlushChain(table string, chain string) error {
 	fake.flushChainMutex.Unlock()
 	if fake.FlushChainStub != nil {
 		return fake.FlushChainStub(table, chain)
-	} else {
-		return fake.flushChainReturns.result1
 	}
+	return fake.flushChainReturns.result1
 }
 
 func (fake *FakeIPTables) FlushChainCallCount() int {
@@ -188,9 +185,8 @@ func (fake *FakeIPTables) DeleteChainReferences(table string, targetChain string
 	fake.deleteChainReferencesMutex.Unlock()
 	if fake.DeleteChainReferencesStub != nil {
 		return fake.DeleteChainReferencesStub(table, targetChain, referencedChain)
-	} else {
-		return fake.deleteChainReferencesReturns.result1
 	}
+	return fake.deleteChainReferencesReturns.result1
 }
 
 func (fake *FakeIPTables) DeleteChainReferencesCallCount() int {
@@ -222,9 +218,8 @@ func (fake *FakeIPTables) PrependRule(chain string, rule iptables.Rule) error {
 	fake.prependRuleMutex.Unlock()
 	if fake.PrependRuleStub != nil {
 		return fake.PrependRuleStub(chain, rule)
-	} else {
-		return fake.prependRuleReturns.result1
 	}
+	return fake.prependRuleReturns.result1
 }
 
 func (fake *FakeIPTables) PrependRuleCallCount() int {
@@ -261,9 +256,8 @@ func (fake *FakeIPTables) BulkPrependRules(chain string, rules []iptables.Rule) 
 	fake.bulkPrependRulesMutex.Unlock()
 	if fake.BulkPrependRulesStub != nil {
 		return fake.BulkPrependRulesStub(chain, rules)
-	} else {
-		return fake.bulkPrependRulesReturns.result1
 	}
+	return fake.bulkPrependRulesReturns.result1
 }
 
 func (fake *FakeIPTables) BulkPrependRulesCallCount() int {
@@ -294,9 +288,8 @@ func (fake *FakeIPTables) InstanceChain(instanceId string) string {
 	fake.instanceChainMutex.Unlock()
 	if fake.InstanceChainStub != nil {
 		return fake.InstanceChainStub(instanceId)
-	} else {
-		return fake.instanceChainReturns.result1
 	}
+	return fake.instanceChainReturns.result1
 }
 
 func (fake *FakeIPTables) InstanceChainCallCount() int {

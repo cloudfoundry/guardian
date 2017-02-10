@@ -36,9 +36,8 @@ func (fake *FakeHostFileCompiler) Compile(log lager.Logger, containerIp net.IP, 
 	fake.compileMutex.Unlock()
 	if fake.CompileStub != nil {
 		return fake.CompileStub(log, containerIp, handle)
-	} else {
-		return fake.compileReturns.result1, fake.compileReturns.result2
 	}
+	return fake.compileReturns.result1, fake.compileReturns.result2
 }
 
 func (fake *FakeHostFileCompiler) CompileCallCount() int {

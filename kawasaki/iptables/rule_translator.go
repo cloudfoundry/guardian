@@ -21,7 +21,7 @@ func NewRuleTranslator() RuleTranslator {
 	return &ruleTranslator{}
 }
 
-func (t *ruleTranslator) TranslateRule(gardenRule garden.NetOutRule) ([]Rule, error) {
+func (t *ruleTranslator) TranslateRule(handle string, gardenRule garden.NetOutRule) ([]Rule, error) {
 	if len(gardenRule.Ports) > 0 && !allowsPort(gardenRule.Protocol) {
 		return nil, fmt.Errorf("Ports cannot be specified for Protocol %s", strings.ToUpper(protocols[gardenRule.Protocol]))
 	}
@@ -34,6 +34,7 @@ func (t *ruleTranslator) TranslateRule(gardenRule garden.NetOutRule) ([]Rule, er
 		Protocol: gardenRule.Protocol,
 		ICMPs:    gardenRule.ICMPs,
 		Log:      gardenRule.Log,
+		Handle:   handle,
 	}
 
 	iptablesRules := []Rule{}

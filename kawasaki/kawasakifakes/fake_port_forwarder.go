@@ -29,9 +29,8 @@ func (fake *FakePortForwarder) Forward(spec kawasaki.PortForwarderSpec) error {
 	fake.forwardMutex.Unlock()
 	if fake.ForwardStub != nil {
 		return fake.ForwardStub(spec)
-	} else {
-		return fake.forwardReturns.result1
 	}
+	return fake.forwardReturns.result1
 }
 
 func (fake *FakePortForwarder) ForwardCallCount() int {

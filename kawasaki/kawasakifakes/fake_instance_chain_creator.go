@@ -50,9 +50,8 @@ func (fake *FakeInstanceChainCreator) Create(logger lager.Logger, handle string,
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(logger, handle, instanceChain, bridgeName, ip, network)
-	} else {
-		return fake.createReturns.result1
 	}
+	return fake.createReturns.result1
 }
 
 func (fake *FakeInstanceChainCreator) CreateCallCount() int {
@@ -84,9 +83,8 @@ func (fake *FakeInstanceChainCreator) Destroy(logger lager.Logger, instanceChain
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(logger, instanceChain)
-	} else {
-		return fake.destroyReturns.result1
 	}
+	return fake.destroyReturns.result1
 }
 
 func (fake *FakeInstanceChainCreator) DestroyCallCount() int {

@@ -43,9 +43,8 @@ func (fake *FakeResolvFileCompiler) Compile(log lager.Logger, resolvConfPath str
 	fake.compileMutex.Unlock()
 	if fake.CompileStub != nil {
 		return fake.CompileStub(log, resolvConfPath, containerIp, overrideServers)
-	} else {
-		return fake.compileReturns.result1, fake.compileReturns.result2
 	}
+	return fake.compileReturns.result1, fake.compileReturns.result2
 }
 
 func (fake *FakeResolvFileCompiler) CompileCallCount() int {

@@ -42,9 +42,8 @@ func (fake *FakeHostConfigurer) Apply(logger lager.Logger, cfg kawasaki.NetworkC
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
 		return fake.ApplyStub(logger, cfg, pid)
-	} else {
-		return fake.applyReturns.result1
 	}
+	return fake.applyReturns.result1
 }
 
 func (fake *FakeHostConfigurer) ApplyCallCount() int {
@@ -75,9 +74,8 @@ func (fake *FakeHostConfigurer) Destroy(cfg kawasaki.NetworkConfig) error {
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(cfg)
-	} else {
-		return fake.destroyReturns.result1
 	}
+	return fake.destroyReturns.result1
 }
 
 func (fake *FakeHostConfigurer) DestroyCallCount() int {

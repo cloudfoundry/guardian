@@ -52,9 +52,8 @@ func (fake *FakeConfigurer) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, 
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
 		return fake.ApplyStub(log, cfg, pid)
-	} else {
-		return fake.applyReturns.result1
 	}
+	return fake.applyReturns.result1
 }
 
 func (fake *FakeConfigurer) ApplyCallCount() int {
@@ -86,9 +85,8 @@ func (fake *FakeConfigurer) DestroyBridge(log lager.Logger, cfg kawasaki.Network
 	fake.destroyBridgeMutex.Unlock()
 	if fake.DestroyBridgeStub != nil {
 		return fake.DestroyBridgeStub(log, cfg)
-	} else {
-		return fake.destroyBridgeReturns.result1
 	}
+	return fake.destroyBridgeReturns.result1
 }
 
 func (fake *FakeConfigurer) DestroyBridgeCallCount() int {
@@ -120,9 +118,8 @@ func (fake *FakeConfigurer) DestroyIPTablesRules(log lager.Logger, cfg kawasaki.
 	fake.destroyIPTablesRulesMutex.Unlock()
 	if fake.DestroyIPTablesRulesStub != nil {
 		return fake.DestroyIPTablesRulesStub(log, cfg)
-	} else {
-		return fake.destroyIPTablesRulesReturns.result1
 	}
+	return fake.destroyIPTablesRulesReturns.result1
 }
 
 func (fake *FakeConfigurer) DestroyIPTablesRulesCallCount() int {

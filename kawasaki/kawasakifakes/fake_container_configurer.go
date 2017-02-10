@@ -34,9 +34,8 @@ func (fake *FakeContainerConfigurer) Apply(logger lager.Logger, cfg kawasaki.Net
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
 		return fake.ApplyStub(logger, cfg, pid)
-	} else {
-		return fake.applyReturns.result1
 	}
+	return fake.applyReturns.result1
 }
 
 func (fake *FakeContainerConfigurer) ApplyCallCount() int {

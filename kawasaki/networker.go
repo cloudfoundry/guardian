@@ -71,6 +71,7 @@ type PortForwarder interface {
 
 type PortForwarderSpec struct {
 	InstanceID  string
+	Handle      string
 	FromPort    uint32
 	ToPort      uint32
 	ContainerIP net.IP
@@ -80,8 +81,8 @@ type PortForwarderSpec struct {
 //go:generate counterfeiter . FirewallOpener
 
 type FirewallOpener interface {
-	Open(log lager.Logger, instance string, rule garden.NetOutRule) error
-	BulkOpen(log lager.Logger, instance string, rule []garden.NetOutRule) error
+	Open(log lager.Logger, instance, handle string, rule garden.NetOutRule) error
+	BulkOpen(log lager.Logger, instance, handle string, rule []garden.NetOutRule) error
 }
 
 //go:generate counterfeiter . Networker
@@ -193,6 +194,7 @@ func (n *networker) NetIn(log lager.Logger, handle string, externalPort, contain
 
 	err = n.portForwarder.Forward(PortForwarderSpec{
 		InstanceID:  cfg.IPTableInstance,
+		Handle:      handle,
 		FromPort:    externalPort,
 		ToPort:      containerPort,
 		ContainerIP: cfg.ContainerIP,
@@ -219,7 +221,7 @@ func (n *networker) NetOut(log lager.Logger, handle string, rule garden.NetOutRu
 		return err
 	}
 
-	return n.firewallOpener.Open(log, cfg.IPTableInstance, rule)
+	return n.firewallOpener.Open(log, cfg.IPTableInstance, handle, rule)
 }
 
 func (n *networker) BulkNetOut(log lager.Logger, handle string, rules []garden.NetOutRule) error {
@@ -228,7 +230,7 @@ func (n *networker) BulkNetOut(log lager.Logger, handle string, rules []garden.N
 		return err
 	}
 
-	return n.firewallOpener.BulkOpen(log, cfg.IPTableInstance, rules)
+	return n.firewallOpener.BulkOpen(log, cfg.IPTableInstance, handle, rules)
 }
 
 func (n *networker) Destroy(log lager.Logger, handle string) error {

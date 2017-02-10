@@ -29,6 +29,7 @@ var _ = Describe("PortForwarder", func() {
 	It("adds a NAT rule to forward the port", func() {
 		Expect(forwarder.Forward(kawasaki.PortForwarderSpec{
 			InstanceID:  "some-instance",
+			Handle:      "some-handle",
 			ExternalIP:  net.ParseIP("5.6.7.8"),
 			ContainerIP: net.ParseIP("1.2.3.4"),
 			FromPort:    22,
@@ -47,6 +48,10 @@ var _ = Describe("PortForwarder", func() {
 					"--destination-port", "22",
 					"--jump", "DNAT",
 					"--to-destination", "1.2.3.4:33",
+					"-m",
+					"comment",
+					"--comment",
+					"some-handle",
 				},
 			},
 		))

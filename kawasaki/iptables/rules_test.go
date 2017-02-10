@@ -19,7 +19,18 @@ var _ = Describe("Rules", func() {
 				Protocol: garden.ProtocolTCP,
 			}
 
-			Expect(rule.Flags("banana-chain")).To(Equal([]string{"--protocol", "tcp", "--jump", "RETURN"}))
+			Expect(rule.Flags("banana-chain")).To(Equal([]string{"--protocol", "tcp", "--jump", "RETURN", "-m", "comment", "--comment", ""}))
+		})
+
+		It("assigns the handle", func() {
+			rule := iptables.SingleFilterRule{
+				Handle:   "some-handle",
+				Protocol: garden.ProtocolTCP,
+			}
+
+			Expect(rule.Flags("banana-chain")).To(Equal([]string{
+				"--protocol", "tcp", "--jump", "RETURN", "-m", "comment", "--comment", "some-handle",
+			}))
 		})
 
 		DescribeTable("networks",
@@ -27,6 +38,7 @@ var _ = Describe("Rules", func() {
 				expectedArgs := []string{"--protocol", "tcp"}
 				expectedArgs = append(expectedArgs, networkArgs...)
 				expectedArgs = append(expectedArgs, []string{"--jump", "RETURN"}...)
+				expectedArgs = append(expectedArgs, []string{"-m", "comment", "--comment", ""}...)
 
 				Expect(rule.Flags("banana-chain")).To(Equal(expectedArgs))
 			},
@@ -69,6 +81,7 @@ var _ = Describe("Rules", func() {
 						"--protocol", "tcp",
 						"--destination-port", "112",
 						"--jump", "RETURN",
+						"-m", "comment", "--comment", "",
 					}))
 				})
 			})
@@ -87,6 +100,7 @@ var _ = Describe("Rules", func() {
 						"--protocol", "tcp",
 						"--destination-port", "112:1112",
 						"--jump", "RETURN",
+						"-m", "comment", "--comment", "",
 					}))
 				})
 			})
@@ -105,6 +119,7 @@ var _ = Describe("Rules", func() {
 					"--protocol", "tcp",
 					"--icmp-type", "0",
 					"--jump", "RETURN",
+					"-m", "comment", "--comment", "",
 				}))
 			})
 
@@ -123,6 +138,7 @@ var _ = Describe("Rules", func() {
 						"--protocol", "tcp",
 						"--icmp-type", "0/1",
 						"--jump", "RETURN",
+						"-m", "comment", "--comment", "",
 					}))
 				})
 			})
@@ -138,6 +154,7 @@ var _ = Describe("Rules", func() {
 			Expect(rule.Flags(chain)).To(Equal([]string{
 				"--protocol", "tcp",
 				"--goto", fmt.Sprintf("%s-log", chain),
+				"-m", "comment", "--comment", "",
 			}))
 		})
 	})

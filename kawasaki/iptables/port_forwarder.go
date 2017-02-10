@@ -20,6 +20,7 @@ func (p *PortForwarder) Forward(spec kawasaki.PortForwarderSpec) error {
 			spec.FromPort,
 			spec.ContainerIP.String(),
 			spec.ToPort,
+			spec.Handle,
 		),
 	)
 }

@@ -32,9 +32,8 @@ func (fake *FakeNetnsExecer) Exec(netnsFD *os.File, cb func() error) error {
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
 		return fake.ExecStub(netnsFD, cb)
-	} else {
-		return fake.execReturns.result1
 	}
+	return fake.execReturns.result1
 }
 
 func (fake *FakeNetnsExecer) ExecCallCount() int {

@@ -39,9 +39,8 @@ func (fake *FakePortPool) Acquire() (uint32, error) {
 	fake.acquireMutex.Unlock()
 	if fake.AcquireStub != nil {
 		return fake.AcquireStub()
-	} else {
-		return fake.acquireReturns.result1, fake.acquireReturns.result2
 	}
+	return fake.acquireReturns.result1, fake.acquireReturns.result2
 }
 
 func (fake *FakePortPool) AcquireCallCount() int {
@@ -91,9 +90,8 @@ func (fake *FakePortPool) Remove(arg1 uint32) error {
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
 		return fake.RemoveStub(arg1)
-	} else {
-		return fake.removeReturns.result1
 	}
+	return fake.removeReturns.result1
 }
 
 func (fake *FakePortPool) RemoveCallCount() int {

@@ -41,8 +41,10 @@ var _ = Describe("FirewallOpenner", func() {
 	Describe("Open", func() {
 		It("builds the correct rules", func() {
 			rule := garden.NetOutRule{Protocol: garden.ProtocolUDP}
-			Expect(opener.Open(logger, "foo-bar-baz", rule)).To(Succeed())
-			Expect(fakeRuleTranslator.TranslateRuleArgsForCall(0)).To(Equal(rule))
+			Expect(opener.Open(logger, "foo-bar-baz", "some-handle", rule)).To(Succeed())
+			actualHandle, actualRule := fakeRuleTranslator.TranslateRuleArgsForCall(0)
+			Expect(actualHandle).To(Equal("some-handle"))
+			Expect(actualRule).To(Equal(rule))
 		})
 
 		Context("when building the rules fails", func() {
@@ -51,7 +53,7 @@ var _ = Describe("FirewallOpenner", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{})).To(MatchError("failed to build rules"))
+				Expect(opener.Open(logger, "foo-bar-baz", "some-handle", garden.NetOutRule{})).To(MatchError("failed to build rules"))
 			})
 		})
 
@@ -66,7 +68,7 @@ var _ = Describe("FirewallOpenner", func() {
 			}
 			fakeRuleTranslator.TranslateRuleReturns(rules, nil)
 
-			Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{})).To(Succeed())
+			Expect(opener.Open(logger, "foo-bar-baz", "some-handle", garden.NetOutRule{})).To(Succeed())
 
 			Expect(fakeIPTablesController.PrependRuleCallCount()).To(Equal(2))
 			_, ruleA := fakeIPTablesController.PrependRuleArgsForCall(0)
@@ -76,7 +78,7 @@ var _ = Describe("FirewallOpenner", func() {
 		})
 
 		It("uses the correct chain name", func() {
-			Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{})).To(Succeed())
+			Expect(opener.Open(logger, "foo-bar-baz", "some-handle", garden.NetOutRule{})).To(Succeed())
 
 			Expect(fakeIPTablesController.PrependRuleCallCount()).To(Equal(1))
 			chainName, _ := fakeIPTablesController.PrependRuleArgsForCall(0)
@@ -89,7 +91,7 @@ var _ = Describe("FirewallOpenner", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(opener.Open(logger, "foo-bar-baz", garden.NetOutRule{})).To(MatchError("i-lost-my-banana"))
+				Expect(opener.Open(logger, "foo-bar-baz", "some-handle", garden.NetOutRule{})).To(MatchError("i-lost-my-banana"))
 			})
 		})
 	})
@@ -105,12 +107,14 @@ var _ = Describe("FirewallOpenner", func() {
 		})
 
 		It("translates the rules", func() {
-			Expect(opener.BulkOpen(logger, "foo-bar-baz", rules)).To(Succeed())
-			allArgs := []garden.NetOutRule{}
+			Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules)).To(Succeed())
+			allRules := []garden.NetOutRule{}
 			for i := 0; i < fakeRuleTranslator.TranslateRuleCallCount(); i++ {
-				allArgs = append(allArgs, fakeRuleTranslator.TranslateRuleArgsForCall(i))
+				handle, rule := fakeRuleTranslator.TranslateRuleArgsForCall(i)
+				Expect(handle).To(Equal("some-handle"))
+				allRules = append(allRules, rule)
 			}
-			Expect(allArgs).To(ConsistOf(rules))
+			Expect(allRules).To(ConsistOf(rules))
 		})
 
 		Context("when translating a rule fails", func() {
@@ -119,7 +123,7 @@ var _ = Describe("FirewallOpenner", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(opener.BulkOpen(logger, "foo-bar-baz", rules)).To(MatchError("failed to build rules"))
+				Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules)).To(MatchError("failed to build rules"))
 			})
 		})
 
@@ -144,12 +148,12 @@ var _ = Describe("FirewallOpenner", func() {
 			}
 
 			i := 0
-			fakeRuleTranslator.TranslateRuleStub = func(gardenRule garden.NetOutRule) ([]iptables.Rule, error) {
+			fakeRuleTranslator.TranslateRuleStub = func(_ string, gardenRule garden.NetOutRule) ([]iptables.Rule, error) {
 				defer func() { i++ }()
 				return iptablesRules[i], nil
 			}
 
-			Expect(opener.BulkOpen(logger, "foo-bar-baz", rules)).To(Succeed())
+			Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules)).To(Succeed())
 
 			Expect(fakeIPTablesController.BulkPrependRulesCallCount()).To(Equal(1))
 			_, appendedIPTablesRules := fakeIPTablesController.BulkPrependRulesArgsForCall(0)
@@ -161,7 +165,7 @@ var _ = Describe("FirewallOpenner", func() {
 		})
 
 		It("prepends to the correct chain name", func() {
-			Expect(opener.BulkOpen(logger, "foo-bar-baz", rules)).To(Succeed())
+			Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules)).To(Succeed())
 			Expect(fakeIPTablesController.BulkPrependRulesCallCount()).To(Equal(1))
 			chainName, _ := fakeIPTablesController.BulkPrependRulesArgsForCall(0)
 			Expect(chainName).To(Equal("prefix-foo-bar-baz"))
@@ -173,7 +177,7 @@ var _ = Describe("FirewallOpenner", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(opener.BulkOpen(logger, "foo-bar-baz", rules)).To(MatchError("i-lost-my-banana"))
+				Expect(opener.BulkOpen(logger, "foo-bar-baz", "some-handle", rules)).To(MatchError("i-lost-my-banana"))
 			})
 		})
 	})

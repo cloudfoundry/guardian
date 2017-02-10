@@ -7,7 +7,7 @@ import (
 
 //go:generate counterfeiter . RuleTranslator
 type RuleTranslator interface {
-	TranslateRule(gardenRule garden.NetOutRule) ([]Rule, error)
+	TranslateRule(handle string, gardenRule garden.NetOutRule) ([]Rule, error)
 }
 
 type FirewallOpener struct {
@@ -22,7 +22,7 @@ func NewFirewallOpener(ruleTranslator RuleTranslator, iptables IPTables) *Firewa
 	}
 }
 
-func (f *FirewallOpener) Open(logger lager.Logger, instance string, rule garden.NetOutRule) error {
+func (f *FirewallOpener) Open(logger lager.Logger, instance, handle string, rule garden.NetOutRule) error {
 	chain := f.iptables.InstanceChain(instance)
 	logger = logger.Session("prepend-filter-rule", lager.Data{
 		"rule":     rule,
@@ -32,7 +32,7 @@ func (f *FirewallOpener) Open(logger lager.Logger, instance string, rule garden.
 	logger.Debug("started")
 	defer logger.Debug("ending")
 
-	iptableRules, err := f.ruleTranslator.TranslateRule(rule)
+	iptableRules, err := f.ruleTranslator.TranslateRule(handle, rule)
 	if err != nil {
 		return err
 	}
@@ -46,7 +46,7 @@ func (f *FirewallOpener) Open(logger lager.Logger, instance string, rule garden.
 	return nil
 }
 
-func (f *FirewallOpener) BulkOpen(logger lager.Logger, instance string, rules []garden.NetOutRule) error {
+func (f *FirewallOpener) BulkOpen(logger lager.Logger, instance, handle string, rules []garden.NetOutRule) error {
 	chain := f.iptables.InstanceChain(instance)
 	logger = logger.Session("prepend-filter-rule", lager.Data{
 		"rules":    rules,
@@ -58,7 +58,7 @@ func (f *FirewallOpener) BulkOpen(logger lager.Logger, instance string, rules []
 
 	collatedIPTablesRules := []Rule{}
 	for _, rule := range rules {
-		iptablesRules, err := f.ruleTranslator.TranslateRule(rule)
+		iptablesRules, err := f.ruleTranslator.TranslateRule(handle, rule)
 		if err != nil {
 			return err
 		}

@@ -18,15 +18,17 @@ var _ = Describe("RuleBuilder", func() {
 	})
 
 	It("applies the default rule", func() {
-		iptablesRules, err := translator.TranslateRule(garden.NetOutRule{})
+		iptablesRules, err := translator.TranslateRule("some-handle", garden.NetOutRule{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(iptablesRules).To(HaveLen(1))
-		Expect(iptablesRules[0]).To(Equal(iptables.SingleFilterRule{}))
+		Expect(iptablesRules[0]).To(Equal(iptables.SingleFilterRule{
+			Handle: "some-handle",
+		}))
 	})
 
 	Context("when a port range is specified for ProtocolALL", func() {
 		It("returns a nice error message", func() {
-			_, err := translator.TranslateRule(garden.NetOutRule{
+			_, err := translator.TranslateRule("some-handle", garden.NetOutRule{
 				Protocol: garden.ProtocolAll,
 				Ports:    []garden.PortRange{{Start: 1, End: 5}},
 			})
@@ -36,7 +38,7 @@ var _ = Describe("RuleBuilder", func() {
 
 	Context("when an invaild protocol is specified", func() {
 		It("returns an error", func() {
-			_, err := translator.TranslateRule(garden.NetOutRule{
+			_, err := translator.TranslateRule("some-handle", garden.NetOutRule{
 				Protocol: garden.Protocol(52),
 			})
 			Expect(err).To(MatchError("invalid protocol: 52"))
@@ -44,13 +46,14 @@ var _ = Describe("RuleBuilder", func() {
 	})
 
 	It("sets the protocol in the rule", func() {
-		iptablesRules, err := translator.TranslateRule(garden.NetOutRule{
+		iptablesRules, err := translator.TranslateRule("some-handle", garden.NetOutRule{
 			Protocol: garden.ProtocolTCP,
 		})
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(iptablesRules).To(HaveLen(1))
 		Expect(iptablesRules[0]).To(Equal(iptables.SingleFilterRule{
+			Handle:   "some-handle",
 			Protocol: garden.ProtocolTCP,
 		}))
 	})
@@ -60,34 +63,36 @@ var _ = Describe("RuleBuilder", func() {
 			Type: garden.ICMPType(1),
 		}
 
-		iptablesRules, err := translator.TranslateRule(garden.NetOutRule{
+		iptablesRules, err := translator.TranslateRule("some-handle", garden.NetOutRule{
 			ICMPs: icmpControl,
 		})
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(iptablesRules).To(HaveLen(1))
 		Expect(iptablesRules[0]).To(Equal(iptables.SingleFilterRule{
-			ICMPs: icmpControl,
+			Handle: "some-handle",
+			ICMPs:  icmpControl,
 		}))
 	})
 
 	Describe("Log", func() {
 		It("sets the log flag to the rule", func() {
-			iptablesRules, err := translator.TranslateRule(garden.NetOutRule{
+			iptablesRules, err := translator.TranslateRule("some-handle", garden.NetOutRule{
 				Log: true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(iptablesRules).To(HaveLen(1))
 			Expect(iptablesRules[0]).To(Equal(iptables.SingleFilterRule{
-				Log: true,
+				Handle: "some-handle",
+				Log:    true,
 			}))
 		})
 	})
 
 	DescribeTable("networks and ports",
 		func(netOutRule garden.NetOutRule, expectedIptablesRules []iptables.SingleFilterRule) {
-			iptablesRules, err := translator.TranslateRule(netOutRule)
+			iptablesRules, err := translator.TranslateRule("some-handle", netOutRule)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(iptablesRules).To(HaveLen(len(expectedIptablesRules)))
@@ -98,7 +103,7 @@ var _ = Describe("RuleBuilder", func() {
 		Entry("with a single destination IP specified",
 			garden.NetOutRule{Networks: []garden.IPRange{{Start: net.ParseIP("1.2.3.4")}}},
 			[]iptables.SingleFilterRule{
-				{Networks: &garden.IPRange{Start: net.ParseIP("1.2.3.4")}},
+				{Handle: "some-handle", Networks: &garden.IPRange{Start: net.ParseIP("1.2.3.4")}},
 			},
 		),
 		Entry("with multiple destination networks specified",
@@ -107,8 +112,8 @@ var _ = Describe("RuleBuilder", func() {
 				{Start: net.ParseIP("2.2.3.4"), End: net.ParseIP("2.2.3.9")},
 			}},
 			[]iptables.SingleFilterRule{
-				{Networks: &garden.IPRange{Start: net.ParseIP("1.2.3.4")}},
-				{Networks: &garden.IPRange{Start: net.ParseIP("2.2.3.4"), End: net.ParseIP("2.2.3.9")}},
+				{Handle: "some-handle", Networks: &garden.IPRange{Start: net.ParseIP("1.2.3.4")}},
+				{Handle: "some-handle", Networks: &garden.IPRange{Start: net.ParseIP("2.2.3.4"), End: net.ParseIP("2.2.3.9")}},
 			},
 		),
 		Entry("with a single port specified",
@@ -119,7 +124,7 @@ var _ = Describe("RuleBuilder", func() {
 				},
 			},
 			[]iptables.SingleFilterRule{
-				{Protocol: garden.ProtocolTCP, Ports: &garden.PortRange{Start: 22, End: 22}},
+				{Handle: "some-handle", Protocol: garden.ProtocolTCP, Ports: &garden.PortRange{Start: 22, End: 22}},
 			},
 		),
 		Entry("with multiple ports specified",
@@ -131,8 +136,8 @@ var _ = Describe("RuleBuilder", func() {
 				},
 			},
 			[]iptables.SingleFilterRule{
-				{Protocol: garden.ProtocolTCP, Ports: &garden.PortRange{Start: 22, End: 22}},
-				{Protocol: garden.ProtocolTCP, Ports: &garden.PortRange{Start: 1000, End: 10000}},
+				{Handle: "some-handle", Protocol: garden.ProtocolTCP, Ports: &garden.PortRange{Start: 22, End: 22}},
+				{Handle: "some-handle", Protocol: garden.ProtocolTCP, Ports: &garden.PortRange{Start: 1000, End: 10000}},
 			},
 		),
 		Entry("with both networks and ports specified",
@@ -149,21 +154,25 @@ var _ = Describe("RuleBuilder", func() {
 			},
 			[]iptables.SingleFilterRule{
 				{
+					Handle:   "some-handle",
 					Protocol: garden.ProtocolTCP,
 					Networks: &garden.IPRange{Start: net.ParseIP("1.2.3.4")},
 					Ports:    &garden.PortRange{Start: 22, End: 22},
 				},
 				{
+					Handle:   "some-handle",
 					Protocol: garden.ProtocolTCP,
 					Networks: &garden.IPRange{Start: net.ParseIP("2.2.3.4"), End: net.ParseIP("2.2.3.9")},
 					Ports:    &garden.PortRange{Start: 22, End: 22},
 				},
 				{
+					Handle:   "some-handle",
 					Protocol: garden.ProtocolTCP,
 					Networks: &garden.IPRange{Start: net.ParseIP("1.2.3.4")},
 					Ports:    &garden.PortRange{Start: 1000, End: 10000},
 				},
 				{
+					Handle:   "some-handle",
 					Protocol: garden.ProtocolTCP,
 					Networks: &garden.IPRange{Start: net.ParseIP("2.2.3.4"), End: net.ParseIP("2.2.3.9")},
 					Ports:    &garden.PortRange{Start: 1000, End: 10000},

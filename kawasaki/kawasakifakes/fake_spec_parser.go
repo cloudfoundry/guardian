@@ -35,9 +35,8 @@ func (fake *FakeSpecParser) Parse(log lager.Logger, spec string) (subnets.Subnet
 	fake.parseMutex.Unlock()
 	if fake.ParseStub != nil {
 		return fake.ParseStub(log, spec)
-	} else {
-		return fake.parseReturns.result1, fake.parseReturns.result2, fake.parseReturns.result3
 	}
+	return fake.parseReturns.result1, fake.parseReturns.result2, fake.parseReturns.result3
 }
 
 func (fake *FakeSpecParser) ParseCallCount() int {

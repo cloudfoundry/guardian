@@ -45,9 +45,8 @@ func (fake *FakeFileWriter) WriteFile(log lager.Logger, filePath string, content
 	fake.writeFileMutex.Unlock()
 	if fake.WriteFileStub != nil {
 		return fake.WriteFileStub(log, filePath, contents, rootfsPath, rootUid, rootGid)
-	} else {
-		return fake.writeFileReturns.result1
 	}
+	return fake.writeFileReturns.result1
 }
 
 func (fake *FakeFileWriter) WriteFileCallCount() int {

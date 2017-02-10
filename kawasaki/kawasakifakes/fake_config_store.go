@@ -65,9 +65,8 @@ func (fake *FakeConfigStore) Get(handle string, name string) (string, bool) {
 	fake.getMutex.Unlock()
 	if fake.GetStub != nil {
 		return fake.GetStub(handle, name)
-	} else {
-		return fake.getReturns.result1, fake.getReturns.result2
 	}
+	return fake.getReturns.result1, fake.getReturns.result2
 }
 
 func (fake *FakeConfigStore) GetCallCount() int {

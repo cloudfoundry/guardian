@@ -57,14 +57,15 @@ var _ = Describe("Create", func() {
 				{
 					Path: "/sbin/iptables",
 					Args: []string{"--wait", "--table", "nat", "-A", "prefix-prerouting",
-						"--jump", "prefix-instance-some-id"},
+						"--jump", "prefix-instance-some-id",
+						"-m", "comment", "--comment", handle},
 				},
 				{
 					Path: "sh",
 					Args: []string{"-c", fmt.Sprintf(
-						`(/sbin/iptables --wait --table nat -S %s | grep "\-j MASQUERADE\b" | grep -q -F -- "-s %s") || /sbin/iptables --wait --table nat -A %s --source %s ! --destination %s --jump MASQUERADE`,
+						`(/sbin/iptables --wait --table nat -S %s | grep "\-j MASQUERADE\b" | grep -q -F -- "-s %s") || /sbin/iptables --wait --table nat -A %s --source %s ! --destination %s --jump MASQUERADE -m comment --comment %s`,
 						"prefix-postrouting", network.String(), "prefix-postrouting",
-						network.String(), network.String(),
+						network.String(), network.String(), handle,
 					)},
 				},
 				{
@@ -74,17 +75,23 @@ var _ = Describe("Create", func() {
 				{
 					Path: "/sbin/iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id",
-						"-s", network.String(), "-d", network.String(), "-j", "ACCEPT"},
+						"-s", network.String(), "-d", network.String(), "-j", "ACCEPT",
+						"-m", "comment", "--comment", handle,
+					},
 				},
 				{
 					Path: "/sbin/iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id",
-						"--goto", "prefix-default"},
+						"--goto", "prefix-default",
+						"-m", "comment", "--comment", handle,
+					},
 				},
 				{
 					Path: "/sbin/iptables",
 					Args: []string{"--wait", "-I", "prefix-forward", "2", "--in-interface", bridgeName,
-						"--source", ip.String(), "--goto", "prefix-instance-some-id"},
+						"--source", ip.String(), "--goto", "prefix-instance-some-id",
+						"-m", "comment", "--comment", handle,
+					},
 				},
 				{
 					Path: "/sbin/iptables",
@@ -93,11 +100,15 @@ var _ = Describe("Create", func() {
 				{
 					Path: "/sbin/iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id-log", "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID",
-						"--protocol", "tcp", "--jump", "LOG", "--log-prefix", "some-handle-that-is-longer-th"},
+						"--protocol", "tcp", "--jump", "LOG", "--log-prefix", "some-handle-that-is-longer-th",
+						"-m", "comment", "--comment", handle,
+					},
 				},
 				{
 					Path: "/sbin/iptables",
-					Args: []string{"--wait", "-A", "prefix-instance-some-id-log", "--jump", "RETURN"},
+					Args: []string{"--wait", "-A", "prefix-instance-some-id-log", "--jump", "RETURN",
+						"-m", "comment", "--comment", handle,
+					},
 				},
 			}
 		})

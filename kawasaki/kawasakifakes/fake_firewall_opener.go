@@ -10,21 +10,23 @@ import (
 )
 
 type FakeFirewallOpener struct {
-	OpenStub        func(log lager.Logger, instance string, rule garden.NetOutRule) error
+	OpenStub        func(log lager.Logger, instance, handle string, rule garden.NetOutRule) error
 	openMutex       sync.RWMutex
 	openArgsForCall []struct {
 		log      lager.Logger
 		instance string
+		handle   string
 		rule     garden.NetOutRule
 	}
 	openReturns struct {
 		result1 error
 	}
-	BulkOpenStub        func(log lager.Logger, instance string, rule []garden.NetOutRule) error
+	BulkOpenStub        func(log lager.Logger, instance, handle string, rule []garden.NetOutRule) error
 	bulkOpenMutex       sync.RWMutex
 	bulkOpenArgsForCall []struct {
 		log      lager.Logger
 		instance string
+		handle   string
 		rule     []garden.NetOutRule
 	}
 	bulkOpenReturns struct {
@@ -34,20 +36,20 @@ type FakeFirewallOpener struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeFirewallOpener) Open(log lager.Logger, instance string, rule garden.NetOutRule) error {
+func (fake *FakeFirewallOpener) Open(log lager.Logger, instance string, handle string, rule garden.NetOutRule) error {
 	fake.openMutex.Lock()
 	fake.openArgsForCall = append(fake.openArgsForCall, struct {
 		log      lager.Logger
 		instance string
+		handle   string
 		rule     garden.NetOutRule
-	}{log, instance, rule})
-	fake.recordInvocation("Open", []interface{}{log, instance, rule})
+	}{log, instance, handle, rule})
+	fake.recordInvocation("Open", []interface{}{log, instance, handle, rule})
 	fake.openMutex.Unlock()
 	if fake.OpenStub != nil {
-		return fake.OpenStub(log, instance, rule)
-	} else {
-		return fake.openReturns.result1
+		return fake.OpenStub(log, instance, handle, rule)
 	}
+	return fake.openReturns.result1
 }
 
 func (fake *FakeFirewallOpener) OpenCallCount() int {
@@ -56,10 +58,10 @@ func (fake *FakeFirewallOpener) OpenCallCount() int {
 	return len(fake.openArgsForCall)
 }
 
-func (fake *FakeFirewallOpener) OpenArgsForCall(i int) (lager.Logger, string, garden.NetOutRule) {
+func (fake *FakeFirewallOpener) OpenArgsForCall(i int) (lager.Logger, string, string, garden.NetOutRule) {
 	fake.openMutex.RLock()
 	defer fake.openMutex.RUnlock()
-	return fake.openArgsForCall[i].log, fake.openArgsForCall[i].instance, fake.openArgsForCall[i].rule
+	return fake.openArgsForCall[i].log, fake.openArgsForCall[i].instance, fake.openArgsForCall[i].handle, fake.openArgsForCall[i].rule
 }
 
 func (fake *FakeFirewallOpener) OpenReturns(result1 error) {
@@ -69,7 +71,7 @@ func (fake *FakeFirewallOpener) OpenReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeFirewallOpener) BulkOpen(log lager.Logger, instance string, rule []garden.NetOutRule) error {
+func (fake *FakeFirewallOpener) BulkOpen(log lager.Logger, instance string, handle string, rule []garden.NetOutRule) error {
 	var ruleCopy []garden.NetOutRule
 	if rule != nil {
 		ruleCopy = make([]garden.NetOutRule, len(rule))
@@ -79,15 +81,15 @@ func (fake *FakeFirewallOpener) BulkOpen(log lager.Logger, instance string, rule
 	fake.bulkOpenArgsForCall = append(fake.bulkOpenArgsForCall, struct {
 		log      lager.Logger
 		instance string
+		handle   string
 		rule     []garden.NetOutRule
-	}{log, instance, ruleCopy})
-	fake.recordInvocation("BulkOpen", []interface{}{log, instance, ruleCopy})
+	}{log, instance, handle, ruleCopy})
+	fake.recordInvocation("BulkOpen", []interface{}{log, instance, handle, ruleCopy})
 	fake.bulkOpenMutex.Unlock()
 	if fake.BulkOpenStub != nil {
-		return fake.BulkOpenStub(log, instance, rule)
-	} else {
-		return fake.bulkOpenReturns.result1
+		return fake.BulkOpenStub(log, instance, handle, rule)
 	}
+	return fake.bulkOpenReturns.result1
 }
 
 func (fake *FakeFirewallOpener) BulkOpenCallCount() int {
@@ -96,10 +98,10 @@ func (fake *FakeFirewallOpener) BulkOpenCallCount() int {
 	return len(fake.bulkOpenArgsForCall)
 }
 
-func (fake *FakeFirewallOpener) BulkOpenArgsForCall(i int) (lager.Logger, string, []garden.NetOutRule) {
+func (fake *FakeFirewallOpener) BulkOpenArgsForCall(i int) (lager.Logger, string, string, []garden.NetOutRule) {
 	fake.bulkOpenMutex.RLock()
 	defer fake.bulkOpenMutex.RUnlock()
-	return fake.bulkOpenArgsForCall[i].log, fake.bulkOpenArgsForCall[i].instance, fake.bulkOpenArgsForCall[i].rule
+	return fake.bulkOpenArgsForCall[i].log, fake.bulkOpenArgsForCall[i].instance, fake.bulkOpenArgsForCall[i].handle, fake.bulkOpenArgsForCall[i].rule
 }
 
 func (fake *FakeFirewallOpener) BulkOpenReturns(result1 error) {

@@ -12,7 +12,7 @@ func (flags iptablesFlags) Flags(chain string) []string {
 	return flags
 }
 
-func natRule(destination string, destinationPort uint32, containerIP string, containerPort uint32) Rule {
+func natRule(destination string, destinationPort uint32, containerIP string, containerPort uint32, comment string) Rule {
 	return iptablesFlags([]string{
 		"--table", "nat",
 		"--protocol", "tcp",
@@ -20,6 +20,7 @@ func natRule(destination string, destinationPort uint32, containerIP string, con
 		"--destination-port", fmt.Sprintf("%d", destinationPort),
 		"--jump", "DNAT",
 		"--to-destination", fmt.Sprintf("%s:%d", containerIP, containerPort),
+		"-m", "comment", "--comment", comment,
 	})
 }
 
@@ -36,6 +37,7 @@ type SingleFilterRule struct {
 	Ports    *garden.PortRange
 	ICMPs    *garden.ICMPControl
 	Log      bool
+	Handle   string
 }
 
 func (r SingleFilterRule) Flags(chain string) (params []string) {
@@ -75,6 +77,8 @@ func (r SingleFilterRule) Flags(chain string) (params []string) {
 	} else {
 		params = append(params, "--jump", "RETURN")
 	}
+
+	params = append(params, "-m", "comment", "--comment", r.Handle)
 
 	return params
 }
