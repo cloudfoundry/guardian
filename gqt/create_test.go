@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -294,6 +295,38 @@ var _ = Describe("Creating a Container", func() {
 			)
 			Expect(err).NotTo(HaveOccurred())
 			Consistently(session).ShouldNot(gbytes.Say(fmt.Sprintf("172-250-%d-0", GinkgoParallelNode())))
+		})
+	})
+
+	Context("when creating a container with NetOut rules", func() {
+		var container garden.Container
+
+		JustBeforeEach(func() {
+			args = append(args, "--deny-network", "0.0.0.0/0")
+
+			rules := []garden.NetOutRule{
+				garden.NetOutRule{
+					Protocol: garden.ProtocolTCP,
+					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+					Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+				},
+				garden.NetOutRule{
+					Protocol: garden.ProtocolTCP,
+					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.4.4"))},
+					Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+				},
+			}
+
+			var err error
+			container, err = client.Create(garden.ContainerSpec{
+				NetOutRules: rules,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("provides connectivity to the addresses provided", func() {
+			Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
+			Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
 		})
 	})
 

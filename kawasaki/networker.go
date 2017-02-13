@@ -167,6 +167,11 @@ func (n *networker) Network(log lager.Logger, containerSpec garden.ContainerSpec
 	if err := n.configurer.Apply(log, config, pid); err != nil {
 		return err
 	}
+
+	if err := n.BulkNetOut(log, containerSpec.Handle, containerSpec.NetOutRules); err != nil {
+		return err
+	}
+
 	return nil
 }
 

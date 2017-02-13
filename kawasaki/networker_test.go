@@ -49,6 +49,18 @@ var _ = Describe("Networker", func() {
 		containerSpec = garden.ContainerSpec{
 			Handle:  "some-handle",
 			Network: "1.2.3.4/30",
+			NetOutRules: []garden.NetOutRule{
+				garden.NetOutRule{
+					Protocol: garden.ProtocolTCP,
+					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+					Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+				},
+				garden.NetOutRule{
+					Protocol: garden.ProtocolTCP,
+					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.4.4"))},
+					Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+				},
+			},
 		}
 
 		logger = lagertest.NewTestLogger("test")
@@ -179,12 +191,9 @@ var _ = Describe("Networker", func() {
 		})
 
 		It("applies the right configuration", func() {
-			err := networker.Network(logger, containerSpec, 42)
-			Expect(err).NotTo(HaveOccurred())
-
+			Expect(networker.Network(logger, containerSpec, 42)).To(Succeed())
 			Expect(fakeConfigurer.ApplyCallCount()).To(Equal(1))
 			_, actualNetConfig, pid := fakeConfigurer.ApplyArgsForCall(0)
-			Expect(err).NotTo(HaveOccurred())
 			Expect(actualNetConfig).To(Equal(networkConfig))
 			Expect(pid).To(Equal(42))
 		})
@@ -193,6 +202,23 @@ var _ = Describe("Networker", func() {
 			It("errors", func() {
 				fakeConfigurer.ApplyReturns(errors.New("wont-apply"))
 				Expect(networker.Network(logger, containerSpec, 42)).To(MatchError("wont-apply"))
+			})
+		})
+
+		It("applies any NetOut rules provided", func() {
+			Expect(networker.Network(logger, containerSpec, 42)).To(Succeed())
+			_, _, _, appliedRules := fakeFirewallOpener.BulkOpenArgsForCall(0)
+			Expect(appliedRules).To(Equal(containerSpec.NetOutRules))
+		})
+
+		Context("when applying the NetOut rules fails", func() {
+			BeforeEach(func() {
+				fakeFirewallOpener.BulkOpenReturns(errors.New("some error"))
+			})
+
+			It("returns a sensible error", func() {
+				err := networker.Network(logger, containerSpec, 42)
+				Expect(err).To(MatchError("some error"))
 			})
 		})
 	})

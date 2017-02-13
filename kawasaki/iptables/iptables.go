@@ -94,6 +94,10 @@ func (iptables *IPTablesController) PrependRule(chain string, rule Rule) error {
 }
 
 func (iptables *IPTablesController) BulkPrependRules(chain string, rules []Rule) error {
+	if len(rules) == 0 {
+		return nil
+	}
+
 	in := bytes.NewBuffer([]byte{})
 	in.WriteString("*filter\n")
 	for _, r := range rules {

@@ -133,6 +133,50 @@ var _ = Describe("ExternalNetworker", func() {
 			}`))
 		})
 
+		Context("when there are NetOut rules provided", func() {
+			BeforeEach(func() {
+				containerSpec.NetOutRules = []garden.NetOutRule{
+					garden.NetOutRule{
+						Protocol: garden.ProtocolTCP,
+						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+						Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+					},
+					garden.NetOutRule{
+						Protocol: garden.ProtocolTCP,
+						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.4.4"))},
+						Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+					},
+				}
+			})
+
+			It("passes them in the stdin to the network plugin", func() {
+				Expect(plugin.Network(logger, containerSpec, 42)).To(Succeed())
+
+				cmd := fakeCommandRunner.ExecutedCommands()[0]
+				pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(pluginInput).To(MatchJSON(`{
+				"Pid": 42,
+				"Properties": {
+					"some-key": "some-network-value",
+					"some-other-key": "some-other-network-value"
+				},
+				"netout_rules": [
+				  {
+					  "protocol":1,
+					  "networks": [{"start":"8.8.8.8","end":"8.8.8.8"}],
+					  "ports": [{"start":53,"end":53}]
+					},
+					{
+					  "protocol":1,
+					  "networks":[{"start":"8.8.4.4","end":"8.8.4.4"}],
+					  "ports":[{"start":53,"end":53}]
+					}
+				]
+			}`))
+			})
+		})
+
 		It("collects and logs the stderr from the plugin", func() {
 			err := plugin.Network(logger, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())

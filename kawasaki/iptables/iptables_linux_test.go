@@ -22,6 +22,7 @@ var _ = Describe("IPTables controller", func() {
 		prefix             string
 		iptablesController iptables.IPTables
 		fakeLocksmith      *FakeLocksmith
+		fakeRunner         *fake_command_runner.FakeCommandRunner
 	)
 
 	BeforeEach(func() {
@@ -29,7 +30,7 @@ var _ = Describe("IPTables controller", func() {
 		netnsName = fmt.Sprintf("ginkgo-netns-%d", GinkgoParallelNode())
 		makeNamespace(netnsName)
 
-		fakeRunner := fake_command_runner.New()
+		fakeRunner = fake_command_runner.New()
 		fakeRunner.WhenRunning(fake_command_runner.CommandSpec{},
 			func(cmd *exec.Cmd) error {
 				return wrapCmdInNs(netnsName, cmd).Run()
@@ -128,6 +129,13 @@ var _ = Describe("IPTables controller", func() {
 			fakeRule.FlagsReturns([]string{"--protocol", "tcp"})
 
 			Expect(iptablesController.BulkPrependRules("test-chain", []iptables.Rule{fakeRule})).NotTo(Succeed())
+		})
+
+		Context("when there are no rules passed", func() {
+			It("does nothing", func() {
+				Expect(iptablesController.BulkPrependRules("test-chain", []iptables.Rule{})).To(Succeed())
+				Expect(fakeRunner.ExecutedCommands()).To(BeZero())
+			})
 		})
 	})
 

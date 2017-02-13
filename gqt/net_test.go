@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,7 +25,7 @@ var _ = Describe("Networking", func() {
 		client    *runner.RunningGarden
 		container garden.Container
 
-		handle           string
+		containerSpec    garden.ContainerSpec
 		containerNetwork string
 		args             []string
 
@@ -36,7 +37,7 @@ var _ = Describe("Networking", func() {
 	BeforeEach(func() {
 		args = []string{}
 		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
-		handle = ""
+		containerSpec = garden.ContainerSpec{}
 
 		var ips []net.IP
 		Eventually(func() error {
@@ -53,11 +54,9 @@ var _ = Describe("Networking", func() {
 
 		client = startGarden(args...)
 
-		container, err = client.Create(garden.ContainerSpec{
-			Handle:     handle,
-			Network:    containerNetwork,
-			Properties: extraProperties,
-		})
+		containerSpec.Network = containerNetwork
+		containerSpec.Properties = extraProperties
+		container, err = client.Create(containerSpec)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -387,7 +386,7 @@ var _ = Describe("Networking", func() {
 				})
 			})
 
-			Context("when --iptables-restore-bin=/bin/false", func() {
+			Context("when the iptables-restore-bin returns non zero", func() {
 				BeforeEach(func() {
 					args = append(args, "--iptables-restore-bin", "/bin/false")
 				})
@@ -474,6 +473,32 @@ var _ = Describe("Networking", func() {
 						fmt.Sprintf("%s %s %s --action up --handle %s", argsFile, stdinFile, pluginReturn, containerHandle),
 					),
 				)
+			})
+
+			Context("and the containerSpec contains NetOutRules", func() {
+				BeforeEach(func() {
+					containerSpec.NetOutRules = []garden.NetOutRule{
+						garden.NetOutRule{
+							Protocol: garden.ProtocolTCP,
+							Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+							Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+						},
+						garden.NetOutRule{
+							Protocol: garden.ProtocolTCP,
+							Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.4.4"))},
+							Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+						},
+					}
+				})
+
+				It("passes the NetOut rules to the plugin during container creation", func() {
+					jsonBytes, err := json.Marshal(containerSpec.NetOutRules)
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(getContent(stdinFile)).Should(
+						ContainSubstring("\"netout_rules\":" + string(jsonBytes)),
+					)
+				})
 			})
 
 			It("persists the returned properties to the container's properties", func() {
@@ -567,7 +592,7 @@ var _ = Describe("Networking", func() {
 
 	Describe("comments added to iptables rules", func() {
 		BeforeEach(func() {
-			handle = fmt.Sprintf("iptable-comment-handle-%d", GinkgoParallelNode())
+			containerSpec.Handle = fmt.Sprintf("iptable-comment-handle-%d", GinkgoParallelNode())
 		})
 
 		Context("when creating a container", func() {
@@ -578,7 +603,7 @@ var _ = Describe("Networking", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Eventually(sess).Should(gexec.Exit(0))
-					Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`/\* %s \*/`, handle)))
+					Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`/\* %s \*/`, containerSpec.Handle)))
 				})
 			})
 
@@ -589,7 +614,7 @@ var _ = Describe("Networking", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Eventually(sess).Should(gexec.Exit(0))
-					Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`/\* %s \*/`, handle)))
+					Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`/\* %s \*/`, containerSpec.Handle)))
 				})
 			})
 		})
@@ -606,7 +631,7 @@ var _ = Describe("Networking", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(sess).Should(gexec.Exit(0))
-				Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`DNAT.*/\* %s \*/`, handle)))
+				Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`DNAT.*/\* %s \*/`, containerSpec.Handle)))
 			})
 		})
 
@@ -625,7 +650,7 @@ var _ = Describe("Networking", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Eventually(sess).Should(gexec.Exit(0))
-				Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`RETURN.*tcp.*destination IP range.* /\* %s \*/`, handle)))
+				Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`RETURN.*tcp.*destination IP range.* /\* %s \*/`, containerSpec.Handle)))
 			})
 		})
 	})
