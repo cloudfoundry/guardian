@@ -728,62 +728,51 @@ var _ = Describe("Create", func() {
 	})
 
 	Describe("clean up on create", func() {
-		var (
-			imageID string
-		)
-
-		BeforeEach(func() {
-			integration.SkipIfNotBTRFS(Driver)
-		})
-
 		JustBeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
-				ID:        "my-busybox",
-				BaseImage: "docker:///busybox:1.26.2",
+				ID:        "my-image-1",
+				BaseImage: baseImagePath,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(Runner.Delete("my-busybox")).To(Succeed())
-			imageID = "random-id"
+			Expect(Runner.Delete("my-image-1")).To(Succeed())
 		})
 
 		AfterEach(func() {
-			Expect(Runner.Delete(imageID)).To(Succeed())
+			Expect(Runner.Delete("my-image-3")).To(Succeed())
 		})
 
 		It("cleans up unused layers before create but not the one about to be created", func() {
-			runner := Runner.WithClean()
+			baseImage2File := integration.CreateBaseImageTar(sourceImagePath)
+			baseImage2Path := baseImage2File.Name()
 
 			createSpec := groot.CreateSpec{
-				ID:        "my-empty",
-				BaseImage: "docker:///cfgarden/empty:v0.1.1",
+				ID:        "my-image-2",
+				BaseImage: baseImage2Path,
 			}
 			_, err := Runner.Create(createSpec)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(runner.Delete("my-empty")).To(Succeed())
+			Expect(Runner.Delete("my-image-2")).To(Succeed())
 
-			layerPath := filepath.Join(StorePath, store.VolumesDirName, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
+			layerPath := filepath.Join(StorePath, store.VolumesDirName, integration.BaseImagePathToVolumeID(baseImage2Path))
 			stat, err := os.Stat(layerPath)
 			Expect(err).NotTo(HaveOccurred())
 			preLayerTimestamp := stat.ModTime()
 
 			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(preContents).To(HaveLen(3))
+			Expect(preContents).To(HaveLen(2))
 
+			runner := Runner.WithClean()
 			_, err = runner.Create(groot.CreateSpec{
-				ID:        imageID,
-				BaseImage: "docker:///cfgarden/empty:v0.1.1",
+				ID:        "my-image-3",
+				BaseImage: baseImage2Path,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
 			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(afterContents).To(HaveLen(2))
-
-			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-				Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
-			}
+			Expect(afterContents).To(HaveLen(1))
 
 			stat, err = os.Stat(layerPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -796,15 +785,17 @@ var _ = Describe("Create", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preContents).To(HaveLen(1))
 
+				baseImage2File := integration.CreateBaseImageTar(sourceImagePath)
+				baseImage2Path := baseImage2File.Name()
 				_, err = Runner.WithNoClean().Create(groot.CreateSpec{
-					ID:        imageID,
-					BaseImage: "docker:///cfgarden/empty:v0.1.1",
+					ID:        "my-image-3",
+					BaseImage: baseImage2Path,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
 				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(3))
+				Expect(afterContents).To(HaveLen(2))
 			})
 		})
 	})
