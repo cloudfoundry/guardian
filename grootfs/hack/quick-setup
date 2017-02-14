@@ -21,7 +21,7 @@ mount_stores() {
   chmod 777 /var/lib/grootfs/btrfs
 
   mkdir -p /var/lib/grootfs/xfs
-  mount -t xfs /var/lib/grootfs.xfs.backing-store /var/lib/grootfs/xfs
+  mount -t xfs -o pquota /var/lib/grootfs.xfs.backing-store /var/lib/grootfs/xfs
   chmod 777 /var/lib/grootfs/xfs
 }
 
