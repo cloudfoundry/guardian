@@ -49,6 +49,21 @@ make
 _Using `go get code.cloudfoundry.org/grootfs` is discouraged because it might
 not work due to our versioned dependencies._
 
+### Filesystems
+GrootFS makes use of various Linux filesystem features in order to efficiently store
+container root filesystems on the host machine.
+
+Currently we support:
+* BTRFS (`--driver btrfs`)
+* Overlay on XFS (`--driver overlay-xfs`)
+
+GrootFS's 'store' directory must be stored on one of these filesystems. Our setup
+script will try to set up both of these filesystems for you so you can experiment
+with GrootFS, or you can provision your own and configure GrootFS to point to the
+mounted filesystem you create, using the `--store` and `--driver` command-line flags.
+These are documented in the instructions below.
+
+
 ### Instructions
 
 #### Requirements
@@ -56,16 +71,22 @@ not work due to our versioned dependencies._
 sudo hack/quick-setup
 ```
 
-This will ensure the following requirements are in place:
+We assume that:
+* You are running a Debian/Ubuntu based system with BTRFS and XFS enabled in the kernel
 
-* GrootFS requires BTRFS to be enabled in the kernel, it also makes use of the
-  brtfs-progs (btrfs-tools package on Ubuntu) for layering images.
-* By default all operations will happen in `/var/lib/grootfs` folder, you can
-  change it by passing the `--store` flag to the binary. The store folder is
-  expected to be inside a mounted BTRFS volume. If you don't have one, you can
-  create a loop mounted BTRFS.
-* For user/group id mapping, you'll also require newuidmap and newgidmap to be
-  installed (uidmap package on Ubuntu)
+This will:
+* Install the userspace tools required to use GrootFS on either BTRFS or XFS
+* Create a BTRFS filesystem and mount it under /var/lib/grootfs/btrfs
+* Create an XFS filesystem and mount it under /var/lib/grootfs/xfs
+
+By default all operations will happen in the `/var/lib/grootfs` folder. You can
+change this by passing the `--store` flag to the `grootfs` binary. The store folder is
+expected to be inside either of the mounted BTRFS or XFS volumes. You will also
+need to pass the `--driver` option with a value of either `btrfs` or `overlay-xfs`
+accordingly.
+
+For user/group id mapping, you'll also require `newuidmap` and `newgidmap` to be
+installed (uidmap package on Ubuntu)
 
 ### Configuration
 
@@ -82,6 +103,7 @@ Following is an example configuration file with all options provided:
 
 ```yaml
 store_path: /var/vcap/data/grootfs/store
+driver: btrfs
 btrfs_bin: /var/vcap/packages/btrfs-progs/bin/btrfs
 drax_bin: /var/vcap/packages/grootfs/bin/drax
 newuidmap_bin: /var/vcap/packages/idmapper/bin/newuidmap
@@ -96,17 +118,19 @@ ignore_base_images:
 clean_on_create: true
 clean_threshold_bytes: 1048576
 uid_mappings:
-	- "0:4294967294:1"
-	- "1:1:4294967293"
+- "0:4294967294:1"
+- "1:1:4294967293"
 gid_mappings:
-	- "0:4294967294:1"
-	- "1:1:4294967293"
+- "0:4294967294:1"
+- "1:1:4294967293"
 ```
 
 | Key | Description  |
 |---|---|
 | store_path  | Path to the store directory |
+| driver | Filesystem driver to use \<btrfs \| overlay-xfs\> |
 | btrfs_bin  | Path to btrfs bin. (If not provided will use $PATH)  |
+| xfsprogs_path  | Path containing the xfsprogs binaries. (If not provided will use $PATH)  |
 | drax_bin | Path to drax bin. (If not provided will use $PATH) |
 | newuidmap_bin | Path to newuidmap bin. (If not provided will use $PATH) |
 | newgidmap_bin | Path to newgidmap bin. (If not provided will use $PATH) |
@@ -371,4 +395,3 @@ make concourse-test
 * [GrootFS CI](https://grootfs.ci.cf-app.com)
 * [Cloud Foundry Slack - Invitation](https://slack.cloudfoundry.org/)
 * [Cloud Foundry Slack](https://cloudfoundry.slack.com/)
-
