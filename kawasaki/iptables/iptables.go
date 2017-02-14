@@ -117,7 +117,7 @@ func (iptables *IPTablesController) InstanceChain(instanceId string) string {
 	return iptables.instanceChainPrefix + instanceId
 }
 
-func (iptables *IPTablesController) run(action string, cmd *exec.Cmd) error {
+func (iptables *IPTablesController) run(action string, cmd *exec.Cmd) (err error) {
 	var buff bytes.Buffer
 	cmd.Stdout = &buff
 	cmd.Stderr = &buff
@@ -127,14 +127,21 @@ func (iptables *IPTablesController) run(action string, cmd *exec.Cmd) error {
 		return err
 	}
 
-	if err := iptables.runner.Run(cmd); err != nil {
-		err := fmt.Errorf("iptables: %s: %s", action, buff.String())
+	defer func() {
 		if unlockErr := u.Unlock(); unlockErr != nil {
-			err = fmt.Errorf("%s and then %s", err, unlockErr)
+			if err != nil {
+				err = fmt.Errorf("%s and then %s", err, unlockErr)
+			} else {
+				err = unlockErr
+			}
 		}
-		return err
+	}()
+
+	if err := iptables.runner.Run(cmd); err != nil {
+		return fmt.Errorf("iptables: %s: %s", action, buff.String())
 	}
-	return u.Unlock()
+
+	return nil
 }
 
 func (iptables *IPTablesController) appendRule(chain string, rule Rule) error {

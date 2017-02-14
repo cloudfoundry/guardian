@@ -33,6 +33,9 @@ var _ = Describe("IPTables controller", func() {
 		fakeRunner = fake_command_runner.New()
 		fakeRunner.WhenRunning(fake_command_runner.CommandSpec{},
 			func(cmd *exec.Cmd) error {
+				if len(cmd.Args) >= 4 && cmd.Args[3] == "panic" {
+					panic("ops")
+				}
 				return wrapCmdInNs(netnsName, cmd).Run()
 			},
 		)
@@ -300,6 +303,14 @@ var _ = Describe("IPTables controller", func() {
 			It("still unlocks", func(done Done) {
 				// this is going to fail, because the chain does not exist
 				Expect(iptablesController.PrependRule("non-existent-chain", iptables.SingleFilterRule{})).NotTo(Succeed())
+				Expect(iptablesController.CreateChain("filter", "test-chain-2")).To(Succeed())
+				close(done)
+			}, 2.0)
+		})
+
+		Context("when running an iptables command panics", func() {
+			It("still unlocks", func(done Done) {
+				Expect(func() { iptablesController.PrependRule("panic", iptables.SingleFilterRule{}) }).To(Panic())
 				Expect(iptablesController.CreateChain("filter", "test-chain-2")).To(Succeed())
 				close(done)
 			}, 2.0)
