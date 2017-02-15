@@ -98,10 +98,16 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		return errors.Wrap(err, "image path does not exist")
 	}
 
-	baseVolumePath := filepath.Join(d.storePath, store.VolumesDirName, spec.BaseVolumeIDs[0])
-	if _, err := os.Stat(baseVolumePath); os.IsNotExist(err) {
-		logger.Error("base-volume-path-not-found", err)
-		return errors.Wrap(err, "base volume path does not exist")
+	baseVolumePaths := []string{}
+	for i := len(spec.BaseVolumeIDs) - 1; i >= 0; i-- {
+		volumePath := filepath.Join(d.storePath, store.VolumesDirName, spec.BaseVolumeIDs[i])
+
+		if _, err := os.Stat(volumePath); os.IsNotExist(err) {
+			logger.Error("base-volume-path-not-found", err)
+			return errors.Wrap(err, "base volume path does not exist")
+		}
+
+		baseVolumePaths = append(baseVolumePaths, volumePath)
 	}
 
 	upperDir := filepath.Join(spec.ImagePath, UpperDir)
@@ -127,7 +133,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		return errors.Wrap(err, "creating rootfs folder")
 	}
 
-	mountData := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", baseVolumePath, upperDir, workDir)
+	mountData := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(baseVolumePaths, ":"), upperDir, workDir)
 	if err := syscall.Mount("overlay", rootfsDir, "overlay", 0, mountData); err != nil {
 		logger.Error("mounting-overlay-to-rootfs-failed", err, lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
 		return errors.Wrap(err, "mounting overlay")

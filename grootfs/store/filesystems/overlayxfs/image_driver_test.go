@@ -26,7 +26,10 @@ var _ = Describe("ImageDriver", func() {
 	var (
 		driver     *overlayxfs.Driver
 		logger     *lagertest.TestLogger
-		volumePath string
+		layer1ID   string
+		layer2ID   string
+		layer1Path string
+		layer2Path string
 		spec       image_cloner.ImageDriverSpec
 	)
 
@@ -38,27 +41,33 @@ var _ = Describe("ImageDriver", func() {
 		driver = overlayxfs.NewDriver("", StorePath)
 		logger = lagertest.NewTestLogger("overlay+xfs")
 
-		volumeID := randVolumeID()
 		var err error
-		volumePath, err = driver.CreateVolume(logger, "parent-id", volumeID)
+		layer1ID = randVolumeID()
+		layer1Path, err = driver.CreateVolume(logger, "parent-id", layer1ID)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(ioutil.WriteFile(filepath.Join(layer1Path, "file-hello"), []byte("hello-1"), 0755)).To(Succeed())
+		Expect(ioutil.WriteFile(filepath.Join(layer1Path, "file-bye"), []byte("bye-1"), 0700)).To(Succeed())
+		Expect(os.Mkdir(filepath.Join(layer1Path, "a-folder"), 0700)).To(Succeed())
+		Expect(ioutil.WriteFile(filepath.Join(layer1Path, "a-folder", "folder-file"), []byte("in-a-folder-1"), 0755)).To(Succeed())
 
-		Expect(ioutil.WriteFile(filepath.Join(volumePath, "file-hello"), []byte("hello"), 0755)).To(Succeed())
-		Expect(ioutil.WriteFile(filepath.Join(volumePath, "file-bye"), []byte("bye"), 0700)).To(Succeed())
-		Expect(os.Mkdir(filepath.Join(volumePath, "a-folder"), 0700)).To(Succeed())
-		Expect(ioutil.WriteFile(filepath.Join(volumePath, "a-folder", "folder-file"), []byte("in-a-folder"), 0755)).To(Succeed())
+		layer2ID = randVolumeID()
+		layer2Path, err = driver.CreateVolume(logger, "parent-id", layer2ID)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ioutil.WriteFile(filepath.Join(layer2Path, "file-bye"), []byte("bye-2"), 0700)).To(Succeed())
+		Expect(os.Mkdir(filepath.Join(layer2Path, "a-folder"), 0700)).To(Succeed())
+		Expect(ioutil.WriteFile(filepath.Join(layer2Path, "a-folder", "folder-file"), []byte("in-a-folder-2"), 0755)).To(Succeed())
 
 		imagePath := filepath.Join(StorePath, store.ImageDirName, fmt.Sprintf("random-id-%d", rand.Int()))
 		Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
 
 		spec = image_cloner.ImageDriverSpec{
 			ImagePath:     imagePath,
-			BaseVolumeIDs: []string{volumeID},
+			BaseVolumeIDs: []string{layer1ID},
 		}
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(volumePath)).To(Succeed())
+		Expect(os.RemoveAll(layer1Path)).To(Succeed())
 	})
 
 	Describe("CreateImage", func() {
@@ -79,25 +88,64 @@ var _ = Describe("ImageDriver", func() {
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).To(BeADirectory())
 		})
 
-		It("creates a rootfs with the same files than the volume", func() {
+		It("creates a rootfs with the same files as the volume", func() {
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).ToNot(BeAnExistingFile())
+
 			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).To(BeADirectory())
 
-			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-hello")).To(BeAnExistingFile())
-			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-bye")).To(BeAnExistingFile())
+			contents, err := ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-hello"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(contents).To(BeEquivalentTo("hello-1"))
+
+			contents, err = ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-bye"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(contents).To(BeEquivalentTo("bye-1"))
+
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder")).To(BeADirectory())
-			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder", "folder-file")).To(BeAnExistingFile())
+
+			contents, err = ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder", "folder-file"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(contents).To(BeEquivalentTo("in-a-folder-1"))
+		})
+
+		Context("multi-layer image", func() {
+			BeforeEach(func() {
+				spec.BaseVolumeIDs = []string{layer1ID, layer2ID}
+			})
+
+			It("creates a rootfs with files correctly composed from the layer volumes", func() {
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).ToNot(BeAnExistingFile())
+
+				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).To(BeADirectory())
+
+				contents, err := ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-hello"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(contents).To(BeEquivalentTo("hello-1"))
+
+				contents, err = ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "file-bye"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(contents).To(BeEquivalentTo("bye-2"))
+
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder")).To(BeADirectory())
+
+				contents, err = ioutil.ReadFile(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "a-folder", "folder-file"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(contents).To(BeEquivalentTo("in-a-folder-2"))
+			})
 		})
 
 		Context("image_info", func() {
 			BeforeEach(func() {
 				volumeID := randVolumeID()
 				var err error
-				volumePath, err = driver.CreateVolume(logger, "parent-id", volumeID)
+				layer1Path, err = driver.CreateVolume(logger, "parent-id", volumeID)
 				Expect(err).NotTo(HaveOccurred())
 
-				dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", volumePath), "count=3", "bs=1024")
+				dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", layer1Path), "count=3", "bs=1024")
 				sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
@@ -130,7 +178,7 @@ var _ = Describe("ImageDriver", func() {
 
 		Context("when disk limit is > 0", func() {
 			BeforeEach(func() {
-				dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", volumePath), "count=3", "bs=1M")
+				dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", layer1Path), "count=3", "bs=1M")
 				sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
@@ -265,10 +313,10 @@ var _ = Describe("ImageDriver", func() {
 		BeforeEach(func() {
 			volumeID := randVolumeID()
 			var err error
-			volumePath, err = driver.CreateVolume(logger, "parent-id", volumeID)
+			layer1Path, err = driver.CreateVolume(logger, "parent-id", volumeID)
 			Expect(err).NotTo(HaveOccurred())
 
-			dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", volumePath), "count=3", "bs=1M")
+			dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", layer1Path), "count=3", "bs=1M")
 			sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
