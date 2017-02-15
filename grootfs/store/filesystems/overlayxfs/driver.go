@@ -16,7 +16,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
+	quotapkg "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 )
@@ -189,13 +189,13 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	}
 
 	imagesPath := filepath.Join(d.storePath, store.ImageDirName)
-	quotaControl, err := quota.NewControl(imagesPath)
+	quotaControl, err := quotapkg.NewControl(imagesPath)
 	if err != nil {
 		logger.Error("creating-quota-control-failed", err, lager.Data{"imagesPath": imagesPath})
 		return errors.Wrapf(err, "creating xfs quota control %s", imagesPath)
 	}
 
-	quota := quota.Quota{
+	quota := quotapkg.Quota{
 		Size: uint64(spec.DiskLimit),
 	}
 
@@ -217,7 +217,7 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 		return groot.VolumeStats{}, errors.Wrapf(err, "image path (%s) doesn't exist", imagePath)
 	}
 
-	projectID, err := quota.GetProjectID(imagePath)
+	projectID, err := quotapkg.GetProjectID(imagePath)
 	if err != nil {
 		logger.Error("fetching-project-id-failed", err)
 		return groot.VolumeStats{}, errors.Wrapf(err, "fetching project id for %s", imagePath)
