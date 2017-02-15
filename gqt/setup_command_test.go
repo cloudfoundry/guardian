@@ -11,7 +11,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
-	"code.cloudfoundry.org/guardian/sysinfo"
+	"code.cloudfoundry.org/idmapper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -157,7 +157,7 @@ var _ = Describe("gdn setup", func() {
 			var maximus *syscall.Credential
 
 			BeforeEach(func() {
-				maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
+				maxId := uint32(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID()))
 				maximus = &syscall.Credential{Uid: maxId, Gid: maxId}
 			})
 

@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 
 	"github.com/nu7hatch/gouuid"
@@ -233,7 +234,7 @@ func init() {
 		os.Exit(0)
 	}
 
-	maxId := uint32(sysinfo.Min(sysinfo.MustGetMaxValidUID(), sysinfo.MustGetMaxValidGID()))
+	maxId := uint32(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID()))
 	idMappings = rootfs_provider.MappingList{
 		{
 			ContainerID: 0,
