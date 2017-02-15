@@ -259,70 +259,72 @@ var _ = Describe("Tar unpacker", func() {
 			Expect(ioutil.WriteFile(path.Join(baseImagePath, ".wh.b_dir"), []byte(""), 0600)).To(Succeed())
 		})
 
-		It("deletes the pre-existing files", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-				Stream:     stream,
-				TargetPath: targetPath,
-			})).To(Succeed())
-
-			Expect(path.Join(targetPath, "b_file")).NotTo(BeAnExistingFile())
-			Expect(path.Join(targetPath, "a_dir", "a_file")).NotTo(BeAnExistingFile())
-		})
-
-		It("deletes the pre-existing directories", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-				Stream:     stream,
-				TargetPath: targetPath,
-			})).To(Succeed())
-
-			Expect(path.Join(targetPath, "b_dir")).NotTo(BeAnExistingFile())
-		})
-
-		It("does not leak the whiteout files", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
-				Stream:     stream,
-				TargetPath: targetPath,
-			})).To(Succeed())
-
-			Expect(path.Join(targetPath, ".wh.b_file")).NotTo(BeAnExistingFile())
-			Expect(path.Join(targetPath, "a_dir", ".wh.a_file")).NotTo(BeAnExistingFile())
-			Expect(path.Join(targetPath, ".wh.b_dir")).NotTo(BeAnExistingFile())
-		})
-
-		Context("when there are opaque whiteouts", func() {
-			BeforeEach(func() {
-				Expect(os.Mkdir(path.Join(baseImagePath, "whiteout_dir"), 0755)).To(Succeed())
-				Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", "a_file"), []byte(""), 0600)).To(Succeed())
-				Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", "b_file"), []byte(""), 0600)).To(Succeed())
-				Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", ".wh..wh..opq"), []byte(""), 0600)).To(Succeed())
-			})
-
-			It("cleans up the folder", func() {
+		Context("BTRFS", func() {
+			It("deletes the pre-existing files", func() {
 				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
 				})).To(Succeed())
 
-				Expect(path.Join(targetPath, "whiteout_dir", "a_file")).NotTo(BeAnExistingFile())
-				Expect(path.Join(targetPath, "whiteout_dir", "b_file")).NotTo(BeAnExistingFile())
+				Expect(path.Join(targetPath, "b_file")).NotTo(BeAnExistingFile())
+				Expect(path.Join(targetPath, "a_dir", "a_file")).NotTo(BeAnExistingFile())
 			})
 
-			It("keeps the parent directory", func() {
+			It("deletes the pre-existing directories", func() {
 				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
 				})).To(Succeed())
 
-				Expect(path.Join(targetPath, "whiteout_dir")).To(BeADirectory())
+				Expect(path.Join(targetPath, "b_dir")).NotTo(BeAnExistingFile())
 			})
 
-			It("does not leak the whiteout file", func() {
+			It("does not leak the whiteout files", func() {
 				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
 				})).To(Succeed())
 
-				Expect(path.Join(targetPath, "whiteout_dir", ".wh..wh..opq")).NotTo(BeAnExistingFile())
+				Expect(path.Join(targetPath, ".wh.b_file")).NotTo(BeAnExistingFile())
+				Expect(path.Join(targetPath, "a_dir", ".wh.a_file")).NotTo(BeAnExistingFile())
+				Expect(path.Join(targetPath, ".wh.b_dir")).NotTo(BeAnExistingFile())
+			})
+
+			Context("when there are opaque whiteouts", func() {
+				BeforeEach(func() {
+					Expect(os.Mkdir(path.Join(baseImagePath, "whiteout_dir"), 0755)).To(Succeed())
+					Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", "a_file"), []byte(""), 0600)).To(Succeed())
+					Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", "b_file"), []byte(""), 0600)).To(Succeed())
+					Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", ".wh..wh..opq"), []byte(""), 0600)).To(Succeed())
+				})
+
+				It("cleans up the folder", func() {
+					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+						Stream:     stream,
+						TargetPath: targetPath,
+					})).To(Succeed())
+
+					Expect(path.Join(targetPath, "whiteout_dir", "a_file")).NotTo(BeAnExistingFile())
+					Expect(path.Join(targetPath, "whiteout_dir", "b_file")).NotTo(BeAnExistingFile())
+				})
+
+				It("keeps the parent directory", func() {
+					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+						Stream:     stream,
+						TargetPath: targetPath,
+					})).To(Succeed())
+
+					Expect(path.Join(targetPath, "whiteout_dir")).To(BeADirectory())
+				})
+
+				It("does not leak the whiteout file", func() {
+					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+						Stream:     stream,
+						TargetPath: targetPath,
+					})).To(Succeed())
+
+					Expect(path.Join(targetPath, "whiteout_dir", ".wh..wh..opq")).NotTo(BeAnExistingFile())
+				})
 			})
 		})
 	})

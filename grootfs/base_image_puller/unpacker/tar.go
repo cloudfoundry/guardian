@@ -37,10 +37,49 @@ func init() {
 }
 
 type TarUnpacker struct {
+	whiteoutHandler whiteoutHandler
 }
 
 func NewTarUnpacker() *TarUnpacker {
-	return &TarUnpacker{}
+	whiteoutHandler := &defaultWhiteoutHandler{}
+
+	return &TarUnpacker{
+		whiteoutHandler: whiteoutHandler,
+	}
+}
+
+type whiteoutHandler interface {
+	removeOpaqueWhiteouts(paths []string) error
+	removeWhiteout(path string) error
+}
+
+type defaultWhiteoutHandler struct {}
+
+func (*defaultWhiteoutHandler) removeWhiteout(path string) error {
+	tbdPath := strings.Replace(path, ".wh.", "", 1)
+	if err := os.RemoveAll(tbdPath); err != nil {
+		return fmt.Errorf("deleting whiteout file: %s", err)
+	}
+
+	return nil
+}
+
+func (*defaultWhiteoutHandler) removeOpaqueWhiteouts(paths []string) error {
+	for _, p := range paths {
+		folder := path.Dir(p)
+		contents, err := ioutil.ReadDir(folder)
+		if err != nil {
+			return fmt.Errorf("reading whiteout directory: %s", err)
+		}
+
+		for _, content := range contents {
+			if err := os.RemoveAll(path.Join(folder, content.Name())); err != nil {
+				return fmt.Errorf("cleaning up whiteout directory: %s", err)
+			}
+		}
+	}
+
+	return nil
 }
 
 func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) error {
@@ -70,7 +109,7 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackS
 			continue
 		}
 		if strings.Contains(entryPath, ".wh.") {
-			if err := u.removeWhiteout(entryPath); err != nil {
+			if err := u.whiteoutHandler.removeWhiteout(entryPath); err != nil {
 				return err
 			}
 			continue
@@ -81,7 +120,7 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackS
 		}
 	}
 
-	return u.removeOpaqueWhiteouts(opaqueWhiteouts)
+	return u.whiteoutHandler.removeOpaqueWhiteouts(opaqueWhiteouts)
 }
 
 func (u *TarUnpacker) handleEntry(targetPath, entryPath string, tarReader *tar.Reader, tarHeader *tar.Header) error {
@@ -141,33 +180,6 @@ func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error 
 
 	if err := changeModTime(path, tarHeader.ModTime); err != nil {
 		return fmt.Errorf("setting the modtime for directory `%s`: %s", path, err)
-	}
-
-	return nil
-}
-
-func (u *TarUnpacker) removeOpaqueWhiteouts(paths []string) error {
-	for _, p := range paths {
-		folder := path.Dir(p)
-		contents, err := ioutil.ReadDir(folder)
-		if err != nil {
-			return fmt.Errorf("reading whiteout directory: %s", err)
-		}
-
-		for _, content := range contents {
-			if err := os.RemoveAll(path.Join(folder, content.Name())); err != nil {
-				return fmt.Errorf("cleaning up whiteout directory: %s", err)
-			}
-		}
-	}
-
-	return nil
-}
-
-func (u *TarUnpacker) removeWhiteout(path string) error {
-	tbdPath := strings.Replace(path, ".wh.", "", 1)
-	if err := os.RemoveAll(tbdPath); err != nil {
-		return fmt.Errorf("deleting whiteout file: %s", err)
 	}
 
 	return nil
