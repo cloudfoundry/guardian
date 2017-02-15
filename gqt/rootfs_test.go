@@ -320,6 +320,19 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 	})
 
+	Context("and the image resides in a private docker registry", func() {
+		It("should return a nice error", func() {
+			_, err := client.Create(garden.ContainerSpec{
+				Image: garden.ImageRef{
+					URI:      "",
+					Username: "imagepluginuser",
+					Password: "secretpassword",
+				},
+			})
+			Expect(err).To(MatchError(ContainSubstring("private docker registries are not supported")))
+		})
+	})
+
 	Context("when the modified timestamp of the rootfs top-level directory changes", func() {
 		var (
 			rootfspath          string
