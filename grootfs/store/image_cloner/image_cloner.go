@@ -16,7 +16,7 @@ import (
 )
 
 type ImageDriverSpec struct {
-	BaseVolumePath     string
+	BaseVolumeIDs      []string
 	ImagePath          string
 	DiskLimit          int64
 	ExclusiveDiskLimit bool
@@ -93,7 +93,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 	}
 
 	imageDriverSpec := ImageDriverSpec{
-		BaseVolumePath:     spec.VolumePath,
+		BaseVolumeIDs:      spec.BaseVolumeIDs,
 		ImagePath:          image.Path,
 		DiskLimit:          spec.DiskLimit,
 		ExclusiveDiskLimit: spec.ExcludeBaseImageFromQuota,

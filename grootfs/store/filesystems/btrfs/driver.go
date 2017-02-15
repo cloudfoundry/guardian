@@ -76,13 +76,14 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	defer logger.Info("end")
 
 	toPath := filepath.Join(spec.ImagePath, "rootfs")
-	cmd := exec.Command(d.btrfsBinPath, "subvolume", "snapshot", spec.BaseVolumePath, toPath)
+	baseVolumePath := filepath.Join(d.storePath, store.VolumesDirName, spec.BaseVolumeIDs[len(spec.BaseVolumeIDs)-1])
+	cmd := exec.Command(d.btrfsBinPath, "subvolume", "snapshot", baseVolumePath, toPath)
 
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf(
 			"creating btrfs snapshot from `%s` to `%s` (%s): %s",
-			spec.BaseVolumePath, toPath, err, string(contents),
+			baseVolumePath, toPath, err, string(contents),
 		)
 	}
 

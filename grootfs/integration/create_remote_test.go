@@ -18,10 +18,11 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
+	"code.cloudfoundry.org/grootfs/integration"
 	"github.com/alecthomas/units"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -44,12 +45,14 @@ var _ = Describe("Create with remote images", func() {
 
 		It("creates a root filesystem based on the image provided", func() {
 			image, err := Runner.Create(groot.CreateSpec{
-				BaseImage: baseImageURL,
+				BaseImage: "docker:///cfgarden/three-layers",
 				ID:        "random-id",
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(path.Join(image.RootFSPath, "hello")).To(BeARegularFile())
+			Expect(path.Join(image.RootFSPath, "layer-3-file")).To(BeARegularFile())
+			Expect(path.Join(image.RootFSPath, "layer-2-file")).To(BeARegularFile())
+			Expect(path.Join(image.RootFSPath, "layer-1-file")).To(BeARegularFile())
 		})
 
 		It("saves the image.json to the image folder", func() {
@@ -80,19 +83,19 @@ var _ = Describe("Create with remote images", func() {
 					ID:        "some-id",
 					BaseImage: "docker:///cfgarden/empty:v0.1.0",
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.btrfs-creating-volume.starting-btrfs"))
+			// Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.overlayxfs-creating-volume.start"))
 			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-sysproc-unpacking.starting-unpack"))
-			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.making-image.btrfs-creating-snapshot.starting-btrfs"))
+			// Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.making-image.overlayxfs-creating-image.end"))
 		})
 
 		Context("when the image is bigger than available memory", func() {
@@ -195,6 +198,84 @@ var _ = Describe("Create with remote images", func() {
 			})
 		})
 
+		Describe("clean up on create", func() {
+			var (
+				imageID string
+			)
+
+			JustBeforeEach(func() {
+				_, err := Runner.Create(groot.CreateSpec{
+					ID:        "my-busybox",
+					BaseImage: "docker:///busybox:1.26.2",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(Runner.Delete("my-busybox")).To(Succeed())
+				imageID = "random-id"
+			})
+
+			AfterEach(func() {
+				Expect(Runner.Delete(imageID)).To(Succeed())
+			})
+
+			It("cleans up unused layers before create but not the one about to be created", func() {
+				runner := Runner.WithClean()
+
+				createSpec := groot.CreateSpec{
+					ID:        "my-empty",
+					BaseImage: "docker:///cfgarden/empty:v0.1.1",
+				}
+				_, err := Runner.Create(createSpec)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(runner.Delete("my-empty")).To(Succeed())
+
+				layerPath := filepath.Join(StorePath, store.VolumesDirName, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
+				stat, err := os.Stat(layerPath)
+				Expect(err).NotTo(HaveOccurred())
+				preLayerTimestamp := stat.ModTime()
+
+				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(preContents).To(HaveLen(3))
+
+				_, err = runner.Create(groot.CreateSpec{
+					ID:        imageID,
+					BaseImage: "docker:///cfgarden/empty:v0.1.1",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(afterContents).To(HaveLen(2))
+
+				for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
+					Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
+				}
+
+				stat, err = os.Stat(layerPath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.ModTime()).To(Equal(preLayerTimestamp))
+			})
+
+			Context("when no-clean flag is set", func() {
+				It("does not clean up unused layers", func() {
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(preContents).To(HaveLen(1))
+
+					_, err = Runner.WithNoClean().Create(groot.CreateSpec{
+						ID:        imageID,
+						BaseImage: "docker:///cfgarden/empty:v0.1.1",
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(afterContents).To(HaveLen(3))
+				})
+			})
+		})
+
 		Context("when the image is private", func() {
 			BeforeEach(func() {
 				baseImageURL = "docker:///cfgarden/private"
@@ -265,14 +346,14 @@ var _ = Describe("Create with remote images", func() {
 		})
 
 		Describe("Unpacked layer caching", func() {
-			It("caches the unpacked image in a subvolume with snapshots", func() {
+			It("caches the unpacked image as a volume", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 				})
 				Expect(err).ToNot(HaveOccurred())
 
-				layerSnapshotPath := filepath.Join(StorePath, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
+				layerSnapshotPath := filepath.Join(StorePath, "volumes", "3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
 				Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 				image, err := Runner.Create(groot.CreateSpec{
@@ -449,12 +530,12 @@ var _ = Describe("Create with remote images", func() {
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
 
@@ -475,12 +556,12 @@ var _ = Describe("Create with remote images", func() {
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())

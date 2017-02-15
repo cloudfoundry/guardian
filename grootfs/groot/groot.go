@@ -57,7 +57,7 @@ type ImageSpec struct {
 	ID                        string
 	DiskLimit                 int64
 	ExcludeBaseImageFromQuota bool
-	VolumePath                string
+	BaseVolumeIDs             []string
 	BaseImage                 specsv1.Image
 	OwnerUID                  int
 	OwnerGID                  int

@@ -10,8 +10,6 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -112,88 +110,6 @@ var _ = Describe("Create (btrfs only)", func() {
 				contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("I'm groot - btrfs"))
-			})
-		})
-	})
-
-	Describe("clean up on create", func() {
-		var (
-			imageID string
-		)
-
-		BeforeEach(func() {
-			integration.SkipIfNotBTRFS(Driver)
-		})
-
-		JustBeforeEach(func() {
-			_, err := Runner.Create(groot.CreateSpec{
-				ID:        "my-busybox",
-				BaseImage: "docker:///busybox:1.26.2",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(Runner.Delete("my-busybox")).To(Succeed())
-			imageID = "random-id"
-		})
-
-		AfterEach(func() {
-			Expect(Runner.Delete(imageID)).To(Succeed())
-		})
-
-		It("cleans up unused layers before create but not the one about to be created", func() {
-			runner := Runner.WithClean()
-
-			createSpec := groot.CreateSpec{
-				ID:        "my-empty",
-				BaseImage: "docker:///cfgarden/empty:v0.1.1",
-			}
-			_, err := Runner.Create(createSpec)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(runner.Delete("my-empty")).To(Succeed())
-
-			layerPath := filepath.Join(StorePath, store.VolumesDirName, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)
-			stat, err := os.Stat(layerPath)
-			Expect(err).NotTo(HaveOccurred())
-			preLayerTimestamp := stat.ModTime()
-
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(preContents).To(HaveLen(3))
-
-			_, err = runner.Create(groot.CreateSpec{
-				ID:        imageID,
-				BaseImage: "docker:///cfgarden/empty:v0.1.1",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(afterContents).To(HaveLen(2))
-
-			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-				Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
-			}
-
-			stat, err = os.Stat(layerPath)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(stat.ModTime()).To(Equal(preLayerTimestamp))
-		})
-
-		Context("when no-clean flag is set", func() {
-			It("does not clean up unused layers", func() {
-				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(1))
-
-				_, err = Runner.WithNoClean().Create(groot.CreateSpec{
-					ID:        imageID,
-					BaseImage: "docker:///cfgarden/empty:v0.1.1",
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(3))
 			})
 		})
 	})

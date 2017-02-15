@@ -52,8 +52,8 @@ var _ = Describe("ImageDriver", func() {
 		Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
 
 		spec = image_cloner.ImageDriverSpec{
-			ImagePath:      imagePath,
-			BaseVolumePath: volumePath,
+			ImagePath:     imagePath,
+			BaseVolumeIDs: []string{volumeID},
 		}
 	})
 
@@ -102,7 +102,7 @@ var _ = Describe("ImageDriver", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
 
-				spec.BaseVolumePath = volumePath
+				spec.BaseVolumeIDs = []string{volumeID}
 			})
 
 			It("creates a image info file with the total base volume size", func() {
@@ -195,7 +195,7 @@ var _ = Describe("ImageDriver", func() {
 
 		Context("when base volume folder does not exist", func() {
 			It("returns an error", func() {
-				spec.BaseVolumePath = "/not-real"
+				spec.BaseVolumeIDs = []string{"not-real"}
 				err := driver.CreateImage(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring("base volume path does not exist")))
 			})
@@ -273,7 +273,7 @@ var _ = Describe("ImageDriver", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 
-			spec.BaseVolumePath = volumePath
+			spec.BaseVolumeIDs = []string{volumeID}
 			spec.DiskLimit = 10 * 1024 * 1024
 			Expect(driver.CreateImage(logger, spec)).To(Succeed())
 

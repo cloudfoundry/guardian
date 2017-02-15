@@ -80,8 +80,8 @@ var _ = Describe("Image", func() {
 
 		It("creates the snapshot", func() {
 			imageSpec := groot.ImageSpec{
-				ID:         "some-id",
-				VolumePath: "/path/to/volume",
+				ID:            "some-id",
+				BaseVolumeIDs: []string{"id-1", "id-2"},
 				BaseImage: specsv1.Image{
 					Author: "Groot",
 				},
@@ -90,7 +90,7 @@ var _ = Describe("Image", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			_, spec := fakeImageDriver.CreateImageArgsForCall(0)
-			Expect(spec.BaseVolumePath).To(Equal(imageSpec.VolumePath))
+			Expect(spec.BaseVolumeIDs).To(Equal(imageSpec.BaseVolumeIDs))
 			Expect(spec.ImagePath).To(Equal(image.Path))
 		})
 
@@ -104,9 +104,9 @@ var _ = Describe("Image", func() {
 			}
 
 			image, err := imageCloner.Create(logger, groot.ImageSpec{
-				ID:         "some-id",
-				VolumePath: "/path/to/volume",
-				BaseImage:  baseImage,
+				ID:            "some-id",
+				BaseVolumeIDs: []string{"id-1", "id-2"},
+				BaseImage:     baseImage,
 			})
 			Expect(err).NotTo(HaveOccurred())
 

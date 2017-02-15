@@ -151,7 +151,7 @@ var _ = Describe("Creator", func() {
 
 		It("makes an image", func() {
 			baseImage := groot.BaseImage{
-				VolumePath: "/path/to/volume",
+				ChainIDs: []string{"id-1", "id-2"},
 				BaseImage: specsv1.Image{
 					Author: "Groot",
 				},
@@ -171,8 +171,8 @@ var _ = Describe("Creator", func() {
 			Expect(fakeImageCloner.CreateCallCount()).To(Equal(1))
 			_, createImagerSpec := fakeImageCloner.CreateArgsForCall(0)
 			Expect(createImagerSpec).To(Equal(groot.ImageSpec{
-				ID:         "some-id",
-				VolumePath: "/path/to/volume",
+				ID:            "some-id",
+				BaseVolumeIDs: []string{"id-1", "id-2"},
 				BaseImage: specsv1.Image{
 					Author: "Groot",
 				},
@@ -525,7 +525,7 @@ var _ = Describe("Creator", func() {
 		Context("when disk limit is given", func() {
 			It("passes the disk limit to the imageCloner", func() {
 				baseImage := groot.BaseImage{
-					VolumePath: "/path/to/volume",
+					ChainIDs: []string{"id-1", "id-2"},
 					BaseImage: specsv1.Image{
 						Author: "Groot",
 					},
@@ -542,8 +542,8 @@ var _ = Describe("Creator", func() {
 				Expect(fakeImageCloner.CreateCallCount()).To(Equal(1))
 				_, createImagerSpec := fakeImageCloner.CreateArgsForCall(0)
 				Expect(createImagerSpec).To(Equal(groot.ImageSpec{
-					ID:         "some-id",
-					VolumePath: "/path/to/volume",
+					ID:            "some-id",
+					BaseVolumeIDs: []string{"id-1", "id-2"},
 					BaseImage: specsv1.Image{
 						Author: "Groot",
 					},

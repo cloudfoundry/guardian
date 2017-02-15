@@ -128,7 +128,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 		ID:                        spec.ID,
 		DiskLimit:                 spec.DiskLimit,
 		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
-		VolumePath:                baseImage.VolumePath,
+		BaseVolumeIDs:             baseImage.ChainIDs,
 		BaseImage:                 baseImage.BaseImage,
 		OwnerUID:                  ownerUid,
 		OwnerGID:                  ownerGid,

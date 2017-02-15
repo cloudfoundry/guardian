@@ -174,11 +174,14 @@ var _ = Describe("Btrfs", func() {
 	})
 
 	Describe("CreateImage", func() {
-		var spec image_cloner.ImageDriverSpec
+		var (
+			spec     image_cloner.ImageDriverSpec
+			volumeID string
+		)
 
 		BeforeEach(func() {
 			driver := btrfs.NewDriver("btrfs", draxBinPath, storePath)
-			volumeID := randVolumeID()
+			volumeID = randVolumeID()
 			volumePath, err := driver.CreateVolume(logger, "", volumeID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ioutil.WriteFile(filepath.Join(volumePath, "a_file"), []byte("hello-world"), 0666)).To(Succeed())
@@ -186,8 +189,8 @@ var _ = Describe("Btrfs", func() {
 			imagePath, err := ioutil.TempDir(storePath, "")
 			Expect(err).NotTo(HaveOccurred())
 			spec = image_cloner.ImageDriverSpec{
-				ImagePath:      imagePath,
-				BaseVolumePath: volumePath,
+				ImagePath:     imagePath,
+				BaseVolumeIDs: []string{volumeID},
 			}
 		})
 
@@ -202,7 +205,7 @@ var _ = Describe("Btrfs", func() {
 			Expect(logger).To(ContainSequence(
 				Debug(
 					Message("btrfs.btrfs-creating-snapshot.starting-btrfs"),
-					Data("args", []string{"btrfs", "subvolume", "snapshot", spec.BaseVolumePath, filepath.Join(spec.ImagePath, "rootfs")}),
+					Data("args", []string{"btrfs", "subvolume", "snapshot", filepath.Join(storePath, store.VolumesDirName, volumeID), filepath.Join(spec.ImagePath, "rootfs")}),
 					Data("path", "/bin/btrfs"),
 				),
 			))
@@ -229,7 +232,7 @@ var _ = Describe("Btrfs", func() {
 
 			Context("when the snapshot path is a volume", func() {
 				JustBeforeEach(func() {
-					cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(spec.BaseVolumePath, "vol-file")), "bs=1048576", "count=5")
+					cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(storePath, store.VolumesDirName, volumeID, "vol-file")), "bs=1048576", "count=5")
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 					Expect(err).ToNot(HaveOccurred())
 					Eventually(sess).Should(gexec.Exit(0))
@@ -332,7 +335,7 @@ var _ = Describe("Btrfs", func() {
 
 		Context("when the parent does not exist", func() {
 			It("returns an error", func() {
-				spec.BaseVolumePath = "non-existent-parent"
+				spec.BaseVolumeIDs = []string{"non-existent-parent"}
 				Expect(
 					driver.CreateImage(logger, spec),
 				).To(MatchError(ContainSubstring("creating btrfs snapshot")))
@@ -404,15 +407,16 @@ var _ = Describe("Btrfs", func() {
 
 		Context("when a volume exists", func() {
 			JustBeforeEach(func() {
-				volumePath, err := driver.CreateVolume(logger, "", randVolumeID())
+				volumeID := randVolumeID()
+				_, err := driver.CreateVolume(logger, "", volumeID)
 				Expect(err).NotTo(HaveOccurred())
 
 				imagePath := filepath.Join(storePath, store.ImageDirName, "image-id")
 				Expect(os.MkdirAll(imagePath, 0777)).To(Succeed())
 
 				spec = image_cloner.ImageDriverSpec{
-					ImagePath:      imagePath,
-					BaseVolumePath: volumePath,
+					ImagePath:     imagePath,
+					BaseVolumeIDs: []string{volumeID},
 				}
 				Expect(driver.CreateImage(logger, spec)).To(Succeed())
 				rootfsPath = filepath.Join(imagePath, "rootfs")
@@ -541,8 +545,8 @@ var _ = Describe("Btrfs", func() {
 				Eventually(sess).Should(gexec.Exit(0))
 
 				spec := image_cloner.ImageDriverSpec{
-					ImagePath:      imagePath,
-					BaseVolumePath: volPath,
+					ImagePath:     imagePath,
+					BaseVolumeIDs: []string{volID},
 				}
 
 				Expect(driver.CreateImage(logger, spec)).To(Succeed())

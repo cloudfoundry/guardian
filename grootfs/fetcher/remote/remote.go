@@ -129,10 +129,9 @@ func (f *RemoteFetcher) chainID(diffID string, parentChainID string) string {
 	chainID := diffID
 
 	if parentChainID != "" {
-		parentChainID = strings.Split(parentChainID, ":")[1]
 		chainIDSha := sha256.Sum256([]byte(fmt.Sprintf("%s %s", parentChainID, diffID)))
 		chainID = hex.EncodeToString(chainIDSha[:32])
 	}
 
-	return "sha256:" + chainID
+	return chainID
 }
