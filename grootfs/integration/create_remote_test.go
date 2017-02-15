@@ -34,10 +34,6 @@ import (
 var _ = Describe("Create with remote images", func() {
 	var baseImageURL string
 
-	BeforeEach(func() {
-		integration.SkipIfNotBTRFS(Driver)
-	})
-
 	Context("when using the default registry", func() {
 		BeforeEach(func() {
 			baseImageURL = "docker:///cfgarden/empty:v0.1.0"
@@ -160,6 +156,7 @@ var _ = Describe("Create with remote images", func() {
 
 		Context("when the image has opaque white outs", func() {
 			BeforeEach(func() {
+				integration.SkipIfNotBTRFS(Driver)
 				baseImageURL = "docker:///cfgarden/opq-whiteout-busybox"
 			})
 
