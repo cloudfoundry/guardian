@@ -118,17 +118,17 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		return errors.Wrap(err, "applying disk limits")
 	}
 
-	if err := os.Mkdir(upperDir, 0700); err != nil {
+	if err := os.Mkdir(upperDir, 0755); err != nil {
 		logger.Error("creating-upperdir-folder-failed", err)
 		return errors.Wrap(err, "creating upperdir folder")
 	}
 
-	if err := os.Mkdir(workDir, 0700); err != nil {
+	if err := os.Mkdir(workDir, 0755); err != nil {
 		logger.Error("creating-workdir-folder-failed", err)
 		return errors.Wrap(err, "creating workdir folder")
 	}
 
-	if err := os.Mkdir(rootfsDir, 0700); err != nil {
+	if err := os.Mkdir(rootfsDir, 0755); err != nil {
 		logger.Error("creating-rootfs-folder-failed", err)
 		return errors.Wrap(err, "creating rootfs folder")
 	}
@@ -146,7 +146,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	}
 
 	imageInfoFileName := filepath.Join(spec.ImagePath, imageInfoName)
-	if err := ioutil.WriteFile(imageInfoFileName, []byte(strconv.FormatInt(baseVolumeSize, 10)), 0700); err != nil {
+	if err := ioutil.WriteFile(imageInfoFileName, []byte(strconv.FormatInt(baseVolumeSize, 10)), 0600); err != nil {
 		return errors.Wrapf(err, "writing image info %s", imageInfoFileName)
 	}
 

@@ -138,6 +138,22 @@ var _ = Describe("ImageDriver", func() {
 			})
 		})
 
+		It("uses the correct permissions to the internal folders", func() {
+			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+
+			stat, err := os.Stat(filepath.Join(spec.ImagePath, overlayxfs.UpperDir))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+
+			stat, err = os.Stat(filepath.Join(spec.ImagePath, overlayxfs.WorkDir))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+
+			stat, err = os.Stat(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+		})
+
 		Context("image_info", func() {
 			BeforeEach(func() {
 				volumeID := randVolumeID()
