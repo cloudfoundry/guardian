@@ -29,6 +29,14 @@ func (cc *DefaultCommandCreator) CreateCommand(log lager.Logger, handle string, 
 		}
 	}
 
+	if spec.Username != "" {
+		args = append(args, "--username", spec.Username)
+	}
+
+	if spec.Password != "" {
+		args = append(args, "--password", spec.Password)
+	}
+
 	rootfs := strings.Replace(spec.RootFS.String(), "#", ":", 1)
 
 	args = append(args, rootfs, handle)

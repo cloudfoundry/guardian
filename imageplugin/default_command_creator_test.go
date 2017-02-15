@@ -125,6 +125,40 @@ var _ = Describe("DefaultCommandCreator", func() {
 			})
 		})
 
+		Context("and username is not provided", func() {
+			It("returns a command without the username", func() {
+				Expect(createCmd.Args).NotTo(ContainElement("--username"))
+			})
+		})
+
+		Context("when password is not provided", func() {
+			It("returns a command without the password", func() {
+				Expect(createCmd.Args).NotTo(ContainElement("--password"))
+			})
+		})
+
+		Context("when username is provided", func() {
+			BeforeEach(func() {
+				spec.Username = "rootfsuser"
+			})
+
+			It("returns a command with the username", func() {
+				Expect(createCmd.Args).To(ContainElement("--username"))
+				Expect(createCmd.Args).To(ContainElement("rootfsuser"))
+			})
+		})
+
+		Context("when password is provided", func() {
+			BeforeEach(func() {
+				spec.Password = "secretpassword"
+			})
+
+			It("returns a command with the password", func() {
+				Expect(createCmd.Args).To(ContainElement("--password"))
+				Expect(createCmd.Args).To(ContainElement("secretpassword"))
+			})
+		})
+
 		Context("when extra args are provided", func() {
 			BeforeEach(func() {
 				extraArgs = []string{"foo", "bar"}

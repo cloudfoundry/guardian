@@ -107,6 +107,14 @@ var CreateCommand = cli.Command{
 			Name:  "exclude-image-from-quota",
 			Usage: "exclude base image from disk quota",
 		},
+		cli.StringFlag{
+			Name:  "username",
+			Usage: "username for docker private registry",
+		},
+		cli.StringFlag{
+			Name:  "password",
+			Usage: "password for docker private registry",
+		},
 	},
 
 	Action: func(ctx *cli.Context) error {

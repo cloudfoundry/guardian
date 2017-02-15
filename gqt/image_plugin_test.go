@@ -897,6 +897,62 @@ var _ = Describe("Image Plugin", func() {
 			})
 		})
 	})
+
+	Context("when images are located in a private registry", func() {
+		var (
+			tmpDir    string
+			imageSpec garden.ImageRef
+		)
+
+		BeforeEach(func() {
+			var err error
+			tmpDir, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
+
+			args = append(args,
+				"--log-level", "debug",
+				"--image-plugin", testImagePluginBin,
+				"--image-plugin-extra-arg", "\"--image-path\"",
+				"--image-plugin-extra-arg", tmpDir,
+				"--image-plugin-extra-arg", "\"--args-path\"",
+				"--image-plugin-extra-arg", filepath.Join(tmpDir, "args"))
+
+			imageSpec = garden.ImageRef{
+				URI:      "",
+				Username: "imagepluginuser",
+				Password: "secretpassword",
+			}
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		})
+
+		It("calls the image plugin with username and password", func() {
+			_, err := client.Create(garden.ContainerSpec{
+				Image: imageSpec,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			args, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(args)).To(ContainSubstring("imagepluginuser"))
+			Expect(string(args)).To(ContainSubstring("secretpassword"))
+		})
+
+		It("does not log username and password", func() {
+			_, err := client.Create(garden.ContainerSpec{
+				Image: imageSpec,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Eventually(client, "1s").ShouldNot(gbytes.Say("imagepluginuser"))
+			Eventually(client, "1s").ShouldNot(gbytes.Say("secretpassword"))
+		})
+
+	})
 })
 
 func copyFile(srcPath, dstPath string) error {
