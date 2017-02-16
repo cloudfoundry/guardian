@@ -4,9 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"path/filepath"
-	"strconv"
 
 	yaml "gopkg.in/yaml.v2"
 )
