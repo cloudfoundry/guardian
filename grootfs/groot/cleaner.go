@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/lager"
+	"errors"
 )
 
 //go:generate counterfeiter . Cleaner
@@ -29,7 +30,8 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	}
 }
 
-func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []string, acquireLock bool) (bool, error) {
+func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []string, acquireLock bool) (noop bool, err error) {
+
 	startTime := time.Now()
 	defer func() {
 		c.metricsEmitter.TryEmitDuration(logger, MetricImageCleanTime, time.Since(startTime))
@@ -48,7 +50,10 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 		if threshold >= storeSize {
 			return true, nil
 		}
+	} else if threshold < 0 {
+		return true, errors.New("Threshold must be greater than 0")
 	}
+
 	if acquireLock {
 		lockFile, err := c.locksmith.Lock(GlobalLockKey)
 		if err != nil {

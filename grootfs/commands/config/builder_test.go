@@ -81,6 +81,17 @@ var _ = Describe("Builder", func() {
 			})
 		})
 
+		Context("when clean threshold property is invalid", func() {
+			BeforeEach(func() {
+				cfg.CleanThresholdBytes = int64(-1)
+			})
+
+			It("returns an error", func() {
+				_, err := builder.Build()
+				Expect(err).To(MatchError("invalid argument: clean threshold cannot be negative"))
+			})
+		})
+
 		Context("when config is invalid", func() {
 			JustBeforeEach(func() {
 				configFilePath = path.Join(configDir, "invalid_config.yaml")

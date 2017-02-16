@@ -178,6 +178,19 @@ var _ = Describe("Cleaner", func() {
 					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 				})
 			})
+
+			Context("when the threshold is negative", func() {
+				BeforeEach(func() {
+					threshold = -120
+					fakeStoreMeasurer.MeasureStoreReturns(1500000, nil)
+				})
+
+				It("indicates a no-op and returns an error", func() {
+					noop, err := cleaner.Clean(logger, threshold, []string{}, true)
+					Expect(noop).To(BeTrue())
+					Expect(err).To(MatchError("Threshold must be greater than 0"))
+				})
+			})
 		})
 	})
 })

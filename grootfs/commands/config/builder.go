@@ -59,6 +59,10 @@ func (b *Builder) Build() (Config, error) {
 		return *b.config, errors.New("invalid argument: disk limit cannot be negative")
 	}
 
+	if b.config.CleanThresholdBytes < 0 {
+		return *b.config, errors.New("invalid argument: clean threshold cannot be negative")
+	}
+
 	return *b.config, nil
 }
 
@@ -218,9 +222,4 @@ func load(configPath string) (Config, error) {
 	}
 
 	return config, nil
-}
-
-func userBasedStorePath(storePath string) string {
-	userID := os.Getuid()
-	return filepath.Join(storePath, strconv.Itoa(userID))
 }

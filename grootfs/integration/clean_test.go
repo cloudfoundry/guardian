@@ -142,6 +142,16 @@ var _ = Describe("Clean", func() {
 		Context("and a threshold is set", func() {
 			var cleanupThresholdInBytes int64
 
+			Context("but it lower than 0", func() {
+				BeforeEach(func() {
+					cleanupThresholdInBytes = -10
+				})
+				It("returns an error", func() {
+					_, err := Runner.Clean(cleanupThresholdInBytes, []string{})
+					Expect(err).To(MatchError("invalid argument: clean threshold cannot be negative"))
+				})
+			})
+
 			Context("and the total is less than the threshold", func() {
 				BeforeEach(func() {
 					cleanupThresholdInBytes = 50000000
