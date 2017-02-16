@@ -15,6 +15,8 @@ import (
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
+	"github.com/containers/storage/pkg/system"
+	"syscall"
 )
 
 func init() {
@@ -24,7 +26,9 @@ func init() {
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		rootFSPath := os.Args[1]
-		unpacker := NewTarUnpacker()
+		filesystem := os.Args[2]
+
+		unpacker := NewTarUnpacker(filesystem)
 		if err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			Stream:     os.Stdin,
 			TargetPath: rootFSPath,
@@ -40,8 +44,16 @@ type TarUnpacker struct {
 	whiteoutHandler whiteoutHandler
 }
 
-func NewTarUnpacker() *TarUnpacker {
-	whiteoutHandler := &defaultWhiteoutHandler{}
+func NewTarUnpacker(filesystem string) *TarUnpacker {
+
+	var whiteoutHandler whiteoutHandler
+
+	switch filesystem {
+	case "overlay-xfs":
+		whiteoutHandler = &overlayWhiteoutHandler{}
+	default:
+		whiteoutHandler = &defaultWhiteoutHandler{}
+	}
 
 	return &TarUnpacker{
 		whiteoutHandler: whiteoutHandler,
@@ -49,15 +61,42 @@ func NewTarUnpacker() *TarUnpacker {
 }
 
 type whiteoutHandler interface {
-	removeOpaqueWhiteouts(paths []string) error
 	removeWhiteout(path string) error
+	removeOpaqueWhiteouts(paths []string) error
 }
 
-type defaultWhiteoutHandler struct {}
+type overlayWhiteoutHandler struct {
+}
+
+func (*overlayWhiteoutHandler) removeWhiteout(path string) error {
+	toBeDeletedPath := strings.Replace(path, ".wh.", "", 1)
+	if err := os.RemoveAll(toBeDeletedPath); err != nil {
+		return fmt.Errorf("deleting  file: %s", err)
+	}
+
+	return syscall.Mknod(toBeDeletedPath, syscall.S_IFCHR, 0)
+}
+
+func (*overlayWhiteoutHandler) removeOpaqueWhiteouts(paths []string) error {
+	for _, path := range paths {
+		parentDir := filepath.Dir(path)
+		if err := system.Lsetxattr(parentDir, "trusted.overlay.opaque", []byte("y"), 0); err != nil {
+			return err
+		}
+
+		if err := cleanWhiteoutDir(parentDir); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+type defaultWhiteoutHandler struct{}
 
 func (*defaultWhiteoutHandler) removeWhiteout(path string) error {
-	tbdPath := strings.Replace(path, ".wh.", "", 1)
-	if err := os.RemoveAll(tbdPath); err != nil {
+	toBeDeletedPath := strings.Replace(path, ".wh.", "", 1)
+	if err := os.RemoveAll(toBeDeletedPath); err != nil {
 		return fmt.Errorf("deleting whiteout file: %s", err)
 	}
 
@@ -66,16 +105,9 @@ func (*defaultWhiteoutHandler) removeWhiteout(path string) error {
 
 func (*defaultWhiteoutHandler) removeOpaqueWhiteouts(paths []string) error {
 	for _, p := range paths {
-		folder := path.Dir(p)
-		contents, err := ioutil.ReadDir(folder)
-		if err != nil {
-			return fmt.Errorf("reading whiteout directory: %s", err)
-		}
-
-		for _, content := range contents {
-			if err := os.RemoveAll(path.Join(folder, content.Name())); err != nil {
-				return fmt.Errorf("cleaning up whiteout directory: %s", err)
-			}
+		parentDir := path.Dir(p)
+		if err := cleanWhiteoutDir(parentDir); err != nil {
+			return err
 		}
 	}
 
@@ -237,6 +269,21 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 
 	if err := changeModTime(path, tarHeader.ModTime); err != nil {
 		return fmt.Errorf("setting the modtime for file `%s`: %s", path, err)
+	}
+
+	return nil
+}
+
+func cleanWhiteoutDir(path string) error {
+	contents, err := ioutil.ReadDir(path)
+	if err != nil {
+		return fmt.Errorf("reading whiteout directory: %s", err)
+	}
+
+	for _, content := range contents {
+		if err := os.RemoveAll(filepath.Join(path, content.Name())); err != nil {
+			return fmt.Errorf("cleaning up whiteout directory: %s", err)
+		}
 	}
 
 	return nil

@@ -22,7 +22,6 @@ import (
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
-	"code.cloudfoundry.org/grootfs/integration"
 	"github.com/alecthomas/units"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -156,7 +155,6 @@ var _ = Describe("Create with remote images", func() {
 
 		Context("when the image has opaque white outs", func() {
 			BeforeEach(func() {
-				integration.SkipIfNotBTRFS(Driver)
 				baseImageURL = "docker:///cfgarden/opq-whiteout-busybox"
 			})
 

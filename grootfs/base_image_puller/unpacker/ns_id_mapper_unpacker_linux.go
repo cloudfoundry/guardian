@@ -23,8 +23,8 @@ func init() {
 		logger := lager.NewLogger("unpack-wrapper")
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
-		if len(os.Args) != 2 {
-			logger.Error("parsing-command", errors.New("destination directory was not specified"))
+		if len(os.Args) != 3 {
+			logger.Error("parsing-command", errors.New("destination directory or filesystem were not specified"))
 			os.Exit(1)
 		}
 
@@ -40,7 +40,9 @@ func init() {
 
 		// Once all id mappings are set, we need to spawn the untar function
 		// in a child proccess, so it can make use of it
-		cmd := reexec.Command("unpack", os.Args[1])
+		targetDir := os.Args[1]
+		filesystem := os.Args[2]
+		cmd := reexec.Command("unpack", targetDir, filesystem)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
@@ -66,12 +68,14 @@ type IDMapper interface {
 type NSIdMapperUnpacker struct {
 	commandRunner commandrunner.CommandRunner
 	idMapper      IDMapper
+	filesystem    string
 }
 
-func NewNSIdMapperUnpacker(commandRunner commandrunner.CommandRunner, idMapper IDMapper) *NSIdMapperUnpacker {
+func NewNSIdMapperUnpacker(commandRunner commandrunner.CommandRunner, idMapper IDMapper, filesystem string) *NSIdMapperUnpacker {
 	return &NSIdMapperUnpacker{
 		commandRunner: commandRunner,
 		idMapper:      idMapper,
+		filesystem:    filesystem,
 	}
 }
 
@@ -85,7 +89,7 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 		return fmt.Errorf("creating tar control pipe: %s", err)
 	}
 
-	unpackCmd := reexec.Command("unpack-wrapper", spec.TargetPath)
+	unpackCmd := reexec.Command("unpack-wrapper", spec.TargetPath, u.filesystem)
 	unpackCmd.Stdin = spec.Stream
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
 		unpackCmd.SysProcAttr = &syscall.SysProcAttr{

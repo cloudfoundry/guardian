@@ -16,11 +16,13 @@ import (
 
 type NSSysProcUnpacker struct {
 	commandRunner commandrunner.CommandRunner
+	filesystem    string
 }
 
-func NewNSSysProcUnpacker(commandRunner commandrunner.CommandRunner) *NSSysProcUnpacker {
+func NewNSSysProcUnpacker(commandRunner commandrunner.CommandRunner, filesystem string) *NSSysProcUnpacker {
 	return &NSSysProcUnpacker{
 		commandRunner: commandRunner,
+		filesystem:    filesystem,
 	}
 }
 
@@ -29,7 +31,7 @@ func (u *NSSysProcUnpacker) Unpack(logger lager.Logger, spec base_image_puller.U
 	logger.Info("start")
 	defer logger.Info("end")
 
-	unpackCmd := reexec.Command("unpack", spec.TargetPath)
+	unpackCmd := reexec.Command("unpack", spec.TargetPath, u.filesystem)
 	unpackCmd.Stdin = spec.Stream
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
 		unpackCmd.SysProcAttr = &syscall.SysProcAttr{

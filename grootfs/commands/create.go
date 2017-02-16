@@ -144,10 +144,10 @@ var CreateCommand = cli.Command{
 		runner := linux_command_runner.New()
 		var unpacker base_image_puller.Unpacker
 		if os.Getuid() == 0 {
-			unpacker = unpackerpkg.NewNSSysProcUnpacker(runner)
+			unpacker = unpackerpkg.NewNSSysProcUnpacker(runner, cfg.FSDriver)
 		} else {
 			idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
-			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper)
+			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper, cfg.FSDriver)
 		}
 
 		dockerSrc := remote.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.InsecureRegistries)

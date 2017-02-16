@@ -28,6 +28,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		logger     *TestLogger
 		imagePath  string
 		targetPath string
+		filesystem string
 
 		commandError error
 	)
@@ -37,7 +38,8 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 
 		fakeIDMapper = new(unpackerfakes.FakeIDMapper)
 		fakeCommandRunner = fake_command_runner.New()
-		unpacker = unpackerpkg.NewNSIdMapperUnpacker(fakeCommandRunner, fakeIDMapper)
+		filesystem = "btrfs"
+		unpacker = unpackerpkg.NewNSIdMapperUnpacker(fakeCommandRunner, fakeIDMapper, filesystem)
 
 		logger = NewLogger("test-store")
 
@@ -63,7 +65,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		Expect(os.RemoveAll(imagePath)).To(Succeed())
 	})
 
-	It("passes the rootfs path to the unpack-wrapper command", func() {
+	It("passes the rootfs path and filesystem to the unpack-wrapper command", func() {
 		Expect(unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			TargetPath: targetPath,
 		})).To(Succeed())
@@ -72,7 +74,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		Expect(commands).To(HaveLen(1))
 		Expect(commands[0].Path).To(Equal("/proc/self/exe"))
 		Expect(commands[0].Args).To(Equal([]string{
-			"unpack-wrapper", targetPath,
+			"unpack-wrapper", targetPath, filesystem,
 		}))
 	})
 
@@ -100,7 +102,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 	It("starts the unpack-wrapper command in a user namespace", func() {
 		Expect(unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			UIDMappings: []groot.IDMappingSpec{
-				groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
+				{HostID: 1000, NamespaceID: 2000, Size: 10},
 			},
 			TargetPath: targetPath,
 		})).To(Succeed())
@@ -166,7 +168,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 			Expect(unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				TargetPath: targetPath,
 				UIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
+					{HostID: 1000, NamespaceID: 2000, Size: 10},
 				},
 			})).To(Succeed())
 
@@ -174,7 +176,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 			_, _, mappings := fakeIDMapper.MapUIDsArgsForCall(0)
 
 			Expect(mappings).To(Equal([]groot.IDMappingSpec{
-				groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
+				{HostID: 1000, NamespaceID: 2000, Size: 10},
 			}))
 		})
 
@@ -187,7 +189,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 				Expect(unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					TargetPath: targetPath,
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
+						{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
 				})).To(MatchError(ContainSubstring("Boom!")))
 			})
@@ -196,7 +198,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 				Expect(unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					TargetPath: targetPath,
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
+						{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
 				})).NotTo(Succeed())
 
@@ -214,7 +216,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 			Expect(unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				TargetPath: targetPath,
 				GIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
+					{HostID: 1000, NamespaceID: 2000, Size: 10},
 				},
 			})).To(Succeed())
 
@@ -222,7 +224,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 			_, _, mappings := fakeIDMapper.MapGIDsArgsForCall(0)
 
 			Expect(mappings).To(Equal([]groot.IDMappingSpec{
-				groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
+				{HostID: 1000, NamespaceID: 2000, Size: 10},
 			}))
 		})
 
@@ -235,7 +237,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 				Expect(unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					TargetPath: targetPath,
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
+						{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
 				})).To(MatchError(ContainSubstring("Boom!")))
 			})
@@ -244,7 +246,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 				Expect(unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					TargetPath: targetPath,
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
+						{HostID: 1000, NamespaceID: 2000, Size: 10},
 					},
 				})).NotTo(Succeed())
 

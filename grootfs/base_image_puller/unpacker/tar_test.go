@@ -12,10 +12,12 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	"github.com/containers/storage/pkg/system"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"syscall"
 )
 
 var _ = Describe("Tar unpacker", func() {
@@ -28,7 +30,7 @@ var _ = Describe("Tar unpacker", func() {
 	)
 
 	BeforeEach(func() {
-		tarUnpacker = unpacker.NewTarUnpacker()
+		tarUnpacker = unpacker.NewTarUnpacker("btrfs")
 
 		var err error
 		targetPath, err = ioutil.TempDir("", "")
@@ -259,7 +261,26 @@ var _ = Describe("Tar unpacker", func() {
 			Expect(ioutil.WriteFile(path.Join(baseImagePath, ".wh.b_dir"), []byte(""), 0600)).To(Succeed())
 		})
 
+		commonWhiteoutTests := func() {
+			It("does not leak the whiteout files", func() {
+				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})).To(Succeed())
+
+				Expect(path.Join(targetPath, ".wh.b_file")).NotTo(BeAnExistingFile())
+				Expect(path.Join(targetPath, "a_dir", ".wh.a_file")).NotTo(BeAnExistingFile())
+				Expect(path.Join(targetPath, ".wh.b_dir")).NotTo(BeAnExistingFile())
+			})
+		}
+
 		Context("BTRFS", func() {
+			BeforeEach(func() {
+				tarUnpacker = unpacker.NewTarUnpacker("btrfs")
+			})
+
+			commonWhiteoutTests()
+
 			It("deletes the pre-existing files", func() {
 				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
@@ -275,29 +296,48 @@ var _ = Describe("Tar unpacker", func() {
 					Stream:     stream,
 					TargetPath: targetPath,
 				})).To(Succeed())
-
 				Expect(path.Join(targetPath, "b_dir")).NotTo(BeAnExistingFile())
 			})
+		})
 
-			It("does not leak the whiteout files", func() {
+		Context("Overlay+XFS", func() {
+			BeforeEach(func() {
+				tarUnpacker = unpacker.NewTarUnpacker("overlay-xfs")
+			})
+
+			commonWhiteoutTests()
+
+			It("creates dev 0 character devices to simulate file deletions", func() {
 				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
 				})).To(Succeed())
 
-				Expect(path.Join(targetPath, ".wh.b_file")).NotTo(BeAnExistingFile())
-				Expect(path.Join(targetPath, "a_dir", ".wh.a_file")).NotTo(BeAnExistingFile())
-				Expect(path.Join(targetPath, ".wh.b_dir")).NotTo(BeAnExistingFile())
+				bFilePath := path.Join(targetPath, "b_file")
+				stat, err := os.Stat(bFilePath)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(stat.Mode()).To(Equal(os.ModeCharDevice|os.ModeDevice), "Whiteout file is not a character device")
+				stat_t := stat.Sys().(*syscall.Stat_t)
+				Expect(stat_t.Rdev).To(Equal(uint64(0)), "Whiteout file has incorrect device number")
+
+				aFilePath := path.Join(targetPath, "a_dir", "a_file")
+				stat, err = os.Stat(aFilePath)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(stat.Mode()).To(Equal(os.ModeCharDevice|os.ModeDevice), "Whiteout file is not a character device")
+				stat_t = stat.Sys().(*syscall.Stat_t)
+				Expect(stat_t.Rdev).To(Equal(uint64(0)), "Whiteout file has incorrect device number")
+			})
+		})
+
+		Context("when there are opaque whiteouts", func() {
+			BeforeEach(func() {
+				Expect(os.Mkdir(path.Join(baseImagePath, "whiteout_dir"), 0755)).To(Succeed())
+				Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", "a_file"), []byte(""), 0600)).To(Succeed())
+				Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", "b_file"), []byte(""), 0600)).To(Succeed())
+				Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", ".wh..wh..opq"), []byte(""), 0600)).To(Succeed())
 			})
 
-			Context("when there are opaque whiteouts", func() {
-				BeforeEach(func() {
-					Expect(os.Mkdir(path.Join(baseImagePath, "whiteout_dir"), 0755)).To(Succeed())
-					Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", "a_file"), []byte(""), 0600)).To(Succeed())
-					Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", "b_file"), []byte(""), 0600)).To(Succeed())
-					Expect(ioutil.WriteFile(path.Join(baseImagePath, "whiteout_dir", ".wh..wh..opq"), []byte(""), 0600)).To(Succeed())
-				})
-
+			commonOpaqueWhiteoutTests := func() {
 				It("cleans up the folder", func() {
 					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
@@ -324,6 +364,34 @@ var _ = Describe("Tar unpacker", func() {
 					})).To(Succeed())
 
 					Expect(path.Join(targetPath, "whiteout_dir", ".wh..wh..opq")).NotTo(BeAnExistingFile())
+				})
+			}
+
+			Context("BTRFS", func() {
+				BeforeEach(func() {
+					tarUnpacker = unpacker.NewTarUnpacker("btrfs")
+				})
+
+				commonOpaqueWhiteoutTests()
+			})
+
+			Context("Overlay+XFS", func() {
+				BeforeEach(func() {
+					tarUnpacker = unpacker.NewTarUnpacker("overlay-xfs")
+				})
+
+				commonOpaqueWhiteoutTests()
+
+				It("Sets the correct attributes on the removed directory", func() {
+					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+						Stream:     stream,
+						TargetPath: targetPath,
+					})).To(Succeed())
+
+					deletedDirectoryPath := path.Join(targetPath, "whiteout_dir")
+					xattrOpaque, err := system.Lgetxattr(deletedDirectoryPath, "trusted.overlay.opaque")
+					Expect(err).ToNot(HaveOccurred())
+					Expect(string(xattrOpaque)).To(Equal("y"), "trusted.overlay.opaque attribute not set")
 				})
 			})
 		})

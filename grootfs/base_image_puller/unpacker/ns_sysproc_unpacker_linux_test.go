@@ -26,6 +26,7 @@ var _ = Describe("NSSysProcUnpacker", func() {
 		logger     *TestLogger
 		imagePath  string
 		targetPath string
+		filesystem string
 
 		commandError             error
 		whenCommandRunnerRunning func(cmd *exec.Cmd) error
@@ -37,8 +38,9 @@ var _ = Describe("NSSysProcUnpacker", func() {
 			return nil
 		}
 
+		filesystem = "btrfs"
 		fakeCommandRunner = fake_command_runner.New()
-		unpacker = unpackerpkg.NewNSSysProcUnpacker(fakeCommandRunner)
+		unpacker = unpackerpkg.NewNSSysProcUnpacker(fakeCommandRunner, filesystem)
 
 		logger = NewLogger("test-store")
 
@@ -69,7 +71,7 @@ var _ = Describe("NSSysProcUnpacker", func() {
 		Expect(os.RemoveAll(imagePath)).To(Succeed())
 	})
 
-	It("passes the rootfs path to the unpack command", func() {
+	It("passes the rootfs path and filesystem to the unpack command", func() {
 		Expect(unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			TargetPath: targetPath,
 		})).To(Succeed())
@@ -78,7 +80,7 @@ var _ = Describe("NSSysProcUnpacker", func() {
 		Expect(commands).To(HaveLen(1))
 		Expect(commands[0].Path).To(Equal("/proc/self/exe"))
 		Expect(commands[0].Args).To(Equal([]string{
-			"unpack", targetPath,
+			"unpack", targetPath, filesystem,
 		}))
 	})
 
@@ -106,7 +108,7 @@ var _ = Describe("NSSysProcUnpacker", func() {
 	It("starts the unpack command in a user namespace with id mappings", func() {
 		Expect(unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			UIDMappings: []groot.IDMappingSpec{
-				groot.IDMappingSpec{HostID: 1000, NamespaceID: 2000, Size: 10},
+				{HostID: 1000, NamespaceID: 2000, Size: 10},
 			},
 			TargetPath: targetPath,
 		})).To(Succeed())
@@ -115,7 +117,7 @@ var _ = Describe("NSSysProcUnpacker", func() {
 		Expect(commands).To(HaveLen(1))
 		Expect(commands[0].SysProcAttr.Cloneflags).To(Equal(uintptr(syscall.CLONE_NEWUSER)))
 		Expect(commands[0].SysProcAttr.UidMappings).To(Equal([]syscall.SysProcIDMap{
-			syscall.SysProcIDMap{HostID: 1000, ContainerID: 2000, Size: 10},
+			{HostID: 1000, ContainerID: 2000, Size: 10},
 		}))
 	})
 
