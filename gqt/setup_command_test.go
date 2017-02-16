@@ -23,12 +23,17 @@ var _ = Describe("gdn setup", func() {
 		cgroupsMountpoint string
 		iptablesPrefix    string
 		setupArgs         []string
+		tag               string
 	)
 
 	BeforeEach(func() {
-		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%d", GinkgoParallelNode()))
-		iptablesPrefix = fmt.Sprintf("w-%d", GinkgoParallelNode())
-		setupArgs = []string{"setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
+		// we can't use GinkgoParallelNode() directly here as this causes interference with the other tests in the GQT suite
+		// i.e. beacuse for these specific tests, we want to teardown the iptables/cgroups after each test
+		// and also because the --tag has a limitation of 1 char in length
+		tag = nodeToString(GinkgoParallelNode())
+		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
+		iptablesPrefix = fmt.Sprintf("w-%s", tag)
+		setupArgs = []string{"setup", "--tag", fmt.Sprintf("%s", tag)}
 	})
 
 	JustBeforeEach(func() {
@@ -150,7 +155,7 @@ var _ = Describe("gdn setup", func() {
 		)
 
 		BeforeEach(func() {
-			serverArgs = []string{"--skip-setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
+			serverArgs = []string{"--skip-setup", "--tag", fmt.Sprintf("%s", tag)}
 		})
 
 		Context("when server is as non-root", func() {
@@ -197,3 +202,12 @@ var _ = Describe("gdn setup", func() {
 		})
 	})
 })
+
+// returns the n'th ASCII character starting from 'a' through 'z'
+// E.g. nodeToString(1) = a, nodeToString(2) = b, etc ...
+func nodeToString(ginkgoNode int) string {
+	r := 'a' + ginkgoNode - 1
+	Expect(r).To(BeNumerically(">=", 'a'))
+	Expect(r).To(BeNumerically("<=", 'z'))
+	return string(r)
+}
