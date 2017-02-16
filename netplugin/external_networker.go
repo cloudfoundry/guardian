@@ -70,9 +70,10 @@ func networkProperties(containerProperties garden.Properties) garden.Properties 
 }
 
 type UpInputs struct {
-	Pid         int
-	Properties  map[string]string
-	NetOutRules []garden.NetOutRule `json:"netout_rules,omitempty"`
+	Pid        int
+	Properties map[string]string
+	NetOut     []garden.NetOutRule `json:"netout_rules,omitempty"`
+	NetIn      []garden.NetIn      `json:"netin,omitempty"`
 }
 
 type UpOutputs struct {
@@ -83,9 +84,10 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 	p.configStore.Set(containerSpec.Handle, gardener.ExternalIPKey, p.externalIP.String())
 
 	inputs := UpInputs{
-		Pid:         pid,
-		Properties:  networkProperties(containerSpec.Properties),
-		NetOutRules: containerSpec.NetOutRules,
+		Pid:        pid,
+		Properties: networkProperties(containerSpec.Properties),
+		NetOut:     containerSpec.NetOut,
+		NetIn:      containerSpec.NetIn,
 	}
 
 	outputs := UpOutputs{}

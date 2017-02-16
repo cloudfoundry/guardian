@@ -135,7 +135,7 @@ var _ = Describe("ExternalNetworker", func() {
 
 		Context("when there are NetOut rules provided", func() {
 			BeforeEach(func() {
-				containerSpec.NetOutRules = []garden.NetOutRule{
+				containerSpec.NetOut = []garden.NetOutRule{
 					garden.NetOutRule{
 						Protocol: garden.ProtocolTCP,
 						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
@@ -171,6 +171,48 @@ var _ = Describe("ExternalNetworker", func() {
 					  "protocol":1,
 					  "networks":[{"start":"8.8.4.4","end":"8.8.4.4"}],
 					  "ports":[{"start":53,"end":53}]
+					}
+				]
+			}`))
+			})
+		})
+
+		Context("when NetIn input is provided", func() {
+
+			BeforeEach(func() {
+				containerSpec.NetIn = []garden.NetIn{
+					garden.NetIn{
+						HostPort:      9999,
+						ContainerPort: 8080,
+					},
+					garden.NetIn{
+						HostPort:      9989,
+						ContainerPort: 8081,
+					},
+				}
+			})
+
+			It("passes the input through stdin to the network plugin", func() {
+				Expect(plugin.Network(logger, containerSpec, 42)).To(Succeed())
+
+				cmd := fakeCommandRunner.ExecutedCommands()[0]
+				pluginInput, err := ioutil.ReadAll(cmd.Stdin)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(pluginInput).To(MatchJSON(`{
+				"Pid": 42,
+				"Properties": {
+					"some-key": "some-network-value",
+					"some-other-key": "some-other-network-value"
+				},
+				"netin": [
+					{
+						"host_port": 9999,
+						"container_port": 8080
+					},
+					{
+						"host_port": 9989,
+						"container_port": 8081
 					}
 				]
 			}`))

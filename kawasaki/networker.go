@@ -168,7 +168,13 @@ func (n *networker) Network(log lager.Logger, containerSpec garden.ContainerSpec
 		return err
 	}
 
-	if err := n.BulkNetOut(log, containerSpec.Handle, containerSpec.NetOutRules); err != nil {
+	for _, netIn := range containerSpec.NetIn {
+		if _, _, err := n.NetIn(log, containerSpec.Handle, netIn.HostPort, netIn.ContainerPort); err != nil {
+			return err
+		}
+	}
+
+	if err := n.BulkNetOut(log, containerSpec.Handle, containerSpec.NetOut); err != nil {
 		return err
 	}
 

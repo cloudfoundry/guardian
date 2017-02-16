@@ -49,7 +49,7 @@ var _ = Describe("Networker", func() {
 		containerSpec = garden.ContainerSpec{
 			Handle:  "some-handle",
 			Network: "1.2.3.4/30",
-			NetOutRules: []garden.NetOutRule{
+			NetOut: []garden.NetOutRule{
 				garden.NetOutRule{
 					Protocol: garden.ProtocolTCP,
 					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
@@ -59,6 +59,16 @@ var _ = Describe("Networker", func() {
 					Protocol: garden.ProtocolTCP,
 					Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.4.4"))},
 					Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+				},
+			},
+			NetIn: []garden.NetIn{
+				garden.NetIn{
+					HostPort:      9999,
+					ContainerPort: 8080,
+				},
+				garden.NetIn{
+					HostPort:      9989,
+					ContainerPort: 8081,
 				},
 			},
 		}
@@ -205,13 +215,34 @@ var _ = Describe("Networker", func() {
 			})
 		})
 
-		It("applies any NetOut rules provided", func() {
+		It("forwards any NetIn configuration via the port forwarder", func() {
 			Expect(networker.Network(logger, containerSpec, 42)).To(Succeed())
-			_, _, _, appliedRules := fakeFirewallOpener.BulkOpenArgsForCall(0)
-			Expect(appliedRules).To(Equal(containerSpec.NetOutRules))
+
+			for i, netIn := range containerSpec.NetIn {
+				actualPortForwarderSpec := fakePortForwarder.ForwardArgsForCall(i)
+				Expect(actualPortForwarderSpec.FromPort).To(BeEquivalentTo(netIn.HostPort))
+				Expect(actualPortForwarderSpec.ToPort).To(BeEquivalentTo(netIn.ContainerPort))
+			}
 		})
 
-		Context("when applying the NetOut rules fails", func() {
+		Context("when forwarding the ports for NetIn configuration fails", func() {
+			BeforeEach(func() {
+				fakePortForwarder.ForwardReturns(errors.New("some error"))
+			})
+
+			It("returns a sensible error", func() {
+				err := networker.Network(logger, containerSpec, 42)
+				Expect(err).To(MatchError("some error"))
+			})
+		})
+
+		It("opens any NetOut rules provided on the firewall", func() {
+			Expect(networker.Network(logger, containerSpec, 42)).To(Succeed())
+			_, _, _, appliedRules := fakeFirewallOpener.BulkOpenArgsForCall(0)
+			Expect(appliedRules).To(Equal(containerSpec.NetOut))
+		})
+
+		Context("opening a NetOut rule on the firewall fails", func() {
 			BeforeEach(func() {
 				fakeFirewallOpener.BulkOpenReturns(errors.New("some error"))
 			})

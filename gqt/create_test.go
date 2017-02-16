@@ -319,7 +319,7 @@ var _ = Describe("Creating a Container", func() {
 
 			var err error
 			container, err = client.Create(garden.ContainerSpec{
-				NetOutRules: rules,
+				NetOut: rules,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -327,6 +327,31 @@ var _ = Describe("Creating a Container", func() {
 		It("provides connectivity to the addresses provided", func() {
 			Expect(checkConnection(container, "8.8.8.8", 53)).To(Succeed())
 			Expect(checkConnection(container, "8.8.4.4", 53)).To(Succeed())
+		})
+	})
+
+	Context("when creating a container with NetIn rules", func() {
+		var container garden.Container
+
+		JustBeforeEach(func() {
+			netIn := []garden.NetIn{
+				garden.NetIn{HostPort: 9888, ContainerPort: 9080},
+			}
+
+			var err error
+			container, err = client.Create(garden.ContainerSpec{
+				NetIn: netIn,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("maps the provided host port to the container port", func() {
+			Expect(listenInContainer(container, 9080)).To(Succeed())
+
+			externalIP := externalIP(container)
+
+			Eventually(func() *gexec.Session { return sendRequest(externalIP, 9888).Wait() }).
+				Should(gbytes.Say(fmt.Sprintf("%d", 9080)))
 		})
 	})
 

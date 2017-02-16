@@ -477,7 +477,7 @@ var _ = Describe("Networking", func() {
 
 			Context("and the containerSpec contains NetOutRules", func() {
 				BeforeEach(func() {
-					containerSpec.NetOutRules = []garden.NetOutRule{
+					containerSpec.NetOut = []garden.NetOutRule{
 						garden.NetOutRule{
 							Protocol: garden.ProtocolTCP,
 							Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
@@ -492,11 +492,35 @@ var _ = Describe("Networking", func() {
 				})
 
 				It("passes the NetOut rules to the plugin during container creation", func() {
-					jsonBytes, err := json.Marshal(containerSpec.NetOutRules)
+					jsonBytes, err := json.Marshal(containerSpec.NetOut)
 					Expect(err).NotTo(HaveOccurred())
 
 					Eventually(getContent(stdinFile)).Should(
 						ContainSubstring("\"netout_rules\":" + string(jsonBytes)),
+					)
+				})
+			})
+
+			Context("and the containerSpec contains NetIn", func() {
+				BeforeEach(func() {
+					containerSpec.NetIn = []garden.NetIn{
+						garden.NetIn{
+							HostPort:      9999,
+							ContainerPort: 8080,
+						},
+						garden.NetIn{
+							HostPort:      9989,
+							ContainerPort: 8081,
+						},
+					}
+				})
+
+				It("passes the NetIn input to the plugin during container creation", func() {
+					jsonBytes, err := json.Marshal(containerSpec.NetIn)
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(getContent(stdinFile)).Should(
+						ContainSubstring("\"netin\":" + string(jsonBytes)),
 					)
 				})
 			})
