@@ -73,6 +73,46 @@ var _ = Describe("Security", func() {
 			})
 		})
 
+		Context("when the --apparmor flag is not set", func() {
+			It("should not enforce the policy when running processes in unprivileged containers", func() {
+				container, err := client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				buffer := gbytes.NewBuffer()
+
+				_, err = container.Run(garden.ProcessSpec{
+					Path: "cat",
+					Args: []string{"/proc/self/attr/current"},
+				}, garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, buffer),
+					Stderr: GinkgoWriter,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(buffer).Should(gbytes.Say("unconfined"))
+			})
+
+			It("should not enforce the policy when running processes in privileged containers", func() {
+				container, err := client.Create(garden.ContainerSpec{
+					Privileged: true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				buffer := gbytes.NewBuffer()
+
+				_, err = container.Run(garden.ProcessSpec{
+					Path: "cat",
+					Args: []string{"/proc/self/attr/current"},
+				}, garden.ProcessIO{
+					Stdout: io.MultiWriter(GinkgoWriter, buffer),
+					Stderr: GinkgoWriter,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(buffer).Should(gbytes.Say("unconfined"))
+			})
+		})
+
 		Context("when the --apparmor flag is pointing to a non-existing policy", func() {
 			BeforeEach(func() {
 				args = append(args, "--apparmor", "non-existing-policy")
