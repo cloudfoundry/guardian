@@ -60,7 +60,7 @@ func TestGroot(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 
 		rand.Seed(time.Now().UnixNano())
-		NamespacerBin = fmt.Sprintf("/tmp/namespacer-%s", rand.Int())
+		NamespacerBin = fmt.Sprintf("/tmp/namespacer-%d", rand.Int())
 		cpNamespacerBin := exec.Command("cp", tmpNamespacerBin, NamespacerBin)
 		sess, err := gexec.Start(cpNamespacerBin, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
