@@ -143,7 +143,7 @@ var _ = Describe("Host", func() {
 				Expect(configurer.Apply(logger, config, 42)).To(Succeed())
 				b := []byte{}
 				_, err := netnsFD.Read(b)
-				Expect(err.Error()).To(ContainSubstring("bad file descriptor"))
+				Expect(err).To(BeAssignableToTypeOf(&os.PathError{}))
 			})
 
 			Context("when opening the netns file descriptor fails", func() {
