@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
@@ -88,9 +89,32 @@ var _ = Describe("Create with remote images", func() {
 				})
 			Expect(err).NotTo(HaveOccurred())
 
-			// Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.overlayxfs-creating-volume.start"))
 			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-sysproc-unpacking.starting-unpack"))
-			// Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.making-image.overlayxfs-creating-image.end"))
+		})
+
+		It("gives any user permission to be inside the container", func() {
+			image, err := Runner.Create(groot.CreateSpec{
+				BaseImage: "docker:///busybox:1.26.2",
+				ID:        "random-id",
+				UIDMappings: []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+				},
+				GIDMappings: []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			cmd := exec.Command(NamespacerBin, image.RootFSPath, strconv.Itoa(int(GrootUID+100)), "/bin/ls", "/")
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS,
+			}
+
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
 		})
 
 		Context("when the image is bigger than available memory", func() {

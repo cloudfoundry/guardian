@@ -8,12 +8,10 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
-	"path/filepath"
 	"strconv"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
@@ -25,12 +23,13 @@ import (
 )
 
 var (
-	GrootFSBin string
-	DraxBin    string
-	Driver     string
-	Runner     runner.Runner
-	StorePath  string
-	StoreName  string
+	GrootFSBin    string
+	DraxBin       string
+	Driver        string
+	Runner        runner.Runner
+	StorePath     string
+	StoreName     string
+	NamespacerBin string
 
 	GrootUser        *user.User
 	GrootUID         uint32
@@ -54,6 +53,16 @@ func TestGroot(t *testing.T) {
 		var err error
 		GrootUser, err = user.Lookup("groot")
 		Expect(err).NotTo(HaveOccurred())
+
+		tmpNamespacerBin, err := gexec.Build("code.cloudfoundry.org/grootfs/integration/namespacer")
+		Expect(err).NotTo(HaveOccurred())
+
+		rand.Seed(time.Now().UnixNano())
+		NamespacerBin = fmt.Sprintf("/tmp/namespacer-%s", rand.Int())
+		cpNamespacerBin := exec.Command("cp", tmpNamespacerBin, NamespacerBin)
+		sess, err := gexec.Start(cpNamespacerBin, GinkgoWriter, GinkgoWriter)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(sess).Should(gexec.Exit(0))
 
 		grootUID, err := strconv.ParseUint(GrootUser.Uid, 10, 32)
 		Expect(err).NotTo(HaveOccurred())
