@@ -13,10 +13,11 @@ import (
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/urfave/cli"
 
+	"syscall"
+
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 	"github.com/containers/storage/pkg/system"
-	"syscall"
 )
 
 func init() {
@@ -74,7 +75,11 @@ func (*overlayWhiteoutHandler) removeWhiteout(path string) error {
 		return fmt.Errorf("deleting  file: %s", err)
 	}
 
-	return syscall.Mknod(toBeDeletedPath, syscall.S_IFCHR, 0)
+	if err := syscall.Mknod(toBeDeletedPath, syscall.S_IFCHR, 0); err != nil {
+		return fmt.Errorf("failed to create whiteout node: %s: %s", toBeDeletedPath, err)
+	}
+
+	return nil
 }
 
 func (*overlayWhiteoutHandler) removeOpaqueWhiteouts(paths []string) error {
