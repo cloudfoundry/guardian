@@ -79,11 +79,23 @@ var _ = Describe("garden server Logging", func() {
 		})
 
 		AfterEach(func() {
-			Expect(client.Stop()).To(Succeed())
+			Expect(client.DestroyAndStop()).To(Succeed())
 		})
 
 		It("logs at debug level", func() {
+			// create a container in order to execute a code path that prints debug
+			// logs
+			_, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
 			Eventually(client, "1s").Should(gbytes.Say(`"log_level":0`))
+		})
+
+		It("doesn't log spurious messages on start", func() {
+			Consistently(client).ShouldNot(gbytes.Say(`guardian.iptables-runner.command.failed`))
+			Consistently(client).ShouldNot(gbytes.Say(`guardian.failed-to-parse-port-pool-properties`))
+
+			Eventually(client).Should(gbytes.Say(`guardian.no-port-pool-state-to-recover-starting-clean`))
 		})
 	})
 

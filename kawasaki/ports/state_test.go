@@ -43,7 +43,7 @@ var _ = Describe("State", func() {
 		Context("when the file does not exist", func() {
 			It("should return a wrapped error", func() {
 				_, err := ports.LoadState("/path/to/not/existing/banana")
-				Expect(err).To(MatchError(ContainSubstring("openning state file")))
+				Expect(err).To(MatchError(ContainSubstring("opening state file")))
 			})
 		})
 

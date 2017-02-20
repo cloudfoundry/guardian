@@ -10,16 +10,32 @@ type State struct {
 	Offset uint32 `json:"offset"`
 }
 
+type StateFileNotFoundError struct {
+	Cause error
+}
+
+type StateFileNotValidError struct {
+	Cause error
+}
+
+func (err StateFileNotFoundError) Error() string {
+	return fmt.Sprintf("opening state file caused %s", err.Cause)
+}
+
+func (err StateFileNotValidError) Error() string {
+	return fmt.Sprintf("parsing state file caused %s", err.Cause)
+}
+
 func LoadState(filePath string) (State, error) {
 	stateFile, err := os.Open(filePath)
 	if err != nil {
-		return State{}, fmt.Errorf("openning state file: %s", err)
+		return State{}, StateFileNotFoundError{err}
 	}
 	defer stateFile.Close()
 
 	var state State
 	if err := json.NewDecoder(stateFile).Decode(&state); err != nil {
-		return State{}, fmt.Errorf("parsing state file: %s", err)
+		return State{}, StateFileNotValidError{err}
 	}
 
 	return state, nil

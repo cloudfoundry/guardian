@@ -7,7 +7,6 @@ import (
 
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
-	"code.cloudfoundry.org/guardian/logging"
 	locksmithpkg "code.cloudfoundry.org/guardian/pkg/locksmith"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/lager"
@@ -58,7 +57,7 @@ func (cmd *SetupCommand) wireIPTablesStarter() gardener.Starter {
 
 	interfacePrefix := fmt.Sprintf("w%s", cmd.Tag)
 	chainPrefix := fmt.Sprintf("w-%s-", cmd.Tag)
-	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: cmd.Logger.Session("iptables-runner")}
+	iptRunner := linux_command_runner.New()
 	locksmith := &locksmithpkg.FileSystem{}
 	ipTables := iptables.New(cmd.Network.IPTables.Path(), "iptables-restore-not-used", iptRunner, locksmith, chainPrefix)
 	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Network.ResetIPTablesRules)

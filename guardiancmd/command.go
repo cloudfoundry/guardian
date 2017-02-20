@@ -344,7 +344,11 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	portPoolState, err := ports.LoadState(cmd.Network.PortPoolPropertiesPath)
 	if err != nil {
-		logger.Error("failed-to-parse-port-pool-properties", err)
+		if _, ok := err.(ports.StateFileNotFoundError); ok {
+			logger.Info("no-port-pool-state-to-recover-starting-clean")
+		} else {
+			logger.Error("failed-to-parse-port-pool-properties", err)
+		}
 	}
 
 	portPool, err := ports.NewPool(
@@ -512,10 +516,13 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, propManager kawasaki.C
 	interfacePrefix := fmt.Sprintf("w%s", cmd.Server.Tag)
 	chainPrefix := fmt.Sprintf("w-%s-", cmd.Server.Tag)
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
-	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
 	locksmith := &locksmithpkg.FileSystem{}
+
+	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
+	nonLoggingIptRunner := linux_command_runner.New()
 	ipTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), iptRunner, locksmith, chainPrefix)
-	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup)
+	nonLoggingIpTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), nonLoggingIptRunner, locksmith, chainPrefix)
+	ipTablesStarter := iptables.NewStarter(nonLoggingIpTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup)
 	ruleTranslator := iptables.NewRuleTranslator()
 
 	networker := kawasaki.New(

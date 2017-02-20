@@ -15,6 +15,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -24,6 +25,7 @@ var _ = Describe("gdn setup", func() {
 		iptablesPrefix    string
 		setupArgs         []string
 		tag               string
+		setupProcess      *gexec.Session
 	)
 
 	BeforeEach(func() {
@@ -37,7 +39,9 @@ var _ = Describe("gdn setup", func() {
 	})
 
 	JustBeforeEach(func() {
-		setupProcess, err := gexec.Start(exec.Command(gardenBin, setupArgs...), GinkgoWriter, GinkgoWriter)
+		var err error
+
+		setupProcess, err = gexec.Start(exec.Command(gardenBin, setupArgs...), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 	})
@@ -84,6 +88,10 @@ var _ = Describe("gdn setup", func() {
 			_, err := exec.Command("iptables", "-L", iptablesPrefix+suffix).CombinedOutput()
 			Expect(err).NotTo(HaveOccurred())
 		}
+	})
+
+	It("doesn't log spurious messages", func() {
+		Consistently(setupProcess).ShouldNot(gbytes.Say("guardian-setup.iptables-runner.command.failed"))
 	})
 
 	Context("when --allow-host-access flag is passed", func() {
