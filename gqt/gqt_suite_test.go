@@ -48,7 +48,7 @@ func TestGqt(t *testing.T) {
 			bins["init_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/init")
 			Expect(err).NotTo(HaveOccurred())
 
-			bins["test_net_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/networkplugin")
+			bins["test_net_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin")
 			Expect(err).NotTo(HaveOccurred())
 
 			bins["test_image_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin")
