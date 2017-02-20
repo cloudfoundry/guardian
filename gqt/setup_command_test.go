@@ -148,7 +148,7 @@ var _ = Describe("gdn setup", func() {
 		})
 	})
 
-	Context("when start the server", func() {
+	Context("when we start the server", func() {
 		var (
 			server     *runner.RunningGarden
 			serverArgs []string
@@ -158,7 +158,11 @@ var _ = Describe("gdn setup", func() {
 			serverArgs = []string{"--skip-setup", "--tag", fmt.Sprintf("%s", tag)}
 		})
 
-		Context("when server is as non-root", func() {
+		AfterEach(func() {
+			Expect(server.DestroyAndStop()).To(Succeed())
+		})
+
+		Context("when the server is running as non-root", func() {
 			var maximus *syscall.Credential
 
 			BeforeEach(func() {
@@ -184,15 +188,11 @@ var _ = Describe("gdn setup", func() {
 			})
 		})
 
-		Context("when server is running as root", func() {
+		Context("when the server is running as root", func() {
 			JustBeforeEach(func() {
 				root := &syscall.Credential{Uid: 0, Gid: 0}
 				server = startGardenAsUser(root, serverArgs...)
 				Expect(server).NotTo(BeNil())
-			})
-
-			AfterEach(func() {
-				server.DestroyAndStop()
 			})
 
 			It("should be able to create a container", func() {

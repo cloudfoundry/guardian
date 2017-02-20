@@ -33,7 +33,7 @@ var _ = Describe("Image Plugin", func() {
 	})
 
 	AfterEach(func() {
-		Expect(client.Stop()).To(Succeed())
+		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
 	Context("when only an unprivileged image plugin is provided", func() {

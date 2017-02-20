@@ -22,13 +22,11 @@ import (
 var dockerRegistryV2RootFSPath = os.Getenv("GARDEN_DOCKER_REGISTRY_V2_TEST_ROOTFS")
 
 var _ = Describe("Rootfs container create parameter", func() {
-	var container garden.Container
 	var args []string
 	var client *runner.RunningGarden
 	var supplyDefaultRootfs bool
 
 	BeforeEach(func() {
-		container = nil
 		args = []string{}
 	})
 
@@ -41,23 +39,19 @@ var _ = Describe("Rootfs container create parameter", func() {
 	})
 
 	AfterEach(func() {
-		if container != nil {
-			Expect(client.Destroy(container.Handle())).To(Succeed())
-		}
+		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
 	Context("with an Image URI provided", func() {
 		It("creates a container using that URI as the rootfs", func() {
-			var err error
-			container, err = client.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}})
+			_, err := client.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	Context("when Image URI and RootFSPath are both specified", func() {
 		It("returns an informative error message", func() {
-			var err error
-			container, err = client.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}, RootFSPath: "docker:///cfgarden/garden-busybox"})
+			_, err := client.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}, RootFSPath: "docker:///cfgarden/garden-busybox"})
 			Expect(err).To(MatchError(ContainSubstring("Cannot provide both Image.URI and RootFSPath")))
 		})
 	})
@@ -68,17 +62,12 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 
 		It("fails if a rootfs is not supplied in container spec", func() {
-			var err error
-
-			container, err = client.Create(garden.ContainerSpec{RootFSPath: ""})
-			Expect(err).To(HaveOccurred())
+			_, err := client.Create(garden.ContainerSpec{RootFSPath: ""})
 			Expect(err).To(MatchError(ContainSubstring("RootFSPath: is a required parameter, since no default rootfs was provided to the server.")))
 		})
 
 		It("creates successfully if a rootfs is supplied in container spec", func() {
-			var err error
-
-			container, err = client.Create(garden.ContainerSpec{RootFSPath: os.Getenv("GARDEN_TEST_ROOTFS")})
+			_, err := client.Create(garden.ContainerSpec{RootFSPath: os.Getenv("GARDEN_TEST_ROOTFS")})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -89,9 +78,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 
 		It("the container is created successfully", func() {
-			var err error
-
-			container, err = client.Create(garden.ContainerSpec{RootFSPath: "", Image: garden.ImageRef{URI: ""}})
+			_, err := client.Create(garden.ContainerSpec{RootFSPath: "", Image: garden.ImageRef{URI: ""}})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
@@ -109,9 +96,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 	Context("with a docker rootfs URI", func() {
 		Context("not containing a host", func() {
 			It("succesfully creates the container", func() {
-				var err error
-
-				container, err = client.Create(garden.ContainerSpec{RootFSPath: "docker:///cfgarden/garden-busybox"})
+				_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker:///cfgarden/garden-busybox"})
 				Expect(err).ToNot(HaveOccurred())
 			})
 
@@ -136,9 +121,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 				})
 
 				It("should fail to create a container", func() {
-					var err error
-
-					container, err = client.Create(garden.ContainerSpec{RootFSPath: "docker:///busybox"})
+					_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker:///busybox"})
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -147,17 +130,14 @@ var _ = Describe("Rootfs container create parameter", func() {
 		Context("containing a host", func() {
 			Context("which is valid", func() {
 				It("creates the container successfully", func() {
-					var err error
-
-					container, err = client.Create(garden.ContainerSpec{RootFSPath: "docker://registry-1.docker.io/cfgarden/garden-busybox"})
+					_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker://registry-1.docker.io/cfgarden/garden-busybox"})
 					Expect(err).ToNot(HaveOccurred())
 				})
 			})
 
 			Context("which is invalid", func() {
 				It("the container is not created successfully", func() {
-					var err error
-					container, err = client.Create(garden.ContainerSpec{RootFSPath: "docker://xindex.docker.io/busybox"})
+					_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker://xindex.docker.io/busybox"})
 					Expect(err).To(HaveOccurred())
 				})
 			})
@@ -341,10 +321,9 @@ var _ = Describe("Rootfs container create parameter", func() {
 		)
 
 		JustBeforeEach(func() {
-			var err error
 			rootfspath = createSmallRootfs()
 
-			container, err = client.Create(garden.ContainerSpec{
+			_, err := client.Create(garden.ContainerSpec{
 				RootFSPath: rootfspath,
 				Privileged: privilegedContainer,
 			})
@@ -359,12 +338,6 @@ var _ = Describe("Rootfs container create parameter", func() {
 				Privileged: privilegedContainer,
 			})
 			Expect(err).NotTo(HaveOccurred())
-		})
-
-		AfterEach(func() {
-			if container2 != nil {
-				Expect(client.Destroy(container2.Handle())).To(Succeed())
-			}
 		})
 
 		Context("with a non-privileged container", func() {
