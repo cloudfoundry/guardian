@@ -112,10 +112,10 @@ func startGardenAsUser(user *syscall.Credential, argv ...string) *runner.Running
 	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, rootfs, tarBin, user, argv...)
 }
 
-func restartGarden(client *runner.RunningGarden, argv ...string) {
+func restartGarden(client *runner.RunningGarden, argv ...string) *runner.RunningGarden {
 	Expect(client.Ping()).To(Succeed(), "tried to restart garden while it was not running")
 	Expect(client.Stop()).To(Succeed())
-	client = startGarden(argv...)
+	return startGarden(argv...)
 }
 
 func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {

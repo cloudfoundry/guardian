@@ -109,7 +109,7 @@ var _ = Describe("graph flags", func() {
 				})
 
 				It("cleans up the graph directory on container creation (and not on destruction)", func() {
-					restartGarden(client, "--graph-cleanup-threshold-in-megabytes=1") // restart with persistent image list empty
+					client = restartGarden(client, "--graph-cleanup-threshold-in-megabytes=1") // restart with persistent image list empty
 					Expect(numLayersInGraph()).To(BeNumerically(">", 0))
 
 					anotherContainer, err := client.Create(garden.ContainerSpec{})

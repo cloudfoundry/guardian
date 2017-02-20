@@ -340,7 +340,7 @@ var _ = Describe("Run", func() {
 				container, err = client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
-				restartGarden(client, "--runc-bin", fakeRuncBinPath, "--properties-path", path.Join(propertiesDir, "props.json"))
+				client = restartGarden(client, "--runc-bin", fakeRuncBinPath, "--properties-path", path.Join(propertiesDir, "props.json"))
 			})
 
 			AfterEach(func() {
@@ -502,7 +502,7 @@ var _ = Describe("Attach", func() {
 			Expect(err).NotTo(HaveOccurred())
 			processID = process.ID()
 
-			restartGarden(client, args...)
+			client = restartGarden(client, args...)
 		})
 
 		It("returns the exit code", func() {
