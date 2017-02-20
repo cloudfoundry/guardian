@@ -138,8 +138,9 @@ var _ = Describe("Destroying a Container", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(client.Destroy(container.Handle())).NotTo(Succeed())
+			Eventually(client).Should(gexec.Exit())
 
-			// start guardian back up with the 'kill -9 <guardian pid> on down' behaviour disabled
+			// start guardian back up with the 'kill -9 <gdn pid> on down' behaviour disabled
 			client = startGarden(netPluginArgs...)
 
 			bundleDir := filepath.Join(client.DepotDir, container.Handle())

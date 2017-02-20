@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"strings"
 )
 
@@ -28,14 +27,12 @@ func main() {
 
 	if os.Args[4] == "kill-garden-server" {
 		if os.Args[6] == "down" {
-			cmd := exec.Command("pidof", "guardian")
-			pid, err := cmd.Output()
+			proc, err := os.FindProcess(os.Getppid())
 			if err != nil {
 				panic(err)
 			}
 
-			cmd = exec.Command("kill", "-9", strings.TrimSpace(string(pid)))
-			if err := cmd.Run(); err != nil {
+			if err := proc.Kill(); err != nil {
 				panic(err)
 			}
 		}
