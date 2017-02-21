@@ -314,18 +314,13 @@ var _ = Describe("Rootfs container create parameter", func() {
 	})
 
 	Context("when the modified timestamp of the rootfs top-level directory changes", func() {
-		var (
-			rootfspath          string
-			privilegedContainer bool
-			container2          garden.Container
-		)
+		var container2 garden.Container
 
 		JustBeforeEach(func() {
-			rootfspath = createSmallRootfs()
+			rootfspath := createSmallRootfs()
 
 			_, err := client.Create(garden.ContainerSpec{
 				RootFSPath: rootfspath,
-				Privileged: privilegedContainer,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -335,30 +330,22 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 			container2, err = client.Create(garden.ContainerSpec{
 				RootFSPath: rootfspath,
-				Privileged: privilegedContainer,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		Context("with a non-privileged container", func() {
-			BeforeEach(func() {
-				privilegedContainer = false
-			})
+		It("should use the updated rootfs when running a process", func() {
+			process, err := container2.Run(garden.ProcessSpec{
+				Path: "/ls",
+				User: "root",
+			}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
+			Expect(err).NotTo(HaveOccurred())
 
-			It("should use the updated rootfs when creating a new container", func() {
-				process, err := container2.Run(garden.ProcessSpec{
-					Path: "/ls",
-					User: "root",
-				}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
-				Expect(err).NotTo(HaveOccurred())
-
-				exitStatus, err := process.Wait()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(exitStatus).To(Equal(0))
-			})
+			exitStatus, err := process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitStatus).To(Equal(0))
 		})
 	})
-
 })
 
 func startV2DockerRegistry(client garden.Client, dockerRegistryIP string, dockerRegistryPort string) garden.Container {
