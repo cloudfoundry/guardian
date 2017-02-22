@@ -99,6 +99,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	}
 
 	baseVolumePaths := []string{}
+	var baseVolumeSize int64
 	for i := len(spec.BaseVolumeIDs) - 1; i >= 0; i-- {
 		volumePath := filepath.Join(d.storePath, store.VolumesDirName, spec.BaseVolumeIDs[i])
 
@@ -107,6 +108,13 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 			return errors.Wrap(err, "base volume path does not exist")
 		}
 
+		volumeSize, err := d.duUsage(logger, volumePath)
+		if err != nil {
+			logger.Error("calculating-base-volume-size-failed", err)
+			return errors.Wrapf(err, "calculating base volume size %s", volumePath)
+		}
+
+		baseVolumeSize += volumeSize
 		baseVolumePaths = append(baseVolumePaths, volumePath)
 	}
 
@@ -114,7 +122,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	workDir := filepath.Join(spec.ImagePath, WorkDir)
 	rootfsDir := filepath.Join(spec.ImagePath, RootfsDir)
 
-	if err := d.applyDiskLimit(logger, spec); err != nil {
+	if err := d.applyDiskLimit(logger, spec, baseVolumeSize); err != nil {
 		return errors.Wrap(err, "applying disk limits")
 	}
 
@@ -139,11 +147,14 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		return errors.Wrap(err, "mounting overlay")
 	}
 
-	baseVolumeSize, err := d.duUsage(logger, rootfsDir)
+	// Allows permissions to work for different users inside the fs
+	file, err := os.Open(rootfsDir)
+	defer file.Close()
 	if err != nil {
-		logger.Error("calculating-base-volume-size-failed", err)
-		return errors.Wrapf(err, "calculating base volume size %s", rootfsDir)
+		return errors.Wrap(err, "reading rootfsDir")
 	}
+	file.Readdir(-1)
+	// Until here
 
 	imageInfoFileName := filepath.Join(spec.ImagePath, imageInfoName)
 	if err := ioutil.WriteFile(imageInfoFileName, []byte(strconv.FormatInt(baseVolumeSize, 10)), 0600); err != nil {
@@ -178,7 +189,7 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	return nil
 }
 
-func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
+func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec, volumeSize int64) error {
 	logger = logger.Session("applying-quotas", lager.Data{"spec": spec})
 	logger.Debug("start")
 	defer logger.Debug("end")
@@ -186,6 +197,19 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	if spec.DiskLimit == 0 {
 		logger.Info("no-need-for-quotas")
 		return nil
+	}
+
+	diskLimit := spec.DiskLimit
+	if spec.ExclusiveDiskLimit {
+		logger.Info("applying-exclusive-quotas")
+	} else {
+		logger.Info("applying-inclusive-quotas")
+		diskLimit -= volumeSize
+		if diskLimit < 0 {
+			err := errors.New("disk limit is smaller than volume size")
+			logger.Error("applying-inclusive-quota-failed", err, lager.Data{"imagePath": spec.ImagePath})
+			return err
+		}
 	}
 
 	imagesPath := filepath.Join(d.storePath, store.ImageDirName)
@@ -196,7 +220,7 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	}
 
 	quota := quotapkg.Quota{
-		Size: uint64(spec.DiskLimit),
+		Size: uint64(diskLimit),
 	}
 
 	if err := quotaControl.SetQuota(spec.ImagePath, quota); err != nil {

@@ -11,6 +11,7 @@ RUN apt-get update && \
         curl \
         git \
         jq \
+        vim \
         netcat \
         sudo \
         uidmap \
@@ -24,6 +25,7 @@ RUN apt-get update && \
         libyaml-dev \
         ruby \
         ruby-dev \
+        runc \
         zlib1g-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

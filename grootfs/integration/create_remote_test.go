@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,7 +13,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	yaml "gopkg.in/yaml.v2"
@@ -107,14 +107,33 @@ var _ = Describe("Create with remote images", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			cmd := exec.Command(NamespacerBin, image.RootFSPath, strconv.Itoa(int(GrootUID+100)), "/bin/ls", "/")
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS,
-			}
-
+			cmd := exec.Command("cp", "./assets/runc.config.json", filepath.Join(image.Path, "config.json"))
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
+
+			containerID := fmt.Sprintf("c-%d", rand.Int())
+
+			cmd = exec.Command("runc", "run", "-d", containerID)
+			cmd.Dir = image.Path
+			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 6*time.Second).Should(gexec.Exit(0))
+
+			defer func() {
+				GinkgoRecover()
+				cmd = exec.Command("runc", "delete", containerID)
+				cmd.Dir = image.Path
+				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess, 6*time.Second).Should(gexec.Exit(0))
+			}()
+
+			cmd = exec.Command("runc", "exec", "-u", strconv.Itoa(int(GrootUID)+100), containerID, "/bin/ls", "/")
+			cmd.Dir = image.Path
+			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 6*time.Second).Should(gexec.Exit(0))
 		})
 
 		Context("when the image is bigger than available memory", func() {

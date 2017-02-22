@@ -177,7 +177,7 @@ var _ = Describe("ImageDriver", func() {
 				contents, err := ioutil.ReadFile(filepath.Join(spec.ImagePath, "image_info"))
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(string(contents)).To(Equal("3078"))
+				Expect(string(contents)).To(Equal("3090"))
 			})
 		})
 
@@ -234,9 +234,46 @@ var _ = Describe("ImageDriver", func() {
 				Eventually(sess).Should(gexec.Exit(0))
 			})
 
+			Context("inclusive quota", func() {
+				BeforeEach(func() {
+					spec.ExclusiveDiskLimit = false
+					spec.DiskLimit = 1024 * 1024 * 10
+				})
+
+				Context("when the DiskLimit is smaller than VolumeSize", func() {
+					It("returns an error", func() {
+						spec.DiskLimit = 1024 * 1024 * 3
+						Expect(driver.CreateImage(logger, spec)).To(MatchError(ContainSubstring("disk limit is smaller than volume size")))
+					})
+				})
+
+				It("enforces the quota in the image", func() {
+					Expect(driver.CreateImage(logger, spec)).To(Succeed())
+					imageRootfsPath := filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)
+
+					dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file-1", imageRootfsPath), "count=5", "bs=1M")
+					sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(0))
+
+					dd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file-2", imageRootfsPath), "count=5", "bs=1M")
+					sess, err = gexec.Start(dd, GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess, 5*time.Second).Should(gexec.Exit(1))
+					Eventually(sess.Err).Should(gbytes.Say("No space left on device"))
+				})
+			})
+
 			Context("exclusive quota", func() {
 				BeforeEach(func() {
 					spec.ExclusiveDiskLimit = true
+				})
+
+				Context("when the DiskLimit is smaller than VolumeSize", func() {
+					It("succeeds", func() {
+						spec.DiskLimit = 1024 * 1024 * 3
+						Expect(driver.CreateImage(logger, spec)).To(Succeed())
+					})
 				})
 
 				It("enforces the quota in the image", func() {
@@ -357,7 +394,7 @@ var _ = Describe("ImageDriver", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(stats.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(4198400)))
-			Expect(stats.DiskUsage.TotalBytesUsed).To(Equal(int64(7344134)))
+			Expect(stats.DiskUsage.TotalBytesUsed).To(Equal(int64(7344146)))
 		})
 
 		Context("when path does not exist", func() {
