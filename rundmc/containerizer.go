@@ -264,7 +264,10 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 		return gardener.ActualContainerSpec{}, err
 	}
 
-	state, _ := c.runtime.State(log, handle)
+	state, err := c.runtime.State(log, handle)
+	if err != nil {
+		return gardener.ActualContainerSpec{}, err
+	}
 
 	privileged := true
 	for _, ns := range bundle.Namespaces() {

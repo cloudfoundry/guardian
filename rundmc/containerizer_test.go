@@ -409,6 +409,10 @@ var _ = Describe("Rundmc", func() {
 	Describe("Info", func() {
 		var namespaces []specs.LinuxNamespace = []specs.LinuxNamespace{}
 
+		BeforeEach(func() {
+			fakeOCIRuntime.StateReturns(runrunc.State{Pid: 42}, nil)
+		})
+
 		JustBeforeEach(func() {
 			fakeBundleLoader.LoadStub = func(bundlePath string) (goci.Bndl, error) {
 				if bundlePath != "/path/to/some-handle" {
@@ -433,8 +437,6 @@ var _ = Describe("Rundmc", func() {
 					},
 				}, nil
 			}
-
-			fakeOCIRuntime.StateReturns(runrunc.State{Pid: 42}, nil)
 		})
 
 		It("should return the ActualContainerSpec with the correct bundlePath", func() {
@@ -514,6 +516,17 @@ var _ = Describe("Rundmc", func() {
 				actualSpec, err := containerizer.Info(logger, "some-handle")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(actualSpec.Privileged).To(BeFalse())
+			})
+		})
+
+		Context("when retrieving the State from the runtime errors", func() {
+			BeforeEach(func() {
+				fakeOCIRuntime.StateReturns(runrunc.State{}, errors.New("error-fetching-state"))
+			})
+
+			It("returns the error", func() {
+				_, err := containerizer.Info(logger, "some-handle")
+				Expect(err).To(MatchError("error-fetching-state"))
 			})
 		})
 	})
