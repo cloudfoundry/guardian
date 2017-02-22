@@ -20,8 +20,6 @@ var _ = Describe("List", func() {
 	var image groot.Image
 
 	BeforeEach(func() {
-		integration.SkipIfNotBTRFS(Driver)
-
 		sourceImagePath, err := ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 

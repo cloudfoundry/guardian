@@ -274,7 +274,6 @@ var _ = Describe("Create", func() {
 		})
 
 		It("creates a image with supplied limit", func() {
-			integration.SkipIfNotBTRFS(Driver)
 			image, err := Runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
@@ -283,7 +282,7 @@ var _ = Describe("Create", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 4)).To(Succeed())
-			Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 2)).To(MatchError(ContainSubstring("Disk quota exceeded")))
+			Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 2)).To(MatchError(ContainSubstring("dd: error writing")))
 		})
 
 		Context("when the disk limit value is invalid", func() {
@@ -407,7 +406,6 @@ var _ = Describe("Create", func() {
 
 	Context("when --clean is given", func() {
 		BeforeEach(func() {
-			integration.SkipIfNotBTRFS(Driver)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///busybox:1.26.2",
@@ -446,7 +444,6 @@ var _ = Describe("Create", func() {
 
 	Context("when --no-clean is given", func() {
 		BeforeEach(func() {
-			integration.SkipIfNotBTRFS(Driver)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///busybox:1.26.2",
@@ -699,7 +696,6 @@ var _ = Describe("Create", func() {
 
 		Describe("disk limit size bytes", func() {
 			BeforeEach(func() {
-				integration.SkipIfNotBTRFS(Driver)
 				cfg.DiskLimitSizeBytes = tenMegabytes
 			})
 
