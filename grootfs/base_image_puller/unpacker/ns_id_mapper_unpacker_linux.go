@@ -2,6 +2,7 @@ package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpa
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -41,8 +42,8 @@ func init() {
 		// Once all id mappings are set, we need to spawn the untar function
 		// in a child proccess, so it can make use of it
 		targetDir := os.Args[1]
-		filesystem := os.Args[2]
-		cmd := reexec.Command("unpack", targetDir, filesystem)
+		unpackStrategyJson := os.Args[2]
+		cmd := reexec.Command("unpack", targetDir, unpackStrategyJson)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
@@ -66,16 +67,16 @@ type IDMapper interface {
 }
 
 type NSIdMapperUnpacker struct {
-	commandRunner commandrunner.CommandRunner
-	idMapper      IDMapper
-	filesystem    string
+	commandRunner  commandrunner.CommandRunner
+	idMapper       IDMapper
+	unpackStrategy UnpackStrategy
 }
 
-func NewNSIdMapperUnpacker(commandRunner commandrunner.CommandRunner, idMapper IDMapper, filesystem string) *NSIdMapperUnpacker {
+func NewNSIdMapperUnpacker(commandRunner commandrunner.CommandRunner, idMapper IDMapper, strategy UnpackStrategy) *NSIdMapperUnpacker {
 	return &NSIdMapperUnpacker{
-		commandRunner: commandRunner,
-		idMapper:      idMapper,
-		filesystem:    filesystem,
+		commandRunner:  commandRunner,
+		idMapper:       idMapper,
+		unpackStrategy: strategy,
 	}
 }
 
@@ -89,7 +90,13 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 		return fmt.Errorf("creating tar control pipe: %s", err)
 	}
 
-	unpackCmd := reexec.Command("unpack-wrapper", spec.TargetPath, u.filesystem)
+	unpackStrategyJson, err := json.Marshal(&u.unpackStrategy)
+	if err != nil {
+		logger.Error("unmarshal-unpack-strategy-failed", err)
+		return fmt.Errorf("unmarshal unpack strategy: %s", err)
+	}
+
+	unpackCmd := reexec.Command("unpack-wrapper", spec.TargetPath, string(unpackStrategyJson))
 	unpackCmd.Stdin = spec.Stream
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
 		unpackCmd.SysProcAttr = &syscall.SysProcAttr{

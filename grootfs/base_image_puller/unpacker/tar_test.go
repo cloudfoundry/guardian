@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"syscall"
+
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/lager"
@@ -17,20 +19,20 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	"syscall"
 )
 
 var _ = Describe("Tar unpacker", func() {
 	var (
-		tarUnpacker   *unpacker.TarUnpacker
-		logger        lager.Logger
-		baseImagePath string
-		stream        *gbytes.Buffer
-		targetPath    string
+		tarUnpacker        *unpacker.TarUnpacker
+		logger             lager.Logger
+		baseImagePath      string
+		stream             *gbytes.Buffer
+		targetPath         string
+		whiteoutDevicePath string
 	)
 
 	BeforeEach(func() {
-		tarUnpacker = unpacker.NewTarUnpacker("btrfs")
+		tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
 
 		var err error
 		targetPath, err = ioutil.TempDir("", "")
@@ -40,6 +42,12 @@ var _ = Describe("Tar unpacker", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		logger = lagertest.NewTestLogger("test-store")
+
+		tmpDir, err := ioutil.TempDir("", "whiteout")
+		Expect(err).NotTo(HaveOccurred())
+		whiteoutDevicePath = filepath.Join(tmpDir, "whiteout_device")
+
+		Expect(syscall.Mknod(whiteoutDevicePath, syscall.S_IFCHR, 0)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
@@ -52,6 +60,7 @@ var _ = Describe("Tar unpacker", func() {
 	AfterEach(func() {
 		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
 		Expect(os.RemoveAll(targetPath)).To(Succeed())
+		Expect(os.RemoveAll(whiteoutDevicePath)).To(Succeed())
 	})
 
 	Describe("regular files", func() {
@@ -276,7 +285,7 @@ var _ = Describe("Tar unpacker", func() {
 
 		Context("BTRFS", func() {
 			BeforeEach(func() {
-				tarUnpacker = unpacker.NewTarUnpacker("btrfs")
+				tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
 			})
 
 			commonWhiteoutTests()
@@ -302,7 +311,10 @@ var _ = Describe("Tar unpacker", func() {
 
 		Context("Overlay+XFS", func() {
 			BeforeEach(func() {
-				tarUnpacker = unpacker.NewTarUnpacker("overlay-xfs")
+				tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
+					Name:               "overlay-xfs",
+					WhiteoutDevicePath: whiteoutDevicePath,
+				})
 			})
 
 			commonWhiteoutTests()
@@ -326,6 +338,24 @@ var _ = Describe("Tar unpacker", func() {
 				Expect(stat.Mode()).To(Equal(os.ModeCharDevice|os.ModeDevice), "Whiteout file is not a character device")
 				stat_t = stat.Sys().(*syscall.Stat_t)
 				Expect(stat_t.Rdev).To(Equal(uint64(0)), "Whiteout file has incorrect device number")
+			})
+
+			Context("when it fails to link the whiteout device", func() {
+				BeforeEach(func() {
+					tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
+						Name:               "overlay-xfs",
+						WhiteoutDevicePath: "/tmp/not-here",
+					})
+				})
+
+				It("returns an error", func() {
+					err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+						Stream:     stream,
+						TargetPath: targetPath,
+					})
+
+					Expect(err).To(MatchError(ContainSubstring("failed to create whiteout node")))
+				})
 			})
 		})
 
@@ -369,7 +399,7 @@ var _ = Describe("Tar unpacker", func() {
 
 			Context("BTRFS", func() {
 				BeforeEach(func() {
-					tarUnpacker = unpacker.NewTarUnpacker("btrfs")
+					tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
 				})
 
 				commonOpaqueWhiteoutTests()
@@ -377,7 +407,10 @@ var _ = Describe("Tar unpacker", func() {
 
 			Context("Overlay+XFS", func() {
 				BeforeEach(func() {
-					tarUnpacker = unpacker.NewTarUnpacker("overlay-xfs")
+					tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
+						Name:               "overlay-xfs",
+						WhiteoutDevicePath: whiteoutDevicePath,
+					})
 				})
 
 				commonOpaqueWhiteoutTests()

@@ -113,6 +113,27 @@ var _ = Describe("Configurer", func() {
 			}
 		})
 
+		It("creates a whiteout device", func() {
+			Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
+
+			stat, err := os.Stat(filepath.Join(storePath, store.WhiteoutDevice))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(currentUID)))
+			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(currentGID)))
+		})
+
+		Context("when the whiteout 'device' is not a device", func() {
+			BeforeEach(func() {
+				Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(storePath, store.WhiteoutDevice), []byte{}, 0755)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				err := store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")
+				Expect(err).To(MatchError(ContainSubstring("the whiteout device file is not a valid device")))
+			})
+		})
+
 		Context("it will change the owner of the created folders to the provided userID", func() {
 			It("returns an error", func() {
 				Expect(store.ConfigureStore(logger, storePath, 2, 1, "random-id")).To(Succeed())

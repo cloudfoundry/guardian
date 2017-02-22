@@ -216,6 +216,24 @@ var _ = Describe("Create with remote images", func() {
 			})
 		})
 
+		Context("when the image has whiteouts", func() {
+			BeforeEach(func() {
+				baseImageURL = "docker:///cfgarden/with-whiteouts"
+			})
+
+			It("removes the whitedout filed", func() {
+				image, err := Runner.Create(groot.CreateSpec{
+					BaseImage: baseImageURL,
+					ID:        "random-id",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(path.Join(image.RootFSPath, "file-to-be-deleted")).ToNot(BeAnExistingFile())
+				Expect(path.Join(image.RootFSPath, "folder")).ToNot(BeAnExistingFile())
+				Expect(path.Join(image.RootFSPath, "existing-file")).To(BeAnExistingFile())
+			})
+		})
+
 		Context("when the image has files with the setuid on", func() {
 			BeforeEach(func() {
 				baseImageURL = "docker:///cfgarden/garden-busybox"

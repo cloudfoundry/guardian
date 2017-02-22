@@ -1,6 +1,7 @@
 package unpacker_test
 
 import (
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -25,10 +26,10 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		fakeCommandRunner *fake_command_runner.FakeCommandRunner
 		unpacker          *unpackerpkg.NSIdMapperUnpacker
 
-		logger     *TestLogger
-		imagePath  string
-		targetPath string
-		filesystem string
+		logger         *TestLogger
+		imagePath      string
+		targetPath     string
+		unpackStrategy unpackerpkg.UnpackStrategy
 
 		commandError error
 	)
@@ -38,8 +39,8 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 
 		fakeIDMapper = new(unpackerfakes.FakeIDMapper)
 		fakeCommandRunner = fake_command_runner.New()
-		filesystem = "btrfs"
-		unpacker = unpackerpkg.NewNSIdMapperUnpacker(fakeCommandRunner, fakeIDMapper, filesystem)
+		unpackStrategy.Name = "btrfs"
+		unpacker = unpackerpkg.NewNSIdMapperUnpacker(fakeCommandRunner, fakeIDMapper, unpackStrategy)
 
 		logger = NewLogger("test-store")
 
@@ -70,11 +71,14 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 			TargetPath: targetPath,
 		})).To(Succeed())
 
+		unpackStrategyJson, err := json.Marshal(&unpackStrategy)
+		Expect(err).NotTo(HaveOccurred())
+
 		commands := fakeCommandRunner.StartedCommands()
 		Expect(commands).To(HaveLen(1))
 		Expect(commands[0].Path).To(Equal("/proc/self/exe"))
 		Expect(commands[0].Args).To(Equal([]string{
-			"unpack-wrapper", targetPath, filesystem,
+			"unpack-wrapper", targetPath, string(unpackStrategyJson),
 		}))
 	})
 

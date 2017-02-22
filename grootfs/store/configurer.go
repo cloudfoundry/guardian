@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
+
+	"github.com/pkg/errors"
 
 	"code.cloudfoundry.org/lager"
 )
@@ -65,10 +68,51 @@ func ensure(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
 		}
 	}
 
+	if err := createWhiteoutDevice(logger, ownerUID, ownerGID, storePath); err != nil {
+		return err
+	}
+
+	if err := validateWhiteoutDevice(filepath.Join(storePath, WhiteoutDevice)); err != nil {
+		logger.Error("validating-whiteout-device-failed", err)
+		return err
+	}
+
 	if err := os.Chown(storePath, ownerUID, ownerGID); err != nil {
 		logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
 		return fmt.Errorf("changing store owner to %d:%d for path %s: %s", ownerUID, ownerGID, storePath, err.Error())
 	}
 
 	return os.Chmod(storePath, 0700)
+}
+
+func createWhiteoutDevice(logger lager.Logger, ownerUID, ownerGID int, storePath string) error {
+	whiteoutDevicePath := filepath.Join(storePath, WhiteoutDevice)
+	if _, err := os.Stat(whiteoutDevicePath); os.IsNotExist(err) {
+		if err := syscall.Mknod(whiteoutDevicePath, syscall.S_IFCHR, 0); err != nil {
+			if err != nil && !os.IsExist(err) {
+				logger.Error("creating-whiteout-device-failed", err, lager.Data{"path": whiteoutDevicePath})
+				return errors.Wrapf(err, "failed to create whiteout device %s", whiteoutDevicePath)
+			}
+		}
+
+		if err := os.Chown(whiteoutDevicePath, ownerUID, ownerGID); err != nil {
+			logger.Error("whiteout-device-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
+			return fmt.Errorf("changing store owner to %d:%d for path %s: %s", ownerUID, ownerGID, whiteoutDevicePath, err.Error())
+		}
+	}
+	return nil
+}
+
+func validateWhiteoutDevice(path string) error {
+	stat, err := os.Stat(path)
+	if err != nil && !os.IsExist(err) {
+		return err
+	}
+
+	statT := stat.Sys().(*syscall.Stat_t)
+	if statT.Rdev != 0 || (stat.Mode()&os.ModeCharDevice) != os.ModeCharDevice {
+		return fmt.Errorf("the whiteout device file is not a valid device %s", path)
+	}
+
+	return nil
 }

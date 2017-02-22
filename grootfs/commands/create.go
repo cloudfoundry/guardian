@@ -143,11 +143,15 @@ var CreateCommand = cli.Command{
 
 		runner := linux_command_runner.New()
 		var unpacker base_image_puller.Unpacker
+		unpackerStrategy := unpackerpkg.UnpackStrategy{
+			Name:               cfg.FSDriver,
+			WhiteoutDevicePath: filepath.Join(storePath, store.WhiteoutDevice),
+		}
 		if os.Getuid() == 0 {
-			unpacker = unpackerpkg.NewNSSysProcUnpacker(runner, cfg.FSDriver)
+			unpacker = unpackerpkg.NewNSSysProcUnpacker(runner, unpackerStrategy)
 		} else {
 			idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
-			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper, cfg.FSDriver)
+			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper, unpackerStrategy)
 		}
 
 		dockerSrc := remote.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.InsecureRegistries)

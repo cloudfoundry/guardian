@@ -2,6 +2,7 @@ package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpa
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"syscall"
 
@@ -15,14 +16,14 @@ import (
 )
 
 type NSSysProcUnpacker struct {
-	commandRunner commandrunner.CommandRunner
-	filesystem    string
+	commandRunner  commandrunner.CommandRunner
+	unpackStrategy UnpackStrategy
 }
 
-func NewNSSysProcUnpacker(commandRunner commandrunner.CommandRunner, filesystem string) *NSSysProcUnpacker {
+func NewNSSysProcUnpacker(commandRunner commandrunner.CommandRunner, unpackStrategy UnpackStrategy) *NSSysProcUnpacker {
 	return &NSSysProcUnpacker{
-		commandRunner: commandRunner,
-		filesystem:    filesystem,
+		commandRunner:  commandRunner,
+		unpackStrategy: unpackStrategy,
 	}
 }
 
@@ -31,7 +32,13 @@ func (u *NSSysProcUnpacker) Unpack(logger lager.Logger, spec base_image_puller.U
 	logger.Info("start")
 	defer logger.Info("end")
 
-	unpackCmd := reexec.Command("unpack", spec.TargetPath, u.filesystem)
+	unpackStrategyJson, err := json.Marshal(&u.unpackStrategy)
+	if err != nil {
+		logger.Error("unmarshal-unpack-strategy-failed", err)
+		return fmt.Errorf("unmarshal unpack strategy: %s", err)
+	}
+
+	unpackCmd := reexec.Command("unpack", spec.TargetPath, string(unpackStrategyJson))
 	unpackCmd.Stdin = spec.Stream
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
 		unpackCmd.SysProcAttr = &syscall.SysProcAttr{

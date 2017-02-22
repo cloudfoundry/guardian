@@ -2,6 +2,7 @@ package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpa
 
 import (
 	"archive/tar"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -13,45 +14,59 @@ import (
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/urfave/cli"
 
-	"syscall"
-
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 	"github.com/containers/storage/pkg/system"
 )
 
 func init() {
+	var fail = func(logger lager.Logger, message string, err error) {
+		logger.Error(message, err)
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
 	reexec.Register("unpack", func() {
 		cli.ErrWriter = os.Stdout
 		logger := lager.NewLogger("unpack")
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		rootFSPath := os.Args[1]
-		filesystem := os.Args[2]
+		unpackStategyJson := os.Args[2]
 
-		unpacker := NewTarUnpacker(filesystem)
+		var unpackStrategy UnpackStrategy
+		err := json.Unmarshal([]byte(unpackStategyJson), &unpackStrategy)
+		if err != nil {
+			fail(logger, "unmarshal-unpack-strategy-failed", err)
+		}
+
+		unpacker := NewTarUnpacker(unpackStrategy)
 		if err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			Stream:     os.Stdin,
 			TargetPath: rootFSPath,
 		}); err != nil {
-			logger.Error("unpacking-failed", err)
-			fmt.Println(err.Error())
-			os.Exit(1)
+			fail(logger, "unpacking-failed", err)
 		}
 	})
+}
+
+type UnpackStrategy struct {
+	Name               string
+	WhiteoutDevicePath string
 }
 
 type TarUnpacker struct {
 	whiteoutHandler whiteoutHandler
 }
 
-func NewTarUnpacker(filesystem string) *TarUnpacker {
-
+func NewTarUnpacker(unpackStrategy UnpackStrategy) *TarUnpacker {
 	var whiteoutHandler whiteoutHandler
 
-	switch filesystem {
+	switch unpackStrategy.Name {
 	case "overlay-xfs":
-		whiteoutHandler = &overlayWhiteoutHandler{}
+		whiteoutHandler = &overlayWhiteoutHandler{
+			whiteoutDevicePath: unpackStrategy.WhiteoutDevicePath,
+		}
 	default:
 		whiteoutHandler = &defaultWhiteoutHandler{}
 	}
@@ -67,15 +82,16 @@ type whiteoutHandler interface {
 }
 
 type overlayWhiteoutHandler struct {
+	whiteoutDevicePath string
 }
 
-func (*overlayWhiteoutHandler) removeWhiteout(path string) error {
+func (h *overlayWhiteoutHandler) removeWhiteout(path string) error {
 	toBeDeletedPath := strings.Replace(path, ".wh.", "", 1)
 	if err := os.RemoveAll(toBeDeletedPath); err != nil {
 		return fmt.Errorf("deleting  file: %s", err)
 	}
 
-	if err := syscall.Mknod(toBeDeletedPath, syscall.S_IFCHR, 0); err != nil {
+	if err := os.Link(h.whiteoutDevicePath, toBeDeletedPath); err != nil {
 		return fmt.Errorf("failed to create whiteout node: %s: %s", toBeDeletedPath, err)
 	}
 
