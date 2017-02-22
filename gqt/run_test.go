@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -71,7 +72,7 @@ var _ = Describe("Run", func() {
 		),
 	)
 
-	It("cleans up any files by the time the process exits", func() {
+	It("cleans up any files within a second of the process exiting", func() {
 		client = startGarden()
 		container, err := client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
@@ -86,6 +87,8 @@ var _ = Describe("Run", func() {
 		}, garden.ProcessIO{})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(process.Wait()).To(Equal(0))
+
+		time.Sleep(time.Second)
 
 		after := filesInDir(filepath.Join(client.DepotDir, container.Handle()))
 
