@@ -117,6 +117,7 @@ var _ = Describe("Stats", func() {
 
 		Context("when the image has no quotas", func() {
 			BeforeEach(func() {
+				integration.SkipIfNotXFS(Driver)
 				diskLimit = 0
 			})
 
