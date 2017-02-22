@@ -116,6 +116,10 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 
 		baseVolumeSize += volumeSize
 		baseVolumePaths = append(baseVolumePaths, volumePath)
+		if err := os.Chmod(volumePath, 755); err != nil {
+			logger.Error("changing-volume-permissions-failed", err)
+			return errors.Wrap(err, "changing volume permissions")
+		}
 	}
 
 	upperDir := filepath.Join(spec.ImagePath, UpperDir)
@@ -146,15 +150,6 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		logger.Error("mounting-overlay-to-rootfs-failed", err, lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
 		return errors.Wrap(err, "mounting overlay")
 	}
-
-	// Allows permissions to work for different users inside the fs
-	file, err := os.Open(rootfsDir)
-	defer file.Close()
-	if err != nil {
-		return errors.Wrap(err, "reading rootfsDir")
-	}
-	file.Readdir(-1)
-	// Until here
 
 	imageInfoFileName := filepath.Join(spec.ImagePath, imageInfoName)
 	if err := ioutil.WriteFile(imageInfoFileName, []byte(strconv.FormatInt(baseVolumeSize, 10)), 0600); err != nil {
