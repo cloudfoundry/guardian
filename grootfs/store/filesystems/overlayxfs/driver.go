@@ -242,15 +242,13 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 		return groot.VolumeStats{}, errors.Wrapf(err, "fetching project id for %s", imagePath)
 	}
 
-	if projectID == 0 {
-		logger.Error("image-path-does-not-have-quota-enabled", err)
-		return groot.VolumeStats{}, fmt.Errorf("the image doesn't have a quota applied: %s", imagePath)
-	}
-
-	exclusiveSize, err := d.listQuotaUsage(logger, projectID)
-	if err != nil {
-		logger.Error("list-quota-usage-failed", err, lager.Data{"projectID": projectID})
-		return groot.VolumeStats{}, errors.Wrapf(err, "listing quota usage %s", imagePath)
+	var exclusiveSize int64
+	if projectID != 0 {
+		exclusiveSize, err = d.listQuotaUsage(logger, projectID)
+		if err != nil {
+			logger.Error("list-quota-usage-failed", err, lager.Data{"projectID": projectID})
+			return groot.VolumeStats{}, errors.Wrapf(err, "listing quota usage %s", imagePath)
+		}
 	}
 
 	volumeSize, err := d.readImageInfo(logger, imagePath)

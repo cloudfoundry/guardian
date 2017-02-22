@@ -420,8 +420,10 @@ var _ = Describe("ImageDriver", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := driver.FetchStats(logger, spec.ImagePath)
-				Expect(err).To(MatchError(ContainSubstring("the image doesn't have a quota applied")))
+				volumeStats, err := driver.FetchStats(logger, spec.ImagePath)
+				Expect(err).ToNot(HaveOccurred())
+				Expect(volumeStats.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(0)))
+				Expect(volumeStats.DiskUsage.TotalBytesUsed).To(BeNumerically("~", 3*1024*1024, 35))
 			})
 		})
 

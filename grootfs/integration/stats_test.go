@@ -54,9 +54,13 @@ var _ = Describe("Stats", func() {
 	})
 
 	Context("when image exists", func() {
-		var expectedStats groot.VolumeStats
+		var (
+			expectedStats groot.VolumeStats
+			diskLimit     int64
+		)
 
 		BeforeEach(func() {
+			diskLimit = 1024 * 1024 * 50
 			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(sourceImagePath, "fatfile")), "bs=1048576", "count=5")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
@@ -68,7 +72,7 @@ var _ = Describe("Stats", func() {
 			image, err = Runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        imageID,
-				DiskLimit: 1024 * 1024 * 50,
+				DiskLimit: diskLimit,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=4")
@@ -107,6 +111,24 @@ var _ = Describe("Stats", func() {
 				)
 				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
 					BeNumerically("~", expectedStats.DiskUsage.ExclusiveBytesUsed, 35),
+				)
+			})
+		})
+
+		Context("when the image has no quotas", func() {
+			BeforeEach(func() {
+				diskLimit = 0
+			})
+
+			It("returns 0 as exclusive usage", func() {
+				stats, err := Runner.Stats(imageID)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(stats.DiskUsage.TotalBytesUsed).To(
+					BeNumerically("~", expectedStats.DiskUsage.TotalBytesUsed-expectedStats.DiskUsage.ExclusiveBytesUsed, 35),
+				)
+				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
+					BeNumerically("~", 0, 35),
 				)
 			})
 		})
