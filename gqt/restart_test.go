@@ -130,7 +130,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 			It("destroys the remaining containers' bridges", func() {
 				out, err := exec.Command("ifconfig").CombinedOutput()
-				Expect(err).NotTo(HaveOccurred())
+				Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("error running ifconfig: %s\noutput: %s", err, string(out)))
 
 				pattern := fmt.Sprintf(".*w%d%s.*", GinkgoParallelNode(), subnetName)
 				Expect(string(out)).NotTo(MatchRegexp(pattern))
