@@ -123,7 +123,7 @@ var _ = Describe("Surviving Restarts", func() {
 			})
 
 			It("destroys the remaining containers' iptables", func() {
-				out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
+				out, err := runIPTables("-S", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(out)).NotTo(MatchRegexp(fmt.Sprintf("%sinstance.*", interfacePrefix)))
 			})
@@ -149,13 +149,13 @@ var _ = Describe("Surviving Restarts", func() {
 				})
 
 				It("destroys orphaned containers' iptables filter rules", func() {
-					out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
+					out, err := runIPTables("-S", "-t", "filter")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(out)).NotTo(MatchRegexp(fmt.Sprintf("%sinstance.*", interfacePrefix)))
 				})
 
 				It("destroys orphaned containers' iptables nat rules", func() {
-					out, err := exec.Command("iptables", "-w", "-S", "-t", "nat").CombinedOutput()
+					out, err := runIPTables("-S", "-t", "nat")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(out)).NotTo(MatchRegexp(fmt.Sprintf("%sinstance.*", interfacePrefix)))
 				})

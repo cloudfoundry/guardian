@@ -53,16 +53,16 @@ var _ = Describe("gdn setup", func() {
 	})
 
 	It("sets up iptables", func() {
-		out, err := exec.Command("iptables", "-L", "INPUT").CombinedOutput()
+		out, err := runIPTables("-L", "INPUT")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).To(ContainSubstring(iptablesPrefix + "-input"))
 
-		out, err = exec.Command("iptables", "-L", "FORWARD").CombinedOutput()
+		out, err = runIPTables("-L", "FORWARD")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(out).To(ContainSubstring(iptablesPrefix + "-forward"))
 
 		for _, suffix := range []string{"-input", "-default", "-forward"} {
-			_, err := exec.Command("iptables", "-L", iptablesPrefix+suffix).CombinedOutput()
+			_, err := runIPTables("-L", iptablesPrefix+suffix)
 			Expect(err).NotTo(HaveOccurred())
 		}
 	})
@@ -77,7 +77,7 @@ var _ = Describe("gdn setup", func() {
 		})
 
 		It("iptables should have the relevant entry ", func() {
-			out, err := exec.Command("iptables", "-L", iptablesPrefix+"-input").CombinedOutput()
+			out, err := runIPTables("-L", iptablesPrefix+"-input")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).NotTo(MatchRegexp("REJECT.*all.*reject-with icmp-host-prohibited"))
 		})
@@ -89,7 +89,7 @@ var _ = Describe("gdn setup", func() {
 		})
 
 		It("iptables should have the relevant entry ", func() {
-			out, err := exec.Command("iptables", "-L", iptablesPrefix+"-default").CombinedOutput()
+			out, err := runIPTables("-L", iptablesPrefix+"-default")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).To(MatchRegexp("REJECT.*8.8.8.0/24.*reject-with icmp-port-unreachable"))
 		})
@@ -103,15 +103,15 @@ var _ = Describe("gdn setup", func() {
 
 		It("uses the binary passed instead of /sbin/iptables", func() {
 			// chack all chains are empty
-			out, err := exec.Command("iptables", "-L", "INPUT").CombinedOutput()
+			out, err := runIPTables("-L", "INPUT")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).NotTo(MatchRegexp(iptablesPrefix + ".*anywhere"))
 
-			out, err = exec.Command("iptables", "-L", "FORWARD").CombinedOutput()
+			out, err = runIPTables("-L", "FORWARD")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).NotTo(MatchRegexp(iptablesPrefix + ".*anywhere"))
 
-			out, err = exec.Command("iptables", "-L", "OUTPUT").CombinedOutput()
+			out, err = runIPTables("-L", "OUTPUT")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).NotTo(MatchRegexp(iptablesPrefix + ".*anywhere"))
 		})
@@ -122,12 +122,13 @@ var _ = Describe("gdn setup", func() {
 
 		JustBeforeEach(func() {
 			instanceChain = fmt.Sprintf("%s-instance-container", iptablesPrefix)
-			Expect(exec.Command("iptables", "-N", instanceChain).Run()).To(Succeed())
+			_, err := runIPTables("-N", instanceChain)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("iptables should have the relevant entry ", func() {
+		It("deletes preexisting iptables rules", func() {
 			Expect(exec.Command(gardenBin, append(setupArgs, "--reset-iptables-rules")...).Run()).To(Succeed())
-			out, err := exec.Command("iptables", "-L").CombinedOutput()
+			out, err := runIPTables("-L")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(out).NotTo(ContainSubstring(instanceChain))
 		})

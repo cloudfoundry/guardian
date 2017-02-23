@@ -622,23 +622,17 @@ var _ = Describe("Networking", func() {
 		Context("when creating a container", func() {
 			Describe("filter table", func() {
 				It("annotates rules with the container handle", func() {
-					iptablesCmd := exec.Command("iptables", "-w", "-t", "filter", "-L")
-					sess, err := gexec.Start(iptablesCmd, GinkgoWriter, GinkgoWriter)
+					output, err := runIPTables("-t", "filter", "-L")
 					Expect(err).NotTo(HaveOccurred())
-
-					Eventually(sess).Should(gexec.Exit(0))
-					Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`/\* %s \*/`, containerSpec.Handle)))
+					Expect(string(output)).To(ContainSubstring(fmt.Sprintf(`/* %s */`, containerSpec.Handle)))
 				})
 			})
 
 			Describe("nat table", func() {
 				It("annotates rules with the container handle", func() {
-					iptablesCmd := exec.Command("iptables", "-w", "-t", "nat", "-L")
-					sess, err := gexec.Start(iptablesCmd, GinkgoWriter, GinkgoWriter)
+					output, err := runIPTables("-t", "nat", "-L")
 					Expect(err).NotTo(HaveOccurred())
-
-					Eventually(sess).Should(gexec.Exit(0))
-					Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`/\* %s \*/`, containerSpec.Handle)))
+					Expect(string(output)).To(ContainSubstring(fmt.Sprintf(`/* %s */`, containerSpec.Handle)))
 				})
 			})
 		})
@@ -650,12 +644,9 @@ var _ = Describe("Networking", func() {
 			})
 
 			It("annotates the rule with the container handle", func() {
-				iptablesCmd := exec.Command("iptables", "-w", "-t", "nat", "-L")
-				sess, err := gexec.Start(iptablesCmd, GinkgoWriter, GinkgoWriter)
+				output, err := runIPTables("-t", "nat", "-L")
 				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(sess).Should(gexec.Exit(0))
-				Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`DNAT.*/\* %s \*/`, containerSpec.Handle)))
+				Expect(string(output)).To(MatchRegexp(fmt.Sprintf(`DNAT.*/\* %s \*/`, containerSpec.Handle)))
 			})
 		})
 
@@ -669,12 +660,9 @@ var _ = Describe("Networking", func() {
 			})
 
 			It("annotates the rule with the container handle", func() {
-				iptablesCmd := exec.Command("iptables", "-w", "-t", "filter", "-L")
-				sess, err := gexec.Start(iptablesCmd, GinkgoWriter, GinkgoWriter)
+				output, err := runIPTables("-t", "filter", "-L")
 				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(sess).Should(gexec.Exit(0))
-				Eventually(sess).Should(gbytes.Say(fmt.Sprintf(`RETURN.*tcp.*destination IP range.* /\* %s \*/`, containerSpec.Handle)))
+				Expect(string(output)).To(ContainSubstring(fmt.Sprintf(`/* %s */`, containerSpec.Handle)))
 			})
 		})
 	})

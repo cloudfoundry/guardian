@@ -177,7 +177,7 @@ var _ = Describe("Destroying a Container", func() {
 
 		var itCleansUpPerContainerNetworkingResources = func() {
 			It("should remove iptable entries", func() {
-				out, err := exec.Command("iptables", "-w", "-S", "-t", "filter").CombinedOutput()
+				out, err := runIPTables("-S", "-t", "filter")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(out)).NotTo(MatchRegexp("w-%d-instance.* 177.100.%d.0/24", GinkgoParallelNode(), GinkgoParallelNode()))
 			})

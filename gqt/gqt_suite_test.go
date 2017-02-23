@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
+	"code.cloudfoundry.org/guardian/pkg/locksmith"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -147,7 +148,21 @@ func cleanupSystemResources(cgroupsMountpoint, iptablesPrefix string) error {
 		fmt.Sprintf("GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=%s-postrounting", iptablesPrefix),
 		fmt.Sprintf("GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=%s-instance-", iptablesPrefix),
 	}
+	lock, err := locksmith.NewFileSystem().Lock(iptables.LockKey)
+	if err != nil {
+		return err
+	}
+	defer lock.Unlock()
 	return cmd.Run()
+}
+
+func runIPTables(ipTablesArgs ...string) ([]byte, error) {
+	lock, err := locksmith.NewFileSystem().Lock(iptables.LockKey)
+	if err != nil {
+		return nil, err
+	}
+	defer lock.Unlock()
+	return exec.Command("iptables", append([]string{"-w"}, ipTablesArgs...)...).CombinedOutput()
 }
 
 // returns the n'th ASCII character starting from 'a' through 'z'
