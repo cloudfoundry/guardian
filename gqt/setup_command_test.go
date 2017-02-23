@@ -5,13 +5,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-	"code.cloudfoundry.org/guardian/kawasaki/iptables"
-	"code.cloudfoundry.org/idmapper"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -35,7 +32,7 @@ var _ = Describe("gdn setup", func() {
 		tag = nodeToString(GinkgoParallelNode())
 		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
 		iptablesPrefix = fmt.Sprintf("w-%s", tag)
-		setupArgs = []string{"setup", "--tag", fmt.Sprintf("%s", tag)}
+		setupArgs = []string{"setup", "--tag", tag}
 	})
 
 	JustBeforeEach(func() {
@@ -47,27 +44,7 @@ var _ = Describe("gdn setup", func() {
 	})
 
 	AfterEach(func() {
-		// cgroups
-		umountCmd := exec.Command("sh", "-c", fmt.Sprintf("umount %s/*", cgroupsMountpoint))
-		Expect(umountCmd.Run()).To(Succeed(), "unmount %s", cgroupsMountpoint)
-		umountCmd = exec.Command("sh", "-c", fmt.Sprintf("umount %s", cgroupsMountpoint))
-		Expect(umountCmd.Run()).To(Succeed(), "unmount %s", cgroupsMountpoint)
-
-		// clean up iptables rules
-		cmd := exec.Command("bash", "-c", iptables.SetupScript)
-		cmd.Env = []string{
-			fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
-			"ACTION=teardown",
-			"GARDEN_IPTABLES_BIN=/sbin/iptables",
-			fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s-input", iptablesPrefix),
-			fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s-forward", iptablesPrefix),
-			fmt.Sprintf("GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=%s-default", iptablesPrefix),
-			fmt.Sprintf("GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=%s-instance-", iptablesPrefix),
-			fmt.Sprintf("GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=%s-prerouting", iptablesPrefix),
-			fmt.Sprintf("GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=%s-postrounting", iptablesPrefix),
-			fmt.Sprintf("GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=%s-instance-", iptablesPrefix),
-		}
-		Expect(cmd.Run()).To(Succeed())
+		Expect(cleanupSystemResources(cgroupsMountpoint, iptablesPrefix)).To(Succeed())
 	})
 
 	It("sets up cgroups", func() {
@@ -170,32 +147,6 @@ var _ = Describe("gdn setup", func() {
 			Expect(server.DestroyAndStop()).To(Succeed())
 		})
 
-		Context("when the server is running as non-root", func() {
-			var maximus *syscall.Credential
-
-			BeforeEach(func() {
-				maxId := uint32(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID()))
-				maximus = &syscall.Credential{Uid: maxId, Gid: maxId}
-			})
-
-			JustBeforeEach(func() {
-				serverArgs = append(serverArgs, "--image-plugin", testImagePluginBin)
-				server = startGardenAsUser(maximus, serverArgs...)
-				Expect(server).NotTo(BeNil())
-			})
-
-			It("server process should run consistently as non-root user", func() {
-				out, err := exec.Command("ps", "-U", fmt.Sprintf("%d", maximus.Uid)).CombinedOutput()
-				Expect(err).NotTo(HaveOccurred(), "No process of user maximus was found")
-				Expect(out).To(ContainSubstring(fmt.Sprintf("%d", server.Pid)))
-
-				Consistently(func() error {
-					return exec.Command("ps", "-p", strconv.Itoa(server.Pid)).Run()
-				}).Should(Succeed())
-
-			})
-		})
-
 		Context("when the server is running as root", func() {
 			JustBeforeEach(func() {
 				root := &syscall.Credential{Uid: 0, Gid: 0}
@@ -210,12 +161,3 @@ var _ = Describe("gdn setup", func() {
 		})
 	})
 })
-
-// returns the n'th ASCII character starting from 'a' through 'z'
-// E.g. nodeToString(1) = a, nodeToString(2) = b, etc ...
-func nodeToString(ginkgoNode int) string {
-	r := 'a' + ginkgoNode - 1
-	Expect(r).To(BeNumerically(">=", 'a'))
-	Expect(r).To(BeNumerically("<=", 'z'))
-	return string(r)
-}

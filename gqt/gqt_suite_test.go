@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -120,4 +122,39 @@ func restartGarden(client *runner.RunningGarden, argv ...string) *runner.Running
 
 func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
 	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, "", tarBin, nil, argv...)
+}
+
+func cleanupSystemResources(cgroupsMountpoint, iptablesPrefix string) error {
+	umountCmd := exec.Command("sh", "-c", fmt.Sprintf("umount %s/*", cgroupsMountpoint))
+	if err := umountCmd.Run(); err != nil {
+		return err
+	}
+	umountCmd = exec.Command("sh", "-c", fmt.Sprintf("umount %s", cgroupsMountpoint))
+	if err := umountCmd.Run(); err != nil {
+		return err
+	}
+
+	cmd := exec.Command("bash", "-c", iptables.SetupScript)
+	cmd.Env = []string{
+		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
+		"ACTION=teardown",
+		"GARDEN_IPTABLES_BIN=/sbin/iptables",
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s-input", iptablesPrefix),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s-forward", iptablesPrefix),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=%s-default", iptablesPrefix),
+		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=%s-instance-", iptablesPrefix),
+		fmt.Sprintf("GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=%s-prerouting", iptablesPrefix),
+		fmt.Sprintf("GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=%s-postrounting", iptablesPrefix),
+		fmt.Sprintf("GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=%s-instance-", iptablesPrefix),
+	}
+	return cmd.Run()
+}
+
+// returns the n'th ASCII character starting from 'a' through 'z'
+// E.g. nodeToString(1) = a, nodeToString(2) = b, etc ...
+func nodeToString(ginkgoNode int) string {
+	r := 'a' + ginkgoNode - 1
+	Expect(r).To(BeNumerically(">=", 'a'))
+	Expect(r).To(BeNumerically("<=", 'z'))
+	return string(r)
 }
