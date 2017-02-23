@@ -117,7 +117,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			fmt.Fprintln(cmd.Stderr, "dadoo stderr")
 
 			// dadoo would not error - simulate dadoo operation
-			go func(cmd *exec.Cmd, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File), stderrContents string) {
+			go func(cmd *exec.Cmd, dadooPanicsBeforeReportingRuncExitCode bool, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File), stderrContents string) {
 				defer GinkgoRecover()
 
 				// parse flags to get bundle dir argument so we can open stdin/out/err pipes
@@ -168,7 +168,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				// close streams
 				Expect(so.Close()).To(Succeed())
 				Expect(se.Close()).To(Succeed())
-			}(cmd, dadooWritesExitCode, []byte(dadooWritesLogs), closeExitPipeCh, receiveWinSize, stderrContents)
+			}(cmd, dadooPanicsBeforeReportingRuncExitCode, dadooWritesExitCode, []byte(dadooWritesLogs), closeExitPipeCh, receiveWinSize, stderrContents)
 
 			return nil
 		})
