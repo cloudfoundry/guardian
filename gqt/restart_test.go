@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -116,6 +117,10 @@ var _ = Describe("Surviving Restarts", func() {
 		Context("when the destroy-containers-on-startup flag is passed", func() {
 			BeforeEach(func() {
 				args = append(args, "--destroy-containers-on-startup")
+			})
+
+			JustBeforeEach(func() {
+				Eventually(client, time.Second*10).Should(gbytes.Say("guardian.start.clean-up-container.cleaned-up"))
 			})
 
 			It("destroys the remaining containers in the depotDir", func() {
