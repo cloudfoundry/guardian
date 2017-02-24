@@ -1,12 +1,14 @@
 package dns
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
 	"regexp"
+	"strings"
 
 	"code.cloudfoundry.org/lager"
 )
@@ -50,5 +52,13 @@ func (r *ResolvFileCompiler) Compile(log lager.Logger, resolvConfPath string, ho
 	if matches {
 		return []byte(fmt.Sprintf("nameserver %s\n", hostIP.String())), nil
 	}
-	return contents, nil
+
+	scanner := bufio.NewScanner(bytes.NewBuffer(contents))
+	var ret bytes.Buffer
+	for scanner.Scan() {
+		if !strings.Contains(scanner.Text(), "127.0.0.") {
+			fmt.Fprintf(&ret, "%s\n", scanner.Text())
+		}
+	}
+	return ret.Bytes(), nil
 }

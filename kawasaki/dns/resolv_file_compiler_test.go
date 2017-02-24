@@ -88,10 +88,11 @@ var _ = Describe("ResolvFileCompiler", func() {
 		})
 
 		Context("and the host is not running DNS", func() {
-			var resolvConfContents string
+			var expectedResolvConfContents string
 
 			BeforeEach(func() {
-				resolvConfContents = "nameserver 127.0.0.1\nnameserver 8.8.4.4\n"
+				resolvConfContents := "nameserver 127.0.0.1\nnameserver 8.8.4.4\n"
+				expectedResolvConfContents = "nameserver 8.8.4.4\n"
 				writeFile(hostResolvConfPath, resolvConfContents)
 			})
 
@@ -99,7 +100,7 @@ var _ = Describe("ResolvFileCompiler", func() {
 				contents, err := compiler.Compile(log, hostResolvConfPath, hostIp, nil)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(string(contents)).To(Equal(resolvConfContents))
+				Expect(string(contents)).To(Equal(expectedResolvConfContents))
 			})
 		})
 	})
