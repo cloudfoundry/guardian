@@ -18,7 +18,7 @@ func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 
 	shares := uint64(spec.Limits.CPU.LimitInShares)
 	cpuSpec := specs.LinuxCPU{Shares: &shares}
-	if l.CpuQuotaPeriodPerShare > 0 {
+	if l.CpuQuotaPeriodPerShare > 0 && shares > 0 {
 		cpuSpec.Period = &CpuPeriod
 
 		quota := shares * l.CpuQuotaPeriodPerShare

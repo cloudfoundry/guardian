@@ -69,6 +69,19 @@ var _ = Describe("LimitsRule", func() {
 		})
 	})
 
+	Context("with positive cpu quota period per share and no shares", func() {
+		It("sets the correct CPU limit in bundle resources", func() {
+			limits := bundlerules.Limits{
+				CpuQuotaPeriodPerShare: 5,
+			}
+			newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{})
+
+			Expect(*(newBndl.Resources().CPU.Shares)).To(BeNumerically("==", 0))
+			Expect(newBndl.Resources().CPU.Period).To(BeNil())
+			Expect(newBndl.Resources().CPU.Quota).To(BeNil())
+		})
+	})
+
 	It("sets the correct PID limit in bundle resources", func() {
 		newBndl := bundlerules.Limits{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			Limits: garden.Limits{
