@@ -202,17 +202,16 @@ var _ = Describe("Surviving Restarts", func() {
 						Stderr: io.MultiWriter(GinkgoWriter, out),
 					})
 					Expect(err).NotTo(HaveOccurred())
-					Eventually(out).Should(gbytes.Say("hello"))
+					psOutput, err := exec.Command("sh", "-c", "ps -elf | grep /bin/sh").CombinedOutput()
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(out).Should(
+						gbytes.Say("hello"),
+						fmt.Sprintf("did not see 'hello' after 5 seconds.\n/bin/sh processes: %s", string(psOutput)),
+					)
 
 					Expect(process.Signal(garden.SignalKill)).To(Succeed())
-
-					exited := make(chan struct{})
-					go func() {
-						process.Wait()
-						close(exited)
-					}()
-
-					Eventually(exited).Should(BeClosed())
+					_, err = process.Wait()
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("can still destroy the container", func() {
