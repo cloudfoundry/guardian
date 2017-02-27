@@ -17,8 +17,13 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/filesystems"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
+)
+
+const (
+	BaseFileSystemName = "btrfs"
 )
 
 type Driver struct {
@@ -27,12 +32,15 @@ type Driver struct {
 	storePath    string
 }
 
-func NewDriver(btrfsBinPath, draxBinPath, storePath string) *Driver {
+func NewDriver(btrfsBinPath, draxBinPath, storePath string) (*Driver, error) {
+	if err := filesystems.CheckFSPath(storePath, filesystems.BtrfsType, BaseFileSystemName); err != nil {
+		return nil, err
+	}
 	return &Driver{
 		btrfsBinPath: btrfsBinPath,
 		draxBinPath:  draxBinPath,
 		storePath:    storePath,
-	}
+	}, nil
 }
 
 func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {

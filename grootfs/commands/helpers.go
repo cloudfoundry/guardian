@@ -11,10 +11,9 @@ import (
 func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {
 	switch cfg.FSDriver {
 	case "btrfs":
-		return btrfs.NewDriver(cfg.BtrfsBin, cfg.DraxBin, cfg.StorePath), nil
+		return btrfs.NewDriver(cfg.BtrfsBin, cfg.DraxBin, cfg.StorePath)
 	case "overlay-xfs":
-		return overlayxfs.NewDriver(cfg.XFSProgsPath, cfg.StorePath), nil
-
+		return overlayxfs.NewDriver(cfg.XFSProgsPath, cfg.StorePath)
 	default:
 		return nil, fmt.Errorf("filesystem driver not supported: %s", cfg.FSDriver)
 	}

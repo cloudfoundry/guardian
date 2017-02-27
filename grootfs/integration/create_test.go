@@ -493,6 +493,10 @@ var _ = Describe("Create", func() {
 	})
 
 	Context("when no --store option is given", func() {
+		BeforeEach(func() {
+			integration.SkipIfNotBTRFS(Driver)
+		})
+
 		It("uses the default store path", func() {
 			Expect("/var/lib/grootfs/images").ToNot(BeAnExistingFile())
 			_, err := Runner.WithoutStore().Create(groot.CreateSpec{
@@ -539,6 +543,16 @@ var _ = Describe("Create", func() {
 				ID:        "this/is/not/okay",
 			})
 			Expect(err).To(MatchError(ContainSubstring("id `this/is/not/okay` contains invalid characters: `/`")))
+		})
+	})
+
+	Context("when StorePath doesn't match the given driver", func() {
+		It("returns an error", func() {
+			_, err := Runner.WithStore("/mnt/ext4").Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+			})
+			Expect(err).To(MatchError(ContainSubstring("filesystem driver requires store filesystem to be")))
 		})
 	})
 

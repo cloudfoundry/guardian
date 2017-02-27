@@ -18,6 +18,12 @@ mount_storage() {
     mknod -m777 /dev/loop$i b 7 $i
   done
 
+  # Make and Mount EXT4 Volume
+  mkdir /mnt/ext4
+  truncate -s 256M /ext4_volume
+  mkfs.ext4 /ext4_volume
+  mount /ext4_volume /mnt/ext4
+
   # Make BTRFS volume
   truncate -s 1G /btrfs_volume
   mkfs.btrfs --nodesize 4k -s 4k /btrfs_volume

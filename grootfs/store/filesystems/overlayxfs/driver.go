@@ -16,24 +16,29 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/filesystems"
 	quotapkg "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 )
 
 const (
-	UpperDir  = "diff"
-	WorkDir   = "workdir"
-	RootfsDir = "rootfs"
+	BaseFileSystemName = "xfs"
+	UpperDir           = "diff"
+	WorkDir            = "workdir"
+	RootfsDir          = "rootfs"
 
 	imageInfoName = "image_info"
 )
 
-func NewDriver(xfsProgsPath, storePath string) *Driver {
+func NewDriver(xfsProgsPath, storePath string) (*Driver, error) {
+	if err := filesystems.CheckFSPath(storePath, filesystems.XfsType, BaseFileSystemName); err != nil {
+		return nil, err
+	}
 	return &Driver{
 		xfsProgsPath: xfsProgsPath,
 		storePath:    storePath,
-	}
+	}, nil
 }
 
 type Driver struct {
