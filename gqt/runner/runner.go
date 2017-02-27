@@ -231,6 +231,9 @@ func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, in
 	if user != nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 		cmd.SysProcAttr.Credential = user
+
+		uidGid := fmt.Sprintf("%d:%d", user.Uid, user.Gid)
+		Expect(exec.Command("chown", "-R", uidGid, tmpdir, depotDir, graphPath).Run()).To(Succeed())
 	}
 
 	return cmd
