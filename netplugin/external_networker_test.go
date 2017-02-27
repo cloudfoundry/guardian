@@ -80,21 +80,6 @@ var _ = Describe("ExternalNetworker", func() {
 	})
 
 	Describe("Network", func() {
-		BeforeEach(func() {
-			pluginOutput = `{ "properties": {
-					"garden.network.container-ip": "10.255.1.2"
-					}
-				}`
-		})
-
-		It("sets the external-ip property on the container", func() {
-			err := plugin.Network(logger, containerSpec, 42)
-			Expect(err).NotTo(HaveOccurred())
-
-			externalIPValue, _ := configStore.Get(handle, gardener.ExternalIPKey)
-			Expect(externalIPValue).To(Equal("1.2.3.4"))
-		})
-
 		It("passes the pid of the container to the external plugin's stdin", func() {
 			err := plugin.Network(logger, containerSpec, 42)
 			Expect(err).NotTo(HaveOccurred())
@@ -178,7 +163,6 @@ var _ = Describe("ExternalNetworker", func() {
 		})
 
 		Context("when NetIn input is provided", func() {
-
 			BeforeEach(func() {
 				containerSpec.NetIn = []garden.NetIn{
 					garden.NetIn{
@@ -226,30 +210,39 @@ var _ = Describe("ExternalNetworker", func() {
 			Expect(logger).To(gbytes.Say("result.*some-stderr-bytes"))
 		})
 
-		It("configures DNS inside the container", func() {
-			err := plugin.Network(logger, containerSpec, 42)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(resolvConfigurer.ConfigureCallCount()).To(Equal(1))
-			log, cfg, pid := resolvConfigurer.ConfigureArgsForCall(0)
-			Expect(log).To(Equal(logger))
-			Expect(pid).To(Equal(42))
-			Expect(cfg).To(Equal(kawasaki.NetworkConfig{
-				ContainerIP:     net.ParseIP("10.255.1.2"),
-				BridgeIP:        net.ParseIP("10.255.1.2"),
-				ContainerHandle: "some-handle",
-				DNSServers:      []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("9.9.9.9")},
-			}))
-		})
-
-		Context("when the resolvConfigurer fails", func() {
+		Context("when the external plugin returns a containerIP in properties", func() {
 			BeforeEach(func() {
-				resolvConfigurer.ConfigureReturns(errors.New("banana"))
+				pluginOutput = `{ "properties": {
+					"garden.network.container-ip": "10.255.1.2"
+					}
+				}`
 			})
-			It("returns the error", func() {
-				err := plugin.Network(logger, containerSpec, 42)
 
-				Expect(err).To(MatchError("banana"))
+			It("configures DNS inside the container", func() {
+				err := plugin.Network(logger, containerSpec, 42)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(resolvConfigurer.ConfigureCallCount()).To(Equal(1))
+				log, cfg, pid := resolvConfigurer.ConfigureArgsForCall(0)
+				Expect(log).To(Equal(logger))
+				Expect(pid).To(Equal(42))
+				Expect(cfg).To(Equal(kawasaki.NetworkConfig{
+					ContainerIP:     net.ParseIP("10.255.1.2"),
+					BridgeIP:        net.ParseIP("10.255.1.2"),
+					ContainerHandle: "some-handle",
+					DNSServers:      []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("9.9.9.9")},
+				}))
+			})
+
+			Context("when the resolvConfigurer fails", func() {
+				BeforeEach(func() {
+					resolvConfigurer.ConfigureReturns(errors.New("banana"))
+				})
+				It("returns the error", func() {
+					err := plugin.Network(logger, containerSpec, 42)
+
+					Expect(err).To(MatchError("banana"))
+				})
 			})
 		})
 
@@ -289,24 +282,14 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 		})
 
-		Context("when the external plugin returns JSON without a properties key", func() {
-			It("returns a useful error message", func() {
-				pluginOutput = `{"not-properties-key":{"foo":"bar"}}`
-
-				err := plugin.Network(logger, containerSpec, 42)
-				Expect(err).To(MatchError(ContainSubstring("network plugin returned JSON without a properties key")))
-			})
-		})
-
 		Context("when the external network plugin returns nothing", func() {
-			It("returns a useful error message", func() {
+			It("succeeds", func() {
 				pluginOutput = ""
 
 				err := plugin.Network(logger, containerSpec, 42)
-				Expect(err).To(MatchError(ContainSubstring("unmarshaling result from external networker")))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
-
 	})
 
 	Describe("Destroy", func() {

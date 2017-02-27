@@ -3,7 +3,6 @@ package netplugin
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -96,32 +95,26 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 		return err
 	}
 
-	if outputs.Properties == nil {
-		return errors.New("network plugin returned JSON without a properties key")
-	}
-
 	for k, v := range outputs.Properties {
 		p.configStore.Set(containerSpec.Handle, k, v)
 	}
 
 	containerIP, ok := p.configStore.Get(containerSpec.Handle, gardener.ContainerIPKey)
-	if !ok {
-		return fmt.Errorf("plugin failed to set a container ip")
-	}
+	if ok {
+		log.Info("external-binary-write-dns-to-config", lager.Data{
+			"dnsServers": p.dnsServers,
+		})
+		cfg := kawasaki.NetworkConfig{
+			ContainerIP:     net.ParseIP(containerIP),
+			BridgeIP:        net.ParseIP(containerIP),
+			ContainerHandle: containerSpec.Handle,
+			DNSServers:      p.dnsServers,
+		}
 
-	log.Info("external-binary-write-dns-to-config", lager.Data{
-		"dnsServers": p.dnsServers,
-	})
-	cfg := kawasaki.NetworkConfig{
-		ContainerIP:     net.ParseIP(containerIP),
-		BridgeIP:        net.ParseIP(containerIP),
-		ContainerHandle: containerSpec.Handle,
-		DNSServers:      p.dnsServers,
-	}
-
-	err = p.resolvConfigurer.Configure(log, cfg, pid)
-	if err != nil {
-		return err
+		err = p.resolvConfigurer.Configure(log, cfg, pid)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -248,7 +241,7 @@ func (p *externalBinaryNetworker) exec(log lager.Logger, action, handle string,
 		return fmt.Errorf("external networker %s: %s", action, err)
 	}
 
-	if outputData != nil {
+	if outputData != nil && stdout.Len() > 0 {
 		err = json.Unmarshal(stdout.Bytes(), outputData)
 		if err != nil {
 			log.Error("external-networker-result", err, logData)

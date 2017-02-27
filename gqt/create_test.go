@@ -467,18 +467,6 @@ var _ = Describe("Creating a Container", func() {
 				Expect(err).To(MatchError(ContainSubstring("unmarshaling result from external networker: invalid character")))
 			})
 		})
-
-		Context("when the external network plugin returns JSON without the 'properties' key", func() {
-			BeforeEach(func() {
-				pluginOutput = `{"not-properties-key":{"foo":"bar"}}`
-				args = append(args, "--network-plugin-extra-arg", pluginOutput)
-			})
-
-			It("returns a useful error message", func() {
-				_, err := client.Create(garden.ContainerSpec{})
-				Expect(err).To(MatchError(ContainSubstring("network plugin returned JSON without a properties key")))
-			})
-		})
 	})
 
 	It("does not make containers available to lookup until creation is completed", func() {

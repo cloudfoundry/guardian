@@ -418,6 +418,17 @@ var _ = Describe("Networking", func() {
 			}
 		})
 
+		Context("and the plugin is essentially a noop", func() {
+			BeforeEach(func() {
+				args = []string{"--network-plugin", "/bin/true"}
+			})
+
+			It("successfully creates a container", func() {
+				_, err := client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		Context("when the network plugin returns properties", func() {
 			BeforeEach(func() {
 				pluginReturn = `{"properties":{
