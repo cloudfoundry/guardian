@@ -7,6 +7,7 @@ import (
 )
 
 var CpuPeriod uint64 = 100000
+var MinCpuQuota uint64 = 1000
 
 type Limits struct {
 	CpuQuotaPeriodPerShare uint64
@@ -22,6 +23,9 @@ func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 		cpuSpec.Period = &CpuPeriod
 
 		quota := shares * l.CpuQuotaPeriodPerShare
+		if quota < MinCpuQuota {
+			quota = MinCpuQuota
+		}
 		cpuSpec.Quota = &quota
 	}
 	bndl = bndl.WithCPUShares(cpuSpec)
