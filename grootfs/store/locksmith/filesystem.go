@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"code.cloudfoundry.org/grootfs/store"
+	errorspkg "github.com/pkg/errors"
 )
 
 var FlockSyscall = syscall.Flock
@@ -26,7 +27,7 @@ func (l *FileSystem) Lock(key string) (*os.File, error) {
 	key = strings.Replace(key, "/", "", -1)
 	lockFile, err := os.OpenFile(l.path(key), os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
-		return nil, fmt.Errorf("creating lock file for key `%s`: %s", key, err)
+		return nil, errorspkg.Wrapf(err, "creating lock file for key `%s`", key)
 	}
 
 	fd := int(lockFile.Fd())

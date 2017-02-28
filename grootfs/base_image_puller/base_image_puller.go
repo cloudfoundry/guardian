@@ -126,7 +126,7 @@ func (p *BaseImagePuller) quotaExceeded(logger lager.Logger, layersDigest []Laye
 
 	totalSize := p.layersSize(layersDigest)
 	if totalSize > spec.DiskLimit {
-		err := fmt.Errorf("layers exceed disk quota %d/%d bytes", totalSize, spec.DiskLimit)
+		err := errorspkg.Errorf("layers exceed disk quota %d/%d bytes", totalSize, spec.DiskLimit)
 		logger.Error("blob-manifest-size-check-failed", err, lager.Data{
 			"totalSize":                 totalSize,
 			"diskLimit":                 spec.DiskLimit,
@@ -187,7 +187,7 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 		digest.ChainID,
 	)
 	if err != nil {
-		return "", fmt.Errorf("creating volume for layer `%s`: %s", digest.BlobID, err)
+		return "", errorspkg.Wrapf(err, "creating volume for layer `%s`", digest.BlobID)
 	}
 	logger.Debug("volume-created", lager.Data{
 		"volumePath":    volumePath,

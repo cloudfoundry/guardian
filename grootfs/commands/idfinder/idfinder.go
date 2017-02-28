@@ -1,13 +1,13 @@
 package idfinder
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/store"
+	errorspkg "github.com/pkg/errors"
 )
 
 func FindID(storePath string, pathOrID string) (string, error) {
@@ -25,14 +25,14 @@ func FindID(storePath string, pathOrID string) (string, error) {
 		matches := pathRegexp.FindStringSubmatch(pathOrID)
 
 		if len(matches) != 2 {
-			return "", fmt.Errorf("path `%s` is outside store path", pathOrID)
+			return "", errorspkg.Errorf("path `%s` is outside store path", pathOrID)
 		}
 		imageID = matches[1]
 		imagePath = pathOrID
 	}
 
 	if !exists(imagePath) {
-		return "", fmt.Errorf("image `%s` was not found", imageID)
+		return "", errorspkg.Errorf("image `%s` was not found", imageID)
 	}
 
 	return imageID, nil

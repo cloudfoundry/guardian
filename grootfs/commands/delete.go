@@ -1,7 +1,6 @@
 package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -13,6 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -26,7 +26,7 @@ var DeleteCommand = cli.Command{
 		logger = logger.Session("delete")
 
 		if ctx.NArg() != 1 {
-			logger.Error("parsing-command", errors.New("id was not specified"))
+			logger.Error("parsing-command", errorspkg.New("id was not specified"))
 			return cli.NewExitError("id was not specified", 1)
 		}
 

@@ -1,10 +1,9 @@
 package filesystems
 
 import (
-	"fmt"
 	"syscall"
 
-	"github.com/pkg/errors"
+	errorspkg "github.com/pkg/errors"
 )
 
 const (
@@ -16,11 +15,11 @@ func CheckFSPath(path string, expectedFilesystem int64, expectedFilesystemName s
 	statfs := syscall.Statfs_t{}
 	err := syscall.Statfs(path, &statfs)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to detect type of filesystem")
+		return errorspkg.Wrapf(err, "Failed to detect type of filesystem")
 	}
 
 	if statfs.Type != expectedFilesystem {
-		return fmt.Errorf("filesystem driver requires store filesystem to be %s", expectedFilesystemName)
+		return errorspkg.Errorf("filesystem driver requires store filesystem to be %s", expectedFilesystemName)
 	}
 	return nil
 }

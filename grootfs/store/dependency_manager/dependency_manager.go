@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	errorspkg "github.com/pkg/errors"
 )
 
 type DependencyManager struct {
@@ -35,7 +37,7 @@ func (d *DependencyManager) Deregister(id string) error {
 func (d *DependencyManager) Dependencies(id string) ([]string, error) {
 	f, err := os.Open(d.filePath(id))
 	if err != nil && os.IsNotExist(err) {
-		return nil, fmt.Errorf("image `%s` not found", id)
+		return nil, errorspkg.Errorf("image `%s` not found", id)
 	}
 	if err != nil {
 		return nil, err

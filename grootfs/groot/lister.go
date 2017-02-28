@@ -1,12 +1,12 @@
 package groot
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 )
 
 type Lister struct {
@@ -23,7 +23,7 @@ func (l *Lister) List(logger lager.Logger, storePath string) ([]string, error) {
 
 	imagePaths, err := l.listDirs(filepath.Join(storePath, store.ImageDirName))
 	if err != nil {
-		return nil, fmt.Errorf("failed to list store path: %s", err)
+		return nil, errorspkg.Wrap(err, "failed to list store path")
 	}
 
 	logger.Debug("list-images", lager.Data{"imagePaths": imagePaths})

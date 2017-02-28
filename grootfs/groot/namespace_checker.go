@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"code.cloudfoundry.org/grootfs/store"
+	errorspkg "github.com/pkg/errors"
 )
 
 const NamespaceFilename = "namespace.json"
@@ -46,7 +47,7 @@ func (n *StoreNamespaceChecker) Check(uidMappings, gidMappings []IDMappingSpec) 
 func (n *StoreNamespaceChecker) validateNamespace(namespaceFilePath string, uidMappings, gidMappings []IDMappingSpec) (bool, error) {
 	namespaceStore, err := os.Open(namespaceFilePath)
 	if err != nil {
-		return false, fmt.Errorf("opening namespace file: %s", err)
+		return false, errorspkg.Wrap(err, "opening namespace file")
 	}
 	defer namespaceStore.Close()
 	var namespace mappings
@@ -68,7 +69,7 @@ func (n *StoreNamespaceChecker) validateNamespace(namespaceFilePath string, uidM
 func (n *StoreNamespaceChecker) writeNamespace(namespaceFilePath string, uidMappings, gidMappings []IDMappingSpec) (bool, error) {
 	namespaceStore, err := os.Create(namespaceFilePath)
 	if err != nil {
-		return false, fmt.Errorf("creating namespace file: %s", err)
+		return false, errorspkg.Wrap(err, "creating namespace file")
 	}
 	defer namespaceStore.Close()
 

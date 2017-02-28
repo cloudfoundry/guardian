@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/lager"
-	"errors"
+	errorspkg "github.com/pkg/errors"
 )
 
 //go:generate counterfeiter . Cleaner
@@ -51,7 +51,7 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 			return true, nil
 		}
 	} else if threshold < 0 {
-		return true, errors.New("Threshold must be greater than 0")
+		return true, errorspkg.New("Threshold must be greater than 0")
 	}
 
 	if acquireLock {

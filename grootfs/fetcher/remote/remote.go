@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	errorspkg "github.com/pkg/errors"
 )
 
 //go:generate counterfeiter . Source
@@ -57,7 +58,7 @@ func (f *RemoteFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL
 
 			configJSON, err := json.Marshal(config)
 			if err != nil {
-				return nil, 0, fmt.Errorf("encoding config to JSON: %s", err)
+				return nil, 0, errorspkg.Wrap(err, "encoding config to JSON")
 			}
 
 			return configJSON, 0, nil
@@ -69,7 +70,7 @@ func (f *RemoteFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL
 
 	var config specsv1.Image
 	if err := json.Unmarshal(contents, &config); err != nil {
-		return base_image_puller.BaseImageInfo{}, fmt.Errorf("decoding config from JSON: %s", err)
+		return base_image_puller.BaseImageInfo{}, errorspkg.Wrap(err, "decoding config from JSON")
 	}
 	logger.Debug("image-config", lager.Data{"config": config})
 

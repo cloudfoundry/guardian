@@ -20,6 +20,7 @@ import (
 	quotapkg "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 )
 
 const (
@@ -53,7 +54,7 @@ func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
 		return volPath, nil
 	}
 
-	return "", fmt.Errorf("volume does not exist `%s`: %s", id, err)
+	return "", errorspkg.Wrapf(err, "volume does not exist `%s`", id)
 }
 
 func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (string, error) {
@@ -73,7 +74,7 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	volumePath := filepath.Join(d.storePath, "volumes", id)
 	if err := os.RemoveAll(volumePath); err != nil {
 		logger.Error(fmt.Sprintf("failed to destroy volume %s", volumePath), err)
-		return errors.Wrap(err, fmt.Sprintf("destroying volume (%s)", id))
+		return errors.Wrapf(err, "destroying volume (%s)", id)
 	}
 	return nil
 }
@@ -83,7 +84,7 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 
 	existingVolumes, err := ioutil.ReadDir(path.Join(d.storePath, store.VolumesDirName))
 	if err != nil {
-		return nil, fmt.Errorf("failed to list volumes: %s", err.Error())
+		return nil, errorspkg.Wrap(err, "failed to list volumes")
 	}
 
 	for _, volumeInfo := range existingVolumes {
@@ -206,7 +207,7 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 		logger.Info("applying-inclusive-quotas")
 		diskLimit -= volumeSize
 		if diskLimit < 0 {
-			err := errors.New("disk limit is smaller than volume size")
+			err := errorspkg.New("disk limit is smaller than volume size")
 			logger.Error("applying-inclusive-quota-failed", err, lager.Data{"imagePath": spec.ImagePath})
 			return err
 		}
@@ -289,7 +290,7 @@ func (d *Driver) listQuotaUsage(logger lager.Logger, projectID uint32) (int64, e
 	output := stdoutBuffer.String()
 	parsedOutput := strings.Fields(output)
 	if len(parsedOutput) != 7 {
-		return 0, fmt.Errorf("quota usage output not as expected: %s", output)
+		return 0, errorspkg.Errorf("quota usage output not as expected: %s", output)
 	}
 
 	usedBlocks, err := strconv.ParseInt(parsedOutput[1], 10, 64)

@@ -3,7 +3,6 @@ package local // import "code.cloudfoundry.org/grootfs/fetcher/local"
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -12,6 +11,7 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	errorspkg "github.com/pkg/errors"
 )
 
 type LocalFetcher struct {
@@ -32,17 +32,17 @@ func (l *LocalFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
 
 	baseImagePath := baseImageURL.String()
 	if _, err := os.Stat(baseImagePath); err != nil {
-		return nil, 0, fmt.Errorf("local image not found in `%s` %s", baseImagePath, err)
+		return nil, 0, errorspkg.Wrapf(err, "local image not found in `%s`", baseImagePath)
 	}
 
 	if err := l.validateBaseImage(baseImagePath); err != nil {
-		return nil, 0, fmt.Errorf("invalid base image: %s", err.Error())
+		return nil, 0, errorspkg.Wrap(err, "invalid base image")
 	}
 
 	logger.Debug("opening-tar", lager.Data{"baseImagePath": baseImagePath})
 	stream, err := os.Open(baseImagePath)
 	if err != nil {
-		return nil, 0, fmt.Errorf("reading local image: %s", err)
+		return nil, 0, errorspkg.Wrap(err, "reading local image")
 	}
 
 	return stream, 0, nil
@@ -56,7 +56,7 @@ func (l *LocalFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL)
 	stat, err := os.Stat(baseImageURL.String())
 	if err != nil {
 		return base_image_puller.BaseImageInfo{},
-			fmt.Errorf("fetching image timestamp: %s", err)
+			errorspkg.Wrap(err, "fetching image timestamp")
 	}
 
 	return base_image_puller.BaseImageInfo{
@@ -83,7 +83,7 @@ func (l *LocalFetcher) validateBaseImage(baseImagePath string) error {
 	}
 
 	if stat.IsDir() {
-		return errors.New("directory provided instead of a tar file")
+		return errorspkg.New("directory provided instead of a tar file")
 	}
 
 	return nil

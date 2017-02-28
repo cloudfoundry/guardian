@@ -1,12 +1,12 @@
 package garbage_collector
 
 import (
-	"errors"
 	"fmt"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 )
 
 //go:generate counterfeiter . CacheDriver
@@ -66,7 +66,7 @@ func (g *GarbageCollector) collectVolumes(logger lager.Logger, keepImages []stri
 
 	unusedVolumes, err := g.unusedVolumes(logger, keepImages)
 	if err != nil {
-		return fmt.Errorf("listing volumes: %s", err.Error())
+		return errorspkg.Wrap(err, "listing volumes")
 	}
 	logger.Debug("unused-volumes", lager.Data{"unusedVolumes": unusedVolumes})
 
@@ -74,7 +74,7 @@ func (g *GarbageCollector) collectVolumes(logger lager.Logger, keepImages []stri
 	for volID, _ := range unusedVolumes {
 		if err := g.volumeDriver.DestroyVolume(logger, volID); err != nil {
 			logger.Error("failed-to-destroy-volume", err, lager.Data{"volumeID": volID})
-			cleanupErr = errors.New("destroying volumes failed")
+			cleanupErr = errorspkg.New("destroying volumes failed")
 		}
 	}
 
@@ -96,7 +96,7 @@ func (g *GarbageCollector) unusedVolumes(logger lager.Logger, keepImages []strin
 
 	volumes, err := g.volumeDriver.Volumes(logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve volume list")
+		return nil, errorspkg.Errorf("failed to retrieve volume list")
 	}
 
 	orphanedVolumes := make(map[string]bool)
@@ -106,7 +106,7 @@ func (g *GarbageCollector) unusedVolumes(logger lager.Logger, keepImages []strin
 
 	imageIDs, err := g.imageCloner.ImageIDs(logger)
 	if err != nil {
-		return nil, fmt.Errorf("failed to retrieve images: %s", err.Error())
+		return nil, errorspkg.Wrap(err, "failed to retrieve images")
 	}
 
 	for _, imageID := range imageIDs {

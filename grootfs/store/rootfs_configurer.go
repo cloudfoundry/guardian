@@ -1,13 +1,12 @@
 package store
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	errorspkg "github.com/pkg/errors"
 )
 
 type RootFSConfigurer struct{}
@@ -20,7 +19,7 @@ func (r *RootFSConfigurer) Configure(rootFSPath string, baseImage specsv1.Image)
 	_, err := os.Stat(rootFSPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return fmt.Errorf("rootfs path does not exist: %s", err)
+			return errorspkg.Wrap(err, "rootfs path does not exist")
 		}
 	}
 
@@ -28,16 +27,16 @@ func (r *RootFSConfigurer) Configure(rootFSPath string, baseImage specsv1.Image)
 		volumeRelPath = filepath.Clean(volumeRelPath)
 		volumePath := filepath.Join(rootFSPath, volumeRelPath)
 		if !r.isRelativeTo(volumePath, rootFSPath) {
-			return errors.New("volume path is outside of the rootfs")
+			return errorspkg.New("volume path is outside of the rootfs")
 		}
 
 		stat, err := os.Stat(volumePath)
 		if err == nil && !stat.IsDir() {
-			return errors.New("a file with the requested volume path already exists")
+			return errorspkg.New("a file with the requested volume path already exists")
 		}
 
 		if err := os.MkdirAll(volumePath, 0755); err != nil {
-			return fmt.Errorf("making volume `%s`: %s", volumePath, err)
+			return errorspkg.Wrapf(err, "making volume `%s`", volumePath)
 		}
 	}
 

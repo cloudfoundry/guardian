@@ -1,12 +1,12 @@
 package store // import "code.cloudfoundry.org/grootfs/store"
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"syscall"
 
 	"github.com/pkg/errors"
+	errorspkg "github.com/pkg/errors"
 
 	"code.cloudfoundry.org/lager"
 )
@@ -43,13 +43,13 @@ func ensure(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
 	}
 
 	if err := os.Setenv("TMPDIR", filepath.Join(storePath, TempDirName)); err != nil {
-		return fmt.Errorf("could not set TMPDIR: %s", err.Error())
+		return errorspkg.Wrap(err, "could not set TMPDIR")
 	}
 
 	for _, requiredPath := range requiredPaths {
 		if info, err := os.Stat(requiredPath); err == nil {
 			if !info.IsDir() {
-				return fmt.Errorf("path `%s` is not a directory", requiredPath)
+				return errorspkg.Errorf("path `%s` is not a directory", requiredPath)
 			}
 
 			continue
@@ -58,13 +58,13 @@ func ensure(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
 		if err := os.Mkdir(requiredPath, 0755); err != nil {
 			dir, err1 := os.Lstat(requiredPath)
 			if err1 != nil || !dir.IsDir() {
-				return fmt.Errorf("making directory `%s`: %s", requiredPath, err)
+				return errorspkg.Wrapf(err, "making directory `%s`", requiredPath)
 			}
 		}
 
 		if err := os.Chown(requiredPath, ownerUID, ownerGID); err != nil {
 			logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
-			return fmt.Errorf("changing store owner to %d:%d for path %s: %s", ownerUID, ownerGID, requiredPath, err.Error())
+			return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, requiredPath)
 		}
 	}
 
@@ -79,7 +79,7 @@ func ensure(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
 
 	if err := os.Chown(storePath, ownerUID, ownerGID); err != nil {
 		logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
-		return fmt.Errorf("changing store owner to %d:%d for path %s: %s", ownerUID, ownerGID, storePath, err.Error())
+		return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, storePath)
 	}
 
 	return os.Chmod(storePath, 0700)
@@ -97,7 +97,7 @@ func createWhiteoutDevice(logger lager.Logger, ownerUID, ownerGID int, storePath
 
 		if err := os.Chown(whiteoutDevicePath, ownerUID, ownerGID); err != nil {
 			logger.Error("whiteout-device-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
-			return fmt.Errorf("changing store owner to %d:%d for path %s: %s", ownerUID, ownerGID, whiteoutDevicePath, err.Error())
+			return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, whiteoutDevicePath)
 		}
 	}
 	return nil
@@ -111,7 +111,7 @@ func validateWhiteoutDevice(path string) error {
 
 	statT := stat.Sys().(*syscall.Stat_t)
 	if statT.Rdev != 0 || (stat.Mode()&os.ModeCharDevice) != os.ModeCharDevice {
-		return fmt.Errorf("the whiteout device file is not a valid device %s", path)
+		return errorspkg.Errorf("the whiteout device file is not a valid device %s", path)
 	}
 
 	return nil

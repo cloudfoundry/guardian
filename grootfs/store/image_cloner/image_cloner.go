@@ -2,7 +2,6 @@ package image_cloner // import "code.cloudfoundry.org/grootfs/store/image_cloner
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -12,7 +11,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/pkg/errors"
+	errorspkg "github.com/pkg/errors"
 )
 
 type ImageDriverSpec struct {
@@ -46,7 +45,7 @@ func (b *ImageCloner) ImageIDs(logger lager.Logger) ([]string, error) {
 
 	existingImages, err := ioutil.ReadDir(path.Join(b.storePath, store.ImageDirName))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read images dir: %s", err.Error())
+		return nil, errorspkg.Wrap(err, "failed to read images dir")
 	}
 
 	for _, imageInfo := range existingImages {
@@ -84,12 +83,12 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 	}()
 
 	if err = os.Mkdir(image.Path, 0700); err != nil {
-		return groot.Image{}, fmt.Errorf("making image path: %s", err)
+		return groot.Image{}, errorspkg.Wrap(err, "making image path")
 	}
 
 	if err = b.writeBaseImageJSON(logger, image, spec.BaseImage); err != nil {
 		logger.Error("writing-image-json-failed", err)
-		return groot.Image{}, fmt.Errorf("creating image.json: %s", err)
+		return groot.Image{}, errorspkg.Wrap(err, "creating image.json")
 	}
 
 	imageDriverSpec := ImageDriverSpec{
@@ -101,7 +100,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 
 	if err = b.imageDriver.CreateImage(logger, imageDriverSpec); err != nil {
 		logger.Error("creating-image-failed", err, lager.Data{"imageDriverSpec": imageDriverSpec})
-		return groot.Image{}, fmt.Errorf("creating image: %s", err)
+		return groot.Image{}, errorspkg.Wrap(err, "creating image")
 	}
 
 	if err := b.setOwnership(spec,
@@ -123,16 +122,16 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 
 	if ok, err := b.Exists(id); !ok {
 		logger.Error("checking-image-path-failed", err)
-		return fmt.Errorf("image not found: %s", id)
+		return errorspkg.Errorf("image not found: %s", id)
 	}
 
 	image := b.createImage(id)
 	if err := b.imageDriver.DestroyImage(logger, image.Path); err != nil {
-		return fmt.Errorf("destroying snapshot: %s", err)
+		return errorspkg.Wrap(err, "destroying snapshot")
 	}
 
 	if err := b.deleteImageDir(image); err != nil {
-		return fmt.Errorf("deleting image path: %s", err)
+		return errorspkg.Wrap(err, "deleting image path")
 	}
 
 	return nil
@@ -144,8 +143,7 @@ func (b *ImageCloner) Exists(id string) (bool, error) {
 		if os.IsNotExist(err) {
 			return false, nil
 		}
-
-		return false, fmt.Errorf("checking if image `%s` exists: `%s`", id, err)
+		return false, errorspkg.Wrapf(err, "checking if image `%s` exists", id)
 	}
 
 	return true, nil
@@ -158,7 +156,7 @@ func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, 
 
 	if ok, err := b.Exists(id); !ok {
 		logger.Error("checking-image-path-failed", err)
-		return groot.VolumeStats{}, fmt.Errorf("image not found: %s", id)
+		return groot.VolumeStats{}, errorspkg.Errorf("image not found: %s", id)
 	}
 
 	image := b.createImage(id)
@@ -168,7 +166,7 @@ func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, 
 
 func (b *ImageCloner) deleteImageDir(image groot.Image) error {
 	if err := os.RemoveAll(image.Path); err != nil {
-		return fmt.Errorf("deleting image path: %s", err)
+		return errorspkg.Wrap(err, "deleting image path")
 	}
 
 	return nil
@@ -210,7 +208,7 @@ func (b *ImageCloner) setOwnership(spec groot.ImageSpec, paths ...string) error 
 
 	for _, path := range paths {
 		if err := os.Chown(path, spec.OwnerUID, spec.OwnerGID); err != nil {
-			return errors.Wrapf(err, "changing %s ownership to %d:%d", path, spec.OwnerUID, spec.OwnerGID)
+			return errorspkg.Wrapf(err, "changing %s ownership to %d:%d", path, spec.OwnerUID, spec.OwnerGID)
 		}
 	}
 	return nil

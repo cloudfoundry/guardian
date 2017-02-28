@@ -2,7 +2,6 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 
@@ -12,7 +11,7 @@ import (
 	"code.cloudfoundry.org/grootfs/metrics"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
-
+	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -26,7 +25,7 @@ var StatsCommand = cli.Command{
 		logger = logger.Session("stats")
 
 		if ctx.NArg() != 1 {
-			logger.Error("parsing-command", errors.New("invalid arguments"), lager.Data{"args": ctx.Args()})
+			logger.Error("parsing-command", errorspkg.New("invalid arguments"), lager.Data{"args": ctx.Args()})
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 

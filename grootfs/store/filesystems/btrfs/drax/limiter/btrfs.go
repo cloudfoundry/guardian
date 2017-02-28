@@ -2,12 +2,12 @@ package limiter // import "code.cloudfoundry.org/grootfs/store/filesystems/btrfs
 
 import (
 	"bytes"
-	"fmt"
 	"os/exec"
 	"strconv"
 	"strings"
 
 	"code.cloudfoundry.org/commandrunner"
+	errorspkg "github.com/pkg/errors"
 
 	"code.cloudfoundry.org/lager"
 )
@@ -37,7 +37,7 @@ func (i *BtrfsLimiter) ApplyDiskLimit(logger lager.Logger, path string, diskLimi
 	logger.Debug("starting-btrfs-command", lager.Data{"cmd": cmd.Path, "args": cmd.Args})
 	if err := i.commandRunner.Run(cmd); err != nil {
 		logger.Error("command-failed", err, lager.Data{"commandOutput": combinedBuffer.String()})
-		return fmt.Errorf(strings.TrimSpace(combinedBuffer.String()))
+		return errorspkg.Errorf(strings.TrimSpace(combinedBuffer.String()))
 	}
 
 	return nil
@@ -55,7 +55,7 @@ func (i *BtrfsLimiter) DestroyQuotaGroup(logger lager.Logger, path string) error
 
 	if err := i.commandRunner.Run(cmd); err != nil {
 		logger.Error("command-failed", err)
-		return fmt.Errorf(strings.TrimSpace(combinedBuffer.String()))
+		return errorspkg.Errorf(strings.TrimSpace(combinedBuffer.String()))
 	}
 
 	return nil

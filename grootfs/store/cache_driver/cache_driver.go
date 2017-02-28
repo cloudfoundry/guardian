@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 )
 
 type CacheDriver struct {
@@ -33,7 +34,7 @@ func (c *CacheDriver) FetchBlob(logger lager.Logger, id string,
 
 	hasBlob, err := c.hasBlob(id)
 	if err != nil {
-		return nil, 0, fmt.Errorf("checking if the blob exists: %s", err)
+		return nil, 0, errorspkg.Wrap(err, "checking if the blob exists")
 	}
 
 	var (
@@ -52,16 +53,16 @@ func (c *CacheDriver) FetchBlob(logger lager.Logger, id string,
 
 		reader, err = os.Open(c.blobPath(id))
 		if err != nil {
-			return nil, 0, fmt.Errorf("accessing the cached blob: %s", err)
+			return nil, 0, errorspkg.Wrap(err, "accessing the cached blob")
 		}
 		stat, err := os.Stat(c.blobPath(id))
 		if err != nil {
-			return nil, 0, fmt.Errorf("acessing cached blob stat: %s", err)
+			return nil, 0, errorspkg.Wrap(err, "acessing cached blob stat")
 		}
 
 		blobContents, err := ioutil.ReadAll(reader)
 		if err != nil {
-			return nil, 0, fmt.Errorf("reading cached blob: %s", err)
+			return nil, 0, errorspkg.Wrap(err, "reading cached blob")
 		}
 
 		return blobContents, stat.Size(), nil
@@ -76,7 +77,7 @@ func (c *CacheDriver) FetchBlob(logger lager.Logger, id string,
 
 	blobFile, err = os.OpenFile(c.blobPath(id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return nil, 0, fmt.Errorf("creating cached blob file: %s", err)
+		return nil, 0, errorspkg.Wrap(err, "creating cached blob file")
 	}
 
 	_, err = io.Copy(blobFile, bytes.NewReader(blobContent))
@@ -103,7 +104,7 @@ func (c *CacheDriver) Clean(logger lager.Logger) error {
 	cachePath := path.Join(c.storePath, "cache")
 	contents, err := ioutil.ReadDir(cachePath)
 	if err != nil {
-		return fmt.Errorf("reading cache contents: %s", err.Error())
+		return errorspkg.Wrap(err, "reading cache contents")
 	}
 
 	totalBlobs := len(contents)
@@ -111,7 +112,7 @@ func (c *CacheDriver) Clean(logger lager.Logger) error {
 		logger.Debug("cleaning-up-blob", lager.Data{"blob": cachedBlob.Name(), "count": fmt.Sprintf("%d/%d", i, totalBlobs)})
 
 		if err := os.Remove(path.Join(cachePath, cachedBlob.Name())); err != nil {
-			return fmt.Errorf("clean up blob `%s`: %s", cachedBlob.Name(), err.Error())
+			return errorspkg.Wrap(err, "clean up blob `%s`")
 		}
 	}
 
@@ -133,7 +134,7 @@ func (c *CacheDriver) hasBlob(id string) (bool, error) {
 	}
 
 	if !fi.Mode().IsRegular() {
-		return false, fmt.Errorf("blob `%s` exists but it's not a regular file", blobPath)
+		return false, errorspkg.Errorf("blob `%s` exists but it's not a regular file", blobPath)
 	}
 
 	return true, nil

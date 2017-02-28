@@ -1,9 +1,9 @@
 package config
 
 import (
-	"errors"
-	"fmt"
 	"io/ioutil"
+
+	errorspkg "github.com/pkg/errors"
 
 	yaml "gopkg.in/yaml.v2"
 )
@@ -53,11 +53,11 @@ func NewBuilder(pathToYaml string) (*Builder, error) {
 
 func (b *Builder) Build() (Config, error) {
 	if b.config.DiskLimitSizeBytes < 0 {
-		return *b.config, errors.New("invalid argument: disk limit cannot be negative")
+		return *b.config, errorspkg.New("invalid argument: disk limit cannot be negative")
 	}
 
 	if b.config.CleanThresholdBytes < 0 {
-		return *b.config, errors.New("invalid argument: clean threshold cannot be negative")
+		return *b.config, errorspkg.New("invalid argument: clean threshold cannot be negative")
 	}
 
 	return *b.config, nil
@@ -209,13 +209,13 @@ func (b *Builder) WithCleanOnCreate(clean bool, noClean bool) *Builder {
 func load(configPath string) (Config, error) {
 	configContent, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		return Config{}, fmt.Errorf("invalid config path: %s", err)
+		return Config{}, errorspkg.Wrap(err, "invalid config path")
 	}
 
 	var config Config
 	err = yaml.Unmarshal(configContent, &config)
 	if err != nil {
-		return Config{}, fmt.Errorf("invalid config file: %s", err)
+		return Config{}, errorspkg.Wrap(err, "invalid config file")
 	}
 
 	return config, nil

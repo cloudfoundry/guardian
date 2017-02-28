@@ -65,19 +65,19 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 
 	parsedURL, err := url.Parse(spec.BaseImage)
 	if err != nil {
-		return Image{}, fmt.Errorf("parsing image url: %s", err)
+		return Image{}, errorspkg.Wrap(err, "parsing image url")
 	}
 
 	if strings.ContainsAny(spec.ID, "/") {
-		return Image{}, fmt.Errorf("id `%s` contains invalid characters: `/`", spec.ID)
+		return Image{}, errorspkg.Errorf("id `%s` contains invalid characters: `/`", spec.ID)
 	}
 
 	ok, err := c.imageCloner.Exists(spec.ID)
 	if err != nil {
-		return Image{}, fmt.Errorf("checking id exists: %s", err)
+		return Image{}, errorspkg.Wrap(err, "checking id exists")
 	}
 	if ok {
-		return Image{}, fmt.Errorf("image for id `%s` already exists", spec.ID)
+		return Image{}, errorspkg.Errorf("image for id `%s` already exists", spec.ID)
 	}
 
 	ownerUid, ownerGid := c.parseOwner(spec.UIDMappings, spec.GIDMappings)
@@ -104,18 +104,18 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 	validNamespace, err := c.namespaceChecker.Check(spec.UIDMappings, spec.GIDMappings)
 	if err != nil {
 		logger.Error("failed-check-namespace", err)
-		return Image{}, fmt.Errorf("checking namespace failed: %s", err.Error())
+		return Image{}, errorspkg.Wrap(err, "checking namespace failed")
 	}
 
 	if !validNamespace {
 		logger.Error("failed-check-namespace", err)
-		return Image{}, fmt.Errorf("store already initialized with a different mapping")
+		return Image{}, errorspkg.New("store already initialized with a different mapping")
 	}
 
 	if spec.CleanOnCreate {
 		ignoredImages := append(spec.CleanOnCreateIgnoreImages, spec.BaseImage)
 		if _, err := c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, ignoredImages, false); err != nil {
-			return Image{}, fmt.Errorf("failed-to-cleanup-store: %s", err)
+			return Image{}, errorspkg.Wrap(err, "failed-to-cleanup-store")
 		}
 	}
 
@@ -135,7 +135,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 	}
 	image, err := c.imageCloner.Create(logger, imageSpec)
 	if err != nil {
-		return Image{}, fmt.Errorf("making image: %s", err)
+		return Image{}, errorspkg.Wrap(err, "making image")
 	}
 
 	imageRefName := fmt.Sprintf(ImageReferenceFormat, spec.ID)

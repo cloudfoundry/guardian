@@ -2,7 +2,6 @@ package btrfs // import "code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -20,6 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 )
 
 const (
@@ -50,7 +50,7 @@ func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
 		return volPath, nil
 	}
 
-	return "", fmt.Errorf("volume does not exist `%s`: %s", id, err)
+	return "", errorspkg.Wrapf(err, "volume does not exist `%s`", id)
 }
 
 func (d *Driver) CreateVolume(logger lager.Logger, parentID, id string) (string, error) {
@@ -69,10 +69,7 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID, id string) (string,
 
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf(
-			"creating btrfs volume `%s` (%s): %s",
-			volPath, err, string(contents),
-		)
+		return "", errorspkg.Wrapf(err, "creating btrfs volume `%s` %s", volPath, string(contents))
 	}
 
 	return volPath, nil
@@ -89,7 +86,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf(
+		return errorspkg.Errorf(
 			"creating btrfs snapshot from `%s` to `%s` (%s): %s",
 			baseVolumePath, toPath, err, string(contents),
 		)
@@ -103,7 +100,7 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 
 	existingVolumes, err := ioutil.ReadDir(path.Join(d.storePath, store.VolumesDirName))
 	if err != nil {
-		return nil, fmt.Errorf("failed to list volumes: %s", err.Error())
+		return nil, errorspkg.Wrap(err, "failed to list volumes")
 	}
 
 	for _, volumeInfo := range existingVolumes {
@@ -123,7 +120,7 @@ func (d *Driver) destroyQgroup(logger lager.Logger, path string) error {
 	}
 
 	if !d.hasSUID() {
-		return errors.New("missing the setuid bit on drax")
+		return errorspkg.New("missing the setuid bit on drax")
 	}
 
 	cmd := exec.Command(d.draxBinPath, "--btrfs-bin", d.btrfsBinPath, "destroy", "--volume-path", path)
@@ -135,7 +132,7 @@ func (d *Driver) destroyQgroup(logger lager.Logger, path string) error {
 	err := cmd.Run()
 	if err != nil {
 		logger.Error("drax-failed", err)
-		return fmt.Errorf("destroying quota group (%s): %s", err, strings.TrimSpace(stdoutBuffer.String()))
+		return errorspkg.Wrapf(err, "destroying quota group %s", strings.TrimSpace(stdoutBuffer.String()))
 	}
 
 	return nil
@@ -163,7 +160,7 @@ func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 	defer logger.Info("end")
 
 	if _, err := os.Stat(path); err != nil {
-		return fmt.Errorf("image path not found: %s", err)
+		return errorspkg.Wrap(err, "image path not found")
 	}
 
 	if err := d.destroyQgroup(logger, path); err != nil {
@@ -174,7 +171,7 @@ func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
 		logger.Error("btrfs-failed", err)
-		return fmt.Errorf("destroying volume (%s): %s", err, strings.TrimSpace(string(contents)))
+		return errorspkg.Wrapf(err, "destroying volume %s", strings.TrimSpace(string(contents)))
 	}
 	return nil
 }
@@ -190,11 +187,11 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	}
 
 	if !d.draxInPath() {
-		return errors.New("drax was not found in the $PATH")
+		return errorspkg.New("drax was not found in the $PATH")
 	}
 
 	if !d.hasSUID() {
-		return errors.New("missing the setuid bit on drax")
+		return errorspkg.New("missing the setuid bit on drax")
 	}
 
 	args := []string{
@@ -218,7 +215,7 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 
 	if err != nil {
 		logger.Error("drax-failed", err)
-		return fmt.Errorf("%s: %s", err, strings.TrimSpace(stdoutBuffer.String()))
+		return errorspkg.Wrapf(err, " %s", strings.TrimSpace(stdoutBuffer.String()))
 	}
 
 	return nil
@@ -230,11 +227,11 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 	defer logger.Info("end")
 
 	if !d.draxInPath() {
-		return groot.VolumeStats{}, errors.New("drax was not found in the $PATH")
+		return groot.VolumeStats{}, errorspkg.New("drax was not found in the $PATH")
 	}
 
 	if !d.hasSUID() {
-		return groot.VolumeStats{}, errors.New("missing the setuid bit on drax")
+		return groot.VolumeStats{}, errorspkg.New("missing the setuid bit on drax")
 	}
 
 	args := []string{
@@ -251,7 +248,7 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 	err := cmd.Run()
 	if err != nil {
 		logger.Error("drax-failed", err)
-		return groot.VolumeStats{}, fmt.Errorf("%s: %s", err, strings.TrimSpace(stdoutBuffer.String()))
+		return groot.VolumeStats{}, errorspkg.Wrapf(err, "%s", strings.TrimSpace(stdoutBuffer.String()))
 	}
 
 	usageRegexp := regexp.MustCompile(`.*\s+(\d+)\s+(\d+)$`)
@@ -259,8 +256,8 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 
 	var stats groot.VolumeStats
 	if len(usage) != 3 {
-		logger.Error("parsing-stats-failed", fmt.Errorf("raw stats: %s", stdoutBuffer.String()))
-		return stats, errors.New("could not parse stats")
+		logger.Error("parsing-stats-failed", errorspkg.Errorf("raw stats: %s", stdoutBuffer.String()))
+		return stats, errorspkg.New("could not parse stats")
 	}
 
 	fmt.Sscanf(usage[1], "%d", &stats.DiskUsage.TotalBytesUsed)

@@ -3,8 +3,6 @@ package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpa
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"os"
 	"syscall"
 
@@ -16,6 +14,7 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 )
 
 func init() {
@@ -25,7 +24,7 @@ func init() {
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		if len(os.Args) != 3 {
-			logger.Error("parsing-command", errors.New("destination directory or filesystem were not specified"))
+			logger.Error("parsing-command", errorspkg.New("destination directory or filesystem were not specified"))
 			os.Exit(1)
 		}
 
@@ -87,13 +86,13 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 
 	ctrlPipeR, ctrlPipeW, err := os.Pipe()
 	if err != nil {
-		return fmt.Errorf("creating tar control pipe: %s", err)
+		return errorspkg.Wrap(err, "creating tar control pipe")
 	}
 
 	unpackStrategyJson, err := json.Marshal(&u.unpackStrategy)
 	if err != nil {
 		logger.Error("unmarshal-unpack-strategy-failed", err)
-		return fmt.Errorf("unmarshal unpack strategy: %s", err)
+		return errorspkg.Wrap(err, "unmarshal unpack strategy")
 	}
 
 	unpackCmd := reexec.Command("unpack-wrapper", spec.TargetPath, string(unpackStrategyJson))
@@ -114,7 +113,7 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 		"args": unpackCmd.Args,
 	})
 	if err := u.commandRunner.Start(unpackCmd); err != nil {
-		return fmt.Errorf("starting unpack command: %s", err)
+		return errorspkg.Wrap(err, "starting unpack command")
 	}
 	logger.Debug("unpack-wrapper-command-is-started")
 
@@ -124,13 +123,13 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 	}
 
 	if _, err := ctrlPipeW.Write([]byte{0}); err != nil {
-		return fmt.Errorf("writing to tar control pipe: %s", err)
+		return errorspkg.Wrap(err, "writing to tar control pipe")
 	}
 	logger.Debug("unpack-wrapper-command-is-signaled-to-continue")
 
 	logger.Debug("waiting-for-unpack-wrapper-command")
 	if err := u.commandRunner.Wait(unpackCmd); err != nil {
-		return fmt.Errorf(outBuffer.String())
+		return errorspkg.Errorf(outBuffer.String())
 	}
 	logger.Debug("unpack-wrapper-command-done")
 
@@ -140,14 +139,14 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 func (u *NSIdMapperUnpacker) setIDMappings(logger lager.Logger, spec base_image_puller.UnpackSpec, untarPid int) error {
 	if len(spec.UIDMappings) > 0 {
 		if err := u.idMapper.MapUIDs(logger, untarPid, spec.UIDMappings); err != nil {
-			return fmt.Errorf("setting uid mapping: %s", err)
+			return errorspkg.Wrap(err, "setting uid mapping")
 		}
 		logger.Debug("uid-mappings-are-set")
 	}
 
 	if len(spec.GIDMappings) > 0 {
 		if err := u.idMapper.MapGIDs(logger, untarPid, spec.GIDMappings); err != nil {
-			return fmt.Errorf("setting gid mapping: %s", err)
+			return errorspkg.Wrap(err, "setting gid mapping")
 		}
 		logger.Debug("gid-mappings-are-set")
 	}

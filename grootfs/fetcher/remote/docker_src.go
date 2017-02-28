@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -65,7 +64,7 @@ func (s *DockerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (Man
 		manifest, err = s.parseSchemaV2Manifest(logger, contents)
 
 	default:
-		return Manifest{}, errors.New(fmt.Sprintf("unknown media type '%s'", mimeType))
+		return Manifest{}, errorspkg.New(fmt.Sprintf("unknown media type '%s'", mimeType))
 	}
 
 	return manifest, nil
@@ -97,7 +96,7 @@ func (s *DockerSource) Config(logger lager.Logger, baseImageURL *url.URL, manife
 			return specsv1.Image{}, err
 		}
 	default:
-		return specsv1.Image{}, fmt.Errorf("schema version not supported (%d)", manifest.SchemaVersion)
+		return specsv1.Image{}, errorspkg.Errorf("schema version not supported (%d)", manifest.SchemaVersion)
 	}
 
 	return config, nil
@@ -132,7 +131,7 @@ func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest s
 
 	blobReader := io.TeeReader(blob, blobTempFile)
 	if !s.checkCheckSum(logger, blobReader, digest) {
-		return "", 0, fmt.Errorf("invalid checksum: layer is corrupted `%s`", digest)
+		return "", 0, errorspkg.Errorf("invalid checksum: layer is corrupted `%s`", digest)
 	}
 	return blobTempFile.Name(), size, nil
 }
@@ -178,7 +177,7 @@ func (s *DockerSource) parseSchemaV1Manifest(logger lager.Logger, rawManifest []
 	var dockerManifest SchemaV1Manifest
 	if err := json.Unmarshal(rawManifest, &dockerManifest); err != nil {
 		logger.Error("parsing-manifest-failed", err, lager.Data{"manifest": string(rawManifest)})
-		return Manifest{}, fmt.Errorf("parsing manifest: %s", err)
+		return Manifest{}, errorspkg.Wrap(err, "parsing manifest")
 	}
 
 	manifest := Manifest{}
@@ -202,7 +201,7 @@ func (s *DockerSource) parseSchemaV2Manifest(logger lager.Logger, rawManifest []
 	var ociManifest specsv1.Manifest
 	if err := json.Unmarshal(rawManifest, &ociManifest); err != nil {
 		logger.Error("parsing-manifest-failed", err, lager.Data{"manifest": string(rawManifest)})
-		return Manifest{}, fmt.Errorf("parsing manifest: %s", err)
+		return Manifest{}, errorspkg.Wrap(err, "parsing manifest")
 	}
 
 	manifest := Manifest{
@@ -232,7 +231,7 @@ func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, baseImageURL *ur
 	var config specsv1.Image
 	if err := json.NewDecoder(stream).Decode(&config); err != nil {
 		logger.Error("parsing-config-failed", err)
-		return specsv1.Image{}, fmt.Errorf("parsing image config: %s", err)
+		return specsv1.Image{}, errorspkg.Wrap(err, "parsing image config")
 	}
 
 	return config, nil
@@ -240,22 +239,22 @@ func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, baseImageURL *ur
 
 func (s *DockerSource) parseSchemaV1Config(logger lager.Logger, manifest Manifest) (specsv1.Image, error) {
 	if len(manifest.V1Compatibility) == 0 {
-		logger.Error("v1-manifest-validation-failed", errors.New("v1compatibility has no layers"), lager.Data{"manifest": manifest})
-		return specsv1.Image{}, errors.New("V1Compatibility is empty for the manifest")
+		logger.Error("v1-manifest-validation-failed", errorspkg.New("v1compatibility has no layers"), lager.Data{"manifest": manifest})
+		return specsv1.Image{}, errorspkg.New("V1Compatibility is empty for the manifest")
 	}
 
 	var config specsv1.Image
 	v1Config := manifest.V1Compatibility[len(manifest.V1Compatibility)-1]
 	if err := json.Unmarshal([]byte(v1Config), &config); err != nil {
 		logger.Error("parsing-manifest-v1-compatibility-failed", err)
-		return specsv1.Image{}, fmt.Errorf("parsing manifest V1Compatibility: %s", err)
+		return specsv1.Image{}, errorspkg.Wrap(err, "parsing manifest V1Compatibility")
 	}
 
 	for _, rawHistory := range manifest.V1Compatibility {
 		var v1Compatibility V1Compatibility
 		if err := json.Unmarshal([]byte(rawHistory), &v1Compatibility); err != nil {
 			logger.Error("parsing-manifest-v1-compatibility-failed", err)
-			return specsv1.Image{}, fmt.Errorf("parsing manifest V1Compatibility: %s", err)
+			return specsv1.Image{}, errorspkg.Wrap(err, "parsing manifest V1Compatibility")
 		}
 		config.RootFS.DiffIDs = append(config.RootFS.DiffIDs, "sha256:"+v1Compatibility.ID)
 	}
@@ -273,7 +272,7 @@ func (s *DockerSource) reference(logger lager.Logger, baseImageURL *url.URL) (ty
 	logger.Debug("parsing-reference", lager.Data{"refString": refString})
 	ref, err := docker.ParseReference(refString)
 	if err != nil {
-		return nil, fmt.Errorf("parsing url failed: %s", err)
+		return nil, errorspkg.Wrap(err, "parsing url failed")
 	}
 
 	return ref, nil

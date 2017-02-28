@@ -2,7 +2,6 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"crypto/x509"
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -84,7 +83,7 @@ var CreateCommand = cli.Command{
 		logger = logger.Session("create")
 
 		if ctx.NArg() != 2 {
-			logger.Error("parsing-command", errors.New("invalid arguments"), lager.Data{"args": ctx.Args()})
+			logger.Error("parsing-command", errorspkg.New("invalid arguments"), lager.Data{"args": ctx.Args()})
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
@@ -115,13 +114,13 @@ var CreateCommand = cli.Command{
 
 		uidMappings, err := parseIDMappings(cfg.UIDMappings)
 		if err != nil {
-			err = fmt.Errorf("parsing uid-mapping: %s", err)
+			err = errorspkg.Errorf("parsing uid-mapping: %s", err)
 			logger.Error("parsing-command", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 		gidMappings, err := parseIDMappings(cfg.GIDMappings)
 		if err != nil {
-			err = fmt.Errorf("parsing gid-mapping: %s", err)
+			err = errorspkg.Errorf("parsing gid-mapping: %s", err)
 			logger.Error("parsing-command", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
@@ -200,7 +199,6 @@ var CreateCommand = cli.Command{
 		image, err := creator.Create(logger, createSpec)
 		if err != nil {
 			logger.Error("creating", err)
-
 			humanizedError := tryHumanize(err, createSpec)
 			return cli.NewExitError(humanizedError, 1)
 		}
@@ -244,8 +242,13 @@ func tryHumanizeDockerErrorsList(err errcode.Errors, spec groot.CreateSpec) stri
 }
 
 func tryParsingErrorMessage(err error) error {
-	if err.Error() == "unable to retrieve auth token: 401 unauthorized" {
-		return errors.New("authorization failed: username and password are invalid")
+	newErr := errorspkg.Cause(err)
+	if newErr.Error() == "unable to retrieve auth token: 401 unauthorized" {
+		return errorspkg.New("authorization failed: username and password are invalid")
+	}
+	if newErr.Error() == "directory provided instead of a tar file" {
+		return errorspkg.New("invalid base image: " + newErr.Error())
+
 	}
 
 	return err
@@ -262,7 +265,7 @@ func tryHumanize(err error, spec groot.CreateSpec) string {
 		return tryHumanizeDockerErrorsList(e, spec)
 	}
 
-	return tryParsingErrorMessage(errorspkg.Cause(err)).Error()
+	return tryParsingErrorMessage(err).Error()
 }
 
 func findStoreOwner(uidMappings, gidMappings []groot.IDMappingSpec) (int, int, error) {
@@ -278,7 +281,7 @@ func findStoreOwner(uidMappings, gidMappings []groot.IDMappingSpec) (int, int, e
 	}
 
 	if len(uidMappings) > 0 && uid == -1 {
-		return 0, 0, errors.New("couldn't determine store owner, missing root user mapping")
+		return 0, 0, errorspkg.New("couldn't determine store owner, missing root user mapping")
 	}
 
 	for _, mapping := range gidMappings {
@@ -290,7 +293,7 @@ func findStoreOwner(uidMappings, gidMappings []groot.IDMappingSpec) (int, int, e
 	}
 
 	if len(gidMappings) > 0 && gid == -1 {
-		return 0, 0, errors.New("couldn't determine store owner, missing root user mapping")
+		return 0, 0, errorspkg.New("couldn't determine store owner, missing root user mapping")
 	}
 
 	return uid, gid, nil

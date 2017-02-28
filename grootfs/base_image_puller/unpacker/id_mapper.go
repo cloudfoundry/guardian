@@ -2,7 +2,6 @@ package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpa
 
 import (
 	"bytes"
-	"fmt"
 	"os/exec"
 	"strconv"
 
@@ -10,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 )
 
 type CommandIDMapper struct {
@@ -49,7 +49,7 @@ func (im *CommandIDMapper) execute(logger lager.Logger, command string, pid int,
 
 	logger.Debug("starting-id-map", lager.Data{"path": mapCmd.Path, "args": mapCmd.Args})
 	if err := im.cmdRunner.Run(mapCmd); err != nil {
-		return fmt.Errorf("%s %s: %s", command, err, buffer.String())
+		return errorspkg.Wrapf(err, "%s, %s", command, buffer.String())
 	}
 
 	return nil

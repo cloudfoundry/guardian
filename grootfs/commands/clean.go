@@ -16,6 +16,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
+	errorspkg "github.com/pkg/errors"
 
 	"github.com/urfave/cli"
 )
@@ -54,7 +55,7 @@ var CleanCommand = cli.Command{
 
 		storePath := cfg.StorePath
 		if _, err := os.Stat(storePath); os.IsNotExist(err) {
-			err := fmt.Errorf("no store found at %s", storePath)
+			err := errorspkg.Errorf("no store found at %s", storePath)
 			logger.Error("store-path-failed", err, nil)
 			return cli.NewExitError(err.Error(), 0)
 		}

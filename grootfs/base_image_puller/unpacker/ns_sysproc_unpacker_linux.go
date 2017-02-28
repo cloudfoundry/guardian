@@ -3,11 +3,11 @@ package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpa
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"syscall"
 
 	"code.cloudfoundry.org/commandrunner"
 	"github.com/docker/docker/pkg/reexec"
+	errorspkg "github.com/pkg/errors"
 	"github.com/tscolari/lagregator"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
@@ -35,7 +35,7 @@ func (u *NSSysProcUnpacker) Unpack(logger lager.Logger, spec base_image_puller.U
 	unpackStrategyJson, err := json.Marshal(&u.unpackStrategy)
 	if err != nil {
 		logger.Error("unmarshal-unpack-strategy-failed", err)
-		return fmt.Errorf("unmarshal unpack strategy: %s", err)
+		return errorspkg.Wrap(err, "unmarshal unpack strategy")
 	}
 
 	unpackCmd := reexec.Command("unpack", spec.TargetPath, string(unpackStrategyJson))
@@ -62,7 +62,7 @@ func (u *NSSysProcUnpacker) Unpack(logger lager.Logger, spec base_image_puller.U
 	})
 
 	if err := u.commandRunner.Run(unpackCmd); err != nil {
-		return fmt.Errorf("unpack command: %s: %s", err, outBuffer.String())
+		return errorspkg.Wrapf(err, "unpack command: %s", outBuffer.String())
 	}
 	logger.Debug("unpack-command-done")
 

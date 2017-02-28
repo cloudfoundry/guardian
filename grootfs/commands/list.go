@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 
 	"github.com/urfave/cli"
 )
@@ -29,7 +30,7 @@ var ListCommand = cli.Command{
 		}
 
 		if _, err := os.Stat(cfg.StorePath); os.IsNotExist(err) {
-			err := fmt.Errorf("no store found at %s", cfg.StorePath)
+			err := errorspkg.Errorf("no store found at %s", cfg.StorePath)
 			logger.Error("store-path-failed", err, nil)
 			return cli.NewExitError(err.Error(), 1)
 		}

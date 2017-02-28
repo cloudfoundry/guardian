@@ -1,7 +1,6 @@
 package garbage_collector
 
 import (
-	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -9,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 )
 
 type StoreMeasurer struct {
@@ -45,7 +45,7 @@ func (s *StoreMeasurer) measurePath(path string) (int64, error) {
 	cmd := exec.Command("du", "-sb", path)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return 0, fmt.Errorf("du for `%s` failed (%s): %s", path, err, out)
+		return 0, errorspkg.Wrapf(err, "du for `%s` failed: %s", path, out)
 	}
 
 	return s.parseDuContents(string(out))
@@ -54,7 +54,7 @@ func (s *StoreMeasurer) measurePath(path string) (int64, error) {
 func (s *StoreMeasurer) parseDuContents(contents string) (int64, error) {
 	parts := strings.Split(contents, "\t")
 	if len(parts) != 2 {
-		return 0, fmt.Errorf("failed to parse du's output `%s`", contents)
+		return 0, errorspkg.Errorf("failed to parse du's output `%s`", contents)
 	}
 	return strconv.ParseInt(parts[0], 10, 64)
 }

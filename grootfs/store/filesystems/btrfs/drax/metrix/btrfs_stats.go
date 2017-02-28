@@ -2,12 +2,12 @@ package metrix // import "code.cloudfoundry.org/grootfs/store/filesystems/btrfs/
 
 import (
 	"bytes"
-	"fmt"
 	"os/exec"
 	"strings"
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/lager"
+	errorspkg "github.com/pkg/errors"
 )
 
 type BtrfsStats struct {
@@ -39,7 +39,7 @@ func (m *BtrfsStats) VolumeStats(logger lager.Logger, path string, forceSync boo
 
 		if err := m.commandRunner.Run(cmd); err != nil {
 			logger.Error("command-failed", err)
-			return nil, fmt.Errorf("syncing filesystem: %s", strings.TrimSpace(combinedBuffer.String()))
+			return nil, errorspkg.Errorf("syncing filesystem: %s", strings.TrimSpace(combinedBuffer.String()))
 		}
 	}
 
@@ -51,7 +51,7 @@ func (m *BtrfsStats) VolumeStats(logger lager.Logger, path string, forceSync boo
 
 	if err := m.commandRunner.Run(cmd); err != nil {
 		logger.Error("command-failed", err)
-		return nil, fmt.Errorf("qgroup usage: %s, %s",
+		return nil, errorspkg.Errorf("qgroup usage: %s, %s",
 			strings.TrimSpace(outputBuffer.String()),
 			strings.TrimSpace(errorBuffer.String()))
 	}
@@ -68,11 +68,11 @@ func (m *BtrfsStats) isSubvolume(logger lager.Logger, path string) error {
 
 	if err := m.commandRunner.Run(cmd); err != nil {
 		if strings.Contains(combinedBuffer.String(), "not a subvolume") {
-			return fmt.Errorf("`%s` is not a btrfs volume: %s", path, err)
+			return errorspkg.Wrapf(err, "`%s` is not a btrfs volume", path)
 		}
 
 		logger.Error("command-failed", err)
-		return fmt.Errorf("checking if volume exists: %s", combinedBuffer.String())
+		return errorspkg.Errorf("checking if volume exists: %s", combinedBuffer.String())
 	}
 
 	return nil

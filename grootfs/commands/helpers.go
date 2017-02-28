@@ -1,11 +1,10 @@
 package commands
 
 import (
-	"fmt"
-
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
+	errorspkg "github.com/pkg/errors"
 )
 
 func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {
@@ -15,6 +14,6 @@ func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {
 	case "overlay-xfs":
 		return overlayxfs.NewDriver(cfg.XFSProgsPath, cfg.StorePath)
 	default:
-		return nil, fmt.Errorf("filesystem driver not supported: %s", cfg.FSDriver)
+		return nil, errorspkg.Errorf("filesystem driver not supported: %s", cfg.FSDriver)
 	}
 }
