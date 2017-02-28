@@ -1,6 +1,8 @@
 package gqt_test
 
 import (
+	"io/ioutil"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -11,20 +13,24 @@ import (
 	"strconv"
 	"syscall"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-	"code.cloudfoundry.org/idmapper"
 	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("rootless containers", func() {
 	var (
 		client            *runner.RunningGarden
-		maxUID            uint32
 		cgroupsMountpoint string
 		iptablesPrefix    string
 	)
 
 	BeforeEach(func() {
+		rootlessRuncPath := os.Getenv("ROOTLESS_RUNC_PATH")
+		if rootlessRuncPath == "" {
+			Fail("ROOTLESS_RUNC_PATH env var is not set")
+		}
+
 		tag := nodeToString(GinkgoParallelNode())
 		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
 		iptablesPrefix = fmt.Sprintf("w-%s", tag)
@@ -34,9 +40,27 @@ var _ = Describe("rootless containers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 
-		maxUID = uint32(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID()))
-		maxUIDUser := &syscall.Credential{Uid: maxUID, Gid: maxUID}
-		client = startGardenAsUser(maxUIDUser, "--skip-setup", "--image-plugin", testImagePluginBin, "--tag", tag)
+		unprivilegedUser := &syscall.Credential{Uid: unprivilegedUID, Gid: unprivilegedUID}
+		unprivilegedUidGid := fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedUID)
+
+		imagePath, err := ioutil.TempDir("", "rootlessImagePath")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(ioutil.WriteFile(filepath.Join(imagePath, "image.json"), []byte("{}"), 0777)).To(Succeed())
+
+		// so much easier to just shell out to the OS here ...
+		Expect(exec.Command("cp", "-r", os.Getenv("GARDEN_TEST_ROOTFS"), imagePath).Run()).To(Succeed())
+		Expect(exec.Command("chown", "-R", unprivilegedUidGid, imagePath).Run()).To(Succeed())
+
+		client = startGardenAsUser(
+			unprivilegedUser,
+			"--skip-setup",
+			"--runc-bin", rootlessRuncPath,
+			"--image-plugin", testImagePluginBin,
+			"--image-plugin-extra-arg", "\"--image-path\"",
+			"--image-plugin-extra-arg", imagePath,
+			"--network-plugin", "/bin/true",
+			"--tag", tag,
+		)
 	})
 
 	AfterEach(func() {
@@ -46,8 +70,8 @@ var _ = Describe("rootless containers", func() {
 
 	Describe("the server process", func() {
 		It("can run consistently as a non-root user", func() {
-			out, err := exec.Command("ps", "-U", fmt.Sprintf("%d", maxUID)).CombinedOutput()
-			Expect(err).NotTo(HaveOccurred(), "No process of user maximus was found")
+			out, err := exec.Command("ps", "-U", fmt.Sprintf("%d", unprivilegedUID)).CombinedOutput()
+			Expect(err).NotTo(HaveOccurred(), "No process of unprivileged user was found")
 			Expect(out).To(ContainSubstring(fmt.Sprintf("%d", client.Pid)))
 
 			Consistently(func() error {
@@ -56,4 +80,10 @@ var _ = Describe("rootless containers", func() {
 		})
 	})
 
+	Describe("creating a container", func() {
+		It("succeeds", func() {
+			_, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
 })

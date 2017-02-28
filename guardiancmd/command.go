@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"time"
 
@@ -292,13 +291,12 @@ func (cmd *ServerCommand) Execute([]string) error {
 	return <-ifrit.Invoke(sigmon.New(cmd)).Wait()
 }
 
-func checkRoot() error {
-	currentUser, err := user.Current()
-	if err != nil {
-		return err
-	}
+func runningAsRoot() bool {
+	return checkRoot() == nil
+}
 
-	if currentUser.Uid != "0" {
+func checkRoot() error {
+	if os.Getuid() != 0 {
 		return errors.New("server must be run as root")
 	}
 
@@ -794,6 +792,13 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPa
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).
 		WithCapabilities(PrivilegedMaxCaps...)
+
+	if !runningAsRoot() {
+		unprivilegedBundle = unprivilegedBundle.
+			WithResources(&specs.LinuxResources{}).
+			WithUIDMappings(idMappings[0]).
+			WithGIDMappings(idMappings[0])
+	}
 
 	template := &rundmc.BundleTemplate{
 		Rules: []rundmc.BundlerRule{

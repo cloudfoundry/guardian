@@ -13,6 +13,7 @@ import (
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	"code.cloudfoundry.org/guardian/pkg/locksmith"
+	"code.cloudfoundry.org/idmapper"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -28,6 +29,8 @@ var defaultRuntime = map[string]string{
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
 var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, testNetPluginBin, tarBin string
+
+var unprivilegedUID uint32
 
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -100,6 +103,13 @@ func TestGqt(t *testing.T) {
 			Expect(os.Chmod(path, 0755)).To(Succeed())
 			return nil
 		})
+
+		// create /run/runc and chown to unprivileged user
+		unprivilegedUID = uint32(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID()))
+		runcRootDir := "/run/runc"
+		Expect(os.MkdirAll(runcRootDir, 0700)).To(Succeed())
+		Expect(os.Chown(runcRootDir, int(unprivilegedUID), int(unprivilegedUID))).To(Succeed())
+
 	})
 
 	SetDefaultEventuallyTimeout(5 * time.Second)

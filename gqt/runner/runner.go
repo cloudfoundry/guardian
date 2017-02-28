@@ -180,12 +180,7 @@ func (r *RunningGarden) Stop() error {
 
 func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs string, user *syscall.Credential, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
-
-	snapshotsPath := filepath.Join(tmpdir, "snapshots")
-
 	Expect(os.MkdirAll(depotDir, 0755)).To(Succeed())
-
-	Expect(os.MkdirAll(snapshotsPath, 0755)).To(Succeed())
 
 	appendDefaultFlag := func(ar []string, key, value string) []string {
 		for _, a := range argv {
@@ -233,7 +228,7 @@ func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, in
 		cmd.SysProcAttr.Credential = user
 
 		uidGid := fmt.Sprintf("%d:%d", user.Uid, user.Gid)
-		Expect(exec.Command("chown", "-R", uidGid, tmpdir, depotDir, graphPath).Run()).To(Succeed())
+		Expect(exec.Command("chown", "-R", uidGid, tmpdir).Run()).To(Succeed())
 	}
 
 	return cmd
