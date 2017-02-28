@@ -80,13 +80,20 @@ var _ = Describe("Dadoo", func() {
 
 	Describe("Exec", func() {
 		var (
-			processDir string
+			processDir  string
+			runcLogFile *os.File
 		)
 
 		BeforeEach(func() {
+			var err error
+
 			bundle = bundle.WithProcess(specs.Process{Args: []string{"/bin/sh", "-c", "sleep 9999"}, Cwd: "/"})
 			processDir = filepath.Join(bundlePath, "processes", "abc")
 			Expect(os.MkdirAll(processDir, 0777)).To(Succeed())
+
+			runcLogFilePath := filepath.Join(processDir, "exec.log")
+			runcLogFile, err = os.Create(runcLogFilePath)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		JustBeforeEach(func() {
@@ -95,6 +102,11 @@ var _ = Describe("Dadoo", func() {
 		})
 
 		AfterEach(func() {
+			runcLogFileContents, err := ioutil.ReadAll(runcLogFile)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(runcLogFile.Close()).To(Succeed())
+			fmt.Print(string(runcLogFileContents))
+
 			cmd := exec.Command("runc", "delete", filepath.Base(bundlePath))
 			Expect(cmd.Run()).To(Succeed())
 		})
@@ -108,7 +120,7 @@ var _ = Describe("Dadoo", func() {
 
 			cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 			cmd.Stdin = bytes.NewReader(processSpec)
-			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -125,7 +137,7 @@ var _ = Describe("Dadoo", func() {
 
 			cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 			cmd.Stdin = bytes.NewReader(processSpec)
-			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -144,7 +156,7 @@ var _ = Describe("Dadoo", func() {
 
 			cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 			cmd.Stdin = bytes.NewReader(processSpec)
-			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -169,7 +181,7 @@ var _ = Describe("Dadoo", func() {
 
 			cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 			cmd.Stdin = bytes.NewReader(processSpec)
-			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 
 			_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -201,7 +213,7 @@ var _ = Describe("Dadoo", func() {
 
 			cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
 			cmd.Stdin = bytes.NewReader(processSpec)
-			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+			cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -233,7 +245,7 @@ var _ = Describe("Dadoo", func() {
 			cmd.Stdin = bytes.NewReader(processSpec)
 			cmd.ExtraFiles = []*os.File{
 				mustOpen("/dev/null"),
-				mustOpen("/dev/null"),
+				runcLogFile,
 				syncPipeW,
 			}
 
@@ -278,7 +290,7 @@ var _ = Describe("Dadoo", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
-				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 				cmd.Stdin = bytes.NewReader(encSpec)
 				_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
@@ -331,7 +343,7 @@ var _ = Describe("Dadoo", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd := exec.Command(dadooBinPath, "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
-				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 				cmd.Stdin = bytes.NewReader(encSpec)
 
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -363,7 +375,7 @@ var _ = Describe("Dadoo", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				cmd := exec.Command(dadooBinPath, "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
-				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 				cmd.Stdin = bytes.NewReader(encSpec)
 
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -409,7 +421,7 @@ var _ = Describe("Dadoo", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					cmd := exec.Command(dadooBinPath, "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
-					cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+					cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 					cmd.Stdin = bytes.NewReader(encSpec)
 
 					_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -456,7 +468,7 @@ var _ = Describe("Dadoo", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					cmd := exec.Command(dadooBinPath, "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
-					cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+					cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 					cmd.Stdin = bytes.NewReader(encSpec)
 
 					_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -534,7 +546,7 @@ var _ = Describe("Dadoo", func() {
 
 					It("exits with 2", func() {
 						dadooCmd := exec.Command(dadooBinPath, "-tty", "-socket-dir-path", string(longerThanAllowedSocketPath), "exec", "runc", processDir, filepath.Base(bundlePath))
-						dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+						dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 						dadooCmd.Stdin = bytes.NewReader(encSpec)
 
 						stdout := gbytes.NewBuffer()
@@ -560,7 +572,7 @@ var _ = Describe("Dadoo", func() {
 
 					It("kills the process and exits with 2", func() {
 						dadooCmd := exec.Command(dadooBinPath, "-tty", "-socket-dir-path", os.TempDir(), "exec", fakeRuncBinPath, processDir, filepath.Base(bundlePath))
-						dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), mustOpen("/dev/null"), mustOpen("/dev/null")}
+						dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
 						dadooCmd.Stdin = bytes.NewReader(encSpec)
 
 						stdout := gbytes.NewBuffer()
