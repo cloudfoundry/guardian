@@ -34,6 +34,9 @@ RUN apt-get update && \
 # Install Bosh
 RUN gem install bundler --no-rdoc --no-ri
 RUN gem install bosh_cli -v 1.3232.0 --no-rdoc --no-ri
+RUN wget https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-2.0.1-linux-amd64 && \
+    mv bosh-cli-* /usr/local/bin/bosh2 && \
+    chmod +x /usr/local/bin/bosh2
 
 ################################
 # Setup GO
