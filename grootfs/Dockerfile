@@ -25,7 +25,6 @@ RUN apt-get update && \
         libyaml-dev \
         ruby \
         ruby-dev \
-        runc \
         zlib1g-dev && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

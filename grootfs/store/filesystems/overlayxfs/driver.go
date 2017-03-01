@@ -63,9 +63,14 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 	defer logger.Info("end")
 
 	volumePath := filepath.Join(d.storePath, store.VolumesDirName, id)
-	if err := os.Mkdir(volumePath, 0700); err != nil {
+	if err := os.Mkdir(volumePath, 0755); err != nil {
 		logger.Error("creating-volume-dir-failed", err)
 		return "", errors.Wrap(err, "creating volume")
+	}
+
+	if err := os.Chmod(volumePath, 755); err != nil {
+		logger.Error("changing-volume-permissions-failed", err)
+		return "", errors.Wrap(err, "changing volume permissions")
 	}
 	return volumePath, nil
 }
@@ -122,10 +127,6 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 
 		baseVolumeSize += volumeSize
 		baseVolumePaths = append(baseVolumePaths, volumePath)
-		if err := os.Chmod(volumePath, 755); err != nil {
-			logger.Error("changing-volume-permissions-failed", err)
-			return errors.Wrap(err, "changing volume permissions")
-		}
 	}
 
 	upperDir := filepath.Join(spec.ImagePath, UpperDir)
