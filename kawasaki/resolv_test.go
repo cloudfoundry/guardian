@@ -94,7 +94,7 @@ var _ = Describe("ResolvConfigurer", func() {
 		})
 	})
 
-	Context("when writting a file fails", func() {
+	Context("when writing a file fails", func() {
 		var failedFilePath string
 
 		JustBeforeEach(func() {
@@ -113,7 +113,7 @@ var _ = Describe("ResolvConfigurer", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(dnsResolv.Configure(log, kawasaki.NetworkConfig{}, 42)).To(MatchError("writting file '/etc/hosts': banana write error"))
+				Expect(dnsResolv.Configure(log, kawasaki.NetworkConfig{}, 42)).To(MatchError("writing file '/etc/hosts': banana write error"))
 			})
 		})
 
@@ -123,7 +123,7 @@ var _ = Describe("ResolvConfigurer", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(dnsResolv.Configure(log, kawasaki.NetworkConfig{}, 42)).To(MatchError("writting file '/etc/resolv.conf': banana write error"))
+				Expect(dnsResolv.Configure(log, kawasaki.NetworkConfig{}, 42)).To(MatchError("writing file '/etc/resolv.conf': banana write error"))
 			})
 		})
 	})

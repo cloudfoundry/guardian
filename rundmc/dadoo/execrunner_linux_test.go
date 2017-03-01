@@ -125,7 +125,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				processDir := dadooFlags.Arg(2)
 				si, so, se, winsz, exit := openPipes(processDir)
 
-				// notify sync pipe - must be before writting stderr
+				// notify sync pipe - must be before writing stderr
 				_, err := fd5.Write([]byte{0})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fd5.Close()).To(Succeed())

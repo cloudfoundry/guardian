@@ -96,7 +96,7 @@ func (r *RootfsWriter) writeFile(log lager.Logger, filePath string, contents []b
 	defer file.Close()
 
 	if _, err := file.Write(contents); err != nil {
-		log.Error("writting-file", err)
+		log.Error("writing-file", err)
 		return err
 	}
 

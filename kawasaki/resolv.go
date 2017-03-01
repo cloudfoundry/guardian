@@ -89,8 +89,8 @@ func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid in
 	}
 
 	if err := d.FileWriter.WriteFile(log, "/etc/hosts", contents, fmt.Sprintf("/proc/%d/root", pid), rootUid, rootGid); err != nil {
-		log.Error("writting-hosts-file", err)
-		return fmt.Errorf("writting file '/etc/hosts': %s", err)
+		log.Error("writing-hosts-file", err)
+		return fmt.Errorf("writing file '/etc/hosts': %s", err)
 	}
 
 	contents, err = d.ResolvFileCompiler.Compile(log, "/etc/resolv.conf", cfg.BridgeIP, cfg.DNSServers)
@@ -100,8 +100,8 @@ func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid in
 	}
 
 	if err := d.FileWriter.WriteFile(log, "/etc/resolv.conf", contents, fmt.Sprintf("/proc/%d/root", pid), rootUid, rootGid); err != nil {
-		log.Error("writting-resolv-file", err)
-		return fmt.Errorf("writting file '/etc/resolv.conf': %s", err)
+		log.Error("writing-resolv-file", err)
+		return fmt.Errorf("writing file '/etc/resolv.conf': %s", err)
 	}
 
 	return nil
