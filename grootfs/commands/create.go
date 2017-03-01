@@ -129,8 +129,10 @@ var CreateCommand = cli.Command{
 		if err != nil {
 			return err
 		}
-		if err = store.ConfigureStore(logger, storePath, storeOwnerUid, storeOwnerGid, id); err != nil {
-			return err
+		if err = store.ConfigureStore(logger, storePath, cfg.FSDriver, storeOwnerUid, storeOwnerGid); err != nil {
+			exitErr := errorspkg.Wrapf(err, "id: %s", id)
+			logger.Error("failed-to-setup-store", err, lager.Data{"id": id})
+			return cli.NewExitError(exitErr.Error(), 1)
 		}
 
 		fsDriver, err := createFileSystemDriver(cfg)

@@ -22,6 +22,7 @@ var _ = Describe("Configurer", func() {
 		currentUID     int
 		currentGID     int
 		logger         lager.Logger
+		driver         string
 	)
 
 	BeforeEach(func() {
@@ -34,6 +35,7 @@ var _ = Describe("Configurer", func() {
 		storePath = path.Join(tempDir, "store")
 
 		logger = lagertest.NewTestLogger("store-configurer")
+		driver = "random-driver"
 	})
 
 	AfterEach(func() {
@@ -43,13 +45,13 @@ var _ = Describe("Configurer", func() {
 
 	Describe("ConfigureStore", func() {
 		It("creates the store directory", func() {
-			Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
+			Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 
 			Expect(storePath).To(BeADirectory())
 		})
 
 		It("creates the correct internal structure", func() {
-			Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
+			Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 
 			Expect(filepath.Join(storePath, "images")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "cache")).To(BeADirectory())
@@ -61,14 +63,13 @@ var _ = Describe("Configurer", func() {
 		})
 
 		It("creates tmp files into TMPDIR inside storePath", func() {
-			Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
+			Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 			file, _ := ioutil.TempFile("", "")
 			Expect(filepath.Join(storePath, store.TempDirName, filepath.Base(file.Name()))).To(BeAnExistingFile())
-
 		})
 
 		It("chmods the storePath to 700", func() {
-			Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
+			Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 
 			stat, err := os.Stat(storePath)
 			Expect(err).NotTo(HaveOccurred())
@@ -76,7 +77,7 @@ var _ = Describe("Configurer", func() {
 		})
 
 		It("chowns the storePath to the owner UID/GID", func() {
-			Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
+			Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 
 			stat, err := os.Stat(storePath)
 			Expect(err).NotTo(HaveOccurred())
@@ -94,14 +95,14 @@ var _ = Describe("Configurer", func() {
 				go func() {
 					defer GinkgoRecover()
 					<-start1
-					Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
+					Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 					close(start1)
 				}()
 
 				go func() {
 					defer GinkgoRecover()
 					<-start2
-					Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
+					Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 					close(start2)
 				}()
 
@@ -113,30 +114,47 @@ var _ = Describe("Configurer", func() {
 			}
 		})
 
-		It("creates a whiteout device", func() {
-			Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
-
-			stat, err := os.Stat(filepath.Join(storePath, store.WhiteoutDevice))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(currentUID)))
-			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(currentGID)))
-		})
-
-		Context("when the whiteout 'device' is not a device", func() {
+		Context("the driver is overlay-xfs", func() {
 			BeforeEach(func() {
-				Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
-				Expect(ioutil.WriteFile(filepath.Join(storePath, store.WhiteoutDevice), []byte{}, 0755)).To(Succeed())
+				driver = "overlay-xfs"
 			})
 
-			It("returns an error", func() {
-				err := store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")
-				Expect(err).To(MatchError(ContainSubstring("the whiteout device file is not a valid device")))
+			It("creates a whiteout device", func() {
+				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
+
+				stat, err := os.Stat(filepath.Join(storePath, store.WhiteoutDevice))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(currentUID)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(currentGID)))
+			})
+
+			Context("when the whiteout 'device' is not a device", func() {
+				BeforeEach(func() {
+					Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
+					Expect(ioutil.WriteFile(filepath.Join(storePath, store.WhiteoutDevice), []byte{}, 0755)).To(Succeed())
+				})
+
+				It("returns an error", func() {
+					err := store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)
+					Expect(err).To(MatchError(ContainSubstring("the whiteout device file is not a valid device")))
+				})
+			})
+		})
+
+		Context("the driver is not overlay-xfs", func() {
+			BeforeEach(func() {
+				driver = "not-overlay-xfs"
+			})
+
+			It("does not create a whiteout device", func() {
+				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
+				Expect(filepath.Join(storePath, store.WhiteoutDevice)).ToNot(BeAnExistingFile())
 			})
 		})
 
 		Context("it will change the owner of the created folders to the provided userID", func() {
 			It("returns an error", func() {
-				Expect(store.ConfigureStore(logger, storePath, 2, 1, "random-id")).To(Succeed())
+				Expect(store.ConfigureStore(logger, storePath, driver, 2, 1)).To(Succeed())
 
 				storeDir, err := os.Stat(storePath)
 				Expect(err).NotTo(HaveOccurred())
@@ -147,7 +165,7 @@ var _ = Describe("Configurer", func() {
 
 		Context("when the base directory does not exist", func() {
 			It("returns an error", func() {
-				Expect(store.ConfigureStore(logger, "/not/exist", currentUID, currentGID, "random-id")).To(
+				Expect(store.ConfigureStore(logger, "/not/exist", driver, currentUID, currentGID)).To(
 					MatchError(ContainSubstring("making directory")),
 				)
 			})
@@ -156,14 +174,14 @@ var _ = Describe("Configurer", func() {
 		Context("when the store already exists", func() {
 			It("succeeds", func() {
 				Expect(os.Mkdir(storePath, 0700)).To(Succeed())
-				Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
+				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 			})
 
 			Context("and it's a regular file", func() {
 				It("returns an error", func() {
 					Expect(ioutil.WriteFile(storePath, []byte("hello"), 0600)).To(Succeed())
 
-					Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(
+					Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(
 						MatchError(ContainSubstring("is not a directory")),
 					)
 				})
@@ -173,7 +191,7 @@ var _ = Describe("Configurer", func() {
 		Context("when any internal directory already exists", func() {
 			It("succeeds", func() {
 				Expect(os.MkdirAll(filepath.Join(storePath, "volumes"), 0700)).To(Succeed())
-				Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(Succeed())
+				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 			})
 
 			Context("and it's a regular file", func() {
@@ -181,7 +199,7 @@ var _ = Describe("Configurer", func() {
 					Expect(os.Mkdir(storePath, 0700)).To(Succeed())
 					Expect(ioutil.WriteFile(filepath.Join(storePath, "volumes"), []byte("hello"), 0600)).To(Succeed())
 
-					Expect(store.ConfigureStore(logger, storePath, currentUID, currentGID, "random-id")).To(
+					Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(
 						MatchError(ContainSubstring("is not a directory")),
 					)
 				})

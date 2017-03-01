@@ -11,22 +11,7 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-func ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int, imageIDOrPath string) error {
-	var data lager.Data
-	if imageIDOrPath != "" {
-		_, id := filepath.Split(imageIDOrPath)
-		data = lager.Data{"id": id}
-	}
-
-	if err := ensure(logger, storePath, ownerUID, ownerGID); err != nil {
-		logger.Error("failed-to-setup-store", err, data)
-		return err
-	}
-
-	return nil
-}
-
-func ensure(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
+func ConfigureStore(logger lager.Logger, storePath, driver string, ownerUID, ownerGID int) error {
 	logger = logger.Session("ensuring-store", lager.Data{"storePath": storePath})
 	logger.Debug("start")
 	defer logger.Debug("end")
@@ -68,13 +53,15 @@ func ensure(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
 		}
 	}
 
-	if err := createWhiteoutDevice(logger, ownerUID, ownerGID, storePath); err != nil {
-		return err
-	}
+	if requiresWhiteout(driver, ownerUID, ownerGID) {
+		if err := createWhiteoutDevice(logger, ownerUID, ownerGID, storePath); err != nil {
+			return err
+		}
 
-	if err := validateWhiteoutDevice(filepath.Join(storePath, WhiteoutDevice)); err != nil {
-		logger.Error("validating-whiteout-device-failed", err)
-		return err
+		if err := validateWhiteoutDevice(filepath.Join(storePath, WhiteoutDevice)); err != nil {
+			logger.Error("validating-whiteout-device-failed", err)
+			return err
+		}
 	}
 
 	if err := os.Chown(storePath, ownerUID, ownerGID); err != nil {
@@ -115,4 +102,8 @@ func validateWhiteoutDevice(path string) error {
 	}
 
 	return nil
+}
+
+func requiresWhiteout(driver string, uid, gid int) bool {
+	return driver == "overlay-xfs" && uid == 0 && gid == 0
 }
