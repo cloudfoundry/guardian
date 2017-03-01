@@ -409,6 +409,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///busybox:1.26.2",
+				DiskLimit: 10 * 1024 * 1024,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -425,11 +426,9 @@ var _ = Describe("Create", func() {
 			Expect(preContents).To(HaveLen(1))
 
 			_, err = Runner.Create(groot.CreateSpec{
-				ID:                          "my-empty",
-				BaseImage:                   "docker:///cfgarden/empty:v0.1.1",
-				CleanOnCreate:               true,
-				CleanOnCreateIgnoreImages:   []string{"docker://my-image"},
-				CleanOnCreateThresholdBytes: int64(250000),
+				ID:            "my-empty",
+				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
+				CleanOnCreate: true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -463,11 +462,9 @@ var _ = Describe("Create", func() {
 			Expect(preContents).To(HaveLen(1))
 
 			_, err = Runner.Create(groot.CreateSpec{
-				ID:                          "my-empty",
-				BaseImage:                   "docker:///cfgarden/empty:v0.1.1",
-				CleanOnCreate:               false,
-				CleanOnCreateIgnoreImages:   []string{"docker://my-image"},
-				CleanOnCreateThresholdBytes: int64(250000),
+				ID:            "my-empty",
+				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
+				CleanOnCreate: false,
 			})
 			Expect(err).NotTo(HaveOccurred())
 

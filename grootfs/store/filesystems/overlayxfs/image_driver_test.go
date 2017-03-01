@@ -204,6 +204,14 @@ var _ = Describe("ImageDriver", func() {
 				spec.DiskLimit = 1024 * 1024 * 10
 			})
 
+			It("creates the backingFsBlockDev device in the `images` parent folder", func() {
+				backingFsBlockDevPath := filepath.Join(StorePath, "backingFsBlockDev")
+
+				Expect(backingFsBlockDevPath).ToNot(BeAnExistingFile())
+				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+				Expect(backingFsBlockDevPath).To(BeAnExistingFile())
+			})
+
 			It("can overwrite files from the lowerdirs", func() {
 				Expect(driver.CreateImage(logger, spec)).To(Succeed())
 				imageRootfsPath := filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)

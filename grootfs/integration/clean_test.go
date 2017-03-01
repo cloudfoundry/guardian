@@ -76,6 +76,7 @@ var _ = Describe("Clean", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					ID:        "my-image-2",
 					BaseImage: anotherBaseImagePath,
+					DiskLimit: 10 * 1024 * 1024,
 				})
 				Expect(err).NotTo(HaveOccurred())
 

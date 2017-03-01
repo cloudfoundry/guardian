@@ -96,7 +96,7 @@ func (g *GarbageCollector) unusedVolumes(logger lager.Logger, keepImages []strin
 
 	volumes, err := g.volumeDriver.Volumes(logger)
 	if err != nil {
-		return nil, errorspkg.Errorf("failed to retrieve volume list")
+		return nil, errorspkg.Wrap(err, "failed to retrieve volume list")
 	}
 
 	orphanedVolumes := make(map[string]bool)

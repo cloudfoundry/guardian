@@ -325,6 +325,7 @@ func getDirFd(dir *C.DIR) uintptr {
 // and create a block device node under the home directory
 // to be used by quotactl commands
 func makeBackingFsDev(home string) (string, error) {
+	home = path.Dir(home)
 	fileinfo, err := os.Stat(home)
 	if err != nil {
 		return "", err
