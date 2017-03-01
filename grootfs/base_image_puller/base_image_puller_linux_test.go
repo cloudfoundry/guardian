@@ -119,18 +119,41 @@ var _ = Describe("Base Image Puller", func() {
 		Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(3))
 		_, parentChainID, chainID := fakeVolumeDriver.CreateVolumeArgsForCall(0)
 		Expect(parentChainID).To(BeEmpty())
-		Expect(chainID).To(Equal("layer-111"))
+		Expect(chainID).To(MatchRegexp("layer-111-\\d*-\\d*"))
 
 		_, parentChainID, chainID = fakeVolumeDriver.CreateVolumeArgsForCall(1)
 		Expect(parentChainID).To(Equal("layer-111"))
-		Expect(chainID).To(Equal("chain-222"))
+		Expect(chainID).To(MatchRegexp("chain-222-\\d*-\\d*"))
 
 		_, parentChainID, chainID = fakeVolumeDriver.CreateVolumeArgsForCall(2)
 		Expect(parentChainID).To(Equal("chain-222"))
-		Expect(chainID).To(Equal("chain-333"))
+		Expect(chainID).To(MatchRegexp("chain-333-\\d*-\\d*"))
 	})
 
-	It("unpacks the layers to the respective volumes", func() {
+	It("renames all the temporary volumes to their final destination", func() {
+		volumesDir, err := ioutil.TempDir("", "volumes")
+		Expect(err).NotTo(HaveOccurred())
+
+		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, id string) (string, error) {
+			volumePath := filepath.Join(volumesDir, id)
+			err := os.MkdirAll(volumePath, 0755)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.MkdirAll(volumePath, 0777)).To(Succeed())
+			return volumePath, nil
+		}
+
+		_, err = baseImagePuller.Pull(logger, groot.BaseImageSpec{
+			BaseImageSrc: remoteBaseImageSrc,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(filepath.Join(volumesDir, "layer-111")).To(BeADirectory())
+		Expect(filepath.Join(volumesDir, "chain-222")).To(BeADirectory())
+		Expect(filepath.Join(volumesDir, "chain-333")).To(BeADirectory())
+	})
+
+	It("unpacks the layers to the respective temporary volumes", func() {
 		volumesDir, err := ioutil.TempDir("", "volumes")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -149,11 +172,11 @@ var _ = Describe("Base Image Puller", func() {
 
 		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
 		_, unpackSpec := fakeUnpacker.UnpackArgsForCall(0)
-		Expect(unpackSpec.TargetPath).To(Equal(filepath.Join(volumesDir, "layer-111")))
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "layer-111-\\d*-\\d*")))
 		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(1)
-		Expect(unpackSpec.TargetPath).To(Equal(filepath.Join(volumesDir, "chain-222")))
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-222-\\d*-\\d*")))
 		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
-		Expect(unpackSpec.TargetPath).To(Equal(filepath.Join(volumesDir, "chain-333")))
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-333-\\d*-\\d*")))
 	})
 
 	It("unpacks the layers got from the fetcher", func() {
@@ -462,7 +485,7 @@ var _ = Describe("Base Image Puller", func() {
 
 			Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(1))
 			_, _, volID := fakeVolumeDriver.CreateVolumeArgsForCall(0)
-			Expect(volID).To(Equal("chain-333"))
+			Expect(volID).To(MatchRegexp("chain-333-(\\d*)-(\\d*)"))
 		})
 	})
 

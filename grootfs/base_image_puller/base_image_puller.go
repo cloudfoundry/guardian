@@ -3,8 +3,11 @@ package base_image_puller // import "code.cloudfoundry.org/grootfs/base_image_pu
 import (
 	"fmt"
 	"io"
+	"math/rand"
 	"net/url"
 	"os"
+	"strings"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
@@ -182,9 +185,10 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 		"parentChainID":             digest.ParentChainID,
 	})
 
+	tempVolumeName := fmt.Sprintf("%s-%d-%d", digest.ChainID, time.Now().Unix(), rand.Int())
 	volumePath, err = p.volumeDriver.CreateVolume(logger,
 		digest.ParentChainID,
-		digest.ChainID,
+		tempVolumeName,
 	)
 	if err != nil {
 		return "", errorspkg.Wrapf(err, "creating volume for layer `%s`", digest.BlobID)
@@ -225,6 +229,12 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 		"chainID":       digest.ChainID,
 		"parentChainID": digest.ParentChainID,
 	})
+
+	finalVolumePath := strings.Replace(volumePath, tempVolumeName, digest.ChainID, 1)
+	if err := os.Rename(volumePath, finalVolumePath); err != nil {
+		logger.Error("moving-volume-failed", err, lager.Data{"from": volumePath, "to": finalVolumePath})
+		return "", errorspkg.Wrap(err, "moving volume")
+	}
 
 	return volumePath, nil
 }
