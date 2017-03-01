@@ -49,6 +49,7 @@ var _ = Describe("List", func() {
 			var err error
 			configDir, err = ioutil.TempDir("", "")
 			Expect(err).NotTo(HaveOccurred())
+			Expect(os.Chmod(configDir, 0755)).To(Succeed())
 			configFilePath = path.Join(configDir, "config.yaml")
 
 			cfg := config.Config{

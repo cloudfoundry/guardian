@@ -72,6 +72,8 @@ var _ = Describe("Create", func() {
 	})
 
 	It("keeps the ownership and permissions", func() {
+		integration.SkipIfNonRoot(GrootfsTestUid)
+
 		image, err := Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
 			ID:        "random-id",
@@ -184,33 +186,33 @@ var _ = Describe("Create", func() {
 
 				stat, err := os.Stat(filepath.Join(StorePath, store.ImageDirName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
-				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootfsTestUid)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootfsTestGid)))
 
 				stat, err = os.Stat(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
-				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootfsTestUid)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootfsTestGid)))
 
 				stat, err = os.Stat(filepath.Join(StorePath, store.LocksDirName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
-				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootfsTestUid)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootfsTestGid)))
 			})
 		})
 
-		Context("when there's mappings", func() {
+		Context("when there are mappings", func() {
 			It("sets the onwnership of the store to the mapped user", func() {
 				_, err := Runner.WithLogLevel(lager.DEBUG).
 					Create(groot.CreateSpec{
 						ID:        "some-id",
 						BaseImage: baseImagePath,
 						UIDMappings: []groot.IDMappingSpec{
-							groot.IDMappingSpec{HostID: 5000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
 							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 						},
 						GIDMappings: []groot.IDMappingSpec{
-							groot.IDMappingSpec{HostID: 6000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
 							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 						},
 					})
@@ -219,18 +221,18 @@ var _ = Describe("Create", func() {
 
 				stat, err := os.Stat(filepath.Join(StorePath, store.ImageDirName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
-				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
 
 				stat, err = os.Stat(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
-				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
 
 				stat, err = os.Stat(filepath.Join(StorePath, store.LocksDirName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(5000)))
-				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(6000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
 			})
 
 			Context("but there's no mapping for root or size = 1", func() {
@@ -376,6 +378,7 @@ var _ = Describe("Create", func() {
 			JustBeforeEach(func() {
 				storePath, err := ioutil.TempDir(StorePath, "store")
 				Expect(err).NotTo(HaveOccurred())
+				Expect(os.Chmod(storePath, 0777)).To(Succeed())
 				Runner = Runner.WithStore(storePath)
 
 				image, err := Runner.Create(groot.CreateSpec{
@@ -383,11 +386,11 @@ var _ = Describe("Create", func() {
 					ID:        "foobar",
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: int(GrootUID) + 1, NamespaceID: 1, Size: 65000},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: int(GrootGID) + 1, NamespaceID: 1, Size: 65000},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
 				Expect(err).ToNot(HaveOccurred())
@@ -492,6 +495,7 @@ var _ = Describe("Create", func() {
 	Context("when no --store option is given", func() {
 		BeforeEach(func() {
 			integration.SkipIfNotBTRFS(Driver)
+			integration.SkipIfNonRoot(GrootfsTestUid)
 		})
 
 		It("uses the default store path", func() {
@@ -640,6 +644,7 @@ var _ = Describe("Create", func() {
 				var err error
 				cfg.StorePath, err = ioutil.TempDir(StorePath, "")
 				Expect(err).NotTo(HaveOccurred())
+				Expect(os.Chmod(cfg.StorePath, 0777)).To(Succeed())
 			})
 
 			It("uses the store path from the config file", func() {
@@ -690,8 +695,8 @@ var _ = Describe("Create", func() {
 
 		Describe("mappings", func() {
 			BeforeEach(func() {
-				cfg.UIDMappings = []string{"1:1001:65990", "0:500:1"}
-				cfg.GIDMappings = []string{"1:1001:65990", "0:501:1"}
+				cfg.UIDMappings = []string{"1:100000:65000", "0:1000:1"}
+				cfg.GIDMappings = []string{"1:100000:65000", "0:1000:1"}
 			})
 
 			It("uses the uid mappings from the config file", func() {
@@ -700,8 +705,8 @@ var _ = Describe("Create", func() {
 
 				rootOwnedFile, err := os.Stat(filepath.Join(image.RootFSPath, "bar"))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(500)))
-				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(501)))
+				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
 			})
 		})
 

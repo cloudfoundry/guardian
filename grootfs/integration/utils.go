@@ -5,10 +5,12 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -66,6 +68,12 @@ func SkipIfNotXFS(driver string) {
 	}
 }
 
+func SkipIfNonRoot(uid int) {
+	if uid != 0 {
+		Skip("These tests can only run as root user. Skipping.")
+	}
+}
+
 func CreateFakeDrax() (string, *os.File, *os.File) {
 	tempFolder, bin, binCalledFile := CreateFakeBin("drax")
 	testhelpers.SuidDrax(bin.Name())
@@ -76,8 +84,11 @@ func CreateFakeBin(binaryName string) (string, *os.File, *os.File) {
 	binCalledFile, err := ioutil.TempFile("", "bin-called")
 	Expect(err).NotTo(HaveOccurred())
 	binCalledFile.Close()
+	Expect(os.Chmod(binCalledFile.Name(), 0666)).To(Succeed())
 
 	tempFolder, err := ioutil.TempDir("", "")
+	Expect(os.Chmod(tempFolder, 0755)).To(Succeed())
+
 	bin, err := os.Create(path.Join(tempFolder, binaryName))
 	Expect(err).NotTo(HaveOccurred())
 	bin.WriteString("#!/bin/bash\necho -n \"I'm groot - " + binaryName + "\" > " + binCalledFile.Name())
@@ -101,4 +112,18 @@ type CustomRoundTripper struct {
 
 func (r *CustomRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return r.RoundTripFn(req)
+}
+
+func MakeBinaryAccessibleToEveryone(binaryPath string) string {
+	binaryName := path.Base(binaryPath)
+	tempDir := fmt.Sprintf("/tmp/temp-%s-%d", binaryName, rand.Int())
+	Expect(os.MkdirAll(tempDir, 0755)).To(Succeed())
+
+	newBinaryPath := filepath.Join(tempDir, binaryName)
+	cp := exec.Command("cp", binaryPath, newBinaryPath)
+	sess, err := gexec.Start(cp, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(sess).Should(gexec.Exit(0))
+
+	return newBinaryPath
 }

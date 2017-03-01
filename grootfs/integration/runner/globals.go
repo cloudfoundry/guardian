@@ -174,6 +174,10 @@ func (r *Runner) SetConfig(cfg config.Config) error {
 		return err
 	}
 
+	if err := os.Chmod(configFile.Name(), 0666); err != nil {
+		return err
+	}
+
 	r.ConfigPath = configFile.Name()
 
 	return nil

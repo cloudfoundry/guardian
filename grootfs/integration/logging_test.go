@@ -1,8 +1,6 @@
 package integration_test
 
 import (
-	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -46,7 +44,7 @@ var _ = Describe("Logging", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(logBuffer).To(gbytes.Say("ns-sysproc-unpacking.unpack"))
+		Expect(string(logBuffer.Contents())).To(MatchRegexp("ns-.*-unpacking.unpack"))
 	})
 
 	Describe("--log-level and --log-file flags", func() {
@@ -89,21 +87,17 @@ var _ = Describe("Logging", func() {
 		Context("when the --log-file is set", func() {
 			var (
 				logFilePath string
-				logReader   io.ReadCloser
-				logWriter   io.WriteCloser
 			)
 
 			BeforeEach(func() {
-				r, w, err := os.Pipe()
+				logFile, err := ioutil.TempFile("", "log")
 				Expect(err).NotTo(HaveOccurred())
-
-				logFilePath = fmt.Sprintf("/proc/%d/fd/%d", os.Getpid(), w.Fd())
-				logReader = r
-				logWriter = w
+				logFilePath = logFile.Name()
+				Expect(os.Chmod(logFilePath, 0777)).To(Succeed())
 			})
 
 			AfterEach(func() {
-				Expect(logReader.Close()).To(Succeed())
+				Expect(os.RemoveAll(logFilePath)).To(Succeed())
 			})
 
 			Context("and --log-level is set", func() {
@@ -117,8 +111,7 @@ var _ = Describe("Logging", func() {
 						})
 					Expect(err).To(HaveOccurred())
 
-					Expect(logWriter.Close()).To(Succeed())
-					allTheLogs, err := ioutil.ReadAll(logReader)
+					allTheLogs, err := ioutil.ReadFile(logFilePath)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(allTheLogs)).To(ContainSubstring("\"log_level\":0"))
 				})
@@ -135,8 +128,7 @@ var _ = Describe("Logging", func() {
 						})
 					Expect(err).To(HaveOccurred())
 
-					Expect(logWriter.Close()).To(Succeed())
-					allTheLogs, err := ioutil.ReadAll(logReader)
+					allTheLogs, err := ioutil.ReadFile(logFilePath)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(allTheLogs)).NotTo(ContainSubstring("\"log_level\":0"))
 					Expect(string(allTheLogs)).To(ContainSubstring("\"log_level\":1"))

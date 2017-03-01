@@ -72,26 +72,6 @@ var _ = Describe("Create with remote images", func() {
 			}))
 		})
 
-		It("logs the steps taken to create the rootfs", func() {
-			errBuffer := gbytes.NewBuffer()
-			_, err := Runner.WithLogLevel(lager.DEBUG).WithStderr(errBuffer).
-				Create(groot.CreateSpec{
-					ID:        "some-id",
-					BaseImage: "docker:///cfgarden/empty:v0.1.0",
-					UIDMappings: []groot.IDMappingSpec{
-						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-					GIDMappings: []groot.IDMappingSpec{
-						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-				})
-			Expect(err).NotTo(HaveOccurred())
-
-			Eventually(errBuffer).Should(gbytes.Say("grootfs.create.groot-creating.image-pulling.ns-sysproc-unpacking.starting-unpack"))
-		})
-
 		It("gives any user permission to be inside the container", func() {
 			image, err := Runner.Create(groot.CreateSpec{
 				BaseImage: "docker:///busybox:1.26.2",
@@ -523,6 +503,7 @@ var _ = Describe("Create with remote images", func() {
 					var err error
 					configDir, err = ioutil.TempDir("", "")
 					Expect(err).NotTo(HaveOccurred())
+					Expect(os.Chmod(configDir, 0755)).To(Succeed())
 
 					cfg := config.Config{
 						InsecureRegistries: []string{fakeRegistry.Addr()},

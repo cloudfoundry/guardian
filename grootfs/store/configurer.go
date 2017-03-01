@@ -17,7 +17,6 @@ func ConfigureStore(logger lager.Logger, storePath, driver string, ownerUID, own
 	defer logger.Debug("end")
 
 	requiredPaths := []string{
-		storePath,
 		filepath.Join(storePath, ImageDirName),
 		filepath.Join(storePath, VolumesDirName),
 		filepath.Join(storePath, CacheDirName),
@@ -31,25 +30,32 @@ func ConfigureStore(logger lager.Logger, storePath, driver string, ownerUID, own
 		return errorspkg.Wrap(err, "could not set TMPDIR")
 	}
 
-	for _, requiredPath := range requiredPaths {
-		if info, err := os.Stat(requiredPath); err == nil {
-			if !info.IsDir() {
-				return errorspkg.Errorf("path `%s` is not a directory", requiredPath)
-			}
+	if err := isDirectory(storePath); err != nil {
+		return err
+	}
 
-			continue
-		}
-
-		if err := os.Mkdir(requiredPath, 0755); err != nil {
-			dir, err1 := os.Lstat(requiredPath)
+	if _, err := os.Stat(storePath); os.IsNotExist(err) {
+		if err := os.Mkdir(storePath, 0755); err != nil {
+			dir, err1 := os.Lstat(storePath)
 			if err1 != nil || !dir.IsDir() {
-				return errorspkg.Wrapf(err, "making directory `%s`", requiredPath)
+				return errorspkg.Wrapf(err, "making directory `%s`", storePath)
 			}
 		}
 
-		if err := os.Chown(requiredPath, ownerUID, ownerGID); err != nil {
+		if err := os.Chown(storePath, ownerUID, ownerGID); err != nil {
 			logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
-			return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, requiredPath)
+			return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, storePath)
+		}
+
+		if err := os.Chmod(storePath, 0700); err != nil {
+			logger.Error("store-permission-change-failed", err)
+			return errorspkg.Wrapf(err, "changing store permissions %s", storePath)
+		}
+	}
+
+	for _, requiredPath := range requiredPaths {
+		if err := createDirectory(logger, requiredPath, ownerUID, ownerGID); err != nil {
+			return err
 		}
 	}
 
@@ -64,12 +70,35 @@ func ConfigureStore(logger lager.Logger, storePath, driver string, ownerUID, own
 		}
 	}
 
-	if err := os.Chown(storePath, ownerUID, ownerGID); err != nil {
-		logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
-		return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, storePath)
+	return nil
+}
+
+func createDirectory(logger lager.Logger, requiredPath string, ownerUID, ownerGID int) error {
+	if err := isDirectory(requiredPath); err != nil {
+		return err
 	}
 
-	return os.Chmod(storePath, 0700)
+	if err := os.Mkdir(requiredPath, 0755); err != nil {
+		dir, err1 := os.Lstat(requiredPath)
+		if err1 != nil || !dir.IsDir() {
+			return errorspkg.Wrapf(err, "making directory `%s`", requiredPath)
+		}
+	}
+
+	if err := os.Chown(requiredPath, ownerUID, ownerGID); err != nil {
+		logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
+		return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, requiredPath)
+	}
+	return nil
+}
+
+func isDirectory(requiredPath string) error {
+	if info, err := os.Stat(requiredPath); err == nil {
+		if !info.IsDir() {
+			return errorspkg.Errorf("path `%s` is not a directory", requiredPath)
+		}
+	}
+	return nil
 }
 
 func createWhiteoutDevice(logger lager.Logger, ownerUID, ownerGID int, storePath string) error {

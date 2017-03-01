@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -38,6 +39,8 @@ var (
 	GrootGID         uint32
 	RegistryUsername string
 	RegistryPassword string
+	GrootfsTestUid   int
+	GrootfsTestGid   int
 )
 
 const btrfsMountPath = "/mnt/btrfs"
@@ -49,6 +52,7 @@ func TestGroot(t *testing.T) {
 	SynchronizedBeforeSuite(func() []byte {
 		grootFSBin, err := gexec.Build("code.cloudfoundry.org/grootfs")
 		Expect(err).NotTo(HaveOccurred())
+		grootFSBin = integration.MakeBinaryAccessibleToEveryone(grootFSBin)
 
 		return []byte(grootFSBin)
 	}, func(data []byte) {
@@ -77,7 +81,10 @@ func TestGroot(t *testing.T) {
 		GrootFSBin = string(data)
 		Driver = os.Getenv("VOLUME_DRIVER")
 
-		fmt.Fprintf(os.Stderr, "============> RUNNING %s TESTS <=============", Driver)
+		GrootfsTestUid, _ = strconv.Atoi(os.Getenv("GROOTFS_TEST_UID"))
+		GrootfsTestGid, _ = strconv.Atoi(os.Getenv("GROOTFS_TEST_GID"))
+
+		fmt.Fprintf(os.Stderr, "============> RUNNING %s TESTS (%d:%d) <=============", Driver, GrootfsTestUid, GrootfsTestGid)
 	})
 
 	SynchronizedAfterSuite(func() {
@@ -102,6 +109,7 @@ func TestGroot(t *testing.T) {
 		var err error
 		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
 		Expect(err).NotTo(HaveOccurred())
+		DraxBin = integration.MakeBinaryAccessibleToEveryone(DraxBin)
 		testhelpers.SuidDrax(DraxBin)
 
 		RegistryUsername = os.Getenv("REGISTRY_USERNAME")
@@ -112,7 +120,7 @@ func TestGroot(t *testing.T) {
 			StorePath:  StorePath,
 			DraxBin:    DraxBin,
 			Driver:     Driver,
-		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter)
+		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(uint32(GrootfsTestUid), uint32(GrootfsTestGid))
 	})
 
 	AfterEach(func() {

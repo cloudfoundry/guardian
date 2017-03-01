@@ -15,6 +15,8 @@ params:
   REGISTRY_USERNAME:
   REGISTRY_PASSWORD:
   VOLUME_DRIVER: btrfs
+  GROOTFS_TEST_UID: 0
+  GROOTFS_TEST_GID: 0
 
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/integration-tests.sh

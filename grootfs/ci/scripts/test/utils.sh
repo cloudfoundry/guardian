@@ -23,6 +23,7 @@ mount_storage() {
   truncate -s 256M /ext4_volume
   mkfs.ext4 /ext4_volume
   mount /ext4_volume /mnt/ext4
+  chmod 777 /mnt/ext4
 
   # Make BTRFS volume
   truncate -s 1G /btrfs_volume

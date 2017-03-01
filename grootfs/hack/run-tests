@@ -114,8 +114,18 @@ run_all_tests() {
 
   fly_unit_tests ""
   export VOLUME_DRIVER="overlay-xfs"
+  export GROOTFS_TEST_UID=0
+  export GROOTFS_TEST_GID=0
   fly_integration_tests  "integration"
+
   export VOLUME_DRIVER="btrfs"
+  export GROOTFS_TEST_UID=0
+  export GROOTFS_TEST_GID=0
+  fly_integration_tests  "integration"
+
+  export VOLUME_DRIVER="btrfs"
+  export GROOTFS_TEST_UID=1000
+  export GROOTFS_TEST_GID=1000
   fly_integration_tests  "integration"
 }
 
