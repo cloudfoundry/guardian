@@ -10,7 +10,7 @@ var CpuPeriod uint64 = 100000
 var MinCpuQuota uint64 = 1000
 
 type Limits struct {
-	CpuQuotaPeriodPerShare uint64
+	CpuQuotaPerShare uint64
 }
 
 func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
@@ -19,10 +19,10 @@ func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 
 	shares := uint64(spec.Limits.CPU.LimitInShares)
 	cpuSpec := specs.LinuxCPU{Shares: &shares}
-	if l.CpuQuotaPeriodPerShare > 0 && shares > 0 {
+	if l.CpuQuotaPerShare > 0 && shares > 0 {
 		cpuSpec.Period = &CpuPeriod
 
-		quota := shares * l.CpuQuotaPeriodPerShare
+		quota := shares * l.CpuQuotaPerShare
 		if quota < MinCpuQuota {
 			quota = MinCpuQuota
 		}

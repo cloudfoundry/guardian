@@ -51,7 +51,7 @@ var _ = Describe("CPU Limits", func() {
 
 	Context("when started with low cpu limit turned on", func() {
 		BeforeEach(func() {
-			args = append(args, "--cpu-quota-period-per-share", "10")
+			args = append(args, "--cpu-quota-per-share", "10")
 		})
 
 		Context("when when a container with cpu limits is created", func() {
@@ -69,7 +69,7 @@ var _ = Describe("CPU Limits", func() {
 				Expect(strings.TrimSpace(string(period))).To(Equal("100000"))
 			})
 
-			It("configures cpu.cfs_quota_us as shares * cpu-quota-period-per-share", func() {
+			It("configures cpu.cfs_quota_us as shares * cpu-quota-per-share", func() {
 				period, err := ioutil.ReadFile(filepath.Join(containerCpuCgroupPath, "cpu.cfs_quota_us"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(strings.TrimSpace(string(period))).To(Equal("1280"))
@@ -87,7 +87,7 @@ var _ = Describe("CPU Limits", func() {
 				Expect(time).To(BeNumerically("==", 0))
 			})
 
-			It("configures cpu.cfs_quota_us as shares * cpu-quota-period-per-share", func() {
+			It("configures cpu.cfs_quota_us as shares * cpu-quota-per-share", func() {
 				period, err := ioutil.ReadFile(filepath.Join(containerCpuCgroupPath, "cpu.cfs_quota_us"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(strings.TrimSpace(string(period))).To(Equal("-1"))

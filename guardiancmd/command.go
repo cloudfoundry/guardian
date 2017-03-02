@@ -215,8 +215,8 @@ type ServerCommand struct {
 	} `group:"Container Networking"`
 
 	Limits struct {
-		CpuQuotaPeriodPerShare uint64 `long:"cpu-quota-period-per-share" default:"0" description:"Maximum number of nanoseconds each cpu share assigned to a container allows per quota period"`
-		MaxContainers          uint64 `long:"max-containers" default:"0" description:"Maximum number of containers that can be created."`
+		CpuQuotaPerShare uint64 `long:"cpu-quota-per-share" default:"0" description:"Maximum number of microseconds each cpu share assigned to a container allows per quota period"`
+		MaxContainers    uint64 `long:"max-containers" default:"0" description:"Maximum number of containers that can be created."`
 	} `group:"Limits"`
 
 	Metrics struct {
@@ -812,7 +812,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPa
 				MkdirChown:       chrootMkdir,
 			},
 			bundlerules.Limits{
-				CpuQuotaPeriodPerShare: cmd.Limits.CpuQuotaPeriodPerShare,
+				CpuQuotaPerShare: cmd.Limits.CpuQuotaPerShare,
 			},
 			bundlerules.BindMounts{},
 			bundlerules.Env{},

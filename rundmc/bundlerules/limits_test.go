@@ -39,7 +39,7 @@ var _ = Describe("LimitsRule", func() {
 		It("sets the correct CPU limit in bundle resources", func() {
 			var quotaPerShare, limitInShares uint64 = 100, 128
 			limits := bundlerules.Limits{
-				CpuQuotaPeriodPerShare: quotaPerShare,
+				CpuQuotaPerShare: quotaPerShare,
 			}
 			newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 				Limits: garden.Limits{
@@ -55,7 +55,7 @@ var _ = Describe("LimitsRule", func() {
 	Context("when cpu quota * period per share is less than min valid cpu quota", func() {
 		It("sets the min valid value of cpu quota in bundle resources", func() {
 			limits := bundlerules.Limits{
-				CpuQuotaPeriodPerShare: 1,
+				CpuQuotaPerShare: 1,
 			}
 			newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 				Limits: garden.Limits{
@@ -70,7 +70,7 @@ var _ = Describe("LimitsRule", func() {
 	Context("when a zero cpu quota period per share is provided", func() {
 		It("sets the correct CPU limit in bundle resources", func() {
 			limits := bundlerules.Limits{
-				CpuQuotaPeriodPerShare: 0,
+				CpuQuotaPerShare: 0,
 			}
 			newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 				Limits: garden.Limits{
@@ -87,7 +87,7 @@ var _ = Describe("LimitsRule", func() {
 	Context("with positive cpu quota period per share and no shares", func() {
 		It("sets the correct CPU limit in bundle resources", func() {
 			limits := bundlerules.Limits{
-				CpuQuotaPeriodPerShare: 5,
+				CpuQuotaPerShare: 5,
 			}
 			newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{})
 
