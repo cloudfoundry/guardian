@@ -61,9 +61,9 @@ func run() int {
 
 	syncPipe.Write([]byte{0})
 
-	stdinW, stdoutR, stderrR := openStdioKeepAlivePipes(processStateDir)
+	stdoutR, stderrR := openStdioKeepAlivePipes(processStateDir)
 	defer func() {
-		tryClose(stdinW, stdoutR, stderrR)
+		tryClose(stdoutR, stderrR)
 	}()
 
 	var runcExecCmd *exec.Cmd
@@ -106,14 +106,13 @@ func run() int {
 	return waitForContainerToExit(processStateDir, containerPid, signals)
 }
 
-// If gdn server process dies, we need dadoo to keep stdin writer and stdout/err reader
+// If gdn server process dies, we need dadoo to keep stdout/err reader
 // FDs so that Linux does not SIGPIPE the user process if it tries to use its end of
 // these pipes.
-func openStdioKeepAlivePipes(processStateDir string) (io.WriteCloser, io.ReadCloser, io.ReadCloser) {
-	keepStdinAlive := openFifo(filepath.Join(processStateDir, "stdin"), os.O_WRONLY)
+func openStdioKeepAlivePipes(processStateDir string) (io.ReadCloser, io.ReadCloser) {
 	keepStdoutAlive := openFifo(filepath.Join(processStateDir, "stdout"), os.O_RDONLY)
 	keepStderrAlive := openFifo(filepath.Join(processStateDir, "stderr"), os.O_RDONLY)
-	return keepStdinAlive, keepStdoutAlive, keepStderrAlive
+	return keepStdoutAlive, keepStderrAlive
 }
 
 func waitForContainerToExit(processStateDir string, containerPid int, signals chan os.Signal) (exitCode int) {

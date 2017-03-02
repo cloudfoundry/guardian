@@ -174,7 +174,7 @@ var _ = Describe("Dadoo", func() {
 			Expect(syscall.Mkfifo(exitPipe, 0)).To(Succeed())
 
 			processSpec, err := json.Marshal(&specs.Process{
-				Args: []string{"/bin/sh", "-c", "read"},
+				Args: []string{"/bin/sh", "-c", "cat <&0"},
 				Cwd:  "/",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -200,7 +200,6 @@ var _ = Describe("Dadoo", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Consistently(exitFifoCh).ShouldNot(BeClosed())
-			fmt.Fprintln(stdin, "hi")
 			Expect(stdin.Close()).To(Succeed())
 			Eventually(exitFifoCh).Should(BeClosed())
 		})
