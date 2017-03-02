@@ -42,7 +42,7 @@ var DeleteCommand = cli.Command{
 		idOrPath := ctx.Args().First()
 		id, err := idfinder.FindID(storePath, idOrPath)
 		if err != nil {
-			logger.Error("find-id-failed", err, lager.Data{"id": idOrPath, "storePath": storePath})
+			logger.Debug("id-not-found-skipping", lager.Data{"id": idOrPath, "storePath": storePath, "errorMessage": err.Error()})
 			fmt.Println(err)
 			return nil
 		}

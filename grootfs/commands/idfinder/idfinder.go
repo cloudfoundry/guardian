@@ -32,7 +32,7 @@ func FindID(storePath string, pathOrID string) (string, error) {
 	}
 
 	if !exists(imagePath) {
-		return "", errorspkg.Errorf("image `%s` was not found", imageID)
+		return "", errorspkg.Errorf("Image `%s` not found. Skipping delete.", imageID)
 	}
 
 	return imageID, nil

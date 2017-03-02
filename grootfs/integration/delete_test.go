@@ -74,7 +74,7 @@ var _ = Describe("Delete", func() {
 				err := Runner.WithStdout(outBuffer).Delete(fakePath)
 				Expect(err).NotTo(HaveOccurred())
 
-				Eventually(outBuffer).Should(gbytes.Say("image `non_existing` was not found"))
+				Eventually(outBuffer).Should(gbytes.Say("Image `non_existing` not found. Skipping delete."))
 			})
 		})
 
@@ -95,7 +95,7 @@ var _ = Describe("Delete", func() {
 			err := Runner.WithStdout(outBuffer).Delete("non-existing-id")
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(outBuffer).Should(gbytes.Say("image `non-existing-id` was not found"))
+			Eventually(outBuffer).Should(gbytes.Say("Image `non-existing-id` not found. Skipping delete."))
 		})
 	})
 
