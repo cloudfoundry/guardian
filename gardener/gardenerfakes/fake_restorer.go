@@ -37,9 +37,8 @@ func (fake *FakeRestorer) Restore(logger lager.Logger, handles []string) []strin
 	fake.restoreMutex.Unlock()
 	if fake.RestoreStub != nil {
 		return fake.RestoreStub(logger, handles)
-	} else {
-		return fake.restoreReturns.result1
 	}
+	return fake.restoreReturns.result1
 }
 
 func (fake *FakeRestorer) RestoreCallCount() int {

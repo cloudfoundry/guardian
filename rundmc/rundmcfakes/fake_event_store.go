@@ -39,9 +39,8 @@ func (fake *FakeEventStore) OnEvent(id string, event string) error {
 	fake.onEventMutex.Unlock()
 	if fake.OnEventStub != nil {
 		return fake.OnEventStub(id, event)
-	} else {
-		return fake.onEventReturns.result1
 	}
+	return fake.onEventReturns.result1
 }
 
 func (fake *FakeEventStore) OnEventCallCount() int {
@@ -72,9 +71,8 @@ func (fake *FakeEventStore) Events(id string) []string {
 	fake.eventsMutex.Unlock()
 	if fake.EventsStub != nil {
 		return fake.EventsStub(id)
-	} else {
-		return fake.eventsReturns.result1
 	}
+	return fake.eventsReturns.result1
 }
 
 func (fake *FakeEventStore) EventsCallCount() int {

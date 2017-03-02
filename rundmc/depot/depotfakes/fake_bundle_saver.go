@@ -29,9 +29,8 @@ func (fake *FakeBundleSaver) Save(path string) error {
 	fake.saveMutex.Unlock()
 	if fake.SaveStub != nil {
 		return fake.SaveStub(path)
-	} else {
-		return fake.saveReturns.result1
 	}
+	return fake.saveReturns.result1
 }
 
 func (fake *FakeBundleSaver) SaveCallCount() int {

@@ -74,9 +74,8 @@ func (fake *FakePropertyManager) All(handle string) (props garden.Properties, er
 	fake.allMutex.Unlock()
 	if fake.AllStub != nil {
 		return fake.AllStub(handle)
-	} else {
-		return fake.allReturns.result1, fake.allReturns.result2
 	}
+	return fake.allReturns.result1, fake.allReturns.result2
 }
 
 func (fake *FakePropertyManager) AllCallCount() int {
@@ -135,9 +134,8 @@ func (fake *FakePropertyManager) Remove(handle string, name string) error {
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
 		return fake.RemoveStub(handle, name)
-	} else {
-		return fake.removeReturns.result1
 	}
+	return fake.removeReturns.result1
 }
 
 func (fake *FakePropertyManager) RemoveCallCount() int {
@@ -169,9 +167,8 @@ func (fake *FakePropertyManager) Get(handle string, name string) (string, bool) 
 	fake.getMutex.Unlock()
 	if fake.GetStub != nil {
 		return fake.GetStub(handle, name)
-	} else {
-		return fake.getReturns.result1, fake.getReturns.result2
 	}
+	return fake.getReturns.result1, fake.getReturns.result2
 }
 
 func (fake *FakePropertyManager) GetCallCount() int {
@@ -204,9 +201,8 @@ func (fake *FakePropertyManager) MatchesAll(handle string, props garden.Properti
 	fake.matchesAllMutex.Unlock()
 	if fake.MatchesAllStub != nil {
 		return fake.MatchesAllStub(handle, props)
-	} else {
-		return fake.matchesAllReturns.result1
 	}
+	return fake.matchesAllReturns.result1
 }
 
 func (fake *FakePropertyManager) MatchesAllCallCount() int {
@@ -237,9 +233,8 @@ func (fake *FakePropertyManager) DestroyKeySpace(arg1 string) error {
 	fake.destroyKeySpaceMutex.Unlock()
 	if fake.DestroyKeySpaceStub != nil {
 		return fake.DestroyKeySpaceStub(arg1)
-	} else {
-		return fake.destroyKeySpaceReturns.result1
 	}
+	return fake.destroyKeySpaceReturns.result1
 }
 
 func (fake *FakePropertyManager) DestroyKeySpaceCallCount() int {

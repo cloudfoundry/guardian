@@ -30,9 +30,8 @@ func (fake *FakePidGetter) Pid(pidFilePath string) (int, error) {
 	fake.pidMutex.Unlock()
 	if fake.PidStub != nil {
 		return fake.PidStub(pidFilePath)
-	} else {
-		return fake.pidReturns.result1, fake.pidReturns.result2
 	}
+	return fake.pidReturns.result1, fake.pidReturns.result2
 }
 
 func (fake *FakePidGetter) PidCallCount() int {

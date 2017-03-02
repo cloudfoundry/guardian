@@ -33,9 +33,8 @@ func (fake *FakeSysInfoProvider) TotalMemory() (uint64, error) {
 	fake.totalMemoryMutex.Unlock()
 	if fake.TotalMemoryStub != nil {
 		return fake.TotalMemoryStub()
-	} else {
-		return fake.totalMemoryReturns.result1, fake.totalMemoryReturns.result2
 	}
+	return fake.totalMemoryReturns.result1, fake.totalMemoryReturns.result2
 }
 
 func (fake *FakeSysInfoProvider) TotalMemoryCallCount() int {
@@ -59,9 +58,8 @@ func (fake *FakeSysInfoProvider) TotalDisk() (uint64, error) {
 	fake.totalDiskMutex.Unlock()
 	if fake.TotalDiskStub != nil {
 		return fake.TotalDiskStub()
-	} else {
-		return fake.totalDiskReturns.result1, fake.totalDiskReturns.result2
 	}
+	return fake.totalDiskReturns.result1, fake.totalDiskReturns.result2
 }
 
 func (fake *FakeSysInfoProvider) TotalDiskCallCount() int {

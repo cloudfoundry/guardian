@@ -58,9 +58,8 @@ func (fake *FakeStateStore) IsStopped(handle string) bool {
 	fake.isStoppedMutex.Unlock()
 	if fake.IsStoppedStub != nil {
 		return fake.IsStoppedStub(handle)
-	} else {
-		return fake.isStoppedReturns.result1
 	}
+	return fake.isStoppedReturns.result1
 }
 
 func (fake *FakeStateStore) IsStoppedCallCount() int {

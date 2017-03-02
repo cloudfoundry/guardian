@@ -70,9 +70,8 @@ func (fake *FakePool) Acquire(arg1 lager.Logger, arg2 subnets.SubnetSelector, ar
 	fake.acquireMutex.Unlock()
 	if fake.AcquireStub != nil {
 		return fake.AcquireStub(arg1, arg2, arg3)
-	} else {
-		return fake.acquireReturns.result1, fake.acquireReturns.result2, fake.acquireReturns.result3
 	}
+	return fake.acquireReturns.result1, fake.acquireReturns.result2, fake.acquireReturns.result3
 }
 
 func (fake *FakePool) AcquireCallCount() int {
@@ -106,9 +105,8 @@ func (fake *FakePool) Release(arg1 *net.IPNet, arg2 net.IP) error {
 	fake.releaseMutex.Unlock()
 	if fake.ReleaseStub != nil {
 		return fake.ReleaseStub(arg1, arg2)
-	} else {
-		return fake.releaseReturns.result1
 	}
+	return fake.releaseReturns.result1
 }
 
 func (fake *FakePool) ReleaseCallCount() int {
@@ -140,9 +138,8 @@ func (fake *FakePool) Remove(arg1 *net.IPNet, arg2 net.IP) error {
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
 		return fake.RemoveStub(arg1, arg2)
-	} else {
-		return fake.removeReturns.result1
 	}
+	return fake.removeReturns.result1
 }
 
 func (fake *FakePool) RemoveCallCount() int {
@@ -171,9 +168,8 @@ func (fake *FakePool) Capacity() int {
 	fake.capacityMutex.Unlock()
 	if fake.CapacityStub != nil {
 		return fake.CapacityStub()
-	} else {
-		return fake.capacityReturns.result1
 	}
+	return fake.capacityReturns.result1
 }
 
 func (fake *FakePool) CapacityCallCount() int {
@@ -199,9 +195,8 @@ func (fake *FakePool) RunIfFree(arg1 *net.IPNet, arg2 func() error) error {
 	fake.runIfFreeMutex.Unlock()
 	if fake.RunIfFreeStub != nil {
 		return fake.RunIfFreeStub(arg1, arg2)
-	} else {
-		return fake.runIfFreeReturns.result1
 	}
+	return fake.runIfFreeReturns.result1
 }
 
 func (fake *FakePool) RunIfFreeCallCount() int {

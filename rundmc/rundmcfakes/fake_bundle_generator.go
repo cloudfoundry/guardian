@@ -31,9 +31,8 @@ func (fake *FakeBundleGenerator) Generate(spec gardener.DesiredContainerSpec) go
 	fake.generateMutex.Unlock()
 	if fake.GenerateStub != nil {
 		return fake.GenerateStub(spec)
-	} else {
-		return fake.generateReturns.result1
 	}
+	return fake.generateReturns.result1
 }
 
 func (fake *FakeBundleGenerator) GenerateCallCount() int {
