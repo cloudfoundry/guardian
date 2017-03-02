@@ -62,7 +62,7 @@ var _ = Describe("Idfinder", func() {
 		It("returns an error when the image does not exist", func() {
 			_, err := idfinder.FindID(storePath, filepath.Join(storePath, store.ImageDirName, "not-here"))
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(ContainSubstring("image `not-here` was not found")))
+			Expect(err).To(MatchError(ContainSubstring("Image `not-here` not found. Skipping delete.")))
 		})
 	})
 })
