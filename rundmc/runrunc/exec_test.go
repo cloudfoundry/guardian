@@ -39,7 +39,7 @@ var _ = Describe("Execer", func() {
 		)
 	})
 
-	It("runs the execRunner with the prepared process spec", func() {
+	It("runs the execRunner with the passed process ID and the prepared process spec", func() {
 		execPreparer.PrepareStub = func(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*runrunc.PreparedSpec, error) {
 			return &runrunc.PreparedSpec{
 				Process: specs.Process{
@@ -51,11 +51,13 @@ var _ = Describe("Execer", func() {
 		}
 
 		execer.Exec(logger, "some-bundle-path", "some-id", garden.ProcessSpec{
+			ID:   "some-process-id",
 			Path: "potato",
 		}, garden.ProcessIO{})
 
 		Expect(execRunner.RunCallCount()).To(Equal(1))
-		_, spec, bundlePath, processesPath, id, _, _ := execRunner.RunArgsForCall(0)
+		_, passedID, spec, bundlePath, processesPath, id, _, _ := execRunner.RunArgsForCall(0)
+		Expect(passedID).To(Equal("some-process-id"))
 		Expect(spec.Args).To(ConsistOf("potato", "some-bundle-path"))
 		Expect(bundlePath).To(Equal("some-bundle-path"))
 		Expect(processesPath).To(Equal("some-bundle-path/processes"))
