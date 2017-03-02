@@ -54,22 +54,30 @@ func run() int {
 	syncPipe := os.NewFile(5, "/proc/self/fd/5")
 	pidFilePath := filepath.Join(processStateDir, "pidfile")
 
-	stdin, stdout, stderr, winsz := openPipes(processStateDir)
+	stdinR, stdoutW, stderrW, winsz := openPipes(processStateDir)
+	defer func() {
+		tryClose(stdinR, stdoutW, stderrW, winsz)
+	}()
 
 	syncPipe.Write([]byte{0})
+
+	stdinW, stdoutR, stderrR := openStdioKeepAlivePipes(processStateDir)
+	defer func() {
+		tryClose(stdinW, stdoutR, stderrR)
+	}()
 
 	var runcExecCmd *exec.Cmd
 	if *tty {
 		if len(*socketDirPath) > MaxSocketDirPathLength {
 			logAndExit(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
 		}
-		ttySocketPath := setupTTYSocket(stdin, stdout, winsz, pidFilePath, *socketDirPath)
+		ttySocketPath := setupTTYSocket(stdinR, stdoutW, winsz, pidFilePath, *socketDirPath)
 		runcExecCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console-socket", ttySocketPath, "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
 	} else {
 		runcExecCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
-		runcExecCmd.Stdin = stdin
-		runcExecCmd.Stdout = stdout
-		runcExecCmd.Stderr = stderr
+		runcExecCmd.Stdin = stdinR
+		runcExecCmd.Stdout = stdoutW
+		runcExecCmd.Stderr = stderrW
 	}
 
 	// we need to be the subreaper so we can wait on the detached container process
@@ -96,6 +104,16 @@ func run() int {
 	check(err)
 
 	return waitForContainerToExit(processStateDir, containerPid, signals)
+}
+
+// If gdn server process dies, we need dadoo to keep stdin writer and stdout/err reader
+// FDs so that Linux does not SIGPIPE the user process if it tries to use its end of
+// these pipes.
+func openStdioKeepAlivePipes(processStateDir string) (io.WriteCloser, io.ReadCloser, io.ReadCloser) {
+	keepStdinAlive := openFifo(filepath.Join(processStateDir, "stdin"), os.O_WRONLY)
+	keepStdoutAlive := openFifo(filepath.Join(processStateDir, "stdout"), os.O_RDONLY)
+	keepStderrAlive := openFifo(filepath.Join(processStateDir, "stderr"), os.O_RDONLY)
+	return keepStdinAlive, keepStdoutAlive, keepStderrAlive
 }
 
 func waitForContainerToExit(processStateDir string, containerPid int, signals chan os.Signal) (exitCode int) {
@@ -126,7 +144,7 @@ func waitForContainerToExit(processStateDir string, containerPid int, signals ch
 	return 0                         // unreachable
 }
 
-func openPipes(processStateDir string) (io.Reader, io.Writer, io.Writer, io.Reader) {
+func openPipes(processStateDir string) (io.ReadCloser, io.WriteCloser, io.WriteCloser, io.ReadWriteCloser) {
 	stdin := openFifo(filepath.Join(processStateDir, "stdin"), os.O_RDONLY)
 	stdout := openFifo(filepath.Join(processStateDir, "stdout"), os.O_WRONLY|os.O_APPEND)
 	stderr := openFifo(filepath.Join(processStateDir, "stderr"), os.O_WRONLY|os.O_APPEND)
@@ -136,7 +154,7 @@ func openPipes(processStateDir string) (io.Reader, io.Writer, io.Writer, io.Read
 	return stdin, stdout, stderr, winsz
 }
 
-func openFifo(path string, flags int) io.ReadWriter {
+func openFifo(path string, flags int) io.ReadWriteCloser {
 	r, err := os.OpenFile(path, flags, 0600)
 	if os.IsNotExist(err) {
 		return nil
@@ -266,5 +284,13 @@ func check(err error) {
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(2)
+	}
+}
+
+func tryClose(closers ...io.Closer) {
+	for _, closer := range closers {
+		if closer != nil {
+			closer.Close()
+		}
 	}
 }

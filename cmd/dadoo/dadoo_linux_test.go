@@ -174,7 +174,7 @@ var _ = Describe("Dadoo", func() {
 			Expect(syscall.Mkfifo(exitPipe, 0)).To(Succeed())
 
 			processSpec, err := json.Marshal(&specs.Process{
-				Args: []string{"/bin/sh", "-c", "cat <&0"},
+				Args: []string{"/bin/sh", "-c", "read"},
 				Cwd:  "/",
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -200,7 +200,8 @@ var _ = Describe("Dadoo", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Consistently(exitFifoCh).ShouldNot(BeClosed())
-			Expect(stdin.Close()).To(Succeed()) // should cause cat <&0 to complete
+			fmt.Fprintln(stdin, "hi")
+			Expect(stdin.Close()).To(Succeed())
 			Eventually(exitFifoCh).Should(BeClosed())
 		})
 
@@ -312,6 +313,39 @@ var _ = Describe("Dadoo", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(string(stdout)).To(Equal("hello"))
+			})
+
+			It("ensures the user process is allowed to write to stdout", func() {
+				spec := specs.Process{
+					Args: []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
+					Cwd:  "/",
+				}
+
+				encSpec, err := json.Marshal(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				cmd := exec.Command(dadooBinPath, "exec", "runc", processDir, filepath.Base(bundlePath))
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
+				cmd.Stdin = bytes.NewReader(encSpec)
+				process, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
+				Expect(err).NotTo(HaveOccurred())
+
+				stdoutP, err := os.Open(stdoutPipe)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = os.Open(stderrPipe)
+				Expect(err).NotTo(HaveOccurred())
+
+				stdoutContents := make([]byte, len("hello"))
+				_, err = stdoutP.Read(stdoutContents)
+				Expect(err).NotTo(HaveOccurred())
+
+				stdoutP.Close()
+
+				Consistently(process.ExitCode, time.Second, time.Millisecond*100).Should(Equal(-1), "expected process to stay alive")
 			})
 		})
 

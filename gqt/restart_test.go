@@ -179,7 +179,7 @@ var _ = Describe("Surviving Restarts", func() {
 		})
 
 		Context("when the destroy-containers-on-startup flag is not passed", func() {
-			Describe("on th pre-existing VM", func() {
+			Describe("on the pre-existing VM", func() {
 				It("does not destroy the depot", func() {
 					Expect(filepath.Join(client.DepotDir, container.Handle())).To(BeADirectory())
 				})
@@ -201,6 +201,14 @@ var _ = Describe("Surviving Restarts", func() {
 
 					Expect(exitCode).To(Equal(12))
 					Expect(out).To(gbytes.Say("hello"))
+				})
+
+				It("launches processes in such a way that they can still write to stdout", func() {
+					Consistently(func() string {
+						out, err := exec.Command("sh", "-c", "ps -elf | grep 'while true; do echo' | grep -v grep | wc -l").CombinedOutput()
+						Expect(err).NotTo(HaveOccurred())
+						return string(out)
+					}, time.Second*2, time.Millisecond*200).Should(Equal("1\n"), "expected user process to stay alive")
 				})
 
 				It("can reattach to processes that are still running", func() {
