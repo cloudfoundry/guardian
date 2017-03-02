@@ -32,9 +32,8 @@ func (fake *FakeCgroupPathResolver) Resolve(cgroupName string, subsystem string)
 	fake.resolveMutex.Unlock()
 	if fake.ResolveStub != nil {
 		return fake.ResolveStub(cgroupName, subsystem)
-	} else {
-		return fake.resolveReturns.result1, fake.resolveReturns.result2
 	}
+	return fake.resolveReturns.result1, fake.resolveReturns.result2
 }
 
 func (fake *FakeCgroupPathResolver) ResolveCallCount() int {

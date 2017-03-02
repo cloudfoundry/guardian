@@ -113,9 +113,8 @@ func (fake *FakeOCIRuntime) Create(log lager.Logger, bundlePath string, id strin
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(log, bundlePath, id, io)
-	} else {
-		return fake.createReturns.result1
 	}
+	return fake.createReturns.result1
 }
 
 func (fake *FakeOCIRuntime) CreateCallCount() int {
@@ -150,9 +149,8 @@ func (fake *FakeOCIRuntime) Exec(log lager.Logger, id string, bundlePath string,
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
 		return fake.ExecStub(log, id, bundlePath, spec, io)
-	} else {
-		return fake.execReturns.result1, fake.execReturns.result2
 	}
+	return fake.execReturns.result1, fake.execReturns.result2
 }
 
 func (fake *FakeOCIRuntime) ExecCallCount() int {
@@ -188,9 +186,8 @@ func (fake *FakeOCIRuntime) Attach(log lager.Logger, id string, bundlePath strin
 	fake.attachMutex.Unlock()
 	if fake.AttachStub != nil {
 		return fake.AttachStub(log, id, bundlePath, processId, io)
-	} else {
-		return fake.attachReturns.result1, fake.attachReturns.result2
 	}
+	return fake.attachReturns.result1, fake.attachReturns.result2
 }
 
 func (fake *FakeOCIRuntime) AttachCallCount() int {
@@ -223,9 +220,8 @@ func (fake *FakeOCIRuntime) Kill(log lager.Logger, bundlePath string) error {
 	fake.killMutex.Unlock()
 	if fake.KillStub != nil {
 		return fake.KillStub(log, bundlePath)
-	} else {
-		return fake.killReturns.result1
 	}
+	return fake.killReturns.result1
 }
 
 func (fake *FakeOCIRuntime) KillCallCount() int {
@@ -257,9 +253,8 @@ func (fake *FakeOCIRuntime) Delete(log lager.Logger, bundlePath string) error {
 	fake.deleteMutex.Unlock()
 	if fake.DeleteStub != nil {
 		return fake.DeleteStub(log, bundlePath)
-	} else {
-		return fake.deleteReturns.result1
 	}
+	return fake.deleteReturns.result1
 }
 
 func (fake *FakeOCIRuntime) DeleteCallCount() int {
@@ -291,9 +286,8 @@ func (fake *FakeOCIRuntime) State(log lager.Logger, id string) (runrunc.State, e
 	fake.stateMutex.Unlock()
 	if fake.StateStub != nil {
 		return fake.StateStub(log, id)
-	} else {
-		return fake.stateReturns.result1, fake.stateReturns.result2
 	}
+	return fake.stateReturns.result1, fake.stateReturns.result2
 }
 
 func (fake *FakeOCIRuntime) StateCallCount() int {
@@ -326,9 +320,8 @@ func (fake *FakeOCIRuntime) Stats(log lager.Logger, id string) (gardener.ActualC
 	fake.statsMutex.Unlock()
 	if fake.StatsStub != nil {
 		return fake.StatsStub(log, id)
-	} else {
-		return fake.statsReturns.result1, fake.statsReturns.result2
 	}
+	return fake.statsReturns.result1, fake.statsReturns.result2
 }
 
 func (fake *FakeOCIRuntime) StatsCallCount() int {
@@ -362,9 +355,8 @@ func (fake *FakeOCIRuntime) WatchEvents(log lager.Logger, id string, eventsNotif
 	fake.watchEventsMutex.Unlock()
 	if fake.WatchEventsStub != nil {
 		return fake.WatchEventsStub(log, id, eventsNotifier)
-	} else {
-		return fake.watchEventsReturns.result1
 	}
+	return fake.watchEventsReturns.result1
 }
 
 func (fake *FakeOCIRuntime) WatchEventsCallCount() int {

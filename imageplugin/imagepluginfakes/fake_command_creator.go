@@ -55,9 +55,8 @@ func (fake *FakeCommandCreator) CreateCommand(log lager.Logger, handle string, s
 	fake.createCommandMutex.Unlock()
 	if fake.CreateCommandStub != nil {
 		return fake.CreateCommandStub(log, handle, spec)
-	} else {
-		return fake.createCommandReturns.result1, fake.createCommandReturns.result2
 	}
+	return fake.createCommandReturns.result1, fake.createCommandReturns.result2
 }
 
 func (fake *FakeCommandCreator) CreateCommandCallCount() int {
@@ -90,9 +89,8 @@ func (fake *FakeCommandCreator) DestroyCommand(log lager.Logger, handle string) 
 	fake.destroyCommandMutex.Unlock()
 	if fake.DestroyCommandStub != nil {
 		return fake.DestroyCommandStub(log, handle)
-	} else {
-		return fake.destroyCommandReturns.result1
 	}
+	return fake.destroyCommandReturns.result1
 }
 
 func (fake *FakeCommandCreator) DestroyCommandCallCount() int {
@@ -124,9 +122,8 @@ func (fake *FakeCommandCreator) MetricsCommand(log lager.Logger, handle string) 
 	fake.metricsCommandMutex.Unlock()
 	if fake.MetricsCommandStub != nil {
 		return fake.MetricsCommandStub(log, handle)
-	} else {
-		return fake.metricsCommandReturns.result1
 	}
+	return fake.metricsCommandReturns.result1
 }
 
 func (fake *FakeCommandCreator) MetricsCommandCallCount() int {

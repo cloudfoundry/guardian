@@ -41,9 +41,8 @@ func (fake *FakeStopper) StopAll(log lager.Logger, cgroupName string, save []int
 	fake.stopAllMutex.Unlock()
 	if fake.StopAllStub != nil {
 		return fake.StopAllStub(log, cgroupName, save, kill)
-	} else {
-		return fake.stopAllReturns.result1
 	}
+	return fake.stopAllReturns.result1
 }
 
 func (fake *FakeStopper) StopAllCallCount() int {

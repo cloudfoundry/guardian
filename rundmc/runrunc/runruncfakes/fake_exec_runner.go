@@ -10,10 +10,11 @@ import (
 )
 
 type FakeExecRunner struct {
-	RunStub        func(log lager.Logger, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
+	RunStub        func(log lager.Logger, passedID string, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
 	runMutex       sync.RWMutex
 	runArgsForCall []struct {
 		log           lager.Logger
+		passedID      string
 		spec          *runrunc.PreparedSpec
 		bundlePath    string
 		processesPath string
@@ -41,21 +42,22 @@ type FakeExecRunner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeExecRunner) Run(log lager.Logger, spec *runrunc.PreparedSpec, bundlePath string, processesPath string, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeExecRunner) Run(log lager.Logger, passedID string, spec *runrunc.PreparedSpec, bundlePath string, processesPath string, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
 	fake.runMutex.Lock()
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
 		log           lager.Logger
+		passedID      string
 		spec          *runrunc.PreparedSpec
 		bundlePath    string
 		processesPath string
 		handle        string
 		tty           *garden.TTYSpec
 		io            garden.ProcessIO
-	}{log, spec, bundlePath, processesPath, handle, tty, io})
-	fake.recordInvocation("Run", []interface{}{log, spec, bundlePath, processesPath, handle, tty, io})
+	}{log, passedID, spec, bundlePath, processesPath, handle, tty, io})
+	fake.recordInvocation("Run", []interface{}{log, passedID, spec, bundlePath, processesPath, handle, tty, io})
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
-		return fake.RunStub(log, spec, bundlePath, processesPath, handle, tty, io)
+		return fake.RunStub(log, passedID, spec, bundlePath, processesPath, handle, tty, io)
 	}
 	return fake.runReturns.result1, fake.runReturns.result2
 }
@@ -66,10 +68,10 @@ func (fake *FakeExecRunner) RunCallCount() int {
 	return len(fake.runArgsForCall)
 }
 
-func (fake *FakeExecRunner) RunArgsForCall(i int) (lager.Logger, *runrunc.PreparedSpec, string, string, string, *garden.TTYSpec, garden.ProcessIO) {
+func (fake *FakeExecRunner) RunArgsForCall(i int) (lager.Logger, string, *runrunc.PreparedSpec, string, string, string, *garden.TTYSpec, garden.ProcessIO) {
 	fake.runMutex.RLock()
 	defer fake.runMutex.RUnlock()
-	return fake.runArgsForCall[i].log, fake.runArgsForCall[i].spec, fake.runArgsForCall[i].bundlePath, fake.runArgsForCall[i].processesPath, fake.runArgsForCall[i].handle, fake.runArgsForCall[i].tty, fake.runArgsForCall[i].io
+	return fake.runArgsForCall[i].log, fake.runArgsForCall[i].passedID, fake.runArgsForCall[i].spec, fake.runArgsForCall[i].bundlePath, fake.runArgsForCall[i].processesPath, fake.runArgsForCall[i].handle, fake.runArgsForCall[i].tty, fake.runArgsForCall[i].io
 }
 
 func (fake *FakeExecRunner) RunReturns(result1 garden.Process, result2 error) {

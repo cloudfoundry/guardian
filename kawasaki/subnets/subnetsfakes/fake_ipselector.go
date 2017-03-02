@@ -38,9 +38,8 @@ func (fake *FakeIPSelector) SelectIP(subnet *net.IPNet, existing []net.IP) (net.
 	fake.selectIPMutex.Unlock()
 	if fake.SelectIPStub != nil {
 		return fake.SelectIPStub(subnet, existing)
-	} else {
-		return fake.selectIPReturns.result1, fake.selectIPReturns.result2
 	}
+	return fake.selectIPReturns.result1, fake.selectIPReturns.result2
 }
 
 func (fake *FakeIPSelector) SelectIPCallCount() int {

@@ -61,9 +61,8 @@ func (fake *FakeDepot) Create(log lager.Logger, handle string, bundle depot.Bund
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(log, handle, bundle)
-	} else {
-		return fake.createReturns.result1
 	}
+	return fake.createReturns.result1
 }
 
 func (fake *FakeDepot) CreateCallCount() int {
@@ -95,9 +94,8 @@ func (fake *FakeDepot) Lookup(log lager.Logger, handle string) (path string, err
 	fake.lookupMutex.Unlock()
 	if fake.LookupStub != nil {
 		return fake.LookupStub(log, handle)
-	} else {
-		return fake.lookupReturns.result1, fake.lookupReturns.result2
 	}
+	return fake.lookupReturns.result1, fake.lookupReturns.result2
 }
 
 func (fake *FakeDepot) LookupCallCount() int {
@@ -130,9 +128,8 @@ func (fake *FakeDepot) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(log, handle)
-	} else {
-		return fake.destroyReturns.result1
 	}
+	return fake.destroyReturns.result1
 }
 
 func (fake *FakeDepot) DestroyCallCount() int {
@@ -161,9 +158,8 @@ func (fake *FakeDepot) Handles() ([]string, error) {
 	fake.handlesMutex.Unlock()
 	if fake.HandlesStub != nil {
 		return fake.HandlesStub()
-	} else {
-		return fake.handlesReturns.result1, fake.handlesReturns.result2
 	}
+	return fake.handlesReturns.result1, fake.handlesReturns.result2
 }
 
 func (fake *FakeDepot) HandlesCallCount() int {

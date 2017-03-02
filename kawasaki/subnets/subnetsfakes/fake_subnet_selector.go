@@ -38,9 +38,8 @@ func (fake *FakeSubnetSelector) SelectSubnet(dynamic *net.IPNet, existing []*net
 	fake.selectSubnetMutex.Unlock()
 	if fake.SelectSubnetStub != nil {
 		return fake.SelectSubnetStub(dynamic, existing)
-	} else {
-		return fake.selectSubnetReturns.result1, fake.selectSubnetReturns.result2
 	}
+	return fake.selectSubnetReturns.result1, fake.selectSubnetReturns.result2
 }
 
 func (fake *FakeSubnetSelector) SelectSubnetCallCount() int {

@@ -25,9 +25,8 @@ func (fake *FakeStarter) Start() error {
 	fake.startMutex.Unlock()
 	if fake.StartStub != nil {
 		return fake.StartStub()
-	} else {
-		return fake.startReturns.result1
 	}
+	return fake.startReturns.result1
 }
 
 func (fake *FakeStarter) StartCallCount() int {

@@ -51,9 +51,8 @@ func (fake *FakeNstarRunner) StreamIn(log lager.Logger, pid int, path string, us
 	fake.streamInMutex.Unlock()
 	if fake.StreamInStub != nil {
 		return fake.StreamInStub(log, pid, path, user, tarStream)
-	} else {
-		return fake.streamInReturns.result1
 	}
+	return fake.streamInReturns.result1
 }
 
 func (fake *FakeNstarRunner) StreamInCallCount() int {
@@ -87,9 +86,8 @@ func (fake *FakeNstarRunner) StreamOut(log lager.Logger, pid int, path string, u
 	fake.streamOutMutex.Unlock()
 	if fake.StreamOutStub != nil {
 		return fake.StreamOutStub(log, pid, path, user)
-	} else {
-		return fake.streamOutReturns.result1, fake.streamOutReturns.result2
 	}
+	return fake.streamOutReturns.result1, fake.streamOutReturns.result2
 }
 
 func (fake *FakeNstarRunner) StreamOutCallCount() int {

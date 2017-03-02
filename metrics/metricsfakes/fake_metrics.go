@@ -49,9 +49,8 @@ func (fake *FakeMetrics) NumCPU() int {
 	fake.numCPUMutex.Unlock()
 	if fake.NumCPUStub != nil {
 		return fake.NumCPUStub()
-	} else {
-		return fake.numCPUReturns.result1
 	}
+	return fake.numCPUReturns.result1
 }
 
 func (fake *FakeMetrics) NumCPUCallCount() int {
@@ -74,9 +73,8 @@ func (fake *FakeMetrics) NumGoroutine() int {
 	fake.numGoroutineMutex.Unlock()
 	if fake.NumGoroutineStub != nil {
 		return fake.NumGoroutineStub()
-	} else {
-		return fake.numGoroutineReturns.result1
 	}
+	return fake.numGoroutineReturns.result1
 }
 
 func (fake *FakeMetrics) NumGoroutineCallCount() int {
@@ -99,9 +97,8 @@ func (fake *FakeMetrics) LoopDevices() int {
 	fake.loopDevicesMutex.Unlock()
 	if fake.LoopDevicesStub != nil {
 		return fake.LoopDevicesStub()
-	} else {
-		return fake.loopDevicesReturns.result1
 	}
+	return fake.loopDevicesReturns.result1
 }
 
 func (fake *FakeMetrics) LoopDevicesCallCount() int {
@@ -124,9 +121,8 @@ func (fake *FakeMetrics) BackingStores() int {
 	fake.backingStoresMutex.Unlock()
 	if fake.BackingStoresStub != nil {
 		return fake.BackingStoresStub()
-	} else {
-		return fake.backingStoresReturns.result1
 	}
+	return fake.backingStoresReturns.result1
 }
 
 func (fake *FakeMetrics) BackingStoresCallCount() int {
@@ -149,9 +145,8 @@ func (fake *FakeMetrics) DepotDirs() int {
 	fake.depotDirsMutex.Unlock()
 	if fake.DepotDirsStub != nil {
 		return fake.DepotDirsStub()
-	} else {
-		return fake.depotDirsReturns.result1
 	}
+	return fake.depotDirsReturns.result1
 }
 
 func (fake *FakeMetrics) DepotDirsCallCount() int {

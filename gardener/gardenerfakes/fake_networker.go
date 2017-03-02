@@ -92,9 +92,8 @@ func (fake *FakeNetworker) Network(log lager.Logger, spec garden.ContainerSpec, 
 	fake.networkMutex.Unlock()
 	if fake.NetworkStub != nil {
 		return fake.NetworkStub(log, spec, pid)
-	} else {
-		return fake.networkReturns.result1
 	}
+	return fake.networkReturns.result1
 }
 
 func (fake *FakeNetworker) NetworkCallCount() int {
@@ -123,9 +122,8 @@ func (fake *FakeNetworker) Capacity() uint64 {
 	fake.capacityMutex.Unlock()
 	if fake.CapacityStub != nil {
 		return fake.CapacityStub()
-	} else {
-		return fake.capacityReturns.result1
 	}
+	return fake.capacityReturns.result1
 }
 
 func (fake *FakeNetworker) CapacityCallCount() int {
@@ -151,9 +149,8 @@ func (fake *FakeNetworker) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(log, handle)
-	} else {
-		return fake.destroyReturns.result1
 	}
+	return fake.destroyReturns.result1
 }
 
 func (fake *FakeNetworker) DestroyCallCount() int {
@@ -187,9 +184,8 @@ func (fake *FakeNetworker) NetIn(log lager.Logger, handle string, hostPort uint3
 	fake.netInMutex.Unlock()
 	if fake.NetInStub != nil {
 		return fake.NetInStub(log, handle, hostPort, containerPort)
-	} else {
-		return fake.netInReturns.result1, fake.netInReturns.result2, fake.netInReturns.result3
 	}
+	return fake.netInReturns.result1, fake.netInReturns.result2, fake.netInReturns.result3
 }
 
 func (fake *FakeNetworker) NetInCallCount() int {
@@ -229,9 +225,8 @@ func (fake *FakeNetworker) BulkNetOut(log lager.Logger, handle string, rules []g
 	fake.bulkNetOutMutex.Unlock()
 	if fake.BulkNetOutStub != nil {
 		return fake.BulkNetOutStub(log, handle, rules)
-	} else {
-		return fake.bulkNetOutReturns.result1
 	}
+	return fake.bulkNetOutReturns.result1
 }
 
 func (fake *FakeNetworker) BulkNetOutCallCount() int {
@@ -264,9 +259,8 @@ func (fake *FakeNetworker) NetOut(log lager.Logger, handle string, rule garden.N
 	fake.netOutMutex.Unlock()
 	if fake.NetOutStub != nil {
 		return fake.NetOutStub(log, handle, rule)
-	} else {
-		return fake.netOutReturns.result1
 	}
+	return fake.netOutReturns.result1
 }
 
 func (fake *FakeNetworker) NetOutCallCount() int {
@@ -298,9 +292,8 @@ func (fake *FakeNetworker) Restore(log lager.Logger, handle string) error {
 	fake.restoreMutex.Unlock()
 	if fake.RestoreStub != nil {
 		return fake.RestoreStub(log, handle)
-	} else {
-		return fake.restoreReturns.result1
 	}
+	return fake.restoreReturns.result1
 }
 
 func (fake *FakeNetworker) RestoreCallCount() int {

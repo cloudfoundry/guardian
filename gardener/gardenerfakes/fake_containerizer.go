@@ -134,9 +134,8 @@ func (fake *FakeContainerizer) Create(log lager.Logger, spec gardener.DesiredCon
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(log, spec)
-	} else {
-		return fake.createReturns.result1
 	}
+	return fake.createReturns.result1
 }
 
 func (fake *FakeContainerizer) CreateCallCount() int {
@@ -165,9 +164,8 @@ func (fake *FakeContainerizer) Handles() ([]string, error) {
 	fake.handlesMutex.Unlock()
 	if fake.HandlesStub != nil {
 		return fake.HandlesStub()
-	} else {
-		return fake.handlesReturns.result1, fake.handlesReturns.result2
 	}
+	return fake.handlesReturns.result1, fake.handlesReturns.result2
 }
 
 func (fake *FakeContainerizer) HandlesCallCount() int {
@@ -195,9 +193,8 @@ func (fake *FakeContainerizer) StreamIn(log lager.Logger, handle string, spec ga
 	fake.streamInMutex.Unlock()
 	if fake.StreamInStub != nil {
 		return fake.StreamInStub(log, handle, spec)
-	} else {
-		return fake.streamInReturns.result1
 	}
+	return fake.streamInReturns.result1
 }
 
 func (fake *FakeContainerizer) StreamInCallCount() int {
@@ -230,9 +227,8 @@ func (fake *FakeContainerizer) StreamOut(log lager.Logger, handle string, spec g
 	fake.streamOutMutex.Unlock()
 	if fake.StreamOutStub != nil {
 		return fake.StreamOutStub(log, handle, spec)
-	} else {
-		return fake.streamOutReturns.result1, fake.streamOutReturns.result2
 	}
+	return fake.streamOutReturns.result1, fake.streamOutReturns.result2
 }
 
 func (fake *FakeContainerizer) StreamOutCallCount() int {
@@ -267,9 +263,8 @@ func (fake *FakeContainerizer) Run(log lager.Logger, handle string, spec garden.
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
 		return fake.RunStub(log, handle, spec, io)
-	} else {
-		return fake.runReturns.result1, fake.runReturns.result2
 	}
+	return fake.runReturns.result1, fake.runReturns.result2
 }
 
 func (fake *FakeContainerizer) RunCallCount() int {
@@ -304,9 +299,8 @@ func (fake *FakeContainerizer) Attach(log lager.Logger, handle string, processGU
 	fake.attachMutex.Unlock()
 	if fake.AttachStub != nil {
 		return fake.AttachStub(log, handle, processGUID, io)
-	} else {
-		return fake.attachReturns.result1, fake.attachReturns.result2
 	}
+	return fake.attachReturns.result1, fake.attachReturns.result2
 }
 
 func (fake *FakeContainerizer) AttachCallCount() int {
@@ -340,9 +334,8 @@ func (fake *FakeContainerizer) Stop(log lager.Logger, handle string, kill bool) 
 	fake.stopMutex.Unlock()
 	if fake.StopStub != nil {
 		return fake.StopStub(log, handle, kill)
-	} else {
-		return fake.stopReturns.result1
 	}
+	return fake.stopReturns.result1
 }
 
 func (fake *FakeContainerizer) StopCallCount() int {
@@ -374,9 +367,8 @@ func (fake *FakeContainerizer) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(log, handle)
-	} else {
-		return fake.destroyReturns.result1
 	}
+	return fake.destroyReturns.result1
 }
 
 func (fake *FakeContainerizer) DestroyCallCount() int {
@@ -408,9 +400,8 @@ func (fake *FakeContainerizer) RemoveBundle(log lager.Logger, handle string) err
 	fake.removeBundleMutex.Unlock()
 	if fake.RemoveBundleStub != nil {
 		return fake.RemoveBundleStub(log, handle)
-	} else {
-		return fake.removeBundleReturns.result1
 	}
+	return fake.removeBundleReturns.result1
 }
 
 func (fake *FakeContainerizer) RemoveBundleCallCount() int {
@@ -442,9 +433,8 @@ func (fake *FakeContainerizer) Info(log lager.Logger, handle string) (gardener.A
 	fake.infoMutex.Unlock()
 	if fake.InfoStub != nil {
 		return fake.InfoStub(log, handle)
-	} else {
-		return fake.infoReturns.result1, fake.infoReturns.result2
 	}
+	return fake.infoReturns.result1, fake.infoReturns.result2
 }
 
 func (fake *FakeContainerizer) InfoCallCount() int {
@@ -477,9 +467,8 @@ func (fake *FakeContainerizer) Metrics(log lager.Logger, handle string) (gardene
 	fake.metricsMutex.Unlock()
 	if fake.MetricsStub != nil {
 		return fake.MetricsStub(log, handle)
-	} else {
-		return fake.metricsReturns.result1, fake.metricsReturns.result2
 	}
+	return fake.metricsReturns.result1, fake.metricsReturns.result2
 }
 
 func (fake *FakeContainerizer) MetricsCallCount() int {

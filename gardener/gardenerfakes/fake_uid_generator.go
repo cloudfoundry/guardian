@@ -25,9 +25,8 @@ func (fake *FakeUidGenerator) Generate() string {
 	fake.generateMutex.Unlock()
 	if fake.GenerateStub != nil {
 		return fake.GenerateStub()
-	} else {
-		return fake.generateReturns.result1
 	}
+	return fake.generateReturns.result1
 }
 
 func (fake *FakeUidGenerator) GenerateCallCount() int {
