@@ -221,7 +221,7 @@ func (p *process) ID() string {
 
 func (p *process) mkfifos() error {
 	for _, pipe := range []string{p.stdin, p.stdout, p.stderr, p.winsz, p.exit} {
-		if err := syscall.Mkfifo(pipe, 0); err != nil {
+		if err := syscall.Mkfifo(pipe, 0600); err != nil {
 			return err
 		}
 	}

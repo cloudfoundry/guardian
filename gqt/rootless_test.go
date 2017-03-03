@@ -1,12 +1,12 @@
 package gqt_test
 
 import (
-	"io/ioutil"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +15,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -84,6 +85,78 @@ var _ = Describe("rootless containers", func() {
 		It("succeeds", func() {
 			_, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Describe("running a process in a container", func() {
+		var container garden.Container
+
+		BeforeEach(func() {
+			var err error
+
+			container, err = client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns the process's exit code", func() {
+			processSpec := garden.ProcessSpec{
+				Path: "sh",
+				Args: []string{"-c", "exit 13"},
+			}
+
+			process, err := container.Run(processSpec, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+
+			exitCode, err := process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(exitCode).To(Equal(13))
+		})
+
+		It("streams input to the process's stdin", func() {
+			processSpec := garden.ProcessSpec{
+				Path: "sh",
+				Args: []string{"-c", "cat"},
+			}
+			stdin := bytes.NewBufferString("rootlessStdinFTW")
+			stdout := gbytes.NewBuffer()
+			processIO := garden.ProcessIO{Stdin: stdin, Stdout: stdout}
+
+			process, err := container.Run(processSpec, processIO)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(stdout).Should(gbytes.Say("rootlessStdinFTW"))
+			Expect(process.Wait()).To(Equal(0))
+		})
+
+		It("streams output from the process's stdout", func() {
+			processSpec := garden.ProcessSpec{
+				Path: "sh",
+				Args: []string{"-c", "echo rootlessStdoutFTW"},
+			}
+			stdout := gbytes.NewBuffer()
+			processIO := garden.ProcessIO{Stdout: stdout}
+
+			process, err := container.Run(processSpec, processIO)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(stdout).Should(gbytes.Say("rootlessStdoutFTW"))
+			Expect(process.Wait()).To(Equal(0))
+		})
+
+		It("streams output from the process's stderr", func() {
+			processSpec := garden.ProcessSpec{
+				Path: "sh",
+				Args: []string{"-c", "echo rootlessStderrFTW 1>&2"},
+			}
+			stderr := gbytes.NewBuffer()
+			processIO := garden.ProcessIO{Stderr: stderr}
+
+			process, err := container.Run(processSpec, processIO)
+			Expect(err).ToNot(HaveOccurred())
+
+			Eventually(stderr).Should(gbytes.Say("rootlessStderrFTW"))
+			Expect(process.Wait()).To(Equal(0))
 		})
 	})
 })
