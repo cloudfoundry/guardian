@@ -29,9 +29,8 @@ func (fake *FakeRetrier) Run(work func() error) error {
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
 		return fake.RunStub(work)
-	} else {
-		return fake.runReturns.result1
 	}
+	return fake.runReturns.result1
 }
 
 func (fake *FakeRetrier) RunCallCount() int {

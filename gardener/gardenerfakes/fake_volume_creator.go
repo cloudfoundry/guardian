@@ -66,9 +66,8 @@ func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec root
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(log, handle, spec)
-	} else {
-		return fake.createReturns.result1, fake.createReturns.result2, fake.createReturns.result3
 	}
+	return fake.createReturns.result1, fake.createReturns.result2, fake.createReturns.result3
 }
 
 func (fake *FakeVolumeCreator) CreateCallCount() int {
@@ -102,9 +101,8 @@ func (fake *FakeVolumeCreator) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(log, handle)
-	} else {
-		return fake.destroyReturns.result1
 	}
+	return fake.destroyReturns.result1
 }
 
 func (fake *FakeVolumeCreator) DestroyCallCount() int {
@@ -137,9 +135,8 @@ func (fake *FakeVolumeCreator) Metrics(log lager.Logger, handle string, privileg
 	fake.metricsMutex.Unlock()
 	if fake.MetricsStub != nil {
 		return fake.MetricsStub(log, handle, privileged)
-	} else {
-		return fake.metricsReturns.result1, fake.metricsReturns.result2
 	}
+	return fake.metricsReturns.result1, fake.metricsReturns.result2
 }
 
 func (fake *FakeVolumeCreator) MetricsCallCount() int {
@@ -171,9 +168,8 @@ func (fake *FakeVolumeCreator) GC(log lager.Logger) error {
 	fake.gCMutex.Unlock()
 	if fake.GCStub != nil {
 		return fake.GCStub(log)
-	} else {
-		return fake.gCReturns.result1
 	}
+	return fake.gCReturns.result1
 }
 
 func (fake *FakeVolumeCreator) GCCallCount() int {

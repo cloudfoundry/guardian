@@ -33,9 +33,8 @@ func (fake *FakeBundlerRule) Apply(bndle goci.Bndl, spec gardener.DesiredContain
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
 		return fake.ApplyStub(bndle, spec)
-	} else {
-		return fake.applyReturns.result1
 	}
+	return fake.applyReturns.result1
 }
 
 func (fake *FakeBundlerRule) ApplyCallCount() int {
