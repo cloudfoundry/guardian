@@ -78,7 +78,7 @@ var CleanCommand = cli.Command{
 		metricsEmitter := metrics.NewEmitter()
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
-		noop, err := cleaner.Clean(logger, cfg.CleanThresholdBytes, cfg.IgnoreBaseImages, true)
+		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, cfg.Clean.IgnoreBaseImages, true)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return cli.NewExitError(err.Error(), 1)

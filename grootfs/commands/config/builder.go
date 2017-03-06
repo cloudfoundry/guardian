@@ -9,24 +9,32 @@ import (
 )
 
 type Config struct {
-	StorePath                 string   `yaml:"store_path"`
-	FSDriver                  string   `yaml:"driver"`
-	CleanOnCreate             bool     `yaml:"clean_on_create"`
-	CleanThresholdBytes       int64    `yaml:"clean_threshold_bytes"`
-	DiskLimitSizeBytes        int64    `yaml:"disk_limit_size_bytes"`
-	DraxBin                   string   `yaml:"drax_bin"`
-	BtrfsBin                  string   `yaml:"btrfs_bin"`
-	XFSProgsPath              string   `yaml:"xfsprogs_path"`
-	NewuidmapBin              string   `yaml:"newuidmap_bin"`
-	NewgidmapBin              string   `yaml:"newgidmap_bin"`
-	ExcludeBaseImageFromQuota bool     `yaml:"exclude_base_image_from_quota"`
-	GIDMappings               []string `yaml:"gid_mappings"`
-	UIDMappings               []string `yaml:"uid_mappings"`
-	IgnoreBaseImages          []string `yaml:"ignore_base_images"`
-	InsecureRegistries        []string `yaml:"insecure_registries"`
-	MetronEndpoint            string   `yaml:"metron_endpoint"`
-	LogLevel                  string   `yaml:"log_level"`
-	LogFile                   string   `yaml:"log_file"`
+	StorePath      string `yaml:"store"`
+	FSDriver       string `yaml:"driver"`
+	DraxBin        string `yaml:"drax_bin"`
+	BtrfsBin       string `yaml:"btrfs_bin"`
+	XFSProgsPath   string `yaml:"xfsprogs_path"`
+	NewuidmapBin   string `yaml:"newuidmap_bin"`
+	NewgidmapBin   string `yaml:"newgidmap_bin"`
+	MetronEndpoint string `yaml:"metron_endpoint"`
+	LogLevel       string `yaml:"log_level"`
+	LogFile        string `yaml:"log_file"`
+	Create         Create `yaml:"create"`
+	Clean          Clean  `yaml:"clean"`
+}
+
+type Create struct {
+	ExcludeImageFromQuota bool     `yaml:"exclude_image_from_quota"`
+	WithClean             bool     `yaml:"with_clean"`
+	DiskLimitSizeBytes    int64    `yaml:"disk_limit_size_bytes"`
+	InsecureRegistries    []string `yaml:"insecure_registries"`
+	GIDMappings           []string `yaml:"gid_mappings"`
+	UIDMappings           []string `yaml:"uid_mappings"`
+}
+
+type Clean struct {
+	IgnoreBaseImages []string `yaml:"ignore_base_images"`
+	ThresholdBytes   int64    `yaml:"threshold_bytes"`
 }
 
 type Builder struct {
@@ -52,11 +60,11 @@ func NewBuilder(pathToYaml string) (*Builder, error) {
 }
 
 func (b *Builder) Build() (Config, error) {
-	if b.config.DiskLimitSizeBytes < 0 {
+	if b.config.Create.DiskLimitSizeBytes < 0 {
 		return *b.config, errorspkg.New("invalid argument: disk limit cannot be negative")
 	}
 
-	if b.config.CleanThresholdBytes < 0 {
+	if b.config.Clean.ThresholdBytes < 0 {
 		return *b.config, errorspkg.New("invalid argument: clean threshold cannot be negative")
 	}
 
@@ -68,7 +76,7 @@ func (b *Builder) WithInsecureRegistries(insecureRegistries []string) *Builder {
 		return b
 	}
 
-	b.config.InsecureRegistries = insecureRegistries
+	b.config.Create.InsecureRegistries = insecureRegistries
 	return b
 }
 
@@ -77,7 +85,7 @@ func (b *Builder) WithIgnoreBaseImages(ignoreBaseImages []string) *Builder {
 		return b
 	}
 
-	b.config.IgnoreBaseImages = ignoreBaseImages
+	b.config.Clean.IgnoreBaseImages = ignoreBaseImages
 	return b
 }
 
@@ -146,7 +154,7 @@ func (b *Builder) WithUIDMappings(uidMappings []string) *Builder {
 		return b
 	}
 
-	b.config.UIDMappings = uidMappings
+	b.config.Create.UIDMappings = uidMappings
 	return b
 }
 
@@ -155,27 +163,27 @@ func (b *Builder) WithGIDMappings(gidMappings []string) *Builder {
 		return b
 	}
 
-	b.config.GIDMappings = gidMappings
+	b.config.Create.GIDMappings = gidMappings
 	return b
 }
 
 func (b *Builder) WithDiskLimitSizeBytes(limit int64, isSet bool) *Builder {
 	if isSet {
-		b.config.DiskLimitSizeBytes = limit
+		b.config.Create.DiskLimitSizeBytes = limit
 	}
 	return b
 }
 
-func (b *Builder) WithExcludeBaseImageFromQuota(exclude, isSet bool) *Builder {
+func (b *Builder) WithExcludeImageFromQuota(exclude, isSet bool) *Builder {
 	if isSet {
-		b.config.ExcludeBaseImageFromQuota = exclude
+		b.config.Create.ExcludeImageFromQuota = exclude
 	}
 	return b
 }
 
 func (b *Builder) WithCleanThresholdBytes(threshold int64, isSet bool) *Builder {
 	if isSet {
-		b.config.CleanThresholdBytes = threshold
+		b.config.Clean.ThresholdBytes = threshold
 	}
 	return b
 }
@@ -194,13 +202,13 @@ func (b *Builder) WithLogFile(filepath string) *Builder {
 	return b
 }
 
-func (b *Builder) WithCleanOnCreate(clean bool, noClean bool) *Builder {
+func (b *Builder) WithClean(clean bool, noClean bool) *Builder {
 	if clean {
-		b.config.CleanOnCreate = clean
+		b.config.Create.WithClean = clean
 	}
 
 	if noClean {
-		b.config.CleanOnCreate = !noClean
+		b.config.Create.WithClean = !noClean
 	}
 
 	return b

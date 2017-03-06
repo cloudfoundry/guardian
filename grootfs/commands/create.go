@@ -61,11 +61,11 @@ var CreateCommand = cli.Command{
 			Usage: "Set disk limit to be exclusive (i.e.: excluding image layers)",
 		},
 		cli.BoolFlag{
-			Name:  "clean",
+			Name:  "with-clean",
 			Usage: "Clean up unused layers before creating rootfs",
 		},
 		cli.BoolFlag{
-			Name:  "no-clean",
+			Name:  "without-clean",
 			Usage: "Do NOT clean up unused layers before creating rootfs",
 		},
 		cli.StringFlag{
@@ -87,8 +87,8 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
-		if ctx.IsSet("clean") && ctx.IsSet("no-clean") {
-			return cli.NewExitError("clean and no-clean cannot be used together", 1)
+		if ctx.IsSet("with-clean") && ctx.IsSet("without-clean") {
+			return cli.NewExitError("with-clean and without-clean cannot be used together", 1)
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
@@ -97,9 +97,9 @@ var CreateCommand = cli.Command{
 			WithGIDMappings(ctx.StringSlice("gid-mapping")).
 			WithDiskLimitSizeBytes(ctx.Int64("disk-limit-size-bytes"),
 				ctx.IsSet("disk-limit-size-bytes")).
-			WithExcludeBaseImageFromQuota(ctx.Bool("exclude-image-from-quota"),
+			WithExcludeImageFromQuota(ctx.Bool("exclude-image-from-quota"),
 				ctx.IsSet("exclude-image-from-quota")).
-			WithCleanOnCreate(ctx.IsSet("clean"), ctx.IsSet("no-clean"))
+			WithClean(ctx.IsSet("with-clean"), ctx.IsSet("without-clean"))
 
 		cfg, err := configBuilder.Build()
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
@@ -112,13 +112,13 @@ var CreateCommand = cli.Command{
 		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
 
-		uidMappings, err := parseIDMappings(cfg.UIDMappings)
+		uidMappings, err := parseIDMappings(cfg.Create.UIDMappings)
 		if err != nil {
 			err = errorspkg.Errorf("parsing uid-mapping: %s", err)
 			logger.Error("parsing-command", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
-		gidMappings, err := parseIDMappings(cfg.GIDMappings)
+		gidMappings, err := parseIDMappings(cfg.Create.GIDMappings)
 		if err != nil {
 			err = errorspkg.Errorf("parsing gid-mapping: %s", err)
 			logger.Error("parsing-command", err)
@@ -155,7 +155,7 @@ var CreateCommand = cli.Command{
 			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper, unpackerStrategy)
 		}
 
-		dockerSrc := remote.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.InsecureRegistries)
+		dockerSrc := remote.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.Create.InsecureRegistries)
 
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		remoteFetcher := remote.NewRemoteFetcher(dockerSrc, cacheDriver)
@@ -190,13 +190,13 @@ var CreateCommand = cli.Command{
 		createSpec := groot.CreateSpec{
 			ID:                          id,
 			BaseImage:                   baseImage,
-			DiskLimit:                   cfg.DiskLimitSizeBytes,
-			ExcludeBaseImageFromQuota:   cfg.ExcludeBaseImageFromQuota,
+			DiskLimit:                   cfg.Create.DiskLimitSizeBytes,
+			ExcludeBaseImageFromQuota:   cfg.Create.ExcludeImageFromQuota,
 			UIDMappings:                 uidMappings,
 			GIDMappings:                 gidMappings,
-			CleanOnCreate:               cfg.CleanOnCreate,
-			CleanOnCreateThresholdBytes: cfg.CleanThresholdBytes,
-			CleanOnCreateIgnoreImages:   cfg.IgnoreBaseImages,
+			CleanOnCreate:               cfg.Create.WithClean,
+			CleanOnCreateThresholdBytes: cfg.Clean.ThresholdBytes,
+			CleanOnCreateIgnoreImages:   cfg.Clean.IgnoreBaseImages,
 		}
 		image, err := creator.Create(logger, createSpec)
 		if err != nil {

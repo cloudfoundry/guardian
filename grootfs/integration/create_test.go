@@ -444,7 +444,7 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Context("when --no-clean is given", func() {
+	Context("when --without-clean is given", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
@@ -482,13 +482,13 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Context("when both no-clean and clean flags are given", func() {
+	Context("when both without-clean and with-clean flags are given", func() {
 		It("returns an error", func() {
 			_, err := Runner.WithClean().WithNoClean().Create(groot.CreateSpec{
 				ID:        "my-empty",
 				BaseImage: "docker:///cfgarden/empty:v0.1.1",
 			})
-			Expect(err).To(MatchError(ContainSubstring("clean and no-clean cannot be used together")))
+			Expect(err).To(MatchError(ContainSubstring("with-clean and without-clean cannot be used together")))
 		})
 	})
 
@@ -695,8 +695,8 @@ var _ = Describe("Create", func() {
 
 		Describe("mappings", func() {
 			BeforeEach(func() {
-				cfg.UIDMappings = []string{"1:100000:65000", "0:1000:1"}
-				cfg.GIDMappings = []string{"1:100000:65000", "0:1000:1"}
+				cfg.Create.UIDMappings = []string{"1:100000:65000", "0:1000:1"}
+				cfg.Create.GIDMappings = []string{"1:100000:65000", "0:1000:1"}
 			})
 
 			It("uses the uid mappings from the config file", func() {
@@ -712,7 +712,7 @@ var _ = Describe("Create", func() {
 
 		Describe("disk limit size bytes", func() {
 			BeforeEach(func() {
-				cfg.DiskLimitSizeBytes = tenMegabytes
+				cfg.Create.DiskLimitSizeBytes = tenMegabytes
 			})
 
 			It("creates a image with limit from the config file", func() {
@@ -725,8 +725,8 @@ var _ = Describe("Create", func() {
 
 		Describe("exclude image from quota", func() {
 			BeforeEach(func() {
-				cfg.ExcludeBaseImageFromQuota = true
-				cfg.DiskLimitSizeBytes = tenMegabytes
+				cfg.Create.ExcludeImageFromQuota = true
+				cfg.Create.DiskLimitSizeBytes = tenMegabytes
 			})
 
 			It("excludes base image from quota when config property say so", func() {

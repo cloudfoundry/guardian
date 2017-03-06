@@ -486,7 +486,9 @@ var _ = Describe("Create with remote images", func() {
 					Expect(os.Chmod(configDir, 0755)).To(Succeed())
 
 					cfg := config.Config{
-						InsecureRegistries: []string{fakeRegistry.Addr()},
+						Create: config.Create{
+							InsecureRegistries: []string{fakeRegistry.Addr()},
+						},
 					}
 
 					configYaml, err := yaml.Marshal(cfg)

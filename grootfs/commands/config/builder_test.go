@@ -15,31 +15,41 @@ import (
 var _ = Describe("Builder", func() {
 	var (
 		cfg            config.Config
+		createCfg      config.Create
+		cleanCfg       config.Clean
 		configDir      string
 		configFilePath string
 		builder        *config.Builder
 	)
 
 	BeforeEach(func() {
+		createCfg = config.Create{
+			WithClean:             false,
+			ExcludeImageFromQuota: true,
+			UIDMappings:           []string{"config-uid-mapping"},
+			GIDMappings:           []string{"config-gid-mapping"},
+			InsecureRegistries:    []string{"http://example.org"},
+			DiskLimitSizeBytes:    int64(1000),
+		}
+
+		cleanCfg = config.Clean{
+			IgnoreBaseImages: []string{"docker:///busybox"},
+			ThresholdBytes:   int64(0),
+		}
+
 		cfg = config.Config{
-			StorePath:                 "/hello",
-			FSDriver:                  "kitten-fs",
-			DraxBin:                   "/config/drax",
-			BtrfsBin:                  "/config/btrfs",
-			XFSProgsPath:              "/config/xfs",
-			NewuidmapBin:              "/config/newuidmap",
-			NewgidmapBin:              "/config/newgidmap",
-			MetronEndpoint:            "config_endpoint:1111",
-			UIDMappings:               []string{"config-uid-mapping"},
-			GIDMappings:               []string{"config-gid-mapping"},
-			IgnoreBaseImages:          []string{"docker:///busybox"},
-			InsecureRegistries:        []string{"http://example.org"},
-			DiskLimitSizeBytes:        int64(1000),
-			ExcludeBaseImageFromQuota: true,
-			CleanThresholdBytes:       int64(0),
-			CleanOnCreate:             false,
-			LogLevel:                  "info",
-			LogFile:                   "/path/to/a/file",
+			Create:         createCfg,
+			Clean:          cleanCfg,
+			StorePath:      "/hello",
+			FSDriver:       "kitten-fs",
+			DraxBin:        "/config/drax",
+			BtrfsBin:       "/config/btrfs",
+			XFSProgsPath:   "/config/xfs",
+			NewuidmapBin:   "/config/newuidmap",
+			NewgidmapBin:   "/config/newgidmap",
+			MetronEndpoint: "config_endpoint:1111",
+			LogLevel:       "info",
+			LogFile:        "/path/to/a/file",
 		}
 	})
 
@@ -65,14 +75,14 @@ var _ = Describe("Builder", func() {
 		It("returns the values read from the config yaml", func() {
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.InsecureRegistries).To(Equal([]string{"http://example.org"}))
-			Expect(config.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
+			Expect(config.Create.InsecureRegistries).To(Equal([]string{"http://example.org"}))
+			Expect(config.Clean.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
 			Expect(config.StorePath).To(Equal("/hello"))
 		})
 
 		Context("when disk limit property is invalid", func() {
 			BeforeEach(func() {
-				cfg.DiskLimitSizeBytes = int64(-1)
+				cfg.Create.DiskLimitSizeBytes = int64(-1)
 			})
 
 			It("returns an error", func() {
@@ -83,7 +93,7 @@ var _ = Describe("Builder", func() {
 
 		Context("when clean threshold property is invalid", func() {
 			BeforeEach(func() {
-				cfg.CleanThresholdBytes = int64(-1)
+				cfg.Clean.ThresholdBytes = int64(-1)
 			})
 
 			It("returns an error", func() {
@@ -111,7 +121,7 @@ var _ = Describe("Builder", func() {
 			builder = builder.WithInsecureRegistries([]string{"1", "2"})
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.InsecureRegistries).To(Equal([]string{"1", "2"}))
+			Expect(config.Create.InsecureRegistries).To(Equal([]string{"1", "2"}))
 		})
 
 		Context("when empty", func() {
@@ -119,7 +129,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithInsecureRegistries([]string{})
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.InsecureRegistries).To(Equal([]string{"http://example.org"}))
+				Expect(config.Create.InsecureRegistries).To(Equal([]string{"http://example.org"}))
 			})
 		})
 
@@ -128,7 +138,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithInsecureRegistries(nil)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.InsecureRegistries).To(Equal([]string{"http://example.org"}))
+				Expect(config.Create.InsecureRegistries).To(Equal([]string{"http://example.org"}))
 			})
 		})
 	})
@@ -138,7 +148,7 @@ var _ = Describe("Builder", func() {
 			builder = builder.WithIgnoreBaseImages([]string{"1", "2"})
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.IgnoreBaseImages).To(Equal([]string{"1", "2"}))
+			Expect(config.Clean.IgnoreBaseImages).To(Equal([]string{"1", "2"}))
 		})
 
 		Context("when empty", func() {
@@ -146,7 +156,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithIgnoreBaseImages([]string{})
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
+				Expect(config.Clean.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
 			})
 		})
 
@@ -155,7 +165,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithIgnoreBaseImages(nil)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
+				Expect(config.Clean.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
 			})
 		})
 	})
@@ -387,7 +397,7 @@ var _ = Describe("Builder", func() {
 			builder = builder.WithUIDMappings([]string{"1", "2"})
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.UIDMappings).To(Equal([]string{"1", "2"}))
+			Expect(config.Create.UIDMappings).To(Equal([]string{"1", "2"}))
 		})
 
 		Context("when empty", func() {
@@ -395,7 +405,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithUIDMappings([]string{})
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.UIDMappings).To(Equal([]string{"config-uid-mapping"}))
+				Expect(config.Create.UIDMappings).To(Equal([]string{"config-uid-mapping"}))
 			})
 		})
 
@@ -404,7 +414,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithUIDMappings(nil)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.UIDMappings).To(Equal([]string{"config-uid-mapping"}))
+				Expect(config.Create.UIDMappings).To(Equal([]string{"config-uid-mapping"}))
 			})
 		})
 	})
@@ -414,7 +424,7 @@ var _ = Describe("Builder", func() {
 			builder = builder.WithGIDMappings([]string{"1", "2"})
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.GIDMappings).To(Equal([]string{"1", "2"}))
+			Expect(config.Create.GIDMappings).To(Equal([]string{"1", "2"}))
 		})
 
 		Context("when empty", func() {
@@ -422,7 +432,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithGIDMappings([]string{})
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.GIDMappings).To(Equal([]string{"config-gid-mapping"}))
+				Expect(config.Create.GIDMappings).To(Equal([]string{"config-gid-mapping"}))
 			})
 		})
 
@@ -431,7 +441,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithGIDMappings(nil)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.GIDMappings).To(Equal([]string{"config-gid-mapping"}))
+				Expect(config.Create.GIDMappings).To(Equal([]string{"config-gid-mapping"}))
 			})
 		})
 	})
@@ -442,7 +452,7 @@ var _ = Describe("Builder", func() {
 			builder = builder.WithDiskLimitSizeBytes(diskLimit, true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.DiskLimitSizeBytes).To(Equal(diskLimit))
+			Expect(config.Create.DiskLimitSizeBytes).To(Equal(diskLimit))
 		})
 
 		Context("when flag is not set", func() {
@@ -450,7 +460,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithDiskLimitSizeBytes(10, false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.DiskLimitSizeBytes).To(Equal(cfg.DiskLimitSizeBytes))
+				Expect(config.Create.DiskLimitSizeBytes).To(Equal(cfg.Create.DiskLimitSizeBytes))
 			})
 		})
 
@@ -464,20 +474,20 @@ var _ = Describe("Builder", func() {
 		})
 	})
 
-	Describe("WithExcludeBaseImageFromQuota", func() {
-		It("overrides the config's ExcludeBaseImageFromQuota when the flag is set", func() {
-			builder = builder.WithExcludeBaseImageFromQuota(false, true)
+	Describe("WithExcludeImageFromQuota", func() {
+		It("overrides the config's ExcludeImageFromQuota when the flag is set", func() {
+			builder = builder.WithExcludeImageFromQuota(false, true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.ExcludeBaseImageFromQuota).To(BeFalse())
+			Expect(config.Create.ExcludeImageFromQuota).To(BeFalse())
 		})
 
 		Context("when flag is not set", func() {
 			It("uses the config entry", func() {
-				builder = builder.WithExcludeBaseImageFromQuota(false, false)
+				builder = builder.WithExcludeImageFromQuota(false, false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.ExcludeBaseImageFromQuota).To(BeTrue())
+				Expect(config.Create.ExcludeImageFromQuota).To(BeTrue())
 			})
 		})
 	})
@@ -487,7 +497,7 @@ var _ = Describe("Builder", func() {
 			builder = builder.WithCleanThresholdBytes(1024, true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.CleanThresholdBytes).To(Equal(int64(1024)))
+			Expect(config.Clean.ThresholdBytes).To(Equal(int64(1024)))
 		})
 
 		Context("when flag is not set", func() {
@@ -495,7 +505,7 @@ var _ = Describe("Builder", func() {
 				builder = builder.WithCleanThresholdBytes(1024, false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.CleanThresholdBytes).To(Equal(cfg.CleanThresholdBytes))
+				Expect(config.Clean.ThresholdBytes).To(Equal(cfg.Clean.ThresholdBytes))
 			})
 		})
 	})
@@ -538,41 +548,41 @@ var _ = Describe("Builder", func() {
 		Describe("WithCleanOnCreate", func() {
 			Context("when no-clean is set, and clean is not set", func() {
 				BeforeEach(func() {
-					cfg.CleanOnCreate = true
+					cfg.Create.WithClean = true
 				})
 
 				It("overrides the config's entry", func() {
-					builder = builder.WithCleanOnCreate(false, true)
+					builder = builder.WithClean(false, true)
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
-					Expect(config.CleanOnCreate).To(BeFalse())
+					Expect(config.Create.WithClean).To(BeFalse())
 				})
 			})
 
 			Context("when no-clean is not set, and clean is set", func() {
 				BeforeEach(func() {
-					cfg.CleanOnCreate = false
+					cfg.Create.WithClean = false
 				})
 
 				It("overrides the config's entry", func() {
-					builder = builder.WithCleanOnCreate(true, false)
+					builder = builder.WithClean(true, false)
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
-					Expect(config.CleanOnCreate).To(BeTrue())
+					Expect(config.Create.WithClean).To(BeTrue())
 				})
 			})
 
 			Context("when no-clean is not set, and clean is not set", func() {
 				BeforeEach(func() {
-					cfg.CleanOnCreate = true
+					cfg.Create.WithClean = true
 				})
 
 				It("uses the config value", func() {
-					cfg.CleanOnCreate = true
-					builder = builder.WithCleanOnCreate(false, false)
+					cfg.Create.WithClean = true
+					builder = builder.WithClean(false, false)
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
-					Expect(config.CleanOnCreate).To(BeTrue())
+					Expect(config.Create.WithClean).To(BeTrue())
 				})
 			})
 		})

@@ -36,16 +36,16 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 
 	if r.CleanOnCreate || r.NoCleanOnCreate {
 		if r.CleanOnCreate {
-			args = append(args, "--clean")
+			args = append(args, "--with-clean")
 		}
 		if r.NoCleanOnCreate {
-			args = append(args, "--no-clean")
+			args = append(args, "--without-clean")
 		}
 	} else {
 		if spec.CleanOnCreate {
-			args = append(args, "--clean")
+			args = append(args, "--with-clean")
 		} else {
-			args = append(args, "--no-clean")
+			args = append(args, "--without-clean")
 		}
 	}
 
