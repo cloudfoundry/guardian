@@ -27,7 +27,7 @@ var _ = Describe("VolumeDriver", func() {
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.ImageDirName), 0777)).To(Succeed())
 
-		driver, err = overlayxfs.NewDriver(XFSProgsPath, StorePath)
+		driver, err = overlayxfs.NewDriver(StorePath)
 		Expect(err).NotTo(HaveOccurred())
 		logger = lagertest.NewTestLogger("overlay+xfs")
 	})
@@ -39,7 +39,7 @@ var _ = Describe("VolumeDriver", func() {
 
 	Context("when the storePath is not a xfs volume", func() {
 		It("returns an error", func() {
-			_, err = overlayxfs.NewDriver(XFSProgsPath, "/mnt/ext4")
+			_, err = overlayxfs.NewDriver("/mnt/ext4")
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("filesystem driver requires store filesystem to be xfs")))
 		})
@@ -120,7 +120,7 @@ var _ = Describe("VolumeDriver", func() {
 
 		Context("when fails to list volumes", func() {
 			It("returns an error", func() {
-				driver, err := overlayxfs.NewDriver(XFSProgsPath, StorePath)
+				driver, err := overlayxfs.NewDriver(StorePath)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(os.RemoveAll(filepath.Join(StorePath, store.VolumesDirName))).To(Succeed())
 				_, err = driver.Volumes(logger)

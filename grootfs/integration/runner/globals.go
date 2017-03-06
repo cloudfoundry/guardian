@@ -84,12 +84,6 @@ func (r Runner) WithBtrfsBin(btrfsBin string) Runner {
 	return nr
 }
 
-func (r Runner) WithXFSProgsPath(xfsProgsPath string) Runner {
-	nr := r
-	nr.XFSProgsPath = xfsProgsPath
-	return nr
-}
-
 func (r Runner) WithNewuidmapBin(newuidmapBin string) Runner {
 	nr := r
 	nr.NewuidmapBin = newuidmapBin

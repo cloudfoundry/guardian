@@ -5,7 +5,8 @@
 package quota
 
 type Quota struct {
-	Size uint64
+	Size   uint64
+	BCount uint64
 }
 
 type Control struct {

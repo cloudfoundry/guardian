@@ -39,7 +39,7 @@ var _ = Describe("ImageDriver", func() {
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.ImageDirName), 0777)).To(Succeed())
 
-		driver, err = overlayxfs.NewDriver("", StorePath)
+		driver, err = overlayxfs.NewDriver(StorePath)
 		Expect(err).NotTo(HaveOccurred())
 		logger = lagertest.NewTestLogger("overlay+xfs")
 
@@ -452,26 +452,6 @@ var _ = Describe("ImageDriver", func() {
 			It("returns an error", func() {
 				_, err := driver.FetchStats(logger, "/tmp")
 				Expect(err).To(MatchError(ContainSubstring("Failed to get projid for")))
-			})
-		})
-
-		Context("when using a custom xfsprogs bin path", func() {
-			It("will use binaries from that path", func() {
-				driver, err := overlayxfs.NewDriver(XFSProgsPath, StorePath)
-				Expect(err).NotTo(HaveOccurred())
-				imagePath := filepath.Join(StorePath, store.ImageDirName, fmt.Sprintf("random-id-%d", rand.Int()))
-				Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
-				spec.ImagePath = imagePath
-
-				Expect(driver.CreateImage(logger, spec)).To(Succeed())
-
-				_, err = driver.FetchStats(logger, spec.ImagePath)
-				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring("quota usage output not as expected")))
-
-				contents, err := ioutil.ReadFile(XFSQuotaCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - xfs_quota"))
 			})
 		})
 	})

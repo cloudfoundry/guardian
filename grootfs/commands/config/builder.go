@@ -13,7 +13,6 @@ type Config struct {
 	FSDriver       string `yaml:"driver"`
 	DraxBin        string `yaml:"drax_bin"`
 	BtrfsBin       string `yaml:"btrfs_bin"`
-	XFSProgsPath   string `yaml:"xfsprogs_path"`
 	NewuidmapBin   string `yaml:"newuidmap_bin"`
 	NewgidmapBin   string `yaml:"newgidmap_bin"`
 	MetronEndpoint string `yaml:"metron_endpoint"`
@@ -129,13 +128,6 @@ func (b *Builder) WithNewgidmapBin(newgidmapBin string, isSet bool) *Builder {
 func (b *Builder) WithBtrfsBin(btrfsBin string, isSet bool) *Builder {
 	if isSet || b.config.BtrfsBin == "" {
 		b.config.BtrfsBin = btrfsBin
-	}
-	return b
-}
-
-func (b *Builder) WithXFSProgsPath(xfsProgsPath string, isSet bool) *Builder {
-	if isSet {
-		b.config.XFSProgsPath = xfsProgsPath
 	}
 	return b
 }

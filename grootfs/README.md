@@ -130,7 +130,6 @@ gid_mappings:
 | store_path  | Path to the store directory |
 | driver | Filesystem driver to use \<btrfs \| overlay-xfs\> |
 | btrfs_bin  | Path to btrfs bin. (If not provided will use $PATH)  |
-| xfsprogs_path  | Path containing the xfsprogs binaries. (If not provided will use $PATH)  |
 | drax_bin | Path to drax bin. (If not provided will use $PATH) |
 | newuidmap_bin | Path to newuidmap bin. (If not provided will use $PATH) |
 | newgidmap_bin | Path to newgidmap bin. (If not provided will use $PATH) |

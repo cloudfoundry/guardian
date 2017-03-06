@@ -32,19 +32,17 @@ const (
 	imageInfoName = "image_info"
 )
 
-func NewDriver(xfsProgsPath, storePath string) (*Driver, error) {
+func NewDriver(storePath string) (*Driver, error) {
 	if err := filesystems.CheckFSPath(storePath, filesystems.XfsType, BaseFileSystemName); err != nil {
 		return nil, err
 	}
 	return &Driver{
-		xfsProgsPath: xfsProgsPath,
-		storePath:    storePath,
+		storePath: storePath,
 	}, nil
 }
 
 type Driver struct {
-	xfsProgsPath string
-	storePath    string
+	storePath string
 }
 
 func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
@@ -251,7 +249,7 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 
 	var exclusiveSize int64
 	if projectID != 0 {
-		exclusiveSize, err = d.listQuotaUsage(logger, projectID)
+		exclusiveSize, err = d.listQuotaUsage(logger, imagePath)
 		if err != nil {
 			logger.Error("list-quota-usage-failed", err, lager.Data{"projectID": projectID})
 			return groot.VolumeStats{}, errors.Wrapf(err, "listing quota usage %s", imagePath)
@@ -274,33 +272,25 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 	}, nil
 }
 
-func (d *Driver) listQuotaUsage(logger lager.Logger, projectID uint32) (int64, error) {
-	logger = logger.Session("listing-quota-usage", lager.Data{"projectID": projectID})
+func (d *Driver) listQuotaUsage(logger lager.Logger, imagePath string) (int64, error) {
+	logger = logger.Session("listing-quota-usage", lager.Data{"imagePath": imagePath})
 	logger.Debug("start")
 	defer logger.Debug("end")
 
-	quotaCmd := exec.Command(filepath.Join(d.xfsProgsPath, "xfs_quota"), "-x", "-c", fmt.Sprintf("quota -N -p %d", projectID), d.storePath)
-	stdoutBuffer := bytes.NewBuffer([]byte{})
-	stderrBuffer := bytes.NewBuffer([]byte{})
-	quotaCmd.Stdout = stdoutBuffer
-	quotaCmd.Stderr = stdoutBuffer
-	if err := quotaCmd.Run(); err != nil {
-		return 0, errors.Wrapf(err, "failed to fetch xfs quota: %s", stderrBuffer.String())
-	}
-
-	output := stdoutBuffer.String()
-	parsedOutput := strings.Fields(output)
-	if len(parsedOutput) != 7 {
-		return 0, errorspkg.Errorf("quota usage output not as expected: %s", output)
-	}
-
-	usedBlocks, err := strconv.ParseInt(parsedOutput[1], 10, 64)
+	imagesPath := filepath.Join(d.storePath, store.ImageDirName)
+	quotaControl, err := quotapkg.NewControl(imagesPath)
 	if err != nil {
-		return 0, err
+		logger.Error("creating-quota-control-failed", err)
+		return 0, errors.Wrapf(err, "creating quota control")
 	}
 
-	// xfs_quota output returns 1K-block values, so we need to multiply it for 1024
-	return usedBlocks * 1024, nil
+	var quota quotapkg.Quota
+	if err := quotaControl.GetQuota(imagePath, &quota); err != nil {
+		logger.Error("getting-quota-failed", err)
+		return 0, errors.Wrapf(err, "getting quota %s", imagePath)
+	}
+
+	return int64(quota.BCount), nil
 }
 
 func (d *Driver) duUsage(logger lager.Logger, path string) (int64, error) {
