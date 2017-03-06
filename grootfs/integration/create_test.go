@@ -407,7 +407,7 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Context("when --clean is given", func() {
+	Context("when --with-clean is given", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
