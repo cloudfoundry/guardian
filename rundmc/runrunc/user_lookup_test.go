@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("LookupUser", func() {
-	Context("when we try to get the Uid and Gid of a username", func() {
+	Context("when we try to get the UID, GID and HOME of a username", func() {
 		var (
 			rootFsPath string
 		)
@@ -24,13 +24,14 @@ var _ = Describe("LookupUser", func() {
 			Expect(os.MkdirAll(filepath.Join(rootFsPath, "etc"), 0777)).To(Succeed())
 		})
 
-		Context("when we try to get the Uid and Gid of the empty string", func() {
-			It("returns the default UID and GID", func() {
+		Context("when we try to get the UID, GID and HOME of the empty string", func() {
+			It("returns the default UID, GID and HOME", func() {
 				rootFsPath = "some path"
 				user, err := runrunc.LookupUser(rootFsPath, "")
 				Expect(err).ToNot(HaveOccurred())
 				Expect(user.Uid).To(BeEquivalentTo(runrunc.DefaultUID))
 				Expect(user.Gid).To(BeEquivalentTo(runrunc.DefaultGID))
+				Expect(user.Home).To(Equal(runrunc.DefaultHome))
 			})
 		})
 
@@ -49,9 +50,9 @@ _dovecot:*:214:6:Dovecot Administrator:/var/empty:/usr/bin/false`,
 			It("gets the user ID from /etc/passwd", func() {
 				user, err := runrunc.LookupUser(rootFsPath, "devil")
 				Expect(err).ToNot(HaveOccurred())
-				Expect(user.Uid).To(BeEquivalentTo(666))             // the UID of the beas
-				Expect(user.Gid).To(BeEquivalentTo(777))             // the GID of the beas
-				Expect(user.Home).To(Equal("/home/fieryunderworld")) // the GID of the beast
+				Expect(user.Uid).To(BeEquivalentTo(666))             // the UID of the beast
+				Expect(user.Gid).To(BeEquivalentTo(777))             // the GID of the beast
+				Expect(user.Home).To(Equal("/home/fieryunderworld")) // the Home of the beast
 			})
 		})
 

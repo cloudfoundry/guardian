@@ -296,7 +296,7 @@ func runningAsRoot() bool {
 }
 
 func checkRoot() error {
-	if os.Getuid() != 0 {
+	if os.Geteuid() != 0 {
 		return errors.New("server must be run as root")
 	}
 

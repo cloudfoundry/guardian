@@ -221,13 +221,10 @@ func (r *execPreparer) lookupUser(bndl goci.Bndl, rootfsPath, username string) (
 }
 
 func (r *execPreparer) ensureDirExists(rootfsPath, dir string, uid, gid int) error {
-	if _, err := os.Stat(filepath.Join(rootfsPath, dir)); err != nil {
-		if os.IsNotExist(err) {
-			if err := r.mkdirer.MkdirAs(rootfsPath, uid, gid, 0755, false, dir); err != nil {
-				return fmt.Errorf("create working directory: %s", err)
-			}
-		} else {
-			return fmt.Errorf("stat working directory: %s", err)
+	if os.Geteuid() == 0 {
+		// the MkdirAs throws a permission error when running in rootless mode...
+		if err := r.mkdirer.MkdirAs(rootfsPath, uid, gid, 0755, false, dir); err != nil {
+			return fmt.Errorf("create working directory: %s", err)
 		}
 	}
 
