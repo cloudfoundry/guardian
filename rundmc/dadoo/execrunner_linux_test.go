@@ -174,6 +174,20 @@ var _ = Describe("Dadoo ExecRunner", func() {
 	})
 
 	Describe("Run", func() {
+		Context("when a processID is reused concurrently", func() {
+			var processID string
+			BeforeEach(func() {
+				processID = "same-id"
+				_, err := runner.Run(log, processID, &runrunc.PreparedSpec{}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns a sensible error", func() {
+				_, err := runner.Run(log, processID, &runrunc.PreparedSpec{}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
+				Expect(err).To(MatchError(fmt.Sprintf("process ID '%s' already in use", processID)))
+			})
+		})
+
 		It("executes the dadoo binary with the correct arguments", func() {
 			runner.Run(log, processID, &runrunc.PreparedSpec{}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
 
@@ -354,7 +368,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		})
 
 		Describe("the returned garden.Process", func() {
-			Context("when the ID is not passed", func() {
+			Context("when an empty process ID is passed", func() {
 				BeforeEach(func() {
 					fakeProcessIDGenerator.GenerateReturns("some-generated-id")
 				})
@@ -367,14 +381,14 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				})
 			})
 
-			Context("when the ID is passed", func() {
+			Context("when a non-empty process ID is passed", func() {
 				It("has the passed ID", func() {
-					passedID := "some-process-id"
+					processID := "some-process-id"
 
-					process, err := runner.Run(log, passedID, &runrunc.PreparedSpec{}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
+					process, err := runner.Run(log, processID, &runrunc.PreparedSpec{}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(process.ID()).To(Equal(passedID))
+					Expect(process.ID()).To(Equal(processID))
 				})
 			})
 

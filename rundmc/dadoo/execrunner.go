@@ -45,18 +45,21 @@ func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator
 	}
 }
 
-func (d *ExecRunner) Run(log lager.Logger, passedID string, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, pio garden.ProcessIO) (p garden.Process, theErr error) {
+func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, pio garden.ProcessIO) (p garden.Process, theErr error) {
 	log = log.Session("execrunner")
 
 	log.Info("start")
 	defer log.Info("done")
 
-	processID := passedID
 	if processID == "" {
 		processID = d.processIDGen.Generate()
 	}
-
 	processPath := filepath.Join(processesPath, processID)
+	_, err := os.Stat(processPath)
+	if err == nil {
+		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
+	}
+
 	if err := os.MkdirAll(processPath, 0700); err != nil {
 		return nil, err
 	}
