@@ -32,10 +32,15 @@ var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, t
 
 var unprivilegedUID uint32
 
+var gqtStartTime time.Time
+
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	SynchronizedBeforeSuite(func() []byte {
+		gqtStartTime = time.Now()
+		fmt.Printf("gqt began running at %s\n", gqtStartTime)
+
 		var err error
 		bins := make(map[string]string)
 
@@ -45,8 +50,12 @@ func TestGqt(t *testing.T) {
 		}
 
 		if bins["oci_runtime_path"] != "" {
+			gdnCompileStart := time.Now()
+			fmt.Printf("began compiling gdn at %s\n", gdnCompileStart)
 			bins["garden_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/gdn", "-tags", "daemon", "-race", "-ldflags", "-extldflags '-static'")
+			gdnCompileTime := time.Since(gdnCompileStart)
 			Expect(err).NotTo(HaveOccurred())
+			fmt.Printf("gdn compile time: %s\n", gdnCompileTime)
 
 			bins["dadoo_bin_bin_bin"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
 			Expect(err).NotTo(HaveOccurred())
@@ -85,6 +94,10 @@ func TestGqt(t *testing.T) {
 		testNetPluginBin = bins["test_net_plugin_bin_path"]
 
 		tarBin = os.Getenv("GARDEN_TAR_PATH")
+	})
+
+	SynchronizedAfterSuite(func() {}, func() {
+		fmt.Printf("gqt duration: %s\n", time.Since(gqtStartTime))
 	})
 
 	BeforeEach(func() {
