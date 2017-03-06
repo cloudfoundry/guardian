@@ -34,10 +34,10 @@ func init() {
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		rootFSPath := os.Args[1]
-		unpackStategyJson := os.Args[2]
+		unpackStrategyJson := os.Args[2]
 
 		var unpackStrategy UnpackStrategy
-		err := json.Unmarshal([]byte(unpackStategyJson), &unpackStrategy)
+		err := json.Unmarshal([]byte(unpackStrategyJson), &unpackStrategy)
 		if err != nil {
 			fail(logger, "unmarshal-unpack-strategy-failed", err)
 		}
