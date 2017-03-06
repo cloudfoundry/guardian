@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -40,7 +41,7 @@ var _ = Describe("gdn setup", func() {
 
 		setupProcess, err = gexec.Start(exec.Command(gardenBin, setupArgs...), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(setupProcess).Should(gexec.Exit(0))
+		Eventually(setupProcess, 10*time.Second).Should(gexec.Exit(0))
 	})
 
 	AfterEach(func() {

@@ -60,7 +60,7 @@ func (cmd *SetupCommand) wireIPTablesStarter() gardener.Starter {
 	iptRunner := linux_command_runner.New()
 	locksmith := &locksmithpkg.FileSystem{}
 	ipTables := iptables.New(cmd.Network.IPTables.Path(), "iptables-restore-not-used", iptRunner, locksmith, chainPrefix)
-	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Network.ResetIPTablesRules)
+	ipTablesStarter := iptables.NewStarter(ipTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Network.ResetIPTablesRules, cmd.Logger)
 
 	return ipTablesStarter
 }

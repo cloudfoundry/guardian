@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+
+	"code.cloudfoundry.org/lager"
 )
 
 const SetupScript = `
@@ -210,23 +212,25 @@ type Starter struct {
 	allowHostAccess            bool
 	destroyContainersOnStartup bool
 	nicPrefix                  string
-
-	denyNetworks []string
+	denyNetworks               []string
+	logger                     lager.Logger
 }
 
-func NewStarter(iptables *IPTablesController, allowHostAccess bool, nicPrefix string, denyNetworks []string, destroyContainersOnStartup bool) *Starter {
+func NewStarter(iptables *IPTablesController, allowHostAccess bool, nicPrefix string, denyNetworks []string, destroyContainersOnStartup bool, logger lager.Logger) *Starter {
 	return &Starter{
 		iptables:                   iptables,
 		allowHostAccess:            allowHostAccess,
 		destroyContainersOnStartup: destroyContainersOnStartup,
 		nicPrefix:                  nicPrefix,
-
-		denyNetworks: denyNetworks,
+		denyNetworks:               denyNetworks,
+		logger:                     logger.Session("create-global-iptables-chains"),
 	}
 }
 
 func (s Starter) Start() error {
+	s.logger.Info("started")
 	if s.destroyContainersOnStartup || !s.chainExists(s.iptables.inputChain) {
+		s.logger.Info("create-started")
 		cmd := exec.Command("bash", "-c", SetupScript)
 		cmd.Env = []string{
 			fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
@@ -246,6 +250,8 @@ func (s Starter) Start() error {
 		if err := s.iptables.run("setup-global-chains", cmd); err != nil {
 			return fmt.Errorf("setting up default chains: %s", err)
 		}
+	} else {
+		s.logger.Info("create-skipped")
 	}
 
 	if err := s.resetDenyNetworks(); err != nil {
@@ -258,6 +264,7 @@ func (s Starter) Start() error {
 		}
 	}
 
+	s.logger.Info("finished")
 	return nil
 }
 

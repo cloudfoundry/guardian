@@ -521,7 +521,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, propManager kawasaki.C
 	nonLoggingIptRunner := linux_command_runner.New()
 	ipTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), iptRunner, locksmith, chainPrefix)
 	nonLoggingIpTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), nonLoggingIptRunner, locksmith, chainPrefix)
-	ipTablesStarter := iptables.NewStarter(nonLoggingIpTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup)
+	ipTablesStarter := iptables.NewStarter(nonLoggingIpTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
 	ruleTranslator := iptables.NewRuleTranslator()
 
 	networker := kawasaki.New(

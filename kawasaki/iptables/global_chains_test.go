@@ -7,6 +7,7 @@ import (
 	"os/exec"
 
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
@@ -34,6 +35,7 @@ var _ = Describe("Setup", func() {
 			"the-nic-prefix",
 			denyNetworks,
 			destroyContainersOnStartup,
+			lagertest.NewTestLogger("global_chains_test"),
 		)
 	})
 
