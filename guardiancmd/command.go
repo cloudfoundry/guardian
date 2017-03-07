@@ -31,6 +31,7 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki/dns"
 	"code.cloudfoundry.org/guardian/kawasaki/factory"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
+	"code.cloudfoundry.org/guardian/kawasaki/mtu"
 	"code.cloudfoundry.org/guardian/kawasaki/ports"
 	"code.cloudfoundry.org/guardian/kawasaki/subnets"
 	"code.cloudfoundry.org/guardian/logging"
@@ -208,7 +209,7 @@ type ServerCommand struct {
 		PortPoolSize           uint32 `long:"port-pool-size"  default:"5000"  description:"Size of the port pool used for mapped container ports."`
 		PortPoolPropertiesPath string `long:"port-pool-properties-path" description:"Path in which to store port pool properties."`
 
-		Mtu int `long:"mtu" default:"1500" description:"MTU size for container network interfaces."`
+		Mtu int `long:"mtu" description:"MTU size for container network interfaces. Defaults to the MTU of the interface used for outbound access by the host."`
 
 		Plugin          FileFlag `long:"network-plugin"           description:"Path to network plugin binary."`
 		PluginExtraArgs []string `long:"network-plugin-extra-arg" description:"Extra argument to pass to the network plugin. Can be specified multiple times."`
@@ -515,10 +516,18 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, propManager kawasaki.C
 	ipTablesStarter := iptables.NewStarter(nonLoggingIpTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
 	ruleTranslator := iptables.NewRuleTranslator()
 
+	containerMtu := cmd.Network.Mtu
+	if containerMtu == 0 {
+		containerMtu, err = mtu.MTU(externalIP.String())
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
 	networker := kawasaki.New(
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(cmd.Network.Pool.CIDR()),
-		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, cmd.Network.Mtu),
+		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, containerMtu),
 		propManager,
 		factory.NewDefaultConfigurer(ipTables),
 		portPool,

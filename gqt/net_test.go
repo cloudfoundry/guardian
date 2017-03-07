@@ -14,10 +14,12 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"code.cloudfoundry.org/guardian/kawasaki/mtu"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	"github.com/pivotal-golang/localip"
 )
 
 var _ = Describe("Networking", func() {
@@ -584,43 +586,87 @@ var _ = Describe("Networking", func() {
 	})
 
 	Describe("MTU size", func() {
-		BeforeEach(func() {
-			args = append(args, "--mtu", "6789")
-		})
-
 		AfterEach(func() {
 			err := client.Destroy(container.Handle())
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		Describe("container's network interface", func() {
-			It("has the correct MTU size", func() {
-				stdout := gbytes.NewBuffer()
-				stderr := gbytes.NewBuffer()
+		Context("when container mtu is specified by operator", func() {
+			BeforeEach(func() {
+				args = append(args, "--mtu", "6789")
+			})
 
-				process, err := container.Run(garden.ProcessSpec{
-					User: "alice",
-					Path: "ifconfig",
-					Args: []string{containerIfName(container)},
-				}, garden.ProcessIO{
-					Stdout: stdout,
-					Stderr: stderr,
+			Describe("container's network interface", func() {
+				It("has the correct MTU size", func() {
+					stdout := gbytes.NewBuffer()
+					stderr := gbytes.NewBuffer()
+
+					process, err := container.Run(garden.ProcessSpec{
+						User: "alice",
+						Path: "ifconfig",
+						Args: []string{containerIfName(container)},
+					}, garden.ProcessIO{
+						Stdout: stdout,
+						Stderr: stderr,
+					})
+					Expect(err).ToNot(HaveOccurred())
+					rc, err := process.Wait()
+					Expect(err).ToNot(HaveOccurred())
+					Expect(rc).To(Equal(0))
+
+					Expect(stdout.Contents()).To(ContainSubstring(" MTU:6789 "))
 				})
-				Expect(err).ToNot(HaveOccurred())
-				rc, err := process.Wait()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(rc).To(Equal(0))
+			})
 
-				Expect(stdout.Contents()).To(ContainSubstring(" MTU:6789 "))
+			Describe("hosts's network interface for a container", func() {
+				It("has the correct MTU size", func() {
+					out, err := exec.Command("ifconfig", hostIfName(container)).Output()
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(out).To(ContainSubstring(" MTU:6789 "))
+				})
 			})
 		})
 
-		Describe("hosts's network interface for a container", func() {
-			It("has the correct MTU size", func() {
-				out, err := exec.Command("ifconfig", hostIfName(container)).Output()
-				Expect(err).ToNot(HaveOccurred())
+		Context("when container mtu is not specified by operator", func() {
+			var outboundIfaceMtu int
 
-				Expect(out).To(ContainSubstring(" MTU:6789 "))
+			BeforeEach(func() {
+				outboundIP, err := localip.LocalIP()
+				Expect(err).ToNot(HaveOccurred())
+				outboundIfaceMtu, err = mtu.MTU(outboundIP)
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			Describe("container's network interface", func() {
+				It("has the same MTU as the host outbound interface", func() {
+					stdout := gbytes.NewBuffer()
+					stderr := gbytes.NewBuffer()
+
+					process, err := container.Run(garden.ProcessSpec{
+						User: "alice",
+						Path: "ifconfig",
+						Args: []string{containerIfName(container)},
+					}, garden.ProcessIO{
+						Stdout: stdout,
+						Stderr: stderr,
+					})
+					Expect(err).ToNot(HaveOccurred())
+					rc, err := process.Wait()
+					Expect(err).ToNot(HaveOccurred())
+					Expect(rc).To(Equal(0))
+
+					Expect(stdout.Contents()).To(ContainSubstring(fmt.Sprintf(" MTU:%d ", outboundIfaceMtu)))
+				})
+			})
+
+			Describe("hosts's network interface for a container", func() {
+				It("has the same MTU as the host outbound interface", func() {
+					out, err := exec.Command("ifconfig", hostIfName(container)).Output()
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(out).To(ContainSubstring(fmt.Sprintf(" MTU:%d ", outboundIfaceMtu)))
+				})
 			})
 		})
 	})
