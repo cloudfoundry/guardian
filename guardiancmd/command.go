@@ -258,14 +258,13 @@ func (cmd *ServerCommand) Execute([]string) error {
 	// see if we have any compiled assets here and perform additional setup
 	// (e.g. updating bin paths to point to the compiled assets) if required
 	if len(bindata.AssetNames()) > 0 {
-		err := checkRoot()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
+		if !runningAsRoot() {
+			fmt.Fprintln(os.Stderr, "server must be run as root")
 			os.Exit(1)
 		}
 
 		depotDir := cmd.Containers.Dir
-		err = os.MkdirAll(depotDir, 0755)
+		err := os.MkdirAll(depotDir, 0755)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
@@ -292,15 +291,7 @@ func (cmd *ServerCommand) Execute([]string) error {
 }
 
 func runningAsRoot() bool {
-	return checkRoot() == nil
-}
-
-func checkRoot() error {
-	if os.Geteuid() != 0 {
-		return errors.New("server must be run as root")
-	}
-
-	return nil
+	return os.Geteuid() == 0
 }
 
 func restoreUnversionedAssets(assetsDir string) (string, error) {
@@ -712,7 +703,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPa
 		goci.RuncBinary(runcPath),
 		dadooPath,
 		runcPath,
-		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps),
+		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps, runningAsRoot),
 		dadoo.NewExecRunner(
 			dadooPath,
 			runcPath,

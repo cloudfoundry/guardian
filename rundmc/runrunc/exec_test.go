@@ -73,11 +73,14 @@ var _ = Describe("ExecPreparer", func() {
 		mkdirer      *fakes.FakeMkdirer
 		bundlePath   string
 		logger       lager.Logger
+		rootless     bool
 
 		preparer runrunc.ExecPreparer
 	)
 
 	BeforeEach(func() {
+		rootless = false
+
 		logger = lagertest.NewTestLogger("test")
 		bundleLoader = new(fakes.FakeBundleLoader)
 		users = new(fakes.FakeUserLookupper)
@@ -95,7 +98,11 @@ var _ = Describe("ExecPreparer", func() {
 		users.LookupReturns(&user.ExecUser{}, nil)
 
 		Expect(ioutil.WriteFile(filepath.Join(bundlePath, "pidfile"), []byte("999"), 0644)).To(Succeed())
-		preparer = runrunc.NewExecPreparer(bundleLoader, users, mkdirer, []string{"foo", "bar", "brains"})
+	})
+
+	JustBeforeEach(func() {
+		runningAsRoot := func() bool { return !rootless }
+		preparer = runrunc.NewExecPreparer(bundleLoader, users, mkdirer, []string{"foo", "bar", "brains"}, runningAsRoot)
 	})
 
 	It("passes a process.json with the correct path and args", func() {
@@ -200,7 +207,7 @@ var _ = Describe("ExecPreparer", func() {
 
 	Describe("passing the correct uid and gid", func() {
 		Context("when the bundle can be loaded", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				users.LookupReturns(&user.ExecUser{Uid: 9, Gid: 7}, nil)
 
 				var err error
@@ -221,7 +228,7 @@ var _ = Describe("ExecPreparer", func() {
 		})
 
 		Context("when the bundle can't be loaded", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				bundleLoader.LoadReturns(goci.Bundle(), errors.New("whoa! Hold them horses!"))
 			})
 
@@ -623,6 +630,21 @@ var _ = Describe("ExecPreparer", func() {
 				Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 				_, _, _, _, _, dirs := mkdirer.MkdirAsArgsForCall(0)
 				Expect(dirs).To(ConsistOf("/some/dir"))
+			})
+
+			Context("when running rootless", func() {
+				BeforeEach(func() {
+					rootless = true
+				})
+
+				It("does not create the directory", func() {
+					users.LookupReturns(&user.ExecUser{Uid: 1012, Gid: 1013, Home: "/some/dir"}, nil)
+
+					_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(mkdirer.MkdirAsCallCount()).To(Equal(0))
+				})
 			})
 		})
 

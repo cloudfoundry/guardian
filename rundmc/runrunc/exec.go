@@ -106,19 +106,21 @@ type ExecPreparer interface {
 }
 
 type execPreparer struct {
-	bundleLoader BundleLoader
-	users        UserLookupper
-	mkdirer      Mkdirer
+	bundleLoader  BundleLoader
+	users         UserLookupper
+	mkdirer       Mkdirer
+	runningAsRoot func() bool
 
 	nonRootMaxCaps []string
 }
 
-func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdirer Mkdirer, nonRootMaxCaps []string) ExecPreparer {
+func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdirer Mkdirer, nonRootMaxCaps []string, runningAsRootFunc func() bool) ExecPreparer {
 	return &execPreparer{
 		bundleLoader:   bundleLoader,
 		users:          userlookup,
 		mkdirer:        mkdirer,
 		nonRootMaxCaps: nonRootMaxCaps,
+		runningAsRoot:  runningAsRootFunc,
 	}
 }
 
@@ -221,7 +223,7 @@ func (r *execPreparer) lookupUser(bndl goci.Bndl, rootfsPath, username string) (
 }
 
 func (r *execPreparer) ensureDirExists(rootfsPath, dir string, uid, gid int) error {
-	if os.Geteuid() == 0 {
+	if r.runningAsRoot() {
 		// the MkdirAs throws a permission error when running in rootless mode...
 		if err := r.mkdirer.MkdirAs(rootfsPath, uid, gid, 0755, false, dir); err != nil {
 			return fmt.Errorf("create working directory: %s", err)
