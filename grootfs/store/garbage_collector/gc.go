@@ -49,8 +49,8 @@ func NewGC(cacheDriver CacheDriver, volumeDriver VolumeDriver, imageCloner Image
 
 func (g *GarbageCollector) Collect(logger lager.Logger, keepImages []string) error {
 	logger = logger.Session("garbage-collector-collect")
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if err := g.collectVolumes(logger, keepImages); err != nil {
 		return err
@@ -61,8 +61,8 @@ func (g *GarbageCollector) Collect(logger lager.Logger, keepImages []string) err
 
 func (g *GarbageCollector) collectVolumes(logger lager.Logger, keepImages []string) error {
 	logger = logger.Session("collect-volumes")
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	unusedVolumes, err := g.unusedVolumes(logger, keepImages)
 	if err != nil {
@@ -83,16 +83,16 @@ func (g *GarbageCollector) collectVolumes(logger lager.Logger, keepImages []stri
 
 func (g *GarbageCollector) collectBlobs(logger lager.Logger) error {
 	logger = logger.Session("collect-blobs")
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	return g.cacheDriver.Clean(logger)
 }
 
 func (g *GarbageCollector) unusedVolumes(logger lager.Logger, keepImages []string) (map[string]bool, error) {
 	logger = logger.Session("unused-volumes")
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	volumes, err := g.volumeDriver.Volumes(logger)
 	if err != nil {

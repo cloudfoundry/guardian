@@ -38,8 +38,8 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 	}()
 
 	logger = logger.Session("groot-cleaning")
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if threshold > 0 {
 		storeSize, err := c.storeMeasurer.MeasureStore(logger)

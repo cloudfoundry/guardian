@@ -25,8 +25,8 @@ func (m *Statser) Stats(logger lager.Logger, id string) (VolumeStats, error) {
 	}()
 
 	logger = logger.Session("groot-stats", lager.Data{"imageID": id})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	stats, err := m.imageCloner.Stats(logger, id)
 	if err != nil {

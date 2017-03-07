@@ -55,8 +55,8 @@ func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
 
 func (d *Driver) CreateVolume(logger lager.Logger, parentID, id string) (string, error) {
 	logger = logger.Session("btrfs-creating-volume", lager.Data{"parentID": parentID, "id": id})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	var cmd *exec.Cmd
 	volPath := filepath.Join(d.storePath, store.VolumesDirName, id)
@@ -77,8 +77,8 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID, id string) (string,
 
 func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
 	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"spec": spec})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	toPath := filepath.Join(spec.ImagePath, "rootfs")
 	baseVolumePath := filepath.Join(d.storePath, store.VolumesDirName, spec.BaseVolumeIDs[len(spec.BaseVolumeIDs)-1])
@@ -140,24 +140,24 @@ func (d *Driver) destroyQgroup(logger lager.Logger, path string) error {
 
 func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	logger = logger.Session("btrfs-destroying-volume", lager.Data{"volumeID": id})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	return d.destroyBtrfsVolume(logger, filepath.Join(d.storePath, "volumes", id))
 }
 
 func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	logger = logger.Session("btrfs-destroying-image", lager.Data{"imagePath": imagePath})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	return d.destroyBtrfsVolume(logger, filepath.Join(imagePath, "rootfs"))
 }
 
 func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 	logger = logger.Session("destroying-subvolume", lager.Data{"path": path})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if _, err := os.Stat(path); err != nil {
 		return errorspkg.Wrap(err, "image path not found")
@@ -178,8 +178,8 @@ func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 
 func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
 	logger = logger.Session("applying-quotas", lager.Data{"spec": spec})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if spec.DiskLimit == 0 {
 		logger.Debug("no-need-for-quotas")
@@ -223,8 +223,8 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 
 func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.VolumeStats, error) {
 	logger = logger.Session("btrfs-fetching-stats", lager.Data{"imagePath": imagePath})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if !d.draxInPath() {
 		return groot.VolumeStats{}, errorspkg.New("drax was not found in the $PATH")

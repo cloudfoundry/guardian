@@ -13,8 +13,8 @@ import (
 
 func ConfigureStore(logger lager.Logger, storePath, driver string, ownerUID, ownerGID int) error {
 	logger = logger.Session("ensuring-store", lager.Data{"storePath": storePath})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	requiredPaths := []string{
 		filepath.Join(storePath, ImageDirName),

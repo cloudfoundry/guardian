@@ -60,8 +60,8 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 	}()
 
 	logger = logger.Session("groot-creating", lager.Data{"imageID": spec.ID, "spec": spec})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	parsedURL, err := url.Parse(spec.BaseImage)
 	if err != nil {

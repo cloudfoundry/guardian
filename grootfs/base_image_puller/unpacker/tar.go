@@ -139,8 +139,8 @@ func (*defaultWhiteoutHandler) removeOpaqueWhiteouts(paths []string) error {
 
 func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) error {
 	logger = logger.Session("unpacking-with-tar", lager.Data{"spec": spec})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if _, err := os.Stat(spec.TargetPath); err != nil {
 		if err := os.Mkdir(spec.TargetPath, 0755); err != nil {

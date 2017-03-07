@@ -81,8 +81,8 @@ func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, 
 
 func (p *BaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImage, error) {
 	logger = logger.Session("image-pulling", lager.Data{"spec": spec})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 	var err error
 
 	baseImageInfo, err := p.fetcher(spec.BaseImageSrc).BaseImageInfo(logger, spec.BaseImageSrc)

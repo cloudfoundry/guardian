@@ -27,8 +27,8 @@ func (l *LocalFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
 		"baseImageURL": baseImageURL.String(),
 		"source":       source,
 	})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	baseImagePath := baseImageURL.String()
 	if _, err := os.Stat(baseImagePath); err != nil {
@@ -50,8 +50,8 @@ func (l *LocalFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
 
 func (l *LocalFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {
 	logger = logger.Session("layers-digest", lager.Data{"baseImageURL": baseImageURL.String()})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	stat, err := os.Stat(baseImageURL.String())
 	if err != nil {

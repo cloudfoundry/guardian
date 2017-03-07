@@ -24,8 +24,8 @@ func NewBtrfsStats(btrfsBin string, commandRunner commandrunner.CommandRunner) *
 
 func (m *BtrfsStats) VolumeStats(logger lager.Logger, path string, forceSync bool) ([]byte, error) {
 	logger = logger.Session("btrfs-fetching-volume-stats", lager.Data{"path": path, "forceSync": forceSync})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if err := m.isSubvolume(logger, path); err != nil {
 		return nil, err

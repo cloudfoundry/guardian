@@ -38,8 +38,8 @@ func NewRemoteFetcher(source Source, cacheDriver fetcher.CacheDriver) *RemoteFet
 
 func (f *RemoteFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {
 	logger = logger.Session("layers-digest", lager.Data{"baseImageURL": baseImageURL})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	logger.Debug("fetching-image-manifest")
 	manifest, err := f.source.Manifest(logger, baseImageURL)
@@ -82,8 +82,8 @@ func (f *RemoteFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL
 
 func (f *RemoteFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error) {
 	logger = logger.Session("streaming", lager.Data{"baseImageURL": baseImageURL})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	blobFilePath, size, err := f.source.Blob(logger, baseImageURL, source)
 	if err != nil {

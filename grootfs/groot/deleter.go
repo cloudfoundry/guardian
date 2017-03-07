@@ -28,8 +28,8 @@ func (d *Deleter) Delete(logger lager.Logger, id string) error {
 	}()
 
 	logger = logger.Session("groot-deleting", lager.Data{"imageID": id})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	err := d.imageCloner.Destroy(logger, id)
 

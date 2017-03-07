@@ -18,8 +18,8 @@ func IamLister() *Lister {
 
 func (l *Lister) List(logger lager.Logger, storePath string) ([]string, error) {
 	logger = logger.Session("groot-listing", lager.Data{"storePath": storePath})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	imagePaths, err := l.listDirs(filepath.Join(storePath, store.ImageDirName))
 	if err != nil {

@@ -29,8 +29,8 @@ func NewNSSysProcUnpacker(commandRunner commandrunner.CommandRunner, unpackStrat
 
 func (u *NSSysProcUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) error {
 	logger = logger.Session("ns-sysproc-unpacking", lager.Data{"spec": spec})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	unpackStrategyJson, err := json.Marshal(&u.unpackStrategy)
 	if err != nil {

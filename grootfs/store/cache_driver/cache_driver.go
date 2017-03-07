@@ -29,8 +29,8 @@ func (c *CacheDriver) FetchBlob(logger lager.Logger, id string,
 	blobFunc fetcher.RemoteBlobFunc,
 ) ([]byte, int64, error) {
 	logger = logger.Session("getting-blob-from-cache", lager.Data{"blobID": id})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	hasBlob, err := c.hasBlob(id)
 	if err != nil {
@@ -98,8 +98,8 @@ func (c *CacheDriver) cleanupCorrupted(logger lager.Logger, id string) {
 
 func (c *CacheDriver) Clean(logger lager.Logger) error {
 	logger = logger.Session("cache-driver-clean")
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	cachePath := path.Join(c.storePath, "cache")
 	contents, err := ioutil.ReadDir(cachePath)

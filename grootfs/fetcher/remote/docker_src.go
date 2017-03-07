@@ -37,8 +37,8 @@ func NewDockerSource(username, password string, trustedRegistries []string) *Doc
 
 func (s *DockerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (Manifest, error) {
 	logger = logger.Session("fetching-image-manifest", lager.Data{"baseImageURL": baseImageURL})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	img, err := s.image(logger, baseImageURL)
 	if err != nil {
@@ -75,8 +75,8 @@ func (s *DockerSource) Config(logger lager.Logger, baseImageURL *url.URL, manife
 		"baseImageURL": baseImageURL,
 		"configDigest": manifest.ConfigCacheKey,
 	})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	var (
 		config specsv1.Image
@@ -108,8 +108,8 @@ func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest s
 		"baseImageURL": baseImageURL,
 		"digest":       digest,
 	})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	imgSrc, err := s.imageSource(logger, baseImageURL)
 	if err != nil {

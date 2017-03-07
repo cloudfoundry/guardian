@@ -57,8 +57,8 @@ func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
 
 func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (string, error) {
 	logger = logger.Session("overlayxfs-creating-volume", lager.Data{"parentID": parentID, "id": id})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	volumePath := filepath.Join(d.storePath, store.VolumesDirName, id)
 	if err := os.Mkdir(volumePath, 0755); err != nil {
@@ -99,8 +99,8 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 
 func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
 	logger = logger.Session("overlayxfs-creating-image", lager.Data{"spec": spec})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if _, err := os.Stat(spec.ImagePath); os.IsNotExist(err) {
 		logger.Error("image-path-not-found", err)
@@ -166,8 +166,8 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 
 func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	logger = logger.Session("overlayxfs-destroying-image", lager.Data{"imagePath": imagePath})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if err := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
 		logger.Error("unmounting-rootfs-folder-failed", err)
@@ -191,8 +191,8 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 
 func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec, volumeSize int64) error {
 	logger = logger.Session("applying-quotas", lager.Data{"spec": spec})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	if spec.DiskLimit == 0 {
 		logger.Info("no-need-for-quotas")
@@ -233,8 +233,8 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 
 func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.VolumeStats, error) {
 	logger = logger.Session("overlayxfs-fetching-stats", lager.Data{"imagePath": imagePath})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
 		logger.Error("image-path-not-found", err)
@@ -274,8 +274,8 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 
 func (d *Driver) listQuotaUsage(logger lager.Logger, imagePath string) (int64, error) {
 	logger = logger.Session("listing-quota-usage", lager.Data{"imagePath": imagePath})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	imagesPath := filepath.Join(d.storePath, store.ImageDirName)
 	quotaControl, err := quotapkg.NewControl(imagesPath)
@@ -295,8 +295,8 @@ func (d *Driver) listQuotaUsage(logger lager.Logger, imagePath string) (int64, e
 
 func (d *Driver) duUsage(logger lager.Logger, path string) (int64, error) {
 	logger = logger.Session("du-metrics", lager.Data{"path": path})
-	logger.Debug("start")
-	defer logger.Debug("end")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	cmd := exec.Command("du", "-bs", path)
 	stdoutBuffer := bytes.NewBuffer([]byte{})

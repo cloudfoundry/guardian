@@ -57,8 +57,8 @@ func (b *ImageCloner) ImageIDs(logger lager.Logger) ([]string, error) {
 
 func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error) {
 	logger = logger.Session("making-image", lager.Data{"storePath": b.storePath, "id": spec.ID})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	var err error
 	image := b.createImage(spec.ID)
@@ -69,8 +69,8 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 				"cause": err.Error(),
 			})
 
-			log.Info("start")
-			defer log.Info("end")
+			log.Info("starting")
+			defer log.Info("ending")
 
 			if err = b.imageDriver.DestroyImage(logger, image.Path); err != nil {
 				log.Error("destroying-rootfs-snapshot", err)
@@ -117,8 +117,8 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 
 func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 	logger = logger.Session("deleting-image", lager.Data{"storePath": b.storePath, "id": id})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if ok, err := b.Exists(id); !ok {
 		logger.Error("checking-image-path-failed", err)
@@ -151,8 +151,8 @@ func (b *ImageCloner) Exists(id string) (bool, error) {
 
 func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, error) {
 	logger = logger.Session("fetching-stats", lager.Data{"id": id})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	if ok, err := b.Exists(id); !ok {
 		logger.Error("checking-image-path-failed", err)
@@ -176,8 +176,8 @@ var OF = os.OpenFile
 
 func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, image groot.Image, baseImage specsv1.Image) error {
 	logger = logger.Session("writing-image-json")
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	imageJsonPath := filepath.Join(image.Path, "image.json")
 	imageJsonFile, err := OF(imageJsonPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)

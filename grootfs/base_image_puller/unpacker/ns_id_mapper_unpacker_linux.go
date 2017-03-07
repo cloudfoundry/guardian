@@ -81,8 +81,8 @@ func NewNSIdMapperUnpacker(commandRunner commandrunner.CommandRunner, idMapper I
 
 func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) error {
 	logger = logger.Session("ns-id-mapper-unpacking", lager.Data{"spec": spec})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	ctrlPipeR, ctrlPipeW, err := os.Pipe()
 	if err != nil {

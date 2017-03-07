@@ -23,8 +23,8 @@ func NewStoreMeasurer(storePath string) *StoreMeasurer {
 
 func (s *StoreMeasurer) MeasureStore(logger lager.Logger) (int64, error) {
 	logger = logger.Session("measuring-store", lager.Data{"storePath": s.storePath})
-	logger.Info("start")
-	defer logger.Info("end")
+	logger.Info("starting")
+	defer logger.Info("ending")
 
 	cacheSize, err := s.measurePath(filepath.Join(s.storePath, store.CacheDirName))
 	if err != nil {
