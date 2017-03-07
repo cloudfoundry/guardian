@@ -12,8 +12,6 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/pkg/errors"
-
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems"
@@ -63,12 +61,12 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 	volumePath := filepath.Join(d.storePath, store.VolumesDirName, id)
 	if err := os.Mkdir(volumePath, 0755); err != nil {
 		logger.Error("creating-volume-dir-failed", err)
-		return "", errors.Wrap(err, "creating volume")
+		return "", errorspkg.Wrap(err, "creating volume")
 	}
 
 	if err := os.Chmod(volumePath, 755); err != nil {
 		logger.Error("changing-volume-permissions-failed", err)
-		return "", errors.Wrap(err, "changing volume permissions")
+		return "", errorspkg.Wrap(err, "changing volume permissions")
 	}
 	return volumePath, nil
 }
@@ -77,7 +75,7 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	volumePath := filepath.Join(d.storePath, "volumes", id)
 	if err := os.RemoveAll(volumePath); err != nil {
 		logger.Error(fmt.Sprintf("failed to destroy volume %s", volumePath), err)
-		return errors.Wrapf(err, "destroying volume (%s)", id)
+		return errorspkg.Wrapf(err, "destroying volume (%s)", id)
 	}
 	return nil
 }
@@ -104,7 +102,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 
 	if _, err := os.Stat(spec.ImagePath); os.IsNotExist(err) {
 		logger.Error("image-path-not-found", err)
-		return errors.Wrap(err, "image path does not exist")
+		return errorspkg.Wrap(err, "image path does not exist")
 	}
 
 	baseVolumePaths := []string{}
@@ -114,13 +112,13 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 
 		if _, err := os.Stat(volumePath); os.IsNotExist(err) {
 			logger.Error("base-volume-path-not-found", err)
-			return errors.Wrap(err, "base volume path does not exist")
+			return errorspkg.Wrap(err, "base volume path does not exist")
 		}
 
 		volumeSize, err := d.duUsage(logger, volumePath)
 		if err != nil {
 			logger.Error("calculating-base-volume-size-failed", err)
-			return errors.Wrapf(err, "calculating base volume size %s", volumePath)
+			return errorspkg.Wrapf(err, "calculating base volume size %s", volumePath)
 		}
 
 		baseVolumeSize += volumeSize
@@ -132,33 +130,33 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	rootfsDir := filepath.Join(spec.ImagePath, RootfsDir)
 
 	if err := d.applyDiskLimit(logger, spec, baseVolumeSize); err != nil {
-		return errors.Wrap(err, "applying disk limits")
+		return errorspkg.Wrap(err, "applying disk limits")
 	}
 
 	if err := os.Mkdir(upperDir, 0755); err != nil {
 		logger.Error("creating-upperdir-folder-failed", err)
-		return errors.Wrap(err, "creating upperdir folder")
+		return errorspkg.Wrap(err, "creating upperdir folder")
 	}
 
 	if err := os.Mkdir(workDir, 0755); err != nil {
 		logger.Error("creating-workdir-folder-failed", err)
-		return errors.Wrap(err, "creating workdir folder")
+		return errorspkg.Wrap(err, "creating workdir folder")
 	}
 
 	if err := os.Mkdir(rootfsDir, 0755); err != nil {
 		logger.Error("creating-rootfs-folder-failed", err)
-		return errors.Wrap(err, "creating rootfs folder")
+		return errorspkg.Wrap(err, "creating rootfs folder")
 	}
 
 	mountData := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(baseVolumePaths, ":"), upperDir, workDir)
 	if err := syscall.Mount("overlay", rootfsDir, "overlay", 0, mountData); err != nil {
 		logger.Error("mounting-overlay-to-rootfs-failed", err, lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
-		return errors.Wrap(err, "mounting overlay")
+		return errorspkg.Wrap(err, "mounting overlay")
 	}
 
 	imageInfoFileName := filepath.Join(spec.ImagePath, imageInfoName)
 	if err := ioutil.WriteFile(imageInfoFileName, []byte(strconv.FormatInt(baseVolumeSize, 10)), 0600); err != nil {
-		return errors.Wrapf(err, "writing image info %s", imageInfoFileName)
+		return errorspkg.Wrapf(err, "writing image info %s", imageInfoFileName)
 	}
 
 	return nil
@@ -171,19 +169,19 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 
 	if err := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
 		logger.Error("unmounting-rootfs-folder-failed", err)
-		return errors.Wrap(err, "unmounting rootfs folder")
+		return errorspkg.Wrap(err, "unmounting rootfs folder")
 	}
 	if err := os.Remove(filepath.Join(imagePath, RootfsDir)); err != nil {
 		logger.Error("removing-rootfs-folder-failed", err)
-		return errors.Wrap(err, "deleting rootfs folder")
+		return errorspkg.Wrap(err, "deleting rootfs folder")
 	}
 	if err := os.RemoveAll(filepath.Join(imagePath, WorkDir)); err != nil {
 		logger.Error("removing-workdir-folder-failed", err)
-		return errors.Wrap(err, "deleting workdir folder")
+		return errorspkg.Wrap(err, "deleting workdir folder")
 	}
 	if err := os.RemoveAll(filepath.Join(imagePath, UpperDir)); err != nil {
 		logger.Error("removing-upperdir-folder-failed", err)
-		return errors.Wrap(err, "deleting upperdir folder")
+		return errorspkg.Wrap(err, "deleting upperdir folder")
 	}
 
 	return nil
@@ -216,7 +214,7 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	quotaControl, err := quotapkg.NewControl(imagesPath)
 	if err != nil {
 		logger.Error("creating-quota-control-failed", err, lager.Data{"imagesPath": imagesPath})
-		return errors.Wrapf(err, "creating xfs quota control %s", imagesPath)
+		return errorspkg.Wrapf(err, "creating xfs quota control %s", imagesPath)
 	}
 
 	quota := quotapkg.Quota{
@@ -225,7 +223,7 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 
 	if err := quotaControl.SetQuota(spec.ImagePath, quota); err != nil {
 		logger.Error("setting-quota-failed", err)
-		return errors.Wrapf(err, "setting quota to %s", spec.ImagePath)
+		return errorspkg.Wrapf(err, "setting quota to %s", spec.ImagePath)
 	}
 
 	return nil
@@ -238,13 +236,13 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 
 	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
 		logger.Error("image-path-not-found", err)
-		return groot.VolumeStats{}, errors.Wrapf(err, "image path (%s) doesn't exist", imagePath)
+		return groot.VolumeStats{}, errorspkg.Wrapf(err, "image path (%s) doesn't exist", imagePath)
 	}
 
 	projectID, err := quotapkg.GetProjectID(imagePath)
 	if err != nil {
 		logger.Error("fetching-project-id-failed", err)
-		return groot.VolumeStats{}, errors.Wrapf(err, "fetching project id for %s", imagePath)
+		return groot.VolumeStats{}, errorspkg.Wrapf(err, "fetching project id for %s", imagePath)
 	}
 
 	var exclusiveSize int64
@@ -252,14 +250,14 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 		exclusiveSize, err = d.listQuotaUsage(logger, imagePath)
 		if err != nil {
 			logger.Error("list-quota-usage-failed", err, lager.Data{"projectID": projectID})
-			return groot.VolumeStats{}, errors.Wrapf(err, "listing quota usage %s", imagePath)
+			return groot.VolumeStats{}, errorspkg.Wrapf(err, "listing quota usage %s", imagePath)
 		}
 	}
 
 	volumeSize, err := d.readImageInfo(logger, imagePath)
 	if err != nil {
 		logger.Error("reading-image-info-failed", err)
-		return groot.VolumeStats{}, errors.Wrapf(err, "reading image info %s", imagePath)
+		return groot.VolumeStats{}, errorspkg.Wrapf(err, "reading image info %s", imagePath)
 	}
 
 	logger.Debug("usage", lager.Data{"volumeSize": volumeSize, "exclusiveSize": exclusiveSize})
@@ -281,13 +279,13 @@ func (d *Driver) listQuotaUsage(logger lager.Logger, imagePath string) (int64, e
 	quotaControl, err := quotapkg.NewControl(imagesPath)
 	if err != nil {
 		logger.Error("creating-quota-control-failed", err)
-		return 0, errors.Wrapf(err, "creating quota control")
+		return 0, errorspkg.Wrapf(err, "creating quota control")
 	}
 
 	var quota quotapkg.Quota
 	if err := quotaControl.GetQuota(imagePath, &quota); err != nil {
 		logger.Error("getting-quota-failed", err)
-		return 0, errors.Wrapf(err, "getting quota %s", imagePath)
+		return 0, errorspkg.Wrapf(err, "getting quota %s", imagePath)
 	}
 
 	return int64(quota.BCount), nil
@@ -305,7 +303,7 @@ func (d *Driver) duUsage(logger lager.Logger, path string) (int64, error) {
 	cmd.Stderr = stdoutBuffer
 	if err := cmd.Run(); err != nil {
 		logger.Error("du-command-failed", err, lager.Data{"stdout": stdoutBuffer.String(), "stderr": stderrBuffer.String()})
-		return 0, errors.Wrapf(err, "du failed: %s", stderrBuffer.String())
+		return 0, errorspkg.Wrapf(err, "du failed: %s", stderrBuffer.String())
 	}
 
 	usageString := strings.Split(stdoutBuffer.String(), "\t")[0]

@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/pkg/errors"
 	errorspkg "github.com/pkg/errors"
 
 	"code.cloudfoundry.org/lager"
@@ -107,7 +106,7 @@ func createWhiteoutDevice(logger lager.Logger, ownerUID, ownerGID int, storePath
 		if err := syscall.Mknod(whiteoutDevicePath, syscall.S_IFCHR, 0); err != nil {
 			if err != nil && !os.IsExist(err) {
 				logger.Error("creating-whiteout-device-failed", err, lager.Data{"path": whiteoutDevicePath})
-				return errors.Wrapf(err, "failed to create whiteout device %s", whiteoutDevicePath)
+				return errorspkg.Wrapf(err, "failed to create whiteout device %s", whiteoutDevicePath)
 			}
 		}
 

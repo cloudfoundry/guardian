@@ -5,7 +5,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/pkg/errors"
+	errorspkg "github.com/pkg/errors"
 )
 
 type BlobReader struct {
@@ -16,12 +16,12 @@ type BlobReader struct {
 func NewBlobReader(blobPath string) (*BlobReader, error) {
 	zippedReader, err := os.Open(blobPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to open blob")
+		return nil, errorspkg.Wrap(err, "failed to open blob")
 	}
 
 	reader, err := gzip.NewReader(zippedReader)
 	if err != nil {
-		return nil, errors.Wrap(err, "blob file is not gzipped")
+		return nil, errorspkg.Wrap(err, "blob file is not gzipped")
 	}
 
 	return &BlobReader{

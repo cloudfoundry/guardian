@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/pkg/errors"
-
 	"code.cloudfoundry.org/grootfs/store"
 	errorspkg "github.com/pkg/errors"
 )
@@ -52,7 +50,7 @@ func (n *StoreNamespaceChecker) validateNamespace(namespaceFilePath string, uidM
 	defer namespaceStore.Close()
 	var namespace mappings
 	if err := json.NewDecoder(namespaceStore).Decode(&namespace); err != nil {
-		return false, errors.Wrapf(err, "reading namespace file %s", namespaceStore)
+		return false, errorspkg.Wrapf(err, "reading namespace file %s", namespaceStore)
 	}
 
 	if !reflect.DeepEqual(namespace.UIDMappings, n.normalizeMappings(uidMappings)) {
