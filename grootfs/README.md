@@ -112,7 +112,7 @@ log_level: debug
 metron_endpoint: 127.0.0.1:8081
 clean:
   threshold_bytes: 1048576
-  ignore_base_images:
+  ignore_images:
     - docker:///ubuntu
     - docker://my-docker-registry.example.com:1234/busybox
 create:
@@ -141,7 +141,7 @@ create:
 | create.with\_clean | Clean up unused layers before creating rootfs |
 | create.uid_mappings | UID mapping for image translation, e.g.: \<Namespace UID\>:\<Host UID\>:\<Size\> |
 | create.gid_mappings | GID mapping for image translation, e.g.: \<Namespace GID\>:\<Host GID\>:\<Size\> |
-| clean.ignore\_base\_images | Images to ignore during cleanup |
+| clean.ignore\_images | Images to ignore during cleanup |
 | clean.threshold\_bytes | Disk usage of the store directory at which cleanup should trigger |
 
 

@@ -32,7 +32,7 @@ type Create struct {
 }
 
 type Clean struct {
-	IgnoreBaseImages []string `yaml:"ignore_base_images"`
+	IgnoreBaseImages []string `yaml:"ignore_images"`
 	ThresholdBytes   int64    `yaml:"threshold_bytes"`
 }
 
