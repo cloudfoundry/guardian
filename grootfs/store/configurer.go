@@ -58,7 +58,7 @@ func ConfigureStore(logger lager.Logger, storePath, driver string, ownerUID, own
 		}
 	}
 
-	if requiresWhiteout(driver, ownerUID, ownerGID) {
+	if requiresWhiteout(driver) {
 		if err := createWhiteoutDevice(logger, ownerUID, ownerGID, storePath); err != nil {
 			return err
 		}
@@ -132,6 +132,6 @@ func validateWhiteoutDevice(path string) error {
 	return nil
 }
 
-func requiresWhiteout(driver string, uid, gid int) bool {
-	return driver == "overlay-xfs" && uid == 0 && gid == 0
+func requiresWhiteout(driver string) bool {
+	return driver == "overlay-xfs"
 }
