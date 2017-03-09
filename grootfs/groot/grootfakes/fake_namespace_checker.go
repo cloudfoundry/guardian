@@ -42,8 +42,9 @@ func (fake *FakeNamespaceChecker) Check(uidMappings []groot.IDMappingSpec, gidMa
 	fake.checkMutex.Unlock()
 	if fake.CheckStub != nil {
 		return fake.CheckStub(uidMappings, gidMappings)
+	} else {
+		return fake.checkReturns.result1, fake.checkReturns.result2
 	}
-	return fake.checkReturns.result1, fake.checkReturns.result2
 }
 
 func (fake *FakeNamespaceChecker) CheckCallCount() int {

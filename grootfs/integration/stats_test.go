@@ -93,10 +93,10 @@ var _ = Describe("Stats", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(stats.DiskUsage.TotalBytesUsed).To(
-					BeNumerically("~", expectedStats.DiskUsage.TotalBytesUsed, 35),
+					BeNumerically("~", expectedStats.DiskUsage.TotalBytesUsed, 100),
 				)
 				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
-					BeNumerically("~", expectedStats.DiskUsage.ExclusiveBytesUsed, 35),
+					BeNumerically("~", expectedStats.DiskUsage.ExclusiveBytesUsed, 100),
 				)
 			})
 		})
@@ -107,10 +107,10 @@ var _ = Describe("Stats", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(stats.DiskUsage.TotalBytesUsed).To(
-					BeNumerically("~", expectedStats.DiskUsage.TotalBytesUsed, 35),
+					BeNumerically("~", expectedStats.DiskUsage.TotalBytesUsed, 100),
 				)
 				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
-					BeNumerically("~", expectedStats.DiskUsage.ExclusiveBytesUsed, 35),
+					BeNumerically("~", expectedStats.DiskUsage.ExclusiveBytesUsed, 100),
 				)
 			})
 		})
@@ -126,10 +126,10 @@ var _ = Describe("Stats", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(stats.DiskUsage.TotalBytesUsed).To(
-					BeNumerically("~", expectedStats.DiskUsage.TotalBytesUsed-expectedStats.DiskUsage.ExclusiveBytesUsed, 35),
+					BeNumerically("~", expectedStats.DiskUsage.TotalBytesUsed-expectedStats.DiskUsage.ExclusiveBytesUsed, 100),
 				)
 				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
-					BeNumerically("~", 0, 35),
+					BeNumerically("~", 0, 100),
 				)
 			})
 		})

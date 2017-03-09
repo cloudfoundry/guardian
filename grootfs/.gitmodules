@@ -97,3 +97,6 @@
 [submodule "vendor/github.com/opencontainers/go-digest"]
 	path = vendor/github.com/opencontainers/go-digest
 	url = https://github.com/opencontainers/go-digest
+[submodule "vendor/github.com/ventu-io/go-shortid"]
+	path = vendor/github.com/ventu-io/go-shortid
+	url = https://github.com/ventu-io/go-shortid

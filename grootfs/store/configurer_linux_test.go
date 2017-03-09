@@ -119,6 +119,13 @@ var _ = Describe("Configurer", func() {
 				driver = "overlay-xfs"
 			})
 
+			It("creates a links directory", func() {
+				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
+				stat, err := os.Stat(filepath.Join(storePath, store.LinksDirName))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.IsDir()).To(BeTrue())
+			})
+
 			It("creates a whiteout device", func() {
 				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 
@@ -149,6 +156,13 @@ var _ = Describe("Configurer", func() {
 			It("does not create a whiteout device", func() {
 				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
 				Expect(filepath.Join(storePath, store.WhiteoutDevice)).ToNot(BeAnExistingFile())
+			})
+
+			It("does not create a links directory", func() {
+				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
+				_, err := os.Stat(filepath.Join(storePath, store.LinksDirName))
+				Expect(err).To(HaveOccurred())
+				Expect(os.IsNotExist(err)).To(BeTrue())
 			})
 		})
 

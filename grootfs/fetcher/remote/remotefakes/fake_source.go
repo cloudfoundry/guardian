@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/lager"
-	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type FakeSource struct {
@@ -21,7 +21,7 @@ type FakeSource struct {
 		result1 remote.Manifest
 		result2 error
 	}
-	ConfigStub        func(logger lager.Logger, baseImageURL *url.URL, manifest remote.Manifest) (specsv1.Image, error)
+	ConfigStub        func(logger lager.Logger, baseImageURL *url.URL, manifest remote.Manifest) (v1.Image, error)
 	configMutex       sync.RWMutex
 	configArgsForCall []struct {
 		logger       lager.Logger
@@ -29,7 +29,7 @@ type FakeSource struct {
 		manifest     remote.Manifest
 	}
 	configReturns struct {
-		result1 specsv1.Image
+		result1 v1.Image
 		result2 error
 	}
 	BlobStub        func(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error)
@@ -58,8 +58,9 @@ func (fake *FakeSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (re
 	fake.manifestMutex.Unlock()
 	if fake.ManifestStub != nil {
 		return fake.ManifestStub(logger, baseImageURL)
+	} else {
+		return fake.manifestReturns.result1, fake.manifestReturns.result2
 	}
-	return fake.manifestReturns.result1, fake.manifestReturns.result2
 }
 
 func (fake *FakeSource) ManifestCallCount() int {
@@ -82,7 +83,7 @@ func (fake *FakeSource) ManifestReturns(result1 remote.Manifest, result2 error) 
 	}{result1, result2}
 }
 
-func (fake *FakeSource) Config(logger lager.Logger, baseImageURL *url.URL, manifest remote.Manifest) (specsv1.Image, error) {
+func (fake *FakeSource) Config(logger lager.Logger, baseImageURL *url.URL, manifest remote.Manifest) (v1.Image, error) {
 	fake.configMutex.Lock()
 	fake.configArgsForCall = append(fake.configArgsForCall, struct {
 		logger       lager.Logger
@@ -93,8 +94,9 @@ func (fake *FakeSource) Config(logger lager.Logger, baseImageURL *url.URL, manif
 	fake.configMutex.Unlock()
 	if fake.ConfigStub != nil {
 		return fake.ConfigStub(logger, baseImageURL, manifest)
+	} else {
+		return fake.configReturns.result1, fake.configReturns.result2
 	}
-	return fake.configReturns.result1, fake.configReturns.result2
 }
 
 func (fake *FakeSource) ConfigCallCount() int {
@@ -109,10 +111,10 @@ func (fake *FakeSource) ConfigArgsForCall(i int) (lager.Logger, *url.URL, remote
 	return fake.configArgsForCall[i].logger, fake.configArgsForCall[i].baseImageURL, fake.configArgsForCall[i].manifest
 }
 
-func (fake *FakeSource) ConfigReturns(result1 specsv1.Image, result2 error) {
+func (fake *FakeSource) ConfigReturns(result1 v1.Image, result2 error) {
 	fake.ConfigStub = nil
 	fake.configReturns = struct {
-		result1 specsv1.Image
+		result1 v1.Image
 		result2 error
 	}{result1, result2}
 }
@@ -128,8 +130,9 @@ func (fake *FakeSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest 
 	fake.blobMutex.Unlock()
 	if fake.BlobStub != nil {
 		return fake.BlobStub(logger, baseImageURL, digest)
+	} else {
+		return fake.blobReturns.result1, fake.blobReturns.result2, fake.blobReturns.result3
 	}
-	return fake.blobReturns.result1, fake.blobReturns.result2, fake.blobReturns.result3
 }
 
 func (fake *FakeSource) BlobCallCount() int {

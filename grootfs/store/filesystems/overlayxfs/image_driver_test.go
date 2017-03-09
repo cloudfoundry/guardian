@@ -38,6 +38,7 @@ var _ = Describe("ImageDriver", func() {
 		Expect(os.MkdirAll(StorePath, 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.ImageDirName), 0777)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(StorePath, store.LinksDirName), 0777)).To(Succeed())
 
 		driver, err = overlayxfs.NewDriver(StorePath)
 		Expect(err).NotTo(HaveOccurred())
@@ -433,7 +434,7 @@ var _ = Describe("ImageDriver", func() {
 				volumeStats, err := driver.FetchStats(logger, spec.ImagePath)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(volumeStats.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(0)))
-				Expect(volumeStats.DiskUsage.TotalBytesUsed).To(BeNumerically("~", 3*1024*1024, 35))
+				Expect(volumeStats.DiskUsage.TotalBytesUsed).To(BeNumerically("~", 3*1024*1024, 100))
 			})
 		})
 

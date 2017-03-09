@@ -36,8 +36,9 @@ func (fake *FakeCacheDriver) FetchBlob(logger lager.Logger, id string, remoteBlo
 	fake.fetchBlobMutex.Unlock()
 	if fake.FetchBlobStub != nil {
 		return fake.FetchBlobStub(logger, id, remoteBlobFunc)
+	} else {
+		return fake.fetchBlobReturns.result1, fake.fetchBlobReturns.result2, fake.fetchBlobReturns.result3
 	}
-	return fake.fetchBlobReturns.result1, fake.fetchBlobReturns.result2, fake.fetchBlobReturns.result3
 }
 
 func (fake *FakeCacheDriver) FetchBlobCallCount() int {

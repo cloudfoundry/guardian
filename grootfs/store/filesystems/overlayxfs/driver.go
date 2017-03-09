@@ -19,6 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
+	shortid "github.com/ventu-io/go-shortid"
 )
 
 const (
@@ -26,8 +27,7 @@ const (
 	UpperDir           = "diff"
 	WorkDir            = "workdir"
 	RootfsDir          = "rootfs"
-
-	imageInfoName = "image_info"
+	imageInfoName      = "image_info"
 )
 
 func NewDriver(storePath string) (*Driver, error) {
@@ -64,6 +64,20 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 		return "", errorspkg.Wrap(err, "creating volume")
 	}
 
+	shortId, err := d.generateID()
+	if err != nil {
+		logger.Error("generating-short-id-failed", err)
+		return "", errorspkg.Wrap(err, "generating short id")
+	}
+	if err := os.Symlink(volumePath, filepath.Join(d.storePath, store.LinksDirName, shortId)); err != nil {
+		logger.Error("creating-volume-symlink-failed", err)
+		return "", errorspkg.Wrap(err, "creating volume symlink")
+	}
+	if err := ioutil.WriteFile(filepath.Join(d.storePath, store.LinksDirName, id), []byte(shortId), 0644); err != nil {
+		logger.Error("creating-link-file-failed", err)
+		return "", errorspkg.Wrap(err, "creating link file")
+	}
+
 	if err := os.Chmod(volumePath, 755); err != nil {
 		logger.Error("changing-volume-permissions-failed", err)
 		return "", errorspkg.Wrap(err, "changing volume permissions")
@@ -72,7 +86,22 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 }
 
 func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
-	volumePath := filepath.Join(d.storePath, "volumes", id)
+	volumePath := filepath.Join(d.storePath, store.VolumesDirName, id)
+	linkInfoPath := filepath.Join(d.storePath, store.LinksDirName, id)
+	shortId, err := ioutil.ReadFile(linkInfoPath)
+	if err != nil {
+		return errorspkg.Wrapf(err, "getting volume symlink location from (%s)", linkInfoPath)
+	}
+
+	linkPath := filepath.Join(d.storePath, store.LinksDirName, string(shortId))
+	if err := os.Remove(linkPath); err != nil {
+		return errorspkg.Wrapf(err, "removing symlink %s", linkPath)
+	}
+
+	if err := os.Remove(linkInfoPath); err != nil {
+		return errorspkg.Wrapf(err, "removing symlink information file %s", linkInfoPath)
+	}
+
 	if err := os.RemoveAll(volumePath); err != nil {
 		logger.Error(fmt.Sprintf("failed to destroy volume %s", volumePath), err)
 		return errorspkg.Wrapf(err, "destroying volume (%s)", id)
@@ -107,22 +136,11 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 
 	baseVolumePaths := []string{}
 	var baseVolumeSize int64
-	for i := len(spec.BaseVolumeIDs) - 1; i >= 0; i-- {
-		volumePath := filepath.Join(d.storePath, store.VolumesDirName, spec.BaseVolumeIDs[i])
 
-		if _, err := os.Stat(volumePath); os.IsNotExist(err) {
-			logger.Error("base-volume-path-not-found", err)
-			return errorspkg.Wrap(err, "base volume path does not exist")
-		}
-
-		volumeSize, err := d.duUsage(logger, volumePath)
-		if err != nil {
-			logger.Error("calculating-base-volume-size-failed", err)
-			return errorspkg.Wrapf(err, "calculating base volume size %s", volumePath)
-		}
-
-		baseVolumeSize += volumeSize
-		baseVolumePaths = append(baseVolumePaths, volumePath)
+	baseVolumePaths, baseVolumeSize, err := d.getLowerDirs(logger, spec.BaseVolumeIDs)
+	if err != nil {
+		logger.Error("generating-lowerdir-paths-failed", err)
+		return errorspkg.Wrap(err, "generating lowerdir paths failed")
 	}
 
 	upperDir := filepath.Join(spec.ImagePath, UpperDir)
@@ -148,6 +166,9 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		return errorspkg.Wrap(err, "creating rootfs folder")
 	}
 
+	if err := os.Chdir(d.storePath); err != nil {
+		return errorspkg.Wrap(err, "failed to change directory to the store path")
+	}
 	mountData := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(baseVolumePaths, ":"), upperDir, workDir)
 	if err := syscall.Mount("overlay", rootfsDir, "overlay", 0, mountData); err != nil {
 		logger.Error("mounting-overlay-to-rootfs-failed", err, lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
@@ -160,6 +181,67 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	}
 
 	return nil
+}
+
+func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
+	logger.Debug("Moving volume from %s to %s\n", lager.Data{"from": from, "to": to})
+
+	if err := os.Rename(from, to); err != nil {
+		logger.Error("moving-volume-failed", err, lager.Data{"from": from, "to": to})
+		return errorspkg.Wrap(err, "moving volume")
+	}
+
+	oldLinkFile := filepath.Join(d.storePath, store.LinksDirName, filepath.Base(from))
+	shortId, err := ioutil.ReadFile(oldLinkFile)
+	if err != nil {
+		return errorspkg.Wrapf(err, "reading short id from %s", to)
+	}
+
+	newLinkFile := filepath.Join(d.storePath, store.LinksDirName, filepath.Base(to))
+	if err := os.Rename(oldLinkFile, newLinkFile); err != nil {
+		logger.Error("moving-link-file-failed", err, lager.Data{"from": oldLinkFile, "to": newLinkFile})
+		return errorspkg.Wrap(err, "moving link file")
+	}
+
+	linkPath := filepath.Join(d.storePath, store.LinksDirName, string(shortId))
+	if err := os.Remove(linkPath); err != nil {
+		return errorspkg.Wrap(err, "removing symlink")
+	}
+
+	if err := os.Symlink(to, linkPath); err != nil {
+		logger.Error("updating-volume-symlink-failed", err)
+		return errorspkg.Wrap(err, "updating volume symlink")
+	}
+
+	return nil
+}
+
+func (d *Driver) getLowerDirs(logger lager.Logger, volumeIDs []string) ([]string, int64, error) {
+	baseVolumePaths := []string{}
+	var totalVolumeSize int64
+	for i := len(volumeIDs) - 1; i >= 0; i-- {
+		volumePath := filepath.Join(d.storePath, store.VolumesDirName, volumeIDs[i])
+
+		if _, err := os.Stat(volumePath); os.IsNotExist(err) {
+			logger.Error("base-volume-path-not-found", err)
+			return nil, 0, errorspkg.Wrap(err, "base volume path does not exist")
+		}
+
+		volumeSize, err := d.duUsage(logger, volumePath)
+		if err != nil {
+			logger.Error("calculating-base-volume-size-failed", err)
+			return nil, 0, errorspkg.Wrapf(err, "calculating base volume size %s", volumePath)
+		}
+		totalVolumeSize += volumeSize
+
+		shortId, err := ioutil.ReadFile(filepath.Join(d.storePath, store.LinksDirName, volumeIDs[i]))
+		if err != nil {
+			return nil, 0, errorspkg.Wrapf(err, "reading short id  %s", volumePath)
+		}
+
+		baseVolumePaths = append(baseVolumePaths, filepath.Join(store.LinksDirName, string(shortId)))
+	}
+	return baseVolumePaths, totalVolumeSize, nil
 }
 
 func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
@@ -317,4 +399,12 @@ func (d *Driver) readImageInfo(logger lager.Logger, imagePath string) (int64, er
 	}
 
 	return strconv.ParseInt(string(contents), 10, 64)
+}
+
+func (d *Driver) generateID() (string, error) {
+	sid, err := shortid.New(1, shortid.DefaultABC, 2342)
+	if err != nil {
+		return "", err
+	}
+	return sid.Generate()
 }

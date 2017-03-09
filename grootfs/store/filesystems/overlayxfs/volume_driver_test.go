@@ -2,6 +2,7 @@ package overlayxfs_test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -26,6 +27,7 @@ var _ = Describe("VolumeDriver", func() {
 		randomID = randVolumeID()
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.ImageDirName), 0777)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(StorePath, store.LinksDirName), 0777)).To(Succeed())
 
 		driver, err = overlayxfs.NewDriver(StorePath)
 		Expect(err).NotTo(HaveOccurred())
@@ -35,6 +37,7 @@ var _ = Describe("VolumeDriver", func() {
 	AfterEach(func() {
 		os.RemoveAll(filepath.Join(StorePath, store.VolumesDirName))
 		os.RemoveAll(filepath.Join(StorePath, store.ImageDirName))
+		os.RemoveAll(filepath.Join(StorePath, store.LinksDirName))
 	})
 
 	Context("when the storePath is not a xfs volume", func() {
@@ -68,11 +71,28 @@ var _ = Describe("VolumeDriver", func() {
 		It("creates a volume", func() {
 			expectedVolumePath := filepath.Join(StorePath, store.VolumesDirName, randomID)
 			Expect(expectedVolumePath).NotTo(BeAnExistingFile())
+
 			volumePath, err := driver.CreateVolume(logger, "parent-id", randomID)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(expectedVolumePath).To(BeADirectory())
 			Expect(volumePath).To(Equal(expectedVolumePath))
+
+			linkFile := filepath.Join(StorePath, store.LinksDirName, randomID)
+			_, err = os.Stat(linkFile)
+			Expect(err).ToNot(HaveOccurred(), "volume link file has not been created")
+
+			linkName, err := ioutil.ReadFile(linkFile)
+			Expect(err).ToNot(HaveOccurred(), "failed to read volume link file")
+
+			link := filepath.Join(StorePath, store.LinksDirName, string(linkName))
+			linkStat, err := os.Lstat(link)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(linkStat.Mode()&os.ModeSymlink).ToNot(
+				BeZero(),
+				fmt.Sprintf("Volume link %s is not a symlink", link),
+			)
+			Expect(os.Readlink(link)).To(Equal(volumePath), "Volume link does not point to volume")
 		})
 
 		Context("when volume dir doesn't exist", func() {
@@ -147,6 +167,92 @@ var _ = Describe("VolumeDriver", func() {
 
 			Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
 			Expect(volumePath).ToNot(BeAnExistingFile())
+		})
+
+		It("deletes the associated symlink", func() {
+			Expect(volumePath).To(BeADirectory())
+			linkFilePath := filepath.Join(StorePath, store.LinksDirName, volumeID)
+			Expect(linkFilePath).To(BeAnExistingFile())
+			linkfileinfo, err := ioutil.ReadFile(linkFilePath)
+			symlinkPath := filepath.Join(StorePath, store.LinksDirName, string(linkfileinfo))
+			Expect(err).ToNot(HaveOccurred())
+			Expect(symlinkPath).To(BeAnExistingFile())
+
+			Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
+			Expect(volumePath).ToNot(BeAnExistingFile())
+			Expect(linkFilePath).ToNot(BeAnExistingFile())
+			Expect(symlinkPath).ToNot(BeAnExistingFile())
+		})
+	})
+
+	Describe("MoveVolume", func() {
+		var (
+			volumeID   string
+			volumePath string
+		)
+
+		JustBeforeEach(func() {
+			volumeID = randVolumeID()
+			var err error
+			volumePath, err = driver.CreateVolume(logger, "", volumeID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("moves the volume to the given location", func() {
+			newVolumePath := fmt.Sprintf("%s-new", volumePath)
+
+			stat, err := os.Stat(newVolumePath)
+			Expect(err).To(HaveOccurred())
+			Expect(os.IsNotExist(err)).To(BeTrue())
+
+			err = driver.MoveVolume(logger, volumePath, newVolumePath)
+			Expect(err).ToNot(HaveOccurred())
+			stat, err = os.Stat(newVolumePath)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stat.IsDir()).To(BeTrue())
+		})
+
+		It("updates the volume link to point to the new volume location", func() {
+			newVolumePath := fmt.Sprintf("%s-new", volumePath)
+			_, err := os.Stat(newVolumePath)
+			Expect(err).To(HaveOccurred())
+			Expect(os.IsNotExist(err)).To(BeTrue())
+			fileInVolume := "file-in-volume"
+			filePath := filepath.Join(volumePath, fileInVolume)
+			f, err := os.Create(filePath)
+			Expect(err).ToNot(HaveOccurred())
+			f.Close()
+
+			err = driver.MoveVolume(logger, volumePath, newVolumePath)
+			Expect(err).ToNot(HaveOccurred())
+
+			linkName, err := ioutil.ReadFile(filepath.Join(StorePath, store.LinksDirName, filepath.Base(newVolumePath)))
+			Expect(err).NotTo(HaveOccurred())
+			linkPath := filepath.Join(StorePath, store.LinksDirName, string(linkName))
+			_, err = os.Lstat(linkPath)
+			Expect(err).NotTo(HaveOccurred())
+
+			target, err := os.Readlink(linkPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(target).To(Equal(newVolumePath))
+
+			_, err = os.Stat(filepath.Join(StorePath, store.LinksDirName, filepath.Base(newVolumePath)))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		Context("when the source volume does not exist", func() {
+			It("returns an error", func() {
+				newVolumePath := fmt.Sprintf("%s-new", volumePath)
+				err = driver.MoveVolume(logger, "nonsense", newVolumePath)
+				Expect(err).To(MatchError(ContainSubstring("moving volume")))
+			})
+		})
+
+		Context("when the target volume already exists", func() {
+			It("returns an error", func() {
+				err = driver.MoveVolume(logger, volumePath, filepath.Dir(volumePath))
+				Expect(err).To(MatchError(ContainSubstring("moving volume")))
+			})
 		})
 	})
 })

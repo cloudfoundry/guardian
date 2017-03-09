@@ -75,6 +75,15 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID, id string) (string,
 	return volPath, nil
 }
 
+func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
+	if err := os.Rename(from, to); err != nil {
+		logger.Error("moving-volume-failed", err, lager.Data{"from": from, "to": to})
+		return errorspkg.Wrap(err, "moving volume")
+	}
+
+	return nil
+}
+
 func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
 	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"spec": spec})
 	logger.Info("starting")

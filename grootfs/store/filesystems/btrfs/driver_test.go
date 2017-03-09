@@ -386,6 +386,49 @@ var _ = Describe("Btrfs", func() {
 		})
 	})
 
+	Describe("MoveVolume", func() {
+		var (
+			volumeID   string
+			volumePath string
+		)
+
+		JustBeforeEach(func() {
+			volumeID = randVolumeID()
+			var err error
+			volumePath, err = driver.CreateVolume(logger, "", volumeID)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("moves the volume to the given location", func() {
+			newVolumePath := fmt.Sprintf("%s-new", volumePath)
+
+			stat, err := os.Stat(newVolumePath)
+			Expect(err).To(HaveOccurred())
+			Expect(os.IsNotExist(err)).To(BeTrue())
+
+			err = driver.MoveVolume(logger, volumePath, newVolumePath)
+			Expect(err).ToNot(HaveOccurred())
+			stat, err = os.Stat(newVolumePath)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(stat.IsDir()).To(BeTrue())
+		})
+
+		Context("when the source volume does not exist", func() {
+			It("returns an error", func() {
+				newVolumePath := fmt.Sprintf("%s-new", volumePath)
+				err = driver.MoveVolume(logger, "nonsense", newVolumePath)
+				Expect(err).To(MatchError(ContainSubstring("moving volume")))
+			})
+		})
+
+		Context("when the target volume already exists", func() {
+			It("returns an error", func() {
+				err = driver.MoveVolume(logger, volumePath, filepath.Dir(volumePath))
+				Expect(err).To(MatchError(ContainSubstring("moving volume")))
+			})
+		})
+	})
+
 	Describe("DestroyVolume", func() {
 		var (
 			volumeID   string

@@ -37,8 +37,9 @@ func (fake *FakeGarbageCollector) Collect(logger lager.Logger, keepBaseImages []
 	fake.collectMutex.Unlock()
 	if fake.CollectStub != nil {
 		return fake.CollectStub(logger, keepBaseImages)
+	} else {
+		return fake.collectReturns.result1
 	}
-	return fake.collectReturns.result1
 }
 
 func (fake *FakeGarbageCollector) CollectCallCount() int {

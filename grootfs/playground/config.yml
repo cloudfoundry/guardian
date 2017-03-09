@@ -1,8 +1,8 @@
-store_path: /var/lib/grootfs
+store_path: /var/lib/grootfs/btrfs
 clean_on_create: false
 #clean_threshold_bytes: 0
 #disk_limit_size_bytes: 1000000
-drax_bin: /usr/local/bin/drax
+drax_bin: /home/ubuntu/drax
 btrfs_bin: /bin/btrfs
 newuidmap_bin: /usr/local/bin/newuidmap
 newgidmap_bin: /usr/local/bin/newgidmap
@@ -13,9 +13,9 @@ insecure_registries: []
 log_level: debug
 log_file:
 
-#uid_mappings:
-#- "0:4294967294:1"
-#- "1:1:4294967293"
-#gid_mappings:
-#- "0:4294967294:1"
-#- "1:1:4294967293"
+uid_mappings:
+- "0:4294967294:1"
+- "1:1:4294967293"
+gid_mappings:
+- "0:4294967294:1"
+- "1:1:4294967293"

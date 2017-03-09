@@ -9,4 +9,5 @@ const (
 	TempDirName      = "tmp"
 	DefaultStorePath = "/var/lib/grootfs"
 	WhiteoutDevice   = "whiteout_dev"
+	LinksDirName     = "l"
 )

@@ -52,8 +52,9 @@ func (fake *FakeImageDriver) CreateImage(logger lager.Logger, spec image_cloner.
 	fake.createImageMutex.Unlock()
 	if fake.CreateImageStub != nil {
 		return fake.CreateImageStub(logger, spec)
+	} else {
+		return fake.createImageReturns.result1
 	}
-	return fake.createImageReturns.result1
 }
 
 func (fake *FakeImageDriver) CreateImageCallCount() int {
@@ -85,8 +86,9 @@ func (fake *FakeImageDriver) DestroyImage(logger lager.Logger, path string) erro
 	fake.destroyImageMutex.Unlock()
 	if fake.DestroyImageStub != nil {
 		return fake.DestroyImageStub(logger, path)
+	} else {
+		return fake.destroyImageReturns.result1
 	}
-	return fake.destroyImageReturns.result1
 }
 
 func (fake *FakeImageDriver) DestroyImageCallCount() int {
@@ -118,8 +120,9 @@ func (fake *FakeImageDriver) FetchStats(logger lager.Logger, path string) (groot
 	fake.fetchStatsMutex.Unlock()
 	if fake.FetchStatsStub != nil {
 		return fake.FetchStatsStub(logger, path)
+	} else {
+		return fake.fetchStatsReturns.result1, fake.fetchStatsReturns.result2
 	}
-	return fake.fetchStatsReturns.result1, fake.fetchStatsReturns.result2
 }
 
 func (fake *FakeImageDriver) FetchStatsCallCount() int {

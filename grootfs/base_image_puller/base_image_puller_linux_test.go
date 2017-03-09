@@ -130,29 +130,6 @@ var _ = Describe("Base Image Puller", func() {
 		Expect(chainID).To(MatchRegexp("chain-333-\\d*-\\d*"))
 	})
 
-	It("renames all the temporary volumes to their final destination", func() {
-		volumesDir, err := ioutil.TempDir("", "volumes")
-		Expect(err).NotTo(HaveOccurred())
-
-		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, id string) (string, error) {
-			volumePath := filepath.Join(volumesDir, id)
-			err := os.MkdirAll(volumePath, 0755)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(os.MkdirAll(volumePath, 0777)).To(Succeed())
-			return volumePath, nil
-		}
-
-		_, err = baseImagePuller.Pull(logger, groot.BaseImageSpec{
-			BaseImageSrc: remoteBaseImageSrc,
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(filepath.Join(volumesDir, "layer-111")).To(BeADirectory())
-		Expect(filepath.Join(volumesDir, "chain-222")).To(BeADirectory())
-		Expect(filepath.Join(volumesDir, "chain-333")).To(BeADirectory())
-	})
-
 	It("unpacks the layers to the respective temporary volumes", func() {
 		volumesDir, err := ioutil.TempDir("", "volumes")
 		Expect(err).NotTo(HaveOccurred())

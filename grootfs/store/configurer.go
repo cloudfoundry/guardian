@@ -69,6 +69,12 @@ func ConfigureStore(logger lager.Logger, storePath, driver string, ownerUID, own
 		}
 	}
 
+	if requiresLinksDir(driver) {
+		if err := createDirectory(logger, filepath.Join(storePath, LinksDirName), ownerUID, ownerGID); err != nil {
+			logger.Error("creating-links-dir-failed", err)
+			return errorspkg.Wrapf(err, "creating links dir")
+		}
+	}
 	return nil
 }
 
@@ -130,6 +136,10 @@ func validateWhiteoutDevice(path string) error {
 	}
 
 	return nil
+}
+
+func requiresLinksDir(driver string) bool {
+	return driver == "overlay-xfs"
 }
 
 func requiresWhiteout(driver string) bool {
