@@ -241,6 +241,12 @@ func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error 
 }
 
 func (u *TarUnpacker) createSymlink(path string, tarHeader *tar.Header) error {
+	if _, err := os.Stat(path); err == nil {
+		if err := os.Remove(path); err != nil {
+			return errorspkg.Wrapf(err, "removing file `%s`", path)
+		}
+	}
+
 	if err := os.Symlink(tarHeader.Linkname, path); err != nil {
 		return errorspkg.Wrapf(err, "create symlink `%s` -> `%s`", tarHeader.Linkname, path)
 	}

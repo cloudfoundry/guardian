@@ -156,6 +156,28 @@ var _ = Describe("Create with remote images", func() {
 			})
 		})
 
+		Context("when the image has links that overwrites existing files", func() {
+			BeforeEach(func() {
+				baseImageURL = "docker:///cfgarden/overwrite-link"
+			})
+
+			It("creates the link with success", func() {
+				image, err := Runner.Create(groot.CreateSpec{
+					BaseImage: baseImageURL,
+					ID:        "random-id",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				symlinkFilePath := filepath.Join(image.RootFSPath, "tmp/symlink")
+				stat, err := os.Lstat(symlinkFilePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Mode() & os.ModeSymlink).ToNot(BeZero())
+				linkTargetPath, err := os.Readlink(symlinkFilePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(linkTargetPath).To(Equal("/etc/link-source"))
+			})
+		})
+
 		Context("when the image has opaque white outs", func() {
 			BeforeEach(func() {
 				baseImageURL = "docker:///cfgarden/opq-whiteout-busybox"

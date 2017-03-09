@@ -230,6 +230,24 @@ var _ = Describe("Tar unpacker", func() {
 
 			Expect(os.SameFile(hlStat, origStat)).To(BeTrue())
 		})
+
+		Context("when the link name already exists", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(filepath.Join(targetPath, "symlink"), []byte{}, 0777)).To(Succeed())
+			})
+
+			It("overwrites it", func() {
+				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})).To(Succeed())
+
+				symlinkFilePath := filepath.Join(targetPath, "symlink")
+				stat, err := os.Lstat(symlinkFilePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Mode() & os.ModeSymlink).ToNot(BeZero())
+			})
+		})
 	})
 
 	Context("setuid and setgid permissions", func() {
