@@ -203,10 +203,18 @@ var _ = Describe("Create with remote images", func() {
 				baseImageURL = "docker:///cfgarden/with-whiteouts"
 			})
 
-			It("removes the whitedout filed", func() {
+			It("removes the whiteout file", func() {
 				image, err := Runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
 				})
 				Expect(err).NotTo(HaveOccurred())
 
