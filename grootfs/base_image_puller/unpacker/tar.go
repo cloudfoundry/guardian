@@ -13,12 +13,13 @@ import (
 
 	errorspkg "github.com/pkg/errors"
 
+	"github.com/containers/storage/pkg/system"
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/urfave/cli"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
-	"github.com/containers/storage/pkg/system"
 )
 
 func init() {
@@ -104,11 +105,11 @@ func (*overlayWhiteoutHandler) removeOpaqueWhiteouts(paths []string) error {
 	for _, path := range paths {
 		parentDir := filepath.Dir(path)
 		if err := system.Lsetxattr(parentDir, "trusted.overlay.opaque", []byte("y"), 0); err != nil {
-			return err
+			return errorspkg.Wrapf(err, "set xattr for %s", parentDir)
 		}
 
 		if err := cleanWhiteoutDir(parentDir); err != nil {
-			return err
+			return errorspkg.Wrapf(err, "clean without dir %s", parentDir)
 		}
 	}
 
@@ -170,7 +171,7 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackS
 			continue
 		}
 
-		if err := u.handleEntry(spec.TargetPath, entryPath, tarReader, tarHeader); err != nil {
+		if err := u.handleEntry(spec.TargetPath, entryPath, tarReader, tarHeader, spec); err != nil {
 			return err
 		}
 	}
@@ -178,7 +179,7 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackS
 	return u.whiteoutHandler.removeOpaqueWhiteouts(opaqueWhiteouts)
 }
 
-func (u *TarUnpacker) handleEntry(targetPath, entryPath string, tarReader *tar.Reader, tarHeader *tar.Header) error {
+func (u *TarUnpacker) handleEntry(targetPath, entryPath string, tarReader *tar.Reader, tarHeader *tar.Header, spec base_image_puller.UnpackSpec) error {
 	switch tarHeader.Typeflag {
 	case tar.TypeBlock, tar.TypeChar:
 		// ignore devices
@@ -195,12 +196,12 @@ func (u *TarUnpacker) handleEntry(targetPath, entryPath string, tarReader *tar.R
 		}
 
 	case tar.TypeDir:
-		if err := u.createDirectory(entryPath, tarHeader); err != nil {
+		if err := u.createDirectory(entryPath, tarHeader, spec); err != nil {
 			return err
 		}
 
 	case tar.TypeReg, tar.TypeRegA:
-		if err := u.createRegularFile(entryPath, tarHeader, tarReader); err != nil {
+		if err := u.createRegularFile(entryPath, tarHeader, tarReader, spec); err != nil {
 			return err
 		}
 	}
@@ -208,7 +209,7 @@ func (u *TarUnpacker) handleEntry(targetPath, entryPath string, tarReader *tar.R
 	return nil
 }
 
-func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error {
+func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header, spec base_image_puller.UnpackSpec) error {
 	if _, err := os.Stat(path); err != nil {
 		if err = os.Mkdir(path, tarHeader.FileInfo().Mode()); err != nil {
 			newErr := errorspkg.Wrapf(err, "creating directory `%s`", path)
@@ -223,8 +224,10 @@ func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header) error 
 	}
 
 	if os.Getuid() == 0 {
-		if err := os.Chown(path, tarHeader.Uid, tarHeader.Gid); err != nil {
-			return errorspkg.Wrapf(err, "chowning directory %d:%d `%s`", tarHeader.Uid, tarHeader.Gid, path)
+		uid := u.translateID(tarHeader.Uid, spec.UIDMappings)
+		gid := u.translateID(tarHeader.Gid, spec.GIDMappings)
+		if err := os.Chown(path, uid, gid); err != nil {
+			return errorspkg.Wrapf(err, "chowning directory %d:%d `%s`", uid, gid, path)
 		}
 	}
 
@@ -262,7 +265,7 @@ func (u *TarUnpacker) createLink(targetPath, path string, tarHeader *tar.Header)
 	return os.Link(filepath.Join(targetPath, tarHeader.Linkname), path)
 }
 
-func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarReader *tar.Reader) error {
+func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarReader *tar.Reader, spec base_image_puller.UnpackSpec) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, tarHeader.FileInfo().Mode())
 	if err != nil {
 		newErr := errorspkg.Wrapf(err, "creating file `%s`", path)
@@ -286,8 +289,10 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 	}
 
 	if os.Getuid() == 0 {
-		if err := os.Chown(path, tarHeader.Uid, tarHeader.Gid); err != nil {
-			return errorspkg.Wrapf(err, "chowning file %d:%d `%s`", tarHeader.Uid, tarHeader.Gid, path)
+		uid := u.translateID(tarHeader.Uid, spec.UIDMappings)
+		gid := u.translateID(tarHeader.Gid, spec.GIDMappings)
+		if err := os.Chown(path, uid, gid); err != nil {
+			return errorspkg.Wrapf(err, "chowning file %d:%d `%s`", uid, gid, path)
 		}
 	}
 
@@ -316,4 +321,32 @@ func cleanWhiteoutDir(path string) error {
 	}
 
 	return nil
+}
+
+func (u *TarUnpacker) translateID(id int, mappings []groot.IDMappingSpec) int {
+	if id == 0 {
+		return u.translateRootID(mappings)
+	}
+
+	for _, mapping := range mappings {
+		if mapping.Size == 1 {
+			continue
+		}
+
+		if id >= mapping.NamespaceID && id < mapping.NamespaceID+mapping.Size {
+			return mapping.HostID + id - 1
+		}
+	}
+
+	return id
+}
+
+func (u *TarUnpacker) translateRootID(mappings []groot.IDMappingSpec) int {
+	for _, mapping := range mappings {
+		if mapping.Size == 1 {
+			return mapping.HostID
+		}
+	}
+
+	return 0
 }

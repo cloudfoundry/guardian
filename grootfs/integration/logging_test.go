@@ -3,10 +3,8 @@ package integration_test
 import (
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
@@ -27,24 +25,6 @@ var _ = Describe("Logging", func() {
 		Expect(err).To(HaveOccurred())
 
 		Eventually(buffer).Should(gbytes.Say("no such file or directory"))
-	})
-
-	It("re-logs the nested unpack commands logs", func() {
-		srcImgPath, err := ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(
-			filepath.Join(srcImgPath, "unreadable-file"), []byte("foo bar"), 0644,
-		)).To(Succeed())
-
-		baseImgFile := integration.CreateBaseImageTar(srcImgPath)
-		logBuffer := gbytes.NewBuffer()
-		_, err = Runner.WithStderr(logBuffer).Create(groot.CreateSpec{
-			ID:        "random-id",
-			BaseImage: baseImgFile.Name(),
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(string(logBuffer.Contents())).To(MatchRegexp("ns-.*-unpacking.unpack"))
 	})
 
 	Describe("--log-level and --log-file flags", func() {

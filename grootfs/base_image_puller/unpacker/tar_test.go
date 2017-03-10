@@ -12,6 +12,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/containers/storage/pkg/system"
@@ -80,6 +81,82 @@ var _ = Describe("Tar unpacker", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("hello-world"))
 		})
+
+		Context("file ownership", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(filepath.Join(baseImagePath, "groot_file"), []byte{}, 0755)).To(Succeed())
+				Expect(os.Chown(filepath.Join(baseImagePath, "groot_file"), 1000, 1000)).To(Succeed())
+			})
+
+			It("preserves it", func() {
+				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})).To(Succeed())
+
+				filePath := path.Join(targetPath, "groot_file")
+				Expect(filePath).To(BeARegularFile())
+				stat, err := os.Stat(filePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
+			})
+
+			Context("when id mappings are provided", func() {
+				BeforeEach(func() {
+					Expect(ioutil.WriteFile(filepath.Join(baseImagePath, "200_file"), []byte{}, 0755)).To(Succeed())
+					Expect(os.Chown(filepath.Join(baseImagePath, "200_file"), 200, 200)).To(Succeed())
+
+					Expect(ioutil.WriteFile(filepath.Join(baseImagePath, "1200_file"), []byte{}, 0755)).To(Succeed())
+					Expect(os.Chown(filepath.Join(baseImagePath, "1200_file"), 1200, 1200)).To(Succeed())
+				})
+
+				It("maps them", func() {
+					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+						Stream:     stream,
+						TargetPath: targetPath,
+						UIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
+							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
+						},
+						GIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
+							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
+						},
+					})).To(Succeed())
+
+					filePath := path.Join(targetPath, "a_file")
+					Expect(filePath).To(BeARegularFile())
+					stat, err := os.Stat(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
+
+					filePath = path.Join(targetPath, "200_file")
+					Expect(filePath).To(BeARegularFile())
+					stat, err = os.Stat(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10 + 200)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(10 + 200)))
+
+					filePath = path.Join(targetPath, "1200_file")
+					Expect(filePath).To(BeARegularFile())
+					stat, err = os.Stat(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(2000 + 1200)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(2000 + 1200)))
+
+					filePath = path.Join(targetPath, "groot_file")
+					Expect(filePath).To(BeARegularFile())
+					stat, err = os.Stat(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
+				})
+			})
+		})
 	})
 
 	Describe("directories", func() {
@@ -100,6 +177,75 @@ var _ = Describe("Tar unpacker", func() {
 			contents, err := ioutil.ReadFile(filePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("goodbye-world"))
+		})
+
+		Context("directory ownership", func() {
+			BeforeEach(func() {
+				Expect(os.Mkdir(filepath.Join(baseImagePath, "groot_dir"), 0755)).To(Succeed())
+				Expect(os.Chown(filepath.Join(baseImagePath, "groot_dir"), 1000, 1000)).To(Succeed())
+			})
+
+			It("preserves it", func() {
+				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})).To(Succeed())
+
+				filePath := path.Join(targetPath, "groot_dir")
+				Expect(filePath).To(BeADirectory())
+				stat, err := os.Stat(filePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
+			})
+
+			Context("when id mappings are provided", func() {
+				BeforeEach(func() {
+					Expect(os.Mkdir(filepath.Join(baseImagePath, "200_dir"), 0755)).To(Succeed())
+					Expect(os.Chown(filepath.Join(baseImagePath, "200_dir"), 200, 200)).To(Succeed())
+
+					Expect(os.Mkdir(filepath.Join(baseImagePath, "1200_dir"), 0755)).To(Succeed())
+					Expect(os.Chown(filepath.Join(baseImagePath, "1200_dir"), 1200, 1200)).To(Succeed())
+				})
+
+				It("maps them", func() {
+					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+						Stream:     stream,
+						TargetPath: targetPath,
+						UIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
+							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
+						},
+						GIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
+							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
+						},
+					})).To(Succeed())
+
+					filePath := path.Join(targetPath, "200_dir")
+					Expect(filePath).To(BeADirectory())
+					stat, err := os.Stat(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10 + 200)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(10 + 200)))
+
+					filePath = path.Join(targetPath, "1200_dir")
+					Expect(filePath).To(BeADirectory())
+					stat, err = os.Stat(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(2000 + 1200)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(2000 + 1200)))
+
+					filePath = path.Join(targetPath, "groot_dir")
+					Expect(filePath).To(BeADirectory())
+					stat, err = os.Stat(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
+				})
+			})
 		})
 	})
 

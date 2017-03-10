@@ -149,7 +149,7 @@ var CreateCommand = cli.Command{
 			WhiteoutDevicePath: filepath.Join(storePath, store.WhiteoutDevice),
 		}
 		if os.Getuid() == 0 {
-			unpacker = unpackerpkg.NewNSSysProcUnpacker(runner, unpackerStrategy)
+			unpacker = unpackerpkg.NewTarUnpacker(unpackerStrategy)
 		} else {
 			idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
 			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper, unpackerStrategy)
