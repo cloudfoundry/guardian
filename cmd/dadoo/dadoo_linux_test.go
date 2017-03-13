@@ -623,7 +623,7 @@ var _ = Describe("Dadoo", func() {
 						pidBytes, err := ioutil.ReadFile(pidFilePath)
 						Expect(err).NotTo(HaveOccurred())
 
-						Expect(exec.Command("ps", "-p", string(pidBytes)).Run()).NotTo(Succeed())
+						Eventually(exec.Command("ps", "-p", string(pidBytes)).Run).ShouldNot(Succeed())
 
 						Eventually(dadooSession).Should(gexec.Exit(2))
 						Eventually(stdout).Should(gbytes.Say(fmt.Sprintf("communication error on send")))
