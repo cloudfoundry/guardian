@@ -356,6 +356,75 @@ var _ = Describe("Tar unpacker", func() {
 			Expect(stat.Mode() & os.ModeSymlink).NotTo(Equal(0))
 		})
 
+		Context("symlink ownership", func() {
+			BeforeEach(func() {
+				Expect(os.Symlink("/", filepath.Join(baseImagePath, "groot_link"))).To(Succeed())
+				Expect(os.Lchown(filepath.Join(baseImagePath, "groot_link"), 1000, 1000)).To(Succeed())
+			})
+
+			It("preserves it", func() {
+				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})).To(Succeed())
+
+				filePath := path.Join(targetPath, "groot_link")
+				Expect(filePath).To(BeAnExistingFile())
+				stat, err := os.Lstat(filePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
+			})
+
+			Context("when id mappings are provided", func() {
+				BeforeEach(func() {
+					Expect(os.Symlink("/", filepath.Join(baseImagePath, "200_link"))).To(Succeed())
+					Expect(os.Lchown(filepath.Join(baseImagePath, "200_link"), 200, 200)).To(Succeed())
+
+					Expect(os.Symlink("/", filepath.Join(baseImagePath, "1200_link"))).To(Succeed())
+					Expect(os.Lchown(filepath.Join(baseImagePath, "1200_link"), 1200, 1200)).To(Succeed())
+				})
+
+				It("maps them", func() {
+					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+						Stream:     stream,
+						TargetPath: targetPath,
+						UIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
+							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
+						},
+						GIDMappings: []groot.IDMappingSpec{
+							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
+							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
+							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
+						},
+					})).To(Succeed())
+
+					filePath := path.Join(targetPath, "200_link")
+					Expect(filePath).To(BeAnExistingFile())
+					stat, err := os.Lstat(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10 + 200)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(10 + 200)))
+
+					filePath = path.Join(targetPath, "1200_link")
+					Expect(filePath).To(BeAnExistingFile())
+					stat, err = os.Lstat(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(2000 + 1200)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(2000 + 1200)))
+
+					filePath = path.Join(targetPath, "groot_link")
+					Expect(filePath).To(BeAnExistingFile())
+					stat, err = os.Lstat(filePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
+				})
+			})
+		})
+
 		It("unpacks the hardlinks", func() {
 			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,

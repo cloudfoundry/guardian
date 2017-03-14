@@ -191,7 +191,7 @@ func (u *TarUnpacker) handleEntry(targetPath, entryPath string, tarReader *tar.R
 		}
 
 	case tar.TypeSymlink:
-		if err := u.createSymlink(entryPath, tarHeader); err != nil {
+		if err := u.createSymlink(entryPath, tarHeader, spec); err != nil {
 			return err
 		}
 
@@ -243,8 +243,8 @@ func (u *TarUnpacker) createDirectory(path string, tarHeader *tar.Header, spec b
 	return nil
 }
 
-func (u *TarUnpacker) createSymlink(path string, tarHeader *tar.Header) error {
-	if _, err := os.Stat(path); err == nil {
+func (u *TarUnpacker) createSymlink(path string, tarHeader *tar.Header, spec base_image_puller.UnpackSpec) error {
+	if _, err := os.Lstat(path); err == nil {
 		if err := os.Remove(path); err != nil {
 			return errorspkg.Wrapf(err, "removing file `%s`", path)
 		}
@@ -256,6 +256,15 @@ func (u *TarUnpacker) createSymlink(path string, tarHeader *tar.Header) error {
 
 	if err := changeModTime(path, tarHeader.ModTime); err != nil {
 		return errorspkg.Wrapf(err, "setting the modtime for the symlink `%s`", path)
+	}
+
+	if os.Getuid() == 0 {
+		uid := u.translateID(tarHeader.Uid, spec.UIDMappings)
+		gid := u.translateID(tarHeader.Gid, spec.GIDMappings)
+
+		if err := os.Lchown(path, uid, gid); err != nil {
+			return errorspkg.Wrapf(err, "chowning link %d:%d `%s`", uid, gid, path)
+		}
 	}
 
 	return nil

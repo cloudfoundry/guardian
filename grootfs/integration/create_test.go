@@ -59,6 +59,10 @@ var _ = Describe("Create", func() {
 		rootFolder := path.Join(sourceImagePath, "root-folder")
 		Expect(os.Mkdir(rootFolder, 0777)).To(Succeed())
 		Expect(ioutil.WriteFile(path.Join(rootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
+
+		grootLinkToRootFile := path.Join(sourceImagePath, "groot-link")
+		Expect(os.Symlink(rootFilePath, grootLinkToRootFile)).To(Succeed())
+		Expect(os.Lchown(grootLinkToRootFile, int(GrootUID), int(GrootGID)))
 	})
 
 	AfterEach(func() {
@@ -84,6 +88,11 @@ var _ = Describe("Create", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 		Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+
+		grootLink, err := os.Lstat(path.Join(image.RootFSPath, "groot-link"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(grootLink.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+		Expect(grootLink.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
 		rootFi, err := os.Stat(path.Join(image.RootFSPath, "bar"))
 		Expect(err).NotTo(HaveOccurred())
@@ -118,6 +127,11 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
+
+			grootLink, err := os.Lstat(path.Join(image.RootFSPath, "groot-link"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(grootLink.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(grootLink.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
 			rootFi, err := os.Stat(path.Join(image.RootFSPath, "bar"))
 			Expect(err).NotTo(HaveOccurred())
