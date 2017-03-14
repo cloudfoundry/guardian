@@ -78,7 +78,7 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 		return "", errorspkg.Wrap(err, "creating link file")
 	}
 
-	if err := os.Chmod(volumePath, 755); err != nil {
+	if err := os.Chmod(volumePath, 0755); err != nil {
 		logger.Error("changing-volume-permissions-failed", err)
 		return "", errorspkg.Wrap(err, "changing volume permissions")
 	}
