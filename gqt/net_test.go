@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -667,6 +668,85 @@ var _ = Describe("Networking", func() {
 
 					Expect(out).To(ContainSubstring(fmt.Sprintf(" MTU:%d ", outboundIfaceMtu)))
 				})
+			})
+		})
+	})
+
+	Describe("DNS servers", func() {
+		var (
+			hostNameservers []string
+			stdout          *gbytes.Buffer
+		)
+
+		BeforeEach(func() {
+			stdout = gbytes.NewBuffer()
+
+			grepCmd := exec.Command("sh", "-c", "grep nameserver /etc/resolv.conf | awk '{print $2}'")
+			var grepHostDnsStdout bytes.Buffer
+			grepCmd.Stdout = io.MultiWriter(&grepHostDnsStdout, GinkgoWriter)
+			grepCmd.Stderr = GinkgoWriter
+			Expect(grepCmd.Run()).To(Succeed())
+			hostNameservers = strings.Fields(grepHostDnsStdout.String())
+		})
+
+		Context("when not provided with any DNS servers", func() {
+			It("adds the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
+				process, err := container.Run(garden.ProcessSpec{
+					Path: "cat",
+					Args: []string{"/etc/resolv.conf"},
+				}, garden.ProcessIO{
+					Stdout: stdout,
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				exitCode, err := process.Wait()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(exitCode).To(Equal(0))
+
+				for _, hostNameserver := range hostNameservers {
+					Expect(stdout.Contents()).To(ContainSubstring(hostNameserver))
+					Expect(stdout.Contents()).NotTo(ContainSubstring("127.0.0."))
+				}
+			})
+		})
+
+		Context("when --dns-server is provided", func() {
+			BeforeEach(func() {
+				args = []string{"--dns-server", "1.2.3.4"}
+			})
+
+			It("adds the IP address to the container's /etc/resolv.conf", func() {
+				process, err := container.Run(garden.ProcessSpec{
+					Path: "cat",
+					Args: []string{"/etc/resolv.conf"},
+				}, garden.ProcessIO{
+					Stdout: stdout,
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				exitCode, err := process.Wait()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(exitCode).To(Equal(0))
+
+				Expect(stdout.Contents()).To(ContainSubstring("nameserver 1.2.3.4"))
+			})
+
+			It("strips the host's DNS servers from the container's /etc/resolv.conf", func() {
+				process, err := container.Run(garden.ProcessSpec{
+					Path: "cat",
+					Args: []string{"/etc/resolv.conf"},
+				}, garden.ProcessIO{
+					Stdout: stdout,
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				exitCode, err := process.Wait()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(exitCode).To(Equal(0))
+
+				for _, hostNameserver := range hostNameservers {
+					Expect(stdout.Contents()).NotTo(ContainSubstring(hostNameserver))
+				}
 			})
 		})
 	})
