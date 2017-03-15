@@ -1,0 +1,41 @@
+package overlayxfs
+
+import (
+	"errors"
+
+	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/lager"
+)
+
+func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
+	return "", errors.New("Not compatible with windows")
+}
+
+func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (string, error) {
+	return "", errors.New("Not compatible with windows")
+}
+
+func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
+	return errors.New("Not compatible with windows")
+}
+
+func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
+	return nil, errors.New("Not compatible with windows")
+}
+
+func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
+	return errors.New("Not compatible with windows")
+}
+
+func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
+	return errors.New("Not compatible with windows")
+}
+
+func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.VolumeStats, error) {
+	return groot.VolumeStats{}, errors.New("Not compatible with windows")
+}
+
+func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
+	return errors.New("Not compatible with windows")
+}

@@ -8,6 +8,9 @@ all:
 	GOOS=linux go build -o grootfs .
 	GOOS=linux go build -o drax ./store/filesystems/btrfs/drax
 
+windows:
+	GOOS=windows go build -o grootfs.exe .
+
 ###### Help ###################################################################
 
 help:

@@ -100,3 +100,6 @@
 [submodule "vendor/github.com/ventu-io/go-shortid"]
 	path = vendor/github.com/ventu-io/go-shortid
 	url = https://github.com/ventu-io/go-shortid
+[submodule "vendor/github.com/Microsoft/go-winio"]
+	path = vendor/github.com/Microsoft/go-winio
+	url = https://github.com/Microsoft/go-winio

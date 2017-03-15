@@ -1,4 +1,4 @@
-// +build linux,!cgo
+// +build !cgo
 
 // This file is a dummy structure to allow us to compile on a Mac with GOOS=linux
 

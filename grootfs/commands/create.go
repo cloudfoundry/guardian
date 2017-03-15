@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
+	"code.cloudfoundry.org/grootfs/commands/commandrunner"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
@@ -23,7 +24,6 @@ import (
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/lager"
 
-	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"github.com/docker/distribution/registry/api/errcode"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -142,7 +142,7 @@ var CreateCommand = cli.Command{
 
 		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
 
-		runner := linux_command_runner.New()
+		runner := commandrunner.New()
 		var unpacker base_image_puller.Unpacker
 		unpackerStrategy := unpackerpkg.UnpackStrategy{
 			Name:               cfg.FSDriver,

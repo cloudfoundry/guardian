@@ -12,7 +12,6 @@ import (
 	"github.com/urfave/cli"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
-	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 )
@@ -57,18 +56,6 @@ func init() {
 		}
 		logger.Debug("unpack-command-done")
 	})
-}
-
-//go:generate counterfeiter . IDMapper
-type IDMapper interface {
-	MapUIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error
-	MapGIDs(logger lager.Logger, pid int, mappings []groot.IDMappingSpec) error
-}
-
-type NSIdMapperUnpacker struct {
-	commandRunner  commandrunner.CommandRunner
-	idMapper       IDMapper
-	unpackStrategy UnpackStrategy
 }
 
 func NewNSIdMapperUnpacker(commandRunner commandrunner.CommandRunner, idMapper IDMapper, strategy UnpackStrategy) *NSIdMapperUnpacker {
