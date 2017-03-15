@@ -1,7 +1,5 @@
 package gardener
 
-var NoopBulkStarter BulkStarter = NewBulkStarter([]Starter{})
-
 type bulkStarter struct {
 	Starters []Starter
 }

@@ -53,86 +53,18 @@ var _ = Describe("gdn setup", func() {
 		Expect(mountpointCmd.Run()).To(Succeed())
 	})
 
-	It("sets up iptables", func() {
+	It("does not setup networking stuff", func() {
 		out, err := runIPTables("-L", "INPUT")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(out).To(ContainSubstring(iptablesPrefix + "-input"))
+		Expect(out).NotTo(ContainSubstring(iptablesPrefix + "-input"))
 
 		out, err = runIPTables("-L", "FORWARD")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(out).To(ContainSubstring(iptablesPrefix + "-forward"))
-
-		for _, suffix := range []string{"-input", "-default", "-forward"} {
-			_, err := runIPTables("-L", iptablesPrefix+suffix)
-			Expect(err).NotTo(HaveOccurred())
-		}
+		Expect(out).NotTo(ContainSubstring(iptablesPrefix + "-forward"))
 	})
 
 	It("doesn't log spurious messages", func() {
 		Consistently(setupProcess).ShouldNot(gbytes.Say("guardian-setup.iptables-runner.command.failed"))
-	})
-
-	Context("when --allow-host-access flag is passed", func() {
-		BeforeEach(func() {
-			setupArgs = append(setupArgs, []string{"--allow-host-access"}...)
-		})
-
-		It("iptables should have the relevant entry ", func() {
-			out, err := runIPTables("-L", iptablesPrefix+"-input")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(out).NotTo(MatchRegexp("REJECT.*all.*reject-with icmp-host-prohibited"))
-		})
-	})
-
-	Context("when --allow-host-access flag is passed", func() {
-		BeforeEach(func() {
-			setupArgs = append(setupArgs, "--deny-network", "8.8.8.0/24")
-		})
-
-		It("iptables should have the relevant entry ", func() {
-			out, err := runIPTables("-L", iptablesPrefix+"-default")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(out).To(MatchRegexp("REJECT.*8.8.8.0/24.*reject-with icmp-port-unreachable"))
-		})
-	})
-
-	Context("when a binary is passed via --iptables-bin flag", func() {
-		BeforeEach(func() {
-			// use echo instead of iptables
-			setupArgs = append(setupArgs, "--iptables-bin", "/bin/echo")
-		})
-
-		It("uses the binary passed instead of /sbin/iptables", func() {
-			// chack all chains are empty
-			out, err := runIPTables("-L", "INPUT")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(out).NotTo(MatchRegexp(iptablesPrefix + ".*anywhere"))
-
-			out, err = runIPTables("-L", "FORWARD")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(out).NotTo(MatchRegexp(iptablesPrefix + ".*anywhere"))
-
-			out, err = runIPTables("-L", "OUTPUT")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(out).NotTo(MatchRegexp(iptablesPrefix + ".*anywhere"))
-		})
-	})
-
-	Context("when --reset-iptables-rules flag is passed", func() {
-		var instanceChain string
-
-		JustBeforeEach(func() {
-			instanceChain = fmt.Sprintf("%s-instance-container", iptablesPrefix)
-			_, err := runIPTables("-N", instanceChain)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("deletes preexisting iptables rules", func() {
-			Expect(exec.Command(gardenBin, append(setupArgs, "--reset-iptables-rules")...).Run()).To(Succeed())
-			out, err := runIPTables("-L")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(out).NotTo(ContainSubstring(instanceChain))
-		})
 	})
 
 	Context("when we start the server", func() {
@@ -159,6 +91,17 @@ var _ = Describe("gdn setup", func() {
 			It("should be able to create a container", func() {
 				_, err := server.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("when a dummy network plugin is suppplied", func() {
+				BeforeEach(func() {
+					serverArgs = append(serverArgs, []string{"--network-plugin", "/bin/true"}...)
+				})
+
+				It("should be able to create a container", func() {
+					_, err := server.Create(garden.ContainerSpec{})
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 		})
 	})

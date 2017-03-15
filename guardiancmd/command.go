@@ -355,13 +355,15 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	var volumeCreator gardener.VolumeCreator = nil
 	volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
 
-	var bulkStarter gardener.BulkStarter = gardener.NewBulkStarter([]gardener.Starter{
-		cmd.wireRunDMCStarter(logger),
-		iptablesStarter,
-	})
-	if cmd.Server.SkipSetup {
-		bulkStarter = gardener.NoopBulkStarter
+	starters := []gardener.Starter{}
+	if !cmd.Server.SkipSetup {
+		starters = append(starters, cmd.wireCgroupsStarter(logger))
 	}
+	if cmd.Network.Plugin.Path() == "" {
+		starters = append(starters, iptablesStarter)
+	}
+
+	var bulkStarter gardener.BulkStarter = gardener.NewBulkStarter(starters)
 
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
@@ -448,7 +450,7 @@ func (cmd *ServerCommand) wireUidGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
-func (cmd *ServerCommand) wireRunDMCStarter(logger lager.Logger) gardener.Starter {
+func (cmd *ServerCommand) wireCgroupsStarter(logger lager.Logger) gardener.Starter {
 	var cgroupsMountpoint string
 	if cmd.Server.Tag != "" {
 		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
