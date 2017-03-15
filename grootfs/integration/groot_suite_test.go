@@ -101,7 +101,7 @@ func TestGroot(t *testing.T) {
 			Driver = "btrfs"
 			StoreName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
 			StorePath = path.Join(btrfsMountPath, StoreName)
-			Expect(os.Mkdir(StorePath, 0755)).NotTo(HaveOccurred())
+			Expect(os.Mkdir(StorePath, 0755)).To(Succeed())
 		}
 
 		Expect(os.Chmod(StorePath, 0777)).To(Succeed())

@@ -25,6 +25,7 @@ invitation.
 # Index
 * [Installation](#installation)
 * [Configuration](#configuration)
+* [Initializing a store](#initializing-a-store)
 * [Create an image](#creating-an-image)
 * [Delete an image](#deleting-an-image)
 * [Stats](#stats)
@@ -144,6 +145,24 @@ create:
 | clean.ignore\_images | Images to ignore during cleanup |
 | clean.threshold\_bytes | Disk usage of the store directory at which cleanup should trigger |
 
+
+
+### Initializing a store
+
+You can create a store directory within a mountpath for your images:
+
+```
+grootfs --store /mnt/xfs/my-store-dir --driver overlay-xfs init-store
+```
+
+N.B.
+- This command is new and as yet incomplete. Therefore we assume the path you
+are giving to `store` is already within a mounted directory.
+- The `driver` you pass to init-store must be compatible with the mounted path.
+- The command can currently only be run as root, with the mounted store owned
+by root.
+- Eventually this command will create a mounted filesystem for you, and will
+allow multiple independent stores to be set within one mount.
 
 
 ### Creating an image
