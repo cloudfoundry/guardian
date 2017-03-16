@@ -86,6 +86,7 @@ func main() {
 
 	grootfs.Commands = []cli.Command{
 		commands.InitStoreCommand,
+		commands.DeleteStoreCommand,
 		commands.CreateCommand,
 		commands.DeleteCommand,
 		commands.StatsCommand,
