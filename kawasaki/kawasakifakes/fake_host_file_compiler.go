@@ -21,12 +21,17 @@ type FakeHostFileCompiler struct {
 		result1 []byte
 		result2 error
 	}
+	compileReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeHostFileCompiler) Compile(log lager.Logger, containerIp net.IP, handle string) ([]byte, error) {
 	fake.compileMutex.Lock()
+	ret, specificReturn := fake.compileReturnsOnCall[len(fake.compileArgsForCall)]
 	fake.compileArgsForCall = append(fake.compileArgsForCall, struct {
 		log         lager.Logger
 		containerIp net.IP
@@ -36,6 +41,9 @@ func (fake *FakeHostFileCompiler) Compile(log lager.Logger, containerIp net.IP, 
 	fake.compileMutex.Unlock()
 	if fake.CompileStub != nil {
 		return fake.CompileStub(log, containerIp, handle)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.compileReturns.result1, fake.compileReturns.result2
 }
@@ -55,6 +63,20 @@ func (fake *FakeHostFileCompiler) CompileArgsForCall(i int) (lager.Logger, net.I
 func (fake *FakeHostFileCompiler) CompileReturns(result1 []byte, result2 error) {
 	fake.CompileStub = nil
 	fake.compileReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeHostFileCompiler) CompileReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.CompileStub = nil
+	if fake.compileReturnsOnCall == nil {
+		fake.compileReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.compileReturnsOnCall[i] = struct {
 		result1 []byte
 		result2 error
 	}{result1, result2}

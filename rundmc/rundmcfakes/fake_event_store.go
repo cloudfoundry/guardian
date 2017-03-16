@@ -17,6 +17,9 @@ type FakeEventStore struct {
 	onEventReturns struct {
 		result1 error
 	}
+	onEventReturnsOnCall map[int]struct {
+		result1 error
+	}
 	EventsStub        func(id string) []string
 	eventsMutex       sync.RWMutex
 	eventsArgsForCall []struct {
@@ -25,12 +28,16 @@ type FakeEventStore struct {
 	eventsReturns struct {
 		result1 []string
 	}
+	eventsReturnsOnCall map[int]struct {
+		result1 []string
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeEventStore) OnEvent(id string, event string) error {
 	fake.onEventMutex.Lock()
+	ret, specificReturn := fake.onEventReturnsOnCall[len(fake.onEventArgsForCall)]
 	fake.onEventArgsForCall = append(fake.onEventArgsForCall, struct {
 		id    string
 		event string
@@ -39,6 +46,9 @@ func (fake *FakeEventStore) OnEvent(id string, event string) error {
 	fake.onEventMutex.Unlock()
 	if fake.OnEventStub != nil {
 		return fake.OnEventStub(id, event)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.onEventReturns.result1
 }
@@ -62,8 +72,21 @@ func (fake *FakeEventStore) OnEventReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeEventStore) OnEventReturnsOnCall(i int, result1 error) {
+	fake.OnEventStub = nil
+	if fake.onEventReturnsOnCall == nil {
+		fake.onEventReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.onEventReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeEventStore) Events(id string) []string {
 	fake.eventsMutex.Lock()
+	ret, specificReturn := fake.eventsReturnsOnCall[len(fake.eventsArgsForCall)]
 	fake.eventsArgsForCall = append(fake.eventsArgsForCall, struct {
 		id string
 	}{id})
@@ -71,6 +94,9 @@ func (fake *FakeEventStore) Events(id string) []string {
 	fake.eventsMutex.Unlock()
 	if fake.EventsStub != nil {
 		return fake.EventsStub(id)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.eventsReturns.result1
 }
@@ -90,6 +116,18 @@ func (fake *FakeEventStore) EventsArgsForCall(i int) string {
 func (fake *FakeEventStore) EventsReturns(result1 []string) {
 	fake.EventsStub = nil
 	fake.eventsReturns = struct {
+		result1 []string
+	}{result1}
+}
+
+func (fake *FakeEventStore) EventsReturnsOnCall(i int, result1 []string) {
+	fake.EventsStub = nil
+	if fake.eventsReturnsOnCall == nil {
+		fake.eventsReturnsOnCall = make(map[int]struct {
+			result1 []string
+		})
+	}
+	fake.eventsReturnsOnCall[i] = struct {
 		result1 []string
 	}{result1}
 }

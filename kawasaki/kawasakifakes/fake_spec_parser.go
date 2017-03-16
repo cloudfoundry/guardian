@@ -21,12 +21,18 @@ type FakeSpecParser struct {
 		result2 subnets.IPSelector
 		result3 error
 	}
+	parseReturnsOnCall map[int]struct {
+		result1 subnets.SubnetSelector
+		result2 subnets.IPSelector
+		result3 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeSpecParser) Parse(log lager.Logger, spec string) (subnets.SubnetSelector, subnets.IPSelector, error) {
 	fake.parseMutex.Lock()
+	ret, specificReturn := fake.parseReturnsOnCall[len(fake.parseArgsForCall)]
 	fake.parseArgsForCall = append(fake.parseArgsForCall, struct {
 		log  lager.Logger
 		spec string
@@ -35,6 +41,9 @@ func (fake *FakeSpecParser) Parse(log lager.Logger, spec string) (subnets.Subnet
 	fake.parseMutex.Unlock()
 	if fake.ParseStub != nil {
 		return fake.ParseStub(log, spec)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
 	}
 	return fake.parseReturns.result1, fake.parseReturns.result2, fake.parseReturns.result3
 }
@@ -54,6 +63,22 @@ func (fake *FakeSpecParser) ParseArgsForCall(i int) (lager.Logger, string) {
 func (fake *FakeSpecParser) ParseReturns(result1 subnets.SubnetSelector, result2 subnets.IPSelector, result3 error) {
 	fake.ParseStub = nil
 	fake.parseReturns = struct {
+		result1 subnets.SubnetSelector
+		result2 subnets.IPSelector
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *FakeSpecParser) ParseReturnsOnCall(i int, result1 subnets.SubnetSelector, result2 subnets.IPSelector, result3 error) {
+	fake.ParseStub = nil
+	if fake.parseReturnsOnCall == nil {
+		fake.parseReturnsOnCall = make(map[int]struct {
+			result1 subnets.SubnetSelector
+			result2 subnets.IPSelector
+			result3 error
+		})
+	}
+	fake.parseReturnsOnCall[i] = struct {
 		result1 subnets.SubnetSelector
 		result2 subnets.IPSelector
 		result3 error

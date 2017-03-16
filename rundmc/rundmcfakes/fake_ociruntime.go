@@ -23,6 +23,9 @@ type FakeOCIRuntime struct {
 	createReturns struct {
 		result1 error
 	}
+	createReturnsOnCall map[int]struct {
+		result1 error
+	}
 	ExecStub        func(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
@@ -33,6 +36,10 @@ type FakeOCIRuntime struct {
 		io         garden.ProcessIO
 	}
 	execReturns struct {
+		result1 garden.Process
+		result2 error
+	}
+	execReturnsOnCall map[int]struct {
 		result1 garden.Process
 		result2 error
 	}
@@ -49,6 +56,10 @@ type FakeOCIRuntime struct {
 		result1 garden.Process
 		result2 error
 	}
+	attachReturnsOnCall map[int]struct {
+		result1 garden.Process
+		result2 error
+	}
 	KillStub        func(log lager.Logger, bundlePath string) error
 	killMutex       sync.RWMutex
 	killArgsForCall []struct {
@@ -56,6 +67,9 @@ type FakeOCIRuntime struct {
 		bundlePath string
 	}
 	killReturns struct {
+		result1 error
+	}
+	killReturnsOnCall map[int]struct {
 		result1 error
 	}
 	DeleteStub        func(log lager.Logger, bundlePath string) error
@@ -67,6 +81,9 @@ type FakeOCIRuntime struct {
 	deleteReturns struct {
 		result1 error
 	}
+	deleteReturnsOnCall map[int]struct {
+		result1 error
+	}
 	StateStub        func(log lager.Logger, id string) (runrunc.State, error)
 	stateMutex       sync.RWMutex
 	stateArgsForCall []struct {
@@ -74,6 +91,10 @@ type FakeOCIRuntime struct {
 		id  string
 	}
 	stateReturns struct {
+		result1 runrunc.State
+		result2 error
+	}
+	stateReturnsOnCall map[int]struct {
 		result1 runrunc.State
 		result2 error
 	}
@@ -87,6 +108,10 @@ type FakeOCIRuntime struct {
 		result1 gardener.ActualContainerMetrics
 		result2 error
 	}
+	statsReturnsOnCall map[int]struct {
+		result1 gardener.ActualContainerMetrics
+		result2 error
+	}
 	WatchEventsStub        func(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
 	watchEventsMutex       sync.RWMutex
 	watchEventsArgsForCall []struct {
@@ -97,12 +122,16 @@ type FakeOCIRuntime struct {
 	watchEventsReturns struct {
 		result1 error
 	}
+	watchEventsReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeOCIRuntime) Create(log lager.Logger, bundlePath string, id string, io garden.ProcessIO) error {
 	fake.createMutex.Lock()
+	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		log        lager.Logger
 		bundlePath string
@@ -113,6 +142,9 @@ func (fake *FakeOCIRuntime) Create(log lager.Logger, bundlePath string, id strin
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(log, bundlePath, id, io)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.createReturns.result1
 }
@@ -136,8 +168,21 @@ func (fake *FakeOCIRuntime) CreateReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeOCIRuntime) CreateReturnsOnCall(i int, result1 error) {
+	fake.CreateStub = nil
+	if fake.createReturnsOnCall == nil {
+		fake.createReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.createReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeOCIRuntime) Exec(log lager.Logger, id string, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	fake.execMutex.Lock()
+	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
 		log        lager.Logger
 		id         string
@@ -149,6 +194,9 @@ func (fake *FakeOCIRuntime) Exec(log lager.Logger, id string, bundlePath string,
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
 		return fake.ExecStub(log, id, bundlePath, spec, io)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.execReturns.result1, fake.execReturns.result2
 }
@@ -173,8 +221,23 @@ func (fake *FakeOCIRuntime) ExecReturns(result1 garden.Process, result2 error) {
 	}{result1, result2}
 }
 
+func (fake *FakeOCIRuntime) ExecReturnsOnCall(i int, result1 garden.Process, result2 error) {
+	fake.ExecStub = nil
+	if fake.execReturnsOnCall == nil {
+		fake.execReturnsOnCall = make(map[int]struct {
+			result1 garden.Process
+			result2 error
+		})
+	}
+	fake.execReturnsOnCall[i] = struct {
+		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeOCIRuntime) Attach(log lager.Logger, id string, bundlePath string, processId string, io garden.ProcessIO) (garden.Process, error) {
 	fake.attachMutex.Lock()
+	ret, specificReturn := fake.attachReturnsOnCall[len(fake.attachArgsForCall)]
 	fake.attachArgsForCall = append(fake.attachArgsForCall, struct {
 		log        lager.Logger
 		id         string
@@ -186,6 +249,9 @@ func (fake *FakeOCIRuntime) Attach(log lager.Logger, id string, bundlePath strin
 	fake.attachMutex.Unlock()
 	if fake.AttachStub != nil {
 		return fake.AttachStub(log, id, bundlePath, processId, io)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.attachReturns.result1, fake.attachReturns.result2
 }
@@ -210,8 +276,23 @@ func (fake *FakeOCIRuntime) AttachReturns(result1 garden.Process, result2 error)
 	}{result1, result2}
 }
 
+func (fake *FakeOCIRuntime) AttachReturnsOnCall(i int, result1 garden.Process, result2 error) {
+	fake.AttachStub = nil
+	if fake.attachReturnsOnCall == nil {
+		fake.attachReturnsOnCall = make(map[int]struct {
+			result1 garden.Process
+			result2 error
+		})
+	}
+	fake.attachReturnsOnCall[i] = struct {
+		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeOCIRuntime) Kill(log lager.Logger, bundlePath string) error {
 	fake.killMutex.Lock()
+	ret, specificReturn := fake.killReturnsOnCall[len(fake.killArgsForCall)]
 	fake.killArgsForCall = append(fake.killArgsForCall, struct {
 		log        lager.Logger
 		bundlePath string
@@ -220,6 +301,9 @@ func (fake *FakeOCIRuntime) Kill(log lager.Logger, bundlePath string) error {
 	fake.killMutex.Unlock()
 	if fake.KillStub != nil {
 		return fake.KillStub(log, bundlePath)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.killReturns.result1
 }
@@ -243,8 +327,21 @@ func (fake *FakeOCIRuntime) KillReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeOCIRuntime) KillReturnsOnCall(i int, result1 error) {
+	fake.KillStub = nil
+	if fake.killReturnsOnCall == nil {
+		fake.killReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.killReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeOCIRuntime) Delete(log lager.Logger, bundlePath string) error {
 	fake.deleteMutex.Lock()
+	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
 	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
 		log        lager.Logger
 		bundlePath string
@@ -253,6 +350,9 @@ func (fake *FakeOCIRuntime) Delete(log lager.Logger, bundlePath string) error {
 	fake.deleteMutex.Unlock()
 	if fake.DeleteStub != nil {
 		return fake.DeleteStub(log, bundlePath)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.deleteReturns.result1
 }
@@ -276,8 +376,21 @@ func (fake *FakeOCIRuntime) DeleteReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeOCIRuntime) DeleteReturnsOnCall(i int, result1 error) {
+	fake.DeleteStub = nil
+	if fake.deleteReturnsOnCall == nil {
+		fake.deleteReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deleteReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeOCIRuntime) State(log lager.Logger, id string) (runrunc.State, error) {
 	fake.stateMutex.Lock()
+	ret, specificReturn := fake.stateReturnsOnCall[len(fake.stateArgsForCall)]
 	fake.stateArgsForCall = append(fake.stateArgsForCall, struct {
 		log lager.Logger
 		id  string
@@ -286,6 +399,9 @@ func (fake *FakeOCIRuntime) State(log lager.Logger, id string) (runrunc.State, e
 	fake.stateMutex.Unlock()
 	if fake.StateStub != nil {
 		return fake.StateStub(log, id)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.stateReturns.result1, fake.stateReturns.result2
 }
@@ -310,8 +426,23 @@ func (fake *FakeOCIRuntime) StateReturns(result1 runrunc.State, result2 error) {
 	}{result1, result2}
 }
 
+func (fake *FakeOCIRuntime) StateReturnsOnCall(i int, result1 runrunc.State, result2 error) {
+	fake.StateStub = nil
+	if fake.stateReturnsOnCall == nil {
+		fake.stateReturnsOnCall = make(map[int]struct {
+			result1 runrunc.State
+			result2 error
+		})
+	}
+	fake.stateReturnsOnCall[i] = struct {
+		result1 runrunc.State
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeOCIRuntime) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {
 	fake.statsMutex.Lock()
+	ret, specificReturn := fake.statsReturnsOnCall[len(fake.statsArgsForCall)]
 	fake.statsArgsForCall = append(fake.statsArgsForCall, struct {
 		log lager.Logger
 		id  string
@@ -320,6 +451,9 @@ func (fake *FakeOCIRuntime) Stats(log lager.Logger, id string) (gardener.ActualC
 	fake.statsMutex.Unlock()
 	if fake.StatsStub != nil {
 		return fake.StatsStub(log, id)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.statsReturns.result1, fake.statsReturns.result2
 }
@@ -344,8 +478,23 @@ func (fake *FakeOCIRuntime) StatsReturns(result1 gardener.ActualContainerMetrics
 	}{result1, result2}
 }
 
+func (fake *FakeOCIRuntime) StatsReturnsOnCall(i int, result1 gardener.ActualContainerMetrics, result2 error) {
+	fake.StatsStub = nil
+	if fake.statsReturnsOnCall == nil {
+		fake.statsReturnsOnCall = make(map[int]struct {
+			result1 gardener.ActualContainerMetrics
+			result2 error
+		})
+	}
+	fake.statsReturnsOnCall[i] = struct {
+		result1 gardener.ActualContainerMetrics
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeOCIRuntime) WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error {
 	fake.watchEventsMutex.Lock()
+	ret, specificReturn := fake.watchEventsReturnsOnCall[len(fake.watchEventsArgsForCall)]
 	fake.watchEventsArgsForCall = append(fake.watchEventsArgsForCall, struct {
 		log            lager.Logger
 		id             string
@@ -355,6 +504,9 @@ func (fake *FakeOCIRuntime) WatchEvents(log lager.Logger, id string, eventsNotif
 	fake.watchEventsMutex.Unlock()
 	if fake.WatchEventsStub != nil {
 		return fake.WatchEventsStub(log, id, eventsNotifier)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.watchEventsReturns.result1
 }
@@ -374,6 +526,18 @@ func (fake *FakeOCIRuntime) WatchEventsArgsForCall(i int) (lager.Logger, string,
 func (fake *FakeOCIRuntime) WatchEventsReturns(result1 error) {
 	fake.WatchEventsStub = nil
 	fake.watchEventsReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeOCIRuntime) WatchEventsReturnsOnCall(i int, result1 error) {
+	fake.WatchEventsStub = nil
+	if fake.watchEventsReturnsOnCall == nil {
+		fake.watchEventsReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.watchEventsReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

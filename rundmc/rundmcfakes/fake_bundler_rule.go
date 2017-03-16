@@ -19,12 +19,16 @@ type FakeBundlerRule struct {
 	applyReturns struct {
 		result1 goci.Bndl
 	}
+	applyReturnsOnCall map[int]struct {
+		result1 goci.Bndl
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeBundlerRule) Apply(bndle goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
 	fake.applyMutex.Lock()
+	ret, specificReturn := fake.applyReturnsOnCall[len(fake.applyArgsForCall)]
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
 		bndle goci.Bndl
 		spec  gardener.DesiredContainerSpec
@@ -33,6 +37,9 @@ func (fake *FakeBundlerRule) Apply(bndle goci.Bndl, spec gardener.DesiredContain
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
 		return fake.ApplyStub(bndle, spec)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.applyReturns.result1
 }
@@ -52,6 +59,18 @@ func (fake *FakeBundlerRule) ApplyArgsForCall(i int) (goci.Bndl, gardener.Desire
 func (fake *FakeBundlerRule) ApplyReturns(result1 goci.Bndl) {
 	fake.ApplyStub = nil
 	fake.applyReturns = struct {
+		result1 goci.Bndl
+	}{result1}
+}
+
+func (fake *FakeBundlerRule) ApplyReturnsOnCall(i int, result1 goci.Bndl) {
+	fake.ApplyStub = nil
+	if fake.applyReturnsOnCall == nil {
+		fake.applyReturnsOnCall = make(map[int]struct {
+			result1 goci.Bndl
+		})
+	}
+	fake.applyReturnsOnCall[i] = struct {
 		result1 goci.Bndl
 	}{result1}
 }

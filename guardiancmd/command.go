@@ -202,7 +202,8 @@ type ServerCommand struct {
 		DenyNetworks    []CIDRFlag `long:"deny-network"      description:"Network ranges to which traffic from containers will be denied. Can be specified multiple times."`
 		AllowNetworks   []CIDRFlag `long:"allow-network"     description:"Network ranges to which traffic from containers will be allowed. Can be specified multiple times."`
 
-		DNSServers []IPFlag `long:"dns-server" description:"DNS server IP address to use instead of automatically determined servers. Can be specified multiple times."`
+		DNSServers           []IPFlag `long:"dns-server" description:"DNS server IP address to use instead of automatically determined servers. Can be specified multiple times."`
+		AdditionalDNSServers []IPFlag `long:"additional-dns-server" description:"DNS server IP address to append to the automatically determined servers. Can be specified multiple times."`
 
 		ExternalIP             IPFlag `long:"external-ip"                     description:"IP address to use to reach container's mapped ports. Autodetected if not specified."`
 		PortPoolStart          uint32 `long:"port-pool-start" default:"60000" description:"Start of the ephemeral port range used for mapped container ports."`
@@ -461,16 +462,22 @@ func (cmd *ServerCommand) wireCgroupsStarter(logger lager.Logger) gardener.Start
 	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, linux_command_runner.New())
 }
 
+func extractIPs(ipflags []IPFlag) []net.IP {
+	ips := make([]net.IP, len(ipflags))
+	for i, ipflag := range ipflags {
+		ips[i] = ipflag.IP()
+	}
+	return ips
+}
+
 func (cmd *ServerCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
 	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	dnsServers := make([]net.IP, len(cmd.Network.DNSServers))
-	for i, ip := range cmd.Network.DNSServers {
-		dnsServers[i] = ip.IP()
-	}
+	dnsServers := extractIPs(cmd.Network.DNSServers)
+	additionalDNSServers := extractIPs(cmd.Network.AdditionalDNSServers)
 
 	if cmd.Network.Plugin.Path() != "" {
 		resolvConfigurer := &kawasaki.ResolvConfigurer{
@@ -519,7 +526,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, propManager kawasaki.C
 	networker := kawasaki.New(
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(cmd.Network.Pool.CIDR()),
-		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, containerMtu),
+		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, additionalDNSServers, containerMtu),
 		propManager,
 		factory.NewDefaultConfigurer(ipTables),
 		portPool,

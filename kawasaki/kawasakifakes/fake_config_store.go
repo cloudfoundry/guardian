@@ -25,6 +25,10 @@ type FakeConfigStore struct {
 		result1 string
 		result2 bool
 	}
+	getReturnsOnCall map[int]struct {
+		result1 string
+		result2 bool
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -57,6 +61,7 @@ func (fake *FakeConfigStore) SetArgsForCall(i int) (string, string, string) {
 
 func (fake *FakeConfigStore) Get(handle string, name string) (string, bool) {
 	fake.getMutex.Lock()
+	ret, specificReturn := fake.getReturnsOnCall[len(fake.getArgsForCall)]
 	fake.getArgsForCall = append(fake.getArgsForCall, struct {
 		handle string
 		name   string
@@ -65,6 +70,9 @@ func (fake *FakeConfigStore) Get(handle string, name string) (string, bool) {
 	fake.getMutex.Unlock()
 	if fake.GetStub != nil {
 		return fake.GetStub(handle, name)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.getReturns.result1, fake.getReturns.result2
 }
@@ -84,6 +92,20 @@ func (fake *FakeConfigStore) GetArgsForCall(i int) (string, string) {
 func (fake *FakeConfigStore) GetReturns(result1 string, result2 bool) {
 	fake.GetStub = nil
 	fake.getReturns = struct {
+		result1 string
+		result2 bool
+	}{result1, result2}
+}
+
+func (fake *FakeConfigStore) GetReturnsOnCall(i int, result1 string, result2 bool) {
+	fake.GetStub = nil
+	if fake.getReturnsOnCall == nil {
+		fake.getReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 bool
+		})
+	}
+	fake.getReturnsOnCall[i] = struct {
 		result1 string
 		result2 bool
 	}{result1, result2}

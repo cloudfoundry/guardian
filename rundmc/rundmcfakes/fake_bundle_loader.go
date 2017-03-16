@@ -18,12 +18,17 @@ type FakeBundleLoader struct {
 		result1 goci.Bndl
 		result2 error
 	}
+	loadReturnsOnCall map[int]struct {
+		result1 goci.Bndl
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeBundleLoader) Load(path string) (goci.Bndl, error) {
 	fake.loadMutex.Lock()
+	ret, specificReturn := fake.loadReturnsOnCall[len(fake.loadArgsForCall)]
 	fake.loadArgsForCall = append(fake.loadArgsForCall, struct {
 		path string
 	}{path})
@@ -31,6 +36,9 @@ func (fake *FakeBundleLoader) Load(path string) (goci.Bndl, error) {
 	fake.loadMutex.Unlock()
 	if fake.LoadStub != nil {
 		return fake.LoadStub(path)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.loadReturns.result1, fake.loadReturns.result2
 }
@@ -50,6 +58,20 @@ func (fake *FakeBundleLoader) LoadArgsForCall(i int) string {
 func (fake *FakeBundleLoader) LoadReturns(result1 goci.Bndl, result2 error) {
 	fake.LoadStub = nil
 	fake.loadReturns = struct {
+		result1 goci.Bndl
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBundleLoader) LoadReturnsOnCall(i int, result1 goci.Bndl, result2 error) {
+	fake.LoadStub = nil
+	if fake.loadReturnsOnCall == nil {
+		fake.loadReturnsOnCall = make(map[int]struct {
+			result1 goci.Bndl
+			result2 error
+		})
+	}
+	fake.loadReturnsOnCall[i] = struct {
 		result1 goci.Bndl
 		result2 error
 	}{result1, result2}

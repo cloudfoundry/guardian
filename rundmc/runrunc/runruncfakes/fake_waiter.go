@@ -15,17 +15,25 @@ type FakeWaiter struct {
 		result1 int
 		result2 error
 	}
+	waitReturnsOnCall map[int]struct {
+		result1 int
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeWaiter) Wait() (int, error) {
 	fake.waitMutex.Lock()
+	ret, specificReturn := fake.waitReturnsOnCall[len(fake.waitArgsForCall)]
 	fake.waitArgsForCall = append(fake.waitArgsForCall, struct{}{})
 	fake.recordInvocation("Wait", []interface{}{})
 	fake.waitMutex.Unlock()
 	if fake.WaitStub != nil {
 		return fake.WaitStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.waitReturns.result1, fake.waitReturns.result2
 }
@@ -39,6 +47,20 @@ func (fake *FakeWaiter) WaitCallCount() int {
 func (fake *FakeWaiter) WaitReturns(result1 int, result2 error) {
 	fake.WaitStub = nil
 	fake.waitReturns = struct {
+		result1 int
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeWaiter) WaitReturnsOnCall(i int, result1 int, result2 error) {
+	fake.WaitStub = nil
+	if fake.waitReturnsOnCall == nil {
+		fake.waitReturnsOnCall = make(map[int]struct {
+			result1 int
+			result2 error
+		})
+	}
+	fake.waitReturnsOnCall[i] = struct {
 		result1 int
 		result2 error
 	}{result1, result2}

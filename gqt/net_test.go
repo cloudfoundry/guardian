@@ -749,6 +749,33 @@ var _ = Describe("Networking", func() {
 				}
 			})
 		})
+
+		Context("when --additional-dns-server is provided", func() {
+			BeforeEach(func() {
+				args = []string{"--additional-dns-server", "1.2.3.4"}
+			})
+
+			It("appends the IP address and the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
+				process, err := container.Run(garden.ProcessSpec{
+					Path: "cat",
+					Args: []string{"/etc/resolv.conf"},
+				}, garden.ProcessIO{
+					Stdout: stdout,
+				})
+				Expect(err).ToNot(HaveOccurred())
+
+				exitCode, err := process.Wait()
+				Expect(err).ToNot(HaveOccurred())
+				Expect(exitCode).To(Equal(0))
+
+				for _, hostNameserver := range hostNameservers {
+					Expect(stdout.Contents()).To(ContainSubstring(hostNameserver))
+					Expect(stdout.Contents()).NotTo(ContainSubstring("127.0.0."))
+				}
+
+				Expect(stdout.Contents()).To(ContainSubstring("nameserver 1.2.3.4"))
+			})
+		})
 	})
 
 	Describe("comments added to iptables rules", func() {

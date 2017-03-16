@@ -19,6 +19,9 @@ type FakeHostConfigurer struct {
 	applyReturns struct {
 		result1 error
 	}
+	applyReturnsOnCall map[int]struct {
+		result1 error
+	}
 	DestroyStub        func(cfg kawasaki.NetworkConfig) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
@@ -27,12 +30,16 @@ type FakeHostConfigurer struct {
 	destroyReturns struct {
 		result1 error
 	}
+	destroyReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeHostConfigurer) Apply(logger lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
 	fake.applyMutex.Lock()
+	ret, specificReturn := fake.applyReturnsOnCall[len(fake.applyArgsForCall)]
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
 		logger lager.Logger
 		cfg    kawasaki.NetworkConfig
@@ -42,6 +49,9 @@ func (fake *FakeHostConfigurer) Apply(logger lager.Logger, cfg kawasaki.NetworkC
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
 		return fake.ApplyStub(logger, cfg, pid)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.applyReturns.result1
 }
@@ -65,8 +75,21 @@ func (fake *FakeHostConfigurer) ApplyReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeHostConfigurer) ApplyReturnsOnCall(i int, result1 error) {
+	fake.ApplyStub = nil
+	if fake.applyReturnsOnCall == nil {
+		fake.applyReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.applyReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeHostConfigurer) Destroy(cfg kawasaki.NetworkConfig) error {
 	fake.destroyMutex.Lock()
+	ret, specificReturn := fake.destroyReturnsOnCall[len(fake.destroyArgsForCall)]
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
 		cfg kawasaki.NetworkConfig
 	}{cfg})
@@ -74,6 +97,9 @@ func (fake *FakeHostConfigurer) Destroy(cfg kawasaki.NetworkConfig) error {
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(cfg)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.destroyReturns.result1
 }
@@ -93,6 +119,18 @@ func (fake *FakeHostConfigurer) DestroyArgsForCall(i int) kawasaki.NetworkConfig
 func (fake *FakeHostConfigurer) DestroyReturns(result1 error) {
 	fake.DestroyStub = nil
 	fake.destroyReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeHostConfigurer) DestroyReturnsOnCall(i int, result1 error) {
+	fake.DestroyStub = nil
+	if fake.destroyReturnsOnCall == nil {
+		fake.destroyReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.destroyReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

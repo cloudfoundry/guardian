@@ -16,12 +16,16 @@ type FakeBundleSaver struct {
 	saveReturns struct {
 		result1 error
 	}
+	saveReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeBundleSaver) Save(path string) error {
 	fake.saveMutex.Lock()
+	ret, specificReturn := fake.saveReturnsOnCall[len(fake.saveArgsForCall)]
 	fake.saveArgsForCall = append(fake.saveArgsForCall, struct {
 		path string
 	}{path})
@@ -29,6 +33,9 @@ func (fake *FakeBundleSaver) Save(path string) error {
 	fake.saveMutex.Unlock()
 	if fake.SaveStub != nil {
 		return fake.SaveStub(path)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.saveReturns.result1
 }
@@ -48,6 +55,18 @@ func (fake *FakeBundleSaver) SaveArgsForCall(i int) string {
 func (fake *FakeBundleSaver) SaveReturns(result1 error) {
 	fake.SaveStub = nil
 	fake.saveReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeBundleSaver) SaveReturnsOnCall(i int, result1 error) {
+	fake.SaveStub = nil
+	if fake.saveReturnsOnCall == nil {
+		fake.saveReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.saveReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

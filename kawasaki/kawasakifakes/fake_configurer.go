@@ -19,6 +19,9 @@ type FakeConfigurer struct {
 	applyReturns struct {
 		result1 error
 	}
+	applyReturnsOnCall map[int]struct {
+		result1 error
+	}
 	DestroyBridgeStub        func(log lager.Logger, cfg kawasaki.NetworkConfig) error
 	destroyBridgeMutex       sync.RWMutex
 	destroyBridgeArgsForCall []struct {
@@ -26,6 +29,9 @@ type FakeConfigurer struct {
 		cfg kawasaki.NetworkConfig
 	}
 	destroyBridgeReturns struct {
+		result1 error
+	}
+	destroyBridgeReturnsOnCall map[int]struct {
 		result1 error
 	}
 	DestroyIPTablesRulesStub        func(log lager.Logger, cfg kawasaki.NetworkConfig) error
@@ -37,12 +43,16 @@ type FakeConfigurer struct {
 	destroyIPTablesRulesReturns struct {
 		result1 error
 	}
+	destroyIPTablesRulesReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeConfigurer) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
 	fake.applyMutex.Lock()
+	ret, specificReturn := fake.applyReturnsOnCall[len(fake.applyArgsForCall)]
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
 		log lager.Logger
 		cfg kawasaki.NetworkConfig
@@ -52,6 +62,9 @@ func (fake *FakeConfigurer) Apply(log lager.Logger, cfg kawasaki.NetworkConfig, 
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
 		return fake.ApplyStub(log, cfg, pid)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.applyReturns.result1
 }
@@ -75,8 +88,21 @@ func (fake *FakeConfigurer) ApplyReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeConfigurer) ApplyReturnsOnCall(i int, result1 error) {
+	fake.ApplyStub = nil
+	if fake.applyReturnsOnCall == nil {
+		fake.applyReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.applyReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeConfigurer) DestroyBridge(log lager.Logger, cfg kawasaki.NetworkConfig) error {
 	fake.destroyBridgeMutex.Lock()
+	ret, specificReturn := fake.destroyBridgeReturnsOnCall[len(fake.destroyBridgeArgsForCall)]
 	fake.destroyBridgeArgsForCall = append(fake.destroyBridgeArgsForCall, struct {
 		log lager.Logger
 		cfg kawasaki.NetworkConfig
@@ -85,6 +111,9 @@ func (fake *FakeConfigurer) DestroyBridge(log lager.Logger, cfg kawasaki.Network
 	fake.destroyBridgeMutex.Unlock()
 	if fake.DestroyBridgeStub != nil {
 		return fake.DestroyBridgeStub(log, cfg)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.destroyBridgeReturns.result1
 }
@@ -108,8 +137,21 @@ func (fake *FakeConfigurer) DestroyBridgeReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeConfigurer) DestroyBridgeReturnsOnCall(i int, result1 error) {
+	fake.DestroyBridgeStub = nil
+	if fake.destroyBridgeReturnsOnCall == nil {
+		fake.destroyBridgeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.destroyBridgeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeConfigurer) DestroyIPTablesRules(log lager.Logger, cfg kawasaki.NetworkConfig) error {
 	fake.destroyIPTablesRulesMutex.Lock()
+	ret, specificReturn := fake.destroyIPTablesRulesReturnsOnCall[len(fake.destroyIPTablesRulesArgsForCall)]
 	fake.destroyIPTablesRulesArgsForCall = append(fake.destroyIPTablesRulesArgsForCall, struct {
 		log lager.Logger
 		cfg kawasaki.NetworkConfig
@@ -118,6 +160,9 @@ func (fake *FakeConfigurer) DestroyIPTablesRules(log lager.Logger, cfg kawasaki.
 	fake.destroyIPTablesRulesMutex.Unlock()
 	if fake.DestroyIPTablesRulesStub != nil {
 		return fake.DestroyIPTablesRulesStub(log, cfg)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.destroyIPTablesRulesReturns.result1
 }
@@ -137,6 +182,18 @@ func (fake *FakeConfigurer) DestroyIPTablesRulesArgsForCall(i int) (lager.Logger
 func (fake *FakeConfigurer) DestroyIPTablesRulesReturns(result1 error) {
 	fake.DestroyIPTablesRulesStub = nil
 	fake.destroyIPTablesRulesReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeConfigurer) DestroyIPTablesRulesReturnsOnCall(i int, result1 error) {
+	fake.DestroyIPTablesRulesStub = nil
+	if fake.destroyIPTablesRulesReturnsOnCall == nil {
+		fake.destroyIPTablesRulesReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.destroyIPTablesRulesReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

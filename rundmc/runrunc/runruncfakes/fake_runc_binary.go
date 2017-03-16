@@ -19,12 +19,18 @@ type FakeRuncBinary struct {
 	execCommandReturns struct {
 		result1 *exec.Cmd
 	}
+	execCommandReturnsOnCall map[int]struct {
+		result1 *exec.Cmd
+	}
 	EventsCommandStub        func(id string) *exec.Cmd
 	eventsCommandMutex       sync.RWMutex
 	eventsCommandArgsForCall []struct {
 		id string
 	}
 	eventsCommandReturns struct {
+		result1 *exec.Cmd
+	}
+	eventsCommandReturnsOnCall map[int]struct {
 		result1 *exec.Cmd
 	}
 	StateCommandStub        func(id, logFile string) *exec.Cmd
@@ -36,6 +42,9 @@ type FakeRuncBinary struct {
 	stateCommandReturns struct {
 		result1 *exec.Cmd
 	}
+	stateCommandReturnsOnCall map[int]struct {
+		result1 *exec.Cmd
+	}
 	StatsCommandStub        func(id, logFile string) *exec.Cmd
 	statsCommandMutex       sync.RWMutex
 	statsCommandArgsForCall []struct {
@@ -43,6 +52,9 @@ type FakeRuncBinary struct {
 		logFile string
 	}
 	statsCommandReturns struct {
+		result1 *exec.Cmd
+	}
+	statsCommandReturnsOnCall map[int]struct {
 		result1 *exec.Cmd
 	}
 	KillCommandStub        func(id, signal, logFile string) *exec.Cmd
@@ -55,6 +67,9 @@ type FakeRuncBinary struct {
 	killCommandReturns struct {
 		result1 *exec.Cmd
 	}
+	killCommandReturnsOnCall map[int]struct {
+		result1 *exec.Cmd
+	}
 	DeleteCommandStub        func(id, logFile string) *exec.Cmd
 	deleteCommandMutex       sync.RWMutex
 	deleteCommandArgsForCall []struct {
@@ -64,12 +79,16 @@ type FakeRuncBinary struct {
 	deleteCommandReturns struct {
 		result1 *exec.Cmd
 	}
+	deleteCommandReturnsOnCall map[int]struct {
+		result1 *exec.Cmd
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeRuncBinary) ExecCommand(id string, processJSONPath string, pidFilePath string) *exec.Cmd {
 	fake.execCommandMutex.Lock()
+	ret, specificReturn := fake.execCommandReturnsOnCall[len(fake.execCommandArgsForCall)]
 	fake.execCommandArgsForCall = append(fake.execCommandArgsForCall, struct {
 		id              string
 		processJSONPath string
@@ -79,6 +98,9 @@ func (fake *FakeRuncBinary) ExecCommand(id string, processJSONPath string, pidFi
 	fake.execCommandMutex.Unlock()
 	if fake.ExecCommandStub != nil {
 		return fake.ExecCommandStub(id, processJSONPath, pidFilePath)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.execCommandReturns.result1
 }
@@ -102,8 +124,21 @@ func (fake *FakeRuncBinary) ExecCommandReturns(result1 *exec.Cmd) {
 	}{result1}
 }
 
+func (fake *FakeRuncBinary) ExecCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.ExecCommandStub = nil
+	if fake.execCommandReturnsOnCall == nil {
+		fake.execCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.execCommandReturnsOnCall[i] = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
 func (fake *FakeRuncBinary) EventsCommand(id string) *exec.Cmd {
 	fake.eventsCommandMutex.Lock()
+	ret, specificReturn := fake.eventsCommandReturnsOnCall[len(fake.eventsCommandArgsForCall)]
 	fake.eventsCommandArgsForCall = append(fake.eventsCommandArgsForCall, struct {
 		id string
 	}{id})
@@ -111,6 +146,9 @@ func (fake *FakeRuncBinary) EventsCommand(id string) *exec.Cmd {
 	fake.eventsCommandMutex.Unlock()
 	if fake.EventsCommandStub != nil {
 		return fake.EventsCommandStub(id)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.eventsCommandReturns.result1
 }
@@ -134,8 +172,21 @@ func (fake *FakeRuncBinary) EventsCommandReturns(result1 *exec.Cmd) {
 	}{result1}
 }
 
+func (fake *FakeRuncBinary) EventsCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.EventsCommandStub = nil
+	if fake.eventsCommandReturnsOnCall == nil {
+		fake.eventsCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.eventsCommandReturnsOnCall[i] = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
 func (fake *FakeRuncBinary) StateCommand(id string, logFile string) *exec.Cmd {
 	fake.stateCommandMutex.Lock()
+	ret, specificReturn := fake.stateCommandReturnsOnCall[len(fake.stateCommandArgsForCall)]
 	fake.stateCommandArgsForCall = append(fake.stateCommandArgsForCall, struct {
 		id      string
 		logFile string
@@ -144,6 +195,9 @@ func (fake *FakeRuncBinary) StateCommand(id string, logFile string) *exec.Cmd {
 	fake.stateCommandMutex.Unlock()
 	if fake.StateCommandStub != nil {
 		return fake.StateCommandStub(id, logFile)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.stateCommandReturns.result1
 }
@@ -167,8 +221,21 @@ func (fake *FakeRuncBinary) StateCommandReturns(result1 *exec.Cmd) {
 	}{result1}
 }
 
+func (fake *FakeRuncBinary) StateCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.StateCommandStub = nil
+	if fake.stateCommandReturnsOnCall == nil {
+		fake.stateCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.stateCommandReturnsOnCall[i] = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
 func (fake *FakeRuncBinary) StatsCommand(id string, logFile string) *exec.Cmd {
 	fake.statsCommandMutex.Lock()
+	ret, specificReturn := fake.statsCommandReturnsOnCall[len(fake.statsCommandArgsForCall)]
 	fake.statsCommandArgsForCall = append(fake.statsCommandArgsForCall, struct {
 		id      string
 		logFile string
@@ -177,6 +244,9 @@ func (fake *FakeRuncBinary) StatsCommand(id string, logFile string) *exec.Cmd {
 	fake.statsCommandMutex.Unlock()
 	if fake.StatsCommandStub != nil {
 		return fake.StatsCommandStub(id, logFile)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.statsCommandReturns.result1
 }
@@ -200,8 +270,21 @@ func (fake *FakeRuncBinary) StatsCommandReturns(result1 *exec.Cmd) {
 	}{result1}
 }
 
+func (fake *FakeRuncBinary) StatsCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.StatsCommandStub = nil
+	if fake.statsCommandReturnsOnCall == nil {
+		fake.statsCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.statsCommandReturnsOnCall[i] = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
 func (fake *FakeRuncBinary) KillCommand(id string, signal string, logFile string) *exec.Cmd {
 	fake.killCommandMutex.Lock()
+	ret, specificReturn := fake.killCommandReturnsOnCall[len(fake.killCommandArgsForCall)]
 	fake.killCommandArgsForCall = append(fake.killCommandArgsForCall, struct {
 		id      string
 		signal  string
@@ -211,6 +294,9 @@ func (fake *FakeRuncBinary) KillCommand(id string, signal string, logFile string
 	fake.killCommandMutex.Unlock()
 	if fake.KillCommandStub != nil {
 		return fake.KillCommandStub(id, signal, logFile)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.killCommandReturns.result1
 }
@@ -234,8 +320,21 @@ func (fake *FakeRuncBinary) KillCommandReturns(result1 *exec.Cmd) {
 	}{result1}
 }
 
+func (fake *FakeRuncBinary) KillCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.KillCommandStub = nil
+	if fake.killCommandReturnsOnCall == nil {
+		fake.killCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.killCommandReturnsOnCall[i] = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
 func (fake *FakeRuncBinary) DeleteCommand(id string, logFile string) *exec.Cmd {
 	fake.deleteCommandMutex.Lock()
+	ret, specificReturn := fake.deleteCommandReturnsOnCall[len(fake.deleteCommandArgsForCall)]
 	fake.deleteCommandArgsForCall = append(fake.deleteCommandArgsForCall, struct {
 		id      string
 		logFile string
@@ -244,6 +343,9 @@ func (fake *FakeRuncBinary) DeleteCommand(id string, logFile string) *exec.Cmd {
 	fake.deleteCommandMutex.Unlock()
 	if fake.DeleteCommandStub != nil {
 		return fake.DeleteCommandStub(id, logFile)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.deleteCommandReturns.result1
 }
@@ -263,6 +365,18 @@ func (fake *FakeRuncBinary) DeleteCommandArgsForCall(i int) (string, string) {
 func (fake *FakeRuncBinary) DeleteCommandReturns(result1 *exec.Cmd) {
 	fake.DeleteCommandStub = nil
 	fake.deleteCommandReturns = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
+func (fake *FakeRuncBinary) DeleteCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.DeleteCommandStub = nil
+	if fake.deleteCommandReturnsOnCall == nil {
+		fake.deleteCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.deleteCommandReturnsOnCall[i] = struct {
 		result1 *exec.Cmd
 	}{result1}
 }

@@ -10,15 +10,20 @@ import (
 )
 
 type FakeResolvFileCompiler struct {
-	CompileStub        func(log lager.Logger, resolvConfPath string, containerIp net.IP, overrideServers []net.IP) ([]byte, error)
+	CompileStub        func(log lager.Logger, resolvConfPath string, containerIp net.IP, overrideServers, additionalDNSServers []net.IP) ([]byte, error)
 	compileMutex       sync.RWMutex
 	compileArgsForCall []struct {
-		log             lager.Logger
-		resolvConfPath  string
-		containerIp     net.IP
-		overrideServers []net.IP
+		log                  lager.Logger
+		resolvConfPath       string
+		containerIp          net.IP
+		overrideServers      []net.IP
+		additionalDNSServers []net.IP
 	}
 	compileReturns struct {
+		result1 []byte
+		result2 error
+	}
+	compileReturnsOnCall map[int]struct {
 		result1 []byte
 		result2 error
 	}
@@ -26,23 +31,33 @@ type FakeResolvFileCompiler struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeResolvFileCompiler) Compile(log lager.Logger, resolvConfPath string, containerIp net.IP, overrideServers []net.IP) ([]byte, error) {
+func (fake *FakeResolvFileCompiler) Compile(log lager.Logger, resolvConfPath string, containerIp net.IP, overrideServers []net.IP, additionalDNSServers []net.IP) ([]byte, error) {
 	var overrideServersCopy []net.IP
 	if overrideServers != nil {
 		overrideServersCopy = make([]net.IP, len(overrideServers))
 		copy(overrideServersCopy, overrideServers)
 	}
+	var additionalDNSServersCopy []net.IP
+	if additionalDNSServers != nil {
+		additionalDNSServersCopy = make([]net.IP, len(additionalDNSServers))
+		copy(additionalDNSServersCopy, additionalDNSServers)
+	}
 	fake.compileMutex.Lock()
+	ret, specificReturn := fake.compileReturnsOnCall[len(fake.compileArgsForCall)]
 	fake.compileArgsForCall = append(fake.compileArgsForCall, struct {
-		log             lager.Logger
-		resolvConfPath  string
-		containerIp     net.IP
-		overrideServers []net.IP
-	}{log, resolvConfPath, containerIp, overrideServersCopy})
-	fake.recordInvocation("Compile", []interface{}{log, resolvConfPath, containerIp, overrideServersCopy})
+		log                  lager.Logger
+		resolvConfPath       string
+		containerIp          net.IP
+		overrideServers      []net.IP
+		additionalDNSServers []net.IP
+	}{log, resolvConfPath, containerIp, overrideServersCopy, additionalDNSServersCopy})
+	fake.recordInvocation("Compile", []interface{}{log, resolvConfPath, containerIp, overrideServersCopy, additionalDNSServersCopy})
 	fake.compileMutex.Unlock()
 	if fake.CompileStub != nil {
-		return fake.CompileStub(log, resolvConfPath, containerIp, overrideServers)
+		return fake.CompileStub(log, resolvConfPath, containerIp, overrideServers, additionalDNSServers)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.compileReturns.result1, fake.compileReturns.result2
 }
@@ -53,15 +68,29 @@ func (fake *FakeResolvFileCompiler) CompileCallCount() int {
 	return len(fake.compileArgsForCall)
 }
 
-func (fake *FakeResolvFileCompiler) CompileArgsForCall(i int) (lager.Logger, string, net.IP, []net.IP) {
+func (fake *FakeResolvFileCompiler) CompileArgsForCall(i int) (lager.Logger, string, net.IP, []net.IP, []net.IP) {
 	fake.compileMutex.RLock()
 	defer fake.compileMutex.RUnlock()
-	return fake.compileArgsForCall[i].log, fake.compileArgsForCall[i].resolvConfPath, fake.compileArgsForCall[i].containerIp, fake.compileArgsForCall[i].overrideServers
+	return fake.compileArgsForCall[i].log, fake.compileArgsForCall[i].resolvConfPath, fake.compileArgsForCall[i].containerIp, fake.compileArgsForCall[i].overrideServers, fake.compileArgsForCall[i].additionalDNSServers
 }
 
 func (fake *FakeResolvFileCompiler) CompileReturns(result1 []byte, result2 error) {
 	fake.CompileStub = nil
 	fake.compileReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeResolvFileCompiler) CompileReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.CompileStub = nil
+	if fake.compileReturnsOnCall == nil {
+		fake.compileReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.compileReturnsOnCall[i] = struct {
 		result1 []byte
 		result2 error
 	}{result1, result2}

@@ -22,6 +22,10 @@ type FakeCommandCreator struct {
 		result1 *exec.Cmd
 		result2 error
 	}
+	createCommandReturnsOnCall map[int]struct {
+		result1 *exec.Cmd
+		result2 error
+	}
 	DestroyCommandStub        func(log lager.Logger, handle string) *exec.Cmd
 	destroyCommandMutex       sync.RWMutex
 	destroyCommandArgsForCall []struct {
@@ -29,6 +33,9 @@ type FakeCommandCreator struct {
 		handle string
 	}
 	destroyCommandReturns struct {
+		result1 *exec.Cmd
+	}
+	destroyCommandReturnsOnCall map[int]struct {
 		result1 *exec.Cmd
 	}
 	MetricsCommandStub        func(log lager.Logger, handle string) *exec.Cmd
@@ -40,12 +47,16 @@ type FakeCommandCreator struct {
 	metricsCommandReturns struct {
 		result1 *exec.Cmd
 	}
+	metricsCommandReturnsOnCall map[int]struct {
+		result1 *exec.Cmd
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeCommandCreator) CreateCommand(log lager.Logger, handle string, spec rootfs_provider.Spec) (*exec.Cmd, error) {
 	fake.createCommandMutex.Lock()
+	ret, specificReturn := fake.createCommandReturnsOnCall[len(fake.createCommandArgsForCall)]
 	fake.createCommandArgsForCall = append(fake.createCommandArgsForCall, struct {
 		log    lager.Logger
 		handle string
@@ -55,6 +66,9 @@ func (fake *FakeCommandCreator) CreateCommand(log lager.Logger, handle string, s
 	fake.createCommandMutex.Unlock()
 	if fake.CreateCommandStub != nil {
 		return fake.CreateCommandStub(log, handle, spec)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.createCommandReturns.result1, fake.createCommandReturns.result2
 }
@@ -79,8 +93,23 @@ func (fake *FakeCommandCreator) CreateCommandReturns(result1 *exec.Cmd, result2 
 	}{result1, result2}
 }
 
+func (fake *FakeCommandCreator) CreateCommandReturnsOnCall(i int, result1 *exec.Cmd, result2 error) {
+	fake.CreateCommandStub = nil
+	if fake.createCommandReturnsOnCall == nil {
+		fake.createCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+			result2 error
+		})
+	}
+	fake.createCommandReturnsOnCall[i] = struct {
+		result1 *exec.Cmd
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeCommandCreator) DestroyCommand(log lager.Logger, handle string) *exec.Cmd {
 	fake.destroyCommandMutex.Lock()
+	ret, specificReturn := fake.destroyCommandReturnsOnCall[len(fake.destroyCommandArgsForCall)]
 	fake.destroyCommandArgsForCall = append(fake.destroyCommandArgsForCall, struct {
 		log    lager.Logger
 		handle string
@@ -89,6 +118,9 @@ func (fake *FakeCommandCreator) DestroyCommand(log lager.Logger, handle string) 
 	fake.destroyCommandMutex.Unlock()
 	if fake.DestroyCommandStub != nil {
 		return fake.DestroyCommandStub(log, handle)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.destroyCommandReturns.result1
 }
@@ -112,8 +144,21 @@ func (fake *FakeCommandCreator) DestroyCommandReturns(result1 *exec.Cmd) {
 	}{result1}
 }
 
+func (fake *FakeCommandCreator) DestroyCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.DestroyCommandStub = nil
+	if fake.destroyCommandReturnsOnCall == nil {
+		fake.destroyCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.destroyCommandReturnsOnCall[i] = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
 func (fake *FakeCommandCreator) MetricsCommand(log lager.Logger, handle string) *exec.Cmd {
 	fake.metricsCommandMutex.Lock()
+	ret, specificReturn := fake.metricsCommandReturnsOnCall[len(fake.metricsCommandArgsForCall)]
 	fake.metricsCommandArgsForCall = append(fake.metricsCommandArgsForCall, struct {
 		log    lager.Logger
 		handle string
@@ -122,6 +167,9 @@ func (fake *FakeCommandCreator) MetricsCommand(log lager.Logger, handle string) 
 	fake.metricsCommandMutex.Unlock()
 	if fake.MetricsCommandStub != nil {
 		return fake.MetricsCommandStub(log, handle)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.metricsCommandReturns.result1
 }
@@ -141,6 +189,18 @@ func (fake *FakeCommandCreator) MetricsCommandArgsForCall(i int) (lager.Logger, 
 func (fake *FakeCommandCreator) MetricsCommandReturns(result1 *exec.Cmd) {
 	fake.MetricsCommandStub = nil
 	fake.metricsCommandReturns = struct {
+		result1 *exec.Cmd
+	}{result1}
+}
+
+func (fake *FakeCommandCreator) MetricsCommandReturnsOnCall(i int, result1 *exec.Cmd) {
+	fake.MetricsCommandStub = nil
+	if fake.metricsCommandReturnsOnCall == nil {
+		fake.metricsCommandReturnsOnCall = make(map[int]struct {
+			result1 *exec.Cmd
+		})
+	}
+	fake.metricsCommandReturnsOnCall[i] = struct {
 		result1 *exec.Cmd
 	}{result1}
 }

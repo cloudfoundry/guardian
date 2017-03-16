@@ -23,6 +23,10 @@ type FakeProcessTracker struct {
 		result1 garden.Process
 		result2 error
 	}
+	runReturnsOnCall map[int]struct {
+		result1 garden.Process
+		result2 error
+	}
 	AttachStub        func(processID string, io garden.ProcessIO, pidFilePath string) (garden.Process, error)
 	attachMutex       sync.RWMutex
 	attachArgsForCall []struct {
@@ -34,12 +38,17 @@ type FakeProcessTracker struct {
 		result1 garden.Process
 		result2 error
 	}
+	attachReturnsOnCall map[int]struct {
+		result1 garden.Process
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeProcessTracker) Run(processID string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, pidFile string) (garden.Process, error) {
 	fake.runMutex.Lock()
+	ret, specificReturn := fake.runReturnsOnCall[len(fake.runArgsForCall)]
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
 		processID string
 		cmd       *exec.Cmd
@@ -51,6 +60,9 @@ func (fake *FakeProcessTracker) Run(processID string, cmd *exec.Cmd, io garden.P
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
 		return fake.RunStub(processID, cmd, io, tty, pidFile)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.runReturns.result1, fake.runReturns.result2
 }
@@ -75,8 +87,23 @@ func (fake *FakeProcessTracker) RunReturns(result1 garden.Process, result2 error
 	}{result1, result2}
 }
 
+func (fake *FakeProcessTracker) RunReturnsOnCall(i int, result1 garden.Process, result2 error) {
+	fake.RunStub = nil
+	if fake.runReturnsOnCall == nil {
+		fake.runReturnsOnCall = make(map[int]struct {
+			result1 garden.Process
+			result2 error
+		})
+	}
+	fake.runReturnsOnCall[i] = struct {
+		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeProcessTracker) Attach(processID string, io garden.ProcessIO, pidFilePath string) (garden.Process, error) {
 	fake.attachMutex.Lock()
+	ret, specificReturn := fake.attachReturnsOnCall[len(fake.attachArgsForCall)]
 	fake.attachArgsForCall = append(fake.attachArgsForCall, struct {
 		processID   string
 		io          garden.ProcessIO
@@ -86,6 +113,9 @@ func (fake *FakeProcessTracker) Attach(processID string, io garden.ProcessIO, pi
 	fake.attachMutex.Unlock()
 	if fake.AttachStub != nil {
 		return fake.AttachStub(processID, io, pidFilePath)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.attachReturns.result1, fake.attachReturns.result2
 }
@@ -105,6 +135,20 @@ func (fake *FakeProcessTracker) AttachArgsForCall(i int) (string, garden.Process
 func (fake *FakeProcessTracker) AttachReturns(result1 garden.Process, result2 error) {
 	fake.AttachStub = nil
 	fake.attachReturns = struct {
+		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeProcessTracker) AttachReturnsOnCall(i int, result1 garden.Process, result2 error) {
+	fake.AttachStub = nil
+	if fake.attachReturnsOnCall == nil {
+		fake.attachReturnsOnCall = make(map[int]struct {
+			result1 garden.Process
+			result2 error
+		})
+	}
+	fake.attachReturnsOnCall[i] = struct {
 		result1 garden.Process
 		result2 error
 	}{result1, result2}

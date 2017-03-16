@@ -19,6 +19,10 @@ type FakeIPSelector struct {
 		result1 net.IP
 		result2 error
 	}
+	selectIPReturnsOnCall map[int]struct {
+		result1 net.IP
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -30,6 +34,7 @@ func (fake *FakeIPSelector) SelectIP(subnet *net.IPNet, existing []net.IP) (net.
 		copy(existingCopy, existing)
 	}
 	fake.selectIPMutex.Lock()
+	ret, specificReturn := fake.selectIPReturnsOnCall[len(fake.selectIPArgsForCall)]
 	fake.selectIPArgsForCall = append(fake.selectIPArgsForCall, struct {
 		subnet   *net.IPNet
 		existing []net.IP
@@ -38,6 +43,9 @@ func (fake *FakeIPSelector) SelectIP(subnet *net.IPNet, existing []net.IP) (net.
 	fake.selectIPMutex.Unlock()
 	if fake.SelectIPStub != nil {
 		return fake.SelectIPStub(subnet, existing)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.selectIPReturns.result1, fake.selectIPReturns.result2
 }
@@ -57,6 +65,20 @@ func (fake *FakeIPSelector) SelectIPArgsForCall(i int) (*net.IPNet, []net.IP) {
 func (fake *FakeIPSelector) SelectIPReturns(result1 net.IP, result2 error) {
 	fake.SelectIPStub = nil
 	fake.selectIPReturns = struct {
+		result1 net.IP
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeIPSelector) SelectIPReturnsOnCall(i int, result1 net.IP, result2 error) {
+	fake.SelectIPStub = nil
+	if fake.selectIPReturnsOnCall == nil {
+		fake.selectIPReturnsOnCall = make(map[int]struct {
+			result1 net.IP
+			result2 error
+		})
+	}
+	fake.selectIPReturnsOnCall[i] = struct {
 		result1 net.IP
 		result2 error
 	}{result1, result2}

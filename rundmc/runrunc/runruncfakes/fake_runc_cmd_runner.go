@@ -18,12 +18,16 @@ type FakeRuncCmdRunner struct {
 	runAndLogReturns struct {
 		result1 error
 	}
+	runAndLogReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeRuncCmdRunner) RunAndLog(log lager.Logger, cmd runrunc.LoggingCmd) error {
 	fake.runAndLogMutex.Lock()
+	ret, specificReturn := fake.runAndLogReturnsOnCall[len(fake.runAndLogArgsForCall)]
 	fake.runAndLogArgsForCall = append(fake.runAndLogArgsForCall, struct {
 		log lager.Logger
 		cmd runrunc.LoggingCmd
@@ -32,6 +36,9 @@ func (fake *FakeRuncCmdRunner) RunAndLog(log lager.Logger, cmd runrunc.LoggingCm
 	fake.runAndLogMutex.Unlock()
 	if fake.RunAndLogStub != nil {
 		return fake.RunAndLogStub(log, cmd)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.runAndLogReturns.result1
 }
@@ -51,6 +58,18 @@ func (fake *FakeRuncCmdRunner) RunAndLogArgsForCall(i int) (lager.Logger, runrun
 func (fake *FakeRuncCmdRunner) RunAndLogReturns(result1 error) {
 	fake.RunAndLogStub = nil
 	fake.runAndLogReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeRuncCmdRunner) RunAndLogReturnsOnCall(i int, result1 error) {
+	fake.RunAndLogStub = nil
+	if fake.runAndLogReturnsOnCall == nil {
+		fake.runAndLogReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.runAndLogReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

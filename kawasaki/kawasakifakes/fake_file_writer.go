@@ -22,6 +22,9 @@ type FakeFileWriter struct {
 	writeFileReturns struct {
 		result1 error
 	}
+	writeFileReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -33,6 +36,7 @@ func (fake *FakeFileWriter) WriteFile(log lager.Logger, filePath string, content
 		copy(contentsCopy, contents)
 	}
 	fake.writeFileMutex.Lock()
+	ret, specificReturn := fake.writeFileReturnsOnCall[len(fake.writeFileArgsForCall)]
 	fake.writeFileArgsForCall = append(fake.writeFileArgsForCall, struct {
 		log        lager.Logger
 		filePath   string
@@ -45,6 +49,9 @@ func (fake *FakeFileWriter) WriteFile(log lager.Logger, filePath string, content
 	fake.writeFileMutex.Unlock()
 	if fake.WriteFileStub != nil {
 		return fake.WriteFileStub(log, filePath, contents, rootfsPath, rootUid, rootGid)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.writeFileReturns.result1
 }
@@ -64,6 +71,18 @@ func (fake *FakeFileWriter) WriteFileArgsForCall(i int) (lager.Logger, string, [
 func (fake *FakeFileWriter) WriteFileReturns(result1 error) {
 	fake.WriteFileStub = nil
 	fake.writeFileReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeFileWriter) WriteFileReturnsOnCall(i int, result1 error) {
+	fake.WriteFileStub = nil
+	if fake.writeFileReturnsOnCall == nil {
+		fake.writeFileReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.writeFileReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

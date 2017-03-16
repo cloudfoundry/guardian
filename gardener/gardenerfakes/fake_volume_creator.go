@@ -23,6 +23,11 @@ type FakeVolumeCreator struct {
 		result2 []string
 		result3 error
 	}
+	createReturnsOnCall map[int]struct {
+		result1 string
+		result2 []string
+		result3 error
+	}
 	DestroyStub        func(log lager.Logger, handle string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
@@ -30,6 +35,9 @@ type FakeVolumeCreator struct {
 		handle string
 	}
 	destroyReturns struct {
+		result1 error
+	}
+	destroyReturnsOnCall map[int]struct {
 		result1 error
 	}
 	MetricsStub        func(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error)
@@ -43,6 +51,10 @@ type FakeVolumeCreator struct {
 		result1 garden.ContainerDiskStat
 		result2 error
 	}
+	metricsReturnsOnCall map[int]struct {
+		result1 garden.ContainerDiskStat
+		result2 error
+	}
 	GCStub        func(log lager.Logger) error
 	gCMutex       sync.RWMutex
 	gCArgsForCall []struct {
@@ -51,12 +63,16 @@ type FakeVolumeCreator struct {
 	gCReturns struct {
 		result1 error
 	}
+	gCReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error) {
 	fake.createMutex.Lock()
+	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		log    lager.Logger
 		handle string
@@ -66,6 +82,9 @@ func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec root
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(log, handle, spec)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
 	}
 	return fake.createReturns.result1, fake.createReturns.result2, fake.createReturns.result3
 }
@@ -91,8 +110,25 @@ func (fake *FakeVolumeCreator) CreateReturns(result1 string, result2 []string, r
 	}{result1, result2, result3}
 }
 
+func (fake *FakeVolumeCreator) CreateReturnsOnCall(i int, result1 string, result2 []string, result3 error) {
+	fake.CreateStub = nil
+	if fake.createReturnsOnCall == nil {
+		fake.createReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 []string
+			result3 error
+		})
+	}
+	fake.createReturnsOnCall[i] = struct {
+		result1 string
+		result2 []string
+		result3 error
+	}{result1, result2, result3}
+}
+
 func (fake *FakeVolumeCreator) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Lock()
+	ret, specificReturn := fake.destroyReturnsOnCall[len(fake.destroyArgsForCall)]
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
 		log    lager.Logger
 		handle string
@@ -101,6 +137,9 @@ func (fake *FakeVolumeCreator) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(log, handle)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.destroyReturns.result1
 }
@@ -124,8 +163,21 @@ func (fake *FakeVolumeCreator) DestroyReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeVolumeCreator) DestroyReturnsOnCall(i int, result1 error) {
+	fake.DestroyStub = nil
+	if fake.destroyReturnsOnCall == nil {
+		fake.destroyReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.destroyReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeVolumeCreator) Metrics(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error) {
 	fake.metricsMutex.Lock()
+	ret, specificReturn := fake.metricsReturnsOnCall[len(fake.metricsArgsForCall)]
 	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
 		log        lager.Logger
 		handle     string
@@ -135,6 +187,9 @@ func (fake *FakeVolumeCreator) Metrics(log lager.Logger, handle string, privileg
 	fake.metricsMutex.Unlock()
 	if fake.MetricsStub != nil {
 		return fake.MetricsStub(log, handle, privileged)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.metricsReturns.result1, fake.metricsReturns.result2
 }
@@ -159,8 +214,23 @@ func (fake *FakeVolumeCreator) MetricsReturns(result1 garden.ContainerDiskStat, 
 	}{result1, result2}
 }
 
+func (fake *FakeVolumeCreator) MetricsReturnsOnCall(i int, result1 garden.ContainerDiskStat, result2 error) {
+	fake.MetricsStub = nil
+	if fake.metricsReturnsOnCall == nil {
+		fake.metricsReturnsOnCall = make(map[int]struct {
+			result1 garden.ContainerDiskStat
+			result2 error
+		})
+	}
+	fake.metricsReturnsOnCall[i] = struct {
+		result1 garden.ContainerDiskStat
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeVolumeCreator) GC(log lager.Logger) error {
 	fake.gCMutex.Lock()
+	ret, specificReturn := fake.gCReturnsOnCall[len(fake.gCArgsForCall)]
 	fake.gCArgsForCall = append(fake.gCArgsForCall, struct {
 		log lager.Logger
 	}{log})
@@ -168,6 +238,9 @@ func (fake *FakeVolumeCreator) GC(log lager.Logger) error {
 	fake.gCMutex.Unlock()
 	if fake.GCStub != nil {
 		return fake.GCStub(log)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.gCReturns.result1
 }
@@ -187,6 +260,18 @@ func (fake *FakeVolumeCreator) GCArgsForCall(i int) lager.Logger {
 func (fake *FakeVolumeCreator) GCReturns(result1 error) {
 	fake.GCStub = nil
 	fake.gCReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeCreator) GCReturnsOnCall(i int, result1 error) {
+	fake.GCStub = nil
+	if fake.gCReturnsOnCall == nil {
+		fake.gCReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.gCReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

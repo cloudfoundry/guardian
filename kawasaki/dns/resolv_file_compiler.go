@@ -1,12 +1,9 @@
 package dns
 
 import (
-	"bufio"
-	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net"
-	"os"
 	"regexp"
 	"strings"
 
@@ -15,50 +12,60 @@ import (
 
 type ResolvFileCompiler struct{}
 
-func (r *ResolvFileCompiler) Compile(log lager.Logger, resolvConfPath string, hostIP net.IP, overrideServers []net.IP) ([]byte, error) {
+func (r *ResolvFileCompiler) Compile(log lager.Logger, resolvFilePath string, hostIP net.IP, overridingDNSServers, additionalDNSServers []net.IP) ([]byte, error) {
 	log = log.Session("resolv-file-compile", lager.Data{
-		"HostResolvConfPath": resolvConfPath,
-		"HostIP":             hostIP,
-		"OverrideServers":    overrideServers,
+		"HostResolvFilePath":   resolvFilePath,
+		"HostIP":               hostIP,
+		"overridingDNSServers": overridingDNSServers,
+		"AdditionalDNSServers": additionalDNSServers,
 	})
 
-	f, err := os.Open(resolvConfPath)
-	if err != nil {
-		log.Error("reading-host-resolv-conf", err)
-		return nil, fmt.Errorf("reading file '%s': %s", resolvConfPath, err)
-	}
-	defer f.Close()
-
-	contents, err := ioutil.ReadAll(f)
-	if err != nil {
-		log.Error("reading-host-resolv-conf", err)
-		return nil, fmt.Errorf("reading file '%s': %s", resolvConfPath, err)
+	servers := []string{}
+	for _, dnsServer := range overridingDNSServers {
+		servers = append(servers, nameserver(dnsServer))
 	}
 
-	if len(overrideServers) > 0 {
-		var buf bytes.Buffer
-		for _, name := range overrideServers {
-			fmt.Fprintf(&buf, "nameserver %s\n", name.String())
+	if len(servers) == 0 {
+		var err error
+		servers, err = parseHostResolvFile(resolvFilePath, hostIP)
+		if err != nil {
+			log.Error("reading-host-resolv", err)
+			return nil, err
 		}
-		return buf.Bytes(), nil
+	}
+
+	for _, dnsServer := range additionalDNSServers {
+		servers = append(servers, nameserver(dnsServer))
+	}
+
+	return []byte(strings.Join(append(servers, ""), "\n")), nil
+}
+
+func parseHostResolvFile(resolvFilePath string, hostIP net.IP) ([]string, error) {
+	contents, err := ioutil.ReadFile(resolvFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("reading file '%s': %s", resolvFilePath, err)
 	}
 
 	matches, err := regexp.Match(`^\s*nameserver\s+127\.0\.0\.1\s*$`, contents)
 	if err != nil {
-		log.Error("matching-regexp", err)
 		return nil, err
 	}
 
 	if matches {
-		return []byte(fmt.Sprintf("nameserver %s\n", hostIP.String())), nil
+		return []string{nameserver(hostIP)}, nil
 	}
 
-	scanner := bufio.NewScanner(bytes.NewBuffer(contents))
-	var ret bytes.Buffer
-	for scanner.Scan() {
-		if !strings.Contains(scanner.Text(), "127.0.0.") {
-			fmt.Fprintf(&ret, "%s\n", scanner.Text())
+	servers := []string{}
+	for _, entry := range strings.Split(strings.TrimSpace(string(contents)), "\n") {
+		if !strings.Contains(entry, "127.0.0.") {
+			servers = append(servers, entry)
 		}
 	}
-	return ret.Bytes(), nil
+
+	return servers, nil
+}
+
+func nameserver(ip net.IP) string {
+	return fmt.Sprintf("nameserver %s", ip.String())
 }

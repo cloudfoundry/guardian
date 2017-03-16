@@ -22,6 +22,11 @@ type FakePool struct {
 		result2 net.IP
 		result3 error
 	}
+	acquireReturnsOnCall map[int]struct {
+		result1 *net.IPNet
+		result2 net.IP
+		result3 error
+	}
 	ReleaseStub        func(*net.IPNet, net.IP) error
 	releaseMutex       sync.RWMutex
 	releaseArgsForCall []struct {
@@ -29,6 +34,9 @@ type FakePool struct {
 		arg2 net.IP
 	}
 	releaseReturns struct {
+		result1 error
+	}
+	releaseReturnsOnCall map[int]struct {
 		result1 error
 	}
 	RemoveStub        func(*net.IPNet, net.IP) error
@@ -40,10 +48,16 @@ type FakePool struct {
 	removeReturns struct {
 		result1 error
 	}
+	removeReturnsOnCall map[int]struct {
+		result1 error
+	}
 	CapacityStub        func() int
 	capacityMutex       sync.RWMutex
 	capacityArgsForCall []struct{}
 	capacityReturns     struct {
+		result1 int
+	}
+	capacityReturnsOnCall map[int]struct {
 		result1 int
 	}
 	RunIfFreeStub        func(*net.IPNet, func() error) error
@@ -55,12 +69,16 @@ type FakePool struct {
 	runIfFreeReturns struct {
 		result1 error
 	}
+	runIfFreeReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakePool) Acquire(arg1 lager.Logger, arg2 subnets.SubnetSelector, arg3 subnets.IPSelector) (*net.IPNet, net.IP, error) {
 	fake.acquireMutex.Lock()
+	ret, specificReturn := fake.acquireReturnsOnCall[len(fake.acquireArgsForCall)]
 	fake.acquireArgsForCall = append(fake.acquireArgsForCall, struct {
 		arg1 lager.Logger
 		arg2 subnets.SubnetSelector
@@ -70,6 +88,9 @@ func (fake *FakePool) Acquire(arg1 lager.Logger, arg2 subnets.SubnetSelector, ar
 	fake.acquireMutex.Unlock()
 	if fake.AcquireStub != nil {
 		return fake.AcquireStub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
 	}
 	return fake.acquireReturns.result1, fake.acquireReturns.result2, fake.acquireReturns.result3
 }
@@ -95,8 +116,25 @@ func (fake *FakePool) AcquireReturns(result1 *net.IPNet, result2 net.IP, result3
 	}{result1, result2, result3}
 }
 
+func (fake *FakePool) AcquireReturnsOnCall(i int, result1 *net.IPNet, result2 net.IP, result3 error) {
+	fake.AcquireStub = nil
+	if fake.acquireReturnsOnCall == nil {
+		fake.acquireReturnsOnCall = make(map[int]struct {
+			result1 *net.IPNet
+			result2 net.IP
+			result3 error
+		})
+	}
+	fake.acquireReturnsOnCall[i] = struct {
+		result1 *net.IPNet
+		result2 net.IP
+		result3 error
+	}{result1, result2, result3}
+}
+
 func (fake *FakePool) Release(arg1 *net.IPNet, arg2 net.IP) error {
 	fake.releaseMutex.Lock()
+	ret, specificReturn := fake.releaseReturnsOnCall[len(fake.releaseArgsForCall)]
 	fake.releaseArgsForCall = append(fake.releaseArgsForCall, struct {
 		arg1 *net.IPNet
 		arg2 net.IP
@@ -105,6 +143,9 @@ func (fake *FakePool) Release(arg1 *net.IPNet, arg2 net.IP) error {
 	fake.releaseMutex.Unlock()
 	if fake.ReleaseStub != nil {
 		return fake.ReleaseStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.releaseReturns.result1
 }
@@ -128,8 +169,21 @@ func (fake *FakePool) ReleaseReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakePool) ReleaseReturnsOnCall(i int, result1 error) {
+	fake.ReleaseStub = nil
+	if fake.releaseReturnsOnCall == nil {
+		fake.releaseReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.releaseReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakePool) Remove(arg1 *net.IPNet, arg2 net.IP) error {
 	fake.removeMutex.Lock()
+	ret, specificReturn := fake.removeReturnsOnCall[len(fake.removeArgsForCall)]
 	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
 		arg1 *net.IPNet
 		arg2 net.IP
@@ -138,6 +192,9 @@ func (fake *FakePool) Remove(arg1 *net.IPNet, arg2 net.IP) error {
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
 		return fake.RemoveStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.removeReturns.result1
 }
@@ -161,13 +218,29 @@ func (fake *FakePool) RemoveReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakePool) RemoveReturnsOnCall(i int, result1 error) {
+	fake.RemoveStub = nil
+	if fake.removeReturnsOnCall == nil {
+		fake.removeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.removeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakePool) Capacity() int {
 	fake.capacityMutex.Lock()
+	ret, specificReturn := fake.capacityReturnsOnCall[len(fake.capacityArgsForCall)]
 	fake.capacityArgsForCall = append(fake.capacityArgsForCall, struct{}{})
 	fake.recordInvocation("Capacity", []interface{}{})
 	fake.capacityMutex.Unlock()
 	if fake.CapacityStub != nil {
 		return fake.CapacityStub()
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.capacityReturns.result1
 }
@@ -185,8 +258,21 @@ func (fake *FakePool) CapacityReturns(result1 int) {
 	}{result1}
 }
 
+func (fake *FakePool) CapacityReturnsOnCall(i int, result1 int) {
+	fake.CapacityStub = nil
+	if fake.capacityReturnsOnCall == nil {
+		fake.capacityReturnsOnCall = make(map[int]struct {
+			result1 int
+		})
+	}
+	fake.capacityReturnsOnCall[i] = struct {
+		result1 int
+	}{result1}
+}
+
 func (fake *FakePool) RunIfFree(arg1 *net.IPNet, arg2 func() error) error {
 	fake.runIfFreeMutex.Lock()
+	ret, specificReturn := fake.runIfFreeReturnsOnCall[len(fake.runIfFreeArgsForCall)]
 	fake.runIfFreeArgsForCall = append(fake.runIfFreeArgsForCall, struct {
 		arg1 *net.IPNet
 		arg2 func() error
@@ -195,6 +281,9 @@ func (fake *FakePool) RunIfFree(arg1 *net.IPNet, arg2 func() error) error {
 	fake.runIfFreeMutex.Unlock()
 	if fake.RunIfFreeStub != nil {
 		return fake.RunIfFreeStub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.runIfFreeReturns.result1
 }
@@ -214,6 +303,18 @@ func (fake *FakePool) RunIfFreeArgsForCall(i int) (*net.IPNet, func() error) {
 func (fake *FakePool) RunIfFreeReturns(result1 error) {
 	fake.RunIfFreeStub = nil
 	fake.runIfFreeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakePool) RunIfFreeReturnsOnCall(i int, result1 error) {
+	fake.RunIfFreeStub = nil
+	if fake.runIfFreeReturnsOnCall == nil {
+		fake.runIfFreeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.runIfFreeReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

@@ -16,12 +16,16 @@ type FakePortForwarder struct {
 	forwardReturns struct {
 		result1 error
 	}
+	forwardReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakePortForwarder) Forward(spec kawasaki.PortForwarderSpec) error {
 	fake.forwardMutex.Lock()
+	ret, specificReturn := fake.forwardReturnsOnCall[len(fake.forwardArgsForCall)]
 	fake.forwardArgsForCall = append(fake.forwardArgsForCall, struct {
 		spec kawasaki.PortForwarderSpec
 	}{spec})
@@ -29,6 +33,9 @@ func (fake *FakePortForwarder) Forward(spec kawasaki.PortForwarderSpec) error {
 	fake.forwardMutex.Unlock()
 	if fake.ForwardStub != nil {
 		return fake.ForwardStub(spec)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.forwardReturns.result1
 }
@@ -48,6 +55,18 @@ func (fake *FakePortForwarder) ForwardArgsForCall(i int) kawasaki.PortForwarderS
 func (fake *FakePortForwarder) ForwardReturns(result1 error) {
 	fake.ForwardStub = nil
 	fake.forwardReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakePortForwarder) ForwardReturnsOnCall(i int, result1 error) {
+	fake.ForwardStub = nil
+	if fake.forwardReturnsOnCall == nil {
+		fake.forwardReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.forwardReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

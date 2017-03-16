@@ -22,6 +22,9 @@ type FakeNstarRunner struct {
 	streamInReturns struct {
 		result1 error
 	}
+	streamInReturnsOnCall map[int]struct {
+		result1 error
+	}
 	StreamOutStub        func(log lager.Logger, pid int, path string, user string) (io.ReadCloser, error)
 	streamOutMutex       sync.RWMutex
 	streamOutArgsForCall []struct {
@@ -34,12 +37,17 @@ type FakeNstarRunner struct {
 		result1 io.ReadCloser
 		result2 error
 	}
+	streamOutReturnsOnCall map[int]struct {
+		result1 io.ReadCloser
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeNstarRunner) StreamIn(log lager.Logger, pid int, path string, user string, tarStream io.Reader) error {
 	fake.streamInMutex.Lock()
+	ret, specificReturn := fake.streamInReturnsOnCall[len(fake.streamInArgsForCall)]
 	fake.streamInArgsForCall = append(fake.streamInArgsForCall, struct {
 		log       lager.Logger
 		pid       int
@@ -51,6 +59,9 @@ func (fake *FakeNstarRunner) StreamIn(log lager.Logger, pid int, path string, us
 	fake.streamInMutex.Unlock()
 	if fake.StreamInStub != nil {
 		return fake.StreamInStub(log, pid, path, user, tarStream)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.streamInReturns.result1
 }
@@ -74,8 +85,21 @@ func (fake *FakeNstarRunner) StreamInReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeNstarRunner) StreamInReturnsOnCall(i int, result1 error) {
+	fake.StreamInStub = nil
+	if fake.streamInReturnsOnCall == nil {
+		fake.streamInReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.streamInReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeNstarRunner) StreamOut(log lager.Logger, pid int, path string, user string) (io.ReadCloser, error) {
 	fake.streamOutMutex.Lock()
+	ret, specificReturn := fake.streamOutReturnsOnCall[len(fake.streamOutArgsForCall)]
 	fake.streamOutArgsForCall = append(fake.streamOutArgsForCall, struct {
 		log  lager.Logger
 		pid  int
@@ -86,6 +110,9 @@ func (fake *FakeNstarRunner) StreamOut(log lager.Logger, pid int, path string, u
 	fake.streamOutMutex.Unlock()
 	if fake.StreamOutStub != nil {
 		return fake.StreamOutStub(log, pid, path, user)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.streamOutReturns.result1, fake.streamOutReturns.result2
 }
@@ -105,6 +132,20 @@ func (fake *FakeNstarRunner) StreamOutArgsForCall(i int) (lager.Logger, int, str
 func (fake *FakeNstarRunner) StreamOutReturns(result1 io.ReadCloser, result2 error) {
 	fake.StreamOutStub = nil
 	fake.streamOutReturns = struct {
+		result1 io.ReadCloser
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeNstarRunner) StreamOutReturnsOnCall(i int, result1 io.ReadCloser, result2 error) {
+	fake.StreamOutStub = nil
+	if fake.streamOutReturnsOnCall == nil {
+		fake.streamOutReturnsOnCall = make(map[int]struct {
+			result1 io.ReadCloser
+			result2 error
+		})
+	}
+	fake.streamOutReturnsOnCall[i] = struct {
 		result1 io.ReadCloser
 		result2 error
 	}{result1, result2}

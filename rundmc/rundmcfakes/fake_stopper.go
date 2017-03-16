@@ -20,6 +20,9 @@ type FakeStopper struct {
 	stopAllReturns struct {
 		result1 error
 	}
+	stopAllReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -31,6 +34,7 @@ func (fake *FakeStopper) StopAll(log lager.Logger, cgroupName string, save []int
 		copy(saveCopy, save)
 	}
 	fake.stopAllMutex.Lock()
+	ret, specificReturn := fake.stopAllReturnsOnCall[len(fake.stopAllArgsForCall)]
 	fake.stopAllArgsForCall = append(fake.stopAllArgsForCall, struct {
 		log        lager.Logger
 		cgroupName string
@@ -41,6 +45,9 @@ func (fake *FakeStopper) StopAll(log lager.Logger, cgroupName string, save []int
 	fake.stopAllMutex.Unlock()
 	if fake.StopAllStub != nil {
 		return fake.StopAllStub(log, cgroupName, save, kill)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.stopAllReturns.result1
 }
@@ -60,6 +67,18 @@ func (fake *FakeStopper) StopAllArgsForCall(i int) (lager.Logger, string, []int,
 func (fake *FakeStopper) StopAllReturns(result1 error) {
 	fake.StopAllStub = nil
 	fake.stopAllReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeStopper) StopAllReturnsOnCall(i int, result1 error) {
+	fake.StopAllStub = nil
+	if fake.stopAllReturnsOnCall == nil {
+		fake.stopAllReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.stopAllReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

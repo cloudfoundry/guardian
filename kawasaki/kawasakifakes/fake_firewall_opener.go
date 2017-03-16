@@ -21,6 +21,9 @@ type FakeFirewallOpener struct {
 	openReturns struct {
 		result1 error
 	}
+	openReturnsOnCall map[int]struct {
+		result1 error
+	}
 	BulkOpenStub        func(log lager.Logger, instance, handle string, rule []garden.NetOutRule) error
 	bulkOpenMutex       sync.RWMutex
 	bulkOpenArgsForCall []struct {
@@ -32,12 +35,16 @@ type FakeFirewallOpener struct {
 	bulkOpenReturns struct {
 		result1 error
 	}
+	bulkOpenReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeFirewallOpener) Open(log lager.Logger, instance string, handle string, rule garden.NetOutRule) error {
 	fake.openMutex.Lock()
+	ret, specificReturn := fake.openReturnsOnCall[len(fake.openArgsForCall)]
 	fake.openArgsForCall = append(fake.openArgsForCall, struct {
 		log      lager.Logger
 		instance string
@@ -48,6 +55,9 @@ func (fake *FakeFirewallOpener) Open(log lager.Logger, instance string, handle s
 	fake.openMutex.Unlock()
 	if fake.OpenStub != nil {
 		return fake.OpenStub(log, instance, handle, rule)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.openReturns.result1
 }
@@ -71,6 +81,18 @@ func (fake *FakeFirewallOpener) OpenReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeFirewallOpener) OpenReturnsOnCall(i int, result1 error) {
+	fake.OpenStub = nil
+	if fake.openReturnsOnCall == nil {
+		fake.openReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.openReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeFirewallOpener) BulkOpen(log lager.Logger, instance string, handle string, rule []garden.NetOutRule) error {
 	var ruleCopy []garden.NetOutRule
 	if rule != nil {
@@ -78,6 +100,7 @@ func (fake *FakeFirewallOpener) BulkOpen(log lager.Logger, instance string, hand
 		copy(ruleCopy, rule)
 	}
 	fake.bulkOpenMutex.Lock()
+	ret, specificReturn := fake.bulkOpenReturnsOnCall[len(fake.bulkOpenArgsForCall)]
 	fake.bulkOpenArgsForCall = append(fake.bulkOpenArgsForCall, struct {
 		log      lager.Logger
 		instance string
@@ -88,6 +111,9 @@ func (fake *FakeFirewallOpener) BulkOpen(log lager.Logger, instance string, hand
 	fake.bulkOpenMutex.Unlock()
 	if fake.BulkOpenStub != nil {
 		return fake.BulkOpenStub(log, instance, handle, rule)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.bulkOpenReturns.result1
 }
@@ -107,6 +133,18 @@ func (fake *FakeFirewallOpener) BulkOpenArgsForCall(i int) (lager.Logger, string
 func (fake *FakeFirewallOpener) BulkOpenReturns(result1 error) {
 	fake.BulkOpenStub = nil
 	fake.bulkOpenReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeFirewallOpener) BulkOpenReturnsOnCall(i int, result1 error) {
+	fake.BulkOpenStub = nil
+	if fake.bulkOpenReturnsOnCall == nil {
+		fake.bulkOpenReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.bulkOpenReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

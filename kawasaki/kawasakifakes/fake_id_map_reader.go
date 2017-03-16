@@ -17,12 +17,17 @@ type FakeIdMapReader struct {
 		result1 int
 		result2 error
 	}
+	readRootIdReturnsOnCall map[int]struct {
+		result1 int
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeIdMapReader) ReadRootId(path string) (int, error) {
 	fake.readRootIdMutex.Lock()
+	ret, specificReturn := fake.readRootIdReturnsOnCall[len(fake.readRootIdArgsForCall)]
 	fake.readRootIdArgsForCall = append(fake.readRootIdArgsForCall, struct {
 		path string
 	}{path})
@@ -30,6 +35,9 @@ func (fake *FakeIdMapReader) ReadRootId(path string) (int, error) {
 	fake.readRootIdMutex.Unlock()
 	if fake.ReadRootIdStub != nil {
 		return fake.ReadRootIdStub(path)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.readRootIdReturns.result1, fake.readRootIdReturns.result2
 }
@@ -49,6 +57,20 @@ func (fake *FakeIdMapReader) ReadRootIdArgsForCall(i int) string {
 func (fake *FakeIdMapReader) ReadRootIdReturns(result1 int, result2 error) {
 	fake.ReadRootIdStub = nil
 	fake.readRootIdReturns = struct {
+		result1 int
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeIdMapReader) ReadRootIdReturnsOnCall(i int, result1 int, result2 error) {
+	fake.ReadRootIdStub = nil
+	if fake.readRootIdReturnsOnCall == nil {
+		fake.readRootIdReturnsOnCall = make(map[int]struct {
+			result1 int
+			result2 error
+		})
+	}
+	fake.readRootIdReturnsOnCall[i] = struct {
 		result1 int
 		result2 error
 	}{result1, result2}

@@ -23,6 +23,9 @@ type FakeInstanceChainCreator struct {
 	createReturns struct {
 		result1 error
 	}
+	createReturnsOnCall map[int]struct {
+		result1 error
+	}
 	DestroyStub        func(logger lager.Logger, instanceChain string) error
 	destroyMutex       sync.RWMutex
 	destroyArgsForCall []struct {
@@ -32,12 +35,16 @@ type FakeInstanceChainCreator struct {
 	destroyReturns struct {
 		result1 error
 	}
+	destroyReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeInstanceChainCreator) Create(logger lager.Logger, handle string, instanceChain string, bridgeName string, ip net.IP, network *net.IPNet) error {
 	fake.createMutex.Lock()
+	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		logger        lager.Logger
 		handle        string
@@ -50,6 +57,9 @@ func (fake *FakeInstanceChainCreator) Create(logger lager.Logger, handle string,
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(logger, handle, instanceChain, bridgeName, ip, network)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.createReturns.result1
 }
@@ -73,8 +83,21 @@ func (fake *FakeInstanceChainCreator) CreateReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeInstanceChainCreator) CreateReturnsOnCall(i int, result1 error) {
+	fake.CreateStub = nil
+	if fake.createReturnsOnCall == nil {
+		fake.createReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.createReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeInstanceChainCreator) Destroy(logger lager.Logger, instanceChain string) error {
 	fake.destroyMutex.Lock()
+	ret, specificReturn := fake.destroyReturnsOnCall[len(fake.destroyArgsForCall)]
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
 		logger        lager.Logger
 		instanceChain string
@@ -83,6 +106,9 @@ func (fake *FakeInstanceChainCreator) Destroy(logger lager.Logger, instanceChain
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(logger, instanceChain)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.destroyReturns.result1
 }
@@ -102,6 +128,18 @@ func (fake *FakeInstanceChainCreator) DestroyArgsForCall(i int) (lager.Logger, s
 func (fake *FakeInstanceChainCreator) DestroyReturns(result1 error) {
 	fake.DestroyStub = nil
 	fake.destroyReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeInstanceChainCreator) DestroyReturnsOnCall(i int, result1 error) {
+	fake.DestroyStub = nil
+	if fake.destroyReturnsOnCall == nil {
+		fake.destroyReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.destroyReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

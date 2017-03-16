@@ -21,12 +21,17 @@ type FakeExecPreparer struct {
 		result1 *runrunc.PreparedSpec
 		result2 error
 	}
+	prepareReturnsOnCall map[int]struct {
+		result1 *runrunc.PreparedSpec
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeExecPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*runrunc.PreparedSpec, error) {
 	fake.prepareMutex.Lock()
+	ret, specificReturn := fake.prepareReturnsOnCall[len(fake.prepareArgsForCall)]
 	fake.prepareArgsForCall = append(fake.prepareArgsForCall, struct {
 		log        lager.Logger
 		bundlePath string
@@ -36,6 +41,9 @@ func (fake *FakeExecPreparer) Prepare(log lager.Logger, bundlePath string, spec 
 	fake.prepareMutex.Unlock()
 	if fake.PrepareStub != nil {
 		return fake.PrepareStub(log, bundlePath, spec)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.prepareReturns.result1, fake.prepareReturns.result2
 }
@@ -55,6 +63,20 @@ func (fake *FakeExecPreparer) PrepareArgsForCall(i int) (lager.Logger, string, g
 func (fake *FakeExecPreparer) PrepareReturns(result1 *runrunc.PreparedSpec, result2 error) {
 	fake.PrepareStub = nil
 	fake.prepareReturns = struct {
+		result1 *runrunc.PreparedSpec
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeExecPreparer) PrepareReturnsOnCall(i int, result1 *runrunc.PreparedSpec, result2 error) {
+	fake.PrepareStub = nil
+	if fake.prepareReturnsOnCall == nil {
+		fake.prepareReturnsOnCall = make(map[int]struct {
+			result1 *runrunc.PreparedSpec
+			result2 error
+		})
+	}
+	fake.prepareReturnsOnCall[i] = struct {
 		result1 *runrunc.PreparedSpec
 		result2 error
 	}{result1, result2}

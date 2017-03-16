@@ -21,6 +21,9 @@ type FakeStateStore struct {
 	isStoppedReturns struct {
 		result1 bool
 	}
+	isStoppedReturnsOnCall map[int]struct {
+		result1 bool
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -51,6 +54,7 @@ func (fake *FakeStateStore) StoreStoppedArgsForCall(i int) string {
 
 func (fake *FakeStateStore) IsStopped(handle string) bool {
 	fake.isStoppedMutex.Lock()
+	ret, specificReturn := fake.isStoppedReturnsOnCall[len(fake.isStoppedArgsForCall)]
 	fake.isStoppedArgsForCall = append(fake.isStoppedArgsForCall, struct {
 		handle string
 	}{handle})
@@ -58,6 +62,9 @@ func (fake *FakeStateStore) IsStopped(handle string) bool {
 	fake.isStoppedMutex.Unlock()
 	if fake.IsStoppedStub != nil {
 		return fake.IsStoppedStub(handle)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.isStoppedReturns.result1
 }
@@ -77,6 +84,18 @@ func (fake *FakeStateStore) IsStoppedArgsForCall(i int) string {
 func (fake *FakeStateStore) IsStoppedReturns(result1 bool) {
 	fake.IsStoppedStub = nil
 	fake.isStoppedReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeStateStore) IsStoppedReturnsOnCall(i int, result1 bool) {
+	fake.IsStoppedStub = nil
+	if fake.isStoppedReturnsOnCall == nil {
+		fake.isStoppedReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.isStoppedReturnsOnCall[i] = struct {
 		result1 bool
 	}{result1}
 }

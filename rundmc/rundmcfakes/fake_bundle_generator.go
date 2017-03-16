@@ -18,12 +18,16 @@ type FakeBundleGenerator struct {
 	generateReturns struct {
 		result1 goci.Bndl
 	}
+	generateReturnsOnCall map[int]struct {
+		result1 goci.Bndl
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeBundleGenerator) Generate(spec gardener.DesiredContainerSpec) goci.Bndl {
 	fake.generateMutex.Lock()
+	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
 		spec gardener.DesiredContainerSpec
 	}{spec})
@@ -31,6 +35,9 @@ func (fake *FakeBundleGenerator) Generate(spec gardener.DesiredContainerSpec) go
 	fake.generateMutex.Unlock()
 	if fake.GenerateStub != nil {
 		return fake.GenerateStub(spec)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.generateReturns.result1
 }
@@ -50,6 +57,18 @@ func (fake *FakeBundleGenerator) GenerateArgsForCall(i int) gardener.DesiredCont
 func (fake *FakeBundleGenerator) GenerateReturns(result1 goci.Bndl) {
 	fake.GenerateStub = nil
 	fake.generateReturns = struct {
+		result1 goci.Bndl
+	}{result1}
+}
+
+func (fake *FakeBundleGenerator) GenerateReturnsOnCall(i int, result1 goci.Bndl) {
+	fake.GenerateStub = nil
+	if fake.generateReturnsOnCall == nil {
+		fake.generateReturnsOnCall = make(map[int]struct {
+			result1 goci.Bndl
+		})
+	}
+	fake.generateReturnsOnCall[i] = struct {
 		result1 goci.Bndl
 	}{result1}
 }

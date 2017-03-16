@@ -19,12 +19,16 @@ type FakeDnsResolvConfigurer struct {
 	configureReturns struct {
 		result1 error
 	}
+	configureReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeDnsResolvConfigurer) Configure(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
 	fake.configureMutex.Lock()
+	ret, specificReturn := fake.configureReturnsOnCall[len(fake.configureArgsForCall)]
 	fake.configureArgsForCall = append(fake.configureArgsForCall, struct {
 		log lager.Logger
 		cfg kawasaki.NetworkConfig
@@ -34,6 +38,9 @@ func (fake *FakeDnsResolvConfigurer) Configure(log lager.Logger, cfg kawasaki.Ne
 	fake.configureMutex.Unlock()
 	if fake.ConfigureStub != nil {
 		return fake.ConfigureStub(log, cfg, pid)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.configureReturns.result1
 }
@@ -53,6 +60,18 @@ func (fake *FakeDnsResolvConfigurer) ConfigureArgsForCall(i int) (lager.Logger, 
 func (fake *FakeDnsResolvConfigurer) ConfigureReturns(result1 error) {
 	fake.ConfigureStub = nil
 	fake.configureReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeDnsResolvConfigurer) ConfigureReturnsOnCall(i int, result1 error) {
+	fake.ConfigureStub = nil
+	if fake.configureReturnsOnCall == nil {
+		fake.configureReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.configureReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

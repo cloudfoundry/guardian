@@ -17,12 +17,16 @@ type FakeEventsNotifier struct {
 	onEventReturns struct {
 		result1 error
 	}
+	onEventReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeEventsNotifier) OnEvent(handle string, event string) error {
 	fake.onEventMutex.Lock()
+	ret, specificReturn := fake.onEventReturnsOnCall[len(fake.onEventArgsForCall)]
 	fake.onEventArgsForCall = append(fake.onEventArgsForCall, struct {
 		handle string
 		event  string
@@ -31,6 +35,9 @@ func (fake *FakeEventsNotifier) OnEvent(handle string, event string) error {
 	fake.onEventMutex.Unlock()
 	if fake.OnEventStub != nil {
 		return fake.OnEventStub(handle, event)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.onEventReturns.result1
 }
@@ -50,6 +57,18 @@ func (fake *FakeEventsNotifier) OnEventArgsForCall(i int) (string, string) {
 func (fake *FakeEventsNotifier) OnEventReturns(result1 error) {
 	fake.OnEventStub = nil
 	fake.onEventReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeEventsNotifier) OnEventReturnsOnCall(i int, result1 error) {
+	fake.OnEventStub = nil
+	if fake.onEventReturnsOnCall == nil {
+		fake.onEventReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.onEventReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

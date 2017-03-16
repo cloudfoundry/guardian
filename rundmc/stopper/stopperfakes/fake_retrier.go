@@ -16,12 +16,16 @@ type FakeRetrier struct {
 	runReturns struct {
 		result1 error
 	}
+	runReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeRetrier) Run(work func() error) error {
 	fake.runMutex.Lock()
+	ret, specificReturn := fake.runReturnsOnCall[len(fake.runArgsForCall)]
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
 		work func() error
 	}{work})
@@ -29,6 +33,9 @@ func (fake *FakeRetrier) Run(work func() error) error {
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
 		return fake.RunStub(work)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.runReturns.result1
 }
@@ -48,6 +55,18 @@ func (fake *FakeRetrier) RunArgsForCall(i int) func() error {
 func (fake *FakeRetrier) RunReturns(result1 error) {
 	fake.RunStub = nil
 	fake.runReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeRetrier) RunReturnsOnCall(i int, result1 error) {
+	fake.RunStub = nil
+	if fake.runReturnsOnCall == nil {
+		fake.runReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.runReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

@@ -26,6 +26,10 @@ type FakeExecRunner struct {
 		result1 garden.Process
 		result2 error
 	}
+	runReturnsOnCall map[int]struct {
+		result1 garden.Process
+		result2 error
+	}
 	AttachStub        func(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
 	attachMutex       sync.RWMutex
 	attachArgsForCall []struct {
@@ -38,12 +42,17 @@ type FakeExecRunner struct {
 		result1 garden.Process
 		result2 error
 	}
+	attachReturnsOnCall map[int]struct {
+		result1 garden.Process
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeExecRunner) Run(log lager.Logger, passedID string, spec *runrunc.PreparedSpec, bundlePath string, processesPath string, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
 	fake.runMutex.Lock()
+	ret, specificReturn := fake.runReturnsOnCall[len(fake.runArgsForCall)]
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
 		log           lager.Logger
 		passedID      string
@@ -58,6 +67,9 @@ func (fake *FakeExecRunner) Run(log lager.Logger, passedID string, spec *runrunc
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
 		return fake.RunStub(log, passedID, spec, bundlePath, processesPath, handle, tty, io)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.runReturns.result1, fake.runReturns.result2
 }
@@ -82,8 +94,23 @@ func (fake *FakeExecRunner) RunReturns(result1 garden.Process, result2 error) {
 	}{result1, result2}
 }
 
+func (fake *FakeExecRunner) RunReturnsOnCall(i int, result1 garden.Process, result2 error) {
+	fake.RunStub = nil
+	if fake.runReturnsOnCall == nil {
+		fake.runReturnsOnCall = make(map[int]struct {
+			result1 garden.Process
+			result2 error
+		})
+	}
+	fake.runReturnsOnCall[i] = struct {
+		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	fake.attachMutex.Lock()
+	ret, specificReturn := fake.attachReturnsOnCall[len(fake.attachArgsForCall)]
 	fake.attachArgsForCall = append(fake.attachArgsForCall, struct {
 		log           lager.Logger
 		processID     string
@@ -94,6 +121,9 @@ func (fake *FakeExecRunner) Attach(log lager.Logger, processID string, io garden
 	fake.attachMutex.Unlock()
 	if fake.AttachStub != nil {
 		return fake.AttachStub(log, processID, io, processesPath)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.attachReturns.result1, fake.attachReturns.result2
 }
@@ -113,6 +143,20 @@ func (fake *FakeExecRunner) AttachArgsForCall(i int) (lager.Logger, string, gard
 func (fake *FakeExecRunner) AttachReturns(result1 garden.Process, result2 error) {
 	fake.AttachStub = nil
 	fake.attachReturns = struct {
+		result1 garden.Process
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeExecRunner) AttachReturnsOnCall(i int, result1 garden.Process, result2 error) {
+	fake.AttachStub = nil
+	if fake.attachReturnsOnCall == nil {
+		fake.attachReturnsOnCall = make(map[int]struct {
+			result1 garden.Process
+			result2 error
+		})
+	}
+	fake.attachReturnsOnCall[i] = struct {
 		result1 garden.Process
 		result2 error
 	}{result1, result2}

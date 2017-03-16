@@ -19,12 +19,17 @@ type FakeRuleTranslator struct {
 		result1 []iptables.Rule
 		result2 error
 	}
+	translateRuleReturnsOnCall map[int]struct {
+		result1 []iptables.Rule
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeRuleTranslator) TranslateRule(handle string, gardenRule garden.NetOutRule) ([]iptables.Rule, error) {
 	fake.translateRuleMutex.Lock()
+	ret, specificReturn := fake.translateRuleReturnsOnCall[len(fake.translateRuleArgsForCall)]
 	fake.translateRuleArgsForCall = append(fake.translateRuleArgsForCall, struct {
 		handle     string
 		gardenRule garden.NetOutRule
@@ -33,6 +38,9 @@ func (fake *FakeRuleTranslator) TranslateRule(handle string, gardenRule garden.N
 	fake.translateRuleMutex.Unlock()
 	if fake.TranslateRuleStub != nil {
 		return fake.TranslateRuleStub(handle, gardenRule)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.translateRuleReturns.result1, fake.translateRuleReturns.result2
 }
@@ -52,6 +60,20 @@ func (fake *FakeRuleTranslator) TranslateRuleArgsForCall(i int) (string, garden.
 func (fake *FakeRuleTranslator) TranslateRuleReturns(result1 []iptables.Rule, result2 error) {
 	fake.TranslateRuleStub = nil
 	fake.translateRuleReturns = struct {
+		result1 []iptables.Rule
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeRuleTranslator) TranslateRuleReturnsOnCall(i int, result1 []iptables.Rule, result2 error) {
+	fake.TranslateRuleStub = nil
+	if fake.translateRuleReturnsOnCall == nil {
+		fake.translateRuleReturnsOnCall = make(map[int]struct {
+			result1 []iptables.Rule
+			result2 error
+		})
+	}
+	fake.translateRuleReturnsOnCall[i] = struct {
 		result1 []iptables.Rule
 		result2 error
 	}{result1, result2}

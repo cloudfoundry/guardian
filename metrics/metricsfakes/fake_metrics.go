@@ -14,10 +14,16 @@ type FakeMetrics struct {
 	numCPUReturns     struct {
 		result1 int
 	}
+	numCPUReturnsOnCall map[int]struct {
+		result1 int
+	}
 	NumGoroutineStub        func() int
 	numGoroutineMutex       sync.RWMutex
 	numGoroutineArgsForCall []struct{}
 	numGoroutineReturns     struct {
+		result1 int
+	}
+	numGoroutineReturnsOnCall map[int]struct {
 		result1 int
 	}
 	LoopDevicesStub        func() int
@@ -26,10 +32,16 @@ type FakeMetrics struct {
 	loopDevicesReturns     struct {
 		result1 int
 	}
+	loopDevicesReturnsOnCall map[int]struct {
+		result1 int
+	}
 	BackingStoresStub        func() int
 	backingStoresMutex       sync.RWMutex
 	backingStoresArgsForCall []struct{}
 	backingStoresReturns     struct {
+		result1 int
+	}
+	backingStoresReturnsOnCall map[int]struct {
 		result1 int
 	}
 	DepotDirsStub        func() int
@@ -38,17 +50,24 @@ type FakeMetrics struct {
 	depotDirsReturns     struct {
 		result1 int
 	}
+	depotDirsReturnsOnCall map[int]struct {
+		result1 int
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeMetrics) NumCPU() int {
 	fake.numCPUMutex.Lock()
+	ret, specificReturn := fake.numCPUReturnsOnCall[len(fake.numCPUArgsForCall)]
 	fake.numCPUArgsForCall = append(fake.numCPUArgsForCall, struct{}{})
 	fake.recordInvocation("NumCPU", []interface{}{})
 	fake.numCPUMutex.Unlock()
 	if fake.NumCPUStub != nil {
 		return fake.NumCPUStub()
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.numCPUReturns.result1
 }
@@ -66,13 +85,29 @@ func (fake *FakeMetrics) NumCPUReturns(result1 int) {
 	}{result1}
 }
 
+func (fake *FakeMetrics) NumCPUReturnsOnCall(i int, result1 int) {
+	fake.NumCPUStub = nil
+	if fake.numCPUReturnsOnCall == nil {
+		fake.numCPUReturnsOnCall = make(map[int]struct {
+			result1 int
+		})
+	}
+	fake.numCPUReturnsOnCall[i] = struct {
+		result1 int
+	}{result1}
+}
+
 func (fake *FakeMetrics) NumGoroutine() int {
 	fake.numGoroutineMutex.Lock()
+	ret, specificReturn := fake.numGoroutineReturnsOnCall[len(fake.numGoroutineArgsForCall)]
 	fake.numGoroutineArgsForCall = append(fake.numGoroutineArgsForCall, struct{}{})
 	fake.recordInvocation("NumGoroutine", []interface{}{})
 	fake.numGoroutineMutex.Unlock()
 	if fake.NumGoroutineStub != nil {
 		return fake.NumGoroutineStub()
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.numGoroutineReturns.result1
 }
@@ -90,13 +125,29 @@ func (fake *FakeMetrics) NumGoroutineReturns(result1 int) {
 	}{result1}
 }
 
+func (fake *FakeMetrics) NumGoroutineReturnsOnCall(i int, result1 int) {
+	fake.NumGoroutineStub = nil
+	if fake.numGoroutineReturnsOnCall == nil {
+		fake.numGoroutineReturnsOnCall = make(map[int]struct {
+			result1 int
+		})
+	}
+	fake.numGoroutineReturnsOnCall[i] = struct {
+		result1 int
+	}{result1}
+}
+
 func (fake *FakeMetrics) LoopDevices() int {
 	fake.loopDevicesMutex.Lock()
+	ret, specificReturn := fake.loopDevicesReturnsOnCall[len(fake.loopDevicesArgsForCall)]
 	fake.loopDevicesArgsForCall = append(fake.loopDevicesArgsForCall, struct{}{})
 	fake.recordInvocation("LoopDevices", []interface{}{})
 	fake.loopDevicesMutex.Unlock()
 	if fake.LoopDevicesStub != nil {
 		return fake.LoopDevicesStub()
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.loopDevicesReturns.result1
 }
@@ -114,13 +165,29 @@ func (fake *FakeMetrics) LoopDevicesReturns(result1 int) {
 	}{result1}
 }
 
+func (fake *FakeMetrics) LoopDevicesReturnsOnCall(i int, result1 int) {
+	fake.LoopDevicesStub = nil
+	if fake.loopDevicesReturnsOnCall == nil {
+		fake.loopDevicesReturnsOnCall = make(map[int]struct {
+			result1 int
+		})
+	}
+	fake.loopDevicesReturnsOnCall[i] = struct {
+		result1 int
+	}{result1}
+}
+
 func (fake *FakeMetrics) BackingStores() int {
 	fake.backingStoresMutex.Lock()
+	ret, specificReturn := fake.backingStoresReturnsOnCall[len(fake.backingStoresArgsForCall)]
 	fake.backingStoresArgsForCall = append(fake.backingStoresArgsForCall, struct{}{})
 	fake.recordInvocation("BackingStores", []interface{}{})
 	fake.backingStoresMutex.Unlock()
 	if fake.BackingStoresStub != nil {
 		return fake.BackingStoresStub()
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.backingStoresReturns.result1
 }
@@ -138,13 +205,29 @@ func (fake *FakeMetrics) BackingStoresReturns(result1 int) {
 	}{result1}
 }
 
+func (fake *FakeMetrics) BackingStoresReturnsOnCall(i int, result1 int) {
+	fake.BackingStoresStub = nil
+	if fake.backingStoresReturnsOnCall == nil {
+		fake.backingStoresReturnsOnCall = make(map[int]struct {
+			result1 int
+		})
+	}
+	fake.backingStoresReturnsOnCall[i] = struct {
+		result1 int
+	}{result1}
+}
+
 func (fake *FakeMetrics) DepotDirs() int {
 	fake.depotDirsMutex.Lock()
+	ret, specificReturn := fake.depotDirsReturnsOnCall[len(fake.depotDirsArgsForCall)]
 	fake.depotDirsArgsForCall = append(fake.depotDirsArgsForCall, struct{}{})
 	fake.recordInvocation("DepotDirs", []interface{}{})
 	fake.depotDirsMutex.Unlock()
 	if fake.DepotDirsStub != nil {
 		return fake.DepotDirsStub()
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.depotDirsReturns.result1
 }
@@ -158,6 +241,18 @@ func (fake *FakeMetrics) DepotDirsCallCount() int {
 func (fake *FakeMetrics) DepotDirsReturns(result1 int) {
 	fake.DepotDirsStub = nil
 	fake.depotDirsReturns = struct {
+		result1 int
+	}{result1}
+}
+
+func (fake *FakeMetrics) DepotDirsReturnsOnCall(i int, result1 int) {
+	fake.DepotDirsStub = nil
+	if fake.depotDirsReturnsOnCall == nil {
+		fake.depotDirsReturnsOnCall = make(map[int]struct {
+			result1 int
+		})
+	}
+	fake.depotDirsReturnsOnCall[i] = struct {
 		result1 int
 	}{result1}
 }

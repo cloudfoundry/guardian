@@ -44,16 +44,31 @@ var _ = Describe("ResolvFileCompiler", func() {
 		})
 
 		It("should return an error", func() {
-			_, err := compiler.Compile(log, hostResolvConfPath, hostIp, nil)
+			_, err := compiler.Compile(log, hostResolvConfPath, hostIp, nil, nil)
 			Expect(err).To(MatchError(ContainSubstring(("reading file '/does/not/exist.conf'"))))
 		})
 	})
 
 	Context("when the host resolv.conf exists", func() {
+		var (
+			overrideServers      []net.IP
+			additionalDNSServers []net.IP
+			contents             []byte
+		)
+
 		BeforeEach(func() {
 			f, err := ioutil.TempFile("", "")
 			Expect(err).NotTo(HaveOccurred())
 			hostResolvConfPath = f.Name()
+
+			overrideServers = []net.IP{}
+			additionalDNSServers = []net.IP{}
+		})
+
+		JustBeforeEach(func() {
+			var err error
+			contents, err = compiler.Compile(log, hostResolvConfPath, hostIp, overrideServers, additionalDNSServers)
+			Expect(err).NotTo(HaveOccurred())
 		})
 
 		AfterEach(func() {
@@ -61,46 +76,88 @@ var _ = Describe("ResolvFileCompiler", func() {
 		})
 
 		Context("and explicit overrides are given", func() {
-			It("should make the container use given DNS servers", func() {
-				overrideServers := []net.IP{
+			BeforeEach(func() {
+				overrideServers = []net.IP{
 					net.ParseIP("8.8.8.8"),
-					net.ParseIP("8.8.4.4"),
+					net.ParseIP("127.0.0.4"),
 				}
+			})
 
-				contents, err := compiler.Compile(log, hostResolvConfPath, hostIp, overrideServers)
-				Expect(err).NotTo(HaveOccurred())
+			It("writes the DNS entries to the container's resolv.conf", func() {
+				Expect(string(contents)).To(Equal("nameserver 8.8.8.8\nnameserver 127.0.0.4\n"))
+			})
 
-				Expect(string(contents)).To(Equal("nameserver 8.8.8.8\nnameserver 8.8.4.4\n"))
+			Context("and additional dns servers are provided", func() {
+				BeforeEach(func() {
+					additionalDNSServers = []net.IP{
+						net.ParseIP("1.2.3.4"),
+						net.ParseIP("9.8.7.6"),
+					}
+				})
+
+				It("appends the additional dns entries to the container's resolv.conf", func() {
+					Expect(string(contents)).To(Equal("nameserver 8.8.8.8\nnameserver 127.0.0.4\nnameserver 1.2.3.4\nnameserver 9.8.7.6\n"))
+				})
 			})
 		})
 
-		Context("and the host is running DNS", func() {
+		Context("and the host has only 1 resolv entry and it's local", func() {
 			BeforeEach(func() {
 				writeFile(hostResolvConfPath, "nameserver 127.0.0.1\n")
 			})
 
-			It("should make the container use host DNS", func() {
-				contents, err := compiler.Compile(log, hostResolvConfPath, hostIp, nil)
-				Expect(err).NotTo(HaveOccurred())
-
+			It("writes the host IP to the container's resolv.conf", func() {
 				Expect(string(contents)).To(Equal("nameserver 254.253.252.251\n"))
+			})
+
+			Context("and additional dns servers are provided", func() {
+				BeforeEach(func() {
+					additionalDNSServers = []net.IP{
+						net.ParseIP("1.2.3.4"),
+						net.ParseIP("9.8.7.6"),
+					}
+				})
+
+				It("appends the additional dns entries to the host IP", func() {
+					Expect(string(contents)).To(Equal("nameserver 254.253.252.251\nnameserver 1.2.3.4\nnameserver 9.8.7.6\n"))
+				})
 			})
 		})
 
-		Context("and the host is not running DNS", func() {
+		Context("and the host has only 1 resolv entry and it's not local", func() {
+			BeforeEach(func() {
+				writeFile(hostResolvConfPath, "nameserver 8.8.8.8\n")
+			})
+
+			It("copies the host's resolv.conf", func() {
+				Expect(string(contents)).To(Equal("nameserver 8.8.8.8\n"))
+			})
+		})
+
+		Context("and the host has many resolv entries including a local", func() {
 			var expectedResolvConfContents string
 
 			BeforeEach(func() {
-				resolvConfContents := "nameserver 127.0.0.1\nnameserver 8.8.4.4\n"
-				expectedResolvConfContents = "nameserver 8.8.4.4\n"
+				resolvConfContents := "nameserver 127.0.0.1\nnameserver 8.8.4.4\nnameserver 8.8.8.8\n"
+				expectedResolvConfContents = "nameserver 8.8.4.4\nnameserver 8.8.8.8\n"
 				writeFile(hostResolvConfPath, resolvConfContents)
 			})
 
-			It("should copy the host's resolv.conf", func() {
-				contents, err := compiler.Compile(log, hostResolvConfPath, hostIp, nil)
-				Expect(err).NotTo(HaveOccurred())
-
+			It("copies the host's resolv.conf except for local entries", func() {
 				Expect(string(contents)).To(Equal(expectedResolvConfContents))
+			})
+
+			Context("and additional dns servers are provided", func() {
+				BeforeEach(func() {
+					additionalDNSServers = []net.IP{
+						net.ParseIP("1.2.3.4"),
+						net.ParseIP("9.8.7.6"),
+					}
+				})
+
+				It("appends the additional dns entries to the container's resolv.conf", func() {
+					Expect(string(contents)).To(Equal("nameserver 8.8.4.4\nnameserver 8.8.8.8\nnameserver 1.2.3.4\nnameserver 9.8.7.6\n"))
+				})
 			})
 		})
 	})

@@ -18,6 +18,9 @@ type FakeRestorer struct {
 	restoreReturns struct {
 		result1 []string
 	}
+	restoreReturnsOnCall map[int]struct {
+		result1 []string
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -29,6 +32,7 @@ func (fake *FakeRestorer) Restore(logger lager.Logger, handles []string) []strin
 		copy(handlesCopy, handles)
 	}
 	fake.restoreMutex.Lock()
+	ret, specificReturn := fake.restoreReturnsOnCall[len(fake.restoreArgsForCall)]
 	fake.restoreArgsForCall = append(fake.restoreArgsForCall, struct {
 		logger  lager.Logger
 		handles []string
@@ -37,6 +41,9 @@ func (fake *FakeRestorer) Restore(logger lager.Logger, handles []string) []strin
 	fake.restoreMutex.Unlock()
 	if fake.RestoreStub != nil {
 		return fake.RestoreStub(logger, handles)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.restoreReturns.result1
 }
@@ -56,6 +63,18 @@ func (fake *FakeRestorer) RestoreArgsForCall(i int) (lager.Logger, []string) {
 func (fake *FakeRestorer) RestoreReturns(result1 []string) {
 	fake.RestoreStub = nil
 	fake.restoreReturns = struct {
+		result1 []string
+	}{result1}
+}
+
+func (fake *FakeRestorer) RestoreReturnsOnCall(i int, result1 []string) {
+	fake.RestoreStub = nil
+	if fake.restoreReturnsOnCall == nil {
+		fake.restoreReturnsOnCall = make(map[int]struct {
+			result1 []string
+		})
+	}
+	fake.restoreReturnsOnCall[i] = struct {
 		result1 []string
 	}{result1}
 }

@@ -15,10 +15,18 @@ type FakeSysInfoProvider struct {
 		result1 uint64
 		result2 error
 	}
+	totalMemoryReturnsOnCall map[int]struct {
+		result1 uint64
+		result2 error
+	}
 	TotalDiskStub        func() (uint64, error)
 	totalDiskMutex       sync.RWMutex
 	totalDiskArgsForCall []struct{}
 	totalDiskReturns     struct {
+		result1 uint64
+		result2 error
+	}
+	totalDiskReturnsOnCall map[int]struct {
 		result1 uint64
 		result2 error
 	}
@@ -28,11 +36,15 @@ type FakeSysInfoProvider struct {
 
 func (fake *FakeSysInfoProvider) TotalMemory() (uint64, error) {
 	fake.totalMemoryMutex.Lock()
+	ret, specificReturn := fake.totalMemoryReturnsOnCall[len(fake.totalMemoryArgsForCall)]
 	fake.totalMemoryArgsForCall = append(fake.totalMemoryArgsForCall, struct{}{})
 	fake.recordInvocation("TotalMemory", []interface{}{})
 	fake.totalMemoryMutex.Unlock()
 	if fake.TotalMemoryStub != nil {
 		return fake.TotalMemoryStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.totalMemoryReturns.result1, fake.totalMemoryReturns.result2
 }
@@ -51,13 +63,31 @@ func (fake *FakeSysInfoProvider) TotalMemoryReturns(result1 uint64, result2 erro
 	}{result1, result2}
 }
 
+func (fake *FakeSysInfoProvider) TotalMemoryReturnsOnCall(i int, result1 uint64, result2 error) {
+	fake.TotalMemoryStub = nil
+	if fake.totalMemoryReturnsOnCall == nil {
+		fake.totalMemoryReturnsOnCall = make(map[int]struct {
+			result1 uint64
+			result2 error
+		})
+	}
+	fake.totalMemoryReturnsOnCall[i] = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeSysInfoProvider) TotalDisk() (uint64, error) {
 	fake.totalDiskMutex.Lock()
+	ret, specificReturn := fake.totalDiskReturnsOnCall[len(fake.totalDiskArgsForCall)]
 	fake.totalDiskArgsForCall = append(fake.totalDiskArgsForCall, struct{}{})
 	fake.recordInvocation("TotalDisk", []interface{}{})
 	fake.totalDiskMutex.Unlock()
 	if fake.TotalDiskStub != nil {
 		return fake.TotalDiskStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.totalDiskReturns.result1, fake.totalDiskReturns.result2
 }
@@ -71,6 +101,20 @@ func (fake *FakeSysInfoProvider) TotalDiskCallCount() int {
 func (fake *FakeSysInfoProvider) TotalDiskReturns(result1 uint64, result2 error) {
 	fake.TotalDiskStub = nil
 	fake.totalDiskReturns = struct {
+		result1 uint64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeSysInfoProvider) TotalDiskReturnsOnCall(i int, result1 uint64, result2 error) {
+	fake.TotalDiskStub = nil
+	if fake.totalDiskReturnsOnCall == nil {
+		fake.totalDiskReturnsOnCall = make(map[int]struct {
+			result1 uint64
+			result2 error
+		})
+	}
+	fake.totalDiskReturnsOnCall[i] = struct {
 		result1 uint64
 		result2 error
 	}{result1, result2}

@@ -14,7 +14,7 @@ import (
 
 //go:generate counterfeiter . ResolvFileCompiler
 type ResolvFileCompiler interface {
-	Compile(log lager.Logger, resolvConfPath string, containerIp net.IP, overrideServers []net.IP) ([]byte, error)
+	Compile(log lager.Logger, resolvConfPath string, containerIp net.IP, overrideServers, additionalDNSServers []net.IP) ([]byte, error)
 }
 
 //go:generate counterfeiter . HostFileCompiler
@@ -93,7 +93,7 @@ func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid in
 		return fmt.Errorf("writing file '/etc/hosts': %s", err)
 	}
 
-	contents, err = d.ResolvFileCompiler.Compile(log, "/etc/resolv.conf", cfg.BridgeIP, cfg.DNSServers)
+	contents, err = d.ResolvFileCompiler.Compile(log, "/etc/resolv.conf", cfg.BridgeIP, cfg.DNSServers, cfg.AdditionalDNSServers)
 	if err != nil {
 		log.Error("compiling-resolv-file", err)
 		return err

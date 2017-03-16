@@ -20,6 +20,9 @@ type FakeDepot struct {
 	createReturns struct {
 		result1 error
 	}
+	createReturnsOnCall map[int]struct {
+		result1 error
+	}
 	LookupStub        func(log lager.Logger, handle string) (path string, err error)
 	lookupMutex       sync.RWMutex
 	lookupArgsForCall []struct {
@@ -27,6 +30,10 @@ type FakeDepot struct {
 		handle string
 	}
 	lookupReturns struct {
+		result1 string
+		result2 error
+	}
+	lookupReturnsOnCall map[int]struct {
 		result1 string
 		result2 error
 	}
@@ -39,10 +46,17 @@ type FakeDepot struct {
 	destroyReturns struct {
 		result1 error
 	}
+	destroyReturnsOnCall map[int]struct {
+		result1 error
+	}
 	HandlesStub        func() ([]string, error)
 	handlesMutex       sync.RWMutex
 	handlesArgsForCall []struct{}
 	handlesReturns     struct {
+		result1 []string
+		result2 error
+	}
+	handlesReturnsOnCall map[int]struct {
 		result1 []string
 		result2 error
 	}
@@ -52,6 +66,7 @@ type FakeDepot struct {
 
 func (fake *FakeDepot) Create(log lager.Logger, handle string, bundle depot.BundleSaver) error {
 	fake.createMutex.Lock()
+	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		log    lager.Logger
 		handle string
@@ -61,6 +76,9 @@ func (fake *FakeDepot) Create(log lager.Logger, handle string, bundle depot.Bund
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(log, handle, bundle)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.createReturns.result1
 }
@@ -84,8 +102,21 @@ func (fake *FakeDepot) CreateReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeDepot) CreateReturnsOnCall(i int, result1 error) {
+	fake.CreateStub = nil
+	if fake.createReturnsOnCall == nil {
+		fake.createReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.createReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeDepot) Lookup(log lager.Logger, handle string) (path string, err error) {
 	fake.lookupMutex.Lock()
+	ret, specificReturn := fake.lookupReturnsOnCall[len(fake.lookupArgsForCall)]
 	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
 		log    lager.Logger
 		handle string
@@ -94,6 +125,9 @@ func (fake *FakeDepot) Lookup(log lager.Logger, handle string) (path string, err
 	fake.lookupMutex.Unlock()
 	if fake.LookupStub != nil {
 		return fake.LookupStub(log, handle)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.lookupReturns.result1, fake.lookupReturns.result2
 }
@@ -118,8 +152,23 @@ func (fake *FakeDepot) LookupReturns(result1 string, result2 error) {
 	}{result1, result2}
 }
 
+func (fake *FakeDepot) LookupReturnsOnCall(i int, result1 string, result2 error) {
+	fake.LookupStub = nil
+	if fake.lookupReturnsOnCall == nil {
+		fake.lookupReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 error
+		})
+	}
+	fake.lookupReturnsOnCall[i] = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeDepot) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Lock()
+	ret, specificReturn := fake.destroyReturnsOnCall[len(fake.destroyArgsForCall)]
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
 		log    lager.Logger
 		handle string
@@ -128,6 +177,9 @@ func (fake *FakeDepot) Destroy(log lager.Logger, handle string) error {
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(log, handle)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.destroyReturns.result1
 }
@@ -151,13 +203,29 @@ func (fake *FakeDepot) DestroyReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeDepot) DestroyReturnsOnCall(i int, result1 error) {
+	fake.DestroyStub = nil
+	if fake.destroyReturnsOnCall == nil {
+		fake.destroyReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.destroyReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeDepot) Handles() ([]string, error) {
 	fake.handlesMutex.Lock()
+	ret, specificReturn := fake.handlesReturnsOnCall[len(fake.handlesArgsForCall)]
 	fake.handlesArgsForCall = append(fake.handlesArgsForCall, struct{}{})
 	fake.recordInvocation("Handles", []interface{}{})
 	fake.handlesMutex.Unlock()
 	if fake.HandlesStub != nil {
 		return fake.HandlesStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.handlesReturns.result1, fake.handlesReturns.result2
 }
@@ -171,6 +239,20 @@ func (fake *FakeDepot) HandlesCallCount() int {
 func (fake *FakeDepot) HandlesReturns(result1 []string, result2 error) {
 	fake.HandlesStub = nil
 	fake.handlesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeDepot) HandlesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.HandlesStub = nil
+	if fake.handlesReturnsOnCall == nil {
+		fake.handlesReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
+		})
+	}
+	fake.handlesReturnsOnCall[i] = struct {
 		result1 []string
 		result2 error
 	}{result1, result2}

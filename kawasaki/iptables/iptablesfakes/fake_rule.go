@@ -16,12 +16,16 @@ type FakeRule struct {
 	flagsReturns struct {
 		result1 []string
 	}
+	flagsReturnsOnCall map[int]struct {
+		result1 []string
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeRule) Flags(chain string) []string {
 	fake.flagsMutex.Lock()
+	ret, specificReturn := fake.flagsReturnsOnCall[len(fake.flagsArgsForCall)]
 	fake.flagsArgsForCall = append(fake.flagsArgsForCall, struct {
 		chain string
 	}{chain})
@@ -29,6 +33,9 @@ func (fake *FakeRule) Flags(chain string) []string {
 	fake.flagsMutex.Unlock()
 	if fake.FlagsStub != nil {
 		return fake.FlagsStub(chain)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.flagsReturns.result1
 }
@@ -48,6 +55,18 @@ func (fake *FakeRule) FlagsArgsForCall(i int) string {
 func (fake *FakeRule) FlagsReturns(result1 []string) {
 	fake.FlagsStub = nil
 	fake.flagsReturns = struct {
+		result1 []string
+	}{result1}
+}
+
+func (fake *FakeRule) FlagsReturnsOnCall(i int, result1 []string) {
+	fake.FlagsStub = nil
+	if fake.flagsReturnsOnCall == nil {
+		fake.flagsReturnsOnCall = make(map[int]struct {
+			result1 []string
+		})
+	}
+	fake.flagsReturnsOnCall[i] = struct {
 		result1 []string
 	}{result1}
 }

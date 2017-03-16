@@ -15,6 +15,10 @@ type FakePortPool struct {
 		result1 uint32
 		result2 error
 	}
+	acquireReturnsOnCall map[int]struct {
+		result1 uint32
+		result2 error
+	}
 	ReleaseStub        func(uint32)
 	releaseMutex       sync.RWMutex
 	releaseArgsForCall []struct {
@@ -28,17 +32,24 @@ type FakePortPool struct {
 	removeReturns struct {
 		result1 error
 	}
+	removeReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakePortPool) Acquire() (uint32, error) {
 	fake.acquireMutex.Lock()
+	ret, specificReturn := fake.acquireReturnsOnCall[len(fake.acquireArgsForCall)]
 	fake.acquireArgsForCall = append(fake.acquireArgsForCall, struct{}{})
 	fake.recordInvocation("Acquire", []interface{}{})
 	fake.acquireMutex.Unlock()
 	if fake.AcquireStub != nil {
 		return fake.AcquireStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.acquireReturns.result1, fake.acquireReturns.result2
 }
@@ -52,6 +63,20 @@ func (fake *FakePortPool) AcquireCallCount() int {
 func (fake *FakePortPool) AcquireReturns(result1 uint32, result2 error) {
 	fake.AcquireStub = nil
 	fake.acquireReturns = struct {
+		result1 uint32
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakePortPool) AcquireReturnsOnCall(i int, result1 uint32, result2 error) {
+	fake.AcquireStub = nil
+	if fake.acquireReturnsOnCall == nil {
+		fake.acquireReturnsOnCall = make(map[int]struct {
+			result1 uint32
+			result2 error
+		})
+	}
+	fake.acquireReturnsOnCall[i] = struct {
 		result1 uint32
 		result2 error
 	}{result1, result2}
@@ -83,6 +108,7 @@ func (fake *FakePortPool) ReleaseArgsForCall(i int) uint32 {
 
 func (fake *FakePortPool) Remove(arg1 uint32) error {
 	fake.removeMutex.Lock()
+	ret, specificReturn := fake.removeReturnsOnCall[len(fake.removeArgsForCall)]
 	fake.removeArgsForCall = append(fake.removeArgsForCall, struct {
 		arg1 uint32
 	}{arg1})
@@ -90,6 +116,9 @@ func (fake *FakePortPool) Remove(arg1 uint32) error {
 	fake.removeMutex.Unlock()
 	if fake.RemoveStub != nil {
 		return fake.RemoveStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
 	}
 	return fake.removeReturns.result1
 }
@@ -109,6 +138,18 @@ func (fake *FakePortPool) RemoveArgsForCall(i int) uint32 {
 func (fake *FakePortPool) RemoveReturns(result1 error) {
 	fake.RemoveStub = nil
 	fake.removeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakePortPool) RemoveReturnsOnCall(i int, result1 error) {
+	fake.RemoveStub = nil
+	if fake.removeReturnsOnCall == nil {
+		fake.removeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.removeReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

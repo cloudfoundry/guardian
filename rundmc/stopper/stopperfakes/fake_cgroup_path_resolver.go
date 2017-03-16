@@ -18,12 +18,17 @@ type FakeCgroupPathResolver struct {
 		result1 string
 		result2 error
 	}
+	resolveReturnsOnCall map[int]struct {
+		result1 string
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeCgroupPathResolver) Resolve(cgroupName string, subsystem string) (string, error) {
 	fake.resolveMutex.Lock()
+	ret, specificReturn := fake.resolveReturnsOnCall[len(fake.resolveArgsForCall)]
 	fake.resolveArgsForCall = append(fake.resolveArgsForCall, struct {
 		cgroupName string
 		subsystem  string
@@ -32,6 +37,9 @@ func (fake *FakeCgroupPathResolver) Resolve(cgroupName string, subsystem string)
 	fake.resolveMutex.Unlock()
 	if fake.ResolveStub != nil {
 		return fake.ResolveStub(cgroupName, subsystem)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
 	}
 	return fake.resolveReturns.result1, fake.resolveReturns.result2
 }
@@ -51,6 +59,20 @@ func (fake *FakeCgroupPathResolver) ResolveArgsForCall(i int) (string, string) {
 func (fake *FakeCgroupPathResolver) ResolveReturns(result1 string, result2 error) {
 	fake.ResolveStub = nil
 	fake.resolveReturns = struct {
+		result1 string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeCgroupPathResolver) ResolveReturnsOnCall(i int, result1 string, result2 error) {
+	fake.ResolveStub = nil
+	if fake.resolveReturnsOnCall == nil {
+		fake.resolveReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 error
+		})
+	}
+	fake.resolveReturnsOnCall[i] = struct {
 		result1 string
 		result2 error
 	}{result1, result2}
