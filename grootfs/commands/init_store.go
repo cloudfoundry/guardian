@@ -32,14 +32,14 @@ var InitStoreCommand = cli.Command{
 
 		if os.Getuid() != 0 {
 			err := errorspkg.Errorf("Store %s can only be initialized by Root user", storePath)
-			logger.Error("init-store-failed", err, nil)
+			logger.Error("init-store-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
 		stat, err := os.Stat(storePath)
 		if err == nil && stat.IsDir() {
 			err = errorspkg.Errorf("Store already initialized at path %s", storePath)
-			logger.Error("init-store-failed", err, nil)
+			logger.Error("init-store-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
@@ -49,13 +49,13 @@ var InitStoreCommand = cli.Command{
 		}
 
 		if err := fsDriver.ValidateFileSystem(logger, filepath.Dir(storePath)); err != nil {
-			logger.Error("init-store-failed", err, nil)
+			logger.Error("init-store-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
 		if err := os.MkdirAll(storePath, 0755); err != nil {
 			err := errorspkg.Wrapf(err, "Failed to initialize store path %s", storePath)
-			logger.Error("init-store-failed", err, nil)
+			logger.Error("init-store-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 		return nil

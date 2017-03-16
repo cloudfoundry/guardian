@@ -10,7 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
-	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -53,7 +53,7 @@ var DeleteCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
+		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.MetaDirName, "dependencies"),
 		)
