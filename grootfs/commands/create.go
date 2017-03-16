@@ -19,6 +19,7 @@ import (
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
@@ -28,11 +29,6 @@ import (
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
-
-type fileSystemDriver interface {
-	image_cloner.ImageDriver
-	base_image_puller.VolumeDriver
-}
 
 var CreateCommand = cli.Command{
 	Name:        "create",
@@ -129,15 +125,16 @@ var CreateCommand = cli.Command{
 		if err != nil {
 			return err
 		}
-		if err = store.ConfigureStore(logger, storePath, cfg.FSDriver, storeOwnerUid, storeOwnerGid); err != nil {
-			exitErr := errorspkg.Wrapf(err, "id: %s", id)
-			logger.Error("failed-to-setup-store", err, lager.Data{"id": id})
-			return cli.NewExitError(exitErr.Error(), 1)
-		}
 
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
+		}
+
+		if err = store.ConfigureStore(logger, storePath, fsDriver, storeOwnerUid, storeOwnerGid); err != nil {
+			exitErr := errorspkg.Wrapf(err, "id: %s", id)
+			logger.Error("failed-to-setup-store", err, lager.Data{"id": id})
+			return cli.NewExitError(exitErr.Error(), 1)
 		}
 
 		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
@@ -146,7 +143,7 @@ var CreateCommand = cli.Command{
 		var unpacker base_image_puller.Unpacker
 		unpackerStrategy := unpackerpkg.UnpackStrategy{
 			Name:               cfg.FSDriver,
-			WhiteoutDevicePath: filepath.Join(storePath, store.WhiteoutDevice),
+			WhiteoutDevicePath: filepath.Join(storePath, overlayxfs.WhiteoutDevice),
 		}
 		if os.Getuid() == 0 {
 			unpacker = unpackerpkg.NewTarUnpacker(unpackerStrategy)

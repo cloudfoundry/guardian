@@ -18,6 +18,10 @@ type FakeImageCloner struct {
 		result1 bool
 		result2 error
 	}
+	existsReturnsOnCall map[int]struct {
+		result1 bool
+		result2 error
+	}
 	CreateStub        func(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
@@ -25,6 +29,10 @@ type FakeImageCloner struct {
 		spec   groot.ImageSpec
 	}
 	createReturns struct {
+		result1 groot.Image
+		result2 error
+	}
+	createReturnsOnCall map[int]struct {
 		result1 groot.Image
 		result2 error
 	}
@@ -37,6 +45,9 @@ type FakeImageCloner struct {
 	destroyReturns struct {
 		result1 error
 	}
+	destroyReturnsOnCall map[int]struct {
+		result1 error
+	}
 	StatsStub        func(logger lager.Logger, id string) (groot.VolumeStats, error)
 	statsMutex       sync.RWMutex
 	statsArgsForCall []struct {
@@ -47,12 +58,17 @@ type FakeImageCloner struct {
 		result1 groot.VolumeStats
 		result2 error
 	}
+	statsReturnsOnCall map[int]struct {
+		result1 groot.VolumeStats
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeImageCloner) Exists(id string) (bool, error) {
 	fake.existsMutex.Lock()
+	ret, specificReturn := fake.existsReturnsOnCall[len(fake.existsArgsForCall)]
 	fake.existsArgsForCall = append(fake.existsArgsForCall, struct {
 		id string
 	}{id})
@@ -60,9 +76,11 @@ func (fake *FakeImageCloner) Exists(id string) (bool, error) {
 	fake.existsMutex.Unlock()
 	if fake.ExistsStub != nil {
 		return fake.ExistsStub(id)
-	} else {
-		return fake.existsReturns.result1, fake.existsReturns.result2
 	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.existsReturns.result1, fake.existsReturns.result2
 }
 
 func (fake *FakeImageCloner) ExistsCallCount() int {
@@ -85,8 +103,23 @@ func (fake *FakeImageCloner) ExistsReturns(result1 bool, result2 error) {
 	}{result1, result2}
 }
 
+func (fake *FakeImageCloner) ExistsReturnsOnCall(i int, result1 bool, result2 error) {
+	fake.ExistsStub = nil
+	if fake.existsReturnsOnCall == nil {
+		fake.existsReturnsOnCall = make(map[int]struct {
+			result1 bool
+			result2 error
+		})
+	}
+	fake.existsReturnsOnCall[i] = struct {
+		result1 bool
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error) {
 	fake.createMutex.Lock()
+	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		logger lager.Logger
 		spec   groot.ImageSpec
@@ -95,9 +128,11 @@ func (fake *FakeImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
 		return fake.CreateStub(logger, spec)
-	} else {
-		return fake.createReturns.result1, fake.createReturns.result2
 	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.createReturns.result1, fake.createReturns.result2
 }
 
 func (fake *FakeImageCloner) CreateCallCount() int {
@@ -120,8 +155,23 @@ func (fake *FakeImageCloner) CreateReturns(result1 groot.Image, result2 error) {
 	}{result1, result2}
 }
 
+func (fake *FakeImageCloner) CreateReturnsOnCall(i int, result1 groot.Image, result2 error) {
+	fake.CreateStub = nil
+	if fake.createReturnsOnCall == nil {
+		fake.createReturnsOnCall = make(map[int]struct {
+			result1 groot.Image
+			result2 error
+		})
+	}
+	fake.createReturnsOnCall[i] = struct {
+		result1 groot.Image
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeImageCloner) Destroy(logger lager.Logger, id string) error {
 	fake.destroyMutex.Lock()
+	ret, specificReturn := fake.destroyReturnsOnCall[len(fake.destroyArgsForCall)]
 	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
 		logger lager.Logger
 		id     string
@@ -130,9 +180,11 @@ func (fake *FakeImageCloner) Destroy(logger lager.Logger, id string) error {
 	fake.destroyMutex.Unlock()
 	if fake.DestroyStub != nil {
 		return fake.DestroyStub(logger, id)
-	} else {
-		return fake.destroyReturns.result1
 	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.destroyReturns.result1
 }
 
 func (fake *FakeImageCloner) DestroyCallCount() int {
@@ -154,8 +206,21 @@ func (fake *FakeImageCloner) DestroyReturns(result1 error) {
 	}{result1}
 }
 
+func (fake *FakeImageCloner) DestroyReturnsOnCall(i int, result1 error) {
+	fake.DestroyStub = nil
+	if fake.destroyReturnsOnCall == nil {
+		fake.destroyReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.destroyReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, error) {
 	fake.statsMutex.Lock()
+	ret, specificReturn := fake.statsReturnsOnCall[len(fake.statsArgsForCall)]
 	fake.statsArgsForCall = append(fake.statsArgsForCall, struct {
 		logger lager.Logger
 		id     string
@@ -164,9 +229,11 @@ func (fake *FakeImageCloner) Stats(logger lager.Logger, id string) (groot.Volume
 	fake.statsMutex.Unlock()
 	if fake.StatsStub != nil {
 		return fake.StatsStub(logger, id)
-	} else {
-		return fake.statsReturns.result1, fake.statsReturns.result2
 	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.statsReturns.result1, fake.statsReturns.result2
 }
 
 func (fake *FakeImageCloner) StatsCallCount() int {
@@ -184,6 +251,20 @@ func (fake *FakeImageCloner) StatsArgsForCall(i int) (lager.Logger, string) {
 func (fake *FakeImageCloner) StatsReturns(result1 groot.VolumeStats, result2 error) {
 	fake.StatsStub = nil
 	fake.statsReturns = struct {
+		result1 groot.VolumeStats
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeImageCloner) StatsReturnsOnCall(i int, result1 groot.VolumeStats, result2 error) {
+	fake.StatsStub = nil
+	if fake.statsReturnsOnCall == nil {
+		fake.statsReturnsOnCall = make(map[int]struct {
+			result1 groot.VolumeStats
+			result2 error
+		})
+	}
+	fake.statsReturnsOnCall[i] = struct {
 		result1 groot.VolumeStats
 		result2 error
 	}{result1, result2}

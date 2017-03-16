@@ -17,12 +17,16 @@ type FakeCacheDriver struct {
 	cleanReturns struct {
 		result1 error
 	}
+	cleanReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeCacheDriver) Clean(logger lager.Logger) error {
 	fake.cleanMutex.Lock()
+	ret, specificReturn := fake.cleanReturnsOnCall[len(fake.cleanArgsForCall)]
 	fake.cleanArgsForCall = append(fake.cleanArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
@@ -30,9 +34,11 @@ func (fake *FakeCacheDriver) Clean(logger lager.Logger) error {
 	fake.cleanMutex.Unlock()
 	if fake.CleanStub != nil {
 		return fake.CleanStub(logger)
-	} else {
-		return fake.cleanReturns.result1
 	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.cleanReturns.result1
 }
 
 func (fake *FakeCacheDriver) CleanCallCount() int {
@@ -50,6 +56,18 @@ func (fake *FakeCacheDriver) CleanArgsForCall(i int) lager.Logger {
 func (fake *FakeCacheDriver) CleanReturns(result1 error) {
 	fake.CleanStub = nil
 	fake.cleanReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeCacheDriver) CleanReturnsOnCall(i int, result1 error) {
+	fake.CleanStub = nil
+	if fake.cleanReturnsOnCall == nil {
+		fake.cleanReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.cleanReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

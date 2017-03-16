@@ -6,7 +6,7 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
-func CheckFSPath(path string, expectedFilesystem int64, expectedFilesystemName string) error {
+func CheckFSPath(path string, expectedFilesystem int64) error {
 	statfs := syscall.Statfs_t{}
 	err := syscall.Statfs(path, &statfs)
 	if err != nil {
@@ -14,7 +14,7 @@ func CheckFSPath(path string, expectedFilesystem int64, expectedFilesystemName s
 	}
 
 	if statfs.Type != expectedFilesystem {
-		return errorspkg.Errorf("filesystem driver requires store filesystem to be %s", expectedFilesystemName)
+		return errorspkg.Errorf("store path filesystem is incompatible (%s)", path)
 	}
 	return nil
 }

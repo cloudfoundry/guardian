@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	BaseFileSystemName = "btrfs"
+	BtrfsType = 0x9123683E
 )
 
 type Driver struct {
@@ -32,15 +32,29 @@ type Driver struct {
 	storePath    string
 }
 
-func NewDriver(btrfsBinPath, draxBinPath, storePath string) (*Driver, error) {
-	if err := filesystems.CheckFSPath(storePath, filesystems.BtrfsType, BaseFileSystemName); err != nil {
-		return nil, err
-	}
+func NewDriver(btrfsBinPath, draxBinPath, storePath string) *Driver {
 	return &Driver{
 		btrfsBinPath: btrfsBinPath,
 		draxBinPath:  draxBinPath,
 		storePath:    storePath,
-	}, nil
+	}
+}
+
+func (d *Driver) ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
+	return nil
+}
+
+func (d *Driver) ValidateFileSystem(logger lager.Logger, path string) error {
+	logger = logger.Session("btrfs-validate-filesystem", lager.Data{"path": path})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	if err := filesystems.CheckFSPath(path, BtrfsType); err != nil {
+		logger.Error("validating-filesystem", err)
+		return errorspkg.Wrap(err, "btrfs filesystem validation")
+	}
+
+	return nil
 }
 
 func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {

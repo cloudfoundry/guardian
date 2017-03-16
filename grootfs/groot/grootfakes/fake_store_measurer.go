@@ -18,12 +18,17 @@ type FakeStoreMeasurer struct {
 		result1 int64
 		result2 error
 	}
+	measureStoreReturnsOnCall map[int]struct {
+		result1 int64
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeStoreMeasurer) MeasureStore(logger lager.Logger) (int64, error) {
 	fake.measureStoreMutex.Lock()
+	ret, specificReturn := fake.measureStoreReturnsOnCall[len(fake.measureStoreArgsForCall)]
 	fake.measureStoreArgsForCall = append(fake.measureStoreArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
@@ -31,9 +36,11 @@ func (fake *FakeStoreMeasurer) MeasureStore(logger lager.Logger) (int64, error) 
 	fake.measureStoreMutex.Unlock()
 	if fake.MeasureStoreStub != nil {
 		return fake.MeasureStoreStub(logger)
-	} else {
-		return fake.measureStoreReturns.result1, fake.measureStoreReturns.result2
 	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.measureStoreReturns.result1, fake.measureStoreReturns.result2
 }
 
 func (fake *FakeStoreMeasurer) MeasureStoreCallCount() int {
@@ -51,6 +58,20 @@ func (fake *FakeStoreMeasurer) MeasureStoreArgsForCall(i int) lager.Logger {
 func (fake *FakeStoreMeasurer) MeasureStoreReturns(result1 int64, result2 error) {
 	fake.MeasureStoreStub = nil
 	fake.measureStoreReturns = struct {
+		result1 int64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeStoreMeasurer) MeasureStoreReturnsOnCall(i int, result1 int64, result2 error) {
+	fake.MeasureStoreStub = nil
+	if fake.measureStoreReturnsOnCall == nil {
+		fake.measureStoreReturnsOnCall = make(map[int]struct {
+			result1 int64
+			result2 error
+		})
+	}
+	fake.measureStoreReturnsOnCall[i] = struct {
 		result1 int64
 		result2 error
 	}{result1, result2}

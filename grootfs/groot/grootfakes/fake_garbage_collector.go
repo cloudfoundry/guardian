@@ -18,6 +18,9 @@ type FakeGarbageCollector struct {
 	collectReturns struct {
 		result1 error
 	}
+	collectReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -29,6 +32,7 @@ func (fake *FakeGarbageCollector) Collect(logger lager.Logger, keepBaseImages []
 		copy(keepBaseImagesCopy, keepBaseImages)
 	}
 	fake.collectMutex.Lock()
+	ret, specificReturn := fake.collectReturnsOnCall[len(fake.collectArgsForCall)]
 	fake.collectArgsForCall = append(fake.collectArgsForCall, struct {
 		logger         lager.Logger
 		keepBaseImages []string
@@ -37,9 +41,11 @@ func (fake *FakeGarbageCollector) Collect(logger lager.Logger, keepBaseImages []
 	fake.collectMutex.Unlock()
 	if fake.CollectStub != nil {
 		return fake.CollectStub(logger, keepBaseImages)
-	} else {
-		return fake.collectReturns.result1
 	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.collectReturns.result1
 }
 
 func (fake *FakeGarbageCollector) CollectCallCount() int {
@@ -57,6 +63,18 @@ func (fake *FakeGarbageCollector) CollectArgsForCall(i int) (lager.Logger, []str
 func (fake *FakeGarbageCollector) CollectReturns(result1 error) {
 	fake.CollectStub = nil
 	fake.collectReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeGarbageCollector) CollectReturnsOnCall(i int, result1 error) {
+	fake.CollectStub = nil
+	if fake.collectReturnsOnCall == nil {
+		fake.collectReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.collectReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

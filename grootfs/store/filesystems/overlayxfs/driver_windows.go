@@ -8,6 +8,14 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
+func (d *Driver) ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
+	return nil
+}
+
+func (d *Driver) ValidateFileSystem(logger lager.Logger, path string) error {
+	return nil
+}
+
 func (d *Driver) VolumePath(logger lager.Logger, id string) (string, error) {
 	return "", errors.New("Not compatible with windows")
 }

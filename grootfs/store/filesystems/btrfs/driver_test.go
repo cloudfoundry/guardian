@@ -27,7 +27,6 @@ var _ = Describe("Btrfs", func() {
 	const btrfsMountPath = "/mnt/btrfs"
 
 	var (
-		err         error
 		driver      *btrfs.Driver
 		logger      *TestLogger
 		storeName   string
@@ -54,8 +53,7 @@ var _ = Describe("Btrfs", func() {
 	})
 
 	JustBeforeEach(func() {
-		driver, err = btrfs.NewDriver("btrfs", draxBinPath, storePath)
-		Expect(err).NotTo(HaveOccurred())
+		driver = btrfs.NewDriver("btrfs", draxBinPath, storePath)
 	})
 
 	AfterEach(func() {
@@ -63,11 +61,18 @@ var _ = Describe("Btrfs", func() {
 		gexec.CleanupBuildArtifacts()
 	})
 
-	Context("when the storePath is not a btrfs volume", func() {
-		It("returns an error", func() {
-			_, err := btrfs.NewDriver("btrfs", draxBinPath, "/mnt/ext4")
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(ContainSubstring("filesystem driver requires store filesystem to be btrfs")))
+	Describe("ValidateFileSystem", func() {
+		Context("when storepath is a XFS mount", func() {
+			It("returns no error", func() {
+				Expect(driver.ValidateFileSystem(logger, storePath)).To(Succeed())
+			})
+		})
+
+		Context("when storepath is not a XFS mount", func() {
+			It("returns an error", func() {
+				err := driver.ValidateFileSystem(logger, "/mnt/ext4")
+				Expect(err).To(MatchError(ContainSubstring("store path filesystem is incompatible")))
+			})
 		})
 	})
 
@@ -118,8 +123,7 @@ var _ = Describe("Btrfs", func() {
 
 		Context("custom btrfs binary path", func() {
 			It("uses the custom btrfs binary given", func() {
-				driver, err = btrfs.NewDriver("cool-btrfs", draxBinPath, storePath)
-				Expect(err).NotTo(HaveOccurred())
+				driver = btrfs.NewDriver("cool-btrfs", draxBinPath, storePath)
 				_, err := driver.CreateVolume(logger, "", "random-id")
 				Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
 			})
@@ -191,8 +195,7 @@ var _ = Describe("Btrfs", func() {
 		)
 
 		BeforeEach(func() {
-			driver, err := btrfs.NewDriver("btrfs", draxBinPath, storePath)
-			Expect(err).NotTo(HaveOccurred())
+			driver := btrfs.NewDriver("btrfs", draxBinPath, storePath)
 			volumeID = randVolumeID()
 			volumePath, err := driver.CreateVolume(logger, "", volumeID)
 			Expect(err).NotTo(HaveOccurred())
@@ -281,8 +284,7 @@ var _ = Describe("Btrfs", func() {
 					})
 
 					It("will force drax to use that binary", func() {
-						driver, err = btrfs.NewDriver(btrfsBin.Name(), draxBinPath, storePath)
-						Expect(err).NotTo(HaveOccurred())
+						driver = btrfs.NewDriver(btrfsBin.Name(), draxBinPath, storePath)
 						Expect(driver.CreateImage(logger, spec)).To(Succeed())
 
 						contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
@@ -340,8 +342,7 @@ var _ = Describe("Btrfs", func() {
 
 		Context("custom btrfs binary path", func() {
 			It("uses the custom btrfs binary given", func() {
-				driver, err = btrfs.NewDriver("cool-btrfs", draxBinPath, storePath)
-				Expect(err).NotTo(HaveOccurred())
+				driver = btrfs.NewDriver("cool-btrfs", draxBinPath, storePath)
 				err := driver.CreateImage(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
 			})
@@ -377,10 +378,9 @@ var _ = Describe("Btrfs", func() {
 
 		Context("when fails to list volumes", func() {
 			It("returns an error", func() {
-				driver, err := btrfs.NewDriver("btrfs", draxBinPath, storePath)
-				Expect(err).NotTo(HaveOccurred())
+				driver := btrfs.NewDriver("btrfs", draxBinPath, storePath)
 				Expect(os.RemoveAll(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
-				_, err = driver.Volumes(logger)
+				_, err := driver.Volumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to list volumes")))
 			})
 		})
@@ -416,14 +416,14 @@ var _ = Describe("Btrfs", func() {
 		Context("when the source volume does not exist", func() {
 			It("returns an error", func() {
 				newVolumePath := fmt.Sprintf("%s-new", volumePath)
-				err = driver.MoveVolume(logger, "nonsense", newVolumePath)
+				err := driver.MoveVolume(logger, "nonsense", newVolumePath)
 				Expect(err).To(MatchError(ContainSubstring("moving volume")))
 			})
 		})
 
 		Context("when the target volume already exists", func() {
 			It("returns an error", func() {
-				err = driver.MoveVolume(logger, volumePath, filepath.Dir(volumePath))
+				err := driver.MoveVolume(logger, volumePath, filepath.Dir(volumePath))
 				Expect(err).To(MatchError(ContainSubstring("moving volume")))
 			})
 		})
@@ -451,8 +451,7 @@ var _ = Describe("Btrfs", func() {
 
 		Context("custom btrfs binary path", func() {
 			It("uses the custom btrfs binary given", func() {
-				driver, err = btrfs.NewDriver("cool-btrfs", draxBinPath, storePath)
-				Expect(err).NotTo(HaveOccurred())
+				driver = btrfs.NewDriver("cool-btrfs", draxBinPath, storePath)
 				err := driver.DestroyVolume(logger, volumeID)
 				Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
 			})
@@ -525,8 +524,7 @@ var _ = Describe("Btrfs", func() {
 
 			Context("custom btrfs binary path", func() {
 				It("uses the custom btrfs binary given", func() {
-					driver, err = btrfs.NewDriver("cool-btrfs", draxBinPath, storePath)
-					Expect(err).NotTo(HaveOccurred())
+					driver = btrfs.NewDriver("cool-btrfs", draxBinPath, storePath)
 					err := driver.DestroyImage(logger, spec.ImagePath)
 					Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
 				})
@@ -644,8 +642,7 @@ var _ = Describe("Btrfs", func() {
 				})
 
 				It("will force drax to use that binary", func() {
-					driver, err = btrfs.NewDriver(btrfsBin.Name(), draxBinPath, storePath)
-					Expect(err).NotTo(HaveOccurred())
+					driver = btrfs.NewDriver(btrfsBin.Name(), draxBinPath, storePath)
 					_, err := driver.FetchStats(logger, imagePath)
 					Expect(err).To(HaveOccurred())
 

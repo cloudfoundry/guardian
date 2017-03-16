@@ -32,15 +32,13 @@ var _ = Describe("Driver", func() {
 
 	BeforeEach(func() {
 		randomID = randVolumeID()
+		logger = lagertest.NewTestLogger("overlay+xfs")
+		driver = overlayxfs.NewDriver(StorePath)
+
 		Expect(os.MkdirAll(StorePath, 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.ImageDirName), 0777)).To(Succeed())
-		Expect(os.MkdirAll(filepath.Join(StorePath, store.LinksDirName), 0777)).To(Succeed())
-
-		var err error
-		driver, err = overlayxfs.NewDriver(StorePath)
-		Expect(err).NotTo(HaveOccurred())
-		logger = lagertest.NewTestLogger("overlay+xfs")
+		Expect(os.MkdirAll(filepath.Join(StorePath, overlayxfs.LinksDirName), 0777)).To(Succeed())
 
 		imagePath := filepath.Join(StorePath, store.ImageDirName, fmt.Sprintf("random-id-%d", rand.Int()))
 		Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
@@ -53,7 +51,8 @@ var _ = Describe("Driver", func() {
 	AfterEach(func() {
 		Expect(os.RemoveAll(filepath.Join(StorePath, store.VolumesDirName))).To(Succeed())
 		Expect(os.RemoveAll(filepath.Join(StorePath, store.ImageDirName))).To(Succeed())
-		Expect(os.RemoveAll(filepath.Join(StorePath, store.LinksDirName))).To(Succeed())
+		Expect(os.RemoveAll(filepath.Join(StorePath, overlayxfs.LinksDirName))).To(Succeed())
+		Expect(os.RemoveAll(filepath.Join(StorePath, overlayxfs.WhiteoutDevice))).To(Succeed())
 	})
 
 	Describe("CreateImage", func() {
@@ -470,14 +469,6 @@ var _ = Describe("Driver", func() {
 		})
 	})
 
-	Context("when the storePath is not a xfs volume", func() {
-		It("returns an error", func() {
-			_, err := overlayxfs.NewDriver("/mnt/ext4")
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(ContainSubstring("filesystem driver requires store filesystem to be xfs")))
-		})
-	})
-
 	Describe("VolumePath", func() {
 		BeforeEach(func() {
 			Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName, randomID), 0755)).To(Succeed())
@@ -497,6 +488,68 @@ var _ = Describe("Driver", func() {
 		})
 	})
 
+	Describe("ConfigureStore", func() {
+		const (
+			currentUID = 2001
+			currentGID = 2002
+		)
+
+		var (
+			storePath string
+		)
+
+		BeforeEach(func() {
+			var err error
+			storePath, err = ioutil.TempDir(StorePath, "configure-store-test")
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("creates a links directory", func() {
+			Expect(driver.ConfigureStore(logger, storePath, currentUID, currentGID)).To(Succeed())
+			stat, err := os.Stat(filepath.Join(storePath, overlayxfs.LinksDirName))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.IsDir()).To(BeTrue())
+			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(currentUID)))
+			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(currentGID)))
+		})
+
+		It("creates a whiteout device", func() {
+			Expect(driver.ConfigureStore(logger, storePath, currentUID, currentGID)).To(Succeed())
+
+			stat, err := os.Stat(filepath.Join(storePath, overlayxfs.WhiteoutDevice))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(currentUID)))
+			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(currentGID)))
+		})
+
+		Context("when the whiteout 'device' is not a device", func() {
+			BeforeEach(func() {
+				Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
+				Expect(ioutil.WriteFile(filepath.Join(storePath, overlayxfs.WhiteoutDevice), []byte{}, 0755)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				err := driver.ConfigureStore(logger, storePath, currentUID, currentGID)
+				Expect(err).To(MatchError(ContainSubstring("the whiteout device file is not a valid device")))
+			})
+		})
+	})
+
+	Describe("ValidateFileSystem", func() {
+		Context("when storepath is a XFS mount", func() {
+			It("returns no error", func() {
+				Expect(driver.ValidateFileSystem(logger, StorePath)).To(Succeed())
+			})
+		})
+
+		Context("when storepath is not a XFS mount", func() {
+			It("returns an error", func() {
+				err := driver.ValidateFileSystem(logger, "/mnt/ext4")
+				Expect(err).To(MatchError(ContainSubstring("store path filesystem is incompatible")))
+			})
+		})
+	})
+
 	Describe("Create", func() {
 		It("creates a volume", func() {
 			expectedVolumePath := filepath.Join(StorePath, store.VolumesDirName, randomID)
@@ -508,14 +561,14 @@ var _ = Describe("Driver", func() {
 			Expect(expectedVolumePath).To(BeADirectory())
 			Expect(volumePath).To(Equal(expectedVolumePath))
 
-			linkFile := filepath.Join(StorePath, store.LinksDirName, randomID)
+			linkFile := filepath.Join(StorePath, overlayxfs.LinksDirName, randomID)
 			_, err = os.Stat(linkFile)
 			Expect(err).ToNot(HaveOccurred(), "volume link file has not been created")
 
 			linkName, err := ioutil.ReadFile(linkFile)
 			Expect(err).ToNot(HaveOccurred(), "failed to read volume link file")
 
-			link := filepath.Join(StorePath, store.LinksDirName, string(linkName))
+			link := filepath.Join(StorePath, overlayxfs.LinksDirName, string(linkName))
 			linkStat, err := os.Lstat(link)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(linkStat.Mode()&os.ModeSymlink).ToNot(
@@ -570,10 +623,9 @@ var _ = Describe("Driver", func() {
 
 		Context("when fails to list volumes", func() {
 			It("returns an error", func() {
-				driver, err := overlayxfs.NewDriver(StorePath)
-				Expect(err).NotTo(HaveOccurred())
+				driver := overlayxfs.NewDriver(StorePath)
 				Expect(os.RemoveAll(filepath.Join(StorePath, store.VolumesDirName))).To(Succeed())
-				_, err = driver.Volumes(logger)
+				_, err := driver.Volumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to list volumes")))
 			})
 		})
@@ -601,10 +653,10 @@ var _ = Describe("Driver", func() {
 
 		It("deletes the associated symlink", func() {
 			Expect(volumePath).To(BeADirectory())
-			linkFilePath := filepath.Join(StorePath, store.LinksDirName, volumeID)
+			linkFilePath := filepath.Join(StorePath, overlayxfs.LinksDirName, volumeID)
 			Expect(linkFilePath).To(BeAnExistingFile())
 			linkfileinfo, err := ioutil.ReadFile(linkFilePath)
-			symlinkPath := filepath.Join(StorePath, store.LinksDirName, string(linkfileinfo))
+			symlinkPath := filepath.Join(StorePath, overlayxfs.LinksDirName, string(linkfileinfo))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(symlinkPath).To(BeAnExistingFile())
 
@@ -656,9 +708,9 @@ var _ = Describe("Driver", func() {
 			err = driver.MoveVolume(logger, volumePath, newVolumePath)
 			Expect(err).ToNot(HaveOccurred())
 
-			linkName, err := ioutil.ReadFile(filepath.Join(StorePath, store.LinksDirName, filepath.Base(newVolumePath)))
+			linkName, err := ioutil.ReadFile(filepath.Join(StorePath, overlayxfs.LinksDirName, filepath.Base(newVolumePath)))
 			Expect(err).NotTo(HaveOccurred())
-			linkPath := filepath.Join(StorePath, store.LinksDirName, string(linkName))
+			linkPath := filepath.Join(StorePath, overlayxfs.LinksDirName, string(linkName))
 			_, err = os.Lstat(linkPath)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -666,7 +718,7 @@ var _ = Describe("Driver", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(target).To(Equal(newVolumePath))
 
-			_, err = os.Stat(filepath.Join(StorePath, store.LinksDirName, filepath.Base(newVolumePath)))
+			_, err = os.Stat(filepath.Join(StorePath, overlayxfs.LinksDirName, filepath.Base(newVolumePath)))
 			Expect(err).NotTo(HaveOccurred())
 		})
 

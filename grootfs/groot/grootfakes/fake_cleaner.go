@@ -21,6 +21,10 @@ type FakeCleaner struct {
 		result1 bool
 		result2 error
 	}
+	cleanReturnsOnCall map[int]struct {
+		result1 bool
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -32,6 +36,7 @@ func (fake *FakeCleaner) Clean(logger lager.Logger, threshold int64, keepImages 
 		copy(keepImagesCopy, keepImages)
 	}
 	fake.cleanMutex.Lock()
+	ret, specificReturn := fake.cleanReturnsOnCall[len(fake.cleanArgsForCall)]
 	fake.cleanArgsForCall = append(fake.cleanArgsForCall, struct {
 		logger      lager.Logger
 		threshold   int64
@@ -42,9 +47,11 @@ func (fake *FakeCleaner) Clean(logger lager.Logger, threshold int64, keepImages 
 	fake.cleanMutex.Unlock()
 	if fake.CleanStub != nil {
 		return fake.CleanStub(logger, threshold, keepImages, acquireLock)
-	} else {
-		return fake.cleanReturns.result1, fake.cleanReturns.result2
 	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.cleanReturns.result1, fake.cleanReturns.result2
 }
 
 func (fake *FakeCleaner) CleanCallCount() int {
@@ -62,6 +69,20 @@ func (fake *FakeCleaner) CleanArgsForCall(i int) (lager.Logger, int64, []string,
 func (fake *FakeCleaner) CleanReturns(result1 bool, result2 error) {
 	fake.CleanStub = nil
 	fake.cleanReturns = struct {
+		result1 bool
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeCleaner) CleanReturnsOnCall(i int, result1 bool, result2 error) {
+	fake.CleanStub = nil
+	if fake.cleanReturnsOnCall == nil {
+		fake.cleanReturnsOnCall = make(map[int]struct {
+			result1 bool
+			result2 error
+		})
+	}
+	fake.cleanReturnsOnCall[i] = struct {
 		result1 bool
 		result2 error
 	}{result1, result2}

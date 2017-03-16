@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/store/filesystems"
 	"code.cloudfoundry.org/lager"
 
 	errorspkg "github.com/pkg/errors"
@@ -44,8 +43,12 @@ var InitStoreCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		if err := checkFSMount(storePath, cfg.FSDriver); err != nil {
-			err := errorspkg.Wrapf(err, "Failed to initialize store path %s", storePath)
+		fsDriver, err := createFileSystemDriver(cfg)
+		if err != nil {
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		if err := fsDriver.ValidateFileSystem(logger, filepath.Dir(storePath)); err != nil {
 			logger.Error("init-store-failed", err, nil)
 			return cli.NewExitError(err.Error(), 1)
 		}
@@ -57,21 +60,4 @@ var InitStoreCommand = cli.Command{
 		}
 		return nil
 	},
-}
-
-func checkFSMount(path, driver string) error {
-	var driverMagic int64
-	switch driver {
-	case "overlay-xfs":
-		driverMagic = filesystems.XfsType
-	case "btrfs":
-		driverMagic = filesystems.BtrfsType
-	}
-
-	path = filepath.Dir(path)
-	if err := filesystems.CheckFSPath(path, driverMagic, driver); err != nil {
-		return err
-	}
-
-	return nil
 }

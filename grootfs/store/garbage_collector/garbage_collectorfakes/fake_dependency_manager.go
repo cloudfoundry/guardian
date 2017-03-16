@@ -17,12 +17,17 @@ type FakeDependencyManager struct {
 		result1 []string
 		result2 error
 	}
+	dependenciesReturnsOnCall map[int]struct {
+		result1 []string
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeDependencyManager) Dependencies(id string) ([]string, error) {
 	fake.dependenciesMutex.Lock()
+	ret, specificReturn := fake.dependenciesReturnsOnCall[len(fake.dependenciesArgsForCall)]
 	fake.dependenciesArgsForCall = append(fake.dependenciesArgsForCall, struct {
 		id string
 	}{id})
@@ -30,9 +35,11 @@ func (fake *FakeDependencyManager) Dependencies(id string) ([]string, error) {
 	fake.dependenciesMutex.Unlock()
 	if fake.DependenciesStub != nil {
 		return fake.DependenciesStub(id)
-	} else {
-		return fake.dependenciesReturns.result1, fake.dependenciesReturns.result2
 	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.dependenciesReturns.result1, fake.dependenciesReturns.result2
 }
 
 func (fake *FakeDependencyManager) DependenciesCallCount() int {
@@ -50,6 +57,20 @@ func (fake *FakeDependencyManager) DependenciesArgsForCall(i int) string {
 func (fake *FakeDependencyManager) DependenciesReturns(result1 []string, result2 error) {
 	fake.DependenciesStub = nil
 	fake.dependenciesReturns = struct {
+		result1 []string
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeDependencyManager) DependenciesReturnsOnCall(i int, result1 []string, result2 error) {
+	fake.DependenciesStub = nil
+	if fake.dependenciesReturnsOnCall == nil {
+		fake.dependenciesReturnsOnCall = make(map[int]struct {
+			result1 []string
+			result2 error
+		})
+	}
+	fake.dependenciesReturnsOnCall[i] = struct {
 		result1 []string
 		result2 error
 	}{result1, result2}

@@ -9,7 +9,13 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-func ConfigureStore(logger lager.Logger, storePath, driver string, ownerUID, ownerGID int) error {
+//go:generate counterfeiter . StoreDriver
+type StoreDriver interface {
+	ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
+	ValidateFileSystem(logger lager.Logger, path string) error
+}
+
+func ConfigureStore(logger lager.Logger, storePath string, driver StoreDriver, ownerUID, ownerGID int) error {
 	logger = logger.Session("ensuring-store", lager.Data{"storePath": storePath})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -57,23 +63,16 @@ func ConfigureStore(logger lager.Logger, storePath, driver string, ownerUID, own
 		}
 	}
 
-	if requiresWhiteout(driver) {
-		if err := createWhiteoutDevice(logger, ownerUID, ownerGID, storePath); err != nil {
-			return err
-		}
-
-		if err := validateWhiteoutDevice(filepath.Join(storePath, WhiteoutDevice)); err != nil {
-			logger.Error("validating-whiteout-device-failed", err)
-			return err
-		}
+	if err := driver.ConfigureStore(logger, storePath, ownerUID, ownerGID); err != nil {
+		logger.Error("store-filesystem-specific-configuration-failed", err)
+		return errorspkg.Wrap(err, "running filesystem-specific configuration")
 	}
 
-	if requiresLinksDir(driver) {
-		if err := createDirectory(logger, filepath.Join(storePath, LinksDirName), ownerUID, ownerGID); err != nil {
-			logger.Error("creating-links-dir-failed", err)
-			return errorspkg.Wrapf(err, "creating links dir")
-		}
+	if err := driver.ValidateFileSystem(logger, storePath); err != nil {
+		logger.Error("filesystem-validation-failed", err)
+		return errorspkg.Wrap(err, "validating file system")
 	}
+
 	return nil
 }
 
@@ -103,12 +102,4 @@ func isDirectory(requiredPath string) error {
 		}
 	}
 	return nil
-}
-
-func requiresLinksDir(driver string) bool {
-	return driver == "overlay-xfs"
-}
-
-func requiresWhiteout(driver string) bool {
-	return driver == "overlay-xfs"
 }

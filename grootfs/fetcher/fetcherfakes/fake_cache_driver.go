@@ -21,12 +21,18 @@ type FakeCacheDriver struct {
 		result2 int64
 		result3 error
 	}
+	fetchBlobReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 int64
+		result3 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeCacheDriver) FetchBlob(logger lager.Logger, id string, remoteBlobFunc fetcher.RemoteBlobFunc) ([]byte, int64, error) {
 	fake.fetchBlobMutex.Lock()
+	ret, specificReturn := fake.fetchBlobReturnsOnCall[len(fake.fetchBlobArgsForCall)]
 	fake.fetchBlobArgsForCall = append(fake.fetchBlobArgsForCall, struct {
 		logger         lager.Logger
 		id             string
@@ -36,9 +42,11 @@ func (fake *FakeCacheDriver) FetchBlob(logger lager.Logger, id string, remoteBlo
 	fake.fetchBlobMutex.Unlock()
 	if fake.FetchBlobStub != nil {
 		return fake.FetchBlobStub(logger, id, remoteBlobFunc)
-	} else {
-		return fake.fetchBlobReturns.result1, fake.fetchBlobReturns.result2, fake.fetchBlobReturns.result3
 	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	return fake.fetchBlobReturns.result1, fake.fetchBlobReturns.result2, fake.fetchBlobReturns.result3
 }
 
 func (fake *FakeCacheDriver) FetchBlobCallCount() int {
@@ -56,6 +64,22 @@ func (fake *FakeCacheDriver) FetchBlobArgsForCall(i int) (lager.Logger, string, 
 func (fake *FakeCacheDriver) FetchBlobReturns(result1 []byte, result2 int64, result3 error) {
 	fake.FetchBlobStub = nil
 	fake.fetchBlobReturns = struct {
+		result1 []byte
+		result2 int64
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *FakeCacheDriver) FetchBlobReturnsOnCall(i int, result1 []byte, result2 int64, result3 error) {
+	fake.FetchBlobStub = nil
+	if fake.fetchBlobReturnsOnCall == nil {
+		fake.fetchBlobReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 int64
+			result3 error
+		})
+	}
+	fake.fetchBlobReturnsOnCall[i] = struct {
 		result1 []byte
 		result2 int64
 		result3 error

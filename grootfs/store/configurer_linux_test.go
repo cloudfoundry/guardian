@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path"
@@ -8,6 +9,7 @@ import (
 	"syscall"
 
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/storefakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -22,7 +24,7 @@ var _ = Describe("Configurer", func() {
 		currentUID     int
 		currentGID     int
 		logger         lager.Logger
-		driver         string
+		driver         *storefakes.FakeStoreDriver
 	)
 
 	BeforeEach(func() {
@@ -35,7 +37,7 @@ var _ = Describe("Configurer", func() {
 		storePath = path.Join(tempDir, "store")
 
 		logger = lagertest.NewTestLogger("store-configurer")
-		driver = "random-driver"
+		driver = new(storefakes.FakeStoreDriver)
 	})
 
 	AfterEach(func() {
@@ -85,6 +87,39 @@ var _ = Describe("Configurer", func() {
 			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(currentGID)))
 		})
 
+		It("calls the store driver for configuration", func() {
+			Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
+			Expect(driver.ConfigureStoreCallCount()).To(Equal(1))
+
+			_, path, ownerUID, ownerGID := driver.ConfigureStoreArgsForCall(0)
+			Expect(path).To(Equal(storePath))
+			Expect(ownerUID).To(Equal(currentUID))
+			Expect(ownerGID).To(Equal(currentGID))
+		})
+
+		Context("when store driver configuration fails", func() {
+			It("returns an error", func() {
+				driver.ConfigureStoreReturns(errors.New("configuration failed"))
+				err := store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)
+				Expect(err).To(MatchError(ContainSubstring("running filesystem-specific configuration")))
+			})
+		})
+
+		It("calls the store driver for filesystem verification", func() {
+			Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
+			Expect(driver.ValidateFileSystemCallCount()).To(Equal(1))
+			_, path := driver.ValidateFileSystemArgsForCall(0)
+			Expect(path).To(Equal(storePath))
+		})
+
+		Context("when store driver filesystem verification fails", func() {
+			It("returns an error", func() {
+				driver.ValidateFileSystemReturns(errors.New("not a valid filesystem"))
+				err := store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)
+				Expect(err).To(MatchError(ContainSubstring("not a valid filesystem")))
+			})
+		})
+
 		It("doesn't fail on race conditions", func() {
 			for i := 0; i < 50; i++ {
 				storePath, err := ioutil.TempDir("", "")
@@ -112,58 +147,6 @@ var _ = Describe("Configurer", func() {
 				Eventually(start1).Should(BeClosed())
 				Eventually(start2).Should(BeClosed())
 			}
-		})
-
-		Context("the driver is overlay-xfs", func() {
-			BeforeEach(func() {
-				driver = "overlay-xfs"
-			})
-
-			It("creates a links directory", func() {
-				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
-				stat, err := os.Stat(filepath.Join(storePath, store.LinksDirName))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.IsDir()).To(BeTrue())
-			})
-
-			It("creates a whiteout device", func() {
-				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
-
-				stat, err := os.Stat(filepath.Join(storePath, store.WhiteoutDevice))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(currentUID)))
-				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(currentGID)))
-			})
-
-			Context("when the whiteout 'device' is not a device", func() {
-				BeforeEach(func() {
-					Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
-					Expect(ioutil.WriteFile(filepath.Join(storePath, store.WhiteoutDevice), []byte{}, 0755)).To(Succeed())
-				})
-
-				It("returns an error", func() {
-					err := store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)
-					Expect(err).To(MatchError(ContainSubstring("the whiteout device file is not a valid device")))
-				})
-			})
-		})
-
-		Context("the driver is not overlay-xfs", func() {
-			BeforeEach(func() {
-				driver = "not-overlay-xfs"
-			})
-
-			It("does not create a whiteout device", func() {
-				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
-				Expect(filepath.Join(storePath, store.WhiteoutDevice)).ToNot(BeAnExistingFile())
-			})
-
-			It("does not create a links directory", func() {
-				Expect(store.ConfigureStore(logger, storePath, driver, currentUID, currentGID)).To(Succeed())
-				_, err := os.Stat(filepath.Join(storePath, store.LinksDirName))
-				Expect(err).To(HaveOccurred())
-				Expect(os.IsNotExist(err)).To(BeTrue())
-			})
 		})
 
 		Context("it will change the owner of the created folders to the provided userID", func() {

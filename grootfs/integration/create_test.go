@@ -567,7 +567,7 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 			})
-			Expect(err).To(MatchError(ContainSubstring("filesystem driver requires store filesystem to be")))
+			Expect(err).To(MatchError(ContainSubstring("store path filesystem is incompatible")))
 		})
 	})
 
