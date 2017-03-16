@@ -3,6 +3,7 @@ package integration_test
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"syscall"
 
 	"code.cloudfoundry.org/grootfs/integration"
@@ -22,7 +23,7 @@ var _ = Describe("InitStore", func() {
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
 		rootUID = 0
-		storePath = fmt.Sprintf("/opt/init_store_%s/grootfs", Runner.Driver)
+		storePath = filepath.Join(StorePath, "init-store")
 		runner = Runner.WithStore(storePath)
 	})
 
@@ -33,8 +34,7 @@ var _ = Describe("InitStore", func() {
 	Context("when the given store path is mounted", func() {
 		Context("and the given driver matches the mounted path", func() {
 			It("returns a newly created store path", func() {
-				_, err := runner.InitStore()
-				Expect(err).NotTo(HaveOccurred())
+				Expect(runner.InitStore()).To(Succeed())
 
 				Expect(runner.StorePath).To(BeADirectory())
 
@@ -51,7 +51,7 @@ var _ = Describe("InitStore", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := runner.InitStore()
+				err := runner.InitStore()
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("%s filesystem validation: store path filesystem is incompatible", runner.Driver))))
 				Expect(runner.StorePath).ToNot(BeADirectory())
@@ -65,7 +65,7 @@ var _ = Describe("InitStore", func() {
 		})
 
 		It("returns an error", func() {
-			_, err := runner.InitStore()
+			err := runner.InitStore()
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(fmt.Sprintf("Store already initialized at path %s", runner.StorePath)))
 		})
@@ -73,7 +73,7 @@ var _ = Describe("InitStore", func() {
 
 	Context("when the user is not root", func() {
 		It("returns an error", func() {
-			_, err := runner.RunningAsUser(GrootUID, GrootUID).InitStore()
+			err := runner.RunningAsUser(GrootUID, GrootUID).InitStore()
 			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(fmt.Sprintf("Store %s can only be initialized by Root user", runner.StorePath)))
 		})

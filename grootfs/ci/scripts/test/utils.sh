@@ -46,21 +46,6 @@ mount_storage() {
     mount -t xfs -o pquota /xfs_volume_${i} /mnt/xfs-${i}
     chmod 777 -R /mnt/xfs-${i}
   done
-
-  # Make and mount another xfs store for init-store tests
-  truncate -s 1G /init_store_xfs_volume
-  mkfs.xfs -b size=4096 /init_store_xfs_volume
-  mkdir /opt/init_store_overlay-xfs
-  mount -t xfs -o pquota /init_store_xfs_volume /opt/init_store_overlay-xfs
-  chmod 777 -R /opt/init_store_overlay-xfs
-
-  # Make and mount another btrfs store for init-store tests
-  truncate -s 1G /init_store_btrfs_volume
-  mkfs.btrfs --nodesize 4k -s 4k /init_store_btrfs_volume
-  mkdir /opt/init_store_btrfs
-  mount -t btrfs -o user_subvol_rm_allowed,rw /init_store_btrfs_volume /opt/init_store_btrfs
-  chmod 777 -R /opt/init_store_btrfs
-  btrfs quota enable /opt/init_store_btrfs
 }
 
 sudo_mount_storage() {
