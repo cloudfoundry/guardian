@@ -149,15 +149,6 @@ func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
 }
 
 func cleanupSystemResources(cgroupsMountpoint, iptablesPrefix string) error {
-	umountCmd := exec.Command("sh", "-c", fmt.Sprintf("umount %s/*", cgroupsMountpoint))
-	if err := umountCmd.Run(); err != nil {
-		return err
-	}
-	umountCmd = exec.Command("sh", "-c", fmt.Sprintf("umount %s", cgroupsMountpoint))
-	if err := umountCmd.Run(); err != nil {
-		return err
-	}
-
 	cmd := exec.Command("bash", "-c", iptables.SetupScript)
 	cmd.Env = []string{
 		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
