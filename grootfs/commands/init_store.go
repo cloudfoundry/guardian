@@ -2,9 +2,10 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"os"
-	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/grootfs/store/locksmith"
+	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 
 	errorspkg "github.com/pkg/errors"
@@ -31,33 +32,24 @@ var InitStoreCommand = cli.Command{
 		storePath := cfg.StorePath
 
 		if os.Getuid() != 0 {
-			err := errorspkg.Errorf("Store %s can only be initialized by Root user", storePath)
-			logger.Error("init-store-failed", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
-
-		stat, err := os.Stat(storePath)
-		if err == nil && stat.IsDir() {
-			err = errorspkg.Errorf("Store already initialized at path %s", storePath)
+			err := errorspkg.Errorf("store %s can only be initialized by Root user", storePath)
 			logger.Error("init-store-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
+			logger.Error("failed-to-initialise-driver", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		if err := fsDriver.ValidateFileSystem(logger, filepath.Dir(storePath)); err != nil {
-			logger.Error("init-store-failed", err)
+		locksmith := locksmith.NewFileSystem(storePath)
+		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
+		if err := manager.InitStore(logger); err != nil {
+			logger.Error("cleaning-up-store-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		if err := os.MkdirAll(storePath, 0755); err != nil {
-			err := errorspkg.Wrapf(err, "Failed to initialize store path %s", storePath)
-			logger.Error("init-store-failed", err)
-			return cli.NewExitError(err.Error(), 1)
-		}
 		return nil
 	},
 }

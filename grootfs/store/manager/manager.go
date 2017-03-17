@@ -17,20 +17,45 @@ type Manager struct {
 	storePath    string
 	imageDriver  image_cloner.ImageDriver
 	volumeDriver base_image_puller.VolumeDriver
+	storeDriver  store.StoreDriver
 	locksmith    groot.Locksmith
 }
 
-func New(storePath string, locksmith groot.Locksmith, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver) *Manager {
+func New(storePath string, locksmith groot.Locksmith, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver store.StoreDriver) *Manager {
 	return &Manager{
 		storePath:    storePath,
 		volumeDriver: volumeDriver,
 		imageDriver:  imageDriver,
+		storeDriver:  storeDriver,
 		locksmith:    locksmith,
 	}
 }
 
+func (m *Manager) InitStore(logger lager.Logger) error {
+	logger = logger.Session("store-manager-init-store")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	stat, err := os.Stat(m.storePath)
+	if err == nil && stat.IsDir() {
+		logger.Error("store-path-already-exists", errors.Errorf("%s already exists", m.storePath))
+		return errors.Errorf("store already initialized at path %s", m.storePath)
+	}
+
+	if err := m.storeDriver.ValidateFileSystem(logger, filepath.Dir(m.storePath)); err != nil {
+		logger.Error("store-path-validation-failed", err)
+		return errors.Wrap(err, "validating store path filesystem")
+	}
+
+	if err := os.MkdirAll(m.storePath, 0755); err != nil {
+		logger.Error("init-store-failed", err, lager.Data{"storePath": m.storePath})
+		return errors.Wrap(err, "initializing store")
+	}
+	return nil
+}
+
 func (m *Manager) DeleteStore(logger lager.Logger) error {
-	logger = logger.Session("store-manager-delete-all-images")
+	logger = logger.Session("store-manager-delete-store")
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 

@@ -45,7 +45,7 @@ var DeleteStoreCommand = cli.Command{
 		store.ConfigureStore(logger, storePath, fsDriver, 0, 0)
 
 		locksmith := locksmith.NewFileSystem(storePath)
-		manager := manager.New(storePath, locksmith, fsDriver, fsDriver)
+		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
 		if err := manager.DeleteStore(logger); err != nil {
 			logger.Error("cleaning-up-store-failed", err)
 			return cli.NewExitError(err.Error(), 1)

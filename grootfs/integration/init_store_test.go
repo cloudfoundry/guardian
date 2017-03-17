@@ -13,16 +13,16 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("InitStore", func() {
+var _ = Describe("Init Store", func() {
+	const rootUID = 0
+
 	var (
-		rootUID   int
 		storePath string
 		runner    runner.Runner
 	)
 
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
-		rootUID = 0
 		storePath = filepath.Join(StorePath, "init-store")
 		runner = Runner.WithStore(storePath)
 	})
@@ -67,7 +67,7 @@ var _ = Describe("InitStore", func() {
 		It("returns an error", func() {
 			err := runner.InitStore()
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(fmt.Sprintf("Store already initialized at path %s", runner.StorePath)))
+			Expect(err).To(MatchError(fmt.Sprintf("store already initialized at path %s", runner.StorePath)))
 		})
 	})
 
@@ -75,7 +75,7 @@ var _ = Describe("InitStore", func() {
 		It("returns an error", func() {
 			err := runner.RunningAsUser(GrootUID, GrootUID).InitStore()
 			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(fmt.Sprintf("Store %s can only be initialized by Root user", runner.StorePath)))
+			Expect(err).To(MatchError(fmt.Sprintf("store %s can only be initialized by Root user", runner.StorePath)))
 		})
 	})
 })

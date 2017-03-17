@@ -2,6 +2,7 @@ package manager_test
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/image_cloner/image_clonerfakes"
 	managerpkg "code.cloudfoundry.org/grootfs/store/manager"
+	"code.cloudfoundry.org/grootfs/store/storefakes"
 	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
@@ -22,6 +24,7 @@ var _ = Describe("Manager", func() {
 	var (
 		imgDriver *image_clonerfakes.FakeImageDriver
 		volDriver *base_image_pullerfakes.FakeVolumeDriver
+		strDriver *storefakes.FakeStoreDriver
 		locksmith *grootfakes.FakeLocksmith
 		manager   *managerpkg.Manager
 		storePath string
@@ -29,16 +32,59 @@ var _ = Describe("Manager", func() {
 	)
 
 	BeforeEach(func() {
-		var err error
-		storePath, err = ioutil.TempDir("", "store-path")
-		Expect(err).NotTo(HaveOccurred())
-
 		imgDriver = new(image_clonerfakes.FakeImageDriver)
 		volDriver = new(base_image_pullerfakes.FakeVolumeDriver)
+		strDriver = new(storefakes.FakeStoreDriver)
 		locksmith = new(grootfakes.FakeLocksmith)
-		manager = managerpkg.New(storePath, locksmith, volDriver, imgDriver)
 
 		logger = lagertest.NewTestLogger("store-manager")
+	})
+
+	AfterEach(func() {
+		os.RemoveAll(storePath)
+	})
+
+	JustBeforeEach(func() {
+		manager = managerpkg.New(storePath, locksmith, volDriver, imgDriver, strDriver)
+	})
+
+	Describe("Init", func() {
+		BeforeEach(func() {
+			storePath = filepath.Join(os.TempDir(), fmt.Sprintf("init-store-%d", GinkgoParallelNode()))
+		})
+
+		It("creates the store path folder", func() {
+			Expect(storePath).ToNot(BeAnExistingFile())
+			Expect(manager.InitStore(logger)).To(Succeed())
+			Expect(storePath).To(BeADirectory())
+		})
+
+		It("validates the store path parent with the store driver", func() {
+			Expect(manager.InitStore(logger)).To(Succeed())
+			Expect(strDriver.ValidateFileSystemCallCount()).To(Equal(1))
+		})
+
+		Context("when the store path already exists", func() {
+			BeforeEach(func() {
+				Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				err := manager.InitStore(logger)
+				Expect(err).To(MatchError(ContainSubstring("store already initialized")))
+			})
+		})
+
+		Context("when the store driver validation fails", func() {
+			BeforeEach(func() {
+				strDriver.ValidateFileSystemReturns(errors.New("not possible"))
+			})
+
+			It("returns an error", func() {
+				err := manager.InitStore(logger)
+				Expect(err).To(MatchError(ContainSubstring("not possible")))
+			})
+		})
 	})
 
 	Describe("DeleteStore", func() {
@@ -48,6 +94,10 @@ var _ = Describe("Manager", func() {
 		)
 
 		BeforeEach(func() {
+			var err error
+			storePath, err = ioutil.TempDir("", "store-path")
+			Expect(err).NotTo(HaveOccurred())
+
 			imagesPath = filepath.Join(storePath, store.ImageDirName)
 			Expect(os.Mkdir(imagesPath, 0755)).To(Succeed())
 			Expect(os.Mkdir(filepath.Join(imagesPath, "img-1"), 0755)).To(Succeed())
