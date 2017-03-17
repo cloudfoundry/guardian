@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
@@ -42,10 +41,10 @@ var DeleteStoreCommand = cli.Command{
 		}
 
 		storePath := cfg.StorePath
-		store.ConfigureStore(logger, storePath, fsDriver, 0, 0)
-
 		locksmith := locksmith.NewFileSystem(storePath)
 		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
+		var _ = manager.ConfigureStore(logger, 0, 0)
+
 		if err := manager.DeleteStore(logger); err != nil {
 			logger.Error("cleaning-up-store-failed", err)
 			return cli.NewExitError(err.Error(), 1)

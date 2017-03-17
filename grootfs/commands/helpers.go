@@ -3,17 +3,17 @@ package commands
 import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
+	"code.cloudfoundry.org/grootfs/store/manager"
 	errorspkg "github.com/pkg/errors"
 )
 
 type fileSystemDriver interface {
 	image_cloner.ImageDriver
 	base_image_puller.VolumeDriver
-	store.StoreDriver
+	manager.StoreDriver
 }
 
 func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {

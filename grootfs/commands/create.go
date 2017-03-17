@@ -15,7 +15,6 @@ import (
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
-	"code.cloudfoundry.org/grootfs/store"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
@@ -23,6 +22,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
+	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 
 	"github.com/docker/distribution/registry/api/errcode"
@@ -131,7 +131,9 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		if err = store.ConfigureStore(logger, storePath, fsDriver, storeOwnerUid, storeOwnerGid); err != nil {
+		locksmith := locksmithpkg.NewFileSystem(storePath)
+		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
+		if err = manager.ConfigureStore(logger, storeOwnerUid, storeOwnerGid); err != nil {
 			exitErr := errorspkg.Wrapf(err, "id: %s", id)
 			logger.Error("failed-to-setup-store", err, lager.Data{"id": id})
 			return cli.NewExitError(exitErr.Error(), 1)
@@ -159,7 +161,6 @@ var CreateCommand = cli.Command{
 
 		localFetcher := local.NewLocalFetcher()
 
-		locksmith := locksmithpkg.NewFileSystem(storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)

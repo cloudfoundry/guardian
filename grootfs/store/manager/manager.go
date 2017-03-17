@@ -13,15 +13,21 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate counterfeiter . StoreDriver
+type StoreDriver interface {
+	ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
+	ValidateFileSystem(logger lager.Logger, path string) error
+}
+
 type Manager struct {
 	storePath    string
 	imageDriver  image_cloner.ImageDriver
 	volumeDriver base_image_puller.VolumeDriver
-	storeDriver  store.StoreDriver
+	storeDriver  StoreDriver
 	locksmith    groot.Locksmith
 }
 
-func New(storePath string, locksmith groot.Locksmith, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver store.StoreDriver) *Manager {
+func New(storePath string, locksmith groot.Locksmith, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver StoreDriver) *Manager {
 	return &Manager{
 		storePath:    storePath,
 		volumeDriver: volumeDriver,
@@ -51,6 +57,68 @@ func (m *Manager) InitStore(logger lager.Logger) error {
 		logger.Error("init-store-failed", err, lager.Data{"storePath": m.storePath})
 		return errors.Wrap(err, "initializing store")
 	}
+	return nil
+}
+
+func (m *Manager) ConfigureStore(logger lager.Logger, ownerUID, ownerGID int) error {
+	logger = logger.Session("store-manager-configure-store", lager.Data{"storePath": m.storePath, "ownerUID": ownerUID, "ownerGID": ownerGID})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	if err := isDirectory(m.storePath); err != nil {
+		return err
+	}
+
+	if err := os.Setenv("TMPDIR", filepath.Join(m.storePath, store.TempDirName)); err != nil {
+		return errors.Wrap(err, "could not set TMPDIR")
+	}
+
+	requiredFolders := []string{
+		store.ImageDirName,
+		store.VolumesDirName,
+		store.CacheDirName,
+		store.LocksDirName,
+		store.MetaDirName,
+		store.TempDirName,
+		filepath.Join(store.MetaDirName, "dependencies"),
+	}
+
+	if _, err := os.Stat(m.storePath); os.IsNotExist(err) {
+		if err := os.Mkdir(m.storePath, 0755); err != nil {
+			dir, err1 := os.Lstat(m.storePath)
+			if err1 != nil || !dir.IsDir() {
+				logger.Error("creating-store-path-failed", err)
+				return errors.Wrapf(err, "making directory `%s`", m.storePath)
+			}
+		}
+
+		if err := os.Chown(m.storePath, ownerUID, ownerGID); err != nil {
+			logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
+			return errors.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, m.storePath)
+		}
+
+		if err := os.Chmod(m.storePath, 0700); err != nil {
+			logger.Error("store-permission-change-failed", err)
+			return errors.Wrapf(err, "changing store permissions %s", m.storePath)
+		}
+	}
+
+	for _, folderName := range requiredFolders {
+		if err := m.createInternalDirectory(logger, folderName, ownerUID, ownerGID); err != nil {
+			return err
+		}
+	}
+
+	if err := m.storeDriver.ConfigureStore(logger, m.storePath, ownerUID, ownerGID); err != nil {
+		logger.Error("store-filesystem-specific-configuration-failed", err)
+		return errors.Wrap(err, "running filesystem-specific configuration")
+	}
+
+	if err := m.storeDriver.ValidateFileSystem(logger, m.storePath); err != nil {
+		logger.Error("filesystem-validation-failed", err)
+		return errors.Wrap(err, "validating file system")
+	}
+
 	return nil
 }
 
@@ -126,4 +194,34 @@ func (m *Manager) volumes() ([]string, error) {
 	}
 
 	return volumeIds, nil
+}
+
+func (m *Manager) createInternalDirectory(logger lager.Logger, folderName string, ownerUID, ownerGID int) error {
+	requiredPath := filepath.Join(m.storePath, folderName)
+
+	if err := isDirectory(requiredPath); err != nil {
+		return err
+	}
+
+	if err := os.Mkdir(requiredPath, 0755); err != nil {
+		dir, err1 := os.Lstat(requiredPath)
+		if err1 != nil || !dir.IsDir() {
+			return errors.Wrapf(err, "making directory `%s`", requiredPath)
+		}
+	}
+
+	if err := os.Chown(requiredPath, ownerUID, ownerGID); err != nil {
+		logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
+		return errors.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, requiredPath)
+	}
+	return nil
+}
+
+func isDirectory(requiredPath string) error {
+	if info, err := os.Stat(requiredPath); err == nil {
+		if !info.IsDir() {
+			return errors.Errorf("path `%s` is not a directory", requiredPath)
+		}
+	}
+	return nil
 }
