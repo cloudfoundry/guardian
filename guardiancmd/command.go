@@ -600,20 +600,17 @@ func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot strin
 	repoFetcher := repository_fetcher.Retryable{
 		RepositoryFetcher: &repository_fetcher.CompositeFetcher{
 			LocalFetcher: &repository_fetcher.Local{
-				Logger:            logger,
 				Cake:              cake,
 				DefaultRootFSPath: cmd.Containers.DefaultRootFS,
 				IDProvider:        repository_fetcher.LayerIDProvider{},
 			},
 			RemoteFetcher: repository_fetcher.NewRemote(
-				logger,
 				cmd.Docker.Registry,
 				cake,
 				distclient.NewDialer(insecureRegistries),
 				repository_fetcher.VerifyFunc(repository_fetcher.Verify),
 			),
 		},
-		Logger: logger,
 	}
 
 	rootFSNamespacer := &rootfs_provider.UidNamespacer{
