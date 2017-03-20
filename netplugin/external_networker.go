@@ -19,32 +19,35 @@ import (
 const NetworkPropertyPrefix = "network."
 
 type externalBinaryNetworker struct {
-	commandRunner    command_runner.CommandRunner
-	configStore      kawasaki.ConfigStore
-	externalIP       net.IP
-	dnsServers       []net.IP
-	resolvConfigurer kawasaki.DnsResolvConfigurer
-	path             string
-	extraArg         []string
+	commandRunner         command_runner.CommandRunner
+	configStore           kawasaki.ConfigStore
+	externalIP            net.IP
+	operatorNameservers   []net.IP
+	additionalNameservers []net.IP
+	resolvConfigurer      kawasaki.DnsResolvConfigurer
+	path                  string
+	extraArg              []string
 }
 
 func New(
 	commandRunner command_runner.CommandRunner,
 	configStore kawasaki.ConfigStore,
 	externalIP net.IP,
-	dnsServers []net.IP,
+	operatorNameServers []net.IP,
+	additionalNameservers []net.IP,
 	resolvConfigurer kawasaki.DnsResolvConfigurer,
 	path string,
 	extraArg []string,
 ) ExternalNetworker {
 	return &externalBinaryNetworker{
-		commandRunner:    commandRunner,
-		configStore:      configStore,
-		externalIP:       externalIP,
-		dnsServers:       dnsServers,
-		resolvConfigurer: resolvConfigurer,
-		path:             path,
-		extraArg:         extraArg,
+		commandRunner:         commandRunner,
+		configStore:           configStore,
+		externalIP:            externalIP,
+		operatorNameservers:   operatorNameServers,
+		additionalNameservers: additionalNameservers,
+		resolvConfigurer:      resolvConfigurer,
+		path:                  path,
+		extraArg:              extraArg,
 	}
 }
 
@@ -77,6 +80,7 @@ type UpInputs struct {
 
 type UpOutputs struct {
 	Properties map[string]string
+	DNSServers []string `json:"dns_servers,omitempty"`
 }
 
 func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
@@ -99,16 +103,26 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 		p.configStore.Set(containerSpec.Handle, k, v)
 	}
 
+	var pluginNameservers []net.IP
+	if outputs.DNSServers != nil {
+		pluginNameservers = []net.IP{}
+		for _, dnsServer := range outputs.DNSServers {
+			pluginNameservers = append(pluginNameservers, net.ParseIP(dnsServer))
+		}
+	}
+
 	containerIP, ok := p.configStore.Get(containerSpec.Handle, gardener.ContainerIPKey)
 	if ok {
 		log.Info("external-binary-write-dns-to-config", lager.Data{
-			"dnsServers": p.dnsServers,
+			"dnsServers": pluginNameservers,
 		})
 		cfg := kawasaki.NetworkConfig{
-			ContainerIP:     net.ParseIP(containerIP),
-			BridgeIP:        net.ParseIP(containerIP),
-			ContainerHandle: containerSpec.Handle,
-			DNSServers:      p.dnsServers,
+			ContainerIP:           net.ParseIP(containerIP),
+			BridgeIP:              net.ParseIP(containerIP),
+			ContainerHandle:       containerSpec.Handle,
+			OperatorNameservers:   p.operatorNameservers,
+			AdditionalNameservers: p.additionalNameservers,
+			PluginNameservers:     pluginNameservers,
 		}
 
 		err = p.resolvConfigurer.Configure(log, cfg, pid)

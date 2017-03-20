@@ -13,15 +13,15 @@ import (
 
 var _ = Describe("ConfigCreator", func() {
 	var (
-		creator              *kawasaki.Creator
-		subnet               *net.IPNet
-		ip                   net.IP
-		externalIP           net.IP
-		dnsServers           []net.IP
-		additionalDNSServers []net.IP
-		logger               lager.Logger
-		idGenerator          *fakes.FakeIDGenerator
-		mtu                  int
+		creator               *kawasaki.Creator
+		subnet                *net.IPNet
+		ip                    net.IP
+		externalIP            net.IP
+		operatorNameservers   []net.IP
+		additionalNameservers []net.IP
+		logger                lager.Logger
+		idGenerator           *fakes.FakeIDGenerator
+		mtu                   int
 	)
 
 	BeforeEach(func() {
@@ -30,11 +30,11 @@ var _ = Describe("ConfigCreator", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		externalIP = net.ParseIP("220.10.120.5")
-		dnsServers = []net.IP{
+		operatorNameservers = []net.IP{
 			net.ParseIP("8.8.8.8"),
 			net.ParseIP("8.8.4.4"),
 		}
-		additionalDNSServers = []net.IP{
+		additionalNameservers = []net.IP{
 			net.ParseIP("1.2.3.4"),
 		}
 
@@ -43,18 +43,18 @@ var _ = Describe("ConfigCreator", func() {
 
 		mtu = 1234
 
-		creator = kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdef", externalIP, dnsServers, additionalDNSServers, mtu)
+		creator = kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdef", externalIP, operatorNameservers, additionalNameservers, mtu)
 	})
 
 	It("panics if the interface prefix is longer than 2 characters", func() {
 		Expect(func() {
-			kawasaki.NewConfigCreator(idGenerator, "too-long", "wc", externalIP, dnsServers, additionalDNSServers, mtu)
+			kawasaki.NewConfigCreator(idGenerator, "too-long", "wc", externalIP, operatorNameservers, additionalNameservers, mtu)
 		}).To(Panic())
 	})
 
 	It("panics if the chain prefix is longer than 16 characters", func() {
 		Expect(func() {
-			kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdefg", externalIP, dnsServers, additionalDNSServers, mtu)
+			kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdefg", externalIP, operatorNameservers, additionalNameservers, mtu)
 		}).To(Panic())
 	})
 
@@ -143,13 +143,13 @@ var _ = Describe("ConfigCreator", func() {
 		config, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(config.DNSServers).To(Equal(dnsServers))
+		Expect(config.OperatorNameservers).To(Equal(operatorNameservers))
 	})
 
 	It("Assigns the Additional DNS servers", func() {
 		config, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(config.AdditionalDNSServers).To(Equal(additionalDNSServers))
+		Expect(config.AdditionalNameservers).To(Equal(additionalNameservers))
 	})
 })

@@ -1,7 +1,6 @@
 package gqt_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +10,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -404,7 +404,6 @@ var _ = Describe("Networking", func() {
 	Context("when a network plugin path is provided at startup", func() {
 		var argsFile string
 		var stdinFile string
-		var pluginReturn string
 
 		BeforeEach(func() {
 			tmpDir, err := ioutil.TempDir("", "netplugtest")
@@ -412,7 +411,6 @@ var _ = Describe("Networking", func() {
 
 			argsFile = path.Join(tmpDir, "args.log")
 			stdinFile = path.Join(tmpDir, "stdin.log")
-			args = append(args, "--network-plugin-extra-arg", pluginReturn)
 
 			args = []string{
 				"--network-plugin", testNetPluginBin,
@@ -432,14 +430,22 @@ var _ = Describe("Networking", func() {
 			})
 		})
 
-		Context("when the network plugin returns properties", func() {
+		Context("when the network plugin returns properties and dns_servers", func() {
+			var pluginReturn string
+
 			BeforeEach(func() {
-				pluginReturn = `{"properties":{
-					"foo":"bar",
-					"kawasaki.mtu":"1499",
-					"garden.network.container-ip":"10.255.10.10",
-					"garden.network.host-ip":"255.255.255.255"
-				}}`
+				pluginReturn = `{
+					"properties":{
+						"foo":"bar",
+						"kawasaki.mtu":"1499",
+						"garden.network.container-ip":"10.255.10.10",
+						"garden.network.host-ip":"255.255.255.255"
+					},
+					"dns_servers": [
+						"1.2.3.4",
+						"1.2.3.5"
+					]
+			  }`
 				args = append(args, "--network-plugin-extra-arg", pluginReturn)
 				extraProperties = garden.Properties{
 					"some-property-on-the-spec": "some-value",
@@ -461,6 +467,10 @@ var _ = Describe("Networking", func() {
 				It("propagates those properties as JSON to the network plugin up action", func() {
 					Eventually(getContent(stdinFile)).Should(ContainSubstring(expectedJSON))
 				})
+			})
+
+			It("sets the nameserver entries in the container's /etc/resolv.conf to the values supplied by the network plugin", func() {
+				Expect(getNameservers(container)).To(Equal([]string{"1.2.3.4", "1.2.3.5"}))
 			})
 
 			It("executes the network plugin during container destroy", func() {
@@ -584,6 +594,86 @@ var _ = Describe("Networking", func() {
 			})
 
 		})
+
+		Context("when the network plugin returns properties but no dns_servers", func() {
+			var (
+				hostNameservers []string
+			)
+
+			BeforeEach(func() {
+				out, err := ioutil.ReadFile("/etc/resolv.conf")
+				Expect(err).NotTo(HaveOccurred())
+				hostNameservers = parseNameservers(string(out))
+
+				pluginReturn := `{
+					"properties":{
+						"foo":"bar",
+						"kawasaki.mtu":"1499",
+						"garden.network.container-ip":"10.255.10.10",
+						"garden.network.host-ip":"255.255.255.255"
+					}
+			  }`
+				args = append(args, "--network-plugin-extra-arg", pluginReturn)
+			})
+
+			Context("and --dns-server/--additional-dns-server has not been provided", func() {
+				It("adds the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
+					resolvConf := readResolvConf(container)
+
+					for _, hostNameserver := range hostNameservers {
+						Expect(resolvConf).To(ContainSubstring(hostNameserver))
+						Expect(resolvConf).NotTo(ContainSubstring("127.0.0."))
+					}
+				})
+			})
+
+			Context("when --dns-server is provided", func() {
+				BeforeEach(func() {
+					args = []string{"--dns-server", "1.2.3.4"}
+				})
+
+				It("adds the IP address to the container's /etc/resolv.conf", func() {
+					nameservers := getNameservers(container)
+					Expect(nameservers).To(ContainElement("1.2.3.4"))
+				})
+
+				It("strips the host's DNS servers from the container's /etc/resolv.conf", func() {
+					nameservers := getNameservers(container)
+
+					for _, hostNameserver := range hostNameservers {
+						Expect(nameservers).NotTo(ContainElement(hostNameserver))
+					}
+				})
+			})
+
+			Context("when --additional-dns-server is provided", func() {
+				BeforeEach(func() {
+					args = []string{"--additional-dns-server", "1.2.3.4"}
+				})
+
+				It("writes the IP address and the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
+					resolvConf := readResolvConf(container)
+
+					for _, hostNameserver := range hostNameservers {
+						Expect(resolvConf).To(ContainSubstring(hostNameserver))
+						Expect(resolvConf).NotTo(ContainSubstring("127.0.0."))
+					}
+
+					Expect(resolvConf).To(ContainSubstring("nameserver 1.2.3.4"))
+				})
+			})
+
+			Context("when --dns-server and --additional-dns-server is provided", func() {
+				BeforeEach(func() {
+					args = []string{"--dns-server", "1.2.3.4", "--additional-dns-server", "1.2.3.5"}
+				})
+
+				It("writes the --dns-server and --additional-dns-server DNS servers to the container's /etc/resolv.conf", func() {
+					resolvConf := readResolvConf(container)
+					Expect(resolvConf).To(Equal("nameserver 1.2.3.4\nnameserver 1.2.3.5\n"))
+				})
+			})
+		})
 	})
 
 	Describe("MTU size", func() {
@@ -675,37 +765,21 @@ var _ = Describe("Networking", func() {
 	Describe("DNS servers", func() {
 		var (
 			hostNameservers []string
-			stdout          *gbytes.Buffer
 		)
 
 		BeforeEach(func() {
-			stdout = gbytes.NewBuffer()
-
-			grepCmd := exec.Command("sh", "-c", "grep nameserver /etc/resolv.conf | awk '{print $2}'")
-			var grepHostDnsStdout bytes.Buffer
-			grepCmd.Stdout = io.MultiWriter(&grepHostDnsStdout, GinkgoWriter)
-			grepCmd.Stderr = GinkgoWriter
-			Expect(grepCmd.Run()).To(Succeed())
-			hostNameservers = strings.Fields(grepHostDnsStdout.String())
+			out, err := ioutil.ReadFile("/etc/resolv.conf")
+			Expect(err).NotTo(HaveOccurred())
+			hostNameservers = parseNameservers(string(out))
 		})
 
 		Context("when not provided with any DNS servers", func() {
 			It("adds the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
-				process, err := container.Run(garden.ProcessSpec{
-					Path: "cat",
-					Args: []string{"/etc/resolv.conf"},
-				}, garden.ProcessIO{
-					Stdout: stdout,
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				exitCode, err := process.Wait()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(exitCode).To(Equal(0))
+				resolvConf := readResolvConf(container)
 
 				for _, hostNameserver := range hostNameservers {
-					Expect(stdout.Contents()).To(ContainSubstring(hostNameserver))
-					Expect(stdout.Contents()).NotTo(ContainSubstring("127.0.0."))
+					Expect(resolvConf).To(ContainSubstring(hostNameserver))
+					Expect(resolvConf).NotTo(ContainSubstring("127.0.0."))
 				}
 			})
 		})
@@ -716,36 +790,15 @@ var _ = Describe("Networking", func() {
 			})
 
 			It("adds the IP address to the container's /etc/resolv.conf", func() {
-				process, err := container.Run(garden.ProcessSpec{
-					Path: "cat",
-					Args: []string{"/etc/resolv.conf"},
-				}, garden.ProcessIO{
-					Stdout: stdout,
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				exitCode, err := process.Wait()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(exitCode).To(Equal(0))
-
-				Expect(stdout.Contents()).To(ContainSubstring("nameserver 1.2.3.4"))
+				nameservers := getNameservers(container)
+				Expect(nameservers).To(ContainElement("1.2.3.4"))
 			})
 
 			It("strips the host's DNS servers from the container's /etc/resolv.conf", func() {
-				process, err := container.Run(garden.ProcessSpec{
-					Path: "cat",
-					Args: []string{"/etc/resolv.conf"},
-				}, garden.ProcessIO{
-					Stdout: stdout,
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				exitCode, err := process.Wait()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(exitCode).To(Equal(0))
+				nameservers := getNameservers(container)
 
 				for _, hostNameserver := range hostNameservers {
-					Expect(stdout.Contents()).NotTo(ContainSubstring(hostNameserver))
+					Expect(nameservers).NotTo(ContainElement(hostNameserver))
 				}
 			})
 		})
@@ -755,25 +808,26 @@ var _ = Describe("Networking", func() {
 				args = []string{"--additional-dns-server", "1.2.3.4"}
 			})
 
-			It("appends the IP address and the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
-				process, err := container.Run(garden.ProcessSpec{
-					Path: "cat",
-					Args: []string{"/etc/resolv.conf"},
-				}, garden.ProcessIO{
-					Stdout: stdout,
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				exitCode, err := process.Wait()
-				Expect(err).ToNot(HaveOccurred())
-				Expect(exitCode).To(Equal(0))
+			It("writes the IP address and the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
+				resolvConf := readResolvConf(container)
 
 				for _, hostNameserver := range hostNameservers {
-					Expect(stdout.Contents()).To(ContainSubstring(hostNameserver))
-					Expect(stdout.Contents()).NotTo(ContainSubstring("127.0.0."))
+					Expect(resolvConf).To(ContainSubstring(hostNameserver))
+					Expect(resolvConf).NotTo(ContainSubstring("127.0.0."))
 				}
 
-				Expect(stdout.Contents()).To(ContainSubstring("nameserver 1.2.3.4"))
+				Expect(resolvConf).To(ContainSubstring("nameserver 1.2.3.4"))
+			})
+		})
+
+		Context("when --dns-server and --additional-dns-server is provided", func() {
+			BeforeEach(func() {
+				args = []string{"--dns-server", "1.2.3.4", "--additional-dns-server", "1.2.3.5"}
+			})
+
+			It("writes the --dns-server and --additional-dns-server DNS servers to the container's /etc/resolv.conf", func() {
+				resolvConf := readResolvConf(container)
+				Expect(resolvConf).To(Equal("nameserver 1.2.3.4\nnameserver 1.2.3.5\n"))
 			})
 		})
 	})
@@ -973,4 +1027,33 @@ func getFlagValue(contentFile, flagName string) func() []byte {
 		Expect(matches).To(HaveLen(2))
 		return matches[1]
 	}
+}
+
+func readResolvConf(container garden.Container) string {
+	stdout := gbytes.NewBuffer()
+
+	process, err := container.Run(garden.ProcessSpec{
+		Path: "cat",
+		Args: []string{"/etc/resolv.conf"},
+	}, garden.ProcessIO{
+		Stdout: stdout,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	exitCode, err := process.Wait()
+	Expect(err).ToNot(HaveOccurred())
+	Expect(exitCode).To(Equal(0))
+	return string(stdout.Contents())
+}
+
+func getNameservers(container garden.Container) []string {
+	contents := readResolvConf(container)
+	return parseNameservers(string(contents))
+}
+
+func parseNameservers(resolvConfContents string) []string {
+	notAnIpSymbol := func(c rune) bool {
+		return !(unicode.IsNumber(c) || c == '.')
+	}
+	return strings.FieldsFunc(resolvConfContents, notAnIpSymbol)
 }

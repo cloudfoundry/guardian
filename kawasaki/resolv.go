@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
@@ -11,11 +12,6 @@ import (
 
 	"code.cloudfoundry.org/lager"
 )
-
-//go:generate counterfeiter . ResolvFileCompiler
-type ResolvFileCompiler interface {
-	Compile(log lager.Logger, resolvConfPath string, containerIp net.IP, overrideServers, additionalDNSServers []net.IP) ([]byte, error)
-}
 
 //go:generate counterfeiter . HostFileCompiler
 type HostFileCompiler interface {
@@ -32,11 +28,23 @@ type IdMapReader interface {
 	ReadRootId(path string) (int, error)
 }
 
+//go:generate counterfeiter . NameserversDeterminer
+type NameserversDeterminer interface {
+	Determine(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP) []net.IP
+}
+
+//go:generate counterfeiter . NameserversSerializer
+type NameserversSerializer interface {
+	Serialize([]net.IP) []byte
+}
+
 type ResolvConfigurer struct {
-	HostsFileCompiler  HostFileCompiler
-	ResolvFileCompiler ResolvFileCompiler
-	FileWriter         FileWriter
-	IDMapReader        IdMapReader
+	HostsFileCompiler     HostFileCompiler
+	NameserversDeterminer NameserversDeterminer
+	NameserversSerializer NameserversSerializer
+	ResolvFilePath        string
+	FileWriter            FileWriter
+	IDMapReader           IdMapReader
 }
 
 type RootIdMapReader struct{}
@@ -93,13 +101,15 @@ func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid in
 		return fmt.Errorf("writing file '/etc/hosts': %s", err)
 	}
 
-	contents, err = d.ResolvFileCompiler.Compile(log, "/etc/resolv.conf", cfg.BridgeIP, cfg.DNSServers, cfg.AdditionalDNSServers)
+	hostResolvContents, err := ioutil.ReadFile(d.ResolvFilePath)
 	if err != nil {
-		log.Error("compiling-resolv-file", err)
+		log.Error("reading-host-resolv-file", err)
 		return err
 	}
+	nameservers := d.NameserversDeterminer.Determine(string(hostResolvContents), cfg.BridgeIP, cfg.PluginNameservers, cfg.OperatorNameservers, cfg.AdditionalNameservers)
+	containerResolvContents := d.NameserversSerializer.Serialize(nameservers)
 
-	if err := d.FileWriter.WriteFile(log, "/etc/resolv.conf", contents, fmt.Sprintf("/proc/%d/root", pid), rootUid, rootGid); err != nil {
+	if err := d.FileWriter.WriteFile(log, "/etc/resolv.conf", containerResolvContents, fmt.Sprintf("/proc/%d/root", pid), rootUid, rootGid); err != nil {
 		log.Error("writing-resolv-file", err)
 		return fmt.Errorf("writing file '/etc/resolv.conf': %s", err)
 	}

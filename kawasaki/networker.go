@@ -349,7 +349,7 @@ func save(config ConfigStore, handle string, netConfig NetworkConfig) error {
 	config.Set(handle, externalIpKey, netConfig.ExternalIP.String())
 
 	var dnsServers []string
-	for _, dnsServer := range netConfig.DNSServers {
+	for _, dnsServer := range netConfig.OperatorNameservers {
 		dnsServers = append(dnsServers, dnsServer.String())
 	}
 
@@ -396,17 +396,17 @@ func load(config ConfigStore, handle string) (NetworkConfig, error) {
 	}
 
 	return NetworkConfig{
-		HostIntf:        vals[0],
-		ContainerIntf:   vals[1],
-		BridgeName:      vals[2],
-		BridgeIP:        net.ParseIP(vals[3]),
-		ContainerIP:     net.ParseIP(vals[4]),
-		ExternalIP:      net.ParseIP(vals[9]),
-		Subnet:          ipnet,
-		IPTablePrefix:   vals[6],
-		IPTableInstance: vals[7],
-		Mtu:             mtu,
-		DNSServers:      dnsServers,
+		HostIntf:            vals[0],
+		ContainerIntf:       vals[1],
+		BridgeName:          vals[2],
+		BridgeIP:            net.ParseIP(vals[3]),
+		ContainerIP:         net.ParseIP(vals[4]),
+		ExternalIP:          net.ParseIP(vals[9]),
+		Subnet:              ipnet,
+		IPTablePrefix:       vals[6],
+		IPTableInstance:     vals[7],
+		Mtu:                 mtu,
+		OperatorNameservers: dnsServers,
 	}, nil
 }
 

@@ -13,6 +13,7 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki/kawasakifakes"
 	"code.cloudfoundry.org/guardian/netplugin"
 	"code.cloudfoundry.org/guardian/properties"
+	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 
@@ -29,15 +30,17 @@ func mustMarshalJSON(input interface{}) string {
 
 var _ = Describe("ExternalNetworker", func() {
 	var (
-		containerSpec     garden.ContainerSpec
-		configStore       kawasaki.ConfigStore
-		fakeCommandRunner *fake_command_runner.FakeCommandRunner
-		logger            *lagertest.TestLogger
-		plugin            netplugin.ExternalNetworker
-		handle            string
-		resolvConfigurer  *kawasakifakes.FakeDnsResolvConfigurer
-		pluginOutput      string
-		pluginErr         error
+		containerSpec        garden.ContainerSpec
+		configStore          kawasaki.ConfigStore
+		fakeCommandRunner    *fake_command_runner.FakeCommandRunner
+		logger               *lagertest.TestLogger
+		plugin               netplugin.ExternalNetworker
+		handle               string
+		resolvConfigurer     *kawasakifakes.FakeDnsResolvConfigurer
+		pluginOutput         string
+		pluginErr            error
+		dnsServers           = []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("9.9.9.9")}
+		additionalDNSServers = []net.IP{net.ParseIP("11.11.11.11")}
 	)
 
 	BeforeEach(func() {
@@ -57,13 +60,13 @@ var _ = Describe("ExternalNetworker", func() {
 		}
 		logger = lagertest.NewTestLogger("test")
 		externalIP := net.ParseIP("1.2.3.4")
-		dnsServers := []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("9.9.9.9")}
 		resolvConfigurer = &kawasakifakes.FakeDnsResolvConfigurer{}
 		plugin = netplugin.New(
 			fakeCommandRunner,
 			configStore,
 			externalIP,
 			dnsServers,
+			additionalDNSServers,
 			resolvConfigurer,
 			"some/path",
 			[]string{"arg1", "arg2", "arg3"},
@@ -210,38 +213,115 @@ var _ = Describe("ExternalNetworker", func() {
 			Expect(logger).To(gbytes.Say("result.*some-stderr-bytes"))
 		})
 
-		Context("when the external plugin returns a containerIP in properties", func() {
-			BeforeEach(func() {
-				pluginOutput = `{ "properties": {
-					"garden.network.container-ip": "10.255.1.2"
-					}
-				}`
-			})
+		Describe("DNS configuration inside the container", func() {
+			var cfg kawasaki.NetworkConfig
 
-			It("configures DNS inside the container", func() {
+			JustBeforeEach(func() {
+				var (
+					log lager.Logger
+					pid int
+				)
+
 				err := plugin.Network(logger, containerSpec, 42)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(resolvConfigurer.ConfigureCallCount()).To(Equal(1))
-				log, cfg, pid := resolvConfigurer.ConfigureArgsForCall(0)
+				log, cfg, pid = resolvConfigurer.ConfigureArgsForCall(0)
 				Expect(log).To(Equal(logger))
 				Expect(pid).To(Equal(42))
-				Expect(cfg).To(Equal(kawasaki.NetworkConfig{
-					ContainerIP:     net.ParseIP("10.255.1.2"),
-					BridgeIP:        net.ParseIP("10.255.1.2"),
-					ContainerHandle: "some-handle",
-					DNSServers:      []net.IP{net.ParseIP("8.8.8.8"), net.ParseIP("9.9.9.9")},
-				}))
 			})
 
-			Context("when the resolvConfigurer fails", func() {
+			Context("when the external plugin returns a containerIP in properties", func() {
 				BeforeEach(func() {
-					resolvConfigurer.ConfigureReturns(errors.New("banana"))
+					pluginOutput = `{
+						"properties": {
+							"garden.network.container-ip": "10.255.1.2"
+						}
+				  }`
 				})
-				It("returns the error", func() {
-					err := plugin.Network(logger, containerSpec, 42)
 
-					Expect(err).To(MatchError("banana"))
+				It("is configured according to Garden defaults", func() {
+					Expect(cfg).To(Equal(kawasaki.NetworkConfig{
+						ContainerIP:           net.ParseIP("10.255.1.2"),
+						BridgeIP:              net.ParseIP("10.255.1.2"),
+						ContainerHandle:       "some-handle",
+						PluginNameservers:     nil,
+						OperatorNameservers:   dnsServers,
+						AdditionalNameservers: additionalDNSServers,
+					}))
+				})
+			})
+
+			Context("when the external plugin returns a containerIP in properties and dns_servers", func() {
+				Context("when 0 DNS servers are returned", func() {
+					BeforeEach(func() {
+						pluginOutput = `{
+							"properties": {
+								"garden.network.container-ip": "10.255.1.2"
+							},
+							"dns_servers": []
+						}`
+					})
+
+					It("is configured using the returned DNS servers", func() {
+						Expect(cfg).To(Equal(kawasaki.NetworkConfig{
+							ContainerIP:           net.ParseIP("10.255.1.2"),
+							BridgeIP:              net.ParseIP("10.255.1.2"),
+							ContainerHandle:       "some-handle",
+							PluginNameservers:     []net.IP{},
+							OperatorNameservers:   dnsServers,
+							AdditionalNameservers: additionalDNSServers,
+						}))
+					})
+				})
+
+				Context("when 1 DNS server is returned", func() {
+					BeforeEach(func() {
+						pluginOutput = `{
+							"properties": {
+								"garden.network.container-ip": "10.255.1.2"
+							},
+							"dns_servers": [
+								"1.2.3.4"
+							]
+						}`
+					})
+
+					It("is configured using the returned DNS servers", func() {
+						Expect(cfg).To(Equal(kawasaki.NetworkConfig{
+							ContainerIP:           net.ParseIP("10.255.1.2"),
+							BridgeIP:              net.ParseIP("10.255.1.2"),
+							ContainerHandle:       "some-handle",
+							PluginNameservers:     []net.IP{net.ParseIP("1.2.3.4")},
+							OperatorNameservers:   dnsServers,
+							AdditionalNameservers: additionalDNSServers,
+						}))
+					})
+				})
+
+				Context("when > 1 DNS server is returned", func() {
+					BeforeEach(func() {
+						pluginOutput = `{
+							"properties": {
+								"garden.network.container-ip": "10.255.1.2"
+							},
+							"dns_servers": [
+								"1.2.3.4",
+								"1.2.3.5"
+							]
+						}`
+					})
+
+					It("is configured using the returned DNS servers", func() {
+						Expect(cfg).To(Equal(kawasaki.NetworkConfig{
+							ContainerIP:           net.ParseIP("10.255.1.2"),
+							BridgeIP:              net.ParseIP("10.255.1.2"),
+							ContainerHandle:       "some-handle",
+							PluginNameservers:     []net.IP{net.ParseIP("1.2.3.4"), net.ParseIP("1.2.3.5")},
+							OperatorNameservers:   dnsServers,
+							AdditionalNameservers: additionalDNSServers,
+						}))
+					})
 				})
 			})
 		})

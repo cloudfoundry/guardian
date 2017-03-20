@@ -2,7 +2,9 @@ package kawasaki_test
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 
 	"code.cloudfoundry.org/guardian/kawasaki"
@@ -15,11 +17,13 @@ import (
 
 var _ = Describe("ResolvConfigurer", func() {
 	var (
-		log                    lager.Logger
-		fakeHostsFileCompiler  *fakes.FakeHostFileCompiler
-		fakeResolvFileCompiler *fakes.FakeResolvFileCompiler
-		fakeFileWriter         *fakes.FakeFileWriter
-		fakeIdMapReader        *fakes.FakeIdMapReader
+		log                       lager.Logger
+		fakeHostsFileCompiler     *fakes.FakeHostFileCompiler
+		fakeNameserversDeterminer *fakes.FakeNameserversDeterminer
+		fakeNameserversSerializer *fakes.FakeNameserversSerializer
+		fakeFileWriter            *fakes.FakeFileWriter
+		fakeIdMapReader           *fakes.FakeIdMapReader
+		resolvFilePath            string
 
 		dnsResolv *kawasaki.ResolvConfigurer
 	)
@@ -27,16 +31,29 @@ var _ = Describe("ResolvConfigurer", func() {
 	BeforeEach(func() {
 		log = lagertest.NewTestLogger("test")
 		fakeHostsFileCompiler = new(fakes.FakeHostFileCompiler)
-		fakeResolvFileCompiler = new(fakes.FakeResolvFileCompiler)
+		fakeNameserversDeterminer = new(fakes.FakeNameserversDeterminer)
+		fakeNameserversSerializer = new(fakes.FakeNameserversSerializer)
 		fakeIdMapReader = new(fakes.FakeIdMapReader)
 		fakeFileWriter = new(fakes.FakeFileWriter)
 
+		resolvFile, err := ioutil.TempFile("", "resolv-tests")
+		Expect(err).NotTo(HaveOccurred())
+		defer resolvFile.Close()
+		resolvFilePath = resolvFile.Name()
+		fmt.Fprintln(resolvFile, "nameserver 1.2.3.4")
+
 		dnsResolv = &kawasaki.ResolvConfigurer{
-			HostsFileCompiler:  fakeHostsFileCompiler,
-			ResolvFileCompiler: fakeResolvFileCompiler,
-			FileWriter:         fakeFileWriter,
-			IDMapReader:        fakeIdMapReader,
+			HostsFileCompiler:     fakeHostsFileCompiler,
+			NameserversDeterminer: fakeNameserversDeterminer,
+			NameserversSerializer: fakeNameserversSerializer,
+			ResolvFilePath:        resolvFilePath,
+			FileWriter:            fakeFileWriter,
+			IDMapReader:           fakeIdMapReader,
 		}
+	})
+
+	AfterEach(func() {
+		Expect(os.Remove(resolvFilePath)).To(Succeed())
 	})
 
 	It("should write the compiled hosts file", func() {
@@ -63,28 +80,37 @@ var _ = Describe("ResolvConfigurer", func() {
 		})
 	})
 
-	It("should write the compile resolv file", func() {
+	It("should write the container's resolv file", func() {
 		compiledResolvFile := []byte("Hello world of resolv.conf")
-		fakeResolvFileCompiler.CompileReturns(compiledResolvFile, nil)
+		fakeNameserversDeterminer.DetermineReturns([]net.IP{net.ParseIP("5.6.7.8")})
+		fakeNameserversSerializer.SerializeReturns(compiledResolvFile)
 		fakeIdMapReader.ReadRootIdReturns(13, nil)
 
-		Expect(dnsResolv.Configure(log, kawasaki.NetworkConfig{}, 42)).To(Succeed())
+		cfg := kawasaki.NetworkConfig{
+			BridgeIP:              net.ParseIP("10.11.12.13"),
+			OperatorNameservers:   []net.IP{net.ParseIP("9.8.7.6"), net.ParseIP("5.4.3.2")},
+			AdditionalNameservers: []net.IP{net.ParseIP("11.11.11.11")},
+			PluginNameservers:     []net.IP{net.ParseIP("11.11.11.12")},
+		}
+		Expect(dnsResolv.Configure(log, cfg, 42)).To(Succeed())
 
-		Expect(fakeResolvFileCompiler.CompileCallCount()).To(Equal(1))
+		Expect(fakeNameserversDeterminer.DetermineCallCount()).To(Equal(1))
+		actualResolvFileContents, actualHostIP, actualPluginNameservers, actualOperatorNameservers, actualAdditionalNameservers := fakeNameserversDeterminer.DetermineArgsForCall(0)
+		Expect(actualResolvFileContents).To(Equal("nameserver 1.2.3.4\n"))
+		Expect(actualHostIP).To(Equal(net.ParseIP("10.11.12.13")))
+		Expect(actualPluginNameservers).To(Equal([]net.IP{net.ParseIP("11.11.11.12")}))
+		Expect(actualOperatorNameservers).To(Equal([]net.IP{net.ParseIP("9.8.7.6"), net.ParseIP("5.4.3.2")}))
+		Expect(actualAdditionalNameservers).To(Equal([]net.IP{net.ParseIP("11.11.11.11")}))
+		Expect(fakeNameserversSerializer.SerializeCallCount()).To(Equal(1))
+		containerResolvContents := fakeNameserversSerializer.SerializeArgsForCall(0)
+		Expect(containerResolvContents).To(Equal([]net.IP{net.ParseIP("5.6.7.8")}))
+
 		_, filePath, contents, rootfs, uid, gid := fakeFileWriter.WriteFileArgsForCall(1)
 		Expect(filePath).To(Equal("/etc/resolv.conf"))
 		Expect(contents).To(Equal(compiledResolvFile))
 		Expect(rootfs).To(Equal("/proc/42/root"))
 		Expect(uid).To(Equal(13))
 		Expect(gid).To(Equal(13))
-	})
-
-	Context("when compiling the resolv.conf file fails", func() {
-		It("should return an error", func() {
-			fakeResolvFileCompiler.CompileReturns(nil, errors.New("banana error"))
-
-			Expect(dnsResolv.Configure(log, kawasaki.NetworkConfig{}, 42)).To(MatchError("banana error"))
-		})
 	})
 
 	Context("when reading the uid/gid mapping fails", func() {

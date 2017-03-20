@@ -13,10 +13,12 @@ import (
 
 func NewDefaultConfigurer(ipt *iptables.IPTablesController) kawasaki.Configurer {
 	resolvConfigurer := &kawasaki.ResolvConfigurer{
-		HostsFileCompiler:  &dns.HostsFileCompiler{},
-		ResolvFileCompiler: &dns.ResolvFileCompiler{},
-		FileWriter:         &dns.RootfsWriter{},
-		IDMapReader:        &kawasaki.RootIdMapReader{},
+		HostsFileCompiler:     &dns.HostsFileCompiler{},
+		NameserversDeterminer: &dns.NameserversDeterminer{},
+		NameserversSerializer: &dns.NameserversSerializer{},
+		ResolvFilePath:        "/etc/resolv.conf",
+		FileWriter:            &dns.RootfsWriter{},
+		IDMapReader:           &kawasaki.RootIdMapReader{},
 	}
 
 	hostConfigurer := &configure.Host{

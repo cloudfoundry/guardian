@@ -98,7 +98,7 @@ var _ = Describe("Networker", func() {
 			ExternalIP:      net.ParseIP("128.128.90.90"),
 			Subnet:          subnet,
 			Mtu:             1200,
-			DNSServers: []net.IP{
+			OperatorNameservers: []net.IP{
 				net.ParseIP("8.8.8.8"),
 				net.ParseIP("8.8.4.4"),
 			},
