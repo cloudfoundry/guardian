@@ -545,7 +545,7 @@ var _ = Describe("Driver", func() {
 		Context("when storepath is not a XFS mount", func() {
 			It("returns an error", func() {
 				err := driver.ValidateFileSystem(logger, "/mnt/ext4")
-				Expect(err).To(MatchError(ContainSubstring("store path filesystem is incompatible")))
+				Expect(err).To(MatchError(ContainSubstring("Store path filesystem (/mnt/ext4) is incompatible with requested driver")))
 			})
 		})
 	})

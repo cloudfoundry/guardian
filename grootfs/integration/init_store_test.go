@@ -53,7 +53,7 @@ var _ = Describe("Init Store", func() {
 			It("returns an error", func() {
 				err := runner.InitStore()
 				Expect(err).To(HaveOccurred())
-				Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("%s filesystem validation: store path filesystem is incompatible", runner.Driver))))
+				Expect(err).To(MatchError("Store path filesystem (/mnt/ext4) is incompatible with requested driver"))
 				Expect(runner.StorePath).ToNot(BeADirectory())
 			})
 		})

@@ -47,7 +47,7 @@ var InitStoreCommand = cli.Command{
 		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
 		if err := manager.InitStore(logger); err != nil {
 			logger.Error("cleaning-up-store-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return cli.NewExitError(errorspkg.Cause(err).Error(), 1)
 		}
 
 		return nil

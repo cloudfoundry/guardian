@@ -567,7 +567,7 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 			})
-			Expect(err).To(MatchError(ContainSubstring("store path filesystem is incompatible")))
+			Expect(err).To(MatchError("Image id 'random-id': Store path filesystem (/mnt/ext4) is incompatible with requested driver"))
 		})
 	})
 

@@ -134,7 +134,7 @@ var CreateCommand = cli.Command{
 		locksmith := locksmithpkg.NewFileSystem(storePath)
 		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
 		if err = manager.ConfigureStore(logger, storeOwnerUid, storeOwnerGid); err != nil {
-			exitErr := errorspkg.Wrapf(err, "id: %s", id)
+			exitErr := errorspkg.Wrapf(errorspkg.Cause(err), "Image id '%s'", id)
 			logger.Error("failed-to-setup-store", err, lager.Data{"id": id})
 			return cli.NewExitError(exitErr.Error(), 1)
 		}

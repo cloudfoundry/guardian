@@ -62,16 +62,16 @@ var _ = Describe("Btrfs", func() {
 	})
 
 	Describe("ValidateFileSystem", func() {
-		Context("when storepath is a XFS mount", func() {
+		Context("when storepath is a BTRFS mount", func() {
 			It("returns no error", func() {
 				Expect(driver.ValidateFileSystem(logger, storePath)).To(Succeed())
 			})
 		})
 
-		Context("when storepath is not a XFS mount", func() {
+		Context("when storepath is not a BTRFS mount", func() {
 			It("returns an error", func() {
 				err := driver.ValidateFileSystem(logger, "/mnt/ext4")
-				Expect(err).To(MatchError(ContainSubstring("store path filesystem is incompatible")))
+				Expect(err).To(MatchError(ContainSubstring("Store path filesystem (/mnt/ext4) is incompatible with requested driver")))
 			})
 		})
 	})

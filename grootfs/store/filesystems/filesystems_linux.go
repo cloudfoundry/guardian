@@ -14,7 +14,7 @@ func CheckFSPath(path string, expectedFilesystem int64) error {
 	}
 
 	if statfs.Type != expectedFilesystem {
-		return errorspkg.Errorf("store path filesystem is incompatible (%s)", path)
+		return errorspkg.Errorf("Store path filesystem (%s) is incompatible with requested driver", path)
 	}
 	return nil
 }
