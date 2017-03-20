@@ -103,12 +103,12 @@ grootfs --config ./my-config.yml <command> ...
 Following is an example configuration file with all options provided:
 
 ```yaml
-store: /var/vcap/data/grootfs/store
+store: /var/lib/data/grootfs/store
 driver: btrfs
-btrfs_bin: /var/vcap/packages/btrfs-progs/bin/btrfs
-drax_bin: /var/vcap/packages/grootfs/bin/drax
-newuidmap_bin: /var/vcap/packages/idmapper/bin/newuidmap
-newgidmap_bin: /var/vcap/packages/idmapper/bin/newgidmap
+btrfs_bin: /var/lib/packages/btrfs-progs/bin/btrfs
+drax_bin: /var/lib/packages/grootfs/bin/drax
+newuidmap_bin: /var/lib/packages/idmapper/bin/newuidmap
+newgidmap_bin: /var/lib/packages/idmapper/bin/newgidmap
 log_level: debug
 metron_endpoint: 127.0.0.1:8081
 clean:
