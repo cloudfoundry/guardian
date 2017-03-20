@@ -26,6 +26,7 @@ invitation.
 * [Installation](#installation)
 * [Configuration](#configuration)
 * [Initializing a store](#initializing-a-store)
+* [Deleting a store](#deleting-a-store)
 * [Create an image](#creating-an-image)
 * [Delete an image](#deleting-an-image)
 * [Stats](#stats)
@@ -164,6 +165,16 @@ by root.
 - Eventually this command will create a mounted filesystem for you, and will
 allow multiple independent stores to be set within one mount.
 
+
+### Deleting a store
+
+You can delete a store by running the following:
+
+While this command will delete all contents of the store path, it will leave
+the backing filesystem intact.
+```
+grootfs --store /mnt/btrfs/my-store-dir --driver btrfs delete-store
+```
 
 ### Creating an image
 
