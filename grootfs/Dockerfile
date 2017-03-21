@@ -27,6 +27,11 @@ RUN wget https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-2.0.1-linux-amd64 
     chmod +x /usr/local/bin/bosh2
 
 ################################
+# Install CF
+RUN wget "https://cli.run.pivotal.io/stable?release=debian64&version=6.25.0&source=github-rel" -O cf.deb && \
+    dpkg -i cf.deb
+
+################################
 # Setup GO
 ENV HOME /root
 ENV GOPATH /root/go
