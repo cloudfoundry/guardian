@@ -14,7 +14,7 @@ usage() {
   print_message "deps -a <url> --- add a new dependency" $colour
   print_message "deps -d <url> --- remove a dependency" $colour
   print_message "deps -u <url> --- update a dependency" $colour
-  print_message "deps -h --- print help menu" $colour
+  print_message "deps -h       --- print help menu" $colour
 }
 
 add_dep() {
@@ -23,7 +23,7 @@ add_dep() {
 
   add_submodule $dep
 
-  print_message "DONE" $GREEN
+  print_message "DEPENDENCY ADDED" $GREEN
   test_warning
 }
 
@@ -35,7 +35,7 @@ remove_dep() {
 
   git add vendor/ .gitmodules
 
-  print_message "DONE" $GREEN
+  print_message "DEPENDENCY DELETED" $GREEN
   test_warning
 }
 
@@ -50,15 +50,15 @@ update_dep() {
 
   git add vendor/$dep
 
-  print_message "DONE" $GREEN
+  print_message "DEPENDENCY UPDATED" $GREEN
   test_warning
 }
 
 convert_url() {
-  repoPath=$1
+  repo_path=$1
   url_conversion_rules=("s/code.cloudfoundry.org/github.com\/cloudfoundry/" "s/golang.org\/x/go.googlesource.com/")
 
-  url="https://"$(echo $repoPath | sed -e 's/.\/vendor\///')
+  url="https://"$(echo $repo_path | sed -e 's/.\/vendor\///')
   for rule in ${url_conversion_rules[@]}; do
     url=$(echo $url | sed $rule)
   done
@@ -70,7 +70,9 @@ add_submodule() {
   path=$1
   url=$(convert_url $path)
 
+  print_message "ADDING GIT SUBMODULE $url to vendor/$path" $GREEN
   git submodule add $url vendor/$path  &> /dev/null
+  print_message "SUBMODULE ADDED" $GREEN
 }
 
 update_gitmodules() {
@@ -86,9 +88,11 @@ update_gitmodules() {
 delete_submodule() {
   dep=$1
 
+  print_message "DELETING DEPENDENCY GIT SUBMODULE $dep" $GREEN
   rm -rf vendor/$dep
   rm -rf .git/modules/vendor/$dep
   update_gitmodules $dep
+  print_message "GIT SUBMODULE $dep DELETED" $GREEN
 }
 
 test_warning() {
