@@ -120,10 +120,7 @@ func MakeBinaryAccessibleToEveryone(binaryPath string) string {
 	Expect(os.MkdirAll(tempDir, 0755)).To(Succeed())
 
 	newBinaryPath := filepath.Join(tempDir, binaryName)
-	cp := exec.Command("cp", binaryPath, newBinaryPath)
-	sess, err := gexec.Start(cp, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	Expect(os.Rename(binaryPath, newBinaryPath)).To(Succeed())
 
 	return newBinaryPath
 }
