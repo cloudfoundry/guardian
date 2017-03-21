@@ -30,6 +30,8 @@ const GraceTimeKey = "garden.grace-time"
 
 const RawRootFSScheme = "raw"
 
+const volumeCreatorSession = "volume-creator"
+
 type SysInfoProvider interface {
 	TotalMemory() (uint64, error)
 	TotalDisk() (uint64, error)
@@ -227,7 +229,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		return nil, err
 	}
 
-	if err := g.VolumeCreator.GC(log); err != nil {
+	if err := g.VolumeCreator.GC(log.Session(volumeCreatorSession)); err != nil {
 		log.Error("graph-cleanup-failed", err)
 	}
 
@@ -238,7 +240,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		rootFSPath = rootFSURL.Path
 	} else {
 		var err error
-		rootFSPath, env, err = g.VolumeCreator.Create(log, spec.Handle, rootfs_provider.Spec{
+		rootFSPath, env, err = g.VolumeCreator.Create(log.Session(volumeCreatorSession), spec.Handle, rootfs_provider.Spec{
 			RootFS:     rootFSURL,
 			Username:   spec.Image.Username,
 			Password:   spec.Image.Password,
@@ -331,15 +333,15 @@ func (g *Gardener) Destroy(handle string) error {
 
 // destroy idempotently destroys any resources associated with the given handle
 func (g *Gardener) destroy(log lager.Logger, handle string) error {
-	if err := g.Containerizer.Destroy(g.Logger, handle); err != nil {
+	if err := g.Containerizer.Destroy(log, handle); err != nil {
 		return err
 	}
 
-	if err := g.Networker.Destroy(g.Logger, handle); err != nil {
+	if err := g.Networker.Destroy(log, handle); err != nil {
 		return err
 	}
 
-	if err := g.VolumeCreator.Destroy(g.Logger, handle); err != nil {
+	if err := g.VolumeCreator.Destroy(log.Session(volumeCreatorSession), handle); err != nil {
 		return err
 	}
 
@@ -347,7 +349,7 @@ func (g *Gardener) destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	return g.Containerizer.RemoveBundle(g.Logger, handle)
+	return g.Containerizer.RemoveBundle(log, handle)
 }
 
 func (g *Gardener) Stop() {}

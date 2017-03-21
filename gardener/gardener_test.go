@@ -854,9 +854,8 @@ var _ = Describe("Gardener", func() {
 		It("asks the networker to destroy the container network", func() {
 			gdnr.Destroy("some-handle")
 			Expect(networker.DestroyCallCount()).To(Equal(1))
-			networkLogger, handleToDestroy := networker.DestroyArgsForCall(0)
+			_, handleToDestroy := networker.DestroyArgsForCall(0)
 			Expect(handleToDestroy).To(Equal("some-handle"))
-			Expect(networkLogger).To(Equal(logger))
 		})
 
 		It("asks the volume creator to destroy the container rootfs", func() {
