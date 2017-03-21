@@ -147,7 +147,7 @@ var _ = Describe("garden server Logging", func() {
 
 			It("doesn't log too many messages", func() {
 				outLines := strings.Split(string(client.Buffer().Contents()), "\n")
-				Expect(len(outLines)).To(BeNumerically("<", 300))
+				Expect(len(outLines)).To(BeNumerically("<", 400))
 			})
 		})
 	})
