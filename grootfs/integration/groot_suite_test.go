@@ -99,7 +99,7 @@ func TestGroot(t *testing.T) {
 			StorePath = fmt.Sprintf(xfsMountPath, GinkgoParallelNode())
 		} else {
 			Driver = "btrfs"
-			StoreName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
+			StoreName = fmt.Sprintf("test-store-%d-%d", GinkgoParallelNode(), rand.Int())
 			StorePath = path.Join(btrfsMountPath, StoreName)
 			Expect(os.Mkdir(StorePath, 0755)).To(Succeed())
 		}
@@ -120,7 +120,7 @@ func TestGroot(t *testing.T) {
 			StorePath:  StorePath,
 			DraxBin:    DraxBin,
 			Driver:     Driver,
-			Timeout:    15 * time.Second,
+			Timeout:    25 * time.Second,
 		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(uint32(GrootfsTestUid), uint32(GrootfsTestGid))
 	})
 
