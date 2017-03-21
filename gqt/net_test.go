@@ -10,7 +10,6 @@ import (
 	"path"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -1052,8 +1051,13 @@ func getNameservers(container garden.Container) []string {
 }
 
 func parseNameservers(resolvConfContents string) []string {
-	notAnIpSymbol := func(c rune) bool {
-		return !(unicode.IsNumber(c) || c == '.')
+	var nameservers []string
+	for _, line := range strings.Split(resolvConfContents, "\n") {
+		if !strings.HasPrefix(line, "nameserver") {
+			continue
+		}
+		nameservers = append(nameservers, strings.Fields(line)[1])
 	}
-	return strings.FieldsFunc(resolvConfContents, notAnIpSymbol)
+
+	return nameservers
 }
