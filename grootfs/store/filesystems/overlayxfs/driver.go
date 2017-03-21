@@ -1,11 +1,13 @@
 package overlayxfs
 
 const (
-	UpperDir      = "diff"
-	WorkDir       = "workdir"
-	RootfsDir     = "rootfs"
-	imageInfoName = "image_info"
-	XfsType       = 0x58465342
+	UpperDir       = "diff"
+	WorkDir        = "workdir"
+	RootfsDir      = "rootfs"
+	imageInfoName  = "image_info"
+	XfsType        = 0x58465342
+	WhiteoutDevice = "whiteout_dev"
+	LinksDirName   = "l"
 )
 
 func NewDriver(storePath string) *Driver {

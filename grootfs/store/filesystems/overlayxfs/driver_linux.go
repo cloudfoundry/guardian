@@ -22,11 +22,6 @@ import (
 	shortid "github.com/ventu-io/go-shortid"
 )
 
-const (
-	WhiteoutDevice = "whiteout_dev"
-	LinksDirName   = "l"
-)
-
 func (d *Driver) ConfigureStore(logger lager.Logger, path string, ownerUID, ownerGID int) error {
 	logger = logger.Session("overlayxfs-configure-store", lager.Data{"path": path})
 	logger.Debug("starting")

@@ -103,3 +103,6 @@
 [submodule "vendor/github.com/Microsoft/go-winio"]
 	path = vendor/github.com/Microsoft/go-winio
 	url = https://github.com/Microsoft/go-winio
+[submodule "vendor/golang.org/x/sys"]
+	path = vendor/golang.org/x/sys
+	url = https://go.googlesource.com/sys
