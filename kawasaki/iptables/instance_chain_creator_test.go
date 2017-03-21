@@ -100,7 +100,7 @@ var _ = Describe("Create", func() {
 				{
 					Path: "/sbin/iptables",
 					Args: []string{"--wait", "-A", "prefix-instance-some-id-log", "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID",
-						"--protocol", "tcp", "--jump", "LOG", "--log-prefix", "some-handle-that-is-longer-th",
+						"--protocol", "tcp", "--jump", "LOG", "--log-prefix", "some-handle-that-is-longer-t ",
 						"-m", "comment", "--comment", handle,
 					},
 				},
