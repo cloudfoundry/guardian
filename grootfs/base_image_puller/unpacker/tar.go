@@ -13,8 +13,8 @@ import (
 
 	errorspkg "github.com/pkg/errors"
 
+	"github.com/containers/storage/pkg/reexec"
 	"github.com/containers/storage/pkg/system"
-	"github.com/docker/docker/pkg/reexec"
 	"github.com/urfave/cli"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"

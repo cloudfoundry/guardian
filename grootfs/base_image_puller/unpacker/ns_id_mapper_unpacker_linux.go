@@ -7,7 +7,7 @@ import (
 	"syscall"
 
 	"code.cloudfoundry.org/commandrunner"
-	"github.com/docker/docker/pkg/reexec"
+	"github.com/containers/storage/pkg/reexec"
 	"github.com/tscolari/lagregator"
 	"github.com/urfave/cli"
 

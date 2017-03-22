@@ -46,9 +46,6 @@
 [submodule "vendor/github.com/containers/image"]
 	path = vendor/github.com/containers/image
 	url = https://github.com/containers/image
-[submodule "vendor/github.com/docker/docker"]
-	path = vendor/github.com/docker/docker
-	url = https://github.com/docker/docker
 [submodule "vendor/github.com/docker/go-units"]
 	path = vendor/github.com/docker/go-units
 	url = https://github.com/docker/go-units
@@ -106,3 +103,6 @@
 [submodule "vendor/golang.org/x/sys"]
 	path = vendor/golang.org/x/sys
 	url = https://go.googlesource.com/sys
+[submodule "vendor/github.com/docker/docker"]
+	path = vendor/github.com/docker/docker
+	url = https://github.com/docker/docker
