@@ -7,12 +7,15 @@
 all:
 	GOOS=linux go build -o grootfs .
 	GOOS=linux go build -o drax ./store/filesystems/btrfs/drax
+
+windows:
 	GOOS=windows go build -o grootfs.exe .
 
 ###### Help ###################################################################
 
 help:
 	@echo '    all ................................. builds the grootfs cli'
+	@echo '    windows ............................. builds grootfs for windows'
 	@echo '    deps ................................ installs dependencies'
 	@echo '    update-deps ......................... updates dependencies'
 	@echo '    test ................................ runs tests locally'

@@ -5,3 +5,4 @@ grootfs_path=$(move_to_gopath grootfs)
 
 cd $grootfs_path
 make
+make windows
