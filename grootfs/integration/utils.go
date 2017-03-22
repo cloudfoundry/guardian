@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/testhelpers"
 
@@ -31,14 +32,14 @@ func CreateBaseImageTar(sourcePath string) *os.File {
 func UpdateBaseImageTar(tarPath, sourcePath string) {
 	sess, err := gexec.Start(exec.Command("tar", "-cpf", tarPath, "-C", sourcePath, "."), GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	Eventually(sess, 15*time.Second).Should(gexec.Exit(0))
 	Expect(os.Chmod(tarPath, 0666)).To(Succeed())
 }
 
 func FindUID(user string) uint32 {
 	sess, err := gexec.Start(exec.Command("id", "-u", user), nil, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	Eventually(sess, 10*time.Second).Should(gexec.Exit(0))
 	i, err := strconv.ParseInt(strings.TrimSpace(string(sess.Out.Contents())), 10, 32)
 	Expect(err).NotTo(HaveOccurred())
 
