@@ -196,14 +196,14 @@ var CreateCommand = cli.Command{
 			CleanOnCreateThresholdBytes: cfg.Clean.ThresholdBytes,
 			CleanOnCreateIgnoreImages:   cfg.Clean.IgnoreBaseImages,
 		}
-		image, err := creator.Create(logger, createSpec)
+		output, err := creator.Create(logger, createSpec)
 		if err != nil {
 			logger.Error("creating", err)
 			humanizedError := tryHumanize(err, createSpec)
 			return cli.NewExitError(humanizedError, 1)
 		}
 
-		fmt.Println(image.Path)
+		fmt.Println(output)
 		return nil
 	},
 }

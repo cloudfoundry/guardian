@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
@@ -50,6 +51,11 @@ var _ = Describe("Creator", func() {
 		fakeNamespaceChecker.CheckReturns(true, nil)
 
 		logger = lagertest.NewTestLogger("creator")
+
+		fakeImageCloner.CreateReturns(groot.Image{
+			Path:       "/path/to/images/123",
+			RootFSPath: "/path/to/images/123/rootfs",
+		}, nil)
 
 		creator = groot.IamCreator(
 			fakeImageCloner, fakeBaseImagePuller, fakeLocksmith,
@@ -193,7 +199,7 @@ var _ = Describe("Creator", func() {
 				BaseImage: injectedBaseImage,
 			}, nil)
 
-			i, err := creator.Create(logger, groot.CreateSpec{
+			output, err := creator.Create(logger, groot.CreateSpec{
 				ID:        "my-image",
 				BaseImage: "docker:///ubuntu",
 			})
@@ -201,7 +207,7 @@ var _ = Describe("Creator", func() {
 
 			Expect(fakeRootFSConfigurer.ConfigureCallCount()).To(Equal(1))
 			rootFSPath, baseImage := fakeRootFSConfigurer.ConfigureArgsForCall(0)
-			Expect(rootFSPath).To(Equal(i.RootFSPath))
+			Expect(rootFSPath).To(Equal(filepath.Join(output, "rootfs")))
 			Expect(baseImage).To(Equal(injectedBaseImage))
 		})
 
@@ -220,9 +226,9 @@ var _ = Describe("Creator", func() {
 				Path: "/path/to/image",
 			}, nil)
 
-			image, err := creator.Create(logger, groot.CreateSpec{})
+			output, err := creator.Create(logger, groot.CreateSpec{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(image.Path).To(Equal("/path/to/image"))
+			Expect(output).To(Equal("/path/to/image"))
 		})
 
 		It("emits metrics for creation", func() {
