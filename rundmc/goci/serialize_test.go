@@ -2,10 +2,10 @@ package goci_test
 
 import (
 	"encoding/json"
-	"io"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	. "github.com/onsi/ginkgo"
@@ -42,11 +42,16 @@ var _ = Describe("Bundle Serialization", func() {
 	})
 
 	Describe("Saving", func() {
-		It("serializes the spec to spec.json", func() {
+		It("serializes the spec to config.json", func() {
 			var configJson map[string]interface{}
-			Expect(json.NewDecoder(mustOpen(path.Join(tmp, "config.json"))).Decode(&configJson)).To(Succeed())
-
+			Expect(json.NewDecoder(mustOpen(filepath.Join(tmp, "config.json"))).Decode(&configJson)).To(Succeed())
 			Expect(configJson).To(HaveKeyWithValue("ociVersion", Equal("abcd")))
+		})
+
+		It("ensures that the runc spec is only readable by its owner", func() {
+			info, err := os.Stat(filepath.Join(tmp, "config.json"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(info.Mode().Perm()).To(Equal(os.FileMode(0600)))
 		})
 
 		Context("when saving fails", func() {
@@ -93,9 +98,8 @@ var _ = Describe("Bundle Serialization", func() {
 	})
 })
 
-func mustOpen(path string) io.Reader {
+func mustOpen(path string) *os.File {
 	r, err := os.Open(path)
 	Expect(err).NotTo(HaveOccurred())
-
 	return r
 }
