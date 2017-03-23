@@ -143,6 +143,7 @@ create:
 | create.with\_clean | Clean up unused layers before creating rootfs |
 | create.uid_mappings | UID mapping for image translation, e.g.: \<Namespace UID\>:\<Host UID\>:\<Size\> |
 | create.gid_mappings | GID mapping for image translation, e.g.: \<Namespace GID\>:\<Host GID\>:\<Size\> |
+| create.json | Format the output as JSON |
 | clean.ignore\_images | Images to ignore during cleanup |
 | clean.threshold\_bytes | Disk usage of the store directory at which cleanup should trigger |
 
@@ -192,7 +193,7 @@ grootfs --store /mnt/btrfs create /my-rootfs.tar my-image-id
 
 #### Output
 
-The output of this command is a rootfs image path
+The output of this command is the image path
 (`/mnt/btrfs/images/<uid>/my-image-id`) which has the following structure:
 
 * The `<uid>` is the effective user id running the command.
@@ -207,6 +208,18 @@ The output of this command is a rootfs image path
 * The `image.json` file follows the [OCI image
   description](https://github.com/opencontainers/image-spec/blob/master/serialization.md#image-json-description)
   schema.
+
+##### JSON
+
+When create is provided with a `--json` flag, it will print the output as json.
+The json will contain:
+
+```
+{
+  "rootfs": "...", # complete path to the image rootfs
+  "config": {...}, # contents of image config, also writen to <image-path>/image.json
+}
+```
 
 #### User/Group ID Mapping
 
