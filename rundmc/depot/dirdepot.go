@@ -58,7 +58,7 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle goci.Bnd
 			Destination: "/etc/hosts",
 			Source:      filepath.Join(containerDir, "hosts"),
 			Type:        "bind",
-			Options:     []string{"rbind"},
+			Options:     []string{"bind"},
 		})
 	}
 	if _, err := os.Stat(filepath.Join(bundle.RootFS(), "etc", "resolv.conf")); err == nil {
@@ -66,7 +66,7 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle goci.Bnd
 			Destination: "/etc/resolv.conf",
 			Source:      filepath.Join(containerDir, "resolv.conf"),
 			Type:        "bind",
-			Options:     []string{"rbind"},
+			Options:     []string{"bind"},
 		})
 	}
 

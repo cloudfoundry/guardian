@@ -94,13 +94,13 @@ var _ = Describe("Depot", func() {
 					Destination: "/etc/hosts",
 					Source:      filepath.Join(depotDir, "aardvaark", "hosts"),
 					Type:        "bind",
-					Options:     []string{"rbind"},
+					Options:     []string{"bind"},
 				},
 				specs.Mount{
 					Destination: "/etc/resolv.conf",
 					Source:      filepath.Join(depotDir, "aardvaark", "resolv.conf"),
 					Type:        "bind",
-					Options:     []string{"rbind"},
+					Options:     []string{"bind"},
 				},
 			))
 		})
@@ -119,7 +119,7 @@ var _ = Describe("Depot", func() {
 						Destination: "/etc/resolv.conf",
 						Source:      filepath.Join(depotDir, "aardvaark", "resolv.conf"),
 						Type:        "bind",
-						Options:     []string{"rbind"},
+						Options:     []string{"bind"},
 					},
 				))
 			})
@@ -139,7 +139,7 @@ var _ = Describe("Depot", func() {
 						Destination: "/etc/hosts",
 						Source:      filepath.Join(depotDir, "aardvaark", "hosts"),
 						Type:        "bind",
-						Options:     []string{"rbind"},
+						Options:     []string{"bind"},
 					},
 				))
 			})
