@@ -1,14 +1,10 @@
 package kawasaki
 
 import (
-	"bufio"
-	"errors"
-	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
-	"strconv"
-	"strings"
+	"path/filepath"
 
 	"code.cloudfoundry.org/lager"
 )
@@ -16,16 +12,6 @@ import (
 //go:generate counterfeiter . HostFileCompiler
 type HostFileCompiler interface {
 	Compile(log lager.Logger, containerIp net.IP, handle string) ([]byte, error)
-}
-
-//go:generate counterfeiter . FileWriter
-type FileWriter interface {
-	WriteFile(log lager.Logger, filePath string, contents []byte, rootfsPath string, rootUid, rootGid int) error
-}
-
-//go:generate counterfeiter . IdMapReader
-type IdMapReader interface {
-	ReadRootId(path string) (int, error)
 }
 
 //go:generate counterfeiter . NameserversDeterminer
@@ -43,62 +29,21 @@ type ResolvConfigurer struct {
 	NameserversDeterminer NameserversDeterminer
 	NameserversSerializer NameserversSerializer
 	ResolvFilePath        string
-	FileWriter            FileWriter
-	IDMapReader           IdMapReader
-}
-
-type RootIdMapReader struct{}
-
-// Reads /proc/<pid>/{uid_map|gid_map} and retrieves the mapped user id
-// for the container root user. Map format is the following:
-// containerId hostId mappingSize
-// 0           1000   1
-func (r *RootIdMapReader) ReadRootId(path string) (int, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return -1, err
-	}
-	defer file.Close()
-
-	reader := bufio.NewReader(file)
-
-	for {
-		line, err := reader.ReadString('\n')
-		fields := strings.Fields(line)
-
-		if len(fields) > 1 && fields[0] == "0" {
-			return strconv.Atoi(fields[1])
-		}
-
-		if err != nil {
-			break
-		}
-	}
-	return -1, errors.New("no root mapping")
+	DepotDir              string
 }
 
 func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid int) error {
 	log = log.Session("dns-resolve-configure")
 
-	contents, err := d.HostsFileCompiler.Compile(log, cfg.ContainerIP, cfg.ContainerHandle)
+	containerHostsContents, err := d.HostsFileCompiler.Compile(log, cfg.ContainerIP, cfg.ContainerHandle)
 	if err != nil {
 		log.Error("compiling-hosts-file", err)
 		return err
 	}
 
-	rootUid, err := d.IDMapReader.ReadRootId(fmt.Sprintf("/proc/%d/uid_map", pid))
-	if err != nil {
-		return err
-	}
-
-	rootGid, err := d.IDMapReader.ReadRootId(fmt.Sprintf("/proc/%d/gid_map", pid))
-	if err != nil {
-		return err
-	}
-
-	if err := d.FileWriter.WriteFile(log, "/etc/hosts", contents, fmt.Sprintf("/proc/%d/root", pid), rootUid, rootGid); err != nil {
+	if err := writeExistingFile(filepath.Join(d.DepotDir, cfg.ContainerHandle, "hosts"), containerHostsContents); err != nil {
 		log.Error("writing-hosts-file", err)
-		return fmt.Errorf("writing file '/etc/hosts': %s", err)
+		return err
 	}
 
 	hostResolvContents, err := ioutil.ReadFile(d.ResolvFilePath)
@@ -109,10 +54,22 @@ func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid in
 	nameservers := d.NameserversDeterminer.Determine(string(hostResolvContents), cfg.BridgeIP, cfg.PluginNameservers, cfg.OperatorNameservers, cfg.AdditionalNameservers)
 	containerResolvContents := d.NameserversSerializer.Serialize(nameservers)
 
-	if err := d.FileWriter.WriteFile(log, "/etc/resolv.conf", containerResolvContents, fmt.Sprintf("/proc/%d/root", pid), rootUid, rootGid); err != nil {
+	if err := writeExistingFile(filepath.Join(d.DepotDir, cfg.ContainerHandle, "resolv.conf"), containerResolvContents); err != nil {
 		log.Error("writing-resolv-file", err)
-		return fmt.Errorf("writing file '/etc/resolv.conf': %s", err)
+		return err
 	}
 
+	return nil
+}
+
+func writeExistingFile(path string, contents []byte) error {
+	file, err := os.OpenFile(path, os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	if _, err := file.Write(contents); err != nil {
+		return err
+	}
 	return nil
 }

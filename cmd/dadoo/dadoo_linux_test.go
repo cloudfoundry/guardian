@@ -27,8 +27,9 @@ import (
 
 var _ = Describe("Dadoo", func() {
 	var (
-		bundlePath string
-		bundle     goci.Bndl
+		bundlePath  string
+		bundle      goci.Bndl
+		bundleSaver = &goci.BundleSaver{}
 	)
 
 	BeforeEach(func() {
@@ -67,7 +68,7 @@ var _ = Describe("Dadoo", func() {
 	})
 
 	JustBeforeEach(func() {
-		Expect(bundle.Save(path.Join(bundlePath))).To(Succeed())
+		Expect(bundleSaver.Save(bundle, path.Join(bundlePath))).To(Succeed())
 	})
 
 	AfterEach(func() {

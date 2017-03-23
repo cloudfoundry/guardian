@@ -5,13 +5,15 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 type FakeBundleSaver struct {
-	SaveStub        func(path string) error
+	SaveStub        func(bundle goci.Bndl, path string) error
 	saveMutex       sync.RWMutex
 	saveArgsForCall []struct {
-		path string
+		bundle goci.Bndl
+		path   string
 	}
 	saveReturns struct {
 		result1 error
@@ -23,16 +25,17 @@ type FakeBundleSaver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBundleSaver) Save(path string) error {
+func (fake *FakeBundleSaver) Save(bundle goci.Bndl, path string) error {
 	fake.saveMutex.Lock()
 	ret, specificReturn := fake.saveReturnsOnCall[len(fake.saveArgsForCall)]
 	fake.saveArgsForCall = append(fake.saveArgsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("Save", []interface{}{path})
+		bundle goci.Bndl
+		path   string
+	}{bundle, path})
+	fake.recordInvocation("Save", []interface{}{bundle, path})
 	fake.saveMutex.Unlock()
 	if fake.SaveStub != nil {
-		return fake.SaveStub(path)
+		return fake.SaveStub(bundle, path)
 	}
 	if specificReturn {
 		return ret.result1
@@ -46,10 +49,10 @@ func (fake *FakeBundleSaver) SaveCallCount() int {
 	return len(fake.saveArgsForCall)
 }
 
-func (fake *FakeBundleSaver) SaveArgsForCall(i int) string {
+func (fake *FakeBundleSaver) SaveArgsForCall(i int) (goci.Bndl, string) {
 	fake.saveMutex.RLock()
 	defer fake.saveMutex.RUnlock()
-	return fake.saveArgsForCall[i].path
+	return fake.saveArgsForCall[i].bundle, fake.saveArgsForCall[i].path
 }
 
 func (fake *FakeBundleSaver) SaveReturns(result1 error) {

@@ -21,12 +21,14 @@ func (b *BndlLoader) Load(path string) (Bndl, error) {
 	return bundle, nil
 }
 
-func (b Bndl) Save(path string) error {
-	return save(b.Spec, filepath.Join(path, "config.json"))
+type BundleSaver struct{}
+
+func (b BundleSaver) Save(bundle Bndl, path string) error {
+	return save(bundle.Spec, filepath.Join(path, "config.json"))
 }
 
 func save(value interface{}, path string) error {
-	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0755)
+	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
 	if err != nil {
 		return fmt.Errorf("Failed to save bundle: %s", err)
 	}

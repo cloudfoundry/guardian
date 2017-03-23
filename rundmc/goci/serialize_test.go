@@ -16,8 +16,9 @@ import (
 var _ = Describe("Bundle Serialization", func() {
 
 	var (
-		tmp   string
-		bndle goci.Bndl
+		tmp         string
+		bndle       goci.Bndl
+		bundleSaver *goci.BundleSaver
 	)
 
 	BeforeEach(func() {
@@ -25,13 +26,15 @@ var _ = Describe("Bundle Serialization", func() {
 		tmp, err = ioutil.TempDir("", "gocitest")
 		Expect(err).NotTo(HaveOccurred())
 
+		bundleSaver = &goci.BundleSaver{}
+
 		bndle = goci.Bndl{
 			Spec: specs.Spec{
 				Version: "abcd",
 			},
 		}
 
-		Expect(bndle.Save(tmp)).To(Succeed())
+		Expect(bundleSaver.Save(bndle, tmp)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -48,7 +51,7 @@ var _ = Describe("Bundle Serialization", func() {
 
 		Context("when saving fails", func() {
 			It("returns an error", func() {
-				err := bndle.Save("non-existent-dir")
+				err := bundleSaver.Save(bndle, "non-existent-dir")
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(ContainSubstring("Failed to save bundle")))
 				Expect(err).To(MatchError(ContainSubstring("no such file or directory")))

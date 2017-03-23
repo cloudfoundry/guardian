@@ -11,14 +11,13 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki/netns"
 )
 
-func NewDefaultConfigurer(ipt *iptables.IPTablesController) kawasaki.Configurer {
+func NewDefaultConfigurer(ipt *iptables.IPTablesController, depotDir string) kawasaki.Configurer {
 	resolvConfigurer := &kawasaki.ResolvConfigurer{
 		HostsFileCompiler:     &dns.HostsFileCompiler{},
 		NameserversDeterminer: &dns.NameserversDeterminer{},
 		NameserversSerializer: &dns.NameserversSerializer{},
+		DepotDir:              depotDir,
 		ResolvFilePath:        "/etc/resolv.conf",
-		FileWriter:            &dns.RootfsWriter{},
-		IDMapReader:           &kawasaki.RootIdMapReader{},
 	}
 
 	hostConfigurer := &configure.Host{

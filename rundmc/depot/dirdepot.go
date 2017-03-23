@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
+	specs "github.com/opencontainers/runtime-spec/specs-go"
+
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
@@ -15,35 +17,64 @@ var ErrDoesNotExist = errors.New("does not exist")
 
 //go:generate counterfeiter . BundleSaver
 type BundleSaver interface {
-	Save(path string) error
+	Save(bundle goci.Bndl, path string) error
 }
 
 // a depot which stores containers as subdirs of a depot directory
 type DirectoryDepot struct {
-	dir string
+	dir         string
+	bundleSaver BundleSaver
 }
 
-func New(dir string) *DirectoryDepot {
+func New(dir string, bundleSaver BundleSaver) *DirectoryDepot {
 	return &DirectoryDepot{
-		dir: dir,
+		dir:         dir,
+		bundleSaver: bundleSaver,
 	}
 }
 
-func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle BundleSaver) error {
+func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle goci.Bndl) error {
 	log = log.Session("depot-create", lager.Data{"handle": handle})
 
 	log.Info("started")
 	defer log.Info("finished")
 
-	path := d.toDir(handle)
-	if err := os.MkdirAll(path, 0700); err != nil {
-		log.Error("mkdir-failed", err, lager.Data{"path": path})
+	containerDir := d.toDir(handle)
+	if err := os.MkdirAll(containerDir, 0755); err != nil {
+		log.Error("mkdir-failed", err, lager.Data{"path": containerDir})
 		return err
 	}
 
-	if err := bundle.Save(path); err != nil {
-		removeOrLog(log, path)
-		log.Error("create-failed", err, lager.Data{"path": path})
+	if err := touchFile(filepath.Join(containerDir, "hosts")); err != nil {
+		return err
+	}
+	if err := touchFile(filepath.Join(containerDir, "resolv.conf")); err != nil {
+		return err
+	}
+
+	mounts := []specs.Mount{}
+	if _, err := os.Stat(filepath.Join(bundle.RootFS(), "etc", "hosts")); err == nil {
+		mounts = append(mounts, specs.Mount{
+			Destination: "/etc/hosts",
+			Source:      filepath.Join(containerDir, "hosts"),
+			Type:        "bind",
+			Options:     []string{"rbind"},
+		})
+	}
+	if _, err := os.Stat(filepath.Join(bundle.RootFS(), "etc", "resolv.conf")); err == nil {
+		mounts = append(mounts, specs.Mount{
+			Destination: "/etc/resolv.conf",
+			Source:      filepath.Join(containerDir, "resolv.conf"),
+			Type:        "bind",
+			Options:     []string{"rbind"},
+		})
+	}
+
+	bundle = bundle.WithMounts(mounts...)
+
+	if err := d.bundleSaver.Save(bundle, containerDir); err != nil {
+		removeOrLog(log, containerDir)
+		log.Error("create-failed", err, lager.Data{"path": containerDir})
 		return err
 	}
 
@@ -98,4 +129,12 @@ func removeOrLog(log lager.Logger, path string) {
 	if err := os.RemoveAll(path); err != nil {
 		log.Error("remove-failed", err, lager.Data{"path": path})
 	}
+}
+
+func touchFile(path string) error {
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	return file.Close()
 }

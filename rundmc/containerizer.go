@@ -8,7 +8,6 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
-	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
@@ -24,7 +23,7 @@ import (
 //go:generate counterfeiter . StateStore
 
 type Depot interface {
-	Create(log lager.Logger, handle string, bundle depot.BundleSaver) error
+	Create(log lager.Logger, handle string, bundle goci.Bndl) error
 	Lookup(log lager.Logger, handle string) (path string, err error)
 	Destroy(log lager.Logger, handle string) error
 	Handles() ([]string, error)

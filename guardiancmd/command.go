@@ -342,7 +342,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		return fmt.Errorf("invalid pool range: %s", err)
 	}
 
-	networker, iptablesStarter, err := cmd.wireNetworker(logger, propManager, portPool)
+	networker, iptablesStarter, err := cmd.wireNetworker(logger, cmd.Containers.Dir, propManager, portPool)
 	if err != nil {
 		logger.Error("failed-to-wire-networker", err)
 		return err
@@ -470,7 +470,7 @@ func extractIPs(ipflags []IPFlag) []net.IP {
 	return ips
 }
 
-func (cmd *ServerCommand) wireNetworker(log lager.Logger, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
+func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
 	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
 		return nil, nil, err
@@ -485,8 +485,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, propManager kawasaki.C
 			NameserversDeterminer: &dns.NameserversDeterminer{},
 			NameserversSerializer: &dns.NameserversSerializer{},
 			ResolvFilePath:        "/etc/resolv.conf",
-			FileWriter:            &dns.RootfsWriter{},
-			IDMapReader:           &kawasaki.RootIdMapReader{},
+			DepotDir:              depotPath,
 		}
 		externalNetworker := netplugin.New(
 			linux_command_runner.New(),
@@ -531,7 +530,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, propManager kawasaki.C
 		subnets.NewPool(cmd.Network.Pool.CIDR()),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, additionalDNSServers, containerMtu),
 		propManager,
-		factory.NewDefaultConfigurer(ipTables),
+		factory.NewDefaultConfigurer(ipTables, depotPath),
 		portPool,
 		iptables.NewPortForwarder(ipTables),
 		iptables.NewFirewallOpener(ruleTranslator, ipTables),
@@ -691,7 +690,7 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 }
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPath, runcPath, nstarPath, tarPath, appArmorProfile string, properties gardener.PropertyManager) *rundmc.Containerizer {
-	depot := depot.New(depotPath)
+	depot := depot.New(depotPath, &goci.BundleSaver{})
 
 	commandRunner := linux_command_runner.New()
 	chrootMkdir := bundlerules.ChrootMkdir{

@@ -5,17 +5,17 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc"
-	"code.cloudfoundry.org/guardian/rundmc/depot"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeDepot struct {
-	CreateStub        func(log lager.Logger, handle string, bundle depot.BundleSaver) error
+	CreateStub        func(log lager.Logger, handle string, bundle goci.Bndl) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		log    lager.Logger
 		handle string
-		bundle depot.BundleSaver
+		bundle goci.Bndl
 	}
 	createReturns struct {
 		result1 error
@@ -64,13 +64,13 @@ type FakeDepot struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDepot) Create(log lager.Logger, handle string, bundle depot.BundleSaver) error {
+func (fake *FakeDepot) Create(log lager.Logger, handle string, bundle goci.Bndl) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		log    lager.Logger
 		handle string
-		bundle depot.BundleSaver
+		bundle goci.Bndl
 	}{log, handle, bundle})
 	fake.recordInvocation("Create", []interface{}{log, handle, bundle})
 	fake.createMutex.Unlock()
@@ -89,7 +89,7 @@ func (fake *FakeDepot) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeDepot) CreateArgsForCall(i int) (lager.Logger, string, depot.BundleSaver) {
+func (fake *FakeDepot) CreateArgsForCall(i int) (lager.Logger, string, goci.Bndl) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].bundle
