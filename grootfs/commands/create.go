@@ -64,6 +64,14 @@ var CreateCommand = cli.Command{
 			Name:  "without-clean",
 			Usage: "Do NOT clean up unused layers before creating rootfs",
 		},
+		cli.BoolFlag{
+			Name:  "json",
+			Usage: "Print RootFS Path and container config as JSON",
+		},
+		cli.BoolFlag{
+			Name:  "no-json",
+			Usage: "Do NOT print RootFS Path and container config as JSON",
+		},
 		cli.StringFlag{
 			Name:  "username",
 			Usage: "Username to authenticate in image registry",
@@ -87,6 +95,10 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError("with-clean and without-clean cannot be used together", 1)
 		}
 
+		if ctx.IsSet("json") && ctx.IsSet("no-json") {
+			return cli.NewExitError("json and no-json cannot be used together", 1)
+		}
+
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry")).
 			WithUIDMappings(ctx.StringSlice("uid-mapping")).
@@ -95,7 +107,8 @@ var CreateCommand = cli.Command{
 				ctx.IsSet("disk-limit-size-bytes")).
 			WithExcludeImageFromQuota(ctx.Bool("exclude-image-from-quota"),
 				ctx.IsSet("exclude-image-from-quota")).
-			WithClean(ctx.IsSet("with-clean"), ctx.IsSet("without-clean"))
+			WithClean(ctx.IsSet("with-clean"), ctx.IsSet("without-clean")).
+			WithJson(ctx.IsSet("json"), ctx.IsSet("no-json"))
 
 		cfg, err := configBuilder.Build()
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
@@ -187,6 +200,7 @@ var CreateCommand = cli.Command{
 
 		createSpec := groot.CreateSpec{
 			ID:                          id,
+			Json:                        cfg.Create.Json,
 			BaseImage:                   baseImage,
 			DiskLimit:                   cfg.Create.DiskLimitSizeBytes,
 			ExcludeBaseImageFromQuota:   cfg.Create.ExcludeImageFromQuota,

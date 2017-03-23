@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
@@ -13,6 +14,11 @@ import (
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	errorspkg "github.com/pkg/errors"
 )
+
+type ImageJson struct {
+	Rootfs string         `json:"rootfs"`
+	Config *specsv1.Image `json:"config,omitempty"`
+}
 
 type ImageDriverSpec struct {
 	BaseVolumeIDs      []string
@@ -60,8 +66,12 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	var err error
-	image := b.createImage(spec.ID)
+	image, err := b.createImage(spec.ID, spec.BaseImage)
+	if err != nil {
+		logger.Error("creating-image-object", err)
+		return groot.Image{}, errorspkg.Wrap(err, "creating image object")
+	}
+
 	defer func() {
 		if err != nil {
 			log := logger.Session("create-failed-cleaning-up", lager.Data{
@@ -76,7 +86,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 				log.Error("destroying-rootfs-snapshot", err)
 			}
 
-			if err = b.deleteImageDir(image); err != nil {
+			if err = b.deleteImageDir(image.Path); err != nil {
 				log.Error("deleting-image-path", err)
 			}
 		}
@@ -125,12 +135,12 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 		return errorspkg.Errorf("image not found: %s", id)
 	}
 
-	image := b.createImage(id)
-	if err := b.imageDriver.DestroyImage(logger, image.Path); err != nil {
+	imagePath := b.imagePath(id)
+	if err := b.imageDriver.DestroyImage(logger, imagePath); err != nil {
 		return errorspkg.Wrap(err, "destroying snapshot")
 	}
 
-	if err := b.deleteImageDir(image); err != nil {
+	if err := b.deleteImageDir(imagePath); err != nil {
 		return errorspkg.Wrap(err, "deleting image path")
 	}
 
@@ -159,13 +169,13 @@ func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, 
 		return groot.VolumeStats{}, errorspkg.Errorf("image not found: %s", id)
 	}
 
-	image := b.createImage(id)
+	imagePath := b.imagePath(id)
 
-	return b.imageDriver.FetchStats(logger, image.Path)
+	return b.imageDriver.FetchStats(logger, imagePath)
 }
 
-func (b *ImageCloner) deleteImageDir(image groot.Image) error {
-	if err := os.RemoveAll(image.Path); err != nil {
+func (b *ImageCloner) deleteImageDir(imagePath string) error {
+	if err := os.RemoveAll(imagePath); err != nil {
 		return errorspkg.Wrap(err, "deleting image path")
 	}
 
@@ -192,13 +202,34 @@ func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, image groot.Image,
 	return nil
 }
 
-func (b *ImageCloner) createImage(id string) groot.Image {
-	imagePath := path.Join(b.storePath, store.ImageDirName, id)
+func (b *ImageCloner) createImage(id string, baseImage specsv1.Image) (groot.Image, error) {
+	imagePath := b.imagePath(id)
+	rootfsPath := path.Join(imagePath, "rootfs")
+
+	var imageConfig *specsv1.Image
+	if !reflect.DeepEqual(baseImage, specsv1.Image{}) {
+		imageConfig = &baseImage
+	}
+
+	imageJson := ImageJson{
+		Rootfs: rootfsPath,
+		Config: imageConfig,
+	}
+
+	jsonBytes, err := json.Marshal(&imageJson)
+	if err != nil {
+		return groot.Image{}, err
+	}
 
 	return groot.Image{
+		Json:       string(jsonBytes),
 		Path:       imagePath,
-		RootFSPath: filepath.Join(imagePath, "rootfs"),
-	}
+		RootFSPath: rootfsPath,
+	}, nil
+}
+
+func (b *ImageCloner) imagePath(id string) string {
+	return path.Join(b.storePath, store.ImageDirName, id)
 }
 
 func (b *ImageCloner) setOwnership(spec groot.ImageSpec, paths ...string) error {

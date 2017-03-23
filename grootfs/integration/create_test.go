@@ -506,6 +506,16 @@ var _ = Describe("Create", func() {
 		})
 	})
 
+	Context("when both json and no-json flags are given", func() {
+		It("returns an error", func() {
+			_, err := Runner.WithJson().WithNoJson().Create(groot.CreateSpec{
+				ID:        "my-empty",
+				BaseImage: "docker:///cfgarden/empty:v0.1.1",
+			})
+			Expect(err).To(MatchError(ContainSubstring("json and no-json cannot be used together")))
+		})
+	})
+
 	Context("when no --store option is given", func() {
 		BeforeEach(func() {
 			integration.SkipIfNotBTRFS(Driver)
@@ -734,6 +744,19 @@ var _ = Describe("Create", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 11)).To(MatchError(ContainSubstring("dd: error writing")))
+			})
+		})
+
+		Describe("json", func() {
+			BeforeEach(func() {
+				cfg.Create.Json = true
+			})
+
+			It("returns a image json as output", func() {
+				image, err := Runner.Create(spec)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(image.Path).To(MatchRegexp("{.+}"))
 			})
 		})
 

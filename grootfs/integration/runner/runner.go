@@ -47,6 +47,9 @@ type Runner struct {
 	// Clean on Create
 	CleanOnCreate   bool
 	NoCleanOnCreate bool
+	// Jason
+	Json   bool
+	NoJson bool
 
 	SysCredential *syscall.Credential
 }

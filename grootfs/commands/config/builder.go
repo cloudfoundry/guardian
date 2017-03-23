@@ -25,6 +25,7 @@ type Config struct {
 type Create struct {
 	ExcludeImageFromQuota bool     `yaml:"exclude_image_from_quota"`
 	WithClean             bool     `yaml:"with_clean"`
+	Json                  bool     `yaml:"json"`
 	DiskLimitSizeBytes    int64    `yaml:"disk_limit_size_bytes"`
 	InsecureRegistries    []string `yaml:"insecure_registries"`
 	GIDMappings           []string `yaml:"gid_mappings"`
@@ -200,7 +201,19 @@ func (b *Builder) WithClean(clean bool, noClean bool) *Builder {
 	}
 
 	if noClean {
-		b.config.Create.WithClean = !noClean
+		b.config.Create.WithClean = false
+	}
+
+	return b
+}
+
+func (b *Builder) WithJson(json bool, noJson bool) *Builder {
+	if json {
+		b.config.Create.Json = json
+	}
+
+	if noJson {
+		b.config.Create.Json = false
 	}
 
 	return b

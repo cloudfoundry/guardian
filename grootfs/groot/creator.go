@@ -17,6 +17,7 @@ type CreateSpec struct {
 	ID                          string
 	BaseImage                   string
 	DiskLimit                   int64
+	Json                        bool
 	ExcludeBaseImageFromQuota   bool
 	CleanOnCreate               bool
 	CleanOnCreateThresholdBytes int64
@@ -153,6 +154,10 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (string, error) {
 		}
 
 		return "", err
+	}
+
+	if spec.Json {
+		return image.Json, nil
 	}
 
 	return image.Path, nil

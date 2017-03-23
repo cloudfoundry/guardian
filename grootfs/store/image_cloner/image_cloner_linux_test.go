@@ -12,7 +12,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
-	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
+	imageclonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/store/image_cloner/image_clonerfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -27,7 +27,7 @@ var _ = Describe("Image", func() {
 		logger      lager.Logger
 		storePath   string
 		imagesPath  string
-		imageCloner *imageClonerpkg.ImageCloner
+		imageCloner *imageclonerpkg.ImageCloner
 
 		fakeImageDriver *image_clonerfakes.FakeImageDriver
 	)
@@ -36,7 +36,7 @@ var _ = Describe("Image", func() {
 		var err error
 		fakeImageDriver = new(image_clonerfakes.FakeImageDriver)
 
-		fakeImageDriver.CreateImageStub = func(_ lager.Logger, spec imageClonerpkg.ImageDriverSpec) error {
+		fakeImageDriver.CreateImageStub = func(_ lager.Logger, spec imageclonerpkg.ImageDriverSpec) error {
 			return os.Mkdir(filepath.Join(spec.ImagePath, "rootfs"), 0777)
 		}
 
@@ -49,8 +49,8 @@ var _ = Describe("Image", func() {
 	})
 
 	JustBeforeEach(func() {
-		logger = lagertest.NewTestLogger("test-bunlder")
-		imageCloner = imageClonerpkg.NewImageCloner(fakeImageDriver, storePath)
+		logger = lagertest.NewTestLogger("test-bundler")
+		imageCloner = imageclonerpkg.NewImageCloner(fakeImageDriver, storePath)
 	})
 
 	AfterEach(func() {
@@ -62,6 +62,17 @@ var _ = Describe("Image", func() {
 			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id"})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(image.Path).To(BeADirectory())
+		})
+
+		It("returns a image Json", func() {
+			imageConfig := specsv1.Image{Created: time.Now()}
+			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig})
+			Expect(err).NotTo(HaveOccurred())
+
+			var outputJson imageclonerpkg.ImageJson
+			Expect(json.Unmarshal([]byte(image.Json), &outputJson)).To(Succeed())
+			Expect(outputJson.Rootfs).To(Equal(image.RootFSPath))
+			Expect(outputJson.Config.Created.Unix()).To(Equal(imageConfig.Created.Unix()))
 		})
 
 		It("keeps the images in the same image directory", func() {
@@ -119,6 +130,17 @@ var _ = Describe("Image", func() {
 			var imageJsonContent specsv1.Image
 			Expect(json.NewDecoder(imageJsonFile).Decode(&imageJsonContent)).To(Succeed())
 			Expect(imageJsonContent).To(Equal(baseImage))
+		})
+
+		Context("when the spec.BaseImage is empty", func() {
+			It("returns a image Json", func() {
+				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: specsv1.Image{}})
+				Expect(err).NotTo(HaveOccurred())
+
+				var outputJson imageclonerpkg.ImageJson
+				Expect(json.Unmarshal([]byte(image.Json), &outputJson)).To(Succeed())
+				Expect(outputJson.Config).To(BeNil())
+			})
 		})
 
 		Describe("created files ownership", func() {
@@ -265,14 +287,14 @@ var _ = Describe("Image", func() {
 
 		Context("when writting the image.json fails", func() {
 			BeforeEach(func() {
-				imageClonerpkg.OF = func(name string, flag int, perm os.FileMode) (*os.File, error) {
+				imageclonerpkg.OF = func(name string, flag int, perm os.FileMode) (*os.File, error) {
 					return nil, errors.New("permission denied: can't write stuff")
 				}
 			})
 
 			AfterEach(func() {
-				// needs to reasign the correct method after running the test
-				imageClonerpkg.OF = os.OpenFile
+				// needs to reassign the correct method after running the test
+				imageclonerpkg.OF = os.OpenFile
 			})
 
 			It("returns an error", func() {

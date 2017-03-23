@@ -64,6 +64,7 @@ type ImageSpec struct {
 }
 
 type Image struct {
+	Json       string
 	Path       string
 	RootFSPath string
 }

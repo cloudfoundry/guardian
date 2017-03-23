@@ -21,6 +21,18 @@ func (r Runner) Create(spec groot.CreateSpec) (groot.Image, error) {
 	}, nil
 }
 
+func (r Runner) CreateJson(spec groot.CreateSpec) (string, error) {
+	args := r.makeCreateArgs(spec)
+	args = append([]string{"--json"}, args...)
+
+	output, err := r.RunSubcommand("create", args...)
+	if err != nil {
+		return "", err
+	}
+
+	return output, nil
+}
+
 func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 	args := []string{}
 	for _, mapping := range spec.UIDMappings {
@@ -46,6 +58,19 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 			args = append(args, "--with-clean")
 		} else {
 			args = append(args, "--without-clean")
+		}
+	}
+
+	if r.Json || r.NoJson {
+		if r.Json {
+			args = append(args, "--json")
+		}
+		if r.NoJson {
+			args = append(args, "--no-json")
+		}
+	} else {
+		if spec.Json {
+			args = append(args, "--json")
 		}
 	}
 

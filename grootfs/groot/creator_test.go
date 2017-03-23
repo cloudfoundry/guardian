@@ -55,6 +55,7 @@ var _ = Describe("Creator", func() {
 		fakeImageCloner.CreateReturns(groot.Image{
 			Path:       "/path/to/images/123",
 			RootFSPath: "/path/to/images/123/rootfs",
+			Json:       `{"rootfs": "/path/to/image/123/rootfs"}`,
 		}, nil)
 
 		creator = groot.IamCreator(
@@ -221,7 +222,7 @@ var _ = Describe("Creator", func() {
 			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
 		})
 
-		It("returns the image", func() {
+		It("returns the image path", func() {
 			fakeImageCloner.CreateReturns(groot.Image{
 				Path: "/path/to/image",
 			}, nil)
@@ -229,6 +230,14 @@ var _ = Describe("Creator", func() {
 			output, err := creator.Create(logger, groot.CreateSpec{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(output).To(Equal("/path/to/image"))
+		})
+
+		Context("when json output is requested", func() {
+			It("returns the json representation of the image", func() {
+				output, err := creator.Create(logger, groot.CreateSpec{Json: true})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(output).To(Equal(`{"rootfs": "/path/to/image/123/rootfs"}`))
+			})
 		})
 
 		It("emits metrics for creation", func() {

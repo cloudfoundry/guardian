@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -70,6 +71,32 @@ var _ = Describe("Create with local images", func() {
 		stat, err := os.Stat(permissiveFolderPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
+	})
+
+	Context("when the --json flag is provided", func() {
+		It("outputs a json with the correct `rootfs` key", func() {
+			output, err := Runner.CreateJson(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			outputObj := map[string]interface{}{}
+			Expect(json.Unmarshal([]byte(output), &outputObj)).To(Succeed())
+			Expect(outputObj["rootfs"]).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id", "rootfs")))
+		})
+
+		It("outputs a json with empty config key", func() {
+			output, err := Runner.CreateJson(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			var outputObj map[string]interface{}
+			Expect(json.Unmarshal([]byte(output), &outputObj)).To(Succeed())
+			Expect(outputObj["config"]).To(BeNil())
+		})
 	})
 
 	Context("when two rootfses are using the same image", func() {

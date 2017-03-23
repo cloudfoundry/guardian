@@ -1,0 +1,28 @@
+{
+  "rootfs": {
+    "type": "layers",
+      "diff_ids": [
+        "sha256:c0de73ac99683640bc8f8de5cda9e0e2fc97fe53d78c9fd60ea69b31303efbc9"
+      ]
+  },
+    "history": [
+    {
+      "created": "2017-03-09T18:28:03.975884948Z",
+      "created_by": "/bin/sh -c #(nop) ADD file:c9ecd8ff00c653fb652ad5a0a9215e1f467f0cd9933653b8a2e5e475b68597ab in / "
+    },
+    {
+      "created": "2017-03-09T18:28:04.586987216Z",
+      "created_by": "/bin/sh -c #(nop)  CMD [\"sh\"]",
+      "empty_layer": true
+    }
+    ],
+    "created": "2017-03-09T18:28:04.586987216Z",
+    "architecture": "amd64",
+    "os": "linux",
+    "config": {
+      "Env": [
+        "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+      ],
+      "Cmd": ["sh"]
+    }
+}

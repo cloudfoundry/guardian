@@ -19,6 +19,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
@@ -94,6 +95,48 @@ var _ = Describe("Create with remote images", func() {
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
+		})
+
+		Context("when the --json flag is provided", func() {
+			It("outputs a json with the correct `rootfs` key", func() {
+				output, err := Runner.CreateJson(groot.CreateSpec{
+					BaseImage: "docker:///busybox:1.26.2",
+					ID:        "random-id",
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				outputObj := map[string]interface{}{}
+				Expect(json.Unmarshal([]byte(output), &outputObj)).To(Succeed())
+				Expect(outputObj["rootfs"]).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id", "rootfs")))
+			})
+
+			It("outputs a json with the correct `config` key", func() {
+				output, err := Runner.CreateJson(groot.CreateSpec{
+					BaseImage: "docker:///busybox:1.26.2",
+					ID:        "random-id",
+					UIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+					GIDMappings: []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				outputObj := map[string]interface{}{}
+				Expect(json.Unmarshal([]byte(output), &outputObj)).To(Succeed())
+				Expect(outputObj["config"]).To(Equal(integration.Busybox1262Config()))
+			})
 		})
 
 		Context("when the image is bigger than available memory", func() {

@@ -30,6 +30,7 @@ var _ = Describe("Builder", func() {
 			GIDMappings:           []string{"config-gid-mapping"},
 			InsecureRegistries:    []string{"http://example.org"},
 			DiskLimitSizeBytes:    int64(1000),
+			Json:                  false,
 		}
 
 		cleanCfg = config.Clean{
@@ -564,6 +565,47 @@ var _ = Describe("Builder", func() {
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(config.Create.WithClean).To(BeTrue())
+				})
+			})
+		})
+
+		Describe("WithJson", func() {
+			Context("when no-clean is set, and clean is not set", func() {
+				BeforeEach(func() {
+					cfg.Create.Json = true
+				})
+
+				It("overrides the config's entry", func() {
+					builder = builder.WithJson(false, true)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.Create.Json).To(BeFalse())
+				})
+			})
+
+			Context("when no-clean is not set, and clean is set", func() {
+				BeforeEach(func() {
+					cfg.Create.Json = false
+				})
+
+				It("overrides the config's entry", func() {
+					builder = builder.WithJson(true, false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.Create.Json).To(BeTrue())
+				})
+			})
+
+			Context("when no-clean is not set, and clean is not set", func() {
+				BeforeEach(func() {
+					cfg.Create.Json = true
+				})
+
+				It("uses the config value", func() {
+					builder = builder.WithJson(false, false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.Create.Json).To(BeTrue())
 				})
 			})
 		})
