@@ -32,7 +32,7 @@ var _ = Describe("Depot", func() {
 		depotDir, err = ioutil.TempDir("", "depot-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		bndle = goci.Bndl{}
+		bndle = goci.Bndl{Spec: specs.Spec{Version: "some-idiosyncratic-version"}}
 
 		logger = lagertest.NewTestLogger("test")
 
@@ -81,7 +81,7 @@ var _ = Describe("Depot", func() {
 			Expect(bundleSaver.SaveCallCount()).To(Equal(1))
 			actualBundle, actualPath := bundleSaver.SaveArgsForCall(0)
 			Expect(actualPath).To(Equal(path.Join(depotDir, "aardvaark")))
-			Expect(actualBundle.Mounts()).To(ConsistOf(
+			Expect(actualBundle).To(Equal(bndle.WithMounts(
 				specs.Mount{
 					Destination: "/etc/hosts",
 					Source:      filepath.Join(depotDir, "aardvaark", "hosts"),
@@ -94,7 +94,7 @@ var _ = Describe("Depot", func() {
 					Type:        "bind",
 					Options:     []string{"bind"},
 				},
-			))
+			)))
 		})
 
 		It("destroys the container directory if creation fails", func() {
