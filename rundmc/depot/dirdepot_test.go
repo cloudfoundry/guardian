@@ -24,7 +24,6 @@ var _ = Describe("Depot", func() {
 		dirdepot    *depot.DirectoryDepot
 		logger      lager.Logger
 		bndle       goci.Bndl
-		rootFSPath  string
 	)
 
 	BeforeEach(func() {
@@ -33,13 +32,7 @@ var _ = Describe("Depot", func() {
 		depotDir, err = ioutil.TempDir("", "depot-test")
 		Expect(err).NotTo(HaveOccurred())
 
-		rootFSPath, err = ioutil.TempDir("", "depot-test")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(os.Mkdir(filepath.Join(rootFSPath, "etc"), 0700)).To(Succeed())
-		Expect(touchFile(filepath.Join(rootFSPath, "etc", "hosts"))).To(Succeed())
-		Expect(touchFile(filepath.Join(rootFSPath, "etc", "resolv.conf"))).To(Succeed())
-
-		bndle = goci.Bndl{Spec: specs.Spec{Root: specs.Root{Path: rootFSPath}}}
+		bndle = goci.Bndl{}
 
 		logger = lagertest.NewTestLogger("test")
 
@@ -49,7 +42,6 @@ var _ = Describe("Depot", func() {
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(depotDir)).To(Succeed())
-		Expect(os.RemoveAll(rootFSPath)).To(Succeed())
 	})
 
 	Describe("lookup", func() {
@@ -74,12 +66,12 @@ var _ = Describe("Depot", func() {
 			Expect(filepath.Join(depotDir, "aardvaark")).To(BeADirectory())
 		})
 
-		It("creates a hosts file", func() {
+		It("creates an empty hosts file in the container dir", func() {
 			Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
 			Expect(filepath.Join(depotDir, "aardvaark", "hosts")).To(BeAnExistingFile())
 		})
 
-		It("creates a resolv.conf file", func() {
+		It("creates an empty resolv.conf file in the container dir", func() {
 			Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
 			Expect(filepath.Join(depotDir, "aardvaark", "resolv.conf")).To(BeAnExistingFile())
 		})
@@ -103,60 +95,6 @@ var _ = Describe("Depot", func() {
 					Options:     []string{"bind"},
 				},
 			))
-		})
-
-		Context("when /etc/hosts does not exist in the container rootFS", func() {
-			BeforeEach(func() {
-				Expect(os.Remove(filepath.Join(rootFSPath, "etc", "hosts"))).To(Succeed())
-			})
-
-			It("should serialize the container config to the directory without a mount for /etc/hosts", func() {
-				Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
-				Expect(bundleSaver.SaveCallCount()).To(Equal(1))
-				actualBundle, _ := bundleSaver.SaveArgsForCall(0)
-				Expect(actualBundle.Mounts()).To(ConsistOf(
-					specs.Mount{
-						Destination: "/etc/resolv.conf",
-						Source:      filepath.Join(depotDir, "aardvaark", "resolv.conf"),
-						Type:        "bind",
-						Options:     []string{"bind"},
-					},
-				))
-			})
-		})
-
-		Context("when /etc/resolv.conf does not exist in the container rootFS", func() {
-			BeforeEach(func() {
-				Expect(os.Remove(filepath.Join(rootFSPath, "etc", "resolv.conf"))).To(Succeed())
-			})
-
-			It("should serialize the container config to the directory without a mount for /etc/resolv.conf", func() {
-				Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
-				Expect(bundleSaver.SaveCallCount()).To(Equal(1))
-				actualBundle, _ := bundleSaver.SaveArgsForCall(0)
-				Expect(actualBundle.Mounts()).To(ConsistOf(
-					specs.Mount{
-						Destination: "/etc/hosts",
-						Source:      filepath.Join(depotDir, "aardvaark", "hosts"),
-						Type:        "bind",
-						Options:     []string{"bind"},
-					},
-				))
-			})
-		})
-
-		Context("when neither /etc/resolv.conf nor /etc/hosts exist in the container rootFS", func() {
-			BeforeEach(func() {
-				Expect(os.Remove(filepath.Join(rootFSPath, "etc", "resolv.conf"))).To(Succeed())
-				Expect(os.Remove(filepath.Join(rootFSPath, "etc", "hosts"))).To(Succeed())
-			})
-
-			It("should serialize the container config to the directory without any mounts", func() {
-				Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
-				Expect(bundleSaver.SaveCallCount()).To(Equal(1))
-				actualBundle, _ := bundleSaver.SaveArgsForCall(0)
-				Expect(actualBundle.Mounts()).To(BeEmpty())
-			})
 		})
 
 		It("destroys the container directory if creation fails", func() {
@@ -212,11 +150,3 @@ var _ = Describe("Depot", func() {
 		})
 	})
 })
-
-func touchFile(path string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0600)
-	if err != nil {
-		return err
-	}
-	return file.Close()
-}

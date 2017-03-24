@@ -52,24 +52,20 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle goci.Bnd
 		return err
 	}
 
-	mounts := []specs.Mount{}
-	if _, err := os.Stat(filepath.Join(bundle.RootFS(), "etc", "hosts")); err == nil {
-		mounts = append(mounts, specs.Mount{
+	mounts := []specs.Mount{
+		{
 			Destination: "/etc/hosts",
 			Source:      filepath.Join(containerDir, "hosts"),
 			Type:        "bind",
 			Options:     []string{"bind"},
-		})
-	}
-	if _, err := os.Stat(filepath.Join(bundle.RootFS(), "etc", "resolv.conf")); err == nil {
-		mounts = append(mounts, specs.Mount{
+		},
+		{
 			Destination: "/etc/resolv.conf",
 			Source:      filepath.Join(containerDir, "resolv.conf"),
 			Type:        "bind",
 			Options:     []string{"bind"},
-		})
+		},
 	}
-
 	bundle = bundle.WithMounts(mounts...)
 
 	if err := d.bundleSaver.Save(bundle, containerDir); err != nil {

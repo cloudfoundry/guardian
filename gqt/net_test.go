@@ -6,8 +6,10 @@ import (
 	"io"
 	"io/ioutil"
 	"net"
+	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -35,6 +37,20 @@ var _ = Describe("Networking", func() {
 
 		extraProperties garden.Properties
 	)
+
+	createRootFSWithoutHostsAndResolv := func() string {
+		rootFSWithoutHostsAndResolv, err := ioutil.TempDir("", "net-test")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chmod(rootFSWithoutHostsAndResolv, 0755)).To(Succeed())
+		copyRootFSCmd := exec.Command("cp", "-r", fmt.Sprintf("%s/.", os.Getenv("GARDEN_TEST_ROOTFS")), rootFSWithoutHostsAndResolv)
+		copyRootFSCmd.Stdout = GinkgoWriter
+		copyRootFSCmd.Stderr = GinkgoWriter
+		Expect(copyRootFSCmd.Run()).To(Succeed())
+		Expect(os.Chmod(filepath.Join(rootFSWithoutHostsAndResolv, "tmp"), 0777)).To(Succeed())
+		Expect(os.Remove(filepath.Join(rootFSWithoutHostsAndResolv, "etc", "hosts"))).To(Succeed())
+		Expect(os.Remove(filepath.Join(rootFSWithoutHostsAndResolv, "etc", "resolv.conf"))).To(Succeed())
+		return rootFSWithoutHostsAndResolv
+	}
 
 	BeforeEach(func() {
 		args = []string{}
@@ -118,15 +134,23 @@ var _ = Describe("Networking", func() {
 		var (
 			longHandle          string = "too-looooong-haaaaaaaaaaaaaannnnnndddle-1234456787889"
 			longHandleContainer garden.Container
+			rootFSPath          string
 		)
+
+		BeforeEach(func() {
+			rootFSPath = ""
+		})
 
 		JustBeforeEach(func() {
 			var err error
-			longHandleContainer, err = client.Create(garden.ContainerSpec{Handle: longHandle})
+			longHandleContainer, err = client.Create(garden.ContainerSpec{
+				Handle:     longHandle,
+				RootFSPath: rootFSPath,
+			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("should lookup container ip using last 49 chars of handle as hostname", func() {
+		itShouldLookupContainerUsingHandle := func() {
 			buff := gbytes.NewBuffer()
 			p, err := longHandleContainer.Run(garden.ProcessSpec{
 				Path: "cat",
@@ -144,6 +168,27 @@ var _ = Describe("Networking", func() {
 			hostsFile := string(buff.Contents())
 			Expect(hostsFile).NotTo(ContainSubstring(longHandle))
 			Expect(hostsFile).To(ContainSubstring(longHandle[len(longHandle)-49:]))
+		}
+
+		It("should lookup container ip using last 49 chars of handle as hostname", func() {
+			itShouldLookupContainerUsingHandle()
+		})
+
+		Context("when the rootFS does not contain /etc/hosts", func() {
+			var rootFSWithoutHostsAndResolv string
+
+			BeforeEach(func() {
+				rootFSWithoutHostsAndResolv = createRootFSWithoutHostsAndResolv()
+				rootFSPath = fmt.Sprintf("raw://%s", rootFSWithoutHostsAndResolv)
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
+			})
+
+			It("adds it and an entry with container IP and truncated handle", func() {
+				itShouldLookupContainerUsingHandle()
+			})
 		})
 	})
 
@@ -468,6 +513,23 @@ var _ = Describe("Networking", func() {
 				Expect(getNameservers(container)).To(Equal([]string{"1.2.3.4", "1.2.3.5"}))
 			})
 
+			Context("when the rootFS does not contain /etc/resolv.conf", func() {
+				var rootFSWithoutHostsAndResolv string
+
+				BeforeEach(func() {
+					rootFSWithoutHostsAndResolv = createRootFSWithoutHostsAndResolv()
+					containerSpec.RootFSPath = fmt.Sprintf("raw://%s", rootFSWithoutHostsAndResolv)
+				})
+
+				AfterEach(func() {
+					Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
+				})
+
+				It("sets the nameserver entries in the container's /etc/resolv.conf to the values supplied by the network plugin", func() {
+					Expect(getNameservers(container)).To(Equal([]string{"1.2.3.4", "1.2.3.5"}))
+				})
+			})
+
 			It("executes the network plugin during container destroy", func() {
 				containerHandle := container.Handle()
 
@@ -789,6 +851,24 @@ var _ = Describe("Networking", func() {
 				Expect(nameservers).To(ContainElement("1.2.3.4"))
 			})
 
+			Context("when the rootFS doesn't contain /etc/resolv.conf", func() {
+				var rootFSWithoutHostsAndResolv string
+
+				BeforeEach(func() {
+					rootFSWithoutHostsAndResolv = createRootFSWithoutHostsAndResolv()
+					containerSpec.RootFSPath = fmt.Sprintf("raw://%s", rootFSWithoutHostsAndResolv)
+				})
+
+				AfterEach(func() {
+					Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
+				})
+
+				It("creates it and adds the IP address to the container's /etc/resolv.conf", func() {
+					nameservers := getNameservers(container)
+					Expect(nameservers).To(ContainElement("1.2.3.4"))
+				})
+			})
+
 			It("strips the host's DNS servers from the container's /etc/resolv.conf", func() {
 				nameservers := getNameservers(container)
 
@@ -1031,7 +1111,8 @@ func readResolvConf(container garden.Container) string {
 		Path: "cat",
 		Args: []string{"/etc/resolv.conf"},
 	}, garden.ProcessIO{
-		Stdout: stdout,
+		Stdout: io.MultiWriter(stdout, GinkgoWriter),
+		Stderr: GinkgoWriter,
 	})
 	Expect(err).ToNot(HaveOccurred())
 

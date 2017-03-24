@@ -21,14 +21,15 @@ import (
 
 var _ = Describe("Rundmc", func() {
 	var (
-		fakeDepot        *fakes.FakeDepot
-		fakeBundler      *fakes.FakeBundleGenerator
-		fakeBundleLoader *fakes.FakeBundleLoader
-		fakeOCIRuntime   *fakes.FakeOCIRuntime
-		fakeNstarRunner  *fakes.FakeNstarRunner
-		fakeStopper      *fakes.FakeStopper
-		fakeEventStore   *fakes.FakeEventStore
-		fakeStateStore   *fakes.FakeStateStore
+		fakeDepot             *fakes.FakeDepot
+		fakeBundler           *fakes.FakeBundleGenerator
+		fakeBundleLoader      *fakes.FakeBundleLoader
+		fakeOCIRuntime        *fakes.FakeOCIRuntime
+		fakeNstarRunner       *fakes.FakeNstarRunner
+		fakeStopper           *fakes.FakeStopper
+		fakeEventStore        *fakes.FakeEventStore
+		fakeStateStore        *fakes.FakeStateStore
+		fakeRootfsFileCreator *fakes.FakeRootfsFileCreator
 
 		logger        lager.Logger
 		containerizer *rundmc.Containerizer
@@ -43,13 +44,14 @@ var _ = Describe("Rundmc", func() {
 		fakeStopper = new(fakes.FakeStopper)
 		fakeEventStore = new(fakes.FakeEventStore)
 		fakeStateStore = new(fakes.FakeStateStore)
+		fakeRootfsFileCreator = new(fakes.FakeRootfsFileCreator)
 		logger = lagertest.NewTestLogger("test")
 
 		fakeDepot.LookupStub = func(_ lager.Logger, handle string) (string, error) {
 			return "/path/to/" + handle, nil
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore)
+		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator)
 	})
 
 	Describe("Create", func() {
@@ -91,11 +93,26 @@ var _ = Describe("Rundmc", func() {
 			Expect(id).To(Equal("exuberant!"))
 		})
 
-		It("should prepare the root file system", func() {
+		It("should prepare the root file system by creating mount points", func() {
 			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
-				Handle: "exuberant!",
+				Handle:     "exuberant!",
+				RootFSPath: "some-rootfs",
 			})).To(Succeed())
 
+			Expect(fakeRootfsFileCreator.CreateFilesCallCount()).To(Equal(1))
+			rootfsPath, createdFiles := fakeRootfsFileCreator.CreateFilesArgsForCall(0)
+			Expect(rootfsPath).To(Equal("some-rootfs"))
+			Expect(createdFiles).To(ConsistOf("/etc/hosts", "/etc/resolv.conf"))
+		})
+
+		Context("when creating files in the rootfs fails", func() {
+			BeforeEach(func() {
+				fakeRootfsFileCreator.CreateFilesReturns(errors.New("file-create-fail"))
+			})
+
+			It("returns the error", func() {
+				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{})).To(MatchError("file-create-fail"))
+			})
 		})
 
 		Context("when the container creation fails", func() {

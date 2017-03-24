@@ -828,7 +828,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPa
 
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver("/run/runc"), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore)
+	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{})
 }
 
 func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {

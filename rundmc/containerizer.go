@@ -21,6 +21,7 @@ import (
 //go:generate counterfeiter . BundleLoader
 //go:generate counterfeiter . Stopper
 //go:generate counterfeiter . StateStore
+//go:generate counterfeiter . RootfsFileCreator
 
 type Depot interface {
 	Create(log lager.Logger, handle string, bundle goci.Bndl) error
@@ -67,28 +68,34 @@ type StateStore interface {
 	IsStopped(handle string) bool
 }
 
-// Containerizer knows how to manage a depot of container bundles
-type Containerizer struct {
-	depot   Depot
-	bundler BundleGenerator
-	loader  BundleLoader
-	runtime OCIRuntime
-	stopper Stopper
-	nstar   NstarRunner
-	events  EventStore
-	states  StateStore
+type RootfsFileCreator interface {
+	CreateFiles(rootFSPath string, pathsToCreate ...string) error
 }
 
-func New(depot Depot, bundler BundleGenerator, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore) *Containerizer {
+// Containerizer knows how to manage a depot of container bundles
+type Containerizer struct {
+	depot             Depot
+	bundler           BundleGenerator
+	loader            BundleLoader
+	runtime           OCIRuntime
+	stopper           Stopper
+	nstar             NstarRunner
+	events            EventStore
+	states            StateStore
+	rootfsFileCreator RootfsFileCreator
+}
+
+func New(depot Depot, bundler BundleGenerator, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator) *Containerizer {
 	return &Containerizer{
-		depot:   depot,
-		bundler: bundler,
-		runtime: runtime,
-		loader:  loader,
-		nstar:   nstarRunner,
-		stopper: stopper,
-		events:  events,
-		states:  states,
+		depot:             depot,
+		bundler:           bundler,
+		runtime:           runtime,
+		loader:            loader,
+		nstar:             nstarRunner,
+		stopper:           stopper,
+		events:            events,
+		states:            states,
+		rootfsFileCreator: rootfsFileCreator,
 	}
 }
 
@@ -98,6 +105,11 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 
 	log.Info("start")
 	defer log.Info("finished")
+
+	if err := c.rootfsFileCreator.CreateFiles(spec.RootFSPath, "/etc/hosts", "/etc/resolv.conf"); err != nil {
+		log.Error("create-rootfs-mountpoint-files-failed", err)
+		return err
+	}
 
 	if err := c.depot.Create(log, spec.Handle, c.bundler.Generate(spec)); err != nil {
 		log.Error("depot-create-failed", err)
