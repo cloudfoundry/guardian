@@ -75,7 +75,7 @@ var _ = Describe("Create with local images", func() {
 
 	Context("when the --json flag is provided", func() {
 		It("outputs a json with the correct `rootfs` key", func() {
-			output, err := Runner.CreateJson(groot.CreateSpec{
+			output, err := Runner.WithJson().CreateOutput(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 			})
@@ -87,7 +87,7 @@ var _ = Describe("Create with local images", func() {
 		})
 
 		It("outputs a json with empty config key", func() {
-			output, err := Runner.CreateJson(groot.CreateSpec{
+			output, err := Runner.WithJson().CreateOutput(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 			})

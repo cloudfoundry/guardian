@@ -570,7 +570,7 @@ var _ = Describe("Builder", func() {
 		})
 
 		Describe("WithJson", func() {
-			Context("when no-clean is set, and clean is not set", func() {
+			Context("when no-json is set, and json is not set", func() {
 				BeforeEach(func() {
 					cfg.Create.Json = true
 				})
@@ -583,7 +583,7 @@ var _ = Describe("Builder", func() {
 				})
 			})
 
-			Context("when no-clean is not set, and clean is set", func() {
+			Context("when no-json is not set, and json is set", func() {
 				BeforeEach(func() {
 					cfg.Create.Json = false
 				})
@@ -596,7 +596,7 @@ var _ = Describe("Builder", func() {
 				})
 			})
 
-			Context("when no-clean is not set, and clean is not set", func() {
+			Context("when no-json is not set, and json is not set", func() {
 				BeforeEach(func() {
 					cfg.Create.Json = true
 				})

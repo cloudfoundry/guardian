@@ -9,22 +9,19 @@ import (
 )
 
 func (r Runner) Create(spec groot.CreateSpec) (groot.Image, error) {
-	args := r.makeCreateArgs(spec)
-	imagePath, err := r.RunSubcommand("create", args...)
+	output, err := r.CreateOutput(spec)
 	if err != nil {
 		return groot.Image{}, err
 	}
 
 	return groot.Image{
-		Path:       imagePath,
-		RootFSPath: filepath.Join(imagePath, "rootfs"),
+		Path:       output,
+		RootFSPath: filepath.Join(output, "rootfs"),
 	}, nil
 }
 
-func (r Runner) CreateJson(spec groot.CreateSpec) (string, error) {
+func (r Runner) CreateOutput(spec groot.CreateSpec) (string, error) {
 	args := r.makeCreateArgs(spec)
-	args = append([]string{"--json"}, args...)
-
 	output, err := r.RunSubcommand("create", args...)
 	if err != nil {
 		return "", err

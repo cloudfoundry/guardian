@@ -99,7 +99,7 @@ var _ = Describe("Create with remote images", func() {
 
 		Context("when the --json flag is provided", func() {
 			It("outputs a json with the correct `rootfs` key", func() {
-				output, err := Runner.CreateJson(groot.CreateSpec{
+				output, err := Runner.WithJson().CreateOutput(groot.CreateSpec{
 					BaseImage: "docker:///busybox:1.26.2",
 					ID:        "random-id",
 					UIDMappings: []groot.IDMappingSpec{
@@ -119,7 +119,7 @@ var _ = Describe("Create with remote images", func() {
 			})
 
 			It("outputs a json with the correct `config` key", func() {
-				output, err := Runner.CreateJson(groot.CreateSpec{
+				output, err := Runner.WithJson().CreateOutput(groot.CreateSpec{
 					BaseImage: "docker:///busybox:1.26.2",
 					ID:        "random-id",
 					UIDMappings: []groot.IDMappingSpec{

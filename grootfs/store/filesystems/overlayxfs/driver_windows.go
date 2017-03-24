@@ -32,8 +32,8 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 	return nil, errors.New("Not compatible with windows")
 }
 
-func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
-	return errors.New("Not compatible with windows")
+func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (image_cloner.MountJson, error) {
+	return image_cloner.MountJson{}, errors.New("Not compatible with windows")
 }
 
 func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {

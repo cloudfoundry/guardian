@@ -25,6 +25,7 @@ type Config struct {
 type Create struct {
 	ExcludeImageFromQuota bool     `yaml:"exclude_image_from_quota"`
 	WithClean             bool     `yaml:"with_clean"`
+	SkipMount             bool     `yaml:"skip_mount"`
 	Json                  bool     `yaml:"json"`
 	DiskLimitSizeBytes    int64    `yaml:"disk_limit_size_bytes"`
 	InsecureRegistries    []string `yaml:"insecure_registries"`

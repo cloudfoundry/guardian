@@ -15,13 +15,22 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
-type ImageJson struct {
+type ImageInfo struct {
 	Rootfs string         `json:"rootfs"`
 	Config *specsv1.Image `json:"config,omitempty"`
+	Mount  *MountInfo     `json:"mount,omitempty"`
+}
+
+type MountInfo struct {
+	Destination string   `json:"destination"`
+	Type        string   `json:"type"`
+	Source      string   `json:"source"`
+	Options     []string `json:"options"`
 }
 
 type ImageDriverSpec struct {
 	BaseVolumeIDs      []string
+	SkipMount          bool
 	ImagePath          string
 	DiskLimit          int64
 	ExclusiveDiskLimit bool
@@ -29,7 +38,7 @@ type ImageDriverSpec struct {
 
 //go:generate counterfeiter . ImageDriver
 type ImageDriver interface {
-	CreateImage(logger lager.Logger, spec ImageDriverSpec) error
+	CreateImage(logger lager.Logger, spec ImageDriverSpec) (MountInfo, error)
 	DestroyImage(logger lager.Logger, path string) error
 	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
 }
@@ -66,12 +75,10 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	image, err := b.createImage(spec.ID, spec.BaseImage)
-	if err != nil {
-		logger.Error("creating-image-object", err)
-		return groot.Image{}, errorspkg.Wrap(err, "creating image object")
-	}
+	imagePath := b.imagePath(spec.ID)
+	imageRootFSPath := filepath.Join(imagePath, "rootfs")
 
+	var err error
 	defer func() {
 		if err != nil {
 			log := logger.Session("create-failed-cleaning-up", lager.Data{
@@ -82,47 +89,59 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 			log.Info("starting")
 			defer log.Info("ending")
 
-			if err = b.imageDriver.DestroyImage(logger, image.Path); err != nil {
-				log.Error("destroying-rootfs-snapshot", err)
+			if err = b.imageDriver.DestroyImage(logger, imagePath); err != nil {
+				log.Error("destroying-rootfs-image", err)
 			}
 
-			if err = b.deleteImageDir(image.Path); err != nil {
+			if err = b.deleteImageDir(imagePath); err != nil {
 				log.Error("deleting-image-path", err)
 			}
 		}
 	}()
 
-	if err = os.Mkdir(image.Path, 0700); err != nil {
+	if err = os.Mkdir(imagePath, 0700); err != nil {
 		return groot.Image{}, errorspkg.Wrap(err, "making image path")
 	}
 
-	if err = b.writeBaseImageJSON(logger, image, spec.BaseImage); err != nil {
+	if err = b.writeBaseImageJSON(logger, imagePath, spec.BaseImage); err != nil {
 		logger.Error("writing-image-json-failed", err)
 		return groot.Image{}, errorspkg.Wrap(err, "creating image.json")
 	}
 
 	imageDriverSpec := ImageDriverSpec{
 		BaseVolumeIDs:      spec.BaseVolumeIDs,
-		ImagePath:          image.Path,
+		SkipMount:          spec.SkipMount,
+		ImagePath:          imagePath,
 		DiskLimit:          spec.DiskLimit,
 		ExclusiveDiskLimit: spec.ExcludeBaseImageFromQuota,
 	}
 
-	if err = b.imageDriver.CreateImage(logger, imageDriverSpec); err != nil {
+	var mountJson MountInfo
+	if mountJson, err = b.imageDriver.CreateImage(logger, imageDriverSpec); err != nil {
 		logger.Error("creating-image-failed", err, lager.Data{"imageDriverSpec": imageDriverSpec})
 		return groot.Image{}, errorspkg.Wrap(err, "creating image")
 	}
 
 	if err := b.setOwnership(spec,
-		image.Path,
-		filepath.Join(image.Path, "image.json"),
-		image.RootFSPath,
+		imagePath,
+		filepath.Join(imagePath, "image.json"),
+		imageRootFSPath,
 	); err != nil {
 		logger.Error("setting-permission-failed", err, lager.Data{"imageDriverSpec": imageDriverSpec})
 		return groot.Image{}, err
 	}
 
-	return image, nil
+	imageJson, err := b.imageJson(imageRootFSPath, spec.BaseImage, mountJson, spec.SkipMount)
+	if err != nil {
+		logger.Error("creating-image-object", err)
+		return groot.Image{}, errorspkg.Wrap(err, "creating image object")
+	}
+
+	return groot.Image{
+		Path:       imagePath,
+		RootFSPath: imageRootFSPath,
+		Json:       imageJson,
+	}, nil
 }
 
 func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
@@ -137,7 +156,7 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 
 	imagePath := b.imagePath(id)
 	if err := b.imageDriver.DestroyImage(logger, imagePath); err != nil {
-		return errorspkg.Wrap(err, "destroying snapshot")
+		return errorspkg.Wrap(err, "destroying image")
 	}
 
 	if err := b.deleteImageDir(imagePath); err != nil {
@@ -184,12 +203,12 @@ func (b *ImageCloner) deleteImageDir(imagePath string) error {
 
 var OF = os.OpenFile
 
-func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, image groot.Image, baseImage specsv1.Image) error {
+func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, baseImage specsv1.Image) error {
 	logger = logger.Session("writing-image-json")
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	imageJsonPath := filepath.Join(image.Path, "image.json")
+	imageJsonPath := filepath.Join(imagePath, "image.json")
 	imageJsonFile, err := OF(imageJsonPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
@@ -202,30 +221,27 @@ func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, image groot.Image,
 	return nil
 }
 
-func (b *ImageCloner) createImage(id string, baseImage specsv1.Image) (groot.Image, error) {
-	imagePath := b.imagePath(id)
-	rootfsPath := path.Join(imagePath, "rootfs")
-
+func (b *ImageCloner) imageJson(rootfsPath string, baseImage specsv1.Image, mountJson MountInfo, skipMount bool) (string, error) {
 	var imageConfig *specsv1.Image
 	if !reflect.DeepEqual(baseImage, specsv1.Image{}) {
 		imageConfig = &baseImage
 	}
 
-	imageJson := ImageJson{
+	imageJson := ImageInfo{
 		Rootfs: rootfsPath,
 		Config: imageConfig,
 	}
 
-	jsonBytes, err := json.Marshal(&imageJson)
-	if err != nil {
-		return groot.Image{}, err
+	if skipMount {
+		imageJson.Mount = &mountJson
 	}
 
-	return groot.Image{
-		Json:       string(jsonBytes),
-		Path:       imagePath,
-		RootFSPath: rootfsPath,
-	}, nil
+	jsonBytes, err := json.Marshal(&imageJson)
+	if err != nil {
+		return "", err
+	}
+
+	return string(jsonBytes), nil
 }
 
 func (b *ImageCloner) imagePath(id string) string {

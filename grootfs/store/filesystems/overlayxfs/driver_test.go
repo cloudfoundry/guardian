@@ -93,7 +93,8 @@ var _ = Describe("Driver", func() {
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.WorkDir)).ToNot(BeAnExistingFile())
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).ToNot(BeAnExistingFile())
 
-			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+			_, err := driver.CreateImage(logger, spec)
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).To(BeADirectory())
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.WorkDir)).To(BeADirectory())
@@ -103,7 +104,8 @@ var _ = Describe("Driver", func() {
 		It("creates a rootfs with the same files as the volume", func() {
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).ToNot(BeAnExistingFile())
 
-			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+			_, err := driver.CreateImage(logger, spec)
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).To(BeADirectory())
 
@@ -122,6 +124,21 @@ var _ = Describe("Driver", func() {
 			Expect(contents).To(BeEquivalentTo("in-a-folder-1"))
 		})
 
+		It("returns a mountJson object", func() {
+			mountJson, err := driver.CreateImage(logger, spec)
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(mountJson.Type).To(Equal("overlay"))
+			Expect(mountJson.Source).To(Equal("overlay"))
+			Expect(mountJson.Destination).To(Equal(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)))
+			Expect(mountJson.Options).To(HaveLen(1))
+			Expect(mountJson.Options[0]).To(MatchRegexp(fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s",
+				filepath.Join(StorePath, overlayxfs.LinksDirName, ".*"),
+				filepath.Join(spec.ImagePath, overlayxfs.UpperDir),
+				filepath.Join(spec.ImagePath, overlayxfs.WorkDir),
+			)))
+		})
+
 		Context("multi-layer image", func() {
 			BeforeEach(func() {
 				spec.BaseVolumeIDs = []string{layer1ID, layer2ID}
@@ -130,7 +147,8 @@ var _ = Describe("Driver", func() {
 			It("creates a rootfs with files correctly composed from the layer volumes", func() {
 				Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).ToNot(BeAnExistingFile())
 
-				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).ToNot(HaveOccurred())
 
 				Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).To(BeADirectory())
 
@@ -151,7 +169,8 @@ var _ = Describe("Driver", func() {
 		})
 
 		It("uses the correct permissions to the internal folders", func() {
-			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+			_, err := driver.CreateImage(logger, spec)
+			Expect(err).ToNot(HaveOccurred())
 
 			stat, err := os.Stat(filepath.Join(spec.ImagePath, overlayxfs.UpperDir))
 			Expect(err).NotTo(HaveOccurred())
@@ -164,6 +183,34 @@ var _ = Describe("Driver", func() {
 			stat, err = os.Stat(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+		})
+
+		Context("when SkipMount is true", func() {
+			BeforeEach(func() {
+				spec.SkipMount = true
+			})
+
+			It("does not mount the rootfs", func() {
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).ToNot(HaveOccurred())
+				rootfsPath := filepath.Join(spec.ImagePath, "rootfs")
+				contents, err := ioutil.ReadDir(rootfsPath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(contents).To(BeEmpty())
+			})
+
+			It("does still create all the subdirectoies", func() {
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).ToNot(BeAnExistingFile())
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.WorkDir)).ToNot(BeAnExistingFile())
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).ToNot(BeAnExistingFile())
+
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).To(BeADirectory())
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.WorkDir)).To(BeADirectory())
+				Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).To(BeADirectory())
+			})
 		})
 
 		Context("image_info", func() {
@@ -183,7 +230,8 @@ var _ = Describe("Driver", func() {
 
 			It("creates a image info file with the total base volume size", func() {
 				Expect(filepath.Join(spec.ImagePath, "image_info")).ToNot(BeAnExistingFile())
-				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(filepath.Join(spec.ImagePath, "image_info")).To(BeAnExistingFile())
 
 				contents, err := ioutil.ReadFile(filepath.Join(spec.ImagePath, "image_info"))
@@ -195,7 +243,8 @@ var _ = Describe("Driver", func() {
 
 		It("doesn't apply any quota", func() {
 			spec.DiskLimit = 0
-			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+			_, err := driver.CreateImage(logger, spec)
+			Expect(err).ToNot(HaveOccurred())
 
 			Expect(logger).To(ContainSequence(
 				Info(
@@ -218,12 +267,14 @@ var _ = Describe("Driver", func() {
 				backingFsBlockDevPath := filepath.Join(StorePath, "backingFsBlockDev")
 
 				Expect(backingFsBlockDevPath).ToNot(BeAnExistingFile())
-				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).ToNot(HaveOccurred())
 				Expect(backingFsBlockDevPath).To(BeAnExistingFile())
 			})
 
 			It("can overwrite files from the lowerdirs", func() {
-				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).ToNot(HaveOccurred())
 				imageRootfsPath := filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)
 
 				dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", imageRootfsPath), "count=5", "bs=1M")
@@ -233,7 +284,8 @@ var _ = Describe("Driver", func() {
 			})
 
 			It("allows images to have independent quotas", func() {
-				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).ToNot(HaveOccurred())
 				imageRootfsPath := filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)
 
 				dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file-1", imageRootfsPath), "count=6", "bs=1M")
@@ -245,7 +297,8 @@ var _ = Describe("Driver", func() {
 				anotherImagePath, err := ioutil.TempDir(filepath.Join(StorePath, store.ImageDirName), "another-image")
 				Expect(err).NotTo(HaveOccurred())
 				anotherSpec.ImagePath = anotherImagePath
-				Expect(driver.CreateImage(logger, anotherSpec)).To(Succeed())
+				_, err = driver.CreateImage(logger, anotherSpec)
+				Expect(err).ToNot(HaveOccurred())
 				anotherImageRootfsPath := filepath.Join(anotherImagePath, overlayxfs.RootfsDir)
 
 				dd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file-2", anotherImageRootfsPath), "count=6", "bs=1M")
@@ -263,12 +316,14 @@ var _ = Describe("Driver", func() {
 				Context("when the DiskLimit is smaller than VolumeSize", func() {
 					It("returns an error", func() {
 						spec.DiskLimit = 1024 * 1024 * 3
-						Expect(driver.CreateImage(logger, spec)).To(MatchError(ContainSubstring("disk limit is smaller than volume size")))
+						_, err := driver.CreateImage(logger, spec)
+						Expect(err).To(MatchError(ContainSubstring("disk limit is smaller than volume size")))
 					})
 				})
 
 				It("enforces the quota in the image", func() {
-					Expect(driver.CreateImage(logger, spec)).To(Succeed())
+					_, err := driver.CreateImage(logger, spec)
+					Expect(err).ToNot(HaveOccurred())
 					imageRootfsPath := filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)
 
 					dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file-1", imageRootfsPath), "count=5", "bs=1M")
@@ -292,12 +347,14 @@ var _ = Describe("Driver", func() {
 				Context("when the DiskLimit is smaller than VolumeSize", func() {
 					It("succeeds", func() {
 						spec.DiskLimit = 1024 * 1024 * 3
-						Expect(driver.CreateImage(logger, spec)).To(Succeed())
+						_, err := driver.CreateImage(logger, spec)
+						Expect(err).ToNot(HaveOccurred())
 					})
 				})
 
 				It("enforces the quota in the image", func() {
-					Expect(driver.CreateImage(logger, spec)).To(Succeed())
+					_, err := driver.CreateImage(logger, spec)
+					Expect(err).ToNot(HaveOccurred())
 					imageRootfsPath := filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)
 
 					dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file-1", imageRootfsPath), "count=8", "bs=1M")
@@ -317,7 +374,7 @@ var _ = Describe("Driver", func() {
 		Context("when base volume folder does not exist", func() {
 			It("returns an error", func() {
 				spec.BaseVolumeIDs = []string{"not-real"}
-				err := driver.CreateImage(logger, spec)
+				_, err := driver.CreateImage(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring("base volume path does not exist")))
 			})
 		})
@@ -325,7 +382,7 @@ var _ = Describe("Driver", func() {
 		Context("when image path folder doesn't exist", func() {
 			It("returns an error", func() {
 				spec.ImagePath = "/not-real"
-				err := driver.CreateImage(logger, spec)
+				_, err := driver.CreateImage(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring("image path does not exist")))
 			})
 		})
@@ -333,7 +390,7 @@ var _ = Describe("Driver", func() {
 		Context("when creating the upper folder fails", func() {
 			It("returns an error", func() {
 				Expect(os.MkdirAll(filepath.Join(spec.ImagePath, overlayxfs.UpperDir), 0755)).To(Succeed())
-				err := driver.CreateImage(logger, spec)
+				_, err := driver.CreateImage(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring("creating upperdir folder")))
 			})
 		})
@@ -341,7 +398,7 @@ var _ = Describe("Driver", func() {
 		Context("when creating the workdir folder fails", func() {
 			It("returns an error", func() {
 				Expect(os.MkdirAll(filepath.Join(spec.ImagePath, overlayxfs.WorkDir), 0755)).To(Succeed())
-				err := driver.CreateImage(logger, spec)
+				_, err := driver.CreateImage(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring("creating workdir folder")))
 			})
 		})
@@ -349,7 +406,7 @@ var _ = Describe("Driver", func() {
 		Context("when creating the rootfs folder fails", func() {
 			It("returns an error", func() {
 				Expect(os.MkdirAll(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir), 0755)).To(Succeed())
-				err := driver.CreateImage(logger, spec)
+				_, err := driver.CreateImage(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring("creating rootfs folder")))
 			})
 		})
@@ -361,7 +418,8 @@ var _ = Describe("Driver", func() {
 			_, err := driver.CreateVolume(logger, "parent-id", volumeID)
 			Expect(err).NotTo(HaveOccurred())
 			spec.BaseVolumeIDs = []string{volumeID}
-			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+			_, err = driver.CreateImage(logger, spec)
+			Expect(err).ToNot(HaveOccurred())
 		})
 
 		It("removes upper, work and rootfs dir from the image path", func() {
@@ -399,7 +457,8 @@ var _ = Describe("Driver", func() {
 
 			spec.BaseVolumeIDs = []string{volumeID}
 			spec.DiskLimit = 10 * 1024 * 1024
-			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+			_, err = driver.CreateImage(logger, spec)
+			Expect(err).ToNot(HaveOccurred())
 
 			dd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/rootfs/file-1", spec.ImagePath), "count=4", "bs=1M")
 			sess, err = gexec.Start(dd, GinkgoWriter, GinkgoWriter)
@@ -439,7 +498,8 @@ var _ = Describe("Driver", func() {
 				Expect(err).NotTo(HaveOccurred())
 				spec.DiskLimit = 0
 				spec.ImagePath = tmpDir
-				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+				_, err = driver.CreateImage(logger, spec)
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("returns an error", func() {

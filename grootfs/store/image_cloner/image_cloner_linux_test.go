@@ -36,8 +36,13 @@ var _ = Describe("Image", func() {
 		var err error
 		fakeImageDriver = new(image_clonerfakes.FakeImageDriver)
 
-		fakeImageDriver.CreateImageStub = func(_ lager.Logger, spec imageclonerpkg.ImageDriverSpec) error {
-			return os.Mkdir(filepath.Join(spec.ImagePath, "rootfs"), 0777)
+		fakeImageDriver.CreateImageStub = func(_ lager.Logger, spec imageclonerpkg.ImageDriverSpec) (imageclonerpkg.MountInfo, error) {
+			return imageclonerpkg.MountInfo{
+				Source:      "my-source",
+				Type:        "my-type",
+				Destination: "my-destination",
+				Options:     []string{"my-option"},
+			}, os.Mkdir(filepath.Join(spec.ImagePath, "rootfs"), 0777)
 		}
 
 		storePath, err = ioutil.TempDir("", "")
@@ -66,13 +71,14 @@ var _ = Describe("Image", func() {
 
 		It("returns a image Json", func() {
 			imageConfig := specsv1.Image{Created: time.Now()}
-			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig})
+			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, SkipMount: false})
 			Expect(err).NotTo(HaveOccurred())
 
-			var outputJson imageclonerpkg.ImageJson
+			var outputJson imageclonerpkg.ImageInfo
 			Expect(json.Unmarshal([]byte(image.Json), &outputJson)).To(Succeed())
 			Expect(outputJson.Rootfs).To(Equal(image.RootFSPath))
 			Expect(outputJson.Config.Created.Unix()).To(Equal(imageConfig.Created.Unix()))
+			Expect(outputJson.Mount).To(BeNil())
 		})
 
 		It("keeps the images in the same image directory", func() {
@@ -132,12 +138,28 @@ var _ = Describe("Image", func() {
 			Expect(imageJsonContent).To(Equal(baseImage))
 		})
 
+		Context("when skip mount is set", func() {
+			It("returns a image Json with mount information", func() {
+				imageConfig := specsv1.Image{Created: time.Now()}
+				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, SkipMount: true})
+				Expect(err).NotTo(HaveOccurred())
+
+				var outputJson imageclonerpkg.ImageInfo
+				Expect(json.Unmarshal([]byte(image.Json), &outputJson)).To(Succeed())
+				Expect(outputJson.Mount).ToNot(BeNil())
+				Expect(outputJson.Mount.Destination).To(Equal("my-destination"))
+				Expect(outputJson.Mount.Source).To(Equal("my-source"))
+				Expect(outputJson.Mount.Type).To(Equal("my-type"))
+				Expect(outputJson.Mount.Options).To(ConsistOf("my-option"))
+			})
+		})
+
 		Context("when the spec.BaseImage is empty", func() {
 			It("returns a image Json", func() {
 				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: specsv1.Image{}})
 				Expect(err).NotTo(HaveOccurred())
 
-				var outputJson imageclonerpkg.ImageJson
+				var outputJson imageclonerpkg.ImageInfo
 				Expect(json.Unmarshal([]byte(image.Json), &outputJson)).To(Succeed())
 				Expect(outputJson.Config).To(BeNil())
 			})
@@ -267,14 +289,14 @@ var _ = Describe("Image", func() {
 			})
 		})
 
-		Context("when creating the snapshot fails", func() {
+		Context("when creating the image fails", func() {
 			BeforeEach(func() {
-				fakeImageDriver.CreateImageReturns(errors.New("failed to create snapshot"))
+				fakeImageDriver.CreateImageReturns(imageclonerpkg.MountInfo{}, errors.New("failed to create image"))
 			})
 
 			It("returns an error", func() {
 				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id"})
-				Expect(err).To(MatchError(ContainSubstring("failed to create snapshot")))
+				Expect(err).To(MatchError(ContainSubstring("failed to create image")))
 			})
 
 			It("removes the image", func() {
@@ -362,7 +384,7 @@ var _ = Describe("Image", func() {
 			})
 		})
 
-		It("removes the snapshot", func() {
+		It("removes the image", func() {
 			err := imageCloner.Destroy(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 
@@ -370,14 +392,14 @@ var _ = Describe("Image", func() {
 			Expect(path).To(Equal(imagePath))
 		})
 
-		Context("when removing the snapshot fails", func() {
+		Context("when removing the image fails", func() {
 			BeforeEach(func() {
-				fakeImageDriver.DestroyImageReturns(errors.New("failed to remove snapshot"))
+				fakeImageDriver.DestroyImageReturns(errors.New("failed to remove image"))
 			})
 
 			It("returns an error", func() {
 				err := imageCloner.Destroy(logger, "some-id")
-				Expect(err).To(MatchError(ContainSubstring("failed to remove snapshot")))
+				Expect(err).To(MatchError(ContainSubstring("failed to remove image")))
 			})
 		})
 	})
@@ -474,7 +496,7 @@ var _ = Describe("Image", func() {
 			})
 		})
 
-		Context("when the snapshot driver fails", func() {
+		Context("when the image driver fails", func() {
 			It("returns an error", func() {
 				fakeImageDriver.FetchStatsReturns(groot.VolumeStats{}, errors.New("failed"))
 

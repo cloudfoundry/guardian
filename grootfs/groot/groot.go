@@ -55,6 +55,7 @@ type BaseImagePuller interface {
 
 type ImageSpec struct {
 	ID                        string
+	SkipMount                 bool
 	DiskLimit                 int64
 	ExcludeBaseImageFromQuota bool
 	BaseVolumeIDs             []string

@@ -139,14 +139,14 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 	return volumes, nil
 }
 
-func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
+func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (image_cloner.MountInfo, error) {
 	logger = logger.Session("overlayxfs-creating-image", lager.Data{"spec": spec})
 	logger.Info("starting")
 	defer logger.Info("ending")
 
 	if _, err := os.Stat(spec.ImagePath); os.IsNotExist(err) {
 		logger.Error("image-path-not-found", err)
-		return errorspkg.Wrap(err, "image path does not exist")
+		return image_cloner.MountInfo{}, errorspkg.Wrap(err, "image path does not exist")
 	}
 
 	baseVolumePaths := []string{}
@@ -155,7 +155,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	baseVolumePaths, baseVolumeSize, err := d.getLowerDirs(logger, spec.BaseVolumeIDs)
 	if err != nil {
 		logger.Error("generating-lowerdir-paths-failed", err)
-		return errorspkg.Wrap(err, "generating lowerdir paths failed")
+		return image_cloner.MountInfo{}, errorspkg.Wrap(err, "generating lowerdir paths failed")
 	}
 
 	upperDir := filepath.Join(spec.ImagePath, UpperDir)
@@ -163,39 +163,47 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	rootfsDir := filepath.Join(spec.ImagePath, RootfsDir)
 
 	if err := d.applyDiskLimit(logger, spec, baseVolumeSize); err != nil {
-		return errorspkg.Wrap(err, "applying disk limits")
+		return image_cloner.MountInfo{}, errorspkg.Wrap(err, "applying disk limits")
 	}
 
 	if err := os.Mkdir(upperDir, 0755); err != nil {
 		logger.Error("creating-upperdir-folder-failed", err)
-		return errorspkg.Wrap(err, "creating upperdir folder")
+		return image_cloner.MountInfo{}, errorspkg.Wrap(err, "creating upperdir folder")
 	}
 
 	if err := os.Mkdir(workDir, 0755); err != nil {
 		logger.Error("creating-workdir-folder-failed", err)
-		return errorspkg.Wrap(err, "creating workdir folder")
+		return image_cloner.MountInfo{}, errorspkg.Wrap(err, "creating workdir folder")
 	}
 
 	if err := os.Mkdir(rootfsDir, 0755); err != nil {
 		logger.Error("creating-rootfs-folder-failed", err)
-		return errorspkg.Wrap(err, "creating rootfs folder")
+		return image_cloner.MountInfo{}, errorspkg.Wrap(err, "creating rootfs folder")
 	}
 
 	if err := os.Chdir(d.storePath); err != nil {
-		return errorspkg.Wrap(err, "failed to change directory to the store path")
+		return image_cloner.MountInfo{}, errorspkg.Wrap(err, "failed to change directory to the store path")
 	}
-	mountData := fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", strings.Join(baseVolumePaths, ":"), upperDir, workDir)
-	if err := syscall.Mount("overlay", rootfsDir, "overlay", 0, mountData); err != nil {
-		logger.Error("mounting-overlay-to-rootfs-failed", err, lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
-		return errorspkg.Wrap(err, "mounting overlay")
+
+	if !spec.SkipMount {
+		mountData := d.mountData(baseVolumePaths, workDir, upperDir, false)
+		if err := syscall.Mount("overlay", rootfsDir, "overlay", 0, mountData); err != nil {
+			logger.Error("mounting-overlay-to-rootfs-failed", err, lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
+			return image_cloner.MountInfo{}, errorspkg.Wrap(err, "mounting overlay")
+		}
 	}
 
 	imageInfoFileName := filepath.Join(spec.ImagePath, imageInfoName)
 	if err := ioutil.WriteFile(imageInfoFileName, []byte(strconv.FormatInt(baseVolumeSize, 10)), 0600); err != nil {
-		return errorspkg.Wrapf(err, "writing image info %s", imageInfoFileName)
+		return image_cloner.MountInfo{}, errorspkg.Wrapf(err, "writing image info %s", imageInfoFileName)
 	}
 
-	return nil
+	return image_cloner.MountInfo{
+		Destination: rootfsDir,
+		Source:      "overlay",
+		Type:        "overlay",
+		Options:     []string{d.mountData(baseVolumePaths, workDir, upperDir, true)},
+	}, nil
 }
 
 func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
@@ -229,6 +237,17 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	}
 
 	return nil
+}
+
+func (d *Driver) mountData(lowerDirs []string, workDir, upperDir string, absolute bool) string {
+	if absolute {
+		for i, lowerDir := range lowerDirs {
+			lowerDirs[i] = filepath.Join(d.storePath, lowerDir)
+		}
+	}
+
+	lowerDirsOpt := strings.Join(lowerDirs, ":")
+	return fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", lowerDirsOpt, upperDir, workDir)
 }
 
 func (d *Driver) getLowerDirs(logger lager.Logger, volumeIDs []string) ([]string, int64, error) {

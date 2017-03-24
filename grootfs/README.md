@@ -144,6 +144,7 @@ create:
 | create.uid_mappings | UID mapping for image translation, e.g.: \<Namespace UID\>:\<Host UID\>:\<Size\> |
 | create.gid_mappings | GID mapping for image translation, e.g.: \<Namespace GID\>:\<Host GID\>:\<Size\> |
 | create.json | Format the output as JSON |
+| create.skip_mount | Skip rootfs mounting and return the mount information in the json output. Only usable with --json and overlay-xfs driver. |
 | clean.ignore\_images | Images to ignore during cleanup |
 | clean.threshold\_bytes | Disk usage of the store directory at which cleanup should trigger |
 
@@ -220,6 +221,28 @@ The json will contain:
   "config": {...}, # contents of image config, also writen to <image-path>/image.json
 }
 ```
+
+If your config file sets `create.skip_mount` to `true`, the json output will also
+contain the `mount` key:
+
+```
+  ...
+  "mount": {
+    "destination": "/path/to/rootfs",
+    "type": "overlay",
+    "source": "overlay",
+    "options": ["lowerdir=..."]
+  }
+  ...
+```
+
+Special notes about `create.skip_mount`:
+
+* It can only be set by config file
+* It can only be used with the `overlay-xfs` driver
+* It can only be used in combination with the `--json` (or `create.json` in config) option
+* This option exists so that GrootFS can be run as non-root. The mount information
+is compatible with [OCI container spec](https://github.com/opencontainers/runtime-spec/blob/master/config.md#example-linux).
 
 #### User/Group ID Mapping
 

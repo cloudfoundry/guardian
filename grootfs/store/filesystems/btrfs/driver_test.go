@@ -210,12 +210,14 @@ var _ = Describe("Btrfs", func() {
 		})
 
 		It("creates a btrfs snapshot", func() {
-			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+			_, err := driver.CreateImage(logger, spec)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(filepath.Join(spec.ImagePath, "rootfs", "a_file")).To(BeARegularFile())
 		})
 
 		It("logs the correct btrfs command", func() {
-			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+			_, err := driver.CreateImage(logger, spec)
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(logger).To(ContainSequence(
 				Debug(
@@ -228,13 +230,29 @@ var _ = Describe("Btrfs", func() {
 
 		It("doesn't apply any quota", func() {
 			spec.DiskLimit = 0
-			Expect(driver.CreateImage(logger, spec)).To(Succeed())
+			_, err := driver.CreateImage(logger, spec)
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(logger).To(ContainSequence(
 				Debug(
 					Message("btrfs.btrfs-creating-snapshot.applying-quotas.no-need-for-quotas"),
 				),
 			))
+		})
+
+		It("returns an empty mountJson object", func() {
+			mountJson, err := driver.CreateImage(logger, spec)
+			Expect(err).ToNot(HaveOccurred())
+			Expect(mountJson).To(Equal(image_cloner.MountInfo{}))
+		})
+
+		Context("when skip mount is true", func() {
+			It("returns an error", func() {
+				spec.SkipMount = true
+
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).To(MatchError(ContainSubstring("skip mount is not supported")))
+			})
 		})
 
 		Context("when disk limit is > 0", func() {
@@ -254,7 +272,8 @@ var _ = Describe("Btrfs", func() {
 				})
 
 				It("applies the disk limit", func() {
-					Expect(driver.CreateImage(logger, spec)).To(Succeed())
+					_, err := driver.CreateImage(logger, spec)
+					Expect(err).NotTo(HaveOccurred())
 
 					cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello")), "bs=1048576", "count=4")
 					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -285,7 +304,8 @@ var _ = Describe("Btrfs", func() {
 
 					It("will force drax to use that binary", func() {
 						driver = btrfs.NewDriver(btrfsBin.Name(), draxBinPath, storePath)
-						Expect(driver.CreateImage(logger, spec)).To(Succeed())
+						_, err := driver.CreateImage(logger, spec)
+						Expect(err).NotTo(HaveOccurred())
 
 						contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
 						Expect(err).NotTo(HaveOccurred())
@@ -299,7 +319,8 @@ var _ = Describe("Btrfs", func() {
 					})
 
 					It("applies the disk limit with the exclusive flag", func() {
-						Expect(driver.CreateImage(logger, spec)).To(Succeed())
+						_, err := driver.CreateImage(logger, spec)
+						Expect(err).NotTo(HaveOccurred())
 
 						cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(snapshotPath, "hello")), "bs=1048576", "count=6")
 						sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -320,9 +341,8 @@ var _ = Describe("Btrfs", func() {
 					})
 
 					It("returns an error", func() {
-						Expect(
-							driver.CreateImage(logger, spec),
-						).To(MatchError(ContainSubstring("drax was not found in the $PATH")))
+						_, err := driver.CreateImage(logger, spec)
+						Expect(err).To(MatchError(ContainSubstring("drax was not found in the $PATH")))
 					})
 				})
 
@@ -332,9 +352,8 @@ var _ = Describe("Btrfs", func() {
 					})
 
 					It("returns an error", func() {
-						Expect(
-							driver.CreateImage(logger, spec),
-						).To(MatchError(ContainSubstring("missing the setuid bit on drax")))
+						_, err := driver.CreateImage(logger, spec)
+						Expect(err).To(MatchError(ContainSubstring("missing the setuid bit on drax")))
 					})
 				})
 			})
@@ -343,7 +362,7 @@ var _ = Describe("Btrfs", func() {
 		Context("custom btrfs binary path", func() {
 			It("uses the custom btrfs binary given", func() {
 				driver = btrfs.NewDriver("cool-btrfs", draxBinPath, storePath)
-				err := driver.CreateImage(logger, spec)
+				_, err := driver.CreateImage(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
 			})
 		})
@@ -351,9 +370,8 @@ var _ = Describe("Btrfs", func() {
 		Context("when the parent does not exist", func() {
 			It("returns an error", func() {
 				spec.BaseVolumeIDs = []string{"non-existent-parent"}
-				Expect(
-					driver.CreateImage(logger, spec),
-				).To(MatchError(ContainSubstring("creating btrfs snapshot")))
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).To(MatchError(ContainSubstring("creating btrfs snapshot")))
 			})
 		})
 	})
@@ -477,7 +495,8 @@ var _ = Describe("Btrfs", func() {
 					ImagePath:     imagePath,
 					BaseVolumeIDs: []string{volumeID},
 				}
-				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+				_, err = driver.CreateImage(logger, spec)
+				Expect(err).NotTo(HaveOccurred())
 				rootfsPath = filepath.Join(imagePath, "rootfs")
 			})
 
@@ -608,7 +627,8 @@ var _ = Describe("Btrfs", func() {
 					BaseVolumeIDs: []string{volID},
 				}
 
-				Expect(driver.CreateImage(logger, spec)).To(Succeed())
+				_, err = driver.CreateImage(logger, spec)
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			It("returns the correct stats", func() {

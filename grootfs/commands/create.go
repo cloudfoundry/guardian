@@ -91,14 +91,6 @@ var CreateCommand = cli.Command{
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
-		if ctx.IsSet("with-clean") && ctx.IsSet("without-clean") {
-			return cli.NewExitError("with-clean and without-clean cannot be used together", 1)
-		}
-
-		if ctx.IsSet("json") && ctx.IsSet("no-json") {
-			return cli.NewExitError("json and no-json cannot be used together", 1)
-		}
-
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry")).
 			WithUIDMappings(ctx.StringSlice("uid-mapping")).
@@ -114,6 +106,10 @@ var CreateCommand = cli.Command{
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		if err := validateOptions(ctx, cfg); err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
 
@@ -201,6 +197,7 @@ var CreateCommand = cli.Command{
 		createSpec := groot.CreateSpec{
 			ID:                          id,
 			Json:                        cfg.Create.Json,
+			SkipMount:                   cfg.Create.SkipMount,
 			BaseImage:                   baseImage,
 			DiskLimit:                   cfg.Create.DiskLimitSizeBytes,
 			ExcludeBaseImageFromQuota:   cfg.Create.ExcludeImageFromQuota,
@@ -311,4 +308,24 @@ func findStoreOwner(uidMappings, gidMappings []groot.IDMappingSpec) (int, int, e
 	}
 
 	return uid, gid, nil
+}
+
+func validateOptions(ctx *cli.Context, cfg config.Config) error {
+	if ctx.IsSet("with-clean") && ctx.IsSet("without-clean") {
+		return errorspkg.New("with-clean and without-clean cannot be used together")
+	}
+
+	if ctx.IsSet("json") && ctx.IsSet("no-json") {
+		return errorspkg.New("json and no-json cannot be used together")
+	}
+
+	if cfg.Create.SkipMount && cfg.FSDriver == "btrfs" {
+		return errorspkg.New("skip mount option is not supported by the btrfs driver")
+	}
+
+	if cfg.Create.SkipMount && !cfg.Create.Json {
+		return errorspkg.New("skip mount option must be called with `json`")
+	}
+
+	return nil
 }

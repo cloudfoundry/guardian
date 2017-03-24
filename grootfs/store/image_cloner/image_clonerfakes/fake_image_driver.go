@@ -10,17 +10,19 @@ import (
 )
 
 type FakeImageDriver struct {
-	CreateImageStub        func(logger lager.Logger, spec image_cloner.ImageDriverSpec) error
+	CreateImageStub        func(logger lager.Logger, spec image_cloner.ImageDriverSpec) (image_cloner.MountInfo, error)
 	createImageMutex       sync.RWMutex
 	createImageArgsForCall []struct {
 		logger lager.Logger
 		spec   image_cloner.ImageDriverSpec
 	}
 	createImageReturns struct {
-		result1 error
+		result1 image_cloner.MountInfo
+		result2 error
 	}
 	createImageReturnsOnCall map[int]struct {
-		result1 error
+		result1 image_cloner.MountInfo
+		result2 error
 	}
 	DestroyImageStub        func(logger lager.Logger, path string) error
 	destroyImageMutex       sync.RWMutex
@@ -52,7 +54,7 @@ type FakeImageDriver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImageDriver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
+func (fake *FakeImageDriver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (image_cloner.MountInfo, error) {
 	fake.createImageMutex.Lock()
 	ret, specificReturn := fake.createImageReturnsOnCall[len(fake.createImageArgsForCall)]
 	fake.createImageArgsForCall = append(fake.createImageArgsForCall, struct {
@@ -65,9 +67,9 @@ func (fake *FakeImageDriver) CreateImage(logger lager.Logger, spec image_cloner.
 		return fake.CreateImageStub(logger, spec)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fake.createImageReturns.result1
+	return fake.createImageReturns.result1, fake.createImageReturns.result2
 }
 
 func (fake *FakeImageDriver) CreateImageCallCount() int {
@@ -82,23 +84,26 @@ func (fake *FakeImageDriver) CreateImageArgsForCall(i int) (lager.Logger, image_
 	return fake.createImageArgsForCall[i].logger, fake.createImageArgsForCall[i].spec
 }
 
-func (fake *FakeImageDriver) CreateImageReturns(result1 error) {
+func (fake *FakeImageDriver) CreateImageReturns(result1 image_cloner.MountInfo, result2 error) {
 	fake.CreateImageStub = nil
 	fake.createImageReturns = struct {
-		result1 error
-	}{result1}
+		result1 image_cloner.MountInfo
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeImageDriver) CreateImageReturnsOnCall(i int, result1 error) {
+func (fake *FakeImageDriver) CreateImageReturnsOnCall(i int, result1 image_cloner.MountInfo, result2 error) {
 	fake.CreateImageStub = nil
 	if fake.createImageReturnsOnCall == nil {
 		fake.createImageReturnsOnCall = make(map[int]struct {
-			result1 error
+			result1 image_cloner.MountInfo
+			result2 error
 		})
 	}
 	fake.createImageReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
+		result1 image_cloner.MountInfo
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeImageDriver) DestroyImage(logger lager.Logger, path string) error {

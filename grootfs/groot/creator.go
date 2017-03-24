@@ -18,6 +18,7 @@ type CreateSpec struct {
 	BaseImage                   string
 	DiskLimit                   int64
 	Json                        bool
+	SkipMount                   bool
 	ExcludeBaseImageFromQuota   bool
 	CleanOnCreate               bool
 	CleanOnCreateThresholdBytes int64
@@ -127,6 +128,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (string, error) {
 
 	imageSpec := ImageSpec{
 		ID:                        spec.ID,
+		SkipMount:                 spec.SkipMount,
 		DiskLimit:                 spec.DiskLimit,
 		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
 		BaseVolumeIDs:             baseImage.ChainIDs,

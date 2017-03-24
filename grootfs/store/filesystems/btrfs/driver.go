@@ -2,6 +2,7 @@ package btrfs // import "code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -98,10 +99,14 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	return nil
 }
 
-func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
+func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (image_cloner.MountInfo, error) {
 	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"spec": spec})
 	logger.Info("starting")
 	defer logger.Info("ending")
+
+	if spec.SkipMount {
+		return image_cloner.MountInfo{}, errors.New("skip mount is not supported")
+	}
 
 	toPath := filepath.Join(spec.ImagePath, "rootfs")
 	baseVolumePath := filepath.Join(d.storePath, store.VolumesDirName, spec.BaseVolumeIDs[len(spec.BaseVolumeIDs)-1])
@@ -109,13 +114,13 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
-		return errorspkg.Errorf(
+		return image_cloner.MountInfo{}, errorspkg.Errorf(
 			"creating btrfs snapshot from `%s` to `%s` (%s): %s",
 			baseVolumePath, toPath, err, string(contents),
 		)
 	}
 
-	return d.applyDiskLimit(logger, spec)
+	return image_cloner.MountInfo{}, d.applyDiskLimit(logger, spec)
 }
 
 func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {

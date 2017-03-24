@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,6 +14,8 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
+	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
@@ -757,6 +760,68 @@ var _ = Describe("Create", func() {
 				Expect(err).ToNot(HaveOccurred())
 
 				Expect(image.Path).To(MatchRegexp("{.+}"))
+			})
+		})
+
+		Describe("skip mount", func() {
+			BeforeEach(func() {
+				integration.SkipIfNotXFS(Driver)
+				cfg.Create.Json = true
+				cfg.Create.SkipMount = true
+			})
+
+			It("does not mount the rootfs", func() {
+				output, err := Runner.CreateOutput(groot.CreateSpec{
+					ID:        "some-id",
+					BaseImage: baseImagePath,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				var imageJson image_cloner.ImageInfo
+				Expect(json.Unmarshal([]byte(output), &imageJson)).To(Succeed())
+				Expect(imageJson.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id/rootfs")))
+
+				contents, err := ioutil.ReadDir(imageJson.Rootfs)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(contents).To(BeEmpty())
+			})
+
+			It("returns the mount information in the output json", func() {
+				output, err := Runner.CreateOutput(groot.CreateSpec{
+					ID:        "some-id",
+					BaseImage: baseImagePath,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				var imageJson image_cloner.ImageInfo
+				Expect(json.Unmarshal([]byte(output), &imageJson)).To(Succeed())
+
+				Expect(imageJson.Mount).ToNot(BeNil())
+				Expect(imageJson.Mount.Destination).To(Equal(imageJson.Rootfs))
+				Expect(imageJson.Mount.Type).To(Equal("overlay"))
+				Expect(imageJson.Mount.Source).To(Equal("overlay"))
+				Expect(imageJson.Mount.Options).To(HaveLen(1))
+				Expect(imageJson.Mount.Options[0]).To(MatchRegexp(
+					fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s",
+						filepath.Join(StorePath, overlayxfs.LinksDirName, ".*"),
+						filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.UpperDir),
+						filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.WorkDir),
+					),
+				))
+			})
+
+			Context("but `json` is not", func() {
+				BeforeEach(func() {
+					cfg.Create.Json = false
+				})
+
+				It("returns an error", func() {
+					_, err := Runner.CreateOutput(groot.CreateSpec{
+						ID:        "my-empty",
+						BaseImage: "docker:///cfgarden/empty:v0.1.1",
+					})
+					Expect(err).To(MatchError(ContainSubstring("skip mount option must be called with `json`")))
+				})
 			})
 		})
 
