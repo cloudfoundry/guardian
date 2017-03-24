@@ -126,10 +126,6 @@ var _ = Describe("Networking", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		AfterEach(func() {
-			client.Destroy(longHandle)
-		})
-
 		It("should lookup container ip using last 49 chars of handle as hostname", func() {
 			buff := gbytes.NewBuffer()
 			p, err := longHandleContainer.Run(garden.ProcessSpec{
