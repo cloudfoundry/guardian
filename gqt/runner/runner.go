@@ -228,10 +228,12 @@ func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, in
 		cmd.SysProcAttr.Credential = user
 
 		uidGid := fmt.Sprintf("%d:%d", user.Uid, user.Gid)
-		out, err := exec.Command("chown", "-R", uidGid, tmpdir).CombinedOutput()
-		Expect(err).NotTo(HaveOccurred(),
-			fmt.Sprintf("Execing 'chown -R %s %s' yielded the following output : %s", uidGid, tmpdir, string(out)),
-		)
+		Eventually(func() error {
+			cmd := exec.Command("chown", "-R", uidGid, tmpdir)
+			cmd.Stdout = GinkgoWriter
+			cmd.Stderr = GinkgoWriter
+			return cmd.Run()
+		}, "3s", "1s").Should(Succeed())
 	}
 
 	return cmd
