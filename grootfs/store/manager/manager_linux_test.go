@@ -24,26 +24,38 @@ import (
 
 var _ = Describe("Manager", func() {
 	var (
-		imgDriver *image_clonerfakes.FakeImageDriver
-		volDriver *base_image_pullerfakes.FakeVolumeDriver
-		strDriver *managerfakes.FakeStoreDriver
-		locksmith *grootfakes.FakeLocksmith
-		manager   *managerpkg.Manager
-		storePath string
-		logger    *lagertest.TestLogger
+		originalTmpDir string
+
+		imgDriver  *image_clonerfakes.FakeImageDriver
+		volDriver  *base_image_pullerfakes.FakeVolumeDriver
+		strDriver  *managerfakes.FakeStoreDriver
+		locksmith  *grootfakes.FakeLocksmith
+		manager    *managerpkg.Manager
+		storePath  string
+		logger     *lagertest.TestLogger
+		spec       managerpkg.InitSpec
+		namespacer *managerfakes.FakeNamespaceWriter
 	)
 
 	BeforeEach(func() {
+		originalTmpDir = os.TempDir()
+
 		imgDriver = new(image_clonerfakes.FakeImageDriver)
 		volDriver = new(base_image_pullerfakes.FakeVolumeDriver)
 		strDriver = new(managerfakes.FakeStoreDriver)
 		locksmith = new(grootfakes.FakeLocksmith)
+		namespacer = new(managerfakes.FakeNamespaceWriter)
 
 		logger = lagertest.NewTestLogger("store-manager")
+
+		spec = managerpkg.InitSpec{
+			NamespaceWriter: namespacer,
+		}
 	})
 
 	AfterEach(func() {
 		os.RemoveAll(storePath)
+		Expect(os.Setenv("TMPDIR", originalTmpDir)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
@@ -57,13 +69,106 @@ var _ = Describe("Manager", func() {
 
 		It("creates the store path folder", func() {
 			Expect(storePath).ToNot(BeAnExistingFile())
-			Expect(manager.InitStore(logger)).To(Succeed())
+			Expect(manager.InitStore(logger, spec)).To(Succeed())
 			Expect(storePath).To(BeADirectory())
 		})
 
+		It("sets the caller user as the owner of the store", func() {
+			Expect(manager.InitStore(logger, spec)).To(Succeed())
+			stat, err := os.Stat(storePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+		})
+
 		It("validates the store path parent with the store driver", func() {
-			Expect(manager.InitStore(logger)).To(Succeed())
+			Expect(manager.InitStore(logger, spec)).To(Succeed())
 			Expect(strDriver.ValidateFileSystemCallCount()).To(Equal(1))
+		})
+
+		It("creates the metadata directory", func() {
+			Expect(filepath.Join(storePath, store.MetaDirName)).ToNot(BeAnExistingFile())
+			Expect(manager.InitStore(logger, spec)).To(Succeed())
+			Expect(filepath.Join(storePath, store.MetaDirName)).To(BeADirectory())
+		})
+
+		It("calls the namespace writer to set the metadata", func() {
+			Expect(manager.InitStore(logger, spec)).To(Succeed())
+			Expect(namespacer.WriteCallCount()).To(Equal(1))
+
+			storePathArg, uidMappings, gidMappings := namespacer.WriteArgsForCall(0)
+			Expect(storePathArg).To(Equal(storePath))
+			Expect(uidMappings).To(BeEmpty())
+			Expect(gidMappings).To(BeEmpty())
+		})
+
+		Context("when the namespaceWriter fails", func() {
+			BeforeEach(func() {
+				namespacer.WriteReturns(errors.New("failed to create"))
+			})
+
+			It("returns an error", func() {
+				err := manager.InitStore(logger, spec)
+				Expect(err).To(MatchError(ContainSubstring("failed to create")))
+			})
+		})
+
+		Context("when id mappings are provided", func() {
+			var (
+				uidMappings []groot.IDMappingSpec
+				gidMappings []groot.IDMappingSpec
+			)
+
+			BeforeEach(func() {
+				uidMappings = []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: 10000, NamespaceID: 1, Size: 10},
+					groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+				}
+				spec.UIDMappings = uidMappings
+
+				gidMappings = []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: 10000, NamespaceID: 1, Size: 10},
+					groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+				}
+				spec.GIDMappings = gidMappings
+			})
+
+			It("sets the root mapping as the owner of the store", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				stat, err := os.Stat(storePath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(GrootUID))
+				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(GrootGID))
+			})
+
+			It("calls the namespace writer to set the metadata", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(namespacer.WriteCallCount()).To(Equal(1))
+
+				storePathArg, uidMappingsArg, gidMappingsArg := namespacer.WriteArgsForCall(0)
+				Expect(storePathArg).To(Equal(storePath))
+				Expect(uidMappingsArg).To(Equal(uidMappings))
+				Expect(gidMappingsArg).To(Equal(gidMappings))
+			})
+
+			Context("when the root mapping is not present", func() {
+				BeforeEach(func() {
+					spec.UIDMappings = []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: 10000, NamespaceID: 1, Size: 10},
+					}
+					spec.GIDMappings = []groot.IDMappingSpec{
+						groot.IDMappingSpec{HostID: 10000, NamespaceID: 1, Size: 10},
+					}
+				})
+
+				It("sets caller user as the owner of the store", func() {
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
+					stat, err := os.Stat(storePath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+				})
+			})
 		})
 
 		Context("when the store path already exists", func() {
@@ -72,7 +177,7 @@ var _ = Describe("Manager", func() {
 			})
 
 			It("returns an error", func() {
-				err := manager.InitStore(logger)
+				err := manager.InitStore(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring("store already initialized")))
 			})
 		})
@@ -83,7 +188,7 @@ var _ = Describe("Manager", func() {
 			})
 
 			It("returns an error", func() {
-				err := manager.InitStore(logger)
+				err := manager.InitStore(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring("not possible")))
 			})
 		})
@@ -91,13 +196,11 @@ var _ = Describe("Manager", func() {
 
 	Describe("ConfigureStore", func() {
 		var (
-			originalTmpDir string
-			currentUID     int
-			currentGID     int
+			currentUID int
+			currentGID int
 		)
 
 		BeforeEach(func() {
-			originalTmpDir = os.TempDir()
 			tempDir, err := ioutil.TempDir("", "")
 			Expect(err).NotTo(HaveOccurred())
 
@@ -110,7 +213,6 @@ var _ = Describe("Manager", func() {
 
 		AfterEach(func() {
 			Expect(os.RemoveAll(path.Dir(storePath))).To(Succeed())
-			Expect(os.Setenv("TMPDIR", originalTmpDir)).To(Succeed())
 		})
 
 		It("creates the store directory", func() {

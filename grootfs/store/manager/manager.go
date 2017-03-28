@@ -27,6 +27,17 @@ type Manager struct {
 	locksmith    groot.Locksmith
 }
 
+//go:generate counterfeiter . NamespaceWriter
+type NamespaceWriter interface {
+	Write(storePath string, uidMappings, gidMappings []groot.IDMappingSpec) error
+}
+
+type InitSpec struct {
+	UIDMappings     []groot.IDMappingSpec
+	GIDMappings     []groot.IDMappingSpec
+	NamespaceWriter NamespaceWriter
+}
+
 func New(storePath string, locksmith groot.Locksmith, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver StoreDriver) *Manager {
 	return &Manager{
 		storePath:    storePath,
@@ -37,8 +48,8 @@ func New(storePath string, locksmith groot.Locksmith, volumeDriver base_image_pu
 	}
 }
 
-func (m *Manager) InitStore(logger lager.Logger) error {
-	logger = logger.Session("store-manager-init-store")
+func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
+	logger = logger.Session("store-manager-init-store", lager.Data{"storePath": m.storePath})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
@@ -54,9 +65,27 @@ func (m *Manager) InitStore(logger lager.Logger) error {
 	}
 
 	if err := os.MkdirAll(m.storePath, 0755); err != nil {
-		logger.Error("init-store-failed", err, lager.Data{"storePath": m.storePath})
+		logger.Error("init-store-failed", err)
 		return errorspkg.Wrap(err, "initializing store")
 	}
+
+	uid, gid := m.findStoreOwner(spec.UIDMappings, spec.GIDMappings)
+	if err := os.Chown(m.storePath, uid, gid); err != nil {
+		logger.Error("chowning-store-path-failed", err, lager.Data{"uid": uid, "gid": gid})
+		return errorspkg.Wrap(err, "chowing store")
+	}
+
+	if err := m.createInternalDirectory(logger, store.MetaDirName, uid, gid); err != nil {
+		logger.Error("creating-metadata-dir-failed", err)
+		return errorspkg.Wrap(err, "creating metadata dir")
+	}
+
+	err = spec.NamespaceWriter.Write(m.storePath, spec.UIDMappings, spec.GIDMappings)
+	if err != nil {
+		logger.Error("writing-namespace-file-failed", err)
+		return errorspkg.Wrapf(err, "writing namespace file for storePath %s", m.storePath)
+	}
+
 	return nil
 }
 
@@ -215,6 +244,29 @@ func (m *Manager) createInternalDirectory(logger lager.Logger, folderName string
 		return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, requiredPath)
 	}
 	return nil
+}
+
+func (m *Manager) findStoreOwner(uidMappings, gidMappings []groot.IDMappingSpec) (int, int) {
+	uid := os.Getuid()
+	gid := os.Getgid()
+
+	for _, mapping := range uidMappings {
+		if mapping.Size == 1 && mapping.NamespaceID == 0 {
+			uid = mapping.HostID
+			break
+		}
+		uid = -1
+	}
+
+	for _, mapping := range gidMappings {
+		if mapping.Size == 1 && mapping.NamespaceID == 0 {
+			gid = mapping.HostID
+			break
+		}
+		gid = -1
+	}
+
+	return uid, gid
 }
 
 func isDirectory(requiredPath string) error {

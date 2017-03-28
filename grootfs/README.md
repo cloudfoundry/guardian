@@ -155,7 +155,7 @@ create:
 You can create a store directory within a mountpath for your images:
 
 ```
-grootfs --store /mnt/xfs/my-store-dir --driver overlay-xfs init-store
+grootfs --store /mnt/xfs/my-store-dir --driver overlay-xfs init-store <--uid-mapping 1000:0:1> <--gid-mapping 1000:0:1> <--uid-mapping/gid-mapping ...>
 ```
 
 N.B.
@@ -164,6 +164,9 @@ are giving to `store` is already within a mounted directory.
 - The `driver` you pass to init-store must be compatible with the mounted path.
 - The command can currently only be run as root, with the mounted store owned
 by root.
+- It can take a number of uid/gid mappings to initialize the store with.
+- If no mappings are provided, the store will be owned by host root user.
+- If mappings are provided, the store will be owned by the namespace root user specified.
 - Eventually this command will create a mounted filesystem for you, and will
 allow multiple independent stores to be set within one mount.
 

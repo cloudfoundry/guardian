@@ -187,7 +187,7 @@ var CreateCommand = cli.Command{
 		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
-		namespaceChecker := groot.NewNamespaceChecker(storePath)
+		namespaceChecker := groot.NewStoreNamespacer(storePath)
 
 		creator := groot.IamCreator(
 			imageCloner, baseImagePuller, locksmith, rootFSConfigurer,
@@ -217,21 +217,6 @@ var CreateCommand = cli.Command{
 		fmt.Println(output)
 		return nil
 	},
-}
-
-func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {
-	mappings := []groot.IDMappingSpec{}
-
-	for _, v := range args {
-		var mapping groot.IDMappingSpec
-		_, err := fmt.Sscanf(v, "%d:%d:%d", &mapping.NamespaceID, &mapping.HostID, &mapping.Size)
-		if err != nil {
-			return nil, err
-		}
-		mappings = append(mappings, mapping)
-	}
-
-	return mappings, nil
 }
 
 func containsDockerError(errorsList errcode.Errors, errCode errcode.ErrorCode) bool {

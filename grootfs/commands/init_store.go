@@ -1,9 +1,11 @@
 package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
+	"fmt"
 	"os"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
@@ -17,9 +19,25 @@ var InitStoreCommand = cli.Command{
 	Usage:       "init-store",
 	Description: "Initialize a Store Directory on a mounted Filesystem",
 
+	Flags: []cli.Flag{
+		cli.StringSliceFlag{
+			Name:  "uid-mapping",
+			Usage: "UID mapping for image translation, e.g.: <Namespace UID>:<Host UID>:<Size>",
+		},
+		cli.StringSliceFlag{
+			Name:  "gid-mapping",
+			Usage: "GID mapping for image translation, e.g.: <Namespace GID>:<Host GID>:<Size>",
+		},
+	},
+
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("init-store")
+
+		if ctx.NArg() != 0 {
+			logger.Error("parsing-command", errorspkg.New("invalid arguments"), lager.Data{"args": ctx.Args()})
+			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
+		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		cfg, err := configBuilder.Build()
@@ -44,8 +62,29 @@ var InitStoreCommand = cli.Command{
 		}
 
 		locksmith := locksmith.NewFileSystem(storePath)
+
+		uidMappings, err := parseIDMappings(ctx.StringSlice("uid-mapping"))
+		if err != nil {
+			err = errorspkg.Errorf("parsing uid-mapping: %s", err)
+			logger.Error("parsing-command", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+		gidMappings, err := parseIDMappings(ctx.StringSlice("gid-mapping"))
+		if err != nil {
+			err = errorspkg.Errorf("parsing gid-mapping: %s", err)
+			logger.Error("parsing-command", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
+
+		namespaceWriter := groot.NewStoreNamespacer(storePath)
+		spec := manager.InitSpec{
+			UIDMappings:     uidMappings,
+			GIDMappings:     gidMappings,
+			NamespaceWriter: namespaceWriter,
+		}
+
 		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
-		if err := manager.InitStore(logger); err != nil {
+		if err := manager.InitStore(logger, spec); err != nil {
 			logger.Error("cleaning-up-store-failed", err)
 			return cli.NewExitError(errorspkg.Cause(err).Error(), 1)
 		}
