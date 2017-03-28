@@ -751,22 +751,29 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPa
 		FileMode: &worldReadWrite,
 	}
 
-	denyAll := specs.LinuxDeviceCgroup{Allow: false, Access: &rwm}
+	denyAll := specs.LinuxDeviceCgroup{Allow: false, Access: rwm}
 	allowedDevices := []specs.LinuxDeviceCgroup{
-		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(3), Allow: true},
-		{Access: &rwm, Type: &character, Major: majorMinor(5), Minor: majorMinor(0), Allow: true},
-		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(8), Allow: true},
-		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(9), Allow: true},
-		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(5), Allow: true},
-		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(7), Allow: true},
-		{Access: &rwm, Type: &character, Major: majorMinor(1), Minor: majorMinor(7), Allow: true},
-		{Access: &rwm, Type: &character, Major: majorMinor(fuseDevice.Major), Minor: majorMinor(fuseDevice.Minor), Allow: true},
+		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(3), Allow: true},
+		{Access: rwm, Type: character, Major: majorMinor(5), Minor: majorMinor(0), Allow: true},
+		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(8), Allow: true},
+		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(9), Allow: true},
+		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(5), Allow: true},
+		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(7), Allow: true},
+		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(7), Allow: true},
+		{Access: rwm, Type: character, Major: majorMinor(fuseDevice.Major), Minor: majorMinor(fuseDevice.Minor), Allow: true},
 	}
 
+	// TODO centralize knowledge of garden -> runc capability schema translation
 	baseProcess := specs.Process{
-		Capabilities: UnprivilegedMaxCaps,
-		Args:         []string{"/tmp/garden-init"},
-		Cwd:          "/",
+		Capabilities: &specs.LinuxCapabilities{
+			Effective:   UnprivilegedMaxCaps,
+			Bounding:    UnprivilegedMaxCaps,
+			Inheritable: UnprivilegedMaxCaps,
+			Permitted:   UnprivilegedMaxCaps,
+			Ambient:     UnprivilegedMaxCaps,
+		},
+		Args: []string{"/tmp/garden-init"},
+		Cwd:  "/",
 	}
 
 	baseBundle := goci.Bundle().

@@ -518,7 +518,7 @@ var _ = Describe("ExecPreparer", func() {
 	Context("when the container has capabilities", func() {
 		BeforeEach(func() {
 			bndl := goci.Bundle()
-			bndl.Spec.Process.Capabilities = []string{"foo", "bar", "baz"}
+			bndl = bndl.WithCapabilities("foo", "bar", "baz")
 			bundleLoader.LoadReturns(bndl, nil)
 		})
 
@@ -526,7 +526,11 @@ var _ = Describe("ExecPreparer", func() {
 			It("passes them on to the process", func() {
 				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(spec.Process.Capabilities).To(Equal([]string{"foo", "bar", "baz"}))
+				Expect(spec.Process.Capabilities.Effective).To(Equal([]string{"foo", "bar", "baz"}))
+				Expect(spec.Process.Capabilities.Bounding).To(Equal([]string{"foo", "bar", "baz"}))
+				Expect(spec.Process.Capabilities.Inheritable).To(Equal([]string{"foo", "bar", "baz"}))
+				Expect(spec.Process.Capabilities.Permitted).To(Equal([]string{"foo", "bar", "baz"}))
+				Expect(spec.Process.Capabilities.Ambient).To(BeEmpty())
 			})
 		})
 
@@ -536,8 +540,25 @@ var _ = Describe("ExecPreparer", func() {
 				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(spec.Process.Capabilities).To(Equal([]string{"foo", "bar"}))
+				Expect(spec.Process.Capabilities.Effective).To(Equal([]string{"foo", "bar"}))
+				Expect(spec.Process.Capabilities.Bounding).To(Equal([]string{"foo", "bar"}))
+				Expect(spec.Process.Capabilities.Inheritable).To(Equal([]string{"foo", "bar"}))
+				Expect(spec.Process.Capabilities.Permitted).To(Equal([]string{"foo", "bar"}))
+				Expect(spec.Process.Capabilities.Ambient).To(BeEmpty())
 			})
+		})
+	})
+
+	Context("when the container has no capabilities", func() {
+		BeforeEach(func() {
+			bndl := goci.Bundle()
+			bundleLoader.LoadReturns(bndl, nil)
+		})
+
+		It("does not set the capabilities object on the process", func() {
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec.Process.Capabilities).To(BeNil())
 		})
 	})
 

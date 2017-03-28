@@ -27,7 +27,7 @@ func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 		if quota < MinCpuQuota {
 			quota = MinCpuQuota
 		}
-		cpuSpec.Quota = &quota
+		cpuSpec.Quota = int64PtrVal(quota)
 	}
 	bndl = bndl.WithCPUShares(cpuSpec)
 
@@ -35,4 +35,9 @@ func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 
 	pids := int64(spec.Limits.Pid.Max)
 	return bndl.WithPidLimit(specs.LinuxPids{Limit: pids})
+}
+
+func int64PtrVal(n uint64) *int64 {
+	unsignedVal := int64(n)
+	return &unsignedVal
 }

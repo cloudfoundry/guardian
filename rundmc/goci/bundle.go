@@ -152,7 +152,7 @@ func (b Bndl) GIDMappings() []specs.LinuxIDMapping {
 }
 
 func (b Bndl) WithPrestartHooks(hook ...specs.Hook) Bndl {
-	b.Spec.Hooks.Prestart = hook
+	b.Spec.Hooks = &specs.Hooks{Prestart: hook}
 	return b
 }
 
@@ -161,7 +161,7 @@ func (b Bndl) PrestartHooks() []specs.Hook {
 }
 
 func (b Bndl) WithPoststopHooks(hook ...specs.Hook) Bndl {
-	b.Spec.Hooks.Poststop = hook
+	b.Spec.Hooks = &specs.Hooks{Poststop: hook}
 	return b
 }
 
@@ -188,12 +188,25 @@ func (b Bndl) Devices() []specs.LinuxDevice {
 
 // WithCapabilities returns a bundle with the given capabilities added. The original bundle is not modified.
 func (b Bndl) WithCapabilities(capabilities ...string) Bndl {
-	b.Spec.Process.Capabilities = capabilities
+	caps := &specs.LinuxCapabilities{
+		Effective:   capabilities,
+		Bounding:    capabilities,
+		Inheritable: capabilities,
+		Permitted:   capabilities,
+		Ambient:     capabilities,
+	}
+	b.Spec.Process.Capabilities = caps
 	return b
 }
 
 func (b Bndl) Capabilities() []string {
-	return b.Spec.Process.Capabilities
+	if b.Spec.Process.Capabilities == nil {
+		return []string{}
+	}
+
+	// guardian sets the effective, bounding, inheritable, and permitted sets to
+	// the same value
+	return b.Spec.Process.Capabilities.Effective
 }
 
 // WithMounts returns a bundle with the given mounts added. The original bundle is not modified.

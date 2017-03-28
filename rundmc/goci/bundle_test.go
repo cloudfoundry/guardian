@@ -33,9 +33,26 @@ var _ = Describe("Bundle", func() {
 			Expect(returnedBundle.Capabilities()).To(ContainElement("waterspuds"))
 		})
 
+		It("adds capabilities to the spec's effective, bounding, inheritable, and permitted sets", func() {
+			returnedBundle := initialBundle.WithCapabilities("growtulips", "waterspuds")
+			Expect(returnedBundle.Spec.Process.Capabilities.Effective).To(ConsistOf("growtulips", "waterspuds"))
+			Expect(returnedBundle.Spec.Process.Capabilities.Bounding).To(ConsistOf("growtulips", "waterspuds"))
+			Expect(returnedBundle.Spec.Process.Capabilities.Inheritable).To(ConsistOf("growtulips", "waterspuds"))
+			Expect(returnedBundle.Spec.Process.Capabilities.Permitted).To(ConsistOf("growtulips", "waterspuds"))
+			Expect(returnedBundle.Spec.Process.Capabilities.Ambient).To(BeEmpty())
+		})
+
 		It("does not modify the initial bundle", func() {
 			returnedBundle := initialBundle.WithCapabilities("growtulips", "waterspuds")
 			Expect(returnedBundle).NotTo(Equal(initialBundle))
+		})
+	})
+
+	Describe("Capabilities", func() {
+		Context("when the process has no capbilities", func() {
+			It("returns an empty list", func() {
+				Expect(initialBundle.Capabilities()).To(BeEmpty())
+			})
 		})
 	})
 
@@ -323,5 +340,4 @@ var _ = Describe("Bundle", func() {
 			Expect(paths[1]).To(Equal("path2"))
 		})
 	})
-
 })

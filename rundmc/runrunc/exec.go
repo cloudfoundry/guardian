@@ -160,9 +160,20 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		return nil, err
 	}
 
-	caps := bndl.Capabilities()
+	capsToSet := bndl.Capabilities()
 	if u.containerUid != 0 {
-		caps = intersect(caps, r.nonRootMaxCaps)
+		capsToSet = intersect(capsToSet, r.nonRootMaxCaps)
+	}
+	var caps *specs.LinuxCapabilities
+	// TODO centralize knowledge of garden -> runc capability schema translation
+	if len(capsToSet) > 0 {
+		caps = &specs.LinuxCapabilities{
+			Effective:   capsToSet,
+			Bounding:    capsToSet,
+			Inheritable: capsToSet,
+			Permitted:   capsToSet,
+			Ambient:     capsToSet,
+		}
 	}
 
 	consoleBox := specs.Box{

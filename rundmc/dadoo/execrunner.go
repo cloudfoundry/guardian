@@ -84,7 +84,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	defer syncr.Close()
 
 	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
-	process.mkfifos()
+	process.mkfifos(spec.HostUID, spec.HostGID)
 	if err != nil {
 		return nil, err
 	}
@@ -225,9 +225,12 @@ func (p *process) ID() string {
 	return p.id
 }
 
-func (p *process) mkfifos() error {
+func (p *process) mkfifos(hostUid, hostGid int) error {
 	for _, pipe := range []string{p.stdin, p.stdout, p.stderr, p.winsz, p.exit} {
 		if err := syscall.Mkfifo(pipe, 0600); err != nil {
+			return err
+		}
+		if err := os.Chown(pipe, hostUid, hostGid); err != nil {
 			return err
 		}
 	}
