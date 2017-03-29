@@ -112,25 +112,5 @@ var _ = Describe("Create (btrfs only)", func() {
 				Expect(string(contents)).To(Equal("I'm groot - btrfs"))
 			})
 		})
-
-		Describe("skip mount", func() {
-			BeforeEach(func() {
-				cfg := config.Config{
-					Create: config.Create{
-						SkipMount: true,
-					},
-				}
-				Expect(Runner.SetConfig(cfg)).To(Succeed())
-			})
-
-			It("returns an error", func() {
-				_, err := Runner.Create(groot.CreateSpec{
-					ID:        "some-id",
-					BaseImage: baseImagePath,
-				})
-				Expect(err).To(MatchError(ContainSubstring("skip mount option is not supported by the btrfs driver")))
-			})
-		})
-
 	})
 })

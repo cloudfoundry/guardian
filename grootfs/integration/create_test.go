@@ -765,7 +765,6 @@ var _ = Describe("Create", func() {
 
 		Describe("skip mount", func() {
 			BeforeEach(func() {
-				integration.SkipIfNotXFS(Driver)
 				cfg.Create.Json = true
 				cfg.Create.SkipMount = true
 			})
@@ -786,28 +785,53 @@ var _ = Describe("Create", func() {
 				Expect(contents).To(BeEmpty())
 			})
 
-			It("returns the mount information in the output json", func() {
-				output, err := Runner.CreateOutput(groot.CreateSpec{
-					ID:        "some-id",
-					BaseImage: baseImagePath,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
+			Describe("Mount json output", func() {
 				var imageJson image_cloner.ImageInfo
-				Expect(json.Unmarshal([]byte(output), &imageJson)).To(Succeed())
 
-				Expect(imageJson.Mount).ToNot(BeNil())
-				Expect(imageJson.Mount.Destination).To(Equal(imageJson.Rootfs))
-				Expect(imageJson.Mount.Type).To(Equal("overlay"))
-				Expect(imageJson.Mount.Source).To(Equal("overlay"))
-				Expect(imageJson.Mount.Options).To(HaveLen(1))
-				Expect(imageJson.Mount.Options[0]).To(MatchRegexp(
-					fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s",
-						filepath.Join(StorePath, overlayxfs.LinksDirName, ".*"),
-						filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.UpperDir),
-						filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.WorkDir),
-					),
-				))
+				JustBeforeEach(func() {
+					output, err := Runner.CreateOutput(groot.CreateSpec{
+						ID:        "some-id",
+						BaseImage: baseImagePath,
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(json.Unmarshal([]byte(output), &imageJson)).To(Succeed())
+				})
+
+				Context("BTRFS", func() {
+					BeforeEach(func() {
+						integration.SkipIfNotBTRFS(Driver)
+					})
+
+					It("returns the mount information in the output json", func() {
+						Expect(imageJson.Mount).ToNot(BeNil())
+						Expect(imageJson.Mount.Destination).To(Equal(imageJson.Rootfs))
+						Expect(imageJson.Mount.Type).To(Equal(""))
+						Expect(imageJson.Mount.Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
+						Expect(imageJson.Mount.Options).To(HaveLen(1))
+						Expect(imageJson.Mount.Options[0]).To(Equal("bind"))
+					})
+				})
+
+				Context("XFS", func() {
+					BeforeEach(func() {
+						integration.SkipIfNotXFS(Driver)
+					})
+
+					It("returns the mount information in the output json", func() {
+						Expect(imageJson.Mount).ToNot(BeNil())
+						Expect(imageJson.Mount.Destination).To(Equal(imageJson.Rootfs))
+						Expect(imageJson.Mount.Type).To(Equal("overlay"))
+						Expect(imageJson.Mount.Source).To(Equal("overlay"))
+						Expect(imageJson.Mount.Options).To(HaveLen(1))
+						Expect(imageJson.Mount.Options[0]).To(MatchRegexp(
+							fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s",
+								filepath.Join(StorePath, overlayxfs.LinksDirName, ".*"),
+								filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.UpperDir),
+								filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.WorkDir),
+							),
+						))
+					})
+				})
 			})
 
 			Context("but `json` is not", func() {

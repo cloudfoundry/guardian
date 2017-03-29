@@ -304,10 +304,6 @@ func validateOptions(ctx *cli.Context, cfg config.Config) error {
 		return errorspkg.New("json and no-json cannot be used together")
 	}
 
-	if cfg.Create.SkipMount && cfg.FSDriver == "btrfs" {
-		return errorspkg.New("skip mount option is not supported by the btrfs driver")
-	}
-
 	if cfg.Create.SkipMount && !cfg.Create.Json {
 		return errorspkg.New("skip mount option must be called with `json`")
 	}

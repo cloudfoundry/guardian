@@ -2,7 +2,6 @@ package btrfs // import "code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -104,14 +103,25 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	if spec.SkipMount {
-		return image_cloner.MountInfo{}, errors.New("skip mount is not supported")
-	}
-
 	toPath := filepath.Join(spec.ImagePath, "rootfs")
 	baseVolumePath := filepath.Join(d.storePath, store.VolumesDirName, spec.BaseVolumeIDs[len(spec.BaseVolumeIDs)-1])
-	cmd := exec.Command(d.btrfsBinPath, "subvolume", "snapshot", baseVolumePath, toPath)
+	var mountInfo image_cloner.MountInfo
 
+	if spec.SkipMount {
+		if err := os.Mkdir(toPath, 0755); err != nil {
+			logger.Error("creating-rootfs-folder-failed", err, lager.Data{"rootfs": toPath})
+			return image_cloner.MountInfo{}, errorspkg.Wrap(err, "creating rootfs folder")
+		}
+
+		mountInfo.Destination = toPath
+		mountInfo.Type = ""
+		mountInfo.Source = filepath.Join(spec.ImagePath, "snapshot")
+		mountInfo.Options = []string{"bind"}
+
+		toPath = mountInfo.Source
+	}
+
+	cmd := exec.Command(d.btrfsBinPath, "subvolume", "snapshot", baseVolumePath, toPath)
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
 		return image_cloner.MountInfo{}, errorspkg.Errorf(
@@ -120,7 +130,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		)
 	}
 
-	return image_cloner.MountInfo{}, d.applyDiskLimit(logger, spec)
+	return mountInfo, d.applyDiskLimit(logger, spec)
 }
 
 func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
@@ -179,7 +189,17 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	return d.destroyBtrfsVolume(logger, filepath.Join(imagePath, "rootfs"))
+	btrfsSnapshot := filepath.Join(imagePath, "rootfs")
+	if _, err := os.Stat(filepath.Join(imagePath, "snapshot")); err == nil {
+		if err := os.Remove(btrfsSnapshot); err != nil {
+			logger.Error("removing-rootfs-folder-failed", err)
+			return errorspkg.Wrap(err, "remove rootfs folder")
+		}
+
+		btrfsSnapshot = filepath.Join(imagePath, "snapshot")
+	}
+
+	return d.destroyBtrfsVolume(logger, btrfsSnapshot)
 }
 
 func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {

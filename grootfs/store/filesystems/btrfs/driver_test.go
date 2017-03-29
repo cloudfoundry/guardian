@@ -247,11 +247,34 @@ var _ = Describe("Btrfs", func() {
 		})
 
 		Context("when skip mount is true", func() {
-			It("returns an error", func() {
+			BeforeEach(func() {
 				spec.SkipMount = true
+			})
 
+			It("keeps the rootfs path empty", func() {
 				_, err := driver.CreateImage(logger, spec)
-				Expect(err).To(MatchError(ContainSubstring("skip mount is not supported")))
+				Expect(err).ToNot(HaveOccurred())
+
+				contents, err := ioutil.ReadDir(filepath.Join(spec.ImagePath, "rootfs"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(contents).To(BeEmpty())
+			})
+
+			It("creates a snapshot folder with volume contents", func() {
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(filepath.Join(spec.ImagePath, "snapshot", "a_file")).To(BeARegularFile())
+			})
+
+			It("returns the correct mount information", func() {
+				mountInfo, err := driver.CreateImage(logger, spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(mountInfo.Type).To(Equal(""))
+				Expect(mountInfo.Destination).To(Equal(filepath.Join(spec.ImagePath, "rootfs")))
+				Expect(mountInfo.Source).To(Equal(filepath.Join(spec.ImagePath, "snapshot")))
+				Expect(mountInfo.Options).To(HaveLen(1))
+				Expect(mountInfo.Options[0]).To(Equal("bind"))
 			})
 		})
 
@@ -483,6 +506,10 @@ var _ = Describe("Btrfs", func() {
 		)
 
 		Context("when a volume exists", func() {
+			BeforeEach(func() {
+				spec = image_cloner.ImageDriverSpec{}
+			})
+
 			JustBeforeEach(func() {
 				volumeID := randVolumeID()
 				_, err := driver.CreateVolume(logger, "", volumeID)
@@ -491,10 +518,9 @@ var _ = Describe("Btrfs", func() {
 				imagePath := filepath.Join(storePath, store.ImageDirName, "image-id")
 				Expect(os.MkdirAll(imagePath, 0777)).To(Succeed())
 
-				spec = image_cloner.ImageDriverSpec{
-					ImagePath:     imagePath,
-					BaseVolumeIDs: []string{volumeID},
-				}
+				spec.ImagePath = imagePath
+				spec.BaseVolumeIDs = []string{volumeID}
+
 				_, err = driver.CreateImage(logger, spec)
 				Expect(err).NotTo(HaveOccurred())
 				rootfsPath = filepath.Join(imagePath, "rootfs")
@@ -539,6 +565,30 @@ var _ = Describe("Btrfs", func() {
 						Data("args", []string{"btrfs", "subvolume", "delete", rootfsPath}),
 					),
 				))
+			})
+
+			Context("when the image was created with skip mount", func() {
+				BeforeEach(func() {
+					spec.SkipMount = true
+				})
+
+				It("removes the image rootfs and snapshot folders", func() {
+					snapshotPath := filepath.Join(spec.ImagePath, "snapshot")
+					Expect(snapshotPath).To(BeADirectory())
+					Expect(rootfsPath).To(BeADirectory())
+
+					Expect(driver.DestroyImage(logger, spec.ImagePath)).To(Succeed())
+					Expect(snapshotPath).ToNot(BeAnExistingFile())
+					Expect(rootfsPath).ToNot(BeAnExistingFile())
+				})
+
+				Context("when the rootfs folder is not empty", func() {
+					It("returns an error", func() {
+						Expect(ioutil.WriteFile(filepath.Join(rootfsPath, "file"), []byte{}, 0700)).To(Succeed())
+						err := driver.DestroyImage(logger, spec.ImagePath)
+						Expect(err).To(MatchError(ContainSubstring("remove rootfs folder")))
+					})
+				})
 			})
 
 			Context("custom btrfs binary path", func() {
