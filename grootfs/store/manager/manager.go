@@ -69,13 +69,18 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 		return errorspkg.Wrap(err, "initializing store")
 	}
 
-	uid, gid := m.findStoreOwner(spec.UIDMappings, spec.GIDMappings)
-	if err := os.Chown(m.storePath, uid, gid); err != nil {
-		logger.Error("chowning-store-path-failed", err, lager.Data{"uid": uid, "gid": gid})
+	ownerUID, ownerGID := m.findStoreOwner(spec.UIDMappings, spec.GIDMappings)
+	if err := os.Chown(m.storePath, ownerUID, ownerGID); err != nil {
+		logger.Error("chowning-store-path-failed", err, lager.Data{"uid": ownerUID, "gid": ownerGID})
 		return errorspkg.Wrap(err, "chowing store")
 	}
 
-	if err := m.createInternalDirectory(logger, store.MetaDirName, uid, gid); err != nil {
+	if err := m.storeDriver.ConfigureStore(logger, m.storePath, ownerUID, ownerGID); err != nil {
+		logger.Error("store-filesystem-specific-configuration-failed", err)
+		return errorspkg.Wrap(err, "running filesystem-specific configuration")
+	}
+
+	if err := m.createInternalDirectory(logger, store.MetaDirName, ownerUID, ownerGID); err != nil {
 		logger.Error("creating-metadata-dir-failed", err)
 		return errorspkg.Wrap(err, "creating metadata dir")
 	}

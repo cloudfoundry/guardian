@@ -102,6 +102,16 @@ var _ = Describe("Manager", func() {
 			Expect(gidMappings).To(BeEmpty())
 		})
 
+		It("calls the store driver to configure the store", func() {
+			Expect(manager.InitStore(logger, spec)).To(Succeed())
+			Expect(strDriver.ConfigureStoreCallCount()).To(Equal(1))
+
+			_, storePathArg, uidArg, gidArg := strDriver.ConfigureStoreArgsForCall(0)
+			Expect(storePathArg).To(Equal(storePath))
+			Expect(uidArg).To(Equal(0))
+			Expect(gidArg).To(Equal(0))
+		})
+
 		Context("when the namespaceWriter fails", func() {
 			BeforeEach(func() {
 				namespacer.WriteReturns(errors.New("failed to create"))
@@ -149,6 +159,16 @@ var _ = Describe("Manager", func() {
 				Expect(storePathArg).To(Equal(storePath))
 				Expect(uidMappingsArg).To(Equal(uidMappings))
 				Expect(gidMappingsArg).To(Equal(gidMappings))
+			})
+
+			It("calls the store driver to configure the store", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(strDriver.ConfigureStoreCallCount()).To(Equal(1))
+
+				_, storePathArg, uidArg, gidArg := strDriver.ConfigureStoreArgsForCall(0)
+				Expect(storePathArg).To(Equal(storePath))
+				Expect(uidArg).To(Equal(int(GrootUID)))
+				Expect(gidArg).To(Equal(int(GrootGID)))
 			})
 
 			Context("when the root mapping is not present", func() {
