@@ -37,6 +37,7 @@ var _ = Describe("Delete Store", func() {
 		_, err := runner.Create(groot.CreateSpec{
 			BaseImage: "docker:///busybox:1.26.2",
 			ID:        "random-id",
+			Mount:     true,
 			UIDMappings: []groot.IDMappingSpec{
 				groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
 				groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},

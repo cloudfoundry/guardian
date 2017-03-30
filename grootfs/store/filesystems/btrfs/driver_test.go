@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
@@ -206,6 +207,7 @@ var _ = Describe("Btrfs", func() {
 			spec = image_cloner.ImageDriverSpec{
 				ImagePath:     imagePath,
 				BaseVolumeIDs: []string{volumeID},
+				Mount:         true,
 			}
 		})
 
@@ -243,12 +245,12 @@ var _ = Describe("Btrfs", func() {
 		It("returns an empty mountJson object", func() {
 			mountJson, err := driver.CreateImage(logger, spec)
 			Expect(err).ToNot(HaveOccurred())
-			Expect(mountJson).To(Equal(image_cloner.MountInfo{}))
+			Expect(mountJson).To(Equal(groot.MountInfo{}))
 		})
 
-		Context("when skip mount is true", func() {
+		Context("when mount is false", func() {
 			BeforeEach(func() {
-				spec.SkipMount = true
+				spec.Mount = false
 			})
 
 			It("keeps the rootfs path empty", func() {
@@ -507,7 +509,9 @@ var _ = Describe("Btrfs", func() {
 
 		Context("when a volume exists", func() {
 			BeforeEach(func() {
-				spec = image_cloner.ImageDriverSpec{}
+				spec = image_cloner.ImageDriverSpec{
+					Mount: true,
+				}
 			})
 
 			JustBeforeEach(func() {
@@ -567,9 +571,9 @@ var _ = Describe("Btrfs", func() {
 				))
 			})
 
-			Context("when the image was created with skip mount", func() {
+			Context("when the image was created with mount set to false", func() {
 				BeforeEach(func() {
-					spec.SkipMount = true
+					spec.Mount = false
 				})
 
 				It("removes the image rootfs and snapshot folders", func() {
@@ -675,6 +679,7 @@ var _ = Describe("Btrfs", func() {
 				spec := image_cloner.ImageDriverSpec{
 					ImagePath:     imagePath,
 					BaseVolumeIDs: []string{volID},
+					Mount:         true,
 				}
 
 				_, err = driver.CreateImage(logger, spec)

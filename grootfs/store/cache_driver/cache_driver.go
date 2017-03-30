@@ -57,7 +57,7 @@ func (c *CacheDriver) FetchBlob(logger lager.Logger, id string,
 		}
 		stat, err := os.Stat(c.blobPath(id))
 		if err != nil {
-			return nil, 0, errorspkg.Wrap(err, "acessing cached blob stat")
+			return nil, 0, errorspkg.Wrap(err, "accessing cached blob stat")
 		}
 
 		blobContents, err := ioutil.ReadAll(reader)

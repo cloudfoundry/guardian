@@ -66,6 +66,7 @@ var _ = Describe("Init Store", func() {
 		_, err := runner.Create(groot.CreateSpec{
 			ID:        "random-id",
 			BaseImage: "docker:///cfgarden/empty",
+			Mount:     true,
 		})
 
 		Expect(err).ToNot(HaveOccurred())
@@ -78,6 +79,7 @@ var _ = Describe("Init Store", func() {
 			_, err := runner.Create(groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: "docker:///cfgarden/empty",
+				Mount:     true,
 				UIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
 					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
@@ -121,6 +123,7 @@ var _ = Describe("Init Store", func() {
 			_, err := runner.Create(groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: "docker:///cfgarden/empty",
+				Mount:     true,
 				UIDMappings: []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
 					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
@@ -141,6 +144,7 @@ var _ = Describe("Init Store", func() {
 				_, err := runner.Create(groot.CreateSpec{
 					ID:        "random-id",
 					BaseImage: "docker:///cfgarden/empty",
+					Mount:     true,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
 					},

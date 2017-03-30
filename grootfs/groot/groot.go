@@ -27,6 +27,19 @@ const (
 //go:generate counterfeiter . MetricsEmitter
 //go:generate counterfeiter . NamespaceChecker
 
+type ImageInfo struct {
+	Rootfs string         `json:"rootfs"`
+	Config *specsv1.Image `json:"config,omitempty"`
+	Mount  *MountInfo     `json:"mount,omitempty"`
+}
+
+type MountInfo struct {
+	Destination string   `json:"destination"`
+	Type        string   `json:"type"`
+	Source      string   `json:"source"`
+	Options     []string `json:"options"`
+}
+
 type IDMappingSpec struct {
 	HostID      int
 	NamespaceID int
@@ -55,7 +68,7 @@ type BaseImagePuller interface {
 
 type ImageSpec struct {
 	ID                        string
-	SkipMount                 bool
+	Mount                     bool
 	DiskLimit                 int64
 	ExcludeBaseImageFromQuota bool
 	BaseVolumeIDs             []string
@@ -65,7 +78,7 @@ type ImageSpec struct {
 }
 
 type Image struct {
-	Json       string
+	ImageInfo  ImageInfo
 	Path       string
 	RootFSPath string
 }

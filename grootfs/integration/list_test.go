@@ -28,6 +28,7 @@ var _ = Describe("List", func() {
 		image, err = Runner.Create(groot.CreateSpec{
 			BaseImage: baseImageFile.Name(),
 			ID:        "root-image",
+			Mount:     true,
 		})
 		Expect(err).ToNot(HaveOccurred())
 	})

@@ -2,6 +2,7 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"crypto/x509"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -65,6 +66,14 @@ var CreateCommand = cli.Command{
 			Usage: "Do NOT clean up unused layers before creating rootfs",
 		},
 		cli.BoolFlag{
+			Name:  "with-mount",
+			Usage: "Mount the root filesystem after creation. This may require root privileges.",
+		},
+		cli.BoolFlag{
+			Name:  "without-mount",
+			Usage: "Do not mount the root filesystem. Must be used in conjunction with --json.",
+		},
+		cli.BoolFlag{
 			Name:  "json",
 			Usage: "Print RootFS Path and container config as JSON",
 		},
@@ -100,7 +109,8 @@ var CreateCommand = cli.Command{
 			WithExcludeImageFromQuota(ctx.Bool("exclude-image-from-quota"),
 				ctx.IsSet("exclude-image-from-quota")).
 			WithClean(ctx.IsSet("with-clean"), ctx.IsSet("without-clean")).
-			WithJson(ctx.IsSet("json"), ctx.IsSet("no-json"))
+			WithJson(ctx.IsSet("json"), ctx.IsSet("no-json")).
+			WithMount(ctx.IsSet("with-mount"), ctx.IsSet("without-mount"))
 
 		cfg, err := configBuilder.Build()
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
@@ -197,7 +207,7 @@ var CreateCommand = cli.Command{
 		createSpec := groot.CreateSpec{
 			ID:                          id,
 			Json:                        cfg.Create.Json,
-			SkipMount:                   cfg.Create.SkipMount,
+			Mount:                       cfg.Create.WithMount,
 			BaseImage:                   baseImage,
 			DiskLimit:                   cfg.Create.DiskLimitSizeBytes,
 			ExcludeBaseImageFromQuota:   cfg.Create.ExcludeImageFromQuota,
@@ -207,14 +217,27 @@ var CreateCommand = cli.Command{
 			CleanOnCreateThresholdBytes: cfg.Clean.ThresholdBytes,
 			CleanOnCreateIgnoreImages:   cfg.Clean.IgnoreBaseImages,
 		}
-		output, err := creator.Create(logger, createSpec)
+		image, err := creator.Create(logger, createSpec)
 		if err != nil {
 			logger.Error("creating", err)
 			humanizedError := tryHumanize(err, createSpec)
 			return cli.NewExitError(humanizedError, 1)
 		}
 
+		var output string
+		if cfg.Create.Json {
+			jsonBytes, err := json.Marshal(image.ImageInfo)
+			if err != nil {
+				logger.Error("formatting output", err)
+				return cli.NewExitError(err.Error(), 1)
+			}
+			output = string(jsonBytes)
+		} else {
+			output = image.Path
+		}
+
 		fmt.Println(output)
+
 		return nil
 	},
 }
@@ -304,7 +327,7 @@ func validateOptions(ctx *cli.Context, cfg config.Config) error {
 		return errorspkg.New("json and no-json cannot be used together")
 	}
 
-	if cfg.Create.SkipMount && !cfg.Create.Json {
+	if !cfg.Create.WithMount && !cfg.Create.Json {
 		return errorspkg.New("skip mount option must be called with `json`")
 	}
 

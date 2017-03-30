@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strconv"
@@ -9,25 +10,36 @@ import (
 )
 
 func (r Runner) Create(spec groot.CreateSpec) (groot.Image, error) {
-	output, err := r.CreateOutput(spec)
+	output, err := r.create(spec)
 	if err != nil {
 		return groot.Image{}, err
 	}
 
+	var path string
+	imageInfo := groot.ImageInfo{}
+
+	if r.Json || spec.Json {
+		path = ""
+		json.Unmarshal([]byte(output), &imageInfo)
+	} else {
+		path = output
+	}
+
 	return groot.Image{
-		Path:       output,
-		RootFSPath: filepath.Join(output, "rootfs"),
+		Path:       path,
+		RootFSPath: filepath.Join(path, "rootfs"),
+		ImageInfo:  imageInfo,
 	}, nil
 }
 
-func (r Runner) CreateOutput(spec groot.CreateSpec) (string, error) {
+func (r Runner) create(spec groot.CreateSpec) (string, error) {
 	args := r.makeCreateArgs(spec)
-	output, err := r.RunSubcommand("create", args...)
+	image, err := r.RunSubcommand("create", args...)
 	if err != nil {
 		return "", err
 	}
 
-	return output, nil
+	return image, nil
 }
 
 func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
@@ -69,6 +81,12 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 		if spec.Json {
 			args = append(args, "--json")
 		}
+	}
+
+	if spec.Mount {
+		args = append(args, "--with-mount")
+	} else {
+		args = append(args, "--without-mount")
 	}
 
 	if r.InsecureRegistry != "" {

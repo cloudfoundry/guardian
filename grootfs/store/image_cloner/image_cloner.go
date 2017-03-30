@@ -15,22 +15,9 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
-type ImageInfo struct {
-	Rootfs string         `json:"rootfs"`
-	Config *specsv1.Image `json:"config,omitempty"`
-	Mount  *MountInfo     `json:"mount,omitempty"`
-}
-
-type MountInfo struct {
-	Destination string   `json:"destination"`
-	Type        string   `json:"type"`
-	Source      string   `json:"source"`
-	Options     []string `json:"options"`
-}
-
 type ImageDriverSpec struct {
 	BaseVolumeIDs      []string
-	SkipMount          bool
+	Mount              bool
 	ImagePath          string
 	DiskLimit          int64
 	ExclusiveDiskLimit bool
@@ -38,7 +25,7 @@ type ImageDriverSpec struct {
 
 //go:generate counterfeiter . ImageDriver
 type ImageDriver interface {
-	CreateImage(logger lager.Logger, spec ImageDriverSpec) (MountInfo, error)
+	CreateImage(logger lager.Logger, spec ImageDriverSpec) (groot.MountInfo, error)
 	DestroyImage(logger lager.Logger, path string) error
 	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
 }
@@ -110,14 +97,14 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 
 	imageDriverSpec := ImageDriverSpec{
 		BaseVolumeIDs:      spec.BaseVolumeIDs,
-		SkipMount:          spec.SkipMount,
+		Mount:              spec.Mount,
 		ImagePath:          imagePath,
 		DiskLimit:          spec.DiskLimit,
 		ExclusiveDiskLimit: spec.ExcludeBaseImageFromQuota,
 	}
 
-	var mountJson MountInfo
-	if mountJson, err = b.imageDriver.CreateImage(logger, imageDriverSpec); err != nil {
+	var mountInfo groot.MountInfo
+	if mountInfo, err = b.imageDriver.CreateImage(logger, imageDriverSpec); err != nil {
 		logger.Error("creating-image-failed", err, lager.Data{"imageDriverSpec": imageDriverSpec})
 		return groot.Image{}, errorspkg.Wrap(err, "creating image")
 	}
@@ -131,7 +118,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 		return groot.Image{}, err
 	}
 
-	imageJson, err := b.imageJson(imageRootFSPath, spec.BaseImage, mountJson, spec.SkipMount)
+	imageInfo, err := b.imageInfo(imageRootFSPath, spec.BaseImage, mountInfo, spec.Mount)
 	if err != nil {
 		logger.Error("creating-image-object", err)
 		return groot.Image{}, errorspkg.Wrap(err, "creating image object")
@@ -140,7 +127,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 	return groot.Image{
 		Path:       imagePath,
 		RootFSPath: imageRootFSPath,
-		Json:       imageJson,
+		ImageInfo:  imageInfo,
 	}, nil
 }
 
@@ -221,27 +208,22 @@ func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, 
 	return nil
 }
 
-func (b *ImageCloner) imageJson(rootfsPath string, baseImage specsv1.Image, mountJson MountInfo, skipMount bool) (string, error) {
+func (b *ImageCloner) imageInfo(rootfsPath string, baseImage specsv1.Image, mountJson groot.MountInfo, mount bool) (groot.ImageInfo, error) {
 	var imageConfig *specsv1.Image
 	if !reflect.DeepEqual(baseImage, specsv1.Image{}) {
 		imageConfig = &baseImage
 	}
 
-	imageJson := ImageInfo{
+	imageInfo := groot.ImageInfo{
 		Rootfs: rootfsPath,
 		Config: imageConfig,
 	}
 
-	if skipMount {
-		imageJson.Mount = &mountJson
+	if !mount {
+		imageInfo.Mount = &mountJson
 	}
 
-	jsonBytes, err := json.Marshal(&imageJson)
-	if err != nil {
-		return "", err
-	}
-
-	return string(jsonBytes), nil
+	return imageInfo, nil
 }
 
 func (b *ImageCloner) imagePath(id string) string {

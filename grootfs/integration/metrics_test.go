@@ -20,6 +20,7 @@ var _ = Describe("Metrics", func() {
 		fakeMetronPort   uint16
 		fakeMetron       *testhelpers.FakeMetron
 		fakeMetronClosed chan struct{}
+		spec             groot.CreateSpec
 	)
 
 	BeforeEach(func() {
@@ -34,6 +35,12 @@ var _ = Describe("Metrics", func() {
 			Expect(fakeMetron.Run()).To(Succeed())
 			close(fakeMetronClosed)
 		}()
+
+		spec = groot.CreateSpec{
+			ID:        "my-id",
+			BaseImage: "docker:///cfgarden/empty:v0.1.0",
+			Mount:     true,
+		}
 	})
 
 	AfterEach(func() {
@@ -43,12 +50,7 @@ var _ = Describe("Metrics", func() {
 
 	Describe("Create", func() {
 		It("emits the total creation time", func() {
-			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Create(groot.CreateSpec{
-					ID:        "my-id",
-					BaseImage: "docker:///cfgarden/empty:v0.1.0",
-				})
+			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
 			var metrics []events.ValueMetric
@@ -65,11 +67,7 @@ var _ = Describe("Metrics", func() {
 
 	Describe("Delete", func() {
 		BeforeEach(func() {
-			_, err := Runner.
-				Create(groot.CreateSpec{
-					ID:        "my-id",
-					BaseImage: "docker:///cfgarden/empty:v0.1.0",
-				})
+			_, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -93,11 +91,7 @@ var _ = Describe("Metrics", func() {
 
 	Describe("Stats", func() {
 		BeforeEach(func() {
-			_, err := Runner.
-				Create(groot.CreateSpec{
-					ID:        "my-id",
-					BaseImage: "docker:///cfgarden/empty:v0.1.0",
-				})
+			_, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -121,11 +115,7 @@ var _ = Describe("Metrics", func() {
 
 	Describe("Clean", func() {
 		BeforeEach(func() {
-			_, err := Runner.
-				Create(groot.CreateSpec{
-					ID:        "my-id",
-					BaseImage: "docker:///cfgarden/empty:v0.1.0",
-				})
+			_, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -172,10 +162,7 @@ var _ = Describe("Metrics", func() {
 
 		Describe("metron endpoint", func() {
 			It("uses the metron agent from the config file", func() {
-				_, err := Runner.Create(groot.CreateSpec{
-					ID:        "my-id",
-					BaseImage: "docker:///cfgarden/empty:v0.1.0",
-				})
+				_, err := Runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 
 				var metrics []events.ValueMetric

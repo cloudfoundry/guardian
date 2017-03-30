@@ -55,7 +55,9 @@ var _ = Describe("Creator", func() {
 		fakeImageCloner.CreateReturns(groot.Image{
 			Path:       "/path/to/images/123",
 			RootFSPath: "/path/to/images/123/rootfs",
-			Json:       `{"rootfs": "/path/to/image/123/rootfs"}`,
+			ImageInfo: groot.ImageInfo{
+				Rootfs: "/path/to/images/123/rootfs",
+			},
 		}, nil)
 
 		creator = groot.IamCreator(
@@ -200,7 +202,7 @@ var _ = Describe("Creator", func() {
 				BaseImage: injectedBaseImage,
 			}, nil)
 
-			output, err := creator.Create(logger, groot.CreateSpec{
+			image, err := creator.Create(logger, groot.CreateSpec{
 				ID:        "my-image",
 				BaseImage: "docker:///ubuntu",
 			})
@@ -208,7 +210,7 @@ var _ = Describe("Creator", func() {
 
 			Expect(fakeRootFSConfigurer.ConfigureCallCount()).To(Equal(1))
 			rootFSPath, baseImage := fakeRootFSConfigurer.ConfigureArgsForCall(0)
-			Expect(rootFSPath).To(Equal(filepath.Join(output, "rootfs")))
+			Expect(rootFSPath).To(Equal(filepath.Join(image.Path, "rootfs")))
 			Expect(baseImage).To(Equal(injectedBaseImage))
 		})
 
@@ -222,22 +224,17 @@ var _ = Describe("Creator", func() {
 			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
 		})
 
-		It("returns the image path", func() {
-			fakeImageCloner.CreateReturns(groot.Image{
-				Path: "/path/to/image",
-			}, nil)
+		It("returns the image", func() {
+			expectedImage := groot.Image{
+				Path:       "/path/to/image",
+				RootFSPath: "rootfs-path",
+				ImageInfo:  groot.ImageInfo{},
+			}
+			fakeImageCloner.CreateReturns(expectedImage, nil)
 
-			output, err := creator.Create(logger, groot.CreateSpec{})
+			image, err := creator.Create(logger, groot.CreateSpec{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(output).To(Equal("/path/to/image"))
-		})
-
-		Context("when json output is requested", func() {
-			It("returns the json representation of the image", func() {
-				output, err := creator.Create(logger, groot.CreateSpec{Json: true})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(output).To(Equal(`{"rootfs": "/path/to/image/123/rootfs"}`))
-			})
+			Expect(image).To(Equal(expectedImage))
 		})
 
 		It("emits metrics for creation", func() {

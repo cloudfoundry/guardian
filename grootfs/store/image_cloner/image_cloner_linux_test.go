@@ -36,8 +36,8 @@ var _ = Describe("Image", func() {
 		var err error
 		fakeImageDriver = new(image_clonerfakes.FakeImageDriver)
 
-		fakeImageDriver.CreateImageStub = func(_ lager.Logger, spec imageclonerpkg.ImageDriverSpec) (imageclonerpkg.MountInfo, error) {
-			return imageclonerpkg.MountInfo{
+		fakeImageDriver.CreateImageStub = func(_ lager.Logger, spec imageclonerpkg.ImageDriverSpec) (groot.MountInfo, error) {
+			return groot.MountInfo{
 				Source:      "my-source",
 				Type:        "my-type",
 				Destination: "my-destination",
@@ -69,16 +69,14 @@ var _ = Describe("Image", func() {
 			Expect(image.Path).To(BeADirectory())
 		})
 
-		It("returns a image Json", func() {
+		It("returns an image", func() {
 			imageConfig := specsv1.Image{Created: time.Now()}
-			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, SkipMount: false})
+			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: true})
 			Expect(err).NotTo(HaveOccurred())
 
-			var outputJson imageclonerpkg.ImageInfo
-			Expect(json.Unmarshal([]byte(image.Json), &outputJson)).To(Succeed())
-			Expect(outputJson.Rootfs).To(Equal(image.RootFSPath))
-			Expect(outputJson.Config.Created.Unix()).To(Equal(imageConfig.Created.Unix()))
-			Expect(outputJson.Mount).To(BeNil())
+			Expect(image.ImageInfo.Rootfs).To(Equal(image.RootFSPath))
+			Expect(image.ImageInfo.Config.Created.Unix()).To(Equal(imageConfig.Created.Unix()))
+			Expect(image.ImageInfo.Mount).To(BeNil())
 		})
 
 		It("keeps the images in the same image directory", func() {
@@ -138,30 +136,26 @@ var _ = Describe("Image", func() {
 			Expect(imageJsonContent).To(Equal(baseImage))
 		})
 
-		Context("when skip mount is set", func() {
-			It("returns a image Json with mount information", func() {
+		Context("when mounting is skipped", func() {
+			It("returns a image with mount information", func() {
 				imageConfig := specsv1.Image{Created: time.Now()}
-				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, SkipMount: true})
+				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: false})
 				Expect(err).NotTo(HaveOccurred())
 
-				var outputJson imageclonerpkg.ImageInfo
-				Expect(json.Unmarshal([]byte(image.Json), &outputJson)).To(Succeed())
-				Expect(outputJson.Mount).ToNot(BeNil())
-				Expect(outputJson.Mount.Destination).To(Equal("my-destination"))
-				Expect(outputJson.Mount.Source).To(Equal("my-source"))
-				Expect(outputJson.Mount.Type).To(Equal("my-type"))
-				Expect(outputJson.Mount.Options).To(ConsistOf("my-option"))
+				Expect(image.ImageInfo.Mount).ToNot(BeNil())
+				Expect(image.ImageInfo.Mount.Destination).To(Equal("my-destination"))
+				Expect(image.ImageInfo.Mount.Source).To(Equal("my-source"))
+				Expect(image.ImageInfo.Mount.Type).To(Equal("my-type"))
+				Expect(image.ImageInfo.Mount.Options).To(ConsistOf("my-option"))
 			})
 		})
 
 		Context("when the spec.BaseImage is empty", func() {
-			It("returns a image Json", func() {
+			It("returns a image", func() {
 				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: specsv1.Image{}})
 				Expect(err).NotTo(HaveOccurred())
 
-				var outputJson imageclonerpkg.ImageInfo
-				Expect(json.Unmarshal([]byte(image.Json), &outputJson)).To(Succeed())
-				Expect(outputJson.Config).To(BeNil())
+				Expect(image.ImageInfo.Config).To(BeNil())
 			})
 		})
 
@@ -291,7 +285,7 @@ var _ = Describe("Image", func() {
 
 		Context("when creating the image fails", func() {
 			BeforeEach(func() {
-				fakeImageDriver.CreateImageReturns(imageclonerpkg.MountInfo{}, errors.New("failed to create image"))
+				fakeImageDriver.CreateImageReturns(groot.MountInfo{}, errors.New("failed to create image"))
 			})
 
 			It("returns an error", func() {

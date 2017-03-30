@@ -18,7 +18,7 @@ type CreateSpec struct {
 	BaseImage                   string
 	DiskLimit                   int64
 	Json                        bool
-	SkipMount                   bool
+	Mount                       bool
 	ExcludeBaseImageFromQuota   bool
 	CleanOnCreate               bool
 	CleanOnCreateThresholdBytes int64
@@ -55,7 +55,7 @@ func IamCreator(
 	}
 }
 
-func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (string, error) {
+func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (Image, error) {
 	startTime := time.Now()
 	defer func() {
 		c.metricsEmitter.TryEmitDuration(logger, MetricImageCreationTime, time.Since(startTime))
@@ -67,19 +67,19 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (string, error) {
 
 	parsedURL, err := url.Parse(spec.BaseImage)
 	if err != nil {
-		return "", errorspkg.Wrap(err, "parsing image url")
+		return Image{}, errorspkg.Wrap(err, "parsing image url")
 	}
 
 	if strings.ContainsAny(spec.ID, "/") {
-		return "", errorspkg.Errorf("id `%s` contains invalid characters: `/`", spec.ID)
+		return Image{}, errorspkg.Errorf("id `%s` contains invalid characters: `/`", spec.ID)
 	}
 
 	ok, err := c.imageCloner.Exists(spec.ID)
 	if err != nil {
-		return "", errorspkg.Wrap(err, "checking id exists")
+		return Image{}, errorspkg.Wrap(err, "checking id exists")
 	}
 	if ok {
-		return "", errorspkg.Errorf("image for id `%s` already exists", spec.ID)
+		return Image{}, errorspkg.Errorf("image for id `%s` already exists", spec.ID)
 	}
 
 	ownerUid, ownerGid := c.parseOwner(spec.UIDMappings, spec.GIDMappings)
@@ -95,7 +95,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (string, error) {
 
 	lockFile, err := c.locksmith.Lock(GlobalLockKey)
 	if err != nil {
-		return "", err
+		return Image{}, err
 	}
 	defer func() {
 		if err := c.locksmith.Unlock(lockFile); err != nil {
@@ -106,29 +106,29 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (string, error) {
 	validNamespace, err := c.namespaceChecker.Check(spec.UIDMappings, spec.GIDMappings)
 	if err != nil {
 		logger.Error("failed-check-namespace", err)
-		return "", errorspkg.Wrap(err, "checking namespace failed")
+		return Image{}, errorspkg.Wrap(err, "checking namespace failed")
 	}
 
 	if !validNamespace {
 		logger.Error("failed-check-namespace", err)
-		return "", errorspkg.New("store already initialized with a different mapping")
+		return Image{}, errorspkg.New("store already initialized with a different mapping")
 	}
 
 	if spec.CleanOnCreate {
 		ignoredImages := append(spec.CleanOnCreateIgnoreImages, spec.BaseImage)
 		if _, err := c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, ignoredImages, false); err != nil {
-			return "", errorspkg.Wrap(err, "failed-to-cleanup-store")
+			return Image{}, errorspkg.Wrap(err, "failed-to-cleanup-store")
 		}
 	}
 
 	baseImage, err := c.baseImagePuller.Pull(logger, baseImageSpec)
 	if err != nil {
-		return "", errorspkg.Wrap(err, "pulling the image")
+		return Image{}, errorspkg.Wrap(err, "pulling the image")
 	}
 
 	imageSpec := ImageSpec{
 		ID:                        spec.ID,
-		SkipMount:                 spec.SkipMount,
+		Mount:                     spec.Mount,
 		DiskLimit:                 spec.DiskLimit,
 		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
 		BaseVolumeIDs:             baseImage.ChainIDs,
@@ -138,7 +138,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (string, error) {
 	}
 	image, err := c.imageCloner.Create(logger, imageSpec)
 	if err != nil {
-		return "", errorspkg.Wrap(err, "making image")
+		return Image{}, errorspkg.Wrap(err, "making image")
 	}
 
 	imageRefName := fmt.Sprintf(ImageReferenceFormat, spec.ID)
@@ -147,7 +147,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (string, error) {
 			logger.Error("failed-to-destroy-image", destroyErr)
 		}
 
-		return "", err
+		return Image{}, err
 	}
 
 	if err := c.rootFSConfigurer.Configure(image.RootFSPath, baseImage.BaseImage); err != nil {
@@ -155,14 +155,10 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (string, error) {
 			logger.Error("failed-to-destroy-image", destroyErr)
 		}
 
-		return "", err
+		return Image{}, err
 	}
 
-	if spec.Json {
-		return image.Json, nil
-	}
-
-	return image.Path, nil
+	return image, nil
 }
 
 func (c *Creator) parseOwner(uidMappings, gidMappings []IDMappingSpec) (int, int) {

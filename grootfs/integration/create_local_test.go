@@ -1,7 +1,6 @@
 package integration_test
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -23,6 +22,7 @@ var _ = Describe("Create with local images", func() {
 		sourceImagePath string
 		baseImagePath   string
 		baseImageFile   *os.File
+		spec            groot.CreateSpec
 	)
 
 	BeforeEach(func() {
@@ -44,13 +44,16 @@ var _ = Describe("Create with local images", func() {
 	JustBeforeEach(func() {
 		baseImageFile = integration.CreateBaseImageTar(sourceImagePath)
 		baseImagePath = baseImageFile.Name()
+
+		spec = groot.CreateSpec{
+			BaseImage: baseImagePath,
+			ID:        "random-id",
+			Mount:     true,
+		}
 	})
 
 	It("creates a root filesystem", func() {
-		image, err := Runner.Create(groot.CreateSpec{
-			BaseImage: baseImagePath,
-			ID:        "random-id",
-		})
+		image, err := Runner.Create(spec)
 		Expect(err).NotTo(HaveOccurred())
 
 		imageContentPath := path.Join(image.RootFSPath, "foo")
@@ -61,10 +64,7 @@ var _ = Describe("Create with local images", func() {
 	})
 
 	It("keeps folders original permissions", func() {
-		image, err := Runner.Create(groot.CreateSpec{
-			BaseImage: baseImagePath,
-			ID:        "random-id",
-		})
+		image, err := Runner.Create(spec)
 		Expect(err).NotTo(HaveOccurred())
 
 		permissiveFolderPath := path.Join(image.RootFSPath, "permissive-folder")
@@ -73,43 +73,15 @@ var _ = Describe("Create with local images", func() {
 		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
 	})
 
-	Context("when the --json flag is provided", func() {
-		It("outputs a json with the correct `rootfs` key", func() {
-			output, err := Runner.WithJson().CreateOutput(groot.CreateSpec{
-				BaseImage: baseImagePath,
-				ID:        "random-id",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			outputObj := map[string]interface{}{}
-			Expect(json.Unmarshal([]byte(output), &outputObj)).To(Succeed())
-			Expect(outputObj["rootfs"]).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id", "rootfs")))
-		})
-
-		It("outputs a json with empty config key", func() {
-			output, err := Runner.WithJson().CreateOutput(groot.CreateSpec{
-				BaseImage: baseImagePath,
-				ID:        "random-id",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			var outputObj map[string]interface{}
-			Expect(json.Unmarshal([]byte(output), &outputObj)).To(Succeed())
-			Expect(outputObj["config"]).To(BeNil())
-		})
-	})
-
 	Context("when two rootfses are using the same image", func() {
 		It("isolates them", func() {
-			image1, err := Runner.Create(groot.CreateSpec{
-				ID:        "random-id",
-				BaseImage: baseImagePath,
-			})
+			image1, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
 			image2, err := Runner.Create(groot.CreateSpec{
 				ID:        "another-random-id",
 				BaseImage: baseImagePath,
+				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(ioutil.WriteFile(filepath.Join(image1.RootFSPath, "new-file"), []byte("hello-world"), 0644)).To(Succeed())
@@ -130,10 +102,7 @@ var _ = Describe("Create with local images", func() {
 		})
 
 		It("preserves the timestamps", func() {
-			image, err := Runner.Create(groot.CreateSpec{
-				ID:        "random-id",
-				BaseImage: baseImagePath,
-			})
+			image, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
 			imageOldFilePath := path.Join(image.RootFSPath, "old-file")
@@ -148,6 +117,7 @@ var _ = Describe("Create with local images", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-image-1",
 				BaseImage: baseImagePath,
+				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -165,6 +135,7 @@ var _ = Describe("Create with local images", func() {
 			createSpec := groot.CreateSpec{
 				ID:        "my-image-2",
 				BaseImage: baseImage2Path,
+				Mount:     true,
 			}
 			_, err := Runner.Create(createSpec)
 			Expect(err).NotTo(HaveOccurred())
@@ -183,6 +154,7 @@ var _ = Describe("Create with local images", func() {
 			_, err = runner.Create(groot.CreateSpec{
 				ID:        "my-image-3",
 				BaseImage: baseImage2Path,
+				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -206,6 +178,7 @@ var _ = Describe("Create with local images", func() {
 				_, err = Runner.WithNoClean().Create(groot.CreateSpec{
 					ID:        "my-image-3",
 					BaseImage: baseImage2Path,
+					Mount:     true,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -223,6 +196,7 @@ var _ = Describe("Create with local images", func() {
 			_, err = Runner.Create(groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: tempDir,
+				Mount:     true,
 			})
 			Expect(err).To(MatchError("invalid base image: directory provided instead of a tar file"))
 		})
@@ -237,10 +211,7 @@ var _ = Describe("Create with local images", func() {
 
 	Context("when image content changes", func() {
 		JustBeforeEach(func() {
-			_, err := Runner.Create(groot.CreateSpec{
-				BaseImage: baseImagePath,
-				ID:        "random-id",
-			})
+			_, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -251,6 +222,7 @@ var _ = Describe("Create with local images", func() {
 			image, err := Runner.Create(groot.CreateSpec{
 				ID:        "random-id-2",
 				BaseImage: baseImagePath,
+				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -263,10 +235,7 @@ var _ = Describe("Create with local images", func() {
 
 	Describe("unpacked volume caching", func() {
 		It("caches the unpacked image in a subvolume with snapshots", func() {
-			_, err := Runner.Create(groot.CreateSpec{
-				BaseImage: baseImagePath,
-				ID:        "random-id",
-			})
+			_, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
 			volumeID := integration.BaseImagePathToVolumeID(baseImagePath)
@@ -276,6 +245,7 @@ var _ = Describe("Create with local images", func() {
 			image, err := Runner.Create(groot.CreateSpec{
 				ID:        "random-id-2",
 				BaseImage: baseImagePath,
+				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(path.Join(image.RootFSPath, "foo")).To(BeARegularFile())
@@ -288,6 +258,7 @@ var _ = Describe("Create with local images", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				BaseImage: "/invalid/image",
 				ID:        "random-id",
+				Mount:     true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("stat /invalid/image: no such file or directory")))
 		})
@@ -305,10 +276,7 @@ var _ = Describe("Create with local images", func() {
 		})
 
 		It("unpacks the symlinks", func() {
-			image, err := Runner.Create(groot.CreateSpec{
-				BaseImage: baseImagePath,
-				ID:        "random-id",
-			})
+			image, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
 			content, err := ioutil.ReadFile(filepath.Join(image.RootFSPath, "symlink"))
@@ -325,10 +293,7 @@ var _ = Describe("Create with local images", func() {
 			})
 
 			It("preserves the timestamps", func() {
-				image, err := Runner.Create(groot.CreateSpec{
-					BaseImage: baseImagePath,
-					ID:        "random-id",
-				})
+				image, err := Runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 
 				symlinkTargetFilePath := path.Join(image.RootFSPath, "symlink-target")

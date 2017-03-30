@@ -16,6 +16,7 @@ var _ = Describe("Concurrent creations", func() {
 		_, err := Runner.Create(groot.CreateSpec{
 			ID:        "test-pre-warm",
 			BaseImage: "docker:///cfgarden/empty",
+			Mount:     true,
 		})
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -32,6 +33,7 @@ var _ = Describe("Concurrent creations", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					ID:        fmt.Sprintf("test-%d", idx),
 					BaseImage: "docker:///cfgarden/empty",
+					Mount:     true,
 				})
 				Expect(err).NotTo(HaveOccurred())
 			}(wg, i)
@@ -53,6 +55,7 @@ var _ = Describe("Concurrent creations", func() {
 					_, err := Runner.Create(groot.CreateSpec{
 						ID:        fmt.Sprintf("test-%d", i),
 						BaseImage: "docker:///cfgarden/empty",
+						Mount:     true,
 					})
 					Expect(err).NotTo(HaveOccurred())
 				}

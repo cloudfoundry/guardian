@@ -73,6 +73,7 @@ var _ = Describe("Stats", func() {
 				BaseImage: baseImagePath,
 				ID:        imageID,
 				DiskLimit: diskLimit,
+				Mount:     true,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=4")

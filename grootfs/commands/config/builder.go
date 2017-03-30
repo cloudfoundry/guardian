@@ -25,7 +25,7 @@ type Config struct {
 type Create struct {
 	ExcludeImageFromQuota bool     `yaml:"exclude_image_from_quota"`
 	WithClean             bool     `yaml:"with_clean"`
-	SkipMount             bool     `yaml:"skip_mount"`
+	WithMount             bool     `yaml:"with_mount"`
 	Json                  bool     `yaml:"json"`
 	DiskLimitSizeBytes    int64    `yaml:"disk_limit_size_bytes"`
 	InsecureRegistries    []string `yaml:"insecure_registries"`
@@ -198,7 +198,7 @@ func (b *Builder) WithLogFile(filepath string) *Builder {
 
 func (b *Builder) WithClean(clean bool, noClean bool) *Builder {
 	if clean {
-		b.config.Create.WithClean = clean
+		b.config.Create.WithClean = true
 	}
 
 	if noClean {
@@ -208,9 +208,21 @@ func (b *Builder) WithClean(clean bool, noClean bool) *Builder {
 	return b
 }
 
+func (b *Builder) WithMount(mount bool, noMount bool) *Builder {
+	if mount {
+		b.config.Create.WithMount = true
+	}
+
+	if noMount {
+		b.config.Create.WithMount = false
+	}
+
+	return b
+}
+
 func (b *Builder) WithJson(json bool, noJson bool) *Builder {
 	if json {
-		b.config.Create.Json = json
+		b.config.Create.Json = true
 	}
 
 	if noJson {

@@ -53,6 +53,7 @@ var _ = Describe("Clean", func() {
 			_, err = Runner.Create(groot.CreateSpec{
 				ID:        "my-image-1",
 				BaseImage: baseImagePath,
+				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -76,6 +77,7 @@ var _ = Describe("Clean", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					ID:        "my-image-2",
 					BaseImage: anotherBaseImagePath,
+					Mount:     true,
 					DiskLimit: 10 * 1024 * 1024,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -124,6 +126,7 @@ var _ = Describe("Clean", func() {
 						_, err := Runner.Create(groot.CreateSpec{
 							ID:        "my-image-3",
 							BaseImage: yetAnotherBaseImagePath,
+							Mount:     true,
 						})
 						Expect(err).NotTo(HaveOccurred())
 
@@ -206,6 +209,7 @@ var _ = Describe("Clean", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-image-1",
 				BaseImage: "docker:///cfgarden/empty:v0.1.1",
+				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -232,6 +236,7 @@ var _ = Describe("Clean", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					ID:        "my-image-2",
 					BaseImage: "docker:///busybox:1.26.2",
+					Mount:     true,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -278,6 +283,7 @@ var _ = Describe("Clean", func() {
 						_, err := Runner.Create(groot.CreateSpec{
 							ID:        "my-image-3",
 							BaseImage: "docker:///cfgarden/empty:v0.1.1",
+							Mount:     true,
 						})
 						Expect(err).NotTo(HaveOccurred())
 

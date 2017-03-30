@@ -45,6 +45,7 @@ var _ = Describe("Driver", func() {
 
 		spec = image_cloner.ImageDriverSpec{
 			ImagePath: imagePath,
+			Mount:     true,
 		}
 	})
 
@@ -185,9 +186,9 @@ var _ = Describe("Driver", func() {
 			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
 		})
 
-		Context("when SkipMount is true", func() {
+		Context("when Mount is false", func() {
 			BeforeEach(func() {
-				spec.SkipMount = true
+				spec.Mount = false
 			})
 
 			It("does not mount the rootfs", func() {

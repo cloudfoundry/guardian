@@ -98,19 +98,19 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	return nil
 }
 
-func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (image_cloner.MountInfo, error) {
+func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error) {
 	logger = logger.Session("btrfs-creating-snapshot", lager.Data{"spec": spec})
 	logger.Info("starting")
 	defer logger.Info("ending")
 
 	toPath := filepath.Join(spec.ImagePath, "rootfs")
 	baseVolumePath := filepath.Join(d.storePath, store.VolumesDirName, spec.BaseVolumeIDs[len(spec.BaseVolumeIDs)-1])
-	var mountInfo image_cloner.MountInfo
+	var mountInfo groot.MountInfo
 
-	if spec.SkipMount {
+	if !spec.Mount {
 		if err := os.Mkdir(toPath, 0755); err != nil {
 			logger.Error("creating-rootfs-folder-failed", err, lager.Data{"rootfs": toPath})
-			return image_cloner.MountInfo{}, errorspkg.Wrap(err, "creating rootfs folder")
+			return groot.MountInfo{}, errorspkg.Wrap(err, "creating rootfs folder")
 		}
 
 		mountInfo.Destination = toPath
@@ -124,7 +124,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	cmd := exec.Command(d.btrfsBinPath, "subvolume", "snapshot", baseVolumePath, toPath)
 	logger.Debug("starting-btrfs", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	if contents, err := cmd.CombinedOutput(); err != nil {
-		return image_cloner.MountInfo{}, errorspkg.Errorf(
+		return groot.MountInfo{}, errorspkg.Errorf(
 			"creating btrfs snapshot from `%s` to `%s` (%s): %s",
 			baseVolumePath, toPath, err, string(contents),
 		)

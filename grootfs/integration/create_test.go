@@ -1,7 +1,6 @@
 package integration_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -15,7 +14,6 @@ import (
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
-	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
@@ -84,6 +82,7 @@ var _ = Describe("Create", func() {
 		image, err := Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
 			ID:        "random-id",
+			Mount:     true,
 		})
 		Expect(err).ToNot(HaveOccurred())
 
@@ -109,6 +108,7 @@ var _ = Describe("Create", func() {
 				Create(groot.CreateSpec{
 					ID:        "some-id",
 					BaseImage: baseImagePath,
+					Mount:     true,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
 						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
@@ -150,6 +150,7 @@ var _ = Describe("Create", func() {
 		It("allows the mapped user to have access to the created image", func() {
 			image, err := Runner.WithLogLevel(lager.DEBUG).
 				Create(groot.CreateSpec{
+					Mount:     true,
 					ID:        "some-id",
 					BaseImage: baseImagePath,
 					UIDMappings: []groot.IDMappingSpec{
@@ -184,6 +185,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithStore(storePath).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
+				Mount:     true,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(storePath).To(BeADirectory())
@@ -198,6 +200,7 @@ var _ = Describe("Create", func() {
 					Create(groot.CreateSpec{
 						ID:        "some-id",
 						BaseImage: baseImagePath,
+						Mount:     true,
 					})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -224,6 +227,7 @@ var _ = Describe("Create", func() {
 					Create(groot.CreateSpec{
 						ID:        "some-id",
 						BaseImage: baseImagePath,
+						Mount:     true,
 						UIDMappings: []groot.IDMappingSpec{
 							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
 							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
@@ -258,6 +262,7 @@ var _ = Describe("Create", func() {
 						Create(groot.CreateSpec{
 							ID:        "some-id",
 							BaseImage: baseImagePath,
+							Mount:     true,
 							UIDMappings: []groot.IDMappingSpec{
 								groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 							},
@@ -279,6 +284,7 @@ var _ = Describe("Create", func() {
 						Create(groot.CreateSpec{
 							ID:        "random-id",
 							BaseImage: "my-image",
+							Mount:     true,
 						})
 					Expect(err).To(HaveOccurred())
 					Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))
@@ -297,6 +303,7 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 				DiskLimit: tenMegabytes,
+				Mount:     true,
 			})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -310,6 +317,7 @@ var _ = Describe("Create", func() {
 					DiskLimit: -200,
 					BaseImage: baseImagePath,
 					ID:        "random-id",
+					Mount:     true,
 				})
 				Expect(err).To(MatchError(ContainSubstring("disk limit cannot be negative")))
 			})
@@ -322,6 +330,7 @@ var _ = Describe("Create", func() {
 					ExcludeBaseImageFromQuota: true,
 					BaseImage:                 baseImagePath,
 					ID:                        "random-id",
+					Mount:                     true,
 				})
 				Expect(err).ToNot(HaveOccurred())
 
@@ -347,6 +356,7 @@ var _ = Describe("Create", func() {
 					_, err := Runner.WithDraxBin(draxBin.Name()).Create(groot.CreateSpec{
 						BaseImage: baseImagePath,
 						ID:        "random-id",
+						Mount:     true,
 						DiskLimit: 104857600,
 					})
 					Expect(err).NotTo(HaveOccurred())
@@ -362,6 +372,7 @@ var _ = Describe("Create", func() {
 						_, err := Runner.WithDraxBin(draxBin.Name()).Create(groot.CreateSpec{
 							BaseImage: baseImagePath,
 							ID:        "random-id",
+							Mount:     true,
 							DiskLimit: 104857600,
 						})
 						Expect(err).To(HaveOccurred())
@@ -378,6 +389,7 @@ var _ = Describe("Create", func() {
 					_, err := Runner.WithoutDraxBin().WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(groot.CreateSpec{
 						BaseImage: baseImagePath,
 						ID:        "random-id",
+						Mount:     true,
 						DiskLimit: tenMegabytes,
 					})
 					Expect(err).ToNot(HaveOccurred())
@@ -401,6 +413,7 @@ var _ = Describe("Create", func() {
 				image, err := Runner.Create(groot.CreateSpec{
 					BaseImage: baseImagePath,
 					ID:        "foobar",
+					Mount:     true,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
 						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
@@ -418,6 +431,7 @@ var _ = Describe("Create", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					BaseImage: baseImagePath,
 					ID:        "foobar2",
+					Mount:     true,
 				})
 				Expect(err).To(MatchError("store already initialized with a different mapping"))
 			})
@@ -429,6 +443,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///busybox:1.26.2",
+				Mount:     true,
 				DiskLimit: 10 * 1024 * 1024,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -448,6 +463,7 @@ var _ = Describe("Create", func() {
 			_, err = Runner.Create(groot.CreateSpec{
 				ID:            "my-empty",
 				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
+				Mount:         true,
 				CleanOnCreate: true,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -466,6 +482,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///busybox:1.26.2",
+				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -484,6 +501,7 @@ var _ = Describe("Create", func() {
 			_, err = Runner.Create(groot.CreateSpec{
 				ID:            "my-empty",
 				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
+				Mount:         true,
 				CleanOnCreate: false,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -504,6 +522,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithClean().WithNoClean().Create(groot.CreateSpec{
 				ID:        "my-empty",
 				BaseImage: "docker:///cfgarden/empty:v0.1.1",
+				Mount:     true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("with-clean and without-clean cannot be used together")))
 		})
@@ -514,6 +533,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithJson().WithNoJson().Create(groot.CreateSpec{
 				ID:        "my-empty",
 				BaseImage: "docker:///cfgarden/empty:v0.1.1",
+				Mount:     true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("json and no-json cannot be used together")))
 		})
@@ -530,6 +550,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithoutStore().Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
+				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect("/var/lib/grootfs/images").To(BeADirectory())
@@ -541,6 +562,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: baseImagePath,
+				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -549,6 +571,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
+				Mount:     true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("image for id `random-id` already exists")))
 		})
@@ -559,6 +582,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "",
+				Mount:     true,
 			})
 			Expect(err).To(HaveOccurred())
 		})
@@ -569,6 +593,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "this/is/not/okay",
+				Mount:     true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("id `this/is/not/okay` contains invalid characters: `/`")))
 		})
@@ -579,6 +604,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithStore("/mnt/ext4").Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
+				Mount:     true,
 			})
 			Expect(err).To(MatchError("Image id 'random-id': Store path filesystem (/mnt/ext4) is incompatible with requested driver"))
 		})
@@ -590,7 +616,9 @@ var _ = Describe("Create", func() {
 				GrootFSBin,
 				"--store", StorePath,
 				"--driver", "dinosaurfs",
-				"create", baseImagePath,
+				"create",
+				"--with-mount",
+				baseImagePath,
 				"some-id",
 			)
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -605,6 +633,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "some-id",
 				BaseImage: "*@#%^!&",
+				Mount:     true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("parsing image url: parse")))
 			Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
@@ -618,6 +647,7 @@ var _ = Describe("Create", func() {
 				"--store", StorePath,
 				"--driver", Driver,
 				"create", baseImagePath,
+				"--with-mount",
 				"--uid-mapping", "1:hello:65000",
 				"some-id",
 			)
@@ -634,6 +664,7 @@ var _ = Describe("Create", func() {
 				"--store", StorePath,
 				"--driver", Driver,
 				"create", baseImagePath,
+				"--with-mount",
 				"--gid-mapping", "1:groot:65000",
 				"some-id",
 			)
@@ -659,6 +690,7 @@ var _ = Describe("Create", func() {
 			spec = groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: baseImagePath,
+				Mount:     true,
 			}
 		})
 
@@ -711,6 +743,7 @@ var _ = Describe("Create", func() {
 					BaseImage: baseImagePath,
 					ID:        "random-id",
 					DiskLimit: 104857600,
+					Mount:     true,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -751,50 +784,50 @@ var _ = Describe("Create", func() {
 		})
 
 		Describe("json", func() {
-			BeforeEach(func() {
-				cfg.Create.Json = true
-			})
-
-			It("returns a image json as output", func() {
-				image, err := Runner.Create(spec)
+			It("returns an image json as output", func() {
+				image, err := Runner.Create(groot.CreateSpec{
+					ID:        "random-id",
+					BaseImage: baseImagePath,
+					Json:      true,
+					Mount:     true,
+				})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(image.Path).To(MatchRegexp("{.+}"))
+				Expect(image.ImageInfo.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id/rootfs")))
+				Expect(image.ImageInfo.Mount).To(BeNil())
+				Expect(image.ImageInfo.Config).To(BeNil())
 			})
 		})
 
-		Describe("skip mount", func() {
-			BeforeEach(func() {
-				cfg.Create.Json = true
-				cfg.Create.SkipMount = true
-			})
-
+		Describe("without mount", func() {
 			It("does not mount the rootfs", func() {
-				output, err := Runner.CreateOutput(groot.CreateSpec{
+				image, err := Runner.Create(groot.CreateSpec{
 					ID:        "some-id",
 					BaseImage: baseImagePath,
+					Json:      true,
+					Mount:     false,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				var imageJson image_cloner.ImageInfo
-				Expect(json.Unmarshal([]byte(output), &imageJson)).To(Succeed())
-				Expect(imageJson.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id/rootfs")))
-
-				contents, err := ioutil.ReadDir(imageJson.Rootfs)
+				contents, err := ioutil.ReadDir(image.ImageInfo.Rootfs)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(contents).To(BeEmpty())
 			})
 
 			Describe("Mount json output", func() {
-				var imageJson image_cloner.ImageInfo
+				var (
+					image groot.Image
+				)
 
 				JustBeforeEach(func() {
-					output, err := Runner.CreateOutput(groot.CreateSpec{
+					var err error
+					image, err = Runner.Create(groot.CreateSpec{
 						ID:        "some-id",
 						BaseImage: baseImagePath,
+						Json:      true,
+						Mount:     false,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					Expect(json.Unmarshal([]byte(output), &imageJson)).To(Succeed())
 				})
 
 				Context("BTRFS", func() {
@@ -803,12 +836,12 @@ var _ = Describe("Create", func() {
 					})
 
 					It("returns the mount information in the output json", func() {
-						Expect(imageJson.Mount).ToNot(BeNil())
-						Expect(imageJson.Mount.Destination).To(Equal(imageJson.Rootfs))
-						Expect(imageJson.Mount.Type).To(Equal(""))
-						Expect(imageJson.Mount.Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
-						Expect(imageJson.Mount.Options).To(HaveLen(1))
-						Expect(imageJson.Mount.Options[0]).To(Equal("bind"))
+						Expect(image.ImageInfo.Mount).ToNot(BeNil())
+						Expect(image.ImageInfo.Mount.Destination).To(Equal(image.ImageInfo.Rootfs))
+						Expect(image.ImageInfo.Mount.Type).To(Equal(""))
+						Expect(image.ImageInfo.Mount.Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
+						Expect(image.ImageInfo.Mount.Options).To(HaveLen(1))
+						Expect(image.ImageInfo.Mount.Options[0]).To(Equal("bind"))
 					})
 				})
 
@@ -818,12 +851,12 @@ var _ = Describe("Create", func() {
 					})
 
 					It("returns the mount information in the output json", func() {
-						Expect(imageJson.Mount).ToNot(BeNil())
-						Expect(imageJson.Mount.Destination).To(Equal(imageJson.Rootfs))
-						Expect(imageJson.Mount.Type).To(Equal("overlay"))
-						Expect(imageJson.Mount.Source).To(Equal("overlay"))
-						Expect(imageJson.Mount.Options).To(HaveLen(1))
-						Expect(imageJson.Mount.Options[0]).To(MatchRegexp(
+						Expect(image.ImageInfo.Mount).ToNot(BeNil())
+						Expect(image.ImageInfo.Mount.Destination).To(Equal(image.ImageInfo.Rootfs))
+						Expect(image.ImageInfo.Mount.Type).To(Equal("overlay"))
+						Expect(image.ImageInfo.Mount.Source).To(Equal("overlay"))
+						Expect(image.ImageInfo.Mount.Options).To(HaveLen(1))
+						Expect(image.ImageInfo.Mount.Options[0]).To(MatchRegexp(
 							fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s",
 								filepath.Join(StorePath, overlayxfs.LinksDirName, ".*"),
 								filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.UpperDir),
@@ -832,19 +865,17 @@ var _ = Describe("Create", func() {
 						))
 					})
 				})
-			})
 
-			Context("but `json` is not", func() {
-				BeforeEach(func() {
-					cfg.Create.Json = false
-				})
-
-				It("returns an error", func() {
-					_, err := Runner.CreateOutput(groot.CreateSpec{
-						ID:        "my-empty",
-						BaseImage: "docker:///cfgarden/empty:v0.1.1",
+				Context("but `json` is not set", func() {
+					It("returns an error", func() {
+						_, err := Runner.Create(groot.CreateSpec{
+							ID:        "my-empty",
+							BaseImage: "docker:///cfgarden/empty:v0.1.1",
+							Json:      false,
+							Mount:     false,
+						})
+						Expect(err).To(MatchError(ContainSubstring("skip mount option must be called with `json`")))
 					})
-					Expect(err).To(MatchError(ContainSubstring("skip mount option must be called with `json`")))
 				})
 			})
 		})

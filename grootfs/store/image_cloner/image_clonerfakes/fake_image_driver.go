@@ -10,18 +10,18 @@ import (
 )
 
 type FakeImageDriver struct {
-	CreateImageStub        func(logger lager.Logger, spec image_cloner.ImageDriverSpec) (image_cloner.MountInfo, error)
+	CreateImageStub        func(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error)
 	createImageMutex       sync.RWMutex
 	createImageArgsForCall []struct {
 		logger lager.Logger
 		spec   image_cloner.ImageDriverSpec
 	}
 	createImageReturns struct {
-		result1 image_cloner.MountInfo
+		result1 groot.MountInfo
 		result2 error
 	}
 	createImageReturnsOnCall map[int]struct {
-		result1 image_cloner.MountInfo
+		result1 groot.MountInfo
 		result2 error
 	}
 	DestroyImageStub        func(logger lager.Logger, path string) error
@@ -54,7 +54,7 @@ type FakeImageDriver struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeImageDriver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (image_cloner.MountInfo, error) {
+func (fake *FakeImageDriver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error) {
 	fake.createImageMutex.Lock()
 	ret, specificReturn := fake.createImageReturnsOnCall[len(fake.createImageArgsForCall)]
 	fake.createImageArgsForCall = append(fake.createImageArgsForCall, struct {
@@ -84,24 +84,24 @@ func (fake *FakeImageDriver) CreateImageArgsForCall(i int) (lager.Logger, image_
 	return fake.createImageArgsForCall[i].logger, fake.createImageArgsForCall[i].spec
 }
 
-func (fake *FakeImageDriver) CreateImageReturns(result1 image_cloner.MountInfo, result2 error) {
+func (fake *FakeImageDriver) CreateImageReturns(result1 groot.MountInfo, result2 error) {
 	fake.CreateImageStub = nil
 	fake.createImageReturns = struct {
-		result1 image_cloner.MountInfo
+		result1 groot.MountInfo
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeImageDriver) CreateImageReturnsOnCall(i int, result1 image_cloner.MountInfo, result2 error) {
+func (fake *FakeImageDriver) CreateImageReturnsOnCall(i int, result1 groot.MountInfo, result2 error) {
 	fake.CreateImageStub = nil
 	if fake.createImageReturnsOnCall == nil {
 		fake.createImageReturnsOnCall = make(map[int]struct {
-			result1 image_cloner.MountInfo
+			result1 groot.MountInfo
 			result2 error
 		})
 	}
 	fake.createImageReturnsOnCall[i] = struct {
-		result1 image_cloner.MountInfo
+		result1 groot.MountInfo
 		result2 error
 	}{result1, result2}
 }

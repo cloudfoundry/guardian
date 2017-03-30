@@ -13,15 +13,20 @@ import (
 )
 
 var _ = Describe("Logging", func() {
+	var spec groot.CreateSpec
+
+	BeforeEach(func() {
+		spec = groot.CreateSpec{
+			ID:        "my-image",
+			BaseImage: "/non/existent/rootfs",
+			Mount:     true,
+		}
+	})
+
 	It("forwards human ouput to stdout", func() {
 		buffer := gbytes.NewBuffer()
 
-		_, err := Runner.
-			WithStdout(buffer).
-			Create(groot.CreateSpec{
-				ID:        "my-image",
-				BaseImage: "/non/existent/rootfs",
-			})
+		_, err := Runner.WithStdout(buffer).Create(spec)
 		Expect(err).To(HaveOccurred())
 
 		Eventually(buffer).Should(gbytes.Say("no such file or directory"))
@@ -33,13 +38,7 @@ var _ = Describe("Logging", func() {
 				It("writes logs to stderr", func() {
 					buffer := gbytes.NewBuffer()
 
-					_, err := Runner.
-						WithStderr(buffer).
-						WithLogLevel(lager.DEBUG).
-						Create(groot.CreateSpec{
-							ID:        "my-image",
-							BaseImage: "/non/existent/rootfs",
-						})
+					_, err := Runner.WithStderr(buffer).WithLogLevel(lager.DEBUG).Create(spec)
 					Expect(err).To(HaveOccurred())
 
 					Expect(buffer).To(gbytes.Say(`"error":".*no such file or directory"`))
@@ -50,13 +49,7 @@ var _ = Describe("Logging", func() {
 				It("does not write anything to stderr", func() {
 					buffer := gbytes.NewBuffer()
 
-					_, err := Runner.
-						WithStderr(buffer).
-						WithoutLogLevel().
-						Create(groot.CreateSpec{
-							ID:        "my-image",
-							BaseImage: "/non/existent/rootfs",
-						})
+					_, err := Runner.WithStderr(buffer).WithoutLogLevel().Create(spec)
 					Expect(err).To(HaveOccurred())
 
 					Expect(buffer.Contents()).To(BeEmpty())
@@ -82,13 +75,7 @@ var _ = Describe("Logging", func() {
 
 			Context("and --log-level is set", func() {
 				It("forwards logs to the given file", func() {
-					_, err := Runner.
-						WithLogFile(logFilePath).
-						WithLogLevel(lager.DEBUG).
-						Create(groot.CreateSpec{
-							ID:        "my-image",
-							BaseImage: "/non/existent/rootfs",
-						})
+					_, err := Runner.WithLogFile(logFilePath).WithLogLevel(lager.DEBUG).Create(spec)
 					Expect(err).To(HaveOccurred())
 
 					allTheLogs, err := ioutil.ReadFile(logFilePath)
@@ -99,13 +86,7 @@ var _ = Describe("Logging", func() {
 
 			Context("and --log-level is not set", func() {
 				It("forwards logs to the given file with the log level set to INFO", func() {
-					_, err := Runner.
-						WithLogFile(logFilePath).
-						WithoutLogLevel().
-						Create(groot.CreateSpec{
-							ID:        "my-image",
-							BaseImage: "/non/existent/rootfs",
-						})
+					_, err := Runner.WithLogFile(logFilePath).WithoutLogLevel().Create(spec)
 					Expect(err).To(HaveOccurred())
 
 					allTheLogs, err := ioutil.ReadFile(logFilePath)
@@ -119,13 +100,7 @@ var _ = Describe("Logging", func() {
 				It("returns an error to stdout", func() {
 					buffer := gbytes.NewBuffer()
 
-					_, err := Runner.
-						WithStdout(buffer).
-						WithLogFile("/path/to/log_file.log").
-						Create(groot.CreateSpec{
-							ID:        "my-image",
-							BaseImage: "/non/existent/rootfs",
-						})
+					_, err := Runner.WithStdout(buffer).WithLogFile("/path/to/log_file.log").Create(spec)
 					Expect(err).To(HaveOccurred())
 
 					Expect(buffer).To(gbytes.Say("no such file or directory"))

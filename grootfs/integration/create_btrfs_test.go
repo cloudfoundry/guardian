@@ -19,6 +19,7 @@ var _ = Describe("Create (btrfs only)", func() {
 	var (
 		baseImagePath   string
 		sourceImagePath string
+		spec            groot.CreateSpec
 	)
 
 	BeforeEach(func() {
@@ -39,6 +40,12 @@ var _ = Describe("Create (btrfs only)", func() {
 	JustBeforeEach(func() {
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
 		baseImagePath = baseImageFile.Name()
+
+		spec = groot.CreateSpec{
+			BaseImage: baseImagePath,
+			ID:        "random-id",
+			Mount:     true,
+		}
 	})
 
 	Context("when inclusive disk limit is provided", func() {
@@ -59,7 +66,7 @@ var _ = Describe("Create (btrfs only)", func() {
 
 			Context("when it's provided", func() {
 				It("uses calls the provided btrfs binary", func() {
-					_, err := Runner.WithBtrfsBin(btrfsBin.Name()).Create(groot.CreateSpec{BaseImage: baseImagePath, ID: "random-id"})
+					_, err := Runner.WithBtrfsBin(btrfsBin.Name()).Create(spec)
 					Expect(err).To(HaveOccurred())
 
 					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
@@ -75,6 +82,7 @@ var _ = Describe("Create (btrfs only)", func() {
 						BaseImage: baseImagePath,
 						ID:        "random-id",
 						DiskLimit: tenMegabytes,
+						Mount:     true,
 					})
 					Expect(err).To(HaveOccurred())
 
@@ -101,10 +109,7 @@ var _ = Describe("Create (btrfs only)", func() {
 			})
 
 			It("uses the btrfs bin from the config file", func() {
-				_, err := Runner.Create(groot.CreateSpec{
-					BaseImage: baseImagePath,
-					ID:        "random-id",
-				})
+				_, err := Runner.Create(spec)
 				Expect(err).To(HaveOccurred())
 
 				contents, err := ioutil.ReadFile(btrfsCalledFile.Name())

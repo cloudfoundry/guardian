@@ -25,6 +25,7 @@ var _ = Describe("Builder", func() {
 	BeforeEach(func() {
 		createCfg = config.Create{
 			WithClean:             false,
+			WithMount:             true,
 			ExcludeImageFromQuota: true,
 			UIDMappings:           []string{"config-uid-mapping"},
 			GIDMappings:           []string{"config-gid-mapping"},
@@ -606,6 +607,47 @@ var _ = Describe("Builder", func() {
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(config.Create.Json).To(BeTrue())
+				})
+			})
+		})
+
+		Describe("WithMount", func() {
+			Context("when without-mount is set, and with-mount is not set", func() {
+				BeforeEach(func() {
+					cfg.Create.WithMount = true
+				})
+
+				It("overrides the config's entry", func() {
+					builder = builder.WithMount(false, true)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.Create.WithMount).To(BeFalse())
+				})
+			})
+
+			Context("when without-mount is not set, and with-mount is set", func() {
+				BeforeEach(func() {
+					cfg.Create.WithMount = false
+				})
+
+				It("overrides the config's entry", func() {
+					builder = builder.WithMount(true, false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.Create.WithMount).To(BeTrue())
+				})
+			})
+
+			Context("when without-mount is not set, and with-mount is not set", func() {
+				BeforeEach(func() {
+					cfg.Create.WithMount = true
+				})
+
+				It("uses the config value", func() {
+					builder = builder.WithMount(false, false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.Create.WithMount).To(BeTrue())
 				})
 			})
 		})

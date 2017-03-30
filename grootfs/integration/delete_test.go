@@ -39,6 +39,7 @@ var _ = Describe("Delete", func() {
 		image, err = Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
 			ID:        "random-id",
+			Mount:     true,
 		})
 		Expect(err).ToNot(HaveOccurred())
 	})

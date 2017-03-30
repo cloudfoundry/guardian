@@ -179,11 +179,6 @@ var _ = Describe("RemoteFetcher", func() {
 			)
 
 			BeforeEach(func() {
-				var err error
-				configContents, err = json.Marshal(expectedConfig)
-				Expect(err).NotTo(HaveOccurred())
-
-				fakeCacheDriver.FetchBlobReturns(configContents, 0, nil)
 				expectedConfig = specsv1.Image{
 					Created: time.Time{}.In(time.UTC),
 					RootFS: specsv1.RootFS{
@@ -193,6 +188,11 @@ var _ = Describe("RemoteFetcher", func() {
 						},
 					},
 				}
+
+				var err error
+				configContents, err = json.Marshal(expectedConfig)
+				Expect(err).NotTo(HaveOccurred())
+				fakeCacheDriver.FetchBlobReturns(configContents, 0, nil)
 			})
 
 			JustBeforeEach(func() {
