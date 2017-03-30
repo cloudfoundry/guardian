@@ -612,19 +612,12 @@ var _ = Describe("Create", func() {
 
 	Context("when the requested filesystem driver is not supported", func() {
 		It("fails with a useful error message", func() {
-			cmd := exec.Command(
-				GrootFSBin,
-				"--store", StorePath,
-				"--driver", "dinosaurfs",
-				"create",
-				"--with-mount",
-				baseImagePath,
-				"some-id",
-			)
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(sess.Wait()).NotTo(gexec.Exit(0))
-			Eventually(sess).Should(gbytes.Say("filesystem driver not supported: dinosaurfs"))
+			_, err := Runner.WithDriver("dinosaurfs").Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "some-id",
+				Mount:     true,
+			})
+			Expect(err).To(MatchError(ContainSubstring("filesystem driver not supported: dinosaurfs")))
 		})
 	})
 
@@ -637,42 +630,6 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).To(MatchError(ContainSubstring("parsing image url: parse")))
 			Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
-		})
-	})
-
-	Context("when a mappings flag is invalid", func() {
-		It("fails when the uid mapping is invalid", func() {
-			cmd := exec.Command(
-				GrootFSBin,
-				"--store", StorePath,
-				"--driver", Driver,
-				"create", baseImagePath,
-				"--with-mount",
-				"--uid-mapping", "1:hello:65000",
-				"some-id",
-			)
-
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(sess.Wait()).NotTo(gexec.Exit(0))
-			Eventually(sess).Should(gbytes.Say("parsing uid-mapping: expected integer"))
-		})
-
-		It("fails when the gid mapping is invalid", func() {
-			cmd := exec.Command(
-				GrootFSBin,
-				"--store", StorePath,
-				"--driver", Driver,
-				"create", baseImagePath,
-				"--with-mount",
-				"--gid-mapping", "1:groot:65000",
-				"some-id",
-			)
-
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(sess.Wait()).NotTo(gexec.Exit(0))
-			Eventually(sess).Should(gbytes.Say("parsing gid-mapping: expected integer"))
 		})
 	})
 
@@ -767,6 +724,28 @@ var _ = Describe("Create", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
 				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
+			})
+
+			Context("when the UID mapping is invalid", func() {
+				BeforeEach(func() {
+					cfg.Create.UIDMappings = []string{"1:hello:65000", "0:1000:1"}
+				})
+
+				It("reports an error", func() {
+					_, err := Runner.Create(spec)
+					Expect(err).To(MatchError(ContainSubstring("parsing uid-mapping: expected integer")))
+				})
+			})
+
+			Context("when the GID mapping is invalid", func() {
+				BeforeEach(func() {
+					cfg.Create.GIDMappings = []string{"1:hello:65000", "0:1000:1"}
+				})
+
+				It("reports an error", func() {
+					_, err := Runner.Create(spec)
+					Expect(err).To(MatchError(ContainSubstring("parsing gid-mapping: expected integer")))
+				})
 			})
 		})
 

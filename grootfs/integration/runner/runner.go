@@ -11,6 +11,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/onsi/ginkgo"
+	"github.com/onsi/gomega/gexec"
+
 	"code.cloudfoundry.org/lager"
 )
 
@@ -52,6 +55,19 @@ type Runner struct {
 	NoJson bool
 
 	SysCredential *syscall.Credential
+}
+
+func (r Runner) StartSubcommand(subcommand string, args ...string) (*gexec.Session, error) {
+	cmd := r.makeCmd(subcommand, args)
+	cmd.Env = r.EnvVars
+
+	if r.SysCredential != nil {
+		cmd.SysProcAttr = &syscall.SysProcAttr{
+			Credential: r.SysCredential,
+		}
+	}
+
+	return gexec.Start(cmd, ginkgo.GinkgoWriter, ginkgo.GinkgoWriter)
 }
 
 func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error) {

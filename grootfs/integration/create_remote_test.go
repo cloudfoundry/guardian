@@ -140,18 +140,11 @@ var _ = Describe("Create with remote images", func() {
 
 		Context("when the image is bigger than available memory", func() {
 			It("doesn't fail", func() {
-				cmd := exec.Command(
-					GrootFSBin,
-					"--store", StorePath,
-					"--driver", Driver,
-					"--log-level", "fatal",
-					"create",
-					"--with-mount",
-					"docker:///ubuntu:trusty",
-					"some-id",
-				)
-
-				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				sess, err := Runner.StartCreate(groot.CreateSpec{
+					BaseImage: "docker:///ubuntu:trusty",
+					ID:        "some-id",
+					Mount:     true,
+				})
 				Expect(err).NotTo(HaveOccurred())
 
 				go func() {

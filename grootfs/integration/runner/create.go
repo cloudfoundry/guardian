@@ -6,10 +6,17 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/onsi/gomega/gexec"
+
 	"code.cloudfoundry.org/grootfs/groot"
 )
 
-func (r Runner) Create(spec groot.CreateSpec) (groot.Image, error) {
+func (r Runner) StartCreate(spec groot.CreateSpec) (*gexec.Session, error) {
+	args := r.makeCreateArgs(spec)
+	return r.StartSubcommand("create", args...)
+}
+
+func (r Runner) Create(spec groot.CreateSpec, extraArgs ...string) (groot.Image, error) {
 	output, err := r.create(spec)
 	if err != nil {
 		return groot.Image{}, err
