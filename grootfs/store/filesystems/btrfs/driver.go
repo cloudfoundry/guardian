@@ -149,31 +149,9 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 }
 
 func (d *Driver) destroyQgroup(logger lager.Logger, path string) error {
-	if !d.draxInPath() {
-		logger.Info("drax-command-not-found", lager.Data{
-			"warning": "could not delete quota group",
-		})
+	_, err := d.runDrax(logger, "--btrfs-bin", d.btrfsBinPath, "destroy", "--volume-path", path)
 
-		return nil
-	}
-
-	if !d.hasSUID() {
-		return errorspkg.New("missing the setuid bit on drax")
-	}
-
-	cmd := exec.Command(d.draxBinPath, "--btrfs-bin", d.btrfsBinPath, "destroy", "--volume-path", path)
-	stdoutBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stdout = stdoutBuffer
-	cmd.Stderr = lagregator.NewRelogger(logger)
-
-	logger.Debug("starting-drax", lager.Data{"path": cmd.Path, "args": cmd.Args})
-	err := cmd.Run()
-	if err != nil {
-		logger.Error("drax-failed", err)
-		return errorspkg.Wrapf(err, "destroying quota group %s", strings.TrimSpace(stdoutBuffer.String()))
-	}
-
-	return nil
+	return err
 }
 
 func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
@@ -189,17 +167,32 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	btrfsSnapshot := filepath.Join(imagePath, "rootfs")
+	snapshotMountPath := filepath.Join(imagePath, "rootfs")
 	if _, err := os.Stat(filepath.Join(imagePath, "snapshot")); err == nil {
-		if err := os.Remove(btrfsSnapshot); err != nil {
+		if err := os.Remove(snapshotMountPath); err != nil {
 			logger.Error("removing-rootfs-folder-failed", err)
 			return errorspkg.Wrap(err, "remove rootfs folder")
 		}
-
-		btrfsSnapshot = filepath.Join(imagePath, "snapshot")
+		snapshotMountPath = filepath.Join(imagePath, "snapshot")
 	}
 
-	return d.destroyBtrfsVolume(logger, btrfsSnapshot)
+	err := d.destroyBtrfsVolume(logger, snapshotMountPath)
+	if err != nil && strings.Contains(err.Error(), "Directory not empty") {
+		subvolumes, err := d.listSubvolumes(logger, imagePath)
+		if err != nil {
+			logger.Error("listing-subvolumes-failed", err)
+			return errorspkg.Wrap(err, "list subvolumes")
+		}
+
+		for _, subvolume := range subvolumes {
+			if err := d.destroyBtrfsVolume(logger, subvolume); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	return err
 }
 
 func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
@@ -212,7 +205,8 @@ func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 	}
 
 	if err := d.destroyQgroup(logger, path); err != nil {
-		logger.Error("destroying-quota-groups-failed", err)
+		logger.Error("destroying-quota-groups-failed", err, lager.Data{
+			"warning": "could not delete quota group"})
 	}
 
 	cmd := exec.Command(d.btrfsBinPath, "subvolume", "delete", path)
@@ -224,6 +218,30 @@ func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 	return nil
 }
 
+func (d *Driver) listSubvolumes(logger lager.Logger, path string) ([]string, error) {
+	logger = logger.Session("listing-subvolumes", lager.Data{"path": path})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	args := []string{
+		"--btrfs-bin", d.btrfsBinPath,
+		"list",
+		path,
+	}
+
+	stdoutBuffer, err := d.runDrax(logger, args...)
+	if err != nil {
+		return nil, err
+	}
+
+	contents, err := ioutil.ReadAll(stdoutBuffer)
+	if err != nil {
+		return nil, errorspkg.Wrapf(err, "read drax read output")
+	}
+
+	return strings.Split(string(contents), "\n"), nil
+}
+
 func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec) error {
 	logger = logger.Session("applying-quotas", lager.Data{"spec": spec})
 	logger.Info("starting")
@@ -232,14 +250,6 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	if spec.DiskLimit == 0 {
 		logger.Debug("no-need-for-quotas")
 		return nil
-	}
-
-	if !d.draxInPath() {
-		return errorspkg.New("drax was not found in the $PATH")
-	}
-
-	if !d.hasSUID() {
-		return errorspkg.New("missing the setuid bit on drax")
 	}
 
 	args := []string{
@@ -253,6 +263,26 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 		args = append(args, "--exclude-image-from-quota")
 	}
 
+	if _, err := d.runDrax(logger, args...); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *Driver) runDrax(logger lager.Logger, args ...string) (*bytes.Buffer, error) {
+	logger = logger.Session("run-drax", lager.Data{"args": args})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	if !d.draxInPath() {
+		return nil, errorspkg.New("drax was not found in the $PATH")
+	}
+
+	if !d.hasSUID() {
+		return nil, errorspkg.New("missing the setuid bit on drax")
+	}
+
 	cmd := exec.Command(d.draxBinPath, args...)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
 	cmd.Stdout = stdoutBuffer
@@ -263,10 +293,10 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 
 	if err != nil {
 		logger.Error("drax-failed", err)
-		return errorspkg.Wrapf(err, " %s", strings.TrimSpace(stdoutBuffer.String()))
+		return nil, errorspkg.Wrapf(err, " %s", strings.TrimSpace(stdoutBuffer.String()))
 	}
 
-	return nil
+	return stdoutBuffer, nil
 }
 
 func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.VolumeStats, error) {
@@ -289,14 +319,9 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 		"--force-sync",
 	}
 
-	cmd := exec.Command(d.draxBinPath, args...)
-	stdoutBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stdout = stdoutBuffer
-	cmd.Stderr = lagregator.NewRelogger(logger)
-	err := cmd.Run()
+	stdoutBuffer, err := d.runDrax(logger, args...)
 	if err != nil {
-		logger.Error("drax-failed", err)
-		return groot.VolumeStats{}, errorspkg.Wrapf(err, "%s", strings.TrimSpace(stdoutBuffer.String()))
+		return groot.VolumeStats{}, err
 	}
 
 	usageRegexp := regexp.MustCompile(`.*\s+(\d+)\s+(\d+)$`)

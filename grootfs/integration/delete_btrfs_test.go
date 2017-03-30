@@ -5,7 +5,9 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
+	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -68,6 +70,38 @@ var _ = Describe("Delete (btrfs only)", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 		Expect(sess).ToNot(gbytes.Say(rootID))
+	})
+
+	Context("when the rootfs folder has subvolumes inside", func() {
+		JustBeforeEach(func() {
+			cmd := exec.Command("btrfs", "sub", "create", filepath.Join(image.RootFSPath, "subvolume"))
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				Credential: &syscall.Credential{
+					Uid: uint32(GrootfsTestUid),
+					Gid: uint32(GrootfsTestGid),
+				},
+			}
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+
+			cmd = exec.Command("btrfs", "sub", "snapshot", filepath.Join(image.RootFSPath, "subvolume"), filepath.Join(image.RootFSPath, "snapshot"))
+			cmd.SysProcAttr = &syscall.SysProcAttr{
+				Credential: &syscall.Credential{
+					Uid: uint32(GrootfsTestUid),
+					Gid: uint32(GrootfsTestGid),
+				},
+			}
+			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess).Should(gexec.Exit(0))
+		})
+
+		It("removes the rootfs completely", func() {
+			Expect(image.RootFSPath).To(BeAnExistingFile())
+			Expect(Runner.Delete("random-id")).To(Succeed())
+			Expect(image.RootFSPath).ToNot(BeAnExistingFile())
+		})
 	})
 
 	Context("when drax is not in PATH", func() {

@@ -571,6 +571,28 @@ var _ = Describe("Btrfs", func() {
 				))
 			})
 
+			Context("when the rootfs folder has subvolumes inside", func() {
+				JustBeforeEach(func() {
+					sess, err := gexec.Start(exec.Command("btrfs", "sub", "create", filepath.Join(rootfsPath, "subvolume")), GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(0))
+
+					sess, err = gexec.Start(exec.Command("btrfs", "sub", "create", filepath.Join(rootfsPath, "subvolume", "subsubvolume")), GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(0))
+
+					sess, err = gexec.Start(exec.Command("btrfs", "sub", "snapshot", filepath.Join(rootfsPath, "subvolume"), filepath.Join(rootfsPath, "snapshot")), GinkgoWriter, GinkgoWriter)
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess).Should(gexec.Exit(0))
+				})
+
+				It("deletes the btrfs volume", func() {
+					Expect(rootfsPath).To(BeADirectory())
+					Expect(driver.DestroyImage(logger, spec.ImagePath)).To(Succeed())
+					Expect(rootfsPath).ToNot(BeAnExistingFile())
+				})
+			})
+
 			Context("when the image was created with mount set to false", func() {
 				BeforeEach(func() {
 					spec.Mount = false
