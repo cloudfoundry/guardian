@@ -874,7 +874,7 @@ var _ = Describe("Create", func() {
 							Json:      false,
 							Mount:     false,
 						})
-						Expect(err).To(MatchError(ContainSubstring("skip mount option must be called with `json`")))
+						Expect(err).To(MatchError(ContainSubstring("without-mount option must be used with the json option")))
 					})
 				})
 			})

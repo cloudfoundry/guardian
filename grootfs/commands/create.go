@@ -207,7 +207,7 @@ var CreateCommand = cli.Command{
 		createSpec := groot.CreateSpec{
 			ID:                          id,
 			Json:                        cfg.Create.Json,
-			Mount:                       cfg.Create.WithMount,
+			Mount:                       !cfg.Create.WithoutMount,
 			BaseImage:                   baseImage,
 			DiskLimit:                   cfg.Create.DiskLimitSizeBytes,
 			ExcludeBaseImageFromQuota:   cfg.Create.ExcludeImageFromQuota,
@@ -327,8 +327,8 @@ func validateOptions(ctx *cli.Context, cfg config.Config) error {
 		return errorspkg.New("json and no-json cannot be used together")
 	}
 
-	if !cfg.Create.WithMount && !cfg.Create.Json {
-		return errorspkg.New("skip mount option must be called with `json`")
+	if cfg.Create.WithoutMount && !cfg.Create.Json {
+		return errorspkg.New("without-mount option must be used with the json option")
 	}
 
 	return nil

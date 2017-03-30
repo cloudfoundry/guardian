@@ -25,7 +25,7 @@ type Config struct {
 type Create struct {
 	ExcludeImageFromQuota bool     `yaml:"exclude_image_from_quota"`
 	WithClean             bool     `yaml:"with_clean"`
-	WithMount             bool     `yaml:"with_mount"`
+	WithoutMount          bool     `yaml:"without_mount"`
 	Json                  bool     `yaml:"json"`
 	DiskLimitSizeBytes    int64    `yaml:"disk_limit_size_bytes"`
 	InsecureRegistries    []string `yaml:"insecure_registries"`
@@ -210,11 +210,11 @@ func (b *Builder) WithClean(clean bool, noClean bool) *Builder {
 
 func (b *Builder) WithMount(mount bool, noMount bool) *Builder {
 	if mount {
-		b.config.Create.WithMount = true
+		b.config.Create.WithoutMount = false
 	}
 
 	if noMount {
-		b.config.Create.WithMount = false
+		b.config.Create.WithoutMount = true
 	}
 
 	return b
