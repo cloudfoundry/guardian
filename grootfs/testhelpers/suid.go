@@ -8,25 +8,25 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-func SuidDrax(draxBinPath string) {
+func SuidBinary(binPath string) {
 	sess, err := gexec.Start(
-		exec.Command("sudo", "chown", "root:root", draxBinPath),
+		exec.Command("sudo", "chown", "root:root", binPath),
 		GinkgoWriter, GinkgoWriter,
 	)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))
 
 	sess, err = gexec.Start(
-		exec.Command("sudo", "chmod", "u+s", draxBinPath),
+		exec.Command("sudo", "chmod", "u+s", binPath),
 		GinkgoWriter, GinkgoWriter,
 	)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess, "5s").Should(gexec.Exit(0))
 }
 
-func UnsuidDrax(draxBinPath string) {
+func UnsuidBinary(binPath string) {
 	sess, err := gexec.Start(
-		exec.Command("sudo", "chmod", "u-s", draxBinPath),
+		exec.Command("sudo", "chmod", "u-s", binPath),
 		GinkgoWriter, GinkgoWriter,
 	)
 	Expect(err).NotTo(HaveOccurred())

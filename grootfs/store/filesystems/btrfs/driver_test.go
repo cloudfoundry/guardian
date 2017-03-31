@@ -48,7 +48,7 @@ var _ = Describe("Btrfs", func() {
 
 		draxBinPath, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
 		Expect(err).NotTo(HaveOccurred())
-		testhelpers.SuidDrax(draxBinPath)
+		testhelpers.SuidBinary(draxBinPath)
 
 		logger = NewLogger("btrfs")
 	})
@@ -373,7 +373,7 @@ var _ = Describe("Btrfs", func() {
 
 				Context("and drax does not have the setuid bit", func() {
 					BeforeEach(func() {
-						testhelpers.UnsuidDrax(draxBinPath)
+						testhelpers.UnsuidBinary(draxBinPath)
 					})
 
 					It("returns an error", func() {
@@ -637,7 +637,7 @@ var _ = Describe("Btrfs", func() {
 
 			Context("and drax does not have the setuid bit", func() {
 				BeforeEach(func() {
-					testhelpers.UnsuidDrax(draxBinPath)
+					testhelpers.UnsuidBinary(draxBinPath)
 				})
 
 				It("doesn't fail, but logs the error", func() {
@@ -762,7 +762,7 @@ var _ = Describe("Btrfs", func() {
 
 			Context("and drax does not have the setuid bit", func() {
 				BeforeEach(func() {
-					testhelpers.UnsuidDrax(draxBinPath)
+					testhelpers.UnsuidBinary(draxBinPath)
 				})
 
 				It("returns an error", func() {

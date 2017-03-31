@@ -110,7 +110,7 @@ func TestGroot(t *testing.T) {
 		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
 		Expect(err).NotTo(HaveOccurred())
 		DraxBin = integration.MakeBinaryAccessibleToEveryone(DraxBin)
-		testhelpers.SuidDrax(DraxBin)
+		testhelpers.SuidBinary(DraxBin)
 
 		RegistryUsername = os.Getenv("REGISTRY_USERNAME")
 		RegistryPassword = os.Getenv("REGISTRY_PASSWORD")

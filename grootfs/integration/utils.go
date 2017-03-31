@@ -78,7 +78,7 @@ func SkipIfNonRoot(uid int) {
 
 func CreateFakeDrax() (string, *os.File, *os.File) {
 	tempFolder, bin, binCalledFile := CreateFakeBin("drax")
-	testhelpers.SuidDrax(bin.Name())
+	testhelpers.SuidBinary(bin.Name())
 	return tempFolder, bin, binCalledFile
 }
 

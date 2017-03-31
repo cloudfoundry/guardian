@@ -368,7 +368,7 @@ var _ = Describe("Create", func() {
 
 				Context("when the drax bin doesn't have uid bit set", func() {
 					It("doesn't leak the image dir", func() {
-						testhelpers.UnsuidDrax(draxBin.Name())
+						testhelpers.UnsuidBinary(draxBin.Name())
 						_, err := Runner.WithDraxBin(draxBin.Name()).Create(groot.CreateSpec{
 							BaseImage: baseImagePath,
 							ID:        "random-id",
