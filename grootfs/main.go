@@ -135,7 +135,9 @@ func main() {
 		return nil
 	}
 
-	_ = grootfs.Run(os.Args)
+	if err := grootfs.Run(os.Args); err != nil {
+		os.Exit(1)
+	}
 }
 
 func translateLogLevel(logLevel string) lager.LogLevel {
