@@ -428,7 +428,8 @@ var _ = Describe("Create with remote images", func() {
 					_, err := Runner.Create(groot.CreateSpec{
 						BaseImage: baseImageURL,
 						ID:        "random-id",
-						Mount:     true,
+						Mount:     mountByDefault(),
+						Json:      !mountByDefault(),
 						ExcludeBaseImageFromQuota: true,
 						DiskLimit:                 10,
 					})
@@ -441,7 +442,8 @@ var _ = Describe("Create with remote images", func() {
 					_, err := Runner.Create(groot.CreateSpec{
 						BaseImage: baseImageURL,
 						ID:        "random-id",
-						Mount:     true,
+						Mount:     mountByDefault(),
+						Json:      !mountByDefault(),
 						DiskLimit: 10,
 					})
 					Expect(err).To(MatchError(ContainSubstring("layers exceed disk quota")))

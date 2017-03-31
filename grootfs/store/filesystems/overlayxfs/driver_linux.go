@@ -19,6 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
+	"github.com/tscolari/lagregator"
 	shortid "github.com/ventu-io/go-shortid"
 )
 
@@ -326,20 +327,9 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 		}
 	}
 
-	imagesPath := filepath.Join(d.storePath, store.ImageDirName)
-	quotaControl, err := quotapkg.NewControl(imagesPath)
-	if err != nil {
-		logger.Error("creating-quota-control-failed", err, lager.Data{"imagesPath": imagesPath})
-		return errorspkg.Wrapf(err, "creating xfs quota control %s", imagesPath)
-	}
-
-	quota := quotapkg.Quota{
-		Size: uint64(diskLimit),
-	}
-
-	if err := quotaControl.SetQuota(spec.ImagePath, quota); err != nil {
-		logger.Error("setting-quota-failed", err)
-		return errorspkg.Wrapf(err, "setting quota to %s", spec.ImagePath)
+	if output, err := d.runTardis(logger, "limit", "--disk-limit-bytes", strconv.FormatInt(diskLimit, 10), "--image-path", spec.ImagePath); err != nil {
+		logger.Error("applying-quota-failed", err, lager.Data{"diskLimit": diskLimit, "imagePath": spec.ImagePath})
+		return errorspkg.Wrapf(err, "apply disk limit: %s", output.String())
 	}
 
 	return nil
@@ -495,4 +485,53 @@ func (d *Driver) createLinksDirectory(logger lager.Logger, storePath string, own
 	}
 
 	return nil
+}
+
+func (d *Driver) runTardis(logger lager.Logger, args ...string) (*bytes.Buffer, error) {
+	logger = logger.Session("run-tardis", lager.Data{"args": args})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	if !d.tardisInPath() {
+		return nil, errorspkg.New("tardis was not found in the $PATH")
+	}
+
+	if !d.hasSUID() {
+		return nil, errorspkg.New("missing the setuid bit on tardis")
+	}
+
+	cmd := exec.Command(d.tardisBinPath, args...)
+	stdoutBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = stdoutBuffer
+	cmd.Stderr = lagregator.NewRelogger(logger)
+
+	logger.Debug("starting-tardis", lager.Data{"path": cmd.Path, "args": cmd.Args})
+	err := cmd.Run()
+
+	if err != nil {
+		logger.Error("tardis-failed", err)
+		return nil, errorspkg.Wrapf(err, " %s", strings.TrimSpace(stdoutBuffer.String()))
+	}
+
+	return stdoutBuffer, nil
+}
+
+func (d *Driver) tardisInPath() bool {
+	if _, err := exec.LookPath(d.tardisBinPath); err != nil {
+		return false
+	}
+	return true
+}
+
+func (d *Driver) hasSUID() bool {
+	path, err := exec.LookPath(d.tardisBinPath)
+	if err != nil {
+		return false
+	}
+	// If LookPath succeeds Stat cannot fail
+	stats, _ := os.Stat(path)
+	if (stats.Mode() & os.ModeSetuid) == 0 {
+		return false
+	}
+	return true
 }

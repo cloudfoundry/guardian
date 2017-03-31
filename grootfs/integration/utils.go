@@ -82,6 +82,12 @@ func CreateFakeDrax() (string, *os.File, *os.File) {
 	return tempFolder, bin, binCalledFile
 }
 
+func CreateFakeTardis() (string, *os.File, *os.File) {
+	tempFolder, bin, binCalledFile := CreateFakeBin("tardis")
+	testhelpers.SuidBinary(bin.Name())
+	return tempFolder, bin, binCalledFile
+}
+
 func CreateFakeBin(binaryName string) (string, *os.File, *os.File) {
 	binCalledFile, err := ioutil.TempFile("", "bin-called")
 	Expect(err).NotTo(HaveOccurred())

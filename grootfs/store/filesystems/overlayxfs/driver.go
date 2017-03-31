@@ -10,12 +10,14 @@ const (
 	LinksDirName   = "l"
 )
 
-func NewDriver(storePath string) *Driver {
+func NewDriver(storePath, tardisBinPath string) *Driver {
 	return &Driver{
-		storePath: storePath,
+		storePath:     storePath,
+		tardisBinPath: tardisBinPath,
 	}
 }
 
 type Driver struct {
-	storePath string
+	storePath     string
+	tardisBinPath string
 }

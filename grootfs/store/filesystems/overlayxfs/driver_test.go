@@ -24,16 +24,21 @@ import (
 
 var _ = Describe("Driver", func() {
 	var (
-		driver   *overlayxfs.Driver
-		logger   *lagertest.TestLogger
-		spec     image_cloner.ImageDriverSpec
-		randomID string
+		driver        *overlayxfs.Driver
+		logger        *lagertest.TestLogger
+		spec          image_cloner.ImageDriverSpec
+		randomID      string
+		tardisBinPath string
 	)
 
 	BeforeEach(func() {
+		tardisBinPath = filepath.Join(os.TempDir(), fmt.Sprintf("tardis-%d", rand.Int()))
+		testhelpers.CopyFile(TardisBinPath, tardisBinPath)
+		testhelpers.SuidBinary(tardisBinPath)
+
 		randomID = randVolumeID()
 		logger = lagertest.NewTestLogger("overlay+xfs")
-		driver = overlayxfs.NewDriver(StorePath)
+		driver = overlayxfs.NewDriver(StorePath, tardisBinPath)
 
 		Expect(os.MkdirAll(StorePath, 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
@@ -370,9 +375,35 @@ var _ = Describe("Driver", func() {
 					Eventually(sess.Err).Should(gbytes.Say("No space left on device"))
 				})
 			})
+
+			Context("when tardis is not in the path", func() {
+				BeforeEach(func() {
+					driver = overlayxfs.NewDriver(StorePath, "/bin/bananas")
+				})
+
+				It("returns an error", func() {
+					_, err := driver.CreateImage(logger, spec)
+					Expect(err).To(MatchError(ContainSubstring("tardis was not found in the $PATH")))
+				})
+			})
+
+			Context("when tardis doesn't have the setuid bit set", func() {
+				BeforeEach(func() {
+					testhelpers.UnsuidBinary(tardisBinPath)
+				})
+
+				It("returns an error", func() {
+					_, err := driver.CreateImage(logger, spec)
+					Expect(err).To(MatchError(ContainSubstring("missing the setuid bit on tardis")))
+				})
+			})
 		})
 
 		Context("when base volume folder does not exist", func() {
+			BeforeEach(func() {
+				testhelpers.UnsuidBinary(tardisBinPath)
+			})
+
 			It("returns an error", func() {
 				spec.BaseVolumeIDs = []string{"not-real"}
 				_, err := driver.CreateImage(logger, spec)
@@ -684,7 +715,7 @@ var _ = Describe("Driver", func() {
 
 		Context("when fails to list volumes", func() {
 			It("returns an error", func() {
-				driver := overlayxfs.NewDriver(StorePath)
+				driver := overlayxfs.NewDriver(StorePath, tardisBinPath)
 				Expect(os.RemoveAll(filepath.Join(StorePath, store.VolumesDirName))).To(Succeed())
 				_, err := driver.Volumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to list volumes")))

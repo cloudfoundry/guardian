@@ -25,6 +25,7 @@ type Runner struct {
 	StorePath string
 	// Binaries
 	DraxBin      string
+	TardisBin    string
 	BtrfsBin     string
 	NewuidmapBin string
 	NewgidmapBin string
@@ -141,6 +142,9 @@ func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 		allArgs = append(allArgs, "--driver", r.Driver)
 	}
 
+	if r.TardisBin != "" {
+		allArgs = append(allArgs, "--tardis-bin", r.TardisBin)
+	}
 	if r.DraxBin != "" {
 		allArgs = append(allArgs, "--drax-bin", r.DraxBin)
 	}

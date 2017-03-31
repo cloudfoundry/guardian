@@ -18,6 +18,7 @@ const (
 	defaultFilesystemDriver = "btrfs"
 	defaultBtrfsBin         = "btrfs"
 	defaultDraxBin          = "drax"
+	defaultTardisBin        = "tardis"
 	defaultNewuidmapBin     = "newuidmap"
 	defaultNewgidmapBin     = "newgidmap"
 )
@@ -56,6 +57,11 @@ func main() {
 		cli.StringFlag{
 			Name:  "log-file",
 			Usage: "File to write logs to. Using this option sets the log level to `info` if --log-level is not specified.",
+		},
+		cli.StringFlag{
+			Name:  "tardis-bin",
+			Usage: "Path to tardis bin. (If not provided will use $PATH)",
+			Value: defaultTardisBin,
 		},
 		cli.StringFlag{
 			Name:  "drax-bin",
@@ -102,6 +108,7 @@ func main() {
 		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), ctx.IsSet("store")).
 			WithFSDriver(ctx.GlobalString("driver"), ctx.IsSet("driver")).
 			WithDraxBin(ctx.GlobalString("drax-bin"), ctx.IsSet("drax-bin")).
+			WithTardisBin(ctx.GlobalString("tardis-bin"), ctx.IsSet("tardis-bin")).
 			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
 			WithLogLevel(ctx.GlobalString("log-level"), ctx.IsSet("log-level")).
 			WithLogFile(ctx.GlobalString("log-file")).

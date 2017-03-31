@@ -45,6 +45,7 @@ var _ = Describe("Builder", func() {
 			StorePath:      "/hello",
 			FSDriver:       "kitten-fs",
 			DraxBin:        "/config/drax",
+			TardisBin:      "/config/tardis",
 			BtrfsBin:       "/config/btrfs",
 			NewuidmapBin:   "/config/newuidmap",
 			NewgidmapBin:   "/config/newgidmap",
@@ -259,6 +260,37 @@ var _ = Describe("Builder", func() {
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(config.DraxBin).To(Equal("/my/drax"))
+				})
+			})
+		})
+	})
+
+	Describe("WithTardisBin", func() {
+		It("overrides the config's tardis path entry when command line flag is set", func() {
+			builder = builder.WithTardisBin("/my/tardis", true)
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.TardisBin).To(Equal("/my/tardis"))
+		})
+
+		Context("when tardis path is not provided via command line", func() {
+			It("uses the config's tardis path ", func() {
+				builder = builder.WithTardisBin("/my/tardis", false)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.TardisBin).To(Equal("/config/tardis"))
+			})
+
+			Context("and tardis path is not set in the config", func() {
+				BeforeEach(func() {
+					cfg.TardisBin = ""
+				})
+
+				It("uses the provided tardis path ", func() {
+					builder = builder.WithTardisBin("/my/tardis", false)
+					config, err := builder.Build()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(config.TardisBin).To(Equal("/my/tardis"))
 				})
 			})
 		})

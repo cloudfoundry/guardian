@@ -299,11 +299,12 @@ var _ = Describe("Create", func() {
 		})
 
 		It("creates a image with supplied limit", func() {
-			image, err := Runner.Create(groot.CreateSpec{
+			image, err := Runner.WithLogLevel(lager.DEBUG).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 				DiskLimit: tenMegabytes,
-				Mount:     true,
+				Mount:     mountByDefault(),
+				Json:      !mountByDefault(),
 			})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -317,7 +318,8 @@ var _ = Describe("Create", func() {
 					DiskLimit: -200,
 					BaseImage: baseImagePath,
 					ID:        "random-id",
-					Mount:     true,
+					Mount:     mountByDefault(),
+					Json:      !mountByDefault(),
 				})
 				Expect(err).To(MatchError(ContainSubstring("disk limit cannot be negative")))
 			})
@@ -330,7 +332,8 @@ var _ = Describe("Create", func() {
 					ExcludeBaseImageFromQuota: true,
 					BaseImage:                 baseImagePath,
 					ID:                        "random-id",
-					Mount:                     true,
+					Mount:                     mountByDefault(),
+					Json:                      !mountByDefault(),
 				})
 				Expect(err).ToNot(HaveOccurred())
 
@@ -645,6 +648,35 @@ var _ = Describe("Create", func() {
 				contents, err := ioutil.ReadFile(draxCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(contents)).To(Equal("I'm groot - drax"))
+			})
+		})
+
+		Describe("tardis bin", func() {
+			var (
+				tardisCalledFile *os.File
+				tardisBin        *os.File
+				tempFolder       string
+			)
+
+			BeforeEach(func() {
+				integration.SkipIfNotXFS(Driver)
+				tempFolder, tardisBin, tardisCalledFile = integration.CreateFakeTardis()
+				cfg.TardisBin = tardisBin.Name()
+			})
+
+			It("uses the tardis bin from the config file", func() {
+				_, err := Runner.WithoutTardisBin().Create(groot.CreateSpec{
+					BaseImage: baseImagePath,
+					ID:        "random-id",
+					DiskLimit: 104857600,
+					Mount:     mountByDefault(),
+					Json:      !mountByDefault(),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(tardisCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - tardis"))
 			})
 		})
 

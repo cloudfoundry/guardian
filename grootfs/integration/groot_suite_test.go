@@ -15,8 +15,10 @@ import (
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,6 +30,7 @@ import (
 var (
 	GrootFSBin    string
 	DraxBin       string
+	TardisBin     string
 	Driver        string
 	Runner        runner.Runner
 	StorePath     string
@@ -112,6 +115,11 @@ func TestGroot(t *testing.T) {
 		DraxBin = integration.MakeBinaryAccessibleToEveryone(DraxBin)
 		testhelpers.SuidBinary(DraxBin)
 
+		TardisBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
+		Expect(err).NotTo(HaveOccurred())
+		TardisBin = integration.MakeBinaryAccessibleToEveryone(TardisBin)
+		testhelpers.SuidBinary(TardisBin)
+
 		RegistryUsername = os.Getenv("REGISTRY_USERNAME")
 		RegistryPassword = os.Getenv("REGISTRY_PASSWORD")
 
@@ -119,9 +127,12 @@ func TestGroot(t *testing.T) {
 			GrootFSBin: GrootFSBin,
 			StorePath:  StorePath,
 			DraxBin:    DraxBin,
+			TardisBin:  TardisBin,
 			Driver:     Driver,
 			Timeout:    25 * time.Second,
 		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(uint32(GrootfsTestUid), uint32(GrootfsTestGid))
+
+		prepareStorePath(StorePath)
 	})
 
 	AfterEach(func() {
@@ -154,4 +165,16 @@ func writeMegabytes(outputPath string, mb int) error {
 		return errors.New(string(sess.Err.Contents()))
 	}
 	return nil
+}
+
+func mountByDefault() bool {
+	return GrootfsTestUid == 0 || Driver == "btrfs"
+}
+
+func prepareStorePath(storePath string) {
+	if Driver == "overlay-xfs" {
+		driver := overlayxfs.NewDriver(storePath, TardisBin)
+		logger := lagertest.NewTestLogger("overlay")
+		Expect(driver.ConfigureStore(logger, StorePath, GrootfsTestUid, GrootfsTestGid)).To(Succeed())
+	}
 }

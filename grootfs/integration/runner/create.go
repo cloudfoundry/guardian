@@ -26,8 +26,8 @@ func (r Runner) Create(spec groot.CreateSpec, extraArgs ...string) (groot.Image,
 	imageInfo := groot.ImageInfo{}
 
 	if r.Json || spec.Json {
-		path = ""
 		json.Unmarshal([]byte(output), &imageInfo)
+		path = filepath.Dir(imageInfo.Rootfs)
 	} else {
 		path = output
 	}

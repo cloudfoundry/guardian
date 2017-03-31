@@ -78,6 +78,18 @@ func (r Runner) WithoutDraxBin() Runner {
 	return nr
 }
 
+func (r Runner) WithTardisBin(draxBin string) Runner {
+	nr := r
+	nr.TardisBin = draxBin
+	return nr
+}
+
+func (r Runner) WithoutTardisBin() Runner {
+	nr := r
+	nr.TardisBin = ""
+	return nr
+}
+
 func (r Runner) WithBtrfsBin(btrfsBin string) Runner {
 	nr := r
 	nr.BtrfsBin = btrfsBin
