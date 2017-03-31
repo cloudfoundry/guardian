@@ -338,68 +338,6 @@ var _ = Describe("Create", func() {
 				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
 			})
 		})
-
-		Describe("--drax-bin global flag", func() {
-			var (
-				draxCalledFile *os.File
-				draxBin        *os.File
-				tempFolder     string
-			)
-
-			BeforeEach(func() {
-				integration.SkipIfNotBTRFS(Driver)
-				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
-			})
-
-			Context("when it's provided", func() {
-				It("uses the provided drax", func() {
-					_, err := Runner.WithDraxBin(draxBin.Name()).Create(groot.CreateSpec{
-						BaseImage: baseImagePath,
-						ID:        "random-id",
-						Mount:     true,
-						DiskLimit: 104857600,
-					})
-					Expect(err).NotTo(HaveOccurred())
-
-					contents, err := ioutil.ReadFile(draxCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - drax"))
-				})
-
-				Context("when the drax bin doesn't have uid bit set", func() {
-					It("doesn't leak the image dir", func() {
-						testhelpers.UnsuidBinary(draxBin.Name())
-						_, err := Runner.WithDraxBin(draxBin.Name()).Create(groot.CreateSpec{
-							BaseImage: baseImagePath,
-							ID:        "random-id",
-							Mount:     true,
-							DiskLimit: 104857600,
-						})
-						Expect(err).To(HaveOccurred())
-
-						imagePath := path.Join(Runner.StorePath, "images", "random-id")
-						Expect(imagePath).ToNot(BeAnExistingFile())
-					})
-				})
-			})
-
-			Context("when it's not provided", func() {
-				It("uses drax from $PATH", func() {
-					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-					_, err := Runner.WithoutDraxBin().WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(groot.CreateSpec{
-						BaseImage: baseImagePath,
-						ID:        "random-id",
-						Mount:     true,
-						DiskLimit: tenMegabytes,
-					})
-					Expect(err).ToNot(HaveOccurred())
-
-					contents, err := ioutil.ReadFile(draxCalledFile.Name())
-					Expect(err).NotTo(HaveOccurred())
-					Expect(string(contents)).To(Equal("I'm groot - drax"))
-				})
-			})
-		})
 	})
 
 	Describe("unique uid and gid mappings per store", func() {

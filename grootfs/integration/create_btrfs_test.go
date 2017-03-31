@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -45,7 +46,54 @@ var _ = Describe("Create (btrfs only)", func() {
 			BaseImage: baseImagePath,
 			ID:        "random-id",
 			Mount:     true,
+			DiskLimit: tenMegabytes,
 		}
+	})
+
+	Describe("--drax-bin global flag", func() {
+		var (
+			draxCalledFile *os.File
+			draxBin        *os.File
+			tempFolder     string
+		)
+
+		BeforeEach(func() {
+			tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
+		})
+
+		Context("when it's provided", func() {
+			It("uses the provided drax", func() {
+				_, err := Runner.WithDraxBin(draxBin.Name()).Create(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(draxCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - drax"))
+			})
+
+			Context("when the drax bin doesn't have uid bit set", func() {
+				It("doesn't leak the image dir", func() {
+					testhelpers.UnsuidBinary(draxBin.Name())
+					_, err := Runner.WithDraxBin(draxBin.Name()).Create(spec)
+					Expect(err).To(HaveOccurred())
+
+					imagePath := path.Join(Runner.StorePath, "images", "random-id")
+					Expect(imagePath).ToNot(BeAnExistingFile())
+				})
+			})
+		})
+
+		Context("when it's not provided", func() {
+			It("uses drax from $PATH", func() {
+				newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
+				_, err := Runner.WithoutDraxBin().WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(spec)
+				Expect(err).ToNot(HaveOccurred())
+
+				contents, err := ioutil.ReadFile(draxCalledFile.Name())
+				Expect(err).NotTo(HaveOccurred())
+				Expect(string(contents)).To(Equal("I'm groot - drax"))
+			})
+		})
 	})
 
 	Context("when inclusive disk limit is provided", func() {
@@ -78,12 +126,7 @@ var _ = Describe("Create (btrfs only)", func() {
 			Context("when it's not provided", func() {
 				It("uses btrfs from $PATH", func() {
 					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-					_, err := Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(groot.CreateSpec{
-						BaseImage: baseImagePath,
-						ID:        "random-id",
-						DiskLimit: tenMegabytes,
-						Mount:     true,
-					})
+					_, err := Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(spec)
 					Expect(err).To(HaveOccurred())
 
 					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
