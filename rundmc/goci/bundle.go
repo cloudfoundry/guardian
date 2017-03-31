@@ -73,6 +73,18 @@ func (b Bndl) Resources() *specs.LinuxResources {
 	return b.Spec.Linux.Resources
 }
 
+func (b Bndl) WithBlockIO(blockIO specs.LinuxBlockIO) Bndl {
+	resources := b.Resources()
+	if resources == nil {
+		resources = &specs.LinuxResources{}
+	}
+
+	resources.BlockIO = &blockIO
+	b.CloneLinux().Spec.Linux.Resources = resources
+
+	return b
+}
+
 func (b Bndl) WithCPUShares(shares specs.LinuxCPU) Bndl {
 	resources := b.Resources()
 	if resources == nil {

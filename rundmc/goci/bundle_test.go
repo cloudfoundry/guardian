@@ -168,6 +168,18 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
+	Describe("WithBlockIO", func() {
+		var blockIOWeight uint16 = 200
+
+		BeforeEach(func() {
+			returnedBundle = initialBundle.WithBlockIO(specs.LinuxBlockIO{Weight: &blockIOWeight})
+		})
+
+		It("returns a bundle with the block IO weight added to the runtime spec", func() {
+			Expect(returnedBundle.Resources().BlockIO.Weight).To(Equal(&blockIOWeight))
+		})
+	})
+
 	Describe("WithPidLimit", func() {
 		var pidLimit int64 = 10
 

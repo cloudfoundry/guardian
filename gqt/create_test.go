@@ -356,13 +356,6 @@ var _ = Describe("Creating a Container", func() {
 	})
 
 	Context("when creating a container and specifying CPU limits", func() {
-		readFileContent := func(path string) string {
-			content, err := ioutil.ReadFile(path)
-			Expect(err).NotTo(HaveOccurred())
-
-			return strings.TrimSpace(string(content))
-		}
-
 		createContainerWithCpuShares := func(share uint64) (garden.Container, error) {
 			limits := garden.Limits{
 				CPU: garden.CPULimits{LimitInShares: share},
@@ -402,6 +395,51 @@ var _ = Describe("Creating a Container", func() {
 			container, err := createContainerWithCpuShares(2)
 			Expect(err).NotTo(HaveOccurred())
 			checkCPUSharesInContainer(container, client.Pid, 2)
+		})
+	})
+
+	Describe("block IO weight", func() {
+		BeforeEach(func() {
+			args = append(args, "--default-container-blockio-weight", "400")
+		})
+
+		checkBlockIOWeightInContainer := func(container garden.Container, expected string) {
+			parentCgroupPath := findCgroupPath(client.Pid, "blkio")
+			parentCgroupPath = strings.TrimLeft(parentCgroupPath, "/")
+			blkIOWeightPath := fmt.Sprintf("%s/cgroups-%d/blkio/%s/%s/blkio.weight", client.Tmpdir,
+				GinkgoParallelNode(), parentCgroupPath, container.Handle())
+
+			blkIOWeight := readFileContent(blkIOWeightPath)
+			Expect(string(blkIOWeight)).To(Equal(expected))
+		}
+
+		It("uses the specified block IO weight", func() {
+			container, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+			checkBlockIOWeightInContainer(container, "400")
+		})
+
+		Context("when specifying a block IO weight of 0", func() {
+			BeforeEach(func() {
+				args = append(args, "--default-container-blockio-weight", "0")
+			})
+
+			It("uses the system default value of 500", func() {
+				container, err := client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+				checkBlockIOWeightInContainer(container, "500")
+			})
+		})
+
+		Context("when specifying block IO weight outside the range 10 - 1000", func() {
+			BeforeEach(func() {
+				args = append(args, "--default-container-blockio-weight", "9")
+			})
+
+			It("returns an out of range error", func() {
+				_, err := client.Create(garden.ContainerSpec{})
+				Expect(err.Error()).To(ContainSubstring("numerical result out of range"))
+			})
 		})
 	})
 
@@ -562,4 +600,26 @@ func numPipes(pid int) (num int) {
 	Eventually(sess).Should(gexec.Exit(0))
 
 	return bytes.Count(sess.Out.Contents(), []byte{'\n'})
+}
+
+func findCgroupPath(pid int, cgroupToFind string) string {
+	cgroupContent, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cgroup", pid))
+	Expect(err).NotTo(HaveOccurred())
+
+	cgroups := strings.Split(string(cgroupContent), "\n")
+	for _, cgroup := range cgroups {
+		if strings.Contains(cgroup, cgroupToFind) {
+			return strings.Split(cgroup, fmt.Sprintf("%s:", cgroupToFind))[1]
+		}
+	}
+
+	Fail(fmt.Sprintf("Could not find cgroup: %s", cgroupToFind))
+	return ""
+}
+
+func readFileContent(path string) string {
+	content, err := ioutil.ReadFile(path)
+	Expect(err).NotTo(HaveOccurred())
+
+	return strings.TrimSpace(string(content))
 }

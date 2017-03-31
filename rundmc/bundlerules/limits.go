@@ -11,6 +11,7 @@ var MinCpuQuota uint64 = 1000
 
 type Limits struct {
 	CpuQuotaPerShare uint64
+	BlockIOWeight    uint16
 }
 
 func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
@@ -29,6 +30,8 @@ func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 		cpuSpec.Quota = &quota
 	}
 	bndl = bndl.WithCPUShares(cpuSpec)
+
+	bndl = bndl.WithBlockIO(specs.LinuxBlockIO{Weight: &l.BlockIOWeight})
 
 	pids := int64(spec.Limits.Pid.Max)
 	return bndl.WithPidLimit(specs.LinuxPids{Limit: pids})

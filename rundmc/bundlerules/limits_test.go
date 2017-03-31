@@ -23,6 +23,15 @@ var _ = Describe("LimitsRule", func() {
 		Expect(*(newBndl.Resources().Memory.Swap)).To(BeNumerically("==", 4096))
 	})
 
+	It("sets the provided BlockIOWeight in the bundle resources", func() {
+		limits := bundlerules.Limits{
+			BlockIOWeight: 100,
+		}
+		newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{})
+
+		Expect(*(newBndl.Resources().BlockIO.Weight)).To(Equal(limits.BlockIOWeight))
+	})
+
 	It("sets the correct CPU limit in bundle resources", func() {
 		newBndl := bundlerules.Limits{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			Limits: garden.Limits{
