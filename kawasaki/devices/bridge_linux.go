@@ -48,7 +48,7 @@ func (Bridge) Create(name string, ip net.IP, subnet *net.IPNet) (intf *net.Inter
 		return nil, fmt.Errorf("devices: add IP to bridge: %v", err)
 	}
 
-	if err := netlink.BridgeSetMcastSnoopOff(link); err != nil {
+	if err := netlink.BridgeSetMcastSnoop(link, false); err != nil {
 		return nil, fmt.Errorf("devices: disable multicast snooping on bridge: %v", err)
 	}
 
