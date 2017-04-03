@@ -66,6 +66,13 @@ var _ = Describe("Bridge Management", func() {
 				Expect(addrs).To(HaveLen(1))
 				Expect(addrs[0].String()).To(Equal(addr))
 			})
+
+			It("disables multicast snooping", func() {
+				bridge, err := b.Create(name, ip, subnet)
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(ioutil.ReadFile(fmt.Sprintf("/sys/devices/virtual/net/%s/bridge/multicast_snooping", bridge.Name))).To(Equal([]byte("0\n")))
+			})
 		})
 
 		Context("when the bridge exists", func() {

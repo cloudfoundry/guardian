@@ -47,6 +47,11 @@ func (Bridge) Create(name string, ip net.IP, subnet *net.IPNet) (intf *net.Inter
 	if err = netlink.AddrAdd(link, addr); err != nil && err.Error() != "file exists" {
 		return nil, fmt.Errorf("devices: add IP to bridge: %v", err)
 	}
+
+	if err := netlink.BridgeSetMcastSnoopOff(link); err != nil {
+		return nil, fmt.Errorf("devices: disable multicast snooping on bridge: %v", err)
+	}
+
 	return intf, nil
 }
 
