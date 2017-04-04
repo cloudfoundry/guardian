@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -95,27 +96,6 @@ var _ = Describe("Run", func() {
 		Expect(after).To(ConsistOf(before))
 	})
 
-	lsofFileHandlesOnProcessPipes := func(processID string) string {
-
-		grepProcID := exec.Command("grep", processID)
-		lsof := exec.Command("lsof")
-
-		lsofOutPipe, err := lsof.StdoutPipe()
-		defer lsofOutPipe.Close()
-		Expect(err).NotTo(HaveOccurred())
-
-		stdoutBuf := gbytes.NewBuffer()
-		grepProcID.Stdin = lsofOutPipe
-		grepProcID.Stdout = stdoutBuf
-		Expect(grepProcID.Start()).To(Succeed())
-
-		Expect(lsof.Run()).To(Succeed())
-
-		grepProcID.Wait()
-
-		return string(stdoutBuf.Contents())
-	}
-
 	It("cleans up file handles when the process exits", func() {
 		client = startGarden()
 
@@ -131,7 +111,8 @@ var _ = Describe("Run", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(process.Wait()).To(Equal(0))
 
-		Expect(lsofFileHandlesOnProcessPipes(process.ID())).To(BeEmpty())
+		out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("lsof | grep %s", process.ID())).Output()
+		Expect(string(out)).To(BeEmpty())
 	})
 
 	Describe("security", func() {

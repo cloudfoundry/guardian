@@ -29,6 +29,15 @@ type FakeProcess struct {
 		result1 int
 		result2 error
 	}
+	ExitStatusStub        func() chan garden.ProcessStatus
+	exitStatusMutex       sync.RWMutex
+	exitStatusArgsForCall []struct{}
+	exitStatusReturns     struct {
+		result1 chan garden.ProcessStatus
+	}
+	exitStatusReturnsOnCall map[int]struct {
+		result1 chan garden.ProcessStatus
+	}
 	SetTTYStub        func(garden.TTYSpec) error
 	setTTYMutex       sync.RWMutex
 	setTTYArgsForCall []struct {
@@ -138,6 +147,46 @@ func (fake *FakeProcess) WaitReturnsOnCall(i int, result1 int, result2 error) {
 	}{result1, result2}
 }
 
+func (fake *FakeProcess) ExitStatus() chan garden.ProcessStatus {
+	fake.exitStatusMutex.Lock()
+	ret, specificReturn := fake.exitStatusReturnsOnCall[len(fake.exitStatusArgsForCall)]
+	fake.exitStatusArgsForCall = append(fake.exitStatusArgsForCall, struct{}{})
+	fake.recordInvocation("ExitStatus", []interface{}{})
+	fake.exitStatusMutex.Unlock()
+	if fake.ExitStatusStub != nil {
+		return fake.ExitStatusStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.exitStatusReturns.result1
+}
+
+func (fake *FakeProcess) ExitStatusCallCount() int {
+	fake.exitStatusMutex.RLock()
+	defer fake.exitStatusMutex.RUnlock()
+	return len(fake.exitStatusArgsForCall)
+}
+
+func (fake *FakeProcess) ExitStatusReturns(result1 chan garden.ProcessStatus) {
+	fake.ExitStatusStub = nil
+	fake.exitStatusReturns = struct {
+		result1 chan garden.ProcessStatus
+	}{result1}
+}
+
+func (fake *FakeProcess) ExitStatusReturnsOnCall(i int, result1 chan garden.ProcessStatus) {
+	fake.ExitStatusStub = nil
+	if fake.exitStatusReturnsOnCall == nil {
+		fake.exitStatusReturnsOnCall = make(map[int]struct {
+			result1 chan garden.ProcessStatus
+		})
+	}
+	fake.exitStatusReturnsOnCall[i] = struct {
+		result1 chan garden.ProcessStatus
+	}{result1}
+}
+
 func (fake *FakeProcess) SetTTY(arg1 garden.TTYSpec) error {
 	fake.setTTYMutex.Lock()
 	ret, specificReturn := fake.setTTYReturnsOnCall[len(fake.setTTYArgsForCall)]
@@ -241,6 +290,8 @@ func (fake *FakeProcess) Invocations() map[string][][]interface{} {
 	defer fake.iDMutex.RUnlock()
 	fake.waitMutex.RLock()
 	defer fake.waitMutex.RUnlock()
+	fake.exitStatusMutex.RLock()
+	defer fake.exitStatusMutex.RUnlock()
 	fake.setTTYMutex.RLock()
 	defer fake.setTTYMutex.RUnlock()
 	fake.signalMutex.RLock()
