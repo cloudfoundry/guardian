@@ -307,12 +307,12 @@ func (p process) attach(pio garden.ProcessIO) error {
 }
 
 func (p process) ExitStatus() chan garden.ProcessStatus {
-	c := make(chan garden.ProcessStatus, 1)
+	statusChan := make(chan garden.ProcessStatus, 1)
 	go func() {
 		// open non-blocking incase exit pipe is already closed
 		exit, err := openNonBlocking(p.exit)
 		if err != nil {
-			c <- garden.ProcessStatus{Code: 1, Err: err}
+			statusChan <- garden.ProcessStatus{Code: 1, Err: err}
 		}
 		defer exit.Close()
 
@@ -322,25 +322,25 @@ func (p process) ExitStatus() chan garden.ProcessStatus {
 		p.ioWg.Wait()
 
 		if _, err := os.Stat(p.exitcode); os.IsNotExist(err) {
-			c <- garden.ProcessStatus{Code: 1, Err: fmt.Errorf("could not find the exitcode file for the process: %s", err.Error())}
+			statusChan <- garden.ProcessStatus{Code: 1, Err: fmt.Errorf("could not find the exitcode file for the process: %s", err.Error())}
 		}
 
 		exitcode, err := ioutil.ReadFile(p.exitcode)
 		if err != nil {
-			c <- garden.ProcessStatus{Code: 1, Err: err}
+			statusChan <- garden.ProcessStatus{Code: 1, Err: err}
 		}
 
 		if len(exitcode) == 0 {
-			c <- garden.ProcessStatus{Code: 1, Err: fmt.Errorf("the exitcode file is empty")}
+			statusChan <- garden.ProcessStatus{Code: 1, Err: fmt.Errorf("the exitcode file is empty")}
 		}
 
 		code, err := strconv.Atoi(string(exitcode))
 		if err != nil {
-			c <- garden.ProcessStatus{Code: 1, Err: fmt.Errorf("failed to parse exit code: %s", err.Error())}
+			statusChan <- garden.ProcessStatus{Code: 1, Err: fmt.Errorf("failed to parse exit code: %s", err.Error())}
 		}
-		c <- garden.ProcessStatus{Code: code, Err: nil}
+		statusChan <- garden.ProcessStatus{Code: code, Err: nil}
 	}()
-	return c
+	return statusChan
 }
 
 func (p process) Wait() (int, error) {
