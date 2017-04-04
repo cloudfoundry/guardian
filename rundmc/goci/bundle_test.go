@@ -35,7 +35,7 @@ var _ = Describe("Bundle", func() {
 
 		It("adds capabilities to the spec's effective, bounding, inheritable, and permitted sets", func() {
 			returnedBundle := initialBundle.WithCapabilities("growtulips", "waterspuds")
-			Expect(returnedBundle.Spec.Process.Capabilities.Effective).To(ConsistOf("growtulips", "waterspuds"))
+			Expect(returnedBundle.Spec.Process.Capabilities.Effective).To(BeEmpty())
 			Expect(returnedBundle.Spec.Process.Capabilities.Bounding).To(ConsistOf("growtulips", "waterspuds"))
 			Expect(returnedBundle.Spec.Process.Capabilities.Inheritable).To(ConsistOf("growtulips", "waterspuds"))
 			Expect(returnedBundle.Spec.Process.Capabilities.Permitted).To(ConsistOf("growtulips", "waterspuds"))

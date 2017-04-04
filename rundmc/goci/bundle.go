@@ -189,11 +189,9 @@ func (b Bndl) Devices() []specs.LinuxDevice {
 // WithCapabilities returns a bundle with the given capabilities added. The original bundle is not modified.
 func (b Bndl) WithCapabilities(capabilities ...string) Bndl {
 	caps := &specs.LinuxCapabilities{
-		Effective:   capabilities,
 		Bounding:    capabilities,
 		Inheritable: capabilities,
 		Permitted:   capabilities,
-		Ambient:     capabilities,
 	}
 	b.Spec.Process.Capabilities = caps
 	return b
@@ -204,9 +202,7 @@ func (b Bndl) Capabilities() []string {
 		return []string{}
 	}
 
-	// guardian sets the effective, bounding, inheritable, and permitted sets to
-	// the same value
-	return b.Spec.Process.Capabilities.Effective
+	return b.Spec.Process.Capabilities.Bounding
 }
 
 // WithMounts returns a bundle with the given mounts added. The original bundle is not modified.

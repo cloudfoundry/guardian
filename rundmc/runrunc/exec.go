@@ -168,11 +168,9 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 	// TODO centralize knowledge of garden -> runc capability schema translation
 	if len(capsToSet) > 0 {
 		caps = &specs.LinuxCapabilities{
-			Effective:   capsToSet,
 			Bounding:    capsToSet,
 			Inheritable: capsToSet,
 			Permitted:   capsToSet,
-			Ambient:     capsToSet,
 		}
 	}
 

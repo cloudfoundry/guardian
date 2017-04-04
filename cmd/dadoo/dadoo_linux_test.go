@@ -627,7 +627,7 @@ var _ = Describe("Dadoo", func() {
 						Eventually(exec.Command("ps", "-p", string(pidBytes)).Run).ShouldNot(Succeed())
 
 						Eventually(dadooSession).Should(gexec.Exit(2))
-						Eventually(stdout).Should(gbytes.Say(fmt.Sprintf("communication error on send")))
+						Eventually(stdout).Should(gbytes.Say(fmt.Sprintf("incorrect number of bytes read")))
 					})
 				})
 			})

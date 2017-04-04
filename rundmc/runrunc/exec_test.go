@@ -526,7 +526,7 @@ var _ = Describe("ExecPreparer", func() {
 			It("passes them on to the process", func() {
 				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(spec.Process.Capabilities.Effective).To(Equal([]string{"foo", "bar", "baz"}))
+				Expect(spec.Process.Capabilities.Effective).To(BeEmpty())
 				Expect(spec.Process.Capabilities.Bounding).To(Equal([]string{"foo", "bar", "baz"}))
 				Expect(spec.Process.Capabilities.Inheritable).To(Equal([]string{"foo", "bar", "baz"}))
 				Expect(spec.Process.Capabilities.Permitted).To(Equal([]string{"foo", "bar", "baz"}))
@@ -540,7 +540,7 @@ var _ = Describe("ExecPreparer", func() {
 				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(spec.Process.Capabilities.Effective).To(Equal([]string{"foo", "bar"}))
+				Expect(spec.Process.Capabilities.Effective).To(BeEmpty())
 				Expect(spec.Process.Capabilities.Bounding).To(Equal([]string{"foo", "bar"}))
 				Expect(spec.Process.Capabilities.Inheritable).To(Equal([]string{"foo", "bar"}))
 				Expect(spec.Process.Capabilities.Permitted).To(Equal([]string{"foo", "bar"}))
