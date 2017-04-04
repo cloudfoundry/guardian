@@ -22,7 +22,7 @@ var _ = Describe("Stats", func() {
 	var (
 		sourceImagePath string
 		baseImagePath   string
-		image           groot.Image
+		image           groot.ImageInfo
 		imageID         string
 	)
 
@@ -76,7 +76,7 @@ var _ = Describe("Stats", func() {
 				Mount:     true,
 			})
 			Expect(err).ToNot(HaveOccurred())
-			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.RootFSPath, "hello")), "bs=1048576", "count=4")
+			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.Rootfs, "hello")), "bs=1048576", "count=4")
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).ToNot(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))

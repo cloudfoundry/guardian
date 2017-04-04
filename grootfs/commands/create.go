@@ -226,7 +226,7 @@ var CreateCommand = cli.Command{
 
 		var output string
 		if cfg.Create.Json {
-			jsonBytes, err := json.Marshal(image.ImageInfo)
+			jsonBytes, err := json.Marshal(image)
 			if err != nil {
 				logger.Error("formatting output", err)
 				return cli.NewExitError(err.Error(), 1)

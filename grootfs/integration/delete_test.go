@@ -17,7 +17,7 @@ var _ = Describe("Delete", func() {
 	var (
 		sourceImagePath string
 		baseImagePath   string
-		image           groot.Image
+		image           groot.ImageInfo
 	)
 
 	BeforeEach(func() {

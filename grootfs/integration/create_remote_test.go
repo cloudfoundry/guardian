@@ -47,9 +47,9 @@ var _ = Describe("Create with remote images", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(path.Join(image.RootFSPath, "layer-3-file")).To(BeARegularFile())
-			Expect(path.Join(image.RootFSPath, "layer-2-file")).To(BeARegularFile())
-			Expect(path.Join(image.RootFSPath, "layer-1-file")).To(BeARegularFile())
+			Expect(path.Join(image.Rootfs, "layer-3-file")).To(BeARegularFile())
+			Expect(path.Join(image.Rootfs, "layer-2-file")).To(BeARegularFile())
+			Expect(path.Join(image.Rootfs, "layer-1-file")).To(BeARegularFile())
 		})
 
 		It("saves the image.json to the image folder", func() {
@@ -90,7 +90,7 @@ var _ = Describe("Create with remote images", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			cmd := exec.Command(NamespacerBin, image.RootFSPath, strconv.Itoa(int(GrootUID+100)), "/bin/ls", "/")
+			cmd := exec.Command(NamespacerBin, image.Rootfs, strconv.Itoa(int(GrootUID+100)), "/bin/ls", "/")
 			cmd.SysProcAttr = &syscall.SysProcAttr{
 				Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS,
 			}
@@ -116,7 +116,7 @@ var _ = Describe("Create with remote images", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(image.ImageInfo.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id", "rootfs")))
+				Expect(image.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id", "rootfs")))
 			})
 
 			It("outputs a json with the correct `config` key", func() {
@@ -134,7 +134,7 @@ var _ = Describe("Create with remote images", func() {
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(image.ImageInfo.Config.RootFS.DiffIDs[0]).To(Equal("sha256:" + testhelpers.BusyBoxImage.Layers[0].ChainID))
+				Expect(image.Config.RootFS.DiffIDs[0]).To(Equal("sha256:" + testhelpers.BusyBoxImage.Layers[0].ChainID))
 			})
 		})
 
@@ -188,7 +188,7 @@ var _ = Describe("Create with remote images", func() {
 					Mount:     true,
 				})
 				Expect(err).NotTo(HaveOccurred())
-				volumeFolder := path.Join(image.RootFSPath, "foo")
+				volumeFolder := path.Join(image.Rootfs, "foo")
 				Expect(volumeFolder).To(BeADirectory())
 			})
 		})
@@ -206,7 +206,7 @@ var _ = Describe("Create with remote images", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				symlinkFilePath := filepath.Join(image.RootFSPath, "tmp/symlink")
+				symlinkFilePath := filepath.Join(image.Rootfs, "tmp/symlink")
 				stat, err := os.Lstat(symlinkFilePath)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(stat.Mode() & os.ModeSymlink).ToNot(BeZero())
@@ -237,7 +237,7 @@ var _ = Describe("Create with remote images", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				whiteoutedDir := path.Join(image.RootFSPath, "var")
+				whiteoutedDir := path.Join(image.Rootfs, "var")
 				Expect(whiteoutedDir).To(BeADirectory())
 				contents, err := ioutil.ReadDir(whiteoutedDir)
 				Expect(err).NotTo(HaveOccurred())
@@ -266,9 +266,9 @@ var _ = Describe("Create with remote images", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(path.Join(image.RootFSPath, "file-to-be-deleted")).ToNot(BeAnExistingFile())
-				Expect(path.Join(image.RootFSPath, "folder")).ToNot(BeAnExistingFile())
-				Expect(path.Join(image.RootFSPath, "existing-file")).To(BeAnExistingFile())
+				Expect(path.Join(image.Rootfs, "file-to-be-deleted")).ToNot(BeAnExistingFile())
+				Expect(path.Join(image.Rootfs, "folder")).ToNot(BeAnExistingFile())
+				Expect(path.Join(image.Rootfs, "existing-file")).To(BeAnExistingFile())
 			})
 		})
 
@@ -285,7 +285,7 @@ var _ = Describe("Create with remote images", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				setuidFilePath := path.Join(image.RootFSPath, "bin", "busybox")
+				setuidFilePath := path.Join(image.Rootfs, "bin", "busybox")
 				stat, err := os.Stat(setuidFilePath)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -469,8 +469,8 @@ var _ = Describe("Create with remote images", func() {
 					Mount:     true,
 				})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(path.Join(image.RootFSPath, "hello")).To(BeARegularFile())
-				Expect(path.Join(image.RootFSPath, "injected-file")).To(BeARegularFile())
+				Expect(path.Join(image.Rootfs, "hello")).To(BeARegularFile())
+				Expect(path.Join(image.Rootfs, "injected-file")).To(BeARegularFile())
 			})
 
 			Describe("when unpacking the image fails", func() {
@@ -520,8 +520,8 @@ var _ = Describe("Create with remote images", func() {
 					Mount:     true,
 				})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(path.Join(image.RootFSPath, "allo")).To(BeAnExistingFile())
-				Expect(path.Join(image.RootFSPath, "hello")).To(BeAnExistingFile())
+				Expect(path.Join(image.Rootfs, "allo")).To(BeAnExistingFile())
+				Expect(path.Join(image.Rootfs, "hello")).To(BeAnExistingFile())
 			})
 		})
 	})
@@ -563,7 +563,7 @@ var _ = Describe("Create with remote images", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(path.Join(image.RootFSPath, "hello")).To(BeARegularFile())
+				Expect(path.Join(image.Rootfs, "hello")).To(BeARegularFile())
 				Expect(fakeRegistry.RequestedBlobs()).To(HaveLen(3))
 			})
 		})
@@ -607,7 +607,7 @@ var _ = Describe("Create with remote images", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(path.Join(image.RootFSPath, "hello")).To(BeARegularFile())
+					Expect(path.Join(image.Rootfs, "hello")).To(BeARegularFile())
 					Expect(fakeRegistry.RequestedBlobs()).To(HaveLen(3))
 				})
 			})
@@ -659,7 +659,7 @@ var _ = Describe("Create with remote images", func() {
 				})
 
 				Expect(err).NotTo(HaveOccurred())
-				Expect(path.Join(image.RootFSPath, "test", "hello")).To(BeARegularFile())
+				Expect(path.Join(image.Rootfs, "test", "hello")).To(BeARegularFile())
 			})
 		})
 	})
@@ -685,7 +685,7 @@ var _ = Describe("Create with remote images", func() {
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(path.Join(image.RootFSPath, "test", "hello")).To(BeARegularFile())
+				Expect(path.Join(image.Rootfs, "test", "hello")).To(BeARegularFile())
 			})
 		})
 	})

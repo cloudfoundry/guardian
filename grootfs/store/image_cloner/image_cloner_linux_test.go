@@ -74,9 +74,9 @@ var _ = Describe("Image", func() {
 			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: true})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(image.ImageInfo.Rootfs).To(Equal(image.RootFSPath))
-			Expect(image.ImageInfo.Config.Created.Unix()).To(Equal(imageConfig.Created.Unix()))
-			Expect(image.ImageInfo.Mount).To(BeNil())
+			Expect(image.Rootfs).To(Equal(filepath.Join(imagesPath, "some-id/rootfs")))
+			Expect(image.Config.Created.Unix()).To(Equal(imageConfig.Created.Unix()))
+			Expect(image.Mount).To(BeNil())
 		})
 
 		It("keeps the images in the same image directory", func() {
@@ -142,11 +142,11 @@ var _ = Describe("Image", func() {
 				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: false})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(image.ImageInfo.Mount).ToNot(BeNil())
-				Expect(image.ImageInfo.Mount.Destination).To(Equal("my-destination"))
-				Expect(image.ImageInfo.Mount.Source).To(Equal("my-source"))
-				Expect(image.ImageInfo.Mount.Type).To(Equal("my-type"))
-				Expect(image.ImageInfo.Mount.Options).To(ConsistOf("my-option"))
+				Expect(image.Mount).ToNot(BeNil())
+				Expect(image.Mount.Destination).To(Equal("my-destination"))
+				Expect(image.Mount.Source).To(Equal("my-source"))
+				Expect(image.Mount.Type).To(Equal("my-type"))
+				Expect(image.Mount.Options).To(ConsistOf("my-option"))
 			})
 		})
 
@@ -155,7 +155,7 @@ var _ = Describe("Image", func() {
 				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: specsv1.Image{}})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(image.ImageInfo.Config).To(BeNil())
+				Expect(image.Config).To(BeNil())
 			})
 		})
 
@@ -178,7 +178,7 @@ var _ = Describe("Image", func() {
 				Expect(imagePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(uid)))
 				Expect(imagePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(gid)))
 
-				rootfsPath, err := os.Stat(image.RootFSPath)
+				rootfsPath, err := os.Stat(image.Rootfs)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rootfsPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(uid)))
 				Expect(rootfsPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(gid)))
@@ -205,7 +205,7 @@ var _ = Describe("Image", func() {
 					Expect(imagePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
 					Expect(imagePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(10000)))
 
-					rootfsPath, err := os.Stat(image.RootFSPath)
+					rootfsPath, err := os.Stat(image.Rootfs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(rootfsPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
 					Expect(rootfsPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(10000)))
@@ -233,7 +233,7 @@ var _ = Describe("Image", func() {
 					Expect(imagePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(50000)))
 					Expect(imagePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
 
-					rootfsPath, err := os.Stat(image.RootFSPath)
+					rootfsPath, err := os.Stat(image.Rootfs)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(rootfsPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(50000)))
 					Expect(rootfsPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))

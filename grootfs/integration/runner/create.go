@@ -16,27 +16,23 @@ func (r Runner) StartCreate(spec groot.CreateSpec) (*gexec.Session, error) {
 	return r.StartSubcommand("create", args...)
 }
 
-func (r Runner) Create(spec groot.CreateSpec, extraArgs ...string) (groot.Image, error) {
+func (r Runner) Create(spec groot.CreateSpec, extraArgs ...string) (groot.ImageInfo, error) {
 	output, err := r.create(spec)
 	if err != nil {
-		return groot.Image{}, err
+		return groot.ImageInfo{}, err
 	}
 
-	var path string
 	imageInfo := groot.ImageInfo{}
 
 	if r.Json || spec.Json {
 		json.Unmarshal([]byte(output), &imageInfo)
-		path = filepath.Dir(imageInfo.Rootfs)
+		imageInfo.Path = filepath.Dir(imageInfo.Rootfs)
 	} else {
-		path = output
+		imageInfo.Path = output
+		imageInfo.Rootfs = filepath.Join(imageInfo.Path, "rootfs")
 	}
 
-	return groot.Image{
-		Path:       path,
-		RootFSPath: filepath.Join(path, "rootfs"),
-		ImageInfo:  imageInfo,
-	}, nil
+	return imageInfo, nil
 }
 
 func (r Runner) create(spec groot.CreateSpec) (string, error) {

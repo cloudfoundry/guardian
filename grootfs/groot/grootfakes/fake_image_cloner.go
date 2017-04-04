@@ -22,18 +22,18 @@ type FakeImageCloner struct {
 		result1 bool
 		result2 error
 	}
-	CreateStub        func(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error)
+	CreateStub        func(logger lager.Logger, spec groot.ImageSpec) (groot.ImageInfo, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		logger lager.Logger
 		spec   groot.ImageSpec
 	}
 	createReturns struct {
-		result1 groot.Image
+		result1 groot.ImageInfo
 		result2 error
 	}
 	createReturnsOnCall map[int]struct {
-		result1 groot.Image
+		result1 groot.ImageInfo
 		result2 error
 	}
 	DestroyStub        func(logger lager.Logger, id string) error
@@ -117,7 +117,7 @@ func (fake *FakeImageCloner) ExistsReturnsOnCall(i int, result1 bool, result2 er
 	}{result1, result2}
 }
 
-func (fake *FakeImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.Image, error) {
+func (fake *FakeImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.ImageInfo, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
@@ -147,24 +147,24 @@ func (fake *FakeImageCloner) CreateArgsForCall(i int) (lager.Logger, groot.Image
 	return fake.createArgsForCall[i].logger, fake.createArgsForCall[i].spec
 }
 
-func (fake *FakeImageCloner) CreateReturns(result1 groot.Image, result2 error) {
+func (fake *FakeImageCloner) CreateReturns(result1 groot.ImageInfo, result2 error) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
-		result1 groot.Image
+		result1 groot.ImageInfo
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeImageCloner) CreateReturnsOnCall(i int, result1 groot.Image, result2 error) {
+func (fake *FakeImageCloner) CreateReturnsOnCall(i int, result1 groot.ImageInfo, result2 error) {
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
-			result1 groot.Image
+			result1 groot.ImageInfo
 			result2 error
 		})
 	}
 	fake.createReturnsOnCall[i] = struct {
-		result1 groot.Image
+		result1 groot.ImageInfo
 		result2 error
 	}{result1, result2}
 }

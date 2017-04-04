@@ -7,19 +7,19 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 )
 
-func (r Runner) List() ([]groot.Image, error) {
+func (r Runner) List() ([]groot.ImageInfo, error) {
 	imagePaths, err := r.RunSubcommand("list")
 	if err != nil {
-		return []groot.Image{}, err
+		return []groot.ImageInfo{}, err
 	}
 
-	images := []groot.Image{}
+	images := []groot.ImageInfo{}
 	buffer := bytes.NewBufferString(imagePaths)
 	scanner := bufio.NewScanner(buffer)
 
 	for scanner.Scan() {
 		imagePath := scanner.Text()
-		image := groot.Image{
+		image := groot.ImageInfo{
 			Path: imagePath,
 		}
 		images = append(images, image)

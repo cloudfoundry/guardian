@@ -56,7 +56,7 @@ var _ = Describe("Create with local images", func() {
 		image, err := Runner.Create(spec)
 		Expect(err).NotTo(HaveOccurred())
 
-		imageContentPath := path.Join(image.RootFSPath, "foo")
+		imageContentPath := path.Join(image.Rootfs, "foo")
 		Expect(imageContentPath).To(BeARegularFile())
 		fooContents, err := ioutil.ReadFile(imageContentPath)
 		Expect(err).NotTo(HaveOccurred())
@@ -67,7 +67,7 @@ var _ = Describe("Create with local images", func() {
 		image, err := Runner.Create(spec)
 		Expect(err).NotTo(HaveOccurred())
 
-		permissiveFolderPath := path.Join(image.RootFSPath, "permissive-folder")
+		permissiveFolderPath := path.Join(image.Rootfs, "permissive-folder")
 		stat, err := os.Stat(permissiveFolderPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0777)))
@@ -84,8 +84,8 @@ var _ = Describe("Create with local images", func() {
 				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(ioutil.WriteFile(filepath.Join(image1.RootFSPath, "new-file"), []byte("hello-world"), 0644)).To(Succeed())
-			Expect(filepath.Join(image2.RootFSPath, "new-file")).NotTo(BeARegularFile())
+			Expect(ioutil.WriteFile(filepath.Join(image1.Rootfs, "new-file"), []byte("hello-world"), 0644)).To(Succeed())
+			Expect(filepath.Join(image2.Rootfs, "new-file")).NotTo(BeARegularFile())
 		})
 	})
 
@@ -105,7 +105,7 @@ var _ = Describe("Create with local images", func() {
 			image, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
-			imageOldFilePath := path.Join(image.RootFSPath, "old-file")
+			imageOldFilePath := path.Join(image.Rootfs, "old-file")
 			fi, err := os.Stat(imageOldFilePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fi.ModTime().Unix()).To(Equal(modTime.Unix()))
@@ -226,9 +226,9 @@ var _ = Describe("Create with local images", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			imageContentPath := path.Join(image.RootFSPath, "foo")
+			imageContentPath := path.Join(image.Rootfs, "foo")
 			Expect(imageContentPath).To(BeARegularFile())
-			barImageContentPath := path.Join(image.RootFSPath, "bar")
+			barImageContentPath := path.Join(image.Rootfs, "bar")
 			Expect(barImageContentPath).To(BeARegularFile())
 		})
 	})
@@ -248,8 +248,8 @@ var _ = Describe("Create with local images", func() {
 				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(path.Join(image.RootFSPath, "foo")).To(BeARegularFile())
-			Expect(path.Join(image.RootFSPath, "injected-file")).To(BeARegularFile())
+			Expect(path.Join(image.Rootfs, "foo")).To(BeARegularFile())
+			Expect(path.Join(image.Rootfs, "injected-file")).To(BeARegularFile())
 		})
 	})
 
@@ -279,7 +279,7 @@ var _ = Describe("Create with local images", func() {
 			image, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
-			content, err := ioutil.ReadFile(filepath.Join(image.RootFSPath, "symlink"))
+			content, err := ioutil.ReadFile(filepath.Join(image.Rootfs, "symlink"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(content)).To(Equal("hello-world"))
 		})
@@ -296,11 +296,11 @@ var _ = Describe("Create with local images", func() {
 				image, err := Runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				symlinkTargetFilePath := path.Join(image.RootFSPath, "symlink-target")
+				symlinkTargetFilePath := path.Join(image.Rootfs, "symlink-target")
 				symlinkTargetFi, err := os.Stat(symlinkTargetFilePath)
 				Expect(err).NotTo(HaveOccurred())
 
-				symlinkFilePath := path.Join(image.RootFSPath, "symlink")
+				symlinkFilePath := path.Join(image.Rootfs, "symlink")
 				symlinkFi, err := os.Lstat(symlinkFilePath)
 				Expect(err).NotTo(HaveOccurred())
 

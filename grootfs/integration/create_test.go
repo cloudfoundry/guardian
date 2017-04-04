@@ -86,17 +86,17 @@ var _ = Describe("Create", func() {
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		grootFi, err := os.Stat(path.Join(image.RootFSPath, "foo"))
+		grootFi, err := os.Stat(path.Join(image.Rootfs, "foo"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 		Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-		grootLink, err := os.Lstat(path.Join(image.RootFSPath, "groot-link"))
+		grootLink, err := os.Lstat(path.Join(image.Rootfs, "groot-link"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(grootLink.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 		Expect(grootLink.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-		rootFi, err := os.Stat(path.Join(image.RootFSPath, "bar"))
+		rootFi, err := os.Stat(path.Join(image.Rootfs, "bar"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(rootUID)))
 		Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))
@@ -121,27 +121,27 @@ var _ = Describe("Create", func() {
 
 			Expect(err).NotTo(HaveOccurred())
 
-			grootFi, err := os.Stat(path.Join(image.RootFSPath, "foo"))
+			grootFi, err := os.Stat(path.Join(image.Rootfs, "foo"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			grootDir, err := os.Stat(path.Join(image.RootFSPath, "groot-folder"))
+			grootDir, err := os.Stat(path.Join(image.Rootfs, "groot-folder"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			grootLink, err := os.Lstat(path.Join(image.RootFSPath, "groot-link"))
+			grootLink, err := os.Lstat(path.Join(image.Rootfs, "groot-link"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootLink.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootLink.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			rootFi, err := os.Stat(path.Join(image.RootFSPath, "bar"))
+			rootFi, err := os.Stat(path.Join(image.Rootfs, "bar"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-			rootDir, err := os.Stat(path.Join(image.RootFSPath, "root-folder"))
+			rootDir, err := os.Stat(path.Join(image.Rootfs, "root-folder"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
@@ -164,7 +164,7 @@ var _ = Describe("Create", func() {
 				})
 			Expect(err).NotTo(HaveOccurred())
 
-			listRootfsCmd := exec.Command("ls", filepath.Join(image.RootFSPath, "root-folder"))
+			listRootfsCmd := exec.Command("ls", filepath.Join(image.Rootfs, "root-folder"))
 			listRootfsCmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
 					Uid: GrootUID,
@@ -308,8 +308,8 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 4)).To(Succeed())
-			Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 2)).To(MatchError(ContainSubstring("dd: error writing")))
+			Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 4)).To(Succeed())
+			Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello2"), 2)).To(MatchError(ContainSubstring("dd: error writing")))
 		})
 
 		Context("when the disk limit value is invalid", func() {
@@ -337,8 +337,8 @@ var _ = Describe("Create", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 6)).To(Succeed())
-				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
+				Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 6)).To(Succeed())
+				Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
 			})
 		})
 	})
@@ -690,7 +690,7 @@ var _ = Describe("Create", func() {
 				image, err := Runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				rootOwnedFile, err := os.Stat(filepath.Join(image.RootFSPath, "bar"))
+				rootOwnedFile, err := os.Stat(filepath.Join(image.Rootfs, "bar"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
 				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(1000)))
@@ -728,7 +728,7 @@ var _ = Describe("Create", func() {
 				image, err := Runner.Create(spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 11)).To(MatchError(ContainSubstring("dd: error writing")))
+				Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 11)).To(MatchError(ContainSubstring("dd: error writing")))
 			})
 		})
 
@@ -742,9 +742,9 @@ var _ = Describe("Create", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(image.ImageInfo.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id/rootfs")))
-				Expect(image.ImageInfo.Mount).To(BeNil())
-				Expect(image.ImageInfo.Config).To(BeNil())
+				Expect(image.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id/rootfs")))
+				Expect(image.Mount).To(BeNil())
+				Expect(image.Config).To(BeNil())
 			})
 		})
 
@@ -758,14 +758,14 @@ var _ = Describe("Create", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				contents, err := ioutil.ReadDir(image.ImageInfo.Rootfs)
+				contents, err := ioutil.ReadDir(image.Rootfs)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(contents).To(BeEmpty())
 			})
 
 			Describe("Mount json output", func() {
 				var (
-					image groot.Image
+					image groot.ImageInfo
 				)
 
 				JustBeforeEach(func() {
@@ -785,12 +785,12 @@ var _ = Describe("Create", func() {
 					})
 
 					It("returns the mount information in the output json", func() {
-						Expect(image.ImageInfo.Mount).ToNot(BeNil())
-						Expect(image.ImageInfo.Mount.Destination).To(Equal(image.ImageInfo.Rootfs))
-						Expect(image.ImageInfo.Mount.Type).To(Equal(""))
-						Expect(image.ImageInfo.Mount.Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
-						Expect(image.ImageInfo.Mount.Options).To(HaveLen(1))
-						Expect(image.ImageInfo.Mount.Options[0]).To(Equal("bind"))
+						Expect(image.Mount).ToNot(BeNil())
+						Expect(image.Mount.Destination).To(Equal(image.Rootfs))
+						Expect(image.Mount.Type).To(Equal(""))
+						Expect(image.Mount.Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
+						Expect(image.Mount.Options).To(HaveLen(1))
+						Expect(image.Mount.Options[0]).To(Equal("bind"))
 					})
 				})
 
@@ -800,12 +800,12 @@ var _ = Describe("Create", func() {
 					})
 
 					It("returns the mount information in the output json", func() {
-						Expect(image.ImageInfo.Mount).ToNot(BeNil())
-						Expect(image.ImageInfo.Mount.Destination).To(Equal(image.ImageInfo.Rootfs))
-						Expect(image.ImageInfo.Mount.Type).To(Equal("overlay"))
-						Expect(image.ImageInfo.Mount.Source).To(Equal("overlay"))
-						Expect(image.ImageInfo.Mount.Options).To(HaveLen(1))
-						Expect(image.ImageInfo.Mount.Options[0]).To(MatchRegexp(
+						Expect(image.Mount).ToNot(BeNil())
+						Expect(image.Mount.Destination).To(Equal(image.Rootfs))
+						Expect(image.Mount.Type).To(Equal("overlay"))
+						Expect(image.Mount.Source).To(Equal("overlay"))
+						Expect(image.Mount.Options).To(HaveLen(1))
+						Expect(image.Mount.Options[0]).To(MatchRegexp(
 							fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s",
 								filepath.Join(StorePath, overlayxfs.LinksDirName, ".*"),
 								filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.UpperDir),
@@ -839,8 +839,8 @@ var _ = Describe("Create", func() {
 				image, err := Runner.Create(spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello"), 6)).To(Succeed())
-				Expect(writeMegabytes(filepath.Join(image.RootFSPath, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
+				Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 6)).To(Succeed())
+				Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
 			})
 		})
 	})

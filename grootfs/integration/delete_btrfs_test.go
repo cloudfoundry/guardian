@@ -23,7 +23,7 @@ var _ = Describe("Delete (btrfs only)", func() {
 	var (
 		sourceImagePath string
 		baseImagePath   string
-		image           groot.Image
+		image           groot.ImageInfo
 	)
 
 	BeforeEach(func() {
@@ -54,7 +54,7 @@ var _ = Describe("Delete (btrfs only)", func() {
 
 	It("destroys the quota group associated with the volume", func() {
 		rootIDBuffer := gbytes.NewBuffer()
-		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", image.RootFSPath), rootIDBuffer, GinkgoWriter)
+		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", image.Rootfs), rootIDBuffer, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 		rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
@@ -74,7 +74,7 @@ var _ = Describe("Delete (btrfs only)", func() {
 
 	Context("when the rootfs folder has subvolumes inside", func() {
 		JustBeforeEach(func() {
-			cmd := exec.Command("btrfs", "sub", "create", filepath.Join(image.RootFSPath, "subvolume"))
+			cmd := exec.Command("btrfs", "sub", "create", filepath.Join(image.Rootfs, "subvolume"))
 			cmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
 					Uid: uint32(GrootfsTestUid),
@@ -85,7 +85,7 @@ var _ = Describe("Delete (btrfs only)", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 
-			cmd = exec.Command("btrfs", "sub", "snapshot", filepath.Join(image.RootFSPath, "subvolume"), filepath.Join(image.RootFSPath, "snapshot"))
+			cmd = exec.Command("btrfs", "sub", "snapshot", filepath.Join(image.Rootfs, "subvolume"), filepath.Join(image.Rootfs, "snapshot"))
 			cmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
 					Uid: uint32(GrootfsTestUid),
@@ -98,9 +98,9 @@ var _ = Describe("Delete (btrfs only)", func() {
 		})
 
 		It("removes the rootfs completely", func() {
-			Expect(image.RootFSPath).To(BeAnExistingFile())
+			Expect(image.Rootfs).To(BeAnExistingFile())
 			Expect(Runner.Delete("random-id")).To(Succeed())
-			Expect(image.RootFSPath).ToNot(BeAnExistingFile())
+			Expect(image.Rootfs).ToNot(BeAnExistingFile())
 		})
 	})
 

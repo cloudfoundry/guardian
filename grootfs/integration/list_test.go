@@ -17,7 +17,7 @@ import (
 )
 
 var _ = Describe("List", func() {
-	var image groot.Image
+	var image groot.ImageInfo
 
 	BeforeEach(func() {
 		sourceImagePath, err := ioutil.TempDir("", "")

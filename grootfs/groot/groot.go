@@ -31,6 +31,7 @@ type ImageInfo struct {
 	Rootfs string         `json:"rootfs"`
 	Config *specsv1.Image `json:"config,omitempty"`
 	Mount  *MountInfo     `json:"mount,omitempty"`
+	Path   string         `json:"-"`
 }
 
 type MountInfo struct {
@@ -77,15 +78,9 @@ type ImageSpec struct {
 	OwnerGID                  int
 }
 
-type Image struct {
-	ImageInfo  ImageInfo
-	Path       string
-	RootFSPath string
-}
-
 type ImageCloner interface {
 	Exists(id string) (bool, error)
-	Create(logger lager.Logger, spec ImageSpec) (Image, error)
+	Create(logger lager.Logger, spec ImageSpec) (ImageInfo, error)
 	Destroy(logger lager.Logger, id string) error
 	Stats(logger lager.Logger, id string) (VolumeStats, error)
 }

@@ -52,12 +52,9 @@ var _ = Describe("Creator", func() {
 
 		logger = lagertest.NewTestLogger("creator")
 
-		fakeImageCloner.CreateReturns(groot.Image{
-			Path:       "/path/to/images/123",
-			RootFSPath: "/path/to/images/123/rootfs",
-			ImageInfo: groot.ImageInfo{
-				Rootfs: "/path/to/images/123/rootfs",
-			},
+		fakeImageCloner.CreateReturns(groot.ImageInfo{
+			Path:   "/path/to/images/123",
+			Rootfs: "/path/to/images/123/rootfs",
 		}, nil)
 
 		creator = groot.IamCreator(
@@ -225,10 +222,9 @@ var _ = Describe("Creator", func() {
 		})
 
 		It("returns the image", func() {
-			expectedImage := groot.Image{
-				Path:       "/path/to/image",
-				RootFSPath: "rootfs-path",
-				ImageInfo:  groot.ImageInfo{},
+			expectedImage := groot.ImageInfo{
+				Path:   "/path/to/image",
+				Rootfs: "rootfs-path",
 			}
 			fakeImageCloner.CreateReturns(expectedImage, nil)
 
@@ -465,7 +461,7 @@ var _ = Describe("Creator", func() {
 
 		Context("when cloning the image fails", func() {
 			BeforeEach(func() {
-				fakeImageCloner.CreateReturns(groot.Image{}, errors.New("Failed to make image"))
+				fakeImageCloner.CreateReturns(groot.ImageInfo{}, errors.New("Failed to make image"))
 			})
 
 			It("returns the error", func() {
