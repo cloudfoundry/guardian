@@ -27,11 +27,6 @@ var _ = Describe("rootless containers", func() {
 	)
 
 	BeforeEach(func() {
-		rootlessRuncPath := os.Getenv("ROOTLESS_RUNC_PATH")
-		if rootlessRuncPath == "" {
-			Fail("ROOTLESS_RUNC_PATH env var is not set")
-		}
-
 		tag := nodeToString(GinkgoParallelNode())
 		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
 		iptablesPrefix = fmt.Sprintf("w-%s", tag)
@@ -55,7 +50,6 @@ var _ = Describe("rootless containers", func() {
 		client = startGardenAsUser(
 			unprivilegedUser,
 			"--skip-setup",
-			"--runc-bin", rootlessRuncPath,
 			"--image-plugin", testImagePluginBin,
 			"--image-plugin-extra-arg", "\"--image-path\"",
 			"--image-plugin-extra-arg", imagePath,
