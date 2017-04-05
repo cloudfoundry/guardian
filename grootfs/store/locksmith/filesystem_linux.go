@@ -6,14 +6,18 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 )
 
 var FlockSyscall = syscall.Flock
 
 func (l *FileSystem) Lock(key string) (*os.File, error) {
+	defer l.metricsEmitter.TryEmitDurationFrom(lager.NewLogger("nil"), MetricsLockingTime, time.Now())
+
 	key = strings.Replace(key, "/", "", -1)
 	lockFile, err := os.OpenFile(l.path(key), os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {

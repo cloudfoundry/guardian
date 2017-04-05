@@ -151,7 +151,8 @@ var CreateCommand = cli.Command{
 			return newExitError(err.Error(), 1)
 		}
 
-		locksmith := locksmithpkg.NewFileSystem(storePath)
+		metricsEmitter := metrics.NewEmitter()
+		locksmith := locksmithpkg.NewFileSystem(storePath, metricsEmitter)
 		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
 		if err = manager.ConfigureStore(logger, storeOwnerUid, storeOwnerGid); err != nil {
 			exitErr := errorspkg.Wrapf(errorspkg.Cause(err), "Image id '%s'", id)
@@ -184,7 +185,6 @@ var CreateCommand = cli.Command{
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
-		metricsEmitter := metrics.NewEmitter()
 		baseImagePuller := base_image_puller.NewBaseImagePuller(
 			localFetcher,
 			remoteFetcher,

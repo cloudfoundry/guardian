@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
@@ -41,7 +42,7 @@ var DeleteStoreCommand = cli.Command{
 		}
 
 		storePath := cfg.StorePath
-		locksmith := locksmith.NewFileSystem(storePath)
+		locksmith := locksmith.NewFileSystem(storePath, metrics.NewEmitter())
 		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
 		var _ = manager.ConfigureStore(logger, 0, 0)
 

@@ -68,7 +68,8 @@ var CleanCommand = cli.Command{
 		}
 
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
-		locksmith := locksmithpkg.NewFileSystem(storePath)
+		metricsEmitter := metrics.NewEmitter()
+		locksmith := locksmithpkg.NewFileSystem(storePath, metricsEmitter)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
@@ -76,7 +77,6 @@ var CleanCommand = cli.Command{
 		sm := garbage_collector.NewStoreMeasurer(storePath)
 		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
 
-		metricsEmitter := metrics.NewEmitter()
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
 		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, cfg.Clean.IgnoreBaseImages, true)

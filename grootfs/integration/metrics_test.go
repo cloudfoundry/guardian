@@ -82,6 +82,21 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
+		It("emits the locking time", func() {
+			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("LockingTime")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("LockingTime"))
+			Expect(*metrics[0].Unit).To(Equal("nanos"))
+			Expect(*metrics[0].Value).NotTo(BeZero())
+		})
+
 		Context("when create fails", func() {
 			BeforeEach(func() {
 				integration.SkipIfNonRoot(GrootfsTestUid)
@@ -214,6 +229,23 @@ var _ = Describe("Metrics", func() {
 			}).Should(HaveLen(1))
 
 			Expect(*metrics[0].Name).To(Equal("ImageCleanTime"))
+			Expect(*metrics[0].Unit).To(Equal("nanos"))
+			Expect(*metrics[0].Value).NotTo(BeZero())
+		})
+
+		It("emits the locking time", func() {
+			_, err := Runner.
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+				Clean(0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("LockingTime")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("LockingTime"))
 			Expect(*metrics[0].Unit).To(Equal("nanos"))
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})

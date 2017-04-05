@@ -5,7 +5,9 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
+	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/locksmith"
 
@@ -16,6 +18,7 @@ import (
 var _ = Describe("Filesystem", func() {
 	var (
 		fileSystemLock *locksmith.FileSystem
+		metricsEmitter *grootfakes.FakeMetricsEmitter
 		storePath      string
 	)
 
@@ -24,8 +27,9 @@ var _ = Describe("Filesystem", func() {
 		storePath, err = ioutil.TempDir("", "store")
 		Expect(err).ToNot(HaveOccurred())
 		Expect(os.Mkdir(filepath.Join(storePath, "locks"), 0755)).To(Succeed())
+		metricsEmitter = new(grootfakes.FakeMetricsEmitter)
 
-		fileSystemLock = locksmith.NewFileSystem(storePath)
+		fileSystemLock = locksmith.NewFileSystem(storePath, metricsEmitter)
 	})
 
 	AfterEach(func() {
@@ -70,10 +74,23 @@ var _ = Describe("Filesystem", func() {
 			Expect(lockFile).To(BeAnExistingFile())
 		})
 
+		It("emits the locking time metric", func() {
+			startTime := time.Now()
+			_ = filepath.Join(storePath, store.LocksDirName, "key.lock")
+			_, err := fileSystemLock.Lock("key")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(metricsEmitter.TryEmitDurationFromCallCount()).To(Equal(1))
+			_, metricName, fromTime := metricsEmitter.TryEmitDurationFromArgsForCall(0)
+
+			Expect(metricName).To(Equal(locksmith.MetricsLockingTime))
+			Expect(fromTime.Unix()).To(BeNumerically("~", startTime.Unix(), 1))
+		})
+
 		Context("when creating the lock file fails", func() {
 			BeforeEach(func() {
 				storePath = "/not/real"
-				fileSystemLock = locksmith.NewFileSystem(storePath)
+				fileSystemLock = locksmith.NewFileSystem(storePath, metricsEmitter)
 			})
 
 			It("returns an error", func() {
