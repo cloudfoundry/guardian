@@ -40,6 +40,7 @@ var CleanCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("clean")
+		newExitError := newErrorHandler(logger, "clean")
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithIgnoreBaseImages(ctx.StringSlice("ignore-image"))
@@ -50,20 +51,20 @@ var CleanCommand = cli.Command{
 		logger.Debug("clean-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 
 		storePath := cfg.StorePath
 		if _, err := os.Stat(storePath); os.IsNotExist(err) {
 			err := errorspkg.Errorf("no store found at %s", storePath)
 			logger.Error("store-path-failed", err, nil)
-			return cli.NewExitError(err.Error(), 0)
+			return newExitError(err.Error(), 0)
 		}
 
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
 			logger.Error("failed-to-initialise-driver", err)
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
@@ -81,7 +82,7 @@ var CleanCommand = cli.Command{
 		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, cfg.Clean.IgnoreBaseImages, true)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 
 		if noop {

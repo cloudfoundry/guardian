@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
@@ -65,6 +66,27 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Unit).To(Equal("nanos"))
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
+
+		Context("when create fails", func() {
+			BeforeEach(func() {
+				integration.SkipIfNonRoot(GrootfsTestUid)
+				spec.BaseImage = "not-here"
+			})
+
+			It("emits an error event", func() {
+				_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
+				Expect(err).To(HaveOccurred())
+
+				var errors []events.Error
+				Eventually(func() []events.Error {
+					errors = fakeMetron.Errors()
+					return errors
+				}).Should(HaveLen(1))
+
+				Expect(*errors[0].Source).To(Equal("grootfs.create"))
+				Expect(*errors[0].Message).To(ContainSubstring("stat not-here: no such file or directory"))
+			})
+		})
 	})
 
 	Describe("Delete", func() {
@@ -88,6 +110,31 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Name).To(Equal("ImageDeletionTime"))
 			Expect(*metrics[0].Unit).To(Equal("nanos"))
 			Expect(*metrics[0].Value).NotTo(BeZero())
+		})
+
+		Context("when delete fails", func() {
+			var runner runner.Runner
+
+			BeforeEach(func() {
+				integration.SkipIfNonRoot(GrootfsTestUid)
+				runner = Runner.RunningAsUser(GrootUID, GrootGID)
+			})
+
+			It("emits an error event", func() {
+				err := runner.
+					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+					Delete("my-id")
+				Expect(err).To(HaveOccurred())
+
+				var errors []events.Error
+				Eventually(func() []events.Error {
+					errors = fakeMetron.Errors()
+					return errors
+				}).Should(HaveLen(1))
+
+				Expect(*errors[0].Source).To(Equal("grootfs.delete"))
+				Expect(*errors[0].Message).To(ContainSubstring("destroying image"))
+			})
 		})
 	})
 
@@ -113,6 +160,24 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Unit).To(Equal("nanos"))
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
+
+		Context("when stats fails", func() {
+			It("emits an error event", func() {
+				_, err := Runner.
+					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+					Stats("some-other-id")
+				Expect(err).To(HaveOccurred())
+
+				var errors []events.Error
+				Eventually(func() []events.Error {
+					errors = fakeMetron.Errors()
+					return errors
+				}).Should(HaveLen(1))
+
+				Expect(*errors[0].Source).To(Equal("grootfs.stats"))
+				Expect(*errors[0].Message).To(ContainSubstring("not found"))
+			})
+		})
 	})
 
 	Describe("Clean", func() {
@@ -136,6 +201,31 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Name).To(Equal("ImageCleanTime"))
 			Expect(*metrics[0].Unit).To(Equal("nanos"))
 			Expect(*metrics[0].Value).NotTo(BeZero())
+		})
+
+		Context("when clean fails", func() {
+			var runner runner.Runner
+
+			BeforeEach(func() {
+				integration.SkipIfNonRoot(GrootfsTestUid)
+				runner = Runner.RunningAsUser(GrootUID, GrootGID)
+			})
+
+			It("emits an error event", func() {
+				_, err := runner.
+					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+					Clean(0, []string{})
+				Expect(err).To(HaveOccurred())
+
+				var errors []events.Error
+				Eventually(func() []events.Error {
+					errors = fakeMetron.Errors()
+					return errors
+				}).Should(HaveLen(1))
+
+				Expect(*errors[0].Source).To(Equal("grootfs.clean"))
+				Expect(*errors[0].Message).To(ContainSubstring("permission denied"))
+			})
 		})
 	})
 

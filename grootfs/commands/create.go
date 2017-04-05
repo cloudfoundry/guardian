@@ -94,10 +94,11 @@ var CreateCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("create")
+		newExitError := newErrorHandler(logger, "create")
 
 		if ctx.NArg() != 2 {
 			logger.Error("parsing-command", errorspkg.New("invalid arguments"), lager.Data{"args": ctx.Args()})
-			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
+			return newExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
@@ -116,11 +117,11 @@ var CreateCommand = cli.Command{
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 
 		if err := validateOptions(ctx, cfg); err != nil {
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 
 		storePath := cfg.StorePath
@@ -131,13 +132,13 @@ var CreateCommand = cli.Command{
 		if err != nil {
 			err = errorspkg.Errorf("parsing uid-mapping: %s", err)
 			logger.Error("parsing-command", err)
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 		gidMappings, err := parseIDMappings(cfg.Create.GIDMappings)
 		if err != nil {
 			err = errorspkg.Errorf("parsing gid-mapping: %s", err)
 			logger.Error("parsing-command", err)
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 
 		storeOwnerUid, storeOwnerGid, err := findStoreOwner(uidMappings, gidMappings)
@@ -147,7 +148,7 @@ var CreateCommand = cli.Command{
 
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 
 		locksmith := locksmithpkg.NewFileSystem(storePath)
@@ -155,7 +156,7 @@ var CreateCommand = cli.Command{
 		if err = manager.ConfigureStore(logger, storeOwnerUid, storeOwnerGid); err != nil {
 			exitErr := errorspkg.Wrapf(errorspkg.Cause(err), "Image id '%s'", id)
 			logger.Error("failed-to-setup-store", err, lager.Data{"id": id})
-			return cli.NewExitError(exitErr.Error(), 1)
+			return newExitError(exitErr.Error(), 1)
 		}
 
 		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
@@ -221,7 +222,7 @@ var CreateCommand = cli.Command{
 		if err != nil {
 			logger.Error("creating", err)
 			humanizedError := tryHumanize(err, createSpec)
-			return cli.NewExitError(humanizedError, 1)
+			return newExitError(humanizedError, 1)
 		}
 
 		var output string
@@ -229,7 +230,7 @@ var CreateCommand = cli.Command{
 			jsonBytes, err := json.Marshal(image)
 			if err != nil {
 				logger.Error("formatting output", err)
-				return cli.NewExitError(err.Error(), 1)
+				return newExitError(err.Error(), 1)
 			}
 			output = string(jsonBytes)
 		} else {

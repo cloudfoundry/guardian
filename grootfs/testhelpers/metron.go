@@ -14,6 +14,7 @@ type FakeMetron struct {
 	connection            net.PacketConn
 	dropsondeUnmarshaller *dropsonde_unmarshaller.DropsondeUnmarshaller
 	valueMetrics          map[string][]events.ValueMetric
+	errors                []events.Error
 	stopped               bool
 	mtx                   sync.RWMutex
 }
@@ -24,6 +25,7 @@ func NewFakeMetron(port uint16) *FakeMetron {
 		dropsondeUnmarshaller: dropsonde_unmarshaller.NewDropsondeUnmarshaller(nil),
 		mtx:          sync.RWMutex{},
 		valueMetrics: make(map[string][]events.ValueMetric),
+		errors:       make([]events.Error, 0),
 	}
 }
 
@@ -57,11 +59,18 @@ func (m *FakeMetron) Run() error {
 			return err
 		}
 
-		if *envelope.EventType == events.Envelope_ValueMetric {
+		switch *envelope.EventType {
+		case events.Envelope_ValueMetric:
 			m.mtx.Lock()
 			metric := *envelope.ValueMetric
 			key := *metric.Name
 			m.valueMetrics[key] = append(m.valueMetrics[key], metric)
+			m.mtx.Unlock()
+
+		case events.Envelope_Error:
+			m.mtx.Lock()
+			err := *envelope.Error
+			m.errors = append(m.errors, err)
 			m.mtx.Unlock()
 		}
 	}
@@ -91,4 +100,11 @@ func (m *FakeMetron) ValueMetricsFor(key string) []events.ValueMetric {
 	}
 
 	return metrics
+}
+
+func (m *FakeMetron) Errors() []events.Error {
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	return m.errors
 }

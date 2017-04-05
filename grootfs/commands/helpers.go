@@ -1,16 +1,20 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/store/manager"
+	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
+	"github.com/urfave/cli"
 )
 
 type fileSystemDriver interface {
@@ -43,4 +47,15 @@ func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {
 	}
 
 	return mappings, nil
+}
+
+type exitErrorFunc func(message string, exitCode int) *cli.ExitError
+
+func newErrorHandler(logger lager.Logger, action string) exitErrorFunc {
+	metricsEmitter := metrics.NewEmitter()
+
+	return func(message string, exitCode int) *cli.ExitError {
+		metricsEmitter.TryEmitError(logger, action, errors.New(message), int32(exitCode))
+		return cli.NewExitError(message, exitCode)
+	}
 }

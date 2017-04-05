@@ -24,10 +24,11 @@ var DeleteCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("delete")
+		newExitError := newErrorHandler(logger, "delete")
 
 		if ctx.NArg() != 1 {
 			logger.Error("parsing-command", errorspkg.New("id was not specified"))
-			return cli.NewExitError("id was not specified", 1)
+			return newExitError("id was not specified", 1)
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
@@ -35,7 +36,7 @@ var DeleteCommand = cli.Command{
 		logger.Debug("delete-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 
 		storePath := cfg.StorePath
@@ -50,7 +51,7 @@ var DeleteCommand = cli.Command{
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
 			logger.Error("failed-to-initialise-driver", err)
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 
 		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
@@ -63,7 +64,7 @@ var DeleteCommand = cli.Command{
 		err = deleter.Delete(logger, id)
 		if err != nil {
 			logger.Error("deleting-image-failed", err)
-			return cli.NewExitError(err.Error(), 1)
+			return newExitError(err.Error(), 1)
 		}
 
 		fmt.Printf("Image %s deleted\n", id)
