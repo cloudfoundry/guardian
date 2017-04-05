@@ -184,15 +184,15 @@ var CreateCommand = cli.Command{
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
+		metricsEmitter := metrics.NewEmitter()
 		baseImagePuller := base_image_puller.NewBaseImagePuller(
 			localFetcher,
 			remoteFetcher,
 			unpacker,
 			fsDriver,
 			dependencyManager,
+			metricsEmitter,
 		)
-		rootFSConfigurer := storepkg.NewRootFSConfigurer()
-		metricsEmitter := metrics.NewEmitter()
 
 		sm := garbage_collector.NewStoreMeasurer(storePath)
 		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
@@ -200,6 +200,7 @@ var CreateCommand = cli.Command{
 
 		namespaceChecker := groot.NewStoreNamespacer(storePath)
 
+		rootFSConfigurer := storepkg.NewRootFSConfigurer()
 		creator := groot.IamCreator(
 			imageCloner, baseImagePuller, locksmith, rootFSConfigurer,
 			dependencyManager, metricsEmitter, cleaner, namespaceChecker,

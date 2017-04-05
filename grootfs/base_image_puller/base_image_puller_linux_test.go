@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/base_image_puller/base_image_pullerfakes"
@@ -31,10 +32,12 @@ var _ = Describe("Base Image Puller", func() {
 		fakeBaseImagePuller      *grootfakes.FakeBaseImagePuller
 		fakeUnpacker             *base_image_pullerfakes.FakeUnpacker
 		fakeVolumeDriver         *base_image_pullerfakes.FakeVolumeDriver
+		fakeMetricsEmitter       *grootfakes.FakeMetricsEmitter
 		fakeDependencyRegisterer *base_image_pullerfakes.FakeDependencyRegisterer
 		expectedImgDesc          specsv1.Image
 
 		baseImagePuller *base_image_puller.BaseImagePuller
+		layersDigest    []base_image_puller.LayerDigest
 
 		remoteBaseImageSrc *url.URL
 	)
@@ -44,17 +47,19 @@ var _ = Describe("Base Image Puller", func() {
 
 		fakeUnpacker = new(base_image_pullerfakes.FakeUnpacker)
 
+		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
 		fakeLocalFetcher = new(base_image_pullerfakes.FakeFetcher)
 		fakeRemoteFetcher = new(base_image_pullerfakes.FakeFetcher)
 		expectedImgDesc = specsv1.Image{Author: "Groot"}
+		layersDigest = []base_image_puller.LayerDigest{
+			{BlobID: "i-am-a-layer", ChainID: "layer-111", ParentChainID: ""},
+			{BlobID: "i-am-another-layer", ChainID: "chain-222", ParentChainID: "layer-111"},
+			{BlobID: "i-am-the-last-layer", ChainID: "chain-333", ParentChainID: "chain-222"},
+		}
 		fakeRemoteFetcher.BaseImageInfoReturns(
 			base_image_puller.BaseImageInfo{
-				LayersDigest: []base_image_puller.LayerDigest{
-					{BlobID: "i-am-a-layer", ChainID: "layer-111", ParentChainID: ""},
-					{BlobID: "i-am-another-layer", ChainID: "chain-222", ParentChainID: "layer-111"},
-					{BlobID: "i-am-the-last-layer", ChainID: "chain-333", ParentChainID: "chain-222"},
-				},
-				Config: expectedImgDesc,
+				LayersDigest: layersDigest,
+				Config:       expectedImgDesc,
 			}, nil)
 
 		fakeRemoteFetcher.StreamBlobStub = func(_ lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error) {
@@ -72,7 +77,7 @@ var _ = Describe("Base Image Puller", func() {
 
 		fakeDependencyRegisterer = new(base_image_pullerfakes.FakeDependencyRegisterer)
 
-		baseImagePuller = base_image_puller.NewBaseImagePuller(fakeLocalFetcher, fakeRemoteFetcher, fakeUnpacker, fakeVolumeDriver, fakeDependencyRegisterer)
+		baseImagePuller = base_image_puller.NewBaseImagePuller(fakeLocalFetcher, fakeRemoteFetcher, fakeUnpacker, fakeVolumeDriver, fakeDependencyRegisterer, fakeMetricsEmitter)
 		logger = lagertest.NewTestLogger("image-puller")
 
 		var err error
@@ -198,6 +203,20 @@ var _ = Describe("Base Image Puller", func() {
 		imageID, chainIDs := fakeDependencyRegisterer.RegisterArgsForCall(0)
 		Expect(imageID).To(Equal("baseimage:docker:///an/image"))
 		Expect(chainIDs).To(ConsistOf("layer-111", "chain-222", "chain-333"))
+	})
+
+	It("emits a metric with the unpack time", func() {
+		start := time.Now()
+
+		_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+			BaseImageSrc: remoteBaseImageSrc,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(len(layersDigest)))
+		_, metricName, fromTime := fakeMetricsEmitter.TryEmitDurationFromArgsForCall(0)
+		Expect(metricName).To(Equal(base_image_puller.MetricsUnpackTimeName))
+		Expect(fromTime.Unix()).To(BeNumerically("~", start.Unix(), 1))
 	})
 
 	Context("when registration fails", func() {
@@ -515,6 +534,29 @@ var _ = Describe("Base Image Puller", func() {
 			Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
 			_, path := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
 			Expect(path).To(Equal("chain-333"))
+		})
+
+		It("emitts a metric with the unpack time", func() {
+			start := time.Now()
+
+			_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+				BaseImageSrc: remoteBaseImageSrc,
+			})
+			Expect(err).To(HaveOccurred())
+
+			Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(3))
+
+			_, metricName, fromTime := fakeMetricsEmitter.TryEmitDurationFromArgsForCall(0)
+			Expect(metricName).To(Equal(base_image_puller.MetricsUnpackTimeName))
+			Expect(fromTime.Unix()).To(BeNumerically("~", start.Unix(), 1))
+
+			_, metricName, fromTime = fakeMetricsEmitter.TryEmitDurationFromArgsForCall(1)
+			Expect(metricName).To(Equal(base_image_puller.MetricsUnpackTimeName))
+			Expect(fromTime.Unix()).To(BeNumerically("~", start.Unix(), 2))
+
+			_, metricName, fromTime = fakeMetricsEmitter.TryEmitDurationFromArgsForCall(2)
+			Expect(metricName).To(Equal(base_image_puller.MetricsFailedUnpackTimeName))
+			Expect(fromTime.Unix()).To(BeNumerically("~", start.Unix(), 3))
 		})
 
 		Context("when UID and GID mappings are provided", func() {

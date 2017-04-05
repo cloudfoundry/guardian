@@ -16,6 +16,8 @@ import (
 )
 
 const BaseImageReferenceFormat = "baseimage:%s"
+const MetricsUnpackTimeName = "UnpackTime"
+const MetricsFailedUnpackTimeName = "FailedUnpackTime"
 
 //go:generate counterfeiter . Fetcher
 //go:generate counterfeiter . Unpacker
@@ -68,15 +70,17 @@ type BaseImagePuller struct {
 	unpacker             Unpacker
 	volumeDriver         VolumeDriver
 	dependencyRegisterer DependencyRegisterer
+	metricsEmitter       groot.MetricsEmitter
 }
 
-func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer) *BaseImagePuller {
+func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer, metricsEmitter groot.MetricsEmitter) *BaseImagePuller {
 	return &BaseImagePuller{
 		localFetcher:         localFetcher,
 		remoteFetcher:        remoteFetcher,
 		unpacker:             unpacker,
 		volumeDriver:         volumeDriver,
 		dependencyRegisterer: dependencyRegisterer,
+		metricsEmitter:       metricsEmitter,
 	}
 }
 
@@ -215,6 +219,7 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 		GIDMappings: spec.GIDMappings,
 	}
 
+	unpackStarted := time.Now()
 	if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
 		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
 			logger.Error("volume-cleanup-failed", errD, lager.Data{
@@ -223,8 +228,10 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 				"parentChainID": digest.ParentChainID,
 			})
 		}
+		p.metricsEmitter.TryEmitDurationFrom(logger, MetricsFailedUnpackTimeName, unpackStarted)
 		return "", errorspkg.Wrapf(err, "unpacking layer `%s`", digest.BlobID)
 	}
+	p.metricsEmitter.TryEmitDurationFrom(logger, MetricsUnpackTimeName, unpackStarted)
 	logger.Debug("layer-unpacked", lager.Data{
 		"blobID":        digest.BlobID,
 		"chainID":       digest.ChainID,
