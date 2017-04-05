@@ -20,7 +20,9 @@ func NewEmitter() *Emitter {
 	return &Emitter{}
 }
 
-func (e *Emitter) TryEmitDuration(logger lager.Logger, name string, duration time.Duration) {
+func (e *Emitter) TryEmitDurationFrom(logger lager.Logger, name string, from time.Time) {
+	duration := time.Since(from)
+
 	if err := metrics.SendValue(name, float64(duration), "nanos"); err != nil {
 		logger.Error("failed-to-emit-metric", err, lager.Data{
 			"key":      name,

@@ -51,9 +51,10 @@ var _ = Describe("Emitter", func() {
 		Eventually(fakeMetronClosed).Should(BeClosed())
 	})
 
-	Describe("TryEmitDuration", func() {
+	Describe("TryEmitDurationFrom", func() {
 		It("emits metrics", func() {
-			emitter.TryEmitDuration(logger, "foo", time.Second)
+			from := time.Now().Add(-1 * time.Second)
+			emitter.TryEmitDurationFrom(logger, "foo", from)
 
 			var fooMetrics []events.ValueMetric
 			Eventually(func() []events.ValueMetric {
@@ -63,7 +64,10 @@ var _ = Describe("Emitter", func() {
 
 			Expect(*fooMetrics[0].Name).To(Equal("foo"))
 			Expect(*fooMetrics[0].Unit).To(Equal("nanos"))
-			Expect(*fooMetrics[0].Value).To(Equal(float64(time.Second)))
+			Expect(*fooMetrics[0].Value).To(SatisfyAll(
+				BeNumerically(">", float64(time.Second-time.Millisecond)),
+				BeNumerically("<", float64(time.Second+time.Millisecond)),
+			))
 		})
 	})
 

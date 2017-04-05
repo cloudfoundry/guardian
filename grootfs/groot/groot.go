@@ -112,7 +112,7 @@ type Locksmith interface {
 }
 
 type MetricsEmitter interface {
-	TryEmitDuration(logger lager.Logger, name string, duration time.Duration)
+	TryEmitDurationFrom(logger lager.Logger, name string, from time.Time)
 }
 
 type DiskUsage struct {
