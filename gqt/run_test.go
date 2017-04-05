@@ -73,6 +73,33 @@ var _ = Describe("Run", func() {
 		),
 	)
 
+	It("creates process files with the right permisssion and ownership", func() {
+		client = startGarden()
+		container, err := client.Create(garden.ContainerSpec{})
+		Expect(err).NotTo(HaveOccurred())
+
+		process, err := container.Run(garden.ProcessSpec{
+			Path: "sleep",
+			Args: []string{"50"},
+		}, garden.ProcessIO{})
+		Expect(err).NotTo(HaveOccurred())
+
+		processPath := filepath.Join(client.DepotDir, container.Handle(), "processes", process.ID())
+		root := uint32(0)
+		maximus := uint32(4294967294)
+		files := []fileInfo{
+			{dir: processPath, mode: "drwx------", owner: root},
+			{dir: processPath, name: "exit", mode: "prw-------", owner: maximus},
+			{dir: processPath, name: "stdin", mode: "prw-------", owner: maximus},
+			{dir: processPath, name: "stdout", mode: "prw-------", owner: maximus},
+			{dir: processPath, name: "stderr", mode: "prw-------", owner: maximus},
+			{dir: processPath, name: "winsz", mode: "prw-------", owner: maximus},
+		}
+		for _, info := range files {
+			Expect(checkFileInfo(info)).NotTo(HaveOccurred())
+		}
+	})
+
 	It("cleans up any files within a second of the process exiting", func() {
 		client = startGarden()
 		container, err := client.Create(garden.ContainerSpec{})
@@ -605,4 +632,26 @@ func (p *process) ExitCode() int {
 
 func (p *process) Buffer() *gbytes.Buffer {
 	return p.buffer
+}
+
+type fileInfo struct {
+	dir   string
+	name  string
+	mode  string
+	owner uint32
+}
+
+func checkFileInfo(expectedInfo fileInfo) error {
+	path := filepath.Join(expectedInfo.dir, expectedInfo.name)
+	actualInfo, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if actualInfo.Mode().String() != expectedInfo.mode {
+		return fmt.Errorf("mode %v is not the expected %v of file %v", actualInfo.Mode(), expectedInfo.mode, path)
+	}
+	if uid := actualInfo.Sys().(*syscall.Stat_t).Uid; uid != expectedInfo.owner {
+		return fmt.Errorf("owner %v is not the expected %v of file %v", uid, expectedInfo.owner, path)
+	}
+	return nil
 }

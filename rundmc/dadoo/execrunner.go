@@ -194,12 +194,12 @@ type process struct {
 }
 
 func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter) *process {
-	stdin, stdout, stderr, winsz, exit, exitcode := filepath.Join(dir, "stdin"),
-		filepath.Join(dir, "stdout"),
-		filepath.Join(dir, "stderr"),
-		filepath.Join(dir, "winsz"),
-		filepath.Join(dir, "exit"),
-		filepath.Join(dir, "exitcode")
+	stdin := filepath.Join(dir, "stdin")
+	stdout := filepath.Join(dir, "stdout")
+	stderr := filepath.Join(dir, "stderr")
+	winsz := filepath.Join(dir, "winsz")
+	exit := filepath.Join(dir, "exit")
+	exitcode := filepath.Join(dir, "exitcode")
 
 	return &process{
 		id:       id,
