@@ -15,6 +15,7 @@ import (
 	"sync"
 	"syscall"
 	"time"
+	"unsafe"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/dadoo"
@@ -210,6 +211,9 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidF
 		}
 
 		os.RemoveAll(sockDir)
+		if err = setOnlcr(master); err != nil {
+			return
+		}
 		streamProcess(master, stdin, stdout, winszFifo)
 
 		return
@@ -292,4 +296,29 @@ func tryClose(closers ...io.Closer) {
 			closer.Close()
 		}
 	}
+}
+
+// setOnlcr copied from runc
+// https://github.com/cloudfoundry-incubator/runc/blob/02ec89829b24dfce45bb207d2344e0e6d078a93c/libcontainer/console_linux.go#L144-L160
+func setOnlcr(terminal *os.File) error {
+	var termios syscall.Termios
+
+	if err := ioctl(terminal.Fd(), syscall.TCGETS, uintptr(unsafe.Pointer(&termios))); err != nil {
+		return fmt.Errorf("ioctl(tty, tcgets): %s", err.Error())
+	}
+
+	termios.Oflag |= syscall.ONLCR
+
+	if err := ioctl(terminal.Fd(), syscall.TCSETS, uintptr(unsafe.Pointer(&termios))); err != nil {
+		return fmt.Errorf("ioctl(tty, tcsets): %s", err.Error())
+	}
+
+	return nil
+}
+
+func ioctl(fd uintptr, flag, data uintptr) error {
+	if _, _, err := syscall.Syscall(syscall.SYS_IOCTL, fd, flag, data); err != 0 {
+		return err
+	}
+	return nil
 }

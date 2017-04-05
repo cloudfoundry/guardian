@@ -437,6 +437,48 @@ var _ = Describe("Dadoo", func() {
 				Expect(string(data)).To(ContainSubstring("x=banana"))
 			})
 
+			It("executes the process with a raw tty with onlcr set", func() {
+				spec := specs.Process{
+					Args: []string{
+						"/bin/sh",
+						"-c",
+						"while true; do stty -a && sleep 1; done",
+					},
+					Cwd:      "/",
+					Terminal: true,
+				}
+
+				encSpec, err := json.Marshal(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				cmd := exec.Command(dadooBinPath, "-tty", "exec", "runc", processDir, filepath.Base(bundlePath))
+				cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
+				cmd.Stdin = bytes.NewReader(encSpec)
+
+				_, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
+				Expect(err).NotTo(HaveOccurred())
+
+				stdout, err := os.Open(stdoutPipe)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = os.Open(stderrPipe)
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = os.OpenFile(winszPipe, os.O_WRONLY, 0600)
+				Expect(err).NotTo(HaveOccurred())
+
+				buffer := gbytes.NewBuffer()
+				pipeR, pipeW := io.Pipe()
+				go io.Copy(pipeW, stdout)
+				go io.Copy(buffer, pipeR)
+
+				Eventually(buffer).Should(gbytes.Say(" onlcr"))
+				Consistently(buffer, "3s").ShouldNot(gbytes.Say("-onlcr"))
+			}, 5.0)
+
 			Context("when defining the window size", func() {
 				It("should set initial window size", func() {
 					spec := specs.Process{
