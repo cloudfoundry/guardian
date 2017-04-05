@@ -20,6 +20,10 @@ import (
 )
 
 var _ = Describe("Clean", func() {
+	BeforeEach(func() {
+		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+	})
+
 	Context("Local Images", func() {
 		var (
 			baseImagePath             string

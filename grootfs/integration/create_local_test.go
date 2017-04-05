@@ -48,7 +48,8 @@ var _ = Describe("Create with local images", func() {
 		spec = groot.CreateSpec{
 			BaseImage: baseImagePath,
 			ID:        "random-id",
-			Mount:     true,
+			Mount:     mountByDefault(),
+			Json:      true,
 		}
 	})
 
@@ -56,8 +57,11 @@ var _ = Describe("Create with local images", func() {
 		image, err := Runner.Create(spec)
 		Expect(err).NotTo(HaveOccurred())
 
+		Expect(Runner.EnsureMounted(image)).To(Succeed())
+
 		imageContentPath := path.Join(image.Rootfs, "foo")
 		Expect(imageContentPath).To(BeARegularFile())
+
 		fooContents, err := ioutil.ReadFile(imageContentPath)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(string(fooContents)).To(Equal("hello-world"))
@@ -66,6 +70,7 @@ var _ = Describe("Create with local images", func() {
 	It("keeps folders original permissions", func() {
 		image, err := Runner.Create(spec)
 		Expect(err).NotTo(HaveOccurred())
+		Expect(Runner.EnsureMounted(image)).To(Succeed())
 
 		permissiveFolderPath := path.Join(image.Rootfs, "permissive-folder")
 		stat, err := os.Stat(permissiveFolderPath)
@@ -81,9 +86,11 @@ var _ = Describe("Create with local images", func() {
 			image2, err := Runner.Create(groot.CreateSpec{
 				ID:        "another-random-id",
 				BaseImage: baseImagePath,
-				Mount:     true,
+				Mount:     false,
+				Json:      true,
 			})
 			Expect(err).NotTo(HaveOccurred())
+
 			Expect(ioutil.WriteFile(filepath.Join(image1.Rootfs, "new-file"), []byte("hello-world"), 0644)).To(Succeed())
 			Expect(filepath.Join(image2.Rootfs, "new-file")).NotTo(BeARegularFile())
 		})
@@ -104,6 +111,7 @@ var _ = Describe("Create with local images", func() {
 		It("preserves the timestamps", func() {
 			image, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(Runner.EnsureMounted(image)).To(Succeed())
 
 			imageOldFilePath := path.Join(image.Rootfs, "old-file")
 			fi, err := os.Stat(imageOldFilePath)
@@ -114,10 +122,12 @@ var _ = Describe("Create with local images", func() {
 
 	Describe("clean up on create", func() {
 		JustBeforeEach(func() {
+			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-image-1",
 				BaseImage: baseImagePath,
 				Mount:     true,
+				Json:      true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -136,6 +146,7 @@ var _ = Describe("Create with local images", func() {
 				ID:        "my-image-2",
 				BaseImage: baseImage2Path,
 				Mount:     true,
+				Json:      true,
 			}
 			_, err := Runner.Create(createSpec)
 			Expect(err).NotTo(HaveOccurred())
@@ -222,9 +233,11 @@ var _ = Describe("Create with local images", func() {
 			image, err := Runner.Create(groot.CreateSpec{
 				ID:        "random-id-2",
 				BaseImage: baseImagePath,
-				Mount:     true,
+				Mount:     mountByDefault(),
+				Json:      true,
 			})
 			Expect(err).NotTo(HaveOccurred())
+			Expect(Runner.EnsureMounted(image)).To(Succeed())
 
 			imageContentPath := path.Join(image.Rootfs, "foo")
 			Expect(imageContentPath).To(BeARegularFile())
@@ -245,8 +258,10 @@ var _ = Describe("Create with local images", func() {
 			image, err := Runner.Create(groot.CreateSpec{
 				ID:        "random-id-2",
 				BaseImage: baseImagePath,
-				Mount:     true,
+				Mount:     mountByDefault(),
+				Json:      true,
 			})
+			Expect(Runner.EnsureMounted(image)).To(Succeed())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(path.Join(image.Rootfs, "foo")).To(BeARegularFile())
 			Expect(path.Join(image.Rootfs, "injected-file")).To(BeARegularFile())
@@ -258,7 +273,8 @@ var _ = Describe("Create with local images", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				BaseImage: "/invalid/image",
 				ID:        "random-id",
-				Mount:     true,
+				Mount:     false,
+				Json:      true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("stat /invalid/image: no such file or directory")))
 		})
@@ -278,6 +294,7 @@ var _ = Describe("Create with local images", func() {
 		It("unpacks the symlinks", func() {
 			image, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
+			Expect(Runner.EnsureMounted(image)).To(Succeed())
 
 			content, err := ioutil.ReadFile(filepath.Join(image.Rootfs, "symlink"))
 			Expect(err).NotTo(HaveOccurred())
@@ -295,6 +312,7 @@ var _ = Describe("Create with local images", func() {
 			It("preserves the timestamps", func() {
 				image, err := Runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
+				Expect(Runner.EnsureMounted(image)).To(Succeed())
 
 				symlinkTargetFilePath := path.Join(image.Rootfs, "symlink-target")
 				symlinkTargetFi, err := os.Stat(symlinkTargetFilePath)

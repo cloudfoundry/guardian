@@ -28,6 +28,7 @@ var _ = Describe("Stats", func() {
 
 	BeforeEach(func() {
 		var err error
+		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		imageID = fmt.Sprintf("random-id-%d", rand.Int())

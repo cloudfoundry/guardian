@@ -3,21 +3,42 @@ package runner
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
+	"syscall"
+
+	yaml "gopkg.in/yaml.v2"
+
+	errorspkg "github.com/pkg/errors"
 
 	"github.com/onsi/gomega/gexec"
 
+	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 )
 
 func (r Runner) StartCreate(spec groot.CreateSpec) (*gexec.Session, error) {
+	if !r.skipInitStore {
+		if err := r.initStore(); err != nil {
+			return nil, err
+		}
+	}
 	args := r.makeCreateArgs(spec)
 	return r.StartSubcommand("create", args...)
 }
 
-func (r Runner) Create(spec groot.CreateSpec, extraArgs ...string) (groot.ImageInfo, error) {
-	output, err := r.create(spec)
+func (r Runner) Create(spec groot.CreateSpec) (groot.ImageInfo, error) {
+	if !r.skipInitStore {
+		if err := r.initStore(); err != nil {
+			return groot.ImageInfo{}, err
+		}
+	}
+
+	args := r.makeCreateArgs(spec)
+	output, err := r.RunSubcommand("create", args...)
 	if err != nil {
 		return groot.ImageInfo{}, err
 	}
@@ -35,14 +56,12 @@ func (r Runner) Create(spec groot.CreateSpec, extraArgs ...string) (groot.ImageI
 	return imageInfo, nil
 }
 
-func (r Runner) create(spec groot.CreateSpec) (string, error) {
-	args := r.makeCreateArgs(spec)
-	image, err := r.RunSubcommand("create", args...)
-	if err != nil {
-		return "", err
+func (r Runner) EnsureMounted(image groot.ImageInfo) error {
+	if image.Mount != nil {
+		return syscall.Mount(image.Mount.Source, image.Mount.Destination, image.Mount.Type, 0, image.Mount.Options[0])
 	}
 
-	return image, nil
+	return nil
 }
 
 func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
@@ -122,4 +141,49 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 	}
 
 	return args
+}
+
+func (r Runner) initStore() error {
+	GrootfsTestUid, _ := strconv.Atoi(os.Getenv("GROOTFS_TEST_UID"))
+	GrootfsTestGid, _ := strconv.Atoi(os.Getenv("GROOTFS_TEST_GID"))
+
+	storePath := r.StorePath
+	if r.StorePath == "" {
+		configBytes, err := ioutil.ReadFile(r.ConfigPath)
+
+		if err != nil {
+			return err
+		}
+		cfg := config.Config{}
+		err = yaml.Unmarshal(configBytes, &cfg)
+		if err != nil {
+			return err
+		}
+		storePath = cfg.StorePath
+	}
+
+	whiteoutDevicePath := filepath.Join(storePath, overlayxfs.WhiteoutDevice)
+
+	if _, err := os.Stat(storePath); os.IsNotExist(err) {
+		os.MkdirAll(storePath, 0700)
+	}
+
+	if err := os.Chown(storePath, GrootfsTestUid, GrootfsTestGid); err != nil {
+		return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", GrootfsTestUid, GrootfsTestGid, storePath)
+	}
+
+	if r.Driver == "overlay-xfs" {
+		if _, err := os.Stat(whiteoutDevicePath); os.IsNotExist(err) {
+			if err := syscall.Mknod(whiteoutDevicePath, syscall.S_IFCHR, 0); err != nil {
+				if err != nil && !os.IsExist(err) {
+					return errorspkg.Wrapf(err, "failed to create whiteout device %s", whiteoutDevicePath)
+				}
+			}
+
+			if err := os.Chown(whiteoutDevicePath, GrootfsTestUid, GrootfsTestGid); err != nil {
+				return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", GrootfsTestUid, GrootfsTestGid, whiteoutDevicePath)
+			}
+		}
+	}
+	return nil
 }

@@ -22,7 +22,8 @@ type Runner struct {
 
 	Driver string
 	// Store path
-	StorePath string
+	StorePath     string
+	skipInitStore bool
 	// Binaries
 	DraxBin      string
 	TardisBin    string

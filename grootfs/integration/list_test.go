@@ -20,6 +20,7 @@ var _ = Describe("List", func() {
 	var image groot.ImageInfo
 
 	BeforeEach(func() {
+		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 		sourceImagePath, err := ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 

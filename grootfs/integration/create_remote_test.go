@@ -19,6 +19,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
@@ -32,6 +33,10 @@ import (
 )
 
 var _ = Describe("Create with remote images", func() {
+	BeforeEach(func() {
+		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+	})
+
 	var baseImageURL string
 
 	Context("when using the default registry", func() {

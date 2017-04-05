@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -12,6 +13,7 @@ import (
 
 var _ = Describe("Concurrent creations", func() {
 	BeforeEach(func() {
+		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 		// run this to setup the store before concurrency!
 		_, err := Runner.Create(groot.CreateSpec{
 			ID:        "test-pre-warm",

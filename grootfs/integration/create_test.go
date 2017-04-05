@@ -82,10 +82,12 @@ var _ = Describe("Create", func() {
 		image, err := Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
 			ID:        "random-id",
-			Mount:     true,
+			Mount:     mountByDefault(),
+			Json:      true,
 		})
 		Expect(err).ToNot(HaveOccurred())
 
+		Expect(Runner.EnsureMounted(image)).To(Succeed())
 		grootFi, err := os.Stat(path.Join(image.Rootfs, "foo"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
@@ -108,7 +110,8 @@ var _ = Describe("Create", func() {
 				Create(groot.CreateSpec{
 					ID:        "some-id",
 					BaseImage: baseImagePath,
-					Mount:     true,
+					Mount:     mountByDefault(),
+					Json:      true,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
 						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
@@ -118,13 +121,14 @@ var _ = Describe("Create", func() {
 						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
-
 			Expect(err).NotTo(HaveOccurred())
 
-			grootFi, err := os.Stat(path.Join(image.Rootfs, "foo"))
+			Expect(Runner.EnsureMounted(image)).To(Succeed())
+
+			grootFile, err := os.Stat(path.Join(image.Rootfs, "foo"))
 			Expect(err).NotTo(HaveOccurred())
-			Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
-			Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
+			Expect(grootFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(grootFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
 			grootDir, err := os.Stat(path.Join(image.Rootfs, "groot-folder"))
 			Expect(err).NotTo(HaveOccurred())
@@ -150,7 +154,8 @@ var _ = Describe("Create", func() {
 		It("allows the mapped user to have access to the created image", func() {
 			image, err := Runner.WithLogLevel(lager.DEBUG).
 				Create(groot.CreateSpec{
-					Mount:     true,
+					Mount:     mountByDefault(),
+					Json:      true,
 					ID:        "some-id",
 					BaseImage: baseImagePath,
 					UIDMappings: []groot.IDMappingSpec{
@@ -163,6 +168,7 @@ var _ = Describe("Create", func() {
 					},
 				})
 			Expect(err).NotTo(HaveOccurred())
+			Expect(Runner.EnsureMounted(image)).To(Succeed())
 
 			listRootfsCmd := exec.Command("ls", filepath.Join(image.Rootfs, "root-folder"))
 			listRootfsCmd.SysProcAttr = &syscall.SysProcAttr{
@@ -180,12 +186,15 @@ var _ = Describe("Create", func() {
 
 	Context("storage setup", func() {
 		It("creates the storage path with the correct permission", func() {
+			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+
 			storePath := filepath.Join(StorePath, "new-store")
 			Expect(storePath).ToNot(BeAnExistingFile())
-			_, err := Runner.WithStore(storePath).Create(groot.CreateSpec{
+			_, err := Runner.WithStore(storePath).SkipInitStore().Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
-				Mount:     true,
+				Mount:     false,
+				Json:      true,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(storePath).To(BeADirectory())
@@ -200,7 +209,8 @@ var _ = Describe("Create", func() {
 					Create(groot.CreateSpec{
 						ID:        "some-id",
 						BaseImage: baseImagePath,
-						Mount:     true,
+						Mount:     false,
+						Json:      true,
 					})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -227,7 +237,8 @@ var _ = Describe("Create", func() {
 					Create(groot.CreateSpec{
 						ID:        "some-id",
 						BaseImage: baseImagePath,
-						Mount:     true,
+						Mount:     false,
+						Json:      true,
 						UIDMappings: []groot.IDMappingSpec{
 							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
 							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
@@ -262,7 +273,8 @@ var _ = Describe("Create", func() {
 						Create(groot.CreateSpec{
 							ID:        "some-id",
 							BaseImage: baseImagePath,
-							Mount:     true,
+							Mount:     false,
+							Json:      true,
 							UIDMappings: []groot.IDMappingSpec{
 								groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 							},
@@ -280,11 +292,12 @@ var _ = Describe("Create", func() {
 			Describe("create", func() {
 				It("logs the image id", func() {
 					logBuffer := gbytes.NewBuffer()
-					_, err := Runner.WithStore("/invalid/store/path").WithStderr(logBuffer).
+					_, err := Runner.WithStore("/an/invalid/path").SkipInitStore().WithStderr(logBuffer).
 						Create(groot.CreateSpec{
 							ID:        "random-id",
 							BaseImage: "my-image",
-							Mount:     true,
+							Mount:     false,
+							Json:      true,
 						})
 					Expect(err).To(HaveOccurred())
 					Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))
@@ -295,6 +308,7 @@ var _ = Describe("Create", func() {
 
 	Context("when disk limit is provided", func() {
 		BeforeEach(func() {
+			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 			Expect(writeMegabytes(filepath.Join(sourceImagePath, "fatfile"), 5)).To(Succeed())
 		})
 
@@ -354,7 +368,8 @@ var _ = Describe("Create", func() {
 				image, err := Runner.Create(groot.CreateSpec{
 					BaseImage: baseImagePath,
 					ID:        "foobar",
-					Mount:     true,
+					Mount:     false,
+					Json:      true,
 					UIDMappings: []groot.IDMappingSpec{
 						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
 						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
@@ -365,14 +380,15 @@ var _ = Describe("Create", func() {
 					},
 				})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(image.Path).To(BeADirectory())
+				Expect(image.Rootfs).To(BeADirectory())
 			})
 
 			It("returns a useful error message", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					BaseImage: baseImagePath,
 					ID:        "foobar2",
-					Mount:     true,
+					Mount:     false,
+					Json:      true,
 				})
 				Expect(err).To(MatchError("store already initialized with a different mapping"))
 			})
@@ -381,14 +397,13 @@ var _ = Describe("Create", func() {
 
 	Context("when --with-clean is given", func() {
 		BeforeEach(func() {
+			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///busybox:1.26.2",
 				Mount:     true,
-				DiskLimit: 10 * 1024 * 1024,
 			})
 			Expect(err).NotTo(HaveOccurred())
-
 			Expect(Runner.Delete("my-busybox")).To(Succeed())
 		})
 
@@ -404,7 +419,8 @@ var _ = Describe("Create", func() {
 			_, err = Runner.Create(groot.CreateSpec{
 				ID:            "my-empty",
 				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
-				Mount:         true,
+				Mount:         false,
+				Json:          true,
 				CleanOnCreate: true,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -420,6 +436,7 @@ var _ = Describe("Create", func() {
 
 	Context("when --without-clean is given", func() {
 		BeforeEach(func() {
+			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///busybox:1.26.2",
@@ -443,6 +460,7 @@ var _ = Describe("Create", func() {
 				ID:            "my-empty",
 				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
 				Mount:         true,
+				Json:          true,
 				CleanOnCreate: false,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -463,7 +481,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithClean().WithNoClean().Create(groot.CreateSpec{
 				ID:        "my-empty",
 				BaseImage: "docker:///cfgarden/empty:v0.1.1",
-				Mount:     true,
+				Mount:     false,
 			})
 			Expect(err).To(MatchError(ContainSubstring("with-clean and without-clean cannot be used together")))
 		})
@@ -474,27 +492,9 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithJson().WithNoJson().Create(groot.CreateSpec{
 				ID:        "my-empty",
 				BaseImage: "docker:///cfgarden/empty:v0.1.1",
-				Mount:     true,
+				Mount:     false,
 			})
 			Expect(err).To(MatchError(ContainSubstring("json and no-json cannot be used together")))
-		})
-	})
-
-	Context("when no --store option is given", func() {
-		BeforeEach(func() {
-			integration.SkipIfNotBTRFS(Driver)
-			integration.SkipIfNonRoot(GrootfsTestUid)
-		})
-
-		It("uses the default store path", func() {
-			Expect("/var/lib/grootfs/images").ToNot(BeAnExistingFile())
-			_, err := Runner.WithoutStore().Create(groot.CreateSpec{
-				BaseImage: baseImagePath,
-				ID:        "random-id",
-				Mount:     true,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect("/var/lib/grootfs/images").To(BeADirectory())
 		})
 	})
 
@@ -503,16 +503,18 @@ var _ = Describe("Create", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: baseImagePath,
-				Mount:     true,
+				Mount:     false,
+				Json:      true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		It("fails and produces a useful error", func() {
-			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
+			_, err := Runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
-				Mount:     true,
+				Mount:     false,
+				Json:      true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("image for id `random-id` already exists")))
 		})
@@ -523,7 +525,7 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "",
-				Mount:     true,
+				Mount:     false,
 			})
 			Expect(err).To(HaveOccurred())
 		})
@@ -534,7 +536,8 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithStore(StorePath).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "this/is/not/okay",
-				Mount:     true,
+				Mount:     false,
+				Json:      true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("id `this/is/not/okay` contains invalid characters: `/`")))
 		})
@@ -545,7 +548,8 @@ var _ = Describe("Create", func() {
 			_, err := Runner.WithStore("/mnt/ext4").Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        "random-id",
-				Mount:     true,
+				Mount:     false,
+				Json:      true,
 			})
 			Expect(err).To(MatchError("Image id 'random-id': Store path filesystem (/mnt/ext4) is incompatible with requested driver"))
 		})
@@ -557,6 +561,7 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "some-id",
 				Mount:     true,
+				Json:      true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("filesystem driver not supported: dinosaurfs")))
 		})
@@ -567,7 +572,8 @@ var _ = Describe("Create", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "some-id",
 				BaseImage: "*@#%^!&",
-				Mount:     true,
+				Mount:     false,
+				Json:      true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("parsing image url: parse")))
 			Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
@@ -588,7 +594,8 @@ var _ = Describe("Create", func() {
 			spec = groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: baseImagePath,
-				Mount:     true,
+				Mount:     mountByDefault(),
+				Json:      true,
 			}
 		})
 
@@ -687,9 +694,15 @@ var _ = Describe("Create", func() {
 			})
 
 			It("uses the uid mappings from the config file", func() {
-				image, err := Runner.Create(spec)
+				image, err := Runner.Create(groot.CreateSpec{
+					ID:        "random-id",
+					BaseImage: baseImagePath,
+					Mount:     mountByDefault(),
+					Json:      true,
+				})
 				Expect(err).NotTo(HaveOccurred())
 
+				Expect(Runner.EnsureMounted(image)).To(Succeed())
 				rootOwnedFile, err := os.Stat(filepath.Join(image.Rootfs, "bar"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(1000)))
@@ -721,6 +734,7 @@ var _ = Describe("Create", func() {
 
 		Describe("disk limit size bytes", func() {
 			BeforeEach(func() {
+				integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 				cfg.Create.DiskLimitSizeBytes = tenMegabytes
 			})
 
@@ -738,12 +752,14 @@ var _ = Describe("Create", func() {
 					ID:        "random-id",
 					BaseImage: baseImagePath,
 					Json:      true,
-					Mount:     true,
+					Mount:     false,
 				})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(image.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id/rootfs")))
-				Expect(image.Mount).To(BeNil())
+				expectedRootfs := filepath.Join(StorePath, store.ImageDirName, "random-id/rootfs")
+				Expect(image.Rootfs).To(Equal(expectedRootfs))
+				Expect(image.Mount).NotTo(BeNil())
+				Expect(image.Mount.Destination).To(Equal(expectedRootfs))
 				Expect(image.Config).To(BeNil())
 			})
 		})
@@ -773,8 +789,8 @@ var _ = Describe("Create", func() {
 					image, err = Runner.Create(groot.CreateSpec{
 						ID:        "some-id",
 						BaseImage: baseImagePath,
-						Json:      true,
 						Mount:     false,
+						Json:      true,
 					})
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -820,8 +836,8 @@ var _ = Describe("Create", func() {
 						_, err := Runner.Create(groot.CreateSpec{
 							ID:        "my-empty",
 							BaseImage: "docker:///cfgarden/empty:v0.1.1",
-							Json:      false,
 							Mount:     false,
+							Json:      false,
 						})
 						Expect(err).To(MatchError(ContainSubstring("without-mount option must be used with the json option")))
 					})
@@ -831,6 +847,7 @@ var _ = Describe("Create", func() {
 
 		Describe("exclude image from quota", func() {
 			BeforeEach(func() {
+				integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 				cfg.Create.ExcludeImageFromQuota = true
 				cfg.Create.DiskLimitSizeBytes = tenMegabytes
 			})
