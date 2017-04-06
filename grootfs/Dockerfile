@@ -41,6 +41,11 @@ RUN \
   wget -qO- https://storage.googleapis.com/golang/go1.7.4.linux-amd64.tar.gz | tar -C /usr/local -xzf -
 
 ################################
+# Setup gaol
+RUN wget https://github.com/contraband/gaol/releases/download/2016-8-22/gaol_linux -O /usr/bin/gaol && \
+    chmod +x /usr/bin/gaol
+
+################################
 # Install Go packages
 RUN go get github.com/onsi/ginkgo/ginkgo
 RUN go install github.com/onsi/ginkgo/ginkgo
