@@ -139,7 +139,7 @@ var _ = Describe("Create with remote images", func() {
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(image.Config.RootFS.DiffIDs[0]).To(Equal("sha256:" + testhelpers.BusyBoxImage.Layers[0].ChainID))
+				Expect(image.Image.RootFS.DiffIDs[0]).To(Equal("sha256:" + testhelpers.BusyBoxImage.Layers[0].ChainID))
 			})
 		})
 

@@ -205,15 +205,15 @@ func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, 
 }
 
 func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage specsv1.Image, mountJson groot.MountInfo, mount bool) (groot.ImageInfo, error) {
-	var imageConfig *specsv1.Image
+	var image *specsv1.Image
 	if !reflect.DeepEqual(baseImage, specsv1.Image{}) {
-		imageConfig = &baseImage
+		image = &baseImage
 	}
 
 	imageInfo := groot.ImageInfo{
 		Path:   imagePath,
 		Rootfs: rootfsPath,
-		Config: imageConfig,
+		Image:  image,
 	}
 
 	if !mount {

@@ -29,7 +29,7 @@ const (
 
 type ImageInfo struct {
 	Rootfs string         `json:"rootfs"`
-	Config *specsv1.Image `json:"config,omitempty"`
+	Image  *specsv1.Image `json:"image,omitempty"`
 	Mount  *MountInfo     `json:"mount,omitempty"`
 	Path   string         `json:"-"`
 }

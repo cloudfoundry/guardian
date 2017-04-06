@@ -760,7 +760,7 @@ var _ = Describe("Create", func() {
 				Expect(image.Rootfs).To(Equal(expectedRootfs))
 				Expect(image.Mount).NotTo(BeNil())
 				Expect(image.Mount.Destination).To(Equal(expectedRootfs))
-				Expect(image.Config).To(BeNil())
+				Expect(image.Image).To(BeNil())
 			})
 		})
 

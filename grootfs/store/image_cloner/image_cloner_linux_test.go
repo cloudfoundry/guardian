@@ -75,7 +75,7 @@ var _ = Describe("Image", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(image.Rootfs).To(Equal(filepath.Join(imagesPath, "some-id/rootfs")))
-			Expect(image.Config.Created.Unix()).To(Equal(imageConfig.Created.Unix()))
+			Expect(image.Image.Created.Unix()).To(Equal(imageConfig.Created.Unix()))
 			Expect(image.Mount).To(BeNil())
 		})
 
@@ -155,7 +155,7 @@ var _ = Describe("Image", func() {
 				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: specsv1.Image{}})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(image.Config).To(BeNil())
+				Expect(image.Image).To(BeNil())
 			})
 		})
 
