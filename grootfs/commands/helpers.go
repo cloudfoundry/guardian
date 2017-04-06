@@ -55,7 +55,9 @@ func newErrorHandler(logger lager.Logger, action string) exitErrorFunc {
 	metricsEmitter := metrics.NewEmitter()
 
 	return func(message string, exitCode int) *cli.ExitError {
-		metricsEmitter.TryEmitError(logger, action, errors.New(message), int32(exitCode))
+		err := errors.New(message)
+		defer metricsEmitter.TryIncrementRunCount(action, err)
+		metricsEmitter.TryEmitError(logger, action, err, int32(exitCode))
 		return cli.NewExitError(message, exitCode)
 	}
 }

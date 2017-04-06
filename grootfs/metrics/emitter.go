@@ -32,8 +32,6 @@ func (e *Emitter) TryEmitDurationFrom(logger lager.Logger, name string, from tim
 }
 
 func (e *Emitter) TryEmitError(logger lager.Logger, command string, err error, exitCode int32) {
-	defer e.TryIncrementRunCount(command, err)
-
 	message := err.Error()
 	source := fmt.Sprintf(errorSource, command)
 
