@@ -129,7 +129,7 @@ func TestGroot(t *testing.T) {
 			DraxBin:    DraxBin,
 			TardisBin:  TardisBin,
 			Driver:     Driver,
-			Timeout:    25 * time.Second,
+			Timeout:    15 * time.Second,
 		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(uint32(GrootfsTestUid), uint32(GrootfsTestGid))
 
 		prepareStorePath(StorePath)

@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"syscall"
+	"time"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -37,6 +38,7 @@ func (r Runner) Create(spec groot.CreateSpec) (groot.ImageInfo, error) {
 		}
 	}
 
+	r.Timeout = 60 * time.Second
 	args := r.makeCreateArgs(spec)
 	output, err := r.RunSubcommand("create", args...)
 	if err != nil {
