@@ -56,10 +56,10 @@ var _ = Describe("Statser", func() {
 			_, err := statser.Stats(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeMetricsEmitter.TryEmitDurationCallCount()).To(Equal(1))
-			_, name, duration := fakeMetricsEmitter.TryEmitDurationArgsForCall(0)
+			Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(1))
+			_, name, start := fakeMetricsEmitter.TryEmitDurationFromArgsForCall(0)
 			Expect(name).To(Equal(groot.MetricImageStatsTime))
-			Expect(duration).NotTo(BeZero())
+			Expect(start).NotTo(BeZero())
 		})
 
 		Context("when imageCloner fails", func() {

@@ -56,10 +56,10 @@ var _ = Describe("Deleter", func() {
 		It("emits metrics for deletion", func() {
 			Expect(deleter.Delete(logger, "some-id")).To(Succeed())
 
-			Expect(fakeMetricsEmitter.TryEmitDurationCallCount()).To(Equal(1))
-			_, name, duration := fakeMetricsEmitter.TryEmitDurationArgsForCall(0)
+			Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(1))
+			_, name, start := fakeMetricsEmitter.TryEmitDurationFromArgsForCall(0)
 			Expect(name).To(Equal(groot.MetricImageDeletionTime))
-			Expect(duration).NotTo(BeZero())
+			Expect(start).NotTo(BeZero())
 		})
 	})
 })

@@ -68,10 +68,10 @@ var _ = Describe("Cleaner", func() {
 			_, err := cleaner.Clean(logger, 0, []string{}, true)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeMetricsEmitter.TryEmitDurationCallCount()).To(Equal(1))
-			_, name, duration := fakeMetricsEmitter.TryEmitDurationArgsForCall(0)
+			Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(1))
+			_, name, start := fakeMetricsEmitter.TryEmitDurationFromArgsForCall(0)
 			Expect(name).To(Equal(groot.MetricImageCleanTime))
-			Expect(duration).NotTo(BeZero())
+			Expect(start).NotTo(BeZero())
 		})
 
 		Context("acquireLock is true", func() {
