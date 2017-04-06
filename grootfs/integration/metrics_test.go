@@ -131,7 +131,7 @@ var _ = Describe("Metrics", func() {
 					return errors
 				}).Should(HaveLen(1))
 
-				Expect(*errors[0].Source).To(Equal("grootfs.create"))
+				Expect(*errors[0].Source).To(Equal("grootfs-error.create"))
 				Expect(*errors[0].Message).To(ContainSubstring("stat not-here: no such file or directory"))
 			})
 
@@ -218,7 +218,7 @@ var _ = Describe("Metrics", func() {
 					return errors
 				}).Should(HaveLen(1))
 
-				Expect(*errors[0].Source).To(Equal("grootfs.delete"))
+				Expect(*errors[0].Source).To(Equal("grootfs-error.delete"))
 				Expect(*errors[0].Message).To(ContainSubstring("destroying image"))
 			})
 
@@ -300,7 +300,7 @@ var _ = Describe("Metrics", func() {
 					return errors
 				}).Should(HaveLen(1))
 
-				Expect(*errors[0].Source).To(Equal("grootfs.stats"))
+				Expect(*errors[0].Source).To(Equal("grootfs-error.stats"))
 				Expect(*errors[0].Message).To(ContainSubstring("not found"))
 			})
 
@@ -406,7 +406,7 @@ var _ = Describe("Metrics", func() {
 					return errors
 				}).Should(HaveLen(1))
 
-				Expect(*errors[0].Source).To(Equal("grootfs.clean"))
+				Expect(*errors[0].Source).To(Equal("grootfs-error.clean"))
 				Expect(*errors[0].Message).To(ContainSubstring("permission denied"))
 			})
 
