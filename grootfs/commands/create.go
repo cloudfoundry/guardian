@@ -240,6 +240,7 @@ var CreateCommand = cli.Command{
 
 		fmt.Println(output)
 
+		metricsEmitter.TryIncrementRunCount("create", nil)
 		return nil
 	},
 }

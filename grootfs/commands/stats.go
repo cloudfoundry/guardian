@@ -61,6 +61,7 @@ var StatsCommand = cli.Command{
 		}
 
 		json.NewEncoder(os.Stdout).Encode(stats)
+		metricsEmitter.TryIncrementRunCount("stats", nil)
 		return nil
 	},
 }

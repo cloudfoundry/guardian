@@ -91,6 +91,7 @@ var CleanCommand = cli.Command{
 		}
 
 		fmt.Println("clean completed")
+		metricsEmitter.TryIncrementRunCount("clean", nil)
 		return nil
 	},
 }

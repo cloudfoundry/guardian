@@ -11,7 +11,7 @@ import (
 	"github.com/cloudfoundry/sonde-go/events"
 )
 
-const errorSource = "grootfs.%s"
+const errorSource = "grootfs-error.%s"
 
 type Emitter struct {
 }
@@ -32,6 +32,8 @@ func (e *Emitter) TryEmitDurationFrom(logger lager.Logger, name string, from tim
 }
 
 func (e *Emitter) TryEmitError(logger lager.Logger, command string, err error, exitCode int32) {
+	defer e.TryIncrementRunCount(command, err)
+
 	message := err.Error()
 	source := fmt.Sprintf(errorSource, command)
 
@@ -51,5 +53,15 @@ func (e *Emitter) TryEmitError(logger lager.Logger, command string, err error, e
 		logger.Error("failed-to-emit-error-event", err, lager.Data{
 			"errorEvent": errorEvent,
 		})
+	}
+}
+
+func (e *Emitter) TryIncrementRunCount(command string, err error) {
+	metrics.IncrementCounter(fmt.Sprintf("grootfs-%s.run", command))
+
+	if err != nil {
+		metrics.IncrementCounter(fmt.Sprintf("grootfs-%s.run.fail", command))
+	} else {
+		metrics.IncrementCounter(fmt.Sprintf("grootfs-%s.run.success", command))
 	}
 }

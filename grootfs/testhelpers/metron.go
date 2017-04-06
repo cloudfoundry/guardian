@@ -14,6 +14,7 @@ type FakeMetron struct {
 	connection            net.PacketConn
 	dropsondeUnmarshaller *dropsonde_unmarshaller.DropsondeUnmarshaller
 	valueMetrics          map[string][]events.ValueMetric
+	counterEvents         map[string][]events.CounterEvent
 	errors                []events.Error
 	stopped               bool
 	mtx                   sync.RWMutex
@@ -23,9 +24,10 @@ func NewFakeMetron(port uint16) *FakeMetron {
 	return &FakeMetron{
 		port: port,
 		dropsondeUnmarshaller: dropsonde_unmarshaller.NewDropsondeUnmarshaller(nil),
-		mtx:          sync.RWMutex{},
-		valueMetrics: make(map[string][]events.ValueMetric),
-		errors:       make([]events.Error, 0),
+		mtx:           sync.RWMutex{},
+		valueMetrics:  make(map[string][]events.ValueMetric),
+		counterEvents: make(map[string][]events.CounterEvent),
+		errors:        make([]events.Error, 0),
 	}
 }
 
@@ -44,7 +46,7 @@ func (m *FakeMetron) Run() error {
 	readBuffer := make([]byte, 65535) //buffer with size = max theoretical UDP size
 	for {
 		readCount, _, err := m.connection.ReadFrom(readBuffer)
-		if err != nil && m.isStopped() {
+		if err != nil || m.isStopped() {
 			return nil
 		}
 		if err != nil {
@@ -59,20 +61,23 @@ func (m *FakeMetron) Run() error {
 			return err
 		}
 
+		m.mtx.Lock()
 		switch *envelope.EventType {
 		case events.Envelope_ValueMetric:
-			m.mtx.Lock()
 			metric := *envelope.ValueMetric
 			key := *metric.Name
 			m.valueMetrics[key] = append(m.valueMetrics[key], metric)
-			m.mtx.Unlock()
 
 		case events.Envelope_Error:
-			m.mtx.Lock()
 			err := *envelope.Error
 			m.errors = append(m.errors, err)
-			m.mtx.Unlock()
+
+		case events.Envelope_CounterEvent:
+			counter := *envelope.CounterEvent
+			name := *counter.Name
+			m.counterEvents[name] = append(m.counterEvents[name], counter)
 		}
+		m.mtx.Unlock()
 	}
 }
 
@@ -83,8 +88,8 @@ func (m *FakeMetron) isStopped() bool {
 }
 
 func (m *FakeMetron) Stop() error {
-	m.mtx.RLock()
-	defer m.mtx.RUnlock()
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
 	m.stopped = true
 
 	return m.connection.Close()
@@ -100,6 +105,18 @@ func (m *FakeMetron) ValueMetricsFor(key string) []events.ValueMetric {
 	}
 
 	return metrics
+}
+
+func (m *FakeMetron) CounterEvents(name string) []events.CounterEvent {
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	counters, ok := m.counterEvents[name]
+	if !ok {
+		return []events.CounterEvent{}
+	}
+
+	return counters
 }
 
 func (m *FakeMetron) Errors() []events.Error {

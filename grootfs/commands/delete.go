@@ -68,6 +68,7 @@ var DeleteCommand = cli.Command{
 		}
 
 		fmt.Printf("Image %s deleted\n", id)
+		metricsEmitter.TryIncrementRunCount("delete", nil)
 		return nil
 	},
 }

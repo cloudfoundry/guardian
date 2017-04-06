@@ -71,6 +71,44 @@ var _ = Describe("Emitter", func() {
 		})
 	})
 
+	Describe("TryIncrementRunCount", func() {
+		It("increments the success run counter", func() {
+			emitter.TryIncrementRunCount("foo", nil)
+
+			var counterEvents []events.CounterEvent
+			Eventually(func() []events.CounterEvent {
+				counterEvents = fakeMetron.CounterEvents("grootfs-foo.run")
+				return counterEvents
+			}).Should(HaveLen(1))
+			Expect(*counterEvents[0].Name).To(Equal("grootfs-foo.run"))
+
+			Eventually(func() []events.CounterEvent {
+				counterEvents = fakeMetron.CounterEvents("grootfs-foo.run.success")
+				return counterEvents
+			}).Should(HaveLen(1))
+			Expect(*counterEvents[0].Name).To(Equal("grootfs-foo.run.success"))
+		})
+
+		Context("when the err is not nil", func() {
+			It("increments the fail run counter", func() {
+				emitter.TryIncrementRunCount("foo", errors.New("bar"))
+
+				var counterEvents []events.CounterEvent
+				Eventually(func() []events.CounterEvent {
+					counterEvents = fakeMetron.CounterEvents("grootfs-foo.run")
+					return counterEvents
+				}).Should(HaveLen(1))
+				Expect(*counterEvents[0].Name).To(Equal("grootfs-foo.run"))
+
+				Eventually(func() []events.CounterEvent {
+					counterEvents = fakeMetron.CounterEvents("grootfs-foo.run.fail")
+					return counterEvents
+				}).Should(HaveLen(1))
+				Expect(*counterEvents[0].Name).To(Equal("grootfs-foo.run.fail"))
+			})
+		})
+	})
+
 	Describe("TryEmitError", func() {
 		It("emits error", func() {
 			emitter.TryEmitError(logger, "create", errors.New("hello"), int32(10))
@@ -81,7 +119,7 @@ var _ = Describe("Emitter", func() {
 				return errors
 			}).Should(HaveLen(1))
 
-			Expect(*errors[0].Source).To(Equal("grootfs.create"))
+			Expect(*errors[0].Source).To(Equal("grootfs-error.create"))
 			Expect(*errors[0].Code).To(Equal(int32(10)))
 			Expect(*errors[0].Message).To(Equal("hello"))
 		})
