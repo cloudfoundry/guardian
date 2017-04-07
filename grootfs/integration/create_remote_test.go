@@ -177,7 +177,7 @@ var _ = Describe("Create with remote images", func() {
 					}
 				}()
 
-				Eventually(sess, 60*time.Second).Should(gexec.Exit(0))
+				Eventually(sess, 180*time.Second).Should(gexec.Exit(0))
 			})
 		})
 
