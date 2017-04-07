@@ -83,7 +83,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	defer logr.Close()
 	defer syncr.Close()
 
-	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
+	process := newProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
 	process.mkfifos(spec.HostUID, spec.HostGID)
 	if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	processPath := filepath.Join(processesPath, processID)
-	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
+	process := newProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
 	if err := process.attach(io); err != nil {
 		return nil, err
 	}
@@ -184,6 +184,7 @@ func (s osSignal) OsSignal() syscall.Signal {
 }
 
 type process struct {
+	logger                                       lager.Logger
 	id                                           string
 	stdin, stdout, stderr, exit, winsz, exitcode string
 	ioWg                                         *sync.WaitGroup
@@ -193,7 +194,7 @@ type process struct {
 	*signaller
 }
 
-func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter) *process {
+func newProcess(log lager.Logger, id, dir string, pidFilePath string, pidGetter PidGetter) *process {
 	stdin := filepath.Join(dir, "stdin")
 	stdout := filepath.Join(dir, "stdout")
 	stderr := filepath.Join(dir, "stderr")
@@ -202,6 +203,7 @@ func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter) *proces
 	exitcode := filepath.Join(dir, "exitcode")
 
 	return &process{
+		logger:   log,
 		id:       id,
 		stdin:    stdin,
 		stdout:   stdout,
@@ -350,7 +352,7 @@ func (p process) Wait() (int, error) {
 	ret := <-p.ExitStatus()
 
 	if err := p.cleanup(); err != nil {
-		return 1, err
+		p.logger.Error("process-cleanup", err)
 	}
 
 	return ret.Code, ret.Err
