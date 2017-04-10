@@ -20,6 +20,15 @@ func NewEmitter() *Emitter {
 	return &Emitter{}
 }
 
+func (e *Emitter) TryEmitUsage(logger lager.Logger, name string, usage int64) {
+	if err := metrics.SendValue(name, float64(usage), "bytes"); err != nil {
+		logger.Error("failed-to-emit-metric", err, lager.Data{
+			"key":   name,
+			"usage": usage,
+		})
+	}
+}
+
 func (e *Emitter) TryEmitDurationFrom(logger lager.Logger, name string, from time.Time) {
 	duration := time.Since(from)
 

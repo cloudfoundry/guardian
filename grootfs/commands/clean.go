@@ -74,7 +74,7 @@ var CleanCommand = cli.Command{
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
-		sm := garbage_collector.NewStoreMeasurer(storePath)
+		sm := storepkg.NewStoreMeasurer(storePath)
 		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
@@ -91,7 +91,15 @@ var CleanCommand = cli.Command{
 		}
 
 		fmt.Println("clean completed")
+
+		usage, err := sm.MeasureStore(logger)
+		if err != nil {
+			logger.Error("measuring-store", err)
+			return newExitError(err.Error(), 1)
+		}
+
 		metricsEmitter.TryIncrementRunCount("clean", nil)
+		metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage)
 		return nil
 	},
 }

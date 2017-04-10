@@ -51,6 +51,22 @@ var _ = Describe("Emitter", func() {
 		Eventually(fakeMetronClosed).Should(BeClosed())
 	})
 
+	Describe("TryEmitUsage", func() {
+		It("emits metrics", func() {
+			emitter.TryEmitUsage(logger, "foo", 1000)
+
+			var fooMetrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				fooMetrics = fakeMetron.ValueMetricsFor("foo")
+				return fooMetrics
+			}).Should(HaveLen(1))
+
+			Expect(*fooMetrics[0].Name).To(Equal("foo"))
+			Expect(*fooMetrics[0].Unit).To(Equal("bytes"))
+			Expect(*fooMetrics[0].Value).To(Equal(float64(1000)))
+		})
+	})
+
 	Describe("TryEmitDurationFrom", func() {
 		It("emits metrics", func() {
 			from := time.Now().Add(-1 * time.Second)

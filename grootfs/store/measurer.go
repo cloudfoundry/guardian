@@ -1,4 +1,4 @@
-package garbage_collector
+package store
 
 import (
 	"os/exec"
@@ -6,7 +6,6 @@ import (
 	"strconv"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 )
@@ -26,13 +25,13 @@ func (s *StoreMeasurer) MeasureStore(logger lager.Logger) (int64, error) {
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	cacheSize, err := s.measurePath(filepath.Join(s.storePath, store.CacheDirName))
+	cacheSize, err := s.measurePath(filepath.Join(s.storePath, CacheDirName))
 	if err != nil {
 		return 0, err
 	}
 	logger.Info("got-cache-size", lager.Data{"cacheSize": cacheSize})
 
-	volumesSize, err := s.measurePath(filepath.Join(s.storePath, store.VolumesDirName))
+	volumesSize, err := s.measurePath(filepath.Join(s.storePath, VolumesDirName))
 	if err != nil {
 		return 0, err
 	}

@@ -1,4 +1,4 @@
-package garbage_collector_test
+package store_test
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -16,10 +15,10 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("Threshold", func() {
+var _ = Describe("Measurer", func() {
 	var (
 		storePath     string
-		storeMeasurer *garbage_collector.StoreMeasurer
+		storeMeasurer *store.StoreMeasurer
 		logger        lager.Logger
 	)
 
@@ -38,7 +37,7 @@ var _ = Describe("Threshold", func() {
 			filepath.Join(storePath, store.ImageDirName), 0744,
 		)).To(Succeed())
 
-		storeMeasurer = garbage_collector.NewStoreMeasurer(storePath)
+		storeMeasurer = store.NewStoreMeasurer(storePath)
 
 		logger = lagertest.NewTestLogger("store-measurer")
 	})
@@ -66,7 +65,7 @@ var _ = Describe("Threshold", func() {
 
 	Context("when the store does not exist", func() {
 		BeforeEach(func() {
-			storeMeasurer = garbage_collector.NewStoreMeasurer("/path/to/non/existent/store")
+			storeMeasurer = store.NewStoreMeasurer("/path/to/non/existent/store")
 		})
 
 		It("returns a useful error", func() {

@@ -97,6 +97,21 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
+		It("emits store usage", func() {
+			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("StoreUsage")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("StoreUsage"))
+			Expect(*metrics[0].Unit).To(Equal("bytes"))
+			Expect(*metrics[0].Value).NotTo(BeZero())
+		})
+
 		It("emits the sucess count", func() {
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 			Expect(err).NotTo(HaveOccurred())
@@ -384,6 +399,22 @@ var _ = Describe("Metrics", func() {
 				return counterEvents
 			}).Should(HaveLen(1))
 			Expect(*counterEvents[0].Name).To(Equal("grootfs-clean.run.success"))
+		})
+
+		It("emits store usage", func() {
+			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+				Clean(0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("StoreUsage")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("StoreUsage"))
+			Expect(*metrics[0].Unit).To(Equal("bytes"))
+			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
 		Context("when clean fails", func() {

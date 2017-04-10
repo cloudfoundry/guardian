@@ -194,7 +194,7 @@ var CreateCommand = cli.Command{
 			metricsEmitter,
 		)
 
-		sm := garbage_collector.NewStoreMeasurer(storePath)
+		sm := storepkg.NewStoreMeasurer(storePath)
 		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
@@ -240,7 +240,15 @@ var CreateCommand = cli.Command{
 
 		fmt.Println(output)
 
+		usage, err := sm.MeasureStore(logger)
+		if err != nil {
+			logger.Error("measuring-store", err)
+			return newExitError(err.Error(), 1)
+		}
+
 		metricsEmitter.TryIncrementRunCount("create", nil)
+		metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage)
+
 		return nil
 	},
 }
