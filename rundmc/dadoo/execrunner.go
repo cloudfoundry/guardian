@@ -132,7 +132,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	logw.Close()
 	syncw.Close()
 
-	stdin, stdout, stderr, err := process.openPipes()
+	stdin, stdout, stderr, err := process.openPipes(pio)
 	if err != nil {
 		return nil, err
 	}
@@ -238,7 +238,7 @@ func (p *process) mkfifos(hostUid, hostGid int) error {
 	return nil
 }
 
-func (p process) openPipes() (stdin, stdout, stderr *os.File, err error) {
+func (p process) openPipes(pio garden.ProcessIO) (stdin, stdout, stderr *os.File, err error) {
 	stdin, err = os.OpenFile(p.stdin, os.O_RDWR, 0600)
 	if err != nil {
 		return nil, nil, nil, err
@@ -267,39 +267,34 @@ func openNonBlocking(fileName string) (*os.File, error) {
 }
 
 func (p process) streamData(pio garden.ProcessIO, stdin, stdout, stderr *os.File) {
-	p.streamInput(pio.Stdin, stdin)
-	p.streamOutput(pio.Stdout, stdout)
-	p.streamOutput(pio.Stderr, stderr)
-}
-
-func (p process) streamInput(processReader io.Reader, input *os.File) {
-	if processReader == nil {
-		input.Close()
-		return
+	if pio.Stdin != nil {
+		go func() {
+			io.Copy(stdin, pio.Stdin)
+			stdin.Close()
+		}()
 	}
 
-	go func() {
-		io.Copy(input, processReader)
-		input.Close()
-	}()
-}
-
-func (p process) streamOutput(processWriter io.Writer, output *os.File) {
-	if processWriter == nil {
-		output.Close()
-		return
+	if pio.Stdout != nil {
+		p.ioWg.Add(1)
+		go func() {
+			io.Copy(pio.Stdout, stdout)
+			stdout.Close()
+			p.ioWg.Done()
+		}()
 	}
 
-	p.ioWg.Add(1)
-	go func() {
-		io.Copy(processWriter, output)
-		output.Close()
-		p.ioWg.Done()
-	}()
+	if pio.Stderr != nil {
+		p.ioWg.Add(1)
+		go func() {
+			io.Copy(pio.Stderr, stderr)
+			stderr.Close()
+			p.ioWg.Done()
+		}()
+	}
 }
 
 func (p process) attach(pio garden.ProcessIO) error {
-	stdin, stdout, stderr, err := p.openPipes()
+	stdin, stdout, stderr, err := p.openPipes(pio)
 	if err != nil {
 		return err
 	}
@@ -309,51 +304,42 @@ func (p process) attach(pio garden.ProcessIO) error {
 	return nil
 }
 
-func (p process) ExitStatus() chan garden.ProcessStatus {
-	c := make(chan garden.ProcessStatus, 1)
-	go func() {
-		// open non-blocking incase exit pipe is already closed
-		exit, err := openNonBlocking(p.exit)
-		if err != nil {
-			c <- garden.ProcessStatus{Code: 1, Err: err}
-		}
-		defer exit.Close()
-
-		buf := make([]byte, 1)
-		exit.Read(buf)
-
-		p.ioWg.Wait()
-
-		if _, err := os.Stat(p.exitcode); os.IsNotExist(err) {
-			c <- garden.ProcessStatus{Code: 1, Err: fmt.Errorf("could not find the exitcode file for the process: %s", err.Error())}
-		}
-
-		exitcode, err := ioutil.ReadFile(p.exitcode)
-		if err != nil {
-			c <- garden.ProcessStatus{Code: 1, Err: err}
-		}
-
-		if len(exitcode) == 0 {
-			c <- garden.ProcessStatus{Code: 1, Err: fmt.Errorf("the exitcode file is empty")}
-		}
-
-		code, err := strconv.Atoi(string(exitcode))
-		if err != nil {
-			c <- garden.ProcessStatus{Code: 1, Err: fmt.Errorf("failed to parse exit code: %s", err.Error())}
-		}
-		c <- garden.ProcessStatus{Code: code, Err: nil}
-	}()
-	return c
-}
-
 func (p process) Wait() (int, error) {
-	ret := <-p.ExitStatus()
+	// open non-blocking incase exit pipe is already closed
+	exit, err := openNonBlocking(p.exit)
+	if err != nil {
+		return 1, err
+	}
+	defer exit.Close()
+
+	buf := make([]byte, 1)
+	exit.Read(buf)
+
+	p.ioWg.Wait()
+
+	if _, err := os.Stat(p.exitcode); os.IsNotExist(err) {
+		return 1, fmt.Errorf("could not find the exitcode file for the process: %s", err.Error())
+	}
+
+	exitcode, err := ioutil.ReadFile(p.exitcode)
+	if err != nil {
+		return 1, err
+	}
+
+	if len(exitcode) == 0 {
+		return 1, fmt.Errorf("the exitcode file is empty")
+	}
+
+	code, err := strconv.Atoi(string(exitcode))
+	if err != nil {
+		return 1, fmt.Errorf("failed to parse exit code: %s", err.Error())
+	}
 
 	if err := p.cleanup(); err != nil {
 		return 1, err
 	}
 
-	return ret.Code, ret.Err
+	return code, nil
 }
 
 func (p process) SetTTY(spec garden.TTYSpec) error {
