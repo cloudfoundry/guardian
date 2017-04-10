@@ -174,7 +174,9 @@ type ServerCommand struct {
 		IPTables        FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the iptables binary"`
 		IPTablesRestore FileFlag `long:"iptables-restore-bin"  default:"/sbin/iptables-restore" description:"path to the iptables-restore binary"`
 		Init            FileFlag `long:"init-bin"       description:"Path execute as pid 1 inside each container."`
-		Runc            string   `long:"runc-bin"      default:"runc" description:"Path to the 'runc' binary."`
+		Runc            string   `long:"runc-bin"       default:"runc" description:"Path to the 'runc' binary."`
+		Newuidmap       string   `long:"newuidmap-bin"  default:"newuidmap" description:"Path to the 'newuidmap' binary."`
+		Newgidmap       string   `long:"newgidmap-bin"  default:"newgidmap" description:"Path to the 'newgidmap' binary."`
 	} `group:"Binary Tools"`
 
 	Graph struct {
@@ -369,7 +371,10 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir),
 		Networker:       networker,
 		VolumeCreator:   volumeCreator,
-		Containerizer:   cmd.wireContainerizer(logger, cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Bin.Runc, cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmd.Containers.ApparmorProfile, propManager),
+		Containerizer: cmd.wireContainerizer(logger,
+			cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Bin.Runc,
+			cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(),
+			cmd.Containers.ApparmorProfile, cmd.Bin.Newuidmap, cmd.Bin.Newgidmap, propManager),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
@@ -685,7 +690,9 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 	}
 }
 
-func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPath, runcPath, nstarPath, tarPath, appArmorProfile string, properties gardener.PropertyManager) *rundmc.Containerizer {
+func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
+	depotPath, dadooPath, runcPath, nstarPath, tarPath, appArmorProfile, newuidmapPath, newgidmapPath string,
+	properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath, &goci.BundleSaver{})
 
 	commandRunner := linux_command_runner.New()
@@ -706,6 +713,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPa
 		goci.RuncBinary(runcPath),
 		dadooPath,
 		runcPath,
+		newuidmapPath,
+		newgidmapPath,
 		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps, runningAsRoot),
 		dadoo.NewExecRunner(
 			dadooPath,
@@ -797,10 +806,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPa
 		WithCapabilities(PrivilegedMaxCaps...)
 
 	if !runningAsRoot() {
-		unprivilegedBundle = unprivilegedBundle.
-			WithResources(&specs.LinuxResources{}).
-			WithUIDMappings(idMappings[0]).
-			WithGIDMappings(idMappings[0])
+		unprivilegedBundle = unprivilegedBundle.WithResources(&specs.LinuxResources{})
 	}
 
 	template := &rundmc.BundleTemplate{

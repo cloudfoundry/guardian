@@ -1,6 +1,8 @@
 package gqt_test
 
 import (
+	"io"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -45,6 +47,7 @@ var _ = Describe("rootless containers", func() {
 		// so much easier to just shell out to the OS here ...
 		Expect(exec.Command("cp", "-r", os.Getenv("GARDEN_TEST_ROOTFS"), imagePath).Run()).To(Succeed())
 		Expect(exec.Command("chown", "-R", unprivilegedUidGid, imagePath).Run()).To(Succeed())
+		Expect(exec.Command("chown", "-R", "1000:1000", filepath.Join(imagePath, "rootfs", "home", "alice")).Run()).To(Succeed())
 
 		client = startGardenAsUser(
 			unprivilegedUser,
@@ -78,6 +81,24 @@ var _ = Describe("rootless containers", func() {
 		It("succeeds", func() {
 			_, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("maps uids and gids other than guardian's user", func() {
+			container, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			var stdout bytes.Buffer
+			process, err := container.Run(garden.ProcessSpec{
+				Path: "stat",
+				Args: []string{"-c", "%U:%G", "/home/alice"},
+			}, garden.ProcessIO{
+				Stdout: io.MultiWriter(&stdout, GinkgoWriter),
+				Stderr: GinkgoWriter,
+			})
+			Expect(err).ToNot(HaveOccurred())
+			Expect(process.Wait()).To(Equal(0))
+
+			Expect(stdout.String()).To(ContainSubstring("alice:alice"))
 		})
 	})
 

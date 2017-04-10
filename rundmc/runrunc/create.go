@@ -14,12 +14,17 @@ import (
 
 type Creator struct {
 	runcPath      string
+	newuidmapPath string
+	newgidmapPath string
 	commandRunner command_runner.CommandRunner
 }
 
-func NewCreator(runcPath string, commandRunner command_runner.CommandRunner) *Creator {
+func NewCreator(runcPath, newuidmapPath, newgidmapPath string, commandRunner command_runner.CommandRunner) *Creator {
 	return &Creator{
-		runcPath, commandRunner,
+		runcPath,
+		newuidmapPath,
+		newgidmapPath,
+		commandRunner,
 	}
 }
 
@@ -31,7 +36,7 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, _ garden.Proce
 	logFilePath := filepath.Join(bundlePath, "create.log")
 	pidFilePath := filepath.Join(bundlePath, "pidfile")
 
-	cmd := exec.Command(c.runcPath, "--debug", "--log", logFilePath, "create", "--no-new-keyring", "--bundle", bundlePath, "--pid-file", pidFilePath, id)
+	cmd := exec.Command(c.runcPath, "--debug", "--log", logFilePath, "-newuidmap", c.newuidmapPath, "-newgidmap", c.newgidmapPath, "create", "--no-new-keyring", "--bundle", bundlePath, "--pid-file", pidFilePath, id)
 
 	log.Info("creating", lager.Data{
 		"runc":        c.runcPath,

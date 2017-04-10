@@ -28,7 +28,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, testNetPluginBin, tarBin string
+var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, testNetPluginBin, tarBin, newuidmapBin, newgidmapBin string
 
 var unprivilegedUID uint32
 
@@ -69,6 +69,12 @@ func TestGqt(t *testing.T) {
 			bins["test_image_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin")
 			Expect(err).NotTo(HaveOccurred())
 
+			bins["newuidmap_bin_path"], err = gexec.Build("code.cloudfoundry.org/idmapper/cmd/newuidmap")
+			Expect(err).NotTo(HaveOccurred())
+
+			bins["newgidmap_bin_path"], err = gexec.Build("code.cloudfoundry.org/idmapper/cmd/newgidmap")
+			Expect(err).NotTo(HaveOccurred())
+
 			cmd := exec.Command("make")
 			cmd.Dir = "../rundmc/nstar"
 			cmd.Stdout = GinkgoWriter
@@ -92,6 +98,8 @@ func TestGqt(t *testing.T) {
 		testImagePluginBin = bins["test_image_plugin_bin_path"]
 		initBin = bins["init_bin_path"]
 		testNetPluginBin = bins["test_net_plugin_bin_path"]
+		newuidmapBin = bins["newuidmap_bin_path"]
+		newgidmapBin = bins["newgidmap_bin_path"]
 
 		tarBin = os.Getenv("GARDEN_TAR_PATH")
 	})
@@ -123,6 +131,8 @@ func TestGqt(t *testing.T) {
 		Expect(os.MkdirAll(runcRootDir, 0700)).To(Succeed())
 		Expect(os.Chown(runcRootDir, int(unprivilegedUID), int(unprivilegedUID))).To(Succeed())
 
+		Expect(os.Chmod(newuidmapBin, 0755|os.ModeSetuid)).To(Succeed())
+		Expect(os.Chmod(newgidmapBin, 0755|os.ModeSetuid)).To(Succeed())
 	})
 
 	SetDefaultEventuallyTimeout(5 * time.Second)
@@ -135,7 +145,7 @@ func startGarden(argv ...string) *runner.RunningGarden {
 
 func startGardenAsUser(user *syscall.Credential, argv ...string) *runner.RunningGarden {
 	rootfs := os.Getenv("GARDEN_TEST_ROOTFS")
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, rootfs, tarBin, user, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, rootfs, tarBin, newuidmapBin, newgidmapBin, user, argv...)
 }
 
 func restartGarden(client *runner.RunningGarden, argv ...string) *runner.RunningGarden {
@@ -145,7 +155,7 @@ func restartGarden(client *runner.RunningGarden, argv ...string) *runner.Running
 }
 
 func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
-	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, "", tarBin, nil, argv...)
+	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, "", tarBin, newuidmapBin, newgidmapBin, nil, argv...)
 }
 
 func cleanupSystemResources(cgroupsMountpoint, iptablesPrefix string) error {
