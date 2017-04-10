@@ -51,7 +51,6 @@ var _ = Describe("Surviving Restarts", func() {
 			containerSpec    garden.ContainerSpec
 			restartArgs      []string
 			gracefulShutdown bool
-			processSpec      garden.ProcessSpec
 		)
 
 		BeforeEach(func() {
@@ -66,11 +65,6 @@ var _ = Describe("Surviving Restarts", func() {
 
 			restartArgs = []string{}
 			gracefulShutdown = true
-
-			processSpec = garden.ProcessSpec{
-				Path: "/bin/sh",
-				Args: []string{"-c", "while true; do echo hello; sleep 1; done;"},
-			}
 		})
 
 		JustBeforeEach(func() {
@@ -94,7 +88,10 @@ var _ = Describe("Surviving Restarts", func() {
 
 			out := gbytes.NewBuffer()
 			existingProc, err = container.Run(
-				processSpec,
+				garden.ProcessSpec{
+					Path: "/bin/sh",
+					Args: []string{"-c", "while true; do echo hello; sleep 1; done;"},
+				},
 				garden.ProcessIO{
 					Stdout: io.MultiWriter(GinkgoWriter, out),
 					Stderr: io.MultiWriter(GinkgoWriter, out),
@@ -232,24 +229,6 @@ var _ = Describe("Surviving Restarts", func() {
 					Expect(process.Signal(garden.SignalKill)).To(Succeed())
 					_, err = process.Wait()
 					Expect(err).NotTo(HaveOccurred())
-				})
-
-				Context("when the process exits before restart", func() {
-					BeforeEach(func() {
-						processSpec = garden.ProcessSpec{
-							Path: "/bin/sh",
-							Args: []string{"-c", "exit 13"},
-						}
-					})
-
-					It("can reattach and get exit status", func() {
-						process, err := container.Attach(existingProc.ID(), garden.ProcessIO{})
-						Expect(err).NotTo(HaveOccurred())
-
-						status := <-process.ExitStatus()
-						Expect(status.Err).NotTo(HaveOccurred())
-						Expect(status.Code).To(Equal(13))
-					})
 				})
 
 				It("can still destroy the container", func() {
