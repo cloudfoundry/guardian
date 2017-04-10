@@ -30,8 +30,9 @@ invitation.
 * [Create an image](#creating-an-image)
 * [Delete an image](#deleting-an-image)
 * [Stats](#stats)
-* [Logging](#logging)
 * [Clean up](#clean-up)
+* [Logging](#logging)
+* [Metrics](#metrics)
 * [Running tests in Concourse](#running-tests-in-concourse)
 * [Known Issues](#known-issues)
 
@@ -312,22 +313,6 @@ grootfs --store /mnt/btrfs delete /mnt/btrfs/images/<uid>/my-image-id
 The store is based on the effective user running the command. If the user tries
 to delete a rootfs image that does not belong to her/him the command fails.
 
-### Logging
-
-By default GrootFS will not emit any logging, you can set the log level with
-the `--log-level` flag:
-
-```
-grootfs --log-level debug create ...
-```
-
-It also supports redirecting the logs to a log file:
-
-```
-grootfs --log-level debug --log-file /var/log/grootfs.log create ...
-```
-
-
 ### Stats
 
 You can get stats from an image by calling `grootfs stats` with the
@@ -406,6 +391,69 @@ The store is based on the effective user running the command. If the user tries
 to clean up a store that does not belong to her/him the command fails.
 
 \* It takes only into account the cache and volumes folders in the store.
+
+### Logging
+
+By default GrootFS will not emit any logging, you can set the log level with
+the `--log-level` flag:
+
+```
+grootfs --log-level debug create ...
+```
+
+It also supports redirecting the logs to a log file:
+
+```
+grootfs --log-level debug --log-file /var/log/grootfs.log create ...
+```
+
+## Metrics
+
+GrootFS emits the following metrics with each command. These are emitted via
+Dropsonde to the Metron Agent and can be integrated with a monitoring application
+e.g. Datadog.
+
+#### Create
+| Metric Name | Units | Description |
+|---|---|---|
+| `ImageCreateTime` | nanos | Total duration of Image Creation |
+| `UnpackTime` | nanos | Total time taken to unpack the base image tarball |
+| `FailedUnpackTime` | nanos | Same as above but emitted on failure |
+| `StoreUsage` | bytes | Total bytes in use in the Store at the end of the command |
+| `LockingTime` | nanos | Total time the store lock is held by the command |
+| `grootfs-create.run` | int | Cumulative count of Create executions |
+| `grootfs-create.fail` | int | Cumulative count of failed Create executions |
+| `grootfs-create.success` | int | Cumulative count of successful Create executions |
+| `grootfs-error.create` | | Emits when an error has occurred |
+
+#### Clean
+| Metric Name | Units | Description |
+|---|---|---|
+| `ImageCleanTime` | nanos | Total duration of Clean |
+| `StoreUsage` | bytes | Total bytes in use in the Store at the end of the command |
+| `LockingTime` | nanos | Total time the store lock is held by the command |
+| `grootfs-clean.run` | int | Cumulative count of Clean executions |
+| `grootfs-clean.fail` | int | Cumulative count of failed Clean executions |
+| `grootfs-clean.success` | int | Cumulative count of successful Clean executions |
+| `grootfs-error.clean` | | Emits when an error has occurred |
+
+#### Delete
+| Metric Name | Units | Description |
+|---|---|---|
+| `ImageDeletionTime` | nanos | Total duration of Image Deletion |
+| `grootfs-delete.run` | int | Cumulative count of Delete executions |
+| `grootfs-delete.fail` | int | Cumulative count of failed Delete executions |
+| `grootfs-delete.success` | int | Cumulative count of successful Delete executions |
+| `grootfs-error.delete` | | Emits when an error has occurred |
+
+#### Stats
+| Metric Name | Units | Description |
+|---|---|---|
+| `ImageStatsTime` | nanos | Total duration of retrieving Image Stats |
+| `grootfs-stats.run` | int | Cumulative count of Stats executions |
+| `grootfs-stats.fail` | int | Cumulative count of failed Stats executions |
+| `grootfs-stats.success` | int | Cumulative count of successful Stats executions |
+| `grootfs-error.stats` | | Emits when an error has occurred |
 
 ## Running tests in Concourse
 
