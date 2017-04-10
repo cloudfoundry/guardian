@@ -28,9 +28,12 @@ func (Bridge) Create(name string, ip net.IP, subnet *net.IPNet) (intf *net.Inter
 	}
 
 	link := &netlink.Bridge{LinkAttrs: netlink.LinkAttrs{Name: name}}
-
 	if err := netlink.LinkAdd(link); err != nil && err.Error() != "file exists" {
 		return nil, fmt.Errorf("devices: create bridge: %v", err)
+	}
+
+	if err := netlink.BridgeSetMcastSnoop(link, false); err != nil {
+		return nil, fmt.Errorf("devices: disable multicast snooping: %v", err)
 	}
 
 	hAddr, _ := net.ParseMAC(randMacAddr())
@@ -46,10 +49,6 @@ func (Bridge) Create(name string, ip net.IP, subnet *net.IPNet) (intf *net.Inter
 	addr := &netlink.Addr{IPNet: &net.IPNet{IP: ip, Mask: subnet.Mask}}
 	if err = netlink.AddrAdd(link, addr); err != nil && err.Error() != "file exists" {
 		return nil, fmt.Errorf("devices: add IP to bridge: %v", err)
-	}
-
-	if err := netlink.BridgeSetMcastSnoop(link, false); err != nil {
-		return nil, fmt.Errorf("devices: disable multicast snooping on bridge: %v", err)
 	}
 
 	return intf, nil
