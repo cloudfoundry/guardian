@@ -26,6 +26,7 @@ var _ = Describe("BlobReader", func() {
 			gzipedBlobContent, err := ioutil.ReadAll(gzipBuffer)
 
 			blobFile, err = ioutil.TempFile("", "")
+			Expect(err).NotTo(HaveOccurred())
 			_, err = blobFile.Write(gzipedBlobContent)
 			Expect(err).NotTo(HaveOccurred())
 			blobReader, err = remote.NewBlobReader(blobFile.Name())
