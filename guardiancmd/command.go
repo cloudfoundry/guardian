@@ -274,12 +274,7 @@ func (cmd *ServerCommand) Execute([]string) error {
 			os.Exit(1)
 		}
 
-		if !runningAsRoot() {
-			cmd.Bin.Runc = filepath.Join(restoredAssetsDir, "bin", "runc-rootless")
-		} else {
-			cmd.Bin.Runc = filepath.Join(restoredAssetsDir, "bin", "runc")
-		}
-
+		cmd.Bin.Runc = filepath.Join(restoredAssetsDir, "bin", "runc")
 		cmd.Bin.Dadoo = FileFlag(filepath.Join(restoredAssetsDir, "bin", "dadoo"))
 		cmd.Bin.Init = FileFlag(filepath.Join(restoredAssetsDir, "bin", "init"))
 		cmd.Bin.NSTar = FileFlag(filepath.Join(restoredAssetsDir, "bin", "nstar"))
