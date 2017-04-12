@@ -416,7 +416,7 @@ e.g. Datadog.
 #### Create
 | Metric Name | Units | Description |
 |---|---|---|
-| `ImageCreateTime` | nanos | Total duration of Image Creation |
+| `ImageCreationTime` | nanos | Total duration of Image Creation |
 | `UnpackTime` | nanos | Total time taken to unpack the base image tarball |
 | `FailedUnpackTime` | nanos | Same as above but emitted on failure |
 | `StoreUsage` | bytes | Total bytes in use in the Store at the end of the command |
