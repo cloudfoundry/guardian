@@ -155,9 +155,10 @@ type ServerCommand struct {
 	} `group:"Server Configuration"`
 
 	Containers struct {
-		Dir                string `long:"depot" default:"/var/run/gdn/depot" description:"Directory in which to store container data."`
-		PropertiesPath     string `long:"properties-path" description:"Path in which to store properties."`
-		ConsoleSocketsPath string `long:"console-sockets-path" description:"Path in which to store temporary sockets"`
+		Dir                      string `long:"depot" default:"/var/run/gdn/depot" description:"Directory in which to store container data."`
+		PropertiesPath           string `long:"properties-path" description:"Path in which to store properties."`
+		ConsoleSocketsPath       string `long:"console-sockets-path" description:"Path in which to store temporary sockets"`
+		CleanupProcessDirsOnWait bool   `long:"cleanup-process-dirs-on-wait" description:"Clean up proccess dirs on first invocation of wait"`
 
 		DefaultRootFS              string        `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
 		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
@@ -712,7 +713,9 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, depotPath, dadooPa
 			runcPath,
 			cmd.wireUidGenerator(),
 			pidFileReader,
-			linux_command_runner.New()),
+			linux_command_runner.New(),
+			cmd.Containers.CleanupProcessDirsOnWait,
+		),
 	)
 
 	mounts := []specs.Mount{

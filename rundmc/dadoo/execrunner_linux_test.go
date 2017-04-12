@@ -69,7 +69,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		processPath = filepath.Join(bundlePath, "the-process")
 		pidPath = filepath.Join(processPath, "0.pid")
 
-		runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner)
+		runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, false)
 		log = lagertest.NewTestLogger("test")
 
 		runcReturns = 0
@@ -255,16 +255,40 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			Expect(string(receivedStdinContents)).NotTo(ContainSubstring(`HostUID`))
 		})
 
-		It("cleans up the processes dir after Wait returns", func() {
-			process, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
-			Expect(err).NotTo(HaveOccurred())
+		Context("when cleanupProcessDirsOnWait is true", func() {
+			BeforeEach(func() {
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, true)
+			})
 
-			Expect(filepath.Join(processPath, processID)).To(BeAnExistingFile())
+			It("cleans up the processes dir after Wait returns", func() {
+				process, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
 
-			_, err = process.Wait()
-			Expect(err).NotTo(HaveOccurred())
+				Expect(filepath.Join(processPath, processID)).To(BeAnExistingFile())
 
-			Expect(filepath.Join(processPath, processID)).NotTo(BeAnExistingFile())
+				_, err = process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(filepath.Join(processPath, processID)).NotTo(BeAnExistingFile())
+			})
+		})
+
+		Context("when cleanupProcessDirsOnWait is false", func() {
+			BeforeEach(func() {
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, false)
+			})
+
+			It("does not clean up the processes dir after Wait returns", func() {
+				process, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(filepath.Join(processPath, processID)).To(BeAnExistingFile())
+
+				_, err = process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(filepath.Join(processPath, processID)).To(BeAnExistingFile())
+			})
 		})
 
 		Context("when spawning dadoo fails", func() {
@@ -647,6 +671,45 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			Expect(syscall.Mkfifo(filepath.Join(processPath, "some-process-id", "stderr"), 0)).To(Succeed())
 			Expect(syscall.Mkfifo(filepath.Join(processPath, "some-process-id", "winsz"), 0)).To(Succeed())
 			Expect(syscall.Mkfifo(filepath.Join(processPath, "some-process-id", "exit"), 0)).To(Succeed())
+		})
+
+		Context("when cleanupProcessDirsOnWait is true", func() {
+			BeforeEach(func() {
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, true)
+			})
+
+			It("cleans up the processes dir after Wait returns", func() {
+				_, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
+				process, err := runner.Attach(log, processID, garden.ProcessIO{}, processPath)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(filepath.Join(processPath, processID)).To(BeAnExistingFile())
+
+				_, err = process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(filepath.Join(processPath, processID)).NotTo(BeAnExistingFile())
+			})
+		})
+
+		Context("when cleanupProcessDirsOnWait is false", func() {
+			BeforeEach(func() {
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, false)
+			})
+
+			It("does not clean up the processes dir after Wait returns", func() {
+				_, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
+				process, err := runner.Attach(log, processID, garden.ProcessIO{}, processPath)
+
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(filepath.Join(processPath, processID)).To(BeAnExistingFile())
+
+				_, err = process.Wait()
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(filepath.Join(processPath, processID)).To(BeAnExistingFile())
+			})
 		})
 
 		Context("when dadoo has already exited", func() {

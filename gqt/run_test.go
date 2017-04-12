@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"syscall"
-	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -73,6 +72,63 @@ var _ = Describe("Run", func() {
 		),
 	)
 
+	Describe("when we wait for process", func() {
+		var (
+			gardenArgs  []string
+			container   garden.Container
+			process     garden.Process
+			processPath string
+		)
+
+		JustBeforeEach(func() {
+			client = startGarden(gardenArgs...)
+			var err error
+			container, err = client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			process, err = container.Run(garden.ProcessSpec{
+				Path: "/bin/sh",
+				Args: []string{"-c", "exit 13"},
+			}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+
+			code, err := process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(code).To(Equal(13))
+
+			processPath = filepath.Join(client.DepotDir, container.Handle(), "processes", process.ID())
+		})
+
+		Context("when --cleanup-process-dirs-on-wait is not set (default)", func() {
+			It("does not delete the process directory", func() {
+				_, err := os.Stat(processPath)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Context("when we reattach", func() {
+				It("can be Waited for again", func() {
+					reattachedProcess, err := container.Attach(process.ID(), garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+
+					code, err := reattachedProcess.Wait()
+					Expect(err).NotTo(HaveOccurred())
+					Expect(code).To(Equal(13))
+				})
+			})
+		})
+
+		Context("when --cleanup-process-dirs-on-wait is set", func() {
+			BeforeEach(func() {
+				gardenArgs = []string{"--cleanup-process-dirs-on-wait"}
+			})
+
+			It("deletes the proccess directory", func() {
+				_, err := os.Stat(processPath)
+				Expect(os.IsNotExist(err)).To(BeTrue())
+			})
+		})
+	})
+
 	It("creates process files with the right permisssion and ownership", func() {
 		client = startGarden()
 		container, err := client.Create(garden.ContainerSpec{})
@@ -98,29 +154,6 @@ var _ = Describe("Run", func() {
 		for _, info := range files {
 			Expect(checkFileInfo(info)).NotTo(HaveOccurred())
 		}
-	})
-
-	It("cleans up any files within a second of the process exiting", func() {
-		client = startGarden()
-		container, err := client.Create(garden.ContainerSpec{})
-		Expect(err).NotTo(HaveOccurred())
-
-		before := filesInDir(filepath.Join(client.DepotDir, container.Handle()))
-
-		process, err := container.Run(garden.ProcessSpec{
-			Path: "echo",
-			Args: []string{
-				"ohai",
-			},
-		}, garden.ProcessIO{})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(process.Wait()).To(Equal(0))
-
-		time.Sleep(time.Second)
-
-		after := filesInDir(filepath.Join(client.DepotDir, container.Handle()))
-
-		Expect(after).To(ConsistOf(before))
 	})
 
 	lsofFileHandlesOnProcessPipes := func(processID string) string {

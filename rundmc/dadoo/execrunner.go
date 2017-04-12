@@ -28,20 +28,22 @@ type PidGetter interface {
 }
 
 type ExecRunner struct {
-	dadooPath     string
-	runcPath      string
-	processIDGen  runrunc.UidGenerator
-	pidGetter     PidGetter
-	commandRunner command_runner.CommandRunner
+	dadooPath                string
+	runcPath                 string
+	processIDGen             runrunc.UidGenerator
+	pidGetter                PidGetter
+	commandRunner            command_runner.CommandRunner
+	cleanupProcessDirsOnWait bool
 }
 
-func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, commandRunner command_runner.CommandRunner) *ExecRunner {
+func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, commandRunner command_runner.CommandRunner, shouldCleanup bool) *ExecRunner {
 	return &ExecRunner{
-		dadooPath:     dadooPath,
-		runcPath:      runcPath,
-		processIDGen:  processIDGen,
-		pidGetter:     pidGetter,
-		commandRunner: commandRunner,
+		dadooPath:                dadooPath,
+		runcPath:                 runcPath,
+		processIDGen:             processIDGen,
+		pidGetter:                pidGetter,
+		commandRunner:            commandRunner,
+		cleanupProcessDirsOnWait: shouldCleanup,
 	}
 }
 
@@ -83,7 +85,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	defer logr.Close()
 	defer syncr.Close()
 
-	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
+	process := d.newProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
 	process.mkfifos(spec.HostUID, spec.HostGID)
 	if err != nil {
 		return nil, err
@@ -164,7 +166,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	processPath := filepath.Join(processesPath, processID)
-	process := newProcess(processID, processPath, filepath.Join(processPath, "pidfile"), d.pidGetter)
+	process := d.newProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
 	if err := process.attach(io); err != nil {
 		return nil, err
 	}
@@ -184,6 +186,7 @@ func (s osSignal) OsSignal() syscall.Signal {
 }
 
 type process struct {
+	logger                                       lager.Logger
 	id                                           string
 	stdin, stdout, stderr, exit, winsz, exitcode string
 	ioWg                                         *sync.WaitGroup
@@ -193,30 +196,31 @@ type process struct {
 	*signaller
 }
 
-func newProcess(id, dir string, pidFilePath string, pidGetter PidGetter) *process {
-	stdin := filepath.Join(dir, "stdin")
-	stdout := filepath.Join(dir, "stdout")
-	stderr := filepath.Join(dir, "stderr")
-	winsz := filepath.Join(dir, "winsz")
-	exit := filepath.Join(dir, "exit")
-	exitcode := filepath.Join(dir, "exitcode")
+func (d *ExecRunner) newProcess(log lager.Logger, id, processPath, pidFilePath string) *process {
+	cleanupFunc := func() error {
+		return nil
+	}
+	if d.cleanupProcessDirsOnWait {
+		cleanupFunc = func() error {
+			return os.RemoveAll(processPath)
+		}
+	}
 
 	return &process{
+		logger:   log,
 		id:       id,
-		stdin:    stdin,
-		stdout:   stdout,
-		stderr:   stderr,
-		winsz:    winsz,
-		exit:     exit,
-		exitcode: exitcode,
+		stdin:    filepath.Join(processPath, "stdin"),
+		stdout:   filepath.Join(processPath, "stdout"),
+		stderr:   filepath.Join(processPath, "stderr"),
+		winsz:    filepath.Join(processPath, "winsz"),
+		exit:     filepath.Join(processPath, "exit"),
+		exitcode: filepath.Join(processPath, "exitcode"),
 		ioWg:     &sync.WaitGroup{},
 		winszCh:  make(chan garden.WindowSize, 5),
-		cleanup: func() error {
-			return os.RemoveAll(dir)
-		},
+		cleanup:  cleanupFunc,
 		signaller: &signaller{
 			pidFilePath: pidFilePath,
-			pidGetter:   pidGetter,
+			pidGetter:   d.pidGetter,
 		},
 	}
 }
@@ -336,7 +340,7 @@ func (p process) Wait() (int, error) {
 	}
 
 	if err := p.cleanup(); err != nil {
-		return 1, err
+		p.logger.Error("process-cleanup", err)
 	}
 
 	return code, nil
