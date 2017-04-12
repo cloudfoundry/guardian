@@ -1,10 +1,7 @@
 package store
 
 import (
-	"os/exec"
-	"path/filepath"
-	"strconv"
-	"strings"
+	"syscall"
 
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
@@ -22,38 +19,27 @@ func NewStoreMeasurer(storePath string) *StoreMeasurer {
 
 func (s *StoreMeasurer) MeasureStore(logger lager.Logger) (int64, error) {
 	logger = logger.Session("measuring-store", lager.Data{"storePath": s.storePath})
-	logger.Info("starting")
-	defer logger.Info("ending")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
-	cacheSize, err := s.measurePath(filepath.Join(s.storePath, CacheDirName))
+	usage, err := s.measurePath(s.storePath)
 	if err != nil {
 		return 0, err
 	}
-	logger.Info("got-cache-size", lager.Data{"cacheSize": cacheSize})
-
-	volumesSize, err := s.measurePath(filepath.Join(s.storePath, VolumesDirName))
-	if err != nil {
-		return 0, err
-	}
-	logger.Info("got-volumes-size", lager.Data{"volumeSize": volumesSize})
-
-	return cacheSize + volumesSize, nil
+	logger.Debug("store-usage", lager.Data{"bytes": usage})
+	return usage, nil
 }
 
 func (s *StoreMeasurer) measurePath(path string) (int64, error) {
-	cmd := exec.Command("du", "-sb", path)
-	out, err := cmd.CombinedOutput()
+	stats := syscall.Statfs_t{}
+	err := syscall.Statfs(path, &stats)
 	if err != nil {
-		return 0, errorspkg.Wrapf(err, "du for `%s` failed: %s", path, out)
+		return 0, errorspkg.Wrapf(err, "Invalid path %s", path)
 	}
 
-	return s.parseDuContents(string(out))
-}
+	bsize := uint64(stats.Bsize)
+	free := stats.Bfree * bsize
+	total := stats.Blocks * bsize
 
-func (s *StoreMeasurer) parseDuContents(contents string) (int64, error) {
-	parts := strings.Split(contents, "\t")
-	if len(parts) != 2 {
-		return 0, errorspkg.Errorf("failed to parse du's output `%s`", contents)
-	}
-	return strconv.ParseInt(parts[0], 10, 64)
+	return int64(total - free), nil
 }

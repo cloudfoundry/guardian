@@ -23,9 +23,9 @@ var _ = Describe("Measurer", func() {
 	)
 
 	BeforeEach(func() {
+		mountPoint := fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelNode())
 		var err error
-
-		storePath, err = ioutil.TempDir("", "")
+		storePath, err = ioutil.TempDir(mountPoint, "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.MkdirAll(
 			filepath.Join(storePath, store.CacheDirName), 0744,
@@ -48,19 +48,20 @@ var _ = Describe("Measurer", func() {
 
 	It("measures space used by the blobs cache and volumes", func() {
 		blobsPath := filepath.Join(storePath, store.CacheDirName)
-		Expect(writeFile(filepath.Join(blobsPath, "sha256:fake"), 256*1024)).To(Succeed())
+		Expect(writeFile(filepath.Join(blobsPath, "sha256:fake"), 2048*1024)).To(Succeed())
 
 		volPath := filepath.Join(storePath, store.VolumesDirName, "sha256:fake")
 		Expect(os.MkdirAll(volPath, 0744)).To(Succeed())
-		Expect(writeFile(filepath.Join(volPath, "my-file"), 256*1024)).To(Succeed())
+		Expect(writeFile(filepath.Join(volPath, "my-file"), 2048*1024)).To(Succeed())
 
 		imagePath := filepath.Join(storePath, store.ImageDirName, "my-image")
 		Expect(os.MkdirAll(imagePath, 0744)).To(Succeed())
-		Expect(writeFile(filepath.Join(imagePath, "my-file"), 256*1024)).To(Succeed())
+		Expect(writeFile(filepath.Join(imagePath, "my-file"), 2048*1024)).To(Succeed())
 
 		storeSize, err := storeMeasurer.MeasureStore(logger)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(storeSize).To(BeNumerically("~", 512*1024, 1024))
+		xfsMetadataSize := 33755136
+		Expect(storeSize).To(BeNumerically("~", 6144*1024+xfsMetadataSize, 256*1024))
 	})
 
 	Context("when the store does not exist", func() {
@@ -70,18 +71,7 @@ var _ = Describe("Measurer", func() {
 
 		It("returns a useful error", func() {
 			_, err := storeMeasurer.MeasureStore(logger)
-			Expect(err).To(MatchError(ContainSubstring("No such file or directory")))
-		})
-	})
-
-	Context("when the volume path does not exist", func() {
-		BeforeEach(func() {
-			Expect(os.RemoveAll(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
-		})
-
-		It("returns a useful error", func() {
-			_, err := storeMeasurer.MeasureStore(logger)
-			Expect(err).To(MatchError(ContainSubstring("No such file or directory")))
+			Expect(err).To(MatchError(ContainSubstring("Invalid path /path/to/non/existent/store")))
 		})
 	})
 })
