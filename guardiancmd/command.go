@@ -478,11 +478,10 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 
 	if cmd.Network.Plugin.Path() != "" {
 		resolvConfigurer := &kawasaki.ResolvConfigurer{
-			HostsFileCompiler:     &dns.HostsFileCompiler{},
-			NameserversDeterminer: &dns.NameserversDeterminer{},
-			NameserversSerializer: &dns.NameserversSerializer{},
-			ResolvFilePath:        "/etc/resolv.conf",
-			DepotDir:              depotPath,
+			HostsFileCompiler: &dns.HostsFileCompiler{},
+			ResolvCompiler:    &dns.ResolvCompiler{},
+			ResolvFilePath:    "/etc/resolv.conf",
+			DepotDir:          depotPath,
 		}
 		externalNetworker := netplugin.New(
 			linux_command_runner.New(),

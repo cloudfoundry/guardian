@@ -1,6 +1,7 @@
 package kawasaki
 
 import (
+	"fmt"
 	"io/ioutil"
 	"net"
 	"os"
@@ -14,22 +15,16 @@ type HostFileCompiler interface {
 	Compile(log lager.Logger, containerIp net.IP, handle string) ([]byte, error)
 }
 
-//go:generate counterfeiter . NameserversDeterminer
-type NameserversDeterminer interface {
-	Determine(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP) []net.IP
-}
-
-//go:generate counterfeiter . NameserversSerializer
-type NameserversSerializer interface {
-	Serialize([]net.IP) []byte
+//go:generate counterfeiter . ResolvCompiler
+type ResolvCompiler interface {
+	Determine(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP) []string
 }
 
 type ResolvConfigurer struct {
-	HostsFileCompiler     HostFileCompiler
-	NameserversDeterminer NameserversDeterminer
-	NameserversSerializer NameserversSerializer
-	ResolvFilePath        string
-	DepotDir              string
+	HostsFileCompiler HostFileCompiler
+	ResolvCompiler    ResolvCompiler
+	ResolvFilePath    string
+	DepotDir          string
 }
 
 func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid int) error {
@@ -51,10 +46,14 @@ func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid in
 		log.Error("reading-host-resolv-file", err)
 		return err
 	}
-	nameservers := d.NameserversDeterminer.Determine(string(hostResolvContents), cfg.BridgeIP, cfg.PluginNameservers, cfg.OperatorNameservers, cfg.AdditionalNameservers)
-	containerResolvContents := d.NameserversSerializer.Serialize(nameservers)
+	resolvEntries := d.ResolvCompiler.Determine(string(hostResolvContents), cfg.BridgeIP, cfg.PluginNameservers, cfg.OperatorNameservers, cfg.AdditionalNameservers)
 
-	if err := writeExistingFile(filepath.Join(d.DepotDir, cfg.ContainerHandle, "resolv.conf"), containerResolvContents); err != nil {
+	containerResolvContents := ""
+	for _, resolvEntry := range resolvEntries {
+		containerResolvContents = fmt.Sprintf("%s%s\n", containerResolvContents, resolvEntry)
+	}
+
+	if err := writeExistingFile(filepath.Join(d.DepotDir, cfg.ContainerHandle, "resolv.conf"), []byte(containerResolvContents)); err != nil {
 		log.Error("writing-resolv-file", err)
 		return err
 	}

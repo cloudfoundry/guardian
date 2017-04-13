@@ -17,13 +17,12 @@ import (
 
 var _ = Describe("ResolvConfigurer", func() {
 	var (
-		log                       lager.Logger
-		fakeHostsFileCompiler     *fakes.FakeHostFileCompiler
-		fakeNameserversDeterminer *fakes.FakeNameserversDeterminer
-		fakeNameserversSerializer *fakes.FakeNameserversSerializer
-		tmpDir                    string
-		depotDir                  string
-		handle                    = "some-container"
+		log                   lager.Logger
+		fakeHostsFileCompiler *fakes.FakeHostFileCompiler
+		fakeResolvCompiler    *fakes.FakeResolvCompiler
+		tmpDir                string
+		depotDir              string
+		handle                = "some-container"
 
 		dnsResolv *kawasaki.ResolvConfigurer
 	)
@@ -31,8 +30,7 @@ var _ = Describe("ResolvConfigurer", func() {
 	BeforeEach(func() {
 		log = lagertest.NewTestLogger("test")
 		fakeHostsFileCompiler = new(fakes.FakeHostFileCompiler)
-		fakeNameserversDeterminer = new(fakes.FakeNameserversDeterminer)
-		fakeNameserversSerializer = new(fakes.FakeNameserversSerializer)
+		fakeResolvCompiler = new(fakes.FakeResolvCompiler)
 
 		var err error
 		tmpDir, err = ioutil.TempDir("", "resolv-test")
@@ -47,11 +45,10 @@ var _ = Describe("ResolvConfigurer", func() {
 		Expect(touchFile(filepath.Join(containerDir, "resolv.conf"))).To(Succeed())
 
 		dnsResolv = &kawasaki.ResolvConfigurer{
-			HostsFileCompiler:     fakeHostsFileCompiler,
-			NameserversDeterminer: fakeNameserversDeterminer,
-			NameserversSerializer: fakeNameserversSerializer,
-			ResolvFilePath:        resolvFilePath,
-			DepotDir:              depotDir,
+			HostsFileCompiler: fakeHostsFileCompiler,
+			ResolvCompiler:    fakeResolvCompiler,
+			ResolvFilePath:    resolvFilePath,
+			DepotDir:          depotDir,
 		}
 	})
 
@@ -80,9 +77,7 @@ var _ = Describe("ResolvConfigurer", func() {
 	})
 
 	It("should write the container's resolv file in the depot dir", func() {
-		compiledResolvFile := "Hello world of resolv.conf"
-		fakeNameserversDeterminer.DetermineReturns([]net.IP{net.ParseIP("5.6.7.8")})
-		fakeNameserversSerializer.SerializeReturns([]byte(compiledResolvFile))
+		fakeResolvCompiler.DetermineReturns([]string{"arbitrary", "lines of text"})
 
 		cfg := kawasaki.NetworkConfig{
 			ContainerHandle:       handle,
@@ -93,20 +88,17 @@ var _ = Describe("ResolvConfigurer", func() {
 		}
 		Expect(dnsResolv.Configure(log, cfg, 42)).To(Succeed())
 
-		Expect(fakeNameserversDeterminer.DetermineCallCount()).To(Equal(1))
-		actualResolvFileContents, actualHostIP, actualPluginNameservers, actualOperatorNameservers, actualAdditionalNameservers := fakeNameserversDeterminer.DetermineArgsForCall(0)
+		Expect(fakeResolvCompiler.DetermineCallCount()).To(Equal(1))
+		actualResolvFileContents, actualHostIP, actualPluginNameservers, actualOperatorNameservers, actualAdditionalNameservers := fakeResolvCompiler.DetermineArgsForCall(0)
 		Expect(actualResolvFileContents).To(Equal("nameserver 1.2.3.4\n"))
 		Expect(actualHostIP).To(Equal(net.ParseIP("10.11.12.13")))
 		Expect(actualPluginNameservers).To(Equal([]net.IP{net.ParseIP("11.11.11.12")}))
 		Expect(actualOperatorNameservers).To(Equal([]net.IP{net.ParseIP("9.8.7.6"), net.ParseIP("5.4.3.2")}))
 		Expect(actualAdditionalNameservers).To(Equal([]net.IP{net.ParseIP("11.11.11.11")}))
-		Expect(fakeNameserversSerializer.SerializeCallCount()).To(Equal(1))
-		containerResolvContents := fakeNameserversSerializer.SerializeArgsForCall(0)
-		Expect(containerResolvContents).To(Equal([]net.IP{net.ParseIP("5.6.7.8")}))
 
 		resolvFileContents, err := ioutil.ReadFile(filepath.Join(depotDir, handle, "resolv.conf"))
 		Expect(err).NotTo(HaveOccurred())
-		Expect(string(resolvFileContents)).To(Equal(compiledResolvFile))
+		Expect(string(resolvFileContents)).To(Equal("arbitrary\nlines of text\n"))
 	})
 
 	Describe("files that should already exist not existing", func() {

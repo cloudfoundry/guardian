@@ -8,8 +8,8 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki"
 )
 
-type FakeNameserversDeterminer struct {
-	DetermineStub        func(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP) []net.IP
+type FakeResolvCompiler struct {
+	DetermineStub        func(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP) []string
 	determineMutex       sync.RWMutex
 	determineArgsForCall []struct {
 		resolvContents        string
@@ -19,16 +19,16 @@ type FakeNameserversDeterminer struct {
 		additionalNameservers []net.IP
 	}
 	determineReturns struct {
-		result1 []net.IP
+		result1 []string
 	}
 	determineReturnsOnCall map[int]struct {
-		result1 []net.IP
+		result1 []string
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeNameserversDeterminer) Determine(resolvContents string, hostIP net.IP, pluginNameservers []net.IP, operatorNameservers []net.IP, additionalNameservers []net.IP) []net.IP {
+func (fake *FakeResolvCompiler) Determine(resolvContents string, hostIP net.IP, pluginNameservers []net.IP, operatorNameservers []net.IP, additionalNameservers []net.IP) []string {
 	var pluginNameserversCopy []net.IP
 	if pluginNameservers != nil {
 		pluginNameserversCopy = make([]net.IP, len(pluginNameservers))
@@ -64,38 +64,38 @@ func (fake *FakeNameserversDeterminer) Determine(resolvContents string, hostIP n
 	return fake.determineReturns.result1
 }
 
-func (fake *FakeNameserversDeterminer) DetermineCallCount() int {
+func (fake *FakeResolvCompiler) DetermineCallCount() int {
 	fake.determineMutex.RLock()
 	defer fake.determineMutex.RUnlock()
 	return len(fake.determineArgsForCall)
 }
 
-func (fake *FakeNameserversDeterminer) DetermineArgsForCall(i int) (string, net.IP, []net.IP, []net.IP, []net.IP) {
+func (fake *FakeResolvCompiler) DetermineArgsForCall(i int) (string, net.IP, []net.IP, []net.IP, []net.IP) {
 	fake.determineMutex.RLock()
 	defer fake.determineMutex.RUnlock()
 	return fake.determineArgsForCall[i].resolvContents, fake.determineArgsForCall[i].hostIP, fake.determineArgsForCall[i].pluginNameservers, fake.determineArgsForCall[i].operatorNameservers, fake.determineArgsForCall[i].additionalNameservers
 }
 
-func (fake *FakeNameserversDeterminer) DetermineReturns(result1 []net.IP) {
+func (fake *FakeResolvCompiler) DetermineReturns(result1 []string) {
 	fake.DetermineStub = nil
 	fake.determineReturns = struct {
-		result1 []net.IP
+		result1 []string
 	}{result1}
 }
 
-func (fake *FakeNameserversDeterminer) DetermineReturnsOnCall(i int, result1 []net.IP) {
+func (fake *FakeResolvCompiler) DetermineReturnsOnCall(i int, result1 []string) {
 	fake.DetermineStub = nil
 	if fake.determineReturnsOnCall == nil {
 		fake.determineReturnsOnCall = make(map[int]struct {
-			result1 []net.IP
+			result1 []string
 		})
 	}
 	fake.determineReturnsOnCall[i] = struct {
-		result1 []net.IP
+		result1 []string
 	}{result1}
 }
 
-func (fake *FakeNameserversDeterminer) Invocations() map[string][][]interface{} {
+func (fake *FakeResolvCompiler) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.determineMutex.RLock()
@@ -103,7 +103,7 @@ func (fake *FakeNameserversDeterminer) Invocations() map[string][][]interface{} 
 	return fake.invocations
 }
 
-func (fake *FakeNameserversDeterminer) recordInvocation(key string, args []interface{}) {
+func (fake *FakeResolvCompiler) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -115,4 +115,4 @@ func (fake *FakeNameserversDeterminer) recordInvocation(key string, args []inter
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ kawasaki.NameserversDeterminer = new(FakeNameserversDeterminer)
+var _ kawasaki.ResolvCompiler = new(FakeResolvCompiler)
