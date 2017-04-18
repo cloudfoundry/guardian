@@ -52,14 +52,18 @@ var _ = Describe("BlobReader", func() {
 	})
 
 	Context("when the blob is not gziped", func() {
+		var notABlobFile *os.File
 		BeforeEach(func() {
-			err := ioutil.WriteFile(blobFile.Name(), []byte("im-not-gziped!"), 0700)
+			var err error
+			notABlobFile, err = ioutil.TempFile("", "")
+			Expect(err).NotTo(HaveOccurred())
+			err = ioutil.WriteFile(notABlobFile.Name(), []byte("im-not-gziped!"), 0700)
 			Expect(err).NotTo(HaveOccurred())
 		})
 
 		Describe("NewBlobReader", func() {
 			It("returns an error", func() {
-				_, err := remote.NewBlobReader(blobFile.Name())
+				_, err := remote.NewBlobReader(notABlobFile.Name())
 				Expect(err).To(MatchError(ContainSubstring("blob file is not gzipped")))
 			})
 		})
