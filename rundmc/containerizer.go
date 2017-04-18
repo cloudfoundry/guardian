@@ -40,8 +40,8 @@ type BundleLoader interface {
 
 type OCIRuntime interface {
 	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
-	Exec(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
-	Attach(log lager.Logger, id, bundlePath, processId string, io garden.ProcessIO) (garden.Process, error)
+	Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
 	Delete(log lager.Logger, bundlePath string) error
 	State(log lager.Logger, id string) (runrunc.State, error)

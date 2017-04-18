@@ -26,12 +26,12 @@ type FakeOCIRuntime struct {
 	createReturnsOnCall map[int]struct {
 		result1 error
 	}
-	ExecStub        func(log lager.Logger, id, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	ExecStub        func(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	execMutex       sync.RWMutex
 	execArgsForCall []struct {
 		log        lager.Logger
-		id         string
 		bundlePath string
+		id         string
 		spec       garden.ProcessSpec
 		io         garden.ProcessIO
 	}
@@ -43,12 +43,12 @@ type FakeOCIRuntime struct {
 		result1 garden.Process
 		result2 error
 	}
-	AttachStub        func(log lager.Logger, id, bundlePath, processId string, io garden.ProcessIO) (garden.Process, error)
+	AttachStub        func(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	attachMutex       sync.RWMutex
 	attachArgsForCall []struct {
 		log        lager.Logger
-		id         string
 		bundlePath string
+		id         string
 		processId  string
 		io         garden.ProcessIO
 	}
@@ -180,20 +180,20 @@ func (fake *FakeOCIRuntime) CreateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeOCIRuntime) Exec(log lager.Logger, id string, bundlePath string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeOCIRuntime) Exec(log lager.Logger, bundlePath string, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	fake.execMutex.Lock()
 	ret, specificReturn := fake.execReturnsOnCall[len(fake.execArgsForCall)]
 	fake.execArgsForCall = append(fake.execArgsForCall, struct {
 		log        lager.Logger
-		id         string
 		bundlePath string
+		id         string
 		spec       garden.ProcessSpec
 		io         garden.ProcessIO
-	}{log, id, bundlePath, spec, io})
-	fake.recordInvocation("Exec", []interface{}{log, id, bundlePath, spec, io})
+	}{log, bundlePath, id, spec, io})
+	fake.recordInvocation("Exec", []interface{}{log, bundlePath, id, spec, io})
 	fake.execMutex.Unlock()
 	if fake.ExecStub != nil {
-		return fake.ExecStub(log, id, bundlePath, spec, io)
+		return fake.ExecStub(log, bundlePath, id, spec, io)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -210,7 +210,7 @@ func (fake *FakeOCIRuntime) ExecCallCount() int {
 func (fake *FakeOCIRuntime) ExecArgsForCall(i int) (lager.Logger, string, string, garden.ProcessSpec, garden.ProcessIO) {
 	fake.execMutex.RLock()
 	defer fake.execMutex.RUnlock()
-	return fake.execArgsForCall[i].log, fake.execArgsForCall[i].id, fake.execArgsForCall[i].bundlePath, fake.execArgsForCall[i].spec, fake.execArgsForCall[i].io
+	return fake.execArgsForCall[i].log, fake.execArgsForCall[i].bundlePath, fake.execArgsForCall[i].id, fake.execArgsForCall[i].spec, fake.execArgsForCall[i].io
 }
 
 func (fake *FakeOCIRuntime) ExecReturns(result1 garden.Process, result2 error) {
@@ -235,20 +235,20 @@ func (fake *FakeOCIRuntime) ExecReturnsOnCall(i int, result1 garden.Process, res
 	}{result1, result2}
 }
 
-func (fake *FakeOCIRuntime) Attach(log lager.Logger, id string, bundlePath string, processId string, io garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeOCIRuntime) Attach(log lager.Logger, bundlePath string, id string, processId string, io garden.ProcessIO) (garden.Process, error) {
 	fake.attachMutex.Lock()
 	ret, specificReturn := fake.attachReturnsOnCall[len(fake.attachArgsForCall)]
 	fake.attachArgsForCall = append(fake.attachArgsForCall, struct {
 		log        lager.Logger
-		id         string
 		bundlePath string
+		id         string
 		processId  string
 		io         garden.ProcessIO
-	}{log, id, bundlePath, processId, io})
-	fake.recordInvocation("Attach", []interface{}{log, id, bundlePath, processId, io})
+	}{log, bundlePath, id, processId, io})
+	fake.recordInvocation("Attach", []interface{}{log, bundlePath, id, processId, io})
 	fake.attachMutex.Unlock()
 	if fake.AttachStub != nil {
-		return fake.AttachStub(log, id, bundlePath, processId, io)
+		return fake.AttachStub(log, bundlePath, id, processId, io)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -265,7 +265,7 @@ func (fake *FakeOCIRuntime) AttachCallCount() int {
 func (fake *FakeOCIRuntime) AttachArgsForCall(i int) (lager.Logger, string, string, string, garden.ProcessIO) {
 	fake.attachMutex.RLock()
 	defer fake.attachMutex.RUnlock()
-	return fake.attachArgsForCall[i].log, fake.attachArgsForCall[i].id, fake.attachArgsForCall[i].bundlePath, fake.attachArgsForCall[i].processId, fake.attachArgsForCall[i].io
+	return fake.attachArgsForCall[i].log, fake.attachArgsForCall[i].bundlePath, fake.attachArgsForCall[i].id, fake.attachArgsForCall[i].processId, fake.attachArgsForCall[i].io
 }
 
 func (fake *FakeOCIRuntime) AttachReturns(result1 garden.Process, result2 error) {
