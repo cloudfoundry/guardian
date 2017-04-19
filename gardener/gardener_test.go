@@ -58,6 +58,7 @@ var _ = Describe("Gardener", func() {
 			Logger:          logger,
 			PropertyManager: propertyManager,
 			Restorer:        restorer,
+			MaxContainers:   0,
 		}
 	})
 
@@ -445,18 +446,40 @@ var _ = Describe("Gardener", func() {
 				container, _ := gdnr.Create(containerSpec)
 				Expect(container).To(BeNil())
 			})
+		})
 
-			Context("when containerizer.Handles() returns an error", func() {
+		Describe("MaxContainers", func() {
+			BeforeEach(func() {
+				containerizer.HandlesReturns([]string{"cake1", "cake2", "cake3"}, nil)
+			})
+
+			Context("when MaxContainers = 0", func() {
+				It("succeeds", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("when MaxContainers > 0", func() {
 				BeforeEach(func() {
-					containerizer.HandlesReturns(nil, errors.New("boom"))
+					gdnr.MaxContainers = 3
 				})
 
-				It("forwards the error", func() {
-					containerSpec := garden.ContainerSpec{Handle: "duplicate-banana"}
-					container, err := gdnr.Create(containerSpec)
-					Expect(container).To(BeNil())
-					Expect(err).To(MatchError("boom"))
+				It("returns an error", func() {
+					_, err := gdnr.Create(garden.ContainerSpec{})
+					Expect(err).To(MatchError("max containers reached"))
 				})
+			})
+		})
+
+		Context("when containerizer.Handles() returns an error", func() {
+			BeforeEach(func() {
+				containerizer.HandlesReturns(nil, errors.New("error-fetching-handles"))
+			})
+
+			It("forwards the error", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{})
+				Expect(err).To(MatchError("error-fetching-handles"))
 			})
 		})
 

@@ -550,6 +550,23 @@ var _ = Describe("Creating a Container", func() {
 			}
 		})
 	})
+
+	Context("when creating more than --max-containers containers", func() {
+		BeforeEach(func() {
+			args = []string{"--max-containers", "1"}
+		})
+
+		JustBeforeEach(func() {
+			_, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("returns an error", func() {
+			_, err := client.Create(garden.ContainerSpec{})
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(("max containers reached")))
+		})
+	})
 })
 
 func initProcessPID(handle string) int {

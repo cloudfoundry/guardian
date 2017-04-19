@@ -187,7 +187,19 @@ type Gardener struct {
 // Create creates a container by combining the results of networker.Network,
 // volumizer.Create and containzer.Create.
 func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err error) {
-	if err := g.checkDuplicateHandle(spec.Handle); err != nil {
+	log := g.Logger.Session("create", lager.Data{"handle": spec.Handle})
+	log.Info("start")
+
+	knownHandles, err := g.Containerizer.Handles()
+	if err != nil {
+		return nil, err
+	}
+
+	if err := g.checkDuplicateHandle(knownHandles, spec.Handle); err != nil {
+		return nil, err
+	}
+
+	if err := g.checkMaxContainers(knownHandles); err != nil {
 		return nil, err
 	}
 
@@ -195,9 +207,6 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		spec.Handle = g.UidGenerator.Generate()
 	}
 
-	log := g.Logger.Session("create", lager.Data{"handle": spec.Handle})
-
-	log.Info("start")
 	defer func() {
 		if err != nil {
 			log := log.Session("create-failed-cleaningup", lager.Data{
@@ -459,13 +468,8 @@ func (g *Gardener) BulkMetrics(handles []string) (map[string]garden.ContainerMet
 	return result, nil
 }
 
-func (g *Gardener) checkDuplicateHandle(handle string) error {
-	handles, err := g.Containerizer.Handles()
-	if err != nil {
-		return err
-	}
-
-	if g.exists(handles, handle) {
+func (g *Gardener) checkDuplicateHandle(knownHandles []string, handle string) error {
+	if g.exists(knownHandles, handle) {
 		return fmt.Errorf("Handle '%s' already in use", handle)
 	}
 
@@ -480,6 +484,18 @@ func (g *Gardener) exists(handles []string, handle string) bool {
 	}
 
 	return false
+}
+
+func (g *Gardener) checkMaxContainers(handles []string) error {
+	if g.MaxContainers == 0 {
+		return nil
+	}
+
+	if len(handles) >= int(g.MaxContainers) {
+		return errors.New("max containers reached")
+	}
+
+	return nil
 }
 
 func (g *Gardener) Start() error {
