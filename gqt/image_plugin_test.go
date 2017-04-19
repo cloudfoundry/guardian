@@ -50,7 +50,7 @@ var _ = Describe("Image Plugin", func() {
 
 			args = append(args,
 				"--image-plugin", testImagePluginBin,
-				"--image-plugin-extra-arg", "\"--image-path\"",
+				"--image-plugin-extra-arg", "\"--rootfs-path\"",
 				"--image-plugin-extra-arg", tmpDir,
 				"--image-plugin-extra-arg", "\"--args-path\"",
 				"--image-plugin-extra-arg", filepath.Join(tmpDir, "args"))
@@ -98,7 +98,7 @@ var _ = Describe("Image Plugin", func() {
 				pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 				Expect(pluginArgs).To(Equal([]string{
 					testImagePluginBin,
-					"--image-path", tmpDir,
+					"--rootfs-path", tmpDir,
 					"--args-path", filepath.Join(tmpDir, "args"),
 					"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
 					"create",
@@ -116,9 +116,7 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("when there are env vars", func() {
 				BeforeEach(func() {
-					customImageJsonFile, err := ioutil.TempFile("", "")
-					Expect(err).NotTo(HaveOccurred())
-					imageJson := imageplugin.Image{
+					image := imageplugin.Image{
 						Config: imageplugin.ImageConfig{
 							Env: []string{
 								"MY_VAR=set",
@@ -126,17 +124,17 @@ var _ = Describe("Image Plugin", func() {
 							},
 						},
 					}
-					Expect(json.NewEncoder(customImageJsonFile).Encode(imageJson)).To(Succeed())
-					Expect(os.Chmod(customImageJsonFile.Name(), 0777)).To(Succeed())
+					imageJson, err := json.Marshal(image)
+					Expect(err).NotTo(HaveOccurred())
 
 					args = append(args,
-						"--image-plugin-extra-arg", "\"--json-file-to-copy\"",
-						"--image-plugin-extra-arg", customImageJsonFile.Name(),
+						"--image-plugin-extra-arg", "\"--image-json\"",
+						"--image-plugin-extra-arg", string(imageJson),
 					)
 
 					gardenDefaultRootfs := os.Getenv("GARDEN_TEST_ROOTFS")
 					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"),
-						filepath.Join(tmpDir, "rootfs", "env"))).To(Succeed())
+						filepath.Join(tmpDir, "env"))).To(Succeed())
 				})
 
 				It("loads the image.json env variables", func() {
@@ -268,7 +266,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 					Expect(pluginArgs).To(Equal([]string{
 						testImagePluginBin,
-						"--image-path", tmpDir,
+						"--rootfs-path", tmpDir,
 						"--args-path", filepath.Join(tmpDir, "args"),
 						"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
 						"--metrics-whoami-path", filepath.Join(tmpDir, "metrics-whoami"),
@@ -353,7 +351,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 					Expect(pluginArgs).To(Equal([]string{
 						testImagePluginBin,
-						"--image-path", tmpDir,
+						"--rootfs-path", tmpDir,
 						"--args-path", filepath.Join(tmpDir, "args"),
 						"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
 						"--destroy-whoami-path", filepath.Join(tmpDir, "destroy-whoami"),
@@ -432,7 +430,7 @@ var _ = Describe("Image Plugin", func() {
 
 			args = append(args,
 				"--privileged-image-plugin", testImagePluginBin,
-				"--privileged-image-plugin-extra-arg", "\"--image-path\"",
+				"--privileged-image-plugin-extra-arg", "\"--rootfs-path\"",
 				"--privileged-image-plugin-extra-arg", tmpDir,
 				"--privileged-image-plugin-extra-arg", "\"--args-path\"",
 				"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "args"))
@@ -480,7 +478,7 @@ var _ = Describe("Image Plugin", func() {
 				pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 				Expect(pluginArgs).To(Equal([]string{
 					testImagePluginBin,
-					"--image-path", tmpDir,
+					"--rootfs-path", tmpDir,
 					"--args-path", filepath.Join(tmpDir, "args"),
 					"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
 					"create",
@@ -498,9 +496,7 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("when there are env vars", func() {
 				BeforeEach(func() {
-					customImageJsonFile, err := ioutil.TempFile("", "")
-					Expect(err).NotTo(HaveOccurred())
-					imageJson := imageplugin.Image{
+					image := imageplugin.Image{
 						Config: imageplugin.ImageConfig{
 							Env: []string{
 								"MY_VAR=set",
@@ -508,17 +504,17 @@ var _ = Describe("Image Plugin", func() {
 							},
 						},
 					}
-					Expect(json.NewEncoder(customImageJsonFile).Encode(imageJson)).To(Succeed())
-					Expect(os.Chmod(customImageJsonFile.Name(), 0777)).To(Succeed())
+					imageJson, err := json.Marshal(image)
+					Expect(err).NotTo(HaveOccurred())
 
 					args = append(args,
-						"--privileged-image-plugin-extra-arg", "\"--json-file-to-copy\"",
-						"--privileged-image-plugin-extra-arg", customImageJsonFile.Name(),
+						"--privileged-image-plugin-extra-arg", "\"--image-json\"",
+						"--privileged-image-plugin-extra-arg", string(imageJson),
 					)
 
 					gardenDefaultRootfs := os.Getenv("GARDEN_TEST_ROOTFS")
 					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"),
-						filepath.Join(tmpDir, "rootfs", "env"))).To(Succeed())
+						filepath.Join(tmpDir, "env"))).To(Succeed())
 				})
 
 				It("loads the image.json env variables", func() {
@@ -636,7 +632,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 					Expect(pluginArgs).To(Equal([]string{
 						testImagePluginBin,
-						"--image-path", tmpDir,
+						"--rootfs-path", tmpDir,
 						"--args-path", filepath.Join(tmpDir, "args"),
 						"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
 						"--metrics-whoami-path", filepath.Join(tmpDir, "metrics-whoami"),
@@ -704,7 +700,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 					Expect(pluginArgs).To(Equal([]string{
 						testImagePluginBin,
-						"--image-path", tmpDir,
+						"--rootfs-path", tmpDir,
 						"--args-path", filepath.Join(tmpDir, "args"),
 						"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
 						"--destroy-whoami-path", filepath.Join(tmpDir, "destroy-whoami"),
@@ -786,7 +782,7 @@ var _ = Describe("Image Plugin", func() {
 
 			args = append(args,
 				"--image-plugin", testImagePluginBin,
-				"--image-plugin-extra-arg", "\"--image-path\"",
+				"--image-plugin-extra-arg", "\"--rootfs-path\"",
 				"--image-plugin-extra-arg", tmpDir,
 				"--image-plugin-extra-arg", "\"--create-bin-location-path\"",
 				"--image-plugin-extra-arg", filepath.Join(tmpDir, "create-bin-location"),
@@ -795,7 +791,7 @@ var _ = Describe("Image Plugin", func() {
 				"--image-plugin-extra-arg", "\"--metrics-bin-location-path\"",
 				"--image-plugin-extra-arg", filepath.Join(tmpDir, "metrics-bin-location"),
 				"--privileged-image-plugin", fmt.Sprintf("%s-priv", testImagePluginBin),
-				"--privileged-image-plugin-extra-arg", "\"--image-path\"",
+				"--privileged-image-plugin-extra-arg", "\"--rootfs-path\"",
 				"--privileged-image-plugin-extra-arg", tmpDir,
 				"--privileged-image-plugin-extra-arg", "\"--create-bin-location-path\"",
 				"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "create-bin-location"),
@@ -914,7 +910,7 @@ var _ = Describe("Image Plugin", func() {
 			args = append(args,
 				"--log-level", "debug",
 				"--image-plugin", testImagePluginBin,
-				"--image-plugin-extra-arg", "\"--image-path\"",
+				"--image-plugin-extra-arg", "\"--rootfs-path\"",
 				"--image-plugin-extra-arg", tmpDir,
 				"--image-plugin-extra-arg", "\"--args-path\"",
 				"--image-plugin-extra-arg", filepath.Join(tmpDir, "args"))

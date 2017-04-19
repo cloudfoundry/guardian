@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/urfave/cli"
 
+	"code.cloudfoundry.org/guardian/imageplugin"
 	"github.com/kardianos/osext"
 )
 
@@ -22,8 +24,8 @@ func main() {
 
 	fakeImagePlugin.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "image-path",
-			Usage: "Path to use as image",
+			Name:  "rootfs-path",
+			Usage: "Path to use as rootfs",
 		},
 		cli.StringFlag{
 			Name:  "args-path",
@@ -42,8 +44,8 @@ func main() {
 			Usage: "Path to write uid/gid on metrics",
 		},
 		cli.StringFlag{
-			Name:  "json-file-to-copy",
-			Usage: "Path to json file to opy as image.json",
+			Name:  "image-json",
+			Usage: "Image json to use as image json",
 		},
 		cli.StringFlag{
 			Name:  "create-log-content",
@@ -153,17 +155,18 @@ var CreateCommand = cli.Command{
 			}
 		}
 
-		imagePath := ctx.GlobalString("image-path")
-		if imagePath != "" {
-			rootFSPath := filepath.Join(imagePath, "rootfs")
+		rootfsPath := ctx.GlobalString("rootfs-path")
+		if rootfsPath != "" {
+			rootFSPath := filepath.Join(rootfsPath, "rootfs")
 			if err := os.MkdirAll(rootFSPath, 0777); err != nil {
 				panic(err)
 			}
 		}
 
-		jsonFile := ctx.GlobalString("json-file-to-copy")
-		if jsonFile != "" {
-			if err := copyFile(jsonFile, filepath.Join(imagePath, "image.json")); err != nil {
+		image := &imageplugin.Image{}
+		imageJson := ctx.GlobalString("image-json")
+		if imageJson != "" {
+			if err := json.Unmarshal([]byte(imageJson), image); err != nil {
 				panic(err)
 			}
 		}
@@ -175,7 +178,17 @@ var CreateCommand = cli.Command{
 			log.Info(logContent)
 		}
 
-		fmt.Println(imagePath)
+		output := imageplugin.CreateOutputs{
+			Rootfs: rootfsPath,
+			Image:  *image,
+		}
+
+		b, err := json.Marshal(output)
+		if err != nil {
+			panic(err)
+		}
+
+		fmt.Println(string(b))
 
 		return nil
 	},

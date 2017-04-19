@@ -41,7 +41,6 @@ var _ = Describe("rootless containers", func() {
 
 		imagePath, err := ioutil.TempDir("", "rootlessImagePath")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(filepath.Join(imagePath, "image.json"), []byte("{}"), 0777)).To(Succeed())
 
 		// so much easier to just shell out to the OS here ...
 		Expect(exec.Command("cp", "-r", os.Getenv("GARDEN_TEST_ROOTFS"), imagePath).Run()).To(Succeed())
@@ -51,8 +50,8 @@ var _ = Describe("rootless containers", func() {
 			unprivilegedUser,
 			"--skip-setup",
 			"--image-plugin", testImagePluginBin,
-			"--image-plugin-extra-arg", "\"--image-path\"",
-			"--image-plugin-extra-arg", imagePath,
+			"--image-plugin-extra-arg", "\"--rootfs-path\"",
+			"--image-plugin-extra-arg", filepath.Join(imagePath, "rootfs"),
 			"--network-plugin", "/bin/true",
 			"--tag", tag,
 		)
