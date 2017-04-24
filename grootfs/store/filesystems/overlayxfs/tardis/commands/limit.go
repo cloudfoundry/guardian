@@ -4,7 +4,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	quotapkg "code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/quota"
+	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis/ids"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
@@ -46,7 +48,14 @@ var LimitCommand = cli.Command{
 			Size: uint64(diskLimit),
 		}
 
-		if err := quotaControl.SetQuota(imagePath, quota); err != nil {
+		idDiscoverer := ids.NewDiscoverer(filepath.Join(filepath.Dir(imagesPath), overlayxfs.IDDir))
+		projectID, err := idDiscoverer.Alloc()
+		if err != nil {
+			logger.Error("allocating-project-id", err)
+			return errorspkg.Wrap(err, "allocating project id")
+		}
+
+		if err := quotaControl.SetQuota(projectID, imagePath, quota); err != nil {
 			logger.Error("setting-quota-failed", err)
 			return errorspkg.Wrapf(err, "setting quota to %s", imagePath)
 		}

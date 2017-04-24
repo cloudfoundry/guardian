@@ -166,7 +166,7 @@ func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 		allArgs = append(allArgs, "--config", r.ConfigPath)
 	}
 
-	allArgs = append(allArgs, subcommand)
+	allArgs = append(allArgs, "--lockless", subcommand)
 	allArgs = append(allArgs, args...)
 
 	cmd := exec.Command(r.GrootFSBin, allArgs...)

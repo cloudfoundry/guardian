@@ -2,6 +2,7 @@ package overlayxfs
 
 const (
 	UpperDir       = "diff"
+	IDDir          = "projectids"
 	WorkDir        = "workdir"
 	RootfsDir      = "rootfs"
 	imageInfoName  = "image_info"

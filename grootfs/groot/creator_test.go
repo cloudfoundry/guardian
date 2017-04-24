@@ -249,7 +249,6 @@ var _ = Describe("Creator", func() {
 		Describe("store ownership", func() {
 			BeforeEach(func() {
 				baseImage := groot.BaseImage{
-					VolumePath: "/path/to/volume",
 					BaseImage: specsv1.Image{
 						Author: "Groot",
 					},

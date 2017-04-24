@@ -16,7 +16,7 @@ func NewControl(basePath string) (*Control, error) {
 	return nil, nil
 }
 
-func (q *Control) SetQuota(targetPath string, quota Quota) error {
+func (q *Control) SetQuota(projectId uint32, targetPath string, quota Quota) error {
 	return nil
 }
 

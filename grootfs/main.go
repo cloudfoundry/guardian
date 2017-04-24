@@ -1,8 +1,10 @@
 package main
 
 import (
+	"math/rand"
 	"os"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/commands"
 	"code.cloudfoundry.org/grootfs/commands/config"
@@ -24,6 +26,7 @@ const (
 )
 
 func init() {
+	rand.Seed(time.Now().UnixNano())
 	if reexec.Init() {
 		os.Exit(0)
 	}
@@ -87,6 +90,10 @@ func main() {
 			Name:  "metron-endpoint",
 			Usage: "Metron endpoint used to send metrics",
 			Value: "",
+		},
+		cli.BoolFlag{
+			Name:  "lockless",
+			Usage: "Do not use filesystem lock",
 		},
 	}
 

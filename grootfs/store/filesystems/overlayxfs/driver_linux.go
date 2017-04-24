@@ -38,9 +38,16 @@ func (d *Driver) ConfigureStore(logger lager.Logger, path string, ownerUID, owne
 		return errorspkg.Wrap(err, "Invalid whiteout device")
 	}
 
-	if err := d.createLinksDirectory(logger, path, ownerUID, ownerGID); err != nil {
+	linksDir := filepath.Join(path, LinksDirName)
+	if err := d.createDirectory(logger, linksDir, ownerUID, ownerGID); err != nil {
 		logger.Error("creating-links-directory-failed", err)
 		return errorspkg.Wrap(err, "Create links directory")
+	}
+
+	idsDir := filepath.Join(path, IDDir)
+	if err := d.createDirectory(logger, idsDir, ownerUID, ownerGID); err != nil {
+		logger.Error("creating-ids-directory-failed", err)
+		return errorspkg.Wrap(err, "Create ids directory")
 	}
 
 	return nil
@@ -211,6 +218,10 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	logger.Debug("Moving volume from %s to %s\n", lager.Data{"from": from, "to": to})
 
 	if err := os.Rename(from, to); err != nil {
+		if os.IsExist(err) {
+			return nil
+		}
+
 		logger.Error("moving-volume-failed", err, lager.Data{"from": from, "to": to})
 		return errorspkg.Wrap(err, "moving volume")
 	}
@@ -467,21 +478,20 @@ func (d *Driver) validateWhiteoutDevice(storePath string) error {
 	return nil
 }
 
-func (d *Driver) createLinksDirectory(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
-	linksDir := filepath.Join(storePath, LinksDirName)
-	if err := os.MkdirAll(linksDir, 0755); err != nil {
-		logger.Error("mkdir-links-directory", err, lager.Data{"linksDir": linksDir})
-		return errorspkg.Wrap(err, "creating links directory")
+func (d *Driver) createDirectory(logger lager.Logger, path string, ownerUID, ownerGID int) error {
+	if err := os.MkdirAll(path, 0755); err != nil {
+		logger.Error("mkdir-path", err, lager.Data{"path": path})
+		return errorspkg.Wrap(err, "creating directory")
 	}
 
-	if err := os.Chmod(linksDir, 0755); err != nil {
-		logger.Error("chmoding-links-directory", err, lager.Data{"linksDir": linksDir, "mode": "0755"})
-		return errorspkg.Wrap(err, "chmoding links directory")
+	if err := os.Chmod(path, 0755); err != nil {
+		logger.Error("chmoding-path", err, lager.Data{"path": path, "mode": "0755"})
+		return errorspkg.Wrap(err, "chmoding directory")
 	}
 
-	if err := os.Chown(linksDir, ownerUID, ownerGID); err != nil {
-		logger.Error("chowning-links-directory", err, lager.Data{"linksDir": linksDir, "uid": ownerUID, "gid": ownerGID})
-		return errorspkg.Wrap(err, "creating links directory")
+	if err := os.Chown(path, ownerUID, ownerGID); err != nil {
+		logger.Error("chowning-path", err, lager.Data{"path": path, "uid": ownerUID, "gid": ownerGID})
+		return errorspkg.Wrap(err, "creating directory")
 	}
 
 	return nil

@@ -149,11 +149,11 @@ func NewControl(basePath string) (*Control, error) {
 
 // SetQuota - assign a unique project id to directory and set the quota limits
 // for that project id
-func (q *Control) SetQuota(targetPath string, quota Quota) error {
+func (q *Control) SetQuota(nextProjectID uint32, targetPath string, quota Quota) error {
 
 	projectID, ok := q.quotas[targetPath]
 	if !ok {
-		projectID = q.nextProjectID
+		projectID = nextProjectID
 
 		//
 		// assign project id to new container directory
@@ -164,7 +164,6 @@ func (q *Control) SetQuota(targetPath string, quota Quota) error {
 		}
 
 		q.quotas[targetPath] = projectID
-		q.nextProjectID++
 	}
 
 	//

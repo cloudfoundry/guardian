@@ -58,9 +58,8 @@ type BaseImageSpec struct {
 }
 
 type BaseImage struct {
-	VolumePath string
-	BaseImage  specsv1.Image
-	ChainIDs   []string
+	BaseImage specsv1.Image
+	ChainIDs  []string
 }
 
 type BaseImagePuller interface {

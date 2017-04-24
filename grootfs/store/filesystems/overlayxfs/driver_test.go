@@ -44,6 +44,7 @@ var _ = Describe("Driver", func() {
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.ImageDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, overlayxfs.LinksDirName), 0777)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(StorePath, overlayxfs.IDDir), 0777)).To(Succeed())
 
 		imagePath := filepath.Join(StorePath, store.ImageDirName, fmt.Sprintf("random-id-%d", rand.Int()))
 		Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
@@ -59,6 +60,7 @@ var _ = Describe("Driver", func() {
 		Expect(os.RemoveAll(filepath.Join(StorePath, store.ImageDirName))).To(Succeed())
 		Expect(os.RemoveAll(filepath.Join(StorePath, overlayxfs.LinksDirName))).To(Succeed())
 		Expect(os.RemoveAll(filepath.Join(StorePath, overlayxfs.WhiteoutDevice))).To(Succeed())
+		Expect(os.RemoveAll(filepath.Join(StorePath, overlayxfs.IDDir))).To(Succeed())
 	})
 
 	Describe("CreateImage", func() {
@@ -823,9 +825,9 @@ var _ = Describe("Driver", func() {
 		})
 
 		Context("when the target volume already exists", func() {
-			It("returns an error", func() {
+			It("returns without error", func() {
 				err := driver.MoveVolume(logger, volumePath, filepath.Dir(volumePath))
-				Expect(err).To(MatchError(ContainSubstring("moving volume")))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})

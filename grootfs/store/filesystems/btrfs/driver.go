@@ -91,8 +91,10 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID, id string) (string,
 
 func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	if err := os.Rename(from, to); err != nil {
-		logger.Error("moving-volume-failed", err, lager.Data{"from": from, "to": to})
-		return errorspkg.Wrap(err, "moving volume")
+		if !os.IsExist(err) {
+			logger.Error("moving-volume-failed", err, lager.Data{"from": from, "to": to})
+			return errorspkg.Wrap(err, "moving volume")
+		}
 	}
 
 	return nil

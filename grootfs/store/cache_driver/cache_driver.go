@@ -37,11 +37,6 @@ func (c *CacheDriver) FetchBlob(logger lager.Logger, id string,
 		return nil, 0, errorspkg.Wrap(err, "checking if the blob exists")
 	}
 
-	var (
-		blobFile *os.File
-		reader   *os.File
-	)
-
 	defer func() {
 		if err != nil {
 			c.cleanupCorrupted(logger, id)
@@ -51,7 +46,7 @@ func (c *CacheDriver) FetchBlob(logger lager.Logger, id string,
 	if hasBlob {
 		logger.Debug("cache-hit")
 
-		reader, err = os.Open(c.blobPath(id))
+		reader, err := os.Open(c.blobPath(id))
 		if err != nil {
 			return nil, 0, errorspkg.Wrap(err, "accessing the cached blob")
 		}
@@ -75,15 +70,21 @@ func (c *CacheDriver) FetchBlob(logger lager.Logger, id string,
 		return nil, 0, err
 	}
 
-	blobFile, err = os.OpenFile(c.blobPath(id), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	tempBlobFile, err := ioutil.TempFile("", id)
 	if err != nil {
-		return nil, 0, errorspkg.Wrap(err, "creating cached blob file")
+		return nil, 0, errorspkg.Wrap(err, "creating temporary blob file")
 	}
 
-	_, err = io.Copy(blobFile, bytes.NewReader(blobContent))
+	_, err = io.Copy(tempBlobFile, bytes.NewReader(blobContent))
 	if err != nil {
 		logger.Error("failed-copying-blob-to-cache", err)
 		c.cleanupCorrupted(logger, id)
+	}
+
+	if err := os.Rename(tempBlobFile.Name(), c.blobPath(id)); err != nil {
+		if !os.IsExist(err) {
+			return nil, 0, errorspkg.Wrap(err, "creating cached blob file")
+		}
 	}
 
 	return blobContent, size, nil

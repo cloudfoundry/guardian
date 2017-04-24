@@ -32,6 +32,7 @@ var _ = Describe("Base Image Puller", func() {
 		fakeBaseImagePuller      *grootfakes.FakeBaseImagePuller
 		fakeUnpacker             *base_image_pullerfakes.FakeUnpacker
 		fakeVolumeDriver         *base_image_pullerfakes.FakeVolumeDriver
+		fakeLocksmith            *grootfakes.FakeLocksmith
 		fakeMetricsEmitter       *grootfakes.FakeMetricsEmitter
 		fakeDependencyRegisterer *base_image_pullerfakes.FakeDependencyRegisterer
 		expectedImgDesc          specsv1.Image
@@ -40,6 +41,7 @@ var _ = Describe("Base Image Puller", func() {
 		layersDigest    []base_image_puller.LayerDigest
 
 		remoteBaseImageSrc *url.URL
+		fakeVolumePath     string
 	)
 
 	BeforeEach(func() {
@@ -47,6 +49,7 @@ var _ = Describe("Base Image Puller", func() {
 
 		fakeUnpacker = new(base_image_pullerfakes.FakeUnpacker)
 
+		fakeLocksmith = new(grootfakes.FakeLocksmith)
 		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
 		fakeLocalFetcher = new(base_image_pullerfakes.FakeFetcher)
 		fakeRemoteFetcher = new(base_image_pullerfakes.FakeFetcher)
@@ -72,12 +75,14 @@ var _ = Describe("Base Image Puller", func() {
 		fakeVolumeDriver = new(base_image_pullerfakes.FakeVolumeDriver)
 		fakeVolumeDriver.VolumePathReturns("", errors.New("volume does not exist"))
 		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, _ string) (string, error) {
-			return ioutil.TempDir("", "volume")
+			var err error
+			fakeVolumePath, err = ioutil.TempDir("", "volume")
+			return fakeVolumePath, err
 		}
 
 		fakeDependencyRegisterer = new(base_image_pullerfakes.FakeDependencyRegisterer)
 
-		baseImagePuller = base_image_puller.NewBaseImagePuller(fakeLocalFetcher, fakeRemoteFetcher, fakeUnpacker, fakeVolumeDriver, fakeDependencyRegisterer, fakeMetricsEmitter)
+		baseImagePuller = base_image_puller.NewBaseImagePuller(fakeLocalFetcher, fakeRemoteFetcher, fakeUnpacker, fakeVolumeDriver, fakeDependencyRegisterer, fakeMetricsEmitter, fakeLocksmith)
 		logger = lagertest.NewTestLogger("image-puller")
 
 		var err error
@@ -92,19 +97,6 @@ var _ = Describe("Base Image Puller", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(baseImage.BaseImage).To(Equal(expectedImgDesc))
-	})
-
-	It("returns the last volume's path", func() {
-		fakeVolumeDriver.VolumePathStub = func(_ lager.Logger, id string) (string, error) {
-			return fmt.Sprintf("/path/to/volume/%s", id), nil
-		}
-
-		baseImage, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
-			BaseImageSrc: remoteBaseImageSrc,
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(baseImage.VolumePath).To(Equal("/path/to/volume/chain-333"))
 	})
 
 	It("returns the chain ids", func() {
@@ -124,15 +116,15 @@ var _ = Describe("Base Image Puller", func() {
 		Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(3))
 		_, parentChainID, chainID := fakeVolumeDriver.CreateVolumeArgsForCall(0)
 		Expect(parentChainID).To(BeEmpty())
-		Expect(chainID).To(MatchRegexp("layer-111-\\d*-\\d*"))
+		Expect(chainID).To(MatchRegexp("layer-111-incomplete-\\d*-\\d*"))
 
 		_, parentChainID, chainID = fakeVolumeDriver.CreateVolumeArgsForCall(1)
 		Expect(parentChainID).To(Equal("layer-111"))
-		Expect(chainID).To(MatchRegexp("chain-222-\\d*-\\d*"))
+		Expect(chainID).To(MatchRegexp("chain-222-incomplete-\\d*-\\d*"))
 
 		_, parentChainID, chainID = fakeVolumeDriver.CreateVolumeArgsForCall(2)
 		Expect(parentChainID).To(Equal("chain-222"))
-		Expect(chainID).To(MatchRegexp("chain-333-\\d*-\\d*"))
+		Expect(chainID).To(MatchRegexp("chain-333-incomplete-\\d*-\\d*"))
 	})
 
 	It("unpacks the layers to the respective temporary volumes", func() {
@@ -154,11 +146,11 @@ var _ = Describe("Base Image Puller", func() {
 
 		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
 		_, unpackSpec := fakeUnpacker.UnpackArgsForCall(0)
-		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "layer-111-\\d*-\\d*")))
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "layer-111-incomplete-\\d*-\\d*")))
 		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(1)
-		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-222-\\d*-\\d*")))
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-222-incomplete-\\d*-\\d*")))
 		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
-		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-333-\\d*-\\d*")))
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-333-incomplete-\\d*-\\d*")))
 	})
 
 	It("unpacks the layers got from the fetcher", func() {
@@ -217,6 +209,21 @@ var _ = Describe("Base Image Puller", func() {
 		_, metricName, fromTime := fakeMetricsEmitter.TryEmitDurationFromArgsForCall(0)
 		Expect(metricName).To(Equal(base_image_puller.MetricsUnpackTimeName))
 		Expect(fromTime.Unix()).To(BeNumerically("~", start.Unix(), 1))
+	})
+
+	It("uses the locksmith for each layer", func() {
+		_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+			BaseImageSrc: remoteBaseImageSrc,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(fakeLocksmith.LockCallCount()).To(Equal(3))
+		Expect(fakeLocksmith.UnlockCallCount()).To(Equal(3))
+
+		for i, layer := range layersDigest {
+			chainID := fakeLocksmith.LockArgsForCall(len(layersDigest) - 1 - i)
+			Expect(chainID).To(Equal(layer.ChainID))
+		}
 	})
 
 	Context("when registration fails", func() {
@@ -389,11 +396,11 @@ var _ = Describe("Base Image Puller", func() {
 			spec.OwnerUID = 10000
 			spec.OwnerGID = 5000
 
-			image, err := baseImagePuller.Pull(logger, spec)
+			_, err := baseImagePuller.Pull(logger, spec)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(image.VolumePath)
-			volumePath, err := os.Stat(image.VolumePath)
+			Expect(fakeVolumePath).To(BeADirectory())
+			volumePath, err := os.Stat(fakeVolumePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10000)))
 			Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(5000)))
@@ -404,11 +411,11 @@ var _ = Describe("Base Image Puller", func() {
 				spec.OwnerUID = 0
 				spec.OwnerGID = 0
 
-				image, err := baseImagePuller.Pull(logger, spec)
+				_, err := baseImagePuller.Pull(logger, spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(image.VolumePath)
-				volumePath, err := os.Stat(image.VolumePath)
+				Expect(fakeVolumePath).To(BeADirectory())
+				volumePath, err := os.Stat(fakeVolumePath)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
 				Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
@@ -420,11 +427,11 @@ var _ = Describe("Base Image Puller", func() {
 				spec.OwnerUID = 0
 				spec.OwnerGID = 5000
 
-				image, err := baseImagePuller.Pull(logger, spec)
+				_, err := baseImagePuller.Pull(logger, spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(image.VolumePath)
-				volumePath, err := os.Stat(image.VolumePath)
+				Expect(fakeVolumePath).To(BeADirectory())
+				volumePath, err := os.Stat(fakeVolumePath)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
 				Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(5000)))
@@ -436,11 +443,11 @@ var _ = Describe("Base Image Puller", func() {
 				spec.OwnerUID = 10000
 				spec.OwnerGID = 0
 
-				image, err := baseImagePuller.Pull(logger, spec)
+				_, err := baseImagePuller.Pull(logger, spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(image.VolumePath)
-				volumePath, err := os.Stat(image.VolumePath)
+				Expect(fakeVolumePath).To(BeADirectory())
+				volumePath, err := os.Stat(fakeVolumePath)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10000)))
 				Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
@@ -460,6 +467,16 @@ var _ = Describe("Base Image Puller", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(0))
+		})
+
+		It("doesn't need to use the locksmith", func() {
+			_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+				BaseImageSrc: remoteBaseImageSrc,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeLocksmith.LockCallCount()).To(Equal(0))
+			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(0))
 		})
 	})
 
@@ -481,7 +498,19 @@ var _ = Describe("Base Image Puller", func() {
 
 			Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(1))
 			_, _, volID := fakeVolumeDriver.CreateVolumeArgsForCall(0)
-			Expect(volID).To(MatchRegexp("chain-333-(\\d*)-(\\d*)"))
+			Expect(volID).To(MatchRegexp("chain-333-incomplete-(\\d*)-(\\d*)"))
+		})
+
+		It("uses the locksmith for the other volumes", func() {
+			_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+				BaseImageSrc: remoteBaseImageSrc,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
+			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
+
+			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal("chain-333"))
 		})
 	})
 

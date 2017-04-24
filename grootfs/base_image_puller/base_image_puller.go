@@ -71,9 +71,10 @@ type BaseImagePuller struct {
 	volumeDriver         VolumeDriver
 	dependencyRegisterer DependencyRegisterer
 	metricsEmitter       groot.MetricsEmitter
+	locksmith            groot.Locksmith
 }
 
-func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer, metricsEmitter groot.MetricsEmitter) *BaseImagePuller {
+func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer, metricsEmitter groot.MetricsEmitter, locksmith groot.Locksmith) *BaseImagePuller {
 	return &BaseImagePuller{
 		localFetcher:         localFetcher,
 		remoteFetcher:        remoteFetcher,
@@ -81,6 +82,7 @@ func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, 
 		volumeDriver:         volumeDriver,
 		dependencyRegisterer: dependencyRegisterer,
 		metricsEmitter:       metricsEmitter,
+		locksmith:            locksmith,
 	}
 }
 
@@ -100,7 +102,7 @@ func (p *BaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (g
 		return groot.BaseImage{}, err
 	}
 
-	volumePath, err := p.buildLayer(logger, len(baseImageInfo.LayersDigest)-1, baseImageInfo.LayersDigest, spec)
+	err = p.buildLayer(logger, len(baseImageInfo.LayersDigest)-1, baseImageInfo.LayersDigest, spec)
 	if err != nil {
 		return groot.BaseImage{}, err
 	}
@@ -112,9 +114,8 @@ func (p *BaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (g
 	}
 
 	baseImage := groot.BaseImage{
-		BaseImage:  baseImageInfo.Config,
-		ChainIDs:   chainIDs,
-		VolumePath: volumePath,
+		BaseImage: baseImageInfo.Config,
+		ChainIDs:  chainIDs,
 	}
 	return baseImage, nil
 }
@@ -154,62 +155,85 @@ func (p *BaseImagePuller) chainIDs(layersDigest []LayerDigest) []string {
 	return chainIDs
 }
 
-func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDigest []LayerDigest, spec groot.BaseImageSpec) (string, error) {
-	if index < 0 {
-		return "", nil
-	}
-
-	digest := layersDigest[index]
+func (p *BaseImagePuller) volumeExists(logger lager.Logger, digest LayerDigest) bool {
 	volumePath, err := p.volumeDriver.VolumePath(logger, digest.ChainID)
 	if err == nil {
 		logger.Debug("volume-exists", lager.Data{
-			"volumePath":    volumePath,
-			"blobID":        digest.BlobID,
-			"chainID":       digest.ChainID,
-			"parentChainID": digest.ParentChainID,
+			"volumePath": volumePath,
 		})
-		return volumePath, nil
+
+		return true
 	}
 
-	if _, err := p.buildLayer(logger, index-1, layersDigest, spec); err != nil {
-		return "", err
+	return false
+}
+
+func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDigest []LayerDigest, spec groot.BaseImageSpec) error {
+	if index < 0 {
+		return nil
 	}
 
+	digest := layersDigest[index]
+	logger = logger.Session("build-layer", lager.Data{
+		"blobID":        digest.BlobID,
+		"chainID":       digest.ChainID,
+		"parentChainID": digest.ParentChainID,
+	})
+	if p.volumeExists(logger, digest) {
+		return nil
+	}
+
+	lockFile, err := p.locksmith.Lock(digest.ChainID)
+	if err != nil {
+		return errorspkg.Wrap(err, "acquiring lock")
+	}
+	defer p.locksmith.Unlock(lockFile)
+
+	if p.volumeExists(logger, digest) {
+		return nil
+	}
+
+	downloadChan := make(chan downloadReturn, 1)
+	go p.downloadLayer(logger, spec, digest, downloadChan)
+
+	if err := p.buildLayer(logger, index-1, layersDigest, spec); err != nil {
+		return err
+	}
+
+	downloadResult := <-downloadChan
+	if downloadResult.Err != nil {
+		return downloadResult.Err
+	}
+
+	defer downloadResult.Stream.Close()
+
+	return p.unpackLayer(logger, digest, spec, downloadResult.Stream)
+}
+
+type downloadReturn struct {
+	Stream io.ReadCloser
+	Err    error
+}
+
+func (p *BaseImagePuller) downloadLayer(logger lager.Logger, spec groot.BaseImageSpec, digest LayerDigest, downloadChan chan downloadReturn) {
 	stream, size, err := p.fetcher(spec.BaseImageSrc).StreamBlob(logger, spec.BaseImageSrc, digest.BlobID)
 	if err != nil {
-		return "", errorspkg.Wrapf(err, "streaming blob `%s`", digest.BlobID)
+		err = errorspkg.Wrapf(err, "streaming blob `%s`", digest.BlobID)
 	}
-	defer stream.Close()
 
 	logger.Debug("got-stream-for-blob", lager.Data{
 		"size":                      size,
 		"diskLimit":                 spec.DiskLimit,
 		"excludeBaseImageFromQuota": spec.ExcludeBaseImageFromQuota,
-		"blobID":                    digest.BlobID,
-		"chainID":                   digest.ChainID,
-		"parentChainID":             digest.ParentChainID,
 	})
 
-	tempVolumeName := fmt.Sprintf("%s-%d-%d", digest.ChainID, time.Now().Unix(), rand.Int())
-	volumePath, err = p.volumeDriver.CreateVolume(logger,
-		digest.ParentChainID,
-		tempVolumeName,
-	)
+	downloadChan <- downloadReturn{Stream: stream, Err: err}
+}
+
+func (p *BaseImagePuller) unpackLayer(logger lager.Logger, digest LayerDigest, spec groot.BaseImageSpec, stream io.ReadCloser) error {
+	tempVolumeName, volumePath, err := p.createTemporaryVolumeDirectory(logger, digest, spec)
 	if err != nil {
-		return "", errorspkg.Wrapf(err, "creating volume for layer `%s`", digest.BlobID)
-	}
-	logger.Debug("volume-created", lager.Data{
-		"volumePath":    volumePath,
-		"blobID":        digest.BlobID,
-		"chainID":       digest.ChainID,
-		"parentChainID": digest.ParentChainID,
-	})
-
-	if spec.OwnerUID != 0 || spec.OwnerGID != 0 {
-		err = os.Chown(volumePath, spec.OwnerUID, spec.OwnerGID)
-		if err != nil {
-			return "", errorspkg.Wrapf(err, "changing volume ownership to %d:%d", spec.OwnerUID, spec.OwnerGID)
-		}
+		return err
 	}
 
 	unpackSpec := UnpackSpec{
@@ -219,31 +243,60 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 		GIDMappings: spec.GIDMappings,
 	}
 
+	err = p.unpackLayerToTemporaryDirectory(logger, unpackSpec, digest)
+	if err != nil {
+		return err
+	}
+
+	err = p.finalizeVolume(logger, tempVolumeName, volumePath, digest.ChainID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, digest LayerDigest, spec groot.BaseImageSpec) (string, string, error) {
+	tempVolumeName := fmt.Sprintf("%s-incomplete-%d-%d", digest.ChainID, time.Now().UnixNano(), rand.Int())
+	volumePath, err := p.volumeDriver.CreateVolume(logger,
+		digest.ParentChainID,
+		tempVolumeName,
+	)
+	if err != nil {
+		return "", "", errorspkg.Wrapf(err, "creating volume for layer `%s`", digest.BlobID)
+	}
+	logger.Debug("volume-created", lager.Data{"volumePath": volumePath})
+
+	if spec.OwnerUID != 0 || spec.OwnerGID != 0 {
+		err = os.Chown(volumePath, spec.OwnerUID, spec.OwnerGID)
+		if err != nil {
+			return "", "", errorspkg.Wrapf(err, "changing volume ownership to %d:%d", spec.OwnerUID, spec.OwnerGID)
+		}
+	}
+
+	return tempVolumeName, volumePath, nil
+}
+
+func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, digest LayerDigest) error {
 	unpackStarted := time.Now()
 	if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
 		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
-			logger.Error("volume-cleanup-failed", errD, lager.Data{
-				"blobID":        digest.BlobID,
-				"chainID":       digest.ChainID,
-				"parentChainID": digest.ParentChainID,
-			})
+			logger.Error("volume-cleanup-failed", errD)
 		}
 		p.metricsEmitter.TryEmitDurationFrom(logger, MetricsFailedUnpackTimeName, unpackStarted)
-		return "", errorspkg.Wrapf(err, "unpacking layer `%s`", digest.BlobID)
+		return errorspkg.Wrapf(err, "unpacking layer `%s`", digest.BlobID)
 	}
 	p.metricsEmitter.TryEmitDurationFrom(logger, MetricsUnpackTimeName, unpackStarted)
-	logger.Debug("layer-unpacked", lager.Data{
-		"blobID":        digest.BlobID,
-		"chainID":       digest.ChainID,
-		"parentChainID": digest.ParentChainID,
-	})
+	logger.Debug("layer-unpacked")
+	return nil
+}
 
-	finalVolumePath := strings.Replace(volumePath, tempVolumeName, digest.ChainID, 1)
+func (p *BaseImagePuller) finalizeVolume(logger lager.Logger, tempVolumeName, volumePath, chainID string) error {
+	finalVolumePath := strings.Replace(volumePath, tempVolumeName, chainID, 1)
 	if err := p.volumeDriver.MoveVolume(logger, volumePath, finalVolumePath); err != nil {
-		return "", errorspkg.Wrapf(err, "failed to move volume to its final location")
+		return errorspkg.Wrapf(err, "failed to move volume to its final location")
 	}
-
-	return volumePath, nil
+	return nil
 }
 
 func (p *BaseImagePuller) layersSize(layerDigests []LayerDigest) int64 {

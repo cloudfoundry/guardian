@@ -465,9 +465,9 @@ var _ = Describe("Btrfs", func() {
 		})
 
 		Context("when the target volume already exists", func() {
-			It("returns an error", func() {
+			It("returns without error", func() {
 				err := driver.MoveVolume(logger, volumePath, filepath.Dir(volumePath))
-				Expect(err).To(MatchError(ContainSubstring("moving volume")))
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})
