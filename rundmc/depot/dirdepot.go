@@ -20,16 +20,23 @@ type BundleSaver interface {
 	Save(bundle goci.Bndl, path string) error
 }
 
+//go:generate counterfeiter . Chowner
+type Chowner interface {
+	Chown(path string, uid, gid int) error
+}
+
 // a depot which stores containers as subdirs of a depot directory
 type DirectoryDepot struct {
 	dir         string
 	bundleSaver BundleSaver
+	chowner     Chowner
 }
 
-func New(dir string, bundleSaver BundleSaver) *DirectoryDepot {
+func New(dir string, bundleSaver BundleSaver, chowner Chowner) *DirectoryDepot {
 	return &DirectoryDepot{
 		dir:         dir,
 		bundleSaver: bundleSaver,
+		chowner:     chowner,
 	}
 }
 
@@ -45,10 +52,12 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle goci.Bnd
 		return err
 	}
 
-	if err := touchFile(filepath.Join(containerDir, "hosts")); err != nil {
+	containerRootHostUID := mappingForContainerRoot(bundle.UIDMappings())
+	containerRootHostGID := mappingForContainerRoot(bundle.GIDMappings())
+	if err := d.createFile(log, filepath.Join(containerDir, "hosts"), int(containerRootHostUID), containerRootHostGID); err != nil {
 		return err
 	}
-	if err := touchFile(filepath.Join(containerDir, "resolv.conf")); err != nil {
+	if err := d.createFile(log, filepath.Join(containerDir, "resolv.conf"), int(containerRootHostUID), containerRootHostGID); err != nil {
 		return err
 	}
 
@@ -127,10 +136,33 @@ func removeOrLog(log lager.Logger, path string) {
 	}
 }
 
+func (d *DirectoryDepot) createFile(log lager.Logger, path string, containerRootHostUID, containerRootHostGID int) error {
+	if err := touchFile(path); err != nil {
+		return err
+	}
+	if err := d.chowner.Chown(path, containerRootHostUID, containerRootHostGID); err != nil {
+		wrappedErr := fmt.Errorf("error chowning %s: %s", filepath.Base(path), err)
+		log.Error("chowning-failed", wrappedErr)
+		return wrappedErr
+	}
+
+	return nil
+}
+
 func touchFile(path string) error {
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 	return file.Close()
+}
+
+func mappingForContainerRoot(mappings []specs.LinuxIDMapping) int {
+	for _, mapping := range mappings {
+		if mapping.ContainerID == 0 {
+			return int(mapping.HostID)
+		}
+	}
+
+	return 0
 }

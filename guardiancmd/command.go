@@ -693,7 +693,7 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	depotPath, dadooPath, runcPath, nstarPath, tarPath, appArmorProfile, newuidmapPath, newgidmapPath string,
 	properties gardener.PropertyManager) *rundmc.Containerizer {
-	depot := depot.New(depotPath, &goci.BundleSaver{})
+	depot := depot.New(depotPath, &goci.BundleSaver{}, &depot.OSChowner{})
 
 	commandRunner := linux_command_runner.New()
 	chrootMkdir := bundlerules.ChrootMkdir{

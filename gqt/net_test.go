@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -130,6 +131,25 @@ var _ = Describe("Networking", func() {
 		Expect(out).To(ContainSubstring(" 0% packet loss"))
 	})
 
+	itShouldLookupContainerUsingHandle := func(container garden.Container, containerHostsEntry string) {
+		buff := gbytes.NewBuffer()
+		p, err := container.Run(garden.ProcessSpec{
+			Path: "cat",
+			Args: []string{"/etc/hosts"},
+		}, garden.ProcessIO{
+			Stdout: buff,
+			Stderr: buff,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		code, err := p.Wait()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(code).To(Equal(0))
+
+		hostsFile := string(buff.Contents())
+		Expect(hostsFile).To(ContainSubstring(fmt.Sprintf("%s\n", containerHostsEntry)))
+	}
+
 	Context("when container handle is longer than 49 chars", func() {
 		var (
 			longHandle          string = "too-looooong-haaaaaaaaaaaaaannnnnndddle-1234456787889"
@@ -150,45 +170,94 @@ var _ = Describe("Networking", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		itShouldLookupContainerUsingHandle := func() {
-			buff := gbytes.NewBuffer()
-			p, err := longHandleContainer.Run(garden.ProcessSpec{
-				Path: "cat",
-				Args: []string{"/etc/hosts"},
-			}, garden.ProcessIO{
-				Stdout: buff,
-				Stderr: buff,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			code, err := p.Wait()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(code).To(Equal(0))
-
-			hostsFile := string(buff.Contents())
-			Expect(hostsFile).NotTo(ContainSubstring(longHandle))
-			Expect(hostsFile).To(ContainSubstring(longHandle[len(longHandle)-49:]))
-		}
-
 		It("should lookup container ip using last 49 chars of handle as hostname", func() {
-			itShouldLookupContainerUsingHandle()
+			itShouldLookupContainerUsingHandle(longHandleContainer, longHandle[len(longHandle)-49:])
+		})
+	})
+
+	Context("when the rootFS does not contain /etc/hosts or /etc/resolv.conf", func() {
+		var (
+			rootFSWithoutHostsAndResolv string
+			rootFSPath                  string
+		)
+
+		BeforeEach(func() {
+			rootFSWithoutHostsAndResolv = createRootFSWithoutHostsAndResolv()
+			rootFSPath = fmt.Sprintf("raw://%s", rootFSWithoutHostsAndResolv)
 		})
 
-		Context("when the rootFS does not contain /etc/hosts", func() {
-			var rootFSWithoutHostsAndResolv string
+		AfterEach(func() {
+			Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
+		})
 
-			BeforeEach(func() {
-				rootFSWithoutHostsAndResolv = createRootFSWithoutHostsAndResolv()
-				rootFSPath = fmt.Sprintf("raw://%s", rootFSWithoutHostsAndResolv)
-			})
+		It("adds it and an entry with container IP and handle", func() {
+			itShouldLookupContainerUsingHandle(container, container.Handle())
+		})
 
-			AfterEach(func() {
-				Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
+		It("allows container root to write /etc/hosts", func() {
+			p, err := container.Run(garden.ProcessSpec{
+				Path: "/bin/sh",
+				Args: []string{
+					"-c",
+					"echo NONSENSE > /etc/hosts",
+				},
+			}, garden.ProcessIO{
+				Stdout: GinkgoWriter,
+				Stderr: GinkgoWriter,
 			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Wait()).To(Equal(0))
+		})
 
-			It("adds it and an entry with container IP and truncated handle", func() {
-				itShouldLookupContainerUsingHandle()
+		It("doesn't allow container non-root to write /etc/hosts", func() {
+			var stderr bytes.Buffer
+			p, err := container.Run(garden.ProcessSpec{
+				Path: "/bin/sh",
+				Args: []string{
+					"-c",
+					"echo NONSENSE > /etc/hosts",
+				},
+				User: "alice",
+			}, garden.ProcessIO{
+				Stdout: GinkgoWriter,
+				Stderr: io.MultiWriter(&stderr, GinkgoWriter),
 			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Wait()).To(Equal(1))
+			Expect(stderr.String()).To(ContainSubstring("Permission denied"))
+		})
+
+		It("allows container root to write /etc/resolv.conf", func() {
+			p, err := container.Run(garden.ProcessSpec{
+				Path: "/bin/sh",
+				Args: []string{
+					"-c",
+					"echo NONSENSE > /etc/resolv.conf",
+				},
+			}, garden.ProcessIO{
+				Stdout: GinkgoWriter,
+				Stderr: GinkgoWriter,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Wait()).To(Equal(0))
+		})
+
+		It("doesn't allow container non-root to write /etc/resolv.conf", func() {
+			var stderr bytes.Buffer
+			p, err := container.Run(garden.ProcessSpec{
+				Path: "/bin/sh",
+				Args: []string{
+					"-c",
+					"echo NONSENSE > /etc/resolv.conf",
+				},
+				User: "alice",
+			}, garden.ProcessIO{
+				Stdout: GinkgoWriter,
+				Stderr: io.MultiWriter(&stderr, GinkgoWriter),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(p.Wait()).To(Equal(1))
+			Expect(stderr.String()).To(ContainSubstring("Permission denied"))
 		})
 	})
 
