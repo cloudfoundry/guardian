@@ -14,7 +14,7 @@ func SuidBinary(binPath string) {
 		GinkgoWriter, GinkgoWriter,
 	)
 	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	Eventually(sess, "5s").Should(gexec.Exit(0))
 
 	sess, err = gexec.Start(
 		exec.Command("sudo", "chmod", "u+s", binPath),
