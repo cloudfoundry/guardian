@@ -13,9 +13,12 @@ import (
 )
 
 var _ = Describe("Concurrent creations", func() {
+	BeforeEach(func() {
+		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+	})
+
 	Context("warm cache", func() {
 		BeforeEach(func() {
-			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 			// run this to setup the store before concurrency!
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "test-pre-warm",
