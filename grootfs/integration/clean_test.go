@@ -164,7 +164,7 @@ var _ = Describe("Clean", func() {
 
 				Context("and the total is less than the threshold", func() {
 					BeforeEach(func() {
-						cleanupThresholdInBytes = 50000000
+						cleanupThresholdInBytes = 500000000
 					})
 
 					It("does not remove the unused volumes", func() {
