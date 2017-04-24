@@ -1,2 +1,6 @@
 #!/bin/bash -e
+
+
+[ -n $DRACO ] && export FLY_TARGET="grootfs-ci"
+
 ./hack/run-tests -p $@

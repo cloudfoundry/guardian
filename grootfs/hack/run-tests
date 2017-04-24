@@ -20,6 +20,7 @@ usage() {
   print_message "run-tests -g <Ginkgo arguments> --- pass custom parameters to Ginkgo" $colour
   print_message "run-tests -r --- run test suites under the provided path recursively" $colour
   print_message "run-tests -f --- run all tests in Concourse" $colour
+  print_message "run-tests -d --- run all tests in Gamora Concourse (not Lite)" $colour
   print_message "run-tests -h --- print help menu" $colour
 }
 
@@ -158,7 +159,7 @@ test_path=""
 GINKGO_ARGS=""
 RECURSIVE=0
 FORCE_FLY=0
-while getopts "p:g:rhf" OPTION
+while getopts "p:g:rhfd" OPTION
 do
   case $OPTION in
     p)
@@ -177,6 +178,9 @@ do
     r)
       RECURSIVE=1
       ;;
+    d)
+      FLY_TARGET=grootfs-ci
+      ;;
     *)
       usage $RED
       exit
@@ -192,6 +196,7 @@ fi
 
 print_message "ginkgo_args='$GINKGO_ARGS'" $GREEN
 print_message "recursive=$RECURSIVE" $GREEN
+print_message "fly_target=$FLY_TARGET" $GREEN
 print_message "force_fly=$FORCE_FLY" $GREEN
 print_message "test_path='$test_path'" $GREEN
 run_tests $test_path

@@ -1,5 +1,5 @@
 .PHONY: all \
-	test concourse-groot-test concourse-root-test concourse-test \
+	concourse-test dracorex-test \
 	go-vet concourse-go-vet go-generate \
 	image push-image \
 	update-deps
@@ -19,8 +19,8 @@ help:
 	@echo '    windows ............................. builds grootfs for windows'
 	@echo '    deps ................................ installs dependencies'
 	@echo '    update-deps ......................... updates dependencies'
-	@echo '    test ................................ runs tests locally'
 	@echo '    concourse-test ...................... runs tests in concourse-lite'
+	@echo '    dracorex-test ....................... runs tests on remote CI'
 	@echo '    compile-tests ....................... checks that tests can be compiled'
 	@echo '    go-vet .............................. runs go vet in grootfs source code'
 	@echo '    concourse-go-vet .................... runs go vet in concourse-lite'
@@ -38,11 +38,11 @@ deps:
 compile-tests:
 	ginkgo build -r .; find . -name '*.test' | xargs rm
 
-test:
-	ginkgo -r -p -race -skipPackage integration .
-
 concourse-test: go-vet
 	./hack/run-tests -r -g "-p"
+
+dracorex-test:
+	./hack/run-tests -d -r -g "-p"
 
 ###### Go tools ###############################################################
 
