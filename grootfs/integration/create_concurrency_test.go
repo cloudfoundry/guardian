@@ -2,10 +2,8 @@ package integration_test
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -89,7 +87,6 @@ var _ = Describe("Concurrent creations", func() {
 		It("can create multiple rootfses of the same image concurrently", func() {
 			wg := new(sync.WaitGroup)
 
-			start := time.Now()
 			for i := 0; i < 20; i++ {
 				wg.Add(1)
 				go func(wg *sync.WaitGroup, idx int) {
@@ -98,7 +95,7 @@ var _ = Describe("Concurrent creations", func() {
 
 					image, err := Runner.Create(groot.CreateSpec{
 						ID:                        fmt.Sprintf("test-%d", idx),
-						BaseImage:                 "docker:///node",
+						BaseImage:                 "docker:///ubuntu",
 						Mount:                     true,
 						DiskLimit:                 2*1024*1024 + 512*1024,
 						ExcludeBaseImageFromQuota: true,
@@ -109,8 +106,6 @@ var _ = Describe("Concurrent creations", func() {
 			}
 
 			wg.Wait()
-
-			fmt.Fprintf(os.Stderr, "-> DURATION: %fs", time.Since(start).Seconds)
 		})
 	})
 })
