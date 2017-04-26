@@ -32,6 +32,7 @@ func save(value interface{}, path string) error {
 	if err != nil {
 		return fmt.Errorf("Failed to save bundle: %s", err)
 	}
+	defer w.Close()
 
 	return json.NewEncoder(w).Encode(value)
 }

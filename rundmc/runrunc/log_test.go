@@ -35,6 +35,7 @@ var _ = Describe("RunAndLog", func() {
 		var err error
 		logFile, err = ioutil.TempFile("", "runandlog")
 		Expect(err).NotTo(HaveOccurred())
+		Expect(logFile.Close()).To(Succeed())
 
 		logRunner = runrunc.NewLogRunner(commandRunner, func() (*os.File, error) {
 			return logFile, nil
@@ -109,6 +110,8 @@ var _ = Describe("RunAndLog", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(a.Name()).NotTo(Equal(b.Name()))
+			Expect(a.Close()).To(Succeed())
+			Expect(b.Close()).To(Succeed())
 			Expect(os.Remove(a.Name())).To(Succeed())
 			Expect(os.Remove(b.Name())).To(Succeed())
 		})
@@ -121,6 +124,7 @@ var _ = Describe("RunAndLog", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(b.Name()).To(HavePrefix(dir))
+			Expect(b.Close()).To(Succeed())
 			Expect(os.RemoveAll(dir)).To(Succeed())
 		})
 	})

@@ -65,6 +65,6 @@ var _ = Describe("Resolver", func() {
 
 	It("returns an error if the state.json doesn't exist", func() {
 		_, err := stopper.NewRuncStateCgroupPathResolver(fakeStateDir).Resolve("some-handle", "devices")
-		Expect(err).To(MatchError(ContainSubstring("no such file")))
+		Expect(os.IsNotExist(err)).To(BeTrue())
 	})
 })
