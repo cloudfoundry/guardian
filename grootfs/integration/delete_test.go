@@ -4,9 +4,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
+	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/store"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -98,6 +101,27 @@ var _ = Describe("Delete", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(outBuffer).Should(gbytes.Say("Image `non-existing-id` not found. Skipping delete."))
+		})
+	})
+
+	Context("when it fails to delete the image", func() {
+		var mntPoint string
+
+		JustBeforeEach(func() {
+			mntPoint = filepath.Join(image.Path, "mnt")
+			Expect(os.Mkdir(mntPoint, 0700)).To(Succeed())
+			Expect(syscall.Mount(os.TempDir(), mntPoint, "none", syscall.MS_BIND, "")).To(Succeed())
+		})
+
+		AfterEach(func() {
+			Expect(syscall.Unmount(mntPoint, syscall.MNT_DETACH)).To(Succeed())
+		})
+
+		It("doesn't remove the metadata file", func() {
+			metadataPath := filepath.Join(StorePath, store.MetaDirName, "dependencies", "image:random-id.json")
+			Expect(metadataPath).To(BeAnExistingFile())
+			Expect(Runner.Delete(image.Path)).To(MatchError(ContainSubstring("deleting image path")))
+			Expect(metadataPath).To(BeAnExistingFile())
 		})
 	})
 

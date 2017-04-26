@@ -138,11 +138,13 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 	}
 
 	imagePath := b.imagePath(id)
-	if err := b.imageDriver.DestroyImage(logger, imagePath); err != nil {
-		return errorspkg.Wrap(err, "destroying image")
+	volDriverErr := b.imageDriver.DestroyImage(logger, imagePath)
+	if volDriverErr != nil {
+		logger.Error("destroying-image-failed", volDriverErr)
 	}
 
 	if err := b.deleteImageDir(imagePath); err != nil {
+		logger.Error("deleting-image-dir-failed", err, lager.Data{"volumeDriverError": volDriverErr})
 		return errorspkg.Wrap(err, "deleting image path")
 	}
 

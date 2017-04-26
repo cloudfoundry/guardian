@@ -234,7 +234,7 @@ var _ = Describe("Metrics", func() {
 				}).Should(HaveLen(1))
 
 				Expect(*errors[0].Source).To(Equal("grootfs-error.delete"))
-				Expect(*errors[0].Message).To(ContainSubstring("destroying image"))
+				Expect(*errors[0].Message).To(ContainSubstring("deleting image"))
 			})
 
 			It("emits the fail count", func() {

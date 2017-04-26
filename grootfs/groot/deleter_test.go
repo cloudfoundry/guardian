@@ -2,6 +2,7 @@ package groot_test
 
 import (
 	"errors"
+	"os"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
@@ -51,6 +52,11 @@ var _ = Describe("Deleter", func() {
 			It("returns an error", func() {
 				Expect(deleter.Delete(logger, "some-id")).To(MatchError(ContainSubstring("failed to destroy image")))
 			})
+
+			It("doesn't deregister the image", func() {
+				Expect(deleter.Delete(logger, "some-id")).To(HaveOccurred())
+				Expect(fakeDependencyManager.DeregisterCallCount()).To(Equal(0))
+			})
 		})
 
 		It("emits metrics for deletion", func() {
@@ -60,6 +66,26 @@ var _ = Describe("Deleter", func() {
 			_, name, start := fakeMetricsEmitter.TryEmitDurationFromArgsForCall(0)
 			Expect(name).To(Equal(groot.MetricImageDeletionTime))
 			Expect(start).NotTo(BeZero())
+		})
+
+		Context("when it fails to deregister an image", func() {
+			BeforeEach(func() {
+				fakeDependencyManager.DeregisterReturns(errors.New("failed"))
+			})
+
+			It("returns an error", func() {
+				Expect(deleter.Delete(logger, "some-id")).To(MatchError(ContainSubstring("failed")))
+			})
+
+			Context("when the image metadata doesn't exist", func() {
+				BeforeEach(func() {
+					fakeDependencyManager.DeregisterReturns(os.ErrNotExist)
+				})
+
+				It("doesn't return an error", func() {
+					Expect(deleter.Delete(logger, "some-id")).To(Succeed())
+				})
+			})
 		})
 	})
 })

@@ -378,7 +378,7 @@ var _ = Describe("Image", func() {
 			})
 		})
 
-		It("removes the image", func() {
+		It("calls the image driver to remove the image", func() {
 			err := imageCloner.Destroy(logger, "some-id")
 			Expect(err).NotTo(HaveOccurred())
 
@@ -386,14 +386,39 @@ var _ = Describe("Image", func() {
 			Expect(path).To(Equal(imagePath))
 		})
 
-		Context("when removing the image fails", func() {
+		Context("when the image driver fails", func() {
 			BeforeEach(func() {
-				fakeImageDriver.DestroyImageReturns(errors.New("failed to remove image"))
+				fakeImageDriver.DestroyImageReturns(errors.New("failed"))
 			})
 
-			It("returns an error", func() {
+			It("doesnt fail", func() {
 				err := imageCloner.Destroy(logger, "some-id")
-				Expect(err).To(MatchError(ContainSubstring("failed to remove image")))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("still tries to delete the image path", func() {
+				err := imageCloner.Destroy(logger, "some-id")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(imagePath).NotTo(BeAnExistingFile())
+			})
+
+			Context("when removing the image path also fails", func() {
+				var mntPoint string
+
+				JustBeforeEach(func() {
+					mntPoint = filepath.Join(imagePath, "mnt")
+					Expect(os.Mkdir(mntPoint, 0700)).To(Succeed())
+					Expect(syscall.Mount(mntPoint, mntPoint, "none", syscall.MS_BIND, "")).To(Succeed())
+				})
+
+				AfterEach(func() {
+					Expect(syscall.Unmount(mntPoint, syscall.MNT_DETACH)).To(Succeed())
+				})
+
+				It("returns an error", func() {
+					err := imageCloner.Destroy(logger, "some-id")
+					Expect(err).To(MatchError(ContainSubstring("deleting image path")))
+				})
 			})
 		})
 	})
