@@ -110,7 +110,7 @@ var _ = Describe("Delete", func() {
 		JustBeforeEach(func() {
 			mntPoint = filepath.Join(image.Path, "mnt")
 			Expect(os.Mkdir(mntPoint, 0700)).To(Succeed())
-			Expect(syscall.Mount(os.TempDir(), mntPoint, "none", syscall.MS_BIND, "")).To(Succeed())
+			Expect(syscall.Mount(mntPoint, mntPoint, "none", syscall.MS_BIND, "")).To(Succeed())
 		})
 
 		AfterEach(func() {
