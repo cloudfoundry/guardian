@@ -1,6 +1,7 @@
 package dadoo
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"errors"
@@ -11,7 +12,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 
@@ -146,8 +146,26 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	}
 
 	process.streamData(pio, stdin, stdout, stderr)
+
+	doneReadingRuncLogs := make(chan []byte)
+	go func(log lager.Logger, logs io.Reader, logTag, loglineprefix string, done chan<- []byte) {
+		scanner := bufio.NewScanner(logs)
+
+		nextLogLine := []byte("")
+		for scanner.Scan() {
+			nextLogLine = scanner.Bytes()
+			forwardLogLineToLager(log, nextLogLine, logTag)
+		}
+		done <- nextLogLine
+	}(log, logr, "runc", "runc exec", doneReadingRuncLogs)
+
 	defer func() {
-		theErr = processLogs(log, logr, theErr, "runc", "runc exec")
+		lastLogLine := <-doneReadingRuncLogs
+		if theErr != nil {
+			parsedLogLine := struct{ Msg string }{}
+			logfmt.Unmarshal(lastLogLine, &parsedLogLine)
+			theErr = fmt.Errorf("%s: %s", theErr, parsedLogLine.Msg)
+		}
 	}()
 
 	log.Info("read-exit-fd")
@@ -158,7 +176,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	}
 	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
 	if runcExitStatus[0] != 0 {
-		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])
+		return nil, fmt.Errorf("runc exec: exit status %d", runcExitStatus[0])
 	}
 
 	return process, nil
@@ -360,37 +378,15 @@ func (p process) SetTTY(spec garden.TTYSpec) error {
 	return json.NewEncoder(winSize).Encode(spec.WindowSize)
 }
 
-func processLogs(log lager.Logger, logs io.Reader, err error, logTag, logLinePrefix string) error {
-	buff, readErr := ioutil.ReadAll(logs)
-
-	if readErr != nil {
-		return fmt.Errorf("start: read log file: %s", readErr)
-	}
-
-	forwardLogsToLager(log, buff, logTag)
-
-	if err != nil {
-		return wrapWithErrorFromLog(log, err, buff, logLinePrefix)
-	}
-
-	return nil
-}
-
-func forwardLogsToLager(log lager.Logger, buff []byte, tag string) {
-	for _, logLine := range strings.Split(string(buff), "\n") {
-		parsedLogLine := struct{ Msg string }{}
-		if err := logfmt.Unmarshal([]byte(logLine), &parsedLogLine); err == nil {
-			log.Debug(tag, lager.Data{
-				"message": parsedLogLine.Msg,
-			})
-		}
-	}
-}
-
-func wrapWithErrorFromLog(log lager.Logger, originalError error, buff []byte, logLinePrefix string) error {
+func forwardLogLineToLager(log lager.Logger, logLine []byte, tag string) {
 	parsedLogLine := struct{ Msg string }{}
-	logfmt.Unmarshal(buff, &parsedLogLine)
-	return fmt.Errorf("%s: %s: %s", logLinePrefix, originalError, parsedLogLine.Msg)
+	if err := logfmt.Unmarshal(logLine, &parsedLogLine); err == nil {
+		log.Debug(tag, lager.Data{
+			"message": parsedLogLine.Msg,
+		})
+	} else {
+		log.Error("parsing-log-line", err, lager.Data{"line": string(logLine)})
+	}
 }
 
 type signaller struct {

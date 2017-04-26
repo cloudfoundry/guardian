@@ -42,6 +42,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		receivedStdinContents                  []byte
 		runcReturns                            byte
 		dadooReturns                           error
+		runcHangsForEver                       bool
 		dadooPanicsBeforeReportingRuncExitCode bool
 		dadooWritesLogs                        string
 		dadooWritesExitCode                    []byte
@@ -74,6 +75,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		runcReturns = 0
 		dadooReturns = nil
+		runcHangsForEver = false
 		dadooPanicsBeforeReportingRuncExitCode = false
 		dadooWritesExitCode = []byte("0")
 		dadooWritesLogs = `time="2016-03-02T13:56:38Z" level=warning msg="signal: potato"
@@ -116,7 +118,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			fmt.Fprintln(cmd.Stderr, "dadoo stderr")
 
 			// dadoo would not error - simulate dadoo operation
-			go func(cmd *exec.Cmd, dadooPanicsBeforeReportingRuncExitCode bool, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File), stderrContents string) {
+			go func(cmd *exec.Cmd, runcHangsForEver, dadooPanicsBeforeReportingRuncExitCode bool, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File), stderrContents string) {
 				defer GinkgoRecover()
 
 				// parse flags to get bundle dir argument so we can open stdin/out/err pipes
@@ -141,6 +143,11 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				Expect(err).NotTo(HaveOccurred())
 				fd4.Close()
 
+				if runcHangsForEver {
+					for {
+					}
+				}
+
 				// return exit status of runc on fd3
 				if !dadooPanicsBeforeReportingRuncExitCode {
 					// if dadooPanics then closes the pipe without writing a value
@@ -148,7 +155,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					Expect(err).NotTo(HaveOccurred())
 				}
 				fd3.Close()
-				// write exit code of actual process to $procesdir/exitcode file
+				// write exit code of actual process to $processdir/exitcode file
 				if exitCode != nil {
 					Expect(ioutil.WriteFile(filepath.Join(processDir, "exitcode"), []byte(exitCode), 0600)).To(Succeed())
 				}
@@ -167,7 +174,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				// close streams
 				Expect(so.Close()).To(Succeed())
 				Expect(se.Close()).To(Succeed())
-			}(cmd, dadooPanicsBeforeReportingRuncExitCode, dadooWritesExitCode, []byte(dadooWritesLogs), closeExitPipeCh, receiveWinSize, stderrContents)
+			}(cmd, runcHangsForEver, dadooPanicsBeforeReportingRuncExitCode, dadooWritesExitCode, []byte(dadooWritesLogs), closeExitPipeCh, receiveWinSize, stderrContents)
 
 			return nil
 		})
@@ -343,7 +350,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Describe("Logging", func() {
 			It("sends all the runc logs to the logger", func() {
 				_, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
-
 				Expect(err).NotTo(HaveOccurred())
 
 				runcLogs := make([]lager.LogFormat, 0)
@@ -372,21 +378,56 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					runcReturns = 3
 				})
 
-				It("return an error including parsed logs when runC fails to start the container", func() {
+				It("return an error including the last log line when runC fails to start the container", func() {
 					_, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
 					Expect(err).To(MatchError("runc exec: exit status 3: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
 				})
 
 				Context("when the log messages can't be parsed", func() {
 					BeforeEach(func() {
-						dadooWritesLogs = `foo="'
+						dadooWritesLogs = `foobarbaz="'
 					`
+					})
+
+					It("logs an error including the log line", func() {
+						_, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
+						Expect(err).To(HaveOccurred())
+						Expect(log.Buffer()).To(gbytes.Say("foobarbaz"))
 					})
 
 					It("returns an error with only the exit status if the log can't be parsed", func() {
 						_, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
-						Expect(err).To(MatchError("runc exec: exit status 3: "))
+						Expect(err).To(MatchError(ContainSubstring("runc exec: exit status 3")))
 					})
+				})
+			})
+
+			Context("when runc is slow to exit (or never exits)", func() {
+				BeforeEach(func() {
+					runcHangsForEver = true
+				})
+
+				It("still forwards runc logs in real time", func() {
+					go func(log lager.Logger, processID, bundlePath, processPath string) {
+						defer GinkgoRecover()
+						runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}},
+							bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
+						Fail("runner should hang if runc hangs")
+					}(log, processID, bundlePath, processPath)
+
+					Eventually(func() []lager.LogFormat {
+						return log.Logs()
+					}).Should(HaveLen(6))
+
+					runcLogs := make([]lager.LogFormat, 0)
+					for _, log := range log.Logs() {
+						if log.Message == "test.execrunner.runc" {
+							runcLogs = append(runcLogs, log)
+						}
+					}
+
+					Expect(runcLogs).To(HaveLen(3))
+					Expect(runcLogs[0].Data).To(HaveKeyWithValue("message", "signal: potato"))
 				})
 			})
 		})

@@ -431,9 +431,9 @@ var _ = Describe("Run", func() {
 			_, err = container.Run(garden.ProcessSpec{
 				Path: "does-not-exit",
 			}, garden.ProcessIO{})
-			Expect(err).To(MatchError(ContainSubstring("executable file not found")))
-
-			Eventually(client).Should(gbytes.Say(`execrunner.runc`))
+			runcErrorMessage := "executable file not found"
+			Expect(err).To(MatchError(ContainSubstring(runcErrorMessage)))
+			Eventually(client).Should(gbytes.Say(runcErrorMessage))
 		})
 
 		It("forwards runc logs to lager when exec fails, and gives proper error messages when requesting a TTY", func() {
@@ -450,9 +450,9 @@ var _ = Describe("Run", func() {
 					},
 				},
 			}, garden.ProcessIO{})
-			Expect(err).To(MatchError(ContainSubstring("executable file not found")))
-
-			Eventually(client).Should(gbytes.Say(`execrunner.runc`))
+			runcErrorMessage := "executable file not found"
+			Expect(err).To(MatchError(ContainSubstring(runcErrorMessage)))
+			Eventually(client).Should(gbytes.Say(runcErrorMessage))
 		})
 
 		Describe("Signalling", func() {
