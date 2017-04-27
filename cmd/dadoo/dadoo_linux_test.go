@@ -98,7 +98,7 @@ var _ = Describe("Dadoo", func() {
 		})
 
 		JustBeforeEach(func() {
-			cmd := exec.Command("runc", "create", "--bundle", bundlePath, filepath.Base(bundlePath))
+			cmd := exec.Command("runc", "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
 			Expect(cmd.Run()).To(Succeed())
 		})
 
