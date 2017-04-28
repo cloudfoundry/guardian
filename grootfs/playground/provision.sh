@@ -65,8 +65,9 @@ install_groot() {
   pushd $HOME/go/src/code.cloudfoundry.org/grootfs
     make deps
     make
-    cp {grootfs,drax} /usr/local/bin
+    cp {grootfs,drax,tardis} /usr/local/bin
     chmod u+s /usr/local/bin/drax
+    chmod u+s /usr/local/bin/tardis
     cp hack/{quick-setup,cleanup-store} /usr/local/bin
   popd
 }
