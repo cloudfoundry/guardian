@@ -134,7 +134,7 @@ func waitForContainerToExit(processStateDir string, containerPid int, signals ch
 
 				ioWg.Wait() // wait for full output to be collected
 
-				check(ioutil.WriteFile(filepath.Join(processStateDir, "exitcode"), []byte(strconv.Itoa(exitCode)), 0700))
+				check(ioutil.WriteFile(filepath.Join(processStateDir, "exitcode"), []byte(strconv.Itoa(exitCode)), 0600))
 				return exitCode
 			}
 		}
