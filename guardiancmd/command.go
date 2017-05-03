@@ -231,6 +231,10 @@ type ServerCommand struct {
 		DropsondeOrigin      string `long:"dropsonde-origin"      default:"garden-linux"   description:"Origin identifier for Dropsonde-emitted metrics."`
 		DropsondeDestination string `long:"dropsonde-destination" default:"127.0.0.1:3457" description:"Destination for Dropsonde-emitted metrics."`
 	} `group:"Metrics"`
+
+	Runc struct {
+		Root string `hidden:"true" long:"runc-root" default:"" description:"root directory for storage of container state (this should be located in tmpfs)"`
+	} `group:"Runc Arguments"`
 }
 
 var uidMappings idmapper.MappingList
@@ -700,15 +704,17 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	runcrunner := runrunc.New(
 		commandRunner,
 		runrunc.NewLogRunner(commandRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
-		goci.RuncBinary(runcPath),
+		goci.RuncBinary{Path: runcPath, Root: cmd.Runc.Root},
 		dadooPath,
 		runcPath,
+		cmd.Runc.Root,
 		newuidmapPath,
 		newgidmapPath,
 		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps, runningAsRoot),
 		dadoo.NewExecRunner(
 			dadooPath,
 			runcPath,
+			cmd.Runc.Root,
 			cmd.wireUidGenerator(),
 			pidFileReader,
 			linux_command_runner.New(),

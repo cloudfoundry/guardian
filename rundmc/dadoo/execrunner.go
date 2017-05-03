@@ -30,16 +30,18 @@ type PidGetter interface {
 type ExecRunner struct {
 	dadooPath                string
 	runcPath                 string
+	runcRoot                 string
 	processIDGen             runrunc.UidGenerator
 	pidGetter                PidGetter
 	commandRunner            command_runner.CommandRunner
 	cleanupProcessDirsOnWait bool
 }
 
-func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, commandRunner command_runner.CommandRunner, shouldCleanup bool) *ExecRunner {
+func NewExecRunner(dadooPath, runcPath, runcRoot string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, commandRunner command_runner.CommandRunner, shouldCleanup bool) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:                dadooPath,
 		runcPath:                 runcPath,
+		runcRoot:                 runcRoot,
 		processIDGen:             processIDGen,
 		pidGetter:                pidGetter,
 		commandRunner:            commandRunner,
@@ -93,9 +95,9 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 
 	var cmd *exec.Cmd
 	if tty != nil {
-		cmd = exec.Command(d.dadooPath, "-tty", "exec", d.runcPath, processPath, handle)
+		cmd = exec.Command(d.dadooPath, "-runc-root", d.runcRoot, "-tty", "exec", d.runcPath, processPath, handle)
 	} else {
-		cmd = exec.Command(d.dadooPath, "exec", d.runcPath, processPath, handle)
+		cmd = exec.Command(d.dadooPath, "-runc-root", d.runcRoot, "exec", d.runcPath, processPath, handle)
 	}
 
 	dadooLogFilePath := filepath.Join(bundlePath, fmt.Sprintf("dadoo.%s.log", processID))

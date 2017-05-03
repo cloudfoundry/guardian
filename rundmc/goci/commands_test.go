@@ -1,14 +1,17 @@
 package goci_test
 
 import (
+	"os/exec"
+
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Commands", func() {
 	BeforeEach(func() {
-		goci.DefaultRuncBinary = "funC"
+		goci.DefaultRuncBinary = goci.RuncBinary{Path: "funC", Root: ""}
 	})
 
 	Describe("StartCommand", func() {
@@ -69,5 +72,40 @@ var _ = Describe("Commands", func() {
 			cmd := goci.DeleteCommand("my-bundle-id", "log.file")
 			Expect(cmd.Args).To(Equal([]string{"funC", "--debug", "--log", "log.file", "delete", "my-bundle-id"}))
 		})
+	})
+
+	Context("when a runc root is passed", func() {
+		BeforeEach(func() {
+			goci.DefaultRuncBinary = goci.RuncBinary{Path: "funC", Root: "/run/funC"}
+		})
+
+		DescribeTable(
+			"passing --root to runc commands",
+			func(commander func() *exec.Cmd) {
+				cmd := commander()
+				Expect(cmd.Args[0:3]).To(Equal([]string{"funC", "--root", "/run/funC"}))
+			},
+			Entry("StartCommand", func() *exec.Cmd {
+				return goci.StartCommand("", "", false, "")
+			}),
+			Entry("ExecCommand", func() *exec.Cmd {
+				return goci.ExecCommand("", "", "")
+			}),
+			Entry("EventsCommand", func() *exec.Cmd {
+				return goci.EventsCommand("")
+			}),
+			Entry("KillCommand", func() *exec.Cmd {
+				return goci.KillCommand("", "", "")
+			}),
+			Entry("StateCommand", func() *exec.Cmd {
+				return goci.StateCommand("", "")
+			}),
+			Entry("StatsCommand", func() *exec.Cmd {
+				return goci.StatsCommand("", "")
+			}),
+			Entry("DeleteCommand", func() *exec.Cmd {
+				return goci.DeleteCommand("", "")
+			}),
+		)
 	})
 })

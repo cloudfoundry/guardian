@@ -22,6 +22,7 @@ var _ = Describe("Create", func() {
 	var (
 		commandRunner  *fake_command_runner.FakeCommandRunner
 		bundlePath     string
+		runcRoot       string
 		logFilePath    string
 		pidFilePath    string
 		logger         *lagertest.TestLogger
@@ -33,6 +34,7 @@ var _ = Describe("Create", func() {
 
 	BeforeEach(func() {
 		logs = ""
+		runcRoot = ""
 		runcExitStatus = nil
 		commandRunner = fake_command_runner.New()
 		logger = lagertest.NewTestLogger("test")
@@ -42,11 +44,11 @@ var _ = Describe("Create", func() {
 		Expect(err).NotTo(HaveOccurred())
 		logFilePath = filepath.Join(bundlePath, "create.log")
 		pidFilePath = filepath.Join(bundlePath, "pidfile")
-
-		runner = runrunc.NewCreator("funC", "newuidmap", "newgidmap", commandRunner)
 	})
 
 	JustBeforeEach(func() {
+		runner = runrunc.NewCreator("funC", runcRoot, "newuidmap", "newgidmap", commandRunner)
+
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "funC",
 		}, func(cmd *exec.Cmd) error {
@@ -63,8 +65,43 @@ var _ = Describe("Create", func() {
 
 		Expect(commandRunner.ExecutedCommands()[0].Path).To(Equal("funC"))
 		Expect(commandRunner.ExecutedCommands()[0].Args).To(ConsistOf(
-			"funC", "--debug", "--log", logFilePath, "-newuidmap", "newuidmap", "-newgidmap", "newgidmap", "create", "--no-new-keyring", "--bundle", bundlePath, "--pid-file", pidFilePath, "some-id",
+			"funC",
+			"--debug",
+			"--log", logFilePath,
+			"--newuidmap", "newuidmap",
+			"--newgidmap", "newgidmap",
+			"create",
+			"--no-new-keyring",
+			"--bundle", bundlePath,
+			"--pid-file", pidFilePath,
+			"some-id",
 		))
+	})
+
+	Context("when runcRoot is provided", func() {
+		BeforeEach(func() {
+			runcRoot = "/tmp/runc/"
+		})
+
+		It("creates the container with runC create, passing --root", func() {
+			Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
+
+			Expect(commandRunner.ExecutedCommands()[0].Path).To(Equal("funC"))
+			Expect(commandRunner.ExecutedCommands()[0].Args).To(ConsistOf(
+				"funC",
+				"--debug",
+				"--log", logFilePath,
+				"--newuidmap", "newuidmap",
+				"--newgidmap", "newgidmap",
+				"--root",
+				runcRoot,
+				"create",
+				"--no-new-keyring",
+				"--bundle", bundlePath,
+				"--pid-file", pidFilePath,
+				"some-id",
+			))
+		})
 	})
 
 	Context("when running runc fails", func() {

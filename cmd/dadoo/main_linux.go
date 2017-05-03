@@ -28,18 +28,14 @@ import (
 
 const MaxSocketDirPathLength = 80
 
-var (
-	tty           = flag.Bool("tty", false, "tty requested")
-	socketDirPath = flag.String("socket-dir-path", "", "path to a dir in which to store console sockets")
-
-	ioWg *sync.WaitGroup = &sync.WaitGroup{}
-)
-
 func main() {
 	os.Exit(run())
 }
 
 func run() int {
+	tty := flag.Bool("tty", false, "tty requested")
+	socketDirPath := flag.String("socket-dir-path", "", "path to a dir in which to store console sockets")
+	runcRoot := flag.String("runc-root", "", "root directory for storage of container state (this should be located in tmpfs)")
 	flag.Parse()
 
 	runtime := flag.Args()[1] // e.g. runc
@@ -67,15 +63,23 @@ func run() int {
 		tryClose(stdoutR, stderrR)
 	}()
 
+	ioWg := &sync.WaitGroup{}
 	var runcExecCmd *exec.Cmd
+	runtimeArgs := []string{"-debug", "-log", logFile}
+	if *runcRoot != "" {
+		runtimeArgs = append(runtimeArgs, "-root", *runcRoot)
+	}
+	runtimeArgs = append(runtimeArgs, "exec", "-d", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath)
 	if *tty {
 		if len(*socketDirPath) > MaxSocketDirPathLength {
 			logAndExit(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
 		}
-		ttySocketPath := setupTTYSocket(stdinR, stdoutW, winsz, pidFilePath, *socketDirPath)
-		runcExecCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-d", "-tty", "-console-socket", ttySocketPath, "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath, containerId)
+		ttySocketPath := setupTTYSocket(stdinR, stdoutW, winsz, pidFilePath, *socketDirPath, ioWg)
+		runtimeArgs = append(runtimeArgs, "-tty", "-console-socket", ttySocketPath, containerId)
+		runcExecCmd = exec.Command(runtime, runtimeArgs...)
 	} else {
-		runcExecCmd = exec.Command(runtime, "-debug", "-log", logFile, "exec", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-d", "-pid-file", pidFilePath, containerId)
+		runtimeArgs = append(runtimeArgs, containerId)
+		runcExecCmd = exec.Command(runtime, runtimeArgs...)
 		runcExecCmd.Stdin = stdinR
 		runcExecCmd.Stdout = stdoutW
 		runcExecCmd.Stderr = stderrW
@@ -104,7 +108,7 @@ func run() int {
 	containerPid, err := parsePid(pidFilePath)
 	check(err)
 
-	return waitForContainerToExit(processStateDir, containerPid, signals)
+	return waitForContainerToExit(processStateDir, containerPid, signals, ioWg)
 }
 
 // If gdn server process dies, we need dadoo to keep stdout/err reader
@@ -116,7 +120,7 @@ func openStdioKeepAlivePipes(processStateDir string) (io.ReadCloser, io.ReadClos
 	return keepStdoutAlive, keepStderrAlive
 }
 
-func waitForContainerToExit(processStateDir string, containerPid int, signals chan os.Signal) (exitCode int) {
+func waitForContainerToExit(processStateDir string, containerPid int, signals chan os.Signal, ioWg *sync.WaitGroup) (exitCode int) {
 	for range signals {
 		for {
 			var status syscall.WaitStatus
@@ -164,7 +168,7 @@ func openFifo(path string, flags int) io.ReadWriteCloser {
 	return r
 }
 
-func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidFilePath, sockDirBase string) string {
+func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidFilePath, sockDirBase string, ioWg *sync.WaitGroup) string {
 	sockDir, err := ioutil.TempDir(sockDirBase, "")
 	check(err)
 
@@ -214,7 +218,7 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidF
 		if err = setOnlcr(master); err != nil {
 			return
 		}
-		streamProcess(master, stdin, stdout, winszFifo)
+		streamProcess(master, stdin, stdout, winszFifo, ioWg)
 
 		return
 	}(l)
@@ -222,7 +226,7 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidF
 	return ttySockPath
 }
 
-func streamProcess(m *os.File, stdin io.Reader, stdout io.Writer, winszFifo io.Reader) {
+func streamProcess(m *os.File, stdin io.Reader, stdout io.Writer, winszFifo io.Reader, ioWg *sync.WaitGroup) {
 	ioWg.Add(1)
 	go func() {
 		defer ioWg.Done()

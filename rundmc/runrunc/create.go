@@ -14,14 +14,16 @@ import (
 
 type Creator struct {
 	runcPath      string
+	runcRoot      string
 	newuidmapPath string
 	newgidmapPath string
 	commandRunner command_runner.CommandRunner
 }
 
-func NewCreator(runcPath, newuidmapPath, newgidmapPath string, commandRunner command_runner.CommandRunner) *Creator {
+func NewCreator(runcPath, runcRoot, newuidmapPath, newgidmapPath string, commandRunner command_runner.CommandRunner) *Creator {
 	return &Creator{
 		runcPath,
+		runcRoot,
 		newuidmapPath,
 		newgidmapPath,
 		commandRunner,
@@ -36,10 +38,30 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, _ garden.Proce
 	logFilePath := filepath.Join(bundlePath, "create.log")
 	pidFilePath := filepath.Join(bundlePath, "pidfile")
 
-	cmd := exec.Command(c.runcPath, "--debug", "--log", logFilePath, "-newuidmap", c.newuidmapPath, "-newgidmap", c.newgidmapPath, "create", "--no-new-keyring", "--bundle", bundlePath, "--pid-file", pidFilePath, id)
+	globalArgs := []string{
+		"--debug",
+		"--log", logFilePath,
+		"--newuidmap", c.newuidmapPath,
+		"--newgidmap", c.newgidmapPath,
+	}
+
+	createArgs := []string{
+		"create",
+		"--no-new-keyring",
+		"--bundle", bundlePath,
+		"--pid-file", pidFilePath,
+		id,
+	}
+
+	if c.runcRoot != "" {
+		globalArgs = append(globalArgs, []string{"--root", c.runcRoot}...)
+	}
+
+	cmd := exec.Command(c.runcPath, append(globalArgs, createArgs...)...)
 
 	log.Info("creating", lager.Data{
 		"runc":        c.runcPath,
+		"runcRoot":    c.runcRoot,
 		"bundlePath":  bundlePath,
 		"id":          id,
 		"logPath":     logFilePath,
