@@ -233,7 +233,7 @@ type ServerCommand struct {
 	} `group:"Metrics"`
 }
 
-var idMappings rootfs_provider.MappingList
+var idMappings idmapper.MappingList
 
 func init() {
 	if reexec.Init() {
@@ -241,18 +241,7 @@ func init() {
 	}
 
 	maxId := uint32(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID()))
-	idMappings = rootfs_provider.MappingList{
-		{
-			ContainerID: 0,
-			HostID:      maxId,
-			Size:        1,
-		},
-		{
-			ContainerID: 1,
-			HostID:      1,
-			Size:        maxId - 1,
-		},
-	}
+	idMappings = idmapper.MappingsForUser(uint32(os.Geteuid()), maxId)
 }
 
 func (cmd *ServerCommand) Execute([]string) error {

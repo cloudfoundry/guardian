@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -218,8 +218,8 @@ func (r *execPreparer) lookupUser(bndl goci.Bndl, rootfsPath, username string) (
 
 	uid, gid := u.Uid, u.Gid
 	if len(bndl.Spec.Linux.UIDMappings) > 0 {
-		uid = rootfs_provider.MappingList(bndl.Spec.Linux.UIDMappings).Map(uid)
-		gid = rootfs_provider.MappingList(bndl.Spec.Linux.GIDMappings).Map(gid)
+		uid = idmapper.MappingList(bndl.Spec.Linux.UIDMappings).Map(uid)
+		gid = idmapper.MappingList(bndl.Spec.Linux.GIDMappings).Map(gid)
 	}
 
 	return &usr{
