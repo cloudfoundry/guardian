@@ -233,15 +233,16 @@ type ServerCommand struct {
 	} `group:"Metrics"`
 }
 
-var idMappings idmapper.MappingList
+var uidMappings idmapper.MappingList
+var gidMappings idmapper.MappingList
 
 func init() {
 	if reexec.Init() {
 		os.Exit(0)
 	}
 
-	maxId := uint32(idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID()))
-	idMappings = idmapper.MappingsForUser(uint32(os.Geteuid()), maxId)
+	uidMappings = idmapper.MappingsForUser(uint32(os.Geteuid()), uint32(idmapper.MustGetMaxValidUID()))
+	gidMappings = idmapper.MappingsForUser(uint32(os.Getegid()), uint32(idmapper.MustGetMaxValidGID()))
 }
 
 func (cmd *ServerCommand) Execute([]string) error {
@@ -607,8 +608,8 @@ func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot strin
 
 	rootFSNamespacer := &rootfs_provider.UidNamespacer{
 		Translator: rootfs_provider.NewUidTranslator(
-			idMappings, // uid
-			idMappings, // gid
+			uidMappings,
+			gidMappings,
 		),
 	}
 
@@ -780,8 +781,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 
 	unprivilegedBundle := baseBundle.
 		WithNamespace(goci.UserNamespace).
-		WithUIDMappings(idMappings...).
-		WithGIDMappings(idMappings...).
+		WithUIDMappings(uidMappings...).
+		WithGIDMappings(gidMappings...).
 		WithMounts(unprivilegedMounts...).
 		WithMaskedPaths(defaultMaskedPaths())
 
@@ -805,8 +806,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 				UnprivilegedBase: unprivilegedBundle,
 			},
 			bundlerules.RootFS{
-				ContainerRootUID: idMappings.Map(0),
-				ContainerRootGID: idMappings.Map(0),
+				ContainerRootUID: uidMappings.Map(0),
+				ContainerRootGID: gidMappings.Map(0),
 				MkdirChown:       chrootMkdir,
 			},
 			bundlerules.Limits{
