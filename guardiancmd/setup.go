@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
+	"github.com/opencontainers/runc/libcontainer/user"
 )
 
 type SetupCommand struct {
@@ -47,6 +48,10 @@ func (cmd *SetupCommand) Execute(args []string) error {
 		return err
 	}
 
+	usr, err := user.LookupUid(int(cmd.RootlessForUID))
+	if err != nil && err != user.ErrNoPasswdEntries {
+		return err
+	}
 	subuidFileContents, err := ioutil.ReadFile("/etc/subuid")
 	if err != nil {
 		return err
@@ -55,10 +60,10 @@ func (cmd *SetupCommand) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	if !sysinfo.UidCanMapExactRange(string(subuidFileContents), cmd.RootlessForUID, 0, uint32(idmapper.MustGetMaxValidUID()+1)) {
+	if !sysinfo.UidCanMapExactRange(string(subuidFileContents), usr.Name, cmd.RootlessForUID, 0, uint32(idmapper.MustGetMaxValidUID()+1)) {
 		fmt.Printf("WARNING: uid %d does not have permission to map the entire UID range\n", cmd.RootlessForUID)
 	}
-	if !sysinfo.UidCanMapExactRange(string(subgidFileContents), cmd.RootlessForUID, 0, uint32(idmapper.MustGetMaxValidGID()+1)) {
+	if !sysinfo.UidCanMapExactRange(string(subgidFileContents), usr.Name, cmd.RootlessForUID, 0, uint32(idmapper.MustGetMaxValidGID()+1)) {
 		fmt.Printf("WARNING: uid %d does not have permission to map the entire GID range\n", cmd.RootlessForUID)
 	}
 
