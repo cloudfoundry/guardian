@@ -82,7 +82,7 @@ func (cc *InstanceChainCreator) createLoggingChain(logger lager.Logger, handle, 
 	}
 	logPrefix = logPrefix + " "
 
-	cmd := exec.Command(cc.iptables.iptablesBinPath, "--wait", "-A", loggingChain, "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID", "--protocol", "tcp", "--jump", "LOG", "--log-prefix", logPrefix, "-m", "comment", "--comment", handle)
+	cmd := exec.Command(cc.iptables.iptablesBinPath, "--wait", "-A", loggingChain, "-m", "conntrack", "--ctstate", "NEW,UNTRACKED,INVALID", "--protocol", "all", "--jump", "LOG", "--log-prefix", logPrefix, "-m", "comment", "--comment", handle)
 	if err := cc.iptables.run("create-instance-chains", cmd); err != nil {
 		return err
 	}
