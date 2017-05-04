@@ -24,7 +24,6 @@ import (
 var _ = Describe("gdn setup", func() {
 	var (
 		cgroupsMountpoint string
-		iptablesPrefix    string
 		setupArgs         []string
 		tag               string
 		runcRoot          string
@@ -32,12 +31,15 @@ var _ = Describe("gdn setup", func() {
 	)
 
 	BeforeEach(func() {
-		// we can't use GinkgoParallelNode() directly here as this causes interference with the other tests in the GQT suite
-		// i.e. beacuse for these specific tests, we want to teardown the iptables/cgroups after each test
-		// and also because the --tag has a limitation of 1 char in length
+		// We want to test that "gdn setup" can mount the cgroup hierarchy.
+		// "gdn server" without --skip-setup does this too, and most gqts implicitly
+		// rely on it.
+		// We need a new test "environment" regardless of what tests have previously
+		// run with the same GinkgoParallelNode.
+		// There is also a 1 character limit on the tag due to iptables rule length
+		// limitations.
 		tag = nodeToString(GinkgoParallelNode())
 		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
-		iptablesPrefix = fmt.Sprintf("w-%s", tag)
 		runcRoot = fmt.Sprintf("/tmp/runc-root-%s", tag)
 		setupArgs = []string{"setup", "--tag", tag, "--runc-root", runcRoot}
 	})
@@ -51,7 +53,6 @@ var _ = Describe("gdn setup", func() {
 	})
 
 	AfterEach(func() {
-		Expect(cleanupSystemResources(cgroupsMountpoint, iptablesPrefix)).To(Succeed())
 		Expect(os.RemoveAll(runcRoot))
 	})
 

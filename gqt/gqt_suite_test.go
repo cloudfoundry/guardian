@@ -158,28 +158,6 @@ func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
 	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, "", tarBin, newuidmapBin, newgidmapBin, nil, argv...)
 }
 
-func cleanupSystemResources(cgroupsMountpoint, iptablesPrefix string) error {
-	cmd := exec.Command("bash", "-c", iptables.SetupScript)
-	cmd.Env = []string{
-		fmt.Sprintf("PATH=%s", os.Getenv("PATH")),
-		"ACTION=teardown",
-		"GARDEN_IPTABLES_BIN=/sbin/iptables",
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INPUT_CHAIN=%s-input", iptablesPrefix),
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_FORWARD_CHAIN=%s-forward", iptablesPrefix),
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_DEFAULT_CHAIN=%s-default", iptablesPrefix),
-		fmt.Sprintf("GARDEN_IPTABLES_FILTER_INSTANCE_PREFIX=%s-instance-", iptablesPrefix),
-		fmt.Sprintf("GARDEN_IPTABLES_NAT_PREROUTING_CHAIN=%s-prerouting", iptablesPrefix),
-		fmt.Sprintf("GARDEN_IPTABLES_NAT_POSTROUTING_CHAIN=%s-postrounting", iptablesPrefix),
-		fmt.Sprintf("GARDEN_IPTABLES_NAT_INSTANCE_PREFIX=%s-instance-", iptablesPrefix),
-	}
-	lock, err := locksmith.NewFileSystem().Lock(iptables.LockKey)
-	if err != nil {
-		return err
-	}
-	defer lock.Unlock()
-	return cmd.Run()
-}
-
 func runIPTables(ipTablesArgs ...string) ([]byte, error) {
 	lock, err := locksmith.NewFileSystem().Lock(iptables.LockKey)
 	if err != nil {

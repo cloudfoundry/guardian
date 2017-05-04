@@ -23,17 +23,11 @@ import (
 
 var _ = Describe("rootless containers", func() {
 	var (
-		client            *runner.RunningGarden
-		cgroupsMountpoint string
-		iptablesPrefix    string
+		client *runner.RunningGarden
 	)
 
 	BeforeEach(func() {
-		tag := nodeToString(GinkgoParallelNode())
-		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
-		iptablesPrefix = fmt.Sprintf("w-%s", tag)
-
-		setupArgs := []string{"setup", "--tag", fmt.Sprintf("%s", tag)}
+		setupArgs := []string{"setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
 		setupProcess, err := gexec.Start(exec.Command(gardenBin, setupArgs...), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
@@ -56,13 +50,11 @@ var _ = Describe("rootless containers", func() {
 			"--image-plugin-extra-arg", "\"--rootfs-path\"",
 			"--image-plugin-extra-arg", filepath.Join(imagePath, "rootfs"),
 			"--network-plugin", "/bin/true",
-			"--tag", tag,
 		)
 	})
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
-		Expect(cleanupSystemResources(cgroupsMountpoint, iptablesPrefix)).To(Succeed())
 	})
 
 	Describe("the server process", func() {
