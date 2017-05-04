@@ -362,7 +362,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	backend := &gardener.Gardener{
 		UidGenerator:    cmd.wireUidGenerator(),
 		BulkStarter:     bulkStarter,
-		SysInfoProvider: sysinfo.NewProvider(cmd.Containers.Dir),
+		SysInfoProvider: sysinfo.NewResourcesProvider(cmd.Containers.Dir),
 		Networker:       networker,
 		VolumeCreator:   volumeCreator,
 		Containerizer: cmd.wireContainerizer(logger,

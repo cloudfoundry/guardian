@@ -7,12 +7,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("SystemInfo", func() {
-	var provider sysinfo.Provider
+var _ = Describe("", func() {
+	var provider sysinfo.ResourcesProvider
 
 	Describe("TotalMemory", func() {
 		BeforeEach(func() {
-			provider = sysinfo.NewProvider("/")
+			provider = sysinfo.NewResourcesProvider("/")
 		})
 
 		It("provides nonzero memory information", func() {
@@ -25,7 +25,7 @@ var _ = Describe("SystemInfo", func() {
 
 	Describe("TotalDisk", func() {
 		BeforeEach(func() {
-			provider = sysinfo.NewProvider("/")
+			provider = sysinfo.NewResourcesProvider("/")
 		})
 
 		It("provides nonzero disk information", func() {

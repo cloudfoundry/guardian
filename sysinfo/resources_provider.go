@@ -2,17 +2,17 @@ package sysinfo
 
 import "github.com/cloudfoundry/gosigar"
 
-type Provider struct {
+type ResourcesProvider struct {
 	depotPath string
 }
 
-func NewProvider(depotPath string) Provider {
-	return Provider{
+func NewResourcesProvider(depotPath string) ResourcesProvider {
+	return ResourcesProvider{
 		depotPath: depotPath,
 	}
 }
 
-func (provider Provider) TotalMemory() (uint64, error) {
+func (provider ResourcesProvider) TotalMemory() (uint64, error) {
 	mem := sigar.Mem{}
 
 	err := mem.Get()
@@ -23,7 +23,7 @@ func (provider Provider) TotalMemory() (uint64, error) {
 	return mem.Total, nil
 }
 
-func (provider Provider) TotalDisk() (uint64, error) {
+func (provider ResourcesProvider) TotalDisk() (uint64, error) {
 	disk := sigar.FileSystemUsage{}
 
 	err := disk.Get(provider.depotPath)
