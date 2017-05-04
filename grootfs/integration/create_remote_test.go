@@ -165,10 +165,13 @@ var _ = Describe("Create with remote images", func() {
 						var statsMap map[string]string
 						Expect(yaml.Unmarshal(stats, &statsMap)).To(Succeed())
 
-						n, err := units.ParseBase2Bytes(strings.Replace(strings.ToUpper(statsMap["VmHWM"]), " ", "", -1))
-						Expect(err).NotTo(HaveOccurred())
-						// Biggest ubuntu:trusty layer is 65694192 bytes
-						Expect(n).To(BeNumerically("<", 50*1024*1024))
+						virtualMemoryHighWaterMark := strings.Replace(strings.ToUpper(statsMap["VmHWM"]), " ", "", -1)
+						if virtualMemoryHighWaterMark != "" {
+							n, err := units.ParseBase2Bytes(virtualMemoryHighWaterMark)
+							Expect(err).NotTo(HaveOccurred())
+							// Biggest ubuntu:trusty layer is 65694192 bytes
+							Expect(n).To(BeNumerically("<", 50*1024*1024))
+						}
 
 						time.Sleep(200 * time.Millisecond)
 						runs++
