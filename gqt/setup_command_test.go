@@ -60,16 +60,6 @@ var _ = Describe("gdn setup", func() {
 		Expect(mountpointCmd.Run()).To(Succeed())
 	})
 
-	It("does not setup networking stuff", func() {
-		out, err := runIPTables("-L", "INPUT")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(out).NotTo(ContainSubstring(iptablesPrefix + "-input"))
-
-		out, err = runIPTables("-L", "FORWARD")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(out).NotTo(ContainSubstring(iptablesPrefix + "-forward"))
-	})
-
 	It("doesn't log spurious messages", func() {
 		Consistently(setupProcess).ShouldNot(gbytes.Say("guardian-setup.iptables-runner.command.failed"))
 	})
