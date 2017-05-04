@@ -14,5 +14,4 @@ clean:
 create:
   insecure_registries: []
   with_clean: false
-  json: false
   without_mount: false

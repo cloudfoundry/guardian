@@ -44,7 +44,6 @@ var _ = Describe("Create (overlay-xfs only)", func() {
 			BaseImage: baseImagePath,
 			ID:        "random-id",
 			Mount:     mountByDefault(),
-			Json:      !mountByDefault(),
 			DiskLimit: tenMegabytes,
 		}
 	})

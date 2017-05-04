@@ -17,7 +17,6 @@ type CreateSpec struct {
 	ID                          string
 	BaseImage                   string
 	DiskLimit                   int64
-	Json                        bool
 	Mount                       bool
 	ExcludeBaseImageFromQuota   bool
 	CleanOnCreate               bool

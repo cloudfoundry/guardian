@@ -46,14 +46,8 @@ func (r Runner) Create(spec groot.CreateSpec) (groot.ImageInfo, error) {
 	}
 
 	imageInfo := groot.ImageInfo{}
-
-	if r.Json || spec.Json {
-		json.Unmarshal([]byte(output), &imageInfo)
-		imageInfo.Path = filepath.Dir(imageInfo.Rootfs)
-	} else {
-		imageInfo.Path = output
-		imageInfo.Rootfs = filepath.Join(imageInfo.Path, "rootfs")
-	}
+	json.Unmarshal([]byte(output), &imageInfo)
+	imageInfo.Path = filepath.Dir(imageInfo.Rootfs)
 
 	return imageInfo, nil
 }
@@ -91,19 +85,6 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 			args = append(args, "--with-clean")
 		} else {
 			args = append(args, "--without-clean")
-		}
-	}
-
-	if r.Json || r.NoJson {
-		if r.Json {
-			args = append(args, "--json")
-		}
-		if r.NoJson {
-			args = append(args, "--no-json")
-		}
-	} else {
-		if spec.Json {
-			args = append(args, "--json")
 		}
 	}
 

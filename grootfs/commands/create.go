@@ -71,15 +71,7 @@ var CreateCommand = cli.Command{
 		},
 		cli.BoolFlag{
 			Name:  "without-mount",
-			Usage: "Do not mount the root filesystem. Must be used in conjunction with --json.",
-		},
-		cli.BoolFlag{
-			Name:  "json",
-			Usage: "Print RootFS Path and container config as JSON",
-		},
-		cli.BoolFlag{
-			Name:  "no-json",
-			Usage: "Do NOT print RootFS Path and container config as JSON",
+			Usage: "Do not mount the root filesystem.",
 		},
 		cli.StringFlag{
 			Name:  "username",
@@ -110,7 +102,6 @@ var CreateCommand = cli.Command{
 			WithExcludeImageFromQuota(ctx.Bool("exclude-image-from-quota"),
 				ctx.IsSet("exclude-image-from-quota")).
 			WithClean(ctx.IsSet("with-clean"), ctx.IsSet("without-clean")).
-			WithJson(ctx.IsSet("json"), ctx.IsSet("no-json")).
 			WithMount(ctx.IsSet("with-mount"), ctx.IsSet("without-mount"))
 
 		cfg, err := configBuilder.Build()
@@ -218,7 +209,6 @@ var CreateCommand = cli.Command{
 
 		createSpec := groot.CreateSpec{
 			ID:                          id,
-			Json:                        cfg.Create.Json,
 			Mount:                       !cfg.Create.WithoutMount,
 			BaseImage:                   baseImage,
 			DiskLimit:                   cfg.Create.DiskLimitSizeBytes,
@@ -236,19 +226,12 @@ var CreateCommand = cli.Command{
 			return newExitError(humanizedError, 1)
 		}
 
-		var output string
-		if cfg.Create.Json {
-			jsonBytes, err := json.Marshal(image)
-			if err != nil {
-				logger.Error("formatting output", err)
-				return newExitError(err.Error(), 1)
-			}
-			output = string(jsonBytes)
-		} else {
-			output = image.Path
+		jsonBytes, err := json.Marshal(image)
+		if err != nil {
+			logger.Error("formatting output", err)
+			return newExitError(err.Error(), 1)
 		}
-
-		fmt.Println(output)
+		fmt.Println(string(jsonBytes))
 
 		usage, err := sm.MeasureStore(logger)
 		if err != nil {
@@ -342,14 +325,6 @@ func findStoreOwner(uidMappings, gidMappings []groot.IDMappingSpec) (int, int, e
 func validateOptions(ctx *cli.Context, cfg config.Config) error {
 	if ctx.IsSet("with-clean") && ctx.IsSet("without-clean") {
 		return errorspkg.New("with-clean and without-clean cannot be used together")
-	}
-
-	if ctx.IsSet("json") && ctx.IsSet("no-json") {
-		return errorspkg.New("json and no-json cannot be used together")
-	}
-
-	if cfg.Create.WithoutMount && !cfg.Create.Json {
-		return errorspkg.New("without-mount option must be used with the json option")
 	}
 
 	return nil

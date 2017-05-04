@@ -49,7 +49,6 @@ var _ = Describe("Create with local images", func() {
 			BaseImage: baseImagePath,
 			ID:        "random-id",
 			Mount:     mountByDefault(),
-			Json:      true,
 		}
 	})
 
@@ -87,7 +86,6 @@ var _ = Describe("Create with local images", func() {
 				ID:        "another-random-id",
 				BaseImage: baseImagePath,
 				Mount:     false,
-				Json:      true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -127,7 +125,6 @@ var _ = Describe("Create with local images", func() {
 				ID:        "my-image-1",
 				BaseImage: baseImagePath,
 				Mount:     true,
-				Json:      true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -146,7 +143,6 @@ var _ = Describe("Create with local images", func() {
 				ID:        "my-image-2",
 				BaseImage: baseImage2Path,
 				Mount:     true,
-				Json:      true,
 			}
 			_, err := Runner.Create(createSpec)
 			Expect(err).NotTo(HaveOccurred())
@@ -234,7 +230,6 @@ var _ = Describe("Create with local images", func() {
 				ID:        "random-id-2",
 				BaseImage: baseImagePath,
 				Mount:     mountByDefault(),
-				Json:      true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(Runner.EnsureMounted(image)).To(Succeed())
@@ -259,7 +254,6 @@ var _ = Describe("Create with local images", func() {
 				ID:        "random-id-2",
 				BaseImage: baseImagePath,
 				Mount:     mountByDefault(),
-				Json:      true,
 			})
 			Expect(Runner.EnsureMounted(image)).To(Succeed())
 			Expect(err).NotTo(HaveOccurred())
@@ -274,7 +268,6 @@ var _ = Describe("Create with local images", func() {
 				BaseImage: "/invalid/image",
 				ID:        "random-id",
 				Mount:     false,
-				Json:      true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("stat /invalid/image: no such file or directory")))
 		})

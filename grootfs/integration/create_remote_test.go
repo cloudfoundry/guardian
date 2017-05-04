@@ -85,12 +85,12 @@ var _ = Describe("Create with remote images", func() {
 				ID:        "random-id",
 				Mount:     true,
 				UIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+					{HostID: 100000, NamespaceID: 1, Size: 65000},
 				},
 				GIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+					{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+					{HostID: 100000, NamespaceID: 1, Size: 65000},
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -104,43 +104,41 @@ var _ = Describe("Create with remote images", func() {
 			Eventually(sess).Should(gexec.Exit(0))
 		})
 
-		Context("when the --json flag is provided", func() {
-			It("outputs a json with the correct `rootfs` key", func() {
-				image, err := Runner.WithJson().Create(groot.CreateSpec{
-					BaseImage: "docker:///busybox:1.26.2",
-					ID:        "random-id",
-					Mount:     true,
-					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(image.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id", "rootfs")))
+		It("outputs a json with the correct `rootfs` key", func() {
+			image, err := Runner.Create(groot.CreateSpec{
+				BaseImage: "docker:///busybox:1.26.2",
+				ID:        "random-id",
+				Mount:     true,
+				UIDMappings: []groot.IDMappingSpec{
+					{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+					{HostID: 100000, NamespaceID: 1, Size: 65000},
+				},
+				GIDMappings: []groot.IDMappingSpec{
+					{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+					{HostID: 100000, NamespaceID: 1, Size: 65000},
+				},
 			})
+			Expect(err).NotTo(HaveOccurred())
 
-			It("outputs a json with the correct `config` key", func() {
-				image, err := Runner.WithJson().Create(groot.CreateSpec{
-					BaseImage: "docker:///busybox:1.26.2",
-					ID:        "random-id",
-					Mount:     true,
-					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(image.Image.RootFS.DiffIDs[0]).To(Equal("sha256:" + testhelpers.BusyBoxImage.Layers[0].ChainID))
+			Expect(image.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id", "rootfs")))
+		})
+
+		It("outputs a json with the correct `config` key", func() {
+			image, err := Runner.Create(groot.CreateSpec{
+				BaseImage: "docker:///busybox:1.26.2",
+				ID:        "random-id",
+				Mount:     true,
+				UIDMappings: []groot.IDMappingSpec{
+					{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+					{HostID: 100000, NamespaceID: 1, Size: 65000},
+				},
+				GIDMappings: []groot.IDMappingSpec{
+					{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+					{HostID: 100000, NamespaceID: 1, Size: 65000},
+				},
 			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(image.Image.RootFS.DiffIDs[0]).To(Equal("sha256:" + testhelpers.BusyBoxImage.Layers[0].ChainID))
 		})
 
 		Context("when the image is bigger than available memory", func() {
@@ -232,12 +230,12 @@ var _ = Describe("Create with remote images", func() {
 					ID:        "random-id",
 					Mount:     true,
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -261,12 +259,12 @@ var _ = Describe("Create with remote images", func() {
 					ID:        "random-id",
 					Mount:     true,
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -434,7 +432,6 @@ var _ = Describe("Create with remote images", func() {
 						BaseImage: baseImageURL,
 						ID:        "random-id",
 						Mount:     mountByDefault(),
-						Json:      !mountByDefault(),
 						ExcludeBaseImageFromQuota: true,
 						DiskLimit:                 10,
 					})
@@ -448,7 +445,6 @@ var _ = Describe("Create with remote images", func() {
 						BaseImage: baseImageURL,
 						ID:        "random-id",
 						Mount:     mountByDefault(),
-						Json:      !mountByDefault(),
 						DiskLimit: 10,
 					})
 					Expect(err).To(MatchError(ContainSubstring("layers exceed disk quota")))

@@ -83,7 +83,6 @@ var _ = Describe("Create", func() {
 			BaseImage: baseImagePath,
 			ID:        "random-id",
 			Mount:     mountByDefault(),
-			Json:      true,
 		})
 		Expect(err).ToNot(HaveOccurred())
 
@@ -111,14 +110,13 @@ var _ = Describe("Create", func() {
 					ID:        "some-id",
 					BaseImage: baseImagePath,
 					Mount:     mountByDefault(),
-					Json:      true,
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
 			Expect(err).NotTo(HaveOccurred())
@@ -155,16 +153,15 @@ var _ = Describe("Create", func() {
 			image, err := Runner.WithLogLevel(lager.DEBUG).
 				Create(groot.CreateSpec{
 					Mount:     mountByDefault(),
-					Json:      true,
 					ID:        "some-id",
 					BaseImage: baseImagePath,
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
 			Expect(err).NotTo(HaveOccurred())
@@ -194,7 +191,6 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 				Mount:     false,
-				Json:      true,
 			})
 			Expect(err).ToNot(HaveOccurred())
 			Expect(storePath).To(BeADirectory())
@@ -210,7 +206,6 @@ var _ = Describe("Create", func() {
 						ID:        "some-id",
 						BaseImage: baseImagePath,
 						Mount:     false,
-						Json:      true,
 					})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -238,14 +233,13 @@ var _ = Describe("Create", func() {
 						ID:        "some-id",
 						BaseImage: baseImagePath,
 						Mount:     false,
-						Json:      true,
 						UIDMappings: []groot.IDMappingSpec{
-							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
-							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+							{HostID: 1000, NamespaceID: 0, Size: 1},
+							{HostID: 100000, NamespaceID: 1, Size: 65000},
 						},
 						GIDMappings: []groot.IDMappingSpec{
-							groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
-							groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+							{HostID: 1000, NamespaceID: 0, Size: 1},
+							{HostID: 100000, NamespaceID: 1, Size: 65000},
 						},
 					})
 
@@ -274,12 +268,11 @@ var _ = Describe("Create", func() {
 							ID:        "some-id",
 							BaseImage: baseImagePath,
 							Mount:     false,
-							Json:      true,
 							UIDMappings: []groot.IDMappingSpec{
-								groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+								{HostID: 100000, NamespaceID: 1, Size: 65000},
 							},
 							GIDMappings: []groot.IDMappingSpec{
-								groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+								{HostID: 100000, NamespaceID: 1, Size: 65000},
 							},
 						})
 
@@ -297,7 +290,6 @@ var _ = Describe("Create", func() {
 							ID:        "random-id",
 							BaseImage: "my-image",
 							Mount:     false,
-							Json:      true,
 						})
 					Expect(err).To(HaveOccurred())
 					Expect(logBuffer).To(gbytes.Say(`"id":"random-id"`))
@@ -318,7 +310,6 @@ var _ = Describe("Create", func() {
 				ID:        "random-id",
 				DiskLimit: tenMegabytes,
 				Mount:     mountByDefault(),
-				Json:      !mountByDefault(),
 			})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -333,7 +324,6 @@ var _ = Describe("Create", func() {
 					BaseImage: baseImagePath,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
-					Json:      !mountByDefault(),
 				})
 				Expect(err).To(MatchError(ContainSubstring("disk limit cannot be negative")))
 			})
@@ -347,7 +337,6 @@ var _ = Describe("Create", func() {
 					BaseImage:                 baseImagePath,
 					ID:                        "random-id",
 					Mount:                     mountByDefault(),
-					Json:                      !mountByDefault(),
 				})
 				Expect(err).ToNot(HaveOccurred())
 
@@ -369,14 +358,13 @@ var _ = Describe("Create", func() {
 					BaseImage: baseImagePath,
 					ID:        "foobar",
 					Mount:     false,
-					Json:      true,
 					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-						groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
 				Expect(err).ToNot(HaveOccurred())
@@ -388,7 +376,6 @@ var _ = Describe("Create", func() {
 					BaseImage: baseImagePath,
 					ID:        "foobar2",
 					Mount:     false,
-					Json:      true,
 				})
 				Expect(err).To(MatchError("store already initialized with a different mapping"))
 			})
@@ -420,7 +407,6 @@ var _ = Describe("Create", func() {
 				ID:            "my-empty",
 				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
 				Mount:         false,
-				Json:          true,
 				CleanOnCreate: true,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -460,7 +446,6 @@ var _ = Describe("Create", func() {
 				ID:            "my-empty",
 				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
 				Mount:         true,
-				Json:          true,
 				CleanOnCreate: false,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -487,24 +472,12 @@ var _ = Describe("Create", func() {
 		})
 	})
 
-	Context("when both json and no-json flags are given", func() {
-		It("returns an error", func() {
-			_, err := Runner.WithJson().WithNoJson().Create(groot.CreateSpec{
-				ID:        "my-empty",
-				BaseImage: "docker:///cfgarden/empty:v0.1.1",
-				Mount:     false,
-			})
-			Expect(err).To(MatchError(ContainSubstring("json and no-json cannot be used together")))
-		})
-	})
-
 	Context("when the id is already being used", func() {
 		JustBeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "random-id",
 				BaseImage: baseImagePath,
 				Mount:     false,
-				Json:      true,
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -514,7 +487,6 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 				Mount:     false,
-				Json:      true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("image for id `random-id` already exists")))
 		})
@@ -537,7 +509,6 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "this/is/not/okay",
 				Mount:     false,
-				Json:      true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("id `this/is/not/okay` contains invalid characters: `/`")))
 		})
@@ -549,7 +520,6 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "random-id",
 				Mount:     false,
-				Json:      true,
 			})
 			Expect(err).To(MatchError("Image id 'random-id': Store path filesystem (/mnt/ext4) is incompatible with requested driver"))
 		})
@@ -561,7 +531,6 @@ var _ = Describe("Create", func() {
 				BaseImage: baseImagePath,
 				ID:        "some-id",
 				Mount:     true,
-				Json:      true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("filesystem driver not supported: dinosaurfs")))
 		})
@@ -573,7 +542,6 @@ var _ = Describe("Create", func() {
 				ID:        "some-id",
 				BaseImage: "*@#%^!&",
 				Mount:     false,
-				Json:      true,
 			})
 			Expect(err).To(MatchError(ContainSubstring("parsing image url: parse")))
 			Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
@@ -595,7 +563,6 @@ var _ = Describe("Create", func() {
 				ID:        "random-id",
 				BaseImage: baseImagePath,
 				Mount:     mountByDefault(),
-				Json:      true,
 			}
 		})
 
@@ -677,7 +644,6 @@ var _ = Describe("Create", func() {
 					ID:        "random-id",
 					DiskLimit: 104857600,
 					Mount:     mountByDefault(),
-					Json:      !mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -698,7 +664,6 @@ var _ = Describe("Create", func() {
 					ID:        "random-id",
 					BaseImage: baseImagePath,
 					Mount:     mountByDefault(),
-					Json:      true,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -746,22 +711,19 @@ var _ = Describe("Create", func() {
 			})
 		})
 
-		Describe("json", func() {
-			It("returns an image json as output", func() {
-				image, err := Runner.Create(groot.CreateSpec{
-					ID:        "random-id",
-					BaseImage: baseImagePath,
-					Json:      true,
-					Mount:     false,
-				})
-				Expect(err).ToNot(HaveOccurred())
-
-				expectedRootfs := filepath.Join(StorePath, store.ImageDirName, "random-id/rootfs")
-				Expect(image.Rootfs).To(Equal(expectedRootfs))
-				Expect(image.Mount).NotTo(BeNil())
-				Expect(image.Mount.Destination).To(Equal(expectedRootfs))
-				Expect(image.Image).To(BeNil())
+		It("returns an image json as output", func() {
+			image, err := Runner.Create(groot.CreateSpec{
+				ID:        "random-id",
+				BaseImage: baseImagePath,
+				Mount:     false,
 			})
+			Expect(err).ToNot(HaveOccurred())
+
+			expectedRootfs := filepath.Join(StorePath, store.ImageDirName, "random-id/rootfs")
+			Expect(image.Rootfs).To(Equal(expectedRootfs))
+			Expect(image.Mount).NotTo(BeNil())
+			Expect(image.Mount.Destination).To(Equal(expectedRootfs))
+			Expect(image.Image).To(BeNil())
 		})
 
 		Describe("without mount", func() {
@@ -769,7 +731,6 @@ var _ = Describe("Create", func() {
 				image, err := Runner.Create(groot.CreateSpec{
 					ID:        "some-id",
 					BaseImage: baseImagePath,
-					Json:      true,
 					Mount:     false,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -790,7 +751,6 @@ var _ = Describe("Create", func() {
 						ID:        "some-id",
 						BaseImage: baseImagePath,
 						Mount:     false,
-						Json:      true,
 					})
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -828,18 +788,6 @@ var _ = Describe("Create", func() {
 								filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.WorkDir),
 							),
 						))
-					})
-				})
-
-				Context("but `json` is not set", func() {
-					It("returns an error", func() {
-						_, err := Runner.Create(groot.CreateSpec{
-							ID:        "my-empty",
-							BaseImage: "docker:///cfgarden/empty:v0.1.1",
-							Mount:     false,
-							Json:      false,
-						})
-						Expect(err).To(MatchError(ContainSubstring("without-mount option must be used with the json option")))
 					})
 				})
 			})
