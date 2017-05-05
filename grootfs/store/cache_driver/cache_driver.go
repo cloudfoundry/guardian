@@ -29,8 +29,8 @@ func (c *CacheDriver) FetchBlob(logger lager.Logger, id string,
 	blobFunc fetcher.RemoteBlobFunc,
 ) ([]byte, int64, error) {
 	logger = logger.Session("getting-blob-from-cache", lager.Data{"blobID": id})
-	logger.Info("starting")
-	defer logger.Info("ending")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	hasBlob, err := c.hasBlob(id)
 	if err != nil {

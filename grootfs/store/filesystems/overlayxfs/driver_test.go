@@ -255,7 +255,7 @@ var _ = Describe("Driver", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(logger).To(ContainSequence(
-				Info(
+				Debug(
 					Message("overlay+xfs.overlayxfs-creating-image.applying-quotas.no-need-for-quotas"),
 				),
 			))

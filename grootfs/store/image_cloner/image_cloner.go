@@ -165,8 +165,8 @@ func (b *ImageCloner) Exists(id string) (bool, error) {
 
 func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, error) {
 	logger = logger.Session("fetching-stats", lager.Data{"id": id})
-	logger.Info("starting")
-	defer logger.Info("ending")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	if ok, err := b.Exists(id); !ok {
 		logger.Error("checking-image-path-failed", err)
@@ -190,8 +190,8 @@ var OF = os.OpenFile
 
 func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, baseImage specsv1.Image) error {
 	logger = logger.Session("writing-image-json")
-	logger.Info("starting")
-	defer logger.Info("ending")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	imageJsonPath := filepath.Join(imagePath, "image.json")
 	imageJsonFile, err := OF(imageJsonPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)

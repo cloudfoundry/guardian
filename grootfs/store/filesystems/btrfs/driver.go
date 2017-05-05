@@ -303,8 +303,8 @@ func (d *Driver) runDrax(logger lager.Logger, args ...string) (*bytes.Buffer, er
 
 func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.VolumeStats, error) {
 	logger = logger.Session("btrfs-fetching-stats", lager.Data{"imagePath": imagePath})
-	logger.Info("starting")
-	defer logger.Info("ending")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	if !d.draxInPath() {
 		return groot.VolumeStats{}, errorspkg.New("drax was not found in the $PATH")

@@ -321,15 +321,15 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	defer logger.Debug("ending")
 
 	if spec.DiskLimit == 0 {
-		logger.Info("no-need-for-quotas")
+		logger.Debug("no-need-for-quotas")
 		return nil
 	}
 
 	diskLimit := spec.DiskLimit
 	if spec.ExclusiveDiskLimit {
-		logger.Info("applying-exclusive-quotas")
+		logger.Debug("applying-exclusive-quotas")
 	} else {
-		logger.Info("applying-inclusive-quotas")
+		logger.Debug("applying-inclusive-quotas")
 		diskLimit -= volumeSize
 		if diskLimit < 0 {
 			err := errorspkg.New("disk limit is smaller than volume size")
@@ -348,8 +348,8 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 
 func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.VolumeStats, error) {
 	logger = logger.Session("overlayxfs-fetching-stats", lager.Data{"imagePath": imagePath})
-	logger.Info("starting")
-	defer logger.Info("ending")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	if _, err := os.Stat(imagePath); os.IsNotExist(err) {
 		logger.Error("image-path-not-found", err)
