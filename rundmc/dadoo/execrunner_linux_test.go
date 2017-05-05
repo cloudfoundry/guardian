@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/dadoo"
@@ -146,6 +147,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 				if runcHangsForEver {
 					for {
+						time.Sleep(time.Minute)
 					}
 				}
 
