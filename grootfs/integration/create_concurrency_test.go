@@ -36,8 +36,8 @@ var _ = Describe("Concurrent creations", func() {
 				go func(wg *sync.WaitGroup, idx int) {
 					defer GinkgoRecover()
 					defer wg.Done()
-
-					image, err := Runner.Create(groot.CreateSpec{
+					runner := Runner // clone runner to avoid data-race on stdout
+					image, err := runner.Create(groot.CreateSpec{
 						ID:        fmt.Sprintf("test-%d", idx),
 						BaseImage: "docker:///cfgarden/empty",
 						Mount:     true,
@@ -61,7 +61,8 @@ var _ = Describe("Concurrent creations", func() {
 					defer wg.Done()
 
 					for i := 0; i < 100; i++ {
-						image, err := Runner.Create(groot.CreateSpec{
+						runner := Runner // clone runner to avoid data-race on stdout
+						image, err := runner.Create(groot.CreateSpec{
 							ID:        fmt.Sprintf("test-%d", i),
 							BaseImage: "docker:///cfgarden/empty",
 							Mount:     true,
@@ -95,8 +96,8 @@ var _ = Describe("Concurrent creations", func() {
 				go func(wg *sync.WaitGroup, idx int) {
 					defer GinkgoRecover()
 					defer wg.Done()
-
-					image, err := Runner.Create(groot.CreateSpec{
+					runner := Runner // clone runner to avoid data-race on stdout
+					image, err := runner.Create(groot.CreateSpec{
 						ID:                        fmt.Sprintf("test-%d", idx),
 						BaseImage:                 "docker:///ubuntu",
 						Mount:                     true,
