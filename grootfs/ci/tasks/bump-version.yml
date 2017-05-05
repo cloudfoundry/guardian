@@ -1,0 +1,19 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: cfgarden/grootfs-ci
+    tag: latest
+
+inputs:
+- name: grootfs-git-repo
+- name: grootfs-next-final-version
+
+outputs:
+- name: bumped-grootfs-repo
+
+run:
+  path: grootfs-git-repo/ci/scripts/bump-version.sh
+  user: root

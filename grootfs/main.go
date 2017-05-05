@@ -35,6 +35,7 @@ func init() {
 func main() {
 	grootfs := cli.NewApp()
 	grootfs.Name = "grootfs"
+	grootfs.Version = version
 	grootfs.Usage = "I am Groot!"
 
 	grootfs.Flags = []cli.Flag{
