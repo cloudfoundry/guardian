@@ -111,6 +111,10 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	volumePath := filepath.Join(d.storePath, store.VolumesDirName, id)
 	linkInfoPath := filepath.Join(d.storePath, LinksDirName, id)
+	logger = logger.Session("overlayxfs-deleting-volume", lager.Data{"volumeID": id, "volumePath": volumePath, "linkInfoPath": linkInfoPath})
+	logger.Info("starting")
+	defer logger.Info("ending")
+
 	shortId, err := ioutil.ReadFile(linkInfoPath)
 	if err != nil {
 		return errorspkg.Wrapf(err, "getting volume symlink location from (%s)", linkInfoPath)
@@ -133,8 +137,11 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 }
 
 func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
-	volumes := []string{}
+	logger = logger.Session("overlayxfs-list-volumes")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
+	volumes := []string{}
 	existingVolumes, err := ioutil.ReadDir(path.Join(d.storePath, store.VolumesDirName))
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "failed to list volumes")
@@ -215,7 +222,9 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 }
 
 func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
-	logger.Debug("Moving volume from %s to %s\n", lager.Data{"from": from, "to": to})
+	logger = logger.Session("overlayxfs-moving-volume", lager.Data{"from": from, "to": to})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	if err := os.Rename(from, to); err != nil {
 		if os.IsExist(err) {

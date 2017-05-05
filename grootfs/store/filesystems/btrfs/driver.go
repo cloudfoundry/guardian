@@ -90,9 +90,13 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID, id string) (string,
 }
 
 func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
+	logger = logger.Session("btrfs-moving-volume", lager.Data{"from": from, "to": to})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
 	if err := os.Rename(from, to); err != nil {
 		if !os.IsExist(err) {
-			logger.Error("moving-volume-failed", err, lager.Data{"from": from, "to": to})
+			logger.Error("moving-volume-failed", err)
 			return errorspkg.Wrap(err, "moving volume")
 		}
 	}
@@ -136,8 +140,11 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 }
 
 func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
-	volumes := []string{}
+	logger = logger.Session("btrfs-listing-volumes")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
+	volumes := []string{}
 	existingVolumes, err := ioutil.ReadDir(path.Join(d.storePath, store.VolumesDirName))
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "failed to list volumes")
