@@ -11,5 +11,6 @@ cd grootfs-release-master/src/code.cloudfoundry.org/grootfs
 make
 cp drax drax-${VERSION}
 cp grootfs grootfs-${VERSION}
+cp tardis tardis-${VERSION}
 
 cp -r . $OUTPUT_PATH
