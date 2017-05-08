@@ -160,6 +160,11 @@ type ServerCommand struct {
 		ConsoleSocketsPath       string `long:"console-sockets-path" description:"Path in which to store temporary sockets"`
 		CleanupProcessDirsOnWait bool   `long:"cleanup-process-dirs-on-wait" description:"Clean up proccess dirs on first invocation of wait"`
 
+		UIDMapStart  uint32 `long:"uid-map-start"  description:"(rootless only) The lowest numerical subordinate user ID the user is allowed to map"`
+		UIDMapLength uint32 `long:"uid-map-length" description:"(rootless only) The number of numerical subordinate user IDs the user is allowed to map"`
+		GIDMapStart  uint32 `long:"gid-map-start"  description:"(rootless only) The lowest numerical subordinate group ID the user is allowed to map"`
+		GIDMapLength uint32 `long:"gid-map-length" description:"(rootless only) The number of numerical subordinate group IDs the user is allowed to map"`
+
 		DefaultRootFS              string        `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
 		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
 		DestroyContainersOnStartup bool          `long:"destroy-containers-on-startup" description:"Clean up all the existing containers on startup."`
@@ -245,8 +250,34 @@ func init() {
 		os.Exit(0)
 	}
 
-	uidMappings = idmapper.MappingsForUser(uint32(os.Geteuid()), uint32(idmapper.MustGetMaxValidUID()))
-	gidMappings = idmapper.MappingsForUser(uint32(os.Getegid()), uint32(idmapper.MustGetMaxValidGID()))
+	maxUID := uint32(idmapper.MustGetMaxValidUID())
+	maxGID := uint32(idmapper.MustGetMaxValidGID())
+	uidMappings = idmapper.MappingList{
+		{
+			ContainerID: 0,
+			HostID:      maxUID,
+			Size:        1,
+		},
+		{
+			ContainerID: 1,
+			HostID:      1,
+			Size:        maxUID - 1,
+		},
+	}
+
+	gidMappings = idmapper.MappingList{
+		{
+			ContainerID: 0,
+			HostID:      maxGID,
+			Size:        1,
+		},
+		{
+			ContainerID: 1,
+			HostID:      1,
+			Size:        maxGID - 1,
+		},
+	}
+
 }
 
 func (cmd *ServerCommand) Execute([]string) error {
@@ -333,6 +364,33 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	)
 	if err != nil {
 		return fmt.Errorf("invalid pool range: %s", err)
+	}
+
+	if !runningAsRoot() {
+		uidMappings = idmapper.MappingList{
+			{
+				ContainerID: 0,
+				HostID:      uint32(os.Geteuid()),
+				Size:        1,
+			},
+			{
+				ContainerID: 1,
+				HostID:      cmd.Containers.UIDMapStart,
+				Size:        cmd.Containers.UIDMapLength,
+			},
+		}
+		gidMappings = idmapper.MappingList{
+			{
+				ContainerID: 0,
+				HostID:      uint32(os.Getegid()),
+				Size:        1,
+			},
+			{
+				ContainerID: 1,
+				HostID:      cmd.Containers.GIDMapStart,
+				Size:        cmd.Containers.GIDMapLength,
+			},
+		}
 	}
 
 	networker, iptablesStarter, err := cmd.wireNetworker(logger, cmd.Containers.Dir, propManager, portPool)

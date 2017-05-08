@@ -23,25 +23,33 @@ import (
 
 var _ = Describe("rootless containers", func() {
 	var (
-		client *runner.RunningGarden
+		client      *runner.RunningGarden
+		runcRootDir string
+		imagePath   string
 	)
 
 	BeforeEach(func() {
+		var err error
+
 		setupArgs := []string{"setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
 		setupProcess, err := gexec.Start(exec.Command(gardenBin, setupArgs...), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 
-		unprivilegedUser := &syscall.Credential{Uid: unprivilegedUID, Gid: unprivilegedUID}
-		unprivilegedUidGid := fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedUID)
-
-		imagePath, err := ioutil.TempDir("", "rootlessImagePath")
+		runcRootDir, err = ioutil.TempDir("", "runcRootDir")
+		Expect(err).NotTo(HaveOccurred())
+		imagePath, err = ioutil.TempDir("", "rootlessImagePath")
 		Expect(err).NotTo(HaveOccurred())
 
-		// so much easier to just shell out to the OS here ...
+		unprivilegedUser := &syscall.Credential{Uid: unprivilegedUID, Gid: unprivilegedGID}
+
 		Expect(exec.Command("cp", "-r", os.Getenv("GARDEN_TEST_ROOTFS"), imagePath).Run()).To(Succeed())
-		Expect(exec.Command("chown", "-R", unprivilegedUidGid, imagePath).Run()).To(Succeed())
-		Expect(exec.Command("chown", "-R", "1000:1000", filepath.Join(imagePath, "rootfs", "home", "alice")).Run()).To(Succeed())
+		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), runcRootDir).Run()).To(Succeed())
+		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), imagePath).Run()).To(Succeed())
+		// The 'alice' user in the GARDEN_TEST_ROOTFS has a UID of 1000
+		// The tests below use a uid range of 100000 -> 165536
+		// 100000 + (1000 - 1) = 100999 (-1 because we map from 0)
+		Expect(exec.Command("chown", "-R", "100999:100999", filepath.Join(imagePath, "rootfs", "home", "alice")).Run()).To(Succeed())
 
 		client = startGardenAsUser(
 			unprivilegedUser,
@@ -49,11 +57,18 @@ var _ = Describe("rootless containers", func() {
 			"--image-plugin", testImagePluginBin,
 			"--image-plugin-extra-arg", "\"--rootfs-path\"",
 			"--image-plugin-extra-arg", filepath.Join(imagePath, "rootfs"),
+			"--uid-map-start", "100000", // default values that get added to /etc/subuid upon `useradd ...`
+			"--uid-map-length", "65536",
+			"--gid-map-start", "100000",
+			"--gid-map-length", "65536",
 			"--network-plugin", "/bin/true",
+			"--runc-root", runcRootDir,
 		)
 	})
 
 	AfterEach(func() {
+		Expect(os.RemoveAll(imagePath)).To(Succeed())
+		Expect(os.RemoveAll(runcRootDir)).To(Succeed())
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
