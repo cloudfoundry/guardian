@@ -72,7 +72,7 @@ func run() int {
 	runtimeArgs = append(runtimeArgs, "exec", "-d", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath)
 	if *tty {
 		if len(*socketDirPath) > MaxSocketDirPathLength {
-			logAndExit(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
+			return logAndExit(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
 		}
 		ttySocketPath := setupTTYSocket(stdinR, stdoutW, winsz, pidFilePath, *socketDirPath, ioWg)
 		runtimeArgs = append(runtimeArgs, "-tty", "-console-socket", ttySocketPath, containerId)
@@ -144,8 +144,7 @@ func waitForContainerToExit(processStateDir string, containerPid int, signals ch
 		}
 	}
 
-	logAndExit("ran out of signals") // cant happen
-	return 0                         // unreachable
+	return logAndExit("ran out of signals") // cant happen
 }
 
 func openPipes(processStateDir string) (io.ReadCloser, io.WriteCloser, io.WriteCloser, io.ReadWriteCloser) {
@@ -282,9 +281,9 @@ func parsePid(pidFile string) (int, error) {
 	return pid, nil
 }
 
-func logAndExit(msg string) {
+func logAndExit(msg string) int {
 	fmt.Println(msg)
-	os.Exit(2)
+	return 2
 }
 
 func check(err error) {
