@@ -57,7 +57,7 @@ var _ = Describe("rootless containers", func() {
 			"--image-plugin", testImagePluginBin,
 			"--image-plugin-extra-arg", "\"--rootfs-path\"",
 			"--image-plugin-extra-arg", filepath.Join(imagePath, "rootfs"),
-			"--uid-map-start", "100000", // default values that get added to /etc/subuid upon `useradd ...`
+			"--uid-map-start", "100000", // /etc/subuid entry baked into the cfgarden/garden-ci-ubuntu image
 			"--uid-map-length", "65536",
 			"--gid-map-start", "100000",
 			"--gid-map-length", "65536",
