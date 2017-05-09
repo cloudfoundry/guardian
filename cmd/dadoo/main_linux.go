@@ -51,17 +51,21 @@ func run() int {
 	syncPipe := os.NewFile(5, "/proc/self/fd/5")
 	pidFilePath := filepath.Join(processStateDir, "pidfile")
 
-	stdinR, stdoutW, stderrW, winsz := openPipes(processStateDir)
-	defer func() {
-		tryClose(stdinR, stdoutW, stderrW, winsz)
-	}()
+	stdinR, stdoutW, stderrW, err := openStdioAndExitFifos(processStateDir)
+	defer closeFile(stdinR, stdoutW, stderrW)
+	if err != nil {
+		fmt.Println(err)
+		return 2
+	}
 
 	syncPipe.Write([]byte{0})
 
-	stdoutR, stderrR := openStdioKeepAlivePipes(processStateDir)
-	defer func() {
-		tryClose(stdoutR, stderrR)
-	}()
+	stdoutR, stderrR, err := openStdioKeepAlivePipes(processStateDir)
+	defer closeFile(stdoutR, stderrR)
+	if err != nil {
+		fmt.Println(err)
+		return 2
+	}
 
 	ioWg := &sync.WaitGroup{}
 	var runcExecCmd *exec.Cmd
@@ -71,6 +75,13 @@ func run() int {
 	}
 	runtimeArgs = append(runtimeArgs, "exec", "-d", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath)
 	if *tty {
+		winsz, err := openFile(filepath.Join(processStateDir, "winsz"), os.O_RDWR)
+		defer closeFile(winsz)
+		if err != nil {
+			fmt.Println(err)
+			return 2
+		}
+
 		if len(*socketDirPath) > MaxSocketDirPathLength {
 			return logAndExit(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
 		}
@@ -95,7 +106,7 @@ func run() int {
 
 	var status syscall.WaitStatus
 	var rusage syscall.Rusage
-	_, err := syscall.Wait4(runcExecCmd.Process.Pid, &status, 0, &rusage)
+	_, err = syscall.Wait4(runcExecCmd.Process.Pid, &status, 0, &rusage)
 	check(err)    // Start succeeded but Wait4 failed, this can only be a programmer error
 	logFD.Close() // No more logs from runc so close fd
 
@@ -114,10 +125,16 @@ func run() int {
 // If gdn server process dies, we need dadoo to keep stdout/err reader
 // FDs so that Linux does not SIGPIPE the user process if it tries to use its end of
 // these pipes.
-func openStdioKeepAlivePipes(processStateDir string) (io.ReadCloser, io.ReadCloser) {
-	keepStdoutAlive := openFifo(filepath.Join(processStateDir, "stdout"), os.O_RDONLY)
-	keepStderrAlive := openFifo(filepath.Join(processStateDir, "stderr"), os.O_RDONLY)
-	return keepStdoutAlive, keepStderrAlive
+func openStdioKeepAlivePipes(processStateDir string) (io.ReadCloser, io.ReadCloser, error) {
+	keepStdoutAlive, err := openFile(filepath.Join(processStateDir, "stdout"), os.O_RDONLY)
+	if err != nil {
+		return nil, nil, err
+	}
+	keepStderrAlive, err := openFile(filepath.Join(processStateDir, "stderr"), os.O_RDONLY)
+	if err != nil {
+		return nil, nil, err
+	}
+	return keepStdoutAlive, keepStderrAlive, nil
 }
 
 func waitForContainerToExit(processStateDir string, containerPid int, signals chan os.Signal, ioWg *sync.WaitGroup) (exitCode int) {
@@ -147,24 +164,28 @@ func waitForContainerToExit(processStateDir string, containerPid int, signals ch
 	return logAndExit("ran out of signals") // cant happen
 }
 
-func openPipes(processStateDir string) (io.ReadCloser, io.WriteCloser, io.WriteCloser, io.ReadWriteCloser) {
-	stdin := openFifo(filepath.Join(processStateDir, "stdin"), os.O_RDONLY)
-	stdout := openFifo(filepath.Join(processStateDir, "stdout"), os.O_WRONLY|os.O_APPEND)
-	stderr := openFifo(filepath.Join(processStateDir, "stderr"), os.O_WRONLY|os.O_APPEND)
-	winsz := openFifo(filepath.Join(processStateDir, "winsz"), os.O_RDWR)
-	openFifo(filepath.Join(processStateDir, "exit"), os.O_RDWR) // open just so guardian can detect it being closed when we exit
-
-	return stdin, stdout, stderr, winsz
+func openStdioAndExitFifos(processStateDir string) (io.ReadCloser, io.WriteCloser, io.WriteCloser, error) {
+	stdin, err := openFile(filepath.Join(processStateDir, "stdin"), os.O_RDONLY)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	stdout, err := openFile(filepath.Join(processStateDir, "stdout"), os.O_WRONLY)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	stderr, err := openFile(filepath.Join(processStateDir, "stderr"), os.O_WRONLY)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	// open just so guardian can detect it being closed when we exit
+	if _, err := openFile(filepath.Join(processStateDir, "exit"), os.O_RDWR); err != nil {
+		return nil, nil, nil, err
+	}
+	return stdin, stdout, stderr, nil
 }
 
-func openFifo(path string, flags int) io.ReadWriteCloser {
-	r, err := os.OpenFile(path, flags, 0600)
-	if os.IsNotExist(err) {
-		return nil
-	}
-
-	check(err)
-	return r
+func openFile(path string, flags int) (*os.File, error) {
+	return os.OpenFile(path, flags, 0600)
 }
 
 func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidFilePath, sockDirBase string, ioWg *sync.WaitGroup) string {
@@ -293,11 +314,9 @@ func check(err error) {
 	}
 }
 
-func tryClose(closers ...io.Closer) {
+func closeFile(closers ...io.Closer) {
 	for _, closer := range closers {
-		if closer != nil {
-			closer.Close()
-		}
+		closer.Close()
 	}
 }
 
