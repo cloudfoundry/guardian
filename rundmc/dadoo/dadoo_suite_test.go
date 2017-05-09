@@ -9,5 +9,5 @@ import (
 
 func TestDadoo(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Dadoo Suite")
+	RunSpecs(t, "rundmc/dadoo Suite")
 }
