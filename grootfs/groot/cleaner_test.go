@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
@@ -47,7 +48,13 @@ var _ = Describe("Cleaner", func() {
 	})
 
 	Describe("Clean", func() {
-		It("calls the garbage collector", func() {
+		It("calls the garbage collector to mark unused blobs", func() {
+			_, err := cleaner.Clean(logger, 0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(fakeGarbageCollector.MarkUnusedCallCount()).To(Equal(1))
+		})
+
+		It("calls the garbage collector to collect", func() {
 			_, err := cleaner.Clean(logger, 0, []string{})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
@@ -74,13 +81,62 @@ var _ = Describe("Cleaner", func() {
 			Expect(start).NotTo(BeZero())
 		})
 
-		Context("acquireLock is true", func() {
-			It("acquires the global lock", func() {
+		It("acquires the global lock", func() {
+			_, err := cleaner.Clean(logger, 0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
+			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GlobalLockKey))
+		})
+
+		It("releases the global lock", func() {
+			_, err := cleaner.Clean(logger, 0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
+			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
+		})
+
+		It("releases the lock between marking unsused and collecting garbage", func() {
+			var unLockTime, markTime, collectTime time.Time
+			fakeLocksmith.UnlockStub = func(_ *os.File) error {
+				unLockTime = time.Now()
+				return nil
+			}
+
+			fakeGarbageCollector.MarkUnusedStub = func(_ lager.Logger, _ []string) error {
+				markTime = time.Now()
+				return nil
+			}
+
+			fakeGarbageCollector.CollectStub = func(_ lager.Logger) error {
+				collectTime = time.Now()
+				return nil
+			}
+
+			_, err := cleaner.Clean(logger, 0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(markTime.UnixNano()).To(BeNumerically("<", unLockTime.UnixNano()))
+			Expect(unLockTime.UnixNano()).To(BeNumerically("<", collectTime.UnixNano()))
+		})
+
+		Context("when marking unused volumes fails", func() {
+			BeforeEach(func() {
+				fakeGarbageCollector.MarkUnusedReturns(errors.New("Failed to mark!"))
+			})
+
+			It("still collects the garbage", func() {
+				_, err := cleaner.Clean(logger, 0, []string{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
+			})
+
+			It("releases the global lock", func() {
 				_, err := cleaner.Clean(logger, 0, []string{})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
-				Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GlobalLockKey))
+				Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
 			})
 		})
 
@@ -99,14 +155,6 @@ var _ = Describe("Cleaner", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 			})
-		})
-
-		It("releases the global lock", func() {
-			_, err := cleaner.Clean(logger, 0, []string{})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
-			Expect(fakeLocksmith.UnlockArgsForCall(0)).To(Equal(lockFile))
 		})
 
 		Context("when a threshold is provided", func() {

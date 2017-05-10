@@ -52,13 +52,16 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 
 	lockFile, err := c.locksmith.Lock(GlobalLockKey)
 	if err != nil {
-		return false, err
+		return false, errorspkg.Wrap(err, "garbage collector acquiring lock")
 	}
-	defer func() {
-		if err := c.locksmith.Unlock(lockFile); err != nil {
-			logger.Error("failed-to-unlock", err)
-		}
-	}()
 
-	return false, c.garbageCollector.Collect(logger, keepImages)
+	if err := c.garbageCollector.MarkUnused(logger, keepImages); err != nil {
+		logger.Error("marking-unused-failed", err)
+	}
+
+	if err := c.locksmith.Unlock(lockFile); err != nil {
+		logger.Error("unlocking-failed", err)
+	}
+
+	return false, c.garbageCollector.Collect(logger)
 }

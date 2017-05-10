@@ -98,7 +98,8 @@ type DependencyManager interface {
 }
 
 type GarbageCollector interface {
-	Collect(logger lager.Logger, keepBaseImages []string) error
+	MarkUnused(logger lager.Logger, keepBaseImages []string) error
+	Collect(logger lager.Logger) error
 }
 
 type StoreMeasurer interface {

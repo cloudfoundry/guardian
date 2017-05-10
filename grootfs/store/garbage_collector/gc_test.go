@@ -2,6 +2,7 @@ package garbage_collector_test
 
 import (
 	"errors"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector/garbage_collectorfakes"
@@ -34,14 +35,19 @@ var _ = Describe("Gc", func() {
 		logger = lagertest.NewTestLogger("garbage_collector")
 	})
 
-	Describe("Collect", func() {
+	Describe("MarkUnused", func() {
 		BeforeEach(func() {
+			fakeVolumeDriver.VolumePathStub = func(_ lager.Logger, id string) (string, error) {
+				return filepath.Join("/store/volumes", id), nil
+			}
+
 			fakeVolumeDriver.VolumesReturns([]string{
 				"sha256:vol-a",
 				"sha256:vol-b",
 				"sha256:vol-c",
 				"sha256:vol-d",
 				"sha256:vol-e",
+				"gc.sha256:vol-f",
 			}, nil)
 
 			fakeDependencyManager.DependenciesStub = func(id string) ([]string, error) {
@@ -56,59 +62,66 @@ var _ = Describe("Gc", func() {
 			fakeImageCloner.ImageIDsReturns([]string{"idA", "idB"}, nil)
 		})
 
-		It("collects unused volumes", func() {
-			Expect(garbageCollector.Collect(logger, []string{})).To(Succeed())
+		It("moves all unused volumes to the gc folder", func() {
+			Expect(garbageCollector.MarkUnused(logger, []string{""})).To(Succeed())
 
-			Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(2))
-			volumes := []string{}
-			_, volID := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
-			volumes = append(volumes, volID)
-			_, volID = fakeVolumeDriver.DestroyVolumeArgsForCall(1)
-			volumes = append(volumes, volID)
+			Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(2))
+			_, from, to := fakeVolumeDriver.MoveVolumeArgsForCall(0)
+			Expect(from).To(Equal("/store/volumes/sha256:vol-d"))
+			Expect(to).To(MatchRegexp("/store/volumes/gc.sha256:vol-d\\.[0-9]+"))
 
-			Expect(volumes).To(ContainElement("sha256:vol-d"))
-			Expect(volumes).To(ContainElement("sha256:vol-e"))
+			_, from, to = fakeVolumeDriver.MoveVolumeArgsForCall(1)
+			Expect(from).To(Equal("/store/volumes/sha256:vol-e"))
+			Expect(to).To(MatchRegexp("/store/volumes/gc.sha256:vol-e\\.[0-9]+"))
 		})
 
-		It("collects blobs from the cache", func() {
-			Expect(garbageCollector.Collect(logger, []string{})).To(Succeed())
-			Expect(fakeCacheDriver.CleanCallCount()).To(Equal(1))
+		It("doesn't remark volumes for gc", func() {
+			Expect(garbageCollector.MarkUnused(logger, []string{""})).To(Succeed())
+
+			for i := 0; i < fakeVolumeDriver.MoveVolumeCallCount(); i++ {
+				_, from, _ := fakeVolumeDriver.MoveVolumeArgsForCall(i)
+				Expect(from).NotTo(Equal("/store/volumes/gc.sha256:vol-f"))
+			}
 		})
 
 		Context("when a list of images to keep is provided", func() {
-			It("does not collect the unused volumes for those listed", func() {
-				Expect(garbageCollector.Collect(logger, []string{"docker:///ubuntu"})).To(Succeed())
+			It("doesn't mark them for collection", func() {
+				Expect(garbageCollector.MarkUnused(logger, []string{"docker:///ubuntu"})).To(Succeed())
 
-				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
-				_, volID := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
-				Expect(volID).To(Equal("sha256:vol-e"))
+				Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(1))
+				_, from, _ := fakeVolumeDriver.MoveVolumeArgsForCall(0)
+				Expect(from).To(Equal("/store/volumes/sha256:vol-e"))
 			})
 
 			Context("when the image to keep is from a private registry", func() {
-				It("does not collect the unused volumes for those listed", func() {
-					Expect(garbageCollector.Collect(logger, []string{"docker://private/ubuntu"})).To(Succeed())
+				It("doesn't mark them for collection", func() {
+					Expect(garbageCollector.MarkUnused(logger, []string{"docker://private/ubuntu"})).To(Succeed())
 
-					Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
-					_, volID := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
-					Expect(volID).To(Equal("sha256:vol-d"))
+					Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(1))
+					_, from, _ := fakeVolumeDriver.MoveVolumeArgsForCall(0)
+					Expect(from).To(Equal("/store/volumes/sha256:vol-d"))
 				})
 			})
 		})
 
-		Context("when destroying a volume fails", func() {
+		Context("when checking the volume path fails", func() {
 			BeforeEach(func() {
-				fakeVolumeDriver.DestroyVolumeStub = func(_ lager.Logger, volID string) error {
-					if volID == "sha256:vol-d" {
-						return errors.New("failed to destroy volume")
+				fakeVolumeDriver.VolumePathStub = func(_ lager.Logger, id string) (string, error) {
+					if id == "sha256:vol-d" {
+						return "", errors.New("volume path failed")
 					}
 
-					return nil
+					return filepath.Join("/store/volumes", id), nil
 				}
 			})
 
-			It("does not stop cleaning up remainging volumes", func() {
-				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(ContainSubstring("destroying volumes failed")))
-				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(2))
+			It("returns an error", func() {
+				Expect(garbageCollector.MarkUnused(logger, []string{})).To(MatchError(ContainSubstring("1/2 volumes failed to be marked as unused")))
+			})
+
+			It("still tries to move the other unused volumes", func() {
+				Expect(garbageCollector.MarkUnused(logger, []string{})).To(HaveOccurred())
+				Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(1))
 			})
 		})
 
@@ -118,7 +131,17 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(ContainSubstring("failed to retrieve volume list")))
+				Expect(garbageCollector.MarkUnused(logger, []string{})).To(MatchError(ContainSubstring("failed to retrieve volume list")))
+			})
+		})
+
+		Context("when moving volumes fails", func() {
+			BeforeEach(func() {
+				fakeVolumeDriver.MoveVolumeReturns(errors.New("Failed to move"))
+			})
+
+			It("returns an error", func() {
+				Expect(garbageCollector.MarkUnused(logger, []string{})).To(MatchError(ContainSubstring("2/2 volumes failed to be marked as unused")))
 			})
 		})
 
@@ -128,7 +151,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(ContainSubstring("failed to retrieve images")))
+				Expect(garbageCollector.MarkUnused(logger, []string{})).To(MatchError(ContainSubstring("failed to retrieve images")))
 			})
 		})
 
@@ -138,13 +161,63 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(
+				Expect(garbageCollector.MarkUnused(logger, []string{})).To(MatchError(
 					ContainSubstring("failed to access deps"),
 				))
 			})
 
-			It("does not delete any volumes", func() {
-				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(0))
+			It("does not move any volumes", func() {
+				Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(0))
+			})
+		})
+	})
+
+	Describe("Collect", func() {
+		BeforeEach(func() {
+			fakeVolumeDriver.VolumesReturns([]string{
+				"sha256:vol-a",
+				"gc.sha256:vol-b",
+				"gc.sha256:vol-c",
+				"sha256:vol-d",
+				"sha256:vol-e",
+				"gc.sha256:vol-f",
+			}, nil)
+		})
+
+		It("collects unused volumes", func() {
+			Expect(garbageCollector.Collect(logger)).To(Succeed())
+
+			Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(3))
+			volumes := []string{}
+			for i := 0; i < fakeVolumeDriver.DestroyVolumeCallCount(); i++ {
+				_, volID := fakeVolumeDriver.DestroyVolumeArgsForCall(i)
+				volumes = append(volumes, volID)
+			}
+
+			Expect(volumes).To(ContainElement("gc.sha256:vol-b"))
+			Expect(volumes).To(ContainElement("gc.sha256:vol-c"))
+			Expect(volumes).To(ContainElement("gc.sha256:vol-f"))
+		})
+
+		It("collects blobs from the cache", func() {
+			Expect(garbageCollector.Collect(logger)).To(Succeed())
+			Expect(fakeCacheDriver.CleanCallCount()).To(Equal(1))
+		})
+
+		Context("when destroying a volume fails", func() {
+			BeforeEach(func() {
+				fakeVolumeDriver.DestroyVolumeStub = func(_ lager.Logger, volID string) error {
+					if volID == "gc.sha256:vol-f" {
+						return errors.New("failed to destroy volume")
+					}
+
+					return nil
+				}
+			})
+
+			It("does not stop cleaning up remaining volumes", func() {
+				Expect(garbageCollector.Collect(logger)).To(MatchError(ContainSubstring("destroying volumes failed")))
+				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(3))
 			})
 		})
 
@@ -154,7 +227,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.Collect(logger, []string{})).To(MatchError(ContainSubstring("failed to clean up cache")))
+				Expect(garbageCollector.Collect(logger)).To(MatchError(ContainSubstring("failed to clean up cache")))
 			})
 		})
 	})
