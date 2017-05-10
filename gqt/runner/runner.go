@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -296,6 +297,18 @@ func (r *RunningGarden) DestroyContainers() error {
 
 type debugVars struct {
 	NumGoRoutines int `json:"numGoRoutines"`
+}
+
+func (r *RunningGarden) DumpGoroutines() (string, error) {
+	debugURL := fmt.Sprintf("http://%s:%d/debug/pprof/goroutine?debug=2", r.debugIP, r.debugPort)
+	res, err := http.Get(debugURL)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	b, err := ioutil.ReadAll(res.Body)
+	return string(b), err
 }
 
 func (r *RunningGarden) NumGoroutines() (int, error) {

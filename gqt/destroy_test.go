@@ -41,18 +41,37 @@ var _ = Describe("Destroying a Container", func() {
 		numGoroutinesBefore, err := client.NumGoroutines()
 		Expect(err).NotTo(HaveOccurred())
 
+		dumpBefore, err := client.DumpGoroutines()
+		Expect(err).NotTo(HaveOccurred())
 		_, err = client.Create(garden.ContainerSpec{
 			Handle: handle,
 		})
 		Expect(err).NotTo(HaveOccurred())
-
+		client.NumGoroutines()
 		client.Destroy(handle)
 
-		Eventually(func() int {
-			numGoroutinesAfter, err := client.NumGoroutines()
+		var numGoroutinesAfter int
+		for i := 0; i < 10; i++ {
+			var err error
+			numGoroutinesAfter, err = client.NumGoroutines()
 			Expect(err).NotTo(HaveOccurred())
-			return numGoroutinesAfter
-		}).Should(Equal(numGoroutinesBefore))
+			if numGoroutinesBefore == numGoroutinesAfter {
+				break
+			}
+			time.Sleep(time.Millisecond * 100)
+		}
+
+		dumpAfter, err := client.DumpGoroutines()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(numGoroutinesAfter).Should(Equal(numGoroutinesBefore),
+			`FAILED: there are leaked goroutines (got from /debug/pprof/goroutine?debug=2)
+----------------------------------------- Before -------------------------------------
+%s
+-----------------------------------------  After -------------------------------------
+%s`,
+			dumpBefore, dumpAfter,
+		)
+
 	})
 
 	It("should destroy the container's rootfs", func() {
