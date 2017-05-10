@@ -17,11 +17,11 @@ make_backing_stores() {
 mount_stores() {
   modprobe btrfs
   mkdir -p /var/lib/grootfs/btrfs
-  mount -t btrfs -o user_subvol_rm_allowed /var/lib/grootfs.btrfs.backing-store /var/lib/grootfs/btrfs
+  mount -t btrfs -o user_subvol_rm_allowed,noatime /var/lib/grootfs.btrfs.backing-store /var/lib/grootfs/btrfs
   chmod 777 /var/lib/grootfs/btrfs
 
   mkdir -p /var/lib/grootfs/xfs
-  mount -t xfs -o pquota /var/lib/grootfs.xfs.backing-store /var/lib/grootfs/xfs
+  mount -t xfs -o pquota,noatime,nobarrier /var/lib/grootfs.xfs.backing-store /var/lib/grootfs/xfs
   chmod 777 /var/lib/grootfs/xfs
 }
 
