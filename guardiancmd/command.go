@@ -179,10 +179,13 @@ type ServerCommand struct {
 		IPTables        FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the iptables binary"`
 		IPTablesRestore FileFlag `long:"iptables-restore-bin"  default:"/sbin/iptables-restore" description:"path to the iptables-restore binary"`
 		Init            FileFlag `long:"init-bin"       description:"Path execute as pid 1 inside each container."`
-		Runc            string   `long:"runc-bin"       default:"runc" description:"Path to the 'runc' binary."`
 		Newuidmap       string   `long:"newuidmap-bin"  default:"newuidmap" description:"Path to the 'newuidmap' binary."`
 		Newgidmap       string   `long:"newgidmap-bin"  default:"newgidmap" description:"Path to the 'newgidmap' binary."`
 	} `group:"Binary Tools"`
+
+	Runtime struct {
+		Plugin string `long:"runtime-plugin"       default:"runc" description:"Path to the runtime plugin binary."`
+	} `group:"Runtime"`
 
 	Graph struct {
 		Dir                         string   `long:"graph"                                default:"/var/gdn/graph" description:"Directory on which to store imported rootfs graph data."`
@@ -302,7 +305,7 @@ func (cmd *ServerCommand) Execute([]string) error {
 			os.Exit(1)
 		}
 
-		cmd.Bin.Runc = filepath.Join(restoredAssetsDir, "bin", "runc")
+		cmd.Runtime.Plugin = filepath.Join(restoredAssetsDir, "bin", "runc")
 		cmd.Bin.Dadoo = FileFlag(filepath.Join(restoredAssetsDir, "bin", "dadoo"))
 		cmd.Bin.Init = FileFlag(filepath.Join(restoredAssetsDir, "bin", "init"))
 		cmd.Bin.NSTar = FileFlag(filepath.Join(restoredAssetsDir, "bin", "nstar"))
@@ -424,7 +427,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		Networker:       networker,
 		VolumeCreator:   volumeCreator,
 		Containerizer: cmd.wireContainerizer(logger,
-			cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Bin.Runc,
+			cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Runtime.Plugin,
 			cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(),
 			cmd.Containers.ApparmorProfile, cmd.Bin.Newuidmap, cmd.Bin.Newgidmap, propManager),
 		PropertyManager: propManager,

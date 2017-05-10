@@ -27,7 +27,7 @@ var defaultRuntime = map[string]string{
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, testNetPluginBin, tarBin string
+var ociRuntimeBin, gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, testRuntimePluginBin, testNetPluginBin, tarBin string
 
 // the unprivileged user is baked into the cfgarden/garden-ci-ubuntu image
 var unprivilegedUID = uint32(5000)
@@ -70,6 +70,9 @@ func TestGqt(t *testing.T) {
 			bins["test_image_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin")
 			Expect(err).NotTo(HaveOccurred())
 
+			bins["test_runtime_plugin_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin")
+			Expect(err).NotTo(HaveOccurred())
+
 			cmd := exec.Command("make")
 			cmd.Dir = "../rundmc/nstar"
 			cmd.Stdout = GinkgoWriter
@@ -91,6 +94,7 @@ func TestGqt(t *testing.T) {
 		nstarBin = bins["nstar_bin_path"]
 		dadooBin = bins["dadoo_bin_bin_bin"]
 		testImagePluginBin = bins["test_image_plugin_bin_path"]
+		testRuntimePluginBin = bins["test_runtime_plugin_bin_path"]
 		initBin = bins["init_bin_path"]
 		testNetPluginBin = bins["test_net_plugin_bin_path"]
 

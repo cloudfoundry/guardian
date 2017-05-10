@@ -80,6 +80,11 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, _ garden.Proce
 func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error {
 	logReader, err := os.OpenFile(logFilePath, os.O_RDONLY, 0644)
 	if err != nil {
+		if os.IsNotExist(err) {
+			log.Info("create-log-does-not-exist")
+			return nil
+		}
+
 		return fmt.Errorf("runc create: open log file '%s': %s", logFilePath, err)
 	}
 

@@ -85,7 +85,7 @@ var _ = Describe("Creating a Container", func() {
 
 		Context("because runc doesn't exist", func() {
 			BeforeEach(func() {
-				args = []string{"--runc-bin", "/tmp/does/not/exist"}
+				args = []string{"--runtime-plugin", "/tmp/does/not/exist"}
 			})
 
 			It("returns a sensible error", func() {

@@ -404,7 +404,7 @@ var _ = Describe("Run", func() {
 				container, err = client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
-				client = restartGarden(client, "--runc-bin", fakeRuncBinPath, "--properties-path", path.Join(propertiesDir, "props.json"))
+				client = restartGarden(client, "--runtime-plugin", fakeRuncBinPath, "--properties-path", path.Join(propertiesDir, "props.json"))
 			})
 
 			AfterEach(func() {
