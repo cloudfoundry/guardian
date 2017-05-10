@@ -9,7 +9,7 @@ import (
 
 //go:generate counterfeiter . Cleaner
 type Cleaner interface {
-	Clean(logger lager.Logger, threshold int64, keepImages []string, acquireLock bool) (bool, error)
+	Clean(logger lager.Logger, threshold int64, keepImages []string) (bool, error)
 }
 
 type cleaner struct {
@@ -30,7 +30,7 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	}
 }
 
-func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []string, acquireLock bool) (noop bool, err error) {
+func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []string) (noop bool, err error) {
 	defer c.metricsEmitter.TryEmitDurationFrom(logger, MetricImageCleanTime, time.Now())
 
 	logger = logger.Session("groot-cleaning")
@@ -50,17 +50,15 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 		return true, errorspkg.New("Threshold must be greater than 0")
 	}
 
-	if acquireLock {
-		lockFile, err := c.locksmith.Lock(GlobalLockKey)
-		if err != nil {
-			return false, err
-		}
-		defer func() {
-			if err := c.locksmith.Unlock(lockFile); err != nil {
-				logger.Error("failed-to-unlock", err)
-			}
-		}()
+	lockFile, err := c.locksmith.Lock(GlobalLockKey)
+	if err != nil {
+		return false, err
 	}
+	defer func() {
+		if err := c.locksmith.Unlock(lockFile); err != nil {
+			logger.Error("failed-to-unlock", err)
+		}
+	}()
 
 	return false, c.garbageCollector.Collect(logger, keepImages)
 }

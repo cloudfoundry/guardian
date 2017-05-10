@@ -175,7 +175,7 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 
 	for _, image := range existingImages {
 		if err := m.imageDriver.DestroyImage(logger, image); err != nil {
-			logger.Error("destroing-image-failed", err, lager.Data{"image": image})
+			logger.Error("destroying-image-failed", err, lager.Data{"image": image})
 			return errorspkg.Wrapf(err, "destroying image %s", image)
 		}
 	}
@@ -187,7 +187,7 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 
 	for _, volume := range existingVolumes {
 		if err := m.volumeDriver.DestroyVolume(logger, volume); err != nil {
-			logger.Error("destroing-volume-failed", err, lager.Data{"volume": volume})
+			logger.Error("destroying-volume-failed", err, lager.Data{"volume": volume})
 			return errorspkg.Wrapf(err, "destroying volume %s", volume)
 		}
 	}

@@ -92,10 +92,6 @@ func main() {
 			Usage: "Metron endpoint used to send metrics",
 			Value: "",
 		},
-		cli.BoolFlag{
-			Name:  "lockless",
-			Usage: "Do not use filesystem lock",
-		},
 	}
 
 	grootfs.Commands = []cli.Command{

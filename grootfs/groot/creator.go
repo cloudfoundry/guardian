@@ -89,16 +89,6 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 		OwnerGID:                  ownerGid,
 	}
 
-	lockFile, err := c.locksmith.Lock(GlobalLockKey)
-	if err != nil {
-		return ImageInfo{}, err
-	}
-	defer func() {
-		if err := c.locksmith.Unlock(lockFile); err != nil {
-			logger.Error("failed-to-unlock", err)
-		}
-	}()
-
 	validNamespace, err := c.namespaceChecker.Check(spec.UIDMappings, spec.GIDMappings)
 	if err != nil {
 		logger.Error("failed-check-namespace", err)
@@ -112,10 +102,20 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 
 	if spec.CleanOnCreate {
 		ignoredImages := append(spec.CleanOnCreateIgnoreImages, spec.BaseImage)
-		if _, err := c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, ignoredImages, false); err != nil {
+		if _, err := c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, ignoredImages); err != nil {
 			return ImageInfo{}, errorspkg.Wrap(err, "failed-to-cleanup-store")
 		}
 	}
+
+	lockFile, err := c.locksmith.Lock(GlobalLockKey)
+	if err != nil {
+		return ImageInfo{}, err
+	}
+	defer func() {
+		if err := c.locksmith.Unlock(lockFile); err != nil {
+			logger.Error("failed-to-unlock", err)
+		}
+	}()
 
 	baseImage, err := c.baseImagePuller.Pull(logger, baseImageSpec)
 	if err != nil {

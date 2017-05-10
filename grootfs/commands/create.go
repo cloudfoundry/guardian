@@ -143,17 +143,10 @@ var CreateCommand = cli.Command{
 		}
 
 		metricsEmitter := metrics.NewEmitter()
-		var globalLocksmith groot.Locksmith
-		var pullerLocksmith groot.Locksmith
+		sharedLocksmith := locksmithpkg.NewSharedFileSystem(storePath, metricsEmitter)
+		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(storePath, metricsEmitter)
 
-		if ctx.GlobalBool("lockless") {
-			globalLocksmith = &locksmithpkg.Null{}
-			pullerLocksmith = locksmithpkg.NewFileSystem(storePath, metricsEmitter)
-		} else {
-			globalLocksmith = locksmithpkg.NewFileSystem(storePath, metricsEmitter)
-			pullerLocksmith = &locksmithpkg.Null{}
-		}
-		manager := manager.New(storePath, globalLocksmith, fsDriver, fsDriver, fsDriver)
+		manager := manager.New(storePath, sharedLocksmith, fsDriver, fsDriver, fsDriver)
 		if err = manager.ConfigureStore(logger, storeOwnerUid, storeOwnerGid); err != nil {
 			exitErr := errorspkg.Wrapf(errorspkg.Cause(err), "Image id '%s'", id)
 			logger.Error("failed-to-setup-store", err, lager.Data{"id": id})
@@ -192,18 +185,18 @@ var CreateCommand = cli.Command{
 			fsDriver,
 			dependencyManager,
 			metricsEmitter,
-			pullerLocksmith,
+			exclusiveLocksmith,
 		)
 
 		sm := storepkg.NewStoreMeasurer(storePath)
 		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
-		cleaner := groot.IamCleaner(globalLocksmith, sm, gc, metricsEmitter)
+		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
 
 		namespaceChecker := groot.NewStoreNamespacer(storePath)
 
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()
 		creator := groot.IamCreator(
-			imageCloner, baseImagePuller, globalLocksmith, rootFSConfigurer,
+			imageCloner, baseImagePuller, sharedLocksmith, rootFSConfigurer,
 			dependencyManager, metricsEmitter, cleaner, namespaceChecker,
 		)
 

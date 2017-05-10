@@ -82,17 +82,17 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
-		XIt("emits the locking time", func() {
+		It("emits the locking time", func() {
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
 			var metrics []events.ValueMetric
 			Eventually(func() []events.ValueMetric {
-				metrics = fakeMetron.ValueMetricsFor("LockingTime")
+				metrics = fakeMetron.ValueMetricsFor("SharedLockingTime")
 				return metrics
 			}).Should(HaveLen(1))
 
-			Expect(*metrics[0].Name).To(Equal("LockingTime"))
+			Expect(*metrics[0].Name).To(Equal("SharedLockingTime"))
 			Expect(*metrics[0].Unit).To(Equal("nanos"))
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
@@ -372,11 +372,11 @@ var _ = Describe("Metrics", func() {
 
 			var metrics []events.ValueMetric
 			Eventually(func() []events.ValueMetric {
-				metrics = fakeMetron.ValueMetricsFor("LockingTime")
+				metrics = fakeMetron.ValueMetricsFor("ExclusiveLockingTime")
 				return metrics
 			}).Should(HaveLen(1))
 
-			Expect(*metrics[0].Name).To(Equal("LockingTime"))
+			Expect(*metrics[0].Name).To(Equal("ExclusiveLockingTime"))
 			Expect(*metrics[0].Unit).To(Equal("nanos"))
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})

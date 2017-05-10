@@ -9,13 +9,12 @@ import (
 )
 
 type FakeCleaner struct {
-	CleanStub        func(logger lager.Logger, threshold int64, keepImages []string, acquireLock bool) (bool, error)
+	CleanStub        func(logger lager.Logger, threshold int64, keepImages []string) (bool, error)
 	cleanMutex       sync.RWMutex
 	cleanArgsForCall []struct {
-		logger      lager.Logger
-		threshold   int64
-		keepImages  []string
-		acquireLock bool
+		logger     lager.Logger
+		threshold  int64
+		keepImages []string
 	}
 	cleanReturns struct {
 		result1 bool
@@ -29,7 +28,7 @@ type FakeCleaner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCleaner) Clean(logger lager.Logger, threshold int64, keepImages []string, acquireLock bool) (bool, error) {
+func (fake *FakeCleaner) Clean(logger lager.Logger, threshold int64, keepImages []string) (bool, error) {
 	var keepImagesCopy []string
 	if keepImages != nil {
 		keepImagesCopy = make([]string, len(keepImages))
@@ -38,15 +37,14 @@ func (fake *FakeCleaner) Clean(logger lager.Logger, threshold int64, keepImages 
 	fake.cleanMutex.Lock()
 	ret, specificReturn := fake.cleanReturnsOnCall[len(fake.cleanArgsForCall)]
 	fake.cleanArgsForCall = append(fake.cleanArgsForCall, struct {
-		logger      lager.Logger
-		threshold   int64
-		keepImages  []string
-		acquireLock bool
-	}{logger, threshold, keepImagesCopy, acquireLock})
-	fake.recordInvocation("Clean", []interface{}{logger, threshold, keepImagesCopy, acquireLock})
+		logger     lager.Logger
+		threshold  int64
+		keepImages []string
+	}{logger, threshold, keepImagesCopy})
+	fake.recordInvocation("Clean", []interface{}{logger, threshold, keepImagesCopy})
 	fake.cleanMutex.Unlock()
 	if fake.CleanStub != nil {
-		return fake.CleanStub(logger, threshold, keepImages, acquireLock)
+		return fake.CleanStub(logger, threshold, keepImages)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -60,10 +58,10 @@ func (fake *FakeCleaner) CleanCallCount() int {
 	return len(fake.cleanArgsForCall)
 }
 
-func (fake *FakeCleaner) CleanArgsForCall(i int) (lager.Logger, int64, []string, bool) {
+func (fake *FakeCleaner) CleanArgsForCall(i int) (lager.Logger, int64, []string) {
 	fake.cleanMutex.RLock()
 	defer fake.cleanMutex.RUnlock()
-	return fake.cleanArgsForCall[i].logger, fake.cleanArgsForCall[i].threshold, fake.cleanArgsForCall[i].keepImages, fake.cleanArgsForCall[i].acquireLock
+	return fake.cleanArgsForCall[i].logger, fake.cleanArgsForCall[i].threshold, fake.cleanArgsForCall[i].keepImages
 }
 
 func (fake *FakeCleaner) CleanReturns(result1 bool, result2 error) {

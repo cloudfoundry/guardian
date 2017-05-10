@@ -8,15 +8,34 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 )
 
+func NewExclusiveFileSystem(storePath string, metricsEmitter groot.MetricsEmitter) *FileSystem {
+	return &FileSystem{
+		storePath:      storePath,
+		metricsEmitter: metricsEmitter,
+		lockType:       syscall.LOCK_EX,
+		metricName:     ExclusiveMetricsLockingTime,
+	}
+}
+
+func NewSharedFileSystem(storePath string, metricsEmitter groot.MetricsEmitter) *FileSystem {
+	return &FileSystem{
+		storePath:      storePath,
+		metricsEmitter: metricsEmitter,
+		lockType:       syscall.LOCK_SH,
+		metricName:     SharedMetricsLockingTime,
+	}
+}
+
 var FlockSyscall = syscall.Flock
 
 func (l *FileSystem) Lock(key string) (*os.File, error) {
-	defer l.metricsEmitter.TryEmitDurationFrom(lager.NewLogger("nil"), MetricsLockingTime, time.Now())
+	defer l.metricsEmitter.TryEmitDurationFrom(lager.NewLogger("nil"), l.metricName, time.Now())
 
 	key = strings.Replace(key, "/", "", -1)
 	lockFile, err := os.OpenFile(l.path(key), os.O_CREATE|os.O_WRONLY, 0600)
@@ -25,7 +44,7 @@ func (l *FileSystem) Lock(key string) (*os.File, error) {
 	}
 
 	fd := int(lockFile.Fd())
-	if err := FlockSyscall(fd, syscall.LOCK_EX); err != nil {
+	if err := FlockSyscall(fd, l.lockType); err != nil {
 		return nil, err
 	}
 

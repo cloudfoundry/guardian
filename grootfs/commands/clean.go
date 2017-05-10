@@ -69,7 +69,7 @@ var CleanCommand = cli.Command{
 
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 		metricsEmitter := metrics.NewEmitter()
-		locksmith := locksmithpkg.NewFileSystem(storePath, metricsEmitter)
+		locksmith := locksmithpkg.NewExclusiveFileSystem(storePath, metricsEmitter)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
@@ -79,7 +79,7 @@ var CleanCommand = cli.Command{
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
-		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, cfg.Clean.IgnoreBaseImages, true)
+		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, cfg.Clean.IgnoreBaseImages)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return newExitError(err.Error(), 1)

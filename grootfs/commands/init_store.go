@@ -62,7 +62,7 @@ var InitStoreCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		locksmith := locksmith.NewFileSystem(storePath, metrics.NewEmitter())
+		locksmith := locksmith.NewExclusiveFileSystem(storePath, metrics.NewEmitter())
 
 		uidMappings, err := parseIDMappings(ctx.StringSlice("uid-mapping"))
 		if err != nil {
