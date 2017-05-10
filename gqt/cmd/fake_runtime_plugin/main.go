@@ -9,11 +9,11 @@ import (
 )
 
 func main() {
-	fakeImagePlugin := cli.NewApp()
-	fakeImagePlugin.Name = "fakeImagePlugin"
-	fakeImagePlugin.Usage = "I am FakeImagePlugin!"
+	fakeRuntimePlugin := cli.NewApp()
+	fakeRuntimePlugin.Name = "fakeRuntimePlugin"
+	fakeRuntimePlugin.Usage = "I am FakeRuntimePlugin!"
 
-	fakeImagePlugin.Flags = []cli.Flag{
+	fakeRuntimePlugin.Flags = []cli.Flag{
 		cli.BoolFlag{
 			Name: "debug",
 		},
@@ -28,11 +28,11 @@ func main() {
 		},
 	}
 
-	fakeImagePlugin.Commands = []cli.Command{
+	fakeRuntimePlugin.Commands = []cli.Command{
 		CreateCommand,
 	}
 
-	_ = fakeImagePlugin.Run(os.Args)
+	_ = fakeRuntimePlugin.Run(os.Args)
 }
 
 var CreateCommand = cli.Command{
