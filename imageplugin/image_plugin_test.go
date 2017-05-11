@@ -8,7 +8,7 @@ import (
 	"os/exec"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_provider"
+	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	fakes "code.cloudfoundry.org/guardian/imageplugin/imagepluginfakes"
 	"code.cloudfoundry.org/lager"
@@ -57,7 +57,7 @@ var _ = Describe("ImagePlugin", func() {
 			cmd *exec.Cmd
 
 			handle             string
-			rootfsProviderSpec rootfs_provider.Spec
+			rootfsProviderSpec rootfs_spec.Spec
 			rootfs             string
 			namespaced         bool
 
@@ -113,7 +113,7 @@ var _ = Describe("ImagePlugin", func() {
 
 			rootfsURL, err := url.Parse(rootfs)
 			Expect(err).NotTo(HaveOccurred())
-			rootfsProviderSpec = rootfs_provider.Spec{RootFS: rootfsURL, Namespaced: namespaced}
+			rootfsProviderSpec = rootfs_spec.Spec{RootFS: rootfsURL, Namespaced: namespaced}
 			createRootfs, createEnvs, createErr = imagePlugin.Create(fakeLogger, handle, rootfsProviderSpec)
 		})
 

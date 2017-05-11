@@ -5,18 +5,18 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_provider"
+	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeVolumeCreator struct {
-	CreateStub        func(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error)
+	CreateStub        func(log lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		log    lager.Logger
 		handle string
-		spec   rootfs_provider.Spec
+		spec   rootfs_spec.Spec
 	}
 	createReturns struct {
 		result1 string
@@ -70,13 +70,13 @@ type FakeVolumeCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error) {
+func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		log    lager.Logger
 		handle string
-		spec   rootfs_provider.Spec
+		spec   rootfs_spec.Spec
 	}{log, handle, spec})
 	fake.recordInvocation("Create", []interface{}{log, handle, spec})
 	fake.createMutex.Unlock()
@@ -95,7 +95,7 @@ func (fake *FakeVolumeCreator) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeVolumeCreator) CreateArgsForCall(i int) (lager.Logger, string, rootfs_provider.Spec) {
+func (fake *FakeVolumeCreator) CreateArgsForCall(i int) (lager.Logger, string, rootfs_spec.Spec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].spec

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_provider"
+	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/gardener"
 	fakes "code.cloudfoundry.org/guardian/gardener/gardenerfakes"
 	"code.cloudfoundry.org/lager"
@@ -219,7 +219,7 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("passes the created rootfs to the containerizer", func() {
-			volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error) {
+			volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error) {
 				return "/path/to/rootfs/" + spec.RootFS.String() + "/" + handle, []string{}, nil
 			}
 
@@ -397,7 +397,7 @@ var _ = Describe("Gardener", func() {
 
 		Context("when environment variables are returned by the volume manager", func() {
 			It("passes them to the containerizer", func() {
-				volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error) {
+				volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error) {
 					return "", []string{"foo=bar", "name=blame"}, nil
 				}
 

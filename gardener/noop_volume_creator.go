@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_provider"
+	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -12,7 +12,7 @@ type NoopVolumeCreator struct{}
 
 var ErrGraphDisabled = errors.New("volume graph is disabled")
 
-func (NoopVolumeCreator) Create(lager.Logger, string, rootfs_provider.Spec) (string, []string, error) {
+func (NoopVolumeCreator) Create(lager.Logger, string, rootfs_spec.Spec) (string, []string, error) {
 	return "", nil, ErrGraphDisabled
 }
 

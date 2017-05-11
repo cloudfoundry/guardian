@@ -5,7 +5,7 @@ import (
 	"os/exec"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_provider"
+	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -33,13 +33,13 @@ var _ = Describe("DefaultCommandCreator", func() {
 	Describe("CreateCommand", func() {
 		var (
 			createCmd *exec.Cmd
-			spec      rootfs_provider.Spec
+			spec      rootfs_spec.Spec
 		)
 
 		BeforeEach(func() {
 			rootfsURL, err := url.Parse("/fake-registry/image")
 			Expect(err).NotTo(HaveOccurred())
-			spec = rootfs_provider.Spec{RootFS: rootfsURL}
+			spec = rootfs_spec.Spec{RootFS: rootfsURL}
 		})
 
 		JustBeforeEach(func() {

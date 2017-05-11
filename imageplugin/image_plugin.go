@@ -7,7 +7,7 @@ import (
 	"os/exec"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_provider"
+	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/lager"
 	"github.com/cloudfoundry/gunk/command_runner"
 	errorwrapper "github.com/pkg/errors"
@@ -16,7 +16,7 @@ import (
 
 //go:generate counterfeiter . CommandCreator
 type CommandCreator interface {
-	CreateCommand(log lager.Logger, handle string, spec rootfs_provider.Spec) (*exec.Cmd, error)
+	CreateCommand(log lager.Logger, handle string, spec rootfs_spec.Spec) (*exec.Cmd, error)
 	DestroyCommand(log lager.Logger, handle string) *exec.Cmd
 	MetricsCommand(log lager.Logger, handle string) *exec.Cmd
 }
@@ -41,7 +41,7 @@ type CreateOutputs struct {
 	Image  Image  `json:"image,omitempty"`
 }
 
-func (p *ImagePlugin) Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error) {
+func (p *ImagePlugin) Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error) {
 	log = log.Session("image-plugin-create", lager.Data{"handle": handle, "spec": spec})
 	log.Debug("start")
 	defer log.Debug("end")

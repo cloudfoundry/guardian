@@ -3,7 +3,7 @@ package imageplugin
 import (
 	"os/exec"
 
-	"code.cloudfoundry.org/garden-shed/rootfs_provider"
+	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -11,7 +11,7 @@ type NotImplementedCommandCreator struct {
 	Err error
 }
 
-func (cc *NotImplementedCommandCreator) CreateCommand(log lager.Logger, handle string, spec rootfs_provider.Spec) (*exec.Cmd, error) {
+func (cc *NotImplementedCommandCreator) CreateCommand(log lager.Logger, handle string, spec rootfs_spec.Spec) (*exec.Cmd, error) {
 	return nil, cc.Err
 }
 

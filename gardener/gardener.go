@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_provider"
+	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -65,7 +65,7 @@ type Networker interface {
 }
 
 type VolumeCreator interface {
-	Create(log lager.Logger, handle string, spec rootfs_provider.Spec) (string, []string, error)
+	Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error)
 	Destroy(log lager.Logger, handle string) error
 	Metrics(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error)
 	GC(log lager.Logger) error
@@ -249,7 +249,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		rootFSPath = rootFSURL.Path
 	} else {
 		var err error
-		rootFSPath, env, err = g.VolumeCreator.Create(log.Session(volumeCreatorSession), spec.Handle, rootfs_provider.Spec{
+		rootFSPath, env, err = g.VolumeCreator.Create(log.Session(volumeCreatorSession), spec.Handle, rootfs_spec.Spec{
 			RootFS:     rootFSURL,
 			Username:   spec.Image.Username,
 			Password:   spec.Image.Password,
