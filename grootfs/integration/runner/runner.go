@@ -118,7 +118,6 @@ func (r Runner) runCmd(cmd *exec.Cmd) error {
 		return runErr
 
 	case <-time.After(r.Timeout):
-		cmd.Process.Kill()
 		return errors.New(
 			fmt.Sprintf("command took more than %f seconds to finish", r.Timeout.Seconds()),
 		)

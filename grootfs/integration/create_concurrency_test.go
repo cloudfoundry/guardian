@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -36,7 +37,7 @@ var _ = Describe("Concurrent creations", func() {
 				go func(wg *sync.WaitGroup, idx int) {
 					defer GinkgoRecover()
 					defer wg.Done()
-					runner := Runner // clone runner to avoid data-race on stdout
+					runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
 					image, err := runner.Create(groot.CreateSpec{
 						ID:        fmt.Sprintf("test-%d", idx),
 						BaseImage: "docker:///cfgarden/empty",
@@ -61,7 +62,7 @@ var _ = Describe("Concurrent creations", func() {
 					defer wg.Done()
 
 					for i := 0; i < 100; i++ {
-						runner := Runner // clone runner to avoid data-race on stdout
+						runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
 						image, err := runner.Create(groot.CreateSpec{
 							ID:        fmt.Sprintf("test-%d", i),
 							BaseImage: "docker:///cfgarden/empty",
@@ -77,8 +78,8 @@ var _ = Describe("Concurrent creations", func() {
 				go func() {
 					defer GinkgoRecover()
 					defer wg.Done()
-
-					_, err := Runner.Clean(0, []string{})
+					runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
+					_, err := runner.Clean(0, []string{})
 					Expect(err).To(Succeed())
 				}()
 
@@ -96,7 +97,7 @@ var _ = Describe("Concurrent creations", func() {
 				go func(wg *sync.WaitGroup, idx int) {
 					defer GinkgoRecover()
 					defer wg.Done()
-					runner := Runner // clone runner to avoid data-race on stdout
+					runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
 					image, err := runner.Create(groot.CreateSpec{
 						ID:                        fmt.Sprintf("test-%d", idx),
 						BaseImage:                 "docker:///ubuntu",
