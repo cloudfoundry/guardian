@@ -1,3 +1,5 @@
+// +build !windows
+
 package locksmith_test
 
 import (

@@ -6,7 +6,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -131,7 +130,7 @@ func startGarden(argv ...string) *runner.RunningGarden {
 	return startGardenAsUser(nil, argv...)
 }
 
-func startGardenAsUser(user *syscall.Credential, argv ...string) *runner.RunningGarden {
+func startGardenAsUser(user runner.UserCredential, argv ...string) *runner.RunningGarden {
 	rootfs := os.Getenv("GARDEN_TEST_ROOTFS")
 	return runner.Start(gardenBin, initBin, nstarBin, dadooBin, testImagePluginBin, rootfs, tarBin, user, argv...)
 }
