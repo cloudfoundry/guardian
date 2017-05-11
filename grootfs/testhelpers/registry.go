@@ -5,6 +5,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"regexp"
+	"sync"
 
 	"github.com/onsi/gomega/ghttp"
 )
@@ -20,6 +21,7 @@ type FakeRegistry struct {
 	blobRequestsCounter map[string]int
 	revProxy            *httputil.ReverseProxy
 	server              *ghttp.Server
+	mutex               *sync.RWMutex
 }
 
 func NewFakeRegistry(actualRegistryURL *url.URL) *FakeRegistry {
@@ -27,6 +29,7 @@ func NewFakeRegistry(actualRegistryURL *url.URL) *FakeRegistry {
 		ActualRegistryURL:   actualRegistryURL,
 		blobHandlers:        make(map[string]blobHandler),
 		blobRequestsCounter: make(map[string]int),
+		mutex:               &sync.RWMutex{},
 	}
 }
 
@@ -72,9 +75,14 @@ func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {
 
 	digest := match[1]
 
+	r.mutex.Lock()
 	r.blobRequestsCounter[digest]++
+	r.mutex.Unlock()
 
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	handler, ok := r.blobHandlers[digest]
+
 	if !ok {
 		r.revProxy.ServeHTTP(rw, req)
 		return
@@ -96,6 +104,9 @@ func (r *FakeRegistry) Addr() string {
 }
 
 func (r *FakeRegistry) WhenGettingBlob(digest string, order int, httpHandler http.HandlerFunc) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+
 	r.blobHandlers[digest] = blobHandler{
 		httpHandler: httpHandler,
 		order:       order,
@@ -103,6 +114,8 @@ func (r *FakeRegistry) WhenGettingBlob(digest string, order int, httpHandler htt
 }
 
 func (r *FakeRegistry) RequestedBlobs() []string {
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
 	blobDigests := []string{}
 	for digest, _ := range r.blobRequestsCounter {
 		blobDigests = append(blobDigests, digest)
