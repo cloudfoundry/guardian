@@ -1137,7 +1137,7 @@ func listenInContainer(container garden.Container, containerPort uint32) error {
 }
 
 func sendRequest(ip string, port uint32) *gexec.Session {
-	sess, err := gexec.Start(exec.Command("nc", "-w5", "-v", ip, fmt.Sprintf("%d", port)), GinkgoWriter, GinkgoWriter)
+	sess, err := gexec.Start(exec.Command("nc", "-w4", "-v", ip, fmt.Sprintf("%d", port)), GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
 	return sess
