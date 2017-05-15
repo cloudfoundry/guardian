@@ -3,7 +3,7 @@ set -e
 
 VERSION=$(cat grootfs-release-version/number)
 
-cd grootfs-release-master/src/code.cloudfoundry.org/grootfs
+cd grootfs-release-develop/src/code.cloudfoundry.org/grootfs
 
 grep "\"${VERSION}\"" version.go && exit 0
 
