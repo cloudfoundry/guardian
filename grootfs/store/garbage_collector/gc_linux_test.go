@@ -64,15 +64,17 @@ var _ = Describe("Gc", func() {
 
 		It("moves all unused volumes to the gc folder", func() {
 			Expect(garbageCollector.MarkUnused(logger, []string{""})).To(Succeed())
-
 			Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(2))
-			_, from, to := fakeVolumeDriver.MoveVolumeArgsForCall(0)
-			Expect(from).To(Equal("/store/volumes/sha256:vol-d"))
-			Expect(to).To(MatchRegexp("/store/volumes/gc.sha256:vol-d\\.[0-9]+"))
+			_, from1, to1 := fakeVolumeDriver.MoveVolumeArgsForCall(0)
+			Expect(from1).To(MatchRegexp("/store/volumes/sha256:vol-[ed]"))
+			Expect(to1).To(MatchRegexp("/store/volumes/gc.sha256:vol-[ed]"))
 
-			_, from, to = fakeVolumeDriver.MoveVolumeArgsForCall(1)
-			Expect(from).To(Equal("/store/volumes/sha256:vol-e"))
-			Expect(to).To(MatchRegexp("/store/volumes/gc.sha256:vol-e\\.[0-9]+"))
+			_, from2, to2 := fakeVolumeDriver.MoveVolumeArgsForCall(1)
+			Expect(from2).To(MatchRegexp("/store/volumes/sha256:vol-[ed]"))
+			Expect(to2).To(MatchRegexp("/store/volumes/gc.sha256:vol-[ed]"))
+
+			Expect(from1).ToNot(Equal(from2))
+			Expect(to1).ToNot(Equal(to2))
 		})
 
 		It("doesn't remark volumes for gc", func() {

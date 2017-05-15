@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	digestpkg "github.com/opencontainers/go-digest"
 	yaml "gopkg.in/yaml.v2"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
@@ -74,8 +75,8 @@ var _ = Describe("Create with remote images", func() {
 			Expect(json.NewDecoder(imageJsonReader).Decode(&imageJson)).To(Succeed())
 
 			Expect(imageJson.Created.String()).To(Equal("2016-08-03 16:50:55.797615406 +0000 UTC"))
-			Expect(imageJson.RootFS.DiffIDs).To(Equal([]string{
-				"sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca",
+			Expect(imageJson.RootFS.DiffIDs).To(Equal([]digestpkg.Digest{
+				digestpkg.NewDigestFromHex("sha256", "3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca"),
 			}))
 		})
 
@@ -138,7 +139,7 @@ var _ = Describe("Create with remote images", func() {
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(image.Image.RootFS.DiffIDs[0]).To(Equal("sha256:" + testhelpers.BusyBoxImage.Layers[0].ChainID))
+			Expect(image.Image.RootFS.DiffIDs[0]).To(Equal(digestpkg.NewDigestFromHex("sha256", testhelpers.BusyBoxImage.Layers[0].ChainID)))
 		})
 
 		Context("when the image is bigger than available memory", func() {

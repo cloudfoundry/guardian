@@ -9,20 +9,6 @@ import (
 )
 
 type FakeVolumeDriver struct {
-	VolumePathGlobStub        func(logger lager.Logger, pattern string) ([]string, error)
-	volumePathGlobMutex       sync.RWMutex
-	volumePathGlobArgsForCall []struct {
-		logger  lager.Logger
-		pattern string
-	}
-	volumePathGlobReturns struct {
-		result1 []string
-		result2 error
-	}
-	volumePathGlobReturnsOnCall map[int]struct {
-		result1 []string
-		result2 error
-	}
 	VolumePathStub        func(logger lager.Logger, id string) (string, error)
 	volumePathMutex       sync.RWMutex
 	volumePathArgsForCall []struct {
@@ -92,58 +78,6 @@ type FakeVolumeDriver struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
-}
-
-func (fake *FakeVolumeDriver) VolumePathGlob(logger lager.Logger, pattern string) ([]string, error) {
-	fake.volumePathGlobMutex.Lock()
-	ret, specificReturn := fake.volumePathGlobReturnsOnCall[len(fake.volumePathGlobArgsForCall)]
-	fake.volumePathGlobArgsForCall = append(fake.volumePathGlobArgsForCall, struct {
-		logger  lager.Logger
-		pattern string
-	}{logger, pattern})
-	fake.recordInvocation("VolumePathGlob", []interface{}{logger, pattern})
-	fake.volumePathGlobMutex.Unlock()
-	if fake.VolumePathGlobStub != nil {
-		return fake.VolumePathGlobStub(logger, pattern)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.volumePathGlobReturns.result1, fake.volumePathGlobReturns.result2
-}
-
-func (fake *FakeVolumeDriver) VolumePathGlobCallCount() int {
-	fake.volumePathGlobMutex.RLock()
-	defer fake.volumePathGlobMutex.RUnlock()
-	return len(fake.volumePathGlobArgsForCall)
-}
-
-func (fake *FakeVolumeDriver) VolumePathGlobArgsForCall(i int) (lager.Logger, string) {
-	fake.volumePathGlobMutex.RLock()
-	defer fake.volumePathGlobMutex.RUnlock()
-	return fake.volumePathGlobArgsForCall[i].logger, fake.volumePathGlobArgsForCall[i].pattern
-}
-
-func (fake *FakeVolumeDriver) VolumePathGlobReturns(result1 []string, result2 error) {
-	fake.VolumePathGlobStub = nil
-	fake.volumePathGlobReturns = struct {
-		result1 []string
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeVolumeDriver) VolumePathGlobReturnsOnCall(i int, result1 []string, result2 error) {
-	fake.VolumePathGlobStub = nil
-	if fake.volumePathGlobReturnsOnCall == nil {
-		fake.volumePathGlobReturnsOnCall = make(map[int]struct {
-			result1 []string
-			result2 error
-		})
-	}
-	fake.volumePathGlobReturnsOnCall[i] = struct {
-		result1 []string
-		result2 error
-	}{result1, result2}
 }
 
 func (fake *FakeVolumeDriver) VolumePath(logger lager.Logger, id string) (string, error) {
@@ -404,8 +338,6 @@ func (fake *FakeVolumeDriver) MoveVolumeReturnsOnCall(i int, result1 error) {
 func (fake *FakeVolumeDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.volumePathGlobMutex.RLock()
-	defer fake.volumePathGlobMutex.RUnlock()
 	fake.volumePathMutex.RLock()
 	defer fake.volumePathMutex.RUnlock()
 	fake.createVolumeMutex.RLock()

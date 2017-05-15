@@ -256,7 +256,9 @@ func (s *DockerSource) parseSchemaV1Config(logger lager.Logger, manifest Manifes
 			logger.Error("parsing-manifest-v1-compatibility-failed", err)
 			return specsv1.Image{}, errorspkg.Wrap(err, "parsing manifest V1Compatibility")
 		}
-		config.RootFS.DiffIDs = append(config.RootFS.DiffIDs, "sha256:"+v1Compatibility.ID)
+
+		digest := digestpkg.NewDigestFromHex("sha256", v1Compatibility.ID)
+		config.RootFS.DiffIDs = append(config.RootFS.DiffIDs, digest)
 	}
 
 	return config, nil

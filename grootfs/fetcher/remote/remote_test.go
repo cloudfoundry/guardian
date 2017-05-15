@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
+
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/fetcherfakes"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
@@ -19,6 +20,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	digestpkg "github.com/opencontainers/go-digest"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -99,9 +101,9 @@ var _ = Describe("RemoteFetcher", func() {
 			fakeSource.ManifestReturns(manifest, nil)
 			fakeSource.ConfigReturns(specsv1.Image{
 				RootFS: specsv1.RootFS{
-					DiffIDs: []string{
-						"sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
-						"sha256:d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0",
+					DiffIDs: []digestpkg.Digest{
+						digestpkg.NewDigestFromHex("sha256", "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5"),
+						digestpkg.NewDigestFromHex("sha256", "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0"),
 					},
 				},
 			}, nil)
@@ -155,12 +157,13 @@ var _ = Describe("RemoteFetcher", func() {
 		})
 
 		It("returns the correct image config", func() {
+			timestamp := time.Time{}.In(time.UTC)
 			expectedConfig := specsv1.Image{
-				Created: time.Time{}.In(time.UTC),
+				Created: &timestamp,
 				RootFS: specsv1.RootFS{
-					DiffIDs: []string{
-						"sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
-						"sha256:d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0",
+					DiffIDs: []digestpkg.Digest{
+						digestpkg.NewDigestFromHex("sha256", "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5"),
+						digestpkg.NewDigestFromHex("sha256", "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0"),
 					},
 				},
 			}
@@ -179,12 +182,13 @@ var _ = Describe("RemoteFetcher", func() {
 			)
 
 			BeforeEach(func() {
+				timestamp := time.Time{}.In(time.UTC)
 				expectedConfig = specsv1.Image{
-					Created: time.Time{}.In(time.UTC),
+					Created: &timestamp,
 					RootFS: specsv1.RootFS{
-						DiffIDs: []string{
-							"sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
-							"sha256:d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0",
+						DiffIDs: []digestpkg.Digest{
+							digestpkg.NewDigestFromHex("sha256", "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5"),
+							digestpkg.NewDigestFromHex("sha256", "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0"),
 						},
 					},
 				}

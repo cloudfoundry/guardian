@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	digestpkg "github.com/opencontainers/go-digest"
 	errorspkg "github.com/pkg/errors"
 )
 
@@ -29,7 +30,7 @@ var _ = Describe("Docker source", func() {
 
 		configBlob           string
 		expectedLayersDigest []remote.Layer
-		expectedDiffIds      []string
+		expectedDiffIds      []digestpkg.Digest
 		manifest             remote.Manifest
 	)
 
@@ -47,9 +48,9 @@ var _ = Describe("Docker source", func() {
 				Size:   88,
 			},
 		}
-		expectedDiffIds = []string{
-			"sha256:afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
-			"sha256:d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0",
+		expectedDiffIds = []digestpkg.Digest{
+			digestpkg.NewDigestFromHex("sha256", "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5"),
+			digestpkg.NewDigestFromHex("sha256", "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0"),
 		}
 
 		manifest = remote.Manifest{
@@ -196,9 +197,9 @@ var _ = Describe("Docker source", func() {
 					SchemaVersion:  2,
 				}
 
-				expectedDiffIds = []string{
-					"sha256:780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
-					"sha256:56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b",
+				expectedDiffIds = []digestpkg.Digest{
+					digestpkg.NewDigestFromHex("sha256", "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296"),
+					digestpkg.NewDigestFromHex("sha256", "56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b"),
 				}
 			})
 
@@ -275,14 +276,14 @@ var _ = Describe("Docker source", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(config.RootFS.DiffIDs).To(HaveLen(8))
-				Expect(config.RootFS.DiffIDs[0]).To(Equal("sha256:ab998debe217fc9749dba7168a9e4910c1e23f839fb902358cee96c3b7f4585c"))
-				Expect(config.RootFS.DiffIDs[1]).To(Equal("sha256:c7fb0a077d24adf502a849eb20caebf5e5485bbceff66ecfe6d20221a57d8cd0"))
-				Expect(config.RootFS.DiffIDs[2]).To(Equal("sha256:1f3613e168c1d0aaa5a5e9990eddba507b0ecd97fc47545fa09e19b78229684c"))
-				Expect(config.RootFS.DiffIDs[3]).To(Equal("sha256:6f88661d681e0263f332fee3c04e3f88a3dda9f8eebf6a2f93ec4232719488e2"))
-				Expect(config.RootFS.DiffIDs[4]).To(Equal("sha256:251bbadf08c36fdae6d4907da26fcc1cbe71c7c8f0e0eb094b0115f29af372fa"))
-				Expect(config.RootFS.DiffIDs[5]).To(Equal("sha256:cc90a59ac496494827ce95c26257991d56bbb8b38556399985949b896bef7801"))
-				Expect(config.RootFS.DiffIDs[6]).To(Equal("sha256:aa527287a51f0178662d50479697b53893b65fee9383af889ece937fd02c7c56"))
-				Expect(config.RootFS.DiffIDs[7]).To(Equal("sha256:0e181a348ded1545ce2a2e84cf84017283315a9ec573959b0e3638ca95e36809"))
+				Expect(config.RootFS.DiffIDs[0]).To(Equal(digestpkg.NewDigestFromHex("sha256", "ab998debe217fc9749dba7168a9e4910c1e23f839fb902358cee96c3b7f4585c")))
+				Expect(config.RootFS.DiffIDs[1]).To(Equal(digestpkg.NewDigestFromHex("sha256", "c7fb0a077d24adf502a849eb20caebf5e5485bbceff66ecfe6d20221a57d8cd0")))
+				Expect(config.RootFS.DiffIDs[2]).To(Equal(digestpkg.NewDigestFromHex("sha256", "1f3613e168c1d0aaa5a5e9990eddba507b0ecd97fc47545fa09e19b78229684c")))
+				Expect(config.RootFS.DiffIDs[3]).To(Equal(digestpkg.NewDigestFromHex("sha256", "6f88661d681e0263f332fee3c04e3f88a3dda9f8eebf6a2f93ec4232719488e2")))
+				Expect(config.RootFS.DiffIDs[4]).To(Equal(digestpkg.NewDigestFromHex("sha256", "251bbadf08c36fdae6d4907da26fcc1cbe71c7c8f0e0eb094b0115f29af372fa")))
+				Expect(config.RootFS.DiffIDs[5]).To(Equal(digestpkg.NewDigestFromHex("sha256", "cc90a59ac496494827ce95c26257991d56bbb8b38556399985949b896bef7801")))
+				Expect(config.RootFS.DiffIDs[6]).To(Equal(digestpkg.NewDigestFromHex("sha256", "aa527287a51f0178662d50479697b53893b65fee9383af889ece937fd02c7c56")))
+				Expect(config.RootFS.DiffIDs[7]).To(Equal(digestpkg.NewDigestFromHex("sha256", "0e181a348ded1545ce2a2e84cf84017283315a9ec573959b0e3638ca95e36809")))
 			})
 
 			Context("when the manifest's v1Compatibility is empty", func() {
@@ -399,9 +400,9 @@ var _ = Describe("Docker source", func() {
 						SchemaVersion:  2,
 					}
 
-					expectedDiffIds = []string{
-						"sha256:780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
-						"sha256:56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b",
+					expectedDiffIds = []digestpkg.Digest{
+						digestpkg.NewDigestFromHex("sha256", "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296"),
+						digestpkg.NewDigestFromHex("sha256", "56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b"),
 					}
 				})
 

@@ -112,7 +112,7 @@ func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
 		}
 
 		diffID := config.RootFS.DiffIDs[i]
-		chainID := f.chainID(diffID, parentChainID)
+		chainID := f.chainID(diffID.String(), parentChainID)
 		layersDigest = append(layersDigest, base_image_puller.LayerDigest{
 			BlobID:        layer.BlobID,
 			Size:          layer.Size,
