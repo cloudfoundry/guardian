@@ -8,9 +8,9 @@ image_resource:
     tag: latest
 
 inputs:
-- name: grootfs-release-master
+- name: grootfs-release-develop
 - name: grootfs-release-version
 
 run:
-  path: grootfs-release-master/src/code.cloudfoundry.org/grootfs/ci/scripts/check-version.sh
+  path: grootfs-release-develop/src/code.cloudfoundry.org/grootfs/ci/scripts/check-version.sh
   user: root
