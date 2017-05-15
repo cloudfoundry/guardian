@@ -687,7 +687,12 @@ var _ = Describe("Dadoo", func() {
 						pidBytes, err := ioutil.ReadFile(pidFilePath)
 						Expect(err).NotTo(HaveOccurred())
 
-						Eventually(exec.Command("ps", "-p", string(pidBytes)).Run).ShouldNot(Succeed())
+						Eventually(func() error {
+							pidCmd := exec.Command("ps", "-p", string(pidBytes))
+							pidCmd.Stdout = GinkgoWriter
+							pidCmd.Stderr = GinkgoWriter
+							return pidCmd.Run()
+						}).ShouldNot(Succeed())
 
 						Eventually(dadooSession).Should(gexec.Exit(2))
 						Eventually(stdout).Should(gbytes.Say("incorrect number of bytes read"))
