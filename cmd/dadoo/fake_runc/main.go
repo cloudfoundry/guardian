@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"time"
 )
 
 func main() {
@@ -41,4 +42,5 @@ func main() {
 	}
 	defer conn.Close()
 	fmt.Fprintf(conn, "myDummyMaster")
+	time.Sleep(time.Second * 5)
 }
