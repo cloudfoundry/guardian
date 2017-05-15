@@ -2,7 +2,7 @@
 	concourse-test dracorex-test \
 	go-vet concourse-go-vet go-generate \
 	image push-image \
-	update-deps
+	update-deps unit
 
 all:
 	GOOS=linux go build -o grootfs .
@@ -19,6 +19,7 @@ help:
 	@echo '    windows ............................. builds grootfs for windows'
 	@echo '    deps ................................ installs dependencies'
 	@echo '    update-deps ......................... updates dependencies'
+	@echo '    unit ................................ run unit tests'
 	@echo '    concourse-test ...................... runs tests in concourse-lite'
 	@echo '    dracorex-test ....................... runs tests on remote CI'
 	@echo '    compile-tests ....................... checks that tests can be compiled'
@@ -37,6 +38,9 @@ deps:
 
 compile-tests:
 	ginkgo build -r .; find . -name '*.test' | xargs rm
+
+unit:
+	./hack/run-tests -r -g "--skipPackage=integration"
 
 concourse-test: go-vet
 	./hack/run-tests -r -g "-p"
