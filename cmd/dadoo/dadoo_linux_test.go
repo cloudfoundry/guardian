@@ -518,7 +518,15 @@ var _ = Describe("Dadoo", func() {
 				It("should set initial window size", func() {
 					spec := specs.Process{
 						Args: []string{
-							"/bin/sh", "-c", `stty -a`,
+							"/bin/sh",
+							"-c",
+							`
+							# The mechanism that is used to set TTY size (ioctl) is
+							# asynchronous. Hence, stty does not return the correct result
+							# right after the process is launched.
+							sleep 1
+							stty -a
+						`,
 						},
 						Cwd:      "/",
 						Terminal: true,
