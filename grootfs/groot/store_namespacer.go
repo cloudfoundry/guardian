@@ -73,7 +73,7 @@ func (n *StoreNamespacer) validateNamespace(namespaceFilePath string, uidMapping
 	defer namespaceStore.Close()
 	var namespace mappings
 	if err := json.NewDecoder(namespaceStore).Decode(&namespace); err != nil {
-		return false, errorspkg.Wrapf(err, "reading namespace file %s", namespaceStore)
+		return false, errorspkg.Wrapf(err, "reading namespace file %s", namespaceStore.Name())
 	}
 
 	if !reflect.DeepEqual(namespace.UIDMappings, n.normalizeMappings(uidMappings)) {
