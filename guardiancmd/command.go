@@ -34,7 +34,6 @@ import (
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
-	"code.cloudfoundry.org/guardian/rundmc/dadoo"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
@@ -42,7 +41,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"github.com/cloudfoundry/dropsonde"
-	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	_ "github.com/docker/docker/daemon/graphdriver/aufs"
 	_ "github.com/docker/docker/pkg/chrootarchive" // allow reexec of docker-applyLayer
 	"github.com/docker/docker/pkg/reexec"
@@ -507,7 +505,7 @@ func (cmd *ServerCommand) wireCgroupsStarter(logger lager.Logger) gardener.Start
 		cgroupsMountpoint = "/sys/fs/cgroup"
 	}
 
-	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, linux_command_runner.New())
+	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, commandRunner())
 }
 
 func extractIPs(ipflags []IPFlag) []net.IP {
@@ -535,7 +533,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 			DepotDir:          depotPath,
 		}
 		externalNetworker := netplugin.New(
-			linux_command_runner.New(),
+			commandRunner(),
 			propManager,
 			externalIP,
 			dnsServers,
@@ -557,8 +555,8 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 	locksmith := &locksmithpkg.FileSystem{}
 
-	iptRunner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: log.Session("iptables-runner")}
-	nonLoggingIptRunner := linux_command_runner.New()
+	iptRunner := &logging.Runner{CommandRunner: commandRunner(), Logger: log.Session("iptables-runner")}
+	nonLoggingIptRunner := commandRunner()
 	ipTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), iptRunner, locksmith, chainPrefix)
 	nonLoggingIpTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), nonLoggingIptRunner, locksmith, chainPrefix)
 	ipTablesStarter := iptables.NewStarter(nonLoggingIpTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
@@ -612,7 +610,7 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 	return &imageplugin.ImagePlugin{
 		UnprivilegedCommandCreator: unprivilegedCommandCreator,
 		PrivilegedCommandCreator:   privilegedCommandCreator,
-		CommandRunner:              linux_command_runner.New(),
+		CommandRunner:              commandRunner(),
 		DefaultRootfs:              cmd.Containers.DefaultRootFS,
 	}
 }
@@ -622,21 +620,15 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	properties gardener.PropertyManager) *rundmc.Containerizer {
 	depot := depot.New(depotPath, &goci.BundleSaver{}, &depot.OSChowner{})
 
-	commandRunner := linux_command_runner.New()
+	cmdRunner := commandRunner()
 	chrootMkdir := bundlerules.ChrootMkdir{
 		Command:       preparerootfs.Command,
-		CommandRunner: commandRunner,
-	}
-
-	pidFileReader := &dadoo.PidFileReader{
-		Clock:         clock.NewClock(),
-		Timeout:       10 * time.Second,
-		SleepInterval: time.Millisecond * 100,
+		CommandRunner: cmdRunner,
 	}
 
 	runcrunner := runrunc.New(
-		commandRunner,
-		runrunc.NewLogRunner(commandRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
+		cmdRunner,
+		runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
 		goci.RuncBinary{Path: runcPath, Root: cmd.Runc.Root},
 		dadooPath,
 		runcPath,
@@ -644,13 +636,12 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		newuidmapPath,
 		newgidmapPath,
 		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps, runningAsRoot),
-		dadoo.NewExecRunner(
+		cmd.wireExecRunner(
 			dadooPath,
 			runcPath,
 			cmd.Runc.Root,
 			cmd.wireUidGenerator(),
-			pidFileReader,
-			linux_command_runner.New(),
+			cmdRunner,
 			cmd.Containers.CleanupProcessDirsOnWait,
 		),
 	)
@@ -767,7 +758,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
-	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, linux_command_runner.New())
+	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver("/run/runc"), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
 	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{})
 }

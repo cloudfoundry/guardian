@@ -14,12 +14,20 @@ import (
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/logging"
+	"code.cloudfoundry.org/guardian/rundmc/dadoo"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/graph"
 	"github.com/eapache/go-resiliency/retrier"
+	"github.com/pivotal-golang/clock"
 )
+
+func commandRunner() command_runner.CommandRunner {
+	return linux_command_runner.New()
+}
 
 func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
 	if graphRoot == "" {
@@ -138,4 +146,23 @@ func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot strin
 		layerCreator,
 		rootfs_provider.NewMetricsAdapter(quotaManager.GetUsage, quotaedGraphDriver.GetMntPath),
 		ovenCleaner)
+}
+
+func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath, runcRoot string, processIDGen runrunc.UidGenerator, commandRunner command_runner.CommandRunner, shouldCleanup bool) *dadoo.ExecRunner {
+
+	pidFileReader := &dadoo.PidFileReader{
+		Clock:         clock.NewClock(),
+		Timeout:       10 * time.Second,
+		SleepInterval: time.Millisecond * 100,
+	}
+
+	return dadoo.NewExecRunner(
+		dadooPath,
+		runcPath,
+		runcRoot,
+		processIDGen,
+		pidFileReader,
+		commandRunner,
+		shouldCleanup,
+	)
 }

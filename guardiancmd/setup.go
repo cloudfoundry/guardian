@@ -7,7 +7,6 @@ import (
 
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 )
 
 type SetupCommand struct {
@@ -24,6 +23,6 @@ func (cmd *SetupCommand) Execute(args []string) error {
 	if cmd.Tag != "" {
 		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Tag))
 	}
-	cgroupStarter := rundmc.NewStarter(cmd.Logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, linux_command_runner.New())
+	cgroupStarter := rundmc.NewStarter(cmd.Logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, commandRunner())
 	return cgroupStarter.Start()
 }
