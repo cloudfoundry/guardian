@@ -387,7 +387,7 @@ var _ = Describe("Create", func() {
 			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
-				BaseImage: "docker:///busybox:1.26.2",
+				BaseImage: "docker:///cfgarden/garden-busybox",
 				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -425,7 +425,7 @@ var _ = Describe("Create", func() {
 			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
-				BaseImage: "docker:///busybox:1.26.2",
+				BaseImage: "docker:///cfgarden/garden-busybox",
 				Mount:     true,
 			})
 			Expect(err).NotTo(HaveOccurred())

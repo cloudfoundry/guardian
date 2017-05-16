@@ -82,7 +82,7 @@ var _ = Describe("Create with remote images", func() {
 
 		It("gives any user permission to be inside the container", func() {
 			image, err := Runner.Create(groot.CreateSpec{
-				BaseImage: "docker:///busybox:1.26.2",
+				BaseImage: "docker:///cfgarden/garden-busybox",
 				ID:        "random-id",
 				Mount:     true,
 				UIDMappings: []groot.IDMappingSpec{
@@ -107,7 +107,7 @@ var _ = Describe("Create with remote images", func() {
 
 		It("outputs a json with the correct `rootfs` key", func() {
 			image, err := Runner.Create(groot.CreateSpec{
-				BaseImage: "docker:///busybox:1.26.2",
+				BaseImage: "docker:///cfgarden/garden-busybox",
 				ID:        "random-id",
 				Mount:     true,
 				UIDMappings: []groot.IDMappingSpec{
@@ -126,7 +126,7 @@ var _ = Describe("Create with remote images", func() {
 
 		It("outputs a json with the correct `config` key", func() {
 			image, err := Runner.Create(groot.CreateSpec{
-				BaseImage: "docker:///busybox:1.26.2",
+				BaseImage: "docker:///cfgarden/garden-busybox",
 				ID:        "random-id",
 				Mount:     true,
 				UIDMappings: []groot.IDMappingSpec{
@@ -308,7 +308,7 @@ var _ = Describe("Create with remote images", func() {
 			JustBeforeEach(func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					ID:        "my-busybox",
-					BaseImage: "docker:///busybox:1.26.2",
+					BaseImage: "docker:///cfgarden/garden-busybox",
 					Mount:     true,
 				})
 				Expect(err).NotTo(HaveOccurred())

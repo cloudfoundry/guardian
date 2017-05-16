@@ -3,7 +3,6 @@ package integration
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -137,13 +136,4 @@ func MakeBinaryAccessibleToEveryone(binaryPath string) string {
 	Expect(os.Rename(binaryPath, newBinaryPath)).To(Succeed())
 
 	return newBinaryPath
-}
-
-func Busybox1262Config() interface{} {
-	var config map[string]interface{}
-
-	file, err := os.Open("./assets/busybox-1.26.2.config.yml")
-	Expect(err).NotTo(HaveOccurred())
-	Expect(json.NewDecoder(file).Decode(&config)).To(Succeed())
-	return config
 }

@@ -239,7 +239,7 @@ var _ = Describe("Clean", func() {
 			BeforeEach(func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					ID:        "my-image-2",
-					BaseImage: "docker:///busybox:1.26.2",
+					BaseImage: "docker:///cfgarden/garden-busybox",
 					Mount:     true,
 				})
 				Expect(err).NotTo(HaveOccurred())
@@ -273,7 +273,7 @@ var _ = Describe("Clean", func() {
 				})
 
 				It("doesn't delete their layers", func() {
-					_, err := Runner.Clean(0, []string{"docker:///busybox:1.26.2"})
+					_, err := Runner.Clean(0, []string{"docker:///cfgarden/garden-busybox"})
 					Expect(err).NotTo(HaveOccurred())
 
 					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
@@ -295,7 +295,7 @@ var _ = Describe("Clean", func() {
 					})
 
 					It("doesn't delete their layers", func() {
-						_, err := Runner.Clean(0, []string{"docker:///busybox:1.26.2", "docker:///cfgarden/empty:v0.1.1"})
+						_, err := Runner.Clean(0, []string{"docker:///cfgarden/garden-busybox", "docker:///cfgarden/empty:v0.1.1"})
 						Expect(err).NotTo(HaveOccurred())
 
 						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))

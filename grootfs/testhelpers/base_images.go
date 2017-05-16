@@ -31,9 +31,7 @@ var BusyBoxImage = BaseImage{
 	ConfigBlobID: "sha256:1efc1d465fd6255396d0efd90a899f57aba2b7b294b02d5f55c6f5505ca9f3e5",
 	Layers: []Layer{
 		{
-			BlobID:  "sha256:fdab12439263ca89c449f09a489b6fbf40af8526a3dda279c8954451703641c3",
-			DiffID:  "sha256:68737f5031b303067faacb264cd3b1466973da762bd83d4381e5396e6a4b79a8",
-			ChainID: "c0de73ac99683640bc8f8de5cda9e0e2fc97fe53d78c9fd60ea69b31303efbc9",
+			ChainID: "3d16a9d9679dba04b90edeeca13dfaa986a268a7e0f4764250bacc2bed236b73",
 		},
 	},
 }

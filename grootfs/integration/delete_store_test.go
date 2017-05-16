@@ -35,7 +35,7 @@ var _ = Describe("Delete Store", func() {
 
 	It("empties the given store path", func() {
 		_, err := runner.Create(groot.CreateSpec{
-			BaseImage: "docker:///busybox:1.26.2",
+			BaseImage: "docker:///cfgarden/garden-busybox",
 			ID:        "random-id",
 			Mount:     true,
 			UIDMappings: []groot.IDMappingSpec{
