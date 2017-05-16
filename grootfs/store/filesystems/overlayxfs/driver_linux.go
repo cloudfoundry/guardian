@@ -23,6 +23,30 @@ import (
 	shortid "github.com/ventu-io/go-shortid"
 )
 
+func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error {
+	logger = logger.Session("overlayxfs-init-filesystem", lager.Data{"filesystemPath": filesystemPath})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	stderr := bytes.NewBuffer([]byte{})
+	stdout := bytes.NewBuffer([]byte{})
+	cmd := exec.Command("mkfs.xfs", "-f", filesystemPath)
+	cmd.Stderr = stderr
+	cmd.Stdout = stdout
+	if err := cmd.Run(); err != nil {
+		logger.Error("formatting-filesystem-failed", err, lager.Data{"stdout": stdout.String(), "stderr": stderr.String(), "cmd": cmd.Args})
+		return errorspkg.Errorf("Formatting XFS filesystem: %s: %s", stderr.String(), err.Error())
+	}
+
+	cmd = exec.Command("mount", "-o", "loop,pquota,noatime,nobarrier", "-t", "xfs", filesystemPath, storePath)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		logger.Error("mounting-filesystem-failed", err, lager.Data{"output": string(output), "cmd": cmd.Args})
+		return errorspkg.Wrapf(err, "Mounting filesystem %s", string(output))
+	}
+
+	return nil
+}
+
 func (d *Driver) ConfigureStore(logger lager.Logger, path string, ownerUID, ownerGID int) error {
 	logger = logger.Session("overlayxfs-configure-store", lager.Data{"path": path})
 	logger.Debug("starting")

@@ -152,23 +152,31 @@ create:
 
 ### Initializing a store
 
-You can create a store directory within a mountpath for your images:
+If you have an existing XFS or BTRFS filesystem mounted, you can use this to hold GrootFS's image store.
+To create a store directory within your existing mountpath:
 
 ```
 grootfs --store /mnt/xfs/my-store-dir --driver overlay-xfs init-store <--uid-mapping 1000:0:1> <--gid-mapping 1000:0:1> <--uid-mapping/gid-mapping ...>
 ```
 
 N.B.
-- This command is new and as yet incomplete. Therefore we assume the path you
-are giving to `store` is already within a mounted directory.
 - The `driver` you pass to init-store must be compatible with the mounted path.
-- The command can currently only be run as root, with the mounted store owned
-by root.
+- The command can currently only be run as root, with the mounted store owned by root.
 - It can take a number of uid/gid mappings to initialize the store with.
 - If no mappings are provided, the store will be owned by host root user.
 - If mappings are provided, the store will be owned by the namespace root user specified.
-- Eventually this command will create a mounted filesystem for you, and will
-allow multiple independent stores to be set within one mount.
+
+#### --store-size-bytes
+
+If you have no existing filesystem, or want to create a dedicated one for GrootFS, `init-store`
+accepts the `--store-size-bytes` flag which allows you to specify the size of a newly created store.
+
+This command will:
+1. create a new file (of the size provided to `--store-size-bytes`) at /store/path.backing-store
+1. format it with a filesystem
+1. mount it at /store/path
+
+*N.B. This is currently only supported by the overlay-xfs driver*.
 
 
 ### Deleting a store

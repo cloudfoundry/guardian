@@ -40,6 +40,15 @@ func NewDriver(btrfsBinPath, draxBinPath, storePath string) *Driver {
 	}
 }
 
+func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error {
+	logger = logger.Session("btrfs-init-filesystem")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	logger.Info("skipping-filesystem-initialization")
+	return nil
+}
+
 func (d *Driver) ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
 	return nil
 }

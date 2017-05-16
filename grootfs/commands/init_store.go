@@ -29,6 +29,10 @@ var InitStoreCommand = cli.Command{
 			Name:  "gid-mapping",
 			Usage: "GID mapping for image translation, e.g.: <Namespace GID>:<Host GID>:<Size>",
 		},
+		cli.Int64Flag{
+			Name:  "store-size-bytes",
+			Usage: "Size of filesystem to create in bytes",
+		},
 	},
 
 	Action: func(ctx *cli.Context) error {
@@ -40,7 +44,8 @@ var InitStoreCommand = cli.Command{
 			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
-		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
+		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder).
+			WithStoreSizeBytes(ctx.Int64("store-size-bytes"))
 		cfg, err := configBuilder.Build()
 		logger.Debug("init-store", lager.Data{"currentConfig": cfg})
 		if err != nil {
@@ -76,12 +81,14 @@ var InitStoreCommand = cli.Command{
 			logger.Error("parsing-command", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
+		storeSizeBytes := cfg.Init.StoreSizeBytes
 
 		namespaceWriter := groot.NewStoreNamespacer(storePath)
 		spec := manager.InitSpec{
 			UIDMappings:     uidMappings,
 			GIDMappings:     gidMappings,
 			NamespaceWriter: namespaceWriter,
+			StoreSizeBytes:  storeSizeBytes,
 		}
 
 		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)

@@ -2,8 +2,10 @@ package integration_test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"math/rand"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 
@@ -11,9 +13,11 @@ import (
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store/manager"
+	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Init Store", func() {
@@ -29,14 +33,76 @@ var _ = Describe("Init Store", func() {
 	)
 
 	BeforeEach(func() {
-		spec = manager.InitSpec{}
 		integration.SkipIfNonRoot(GrootfsTestUid)
+
+		spec = manager.InitSpec{}
 		storePath = filepath.Join(StorePath, fmt.Sprintf("init-store-%d", rand.Int()))
 		runner = Runner.WithStore(storePath)
 	})
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(storePath))
+	})
+
+	Context("when we need to create the store filesystem", func() {
+		var backingStoreFile string
+
+		BeforeEach(func() {
+			integration.SkipIfNotXFS(Driver)
+			Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
+
+			storePath = filepath.Join(storePath, "store")
+			runner = Runner.WithStore(storePath)
+			spec.StoreSizeBytes = 500 * 1024 * 1024
+			backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
+		})
+
+		AfterEach(func() {
+			syscall.Unmount(storePath, 0)
+			Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
+		})
+
+		It("creates the backing file with the correct size", func() {
+			err := runner.InitStore(spec)
+			Expect(err).NotTo(HaveOccurred())
+
+			stat, err := os.Stat(backingStoreFile)
+			Expect(err).To(BeNil())
+			Expect(stat.Size()).To(Equal(int64(500 * 1024 * 1024)))
+		})
+
+		It("initialises an XFS filesystem in the backing file", func() {
+			Expect(runner.WithLogLevel(lager.DEBUG).InitStore(spec)).To(Succeed())
+
+			buffer := gbytes.NewBuffer()
+			cmd := exec.Command("file", backingStoreFile)
+			cmd.Stdout = buffer
+			Expect(cmd.Run()).To(Succeed())
+			Expect(buffer).To(gbytes.Say("XFS"))
+		})
+
+		Context("when the given backing store size is too small", func() {
+			BeforeEach(func() {
+				spec.StoreSizeBytes = 199 * 1024 * 1024
+			})
+
+			It("returns an error", func() {
+				err := runner.InitStore(spec)
+				Expect(err).To(MatchError(ContainSubstring("store size must be at least 200Mb")))
+			})
+		})
+
+		Context("when backing file already exists", func() {
+			BeforeEach(func() {
+				backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
+				ioutil.WriteFile(backingStoreFile, []byte{}, 0600)
+			})
+
+			It("fails with nice error message", func() {
+				err := runner.InitStore(spec)
+				Expect(err).To(MatchError(ContainSubstring("backing store file already exists at path")))
+			})
+		})
 	})
 
 	It("returns a newly created store path", func() {

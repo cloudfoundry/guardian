@@ -831,6 +831,49 @@ var _ = Describe("Driver", func() {
 			})
 		})
 	})
+
+	Context("InitFilesystem", func() {
+		var fsFile, storePath string
+
+		BeforeEach(func() {
+			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
+			Expect(err).NotTo(HaveOccurred())
+			fsFile = tempFile.Name()
+			os.Truncate(fsFile, 1024*1024*1024)
+
+			storePath, err = ioutil.TempDir("", "store")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("succcesfully creates and mounts a filesystem", func() {
+			err := driver.InitFilesystem(logger, fsFile, storePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(driver.ValidateFileSystem(logger, storePath)).To(Succeed())
+		})
+
+		It("successfully mounts the filesystem with the correct mount options", func() {
+			Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
+			mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s.*noatime.*nobarrier.*prjquota", storePath)))
+		})
+
+		Context("when creating the filesystem fails", func() {
+			It("returns an error", func() {
+				err := driver.InitFilesystem(logger, "/tmp/no-valid", storePath)
+				Expect(err).To(MatchError(ContainSubstring("Formatting XFS filesystem")))
+			})
+		})
+
+		Context("when mounting the filesystem fails", func() {
+			It("returns an error", func() {
+				err := driver.InitFilesystem(logger, fsFile, "/tmp/no-valid")
+				Expect(err).To(MatchError(ContainSubstring("Mounting filesystem")))
+			})
+		})
+
+	})
 })
 
 func randVolumeID() string {

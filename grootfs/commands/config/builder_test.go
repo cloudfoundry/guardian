@@ -92,6 +92,18 @@ var _ = Describe("Builder", func() {
 			})
 		})
 
+		Context("when --store-size-bytes is used together with --driver=btrfs", func() {
+			BeforeEach(func() {
+				cfg.FSDriver = "btrfs"
+			})
+
+			It("tells the user this is an unsupported combination", func() {
+				builder = builder.WithStoreSizeBytes(1024)
+				_, err := builder.Build()
+				Expect(err).To(MatchError(ContainSubstring("store-size-bytes is not supported on BTRFS")))
+			})
+		})
+
 		Context("when clean threshold property is invalid", func() {
 			BeforeEach(func() {
 				cfg.Clean.ThresholdBytes = int64(-1)
@@ -639,6 +651,15 @@ var _ = Describe("Builder", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(config.Create.WithoutMount).To(BeFalse())
 				})
+			})
+		})
+
+		Describe("WithStoreSizeBytes", func() {
+			It("sets the correct config value", func() {
+				builder = builder.WithStoreSizeBytes(1024)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.Init.StoreSizeBytes).To(Equal(int64(1024)))
 			})
 		})
 	})

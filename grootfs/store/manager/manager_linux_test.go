@@ -62,7 +62,7 @@ var _ = Describe("Manager", func() {
 		manager = managerpkg.New(storePath, locksmith, volDriver, imgDriver, strDriver)
 	})
 
-	Describe("Init", func() {
+	Describe("InitStore", func() {
 		BeforeEach(func() {
 			storePath = filepath.Join(os.TempDir(), fmt.Sprintf("init-store-%d", GinkgoParallelNode()))
 		})
@@ -187,6 +187,82 @@ var _ = Describe("Manager", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
 					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+				})
+			})
+		})
+
+		Context("when store size is provided", func() {
+			var backingstoreFile string
+
+			BeforeEach(func() {
+				spec.StoreSizeBytes = 1024 * 1024 * 500
+				backingstoreFile = fmt.Sprintf("%s.backing-store", storePath)
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(backingstoreFile)).To(Succeed())
+			})
+
+			It("creates a backing store file", func() {
+				Expect(backingstoreFile).ToNot(BeAnExistingFile())
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(backingstoreFile).To(BeAnExistingFile())
+			})
+
+			It("truncates the backing store file with the right size", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+
+				stats, err := os.Stat(backingstoreFile)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(stats.Size()).To(Equal(int64(1024 * 1024 * 500)))
+			})
+
+			It("uses the storedriver to initialize the filesystem", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(strDriver.InitFilesystemCallCount()).To(Equal(1), "store driver was not called")
+
+				_, filesystemPathArg, storePathArg := strDriver.InitFilesystemArgsForCall(0)
+				Expect(filesystemPathArg).To(Equal(backingstoreFile))
+				Expect(storePathArg).To(Equal(storePath))
+			})
+
+			Context("when the store size is less than 200Mb", func() {
+				BeforeEach(func() {
+					spec.StoreSizeBytes = 1024 * 1024 * 199
+				})
+
+				It("returns an error", func() {
+					err := manager.InitStore(logger, spec)
+					Expect(err).To(MatchError(ContainSubstring("store size must be at least 200Mb")))
+				})
+
+				It("doesn't create the store folder", func() {
+					Expect(storePath).ToNot(BeAnExistingFile())
+					err := manager.InitStore(logger, spec)
+					Expect(err).To(HaveOccurred())
+					Expect(storePath).ToNot(BeAnExistingFile())
+				})
+			})
+
+			Context("when the backingstore file already exits", func() {
+				BeforeEach(func() {
+					Expect(ioutil.WriteFile(backingstoreFile, []byte{}, 0700)).To(Succeed())
+				})
+
+				It("returns an error", func() {
+					err := manager.InitStore(logger, spec)
+					Expect(err).To(MatchError(ContainSubstring("backing store file already exists")))
+				})
+			})
+
+			Context("when the storedrive fails to initialize the fs", func() {
+				BeforeEach(func() {
+					strDriver.InitFilesystemReturns(errors.New("failed!"))
+				})
+
+				It("returns an error", func() {
+					err := manager.InitStore(logger, spec)
+					Expect(err).To(MatchError(ContainSubstring("failed!")))
 				})
 			})
 		})

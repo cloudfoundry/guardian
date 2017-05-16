@@ -21,6 +21,10 @@ func (r Runner) InitStore(spec manager.InitSpec) error {
 		)
 	}
 
+	if spec.StoreSizeBytes > 0 {
+		args = append(args, "--store-size-bytes", fmt.Sprintf("%d", spec.StoreSizeBytes))
+	}
+
 	_, err := r.RunSubcommand("init-store", args...)
 	return err
 }

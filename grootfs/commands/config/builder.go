@@ -21,6 +21,7 @@ type Config struct {
 	LogFile        string `yaml:"log_file"`
 	Create         Create `yaml:"create"`
 	Clean          Clean  `yaml:"clean"`
+	Init           Init   `yaml:"-"`
 }
 
 type Create struct {
@@ -36,6 +37,10 @@ type Create struct {
 type Clean struct {
 	IgnoreBaseImages []string `yaml:"ignore_images"`
 	ThresholdBytes   int64    `yaml:"threshold_bytes"`
+}
+
+type Init struct {
+	StoreSizeBytes int64
 }
 
 type Builder struct {
@@ -67,6 +72,10 @@ func (b *Builder) Build() (Config, error) {
 
 	if b.config.Clean.ThresholdBytes < 0 {
 		return *b.config, errorspkg.New("invalid argument: clean threshold cannot be negative")
+	}
+
+	if b.config.Init.StoreSizeBytes > 0 && b.config.FSDriver == "btrfs" {
+		return *b.config, errorspkg.New("invalid argument: store-size-bytes is not supported on BTRFS")
 	}
 
 	return *b.config, nil
@@ -224,6 +233,11 @@ func (b *Builder) WithMount(mount bool, noMount bool) *Builder {
 		b.config.Create.WithoutMount = true
 	}
 
+	return b
+}
+
+func (b *Builder) WithStoreSizeBytes(size int64) *Builder {
+	b.config.Init.StoreSizeBytes = size
 	return b
 }
 
