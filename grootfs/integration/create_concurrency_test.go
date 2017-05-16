@@ -89,6 +89,18 @@ var _ = Describe("Concurrent creations", func() {
 	})
 
 	Context("cold cache", func() {
+		BeforeEach(func() {
+			// run this to setup the store before concurrency!
+			// avoids the concurrent creation of namespace.json file
+			// can be removed after #142588813 is delivered
+			_, err := Runner.Create(groot.CreateSpec{
+				ID:        "test-pre-warm",
+				BaseImage: "docker:///cfgarden/empty",
+				Mount:     true,
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
 		It("can create multiple rootfses of the same image concurrently", func() {
 			wg := new(sync.WaitGroup)
 
