@@ -363,7 +363,7 @@ var _ = Describe("Networking", func() {
 
 			externalIP := externalIP(container)
 
-			Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait() }, "10s").
+			Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait("10s") }, "10s").
 				Should(gbytes.Say(fmt.Sprintf("%d", containerPort)))
 		})
 
@@ -377,7 +377,7 @@ var _ = Describe("Networking", func() {
 
 			externalIP := externalIP(container)
 
-			Eventually(func() *gexec.Session { return sendRequest(externalIP, actualHostPort).Wait() }, "10s").
+			Eventually(func() *gexec.Session { return sendRequest(externalIP, actualHostPort).Wait("10s") }, "10s").
 				Should(gbytes.Say(fmt.Sprintf("%d", actualContainerPort)))
 		})
 	})
