@@ -8,6 +8,10 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
+func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error {
+	return nil
+}
+
 func (d *Driver) ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
 	return nil
 }
