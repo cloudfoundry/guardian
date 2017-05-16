@@ -178,12 +178,10 @@ var _ = Describe("Networking", func() {
 	Context("when the rootFS does not contain /etc/hosts or /etc/resolv.conf", func() {
 		var (
 			rootFSWithoutHostsAndResolv string
-			rootFSPath                  string
 		)
 
 		BeforeEach(func() {
 			rootFSWithoutHostsAndResolv = createRootFSWithoutHostsAndResolv()
-			rootFSPath = fmt.Sprintf("raw://%s", rootFSWithoutHostsAndResolv)
 		})
 
 		AfterEach(func() {
@@ -365,7 +363,7 @@ var _ = Describe("Networking", func() {
 
 			externalIP := externalIP(container)
 
-			Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait() }).
+			Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait() }, "10s").
 				Should(gbytes.Say(fmt.Sprintf("%d", containerPort)))
 		})
 
@@ -379,7 +377,7 @@ var _ = Describe("Networking", func() {
 
 			externalIP := externalIP(container)
 
-			Eventually(func() *gexec.Session { return sendRequest(externalIP, actualHostPort).Wait() }).
+			Eventually(func() *gexec.Session { return sendRequest(externalIP, actualHostPort).Wait() }, "10s").
 				Should(gbytes.Say(fmt.Sprintf("%d", actualContainerPort)))
 		})
 	})
@@ -1137,7 +1135,7 @@ func listenInContainer(container garden.Container, containerPort uint32) error {
 }
 
 func sendRequest(ip string, port uint32) *gexec.Session {
-	sess, err := gexec.Start(exec.Command("nc", "-w4", "-v", ip, fmt.Sprintf("%d", port)), GinkgoWriter, GinkgoWriter)
+	sess, err := gexec.Start(exec.Command("nc", "-w5", "-v", ip, fmt.Sprintf("%d", port)), GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 
 	return sess
