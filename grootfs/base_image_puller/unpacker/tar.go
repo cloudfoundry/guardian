@@ -10,7 +10,6 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	errorspkg "github.com/pkg/errors"
 
@@ -150,12 +149,9 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackS
 		}
 	}
 
-	elapsedTimes := map[string]time.Duration{}
-
 	tarReader := tar.NewReader(spec.Stream)
 	opaqueWhiteouts := []string{}
 	for {
-		startedAt := time.Now()
 		tarHeader, err := tarReader.Next()
 		if err == io.EOF {
 			break
@@ -172,18 +168,14 @@ func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackS
 			if err := u.whiteoutHandler.removeWhiteout(entryPath); err != nil {
 				return err
 			}
-			elapsedTimes[tarHeader.Name] = time.Since(startedAt)
 			continue
 		}
 
 		if err := u.handleEntry(spec.TargetPath, entryPath, tarReader, tarHeader, spec); err != nil {
 			return err
 		}
-
-		elapsedTimes[tarHeader.Name] = time.Since(startedAt)
 	}
 
-	logger.Debug("elapsed-times", lager.Data{"times": elapsedTimes})
 	return u.whiteoutHandler.removeOpaqueWhiteouts(opaqueWhiteouts)
 }
 
