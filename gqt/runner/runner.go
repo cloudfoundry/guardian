@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"syscall"
 	"time"
@@ -24,10 +25,21 @@ import (
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
+type Binaries struct {
+	OCIRuntime    string `json:"oci_runtime,omitempty"`
+	Tar           string `json:"tar,omitempty"`
+	Gdn           string `json:"gdn,omitempty"`
+	Init          string `json:"init,omitempty"`
+	RuntimePlugin string `json:"runtime_plugin,omitempty"`
+	ImagePlugin   string `json:"image_plugin,omitempty"`
+	NetworkPlugin string `json:"network_plugin,omitempty"`
+	ExecRunner    string `json:"execrunner,omitempty"`
+	NSTar         string `json:"nstar,omitempty"`
+}
+
 const MNT_DETACH = 0x2
 
 var DataDir string
-var TarBin = os.Getenv("GARDEN_TAR_PATH")
 
 type RunningGarden struct {
 	client.Client
@@ -71,7 +83,7 @@ func init() {
 	}
 }
 
-func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin, network, address string, user UserCredential, argv ...string) GardenRunner {
+func NewGardenRunner(binaries *Binaries, rootfs, network, address string, user UserCredential, argv ...string) GardenRunner {
 	r := GardenRunner{}
 
 	r.Network = network
@@ -85,9 +97,11 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBi
 	r.DepotDir = filepath.Join(r.TmpDir, "containers")
 	r.ConsoleSockets = filepath.Join(r.TmpDir, "console-sockets")
 
-	MustMountTmpfs(r.GraphPath)
+	if runtime.GOOS == "linux" {
+		MustMountTmpfs(r.GraphPath)
+	}
 
-	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.ConsoleSockets, r.Network, r.Addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs, user, argv...)
+	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.ConsoleSockets, r.Network, r.Addr, binaries, rootfs, user, argv...)
 	r.Cmd.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", r.TmpDir))
 
 	for i, arg := range r.Cmd.Args {
@@ -110,8 +124,8 @@ func NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBi
 	return r
 }
 
-func Start(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin string, user UserCredential, argv ...string) *RunningGarden {
-	runner := NewGardenRunner(bin, initBin, nstarBin, dadooBin, grootfsBin, rootfs, tarBin, "unix", fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode()), user, argv...)
+func Start(binaries *Binaries, rootfs string, user UserCredential, argv ...string) *RunningGarden {
+	runner := NewGardenRunner(binaries, rootfs, "unix", fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode()), user, argv...)
 
 	r := &RunningGarden{
 		runner:   runner,

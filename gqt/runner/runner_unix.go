@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -19,7 +20,7 @@ import (
 
 type UserCredential *syscall.Credential
 
-func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, initBin, nstarBin, dadooBin, grootfsBin, tarBin, rootfs string, user UserCredential, argv ...string) *exec.Cmd {
+func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr string, binaries *Binaries, rootfs string, user UserCredential, argv ...string) *exec.Cmd {
 	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
 	Expect(os.MkdirAll(depotDir, 0755)).To(Succeed())
 
@@ -57,13 +58,13 @@ func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr, bin, in
 	gardenArgs = appendDefaultFlag(gardenArgs, "--console-sockets-path", consoleSocketsPath)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
 	gardenArgs = appendDefaultFlag(gardenArgs, "--network-pool", fmt.Sprintf("10.254.%d.0/22", 4*GinkgoParallelNode()))
-	gardenArgs = appendDefaultFlag(gardenArgs, "--init-bin", initBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--dadoo-bin", dadooBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--nstar-bin", nstarBin)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", tarBin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--init-bin", binaries.Init)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--dadoo-bin", binaries.ExecRunner)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--nstar-bin", binaries.NSTar)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", binaries.Tar)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--port-pool-start", fmt.Sprintf("%d", GinkgoParallelNode()*7000))
 
-	cmd := exec.Command(bin, append([]string{"server"}, gardenArgs...)...)
+	cmd := exec.Command(binaries.Gdn, append([]string{"server"}, gardenArgs...)...)
 	if user != nil {
 		cmd.SysProcAttr = &syscall.SysProcAttr{}
 		cmd.SysProcAttr.Credential = user
@@ -102,7 +103,9 @@ func (r *RunningGarden) Cleanup() {
 		r.logger.Error("failed-to-unmount", err)
 	}
 
-	MustUnmountTmpfs(r.GraphPath)
+	if runtime.GOOS == "linux" {
+		MustUnmountTmpfs(r.GraphPath)
+	}
 
 	// In the kernel version 3.19.0-51-generic the code bellow results in
 	// hanging the running VM. We are not deleting the node-X directories. They

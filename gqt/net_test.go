@@ -520,7 +520,7 @@ var _ = Describe("Networking", func() {
 			stdinFile = path.Join(tmpDir, "stdin.log")
 
 			args = []string{
-				"--network-plugin", testNetPluginBin,
+				"--network-plugin", binaries.NetworkPlugin,
 				"--network-plugin-extra-arg", argsFile,
 				"--network-plugin-extra-arg", stdinFile,
 			}

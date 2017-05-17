@@ -3,6 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/urfave/cli"
@@ -50,7 +51,7 @@ var CreateCommand = cli.Command{
 	},
 
 	Action: func(ctx *cli.Context) error {
-		err := ioutil.WriteFile("/tmp/args", []byte(strings.Join(os.Args, " ")), 0777)
+		err := ioutil.WriteFile(filepath.Join(os.TempDir(), "args"), []byte(strings.Join(os.Args, " ")), 0777)
 		if err != nil {
 			panic(err)
 		}

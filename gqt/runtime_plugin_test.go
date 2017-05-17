@@ -31,7 +31,7 @@ var _ = Describe("Runtime Plugin", func() {
 
 	Context("when a runtime plugin is provided", func() {
 		BeforeEach(func() {
-			args = append(args, "--runtime-plugin", testRuntimePluginBin)
+			args = append(args, "--runtime-plugin", binaries.RuntimePlugin)
 		})
 
 		Context("and a container is successfully created", func() {
@@ -42,12 +42,12 @@ var _ = Describe("Runtime Plugin", func() {
 			})
 
 			It("executes the plugin, passing the correct args", func() {
-				pluginArgsBytes, err := ioutil.ReadFile("/tmp/args")
+				pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(client.Tmpdir, "args"))
 				Expect(err).ToNot(HaveOccurred())
 
 				pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 				Expect(pluginArgs).To(ConsistOf(
-					testRuntimePluginBin,
+					binaries.RuntimePlugin,
 					"--debug",
 					"--log", HaveSuffix(filepath.Join("containers", handle, "create.log")),
 					"--newuidmap", HaveSuffix("newuidmap"),

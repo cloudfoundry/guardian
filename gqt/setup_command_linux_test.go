@@ -40,7 +40,7 @@ var _ = Describe("gdn setup", func() {
 	JustBeforeEach(func() {
 		var err error
 
-		setupProcess, err = gexec.Start(exec.Command(gardenBin, setupArgs...), GinkgoWriter, GinkgoWriter)
+		setupProcess, err = gexec.Start(exec.Command(binaries.Gdn, setupArgs...), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess, 10*time.Second).Should(gexec.Exit(0))
 	})

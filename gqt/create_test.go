@@ -452,7 +452,7 @@ var _ = Describe("Creating a Container", func() {
 			tmpFile := path.Join(tmpDir, "iwasrun.log")
 
 			args = []string{
-				"--network-plugin", testNetPluginBin,
+				"--network-plugin", binaries.NetworkPlugin,
 				"--network-plugin-extra-arg", tmpFile,
 				"--network-plugin-extra-arg", "/dev/null",
 			}

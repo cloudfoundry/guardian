@@ -143,7 +143,7 @@ var _ = Describe("Destroying a Container", func() {
 
 			netPluginArgs = []string{
 				"--properties-path", path.Join(tmpDir, "props.json"),
-				"--network-plugin", testNetPluginBin,
+				"--network-plugin", binaries.NetworkPlugin,
 				"--network-plugin-extra-arg", argsFile,
 				"--network-plugin-extra-arg", stdinFile,
 				"--network-plugin-extra-arg", pluginReturn,

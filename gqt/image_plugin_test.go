@@ -49,7 +49,7 @@ var _ = Describe("Image Plugin", func() {
 			Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
 
 			args = append(args,
-				"--image-plugin", testImagePluginBin,
+				"--image-plugin", binaries.ImagePlugin,
 				"--image-plugin-extra-arg", "\"--rootfs-path\"",
 				"--image-plugin-extra-arg", tmpDir,
 				"--image-plugin-extra-arg", "\"--args-path\"",
@@ -97,7 +97,7 @@ var _ = Describe("Image Plugin", func() {
 
 				pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 				Expect(pluginArgs).To(Equal([]string{
-					testImagePluginBin,
+					binaries.ImagePlugin,
 					"--rootfs-path", tmpDir,
 					"--args-path", filepath.Join(tmpDir, "args"),
 					"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
@@ -265,7 +265,7 @@ var _ = Describe("Image Plugin", func() {
 
 					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 					Expect(pluginArgs).To(Equal([]string{
-						testImagePluginBin,
+						binaries.ImagePlugin,
 						"--rootfs-path", tmpDir,
 						"--args-path", filepath.Join(tmpDir, "args"),
 						"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
@@ -350,7 +350,7 @@ var _ = Describe("Image Plugin", func() {
 
 					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 					Expect(pluginArgs).To(Equal([]string{
-						testImagePluginBin,
+						binaries.ImagePlugin,
 						"--rootfs-path", tmpDir,
 						"--args-path", filepath.Join(tmpDir, "args"),
 						"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
@@ -429,7 +429,7 @@ var _ = Describe("Image Plugin", func() {
 			Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
 
 			args = append(args,
-				"--privileged-image-plugin", testImagePluginBin,
+				"--privileged-image-plugin", binaries.ImagePlugin,
 				"--privileged-image-plugin-extra-arg", "\"--rootfs-path\"",
 				"--privileged-image-plugin-extra-arg", tmpDir,
 				"--privileged-image-plugin-extra-arg", "\"--args-path\"",
@@ -477,7 +477,7 @@ var _ = Describe("Image Plugin", func() {
 
 				pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 				Expect(pluginArgs).To(Equal([]string{
-					testImagePluginBin,
+					binaries.ImagePlugin,
 					"--rootfs-path", tmpDir,
 					"--args-path", filepath.Join(tmpDir, "args"),
 					"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
@@ -631,7 +631,7 @@ var _ = Describe("Image Plugin", func() {
 
 					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 					Expect(pluginArgs).To(Equal([]string{
-						testImagePluginBin,
+						binaries.ImagePlugin,
 						"--rootfs-path", tmpDir,
 						"--args-path", filepath.Join(tmpDir, "args"),
 						"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
@@ -699,7 +699,7 @@ var _ = Describe("Image Plugin", func() {
 
 					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
 					Expect(pluginArgs).To(Equal([]string{
-						testImagePluginBin,
+						binaries.ImagePlugin,
 						"--rootfs-path", tmpDir,
 						"--args-path", filepath.Join(tmpDir, "args"),
 						"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
@@ -772,7 +772,7 @@ var _ = Describe("Image Plugin", func() {
 
 		BeforeEach(func() {
 			// make a a copy of the fake image plugin so we can check location of file called
-			Expect(copyFile(testImagePluginBin, fmt.Sprintf("%s-priv", testImagePluginBin))).To(Succeed())
+			Expect(copyFile(binaries.ImagePlugin, fmt.Sprintf("%s-priv", binaries.ImagePlugin))).To(Succeed())
 
 			var err error
 			tmpDir, err = ioutil.TempDir("", "")
@@ -781,7 +781,7 @@ var _ = Describe("Image Plugin", func() {
 			Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
 
 			args = append(args,
-				"--image-plugin", testImagePluginBin,
+				"--image-plugin", binaries.ImagePlugin,
 				"--image-plugin-extra-arg", "\"--rootfs-path\"",
 				"--image-plugin-extra-arg", tmpDir,
 				"--image-plugin-extra-arg", "\"--create-bin-location-path\"",
@@ -790,7 +790,7 @@ var _ = Describe("Image Plugin", func() {
 				"--image-plugin-extra-arg", filepath.Join(tmpDir, "destroy-bin-location"),
 				"--image-plugin-extra-arg", "\"--metrics-bin-location-path\"",
 				"--image-plugin-extra-arg", filepath.Join(tmpDir, "metrics-bin-location"),
-				"--privileged-image-plugin", fmt.Sprintf("%s-priv", testImagePluginBin),
+				"--privileged-image-plugin", fmt.Sprintf("%s-priv", binaries.ImagePlugin),
 				"--privileged-image-plugin-extra-arg", "\"--rootfs-path\"",
 				"--privileged-image-plugin-extra-arg", tmpDir,
 				"--privileged-image-plugin-extra-arg", "\"--create-bin-location-path\"",
@@ -818,7 +818,7 @@ var _ = Describe("Image Plugin", func() {
 				pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "create-bin-location"))
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(string(pluginLocationBytes)).To(Equal(testImagePluginBin))
+				Expect(string(pluginLocationBytes)).To(Equal(binaries.ImagePlugin))
 			})
 
 			Context("and metrics are collected on that container", func() {
@@ -831,7 +831,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "metrics-bin-location"))
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(string(pluginLocationBytes)).To(Equal(testImagePluginBin))
+					Expect(string(pluginLocationBytes)).To(Equal(binaries.ImagePlugin))
 				})
 			})
 
@@ -844,7 +844,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "destroy-bin-location"))
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(string(pluginLocationBytes)).To(ContainSubstring(testImagePluginBin))
+					Expect(string(pluginLocationBytes)).To(ContainSubstring(binaries.ImagePlugin))
 				})
 			})
 		})
@@ -862,7 +862,7 @@ var _ = Describe("Image Plugin", func() {
 				pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "create-bin-location"))
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(string(pluginLocationBytes)).To(Equal(fmt.Sprintf("%s-priv", testImagePluginBin)))
+				Expect(string(pluginLocationBytes)).To(Equal(fmt.Sprintf("%s-priv", binaries.ImagePlugin)))
 			})
 
 			Context("and metrics are collected on that container", func() {
@@ -875,7 +875,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "metrics-bin-location"))
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(string(pluginLocationBytes)).To(Equal(fmt.Sprintf("%s-priv", testImagePluginBin)))
+					Expect(string(pluginLocationBytes)).To(Equal(fmt.Sprintf("%s-priv", binaries.ImagePlugin)))
 				})
 			})
 
@@ -888,7 +888,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "destroy-bin-location"))
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(string(pluginLocationBytes)).To(ContainSubstring(fmt.Sprintf("%s-priv", testImagePluginBin)))
+					Expect(string(pluginLocationBytes)).To(ContainSubstring(fmt.Sprintf("%s-priv", binaries.ImagePlugin)))
 				})
 			})
 		})
@@ -909,7 +909,7 @@ var _ = Describe("Image Plugin", func() {
 
 			args = append(args,
 				"--log-level", "debug",
-				"--image-plugin", testImagePluginBin,
+				"--image-plugin", binaries.ImagePlugin,
 				"--image-plugin-extra-arg", "\"--rootfs-path\"",
 				"--image-plugin-extra-arg", tmpDir,
 				"--image-plugin-extra-arg", "\"--args-path\"",

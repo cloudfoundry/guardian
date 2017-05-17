@@ -32,7 +32,7 @@ var _ = Describe("rootless containers", func() {
 		var err error
 
 		setupArgs := []string{"setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
-		setupProcess, err := gexec.Start(exec.Command(gardenBin, setupArgs...), GinkgoWriter, GinkgoWriter)
+		setupProcess, err := gexec.Start(exec.Command(binaries.Gdn, setupArgs...), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 
@@ -54,7 +54,7 @@ var _ = Describe("rootless containers", func() {
 		client = startGardenAsUser(
 			unprivilegedUser,
 			"--skip-setup",
-			"--image-plugin", testImagePluginBin,
+			"--image-plugin", binaries.ImagePlugin,
 			"--image-plugin-extra-arg", "\"--rootfs-path\"",
 			"--image-plugin-extra-arg", filepath.Join(imagePath, "rootfs"),
 			"--uid-map-start", "100000", // /etc/subuid entry baked into the cfgarden/garden-ci-ubuntu image
