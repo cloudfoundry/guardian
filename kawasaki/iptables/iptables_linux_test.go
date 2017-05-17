@@ -26,7 +26,7 @@ var _ = Describe("IPTables controller", func() {
 	)
 
 	BeforeEach(func() {
-		SetDefaultEventuallyTimeout(3 * time.Second)
+		SetDefaultEventuallyTimeout(8 * time.Second)
 		netnsName = fmt.Sprintf("ginkgo-netns-%d", GinkgoParallelNode())
 		makeNamespace(netnsName)
 
@@ -341,8 +341,6 @@ func deleteNamespace(nsName string) {
 }
 
 func wrapCmdInNs(nsName string, cmd *exec.Cmd) *exec.Cmd {
-	// We wrap iptables with strace to check whether slowness in #145258087
-	// is due to iptables being slow or exiting netns being slow.
 	wrappedCmd := exec.Command("strace", "-ttT", "ip", "netns", "exec", nsName)
 	wrappedCmd.Args = append(wrappedCmd.Args, cmd.Args...)
 	wrappedCmd.Stdin = cmd.Stdin
