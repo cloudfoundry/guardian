@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -44,7 +43,7 @@ var _ = Describe("Init Store", func() {
 		Expect(os.RemoveAll(storePath))
 	})
 
-	Context("when we need to create the store filesystem", func() {
+	Context("when --store-size-bytes is passed", func() {
 		var backingStoreFile string
 
 		BeforeEach(func() {
@@ -89,18 +88,6 @@ var _ = Describe("Init Store", func() {
 			It("returns an error", func() {
 				err := runner.InitStore(spec)
 				Expect(err).To(MatchError(ContainSubstring("store size must be at least 200Mb")))
-			})
-		})
-
-		Context("when backing file already exists", func() {
-			BeforeEach(func() {
-				backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
-				ioutil.WriteFile(backingStoreFile, []byte{}, 0600)
-			})
-
-			It("fails with nice error message", func() {
-				err := runner.InitStore(spec)
-				Expect(err).To(MatchError(ContainSubstring("backing store file already exists at path")))
 			})
 		})
 	})
@@ -242,10 +229,8 @@ var _ = Describe("Init Store", func() {
 			Expect(os.MkdirAll(runner.StorePath, 0755)).To(Succeed())
 		})
 
-		It("returns an error", func() {
-			err := runner.InitStore(spec)
-			Expect(err).To(HaveOccurred())
-			Expect(err).To(MatchError(fmt.Sprintf("store already initialized at path %s", runner.StorePath)))
+		It("does not return an error", func() {
+			Expect(runner.InitStore(spec)).To(Succeed())
 		})
 	})
 

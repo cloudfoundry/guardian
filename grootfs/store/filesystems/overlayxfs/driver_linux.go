@@ -28,20 +28,15 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	stderr := bytes.NewBuffer([]byte{})
-	stdout := bytes.NewBuffer([]byte{})
-	cmd := exec.Command("mkfs.xfs", "-f", filesystemPath)
-	cmd.Stderr = stderr
-	cmd.Stdout = stdout
-	if err := cmd.Run(); err != nil {
-		logger.Error("formatting-filesystem-failed", err, lager.Data{"stdout": stdout.String(), "stderr": stderr.String(), "cmd": cmd.Args})
-		return errorspkg.Errorf("Formatting XFS filesystem: %s: %s", stderr.String(), err.Error())
-	}
+	if err := d.mountFilesystem(filesystemPath, storePath, "remount"); err != nil {
+		if err := d.formatFilesystem(logger, filesystemPath); err != nil {
+			return err
+		}
 
-	cmd = exec.Command("mount", "-o", "loop,pquota,noatime,nobarrier", "-t", "xfs", filesystemPath, storePath)
-	if output, err := cmd.CombinedOutput(); err != nil {
-		logger.Error("mounting-filesystem-failed", err, lager.Data{"output": string(output), "cmd": cmd.Args})
-		return errorspkg.Wrapf(err, "Mounting filesystem %s", string(output))
+		if err := d.mountFilesystem(filesystemPath, storePath, ""); err != nil {
+			logger.Error("mounting-filesystem-failed", err, lager.Data{"filesystemPath": filesystemPath, "storePath": storePath})
+			return errorspkg.Wrap(err, "Mounting filesystem")
+		}
 	}
 
 	return nil
@@ -279,6 +274,30 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	if err := os.Symlink(to, linkPath); err != nil {
 		logger.Error("updating-volume-symlink-failed", err)
 		return errorspkg.Wrap(err, "updating volume symlink")
+	}
+
+	return nil
+}
+
+func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) error {
+	stdout := bytes.NewBuffer([]byte{})
+	stderr := bytes.NewBuffer([]byte{})
+	cmd := exec.Command("mkfs.xfs", "-f", filesystemPath)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
+		logger.Error("formatting-filesystem-failed", err, lager.Data{"cmd": cmd.Args, "stdout": stdout, "stderr": stderr})
+		return errorspkg.Errorf("Formatting XFS filesystem: %s", err.Error())
+	}
+
+	return nil
+}
+
+func (d *Driver) mountFilesystem(source, destination, option string) error {
+	allOpts := fmt.Sprintf("%s,loop,pquota,noatime,nobarrier", option)
+	cmd := exec.Command("mount", "-o", allOpts, "-t", "xfs", source, destination)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return errorspkg.Errorf("%s: %s", err, string(output))
 	}
 
 	return nil

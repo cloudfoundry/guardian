@@ -31,7 +31,7 @@ var InitStoreCommand = cli.Command{
 		},
 		cli.Int64Flag{
 			Name:  "store-size-bytes",
-			Usage: "Size of filesystem to create in bytes",
+			Usage: "Creates a new filesystem of the given size and mounts it to the given Store Directory",
 		},
 	},
 

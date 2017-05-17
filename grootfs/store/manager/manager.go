@@ -61,42 +61,14 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 
 	stat, err := os.Stat(m.storePath)
 	if err == nil && stat.IsDir() {
-		logger.Error("store-path-already-exists", errorspkg.Errorf("%s already exists", m.storePath))
-		return errorspkg.Errorf("store already initialized at path %s", m.storePath)
+		logger.Info("store-path-already-exists", lager.Data{"StorePath": m.storePath})
 	}
 
 	validationPath := filepath.Dir(m.storePath)
 
 	if spec.StoreSizeBytes > 0 {
-		if spec.StoreSizeBytes < MinStoreSizeBytes {
-			logger.Error("init-store-failed", errors.New("store size myst be at least 200Mb"), lager.Data{"storeSize": spec.StoreSizeBytes})
-			return errorspkg.New("store size must be at least 200Mb")
-		}
-
-		backingStoreFile := fmt.Sprintf("%s.backing-store", m.storePath)
-		if _, err := os.Stat(backingStoreFile); err == nil {
-			logger.Error("backing-store-file-already-exists", errorspkg.Errorf("%s already exists", backingStoreFile))
-			return errorspkg.Errorf("backing store file already exists at path %s", backingStoreFile)
-		}
-
-		if err := ioutil.WriteFile(backingStoreFile, []byte{}, 0600); err != nil {
-			logger.Error("writing-backingstore-file", err, lager.Data{"backingstoreFile": backingStoreFile})
-			return errorspkg.Wrap(err, "creating backing store file")
-		}
-
-		if err = os.Truncate(backingStoreFile, spec.StoreSizeBytes); err != nil {
-			logger.Error("trunctaing-backing-store-file-failed", err, lager.Data{"backingstoreFile": backingStoreFile, "size": spec.StoreSizeBytes})
-			return errorspkg.Wrap(err, "truncating backing store file")
-		}
-
-		if err := os.MkdirAll(m.storePath, 0755); err != nil {
-			logger.Error("init-store-failed", err)
-			return errorspkg.Wrap(err, "initializing store")
-		}
-
-		if err := m.storeDriver.InitFilesystem(logger, backingStoreFile, m.storePath); err != nil {
-			logger.Error("initializing-filesystem-failed", err, lager.Data{"backingstoreFile": backingStoreFile})
-			return errorspkg.Wrap(err, "initializing filesyztem")
+		if err := m.createAndMountFilesystem(logger, spec.StoreSizeBytes); err != nil {
+			return err
 		}
 
 		validationPath = m.storePath
@@ -238,6 +210,38 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 	if err := os.RemoveAll(m.storePath); err != nil {
 		logger.Error("deleting-store-path-failed", err, lager.Data{"storePath": m.storePath})
 		return errorspkg.Wrapf(err, "deleting store path")
+	}
+
+	return nil
+}
+
+func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes int64) error {
+	if storeSizeBytes < MinStoreSizeBytes {
+		logger.Error("init-store-failed", errors.New("store size must be at least 200Mb"), lager.Data{"storeSize": storeSizeBytes})
+		return errorspkg.New("store size must be at least 200Mb")
+	}
+
+	backingStoreFile := fmt.Sprintf("%s.backing-store", m.storePath)
+	if _, err := os.Stat(backingStoreFile); os.IsNotExist(err) {
+		if err := ioutil.WriteFile(backingStoreFile, []byte{}, 0600); err != nil {
+			logger.Error("writing-backing-store-file", err, lager.Data{"backingstoreFile": backingStoreFile})
+			return errorspkg.Wrap(err, "creating backing store file")
+		}
+	}
+
+	if err := os.Truncate(backingStoreFile, storeSizeBytes); err != nil {
+		logger.Error("truncating-backing-store-file-failed", err, lager.Data{"backingstoreFile": backingStoreFile, "size": storeSizeBytes})
+		return errorspkg.Wrap(err, "truncating backing store file")
+	}
+
+	if err := os.MkdirAll(m.storePath, 0755); err != nil {
+		logger.Error("init-store-failed", err)
+		return errorspkg.Wrap(err, "initializing store")
+	}
+
+	if err := m.storeDriver.InitFilesystem(logger, backingStoreFile, m.storePath); err != nil {
+		logger.Error("initializing-filesystem-failed", err, lager.Data{"backingstoreFile": backingStoreFile})
+		return errorspkg.Wrap(err, "initializing filesyztem")
 	}
 
 	return nil

@@ -26,15 +26,15 @@ var _ = Describe("Manager", func() {
 	var (
 		originalTmpDir string
 
-		imgDriver  *image_clonerfakes.FakeImageDriver
-		volDriver  *base_image_pullerfakes.FakeVolumeDriver
-		strDriver  *managerfakes.FakeStoreDriver
-		locksmith  *grootfakes.FakeLocksmith
-		manager    *managerpkg.Manager
-		storePath  string
-		logger     *lagertest.TestLogger
-		spec       managerpkg.InitSpec
-		namespacer *managerfakes.FakeNamespaceWriter
+		imgDriver   *image_clonerfakes.FakeImageDriver
+		volDriver   *base_image_pullerfakes.FakeVolumeDriver
+		storeDriver *managerfakes.FakeStoreDriver
+		locksmith   *grootfakes.FakeLocksmith
+		manager     *managerpkg.Manager
+		storePath   string
+		logger      *lagertest.TestLogger
+		spec        managerpkg.InitSpec
+		namespacer  *managerfakes.FakeNamespaceWriter
 	)
 
 	BeforeEach(func() {
@@ -42,7 +42,7 @@ var _ = Describe("Manager", func() {
 
 		imgDriver = new(image_clonerfakes.FakeImageDriver)
 		volDriver = new(base_image_pullerfakes.FakeVolumeDriver)
-		strDriver = new(managerfakes.FakeStoreDriver)
+		storeDriver = new(managerfakes.FakeStoreDriver)
 		locksmith = new(grootfakes.FakeLocksmith)
 		namespacer = new(managerfakes.FakeNamespaceWriter)
 
@@ -59,7 +59,7 @@ var _ = Describe("Manager", func() {
 	})
 
 	JustBeforeEach(func() {
-		manager = managerpkg.New(storePath, locksmith, volDriver, imgDriver, strDriver)
+		manager = managerpkg.New(storePath, locksmith, volDriver, imgDriver, storeDriver)
 	})
 
 	Describe("InitStore", func() {
@@ -83,7 +83,7 @@ var _ = Describe("Manager", func() {
 
 		It("validates the store path parent with the store driver", func() {
 			Expect(manager.InitStore(logger, spec)).To(Succeed())
-			Expect(strDriver.ValidateFileSystemCallCount()).To(Equal(1))
+			Expect(storeDriver.ValidateFileSystemCallCount()).To(Equal(1))
 		})
 
 		It("creates the metadata directory", func() {
@@ -104,9 +104,9 @@ var _ = Describe("Manager", func() {
 
 		It("calls the store driver to configure the store", func() {
 			Expect(manager.InitStore(logger, spec)).To(Succeed())
-			Expect(strDriver.ConfigureStoreCallCount()).To(Equal(1))
+			Expect(storeDriver.ConfigureStoreCallCount()).To(Equal(1))
 
-			_, storePathArg, uidArg, gidArg := strDriver.ConfigureStoreArgsForCall(0)
+			_, storePathArg, uidArg, gidArg := storeDriver.ConfigureStoreArgsForCall(0)
 			Expect(storePathArg).To(Equal(storePath))
 			Expect(uidArg).To(Equal(0))
 			Expect(gidArg).To(Equal(0))
@@ -163,9 +163,9 @@ var _ = Describe("Manager", func() {
 
 			It("calls the store driver to configure the store", func() {
 				Expect(manager.InitStore(logger, spec)).To(Succeed())
-				Expect(strDriver.ConfigureStoreCallCount()).To(Equal(1))
+				Expect(storeDriver.ConfigureStoreCallCount()).To(Equal(1))
 
-				_, storePathArg, uidArg, gidArg := strDriver.ConfigureStoreArgsForCall(0)
+				_, storePathArg, uidArg, gidArg := storeDriver.ConfigureStoreArgsForCall(0)
 				Expect(storePathArg).To(Equal(storePath))
 				Expect(uidArg).To(Equal(int(GrootUID)))
 				Expect(gidArg).To(Equal(int(GrootGID)))
@@ -192,37 +192,37 @@ var _ = Describe("Manager", func() {
 		})
 
 		Context("when store size is provided", func() {
-			var backingstoreFile string
+			var backingStoreFile string
 
 			BeforeEach(func() {
 				spec.StoreSizeBytes = 1024 * 1024 * 500
-				backingstoreFile = fmt.Sprintf("%s.backing-store", storePath)
+				backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
 			})
 
 			AfterEach(func() {
-				Expect(os.RemoveAll(backingstoreFile)).To(Succeed())
+				Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
 			})
 
 			It("creates a backing store file", func() {
-				Expect(backingstoreFile).ToNot(BeAnExistingFile())
+				Expect(backingStoreFile).ToNot(BeAnExistingFile())
 				Expect(manager.InitStore(logger, spec)).To(Succeed())
-				Expect(backingstoreFile).To(BeAnExistingFile())
+				Expect(backingStoreFile).To(BeAnExistingFile())
 			})
 
 			It("truncates the backing store file with the right size", func() {
 				Expect(manager.InitStore(logger, spec)).To(Succeed())
 
-				stats, err := os.Stat(backingstoreFile)
+				stats, err := os.Stat(backingStoreFile)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(stats.Size()).To(Equal(int64(1024 * 1024 * 500)))
 			})
 
 			It("uses the storedriver to initialize the filesystem", func() {
 				Expect(manager.InitStore(logger, spec)).To(Succeed())
-				Expect(strDriver.InitFilesystemCallCount()).To(Equal(1), "store driver was not called")
+				Expect(storeDriver.InitFilesystemCallCount()).To(Equal(1), "store driver was not called")
 
-				_, filesystemPathArg, storePathArg := strDriver.InitFilesystemArgsForCall(0)
-				Expect(filesystemPathArg).To(Equal(backingstoreFile))
+				_, filesystemPathArg, storePathArg := storeDriver.InitFilesystemArgsForCall(0)
+				Expect(filesystemPathArg).To(Equal(backingStoreFile))
 				Expect(storePathArg).To(Equal(storePath))
 			})
 
@@ -244,20 +244,31 @@ var _ = Describe("Manager", func() {
 				})
 			})
 
-			Context("when the backingstore file already exits", func() {
+			Context("when the backingstore file already exists", func() {
 				BeforeEach(func() {
-					Expect(ioutil.WriteFile(backingstoreFile, []byte{}, 0700)).To(Succeed())
+					Expect(ioutil.WriteFile(backingStoreFile, []byte{}, 0700)).To(Succeed())
 				})
 
-				It("returns an error", func() {
+				It("succeeds", func() {
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
+				})
+
+			})
+
+			Context("when the store directory already exists", func() {
+				BeforeEach(func() {
+					Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
+				})
+
+				It("succeeds", func() {
 					err := manager.InitStore(logger, spec)
-					Expect(err).To(MatchError(ContainSubstring("backing store file already exists")))
+					Expect(err).To(Succeed())
 				})
 			})
 
-			Context("when the storedrive fails to initialize the fs", func() {
+			Context("when the store driver fails to initialize the filesystem", func() {
 				BeforeEach(func() {
-					strDriver.InitFilesystemReturns(errors.New("failed!"))
+					storeDriver.InitFilesystemReturns(errors.New("failed!"))
 				})
 
 				It("returns an error", func() {
@@ -267,20 +278,9 @@ var _ = Describe("Manager", func() {
 			})
 		})
 
-		Context("when the store path already exists", func() {
-			BeforeEach(func() {
-				Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
-			})
-
-			It("returns an error", func() {
-				err := manager.InitStore(logger, spec)
-				Expect(err).To(MatchError(ContainSubstring("store already initialized")))
-			})
-		})
-
 		Context("when the store driver validation fails", func() {
 			BeforeEach(func() {
-				strDriver.ValidateFileSystemReturns(errors.New("not possible"))
+				storeDriver.ValidateFileSystemReturns(errors.New("not possible"))
 			})
 
 			It("returns an error", func() {
@@ -354,9 +354,9 @@ var _ = Describe("Manager", func() {
 
 		It("calls the store driver for configuration", func() {
 			Expect(manager.ConfigureStore(logger, currentUID, currentGID)).To(Succeed())
-			Expect(strDriver.ConfigureStoreCallCount()).To(Equal(1))
+			Expect(storeDriver.ConfigureStoreCallCount()).To(Equal(1))
 
-			_, path, ownerUID, ownerGID := strDriver.ConfigureStoreArgsForCall(0)
+			_, path, ownerUID, ownerGID := storeDriver.ConfigureStoreArgsForCall(0)
 			Expect(path).To(Equal(storePath))
 			Expect(ownerUID).To(Equal(currentUID))
 			Expect(ownerGID).To(Equal(currentGID))
@@ -364,7 +364,7 @@ var _ = Describe("Manager", func() {
 
 		Context("when store driver configuration fails", func() {
 			It("returns an error", func() {
-				strDriver.ConfigureStoreReturns(errors.New("configuration failed"))
+				storeDriver.ConfigureStoreReturns(errors.New("configuration failed"))
 				err := manager.ConfigureStore(logger, currentUID, currentGID)
 				Expect(err).To(MatchError(ContainSubstring("running filesystem-specific configuration")))
 			})
@@ -372,14 +372,14 @@ var _ = Describe("Manager", func() {
 
 		It("calls the store driver for filesystem verification", func() {
 			Expect(manager.ConfigureStore(logger, currentUID, currentGID)).To(Succeed())
-			Expect(strDriver.ValidateFileSystemCallCount()).To(Equal(1))
-			_, path := strDriver.ValidateFileSystemArgsForCall(0)
+			Expect(storeDriver.ValidateFileSystemCallCount()).To(Equal(1))
+			_, path := storeDriver.ValidateFileSystemArgsForCall(0)
 			Expect(path).To(Equal(storePath))
 		})
 
 		Context("when store driver filesystem verification fails", func() {
 			It("returns an error", func() {
-				strDriver.ValidateFileSystemReturns(errors.New("not a valid filesystem"))
+				storeDriver.ValidateFileSystemReturns(errors.New("not a valid filesystem"))
 				err := manager.ConfigureStore(logger, currentUID, currentGID)
 				Expect(err).To(MatchError(ContainSubstring("not a valid filesystem")))
 			})
@@ -389,7 +389,7 @@ var _ = Describe("Manager", func() {
 			for i := 0; i < 50; i++ {
 				storePath, err := ioutil.TempDir("", "")
 				Expect(err).NotTo(HaveOccurred())
-				manager = managerpkg.New(storePath, locksmith, volDriver, imgDriver, strDriver)
+				manager = managerpkg.New(storePath, locksmith, volDriver, imgDriver, storeDriver)
 				start1 := make(chan bool)
 				start2 := make(chan bool)
 

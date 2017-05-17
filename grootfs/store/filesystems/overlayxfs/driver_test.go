@@ -63,6 +63,76 @@ var _ = Describe("Driver", func() {
 		Expect(os.RemoveAll(filepath.Join(StorePath, overlayxfs.IDDir))).To(Succeed())
 	})
 
+	Describe("InitFilesystem", func() {
+		var fsFile, storePath string
+
+		BeforeEach(func() {
+			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
+			Expect(err).NotTo(HaveOccurred())
+			fsFile = tempFile.Name()
+			os.Truncate(fsFile, 1024*1024*1024)
+
+			storePath, err = ioutil.TempDir("", "store")
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("succcesfully creates and mounts a filesystem", func() {
+			err := driver.InitFilesystem(logger, fsFile, storePath)
+			Expect(err).NotTo(HaveOccurred())
+			statfs := syscall.Statfs_t{}
+			Expect(syscall.Statfs(storePath, &statfs)).To(Succeed())
+			Expect(statfs.Type).To(Equal(overlayxfs.XfsType))
+		})
+
+		It("successfully mounts the filesystem with the correct mount options", func() {
+			Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
+			mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s.*noatime.*nobarrier.*prjquota", storePath)))
+		})
+
+		Context("when creating the filesystem fails", func() {
+			It("returns an error", func() {
+				err := driver.InitFilesystem(logger, "/tmp/no-valid", storePath)
+				Expect(err).To(MatchError(ContainSubstring("Formatting XFS filesystem")))
+			})
+		})
+
+		Context("when the filesystem is already formatted", func() {
+			BeforeEach(func() {
+				cmd := exec.Command("mkfs.xfs", "-f", fsFile)
+				Expect(os.Truncate(fsFile, 200*1024*1024)).To(Succeed())
+				Expect(cmd.Run()).To(Succeed())
+			})
+
+			It("succeeds", func() {
+				Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
+			})
+		})
+
+		Context("when the store is already mounted", func() {
+			BeforeEach(func() {
+				Expect(os.Truncate(fsFile, 200*1024*1024)).To(Succeed())
+				cmd := exec.Command("mkfs.xfs", "-f", fsFile)
+				Expect(cmd.Run()).To(Succeed())
+				cmd = exec.Command("mount", "-o", "loop,pquota,noatime,nobarrier", "-t", "xfs", fsFile, storePath)
+				Expect(cmd.Run()).To(Succeed())
+			})
+
+			It("succeeds", func() {
+				Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
+			})
+		})
+
+		Context("when mounting the filesystem fails", func() {
+			It("returns an error", func() {
+				err := driver.InitFilesystem(logger, fsFile, "/tmp/no-valid")
+				Expect(err).To(MatchError(ContainSubstring("Mounting filesystem")))
+			})
+		})
+	})
+
 	Describe("CreateImage", func() {
 		var (
 			layer1ID   string
@@ -830,49 +900,6 @@ var _ = Describe("Driver", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
-	})
-
-	Context("InitFilesystem", func() {
-		var fsFile, storePath string
-
-		BeforeEach(func() {
-			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
-			Expect(err).NotTo(HaveOccurred())
-			fsFile = tempFile.Name()
-			os.Truncate(fsFile, 1024*1024*1024)
-
-			storePath, err = ioutil.TempDir("", "store")
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("succcesfully creates and mounts a filesystem", func() {
-			err := driver.InitFilesystem(logger, fsFile, storePath)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(driver.ValidateFileSystem(logger, storePath)).To(Succeed())
-		})
-
-		It("successfully mounts the filesystem with the correct mount options", func() {
-			Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
-			mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s.*noatime.*nobarrier.*prjquota", storePath)))
-		})
-
-		Context("when creating the filesystem fails", func() {
-			It("returns an error", func() {
-				err := driver.InitFilesystem(logger, "/tmp/no-valid", storePath)
-				Expect(err).To(MatchError(ContainSubstring("Formatting XFS filesystem")))
-			})
-		})
-
-		Context("when mounting the filesystem fails", func() {
-			It("returns an error", func() {
-				err := driver.InitFilesystem(logger, fsFile, "/tmp/no-valid")
-				Expect(err).To(MatchError(ContainSubstring("Mounting filesystem")))
-			})
-		})
-
 	})
 })
 
