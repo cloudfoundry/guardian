@@ -41,6 +41,11 @@ type MountInfo struct {
 	Options     []string `json:"options"`
 }
 
+type IDMappings struct {
+	UIDMappings []IDMappingSpec
+	GIDMappings []IDMappingSpec
+}
+
 type IDMappingSpec struct {
 	HostID      int
 	NamespaceID int

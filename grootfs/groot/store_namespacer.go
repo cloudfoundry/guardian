@@ -3,6 +3,7 @@ package groot
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -44,6 +45,32 @@ func (n *StoreNamespacer) Check(uidMappings, gidMappings []IDMappingSpec) (bool,
 	}
 
 	return n.validateNamespace(namespaceFilePath, uidMappings, gidMappings)
+}
+
+func (n *StoreNamespacer) Read() (IDMappings, error) {
+	mappingsFromFile := mappings{}
+	jsonBytes, err := ioutil.ReadFile(n.namespaceFilePath())
+	if err != nil {
+		return IDMappings{}, errorspkg.Wrap(err, "reading namespace file")
+	}
+	if err := json.Unmarshal(jsonBytes, &mappingsFromFile); err != nil {
+		return IDMappings{}, errorspkg.Wrap(err, "invalid namespace file")
+	}
+
+	uidMappings, err := n.parseIDMappings(mappingsFromFile.UIDMappings)
+	if err != nil {
+		return IDMappings{}, errorspkg.Wrap(err, "invalid uid mappings format")
+	}
+
+	gidMappings, err := n.parseIDMappings(mappingsFromFile.GIDMappings)
+	if err != nil {
+		return IDMappings{}, errorspkg.Wrap(err, "invalid gid mappings format")
+	}
+
+	return IDMappings{
+		UIDMappings: uidMappings,
+		GIDMappings: gidMappings,
+	}, nil
 }
 
 func (n *StoreNamespacer) Write(storePath string, uidMappings, gidMappings []IDMappingSpec) error {
@@ -99,4 +126,19 @@ func (n *StoreNamespacer) normalizeMappings(mappings []IDMappingSpec) []string {
 
 	sort.Strings(stringMappings)
 	return stringMappings
+}
+
+func (n *StoreNamespacer) parseIDMappings(args []string) ([]IDMappingSpec, error) {
+	mappings := []IDMappingSpec{}
+
+	for _, v := range args {
+		var mapping IDMappingSpec
+		_, err := fmt.Sscanf(v, "%d:%d:%d", &mapping.NamespaceID, &mapping.HostID, &mapping.Size)
+		if err != nil {
+			return nil, err
+		}
+		mappings = append(mappings, mapping)
+	}
+
+	return mappings, nil
 }

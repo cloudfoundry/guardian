@@ -31,7 +31,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 		namespaceChecker = groot.NewStoreNamespacer(storePath)
 	})
 
-	Describe("WriteNamespace", func() {
+	Describe("Write", func() {
 		BeforeEach(func() {
 			uidMappings = []groot.IDMappingSpec{
 				groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 10},
@@ -69,6 +69,100 @@ var _ = Describe("StoreNamespaceChecker", func() {
 			It("returns an error", func() {
 				err := namespaceChecker.Write(storePath, uidMappings, gidMappings)
 				Expect(err).To(MatchError(ContainSubstring("creating namespace file")))
+			})
+		})
+	})
+
+	Describe("Read", func() {
+		var (
+			expectedMappings groot.IDMappings
+			namespaceFile    string
+		)
+		BeforeEach(func() {
+			namespaceFile = filepath.Join(storePath, store.MetaDirName, "namespace.json")
+			mappings := []byte(`{"uid-mappings":["0:1000:1","1:100000:10"],"gid-mappings":["0:2000:1","1:200000:10"]}`)
+			Expect(ioutil.WriteFile(namespaceFile, mappings, 0700)).To(Succeed())
+
+			expectedMappings = groot.IDMappings{
+				UIDMappings: []groot.IDMappingSpec{
+					{
+						HostID:      1000,
+						NamespaceID: 0,
+						Size:        1,
+					},
+					{
+						HostID:      100000,
+						NamespaceID: 1,
+						Size:        10,
+					},
+				},
+				GIDMappings: []groot.IDMappingSpec{
+					{
+						HostID:      2000,
+						NamespaceID: 0,
+						Size:        1,
+					},
+					{
+						HostID:      200000,
+						NamespaceID: 1,
+						Size:        10,
+					},
+				},
+			}
+		})
+
+		It("reads from the namespace file", func() {
+			mappingsFromFile, err := namespaceChecker.Read()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(mappingsFromFile).To(Equal(expectedMappings))
+		})
+
+		Context("when it fails to read the namespace file", func() {
+			BeforeEach(func() {
+				storePath = "invalid-path"
+			})
+
+			It("returns an error", func() {
+				_, err := namespaceChecker.Read()
+				Expect(err).To(MatchError(ContainSubstring("reading namespace file")))
+			})
+		})
+
+		Context("when the mappings file contains invalid json", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(namespaceFile, []byte("junk"), 600)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				_, err := namespaceChecker.Read()
+				Expect(err).To(MatchError(ContainSubstring("invalid namespace file")))
+			})
+		})
+
+		Context("when the mappings file contains", func() {
+			Context("invalid uid mappings", func() {
+				BeforeEach(func() {
+					badUidMappings := []byte(`{"uid-mappings":["1000:1","10"],"gid-mappings":["0:2000:1","1:200000:10"]}`)
+					Expect(ioutil.WriteFile(namespaceFile, badUidMappings, 600)).To(Succeed())
+				})
+
+				It("returns an error", func() {
+					_, err := namespaceChecker.Read()
+					Expect(err).To(MatchError(ContainSubstring("invalid uid mappings format")))
+				})
+			})
+
+			Context("invalid gid mappings", func() {
+				BeforeEach(func() {
+					badGidMappings := []byte(`{"gid-mappings":["1000:1","10"],"uid-mappings":["0:2000:1","1:200000:10"]}`)
+					Expect(ioutil.WriteFile(namespaceFile, badGidMappings, 600)).To(Succeed())
+				})
+
+				It("returns an error", func() {
+					_, err := namespaceChecker.Read()
+					Expect(err).To(MatchError(ContainSubstring("invalid gid mappings format")))
+				})
 			})
 		})
 	})
