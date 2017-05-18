@@ -807,38 +807,45 @@ var _ = Describe("Networking", func() {
 		})
 
 		Context("when container mtu is specified by operator", func() {
-			BeforeEach(func() {
-				args = append(args, "--mtu", "6789")
-			})
+			Context("when mtu is bellow max allowed value", func() {
+				BeforeEach(func() {
+					args = append(args, "--mtu", "1234")
+				})
 
-			Describe("container's network interface", func() {
-				It("has the correct MTU size", func() {
-					stdout := gbytes.NewBuffer()
-					stderr := gbytes.NewBuffer()
-
-					process, err := container.Run(garden.ProcessSpec{
-						User: "alice",
-						Path: "ifconfig",
-						Args: []string{containerIfName(container)},
-					}, garden.ProcessIO{
-						Stdout: stdout,
-						Stderr: stderr,
+				Describe("container's network interface", func() {
+					It("has the correct MTU size", func() {
+						stdout := containerIfconfig(container)
+						Expect(stdout).To(ContainSubstring(" MTU:1234 "))
 					})
-					Expect(err).ToNot(HaveOccurred())
-					rc, err := process.Wait()
-					Expect(err).ToNot(HaveOccurred())
-					Expect(rc).To(Equal(0))
+				})
 
-					Expect(stdout.Contents()).To(ContainSubstring(" MTU:6789 "))
+				Describe("hosts's network interface for a container", func() {
+					It("has the correct MTU size", func() {
+						out, err := exec.Command("ifconfig", hostIfName(container)).Output()
+						Expect(err).ToNot(HaveOccurred())
+						Expect(out).To(ContainSubstring(" MTU:1234 "))
+					})
 				})
 			})
 
-			Describe("hosts's network interface for a container", func() {
-				It("has the correct MTU size", func() {
-					out, err := exec.Command("ifconfig", hostIfName(container)).Output()
-					Expect(err).ToNot(HaveOccurred())
+			Context("when mtu is above max allowed value", func() {
+				BeforeEach(func() {
+					args = append(args, "--mtu", "1501")
+				})
 
-					Expect(out).To(ContainSubstring(" MTU:6789 "))
+				Describe("container's network interface", func() {
+					It("has the correct MTU size", func() {
+						stdout := containerIfconfig(container)
+						Expect(stdout).To(ContainSubstring(" MTU:1500 "))
+					})
+				})
+
+				Describe("hosts's network interface for a container", func() {
+					It("has the correct MTU size", func() {
+						out, err := exec.Command("ifconfig", hostIfName(container)).Output()
+						Expect(err).ToNot(HaveOccurred())
+						Expect(out).To(ContainSubstring(" MTU:1500 "))
+					})
 				})
 			})
 		})
@@ -855,23 +862,8 @@ var _ = Describe("Networking", func() {
 
 			Describe("container's network interface", func() {
 				It("has the same MTU as the host outbound interface", func() {
-					stdout := gbytes.NewBuffer()
-					stderr := gbytes.NewBuffer()
-
-					process, err := container.Run(garden.ProcessSpec{
-						User: "alice",
-						Path: "ifconfig",
-						Args: []string{containerIfName(container)},
-					}, garden.ProcessIO{
-						Stdout: stdout,
-						Stderr: stderr,
-					})
-					Expect(err).ToNot(HaveOccurred())
-					rc, err := process.Wait()
-					Expect(err).ToNot(HaveOccurred())
-					Expect(rc).To(Equal(0))
-
-					Expect(stdout.Contents()).To(ContainSubstring(fmt.Sprintf(" MTU:%d ", outboundIfaceMtu)))
+					stdout := containerIfconfig(container)
+					Expect(stdout).To(ContainSubstring(fmt.Sprintf(" MTU:%d ", outboundIfaceMtu)))
 				})
 			})
 
@@ -1204,4 +1196,22 @@ func parseNameservers(resolvConfContents string) []string {
 	}
 
 	return nameservers
+}
+
+func containerIfconfig(container garden.Container) string {
+	stdout := gbytes.NewBuffer()
+
+	process, err := container.Run(garden.ProcessSpec{
+		User: "alice",
+		Path: "ifconfig",
+		Args: []string{containerIfName(container)},
+	}, garden.ProcessIO{
+		Stdout: stdout,
+	})
+
+	Expect(err).ToNot(HaveOccurred())
+	rc, err := process.Wait()
+	Expect(err).ToNot(HaveOccurred())
+	Expect(rc).To(Equal(0))
+	return string(stdout.Contents())
 }

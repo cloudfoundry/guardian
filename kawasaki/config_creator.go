@@ -12,6 +12,7 @@ import (
 const (
 	maxInterfacePrefixLen = 2
 	maxChainPrefixLen     = 16
+	maxAllowedMtuSize     = 1500
 )
 
 //go:generate counterfeiter . IDGenerator
@@ -63,7 +64,7 @@ func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix stri
 		externalIP:            externalIP,
 		operatorNameservers:   operatorNameservers,
 		additionalNameservers: additionalNameservers,
-		mtu: mtu,
+		mtu: min(mtu, maxAllowedMtuSize),
 	}
 }
 
@@ -86,4 +87,11 @@ func (c *Creator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip 
 		OperatorNameservers:   c.operatorNameservers,
 		AdditionalNameservers: c.additionalNameservers,
 	}, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

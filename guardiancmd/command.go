@@ -210,7 +210,7 @@ type ServerCommand struct {
 		PortPoolSize           uint32 `long:"port-pool-size"  default:"5000"  description:"Size of the port pool used for mapped container ports."`
 		PortPoolPropertiesPath string `long:"port-pool-properties-path" description:"Path in which to store port pool properties."`
 
-		Mtu int `long:"mtu" description:"MTU size for container network interfaces. Defaults to the MTU of the interface used for outbound access by the host."`
+		Mtu int `long:"mtu" description:"MTU size for container network interfaces. Defaults to the MTU of the interface used for outbound access by the host. Max allowed value is 1500."`
 
 		Plugin          FileFlag `long:"network-plugin"           description:"Path to network plugin binary."`
 		PluginExtraArgs []string `long:"network-plugin-extra-arg" description:"Extra argument to pass to the network plugin. Can be specified multiple times."`

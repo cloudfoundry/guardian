@@ -42,7 +42,9 @@ var _ = Describe("ConfigCreator", func() {
 		idGenerator = &fakes.FakeIDGenerator{}
 
 		mtu = 1234
+	})
 
+	JustBeforeEach(func() {
 		creator = kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdef", externalIP, operatorNameservers, additionalNameservers, mtu)
 	})
 
@@ -56,6 +58,18 @@ var _ = Describe("ConfigCreator", func() {
 		Expect(func() {
 			kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdefg", externalIP, operatorNameservers, additionalNameservers, mtu)
 		}).To(Panic())
+	})
+
+	Context("when mtu is greater than max allowed value", func() {
+		BeforeEach(func() {
+			mtu = 6789
+		})
+
+		It("sets mtu to max allowed value", func() {
+			config, err := creator.Create(logger, "banana", subnet, ip)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.Mtu).To(Equal(1500))
+		})
 	})
 
 	It("assigns the same bridge name to all IPs in the same subnet", func() {
