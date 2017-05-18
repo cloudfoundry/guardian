@@ -58,7 +58,7 @@ var DeleteCommand = cli.Command{
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.MetaDirName, "dependencies"),
 		)
-		metricsEmitter := metrics.NewEmitter()
+		metricsEmitter := metrics.NewEmitter(systemReporter(cfg.SlowActionThreshold))
 		deleter := groot.IamDeleter(imageCloner, dependencyManager, metricsEmitter)
 
 		err = deleter.Delete(logger, id)

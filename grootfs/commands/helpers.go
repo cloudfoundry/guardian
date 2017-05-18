@@ -3,11 +3,14 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/grootfs/commands/commandrunner"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
+	"code.cloudfoundry.org/grootfs/metrics/systemreporter"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
@@ -51,8 +54,12 @@ func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {
 
 type exitErrorFunc func(message string, exitCode int) *cli.ExitError
 
+func systemReporter(threshold int) metrics.SystemReporter {
+	return systemreporter.NewLogBased(time.Duration(threshold)*time.Second, commandrunner.New())
+}
+
 func newErrorHandler(logger lager.Logger, action string) exitErrorFunc {
-	metricsEmitter := metrics.NewEmitter()
+	metricsEmitter := metrics.NewEmitter(systemReporter(0))
 
 	return func(message string, exitCode int) *cli.ExitError {
 		err := errors.New(message)

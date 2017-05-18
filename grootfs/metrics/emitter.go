@@ -13,11 +13,19 @@ import (
 
 const errorSource = "grootfs-error.%s"
 
-type Emitter struct {
+//go:generate counterfeiter . SystemReporter
+type SystemReporter interface {
+	Report(lager.Logger, time.Duration)
 }
 
-func NewEmitter() *Emitter {
-	return &Emitter{}
+type Emitter struct {
+	systemReporter SystemReporter
+}
+
+func NewEmitter(systemReporter SystemReporter) *Emitter {
+	return &Emitter{
+		systemReporter: systemReporter,
+	}
 }
 
 func (e *Emitter) TryEmitUsage(logger lager.Logger, name string, usage int64) {
@@ -38,6 +46,8 @@ func (e *Emitter) TryEmitDurationFrom(logger lager.Logger, name string, from tim
 			"duration": duration,
 		})
 	}
+
+	e.systemReporter.Report(logger, duration)
 }
 
 func (e *Emitter) TryEmitError(logger lager.Logger, command string, err error, exitCode int32) {

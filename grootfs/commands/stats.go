@@ -52,7 +52,7 @@ var StatsCommand = cli.Command{
 		}
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 
-		metricsEmitter := metrics.NewEmitter()
+		metricsEmitter := metrics.NewEmitter(systemReporter(cfg.SlowActionThreshold))
 		statser := groot.IamStatser(imageCloner, metricsEmitter)
 		stats, err := statser.Stats(logger, id)
 		if err != nil {

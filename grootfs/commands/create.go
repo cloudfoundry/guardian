@@ -142,7 +142,7 @@ var CreateCommand = cli.Command{
 			return newExitError(err.Error(), 1)
 		}
 
-		metricsEmitter := metrics.NewEmitter()
+		metricsEmitter := metrics.NewEmitter(systemReporter(cfg.SlowActionThreshold))
 		sharedLocksmith := locksmithpkg.NewSharedFileSystem(storePath, metricsEmitter)
 		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(storePath, metricsEmitter)
 

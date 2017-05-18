@@ -42,7 +42,7 @@ var DeleteStoreCommand = cli.Command{
 		}
 
 		storePath := cfg.StorePath
-		locksmith := locksmith.NewSharedFileSystem(storePath, metrics.NewEmitter())
+		locksmith := locksmith.NewSharedFileSystem(storePath, metrics.NewEmitter(systemReporter(cfg.SlowActionThreshold)))
 		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
 		var _ = manager.ConfigureStore(logger, 0, 0)
 

@@ -9,19 +9,20 @@ import (
 )
 
 type Config struct {
-	StorePath      string `yaml:"store"`
-	FSDriver       string `yaml:"driver"`
-	DraxBin        string `yaml:"drax_bin"`
-	TardisBin      string `yaml:"tardis_bin"`
-	BtrfsBin       string `yaml:"btrfs_bin"`
-	NewuidmapBin   string `yaml:"newuidmap_bin"`
-	NewgidmapBin   string `yaml:"newgidmap_bin"`
-	MetronEndpoint string `yaml:"metron_endpoint"`
-	LogLevel       string `yaml:"log_level"`
-	LogFile        string `yaml:"log_file"`
-	Create         Create `yaml:"create"`
-	Clean          Clean  `yaml:"clean"`
-	Init           Init   `yaml:"-"`
+	StorePath           string `yaml:"store"`
+	FSDriver            string `yaml:"driver"`
+	DraxBin             string `yaml:"drax_bin"`
+	TardisBin           string `yaml:"tardis_bin"`
+	BtrfsBin            string `yaml:"btrfs_bin"`
+	NewuidmapBin        string `yaml:"newuidmap_bin"`
+	NewgidmapBin        string `yaml:"newgidmap_bin"`
+	MetronEndpoint      string `yaml:"metron_endpoint"`
+	LogLevel            string `yaml:"log_level"`
+	LogFile             string `yaml:"log_file"`
+	SlowActionThreshold int    `yaml:"slow_action_threshold"`
+	Create              Create `yaml:"create"`
+	Clean               Clean  `yaml:"clean"`
+	Init                Init   `yaml:"-"`
 }
 
 type Create struct {

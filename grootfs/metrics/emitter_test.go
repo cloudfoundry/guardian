@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/grootfs/metrics"
+	"code.cloudfoundry.org/grootfs/metrics/metricsfakes"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry/dropsonde"
@@ -17,15 +18,17 @@ import (
 
 var _ = Describe("Emitter", func() {
 	var (
-		fakeMetronPort   uint16
-		fakeMetron       *testhelpers.FakeMetron
-		fakeMetronClosed chan struct{}
-		emitter          *metrics.Emitter
-		logger           *lagertest.TestLogger
+		fakeMetronPort     uint16
+		fakeMetron         *testhelpers.FakeMetron
+		fakeMetronClosed   chan struct{}
+		fakeSystemReporter *metricsfakes.FakeSystemReporter
+		emitter            *metrics.Emitter
+		logger             *lagertest.TestLogger
 	)
 
 	BeforeEach(func() {
 		fakeMetronPort = uint16(5000 + GinkgoParallelNode())
+		fakeSystemReporter = new(metricsfakes.FakeSystemReporter)
 
 		fakeMetron = testhelpers.NewFakeMetron(fakeMetronPort)
 		Expect(fakeMetron.Listen()).To(Succeed())
@@ -41,7 +44,7 @@ var _ = Describe("Emitter", func() {
 			close(fakeMetronClosed)
 		}()
 
-		emitter = metrics.NewEmitter()
+		emitter = metrics.NewEmitter(fakeSystemReporter)
 
 		logger = lagertest.NewTestLogger("emitter")
 	})
@@ -84,6 +87,13 @@ var _ = Describe("Emitter", func() {
 				BeNumerically(">", float64(time.Second-time.Millisecond)),
 				BeNumerically("<", float64(time.Second+time.Millisecond)),
 			))
+		})
+
+		It("sends the duration to the system reporter", func() {
+			from := time.Now().Add(-1 * time.Second)
+			emitter.TryEmitDurationFrom(logger, "foo", from)
+
+			Expect(fakeSystemReporter.ReportCallCount()).To(Equal(1))
 		})
 	})
 
