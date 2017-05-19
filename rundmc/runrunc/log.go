@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/exec"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 //go:generate counterfeiter . RuncCmdRunner
@@ -21,11 +21,11 @@ type RuncCmdRunner interface {
 }
 
 type logRunner struct {
-	runner          command_runner.CommandRunner
+	runner          commandrunner.CommandRunner
 	generateLogFile generateLogFileFunc
 }
 
-func NewLogRunner(runner command_runner.CommandRunner, logFileGenerator generateLogFileFunc) *logRunner {
+func NewLogRunner(runner commandrunner.CommandRunner, logFileGenerator generateLogFileFunc) *logRunner {
 	return &logRunner{runner, logFileGenerator}
 }
 

@@ -7,12 +7,12 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 type Runner struct {
-	command_runner.CommandRunner
+	commandrunner.CommandRunner
 
 	Logger lager.Logger
 }

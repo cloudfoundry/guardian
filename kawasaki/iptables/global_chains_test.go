@@ -6,10 +6,10 @@ import (
 	"os"
 	"os/exec"
 
+	"code.cloudfoundry.org/commandrunner/fake_command_runner"
+	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
-	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

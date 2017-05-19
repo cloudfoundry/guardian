@@ -9,11 +9,11 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"code.cloudfoundry.org/commandrunner/fake_command_runner"
+	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
-	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
-	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
 )
 
 var _ = Describe("Stats", func() {

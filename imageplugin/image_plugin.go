@@ -6,10 +6,10 @@ import (
 	"net/url"
 	"os/exec"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 	errorwrapper "github.com/pkg/errors"
 	"github.com/tscolari/lagregator"
 )
@@ -24,7 +24,7 @@ type CommandCreator interface {
 type ImagePlugin struct {
 	UnprivilegedCommandCreator CommandCreator
 	PrivilegedCommandCreator   CommandCreator
-	CommandRunner              command_runner.CommandRunner
+	CommandRunner              commandrunner.CommandRunner
 	DefaultRootfs              string
 }
 

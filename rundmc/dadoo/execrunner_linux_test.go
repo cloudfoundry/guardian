@@ -15,6 +15,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/dadoo"
 	dadoofakes "code.cloudfoundry.org/guardian/rundmc/dadoo/dadoofakes"
@@ -22,7 +23,6 @@ import (
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"

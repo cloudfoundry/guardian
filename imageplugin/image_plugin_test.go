@@ -7,12 +7,12 @@ import (
 	"net/url"
 	"os/exec"
 
+	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	fakes "code.cloudfoundry.org/guardian/imageplugin/imagepluginfakes"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"

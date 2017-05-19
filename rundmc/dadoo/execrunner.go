@@ -15,10 +15,10 @@ import (
 	"sync"
 	"syscall"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 	"github.com/kr/logfmt"
 )
 
@@ -33,11 +33,11 @@ type ExecRunner struct {
 	runcRoot                 string
 	processIDGen             runrunc.UidGenerator
 	pidGetter                PidGetter
-	commandRunner            command_runner.CommandRunner
+	commandRunner            commandrunner.CommandRunner
 	cleanupProcessDirsOnWait bool
 }
 
-func NewExecRunner(dadooPath, runcPath, runcRoot string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, commandRunner command_runner.CommandRunner, shouldCleanup bool) *ExecRunner {
+func NewExecRunner(dadooPath, runcPath, runcRoot string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:                dadooPath,
 		runcPath:                 runcPath,

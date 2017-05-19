@@ -9,9 +9,9 @@ import (
 	"path"
 	"strings"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 type Starter struct {
@@ -28,7 +28,7 @@ func (err CgroupsFormatError) Error() string {
 	return fmt.Sprintf("unknown /proc/cgroups format: %s", err.Content)
 }
 
-func NewStarter(logger lager.Logger, procCgroupReader io.ReadCloser, procSelfCgroupReader io.ReadCloser, cgroupMountpoint string, runner command_runner.CommandRunner) *Starter {
+func NewStarter(logger lager.Logger, procCgroupReader io.ReadCloser, procSelfCgroupReader io.ReadCloser, cgroupMountpoint string, runner commandrunner.CommandRunner) *Starter {
 	return &Starter{
 		&CgroupStarter{
 			CgroupPath:      cgroupMountpoint,
@@ -42,7 +42,7 @@ func NewStarter(logger lager.Logger, procCgroupReader io.ReadCloser, procSelfCgr
 
 type CgroupStarter struct {
 	CgroupPath    string
-	CommandRunner command_runner.CommandRunner
+	CommandRunner commandrunner.CommandRunner
 
 	ProcCgroups     io.ReadCloser
 	ProcSelfCgroups io.ReadCloser

@@ -11,8 +11,8 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
-	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
+	"code.cloudfoundry.org/commandrunner/fake_command_runner"
+	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
 )
 
 var _ = Describe("State", func() {

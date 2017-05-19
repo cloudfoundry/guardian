@@ -7,9 +7,9 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 type Creator struct {
@@ -17,10 +17,10 @@ type Creator struct {
 	runcRoot      string
 	newuidmapPath string
 	newgidmapPath string
-	commandRunner command_runner.CommandRunner
+	commandRunner commandrunner.CommandRunner
 }
 
-func NewCreator(runcPath, runcRoot, newuidmapPath, newgidmapPath string, commandRunner command_runner.CommandRunner) *Creator {
+func NewCreator(runcPath, runcRoot, newuidmapPath, newgidmapPath string, commandRunner commandrunner.CommandRunner) *Creator {
 	return &Creator{
 		runcPath,
 		runcRoot,

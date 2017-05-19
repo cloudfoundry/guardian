@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 //go:generate counterfeiter . EventsNotifier
@@ -15,11 +15,11 @@ type EventsNotifier interface {
 }
 
 type OomWatcher struct {
-	commandRunner command_runner.CommandRunner
+	commandRunner commandrunner.CommandRunner
 	runc          RuncBinary
 }
 
-func NewOomWatcher(runner command_runner.CommandRunner, runc RuncBinary) *OomWatcher {
+func NewOomWatcher(runner commandrunner.CommandRunner, runc RuncBinary) *OomWatcher {
 	return &OomWatcher{runner, runc}
 }
 

@@ -1,12 +1,12 @@
 package guardiancmd
 
 import (
+	"code.cloudfoundry.org/commandrunner"
+	"code.cloudfoundry.org/commandrunner/windows_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
-	"github.com/cloudfoundry/gunk/command_runner/windows_command_runner"
 )
 
 type NoopExecRunner struct{}
@@ -19,7 +19,7 @@ func (n *NoopExecRunner) Attach(log lager.Logger, processID string, io garden.Pr
 	panic("not supported on this platform")
 }
 
-func commandRunner() command_runner.CommandRunner {
+func commandRunner() commandrunner.CommandRunner {
 	return windows_command_runner.New(false)
 }
 
@@ -27,6 +27,6 @@ func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot strin
 	return gardener.NoopVolumeCreator{}
 }
 
-func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath, runcRoot string, processIDGen runrunc.UidGenerator, commandRunner command_runner.CommandRunner, shouldCleanup bool) runrunc.ExecRunner {
+func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath, runcRoot string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) runrunc.ExecRunner {
 	return &NoopExecRunner{}
 }

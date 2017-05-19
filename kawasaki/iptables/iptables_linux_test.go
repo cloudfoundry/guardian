@@ -6,10 +6,10 @@ import (
 	"os/exec"
 	"time"
 
+	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	fakes "code.cloudfoundry.org/guardian/kawasaki/iptables/iptablesfakes"
 	"code.cloudfoundry.org/guardian/pkg/locksmith"
-	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"

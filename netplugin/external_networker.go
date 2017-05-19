@@ -9,17 +9,17 @@ import (
 	"os/exec"
 	"strings"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 const NetworkPropertyPrefix = "network."
 
 type externalBinaryNetworker struct {
-	commandRunner         command_runner.CommandRunner
+	commandRunner         commandrunner.CommandRunner
 	configStore           kawasaki.ConfigStore
 	externalIP            net.IP
 	operatorNameservers   []net.IP
@@ -30,7 +30,7 @@ type externalBinaryNetworker struct {
 }
 
 func New(
-	commandRunner command_runner.CommandRunner,
+	commandRunner commandrunner.CommandRunner,
 	configStore kawasaki.ConfigStore,
 	externalIP net.IP,
 	operatorNameServers []net.IP,

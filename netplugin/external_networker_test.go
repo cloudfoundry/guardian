@@ -7,6 +7,7 @@ import (
 	"net"
 	"os/exec"
 
+	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
@@ -15,7 +16,6 @@ import (
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"

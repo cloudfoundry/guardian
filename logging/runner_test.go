@@ -5,20 +5,20 @@ import (
 	"os/exec"
 	"time"
 
+	"code.cloudfoundry.org/commandrunner"
+	"code.cloudfoundry.org/commandrunner/fake_command_runner"
+	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
+	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry/gunk/command_runner"
-	"github.com/cloudfoundry/gunk/command_runner/fake_command_runner"
-	. "github.com/cloudfoundry/gunk/command_runner/fake_command_runner/matchers"
-	"github.com/cloudfoundry/gunk/command_runner/linux_command_runner"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Logging Runner", func() {
-	var innerRunner command_runner.CommandRunner
+	var innerRunner commandrunner.CommandRunner
 	var logger *lagertest.TestLogger
 
 	var runner *logging.Runner

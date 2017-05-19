@@ -3,7 +3,7 @@ package runrunc
 import (
 	"os/exec"
 
-	"github.com/cloudfoundry/gunk/command_runner"
+	"code.cloudfoundry.org/commandrunner"
 )
 
 const DefaultRootPath = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -11,7 +11,7 @@ const DefaultPath = "PATH=/usr/local/bin:/usr/bin:/bin"
 
 // da doo
 type RunRunc struct {
-	commandRunner command_runner.CommandRunner
+	commandRunner commandrunner.CommandRunner
 	runc          RuncBinary
 
 	*Execer
@@ -33,7 +33,7 @@ type RuncBinary interface {
 	DeleteCommand(id, logFile string) *exec.Cmd
 }
 
-func New(runner command_runner.CommandRunner, runcCmdRunner RuncCmdRunner, runc RuncBinary, dadooPath, runcPath, runcRoot, newuidmapPath, newgidmapPath string, execPreparer ExecPreparer, execRunner ExecRunner) *RunRunc {
+func New(runner commandrunner.CommandRunner, runcCmdRunner RuncCmdRunner, runc RuncBinary, dadooPath, runcPath, runcRoot, newuidmapPath, newgidmapPath string, execPreparer ExecPreparer, execRunner ExecRunner) *RunRunc {
 	return &RunRunc{
 		Creator: NewCreator(runcPath, runcRoot, newuidmapPath, newgidmapPath, runner),
 		Execer:  NewExecer(execPreparer, execRunner),

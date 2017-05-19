@@ -8,7 +8,7 @@ import (
 
 	"code.cloudfoundry.org/guardian/pkg/locksmith"
 
-	"github.com/cloudfoundry/gunk/command_runner"
+	"code.cloudfoundry.org/commandrunner"
 )
 
 const LockKey = "/var/run/garden-iptables.lock"
@@ -34,7 +34,7 @@ type IPTables interface {
 }
 
 type IPTablesController struct {
-	runner                                                                                         command_runner.CommandRunner
+	runner                                                                                         commandrunner.CommandRunner
 	locksmith                                                                                      Locksmith
 	iptablesBinPath                                                                                string
 	iptablesRestoreBinPath                                                                         string
@@ -45,7 +45,7 @@ type Chains struct {
 	Prerouting, Postrouting, Input, Forward, Default string
 }
 
-func New(iptablesBinPath, iptablesRestoreBinPath string, runner command_runner.CommandRunner, locksmith Locksmith, chainPrefix string) *IPTablesController {
+func New(iptablesBinPath, iptablesRestoreBinPath string, runner commandrunner.CommandRunner, locksmith Locksmith, chainPrefix string) *IPTablesController {
 	return &IPTablesController{
 		runner:                 runner,
 		locksmith:              locksmith,

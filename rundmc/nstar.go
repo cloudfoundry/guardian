@@ -9,18 +9,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/lager"
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 type nstar struct {
 	NstarBinPath string
 	TarBinPath   string
 
-	CommandRunner command_runner.CommandRunner
+	CommandRunner commandrunner.CommandRunner
 }
 
-func NewNstarRunner(nstarPath, tarPath string, runner command_runner.CommandRunner) NstarRunner {
+func NewNstarRunner(nstarPath, tarPath string, runner commandrunner.CommandRunner) NstarRunner {
 	return &nstar{
 		NstarBinPath:  nstarPath,
 		TarBinPath:    tarPath,

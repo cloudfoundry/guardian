@@ -4,9 +4,9 @@ import (
 	"os"
 	"os/exec"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
-	"github.com/cloudfoundry/gunk/command_runner"
 )
 
 type MkdirChowner interface {
@@ -43,7 +43,7 @@ func (r RootFS) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 
 type ChrootMkdir struct {
 	Command       func(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
-	CommandRunner command_runner.CommandRunner
+	CommandRunner commandrunner.CommandRunner
 }
 
 func (m ChrootMkdir) MkdirAs(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
