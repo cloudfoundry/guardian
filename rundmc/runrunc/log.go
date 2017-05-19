@@ -42,7 +42,7 @@ func (l *logRunner) RunAndLog(log lager.Logger, loggingCmd LoggingCmd) (err erro
 
 func forwardLogs(log lager.Logger, logFile *os.File, err error) error {
 	defer os.Remove(logFile.Name())
-	buff, readErr := ioutil.ReadAll(logFile)
+	buff, readErr := ioutil.ReadFile(logFile.Name())
 	if readErr != nil {
 		return fmt.Errorf("read log file: %s", readErr)
 	}

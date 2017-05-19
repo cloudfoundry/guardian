@@ -10,6 +10,7 @@ func Load(path string) (*Manager, error) {
 	if err != nil {
 		return NewManager(), nil
 	}
+	defer f.Close()
 
 	var mgr Manager
 	if err := json.NewDecoder(f).Decode(&mgr); err != nil {
@@ -24,6 +25,7 @@ func Save(path string, mgr *Manager) error {
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 
 	return json.NewEncoder(f).Encode(mgr)
 }
