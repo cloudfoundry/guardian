@@ -1,7 +1,9 @@
 package gqt_test
 
 import (
+	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -13,8 +15,9 @@ import (
 
 var _ = Describe("Runtime Plugin", func() {
 	var (
-		args   []string
-		client *runner.RunningGarden
+		args         []string
+		argsFilepath string
+		client       *runner.RunningGarden
 	)
 
 	BeforeEach(func() {
@@ -23,9 +26,11 @@ var _ = Describe("Runtime Plugin", func() {
 
 	JustBeforeEach(func() {
 		client = startGarden(args...)
+		argsFilepath = filepath.Join(client.Tmpdir, "args")
 	})
 
 	AfterEach(func() {
+		Expect(os.Remove(argsFilepath)).To(Succeed())
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
@@ -35,14 +40,14 @@ var _ = Describe("Runtime Plugin", func() {
 		})
 
 		Context("and a container is successfully created", func() {
-			var handle = "some-handle"
+			var handle = fmt.Sprintf("some-handle-%d", GinkgoParallelNode())
 
 			JustBeforeEach(func() {
 				client.Create(garden.ContainerSpec{Handle: handle})
 			})
 
 			It("executes the plugin, passing the correct args", func() {
-				pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(client.Tmpdir, "args"))
+				pluginArgsBytes, err := ioutil.ReadFile(argsFilepath)
 				Expect(err).ToNot(HaveOccurred())
 
 				pluginArgs := strings.Split(string(pluginArgsBytes), " ")

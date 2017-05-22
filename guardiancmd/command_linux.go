@@ -1,6 +1,7 @@
 package guardiancmd
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -16,8 +17,11 @@ import (
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/logging"
+	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/dadoo"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/graph"
@@ -25,8 +29,42 @@ import (
 	"github.com/pivotal-golang/clock"
 )
 
+func init() {
+	maxUID := uint32(idmapper.MustGetMaxValidUID())
+	maxGID := uint32(idmapper.MustGetMaxValidGID())
+	uidMappings = idmapper.MappingList{
+		{
+			ContainerID: 0,
+			HostID:      maxUID,
+			Size:        1,
+		},
+		{
+			ContainerID: 1,
+			HostID:      1,
+			Size:        maxUID - 1,
+		},
+	}
+
+	gidMappings = idmapper.MappingList{
+		{
+			ContainerID: 0,
+			HostID:      maxGID,
+			Size:        1,
+		},
+		{
+			ContainerID: 1,
+			HostID:      1,
+			Size:        maxGID - 1,
+		},
+	}
+}
+
 func commandRunner() commandrunner.CommandRunner {
 	return linux_command_runner.New()
+}
+
+func wireDepot(depotPath string, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
+	return depot.New(depotPath, bundleSaver, &depot.OSChowner{})
 }
 
 func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
@@ -165,4 +203,15 @@ func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath, runcRoot string, p
 		commandRunner,
 		shouldCleanup,
 	)
+}
+
+func (cmd *ServerCommand) wireCgroupsStarter(logger lager.Logger) gardener.Starter {
+	var cgroupsMountpoint string
+	if cmd.Server.Tag != "" {
+		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
+	} else {
+		cgroupsMountpoint = "/sys/fs/cgroup"
+	}
+
+	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, commandRunner())
 }

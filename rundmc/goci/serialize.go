@@ -29,6 +29,7 @@ func (b BundleSaver) Save(bundle Bndl, path string) error {
 
 func save(value interface{}, path string) error {
 	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
+	defer w.Close()
 	if err != nil {
 		return fmt.Errorf("Failed to save bundle: %s", err)
 	}

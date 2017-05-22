@@ -34,7 +34,6 @@ import (
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
-	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -241,35 +240,6 @@ func init() {
 	if reexec.Init() {
 		os.Exit(0)
 	}
-
-	maxUID := uint32(idmapper.MustGetMaxValidUID())
-	maxGID := uint32(idmapper.MustGetMaxValidGID())
-	uidMappings = idmapper.MappingList{
-		{
-			ContainerID: 0,
-			HostID:      maxUID,
-			Size:        1,
-		},
-		{
-			ContainerID: 1,
-			HostID:      1,
-			Size:        maxUID - 1,
-		},
-	}
-
-	gidMappings = idmapper.MappingList{
-		{
-			ContainerID: 0,
-			HostID:      maxGID,
-			Size:        1,
-		},
-		{
-			ContainerID: 1,
-			HostID:      1,
-			Size:        maxGID - 1,
-		},
-	}
-
 }
 
 func (cmd *ServerCommand) Execute([]string) error {
@@ -497,17 +467,6 @@ func (cmd *ServerCommand) wireUidGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
-func (cmd *ServerCommand) wireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	var cgroupsMountpoint string
-	if cmd.Server.Tag != "" {
-		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
-	} else {
-		cgroupsMountpoint = "/sys/fs/cgroup"
-	}
-
-	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, commandRunner())
-}
-
 func extractIPs(ipflags []IPFlag) []net.IP {
 	ips := make([]net.IP, len(ipflags))
 	for i, ipflag := range ipflags {
@@ -616,9 +575,9 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 }
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
-	depotPath, dadooPath, runcPath, nstarPath, tarPath, appArmorProfile, newuidmapPath, newgidmapPath string,
+	depotPath, dadooPath, runtimePath, nstarPath, tarPath, appArmorProfile, newuidmapPath, newgidmapPath string,
 	properties gardener.PropertyManager) *rundmc.Containerizer {
-	depot := depot.New(depotPath, &goci.BundleSaver{}, &depot.OSChowner{})
+	depot := wireDepot(depotPath, &goci.BundleSaver{})
 
 	cmdRunner := commandRunner()
 	chrootMkdir := bundlerules.ChrootMkdir{
@@ -629,16 +588,16 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	runcrunner := runrunc.New(
 		cmdRunner,
 		runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
-		goci.RuncBinary{Path: runcPath, Root: cmd.Runc.Root},
+		goci.RuncBinary{Path: runtimePath, Root: cmd.Runc.Root},
 		dadooPath,
-		runcPath,
+		runtimePath,
 		cmd.Runc.Root,
 		newuidmapPath,
 		newgidmapPath,
 		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps, runningAsRoot),
 		cmd.wireExecRunner(
 			dadooPath,
-			runcPath,
+			runtimePath,
 			cmd.Runc.Root,
 			cmd.wireUidGenerator(),
 			cmdRunner,

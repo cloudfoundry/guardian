@@ -20,7 +20,8 @@ import (
 )
 
 var defaultRuntime = map[string]string{
-	"linux": "runc",
+	"linux":   "runc",
+	"windows": "winc",
 }
 
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
@@ -61,6 +62,9 @@ func TestGqt(t *testing.T) {
 			Expect(err).NotTo(HaveOccurred())
 
 			binaries.RuntimePlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin")
+			Expect(err).NotTo(HaveOccurred())
+
+			binaries.NoopPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin")
 			Expect(err).NotTo(HaveOccurred())
 
 			if runtime.GOOS == "linux" {

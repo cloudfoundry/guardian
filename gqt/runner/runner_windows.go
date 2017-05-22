@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 
 	"code.cloudfoundry.org/lager"
 	. "github.com/onsi/ginkgo"
@@ -34,8 +35,13 @@ func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr string, 
 	gardenArgs := make([]string, len(argv))
 	copy(gardenArgs, argv)
 
-	gardenArgs = appendDefaultFlag(gardenArgs, "--bind-ip", "127.0.0.1")
-	gardenArgs = appendDefaultFlag(gardenArgs, "--bind-port", "7777")
+	switch network {
+	case "tcp":
+		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-ip", strings.Split(addr, ":")[0])
+		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-port", strings.Split(addr, ":")[1])
+	case "unix":
+		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-socket", addr)
+	}
 
 	if rootfs != "" {
 		gardenArgs = appendDefaultFlag(gardenArgs, "--default-rootfs", rootfs)
@@ -44,7 +50,8 @@ func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr string, 
 	gardenArgs = appendDefaultFlag(gardenArgs, "--depot", depotDir)
 	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
 
-	gardenArgs = appendDefaultFlag(gardenArgs, "--network-plugin", binaries.NetworkPlugin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--network-plugin", binaries.NoopPlugin)
+	gardenArgs = appendDefaultFlag(gardenArgs, "--image-plugin", binaries.NoopPlugin)
 
 	return exec.Command(binaries.Gdn, append([]string{"server"}, gardenArgs...)...)
 }

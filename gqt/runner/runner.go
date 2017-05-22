@@ -33,6 +33,7 @@ type Binaries struct {
 	RuntimePlugin string `json:"runtime_plugin,omitempty"`
 	ImagePlugin   string `json:"image_plugin,omitempty"`
 	NetworkPlugin string `json:"network_plugin,omitempty"`
+	NoopPlugin    string `json:"noop_plugin,omitempty"`
 	ExecRunner    string `json:"execrunner,omitempty"`
 	NSTar         string `json:"nstar,omitempty"`
 }
@@ -102,7 +103,14 @@ func NewGardenRunner(binaries *Binaries, rootfs, network, address string, user U
 	}
 
 	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.ConsoleSockets, r.Network, r.Addr, binaries, rootfs, user, argv...)
-	r.Cmd.Env = append(os.Environ(), fmt.Sprintf("TMPDIR=%s", r.TmpDir))
+	r.Cmd.Env = append(
+		[]string{
+			fmt.Sprintf("TMPDIR=%s", r.TmpDir),
+			fmt.Sprintf("TEMP=%s", r.TmpDir),
+			fmt.Sprintf("TMP=%s", r.TmpDir),
+		},
+		os.Environ()...,
+	)
 
 	for i, arg := range r.Cmd.Args {
 		if arg == "--debug-bind-ip" {
@@ -125,7 +133,15 @@ func NewGardenRunner(binaries *Binaries, rootfs, network, address string, user U
 }
 
 func Start(binaries *Binaries, rootfs string, user UserCredential, argv ...string) *RunningGarden {
-	runner := NewGardenRunner(binaries, rootfs, "unix", fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode()), user, argv...)
+	network := "unix"
+	address := fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
+
+	if runtime.GOOS == "windows" {
+		network = "tcp"
+		address = fmt.Sprintf("127.0.0.1:777%d", GinkgoParallelNode())
+	}
+
+	runner := NewGardenRunner(binaries, rootfs, network, address, user, argv...)
 
 	r := &RunningGarden{
 		runner:   runner,
@@ -164,8 +180,13 @@ func (r *RunningGarden) DestroyAndStop() error {
 		return err
 	}
 
-	if err := r.Stop(); err != nil {
-		return err
+	if runtime.GOOS == "windows" {
+		// Windows doesn't support SIGTERM
+		r.Kill()
+	} else {
+		if err := r.Stop(); err != nil {
+			return err
+		}
 	}
 
 	return nil
