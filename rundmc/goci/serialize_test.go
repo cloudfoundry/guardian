@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	. "github.com/onsi/ginkgo"
@@ -16,9 +17,13 @@ import (
 var _ = Describe("Bundle Serialization", func() {
 
 	var (
-		tmp         string
-		bndle       goci.Bndl
-		bundleSaver *goci.BundleSaver
+		tmp                  string
+		bndle                goci.Bndl
+		bundleSaver          *goci.BundleSaver
+		notFoundRuntimeError = map[string]string{
+			"linux":   "no such file or directory",
+			"windows": "The system cannot find the path specified.",
+		}
 	)
 
 	BeforeEach(func() {
@@ -44,11 +49,17 @@ var _ = Describe("Bundle Serialization", func() {
 	Describe("Saving", func() {
 		It("serializes the spec to config.json", func() {
 			var configJson map[string]interface{}
-			Expect(json.NewDecoder(mustOpen(filepath.Join(tmp, "config.json"))).Decode(&configJson)).To(Succeed())
+			configFile := mustOpen(filepath.Join(tmp, "config.json"))
+			defer configFile.Close()
+			Expect(json.NewDecoder(configFile).Decode(&configJson)).To(Succeed())
 			Expect(configJson).To(HaveKeyWithValue("ociVersion", Equal("abcd")))
 		})
 
 		It("ensures that the runc spec is only readable by its owner", func() {
+			if runtime.GOOS == "windows" {
+				Skip("not supported on Windows")
+			}
+
 			info, err := os.Stat(filepath.Join(tmp, "config.json"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(info.Mode().Perm()).To(Equal(os.FileMode(0600)))
@@ -59,7 +70,7 @@ var _ = Describe("Bundle Serialization", func() {
 				err := bundleSaver.Save(bndle, "non-existent-dir")
 				Expect(err).To(HaveOccurred())
 				Expect(err).To(MatchError(ContainSubstring("Failed to save bundle")))
-				Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
+				Expect(err).To(MatchError(ContainSubstring(notFoundRuntimeError[runtime.GOOS])))
 			})
 		})
 	})
@@ -74,12 +85,16 @@ var _ = Describe("Bundle Serialization", func() {
 		})
 
 		Context("when config.json does not exist", func() {
+			BeforeEach(func() {
+				notFoundRuntimeError["windows"] = "The system cannot find the file specified."
+			})
+
 			It("returns an error", func() {
 				Expect(os.Remove(path.Join(tmp, "config.json"))).To(Succeed())
 				bundleLoader := &goci.BndlLoader{}
 				_, err := bundleLoader.Load(tmp)
 				Expect(err).To(MatchError(ContainSubstring("Failed to load bundle")))
-				Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
+				Expect(err).To(MatchError(ContainSubstring(notFoundRuntimeError[runtime.GOOS])))
 			})
 		})
 

@@ -109,6 +109,8 @@ var _ = Describe("RunAndLog", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(a.Name()).NotTo(Equal(b.Name()))
+			a.Close()
+			b.Close()
 			Expect(os.Remove(a.Name())).To(Succeed())
 			Expect(os.Remove(b.Name())).To(Succeed())
 		})
@@ -121,6 +123,7 @@ var _ = Describe("RunAndLog", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(b.Name()).To(HavePrefix(dir))
+			b.Close()
 			Expect(os.RemoveAll(dir)).To(Succeed())
 		})
 	})

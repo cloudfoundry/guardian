@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 
 	"code.cloudfoundry.org/guardian/rundmc/depot"
@@ -192,7 +191,7 @@ var _ = Describe("Depot", func() {
 			Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
 			Expect(bundleSaver.SaveCallCount()).To(Equal(1))
 			actualBundle, actualPath := bundleSaver.SaveArgsForCall(0)
-			Expect(actualPath).To(Equal(path.Join(depotDir, "aardvaark")))
+			Expect(actualPath).To(Equal(filepath.Join(depotDir, "aardvaark")))
 			Expect(actualBundle).To(Equal(bndle.WithMounts(
 				specs.Mount{
 					Destination: "/etc/hosts",
@@ -255,9 +254,9 @@ var _ = Describe("Depot", func() {
 				invalidDepot = depot.New("rubbish", bundleSaver, chowner)
 			})
 
-			It("should return the handles", func() {
+			It("returns an error", func() {
 				_, err := invalidDepot.Handles()
-				Expect(err).To(MatchError("invalid depot directory rubbish: open rubbish: no such file or directory"))
+				Expect(err).To(MatchError(ContainSubstring("invalid depot directory rubbish: open rubbish:")))
 			})
 		})
 	})

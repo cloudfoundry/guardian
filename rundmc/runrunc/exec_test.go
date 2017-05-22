@@ -218,7 +218,7 @@ var _ = Describe("ExecPreparer", func() {
 			It("looks up the user and group IDs of the user in the right rootfs", func() {
 				Expect(users.LookupCallCount()).To(Equal(1))
 				actualRootfsPath, actualUserName := users.LookupArgsForCall(0)
-				Expect(actualRootfsPath).To(Equal("/proc/999/root"))
+				Expect(actualRootfsPath).To(Equal(filepath.Join("/proc", "999", "root")))
 				Expect(actualUserName).To(Equal("spiderman"))
 			})
 
@@ -588,7 +588,7 @@ var _ = Describe("ExecPreparer", func() {
 					It("creates the working directory", func() {
 						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 						rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
-						Expect(rootfs).To(Equal("/proc/999/root"))
+						Expect(rootfs).To(Equal(filepath.Join("/proc", "999", "root")))
 						Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
 						Expect(mode).To(BeNumerically("==", 0755))
 						Expect(recreate).To(BeFalse())
@@ -618,7 +618,7 @@ var _ = Describe("ExecPreparer", func() {
 					It("creates the working directory as the mapped user", func() {
 						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 						rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
-						Expect(rootfs).To(Equal("/proc/999/root"))
+						Expect(rootfs).To(Equal(filepath.Join("/proc", "999", "root")))
 						Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
 						Expect(mode).To(BeEquivalentTo(0755))
 						Expect(recreate).To(BeFalse())

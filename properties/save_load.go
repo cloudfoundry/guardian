@@ -7,6 +7,7 @@ import (
 
 func Load(path string) (*Manager, error) {
 	f, err := os.Open(path)
+	defer f.Close()
 	if err != nil {
 		return NewManager(), nil
 	}
@@ -21,6 +22,7 @@ func Load(path string) (*Manager, error) {
 
 func Save(path string, mgr *Manager) error {
 	f, err := os.Create(path)
+	defer f.Close()
 	if err != nil {
 		return err
 	}

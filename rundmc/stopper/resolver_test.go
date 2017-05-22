@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	. "github.com/onsi/ginkgo"
@@ -13,11 +14,17 @@ import (
 
 var _ = Describe("Resolver", func() {
 	var (
-		fakeStateDir string
+		fakeStateDir         string
+		notFoundRuntimeError map[string]string
 	)
 
 	BeforeEach(func() {
 		var err error
+		notFoundRuntimeError = map[string]string{
+			"linux":   "no such file or directory",
+			"windows": "The system cannot find the file specified.",
+		}
+
 		fakeStateDir, err = ioutil.TempDir("", "fakestate")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -65,6 +72,6 @@ var _ = Describe("Resolver", func() {
 
 	It("returns an error if the state.json doesn't exist", func() {
 		_, err := stopper.NewRuncStateCgroupPathResolver(fakeStateDir).Resolve("some-handle", "devices")
-		Expect(err).To(MatchError(ContainSubstring("no such file")))
+		Expect(err).To(MatchError(ContainSubstring(notFoundRuntimeError[runtime.GOOS])))
 	})
 })
