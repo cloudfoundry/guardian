@@ -89,6 +89,10 @@ func TestGqt(t *testing.T) {
 		Expect(json.Unmarshal(data, &binaries)).To(Succeed())
 	})
 
+	SynchronizedAfterSuite(func() {}, func() {
+		gexec.CleanupBuildArtifacts()
+	})
+
 	BeforeEach(func() {
 		if binaries.OCIRuntime == "" {
 			Skip("No OCI Runtime for Platform: " + runtime.GOOS)

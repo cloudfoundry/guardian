@@ -138,7 +138,7 @@ func Start(binaries *Binaries, rootfs string, user UserCredential, argv ...strin
 
 	if runtime.GOOS == "windows" {
 		network = "tcp"
-		address = fmt.Sprintf("127.0.0.1:777%d", GinkgoParallelNode())
+		address = fmt.Sprintf("127.0.0.1:999%d", GinkgoParallelNode())
 	}
 
 	runner := NewGardenRunner(binaries, rootfs, network, address, user, argv...)
@@ -188,6 +188,8 @@ func (r *RunningGarden) DestroyAndStop() error {
 			return err
 		}
 	}
+
+	os.RemoveAll(r.Tmpdir)
 
 	return nil
 }
