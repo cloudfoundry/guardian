@@ -454,49 +454,10 @@ var _ = Describe("Run", func() {
 			Expect(err).To(MatchError(ContainSubstring(runcErrorMessage)))
 			Eventually(client).Should(gbytes.Say(runcErrorMessage))
 		})
-
-		Describe("Signalling", func() {
-			It("should forward SIGTERM to the process", func() {
-				client = startGarden()
-
-				container, err := client.Create(garden.ContainerSpec{})
-				Expect(err).NotTo(HaveOccurred())
-
-				buffer := gbytes.NewBuffer()
-				proc, err := container.Run(garden.ProcessSpec{
-					Path: "sh",
-					Args: []string{"-c", `
-					trap 'exit 42' TERM
-
-					while true; do
-					  echo 'sleeping'
-					  sleep 1
-					done
-				`},
-				}, garden.ProcessIO{
-					Stdout: buffer,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(buffer).Should(gbytes.Say("sleeping"))
-
-				err = proc.Signal(garden.SignalTerminate)
-				Expect(err).NotTo(HaveOccurred())
-
-				status := make(chan int)
-				go func() {
-					exit, err := proc.Wait()
-					Expect(err).NotTo(HaveOccurred())
-					status <- exit
-				}()
-
-				Eventually(status).Should(Receive(BeEquivalentTo(42)))
-			})
-		})
 	})
 
 	Describe("Signalling", func() {
-		It("should forward SIGTERM to the process", func(done Done) {
+		It("should forward SIGTERM to the process", func() {
 			client = startGarden()
 
 			container, err := client.Create(garden.ContainerSpec{})
@@ -523,10 +484,15 @@ var _ = Describe("Run", func() {
 			err = proc.Signal(garden.SignalTerminate)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(proc.Wait()).To(Equal(42))
+			status := make(chan int)
+			go func() {
+				exit, err := proc.Wait()
+				Expect(err).NotTo(HaveOccurred())
+				status <- exit
+			}()
 
-			close(done)
-		}, 20.0)
+			Eventually(status).Should(Receive(BeEquivalentTo(42)))
+		})
 	})
 })
 
