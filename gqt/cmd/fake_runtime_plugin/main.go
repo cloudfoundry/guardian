@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -32,8 +31,6 @@ func main() {
 
 	fakeRuntimePlugin.Commands = []cli.Command{
 		CreateCommand,
-		StateCommand,
-		EventsCommand,
 	}
 
 	_ = fakeRuntimePlugin.Run(os.Args)
@@ -59,26 +56,6 @@ var CreateCommand = cli.Command{
 			panic(err)
 		}
 
-		return nil
-	},
-}
-
-var StateCommand = cli.Command{
-	Name:  "state",
-	Flags: []cli.Flag{},
-
-	Action: func(ctx *cli.Context) error {
-		fmt.Printf("{}")
-		return nil
-	},
-}
-
-var EventsCommand = cli.Command{
-	Name:  "events",
-	Flags: []cli.Flag{},
-
-	Action: func(ctx *cli.Context) error {
-		fmt.Printf("{}")
 		return nil
 	},
 }
