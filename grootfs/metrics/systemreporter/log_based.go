@@ -36,7 +36,7 @@ func (r *LogBased) Report(logger lager.Logger, duration time.Duration) {
 		IoStat:               r.execute("iostat", "-xzp"),
 		TopProcessesByMemory: r.topEntries(10, r.execute("ps", "-aux", "--sort", "-rss")),
 		TopProcessesByCPU:    r.topEntries(10, r.execute("ps", "-aux", "--sort", "-pcpu")),
-		Dmesg:                r.tailEntries(250, r.execute("dmesg")),
+		Dmesg:                r.tailEntries(250, r.execute("dmesg", "-T")),
 	}
 
 	logger.Info("threshold-reached", lager.Data{"report": report})

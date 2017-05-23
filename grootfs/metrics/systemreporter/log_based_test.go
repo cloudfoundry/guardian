@@ -74,6 +74,7 @@ var _ = Describe("LogBased", func() {
 		It("reports the dmesg", func() {
 			cmdRunner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "dmesg",
+				Args: []string{"-T"},
 			}, func(cmd *exec.Cmd) error {
 				for i := 1; i < 300; i++ {
 					cmd.Stdout.Write([]byte(fmt.Sprintf("%d\n", i)))
