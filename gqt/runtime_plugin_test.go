@@ -36,14 +36,19 @@ var _ = Describe("Runtime Plugin", func() {
 
 	Context("when a runtime plugin is provided", func() {
 		BeforeEach(func() {
-			args = append(args, "--runtime-plugin", binaries.RuntimePlugin)
+			args = append(
+				args,
+				"--runtime-plugin", binaries.RuntimePlugin,
+				"--network-plugin", binaries.NoopPlugin,
+			)
 		})
 
 		Context("and a container is successfully created", func() {
 			var handle = fmt.Sprintf("some-handle-%d", GinkgoParallelNode())
 
 			JustBeforeEach(func() {
-				client.Create(garden.ContainerSpec{Handle: handle})
+				_, err := client.Create(garden.ContainerSpec{Handle: handle})
+				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("executes the plugin, passing the correct args", func() {
