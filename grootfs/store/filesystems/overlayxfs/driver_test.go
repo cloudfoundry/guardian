@@ -89,7 +89,7 @@ var _ = Describe("Driver", func() {
 			mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s.*noatime.*nobarrier.*prjquota", storePath)))
+			Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s[^\n]*noatime[^\n]*nobarrier[^\n]*prjquota", storePath)))
 		})
 
 		Context("when creating the filesystem fails", func() {
