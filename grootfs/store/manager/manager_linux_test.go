@@ -79,9 +79,30 @@ var _ = Describe("Manager", func() {
 			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
 		})
 
-		It("validates the store path parent with the store driver", func() {
-			Expect(manager.InitStore(logger, spec)).To(Succeed())
-			Expect(storeDriver.ValidateFileSystemCallCount()).To(Equal(1))
+		Describe("Path validation", func() {
+			Context("when the store path folder exists", func() {
+				BeforeEach(func() {
+					Expect(os.MkdirAll(storePath, 0700)).To(Succeed())
+				})
+
+				It("validates the store path with the store driver", func() {
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
+					Expect(storeDriver.ValidateFileSystemCallCount()).To(Equal(1))
+
+					_, path := storeDriver.ValidateFileSystemArgsForCall(0)
+					Expect(path).To(Equal(storePath))
+				})
+			})
+
+			Context("when the store path folder doesn't exist", func() {
+				It("validates the store path parent with the store driver", func() {
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
+					Expect(storeDriver.ValidateFileSystemCallCount()).To(Equal(1))
+
+					_, path := storeDriver.ValidateFileSystemArgsForCall(0)
+					Expect(path).To(Equal(filepath.Dir(storePath)))
+				})
+			})
 		})
 
 		It("creates the correct internal structure", func() {
@@ -256,6 +277,14 @@ var _ = Describe("Manager", func() {
 				_, filesystemPathArg, storePathArg := storeDriver.InitFilesystemArgsForCall(0)
 				Expect(filesystemPathArg).To(Equal(backingStoreFile))
 				Expect(storePathArg).To(Equal(storePath))
+			})
+
+			It("validates the store path with the store driver", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(storeDriver.ValidateFileSystemCallCount()).To(Equal(1))
+
+				_, path := storeDriver.ValidateFileSystemArgsForCall(0)
+				Expect(path).To(Equal(storePath))
 			})
 
 			Context("when the store size is less than 200Mb", func() {

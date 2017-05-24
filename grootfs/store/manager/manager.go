@@ -60,12 +60,12 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
+	validationPath := filepath.Dir(m.storePath)
 	stat, err := os.Stat(m.storePath)
 	if err == nil && stat.IsDir() {
 		logger.Info("store-path-already-exists", lager.Data{"StorePath": m.storePath})
+		validationPath = m.storePath
 	}
-
-	validationPath := filepath.Dir(m.storePath)
 
 	if spec.StoreSizeBytes > 0 {
 		if err := m.createAndMountFilesystem(logger, spec.StoreSizeBytes); err != nil {
