@@ -122,12 +122,6 @@ create:
   insecure_registries:
   - my-docker-registry.example.com:1234
   with_clean: true
-  uid_mappings:
-  - "0:4294967294:1"
-  - "1:1:4294967293"
-  gid_mappings:
-  - "0:4294967294:1"
-  - "1:1:4294967293"
 ```
 
 | Key | Description  |
@@ -142,8 +136,6 @@ create:
 | metron_endpoint | Metron endpoint used to send metrics |
 | create.insecure_registries | Whitelist a private registry |
 | create.with\_clean | Clean up unused layers before creating rootfs |
-| create.uid_mappings | UID mapping for image translation, e.g.: \<Namespace UID\>:\<Host UID\>:\<Size\> |
-| create.gid_mappings | GID mapping for image translation, e.g.: \<Namespace GID\>:\<Host GID\>:\<Size\> |
 | create.without_mount | Don't perform the rootfs mount. |
 | clean.ignore\_images | Images to ignore during cleanup |
 | clean.threshold\_bytes | Disk usage of the store directory at which cleanup should trigger |
@@ -178,6 +170,19 @@ This command will:
 
 *N.B. This is currently only supported by the overlay-xfs driver*.
 
+
+#### --uid-mapping / --gid-mapping
+
+User and group id mappings are a property of the store and, if desired, must be
+set as part of the `init-store` command. All `create` commands ran against that
+store will use the same mapping.
+
+* If you're not running as root, and you want to use mappings, you'll also need
+  to map root (`0:--your-user-id:1`)
+* Your id mappings can't overlap (e.g. 1:100000:65000 and 100:1000:200)
+* You need to have these [mappings
+  allowed](http://man7.org/linux/man-pages/man5/subuid.5.html) in the
+  `/etc/subuid` and `/etc/subgid` files
 
 ### Deleting a store
 
@@ -236,33 +241,6 @@ the json output will also contain the `mount` key:
 
 The `--without-mount` option exists so that GrootFS can be run as non-root. The mount information is compatible
 with [OCI container spec](https://github.com/opencontainers/runtime-spec/blob/master/config.md#example-linux).
-
-
-
-#### User/Group ID Mapping
-
-You might want to apply some user and group id mappings to the contents of the
-`rootfs` folder. GrootFS supports the `--uid-mapping` and `--gid-mapping`
-arguments.  Suppose you are user with UID/GID 1000:
-
-```
-grootfs --store /mnt/btrfs create \
-        --uid-mapping 0:1000:1 \
-        --uid-mapping 1:100000:650000 \
-        --gid-mapping 0:1000:1 \
-        --gid-mapping 1:100000:650000 \
-        docker:///ubuntu:latest \
-        my-image-id
-```
-
-Some important notes:
-
-* If you're not running as root, and you want to use mappings, you'll also need
-  to map root (`0:--your-user-id:1`)
-* Your id mappings can't overlap (e.g. 1:100000:65000 and 100:1000:200)
-* You need to have these [mappings
-  allowed](http://man7.org/linux/man-pages/man5/subuid.5.html) in the
-  `/etc/subuid` and `/etc/subgid` files
 
 #### Disk Quotas & Drax
 
