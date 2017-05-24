@@ -1,6 +1,8 @@
 package gqt_test
 
 import (
+	"bytes"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -140,7 +142,17 @@ func runIPTables(ipTablesArgs ...string) ([]byte, error) {
 		return nil, err
 	}
 	defer lock.Unlock()
-	return exec.Command("iptables", append([]string{"-w"}, ipTablesArgs...)...).CombinedOutput()
+
+	outBuffer := bytes.NewBuffer([]byte{})
+	errBuffer := bytes.NewBuffer([]byte{})
+	cmd := exec.Command("iptables", append([]string{"-w"}, ipTablesArgs...)...)
+	cmd.Stdout = outBuffer
+	cmd.Stderr = errBuffer
+	err = cmd.Run()
+
+	fmt.Fprintln(GinkgoWriter, outBuffer.String())
+	fmt.Fprintln(GinkgoWriter, errBuffer.String())
+	return outBuffer.Bytes(), err
 }
 
 // returns the n'th ASCII character starting from 'a' through 'z'

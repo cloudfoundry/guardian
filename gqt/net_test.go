@@ -974,7 +974,7 @@ var _ = Describe("Networking", func() {
 		Context("when creating a container", func() {
 			Describe("filter table", func() {
 				It("annotates rules with the container handle", func() {
-					output, err := runIPTables("-t", "filter", "-L")
+					output, err := runIPTables("-t", "filter", "-n", "-L")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(output)).To(ContainSubstring(fmt.Sprintf(`/* %s */`, containerSpec.Handle)))
 				})
@@ -982,7 +982,7 @@ var _ = Describe("Networking", func() {
 
 			Describe("nat table", func() {
 				It("annotates rules with the container handle", func() {
-					output, err := runIPTables("-t", "nat", "-L")
+					output, err := runIPTables("-t", "nat", "-n", "-L")
 					Expect(err).NotTo(HaveOccurred())
 					Expect(string(output)).To(ContainSubstring(fmt.Sprintf(`/* %s */`, containerSpec.Handle)))
 				})
@@ -996,7 +996,7 @@ var _ = Describe("Networking", func() {
 			})
 
 			It("annotates the rule with the container handle", func() {
-				output, err := runIPTables("-t", "nat", "-L")
+				output, err := runIPTables("-t", "nat", "-n", "-L")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(output)).To(MatchRegexp(fmt.Sprintf(`DNAT.*/\* %s \*/`, containerSpec.Handle)))
 			})
@@ -1012,7 +1012,7 @@ var _ = Describe("Networking", func() {
 			})
 
 			It("annotates the rule with the container handle", func() {
-				output, err := runIPTables("-t", "filter", "-L")
+				output, err := runIPTables("-t", "filter", "-n", "-L")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(string(output)).To(ContainSubstring(fmt.Sprintf(`/* %s */`, containerSpec.Handle)))
 			})

@@ -54,7 +54,7 @@ var _ = Describe("IPTables controller", func() {
 		It("creates the chain", func() {
 			Expect(iptablesController.CreateChain("filter", "test-chain")).To(Succeed())
 
-			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
+			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-n", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 		})
@@ -63,7 +63,7 @@ var _ = Describe("IPTables controller", func() {
 			It("creates the nat chain", func() {
 				Expect(iptablesController.CreateChain("nat", "test-chain")).To(Succeed())
 
-				sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-t", "nat", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
+				sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-t", "nat", "-n", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(0))
 			})
@@ -150,7 +150,7 @@ var _ = Describe("IPTables controller", func() {
 		It("deletes the chain", func() {
 			Expect(iptablesController.DeleteChain("filter", "test-chain")).To(Succeed())
 
-			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
+			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-n", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(1))
 		})
@@ -163,7 +163,7 @@ var _ = Describe("IPTables controller", func() {
 			It("deletes the nat chain", func() {
 				Expect(iptablesController.DeleteChain("nat", "test-chain")).To(Succeed())
 
-				sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-t", "nat", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
+				sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-t", "nat", "-n", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
 				Eventually(sess).Should(gexec.Exit(1))
 			})
