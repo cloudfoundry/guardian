@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
@@ -16,6 +17,19 @@ import (
 var _ = Describe("Concurrent creations", func() {
 	BeforeEach(func() {
 		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+		err := Runner.RunningAsUser(0, 0).InitStore(manager.InitSpec{
+			UIDMappings: []groot.IDMappingSpec{
+				{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+				{HostID: 100000, NamespaceID: 1, Size: 65000},
+			},
+			GIDMappings: []groot.IDMappingSpec{
+				{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+				{HostID: 100000, NamespaceID: 1, Size: 65000},
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Runner = Runner.SkipInitStore()
 	})
 
 	Context("warm cache", func() {
@@ -26,6 +40,7 @@ var _ = Describe("Concurrent creations", func() {
 				BaseImage: "docker:///cfgarden/empty",
 				Mount:     true,
 			})
+
 			Expect(err).NotTo(HaveOccurred())
 		})
 
