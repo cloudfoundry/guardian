@@ -53,16 +53,16 @@ type Runner struct {
 	CleanOnCreate   bool
 	NoCleanOnCreate bool
 
-	SysCredential *syscall.Credential
+	SysCredential syscall.Credential
 }
 
 func (r Runner) StartSubcommand(subcommand string, args ...string) (*gexec.Session, error) {
 	cmd := r.makeCmd(subcommand, args)
 	cmd.Env = r.EnvVars
 
-	if r.SysCredential != nil {
+	if r.SysCredential.Uid != 0 {
 		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Credential: r.SysCredential,
+			Credential: &r.SysCredential,
 		}
 	}
 
@@ -82,9 +82,9 @@ func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error)
 	cmd := r.makeCmd(subcommand, args)
 	cmd.Env = r.EnvVars
 
-	if r.SysCredential != nil {
+	if r.SysCredential.Uid != 0 {
 		cmd.SysProcAttr = &syscall.SysProcAttr{
-			Credential: r.SysCredential,
+			Credential: &r.SysCredential,
 		}
 	}
 

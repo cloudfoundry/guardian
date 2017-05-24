@@ -134,6 +134,9 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 
 	if ok, err := b.Exists(id); !ok {
 		logger.Error("checking-image-path-failed", err)
+		if err != nil {
+			return errorspkg.Wrapf(err, "unable to check image: %s", id)
+		}
 		return errorspkg.Errorf("image not found: %s", id)
 	}
 

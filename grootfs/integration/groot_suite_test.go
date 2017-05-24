@@ -8,17 +8,13 @@ import (
 	"os/exec"
 	"os/user"
 	"path"
-	"path/filepath"
 	"strconv"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
-	"code.cloudfoundry.org/lager/lagertest"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -28,13 +24,14 @@ import (
 )
 
 var (
+	storeName string
+
 	GrootFSBin    string
 	DraxBin       string
 	TardisBin     string
 	Driver        string
 	Runner        runner.Runner
 	StorePath     string
-	StoreName     string
 	NamespacerBin string
 
 	GrootUser        *user.User
@@ -99,15 +96,13 @@ func TestGroot(t *testing.T) {
 		rand.Seed(time.Now().UnixNano() + int64(GinkgoParallelNode()*1000))
 
 		if Driver == "overlay-xfs" {
-			StorePath = fmt.Sprintf(xfsMountPath, GinkgoParallelNode())
+			mountPath := fmt.Sprintf(xfsMountPath, GinkgoParallelNode())
+			StorePath = path.Join(mountPath, "store")
 		} else {
 			Driver = "btrfs"
-			StoreName = fmt.Sprintf("test-store-%d-%d", GinkgoParallelNode(), rand.Int())
-			StorePath = path.Join(btrfsMountPath, StoreName)
-			Expect(os.Mkdir(StorePath, 0755)).To(Succeed())
+			storeName = fmt.Sprintf("test-store-%d-%d", GinkgoParallelNode(), rand.Int())
+			StorePath = path.Join(btrfsMountPath, storeName)
 		}
-
-		Expect(os.Chmod(StorePath, 0777)).To(Succeed())
 
 		var err error
 		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
@@ -131,24 +126,16 @@ func TestGroot(t *testing.T) {
 			Driver:     Driver,
 			Timeout:    15 * time.Second,
 		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(uint32(GrootfsTestUid), uint32(GrootfsTestGid))
-
-		prepareStorePath(StorePath)
 	})
 
 	AfterEach(func() {
 		if Driver == "overlay-xfs" {
-			testhelpers.CleanUpOverlayMounts(StorePath, "images")
+			testhelpers.CleanUpOverlayMounts(StorePath)
 		} else {
-			testhelpers.CleanUpBtrfsSubvolumes(btrfsMountPath, StoreName)
-			Expect(os.RemoveAll(StorePath)).To(Succeed())
+			testhelpers.CleanUpBtrfsSubvolumes(btrfsMountPath, storeName)
 		}
 
-		os.RemoveAll(filepath.Join(StorePath, store.MetaDirName))
-		os.RemoveAll(filepath.Join(StorePath, store.ImageDirName))
-		os.RemoveAll(filepath.Join(StorePath, store.VolumesDirName))
-		os.RemoveAll(filepath.Join(StorePath, store.LocksDirName))
-		os.RemoveAll(filepath.Join(StorePath, store.CacheDirName))
-		os.RemoveAll(filepath.Join(StorePath, store.TempDirName))
+		Expect(os.RemoveAll(StorePath)).To(Succeed())
 	})
 
 	RunSpecs(t, "Integration Suite")
@@ -169,12 +156,4 @@ func writeMegabytes(outputPath string, mb int) error {
 
 func mountByDefault() bool {
 	return GrootfsTestUid == 0 || Driver == "btrfs"
-}
-
-func prepareStorePath(storePath string) {
-	if Driver == "overlay-xfs" {
-		driver := overlayxfs.NewDriver(storePath, TardisBin)
-		logger := lagertest.NewTestLogger("overlay")
-		Expect(driver.ConfigureStore(logger, StorePath, GrootfsTestUid, GrootfsTestGid)).To(Succeed())
-	}
 }

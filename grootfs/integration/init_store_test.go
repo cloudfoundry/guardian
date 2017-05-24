@@ -2,17 +2,14 @@ package integration_test
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store/manager"
-	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -26,21 +23,15 @@ var _ = Describe("Init Store", func() {
 	)
 
 	var (
-		storePath string
-		runner    runner.Runner
-		spec      manager.InitSpec
+		runner runner.Runner
+		spec   manager.InitSpec
 	)
 
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
 
+		runner = Runner.WithStore(StorePath)
 		spec = manager.InitSpec{}
-		storePath = filepath.Join(StorePath, fmt.Sprintf("init-store-%d", rand.Int()))
-		runner = Runner.WithStore(storePath)
-	})
-
-	AfterEach(func() {
-		Expect(os.RemoveAll(storePath))
 	})
 
 	Context("when --store-size-bytes is passed", func() {
@@ -48,16 +39,13 @@ var _ = Describe("Init Store", func() {
 
 		BeforeEach(func() {
 			integration.SkipIfNotXFS(Driver)
-			Expect(os.MkdirAll(storePath, 0755)).To(Succeed())
 
-			storePath = filepath.Join(storePath, "store")
-			runner = Runner.WithStore(storePath)
 			spec.StoreSizeBytes = 500 * 1024 * 1024
-			backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
+			backingStoreFile = fmt.Sprintf("%s.backing-store", StorePath)
 		})
 
 		AfterEach(func() {
-			syscall.Unmount(storePath, 0)
+			syscall.Unmount(StorePath, 0)
 			Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
 		})
 
@@ -71,7 +59,7 @@ var _ = Describe("Init Store", func() {
 		})
 
 		It("initialises an XFS filesystem in the backing file", func() {
-			Expect(runner.WithLogLevel(lager.DEBUG).InitStore(spec)).To(Succeed())
+			Expect(runner.InitStore(spec)).To(Succeed())
 
 			buffer := gbytes.NewBuffer()
 			cmd := exec.Command("file", backingStoreFile)
@@ -99,7 +87,7 @@ var _ = Describe("Init Store", func() {
 
 		stat, err := os.Stat(runner.StorePath)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0755)))
+		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0700)))
 	})
 
 	It("sets the ownership to the caller user", func() {
@@ -111,40 +99,6 @@ var _ = Describe("Init Store", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(rootUID)))
 		Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))
-	})
-
-	It("can create images with the same mappings", func() {
-		Expect(runner.InitStore(spec)).To(Succeed())
-
-		_, err := runner.Create(groot.CreateSpec{
-			ID:        "random-id",
-			BaseImage: "docker:///cfgarden/empty",
-			Mount:     true,
-		})
-
-		Expect(err).ToNot(HaveOccurred())
-	})
-
-	Context("when the store is used to create a image with different mappings", func() {
-		It("fails", func() {
-			Expect(runner.InitStore(spec)).To(Succeed())
-
-			_, err := runner.Create(groot.CreateSpec{
-				ID:        "random-id",
-				BaseImage: "docker:///cfgarden/empty",
-				Mount:     true,
-				UIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-				GIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-			})
-
-			Expect(err).To(MatchError("store already initialized with a different mapping"))
-		})
 	})
 
 	Context("when id mappings are provided", func() {
@@ -168,46 +122,6 @@ var _ = Describe("Init Store", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
-		})
-
-		It("can create images with the same mappings", func() {
-			Expect(runner.InitStore(spec)).To(Succeed())
-
-			_, err := runner.Create(groot.CreateSpec{
-				ID:        "random-id",
-				BaseImage: "docker:///cfgarden/empty",
-				Mount:     true,
-				UIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-				GIDMappings: []groot.IDMappingSpec{
-					groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-			})
-
-			Expect(err).ToNot(HaveOccurred())
-		})
-
-		Context("when the store is used to create a image with different mappings", func() {
-			It("fails", func() {
-				Expect(runner.InitStore(spec)).To(Succeed())
-
-				_, err := runner.Create(groot.CreateSpec{
-					ID:        "random-id",
-					BaseImage: "docker:///cfgarden/empty",
-					Mount:     true,
-					UIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
-					},
-					GIDMappings: []groot.IDMappingSpec{
-						groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
-					},
-				})
-
-				Expect(err).To(MatchError("store already initialized with a different mapping"))
-			})
 		})
 	})
 

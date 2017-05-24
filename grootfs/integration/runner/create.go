@@ -2,28 +2,20 @@ package runner
 
 import (
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
 	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
 
-	yaml "gopkg.in/yaml.v2"
-
-	errorspkg "github.com/pkg/errors"
-
 	"github.com/onsi/gomega/gexec"
 
-	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
+	"code.cloudfoundry.org/grootfs/store/manager"
 )
 
 func (r Runner) StartCreate(spec groot.CreateSpec) (*gexec.Session, error) {
 	if !r.skipInitStore {
-		if err := r.initStore(); err != nil {
+		if err := r.initStoreAsRoot(); err != nil {
 			return nil, err
 		}
 	}
@@ -33,7 +25,7 @@ func (r Runner) StartCreate(spec groot.CreateSpec) (*gexec.Session, error) {
 
 func (r Runner) Create(spec groot.CreateSpec) (groot.ImageInfo, error) {
 	if !r.skipInitStore {
-		if err := r.initStore(); err != nil {
+		if err := r.initStoreAsRoot(); err != nil {
 			return groot.ImageInfo{}, err
 		}
 	}
@@ -60,18 +52,34 @@ func (r Runner) EnsureMounted(image groot.ImageInfo) error {
 	return nil
 }
 
+func (r Runner) initStoreAsRoot() error {
+	spec := manager.InitSpec{}
+
+	if r.SysCredential.Uid != 0 {
+		spec.UIDMappings = defaultIdMapping(r.SysCredential.Uid)
+		spec.GIDMappings = defaultIdMapping(r.SysCredential.Gid)
+	}
+
+	if err := r.RunningAsUser(0, 0).InitStore(spec); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func defaultIdMapping(hostId uint32) []groot.IDMappingSpec {
+	return []groot.IDMappingSpec{
+		groot.IDMappingSpec{
+			HostID:      int(hostId),
+			NamespaceID: 0,
+			Size:        1,
+		},
+		{HostID: 100000, NamespaceID: 1, Size: 65000},
+	}
+}
+
 func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 	args := []string{}
-	for _, mapping := range spec.UIDMappings {
-		args = append(args, "--uid-mapping",
-			fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size),
-		)
-	}
-	for _, mapping := range spec.GIDMappings {
-		args = append(args, "--gid-mapping",
-			fmt.Sprintf("%d:%d:%d", mapping.NamespaceID, mapping.HostID, mapping.Size),
-		)
-	}
 
 	if r.CleanOnCreate || r.NoCleanOnCreate {
 		if r.CleanOnCreate {
@@ -126,47 +134,20 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 	return args
 }
 
-func (r Runner) initStore() error {
-	GrootfsTestUid, _ := strconv.Atoi(os.Getenv("GROOTFS_TEST_UID"))
-	GrootfsTestGid, _ := strconv.Atoi(os.Getenv("GROOTFS_TEST_GID"))
+// func (r Runner) initStore() error {
+// 	GrootfsTestUid, _ := strconv.Atoi(os.Getenv("GROOTFS_TEST_UID"))
+// 	GrootfsTestGid, _ := strconv.Atoi(os.Getenv("GROOTFS_TEST_GID"))
 
-	storePath := r.StorePath
-	if r.StorePath == "" {
-		configBytes, err := ioutil.ReadFile(r.ConfigPath)
+// 	spec := manager.InitSpec{
+// 		UIDMappings: []groot.IDMappingSpec{
+// 			{HostID: int(GrootfsTestUid), NamespaceID: 0, Size: 1},
+// 			{HostID: 100000, NamespaceID: 1, Size: 65000},
+// 		},
+// 		GIDMappings: []groot.IDMappingSpec{
+// 			{HostID: int(GrootfsTestGid), NamespaceID: 0, Size: 1},
+// 			{HostID: 100000, NamespaceID: 1, Size: 65000},
+// 		},
+// 	}
 
-		if err != nil {
-			return err
-		}
-		cfg := config.Config{}
-		err = yaml.Unmarshal(configBytes, &cfg)
-		if err != nil {
-			return err
-		}
-		storePath = cfg.StorePath
-	}
-
-	whiteoutDevicePath := filepath.Join(storePath, overlayxfs.WhiteoutDevice)
-
-	if _, err := os.Stat(storePath); os.IsNotExist(err) {
-		os.MkdirAll(storePath, 0700)
-	}
-
-	if err := os.Chown(storePath, GrootfsTestUid, GrootfsTestGid); err != nil {
-		return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", GrootfsTestUid, GrootfsTestGid, storePath)
-	}
-
-	if r.Driver == "overlay-xfs" {
-		if _, err := os.Stat(whiteoutDevicePath); os.IsNotExist(err) {
-			if err := syscall.Mknod(whiteoutDevicePath, syscall.S_IFCHR, 0); err != nil {
-				if err != nil && !os.IsExist(err) {
-					return errorspkg.Wrapf(err, "failed to create whiteout device %s", whiteoutDevicePath)
-				}
-			}
-
-			if err := os.Chown(whiteoutDevicePath, GrootfsTestUid, GrootfsTestGid); err != nil {
-				return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", GrootfsTestUid, GrootfsTestGid, whiteoutDevicePath)
-			}
-		}
-	}
-	return nil
-}
+// 	return r.InitStore(spec)
+// }

@@ -27,8 +27,6 @@ var _ = Describe("Builder", func() {
 			WithClean:             false,
 			WithoutMount:          false,
 			ExcludeImageFromQuota: true,
-			UIDMappings:           []string{"config-uid-mapping"},
-			GIDMappings:           []string{"config-gid-mapping"},
 			InsecureRegistries:    []string{"http://example.org"},
 			DiskLimitSizeBytes:    int64(1000),
 		}
@@ -414,60 +412,6 @@ var _ = Describe("Builder", func() {
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(config.MetronEndpoint).To(Equal("config_endpoint:1111"))
-			})
-		})
-	})
-
-	Describe("WithUIDMappings", func() {
-		It("overrides the config's UIDMappings entry", func() {
-			builder = builder.WithUIDMappings([]string{"1", "2"})
-			config, err := builder.Build()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(config.Create.UIDMappings).To(Equal([]string{"1", "2"}))
-		})
-
-		Context("when empty", func() {
-			It("doesn't override the config's UIDMappings entry", func() {
-				builder = builder.WithUIDMappings([]string{})
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.Create.UIDMappings).To(Equal([]string{"config-uid-mapping"}))
-			})
-		})
-
-		Context("when nil", func() {
-			It("doesn't override the config's UIDMappings entry", func() {
-				builder = builder.WithUIDMappings(nil)
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.Create.UIDMappings).To(Equal([]string{"config-uid-mapping"}))
-			})
-		})
-	})
-
-	Describe("WithGIDMappings", func() {
-		It("overrides the config's GIDMappings entry", func() {
-			builder = builder.WithGIDMappings([]string{"1", "2"})
-			config, err := builder.Build()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(config.Create.GIDMappings).To(Equal([]string{"1", "2"}))
-		})
-
-		Context("when empty", func() {
-			It("doesn't override the config's GIDMappings entry", func() {
-				builder = builder.WithGIDMappings([]string{})
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.Create.GIDMappings).To(Equal([]string{"config-gid-mapping"}))
-			})
-		})
-
-		Context("when nil", func() {
-			It("doesn't override the config's GIDMappings entry", func() {
-				builder = builder.WithGIDMappings(nil)
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.Create.GIDMappings).To(Equal([]string{"config-gid-mapping"}))
 			})
 		})
 	})

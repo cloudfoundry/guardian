@@ -112,7 +112,7 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
-		It("emits the sucess count", func() {
+		It("emits the success count", func() {
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -234,7 +234,7 @@ var _ = Describe("Metrics", func() {
 				}).Should(HaveLen(1))
 
 				Expect(*errors[0].Source).To(Equal("grootfs-error.delete"))
-				Expect(*errors[0].Message).To(ContainSubstring("deleting image"))
+				Expect(*errors[0].Message).To(ContainSubstring("permission denied"))
 			})
 
 			It("emits the fail count", func() {

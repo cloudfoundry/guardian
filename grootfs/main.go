@@ -3,6 +3,7 @@ package main
 import (
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -109,6 +110,8 @@ func main() {
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
+		ctx.App.Metadata["configBuilder"] = cfgBuilder
+
 		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), ctx.IsSet("store")).
 			WithFSDriver(ctx.GlobalString("driver"), ctx.IsSet("driver")).
 			WithDraxBin(ctx.GlobalString("drax-bin"), ctx.IsSet("drax-bin")).
@@ -123,7 +126,6 @@ func main() {
 		if err != nil {
 			return cli.NewExitError(err.Error(), 1)
 		}
-		ctx.App.Metadata["configBuilder"] = cfgBuilder
 
 		lagerLogLevel := translateLogLevel(cfg.LogLevel)
 		logger, err := configureLogger(lagerLogLevel, cfg.LogFile)
@@ -135,6 +137,11 @@ func main() {
 		// Sadness. We need to do that becuase we use stderr for logs so user
 		// errors need to end up in stdout.
 		cli.ErrWriter = os.Stdout
+
+		if err := os.Setenv("TMPDIR", filepath.Join(cfg.StorePath, store.TempDirName)); err != nil {
+			logger.Error("setting TMPDIR env var", err)
+			return cli.NewExitError(err.Error(), 1)
+		}
 
 		dropsondeOrigin := grootfs.Name
 		if cfg.MetronEndpoint != "" {

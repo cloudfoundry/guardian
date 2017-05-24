@@ -12,12 +12,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var _ = Describe("StoreNamespaceChecker", func() {
+var _ = Describe("StoreNamespacer", func() {
 	var (
-		storePath        string
-		namespaceChecker *groot.StoreNamespacer
-		uidMappings      []groot.IDMappingSpec
-		gidMappings      []groot.IDMappingSpec
+		storePath       string
+		storeNamespacer *groot.StoreNamespacer
+		uidMappings     []groot.IDMappingSpec
+		gidMappings     []groot.IDMappingSpec
 	)
 
 	BeforeEach(func() {
@@ -28,49 +28,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 	})
 
 	JustBeforeEach(func() {
-		namespaceChecker = groot.NewStoreNamespacer(storePath)
-	})
-
-	Describe("Write", func() {
-		BeforeEach(func() {
-			uidMappings = []groot.IDMappingSpec{
-				groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 10},
-				groot.IDMappingSpec{HostID: 1000, NamespaceID: 0, Size: 1},
-			}
-
-			gidMappings = []groot.IDMappingSpec{
-				groot.IDMappingSpec{HostID: 200000, NamespaceID: 1, Size: 10},
-				groot.IDMappingSpec{HostID: 2000, NamespaceID: 0, Size: 1},
-			}
-		})
-
-		It("creates the correct namespace file", func() {
-			err := namespaceChecker.Write(storePath, uidMappings, gidMappings)
-			Expect(err).NotTo(HaveOccurred())
-
-			namespaceFile := filepath.Join(storePath, store.MetaDirName, "namespace.json")
-			Expect(namespaceFile).To(BeAnExistingFile())
-
-			contents, err := ioutil.ReadFile(namespaceFile)
-			Expect(err).NotTo(HaveOccurred())
-
-			var namespaces map[string][]string
-			Expect(json.Unmarshal(contents, &namespaces)).To(Succeed())
-
-			Expect(namespaces["uid-mappings"]).To(Equal([]string{"0:1000:1", "1:100000:10"}))
-			Expect(namespaces["gid-mappings"]).To(Equal([]string{"0:2000:1", "1:200000:10"}))
-		})
-
-		Context("when it fails to create the namespace file", func() {
-			BeforeEach(func() {
-				storePath = "invalid-path"
-			})
-
-			It("returns an error", func() {
-				err := namespaceChecker.Write(storePath, uidMappings, gidMappings)
-				Expect(err).To(MatchError(ContainSubstring("creating namespace file")))
-			})
-		})
+		storeNamespacer = groot.NewStoreNamespacer(storePath)
 	})
 
 	Describe("Read", func() {
@@ -112,7 +70,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 		})
 
 		It("reads from the namespace file", func() {
-			mappingsFromFile, err := namespaceChecker.Read()
+			mappingsFromFile, err := storeNamespacer.Read()
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(mappingsFromFile).To(Equal(expectedMappings))
@@ -124,7 +82,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := namespaceChecker.Read()
+				_, err := storeNamespacer.Read()
 				Expect(err).To(MatchError(ContainSubstring("reading namespace file")))
 			})
 		})
@@ -135,7 +93,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := namespaceChecker.Read()
+				_, err := storeNamespacer.Read()
 				Expect(err).To(MatchError(ContainSubstring("invalid namespace file")))
 			})
 		})
@@ -148,7 +106,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := namespaceChecker.Read()
+					_, err := storeNamespacer.Read()
 					Expect(err).To(MatchError(ContainSubstring("invalid uid mappings format")))
 				})
 			})
@@ -160,14 +118,14 @@ var _ = Describe("StoreNamespaceChecker", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := namespaceChecker.Read()
+					_, err := storeNamespacer.Read()
 					Expect(err).To(MatchError(ContainSubstring("invalid gid mappings format")))
 				})
 			})
 		})
 	})
 
-	Describe("Check", func() {
+	Describe("ApplyMappings", func() {
 		BeforeEach(func() {
 			uidMappings = []groot.IDMappingSpec{
 				groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 10},
@@ -180,27 +138,34 @@ var _ = Describe("StoreNamespaceChecker", func() {
 			}
 		})
 
-		It("returns true when there's no namespace file", func() {
-			check, err := namespaceChecker.Check(uidMappings, gidMappings)
-			Expect(err).ToNot(HaveOccurred())
-			Expect(check).To(BeTrue())
-		})
+		Context("when there is no namespace file", func() {
+			It("creates the correct namespace file", func() {
+				err := storeNamespacer.ApplyMappings(uidMappings, gidMappings)
+				Expect(err).NotTo(HaveOccurred())
 
-		It("creates the correct namespace file", func() {
-			_, err := namespaceChecker.Check(uidMappings, gidMappings)
-			Expect(err).NotTo(HaveOccurred())
+				namespaceFile := filepath.Join(storePath, store.MetaDirName, "namespace.json")
+				Expect(namespaceFile).To(BeAnExistingFile())
 
-			namespaceFile := filepath.Join(storePath, store.MetaDirName, "namespace.json")
-			Expect(namespaceFile).To(BeAnExistingFile())
+				contents, err := ioutil.ReadFile(namespaceFile)
+				Expect(err).NotTo(HaveOccurred())
 
-			contents, err := ioutil.ReadFile(namespaceFile)
-			Expect(err).NotTo(HaveOccurred())
+				var namespaces map[string][]string
+				Expect(json.Unmarshal(contents, &namespaces)).To(Succeed())
 
-			var namespaces map[string][]string
-			Expect(json.Unmarshal(contents, &namespaces)).To(Succeed())
+				Expect(namespaces["uid-mappings"]).To(Equal([]string{"0:1000:1", "1:100000:10"}))
+				Expect(namespaces["gid-mappings"]).To(Equal([]string{"0:2000:1", "1:200000:10"}))
+			})
 
-			Expect(namespaces["uid-mappings"]).To(Equal([]string{"0:1000:1", "1:100000:10"}))
-			Expect(namespaces["gid-mappings"]).To(Equal([]string{"0:2000:1", "1:200000:10"}))
+			Context("when it fails to create the namespace file", func() {
+				BeforeEach(func() {
+					storePath = "invalid-path"
+				})
+
+				It("returns an error", func() {
+					err := storeNamespacer.ApplyMappings(uidMappings, gidMappings)
+					Expect(err).To(MatchError(ContainSubstring("creating namespace file")))
+				})
+			})
 		})
 
 		Context("when there's a namespace file", func() {
@@ -209,10 +174,8 @@ var _ = Describe("StoreNamespaceChecker", func() {
 				Expect(ioutil.WriteFile(filepath.Join(storePath, store.MetaDirName, "namespace.json"), mappings, 0700)).To(Succeed())
 			})
 
-			It("returns true when the namespaces are the same", func() {
-				check, err := namespaceChecker.Check(uidMappings, gidMappings)
-				Expect(err).ToNot(HaveOccurred())
-				Expect(check).To(BeTrue())
+			It("succeeds when the namespaces are the same", func() {
+				Expect(storeNamespacer.ApplyMappings(uidMappings, gidMappings)).To(Succeed())
 			})
 
 			Context("when uid mapping doesn't match", func() {
@@ -220,10 +183,9 @@ var _ = Describe("StoreNamespaceChecker", func() {
 					uidMappings[0].HostID = 8888
 				})
 
-				It("returns false when the namepsaces are different", func() {
-					check, err := namespaceChecker.Check(uidMappings, gidMappings)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(check).To(BeFalse())
+				It("returns an error", func() {
+					err := storeNamespacer.ApplyMappings(uidMappings, gidMappings)
+					Expect(err).To(MatchError(ContainSubstring("provided UID mappings do not match those already configured in the store")))
 				})
 			})
 
@@ -232,10 +194,9 @@ var _ = Describe("StoreNamespaceChecker", func() {
 					gidMappings[0].HostID = 8888
 				})
 
-				It("returns false when the namepsaces are different", func() {
-					check, err := namespaceChecker.Check(uidMappings, gidMappings)
-					Expect(err).ToNot(HaveOccurred())
-					Expect(check).To(BeFalse())
+				It("returns an error", func() {
+					err := storeNamespacer.ApplyMappings(uidMappings, gidMappings)
+					Expect(err).To(MatchError(ContainSubstring("provided GID mappings do not match those already configured in the store")))
 				})
 			})
 
@@ -247,7 +208,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 				})
 
 				It("returns an error", func() {
-					_, err := namespaceChecker.Check(uidMappings, gidMappings)
+					err := storeNamespacer.ApplyMappings(uidMappings, gidMappings)
 					Expect(err).To(MatchError(ContainSubstring("reading namespace file")))
 				})
 			})
@@ -259,7 +220,7 @@ var _ = Describe("StoreNamespaceChecker", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := namespaceChecker.Check(uidMappings, gidMappings)
+				err := storeNamespacer.ApplyMappings(uidMappings, gidMappings)
 				Expect(err).To(MatchError(ContainSubstring("creating namespace file")))
 			})
 		})

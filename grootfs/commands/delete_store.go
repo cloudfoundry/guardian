@@ -1,15 +1,11 @@
 package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
-	"os"
-
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
-
-	"github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
 
@@ -30,11 +26,6 @@ var DeleteStoreCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		if _, err := os.Stat(cfg.StorePath); os.IsNotExist(err) {
-			logger.Error("store path doesn't exist", err)
-			return cli.NewExitError(errors.Wrap(err, "store path doesn't exist").Error(), 1)
-		}
-
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
 			logger.Error("failed-to-initialise-driver", err)
@@ -43,8 +34,7 @@ var DeleteStoreCommand = cli.Command{
 
 		storePath := cfg.StorePath
 		locksmith := locksmith.NewSharedFileSystem(storePath, metrics.NewEmitter(systemReporter(cfg.SlowActionThreshold)))
-		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
-		var _ = manager.ConfigureStore(logger, 0, 0)
+		manager := manager.New(storePath, locksmith, nil, fsDriver, fsDriver, fsDriver)
 
 		if err := manager.DeleteStore(logger); err != nil {
 			logger.Error("cleaning-up-store-failed", err)

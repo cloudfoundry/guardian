@@ -30,17 +30,17 @@ func NewStoreNamespacer(storePath string) *StoreNamespacer {
 	}
 }
 
-func (n *StoreNamespacer) Check(uidMappings, gidMappings []IDMappingSpec) (bool, error) {
+func (n *StoreNamespacer) ApplyMappings(uidMappings, gidMappings []IDMappingSpec) error {
 	namespaceFilePath := n.namespaceFilePath()
 
 	_, err := os.Stat(namespaceFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			if err := n.Write(n.storePath, uidMappings, gidMappings); err != nil {
-				return false, err
+			if err := n.write(uidMappings, gidMappings); err != nil {
+				return err
 			}
 
-			return true, nil
+			return nil
 		}
 	}
 
@@ -73,7 +73,7 @@ func (n *StoreNamespacer) Read() (IDMappings, error) {
 	}, nil
 }
 
-func (n *StoreNamespacer) Write(storePath string, uidMappings, gidMappings []IDMappingSpec) error {
+func (n *StoreNamespacer) write(uidMappings, gidMappings []IDMappingSpec) error {
 	namespaceStore, err := os.Create(n.namespaceFilePath())
 	if err != nil {
 		return errorspkg.Wrap(err, "creating namespace file")
@@ -92,26 +92,26 @@ func (n *StoreNamespacer) Write(storePath string, uidMappings, gidMappings []IDM
 	return nil
 }
 
-func (n *StoreNamespacer) validateNamespace(namespaceFilePath string, uidMappings, gidMappings []IDMappingSpec) (bool, error) {
+func (n *StoreNamespacer) validateNamespace(namespaceFilePath string, uidMappings, gidMappings []IDMappingSpec) error {
 	namespaceStore, err := os.Open(namespaceFilePath)
 	if err != nil {
-		return false, errorspkg.Wrap(err, "opening namespace file")
+		return errorspkg.Wrap(err, "opening namespace file")
 	}
 	defer namespaceStore.Close()
 	var namespace mappings
 	if err := json.NewDecoder(namespaceStore).Decode(&namespace); err != nil {
-		return false, errorspkg.Wrapf(err, "reading namespace file %s", namespaceStore.Name())
+		return errorspkg.Wrapf(err, "reading namespace file %s", namespaceStore.Name())
 	}
 
 	if !reflect.DeepEqual(namespace.UIDMappings, n.normalizeMappings(uidMappings)) {
-		return false, nil
+		return errorspkg.New("provided UID mappings do not match those already configured in the store")
 	}
 
 	if !reflect.DeepEqual(namespace.GIDMappings, n.normalizeMappings(gidMappings)) {
-		return false, nil
+		return errorspkg.New("provided GID mappings do not match those already configured in the store")
 	}
 
-	return true, nil
+	return nil
 }
 
 func (n *StoreNamespacer) namespaceFilePath() string {

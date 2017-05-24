@@ -83,15 +83,14 @@ var InitStoreCommand = cli.Command{
 		}
 		storeSizeBytes := cfg.Init.StoreSizeBytes
 
-		namespaceWriter := groot.NewStoreNamespacer(storePath)
+		namespacer := groot.NewStoreNamespacer(storePath)
 		spec := manager.InitSpec{
-			UIDMappings:     uidMappings,
-			GIDMappings:     gidMappings,
-			NamespaceWriter: namespaceWriter,
-			StoreSizeBytes:  storeSizeBytes,
+			UIDMappings:    uidMappings,
+			GIDMappings:    gidMappings,
+			StoreSizeBytes: storeSizeBytes,
 		}
 
-		manager := manager.New(storePath, locksmith, fsDriver, fsDriver, fsDriver)
+		manager := manager.New(storePath, locksmith, namespacer, fsDriver, fsDriver, fsDriver)
 		if err := manager.InitStore(logger, spec); err != nil {
 			logger.Error("cleaning-up-store-failed", err)
 			return cli.NewExitError(errorspkg.Cause(err).Error(), 1)

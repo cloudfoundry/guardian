@@ -243,7 +243,7 @@ func (r Runner) WithNoClean() Runner {
 
 func (r Runner) RunningAsUser(uid, gid uint32) Runner {
 	nr := r
-	nr.SysCredential = &syscall.Credential{
+	nr.SysCredential = syscall.Credential{
 		Uid: uid,
 		Gid: gid,
 	}

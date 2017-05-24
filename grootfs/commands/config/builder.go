@@ -31,8 +31,6 @@ type Create struct {
 	WithoutMount          bool     `yaml:"without_mount"`
 	DiskLimitSizeBytes    int64    `yaml:"disk_limit_size_bytes"`
 	InsecureRegistries    []string `yaml:"insecure_registries"`
-	GIDMappings           []string `yaml:"gid_mappings"`
-	UIDMappings           []string `yaml:"uid_mappings"`
 }
 
 type Clean struct {
@@ -157,24 +155,6 @@ func (b *Builder) WithMetronEndpoint(metronEndpoint string) *Builder {
 	}
 
 	b.config.MetronEndpoint = metronEndpoint
-	return b
-}
-
-func (b *Builder) WithUIDMappings(uidMappings []string) *Builder {
-	if uidMappings == nil || len(uidMappings) == 0 {
-		return b
-	}
-
-	b.config.Create.UIDMappings = uidMappings
-	return b
-}
-
-func (b *Builder) WithGIDMappings(gidMappings []string) *Builder {
-	if gidMappings == nil || len(gidMappings) == 0 {
-		return b
-	}
-
-	b.config.Create.GIDMappings = gidMappings
 	return b
 }
 

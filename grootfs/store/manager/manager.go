@@ -25,32 +25,33 @@ type StoreDriver interface {
 }
 
 type Manager struct {
-	storePath    string
-	imageDriver  image_cloner.ImageDriver
-	volumeDriver base_image_puller.VolumeDriver
-	storeDriver  StoreDriver
-	locksmith    groot.Locksmith
+	storePath       string
+	imageDriver     image_cloner.ImageDriver
+	volumeDriver    base_image_puller.VolumeDriver
+	storeDriver     StoreDriver
+	locksmith       groot.Locksmith
+	storeNamespacer StoreNamespacer
 }
 
-//go:generate counterfeiter . NamespaceWriter
-type NamespaceWriter interface {
-	Write(storePath string, uidMappings, gidMappings []groot.IDMappingSpec) error
+//go:generate counterfeiter . StoreNamespacer
+type StoreNamespacer interface {
+	ApplyMappings(uidMappings, gidMappings []groot.IDMappingSpec) error
 }
 
 type InitSpec struct {
-	UIDMappings     []groot.IDMappingSpec
-	GIDMappings     []groot.IDMappingSpec
-	NamespaceWriter NamespaceWriter
-	StoreSizeBytes  int64
+	UIDMappings    []groot.IDMappingSpec
+	GIDMappings    []groot.IDMappingSpec
+	StoreSizeBytes int64
 }
 
-func New(storePath string, locksmith groot.Locksmith, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver StoreDriver) *Manager {
+func New(storePath string, locksmith groot.Locksmith, storeNamespacer StoreNamespacer, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver StoreDriver) *Manager {
 	return &Manager{
-		storePath:    storePath,
-		volumeDriver: volumeDriver,
-		imageDriver:  imageDriver,
-		storeDriver:  storeDriver,
-		locksmith:    locksmith,
+		storePath:       storePath,
+		volumeDriver:    volumeDriver,
+		imageDriver:     imageDriver,
+		storeDriver:     storeDriver,
+		locksmith:       locksmith,
+		storeNamespacer: storeNamespacer,
 	}
 }
 
@@ -79,9 +80,15 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 		return errorspkg.Wrap(err, "validating store path filesystem")
 	}
 
-	if err := os.MkdirAll(m.storePath, 0755); err != nil {
+	if err := os.MkdirAll(filepath.Join(m.storePath, store.MetaDirName), 0755); err != nil {
 		logger.Error("init-store-failed", err)
 		return errorspkg.Wrap(err, "initializing store")
+	}
+
+	err = m.storeNamespacer.ApplyMappings(spec.UIDMappings, spec.GIDMappings)
+	if err != nil {
+		logger.Error("applying-namespace-mappings-failed", err)
+		return err
 	}
 
 	ownerUID, ownerGID := m.findStoreOwner(spec.UIDMappings, spec.GIDMappings)
@@ -90,26 +97,15 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 		return errorspkg.Wrap(err, "chowing store")
 	}
 
-	if err := m.storeDriver.ConfigureStore(logger, m.storePath, ownerUID, ownerGID); err != nil {
+	if err := m.configureStore(logger, ownerUID, ownerGID); err != nil {
 		logger.Error("store-filesystem-specific-configuration-failed", err)
 		return errorspkg.Wrap(err, "running filesystem-specific configuration")
-	}
-
-	if err := m.createInternalDirectory(logger, store.MetaDirName, ownerUID, ownerGID); err != nil {
-		logger.Error("creating-metadata-dir-failed", err)
-		return errorspkg.Wrap(err, "creating metadata dir")
-	}
-
-	err = spec.NamespaceWriter.Write(m.storePath, spec.UIDMappings, spec.GIDMappings)
-	if err != nil {
-		logger.Error("writing-namespace-file-failed", err)
-		return errorspkg.Wrapf(err, "writing namespace file for storePath %s", m.storePath)
 	}
 
 	return nil
 }
 
-func (m *Manager) ConfigureStore(logger lager.Logger, ownerUID, ownerGID int) error {
+func (m *Manager) configureStore(logger lager.Logger, ownerUID, ownerGID int) error {
 	logger = logger.Session("store-manager-configure-store", lager.Data{"storePath": m.storePath, "ownerUID": ownerUID, "ownerGID": ownerGID})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -118,38 +114,24 @@ func (m *Manager) ConfigureStore(logger lager.Logger, ownerUID, ownerGID int) er
 		return err
 	}
 
-	if err := os.Setenv("TMPDIR", filepath.Join(m.storePath, store.TempDirName)); err != nil {
-		return errorspkg.Wrap(err, "could not set TMPDIR")
+	if err := os.Chown(m.storePath, ownerUID, ownerGID); err != nil {
+		logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
+		return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, m.storePath)
+	}
+
+	if err := os.Chmod(m.storePath, 0700); err != nil {
+		logger.Error("store-permission-change-failed", err)
+		return errorspkg.Wrapf(err, "changing store permissions %s", m.storePath)
 	}
 
 	requiredFolders := []string{
 		store.ImageDirName,
 		store.VolumesDirName,
 		store.CacheDirName,
-		store.LocksDirName,
 		store.MetaDirName,
+		store.LocksDirName,
 		store.TempDirName,
 		filepath.Join(store.MetaDirName, "dependencies"),
-	}
-
-	if _, err := os.Stat(m.storePath); os.IsNotExist(err) {
-		if err := os.Mkdir(m.storePath, 0755); err != nil {
-			dir, err1 := os.Lstat(m.storePath)
-			if err1 != nil || !dir.IsDir() {
-				logger.Error("creating-store-path-failed", err)
-				return errorspkg.Wrapf(err, "making directory `%s`", m.storePath)
-			}
-		}
-
-		if err := os.Chown(m.storePath, ownerUID, ownerGID); err != nil {
-			logger.Error("store-ownership-change-failed", err, lager.Data{"target-uid": ownerUID, "target-gid": ownerGID})
-			return errorspkg.Wrapf(err, "changing store owner to %d:%d for path %s", ownerUID, ownerGID, m.storePath)
-		}
-
-		if err := os.Chmod(m.storePath, 0700); err != nil {
-			logger.Error("store-permission-change-failed", err)
-			return errorspkg.Wrapf(err, "changing store permissions %s", m.storePath)
-		}
 	}
 
 	for _, folderName := range requiredFolders {
@@ -163,11 +145,6 @@ func (m *Manager) ConfigureStore(logger lager.Logger, ownerUID, ownerGID int) er
 		return errorspkg.Wrap(err, "running filesystem-specific configuration")
 	}
 
-	if err := m.storeDriver.ValidateFileSystem(logger, m.storePath); err != nil {
-		logger.Error("filesystem-validation-failed", err)
-		return errorspkg.Wrap(err, "validating file system")
-	}
-
 	return nil
 }
 
@@ -176,10 +153,15 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
+	if _, err := os.Stat(m.storePath); os.IsNotExist(err) {
+		logger.Info("store-not-found", lager.Data{"storePath": m.storePath})
+		return nil
+	}
+
 	fileLock, err := m.locksmith.Lock(groot.GlobalLockKey)
 	if err != nil {
 		logger.Error("locking-failed", err)
-		return errorspkg.Wrap(err, "requesting lock")
+		return errorspkg.Wrap(err, "failed to lock - refusing to delete possibly corrupted store")
 	}
 	defer m.locksmith.Unlock(fileLock)
 

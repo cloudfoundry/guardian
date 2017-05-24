@@ -23,7 +23,6 @@ import (
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
-	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 
 	"github.com/docker/distribution/registry/api/errcode"
@@ -40,14 +39,6 @@ var CreateCommand = cli.Command{
 		cli.Int64Flag{
 			Name:  "disk-limit-size-bytes",
 			Usage: "Inclusive disk limit (i.e: includes all layers in the filesystem)",
-		},
-		cli.StringSliceFlag{
-			Name:  "uid-mapping",
-			Usage: "UID mapping for image translation, e.g.: <Namespace UID>:<Host UID>:<Size>",
-		},
-		cli.StringSliceFlag{
-			Name:  "gid-mapping",
-			Usage: "GID mapping for image translation, e.g.: <Namespace GID>:<Host GID>:<Size>",
 		},
 		cli.StringSliceFlag{
 			Name:  "insecure-registry",
@@ -95,8 +86,6 @@ var CreateCommand = cli.Command{
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
 		configBuilder.WithInsecureRegistries(ctx.StringSlice("insecure-registry")).
-			WithUIDMappings(ctx.StringSlice("uid-mapping")).
-			WithGIDMappings(ctx.StringSlice("gid-mapping")).
 			WithDiskLimitSizeBytes(ctx.Int64("disk-limit-size-bytes"),
 				ctx.IsSet("disk-limit-size-bytes")).
 			WithExcludeImageFromQuota(ctx.Bool("exclude-image-from-quota"),
@@ -119,22 +108,10 @@ var CreateCommand = cli.Command{
 		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
 
-		uidMappings, err := parseIDMappings(cfg.Create.UIDMappings)
+		storeNamespacer := groot.NewStoreNamespacer(storePath)
+		idMappings, err := storeNamespacer.Read()
 		if err != nil {
-			err = errorspkg.Errorf("parsing uid-mapping: %s", err)
-			logger.Error("parsing-command", err)
 			return newExitError(err.Error(), 1)
-		}
-		gidMappings, err := parseIDMappings(cfg.Create.GIDMappings)
-		if err != nil {
-			err = errorspkg.Errorf("parsing gid-mapping: %s", err)
-			logger.Error("parsing-command", err)
-			return newExitError(err.Error(), 1)
-		}
-
-		storeOwnerUid, storeOwnerGid, err := findStoreOwner(uidMappings, gidMappings)
-		if err != nil {
-			return err
 		}
 
 		fsDriver, err := createFileSystemDriver(cfg)
@@ -145,14 +122,6 @@ var CreateCommand = cli.Command{
 		metricsEmitter := metrics.NewEmitter(systemReporter(cfg.SlowActionThreshold))
 		sharedLocksmith := locksmithpkg.NewSharedFileSystem(storePath, metricsEmitter)
 		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(storePath, metricsEmitter)
-
-		manager := manager.New(storePath, sharedLocksmith, fsDriver, fsDriver, fsDriver)
-		if err = manager.ConfigureStore(logger, storeOwnerUid, storeOwnerGid); err != nil {
-			exitErr := errorspkg.Wrapf(errorspkg.Cause(err), "Image id '%s'", id)
-			logger.Error("failed-to-setup-store", err, lager.Data{"id": id})
-			return newExitError(exitErr.Error(), 1)
-		}
-
 		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
 
 		runner := commandrunner.New()
@@ -192,12 +161,10 @@ var CreateCommand = cli.Command{
 		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
 		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
 
-		namespaceChecker := groot.NewStoreNamespacer(storePath)
-
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()
 		creator := groot.IamCreator(
 			imageCloner, baseImagePuller, sharedLocksmith, rootFSConfigurer,
-			dependencyManager, metricsEmitter, cleaner, namespaceChecker,
+			dependencyManager, metricsEmitter, cleaner,
 		)
 
 		createSpec := groot.CreateSpec{
@@ -206,8 +173,8 @@ var CreateCommand = cli.Command{
 			BaseImage:                   baseImage,
 			DiskLimit:                   cfg.Create.DiskLimitSizeBytes,
 			ExcludeBaseImageFromQuota:   cfg.Create.ExcludeImageFromQuota,
-			UIDMappings:                 uidMappings,
-			GIDMappings:                 gidMappings,
+			UIDMappings:                 idMappings.UIDMappings,
+			GIDMappings:                 idMappings.GIDMappings,
 			CleanOnCreate:               cfg.Create.WithClean,
 			CleanOnCreateThresholdBytes: cfg.Clean.ThresholdBytes,
 			CleanOnCreateIgnoreImages:   cfg.Clean.IgnoreBaseImages,
