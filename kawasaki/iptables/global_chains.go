@@ -269,7 +269,7 @@ func (s Starter) Start() error {
 }
 
 func (s Starter) chainExists(chainName string) bool {
-	cmd := exec.Command(s.iptables.iptablesBinPath, "-w", "-L", chainName)
+	cmd := exec.Command(s.iptables.iptablesBinPath, "-w", "-n", "-L", chainName)
 	cmd.Env = append(cmd.Env, fmt.Sprintf("PATH=%s", os.Getenv("PATH")))
 	return s.iptables.run("checking-chain-exists", cmd) == nil
 }

@@ -94,7 +94,7 @@ var _ = Describe("Setup", func() {
 			BeforeEach(func() {
 				fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "/sbin/iptables",
-					Args: []string{"-w", "-L", "prefix-input"},
+					Args: []string{"-w", "-n", "-L", "prefix-input"},
 				}, func(_ *exec.Cmd) error {
 					return errors.New("exit status 1")
 				})
@@ -174,7 +174,7 @@ var _ = Describe("Setup", func() {
 			BeforeEach(func() {
 				fakeRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "/sbin/iptables",
-					Args: []string{"-w", "-L", "prefix-input"},
+					Args: []string{"-w", "-n", "-L", "prefix-input"},
 				}, func(_ *exec.Cmd) error {
 					return nil
 				})
