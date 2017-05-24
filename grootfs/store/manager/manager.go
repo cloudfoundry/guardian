@@ -56,7 +56,7 @@ func New(storePath string, locksmith groot.Locksmith, storeNamespacer StoreNames
 }
 
 func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
-	logger = logger.Session("store-manager-init-store", lager.Data{"storePath": m.storePath})
+	logger = logger.Session("store-manager-init-store", lager.Data{"storePath": m.storePath, "spec": spec})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
@@ -68,16 +68,21 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 	}
 
 	if spec.StoreSizeBytes > 0 {
-		if err := m.createAndMountFilesystem(logger, spec.StoreSizeBytes); err != nil {
-			return err
-		}
-
 		validationPath = m.storePath
 	}
 
 	if err := m.storeDriver.ValidateFileSystem(logger, validationPath); err != nil {
 		logger.Error("store-path-validation-failed", err)
-		return errorspkg.Wrap(err, "validating store path filesystem")
+		if spec.StoreSizeBytes <= 0 {
+			return errorspkg.Wrap(err, "validating store path filesystem")
+		}
+
+		if err := m.createAndMountFilesystem(logger, spec.StoreSizeBytes); err != nil {
+			return err
+		}
+
+	} else {
+		logger.Info("store-already-initialized")
 	}
 
 	if err := os.MkdirAll(filepath.Join(m.storePath, store.MetaDirName), 0755); err != nil {

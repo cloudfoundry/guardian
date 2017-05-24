@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Manager", func() {
@@ -250,6 +251,7 @@ var _ = Describe("Manager", func() {
 			BeforeEach(func() {
 				spec.StoreSizeBytes = 1024 * 1024 * 500
 				backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
+				storeDriver.ValidateFileSystemReturns(errors.New("not initilized yet"))
 			})
 
 			AfterEach(func() {
@@ -305,6 +307,17 @@ var _ = Describe("Manager", func() {
 				})
 			})
 
+			Context("when the store is considered valid", func() {
+				BeforeEach(func() {
+					storeDriver.ValidateFileSystemReturns(nil)
+				})
+
+				It("doesn't call the storedriver to initialize it", func() {
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
+					Expect(storeDriver.InitFilesystemCallCount()).To(BeZero())
+				})
+			})
+
 			Context("when the backingstore file already exists", func() {
 				BeforeEach(func() {
 					Expect(ioutil.WriteFile(backingStoreFile, []byte{}, 0700)).To(Succeed())
@@ -347,6 +360,23 @@ var _ = Describe("Manager", func() {
 			It("returns an error", func() {
 				err := manager.InitStore(logger, spec)
 				Expect(err).To(MatchError(ContainSubstring("not possible")))
+			})
+		})
+
+		Context("when the store is already initialized", func() {
+			JustBeforeEach(func() {
+				spec.StoreSizeBytes = 10000000000000
+				storeDriver.ValidateFileSystemReturns(nil)
+			})
+
+			It("logs the event", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(logger.Buffer()).To(gbytes.Say("store-already-initialized"))
+			})
+
+			It("doesn't try to recreate/mount the backing store", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(storeDriver.InitFilesystemCallCount()).To(Equal(0))
 			})
 		})
 	})

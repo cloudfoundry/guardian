@@ -68,6 +68,19 @@ var _ = Describe("Init Store", func() {
 			Expect(buffer).To(gbytes.Say("XFS"))
 		})
 
+		Context("when the given store path is already initialized", func() {
+			BeforeEach(func() {
+				Expect(runner.InitStore(spec)).To(Succeed())
+			})
+
+			It("logs the event", func() {
+				logs := gbytes.NewBuffer()
+				Expect(runner.WithStderr(logs).InitStore(spec)).To(Succeed())
+
+				Expect(logs).To(gbytes.Say("store-already-initialized"))
+			})
+		})
+
 		Context("when the given backing store size is too small", func() {
 			BeforeEach(func() {
 				spec.StoreSizeBytes = 199 * 1024 * 1024
@@ -140,7 +153,7 @@ var _ = Describe("Init Store", func() {
 
 	Context("when the given store path is already initialized", func() {
 		BeforeEach(func() {
-			Expect(os.MkdirAll(runner.StorePath, 0755)).To(Succeed())
+			Expect(runner.InitStore(spec)).To(Succeed())
 		})
 
 		It("does not return an error", func() {

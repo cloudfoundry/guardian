@@ -43,7 +43,7 @@ mount_storage() {
 
     # Mount XFS
     mkdir /mnt/xfs-${i}
-    mount -t xfs -o pquota /xfs_volume_${i} /mnt/xfs-${i}
+    mount -t xfs -o pquota,noatime,nobarrier /xfs_volume_${i} /mnt/xfs-${i}
     chmod 777 -R /mnt/xfs-${i}
   done
 }
