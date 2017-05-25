@@ -34,9 +34,9 @@ var DeleteStoreCommand = cli.Command{
 
 		storePath := cfg.StorePath
 		locksmith := locksmith.NewSharedFileSystem(storePath, metrics.NewEmitter(systemReporter(cfg.SlowActionThreshold)))
-		manager := manager.New(storePath, locksmith, nil, fsDriver, fsDriver, fsDriver)
+		manager := manager.New(storePath, nil, fsDriver, fsDriver, fsDriver)
 
-		if err := manager.DeleteStore(logger); err != nil {
+		if err := manager.DeleteStore(logger, locksmith); err != nil {
 			logger.Error("cleaning-up-store-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}

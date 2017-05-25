@@ -58,7 +58,7 @@ var _ = Describe("Manager", func() {
 	})
 
 	JustBeforeEach(func() {
-		manager = managerpkg.New(storePath, locksmith, namespacer, volDriver, imgDriver, storeDriver)
+		manager = managerpkg.New(storePath, namespacer, volDriver, imgDriver, storeDriver)
 	})
 
 	Describe("InitStore", func() {
@@ -456,7 +456,7 @@ var _ = Describe("Manager", func() {
 		})
 
 		It("uses the image driver to delete all images in the store path", func() {
-			Expect(manager.DeleteStore(logger)).To(Succeed())
+			Expect(manager.DeleteStore(logger, locksmith)).To(Succeed())
 
 			Expect(imgDriver.DestroyImageCallCount()).To(Equal(2))
 
@@ -468,7 +468,7 @@ var _ = Describe("Manager", func() {
 		})
 
 		It("uses the volume driver to delete all volumes in the store path", func() {
-			Expect(manager.DeleteStore(logger)).To(Succeed())
+			Expect(manager.DeleteStore(logger, locksmith)).To(Succeed())
 
 			Expect(volDriver.DestroyVolumeCallCount()).To(Equal(2))
 
@@ -480,7 +480,7 @@ var _ = Describe("Manager", func() {
 		})
 
 		It("requests a lock", func() {
-			Expect(manager.DeleteStore(logger)).To(Succeed())
+			Expect(manager.DeleteStore(logger, locksmith)).To(Succeed())
 			Expect(locksmith.LockCallCount()).To(Equal(1))
 			Expect(locksmith.UnlockCallCount()).To(Equal(1))
 
@@ -490,7 +490,7 @@ var _ = Describe("Manager", func() {
 
 		It("deletes the store path", func() {
 			Expect(storePath).To(BeAnExistingFile())
-			Expect(manager.DeleteStore(logger)).To(Succeed())
+			Expect(manager.DeleteStore(logger, locksmith)).To(Succeed())
 			Expect(storePath).ToNot(BeAnExistingFile())
 		})
 
@@ -500,7 +500,7 @@ var _ = Describe("Manager", func() {
 			})
 
 			It("returns an error", func() {
-				err := manager.DeleteStore(logger)
+				err := manager.DeleteStore(logger, locksmith)
 				Expect(err).To(MatchError(ContainSubstring("failed to delete")))
 			})
 		})
@@ -511,7 +511,7 @@ var _ = Describe("Manager", func() {
 			})
 
 			It("returns an error", func() {
-				err := manager.DeleteStore(logger)
+				err := manager.DeleteStore(logger, locksmith)
 				Expect(err).To(MatchError(ContainSubstring("failed to delete")))
 			})
 		})
@@ -522,7 +522,7 @@ var _ = Describe("Manager", func() {
 			})
 
 			It("returns an error", func() {
-				err := manager.DeleteStore(logger)
+				err := manager.DeleteStore(logger, locksmith)
 				Expect(err).To(MatchError(ContainSubstring("cant do it")))
 			})
 		})
@@ -533,7 +533,7 @@ var _ = Describe("Manager", func() {
 			})
 
 			It("doesn't fail", func() {
-				Expect(manager.DeleteStore(logger)).To(Succeed())
+				Expect(manager.DeleteStore(logger, locksmith)).To(Succeed())
 			})
 		})
 
@@ -543,7 +543,7 @@ var _ = Describe("Manager", func() {
 			})
 
 			It("fails", func() {
-				Expect(manager.DeleteStore(logger)).To(Succeed())
+				Expect(manager.DeleteStore(logger, locksmith)).To(Succeed())
 			})
 		})
 	})

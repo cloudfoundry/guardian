@@ -6,8 +6,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/metrics"
-	"code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 
@@ -67,8 +65,6 @@ var InitStoreCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		locksmith := locksmith.NewExclusiveFileSystem(storePath, metrics.NewEmitter(systemReporter(cfg.SlowActionThreshold)))
-
 		uidMappings, err := parseIDMappings(ctx.StringSlice("uid-mapping"))
 		if err != nil {
 			err = errorspkg.Errorf("parsing uid-mapping: %s", err)
@@ -90,7 +86,7 @@ var InitStoreCommand = cli.Command{
 			StoreSizeBytes: storeSizeBytes,
 		}
 
-		manager := manager.New(storePath, locksmith, namespacer, fsDriver, fsDriver, fsDriver)
+		manager := manager.New(storePath, namespacer, fsDriver, fsDriver, fsDriver)
 		if err := manager.InitStore(logger, spec); err != nil {
 			logger.Error("cleaning-up-store-failed", err)
 			return cli.NewExitError(errorspkg.Cause(err).Error(), 1)

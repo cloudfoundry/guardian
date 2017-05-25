@@ -29,7 +29,6 @@ type Manager struct {
 	imageDriver     image_cloner.ImageDriver
 	volumeDriver    base_image_puller.VolumeDriver
 	storeDriver     StoreDriver
-	locksmith       groot.Locksmith
 	storeNamespacer StoreNamespacer
 }
 
@@ -44,13 +43,12 @@ type InitSpec struct {
 	StoreSizeBytes int64
 }
 
-func New(storePath string, locksmith groot.Locksmith, storeNamespacer StoreNamespacer, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver StoreDriver) *Manager {
+func New(storePath string, storeNamespacer StoreNamespacer, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver StoreDriver) *Manager {
 	return &Manager{
 		storePath:       storePath,
 		volumeDriver:    volumeDriver,
 		imageDriver:     imageDriver,
 		storeDriver:     storeDriver,
-		locksmith:       locksmith,
 		storeNamespacer: storeNamespacer,
 	}
 }
@@ -153,7 +151,7 @@ func (m *Manager) configureStore(logger lager.Logger, ownerUID, ownerGID int) er
 	return nil
 }
 
-func (m *Manager) DeleteStore(logger lager.Logger) error {
+func (m *Manager) DeleteStore(logger lager.Logger, locksmith groot.Locksmith) error {
 	logger = logger.Session("store-manager-delete-store")
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -163,12 +161,12 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 		return nil
 	}
 
-	fileLock, err := m.locksmith.Lock(groot.GlobalLockKey)
+	fileLock, err := locksmith.Lock(groot.GlobalLockKey)
 	if err != nil {
 		logger.Error("locking-failed", err)
 		return errorspkg.Wrap(err, "failed to lock - refusing to delete possibly corrupted store")
 	}
-	defer m.locksmith.Unlock(fileLock)
+	defer locksmith.Unlock(fileLock)
 
 	existingImages, err := m.images()
 	if err != nil {
