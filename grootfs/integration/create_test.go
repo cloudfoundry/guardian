@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/manager"
@@ -380,6 +381,38 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).To(MatchError(ContainSubstring("parsing image url: parse")))
 			Expect(err).To(MatchError(ContainSubstring("invalid URL escape")))
+		})
+	})
+
+	Context("when StorePath doesn't match the given driver", func() {
+		var (
+			storePath string
+			runner    runner.Runner
+		)
+
+		BeforeEach(func() {
+			driver := "overlay-xfs"
+			var err error
+			storePath, err = ioutil.TempDir("/mnt/xfs-1", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			if Driver == "overlay-xfs" {
+				driver = "btrfs"
+				storePath, err = ioutil.TempDir("/mnt/btrfs", "")
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			runner = Runner.WithStore(storePath)
+			runner.WithDriver(driver).InitStore(manager.InitSpec{})
+		})
+
+		It("returns an error", func() {
+			_, err := runner.Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+			})
+			errMessage := fmt.Sprintf("Store path filesystem (%s) is incompatible with requested driver", storePath)
+			Expect(err).To(MatchError(ContainSubstring(errMessage)))
 		})
 	})
 
