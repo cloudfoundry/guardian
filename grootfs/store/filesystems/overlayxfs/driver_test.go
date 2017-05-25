@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/filesystems"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -81,7 +82,7 @@ var _ = Describe("Driver", func() {
 			Expect(err).NotTo(HaveOccurred())
 			statfs := syscall.Statfs_t{}
 			Expect(syscall.Statfs(storePath, &statfs)).To(Succeed())
-			Expect(statfs.Type).To(Equal(overlayxfs.XfsType))
+			Expect(statfs.Type).To(Equal(filesystems.XfsType))
 		})
 
 		It("successfully mounts the filesystem with the correct mount options", func() {

@@ -58,7 +58,7 @@ func (d *Driver) ValidateFileSystem(logger lager.Logger, path string) error {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	if err := filesystems.CheckFSPath(path, BtrfsType, "user_subvol_rm_allowed"); err != nil {
+	if err := filesystems.CheckFSPath(path, "btrfs", "user_subvol_rm_allowed"); err != nil {
 		logger.Error("validating-filesystem", err)
 		return errorspkg.Wrap(err, "btrfs filesystem validation")
 	}

@@ -2,6 +2,7 @@ package filesystems
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"strings"
 	"syscall"
@@ -9,21 +10,31 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
-func CheckFSPath(path string, expectedFilesystem int64, mountOptions ...string) error {
+const (
+	XfsType   = int64(0x58465342)
+	BtrfsType = int64(0x9123683E)
+)
+
+func CheckFSPath(path string, filesystem string, mountOptions ...string) error {
 	statfs := syscall.Statfs_t{}
 	err := syscall.Statfs(path, &statfs)
 	if err != nil {
 		return errorspkg.Wrapf(err, "Failed to detect type of filesystem")
 	}
 
-	if statfs.Type != expectedFilesystem {
+	fsType, err := filesystemCode(filesystem)
+	if err != nil {
+		return err
+	}
+
+	if statfs.Type != fsType {
 		return errorspkg.Errorf("Store path filesystem (%s) is incompatible with requested driver", path)
 	}
 
-	return checkMountOptions(path, mountOptions...)
+	return checkMountOptions(path, filesystem, mountOptions...)
 }
 
-func checkMountOptions(path string, options ...string) error {
+func checkMountOptions(path, filesystem string, options ...string) error {
 	mounts, err := os.Open("/proc/mounts")
 	if err != nil {
 		return errorspkg.Errorf("Failed to open /proc/mounts: %s", err.Error())
@@ -32,7 +43,7 @@ func checkMountOptions(path string, options ...string) error {
 	scanner := bufio.NewScanner(mounts)
 	for scanner.Scan() {
 		mountPoint := scanner.Text()
-		if !strings.Contains(mountPoint, path) {
+		if !strings.Contains(mountPoint, fmt.Sprintf("%s %s", filesystem, path)) {
 			continue
 		}
 
@@ -46,4 +57,15 @@ func checkMountOptions(path string, options ...string) error {
 	}
 
 	return nil
+}
+
+func filesystemCode(filesystem string) (int64, error) {
+	switch filesystem {
+	case "xfs":
+		return XfsType, nil
+	case "btrfs":
+		return BtrfsType, nil
+	default:
+		return 0, errorspkg.Errorf("filesystem %s is not supported", filesystem)
+	}
 }

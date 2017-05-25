@@ -6,7 +6,6 @@ const (
 	WorkDir        = "workdir"
 	RootfsDir      = "rootfs"
 	imageInfoName  = "image_info"
-	XfsType        = int64(0x58465342)
 	WhiteoutDevice = "whiteout_dev"
 	LinksDirName   = "l"
 )
