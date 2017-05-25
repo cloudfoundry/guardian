@@ -23,6 +23,15 @@ var _ = Describe("LimitsRule", func() {
 		Expect(*(newBndl.Resources().Memory.Swap)).To(BeNumerically("==", 4096))
 	})
 
+	It("sets the correct TCPMemoryLimit in the bundle resources", func() {
+		limits := bundlerules.Limits{
+			TCPMemoryLimit: 100,
+		}
+		newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{})
+
+		Expect(*(newBndl.Resources().Memory.KernelTCP)).To(Equal(limits.TCPMemoryLimit))
+	})
+
 	It("sets the provided BlockIOWeight in the bundle resources", func() {
 		limits := bundlerules.Limits{
 			BlockIOWeight: 100,

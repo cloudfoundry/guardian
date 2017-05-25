@@ -217,6 +217,7 @@ type ServerCommand struct {
 
 	Limits struct {
 		CpuQuotaPerShare     uint64 `long:"cpu-quota-per-share" default:"0" description:"Maximum number of microseconds each cpu share assigned to a container allows per quota period"`
+		TCPMemoryLimit       uint64 `long:"tcp-memory-limit" default:"0" description:"Set hard limit for the tcp buf memory, value in bytes"`
 		DefaultBlockIOWeight uint16 `long:"default-container-blockio-weight" default:"0" description:"Default block IO weight assigned to a container"`
 		MaxContainers        uint64 `long:"max-containers" default:"0" description:"Maximum number of containers that can be created."`
 	} `group:"Limits"`
@@ -701,6 +702,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			},
 			bundlerules.Limits{
 				CpuQuotaPerShare: cmd.Limits.CpuQuotaPerShare,
+				TCPMemoryLimit:   cmd.Limits.TCPMemoryLimit,
 				BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
 			},
 			bundlerules.BindMounts{},

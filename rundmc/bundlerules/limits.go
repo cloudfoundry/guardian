@@ -12,11 +12,12 @@ var MinCpuQuota uint64 = 1000
 type Limits struct {
 	CpuQuotaPerShare uint64
 	BlockIOWeight    uint16
+	TCPMemoryLimit   uint64
 }
 
 func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
 	limit := uint64(spec.Limits.Memory.LimitInBytes)
-	bndl = bndl.WithMemoryLimit(specs.LinuxMemory{Limit: &limit, Swap: &limit})
+	bndl = bndl.WithMemoryLimit(specs.LinuxMemory{Limit: &limit, Swap: &limit, KernelTCP: &l.TCPMemoryLimit})
 
 	shares := uint64(spec.Limits.CPU.LimitInShares)
 	cpuSpec := specs.LinuxCPU{Shares: &shares}
