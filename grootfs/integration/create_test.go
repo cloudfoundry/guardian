@@ -104,6 +104,23 @@ var _ = Describe("Create", func() {
 		Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))
 	})
 
+	Context("when the store isn't initialized", func() {
+		var runner runner.Runner
+
+		BeforeEach(func() {
+			runner = Runner.SkipInitStore()
+		})
+
+		It("returns an error", func() {
+			_, err := runner.Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+				Mount:     mountByDefault(),
+			})
+			Expect(err).To(MatchError(ContainSubstring("Store path is not initialized. Please run init-store.")))
+		})
+	})
+
 	Context("when mappings are applied on store initialization", func() {
 		BeforeEach(func() {
 			initSpec := manager.InitSpec{

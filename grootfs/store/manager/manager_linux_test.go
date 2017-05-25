@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"syscall"
 
@@ -381,56 +380,114 @@ var _ = Describe("Manager", func() {
 		})
 	})
 
-	Describe("ConfigureStore", func() {
-		var (
-			currentUID int
-			currentGID int
-		)
-
+	Describe("IsStoreInitialized", func() {
 		BeforeEach(func() {
-			tempDir, err := ioutil.TempDir("", "")
+			var err error
+			storePath, err = ioutil.TempDir("", "init-store")
 			Expect(err).NotTo(HaveOccurred())
 
-			currentUID = os.Getuid()
-			currentGID = os.Getgid()
-			storePath = path.Join(tempDir, fmt.Sprintf("store-%d", GinkgoParallelNode()))
-
-			logger = lagertest.NewTestLogger("store-configurer")
+			namespacer.ApplyMappingsStub = func(_, _ []groot.IDMappingSpec) error {
+				return ioutil.WriteFile(filepath.Join(storePath, store.MetaDirName, groot.NamespaceFilename), []byte{}, 0666)
+			}
 		})
 
-		AfterEach(func() {
-			Expect(os.RemoveAll(path.Dir(storePath))).To(Succeed())
+		Context("when the store is initialized", func() {
+			JustBeforeEach(func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+			})
+
+			It("returns true", func() {
+				Expect(manager.IsStoreInitialized(logger)).To(BeTrue())
+			})
 		})
 
-		// It("doesn't fail on race conditions", func() {
-		// 	for i := 0; i < 50; i++ {
-		// 		storePath, err := ioutil.TempDir("", "")
-		// 		Expect(err).NotTo(HaveOccurred())
-		// 		manager = managerpkg.New(storePath, locksmith, volDriver, imgDriver, storeDriver)
-		// 		start1 := make(chan bool)
-		// 		start2 := make(chan bool)
+		Context("when the store is missing the images dir", func() {
+			JustBeforeEach(func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(os.RemoveAll(filepath.Join(storePath, store.ImageDirName))).To(Succeed())
+			})
 
-		// 		go func() {
-		// 			defer GinkgoRecover()
-		// 			<-start1
-		// 			Expect(manager.ConfigureStore(logger, currentUID, currentGID)).To(Succeed())
-		// 			close(start1)
-		// 		}()
+			It("returns false", func() {
+				Expect(manager.IsStoreInitialized(logger)).To(BeFalse())
+			})
+		})
 
-		// 		go func() {
-		// 			defer GinkgoRecover()
-		// 			<-start2
-		// 			Expect(manager.ConfigureStore(logger, currentUID, currentGID)).To(Succeed())
-		// 			close(start2)
-		// 		}()
+		Context("when the store is missing the volumes dir", func() {
+			JustBeforeEach(func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(os.RemoveAll(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
+			})
 
-		// 		start1 <- true
-		// 		start2 <- true
+			It("returns false", func() {
+				Expect(manager.IsStoreInitialized(logger)).To(BeFalse())
+			})
+		})
 
-		// 		Eventually(start1).Should(BeClosed())
-		// 		Eventually(start2).Should(BeClosed())
-		// 	}
-		// })
+		Context("when the store is missing the cache dir", func() {
+			JustBeforeEach(func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(os.RemoveAll(filepath.Join(storePath, store.CacheDirName))).To(Succeed())
+			})
+
+			It("returns false", func() {
+				Expect(manager.IsStoreInitialized(logger)).To(BeFalse())
+			})
+		})
+
+		Context("when the store is missing the meta dir", func() {
+			JustBeforeEach(func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(os.RemoveAll(filepath.Join(storePath, store.MetaDirName))).To(Succeed())
+			})
+
+			It("returns false", func() {
+				Expect(manager.IsStoreInitialized(logger)).To(BeFalse())
+			})
+		})
+
+		Context("when the store is missing the locks dir", func() {
+			JustBeforeEach(func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(os.RemoveAll(filepath.Join(storePath, store.LocksDirName))).To(Succeed())
+			})
+
+			It("returns false", func() {
+				Expect(manager.IsStoreInitialized(logger)).To(BeFalse())
+			})
+		})
+
+		Context("when the store is missing the temp dir", func() {
+			JustBeforeEach(func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(os.RemoveAll(filepath.Join(storePath, store.TempDirName))).To(Succeed())
+			})
+
+			It("returns false", func() {
+				Expect(manager.IsStoreInitialized(logger)).To(BeFalse())
+			})
+		})
+
+		Context("when the store is missing the dependencies dir", func() {
+			JustBeforeEach(func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(os.RemoveAll(filepath.Join(storePath, store.MetaDirName, "dependencies"))).To(Succeed())
+			})
+
+			It("returns false", func() {
+				Expect(manager.IsStoreInitialized(logger)).To(BeFalse())
+			})
+		})
+
+		Context("when the store is missing the namepsace.json", func() {
+			JustBeforeEach(func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(os.RemoveAll(filepath.Join(storePath, store.MetaDirName, groot.NamespaceFilename))).To(Succeed())
+			})
+
+			It("returns false", func() {
+				Expect(manager.IsStoreInitialized(logger)).To(BeFalse())
+			})
+		})
 	})
 
 	Describe("DeleteStore", func() {

@@ -108,6 +108,19 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 	return nil
 }
 
+func (m *Manager) IsStoreInitialized(logger lager.Logger) bool {
+	for _, folderName := range store.StoreFolders {
+		if _, err := os.Stat(filepath.Join(m.storePath, folderName)); os.IsNotExist(err) {
+			return false
+		}
+	}
+
+	if _, err := os.Stat(filepath.Join(m.storePath, store.MetaDirName, groot.NamespaceFilename)); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
 func (m *Manager) configureStore(logger lager.Logger, ownerUID, ownerGID int) error {
 	logger = logger.Session("store-manager-configure-store", lager.Data{"storePath": m.storePath, "ownerUID": ownerUID, "ownerGID": ownerGID})
 	logger.Debug("starting")
@@ -127,17 +140,7 @@ func (m *Manager) configureStore(logger lager.Logger, ownerUID, ownerGID int) er
 		return errorspkg.Wrapf(err, "changing store permissions %s", m.storePath)
 	}
 
-	requiredFolders := []string{
-		store.ImageDirName,
-		store.VolumesDirName,
-		store.CacheDirName,
-		store.MetaDirName,
-		store.LocksDirName,
-		store.TempDirName,
-		filepath.Join(store.MetaDirName, "dependencies"),
-	}
-
-	for _, folderName := range requiredFolders {
+	for _, folderName := range store.StoreFolders {
 		if err := m.createInternalDirectory(logger, folderName, ownerUID, ownerGID); err != nil {
 			return err
 		}

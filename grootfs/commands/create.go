@@ -3,6 +3,7 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 import (
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -23,6 +24,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
+	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 
 	"github.com/docker/distribution/registry/api/errcode"
@@ -108,12 +110,6 @@ var CreateCommand = cli.Command{
 		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
 
-		storeNamespacer := groot.NewStoreNamespacer(storePath)
-		idMappings, err := storeNamespacer.Read()
-		if err != nil {
-			return newExitError(err.Error(), 1)
-		}
-
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
 			return newExitError(err.Error(), 1)
@@ -123,6 +119,19 @@ var CreateCommand = cli.Command{
 		sharedLocksmith := locksmithpkg.NewSharedFileSystem(storePath, metricsEmitter)
 		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(storePath, metricsEmitter)
 		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
+
+		storeNamespacer := groot.NewStoreNamespacer(storePath)
+		manager := manager.New(storePath, storeNamespacer, fsDriver, fsDriver, fsDriver)
+		if !manager.IsStoreInitialized(logger) {
+			logger.Error("store-verification-failed", errors.New("store is not initialized"))
+			return newExitError("Store path is not initialized. Please run init-store.", 1)
+		}
+
+		idMappings, err := storeNamespacer.Read()
+		if err != nil {
+			logger.Error("reading-namespace-file", err)
+			return newExitError(err.Error(), 1)
+		}
 
 		runner := commandrunner.New()
 		var unpacker base_image_puller.Unpacker
