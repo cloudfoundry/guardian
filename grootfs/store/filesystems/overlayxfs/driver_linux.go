@@ -59,13 +59,13 @@ func (d *Driver) ConfigureStore(logger lager.Logger, path string, ownerUID, owne
 	}
 
 	linksDir := filepath.Join(path, LinksDirName)
-	if err := d.createDirectory(logger, linksDir, ownerUID, ownerGID); err != nil {
+	if err := d.createStoreDirectory(logger, linksDir, ownerUID, ownerGID); err != nil {
 		logger.Error("creating-links-directory-failed", err)
 		return errorspkg.Wrap(err, "Create links directory")
 	}
 
 	idsDir := filepath.Join(path, IDDir)
-	if err := d.createDirectory(logger, idsDir, ownerUID, ownerGID); err != nil {
+	if err := d.createStoreDirectory(logger, idsDir, ownerUID, ownerGID); err != nil {
 		logger.Error("creating-ids-directory-failed", err)
 		return errorspkg.Wrap(err, "Create ids directory")
 	}
@@ -193,27 +193,22 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		return groot.MountInfo{}, errorspkg.Wrap(err, "generating lowerdir paths failed")
 	}
 
-	upperDir := filepath.Join(spec.ImagePath, UpperDir)
-	workDir := filepath.Join(spec.ImagePath, WorkDir)
-	rootfsDir := filepath.Join(spec.ImagePath, RootfsDir)
-
 	if err := d.applyDiskLimit(logger, spec, baseVolumeSize); err != nil {
 		return groot.MountInfo{}, errorspkg.Wrap(err, "applying disk limits")
 	}
 
-	if err := os.Mkdir(upperDir, 0755); err != nil {
-		logger.Error("creating-upperdir-folder-failed", err)
-		return groot.MountInfo{}, errorspkg.Wrap(err, "creating upperdir folder")
+	upperDir := filepath.Join(spec.ImagePath, UpperDir)
+	workDir := filepath.Join(spec.ImagePath, WorkDir)
+	rootfsDir := filepath.Join(spec.ImagePath, RootfsDir)
+
+	directories := map[string]string{
+		"upperdir": upperDir,
+		"workdir":  workDir,
+		"rootfs":   rootfsDir,
 	}
 
-	if err := os.Mkdir(workDir, 0755); err != nil {
-		logger.Error("creating-workdir-folder-failed", err)
-		return groot.MountInfo{}, errorspkg.Wrap(err, "creating workdir folder")
-	}
-
-	if err := os.Mkdir(rootfsDir, 0755); err != nil {
-		logger.Error("creating-rootfs-folder-failed", err)
-		return groot.MountInfo{}, errorspkg.Wrap(err, "creating rootfs folder")
+	if err := d.createImageDirectories(logger, directories); err != nil {
+		return groot.MountInfo{}, err
 	}
 
 	if err := os.Chdir(d.storePath); err != nil {
@@ -221,10 +216,9 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	}
 
 	if spec.Mount {
-		mountData := d.mountData(baseVolumePaths, workDir, upperDir, false)
-		if err := syscall.Mount("overlay", rootfsDir, "overlay", 0, mountData); err != nil {
-			logger.Error("mounting-overlay-to-rootfs-failed", err, lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
-			return groot.MountInfo{}, errorspkg.Wrap(err, "mounting overlay")
+		mountData := d.formatMountData(baseVolumePaths, workDir, upperDir, false)
+		if err := d.mountImage(logger, rootfsDir, mountData); err != nil {
+			return groot.MountInfo{}, err
 		}
 	}
 
@@ -237,7 +231,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		Destination: rootfsDir,
 		Source:      "overlay",
 		Type:        "overlay",
-		Options:     []string{d.mountData(baseVolumePaths, workDir, upperDir, true)},
+		Options:     []string{d.formatMountData(baseVolumePaths, workDir, upperDir, true)},
 	}, nil
 }
 
@@ -370,7 +364,18 @@ func (d *Driver) mountFilesystem(source, destination, option, externalLogPath st
 	return nil
 }
 
-func (d *Driver) mountData(lowerDirs []string, workDir, upperDir string, absolute bool) string {
+func (d *Driver) createImageDirectories(logger lager.Logger, directories map[string]string) error {
+	for name, directory := range directories {
+		if err := os.Mkdir(directory, 0755); err != nil {
+			logger.Error(fmt.Sprintf("creating-%s-folder-failed", name), err)
+			return errorspkg.Wrapf(err, "creating %s folder", name)
+		}
+	}
+
+	return nil
+}
+
+func (d *Driver) formatMountData(lowerDirs []string, workDir, upperDir string, absolute bool) string {
 	if absolute {
 		for i, lowerDir := range lowerDirs {
 			lowerDirs[i] = filepath.Join(d.storePath, lowerDir)
@@ -379,6 +384,18 @@ func (d *Driver) mountData(lowerDirs []string, workDir, upperDir string, absolut
 
 	lowerDirsOpt := strings.Join(lowerDirs, ":")
 	return fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s", lowerDirsOpt, upperDir, workDir)
+}
+
+func (d *Driver) mountImage(logger lager.Logger, rootfsDir, mountData string) error {
+	logger.Session("mounting-overlay-to-rootfs", lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
+	logger.Info("starting")
+	defer logger.Info("ending")
+
+	if err := syscall.Mount("overlay", rootfsDir, "overlay", 0, mountData); err != nil {
+		logger.Error("failed", err, lager.Data{"mountData": mountData, "rootfsDir": rootfsDir})
+		return errorspkg.Wrap(err, "mounting overlay")
+	}
+	return nil
 }
 
 func (d *Driver) getLowerDirs(logger lager.Logger, volumeIDs []string) ([]string, int64, error) {
@@ -597,7 +614,7 @@ func (d *Driver) validateWhiteoutDevice(storePath string) error {
 	return nil
 }
 
-func (d *Driver) createDirectory(logger lager.Logger, path string, ownerUID, ownerGID int) error {
+func (d *Driver) createStoreDirectory(logger lager.Logger, path string, ownerUID, ownerGID int) error {
 	if err := os.MkdirAll(path, 0755); err != nil {
 		logger.Error("mkdir-path", err, lager.Data{"path": path})
 		return errorspkg.Wrap(err, "creating directory")
