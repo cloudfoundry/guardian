@@ -10,14 +10,16 @@ const (
 	LinksDirName   = "l"
 )
 
-func NewDriver(storePath, tardisBinPath string) *Driver {
+func NewDriver(storePath, tardisBinPath string, externalLogSize int64) *Driver {
 	return &Driver{
-		storePath:     storePath,
-		tardisBinPath: tardisBinPath,
+		storePath:       storePath,
+		tardisBinPath:   tardisBinPath,
+		externalLogSize: externalLogSize,
 	}
 }
 
 type Driver struct {
-	storePath     string
-	tardisBinPath string
+	storePath       string
+	tardisBinPath   string
+	externalLogSize int64
 }

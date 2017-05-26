@@ -51,6 +51,14 @@ func (r Runner) WithoutStore() Runner {
 	nr := r
 	nr.StorePath = ""
 	return nr
+	r.StorePath = ""
+	return r
+}
+
+
+func (r Runner) WithExternalLogDeviceSize(sizeMb int64) Runner {
+	r.ExternaLogDeviceSize = sizeMb
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////

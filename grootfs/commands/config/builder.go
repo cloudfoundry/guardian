@@ -39,7 +39,8 @@ type Clean struct {
 }
 
 type Init struct {
-	StoreSizeBytes int64
+	StoreSizeBytes     int64
+	ExternalLogdevSize int64
 }
 
 type Builder struct {
@@ -75,6 +76,10 @@ func (b *Builder) Build() (Config, error) {
 
 	if b.config.Init.StoreSizeBytes > 0 && b.config.FSDriver == "btrfs" {
 		return *b.config, errorspkg.New("invalid argument: store-size-bytes is not supported on BTRFS")
+	}
+
+	if b.config.Init.StoreSizeBytes <= 0 && b.config.Init.ExternalLogdevSize > 0 {
+		return *b.config, errorspkg.New("--external-logdev-size-mb requires the --store-size-bytes flag")
 	}
 
 	return *b.config, nil
@@ -219,6 +224,11 @@ func (b *Builder) WithMount(mount bool, noMount bool) *Builder {
 
 func (b *Builder) WithStoreSizeBytes(size int64) *Builder {
 	b.config.Init.StoreSizeBytes = size
+	return b
+}
+
+func (b *Builder) WithExternalLogdevSize(size int64) *Builder {
+	b.config.Init.ExternalLogdevSize = size
 	return b
 }
 

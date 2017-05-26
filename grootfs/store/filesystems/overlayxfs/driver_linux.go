@@ -28,12 +28,13 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	if err := d.mountFilesystem(filesystemPath, storePath, "remount"); err != nil {
-		if err := d.formatFilesystem(logger, filesystemPath); err != nil {
+	externalLogPath := fmt.Sprintf("%s.external-log", storePath)
+	if err := d.mountFilesystem(filesystemPath, storePath, "remount", externalLogPath); err != nil {
+		if err := d.formatFilesystem(logger, filesystemPath, externalLogPath); err != nil {
 			return err
 		}
 
-		if err := d.mountFilesystem(filesystemPath, storePath, ""); err != nil {
+		if err := d.mountFilesystem(filesystemPath, storePath, "", externalLogPath); err != nil {
 			logger.Error("mounting-filesystem-failed", err, lager.Data{"filesystemPath": filesystemPath, "storePath": storePath})
 			return errorspkg.Wrap(err, "Mounting filesystem")
 		}
@@ -279,22 +280,88 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	return nil
 }
 
-func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) error {
+func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath, externalLogPath string) error {
+	logger = logger.Session("formatting-filesystem")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	mkfsArgs := []string{"-f"}
+	if d.externalLogSize > 0 {
+		if err := d.createExternalLogFile(logger, externalLogPath); err != nil {
+			return errorspkg.Wrapf(err, "creating-external-log-file")
+		}
+
+		loopdevPath, err := d.findAssociatedLoopDevice(externalLogPath)
+		if err != nil {
+			return err
+		}
+
+		mkfsArgs = append(mkfsArgs, "-l", fmt.Sprintf("logdev=%s,size=%d", loopdevPath, d.externalLogSize*1024*1024))
+	}
+
 	stdout := bytes.NewBuffer([]byte{})
 	stderr := bytes.NewBuffer([]byte{})
-	cmd := exec.Command("mkfs.xfs", "-f", filesystemPath)
+	cmd := exec.Command("mkfs.xfs", append(mkfsArgs, filesystemPath)...)
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
-		logger.Error("formatting-filesystem-failed", err, lager.Data{"cmd": cmd.Args, "stdout": stdout, "stderr": stderr})
+		logger.Error("formatting-filesystem-failed", err, lager.Data{"cmd": cmd.Args, "stdout": stdout.String(), "stderr": stderr.String()})
 		return errorspkg.Errorf("Formatting XFS filesystem: %s", err.Error())
 	}
 
 	return nil
 }
 
-func (d *Driver) mountFilesystem(source, destination, option string) error {
+func (d *Driver) createExternalLogFile(logger lager.Logger, externalLogPath string) error {
+	logger = logger.Session("creating-external-log-file")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	if _, err := os.Stat(externalLogPath); os.IsNotExist(err) {
+		if err := ioutil.WriteFile(externalLogPath, []byte{}, 0600); err != nil {
+			logger.Error("writing-external-log-file", err, lager.Data{"externalLogPath": externalLogPath})
+			return errorspkg.Wrap(err, "creating external log file")
+		}
+	}
+	if err := os.Truncate(externalLogPath, d.externalLogSize*1024*1024); err != nil {
+		logger.Error("truncating-external-log-file-failed", err, lager.Data{"externalLogPath": externalLogPath, "size": d.externalLogSize})
+		return errorspkg.Wrap(err, "truncating external log file")
+	}
+
+	errBuffer := bytes.NewBuffer([]byte{})
+	cmd := exec.Command("losetup", "-f", externalLogPath)
+	cmd.Stderr = errBuffer
+	if err := cmd.Run(); err != nil {
+		return errorspkg.Wrapf(err, "attaching external log to loop device: %s", errBuffer.String())
+	}
+
+	return nil
+}
+
+func (d *Driver) findAssociatedLoopDevice(filePath string) (string, error) {
+	errBuffer := bytes.NewBuffer([]byte{})
+	cmd := exec.Command("losetup", "-O", "name", "-n", "-j", filePath)
+	cmd.Stderr = errBuffer
+	output, err := cmd.Output()
+	if err != nil {
+		return "", errorspkg.Wrapf(err, "finding attached loop device: %s", errBuffer.String())
+	}
+
+	return strings.Trim(string(output), "\n"), nil
+}
+
+func (d *Driver) mountFilesystem(source, destination, option, externalLogPath string) error {
 	allOpts := strings.Trim(fmt.Sprintf("%s,loop,pquota,noatime,nobarrier", option), ",")
+
+	if d.externalLogSize > 0 {
+		loopdevPath, err := d.findAssociatedLoopDevice(externalLogPath)
+		if err != nil {
+			return err
+		}
+
+		allOpts = fmt.Sprintf("%s,logdev=%s", allOpts, loopdevPath)
+	}
+
 	cmd := exec.Command("mount", "-o", allOpts, "-t", "xfs", source, destination)
 	if output, err := cmd.CombinedOutput(); err != nil {
 		return errorspkg.Errorf("%s: %s", err, string(output))
