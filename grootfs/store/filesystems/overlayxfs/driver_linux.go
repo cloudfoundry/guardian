@@ -334,14 +334,19 @@ func (d *Driver) createExternalLogFile(logger lager.Logger, externalLogPath stri
 
 func (d *Driver) findAssociatedLoopDevice(filePath string) (string, error) {
 	errBuffer := bytes.NewBuffer([]byte{})
-	cmd := exec.Command("losetup", "-O", "name", "-n", "-j", filePath)
+	cmd := exec.Command("losetup", "-j", filePath)
 	cmd.Stderr = errBuffer
 	output, err := cmd.Output()
 	if err != nil {
 		return "", errorspkg.Wrapf(err, "finding attached loop device: %s", errBuffer.String())
 	}
 
-	return strings.Trim(string(output), "\n"), nil
+	losetupColumns := strings.Split(string(output), ":")
+	if len(losetupColumns) == 3 {
+		return losetupColumns[0], nil
+	}
+
+	return "", errorspkg.Errorf("unexpwcted losetup output: %s", string(output))
 }
 
 func (d *Driver) mountFilesystem(source, destination, option, externalLogPath string) error {
