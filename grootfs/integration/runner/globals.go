@@ -19,22 +19,14 @@ import (
 ///////////////////////////////////////////////////////////////////////////////
 
 func (r Runner) WithCredentials(username, password string) Runner {
-	nr := r
-	nr.RegistryUsername = username
-	nr.RegistryPassword = password
-	return nr
+	r.RegistryUsername = username
+	r.RegistryPassword = password
+	return r
 }
 
 func (r Runner) WithInsecureRegistry(registry string) Runner {
-	nr := r
-	nr.InsecureRegistry = registry
-	return nr
-}
-
-func (r Runner) SkipInitStore() Runner {
-	nr := r
-	nr.skipInitStore = true
-	return nr
+	r.InsecureRegistry = registry
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -42,19 +34,19 @@ func (r Runner) SkipInitStore() Runner {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (r Runner) WithStore(path string) Runner {
-	nr := r
-	nr.StorePath = path
-	return nr
+	r.StorePath = path
+	return r
 }
 
 func (r Runner) WithoutStore() Runner {
-	nr := r
-	nr.StorePath = ""
-	return nr
 	r.StorePath = ""
 	return r
 }
 
+func (r Runner) SkipInitStore() Runner {
+	r.skipInitStore = true
+	return r
+}
 
 func (r Runner) WithExternalLogDeviceSize(sizeMb int64) Runner {
 	r.ExternaLogDeviceSize = sizeMb
@@ -65,15 +57,13 @@ func (r Runner) WithExternalLogDeviceSize(sizeMb int64) Runner {
 // Drivers
 ///////////////////////////////////////////////////////////////////////////////
 func (r Runner) WithDriver(driver string) Runner {
-	nr := r
-	nr.Driver = driver
-	return nr
+	r.Driver = driver
+	return r
 }
 
 func (r Runner) WithoutDriver() Runner {
-	nr := r
-	nr.Driver = ""
-	return nr
+	r.Driver = ""
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -81,45 +71,38 @@ func (r Runner) WithoutDriver() Runner {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (r Runner) WithDraxBin(draxBin string) Runner {
-	nr := r
-	nr.DraxBin = draxBin
-	return nr
+	r.DraxBin = draxBin
+	return r
 }
 
 func (r Runner) WithoutDraxBin() Runner {
-	nr := r
-	nr.DraxBin = ""
-	return nr
+	r.DraxBin = ""
+	return r
 }
 
 func (r Runner) WithTardisBin(draxBin string) Runner {
-	nr := r
-	nr.TardisBin = draxBin
-	return nr
+	r.TardisBin = draxBin
+	return r
 }
 
 func (r Runner) WithoutTardisBin() Runner {
-	nr := r
-	nr.TardisBin = ""
-	return nr
+	r.TardisBin = ""
+	return r
 }
 
 func (r Runner) WithBtrfsBin(btrfsBin string) Runner {
-	nr := r
-	nr.BtrfsBin = btrfsBin
-	return nr
+	r.BtrfsBin = btrfsBin
+	return r
 }
 
 func (r Runner) WithNewuidmapBin(newuidmapBin string) Runner {
-	nr := r
-	nr.NewuidmapBin = newuidmapBin
-	return nr
+	r.NewuidmapBin = newuidmapBin
+	return r
 }
 
 func (r Runner) WithNewgidmapBin(newgidmapBin string) Runner {
-	nr := r
-	nr.NewgidmapBin = newgidmapBin
-	return nr
+	r.NewgidmapBin = newgidmapBin
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -127,10 +110,9 @@ func (r Runner) WithNewgidmapBin(newgidmapBin string) Runner {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (r Runner) WithMetronEndpoint(host net.IP, port uint16) Runner {
-	nr := r
-	nr.MetronHost = host
-	nr.MetronPort = port
-	return nr
+	r.MetronHost = host
+	r.MetronPort = port
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -138,22 +120,19 @@ func (r Runner) WithMetronEndpoint(host net.IP, port uint16) Runner {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (r Runner) WithLogLevel(level lager.LogLevel) Runner {
-	nr := r
-	nr.LogLevel = level
-	nr.LogLevelSet = true
-	return nr
+	r.LogLevel = level
+	r.LogLevelSet = true
+	return r
 }
 
 func (r Runner) WithoutLogLevel() Runner {
-	nr := r
-	nr.LogLevelSet = false
-	return nr
+	r.LogLevelSet = false
+	return r
 }
 
 func (r Runner) WithLogFile(path string) Runner {
-	nr := r
-	nr.LogFile = path
-	return nr
+	r.LogFile = path
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -161,15 +140,13 @@ func (r Runner) WithLogFile(path string) Runner {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (r Runner) WithStdout(stdout io.Writer) Runner {
-	nr := r
-	nr.Stdout = stdout
-	return nr
+	r.Stdout = stdout
+	return r
 }
 
 func (r Runner) WithStderr(stderr io.Writer) Runner {
-	nr := r
-	nr.Stderr = stderr
-	return nr
+	r.Stderr = stderr
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -204,9 +181,8 @@ func (r *Runner) SetConfig(cfg config.Config) error {
 }
 
 func (r Runner) WithConfig(configPath string) Runner {
-	nr := r
-	nr.ConfigPath = configPath
-	return nr
+	r.ConfigPath = configPath
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -214,9 +190,8 @@ func (r Runner) WithConfig(configPath string) Runner {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (r Runner) WithTimeout(timeout time.Duration) Runner {
-	nr := r
-	nr.Timeout = timeout
-	return nr
+	r.Timeout = timeout
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -224,9 +199,8 @@ func (r Runner) WithTimeout(timeout time.Duration) Runner {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (r Runner) WithEnvVar(variable string) Runner {
-	nr := r
-	nr.EnvVars = append(nr.EnvVars, variable)
-	return nr
+	r.EnvVars = append(r.EnvVars, variable)
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -234,15 +208,13 @@ func (r Runner) WithEnvVar(variable string) Runner {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (r Runner) WithClean() Runner {
-	nr := r
-	nr.CleanOnCreate = true
-	return nr
+	r.CleanOnCreate = true
+	return r
 }
 
 func (r Runner) WithNoClean() Runner {
-	nr := r
-	nr.NoCleanOnCreate = true
-	return nr
+	r.NoCleanOnCreate = true
+	return r
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -250,10 +222,9 @@ func (r Runner) WithNoClean() Runner {
 ///////////////////////////////////////////////////////////////////////////////
 
 func (r Runner) RunningAsUser(uid, gid uint32) Runner {
-	nr := r
-	nr.SysCredential = syscall.Credential{
+	r.SysCredential = syscall.Credential{
 		Uid: uid,
 		Gid: gid,
 	}
-	return nr
+	return r
 }
