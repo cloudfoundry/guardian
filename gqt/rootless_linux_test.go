@@ -29,10 +29,25 @@ var _ = Describe("rootless containers", func() {
 	)
 
 	BeforeEach(func() {
-		var err error
+		tmpDir := filepath.Join(
+			os.TempDir(),
+			fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
+		)
 
 		setupArgs := []string{"setup", "--tag", fmt.Sprintf("%d", GinkgoParallelNode())}
-		setupProcess, err := gexec.Start(exec.Command(binaries.Gdn, setupArgs...), GinkgoWriter, GinkgoWriter)
+		cmd := exec.Command(binaries.Gdn, setupArgs...)
+		cmd.Env = append(
+			[]string{
+				fmt.Sprintf("TMPDIR=%s", tmpDir),
+				fmt.Sprintf("TEMP=%s", tmpDir),
+				fmt.Sprintf("TMP=%s", tmpDir),
+			},
+			os.Environ()...,
+		)
+
+		var err error
+
+		setupProcess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 

@@ -18,6 +18,7 @@ import (
 
 var _ = Describe("gdn setup", func() {
 	var (
+		tmpDir            string
 		cgroupsMountpoint string
 		setupArgs         []string
 		tag               string
@@ -33,20 +34,35 @@ var _ = Describe("gdn setup", func() {
 		// There is also a 1 character limit on the tag due to iptables rule length
 		// limitations.
 		tag = nodeToString(GinkgoParallelNode())
-		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
+		tmpDir = filepath.Join(
+			os.TempDir(),
+			fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
+		)
+		cgroupsMountpoint = filepath.Join(tmpDir, fmt.Sprintf("cgroups-%s", tag))
 		setupArgs = []string{"setup", "--tag", tag}
 	})
 
 	JustBeforeEach(func() {
 		var err error
 
-		setupProcess, err = gexec.Start(exec.Command(binaries.Gdn, setupArgs...), GinkgoWriter, GinkgoWriter)
+		cmd := exec.Command(binaries.Gdn, setupArgs...)
+		cmd.Env = append(
+			[]string{
+				fmt.Sprintf("TMPDIR=%s", tmpDir),
+				fmt.Sprintf("TEMP=%s", tmpDir),
+				fmt.Sprintf("TMP=%s", tmpDir),
+			},
+			os.Environ()...,
+		)
+		setupProcess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess, 10*time.Second).Should(gexec.Exit(0))
 	})
 
 	It("sets up cgroups", func() {
 		mountpointCmd := exec.Command("mountpoint", "-q", cgroupsMountpoint+"/")
+		mountpointCmd.Stdout = GinkgoWriter
+		mountpointCmd.Stderr = GinkgoWriter
 		Expect(mountpointCmd.Run()).To(Succeed())
 	})
 
