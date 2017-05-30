@@ -24,8 +24,6 @@ import (
 )
 
 var (
-	storeName string
-
 	GrootFSBin    string
 	DraxBin       string
 	TardisBin     string
@@ -33,6 +31,7 @@ var (
 	Runner        runner.Runner
 	StorePath     string
 	NamespacerBin string
+	mountPath     string
 
 	GrootUser        *user.User
 	GrootUID         uint32
@@ -43,7 +42,7 @@ var (
 	GrootfsTestGid   int
 )
 
-const btrfsMountPath = "/mnt/btrfs"
+const btrfsMountPath = "/mnt/btrfs-%d"
 const xfsMountPath = "/mnt/xfs-%d"
 
 func TestGroot(t *testing.T) {
@@ -96,13 +95,12 @@ func TestGroot(t *testing.T) {
 		rand.Seed(time.Now().UnixNano() + int64(GinkgoParallelNode()*1000))
 
 		if Driver == "overlay-xfs" {
-			mountPath := fmt.Sprintf(xfsMountPath, GinkgoParallelNode())
-			StorePath = path.Join(mountPath, "store")
+			mountPath = fmt.Sprintf(xfsMountPath, GinkgoParallelNode())
 		} else {
 			Driver = "btrfs"
-			storeName = fmt.Sprintf("test-store-%d-%d", GinkgoParallelNode(), rand.Int())
-			StorePath = path.Join(btrfsMountPath, storeName)
+			mountPath = fmt.Sprintf(btrfsMountPath, GinkgoParallelNode())
 		}
+		StorePath = path.Join(mountPath, "store")
 
 		var err error
 		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
@@ -132,7 +130,7 @@ func TestGroot(t *testing.T) {
 		if Driver == "overlay-xfs" {
 			testhelpers.CleanUpOverlayMounts(StorePath)
 		} else {
-			testhelpers.CleanUpBtrfsSubvolumes(btrfsMountPath, storeName)
+			testhelpers.CleanUpBtrfsSubvolumes(mountPath)
 		}
 
 		Expect(os.RemoveAll(StorePath)).To(Succeed())

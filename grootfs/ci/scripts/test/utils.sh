@@ -25,18 +25,18 @@ mount_storage() {
   mount /ext4_volume /mnt/ext4
   chmod 777 /mnt/ext4
 
-  # Make BTRFS volume
-  truncate -s 1G /btrfs_volume
-  mkfs.btrfs --nodesize 4k -s 4k /btrfs_volume
-
-  # Mount BTRFS
-  mkdir /mnt/btrfs
-  mount -t btrfs -o user_subvol_rm_allowed,rw /btrfs_volume /mnt/btrfs
-  chmod 777 -R /mnt/btrfs
-  btrfs quota enable /mnt/btrfs
-
   for i in {1..9}
   do
+    # Make BTRFS Volume
+    truncate -s 1G /btrfs_volume_${i}
+    mkfs.btrfs --nodesize 4k -s 4k /btrfs_volume_${i}
+
+    # Mount BTRFS
+    mkdir /mnt/btrfs-${i}
+    mount -t btrfs -o user_subvol_rm_allowed,rw /btrfs_volume_${i} /mnt/btrfs-${i}
+    chmod 777 -R /mnt/btrfs-${i}
+    btrfs quota enable /mnt/btrfs-${i}
+
     # Make XFS Volume
     truncate -s 1G /xfs_volume_${i}
     mkfs.xfs -b size=4096 /xfs_volume_${i}

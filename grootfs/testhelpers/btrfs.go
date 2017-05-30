@@ -43,12 +43,8 @@ func subvolumeDelete(subvolumeAbsPath string) {
 	Expect(cmd.Run()).To(Succeed(), fmt.Sprintf("deleting volume `%s`", subvolumeAbsPath))
 }
 
-func CleanUpBtrfsSubvolumes(btrfsPath string, storeName string) {
+func CleanUpBtrfsSubvolumes(btrfsPath string) {
 	for _, subvolumePath := range subvolumePaths(btrfsPath) {
-		if !strings.HasPrefix(subvolumePath, storeName+"/") {
-			continue
-		}
-
 		subvolumeAbsPath := filepath.Join(btrfsPath, subvolumePath)
 		subvolumeDelete(subvolumeAbsPath)
 	}
