@@ -415,7 +415,7 @@ var _ = Describe("Create", func() {
 
 			if Driver == "overlay-xfs" {
 				driver = "btrfs"
-				storePath, err = ioutil.TempDir("/mnt/btrfs", "")
+				storePath, err = ioutil.TempDir("/mnt/btrfs-1", "")
 				Expect(err).NotTo(HaveOccurred())
 			}
 
