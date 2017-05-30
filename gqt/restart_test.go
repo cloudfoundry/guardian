@@ -43,6 +43,7 @@ var _ = Describe("Surviving Restarts", func() {
 	Context("when a container is created and then garden is restarted", func() {
 		var (
 			container        garden.Container
+			netOutRules      []garden.NetOutRule
 			hostNetInPort    uint32
 			externalIP       string
 			interfacePrefix  string
@@ -63,6 +64,14 @@ var _ = Describe("Surviving Restarts", func() {
 				Network: "177.100.10.30/30",
 			}
 
+			netOutRules = []garden.NetOutRule{
+				garden.NetOutRule{
+					Networks: []garden.IPRange{
+						garden.IPRangeFromIP(net.ParseIP("8.8.8.8")),
+					},
+				},
+			}
+
 			restartArgs = []string{}
 			gracefulShutdown = true
 		})
@@ -75,11 +84,7 @@ var _ = Describe("Surviving Restarts", func() {
 			hostNetInPort, _, err = container.NetIn(hostNetInPort, 8080)
 			Expect(err).NotTo(HaveOccurred())
 
-			container.NetOut(garden.NetOutRule{
-				Networks: []garden.IPRange{
-					garden.IPRangeFromIP(net.ParseIP("8.8.8.8")),
-				},
-			})
+			Expect(container.BulkNetOut(netOutRules)).To(Succeed())
 
 			info, err := container.Info()
 			Expect(err).NotTo(HaveOccurred())
@@ -174,6 +179,23 @@ var _ = Describe("Surviving Restarts", func() {
 				It("can be created with the same network reservation", func() {
 					_, err := client.Create(containerSpec)
 					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("when a container has ICMP NetOut rules applied", func() {
+				BeforeEach(func() {
+					netOutRules = append(netOutRules,
+						garden.NetOutRule{
+							Protocol: garden.ProtocolICMP,
+							ICMPs: &garden.ICMPControl{
+								Type: garden.ICMPType(255),
+								Code: garden.ICMPControlCode(uint8(255)),
+							},
+						})
+				})
+
+				It("starts up successfully", func() {
+					Expect(client.Ping()).To(Succeed())
 				})
 			})
 		})

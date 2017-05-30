@@ -29,6 +29,7 @@ const SetupScript = `
 		echo "$rules" |
 		grep " -j garden-dispatch" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
+		sed -e "s/--icmp-type any/--icmp-type 255\/255/" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w
 
 		# Remove jump to garden-dispatch from FORWARD
@@ -36,6 +37,7 @@ const SetupScript = `
 		echo "$rules" |
 		grep " -j garden-dispatch" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
+		sed -e "s/--icmp-type any/--icmp-type 255\/255/" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w
 
 		# Prune garden-dispatch
@@ -53,6 +55,7 @@ const SetupScript = `
 		echo "$rules" |
 		grep "\-g ${filter_instance_prefix}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
+		sed -e "s/--icmp-type any/--icmp-type 255\/255/" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w
 
 		# Prune per-instance chains
@@ -60,6 +63,7 @@ const SetupScript = `
 		echo "$rules" |
 		grep "^-A ${filter_instance_prefix}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
+		sed -e "s/--icmp-type any/--icmp-type 255\/255/" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w
 
 		# Delete per-instance chains
@@ -67,6 +71,7 @@ const SetupScript = `
 		echo "$rules" |
 		grep "^-N ${filter_instance_prefix}" |
 		sed -e "s/-N/-X/" -e "s/\s\+\$//" |
+		sed -e "s/--icmp-type any/--icmp-type 255\/255/" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w || true
 
 		# Remove jump to garden-forward from FORWARD
@@ -74,6 +79,7 @@ const SetupScript = `
 		echo "$rules" |
 		grep " -j ${filter_forward_chain}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
+		sed -e "s/--icmp-type any/--icmp-type 255\/255/" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w || true
 
 		${iptables_bin} -w -F ${filter_forward_chain} 2> /dev/null || true
@@ -84,6 +90,7 @@ const SetupScript = `
 		echo "$rules" |
 		grep " -j ${filter_input_chain}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
+		sed -e "s/--icmp-type any/--icmp-type 255\/255/" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w || true
 
 		# Empty and delete filter input chain
@@ -139,6 +146,7 @@ const SetupScript = `
 		echo "$rules" |
 		grep "\-j ${nat_instance_prefix}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
+		sed -e "s/--icmp-type any/--icmp-type 255\/255/" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w -t nat
 
 		# Prune per-instance chains
@@ -146,6 +154,7 @@ const SetupScript = `
 		echo "$rules" |
 		grep "^-A ${nat_instance_prefix}" |
 		sed -e "s/-A/-D/" -e "s/\s\+\$//" |
+		sed -e "s/--icmp-type any/--icmp-type 255\/255/" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w -t nat
 
 		# Delete per-instance chains
@@ -153,6 +162,7 @@ const SetupScript = `
 		echo "$rules" |
 		grep "^-N ${nat_instance_prefix}" |
 		sed -e "s/-N/-X/" -e "s/\s\+\$//" |
+		sed -e "s/--icmp-type any/--icmp-type 255\/255/" |
 		xargs --no-run-if-empty --max-lines=1 ${iptables_bin} -w -t nat || true
 
 		# Flush prerouting chain
