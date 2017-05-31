@@ -67,8 +67,7 @@ var _ = Describe("LogBased", func() {
 
 			contents, err := ioutil.ReadAll(logger.Buffer())
 			Expect(err).NotTo(HaveOccurred())
-			Expect(string(contents)).To(ContainSubstring("top_processes_by_memory\":\"1\\n2\\n3\\n4\\n5\\n6\\n7\\n8\\n9\\n10\""))
-			Expect(string(contents)).ToNot(ContainSubstring("11\""))
+			Expect(string(contents)).To(MatchRegexp(`"top_processes_by_memory":"1\\n2\\n3\\n4\\n5\\n6\\n7\\n8\\n9\\n10"`))
 		})
 
 		It("reports the dmesg", func() {
