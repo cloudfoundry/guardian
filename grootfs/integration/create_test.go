@@ -410,12 +410,12 @@ var _ = Describe("Create", func() {
 		BeforeEach(func() {
 			driver := "overlay-xfs"
 			var err error
-			storePath, err = ioutil.TempDir("/mnt/xfs-1", "")
+			storePath, err = ioutil.TempDir(fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelNode()), "")
 			Expect(err).NotTo(HaveOccurred())
 
 			if Driver == "overlay-xfs" {
 				driver = "btrfs"
-				storePath, err = ioutil.TempDir("/mnt/btrfs-1", "")
+				storePath, err = ioutil.TempDir(fmt.Sprintf("/mnt/btrfs-%d", GinkgoParallelNode()), "")
 				Expect(err).NotTo(HaveOccurred())
 			}
 

@@ -25,20 +25,21 @@ import (
 )
 
 var _ = Describe("Btrfs", func() {
-	const btrfsMountPath = "/mnt/btrfs"
+	const storeName = "test-store"
 
 	var (
-		driver      *btrfs.Driver
-		logger      *TestLogger
-		storeName   string
-		storePath   string
-		draxBinPath string
-		volumesPath string
+		driver         *btrfs.Driver
+		logger         *TestLogger
+		storePath      string
+		draxBinPath    string
+		volumesPath    string
+		btrfsMountPath string
 	)
 
 	BeforeEach(func() {
+		btrfsMountPath = fmt.Sprintf("/mnt/btrfs-%d", GinkgoParallelNode())
+
 		var err error
-		storeName = fmt.Sprintf("test-store-%d", GinkgoParallelNode())
 		Expect(os.MkdirAll(filepath.Join(btrfsMountPath, storeName), 0755)).To(Succeed())
 		storePath, err = ioutil.TempDir(filepath.Join(btrfsMountPath, storeName), "")
 		Expect(err).NotTo(HaveOccurred())
