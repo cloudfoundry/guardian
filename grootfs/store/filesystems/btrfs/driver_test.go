@@ -58,7 +58,7 @@ var _ = Describe("Btrfs", func() {
 	})
 
 	AfterEach(func() {
-		testhelpers.CleanUpBtrfsSubvolumes(btrfsMountPath, storeName)
+		testhelpers.CleanUpBtrfsSubvolumes(btrfsMountPath)
 		gexec.CleanupBuildArtifacts()
 	})
 
