@@ -346,7 +346,7 @@ func (d *Driver) findAssociatedLoopDevice(filePath string) (string, error) {
 		return losetupColumns[0], nil
 	}
 
-	return "", errorspkg.Errorf("unexpwcted losetup output: %s", string(output))
+	return "", errorspkg.Errorf("unexpected losetup output: %s", string(output))
 }
 
 func (d *Driver) mountFilesystem(source, destination, option, externalLogPath string) error {
