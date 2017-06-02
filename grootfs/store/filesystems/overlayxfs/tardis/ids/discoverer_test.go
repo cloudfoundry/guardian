@@ -7,17 +7,21 @@ import (
 
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis/ids"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("IdDiscoverer", func() {
 	var (
+		logger     lager.Logger
 		discoverer *ids.Discoverer
 		idDirPath  string
 	)
 
 	BeforeEach(func() {
+		logger = lagertest.NewTestLogger("test-logger")
 		idDirPath = filepath.Join(StorePath, overlayxfs.IDDir)
 		discoverer = ids.NewDiscoverer(idDirPath)
 
@@ -32,21 +36,21 @@ var _ = Describe("IdDiscoverer", func() {
 	Describe("Alloc", func() {
 		Context("when the id dir is empty", func() {
 			It("allocates the first available number", func() {
-				id, err := discoverer.Alloc()
+				id, err := discoverer.Alloc(logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(uint32(1)))
 			})
 
 			It("always allocates unique numbers", func() {
-				id, err := discoverer.Alloc()
+				id, err := discoverer.Alloc(logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(uint32(1)))
 
-				id, err = discoverer.Alloc()
+				id, err = discoverer.Alloc(logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(uint32(2)))
 
-				id, err = discoverer.Alloc()
+				id, err = discoverer.Alloc(logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(uint32(3)))
 			})
@@ -62,7 +66,7 @@ var _ = Describe("IdDiscoverer", func() {
 						defer GinkgoRecover()
 						defer wg.Done()
 
-						id, err := discoverer.Alloc()
+						id, err := discoverer.Alloc(logger)
 						Expect(err).NotTo(HaveOccurred())
 						ids[i] = int(id)
 					}(i)
@@ -79,7 +83,7 @@ var _ = Describe("IdDiscoverer", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := discoverer.Alloc()
+				_, err := discoverer.Alloc(logger)
 				Expect(err).To(MatchError(ContainSubstring("reading directory")))
 			})
 		})

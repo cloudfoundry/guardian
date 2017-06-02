@@ -31,7 +31,7 @@ var LimitCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		logger := lager.NewLogger("tardis")
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
-		logger.Info("staring")
+		logger.Info("starting")
 		defer logger.Info("ending")
 
 		imagePath := ctx.String("image-path")
@@ -49,17 +49,22 @@ var LimitCommand = cli.Command{
 		}
 
 		idDiscoverer := ids.NewDiscoverer(filepath.Join(filepath.Dir(imagesPath), overlayxfs.IDDir))
-		projectID, err := idDiscoverer.Alloc()
+		projectID, err := idDiscoverer.Alloc(logger)
 		if err != nil {
 			logger.Error("allocating-project-id", err)
 			return errorspkg.Wrap(err, "allocating project id")
 		}
 
-		if err := quotaControl.SetQuota(projectID, imagePath, quota); err != nil {
-			logger.Error("setting-quota-failed", err)
-			return errorspkg.Wrapf(err, "setting quota to %s", imagePath)
-		}
+		return func(logger lager.Logger) error {
+			logger = logger.Session("set-quota")
+			logger.Debug("starting")
+			defer logger.Debug("ending")
 
-		return nil
+			if err := quotaControl.SetQuota(projectID, imagePath, quota); err != nil {
+				logger.Error("setting-quota-failed", err)
+				return errorspkg.Wrapf(err, "setting quota to %s", imagePath)
+			}
+			return nil
+		}(logger)
 	},
 }

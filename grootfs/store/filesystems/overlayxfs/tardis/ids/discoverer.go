@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"code.cloudfoundry.org/lager"
+
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +21,11 @@ type Discoverer struct {
 	idsPath string
 }
 
-func (i *Discoverer) Alloc() (uint32, error) {
+func (i *Discoverer) Alloc(logger lager.Logger) (uint32, error) {
+	logger = logger.Session("project-id-allocation")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
 	contents, err := ioutil.ReadDir(i.idsPath)
 	if err != nil {
 		return 0, errors.Wrap(err, "reading directory")
