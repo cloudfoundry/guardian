@@ -639,9 +639,7 @@ func (d *Driver) createStoreDirectory(logger lager.Logger, path string, ownerUID
 }
 
 func (d *Driver) runTardis(logger lager.Logger, args ...string) (*bytes.Buffer, error) {
-	logger = logger.Session("run-tardis", lager.Data{"args": args})
-	logger.Debug("starting")
-	defer logger.Debug("ending")
+	logger = logger.Session("run-tardis", lager.Data{"path": d.tardisBinPath, "args": args})
 
 	if !d.tardisInPath() {
 		return nil, errorspkg.New("tardis was not found in the $PATH")
@@ -656,7 +654,6 @@ func (d *Driver) runTardis(logger lager.Logger, args ...string) (*bytes.Buffer, 
 	cmd.Stdout = stdoutBuffer
 	cmd.Stderr = lagregator.NewRelogger(logger)
 
-	logger.Debug("starting-tardis", lager.Data{"path": cmd.Path, "args": cmd.Args})
 	err := cmd.Run()
 
 	if err != nil {
