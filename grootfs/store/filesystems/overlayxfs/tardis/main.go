@@ -9,20 +9,20 @@ import (
 )
 
 func main() {
-	drax := cli.NewApp()
-	drax.Name = "drax"
-	drax.Usage = "The destroyer"
-	drax.Version = "0.1.0"
+	tardis := cli.NewApp()
+	tardis.Name = "tardis"
+	tardis.Usage = "The destroyer"
+	tardis.Version = "0.1.0"
 
-	drax.Before = func(ctx *cli.Context) error {
+	tardis.Before = func(ctx *cli.Context) error {
 		cli.ErrWriter = os.Stdout
 
 		return nil
 	}
 
-	drax.Commands = []cli.Command{
+	tardis.Commands = []cli.Command{
 		commands.LimitCommand,
 	}
 
-	drax.Run(os.Args)
+	tardis.Run(os.Args)
 }
