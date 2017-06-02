@@ -17,8 +17,8 @@ import (
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/rundmc/dadoo"
-	dadoofakes "code.cloudfoundry.org/guardian/rundmc/dadoo/dadoofakes"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo/dadoofakes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/lager"

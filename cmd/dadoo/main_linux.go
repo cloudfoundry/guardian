@@ -18,7 +18,7 @@ import (
 	"unsafe"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/rundmc/dadoo"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
 
 	"github.com/eapache/go-resiliency/retrier"
 	"github.com/opencontainers/runc/libcontainer/system"
@@ -69,11 +69,11 @@ func run() int {
 
 	ioWg := &sync.WaitGroup{}
 	var runcExecCmd *exec.Cmd
-	runtimeArgs := []string{"-debug", "-log", logFile}
+	runtimeArgs := []string{"--debug", "--log", logFile}
 	if *runcRoot != "" {
-		runtimeArgs = append(runtimeArgs, "-root", *runcRoot)
+		runtimeArgs = append(runtimeArgs, "--root", *runcRoot)
 	}
-	runtimeArgs = append(runtimeArgs, "exec", "-d", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "-pid-file", pidFilePath)
+	runtimeArgs = append(runtimeArgs, "exec", "-d", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "--pid-file", pidFilePath)
 	if *tty {
 		winsz, err := openFile(filepath.Join(processStateDir, "winsz"), os.O_RDWR)
 		defer closeFile(winsz)
@@ -86,7 +86,7 @@ func run() int {
 			return logAndExit(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
 		}
 		ttySocketPath := setupTTYSocket(stdinR, stdoutW, winsz, pidFilePath, *socketDirPath, ioWg)
-		runtimeArgs = append(runtimeArgs, "-tty", "-console-socket", ttySocketPath, containerId)
+		runtimeArgs = append(runtimeArgs, "--tty", "--console-socket", ttySocketPath, containerId)
 		runcExecCmd = exec.Command(runtime, runtimeArgs...)
 	} else {
 		runtimeArgs = append(runtimeArgs, containerId)

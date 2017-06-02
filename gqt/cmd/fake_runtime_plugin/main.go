@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/urfave/cli"
@@ -34,9 +36,17 @@ func main() {
 		CreateCommand,
 		StateCommand,
 		EventsCommand,
+		ExecCommand,
 	}
 
 	_ = fakeRuntimePlugin.Run(os.Args)
+}
+
+func writeArgs(action string) {
+	err := ioutil.WriteFile(filepath.Join(os.TempDir(), fmt.Sprintf("%s-args", action)), []byte(strings.Join(os.Args, " ")), 0777)
+	if err != nil {
+		panic(err)
+	}
 }
 
 var CreateCommand = cli.Command{
@@ -54,8 +64,9 @@ var CreateCommand = cli.Command{
 	},
 
 	Action: func(ctx *cli.Context) error {
-		err := ioutil.WriteFile(filepath.Join(os.TempDir(), "args"), []byte(strings.Join(os.Args, " ")), 0777)
-		if err != nil {
+		writeArgs("create")
+
+		if err := ioutil.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
 			panic(err)
 		}
 
@@ -79,6 +90,49 @@ var EventsCommand = cli.Command{
 
 	Action: func(ctx *cli.Context) error {
 		fmt.Printf("{}")
+		return nil
+	},
+}
+
+func copyFile(source, target string) {
+	sourceFile, err := os.Open(source)
+	if err != nil {
+		panic(err)
+	}
+	defer sourceFile.Close()
+
+	targetFile, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer targetFile.Close()
+
+	if _, err := io.Copy(targetFile, sourceFile); err != nil {
+		panic(err)
+	}
+}
+
+var ExecCommand = cli.Command{
+	Name: "exec",
+	Flags: []cli.Flag{
+		cli.StringFlag{
+			Name:  "process, p",
+			Usage: "path to the process.json",
+		},
+		cli.BoolFlag{
+			Name:  "detach,d",
+			Usage: "detach from the container's process",
+		},
+		cli.StringFlag{
+			Name:  "pid-file",
+			Value: "",
+			Usage: "specify the file to write the process id to",
+		},
+	},
+
+	Action: func(ctx *cli.Context) error {
+		copyFile(ctx.String("p"), filepath.Join(os.TempDir(), "exec-process-spec"))
+		writeArgs("exec")
 		return nil
 	},
 }

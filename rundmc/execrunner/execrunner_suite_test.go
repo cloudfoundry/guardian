@@ -1,4 +1,4 @@
-package dadoo_test
+package execrunner_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestDadoo(t *testing.T) {
+func TestExecrunner(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "rundmc/dadoo Suite")
+	RunSpecs(t, "Execrunner Suite")
 }

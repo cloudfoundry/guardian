@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"code.cloudfoundry.org/guardian/rundmc/dadoo"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/clock/fakeclock"

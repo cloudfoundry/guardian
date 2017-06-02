@@ -4,7 +4,7 @@ package dadoofakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/guardian/rundmc/dadoo"
+	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
 )
 
 type FakePidGetter struct {

@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,15 +10,15 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Runtime Plugin", func() {
 	var (
-		args         []string
-		argsFilepath string
-		client       *runner.RunningGarden
+		args   []string
+		client *runner.RunningGarden
 	)
 
 	BeforeEach(func() {
@@ -26,11 +27,9 @@ var _ = Describe("Runtime Plugin", func() {
 
 	JustBeforeEach(func() {
 		client = startGarden(args...)
-		argsFilepath = filepath.Join(client.Tmpdir, "args")
 	})
 
 	AfterEach(func() {
-		Expect(os.Remove(argsFilepath)).To(Succeed())
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
@@ -43,20 +42,22 @@ var _ = Describe("Runtime Plugin", func() {
 			)
 		})
 
-		Context("and a container is successfully created", func() {
-			var handle = fmt.Sprintf("some-handle-%d", GinkgoParallelNode())
+		Describe("creating a container", func() {
+			var (
+				handle       = fmt.Sprintf("some-handle-%d", GinkgoParallelNode())
+				container    garden.Container
+				argsFilepath string
+			)
 
 			JustBeforeEach(func() {
-				_, err := client.Create(garden.ContainerSpec{Handle: handle})
+				argsFilepath = filepath.Join(client.Tmpdir, "create-args")
+				var err error
+				container, err = client.Create(garden.ContainerSpec{Handle: handle})
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("executes the plugin, passing the correct args", func() {
-				pluginArgsBytes, err := ioutil.ReadFile(argsFilepath)
-				Expect(err).ToNot(HaveOccurred())
-
-				pluginArgs := strings.Split(string(pluginArgsBytes), " ")
-				Expect(pluginArgs).To(ConsistOf(
+			It("executes the plugin, passing the correct args for create", func() {
+				Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
 					binaries.RuntimePlugin,
 					"--debug",
 					"--log", HaveSuffix(filepath.Join("containers", handle, "create.log")),
@@ -69,6 +70,50 @@ var _ = Describe("Runtime Plugin", func() {
 					handle,
 				))
 			})
+
+			Describe("starting a process", func() {
+				JustBeforeEach(func() {
+					argsFilepath = filepath.Join(client.Tmpdir, "exec-args")
+
+					_, err := container.Run(garden.ProcessSpec{Path: "some-idiosyncratic-binary"}, garden.ProcessIO{
+						Stdout: GinkgoWriter,
+						Stderr: GinkgoWriter,
+					})
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("executes the plugin, passing the correct args for exec", func() {
+					Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
+						binaries.RuntimePlugin,
+						"--debug",
+						"--log", MatchRegexp(".*"),
+						"exec",
+						"-d",
+						"-p", MatchRegexp(".*"),
+						"--pid-file", MatchRegexp(".*"),
+						handle,
+					))
+				})
+
+				It("passes the spec serialised into a file", func() {
+					processSpecFilePath := filepath.Join(client.Tmpdir, "exec-process-spec")
+					Eventually(processSpecFilePath).Should(BeAnExistingFile())
+					processSpecFile, err := os.Open(processSpecFilePath)
+					Expect(err).ToNot(HaveOccurred())
+					defer processSpecFile.Close()
+
+					var processSpec runrunc.PreparedSpec
+					Expect(json.NewDecoder(processSpecFile).Decode(&processSpec)).To(Succeed())
+					Expect(processSpec.Process.Args[0]).To(Equal("some-idiosyncratic-binary"))
+				})
+			})
 		})
 	})
 })
+
+func readPluginArgs(argsFilePath string) []string {
+	Eventually(argsFilePath).Should(BeAnExistingFile())
+	pluginArgsBytes, err := ioutil.ReadFile(argsFilePath)
+	Expect(err).ToNot(HaveOccurred())
+	return strings.Split(string(pluginArgsBytes), " ")
+}
