@@ -15,8 +15,8 @@ import (
 
 var InitStoreCommand = cli.Command{
 	Name:        "init-store",
-	Usage:       "init-store",
-	Description: "Initialize a Store Directory on a mounted Filesystem",
+	Usage:       "init-store --store <path>",
+	Description: "Initialize a Store Directory",
 
 	Flags: []cli.Flag{
 		cli.StringSliceFlag{

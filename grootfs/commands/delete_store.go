@@ -11,7 +11,7 @@ import (
 
 var DeleteStoreCommand = cli.Command{
 	Name:        "delete-store",
-	Usage:       "delete-store",
+	Usage:       "delete-store --store <path>",
 	Description: "Deletes the given store from the system",
 
 	Action: func(ctx *cli.Context) error {
