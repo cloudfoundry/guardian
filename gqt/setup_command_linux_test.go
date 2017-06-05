@@ -18,11 +18,11 @@ import (
 
 var _ = Describe("gdn setup", func() {
 	var (
-		tmpDir            string
-		cgroupsMountpoint string
-		setupArgs         []string
-		tag               string
-		setupProcess      *gexec.Session
+		tmpDir       string
+		cgroupsRoot  string
+		setupArgs    []string
+		tag          string
+		setupProcess *gexec.Session
 	)
 
 	BeforeEach(func() {
@@ -38,7 +38,7 @@ var _ = Describe("gdn setup", func() {
 			os.TempDir(),
 			fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
 		)
-		cgroupsMountpoint = filepath.Join(tmpDir, fmt.Sprintf("cgroups-%s", tag))
+		cgroupsRoot = filepath.Join(tmpDir, fmt.Sprintf("cgroups-%s", tag))
 		setupArgs = []string{"setup", "--tag", tag}
 	})
 
@@ -60,10 +60,14 @@ var _ = Describe("gdn setup", func() {
 	})
 
 	It("sets up cgroups", func() {
-		mountpointCmd := exec.Command("mountpoint", "-q", cgroupsMountpoint+"/")
+		mountpointCmd := exec.Command("mountpoint", "-q", cgroupsRoot+"/")
 		mountpointCmd.Stdout = GinkgoWriter
 		mountpointCmd.Stderr = GinkgoWriter
 		Expect(mountpointCmd.Run()).To(Succeed())
+	})
+
+	AfterEach(func() {
+		Expect(umountCgroups(cgroupsRoot)).To(Succeed())
 	})
 
 	Context("when we start the server", func() {
