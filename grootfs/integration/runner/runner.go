@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -109,9 +110,16 @@ func (r Runner) runCmd(cmd *exec.Cmd) error {
 		return cmd.Run()
 	}
 
+	var process os.Process
+	err := cmd.Start()
+	if err != nil {
+		return err
+	}
+	process = *cmd.Process
+
 	errChan := make(chan error)
 	go func() {
-		errChan <- cmd.Run()
+		errChan <- cmd.Wait()
 		close(errChan)
 	}()
 
@@ -120,10 +128,7 @@ func (r Runner) runCmd(cmd *exec.Cmd) error {
 		return runErr
 
 	case <-time.After(r.Timeout):
-		if process := cmd.Process; process != nil {
-			pid := process.Pid
-			syscall.Kill(pid, syscall.SIGKILL)
-		}
+		syscall.Kill(process.Pid, syscall.SIGKILL)
 
 		return errors.New(
 			fmt.Sprintf("command took more than %f seconds to finish", r.Timeout.Seconds()),
