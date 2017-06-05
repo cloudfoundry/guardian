@@ -42,13 +42,13 @@ func (r RootFS) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 }
 
 type ChrootMkdir struct {
-	Command       func(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
+	Command       func(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
 	CommandRunner commandrunner.CommandRunner
 }
 
-func (m ChrootMkdir) MkdirAs(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
+func (m ChrootMkdir) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
 	return m.CommandRunner.Run(m.Command(
-		rootfsPath,
+		rootFSPathFile,
 		uid,
 		gid,
 		mode,

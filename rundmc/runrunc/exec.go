@@ -31,7 +31,7 @@ type UserLookupper interface {
 	Lookup(rootFsPath string, user string) (*user.ExecUser, error)
 }
 type Mkdirer interface {
-	MkdirAs(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
+	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
 type LookupFunc func(rootfsPath, user string) (*user.ExecUser, error)
@@ -141,10 +141,10 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		log.Error("read-pidfile-failed", err)
 		return nil, err
 	}
-
 	pid := string(pidBytes)
-	rootFsPath := filepath.Join("/proc", pid, "root")
-	u, err := r.lookupUser(bndl, rootFsPath, spec.User)
+
+	rootFSPathFile := filepath.Join("/proc", pid, "root")
+	u, err := r.lookupUser(bndl, rootFSPathFile, spec.User)
 	if err != nil {
 		log.Error("lookup-user-failed", err)
 		return nil, err
@@ -155,7 +155,7 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		cwd = spec.Dir
 	}
 
-	if err := r.ensureDirExists(rootFsPath, cwd, u.hostUid, u.hostGid); err != nil {
+	if err := r.ensureDirExists(rootFSPathFile, cwd, u.hostUid, u.hostGid); err != nil {
 		log.Error("ensure-dir-failed", err)
 		return nil, err
 	}
@@ -231,10 +231,10 @@ func (r *execPreparer) lookupUser(bndl goci.Bndl, rootfsPath, username string) (
 	}, nil
 }
 
-func (r *execPreparer) ensureDirExists(rootfsPath, dir string, uid, gid int) error {
+func (r *execPreparer) ensureDirExists(rootFSPathFile, dir string, uid, gid int) error {
 	if r.runningAsRoot() {
 		// the MkdirAs throws a permission error when running in rootless mode...
-		if err := r.mkdirer.MkdirAs(rootfsPath, uid, gid, 0755, false, dir); err != nil {
+		if err := r.mkdirer.MkdirAs(rootFSPathFile, uid, gid, 0755, false, dir); err != nil {
 			return fmt.Errorf("create working directory: %s", err)
 		}
 	}
