@@ -62,3 +62,7 @@ func (fileWriter) WriteFile(path string, contents []byte, mode os.FileMode) erro
 	}
 	return ioutil.WriteFile(path, contents, mode)
 }
+
+func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
+	return &runrunc.WindowsExecPreparer{}
+}

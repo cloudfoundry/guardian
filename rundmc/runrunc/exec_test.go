@@ -102,7 +102,7 @@ var _ = Describe("ExecPreparer", func() {
 
 	JustBeforeEach(func() {
 		runningAsRoot := func() bool { return !rootless }
-		preparer = runrunc.NewExecPreparer(bundleLoader, users, mkdirer, []string{"foo", "bar", "brains"}, runningAsRoot)
+		preparer = runrunc.NewLinuxExecPreparer(bundleLoader, users, mkdirer, []string{"foo", "bar", "brains"}, runningAsRoot)
 	})
 
 	It("passes a process.json with the correct path and args", func() {

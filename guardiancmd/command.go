@@ -595,7 +595,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		cmd.Runc.Root,
 		newuidmapPath,
 		newgidmapPath,
-		runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps, runningAsRoot),
+		cmd.wireExecPreparer(),
 		cmd.wireExecRunner(
 			dadooPath,
 			runtimePath,
