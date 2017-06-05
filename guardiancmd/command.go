@@ -606,21 +606,9 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		),
 	)
 
-	mounts := []specs.Mount{
-		{Type: "sysfs", Source: "sysfs", Destination: "/sys", Options: []string{"nosuid", "noexec", "nodev", "ro"}},
-		{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
-		{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
-			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
-		{Type: "bind", Source: cmd.Bin.Init.Path(), Destination: "/tmp/garden-init", Options: []string{"bind"}},
-	}
-
-	privilegedMounts := append(mounts,
-		specs.Mount{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
-	)
-
-	unprivilegedMounts := append(mounts,
-		specs.Mount{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
-	)
+	mounts := defaultBindMounts(cmd.Bin.Init.Path())
+	privilegedMounts := append(mounts, privilegedMounts()...)
+	unprivilegedMounts := append(mounts, unprivilegedMounts()...)
 
 	rwm := "rwm"
 	character := "c"
