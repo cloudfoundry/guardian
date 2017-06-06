@@ -16,6 +16,8 @@ RUN apt-get update && \
         sudo \
         uidmap \
         unzip \
+        python \
+        python-yaml \
         wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
