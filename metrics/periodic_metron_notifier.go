@@ -8,25 +8,13 @@ import (
 	"github.com/pivotal-golang/clock"
 )
 
-type Metric string
-
-func (name Metric) Send(value int) {
-	dropsonde_metrics.SendValue(string(name), float64(value), "Metric")
+func sendMetric(key string, value int) {
+	dropsonde_metrics.SendValue(key, float64(value), "Metric")
 }
 
-type Duration string
-
-func (name Duration) Send(duration time.Duration) {
-	dropsonde_metrics.SendValue(string(name), float64(duration), "nanos")
+func sendDuration(duration time.Duration) {
+	dropsonde_metrics.SendValue("MetricsReporting", float64(duration), "nanos")
 }
-
-const (
-	loopDevices   = Metric("LoopDevices")
-	backingStores = Metric("BackingStores")
-	depotDirs     = Metric("DepotDirs")
-
-	metricsReportingDuration = Duration("MetricsReporting")
-)
 
 type PeriodicMetronNotifier struct {
 	Interval time.Duration
@@ -69,12 +57,12 @@ func (notifier PeriodicMetronNotifier) Start() {
 			case <-ticker.C():
 				startedAt := notifier.Clock.Now()
 
-				loopDevices.Send(notifier.metrics.LoopDevices())
-				backingStores.Send(notifier.metrics.BackingStores())
-				depotDirs.Send(notifier.metrics.DepotDirs())
+				for key, metric := range notifier.metrics {
+					sendMetric(key, metric())
+				}
 
 				finishedAt := notifier.Clock.Now()
-				metricsReportingDuration.Send(finishedAt.Sub(startedAt))
+				sendDuration(finishedAt.Sub(startedAt))
 			case <-notifier.stopped:
 				return
 			}

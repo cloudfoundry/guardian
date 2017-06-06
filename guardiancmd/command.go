@@ -412,12 +412,26 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	metricsProvider := cmd.wireMetricsProvider(logger, cmd.Containers.Dir, cmd.Graph.Dir)
 
-	metronNotifier := cmd.wireMetronNotifier(logger, metricsProvider)
+	debugServerMetrics := map[string]func() int{
+		"numCPUS":       metricsProvider.NumCPU,
+		"numGoRoutines": metricsProvider.NumGoroutine,
+		"loopDevices":   metricsProvider.LoopDevices,
+		"backingStores": metricsProvider.BackingStores,
+		"depotDirs":     metricsProvider.DepotDirs,
+	}
+
+	periodicMetronMetrics := map[string]func() int{
+		"LoopDevices":   metricsProvider.LoopDevices,
+		"BackingStores": metricsProvider.BackingStores,
+		"DepotDirs":     metricsProvider.DepotDirs,
+	}
+
+	metronNotifier := cmd.wireMetronNotifier(logger, periodicMetronMetrics)
 	metronNotifier.Start()
 
 	if cmd.Server.DebugBindIP != nil {
 		addr := fmt.Sprintf("%s:%d", cmd.Server.DebugBindIP.IP(), cmd.Server.DebugBindPort)
-		metrics.StartDebugServer(addr, reconfigurableSink, metricsProvider)
+		metrics.StartDebugServer(addr, reconfigurableSink, debugServerMetrics)
 	}
 
 	err = gardenServer.Start()
@@ -724,13 +738,13 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{})
 }
 
-func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) metrics.Metrics {
+func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) *metrics.MetricsProvider {
 	var backingStoresPath string
 	if graphRoot != "" {
 		backingStoresPath = filepath.Join(graphRoot, "backing_stores")
 	}
 
-	return metrics.NewMetrics(log, backingStoresPath, depotPath)
+	return metrics.NewMetricsProvider(log, backingStoresPath, depotPath)
 }
 
 func (cmd *ServerCommand) wireMetronNotifier(log lager.Logger, metricsProvider metrics.Metrics) *metrics.PeriodicMetronNotifier {

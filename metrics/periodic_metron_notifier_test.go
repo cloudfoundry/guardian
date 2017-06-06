@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/guardian/metrics"
-	fakes "code.cloudfoundry.org/guardian/metrics/metricsfakes"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/cloudfoundry/dropsonde/metric_sender/fake"
 	dropsonde_metrics "github.com/cloudfoundry/dropsonde/metrics"
@@ -18,9 +17,9 @@ var _ = Describe("PeriodicMetronNotifier", func() {
 	var (
 		sender *fake.FakeMetricSender
 
-		fakeMetrics    *fakes.FakeMetrics
+		testMetrics    metrics.Metrics
 		reportInterval time.Duration
-		fakeClock      *fakeclock.FakeClock
+		clock          *fakeclock.FakeClock
 
 		pmn *metrics.PeriodicMetronNotifier
 	)
@@ -28,12 +27,12 @@ var _ = Describe("PeriodicMetronNotifier", func() {
 	BeforeEach(func() {
 		reportInterval = 100 * time.Millisecond
 
-		fakeMetrics = new(fakes.FakeMetrics)
-		fakeMetrics.LoopDevicesReturns(33)
-		fakeMetrics.BackingStoresReturns(12)
-		fakeMetrics.DepotDirsReturns(3)
+		testMetrics = map[string]func() int{
+			"fooMetric": func() int { return 1 },
+			"barMetric": func() int { return 2 },
+		}
 
-		fakeClock = fakeclock.NewFakeClock(time.Unix(123, 456))
+		clock = fakeclock.NewFakeClock(time.Unix(123, 456))
 
 		sender = fake.NewFakeMetricSender()
 		dropsonde_metrics.Initialize(sender, nil)
@@ -42,9 +41,9 @@ var _ = Describe("PeriodicMetronNotifier", func() {
 	JustBeforeEach(func() {
 		pmn = metrics.NewPeriodicMetronNotifier(
 			lagertest.NewTestLogger("test"),
-			fakeMetrics,
+			testMetrics,
 			reportInterval,
-			fakeClock,
+			clock,
 		)
 		pmn.Start()
 	})
@@ -55,26 +54,19 @@ var _ = Describe("PeriodicMetronNotifier", func() {
 
 	Context("when the report interval elapses", func() {
 		It("emits metrics", func() {
-			fakeClock.Increment(reportInterval)
+			clock.Increment(reportInterval)
 
 			Eventually(func() fake.Metric {
-				return sender.GetValue("LoopDevices")
+				return sender.GetValue("fooMetric")
 			}).Should(Equal(fake.Metric{
-				Value: 33,
+				Value: 1,
 				Unit:  "Metric",
 			}))
 
 			Eventually(func() fake.Metric {
-				return sender.GetValue("BackingStores")
+				return sender.GetValue("barMetric")
 			}).Should(Equal(fake.Metric{
-				Value: 12,
-				Unit:  "Metric",
-			}))
-
-			Eventually(func() fake.Metric {
-				return sender.GetValue("DepotDirs")
-			}).Should(Equal(fake.Metric{
-				Value: 3,
+				Value: 2,
 				Unit:  "Metric",
 			}))
 		})

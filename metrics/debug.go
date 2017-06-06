@@ -13,25 +13,14 @@ import (
 )
 
 func StartDebugServer(address string, sink *lager.ReconfigurableSink, metrics Metrics) (ifrit.Process, error) {
-	expvar.Publish("numCPUS", expvar.Func(func() interface{} {
-		return metrics.NumCPU()
-	}))
-
-	expvar.Publish("numGoRoutines", expvar.Func(func() interface{} {
-		return metrics.NumGoroutine()
-	}))
-
-	expvar.Publish("loopDevices", expvar.Func(func() interface{} {
-		return metrics.LoopDevices()
-	}))
-
-	expvar.Publish("backingStores", expvar.Func(func() interface{} {
-		return metrics.BackingStores()
-	}))
-
-	expvar.Publish("depotDirs", expvar.Func(func() interface{} {
-		return metrics.DepotDirs()
-	}))
+	for key, metric := range metrics {
+		// https://github.com/golang/go/wiki/CommonMistakes
+		captureKey := key
+		captureMetric := metric
+		expvar.Publish(captureKey, expvar.Func(func() interface{} {
+			return captureMetric()
+		}))
+	}
 
 	server := http_server.New(address, handler(sink))
 	p := ifrit.Invoke(server)
