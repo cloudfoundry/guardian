@@ -363,7 +363,23 @@ var _ = Describe("Networking", func() {
 
 			externalIP := externalIP(container)
 
-			Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait("10s") }, "10s").
+			_, err = container.Run(garden.ProcessSpec{
+				Path: "ps",
+				Args: []string{"-aef"},
+			},
+				garden.ProcessIO{
+					Stdout: GinkgoWriter,
+					Stderr: GinkgoWriter,
+				})
+			Expect(err).NotTo(HaveOccurred())
+
+			cmd := exec.Command("iptables", "-t", "nat", "-L")
+			cmd.Stdout = GinkgoWriter
+			cmd.Stderr = GinkgoWriter
+			Expect(cmd.Run()).To(Succeed())
+
+			// the same request withing the container
+			Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait("10s") }, "10s", "1s").
 				Should(gbytes.Say(fmt.Sprintf("%d", containerPort)))
 		})
 
