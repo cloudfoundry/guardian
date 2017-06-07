@@ -7,8 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
-	specs "github.com/opencontainers/runtime-spec/specs-go"
-
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
@@ -20,27 +19,27 @@ type BundleSaver interface {
 	Save(bundle goci.Bndl, path string) error
 }
 
-//go:generate counterfeiter . Chowner
-type Chowner interface {
-	Chown(path string, uid, gid int) error
+//go:generate counterfeiter . BundleGenerator
+type BundleGenerator interface {
+	Generate(spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
 }
 
 // a depot which stores containers as subdirs of a depot directory
 type DirectoryDepot struct {
 	dir         string
+	bundler     BundleGenerator
 	bundleSaver BundleSaver
-	chowner     Chowner
 }
 
-func New(dir string, bundleSaver BundleSaver, chowner Chowner) *DirectoryDepot {
+func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver) *DirectoryDepot {
 	return &DirectoryDepot{
 		dir:         dir,
+		bundler:     bundler,
 		bundleSaver: bundleSaver,
-		chowner:     chowner,
 	}
 }
 
-func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle goci.Bndl) error {
+func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec gardener.DesiredContainerSpec) error {
 	log = log.Session("depot-create", lager.Data{"handle": handle})
 
 	log.Info("started")
@@ -52,30 +51,12 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, bundle goci.Bnd
 		return err
 	}
 
-	containerRootHostUID := mappingForContainerRoot(bundle.UIDMappings())
-	containerRootHostGID := mappingForContainerRoot(bundle.GIDMappings())
-	if err := d.createFile(log, filepath.Join(containerDir, "hosts"), int(containerRootHostUID), containerRootHostGID); err != nil {
+	bundle, err := d.bundler.Generate(spec, containerDir)
+	if err != nil {
+		removeOrLog(log, containerDir)
+		log.Error("generate-failed", err, lager.Data{"path": containerDir})
 		return err
 	}
-	if err := d.createFile(log, filepath.Join(containerDir, "resolv.conf"), int(containerRootHostUID), containerRootHostGID); err != nil {
-		return err
-	}
-
-	mounts := []specs.Mount{
-		{
-			Destination: "/etc/hosts",
-			Source:      filepath.Join(containerDir, "hosts"),
-			Type:        "bind",
-			Options:     []string{"bind"},
-		},
-		{
-			Destination: "/etc/resolv.conf",
-			Source:      filepath.Join(containerDir, "resolv.conf"),
-			Type:        "bind",
-			Options:     []string{"bind"},
-		},
-	}
-	bundle = bundle.WithMounts(mounts...)
 
 	if err := d.bundleSaver.Save(bundle, containerDir); err != nil {
 		removeOrLog(log, containerDir)
@@ -134,35 +115,4 @@ func removeOrLog(log lager.Logger, path string) {
 	if err := os.RemoveAll(path); err != nil {
 		log.Error("remove-failed", err, lager.Data{"path": path})
 	}
-}
-
-func (d *DirectoryDepot) createFile(log lager.Logger, path string, containerRootHostUID, containerRootHostGID int) error {
-	if err := touchFile(path); err != nil {
-		return err
-	}
-	if err := d.chowner.Chown(path, containerRootHostUID, containerRootHostGID); err != nil {
-		wrappedErr := fmt.Errorf("error chowning %s: %s", filepath.Base(path), err)
-		log.Error("chowning-failed", wrappedErr)
-		return wrappedErr
-	}
-
-	return nil
-}
-
-func touchFile(path string) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return err
-	}
-	return file.Close()
-}
-
-func mappingForContainerRoot(mappings []specs.LinuxIDMapping) int {
-	for _, mapping := range mappings {
-		if mapping.ContainerID == 0 {
-			return int(mapping.HostID)
-		}
-	}
-
-	return 0
 }

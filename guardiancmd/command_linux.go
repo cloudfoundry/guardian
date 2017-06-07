@@ -67,8 +67,8 @@ func commandRunner() commandrunner.CommandRunner {
 	return linux_command_runner.New()
 }
 
-func wireDepot(depotPath string, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
-	return depot.New(depotPath, bundleSaver, &depot.OSChowner{})
+func wireDepot(depotPath string, bundler depot.BundleGenerator, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
+	return depot.New(depotPath, bundler, bundleSaver)
 }
 
 func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {

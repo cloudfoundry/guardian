@@ -15,13 +15,15 @@ var _ = Describe("Env Rule", func() {
 	)
 
 	JustBeforeEach(func() {
+		var err error
 		rule = bundlerules.Env{}
-		newBndl = rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		newBndl, err = rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			Env: []string{
 				"TEST=banana",
 				"CONTAINER_NAME=hello",
 			},
-		})
+		}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("sets the environment onto the bundle process", func() {

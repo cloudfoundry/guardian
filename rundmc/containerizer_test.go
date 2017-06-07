@@ -22,7 +22,6 @@ import (
 var _ = Describe("Rundmc", func() {
 	var (
 		fakeDepot             *fakes.FakeDepot
-		fakeBundler           *fakes.FakeBundleGenerator
 		fakeBundleLoader      *fakes.FakeBundleLoader
 		fakeOCIRuntime        *fakes.FakeOCIRuntime
 		fakeNstarRunner       *fakes.FakeNstarRunner
@@ -38,7 +37,6 @@ var _ = Describe("Rundmc", func() {
 	BeforeEach(func() {
 		fakeDepot = new(fakes.FakeDepot)
 		fakeOCIRuntime = new(fakes.FakeOCIRuntime)
-		fakeBundler = new(fakes.FakeBundleGenerator)
 		fakeBundleLoader = new(fakes.FakeBundleLoader)
 		fakeNstarRunner = new(fakes.FakeNstarRunner)
 		fakeStopper = new(fakes.FakeStopper)
@@ -51,25 +49,21 @@ var _ = Describe("Rundmc", func() {
 			return "/path/to/" + handle, nil
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeBundler, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator)
+		containerizer = rundmc.New(fakeDepot, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator)
 	})
 
 	Describe("Create", func() {
 		It("should ask the depot to create a container", func() {
-			var returnedBundle goci.Bndl
-			fakeBundler.GenerateStub = func(spec gardener.DesiredContainerSpec) goci.Bndl {
-				return returnedBundle
-			}
-
-			containerizer.Create(logger, gardener.DesiredContainerSpec{
+			spec := gardener.DesiredContainerSpec{
 				Handle: "exuberant!",
-			})
+			}
+			containerizer.Create(logger, spec)
 
 			Expect(fakeDepot.CreateCallCount()).To(Equal(1))
 
-			_, handle, bundle := fakeDepot.CreateArgsForCall(0)
+			_, handle, actualSpec := fakeDepot.CreateArgsForCall(0)
 			Expect(handle).To(Equal("exuberant!"))
-			Expect(bundle).To(Equal(returnedBundle))
+			Expect(actualSpec).To(Equal(spec))
 		})
 
 		Context("when creating the depot directory fails", func() {

@@ -15,7 +15,7 @@ type Limits struct {
 	TCPMemoryLimit   uint64
 }
 
-func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
+func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	limit := uint64(spec.Limits.Memory.LimitInBytes)
 	bndl = bndl.WithMemoryLimit(specs.LinuxMemory{Limit: &limit, Swap: &limit, KernelTCP: &l.TCPMemoryLimit})
 
@@ -35,7 +35,7 @@ func (l Limits) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 	bndl = bndl.WithBlockIO(specs.LinuxBlockIO{Weight: &l.BlockIOWeight})
 
 	pids := int64(spec.Limits.Pid.Max)
-	return bndl.WithPidLimit(specs.LinuxPids{Limit: pids})
+	return bndl.WithPidLimit(specs.LinuxPids{Limit: pids}), nil
 }
 
 func int64PtrVal(n uint64) *int64 {

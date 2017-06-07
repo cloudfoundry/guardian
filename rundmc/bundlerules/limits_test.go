@@ -13,11 +13,12 @@ import (
 
 var _ = Describe("LimitsRule", func() {
 	It("sets the correct memory limit in bundle resources", func() {
-		newBndl := bundlerules.Limits{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			Limits: garden.Limits{
 				Memory: garden.MemoryLimits{LimitInBytes: 4096},
 			},
-		})
+		}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(*(newBndl.Resources().Memory.Limit)).To(BeNumerically("==", 4096))
 		Expect(*(newBndl.Resources().Memory.Swap)).To(BeNumerically("==", 4096))
@@ -27,7 +28,8 @@ var _ = Describe("LimitsRule", func() {
 		limits := bundlerules.Limits{
 			TCPMemoryLimit: 100,
 		}
-		newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{})
+		newBndl, err := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(*(newBndl.Resources().Memory.KernelTCP)).To(Equal(limits.TCPMemoryLimit))
 	})
@@ -36,17 +38,19 @@ var _ = Describe("LimitsRule", func() {
 		limits := bundlerules.Limits{
 			BlockIOWeight: 100,
 		}
-		newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{})
+		newBndl, err := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(*(newBndl.Resources().BlockIO.Weight)).To(Equal(limits.BlockIOWeight))
 	})
 
 	It("sets the correct CPU limit in bundle resources", func() {
-		newBndl := bundlerules.Limits{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			Limits: garden.Limits{
 				CPU: garden.CPULimits{LimitInShares: 1},
 			},
-		})
+		}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(*(newBndl.Resources().CPU.Shares)).To(BeNumerically("==", 1))
 		Expect(newBndl.Resources().CPU.Period).To(BeNil())
@@ -59,11 +63,12 @@ var _ = Describe("LimitsRule", func() {
 			limits := bundlerules.Limits{
 				CpuQuotaPerShare: quotaPerShare,
 			}
-			newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+			newBndl, err := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 				Limits: garden.Limits{
 					CPU: garden.CPULimits{LimitInShares: limitInShares},
 				},
-			})
+			}, "not-needed-path")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(*(newBndl.Resources().CPU.Period)).To(BeNumerically("==", 100000))
 			Expect(*(newBndl.Resources().CPU.Quota)).To(BeNumerically("==", limitInShares*quotaPerShare))
@@ -75,11 +80,12 @@ var _ = Describe("LimitsRule", func() {
 			limits := bundlerules.Limits{
 				CpuQuotaPerShare: 1,
 			}
-			newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+			newBndl, err := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 				Limits: garden.Limits{
 					CPU: garden.CPULimits{LimitInShares: 1},
 				},
-			})
+			}, "not-needed-path")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(*(newBndl.Resources().CPU.Quota)).To(BeNumerically("==", 1000))
 		})
@@ -90,11 +96,12 @@ var _ = Describe("LimitsRule", func() {
 			limits := bundlerules.Limits{
 				CpuQuotaPerShare: 0,
 			}
-			newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+			newBndl, err := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 				Limits: garden.Limits{
 					CPU: garden.CPULimits{LimitInShares: 1},
 				},
-			})
+			}, "not-needed-path")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(*(newBndl.Resources().CPU.Shares)).To(BeNumerically("==", 1))
 			Expect(newBndl.Resources().CPU.Period).To(BeNil())
@@ -107,7 +114,8 @@ var _ = Describe("LimitsRule", func() {
 			limits := bundlerules.Limits{
 				CpuQuotaPerShare: 5,
 			}
-			newBndl := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{})
+			newBndl, err := limits.Apply(goci.Bundle(), gardener.DesiredContainerSpec{}, "not-needed-path")
+			Expect(err).NotTo(HaveOccurred())
 
 			Expect(*(newBndl.Resources().CPU.Shares)).To(BeNumerically("==", 0))
 			Expect(newBndl.Resources().CPU.Period).To(BeNil())
@@ -116,11 +124,12 @@ var _ = Describe("LimitsRule", func() {
 	})
 
 	It("sets the correct PID limit in bundle resources", func() {
-		newBndl := bundlerules.Limits{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		newBndl, err := bundlerules.Limits{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			Limits: garden.Limits{
 				Pid: garden.PidLimits{Max: 1},
 			},
-		})
+		}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(newBndl.Resources().Pids.Limit).To(BeNumerically("==", 1))
 	})
@@ -132,11 +141,12 @@ var _ = Describe("LimitsRule", func() {
 			},
 		)
 
-		newBndl := bundlerules.Limits{}.Apply(bndl, gardener.DesiredContainerSpec{
+		newBndl, err := bundlerules.Limits{}.Apply(bndl, gardener.DesiredContainerSpec{
 			Limits: garden.Limits{
 				Memory: garden.MemoryLimits{LimitInBytes: 4096},
 			},
-		})
+		}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(*(newBndl.Resources().Memory.Limit)).To(BeNumerically("==", 4096))
 		Expect(newBndl.Resources().Devices).To(Equal(bndl.Resources().Devices))

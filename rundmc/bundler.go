@@ -7,19 +7,23 @@ import (
 
 //go:generate counterfeiter . BundlerRule
 type BundlerRule interface {
-	Apply(bndle goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl
+	Apply(bndle goci.Bndl, spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
 }
 
 type BundleTemplate struct {
 	Rules []BundlerRule
 }
 
-func (b BundleTemplate) Generate(spec gardener.DesiredContainerSpec) goci.Bndl {
+func (b BundleTemplate) Generate(spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
 	var bndl goci.Bndl
 
 	for _, rule := range b.Rules {
-		bndl = rule.Apply(bndl, spec)
+		var err error
+		bndl, err = rule.Apply(bndl, spec, containerDir)
+		if err != nil {
+			return goci.Bndl{}, err
+		}
 	}
 
-	return bndl
+	return bndl, nil
 }

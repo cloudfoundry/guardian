@@ -14,7 +14,6 @@ import (
 )
 
 //go:generate counterfeiter . Depot
-//go:generate counterfeiter . BundleGenerator
 //go:generate counterfeiter . OCIRuntime
 //go:generate counterfeiter . NstarRunner
 //go:generate counterfeiter . EventStore
@@ -24,14 +23,10 @@ import (
 //go:generate counterfeiter . RootfsFileCreator
 
 type Depot interface {
-	Create(log lager.Logger, handle string, bundle goci.Bndl) error
+	Create(log lager.Logger, handle string, spec gardener.DesiredContainerSpec) error
 	Lookup(log lager.Logger, handle string) (path string, err error)
 	Destroy(log lager.Logger, handle string) error
 	Handles() ([]string, error)
-}
-
-type BundleGenerator interface {
-	Generate(spec gardener.DesiredContainerSpec) goci.Bndl
 }
 
 type BundleLoader interface {
@@ -75,7 +70,6 @@ type RootfsFileCreator interface {
 // Containerizer knows how to manage a depot of container bundles
 type Containerizer struct {
 	depot             Depot
-	bundler           BundleGenerator
 	loader            BundleLoader
 	runtime           OCIRuntime
 	stopper           Stopper
@@ -85,10 +79,9 @@ type Containerizer struct {
 	rootfsFileCreator RootfsFileCreator
 }
 
-func New(depot Depot, bundler BundleGenerator, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator) *Containerizer {
+func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator) *Containerizer {
 	return &Containerizer{
 		depot:             depot,
-		bundler:           bundler,
 		runtime:           runtime,
 		loader:            loader,
 		nstar:             nstarRunner,
@@ -111,7 +104,7 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 		return err
 	}
 
-	if err := c.depot.Create(log, spec.Handle, c.bundler.Generate(spec)); err != nil {
+	if err := c.depot.Create(log, spec.Handle, spec); err != nil {
 		log.Error("depot-create-failed", err)
 		return err
 	}

@@ -10,7 +10,7 @@ import (
 type BindMounts struct {
 }
 
-func (b BindMounts) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
+func (b BindMounts) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
 	var mounts []specs.Mount
 	for _, m := range spec.BindMounts {
 		modeOpt := "ro"
@@ -26,5 +26,5 @@ func (b BindMounts) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) go
 		})
 	}
 
-	return bndl.WithMounts(mounts...)
+	return bndl.WithMounts(mounts...), nil
 }

@@ -594,37 +594,6 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	depotPath, dadooPath, runtimePath, nstarPath, tarPath, appArmorProfile, newuidmapPath, newgidmapPath string,
 	properties gardener.PropertyManager) *rundmc.Containerizer {
-	depot := wireDepot(depotPath, &goci.BundleSaver{})
-
-	cmdRunner := commandRunner()
-	chrootMkdir := bundlerules.ChrootMkdir{
-		Command:       preparerootfs.Command,
-		CommandRunner: cmdRunner,
-	}
-
-	runcrunner := runrunc.New(
-		cmdRunner,
-		runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
-		goci.RuncBinary{Path: runtimePath, Root: cmd.Runc.Root},
-		dadooPath,
-		runtimePath,
-		cmd.Runc.Root,
-		newuidmapPath,
-		newgidmapPath,
-		cmd.wireExecPreparer(),
-		cmd.wireExecRunner(
-			dadooPath,
-			runtimePath,
-			cmd.Runc.Root,
-			cmd.wireUidGenerator(),
-			cmdRunner,
-			cmd.Containers.CleanupProcessDirsOnWait,
-		),
-	)
-
-	mounts := defaultBindMounts(cmd.Bin.Init.Path())
-	privilegedMounts := append(mounts, privilegedMounts()...)
-	unprivilegedMounts := append(mounts, unprivilegedMounts()...)
 
 	rwm := "rwm"
 	character := "c"
@@ -666,31 +635,41 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		Cwd:  "/",
 	}
 
+	mounts := defaultBindMounts(cmd.Bin.Init.Path())
+	privilegedMounts := append(mounts, privilegedMounts()...)
+	unprivilegedMounts := append(mounts, unprivilegedMounts()...)
+
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
 		WithResources(&specs.LinuxResources{Devices: append([]specs.LinuxDeviceCgroup{denyAll}, allowedDevices...)}).
 		WithRootFS(cmd.Containers.DefaultRootFS).
 		WithDevices(fuseDevice).
 		WithProcess(baseProcess)
-
 	unprivilegedBundle := baseBundle.
 		WithNamespace(goci.UserNamespace).
 		WithUIDMappings(uidMappings...).
 		WithGIDMappings(gidMappings...).
 		WithMounts(unprivilegedMounts...).
 		WithMaskedPaths(defaultMaskedPaths())
-
 	unprivilegedBundle.Spec.Linux.Seccomp = seccomp
 	if appArmorProfile != "" {
 		unprivilegedBundle.Spec.Process.ApparmorProfile = appArmorProfile
 	}
-
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).
 		WithCapabilities(PrivilegedMaxCaps...)
-
 	if !runningAsRoot() {
 		unprivilegedBundle = unprivilegedBundle.WithResources(&specs.LinuxResources{})
+	}
+	log.Info("base-bundles", lager.Data{
+		"privileged":   privilegedBundle,
+		"unprivileged": unprivilegedBundle,
+	})
+
+	cmdRunner := commandRunner()
+	chrootMkdir := bundlerules.ChrootMkdir{
+		Command:       preparerootfs.Command,
+		CommandRunner: cmdRunner,
 	}
 
 	template := &rundmc.BundleTemplate{
@@ -712,20 +691,38 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			bundlerules.BindMounts{},
 			bundlerules.Env{},
 			bundlerules.Hostname{},
+			bundlerules.EtcMounts{Chowner: &bundlerules.OSChowner{}},
 		},
 	}
 
-	log.Info("base-bundles", lager.Data{
-		"privileged":   privilegedBundle,
-		"unprivileged": unprivilegedBundle,
-	})
+	depot := wireDepot(depotPath, template, &goci.BundleSaver{})
+
+	runcrunner := runrunc.New(
+		cmdRunner,
+		runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
+		goci.RuncBinary{Path: runtimePath, Root: cmd.Runc.Root},
+		dadooPath,
+		runtimePath,
+		cmd.Runc.Root,
+		newuidmapPath,
+		newgidmapPath,
+		cmd.wireExecPreparer(),
+		cmd.wireExecRunner(
+			dadooPath,
+			runtimePath,
+			cmd.Runc.Root,
+			cmd.wireUidGenerator(),
+			cmdRunner,
+			cmd.Containers.CleanupProcessDirsOnWait,
+		),
+	)
 
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver("/run/runc"), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, template, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{})
+	return rundmc.New(depot, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{})
 }
 
 func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) *metrics.MetricsProvider {

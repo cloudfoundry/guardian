@@ -15,7 +15,8 @@ var _ = Describe("BindMountsRule", func() {
 	var newBndl goci.Bndl
 
 	BeforeEach(func() {
-		newBndl = bundlerules.BindMounts{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		var err error
+		newBndl, err = bundlerules.BindMounts{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			BindMounts: []garden.BindMount{
 				{
 					SrcPath: "/path/to/ro/src",
@@ -28,7 +29,8 @@ var _ = Describe("BindMountsRule", func() {
 					Mode:    garden.BindMountModeRW,
 				},
 			},
-		})
+		}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	It("adds mounts in the bundle spec", func() {
@@ -46,6 +48,6 @@ var _ = Describe("BindMountsRule", func() {
 			Type:        "bind",
 			Source:      "/path/to/rw/src",
 			Options:     []string{"bind", "rw"},
-		}))
+		}), "not-needed-path")
 	})
 })

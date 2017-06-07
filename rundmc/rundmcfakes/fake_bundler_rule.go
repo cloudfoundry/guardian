@@ -10,38 +10,42 @@ import (
 )
 
 type FakeBundlerRule struct {
-	ApplyStub        func(bndle goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl
+	ApplyStub        func(bndle goci.Bndl, spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
 	applyMutex       sync.RWMutex
 	applyArgsForCall []struct {
-		bndle goci.Bndl
-		spec  gardener.DesiredContainerSpec
+		bndle        goci.Bndl
+		spec         gardener.DesiredContainerSpec
+		containerDir string
 	}
 	applyReturns struct {
 		result1 goci.Bndl
+		result2 error
 	}
 	applyReturnsOnCall map[int]struct {
 		result1 goci.Bndl
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBundlerRule) Apply(bndle goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
+func (fake *FakeBundlerRule) Apply(bndle goci.Bndl, spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
 	fake.applyMutex.Lock()
 	ret, specificReturn := fake.applyReturnsOnCall[len(fake.applyArgsForCall)]
 	fake.applyArgsForCall = append(fake.applyArgsForCall, struct {
-		bndle goci.Bndl
-		spec  gardener.DesiredContainerSpec
-	}{bndle, spec})
-	fake.recordInvocation("Apply", []interface{}{bndle, spec})
+		bndle        goci.Bndl
+		spec         gardener.DesiredContainerSpec
+		containerDir string
+	}{bndle, spec, containerDir})
+	fake.recordInvocation("Apply", []interface{}{bndle, spec, containerDir})
 	fake.applyMutex.Unlock()
 	if fake.ApplyStub != nil {
-		return fake.ApplyStub(bndle, spec)
+		return fake.ApplyStub(bndle, spec, containerDir)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fake.applyReturns.result1
+	return fake.applyReturns.result1, fake.applyReturns.result2
 }
 
 func (fake *FakeBundlerRule) ApplyCallCount() int {
@@ -50,29 +54,32 @@ func (fake *FakeBundlerRule) ApplyCallCount() int {
 	return len(fake.applyArgsForCall)
 }
 
-func (fake *FakeBundlerRule) ApplyArgsForCall(i int) (goci.Bndl, gardener.DesiredContainerSpec) {
+func (fake *FakeBundlerRule) ApplyArgsForCall(i int) (goci.Bndl, gardener.DesiredContainerSpec, string) {
 	fake.applyMutex.RLock()
 	defer fake.applyMutex.RUnlock()
-	return fake.applyArgsForCall[i].bndle, fake.applyArgsForCall[i].spec
+	return fake.applyArgsForCall[i].bndle, fake.applyArgsForCall[i].spec, fake.applyArgsForCall[i].containerDir
 }
 
-func (fake *FakeBundlerRule) ApplyReturns(result1 goci.Bndl) {
+func (fake *FakeBundlerRule) ApplyReturns(result1 goci.Bndl, result2 error) {
 	fake.ApplyStub = nil
 	fake.applyReturns = struct {
 		result1 goci.Bndl
-	}{result1}
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeBundlerRule) ApplyReturnsOnCall(i int, result1 goci.Bndl) {
+func (fake *FakeBundlerRule) ApplyReturnsOnCall(i int, result1 goci.Bndl, result2 error) {
 	fake.ApplyStub = nil
 	if fake.applyReturnsOnCall == nil {
 		fake.applyReturnsOnCall = make(map[int]struct {
 			result1 goci.Bndl
+			result2 error
 		})
 	}
 	fake.applyReturnsOnCall[i] = struct {
 		result1 goci.Bndl
-	}{result1}
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeBundlerRule) Invocations() map[string][][]interface{} {

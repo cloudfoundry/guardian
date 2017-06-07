@@ -1,6 +1,8 @@
 package rundmc_test
 
 import (
+	"errors"
+
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -11,7 +13,10 @@ import (
 )
 
 var _ = Describe("BundleTemplate", func() {
-	var bundler rundmc.BundleTemplate
+	var (
+		bundler      rundmc.BundleTemplate
+		containerDir = "some-container-dir"
+	)
 
 	Context("when there is only one rule", func() {
 		var rule *fakes.FakeBundlerRule
@@ -25,20 +30,31 @@ var _ = Describe("BundleTemplate", func() {
 
 		It("returns the bundle from the first rule", func() {
 			returnedSpec := goci.Bndl{}.WithRootFS("something")
-			rule.ApplyStub = func(bndle goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
+			rule.ApplyStub = func(bndle goci.Bndl, spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
 				Expect(spec.RootFSPath).To(Equal("the-rootfs"))
-				return returnedSpec
+				return returnedSpec, nil
 			}
 
-			result := bundler.Generate(gardener.DesiredContainerSpec{RootFSPath: "the-rootfs"})
+			result, err := bundler.Generate(gardener.DesiredContainerSpec{RootFSPath: "the-rootfs"}, containerDir)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(returnedSpec))
 		})
 
-		It("passes an empty bundle to the first rule", func() {
-			bundler.Generate(gardener.DesiredContainerSpec{})
+		It("returns the error from the first failing rule", func() {
+			rule.ApplyReturns(goci.Bndl{}, errors.New("didn't work"))
+			_, err := bundler.Generate(gardener.DesiredContainerSpec{RootFSPath: "the-rootfs"}, containerDir)
+			Expect(err).To(MatchError(ContainSubstring("didn't work")))
+		})
 
-			bndl, _ := rule.ApplyArgsForCall(0)
+		It("passes an empty bundle, the desired spec, and container dir to the first rule", func() {
+			spec := gardener.DesiredContainerSpec{Handle: "some-handle"}
+			bundler.Generate(spec, containerDir)
+
+			Expect(rule.ApplyCallCount()).To(Equal(1))
+			bndl, actualSpec, actualContainerDir := rule.ApplyArgsForCall(0)
 			Expect(bndl).To(Equal(goci.Bndl{}))
+			Expect(actualSpec).To(Equal(spec))
+			Expect(actualContainerDir).To(Equal(containerDir))
 		})
 	})
 
@@ -59,7 +75,7 @@ var _ = Describe("BundleTemplate", func() {
 		})
 
 		It("calls all the rules", func() {
-			bundler.Generate(gardener.DesiredContainerSpec{})
+			bundler.Generate(gardener.DesiredContainerSpec{}, containerDir)
 
 			Expect(ruleA.ApplyCallCount()).To(Equal(1))
 			Expect(ruleB.ApplyCallCount()).To(Equal(1))
@@ -70,12 +86,12 @@ var _ = Describe("BundleTemplate", func() {
 				specs.Mount{Destination: "test_a"},
 				specs.Mount{Destination: "test_b"},
 			)
-			ruleA.ApplyReturns(bndl)
+			ruleA.ApplyReturns(bndl, nil)
 
-			bundler.Generate(gardener.DesiredContainerSpec{})
+			bundler.Generate(gardener.DesiredContainerSpec{}, containerDir)
 
 			Expect(ruleB.ApplyCallCount()).To(Equal(1))
-			recBndl, _ := ruleB.ApplyArgsForCall(0)
+			recBndl, _, _ := ruleB.ApplyArgsForCall(0)
 			Expect(recBndl).To(Equal(bndl))
 		})
 
@@ -84,9 +100,10 @@ var _ = Describe("BundleTemplate", func() {
 				specs.Mount{Destination: "test_a"},
 				specs.Mount{Destination: "test_b"},
 			)
-			ruleB.ApplyReturns(bndl)
+			ruleB.ApplyReturns(bndl, nil)
 
-			recBndl := bundler.Generate(gardener.DesiredContainerSpec{})
+			recBndl, err := bundler.Generate(gardener.DesiredContainerSpec{}, containerDir)
+			Expect(err).NotTo(HaveOccurred())
 			Expect(recBndl).To(Equal(bndl))
 		})
 	})

@@ -20,7 +20,7 @@ type RootFS struct {
 	MkdirChown MkdirChowner
 }
 
-func (r RootFS) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.Bndl {
+func (r RootFS) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	var uid, gid int
 	if !spec.Privileged {
 		uid = r.ContainerRootUID
@@ -38,7 +38,7 @@ func (r RootFS) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec) goci.B
 		"tmp",
 	)
 
-	return bndl.WithRootFS(spec.RootFSPath)
+	return bndl.WithRootFS(spec.RootFSPath), nil
 }
 
 type ChrootMkdir struct {

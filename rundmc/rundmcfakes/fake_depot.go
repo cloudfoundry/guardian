@@ -4,18 +4,18 @@ package rundmcfakes
 import (
 	"sync"
 
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc"
-	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeDepot struct {
-	CreateStub        func(log lager.Logger, handle string, bundle goci.Bndl) error
+	CreateStub        func(log lager.Logger, handle string, spec gardener.DesiredContainerSpec) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		log    lager.Logger
 		handle string
-		bundle goci.Bndl
+		spec   gardener.DesiredContainerSpec
 	}
 	createReturns struct {
 		result1 error
@@ -64,18 +64,18 @@ type FakeDepot struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDepot) Create(log lager.Logger, handle string, bundle goci.Bndl) error {
+func (fake *FakeDepot) Create(log lager.Logger, handle string, spec gardener.DesiredContainerSpec) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		log    lager.Logger
 		handle string
-		bundle goci.Bndl
-	}{log, handle, bundle})
-	fake.recordInvocation("Create", []interface{}{log, handle, bundle})
+		spec   gardener.DesiredContainerSpec
+	}{log, handle, spec})
+	fake.recordInvocation("Create", []interface{}{log, handle, spec})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(log, handle, bundle)
+		return fake.CreateStub(log, handle, spec)
 	}
 	if specificReturn {
 		return ret.result1
@@ -89,10 +89,10 @@ func (fake *FakeDepot) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeDepot) CreateArgsForCall(i int) (lager.Logger, string, goci.Bndl) {
+func (fake *FakeDepot) CreateArgsForCall(i int) (lager.Logger, string, gardener.DesiredContainerSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].bundle
+	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].spec
 }
 
 func (fake *FakeDepot) CreateReturns(result1 error) {

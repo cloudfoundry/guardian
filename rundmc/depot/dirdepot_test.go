@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	fakes "code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -18,12 +19,13 @@ import (
 
 var _ = Describe("Depot", func() {
 	var (
-		depotDir    string
-		bundleSaver *fakes.FakeBundleSaver
-		chowner     *fakes.FakeChowner
-		dirdepot    *depot.DirectoryDepot
-		logger      lager.Logger
-		bndle       goci.Bndl
+		depotDir        string
+		bundleSaver     *fakes.FakeBundleSaver
+		bundleGenerator *fakes.FakeBundleGenerator
+		dirdepot        *depot.DirectoryDepot
+		logger          lager.Logger
+		bndle           goci.Bndl
+		spec            gardener.DesiredContainerSpec
 	)
 
 	BeforeEach(func() {
@@ -32,6 +34,7 @@ var _ = Describe("Depot", func() {
 		depotDir, err = ioutil.TempDir("", "depot-test")
 		Expect(err).NotTo(HaveOccurred())
 
+		spec = gardener.DesiredContainerSpec{Handle: "some-idiosyncratic-handle"}
 		bndle = goci.Bndl{Spec: specs.Spec{Version: "some-idiosyncratic-version", Linux: &specs.Linux{}}}
 		bndle = bndle.WithUIDMappings(
 			specs.LinuxIDMapping{
@@ -66,8 +69,8 @@ var _ = Describe("Depot", func() {
 		logger = lagertest.NewTestLogger("test")
 
 		bundleSaver = new(fakes.FakeBundleSaver)
-		chowner = new(fakes.FakeChowner)
-		dirdepot = depot.New(depotDir, bundleSaver, chowner)
+		bundleGenerator = new(fakes.FakeBundleGenerator)
+		dirdepot = depot.New(depotDir, bundleGenerator, bundleSaver)
 	})
 
 	AfterEach(func() {
@@ -92,126 +95,43 @@ var _ = Describe("Depot", func() {
 
 	Describe("create", func() {
 		It("should create a directory", func() {
-			Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
+			Expect(dirdepot.Create(logger, "aardvaark", spec)).To(Succeed())
 			Expect(filepath.Join(depotDir, "aardvaark")).To(BeADirectory())
 		})
 
-		It("creates an empty hosts file in the container dir", func() {
-			Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
-			Expect(filepath.Join(depotDir, "aardvaark", "hosts")).To(BeAnExistingFile())
-		})
+		It("it saves the bundle", func() {
+			bundleGenerator.GenerateReturns(bndle, nil)
+			Expect(dirdepot.Create(logger, "aardvaark", spec)).To(Succeed())
 
-		It("creates an empty resolv.conf file in the container dir", func() {
-			Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
-			Expect(filepath.Join(depotDir, "aardvaark", "resolv.conf")).To(BeAnExistingFile())
-		})
-
-		It("chowns the hosts and resolv.conf files to container root", func() {
-			Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
-			Expect(chowner.ChownCallCount()).To(Equal(2))
-			hostsPath, hostsUid, hostsGid := chowner.ChownArgsForCall(0)
-			Expect(hostsPath).To(Equal(filepath.Join(depotDir, "aardvaark", "hosts")))
-			Expect(hostsUid).To(Equal(15))
-			Expect(hostsGid).To(Equal(42))
-			resolvPath, resolvUid, resolvGid := chowner.ChownArgsForCall(1)
-			Expect(resolvPath).To(Equal(filepath.Join(depotDir, "aardvaark", "resolv.conf")))
-			Expect(resolvUid).To(Equal(15))
-			Expect(resolvGid).To(Equal(42))
-		})
-
-		Context("when chowning the hosts file fails", func() {
-			BeforeEach(func() {
-				chowner.ChownStub = func(path string, uid, gid int) error {
-					if filepath.Base(path) == "hosts" {
-						return errors.New("whoops")
-					}
-					return nil
-				}
-			})
-
-			It("returns an error", func() {
-				Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(MatchError(ContainSubstring("error chowning hosts: whoops")))
-			})
-		})
-
-		Context("when chowning the resolv.conf file fails", func() {
-			BeforeEach(func() {
-				chowner.ChownStub = func(path string, uid, gid int) error {
-					if filepath.Base(path) == "resolv.conf" {
-						return errors.New("whoops")
-					}
-					return nil
-				}
-			})
-
-			It("returns an error", func() {
-				Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(MatchError(ContainSubstring("error chowning resolv.conf: whoops")))
-			})
-		})
-
-		Context("when there is no UID mapping for container root", func() {
-			BeforeEach(func() {
-				bndle = bndle.WithUIDMappings()
-			})
-
-			It("chowns the hosts and resolv.conf files to UID 0 and the mapped GID", func() {
-				Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
-				Expect(chowner.ChownCallCount()).To(Equal(2))
-				hostsPath, hostsUid, hostsGid := chowner.ChownArgsForCall(0)
-				Expect(hostsPath).To(Equal(filepath.Join(depotDir, "aardvaark", "hosts")))
-				Expect(hostsUid).To(Equal(0))
-				Expect(hostsGid).To(Equal(42))
-				resolvPath, resolvUid, resolvGid := chowner.ChownArgsForCall(1)
-				Expect(resolvPath).To(Equal(filepath.Join(depotDir, "aardvaark", "resolv.conf")))
-				Expect(resolvUid).To(Equal(0))
-				Expect(resolvGid).To(Equal(42))
-			})
-		})
-
-		Context("when there is no GID mapping for container root", func() {
-			BeforeEach(func() {
-				bndle = bndle.WithGIDMappings()
-			})
-
-			It("chowns the hosts and resolv.conf files to the mapped user and GID 0", func() {
-				Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
-				Expect(chowner.ChownCallCount()).To(Equal(2))
-				hostsPath, hostsUid, hostsGid := chowner.ChownArgsForCall(0)
-				Expect(hostsPath).To(Equal(filepath.Join(depotDir, "aardvaark", "hosts")))
-				Expect(hostsUid).To(Equal(15))
-				Expect(hostsGid).To(Equal(0))
-				resolvPath, resolvUid, resolvGid := chowner.ChownArgsForCall(1)
-				Expect(resolvPath).To(Equal(filepath.Join(depotDir, "aardvaark", "resolv.conf")))
-				Expect(resolvUid).To(Equal(15))
-				Expect(resolvGid).To(Equal(0))
-			})
-		})
-
-		It("should serialize the container config to the directory with mounts for hosts and resolv.conf", func() {
-			Expect(dirdepot.Create(logger, "aardvaark", bndle)).To(Succeed())
 			Expect(bundleSaver.SaveCallCount()).To(Equal(1))
 			actualBundle, actualPath := bundleSaver.SaveArgsForCall(0)
 			Expect(actualPath).To(Equal(filepath.Join(depotDir, "aardvaark")))
-			Expect(actualBundle).To(Equal(bndle.WithMounts(
-				specs.Mount{
-					Destination: "/etc/hosts",
-					Source:      filepath.Join(depotDir, "aardvaark", "hosts"),
-					Type:        "bind",
-					Options:     []string{"bind"},
-				},
-				specs.Mount{
-					Destination: "/etc/resolv.conf",
-					Source:      filepath.Join(depotDir, "aardvaark", "resolv.conf"),
-					Type:        "bind",
-					Options:     []string{"bind"},
-				},
-			)))
+			Expect(actualBundle).To(Equal(bndle))
 		})
 
-		It("destroys the container directory if creation fails", func() {
-			bundleSaver.SaveReturns(errors.New("didn't work"))
-			Expect(dirdepot.Create(logger, "aardvaark", bndle)).NotTo(Succeed())
-			Expect(filepath.Join(depotDir, "aardvaark")).NotTo(BeADirectory())
+		It("generates the bundle", func() {
+			bundleGenerator.GenerateReturns(bndle, nil)
+			Expect(dirdepot.Create(logger, "aardvaark", spec)).To(Succeed())
+
+			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+			actualDesiredSpec, actualContainerDir := bundleGenerator.GenerateArgsForCall(0)
+			Expect(actualDesiredSpec).To(Equal(spec))
+			Expect(actualContainerDir).To(Equal(filepath.Join(depotDir, "aardvaark")))
+		})
+
+		Context("when creation fails", func() {
+			It("destroys the container directory if creation fails", func() {
+				bundleSaver.SaveReturns(errors.New("didn't work"))
+				Expect(dirdepot.Create(logger, "aardvaark", spec)).NotTo(Succeed())
+				Expect(filepath.Join(depotDir, "aardvaark")).NotTo(BeADirectory())
+			})
+		})
+		Context("when generation fails", func() {
+			It("destroys the container directory if creation fails", func() {
+				bundleGenerator.GenerateReturns(goci.Bndl{}, errors.New("didn't work"))
+				Expect(dirdepot.Create(logger, "aardvaark", spec)).NotTo(Succeed())
+				Expect(filepath.Join(depotDir, "aardvaark")).NotTo(BeADirectory())
+			})
 		})
 	})
 
@@ -232,8 +152,8 @@ var _ = Describe("Depot", func() {
 	Describe("handles", func() {
 		Context("when handles exist", func() {
 			BeforeEach(func() {
-				Expect(dirdepot.Create(logger, "banana", bndle)).To(Succeed())
-				Expect(dirdepot.Create(logger, "banana2", bndle)).To(Succeed())
+				Expect(dirdepot.Create(logger, "banana", spec)).To(Succeed())
+				Expect(dirdepot.Create(logger, "banana2", spec)).To(Succeed())
 			})
 
 			It("should return the handles", func() {
@@ -251,7 +171,7 @@ var _ = Describe("Depot", func() {
 			var invalidDepot *depot.DirectoryDepot
 
 			BeforeEach(func() {
-				invalidDepot = depot.New("rubbish", bundleSaver, chowner)
+				invalidDepot = depot.New("rubbish", bundleGenerator, bundleSaver)
 			})
 
 			It("returns an error", func() {

@@ -54,10 +54,12 @@ var _ = Describe("RootFS", func() {
 			},
 		}
 
-		returnedBundle = rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		var err error
+		returnedBundle, err = rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			RootFSPath: rootfsPath,
 			Privileged: privileged,
-		})
+		}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
