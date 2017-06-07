@@ -29,6 +29,7 @@ import (
 	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/graph"
 	"github.com/eapache/go-resiliency/retrier"
+	"github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pivotal-golang/clock"
 )
 
@@ -226,4 +227,26 @@ func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
 		CommandRunner: cmdRunner,
 	}
 	return runrunc.NewLinuxExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps, runningAsRoot)
+}
+
+func defaultBindMounts(binInitPath string) []specs.Mount {
+	return []specs.Mount{
+		{Type: "sysfs", Source: "sysfs", Destination: "/sys", Options: []string{"nosuid", "noexec", "nodev", "ro"}},
+		{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
+		{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
+			Options: []string{"nosuid", "noexec", "newinstance", "ptmxmode=0666", "mode=0620"}},
+		{Type: "bind", Source: binInitPath, Destination: "/tmp/garden-init", Options: []string{"bind"}},
+	}
+}
+
+func privilegedMounts() []specs.Mount {
+	return []specs.Mount{
+		{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
+	}
+}
+
+func unprivilegedMounts() []specs.Mount {
+	return []specs.Mount{
+		{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
+	}
 }

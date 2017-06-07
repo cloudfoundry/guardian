@@ -87,6 +87,7 @@ func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error 
 
 		return fmt.Errorf("runc create: open log file '%s': %s", logFilePath, err)
 	}
+	defer logReader.Close()
 
 	buff, readErr := ioutil.ReadAll(logReader)
 	if readErr != nil {

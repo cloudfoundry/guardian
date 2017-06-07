@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type NoopStarter struct{}
@@ -65,4 +66,16 @@ func (fileWriter) WriteFile(path string, contents []byte, mode os.FileMode) erro
 
 func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
 	return &runrunc.WindowsExecPreparer{}
+}
+
+func defaultBindMounts(binInitPath string) []specs.Mount {
+	return []specs.Mount{}
+}
+
+func privilegedMounts() []specs.Mount {
+	return []specs.Mount{}
+}
+
+func unprivilegedMounts() []specs.Mount {
+	return []specs.Mount{}
 }
