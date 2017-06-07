@@ -13,9 +13,6 @@ import (
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 
-	"github.com/nu7hatch/gouuid"
-	"github.com/opencontainers/runtime-spec/specs-go"
-
 	"code.cloudfoundry.org/garden/server"
 	"code.cloudfoundry.org/guardian/bindata"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -44,6 +41,8 @@ import (
 	_ "github.com/docker/docker/pkg/chrootarchive" // allow reexec of docker-applyLayer
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/eapache/go-resiliency/retrier"
+	uuid "github.com/nu7hatch/gouuid"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pivotal-golang/clock"
 	"github.com/pivotal-golang/localip"
 	"github.com/tedsuo/ifrit"
@@ -421,9 +420,12 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	}
 
 	periodicMetronMetrics := map[string]func() int{
-		"LoopDevices":   metricsProvider.LoopDevices,
-		"BackingStores": metricsProvider.BackingStores,
-		"DepotDirs":     metricsProvider.DepotDirs,
+		"DepotDirs": metricsProvider.DepotDirs,
+	}
+
+	if cmd.Image.Plugin == "" && cmd.Image.PrivilegedPlugin == "" {
+		periodicMetronMetrics["LoopDevices"] = metricsProvider.LoopDevices
+		periodicMetronMetrics["BackingStores"] = metricsProvider.BackingStores
 	}
 
 	metronNotifier := cmd.wireMetronNotifier(logger, periodicMetronMetrics)
