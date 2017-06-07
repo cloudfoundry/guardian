@@ -250,3 +250,7 @@ func unprivilegedMounts() []specs.Mount {
 		{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
 	}
 }
+
+func osSpecificBundleRules() []rundmc.BundlerRule {
+	return []rundmc.BundlerRule{bundlerules.EtcMounts{Chowner: &bundlerules.OSChowner{}}}
+}

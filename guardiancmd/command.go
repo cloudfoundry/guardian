@@ -672,28 +672,28 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		CommandRunner: cmdRunner,
 	}
 
-	template := &rundmc.BundleTemplate{
-		Rules: []rundmc.BundlerRule{
-			bundlerules.Base{
-				PrivilegedBase:   privilegedBundle,
-				UnprivilegedBase: unprivilegedBundle,
-			},
-			bundlerules.RootFS{
-				ContainerRootUID: uidMappings.Map(0),
-				ContainerRootGID: gidMappings.Map(0),
-				MkdirChown:       chrootMkdir,
-			},
-			bundlerules.Limits{
-				CpuQuotaPerShare: cmd.Limits.CpuQuotaPerShare,
-				TCPMemoryLimit:   cmd.Limits.TCPMemoryLimit,
-				BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
-			},
-			bundlerules.BindMounts{},
-			bundlerules.Env{},
-			bundlerules.Hostname{},
-			bundlerules.EtcMounts{Chowner: &bundlerules.OSChowner{}},
+	bundleRules := []rundmc.BundlerRule{
+		bundlerules.Base{
+			PrivilegedBase:   privilegedBundle,
+			UnprivilegedBase: unprivilegedBundle,
 		},
+		bundlerules.RootFS{
+			ContainerRootUID: uidMappings.Map(0),
+			ContainerRootGID: gidMappings.Map(0),
+			MkdirChown:       chrootMkdir,
+		},
+		bundlerules.Limits{
+			CpuQuotaPerShare: cmd.Limits.CpuQuotaPerShare,
+			TCPMemoryLimit:   cmd.Limits.TCPMemoryLimit,
+			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
+		},
+		bundlerules.BindMounts{},
+		bundlerules.Env{},
+		bundlerules.Hostname{},
 	}
+	bundleRules = append(bundleRules, osSpecificBundleRules()...)
+
+	template := &rundmc.BundleTemplate{Rules: bundleRules}
 
 	depot := wireDepot(depotPath, template, &goci.BundleSaver{})
 

@@ -8,6 +8,7 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/windows_command_runner"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -16,13 +17,8 @@ import (
 )
 
 type NoopStarter struct{}
-type NoopChowner struct{}
 
 func (s *NoopStarter) Start() error {
-	return nil
-}
-
-func (c *NoopChowner) Chown(path string, uid, gid int) error {
 	return nil
 }
 
@@ -30,8 +26,8 @@ func commandRunner() commandrunner.CommandRunner {
 	return windows_command_runner.New(false)
 }
 
-func wireDepot(depotPath string, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
-	return depot.New(depotPath, bundleSaver, &NoopChowner{})
+func wireDepot(depotPath string, bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
+	return depot.New(depotPath, bundleGenerator, bundleSaver)
 }
 
 func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
@@ -78,4 +74,8 @@ func privilegedMounts() []specs.Mount {
 
 func unprivilegedMounts() []specs.Mount {
 	return []specs.Mount{}
+}
+
+func osSpecificBundleRules() []rundmc.BundlerRule {
+	return []rundmc.BundlerRule{}
 }
