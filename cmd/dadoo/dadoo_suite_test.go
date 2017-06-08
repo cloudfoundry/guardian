@@ -57,8 +57,8 @@ func TestDadoo(t *testing.T) {
 			}
 
 			fields := strings.Fields(line)
-			if fields[2] == "tmpfs" {
-				Expect(syscall.Unmount(fields[1], syscall.MNT_DETACH)).To(Succeed())
+			if fields[2] == "cgroup" {
+				Expect(syscall.Unmount(fields[1], 0)).To(Succeed())
 			}
 		}
 	})
