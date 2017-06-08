@@ -137,14 +137,14 @@ func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
 }
 
 func umountCgroups(cgroupsRoot string) error {
-	umountCmd := exec.Command("sh", "-c", fmt.Sprintf("umount %s/*", cgroupsRoot))
+	umountCmd := exec.Command("sh", "-c", fmt.Sprintf("umount --lazy %s/*", cgroupsRoot))
 	umountCmd.Stdout = GinkgoWriter
 	umountCmd.Stderr = GinkgoWriter
 	if err := umountCmd.Run(); err != nil {
 		return err
 	}
 
-	umountCmd = exec.Command("sh", "-c", fmt.Sprintf("umount %s", cgroupsRoot))
+	umountCmd = exec.Command("sh", "-c", fmt.Sprintf("umount --lazy %s", cgroupsRoot))
 	umountCmd.Stdout = GinkgoWriter
 	umountCmd.Stderr = GinkgoWriter
 	if err := umountCmd.Run(); err != nil {

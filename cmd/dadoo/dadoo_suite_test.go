@@ -2,7 +2,10 @@ package main_test
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"os"
+	"strings"
+	"syscall"
 	"testing"
 
 	. "github.com/onsi/ginkgo"
@@ -41,6 +44,23 @@ func TestDadoo(t *testing.T) {
 		Expect(json.Unmarshal(data, &bins)).To(Succeed())
 
 		dadooBinPath = bins["dadoo_bin_path"]
+	})
+
+	SynchronizedAfterSuite(func() {}, func() {
+		mountsFileContent, err := ioutil.ReadFile("/proc/self/mounts")
+		Expect(err).NotTo(HaveOccurred())
+
+		lines := strings.Split(string(mountsFileContent), "\n")
+		for _, line := range lines {
+			if line == "" {
+				continue
+			}
+
+			fields := strings.Fields(line)
+			if fields[2] == "tmpfs" {
+				Expect(syscall.Unmount(fields[1], syscall.MNT_DETACH)).To(Succeed())
+			}
+		}
 	})
 
 	BeforeEach(func() {

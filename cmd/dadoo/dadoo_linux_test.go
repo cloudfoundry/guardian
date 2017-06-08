@@ -82,8 +82,6 @@ var _ = Describe("Dadoo", func() {
 		//syscall.Unmount(bundlePath, 0x2) TODO: is it safe to add this unmount back in now?
 		os.RemoveAll(filepath.Join(bundlePath, "root"))
 		os.RemoveAll(bundlePath)
-
-		Expect(umountCgroups(cgroupsRoot)).To(Succeed())
 	})
 
 	Describe("Exec", func() {
@@ -129,6 +127,7 @@ var _ = Describe("Dadoo", func() {
 		})
 
 		JustBeforeEach(func() {
+			// hangs if GinkgoWriter is attached
 			cmd := exec.Command("runc", "--root", runcRoot, "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
 			Expect(cmd.Run()).To(Succeed())
 		})
@@ -876,24 +875,6 @@ func setupCgroups(cgroupsRoot string) error {
 	starter := rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, runner)
 
 	return starter.Start()
-}
-
-func umountCgroups(cgroupsRoot string) error {
-	umountCmd := exec.Command("sh", "-c", fmt.Sprintf("umount %s/*", cgroupsRoot))
-	umountCmd.Stdout = GinkgoWriter
-	umountCmd.Stderr = GinkgoWriter
-	if err := umountCmd.Run(); err != nil {
-		return err
-	}
-
-	umountCmd = exec.Command("sh", "-c", fmt.Sprintf("umount %s", cgroupsRoot))
-	umountCmd.Stdout = GinkgoWriter
-	umountCmd.Stderr = GinkgoWriter
-	if err := umountCmd.Run(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func devNull() *os.File {
