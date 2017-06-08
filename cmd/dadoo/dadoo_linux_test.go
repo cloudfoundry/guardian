@@ -27,6 +27,7 @@ import (
 
 var _ = Describe("Dadoo", func() {
 	var (
+		cgroupsRoot string
 		bundlePath  string
 		bundle      goci.Bndl
 		bundleSaver = &goci.BundleSaver{}
@@ -34,7 +35,8 @@ var _ = Describe("Dadoo", func() {
 	)
 
 	BeforeEach(func() {
-		setupCgroups()
+		cgroupsRoot = filepath.Join(os.TempDir(), fmt.Sprintf("dadoo-tests-cgroups-%d", GinkgoParallelNode()))
+		Expect(setupCgroups(cgroupsRoot)).To(Succeed())
 
 		runcRoot = "/run/runc"
 
@@ -80,6 +82,8 @@ var _ = Describe("Dadoo", func() {
 		//syscall.Unmount(bundlePath, 0x2) TODO: is it safe to add this unmount back in now?
 		os.RemoveAll(filepath.Join(bundlePath, "root"))
 		os.RemoveAll(bundlePath)
+
+		Expect(umountCgroups(cgroupsRoot)).To(Succeed())
 	})
 
 	Describe("Exec", func() {
@@ -865,13 +869,31 @@ func mustOpen(path string) *os.File {
 	return r
 }
 
-func setupCgroups() error {
+func setupCgroups(cgroupsRoot string) error {
 	logger := lagertest.NewTestLogger("test")
 	runner := linux_command_runner.New()
 
-	starter := rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), path.Join(os.TempDir(), fmt.Sprintf("cgroups-%d", GinkgoParallelNode())), runner)
+	starter := rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, runner)
 
 	return starter.Start()
+}
+
+func umountCgroups(cgroupsRoot string) error {
+	umountCmd := exec.Command("sh", "-c", fmt.Sprintf("umount %s/*", cgroupsRoot))
+	umountCmd.Stdout = GinkgoWriter
+	umountCmd.Stderr = GinkgoWriter
+	if err := umountCmd.Run(); err != nil {
+		return err
+	}
+
+	umountCmd = exec.Command("sh", "-c", fmt.Sprintf("umount %s", cgroupsRoot))
+	umountCmd.Stdout = GinkgoWriter
+	umountCmd.Stderr = GinkgoWriter
+	if err := umountCmd.Run(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func devNull() *os.File {
