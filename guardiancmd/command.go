@@ -661,7 +661,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	if !runningAsRoot() {
 		unprivilegedBundle = unprivilegedBundle.WithResources(&specs.LinuxResources{})
 	}
-	log.Info("base-bundles", lager.Data{
+	log.Debug("base-bundles", lager.Data{
 		"privileged":   privilegedBundle,
 		"unprivileged": unprivilegedBundle,
 	})
