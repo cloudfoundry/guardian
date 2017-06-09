@@ -175,6 +175,10 @@ func (r *RunningGarden) Kill() error {
 	}
 }
 
+type ErrGardenStop struct {
+	error
+}
+
 func (r *RunningGarden) DestroyAndStop() error {
 	if err := r.DestroyContainers(); err != nil {
 		return err
@@ -185,7 +189,7 @@ func (r *RunningGarden) DestroyAndStop() error {
 		r.Kill()
 	} else {
 		if err := r.Stop(); err != nil {
-			return err
+			return ErrGardenStop{error: err}
 		}
 	}
 
@@ -219,7 +223,9 @@ func (r *RunningGarden) DestroyContainers() error {
 	}
 
 	for _, container := range containers {
-		r.Destroy(container.Handle())
+		if err := r.Destroy(container.Handle()); err != nil {
+			return err
+		}
 	}
 
 	return nil

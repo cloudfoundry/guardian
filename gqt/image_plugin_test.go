@@ -20,11 +20,19 @@ import (
 var _ = Describe("Image Plugin", func() {
 
 	var (
-		args   []string
-		client *runner.RunningGarden
+		tmpDir                            string
+		args                              []string
+		client                            *runner.RunningGarden
+		containerDestructionShouldSucceed bool
 	)
 
 	BeforeEach(func() {
+		containerDestructionShouldSucceed = true
+		var err error
+		tmpDir, err = ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+		Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
+
 		args = []string{}
 	})
 
@@ -33,21 +41,17 @@ var _ = Describe("Image Plugin", func() {
 	})
 
 	AfterEach(func() {
-		Expect(client.DestroyAndStop()).To(Succeed())
+		err := client.DestroyAndStop()
+		if containerDestructionShouldSucceed {
+			Expect(err).NotTo(HaveOccurred())
+		} else {
+			Expect(err).NotTo(BeAssignableToTypeOf(runner.ErrGardenStop{}))
+		}
+		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
 	Context("when only an unprivileged image plugin is provided", func() {
-		var (
-			tmpDir string
-		)
-
 		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
-
 			args = append(args,
 				"--image-plugin", binaries.ImagePlugin,
 				"--image-plugin-extra-arg", "\"--rootfs-path\"",
@@ -56,23 +60,15 @@ var _ = Describe("Image Plugin", func() {
 				"--image-plugin-extra-arg", filepath.Join(tmpDir, "args"))
 		})
 
-		AfterEach(func() {
-			Expect(os.RemoveAll(tmpDir)).To(Succeed())
-		})
-
 		Context("and an unprivileged container is successfully created", func() {
 			var (
 				containerSpec garden.ContainerSpec
 				container     garden.Container
 				handle        string
-
-				destroyContainer bool
 			)
 
 			BeforeEach(func() {
 				containerSpec = garden.ContainerSpec{}
-				destroyContainer = true
-
 				args = append(args,
 					"--image-plugin-extra-arg", "\"--create-whoami-path\"",
 					"--image-plugin-extra-arg", filepath.Join(tmpDir, "create-whoami"))
@@ -83,12 +79,6 @@ var _ = Describe("Image Plugin", func() {
 				container, err = client.Create(containerSpec)
 				Expect(err).NotTo(HaveOccurred())
 				handle = container.Handle()
-			})
-
-			AfterEach(func() {
-				if destroyContainer {
-					Expect(client.Destroy(container.Handle())).To(Succeed())
-				}
 			})
 
 			It("executes the plugin, passing the correct args", func() {
@@ -334,7 +324,6 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("and that container is destroyed", func() {
 				BeforeEach(func() {
-					destroyContainer = false
 					args = append(args,
 						"--image-plugin-extra-arg", "\"--destroy-whoami-path\"",
 						"--image-plugin-extra-arg", filepath.Join(tmpDir, "destroy-whoami"))
@@ -382,7 +371,7 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("but the plugin fails on destruction", func() {
 				BeforeEach(func() {
-					destroyContainer = false
+					containerDestructionShouldSucceed = false
 					args = append(args,
 						"--image-plugin-extra-arg", "\"--fail-on\"",
 						"--image-plugin-extra-arg", "destroy")
@@ -417,17 +406,7 @@ var _ = Describe("Image Plugin", func() {
 	})
 
 	Context("when only a privileged image plugin is provided", func() {
-		var (
-			tmpDir string
-		)
-
 		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
-
 			args = append(args,
 				"--privileged-image-plugin", binaries.ImagePlugin,
 				"--privileged-image-plugin-extra-arg", "\"--rootfs-path\"",
@@ -436,22 +415,15 @@ var _ = Describe("Image Plugin", func() {
 				"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "args"))
 		})
 
-		AfterEach(func() {
-			Expect(os.RemoveAll(tmpDir)).To(Succeed())
-		})
-
 		Context("and a container is created", func() {
 			var (
 				containerSpec garden.ContainerSpec
 				container     garden.Container
 				handle        string
-
-				destroyContainer bool
 			)
 
 			BeforeEach(func() {
 				containerSpec = garden.ContainerSpec{Privileged: true}
-				destroyContainer = false
 
 				args = append(args,
 					"--privileged-image-plugin-extra-arg", "\"--create-whoami-path\"",
@@ -463,12 +435,6 @@ var _ = Describe("Image Plugin", func() {
 				container, err = client.Create(containerSpec)
 				Expect(err).NotTo(HaveOccurred())
 				handle = container.Handle()
-			})
-
-			AfterEach(func() {
-				if destroyContainer {
-					Expect(client.Destroy(container.Handle())).To(Succeed())
-				}
 			})
 
 			It("executes the plugin, passing the correct args", func() {
@@ -682,8 +648,6 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("and that container is destroyed", func() {
 				BeforeEach(func() {
-					destroyContainer = false
-
 					args = append(args,
 						"--privileged-image-plugin-extra-arg", "\"--destroy-whoami-path\"",
 						"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "destroy-whoami"))
@@ -731,7 +695,7 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("but the plugin fails on destruction", func() {
 				BeforeEach(func() {
-					destroyContainer = false
+					containerDestructionShouldSucceed = false
 					args = append(args,
 						"--privileged-image-plugin-extra-arg", "\"--fail-on\"",
 						"--privileged-image-plugin-extra-arg", "destroy")
@@ -766,19 +730,9 @@ var _ = Describe("Image Plugin", func() {
 	})
 
 	Context("when both image_plugin and privileged_image_plugin are provided", func() {
-		var (
-			tmpDir string
-		)
-
 		BeforeEach(func() {
 			// make a a copy of the fake image plugin so we can check location of file called
 			Expect(copyFile(binaries.ImagePlugin, fmt.Sprintf("%s-priv", binaries.ImagePlugin))).To(Succeed())
-
-			var err error
-			tmpDir, err = ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
 
 			args = append(args,
 				"--image-plugin", binaries.ImagePlugin,
@@ -799,10 +753,6 @@ var _ = Describe("Image Plugin", func() {
 				"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "destroy-bin-location"),
 				"--privileged-image-plugin-extra-arg", "\"--metrics-bin-location-path\"",
 				"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "metrics-bin-location"))
-		})
-
-		AfterEach(func() {
-			Expect(os.RemoveAll(tmpDir)).To(Succeed())
 		})
 
 		Context("when an unprivileged container is created", func() {
@@ -896,17 +846,10 @@ var _ = Describe("Image Plugin", func() {
 
 	Context("when images are located in a private registry", func() {
 		var (
-			tmpDir    string
 			imageSpec garden.ImageRef
 		)
 
 		BeforeEach(func() {
-			var err error
-			tmpDir, err = ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
-
 			args = append(args,
 				"--log-level", "debug",
 				"--image-plugin", binaries.ImagePlugin,
@@ -920,10 +863,6 @@ var _ = Describe("Image Plugin", func() {
 				Username: "imagepluginuser",
 				Password: "secretpassword",
 			}
-		})
-
-		AfterEach(func() {
-			Expect(os.RemoveAll(tmpDir)).To(Succeed())
 		})
 
 		It("calls the image plugin with username and password", func() {
