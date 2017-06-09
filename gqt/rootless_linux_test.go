@@ -26,7 +26,6 @@ var _ = Describe("rootless containers", func() {
 		client      *runner.RunningGarden
 		runcRootDir string
 		imagePath   string
-		cgroupsRoot string
 	)
 
 	BeforeEach(func() {
@@ -34,8 +33,7 @@ var _ = Describe("rootless containers", func() {
 			os.TempDir(),
 			fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
 		)
-		tag := fmt.Sprintf("%s", nodeToString(GinkgoParallelNode()))
-		cgroupsRoot = filepath.Join(tmpDir, fmt.Sprintf("cgroups-%s", tag))
+		tag := fmt.Sprintf("%d", GinkgoParallelNode())
 		setupArgs := []string{"setup", "--tag", tag}
 		cmd := exec.Command(binaries.Gdn, setupArgs...)
 		cmd.Env = append(
@@ -87,7 +85,6 @@ var _ = Describe("rootless containers", func() {
 		Expect(os.RemoveAll(imagePath)).To(Succeed())
 		Expect(os.RemoveAll(runcRootDir)).To(Succeed())
 		Expect(client.DestroyAndStop()).To(Succeed())
-		Expect(umountCgroups(cgroupsRoot)).To(Succeed())
 	})
 
 	Describe("the server process", func() {

@@ -136,24 +136,6 @@ func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
 	return runner.Start(binaries, "", nil, argv...)
 }
 
-func umountCgroups(cgroupsRoot string) error {
-	umountCmd := exec.Command("sh", "-c", fmt.Sprintf("umount %s/*", cgroupsRoot))
-	umountCmd.Stdout = GinkgoWriter
-	umountCmd.Stderr = GinkgoWriter
-	if err := umountCmd.Run(); err != nil {
-		return err
-	}
-
-	umountCmd = exec.Command("sh", "-c", fmt.Sprintf("umount %s", cgroupsRoot))
-	umountCmd.Stdout = GinkgoWriter
-	umountCmd.Stderr = GinkgoWriter
-	if err := umountCmd.Run(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func runIPTables(ipTablesArgs ...string) ([]byte, error) {
 	lock, err := locksmith.NewFileSystem().Lock(iptables.LockKey)
 	if err != nil {

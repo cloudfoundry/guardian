@@ -2,9 +2,11 @@ package gqt_test
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 
@@ -19,26 +21,17 @@ import (
 var _ = Describe("gdn setup", func() {
 	var (
 		tmpDir       string
-		cgroupsRoot  string
 		setupArgs    []string
 		tag          string
 		setupProcess *gexec.Session
 	)
 
 	BeforeEach(func() {
-		// We want to test that "gdn setup" can mount the cgroup hierarchy.
-		// "gdn server" without --skip-setup does this too, and most gqts implicitly
-		// rely on it.
-		// We need a new test "environment" regardless of what tests have previously
-		// run with the same GinkgoParallelNode.
-		// There is also a 1 character limit on the tag due to iptables rule length
-		// limitations.
-		tag = nodeToString(GinkgoParallelNode())
+		tag = fmt.Sprintf("%d", GinkgoParallelNode())
 		tmpDir = filepath.Join(
 			os.TempDir(),
 			fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
 		)
-		cgroupsRoot = filepath.Join(tmpDir, fmt.Sprintf("cgroups-%s", tag))
 		setupArgs = []string{"setup", "--tag", tag}
 	})
 
@@ -59,15 +52,33 @@ var _ = Describe("gdn setup", func() {
 		Eventually(setupProcess, 10*time.Second).Should(gexec.Exit(0))
 	})
 
-	It("sets up cgroups", func() {
-		mountpointCmd := exec.Command("mountpoint", "-q", cgroupsRoot+"/")
-		mountpointCmd.Stdout = GinkgoWriter
-		mountpointCmd.Stderr = GinkgoWriter
-		Expect(mountpointCmd.Run()).To(Succeed())
-	})
+	Describe("mounting cgroups", func() {
+		var cgroupsRoot string
 
-	AfterEach(func() {
-		Expect(umountCgroups(cgroupsRoot)).To(Succeed())
+		BeforeEach(func() {
+			// We want to test that "gdn setup" can mount the cgroup hierarchy.
+			// "gdn server" without --skip-setup does this too, and most gqts implicitly
+			// rely on it.
+			// We need a new test "environment" regardless of what tests have previously
+			// run with the same GinkgoParallelNode.
+			// There is also a 1 character limit on the tag due to iptables rule length
+			// limitations.
+			tag = nodeToString(GinkgoParallelNode())
+			cgroupsRoot = filepath.Join(tmpDir, fmt.Sprintf("cgroups-%s", tag))
+			ensureCgroupsForTagUnmounted(cgroupsRoot)
+			tmpDir = filepath.Join(
+				os.TempDir(),
+				fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
+			)
+			setupArgs = []string{"setup", "--tag", tag}
+		})
+
+		It("sets up cgroups", func() {
+			mountpointCmd := exec.Command("mountpoint", "-q", cgroupsRoot+"/")
+			mountpointCmd.Stdout = GinkgoWriter
+			mountpointCmd.Stderr = GinkgoWriter
+			Expect(mountpointCmd.Run()).To(Succeed())
+		})
 	})
 
 	Context("when we start the server", func() {
@@ -109,3 +120,31 @@ var _ = Describe("gdn setup", func() {
 		})
 	})
 })
+
+func ensureCgroupsForTagUnmounted(cgroupsRoot string) {
+	mountsFileContent, err := ioutil.ReadFile("/proc/self/mounts")
+	Expect(err).NotTo(HaveOccurred())
+
+	lines := strings.Split(string(mountsFileContent), "\n")
+
+	tmpFsFound := false
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if fields[2] == "cgroup" && strings.Contains(fields[1], cgroupsRoot) {
+			println("unmounting " + fields[1])
+			Expect(syscall.Unmount(fields[1], 0)).To(Succeed())
+		}
+		if fields[2] == "tmpfs" && fields[1] == cgroupsRoot {
+			tmpFsFound = true
+		}
+	}
+
+	if tmpFsFound {
+		println("unmounting " + cgroupsRoot)
+		Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
+	}
+}
