@@ -46,6 +46,8 @@ func (e *DirectExecRunner) Run(log lager.Logger, processID string, spec *runrunc
 	}
 
 	cmd := exec.Command(e.RuntimePath, "--debug", "--log", "IGNORED", "exec", "-p", specPath, "--pid-file", "IGNORED", handle)
+	cmd.Stdout = io.Stdout
+	cmd.Stderr = io.Stderr
 	if err := e.CommandRunner.Start(cmd); err != nil {
 		return nil, errors.Wrap(err, "execing runtime plugin")
 	}

@@ -1,6 +1,7 @@
 package execrunner_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -29,6 +30,7 @@ var _ = Describe("DirectExecRunner", func() {
 
 		spec         *runrunc.PreparedSpec
 		process      garden.Process
+		processIO    garden.ProcessIO
 		runErr       error
 		processID    string
 		processesDir string
@@ -59,7 +61,7 @@ var _ = Describe("DirectExecRunner", func() {
 				lagertest.NewTestLogger("execrunner-windows"),
 				processID, spec,
 				"a-bundle", processesDir, "handle",
-				nil, garden.ProcessIO{},
+				nil, processIO,
 			)
 		})
 
@@ -118,6 +120,34 @@ var _ = Describe("DirectExecRunner", func() {
 
 			It("returns an error", func() {
 				Expect(runErr).To(MatchError("execing runtime plugin: oops"))
+			})
+		})
+
+		Context("when stdout and stderr streams are passed in", func() {
+			var (
+				stdout *bytes.Buffer
+				stderr *bytes.Buffer
+			)
+
+			BeforeEach(func() {
+				stdout = new(bytes.Buffer)
+				stderr = new(bytes.Buffer)
+				processIO = garden.ProcessIO{Stdout: stdout, Stderr: stderr}
+
+				cmdRunner.WhenRunning(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
+					if c.Stdout == nil || c.Stderr == nil {
+						return nil
+					}
+
+					_, _ = c.Stdout.Write([]byte("hello stdout"))
+					_, _ = c.Stderr.Write([]byte("an error"))
+					return nil
+				})
+			})
+
+			It("passes them to the command", func() {
+				Expect(stdout.String()).To(Equal("hello stdout"))
+				Expect(stderr.String()).To(Equal("an error"))
 			})
 		})
 	})
