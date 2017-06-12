@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"code.cloudfoundry.org/garden"
@@ -83,16 +84,19 @@ var _ = Describe("Runtime Plugin", func() {
 				})
 
 				It("executes the plugin, passing the correct args for exec", func() {
-					Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
+					pluginArgs := []interface{}{
 						binaries.RuntimePlugin,
 						"--debug",
 						"--log", MatchRegexp(".*"),
 						"exec",
-						"-d",
 						"-p", MatchRegexp(".*"),
 						"--pid-file", MatchRegexp(".*"),
 						handle,
-					))
+					}
+					if runtime.GOOS != "windows" {
+						pluginArgs = append(pluginArgs, "-d")
+					}
+					Expect(readPluginArgs(argsFilepath)).To(ConsistOf(pluginArgs))
 				})
 
 				It("passes the spec serialised into a file", func() {
