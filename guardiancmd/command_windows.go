@@ -1,10 +1,6 @@
 package guardiancmd
 
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
-
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/windows_command_runner"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -43,21 +39,11 @@ func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath, runcRoot string, p
 		RuntimePath:   runcPath,
 		CommandRunner: windows_command_runner.New(false),
 		ProcessIDGen:  processIDGen,
-		FileWriter:    &fileWriter{},
 	}
 }
 
 func (cmd *ServerCommand) wireCgroupsStarter(logger lager.Logger) gardener.Starter {
 	return &NoopStarter{}
-}
-
-type fileWriter struct{}
-
-func (fileWriter) WriteFile(path string, contents []byte, mode os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0600); err != nil {
-		return err
-	}
-	return ioutil.WriteFile(path, contents, mode)
 }
 
 func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
