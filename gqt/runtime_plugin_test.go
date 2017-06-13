@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Runtime Plugin", func() {
@@ -75,13 +76,20 @@ var _ = Describe("Runtime Plugin", func() {
 			Describe("starting a process", func() {
 				var (
 					runtimePluginExitCode int
+					stdoutContents        string
+					stderrContents        string
 
-					process garden.Process
-					runErr  error
+					process      garden.Process
+					stdoutWriter *gbytes.Buffer
+					stderrWriter *gbytes.Buffer
+					runErr       error
 				)
 
 				BeforeEach(func() {
 					runtimePluginExitCode = 0
+
+					stdoutWriter = gbytes.NewBuffer()
+					stderrWriter = gbytes.NewBuffer()
 				})
 
 				JustBeforeEach(func() {
@@ -89,10 +97,10 @@ var _ = Describe("Runtime Plugin", func() {
 
 					process, runErr = container.Run(garden.ProcessSpec{
 						Path: "some-idiosyncratic-binary",
-						Args: []string{fmt.Sprintf("%d", runtimePluginExitCode)},
+						Args: []string{fmt.Sprintf("%d", runtimePluginExitCode), stdoutContents, stderrContents},
 					}, garden.ProcessIO{
-						Stdout: GinkgoWriter,
-						Stderr: GinkgoWriter,
+						Stdout: stdoutWriter,
+						Stderr: stderrWriter,
 					})
 				})
 
@@ -126,6 +134,21 @@ var _ = Describe("Runtime Plugin", func() {
 					var processSpec runrunc.PreparedSpec
 					Expect(json.NewDecoder(processSpecFile).Decode(&processSpec)).To(Succeed())
 					Expect(processSpec.Process.Args[0]).To(Equal("some-idiosyncratic-binary"))
+				})
+
+				Context("runtime plugin stdio", func() {
+					BeforeEach(func() {
+						stdoutContents = "some stdout content"
+						stderrContents = "some stderr content"
+					})
+
+					It("returns the runtime plugin's stdout", func() {
+						Eventually(stdoutWriter).Should(gbytes.Say(stdoutContents))
+					})
+
+					It("returns the runtime plugin's stderr", func() {
+						Eventually(stderrWriter).Should(gbytes.Say(stderrContents))
+					})
 				})
 
 				Context("when the runtime plugin exits with 32", func() {

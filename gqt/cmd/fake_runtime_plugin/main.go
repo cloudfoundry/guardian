@@ -150,6 +150,14 @@ var ExecCommand = cli.Command{
 		exitCode, err := strconv.Atoi(exitCodeStr)
 		mustNot(err)
 
+		stdoutStr := procSpec.Args[2]
+		_, err = fmt.Fprintln(os.Stdout, stdoutStr)
+		mustNot(err)
+
+		stderrStr := procSpec.Args[3]
+		_, err = fmt.Fprintln(os.Stderr, stderrStr)
+		mustNot(err)
+
 		// To satisfy dadoo's requirement that the runtime plugin fork SOMETHING
 		childCmd := exec.Command(os.Args[0], "child", "--exitcode", exitCodeStr)
 		must(childCmd.Start())
