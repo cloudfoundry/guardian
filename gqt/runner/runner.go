@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -193,8 +194,30 @@ func (r *RunningGarden) DestroyAndStop() error {
 		}
 	}
 
-	os.RemoveAll(r.Tmpdir)
+	if err := r.removeTempDirPreservingCgroupMounts(); err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func (r *RunningGarden) removeTempDirPreservingCgroupMounts() error {
+	tmpDir, err := os.Open(r.Tmpdir)
+	if err != nil {
+		return err
+	}
+	defer tmpDir.Close()
+	tmpDirContents, err := tmpDir.Readdir(0)
+	if err != nil {
+		return err
+	}
+	for _, tmpDirChild := range tmpDirContents {
+		if !strings.Contains(tmpDirChild.Name(), "cgroups-") {
+			if err := os.RemoveAll(filepath.Join(r.Tmpdir, tmpDirChild.Name())); err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }
 
