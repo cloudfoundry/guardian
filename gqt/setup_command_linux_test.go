@@ -135,7 +135,6 @@ func ensureCgroupsForTagUnmounted(cgroupsRoot string) {
 
 		fields := strings.Fields(line)
 		if fields[2] == "cgroup" && strings.Contains(fields[1], cgroupsRoot) {
-			println("unmounting " + fields[1])
 			Expect(syscall.Unmount(fields[1], 0)).To(Succeed())
 		}
 		if fields[2] == "tmpfs" && fields[1] == cgroupsRoot {
@@ -144,7 +143,6 @@ func ensureCgroupsForTagUnmounted(cgroupsRoot string) {
 	}
 
 	if tmpFsFound {
-		println("unmounting " + cgroupsRoot)
 		Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
 	}
 }
