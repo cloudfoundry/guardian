@@ -73,14 +73,31 @@ var _ = Describe("Runtime Plugin", func() {
 			})
 
 			Describe("starting a process", func() {
+				var (
+					runtimePluginExitCode int
+
+					process garden.Process
+					runErr  error
+				)
+
+				BeforeEach(func() {
+					runtimePluginExitCode = 0
+				})
+
 				JustBeforeEach(func() {
 					argsFilepath = filepath.Join(client.Tmpdir, "exec-args")
 
-					_, err := container.Run(garden.ProcessSpec{Path: "some-idiosyncratic-binary"}, garden.ProcessIO{
+					process, runErr = container.Run(garden.ProcessSpec{
+						Path: "some-idiosyncratic-binary",
+						Args: []string{fmt.Sprintf("%d", runtimePluginExitCode)},
+					}, garden.ProcessIO{
 						Stdout: GinkgoWriter,
 						Stderr: GinkgoWriter,
 					})
-					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("returns no error", func() {
+					Expect(runErr).NotTo(HaveOccurred())
 				})
 
 				It("executes the plugin, passing the correct args for exec", func() {
@@ -110,6 +127,41 @@ var _ = Describe("Runtime Plugin", func() {
 					Expect(json.NewDecoder(processSpecFile).Decode(&processSpec)).To(Succeed())
 					Expect(processSpec.Process.Args[0]).To(Equal("some-idiosyncratic-binary"))
 				})
+
+				Context("when the runtime plugin exits with 32", func() {
+					BeforeEach(func() {
+						runtimePluginExitCode = 32
+					})
+
+					It("returns an error because the runtime plugin exits non-zero on Linux", func() {
+						onlyOnLinux()
+						Expect(runErr).To(MatchError(ContainSubstring("exit status 32")))
+					})
+
+					It("returns no error on Windows", func() {
+						onlyOnWindows()
+						Expect(runErr).NotTo(HaveOccurred())
+					})
+				})
+
+				Describe("the returned process", func() {
+					Describe("Wait", func() {
+						It("returns the exit status of the runtime plugin", func() {
+							Expect(process.Wait()).To(Equal(0))
+						})
+
+						Context("when the runtime plugin exits with 42", func() {
+							BeforeEach(func() {
+								runtimePluginExitCode = 42
+							})
+
+							It("returns the exit status of the runtime plugin on Windows", func() {
+								onlyOnWindows()
+								Expect(process.Wait()).To(Equal(42))
+							})
+						})
+					})
+				})
 			})
 		})
 	})
@@ -120,4 +172,18 @@ func readPluginArgs(argsFilePath string) []string {
 	pluginArgsBytes, err := ioutil.ReadFile(argsFilePath)
 	Expect(err).ToNot(HaveOccurred())
 	return strings.Split(string(pluginArgsBytes), " ")
+}
+
+func onlyOnLinux() {
+	onlyOn("linux")
+}
+
+func onlyOnWindows() {
+	onlyOn("windows")
+}
+
+func onlyOn(goos string) {
+	if runtime.GOOS != goos {
+		Skip(goos + " only")
+	}
 }

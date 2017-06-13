@@ -45,7 +45,7 @@ func (e *DirectExecRunner) Run(log lager.Logger, processID string, spec *runrunc
 		return nil, errors.Wrap(err, "writing process spec")
 	}
 
-	cmd := exec.Command(e.RuntimePath, "--debug", "--log", "IGNORED", "exec", "-p", specPath, "--pid-file", "IGNORED", handle)
+	cmd := exec.Command(e.RuntimePath, "--debug", "--log", "IGNORED", "exec", "-p", specPath, "--pid-file", filepath.Join(processPath, "pidfile"), handle)
 	cmd.Stdout = io.Stdout
 	cmd.Stderr = io.Stderr
 	if err := e.CommandRunner.Start(cmd); err != nil {

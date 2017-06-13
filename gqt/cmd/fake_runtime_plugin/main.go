@@ -1,13 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 
 	"github.com/urfave/cli"
 )
@@ -37,6 +41,7 @@ func main() {
 		StateCommand,
 		EventsCommand,
 		ExecCommand,
+		ChildProcessCommand,
 	}
 
 	_ = fakeRuntimePlugin.Run(os.Args)
@@ -131,8 +136,50 @@ var ExecCommand = cli.Command{
 	},
 
 	Action: func(ctx *cli.Context) error {
-		copyFile(ctx.String("p"), filepath.Join(os.TempDir(), "exec-process-spec"))
+		procSpecFilePath := filepath.Join(os.TempDir(), "exec-process-spec")
+		copyFile(ctx.String("p"), procSpecFilePath)
 		writeArgs("exec")
+
+		var procSpec runrunc.PreparedSpec
+		procSpecFile, err := os.Open(procSpecFilePath)
+		mustNot(err)
+		defer procSpecFile.Close()
+		must(json.NewDecoder(procSpecFile).Decode(&procSpec))
+
+		exitCodeStr := procSpec.Args[1]
+		exitCode, err := strconv.Atoi(exitCodeStr)
+		mustNot(err)
+
+		// To satisfy dadoo's requirement that the runtime plugin fork SOMETHING
+		childCmd := exec.Command(os.Args[0], "child", "--exitcode", exitCodeStr)
+		must(childCmd.Start())
+		childPid := childCmd.Process.Pid
+		must(ioutil.WriteFile(ctx.String("pid-file"), []byte(fmt.Sprintf("%d", childPid)), 0777))
+
+		os.Exit(exitCode)
+
 		return nil
 	},
 }
+
+// Forked as external process by exec subcmd
+var ChildProcessCommand = cli.Command{
+	Name: "child",
+	Flags: []cli.Flag{
+		cli.IntFlag{
+			Name: "exitcode",
+		},
+	},
+	Action: func(ctx *cli.Context) error {
+		os.Exit(ctx.Int("exitcode"))
+		return nil
+	},
+}
+
+func mustNot(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+var must = mustNot
