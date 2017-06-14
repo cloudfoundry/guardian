@@ -3,6 +3,7 @@ package gqt_test
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -99,8 +100,8 @@ var _ = Describe("Runtime Plugin", func() {
 						Path: "some-idiosyncratic-binary",
 						Args: []string{fmt.Sprintf("%d", runtimePluginExitCode), stdoutContents, stderrContents},
 					}, garden.ProcessIO{
-						Stdout: stdoutWriter,
-						Stderr: stderrWriter,
+						Stdout: io.MultiWriter(GinkgoWriter, stdoutWriter),
+						Stderr: io.MultiWriter(GinkgoWriter, stderrWriter),
 					})
 				})
 
@@ -136,7 +137,7 @@ var _ = Describe("Runtime Plugin", func() {
 					Expect(processSpec.Process.Args[0]).To(Equal("some-idiosyncratic-binary"))
 				})
 
-				Context("runtime plugin stdio", func() {
+				Describe("runtime plugin stdio", func() {
 					BeforeEach(func() {
 						stdoutContents = "some stdout content"
 						stderrContents = "some stderr content"
