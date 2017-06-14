@@ -348,6 +348,46 @@ var _ = Describe("Networking", func() {
 	})
 
 	Describe("NetIn", func() {
+		var runIpAddr = func() {
+			fmt.Fprintln(GinkgoWriter, "** HOST ADDR **")
+			cmd := exec.Command("ip", "addr")
+			cmd.Stdout = GinkgoWriter
+			cmd.Stderr = GinkgoWriter
+
+			Expect(cmd.Run()).To(Succeed())
+
+			fmt.Fprintln(GinkgoWriter, "** CONTAINER ADDR **")
+			_, err := container.Run(garden.ProcessSpec{
+				Path: "ip",
+				Args: []string{"addr"},
+			},
+				garden.ProcessIO{
+					Stdout: GinkgoWriter,
+					Stderr: GinkgoWriter,
+				})
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		var runIpRoute = func() {
+			fmt.Fprintln(GinkgoWriter, "** HOST ROUTE **")
+			cmd := exec.Command("ip", "route")
+			cmd.Stdout = GinkgoWriter
+			cmd.Stderr = GinkgoWriter
+
+			Expect(cmd.Run()).To(Succeed())
+
+			fmt.Fprintln(GinkgoWriter, "** CONTAINER ROUTE **")
+			_, err := container.Run(garden.ProcessSpec{
+				Path: "ip",
+				Args: []string{"route"},
+			},
+				garden.ProcessIO{
+					Stdout: GinkgoWriter,
+					Stderr: GinkgoWriter,
+				})
+			Expect(err).NotTo(HaveOccurred())
+		}
+
 		It("maps the provided host port to the container port", func() {
 			const (
 				hostPort      uint32 = 9888
@@ -377,6 +417,9 @@ var _ = Describe("Networking", func() {
 			cmd.Stdout = GinkgoWriter
 			cmd.Stderr = GinkgoWriter
 			Expect(cmd.Run()).To(Succeed())
+
+			runIpAddr()
+			runIpRoute()
 
 			// the same request withing the container
 			Eventually(func() *gexec.Session { return sendRequest(externalIP, hostPort).Wait("10s") }, "10s", "1s").
