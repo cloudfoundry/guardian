@@ -36,42 +36,24 @@ var _ = Describe("Destroying a Container", func() {
 	})
 
 	It("should not leak goroutines", func() {
+		var numGoRoutines = func() int {
+			numGoroutines, err := client.NumGoroutines()
+			Expect(err).NotTo(HaveOccurred())
+
+			return numGoroutines
+		}
+
 		handle := fmt.Sprintf("goroutine-leak-test-%d", GinkgoParallelNode())
 
-		numGoroutinesBefore, err := client.NumGoroutines()
-		Expect(err).NotTo(HaveOccurred())
+		numGoroutinesBefore := numGoRoutines()
 
-		dumpBefore, err := client.DumpGoroutines()
-		Expect(err).NotTo(HaveOccurred())
-		_, err = client.Create(garden.ContainerSpec{
+		_, err := client.Create(garden.ContainerSpec{
 			Handle: handle,
 		})
 		Expect(err).NotTo(HaveOccurred())
-		client.NumGoroutines()
-		client.Destroy(handle)
+		Expect(client.Destroy(handle)).To(Succeed())
 
-		var numGoroutinesAfter int
-		for i := 0; i < 10; i++ {
-			var err error
-			numGoroutinesAfter, err = client.NumGoroutines()
-			Expect(err).NotTo(HaveOccurred())
-			if numGoroutinesBefore == numGoroutinesAfter {
-				break
-			}
-			time.Sleep(time.Millisecond * 100)
-		}
-
-		dumpAfter, err := client.DumpGoroutines()
-		Expect(err).NotTo(HaveOccurred())
-		Expect(numGoroutinesAfter).Should(Equal(numGoroutinesBefore),
-			`FAILED: there are leaked goroutines (got from /debug/pprof/goroutine?debug=2)
------------------------------------------ Before -------------------------------------
-%s
------------------------------------------  After -------------------------------------
-%s`,
-			dumpBefore, dumpAfter,
-		)
-
+		Consistently(numGoRoutines).Should(BeNumerically("<=", numGoroutinesBefore))
 	})
 
 	It("should destroy the container's rootfs", func() {
