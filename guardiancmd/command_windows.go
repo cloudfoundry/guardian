@@ -4,6 +4,7 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/windows_command_runner"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
@@ -15,6 +16,12 @@ import (
 type NoopStarter struct{}
 
 func (s *NoopStarter) Start() error {
+	return nil
+}
+
+type NoopResolvConfigurer struct{}
+
+func (*NoopResolvConfigurer) Configure(log lager.Logger, cfg kawasaki.NetworkConfig, pid int) error {
 	return nil
 }
 
@@ -48,6 +55,10 @@ func (cmd *ServerCommand) wireCgroupsStarter(logger lager.Logger) gardener.Start
 
 func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
 	return &runrunc.WindowsExecPreparer{}
+}
+
+func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {
+	return &NoopResolvConfigurer{}
 }
 
 func defaultBindMounts(binInitPath string) []specs.Mount {

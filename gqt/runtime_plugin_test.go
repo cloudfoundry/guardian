@@ -41,25 +41,24 @@ var _ = Describe("Runtime Plugin", func() {
 			args = append(
 				args,
 				"--runtime-plugin", binaries.RuntimePlugin,
-				"--network-plugin", binaries.NoopPlugin,
+				"--network-plugin", binaries.NetworkPlugin,
 			)
 		})
 
 		Describe("creating a container", func() {
 			var (
 				handle       = fmt.Sprintf("some-handle-%d", GinkgoParallelNode())
-				container    garden.Container
 				argsFilepath string
 			)
 
 			JustBeforeEach(func() {
 				argsFilepath = filepath.Join(client.Tmpdir, "create-args")
-				var err error
-				container, err = client.Create(garden.ContainerSpec{Handle: handle})
-				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("executes the plugin, passing the correct args for create", func() {
+				_, err := client.Create(garden.ContainerSpec{Handle: handle})
+				Expect(err).ToNot(HaveOccurred())
+
 				Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
 					binaries.RuntimePlugin,
 					"--debug",
@@ -72,6 +71,34 @@ var _ = Describe("Runtime Plugin", func() {
 					"--pid-file", HaveSuffix(filepath.Join("containers", handle, "pidfile")),
 					handle,
 				))
+			})
+
+			Context("when the network plugin returns configuration", func() {
+				BeforeEach(func() {
+					pluginReturn := `{
+					"properties":{
+						"foo":"bar",
+						"kawasaki.mtu":"1499",
+						"garden.network.container-ip":"10.255.10.10",
+						"garden.network.host-ip":"255.255.255.255"
+					},
+					"dns_servers": [
+						"1.2.3.4",
+						"1.2.3.5"
+					]
+			  }`
+					args = append(
+						args,
+						"--network-plugin-extra-arg", os.DevNull,
+						"--network-plugin-extra-arg", os.DevNull,
+						"--network-plugin-extra-arg", pluginReturn,
+					)
+				})
+
+				It("succeeds", func() {
+					_, err := client.Create(garden.ContainerSpec{Handle: handle})
+					Expect(err).ToNot(HaveOccurred())
+				})
 			})
 
 			Describe("starting a process", func() {
@@ -95,6 +122,9 @@ var _ = Describe("Runtime Plugin", func() {
 
 				JustBeforeEach(func() {
 					argsFilepath = filepath.Join(client.Tmpdir, "exec-args")
+
+					container, err := client.Create(garden.ContainerSpec{Handle: handle})
+					Expect(err).ToNot(HaveOccurred())
 
 					process, runErr = container.Run(garden.ProcessSpec{
 						Path: "some-idiosyncratic-binary",

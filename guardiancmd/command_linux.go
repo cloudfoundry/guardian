@@ -16,6 +16,8 @@ import (
 	"code.cloudfoundry.org/garden-shed/repository_fetcher"
 	"code.cloudfoundry.org/garden-shed/rootfs_provider"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/kawasaki"
+	"code.cloudfoundry.org/guardian/kawasaki/dns"
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
@@ -227,6 +229,15 @@ func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
 		CommandRunner: cmdRunner,
 	}
 	return runrunc.NewLinuxExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps, runningAsRoot)
+}
+
+func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {
+	return &kawasaki.ResolvConfigurer{
+		HostsFileCompiler: &dns.HostsFileCompiler{},
+		ResolvCompiler:    &dns.ResolvCompiler{},
+		ResolvFilePath:    "/etc/resolv.conf",
+		DepotDir:          depotPath,
+	}
 }
 
 func defaultBindMounts(binInitPath string) []specs.Mount {

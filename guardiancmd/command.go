@@ -18,7 +18,6 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/guardian/kawasaki"
-	"code.cloudfoundry.org/guardian/kawasaki/dns"
 	"code.cloudfoundry.org/guardian/kawasaki/factory"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	"code.cloudfoundry.org/guardian/kawasaki/mtu"
@@ -502,12 +501,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 	additionalDNSServers := extractIPs(cmd.Network.AdditionalDNSServers)
 
 	if cmd.Network.Plugin.Path() != "" {
-		resolvConfigurer := &kawasaki.ResolvConfigurer{
-			HostsFileCompiler: &dns.HostsFileCompiler{},
-			ResolvCompiler:    &dns.ResolvCompiler{},
-			ResolvFilePath:    "/etc/resolv.conf",
-			DepotDir:          depotPath,
-		}
+		resolvConfigurer := wireResolvConfigurer(depotPath)
 		externalNetworker := netplugin.New(
 			commandRunner(),
 			propManager,
