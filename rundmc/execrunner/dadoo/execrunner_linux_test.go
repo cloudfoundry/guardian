@@ -165,6 +165,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				<-closeExitPipeCh
 				Expect(exit.Close()).To(Succeed())
 
+				// Sleep before printing any stdout/stderr to allow attach calls to complete
+				time.Sleep(time.Millisecond * 50)
 				// do some test IO (directly write to stdout and copy stdin->stderr)
 				so.WriteString("hello stdout")
 
@@ -668,6 +670,31 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			process.Wait()
 			Eventually(stdout).Should(gbytes.Say("hello stdout"))
 			Eventually(stderr).Should(gbytes.Say("omg"))
+		})
+
+		Context("when running and attaching", func() {
+			It("multiplexes stdout and stderr", func() {
+				runStdout := gbytes.NewBuffer()
+				runStderr := gbytes.NewBuffer()
+				process, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"sleep4reals"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{
+					Stdout: runStdout,
+					Stderr: runStderr,
+					Stdin:  strings.NewReader("omg"),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				attachStdout := gbytes.NewBuffer()
+				attachStderr := gbytes.NewBuffer()
+				_, err = runner.Attach(log, processID, garden.ProcessIO{Stdout: attachStdout, Stderr: attachStderr, Stdin: strings.NewReader("")}, processPath)
+				Expect(err).NotTo(HaveOccurred())
+
+				process.Wait()
+				Eventually(runStdout).Should(gbytes.Say("hello stdout"))
+				Eventually(attachStdout).Should(gbytes.Say("hello stdout"))
+
+				Eventually(runStderr).Should(gbytes.Say("omg"))
+				Eventually(attachStderr).Should(gbytes.Say("omg"))
+			})
 		})
 
 		It("closed stdin when the stdin stream ends", func() {

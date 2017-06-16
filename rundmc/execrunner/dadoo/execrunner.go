@@ -35,6 +35,8 @@ type ExecRunner struct {
 	pidGetter                PidGetter
 	commandRunner            commandrunner.CommandRunner
 	cleanupProcessDirsOnWait bool
+	processes                map[string]*process
+	processesMutex           *sync.Mutex
 }
 
 func NewExecRunner(dadooPath, runcPath, runcRoot string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *ExecRunner {
@@ -46,6 +48,8 @@ func NewExecRunner(dadooPath, runcPath, runcRoot string, processIDGen runrunc.Ui
 		pidGetter:                pidGetter,
 		commandRunner:            commandRunner,
 		cleanupProcessDirsOnWait: shouldCleanup,
+		processes:                map[string]*process{},
+		processesMutex:           new(sync.Mutex),
 	}
 }
 
@@ -87,7 +91,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	defer logr.Close()
 	defer syncr.Close()
 
-	process := d.newProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
+	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
 	process.mkfifos(spec.HostUID, spec.HostGID)
 	if err != nil {
 		return nil, err
@@ -186,7 +190,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	processPath := filepath.Join(processesPath, processID)
-	process := d.newProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
+	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
 	if err := process.attach(io); err != nil {
 		return nil, err
 	}
@@ -212,11 +216,21 @@ type process struct {
 	ioWg                                         *sync.WaitGroup
 	winszCh                                      chan garden.WindowSize
 	cleanup                                      func() error
+	stdoutWriter                                 *DynamicMultiWriter
+	stderrWriter                                 *DynamicMultiWriter
+	streamMutex                                  *sync.Mutex
 
 	*signaller
 }
 
-func (d *ExecRunner) newProcess(log lager.Logger, id, processPath, pidFilePath string) *process {
+func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath string) *process {
+	d.processesMutex.Lock()
+	defer d.processesMutex.Unlock()
+
+	if existingProcess, ok := d.processes[id]; ok {
+		return existingProcess
+	}
+
 	cleanupFunc := func() error {
 		return nil
 	}
@@ -226,7 +240,7 @@ func (d *ExecRunner) newProcess(log lager.Logger, id, processPath, pidFilePath s
 		}
 	}
 
-	return &process{
+	d.processes[id] = &process{
 		logger:   log,
 		id:       id,
 		stdin:    filepath.Join(processPath, "stdin"),
@@ -242,7 +256,11 @@ func (d *ExecRunner) newProcess(log lager.Logger, id, processPath, pidFilePath s
 			pidFilePath: pidFilePath,
 			pidGetter:   d.pidGetter,
 		},
+		stdoutWriter: NewDynamicMultiWriter(),
+		stderrWriter: NewDynamicMultiWriter(),
+		streamMutex:  new(sync.Mutex),
 	}
+	return d.processes[id]
 }
 
 func (p *process) ID() string {
@@ -291,6 +309,9 @@ func openNonBlocking(fileName string) (*os.File, error) {
 }
 
 func (p process) streamData(pio garden.ProcessIO, stdin, stdout, stderr *os.File) {
+	p.streamMutex.Lock()
+	defer p.streamMutex.Unlock()
+
 	if pio.Stdin != nil {
 		go func() {
 			io.Copy(stdin, pio.Stdin)
@@ -299,21 +320,27 @@ func (p process) streamData(pio garden.ProcessIO, stdin, stdout, stderr *os.File
 	}
 
 	if pio.Stdout != nil {
-		p.ioWg.Add(1)
-		go func() {
-			io.Copy(pio.Stdout, stdout)
-			stdout.Close()
-			p.ioWg.Done()
-		}()
+		p.stdoutWriter.Attach(pio.Stdout)
+		if p.stdoutWriter.Count() == 1 {
+			p.ioWg.Add(1)
+			go func() {
+				io.Copy(p.stdoutWriter, stdout)
+				stdout.Close()
+				p.ioWg.Done()
+			}()
+		}
 	}
 
 	if pio.Stderr != nil {
-		p.ioWg.Add(1)
-		go func() {
-			io.Copy(pio.Stderr, stderr)
-			stderr.Close()
-			p.ioWg.Done()
-		}()
+		p.stderrWriter.Attach(pio.Stderr)
+		if p.stderrWriter.Count() == 1 {
+			p.ioWg.Add(1)
+			go func() {
+				io.Copy(p.stderrWriter, stderr)
+				stderr.Close()
+				p.ioWg.Done()
+			}()
+		}
 	}
 }
 

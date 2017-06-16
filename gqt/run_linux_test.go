@@ -593,7 +593,6 @@ var _ = Describe("Attach", func() {
 			Expect(exitCode).To(Equal(137)) // 137 = exit code when a process is KILLed
 		})
 	})
-
 })
 
 func should(matchers ...types.GomegaMatcher) func(actual interface{}) {
