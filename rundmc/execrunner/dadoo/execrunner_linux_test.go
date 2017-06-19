@@ -200,6 +200,30 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 		})
 
+		Context("when a processID is reused for a different container ID (different process path)", func() {
+			var (
+				processID        = "an-id"
+				otherProcessPath string
+			)
+
+			BeforeEach(func() {
+				_, err := runner.Run(log, processID, &runrunc.PreparedSpec{}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+
+				otherProcessPath, err = ioutil.TempDir("", "execrunner-tests")
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(otherProcessPath)).To(Succeed())
+			})
+
+			It("succeeds", func() {
+				_, err := runner.Run(log, processID, &runrunc.PreparedSpec{}, bundlePath, otherProcessPath, "some-handle", nil, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
 		It("executes the dadoo binary with the correct arguments", func() {
 			runner.Run(log, processID, &runrunc.PreparedSpec{}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
 

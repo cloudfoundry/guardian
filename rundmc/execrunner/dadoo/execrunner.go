@@ -227,7 +227,7 @@ func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath s
 	d.processesMutex.Lock()
 	defer d.processesMutex.Unlock()
 
-	if existingProcess, ok := d.processes[id]; ok {
+	if existingProcess, ok := d.processes[processPath]; ok {
 		return existingProcess
 	}
 
@@ -240,7 +240,7 @@ func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath s
 		}
 	}
 
-	d.processes[id] = &process{
+	d.processes[processPath] = &process{
 		logger:   log,
 		id:       id,
 		stdin:    filepath.Join(processPath, "stdin"),
@@ -260,7 +260,7 @@ func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath s
 		stderrWriter: NewDynamicMultiWriter(),
 		streamMutex:  new(sync.Mutex),
 	}
-	return d.processes[id]
+	return d.processes[processPath]
 }
 
 func (p *process) ID() string {
