@@ -52,11 +52,11 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		closeExitPipeCh                        chan struct{}
 		stderrContents                         string
 
-		testFinishedCh chan bool
+		testFinishedCh chan struct{}
 	)
 
 	BeforeEach(func() {
-		testFinishedCh = make(chan bool)
+		testFinishedCh = make(chan struct{})
 
 		fakeCommandRunner = fake_command_runner.New()
 		fakeProcessIDGenerator = new(fakes.FakeUidGenerator)
@@ -120,8 +120,9 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			fmt.Fprintln(cmd.Stderr, "dadoo stderr")
 
 			// dadoo would not error - simulate dadoo operation
-			go func(cmd *exec.Cmd, runcHangsForEver, dadooPanicsBeforeReportingRuncExitCode bool, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File), stderrContents string) {
+			go func(cmd *exec.Cmd, runcHangsForEver, dadooPanicsBeforeReportingRuncExitCode bool, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File), stderrContents string, doneCh chan<- struct{}) {
 				defer GinkgoRecover()
+				defer close(doneCh)
 
 				// parse flags to get bundle dir argument so we can open stdin/out/err pipes
 				dadooFlags.Parse(cmd.Args[1:])
@@ -179,10 +180,17 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				// close streams
 				Expect(so.Close()).To(Succeed())
 				Expect(se.Close()).To(Succeed())
-			}(cmd, runcHangsForEver, dadooPanicsBeforeReportingRuncExitCode, dadooWritesExitCode, []byte(dadooWritesLogs), closeExitPipeCh, receiveWinSize, stderrContents)
+			}(cmd, runcHangsForEver, dadooPanicsBeforeReportingRuncExitCode, dadooWritesExitCode, []byte(dadooWritesLogs), closeExitPipeCh, receiveWinSize, stderrContents, testFinishedCh)
 
 			return nil
 		})
+	})
+
+	AfterEach(func() {
+		select {
+		case <-testFinishedCh:
+		case <-time.After(time.Millisecond * 500):
+		}
 	})
 
 	Describe("Run", func() {
@@ -202,7 +210,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when a processID is reused for a different container ID (different process path)", func() {
 			var (
-				processID        = "an-id"
 				otherProcessPath string
 			)
 
