@@ -38,6 +38,7 @@ func main() {
 
 	fakeRuntimePlugin.Commands = []cli.Command{
 		CreateCommand,
+		DeleteCommand,
 		StateCommand,
 		EventsCommand,
 		ExecCommand,
@@ -79,12 +80,23 @@ var CreateCommand = cli.Command{
 	},
 }
 
+var DeleteCommand = cli.Command{
+	Name:  "delete",
+	Flags: []cli.Flag{},
+
+	Action: func(ctx *cli.Context) error {
+		writeArgs("delete")
+
+		return nil
+	},
+}
+
 var StateCommand = cli.Command{
 	Name:  "state",
 	Flags: []cli.Flag{},
 
 	Action: func(ctx *cli.Context) error {
-		fmt.Printf("{}")
+		fmt.Printf(`{"status":"created"}`)
 		return nil
 	},
 }

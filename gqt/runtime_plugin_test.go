@@ -47,7 +47,7 @@ var _ = Describe("Runtime Plugin", func() {
 
 		Describe("creating a container", func() {
 			var (
-				handle       = fmt.Sprintf("some-handle-%d", GinkgoParallelNode())
+				handle       = fmt.Sprintf("runtime-plugin-test-handle-%d", GinkgoParallelNode())
 				argsFilepath string
 			)
 
@@ -215,6 +215,32 @@ var _ = Describe("Runtime Plugin", func() {
 							})
 						})
 					})
+				})
+			})
+
+			Describe("destroying a container", func() {
+				var (
+					handle       = fmt.Sprintf("runtime-plugin-test-handle-%d", GinkgoParallelNode())
+					argsFilepath string
+				)
+
+				JustBeforeEach(func() {
+					argsFilepath = filepath.Join(client.Tmpdir, "delete-args")
+
+					_, err := client.Create(garden.ContainerSpec{Handle: handle})
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("executes the plugin, passing the correct args for delete", func() {
+					Expect(client.Destroy(handle)).To(Succeed())
+
+					Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
+						binaries.RuntimePlugin,
+						"--debug",
+						"--log", MatchRegexp(".*"),
+						"delete",
+						handle,
+					))
 				})
 			})
 		})
