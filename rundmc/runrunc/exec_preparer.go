@@ -12,10 +12,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-// The fact that this file is named linux_exec_preparer.go rather than
-// exec_preparer_linux.go is intentional: the LinuxExecPreparer doesn't
-// actually need to be developed only on Linux.
-type LinuxExecPreparer struct {
+type execPreparer struct {
 	bundleLoader  BundleLoader
 	users         UserLookupper
 	mkdirer       Mkdirer
@@ -24,8 +21,8 @@ type LinuxExecPreparer struct {
 	nonRootMaxCaps []string
 }
 
-func NewLinuxExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdirer Mkdirer, nonRootMaxCaps []string, runningAsRootFunc func() bool) ExecPreparer {
-	return &LinuxExecPreparer{
+func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdirer Mkdirer, nonRootMaxCaps []string, runningAsRootFunc func() bool) ExecPreparer {
+	return &execPreparer{
 		bundleLoader:   bundleLoader,
 		users:          userlookup,
 		mkdirer:        mkdirer,
@@ -34,7 +31,7 @@ func NewLinuxExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, m
 	}
 }
 
-func (r *LinuxExecPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*PreparedSpec, error) {
+func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*PreparedSpec, error) {
 	log = log.Session("prepare")
 
 	log.Info("start")
@@ -120,7 +117,7 @@ type usr struct {
 	home                       string
 }
 
-func (r *LinuxExecPreparer) lookupUser(bndl goci.Bndl, rootfsPath, username string) (*usr, error) {
+func (r *execPreparer) lookupUser(bndl goci.Bndl, rootfsPath, username string) (*usr, error) {
 	u, err := r.users.Lookup(rootfsPath, username)
 	if err != nil {
 		return nil, err
@@ -141,7 +138,7 @@ func (r *LinuxExecPreparer) lookupUser(bndl goci.Bndl, rootfsPath, username stri
 	}, nil
 }
 
-func (r *LinuxExecPreparer) ensureDirExists(rootFSPathFile, dir string, uid, gid int) error {
+func (r *execPreparer) ensureDirExists(rootFSPathFile, dir string, uid, gid int) error {
 	if r.runningAsRoot() {
 		// the MkdirAs throws a permission error when running in rootless mode...
 		if err := r.mkdirer.MkdirAs(rootFSPathFile, uid, gid, 0755, false, dir); err != nil {

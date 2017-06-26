@@ -1,6 +1,10 @@
 package guardiancmd
 
 import (
+	"os"
+	"path/filepath"
+	"strings"
+
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/commandrunner/windows_command_runner"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -8,6 +12,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -53,8 +58,21 @@ func (cmd *ServerCommand) wireCgroupsStarter(logger lager.Logger) gardener.Start
 	return &NoopStarter{}
 }
 
+type mkdirer struct{}
+
+func (m mkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
+	for _, path := range paths {
+		volumeName := filepath.VolumeName(path)
+		if err := os.MkdirAll(filepath.Join(rootFSPathFile, strings.TrimPrefix(path, volumeName)), 0755); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
-	return &runrunc.WindowsExecPreparer{}
+	runningAsRoot := func() bool { return true }
+	return runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), mkdirer{}, nil, runningAsRoot)
 }
 
 func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {
