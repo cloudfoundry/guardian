@@ -2,6 +2,7 @@ package execrunner
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -24,6 +25,11 @@ type DirectExecRunner struct {
 }
 
 func (e *DirectExecRunner) Run(log lager.Logger, processID string, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
+	log = log.Session("execrunner")
+
+	log.Info("start")
+	defer log.Info("done")
+
 	if processID == "" {
 		processID = e.ProcessIDGen.Generate()
 	}
@@ -35,12 +41,16 @@ func (e *DirectExecRunner) Run(log lager.Logger, processID string, spec *runrunc
 	}
 
 	processPath := filepath.Join(processesPath, proc.ID())
-	specPath := filepath.Join(processPath, "spec.json")
+	_, err = os.Stat(processPath)
+	if err == nil {
+		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
+	}
 
 	if err := os.MkdirAll(processPath, 0700); err != nil {
 		return nil, err
 	}
 
+	specPath := filepath.Join(processPath, "spec.json")
 	if err := ioutil.WriteFile(specPath, marshaledSpec, 0600); err != nil {
 		return nil, errors.Wrap(err, "writing process spec")
 	}
