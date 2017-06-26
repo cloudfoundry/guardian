@@ -453,6 +453,16 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 		return errorspkg.Wrap(err, "deleting upperdir folder")
 	}
 
+	projectID, err := quotapkg.GetProjectID(imagePath)
+	if err != nil {
+		logger.Error("fetching-project-id-failed", err)
+		logger.Info("skipping-project-id-folder-removal")
+	} else if projectID != 0 {
+		if err := os.RemoveAll(filepath.Join(d.storePath, IDDir, strconv.Itoa(int(projectID)))); err != nil {
+			logger.Error("removing-project-id-folder-failed", err)
+		}
+	}
+
 	return nil
 }
 

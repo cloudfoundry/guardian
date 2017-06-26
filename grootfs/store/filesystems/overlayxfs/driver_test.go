@@ -552,7 +552,7 @@ var _ = Describe("Driver", func() {
 	})
 
 	Describe("DestroyImage", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			volumeID := randVolumeID()
 			_, err := driver.CreateVolume(logger, "parent-id", volumeID)
 			Expect(err).NotTo(HaveOccurred())
@@ -571,6 +571,25 @@ var _ = Describe("Driver", func() {
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).ToNot(BeAnExistingFile())
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.WorkDir)).ToNot(BeAnExistingFile())
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)).ToNot(BeAnExistingFile())
+		})
+
+		Context("projectids", func() {
+			BeforeEach(func() {
+				spec.DiskLimit = 1000000000
+			})
+
+			It("removes the projectid directory for that image", func() {
+				projectidsDir := filepath.Join(StorePath, overlayxfs.IDDir)
+				ids, err := ioutil.ReadDir(projectidsDir)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(HaveLen(1))
+
+				Expect(driver.DestroyImage(logger, spec.ImagePath)).To(Succeed())
+
+				ids, err = ioutil.ReadDir(projectidsDir)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(ids).To(BeEmpty())
+			})
 		})
 
 		Context("when it fails unmount the rootfs", func() {
