@@ -726,8 +726,47 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				Eventually(runStderr).Should(gbytes.Say("omg"))
 				Eventually(attachStderr).Should(gbytes.Say("omg"))
 			})
-		})
 
+			It("cleans up the map entry but not the process path", func() {
+				runStdout := gbytes.NewBuffer()
+				runStderr := gbytes.NewBuffer()
+				process, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"sleep4reals"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{
+					Stdout: runStdout,
+					Stderr: runStderr,
+					Stdin:  strings.NewReader("omg"),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				process.Wait()
+				Eventually(runStdout).Should(gbytes.Say("hello stdout"))
+				Eventually(runStderr).Should(gbytes.Say("omg"))
+
+				Expect(filepath.Join(processPath, processID)).Should(BeADirectory())
+				Expect(len(runner.GetProcesses())).To(Equal(0))
+			})
+
+			Context("when cleanupProcessDirsOnWait is true", func() {
+				JustBeforeEach(func() {
+					runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, true)
+				})
+
+				It("cleans up the map entry and the process path", func() {
+					runStdout := gbytes.NewBuffer()
+					runStderr := gbytes.NewBuffer()
+					process, err := runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"sleep4reals"}}}, bundlePath, processPath, "some-handle", nil, garden.ProcessIO{
+						Stdout: runStdout,
+						Stderr: runStderr,
+						Stdin:  strings.NewReader("omg"),
+					})
+					Expect(err).NotTo(HaveOccurred())
+					process.Wait()
+					Eventually(runStdout).Should(gbytes.Say("hello stdout"))
+					Eventually(runStderr).Should(gbytes.Say("omg"))
+
+					Expect(filepath.Join(processPath, processID)).ShouldNot(BeADirectory())
+					Expect(len(runner.GetProcesses())).To(Equal(0))
+				})
+			})
+		})
 		It("closed stdin when the stdin stream ends", func() {
 			stdout := gbytes.NewBuffer()
 			stderr := gbytes.NewBuffer()

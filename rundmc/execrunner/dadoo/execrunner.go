@@ -224,22 +224,22 @@ type process struct {
 }
 
 func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath string) *process {
-	d.processesMutex.Lock()
-	defer d.processesMutex.Unlock()
 
 	if existingProcess, ok := d.processes[processPath]; ok {
 		return existingProcess
 	}
 
 	cleanupFunc := func() error {
-		return nil
-	}
-	if d.cleanupProcessDirsOnWait {
-		cleanupFunc = func() error {
+		d.processesMutex.Lock()
+		delete(d.processes, processPath)
+		d.processesMutex.Unlock()
+		if d.cleanupProcessDirsOnWait {
 			return os.RemoveAll(processPath)
 		}
+		return nil
 	}
 
+	d.processesMutex.Lock()
 	d.processes[processPath] = &process{
 		logger:   log,
 		id:       id,
@@ -260,6 +260,7 @@ func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath s
 		stderrWriter: NewDynamicMultiWriter(),
 		streamMutex:  new(sync.Mutex),
 	}
+	d.processesMutex.Unlock()
 	return d.processes[processPath]
 }
 
