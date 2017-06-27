@@ -17,6 +17,7 @@ import (
 
 const BaseImageReferenceFormat = "baseimage:%s"
 const MetricsUnpackTimeName = "UnpackTime"
+const MetricsDownloadTimeName = "DownloadTime"
 const MetricsFailedUnpackTimeName = "FailedUnpackTime"
 
 //go:generate counterfeiter . Fetcher
@@ -216,6 +217,11 @@ type downloadReturn struct {
 }
 
 func (p *BaseImagePuller) downloadLayer(logger lager.Logger, spec groot.BaseImageSpec, digest LayerDigest, downloadChan chan downloadReturn) {
+	logger = logger.Session("downloading-layer", lager.Data{"LayerDigest": digest})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+	defer p.metricsEmitter.TryEmitDurationFrom(logger, MetricsDownloadTimeName, time.Now())
+
 	stream, size, err := p.fetcher(spec.BaseImageSrc).StreamBlob(logger, spec.BaseImageSrc, digest.BlobID)
 	if err != nil {
 		err = errorspkg.Wrapf(err, "streaming blob `%s`", digest.BlobID)
@@ -231,6 +237,10 @@ func (p *BaseImagePuller) downloadLayer(logger lager.Logger, spec groot.BaseImag
 }
 
 func (p *BaseImagePuller) unpackLayer(logger lager.Logger, digest LayerDigest, spec groot.BaseImageSpec, stream io.ReadCloser) error {
+	logger = logger.Session("unpacking-layer", lager.Data{"LayerDigest": digest})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
 	tempVolumeName, volumePath, err := p.createTemporaryVolumeDirectory(logger, digest, spec)
 	if err != nil {
 		return err
@@ -278,15 +288,14 @@ func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, di
 }
 
 func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, digest LayerDigest) error {
-	unpackStarted := time.Now()
+	defer p.metricsEmitter.TryEmitDurationFrom(logger, MetricsUnpackTimeName, time.Now())
+
 	if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
 		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
 			logger.Error("volume-cleanup-failed", errD)
 		}
-		p.metricsEmitter.TryEmitDurationFrom(logger, MetricsFailedUnpackTimeName, unpackStarted)
 		return errorspkg.Wrapf(err, "unpacking layer `%s`", digest.BlobID)
 	}
-	p.metricsEmitter.TryEmitDurationFrom(logger, MetricsUnpackTimeName, unpackStarted)
 	logger.Debug("layer-unpacked")
 	return nil
 }
