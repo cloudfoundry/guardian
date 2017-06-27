@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 
@@ -197,18 +198,13 @@ var _ = Describe("Base Image Puller", func() {
 		Expect(chainIDs).To(ConsistOf("layer-111", "chain-222", "chain-333"))
 	})
 
-	It("emits a metric with the unpack time", func() {
-		start := time.Now()
-
+	It("emits a metric with the unpack and download time for each layer", func() {
 		_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
 			BaseImageSrc: remoteBaseImageSrc,
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(len(layersDigest)))
-		_, metricName, fromTime := fakeMetricsEmitter.TryEmitDurationFromArgsForCall(0)
-		Expect(metricName).To(Equal(base_image_puller.MetricsUnpackTimeName))
-		Expect(fromTime.Unix()).To(BeNumerically("~", start.Unix(), 1))
+		Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(2 * len(layersDigest)))
 	})
 
 	It("uses the locksmith for each layer", func() {
@@ -565,27 +561,31 @@ var _ = Describe("Base Image Puller", func() {
 			Expect(path).To(Equal("chain-333"))
 		})
 
-		It("emitts a metric with the unpack time", func() {
-			start := time.Now()
+		It("emitts a metric with the unpack and download time for each layer", func() {
+			downloadTimeMetrics := 0
+			unpackTimeMetrics := 0
+			mutex := &sync.Mutex{}
+
+			fakeMetricsEmitter.TryEmitDurationFromStub = func(_ lager.Logger, name string, value time.Time) {
+				mutex.Lock()
+				defer mutex.Unlock()
+
+				switch name {
+				case base_image_puller.MetricsUnpackTimeName:
+					unpackTimeMetrics += 1
+				case base_image_puller.MetricsDownloadTimeName:
+					downloadTimeMetrics += 1
+				}
+			}
 
 			_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
 				BaseImageSrc: remoteBaseImageSrc,
 			})
 			Expect(err).To(HaveOccurred())
 
-			Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(3))
-
-			_, metricName, fromTime := fakeMetricsEmitter.TryEmitDurationFromArgsForCall(0)
-			Expect(metricName).To(Equal(base_image_puller.MetricsUnpackTimeName))
-			Expect(fromTime.Unix()).To(BeNumerically("~", start.Unix(), 1))
-
-			_, metricName, fromTime = fakeMetricsEmitter.TryEmitDurationFromArgsForCall(1)
-			Expect(metricName).To(Equal(base_image_puller.MetricsUnpackTimeName))
-			Expect(fromTime.Unix()).To(BeNumerically("~", start.Unix(), 2))
-
-			_, metricName, fromTime = fakeMetricsEmitter.TryEmitDurationFromArgsForCall(2)
-			Expect(metricName).To(Equal(base_image_puller.MetricsFailedUnpackTimeName))
-			Expect(fromTime.Unix()).To(BeNumerically("~", start.Unix(), 3))
+			Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(6))
+			Expect(unpackTimeMetrics).To(Equal(3))
+			Expect(downloadTimeMetrics).To(Equal(3))
 		})
 
 		Context("when UID and GID mappings are provided", func() {
