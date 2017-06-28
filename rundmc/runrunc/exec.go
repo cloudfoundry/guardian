@@ -14,6 +14,7 @@ import (
 
 //go:generate counterfeiter . UidGenerator
 //go:generate counterfeiter . UserLookupper
+//go:generate counterfeiter . EnvDeterminer
 //go:generate counterfeiter . Mkdirer
 //go:generate counterfeiter . BundleLoader
 //go:generate counterfeiter . ProcessTracker
@@ -34,6 +35,16 @@ type LookupFunc func(rootfsPath, user string) (*user.ExecUser, error)
 
 func (fn LookupFunc) Lookup(rootfsPath, user string) (*user.ExecUser, error) {
 	return fn(rootfsPath, user)
+}
+
+type EnvDeterminer interface {
+	EnvFor(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string
+}
+
+type EnvFunc func(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string
+
+func (fn EnvFunc) EnvFor(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string {
+	return fn(uid, bndl, spec)
 }
 
 type BundleLoader interface {

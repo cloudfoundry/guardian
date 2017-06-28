@@ -15,16 +15,18 @@ import (
 type execPreparer struct {
 	bundleLoader  BundleLoader
 	users         UserLookupper
+	envDeterminer EnvDeterminer
 	mkdirer       Mkdirer
 	runningAsRoot func() bool
 
 	nonRootMaxCaps []string
 }
 
-func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, mkdirer Mkdirer, nonRootMaxCaps []string, runningAsRootFunc func() bool) ExecPreparer {
+func NewExecPreparer(bundleLoader BundleLoader, userlookup UserLookupper, envDeterminer EnvDeterminer, mkdirer Mkdirer, nonRootMaxCaps []string, runningAsRootFunc func() bool) ExecPreparer {
 	return &execPreparer{
 		bundleLoader:   bundleLoader,
 		users:          userlookup,
+		envDeterminer:  envDeterminer,
 		mkdirer:        mkdirer,
 		nonRootMaxCaps: nonRootMaxCaps,
 		runningAsRoot:  runningAsRootFunc,
@@ -96,7 +98,7 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		Process: specs.Process{
 			Args:        append([]string{spec.Path}, spec.Args...),
 			ConsoleSize: consoleBox,
-			Env:         envFor(u.containerUid, bndl, spec),
+			Env:         r.envDeterminer.EnvFor(u.containerUid, bndl, spec),
 			User: specs.User{
 				UID:            uint32(u.containerUid),
 				GID:            uint32(u.containerGid),

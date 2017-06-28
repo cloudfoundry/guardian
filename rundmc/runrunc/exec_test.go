@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -14,7 +13,6 @@ import (
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runtime-spec/specs-go"
@@ -51,10 +49,11 @@ var _ = Describe("Execer", func() {
 			}, nil
 		}
 
-		execer.Exec(logger, "some-bundle-path", "some-id", garden.ProcessSpec{
+		_, err := execer.Exec(logger, "some-bundle-path", "some-id", garden.ProcessSpec{
 			ID:   "some-process-id",
 			Path: "potato",
 		}, garden.ProcessIO{})
+		Expect(err).NotTo(HaveOccurred())
 
 		Expect(execRunner.RunCallCount()).To(Equal(1))
 		_, passedID, spec, bundlePath, processesPath, id, _, _ := execRunner.RunArgsForCall(0)
@@ -68,9 +67,11 @@ var _ = Describe("Execer", func() {
 
 var _ = Describe("ExecPreparer", func() {
 	var (
+		bndl         goci.Bndl
 		spec         *runrunc.PreparedSpec
 		bundleLoader *fakes.FakeBundleLoader
 		users        *fakes.FakeUserLookupper
+		enver        *fakes.FakeEnvDeterminer
 		mkdirer      *fakes.FakeMkdirer
 		bundlePath   string
 		logger       lager.Logger
@@ -82,9 +83,11 @@ var _ = Describe("ExecPreparer", func() {
 	BeforeEach(func() {
 		rootless = false
 
+		bndl = goci.Bundle().WithHostname("some-hostname")
 		logger = lagertest.NewTestLogger("test")
 		bundleLoader = new(fakes.FakeBundleLoader)
 		users = new(fakes.FakeUserLookupper)
+		enver = new(fakes.FakeEnvDeterminer)
 		mkdirer = new(fakes.FakeMkdirer)
 
 		var err error
@@ -92,18 +95,18 @@ var _ = Describe("ExecPreparer", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
-			bndl := goci.Bundle()
 			return bndl, nil
 		}
 
 		users.LookupReturns(&user.ExecUser{}, nil)
+		enver.EnvForReturns([]string{"FOO=bar"})
 
 		Expect(ioutil.WriteFile(filepath.Join(bundlePath, "pidfile"), []byte("999"), 0644)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
 		runningAsRoot := func() bool { return !rootless }
-		preparer = runrunc.NewExecPreparer(bundleLoader, users, mkdirer, []string{"foo", "bar", "brains"}, runningAsRoot)
+		preparer = runrunc.NewExecPreparer(bundleLoader, users, enver, mkdirer, []string{"foo", "bar", "brains"}, runningAsRoot)
 	})
 
 	It("passes a process.json with the correct path and args", func() {
@@ -121,6 +124,22 @@ var _ = Describe("ExecPreparer", func() {
 
 		Expect(spec.HostUID).To(BeEquivalentTo(234))
 		Expect(spec.HostGID).To(BeEquivalentTo(567))
+	})
+
+	It("passes the correct env", func() {
+		users.LookupReturns(&user.ExecUser{Uid: 234, Gid: 567}, nil)
+
+		processSpec := garden.ProcessSpec{ID: "some-id"}
+		preparedSpec, err := preparer.Prepare(logger, bundlePath, processSpec)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(enver.EnvForCallCount()).To(Equal(1))
+		actualUID, actualBndl, actualProcessSpec := enver.EnvForArgsForCall(0)
+		Expect(actualUID).To(Equal(234))
+		Expect(actualBndl).To(Equal(bndl))
+		Expect(actualProcessSpec).To(Equal(processSpec))
+
+		Expect(preparedSpec.Env).To(Equal([]string{"FOO=bar"}))
 	})
 
 	It("sets the rlimits correctly", func() {
@@ -255,278 +274,6 @@ var _ = Describe("ExecPreparer", func() {
 
 				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
 				Expect(err).To(MatchError(ContainSubstring("pidfile")))
-			})
-		})
-	})
-
-	Context("when the user is specified in the process spec", func() {
-		DescribeTable("appends the correct USER env var", func(env, expected []string) {
-			if runtime.GOOS == "windows" {
-				Skip("USER and PATH not implemented on windows")
-			}
-			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-				User: "spiderman",
-				Env:  env,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(spec.Process.Env).To(Equal(expected))
-		},
-			Entry(
-				"when Env does not contain USER",
-				[]string{"a=1", "PATH=a", "HOME=/spidermanhome"},
-				[]string{"a=1", "PATH=a", "HOME=/spidermanhome", "USER=spiderman"},
-			),
-			Entry(
-				"when Env does not contain USER, but does contain an env var matching the string .*USER",
-				[]string{"a=1", "PATH=a", "AUSER=foo"},
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USER=spiderman"},
-			),
-			Entry(
-				"when Env does not contain USER, but does contain an env var matching the string USER.*",
-				[]string{"a=1", "PATH=a", "USERA=bar"},
-				[]string{"a=1", "PATH=a", "USERA=bar", "USER=spiderman"},
-			),
-			Entry(
-				"when Env does not contain USER, but does contain an env var matching the string .*USER.*",
-				[]string{"a=1", "PATH=a", "AUSERB=baz"},
-				[]string{"a=1", "PATH=a", "AUSERB=baz", "USER=spiderman"},
-			),
-			Entry(
-				"when Env does not contain USER, but contains many env vars matching the string .*USER.*",
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USERB=bar", "USERINYOURUSER=yodawg"},
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USERB=bar", "USERINYOURUSER=yodawg", "USER=spiderman"},
-			),
-			Entry(
-				"when Env does contain USER",
-				[]string{"a=1", "PATH=a", "USER=superman"},
-				[]string{"a=1", "PATH=a", "USER=superman"},
-			),
-			Entry(
-				"when Env does contain USER, as well as an env var matching the string .*USER",
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USER=superman"},
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USER=superman"},
-			),
-			Entry(
-				"when Env does contain USER, as well as an env var matching the string USER.*",
-				[]string{"a=1", "PATH=a", "USERA=bar", "USER=superman"},
-				[]string{"a=1", "PATH=a", "USERA=bar", "USER=superman"},
-			),
-			Entry(
-				"when Env does contain USER, as well as an env var matching the string .*USER.*",
-				[]string{"a=1", "PATH=a", "AUSERB=baz", "USER=superman"},
-				[]string{"a=1", "PATH=a", "AUSERB=baz", "USER=superman"},
-			),
-			Entry(
-				"when Env does contain USER, as well as many env vars matching the string .*USER.*",
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USERB=bar", "USERINYOURUSER=yodawg", "USER=superman"},
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USERB=bar", "USERINYOURUSER=yodawg", "USER=superman"},
-			),
-		)
-	})
-
-	Context("when the user is not specified in the process spec", func() {
-		DescribeTable("appends the correct USER env var", func(env, expected []string) {
-			if runtime.GOOS == "windows" {
-				Skip("USER and PATH not implemented on windows")
-			}
-			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-				Env: env,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(spec.Process.Env).To(Equal(expected))
-		},
-			Entry(
-				"when Env does not contain USER",
-				[]string{"a=1", "PATH=a"},
-				[]string{"a=1", "PATH=a", "USER=root"},
-			),
-			Entry(
-				"when Env does not contain USER, but does contain an env var matching the string .*USER",
-				[]string{"a=1", "PATH=a", "AUSER=foo"},
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USER=root"},
-			),
-			Entry(
-				"when Env does not contain USER, but does contain an env var matching the string USER.*",
-				[]string{"a=1", "PATH=a", "USERA=bar"},
-				[]string{"a=1", "PATH=a", "USERA=bar", "USER=root"},
-			),
-			Entry(
-				"when Env does not contain USER, but does contain an env var matching the string .*USER.*",
-				[]string{"a=1", "PATH=a", "AUSERB=baz"},
-				[]string{"a=1", "PATH=a", "AUSERB=baz", "USER=root"},
-			),
-			Entry(
-				"when Env does not contain USER, but contains many env vars matching the string .*USER.*",
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USERB=bar", "USERINYOURUSER=yodawg"},
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USERB=bar", "USERINYOURUSER=yodawg", "USER=root"},
-			),
-			Entry(
-				"when Env does contain USER",
-				[]string{"a=1", "PATH=a", "USER=yo"},
-				[]string{"a=1", "PATH=a", "USER=yo"},
-			),
-			Entry(
-				"when Env does contain USER, as well as an env var matching the string .*USER",
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USER=yo"},
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USER=yo"},
-			),
-			Entry(
-				"when Env does contain USER, as well as an env var matching the string USER.*",
-				[]string{"a=1", "PATH=a", "USERA=bar", "USER=yo"},
-				[]string{"a=1", "PATH=a", "USERA=bar", "USER=yo"},
-			),
-			Entry(
-				"when Env does contain USER, as well as an env var matching the string .*USER.*",
-				[]string{"a=1", "PATH=a", "AUSERB=baz", "USER=yo"},
-				[]string{"a=1", "PATH=a", "AUSERB=baz", "USER=yo"},
-			),
-			Entry(
-				"when Env does contain USER, as well as many env vars matching the string .*USER.*",
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USERB=bar", "USERINYOURUSER=yodawg", "USER=yo"},
-				[]string{"a=1", "PATH=a", "AUSER=foo", "USERB=bar", "USERINYOURUSER=yodawg", "USER=yo"},
-			),
-		)
-	})
-
-	Context("when the environment already contains a PATH", func() {
-		It("passes the environment variables", func() {
-			if runtime.GOOS == "windows" {
-				Skip("USER and PATH not implemented on windows")
-			}
-			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-				Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(spec.Process.Env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
-		})
-	})
-
-	Context("when the environment does not already contain a PATH", func() {
-		DescribeTable("appends a default PATH", func(procUser string, uid int, env, expected []string) {
-			if runtime.GOOS == "windows" {
-				Skip("USER and PATH not implemented on windows")
-			}
-			users.LookupReturns(&user.ExecUser{Uid: uid, Gid: uid}, nil)
-			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-				Env:  env,
-				User: procUser,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(spec.Process.Env).To(Equal(expected))
-		},
-			Entry(
-				"for the root user", "root", 0,
-				[]string{"a=1"},
-				[]string{"a=1", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=root"},
-			),
-			Entry(
-				"for the root user, and an env var matching the string .*PATH", "root", 0,
-				[]string{"a=1", "APATH=foo"},
-				[]string{"a=1", "APATH=foo", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=root"},
-			),
-			Entry(
-				"for the root user, and an env var matching the string PATH.*", "root", 0,
-				[]string{"a=1", "PATHA=bar"},
-				[]string{"a=1", "PATHA=bar", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=root"},
-			),
-			Entry(
-				"for the root user, and an env var matching the string .*PATH.*", "root", 0,
-				[]string{"a=1", "APATHB=baz"},
-				[]string{"a=1", "APATHB=baz", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=root"},
-			),
-			Entry(
-				"for the root user, and many env vars matching the string .*PATH.*", "root", 0,
-				[]string{"a=1", "APATH=foo", "PATHB=bar", "PATHINYOURPATH=yodawg"},
-				[]string{"a=1", "APATH=foo", "PATHB=bar", "PATHINYOURPATH=yodawg", "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin", "USER=root"},
-			),
-			Entry(
-				"for a non-root user", "alice", 1000,
-				[]string{"a=1"},
-				[]string{"a=1", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"},
-			),
-			Entry(
-				"for a non-root user, and an env var matching the string .*PATH", "alice", 1000,
-				[]string{"a=1", "APATH=foo"},
-				[]string{"a=1", "APATH=foo", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"},
-			),
-			Entry(
-				"for a non-root user, and an env var matching the string PATH.*", "alice", 1000,
-				[]string{"a=1", "PATHA=bar"},
-				[]string{"a=1", "PATHA=bar", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"},
-			),
-			Entry(
-				"for a non-root user, and an env var matching the string .*PATH.*", "alice", 1000,
-				[]string{"a=1", "APATHB=baz"},
-				[]string{"a=1", "APATHB=baz", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"},
-			),
-			Entry(
-				"for a non-root user, and many env vars matching the string .*PATH.*", "alice", 1000,
-				[]string{"a=1", "APATH=foo", "PATHB=bar", "PATHINYOURPATH=yodawg"},
-				[]string{"a=1", "APATH=foo", "PATHB=bar", "PATHINYOURPATH=yodawg", "PATH=/usr/local/bin:/usr/bin:/bin", "USER=alice"},
-			),
-		)
-	})
-
-	Context("when the container has environment variables", func() {
-		var (
-			processEnv   []string
-			containerEnv []string
-			bndl         goci.Bndl
-
-			spec *runrunc.PreparedSpec
-		)
-
-		BeforeEach(func() {
-			containerEnv = []string{"ENV_CONTAINER_NAME=garden"}
-			processEnv = []string{"ENV_PROCESS_ID=1"}
-		})
-
-		JustBeforeEach(func() {
-			bndl = goci.Bundle()
-			bndl.Spec.Process.Env = containerEnv
-			bundleLoader.LoadReturns(bndl, nil)
-
-			var err error
-			spec, err = preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-				Env: processEnv,
-			})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("appends the process vars into container vars", func() {
-			envWContainer := make([]string, len(spec.Process.Env))
-			copy(envWContainer, spec.Process.Env)
-
-			bndl.Spec.Process.Env = []string{}
-			bundleLoader.LoadReturns(bndl, nil)
-
-			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-				Env: processEnv,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(envWContainer).To(Equal(append(containerEnv, spec.Process.Env...)))
-		})
-
-		Context("and the container environment contains PATH", func() {
-			BeforeEach(func() {
-				containerEnv = append(containerEnv, "PATH=/test")
-			})
-
-			It("should not apply the default PATH", func() {
-				if runtime.GOOS == "windows" {
-					Skip("USER and PATH not implemented on windows")
-				}
-				Expect(spec.Process.Env).To(Equal([]string{
-					"ENV_CONTAINER_NAME=garden",
-					"PATH=/test",
-					"ENV_PROCESS_ID=1",
-					"USER=root",
-				}))
 			})
 		})
 	})

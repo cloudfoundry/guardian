@@ -228,7 +228,7 @@ func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
 		Command:       preparerootfs.Command,
 		CommandRunner: cmdRunner,
 	}
-	return runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), chrootMkdir, NonRootMaxCaps, runningAsRoot)
+	return runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), runrunc.EnvFunc(runrunc.UnixEnvFor), chrootMkdir, NonRootMaxCaps, runningAsRoot)
 }
 
 func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {

@@ -72,7 +72,7 @@ func (m mkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, 
 
 func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
 	runningAsRoot := func() bool { return true }
-	return runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), mkdirer{}, nil, runningAsRoot)
+	return runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), runrunc.EnvFunc(runrunc.WindowsEnvFor), mkdirer{}, nil, runningAsRoot)
 }
 
 func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {

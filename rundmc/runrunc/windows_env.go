@@ -5,6 +5,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
-func envFor(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string {
+func WindowsEnvFor(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string {
 	return append(bndl.Spec.Process.Env, spec.Env...)
 }
