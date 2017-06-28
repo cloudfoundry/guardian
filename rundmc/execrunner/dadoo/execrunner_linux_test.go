@@ -51,13 +51,9 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		receiveWinSize                         func(*os.File)
 		closeExitPipeCh                        chan struct{}
 		stderrContents                         string
-
-		testFinishedCh chan struct{}
 	)
 
 	BeforeEach(func() {
-		testFinishedCh = make(chan struct{})
-
 		fakeCommandRunner = fake_command_runner.New()
 		fakeProcessIDGenerator = new(fakes.FakeUidGenerator)
 		fakePidGetter = new(dadoofakes.FakePidGetter)
@@ -120,9 +116,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			fmt.Fprintln(cmd.Stderr, "dadoo stderr")
 
 			// dadoo would not error - simulate dadoo operation
-			go func(cmd *exec.Cmd, runcHangsForEver, dadooPanicsBeforeReportingRuncExitCode bool, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File), stderrContents string, doneCh chan<- struct{}) {
+			go func(cmd *exec.Cmd, runcHangsForEver, dadooPanicsBeforeReportingRuncExitCode bool, exitCode []byte, logs []byte, closeExitPipeCh chan struct{}, recvWinSz func(*os.File), stderrContents string) {
 				defer GinkgoRecover()
-				defer close(doneCh)
 
 				// parse flags to get bundle dir argument so we can open stdin/out/err pipes
 				dadooFlags.Parse(cmd.Args[1:])
@@ -161,6 +156,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				fd3.Close()
 				// write exit code of actual process to $processdir/exitcode file
 				if exitCode != nil {
+					Eventually(processDir).Should(BeADirectory())
 					Expect(ioutil.WriteFile(filepath.Join(processDir, "exitcode"), []byte(exitCode), 0600)).To(Succeed())
 				}
 				<-closeExitPipeCh
@@ -180,17 +176,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				// close streams
 				Expect(so.Close()).To(Succeed())
 				Expect(se.Close()).To(Succeed())
-			}(cmd, runcHangsForEver, dadooPanicsBeforeReportingRuncExitCode, dadooWritesExitCode, []byte(dadooWritesLogs), closeExitPipeCh, receiveWinSize, stderrContents, testFinishedCh)
+			}(cmd, runcHangsForEver, dadooPanicsBeforeReportingRuncExitCode, dadooWritesExitCode, []byte(dadooWritesLogs), closeExitPipeCh, receiveWinSize, stderrContents)
 
 			return nil
 		})
-	})
-
-	AfterEach(func() {
-		select {
-		case <-testFinishedCh:
-		case <-time.After(time.Millisecond * 500):
-		}
 	})
 
 	Describe("Run", func() {
@@ -219,10 +208,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 				otherProcessPath, err = ioutil.TempDir("", "execrunner-tests")
 				Expect(err).NotTo(HaveOccurred())
-			})
-
-			AfterEach(func() {
-				Expect(os.RemoveAll(otherProcessPath)).To(Succeed())
 			})
 
 			It("succeeds", func() {
@@ -465,8 +450,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 					Expect(runcLogs).To(HaveLen(3))
 					Expect(runcLogs[0].Data).To(HaveKeyWithValue("message", "signal: potato"))
-
-					Consistently(testFinishedCh).ShouldNot(BeClosed())
 				})
 			})
 		})
