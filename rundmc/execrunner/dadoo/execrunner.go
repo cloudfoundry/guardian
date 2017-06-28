@@ -178,7 +178,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	runcExitStatus := make([]byte, 1)
 	bytesRead, err := fd3r.Read(runcExitStatus)
 	if bytesRead == 0 || err != nil {
-		return nil, errors.New("failed to read runc exit code")
+		return nil, fmt.Errorf("failed to read runc exit code %v", err)
 	}
 	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
 	if runcExitStatus[0] != 0 {

@@ -450,7 +450,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 						defer GinkgoRecover()
 						runner.Run(log, processID, &runrunc.PreparedSpec{Process: specs.Process{Args: []string{"Banana", "rama"}}},
 							bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
-						Fail("runner should hang if runc hangs")
 					}(log, processID, bundlePath, processPath)
 
 					Eventually(func() []lager.LogFormat {
@@ -466,6 +465,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 					Expect(runcLogs).To(HaveLen(3))
 					Expect(runcLogs[0].Data).To(HaveKeyWithValue("message", "signal: potato"))
+
+					Consistently(testFinishedCh).ShouldNot(BeClosed())
 				})
 			})
 		})
