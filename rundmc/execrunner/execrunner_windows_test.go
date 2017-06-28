@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
@@ -40,6 +43,10 @@ var _ = Describe("DirectExecRunner", func() {
 		var err error
 		cmdRunner = fake_command_runner.New()
 		processIDGen = new(runruncfakes.FakeUidGenerator)
+		processIDGen.GenerateStub = func() string {
+			return strconv.Itoa(rand.Int())
+		}
+
 		execRunner = &execrunner.DirectExecRunner{
 			RuntimePath:   runtimePath,
 			CommandRunner: cmdRunner,
@@ -108,6 +115,18 @@ var _ = Describe("DirectExecRunner", func() {
 
 			It("uses it", func() {
 				Expect(process.ID()).To(Equal("frank"))
+			})
+		})
+
+		Context("when a processID is reused concurrently", func() {
+			BeforeEach(func() {
+				processID = "reused"
+				_, err := execRunner.Run(lagertest.NewTestLogger("execrunner-windows"), processID, &runrunc.PreparedSpec{}, "a-bundle", processesDir, "handle", nil, garden.ProcessIO{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("returns a sensible error", func() {
+				Expect(runErr).To(MatchError(fmt.Sprintf("process ID '%s' already in use", processID)))
 			})
 		})
 

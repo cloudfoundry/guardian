@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -102,7 +103,7 @@ var _ = Describe("ExecPreparer", func() {
 
 	JustBeforeEach(func() {
 		runningAsRoot := func() bool { return !rootless }
-		preparer = runrunc.NewLinuxExecPreparer(bundleLoader, users, mkdirer, []string{"foo", "bar", "brains"}, runningAsRoot)
+		preparer = runrunc.NewExecPreparer(bundleLoader, users, mkdirer, []string{"foo", "bar", "brains"}, runningAsRoot)
 	})
 
 	It("passes a process.json with the correct path and args", func() {
@@ -260,6 +261,9 @@ var _ = Describe("ExecPreparer", func() {
 
 	Context("when the user is specified in the process spec", func() {
 		DescribeTable("appends the correct USER env var", func(env, expected []string) {
+			if runtime.GOOS == "windows" {
+				Skip("USER and PATH not implemented on windows")
+			}
 			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
 				User: "spiderman",
 				Env:  env,
@@ -323,6 +327,9 @@ var _ = Describe("ExecPreparer", func() {
 
 	Context("when the user is not specified in the process spec", func() {
 		DescribeTable("appends the correct USER env var", func(env, expected []string) {
+			if runtime.GOOS == "windows" {
+				Skip("USER and PATH not implemented on windows")
+			}
 			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
 				Env: env,
 			})
@@ -385,6 +392,9 @@ var _ = Describe("ExecPreparer", func() {
 
 	Context("when the environment already contains a PATH", func() {
 		It("passes the environment variables", func() {
+			if runtime.GOOS == "windows" {
+				Skip("USER and PATH not implemented on windows")
+			}
 			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
 				Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
 			})
@@ -396,6 +406,9 @@ var _ = Describe("ExecPreparer", func() {
 
 	Context("when the environment does not already contain a PATH", func() {
 		DescribeTable("appends a default PATH", func(procUser string, uid int, env, expected []string) {
+			if runtime.GOOS == "windows" {
+				Skip("USER and PATH not implemented on windows")
+			}
 			users.LookupReturns(&user.ExecUser{Uid: uid, Gid: uid}, nil)
 			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
 				Env:  env,
@@ -505,6 +518,9 @@ var _ = Describe("ExecPreparer", func() {
 			})
 
 			It("should not apply the default PATH", func() {
+				if runtime.GOOS == "windows" {
+					Skip("USER and PATH not implemented on windows")
+				}
 				Expect(spec.Process.Env).To(Equal([]string{
 					"ENV_CONTAINER_NAME=garden",
 					"PATH=/test",
