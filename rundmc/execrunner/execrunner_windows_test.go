@@ -216,7 +216,7 @@ var _ = Describe("DirectExecRunner", func() {
 			})
 		})
 
-		Context("commandRunner.Wait returns a non ExitError", func() {
+		Context("when it returns a non ExitError", func() {
 			BeforeEach(func() {
 				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
 					return errors.New("couldn't wait for process")
@@ -230,7 +230,7 @@ var _ = Describe("DirectExecRunner", func() {
 			})
 		})
 
-		Context("commandRunner.Wait called consecutive times", func() {
+		Context("when it is called consecutive times", func() {
 			BeforeEach(func() {
 				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
 					return exec.Command("powershell.exe", "-Command", "Exit 12").Run()
@@ -248,15 +248,17 @@ var _ = Describe("DirectExecRunner", func() {
 			})
 		})
 
-		Context("commandRunner.Wait called multiple times in parallel", func() {
-			It("returns the same exit code every time", func() {
-				done := make(chan (bool))
+		Context("when it is called multiple times in parallel before the process has exited", func() {
+			proceed := make(chan struct{})
 
+			BeforeEach(func() {
 				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					<-done
+					<-proceed
 					return exec.Command("powershell.exe", "-Command", "Exit 12").Run()
 				})
+			})
 
+			It("returns the same exit code every time", func() {
 				var wg sync.WaitGroup
 
 				for i := 0; i < 5; i++ {
@@ -272,7 +274,7 @@ var _ = Describe("DirectExecRunner", func() {
 					}()
 				}
 
-				done <- true
+				close(proceed)
 				wg.Wait()
 			})
 		})
