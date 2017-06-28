@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -30,7 +31,7 @@ var _ = Describe("Init Store", func() {
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
 
-		runner = Runner.WithStore(StorePath)
+		runner = Runner.WithStore(StorePath).SkipInitStore()
 		spec = manager.InitSpec{}
 	})
 
@@ -162,6 +163,36 @@ var _ = Describe("Init Store", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+		})
+
+		It("creates a store that correctly maps the user/group ids", func() {
+			sourceImagePath := integration.CreateBaseImage(0, 0, GrootUID, GrootGID)
+			baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+			baseImagePath := baseImageFile.Name()
+
+			defer func() {
+				Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
+				Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+			}()
+
+			Expect(runner.InitStore(spec)).To(Succeed())
+			image, err := runner.Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+				Mount:     mountByDefault(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(runner.EnsureMounted(image)).To(Succeed())
+			grootFi, err := os.Stat(path.Join(image.Rootfs, "foo"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
+
+			rootFi, err := os.Stat(path.Join(image.Rootfs, "bar"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+			Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 		})
 	})
 
