@@ -133,21 +133,3 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 
 	return args
 }
-
-// func (r Runner) initStore() error {
-// 	GrootfsTestUid, _ := strconv.Atoi(os.Getenv("GROOTFS_TEST_UID"))
-// 	GrootfsTestGid, _ := strconv.Atoi(os.Getenv("GROOTFS_TEST_GID"))
-
-// 	spec := manager.InitSpec{
-// 		UIDMappings: []groot.IDMappingSpec{
-// 			{HostID: int(GrootfsTestUid), NamespaceID: 0, Size: 1},
-// 			{HostID: 100000, NamespaceID: 1, Size: 65000},
-// 		},
-// 		GIDMappings: []groot.IDMappingSpec{
-// 			{HostID: int(GrootfsTestGid), NamespaceID: 0, Size: 1},
-// 			{HostID: 100000, NamespaceID: 1, Size: 65000},
-// 		},
-// 	}
-
-// 	return r.InitStore(spec)
-// }

@@ -34,8 +34,8 @@ var (
 	mountPath     string
 
 	GrootUser        *user.User
-	GrootUID         uint32
-	GrootGID         uint32
+	GrootUID         int
+	GrootGID         int
 	RegistryUsername string
 	RegistryPassword string
 	GrootfsTestUid   int
@@ -69,13 +69,11 @@ func TestGroot(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
 
-		grootUID, err := strconv.ParseUint(GrootUser.Uid, 10, 32)
+		GrootUID, err = strconv.Atoi(GrootUser.Uid)
 		Expect(err).NotTo(HaveOccurred())
-		GrootUID = uint32(grootUID)
 
-		grootGID, err := strconv.ParseUint(GrootUser.Gid, 10, 32)
+		GrootGID, err = strconv.Atoi(GrootUser.Gid)
 		Expect(err).NotTo(HaveOccurred())
-		GrootGID = uint32(grootGID)
 
 		GrootFSBin = string(data)
 		Driver = os.Getenv("VOLUME_DRIVER")
@@ -123,7 +121,7 @@ func TestGroot(t *testing.T) {
 			TardisBin:  TardisBin,
 			Driver:     Driver,
 			Timeout:    15 * time.Second,
-		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(uint32(GrootfsTestUid), uint32(GrootfsTestGid))
+		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(GrootfsTestUid, GrootfsTestGid)
 	})
 
 	AfterEach(func() {

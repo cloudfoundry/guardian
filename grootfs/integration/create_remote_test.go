@@ -86,17 +86,17 @@ var _ = Describe("Create with remote images", func() {
 				ID:        "random-id",
 				Mount:     true,
 				UIDMappings: []groot.IDMappingSpec{
-					{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+					{HostID: GrootUID, NamespaceID: 0, Size: 1},
 					{HostID: 100000, NamespaceID: 1, Size: 65000},
 				},
 				GIDMappings: []groot.IDMappingSpec{
-					{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+					{HostID: GrootGID, NamespaceID: 0, Size: 1},
 					{HostID: 100000, NamespaceID: 1, Size: 65000},
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			cmd := exec.Command(NamespacerBin, image.Rootfs, strconv.Itoa(int(GrootUID+100)), "/bin/ls", "/")
+			cmd := exec.Command(NamespacerBin, image.Rootfs, strconv.Itoa(GrootUID+100), "/bin/ls", "/")
 			cmd.SysProcAttr = &syscall.SysProcAttr{
 				Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS,
 			}
@@ -111,11 +111,11 @@ var _ = Describe("Create with remote images", func() {
 				ID:        "random-id",
 				Mount:     true,
 				UIDMappings: []groot.IDMappingSpec{
-					{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+					{HostID: GrootUID, NamespaceID: 0, Size: 1},
 					{HostID: 100000, NamespaceID: 1, Size: 65000},
 				},
 				GIDMappings: []groot.IDMappingSpec{
-					{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+					{HostID: GrootGID, NamespaceID: 0, Size: 1},
 					{HostID: 100000, NamespaceID: 1, Size: 65000},
 				},
 			})
@@ -130,11 +130,11 @@ var _ = Describe("Create with remote images", func() {
 				ID:        "random-id",
 				Mount:     true,
 				UIDMappings: []groot.IDMappingSpec{
-					{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+					{HostID: GrootUID, NamespaceID: 0, Size: 1},
 					{HostID: 100000, NamespaceID: 1, Size: 65000},
 				},
 				GIDMappings: []groot.IDMappingSpec{
-					{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+					{HostID: GrootGID, NamespaceID: 0, Size: 1},
 					{HostID: 100000, NamespaceID: 1, Size: 65000},
 				},
 			})
@@ -234,11 +234,11 @@ var _ = Describe("Create with remote images", func() {
 					ID:        "random-id",
 					Mount:     true,
 					UIDMappings: []groot.IDMappingSpec{
-						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: GrootUID, NamespaceID: 0, Size: 1},
 						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: GrootGID, NamespaceID: 0, Size: 1},
 						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
@@ -263,11 +263,11 @@ var _ = Describe("Create with remote images", func() {
 					ID:        "random-id",
 					Mount:     true,
 					UIDMappings: []groot.IDMappingSpec{
-						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: GrootUID, NamespaceID: 0, Size: 1},
 						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: GrootGID, NamespaceID: 0, Size: 1},
 						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
@@ -301,9 +301,7 @@ var _ = Describe("Create with remote images", func() {
 		})
 
 		Describe("clean up on create", func() {
-			var (
-				imageID string
-			)
+			var imageID string
 
 			JustBeforeEach(func() {
 				_, err := Runner.Create(groot.CreateSpec{
@@ -654,11 +652,11 @@ var _ = Describe("Create with remote images", func() {
 					ID:        "random-id",
 					Mount:     true,
 					UIDMappings: []groot.IDMappingSpec{
-						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: GrootUID, NamespaceID: 0, Size: 1},
 						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: GrootGID, NamespaceID: 0, Size: 1},
 						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})
@@ -681,11 +679,11 @@ var _ = Describe("Create with remote images", func() {
 					ID:        "random-id",
 					Mount:     true,
 					UIDMappings: []groot.IDMappingSpec{
-						{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+						{HostID: GrootUID, NamespaceID: 0, Size: 1},
 						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 					GIDMappings: []groot.IDMappingSpec{
-						{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+						{HostID: GrootGID, NamespaceID: 0, Size: 1},
 						{HostID: 100000, NamespaceID: 1, Size: 65000},
 					},
 				})

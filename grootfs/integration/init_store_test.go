@@ -144,11 +144,11 @@ var _ = Describe("Init Store", func() {
 	Context("when id mappings are provided", func() {
 		BeforeEach(func() {
 			spec.UIDMappings = []groot.IDMappingSpec{
-				groot.IDMappingSpec{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+				groot.IDMappingSpec{HostID: GrootUID, NamespaceID: 0, Size: 1},
 				groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 			}
 			spec.GIDMappings = []groot.IDMappingSpec{
-				groot.IDMappingSpec{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+				groot.IDMappingSpec{HostID: GrootGID, NamespaceID: 0, Size: 1},
 				groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
 			}
 		})

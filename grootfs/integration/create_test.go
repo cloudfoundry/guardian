@@ -26,45 +26,18 @@ import (
 
 const (
 	tenMegabytes = int64(10485760)
+	rootUID      = 0
+	rootGID      = 0
 )
 
 var _ = Describe("Create", func() {
 	var (
 		baseImagePath   string
 		sourceImagePath string
-		rootUID         int
-		rootGID         int
 	)
 
 	BeforeEach(func() {
-		rootUID = 0
-		rootGID = 0
-
-		var err error
-		sourceImagePath, err = ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(os.Chown(sourceImagePath, rootUID, rootGID)).To(Succeed())
-		Expect(os.Chmod(sourceImagePath, 0755)).To(Succeed())
-
-		grootFilePath := path.Join(sourceImagePath, "foo")
-		Expect(ioutil.WriteFile(grootFilePath, []byte("hello-world"), 0644)).To(Succeed())
-		Expect(os.Chown(grootFilePath, int(GrootUID), int(GrootGID))).To(Succeed())
-
-		grootFolder := path.Join(sourceImagePath, "groot-folder")
-		Expect(os.Mkdir(grootFolder, 0777)).To(Succeed())
-		Expect(os.Chown(grootFolder, int(GrootUID), int(GrootGID))).To(Succeed())
-		Expect(ioutil.WriteFile(path.Join(grootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
-
-		rootFilePath := path.Join(sourceImagePath, "bar")
-		Expect(ioutil.WriteFile(rootFilePath, []byte("hello-world"), 0644)).To(Succeed())
-
-		rootFolder := path.Join(sourceImagePath, "root-folder")
-		Expect(os.Mkdir(rootFolder, 0777)).To(Succeed())
-		Expect(ioutil.WriteFile(path.Join(rootFolder, "hello"), []byte("hello-world"), 0644)).To(Succeed())
-
-		grootLinkToRootFile := path.Join(sourceImagePath, "groot-link")
-		Expect(os.Symlink(rootFilePath, grootLinkToRootFile)).To(Succeed())
-		Expect(os.Lchown(grootLinkToRootFile, int(GrootUID), int(GrootGID)))
+		sourceImagePath = integration.CreateBaseImage(rootUID, rootGID, GrootUID, GrootGID)
 	})
 
 	AfterEach(func() {
@@ -125,11 +98,11 @@ var _ = Describe("Create", func() {
 		BeforeEach(func() {
 			initSpec := manager.InitSpec{
 				UIDMappings: []groot.IDMappingSpec{
-					{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+					{HostID: GrootUID, NamespaceID: 0, Size: 1},
 					{HostID: 100000, NamespaceID: 1, Size: 65000},
 				},
 				GIDMappings: []groot.IDMappingSpec{
-					{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+					{HostID: GrootGID, NamespaceID: 0, Size: 1},
 					{HostID: 100000, NamespaceID: 1, Size: 65000},
 				},
 			}
@@ -187,8 +160,8 @@ var _ = Describe("Create", func() {
 			listRootfsCmd := exec.Command("ls", filepath.Join(image.Rootfs, "root-folder"))
 			listRootfsCmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
-					Uid: GrootUID,
-					Gid: GrootGID,
+					Uid: uint32(GrootUID),
+					Gid: uint32(GrootGID),
 				},
 			}
 

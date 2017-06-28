@@ -19,11 +19,11 @@ var _ = Describe("Concurrent creations", func() {
 		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
 		err := Runner.RunningAsUser(0, 0).InitStore(manager.InitSpec{
 			UIDMappings: []groot.IDMappingSpec{
-				{HostID: int(GrootUID), NamespaceID: 0, Size: 1},
+				{HostID: GrootUID, NamespaceID: 0, Size: 1},
 				{HostID: 100000, NamespaceID: 1, Size: 65000},
 			},
 			GIDMappings: []groot.IDMappingSpec{
-				{HostID: int(GrootGID), NamespaceID: 0, Size: 1},
+				{HostID: GrootGID, NamespaceID: 0, Size: 1},
 				{HostID: 100000, NamespaceID: 1, Size: 65000},
 			},
 		})
