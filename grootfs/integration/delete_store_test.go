@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/store/manager"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,7 +17,7 @@ var _ = Describe("Delete Store", func() {
 	})
 
 	It("empties the given store path", func() {
-		Expect(Runner.InitStore(manager.InitSpec{})).To(Succeed())
+		Expect(Runner.InitStore(runner.InitSpec{})).To(Succeed())
 		Expect(StorePath).To(BeAnExistingFile())
 
 		storeContents, err := ioutil.ReadDir(StorePath)

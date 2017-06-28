@@ -10,7 +10,6 @@ import (
 	"github.com/onsi/gomega/gexec"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store/manager"
 )
 
 func (r Runner) StartCreate(spec groot.CreateSpec) (*gexec.Session, error) {
@@ -53,7 +52,7 @@ func (r Runner) EnsureMounted(image groot.ImageInfo) error {
 }
 
 func (r Runner) initStoreAsRoot() error {
-	spec := manager.InitSpec{}
+	spec := InitSpec{}
 
 	if r.SysCredential.Uid != 0 {
 		spec.UIDMappings = defaultIdMapping(r.SysCredential.Uid)

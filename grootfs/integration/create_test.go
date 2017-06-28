@@ -15,7 +15,6 @@ import (
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
-	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
 
@@ -96,7 +95,7 @@ var _ = Describe("Create", func() {
 
 	Context("when mappings are applied on store initialization", func() {
 		BeforeEach(func() {
-			initSpec := manager.InitSpec{
+			initSpec := runner.InitSpec{
 				UIDMappings: []groot.IDMappingSpec{
 					{HostID: GrootUID, NamespaceID: 0, Size: 1},
 					{HostID: 100000, NamespaceID: 1, Size: 65000},
@@ -381,19 +380,16 @@ var _ = Describe("Create", func() {
 		)
 
 		BeforeEach(func() {
-			driver := "overlay-xfs"
 			var err error
 			storePath, err = ioutil.TempDir(fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelNode()), "")
 			Expect(err).NotTo(HaveOccurred())
 
 			if Driver == "overlay-xfs" {
-				driver = "btrfs"
 				storePath, err = ioutil.TempDir(fmt.Sprintf("/mnt/btrfs-%d", GinkgoParallelNode()), "")
 				Expect(err).NotTo(HaveOccurred())
 			}
 
-			runner = Runner.WithStore(storePath)
-			runner.WithDriver(driver).InitStore(manager.InitSpec{})
+			runner = Runner.WithStore(storePath).WithDriver(Driver)
 		})
 
 		It("returns an error", func() {
@@ -437,7 +433,6 @@ var _ = Describe("Create", func() {
 
 			It("uses the store path from the config file", func() {
 				runner := Runner.WithoutStore()
-				runner.InitStore(manager.InitSpec{})
 				image, err := runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(image.Path).To(Equal(filepath.Join(cfg.StorePath, "images/random-id")))

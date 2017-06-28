@@ -9,8 +9,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/integration/runner"
-	"code.cloudfoundry.org/grootfs/store/manager"
+	grootfsRunner "code.cloudfoundry.org/grootfs/integration/runner"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -24,15 +23,15 @@ var _ = Describe("Init Store", func() {
 	)
 
 	var (
-		runner runner.Runner
-		spec   manager.InitSpec
+		runner grootfsRunner.Runner
+		spec   grootfsRunner.InitSpec
 	)
 
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
 
 		runner = Runner.WithStore(StorePath).SkipInitStore()
-		spec = manager.InitSpec{}
+		spec = grootfsRunner.InitSpec{}
 	})
 
 	Context("when --store-size-bytes is passed", func() {

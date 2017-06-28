@@ -7,7 +7,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/store/manager"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
@@ -17,7 +17,7 @@ import (
 var _ = Describe("Concurrent creations", func() {
 	BeforeEach(func() {
 		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
-		err := Runner.RunningAsUser(0, 0).InitStore(manager.InitSpec{
+		err := Runner.RunningAsUser(0, 0).InitStore(runner.InitSpec{
 			UIDMappings: []groot.IDMappingSpec{
 				{HostID: GrootUID, NamespaceID: 0, Size: 1},
 				{HostID: 100000, NamespaceID: 1, Size: 65000},

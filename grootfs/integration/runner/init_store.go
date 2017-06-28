@@ -3,10 +3,16 @@ package runner
 import (
 	"fmt"
 
-	"code.cloudfoundry.org/grootfs/store/manager"
+	"code.cloudfoundry.org/grootfs/groot"
 )
 
-func (r Runner) InitStore(spec manager.InitSpec) error {
+type InitSpec struct {
+	UIDMappings    []groot.IDMappingSpec
+	GIDMappings    []groot.IDMappingSpec
+	StoreSizeBytes int64
+}
+
+func (r Runner) InitStore(spec InitSpec) error {
 	args := []string{}
 
 	for _, mapping := range spec.UIDMappings {
