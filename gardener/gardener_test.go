@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/gardener"
 	fakes "code.cloudfoundry.org/guardian/gardener/gardenerfakes"
 	"code.cloudfoundry.org/lager"
@@ -15,6 +14,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("Gardener", func() {
@@ -218,24 +218,6 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		It("passes the created rootfs to the containerizer", func() {
-			volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_spec.Spec) (gardener.DesiredImageSpec, error) {
-				return gardener.DesiredImageSpec{
-					RootFS: "/path/to/rootfs/" + spec.RootFS.String() + "/" + handle,
-				}, nil
-			}
-
-			_, err := gdnr.Create(garden.ContainerSpec{
-				Handle:     "bob",
-				RootFSPath: "alice",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(containerizer.CreateCallCount()).To(Equal(1))
-			_, spec := containerizer.CreateArgsForCall(0)
-			Expect(spec.RootFSPath).To(Equal("/path/to/rootfs/alice/bob"))
-		})
-
 		Context("when volume creator fails", func() {
 			BeforeEach(func() {
 				volumeCreator.CreateReturns(gardener.DesiredImageSpec{}, errors.New("booom!"))
@@ -397,25 +379,35 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		Context("when environment variables are returned by the volume manager", func() {
-			It("passes them to the containerizer", func() {
-				volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_spec.Spec) (gardener.DesiredImageSpec, error) {
-					return gardener.DesiredImageSpec{
-						Image: gardener.Image{
-							Config: gardener.ImageConfig{
-								Env: []string{"foo=bar", "name=blame"},
-							},
-						},
-					}, nil
-				}
+		It("passes fields from DesiredImageSpec to the containerizer", func() {
+			volumeCreator.CreateReturns(gardener.DesiredImageSpec{
+				RootFS: "rootfs",
+				Mounts: []specs.Mount{{
+					Source:      "src",
+					Destination: "dest",
+					Options:     []string{"opts"},
+					Type:        "type",
+				}},
+				Image: gardener.Image{
+					Config: gardener.ImageConfig{
+						Env: []string{"some-env"},
+					},
+				},
+			}, nil)
 
-				_, err := gdnr.Create(garden.ContainerSpec{})
-				Expect(err).NotTo(HaveOccurred())
+			_, err := gdnr.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
 
-				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.Env).To(Equal([]string{"foo=bar", "name=blame"}))
-			})
+			Expect(containerizer.CreateCallCount()).To(Equal(1))
+			_, spec := containerizer.CreateArgsForCall(0)
+			Expect(spec.RootFSPath).To(Equal("rootfs"))
+			Expect(spec.Env).To(Equal([]string{"some-env"}))
+			Expect(spec.DesiredImageSpecMounts).To(Equal([]specs.Mount{{
+				Source:      "src",
+				Destination: "dest",
+				Options:     []string{"opts"},
+				Type:        "type",
+			}}))
 		})
 
 		Context("when environment variables are specified", func() {

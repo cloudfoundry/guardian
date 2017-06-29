@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -15,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("Image Plugin", func() {
@@ -140,6 +142,58 @@ var _ = Describe("Image Plugin", func() {
 
 					Eventually(buffer).Should(gbytes.Say("MY_VAR=set"))
 					Eventually(buffer).Should(gbytes.Say("MY_SECOND_VAR=also_set"))
+				})
+			})
+
+			Context("when there are mounts", func() {
+				var mountedDir string
+				fileName := "mnted-file"
+				fileContent := "mnted-file-content"
+
+				BeforeEach(func() {
+					var err error
+					mountedDir, err = ioutil.TempDir("", "bind-mount")
+					Expect(err).NotTo(HaveOccurred())
+					Expect(os.Chmod(mountedDir, 0777)).To(Succeed())
+					Expect(ioutil.WriteFile(filepath.Join(mountedDir, fileName), []byte(fileContent), 0644)).To(Succeed())
+
+					mounts := []specs.Mount{
+						{
+							Type:        "bind",
+							Options:     []string{"bind"},
+							Source:      mountedDir,
+							Destination: "/bind-mount",
+						},
+					}
+					mountsJson, err := json.Marshal(mounts)
+					Expect(err).NotTo(HaveOccurred())
+
+					args = append(args,
+						"--image-plugin-extra-arg", "\"--mounts-json\"",
+						"--image-plugin-extra-arg", string(mountsJson),
+					)
+
+					gardenDefaultRootfs := os.Getenv("GARDEN_TEST_ROOTFS")
+					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "cat"),
+						filepath.Join(tmpDir, "cat"))).To(Succeed())
+				})
+
+				AfterEach(func() {
+					Expect(os.RemoveAll(mountedDir)).To(Succeed())
+				})
+
+				It("mounts the directories from the image plugin response", func() {
+					var stdout bytes.Buffer
+					process, err := container.Run(garden.ProcessSpec{
+						Path: "/cat",
+						Args: []string{filepath.Join("/bind-mount", fileName)},
+					}, garden.ProcessIO{
+						Stdout: io.MultiWriter(&stdout, GinkgoWriter),
+						Stderr: GinkgoWriter,
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(process.Wait()).To(Equal(0))
+					Expect(stdout.String()).To(Equal(fileContent))
 				})
 			})
 

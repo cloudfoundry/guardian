@@ -11,6 +11,7 @@ import (
 
 	"code.cloudfoundry.org/lager"
 
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 
 	"code.cloudfoundry.org/guardian/gardener"
@@ -46,6 +47,10 @@ func main() {
 		cli.StringFlag{
 			Name:  "image-json",
 			Usage: "Image json to use as image json",
+		},
+		cli.StringFlag{
+			Name:  "mounts-json",
+			Usage: "Mounts json",
 		},
 		cli.StringFlag{
 			Name:  "create-log-content",
@@ -171,6 +176,14 @@ var CreateCommand = cli.Command{
 			}
 		}
 
+		var mounts []specs.Mount
+		mountsJson := ctx.GlobalString("mounts-json")
+		if mountsJson != "" {
+			if err := json.Unmarshal([]byte(mountsJson), &mounts); err != nil {
+				panic(err)
+			}
+		}
+
 		logContent := ctx.GlobalString("create-log-content")
 		if logContent != "" {
 			log := lager.NewLogger("fake-image-plugin")
@@ -181,6 +194,7 @@ var CreateCommand = cli.Command{
 		output := gardener.DesiredImageSpec{
 			RootFS: rootfsPath,
 			Image:  *image,
+			Mounts: mounts,
 		}
 
 		b, err := json.Marshal(output)

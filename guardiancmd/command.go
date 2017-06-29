@@ -681,7 +681,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			TCPMemoryLimit:   cmd.Limits.TCPMemoryLimit,
 			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
 		},
-		bundlerules.BindMounts{},
+		bundlerules.Mounts{},
 		bundlerules.Env{},
 		bundlerules.Hostname{},
 	}

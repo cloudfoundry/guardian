@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"time"
 
+	specs "github.com/opencontainers/runtime-spec/specs-go"
+
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/lager"
@@ -72,8 +74,9 @@ type VolumeCreator interface {
 }
 
 type DesiredImageSpec struct {
-	RootFS string `json:"rootfs,omitempty"`
-	Image  Image  `json:"image,omitempty"`
+	RootFS string        `json:"rootfs,omitempty"`
+	Mounts []specs.Mount `json:"mounts,omitempty"`
+	Image  Image         `json:"image,omitempty"`
 }
 
 type Image struct {
@@ -126,6 +129,9 @@ type DesiredContainerSpec struct {
 
 	// Bind mounts
 	BindMounts []garden.BindMount
+
+	// Mounts returned from the VolumeCreator
+	DesiredImageSpecMounts []specs.Mount
 
 	// Container is privileged
 	Privileged bool
@@ -275,13 +281,14 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	}
 
 	if err := g.Containerizer.Create(log, DesiredContainerSpec{
-		Handle:     spec.Handle,
-		RootFSPath: desiredImageSpec.RootFS,
-		Hostname:   spec.Handle,
-		Privileged: spec.Privileged,
-		BindMounts: spec.BindMounts,
-		Limits:     spec.Limits,
-		Env:        append(desiredImageSpec.Image.Config.Env, spec.Env...),
+		Handle:                 spec.Handle,
+		RootFSPath:             desiredImageSpec.RootFS,
+		Hostname:               spec.Handle,
+		Privileged:             spec.Privileged,
+		BindMounts:             spec.BindMounts,
+		DesiredImageSpecMounts: desiredImageSpec.Mounts,
+		Limits:                 spec.Limits,
+		Env:                    append(desiredImageSpec.Image.Config.Env, spec.Env...),
 	}); err != nil {
 		return nil, err
 	}

@@ -7,10 +7,10 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
-type BindMounts struct {
+type Mounts struct {
 }
 
-func (b BindMounts) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
+func (b Mounts) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
 	var mounts []specs.Mount
 	for _, m := range spec.BindMounts {
 		modeOpt := "ro"
@@ -25,6 +25,8 @@ func (b BindMounts) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, co
 			Options:     []string{"bind", modeOpt},
 		})
 	}
+
+	mounts = append(mounts, spec.DesiredImageSpecMounts...)
 
 	return bndl.WithMounts(mounts...), nil
 }

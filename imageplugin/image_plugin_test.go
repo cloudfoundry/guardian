@@ -17,6 +17,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/st3v/glager"
 )
 
@@ -239,6 +240,23 @@ var _ = Describe("ImagePlugin", func() {
 
 			It("returns the list of env variables to set", func() {
 				Expect(createImageSpec.Image.Config.Env).To(ConsistOf([]string{"MY_VAR=set", "MY_SECOND_VAR=also_set"}))
+			})
+		})
+
+		Context("when there are mounts defined", func() {
+			BeforeEach(func() {
+				createOutputs.Mounts = []specs.Mount{
+					{
+						Source:      "src",
+						Destination: "dest",
+						Options:     []string{"bind"},
+						Type:        "bind",
+					},
+				}
+			})
+
+			It("returns the list of mounts to configure", func() {
+				Expect(createImageSpec.Mounts).To(Equal(createOutputs.Mounts))
 			})
 		})
 
