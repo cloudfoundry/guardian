@@ -65,10 +65,23 @@ type Networker interface {
 }
 
 type VolumeCreator interface {
-	Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error)
+	Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (DesiredImageSpec, error)
 	Destroy(log lager.Logger, handle string) error
 	Metrics(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error)
 	GC(log lager.Logger) error
+}
+
+type DesiredImageSpec struct {
+	RootFS string `json:"rootfs,omitempty"`
+	Image  Image  `json:"image,omitempty"`
+}
+
+type Image struct {
+	Config ImageConfig `json:"config,omitempty"`
+}
+
+type ImageConfig struct {
+	Env []string `json:"Env,omitempty"`
 }
 
 type UidGenerator interface {
@@ -242,14 +255,13 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		log.Error("graph-cleanup-failed", err)
 	}
 
-	var rootFSPath string
-	var env []string
+	var desiredImageSpec DesiredImageSpec
 
 	if rootFSURL.Scheme == RawRootFSScheme {
-		rootFSPath = rootFSURL.Path
+		desiredImageSpec.RootFS = rootFSURL.Path
 	} else {
 		var err error
-		rootFSPath, env, err = g.VolumeCreator.Create(log.Session(volumeCreatorSession), spec.Handle, rootfs_spec.Spec{
+		desiredImageSpec, err = g.VolumeCreator.Create(log.Session(volumeCreatorSession), spec.Handle, rootfs_spec.Spec{
 			RootFS:     rootFSURL,
 			Username:   spec.Image.Username,
 			Password:   spec.Image.Password,
@@ -264,12 +276,12 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 
 	if err := g.Containerizer.Create(log, DesiredContainerSpec{
 		Handle:     spec.Handle,
-		RootFSPath: rootFSPath,
+		RootFSPath: desiredImageSpec.RootFS,
 		Hostname:   spec.Handle,
 		Privileged: spec.Privileged,
 		BindMounts: spec.BindMounts,
 		Limits:     spec.Limits,
-		Env:        append(env, spec.Env...),
+		Env:        append(desiredImageSpec.Image.Config.Env, spec.Env...),
 	}); err != nil {
 		return nil, err
 	}

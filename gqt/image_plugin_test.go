@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/gqt/runner"
-	"code.cloudfoundry.org/guardian/imageplugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -106,8 +106,8 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("when there are env vars", func() {
 				BeforeEach(func() {
-					image := imageplugin.Image{
-						Config: imageplugin.ImageConfig{
+					image := gardener.Image{
+						Config: gardener.ImageConfig{
 							Env: []string{
 								"MY_VAR=set",
 								"MY_SECOND_VAR=also_set",
@@ -462,8 +462,8 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("when there are env vars", func() {
 				BeforeEach(func() {
-					image := imageplugin.Image{
-						Config: imageplugin.ImageConfig{
+					image := gardener.Image{
+						Config: gardener.ImageConfig{
 							Env: []string{
 								"MY_VAR=set",
 								"MY_SECOND_VAR=also_set",

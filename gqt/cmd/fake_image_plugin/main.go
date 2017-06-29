@@ -13,7 +13,7 @@ import (
 
 	"github.com/urfave/cli"
 
-	"code.cloudfoundry.org/guardian/imageplugin"
+	"code.cloudfoundry.org/guardian/gardener"
 	"github.com/kardianos/osext"
 )
 
@@ -163,7 +163,7 @@ var CreateCommand = cli.Command{
 			}
 		}
 
-		image := &imageplugin.Image{}
+		image := &gardener.Image{}
 		imageJson := ctx.GlobalString("image-json")
 		if imageJson != "" {
 			if err := json.Unmarshal([]byte(imageJson), image); err != nil {
@@ -178,8 +178,8 @@ var CreateCommand = cli.Command{
 			log.Info(logContent)
 		}
 
-		output := imageplugin.CreateOutputs{
-			Rootfs: rootfsPath,
+		output := gardener.DesiredImageSpec{
+			RootFS: rootfsPath,
 			Image:  *image,
 		}
 

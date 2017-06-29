@@ -12,8 +12,8 @@ type NoopVolumeCreator struct{}
 
 var ErrGraphDisabled = errors.New("volume graph is disabled")
 
-func (NoopVolumeCreator) Create(lager.Logger, string, rootfs_spec.Spec) (string, []string, error) {
-	return "", nil, ErrGraphDisabled
+func (NoopVolumeCreator) Create(lager.Logger, string, rootfs_spec.Spec) (DesiredImageSpec, error) {
+	return DesiredImageSpec{}, ErrGraphDisabled
 }
 
 func (NoopVolumeCreator) Destroy(lager.Logger, string) error {

@@ -9,6 +9,7 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager"
 	errorwrapper "github.com/pkg/errors"
 	"github.com/tscolari/lagregator"
@@ -28,20 +29,7 @@ type ImagePlugin struct {
 	DefaultRootfs              string
 }
 
-type Image struct {
-	Config ImageConfig `json:"config,omitempty"`
-}
-
-type ImageConfig struct {
-	Env []string `json:"Env,omitempty"`
-}
-
-type CreateOutputs struct {
-	Rootfs string `json:"rootfs,omitempty"`
-	Image  Image  `json:"image,omitempty"`
-}
-
-func (p *ImagePlugin) Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error) {
+func (p *ImagePlugin) Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (gardener.DesiredImageSpec, error) {
 	log = log.Session("image-plugin-create", lager.Data{"handle": handle, "spec": spec})
 	log.Debug("start")
 	defer log.Debug("end")
@@ -52,7 +40,7 @@ func (p *ImagePlugin) Create(log lager.Logger, handle string, spec rootfs_spec.S
 
 		if err != nil {
 			log.Error("parsing-default-rootfs-failed", err)
-			return "", nil, errorwrapper.Wrap(err, "parsing default rootfs")
+			return gardener.DesiredImageSpec{}, errorwrapper.Wrap(err, "parsing default rootfs")
 		}
 	}
 
@@ -66,7 +54,7 @@ func (p *ImagePlugin) Create(log lager.Logger, handle string, spec rootfs_spec.S
 		createCmd, err = p.PrivilegedCommandCreator.CreateCommand(log, handle, spec)
 	}
 	if err != nil {
-		return "", nil, errorwrapper.Wrap(err, "creating create command")
+		return gardener.DesiredImageSpec{}, errorwrapper.Wrap(err, "creating create command")
 	}
 
 	stdoutBuffer := bytes.NewBuffer([]byte{})
@@ -76,18 +64,17 @@ func (p *ImagePlugin) Create(log lager.Logger, handle string, spec rootfs_spec.S
 	if err := p.CommandRunner.Run(createCmd); err != nil {
 		logData := lager.Data{"action": "create", "stdout": stdoutBuffer.String()}
 		log.Error("image-plugin-result", err, logData)
-		return "", nil, errorwrapper.Wrapf(err, "running image plugin create: %s", stdoutBuffer.String())
+		return gardener.DesiredImageSpec{}, errorwrapper.Wrapf(err, "running image plugin create: %s", stdoutBuffer.String())
 	}
 
-	createOutputs := &CreateOutputs{}
-	err = json.Unmarshal(stdoutBuffer.Bytes(), createOutputs)
-	if err != nil {
+	var desiredSpec gardener.DesiredImageSpec
+	if err := json.Unmarshal(stdoutBuffer.Bytes(), &desiredSpec); err != nil {
 		logData := lager.Data{"action": "create", "stdout": stdoutBuffer.String()}
 		log.Error("image-plugin-parsing", err, logData)
-		return "", nil, errorwrapper.Wrapf(err, "parsing image plugin create: %s", stdoutBuffer.String())
+		return gardener.DesiredImageSpec{}, errorwrapper.Wrapf(err, "parsing image plugin create: %s", stdoutBuffer.String())
 	}
 
-	return createOutputs.Rootfs, createOutputs.Image.Config.Env, nil
+	return desiredSpec, nil
 }
 
 func (p *ImagePlugin) Destroy(log lager.Logger, handle string) error {

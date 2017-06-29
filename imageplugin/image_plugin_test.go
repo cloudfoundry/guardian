@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	fakes "code.cloudfoundry.org/guardian/imageplugin/imagepluginfakes"
 	"code.cloudfoundry.org/lager"
@@ -62,14 +63,13 @@ var _ = Describe("ImagePlugin", func() {
 			namespaced         bool
 
 			// fakeImagePluginStdout will override createOutputs if set
-			createOutputs         *imageplugin.CreateOutputs
+			createOutputs         gardener.DesiredImageSpec
 			fakeImagePluginStdout string
 			fakeImagePluginStderr string
 			fakeImagePluginError  error
 
-			createRootfs string
-			createEnvs   []string
-			createErr    error
+			createImageSpec gardener.DesiredImageSpec
+			createErr       error
 		)
 
 		BeforeEach(func() {
@@ -81,15 +81,14 @@ var _ = Describe("ImagePlugin", func() {
 			rootfs = "docker:///busybox"
 			namespaced = true //assume unprivileged by default
 
-			createOutputs = &imageplugin.CreateOutputs{
-				Rootfs: "/image-rootfs/rootfs",
+			createOutputs = gardener.DesiredImageSpec{
+				RootFS: "/image-rootfs/rootfs",
 			}
 			fakeImagePluginStdout = ""
 			fakeImagePluginStderr = ""
 			fakeImagePluginError = nil
 
-			createRootfs = ""
-			createEnvs = []string{}
+			createImageSpec = gardener.DesiredImageSpec{}
 			createErr = nil
 		})
 
@@ -114,7 +113,7 @@ var _ = Describe("ImagePlugin", func() {
 			rootfsURL, err := url.Parse(rootfs)
 			Expect(err).NotTo(HaveOccurred())
 			rootfsProviderSpec = rootfs_spec.Spec{RootFS: rootfsURL, Namespaced: namespaced}
-			createRootfs, createEnvs, createErr = imagePlugin.Create(fakeLogger, handle, rootfsProviderSpec)
+			createImageSpec, createErr = imagePlugin.Create(fakeLogger, handle, rootfsProviderSpec)
 		})
 
 		It("calls the unprivileged command creator to generate a create command", func() {
@@ -207,7 +206,7 @@ var _ = Describe("ImagePlugin", func() {
 		})
 
 		It("returns the rootfs json property as the rootfs", func() {
-			Expect(createRootfs).To(Equal("/image-rootfs/rootfs"))
+			Expect(createImageSpec.RootFS).To(Equal("/image-rootfs/rootfs"))
 		})
 
 		Context("when parsing the plugin output fails", func() {
@@ -222,14 +221,14 @@ var _ = Describe("ImagePlugin", func() {
 
 		Context("when no image config is defined", func() {
 			It("returns an empty list of env vars", func() {
-				Expect(createEnvs).To(BeEmpty())
+				Expect(createImageSpec.Image.Config.Env).To(BeEmpty())
 			})
 		})
 
 		Context("when there is image config defined", func() {
 			BeforeEach(func() {
-				createOutputs.Image = imageplugin.Image{
-					Config: imageplugin.ImageConfig{
+				createOutputs.Image = gardener.Image{
+					Config: gardener.ImageConfig{
 						Env: []string{
 							"MY_VAR=set",
 							"MY_SECOND_VAR=also_set",
@@ -239,7 +238,7 @@ var _ = Describe("ImagePlugin", func() {
 			})
 
 			It("returns the list of env variables to set", func() {
-				Expect(createEnvs).To(ConsistOf([]string{"MY_VAR=set", "MY_SECOND_VAR=also_set"}))
+				Expect(createImageSpec.Image.Config.Env).To(ConsistOf([]string{"MY_VAR=set", "MY_SECOND_VAR=also_set"}))
 			})
 		})
 

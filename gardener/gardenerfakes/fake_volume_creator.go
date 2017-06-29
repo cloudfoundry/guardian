@@ -11,7 +11,7 @@ import (
 )
 
 type FakeVolumeCreator struct {
-	CreateStub        func(log lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error)
+	CreateStub        func(log lager.Logger, handle string, spec rootfs_spec.Spec) (gardener.DesiredImageSpec, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		log    lager.Logger
@@ -19,14 +19,12 @@ type FakeVolumeCreator struct {
 		spec   rootfs_spec.Spec
 	}
 	createReturns struct {
-		result1 string
-		result2 []string
-		result3 error
+		result1 gardener.DesiredImageSpec
+		result2 error
 	}
 	createReturnsOnCall map[int]struct {
-		result1 string
-		result2 []string
-		result3 error
+		result1 gardener.DesiredImageSpec
+		result2 error
 	}
 	DestroyStub        func(log lager.Logger, handle string) error
 	destroyMutex       sync.RWMutex
@@ -70,7 +68,7 @@ type FakeVolumeCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error) {
+func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (gardener.DesiredImageSpec, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
@@ -84,9 +82,9 @@ func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec root
 		return fake.CreateStub(log, handle, spec)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
+		return ret.result1, ret.result2
 	}
-	return fake.createReturns.result1, fake.createReturns.result2, fake.createReturns.result3
+	return fake.createReturns.result1, fake.createReturns.result2
 }
 
 func (fake *FakeVolumeCreator) CreateCallCount() int {
@@ -101,29 +99,26 @@ func (fake *FakeVolumeCreator) CreateArgsForCall(i int) (lager.Logger, string, r
 	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].spec
 }
 
-func (fake *FakeVolumeCreator) CreateReturns(result1 string, result2 []string, result3 error) {
+func (fake *FakeVolumeCreator) CreateReturns(result1 gardener.DesiredImageSpec, result2 error) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
-		result1 string
-		result2 []string
-		result3 error
-	}{result1, result2, result3}
+		result1 gardener.DesiredImageSpec
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeVolumeCreator) CreateReturnsOnCall(i int, result1 string, result2 []string, result3 error) {
+func (fake *FakeVolumeCreator) CreateReturnsOnCall(i int, result1 gardener.DesiredImageSpec, result2 error) {
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
-			result1 string
-			result2 []string
-			result3 error
+			result1 gardener.DesiredImageSpec
+			result2 error
 		})
 	}
 	fake.createReturnsOnCall[i] = struct {
-		result1 string
-		result2 []string
-		result3 error
-	}{result1, result2, result3}
+		result1 gardener.DesiredImageSpec
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeVolumeCreator) Destroy(log lager.Logger, handle string) error {

@@ -219,8 +219,10 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("passes the created rootfs to the containerizer", func() {
-			volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error) {
-				return "/path/to/rootfs/" + spec.RootFS.String() + "/" + handle, []string{}, nil
+			volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_spec.Spec) (gardener.DesiredImageSpec, error) {
+				return gardener.DesiredImageSpec{
+					RootFS: "/path/to/rootfs/" + spec.RootFS.String() + "/" + handle,
+				}, nil
 			}
 
 			_, err := gdnr.Create(garden.ContainerSpec{
@@ -236,7 +238,7 @@ var _ = Describe("Gardener", func() {
 
 		Context("when volume creator fails", func() {
 			BeforeEach(func() {
-				volumeCreator.CreateReturns("", []string{}, errors.New("booom!"))
+				volumeCreator.CreateReturns(gardener.DesiredImageSpec{}, errors.New("booom!"))
 			})
 
 			It("returns an error", func() {
@@ -397,8 +399,14 @@ var _ = Describe("Gardener", func() {
 
 		Context("when environment variables are returned by the volume manager", func() {
 			It("passes them to the containerizer", func() {
-				volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_spec.Spec) (string, []string, error) {
-					return "", []string{"foo=bar", "name=blame"}, nil
+				volumeCreator.CreateStub = func(_ lager.Logger, handle string, spec rootfs_spec.Spec) (gardener.DesiredImageSpec, error) {
+					return gardener.DesiredImageSpec{
+						Image: gardener.Image{
+							Config: gardener.ImageConfig{
+								Env: []string{"foo=bar", "name=blame"},
+							},
+						},
+					}, nil
 				}
 
 				_, err := gdnr.Create(garden.ContainerSpec{})

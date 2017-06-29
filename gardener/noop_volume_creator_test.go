@@ -23,7 +23,7 @@ var _ = Describe("NoopVolumeCreator", func() {
 
 	Describe("Create", func() {
 		It("returns ErrGraphDisabled", func() {
-			_, _, err := volumeCreator.Create(logger, "some-handle", rootfs_spec.Spec{})
+			_, err := volumeCreator.Create(logger, "some-handle", rootfs_spec.Spec{})
 			Expect(err).To(Equal(gardener.ErrGraphDisabled))
 		})
 	})
