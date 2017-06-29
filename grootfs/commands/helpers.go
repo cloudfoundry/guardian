@@ -3,6 +3,9 @@ package commands
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"strconv"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
@@ -16,6 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
+	"github.com/opencontainers/runc/libcontainer/user"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -47,6 +51,56 @@ func parseIDMappings(args []string) ([]groot.IDMappingSpec, error) {
 			return nil, err
 		}
 		mappings = append(mappings, mapping)
+	}
+
+	return mappings, nil
+}
+
+func readSubUIDMapping(username string) ([]groot.IDMappingSpec, error) {
+	user, err := user.LookupUser(username)
+	if err != nil {
+		return nil, err
+	}
+
+	return readSubIDMapping(username, user.Uid, "/etc/subuid")
+}
+
+func readSubGIDMapping(groupname string) ([]groot.IDMappingSpec, error) {
+	group, err := user.LookupGroup(groupname)
+	if err != nil {
+		return nil, err
+	}
+
+	return readSubIDMapping(groupname, group.Gid, "/etc/subgid")
+}
+
+func readSubIDMapping(name string, id int, subidPath string) ([]groot.IDMappingSpec, error) {
+	mappings := []groot.IDMappingSpec{{
+		HostID: id, NamespaceID: 0, Size: 1,
+	}}
+
+	contents, err := ioutil.ReadFile(subidPath)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, line := range strings.Fields(string(contents)) {
+		entry := strings.Split(line, ":")
+		if entry[0] == name {
+			hostID, err := strconv.Atoi(entry[1])
+			if err != nil {
+				return nil, err
+			}
+			size, err := strconv.Atoi(entry[2])
+			if err != nil {
+				return nil, err
+			}
+			mappings = append(mappings, groot.IDMappingSpec{
+				HostID:      hostID,
+				NamespaceID: 1,
+				Size:        size,
+			})
+		}
 	}
 
 	return mappings, nil

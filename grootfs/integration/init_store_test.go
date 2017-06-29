@@ -195,6 +195,104 @@ var _ = Describe("Init Store", func() {
 		})
 	})
 
+	Context("when --rootless is provided", func() {
+		BeforeEach(func() {
+			spec.Rootless = "groot:groot"
+		})
+
+		It("sets the ownership to the provided user and group", func() {
+			Expect(runner.InitStore(spec)).To(Succeed())
+
+			Expect(runner.StorePath).To(BeADirectory())
+
+			stat, err := os.Stat(runner.StorePath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+		})
+
+		It("creates a store that correctly maps the user/group ids", func() {
+			sourceImagePath := integration.CreateBaseImage(0, 0, GrootUID, GrootGID)
+			baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+			baseImagePath := baseImageFile.Name()
+
+			defer func() {
+				Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
+				Expect(os.RemoveAll(baseImagePath)).To(Succeed())
+			}()
+
+			Expect(runner.InitStore(spec)).To(Succeed())
+			image, err := runner.Create(groot.CreateSpec{
+				BaseImage: baseImagePath,
+				ID:        "random-id",
+				Mount:     mountByDefault(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(runner.EnsureMounted(image)).To(Succeed())
+			grootFi, err := os.Stat(path.Join(image.Rootfs, "foo"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
+
+			rootFi, err := os.Stat(path.Join(image.Rootfs, "bar"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+			Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+		})
+
+		Context("and id mappings are provided", func() {
+			BeforeEach(func() {
+				spec.UIDMappings = []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: GrootUID, NamespaceID: 0, Size: 1},
+					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+				}
+				spec.GIDMappings = []groot.IDMappingSpec{
+					groot.IDMappingSpec{HostID: GrootGID, NamespaceID: 0, Size: 1},
+					groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+				}
+			})
+
+			It("returns an error", func() {
+				err := runner.InitStore(spec)
+				Expect(err).To(MatchError(ContainSubstring("cannot specify --rootless and --uid-mapping/--gid-mapping")))
+			})
+		})
+
+		Context("when the rootless parameter is invalid", func() {
+			BeforeEach(func() {
+				spec.Rootless = "lol"
+			})
+
+			It("returns an error", func() {
+				err := runner.InitStore(spec)
+				Expect(err).To(MatchError(ContainSubstring("invalid --rootless parameter, format must be <user>:<group>")))
+			})
+		})
+
+		Context("when the user does not exist", func() {
+			BeforeEach(func() {
+				spec.Rootless = "someoneelse:groot"
+			})
+
+			It("returns an error", func() {
+				err := runner.InitStore(spec)
+				Expect(err).To(MatchError(ContainSubstring("error reading mappings for user 'someoneelse'")))
+			})
+		})
+
+		Context("when the group does not exist", func() {
+			BeforeEach(func() {
+				spec.Rootless = "groot:something"
+			})
+
+			It("returns an error", func() {
+				err := runner.InitStore(spec)
+				Expect(err).To(MatchError(ContainSubstring("error reading mappings for group 'something'")))
+			})
+		})
+	})
+
 	Context("when the given driver does not match the mounted path", func() {
 		BeforeEach(func() {
 			runner = Runner.WithStore("/mnt/ext4/grootfs")

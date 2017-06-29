@@ -41,6 +41,8 @@ type Clean struct {
 type Init struct {
 	StoreSizeBytes     int64
 	ExternalLogdevSize int64
+	OwnerUser          string
+	OwnerGroup         string
 }
 
 type Builder struct {
