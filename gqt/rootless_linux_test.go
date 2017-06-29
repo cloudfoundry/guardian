@@ -122,6 +122,17 @@ var _ = Describe("rootless containers", func() {
 
 			Expect(stdout.String()).To(ContainSubstring("alice:alice"))
 		})
+
+		Context("when the rootfs contains a read-only resolv.conf", func() {
+			BeforeEach(func() {
+				Expect(os.Chmod(filepath.Join(imagePath, "rootfs", "etc", "resolv.conf"), 0444)).To(Succeed())
+			})
+
+			It("succeeds anyway", func() {
+				_, err := client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
 	})
 
 	Describe("running a process in a container", func() {

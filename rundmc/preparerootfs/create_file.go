@@ -22,7 +22,7 @@ func touchFile(path string) error {
 		return err
 	}
 
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0644)
+	file, err := os.OpenFile(path, os.O_CREATE, 0444)
 	if err != nil {
 		return err
 	}
