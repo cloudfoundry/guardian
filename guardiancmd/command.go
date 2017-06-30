@@ -203,8 +203,8 @@ type ServerCommand struct {
 		AdditionalDNSServers []IPFlag `long:"additional-dns-server" description:"DNS server IP address to append to the automatically determined servers. Can be specified multiple times."`
 
 		ExternalIP             IPFlag `long:"external-ip"                     description:"IP address to use to reach container's mapped ports. Autodetected if not specified."`
-		PortPoolStart          uint32 `long:"port-pool-start" default:"60000" description:"Start of the ephemeral port range used for mapped container ports."`
-		PortPoolSize           uint32 `long:"port-pool-size"  default:"5000"  description:"Size of the port pool used for mapped container ports."`
+		PortPoolStart          uint32 `long:"port-pool-start" default:"61001" description:"Start of the ephemeral port range used for mapped container ports."`
+		PortPoolSize           uint32 `long:"port-pool-size"  default:"4534"  description:"Size of the port pool used for mapped container ports."`
 		PortPoolPropertiesPath string `long:"port-pool-properties-path" description:"Path in which to store port pool properties."`
 
 		Mtu int `long:"mtu" description:"MTU size for container network interfaces. Defaults to the MTU of the interface used for outbound access by the host. Max allowed value is 1500."`
