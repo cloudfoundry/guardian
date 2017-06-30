@@ -13,3 +13,4 @@ inputs:
 
 run:
   path: src/code.cloudfoundry.org/grootfs/ci/scripts/make.sh
+  user: root
