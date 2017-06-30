@@ -7,6 +7,9 @@ mount_storage
 dest_path=$(move_to_gopath grootfs)
 cd $dest_path
 
+chmod +s /usr/bin/newuidmap
+chmod +s /usr/bin/newgidmap
+
 echo "I AM INTEGRATION: ${VOLUME_DRIVER} (${GROOTFS_TEST_UID}:${GROOTFS_TEST_GID})" | grootsay
 
 args=$@
