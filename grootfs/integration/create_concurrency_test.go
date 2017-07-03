@@ -16,7 +16,7 @@ import (
 
 var _ = Describe("Concurrent creations", func() {
 	BeforeEach(func() {
-		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+		integration.SkipIfNonRoot(GrootfsTestUid)
 		err := Runner.RunningAsUser(0, 0).InitStore(runner.InitSpec{
 			UIDMappings: []groot.IDMappingSpec{
 				{HostID: GrootUID, NamespaceID: 0, Size: 1},

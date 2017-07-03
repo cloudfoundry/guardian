@@ -26,7 +26,7 @@ var _ = Describe("Metrics", func() {
 	)
 
 	BeforeEach(func() {
-		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+		integration.SkipIfNonRoot(GrootfsTestUid)
 		fakeMetronPort = uint16(5000 + GinkgoParallelNode())
 
 		fakeMetron = testhelpers.NewFakeMetron(fakeMetronPort)

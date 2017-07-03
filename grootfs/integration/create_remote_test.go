@@ -35,7 +35,7 @@ import (
 
 var _ = Describe("Create with remote images", func() {
 	BeforeEach(func() {
-		integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+		integration.SkipIfNonRoot(GrootfsTestUid)
 	})
 
 	var baseImageURL string

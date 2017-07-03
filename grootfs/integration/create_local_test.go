@@ -120,7 +120,7 @@ var _ = Describe("Create with local images", func() {
 
 	Describe("clean up on create", func() {
 		JustBeforeEach(func() {
-			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+			integration.SkipIfNonRoot(GrootfsTestUid)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-image-1",
 				BaseImage: baseImagePath,

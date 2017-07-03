@@ -104,12 +104,6 @@ func SkipIfNonRoot(uid int) {
 	}
 }
 
-func SkipIfNonRootAndNotBTRFS(uid int, driver string) {
-	if uid != 0 && driver != "btrfs" {
-		Skip("These tests can only run as root user for xfs. Skipping.")
-	}
-}
-
 func CreateFakeDrax() (string, *os.File, *os.File) {
 	tempFolder, bin, binCalledFile := CreateFakeBin("drax")
 	testhelpers.SuidBinary(bin.Name())

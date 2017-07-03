@@ -172,7 +172,7 @@ var _ = Describe("Create", func() {
 
 	Context("when disk limit is provided", func() {
 		BeforeEach(func() {
-			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+			integration.SkipIfNonRoot(GrootfsTestUid)
 			Expect(writeMegabytes(filepath.Join(sourceImagePath, "fatfile"), 5)).To(Succeed())
 		})
 
@@ -220,7 +220,7 @@ var _ = Describe("Create", func() {
 
 	Context("when --with-clean is given", func() {
 		BeforeEach(func() {
-			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+			integration.SkipIfNonRoot(GrootfsTestUid)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///cfgarden/garden-busybox",
@@ -258,7 +258,7 @@ var _ = Describe("Create", func() {
 
 	Context("when --without-clean is given", func() {
 		BeforeEach(func() {
-			integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+			integration.SkipIfNonRoot(GrootfsTestUid)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///cfgarden/garden-busybox",
@@ -509,7 +509,7 @@ var _ = Describe("Create", func() {
 
 		Describe("disk limit size bytes", func() {
 			BeforeEach(func() {
-				integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+				integration.SkipIfNonRoot(GrootfsTestUid)
 				cfg.Create.DiskLimitSizeBytes = tenMegabytes
 			})
 
@@ -605,7 +605,7 @@ var _ = Describe("Create", func() {
 
 		Describe("exclude image from quota", func() {
 			BeforeEach(func() {
-				integration.SkipIfNonRootAndNotBTRFS(GrootfsTestUid, Driver)
+				integration.SkipIfNonRoot(GrootfsTestUid)
 				cfg.Create.ExcludeImageFromQuota = true
 				cfg.Create.DiskLimitSizeBytes = tenMegabytes
 			})
