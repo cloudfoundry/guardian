@@ -29,12 +29,14 @@ const (
 type Driver struct {
 	draxBinPath  string
 	btrfsBinPath string
+	mkfsBinPath  string
 	storePath    string
 }
 
-func NewDriver(btrfsBinPath, draxBinPath, storePath string) *Driver {
+func NewDriver(btrfsBinPath, mkfsBinPath, draxBinPath, storePath string) *Driver {
 	return &Driver{
 		btrfsBinPath: btrfsBinPath,
+		mkfsBinPath:  mkfsBinPath,
 		draxBinPath:  draxBinPath,
 		storePath:    storePath,
 	}
@@ -45,7 +47,15 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	logger.Info("skipping-filesystem-initialization")
+	if err := d.mountFilesystem("remount", filesystemPath, storePath); err != nil {
+		if err := d.formatFilesystem(logger, filesystemPath); err != nil {
+			return err
+		}
+		if err := d.mountFilesystem("", filesystemPath, storePath); err != nil {
+			return errorspkg.Errorf("Mounting filesystem: %s", err)
+		}
+	}
+
 	return nil
 }
 
@@ -166,12 +176,6 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 	return volumes, nil
 }
 
-func (d *Driver) destroyQgroup(logger lager.Logger, path string) error {
-	_, err := d.runDrax(logger, "--btrfs-bin", d.btrfsBinPath, "destroy", "--volume-path", path)
-
-	return err
-}
-
 func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	logger = logger.Session("btrfs-destroying-volume", lager.Data{"volumeID": id})
 	logger.Info("starting")
@@ -213,6 +217,75 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	return err
 }
 
+func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.VolumeStats, error) {
+	logger = logger.Session("btrfs-fetching-stats", lager.Data{"imagePath": imagePath})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	if !d.draxInPath() {
+		return groot.VolumeStats{}, errorspkg.New("drax was not found in the $PATH")
+	}
+
+	if !d.hasSUID() {
+		return groot.VolumeStats{}, errorspkg.New("missing the setuid bit on drax")
+	}
+
+	args := []string{
+		"--btrfs-bin", d.btrfsBinPath,
+		"stats",
+		"--volume-path", filepath.Join(imagePath, "rootfs"),
+		"--force-sync",
+	}
+
+	stdoutBuffer, err := d.runDrax(logger, args...)
+	if err != nil {
+		return groot.VolumeStats{}, err
+	}
+
+	usageRegexp := regexp.MustCompile(`.*\s+(\d+)\s+(\d+)$`)
+	usage := usageRegexp.FindStringSubmatch(strings.TrimSpace(stdoutBuffer.String()))
+
+	var stats groot.VolumeStats
+	if len(usage) != 3 {
+		logger.Error("parsing-stats-failed", errorspkg.Errorf("raw stats: %s", stdoutBuffer.String()))
+		return stats, errorspkg.New("could not parse stats")
+	}
+
+	fmt.Sscanf(usage[1], "%d", &stats.DiskUsage.TotalBytesUsed)
+	fmt.Sscanf(usage[2], "%d", &stats.DiskUsage.ExclusiveBytesUsed)
+
+	return stats, nil
+}
+
+func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) error {
+	logger = logger.Session("formatting-filesystem")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	stdout := bytes.NewBuffer([]byte{})
+	stderr := bytes.NewBuffer([]byte{})
+	cmd := exec.Command(d.mkfsBinPath, "-f", filesystemPath)
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	if err := cmd.Run(); err != nil {
+		logger.Error("formatting-filesystem-failed", err, lager.Data{"cmd": cmd.Args, "stdout": stdout.String(), "stderr": stderr.String()})
+		return errorspkg.Errorf("Formatting BTRFS filesystem: %s", err.Error())
+	}
+
+	return nil
+}
+
+func (d *Driver) mountFilesystem(option, source, destination string) error {
+	allOpts := strings.Trim(fmt.Sprintf("%s,user_subvol_rm_allowed,rw", option), ",")
+
+	cmd := exec.Command("mount", "-o", allOpts, "-t", "btrfs", source, destination)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		return errorspkg.Errorf("%s: %s", err, string(output))
+	}
+
+	return nil
+}
+
 func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 	logger = logger.Session("destroying-subvolume", lager.Data{"path": path})
 	logger.Info("starting")
@@ -234,6 +307,12 @@ func (d *Driver) destroyBtrfsVolume(logger lager.Logger, path string) error {
 		return errorspkg.Wrapf(err, "destroying volume %s", strings.TrimSpace(string(contents)))
 	}
 	return nil
+}
+
+func (d *Driver) destroyQgroup(logger lager.Logger, path string) error {
+	_, err := d.runDrax(logger, "--btrfs-bin", d.btrfsBinPath, "destroy", "--volume-path", path)
+
+	return err
 }
 
 func (d *Driver) listSubvolumes(logger lager.Logger, path string) ([]string, error) {
@@ -315,46 +394,6 @@ func (d *Driver) runDrax(logger lager.Logger, args ...string) (*bytes.Buffer, er
 	}
 
 	return stdoutBuffer, nil
-}
-
-func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.VolumeStats, error) {
-	logger = logger.Session("btrfs-fetching-stats", lager.Data{"imagePath": imagePath})
-	logger.Debug("starting")
-	defer logger.Debug("ending")
-
-	if !d.draxInPath() {
-		return groot.VolumeStats{}, errorspkg.New("drax was not found in the $PATH")
-	}
-
-	if !d.hasSUID() {
-		return groot.VolumeStats{}, errorspkg.New("missing the setuid bit on drax")
-	}
-
-	args := []string{
-		"--btrfs-bin", d.btrfsBinPath,
-		"stats",
-		"--volume-path", filepath.Join(imagePath, "rootfs"),
-		"--force-sync",
-	}
-
-	stdoutBuffer, err := d.runDrax(logger, args...)
-	if err != nil {
-		return groot.VolumeStats{}, err
-	}
-
-	usageRegexp := regexp.MustCompile(`.*\s+(\d+)\s+(\d+)$`)
-	usage := usageRegexp.FindStringSubmatch(strings.TrimSpace(stdoutBuffer.String()))
-
-	var stats groot.VolumeStats
-	if len(usage) != 3 {
-		logger.Error("parsing-stats-failed", errorspkg.Errorf("raw stats: %s", stdoutBuffer.String()))
-		return stats, errorspkg.New("could not parse stats")
-	}
-
-	fmt.Sscanf(usage[1], "%d", &stats.DiskUsage.TotalBytesUsed)
-	fmt.Sscanf(usage[2], "%d", &stats.DiskUsage.ExclusiveBytesUsed)
-
-	return stats, nil
 }
 
 func (d *Driver) draxInPath() bool {

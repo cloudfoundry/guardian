@@ -107,7 +107,7 @@ Following is an example configuration file with all options provided:
 ```yaml
 store: /var/lib/data/grootfs/store
 driver: btrfs
-btrfs_bin: /var/lib/packages/btrfs-progs/bin/btrfs
+btrfs_progs_path: /var/lib/packages/btrfs-progs/bin
 drax_bin: /var/lib/packages/grootfs/bin/drax
 newuidmap_bin: /var/lib/packages/idmapper/bin/newuidmap
 newgidmap_bin: /var/lib/packages/idmapper/bin/newgidmap
@@ -128,7 +128,7 @@ create:
 |---|---|
 | store  | Path to the store directory |
 | driver | Filesystem driver to use \<btrfs \| overlay-xfs\> |
-| btrfs_bin  | Path to btrfs bin. (If not provided will use $PATH)  |
+| btrfs_progs_path  | Path to btrfs progs. (If not provided will use $PATH)  |
 | drax_bin | Path to drax bin. (If not provided will use $PATH) |
 | newuidmap_bin | Path to newuidmap bin. (If not provided will use $PATH) |
 | newgidmap_bin | Path to newgidmap bin. (If not provided will use $PATH) |
@@ -167,8 +167,6 @@ This command will:
 1. create a new file (of the size provided to `--store-size-bytes`) at /store/path.backing-store
 1. format it with a filesystem
 1. mount it at /store/path
-
-*N.B. This is currently only supported by the overlay-xfs driver*.
 
 
 #### --uid-mapping / --gid-mapping

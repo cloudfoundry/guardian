@@ -101,20 +101,19 @@ var _ = Describe("Create (btrfs only)", func() {
 			Expect(writeMegabytes(filepath.Join(sourceImagePath, "fatfile"), 5)).To(Succeed())
 		})
 
-		Describe("--btrfs-bin global flag", func() {
+		Describe("--btrfs-progs-path global flag", func() {
 			var (
 				btrfsCalledFile *os.File
-				btrfsBin        *os.File
-				tempFolder      string
+				btrfsProgsPath  string
 			)
 
 			BeforeEach(func() {
-				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
+				btrfsProgsPath, _, btrfsCalledFile = integration.CreateFakeBin("btrfs")
 			})
 
 			Context("when it's provided", func() {
 				It("uses calls the provided btrfs binary", func() {
-					_, err := Runner.WithBtrfsBin(btrfsBin.Name()).Create(spec)
+					_, err := Runner.WithBtrfsProgsPath(btrfsProgsPath).Create(spec)
 					Expect(err).To(HaveOccurred())
 
 					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
@@ -125,9 +124,8 @@ var _ = Describe("Create (btrfs only)", func() {
 
 			Context("when it's not provided", func() {
 				It("uses btrfs from $PATH", func() {
-					newPATH := fmt.Sprintf("%s:%s", tempFolder, os.Getenv("PATH"))
-					_, err := Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(spec)
-					Expect(err).To(HaveOccurred())
+					newPATH := fmt.Sprintf("%s:%s", btrfsProgsPath, os.Getenv("PATH"))
+					Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(spec)
 
 					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
@@ -141,13 +139,12 @@ var _ = Describe("Create (btrfs only)", func() {
 		Describe("btrfs bin", func() {
 			var (
 				btrfsCalledFile *os.File
-				btrfsBin        *os.File
-				tempFolder      string
+				btrfsProgsPath  string
 			)
 
 			BeforeEach(func() {
-				tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
-				cfg := config.Config{BtrfsBin: btrfsBin.Name()}
+				btrfsProgsPath, _, btrfsCalledFile = integration.CreateFakeBin("btrfs")
+				cfg := config.Config{BtrfsProgsPath: btrfsProgsPath}
 				Expect(Runner.SetConfig(cfg)).To(Succeed())
 			})
 

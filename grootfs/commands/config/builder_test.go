@@ -43,7 +43,7 @@ var _ = Describe("Builder", func() {
 			FSDriver:       "kitten-fs",
 			DraxBin:        "/config/drax",
 			TardisBin:      "/config/tardis",
-			BtrfsBin:       "/config/btrfs",
+			BtrfsProgsPath: "/config/btrfs-progs",
 			NewuidmapBin:   "/config/newuidmap",
 			NewgidmapBin:   "/config/newgidmap",
 			MetronEndpoint: "config_endpoint:1111",
@@ -87,18 +87,6 @@ var _ = Describe("Builder", func() {
 			It("returns an error", func() {
 				_, err := builder.Build()
 				Expect(err).To(MatchError("invalid argument: disk limit cannot be negative"))
-			})
-		})
-
-		Context("when --store-size-bytes is used together with --driver=btrfs", func() {
-			BeforeEach(func() {
-				cfg.FSDriver = "btrfs"
-			})
-
-			It("tells the user this is an unsupported combination", func() {
-				builder = builder.WithStoreSizeBytes(1024)
-				_, err := builder.Build()
-				Expect(err).To(MatchError(ContainSubstring("store-size-bytes is not supported on BTRFS")))
 			})
 		})
 
@@ -380,32 +368,32 @@ var _ = Describe("Builder", func() {
 		})
 	})
 
-	Describe("WithBtrfsBin", func() {
+	Describe("WithBtrfsProgsPath", func() {
 		It("overrides the config's btrfs path entry when command line flag is set", func() {
-			builder = builder.WithBtrfsBin("/my/btrfs", true)
+			builder = builder.WithBtrfsProgsPath("/my/btrfs-progs", true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.BtrfsBin).To(Equal("/my/btrfs"))
+			Expect(config.BtrfsProgsPath).To(Equal("/my/btrfs-progs"))
 		})
 
 		Context("when btrfs path is not provided via command line", func() {
 			It("uses the config's btrfs path ", func() {
-				builder = builder.WithBtrfsBin("/my/btrfs", false)
+				builder = builder.WithBtrfsProgsPath("/my/btrfs-progs", false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.BtrfsBin).To(Equal("/config/btrfs"))
+				Expect(config.BtrfsProgsPath).To(Equal("/config/btrfs-progs"))
 			})
 
 			Context("and btrfs path is not set in the config", func() {
 				BeforeEach(func() {
-					cfg.BtrfsBin = ""
+					cfg.BtrfsProgsPath = ""
 				})
 
 				It("uses the provided btrfs path ", func() {
-					builder = builder.WithBtrfsBin("/my/btrfs", false)
+					builder = builder.WithBtrfsProgsPath("/my/btrfs-progs", false)
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
-					Expect(config.BtrfsBin).To(Equal("/my/btrfs"))
+					Expect(config.BtrfsProgsPath).To(Equal("/my/btrfs-progs"))
 				})
 			})
 		})

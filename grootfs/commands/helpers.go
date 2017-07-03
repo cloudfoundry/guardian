@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -33,7 +34,8 @@ type fileSystemDriver interface {
 func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {
 	switch cfg.FSDriver {
 	case "btrfs":
-		return btrfs.NewDriver(cfg.BtrfsBin, cfg.DraxBin, cfg.StorePath), nil
+		return btrfs.NewDriver(filepath.Join(cfg.BtrfsProgsPath, "btrfs"),
+			filepath.Join(cfg.BtrfsProgsPath, "mkfs.btrfs"), cfg.DraxBin, cfg.StorePath), nil
 	case "overlay-xfs":
 		return overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin, cfg.Init.ExternalLogdevSize), nil
 	default:

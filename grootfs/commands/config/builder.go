@@ -13,7 +13,7 @@ type Config struct {
 	FSDriver            string `yaml:"driver"`
 	DraxBin             string `yaml:"drax_bin"`
 	TardisBin           string `yaml:"tardis_bin"`
-	BtrfsBin            string `yaml:"btrfs_bin"`
+	BtrfsProgsPath      string `yaml:"btrfs_progs_path"`
 	NewuidmapBin        string `yaml:"newuidmap_bin"`
 	NewgidmapBin        string `yaml:"newgidmap_bin"`
 	MetronEndpoint      string `yaml:"metron_endpoint"`
@@ -74,10 +74,6 @@ func (b *Builder) Build() (Config, error) {
 
 	if b.config.Clean.ThresholdBytes < 0 {
 		return *b.config, errorspkg.New("invalid argument: clean threshold cannot be negative")
-	}
-
-	if b.config.Init.StoreSizeBytes > 0 && b.config.FSDriver == "btrfs" {
-		return *b.config, errorspkg.New("invalid argument: store-size-bytes is not supported on BTRFS")
 	}
 
 	if b.config.Init.StoreSizeBytes <= 0 && b.config.Init.ExternalLogdevSize > 0 {
@@ -149,9 +145,9 @@ func (b *Builder) WithNewgidmapBin(newgidmapBin string, isSet bool) *Builder {
 	return b
 }
 
-func (b *Builder) WithBtrfsBin(btrfsBin string, isSet bool) *Builder {
-	if isSet || b.config.BtrfsBin == "" {
-		b.config.BtrfsBin = btrfsBin
+func (b *Builder) WithBtrfsProgsPath(btrfsProgsPath string, isSet bool) *Builder {
+	if isSet || b.config.BtrfsProgsPath == "" {
+		b.config.BtrfsProgsPath = btrfsProgsPath
 	}
 	return b
 }

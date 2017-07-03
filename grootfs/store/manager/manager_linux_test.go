@@ -52,7 +52,7 @@ var _ = Describe("Manager", func() {
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(storePath)
+		Expect(os.RemoveAll(storePath)).To(Succeed())
 		Expect(os.Setenv("TMPDIR", originalTmpDir)).To(Succeed())
 	})
 

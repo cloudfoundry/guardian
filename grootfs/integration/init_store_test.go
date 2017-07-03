@@ -38,8 +38,6 @@ var _ = Describe("Init Store", func() {
 		var backingStoreFile string
 
 		BeforeEach(func() {
-			integration.SkipIfNotXFS(Driver)
-
 			spec.StoreSizeBytes = 500 * 1024 * 1024
 			backingStoreFile = fmt.Sprintf("%s.backing-store", StorePath)
 		})
@@ -58,14 +56,16 @@ var _ = Describe("Init Store", func() {
 			Expect(stat.Size()).To(Equal(int64(500 * 1024 * 1024)))
 		})
 
-		It("initialises an XFS filesystem in the backing file", func() {
+		It("initialises a filesystem in the backing file", func() {
 			Expect(runner.InitStore(spec)).To(Succeed())
 
 			buffer := gbytes.NewBuffer()
 			cmd := exec.Command("file", backingStoreFile)
 			cmd.Stdout = buffer
 			Expect(cmd.Run()).To(Succeed())
-			Expect(buffer).To(gbytes.Say("XFS"))
+
+			fsType := map[string]string{"btrfs": "BTRFS", "overlay-xfs": "XFS"}
+			Expect(buffer).To(gbytes.Say(fsType[Driver]))
 		})
 
 		Context("when the given store path is already initialized", func() {
@@ -95,6 +95,7 @@ var _ = Describe("Init Store", func() {
 		Context("when using external log device", func() {
 			JustBeforeEach(func() {
 				runner = runner.WithExternalLogDeviceSize(64)
+				integration.SkipIfNotXFS(Driver)
 			})
 
 			It("uses the logdev mount option", func() {
@@ -112,6 +113,7 @@ var _ = Describe("Init Store", func() {
 	Context("when using external log device without store size bytes", func() {
 		BeforeEach(func() {
 			runner = runner.WithExternalLogDeviceSize(64)
+			integration.SkipIfNotXFS(Driver)
 		})
 
 		It("returns an error", func() {

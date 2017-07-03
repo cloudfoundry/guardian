@@ -90,8 +90,8 @@ func (r Runner) WithoutTardisBin() Runner {
 	return r
 }
 
-func (r Runner) WithBtrfsBin(btrfsBin string) Runner {
-	r.BtrfsBin = btrfsBin
+func (r Runner) WithBtrfsProgsPath(btrfsProgsPath string) Runner {
+	r.BtrfsProgsPath = btrfsProgsPath
 	return r
 }
 

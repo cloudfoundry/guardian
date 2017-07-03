@@ -25,11 +25,11 @@ type Runner struct {
 	StorePath     string
 	skipInitStore bool
 	// Binaries
-	DraxBin      string
-	TardisBin    string
-	BtrfsBin     string
-	NewuidmapBin string
-	NewgidmapBin string
+	DraxBin        string
+	TardisBin      string
+	BtrfsProgsPath string
+	NewuidmapBin   string
+	NewgidmapBin   string
 	// Metrics
 	MetronHost net.IP
 	MetronPort uint16
@@ -162,8 +162,8 @@ func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {
 	if r.NewgidmapBin != "" {
 		allArgs = append(allArgs, "--newgidmap-bin", r.NewgidmapBin)
 	}
-	if r.BtrfsBin != "" {
-		allArgs = append(allArgs, "--btrfs-bin", r.BtrfsBin)
+	if r.BtrfsProgsPath != "" {
+		allArgs = append(allArgs, "--btrfs-progs-path", r.BtrfsProgsPath)
 	}
 	if r.MetronHost != nil && r.MetronPort != 0 {
 		metronEndpoint := fmt.Sprintf("%s:%d", r.MetronHost.String(), r.MetronPort)

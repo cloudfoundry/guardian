@@ -19,7 +19,6 @@ import (
 
 const (
 	defaultFilesystemDriver = "btrfs"
-	defaultBtrfsBin         = "btrfs"
 	defaultDraxBin          = "drax"
 	defaultTardisBin        = "tardis"
 	defaultNewuidmapBin     = "newuidmap"
@@ -74,9 +73,9 @@ func main() {
 			Value: defaultDraxBin,
 		},
 		cli.StringFlag{
-			Name:  "btrfs-bin",
-			Usage: "Path to btrfs bin. (If not provided will use $PATH)",
-			Value: defaultBtrfsBin,
+			Name:  "btrfs-progs-path",
+			Usage: "Path to btrfs progs. (If not provided will use $PATH)",
+			Value: "",
 		},
 		cli.StringFlag{
 			Name:  "newuidmap-bin",
@@ -119,7 +118,7 @@ func main() {
 			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
 			WithLogLevel(ctx.GlobalString("log-level"), ctx.IsSet("log-level")).
 			WithLogFile(ctx.GlobalString("log-file")).
-			WithBtrfsBin(ctx.GlobalString("btrfs-bin"), ctx.IsSet("btrfs-bin")).
+			WithBtrfsProgsPath(ctx.GlobalString("btrfs-progs-path"), ctx.IsSet("btrfs-progs-path")).
 			WithNewuidmapBin(ctx.GlobalString("newuidmap-bin"), ctx.IsSet("newuidmap-bin")).
 			WithNewgidmapBin(ctx.GlobalString("newgidmap-bin"), ctx.IsSet("newgidmap-bin")).
 			Build()
