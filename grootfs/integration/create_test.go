@@ -455,12 +455,11 @@ var _ = Describe("Create", func() {
 			var (
 				draxCalledFile *os.File
 				draxBin        *os.File
-				tempFolder     string
 			)
 
 			BeforeEach(func() {
 				integration.SkipIfNotBTRFS(Driver)
-				tempFolder, draxBin, draxCalledFile = integration.CreateFakeDrax()
+				_, draxBin, draxCalledFile = integration.CreateFakeDrax()
 				cfg.DraxBin = draxBin.Name()
 			})
 
@@ -483,12 +482,11 @@ var _ = Describe("Create", func() {
 			var (
 				tardisCalledFile *os.File
 				tardisBin        *os.File
-				tempFolder       string
 			)
 
 			BeforeEach(func() {
 				integration.SkipIfNotXFS(Driver)
-				tempFolder, tardisBin, tardisCalledFile = integration.CreateFakeTardis()
+				_, tardisBin, tardisCalledFile = integration.CreateFakeTardis()
 				cfg.TardisBin = tardisBin.Name()
 			})
 
