@@ -768,7 +768,7 @@ var _ = Describe("Driver", func() {
 		})
 	})
 
-	Describe("Create", func() {
+	Describe("CreateVolume", func() {
 		It("creates a volume", func() {
 			expectedVolumePath := filepath.Join(StorePath, store.VolumesDirName, randomID)
 			Expect(expectedVolumePath).NotTo(BeAnExistingFile())

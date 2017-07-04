@@ -107,7 +107,7 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 		return "", errorspkg.Wrap(err, "creating volume")
 	}
 
-	shortId, err := d.generateID()
+	shortId, err := shortid.Generate()
 	if err != nil {
 		logger.Error("generating-short-id-failed", err)
 		return "", errorspkg.Wrap(err, "generating short id")
@@ -585,14 +585,6 @@ func (d *Driver) readImageInfo(logger lager.Logger, imagePath string) (int64, er
 	}
 
 	return strconv.ParseInt(string(contents), 10, 64)
-}
-
-func (d *Driver) generateID() (string, error) {
-	sid, err := shortid.New(1, shortid.DefaultABC, 2342)
-	if err != nil {
-		return "", err
-	}
-	return sid.Generate()
 }
 
 func (d *Driver) createWhiteoutDevice(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
