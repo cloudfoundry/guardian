@@ -71,7 +71,7 @@ var _ = Describe("Driver", func() {
 			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
 			Expect(err).NotTo(HaveOccurred())
 			fsFile = tempFile.Name()
-			os.Truncate(fsFile, 1024*1024*1024)
+			Expect(os.Truncate(fsFile, 1024*1024*1024)).To(Succeed())
 
 			storePath, err = ioutil.TempDir("", "store")
 			Expect(err).NotTo(HaveOccurred())
@@ -921,7 +921,7 @@ var _ = Describe("Driver", func() {
 			filePath := filepath.Join(volumePath, fileInVolume)
 			f, err := os.Create(filePath)
 			Expect(err).ToNot(HaveOccurred())
-			f.Close()
+			Expect(f.Close()).To(Succeed())
 
 			err = driver.MoveVolume(logger, volumePath, newVolumePath)
 			Expect(err).ToNot(HaveOccurred())
