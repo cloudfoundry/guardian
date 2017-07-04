@@ -107,7 +107,7 @@ func (d *Driver) CreateVolume(logger lager.Logger, parentID string, id string) (
 		return "", errorspkg.Wrap(err, "creating volume")
 	}
 
-	shortId, err := shortid.Generate()
+	shortId, err := d.generateShortishID()
 	if err != nil {
 		logger.Error("generating-short-id-failed", err)
 		return "", errorspkg.Wrap(err, "generating short id")
@@ -686,4 +686,9 @@ func (d *Driver) hasSUID() bool {
 		return false
 	}
 	return true
+}
+
+func (d *Driver) generateShortishID() (string, error) {
+	id, err := shortid.Generate()
+	return id + strconv.Itoa(os.Getpid()), err
 }
