@@ -323,7 +323,7 @@ var _ = Describe("Docker source", func() {
 			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
 			Expect(err).NotTo(HaveOccurred())
 			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
-			Expect(fakeRegistry.Start()).To(Succeed())
+			fakeRegistry.Start()
 
 			baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 			Expect(err).NotTo(HaveOccurred())
@@ -538,7 +538,7 @@ var _ = Describe("Docker source", func() {
 				fakeRegistry.WhenGettingBlob(layerDigest, 1, func(rw http.ResponseWriter, req *http.Request) {
 					rw.Write([]byte("bad-blob"))
 				})
-				Expect(fakeRegistry.Start()).To(Succeed())
+				fakeRegistry.Start()
 
 				baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 				Expect(err).NotTo(HaveOccurred())

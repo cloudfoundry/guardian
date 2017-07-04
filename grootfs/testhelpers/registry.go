@@ -19,6 +19,7 @@ type FakeRegistry struct {
 	ActualRegistryURL   *url.URL
 	blobHandlers        map[string]blobHandler
 	blobRequestsCounter map[string]int
+	blobRegexp          *regexp.Regexp
 	revProxy            *httputil.ReverseProxy
 	server              *ghttp.Server
 	mutex               *sync.RWMutex
@@ -33,7 +34,7 @@ func NewFakeRegistry(actualRegistryURL *url.URL) *FakeRegistry {
 	}
 }
 
-func (r *FakeRegistry) Start() error {
+func (r *FakeRegistry) Start() {
 	r.revProxy = httputil.NewSingleHostReverseProxy(r.ActualRegistryURL)
 	// Dockerhub returns 503 if the host is set to localhost as it happens with
 	// the reverse proxy
@@ -45,29 +46,15 @@ func (r *FakeRegistry) Start() error {
 
 	r.server = ghttp.NewTLSServer()
 
-	blobRegexp, err := regexp.Compile(`\/v2\/.*\/blobs\/sha256:[a-f0-9]*`)
-	if err != nil {
-		return err
-	}
-	r.server.RouteToHandler("GET", blobRegexp, r.serveBlob)
+	r.blobRegexp = regexp.MustCompile(`\/v2\/.*\/blobs\/sha256:([a-f0-9]*)`)
+	r.server.RouteToHandler("GET", r.blobRegexp, r.serveBlob)
 
-	ourRegexp, err := regexp.Compile(`.*`)
-	if err != nil {
-		return err
-	}
+	ourRegexp := regexp.MustCompile(`.*`)
 	r.server.RouteToHandler("GET", ourRegexp, r.revProxy.ServeHTTP)
-
-	return nil
 }
 
 func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {
-	re, err := regexp.Compile(`\/v2\/.*\/blobs\/sha256:([a-f0-9]*)`)
-	if err != nil {
-		r.revProxy.ServeHTTP(rw, req)
-		return
-	}
-
-	match := re.FindStringSubmatch(req.URL.Path)
+	match := r.blobRegexp.FindStringSubmatch(req.URL.Path)
 	if match == nil {
 		r.revProxy.ServeHTTP(rw, req)
 		return

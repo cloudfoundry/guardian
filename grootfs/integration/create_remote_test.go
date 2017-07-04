@@ -486,7 +486,7 @@ var _ = Describe("Create with remote images", func() {
 					fakeRegistry.WhenGettingBlob("6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a", 0, func(w http.ResponseWriter, r *http.Request) {
 						w.Write([]byte("bad-blob"))
 					})
-					Expect(fakeRegistry.Start()).To(Succeed())
+					fakeRegistry.Start()
 
 					baseImageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", fakeRegistry.Addr())
 				})
@@ -538,7 +538,7 @@ var _ = Describe("Create with remote images", func() {
 			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
 			Expect(err).NotTo(HaveOccurred())
 			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
-			Expect(fakeRegistry.Start()).To(Succeed())
+			fakeRegistry.Start()
 
 			baseImageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr())
 		})
