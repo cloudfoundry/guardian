@@ -1,4 +1,4 @@
-package remote_test
+package source_test
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
+	"code.cloudfoundry.org/grootfs/fetcher/remote/source"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -22,7 +23,7 @@ import (
 var _ = Describe("Docker source", func() {
 	var (
 		trustedRegistries []string
-		dockerSrc         *remote.DockerSource
+		dockerSrc         *source.DockerSource
 
 		logger       *lagertest.TestLogger
 		baseImageURL *url.URL
@@ -64,7 +65,7 @@ var _ = Describe("Docker source", func() {
 	})
 
 	JustBeforeEach(func() {
-		dockerSrc = remote.NewDockerSource("", "", trustedRegistries)
+		dockerSrc = source.NewDockerSource("", "", trustedRegistries)
 	})
 
 	Describe("Manifest", func() {
@@ -117,7 +118,7 @@ var _ = Describe("Docker source", func() {
 
 			Context("when the correct credentials are provided", func() {
 				JustBeforeEach(func() {
-					dockerSrc = remote.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
+					dockerSrc = source.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
 				})
 
 				It("fetches the manifest", func() {
@@ -204,7 +205,7 @@ var _ = Describe("Docker source", func() {
 
 			Context("when the correct credentials are provided", func() {
 				JustBeforeEach(func() {
-					dockerSrc = remote.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
+					dockerSrc = source.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
 				})
 
 				It("fetches the config", func() {
@@ -435,7 +436,7 @@ var _ = Describe("Docker source", func() {
 				})
 
 				JustBeforeEach(func() {
-					dockerSrc = remote.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
+					dockerSrc = source.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
 				})
 
 				It("fetches the manifest", func() {
@@ -508,7 +509,7 @@ var _ = Describe("Docker source", func() {
 
 			Context("when the correct credentials are provided", func() {
 				JustBeforeEach(func() {
-					dockerSrc = remote.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
+					dockerSrc = source.NewDockerSource(RegistryUsername, RegistryPassword, trustedRegistries)
 				})
 
 				It("fetches the config", func() {

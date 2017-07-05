@@ -15,6 +15,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/fetcher/local"
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
+	"code.cloudfoundry.org/grootfs/fetcher/remote/source"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
@@ -146,7 +147,7 @@ var CreateCommand = cli.Command{
 			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper, unpackerStrategy)
 		}
 
-		dockerSrc := remote.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.Create.InsecureRegistries)
+		dockerSrc := source.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.Create.InsecureRegistries)
 
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		remoteFetcher := remote.NewRemoteFetcher(dockerSrc, cacheDriver)
