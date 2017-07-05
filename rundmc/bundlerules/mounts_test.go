@@ -12,56 +12,87 @@ import (
 )
 
 var _ = Describe("MountsRule", func() {
-	var newBndl goci.Bndl
+	var bndl goci.Bndl
 
 	BeforeEach(func() {
 		var err error
-		newBndl, err = bundlerules.Mounts{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
-			BindMounts: []garden.BindMount{
-				{
-					SrcPath: "/path/to/ro/src",
-					DstPath: "/path/to/ro/dest",
-					Mode:    garden.BindMountModeRO,
-				},
-				{
-					SrcPath: "/path/to/rw/src",
-					DstPath: "/path/to/rw/dest",
-					Mode:    garden.BindMountModeRW,
-				},
+
+		preConfiguredMounts := []specs.Mount{
+			{
+				Destination: "/path/to/dest",
+				Source:      "/path/to/src",
+				Type:        "preconfigured-mount",
 			},
-			DesiredImageSpecMounts: []specs.Mount{
-				{
-					Source:      "src",
-					Destination: "dest",
-					Options:     []string{"opts"},
-					Type:        "mounty",
-				},
+		}
+		bindMounts := []garden.BindMount{
+			{
+				SrcPath: "/path/to/ro/src",
+				DstPath: "/path/to/ro/dest",
+				Mode:    garden.BindMountModeRO,
 			},
-		}, "not-needed-path")
+			{
+				SrcPath: "/path/to/rw/src",
+				DstPath: "/path/to/rw/dest",
+				Mode:    garden.BindMountModeRW,
+			},
+		}
+		desiredImageSpecMounts := []specs.Mount{
+			{
+				Source:      "src",
+				Destination: "dest",
+				Options:     []string{"opts"},
+				Type:        "mounty",
+			},
+		}
+
+		originalBndl := goci.Bundle().WithMounts(preConfiguredMounts...)
+
+		bndl, err = bundlerules.Mounts{}.Apply(
+			originalBndl,
+			gardener.DesiredContainerSpec{
+				BindMounts:             bindMounts,
+				DesiredImageSpecMounts: desiredImageSpecMounts,
+			}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())
 	})
 
-	It("adds mounts in the bundle spec", func() {
-		Expect(newBndl.Mounts()).To(Equal(
-			[]specs.Mount{
-				{
-					Destination: "/path/to/ro/dest",
-					Type:        "bind",
-					Source:      "/path/to/ro/src",
-					Options:     []string{"bind", "ro"},
-				},
-				{
-					Destination: "/path/to/rw/dest",
-					Type:        "bind",
-					Source:      "/path/to/rw/src",
-					Options:     []string{"bind", "rw"},
-				},
-				{
-					Source:      "src",
-					Destination: "dest",
-					Options:     []string{"opts"},
-					Type:        "mounty",
-				},
+	It("adds mounts to the bundle, ensuring desiredImageSpecMounts appear first", func() {
+		Expect(bndl.Mounts()[0]).To(Equal(
+			specs.Mount{
+				Source:      "src",
+				Destination: "dest",
+				Options:     []string{"opts"},
+				Type:        "mounty",
+			},
+		))
+	})
+
+	It("adds mounts to the bundle, ensuring preConfiguredMounts appear second", func() {
+		Expect(bndl.Mounts()[1]).To(Equal(
+			specs.Mount{
+				Source:      "/path/to/src",
+				Destination: "/path/to/dest",
+				Type:        "preconfigured-mount",
+			},
+		))
+	})
+
+	It("adds mounts to the bundle, ensuring bindMounts appear last", func() {
+		Expect(bndl.Mounts()[2]).To(Equal(
+			specs.Mount{
+				Source:      "/path/to/ro/src",
+				Destination: "/path/to/ro/dest",
+				Options:     []string{"bind", "ro"},
+				Type:        "bind",
+			},
+		))
+
+		Expect(bndl.Mounts()[3]).To(Equal(
+			specs.Mount{
+				Source:      "/path/to/rw/src",
+				Destination: "/path/to/rw/dest",
+				Options:     []string{"bind", "rw"},
+				Type:        "bind",
 			},
 		))
 	})

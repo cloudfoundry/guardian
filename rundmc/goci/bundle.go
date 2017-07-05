@@ -205,9 +205,15 @@ func (b Bndl) Capabilities() []string {
 	return b.Spec.Process.Capabilities.Bounding
 }
 
-// WithMounts returns a bundle with the given mounts added. The original bundle is not modified.
+// WithMounts returns a bundle with the given mounts appended. The original bundle is not modified.
 func (b Bndl) WithMounts(mounts ...specs.Mount) Bndl {
 	b.Spec.Mounts = append(b.Spec.Mounts, mounts...)
+	return b
+}
+
+// WithPrependedMounts returns a bundle with the given mounts prepended. The original bundle is not modified.
+func (b Bndl) WithPrependedMounts(mounts ...specs.Mount) Bndl {
+	b.Spec.Mounts = append(mounts, b.Spec.Mounts...)
 	return b
 }
 

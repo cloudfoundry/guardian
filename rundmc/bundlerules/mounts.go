@@ -26,7 +26,8 @@ func (b Mounts) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, contai
 		})
 	}
 
-	mounts = append(mounts, spec.DesiredImageSpecMounts...)
+	bndl = bndl.WithPrependedMounts(spec.DesiredImageSpecMounts...)
+	bndl = bndl.WithMounts(mounts...)
 
-	return bndl.WithMounts(mounts...), nil
+	return bndl, nil
 }

@@ -108,9 +108,9 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
-	Describe("WithMounts", func() {
+	Describe("Mounts", func() {
 		BeforeEach(func() {
-			returnedBundle = initialBundle.WithMounts(
+			initialBundle = initialBundle.WithMounts(
 				specs.Mount{
 					Type:        "apple_fs",
 					Source:      "iDevice",
@@ -119,40 +119,85 @@ var _ = Describe("Bundle", func() {
 						"healthy",
 						"shiny",
 					},
-				},
-				specs.Mount{
-					Type:        "banana_fs",
-					Source:      "banana_device",
-					Destination: "/banana",
-					Options: []string{
-						"yellow",
-						"fresh",
-					},
 				})
 		})
 
-		It("returns a bundle with the mounts added to the spec", func() {
-			Expect(returnedBundle.Mounts()).To(ContainElement(
-				specs.Mount{
-					Destination: "/banana",
-					Type:        "banana_fs",
-					Source:      "banana_device",
-					Options:     []string{"yellow", "fresh"},
-				},
-			))
+		Describe("WithMounts", func() {
+			BeforeEach(func() {
+				returnedBundle = initialBundle.WithMounts(
+					specs.Mount{
+						Type:        "banana_fs",
+						Source:      "banana_device",
+						Destination: "/banana",
+						Options: []string{
+							"yellow",
+							"fresh",
+						},
+					})
+			})
 
-			Expect(returnedBundle.Mounts()).To(ContainElement(
-				specs.Mount{
-					Destination: "/apple",
-					Type:        "apple_fs",
-					Source:      "iDevice",
-					Options:     []string{"healthy", "shiny"},
-				}))
+			It("returns a bundle with the mounts appended to the spec", func() {
+				Expect(returnedBundle.Mounts()[0]).To(Equal(
+					specs.Mount{
+						Destination: "/apple",
+						Type:        "apple_fs",
+						Source:      "iDevice",
+						Options:     []string{"healthy", "shiny"},
+					}))
+
+				Expect(returnedBundle.Mounts()[1]).To(Equal(
+					specs.Mount{
+						Destination: "/banana",
+						Type:        "banana_fs",
+						Source:      "banana_device",
+						Options:     []string{"yellow", "fresh"},
+					},
+				))
+			})
+
+			It("does not modify the original bundle", func() {
+				Expect(returnedBundle).NotTo(Equal(initialBundle))
+				Expect(initialBundle.Mounts()).To(HaveLen(1))
+			})
 		})
 
-		It("does not modify the original bundle", func() {
-			Expect(returnedBundle).NotTo(Equal(initialBundle))
-			Expect(initialBundle.Mounts()).To(HaveLen(0))
+		Describe("WithPrependedMounts", func() {
+			BeforeEach(func() {
+				returnedBundle = initialBundle.WithPrependedMounts(
+					specs.Mount{
+						Type:        "banana_fs",
+						Source:      "banana_device",
+						Destination: "/banana",
+						Options: []string{
+							"yellow",
+							"fresh",
+						},
+					})
+			})
+
+			It("returns a bundle with the mounts prepended to the spec", func() {
+				Expect(returnedBundle.Mounts()[0]).To(Equal(
+					specs.Mount{
+						Destination: "/banana",
+						Type:        "banana_fs",
+						Source:      "banana_device",
+						Options:     []string{"yellow", "fresh"},
+					},
+				))
+
+				Expect(returnedBundle.Mounts()[1]).To(Equal(
+					specs.Mount{
+						Destination: "/apple",
+						Type:        "apple_fs",
+						Source:      "iDevice",
+						Options:     []string{"healthy", "shiny"},
+					}))
+			})
+
+			It("does not modify the original bundle", func() {
+				Expect(returnedBundle).NotTo(Equal(initialBundle))
+				Expect(initialBundle.Mounts()).To(HaveLen(1))
+			})
 		})
 	})
 

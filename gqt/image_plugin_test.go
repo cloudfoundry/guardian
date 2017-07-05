@@ -67,10 +67,22 @@ var _ = Describe("Image Plugin", func() {
 				containerSpec garden.ContainerSpec
 				container     garden.Container
 				handle        string
+				tmpMountDir   string
 			)
 
 			BeforeEach(func() {
-				containerSpec = garden.ContainerSpec{}
+				tmpMountDir, err := ioutil.TempDir("", "")
+				Expect(err).NotTo(HaveOccurred())
+
+				containerSpec = garden.ContainerSpec{
+					BindMounts: []garden.BindMount{
+						garden.BindMount{
+							SrcPath: tmpMountDir,
+							DstPath: "/user-provided-bind-mount",
+							Mode:    garden.BindMountModeRO,
+						},
+					},
+				}
 				args = append(args,
 					"--image-plugin-extra-arg", "\"--create-whoami-path\"",
 					"--image-plugin-extra-arg", filepath.Join(tmpDir, "create-whoami"))
@@ -81,6 +93,10 @@ var _ = Describe("Image Plugin", func() {
 				container, err = client.Create(containerSpec)
 				Expect(err).NotTo(HaveOccurred())
 				handle = container.Handle()
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(tmpMountDir)).To(Succeed())
 			})
 
 			It("executes the plugin, passing the correct args", func() {
@@ -162,7 +178,7 @@ var _ = Describe("Image Plugin", func() {
 							Type:        "bind",
 							Options:     []string{"bind"},
 							Source:      mountedDir,
-							Destination: "/bind-mount",
+							Destination: "/image-plugin-bind-mount",
 						},
 					}
 					mountsJson, err := json.Marshal(mounts)
@@ -186,7 +202,7 @@ var _ = Describe("Image Plugin", func() {
 					var stdout bytes.Buffer
 					process, err := container.Run(garden.ProcessSpec{
 						Path: "/cat",
-						Args: []string{filepath.Join("/bind-mount", fileName)},
+						Args: []string{filepath.Join("/image-plugin-bind-mount", fileName)},
 					}, garden.ProcessIO{
 						Stdout: io.MultiWriter(&stdout, GinkgoWriter),
 						Stderr: GinkgoWriter,
@@ -194,6 +210,16 @@ var _ = Describe("Image Plugin", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(process.Wait()).To(Equal(0))
 					Expect(stdout.String()).To(Equal(fileContent))
+				})
+
+				It("ensures that the mounts from the image plugin response are first in config.json", func() {
+					config, err := ioutil.ReadFile(filepath.Join(client.DepotDir, container.Handle(), "config.json"))
+					Expect(err).NotTo(HaveOccurred())
+
+					var spec specs.Spec
+					Expect(json.Unmarshal(config, &spec)).To(Succeed())
+
+					Expect(spec.Mounts[0].Destination).To(Equal("/image-plugin-bind-mount"))
 				})
 			})
 
