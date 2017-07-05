@@ -10,7 +10,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/fetcher/remote"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -25,7 +24,7 @@ var _ = Describe("Docker source", func() {
 		trustedRegistries []string
 		dockerSrc         *remote.DockerSource
 
-		logger       lager.Logger
+		logger       *lagertest.TestLogger
 		baseImageURL *url.URL
 
 		configBlob           string
@@ -313,6 +312,35 @@ var _ = Describe("Docker source", func() {
 					Expect(err).To(MatchError(ContainSubstring("parsing manifest V1Compatibility:")))
 				})
 			})
+		})
+	})
+
+	Context("when fetching a blob fails temporarily", func() {
+		var fakeRegistry *testhelpers.FakeRegistry
+
+		BeforeEach(func() {
+			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+			Expect(err).NotTo(HaveOccurred())
+			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+			fakeRegistry.Start()
+
+			trustedRegistries = []string{fakeRegistry.Addr()}
+			baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		AfterEach(func() {
+			fakeRegistry.Stop()
+		})
+
+		It("retries twice", func() {
+			fakeRegistry.FailNextRequests(2)
+
+			_, _, err := dockerSrc.Blob(logger, baseImageURL, expectedLayersDigest[0].BlobID)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(logger.TestSink.LogMessages()).To(
+				ContainElement("test-docker-source.streaming-blob.attempt-get-blob"))
 		})
 	})
 

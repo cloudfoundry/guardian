@@ -20,6 +20,7 @@ type FakeRegistry struct {
 	blobHandlers        map[string]blobHandler
 	blobRequestsCounter map[string]int
 	blobRegexp          *regexp.Regexp
+	failNextRequests    int
 	revProxy            *httputil.ReverseProxy
 	server              *ghttp.Server
 	mutex               *sync.RWMutex
@@ -53,7 +54,18 @@ func (r *FakeRegistry) Start() {
 	r.server.RouteToHandler("GET", ourRegexp, r.revProxy.ServeHTTP)
 }
 
+func (r *FakeRegistry) FailNextRequests(n int) {
+	r.failNextRequests = n
+}
+
 func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {
+	if r.failNextRequests > 0 {
+		r.failNextRequests--
+		rw.WriteHeader(http.StatusUnauthorized)
+		rw.Write([]byte("nope"))
+		return
+	}
+
 	match := r.blobRegexp.FindStringSubmatch(req.URL.Path)
 	if match == nil {
 		r.revProxy.ServeHTTP(rw, req)

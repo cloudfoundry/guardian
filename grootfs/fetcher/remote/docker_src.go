@@ -21,6 +21,8 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
+const MAX_DOCKER_RETRIES = 3
+
 type DockerSource struct {
 	trustedRegistries []string
 	username          string
@@ -116,8 +118,9 @@ func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest s
 		return "", 0, err
 	}
 
-	d := digestpkg.Digest(digest)
-	blob, size, err := imgSrc.GetBlob(types.BlobInfo{Digest: d})
+	blobInfo := types.BlobInfo{Digest: digestpkg.Digest(digest)}
+
+	blob, size, err := s.getBlobWithRetries(imgSrc, blobInfo, logger)
 	if err != nil {
 		return "", 0, err
 	}
@@ -134,6 +137,20 @@ func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest s
 		return "", 0, errorspkg.Errorf("invalid checksum: layer is corrupted `%s`", digest)
 	}
 	return blobTempFile.Name(), size, nil
+}
+
+func (s *DockerSource) getBlobWithRetries(imgSrc types.ImageSource, blobInfo types.BlobInfo, logger lager.Logger) (io.ReadCloser, int64, error) {
+	var err error
+	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
+		logger.Info("attempt-get-blob", lager.Data{"attempt": i + 1})
+		blob, size, e := imgSrc.GetBlob(blobInfo)
+		if e == nil {
+			return blob, size, nil
+		}
+		err = e
+	}
+
+	return nil, 0, err
 }
 
 func (s *DockerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest string) bool {
