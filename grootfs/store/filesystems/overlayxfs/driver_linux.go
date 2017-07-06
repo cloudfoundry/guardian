@@ -136,17 +136,19 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	defer logger.Info("ending")
 
 	shortId, err := ioutil.ReadFile(linkInfoPath)
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return errorspkg.Wrapf(err, "getting volume symlink location from (%s)", linkInfoPath)
 	}
 
-	linkPath := filepath.Join(d.storePath, LinksDirName, string(shortId))
-	if err := os.Remove(linkPath); err != nil {
-		return errorspkg.Wrapf(err, "removing symlink %s", linkPath)
-	}
+	if err == nil || !os.IsNotExist(err) {
+		linkPath := filepath.Join(d.storePath, LinksDirName, string(shortId))
+		if err := os.Remove(linkPath); err != nil && !os.IsNotExist(err) {
+			return errorspkg.Wrapf(err, "removing symlink %s", linkPath)
+		}
 
-	if err := os.Remove(linkInfoPath); err != nil {
-		return errorspkg.Wrapf(err, "removing symlink information file %s", linkInfoPath)
+		if err := os.Remove(linkInfoPath); err != nil && !os.IsNotExist(err) {
+			return errorspkg.Wrapf(err, "removing symlink information file %s", linkInfoPath)
+		}
 	}
 
 	if err := os.RemoveAll(volumePath); err != nil {

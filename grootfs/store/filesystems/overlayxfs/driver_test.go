@@ -874,14 +874,40 @@ var _ = Describe("Driver", func() {
 			linkFilePath := filepath.Join(StorePath, overlayxfs.LinksDirName, volumeID)
 			Expect(linkFilePath).To(BeAnExistingFile())
 			linkfileinfo, err := ioutil.ReadFile(linkFilePath)
-			symlinkPath := filepath.Join(StorePath, overlayxfs.LinksDirName, string(linkfileinfo))
 			Expect(err).ToNot(HaveOccurred())
+			symlinkPath := filepath.Join(StorePath, overlayxfs.LinksDirName, string(linkfileinfo))
 			Expect(symlinkPath).To(BeAnExistingFile())
 
 			Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
 			Expect(volumePath).ToNot(BeAnExistingFile())
 			Expect(linkFilePath).ToNot(BeAnExistingFile())
 			Expect(symlinkPath).ToNot(BeAnExistingFile())
+		})
+
+		Context("when the associated symlink has already been deleted", func() {
+			It("does not fail", func() {
+				linkFilePath := filepath.Join(StorePath, overlayxfs.LinksDirName, volumeID)
+				Expect(linkFilePath).To(BeAnExistingFile())
+				linkfileinfo, err := ioutil.ReadFile(linkFilePath)
+				Expect(err).ToNot(HaveOccurred())
+				symlinkPath := filepath.Join(StorePath, overlayxfs.LinksDirName, string(linkfileinfo))
+				Expect(symlinkPath).To(BeAnExistingFile())
+				Expect(os.Remove(symlinkPath)).To(Succeed())
+
+				Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
+				Expect(volumePath).ToNot(BeAnExistingFile())
+			})
+		})
+
+		Context("when the associated link file has already been deleted", func() {
+			It("does not fail", func() {
+				linkFilePath := filepath.Join(StorePath, overlayxfs.LinksDirName, volumeID)
+				Expect(linkFilePath).To(BeAnExistingFile())
+				Expect(os.Remove(linkFilePath)).To(Succeed())
+
+				Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
+				Expect(volumePath).ToNot(BeAnExistingFile())
+			})
 		})
 	})
 
