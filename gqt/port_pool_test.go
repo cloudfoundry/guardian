@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -20,7 +19,6 @@ var _ = Describe("Port Pool", func() {
 			containers    []garden.Container
 			client        *runner.RunningGarden
 			expectedPort  uint32
-			args          []string
 			propsPoolDir  string
 			numContainers int = 2
 		)
@@ -30,13 +28,12 @@ var _ = Describe("Port Pool", func() {
 			portPoolStart = GinkgoParallelNode() * 7000
 			propsPoolDir, err = ioutil.TempDir("", "portpool")
 			Expect(err).NotTo(HaveOccurred())
-			args = []string{
-				"--port-pool-size", strconv.Itoa(numContainers),
-				"--port-pool-properties-path", filepath.Join(propsPoolDir, "props.json"),
-				"--port-pool-start", strconv.Itoa(portPoolStart),
-			}
+
+			config.PortPoolSize = &numContainers
+			config.PortPoolPropertiesPath = filepath.Join(propsPoolDir, "props.json")
+			config.PortPoolStart = &portPoolStart
 			containers = []garden.Container{}
-			client = startGarden(args...)
+			client = runner.Start(config)
 
 			// Create containers and NetIn
 			for i := 0; i < numContainers; i++ {
@@ -51,7 +48,6 @@ var _ = Describe("Port Pool", func() {
 
 				containers = append(containers, container)
 			}
-
 		})
 
 		AfterEach(func() {
@@ -99,7 +95,7 @@ var _ = Describe("Port Pool", func() {
 
 				JustBeforeEach(func() {
 					client.Stop()
-					client = startGarden(args...)
+					client = runner.Start(config)
 				})
 
 				It("should persist the head of the port allocation queue", func() {

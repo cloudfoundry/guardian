@@ -24,7 +24,7 @@ var _ = Describe("Fuse", func() {
 		}
 
 		var err error
-		client = startGarden()
+		client = runner.Start(config)
 		container, err = client.Create(garden.ContainerSpec{
 			RootFSPath: fuseRootfs,
 			Privileged: true,

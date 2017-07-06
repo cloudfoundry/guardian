@@ -30,7 +30,7 @@ var _ = Describe("Run", func() {
 
 	DescribeTable("running a process",
 		func(spec garden.ProcessSpec, matchers ...func(actual interface{})) {
-			client = startGarden()
+			client = runner.Start(config)
 			container, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -74,14 +74,13 @@ var _ = Describe("Run", func() {
 
 	Describe("when we wait for process", func() {
 		var (
-			gardenArgs  []string
 			container   garden.Container
 			process     garden.Process
 			processPath string
 		)
 
 		JustBeforeEach(func() {
-			client = startGarden(gardenArgs...)
+			client = runner.Start(config)
 			var err error
 			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
@@ -119,7 +118,7 @@ var _ = Describe("Run", func() {
 
 		Context("when --cleanup-process-dirs-on-wait is set", func() {
 			BeforeEach(func() {
-				gardenArgs = []string{"--cleanup-process-dirs-on-wait"}
+				config.CleanupProcessDirsOnWait = boolptr(true)
 			})
 
 			It("deletes the proccess directory", func() {
@@ -130,7 +129,7 @@ var _ = Describe("Run", func() {
 	})
 
 	It("creates process files with the right permisssion and ownership", func() {
-		client = startGarden()
+		client = runner.Start(config)
 		container, err := client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -178,7 +177,7 @@ var _ = Describe("Run", func() {
 	}
 
 	It("cleans up file handles when the process exits", func() {
-		client = startGarden()
+		client = runner.Start(config)
 
 		container, err := client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())
@@ -208,7 +207,7 @@ var _ = Describe("Run", func() {
 
 				defer syscall.Setrlimit(syscall.RLIMIT_NOFILE, &old)
 
-				client = startGarden()
+				client = runner.Start(config)
 				container, err := client.Create(garden.ContainerSpec{
 					Privileged: false,
 				})
@@ -253,7 +252,7 @@ var _ = Describe("Run", func() {
 			})
 
 			It("does not follow symlinks into the host when creating cwd", func() {
-				client = startGarden()
+				client = runner.Start(config)
 				container, err := client.Create(garden.ContainerSpec{RootFSPath: rootfs})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -270,7 +269,7 @@ var _ = Describe("Run", func() {
 
 	Context("when container is privileged", func() {
 		It("can run a process as a particular user", func() {
-			client = startGarden()
+			client = runner.Start(config)
 			container, err := client.Create(garden.ContainerSpec{
 				Privileged: true,
 			})
@@ -300,7 +299,7 @@ var _ = Describe("Run", func() {
 		var container garden.Container
 
 		BeforeEach(func() {
-			client = startGarden()
+			client = runner.Start(config)
 			var err error
 			container, err = client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
@@ -340,7 +339,7 @@ var _ = Describe("Run", func() {
 		var container garden.Container
 
 		BeforeEach(func() {
-			client = startGarden()
+			client = runner.Start(config)
 			var err error
 			container, err = client.Create(garden.ContainerSpec{
 				Env: []string{"USER=ppp", "HOME=/home/ppp"},
@@ -394,17 +393,21 @@ var _ = Describe("Run", func() {
 			)
 
 			BeforeEach(func() {
-				fakeRuncBinPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc_stderr")
-				Expect(err).NotTo(HaveOccurred())
-
+				var err error
 				propertiesDir, err = ioutil.TempDir("", "props")
 				Expect(err).NotTo(HaveOccurred())
-				client = startGarden("--properties-path", path.Join(propertiesDir, "props.json"))
+
+				config.PropertiesPath = path.Join(propertiesDir, "props.json")
+				client = runner.Start(config)
 
 				container, err = client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
-				client = restartGarden(client, "--runtime-plugin", fakeRuncBinPath, "--properties-path", path.Join(propertiesDir, "props.json"))
+				fakeRuncBinPath, err := gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runc_stderr")
+				Expect(err).NotTo(HaveOccurred())
+
+				config.RuntimePluginBin = fakeRuncBinPath
+				client = restartGarden(client, config)
 			})
 
 			AfterEach(func() {
@@ -424,7 +427,8 @@ var _ = Describe("Run", func() {
 		})
 
 		It("forwards runc logs to lager when exec fails, and gives proper error messages", func() {
-			client = startGarden("--log-level", "debug")
+			config.LogLevel = "debug"
+			client = runner.Start(config)
 			container, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -437,7 +441,8 @@ var _ = Describe("Run", func() {
 		})
 
 		It("forwards runc logs to lager when exec fails, and gives proper error messages when requesting a TTY", func() {
-			client = startGarden("--log-level", "debug")
+			config.LogLevel = "debug"
+			client = runner.Start(config)
 			container, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -458,7 +463,7 @@ var _ = Describe("Run", func() {
 
 	Describe("Signalling", func() {
 		It("should forward SIGTERM to the process", func() {
-			client = startGarden()
+			client = runner.Start(config)
 
 			container, err := client.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
@@ -501,7 +506,6 @@ var _ = Describe("Attach", func() {
 		client    *runner.RunningGarden
 		container garden.Container
 		processID string
-		args      []string
 	)
 
 	BeforeEach(func() {
@@ -509,9 +513,9 @@ var _ = Describe("Attach", func() {
 		// after restarting the server
 		propertiesDir, err := ioutil.TempDir("", "props")
 		Expect(err).NotTo(HaveOccurred())
-		args = []string{"--properties-path", path.Join(propertiesDir, "props.json")}
+		config.PropertiesPath = path.Join(propertiesDir, "props.json")
 
-		client = startGarden(args...)
+		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
@@ -532,7 +536,7 @@ var _ = Describe("Attach", func() {
 			Expect(err).NotTo(HaveOccurred())
 			processID = process.ID()
 
-			client = restartGarden(client, args...)
+			client = restartGarden(client, config)
 		})
 
 		It("returns the exit code", func() {
@@ -581,7 +585,7 @@ var _ = Describe("Attach", func() {
 
 			Expect(hostProcess.Kill()).To(Succeed())
 
-			client = startGarden(args...)
+			client = runner.Start(config)
 		})
 
 		It("returns the exit code (and doesn't hang!)", func() {

@@ -32,7 +32,6 @@ var _ = Describe("Networking", func() {
 
 		containerSpec    garden.ContainerSpec
 		containerNetwork string
-		args             []string
 
 		exampleDotCom net.IP
 
@@ -43,7 +42,7 @@ var _ = Describe("Networking", func() {
 		rootFSWithoutHostsAndResolv, err := ioutil.TempDir("", "net-test")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Chmod(rootFSWithoutHostsAndResolv, 0755)).To(Succeed())
-		copyRootFSCmd := exec.Command("cp", "-r", fmt.Sprintf("%s/.", os.Getenv("GARDEN_TEST_ROOTFS")), rootFSWithoutHostsAndResolv)
+		copyRootFSCmd := exec.Command("cp", "-r", fmt.Sprintf("%s/.", defaultTestRootFS), rootFSWithoutHostsAndResolv)
 		copyRootFSCmd.Stdout = GinkgoWriter
 		copyRootFSCmd.Stderr = GinkgoWriter
 		Expect(copyRootFSCmd.Run()).To(Succeed())
@@ -54,7 +53,6 @@ var _ = Describe("Networking", func() {
 	}
 
 	BeforeEach(func() {
-		args = []string{}
 		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
 		containerSpec = garden.ContainerSpec{}
 
@@ -71,7 +69,7 @@ var _ = Describe("Networking", func() {
 	JustBeforeEach(func() {
 		var err error
 
-		client = startGarden(args...)
+		client = runner.Start(config)
 
 		containerSpec.Network = containerNetwork
 		containerSpec.Properties = extraProperties
@@ -116,7 +114,7 @@ var _ = Describe("Networking", func() {
 
 	Context("when default network pool is changed", func() {
 		BeforeEach(func() {
-			args = []string{"--network-pool", "10.253.0.0/29"}
+			config.NetworkPool = "10.253.0.0/29"
 			containerNetwork = ""
 		})
 
@@ -385,7 +383,7 @@ var _ = Describe("Networking", func() {
 
 	Describe("--deny-network flag", func() {
 		BeforeEach(func() {
-			args = append(args, "--deny-network", "8.8.8.0/24")
+			config.DenyNetworks = []string{"8.8.8.0/24"}
 		})
 
 		It("should deny outbound traffic to IPs in the range", func() {
@@ -398,7 +396,7 @@ var _ = Describe("Networking", func() {
 
 		Context("when multiple --deny-networks are passed", func() {
 			BeforeEach(func() {
-				args = append(args, "--deny-network", "8.8.4.0/24")
+				config.DenyNetworks = append(config.DenyNetworks, "8.8.4.0/24")
 			})
 
 			It("should deny IPs in either range", func() {
@@ -423,7 +421,7 @@ var _ = Describe("Networking", func() {
 
 		Context("when an IP within the denied network range is permitted", func() {
 			BeforeEach(func() {
-				args = append(args, "--deny-network", "0.0.0.0/0")
+				config.DenyNetworks = []string{"0.0.0.0/0"}
 			})
 
 			JustBeforeEach(func() {
@@ -469,7 +467,7 @@ var _ = Describe("Networking", func() {
 
 		Context("when an IP within the denied network range is permitted", func() {
 			BeforeEach(func() {
-				args = append(args, "--deny-network", "0.0.0.0/0")
+				config.DenyNetworks = []string{"0.0.0.0/0"}
 			})
 
 			JustBeforeEach(func() {
@@ -499,7 +497,7 @@ var _ = Describe("Networking", func() {
 
 			Context("when the iptables-restore-bin returns non zero", func() {
 				BeforeEach(func() {
-					args = append(args, "--iptables-restore-bin", "/bin/false")
+					config.IPTablesRestoreBin = "/bin/false"
 				})
 
 				It("should fail on BulkNetOut", func() {
@@ -520,16 +518,13 @@ var _ = Describe("Networking", func() {
 			argsFile = path.Join(tmpDir, "args.log")
 			stdinFile = path.Join(tmpDir, "stdin.log")
 
-			args = []string{
-				"--network-plugin", binaries.NetworkPlugin,
-				"--network-plugin-extra-arg", argsFile,
-				"--network-plugin-extra-arg", stdinFile,
-			}
+			config.NetworkPluginBin = binaries.NetworkPlugin
+			config.NetworkPluginExtraArgs = []string{argsFile, stdinFile}
 		})
 
 		Context("and the plugin is essentially a noop", func() {
 			BeforeEach(func() {
-				args = []string{"--network-plugin", "/bin/true"}
+				config.NetworkPluginBin = "/bin/true"
 			})
 
 			It("successfully creates a container", func() {
@@ -554,7 +549,10 @@ var _ = Describe("Networking", func() {
 						"1.2.3.5"
 					]
 			  }`
-				args = append(args, "--network-plugin-extra-arg", pluginReturn)
+				config.NetworkPluginExtraArgs = append(
+					config.NetworkPluginExtraArgs,
+					pluginReturn,
+				)
 				extraProperties = garden.Properties{
 					"some-property-on-the-spec": "some-value",
 					"network.some-key":          "some-value",
@@ -738,7 +736,10 @@ var _ = Describe("Networking", func() {
 						"garden.network.host-ip":"255.255.255.255"
 					}
 			  }`
-				args = append(args, "--network-plugin-extra-arg", pluginReturn)
+				config.NetworkPluginExtraArgs = append(
+					config.NetworkPluginExtraArgs,
+					pluginReturn,
+				)
 			})
 
 			Context("and --dns-server/--additional-dns-server has not been provided", func() {
@@ -754,7 +755,7 @@ var _ = Describe("Networking", func() {
 
 			Context("when --dns-server is provided", func() {
 				BeforeEach(func() {
-					args = []string{"--dns-server", "1.2.3.4"}
+					config.DNSServers = []string{"1.2.3.4"}
 				})
 
 				It("adds the IP address to the container's /etc/resolv.conf", func() {
@@ -773,7 +774,7 @@ var _ = Describe("Networking", func() {
 
 			Context("when --additional-dns-server is provided", func() {
 				BeforeEach(func() {
-					args = []string{"--additional-dns-server", "1.2.3.4"}
+					config.AdditionalDNSServers = []string{"1.2.3.4"}
 				})
 
 				It("writes the IP address and the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
@@ -790,7 +791,8 @@ var _ = Describe("Networking", func() {
 
 			Context("when --dns-server and --additional-dns-server is provided", func() {
 				BeforeEach(func() {
-					args = []string{"--dns-server", "1.2.3.4", "--additional-dns-server", "1.2.3.5"}
+					config.DNSServers = []string{"1.2.3.4"}
+					config.AdditionalDNSServers = []string{"1.2.3.5"}
 				})
 
 				It("writes the --dns-server and --additional-dns-server DNS servers to the container's /etc/resolv.conf", func() {
@@ -810,7 +812,7 @@ var _ = Describe("Networking", func() {
 		Context("when container mtu is specified by operator", func() {
 			Context("when mtu is bellow max allowed value", func() {
 				BeforeEach(func() {
-					args = append(args, "--mtu", "1234")
+					config.MTU = intptr(1234)
 				})
 
 				Describe("container's network interface", func() {
@@ -831,7 +833,7 @@ var _ = Describe("Networking", func() {
 
 			Context("when mtu is above max allowed value", func() {
 				BeforeEach(func() {
-					args = append(args, "--mtu", "1501")
+					config.MTU = intptr(1501)
 				})
 
 				Describe("container's network interface", func() {
@@ -903,7 +905,7 @@ var _ = Describe("Networking", func() {
 
 		Context("when --dns-server is provided", func() {
 			BeforeEach(func() {
-				args = []string{"--dns-server", "1.2.3.4"}
+				config.DNSServers = []string{"1.2.3.4"}
 			})
 
 			It("adds the IP address to the container's /etc/resolv.conf", func() {
@@ -940,7 +942,7 @@ var _ = Describe("Networking", func() {
 
 		Context("when --additional-dns-server is provided", func() {
 			BeforeEach(func() {
-				args = []string{"--additional-dns-server", "1.2.3.4"}
+				config.AdditionalDNSServers = []string{"1.2.3.4"}
 			})
 
 			It("writes the IP address and the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
@@ -957,7 +959,8 @@ var _ = Describe("Networking", func() {
 
 		Context("when --dns-server and --additional-dns-server is provided", func() {
 			BeforeEach(func() {
-				args = []string{"--dns-server", "1.2.3.4", "--additional-dns-server", "1.2.3.5"}
+				config.DNSServers = []string{"1.2.3.4"}
+				config.AdditionalDNSServers = []string{"1.2.3.5"}
 			})
 
 			It("writes the --dns-server and --additional-dns-server DNS servers to the container's /etc/resolv.conf", func() {
@@ -1024,21 +1027,16 @@ var _ = Describe("Networking", func() {
 var _ = Describe("IPTables Binary Flags", func() {
 	var (
 		client *runner.RunningGarden
-		args   []string
 	)
 
-	BeforeEach(func() {
-		args = []string{}
-	})
-
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 	})
 
 	Describe("--iptables-bin flag", func() {
 		Context("when the path is valid", func() {
 			BeforeEach(func() {
-				args = append(args, "--iptables-bin", "/sbin/iptables")
+				config.IPTableseBin = "/sbin/iptables"
 			})
 
 			AfterEach(func() {
@@ -1052,7 +1050,7 @@ var _ = Describe("IPTables Binary Flags", func() {
 
 		Context("when the path is invalid", func() {
 			BeforeEach(func() {
-				args = append(args, "--iptables-bin", "/path/to/iptables/bin")
+				config.IPTableseBin = "/path/to/iptables/bin"
 			})
 
 			It("should fail to start the server", func() {
@@ -1062,7 +1060,7 @@ var _ = Describe("IPTables Binary Flags", func() {
 
 		Context("when the path is valid but it's not iptables", func() {
 			BeforeEach(func() {
-				args = append(args, "--iptables-bin", "/bin/ls")
+				config.IPTableseBin = "/bin/ls"
 			})
 
 			It("should fail to start the server", func() {

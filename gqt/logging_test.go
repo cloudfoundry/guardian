@@ -24,7 +24,9 @@ var _ = Describe("runC Logging", func() {
 
 		containerSpec := garden.ContainerSpec{}
 
-		client = startGarden("--runtime-plugin", binPath, "--log-level", logLevel)
+		config.RuntimePluginBin = binPath
+		config.LogLevel = logLevel
+		client = runner.Start(config)
 		client.Create(containerSpec)
 	})
 
@@ -61,21 +63,16 @@ var _ = Describe("runC Logging", func() {
 
 var _ = Describe("garden server Logging", func() {
 	var (
-		args   []string
 		client *runner.RunningGarden
 	)
 
-	BeforeEach(func() {
-		args = []string{}
-	})
-
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 	})
 
 	Context("when the log-level is passed as debug", func() {
 		BeforeEach(func() {
-			args = []string{"--log-level", "debug"}
+			config.LogLevel = "debug"
 		})
 
 		AfterEach(func() {
@@ -154,7 +151,7 @@ var _ = Describe("garden server Logging", func() {
 
 	Context("when a nonsense log-level is passed", func() {
 		BeforeEach(func() {
-			args = []string{"--log-level", "nonsense-log-level"}
+			config.LogLevel = "nonsense-log-level"
 		})
 
 		It("exits with a code of 1", func() {

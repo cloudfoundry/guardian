@@ -17,7 +17,6 @@ import (
 
 var _ = Describe("Limits", func() {
 	var (
-		args       []string
 		client     *runner.RunningGarden
 		container  garden.Container
 		cgroupPath string
@@ -25,12 +24,9 @@ var _ = Describe("Limits", func() {
 		cgroupType string
 		limits     garden.Limits
 	)
-	BeforeEach(func() {
-		args = nil
-	})
 
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 		var err error
 		container, err = client.Create(garden.ContainerSpec{
 			Limits: limits,
@@ -78,7 +74,7 @@ var _ = Describe("Limits", func() {
 
 		Context("when starting the server with --tcp-memory-limit set to > 0", func() {
 			BeforeEach(func() {
-				args = append(args, "--tcp-memory-limit", "212992")
+				config.TCPMemoryLimit = uint64ptr(212992)
 			})
 
 			It("sets memory.kmem.tcp.limit_in_bytes to the provided value", func() {
@@ -95,7 +91,7 @@ var _ = Describe("Limits", func() {
 
 		Context("when started with low cpu limit turned on", func() {
 			BeforeEach(func() {
-				args = append(args, "--cpu-quota-per-share", "10")
+				config.CPUQuotaPerShare = uint64ptr(10)
 			})
 
 			Context("when a container with cpu limits is created", func() {

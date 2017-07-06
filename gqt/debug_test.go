@@ -13,16 +13,11 @@ import (
 
 var _ = Describe("Debug Endpoint", func() {
 	var (
-		args   []string
 		client *runner.RunningGarden
 	)
 
-	BeforeEach(func() {
-		args = nil
-	})
-
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
@@ -39,7 +34,8 @@ var _ = Describe("Debug Endpoint", func() {
 
 	Context("when garden is started with debug address", func() {
 		BeforeEach(func() {
-			args = append(args, "--debug-bind-ip", "127.0.0.1", "--debug-bind-port", "9876")
+			config.DebugIP = "127.0.0.1"
+			config.DebugPort = intptr(9876)
 		})
 
 		It("listens on the specified address only", func() {

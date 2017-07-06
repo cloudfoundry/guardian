@@ -14,7 +14,6 @@ import (
 
 var _ = Describe("Properties", func() {
 	var (
-		args          []string
 		client        *runner.RunningGarden
 		container     garden.Container
 		props         garden.Properties
@@ -25,9 +24,10 @@ var _ = Describe("Properties", func() {
 		var err error
 		propertiesDir, err = ioutil.TempDir("", "props")
 		Expect(err).NotTo(HaveOccurred())
-		args = append(args, "--properties-path", path.Join(propertiesDir, "props.json"))
 
-		client = startGarden(args...)
+		config.PropertiesPath = path.Join(propertiesDir, "props.json")
+
+		client = runner.Start(config)
 		props = garden.Properties{"somename": "somevalue"}
 
 		container, err = client.Create(garden.ContainerSpec{
@@ -112,7 +112,7 @@ var _ = Describe("Properties", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(client.Stop()).To(Succeed())
-			client = startGarden(args...)
+			client = runner.Start(config)
 
 			afterProps, err := container.Properties()
 			Expect(err).NotTo(HaveOccurred())

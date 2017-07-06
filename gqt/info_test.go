@@ -17,7 +17,7 @@ var _ = Describe("Info", func() {
 
 	BeforeEach(func() {
 		var err error
-		client = startGarden()
+		client = runner.Start(config)
 		container, err = client.Create(garden.ContainerSpec{
 			Network: "10.252.0.2",
 			Properties: garden.Properties{
@@ -79,7 +79,7 @@ var _ = Describe("BulkInfo", func() {
 	)
 
 	BeforeEach(func() {
-		client = startGarden()
+		client = runner.Start(config)
 		_, err := client.Create(garden.ContainerSpec{
 			Handle: "first",
 		})

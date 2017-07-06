@@ -27,7 +27,7 @@ var _ = Describe("Streaming", func() {
 	BeforeEach(func() {
 		var err error
 
-		client = startGarden()
+		client = runner.Start(config)
 
 		container, err = client.Create(garden.ContainerSpec{})
 		Expect(err).NotTo(HaveOccurred())

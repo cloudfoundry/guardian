@@ -13,15 +13,10 @@ import (
 var _ = Describe("Security", func() {
 	var (
 		client *runner.RunningGarden
-		args   []string
 	)
 
-	BeforeEach(func() {
-		args = []string{}
-	})
-
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
@@ -31,7 +26,7 @@ var _ = Describe("Security", func() {
 	Describe("Apparmor", func() {
 		Context("when the --apparmor flag is pointing to a loaded policy", func() {
 			BeforeEach(func() {
-				args = append(args, "--apparmor", "garden-default")
+				config.AppArmor = "garden-default"
 			})
 
 			It("should enforce the policy when running processes in unprivileged containers", func() {
@@ -115,7 +110,7 @@ var _ = Describe("Security", func() {
 
 		Context("when the --apparmor flag is pointing to a non-existing policy", func() {
 			BeforeEach(func() {
-				args = append(args, "--apparmor", "non-existing-policy")
+				config.AppArmor = "non-existing-policy"
 			})
 
 			It("should return an error when creating a container", func() {

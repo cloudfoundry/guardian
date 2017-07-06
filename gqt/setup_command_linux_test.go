@@ -83,12 +83,12 @@ var _ = Describe("gdn setup", func() {
 
 	Context("when we start the server", func() {
 		var (
-			server     *runner.RunningGarden
-			serverArgs []string
+			server *runner.RunningGarden
 		)
 
 		BeforeEach(func() {
-			serverArgs = []string{"--skip-setup", "--tag", fmt.Sprintf("%s", tag)}
+			config.SkipSetup = boolptr(true)
+			config.Tag = tag
 		})
 
 		AfterEach(func() {
@@ -97,8 +97,8 @@ var _ = Describe("gdn setup", func() {
 
 		Context("when the server is running as root", func() {
 			JustBeforeEach(func() {
-				root := &syscall.Credential{Uid: 0, Gid: 0}
-				server = startGardenAsUser(root, serverArgs...)
+				config.User = &syscall.Credential{Uid: 0, Gid: 0}
+				server = runner.Start(config)
 				Expect(server).NotTo(BeNil())
 			})
 
@@ -109,7 +109,7 @@ var _ = Describe("gdn setup", func() {
 
 			Context("when a dummy network plugin is suppplied", func() {
 				BeforeEach(func() {
-					serverArgs = append(serverArgs, []string{"--network-plugin", "/bin/true"}...)
+					config.NetworkPluginBin = "/bin/true"
 				})
 
 				It("should be able to create a container", func() {

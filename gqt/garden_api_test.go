@@ -8,16 +8,11 @@ import (
 
 var _ = Describe("Garden API", func() {
 	var (
-		args   []string
 		client *runner.RunningGarden
 	)
 
-	BeforeEach(func() {
-		args = []string{}
-	})
-
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
@@ -36,7 +31,7 @@ var _ = Describe("Garden API", func() {
 
 		Context("when the network pool is /24", func() {
 			BeforeEach(func() {
-				args = append(args, "--network-pool", "10.254.0.0/24")
+				config.NetworkPool = "10.254.0.0/24"
 			})
 
 			It("returns the capacity of the subnet pool", func() {
@@ -47,7 +42,7 @@ var _ = Describe("Garden API", func() {
 
 			Context("when the capacity is limited by maxContainers", func() {
 				BeforeEach(func() {
-					args = append(args, "--max-containers", "32")
+					config.MaxContainers = uint64ptr(32)
 				})
 
 				It("returns the limited capacity from maxContainers", func() {

@@ -28,7 +28,6 @@ import (
 
 var _ = Describe("Creating a Container", func() {
 	var (
-		args      []string
 		client    *runner.RunningGarden
 		container garden.Container
 
@@ -36,12 +35,8 @@ var _ = Describe("Creating a Container", func() {
 		initialPipes   int
 	)
 
-	BeforeEach(func() {
-		args = nil
-	})
-
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 		initialSockets = numOpenSockets(client.Pid)
 		initialPipes = numPipes(client.Pid)
 	})
@@ -74,18 +69,18 @@ var _ = Describe("Creating a Container", func() {
 			_, err := client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
-			prev, err := ioutil.ReadDir(filepath.Join(client.GraphPath, "aufs", "mnt"))
+			prev, err := ioutil.ReadDir(filepath.Join(client.GraphDir, "aufs", "mnt"))
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
-			Expect(ioutil.ReadDir(filepath.Join(client.GraphPath, "aufs", "mnt"))).To(HaveLen(len(prev)))
+			Expect(ioutil.ReadDir(filepath.Join(client.GraphDir, "aufs", "mnt"))).To(HaveLen(len(prev)))
 		})
 
 		Context("because runc doesn't exist", func() {
 			BeforeEach(func() {
-				args = []string{"--runtime-plugin", "/tmp/does/not/exist"}
+				config.RuntimePluginBin = "/tmp/does/not/exist"
 			})
 
 			It("returns a sensible error", func() {
@@ -225,7 +220,7 @@ var _ = Describe("Creating a Container", func() {
 
 			rootFSPath, err = ioutil.TempDir("", "test-rootfs")
 			Expect(err).NotTo(HaveOccurred())
-			command := fmt.Sprintf("cp -rf %s/* %s", os.Getenv("GARDEN_TEST_ROOTFS"), rootFSPath)
+			command := fmt.Sprintf("cp -rf %s/* %s", defaultTestRootFS, rootFSPath)
 			Expect(exec.Command("sh", "-c", command).Run()).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(rootFSPath, "my-file"), []byte("some-content"), 0644)).To(Succeed())
 			Expect(os.Mkdir(path.Join(rootFSPath, "somedir"), 0777)).To(Succeed())
@@ -302,7 +297,7 @@ var _ = Describe("Creating a Container", func() {
 		var container garden.Container
 
 		JustBeforeEach(func() {
-			args = append(args, "--deny-network", "0.0.0.0/0")
+			config.DenyNetworks = []string{"0.0.0.0/0"}
 
 			rules := []garden.NetOutRule{
 				garden.NetOutRule{
@@ -372,7 +367,7 @@ var _ = Describe("Creating a Container", func() {
 			cpuset := readFileContent(fmt.Sprintf("/proc/%d/cpuset", clientPid))
 			cpuset = strings.TrimLeft(cpuset, "/")
 
-			cpuSharesPath := fmt.Sprintf("%s/cgroups-%d/cpu/%s/%s/cpu.shares", client.Tmpdir,
+			cpuSharesPath := fmt.Sprintf("%s/cgroups-%d/cpu/%s/%s/cpu.shares", client.TmpDir,
 				GinkgoParallelNode(), cpuset, container.Handle())
 
 			cpuShares := readFileContent(cpuSharesPath)
@@ -400,13 +395,13 @@ var _ = Describe("Creating a Container", func() {
 
 	Describe("block IO weight", func() {
 		BeforeEach(func() {
-			args = append(args, "--default-container-blockio-weight", "400")
+			config.DefaultBlkioWeight = uint64ptr(400)
 		})
 
 		checkBlockIOWeightInContainer := func(container garden.Container, expected string) {
 			parentCgroupPath := findCgroupPath(client.Pid, "blkio")
 			parentCgroupPath = strings.TrimLeft(parentCgroupPath, "/")
-			blkIOWeightPath := fmt.Sprintf("%s/cgroups-%d/blkio/%s/%s/blkio.weight", client.Tmpdir,
+			blkIOWeightPath := fmt.Sprintf("%s/cgroups-%d/blkio/%s/%s/blkio.weight", client.TmpDir,
 				GinkgoParallelNode(), parentCgroupPath, container.Handle())
 
 			blkIOWeight := readFileContent(blkIOWeightPath)
@@ -421,7 +416,7 @@ var _ = Describe("Creating a Container", func() {
 
 		Context("when specifying a block IO weight of 0", func() {
 			BeforeEach(func() {
-				args = append(args, "--default-container-blockio-weight", "0")
+				config.DefaultBlkioWeight = uint64ptr(0)
 			})
 
 			It("uses the system default value of 500", func() {
@@ -433,7 +428,7 @@ var _ = Describe("Creating a Container", func() {
 
 		Context("when specifying block IO weight outside the range 10 - 1000", func() {
 			BeforeEach(func() {
-				args = append(args, "--default-container-blockio-weight", "9")
+				config.DefaultBlkioWeight = uint64ptr(9)
 			})
 
 			It("returns an out of range error", func() {
@@ -451,17 +446,14 @@ var _ = Describe("Creating a Container", func() {
 
 			tmpFile := path.Join(tmpDir, "iwasrun.log")
 
-			args = []string{
-				"--network-plugin", binaries.NetworkPlugin,
-				"--network-plugin-extra-arg", tmpFile,
-				"--network-plugin-extra-arg", "/dev/null",
-			}
+			config.NetworkPluginBin = binaries.NetworkPlugin
+			config.NetworkPluginExtraArgs = []string{tmpFile, "/dev/null"}
 		})
 
 		Context("when the plugin returns a properties key", func() {
 			BeforeEach(func() {
 				pluginOutput = `{"properties": {"key":"value", "garden.network.container-ip":"10.10.24.3"}}`
-				args = append(args, "--network-plugin-extra-arg", pluginOutput)
+				config.NetworkPluginExtraArgs = append(config.NetworkPluginExtraArgs, pluginOutput)
 			})
 
 			It("does not run kawasaki", func() {
@@ -497,7 +489,7 @@ var _ = Describe("Creating a Container", func() {
 		Context("when the external network plugin returns invalid JSON", func() {
 			BeforeEach(func() {
 				pluginOutput = "invalid-json"
-				args = append(args, "--network-plugin-extra-arg", pluginOutput)
+				config.NetworkPluginExtraArgs = append(config.NetworkPluginExtraArgs, pluginOutput)
 			})
 
 			It("returns a useful error message", func() {
@@ -553,7 +545,7 @@ var _ = Describe("Creating a Container", func() {
 
 	Context("when creating more than --max-containers containers", func() {
 		BeforeEach(func() {
-			args = []string{"--max-containers", "1"}
+			config.MaxContainers = uint64ptr(1)
 		})
 
 		JustBeforeEach(func() {

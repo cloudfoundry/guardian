@@ -42,7 +42,7 @@ var _ = Describe("Bind mount", func() {
 	})
 
 	JustBeforeEach(func() {
-		client = startGarden()
+		client = runner.Start(config)
 
 		var err error
 		container, err = client.Create(

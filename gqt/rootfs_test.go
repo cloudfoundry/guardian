@@ -22,20 +22,10 @@ import (
 var dockerRegistryV2RootFSPath = os.Getenv("GARDEN_DOCKER_REGISTRY_V2_TEST_ROOTFS")
 
 var _ = Describe("Rootfs container create parameter", func() {
-	var args []string
 	var client *runner.RunningGarden
-	var supplyDefaultRootfs bool
-
-	BeforeEach(func() {
-		args = []string{}
-	})
 
 	JustBeforeEach(func() {
-		if supplyDefaultRootfs {
-			client = startGarden(args...)
-		} else {
-			client = startGardenWithoutDefaultRootfs(args...)
-		}
+		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
@@ -58,7 +48,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 	Context("without a default rootfs", func() {
 		BeforeEach(func() {
-			supplyDefaultRootfs = false
+			config.DefaultRootFS = ""
 		})
 
 		It("fails if a rootfs is not supplied in container spec", func() {
@@ -67,14 +57,14 @@ var _ = Describe("Rootfs container create parameter", func() {
 		})
 
 		It("creates successfully if a rootfs is supplied in container spec", func() {
-			_, err := client.Create(garden.ContainerSpec{RootFSPath: os.Getenv("GARDEN_TEST_ROOTFS")})
+			_, err := client.Create(garden.ContainerSpec{RootFSPath: defaultTestRootFS})
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 
 	Context("with a default rootfs", func() {
 		BeforeEach(func() {
-			args = append(args, "--default-rootfs", os.Getenv("GARDEN_TEST_ROOTFS"))
+			config.DefaultRootFS = defaultTestRootFS
 		})
 
 		It("the container is created successfully", func() {
@@ -117,7 +107,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 			Context("when the -registry flag targets a non-existing registry", func() {
 				BeforeEach(func() {
-					args = []string{"--docker-registry", "registry-12.banana-docker.io"}
+					config.DockerRegistry = "registry-12.banana-docker.io"
 				})
 
 				It("should fail to create a container", func() {
@@ -170,16 +160,12 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 				Context("when the host is listed in --insecure-docker-registry", func() {
 					BeforeEach(func() {
-						args = []string{"--allow-host-access"}
+						config.AllowHostAccess = boolptr(true)
 					})
 
 					Context("when the registry is NOT using TLS", func() {
 						BeforeEach(func() {
-							args = append(
-								args,
-								"--insecure-docker-registry",
-								fmt.Sprintf("%s:%s", dockerRegistryIP, dockerRegistryPort),
-							)
+							config.InsecureDockerRegistry = fmt.Sprintf("%s:%s", dockerRegistryIP, dockerRegistryPort)
 						})
 
 						It("creates the container successfully ", func() {
@@ -198,11 +184,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 					Context("when the registry is in a CIDR", func() {
 						BeforeEach(func() {
-							args = append(
-								args,
-								"--insecure-docker-registry",
-								fmt.Sprintf("%s/24", dockerRegistryIP),
-							)
+							config.InsecureDockerRegistry = fmt.Sprintf("%s/24", dockerRegistryIP)
 						})
 
 						It("creates the container successfully ", func() {
@@ -231,11 +213,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 							serverURL, err = url.Parse(server.URL)
 							Expect(err).NotTo(HaveOccurred())
 
-							args = append(
-								args,
-								"--insecure-docker-registry",
-								serverURL.Host,
-							)
+							config.InsecureDockerRegistry = serverURL.Host
 						})
 
 						AfterEach(func() {
@@ -256,7 +234,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 						Context("and its specified as --registry", func() {
 							BeforeEach(func() {
-								args = append(args, "--docker-registry", serverURL.Host)
+								config.DockerRegistry = serverURL.Host
 							})
 
 							It("still works when the host is specified", func() {

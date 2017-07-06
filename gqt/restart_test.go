@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"reflect"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -20,16 +21,11 @@ import (
 
 var _ = Describe("Surviving Restarts", func() {
 	var (
-		args   []string
 		client *runner.RunningGarden
 	)
 
-	BeforeEach(func() {
-		args = []string{}
-	})
-
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
@@ -45,12 +41,11 @@ var _ = Describe("Surviving Restarts", func() {
 			container        garden.Container
 			netOutRules      []garden.NetOutRule
 			hostNetInPort    uint32
-			externalIP       string
 			interfacePrefix  string
 			propertiesDir    string
 			existingProc     garden.Process
 			containerSpec    garden.ContainerSpec
-			restartArgs      []string
+			restartConfig    runner.GdnRunnerConfig
 			gracefulShutdown bool
 		)
 
@@ -58,7 +53,7 @@ var _ = Describe("Surviving Restarts", func() {
 			var err error
 			propertiesDir, err = ioutil.TempDir("", "props")
 			Expect(err).NotTo(HaveOccurred())
-			args = append(args, "--properties-path", path.Join(propertiesDir, "props.json"))
+			config.PropertiesPath = path.Join(propertiesDir, "props.json")
 
 			containerSpec = garden.ContainerSpec{
 				Network: "177.100.10.30/30",
@@ -72,7 +67,7 @@ var _ = Describe("Surviving Restarts", func() {
 				},
 			}
 
-			restartArgs = []string{}
+			restartConfig = defaultConfig()
 			gracefulShutdown = true
 		})
 
@@ -88,7 +83,6 @@ var _ = Describe("Surviving Restarts", func() {
 
 			info, err := container.Info()
 			Expect(err).NotTo(HaveOccurred())
-			externalIP = info.ExternalIP
 			interfacePrefix = info.Properties["kawasaki.iptable-prefix"]
 
 			out := gbytes.NewBuffer()
@@ -109,10 +103,10 @@ var _ = Describe("Surviving Restarts", func() {
 				Expect(client.Kill()).To(MatchError("exit status 137"))
 			}
 
-			if len(restartArgs) == 0 {
-				restartArgs = args
+			if reflect.DeepEqual(restartConfig, defaultConfig()) {
+				restartConfig = config
 			}
-			client = startGarden(restartArgs...)
+			client = runner.Start(restartConfig)
 		})
 
 		AfterEach(func() {
@@ -121,7 +115,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 		Context("when the destroy-containers-on-startup flag is passed", func() {
 			BeforeEach(func() {
-				args = append(args, "--destroy-containers-on-startup")
+				config.DestroyContainersOnStartup = boolptr(true)
 			})
 
 			JustBeforeEach(func() {
@@ -278,7 +272,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 				Context("when the server denies all the networks", func() {
 					BeforeEach(func() {
-						args = append(args, "--deny-network", "0.0.0.0/0")
+						config.DenyNetworks = []string{"0.0.0.0/0"}
 					})
 
 					It("still can't access disallowed IPs", func() {
@@ -292,8 +286,8 @@ var _ = Describe("Surviving Restarts", func() {
 
 				Context("when the server is restarted without deny networks applied", func() {
 					BeforeEach(func() {
-						restartArgs = args[:]
-						args = append(args, "--deny-network", "0.0.0.0/0")
+						restartConfig = config
+						config.DenyNetworks = []string{"0.0.0.0/0"}
 					})
 
 					It("is able to access the internet", func() {

@@ -23,7 +23,6 @@ var _ = Describe("Image Plugin", func() {
 
 	var (
 		tmpDir                            string
-		args                              []string
 		client                            *runner.RunningGarden
 		containerDestructionShouldSucceed bool
 	)
@@ -34,12 +33,10 @@ var _ = Describe("Image Plugin", func() {
 		tmpDir, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
-
-		args = []string{}
 	})
 
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
@@ -54,12 +51,13 @@ var _ = Describe("Image Plugin", func() {
 
 	Context("when only an unprivileged image plugin is provided", func() {
 		BeforeEach(func() {
-			args = append(args,
-				"--image-plugin", binaries.ImagePlugin,
-				"--image-plugin-extra-arg", "\"--rootfs-path\"",
-				"--image-plugin-extra-arg", tmpDir,
-				"--image-plugin-extra-arg", "\"--args-path\"",
-				"--image-plugin-extra-arg", filepath.Join(tmpDir, "args"))
+			config.ImagePluginBin = binaries.ImagePlugin
+			config.ImagePluginExtraArgs = []string{
+				"\"--rootfs-path\"",
+				tmpDir,
+				"\"--args-path\"",
+				filepath.Join(tmpDir, "args"),
+			}
 		})
 
 		Context("and an unprivileged container is successfully created", func() {
@@ -83,10 +81,11 @@ var _ = Describe("Image Plugin", func() {
 						},
 					},
 				}
-				args = append(args,
-					"--image-plugin-extra-arg", "\"--create-whoami-path\"",
-					"--image-plugin-extra-arg", filepath.Join(tmpDir, "create-whoami"))
-			})
+				config.ImagePluginExtraArgs = append(
+					config.ImagePluginExtraArgs,
+					"\"--create-whoami-path\"",
+					filepath.Join(tmpDir, "create-whoami"),
+				)
 
 			JustBeforeEach(func() {
 				var err error
@@ -110,7 +109,7 @@ var _ = Describe("Image Plugin", func() {
 					"--args-path", filepath.Join(tmpDir, "args"),
 					"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
 					"create",
-					os.Getenv("GARDEN_TEST_ROOTFS"),
+					defaultTestRootFS,
 					handle,
 				}))
 			})
@@ -135,12 +134,13 @@ var _ = Describe("Image Plugin", func() {
 					imageJson, err := json.Marshal(image)
 					Expect(err).NotTo(HaveOccurred())
 
-					args = append(args,
-						"--image-plugin-extra-arg", "\"--image-json\"",
-						"--image-plugin-extra-arg", string(imageJson),
+					config.ImagePluginExtraArgs = append(
+						config.ImagePluginExtraArgs,
+						"\"--image-json\"",
+						string(imageJson),
 					)
 
-					gardenDefaultRootfs := os.Getenv("GARDEN_TEST_ROOTFS")
+					gardenDefaultRootfs := defaultTestRootFS
 					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"),
 						filepath.Join(tmpDir, "env"))).To(Succeed())
 				})
@@ -184,12 +184,13 @@ var _ = Describe("Image Plugin", func() {
 					mountsJson, err := json.Marshal(mounts)
 					Expect(err).NotTo(HaveOccurred())
 
-					args = append(args,
-						"--image-plugin-extra-arg", "\"--mounts-json\"",
-						"--image-plugin-extra-arg", string(mountsJson),
+					config.ImagePluginExtraArgs = append(
+						config.ImagePluginExtraArgs,
+						"\"--mounts-json\"",
+						string(mountsJson),
 					)
 
-					gardenDefaultRootfs := os.Getenv("GARDEN_TEST_ROOTFS")
+					gardenDefaultRootfs := defaultTestRootFS
 					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "cat"),
 						filepath.Join(tmpDir, "cat"))).To(Succeed())
 				})
@@ -232,7 +233,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(string(pluginArgsBytes)).To(ContainSubstring(os.Getenv("GARDEN_TEST_ROOTFS")))
+					Expect(string(pluginArgsBytes)).To(ContainSubstring(defaultTestRootFS))
 				})
 			})
 
@@ -302,9 +303,11 @@ var _ = Describe("Image Plugin", func() {
 
 				Context("when the plugin logs to stderr", func() {
 					BeforeEach(func() {
-						args = append(args,
-							"--image-plugin-extra-arg", "\"--create-log-content\"",
-							"--image-plugin-extra-arg", "CREATE-FAKE-LOG-LINE")
+						config.ImagePluginExtraArgs = append(
+							config.ImagePluginExtraArgs,
+							"\"--create-log-content\"",
+							"CREATE-FAKE-LOG-LINE",
+						)
 					})
 
 					It("relogs the plugin's stderr to the garden logs", func() {
@@ -315,12 +318,15 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("and metrics are collected on that container", func() {
 				var metrics garden.Metrics
+
 				BeforeEach(func() {
-					args = append(args,
-						"--image-plugin-extra-arg", "\"--metrics-whoami-path\"",
-						"--image-plugin-extra-arg", filepath.Join(tmpDir, "metrics-whoami"),
-						"--image-plugin-extra-arg", "\"--metrics-output\"",
-						"--image-plugin-extra-arg", `{"disk_usage": {"total_bytes_used": 1000, "exclusive_bytes_used": 2000}}`)
+					config.ImagePluginExtraArgs = append(
+						config.ImagePluginExtraArgs,
+						"\"--metrics-whoami-path\"",
+						filepath.Join(tmpDir, "metrics-whoami"),
+						"\"--metrics-output\"",
+						`{"disk_usage": {"total_bytes_used": 1000, "exclusive_bytes_used": 2000}}`,
+					)
 				})
 
 				JustBeforeEach(func() {
@@ -365,9 +371,11 @@ var _ = Describe("Image Plugin", func() {
 
 				Context("when the plugin logs to stderr", func() {
 					BeforeEach(func() {
-						args = append(args,
-							"--image-plugin-extra-arg", "\"--metrics-log-content\"",
-							"--image-plugin-extra-arg", "METRICS-FAKE-LOG-LINE")
+						config.ImagePluginExtraArgs = append(
+							config.ImagePluginExtraArgs,
+							"\"--metrics-log-content\"",
+							"METRICS-FAKE-LOG-LINE",
+						)
 					})
 
 					It("relogs the plugin's stderr to the garden logs", func() {
@@ -378,9 +386,11 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("but the plugin returns nonsense stats", func() {
 				BeforeEach(func() {
-					args = append(args,
-						"--image-plugin-extra-arg", "\"--metrics-output\"",
-						"--image-plugin-extra-arg", "NONSENSE_JSON")
+					config.ImagePluginExtraArgs = append(
+						config.ImagePluginExtraArgs,
+						"\"--metrics-output\"",
+						"NONSENSE_JSON",
+					)
 				})
 
 				It("returns a sensible error containing the json", func() {
@@ -391,9 +401,11 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("but the plugin fails when collecting metrics", func() {
 				BeforeEach(func() {
-					args = append(args,
-						"--image-plugin-extra-arg", "\"--fail-on\"",
-						"--image-plugin-extra-arg", "metrics")
+					config.ImagePluginExtraArgs = append(
+						config.ImagePluginExtraArgs,
+						"\"--fail-on\"",
+						"metrics",
+					)
 				})
 
 				It("returns the plugin's stdout in a useful error", func() {
@@ -404,9 +416,11 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("and that container is destroyed", func() {
 				BeforeEach(func() {
-					args = append(args,
-						"--image-plugin-extra-arg", "\"--destroy-whoami-path\"",
-						"--image-plugin-extra-arg", filepath.Join(tmpDir, "destroy-whoami"))
+					config.ImagePluginExtraArgs = append(
+						config.ImagePluginExtraArgs,
+						"\"--destroy-whoami-path\"",
+						filepath.Join(tmpDir, "destroy-whoami"),
+					)
 				})
 
 				JustBeforeEach(func() {
@@ -438,9 +452,11 @@ var _ = Describe("Image Plugin", func() {
 
 				Context("when the plugin logs to stderr", func() {
 					BeforeEach(func() {
-						args = append(args,
-							"--image-plugin-extra-arg", "\"--destroy-log-content\"",
-							"--image-plugin-extra-arg", "DESTROY-FAKE-LOG-LINE")
+						config.ImagePluginExtraArgs = append(
+							config.ImagePluginExtraArgs,
+							"\"--destroy-log-content\"",
+							"DESTROY-FAKE-LOG-LINE",
+						)
 					})
 
 					It("relogs the plugin's stderr to the garden logs", func() {
@@ -452,9 +468,11 @@ var _ = Describe("Image Plugin", func() {
 			Context("but the plugin fails on destruction", func() {
 				BeforeEach(func() {
 					containerDestructionShouldSucceed = false
-					args = append(args,
-						"--image-plugin-extra-arg", "\"--fail-on\"",
-						"--image-plugin-extra-arg", "destroy")
+					config.ImagePluginExtraArgs = append(
+						config.ImagePluginExtraArgs,
+						"\"--fail-on\"",
+						"destroy",
+					)
 				})
 
 				It("returns the plugin's stdout in a useful error", func() {
@@ -466,9 +484,11 @@ var _ = Describe("Image Plugin", func() {
 
 		Context("but the plugin fails on creation", func() {
 			BeforeEach(func() {
-				args = append(args,
-					"--image-plugin-extra-arg", "\"--fail-on\"",
-					"--image-plugin-extra-arg", "create")
+				config.ImagePluginExtraArgs = append(
+					config.ImagePluginExtraArgs,
+					"\"--fail-on\"",
+					"create",
+				)
 			})
 
 			It("returns the plugin's stdout in a useful error", func() {
@@ -487,12 +507,13 @@ var _ = Describe("Image Plugin", func() {
 
 	Context("when only a privileged image plugin is provided", func() {
 		BeforeEach(func() {
-			args = append(args,
-				"--privileged-image-plugin", binaries.ImagePlugin,
-				"--privileged-image-plugin-extra-arg", "\"--rootfs-path\"",
-				"--privileged-image-plugin-extra-arg", tmpDir,
-				"--privileged-image-plugin-extra-arg", "\"--args-path\"",
-				"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "args"))
+			config.PrivilegedImagePluginBin = binaries.ImagePlugin
+			config.PrivilegedImagePluginExtraArgs = []string{
+				"\"--rootfs-path\"",
+				tmpDir,
+				"\"--args-path\"",
+				filepath.Join(tmpDir, "args"),
+			}
 		})
 
 		Context("and a container is created", func() {
@@ -505,9 +526,11 @@ var _ = Describe("Image Plugin", func() {
 			BeforeEach(func() {
 				containerSpec = garden.ContainerSpec{Privileged: true}
 
-				args = append(args,
-					"--privileged-image-plugin-extra-arg", "\"--create-whoami-path\"",
-					"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "create-whoami"))
+				config.PrivilegedImagePluginExtraArgs = append(
+					config.PrivilegedImagePluginExtraArgs,
+					"\"--create-whoami-path\"",
+					filepath.Join(tmpDir, "create-whoami"),
+				)
 			})
 
 			JustBeforeEach(func() {
@@ -528,7 +551,7 @@ var _ = Describe("Image Plugin", func() {
 					"--args-path", filepath.Join(tmpDir, "args"),
 					"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
 					"create",
-					os.Getenv("GARDEN_TEST_ROOTFS"),
+					defaultTestRootFS,
 					handle,
 				}))
 			})
@@ -553,12 +576,12 @@ var _ = Describe("Image Plugin", func() {
 					imageJson, err := json.Marshal(image)
 					Expect(err).NotTo(HaveOccurred())
 
-					args = append(args,
-						"--privileged-image-plugin-extra-arg", "\"--image-json\"",
-						"--privileged-image-plugin-extra-arg", string(imageJson),
+					config.PrivilegedImagePluginExtraArgs = append(
+						config.PrivilegedImagePluginExtraArgs,
+						"\"--image-json\"",
+						string(imageJson),
 					)
-
-					gardenDefaultRootfs := os.Getenv("GARDEN_TEST_ROOTFS")
+					gardenDefaultRootfs := defaultTestRootFS
 					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"),
 						filepath.Join(tmpDir, "env"))).To(Succeed())
 				})
@@ -588,7 +611,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(string(pluginArgsBytes)).To(ContainSubstring(os.Getenv("GARDEN_TEST_ROOTFS")))
+					Expect(string(pluginArgsBytes)).To(ContainSubstring(defaultTestRootFS))
 				})
 			})
 
@@ -659,11 +682,13 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("and metrics are collected on that container", func() {
 				BeforeEach(func() {
-					args = append(args,
-						"--privileged-image-plugin-extra-arg", "\"--metrics-whoami-path\"",
-						"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "metrics-whoami"),
-						"--privileged-image-plugin-extra-arg", "\"--metrics-output\"",
-						"--privileged-image-plugin-extra-arg", `{"disk_usage": {"total_bytes_used": 1000, "exclusive_bytes_used": 2000}}`)
+					config.PrivilegedImagePluginExtraArgs = append(
+						config.PrivilegedImagePluginExtraArgs,
+						"\"--metrics-whoami-path\"",
+						filepath.Join(tmpDir, "metrics-whoami"),
+						"\"--metrics-output\"",
+						`{"disk_usage": {"total_bytes_used": 1000, "exclusive_bytes_used": 2000}}`,
+					)
 				})
 
 				JustBeforeEach(func() {
@@ -702,9 +727,11 @@ var _ = Describe("Image Plugin", func() {
 
 				Context("when the plugin logs to stderr", func() {
 					BeforeEach(func() {
-						args = append(args,
-							"--privileged-image-plugin-extra-arg", "\"--metrics-log-content\"",
-							"--privileged-image-plugin-extra-arg", "METRICS-FAKE-LOG-LINE")
+						config.PrivilegedImagePluginExtraArgs = append(
+							config.PrivilegedImagePluginExtraArgs,
+							"\"--metrics-log-content\"",
+							"METRICS-FAKE-LOG-LINE",
+						)
 					})
 
 					It("relogs the plugin's stderr to the garden logs", func() {
@@ -715,9 +742,11 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("but the plugin fails when collecting metrics", func() {
 				BeforeEach(func() {
-					args = append(args,
-						"--privileged-image-plugin-extra-arg", "\"--fail-on\"",
-						"--privileged-image-plugin-extra-arg", "metrics")
+					config.PrivilegedImagePluginExtraArgs = append(
+						config.PrivilegedImagePluginExtraArgs,
+						"\"--fail-on\"",
+						"metrics",
+					)
 				})
 
 				It("returns the plugin's stdout in a useful error", func() {
@@ -728,9 +757,11 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("and that container is destroyed", func() {
 				BeforeEach(func() {
-					args = append(args,
-						"--privileged-image-plugin-extra-arg", "\"--destroy-whoami-path\"",
-						"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "destroy-whoami"))
+					config.PrivilegedImagePluginExtraArgs = append(
+						config.PrivilegedImagePluginExtraArgs,
+						"\"--destroy-whoami-path\"",
+						filepath.Join(tmpDir, "destroy-whoami"),
+					)
 				})
 
 				JustBeforeEach(func() {
@@ -762,9 +793,11 @@ var _ = Describe("Image Plugin", func() {
 
 				Context("when the plugin logs to stderr", func() {
 					BeforeEach(func() {
-						args = append(args,
-							"--privileged-image-plugin-extra-arg", "\"--destroy-log-content\"",
-							"--privileged-image-plugin-extra-arg", "DESTROY-FAKE-LOG-LINE")
+						config.PrivilegedImagePluginExtraArgs = append(
+							config.PrivilegedImagePluginExtraArgs,
+							"\"--destroy-log-content\"",
+							"DESTROY-FAKE-LOG-LINE",
+						)
 					})
 
 					It("relogs the plugin's stderr to the garden logs", func() {
@@ -776,9 +809,11 @@ var _ = Describe("Image Plugin", func() {
 			Context("but the plugin fails on destruction", func() {
 				BeforeEach(func() {
 					containerDestructionShouldSucceed = false
-					args = append(args,
-						"--privileged-image-plugin-extra-arg", "\"--fail-on\"",
-						"--privileged-image-plugin-extra-arg", "destroy")
+					config.PrivilegedImagePluginExtraArgs = append(
+						config.PrivilegedImagePluginExtraArgs,
+						"\"--fail-on\"",
+						"destroy",
+					)
 				})
 
 				It("returns the plugin's stdout in a useful error", func() {
@@ -790,9 +825,11 @@ var _ = Describe("Image Plugin", func() {
 
 		Context("but the plugin fails on creation", func() {
 			BeforeEach(func() {
-				args = append(args,
-					"--privileged-image-plugin-extra-arg", "\"--fail-on\"",
-					"--privileged-image-plugin-extra-arg", "create")
+				config.PrivilegedImagePluginExtraArgs = append(
+					config.PrivilegedImagePluginExtraArgs,
+					"\"--fail-on\"",
+					"create",
+				)
 			})
 
 			It("returns the plugin's stdout in a useful error", func() {
@@ -812,27 +849,33 @@ var _ = Describe("Image Plugin", func() {
 	Context("when both image_plugin and privileged_image_plugin are provided", func() {
 		BeforeEach(func() {
 			// make a a copy of the fake image plugin so we can check location of file called
-			Expect(copyFile(binaries.ImagePlugin, fmt.Sprintf("%s-priv", binaries.ImagePlugin))).To(Succeed())
+			privilegedImagePluginPath := fmt.Sprintf("%s-priv", binaries.ImagePlugin)
+			Expect(copyFile(binaries.ImagePlugin, privilegedImagePluginPath)).To(Succeed())
 
-			args = append(args,
-				"--image-plugin", binaries.ImagePlugin,
-				"--image-plugin-extra-arg", "\"--rootfs-path\"",
-				"--image-plugin-extra-arg", tmpDir,
-				"--image-plugin-extra-arg", "\"--create-bin-location-path\"",
-				"--image-plugin-extra-arg", filepath.Join(tmpDir, "create-bin-location"),
-				"--image-plugin-extra-arg", "\"--destroy-bin-location-path\"",
-				"--image-plugin-extra-arg", filepath.Join(tmpDir, "destroy-bin-location"),
-				"--image-plugin-extra-arg", "\"--metrics-bin-location-path\"",
-				"--image-plugin-extra-arg", filepath.Join(tmpDir, "metrics-bin-location"),
-				"--privileged-image-plugin", fmt.Sprintf("%s-priv", binaries.ImagePlugin),
-				"--privileged-image-plugin-extra-arg", "\"--rootfs-path\"",
-				"--privileged-image-plugin-extra-arg", tmpDir,
-				"--privileged-image-plugin-extra-arg", "\"--create-bin-location-path\"",
-				"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "create-bin-location"),
-				"--privileged-image-plugin-extra-arg", "\"--destroy-bin-location-path\"",
-				"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "destroy-bin-location"),
-				"--privileged-image-plugin-extra-arg", "\"--metrics-bin-location-path\"",
-				"--privileged-image-plugin-extra-arg", filepath.Join(tmpDir, "metrics-bin-location"))
+			config.ImagePluginBin = binaries.ImagePlugin
+			config.PrivilegedImagePluginBin = privilegedImagePluginPath
+			config.ImagePluginExtraArgs = append(
+				config.ImagePluginExtraArgs,
+				"\"--rootfs-path\"",
+				tmpDir,
+				"\"--create-bin-location-path\"",
+				filepath.Join(tmpDir, "create-bin-location"),
+				"\"--destroy-bin-location-path\"",
+				filepath.Join(tmpDir, "destroy-bin-location"),
+				"\"--metrics-bin-location-path\"",
+				filepath.Join(tmpDir, "metrics-bin-location"),
+			)
+			config.PrivilegedImagePluginExtraArgs = append(
+				config.PrivilegedImagePluginExtraArgs,
+				"\"--rootfs-path\"",
+				tmpDir,
+				"\"--create-bin-location-path\"",
+				filepath.Join(tmpDir, "create-bin-location"),
+				"\"--destroy-bin-location-path\"",
+				filepath.Join(tmpDir, "destroy-bin-location"),
+				"\"--metrics-bin-location-path\"",
+				filepath.Join(tmpDir, "metrics-bin-location"),
+			)
 		})
 
 		Context("when an unprivileged container is created", func() {
@@ -930,13 +973,15 @@ var _ = Describe("Image Plugin", func() {
 		)
 
 		BeforeEach(func() {
-			args = append(args,
-				"--log-level", "debug",
-				"--image-plugin", binaries.ImagePlugin,
-				"--image-plugin-extra-arg", "\"--rootfs-path\"",
-				"--image-plugin-extra-arg", tmpDir,
-				"--image-plugin-extra-arg", "\"--args-path\"",
-				"--image-plugin-extra-arg", filepath.Join(tmpDir, "args"))
+			config.LogLevel = "debug"
+			config.ImagePluginBin = binaries.ImagePlugin
+			config.ImagePluginExtraArgs = append(
+				config.ImagePluginExtraArgs,
+				"\"--rootfs-path\"",
+				tmpDir,
+				"\"--args-path\"",
+				filepath.Join(tmpDir, "args"),
+			)
 
 			imageSpec = garden.ImageRef{
 				URI:      "",

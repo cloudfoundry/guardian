@@ -21,7 +21,6 @@ var _ = Describe("graph flags", func() {
 		diffPath             string
 		mntPath              string
 		nonDefaultRootfsPath string
-		args                 []string
 		persistentImages     []string
 	)
 
@@ -58,14 +57,12 @@ var _ = Describe("graph flags", func() {
 	})
 
 	JustBeforeEach(func() {
-		for _, image := range persistentImages {
-			args = append(args, "--persistent-image", image)
-		}
-		client = startGarden(args...)
+		config.PersistentImages = persistentImages
+		client = runner.Start(config)
 
-		layersPath = path.Join(client.GraphPath, "aufs", "layers")
-		diffPath = path.Join(client.GraphPath, "aufs", "diff")
-		mntPath = path.Join(client.GraphPath, "aufs", "mnt")
+		layersPath = path.Join(client.GraphDir, "aufs", "layers")
+		diffPath = path.Join(client.GraphDir, "aufs", "diff")
+		mntPath = path.Join(client.GraphDir, "aufs", "mnt")
 	})
 
 	AfterEach(func() {
@@ -85,7 +82,7 @@ var _ = Describe("graph flags", func() {
 
 		Context("when the graph cleanup threshold is set to -1", func() {
 			BeforeEach(func() {
-				args = []string{"--graph-cleanup-threshold-in-megabytes=-1"}
+				config.GraphCleanupThresholdMB = intptr(-1)
 			})
 
 			It("does NOT clean up the graph directory on create", func() {
@@ -100,16 +97,17 @@ var _ = Describe("graph flags", func() {
 
 		Context("when the graph cleanup threshold is exceeded", func() {
 			BeforeEach(func() {
-				args = []string{"--graph-cleanup-threshold-in-megabytes", "0"}
+				config.GraphCleanupThresholdMB = intptr(0)
 			})
 
 			Context("when there are other rootfs layers in the graph dir", func() {
 				BeforeEach(func() {
-					args = append(args, "--persistent-image", "docker:///busybox")
+					persistentImages = append(persistentImages, "docker:///busybox")
 				})
 
 				It("cleans up the graph directory on container creation (and not on destruction)", func() {
-					client = restartGarden(client, "--graph-cleanup-threshold-in-megabytes=1") // restart with persistent image list empty
+					config.GraphCleanupThresholdMB = intptr(1)
+					client = restartGarden(client, config) // restart with persistent image list empty
 					Expect(numLayersInGraph()).To(BeNumerically(">", 0))
 
 					anotherContainer, err := client.Create(garden.ContainerSpec{})
@@ -124,7 +122,7 @@ var _ = Describe("graph flags", func() {
 
 		Context("when the graph cleanup threshold is not exceeded", func() {
 			BeforeEach(func() {
-				args = []string{"--graph-cleanup-threshold-in-megabytes", "1024"}
+				config.GraphCleanupThresholdMB = intptr(1024)
 			})
 
 			It("does not cleanup", func() {
@@ -142,7 +140,7 @@ var _ = Describe("graph flags", func() {
 
 	Describe("--persistentImage", func() {
 		BeforeEach(func() {
-			args = []string{"--graph-cleanup-threshold-in-megabytes", "0"}
+			config.GraphCleanupThresholdMB = intptr(0)
 		})
 
 		Context("when set", func() {
@@ -152,7 +150,7 @@ var _ = Describe("graph flags", func() {
 
 			Context("and local images are used", func() {
 				BeforeEach(func() {
-					persistentImages = []string{os.Getenv("GARDEN_TEST_ROOTFS")}
+					persistentImages = []string{defaultTestRootFS}
 				})
 
 				Describe("graph cleanup for a rootfs on the whitelist", func() {
@@ -169,7 +167,7 @@ var _ = Describe("graph flags", func() {
 					Context("which is a symlink", func() {
 						BeforeEach(func() {
 							Expect(os.MkdirAll("/var/vcap/packages", 0755)).To(Succeed())
-							err := exec.Command("ln", "-s", os.Getenv("GARDEN_TEST_ROOTFS"), "/var/vcap/packages/busybox").Run()
+							err := exec.Command("ln", "-s", defaultTestRootFS, "/var/vcap/packages/busybox").Run()
 							Expect(err).ToNot(HaveOccurred())
 
 							persistentImages = []string{"/var/vcap/packages/busybox"}

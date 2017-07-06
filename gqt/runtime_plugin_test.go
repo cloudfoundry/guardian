@@ -20,16 +20,11 @@ import (
 
 var _ = Describe("Runtime Plugin", func() {
 	var (
-		args   []string
 		client *runner.RunningGarden
 	)
 
-	BeforeEach(func() {
-		args = []string{}
-	})
-
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
@@ -38,11 +33,9 @@ var _ = Describe("Runtime Plugin", func() {
 
 	Context("when a runtime plugin is provided", func() {
 		BeforeEach(func() {
-			args = append(
-				args,
-				"--runtime-plugin", binaries.RuntimePlugin,
-				"--network-plugin", binaries.NetworkPlugin,
-			)
+			config.RuntimePluginBin = binaries.RuntimePlugin
+			config.NetworkPluginBin = binaries.NetworkPlugin
+			config.ImagePluginBin = binaries.NoopPlugin
 		})
 
 		Describe("creating a container", func() {
@@ -52,7 +45,7 @@ var _ = Describe("Runtime Plugin", func() {
 			)
 
 			JustBeforeEach(func() {
-				argsFilepath = filepath.Join(client.Tmpdir, "create-args")
+				argsFilepath = filepath.Join(client.TmpDir, "create-args")
 			})
 
 			It("executes the plugin, passing the correct args for create", func() {
@@ -87,12 +80,11 @@ var _ = Describe("Runtime Plugin", func() {
 						"1.2.3.5"
 					]
 			  }`
-					args = append(
-						args,
-						"--network-plugin-extra-arg", os.DevNull,
-						"--network-plugin-extra-arg", os.DevNull,
-						"--network-plugin-extra-arg", pluginReturn,
-					)
+					config.NetworkPluginExtraArgs = []string{
+						os.DevNull,
+						os.DevNull,
+						pluginReturn,
+					}
 				})
 
 				It("succeeds", func() {
@@ -121,7 +113,7 @@ var _ = Describe("Runtime Plugin", func() {
 				})
 
 				JustBeforeEach(func() {
-					argsFilepath = filepath.Join(client.Tmpdir, "exec-args")
+					argsFilepath = filepath.Join(client.TmpDir, "exec-args")
 
 					container, err := client.Create(garden.ContainerSpec{Handle: handle})
 					Expect(err).ToNot(HaveOccurred())
@@ -156,7 +148,7 @@ var _ = Describe("Runtime Plugin", func() {
 				})
 
 				It("passes the spec serialised into a file", func() {
-					processSpecFilePath := filepath.Join(client.Tmpdir, "exec-process-spec")
+					processSpecFilePath := filepath.Join(client.TmpDir, "exec-process-spec")
 					Eventually(processSpecFilePath).Should(BeAnExistingFile())
 					processSpecFile, err := os.Open(processSpecFilePath)
 					Expect(err).ToNot(HaveOccurred())
@@ -225,7 +217,7 @@ var _ = Describe("Runtime Plugin", func() {
 				)
 
 				JustBeforeEach(func() {
-					argsFilepath = filepath.Join(client.Tmpdir, "delete-args")
+					argsFilepath = filepath.Join(client.TmpDir, "delete-args")
 
 					_, err := client.Create(garden.ContainerSpec{Handle: handle})
 					Expect(err).ToNot(HaveOccurred())

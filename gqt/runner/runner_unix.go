@@ -7,8 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
@@ -20,65 +18,22 @@ import (
 
 type UserCredential *syscall.Credential
 
-func cmd(tmpdir, depotDir, graphPath, consoleSocketsPath, network, addr string, binaries *Binaries, rootfs string, user UserCredential, argv ...string) *exec.Cmd {
-	Expect(os.MkdirAll(tmpdir, 0755)).To(Succeed())
-	Expect(os.MkdirAll(depotDir, 0755)).To(Succeed())
+func setUserCredential(runner *GardenRunner) {
+	runner.Command.SysProcAttr = &syscall.SysProcAttr{Credential: runner.User}
+}
 
-	appendDefaultFlag := func(ar []string, key, value string) []string {
-		for _, a := range argv {
-			if a == key {
-				return ar
-			}
-		}
+func (r *GardenRunner) setupDirsForUser() {
+	MustMountTmpfs(r.GraphDir)
 
-		if value != "" {
-			return append(ar, key, value)
-		} else {
-			return append(ar, key)
-		}
-	}
-
-	gardenArgs := make([]string, len(argv))
-	copy(gardenArgs, argv)
-
-	switch network {
-	case "tcp":
-		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-ip", strings.Split(addr, ":")[0])
-		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-port", strings.Split(addr, ":")[1])
-	case "unix":
-		gardenArgs = appendDefaultFlag(gardenArgs, "--bind-socket", addr)
-	}
-
-	if rootfs != "" {
-		gardenArgs = appendDefaultFlag(gardenArgs, "--default-rootfs", rootfs)
-	}
-
-	gardenArgs = appendDefaultFlag(gardenArgs, "--depot", depotDir)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--graph", graphPath)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--console-sockets-path", consoleSocketsPath)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--tag", fmt.Sprintf("%d", GinkgoParallelNode()))
-	gardenArgs = appendDefaultFlag(gardenArgs, "--network-pool", fmt.Sprintf("10.254.%d.0/22", 4*GinkgoParallelNode()))
-	gardenArgs = appendDefaultFlag(gardenArgs, "--init-bin", binaries.Init)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--dadoo-bin", binaries.ExecRunner)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--nstar-bin", binaries.NSTar)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--tar-bin", binaries.Tar)
-	gardenArgs = appendDefaultFlag(gardenArgs, "--port-pool-start", fmt.Sprintf("%d", GinkgoParallelNode()*7000))
-
-	cmd := exec.Command(binaries.Gdn, append([]string{"server"}, gardenArgs...)...)
-	if user != nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{}
-		cmd.SysProcAttr.Credential = user
-
-		uidGid := fmt.Sprintf("%d:%d", user.Uid, user.Gid)
+	if r.Command.SysProcAttr.Credential != nil {
+		uidGid := fmt.Sprintf("%d:%d", r.User.Uid, r.User.Gid)
 		Eventually(func() error {
-			cmd := exec.Command("chown", "-R", uidGid, tmpdir)
+			cmd := exec.Command("chown", "-R", uidGid, r.TmpDir)
 			cmd.Stdout = GinkgoWriter
 			cmd.Stderr = GinkgoWriter
 			return cmd.Run()
 		}, "3s", "1s").Should(Succeed())
 	}
-
-	return cmd
 }
 
 func (r *RunningGarden) Cleanup() {
@@ -87,11 +42,11 @@ func (r *RunningGarden) Cleanup() {
 	retry := retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil)
 
 	err := retry.Run(func() error {
-		if err := os.RemoveAll(path.Join(r.GraphPath, "aufs")); err == nil {
+		if err := os.RemoveAll(path.Join(r.GraphDir, "aufs")); err == nil {
 			return nil // if we can remove it, it's already unmounted
 		}
 
-		if err := syscall.Unmount(path.Join(r.GraphPath, "aufs"), MNT_DETACH); err != nil {
+		if err := syscall.Unmount(path.Join(r.GraphDir, "aufs"), MNT_DETACH); err != nil {
 			r.logger.Error("failed-unmount-attempt", err)
 			return err
 		}
@@ -103,9 +58,7 @@ func (r *RunningGarden) Cleanup() {
 		r.logger.Error("failed-to-unmount", err)
 	}
 
-	if runtime.GOOS == "linux" {
-		MustUnmountTmpfs(r.GraphPath)
-	}
+	MustUnmountTmpfs(r.GraphDir)
 
 	// In the kernel version 3.19.0-51-generic the code bellow results in
 	// hanging the running VM. We are not deleting the node-X directories. They
@@ -118,8 +71,8 @@ func (r *RunningGarden) Cleanup() {
 	// }
 
 	r.logger.Info("cleanup-tempdirs")
-	if err := os.RemoveAll(r.Tmpdir); err != nil {
-		r.logger.Error("cleanup-tempdirs-failed", err, lager.Data{"tmpdir": r.Tmpdir})
+	if err := os.RemoveAll(r.TmpDir); err != nil {
+		r.logger.Error("cleanup-tempdirs-failed", err, lager.Data{"tmpdir": r.TmpDir})
 	} else {
 		r.logger.Info("tempdirs-removed")
 	}

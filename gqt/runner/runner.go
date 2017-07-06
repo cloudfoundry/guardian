@@ -9,8 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -19,15 +19,122 @@ import (
 	"code.cloudfoundry.org/garden/client/connection"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo"
-	"github.com/onsi/gomega/gbytes"
+	. "github.com/onsi/gomega"
 	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/ginkgomon"
 )
 
+type GdnRunnerConfig struct {
+	TmpDir string
+	User   UserCredential
+
+	// Garden config
+	GdnBin                   string
+	TarBin                   string `flag:"tar-bin"`
+	InitBin                  string `flag:"init-bin"`
+	RuntimePluginBin         string `flag:"runtime-plugin"`
+	ImagePluginBin           string `flag:"image-plugin"`
+	PrivilegedImagePluginBin string `flag:"privileged-image-plugin"`
+	NetworkPluginBin         string `flag:"network-plugin"`
+	ExecRunnerBin            string `flag:"dadoo-bin"`
+	NSTarBin                 string `flag:"nstar-bin"`
+
+	DefaultRootFS                  string   `flag:"default-rootfs"`
+	DepotDir                       string   `flag:"depot"`
+	GraphDir                       string   `flag:"graph"`
+	ConsoleSocketsPath             string   `flag:"console-sockets-path"`
+	BindIP                         string   `flag:"bind-ip"`
+	BindPort                       *int     `flag:"bind-port"`
+	BindSocket                     string   `flag:"bind-socket"`
+	DenyNetworks                   []string `flag:"deny-network"`
+	DefaultBlkioWeight             *uint64  `flag:"default-container-blockio-weight"`
+	NetworkPluginExtraArgs         []string `flag:"network-plugin-extra-arg"`
+	ImagePluginExtraArgs           []string `flag:"image-plugin-extra-arg"`
+	PrivilegedImagePluginExtraArgs []string `flag:"privileged-image-plugin-extra-arg"`
+	MaxContainers                  *uint64  `flag:"max-containers"`
+	DebugIP                        string   `flag:"debug-bind-ip"`
+	DebugPort                      *int     `flag:"debug-bind-port"`
+	PropertiesPath                 string   `flag:"properties-path"`
+	PersistentImages               []string `flag:"persistent-image"`
+	GraphCleanupThresholdMB        *int     `flag:"graph-cleanup-threshold-in-megabytes"`
+	LogLevel                       string   `flag:"log-level"`
+	TCPMemoryLimit                 *uint64  `flag:"tcp-memory-limit"`
+	CPUQuotaPerShare               *uint64  `flag:"cpu-quota-per-share"`
+	IPTableseBin                   string   `flag:"iptables-bin"`
+	IPTablesRestoreBin             string   `flag:"iptables-restore-bin"`
+	DNSServers                     []string `flag:"dns-server"`
+	AdditionalDNSServers           []string `flag:"additional-dns-server"`
+	MTU                            *int     `flag:"mtu"`
+	PortPoolSize                   *int     `flag:"port-pool-size"`
+	PortPoolStart                  *int     `flag:"port-pool-start"`
+	PortPoolPropertiesPath         string   `flag:"port-pool-properties-path"`
+	DestroyContainersOnStartup     *bool    `flag:"destroy-containers-on-startup"`
+	DockerRegistry                 string   `flag:"docker-registry"`
+	InsecureDockerRegistry         string   `flag:"insecure-docker-registry"`
+	AllowHostAccess                *bool    `flag:"allow-host-access"`
+	SkipSetup                      *bool    `flag:"skip-setup"`
+	RuncRoot                       string   `flag:"runc-root"`
+	UIDMapStart                    *uint32  `flag:"uid-map-start"`
+	UIDMapLength                   *uint32  `flag:"uid-map-length"`
+	GIDMapStart                    *uint32  `flag:"gid-map-start"`
+	GIDMapLength                   *uint32  `flag:"gid-map-length"`
+	CleanupProcessDirsOnWait       *bool    `flag:"cleanup-process-dirs-on-wait"`
+	AppArmor                       string   `flag:"apparmor"`
+	Tag                            string   `flag:"tag"`
+	NetworkPool                    string   `flag:"network-pool"`
+}
+
+func (c GdnRunnerConfig) connectionInfo() (string, string) {
+	if c.BindSocket == "" {
+		return "tcp", fmt.Sprintf("%s:%d", c.BindIP, *c.BindPort)
+	}
+
+	return "unix", c.BindSocket
+}
+
+func (c GdnRunnerConfig) toFlags() []string {
+	gardenArgs := []string{}
+
+	vConf := reflect.ValueOf(c)
+	tConf := vConf.Type()
+	for i := 0; i < tConf.NumField(); i++ {
+		tField := tConf.Field(i)
+		flagName, ok := tField.Tag.Lookup("flag")
+		if !ok {
+			continue
+		}
+
+		vField := vConf.Field(i)
+		if vField.Kind() != reflect.String && vField.IsNil() {
+			continue
+		}
+
+		fieldVal := reflect.Indirect(vField).Interface()
+		switch v := fieldVal.(type) {
+		case string:
+			if v != "" {
+				gardenArgs = append(gardenArgs, "--"+flagName, v)
+			}
+		case int, uint64, uint32:
+			gardenArgs = append(gardenArgs, "--"+flagName, fmt.Sprintf("%d", v))
+		case bool:
+			if v {
+				gardenArgs = append(gardenArgs, "--"+flagName)
+			}
+		case []string:
+			for _, val := range v {
+				gardenArgs = append(gardenArgs, "--"+flagName, val)
+			}
+		default:
+			Fail(fmt.Sprintf("unrecognised field type for field %s", flagName))
+		}
+	}
+
+	return gardenArgs
+}
+
 type Binaries struct {
-	OCIRuntime    string `json:"oci_runtime,omitempty"`
 	Tar           string `json:"tar,omitempty"`
 	Gdn           string `json:"gdn,omitempty"`
 	Init          string `json:"init,omitempty"`
@@ -39,130 +146,105 @@ type Binaries struct {
 	NSTar         string `json:"nstar,omitempty"`
 }
 
-const MNT_DETACH = 0x2
+type GardenRunner struct {
+	*GdnRunnerConfig
+	*ginkgomon.Runner
+}
 
-var DataDir string
+func (r *GardenRunner) Setup() {
+	Expect(os.MkdirAll(r.TmpDir, 0755)).To(Succeed())
+	Expect(os.MkdirAll(r.DepotDir, 0755)).To(Succeed())
+	r.setupDirsForUser()
+}
 
 type RunningGarden struct {
+	*GardenRunner
 	client.Client
 
-	runner  GardenRunner
 	process ifrit.Process
-
-	debugIP   string
-	debugPort int
-
-	Pid int
-
-	Tmpdir string
-
-	DepotDir  string
-	DataDir   string
-	GraphPath string
-
-	logger lager.Logger
+	Pid     int
+	logger  lager.Logger
 }
 
-type GardenRunner struct {
-	*ginkgomon.Runner
-	Cmd            *exec.Cmd
-	TmpDir         string
-	GraphPath      string
-	ConsoleSockets string
-	DepotDir       string
-	DebugIp        string
-	DebugPort      int
-	Network, Addr  string
-}
+const MNT_DETACH = 0x2
+
+var graphDirBase string
 
 func init() {
-	DataDir = os.Getenv("GARDEN_TEST_GRAPHPATH")
-	if DataDir == "" {
+	graphDirBase = os.Getenv("GARDEN_TEST_GRAPHPATH")
+	if graphDirBase == "" {
 		// This must be set outside of the Ginkgo node directory (tmpDir) because
 		// otherwise the Concourse worker may run into one of the AUFS kernel
 		// module bugs that cause the VM to become unresponsive.
-		DataDir = "/tmp/aufs_mount"
+		graphDirBase = "/tmp/aufs_mount"
 	}
 }
 
-func NewGardenRunner(binaries *Binaries, rootfs, network, address string, user UserCredential, argv ...string) GardenRunner {
-	r := GardenRunner{}
-
-	r.Network = network
-	r.Addr = address
-	r.TmpDir = filepath.Join(
+func DefaultGdnRunnerConfig() GdnRunnerConfig {
+	var config GdnRunnerConfig
+	config.TmpDir = filepath.Join(
 		os.TempDir(),
-		fmt.Sprintf("test-garden-%d", ginkgo.GinkgoParallelNode()),
+		fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
 	)
 
-	r.GraphPath = filepath.Join(DataDir, fmt.Sprintf("node-%d", ginkgo.GinkgoParallelNode()))
-	r.DepotDir = filepath.Join(r.TmpDir, "containers")
-	r.ConsoleSockets = filepath.Join(r.TmpDir, "console-sockets")
+	config.GraphDir = filepath.Join(graphDirBase, fmt.Sprintf("node-%d", GinkgoParallelNode()))
+	config.DepotDir = filepath.Join(config.TmpDir, "containers")
+	config.ConsoleSocketsPath = filepath.Join(config.TmpDir, "console-sockets")
 
-	if runtime.GOOS == "linux" {
-		MustMountTmpfs(r.GraphPath)
+	if runtime.GOOS == "windows" {
+		config.BindIP = "127.0.0.1"
+		config.BindPort = intptr(9990 + GinkgoParallelNode())
+	} else {
+		config.BindSocket = fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
 	}
 
-	r.Cmd = cmd(r.TmpDir, r.DepotDir, r.GraphPath, r.ConsoleSockets, r.Network, r.Addr, binaries, rootfs, user, argv...)
-	r.Cmd.Env = append(
+	config.Tag = fmt.Sprintf("%d", GinkgoParallelNode())
+	config.NetworkPool = fmt.Sprintf("10.254.%d.0/22", 4*GinkgoParallelNode())
+	config.PortPoolStart = intptr(GinkgoParallelNode() * 7000)
+
+	return config
+}
+
+func NewGardenRunner(config GdnRunnerConfig) *GardenRunner {
+	runner := &GardenRunner{
+		GdnRunnerConfig: &config,
+		Runner: ginkgomon.New(ginkgomon.Config{
+			Name:              "guardian",
+			AnsiColorCode:     "31m",
+			StartCheck:        "guardian.started",
+			StartCheckTimeout: 30 * time.Second,
+		}),
+	}
+
+	runner.Command = exec.Command(config.GdnBin, append([]string{"server"}, config.toFlags()...)...)
+	runner.Command.Env = append(
 		[]string{
-			fmt.Sprintf("TMPDIR=%s", r.TmpDir),
-			fmt.Sprintf("TEMP=%s", r.TmpDir),
-			fmt.Sprintf("TMP=%s", r.TmpDir),
+			fmt.Sprintf("TMPDIR=%s", runner.TmpDir),
+			fmt.Sprintf("TEMP=%s", runner.TmpDir),
+			fmt.Sprintf("TMP=%s", runner.TmpDir),
 		},
 		os.Environ()...,
 	)
+	setUserCredential(runner)
 
-	for i, arg := range r.Cmd.Args {
-		if arg == "--debug-bind-ip" {
-			r.DebugIp = r.Cmd.Args[i+1]
-		}
-		if arg == "--debug-bind-port" {
-			r.DebugPort, _ = strconv.Atoi(r.Cmd.Args[i+1])
-		}
-	}
+	runner.Setup()
 
-	r.Runner = ginkgomon.New(ginkgomon.Config{
-		Name:              "guardian",
-		Command:           r.Cmd,
-		AnsiColorCode:     "31m",
-		StartCheck:        "guardian.started",
-		StartCheckTimeout: 30 * time.Second,
-	})
-
-	return r
+	return runner
 }
 
-func Start(binaries *Binaries, rootfs string, user UserCredential, argv ...string) *RunningGarden {
-	network := "unix"
-	address := fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
+func Start(config GdnRunnerConfig) *RunningGarden {
+	runner := NewGardenRunner(config)
 
-	if runtime.GOOS == "windows" {
-		network = "tcp"
-		address = fmt.Sprintf("127.0.0.1:999%d", GinkgoParallelNode())
+	gdn := &RunningGarden{
+		GardenRunner: runner,
+		logger:       lagertest.NewTestLogger("garden-runner"),
 	}
 
-	runner := NewGardenRunner(binaries, rootfs, network, address, user, argv...)
+	gdn.process = ifrit.Invoke(runner)
+	gdn.Pid = runner.Command.Process.Pid
+	gdn.Client = client.New(connection.New(runner.connectionInfo()))
 
-	r := &RunningGarden{
-		runner:   runner,
-		DepotDir: runner.DepotDir,
-
-		DataDir:   DataDir,
-		GraphPath: runner.GraphPath,
-		Tmpdir:    runner.TmpDir,
-		logger:    lagertest.NewTestLogger("garden-runner"),
-
-		debugIP:   runner.DebugIp,
-		debugPort: runner.DebugPort,
-
-		Client: client.New(connection.New(runner.Network, runner.Addr)),
-	}
-
-	r.process = ifrit.Invoke(r.runner)
-	r.Pid = runner.Cmd.Process.Pid
-
-	return r
+	return gdn
 }
 
 func (r *RunningGarden) Kill() error {
@@ -202,7 +284,7 @@ func (r *RunningGarden) DestroyAndStop() error {
 }
 
 func (r *RunningGarden) removeTempDirPreservingCgroupMounts() error {
-	tmpDir, err := os.Open(r.Tmpdir)
+	tmpDir, err := os.Open(r.TmpDir)
 	if err != nil {
 		return err
 	}
@@ -213,7 +295,7 @@ func (r *RunningGarden) removeTempDirPreservingCgroupMounts() error {
 	}
 	for _, tmpDirChild := range tmpDirContents {
 		if !strings.Contains(tmpDirChild.Name(), "cgroups-") {
-			if err := os.RemoveAll(filepath.Join(r.Tmpdir, tmpDirChild.Name())); err != nil {
+			if err := os.RemoveAll(filepath.Join(r.TmpDir, tmpDirChild.Name())); err != nil {
 				return err
 			}
 		}
@@ -259,7 +341,7 @@ type debugVars struct {
 }
 
 func (r *RunningGarden) DumpGoroutines() (string, error) {
-	debugURL := fmt.Sprintf("http://%s:%d/debug/pprof/goroutine?debug=2", r.debugIP, r.debugPort)
+	debugURL := fmt.Sprintf("http://%s:%d/debug/pprof/goroutine?debug=2", r.DebugIP, *r.DebugPort)
 	res, err := http.Get(debugURL)
 	if err != nil {
 		return "", err
@@ -271,7 +353,7 @@ func (r *RunningGarden) DumpGoroutines() (string, error) {
 }
 
 func (r *RunningGarden) NumGoroutines() (int, error) {
-	debugURL := fmt.Sprintf("http://%s:%d/debug/vars", r.debugIP, r.debugPort)
+	debugURL := fmt.Sprintf("http://%s:%d/debug/vars", r.DebugIP, *r.DebugPort)
 	res, err := http.Get(debugURL)
 	if err != nil {
 		return 0, err
@@ -288,10 +370,6 @@ func (r *RunningGarden) NumGoroutines() (int, error) {
 	return debugVarsData.NumGoRoutines, nil
 }
 
-func (r *RunningGarden) Buffer() *gbytes.Buffer {
-	return r.runner.Buffer()
-}
-
-func (r *RunningGarden) ExitCode() int {
-	return r.runner.ExitCode()
+func intptr(i int) *int {
+	return &i
 }

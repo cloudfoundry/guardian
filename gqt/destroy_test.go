@@ -19,16 +19,16 @@ import (
 
 var _ = Describe("Destroying a Container", func() {
 	var (
-		args   []string
 		client *runner.RunningGarden
 	)
 
 	BeforeEach(func() {
-		args = []string{"--debug-bind-ip", "0.0.0.0", "--debug-bind-port", fmt.Sprintf("%d", 8080+GinkgoParallelNode())}
+		config.DebugIP = "0.0.0.0"
+		config.DebugPort = intptr(8080 + GinkgoParallelNode())
 	})
 
 	JustBeforeEach(func() {
-		client = startGarden(args...)
+		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
@@ -103,11 +103,7 @@ var _ = Describe("Destroying a Container", func() {
 	})
 
 	Context("when container destroy is interrupted half way through", func() {
-		// simulate this scenario by starting guardian with a network plugin which
-		// kill -9s <guardian pid> on 'down' (i.e. half way through a container delete)
-		// then, start the guardian server backup without the plugin, and ensuring that
-		// --destroy-containers-on-startup=false
-		var netPluginArgs []string
+		var originalConfig runner.GdnRunnerConfig
 
 		BeforeEach(func() {
 			tmpDir, err := ioutil.TempDir("", "netplugtest")
@@ -121,15 +117,15 @@ var _ = Describe("Destroying a Container", func() {
 					"garden.network.host-ip":"255.255.255.255"
 				}}`
 
-			netPluginArgs = []string{
-				"--properties-path", path.Join(tmpDir, "props.json"),
-				"--network-plugin", binaries.NetworkPlugin,
-				"--network-plugin-extra-arg", argsFile,
-				"--network-plugin-extra-arg", stdinFile,
-				"--network-plugin-extra-arg", pluginReturn,
-			}
-
-			args = append(netPluginArgs, []string{"--network-plugin-extra-arg", "kill-garden-server"}...)
+			config.PropertiesPath = path.Join(tmpDir, "props.json")
+			config.NetworkPluginBin = binaries.NetworkPlugin
+			// simulate this scenario by starting guardian with a network plugin which
+			// kill -9s <guardian pid> on 'down' (i.e. half way through a container delete)
+			// then, start the guardian server backup without the plugin, and ensuring that
+			// --destroy-containers-on-startup=false
+			config.NetworkPluginExtraArgs = []string{argsFile, stdinFile, pluginReturn}
+			originalConfig = config
+			config.NetworkPluginExtraArgs = append(config.NetworkPluginExtraArgs, "kill-garden-server")
 		})
 
 		It("leaves the bundle dir in the depot", func() {
@@ -140,7 +136,7 @@ var _ = Describe("Destroying a Container", func() {
 			Eventually(client).Should(gexec.Exit())
 
 			// start guardian back up with the 'kill -9 <gdn pid> on down' behaviour disabled
-			client = startGarden(netPluginArgs...)
+			client = runner.Start(originalConfig)
 
 			bundleDir := filepath.Join(client.DepotDir, container.Handle())
 			Expect(bundleDir).To(BeADirectory())

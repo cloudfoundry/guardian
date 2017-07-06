@@ -21,14 +21,10 @@ import (
 	"testing"
 )
 
-var defaultRuntime = map[string]string{
-	"linux":   "runc",
-	"windows": "winc",
-}
-
 var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
 
-var binaries *runner.Binaries
+var config runner.GdnRunnerConfig
+var binaries runner.Binaries
 
 // the unprivileged user is baked into the cfgarden/garden-ci-ubuntu image
 var unprivilegedUID = uint32(5000)
@@ -36,50 +32,45 @@ var unprivilegedGID = uint32(5000)
 
 var gqtStartTime time.Time
 
+var defaultTestRootFS string
+
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	SynchronizedBeforeSuite(func() []byte {
 		var err error
-		binaries = &runner.Binaries{}
-
-		binaries.OCIRuntime = os.Getenv("OCI_RUNTIME")
-		if binaries.OCIRuntime == "" {
-			binaries.OCIRuntime = defaultRuntime[runtime.GOOS]
-		}
+		binaries = runner.Binaries{}
 
 		binaries.Tar = os.Getenv("GARDEN_TAR_PATH")
 
-		if binaries.OCIRuntime != "" {
-			binaries.Gdn, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/gdn", "-tags", "daemon", "-race", "-ldflags", "-extldflags '-static'")
+		binaries.Gdn, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/gdn", "-tags", "daemon", "-race", "-ldflags", "-extldflags '-static'")
+		Expect(err).NotTo(HaveOccurred())
+
+		binaries.Init, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/init")
+		Expect(err).NotTo(HaveOccurred())
+
+		binaries.NetworkPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin")
+		Expect(err).NotTo(HaveOccurred())
+
+		binaries.ImagePlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin")
+		Expect(err).NotTo(HaveOccurred())
+
+		binaries.RuntimePlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin")
+		Expect(err).NotTo(HaveOccurred())
+
+		binaries.NoopPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin")
+		Expect(err).NotTo(HaveOccurred())
+
+		if runtime.GOOS == "linux" {
+			binaries.ExecRunner, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
 			Expect(err).NotTo(HaveOccurred())
 
-			binaries.Init, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/init")
-			Expect(err).NotTo(HaveOccurred())
-
-			binaries.NetworkPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin")
-			Expect(err).NotTo(HaveOccurred())
-
-			binaries.ImagePlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin")
-			Expect(err).NotTo(HaveOccurred())
-
-			binaries.RuntimePlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin")
-			Expect(err).NotTo(HaveOccurred())
-
-			binaries.NoopPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin")
-			Expect(err).NotTo(HaveOccurred())
-
-			if runtime.GOOS == "linux" {
-				binaries.ExecRunner, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
-				Expect(err).NotTo(HaveOccurred())
-
-				cmd := exec.Command("make")
-				cmd.Dir = "../rundmc/nstar"
-				cmd.Stdout = GinkgoWriter
-				cmd.Stderr = GinkgoWriter
-				Expect(cmd.Run()).To(Succeed())
-				binaries.NSTar = "../rundmc/nstar/nstar"
-			}
+			cmd := exec.Command("make")
+			cmd.Dir = "../rundmc/nstar"
+			cmd.Stdout = GinkgoWriter
+			cmd.Stderr = GinkgoWriter
+			Expect(cmd.Run()).To(Succeed())
+			binaries.NSTar = "../rundmc/nstar/nstar"
 		}
 
 		data, err := json.Marshal(binaries)
@@ -87,8 +78,8 @@ func TestGqt(t *testing.T) {
 
 		return data
 	}, func(data []byte) {
-		binaries = &runner.Binaries{}
 		Expect(json.Unmarshal(data, &binaries)).To(Succeed())
+		defaultTestRootFS = os.Getenv("GARDEN_TEST_ROOTFS")
 	})
 
 	SynchronizedAfterSuite(func() {}, func() {
@@ -96,11 +87,7 @@ func TestGqt(t *testing.T) {
 	})
 
 	BeforeEach(func() {
-		if binaries.OCIRuntime == "" {
-			Skip("No OCI Runtime for Platform: " + runtime.GOOS)
-		}
-
-		if os.Getenv("GARDEN_TEST_ROOTFS") == "" {
+		if defaultTestRootFS == "" {
 			Skip("No Garden RootFS")
 		}
 
@@ -111,29 +98,30 @@ func TestGqt(t *testing.T) {
 			Expect(os.Chmod(path, 0755)).To(Succeed())
 			return nil
 		})
+
+		config = defaultConfig()
 	})
 
 	SetDefaultEventuallyTimeout(5 * time.Second)
 	RunSpecs(t, "GQT Suite")
 }
 
-func startGarden(argv ...string) *runner.RunningGarden {
-	return startGardenAsUser(nil, argv...)
+func defaultConfig() runner.GdnRunnerConfig {
+	config := runner.DefaultGdnRunnerConfig()
+	config.DefaultRootFS = defaultTestRootFS
+	config.GdnBin = binaries.Gdn
+	config.ExecRunnerBin = binaries.ExecRunner
+	config.InitBin = binaries.Init
+	config.TarBin = binaries.Tar
+	config.NSTarBin = binaries.NSTar
+
+	return config
 }
 
-func startGardenAsUser(user runner.UserCredential, argv ...string) *runner.RunningGarden {
-	rootfs := os.Getenv("GARDEN_TEST_ROOTFS")
-	return runner.Start(binaries, rootfs, user, argv...)
-}
-
-func restartGarden(client *runner.RunningGarden, argv ...string) *runner.RunningGarden {
+func restartGarden(client *runner.RunningGarden, config runner.GdnRunnerConfig) *runner.RunningGarden {
 	Expect(client.Ping()).To(Succeed(), "tried to restart garden while it was not running")
 	Expect(client.Stop()).To(Succeed())
-	return startGarden(argv...)
-}
-
-func startGardenWithoutDefaultRootfs(argv ...string) *runner.RunningGarden {
-	return runner.Start(binaries, "", nil, argv...)
+	return runner.Start(config)
 }
 
 func runIPTables(ipTablesArgs ...string) ([]byte, error) {
@@ -162,4 +150,20 @@ func nodeToString(ginkgoNode int) string {
 	Expect(r).To(BeNumerically(">=", 'a'))
 	Expect(r).To(BeNumerically("<=", 'z'))
 	return string(r)
+}
+
+func intptr(i int) *int {
+	return &i
+}
+
+func uint64ptr(i uint64) *uint64 {
+	return &i
+}
+
+func uint32ptr(i uint32) *uint32 {
+	return &i
+}
+
+func boolptr(b bool) *bool {
+	return &b
 }

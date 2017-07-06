@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"io"
+	"syscall"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -13,7 +14,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -58,7 +58,7 @@ var _ = Describe("rootless containers", func() {
 
 		unprivilegedUser := &syscall.Credential{Uid: unprivilegedUID, Gid: unprivilegedGID}
 
-		Expect(exec.Command("cp", "-r", os.Getenv("GARDEN_TEST_ROOTFS"), imagePath).Run()).To(Succeed())
+		Expect(exec.Command("cp", "-r", defaultTestRootFS, imagePath).Run()).To(Succeed())
 		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), runcRootDir).Run()).To(Succeed())
 		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), imagePath).Run()).To(Succeed())
 		// The 'alice' user in the GARDEN_TEST_ROOTFS has a UID of 1000
@@ -66,19 +66,18 @@ var _ = Describe("rootless containers", func() {
 		// 100000 + (1000 - 1) = 100999 (-1 because we map from 0)
 		Expect(exec.Command("chown", "-R", "100999:100999", filepath.Join(imagePath, "rootfs", "home", "alice")).Run()).To(Succeed())
 
-		client = startGardenAsUser(
-			unprivilegedUser,
-			"--skip-setup",
-			"--image-plugin", binaries.ImagePlugin,
-			"--image-plugin-extra-arg", "\"--rootfs-path\"",
-			"--image-plugin-extra-arg", filepath.Join(imagePath, "rootfs"),
-			"--uid-map-start", "100000", // /etc/subuid entry baked into the cfgarden/garden-ci-ubuntu image
-			"--uid-map-length", "65536",
-			"--gid-map-start", "100000",
-			"--gid-map-length", "65536",
-			"--network-plugin", "/bin/true",
-			"--runc-root", runcRootDir,
-		)
+		config.ImagePluginBin = binaries.ImagePlugin
+		config.NetworkPluginBin = "/bin/true"
+		config.User = unprivilegedUser
+		config.SkipSetup = boolptr(true)
+		config.UIDMapStart = uint32ptr(100000)
+		config.UIDMapLength = uint32ptr(65536)
+		config.GIDMapStart = uint32ptr(100000)
+		config.GIDMapLength = uint32ptr(65536)
+		config.RuncRoot = runcRootDir
+		config.ImagePluginExtraArgs = []string{"\"--rootfs-path\"", filepath.Join(imagePath, "rootfs")}
+
+		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
