@@ -86,6 +86,7 @@ var _ = Describe("Image Plugin", func() {
 					"\"--create-whoami-path\"",
 					filepath.Join(tmpDir, "create-whoami"),
 				)
+			})
 
 			JustBeforeEach(func() {
 				var err error
