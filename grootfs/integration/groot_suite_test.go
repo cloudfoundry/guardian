@@ -151,5 +151,9 @@ func writeMegabytes(outputPath string, mb int) error {
 }
 
 func mountByDefault() bool {
-	return GrootfsTestUid == 0 || Driver == "btrfs"
+	return GrootfsTestUid == 0 || isBtrfs()
+}
+
+func isBtrfs() bool {
+	return Driver == "btrfs"
 }

@@ -7,6 +7,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -28,7 +30,6 @@ var _ = Describe("Stats", func() {
 
 	BeforeEach(func() {
 		var err error
-		integration.SkipIfNonRoot(GrootfsTestUid)
 		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		imageID = fmt.Sprintf("random-id-%d", rand.Int())
@@ -74,13 +75,22 @@ var _ = Describe("Stats", func() {
 				BaseImage: baseImagePath,
 				ID:        imageID,
 				DiskLimit: diskLimit,
-				Mount:     true,
+				Mount:     isBtrfs(), // btrfs needs the mount option
 			})
 			Expect(err).ToNot(HaveOccurred())
-			cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(image.Rootfs, "hello")), "bs=1048576", "count=4")
-			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
+
+			writeFileCmdLine := fmt.Sprintf("dd if=/dev/zero of=%s bs=1048576 count=4", filepath.Join(image.Rootfs, "hello"))
+
+			var cmd *exec.Cmd
+			if image.Mount != nil {
+				cmd = unshareWithMount(writeFileCmdLine, image.Mount)
+			} else {
+				cmd = exec.Command("sh", "-c", writeFileCmdLine)
+			}
+
+			sess := runAsUser(cmd, GrootfsTestUid, GrootfsTestGid)
 			Eventually(sess).Should(gexec.Exit(0))
+
 			expectedStats = groot.VolumeStats{
 				DiskUsage: groot.DiskUsage{
 					TotalBytesUsed:     9441280,
@@ -168,3 +178,25 @@ var _ = Describe("Stats", func() {
 		})
 	})
 })
+
+func unshareWithMount(cmdLine string, mount *groot.MountInfo) *exec.Cmd {
+	mountOptions := strings.Join(mount.Options, ",")
+	mountCmdLine := fmt.Sprintf("mount -t %s %s -o%s %s", mount.Type, mount.Source, mountOptions, mount.Destination)
+
+	return exec.Command("unshare", "--user", "--map-root-user", "--mount", "sh", "-c",
+		fmt.Sprintf("%s; %s", mountCmdLine, cmdLine))
+}
+
+func runAsUser(cmd *exec.Cmd, uid, gid int) *gexec.Session {
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid: uint32(uid),
+			Gid: uint32(gid),
+		},
+	}
+
+	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	Expect(err).ToNot(HaveOccurred())
+	return sess
+
+}

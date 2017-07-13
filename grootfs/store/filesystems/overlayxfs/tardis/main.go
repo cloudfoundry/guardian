@@ -22,6 +22,7 @@ func main() {
 
 	tardis.Commands = []cli.Command{
 		commands.LimitCommand,
+		commands.StatsCommand,
 	}
 
 	tardis.Run(os.Args)
