@@ -143,7 +143,7 @@ func writeMegabytes(outputPath string, mb int) error {
 	if err != nil {
 		return err
 	}
-	Eventually(sess, 5*time.Second).Should(gexec.Exit())
+	Eventually(sess, 10*time.Second).Should(gexec.Exit())
 	if sess.ExitCode() > 0 {
 		return errors.New(string(sess.Err.Contents()))
 	}
