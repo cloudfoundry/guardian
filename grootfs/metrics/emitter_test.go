@@ -85,7 +85,7 @@ var _ = Describe("Emitter", func() {
 			Expect(*fooMetrics[0].Unit).To(Equal("nanos"))
 			Expect(*fooMetrics[0].Value).To(SatisfyAll(
 				BeNumerically(">", float64(time.Second-time.Millisecond)),
-				BeNumerically("<", float64(time.Second+time.Millisecond)),
+				BeNumerically("<", float64(time.Second+10*time.Millisecond)),
 			))
 		})
 
