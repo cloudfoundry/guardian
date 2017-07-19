@@ -70,6 +70,8 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, _ garden.Proce
 
 	err := c.commandRunner.Run(cmd)
 
+	log.Info("completing")
+
 	defer func() {
 		theErr = processLogs(log, logFilePath, err)
 	}()
