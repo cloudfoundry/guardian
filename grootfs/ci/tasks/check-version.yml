@@ -9,7 +9,7 @@ image_resource:
 
 inputs:
 - name: grootfs-release-develop
-- name: grootfs-release-version
+- name: version
 
 run:
   path: grootfs-release-develop/src/code.cloudfoundry.org/grootfs/ci/scripts/check-version.sh

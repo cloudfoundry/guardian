@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-VERSION=$(cat grootfs-release-version/number)
+VERSION=$(cat version/number)
 
 cd grootfs-release-develop/src/code.cloudfoundry.org/grootfs
 
