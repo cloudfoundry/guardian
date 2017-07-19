@@ -33,11 +33,16 @@ RUN wget https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-2.0.28-linux-amd64
 RUN wget "https://cli.run.pivotal.io/stable?release=debian64&version=6.28.0&source=github-rel" -O cf.deb && \
     dpkg -i cf.deb
 
+###############################
+# Setup the GOPATH
+RUN mkdir -p /go && \
+    mkdir -p /go/src/code.cloudfoundry.org/grootfs
+
 ################################
 # Setup GO
 ENV HOME /root
-ENV GOPATH /root/go
-ENV PATH /root/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV GOPATH /go
+ENV PATH /go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 RUN mkdir -p $GOPATH
 RUN \
   wget -qO- https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz | tar -C /usr/local -xzf -
@@ -59,12 +64,7 @@ RUN go get github.com/fouralarmfire/grootsay
 # Add groot user
 RUN useradd -d /home/groot -m -U groot
 RUN echo "groot ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
-
-###############################
-# Setup the GOPATH
-RUN mkdir -p /go && \
-    mkdir -p /go/src/code.cloudfoundry.org/grootfs && \
-    chown -R groot:groot /go
+RUN chown -R groot:groot /go
 
 ################################
 # Make /root writable (e.g. /root/.docker/...)
