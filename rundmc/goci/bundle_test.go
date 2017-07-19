@@ -218,6 +218,26 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
+	Describe("WithWindowsMemoryLimit", func() {
+		var limit uint64
+		var mem specs.WindowsMemoryResources
+
+		BeforeEach(func() {
+			limit = 500
+			mem = specs.WindowsMemoryResources{Limit: &limit}
+			returnedBundle = initialBundle.WithWindowsMemoryLimit(mem)
+		})
+
+		It("returns a bundle with the windows memory limit", func() {
+			Expect(*(returnedBundle.WindowsResources().Memory)).To(Equal(mem))
+		})
+
+		It("does not modify the original bundle", func() {
+			Expect(returnedBundle).NotTo(Equal(initialBundle))
+			Expect(initialBundle.Resources()).To(BeNil())
+		})
+	})
+
 	Describe("WithCPUShares", func() {
 		var shares uint64 = 10
 

@@ -13,6 +13,9 @@ func Bundle() Bndl {
 		Spec: specs.Spec{
 			Version: "1.0.0-rc6",
 			Linux:   &specs.Linux{},
+			Windows: &specs.Windows{
+				LayerFolders: []string{"ignored-for-now"},
+			},
 			Process: &specs.Process{
 				ConsoleSize: &specs.Box{},
 			},
@@ -74,6 +77,10 @@ func (b Bndl) Resources() *specs.LinuxResources {
 	return b.Spec.Linux.Resources
 }
 
+func (b Bndl) WindowsResources() *specs.WindowsResources {
+	return b.Spec.Windows.Resources
+}
+
 func (b Bndl) WithBlockIO(blockIO specs.LinuxBlockIO) Bndl {
 	resources := b.Resources()
 	if resources == nil {
@@ -106,6 +113,18 @@ func (b Bndl) WithMemoryLimit(limit specs.LinuxMemory) Bndl {
 
 	resources.Memory = &limit
 	b.CloneLinux().Spec.Linux.Resources = resources
+
+	return b
+}
+
+func (b Bndl) WithWindowsMemoryLimit(limit specs.WindowsMemoryResources) Bndl {
+	resources := b.WindowsResources()
+	if resources == nil {
+		resources = &specs.WindowsResources{}
+	}
+
+	resources.Memory = &limit
+	b.CloneWindows().Spec.Windows.Resources = resources
 
 	return b
 }
@@ -254,6 +273,11 @@ func (b *Bndl) CloneLinux() Bndl {
 	b.Spec.Linux = &l
 	return *b
 }
+func (b *Bndl) CloneWindows() Bndl {
+	l := copyWindows(*b.Spec.Windows)
+	b.Spec.Windows = &l
+	return *b
+}
 
 func (b *Bndl) CloneProcess() Bndl {
 	l := (*b.Spec.Process)
@@ -262,5 +286,9 @@ func (b *Bndl) CloneProcess() Bndl {
 }
 
 func copy(l specs.Linux) specs.Linux {
+	return l
+}
+
+func copyWindows(l specs.Windows) specs.Windows {
 	return l
 }
