@@ -1,10 +1,6 @@
 package goci
 
-import (
-	"runtime"
-
-	"github.com/opencontainers/runtime-spec/specs-go"
-)
+import specs "github.com/opencontainers/runtime-spec/specs-go"
 
 // Bndl represents an in-memory OCI bundle
 type Bndl struct {
@@ -15,12 +11,12 @@ type Bndl struct {
 func Bundle() Bndl {
 	return Bndl{
 		Spec: specs.Spec{
-			Version: "1.0.0-rc3",
+			Version: "1.0.0-rc6",
 			Linux:   &specs.Linux{},
-			Platform: specs.Platform{
-				OS:   runtime.GOOS,
-				Arch: runtime.GOARCH,
+			Process: &specs.Process{
+				ConsoleSize: &specs.Box{},
 			},
+			Root: &specs.Root{},
 		},
 	}
 }
@@ -36,7 +32,7 @@ var (
 
 // WithProcess returns a bundle with the process replaced with the given Process. The original bundle is not modified.
 func (b Bndl) WithProcess(process specs.Process) Bndl {
-	b.Spec.Process = process
+	b.Spec.Process = &process
 	return b
 }
 
@@ -50,11 +46,16 @@ func (b Bndl) WithHostname(hostname string) Bndl {
 }
 
 func (b Bndl) Process() specs.Process {
-	return b.Spec.Process
+	return *(b.Spec.Process)
+}
+
+func (b Bndl) WithApparmorProfile(profile string) Bndl {
+	b.CloneProcess().Spec.Process.ApparmorProfile = profile
+	return b
 }
 
 func (b Bndl) WithRootFS(absolutePath string) Bndl {
-	b.Spec.Root = specs.Root{Path: absolutePath}
+	b.Spec.Root = &specs.Root{Path: absolutePath}
 	return b
 }
 
@@ -193,7 +194,7 @@ func (b Bndl) WithCapabilities(capabilities ...string) Bndl {
 		Inheritable: capabilities,
 		Permitted:   capabilities,
 	}
-	b.Spec.Process.Capabilities = caps
+	b.CloneProcess().Spec.Process.Capabilities = caps
 	return b
 }
 
@@ -251,6 +252,12 @@ func Process(args ...string) specs.Process {
 func (b *Bndl) CloneLinux() Bndl {
 	l := copy(*b.Spec.Linux)
 	b.Spec.Linux = &l
+	return *b
+}
+
+func (b *Bndl) CloneProcess() Bndl {
+	l := (*b.Spec.Process)
+	b.Spec.Process = &l
 	return *b
 }
 

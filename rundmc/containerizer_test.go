@@ -430,10 +430,11 @@ var _ = Describe("Rundmc", func() {
 					return goci.Bundle(), errors.New("cannot find bundle")
 				}
 
-				var limit uint64 = 10
+				var limit int64 = 10
 				var shares uint64 = 20
 				return goci.Bndl{
 					Spec: specs.Spec{
+						Root: &specs.Root{},
 						Linux: &specs.Linux{
 							Namespaces: namespaces,
 							Resources: &specs.LinuxResources{

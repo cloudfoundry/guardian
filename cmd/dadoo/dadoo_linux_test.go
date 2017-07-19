@@ -63,7 +63,13 @@ var _ = Describe("Dadoo", func() {
 		Eventually(chown, "2m").Should(gexec.Exit(0))
 
 		bundle = bundle.
-			WithProcess(specs.Process{Args: []string{"/bin/sh", "-c", "exit 12"}, Cwd: "/"}).
+			WithProcess(
+				specs.Process{
+					Args:        []string{"/bin/sh", "-c", "exit 12"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
+				},
+			).
 			WithRootFS(path.Join(bundlePath, "root")).
 			WithNamespace(goci.UserNamespace).
 			WithUIDMappings(specs.LinuxIDMapping{HostID: 1, ContainerID: 0, Size: 100}).
@@ -105,7 +111,13 @@ var _ = Describe("Dadoo", func() {
 		BeforeEach(func() {
 			var err error
 
-			bundle = bundle.WithProcess(specs.Process{Args: []string{"/bin/sh", "-c", "sleep 9999"}, Cwd: "/"})
+			bundle = bundle.WithProcess(
+				specs.Process{
+					Args:        []string{"/bin/sh", "-c", "sleep 9999"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
+				},
+			)
 			processDir = filepath.Join(bundlePath, "processes", "abc")
 			Expect(os.MkdirAll(processDir, 0777)).To(Succeed())
 
@@ -145,8 +157,9 @@ var _ = Describe("Dadoo", func() {
 		Context("not requesting a TTY", func() {
 			It("should return the exit code of the container process", func() {
 				processSpec, err := json.Marshal(&specs.Process{
-					Args: []string{"/bin/sh", "-c", "exit 24"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "exit 24"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -163,8 +176,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("should write the exit code to a file named exitcode in the container dir", func() {
 				processSpec, err := json.Marshal(&specs.Process{
-					Args: []string{"/bin/sh", "-c", "exit 24"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "exit 24"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -183,8 +197,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("if the process is signalled the exitcode should be 128 + the signal number", func() {
 				processSpec, err := json.Marshal(&specs.Process{
-					Args: []string{"/bin/sh", "-c", "kill -9 $$"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "kill -9 $$"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -203,8 +218,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("should open the exit pipe and close it when it exits", func() {
 				processSpec, err := json.Marshal(&specs.Process{
-					Args: []string{"/bin/sh", "-c", "cat <&0"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "cat <&0"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -241,8 +257,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("should not destroy the container when the exec process exits", func() {
 				processSpec, err := json.Marshal(&specs.Process{
-					Args: []string{"/bin/sh", "-c", "exit 24"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "exit 24"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -264,8 +281,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("should write to the sync pipe when streaming pipes are open", func(done Done) {
 				processSpec, err := json.Marshal(&specs.Process{
-					Args: []string{"/bin/sh", "-c", "echo hello-world; exit 24"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "echo hello-world; exit 24"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -307,8 +325,9 @@ var _ = Describe("Dadoo", func() {
 
 				It("uses the provided value as the runc root dir", func() {
 					processSpec, err := json.Marshal(&specs.Process{
-						Args: []string{"/bin/sh", "-c", "exit 0"},
-						Cwd:  "/",
+						Args:        []string{"/bin/sh", "-c", "exit 0"},
+						Cwd:         "/",
+						ConsoleSize: &specs.Box{},
 					})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -331,8 +350,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("should write the container's output to the named pipes inside the process dir", func() {
 				spec := specs.Process{
-					Args: []string{"/bin/sh", "-c", "cat <&0"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "cat <&0"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				}
 
 				encSpec, err := json.Marshal(spec)
@@ -363,8 +383,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("ensures the user process is allowed to write to stdout", func() {
 				spec := specs.Process{
-					Args: []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				}
 
 				encSpec, err := json.Marshal(spec)
@@ -406,9 +427,10 @@ var _ = Describe("Dadoo", func() {
 
 			It("should connect the process to a TTY", func() {
 				spec := specs.Process{
-					Args:     []string{"/bin/sh", "-c", `test -t 1`},
-					Cwd:      "/",
-					Terminal: true,
+					Args:        []string{"/bin/sh", "-c", `test -t 1`},
+					Cwd:         "/",
+					Terminal:    true,
+					ConsoleSize: &specs.Box{},
 				}
 
 				encSpec, err := json.Marshal(spec)
@@ -438,9 +460,10 @@ var _ = Describe("Dadoo", func() {
 
 			It("should forward IO", func() {
 				spec := specs.Process{
-					Args:     []string{"/bin/sh", "-c", `read x; echo "x=$x"`},
-					Cwd:      "/",
-					Terminal: true,
+					Args:        []string{"/bin/sh", "-c", `read x; echo "x=$x"`},
+					Cwd:         "/",
+					Terminal:    true,
+					ConsoleSize: &specs.Box{},
 				}
 
 				encSpec, err := json.Marshal(spec)
@@ -482,8 +505,9 @@ var _ = Describe("Dadoo", func() {
 						"-c",
 						"while true; do stty -a && sleep 1; done",
 					},
-					Cwd:      "/",
-					Terminal: true,
+					Cwd:         "/",
+					Terminal:    true,
+					ConsoleSize: &specs.Box{},
 				}
 
 				encSpec, err := json.Marshal(spec)
@@ -533,7 +557,7 @@ var _ = Describe("Dadoo", func() {
 						},
 						Cwd:      "/",
 						Terminal: true,
-						ConsoleSize: specs.Box{
+						ConsoleSize: &specs.Box{
 							Height: 17,
 							Width:  13,
 						},
@@ -582,8 +606,9 @@ var _ = Describe("Dadoo", func() {
 						done
 					`,
 						},
-						Cwd:      "/",
-						Terminal: true,
+						Cwd:         "/",
+						Terminal:    true,
+						ConsoleSize: &specs.Box{},
 					}
 
 					encSpec, err := json.Marshal(spec)
@@ -630,8 +655,9 @@ var _ = Describe("Dadoo", func() {
 
 				BeforeEach(func() {
 					spec := specs.Process{
-						Args:     []string{"true"},
-						Terminal: true,
+						Args:        []string{"true"},
+						Terminal:    true,
+						ConsoleSize: &specs.Box{},
 					}
 
 					var err error
@@ -718,8 +744,9 @@ var _ = Describe("Dadoo", func() {
 
 				It("exits with 2", func() {
 					spec := specs.Process{
-						Args: []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
-						Cwd:  "/",
+						Args:        []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
+						Cwd:         "/",
+						ConsoleSize: &specs.Box{},
 					}
 
 					encSpec, err := json.Marshal(spec)
@@ -751,8 +778,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("exits with 2", func() {
 				spec := specs.Process{
-					Args: []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				}
 
 				encSpec, err := json.Marshal(spec)
@@ -776,8 +804,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("exits with 2", func() {
 				spec := specs.Process{
-					Args: []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				}
 
 				encSpec, err := json.Marshal(spec)
@@ -804,8 +833,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("exits with 2", func() {
 				spec := specs.Process{
-					Args: []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				}
 
 				encSpec, err := json.Marshal(spec)
@@ -834,8 +864,9 @@ var _ = Describe("Dadoo", func() {
 
 			It("exits with 2", func() {
 				spec := specs.Process{
-					Args: []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
-					Cwd:  "/",
+					Args:        []string{"/bin/sh", "-c", "while true; do echo hello; sleep 0.1; done"},
+					Cwd:         "/",
+					ConsoleSize: &specs.Box{},
 				}
 
 				encSpec, err := json.Marshal(spec)

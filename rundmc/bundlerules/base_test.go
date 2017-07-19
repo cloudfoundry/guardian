@@ -19,8 +19,28 @@ var _ = Describe("Base", func() {
 
 	BeforeEach(func() {
 		t := true
-		privilegeBndl = goci.Bndl{Spec: specs.Spec{Linux: &specs.Linux{Resources: &specs.LinuxResources{DisableOOMKiller: &t}}}}.WithNamespace(goci.NetworkNamespace)
-		unprivilegeBndl = goci.Bndl{Spec: specs.Spec{Linux: &specs.Linux{Resources: &specs.LinuxResources{DisableOOMKiller: &t}}}}.WithNamespace(goci.UserNamespace)
+		privilegeBndl = goci.Bndl{
+			Spec: specs.Spec{
+				Linux: &specs.Linux{
+					Resources: &specs.LinuxResources{
+						Memory: &specs.LinuxMemory{
+							DisableOOMKiller: &t,
+						},
+					},
+				},
+			},
+		}.WithNamespace(goci.NetworkNamespace)
+		unprivilegeBndl = goci.Bndl{
+			Spec: specs.Spec{
+				Linux: &specs.Linux{
+					Resources: &specs.LinuxResources{
+						Memory: &specs.LinuxMemory{
+							DisableOOMKiller: &t,
+						},
+					},
+				},
+			},
+		}.WithNamespace(goci.UserNamespace)
 
 		rule = bundlerules.Base{
 			PrivilegedBase:   privilegeBndl,
@@ -44,7 +64,7 @@ var _ = Describe("Base", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Spec.Linux.Resources is a pointer
-			Expect(retBndl.Spec.Linux.Resources.DisableOOMKiller).NotTo(BeIdenticalTo(privilegeBndl.Spec.Linux.Resources.DisableOOMKiller))
+			Expect(retBndl.Spec.Linux.Resources.Memory.DisableOOMKiller).NotTo(BeIdenticalTo(privilegeBndl.Spec.Linux.Resources.Memory.DisableOOMKiller))
 		})
 	})
 
@@ -65,7 +85,7 @@ var _ = Describe("Base", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Spec.Linux.Resources is a pointer
-			Expect(retBndl.Spec.Linux.Resources.DisableOOMKiller).NotTo(BeIdenticalTo(unprivilegeBndl.Spec.Linux.Resources.DisableOOMKiller))
+			Expect(retBndl.Spec.Linux.Resources.Memory.DisableOOMKiller).NotTo(BeIdenticalTo(unprivilegeBndl.Spec.Linux.Resources.Memory.DisableOOMKiller))
 		})
 	})
 })

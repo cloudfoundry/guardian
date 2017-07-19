@@ -625,10 +625,10 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			Permitted:   UnprivilegedMaxCaps,
 			Ambient:     UnprivilegedMaxCaps,
 		},
-		Args: []string{"/tmp/garden-init"},
-		Cwd:  "/",
+		Args:        []string{"/tmp/garden-init"},
+		Cwd:         "/",
+		ConsoleSize: &specs.Box{},
 	}
-
 	mounts := defaultBindMounts(cmd.Bin.Init.Path())
 	privilegedMounts := append(mounts, privilegedMounts()...)
 	unprivilegedMounts := append(mounts, unprivilegedMounts()...)
@@ -647,7 +647,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		WithMaskedPaths(defaultMaskedPaths())
 	unprivilegedBundle.Spec.Linux.Seccomp = seccomp
 	if appArmorProfile != "" {
-		unprivilegedBundle.Spec.Process.ApparmorProfile = appArmorProfile
+		unprivilegedBundle = unprivilegedBundle.WithApparmorProfile(appArmorProfile)
 	}
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).
@@ -655,6 +655,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	if !runningAsRoot() {
 		unprivilegedBundle = unprivilegedBundle.WithResources(&specs.LinuxResources{})
 	}
+
 	log.Debug("base-bundles", lager.Data{
 		"privileged":   privilegedBundle,
 		"unprivileged": unprivilegedBundle,
@@ -678,7 +679,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		},
 		bundlerules.Limits{
 			CpuQuotaPerShare: cmd.Limits.CpuQuotaPerShare,
-			TCPMemoryLimit:   cmd.Limits.TCPMemoryLimit,
+			TCPMemoryLimit:   int64(cmd.Limits.TCPMemoryLimit),
 			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
 		},
 		bundlerules.Mounts{},

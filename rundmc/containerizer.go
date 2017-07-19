@@ -292,7 +292,7 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 				LimitInShares: *bundle.Resources().CPU.Shares,
 			},
 			Memory: garden.MemoryLimits{
-				LimitInBytes: *bundle.Resources().Memory.Limit,
+				LimitInBytes: uint64(*bundle.Resources().Memory.Limit),
 			},
 		},
 		Privileged: privileged,

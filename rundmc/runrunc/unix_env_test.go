@@ -7,12 +7,14 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("UnixEnvFor", func() {
 	Context("when the user is specified in the process spec", func() {
 		DescribeTable("appends the correct USER env var", func(specEnv, expectedEnv []string) {
-			env := runrunc.UnixEnvFor(2, goci.Bndl{}, garden.ProcessSpec{
+			bundle := goci.Bundle()
+			env := runrunc.UnixEnvFor(2, bundle, garden.ProcessSpec{
 				User: "spiderman",
 				Env:  specEnv,
 			})
@@ -74,7 +76,8 @@ var _ = Describe("UnixEnvFor", func() {
 
 	Context("when the user is not specified in the process spec", func() {
 		DescribeTable("appends the correct USER env var", func(specEnv, expectedEnv []string) {
-			env := runrunc.UnixEnvFor(1, goci.Bndl{}, garden.ProcessSpec{
+			bundle := goci.Bundle()
+			env := runrunc.UnixEnvFor(1, bundle, garden.ProcessSpec{
 				Env: specEnv,
 			})
 
@@ -135,7 +138,8 @@ var _ = Describe("UnixEnvFor", func() {
 
 	Context("when the environment already contains a PATH", func() {
 		It("passes the environment variables", func() {
-			env := runrunc.UnixEnvFor(1, goci.Bndl{}, garden.ProcessSpec{
+			bundle := goci.Bundle()
+			env := runrunc.UnixEnvFor(1, bundle, garden.ProcessSpec{
 				Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
 			})
 
@@ -145,7 +149,8 @@ var _ = Describe("UnixEnvFor", func() {
 
 	Context("when the environment does not already contain a PATH", func() {
 		DescribeTable("appends a default PATH", func(procUser string, uid int, specEnv, expectedEnv []string) {
-			env := runrunc.UnixEnvFor(uid, goci.Bndl{}, garden.ProcessSpec{
+			bundle := goci.Bundle()
+			env := runrunc.UnixEnvFor(uid, bundle, garden.ProcessSpec{
 				Env:  specEnv,
 				User: procUser,
 			})
@@ -209,7 +214,7 @@ var _ = Describe("UnixEnvFor", func() {
 		var (
 			processEnv   []string
 			containerEnv []string
-			bndl         goci.Bndl
+			bundle       goci.Bndl
 
 			env []string
 		)
@@ -220,10 +225,9 @@ var _ = Describe("UnixEnvFor", func() {
 		})
 
 		JustBeforeEach(func() {
-			bndl = goci.Bundle()
-			bndl.Spec.Process.Env = containerEnv
+			bundle = goci.Bundle().WithProcess(specs.Process{Env: containerEnv})
 
-			env = runrunc.UnixEnvFor(9, bndl, garden.ProcessSpec{
+			env = runrunc.UnixEnvFor(9, bundle, garden.ProcessSpec{
 				Env: processEnv,
 			})
 		})
@@ -232,9 +236,9 @@ var _ = Describe("UnixEnvFor", func() {
 			envWContainer := make([]string, len(env))
 			copy(envWContainer, env)
 
-			bndl.Spec.Process.Env = []string{}
+			bundle.Spec.Process.Env = []string{}
 
-			env = runrunc.UnixEnvFor(9, bndl, garden.ProcessSpec{
+			env = runrunc.UnixEnvFor(9, bundle, garden.ProcessSpec{
 				Env: processEnv,
 			})
 

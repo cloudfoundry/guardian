@@ -83,7 +83,7 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		}
 	}
 
-	consoleBox := specs.Box{
+	consoleBox := &specs.Box{
 		Width:  80,
 		Height: 24,
 	}

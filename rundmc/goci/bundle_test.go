@@ -4,7 +4,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/runtime-spec/specs-go"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("Bundle", func() {
@@ -16,7 +16,7 @@ var _ = Describe("Bundle", func() {
 	})
 
 	It("specifies the correct version", func() {
-		Expect(initialBundle.Spec.Version).To(Equal("1.0.0-rc3"))
+		Expect(initialBundle.Spec.Version).To(Equal("1.0.0-rc6"))
 	})
 
 	Describe("WithHostname", func() {
@@ -205,11 +205,11 @@ var _ = Describe("Bundle", func() {
 		var t = true
 
 		BeforeEach(func() {
-			returnedBundle = initialBundle.WithResources(&specs.LinuxResources{DisableOOMKiller: &t})
+			returnedBundle = initialBundle.WithResources(&specs.LinuxResources{Memory: &specs.LinuxMemory{DisableOOMKiller: &t}})
 		})
 
 		It("returns a bundle with the resources added to the runtime spec", func() {
-			Expect(returnedBundle.Resources()).To(Equal(&specs.LinuxResources{DisableOOMKiller: &t}))
+			Expect(returnedBundle.Resources()).To(Equal(&specs.LinuxResources{Memory: &specs.LinuxMemory{DisableOOMKiller: &t}}))
 		})
 
 		It("does not modify the original bundle", func() {

@@ -166,21 +166,21 @@ var _ = Describe("ExecPreparer", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(spec.Process.Rlimits).To(ConsistOf(
-			specs.LinuxRlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
-			specs.LinuxRlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
-			specs.LinuxRlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
-			specs.LinuxRlimit{Type: "RLIMIT_DATA", Hard: 99, Soft: 99},
-			specs.LinuxRlimit{Type: "RLIMIT_FSIZE", Hard: 101, Soft: 101},
-			specs.LinuxRlimit{Type: "RLIMIT_LOCKS", Hard: 111, Soft: 111},
-			specs.LinuxRlimit{Type: "RLIMIT_MEMLOCK", Hard: 987, Soft: 987},
-			specs.LinuxRlimit{Type: "RLIMIT_MSGQUEUE", Hard: 777, Soft: 777},
-			specs.LinuxRlimit{Type: "RLIMIT_NICE", Hard: 111, Soft: 111},
-			specs.LinuxRlimit{Type: "RLIMIT_NOFILE", Hard: 222, Soft: 222},
-			specs.LinuxRlimit{Type: "RLIMIT_NPROC", Hard: 1234, Soft: 1234},
-			specs.LinuxRlimit{Type: "RLIMIT_RSS", Hard: 888, Soft: 888},
-			specs.LinuxRlimit{Type: "RLIMIT_RTPRIO", Hard: 254, Soft: 254},
-			specs.LinuxRlimit{Type: "RLIMIT_SIGPENDING", Hard: 101, Soft: 101},
-			specs.LinuxRlimit{Type: "RLIMIT_STACK", Hard: 44, Soft: 44},
+			specs.POSIXRlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
+			specs.POSIXRlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
+			specs.POSIXRlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
+			specs.POSIXRlimit{Type: "RLIMIT_DATA", Hard: 99, Soft: 99},
+			specs.POSIXRlimit{Type: "RLIMIT_FSIZE", Hard: 101, Soft: 101},
+			specs.POSIXRlimit{Type: "RLIMIT_LOCKS", Hard: 111, Soft: 111},
+			specs.POSIXRlimit{Type: "RLIMIT_MEMLOCK", Hard: 987, Soft: 987},
+			specs.POSIXRlimit{Type: "RLIMIT_MSGQUEUE", Hard: 777, Soft: 777},
+			specs.POSIXRlimit{Type: "RLIMIT_NICE", Hard: 111, Soft: 111},
+			specs.POSIXRlimit{Type: "RLIMIT_NOFILE", Hard: 222, Soft: 222},
+			specs.POSIXRlimit{Type: "RLIMIT_NPROC", Hard: 1234, Soft: 1234},
+			specs.POSIXRlimit{Type: "RLIMIT_RSS", Hard: 888, Soft: 888},
+			specs.POSIXRlimit{Type: "RLIMIT_RTPRIO", Hard: 254, Soft: 254},
+			specs.POSIXRlimit{Type: "RLIMIT_SIGPENDING", Hard: 101, Soft: 101},
+			specs.POSIXRlimit{Type: "RLIMIT_STACK", Hard: 44, Soft: 44},
 		))
 	})
 
