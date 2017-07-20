@@ -1,10 +1,6 @@
 package runrunc
 
-import (
-	"fmt"
-
-	"github.com/opencontainers/runc/libcontainer/user"
-)
+import "fmt"
 
 const (
 	DefaultUID  int    = 0
@@ -12,8 +8,8 @@ const (
 	DefaultHome string = `C:\\Users\\ContainerAdministrator`
 )
 
-func LookupUser(rootFsPath, userName string) (*user.ExecUser, error) {
-	user := &user.ExecUser{Uid: DefaultUID, Gid: DefaultGID, Home: DefaultHome}
+func LookupUser(rootFsPath, userName string) (*ExecUser, error) {
+	user := &ExecUser{Uid: DefaultUID, Gid: DefaultGID, Home: DefaultHome}
 	if userName != "" {
 		user.Home = fmt.Sprintf("C:\\Users\\%s", userName)
 	}

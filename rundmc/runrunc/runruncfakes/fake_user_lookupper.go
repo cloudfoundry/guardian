@@ -5,29 +5,28 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"github.com/opencontainers/runc/libcontainer/user"
 )
 
 type FakeUserLookupper struct {
-	LookupStub        func(rootFsPath string, user string) (*user.ExecUser, error)
+	LookupStub        func(rootFsPath string, user string) (*runrunc.ExecUser, error)
 	lookupMutex       sync.RWMutex
 	lookupArgsForCall []struct {
 		rootFsPath string
 		user       string
 	}
 	lookupReturns struct {
-		result1 *user.ExecUser
+		result1 *runrunc.ExecUser
 		result2 error
 	}
 	lookupReturnsOnCall map[int]struct {
-		result1 *user.ExecUser
+		result1 *runrunc.ExecUser
 		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeUserLookupper) Lookup(rootFsPath string, user string) (*user.ExecUser, error) {
+func (fake *FakeUserLookupper) Lookup(rootFsPath string, user string) (*runrunc.ExecUser, error) {
 	fake.lookupMutex.Lock()
 	ret, specificReturn := fake.lookupReturnsOnCall[len(fake.lookupArgsForCall)]
 	fake.lookupArgsForCall = append(fake.lookupArgsForCall, struct {
@@ -57,24 +56,24 @@ func (fake *FakeUserLookupper) LookupArgsForCall(i int) (string, string) {
 	return fake.lookupArgsForCall[i].rootFsPath, fake.lookupArgsForCall[i].user
 }
 
-func (fake *FakeUserLookupper) LookupReturns(result1 *user.ExecUser, result2 error) {
+func (fake *FakeUserLookupper) LookupReturns(result1 *runrunc.ExecUser, result2 error) {
 	fake.LookupStub = nil
 	fake.lookupReturns = struct {
-		result1 *user.ExecUser
+		result1 *runrunc.ExecUser
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeUserLookupper) LookupReturnsOnCall(i int, result1 *user.ExecUser, result2 error) {
+func (fake *FakeUserLookupper) LookupReturnsOnCall(i int, result1 *runrunc.ExecUser, result2 error) {
 	fake.LookupStub = nil
 	if fake.lookupReturnsOnCall == nil {
 		fake.lookupReturnsOnCall = make(map[int]struct {
-			result1 *user.ExecUser
+			result1 *runrunc.ExecUser
 			result2 error
 		})
 	}
 	fake.lookupReturnsOnCall[i] = struct {
-		result1 *user.ExecUser
+		result1 *runrunc.ExecUser
 		result2 error
 	}{result1, result2}
 }

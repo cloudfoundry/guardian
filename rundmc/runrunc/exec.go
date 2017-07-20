@@ -8,7 +8,6 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
-	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -24,16 +23,23 @@ type UidGenerator interface {
 	Generate() string
 }
 
+type ExecUser struct {
+	Uid   int
+	Gid   int
+	Sgids []int
+	Home  string
+}
+
 type UserLookupper interface {
-	Lookup(rootFsPath string, user string) (*user.ExecUser, error)
+	Lookup(rootFsPath string, user string) (*ExecUser, error)
 }
 type Mkdirer interface {
 	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
 
-type LookupFunc func(rootfsPath, user string) (*user.ExecUser, error)
+type LookupFunc func(rootfsPath, user string) (*ExecUser, error)
 
-func (fn LookupFunc) Lookup(rootfsPath, user string) (*user.ExecUser, error) {
+func (fn LookupFunc) Lookup(rootfsPath, user string) (*ExecUser, error) {
 	return fn(rootfsPath, user)
 }
 

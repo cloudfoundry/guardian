@@ -12,9 +12,14 @@ const (
 	DefaultHome string = "/root"
 )
 
-func LookupUser(rootFsPath, userName string) (*user.ExecUser, error) {
+func LookupUser(rootFsPath, userName string) (*ExecUser, error) {
 	defaultUser := &user.ExecUser{Uid: DefaultUID, Gid: DefaultGID, Home: DefaultHome}
 	passwdPath := filepath.Join(rootFsPath, "etc", "passwd")
 
-	return user.GetExecUserPath(userName, defaultUser, passwdPath, "")
+	execUser, err := user.GetExecUserPath(userName, defaultUser, passwdPath, "")
+	if err != nil {
+		return nil, err
+	}
+
+	return &ExecUser{Uid: execUser.Uid, Gid: execUser.Gid, Home: execUser.Home, Sgids: execUser.Sgids}, nil
 }

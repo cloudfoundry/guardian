@@ -14,7 +14,6 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/runc/libcontainer/user"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -98,7 +97,7 @@ var _ = Describe("ExecPreparer", func() {
 			return bndl, nil
 		}
 
-		users.LookupReturns(&user.ExecUser{}, nil)
+		users.LookupReturns(&runrunc.ExecUser{}, nil)
 		enver.EnvForReturns([]string{"FOO=bar"})
 
 		Expect(ioutil.WriteFile(filepath.Join(bundlePath, "pidfile"), []byte("999"), 0644)).To(Succeed())
@@ -117,7 +116,7 @@ var _ = Describe("ExecPreparer", func() {
 	})
 
 	It("returns the HostUID and HostGID in the returned spec", func() {
-		users.LookupReturns(&user.ExecUser{Uid: 234, Gid: 567}, nil)
+		users.LookupReturns(&runrunc.ExecUser{Uid: 234, Gid: 567}, nil)
 
 		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{}})
 		Expect(err).NotTo(HaveOccurred())
@@ -127,7 +126,7 @@ var _ = Describe("ExecPreparer", func() {
 	})
 
 	It("passes the correct env", func() {
-		users.LookupReturns(&user.ExecUser{Uid: 234, Gid: 567}, nil)
+		users.LookupReturns(&runrunc.ExecUser{Uid: 234, Gid: 567}, nil)
 
 		processSpec := garden.ProcessSpec{ID: "some-id"}
 		preparedSpec, err := preparer.Prepare(logger, bundlePath, processSpec)
@@ -228,7 +227,7 @@ var _ = Describe("ExecPreparer", func() {
 	Describe("passing the correct uid and gid", func() {
 		Context("when the bundle can be loaded", func() {
 			JustBeforeEach(func() {
-				users.LookupReturns(&user.ExecUser{Uid: 9, Gid: 7}, nil)
+				users.LookupReturns(&runrunc.ExecUser{Uid: 9, Gid: 7}, nil)
 
 				var err error
 				spec, err = preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
@@ -261,7 +260,7 @@ var _ = Describe("ExecPreparer", func() {
 
 		Context("when User Lookup returns an error", func() {
 			It("passes a process.json with the correct user and group ids", func() {
-				users.LookupReturns(&user.ExecUser{Uid: 0, Gid: 0}, errors.New("bang"))
+				users.LookupReturns(&runrunc.ExecUser{Uid: 0, Gid: 0}, errors.New("bang"))
 
 				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
 				Expect(err).To(MatchError(ContainSubstring("bang")))
@@ -299,7 +298,7 @@ var _ = Describe("ExecPreparer", func() {
 
 		Context("and the user is not root", func() {
 			It("removes any caps not in nonRootMaxCaps list", func() {
-				users.LookupReturns(&user.ExecUser{Uid: 1234, Gid: 0}, nil)
+				users.LookupReturns(&runrunc.ExecUser{Uid: 1234, Gid: 0}, nil)
 				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
 
 				Expect(err).NotTo(HaveOccurred())
@@ -339,7 +338,7 @@ var _ = Describe("ExecPreparer", func() {
 
 			Describe("Creating the working directory", func() {
 				JustBeforeEach(func() {
-					users.LookupReturns(&user.ExecUser{Uid: 1012, Gid: 1013}, nil)
+					users.LookupReturns(&runrunc.ExecUser{Uid: 1012, Gid: 1013}, nil)
 
 					_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
 						Dir: "/path/to/banana/dir",
@@ -394,7 +393,7 @@ var _ = Describe("ExecPreparer", func() {
 
 		Context("when the working directory is not specified", func() {
 			It("defaults to the user's HOME directory", func() {
-				users.LookupReturns(&user.ExecUser{Home: "/the/home/dir"}, nil)
+				users.LookupReturns(&runrunc.ExecUser{Home: "/the/home/dir"}, nil)
 
 				spec, err := preparer.Prepare(
 					logger, bundlePath,
@@ -406,7 +405,7 @@ var _ = Describe("ExecPreparer", func() {
 			})
 
 			It("creates the directory", func() {
-				users.LookupReturns(&user.ExecUser{Uid: 1012, Gid: 1013, Home: "/some/dir"}, nil)
+				users.LookupReturns(&runrunc.ExecUser{Uid: 1012, Gid: 1013, Home: "/some/dir"}, nil)
 
 				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
 				Expect(err).NotTo(HaveOccurred())
@@ -422,7 +421,7 @@ var _ = Describe("ExecPreparer", func() {
 				})
 
 				It("does not create the directory", func() {
-					users.LookupReturns(&user.ExecUser{Uid: 1012, Gid: 1013, Home: "/some/dir"}, nil)
+					users.LookupReturns(&runrunc.ExecUser{Uid: 1012, Gid: 1013, Home: "/some/dir"}, nil)
 
 					_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
 					Expect(err).NotTo(HaveOccurred())
