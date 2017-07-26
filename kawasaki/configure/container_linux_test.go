@@ -83,7 +83,7 @@ var _ = Describe("Container", func() {
 		sess, err := gexec.Start(exec.Command("ip", "netns", "delete", netNsName), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess).Should(gexec.Exit(0))
-		netNsPath := fmt.Sprintf("/run/netns/%s", netNsName)
+		netNsPath := fmt.Sprintf("/var/run/netns/%s", netNsName)
 		Eventually(netNsPath).ShouldNot(BeAnExistingFile())
 	})
 
