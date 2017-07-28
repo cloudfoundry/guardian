@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -39,14 +40,14 @@ var _ = Describe("Clean", func() {
 			sourceImagePath, err = ioutil.TempDir("", "")
 			sess, err := gexec.Start(exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(sourceImagePath, "foo")), "count=2", "bs=1M"), GinkgoWriter, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 			baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
 			baseImagePath = baseImageFile.Name()
 
 			anotherSourceImagePath, err = ioutil.TempDir("", "")
 			sess, err = gexec.Start(exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(anotherSourceImagePath, "foo")), "count=2", "bs=1M"), GinkgoWriter, nil)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 			anotherBaseImageFile := integration.CreateBaseImageTar(anotherSourceImagePath)
 			anotherBaseImagePath = anotherBaseImageFile.Name()
 
