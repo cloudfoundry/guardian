@@ -202,7 +202,7 @@ var _ = Describe("Base Image Puller", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(BeNumerically("~", 2*len(layersDigest), 1))
+		Eventually(fakeMetricsEmitter.TryEmitDurationFromCallCount).Should(Equal(2 * len(layersDigest)))
 	})
 
 	It("uses the locksmith for each layer", func() {
