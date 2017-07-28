@@ -161,7 +161,7 @@ func streamTar(r *tar.Reader) []tarEntry {
 		}
 
 		contents := make([]byte, header.Size)
-		r.Read(contents)
+		_, _ = r.Read(contents)
 		l = append(l, tarEntry{
 			header:   header,
 			contents: contents,

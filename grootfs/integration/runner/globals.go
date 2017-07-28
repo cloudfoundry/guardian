@@ -167,7 +167,7 @@ func (r *Runner) SetConfig(cfg config.Config) error {
 
 	_, err = configFile.Write(configYaml)
 	if err != nil {
-		os.Remove(configFile.Name())
+		_ = os.Remove(configFile.Name())
 		return err
 	}
 

@@ -38,6 +38,7 @@ var _ = Describe("Clean", func() {
 		BeforeEach(func() {
 			var err error
 			sourceImagePath, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
 			sess, err := gexec.Start(exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(sourceImagePath, "foo")), "count=2", "bs=1M"), GinkgoWriter, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
@@ -45,6 +46,7 @@ var _ = Describe("Clean", func() {
 			baseImagePath = baseImageFile.Name()
 
 			anotherSourceImagePath, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
 			sess, err = gexec.Start(exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(anotherSourceImagePath, "foo")), "count=2", "bs=1M"), GinkgoWriter, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
@@ -52,6 +54,7 @@ var _ = Describe("Clean", func() {
 			anotherBaseImagePath = anotherBaseImageFile.Name()
 
 			yetAnotherSourceImagePath, err = ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
 			yetAnotherBaseImageFile := integration.CreateBaseImageTar(yetAnotherSourceImagePath)
 			yetAnotherBaseImagePath = yetAnotherBaseImageFile.Name()
 

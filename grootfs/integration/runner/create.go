@@ -37,7 +37,7 @@ func (r Runner) Create(spec groot.CreateSpec) (groot.ImageInfo, error) {
 	}
 
 	imageInfo := groot.ImageInfo{}
-	json.Unmarshal([]byte(output), &imageInfo)
+	_ = json.Unmarshal([]byte(output), &imageInfo)
 	imageInfo.Path = filepath.Dir(imageInfo.Rootfs)
 
 	return imageInfo, nil

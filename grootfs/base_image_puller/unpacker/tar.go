@@ -289,7 +289,7 @@ func (u *TarUnpacker) createRegularFile(path string, tarHeader *tar.Header, tarR
 
 	_, err = io.Copy(file, tarReader)
 	if err != nil {
-		file.Close()
+		_ = file.Close()
 		return errorspkg.Wrapf(err, "writing to file `%s`", path)
 	}
 

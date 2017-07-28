@@ -476,7 +476,7 @@ var _ = Describe("Metrics", func() {
 				MetronEndpoint: fmt.Sprintf("127.0.0.1:%d", fakeMetronPort),
 			}
 
-			Runner.SetConfig(cfg)
+			Expect(Runner.SetConfig(cfg)).To(Succeed())
 		})
 
 		AfterEach(func() {

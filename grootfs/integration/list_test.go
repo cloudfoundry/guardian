@@ -91,7 +91,7 @@ var _ = Describe("List", func() {
 
 	Context("when there are no existing images", func() {
 		BeforeEach(func() {
-			Runner.Delete(image.Path)
+			_ = Runner.Delete(image.Path)
 		})
 
 		It("returns an informative message", func() {

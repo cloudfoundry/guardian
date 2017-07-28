@@ -60,7 +60,7 @@ var StatsCommand = cli.Command{
 			return newExitError(err.Error(), 1)
 		}
 
-		json.NewEncoder(os.Stdout).Encode(stats)
+		_ = json.NewEncoder(os.Stdout).Encode(stats)
 		metricsEmitter.TryIncrementRunCount("stats", nil)
 		return nil
 	},

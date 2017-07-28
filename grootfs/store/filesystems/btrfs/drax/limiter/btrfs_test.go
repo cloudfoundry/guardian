@@ -56,8 +56,10 @@ var _ = Describe("Btrfs", func() {
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "custom-btrfs-bin",
 				}, func(cmd *exec.Cmd) error {
-					cmd.Stdout.Write([]byte("failed to set btrfs limit"))
-					cmd.Stderr.Write([]byte("some stderr text"))
+					_, err := cmd.Stdout.Write([]byte("failed to set btrfs limit"))
+					Expect(err).NotTo(HaveOccurred())
+					_, err = cmd.Stderr.Write([]byte("some stderr text"))
+					Expect(err).NotTo(HaveOccurred())
 
 					return errors.New("exit status 1")
 				})
@@ -87,8 +89,10 @@ var _ = Describe("Btrfs", func() {
 				fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "custom-btrfs-bin",
 				}, func(cmd *exec.Cmd) error {
-					cmd.Stdout.Write([]byte("failed to destroy qgroup"))
-					cmd.Stderr.Write([]byte("some stderr text"))
+					_, err := cmd.Stdout.Write([]byte("failed to destroy qgroup"))
+					Expect(err).NotTo(HaveOccurred())
+					_, err = cmd.Stderr.Write([]byte("some stderr text"))
+					Expect(err).NotTo(HaveOccurred())
 
 					return errors.New("exit status 1")
 				})

@@ -282,7 +282,8 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 			fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
 				Path: "/proc/self/exe",
 			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte("hello-world"))
+				_, err := cmd.Stdout.Write([]byte("hello-world"))
+				Expect(err).NotTo(HaveOccurred())
 				return errors.New("exit status 1")
 			})
 		})

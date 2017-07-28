@@ -78,7 +78,8 @@ var _ = Describe("IDMapper", func() {
 				fakeCmdRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "newuidmap",
 				}, func(cmd *exec.Cmd) error {
-					cmd.Stdout.Write([]byte("invalid mapping"))
+					_, err := cmd.Stdout.Write([]byte("invalid mapping"))
+					Expect(err).NotTo(HaveOccurred())
 					return errors.New("exit code 1")
 				})
 			})
@@ -145,7 +146,8 @@ var _ = Describe("IDMapper", func() {
 				fakeCmdRunner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "newgidmap",
 				}, func(cmd *exec.Cmd) error {
-					cmd.Stdout.Write([]byte("invalid mapping"))
+					_, err := cmd.Stdout.Write([]byte("invalid mapping"))
+					Expect(err).NotTo(HaveOccurred())
 					return errors.New("exit code 1")
 				})
 			})

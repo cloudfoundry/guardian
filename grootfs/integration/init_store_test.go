@@ -43,7 +43,7 @@ var _ = Describe("Init Store", func() {
 		})
 
 		AfterEach(func() {
-			syscall.Unmount(StorePath, 0)
+			_ = syscall.Unmount(StorePath, 0)
 			Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
 		})
 

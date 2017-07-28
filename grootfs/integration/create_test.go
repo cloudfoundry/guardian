@@ -230,7 +230,7 @@ var _ = Describe("Create", func() {
 		})
 
 		AfterEach(func() {
-			Runner.Delete("my-empty")
+			_ = Runner.Delete("my-empty")
 		})
 
 		It("cleans the store first", func() {
@@ -269,7 +269,7 @@ var _ = Describe("Create", func() {
 		})
 
 		AfterEach(func() {
-			Runner.Delete("my-empty")
+			_ = Runner.Delete("my-empty")
 		})
 
 		It("does not clean the store", func() {

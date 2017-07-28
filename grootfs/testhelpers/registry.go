@@ -62,7 +62,7 @@ func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {
 	if r.failNextRequests > 0 {
 		r.failNextRequests--
 		rw.WriteHeader(http.StatusUnauthorized)
-		rw.Write([]byte("nope"))
+		_, _ = rw.Write([]byte("nope"))
 		return
 	}
 

@@ -74,11 +74,11 @@ func (e *Emitter) TryEmitError(logger lager.Logger, command string, err error, e
 }
 
 func (e *Emitter) TryIncrementRunCount(command string, err error) {
-	metrics.IncrementCounter(fmt.Sprintf("grootfs-%s.run", command))
+	_ = metrics.IncrementCounter(fmt.Sprintf("grootfs-%s.run", command))
 
 	if err != nil {
-		metrics.IncrementCounter(fmt.Sprintf("grootfs-%s.run.fail", command))
+		_ = metrics.IncrementCounter(fmt.Sprintf("grootfs-%s.run.fail", command))
 	} else {
-		metrics.IncrementCounter(fmt.Sprintf("grootfs-%s.run.success", command))
+		_ = metrics.IncrementCounter(fmt.Sprintf("grootfs-%s.run.success", command))
 	}
 }

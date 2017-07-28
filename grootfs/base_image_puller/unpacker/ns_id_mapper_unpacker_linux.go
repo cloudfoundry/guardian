@@ -105,7 +105,7 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 	logger.Debug("unpack-wrapper-command-is-started")
 
 	if err := u.setIDMappings(logger, spec, unpackCmd.Process.Pid); err != nil {
-		ctrlPipeW.Close()
+		_ = ctrlPipeW.Close()
 		return err
 	}
 

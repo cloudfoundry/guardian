@@ -484,7 +484,8 @@ var _ = Describe("Create with remote images", func() {
 					Expect(err).NotTo(HaveOccurred())
 					fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
 					fakeRegistry.WhenGettingBlob("6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a", 0, func(w http.ResponseWriter, r *http.Request) {
-						w.Write([]byte("bad-blob"))
+						_, err := w.Write([]byte("bad-blob"))
+						Expect(err).NotTo(HaveOccurred())
 					})
 					fakeRegistry.Start()
 

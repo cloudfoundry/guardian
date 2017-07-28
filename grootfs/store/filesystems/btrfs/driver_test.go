@@ -547,13 +547,13 @@ var _ = Describe("Btrfs", func() {
 		It("moves the volume to the given location", func() {
 			newVolumePath := fmt.Sprintf("%s-new", volumePath)
 
-			stat, err := os.Stat(newVolumePath)
+			_, err := os.Stat(newVolumePath)
 			Expect(err).To(HaveOccurred())
 			Expect(os.IsNotExist(err)).To(BeTrue())
 
 			err = driver.MoveVolume(logger, volumePath, newVolumePath)
 			Expect(err).ToNot(HaveOccurred())
-			stat, err = os.Stat(newVolumePath)
+			stat, err := os.Stat(newVolumePath)
 			Expect(err).ToNot(HaveOccurred())
 			Expect(stat.IsDir()).To(BeTrue())
 		})

@@ -34,14 +34,14 @@ var _ = Describe("RemoteFetcher", func() {
 	)
 
 	BeforeEach(func() {
-		var err error
 		fakeSource = new(remotefakes.FakeSource)
 		fakeCacheDriver = new(fetcherfakes.FakeCacheDriver)
 
 		gzipBuffer := bytes.NewBuffer([]byte{})
 		gzipWriter := gzip.NewWriter(gzipBuffer)
-		gzipWriter.Write([]byte("hello-world"))
-		gzipWriter.Close()
+		_, err := gzipWriter.Write([]byte("hello-world"))
+		Expect(err).NotTo(HaveOccurred())
+		Expect(gzipWriter.Close()).To(Succeed())
 		gzipedBlobContent, err = ioutil.ReadAll(gzipBuffer)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -245,6 +245,7 @@ var _ = Describe("RemoteFetcher", func() {
 	Describe("StreamBlob", func() {
 		BeforeEach(func() {
 			tmpFile, err := ioutil.TempFile("", "")
+			Expect(err).NotTo(HaveOccurred())
 			_, err = tmpFile.Write(gzipedBlobContent)
 			Expect(err).NotTo(HaveOccurred())
 			defer tmpFile.Close()
@@ -279,7 +280,7 @@ var _ = Describe("RemoteFetcher", func() {
 			defer tmpFile.Close()
 
 			gzipWriter := gzip.NewWriter(tmpFile)
-			gzipWriter.Close()
+			Expect(gzipWriter.Close()).To(Succeed())
 
 			fakeSource.BlobReturns(tmpFile.Name(), 1024, nil)
 

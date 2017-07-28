@@ -43,7 +43,8 @@ var _ = Describe("LogBased", func() {
 				Path: "ps",
 				Args: []string{"-aux", "--sort", "-pcpu"},
 			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11"))
+				_, err := cmd.Stdout.Write([]byte("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11"))
+				Expect(err).NotTo(HaveOccurred())
 				return nil
 			})
 
@@ -59,7 +60,8 @@ var _ = Describe("LogBased", func() {
 				Path: "ps",
 				Args: []string{"-aux", "--sort", "-rss"},
 			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11"))
+				_, err := cmd.Stdout.Write([]byte("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11"))
+				Expect(err).NotTo(HaveOccurred())
 				return nil
 			})
 
@@ -76,9 +78,11 @@ var _ = Describe("LogBased", func() {
 				Args: []string{"-T"},
 			}, func(cmd *exec.Cmd) error {
 				for i := 1; i < 300; i++ {
-					cmd.Stdout.Write([]byte(fmt.Sprintf("%d\n", i)))
+					_, err := cmd.Stdout.Write([]byte(fmt.Sprintf("%d\n", i)))
+					Expect(err).NotTo(HaveOccurred())
 				}
-				cmd.Stdout.Write([]byte("I've ran"))
+				_, err := cmd.Stdout.Write([]byte("I've ran"))
+				Expect(err).NotTo(HaveOccurred())
 				return nil
 			})
 
@@ -96,7 +100,8 @@ var _ = Describe("LogBased", func() {
 				Path: "iostat",
 				Args: []string{"-xzp"},
 			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte("I've ran"))
+				_, err := cmd.Stdout.Write([]byte("I've ran"))
+				Expect(err).NotTo(HaveOccurred())
 				return nil
 			})
 
@@ -112,7 +117,8 @@ var _ = Describe("LogBased", func() {
 				Path: "mpstat",
 				Args: []string{"-P", "ALL"},
 			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte("I've ran"))
+				_, err := cmd.Stdout.Write([]byte("I've ran"))
+				Expect(err).NotTo(HaveOccurred())
 				return nil
 			})
 
@@ -127,7 +133,8 @@ var _ = Describe("LogBased", func() {
 			cmdRunner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "vmstat",
 			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte("I've ran"))
+				_, err := cmd.Stdout.Write([]byte("I've ran"))
+				Expect(err).NotTo(HaveOccurred())
 				return nil
 			})
 
@@ -142,7 +149,8 @@ var _ = Describe("LogBased", func() {
 			cmdRunner.WhenRunning(fake_command_runner.CommandSpec{
 				Path: "pidstat",
 			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte("I've ran"))
+				_, err := cmd.Stdout.Write([]byte("I've ran"))
+				Expect(err).NotTo(HaveOccurred())
 				return nil
 			})
 

@@ -36,7 +36,7 @@ func (l *Lister) listDirs(path string) ([]string, error) {
 		return nil, err
 	}
 	files, err := f.Readdir(-1)
-	f.Close()
+	_ = f.Close()
 	if err != nil {
 		return nil, err
 	}

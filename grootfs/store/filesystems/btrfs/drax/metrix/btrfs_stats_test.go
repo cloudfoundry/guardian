@@ -37,7 +37,8 @@ var _ = Describe("Stats", func() {
 				Path: "custom-btrfs-bin",
 				Args: []string{"qgroup", "show", "--raw", "-F", "/full/path/to/volume"},
 			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write(stats)
+				_, err := cmd.Stdout.Write(stats)
+				Expect(err).NotTo(HaveOccurred())
 				return nil
 			})
 		})
@@ -96,8 +97,10 @@ var _ = Describe("Stats", func() {
 						Path: "custom-btrfs-bin",
 						Args: []string{"filesystem", "sync", "/full/path/to/volume"},
 					}, func(cmd *exec.Cmd) error {
-						cmd.Stdout.Write([]byte("failed to sync stuff"))
-						cmd.Stderr.Write([]byte("some stderr text"))
+						_, err := cmd.Stdout.Write([]byte("failed to sync stuff"))
+						Expect(err).NotTo(HaveOccurred())
+						_, err = cmd.Stderr.Write([]byte("some stderr text"))
+						Expect(err).NotTo(HaveOccurred())
 						return errors.New("super error")
 					})
 				})
@@ -116,8 +119,10 @@ var _ = Describe("Stats", func() {
 					Path: "custom-btrfs-bin",
 					Args: []string{"subvolume", "show", "/full/path/to/volume"},
 				}, func(cmd *exec.Cmd) error {
-					cmd.Stdout.Write([]byte("failed to show stuff"))
-					cmd.Stderr.Write([]byte("some stderr text"))
+					_, err := cmd.Stdout.Write([]byte("failed to show stuff"))
+					Expect(err).NotTo(HaveOccurred())
+					_, err = cmd.Stderr.Write([]byte("some stderr text"))
+					Expect(err).NotTo(HaveOccurred())
 					return errors.New("super error")
 				})
 			})
@@ -135,8 +140,10 @@ var _ = Describe("Stats", func() {
 					Path: "custom-btrfs-bin",
 					Args: []string{"subvolume", "show", "/full/path/to/volume"},
 				}, func(cmd *exec.Cmd) error {
-					cmd.Stdout.Write([]byte("failed to show stuff"))
-					cmd.Stderr.Write([]byte("not a subvolume"))
+					_, err := cmd.Stdout.Write([]byte("failed to show stuff"))
+					Expect(err).NotTo(HaveOccurred())
+					_, err = cmd.Stderr.Write([]byte("not a subvolume"))
+					Expect(err).NotTo(HaveOccurred())
 					return errors.New("super error")
 				})
 			})
@@ -155,8 +162,10 @@ var _ = Describe("Stats", func() {
 					Path: "custom-btrfs-bin",
 					Args: []string{"qgroup", "show", "--raw", "-F", "/full/path/to/volume"},
 				}, func(cmd *exec.Cmd) error {
-					cmd.Stdout.Write([]byte("failed to sync stuff"))
-					cmd.Stderr.Write([]byte("some stderr text"))
+					_, err := cmd.Stdout.Write([]byte("failed to sync stuff"))
+					Expect(err).NotTo(HaveOccurred())
+					_, err = cmd.Stderr.Write([]byte("some stderr text"))
+					Expect(err).NotTo(HaveOccurred())
 					return errors.New("super error")
 				})
 			})

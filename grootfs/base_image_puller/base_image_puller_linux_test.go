@@ -158,7 +158,8 @@ var _ = Describe("Base Image Puller", func() {
 			buffer := bytes.NewBuffer([]byte{})
 			stream := gzip.NewWriter(buffer)
 			defer stream.Close()
-			stream.Write([]byte(fmt.Sprintf("layer-%s-contents", source)))
+			_, err := stream.Write([]byte(fmt.Sprintf("layer-%s-contents", source)))
+			Expect(err).NotTo(HaveOccurred())
 			return ioutil.NopCloser(buffer), 1200, nil
 		}
 

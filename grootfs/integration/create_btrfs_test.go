@@ -125,7 +125,7 @@ var _ = Describe("Create (btrfs only)", func() {
 			Context("when it's not provided", func() {
 				It("uses btrfs from $PATH", func() {
 					newPATH := fmt.Sprintf("%s:%s", btrfsProgsPath, os.Getenv("PATH"))
-					Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(spec)
+					_, _ = Runner.WithEnvVar(fmt.Sprintf("PATH=%s", newPATH)).Create(spec)
 
 					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())

@@ -119,17 +119,19 @@ func CreateFakeTardis() (string, *os.File, *os.File) {
 func CreateFakeBin(binaryName string) (string, *os.File, *os.File) {
 	binCalledFile, err := ioutil.TempFile("", "bin-called")
 	Expect(err).NotTo(HaveOccurred())
-	binCalledFile.Close()
+	Expect(binCalledFile.Close()).To(Succeed())
 	Expect(os.Chmod(binCalledFile.Name(), 0666)).To(Succeed())
 
 	tempFolder, err := ioutil.TempDir("", "")
+	Expect(err).NotTo(HaveOccurred())
 	Expect(os.Chmod(tempFolder, 0755)).To(Succeed())
 
 	bin, err := os.Create(path.Join(tempFolder, binaryName))
 	Expect(err).NotTo(HaveOccurred())
-	bin.WriteString("#!/bin/bash\necho -n \"I'm groot - " + binaryName + "\" > " + binCalledFile.Name())
-	bin.Chmod(0777)
-	bin.Close()
+	_, err = bin.WriteString("#!/bin/bash\necho -n \"I'm groot - " + binaryName + "\" > " + binCalledFile.Name())
+	Expect(err).NotTo(HaveOccurred())
+	Expect(bin.Chmod(0777)).To(Succeed())
+	Expect(bin.Close()).To(Succeed())
 
 	return tempFolder, bin, binCalledFile
 }

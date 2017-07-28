@@ -21,9 +21,11 @@ var _ = Describe("BlobReader", func() {
 		BeforeEach(func() {
 			gzipBuffer := bytes.NewBuffer([]byte{})
 			gzipWriter := gzip.NewWriter(gzipBuffer)
-			gzipWriter.Write([]byte("hello-world"))
-			gzipWriter.Close()
+			_, err := gzipWriter.Write([]byte("hello-world"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(gzipWriter.Close()).To(Succeed())
 			gzipedBlobContent, err := ioutil.ReadAll(gzipBuffer)
+			Expect(err).NotTo(HaveOccurred())
 
 			blobFile, err = ioutil.TempFile("", "")
 			Expect(err).NotTo(HaveOccurred())

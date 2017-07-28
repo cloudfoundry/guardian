@@ -666,7 +666,7 @@ var _ = Describe("Tar unpacker", func() {
 	Context("when it fails to untar", func() {
 		JustBeforeEach(func() {
 			stream = gbytes.NewBuffer()
-			stream.Write([]byte("not-a-tar"))
+			_, _ = stream.Write([]byte("not-a-tar"))
 		})
 
 		It("returns the error", func() {

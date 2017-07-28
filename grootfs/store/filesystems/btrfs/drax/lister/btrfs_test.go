@@ -46,7 +46,8 @@ var _ = Describe("Btrfs", func() {
 			Args: []string{"subvolume", "list", "/mnt/btrfs/privileged/images/this"},
 		}, func(cmd *exec.Cmd) error {
 
-			cmd.Stdout.Write(list)
+			_, err := cmd.Stdout.Write(list)
+			Expect(err).NotTo(HaveOccurred())
 			return returnError
 		})
 	})
