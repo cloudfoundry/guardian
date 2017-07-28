@@ -89,7 +89,7 @@ var _ = Describe("StoreNamespacer", func() {
 
 		Context("when the mappings file contains invalid json", func() {
 			BeforeEach(func() {
-				Expect(ioutil.WriteFile(namespaceFile, []byte("junk"), 600)).To(Succeed())
+				Expect(ioutil.WriteFile(namespaceFile, []byte("junk"), 0600)).To(Succeed())
 			})
 
 			It("returns an error", func() {
@@ -102,7 +102,7 @@ var _ = Describe("StoreNamespacer", func() {
 			Context("invalid uid mappings", func() {
 				BeforeEach(func() {
 					badUidMappings := []byte(`{"uid-mappings":["1000:1","10"],"gid-mappings":["0:2000:1","1:200000:10"]}`)
-					Expect(ioutil.WriteFile(namespaceFile, badUidMappings, 600)).To(Succeed())
+					Expect(ioutil.WriteFile(namespaceFile, badUidMappings, 0600)).To(Succeed())
 				})
 
 				It("returns an error", func() {
@@ -114,7 +114,7 @@ var _ = Describe("StoreNamespacer", func() {
 			Context("invalid gid mappings", func() {
 				BeforeEach(func() {
 					badGidMappings := []byte(`{"gid-mappings":["1000:1","10"],"uid-mappings":["0:2000:1","1:200000:10"]}`)
-					Expect(ioutil.WriteFile(namespaceFile, badGidMappings, 600)).To(Succeed())
+					Expect(ioutil.WriteFile(namespaceFile, badGidMappings, 0600)).To(Succeed())
 				})
 
 				It("returns an error", func() {

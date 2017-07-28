@@ -31,7 +31,7 @@ var _ = Describe("Delete Store", func() {
 
 	Context("when given a path which does not look like a store", func() {
 		JustBeforeEach(func() {
-			Expect(os.MkdirAll(StorePath, 600)).To(Succeed())
+			Expect(os.MkdirAll(StorePath, 0600)).To(Succeed())
 			storeContents, err := ioutil.ReadDir(StorePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(storeContents).To(BeEmpty())
