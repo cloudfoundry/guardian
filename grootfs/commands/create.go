@@ -261,37 +261,6 @@ func tryHumanize(err error, spec groot.CreateSpec) string {
 	return tryParsingErrorMessage(err).Error()
 }
 
-func findStoreOwner(uidMappings, gidMappings []groot.IDMappingSpec) (int, int, error) {
-	uid := os.Getuid()
-	gid := os.Getgid()
-
-	for _, mapping := range uidMappings {
-		if mapping.Size == 1 && mapping.NamespaceID == 0 {
-			uid = mapping.HostID
-			break
-		}
-		uid = -1
-	}
-
-	if len(uidMappings) > 0 && uid == -1 {
-		return 0, 0, errorspkg.New("couldn't determine store owner, missing root user mapping")
-	}
-
-	for _, mapping := range gidMappings {
-		if mapping.Size == 1 && mapping.NamespaceID == 0 {
-			gid = mapping.HostID
-			break
-		}
-		gid = -1
-	}
-
-	if len(gidMappings) > 0 && gid == -1 {
-		return 0, 0, errorspkg.New("couldn't determine store owner, missing root user mapping")
-	}
-
-	return uid, gid, nil
-}
-
 func validateOptions(ctx *cli.Context, cfg config.Config) error {
 	if ctx.IsSet("with-clean") && ctx.IsSet("without-clean") {
 		return errorspkg.New("with-clean and without-clean cannot be used together")

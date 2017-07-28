@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"path"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -465,15 +464,13 @@ var _ = Describe("Metrics", func() {
 
 	Describe("--config global flag", func() {
 		var (
-			configDir      string
-			configFilePath string
+			configDir string
 		)
 
 		BeforeEach(func() {
 			var err error
 			configDir, err = ioutil.TempDir("", "")
 			Expect(err).NotTo(HaveOccurred())
-			configFilePath = path.Join(configDir, "config.yaml")
 
 			cfg := config.Config{
 				MetronEndpoint: fmt.Sprintf("127.0.0.1:%d", fakeMetronPort),

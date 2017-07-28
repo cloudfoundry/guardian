@@ -3,7 +3,6 @@ package remote_test
 import (
 	"bytes"
 	"compress/gzip"
-	"context"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -32,8 +31,6 @@ var _ = Describe("RemoteFetcher", func() {
 		logger            *lagertest.TestLogger
 		baseImageURL      *url.URL
 		gzipedBlobContent []byte
-		cancelCalled      bool
-		cancelFunc        context.CancelFunc
 	)
 
 	BeforeEach(func() {
@@ -47,9 +44,6 @@ var _ = Describe("RemoteFetcher", func() {
 		gzipWriter.Close()
 		gzipedBlobContent, err = ioutil.ReadAll(gzipBuffer)
 		Expect(err).NotTo(HaveOccurred())
-
-		cancelCalled = false
-		cancelFunc = func() { cancelCalled = true }
 
 		// by default, the cache driver does not do any caching
 		fakeCacheDriver.FetchBlobStub = func(logger lager.Logger, id string,

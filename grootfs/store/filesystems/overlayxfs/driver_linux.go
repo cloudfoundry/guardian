@@ -187,9 +187,6 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 		return groot.MountInfo{}, errorspkg.Wrap(err, "image path does not exist")
 	}
 
-	baseVolumePaths := []string{}
-	var baseVolumeSize int64
-
 	baseVolumePaths, baseVolumeSize, err := d.getLowerDirs(logger, spec.BaseVolumeIDs)
 	if err != nil {
 		logger.Error("generating-lowerdir-paths-failed", err)

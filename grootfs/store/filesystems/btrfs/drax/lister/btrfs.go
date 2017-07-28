@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 
@@ -110,11 +109,4 @@ func (l *BtrfsLister) findMountPoint(path string) (string, error) {
 	}
 
 	return "", errorspkg.New("can't find mount point")
-}
-
-var basePathRegexp = regexp.MustCompile("(.*)/images/[^/]*")
-
-func findStorePath(imagePath string) string {
-	matches := basePathRegexp.FindStringSubmatch(imagePath)
-	return matches[0]
 }

@@ -30,7 +30,6 @@ var _ = Describe("Base Image Puller", func() {
 		logger                   lager.Logger
 		fakeLocalFetcher         *base_image_pullerfakes.FakeFetcher
 		fakeRemoteFetcher        *base_image_pullerfakes.FakeFetcher
-		fakeBaseImagePuller      *grootfakes.FakeBaseImagePuller
 		fakeUnpacker             *base_image_pullerfakes.FakeUnpacker
 		fakeVolumeDriver         *base_image_pullerfakes.FakeVolumeDriver
 		fakeLocksmith            *grootfakes.FakeLocksmith
@@ -46,8 +45,6 @@ var _ = Describe("Base Image Puller", func() {
 	)
 
 	BeforeEach(func() {
-		fakeBaseImagePuller = new(grootfakes.FakeBaseImagePuller)
-
 		fakeUnpacker = new(base_image_pullerfakes.FakeUnpacker)
 
 		fakeLocksmith = new(grootfakes.FakeLocksmith)

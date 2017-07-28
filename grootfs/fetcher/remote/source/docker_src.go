@@ -70,7 +70,7 @@ func (s *DockerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (rem
 		return remote.Manifest{}, errorspkg.New(fmt.Sprintf("unknown media type '%s'", mimeType))
 	}
 
-	return manifest, nil
+	return manifest, err
 }
 
 func (s *DockerSource) Config(logger lager.Logger, baseImageURL *url.URL, manifest remote.Manifest) (specsv1.Image, error) {
@@ -174,11 +174,7 @@ func (s *DockerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest
 		"downloadedChecksum": blobContentsSha,
 	})
 
-	if digestID != blobContentsSha {
-		return false
-	}
-
-	return true
+	return digestID == blobContentsSha
 }
 
 func (s *DockerSource) skipTLSValidation(baseImageURL *url.URL) bool {
