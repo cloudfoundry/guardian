@@ -36,11 +36,7 @@ func (n *StoreNamespacer) ApplyMappings(uidMappings, gidMappings []IDMappingSpec
 	_, err := os.Stat(namespaceFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			if err := n.write(uidMappings, gidMappings); err != nil {
-				return err
-			}
-
-			return nil
+			return n.write(uidMappings, gidMappings)
 		}
 	}
 
@@ -85,11 +81,7 @@ func (n *StoreNamespacer) write(uidMappings, gidMappings []IDMappingSpec) error 
 		GIDMappings: n.normalizeMappings(gidMappings),
 	}
 
-	if err := json.NewEncoder(namespaceStore).Encode(namespace); err != nil {
-		return err
-	}
-
-	return nil
+	return json.NewEncoder(namespaceStore).Encode(namespace)
 }
 
 func (n *StoreNamespacer) validateNamespace(namespaceFilePath string, uidMappings, gidMappings []IDMappingSpec) error {

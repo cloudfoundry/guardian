@@ -259,11 +259,7 @@ func (p *BaseImagePuller) unpackLayer(logger lager.Logger, digest LayerDigest, s
 	}
 
 	err = p.finalizeVolume(logger, tempVolumeName, volumePath, digest.ChainID)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, digest LayerDigest, spec groot.BaseImageSpec) (string, string, error) {

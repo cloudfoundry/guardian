@@ -128,9 +128,7 @@ func (r Runner) runCmd(cmd *exec.Cmd) error {
 		cmd.Process.Kill()
 		cmd.Wait()
 
-		return errors.New(
-			fmt.Sprintf("command took more than %f seconds to finish", r.Timeout.Seconds()),
-		)
+		return fmt.Errorf("command took more than %f seconds to finish", r.Timeout.Seconds())
 	}
 }
 
