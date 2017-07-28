@@ -124,6 +124,9 @@ type DesiredContainerSpec struct {
 	// Path to the Root Filesystem for the container
 	RootFSPath string
 
+	// RootFS propagation rule for the container
+	RootFSPropagation string
+
 	// Container hostname
 	Hostname string
 
@@ -283,6 +286,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	if err := g.Containerizer.Create(log, DesiredContainerSpec{
 		Handle:                 spec.Handle,
 		RootFSPath:             desiredImageSpec.RootFS,
+		RootFSPropagation:      spec.RootFSPropagation,
 		Hostname:               spec.Handle,
 		Privileged:             spec.Privileged,
 		BindMounts:             spec.BindMounts,

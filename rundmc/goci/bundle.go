@@ -62,6 +62,15 @@ func (b Bndl) WithRootFS(absolutePath string) Bndl {
 	return b
 }
 
+func (b Bndl) RootFSPropagation() string {
+	return b.Spec.Linux.RootfsPropagation
+}
+
+func (b Bndl) WithRootFSPropagation(rootfsPropagation string) Bndl {
+	b.Spec.Linux.RootfsPropagation = rootfsPropagation
+	return b
+}
+
 // GetRootfsPath returns the path to the rootfs of this bundle. Nothing is modified
 func (b Bndl) RootFS() string {
 	return b.Spec.Root.Path

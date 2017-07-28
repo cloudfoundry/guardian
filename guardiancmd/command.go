@@ -677,6 +677,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			ContainerRootGID: gidMappings.Map(0),
 			MkdirChown:       chrootMkdir,
 		},
+		bundlerules.RootFSPropagation{},
 		bundlerules.Limits{
 			CpuQuotaPerShare: cmd.Limits.CpuQuotaPerShare,
 			TCPMemoryLimit:   int64(cmd.Limits.TCPMemoryLimit),
