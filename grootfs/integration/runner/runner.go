@@ -91,9 +91,9 @@ func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error)
 	}
 
 	runErr := r.runCmd(cmd)
+	stdoutContents := strings.TrimSpace(stdoutBuffer.String())
 	if runErr != nil {
 		errStr := fmt.Sprintf("command exited with %s", runErr)
-		stdoutContents := strings.TrimSpace(stdoutBuffer.String())
 		if stdoutContents != "" {
 			errStr = stdoutContents
 		}
@@ -101,7 +101,7 @@ func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error)
 		return "", errors.New(errStr)
 	}
 
-	return strings.TrimSpace(stdoutBuffer.String()), nil
+	return stdoutContents, nil
 }
 
 func (r Runner) runCmd(cmd *exec.Cmd) error {
@@ -109,12 +109,10 @@ func (r Runner) runCmd(cmd *exec.Cmd) error {
 		return cmd.Run()
 	}
 
-	var pid int
 	err := cmd.Start()
 	if err != nil {
 		return err
 	}
-	pid = cmd.Process.Pid
 
 	errChan := make(chan error)
 	go func() {
@@ -127,7 +125,8 @@ func (r Runner) runCmd(cmd *exec.Cmd) error {
 		return runErr
 
 	case <-time.After(r.Timeout):
-		syscall.Kill(pid, syscall.SIGKILL)
+		cmd.Process.Kill()
+		cmd.Wait()
 
 		return errors.New(
 			fmt.Sprintf("command took more than %f seconds to finish", r.Timeout.Seconds()),
