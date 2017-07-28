@@ -206,8 +206,6 @@ func (q *Control) GetQuota(targetPath string, quota *Quota) error {
 		return fmt.Errorf("quota not found for path : %s", targetPath)
 	}
 
-	syscall.Sync()
-
 	//
 	// get the quota limit for the container's project id
 	//
