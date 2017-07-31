@@ -581,9 +581,17 @@ var _ = Describe("Base Image Puller", func() {
 			})
 			Expect(err).To(HaveOccurred())
 
-			Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(BeNumerically("~", 6, 1))
-			Expect(unpackTimeMetrics).To(BeNumerically("~", 3, 1))
-			Expect(downloadTimeMetrics).To(BeNumerically("~", 3, 1))
+			Eventually(fakeMetricsEmitter.TryEmitDurationFromCallCount).Should(Equal(6))
+			Eventually(func() int {
+				mutex.Lock()
+				defer mutex.Unlock()
+				return unpackTimeMetrics
+			}).Should(Equal(3))
+			Eventually(func() int {
+				mutex.Lock()
+				defer mutex.Unlock()
+				return downloadTimeMetrics
+			}).Should(Equal(3))
 		})
 
 		Context("when UID and GID mappings are provided", func() {
