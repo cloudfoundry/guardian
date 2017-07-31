@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -64,19 +65,19 @@ var _ = Describe("Delete (btrfs only)", func() {
 		rootIDBuffer := gbytes.NewBuffer()
 		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", image.Rootfs), rootIDBuffer, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
+		Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 		rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
 
 		sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
+		Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 		Expect(sess).To(gbytes.Say(rootID))
 
 		Expect(Runner.Delete(imageId)).To(Succeed())
 
 		sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
+		Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 		Expect(sess).ToNot(gbytes.Say(rootID))
 	})
 
@@ -91,7 +92,7 @@ var _ = Describe("Delete (btrfs only)", func() {
 			}
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 
 			cmd = exec.Command("btrfs", "sub", "snapshot", filepath.Join(image.Rootfs, "subvolume"), filepath.Join(image.Rootfs, "snapshot"))
 			cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -102,7 +103,7 @@ var _ = Describe("Delete (btrfs only)", func() {
 			}
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 		})
 
 		It("removes the rootfs completely", func() {
