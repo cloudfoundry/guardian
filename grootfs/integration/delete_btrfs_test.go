@@ -1,12 +1,14 @@
 package integration_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -24,6 +26,7 @@ var _ = Describe("Delete (btrfs only)", func() {
 		sourceImagePath string
 		baseImagePath   string
 		image           groot.ImageInfo
+		imageIndex      uint32
 	)
 
 	BeforeEach(func() {
@@ -40,19 +43,24 @@ var _ = Describe("Delete (btrfs only)", func() {
 		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
 	})
 
-	JustBeforeEach(func() {
+	createRandomImage := func() string {
+		imageId := fmt.Sprintf("image-%d", atomic.AddUint32(&imageIndex, 1))
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
 		baseImagePath = baseImageFile.Name()
 		var err error
 		image, err = Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
-			ID:        "random-id",
+			ID:        imageId,
 			Mount:     true,
 		})
 		Expect(err).ToNot(HaveOccurred())
-	})
+
+		return imageId
+	}
 
 	It("destroys the quota group associated with the volume", func() {
+		imageId := createRandomImage()
+
 		rootIDBuffer := gbytes.NewBuffer()
 		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", image.Rootfs), rootIDBuffer, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
@@ -64,7 +72,7 @@ var _ = Describe("Delete (btrfs only)", func() {
 		Eventually(sess).Should(gexec.Exit(0))
 		Expect(sess).To(gbytes.Say(rootID))
 
-		Expect(Runner.Delete("random-id")).To(Succeed())
+		Expect(Runner.Delete(imageId)).To(Succeed())
 
 		sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
@@ -98,14 +106,17 @@ var _ = Describe("Delete (btrfs only)", func() {
 		})
 
 		It("removes the rootfs completely", func() {
+			imageId := createRandomImage()
 			Expect(image.Rootfs).To(BeAnExistingFile())
-			Expect(Runner.Delete("random-id")).To(Succeed())
+			Expect(Runner.Delete(imageId)).To(Succeed())
 			Expect(image.Rootfs).ToNot(BeAnExistingFile())
 		})
 	})
 
 	Context("when drax is not in PATH", func() {
 		It("returns a warning", func() {
+			imageId := createRandomImage()
+
 			errBuffer := gbytes.NewBuffer()
 			outBuffer := gbytes.NewBuffer()
 			err := Runner.WithoutDraxBin().
@@ -113,10 +124,10 @@ var _ = Describe("Delete (btrfs only)", func() {
 				WithEnvVar("PATH=/usr/sbin:/usr/bin:/sbin:/bin").
 				WithStdout(outBuffer).
 				WithStderr(errBuffer).
-				Delete("random-id")
+				Delete(imageId)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(errBuffer).Should(gbytes.Say("could not delete quota group"))
-			Eventually(outBuffer).Should(gbytes.Say("Image random-id deleted"))
+			Eventually(outBuffer).Should(gbytes.Say(fmt.Sprintf("Image %s deleted", imageId)))
 		})
 	})
 })
