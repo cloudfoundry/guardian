@@ -10,7 +10,6 @@ import (
 	"syscall"
 	"time"
 
-	"code.cloudfoundry.org/lager"
 	"github.com/eapache/go-resiliency/retrier"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -69,11 +68,4 @@ func (r *RunningGarden) Cleanup() {
 	// if err := os.RemoveAll(r.GraphPath); err != nil {
 	// 	r.logger.Error("remove-graph", err)
 	// }
-
-	r.logger.Info("cleanup-tempdirs")
-	if err := os.RemoveAll(r.TmpDir); err != nil {
-		r.logger.Error("cleanup-tempdirs-failed", err, lager.Data{"tmpdir": r.TmpDir})
-	} else {
-		r.logger.Info("tempdirs-removed")
-	}
 }
