@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega/gexec"
@@ -42,8 +41,6 @@ type Runner struct {
 	Stderr io.Writer
 	// Configuration
 	ConfigPath string
-	// Timeout
-	Timeout time.Duration
 	// Registry
 	InsecureRegistry string
 	RegistryUsername string
@@ -90,46 +87,20 @@ func (r Runner) RunSubcommand(subcommand string, args ...string) (string, error)
 		}
 	}
 
-	runErr := r.runCmd(cmd)
+	runErr := cmd.Run()
 	stdoutContents := strings.TrimSpace(stdoutBuffer.String())
 	if runErr != nil {
-		errStr := fmt.Sprintf("command exited with %s", runErr)
+		var errStr string
 		if stdoutContents != "" {
 			errStr = stdoutContents
+		} else {
+			errStr = fmt.Sprintf("command exited with %s", runErr)
 		}
 
 		return "", errors.New(errStr)
 	}
 
 	return stdoutContents, nil
-}
-
-func (r Runner) runCmd(cmd *exec.Cmd) error {
-	if r.Timeout == 0 {
-		return cmd.Run()
-	}
-
-	err := cmd.Start()
-	if err != nil {
-		return err
-	}
-
-	errChan := make(chan error)
-	go func() {
-		errChan <- cmd.Wait()
-		close(errChan)
-	}()
-
-	select {
-	case runErr := <-errChan:
-		return runErr
-
-	case <-time.After(r.Timeout):
-		cmd.Process.Kill()
-		cmd.Wait()
-
-		return fmt.Errorf("command took more than %f seconds to finish", r.Timeout.Seconds())
-	}
 }
 
 func (r Runner) makeCmd(subcommand string, args []string) *exec.Cmd {

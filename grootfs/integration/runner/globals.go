@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 	"syscall"
-	"time"
 
 	yaml "gopkg.in/yaml.v2"
 
@@ -182,15 +181,6 @@ func (r *Runner) SetConfig(cfg config.Config) error {
 
 func (r Runner) WithConfig(configPath string) Runner {
 	r.ConfigPath = configPath
-	return r
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// Timeout
-///////////////////////////////////////////////////////////////////////////////
-
-func (r Runner) WithTimeout(timeout time.Duration) Runner {
-	r.Timeout = timeout
 	return r
 }
 
