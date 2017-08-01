@@ -13,9 +13,9 @@ import (
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/commands/commandrunner"
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/fetcher/local"
-	"code.cloudfoundry.org/grootfs/fetcher/remote"
-	"code.cloudfoundry.org/grootfs/fetcher/remote/source"
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
+	"code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
@@ -150,16 +150,16 @@ var CreateCommand = cli.Command{
 		dockerSrc := source.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.Create.InsecureRegistries)
 
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
-		remoteFetcher := remote.NewRemoteFetcher(dockerSrc, cacheDriver)
+		layerFetcher := layer_fetcher.NewLayerFetcher(dockerSrc, cacheDriver)
 
-		localFetcher := local.NewLocalFetcher()
+		tarFetcher := tar_fetcher.NewTarFetcher()
 
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
 		baseImagePuller := base_image_puller.NewBaseImagePuller(
-			localFetcher,
-			remoteFetcher,
+			tarFetcher,
+			layerFetcher,
 			unpacker,
 			fsDriver,
 			dependencyManager,

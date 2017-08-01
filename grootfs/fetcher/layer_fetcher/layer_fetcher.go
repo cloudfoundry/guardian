@@ -1,4 +1,4 @@
-package remote // import "code.cloudfoundry.org/grootfs/fetcher/remote"
+package layer_fetcher // import "code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 
 import (
 	"crypto/sha256"
@@ -24,19 +24,19 @@ type Source interface {
 	Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error)
 }
 
-type RemoteFetcher struct {
+type LayerFetcher struct {
 	source      Source
 	cacheDriver fetcher.CacheDriver
 }
 
-func NewRemoteFetcher(source Source, cacheDriver fetcher.CacheDriver) *RemoteFetcher {
-	return &RemoteFetcher{
+func NewLayerFetcher(source Source, cacheDriver fetcher.CacheDriver) *LayerFetcher {
+	return &LayerFetcher{
 		source:      source,
 		cacheDriver: cacheDriver,
 	}
 }
 
-func (f *RemoteFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {
+func (f *LayerFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {
 	logger = logger.Session("layers-digest", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -80,7 +80,7 @@ func (f *RemoteFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL
 	}, nil
 }
 
-func (f *RemoteFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error) {
+func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error) {
 	logger = logger.Session("streaming", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -100,7 +100,7 @@ func (f *RemoteFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, s
 	return blobReader, size, nil
 }
 
-func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
+func (f *LayerFetcher) createLayersDigest(logger lager.Logger,
 	manifest Manifest, config specsv1.Image,
 ) []base_image_puller.LayerDigest {
 	layersDigest := []base_image_puller.LayerDigest{}
@@ -125,7 +125,7 @@ func (f *RemoteFetcher) createLayersDigest(logger lager.Logger,
 	return layersDigest
 }
 
-func (f *RemoteFetcher) chainID(diffID string, parentChainID string) string {
+func (f *LayerFetcher) chainID(diffID string, parentChainID string) string {
 	diffID = strings.Split(diffID, ":")[1]
 	chainID := diffID
 

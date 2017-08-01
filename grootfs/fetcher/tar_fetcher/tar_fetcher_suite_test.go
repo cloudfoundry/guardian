@@ -1,4 +1,4 @@
-package remote_test
+package tar_fetcher_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,8 +7,7 @@ import (
 	"testing"
 )
 
-func TestRemote(t *testing.T) {
+func TestTarFetcher(t *testing.T) {
 	RegisterFailHandler(Fail)
-
-	RunSpecs(t, "Remote Suite")
+	RunSpecs(t, "Tar Fetcher Suite")
 }

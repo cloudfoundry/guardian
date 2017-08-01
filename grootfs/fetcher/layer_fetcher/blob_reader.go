@@ -1,4 +1,4 @@
-package remote
+package layer_fetcher // import "code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 
 import (
 	"compress/gzip"

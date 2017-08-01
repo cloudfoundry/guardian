@@ -1,4 +1,4 @@
-package local_test
+package layer_fetcher_test
 
 import (
 	. "github.com/onsi/ginkgo"
@@ -7,7 +7,8 @@ import (
 	"testing"
 )
 
-func TestLocal(t *testing.T) {
+func TestLayerFetcher(t *testing.T) {
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "Local Suite")
+
+	RunSpecs(t, "Layer Fetcher Suite")
 }

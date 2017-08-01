@@ -1,4 +1,4 @@
-package local // import "code.cloudfoundry.org/grootfs/fetcher/local"
+package tar_fetcher // import "code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
 
 import (
 	"crypto/sha256"
@@ -14,14 +14,14 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
-type LocalFetcher struct {
+type TarFetcher struct {
 }
 
-func NewLocalFetcher() *LocalFetcher {
-	return &LocalFetcher{}
+func NewTarFetcher() *TarFetcher {
+	return &TarFetcher{}
 }
 
-func (l *LocalFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
+func (l *TarFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
 	source string) (io.ReadCloser, int64, error) {
 	logger = logger.Session("stream-blob", lager.Data{
 		"baseImageURL": baseImageURL.String(),
@@ -48,7 +48,7 @@ func (l *LocalFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
 	return stream, 0, nil
 }
 
-func (l *LocalFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {
+func (l *TarFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {
 	logger = logger.Session("layers-digest", lager.Data{"baseImageURL": baseImageURL.String()})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -71,12 +71,12 @@ func (l *LocalFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL)
 	}, nil
 }
 
-func (l *LocalFetcher) generateChainID(baseImagePath string, timestamp int64) string {
+func (l *TarFetcher) generateChainID(baseImagePath string, timestamp int64) string {
 	baseImagePathSha := sha256.Sum256([]byte(baseImagePath))
 	return fmt.Sprintf("%s-%d", hex.EncodeToString(baseImagePathSha[:32]), timestamp)
 }
 
-func (l *LocalFetcher) validateBaseImage(baseImagePath string) error {
+func (l *TarFetcher) validateBaseImage(baseImagePath string) error {
 	stat, err := os.Stat(baseImagePath)
 	if err != nil {
 		return err

@@ -1,4 +1,4 @@
-package remote_test
+package layer_fetcher_test
 
 import (
 	"bytes"
@@ -13,8 +13,8 @@ import (
 
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/fetcherfakes"
-	"code.cloudfoundry.org/grootfs/fetcher/remote"
-	"code.cloudfoundry.org/grootfs/fetcher/remote/remotefakes"
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/layer_fetcherfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -23,18 +23,18 @@ import (
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-var _ = Describe("RemoteFetcher", func() {
+var _ = Describe("LayerFetcher", func() {
 	var (
 		fakeCacheDriver   *fetcherfakes.FakeCacheDriver
-		fakeSource        *remotefakes.FakeSource
-		fetcher           *remote.RemoteFetcher
+		fakeSource        *layer_fetcherfakes.FakeSource
+		fetcher           *layer_fetcher.LayerFetcher
 		logger            *lagertest.TestLogger
 		baseImageURL      *url.URL
 		gzipedBlobContent []byte
 	)
 
 	BeforeEach(func() {
-		fakeSource = new(remotefakes.FakeSource)
+		fakeSource = new(layer_fetcherfakes.FakeSource)
 		fakeCacheDriver = new(fetcherfakes.FakeCacheDriver)
 
 		gzipBuffer := bytes.NewBuffer([]byte{})
@@ -57,9 +57,9 @@ var _ = Describe("RemoteFetcher", func() {
 			return contents, size, nil
 		}
 
-		fetcher = remote.NewRemoteFetcher(fakeSource, fakeCacheDriver)
+		fetcher = layer_fetcher.NewLayerFetcher(fakeSource, fakeCacheDriver)
 
-		logger = lagertest.NewTestLogger("test-remote-fetcher")
+		logger = lagertest.NewTestLogger("test-layer-fetcher")
 		baseImageURL, err = url.Parse("docker:///cfgarden/empty:v0.1.1")
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -76,7 +76,7 @@ var _ = Describe("RemoteFetcher", func() {
 
 		Context("when fetching the manifest fails", func() {
 			BeforeEach(func() {
-				fakeSource.ManifestReturns(remote.Manifest{}, errors.New("fetching the manifest"))
+				fakeSource.ManifestReturns(layer_fetcher.Manifest{}, errors.New("fetching the manifest"))
 			})
 
 			It("returns an error", func() {
@@ -86,10 +86,10 @@ var _ = Describe("RemoteFetcher", func() {
 		})
 
 		It("returns the correct list of layer digests", func() {
-			manifest := remote.Manifest{
-				Layers: []remote.Layer{
-					remote.Layer{BlobID: "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58", Size: 1024},
-					remote.Layer{BlobID: "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76", Size: 2048},
+			manifest := layer_fetcher.Manifest{
+				Layers: []layer_fetcher.Layer{
+					layer_fetcher.Layer{BlobID: "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58", Size: 1024},
+					layer_fetcher.Layer{BlobID: "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76", Size: 2048},
 				},
 			}
 			fakeSource.ManifestReturns(manifest, nil)
@@ -125,7 +125,7 @@ var _ = Describe("RemoteFetcher", func() {
 		})
 
 		It("calls the source", func() {
-			manifest := remote.Manifest{
+			manifest := layer_fetcher.Manifest{
 				ConfigCacheKey: "sha256:hello-world",
 			}
 			fakeSource.ManifestReturns(manifest, nil)
@@ -198,7 +198,7 @@ var _ = Describe("RemoteFetcher", func() {
 			})
 
 			It("calls the cache driver", func() {
-				manifest := remote.Manifest{
+				manifest := layer_fetcher.Manifest{
 					ConfigCacheKey: "sha256:cached-config",
 				}
 				fakeSource.ManifestReturns(manifest, nil)

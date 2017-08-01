@@ -22,5 +22,5 @@ func TestSource(t *testing.T) {
 		RegistryPassword = os.Getenv("REGISTRY_PASSWORD")
 	})
 
-	RunSpecs(t, "Remote Source Suite")
+	RunSpecs(t, "Layer Fetcher Source Suite")
 }

@@ -66,8 +66,8 @@ type VolumeDriver interface {
 }
 
 type BaseImagePuller struct {
-	localFetcher         Fetcher
-	remoteFetcher        Fetcher
+	tarFetcher           Fetcher
+	layerFetcher         Fetcher
 	unpacker             Unpacker
 	volumeDriver         VolumeDriver
 	dependencyRegisterer DependencyRegisterer
@@ -75,10 +75,10 @@ type BaseImagePuller struct {
 	locksmith            groot.Locksmith
 }
 
-func NewBaseImagePuller(localFetcher, remoteFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer, metricsEmitter groot.MetricsEmitter, locksmith groot.Locksmith) *BaseImagePuller {
+func NewBaseImagePuller(tarFetcher, layerFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer, metricsEmitter groot.MetricsEmitter, locksmith groot.Locksmith) *BaseImagePuller {
 	return &BaseImagePuller{
-		localFetcher:         localFetcher,
-		remoteFetcher:        remoteFetcher,
+		tarFetcher:           tarFetcher,
+		layerFetcher:         layerFetcher,
 		unpacker:             unpacker,
 		volumeDriver:         volumeDriver,
 		dependencyRegisterer: dependencyRegisterer,
@@ -123,9 +123,9 @@ func (p *BaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (g
 
 func (p *BaseImagePuller) fetcher(baseImageURL *url.URL) Fetcher {
 	if baseImageURL.Scheme == "" {
-		return p.localFetcher
+		return p.tarFetcher
 	} else {
-		return p.remoteFetcher
+		return p.layerFetcher
 	}
 }
 

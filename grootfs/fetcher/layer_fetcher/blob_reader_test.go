@@ -1,4 +1,4 @@
-package remote_test
+package layer_fetcher_test
 
 import (
 	"bytes"
@@ -6,14 +6,15 @@ import (
 	"io/ioutil"
 	"os"
 
-	"code.cloudfoundry.org/grootfs/fetcher/remote"
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("BlobReader", func() {
 	var (
-		blobReader *remote.BlobReader
+		blobReader *layer_fetcher.BlobReader
 		blobFile   *os.File
 	)
 
@@ -31,7 +32,7 @@ var _ = Describe("BlobReader", func() {
 			Expect(err).NotTo(HaveOccurred())
 			_, err = blobFile.Write(gzipedBlobContent)
 			Expect(err).NotTo(HaveOccurred())
-			blobReader, err = remote.NewBlobReader(blobFile.Name())
+			blobReader, err = layer_fetcher.NewBlobReader(blobFile.Name())
 			Expect(err).NotTo(HaveOccurred())
 		})
 
@@ -65,7 +66,7 @@ var _ = Describe("BlobReader", func() {
 
 		Describe("NewBlobReader", func() {
 			It("returns an error", func() {
-				_, err := remote.NewBlobReader(notABlobFile.Name())
+				_, err := layer_fetcher.NewBlobReader(notABlobFile.Name())
 				Expect(err).To(MatchError(ContainSubstring("blob file is not gzipped")))
 			})
 		})
@@ -74,7 +75,7 @@ var _ = Describe("BlobReader", func() {
 	Context("when the blob doesn't exist", func() {
 		Describe("NewBlobReader", func() {
 			It("returns an error", func() {
-				_, err := remote.NewBlobReader("not-a-real/file")
+				_, err := layer_fetcher.NewBlobReader("not-a-real/file")
 				Expect(err).To(MatchError(ContainSubstring("failed to open blob")))
 			})
 		})

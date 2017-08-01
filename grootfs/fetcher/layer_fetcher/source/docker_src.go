@@ -1,4 +1,4 @@
-package source // import "code.cloudfoundry.org/grootfs/fetcher/remote/source"
+package source // import "code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
 
 import (
 	"crypto/sha256"
@@ -11,7 +11,7 @@ import (
 	"os"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/fetcher/remote"
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/lager"
 	"github.com/Sirupsen/logrus"
 	"github.com/containers/image/docker"
@@ -38,7 +38,7 @@ func NewDockerSource(username, password string, trustedRegistries []string) *Doc
 	}
 }
 
-func (s *DockerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (remote.Manifest, error) {
+func (s *DockerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (layer_fetcher.Manifest, error) {
 	logger = logger.Session("fetching-image-manifest", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -47,16 +47,16 @@ func (s *DockerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (rem
 	if err != nil {
 		logger.Error("fetching-image-reference-failed", err)
 
-		return remote.Manifest{}, errorspkg.Wrap(err, "fetching image reference")
+		return layer_fetcher.Manifest{}, errorspkg.Wrap(err, "fetching image reference")
 	}
 
 	contents, mimeType, err := img.Manifest()
 	if err != nil {
 		logger.Error("fetching-manifest-failed", err)
-		return remote.Manifest{}, errorspkg.Wrap(err, "fetching manifest")
+		return layer_fetcher.Manifest{}, errorspkg.Wrap(err, "fetching manifest")
 	}
 
-	var manifest remote.Manifest
+	var manifest layer_fetcher.Manifest
 	switch mimeType {
 	case manifestpkg.DockerV2Schema1MediaType, manifestpkg.DockerV2Schema1SignedMediaType:
 		logger.Debug("docker-image-version-2-schema-1")
@@ -67,13 +67,13 @@ func (s *DockerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (rem
 		manifest, err = s.parseSchemaV2Manifest(logger, contents)
 
 	default:
-		return remote.Manifest{}, errorspkg.New(fmt.Sprintf("unknown media type '%s'", mimeType))
+		return layer_fetcher.Manifest{}, errorspkg.New(fmt.Sprintf("unknown media type '%s'", mimeType))
 	}
 
 	return manifest, err
 }
 
-func (s *DockerSource) Config(logger lager.Logger, baseImageURL *url.URL, manifest remote.Manifest) (specsv1.Image, error) {
+func (s *DockerSource) Config(logger lager.Logger, baseImageURL *url.URL, manifest layer_fetcher.Manifest) (specsv1.Image, error) {
 	logger = logger.Session("fetching-image-config", lager.Data{
 		"baseImageURL": baseImageURL,
 		"configDigest": manifest.ConfigCacheKey,
@@ -187,16 +187,16 @@ func (s *DockerSource) skipTLSValidation(baseImageURL *url.URL) bool {
 	return false
 }
 
-func (s *DockerSource) parseSchemaV1Manifest(logger lager.Logger, rawManifest []byte) (remote.Manifest, error) {
-	var dockerManifest remote.SchemaV1Manifest
+func (s *DockerSource) parseSchemaV1Manifest(logger lager.Logger, rawManifest []byte) (layer_fetcher.Manifest, error) {
+	var dockerManifest layer_fetcher.SchemaV1Manifest
 	if err := json.Unmarshal(rawManifest, &dockerManifest); err != nil {
 		logger.Error("parsing-manifest-failed", err, lager.Data{"manifest": string(rawManifest)})
-		return remote.Manifest{}, errorspkg.Wrap(err, "parsing manifest")
+		return layer_fetcher.Manifest{}, errorspkg.Wrap(err, "parsing manifest")
 	}
 
-	manifest := remote.Manifest{}
+	manifest := layer_fetcher.Manifest{}
 	for _, layer := range dockerManifest.FSLayers {
-		manifest.Layers = append([]remote.Layer{remote.Layer{BlobID: layer["blobSum"]}}, manifest.Layers...)
+		manifest.Layers = append([]layer_fetcher.Layer{layer_fetcher.Layer{BlobID: layer["blobSum"]}}, manifest.Layers...)
 	}
 
 	for _, history := range dockerManifest.History {
@@ -211,18 +211,18 @@ func (s *DockerSource) parseSchemaV1Manifest(logger lager.Logger, rawManifest []
 	return manifest, nil
 }
 
-func (s *DockerSource) parseSchemaV2Manifest(logger lager.Logger, rawManifest []byte) (remote.Manifest, error) {
+func (s *DockerSource) parseSchemaV2Manifest(logger lager.Logger, rawManifest []byte) (layer_fetcher.Manifest, error) {
 	var ociManifest specsv1.Manifest
 	if err := json.Unmarshal(rawManifest, &ociManifest); err != nil {
 		logger.Error("parsing-manifest-failed", err, lager.Data{"manifest": string(rawManifest)})
-		return remote.Manifest{}, errorspkg.Wrap(err, "parsing manifest")
+		return layer_fetcher.Manifest{}, errorspkg.Wrap(err, "parsing manifest")
 	}
 
-	manifest := remote.Manifest{
+	manifest := layer_fetcher.Manifest{
 		ConfigCacheKey: ociManifest.Config.Digest.String(),
 	}
 	for _, layer := range ociManifest.Layers {
-		manifest.Layers = append(manifest.Layers, remote.Layer{BlobID: layer.Digest.String(), Size: layer.Size})
+		manifest.Layers = append(manifest.Layers, layer_fetcher.Layer{BlobID: layer.Digest.String(), Size: layer.Size})
 	}
 
 	manifest.SchemaVersion = 2
@@ -251,7 +251,7 @@ func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, baseImageURL *ur
 	return config, nil
 }
 
-func (s *DockerSource) parseSchemaV1Config(logger lager.Logger, manifest remote.Manifest) (specsv1.Image, error) {
+func (s *DockerSource) parseSchemaV1Config(logger lager.Logger, manifest layer_fetcher.Manifest) (specsv1.Image, error) {
 	if len(manifest.V1Compatibility) == 0 {
 		logger.Error("v1-manifest-validation-failed", errorspkg.New("v1compatibility has no layers"), lager.Data{"manifest": manifest})
 		return specsv1.Image{}, errorspkg.New("V1Compatibility is empty for the manifest")
@@ -265,7 +265,7 @@ func (s *DockerSource) parseSchemaV1Config(logger lager.Logger, manifest remote.
 	}
 
 	for _, rawHistory := range manifest.V1Compatibility {
-		var v1Compatibility remote.V1Compatibility
+		var v1Compatibility layer_fetcher.V1Compatibility
 		if err := json.Unmarshal([]byte(rawHistory), &v1Compatibility); err != nil {
 			logger.Error("parsing-manifest-v1-compatibility-failed", err)
 			return specsv1.Image{}, errorspkg.Wrap(err, "parsing manifest V1Compatibility")

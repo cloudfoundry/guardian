@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/fetcher/remote"
-	"code.cloudfoundry.org/grootfs/fetcher/remote/source"
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -29,21 +29,21 @@ var _ = Describe("Docker source", func() {
 		baseImageURL *url.URL
 
 		configBlob           string
-		expectedLayersDigest []remote.Layer
+		expectedLayersDigest []layer_fetcher.Layer
 		expectedDiffIds      []digestpkg.Digest
-		manifest             remote.Manifest
+		manifest             layer_fetcher.Manifest
 	)
 
 	BeforeEach(func() {
 		trustedRegistries = []string{}
 
 		configBlob = "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d"
-		expectedLayersDigest = []remote.Layer{
-			remote.Layer{
+		expectedLayersDigest = []layer_fetcher.Layer{
+			layer_fetcher.Layer{
 				BlobID: "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
 				Size:   90,
 			},
-			remote.Layer{
+			layer_fetcher.Layer{
 				BlobID: "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
 				Size:   88,
 			},
@@ -53,7 +53,7 @@ var _ = Describe("Docker source", func() {
 			digestpkg.NewDigestFromHex("sha256", "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0"),
 		}
 
-		manifest = remote.Manifest{
+		manifest = layer_fetcher.Manifest{
 			ConfigCacheKey: configBlob,
 			SchemaVersion:  2,
 		}
@@ -92,14 +92,14 @@ var _ = Describe("Docker source", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(manifest.Layers).To(HaveLen(8))
-				Expect(manifest.Layers[0]).To(Equal(remote.Layer{BlobID: "sha256:51f5c6a04d83efd2d45c5fd59537218924bc46705e3de6ffc8bc07b51481610b"}))
-				Expect(manifest.Layers[1]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
-				Expect(manifest.Layers[2]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
-				Expect(manifest.Layers[3]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
-				Expect(manifest.Layers[4]).To(Equal(remote.Layer{BlobID: "sha256:640c8f3d0eb2b84205cc43e312914c4ae464d433089ee1c95042b893eb7af09b"}))
-				Expect(manifest.Layers[5]).To(Equal(remote.Layer{BlobID: "sha256:a4335300aa893de13a747fee474cd982c62539fd8e20e9b5eb21125996140b8a"}))
-				Expect(manifest.Layers[6]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
-				Expect(manifest.Layers[7]).To(Equal(remote.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
+				Expect(manifest.Layers[0]).To(Equal(layer_fetcher.Layer{BlobID: "sha256:51f5c6a04d83efd2d45c5fd59537218924bc46705e3de6ffc8bc07b51481610b"}))
+				Expect(manifest.Layers[1]).To(Equal(layer_fetcher.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
+				Expect(manifest.Layers[2]).To(Equal(layer_fetcher.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
+				Expect(manifest.Layers[3]).To(Equal(layer_fetcher.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
+				Expect(manifest.Layers[4]).To(Equal(layer_fetcher.Layer{BlobID: "sha256:640c8f3d0eb2b84205cc43e312914c4ae464d433089ee1c95042b893eb7af09b"}))
+				Expect(manifest.Layers[5]).To(Equal(layer_fetcher.Layer{BlobID: "sha256:a4335300aa893de13a747fee474cd982c62539fd8e20e9b5eb21125996140b8a"}))
+				Expect(manifest.Layers[6]).To(Equal(layer_fetcher.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
+				Expect(manifest.Layers[7]).To(Equal(layer_fetcher.Layer{BlobID: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
 
 				Expect(manifest.ConfigCacheKey).To(Equal("sha256:f0f2e4b0f880c47ef68d8bca346ced37d32712b671412704524ac4162fbf944d"))
 			})
@@ -192,7 +192,7 @@ var _ = Describe("Docker source", func() {
 				baseImageURL, err = url.Parse("docker:///cfgarden/private")
 				Expect(err).NotTo(HaveOccurred())
 
-				manifest = remote.Manifest{
+				manifest = layer_fetcher.Manifest{
 					ConfigCacheKey: "sha256:c2bf00eb303023869c676f91af930a12925c24d677999917e8d52c73fa10b73a",
 					SchemaVersion:  2,
 				}
@@ -228,7 +228,7 @@ var _ = Describe("Docker source", func() {
 
 		Context("when schema version is not supported", func() {
 			BeforeEach(func() {
-				manifest = remote.Manifest{
+				manifest = layer_fetcher.Manifest{
 					SchemaVersion: 666,
 				}
 			})
@@ -288,7 +288,7 @@ var _ = Describe("Docker source", func() {
 
 			Context("when the manifest's v1Compatibility is empty", func() {
 				BeforeEach(func() {
-					manifest = remote.Manifest{
+					manifest = layer_fetcher.Manifest{
 						SchemaVersion:   1,
 						V1Compatibility: []string{},
 					}
@@ -302,7 +302,7 @@ var _ = Describe("Docker source", func() {
 
 			Context("when the manifest history is corrupted", func() {
 				BeforeEach(func() {
-					manifest = remote.Manifest{
+					manifest = layer_fetcher.Manifest{
 						SchemaVersion:   1,
 						V1Compatibility: []string{"not-json"},
 					}
@@ -424,7 +424,7 @@ var _ = Describe("Docker source", func() {
 					expectedLayersDigest[0].BlobID = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
 					expectedLayersDigest[1].BlobID = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
 
-					manifest = remote.Manifest{
+					manifest = layer_fetcher.Manifest{
 						ConfigCacheKey: "sha256:c2bf00eb303023869c676f91af930a12925c24d677999917e8d52c73fa10b73a",
 						SchemaVersion:  2,
 					}

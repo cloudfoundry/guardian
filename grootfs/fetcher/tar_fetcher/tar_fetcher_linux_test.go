@@ -1,4 +1,4 @@
-package local_test
+package tar_fetcher_test
 
 import (
 	"archive/tar"
@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
-	"code.cloudfoundry.org/grootfs/fetcher/local"
+	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
 	"code.cloudfoundry.org/grootfs/integration"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -19,9 +19,9 @@ import (
 	. "github.com/st3v/glager"
 )
 
-var _ = Describe("Local Fetcher", func() {
+var _ = Describe("Tar Fetcher", func() {
 	var (
-		fetcher *local.LocalFetcher
+		fetcher *fetcherpkg.TarFetcher
 
 		sourceImagePath string
 		baseImagePath   string
@@ -30,13 +30,13 @@ var _ = Describe("Local Fetcher", func() {
 	)
 
 	BeforeEach(func() {
-		fetcher = local.NewLocalFetcher()
+		fetcher = fetcherpkg.NewTarFetcher()
 
 		var err error
 		sourceImagePath, err = ioutil.TempDir("", "image")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
-		logger = NewLogger("local-fetcher")
+		logger = NewLogger("tar-fetcher")
 	})
 
 	JustBeforeEach(func() {
@@ -70,7 +70,7 @@ var _ = Describe("Local Fetcher", func() {
 
 			Expect(logger).To(ContainSequence(
 				Debug(
-					Message("local-fetcher.stream-blob.opening-tar"),
+					Message("tar-fetcher.stream-blob.opening-tar"),
 					Data("baseImagePath", baseImagePath),
 				),
 			))
