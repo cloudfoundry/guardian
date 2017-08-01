@@ -103,6 +103,7 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 				UID:            uint32(u.containerUid),
 				GID:            uint32(u.containerGid),
 				AdditionalGids: []uint32{},
+				Username:       spec.User,
 			},
 			Cwd:             cwd,
 			Capabilities:    caps,
