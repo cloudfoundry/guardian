@@ -14,8 +14,9 @@ import (
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/lager"
 	"github.com/Sirupsen/logrus"
-	"github.com/containers/image/docker"
+	_ "github.com/containers/image/docker"
 	manifestpkg "github.com/containers/image/manifest"
+	"github.com/containers/image/transports"
 	"github.com/containers/image/types"
 	digestpkg "github.com/opencontainers/go-digest"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -286,7 +287,8 @@ func (s *LayerSource) reference(logger lager.Logger, baseImageURL *url.URL) (typ
 	refString += baseImageURL.Path
 
 	logger.Debug("parsing-reference", lager.Data{"refString": refString})
-	ref, err := docker.ParseReference(refString)
+	transport := transports.Get(baseImageURL.Scheme)
+	ref, err := transport.ParseReference(refString)
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "parsing url failed")
 	}
