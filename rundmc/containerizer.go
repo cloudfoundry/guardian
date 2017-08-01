@@ -3,6 +3,7 @@ package rundmc
 import (
 	"fmt"
 	"io"
+	"time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
@@ -11,6 +12,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
 //go:generate counterfeiter . Depot
@@ -163,9 +165,12 @@ func (c *Containerizer) Attach(log lager.Logger, handle string, processID string
 // StreamIn streams files in to the container
 func (c *Containerizer) StreamIn(log lager.Logger, handle string, spec garden.StreamInSpec) error {
 	log = log.Session("stream-in", lager.Data{"handle": handle})
-
 	log.Info("started")
 	defer log.Info("finished")
+
+	defer func(startedAt time.Time) {
+		_ = metrics.SendValue("StreamInDuration", float64(time.Since(startedAt).Nanoseconds()), "nanos")
+	}(time.Now())
 
 	state, err := c.runtime.State(log, handle)
 	if err != nil {
