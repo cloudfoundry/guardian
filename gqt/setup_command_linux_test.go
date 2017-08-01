@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -30,7 +31,7 @@ var _ = Describe("gdn setup", func() {
 		tag = fmt.Sprintf("%d", GinkgoParallelNode())
 		tmpDir = filepath.Join(
 			os.TempDir(),
-			fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
+			fmt.Sprintf("test-garden-%s", tag),
 		)
 		setupArgs = []string{"setup", "--tag", tag}
 	})
@@ -64,12 +65,12 @@ var _ = Describe("gdn setup", func() {
 			// There is also a 1 character limit on the tag due to iptables rule length
 			// limitations.
 			tag = nodeToString(GinkgoParallelNode())
-			cgroupsRoot = filepath.Join(tmpDir, fmt.Sprintf("cgroups-%s", tag))
-			ensureCgroupsForTagUnmounted(cgroupsRoot)
 			tmpDir = filepath.Join(
 				os.TempDir(),
-				fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
+				fmt.Sprintf("test-garden-%s", tag),
 			)
+			cgroupsRoot = filepath.Join(tmpDir, fmt.Sprintf("cgroups-%s", tag))
+			ensureCgroupsForTagUnmounted(cgroupsRoot)
 			setupArgs = []string{"setup", "--tag", tag}
 		})
 
@@ -78,6 +79,35 @@ var _ = Describe("gdn setup", func() {
 			mountpointCmd.Stdout = GinkgoWriter
 			mountpointCmd.Stderr = GinkgoWriter
 			Expect(mountpointCmd.Run()).To(Succeed())
+		})
+
+		Context("when setting up for rootless", func() {
+			var idToStr = func(id uint32) string {
+				return strconv.FormatUint(uint64(id), 10)
+			}
+
+			BeforeEach(func() {
+				setupArgs = append(setupArgs, "--rootless-uid", idToStr(unprivilegedUID), "--rootless-gid", idToStr(unprivilegedGID))
+			})
+
+			It("chowns the garden cgroup dir to the rootless user for each subsystem", func() {
+				currentCgroup, err := exec.Command("sh", "-c", "cat /proc/self/cgroup | head -1 | awk -F ':' '{print $3}'").CombinedOutput()
+				Expect(err).NotTo(HaveOccurred())
+				cgroupName := strings.TrimSpace(string(currentCgroup))
+
+				subsystems, err := ioutil.ReadDir(cgroupsRoot)
+				Expect(err).NotTo(HaveOccurred())
+
+				for _, subsystem := range subsystems {
+					path := filepath.Join(cgroupsRoot, subsystem.Name(), cgroupName, fmt.Sprintf("garden-%s", tag))
+					Expect(path).To(BeADirectory())
+
+					var stat syscall.Stat_t
+					Expect(syscall.Stat(path, &stat)).To(Succeed())
+					Expect(stat.Uid).To(Equal(unprivilegedUID), "subsystem: "+subsystem.Name())
+					Expect(stat.Gid).To(Equal(unprivilegedGID))
+				}
+			})
 		})
 	})
 

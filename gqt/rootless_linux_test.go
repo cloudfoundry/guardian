@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"io"
+	"strings"
 	"syscall"
 
 	. "github.com/onsi/ginkgo"
@@ -28,13 +29,20 @@ var _ = Describe("rootless containers", func() {
 		imagePath   string
 	)
 
+	var idToStr = func(id uint32) string {
+		return strconv.FormatUint(uint64(id), 10)
+	}
+
 	BeforeEach(func() {
 		tmpDir := filepath.Join(
 			os.TempDir(),
-			fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
+			fmt.Sprintf("test-garden-%s", config.Tag),
 		)
-		tag := fmt.Sprintf("%d", GinkgoParallelNode())
-		setupArgs := []string{"setup", "--tag", tag}
+		setupArgs := []string{"setup",
+			"--tag", config.Tag,
+			"--rootless-uid", idToStr(unprivilegedUID),
+			"--rootless-gid", idToStr(unprivilegedGID)}
+
 		cmd := exec.Command(binaries.Gdn, setupArgs...)
 		cmd.Env = append(
 			[]string{
@@ -51,9 +59,9 @@ var _ = Describe("rootless containers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 
-		runcRootDir, err = ioutil.TempDir("", "runcRootDir")
+		runcRootDir, err = ioutil.TempDir(tmpDir, "runcRootDir")
 		Expect(err).NotTo(HaveOccurred())
-		imagePath, err = ioutil.TempDir("", "rootlessImagePath")
+		imagePath, err = ioutil.TempDir(tmpDir, "rootlessImagePath")
 		Expect(err).NotTo(HaveOccurred())
 
 		unprivilegedUser := &syscall.Credential{Uid: unprivilegedUID, Gid: unprivilegedGID}
@@ -81,8 +89,6 @@ var _ = Describe("rootless containers", func() {
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(imagePath)).To(Succeed())
-		Expect(os.RemoveAll(runcRootDir)).To(Succeed())
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
@@ -130,6 +136,79 @@ var _ = Describe("rootless containers", func() {
 			It("succeeds anyway", func() {
 				_, err := client.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("when we setup limits", func() {
+			var cgroupPath, cgroupType string
+			var container garden.Container
+			JustBeforeEach(func() {
+				currentCgroup, err := exec.Command("sh", "-c", "cat /proc/self/cgroup | head -1 | awk -F ':' '{print $3}'").CombinedOutput()
+				Expect(err).NotTo(HaveOccurred())
+				cgroupName := strings.TrimSpace(string(currentCgroup))
+
+				cgroupPath = fmt.Sprintf("%s/cgroups-%s/%s%s/garden-%s/%s",
+					client.TmpDir, config.Tag, cgroupType, cgroupName, config.Tag, container.Handle())
+			})
+
+			BeforeEach(func() {
+				var err error
+				container, err = client.Create(garden.ContainerSpec{
+					Limits: garden.Limits{
+						Memory: garden.MemoryLimits{
+							LimitInBytes: 64 * 1024 * 1024,
+						},
+						Pid: garden.PidLimits{
+							Max: 100,
+						},
+						CPU: garden.CPULimits{
+							LimitInShares: 512,
+						},
+					},
+				})
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Describe("the memory cgroup", func() {
+				BeforeEach(func() {
+					cgroupType = "memory"
+				})
+
+				It("creates container with the specified memory limit", func() {
+					Expect(cgroupPath).To(BeADirectory())
+					memLimitBytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "memory.limit_in_bytes"))
+					Expect(err).NotTo(HaveOccurred())
+					memLimit := strings.TrimSpace(string(memLimitBytes))
+					Expect(memLimit).To(Equal("67108864"))
+				})
+			})
+
+			Describe("the pids cgroup", func() {
+				BeforeEach(func() {
+					cgroupType = "pids"
+				})
+
+				It("creates container with the specified pid limit", func() {
+					Expect(cgroupPath).To(BeADirectory())
+					pidsMaxInBytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "pids.max"))
+					Expect(err).NotTo(HaveOccurred())
+					pidsMax := strings.TrimSpace(string(pidsMaxInBytes))
+					Expect(pidsMax).To(Equal("100"))
+				})
+			})
+
+			Describe("the cpu cgroup", func() {
+				BeforeEach(func() {
+					cgroupType = "cpu"
+				})
+
+				It("creates container with the specified cpu limits", func() {
+					Expect(cgroupPath).To(BeADirectory())
+					sharesBytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "cpu.shares"))
+					Expect(err).NotTo(HaveOccurred())
+					shares := strings.TrimSpace(string(sharesBytes))
+					Expect(shares).To(Equal("512"))
+				})
 			})
 		})
 	})

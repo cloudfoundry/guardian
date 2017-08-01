@@ -94,7 +94,7 @@ var _ = Describe("Port Pool", func() {
 				})
 
 				JustBeforeEach(func() {
-					client.Stop()
+					Expect(client.Stop()).To(Succeed())
 					client = runner.Start(config)
 				})
 

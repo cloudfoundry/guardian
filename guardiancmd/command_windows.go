@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -54,7 +55,7 @@ func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath, runcRoot string, p
 	}
 }
 
-func (cmd *ServerCommand) wireCgroupsStarter(logger lager.Logger) gardener.Starter {
+func wireCgroupsStarter(_ lager.Logger, _ string, _ cgroups.Chowner) gardener.Starter {
 	return &NoopStarter{}
 }
 

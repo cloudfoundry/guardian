@@ -26,8 +26,13 @@ func (r *GardenRunner) setupDirsForUser() {
 
 	if r.Command.SysProcAttr.Credential != nil {
 		uidGid := fmt.Sprintf("%d:%d", r.User.Uid, r.User.Gid)
+		cmd := exec.Command("chown", uidGid, r.TmpDir)
+		cmd.Stdout = GinkgoWriter
+		cmd.Stderr = GinkgoWriter
+		Expect(cmd.Run()).To(Succeed())
+
 		Eventually(func() error {
-			cmd := exec.Command("chown", "-R", uidGid, r.TmpDir)
+			cmd := exec.Command("chown", "-R", uidGid, r.DepotDir)
 			cmd.Stdout = GinkgoWriter
 			cmd.Stderr = GinkgoWriter
 			return cmd.Run()

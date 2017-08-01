@@ -21,6 +21,7 @@ import (
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -31,7 +32,7 @@ import (
 	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/graph"
 	"github.com/eapache/go-resiliency/retrier"
-	"github.com/opencontainers/runtime-spec/specs-go"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/pivotal-golang/clock"
 )
 
@@ -211,15 +212,15 @@ func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath, runcRoot string, p
 	)
 }
 
-func (cmd *ServerCommand) wireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	var cgroupsMountpoint string
-	if cmd.Server.Tag != "" {
-		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", cmd.Server.Tag))
-	} else {
-		cgroupsMountpoint = "/sys/fs/cgroup"
+func wireCgroupsStarter(logger lager.Logger, tag string, chowner cgroups.Chowner) gardener.Starter {
+	cgroupsMountpoint := "/sys/fs/cgroup"
+	gardenCgroup := "garden"
+	if tag != "" {
+		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
+		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, tag)
 	}
 
-	return rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, commandRunner())
+	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, gardenCgroup, commandRunner(), chowner)
 }
 
 func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {

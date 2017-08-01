@@ -411,6 +411,8 @@ var _ = Describe("Run", func() {
 			})
 
 			AfterEach(func() {
+				config.RuntimePluginBin = ""
+				client = restartGarden(client, config)
 				Expect(os.RemoveAll(propertiesDir)).To(Succeed())
 			})
 

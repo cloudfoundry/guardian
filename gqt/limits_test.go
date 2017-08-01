@@ -33,14 +33,12 @@ var _ = Describe("Limits", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		// read the name of concourse outer container cgroup as the test container cgroup will be nested under it
-		//cpuset := readFileContent(fmt.Sprintf("/proc/%d/cpuset", clientPid))
 		currentCgroup, err := exec.Command("sh", "-c", "cat /proc/self/cgroup | head -1 | awk -F ':' '{print $3}'").CombinedOutput()
 		Expect(err).NotTo(HaveOccurred())
 		cgroupName = strings.TrimSpace(string(currentCgroup))
 
-		cgroupPath = fmt.Sprintf("/tmp/test-garden-%d/cgroups-%d/%s/%s/%s", GinkgoParallelNode(), GinkgoParallelNode(), cgroupType,
-			cgroupName, container.Handle())
+		cgroupPath = fmt.Sprintf("%s/cgroups-%s/%s/%s/garden-%s/%s", client.TmpDir, config.Tag, cgroupType,
+			cgroupName, config.Tag, container.Handle())
 	})
 
 	AfterEach(func() {

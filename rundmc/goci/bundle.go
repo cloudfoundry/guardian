@@ -39,6 +39,15 @@ func (b Bndl) WithProcess(process specs.Process) Bndl {
 	return b
 }
 
+func (b Bndl) CGroupPath() string {
+	return b.Spec.Linux.CgroupsPath
+}
+
+func (b Bndl) WithCGroupPath(path string) Bndl {
+	b.Spec.Linux.CgroupsPath = path
+	return b
+}
+
 func (b Bndl) Hostname() string {
 	return b.Spec.Hostname
 }

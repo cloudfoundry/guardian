@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -182,12 +183,13 @@ func init() {
 
 func DefaultGdnRunnerConfig() GdnRunnerConfig {
 	var config GdnRunnerConfig
+	config.Tag = fmt.Sprintf("%d", GinkgoParallelNode())
 	config.TmpDir = filepath.Join(
 		os.TempDir(),
-		fmt.Sprintf("test-garden-%d", GinkgoParallelNode()),
+		fmt.Sprintf("test-garden-%s", config.Tag),
 	)
 
-	config.GraphDir = filepath.Join(graphDirBase, fmt.Sprintf("node-%d", GinkgoParallelNode()))
+	config.GraphDir = filepath.Join(graphDirBase, fmt.Sprintf("node-%s", config.Tag))
 	config.DepotDir = filepath.Join(config.TmpDir, "containers")
 	config.ConsoleSocketsPath = filepath.Join(config.TmpDir, "console-sockets")
 
@@ -195,10 +197,9 @@ func DefaultGdnRunnerConfig() GdnRunnerConfig {
 		config.BindIP = "127.0.0.1"
 		config.BindPort = intptr(9990 + GinkgoParallelNode())
 	} else {
-		config.BindSocket = fmt.Sprintf("/tmp/garden_%d.sock", GinkgoParallelNode())
+		config.BindSocket = fmt.Sprintf("/tmp/garden_%s.sock", config.Tag)
 	}
 
-	config.Tag = fmt.Sprintf("%d", GinkgoParallelNode())
 	config.NetworkPool = fmt.Sprintf("10.254.%d.0/22", 4*GinkgoParallelNode())
 	config.PortPoolStart = intptr(GinkgoParallelNode() * 7000)
 
@@ -293,14 +294,57 @@ func (r *RunningGarden) removeTempDirPreservingCgroupMounts() error {
 	if err != nil {
 		return err
 	}
+
 	for _, tmpDirChild := range tmpDirContents {
 		if !strings.Contains(tmpDirChild.Name(), "cgroups-") {
 			if err := os.RemoveAll(filepath.Join(r.TmpDir, tmpDirChild.Name())); err != nil {
 				return err
 			}
+		} else {
+			cGroupsPath := path.Join(r.TmpDir, tmpDirChild.Name())
+			if err = r.cleanGardenCgroups(cGroupsPath); err != nil {
+				return err
+			}
 		}
 	}
+
 	return nil
+}
+
+func (r *RunningGarden) cleanGardenCgroups(cGroupsPath string) error {
+	subsystems, err := ioutil.ReadDir(cGroupsPath)
+	if err != nil {
+		return err
+	}
+
+	for _, subsystem := range subsystems {
+		cGroupPath, err := r.findCgroupPath(subsystem.Name())
+		if err != nil {
+			return err
+		}
+		nestedCgroup := filepath.Join(cGroupsPath, subsystem.Name(), cGroupPath)
+		if err := os.Remove(filepath.Join(nestedCgroup, fmt.Sprintf("garden-%s", r.Tag))); err != nil && !os.IsNotExist(err) {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (r *RunningGarden) findCgroupPath(cgroupToFind string) (string, error) {
+	cgroupContent, err := ioutil.ReadFile(fmt.Sprintf("/proc/self/cgroup"))
+	if err != nil {
+		return "", err
+	}
+
+	cgroups := strings.Split(string(cgroupContent), "\n")
+	for _, cgroup := range cgroups {
+		separator := fmt.Sprintf(":%s:", cgroupToFind)
+		if strings.Contains(cgroup, separator) {
+			return strings.Split(cgroup, separator)[1], nil
+		}
+	}
+	return "", errors.New("Cgroup subsystem not found")
 }
 
 func (r *RunningGarden) Stop() error {

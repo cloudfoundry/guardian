@@ -15,7 +15,7 @@ import (
 
 	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -903,7 +903,7 @@ func setupCgroups(cgroupsRoot string) error {
 	logger := lagertest.NewTestLogger("test")
 	runner := linux_command_runner.New()
 
-	starter := rundmc.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, runner)
+	starter := cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, "garden", runner, &cgroups.OSChowner{})
 
 	return starter.Start()
 }

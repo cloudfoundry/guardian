@@ -86,6 +86,7 @@ var _ = Describe("Surviving Restarts", func() {
 			interfacePrefix = info.Properties["kawasaki.iptable-prefix"]
 
 			out := gbytes.NewBuffer()
+
 			existingProc, err = container.Run(
 				garden.ProcessSpec{
 					Path: "/bin/sh",
@@ -148,7 +149,7 @@ var _ = Describe("Surviving Restarts", func() {
 				processes, err := exec.Command("ps", "aux").CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(string(processes)).NotTo(ContainSubstring(fmt.Sprintf("run runc /tmp/test-garden-%d/containers/%s", GinkgoParallelNode(), container.Handle())))
+				Expect(string(processes)).NotTo(ContainSubstring(fmt.Sprintf("run runc %s/containers/%s", client.TmpDir, container.Handle())))
 			})
 
 			Context("when the garden server does not shut down gracefully", func() {
@@ -300,6 +301,7 @@ var _ = Describe("Surviving Restarts", func() {
 			Context("when creating a container after restart", func() {
 				It("should not allocate ports used before restart", func() {
 					secondContainer, err := client.Create(garden.ContainerSpec{})
+					Expect(err).NotTo(HaveOccurred())
 					secondContainerHostPort, _, err := secondContainer.NetIn(0, 8080)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(hostNetInPort).NotTo(Equal(secondContainerHostPort))

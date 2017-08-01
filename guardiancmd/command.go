@@ -30,6 +30,7 @@ import (
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -370,7 +371,8 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	starters := []gardener.Starter{}
 	if !cmd.Server.SkipSetup {
-		starters = append(starters, cmd.wireCgroupsStarter(logger))
+		chowner := &cgroups.OSChowner{}
+		starters = append(starters, wireCgroupsStarter(logger, cmd.Server.Tag, chowner))
 	}
 	if cmd.Network.Plugin.Path() == "" {
 		starters = append(starters, iptablesStarter)
@@ -667,6 +669,11 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		CommandRunner: cmdRunner,
 	}
 
+	gardenCgroup := "garden"
+	if cmd.Server.Tag != "" {
+		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, cmd.Server.Tag)
+	}
+
 	bundleRules := []rundmc.BundlerRule{
 		bundlerules.Base{
 			PrivilegedBase:   privilegedBundle,
@@ -686,6 +693,9 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		bundlerules.Env{},
 		bundlerules.Hostname{},
 		bundlerules.Windows{},
+		bundlerules.CGroupPath{
+			GardenCgroup: gardenCgroup,
+		},
 	}
 	bundleRules = append(bundleRules, osSpecificBundleRules()...)
 

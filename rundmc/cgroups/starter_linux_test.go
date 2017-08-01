@@ -1,4 +1,4 @@
-package rundmc_test
+package cgroups_test
 
 import (
 	"bytes"
@@ -10,7 +10,8 @@ import (
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
-	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	fakes "code.cloudfoundry.org/guardian/rundmc/cgroups/cgroupsfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -20,10 +21,11 @@ import (
 var _ = Describe("CgroupStarter", func() {
 	var (
 		runner          *fake_command_runner.FakeCommandRunner
-		starter         *rundmc.CgroupStarter
+		starter         *cgroups.CgroupStarter
 		procCgroups     *FakeReadCloser
 		procSelfCgroups *FakeReadCloser
 		logger          lager.Logger
+		chowner         *fakes.FakeChowner
 
 		tmpDir string
 	)
@@ -37,12 +39,15 @@ var _ = Describe("CgroupStarter", func() {
 		runner = fake_command_runner.New()
 		procCgroups = &FakeReadCloser{Buffer: bytes.NewBufferString("")}
 		procSelfCgroups = &FakeReadCloser{Buffer: bytes.NewBufferString("")}
-		starter = &rundmc.CgroupStarter{
+		chowner = &fakes.FakeChowner{}
+		starter = &cgroups.CgroupStarter{
 			CgroupPath:      path.Join(tmpDir, "cgroup"),
+			GardenCgroup:    "garden",
 			CommandRunner:   runner,
 			ProcCgroups:     procCgroups,
 			ProcSelfCgroups: procSelfCgroups,
 			Logger:          logger,
+			Chowner:         chowner,
 		}
 	})
 
@@ -145,6 +150,64 @@ var _ = Describe("CgroupStarter", func() {
 			Expect(path.Join(tmpDir, "cgroup", "devices")).To(BeADirectory())
 		})
 
+		It("creates subdirectories owned by the specified user and group", func() {
+			starter.Start()
+			allChowns := []string{}
+			for i := 0; i < chowner.RecursiveChownCallCount(); i++ {
+				allChowns = append(allChowns, chowner.RecursiveChownArgsForCall(i))
+			}
+
+			for _, subsystem := range []string{"devices", "cpu", "memory"} {
+				fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden")
+				Expect(fullPath).To(BeADirectory())
+				Expect(allChowns).To(ContainElement(fullPath))
+				dirStat, err := os.Stat(fullPath)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(dirStat.Mode() & os.ModePerm).To(Equal(os.FileMode(0700)))
+			}
+		})
+
+		Context("when we are in the nested case", func() {
+			BeforeEach(func() {
+				_, err := procCgroups.Write([]byte(
+					"#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
+						"memory\t2\t1\t1\n",
+				))
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = procSelfCgroups.Write([]byte(
+					"4:memory:/461299e6-b672-497c-64e5-793494b9bbdb\n",
+				))
+				Expect(err).NotTo(HaveOccurred())
+
+				for _, notMounted := range []string{"memory"} {
+					runner.WhenRunning(fake_command_runner.CommandSpec{
+						Path: "mountpoint",
+						Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted) + "/"},
+					}, func(cmd *exec.Cmd) error {
+						return errors.New("not a mountpoint")
+					})
+				}
+			})
+
+			It("creates subdirectories owned by the specified user and group", func() {
+				starter.Start()
+				allChowns := []string{}
+				for i := 0; i < chowner.RecursiveChownCallCount(); i++ {
+					allChowns = append(allChowns, chowner.RecursiveChownArgsForCall(i))
+				}
+
+				for _, subsystem := range []string{"memory"} {
+					fullPath := path.Join(tmpDir, "cgroup", subsystem, "461299e6-b672-497c-64e5-793494b9bbdb", "garden")
+					Expect(fullPath).To(BeADirectory())
+					Expect(allChowns).To(ContainElement(fullPath))
+					dirStat, err := os.Stat(fullPath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(dirStat.Mode() & os.ModePerm).To(Equal(os.FileMode(0700)))
+				}
+			})
+		})
+
 		Context("when a subsystem is not yet mounted anywhere", func() {
 			BeforeEach(func() {
 				_, err := procCgroups.Write([]byte("freezer\t7\t1\t1\n"))
@@ -222,7 +285,7 @@ var _ = Describe("CgroupStarter", func() {
 
 		It("returns CgroupsFormatError", func() {
 			err := starter.Start()
-			Expect(err).To(Equal(rundmc.CgroupsFormatError{Content: "devices\tA ONE AND A\t1\t1"}))
+			Expect(err).To(Equal(cgroups.CgroupsFormatError{Content: "devices\tA ONE AND A\t1\t1"}))
 		})
 	})
 
@@ -241,7 +304,7 @@ var _ = Describe("CgroupStarter", func() {
 
 		It("returns CgroupsFormatError", func() {
 			err := starter.Start()
-			Expect(err).To(Equal(rundmc.CgroupsFormatError{Content: "(empty)"}))
+			Expect(err).To(Equal(cgroups.CgroupsFormatError{Content: "(empty)"}))
 		})
 	})
 
@@ -266,7 +329,7 @@ var _ = Describe("CgroupStarter", func() {
 
 		It("returns CgroupsFormatError", func() {
 			err := starter.Start()
-			Expect(err).To(Equal(rundmc.CgroupsFormatError{Content: "#subsys_name\tsome\tbogus\tcolumns"}))
+			Expect(err).To(Equal(cgroups.CgroupsFormatError{Content: "#subsys_name\tsome\tbogus\tcolumns"}))
 		})
 	})
 

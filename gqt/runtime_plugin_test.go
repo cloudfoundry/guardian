@@ -40,7 +40,7 @@ var _ = Describe("Runtime Plugin", func() {
 
 		Describe("creating a container", func() {
 			var (
-				handle       = fmt.Sprintf("runtime-plugin-test-handle-%d", GinkgoParallelNode())
+				handle       = fmt.Sprintf("runtime-plugin-test-handle-%s", config.Tag)
 				argsFilepath string
 			)
 
@@ -212,7 +212,7 @@ var _ = Describe("Runtime Plugin", func() {
 
 			Describe("destroying a container", func() {
 				var (
-					handle       = fmt.Sprintf("runtime-plugin-test-handle-%d", GinkgoParallelNode())
+					handle       = fmt.Sprintf("runtime-plugin-test-handle-%s", config.Tag)
 					argsFilepath string
 				)
 

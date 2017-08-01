@@ -1,4 +1,4 @@
-package rundmc
+package cgroups
 
 import (
 	"bufio"
@@ -28,26 +28,30 @@ func (err CgroupsFormatError) Error() string {
 	return fmt.Sprintf("unknown /proc/cgroups format: %s", err.Content)
 }
 
-func NewStarter(logger lager.Logger, procCgroupReader io.ReadCloser, procSelfCgroupReader io.ReadCloser, cgroupMountpoint string, runner commandrunner.CommandRunner) *Starter {
+func NewStarter(logger lager.Logger, procCgroupReader io.ReadCloser, procSelfCgroupReader io.ReadCloser, cgroupMountpoint, gardenCgroup string, runner commandrunner.CommandRunner, chowner Chowner) *Starter {
 	return &Starter{
 		&CgroupStarter{
 			CgroupPath:      cgroupMountpoint,
+			GardenCgroup:    gardenCgroup,
 			ProcCgroups:     procCgroupReader,
 			ProcSelfCgroups: procSelfCgroupReader,
 			CommandRunner:   runner,
 			Logger:          logger,
+			Chowner:         chowner,
 		},
 	}
 }
 
 type CgroupStarter struct {
 	CgroupPath    string
+	GardenCgroup  string
 	CommandRunner commandrunner.CommandRunner
 
 	ProcCgroups     io.ReadCloser
 	ProcSelfCgroups io.ReadCloser
 
-	Logger lager.Logger
+	Logger  lager.Logger
+	Chowner Chowner
 }
 
 func (s *CgroupStarter) Start() error {
@@ -94,14 +98,37 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 			continue
 		}
 
-		cgroupsToMount, found := subsystemGroupings[subsystem]
-		if !found {
-			cgroupsToMount = subsystem
+		subsystemToMount, dirToCreate := subsystem, s.GardenCgroup
+		if v, ok := subsystemGroupings[subsystem]; ok {
+			subsystemToMount = v.SubSystem
+			dirToCreate = path.Join(v.Path, s.GardenCgroup)
 		}
 
-		if err := s.mountCgroup(logger, path.Join(s.CgroupPath, subsystem), cgroupsToMount); err != nil {
+		subsystemMountPath := path.Join(s.CgroupPath, subsystem)
+		if err := s.idempotentCgroupMount(logger, subsystemMountPath, subsystemToMount); err != nil {
 			return err
 		}
+
+		gardenCgroupPath := path.Join(s.CgroupPath, subsystem, dirToCreate)
+		if err := s.createGardenCgroup(logger, gardenCgroupPath); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *CgroupStarter) createGardenCgroup(log lager.Logger, gardenCgroupPath string) error {
+	log = log.Session("creating-garden-cgroup", lager.Data{"gardenCgroup": gardenCgroupPath})
+	log.Info("started")
+	defer log.Info("finished")
+
+	if err := os.MkdirAll(gardenCgroupPath, 0700); err != nil {
+		return err
+	}
+
+	if err := s.Chowner.RecursiveChown(gardenCgroupPath); err != nil {
+		return err
 	}
 
 	return nil
@@ -118,11 +145,15 @@ func (s *CgroupStarter) mountTmpfsOnCgroupPath(log lager.Logger, path string) {
 	}
 }
 
-func (s *CgroupStarter) subsystemGroupings() (map[string]string, error) {
-	groupings := map[string]string{}
+type group struct {
+	SubSystem string
+	Path      string
+}
+
+func (s *CgroupStarter) subsystemGroupings() (map[string]group, error) {
+	groupings := map[string]group{}
 
 	scanner := bufio.NewScanner(s.ProcSelfCgroups)
-
 	for scanner.Scan() {
 		segs := strings.Split(scanner.Text(), ":")
 		if len(segs) != 3 {
@@ -131,14 +162,14 @@ func (s *CgroupStarter) subsystemGroupings() (map[string]string, error) {
 
 		subsystems := strings.Split(segs[1], ",")
 		for _, subsystem := range subsystems {
-			groupings[subsystem] = segs[1]
+			groupings[subsystem] = group{segs[1], segs[2]}
 		}
 	}
 
 	return groupings, scanner.Err()
 }
 
-func (s *CgroupStarter) mountCgroup(logger lager.Logger, cgroupPath, subsystems string) error {
+func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, subsystems string) error {
 	logger = logger.Session("mount-cgroup", lager.Data{
 		"path":       cgroupPath,
 		"subsystems": subsystems,

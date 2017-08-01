@@ -34,7 +34,6 @@ func KillCommand(id, signal, logFile string) *exec.Cmd {
 	return DefaultRuncBinary.KillCommand(id, signal, logFile)
 }
 
-// StateCommands creates a command that gets the state of a container using the default runc binary name.
 func StateCommand(id, logFile string) *exec.Cmd {
 	return DefaultRuncBinary.StateCommand(id, logFile)
 }
