@@ -22,23 +22,23 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
-const MAX_DOCKER_RETRIES = 3
+const MAX_BLOB_RETRIES = 3
 
-type DockerSource struct {
+type LayerSource struct {
 	trustedRegistries []string
 	username          string
 	password          string
 }
 
-func NewDockerSource(username, password string, trustedRegistries []string) *DockerSource {
-	return &DockerSource{
+func NewLayerSource(username, password string, trustedRegistries []string) *LayerSource {
+	return &LayerSource{
 		username:          username,
 		password:          password,
 		trustedRegistries: trustedRegistries,
 	}
 }
 
-func (s *DockerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (layer_fetcher.Manifest, error) {
+func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (layer_fetcher.Manifest, error) {
 	logger = logger.Session("fetching-image-manifest", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -73,7 +73,7 @@ func (s *DockerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (lay
 	return manifest, err
 }
 
-func (s *DockerSource) Config(logger lager.Logger, baseImageURL *url.URL, manifest layer_fetcher.Manifest) (specsv1.Image, error) {
+func (s *LayerSource) Config(logger lager.Logger, baseImageURL *url.URL, manifest layer_fetcher.Manifest) (specsv1.Image, error) {
 	logger = logger.Session("fetching-image-config", lager.Data{
 		"baseImageURL": baseImageURL,
 		"configDigest": manifest.ConfigCacheKey,
@@ -105,7 +105,7 @@ func (s *DockerSource) Config(logger lager.Logger, baseImageURL *url.URL, manife
 	return config, nil
 }
 
-func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error) {
+func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error) {
 	logrus.SetOutput(os.Stderr)
 	logger = logger.Session("streaming-blob", lager.Data{
 		"baseImageURL": baseImageURL,
@@ -140,9 +140,9 @@ func (s *DockerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest s
 	return blobTempFile.Name(), size, nil
 }
 
-func (s *DockerSource) getBlobWithRetries(imgSrc types.ImageSource, blobInfo types.BlobInfo, logger lager.Logger) (io.ReadCloser, int64, error) {
+func (s *LayerSource) getBlobWithRetries(imgSrc types.ImageSource, blobInfo types.BlobInfo, logger lager.Logger) (io.ReadCloser, int64, error) {
 	var err error
-	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
+	for i := 0; i < MAX_BLOB_RETRIES; i++ {
 		logger.Info("attempt-get-blob", lager.Data{"attempt": i + 1})
 		blob, size, e := imgSrc.GetBlob(blobInfo)
 		if e == nil {
@@ -154,7 +154,7 @@ func (s *DockerSource) getBlobWithRetries(imgSrc types.ImageSource, blobInfo typ
 	return nil, 0, err
 }
 
-func (s *DockerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest string) bool {
+func (s *LayerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest string) bool {
 	var (
 		actualSize int64
 		err        error
@@ -177,7 +177,7 @@ func (s *DockerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest
 	return digestID == blobContentsSha
 }
 
-func (s *DockerSource) skipTLSValidation(baseImageURL *url.URL) bool {
+func (s *LayerSource) skipTLSValidation(baseImageURL *url.URL) bool {
 	for _, trustedRegistry := range s.trustedRegistries {
 		if baseImageURL.Host == trustedRegistry {
 			return true
@@ -187,7 +187,7 @@ func (s *DockerSource) skipTLSValidation(baseImageURL *url.URL) bool {
 	return false
 }
 
-func (s *DockerSource) parseSchemaV1Manifest(logger lager.Logger, rawManifest []byte) (layer_fetcher.Manifest, error) {
+func (s *LayerSource) parseSchemaV1Manifest(logger lager.Logger, rawManifest []byte) (layer_fetcher.Manifest, error) {
 	var dockerManifest layer_fetcher.SchemaV1Manifest
 	if err := json.Unmarshal(rawManifest, &dockerManifest); err != nil {
 		logger.Error("parsing-manifest-failed", err, lager.Data{"manifest": string(rawManifest)})
@@ -211,7 +211,7 @@ func (s *DockerSource) parseSchemaV1Manifest(logger lager.Logger, rawManifest []
 	return manifest, nil
 }
 
-func (s *DockerSource) parseSchemaV2Manifest(logger lager.Logger, rawManifest []byte) (layer_fetcher.Manifest, error) {
+func (s *LayerSource) parseSchemaV2Manifest(logger lager.Logger, rawManifest []byte) (layer_fetcher.Manifest, error) {
 	var ociManifest specsv1.Manifest
 	if err := json.Unmarshal(rawManifest, &ociManifest); err != nil {
 		logger.Error("parsing-manifest-failed", err, lager.Data{"manifest": string(rawManifest)})
@@ -229,7 +229,7 @@ func (s *DockerSource) parseSchemaV2Manifest(logger lager.Logger, rawManifest []
 	return manifest, nil
 }
 
-func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, baseImageURL *url.URL, configDigest string) (specsv1.Image, error) {
+func (s *LayerSource) parseSchemaV2Config(logger lager.Logger, baseImageURL *url.URL, configDigest string) (specsv1.Image, error) {
 	imgSrc, err := s.imageSource(logger, baseImageURL)
 	if err != nil {
 		return specsv1.Image{}, err
@@ -251,7 +251,7 @@ func (s *DockerSource) parseSchemaV2Config(logger lager.Logger, baseImageURL *ur
 	return config, nil
 }
 
-func (s *DockerSource) parseSchemaV1Config(logger lager.Logger, manifest layer_fetcher.Manifest) (specsv1.Image, error) {
+func (s *LayerSource) parseSchemaV1Config(logger lager.Logger, manifest layer_fetcher.Manifest) (specsv1.Image, error) {
 	if len(manifest.V1Compatibility) == 0 {
 		logger.Error("v1-manifest-validation-failed", errorspkg.New("v1compatibility has no layers"), lager.Data{"manifest": manifest})
 		return specsv1.Image{}, errorspkg.New("V1Compatibility is empty for the manifest")
@@ -278,7 +278,7 @@ func (s *DockerSource) parseSchemaV1Config(logger lager.Logger, manifest layer_f
 	return config, nil
 }
 
-func (s *DockerSource) reference(logger lager.Logger, baseImageURL *url.URL) (types.ImageReference, error) {
+func (s *LayerSource) reference(logger lager.Logger, baseImageURL *url.URL) (types.ImageReference, error) {
 	refString := "/"
 	if baseImageURL.Host != "" {
 		refString += "/" + baseImageURL.Host
@@ -294,7 +294,7 @@ func (s *DockerSource) reference(logger lager.Logger, baseImageURL *url.URL) (ty
 	return ref, nil
 }
 
-func (s *DockerSource) image(logger lager.Logger, baseImageURL *url.URL) (types.Image, error) {
+func (s *LayerSource) image(logger lager.Logger, baseImageURL *url.URL) (types.Image, error) {
 	ref, err := s.reference(logger, baseImageURL)
 	if err != nil {
 		return nil, err
@@ -316,7 +316,7 @@ func (s *DockerSource) image(logger lager.Logger, baseImageURL *url.URL) (types.
 	return img, nil
 }
 
-func (s *DockerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (types.ImageSource, error) {
+func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (types.ImageSource, error) {
 	ref, err := s.reference(logger, baseImageURL)
 	if err != nil {
 		return nil, err

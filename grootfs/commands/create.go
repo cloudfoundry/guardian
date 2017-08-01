@@ -147,10 +147,10 @@ var CreateCommand = cli.Command{
 			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper, unpackerStrategy)
 		}
 
-		dockerSrc := source.NewDockerSource(ctx.String("username"), ctx.String("password"), cfg.Create.InsecureRegistries)
+		layerSource := source.NewLayerSource(ctx.String("username"), ctx.String("password"), cfg.Create.InsecureRegistries)
 
 		cacheDriver := cache_driver.NewCacheDriver(storePath)
-		layerFetcher := layer_fetcher.NewLayerFetcher(dockerSrc, cacheDriver)
+		layerFetcher := layer_fetcher.NewLayerFetcher(layerSource, cacheDriver)
 
 		tarFetcher := tar_fetcher.NewTarFetcher()
 
