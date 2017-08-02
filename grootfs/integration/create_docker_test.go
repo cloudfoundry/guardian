@@ -33,7 +33,7 @@ import (
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-var _ = Describe("Create with remote images", func() {
+var _ = Describe("Create with remote DOCKER images", func() {
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
 	})

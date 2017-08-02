@@ -17,7 +17,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("Create with local images", func() {
+var _ = Describe("Create with local TAR images", func() {
 	var (
 		sourceImagePath string
 		baseImagePath   string
