@@ -28,6 +28,7 @@ var _ = Describe("ImagePlugin", func() {
 
 		fakeUnprivilegedCommandCreator *fakes.FakeCommandCreator
 		fakePrivilegedCommandCreator   *fakes.FakeCommandCreator
+		fakeImageSpecCreator           *fakes.FakeImageSpecCreator
 		fakeCommandRunner              *fake_command_runner.FakeCommandRunner
 
 		fakeLogger lager.Logger
@@ -38,6 +39,7 @@ var _ = Describe("ImagePlugin", func() {
 	BeforeEach(func() {
 		fakeUnprivilegedCommandCreator = new(fakes.FakeCommandCreator)
 		fakePrivilegedCommandCreator = new(fakes.FakeCommandCreator)
+		fakeImageSpecCreator = new(fakes.FakeImageSpecCreator)
 		fakeCommandRunner = fake_command_runner.New()
 
 		fakeLogger = glager.NewLogger("image-plugin")
@@ -49,6 +51,7 @@ var _ = Describe("ImagePlugin", func() {
 		imagePlugin = imageplugin.ImagePlugin{
 			UnprivilegedCommandCreator: fakeUnprivilegedCommandCreator,
 			PrivilegedCommandCreator:   fakePrivilegedCommandCreator,
+			ImageSpecCreator:           fakeImageSpecCreator,
 			CommandRunner:              fakeCommandRunner,
 			DefaultRootfs:              defaultRootfs,
 		}
@@ -127,6 +130,10 @@ var _ = Describe("ImagePlugin", func() {
 			Expect(specArg).To(Equal(rootfsProviderSpec))
 		})
 
+		It("doesn't generate an OCI image spec", func() {
+			Expect(fakeImageSpecCreator.CreateImageSpecCallCount()).To(Equal(0))
+		})
+
 		Context("when the unprivileged command creator returns an error", func() {
 			BeforeEach(func() {
 				fakeUnprivilegedCommandCreator.CreateCommandReturns(nil, errors.New("explosion"))
@@ -134,6 +141,41 @@ var _ = Describe("ImagePlugin", func() {
 
 			It("returns that error", func() {
 				Expect(createErr).To(MatchError("creating create command: explosion"))
+			})
+		})
+
+		Context("when the rootfs uses the scheme preloaded+layer", func() {
+			var ociImageURI *url.URL
+
+			BeforeEach(func() {
+				var err error
+				ociImageURI, err = url.Parse("https://arbitrary.com/this-must-be-a-parseable-url-though")
+				Expect(err).NotTo(HaveOccurred())
+				fakeImageSpecCreator.CreateImageSpecReturns(ociImageURI, nil)
+				rootfs = "preloaded+layer:///path/to/rootfs?layer=https://layer.com/layer.tgz&layer_path=/a/path"
+			})
+
+			It("generates an OCI image spec", func() {
+				Expect(fakeImageSpecCreator.CreateImageSpecCallCount()).To(Equal(1))
+				actualRootFS, actualHandle := fakeImageSpecCreator.CreateImageSpecArgsForCall(0)
+				Expect(actualRootFS.String()).To(Equal(rootfs))
+				Expect(actualHandle).To(Equal(handle))
+			})
+
+			It("passes the new OCI image URI to the image plugin command creator", func() {
+				Expect(fakeUnprivilegedCommandCreator.CreateCommandCallCount()).To(Equal(1))
+				_, _, actualSpec := fakeUnprivilegedCommandCreator.CreateCommandArgsForCall(0)
+				Expect(actualSpec.RootFS).To(Equal(ociImageURI))
+			})
+
+			Context("when the image spec creator returns an error", func() {
+				BeforeEach(func() {
+					fakeImageSpecCreator.CreateImageSpecReturns(nil, errors.New("morty"))
+				})
+
+				It("returns an error", func() {
+					Expect(createErr).To(MatchError(ContainSubstring("morty")))
+				})
 			})
 		})
 

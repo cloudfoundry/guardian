@@ -582,6 +582,7 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 	return &imageplugin.ImagePlugin{
 		UnprivilegedCommandCreator: unprivilegedCommandCreator,
 		PrivilegedCommandCreator:   privilegedCommandCreator,
+		ImageSpecCreator:           imageplugin.NewOCIImageSpecCreator(cmd.Containers.Dir),
 		CommandRunner:              commandRunner(),
 		DefaultRootfs:              cmd.Containers.DefaultRootFS,
 	}

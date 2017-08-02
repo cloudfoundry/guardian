@@ -3,8 +3,10 @@ package imageplugin
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os/exec"
+	"strings"
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
@@ -15,6 +17,8 @@ import (
 	"github.com/tscolari/lagregator"
 )
 
+const PreloadedPlusLayerScheme = "preloaded+layer"
+
 //go:generate counterfeiter . CommandCreator
 type CommandCreator interface {
 	CreateCommand(log lager.Logger, handle string, spec rootfs_spec.Spec) (*exec.Cmd, error)
@@ -22,9 +26,15 @@ type CommandCreator interface {
 	MetricsCommand(log lager.Logger, handle string) *exec.Cmd
 }
 
+//go:generate counterfeiter . ImageSpecCreator
+type ImageSpecCreator interface {
+	CreateImageSpec(rootFS *url.URL, handle string) (*url.URL, error)
+}
+
 type ImagePlugin struct {
 	UnprivilegedCommandCreator CommandCreator
 	PrivilegedCommandCreator   CommandCreator
+	ImageSpecCreator           ImageSpecCreator
 	CommandRunner              commandrunner.CommandRunner
 	DefaultRootfs              string
 }
@@ -41,6 +51,15 @@ func (p *ImagePlugin) Create(log lager.Logger, handle string, spec rootfs_spec.S
 		if err != nil {
 			log.Error("parsing-default-rootfs-failed", err)
 			return gardener.DesiredImageSpec{}, errorwrapper.Wrap(err, "parsing default rootfs")
+		}
+	}
+
+	if strings.HasPrefix(spec.RootFS.String(), fmt.Sprintf("%s:", PreloadedPlusLayerScheme)) {
+		var err error
+		spec.RootFS, err = p.ImageSpecCreator.CreateImageSpec(spec.RootFS, handle)
+		if err != nil {
+			log.Error("creating-image-spec", err)
+			return gardener.DesiredImageSpec{}, errorwrapper.Wrap(err, "creating image spec")
 		}
 	}
 

@@ -2,6 +2,8 @@ package gqt_test
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,9 +15,12 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	"code.cloudfoundry.org/guardian/imageplugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	digest "github.com/opencontainers/go-digest"
+	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -261,6 +266,65 @@ var _ = Describe("Image Plugin", func() {
 					Expect(err).ToNot(HaveOccurred())
 
 					Expect(string(pluginArgsBytes)).To(ContainSubstring("/some/fake/rootfs"))
+				})
+			})
+
+			Context("when passing a preloaded+layer image URI", func() {
+				// This must be a real file, as it has stat() called on it to get the
+				// mtime.
+				// Using a temporary directory causes flakiness.
+				var rootFSPath = "/bin/sh"
+
+				BeforeEach(func() {
+					containerSpec.Image = garden.ImageRef{URI: fmt.Sprintf(
+						"preloaded+layer://%s?layer=https://droplets.com/droplet.tgz&layer_path=/untar/here&layer_digest=some-digest",
+						rootFSPath,
+					)}
+				})
+
+				It("executes the plugin, passing an OCI image URI", func() {
+					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
+					Expect(err).ToNot(HaveOccurred())
+
+					ociImagePath := filepath.Join(client.DepotDir, container.Handle(), "image")
+					ociImageURI := fmt.Sprintf("oci://%s", ociImagePath)
+					Expect(string(pluginArgsBytes)).To(ContainSubstring(ociImageURI))
+
+					var imageIndex imagespec.Index
+					unmarshalJSONFromFile(filepath.Join(ociImagePath, "index.json"), &imageIndex)
+					Expect(imageIndex.SchemaVersion).To(Equal(imageplugin.ImageSpecSchemaVersion))
+					Expect(imageIndex.Manifests).To(HaveLen(1))
+
+					manifestDigest := imageIndex.Manifests[0].Digest.String()
+					Expect(manifestDigest).To(HavePrefix("sha256:"))
+					manifestDigest = strings.TrimLeft(manifestDigest, "sha256:")
+					manifestPath := filepath.Join(ociImagePath, "blobs", "sha256", manifestDigest)
+
+					var imageManifest imagespec.Manifest
+					unmarshalJSONFromFile(manifestPath, &imageManifest)
+					Expect(imageManifest.SchemaVersion).To(Equal(imageplugin.ImageSpecSchemaVersion))
+
+					Expect(imageManifest.Layers).To(HaveLen(2))
+
+					Expect(imageManifest.Layers[0].URLs).To(ConsistOf("file://" + rootFSPath))
+					bottomLayerSHA := digest.Digest(
+						fmt.Sprintf("sha256:%s-%d", shaOf(rootFSPath), lastModifiedTime(rootFSPath)),
+					)
+					Expect(imageManifest.Layers[0].Digest).To(Equal(bottomLayerSHA))
+
+					Expect(imageManifest.Layers[1].URLs).To(ConsistOf("https://droplets.com/droplet.tgz"))
+					Expect(imageManifest.Layers[1].Annotations).To(HaveKeyWithValue(imageplugin.ImageSpecBaseDirectoryAnnotationKey, "/untar/here"))
+					topLayerSHA := digest.Digest("sha256:some-digest")
+					Expect(imageManifest.Layers[1].Digest).To(Equal(topLayerSHA))
+
+					configDigest := imageManifest.Config.Digest.String()
+					Expect(configDigest).To(HavePrefix("sha256:"))
+					configDigest = strings.TrimLeft(configDigest, "sha256:")
+					configPath := filepath.Join(ociImagePath, "blobs", "sha256", configDigest)
+
+					var imageConfig imagespec.Image
+					unmarshalJSONFromFile(configPath, &imageConfig)
+					Expect(imageConfig.RootFS.DiffIDs).To(Equal([]digest.Digest{bottomLayerSHA, topLayerSHA}))
 				})
 			})
 
@@ -1015,6 +1079,23 @@ var _ = Describe("Image Plugin", func() {
 
 	})
 })
+
+func shaOf(s string) string {
+	shaBytes := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(shaBytes[:])
+}
+
+func lastModifiedTime(pathname string) int64 {
+	info, err := os.Stat(pathname)
+	Expect(err).NotTo(HaveOccurred())
+	return info.ModTime().UnixNano()
+}
+
+func unmarshalJSONFromFile(pathname string, into interface{}) {
+	contents, err := ioutil.ReadFile(pathname)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(json.Unmarshal(contents, into)).To(Succeed())
+}
 
 func copyFile(srcPath, dstPath string) error {
 	dirPath := filepath.Dir(dstPath)
