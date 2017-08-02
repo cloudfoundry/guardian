@@ -20,7 +20,7 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
-var _ = Describe("Layer source", func() {
+var _ = Describe("Layer source: Docker", func() {
 	var (
 		trustedRegistries []string
 		layerSource       *source.LayerSource

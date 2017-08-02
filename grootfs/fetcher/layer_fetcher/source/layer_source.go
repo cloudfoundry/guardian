@@ -16,6 +16,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	_ "github.com/containers/image/docker"
 	manifestpkg "github.com/containers/image/manifest"
+	_ "github.com/containers/image/oci/layout"
 	"github.com/containers/image/transports"
 	"github.com/containers/image/types"
 	digestpkg "github.com/opencontainers/go-digest"

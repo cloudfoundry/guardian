@@ -506,7 +506,7 @@ var _ = Describe("Create with remote images", func() {
 					})
 
 					Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
-					layerSnapshotPath := filepath.Join(StorePath, "volumes", "sha256:3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
+					layerSnapshotPath := filepath.Join(StorePath, "volumes", "3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
 					Expect(layerSnapshotPath).ToNot(BeAnExistingFile())
 				})
 			})

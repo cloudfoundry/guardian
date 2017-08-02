@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
@@ -241,7 +242,9 @@ func tryParsingErrorMessage(err error) error {
 	}
 	if newErr.Error() == "directory provided instead of a tar file" {
 		return errorspkg.New("invalid base image: " + newErr.Error())
-
+	}
+	if regexp.MustCompile("pulling the image: fetching list of digests: fetching image reference: .*: no such file or directory").MatchString(err.Error()) {
+		return errorspkg.New("Image source doesn't exist")
 	}
 
 	return err
