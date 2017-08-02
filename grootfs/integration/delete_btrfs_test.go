@@ -24,65 +24,63 @@ import (
 
 var _ = Describe("Delete (btrfs only)", func() {
 	var (
-		sourceImagePath string
-		baseImagePath   string
-		image           groot.ImageInfo
-		imageIndex      uint32
+		nextUniqueImageIndex uint32
 	)
 
 	BeforeEach(func() {
 		integration.SkipIfNotBTRFS(Driver)
-
-		var err error
-		sourceImagePath, err = ioutil.TempDir("", "")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
-	AfterEach(func() {
-		Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
-		Expect(os.RemoveAll(baseImagePath)).To(Succeed())
-	})
-
-	createRandomImage := func() string {
-		imageId := fmt.Sprintf("image-%d", atomic.AddUint32(&imageIndex, 1))
-		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
-		baseImagePath = baseImageFile.Name()
-		var err error
-		image, err = Runner.Create(groot.CreateSpec{
+	createUniqueImage := func(baseImagePath string) (imageId string, image groot.ImageInfo) {
+		imageId = fmt.Sprintf("image-%d", atomic.AddUint32(&nextUniqueImageIndex, 1))
+		image, err := Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
 			ID:        imageId,
 			Mount:     true,
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		return imageId
+		return
+	}
+
+	withUniqueImage := func(testFunc func(imageId string, image groot.ImageInfo)) {
+		sourceImagePath, err := ioutil.TempDir("", "")
+		Expect(err).NotTo(HaveOccurred())
+		defer func() { Expect(os.RemoveAll(sourceImagePath)).To(Succeed()) }()
+		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+
+		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+		baseImagePath := baseImageFile.Name()
+		defer func() { Expect(os.RemoveAll(baseImagePath)).To(Succeed()) }()
+
+		imageId, image := createUniqueImage(baseImagePath)
+		testFunc(imageId, image)
 	}
 
 	It("destroys the quota group associated with the volume", func() {
-		imageId := createRandomImage()
+		withUniqueImage(func(imageId string, image groot.ImageInfo) {
+			rootIDBuffer := gbytes.NewBuffer()
+			sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", image.Rootfs), rootIDBuffer, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
+			rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
 
-		rootIDBuffer := gbytes.NewBuffer()
-		sess, err := gexec.Start(exec.Command("sudo", "btrfs", "inspect-internal", "rootid", image.Rootfs), rootIDBuffer, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
-		rootID := strings.TrimSpace(string(rootIDBuffer.Contents()))
+			sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
+			Expect(sess).To(gbytes.Say(rootID))
 
-		sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
-		Expect(sess).To(gbytes.Say(rootID))
+			Expect(Runner.Delete(imageId)).To(Succeed())
 
-		Expect(Runner.Delete(imageId)).To(Succeed())
-
-		sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
-		Expect(sess).ToNot(gbytes.Say(rootID))
+			sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
+			Expect(sess).ToNot(gbytes.Say(rootID))
+		})
 	})
 
-	Context("when the rootfs folder has subvolumes inside", func() {
-		JustBeforeEach(func() {
+	It("can delete a rootfs with nested btrfs subvolumes", func() {
+		withUniqueImage(func(imageId string, image groot.ImageInfo) {
 			cmd := exec.Command("btrfs", "sub", "create", filepath.Join(image.Rootfs, "subvolume"))
 			cmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
@@ -104,20 +102,15 @@ var _ = Describe("Delete (btrfs only)", func() {
 			sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
-		})
 
-		It("removes the rootfs completely", func() {
-			imageId := createRandomImage()
 			Expect(image.Rootfs).To(BeAnExistingFile())
 			Expect(Runner.Delete(imageId)).To(Succeed())
 			Expect(image.Rootfs).ToNot(BeAnExistingFile())
 		})
 	})
 
-	Context("when drax is not in PATH", func() {
-		It("returns a warning", func() {
-			imageId := createRandomImage()
-
+	It("returns a warning when drax is not in the PATH", func() {
+		withUniqueImage(func(imageId string, image groot.ImageInfo) {
 			errBuffer := gbytes.NewBuffer()
 			outBuffer := gbytes.NewBuffer()
 			err := Runner.WithoutDraxBin().
