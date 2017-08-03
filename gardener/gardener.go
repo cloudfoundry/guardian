@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/cloudfoundry/dropsonde/metrics"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
@@ -208,6 +209,10 @@ type Gardener struct {
 func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err error) {
 	log := g.Logger.Session("create", lager.Data{"handle": spec.Handle})
 	log.Info("start")
+
+	defer func(startedAt time.Time) {
+		_ = metrics.SendValue("ContainerCreationDuration", float64(time.Since(startedAt).Nanoseconds()), "nanos")
+	}(time.Now())
 
 	knownHandles, err := g.Containerizer.Handles()
 	if err != nil {
