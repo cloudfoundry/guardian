@@ -39,7 +39,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		bundlePath                             string
 		processPath                            string
 		processID                              string
-		pidPath                                string
 		receivedStdinContents                  []byte
 		runcReturns                            byte
 		dadooReturns                           error
@@ -65,7 +64,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		bundlePath, err = ioutil.TempDir("", "dadooexecrunnerbundle")
 		Expect(err).NotTo(HaveOccurred())
 		processPath = filepath.Join(bundlePath, "the-process")
-		pidPath = filepath.Join(processPath, "0.pid")
 
 		runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, false)
 		log = lagertest.NewTestLogger("test")
@@ -851,8 +849,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		})
 
 		Context("when dadoo is running", func() {
-
-			var stdin, stdout, stderr, exit *os.File
+			var stdin, stdout, stderr *os.File
 			var gstdin, gstdout, gstderr *os.File
 
 			var openNonBlocking = func(fileName string) (*os.File, error) {
@@ -880,7 +877,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				// open dadoo pipes
-				stdin, stdout, stderr, _, exit = openPipes(filepath.Join(processPath, "some-process-id"))
+				stdin, stdout, stderr, _, _ = openPipes(filepath.Join(processPath, "some-process-id"))
 			})
 
 			AfterEach(func() {

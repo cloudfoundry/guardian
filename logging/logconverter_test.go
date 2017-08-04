@@ -1,4 +1,4 @@
-package runrunc_test
+package logging_test
 
 import (
 	"bytes"
@@ -7,7 +7,7 @@ import (
 	"io"
 	"strings"
 
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/lager"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -21,13 +21,13 @@ var _ = Describe("FowardRuncLogsToLager", func() {
 
 	JustBeforeEach(func() {
 		var lagerLogs bytes.Buffer
-		logger := lager.NewLogger("runrunc-test")
+		logger := lager.NewLogger("logging-test")
 		logger.RegisterSink(lager.NewWriterSink(
 			io.MultiWriter(&lagerLogs, GinkgoWriter),
 			lager.DEBUG,
 		))
 
-		runrunc.ForwardRuncLogsToLager(logger, "a-tag", runcLogs)
+		logging.ForwardLogfmtLogsToLager(logger, "a-tag", runcLogs)
 
 		lagerLines = strings.Split(lagerLogs.String(), "\n")
 	})
@@ -75,7 +75,7 @@ var _ = Describe("WrapWithErrorFromLastLogLine", func() {
 	)
 
 	JustBeforeEach(func() {
-		wrappedErr = runrunc.WrapWithErrorFromLastLogLine("a tag", errors.New("some-err"), runcLogs)
+		wrappedErr = logging.WrapWithErrorFromLastLogLine("a tag", errors.New("some-err"), runcLogs)
 	})
 
 	Context("when the logs are well-formed logfmt", func() {

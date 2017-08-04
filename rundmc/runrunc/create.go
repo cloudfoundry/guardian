@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -96,10 +97,10 @@ func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error 
 		return fmt.Errorf("runc create: read log file: %s", readErr)
 	}
 
-	ForwardRuncLogsToLager(log, "runc", buff)
+	logging.ForwardLogfmtLogsToLager(log, "runc", buff)
 
 	if upstreamErr != nil {
-		return WrapWithErrorFromLastLogLine("runc create", upstreamErr, buff)
+		return logging.WrapWithErrorFromLastLogLine("runc create", upstreamErr, buff)
 	}
 
 	return nil

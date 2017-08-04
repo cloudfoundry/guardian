@@ -1,4 +1,4 @@
-package runrunc
+package logging
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"github.com/go-logfmt/logfmt"
 )
 
-func ForwardRuncLogsToLager(log lager.Logger, tag string, logfileContent []byte) {
+func ForwardLogfmtLogsToLager(log lager.Logger, tag string, logfileContent []byte) {
 	decoder := logfmt.NewDecoder(bytes.NewReader(logfileContent))
 	for decoder.ScanRecord() {
 		for decoder.ScanKeyval() {

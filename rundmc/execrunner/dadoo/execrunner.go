@@ -17,9 +17,9 @@ import (
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
-	"github.com/kr/logfmt"
 )
 
 //go:generate counterfeiter . PidGetter
@@ -154,23 +154,21 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	process.streamData(pio, stdin, stdout, stderr)
 
 	doneReadingRuncLogs := make(chan []byte)
-	go func(log lager.Logger, logs io.Reader, logTag, loglineprefix string, done chan<- []byte) {
+	go func(log lager.Logger, logs io.Reader, logTag string, done chan<- []byte) {
 		scanner := bufio.NewScanner(logs)
 
 		nextLogLine := []byte("")
 		for scanner.Scan() {
 			nextLogLine = scanner.Bytes()
-			forwardLogLineToLager(log, nextLogLine, logTag)
+			logging.ForwardLogfmtLogsToLager(log, logTag, nextLogLine)
 		}
 		done <- nextLogLine
-	}(log, logr, "runc", "runc exec", doneReadingRuncLogs)
+	}(log, logr, "runc", doneReadingRuncLogs)
 
 	defer func() {
 		lastLogLine := <-doneReadingRuncLogs
 		if theErr != nil {
-			parsedLogLine := struct{ Msg string }{}
-			logfmt.Unmarshal(lastLogLine, &parsedLogLine)
-			theErr = fmt.Errorf("%s: %s", theErr, parsedLogLine.Msg)
+			theErr = logging.WrapWithErrorFromLastLogLine("runc exec", theErr, lastLogLine)
 		}
 	}()
 
@@ -182,7 +180,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	}
 	log.Info("runc-exit-status", lager.Data{"status": runcExitStatus[0]})
 	if runcExitStatus[0] != 0 {
-		return nil, fmt.Errorf("runc exec: exit status %d", runcExitStatus[0])
+		return nil, fmt.Errorf("exit status %d", runcExitStatus[0])
 	}
 
 	return process, nil
@@ -406,17 +404,6 @@ func (p process) SetTTY(spec garden.TTYSpec) error {
 
 	defer winSize.Close()
 	return json.NewEncoder(winSize).Encode(spec.WindowSize)
-}
-
-func forwardLogLineToLager(log lager.Logger, logLine []byte, tag string) {
-	parsedLogLine := struct{ Msg string }{}
-	if err := logfmt.Unmarshal(logLine, &parsedLogLine); err == nil {
-		log.Debug(tag, lager.Data{
-			"message": parsedLogLine.Msg,
-		})
-	} else {
-		log.Error("parsing-log-line", err, lager.Data{"line": string(logLine)})
-	}
 }
 
 type signaller struct {
