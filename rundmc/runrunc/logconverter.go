@@ -1,26 +1,61 @@
 package runrunc
 
 import (
+	"bytes"
 	"fmt"
-	"strings"
 
 	"code.cloudfoundry.org/lager"
-	"github.com/kr/logfmt"
+	"github.com/go-logfmt/logfmt"
 )
 
-func forwardRuncLogsToLager(log lager.Logger, buff []byte) {
-	parsedLogLine := struct{ Msg string }{}
-	for _, logLine := range strings.Split(string(buff), "\n") {
-		if err := logfmt.Unmarshal([]byte(logLine), &parsedLogLine); err == nil {
-			log.Debug("runc", lager.Data{
-				"message": parsedLogLine.Msg,
-			})
+func ForwardRuncLogsToLager(log lager.Logger, logfileContent []byte) {
+	decoder := logfmt.NewDecoder(bytes.NewReader(logfileContent))
+	for decoder.ScanRecord() {
+		for decoder.ScanKeyval() {
+			if string(decoder.Key()) == "msg" {
+				log.Debug("runc", lager.Data{"message": string(decoder.Value())})
+			}
 		}
+		if err := decoder.Err(); err != nil {
+			writeWholeLogfileToLager(log, logfileContent)
+			return
+		}
+	}
+	if err := decoder.Err(); err != nil {
+		writeWholeLogfileToLager(log, logfileContent)
+		return
 	}
 }
 
-func wrapWithErrorFromRuncLog(log lager.Logger, originalError error, buff []byte) error {
-	parsedLogLine := struct{ Msg string }{}
-	logfmt.Unmarshal(buff, &parsedLogLine)
-	return fmt.Errorf("runc create: %s: %s", originalError, parsedLogLine.Msg)
+func WrapWithErrorFromLastLogLine(originalError error, logfileContent []byte) error {
+	lastLogLine := lastNonEmptyLine(logfileContent)
+	decoder := logfmt.NewDecoder(bytes.NewReader(lastLogLine))
+	if decoder.ScanRecord() {
+		for decoder.ScanKeyval() {
+			if string(decoder.Key()) == "msg" {
+				return fmt.Errorf("runc: %s: %s", originalError, string(decoder.Value()))
+			}
+		}
+		if err := decoder.Err(); err != nil {
+			return fmt.Errorf("runc: %s: %s", originalError, string(logfileContent))
+		}
+	} else {
+		return fmt.Errorf("runc: %s: %s", originalError, string(logfileContent))
+	}
+
+	return nil
+}
+
+func lastNonEmptyLine(content []byte) []byte {
+	lines := bytes.Split(content, []byte("\n"))
+	for i := len(lines) - 1; i >= 0; i-- {
+		if string(lines[i]) != "" {
+			return lines[i]
+		}
+	}
+	return lines[len(lines)-1]
+}
+
+func writeWholeLogfileToLager(log lager.Logger, logfileContent []byte) {
+	log.Info("error-parsing-runc-log-file", lager.Data{"message": string(logfileContent)})
 }
