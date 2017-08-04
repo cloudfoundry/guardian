@@ -149,6 +149,20 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
+		Context("when passing a rootfs propagation rule", func() {
+			It("should pass the the rootfs propagation to the containerizer", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{
+					RootFSPropagation: "shared",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(containerizer.CreateCallCount()).To(Equal(1))
+
+				_, spec := containerizer.CreateArgsForCall(0)
+				Expect(spec.RootFSPropagation).To(Equal("shared"))
+			})
+		})
+
 		Context("when passing an ImageRef", func() {
 			Context("when parsing the rootfs path fails", func() {
 				It("should return an error", func() {
