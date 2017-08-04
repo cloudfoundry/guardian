@@ -49,10 +49,10 @@ func forwardLogs(log lager.Logger, logFile *os.File, err error) error {
 		return fmt.Errorf("read log file: %s", readErr)
 	}
 
-	ForwardRuncLogsToLager(log, buff)
+	ForwardRuncLogsToLager(log, "runc", buff)
 
 	if err != nil {
-		return WrapWithErrorFromLastLogLine(err, buff)
+		return WrapWithErrorFromLastLogLine("runc", err, buff)
 	}
 
 	return nil

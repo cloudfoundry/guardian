@@ -8,12 +8,12 @@ import (
 	"github.com/go-logfmt/logfmt"
 )
 
-func ForwardRuncLogsToLager(log lager.Logger, logfileContent []byte) {
+func ForwardRuncLogsToLager(log lager.Logger, tag string, logfileContent []byte) {
 	decoder := logfmt.NewDecoder(bytes.NewReader(logfileContent))
 	for decoder.ScanRecord() {
 		for decoder.ScanKeyval() {
 			if string(decoder.Key()) == "msg" {
-				log.Debug("runc", lager.Data{"message": string(decoder.Value())})
+				log.Debug(tag, lager.Data{"message": string(decoder.Value())})
 			}
 		}
 		if err := decoder.Err(); err != nil {
@@ -27,23 +27,19 @@ func ForwardRuncLogsToLager(log lager.Logger, logfileContent []byte) {
 	}
 }
 
-func WrapWithErrorFromLastLogLine(originalError error, logfileContent []byte) error {
+func WrapWithErrorFromLastLogLine(tag string, originalError error, logfileContent []byte) error {
 	lastLogLine := lastNonEmptyLine(logfileContent)
 	decoder := logfmt.NewDecoder(bytes.NewReader(lastLogLine))
 	if decoder.ScanRecord() {
 		for decoder.ScanKeyval() {
 			if string(decoder.Key()) == "msg" {
-				return fmt.Errorf("runc: %s: %s", originalError, string(decoder.Value()))
+				return fmt.Errorf("%s: %s: %s", tag, originalError, string(decoder.Value()))
 			}
 		}
-		if err := decoder.Err(); err != nil {
-			return fmt.Errorf("runc: %s: %s", originalError, string(logfileContent))
-		}
+		return fmt.Errorf("%s: %s: %s", tag, originalError, string(logfileContent))
 	} else {
-		return fmt.Errorf("runc: %s: %s", originalError, string(logfileContent))
+		return fmt.Errorf("%s: %s: %s", tag, originalError, string(logfileContent))
 	}
-
-	return nil
 }
 
 func lastNonEmptyLine(content []byte) []byte {

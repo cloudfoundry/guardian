@@ -27,7 +27,7 @@ var _ = Describe("FowardRuncLogsToLager", func() {
 			lager.DEBUG,
 		))
 
-		runrunc.ForwardRuncLogsToLager(logger, runcLogs)
+		runrunc.ForwardRuncLogsToLager(logger, "a-tag", runcLogs)
 
 		lagerLines = strings.Split(lagerLogs.String(), "\n")
 	})
@@ -43,6 +43,10 @@ time="2017-08-04T08:46:06Z" level=error msg="container_linux.go:267: starting co
 			Expect(lagerLines).To(HaveLen(3))
 			Expect(lagerMessage(lagerLines[0])).To(Equal("signal: killed"))
 			Expect(lagerMessage(lagerLines[1])).To(ContainSubstring("The minimum allowed cpu-shares is 2"))
+		})
+
+		It("prefixes the lines with the supplied tag", func() {
+			Expect(lagerLines[0]).To(ContainSubstring("a-tag"))
 		})
 	})
 
@@ -71,7 +75,7 @@ var _ = Describe("WrapWithErrorFromLastLogLine", func() {
 	)
 
 	JustBeforeEach(func() {
-		wrappedErr = runrunc.WrapWithErrorFromLastLogLine(errors.New("some-err"), runcLogs)
+		wrappedErr = runrunc.WrapWithErrorFromLastLogLine("a tag", errors.New("some-err"), runcLogs)
 	})
 
 	Context("when the logs are well-formed logfmt", func() {
@@ -82,7 +86,7 @@ time="2017-08-04T08:46:06Z" level=error msg="some message"
 		})
 
 		It("returns an error containing the last runc log message", func() {
-			Expect(wrappedErr).To(MatchError("runc: some-err: some message"))
+			Expect(wrappedErr).To(MatchError("a tag: some-err: some message"))
 		})
 	})
 
@@ -95,7 +99,7 @@ time="2017-08-04T09:17:53Z" level=error msg="container_linux.go:265: starting co
 		})
 
 		It("returns an error containing the whole runc log file", func() {
-			Expect(wrappedErr).To(MatchError(ContainSubstring("runc: some-err: ")))
+			Expect(wrappedErr).To(MatchError(ContainSubstring("a tag: some-err: ")))
 			Expect(wrappedErr).To(MatchError(ContainSubstring("The minimum allowed cpu-shares is 2")))
 		})
 	})

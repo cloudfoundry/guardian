@@ -110,7 +110,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("returns runc's exit status", func() {
-			Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc: some-error: "))
+			Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc create: some-error: "))
 		})
 	})
 
@@ -142,7 +142,7 @@ var _ = Describe("Create", func() {
 			})
 
 			It("return an error including parsed logs when runC fails to start the container", func() {
-				Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc: boom: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
+				Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc create: boom: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
 			})
 
 			Context("when the log messages can't be parsed", func() {
@@ -153,7 +153,7 @@ var _ = Describe("Create", func() {
 				})
 
 				It("returns an error with the entire log contents", func() {
-					Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc: boom: msg=\"unterminated string\n\"\n"))
+					Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc create: boom: msg=\"unterminated string\n\"\n"))
 				})
 			})
 		})

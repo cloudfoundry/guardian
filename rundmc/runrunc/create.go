@@ -96,10 +96,10 @@ func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error 
 		return fmt.Errorf("runc create: read log file: %s", readErr)
 	}
 
-	ForwardRuncLogsToLager(log, buff)
+	ForwardRuncLogsToLager(log, "runc", buff)
 
 	if upstreamErr != nil {
-		return WrapWithErrorFromLastLogLine(upstreamErr, buff)
+		return WrapWithErrorFromLastLogLine("runc create", upstreamErr, buff)
 	}
 
 	return nil
