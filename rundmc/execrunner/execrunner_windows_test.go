@@ -83,6 +83,7 @@ var _ = Describe("DirectExecRunner", func() {
 				runtimePath,
 				"--debug",
 				"--log", MatchRegexp(".*"),
+				"--log-format", "json",
 				"exec",
 				"-p", filepath.Join(processesDir, process.ID(), "spec.json"),
 				"--pid-file", MatchRegexp(".*"),

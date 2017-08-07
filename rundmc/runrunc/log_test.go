@@ -16,9 +16,9 @@ import (
 )
 
 var _ = Describe("RunAndLog", func() {
-	const logs string = `time="2016-03-02T13:56:38Z" level=warning msg="signal: potato"
-				time="2016-03-02T13:56:38Z" level=error msg="fork/exec POTATO: no such file or directory"
-				time="2016-03-02T13:56:38Z" level=fatal msg="Container start failed: [10] System error: fork/exec POTATO: no such file or directory"`
+	const logs = `{"time":"2016-03-02T13:56:38Z", "level":"warning", "msg":"signal: potato"}
+{"time":"2016-03-02T13:56:38Z", "level":"error", "msg":"fork/exec POTATO: no such file or directory"}
+{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"Container start failed: [10] System error: fork/exec POTATO: no such file or directory"}`
 
 	var (
 		commandRunner *fake_command_runner.FakeCommandRunner

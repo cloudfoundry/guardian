@@ -2,44 +2,38 @@ package logging
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"code.cloudfoundry.org/lager"
-	"github.com/go-logfmt/logfmt"
 )
 
-func ForwardLogfmtLogsToLager(log lager.Logger, tag string, logfileContent []byte) {
-	decoder := logfmt.NewDecoder(bytes.NewReader(logfileContent))
-	for decoder.ScanRecord() {
-		for decoder.ScanKeyval() {
-			if string(decoder.Key()) == "msg" {
-				log.Debug(tag, lager.Data{"message": string(decoder.Value())})
-			}
+type logLine struct{ Msg string }
+
+func ForwardRuncLogsToLager(log lager.Logger, tag string, logfileContent []byte) {
+	lines := bytes.Split(logfileContent, []byte("\n"))
+	for _, line := range lines {
+		if len(line) == 0 {
+			continue
 		}
-		if err := decoder.Err(); err != nil {
-			writeWholeLogfileToLager(log, logfileContent)
-			return
+
+		var parsedLine logLine
+		if err := json.Unmarshal(line, &parsedLine); err != nil {
+			log.Info("error-parsing-runc-log-file", lager.Data{"message": string(line)})
+			continue
 		}
-	}
-	if err := decoder.Err(); err != nil {
-		writeWholeLogfileToLager(log, logfileContent)
-		return
+		log.Debug(tag, lager.Data{"message": parsedLine.Msg})
 	}
 }
 
 func WrapWithErrorFromLastLogLine(tag string, originalError error, logfileContent []byte) error {
-	lastLogLine := lastNonEmptyLine(logfileContent)
-	decoder := logfmt.NewDecoder(bytes.NewReader(lastLogLine))
-	if decoder.ScanRecord() {
-		for decoder.ScanKeyval() {
-			if string(decoder.Key()) == "msg" {
-				return fmt.Errorf("%s: %s: %s", tag, originalError, string(decoder.Value()))
-			}
-		}
-		return fmt.Errorf("%s: %s: %s", tag, originalError, string(logfileContent))
-	} else {
-		return fmt.Errorf("%s: %s: %s", tag, originalError, string(logfileContent))
+	msg := lastNonEmptyLine(logfileContent)
+	var line logLine
+	if err := json.Unmarshal(msg, &line); err == nil {
+		msg = []byte(line.Msg)
 	}
+
+	return fmt.Errorf("%s: %s: %s", tag, originalError, msg)
 }
 
 func lastNonEmptyLine(content []byte) []byte {
@@ -50,8 +44,4 @@ func lastNonEmptyLine(content []byte) []byte {
 		}
 	}
 	return lines[len(lines)-1]
-}
-
-func writeWholeLogfileToLager(log lager.Logger, logfileContent []byte) {
-	log.Info("error-parsing-runc-log-file", lager.Data{"message": string(logfileContent)})
 }

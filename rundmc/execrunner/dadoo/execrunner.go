@@ -160,7 +160,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 		nextLogLine := []byte("")
 		for scanner.Scan() {
 			nextLogLine = scanner.Bytes()
-			logging.ForwardLogfmtLogsToLager(log, logTag, nextLogLine)
+			logging.ForwardRuncLogsToLager(log, logTag, nextLogLine)
 		}
 		done <- nextLogLine
 	}(log, logr, "runc", doneReadingRuncLogs)

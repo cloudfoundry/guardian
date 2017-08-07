@@ -27,22 +27,22 @@ var _ = Describe("FowardRuncLogsToLager", func() {
 			lager.DEBUG,
 		))
 
-		logging.ForwardLogfmtLogsToLager(logger, "a-tag", runcLogs)
+		logging.ForwardRuncLogsToLager(logger, "a-tag", runcLogs)
 
 		lagerLines = strings.Split(lagerLogs.String(), "\n")
 	})
 
-	Context("when the logs are well-formed logfmt", func() {
+	Context("when the logs are valid json", func() {
 		BeforeEach(func() {
-			runcLogs = []byte(`time="2017-08-04T08:46:06Z" level=warning msg="signal: killed"
-time="2017-08-04T08:46:06Z" level=error msg="container_linux.go:267: starting container process caused \"process_linux.go:348: container init caused \\\"process_linux.go:320: setting cgroup config for procHooks process caused \\\\\\\"The minimum allowed cpu-shares is 2\\\\\\\"\\\"\"\n"
-`)
+			runcLogs = []byte(`{"msg":"message 1"}
+{"msg":"message 2"}`)
 		})
 
 		It("forwards every line to lager", func() {
+			// lager adds one empty line
 			Expect(lagerLines).To(HaveLen(3))
-			Expect(lagerMessage(lagerLines[0])).To(Equal("signal: killed"))
-			Expect(lagerMessage(lagerLines[1])).To(ContainSubstring("The minimum allowed cpu-shares is 2"))
+			Expect(lagerMessage(lagerLines[0])).To(Equal("message 1"))
+			Expect(lagerMessage(lagerLines[1])).To(Equal("message 2"))
 		})
 
 		It("prefixes the lines with the supplied tag", func() {
@@ -50,20 +50,30 @@ time="2017-08-04T08:46:06Z" level=error msg="container_linux.go:267: starting co
 		})
 	})
 
-	Context("when the logs are not well-formed logfmt", func() {
+	Context("when the logs are not valid json", func() {
 		BeforeEach(func() {
-			runcLogs = []byte(`time="2017-08-04T09:17:53Z" level=warning msg="signal: killed"
-time="2017-08-04T09:17:53Z" level=error msg="container_linux.go:265: starting container process caused \"process_linux.go:348: container init caused \\"process_linux.go:320: setting cgroup config for procHooks process caused \\\\"The minimum allowed cpu-shares is 2\\\\"\\"\"
-"
-`)
+			runcLogs = []byte(`{"msg":"a valid entry"}
+}weirdStuff{`)
 		})
 
 		It("forwards lines to lager up until the poorly-formed line", func() {
-			Expect(lagerMessage(lagerLines[0])).To(Equal("signal: killed"))
+			Expect(lagerMessage(lagerLines[0])).To(Equal("a valid entry"))
 		})
 
-		It("includes the whole log file in a parse error message", func() {
-			Expect(lagerMessage(lagerLines[2])).To(ContainSubstring("The minimum allowed cpu-shares is 2"))
+		It("prints the raw line", func() {
+			Expect(lagerMessage(lagerLines[1])).To(ContainSubstring("weirdStuff"))
+		})
+	})
+
+	Context("when an empty line occurs", func() {
+		BeforeEach(func() {
+			runcLogs = []byte(`{"msg":"a valid entry"}
+`)
+		})
+
+		It("does not attempt to parse the empty line", func() {
+			// lager adds one empty line
+			Expect(lagerLines).To(HaveLen(2))
 		})
 	})
 })
@@ -78,29 +88,25 @@ var _ = Describe("WrapWithErrorFromLastLogLine", func() {
 		wrappedErr = logging.WrapWithErrorFromLastLogLine("a tag", errors.New("some-err"), runcLogs)
 	})
 
-	Context("when the logs are well-formed logfmt", func() {
+	Context("when the logs are valid json", func() {
 		BeforeEach(func() {
-			runcLogs = []byte(`time="2017-08-04T08:46:06Z" level=warning msg="signal: killed"
-time="2017-08-04T08:46:06Z" level=error msg="some message"
-`)
+			runcLogs = []byte(`{"msg":"message 1"}
+{"msg":"message 2"}`)
 		})
 
 		It("returns an error containing the last runc log message", func() {
-			Expect(wrappedErr).To(MatchError("a tag: some-err: some message"))
+			Expect(wrappedErr).To(MatchError("a tag: some-err: message 2"))
 		})
 	})
 
-	Context("when the logs are not well-formed logfmt", func() {
+	Context("when the last line is not valid json", func() {
 		BeforeEach(func() {
-			runcLogs = []byte(`time="2017-08-04T09:17:53Z" level=warning msg="signal: killed"
-time="2017-08-04T09:17:53Z" level=error msg="container_linux.go:265: starting container process caused \"process_linux.go:348: container init caused \\"process_linux.go:320: setting cgroup config for procHooks process caused \\\\"The minimum allowed cpu-shares is 2\\\\"\\"\"
-"
-`)
+			runcLogs = []byte(`{"msg":"a valid entry"}
+}weirdStuff{`)
 		})
 
-		It("returns an error containing the whole runc log file", func() {
-			Expect(wrappedErr).To(MatchError(ContainSubstring("a tag: some-err: ")))
-			Expect(wrappedErr).To(MatchError(ContainSubstring("The minimum allowed cpu-shares is 2")))
+		It("returns an error containing the raw last line", func() {
+			Expect(wrappedErr).To(MatchError("a tag: some-err: }weirdStuff{"))
 		})
 	})
 })

@@ -20,6 +20,7 @@ func main() {
 		os.Exit(1)
 	}
 
+	logrus.SetFormatter(new(logrus.JSONFormatter))
 	logrus.SetOutput(f)
 	logrus.Info("guardian-runc-logging-test-info")
 	logrus.Warn("guardian-runc-logging-test-warn")

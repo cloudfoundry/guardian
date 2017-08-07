@@ -73,9 +73,9 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		runcHangsForEver = false
 		dadooPanicsBeforeReportingRuncExitCode = false
 		dadooWritesExitCode = []byte("0")
-		dadooWritesLogs = `time="2016-03-02T13:56:38Z" level=warning msg="signal: potato"
-				time="2016-03-02T13:56:38Z" level=error msg="fork/exec POTATO: no such file or directory"
-				time="2016-03-02T13:56:38Z" level=fatal msg="Container start failed: [10] System error: fork/exec POTATO: no such file or directory"`
+		dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"warning", "msg":"signal: potato"}
+{"time":"2016-03-02T13:56:38Z", "level":"error", "msg":"fork/exec POTATO: no such file or directory"}
+{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"Container start failed: [10] System error: fork/exec POTATO: no such file or directory"}`
 
 		dadooFlags := flag.NewFlagSet("something", flag.PanicOnError)
 		dadooFlags.Bool("tty", false, "")

@@ -1,13 +1,13 @@
 package runrunc_test
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
@@ -54,7 +54,7 @@ var _ = Describe("Create", func() {
 		}, func(cmd *exec.Cmd) error {
 			logFile, err := os.Create(cmd.Args[3])
 			Expect(err).NotTo(HaveOccurred())
-			_, err = io.Copy(logFile, bytes.NewReader([]byte(logs)))
+			_, err = io.Copy(logFile, strings.NewReader(logs))
 			Expect(err).NotTo(HaveOccurred())
 			return runcExitStatus
 		})
@@ -68,6 +68,7 @@ var _ = Describe("Create", func() {
 			"funC",
 			"--debug",
 			"--log", logFilePath,
+			"--log-format", "json",
 			"--newuidmap", "newuidmap",
 			"--newgidmap", "newgidmap",
 			"create",
@@ -91,6 +92,7 @@ var _ = Describe("Create", func() {
 				"funC",
 				"--debug",
 				"--log", logFilePath,
+				"--log-format", "json",
 				"--newuidmap", "newuidmap",
 				"--newgidmap", "newgidmap",
 				"--root",
@@ -115,11 +117,10 @@ var _ = Describe("Create", func() {
 	})
 
 	Describe("forwarding logs from runC", func() {
-
 		BeforeEach(func() {
-			logs = `time="2016-03-02T13:56:38Z" level=warning msg="signal: potato"
-				time="2016-03-02T13:56:38Z" level=error msg="fork/exec POTATO: no such file or directory"
-				time="2016-03-02T13:56:38Z" level=fatal msg="Container start failed: [10] System error: fork/exec POTATO: no such file or directory"`
+			logs = `{"time":"2016-03-02T13:56:38Z", "level":"warning", "msg":"signal: potato"}
+{"time":"2016-03-02T13:56:38Z", "level":"error", "msg":"fork/exec POTATO: no such file or directory"}
+{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"Container start failed: [10] System error: fork/exec POTATO: no such file or directory"}`
 		})
 
 		It("sends all the logs to the logger", func() {
@@ -147,13 +148,11 @@ var _ = Describe("Create", func() {
 
 			Context("when the log messages can't be parsed", func() {
 				BeforeEach(func() {
-					logs = `msg="unterminated string
-"
-`
+					logs = "garbage\n"
 				})
 
-				It("returns an error with the entire log contents", func() {
-					Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc create: boom: msg=\"unterminated string\n\"\n"))
+				It("returns an error with the last non-empty line", func() {
+					Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc create: boom: garbage"))
 				})
 			})
 		})

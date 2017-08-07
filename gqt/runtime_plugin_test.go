@@ -56,6 +56,7 @@ var _ = Describe("Runtime Plugin", func() {
 					binaries.RuntimePlugin,
 					"--debug",
 					"--log", HaveSuffix(filepath.Join("containers", handle, "create.log")),
+					"--log-format", "json",
 					"--newuidmap", HaveSuffix("newuidmap"),
 					"--newgidmap", HaveSuffix("newgidmap"),
 					"create",
@@ -136,6 +137,7 @@ var _ = Describe("Runtime Plugin", func() {
 						binaries.RuntimePlugin,
 						"--debug",
 						"--log", MatchRegexp(".*"),
+						"--log-format", "json",
 						"exec",
 						"-p", MatchRegexp(".*"),
 						"--pid-file", MatchRegexp(".*"),
@@ -230,6 +232,7 @@ var _ = Describe("Runtime Plugin", func() {
 						binaries.RuntimePlugin,
 						"--debug",
 						"--log", MatchRegexp(".*"),
+						"--log-format", "json",
 						"delete",
 						handle,
 					))

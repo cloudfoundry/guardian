@@ -42,6 +42,7 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, _ garden.Proce
 	globalArgs := []string{
 		"--debug",
 		"--log", logFilePath,
+		"--log-format", "json",
 		"--newuidmap", c.newuidmapPath,
 		"--newgidmap", c.newgidmapPath,
 	}
@@ -97,7 +98,7 @@ func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error 
 		return fmt.Errorf("runc create: read log file: %s", readErr)
 	}
 
-	logging.ForwardLogfmtLogsToLager(log, "runc", buff)
+	logging.ForwardRuncLogsToLager(log, "runc", buff)
 
 	if upstreamErr != nil {
 		return logging.WrapWithErrorFromLastLogLine("runc create", upstreamErr, buff)

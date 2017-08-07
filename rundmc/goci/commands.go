@@ -54,7 +54,7 @@ func EventsCommand(id string) *exec.Cmd {
 
 // StartCommand returns an *exec.Cmd that, when run, will execute a given bundle.
 func (runc RuncBinary) StartCommand(path, id string, detach bool, log string) *exec.Cmd {
-	args := []string{"--debug", "--log", log, "start"}
+	args := []string{"--debug", "--log", log, "--log-format", "json", "start"}
 	if detach {
 		args = append(args, "-d")
 	}
@@ -83,24 +83,24 @@ func (runc RuncBinary) EventsCommand(id string) *exec.Cmd {
 // container.
 func (runc RuncBinary) KillCommand(id, signal, logFile string) *exec.Cmd {
 	return exec.Command(
-		runc.Path, runc.args("--debug", "--log", logFile, "kill", id, signal)...,
+		runc.Path, runc.args("--debug", "--log", logFile, "--log-format", "json", "kill", id, signal)...,
 	)
 }
 
 // StateCommand returns an *exec.Cmd that, when run, will get the state of the
 // container.
 func (runc RuncBinary) StateCommand(id, logFile string) *exec.Cmd {
-	return exec.Command(runc.Path, runc.args("--debug", "--log", logFile, "state", id)...)
+	return exec.Command(runc.Path, runc.args("--debug", "--log", logFile, "--log-format", "json", "state", id)...)
 }
 
 // StatsCommand returns an *exec.Cmd that, when run, will get the stats of the
 // container.
 func (runc RuncBinary) StatsCommand(id, logFile string) *exec.Cmd {
-	return exec.Command(runc.Path, runc.args("--debug", "--log", logFile, "events", "--stats", id)...)
+	return exec.Command(runc.Path, runc.args("--debug", "--log", logFile, "--log-format", "json", "events", "--stats", id)...)
 }
 
 // DeleteCommand returns an *exec.Cmd that, when run, will signal the running
 // container.
 func (runc RuncBinary) DeleteCommand(id, logFile string) *exec.Cmd {
-	return exec.Command(runc.Path, runc.args("--debug", "--log", logFile, "delete", id)...)
+	return exec.Command(runc.Path, runc.args("--debug", "--log", logFile, "--log-format", "json", "delete", id)...)
 }

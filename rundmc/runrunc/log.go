@@ -50,7 +50,7 @@ func forwardLogs(log lager.Logger, logFile *os.File, err error) error {
 		return fmt.Errorf("read log file: %s", readErr)
 	}
 
-	logging.ForwardLogfmtLogsToLager(log, "runc", buff)
+	logging.ForwardRuncLogsToLager(log, "runc", buff)
 
 	if err != nil {
 		return logging.WrapWithErrorFromLastLogLine("runc", err, buff)

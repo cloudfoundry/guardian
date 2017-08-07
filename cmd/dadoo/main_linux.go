@@ -69,7 +69,7 @@ func run() int {
 
 	ioWg := &sync.WaitGroup{}
 	var runcExecCmd *exec.Cmd
-	runtimeArgs := []string{"--debug", "--log", logFile}
+	runtimeArgs := []string{"--debug", "--log", logFile, "--log-format", "json"}
 	if *runcRoot != "" {
 		runtimeArgs = append(runtimeArgs, "--root", *runcRoot)
 	}

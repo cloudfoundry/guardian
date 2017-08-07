@@ -29,6 +29,9 @@ func main() {
 			Name: "log",
 		},
 		cli.StringFlag{
+			Name: "log-format",
+		},
+		cli.StringFlag{
 			Name: "newuidmap",
 		},
 		cli.StringFlag{
