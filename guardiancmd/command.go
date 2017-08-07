@@ -638,7 +638,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		WithResources(&specs.LinuxResources{Devices: append([]specs.LinuxDeviceCgroup{denyAll}, allowedDevices...)}).
 		WithRootFS(cmd.Containers.DefaultRootFS).
 		WithDevices(fuseDevice).
-		WithProcess(baseProcess)
+		WithProcess(baseProcess).
+		WithRootFSPropagation("private")
 	unprivilegedBundle := baseBundle.
 		WithNamespace(goci.UserNamespace).
 		WithUIDMappings(uidMappings...).
