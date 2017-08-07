@@ -11,6 +11,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -77,6 +78,7 @@ type DesiredImageSpec struct {
 	RootFS string        `json:"rootfs,omitempty"`
 	Mounts []specs.Mount `json:"mounts,omitempty"`
 	Image  Image         `json:"image,omitempty"`
+	specs.Spec
 }
 
 type Image struct {
@@ -139,6 +141,8 @@ type DesiredContainerSpec struct {
 	Limits garden.Limits
 
 	Env []string
+
+	BaseConfig goci.Bndl
 }
 
 type ActualContainerSpec struct {
@@ -289,6 +293,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		DesiredImageSpecMounts: desiredImageSpec.Mounts,
 		Limits:                 spec.Limits,
 		Env:                    append(desiredImageSpec.Image.Config.Env, spec.Env...),
+		BaseConfig:             goci.Bndl{Spec: desiredImageSpec.Spec},
 	}); err != nil {
 		return nil, err
 	}

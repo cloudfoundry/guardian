@@ -410,6 +410,27 @@ var _ = Describe("Gardener", func() {
 			}}))
 		})
 
+		It("passes the base runtime config from the DesiredImageSpec to the containerizer", func() {
+			volumeCreator.CreateReturns(gardener.DesiredImageSpec{
+				Spec: specs.Spec{
+					Root: &specs.Root{
+						Path: "banana",
+					},
+					Windows: &specs.Windows{
+						LayerFolders: []string{"layer-1", "layer-2"},
+					},
+				},
+			}, nil)
+
+			_, err := gdnr.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(containerizer.CreateCallCount()).To(Equal(1))
+			_, spec := containerizer.CreateArgsForCall(0)
+			Expect(spec.BaseConfig.Spec.Root.Path).To(Equal("banana"))
+			Expect(spec.BaseConfig.Spec.Windows.LayerFolders).To(Equal([]string{"layer-1", "layer-2"}))
+		})
+
 		Context("when environment variables are specified", func() {
 			It("passes into the containerizer", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{
