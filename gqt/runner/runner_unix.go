@@ -45,7 +45,7 @@ func (r *RunningGarden) Cleanup() {
 	// otherwise the following commands might fail
 	retry := retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil)
 
-	err := retry.Run(func() error {
+	Expect(retry.Run(func() error {
 		if err := os.RemoveAll(path.Join(r.GraphDir, "aufs")); err == nil {
 			return nil // if we can remove it, it's already unmounted
 		}
@@ -56,11 +56,7 @@ func (r *RunningGarden) Cleanup() {
 		}
 
 		return nil
-	})
-
-	if err != nil {
-		r.logger.Error("failed-to-unmount", err)
-	}
+	})).To(Succeed())
 
 	MustUnmountTmpfs(r.GraphDir)
 
