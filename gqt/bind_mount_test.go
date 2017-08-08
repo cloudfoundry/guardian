@@ -109,12 +109,14 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			Describe("nested-mounts", func() {
+				var nestedMountpoint string
+
 				JustBeforeEach(func() {
-					mountNested(srcPath)
+					nestedMountpoint = createMountPointUnder(srcPath)
 				})
 
 				AfterEach(func() {
-					unmountNested(srcPath)
+					unmount(nestedMountpoint)
 				})
 
 				It("allows all users to read from nested bind mounts", func() {
@@ -169,12 +171,14 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			Describe("nested-mounts", func() {
+				var nestedMountpoint string
+
 				JustBeforeEach(func() {
-					mountNested(srcPath)
+					nestedMountpoint = createMountPointUnder(srcPath)
 				})
 
 				AfterEach(func() {
-					unmountNested(srcPath)
+					unmount(nestedMountpoint)
 				})
 
 				It("allows all users to read from nested bind mounts", func() {
@@ -236,12 +240,14 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			Describe("nested-mounts", func() {
+				var nestedMountpoint string
+
 				JustBeforeEach(func() {
-					mountNested(srcPath)
+					nestedMountpoint = createMountPointUnder(srcPath)
 				})
 
 				AfterEach(func() {
-					unmountNested(srcPath)
+					unmount(nestedMountpoint)
 				})
 
 				It("allows all users to read from nested bind mounts", func() {
@@ -299,12 +305,14 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			Describe("nested-mounts", func() {
+				var nestedMountpoint string
+
 				JustBeforeEach(func() {
-					mountNested(srcPath)
+					nestedMountpoint = createMountPointUnder(srcPath)
 				})
 
 				AfterEach(func() {
-					unmountNested(srcPath)
+					unmount(nestedMountpoint)
 				})
 
 				It("allows all users to read from nested bind mounts", func() {
@@ -358,7 +366,7 @@ func createTestHostDirAndTestFile() (string, string) {
 	return tstHostDir, fileName
 }
 
-func mountNested(srcPath string) {
+func createMountPointUnder(srcPath string) string {
 	nestedBindPath := filepath.Join(srcPath, "nested-bind")
 	Expect(os.MkdirAll(nestedBindPath, os.FileMode(0755))).To(Succeed())
 
@@ -368,11 +376,12 @@ func mountNested(srcPath string) {
 	file, err := os.OpenFile(filepath.Join(nestedBindPath, "nested-file"), os.O_CREATE|os.O_RDWR, 0777)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(file.Close()).ToNot(HaveOccurred())
+
+	return nestedBindPath
 }
 
-func unmountNested(srcPath string) {
-	nestedPath := filepath.Join(srcPath, "nested-bind")
-	cmd := exec.Command("umount", "-f", nestedPath)
+func unmount(mountpoint string) {
+	cmd := exec.Command("umount", "-f", mountpoint)
 	output, err := cmd.CombinedOutput()
 	fmt.Println(string(output))
 	Expect(err).NotTo(HaveOccurred())
