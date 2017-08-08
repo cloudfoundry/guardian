@@ -13,7 +13,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/lager"
-	"github.com/Sirupsen/logrus"
 	_ "github.com/containers/image/docker"
 	manifestpkg "github.com/containers/image/manifest"
 	_ "github.com/containers/image/oci/layout"
@@ -22,6 +21,7 @@ import (
 	digestpkg "github.com/opencontainers/go-digest"
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	errorspkg "github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const MAX_BLOB_RETRIES = 3
