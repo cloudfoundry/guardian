@@ -26,6 +26,13 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
+	Describe("WithRootFSPropagation", func() {
+		It("sets the RootFSPropagation in the bundle", func() {
+			returnedBundle := initialBundle.WithRootFSPropagation("rshared")
+			Expect(returnedBundle.RootFSPropagation()).To(Equal("rshared"))
+		})
+	})
+
 	Describe("WithCapabilities", func() {
 		It("adds capabilities to the bundle", func() {
 			returnedBundle := initialBundle.WithCapabilities("growtulips", "waterspuds")
