@@ -245,6 +245,24 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
+	Describe("WithWindowsLayerFolders", func() {
+		var layerFolders []string
+
+		BeforeEach(func() {
+			layerFolders = []string{"layer-1", "layer-0"}
+			returnedBundle = initialBundle.WithWindowsLayerFolders(layerFolders)
+		})
+
+		It("returns a bundle with the windows layerFolders", func() {
+			Expect(returnedBundle.Spec.Windows.LayerFolders).To(Equal(layerFolders))
+		})
+
+		It("does not modify the original bundle", func() {
+			Expect(returnedBundle).NotTo(Equal(initialBundle))
+			Expect(initialBundle.Resources()).To(BeNil())
+		})
+	})
+
 	Describe("WithCPUShares", func() {
 		var shares uint64 = 10
 

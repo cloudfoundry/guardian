@@ -14,7 +14,7 @@ func Bundle() Bndl {
 			Version: "1.0.0-rc6",
 			Linux:   &specs.Linux{},
 			Windows: &specs.Windows{
-				LayerFolders: []string{"ignored-for-now"},
+				LayerFolders: []string{},
 			},
 			Process: &specs.Process{
 				ConsoleSize: &specs.Box{},
@@ -83,6 +83,11 @@ func (b Bndl) WithRootFSPropagation(rootfsPropagation string) Bndl {
 // GetRootfsPath returns the path to the rootfs of this bundle. Nothing is modified
 func (b Bndl) RootFS() string {
 	return b.Spec.Root.Path
+}
+
+func (b Bndl) WithWindowsLayerFolders(layerFolders []string) Bndl {
+	b.CloneWindows().Spec.Windows.LayerFolders = layerFolders
+	return b
 }
 
 // WithResources returns a bundle with the resources replaced with the given Resources. The original bundle is not modified.
