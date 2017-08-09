@@ -85,8 +85,8 @@ func (b Bndl) RootFS() string {
 	return b.Spec.Root.Path
 }
 
-func (b Bndl) WithWindowsLayerFolders(layerFolders []string) Bndl {
-	b.CloneWindows().Spec.Windows.LayerFolders = layerFolders
+func (b Bndl) WithWindows(windows specs.Windows) Bndl {
+	b.Spec.Windows = &windows
 	return b
 }
 

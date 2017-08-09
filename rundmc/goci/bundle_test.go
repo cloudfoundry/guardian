@@ -245,16 +245,15 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
-	Describe("WithWindowsLayerFolders", func() {
-		var layerFolders []string
+	Describe("WithWindows", func() {
+		var windows = specs.Windows{LayerFolders: []string{"layer-1", "layer-2"}}
 
 		BeforeEach(func() {
-			layerFolders = []string{"layer-1", "layer-0"}
-			returnedBundle = initialBundle.WithWindowsLayerFolders(layerFolders)
+			returnedBundle = initialBundle.WithWindows(windows)
 		})
 
-		It("returns a bundle with the windows layerFolders", func() {
-			Expect(returnedBundle.Spec.Windows.LayerFolders).To(Equal(layerFolders))
+		It("returns a bundle with windows", func() {
+			Expect(returnedBundle.Spec.Windows).To(Equal(&windows))
 		})
 
 		It("does not modify the original bundle", func() {

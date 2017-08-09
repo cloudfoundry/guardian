@@ -230,6 +230,12 @@ var _ = Describe("Image Plugin", func() {
 				})
 			})
 
+			It("adds any returned Windows config to the container bundle", func() {
+				var spec specs.Spec
+				unmarshalJSONFromFile(filepath.Join(client.DepotDir, container.Handle(), "config.json"), &spec)
+				Expect(spec.Windows.LayerFolders).To(Equal([]string{"layer", "folders"}))
+			})
+
 			Context("when rootfs is not specified", func() {
 				BeforeEach(func() {
 					containerSpec.RootFSPath = ""

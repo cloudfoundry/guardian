@@ -195,6 +195,11 @@ var CreateCommand = cli.Command{
 			RootFS: rootfsPath,
 			Image:  *image,
 			Mounts: mounts,
+			Spec: specs.Spec{
+				Windows: &specs.Windows{
+					LayerFolders: []string{"layer", "folders"},
+				},
+			},
 		}
 
 		b, err := json.Marshal(output)
