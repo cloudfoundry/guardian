@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os/exec"
+	"reflect"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
@@ -66,13 +67,15 @@ var _ = Describe("ImagePlugin", func() {
 			rootfs             string
 			namespaced         bool
 
-			// fakeImagePluginStdout will override createOutputs if set
-			createOutputs         gardener.DesiredImageSpec
+			// fakeImagePluginStdout will override these if set
+			createdSpec              specs.Spec
+			createdOldSchemaResponse gardener.DesiredImageSpec
+
 			fakeImagePluginStdout string
 			fakeImagePluginStderr string
 			fakeImagePluginError  error
 
-			createImageSpec gardener.DesiredImageSpec
+			baseRuntimeSpec specs.Spec
 			createErr       error
 		)
 
@@ -85,14 +88,15 @@ var _ = Describe("ImagePlugin", func() {
 			rootfs = "docker:///busybox"
 			namespaced = true //assume unprivileged by default
 
-			createOutputs = gardener.DesiredImageSpec{
-				RootFS: "/image-rootfs/rootfs",
+			createdOldSchemaResponse = gardener.DesiredImageSpec{}
+			createdSpec = specs.Spec{
+				Root: &specs.Root{Path: "/image-rootfs/rootfs"},
 			}
+
 			fakeImagePluginStdout = ""
 			fakeImagePluginStderr = ""
 			fakeImagePluginError = nil
 
-			createImageSpec = gardener.DesiredImageSpec{}
 			createErr = nil
 		})
 
@@ -104,6 +108,12 @@ var _ = Describe("ImagePlugin", func() {
 				func(cmd *exec.Cmd) error {
 					cmd.Stderr.Write([]byte(fakeImagePluginStderr))
 					if fakeImagePluginStdout == "" {
+						var createOutputs interface{}
+						createOutputs = createdSpec
+						if !reflect.DeepEqual(createdOldSchemaResponse, gardener.DesiredImageSpec{}) {
+							createOutputs = createdOldSchemaResponse
+						}
+
 						b, err := json.Marshal(createOutputs)
 						Expect(err).NotTo(HaveOccurred())
 						fakeImagePluginStdout = string(b)
@@ -117,7 +127,7 @@ var _ = Describe("ImagePlugin", func() {
 			rootfsURL, err := url.Parse(rootfs)
 			Expect(err).NotTo(HaveOccurred())
 			rootfsProviderSpec = rootfs_spec.Spec{RootFS: rootfsURL, Namespaced: namespaced}
-			createImageSpec, createErr = imagePlugin.Create(fakeLogger, handle, rootfsProviderSpec)
+			baseRuntimeSpec, createErr = imagePlugin.Create(fakeLogger, handle, rootfsProviderSpec)
 		})
 
 		It("calls the unprivileged command creator to generate a create command", func() {
@@ -249,7 +259,7 @@ var _ = Describe("ImagePlugin", func() {
 		})
 
 		It("returns the rootfs json property as the rootfs", func() {
-			Expect(createImageSpec.RootFS).To(Equal("/image-rootfs/rootfs"))
+			Expect(baseRuntimeSpec.Root.Path).To(Equal("/image-rootfs/rootfs"))
 		})
 
 		Context("when parsing the plugin output fails", func() {
@@ -264,30 +274,38 @@ var _ = Describe("ImagePlugin", func() {
 
 		Context("when no image config is defined", func() {
 			It("returns an empty list of env vars", func() {
-				Expect(createImageSpec.Image.Config.Env).To(BeEmpty())
+				Expect(baseRuntimeSpec.Process.Env).To(BeEmpty())
 			})
 		})
 
-		Context("when there is image config defined", func() {
+		Context("when no rootfs path is returned", func() {
 			BeforeEach(func() {
-				createOutputs.Image = gardener.Image{
-					Config: gardener.ImageConfig{
-						Env: []string{
-							"MY_VAR=set",
-							"MY_SECOND_VAR=also_set",
-						},
+				createdSpec.Root = nil
+			})
+
+			It("returns an empty string for Root.Path", func() {
+				Expect(baseRuntimeSpec.Root.Path).To(BeEmpty())
+			})
+		})
+
+		Context("when there is env defined", func() {
+			BeforeEach(func() {
+				createdSpec.Process = &specs.Process{
+					Env: []string{
+						"MY_VAR=set",
+						"MY_SECOND_VAR=also_set",
 					},
 				}
 			})
 
 			It("returns the list of env variables to set", func() {
-				Expect(createImageSpec.Image.Config.Env).To(ConsistOf([]string{"MY_VAR=set", "MY_SECOND_VAR=also_set"}))
+				Expect(baseRuntimeSpec.Process.Env).To(ConsistOf([]string{"MY_VAR=set", "MY_SECOND_VAR=also_set"}))
 			})
 		})
 
 		Context("when there are mounts defined", func() {
 			BeforeEach(func() {
-				createOutputs.Mounts = []specs.Mount{
+				createdSpec.Mounts = []specs.Mount{
 					{
 						Source:      "src",
 						Destination: "dest",
@@ -298,7 +316,53 @@ var _ = Describe("ImagePlugin", func() {
 			})
 
 			It("returns the list of mounts to configure", func() {
-				Expect(createImageSpec.Mounts).To(Equal(createOutputs.Mounts))
+				Expect(baseRuntimeSpec.Mounts).To(Equal(createdSpec.Mounts))
+			})
+		})
+
+		Context("when the image plugin returns old schema", func() {
+			BeforeEach(func() {
+				createdOldSchemaResponse = gardener.DesiredImageSpec{
+					Spec: specs.Spec{Windows: &specs.Windows{
+						LayerFolders: []string{"layer", "folders"},
+					}},
+					RootFS: "old-schema-rootfs",
+					Image: gardener.Image{Config: gardener.ImageConfig{Env: []string{
+						"OLD_VAR=foo",
+					}}},
+					Mounts: []specs.Mount{
+						{
+							Source:      "src",
+							Destination: "dest",
+							Options:     []string{"bind"},
+							Type:        "bind",
+						},
+					},
+				}
+			})
+
+			It("returns the base config with rootfs, env, and mounts added", func() {
+				expectedRuntimeSpec := specs.Spec{
+					Windows: &specs.Windows{
+						LayerFolders: []string{"layer", "folders"},
+					},
+					Root: &specs.Root{
+						Path: "old-schema-rootfs",
+					},
+					Process: &specs.Process{
+						Env: []string{"OLD_VAR=foo"},
+					},
+					Mounts: []specs.Mount{
+						{
+							Source:      "src",
+							Destination: "dest",
+							Options:     []string{"bind"},
+							Type:        "bind",
+						},
+					},
+				}
+
+				Expect(baseRuntimeSpec).To(Equal(expectedRuntimeSpec))
 			})
 		})
 

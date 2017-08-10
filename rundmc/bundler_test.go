@@ -31,18 +31,18 @@ var _ = Describe("BundleTemplate", func() {
 		It("returns the bundle from the first rule", func() {
 			returnedSpec := goci.Bndl{}.WithRootFS("something")
 			rule.ApplyStub = func(bndle goci.Bndl, spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
-				Expect(spec.RootFSPath).To(Equal("the-rootfs"))
+				Expect(spec.BaseConfig.Root.Path).To(Equal("the-rootfs"))
 				return returnedSpec, nil
 			}
 
-			result, err := bundler.Generate(gardener.DesiredContainerSpec{RootFSPath: "the-rootfs"}, containerDir)
+			result, err := bundler.Generate(gardener.DesiredContainerSpec{BaseConfig: specs.Spec{Root: &specs.Root{Path: "the-rootfs"}}}, containerDir)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(result).To(Equal(returnedSpec))
 		})
 
 		It("returns the error from the first failing rule", func() {
 			rule.ApplyReturns(goci.Bndl{}, errors.New("didn't work"))
-			_, err := bundler.Generate(gardener.DesiredContainerSpec{RootFSPath: "the-rootfs"}, containerDir)
+			_, err := bundler.Generate(gardener.DesiredContainerSpec{BaseConfig: specs.Spec{Root: &specs.Root{Path: "the-rootfs"}}}, containerDir)
 			Expect(err).To(MatchError(ContainSubstring("didn't work")))
 		})
 

@@ -11,7 +11,6 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
-	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -68,12 +67,17 @@ type Networker interface {
 }
 
 type VolumeCreator interface {
-	Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (DesiredImageSpec, error)
+	Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (specs.Spec, error)
 	Destroy(log lager.Logger, handle string) error
 	Metrics(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error)
 	GC(log lager.Logger) error
 }
 
+// DEPRECATED
+// Image plugins should return a runtime config json (represented in Go
+// by a `specs.Spec`).
+// For now, a json-serialised DesiredImageSpec is stil supported but will be
+// removed.
 type DesiredImageSpec struct {
 	RootFS string        `json:"rootfs,omitempty"`
 	Mounts []specs.Mount `json:"mounts,omitempty"`
@@ -123,26 +127,20 @@ func (fn UidGeneratorFunc) Generate() string {
 type DesiredContainerSpec struct {
 	Handle string
 
-	// Path to the Root Filesystem for the container
-	RootFSPath string
-
 	// Container hostname
 	Hostname string
 
 	// Bind mounts
 	BindMounts []garden.BindMount
 
-	// Mounts returned from the VolumeCreator
-	DesiredImageSpecMounts []specs.Mount
+	Env []string
 
 	// Container is privileged
 	Privileged bool
 
 	Limits garden.Limits
 
-	Env []string
-
-	BaseConfig goci.Bndl
+	BaseConfig specs.Spec
 }
 
 type ActualContainerSpec struct {
@@ -265,13 +263,13 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		log.Error("graph-cleanup-failed", err)
 	}
 
-	var desiredImageSpec DesiredImageSpec
-
+	var baseConfig specs.Spec
 	if rootFSURL.Scheme == RawRootFSScheme {
-		desiredImageSpec.RootFS = rootFSURL.Path
+		baseConfig.Root = &specs.Root{Path: rootFSURL.Path}
+		baseConfig.Process = &specs.Process{}
 	} else {
 		var err error
-		desiredImageSpec, err = g.VolumeCreator.Create(log.Session(volumeCreatorSession), spec.Handle, rootfs_spec.Spec{
+		baseConfig, err = g.VolumeCreator.Create(log.Session(volumeCreatorSession), spec.Handle, rootfs_spec.Spec{
 			RootFS:     rootFSURL,
 			Username:   spec.Image.Username,
 			Password:   spec.Image.Password,
@@ -285,15 +283,13 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	}
 
 	if err := g.Containerizer.Create(log, DesiredContainerSpec{
-		Handle:                 spec.Handle,
-		RootFSPath:             desiredImageSpec.RootFS,
-		Hostname:               spec.Handle,
-		Privileged:             spec.Privileged,
-		BindMounts:             spec.BindMounts,
-		DesiredImageSpecMounts: desiredImageSpec.Mounts,
-		Limits:                 spec.Limits,
-		Env:                    append(desiredImageSpec.Image.Config.Env, spec.Env...),
-		BaseConfig:             goci.Bndl{Spec: desiredImageSpec.Spec},
+		Handle:     spec.Handle,
+		Hostname:   spec.Handle,
+		Privileged: spec.Privileged,
+		Env:        spec.Env,
+		BindMounts: spec.BindMounts,
+		Limits:     spec.Limits,
+		BaseConfig: baseConfig,
 	}); err != nil {
 		return nil, err
 	}

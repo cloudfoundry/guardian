@@ -8,10 +8,11 @@ import (
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type FakeVolumeCreator struct {
-	CreateStub        func(log lager.Logger, handle string, spec rootfs_spec.Spec) (gardener.DesiredImageSpec, error)
+	CreateStub        func(log lager.Logger, handle string, spec rootfs_spec.Spec) (specs.Spec, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		log    lager.Logger
@@ -19,11 +20,11 @@ type FakeVolumeCreator struct {
 		spec   rootfs_spec.Spec
 	}
 	createReturns struct {
-		result1 gardener.DesiredImageSpec
+		result1 specs.Spec
 		result2 error
 	}
 	createReturnsOnCall map[int]struct {
-		result1 gardener.DesiredImageSpec
+		result1 specs.Spec
 		result2 error
 	}
 	DestroyStub        func(log lager.Logger, handle string) error
@@ -68,7 +69,7 @@ type FakeVolumeCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (gardener.DesiredImageSpec, error) {
+func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (specs.Spec, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
@@ -99,24 +100,24 @@ func (fake *FakeVolumeCreator) CreateArgsForCall(i int) (lager.Logger, string, r
 	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].spec
 }
 
-func (fake *FakeVolumeCreator) CreateReturns(result1 gardener.DesiredImageSpec, result2 error) {
+func (fake *FakeVolumeCreator) CreateReturns(result1 specs.Spec, result2 error) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
-		result1 gardener.DesiredImageSpec
+		result1 specs.Spec
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeVolumeCreator) CreateReturnsOnCall(i int, result1 gardener.DesiredImageSpec, result2 error) {
+func (fake *FakeVolumeCreator) CreateReturnsOnCall(i int, result1 specs.Spec, result2 error) {
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
-			result1 gardener.DesiredImageSpec
+			result1 specs.Spec
 			result2 error
 		})
 	}
 	fake.createReturnsOnCall[i] = struct {
-		result1 gardener.DesiredImageSpec
+		result1 specs.Spec
 		result2 error
 	}{result1, result2}
 }

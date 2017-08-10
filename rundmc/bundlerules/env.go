@@ -10,6 +10,6 @@ type Env struct {
 
 func (r Env) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	process := bndl.Process()
-	process.Env = spec.Env
+	process.Env = append(spec.BaseConfig.Process.Env, spec.Env...)
 	return bndl.WithProcess(process), nil
 }

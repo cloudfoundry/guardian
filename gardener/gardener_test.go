@@ -190,11 +190,17 @@ var _ = Describe("Gardener", func() {
 			It("creates the container with the given path", func() {
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
 				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.RootFSPath).To(Equal("/banana"))
+				Expect(spec.BaseConfig.Root.Path).To(Equal("/banana"))
 			})
 
 			It("does not create a volume", func() {
 				Expect(volumeCreator.CreateCallCount()).To(Equal(0))
+			})
+
+			It("creates the container with an empty base config environment", func() {
+				Expect(containerizer.CreateCallCount()).To(Equal(1))
+				_, spec := containerizer.CreateArgsForCall(0)
+				Expect(spec.BaseConfig.Process.Env).To(BeNil())
 			})
 		})
 
@@ -220,7 +226,7 @@ var _ = Describe("Gardener", func() {
 
 		Context("when volume creator fails", func() {
 			BeforeEach(func() {
-				volumeCreator.CreateReturns(gardener.DesiredImageSpec{}, errors.New("booom!"))
+				volumeCreator.CreateReturns(specs.Spec{}, errors.New("booom!"))
 			})
 
 			It("returns an error", func() {
@@ -379,73 +385,25 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		It("passes fields from DesiredImageSpec to the containerizer", func() {
-			volumeCreator.CreateReturns(gardener.DesiredImageSpec{
-				RootFS: "rootfs",
-				Mounts: []specs.Mount{{
-					Source:      "src",
-					Destination: "dest",
-					Options:     []string{"opts"},
-					Type:        "type",
-				}},
-				Image: gardener.Image{
-					Config: gardener.ImageConfig{
-						Env: []string{"some-env"},
-					},
-				},
-			}, nil)
+		It("passes base config to containerizer", func() {
+			runtimeConfig := specs.Spec{Version: "some-idiosyncratic-version"}
+			volumeCreator.CreateReturns(runtimeConfig, nil)
 
 			_, err := gdnr.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(containerizer.CreateCallCount()).To(Equal(1))
 			_, spec := containerizer.CreateArgsForCall(0)
-			Expect(spec.RootFSPath).To(Equal("rootfs"))
-			Expect(spec.Env).To(Equal([]string{"some-env"}))
-			Expect(spec.DesiredImageSpecMounts).To(Equal([]specs.Mount{{
-				Source:      "src",
-				Destination: "dest",
-				Options:     []string{"opts"},
-				Type:        "type",
-			}}))
+			Expect(spec.BaseConfig).To(Equal(runtimeConfig))
 		})
 
-		It("passes the base runtime config from the DesiredImageSpec to the containerizer", func() {
-			volumeCreator.CreateReturns(gardener.DesiredImageSpec{
-				Spec: specs.Spec{
-					Root: &specs.Root{
-						Path: "banana",
-					},
-					Windows: &specs.Windows{
-						LayerFolders: []string{"layer-1", "layer-2"},
-					},
-				},
-			}, nil)
-
-			_, err := gdnr.Create(garden.ContainerSpec{})
+		It("passes env to containerizer", func() {
+			_, err := gdnr.Create(garden.ContainerSpec{Env: []string{"FOO=bar"}})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(containerizer.CreateCallCount()).To(Equal(1))
 			_, spec := containerizer.CreateArgsForCall(0)
-			Expect(spec.BaseConfig.Spec.Root.Path).To(Equal("banana"))
-			Expect(spec.BaseConfig.Spec.Windows.LayerFolders).To(Equal([]string{"layer-1", "layer-2"}))
-		})
-
-		Context("when environment variables are specified", func() {
-			It("passes into the containerizer", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{
-					Env: []string{"ENV.CONTAINER_ID=1", "ENV.CONTAINER_NAME=garden"},
-				})
-
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.Env).To(Equal([]string{
-					"ENV.CONTAINER_ID=1",
-					"ENV.CONTAINER_NAME=garden",
-				}))
-			})
+			Expect(spec.Env).To(Equal([]string{"FOO=bar"}))
 		})
 
 		Context("when passed a handle that already exists", func() {

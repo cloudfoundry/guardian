@@ -50,8 +50,8 @@ var _ = Describe("MountsRule", func() {
 		bndl, err = bundlerules.Mounts{}.Apply(
 			originalBndl,
 			gardener.DesiredContainerSpec{
-				BindMounts:             bindMounts,
-				DesiredImageSpecMounts: desiredImageSpecMounts,
+				BindMounts: bindMounts,
+				BaseConfig: specs.Spec{Mounts: desiredImageSpecMounts},
 			}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())
 	})

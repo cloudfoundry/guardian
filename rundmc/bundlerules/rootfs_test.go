@@ -10,6 +10,7 @@ import (
 	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
@@ -56,7 +57,7 @@ var _ = Describe("RootFS", func() {
 
 		var err error
 		returnedBundle, err = rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
-			RootFSPath: rootfsPath,
+			BaseConfig: specs.Spec{Root: &specs.Root{Path: rootfsPath}},
 			Privileged: privileged,
 		}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())

@@ -99,7 +99,7 @@ func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerS
 	log.Info("start")
 	defer log.Info("finished")
 
-	if err := c.rootfsFileCreator.CreateFiles(spec.RootFSPath, "/etc/hosts", "/etc/resolv.conf"); err != nil {
+	if err := c.rootfsFileCreator.CreateFiles(spec.BaseConfig.Root.Path, "/etc/hosts", "/etc/resolv.conf"); err != nil {
 		log.Error("create-rootfs-mountpoint-files-failed", err)
 		return err
 	}

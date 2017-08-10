@@ -15,11 +15,9 @@ var _ = Describe("WindowsRule", func() {
 	It("copies the Windows config from the BaseConfig and sets the memory limit", func() {
 		layerFolders := []string{"layer-1", "layer-0"}
 		newBndl, err := bundlerules.Windows{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
-			BaseConfig: goci.Bndl{
-				Spec: specs.Spec{
-					Windows: &specs.Windows{
-						LayerFolders: layerFolders,
-					},
+			BaseConfig: specs.Spec{
+				Windows: &specs.Windows{
+					LayerFolders: layerFolders,
 				},
 			},
 			Limits: garden.Limits{
@@ -41,10 +39,8 @@ var _ = Describe("WindowsRule", func() {
 	Context("when the base bundle does not contain Windows config", func() {
 		It("returns the original bundle", func() {
 			newBndl, err := bundlerules.Windows{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
-				BaseConfig: goci.Bndl{
-					Spec: specs.Spec{
-						Windows: nil,
-					},
+				BaseConfig: specs.Spec{
+					Windows: nil,
 				},
 			}, "not-needed-path")
 

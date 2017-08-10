@@ -129,21 +129,17 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("when there are env vars", func() {
 				BeforeEach(func() {
-					image := gardener.Image{
-						Config: gardener.ImageConfig{
-							Env: []string{
-								"MY_VAR=set",
-								"MY_SECOND_VAR=also_set",
-							},
-						},
+					env := []string{
+						"MY_VAR=set",
+						"MY_SECOND_VAR=also_set",
 					}
-					imageJson, err := json.Marshal(image)
+					envJson, err := json.Marshal(env)
 					Expect(err).NotTo(HaveOccurred())
 
 					config.ImagePluginExtraArgs = append(
 						config.ImagePluginExtraArgs,
-						"\"--image-json\"",
-						string(imageJson),
+						"\"--env-json\"",
+						string(envJson),
 					)
 
 					gardenDefaultRootfs := defaultTestRootFS
@@ -151,7 +147,7 @@ var _ = Describe("Image Plugin", func() {
 						filepath.Join(tmpDir, "env"))).To(Succeed())
 				})
 
-				It("loads the image.json env variables", func() {
+				It("loads the image plugin env variables", func() {
 					buffer := gbytes.NewBuffer()
 					process, err := container.Run(garden.ProcessSpec{
 						Path: "/env",
@@ -164,6 +160,113 @@ var _ = Describe("Image Plugin", func() {
 
 					Eventually(buffer).Should(gbytes.Say("MY_VAR=set"))
 					Eventually(buffer).Should(gbytes.Say("MY_SECOND_VAR=also_set"))
+				})
+			})
+
+			Context("when the ImagePlugin returns using the old schema", func() {
+				Context("when there are env vars", func() {
+					BeforeEach(func() {
+						image := gardener.Image{
+							Config: gardener.ImageConfig{
+								Env: []string{
+									"MY_VAR=set",
+									"MY_SECOND_VAR=also_set",
+								},
+							},
+						}
+						imageJson, err := json.Marshal(image)
+						Expect(err).NotTo(HaveOccurred())
+
+						config.ImagePluginExtraArgs = append(
+							config.ImagePluginExtraArgs,
+							"\"--image-json\"",
+							string(imageJson),
+							"\"--old-return-schema\"",
+						)
+
+						gardenDefaultRootfs := defaultTestRootFS
+						Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"),
+							filepath.Join(tmpDir, "env"))).To(Succeed())
+					})
+
+					It("loads the image plugin env variables", func() {
+						buffer := gbytes.NewBuffer()
+						process, err := container.Run(garden.ProcessSpec{
+							Path: "/env",
+							Dir:  "/",
+						}, garden.ProcessIO{Stdout: buffer, Stderr: buffer})
+						Expect(err).NotTo(HaveOccurred())
+						exitCode, err := process.Wait()
+						Expect(err).NotTo(HaveOccurred())
+						Expect(exitCode).To(BeZero())
+
+						Eventually(buffer).Should(gbytes.Say("MY_VAR=set"))
+						Eventually(buffer).Should(gbytes.Say("MY_SECOND_VAR=also_set"))
+					})
+				})
+
+				Context("when there are mounts", func() {
+					var mountedDir string
+					fileName := "mnted-file"
+					fileContent := "mnted-file-content"
+
+					BeforeEach(func() {
+						var err error
+						mountedDir, err = ioutil.TempDir("", "bind-mount")
+						Expect(err).NotTo(HaveOccurred())
+						Expect(os.Chmod(mountedDir, 0777)).To(Succeed())
+						Expect(ioutil.WriteFile(filepath.Join(mountedDir, fileName), []byte(fileContent), 0644)).To(Succeed())
+
+						mounts := []specs.Mount{
+							{
+								Type:        "bind",
+								Options:     []string{"bind"},
+								Source:      mountedDir,
+								Destination: "/image-plugin-bind-mount",
+							},
+						}
+						mountsJson, err := json.Marshal(mounts)
+						Expect(err).NotTo(HaveOccurred())
+
+						config.ImagePluginExtraArgs = append(
+							config.ImagePluginExtraArgs,
+							"\"--mounts-json\"",
+							string(mountsJson),
+							"\"--old-return-schema\"",
+						)
+
+						gardenDefaultRootfs := defaultTestRootFS
+						Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "cat"),
+							filepath.Join(tmpDir, "cat"))).To(Succeed())
+					})
+
+					AfterEach(func() {
+						Expect(os.RemoveAll(mountedDir)).To(Succeed())
+					})
+
+					It("mounts the directories from the image plugin response", func() {
+						var stdout bytes.Buffer
+						process, err := container.Run(garden.ProcessSpec{
+							Path: "/cat",
+							Args: []string{filepath.Join("/image-plugin-bind-mount", fileName)},
+						}, garden.ProcessIO{
+							Stdout: io.MultiWriter(&stdout, GinkgoWriter),
+							Stderr: GinkgoWriter,
+						})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(process.Wait()).To(Equal(0))
+						Expect(stdout.String()).To(Equal(fileContent))
+					})
+
+					It("ensures that the mounts from the image plugin response are first in config.json", func() {
+						config, err := ioutil.ReadFile(filepath.Join(client.DepotDir, container.Handle(), "config.json"))
+						Expect(err).NotTo(HaveOccurred())
+
+						var spec specs.Spec
+						Expect(json.Unmarshal(config, &spec)).To(Succeed())
+
+						Expect(spec.Mounts[0].Destination).To(Equal("/image-plugin-bind-mount"))
+					})
 				})
 			})
 
@@ -636,21 +739,17 @@ var _ = Describe("Image Plugin", func() {
 
 			Context("when there are env vars", func() {
 				BeforeEach(func() {
-					image := gardener.Image{
-						Config: gardener.ImageConfig{
-							Env: []string{
-								"MY_VAR=set",
-								"MY_SECOND_VAR=also_set",
-							},
-						},
+					env := []string{
+						"MY_VAR=set",
+						"MY_SECOND_VAR=also_set",
 					}
-					imageJson, err := json.Marshal(image)
+					envJson, err := json.Marshal(env)
 					Expect(err).NotTo(HaveOccurred())
 
 					config.PrivilegedImagePluginExtraArgs = append(
 						config.PrivilegedImagePluginExtraArgs,
-						"\"--image-json\"",
-						string(imageJson),
+						"\"--env-json\"",
+						string(envJson),
 					)
 					gardenDefaultRootfs := defaultTestRootFS
 					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"),

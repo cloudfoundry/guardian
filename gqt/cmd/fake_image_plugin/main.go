@@ -49,6 +49,10 @@ func main() {
 			Usage: "Image json to use as image json",
 		},
 		cli.StringFlag{
+			Name:  "env-json",
+			Usage: "environment container processes should inherit",
+		},
+		cli.StringFlag{
 			Name:  "mounts-json",
 			Usage: "Mounts json",
 		},
@@ -83,6 +87,10 @@ func main() {
 		cli.StringFlag{
 			Name:  "metrics-bin-location-path",
 			Usage: "Path to write this binary's location to on metrics",
+		},
+		cli.BoolFlag{
+			Name:  "old-return-schema",
+			Usage: "use old, deprecated DesiredImageSpec as return json",
 		},
 	}
 
@@ -184,6 +192,14 @@ var CreateCommand = cli.Command{
 			}
 		}
 
+		var env []string
+		envJson := ctx.GlobalString("env-json")
+		if envJson != "" {
+			if err := json.Unmarshal([]byte(envJson), &env); err != nil {
+				panic(err)
+			}
+		}
+
 		logContent := ctx.GlobalString("create-log-content")
 		if logContent != "" {
 			log := lager.NewLogger("fake-image-plugin")
@@ -191,15 +207,33 @@ var CreateCommand = cli.Command{
 			log.Info(logContent)
 		}
 
-		output := gardener.DesiredImageSpec{
-			RootFS: rootfsPath,
-			Image:  *image,
-			Mounts: mounts,
-			Spec: specs.Spec{
+		oldReturnSchema := ctx.GlobalBool("old-return-schema")
+
+		var output interface{}
+		if oldReturnSchema {
+			output = gardener.DesiredImageSpec{
+				RootFS: rootfsPath,
+				Image:  *image,
+				Mounts: mounts,
+				Spec: specs.Spec{
+					Windows: &specs.Windows{
+						LayerFolders: []string{"layer", "folders"},
+					},
+				},
+			}
+		} else {
+			output = specs.Spec{
+				Root: &specs.Root{
+					Path: rootfsPath,
+				},
+				Mounts: mounts,
+				Process: &specs.Process{
+					Env: env,
+				},
 				Windows: &specs.Windows{
 					LayerFolders: []string{"layer", "folders"},
 				},
-			},
+			}
 		}
 
 		b, err := json.Marshal(output)

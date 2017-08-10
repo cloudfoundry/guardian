@@ -28,17 +28,17 @@ func (r RootFS) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ stri
 	}
 
 	r.MkdirChown.MkdirAs(
-		spec.RootFSPath, uid, gid, 0755, true,
+		spec.BaseConfig.Root.Path, uid, gid, 0755, true,
 		".pivot_root",
 		"dev", "proc", "sys",
 	)
 
 	r.MkdirChown.MkdirAs(
-		spec.RootFSPath, uid, gid, 0777, false,
+		spec.BaseConfig.Root.Path, uid, gid, 0777, false,
 		"tmp",
 	)
 
-	return bndl.WithRootFS(spec.RootFSPath), nil
+	return bndl.WithRootFS(spec.BaseConfig.Root.Path), nil
 }
 
 type ChrootMkdir struct {
