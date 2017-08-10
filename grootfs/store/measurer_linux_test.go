@@ -15,7 +15,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("Measurer", func() {
+var _ = FDescribe("Measurer", func() {
 	var (
 		storePath     string
 		storeMeasurer *store.StoreMeasurer
@@ -27,9 +27,6 @@ var _ = Describe("Measurer", func() {
 		var err error
 		storePath, err = ioutil.TempDir(mountPoint, "")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(os.MkdirAll(
-			filepath.Join(storePath, store.CacheDirName), 0744,
-		)).To(Succeed())
 		Expect(os.MkdirAll(
 			filepath.Join(storePath, store.VolumesDirName), 0744,
 		)).To(Succeed())
@@ -46,10 +43,7 @@ var _ = Describe("Measurer", func() {
 		Expect(os.RemoveAll(storePath)).To(Succeed())
 	})
 
-	It("measures space used by the blobs cache and volumes", func() {
-		blobsPath := filepath.Join(storePath, store.CacheDirName)
-		Expect(writeFile(filepath.Join(blobsPath, "sha256:fake"), 2048*1024)).To(Succeed())
-
+	It("measures space used by the volumes and images", func() {
 		volPath := filepath.Join(storePath, store.VolumesDirName, "sha256:fake")
 		Expect(os.MkdirAll(volPath, 0744)).To(Succeed())
 		Expect(writeFile(filepath.Join(volPath, "my-file"), 2048*1024)).To(Succeed())
@@ -61,7 +55,7 @@ var _ = Describe("Measurer", func() {
 		storeSize, err := storeMeasurer.MeasureStore(logger)
 		Expect(err).NotTo(HaveOccurred())
 		xfsMetadataSize := 33755136
-		Expect(storeSize).To(BeNumerically("~", 6144*1024+xfsMetadataSize, 256*1024))
+		Expect(storeSize).To(BeNumerically("~", 4096*1024+xfsMetadataSize, 256*1024))
 	})
 
 	Context("when the store does not exist", func() {

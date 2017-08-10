@@ -18,7 +18,6 @@ var _ = Describe("Gc", func() {
 	var (
 		logger                lager.Logger
 		garbageCollector      *garbage_collector.GarbageCollector
-		fakeCacheDriver       *garbage_collectorfakes.FakeCacheDriver
 		fakeVolumeDriver      *garbage_collectorfakes.FakeVolumeDriver
 		fakeDependencyManager *garbage_collectorfakes.FakeDependencyManager
 		fakeImageCloner       *garbage_collectorfakes.FakeImageCloner
@@ -26,11 +25,10 @@ var _ = Describe("Gc", func() {
 
 	BeforeEach(func() {
 		fakeImageCloner = new(garbage_collectorfakes.FakeImageCloner)
-		fakeCacheDriver = new(garbage_collectorfakes.FakeCacheDriver)
 		fakeVolumeDriver = new(garbage_collectorfakes.FakeVolumeDriver)
 		fakeDependencyManager = new(garbage_collectorfakes.FakeDependencyManager)
 
-		garbageCollector = garbage_collector.NewGC(fakeCacheDriver, fakeVolumeDriver, fakeImageCloner, fakeDependencyManager)
+		garbageCollector = garbage_collector.NewGC(fakeVolumeDriver, fakeImageCloner, fakeDependencyManager)
 
 		logger = lagertest.NewTestLogger("garbage_collector")
 	})
@@ -201,11 +199,6 @@ var _ = Describe("Gc", func() {
 			Expect(volumes).To(ContainElement("gc.sha256:vol-f"))
 		})
 
-		It("collects blobs from the cache", func() {
-			Expect(garbageCollector.Collect(logger)).To(Succeed())
-			Expect(fakeCacheDriver.CleanCallCount()).To(Equal(1))
-		})
-
 		Context("when destroying a volume fails", func() {
 			BeforeEach(func() {
 				fakeVolumeDriver.DestroyVolumeStub = func(_ lager.Logger, volID string) error {
@@ -220,16 +213,6 @@ var _ = Describe("Gc", func() {
 			It("does not stop cleaning up remaining volumes", func() {
 				Expect(garbageCollector.Collect(logger)).To(MatchError(ContainSubstring("destroying volumes failed")))
 				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(3))
-			})
-		})
-
-		Context("when cleaning blobs cache fails", func() {
-			BeforeEach(func() {
-				fakeCacheDriver.CleanReturns(errors.New("failed to clean up cache"))
-			})
-
-			It("returns an error", func() {
-				Expect(garbageCollector.Collect(logger)).To(MatchError(ContainSubstring("failed to clean up cache")))
 			})
 		})
 	})

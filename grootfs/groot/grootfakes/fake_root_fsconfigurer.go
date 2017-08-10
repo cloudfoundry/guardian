@@ -9,38 +9,32 @@ import (
 )
 
 type FakeRootFSConfigurer struct {
-	ConfigureStub        func(rootFSPath string, baseImage specsv1.Image) error
+	ConfigureStub        func(rootFSPath string, baseImage *specsv1.Image) error
 	configureMutex       sync.RWMutex
 	configureArgsForCall []struct {
 		rootFSPath string
-		baseImage  specsv1.Image
+		baseImage  *specsv1.Image
 	}
 	configureReturns struct {
-		result1 error
-	}
-	configureReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeRootFSConfigurer) Configure(rootFSPath string, baseImage specsv1.Image) error {
+func (fake *FakeRootFSConfigurer) Configure(rootFSPath string, baseImage *specsv1.Image) error {
 	fake.configureMutex.Lock()
-	ret, specificReturn := fake.configureReturnsOnCall[len(fake.configureArgsForCall)]
 	fake.configureArgsForCall = append(fake.configureArgsForCall, struct {
 		rootFSPath string
-		baseImage  specsv1.Image
+		baseImage  *specsv1.Image
 	}{rootFSPath, baseImage})
 	fake.recordInvocation("Configure", []interface{}{rootFSPath, baseImage})
 	fake.configureMutex.Unlock()
 	if fake.ConfigureStub != nil {
 		return fake.ConfigureStub(rootFSPath, baseImage)
+	} else {
+		return fake.configureReturns.result1
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.configureReturns.result1
 }
 
 func (fake *FakeRootFSConfigurer) ConfigureCallCount() int {
@@ -49,7 +43,7 @@ func (fake *FakeRootFSConfigurer) ConfigureCallCount() int {
 	return len(fake.configureArgsForCall)
 }
 
-func (fake *FakeRootFSConfigurer) ConfigureArgsForCall(i int) (string, specsv1.Image) {
+func (fake *FakeRootFSConfigurer) ConfigureArgsForCall(i int) (string, *specsv1.Image) {
 	fake.configureMutex.RLock()
 	defer fake.configureMutex.RUnlock()
 	return fake.configureArgsForCall[i].rootFSPath, fake.configureArgsForCall[i].baseImage
@@ -58,18 +52,6 @@ func (fake *FakeRootFSConfigurer) ConfigureArgsForCall(i int) (string, specsv1.I
 func (fake *FakeRootFSConfigurer) ConfigureReturns(result1 error) {
 	fake.ConfigureStub = nil
 	fake.configureReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeRootFSConfigurer) ConfigureReturnsOnCall(i int, result1 error) {
-	fake.ConfigureStub = nil
-	if fake.configureReturnsOnCall == nil {
-		fake.configureReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.configureReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

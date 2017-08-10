@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
@@ -74,9 +73,8 @@ var CleanCommand = cli.Command{
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
-		cacheDriver := cache_driver.NewCacheDriver(storePath)
 		sm := storepkg.NewStoreMeasurer(storePath)
-		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 

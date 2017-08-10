@@ -18,10 +18,6 @@ type FakeLocksmith struct {
 		result1 *os.File
 		result2 error
 	}
-	lockReturnsOnCall map[int]struct {
-		result1 *os.File
-		result2 error
-	}
 	UnlockStub        func(lockFile *os.File) error
 	unlockMutex       sync.RWMutex
 	unlockArgsForCall []struct {
@@ -30,16 +26,12 @@ type FakeLocksmith struct {
 	unlockReturns struct {
 		result1 error
 	}
-	unlockReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeLocksmith) Lock(key string) (*os.File, error) {
 	fake.lockMutex.Lock()
-	ret, specificReturn := fake.lockReturnsOnCall[len(fake.lockArgsForCall)]
 	fake.lockArgsForCall = append(fake.lockArgsForCall, struct {
 		key string
 	}{key})
@@ -47,11 +39,9 @@ func (fake *FakeLocksmith) Lock(key string) (*os.File, error) {
 	fake.lockMutex.Unlock()
 	if fake.LockStub != nil {
 		return fake.LockStub(key)
+	} else {
+		return fake.lockReturns.result1, fake.lockReturns.result2
 	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.lockReturns.result1, fake.lockReturns.result2
 }
 
 func (fake *FakeLocksmith) LockCallCount() int {
@@ -74,23 +64,8 @@ func (fake *FakeLocksmith) LockReturns(result1 *os.File, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *FakeLocksmith) LockReturnsOnCall(i int, result1 *os.File, result2 error) {
-	fake.LockStub = nil
-	if fake.lockReturnsOnCall == nil {
-		fake.lockReturnsOnCall = make(map[int]struct {
-			result1 *os.File
-			result2 error
-		})
-	}
-	fake.lockReturnsOnCall[i] = struct {
-		result1 *os.File
-		result2 error
-	}{result1, result2}
-}
-
 func (fake *FakeLocksmith) Unlock(lockFile *os.File) error {
 	fake.unlockMutex.Lock()
-	ret, specificReturn := fake.unlockReturnsOnCall[len(fake.unlockArgsForCall)]
 	fake.unlockArgsForCall = append(fake.unlockArgsForCall, struct {
 		lockFile *os.File
 	}{lockFile})
@@ -98,11 +73,9 @@ func (fake *FakeLocksmith) Unlock(lockFile *os.File) error {
 	fake.unlockMutex.Unlock()
 	if fake.UnlockStub != nil {
 		return fake.UnlockStub(lockFile)
+	} else {
+		return fake.unlockReturns.result1
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.unlockReturns.result1
 }
 
 func (fake *FakeLocksmith) UnlockCallCount() int {
@@ -120,18 +93,6 @@ func (fake *FakeLocksmith) UnlockArgsForCall(i int) *os.File {
 func (fake *FakeLocksmith) UnlockReturns(result1 error) {
 	fake.UnlockStub = nil
 	fake.unlockReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeLocksmith) UnlockReturnsOnCall(i int, result1 error) {
-	fake.UnlockStub = nil
-	if fake.unlockReturnsOnCall == nil {
-		fake.unlockReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.unlockReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

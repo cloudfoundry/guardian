@@ -6,7 +6,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"reflect"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
@@ -191,7 +190,7 @@ func (b *ImageCloner) deleteImageDir(imagePath string) error {
 
 var OF = os.OpenFile
 
-func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, baseImage specsv1.Image) error {
+func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, baseImage *specsv1.Image) error {
 	logger = logger.Session("writing-image-json")
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -209,16 +208,11 @@ func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, 
 	return nil
 }
 
-func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage specsv1.Image, mountJson groot.MountInfo, mount bool) (groot.ImageInfo, error) {
-	var image *specsv1.Image
-	if !reflect.DeepEqual(baseImage, specsv1.Image{}) {
-		image = &baseImage
-	}
-
+func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage *specsv1.Image, mountJson groot.MountInfo, mount bool) (groot.ImageInfo, error) {
 	imageInfo := groot.ImageInfo{
 		Path:   imagePath,
 		Rootfs: rootfsPath,
-		Image:  image,
+		Image:  baseImage,
 	}
 
 	if !mount {

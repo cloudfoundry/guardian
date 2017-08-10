@@ -15,7 +15,11 @@ func NewRootFSConfigurer() *RootFSConfigurer {
 	return &RootFSConfigurer{}
 }
 
-func (r *RootFSConfigurer) Configure(rootFSPath string, baseImage specsv1.Image) error {
+func (r *RootFSConfigurer) Configure(rootFSPath string, baseImage *specsv1.Image) error {
+	if baseImage == nil {
+		return nil
+	}
+
 	_, err := os.Stat(rootFSPath)
 	if err != nil {
 		if os.IsNotExist(err) {

@@ -20,9 +20,6 @@ type FakeStoreDriver struct {
 	configureStoreReturns struct {
 		result1 error
 	}
-	configureStoreReturnsOnCall map[int]struct {
-		result1 error
-	}
 	ValidateFileSystemStub        func(logger lager.Logger, path string) error
 	validateFileSystemMutex       sync.RWMutex
 	validateFileSystemArgsForCall []struct {
@@ -30,9 +27,6 @@ type FakeStoreDriver struct {
 		path   string
 	}
 	validateFileSystemReturns struct {
-		result1 error
-	}
-	validateFileSystemReturnsOnCall map[int]struct {
 		result1 error
 	}
 	InitFilesystemStub        func(logger lager.Logger, filesystemPath, storePath string) error
@@ -45,16 +39,12 @@ type FakeStoreDriver struct {
 	initFilesystemReturns struct {
 		result1 error
 	}
-	initFilesystemReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeStoreDriver) ConfigureStore(logger lager.Logger, storePath string, ownerUID int, ownerGID int) error {
 	fake.configureStoreMutex.Lock()
-	ret, specificReturn := fake.configureStoreReturnsOnCall[len(fake.configureStoreArgsForCall)]
 	fake.configureStoreArgsForCall = append(fake.configureStoreArgsForCall, struct {
 		logger    lager.Logger
 		storePath string
@@ -65,11 +55,9 @@ func (fake *FakeStoreDriver) ConfigureStore(logger lager.Logger, storePath strin
 	fake.configureStoreMutex.Unlock()
 	if fake.ConfigureStoreStub != nil {
 		return fake.ConfigureStoreStub(logger, storePath, ownerUID, ownerGID)
+	} else {
+		return fake.configureStoreReturns.result1
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.configureStoreReturns.result1
 }
 
 func (fake *FakeStoreDriver) ConfigureStoreCallCount() int {
@@ -91,21 +79,8 @@ func (fake *FakeStoreDriver) ConfigureStoreReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeStoreDriver) ConfigureStoreReturnsOnCall(i int, result1 error) {
-	fake.ConfigureStoreStub = nil
-	if fake.configureStoreReturnsOnCall == nil {
-		fake.configureStoreReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.configureStoreReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeStoreDriver) ValidateFileSystem(logger lager.Logger, path string) error {
 	fake.validateFileSystemMutex.Lock()
-	ret, specificReturn := fake.validateFileSystemReturnsOnCall[len(fake.validateFileSystemArgsForCall)]
 	fake.validateFileSystemArgsForCall = append(fake.validateFileSystemArgsForCall, struct {
 		logger lager.Logger
 		path   string
@@ -114,11 +89,9 @@ func (fake *FakeStoreDriver) ValidateFileSystem(logger lager.Logger, path string
 	fake.validateFileSystemMutex.Unlock()
 	if fake.ValidateFileSystemStub != nil {
 		return fake.ValidateFileSystemStub(logger, path)
+	} else {
+		return fake.validateFileSystemReturns.result1
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.validateFileSystemReturns.result1
 }
 
 func (fake *FakeStoreDriver) ValidateFileSystemCallCount() int {
@@ -140,21 +113,8 @@ func (fake *FakeStoreDriver) ValidateFileSystemReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeStoreDriver) ValidateFileSystemReturnsOnCall(i int, result1 error) {
-	fake.ValidateFileSystemStub = nil
-	if fake.validateFileSystemReturnsOnCall == nil {
-		fake.validateFileSystemReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.validateFileSystemReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeStoreDriver) InitFilesystem(logger lager.Logger, filesystemPath string, storePath string) error {
 	fake.initFilesystemMutex.Lock()
-	ret, specificReturn := fake.initFilesystemReturnsOnCall[len(fake.initFilesystemArgsForCall)]
 	fake.initFilesystemArgsForCall = append(fake.initFilesystemArgsForCall, struct {
 		logger         lager.Logger
 		filesystemPath string
@@ -164,11 +124,9 @@ func (fake *FakeStoreDriver) InitFilesystem(logger lager.Logger, filesystemPath 
 	fake.initFilesystemMutex.Unlock()
 	if fake.InitFilesystemStub != nil {
 		return fake.InitFilesystemStub(logger, filesystemPath, storePath)
+	} else {
+		return fake.initFilesystemReturns.result1
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.initFilesystemReturns.result1
 }
 
 func (fake *FakeStoreDriver) InitFilesystemCallCount() int {
@@ -186,18 +144,6 @@ func (fake *FakeStoreDriver) InitFilesystemArgsForCall(i int) (lager.Logger, str
 func (fake *FakeStoreDriver) InitFilesystemReturns(result1 error) {
 	fake.InitFilesystemStub = nil
 	fake.initFilesystemReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeStoreDriver) InitFilesystemReturnsOnCall(i int, result1 error) {
-	fake.InitFilesystemStub = nil
-	if fake.initFilesystemReturnsOnCall == nil {
-		fake.initFilesystemReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.initFilesystemReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

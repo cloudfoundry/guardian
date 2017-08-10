@@ -12,14 +12,9 @@ import (
 	errorspkg "github.com/pkg/errors"
 )
 
-//go:generate counterfeiter . CacheDriver
 //go:generate counterfeiter . ImageCloner
 //go:generate counterfeiter . DependencyManager
 //go:generate counterfeiter . VolumeDriver
-
-type CacheDriver interface {
-	Clean(logger lager.Logger) error
-}
 
 type ImageCloner interface {
 	ImageIDs(logger lager.Logger) ([]string, error)
@@ -37,15 +32,13 @@ type VolumeDriver interface {
 }
 
 type GarbageCollector struct {
-	cacheDriver       CacheDriver
 	volumeDriver      VolumeDriver
 	imageCloner       ImageCloner
 	dependencyManager DependencyManager
 }
 
-func NewGC(cacheDriver CacheDriver, volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager) *GarbageCollector {
+func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager) *GarbageCollector {
 	return &GarbageCollector{
-		cacheDriver:       cacheDriver,
 		volumeDriver:      volumeDriver,
 		imageCloner:       imageCloner,
 		dependencyManager: dependencyManager,
@@ -99,11 +92,7 @@ func (g *GarbageCollector) Collect(logger lager.Logger) error {
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	if err := g.collectVolumes(logger); err != nil {
-		return err
-	}
-
-	return g.collectBlobs(logger)
+	return g.collectVolumes(logger)
 }
 
 func (g *GarbageCollector) collectVolumes(logger lager.Logger) error {
@@ -129,14 +118,6 @@ func (g *GarbageCollector) collectVolumes(logger lager.Logger) error {
 	}
 
 	return cleanupErr
-}
-
-func (g *GarbageCollector) collectBlobs(logger lager.Logger) error {
-	logger = logger.Session("collect-blobs")
-	logger.Info("starting")
-	defer logger.Info("ending")
-
-	return g.cacheDriver.Clean(logger)
 }
 
 func (g *GarbageCollector) gcVolumes(logger lager.Logger) (map[string]bool, error) {

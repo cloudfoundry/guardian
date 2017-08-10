@@ -15,7 +15,7 @@ import (
 var _ = Describe("RootfsConfigurer", func() {
 	var (
 		configurer *store.RootFSConfigurer
-		baseImage  specsv1.Image
+		baseImage  *specsv1.Image
 		rootFSPath string
 	)
 
@@ -24,7 +24,7 @@ var _ = Describe("RootfsConfigurer", func() {
 		rootFSPath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
-		baseImage = specsv1.Image{
+		baseImage = &specsv1.Image{
 			Config: specsv1.ImageConfig{
 				Volumes: map[string]struct{}{
 					"/volume-a/nested/dir": struct{}{},
@@ -85,6 +85,16 @@ var _ = Describe("RootfsConfigurer", func() {
 			It("creates the volume", func() {
 				Expect(configurer.Configure(rootFSPath, baseImage)).To(Succeed())
 				Expect(filepath.Join(rootFSPath, "volume-c")).To(BeADirectory())
+			})
+		})
+
+		Context("when the base image is nil", func() {
+			BeforeEach(func() {
+				baseImage = nil
+			})
+
+			It("returns quietly", func() {
+				Expect(configurer.Configure(rootFSPath, baseImage)).To(Succeed())
 			})
 		})
 	})

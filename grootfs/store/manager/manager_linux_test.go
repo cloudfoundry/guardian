@@ -109,7 +109,6 @@ var _ = Describe("Manager", func() {
 			Expect(manager.InitStore(logger, spec)).To(Succeed())
 
 			Expect(filepath.Join(storePath, "images")).To(BeADirectory())
-			Expect(filepath.Join(storePath, "cache")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "volumes")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "tmp")).To(BeADirectory())
 			Expect(filepath.Join(storePath, "locks")).To(BeADirectory())
@@ -416,17 +415,6 @@ var _ = Describe("Manager", func() {
 			JustBeforeEach(func() {
 				Expect(manager.InitStore(logger, spec)).To(Succeed())
 				Expect(os.RemoveAll(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
-			})
-
-			It("returns false", func() {
-				Expect(manager.IsStoreInitialized(logger)).To(BeFalse())
-			})
-		})
-
-		Context("when the store is missing the cache dir", func() {
-			JustBeforeEach(func() {
-				Expect(manager.InitStore(logger, spec)).To(Succeed())
-				Expect(os.RemoveAll(filepath.Join(storePath, store.CacheDirName))).To(Succeed())
 			})
 
 			It("returns false", func() {

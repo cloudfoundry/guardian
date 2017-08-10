@@ -20,7 +20,6 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
-	"code.cloudfoundry.org/grootfs/store/cache_driver"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
@@ -150,9 +149,7 @@ var CreateCommand = cli.Command{
 
 		layerSource := source.NewLayerSource(ctx.String("username"), ctx.String("password"), cfg.Create.InsecureRegistries)
 
-		cacheDriver := cache_driver.NewCacheDriver(storePath)
-		layerFetcher := layer_fetcher.NewLayerFetcher(layerSource, cacheDriver)
-
+		layerFetcher := layer_fetcher.NewLayerFetcher(&layerSource)
 		tarFetcher := tar_fetcher.NewTarFetcher()
 
 		dependencyManager := dependency_manager.NewDependencyManager(
@@ -169,7 +166,7 @@ var CreateCommand = cli.Command{
 		)
 
 		sm := storepkg.NewStoreMeasurer(storePath)
-		gc := garbage_collector.NewGC(cacheDriver, fsDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager)
 		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
 
 		rootFSConfigurer := storepkg.NewRootFSConfigurer()

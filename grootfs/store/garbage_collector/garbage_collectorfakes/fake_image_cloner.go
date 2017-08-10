@@ -18,17 +18,12 @@ type FakeImageCloner struct {
 		result1 []string
 		result2 error
 	}
-	imageIDsReturnsOnCall map[int]struct {
-		result1 []string
-		result2 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeImageCloner) ImageIDs(logger lager.Logger) ([]string, error) {
 	fake.imageIDsMutex.Lock()
-	ret, specificReturn := fake.imageIDsReturnsOnCall[len(fake.imageIDsArgsForCall)]
 	fake.imageIDsArgsForCall = append(fake.imageIDsArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
@@ -36,11 +31,9 @@ func (fake *FakeImageCloner) ImageIDs(logger lager.Logger) ([]string, error) {
 	fake.imageIDsMutex.Unlock()
 	if fake.ImageIDsStub != nil {
 		return fake.ImageIDsStub(logger)
+	} else {
+		return fake.imageIDsReturns.result1, fake.imageIDsReturns.result2
 	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.imageIDsReturns.result1, fake.imageIDsReturns.result2
 }
 
 func (fake *FakeImageCloner) ImageIDsCallCount() int {
@@ -58,20 +51,6 @@ func (fake *FakeImageCloner) ImageIDsArgsForCall(i int) lager.Logger {
 func (fake *FakeImageCloner) ImageIDsReturns(result1 []string, result2 error) {
 	fake.ImageIDsStub = nil
 	fake.imageIDsReturns = struct {
-		result1 []string
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeImageCloner) ImageIDsReturnsOnCall(i int, result1 []string, result2 error) {
-	fake.ImageIDsStub = nil
-	if fake.imageIDsReturnsOnCall == nil {
-		fake.imageIDsReturnsOnCall = make(map[int]struct {
-			result1 []string
-			result2 error
-		})
-	}
-	fake.imageIDsReturnsOnCall[i] = struct {
 		result1 []string
 		result2 error
 	}{result1, result2}

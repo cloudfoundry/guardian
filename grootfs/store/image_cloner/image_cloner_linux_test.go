@@ -71,7 +71,7 @@ var _ = Describe("Image", func() {
 
 		It("returns an image", func() {
 			timestamp := time.Now()
-			imageConfig := specsv1.Image{Created: &timestamp}
+			imageConfig := &specsv1.Image{Created: &timestamp}
 			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: true})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -98,7 +98,7 @@ var _ = Describe("Image", func() {
 			imageSpec := groot.ImageSpec{
 				ID:            "some-id",
 				BaseVolumeIDs: []string{"id-1", "id-2"},
-				BaseImage: specsv1.Image{
+				BaseImage: &specsv1.Image{
 					Author: "Groot",
 				},
 			}
@@ -112,7 +112,7 @@ var _ = Describe("Image", func() {
 
 		It("writes the image.json to the image", func() {
 			timestamp := time.Time{}.In(time.UTC)
-			baseImage := specsv1.Image{
+			baseImage := &specsv1.Image{
 				Author:  "Groot",
 				Created: &timestamp,
 				Config: specsv1.ImageConfig{
@@ -133,15 +133,15 @@ var _ = Describe("Image", func() {
 			imageJsonFile, err := os.Open(imageJsonPath)
 			Expect(err).NotTo(HaveOccurred())
 
-			var imageJsonContent specsv1.Image
-			Expect(json.NewDecoder(imageJsonFile).Decode(&imageJsonContent)).To(Succeed())
+			imageJsonContent := &specsv1.Image{}
+			Expect(json.NewDecoder(imageJsonFile).Decode(imageJsonContent)).To(Succeed())
 			Expect(imageJsonContent).To(Equal(baseImage))
 		})
 
 		Context("when mounting is skipped", func() {
 			It("returns a image with mount information", func() {
 				timestamp := time.Now()
-				imageConfig := specsv1.Image{Created: &timestamp}
+				imageConfig := &specsv1.Image{Created: &timestamp}
 				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: false})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -150,15 +150,6 @@ var _ = Describe("Image", func() {
 				Expect(image.Mounts[0].Source).To(Equal("my-source"))
 				Expect(image.Mounts[0].Type).To(Equal("my-type"))
 				Expect(image.Mounts[0].Options).To(ConsistOf("my-option"))
-			})
-		})
-
-		Context("when the spec.BaseImage is empty", func() {
-			It("returns a image", func() {
-				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: specsv1.Image{}})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(image.Image).To(BeNil())
 			})
 		})
 

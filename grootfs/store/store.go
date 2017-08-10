@@ -4,7 +4,6 @@ import "path/filepath"
 const (
 	ImageDirName     = "images"
 	VolumesDirName   = "volumes"
-	CacheDirName     = "cache"
 	LocksDirName     = "locks"
 	MetaDirName      = "meta"
 	TempDirName      = "tmp"
@@ -14,7 +13,6 @@ const (
 var StoreFolders []string = []string{
 	ImageDirName,
 	VolumesDirName,
-	CacheDirName,
 	MetaDirName,
 	LocksDirName,
 	TempDirName,

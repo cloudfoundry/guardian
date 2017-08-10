@@ -10,7 +10,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
-	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 	errorspkg "github.com/pkg/errors"
 )
 
@@ -67,7 +66,7 @@ func (l *TarFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (
 				ChainID:       l.generateChainID(baseImageURL.String(), stat.ModTime().UnixNano()),
 			},
 		},
-		Config: specsv1.Image{},
+		Config: nil,
 	}, nil
 }
 

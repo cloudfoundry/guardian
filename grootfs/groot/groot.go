@@ -62,7 +62,7 @@ type BaseImageSpec struct {
 }
 
 type BaseImage struct {
-	BaseImage specsv1.Image
+	BaseImage *specsv1.Image
 	ChainIDs  []string
 }
 
@@ -76,7 +76,7 @@ type ImageSpec struct {
 	DiskLimit                 int64
 	ExcludeBaseImageFromQuota bool
 	BaseVolumeIDs             []string
-	BaseImage                 specsv1.Image
+	BaseImage                 *specsv1.Image
 	OwnerUID                  int
 	OwnerGID                  int
 }
@@ -89,7 +89,7 @@ type ImageCloner interface {
 }
 
 type RootFSConfigurer interface {
-	Configure(rootFSPath string, baseImage specsv1.Image) error
+	Configure(rootFSPath string, baseImage *specsv1.Image) error
 }
 
 type DependencyManager interface {

@@ -17,18 +17,12 @@ type FakeDependencyManager struct {
 	registerReturns struct {
 		result1 error
 	}
-	registerReturnsOnCall map[int]struct {
-		result1 error
-	}
 	DeregisterStub        func(id string) error
 	deregisterMutex       sync.RWMutex
 	deregisterArgsForCall []struct {
 		id string
 	}
 	deregisterReturns struct {
-		result1 error
-	}
-	deregisterReturnsOnCall map[int]struct {
 		result1 error
 	}
 	invocations      map[string][][]interface{}
@@ -42,7 +36,6 @@ func (fake *FakeDependencyManager) Register(id string, chainIDs []string) error 
 		copy(chainIDsCopy, chainIDs)
 	}
 	fake.registerMutex.Lock()
-	ret, specificReturn := fake.registerReturnsOnCall[len(fake.registerArgsForCall)]
 	fake.registerArgsForCall = append(fake.registerArgsForCall, struct {
 		id       string
 		chainIDs []string
@@ -51,11 +44,9 @@ func (fake *FakeDependencyManager) Register(id string, chainIDs []string) error 
 	fake.registerMutex.Unlock()
 	if fake.RegisterStub != nil {
 		return fake.RegisterStub(id, chainIDs)
+	} else {
+		return fake.registerReturns.result1
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.registerReturns.result1
 }
 
 func (fake *FakeDependencyManager) RegisterCallCount() int {
@@ -77,21 +68,8 @@ func (fake *FakeDependencyManager) RegisterReturns(result1 error) {
 	}{result1}
 }
 
-func (fake *FakeDependencyManager) RegisterReturnsOnCall(i int, result1 error) {
-	fake.RegisterStub = nil
-	if fake.registerReturnsOnCall == nil {
-		fake.registerReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.registerReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeDependencyManager) Deregister(id string) error {
 	fake.deregisterMutex.Lock()
-	ret, specificReturn := fake.deregisterReturnsOnCall[len(fake.deregisterArgsForCall)]
 	fake.deregisterArgsForCall = append(fake.deregisterArgsForCall, struct {
 		id string
 	}{id})
@@ -99,11 +77,9 @@ func (fake *FakeDependencyManager) Deregister(id string) error {
 	fake.deregisterMutex.Unlock()
 	if fake.DeregisterStub != nil {
 		return fake.DeregisterStub(id)
+	} else {
+		return fake.deregisterReturns.result1
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.deregisterReturns.result1
 }
 
 func (fake *FakeDependencyManager) DeregisterCallCount() int {
@@ -121,18 +97,6 @@ func (fake *FakeDependencyManager) DeregisterArgsForCall(i int) string {
 func (fake *FakeDependencyManager) DeregisterReturns(result1 error) {
 	fake.DeregisterStub = nil
 	fake.deregisterReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeDependencyManager) DeregisterReturnsOnCall(i int, result1 error) {
-	fake.DeregisterStub = nil
-	if fake.deregisterReturnsOnCall == nil {
-		fake.deregisterReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.deregisterReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }

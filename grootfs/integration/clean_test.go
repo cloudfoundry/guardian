@@ -226,19 +226,6 @@ var _ = Describe("Clean", func() {
 			Expect(Runner.Delete("my-image-1")).To(Succeed())
 		})
 
-		It("removes the cached blobs", func() {
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(len(preContents)).To(BeNumerically(">", 0))
-
-			_, err = Runner.Clean(0, []string{})
-			Expect(err).NotTo(HaveOccurred())
-
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.CacheDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(afterContents).To(HaveLen(0))
-		})
-
 		Context("when there are unused layers", func() {
 			BeforeEach(func() {
 				_, err := Runner.Create(groot.CreateSpec{

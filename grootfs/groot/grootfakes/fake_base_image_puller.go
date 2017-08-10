@@ -19,17 +19,12 @@ type FakeBaseImagePuller struct {
 		result1 groot.BaseImage
 		result2 error
 	}
-	pullReturnsOnCall map[int]struct {
-		result1 groot.BaseImage
-		result2 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
 func (fake *FakeBaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImage, error) {
 	fake.pullMutex.Lock()
-	ret, specificReturn := fake.pullReturnsOnCall[len(fake.pullArgsForCall)]
 	fake.pullArgsForCall = append(fake.pullArgsForCall, struct {
 		logger lager.Logger
 		spec   groot.BaseImageSpec
@@ -38,11 +33,9 @@ func (fake *FakeBaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageS
 	fake.pullMutex.Unlock()
 	if fake.PullStub != nil {
 		return fake.PullStub(logger, spec)
+	} else {
+		return fake.pullReturns.result1, fake.pullReturns.result2
 	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.pullReturns.result1, fake.pullReturns.result2
 }
 
 func (fake *FakeBaseImagePuller) PullCallCount() int {
@@ -60,20 +53,6 @@ func (fake *FakeBaseImagePuller) PullArgsForCall(i int) (lager.Logger, groot.Bas
 func (fake *FakeBaseImagePuller) PullReturns(result1 groot.BaseImage, result2 error) {
 	fake.PullStub = nil
 	fake.pullReturns = struct {
-		result1 groot.BaseImage
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeBaseImagePuller) PullReturnsOnCall(i int, result1 groot.BaseImage, result2 error) {
-	fake.PullStub = nil
-	if fake.pullReturnsOnCall == nil {
-		fake.pullReturnsOnCall = make(map[int]struct {
-			result1 groot.BaseImage
-			result2 error
-		})
-	}
-	fake.pullReturnsOnCall[i] = struct {
 		result1 groot.BaseImage
 		result2 error
 	}{result1, result2}

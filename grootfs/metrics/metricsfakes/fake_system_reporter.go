@@ -7,6 +7,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/lager"
+	"github.com/cloudfoundry/dropsonde/metrics"
 )
 
 type FakeSystemReporter struct {

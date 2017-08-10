@@ -41,7 +41,7 @@ type LayerDigest struct {
 
 type BaseImageInfo struct {
 	LayersDigest []LayerDigest
-	Config       specsv1.Image
+	Config       *specsv1.Image
 }
 
 type Fetcher interface {

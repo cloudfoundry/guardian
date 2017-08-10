@@ -112,9 +112,8 @@ var _ = Describe("Create (btrfs only)", func() {
 			})
 
 			Context("when it's provided", func() {
-				It("uses calls the provided btrfs binary", func() {
-					_, err := Runner.WithBtrfsProgsPath(btrfsProgsPath).Create(spec)
-					Expect(err).To(HaveOccurred())
+				It("calls the provided btrfs binary", func() {
+					Runner.WithBtrfsProgsPath(btrfsProgsPath).Create(spec)
 
 					contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
 					Expect(err).NotTo(HaveOccurred())
@@ -149,8 +148,7 @@ var _ = Describe("Create (btrfs only)", func() {
 			})
 
 			It("uses the btrfs bin from the config file", func() {
-				_, err := Runner.Create(spec)
-				Expect(err).To(HaveOccurred())
+				Runner.Create(spec)
 
 				contents, err := ioutil.ReadFile(btrfsCalledFile.Name())
 				Expect(err).NotTo(HaveOccurred())

@@ -359,7 +359,7 @@ fails without cleaning up anything.
 The store is based on the effective user running the command. If the user tries
 to clean up a store that does not belong to her/him the command fails.
 
-\* It takes only into account the cache and volumes folders in the store.
+\* It takes only into account the volumes folders in the store.
 
 ### Logging
 

@@ -17,9 +17,6 @@ type FakeDependencyRegisterer struct {
 	registerReturns struct {
 		result1 error
 	}
-	registerReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -31,7 +28,6 @@ func (fake *FakeDependencyRegisterer) Register(id string, chainIDs []string) err
 		copy(chainIDsCopy, chainIDs)
 	}
 	fake.registerMutex.Lock()
-	ret, specificReturn := fake.registerReturnsOnCall[len(fake.registerArgsForCall)]
 	fake.registerArgsForCall = append(fake.registerArgsForCall, struct {
 		id       string
 		chainIDs []string
@@ -40,11 +36,9 @@ func (fake *FakeDependencyRegisterer) Register(id string, chainIDs []string) err
 	fake.registerMutex.Unlock()
 	if fake.RegisterStub != nil {
 		return fake.RegisterStub(id, chainIDs)
+	} else {
+		return fake.registerReturns.result1
 	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.registerReturns.result1
 }
 
 func (fake *FakeDependencyRegisterer) RegisterCallCount() int {
@@ -62,18 +56,6 @@ func (fake *FakeDependencyRegisterer) RegisterArgsForCall(i int) (string, []stri
 func (fake *FakeDependencyRegisterer) RegisterReturns(result1 error) {
 	fake.RegisterStub = nil
 	fake.registerReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeDependencyRegisterer) RegisterReturnsOnCall(i int, result1 error) {
-	fake.RegisterStub = nil
-	if fake.registerReturnsOnCall == nil {
-		fake.registerReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.registerReturnsOnCall[i] = struct {
 		result1 error
 	}{result1}
 }
