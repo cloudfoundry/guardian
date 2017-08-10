@@ -527,8 +527,8 @@ var _ = Describe("Create", func() {
 
 			expectedRootfs := filepath.Join(StorePath, store.ImageDirName, "random-id/rootfs")
 			Expect(image.Rootfs).To(Equal(expectedRootfs))
-			Expect(image.Mount).NotTo(BeNil())
-			Expect(image.Mount.Destination).To(Equal(expectedRootfs))
+			Expect(image.Mounts).NotTo(BeNil())
+			Expect(image.Mounts[0].Destination).To(Equal(expectedRootfs))
 			Expect(image.Image).To(BeNil())
 		})
 
@@ -567,12 +567,12 @@ var _ = Describe("Create", func() {
 					})
 
 					It("returns the mount information in the output json", func() {
-						Expect(image.Mount).ToNot(BeNil())
-						Expect(image.Mount.Destination).To(Equal(image.Rootfs))
-						Expect(image.Mount.Type).To(Equal(""))
-						Expect(image.Mount.Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
-						Expect(image.Mount.Options).To(HaveLen(1))
-						Expect(image.Mount.Options[0]).To(Equal("bind"))
+						Expect(image.Mounts).ToNot(BeNil())
+						Expect(image.Mounts[0].Destination).To(Equal(image.Rootfs))
+						Expect(image.Mounts[0].Type).To(Equal(""))
+						Expect(image.Mounts[0].Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
+						Expect(image.Mounts[0].Options).To(HaveLen(1))
+						Expect(image.Mounts[0].Options[0]).To(Equal("bind"))
 					})
 				})
 
@@ -582,12 +582,12 @@ var _ = Describe("Create", func() {
 					})
 
 					It("returns the mount information in the output json", func() {
-						Expect(image.Mount).ToNot(BeNil())
-						Expect(image.Mount.Destination).To(Equal(image.Rootfs))
-						Expect(image.Mount.Type).To(Equal("overlay"))
-						Expect(image.Mount.Source).To(Equal("overlay"))
-						Expect(image.Mount.Options).To(HaveLen(1))
-						Expect(image.Mount.Options[0]).To(MatchRegexp(
+						Expect(image.Mounts).ToNot(BeNil())
+						Expect(image.Mounts[0].Destination).To(Equal(image.Rootfs))
+						Expect(image.Mounts[0].Type).To(Equal("overlay"))
+						Expect(image.Mounts[0].Source).To(Equal("overlay"))
+						Expect(image.Mounts[0].Options).To(HaveLen(1))
+						Expect(image.Mounts[0].Options[0]).To(MatchRegexp(
 							fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s",
 								filepath.Join(StorePath, overlayxfs.LinksDirName, ".*"),
 								filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.UpperDir),

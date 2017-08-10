@@ -222,7 +222,7 @@ func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage specsv1.
 	}
 
 	if !mount {
-		imageInfo.Mount = &mountJson
+		imageInfo.Mounts = []*groot.MountInfo{&mountJson}
 	}
 
 	return imageInfo, nil

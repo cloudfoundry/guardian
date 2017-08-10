@@ -77,7 +77,7 @@ var _ = Describe("Image", func() {
 
 			Expect(image.Rootfs).To(Equal(filepath.Join(imagesPath, "some-id/rootfs")))
 			Expect(image.Image.Created.Unix()).To(Equal(imageConfig.Created.Unix()))
-			Expect(image.Mount).To(BeNil())
+			Expect(image.Mounts).To(BeNil())
 		})
 
 		It("keeps the images in the same image directory", func() {
@@ -145,11 +145,11 @@ var _ = Describe("Image", func() {
 				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: false})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(image.Mount).ToNot(BeNil())
-				Expect(image.Mount.Destination).To(Equal("my-destination"))
-				Expect(image.Mount.Source).To(Equal("my-source"))
-				Expect(image.Mount.Type).To(Equal("my-type"))
-				Expect(image.Mount.Options).To(ConsistOf("my-option"))
+				Expect(image.Mounts).ToNot(BeNil())
+				Expect(image.Mounts[0].Destination).To(Equal("my-destination"))
+				Expect(image.Mounts[0].Source).To(Equal("my-source"))
+				Expect(image.Mounts[0].Type).To(Equal("my-type"))
+				Expect(image.Mounts[0].Options).To(ConsistOf("my-option"))
 			})
 		})
 

@@ -42,8 +42,10 @@ func (r Runner) Create(spec groot.CreateSpec) (groot.ImageInfo, error) {
 }
 
 func (r Runner) EnsureMounted(image groot.ImageInfo) error {
-	if image.Mount != nil {
-		return syscall.Mount(image.Mount.Source, image.Mount.Destination, image.Mount.Type, 0, image.Mount.Options[0])
+	if len(image.Mounts) != 0 {
+		for _, mountPoint := range image.Mounts {
+			return syscall.Mount(mountPoint.Source, mountPoint.Destination, mountPoint.Type, 0, mountPoint.Options[0])
+		}
 	}
 
 	return nil

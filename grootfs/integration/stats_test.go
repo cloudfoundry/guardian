@@ -82,8 +82,8 @@ var _ = Describe("Stats", func() {
 			writeFileCmdLine := fmt.Sprintf("dd if=/dev/zero of=%s bs=1048576 count=4", filepath.Join(image.Rootfs, "hello"))
 
 			var cmd *exec.Cmd
-			if image.Mount != nil {
-				cmd = unshareWithMount(writeFileCmdLine, image.Mount)
+			if image.Mounts != nil {
+				cmd = unshareWithMount(writeFileCmdLine, image.Mounts[0])
 			} else {
 				cmd = exec.Command("sh", "-c", writeFileCmdLine)
 			}
