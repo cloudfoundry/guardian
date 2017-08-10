@@ -129,7 +129,7 @@ var _ = Describe("Creator", func() {
 		It("makes an image", func() {
 			baseImage := groot.BaseImage{
 				ChainIDs: []string{"id-1", "id-2"},
-				BaseImage: specsv1.Image{
+				BaseImage: &specsv1.Image{
 					Author: "Groot",
 				},
 			}
@@ -150,7 +150,7 @@ var _ = Describe("Creator", func() {
 			Expect(createImagerSpec).To(Equal(groot.ImageSpec{
 				ID:            "some-id",
 				BaseVolumeIDs: []string{"id-1", "id-2"},
-				BaseImage: specsv1.Image{
+				BaseImage: &specsv1.Image{
 					Author: "Groot",
 				},
 				OwnerUID: 50,
@@ -159,7 +159,7 @@ var _ = Describe("Creator", func() {
 		})
 
 		It("configures the rootfs", func() {
-			injectedBaseImage := specsv1.Image{
+			injectedBaseImage := &specsv1.Image{
 				Config: specsv1.ImageConfig{
 					Volumes: map[string]struct{}{
 						"/path/to/volume": struct{}{},
@@ -220,7 +220,7 @@ var _ = Describe("Creator", func() {
 		Describe("store ownership", func() {
 			BeforeEach(func() {
 				baseImage := groot.BaseImage{
-					BaseImage: specsv1.Image{
+					BaseImage: &specsv1.Image{
 						Author: "Groot",
 					},
 				}
@@ -478,7 +478,7 @@ var _ = Describe("Creator", func() {
 			It("passes the disk limit to the imageCloner", func() {
 				baseImage := groot.BaseImage{
 					ChainIDs: []string{"id-1", "id-2"},
-					BaseImage: specsv1.Image{
+					BaseImage: &specsv1.Image{
 						Author: "Groot",
 					},
 				}
@@ -496,7 +496,7 @@ var _ = Describe("Creator", func() {
 				Expect(createImagerSpec).To(Equal(groot.ImageSpec{
 					ID:            "some-id",
 					BaseVolumeIDs: []string{"id-1", "id-2"},
-					BaseImage: specsv1.Image{
+					BaseImage: &specsv1.Image{
 						Author: "Groot",
 					},
 					OwnerUID:  os.Getuid(),

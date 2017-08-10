@@ -2,6 +2,7 @@
 package layer_fetcherfakes
 
 import (
+	"context"
 	"sync"
 
 	"github.com/containers/image/docker/reference"
@@ -41,10 +42,12 @@ type FakeImage struct {
 		result2 string
 		result3 error
 	}
-	SignaturesStub        func() ([][]byte, error)
+	SignaturesStub        func(ctx context.Context) ([][]byte, error)
 	signaturesMutex       sync.RWMutex
-	signaturesArgsForCall []struct{}
-	signaturesReturns     struct {
+	signaturesArgsForCall []struct {
+		ctx context.Context
+	}
+	signaturesReturns struct {
 		result1 [][]byte
 		result2 error
 	}
@@ -288,14 +291,16 @@ func (fake *FakeImage) ManifestReturnsOnCall(i int, result1 []byte, result2 stri
 	}{result1, result2, result3}
 }
 
-func (fake *FakeImage) Signatures() ([][]byte, error) {
+func (fake *FakeImage) Signatures(ctx context.Context) ([][]byte, error) {
 	fake.signaturesMutex.Lock()
 	ret, specificReturn := fake.signaturesReturnsOnCall[len(fake.signaturesArgsForCall)]
-	fake.signaturesArgsForCall = append(fake.signaturesArgsForCall, struct{}{})
-	fake.recordInvocation("Signatures", []interface{}{})
+	fake.signaturesArgsForCall = append(fake.signaturesArgsForCall, struct {
+		ctx context.Context
+	}{ctx})
+	fake.recordInvocation("Signatures", []interface{}{ctx})
 	fake.signaturesMutex.Unlock()
 	if fake.SignaturesStub != nil {
-		return fake.SignaturesStub()
+		return fake.SignaturesStub(ctx)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -307,6 +312,12 @@ func (fake *FakeImage) SignaturesCallCount() int {
 	fake.signaturesMutex.RLock()
 	defer fake.signaturesMutex.RUnlock()
 	return len(fake.signaturesArgsForCall)
+}
+
+func (fake *FakeImage) SignaturesArgsForCall(i int) context.Context {
+	fake.signaturesMutex.RLock()
+	defer fake.signaturesMutex.RUnlock()
+	return fake.signaturesArgsForCall[i].ctx
 }
 
 func (fake *FakeImage) SignaturesReturns(result1 [][]byte, result2 error) {

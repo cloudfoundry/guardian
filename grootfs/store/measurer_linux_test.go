@@ -15,7 +15,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = FDescribe("Measurer", func() {
+var _ = Describe("Measurer", func() {
 	var (
 		storePath     string
 		storeMeasurer *store.StoreMeasurer
