@@ -20,24 +20,11 @@ import (
 )
 
 var _ = Describe("Surviving Restarts", func() {
-	var (
-		client *runner.RunningGarden
-	)
-
-	JustBeforeEach(func() {
-		client = runner.Start(config)
-	})
-
-	AfterEach(func() {
-		Expect(client.DestroyAndStop()).To(Succeed())
-	})
-
-	const (
-		subnetName string = "177-100-10-0"
-	)
+	const subnetName string = "177-100-10-0"
 
 	Context("when a container is created and then garden is restarted", func() {
 		var (
+			client           *runner.RunningGarden
 			container        garden.Container
 			netOutRules      []garden.NetOutRule
 			hostNetInPort    uint32
@@ -72,6 +59,7 @@ var _ = Describe("Surviving Restarts", func() {
 		})
 
 		JustBeforeEach(func() {
+			client = runner.Start(config)
 			var err error
 			container, err = client.Create(containerSpec)
 			Expect(err).NotTo(HaveOccurred())
@@ -112,6 +100,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 		AfterEach(func() {
 			Expect(os.RemoveAll(propertiesDir)).To(Succeed())
+			Expect(client.DestroyAndStop()).To(Succeed())
 		})
 
 		Context("when the destroy-containers-on-startup flag is passed", func() {
