@@ -20,8 +20,6 @@ import (
 )
 
 var _ = Describe("Surviving Restarts", func() {
-	const subnetName string = "177-100-10-0"
-
 	Context("when a container is created and then garden is restarted", func() {
 		var (
 			client           *runner.RunningGarden
@@ -32,6 +30,7 @@ var _ = Describe("Surviving Restarts", func() {
 			propertiesDir    string
 			existingProc     garden.Process
 			containerSpec    garden.ContainerSpec
+			hostIP           string
 			restartConfig    runner.GdnRunnerConfig
 			gracefulShutdown bool
 		)
@@ -72,6 +71,7 @@ var _ = Describe("Surviving Restarts", func() {
 			info, err := container.Info()
 			Expect(err).NotTo(HaveOccurred())
 			interfacePrefix = info.Properties["kawasaki.iptable-prefix"]
+			hostIP = info.HostIP
 
 			out := gbytes.NewBuffer()
 
@@ -123,22 +123,25 @@ var _ = Describe("Surviving Restarts", func() {
 			})
 
 			It("destroys the remaining containers' bridges", func() {
-				var out []byte
-				var err error
-				Eventually(func() error {
-					out, err = exec.Command("ifconfig").CombinedOutput()
-					return err
-				}).Should(Succeed(), fmt.Sprintf("error running ifconfig: %s\noutput: %s", err, string(out)))
+				check := func() string {
+					out, err := exec.Command("ifconfig").CombinedOutput()
+					Expect(err).NotTo(HaveOccurred(), "Running ifconfig")
+					return string(out)
+				}
 
-				pattern := fmt.Sprintf(".*w%d%s.*", GinkgoParallelNode(), subnetName)
-				Expect(string(out)).NotTo(MatchRegexp(pattern))
+				Eventually(check, time.Second*2, time.Millisecond*200).ShouldNot(ContainSubstring(fmt.Sprintf("inet addr:%s  Bcast:0.0.0.0  Mask:255.255.255.252", hostIP)))
+				Consistently(check, time.Second*2, time.Millisecond*200).ShouldNot(ContainSubstring(fmt.Sprintf("inet addr:%s  Bcast:0.0.0.0  Mask:255.255.255.252", hostIP)))
 			})
 
 			It("kills the container processes", func() {
-				processes, err := exec.Command("ps", "aux").CombinedOutput()
-				Expect(err).NotTo(HaveOccurred())
+				check := func() string {
+					out, err := exec.Command("sh", "-c", "ps -elf | grep 'while true; do echo' | grep -v grep | wc -l").CombinedOutput()
+					Expect(err).NotTo(HaveOccurred())
+					return string(out)
+				}
 
-				Expect(string(processes)).NotTo(ContainSubstring(fmt.Sprintf("run runc %s/containers/%s", client.TmpDir, container.Handle())))
+				Eventually(check, time.Second*2, time.Millisecond*200).Should(Equal("0\n"), "expected user process to stay alive")
+				Consistently(check, time.Second*2, time.Millisecond*200).Should(Equal("0\n"), "expected user process to stay alive")
 			})
 
 			Context("when the garden server does not shut down gracefully", func() {
@@ -209,7 +212,7 @@ var _ = Describe("Surviving Restarts", func() {
 					Expect(out).To(gbytes.Say("hello"))
 				})
 
-				It("launches processes in such a way that they can still write to stdout", func() {
+				It("the container process is still running", func() {
 					Consistently(func() string {
 						out, err := exec.Command("sh", "-c", "ps -elf | grep 'while true; do echo' | grep -v grep | wc -l").CombinedOutput()
 						Expect(err).NotTo(HaveOccurred())
