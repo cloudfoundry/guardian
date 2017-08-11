@@ -129,7 +129,7 @@ var _ = Describe("Surviving Restarts", func() {
 					return string(out)
 				}
 
-				Eventually(check, time.Second*2, time.Millisecond*200).ShouldNot(ContainSubstring(fmt.Sprintf("inet addr:%s  Bcast:0.0.0.0  Mask:255.255.255.252", hostIP)))
+				Eventually(check, time.Second*4, time.Millisecond*200).ShouldNot(ContainSubstring(fmt.Sprintf("inet addr:%s  Bcast:0.0.0.0  Mask:255.255.255.252", hostIP)))
 				Consistently(check, time.Second*2, time.Millisecond*200).ShouldNot(ContainSubstring(fmt.Sprintf("inet addr:%s  Bcast:0.0.0.0  Mask:255.255.255.252", hostIP)))
 			})
 
@@ -212,7 +212,7 @@ var _ = Describe("Surviving Restarts", func() {
 					Expect(out).To(gbytes.Say("hello"))
 				})
 
-				It("the container process is still running", func() {
+				It("allows the container process to continue running", func() {
 					Consistently(func() string {
 						out, err := exec.Command("sh", "-c", "ps -elf | grep 'while true; do echo' | grep -v grep | wc -l").CombinedOutput()
 						Expect(err).NotTo(HaveOccurred())
