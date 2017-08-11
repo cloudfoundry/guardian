@@ -124,11 +124,12 @@ var _ = Describe("Surviving Restarts", func() {
 
 			It("destroys the remaining containers' bridges", func() {
 				check := func() string {
-					out, err := exec.Command("ifconfig").CombinedOutput()
-					Expect(err).NotTo(HaveOccurred(), "Running ifconfig")
+					out, _ := exec.Command("ifconfig").CombinedOutput()
+					// ifconfig is flakey/racy when an interface is deleted
 					return string(out)
 				}
 
+				Eventually(check, time.Second*2, time.Millisecond*200).Should(ContainSubstring("LOOPBACK"))
 				Eventually(check, time.Second*4, time.Millisecond*200).ShouldNot(ContainSubstring(fmt.Sprintf("inet addr:%s  Bcast:0.0.0.0  Mask:255.255.255.252", hostIP)))
 				Consistently(check, time.Second*2, time.Millisecond*200).ShouldNot(ContainSubstring(fmt.Sprintf("inet addr:%s  Bcast:0.0.0.0  Mask:255.255.255.252", hostIP)))
 			})
