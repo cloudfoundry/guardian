@@ -25,11 +25,13 @@ var _ = Describe("Debug Endpoint", func() {
 	})
 
 	It("does not listen for debug", func() {
-		out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("netstat -anp | grep %d", client.Pid)).CombinedOutput()
-		Expect(err).NotTo(HaveOccurred())
+		netstat := func() string {
+			out, err := exec.Command("/bin/sh", "-c", fmt.Sprintf("netstat -anp | grep %d", client.Pid)).CombinedOutput()
+			Expect(err).NotTo(HaveOccurred())
+			return strings.TrimSpace(string(out))
+		}
 
-		output := strings.TrimSpace(string(out))
-		Expect(output).NotTo(ContainSubstring("tcp"))
+		Eventually(netstat).ShouldNot(ContainSubstring("tcp"))
 	})
 
 	Context("when garden is started with debug address", func() {
