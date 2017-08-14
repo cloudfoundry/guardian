@@ -242,11 +242,16 @@ func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {
 }
 
 func defaultBindMounts(binInitPath string) []specs.Mount {
+	devptsGid := 0
+	if runningAsRoot() {
+		devptsGid = 5
+	}
+
 	return []specs.Mount{
 		{Type: "sysfs", Source: "sysfs", Destination: "/sys", Options: []string{"nosuid", "noexec", "nodev", "ro"}},
 		{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
 		{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
-			Options: []string{"nosuid", "noexec", "newinstance", "gid=5", "ptmxmode=0666", "mode=0620"}},
+			Options: []string{"nosuid", "noexec", "newinstance", fmt.Sprintf("gid=%d", devptsGid), "ptmxmode=0666", "mode=0620"}},
 		{Type: "bind", Source: binInitPath, Destination: "/tmp/garden-init", Options: []string{"bind"}},
 	}
 }

@@ -128,6 +128,36 @@ var _ = Describe("rootless containers", func() {
 			Expect(stdout.String()).To(ContainSubstring("alice:alice"))
 		})
 
+		// Runc validates that no mount points in rootless containers have non-zero
+		// uid or gid. When we want to enable TTYs in rootless containers we will
+		// probably have to address this, but for now we just set the gid to 0
+		// instead of 5 (5 being the arbitrary gid we select as the owner of
+		// /dev/pts).
+		// In the container, this mount point appears to be owned by the
+		// unprivileged host gid, rather than 0.
+		It("should have devpts mounted with gid=unprivilegedGID", func() {
+			container, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			stdout := gbytes.NewBuffer()
+
+			process, err := container.Run(garden.ProcessSpec{
+				User: "root",
+				Path: "cat",
+				Args: []string{"/proc/mounts"},
+			}, garden.ProcessIO{
+				Stdout: io.MultiWriter(stdout, GinkgoWriter),
+				Stderr: GinkgoWriter,
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			exitCode, err := process.Wait()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(exitCode).To(Equal(0))
+
+			Expect(stdout).To(gbytes.Say("devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=%d,mode=620,ptmxmode=666", unprivilegedGID))
+		})
+
 		Context("when the rootfs contains a read-only resolv.conf", func() {
 			BeforeEach(func() {
 				Expect(os.Chmod(filepath.Join(imagePath, "rootfs", "etc", "resolv.conf"), 0444)).To(Succeed())
