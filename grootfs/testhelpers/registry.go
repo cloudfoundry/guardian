@@ -47,7 +47,7 @@ func (r *FakeRegistry) Start() {
 
 	r.server = ghttp.NewTLSServer()
 
-	r.blobRegexp = regexp.MustCompile(`\/v2\/.*\/blobs\/sha256:([a-f0-9]*)`)
+	r.blobRegexp = regexp.MustCompile(`\/v2\/.*\/blobs\/(.*)`)
 	r.server.RouteToHandler("GET", r.blobRegexp, r.serveBlob)
 
 	ourRegexp := regexp.MustCompile(`.*`)

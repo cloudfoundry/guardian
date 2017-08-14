@@ -490,38 +490,83 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				Expect(path.Join(image.Rootfs, "injected-file")).To(BeARegularFile())
 			})
 
-			Describe("when unpacking the image fails", func() {
-				var fakeRegistry *testhelpers.FakeRegistry
-
-				BeforeEach(func() {
-					dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
-					Expect(err).NotTo(HaveOccurred())
-					fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
-					fakeRegistry.WhenGettingBlob("6c1f4533b125f8f825188c4f4ff633a338cfce0db2813124d3d518028baf7d7a", 0, func(w http.ResponseWriter, r *http.Request) {
-						_, err := w.Write([]byte("bad-blob"))
-						Expect(err).NotTo(HaveOccurred())
-					})
-					fakeRegistry.Start()
-
-					baseImageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.0", fakeRegistry.Addr())
-				})
+			Describe("when one of the layers is corrupted", func() {
+				var (
+					fakeRegistry  *testhelpers.FakeRegistry
+					corruptedBlob string
+				)
 
 				AfterEach(func() {
 					fakeRegistry.Stop()
 				})
 
-				It("deletes the layer volume cache", func() {
-					runner := Runner.WithInsecureRegistry(fakeRegistry.Addr())
-
-					_, err := runner.Create(groot.CreateSpec{
-						BaseImage: baseImageURL,
-						ID:        "random-id-2",
-						Mount:     mountByDefault(),
+				Context("when the image has a version 2 manifest schema", func() {
+					BeforeEach(func() {
+						dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+						Expect(err).NotTo(HaveOccurred())
+						fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+						corruptedBlob = testhelpers.EmptyBaseImageV011.Layers[1].BlobID
+						fakeRegistry.WhenGettingBlob(corruptedBlob, 0, func(w http.ResponseWriter, r *http.Request) {
+							_, err := w.Write([]byte("bad-blob"))
+							Expect(err).NotTo(HaveOccurred())
+						})
+						fakeRegistry.Start()
+						baseImageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr())
 					})
 
-					Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
-					layerSnapshotPath := filepath.Join(StorePath, "volumes", "3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
-					Expect(layerSnapshotPath).ToNot(BeAnExistingFile())
+					It("fails and cleans up the corrupted volumes", func() {
+						runner := Runner.WithInsecureRegistry(fakeRegistry.Addr())
+
+						volumesDir := filepath.Join(StorePath, store.VolumesDirName)
+						Expect(volumesDir).ToNot(BeADirectory())
+
+						_, err := runner.Create(groot.CreateSpec{
+							BaseImage: baseImageURL,
+							ID:        "random-id-2",
+							Mount:     mountByDefault(),
+						})
+
+						Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
+						Expect(filepath.Join(volumesDir, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)).To(BeADirectory())
+						Expect(filepath.Join(volumesDir, testhelpers.EmptyBaseImageV011.Layers[1].ChainID)).ToNot(BeADirectory())
+					})
+				})
+
+				Context("when the image has a version 1 manifest schema", func() {
+					BeforeEach(func() {
+						dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+						Expect(err).NotTo(HaveOccurred())
+						fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+						corruptedBlob = testhelpers.SchemaV1EmptyBaseImage.Layers[2].BlobID
+						fakeRegistry.WhenGettingBlob(corruptedBlob, 0, func(w http.ResponseWriter, r *http.Request) {
+							_, err := w.Write([]byte("bad-blob"))
+							Expect(err).NotTo(HaveOccurred())
+						})
+						fakeRegistry.Start()
+						baseImageURL = fmt.Sprintf("docker://%s/cfgarden/empty:schemaV1", fakeRegistry.Addr())
+					})
+
+					It("fails and cleans up the corrupted volumes", func() {
+						runner := Runner.WithInsecureRegistry(fakeRegistry.Addr())
+
+						volumesDir := filepath.Join(StorePath, store.VolumesDirName)
+						Expect(volumesDir).ToNot(BeADirectory())
+
+						_, err := runner.Create(groot.CreateSpec{
+							BaseImage: baseImageURL,
+							ID:        "random-id-2",
+							Mount:     mountByDefault(),
+						})
+
+						Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
+
+						// TODO we can't test the precise contents of the Volumes Dir until we compute proper diff/chain ids for v1 images
+						volumes, _ := ioutil.ReadDir(volumesDir)
+						for _, v := range volumes {
+							fmt.Println(v.Name())
+						}
+						Expect(len(volumes)).To(Equal(len(testhelpers.SchemaV1EmptyBaseImage.Layers) - 1))
+					})
 				})
 			})
 		})

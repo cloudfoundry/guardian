@@ -156,8 +156,8 @@ func (p *BaseImagePuller) chainIDs(layersDigest []LayerDigest) []string {
 	return chainIDs
 }
 
-func (p *BaseImagePuller) volumeExists(logger lager.Logger, digest LayerDigest) bool {
-	volumePath, err := p.volumeDriver.VolumePath(logger, digest.ChainID)
+func (p *BaseImagePuller) volumeExists(logger lager.Logger, chainID string) bool {
+	volumePath, err := p.volumeDriver.VolumePath(logger, chainID)
 	if err == nil {
 		logger.Debug("volume-exists", lager.Data{
 			"volumePath": volumePath,
@@ -169,18 +169,18 @@ func (p *BaseImagePuller) volumeExists(logger lager.Logger, digest LayerDigest) 
 	return false
 }
 
-func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDigest []LayerDigest, spec groot.BaseImageSpec) error {
+func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDigests []LayerDigest, spec groot.BaseImageSpec) error {
 	if index < 0 {
 		return nil
 	}
 
-	digest := layersDigest[index]
+	digest := layersDigests[index]
 	logger = logger.Session("build-layer", lager.Data{
 		"blobID":        digest.BlobID,
 		"chainID":       digest.ChainID,
 		"parentChainID": digest.ParentChainID,
 	})
-	if p.volumeExists(logger, digest) {
+	if p.volumeExists(logger, digest.ChainID) {
 		return nil
 	}
 
@@ -190,14 +190,14 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 	}
 	defer p.locksmith.Unlock(lockFile)
 
-	if p.volumeExists(logger, digest) {
+	if p.volumeExists(logger, digest.ChainID) {
 		return nil
 	}
 
 	downloadChan := make(chan downloadReturn, 1)
 	go p.downloadLayer(logger, spec, digest, downloadChan)
 
-	if err := p.buildLayer(logger, index-1, layersDigest, spec); err != nil {
+	if err := p.buildLayer(logger, index-1, layersDigests, spec); err != nil {
 		return err
 	}
 
@@ -258,8 +258,7 @@ func (p *BaseImagePuller) unpackLayer(logger lager.Logger, digest LayerDigest, s
 		return err
 	}
 
-	err = p.finalizeVolume(logger, tempVolumeName, volumePath, digest.ChainID)
-	return err
+	return p.finalizeVolume(logger, tempVolumeName, volumePath, digest.ChainID)
 }
 
 func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, digest LayerDigest, spec groot.BaseImageSpec) (string, string, error) {

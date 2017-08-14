@@ -27,6 +27,26 @@ var EmptyBaseImageV011 = BaseImage{
 	},
 }
 
+var SchemaV1EmptyBaseImage = BaseImage{
+	Layers: []Layer{
+		{
+			BlobID:  "sha256:52654756942eb47cd5e803d9d5905f2f5e8045f3794eed727dee5734ff485771",
+			DiffID:  "sha256:5b9746c87396a8cff11e5cbfa37321018bb797fcf0b4404615e713337ea1c62b",
+			ChainID: "a49264ee8715ec441c509a7a936003718a592730daedce4cb2d443120d6fc372",
+		},
+		{
+			BlobID:  "sha256:64df864e75bb2dea96b726cff208ce7ee8125901dfc11e53479534519735c8e4",
+			DiffID:  "sha256:eb639428f6fd1693228c64a7474bd6302c7ebd06404c7092dd3d5187ba4fdddf",
+			ChainID: "58083c148e1ac4ebeca6554442b1ca1190fcb7532e4dbd2db92ae8812a1747b1",
+		},
+		{
+			BlobID:  "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4",
+			DiffID:  "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+			ChainID: "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+		},
+	},
+}
+
 var BusyBoxImage = BaseImage{
 	ConfigBlobID: "sha256:1efc1d465fd6255396d0efd90a899f57aba2b7b294b02d5f55c6f5505ca9f3e5",
 	Layers: []Layer{

@@ -77,11 +77,7 @@ func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, so
 	return blobReader, size, nil
 }
 
-func (f *LayerFetcher) createLayersDigest(
-	logger lager.Logger,
-	image types.Image,
-	config *specsv1.Image,
-) []base_image_puller.LayerDigest {
+func (f *LayerFetcher) createLayersDigest(logger lager.Logger, image types.Image, config *specsv1.Image) []base_image_puller.LayerDigest {
 	layersDigest := []base_image_puller.LayerDigest{}
 
 	var parentChainID string
