@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -22,17 +23,17 @@ import (
 var _ = Describe("Surviving Restarts", func() {
 	Context("when a container is created and then garden is restarted", func() {
 		var (
-			client           *runner.RunningGarden
-			container        garden.Container
-			netOutRules      []garden.NetOutRule
-			hostNetInPort    uint32
-			interfacePrefix  string
-			propertiesDir    string
-			existingProc     garden.Process
-			containerSpec    garden.ContainerSpec
-			hostIP           string
-			restartConfig    runner.GdnRunnerConfig
-			gracefulShutdown bool
+			client              *runner.RunningGarden
+			container           garden.Container
+			containerBridgeName string
+			netOutRules         []garden.NetOutRule
+			hostNetInPort       uint32
+			interfacePrefix     string
+			propertiesDir       string
+			existingProc        garden.Process
+			containerSpec       garden.ContainerSpec
+			restartConfig       runner.GdnRunnerConfig
+			gracefulShutdown    bool
 		)
 
 		BeforeEach(func() {
@@ -63,18 +64,24 @@ var _ = Describe("Surviving Restarts", func() {
 			container, err = client.Create(containerSpec)
 			Expect(err).NotTo(HaveOccurred())
 
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+			interfacePrefix = info.Properties["kawasaki.iptable-prefix"]
+
+			containerBridgeName, err = container.Property("kawasaki.bridge-interface")
+			Expect(err).NotTo(HaveOccurred())
+
+			// Sanity check for "destroys the remaining containers' bridges"
+			containerBridgeIPs, err := exec.Command("ip", "addr", "show", containerBridgeName).CombinedOutput()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(containerBridgeIPs)).To(ContainSubstring("inet %s", info.HostIP))
+
 			hostNetInPort, _, err = container.NetIn(hostNetInPort, 8080)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(container.BulkNetOut(netOutRules)).To(Succeed())
 
-			info, err := container.Info()
-			Expect(err).NotTo(HaveOccurred())
-			interfacePrefix = info.Properties["kawasaki.iptable-prefix"]
-			hostIP = info.HostIP
-
 			out := gbytes.NewBuffer()
-
 			existingProc, err = container.Run(
 				garden.ProcessSpec{
 					Path: "/bin/sh",
@@ -123,15 +130,12 @@ var _ = Describe("Surviving Restarts", func() {
 			})
 
 			It("destroys the remaining containers' bridges", func() {
-				check := func() string {
-					out, _ := exec.Command("ifconfig").CombinedOutput()
-					// ifconfig is flakey/racy when an interface is deleted
-					return string(out)
-				}
-
-				Eventually(check, time.Second*2, time.Millisecond*200).Should(ContainSubstring("LOOPBACK"))
-				Eventually(check, time.Second*4, time.Millisecond*200).ShouldNot(ContainSubstring(fmt.Sprintf("inet addr:%s  Bcast:0.0.0.0  Mask:255.255.255.252", hostIP)))
-				Consistently(check, time.Second*2, time.Millisecond*200).ShouldNot(ContainSubstring(fmt.Sprintf("inet addr:%s  Bcast:0.0.0.0  Mask:255.255.255.252", hostIP)))
+				var stderr bytes.Buffer
+				cmd := exec.Command("ip", "link", "show", containerBridgeName)
+				cmd.Stdout = GinkgoWriter
+				cmd.Stderr = io.MultiWriter(&stderr, GinkgoWriter)
+				Expect(cmd.Run()).NotTo(Succeed())
+				Expect(stderr.String()).To(Equal(fmt.Sprintf("Device \"%s\" does not exist.\n", containerBridgeName)))
 			})
 
 			It("kills the container processes", func() {
