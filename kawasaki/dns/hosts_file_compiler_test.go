@@ -26,10 +26,16 @@ var _ = Describe("HostsFileCompiler", func() {
 	})
 
 	Describe("Compile", func() {
-		It("should configure the localhost mapping", func() {
+		It("should configure the ipv4 localhost mapping", func() {
 			contents, err := compiler.Compile(log, ip, "myhandle")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(ContainSubstring("127.0.0.1 localhost"))
+		})
+
+		It("should configure the ipv6 localhost mapping", func() {
+			contents, err := compiler.Compile(log, ip, "myhandle")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(contents)).To(ContainSubstring("::1 localhost"))
 		})
 
 		It("should configure the hostname mapping", func() {
