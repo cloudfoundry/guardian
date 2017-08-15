@@ -100,19 +100,6 @@ func TestGroot(t *testing.T) {
 		}
 		StorePath = path.Join(mountPath, "store")
 
-		RegistryUsername = os.Getenv("REGISTRY_USERNAME")
-		RegistryPassword = os.Getenv("REGISTRY_PASSWORD")
-
-		Runner = runner.Runner{
-			GrootFSBin: GrootFSBin,
-			StorePath:  StorePath,
-			DraxBin:    DraxBin,
-			TardisBin:  TardisBin,
-			Driver:     Driver,
-		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(GrootfsTestUid, GrootfsTestGid)
-	})
-
-	JustBeforeEach(func() {
 		var err error
 		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
 		Expect(err).NotTo(HaveOccurred())
@@ -123,6 +110,17 @@ func TestGroot(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 		TardisBin = integration.MakeBinaryAccessibleToEveryone(TardisBin)
 		testhelpers.SuidBinary(TardisBin)
+
+		RegistryUsername = os.Getenv("REGISTRY_USERNAME")
+		RegistryPassword = os.Getenv("REGISTRY_PASSWORD")
+
+		Runner = runner.Runner{
+			GrootFSBin: GrootFSBin,
+			StorePath:  StorePath,
+			DraxBin:    DraxBin,
+			TardisBin:  TardisBin,
+			Driver:     Driver,
+		}.WithLogLevel(lager.DEBUG).WithStderr(GinkgoWriter).RunningAsUser(GrootfsTestUid, GrootfsTestGid)
 	})
 
 	AfterEach(func() {
