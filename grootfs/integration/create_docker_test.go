@@ -527,6 +527,10 @@ var _ = Describe("Create with remote DOCKER images", func() {
 						})
 
 						Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
+
+						volumes, _ := ioutil.ReadDir(volumesDir)
+						Expect(len(volumes)).To(Equal(len(testhelpers.EmptyBaseImageV011.Layers) - 1))
+
 						Expect(filepath.Join(volumesDir, testhelpers.EmptyBaseImageV011.Layers[0].ChainID)).To(BeADirectory())
 						Expect(filepath.Join(volumesDir, testhelpers.EmptyBaseImageV011.Layers[1].ChainID)).ToNot(BeADirectory())
 					})
@@ -546,7 +550,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 						baseImageURL = fmt.Sprintf("docker://%s/cfgarden/empty:schemaV1", fakeRegistry.Addr())
 					})
 
-					It("fails and cleans up the corrupted volumes", func() {
+					It("fails and never creates any volumes", func() {
 						runner := Runner.WithInsecureRegistry(fakeRegistry.Addr())
 
 						volumesDir := filepath.Join(StorePath, store.VolumesDirName)
@@ -558,14 +562,10 @@ var _ = Describe("Create with remote DOCKER images", func() {
 							Mount:     mountByDefault(),
 						})
 
-						Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
+						Expect(err).To(MatchError(ContainSubstring("converting V1 schema failed")))
 
-						// TODO we can't test the precise contents of the Volumes Dir until we compute proper diff/chain ids for v1 images
 						volumes, _ := ioutil.ReadDir(volumesDir)
-						for _, v := range volumes {
-							fmt.Println(v.Name())
-						}
-						Expect(len(volumes)).To(Equal(len(testhelpers.SchemaV1EmptyBaseImage.Layers) - 1))
+						Expect(len(volumes)).To(Equal(0))
 					})
 				})
 			})
@@ -586,6 +586,11 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				Expect(Runner.EnsureMounted(image)).To(Succeed())
 				Expect(path.Join(image.Rootfs, "allo")).To(BeAnExistingFile())
 				Expect(path.Join(image.Rootfs, "hello")).To(BeAnExistingFile())
+
+				volumesDir := filepath.Join(StorePath, store.VolumesDirName)
+				Expect(filepath.Join(volumesDir, testhelpers.SchemaV1EmptyBaseImage.Layers[0].ChainID)).To(BeADirectory())
+				Expect(filepath.Join(volumesDir, testhelpers.SchemaV1EmptyBaseImage.Layers[1].ChainID)).To(BeADirectory())
+				Expect(filepath.Join(volumesDir, testhelpers.SchemaV1EmptyBaseImage.Layers[2].ChainID)).To(BeADirectory())
 			})
 		})
 	})

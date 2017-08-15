@@ -75,7 +75,7 @@ var _ = Describe("Layer source: Docker", func() {
 		Context("when the image schema version is 1", func() {
 			BeforeEach(func() {
 				var err error
-				baseImageURL, err = url.Parse("docker:///nginx:1.9")
+				baseImageURL, err = url.Parse("docker://cfgarden/empty:schemaV1")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -83,17 +83,12 @@ var _ = Describe("Layer source: Docker", func() {
 				manifest, err := layerSource.Manifest(logger, baseImageURL)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(manifest.ConfigInfo().Digest.String()).To(Equal("sha256:ecc064391b2b82724ab6416936ba0fec4328e9657dd4d3a930460415f7c713d8"))
+				Expect(manifest.ConfigInfo().Digest.String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.ConfigBlobID))
 
-				Expect(manifest.LayerInfos()).To(HaveLen(8))
-				Expect(manifest.LayerInfos()[0]).To(Equal(types.BlobInfo{Digest: "sha256:51f5c6a04d83efd2d45c5fd59537218924bc46705e3de6ffc8bc07b51481610b"}))
-				Expect(manifest.LayerInfos()[1]).To(Equal(types.BlobInfo{Digest: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
-				Expect(manifest.LayerInfos()[2]).To(Equal(types.BlobInfo{Digest: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
-				Expect(manifest.LayerInfos()[3]).To(Equal(types.BlobInfo{Digest: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
-				Expect(manifest.LayerInfos()[4]).To(Equal(types.BlobInfo{Digest: "sha256:640c8f3d0eb2b84205cc43e312914c4ae464d433089ee1c95042b893eb7af09b"}))
-				Expect(manifest.LayerInfos()[5]).To(Equal(types.BlobInfo{Digest: "sha256:a4335300aa893de13a747fee474cd982c62539fd8e20e9b5eb21125996140b8a"}))
-				Expect(manifest.LayerInfos()[6]).To(Equal(types.BlobInfo{Digest: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
-				Expect(manifest.LayerInfos()[7]).To(Equal(types.BlobInfo{Digest: "sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"}))
+				Expect(manifest.LayerInfos()).To(HaveLen(3))
+				Expect(manifest.LayerInfos()[0].Digest.String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.Layers[0].BlobID))
+				Expect(manifest.LayerInfos()[1].Digest.String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.Layers[1].BlobID))
+				Expect(manifest.LayerInfos()[2].Digest.String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.Layers[2].BlobID))
 			})
 		})
 
@@ -226,7 +221,7 @@ var _ = Describe("Layer source: Docker", func() {
 		Context("when the image schema version is 1", func() {
 			BeforeEach(func() {
 				var err error
-				baseImageURL, err = url.Parse("docker:///nginx:1.9")
+				baseImageURL, err = url.Parse("docker://cfgarden/empty:schemaV1")
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -236,15 +231,10 @@ var _ = Describe("Layer source: Docker", func() {
 				config, err := manifest.OCIConfig()
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(config.RootFS.DiffIDs).To(HaveLen(8))
-				Expect(config.RootFS.DiffIDs[0]).To(Equal(digestpkg.NewDigestFromHex("sha256", "51f5c6a04d83efd2d45c5fd59537218924bc46705e3de6ffc8bc07b51481610b")))
-				Expect(config.RootFS.DiffIDs[1]).To(Equal(digestpkg.NewDigestFromHex("sha256", "a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")))
-				Expect(config.RootFS.DiffIDs[2]).To(Equal(digestpkg.NewDigestFromHex("sha256", "a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")))
-				Expect(config.RootFS.DiffIDs[3]).To(Equal(digestpkg.NewDigestFromHex("sha256", "a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")))
-				Expect(config.RootFS.DiffIDs[4]).To(Equal(digestpkg.NewDigestFromHex("sha256", "640c8f3d0eb2b84205cc43e312914c4ae464d433089ee1c95042b893eb7af09b")))
-				Expect(config.RootFS.DiffIDs[5]).To(Equal(digestpkg.NewDigestFromHex("sha256", "a4335300aa893de13a747fee474cd982c62539fd8e20e9b5eb21125996140b8a")))
-				Expect(config.RootFS.DiffIDs[6]).To(Equal(digestpkg.NewDigestFromHex("sha256", "a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")))
-				Expect(config.RootFS.DiffIDs[7]).To(Equal(digestpkg.NewDigestFromHex("sha256", "a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")))
+				Expect(config.RootFS.DiffIDs).To(HaveLen(3))
+				Expect(config.RootFS.DiffIDs[0].String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.Layers[0].DiffID))
+				Expect(config.RootFS.DiffIDs[1].String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.Layers[1].DiffID))
+				Expect(config.RootFS.DiffIDs[2].String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.Layers[2].DiffID))
 			})
 		})
 	})

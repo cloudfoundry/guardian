@@ -1,6 +1,7 @@
 package source // import "code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
 
 import (
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -49,7 +50,7 @@ func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (type
 		return nil, errorspkg.Wrap(err, "fetching image reference")
 	}
 
-	return convertImage(img)
+	return s.convertImage(logger, img, baseImageURL)
 }
 
 func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error) {
@@ -173,31 +174,6 @@ func (s *LayerSource) image(logger lager.Logger, baseImageURL *url.URL) (types.I
 	return img, nil
 }
 
-func convertImage(originalImage types.Image) (types.Image, error) {
-	_, mimetype, err := originalImage.Manifest()
-	if err != nil {
-		return nil, err
-	}
-
-	if mimetype != manifestpkg.DockerV2Schema1MediaType && mimetype != manifestpkg.DockerV2Schema1SignedMediaType {
-		return originalImage, nil
-	}
-
-	diffIds := []digestpkg.Digest{}
-	for _, layer := range originalImage.LayerInfos() {
-		diffIds = append(diffIds, layer.Digest)
-	}
-
-	options := types.ManifestUpdateOptions{
-		ManifestMIMEType: manifestpkg.DockerV2Schema2MediaType,
-		InformationOnly: types.ManifestUpdateInformation{
-			LayerDiffIDs: diffIds,
-		},
-	}
-
-	return originalImage.UpdatedImage(options)
-}
-
 func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (types.ImageSource, error) {
 	ref, err := s.reference(logger, baseImageURL)
 	if err != nil {
@@ -219,6 +195,65 @@ func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (t
 	logger.Debug("new-image-source", lager.Data{"skipTLSValidation": skipTLSValidation})
 
 	return imgSrc, nil
+}
+
+func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Image, baseImageURL *url.URL) (types.Image, error) {
+	_, mimetype, err := originalImage.Manifest()
+	if err != nil {
+		return nil, err
+	}
+
+	if mimetype != manifestpkg.DockerV2Schema1MediaType && mimetype != manifestpkg.DockerV2Schema1SignedMediaType {
+		return originalImage, nil
+	}
+
+	logger = logger.Session("convert-schema-V1-image")
+	logger.Info("starting")
+	defer logger.Info("ending")
+
+	imgSrc, err := s.imageSource(logger, baseImageURL)
+	if err != nil {
+		return nil, err
+	}
+
+	diffIDs := []digestpkg.Digest{}
+	for _, layer := range originalImage.LayerInfos() {
+		diffID, err := s.v1DiffID(layer, imgSrc)
+		if err != nil {
+			return nil, errorspkg.Wrap(err, "converting V1 schema failed")
+		}
+		diffIDs = append(diffIDs, diffID)
+	}
+
+	options := types.ManifestUpdateOptions{
+		ManifestMIMEType: manifestpkg.DockerV2Schema2MediaType,
+		InformationOnly: types.ManifestUpdateInformation{
+			LayerDiffIDs: diffIDs,
+		},
+	}
+
+	return originalImage.UpdatedImage(options)
+}
+
+func (s *LayerSource) v1DiffID(layer types.BlobInfo, imgSrc types.ImageSource) (digestpkg.Digest, error) {
+	blob, _, err := imgSrc.GetBlob(layer)
+	if err != nil {
+		return "", errorspkg.Wrap(err, "fetching V1 layer blob")
+	}
+	defer blob.Close()
+
+	gzipReader, err := gzip.NewReader(blob)
+	if err != nil {
+		return "", errorspkg.Wrap(err, "creating reader for V1 layer blob")
+	}
+
+	data, err := ioutil.ReadAll(gzipReader)
+	if err != nil {
+		return "", errorspkg.Wrap(err, "reading V1 layer blob")
+	}
+	sha := sha256.Sum256(data)
+
+	return digestpkg.NewDigestFromHex("sha256", hex.EncodeToString(sha[:])), nil
 }
 
 func preferedMediaTypes() []string {
