@@ -21,14 +21,13 @@ const cfBaseDirectoryAnnotation = "org.cloudfoundry.image.base-directory"
 //go:generate counterfeiter . Manifest
 
 type Manifest interface {
-	OCIConfig() (*specsv1.Image, error)
-	LayerInfos() []types.BlobInfo
-	ConfigInfo() types.BlobInfo
-	Close() error
+	// Manifest is just a shortcut for the types.Image interface,
+	// to make it simpler to test with fakes.
+	types.Image
 }
 
 type Source interface {
-	Manifest(logger lager.Logger, baseImageURL *url.URL) (Manifest, error)
+	Manifest(logger lager.Logger, baseImageURL *url.URL) (types.Image, error)
 	Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error)
 }
 

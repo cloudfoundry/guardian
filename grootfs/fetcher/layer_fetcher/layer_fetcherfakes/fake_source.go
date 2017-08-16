@@ -7,21 +7,22 @@ import (
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/lager"
+	"github.com/containers/image/types"
 )
 
 type FakeSource struct {
-	ManifestStub        func(logger lager.Logger, baseImageURL *url.URL) (layer_fetcher.Manifest, error)
+	ManifestStub        func(logger lager.Logger, baseImageURL *url.URL) (types.Image, error)
 	manifestMutex       sync.RWMutex
 	manifestArgsForCall []struct {
 		logger       lager.Logger
 		baseImageURL *url.URL
 	}
 	manifestReturns struct {
-		result1 layer_fetcher.Manifest
+		result1 types.Image
 		result2 error
 	}
 	manifestReturnsOnCall map[int]struct {
-		result1 layer_fetcher.Manifest
+		result1 types.Image
 		result2 error
 	}
 	BlobStub        func(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error)
@@ -45,7 +46,7 @@ type FakeSource struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (layer_fetcher.Manifest, error) {
+func (fake *FakeSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (types.Image, error) {
 	fake.manifestMutex.Lock()
 	ret, specificReturn := fake.manifestReturnsOnCall[len(fake.manifestArgsForCall)]
 	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct {
@@ -75,24 +76,24 @@ func (fake *FakeSource) ManifestArgsForCall(i int) (lager.Logger, *url.URL) {
 	return fake.manifestArgsForCall[i].logger, fake.manifestArgsForCall[i].baseImageURL
 }
 
-func (fake *FakeSource) ManifestReturns(result1 layer_fetcher.Manifest, result2 error) {
+func (fake *FakeSource) ManifestReturns(result1 types.Image, result2 error) {
 	fake.ManifestStub = nil
 	fake.manifestReturns = struct {
-		result1 layer_fetcher.Manifest
+		result1 types.Image
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeSource) ManifestReturnsOnCall(i int, result1 layer_fetcher.Manifest, result2 error) {
+func (fake *FakeSource) ManifestReturnsOnCall(i int, result1 types.Image, result2 error) {
 	fake.ManifestStub = nil
 	if fake.manifestReturnsOnCall == nil {
 		fake.manifestReturnsOnCall = make(map[int]struct {
-			result1 layer_fetcher.Manifest
+			result1 types.Image
 			result2 error
 		})
 	}
 	fake.manifestReturnsOnCall[i] = struct {
-		result1 layer_fetcher.Manifest
+		result1 types.Image
 		result2 error
 	}{result1, result2}
 }

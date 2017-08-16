@@ -2,23 +2,89 @@
 package layer_fetcherfakes
 
 import (
+	"context"
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+	"github.com/containers/image/docker/reference"
 	"github.com/containers/image/types"
-	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type FakeManifest struct {
-	OCIConfigStub        func() (*specsv1.Image, error)
+	ReferenceStub        func() types.ImageReference
+	referenceMutex       sync.RWMutex
+	referenceArgsForCall []struct{}
+	referenceReturns     struct {
+		result1 types.ImageReference
+	}
+	referenceReturnsOnCall map[int]struct {
+		result1 types.ImageReference
+	}
+	CloseStub        func() error
+	closeMutex       sync.RWMutex
+	closeArgsForCall []struct{}
+	closeReturns     struct {
+		result1 error
+	}
+	closeReturnsOnCall map[int]struct {
+		result1 error
+	}
+	ManifestStub        func() ([]byte, string, error)
+	manifestMutex       sync.RWMutex
+	manifestArgsForCall []struct{}
+	manifestReturns     struct {
+		result1 []byte
+		result2 string
+		result3 error
+	}
+	manifestReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 string
+		result3 error
+	}
+	SignaturesStub        func(ctx context.Context) ([][]byte, error)
+	signaturesMutex       sync.RWMutex
+	signaturesArgsForCall []struct {
+		ctx context.Context
+	}
+	signaturesReturns struct {
+		result1 [][]byte
+		result2 error
+	}
+	signaturesReturnsOnCall map[int]struct {
+		result1 [][]byte
+		result2 error
+	}
+	ConfigInfoStub        func() types.BlobInfo
+	configInfoMutex       sync.RWMutex
+	configInfoArgsForCall []struct{}
+	configInfoReturns     struct {
+		result1 types.BlobInfo
+	}
+	configInfoReturnsOnCall map[int]struct {
+		result1 types.BlobInfo
+	}
+	ConfigBlobStub        func() ([]byte, error)
+	configBlobMutex       sync.RWMutex
+	configBlobArgsForCall []struct{}
+	configBlobReturns     struct {
+		result1 []byte
+		result2 error
+	}
+	configBlobReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	OCIConfigStub        func() (*v1.Image, error)
 	oCIConfigMutex       sync.RWMutex
 	oCIConfigArgsForCall []struct{}
 	oCIConfigReturns     struct {
-		result1 *specsv1.Image
+		result1 *v1.Image
 		result2 error
 	}
 	oCIConfigReturnsOnCall map[int]struct {
-		result1 *specsv1.Image
+		result1 *v1.Image
 		result2 error
 	}
 	LayerInfosStub        func() []types.BlobInfo
@@ -30,29 +96,337 @@ type FakeManifest struct {
 	layerInfosReturnsOnCall map[int]struct {
 		result1 []types.BlobInfo
 	}
-	ConfigInfoStub        func() types.BlobInfo
-	configInfoMutex       sync.RWMutex
-	configInfoArgsForCall []struct{}
-	configInfoReturns     struct {
-		result1 types.BlobInfo
+	EmbeddedDockerReferenceConflictsStub        func(ref reference.Named) bool
+	embeddedDockerReferenceConflictsMutex       sync.RWMutex
+	embeddedDockerReferenceConflictsArgsForCall []struct {
+		ref reference.Named
 	}
-	configInfoReturnsOnCall map[int]struct {
-		result1 types.BlobInfo
+	embeddedDockerReferenceConflictsReturns struct {
+		result1 bool
 	}
-	CloseStub        func() error
-	closeMutex       sync.RWMutex
-	closeArgsForCall []struct{}
-	closeReturns     struct {
-		result1 error
+	embeddedDockerReferenceConflictsReturnsOnCall map[int]struct {
+		result1 bool
 	}
-	closeReturnsOnCall map[int]struct {
-		result1 error
+	InspectStub        func() (*types.ImageInspectInfo, error)
+	inspectMutex       sync.RWMutex
+	inspectArgsForCall []struct{}
+	inspectReturns     struct {
+		result1 *types.ImageInspectInfo
+		result2 error
+	}
+	inspectReturnsOnCall map[int]struct {
+		result1 *types.ImageInspectInfo
+		result2 error
+	}
+	UpdatedImageNeedsLayerDiffIDsStub        func(options types.ManifestUpdateOptions) bool
+	updatedImageNeedsLayerDiffIDsMutex       sync.RWMutex
+	updatedImageNeedsLayerDiffIDsArgsForCall []struct {
+		options types.ManifestUpdateOptions
+	}
+	updatedImageNeedsLayerDiffIDsReturns struct {
+		result1 bool
+	}
+	updatedImageNeedsLayerDiffIDsReturnsOnCall map[int]struct {
+		result1 bool
+	}
+	UpdatedImageStub        func(options types.ManifestUpdateOptions) (types.Image, error)
+	updatedImageMutex       sync.RWMutex
+	updatedImageArgsForCall []struct {
+		options types.ManifestUpdateOptions
+	}
+	updatedImageReturns struct {
+		result1 types.Image
+		result2 error
+	}
+	updatedImageReturnsOnCall map[int]struct {
+		result1 types.Image
+		result2 error
+	}
+	IsMultiImageStub        func() bool
+	isMultiImageMutex       sync.RWMutex
+	isMultiImageArgsForCall []struct{}
+	isMultiImageReturns     struct {
+		result1 bool
+	}
+	isMultiImageReturnsOnCall map[int]struct {
+		result1 bool
+	}
+	SizeStub        func() (int64, error)
+	sizeMutex       sync.RWMutex
+	sizeArgsForCall []struct{}
+	sizeReturns     struct {
+		result1 int64
+		result2 error
+	}
+	sizeReturnsOnCall map[int]struct {
+		result1 int64
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeManifest) OCIConfig() (*specsv1.Image, error) {
+func (fake *FakeManifest) Reference() types.ImageReference {
+	fake.referenceMutex.Lock()
+	ret, specificReturn := fake.referenceReturnsOnCall[len(fake.referenceArgsForCall)]
+	fake.referenceArgsForCall = append(fake.referenceArgsForCall, struct{}{})
+	fake.recordInvocation("Reference", []interface{}{})
+	fake.referenceMutex.Unlock()
+	if fake.ReferenceStub != nil {
+		return fake.ReferenceStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.referenceReturns.result1
+}
+
+func (fake *FakeManifest) ReferenceCallCount() int {
+	fake.referenceMutex.RLock()
+	defer fake.referenceMutex.RUnlock()
+	return len(fake.referenceArgsForCall)
+}
+
+func (fake *FakeManifest) ReferenceReturns(result1 types.ImageReference) {
+	fake.ReferenceStub = nil
+	fake.referenceReturns = struct {
+		result1 types.ImageReference
+	}{result1}
+}
+
+func (fake *FakeManifest) ReferenceReturnsOnCall(i int, result1 types.ImageReference) {
+	fake.ReferenceStub = nil
+	if fake.referenceReturnsOnCall == nil {
+		fake.referenceReturnsOnCall = make(map[int]struct {
+			result1 types.ImageReference
+		})
+	}
+	fake.referenceReturnsOnCall[i] = struct {
+		result1 types.ImageReference
+	}{result1}
+}
+
+func (fake *FakeManifest) Close() error {
+	fake.closeMutex.Lock()
+	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
+	fake.closeArgsForCall = append(fake.closeArgsForCall, struct{}{})
+	fake.recordInvocation("Close", []interface{}{})
+	fake.closeMutex.Unlock()
+	if fake.CloseStub != nil {
+		return fake.CloseStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.closeReturns.result1
+}
+
+func (fake *FakeManifest) CloseCallCount() int {
+	fake.closeMutex.RLock()
+	defer fake.closeMutex.RUnlock()
+	return len(fake.closeArgsForCall)
+}
+
+func (fake *FakeManifest) CloseReturns(result1 error) {
+	fake.CloseStub = nil
+	fake.closeReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeManifest) CloseReturnsOnCall(i int, result1 error) {
+	fake.CloseStub = nil
+	if fake.closeReturnsOnCall == nil {
+		fake.closeReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.closeReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeManifest) Manifest() ([]byte, string, error) {
+	fake.manifestMutex.Lock()
+	ret, specificReturn := fake.manifestReturnsOnCall[len(fake.manifestArgsForCall)]
+	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct{}{})
+	fake.recordInvocation("Manifest", []interface{}{})
+	fake.manifestMutex.Unlock()
+	if fake.ManifestStub != nil {
+		return fake.ManifestStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	return fake.manifestReturns.result1, fake.manifestReturns.result2, fake.manifestReturns.result3
+}
+
+func (fake *FakeManifest) ManifestCallCount() int {
+	fake.manifestMutex.RLock()
+	defer fake.manifestMutex.RUnlock()
+	return len(fake.manifestArgsForCall)
+}
+
+func (fake *FakeManifest) ManifestReturns(result1 []byte, result2 string, result3 error) {
+	fake.ManifestStub = nil
+	fake.manifestReturns = struct {
+		result1 []byte
+		result2 string
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *FakeManifest) ManifestReturnsOnCall(i int, result1 []byte, result2 string, result3 error) {
+	fake.ManifestStub = nil
+	if fake.manifestReturnsOnCall == nil {
+		fake.manifestReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 string
+			result3 error
+		})
+	}
+	fake.manifestReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 string
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *FakeManifest) Signatures(ctx context.Context) ([][]byte, error) {
+	fake.signaturesMutex.Lock()
+	ret, specificReturn := fake.signaturesReturnsOnCall[len(fake.signaturesArgsForCall)]
+	fake.signaturesArgsForCall = append(fake.signaturesArgsForCall, struct {
+		ctx context.Context
+	}{ctx})
+	fake.recordInvocation("Signatures", []interface{}{ctx})
+	fake.signaturesMutex.Unlock()
+	if fake.SignaturesStub != nil {
+		return fake.SignaturesStub(ctx)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.signaturesReturns.result1, fake.signaturesReturns.result2
+}
+
+func (fake *FakeManifest) SignaturesCallCount() int {
+	fake.signaturesMutex.RLock()
+	defer fake.signaturesMutex.RUnlock()
+	return len(fake.signaturesArgsForCall)
+}
+
+func (fake *FakeManifest) SignaturesArgsForCall(i int) context.Context {
+	fake.signaturesMutex.RLock()
+	defer fake.signaturesMutex.RUnlock()
+	return fake.signaturesArgsForCall[i].ctx
+}
+
+func (fake *FakeManifest) SignaturesReturns(result1 [][]byte, result2 error) {
+	fake.SignaturesStub = nil
+	fake.signaturesReturns = struct {
+		result1 [][]byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManifest) SignaturesReturnsOnCall(i int, result1 [][]byte, result2 error) {
+	fake.SignaturesStub = nil
+	if fake.signaturesReturnsOnCall == nil {
+		fake.signaturesReturnsOnCall = make(map[int]struct {
+			result1 [][]byte
+			result2 error
+		})
+	}
+	fake.signaturesReturnsOnCall[i] = struct {
+		result1 [][]byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManifest) ConfigInfo() types.BlobInfo {
+	fake.configInfoMutex.Lock()
+	ret, specificReturn := fake.configInfoReturnsOnCall[len(fake.configInfoArgsForCall)]
+	fake.configInfoArgsForCall = append(fake.configInfoArgsForCall, struct{}{})
+	fake.recordInvocation("ConfigInfo", []interface{}{})
+	fake.configInfoMutex.Unlock()
+	if fake.ConfigInfoStub != nil {
+		return fake.ConfigInfoStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.configInfoReturns.result1
+}
+
+func (fake *FakeManifest) ConfigInfoCallCount() int {
+	fake.configInfoMutex.RLock()
+	defer fake.configInfoMutex.RUnlock()
+	return len(fake.configInfoArgsForCall)
+}
+
+func (fake *FakeManifest) ConfigInfoReturns(result1 types.BlobInfo) {
+	fake.ConfigInfoStub = nil
+	fake.configInfoReturns = struct {
+		result1 types.BlobInfo
+	}{result1}
+}
+
+func (fake *FakeManifest) ConfigInfoReturnsOnCall(i int, result1 types.BlobInfo) {
+	fake.ConfigInfoStub = nil
+	if fake.configInfoReturnsOnCall == nil {
+		fake.configInfoReturnsOnCall = make(map[int]struct {
+			result1 types.BlobInfo
+		})
+	}
+	fake.configInfoReturnsOnCall[i] = struct {
+		result1 types.BlobInfo
+	}{result1}
+}
+
+func (fake *FakeManifest) ConfigBlob() ([]byte, error) {
+	fake.configBlobMutex.Lock()
+	ret, specificReturn := fake.configBlobReturnsOnCall[len(fake.configBlobArgsForCall)]
+	fake.configBlobArgsForCall = append(fake.configBlobArgsForCall, struct{}{})
+	fake.recordInvocation("ConfigBlob", []interface{}{})
+	fake.configBlobMutex.Unlock()
+	if fake.ConfigBlobStub != nil {
+		return fake.ConfigBlobStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.configBlobReturns.result1, fake.configBlobReturns.result2
+}
+
+func (fake *FakeManifest) ConfigBlobCallCount() int {
+	fake.configBlobMutex.RLock()
+	defer fake.configBlobMutex.RUnlock()
+	return len(fake.configBlobArgsForCall)
+}
+
+func (fake *FakeManifest) ConfigBlobReturns(result1 []byte, result2 error) {
+	fake.ConfigBlobStub = nil
+	fake.configBlobReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManifest) ConfigBlobReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.ConfigBlobStub = nil
+	if fake.configBlobReturnsOnCall == nil {
+		fake.configBlobReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.configBlobReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManifest) OCIConfig() (*v1.Image, error) {
 	fake.oCIConfigMutex.Lock()
 	ret, specificReturn := fake.oCIConfigReturnsOnCall[len(fake.oCIConfigArgsForCall)]
 	fake.oCIConfigArgsForCall = append(fake.oCIConfigArgsForCall, struct{}{})
@@ -73,24 +447,24 @@ func (fake *FakeManifest) OCIConfigCallCount() int {
 	return len(fake.oCIConfigArgsForCall)
 }
 
-func (fake *FakeManifest) OCIConfigReturns(result1 *specsv1.Image, result2 error) {
+func (fake *FakeManifest) OCIConfigReturns(result1 *v1.Image, result2 error) {
 	fake.OCIConfigStub = nil
 	fake.oCIConfigReturns = struct {
-		result1 *specsv1.Image
+		result1 *v1.Image
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeManifest) OCIConfigReturnsOnCall(i int, result1 *specsv1.Image, result2 error) {
+func (fake *FakeManifest) OCIConfigReturnsOnCall(i int, result1 *v1.Image, result2 error) {
 	fake.OCIConfigStub = nil
 	if fake.oCIConfigReturnsOnCall == nil {
 		fake.oCIConfigReturnsOnCall = make(map[int]struct {
-			result1 *specsv1.Image
+			result1 *v1.Image
 			result2 error
 		})
 	}
 	fake.oCIConfigReturnsOnCall[i] = struct {
-		result1 *specsv1.Image
+		result1 *v1.Image
 		result2 error
 	}{result1, result2}
 }
@@ -135,97 +509,310 @@ func (fake *FakeManifest) LayerInfosReturnsOnCall(i int, result1 []types.BlobInf
 	}{result1}
 }
 
-func (fake *FakeManifest) ConfigInfo() types.BlobInfo {
-	fake.configInfoMutex.Lock()
-	ret, specificReturn := fake.configInfoReturnsOnCall[len(fake.configInfoArgsForCall)]
-	fake.configInfoArgsForCall = append(fake.configInfoArgsForCall, struct{}{})
-	fake.recordInvocation("ConfigInfo", []interface{}{})
-	fake.configInfoMutex.Unlock()
-	if fake.ConfigInfoStub != nil {
-		return fake.ConfigInfoStub()
+func (fake *FakeManifest) EmbeddedDockerReferenceConflicts(ref reference.Named) bool {
+	fake.embeddedDockerReferenceConflictsMutex.Lock()
+	ret, specificReturn := fake.embeddedDockerReferenceConflictsReturnsOnCall[len(fake.embeddedDockerReferenceConflictsArgsForCall)]
+	fake.embeddedDockerReferenceConflictsArgsForCall = append(fake.embeddedDockerReferenceConflictsArgsForCall, struct {
+		ref reference.Named
+	}{ref})
+	fake.recordInvocation("EmbeddedDockerReferenceConflicts", []interface{}{ref})
+	fake.embeddedDockerReferenceConflictsMutex.Unlock()
+	if fake.EmbeddedDockerReferenceConflictsStub != nil {
+		return fake.EmbeddedDockerReferenceConflictsStub(ref)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.configInfoReturns.result1
+	return fake.embeddedDockerReferenceConflictsReturns.result1
 }
 
-func (fake *FakeManifest) ConfigInfoCallCount() int {
-	fake.configInfoMutex.RLock()
-	defer fake.configInfoMutex.RUnlock()
-	return len(fake.configInfoArgsForCall)
+func (fake *FakeManifest) EmbeddedDockerReferenceConflictsCallCount() int {
+	fake.embeddedDockerReferenceConflictsMutex.RLock()
+	defer fake.embeddedDockerReferenceConflictsMutex.RUnlock()
+	return len(fake.embeddedDockerReferenceConflictsArgsForCall)
 }
 
-func (fake *FakeManifest) ConfigInfoReturns(result1 types.BlobInfo) {
-	fake.ConfigInfoStub = nil
-	fake.configInfoReturns = struct {
-		result1 types.BlobInfo
+func (fake *FakeManifest) EmbeddedDockerReferenceConflictsArgsForCall(i int) reference.Named {
+	fake.embeddedDockerReferenceConflictsMutex.RLock()
+	defer fake.embeddedDockerReferenceConflictsMutex.RUnlock()
+	return fake.embeddedDockerReferenceConflictsArgsForCall[i].ref
+}
+
+func (fake *FakeManifest) EmbeddedDockerReferenceConflictsReturns(result1 bool) {
+	fake.EmbeddedDockerReferenceConflictsStub = nil
+	fake.embeddedDockerReferenceConflictsReturns = struct {
+		result1 bool
 	}{result1}
 }
 
-func (fake *FakeManifest) ConfigInfoReturnsOnCall(i int, result1 types.BlobInfo) {
-	fake.ConfigInfoStub = nil
-	if fake.configInfoReturnsOnCall == nil {
-		fake.configInfoReturnsOnCall = make(map[int]struct {
-			result1 types.BlobInfo
+func (fake *FakeManifest) EmbeddedDockerReferenceConflictsReturnsOnCall(i int, result1 bool) {
+	fake.EmbeddedDockerReferenceConflictsStub = nil
+	if fake.embeddedDockerReferenceConflictsReturnsOnCall == nil {
+		fake.embeddedDockerReferenceConflictsReturnsOnCall = make(map[int]struct {
+			result1 bool
 		})
 	}
-	fake.configInfoReturnsOnCall[i] = struct {
-		result1 types.BlobInfo
+	fake.embeddedDockerReferenceConflictsReturnsOnCall[i] = struct {
+		result1 bool
 	}{result1}
 }
 
-func (fake *FakeManifest) Close() error {
-	fake.closeMutex.Lock()
-	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
-	fake.closeArgsForCall = append(fake.closeArgsForCall, struct{}{})
-	fake.recordInvocation("Close", []interface{}{})
-	fake.closeMutex.Unlock()
-	if fake.CloseStub != nil {
-		return fake.CloseStub()
+func (fake *FakeManifest) Inspect() (*types.ImageInspectInfo, error) {
+	fake.inspectMutex.Lock()
+	ret, specificReturn := fake.inspectReturnsOnCall[len(fake.inspectArgsForCall)]
+	fake.inspectArgsForCall = append(fake.inspectArgsForCall, struct{}{})
+	fake.recordInvocation("Inspect", []interface{}{})
+	fake.inspectMutex.Unlock()
+	if fake.InspectStub != nil {
+		return fake.InspectStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.inspectReturns.result1, fake.inspectReturns.result2
+}
+
+func (fake *FakeManifest) InspectCallCount() int {
+	fake.inspectMutex.RLock()
+	defer fake.inspectMutex.RUnlock()
+	return len(fake.inspectArgsForCall)
+}
+
+func (fake *FakeManifest) InspectReturns(result1 *types.ImageInspectInfo, result2 error) {
+	fake.InspectStub = nil
+	fake.inspectReturns = struct {
+		result1 *types.ImageInspectInfo
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManifest) InspectReturnsOnCall(i int, result1 *types.ImageInspectInfo, result2 error) {
+	fake.InspectStub = nil
+	if fake.inspectReturnsOnCall == nil {
+		fake.inspectReturnsOnCall = make(map[int]struct {
+			result1 *types.ImageInspectInfo
+			result2 error
+		})
+	}
+	fake.inspectReturnsOnCall[i] = struct {
+		result1 *types.ImageInspectInfo
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManifest) UpdatedImageNeedsLayerDiffIDs(options types.ManifestUpdateOptions) bool {
+	fake.updatedImageNeedsLayerDiffIDsMutex.Lock()
+	ret, specificReturn := fake.updatedImageNeedsLayerDiffIDsReturnsOnCall[len(fake.updatedImageNeedsLayerDiffIDsArgsForCall)]
+	fake.updatedImageNeedsLayerDiffIDsArgsForCall = append(fake.updatedImageNeedsLayerDiffIDsArgsForCall, struct {
+		options types.ManifestUpdateOptions
+	}{options})
+	fake.recordInvocation("UpdatedImageNeedsLayerDiffIDs", []interface{}{options})
+	fake.updatedImageNeedsLayerDiffIDsMutex.Unlock()
+	if fake.UpdatedImageNeedsLayerDiffIDsStub != nil {
+		return fake.UpdatedImageNeedsLayerDiffIDsStub(options)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.closeReturns.result1
+	return fake.updatedImageNeedsLayerDiffIDsReturns.result1
 }
 
-func (fake *FakeManifest) CloseCallCount() int {
-	fake.closeMutex.RLock()
-	defer fake.closeMutex.RUnlock()
-	return len(fake.closeArgsForCall)
+func (fake *FakeManifest) UpdatedImageNeedsLayerDiffIDsCallCount() int {
+	fake.updatedImageNeedsLayerDiffIDsMutex.RLock()
+	defer fake.updatedImageNeedsLayerDiffIDsMutex.RUnlock()
+	return len(fake.updatedImageNeedsLayerDiffIDsArgsForCall)
 }
 
-func (fake *FakeManifest) CloseReturns(result1 error) {
-	fake.CloseStub = nil
-	fake.closeReturns = struct {
-		result1 error
+func (fake *FakeManifest) UpdatedImageNeedsLayerDiffIDsArgsForCall(i int) types.ManifestUpdateOptions {
+	fake.updatedImageNeedsLayerDiffIDsMutex.RLock()
+	defer fake.updatedImageNeedsLayerDiffIDsMutex.RUnlock()
+	return fake.updatedImageNeedsLayerDiffIDsArgsForCall[i].options
+}
+
+func (fake *FakeManifest) UpdatedImageNeedsLayerDiffIDsReturns(result1 bool) {
+	fake.UpdatedImageNeedsLayerDiffIDsStub = nil
+	fake.updatedImageNeedsLayerDiffIDsReturns = struct {
+		result1 bool
 	}{result1}
 }
 
-func (fake *FakeManifest) CloseReturnsOnCall(i int, result1 error) {
-	fake.CloseStub = nil
-	if fake.closeReturnsOnCall == nil {
-		fake.closeReturnsOnCall = make(map[int]struct {
-			result1 error
+func (fake *FakeManifest) UpdatedImageNeedsLayerDiffIDsReturnsOnCall(i int, result1 bool) {
+	fake.UpdatedImageNeedsLayerDiffIDsStub = nil
+	if fake.updatedImageNeedsLayerDiffIDsReturnsOnCall == nil {
+		fake.updatedImageNeedsLayerDiffIDsReturnsOnCall = make(map[int]struct {
+			result1 bool
 		})
 	}
-	fake.closeReturnsOnCall[i] = struct {
-		result1 error
+	fake.updatedImageNeedsLayerDiffIDsReturnsOnCall[i] = struct {
+		result1 bool
 	}{result1}
+}
+
+func (fake *FakeManifest) UpdatedImage(options types.ManifestUpdateOptions) (types.Image, error) {
+	fake.updatedImageMutex.Lock()
+	ret, specificReturn := fake.updatedImageReturnsOnCall[len(fake.updatedImageArgsForCall)]
+	fake.updatedImageArgsForCall = append(fake.updatedImageArgsForCall, struct {
+		options types.ManifestUpdateOptions
+	}{options})
+	fake.recordInvocation("UpdatedImage", []interface{}{options})
+	fake.updatedImageMutex.Unlock()
+	if fake.UpdatedImageStub != nil {
+		return fake.UpdatedImageStub(options)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.updatedImageReturns.result1, fake.updatedImageReturns.result2
+}
+
+func (fake *FakeManifest) UpdatedImageCallCount() int {
+	fake.updatedImageMutex.RLock()
+	defer fake.updatedImageMutex.RUnlock()
+	return len(fake.updatedImageArgsForCall)
+}
+
+func (fake *FakeManifest) UpdatedImageArgsForCall(i int) types.ManifestUpdateOptions {
+	fake.updatedImageMutex.RLock()
+	defer fake.updatedImageMutex.RUnlock()
+	return fake.updatedImageArgsForCall[i].options
+}
+
+func (fake *FakeManifest) UpdatedImageReturns(result1 types.Image, result2 error) {
+	fake.UpdatedImageStub = nil
+	fake.updatedImageReturns = struct {
+		result1 types.Image
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManifest) UpdatedImageReturnsOnCall(i int, result1 types.Image, result2 error) {
+	fake.UpdatedImageStub = nil
+	if fake.updatedImageReturnsOnCall == nil {
+		fake.updatedImageReturnsOnCall = make(map[int]struct {
+			result1 types.Image
+			result2 error
+		})
+	}
+	fake.updatedImageReturnsOnCall[i] = struct {
+		result1 types.Image
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManifest) IsMultiImage() bool {
+	fake.isMultiImageMutex.Lock()
+	ret, specificReturn := fake.isMultiImageReturnsOnCall[len(fake.isMultiImageArgsForCall)]
+	fake.isMultiImageArgsForCall = append(fake.isMultiImageArgsForCall, struct{}{})
+	fake.recordInvocation("IsMultiImage", []interface{}{})
+	fake.isMultiImageMutex.Unlock()
+	if fake.IsMultiImageStub != nil {
+		return fake.IsMultiImageStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.isMultiImageReturns.result1
+}
+
+func (fake *FakeManifest) IsMultiImageCallCount() int {
+	fake.isMultiImageMutex.RLock()
+	defer fake.isMultiImageMutex.RUnlock()
+	return len(fake.isMultiImageArgsForCall)
+}
+
+func (fake *FakeManifest) IsMultiImageReturns(result1 bool) {
+	fake.IsMultiImageStub = nil
+	fake.isMultiImageReturns = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeManifest) IsMultiImageReturnsOnCall(i int, result1 bool) {
+	fake.IsMultiImageStub = nil
+	if fake.isMultiImageReturnsOnCall == nil {
+		fake.isMultiImageReturnsOnCall = make(map[int]struct {
+			result1 bool
+		})
+	}
+	fake.isMultiImageReturnsOnCall[i] = struct {
+		result1 bool
+	}{result1}
+}
+
+func (fake *FakeManifest) Size() (int64, error) {
+	fake.sizeMutex.Lock()
+	ret, specificReturn := fake.sizeReturnsOnCall[len(fake.sizeArgsForCall)]
+	fake.sizeArgsForCall = append(fake.sizeArgsForCall, struct{}{})
+	fake.recordInvocation("Size", []interface{}{})
+	fake.sizeMutex.Unlock()
+	if fake.SizeStub != nil {
+		return fake.SizeStub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.sizeReturns.result1, fake.sizeReturns.result2
+}
+
+func (fake *FakeManifest) SizeCallCount() int {
+	fake.sizeMutex.RLock()
+	defer fake.sizeMutex.RUnlock()
+	return len(fake.sizeArgsForCall)
+}
+
+func (fake *FakeManifest) SizeReturns(result1 int64, result2 error) {
+	fake.SizeStub = nil
+	fake.sizeReturns = struct {
+		result1 int64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManifest) SizeReturnsOnCall(i int, result1 int64, result2 error) {
+	fake.SizeStub = nil
+	if fake.sizeReturnsOnCall == nil {
+		fake.sizeReturnsOnCall = make(map[int]struct {
+			result1 int64
+			result2 error
+		})
+	}
+	fake.sizeReturnsOnCall[i] = struct {
+		result1 int64
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeManifest) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.referenceMutex.RLock()
+	defer fake.referenceMutex.RUnlock()
+	fake.closeMutex.RLock()
+	defer fake.closeMutex.RUnlock()
+	fake.manifestMutex.RLock()
+	defer fake.manifestMutex.RUnlock()
+	fake.signaturesMutex.RLock()
+	defer fake.signaturesMutex.RUnlock()
+	fake.configInfoMutex.RLock()
+	defer fake.configInfoMutex.RUnlock()
+	fake.configBlobMutex.RLock()
+	defer fake.configBlobMutex.RUnlock()
 	fake.oCIConfigMutex.RLock()
 	defer fake.oCIConfigMutex.RUnlock()
 	fake.layerInfosMutex.RLock()
 	defer fake.layerInfosMutex.RUnlock()
-	fake.configInfoMutex.RLock()
-	defer fake.configInfoMutex.RUnlock()
-	fake.closeMutex.RLock()
-	defer fake.closeMutex.RUnlock()
+	fake.embeddedDockerReferenceConflictsMutex.RLock()
+	defer fake.embeddedDockerReferenceConflictsMutex.RUnlock()
+	fake.inspectMutex.RLock()
+	defer fake.inspectMutex.RUnlock()
+	fake.updatedImageNeedsLayerDiffIDsMutex.RLock()
+	defer fake.updatedImageNeedsLayerDiffIDsMutex.RUnlock()
+	fake.updatedImageMutex.RLock()
+	defer fake.updatedImageMutex.RUnlock()
+	fake.isMultiImageMutex.RLock()
+	defer fake.isMultiImageMutex.RUnlock()
+	fake.sizeMutex.RLock()
+	defer fake.sizeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
