@@ -3,6 +3,7 @@ package gqt_test
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -166,4 +167,10 @@ func uint32ptr(i uint32) *uint32 {
 
 func boolptr(b bool) *bool {
 	return &b
+}
+
+func readFile(path string) string {
+	content, err := ioutil.ReadFile(path)
+	Expect(err).NotTo(HaveOccurred())
+	return string(content)
 }

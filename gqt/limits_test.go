@@ -3,7 +3,6 @@ package gqt_test
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -58,10 +57,8 @@ var _ = Describe("Limits", func() {
 		})
 
 		JustBeforeEach(func() {
-			memLimitBytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "memory.kmem.tcp.limit_in_bytes"))
-			Expect(err).NotTo(HaveOccurred())
-
-			tcpMemLimit = strings.TrimSpace(string(memLimitBytes))
+			memLimitBytes := readFile(filepath.Join(cgroupPath, "memory.kmem.tcp.limit_in_bytes"))
+			tcpMemLimit = strings.TrimSpace(memLimitBytes)
 		})
 
 		Context("when starting the server with --tcp-memory-limit set to 0", func() {
@@ -102,15 +99,13 @@ var _ = Describe("Limits", func() {
 				})
 
 				It("sets cpu.cfs_period_us to 100000 (100ms)", func() {
-					period, err := ioutil.ReadFile(filepath.Join(cgroupPath, "cpu.cfs_period_us"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(strings.TrimSpace(string(period))).To(Equal("100000"))
+					period := readFile(filepath.Join(cgroupPath, "cpu.cfs_period_us"))
+					Expect(strings.TrimSpace(period)).To(Equal("100000"))
 				})
 
 				It("configures cpu.cfs_quota_us as shares * cpu-quota-per-share", func() {
-					period, err := ioutil.ReadFile(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(strings.TrimSpace(string(period))).To(Equal("1280"))
+					period := readFile(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
+					Expect(strings.TrimSpace(period)).To(Equal("1280"))
 				})
 			})
 		})
@@ -126,11 +121,36 @@ var _ = Describe("Limits", func() {
 				})
 
 				It("configures cpu.cfs_quota_us as shares * cpu-quota-per-share", func() {
-					period, err := ioutil.ReadFile(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(strings.TrimSpace(string(period))).To(Equal("-1"))
+					period := readFile(filepath.Join(cgroupPath, "cpu.cfs_quota_us"))
+					Expect(strings.TrimSpace(period)).To(Equal("-1"))
 				})
 			})
+		})
+	})
+
+	Describe("device restrictions", func() {
+		BeforeEach(func() {
+			cgroupType = "devices"
+		})
+
+		It("allows only certain devices", func() {
+			expectedAllowedDevices := `c 1:3 rwm
+c 5:0 rwm
+c 1:8 rwm
+c 1:9 rwm
+c 1:5 rwm
+c 1:7 rwm
+c 10:229 rwm
+c *:* m
+b *:* m
+c 5:1 rwm
+c 136:* rwm
+c 5:2 rwm
+c 10:200 rwm
+`
+
+			allowedDevices := readFile(filepath.Join(cgroupPath, "devices.list"))
+			Expect(allowedDevices).To(Equal(expectedAllowedDevices))
 		})
 	})
 })

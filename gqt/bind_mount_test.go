@@ -89,7 +89,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("allows all users to read files", func() {
-				readProcess := readFile(container, dstPath, testFileName, "alice")
+				readProcess := containerReadFile(container, dstPath, testFileName, "alice")
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
@@ -99,7 +99,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("allows root to read files", func() {
-				readProcess := readFile(container, dstPath, testFileName, "root")
+				readProcess := containerReadFile(container, dstPath, testFileName, "root")
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
@@ -121,7 +121,7 @@ var _ = Describe("Bind mount", func() {
 
 				It("allows all users to read from nested bind mounts", func() {
 					nestedPath := filepath.Join(dstPath, "nested-bind")
-					readProcess := readFile(container, nestedPath, "nested-file", "alice")
+					readProcess := containerReadFile(container, nestedPath, "nested-file", "alice")
 					Expect(readProcess.Wait()).To(Equal(0))
 				})
 
@@ -133,7 +133,7 @@ var _ = Describe("Bind mount", func() {
 
 				It("allows root to read from nested bind mounts", func() {
 					nestedPath := filepath.Join(dstPath, "nested-bind")
-					readProcess := readFile(container, nestedPath, "nested-file", "alice")
+					readProcess := containerReadFile(container, nestedPath, "nested-file", "alice")
 					Expect(readProcess.Wait()).To(Equal(0))
 				})
 
@@ -151,7 +151,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("allows all users to read files", func() {
-				readProcess := readFile(container, dstPath, testFileName, "alice")
+				readProcess := containerReadFile(container, dstPath, testFileName, "alice")
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
@@ -161,7 +161,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("allows root to read files", func() {
-				readProcess := readFile(container, dstPath, testFileName, "root")
+				readProcess := containerReadFile(container, dstPath, testFileName, "root")
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
@@ -183,7 +183,7 @@ var _ = Describe("Bind mount", func() {
 
 				It("allows all users to read from nested bind mounts", func() {
 					nestedPath := filepath.Join(dstPath, "nested-bind")
-					readProcess := readFile(container, nestedPath, "nested-file", "alice")
+					readProcess := containerReadFile(container, nestedPath, "nested-file", "alice")
 					Expect(readProcess.Wait()).To(Equal(0))
 				})
 
@@ -195,7 +195,7 @@ var _ = Describe("Bind mount", func() {
 
 				It("allows root to read from nested bind mounts", func() {
 					nestedPath := filepath.Join(dstPath, "nested-bind")
-					readProcess := readFile(container, nestedPath, "nested-file", "alice")
+					readProcess := containerReadFile(container, nestedPath, "nested-file", "alice")
 					Expect(readProcess.Wait()).To(Equal(0))
 				})
 
@@ -220,7 +220,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("allows all users to read files", func() {
-				readProcess := readFile(container, dstPath, testFileName, "alice")
+				readProcess := containerReadFile(container, dstPath, testFileName, "alice")
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
@@ -230,7 +230,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("allows root to read files", func() {
-				readProcess := readFile(container, dstPath, testFileName, "root")
+				readProcess := containerReadFile(container, dstPath, testFileName, "root")
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
@@ -252,7 +252,7 @@ var _ = Describe("Bind mount", func() {
 
 				It("allows all users to read from nested bind mounts", func() {
 					nestedPath := filepath.Join(dstPath, "nested-bind")
-					readProcess := readFile(container, nestedPath, "nested-file", "alice")
+					readProcess := containerReadFile(container, nestedPath, "nested-file", "alice")
 					Expect(readProcess.Wait()).To(Equal(0))
 				})
 
@@ -264,7 +264,7 @@ var _ = Describe("Bind mount", func() {
 
 				It("allows root to read from nested bind mounts", func() {
 					nestedPath := filepath.Join(dstPath, "nested-bind")
-					readProcess := readFile(container, nestedPath, "nested-file", "alice")
+					readProcess := containerReadFile(container, nestedPath, "nested-file", "alice")
 					Expect(readProcess.Wait()).To(Equal(0))
 				})
 
@@ -282,7 +282,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("allows all users to read files", func() {
-				readProcess := readFile(container, dstPath, testFileName, "alice")
+				readProcess := containerReadFile(container, dstPath, testFileName, "alice")
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
@@ -293,7 +293,7 @@ var _ = Describe("Bind mount", func() {
 			})
 
 			It("allows root to read files", func() {
-				readProcess := readFile(container, dstPath, testFileName, "root")
+				readProcess := containerReadFile(container, dstPath, testFileName, "root")
 				Expect(readProcess.Wait()).To(Equal(0))
 			})
 
@@ -317,7 +317,7 @@ var _ = Describe("Bind mount", func() {
 
 				It("allows all users to read from nested bind mounts", func() {
 					nestedPath := filepath.Join(dstPath, "nested-bind")
-					readProcess := readFile(container, nestedPath, "nested-file", "alice")
+					readProcess := containerReadFile(container, nestedPath, "nested-file", "alice")
 					Expect(readProcess.Wait()).To(Equal(0))
 				})
 
@@ -329,7 +329,7 @@ var _ = Describe("Bind mount", func() {
 
 				It("allows root to read from nested bind mounts", func() {
 					nestedPath := filepath.Join(dstPath, "nested-bind")
-					readProcess := readFile(container, nestedPath, "nested-file", "alice")
+					readProcess := containerReadFile(container, nestedPath, "nested-file", "alice")
 					Expect(readProcess.Wait()).To(Equal(0))
 				})
 
@@ -387,7 +387,7 @@ func unmount(mountpoint string) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func readFile(container garden.Container, dstPath, fileName, user string) garden.Process {
+func containerReadFile(container garden.Container, dstPath, fileName, user string) garden.Process {
 	filePath := filepath.Join(dstPath, fileName)
 
 	process, err := container.Run(garden.ProcessSpec{
