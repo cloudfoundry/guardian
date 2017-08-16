@@ -131,17 +131,6 @@ var _ = Describe("Layer source: OCI", func() {
 		})
 	})
 
-	// Describe("Config", func() {
-	// 	var manifest source.Manifest
-
-	// 	JustBeforeEach(func() {
-	// 		var err error
-	// 		manifest, err = layerSource.Manifest(logger, baseImageURL)
-	// 		Expect(err).NotTo(HaveOccurred())
-	// 	})
-
-	// })
-
 	Describe("Blob", func() {
 		It("downloads a blob", func() {
 			blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigest[0].Digest.String())

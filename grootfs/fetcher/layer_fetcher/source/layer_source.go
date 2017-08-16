@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/lager"
 	_ "github.com/containers/image/docker"
 	manifestpkg "github.com/containers/image/manifest"
@@ -39,7 +40,7 @@ func NewLayerSource(username, password string, trustedRegistries []string) Layer
 	}
 }
 
-func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (types.Image, error) {
+func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (layer_fetcher.Manifest, error) {
 	logger = logger.Session("fetching-image-manifest", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -197,7 +198,7 @@ func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (t
 	return imgSrc, nil
 }
 
-func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Image, baseImageURL *url.URL) (types.Image, error) {
+func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Image, baseImageURL *url.URL) (layer_fetcher.Manifest, error) {
 	_, mimetype, err := originalImage.Manifest()
 	if err != nil {
 		return nil, err
@@ -232,7 +233,12 @@ func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Imag
 		},
 	}
 
-	return originalImage.UpdatedImage(options)
+	newImg, err := originalImage.UpdatedImage(options)
+	if err != nil {
+		return nil, err
+	}
+
+	return layer_fetcher.Manifest(newImg), err
 }
 
 func (s *LayerSource) v1DiffID(layer types.BlobInfo, imgSrc types.ImageSource) (digestpkg.Digest, error) {

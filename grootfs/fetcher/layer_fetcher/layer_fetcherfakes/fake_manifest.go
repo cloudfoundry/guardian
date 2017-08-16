@@ -30,6 +30,15 @@ type FakeManifest struct {
 	layerInfosReturnsOnCall map[int]struct {
 		result1 []types.BlobInfo
 	}
+	ConfigInfoStub        func() types.BlobInfo
+	configInfoMutex       sync.RWMutex
+	configInfoArgsForCall []struct{}
+	configInfoReturns     struct {
+		result1 types.BlobInfo
+	}
+	configInfoReturnsOnCall map[int]struct {
+		result1 types.BlobInfo
+	}
 	CloseStub        func() error
 	closeMutex       sync.RWMutex
 	closeArgsForCall []struct{}
@@ -126,6 +135,46 @@ func (fake *FakeManifest) LayerInfosReturnsOnCall(i int, result1 []types.BlobInf
 	}{result1}
 }
 
+func (fake *FakeManifest) ConfigInfo() types.BlobInfo {
+	fake.configInfoMutex.Lock()
+	ret, specificReturn := fake.configInfoReturnsOnCall[len(fake.configInfoArgsForCall)]
+	fake.configInfoArgsForCall = append(fake.configInfoArgsForCall, struct{}{})
+	fake.recordInvocation("ConfigInfo", []interface{}{})
+	fake.configInfoMutex.Unlock()
+	if fake.ConfigInfoStub != nil {
+		return fake.ConfigInfoStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.configInfoReturns.result1
+}
+
+func (fake *FakeManifest) ConfigInfoCallCount() int {
+	fake.configInfoMutex.RLock()
+	defer fake.configInfoMutex.RUnlock()
+	return len(fake.configInfoArgsForCall)
+}
+
+func (fake *FakeManifest) ConfigInfoReturns(result1 types.BlobInfo) {
+	fake.ConfigInfoStub = nil
+	fake.configInfoReturns = struct {
+		result1 types.BlobInfo
+	}{result1}
+}
+
+func (fake *FakeManifest) ConfigInfoReturnsOnCall(i int, result1 types.BlobInfo) {
+	fake.ConfigInfoStub = nil
+	if fake.configInfoReturnsOnCall == nil {
+		fake.configInfoReturnsOnCall = make(map[int]struct {
+			result1 types.BlobInfo
+		})
+	}
+	fake.configInfoReturnsOnCall[i] = struct {
+		result1 types.BlobInfo
+	}{result1}
+}
+
 func (fake *FakeManifest) Close() error {
 	fake.closeMutex.Lock()
 	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
@@ -173,6 +222,8 @@ func (fake *FakeManifest) Invocations() map[string][][]interface{} {
 	defer fake.oCIConfigMutex.RUnlock()
 	fake.layerInfosMutex.RLock()
 	defer fake.layerInfosMutex.RUnlock()
+	fake.configInfoMutex.RLock()
+	defer fake.configInfoMutex.RUnlock()
 	fake.closeMutex.RLock()
 	defer fake.closeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -176,7 +177,7 @@ var _ = Describe("Layer source: Docker", func() {
 		})
 
 		Context("when the image is private", func() {
-			var manifest types.Image
+			var manifest layer_fetcher.Manifest
 
 			BeforeEach(func() {
 				var err error

@@ -23,6 +23,7 @@ const cfBaseDirectoryAnnotation = "org.cloudfoundry.image.base-directory"
 type Manifest interface {
 	OCIConfig() (*specsv1.Image, error)
 	LayerInfos() []types.BlobInfo
+	ConfigInfo() types.BlobInfo
 	Close() error
 }
 
