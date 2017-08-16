@@ -18,6 +18,7 @@ RUN apt-get update && \
         unzip \
         python \
         python-yaml \
+        strace \
         wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
