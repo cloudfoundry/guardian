@@ -49,7 +49,7 @@ var _ = Describe("LayerFetcher", func() {
 
 	Describe("BaseImageInfo", func() {
 		It("fetches the manifest", func() {
-			fakeManifest := new(layer_fetcherfakes.FakeImage)
+			fakeManifest := new(layer_fetcherfakes.FakeManifest)
 			fakeManifest.OCIConfigReturns(&specsv1.Image{}, nil)
 			fakeSource.ManifestReturns(fakeManifest, nil)
 
@@ -62,7 +62,7 @@ var _ = Describe("LayerFetcher", func() {
 		})
 
 		It("closes the manifest", func() {
-			fakeManifest := new(layer_fetcherfakes.FakeImage)
+			fakeManifest := new(layer_fetcherfakes.FakeManifest)
 			fakeManifest.OCIConfigReturns(&specsv1.Image{}, nil)
 			fakeSource.ManifestReturns(fakeManifest, nil)
 
@@ -92,7 +92,7 @@ var _ = Describe("LayerFetcher", func() {
 					},
 				},
 			}
-			fakeManifest := new(layer_fetcherfakes.FakeImage)
+			fakeManifest := new(layer_fetcherfakes.FakeManifest)
 			fakeManifest.OCIConfigReturns(config, nil)
 			fakeManifest.LayerInfosReturns([]types.BlobInfo{
 				types.BlobInfo{
@@ -130,7 +130,7 @@ var _ = Describe("LayerFetcher", func() {
 
 		Context("when retrieving the OCI Config fails", func() {
 			BeforeEach(func() {
-				fakeManifest := new(layer_fetcherfakes.FakeImage)
+				fakeManifest := new(layer_fetcherfakes.FakeManifest)
 				fakeManifest.OCIConfigReturns(&specsv1.Image{}, errors.New("OCI Config retrieval failed"))
 				fakeSource.ManifestReturns(fakeManifest, nil)
 			})
@@ -153,7 +153,7 @@ var _ = Describe("LayerFetcher", func() {
 				},
 			}
 
-			fakeManifest := new(layer_fetcherfakes.FakeImage)
+			fakeManifest := new(layer_fetcherfakes.FakeManifest)
 			fakeManifest.OCIConfigReturns(expectedConfig, nil)
 			fakeSource.ManifestReturns(fakeManifest, nil)
 

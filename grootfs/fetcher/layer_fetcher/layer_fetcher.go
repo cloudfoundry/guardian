@@ -15,10 +15,19 @@ import (
 	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+const cfBaseDirectoryAnnotation = "org.cloudfoundry.image.base-directory"
+
 //go:generate counterfeiter . Source
+//go:generate counterfeiter . Manifest
+
+type Manifest interface {
+	OCIConfig() (*specsv1.Image, error)
+	LayerInfos() []types.BlobInfo
+	Close() error
+}
 
 type Source interface {
-	Manifest(logger lager.Logger, baseImageURL *url.URL) (types.Image, error)
+	Manifest(logger lager.Logger, baseImageURL *url.URL) (Manifest, error)
 	Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error)
 }
 
@@ -77,7 +86,7 @@ func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, so
 	return blobReader, size, nil
 }
 
-func (f *LayerFetcher) createLayersDigest(logger lager.Logger, image types.Image, config *specsv1.Image) []base_image_puller.LayerDigest {
+func (f *LayerFetcher) createLayersDigest(logger lager.Logger, image Manifest, config *specsv1.Image) []base_image_puller.LayerDigest {
 	layersDigest := []base_image_puller.LayerDigest{}
 
 	var parentChainID string
