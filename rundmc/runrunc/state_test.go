@@ -79,6 +79,22 @@ var _ = Describe("State", func() {
 
 	})
 
+	Context("when returned state is invalid", func() {
+		BeforeEach(func() {
+			stateCmdOutput = `{
+					"Pid": 0,
+					"Status": "quite-a-status"
+				}`
+		})
+
+		It("returns error", func() {
+			_, err := stater.State(logger, "some-container")
+			Expect(err).To(
+				MatchError(ContainSubstring("Pid cannot be 0 for a container")),
+			)
+		})
+	})
+
 	Context("when getting state fails", func() {
 		BeforeEach(func() {
 			stateCmdExit = errors.New("boom")

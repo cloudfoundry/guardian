@@ -99,7 +99,7 @@ var StateCommand = cli.Command{
 	Flags: []cli.Flag{},
 
 	Action: func(ctx *cli.Context) error {
-		fmt.Printf(`{"status":"created"}`)
+		fmt.Printf(`{"pid":1234, "status":"created"}`)
 		return nil
 	},
 }
