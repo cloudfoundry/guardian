@@ -16,6 +16,7 @@ func (w Windows) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ str
 	bndl = bndl.WithWindows(*spec.BaseConfig.Windows)
 	limit := uint64(spec.Limits.Memory.LimitInBytes)
 	bndl = bndl.WithWindowsMemoryLimit(specs.WindowsMemoryResources{Limit: &limit})
-
+	shares := uint16(spec.Limits.CPU.LimitInShares)
+	bndl = bndl.WithWindowsCPUShares(specs.WindowsCPUResources{Shares: &shares})
 	return bndl, nil
 }

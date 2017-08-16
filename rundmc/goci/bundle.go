@@ -128,6 +128,18 @@ func (b Bndl) WithCPUShares(shares specs.LinuxCPU) Bndl {
 	return b
 }
 
+func (b Bndl) WithWindowsCPUShares(shares specs.WindowsCPUResources) Bndl {
+	resources := b.WindowsResources()
+	if resources == nil {
+		resources = &specs.WindowsResources{}
+	}
+
+	resources.CPU = &shares
+	b.CloneWindows().Spec.Windows.Resources = resources
+
+	return b
+}
+
 func (b Bndl) WithMemoryLimit(limit specs.LinuxMemory) Bndl {
 	resources := b.Resources()
 	if resources == nil {
