@@ -53,8 +53,8 @@ func (r *Stater) State(log lager.Logger, handle string) (state State, err error)
 		return State{}, fmt.Errorf("runc state: %s", err)
 	}
 
-	if state.Pid == 0 {
-		return State{}, errors.New("Pid cannot be 0 for a container")
+	if state.Pid == 0 && state.Status != StoppedStatus {
+		return State{}, errors.New("Pid can only be 0 for stopped containers")
 	}
 
 	return state, nil

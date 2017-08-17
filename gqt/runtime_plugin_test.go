@@ -94,6 +94,29 @@ var _ = Describe("Runtime Plugin", func() {
 				})
 			})
 
+			Context("when runtime plugin state returns a pid of zero for a created container", func() {
+				var networkPluginArgsFile string
+
+				BeforeEach(func() {
+					networkPluginArgsFile = filepath.Join(os.TempDir(), fmt.Sprintf("network-a-%d", GinkgoParallelNode()))
+					config.NetworkPluginExtraArgs = []string{networkPluginArgsFile, os.DevNull, "unused"}
+				})
+
+				JustBeforeEach(func() {
+					Expect(ioutil.WriteFile(
+						filepath.Join(client.TmpDir, "runtime-state-output"),
+						[]byte(`{"pid": 0, "status": "created"}`),
+						0600,
+					)).To(Succeed())
+				})
+
+				It("returns an error without calling the network plugin", func() {
+					_, err := client.Create(garden.ContainerSpec{Handle: handle})
+					Expect(err).To(HaveOccurred())
+					Expect(readFile(networkPluginArgsFile)).NotTo(ContainSubstring("up"))
+				})
+			})
+
 			Describe("starting a process", func() {
 				var (
 					runtimePluginExitCode int

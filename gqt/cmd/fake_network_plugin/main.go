@@ -12,8 +12,13 @@ func main() {
 		panic("network test plugin requires at least 4 arguments")
 	}
 
+	argsFile, err := os.OpenFile(os.Args[1], os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0600)
+	if err != nil {
+		panic(err)
+	}
+	defer argsFile.Close()
 	args := strings.Join(os.Args, " ")
-	if err := ioutil.WriteFile(os.Args[1], []byte(args), 0700); err != nil {
+	if _, err := fmt.Fprintln(argsFile, args); err != nil {
 		panic(err)
 	}
 
@@ -21,7 +26,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	if err := ioutil.WriteFile(os.Args[2], input, 0700); err != nil {
+	if err := ioutil.WriteFile(os.Args[2], input, 0600); err != nil {
 		panic(err)
 	}
 

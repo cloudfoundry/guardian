@@ -58,6 +58,17 @@ func writeArgs(action string) {
 	}
 }
 
+func readOutput(action string) (string, bool) {
+	content, err := ioutil.ReadFile(filepath.Join(os.TempDir(), fmt.Sprintf("runtime-%s-output", action)))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", false
+		}
+		panic(err)
+	}
+	return string(content), true
+}
+
 var CreateCommand = cli.Command{
 	Name: "create",
 	Flags: []cli.Flag{
@@ -99,7 +110,11 @@ var StateCommand = cli.Command{
 	Flags: []cli.Flag{},
 
 	Action: func(ctx *cli.Context) error {
-		fmt.Printf(`{"pid":1234, "status":"created"}`)
+		state := `{"pid":1234, "status":"created"}`
+		if overrideState, ok := readOutput("state"); ok {
+			state = overrideState
+		}
+		fmt.Println(state)
 		return nil
 	},
 }
