@@ -26,7 +26,7 @@ const MetricsFailedUnpackTimeName = "FailedUnpackTime"
 //go:generate counterfeiter . VolumeDriver
 
 type UnpackSpec struct {
-	Stream      io.ReadCloser
+	Stream      io.ReadCloser `json:"-"`
 	TargetPath  string
 	UIDMappings []groot.IDMappingSpec
 	GIDMappings []groot.IDMappingSpec

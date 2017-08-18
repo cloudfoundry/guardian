@@ -27,9 +27,10 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 	)
 
 	BeforeEach(func() {
-		tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
-
 		var err error
+		tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
+		Expect(err).NotTo(HaveOccurred())
+
 		targetPath, err = ioutil.TempDir("", "target-")
 		Expect(err).NotTo(HaveOccurred())
 

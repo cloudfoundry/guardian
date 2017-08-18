@@ -1,6 +1,8 @@
 package unpacker_test
 
 import (
+	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,6 +17,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
+	"github.com/containers/storage/pkg/reexec"
 	"github.com/containers/storage/pkg/system"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,20 +25,27 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
+func init() {
+	if reexec.Init() {
+		os.Exit(0)
+	}
+}
+
 var _ = Describe("Tar unpacker", func() {
 	var (
 		tarUnpacker        *unpacker.TarUnpacker
 		logger             lager.Logger
 		baseImagePath      string
-		stream             *gbytes.Buffer
+		stream             io.ReadWriteCloser
 		targetPath         string
 		whiteoutDevicePath string
 	)
 
 	BeforeEach(func() {
-		tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
-
 		var err error
+		tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
+		Expect(err).NotTo(HaveOccurred())
+
 		targetPath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -518,7 +528,9 @@ var _ = Describe("Tar unpacker", func() {
 
 		Context("BTRFS", func() {
 			BeforeEach(func() {
-				tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
+				var err error
+				tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			commonWhiteoutTests()
@@ -544,10 +556,12 @@ var _ = Describe("Tar unpacker", func() {
 
 		Context("Overlay+XFS", func() {
 			BeforeEach(func() {
-				tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
+				var err error
+				tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
 					Name:               "overlay-xfs",
 					WhiteoutDevicePath: whiteoutDevicePath,
 				})
+				Expect(err).NotTo(HaveOccurred())
 			})
 
 			commonWhiteoutTests()
@@ -575,10 +589,12 @@ var _ = Describe("Tar unpacker", func() {
 
 			Context("when it fails to link the whiteout device", func() {
 				BeforeEach(func() {
-					tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
+					var err error
+					tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
 						Name:               "overlay-xfs",
 						WhiteoutDevicePath: "/tmp/not-here",
 					})
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("returns an error", func() {
@@ -632,7 +648,9 @@ var _ = Describe("Tar unpacker", func() {
 
 			Context("BTRFS", func() {
 				BeforeEach(func() {
-					tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
+					var err error
+					tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				commonOpaqueWhiteoutTests()
@@ -640,10 +658,12 @@ var _ = Describe("Tar unpacker", func() {
 
 			Context("Overlay+XFS", func() {
 				BeforeEach(func() {
-					tarUnpacker = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
+					var err error
+					tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{
 						Name:               "overlay-xfs",
 						WhiteoutDevicePath: whiteoutDevicePath,
 					})
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				commonOpaqueWhiteoutTests()
@@ -674,6 +694,35 @@ var _ = Describe("Tar unpacker", func() {
 				Stream:     stream,
 				TargetPath: targetPath,
 			})).To(MatchError(ContainSubstring("unexpected EOF")))
+		})
+	})
+
+	Context("when the tar has files that point to a parent directory", func() {
+		JustBeforeEach(func() {
+			workDir, err := os.Getwd()
+			Expect(err).NotTo(HaveOccurred())
+			stream, err = os.Open(fmt.Sprintf("%s/../../integration/assets/hacked.tar", workDir))
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("doesn't create the file outside the target path", func() {
+			err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(filepath.Join(targetPath, "../", "file_outside_root")).ToNot(BeAnExistingFile())
+		})
+
+		It("creates the file in the root of the target path", func() {
+			err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				Stream:     stream,
+				TargetPath: targetPath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(filepath.Join(targetPath, "file_outside_root")).To(BeAnExistingFile())
 		})
 	})
 

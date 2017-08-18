@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -238,6 +239,22 @@ var _ = Describe("Create with local TAR images", func() {
 			Expect(imageContentPath).To(BeARegularFile())
 			barImageContentPath := path.Join(image.Rootfs, "bar")
 			Expect(barImageContentPath).To(BeARegularFile())
+		})
+	})
+
+	Context("when the tar has files that point outside the root dir", func() {
+		It("doesn't leak the file", func() {
+			workDir, err := os.Getwd()
+			Expect(err).NotTo(HaveOccurred())
+			baseImagePath = fmt.Sprintf("%s/assets/hacked.tar", workDir)
+
+			_, err = Runner.Create(groot.CreateSpec{
+				ID:        "image-1",
+				BaseImage: baseImagePath,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(filepath.Join(StorePath, store.VolumesDirName, "file_outside_root")).ToNot(BeAnExistingFile())
 		})
 	})
 
