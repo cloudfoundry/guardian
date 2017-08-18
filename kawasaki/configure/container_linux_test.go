@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/configure"
@@ -46,7 +47,7 @@ var _ = Describe("Container", func() {
 
 		sess, err := gexec.Start(exec.Command("ip", "netns", "add", netNsName), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
+		Eventually(sess, time.Second*10).Should(gexec.Exit(0))
 
 		netNsPath := fmt.Sprintf("/run/netns/%s", netNsName)
 		netNsFd, err = os.Open(netNsPath)
