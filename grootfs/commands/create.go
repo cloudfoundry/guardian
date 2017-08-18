@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
-	"code.cloudfoundry.org/grootfs/commands/commandrunner"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
@@ -134,7 +134,7 @@ var CreateCommand = cli.Command{
 			return newExitError(err.Error(), 1)
 		}
 
-		runner := commandrunner.New()
+		runner := linux_command_runner.New()
 		var unpacker base_image_puller.Unpacker
 		unpackerStrategy := unpackerpkg.UnpackStrategy{
 			Name:               cfg.FSDriver,
