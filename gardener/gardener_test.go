@@ -46,7 +46,7 @@ var _ = Describe("Gardener", func() {
 
 		propertyManager.GetReturns("", true)
 		containerizer.HandlesReturns([]string{"some-handle"}, nil)
-		containerizer.InfoReturns(gardener.ActualContainerSpec{RootFSPath: "rootfs"}, nil)
+		containerizer.InfoReturns(gardener.ActualContainerSpec{Pid: 470, RootFSPath: "rootfs"}, nil)
 
 		gdnr = &gardener.Gardener{
 			SysInfoProvider: sysinfoProvider,
@@ -340,6 +340,17 @@ var _ = Describe("Gardener", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
 				Expect(err).To(MatchError("boom"))
 
+			})
+		})
+
+		Context("when container info returns pid = 0", func() {
+			BeforeEach(func() {
+				containerizer.InfoReturns(gardener.ActualContainerSpec{Pid: 0}, nil)
+			})
+
+			It("errors", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
+				Expect(err).To(HaveOccurred())
 			})
 		})
 

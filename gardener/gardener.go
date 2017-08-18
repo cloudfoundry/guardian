@@ -304,6 +304,12 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		return nil, err
 	}
 
+	if actualSpec.Pid == 0 {
+		err := errors.New("container init PID was 0")
+		log.Error("checking-init-pid", err)
+		return nil, err
+	}
+
 	if err = g.Networker.Network(log, spec, actualSpec.Pid); err != nil {
 		return nil, err
 	}

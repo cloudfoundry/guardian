@@ -63,9 +63,7 @@ var _ = Describe("State", func() {
 	It("gets the bundle state", func() {
 		state, err := stater.State(logger, "some-container")
 		Expect(err).NotTo(HaveOccurred())
-
-		Expect(state.Pid).To(Equal(4))
-		Expect(state.Status).To(BeEquivalentTo("quite-a-status"))
+		Expect(state).To(Equal(runrunc.State{Pid: 4, Status: "quite-a-status"}))
 	})
 
 	It("forwards runc logs", func() {
@@ -77,38 +75,6 @@ var _ = Describe("State", func() {
 			Args: []string{"--log", "potato.log", "state", "some-container"},
 		}))
 
-	})
-
-	Context("when the pid returned for a not-stopped container is 0", func() {
-		BeforeEach(func() {
-			stateCmdOutput = `{
-					"Pid": 0,
-					"Status": "not-stopped"
-				}`
-		})
-
-		It("returns error", func() {
-			_, err := stater.State(logger, "some-container")
-			Expect(err).To(
-				MatchError(ContainSubstring("Pid can only be 0 for stopped containers")),
-			)
-		})
-	})
-
-	Context("when the pid returned for a stopped container is 0", func() {
-		BeforeEach(func() {
-			stateCmdOutput = `{
-					"Pid": 0,
-					"Status": "stopped"
-				}`
-		})
-
-		It("returns Pid equal 0", func() {
-			state, err := stater.State(logger, "some-container")
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(state.Pid).To(Equal(0))
-		})
 	})
 
 	Context("when getting state fails", func() {

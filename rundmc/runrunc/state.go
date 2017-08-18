@@ -3,7 +3,6 @@ package runrunc
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os/exec"
 
@@ -51,10 +50,6 @@ func (r *Stater) State(log lager.Logger, handle string) (state State, err error)
 	if err := json.NewDecoder(buf).Decode(&state); err != nil {
 		log.Error("decode-state-failed", err)
 		return State{}, fmt.Errorf("runc state: %s", err)
-	}
-
-	if state.Pid == 0 && state.Status != StoppedStatus {
-		return State{}, errors.New("Pid can only be 0 for stopped containers")
 	}
 
 	return state, nil
