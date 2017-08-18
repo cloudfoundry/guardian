@@ -113,6 +113,10 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 		args = append(args, "--password", r.RegistryPassword)
 	}
 
+	if r.SkipLayerValidation {
+		args = append(args, "--skip-layer-validation")
+	}
+
 	if spec.DiskLimit != 0 {
 		args = append(args, "--disk-limit-size-bytes",
 			strconv.FormatInt(spec.DiskLimit, 10),

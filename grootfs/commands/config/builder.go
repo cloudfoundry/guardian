@@ -27,6 +27,7 @@ type Config struct {
 
 type Create struct {
 	ExcludeImageFromQuota bool     `yaml:"exclude_image_from_quota"`
+	SkipLayerValidation   bool     `yaml:"skip_layer_validation"`
 	WithClean             bool     `yaml:"with_clean"`
 	WithoutMount          bool     `yaml:"without_mount"`
 	DiskLimitSizeBytes    int64    `yaml:"disk_limit_size_bytes"`
@@ -171,6 +172,13 @@ func (b *Builder) WithDiskLimitSizeBytes(limit int64, isSet bool) *Builder {
 func (b *Builder) WithExcludeImageFromQuota(exclude, isSet bool) *Builder {
 	if isSet {
 		b.config.Create.ExcludeImageFromQuota = exclude
+	}
+	return b
+}
+
+func (b *Builder) WithSkipLayerValidation(skip, isSet bool) *Builder {
+	if isSet {
+		b.config.Create.SkipLayerValidation = skip
 	}
 	return b
 }

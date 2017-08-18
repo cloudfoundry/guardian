@@ -27,6 +27,7 @@ var _ = Describe("Builder", func() {
 			WithClean:             false,
 			WithoutMount:          false,
 			ExcludeImageFromQuota: true,
+			SkipLayerValidation:   true,
 			InsecureRegistries:    []string{"http://example.org"},
 			DiskLimitSizeBytes:    int64(1000),
 		}
@@ -459,6 +460,24 @@ var _ = Describe("Builder", func() {
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(config.Create.ExcludeImageFromQuota).To(BeTrue())
+			})
+		})
+	})
+
+	Describe("WithSkipLayerValidation", func() {
+		It("overrides the config's SkipLayerValidation when the flag is set", func() {
+			builder = builder.WithSkipLayerValidation(false, true)
+			config, err := builder.Build()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(config.Create.SkipLayerValidation).To(BeFalse())
+		})
+
+		Context("when flag is not set", func() {
+			It("uses the config entry", func() {
+				builder = builder.WithSkipLayerValidation(false, false)
+				config, err := builder.Build()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(config.Create.SkipLayerValidation).To(BeTrue())
 			})
 		})
 	})

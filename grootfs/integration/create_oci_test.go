@@ -395,4 +395,17 @@ var _ = Describe("Create with OCI images", func() {
 			})
 		})
 	})
+
+	Context("when --skip-layer-validation flag is passed", func() {
+		It("does not validate the checksums for oci image layers", func() {
+			image, err := Runner.SkipLayerCheckSumValidation().Create(groot.CreateSpec{
+				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/corrupted:latest", workDir),
+				ID:        "random-id",
+				Mount:     true,
+			})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(filepath.Join(image.Rootfs, "corrupted")).To(BeARegularFile())
+		})
+	})
 })

@@ -26,16 +26,18 @@ import (
 const MAX_BLOB_RETRIES = 3
 
 type LayerSource struct {
-	trustedRegistries []string
-	username          string
-	password          string
+	trustedRegistries      []string
+	username               string
+	password               string
+	skipChecksumValidation bool
 }
 
-func NewLayerSource(username, password string, trustedRegistries []string) LayerSource {
+func NewLayerSource(username, password string, trustedRegistries []string, skipChecksumValidation bool) LayerSource {
 	return LayerSource{
-		username:          username,
-		password:          password,
-		trustedRegistries: trustedRegistries,
+		username:               username,
+		password:               password,
+		trustedRegistries:      trustedRegistries,
+		skipChecksumValidation: skipChecksumValidation,
 	}
 }
 
@@ -82,9 +84,11 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest st
 	defer func() { _ = blobTempFile.Close() }()
 
 	blobReader := io.TeeReader(blob, blobTempFile)
-	if !s.checkCheckSum(logger, blobReader, digest) {
+
+	if !s.checkCheckSum(logger, blobReader, digest, baseImageURL) {
 		return "", 0, errorspkg.Errorf("invalid checksum: layer is corrupted `%s`", digest)
 	}
+
 	return blobTempFile.Name(), size, nil
 }
 
@@ -102,7 +106,7 @@ func (s *LayerSource) getBlobWithRetries(imgSrc types.ImageSource, blobInfo type
 	return nil, 0, err
 }
 
-func (s *LayerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest string) bool {
+func (s *LayerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest string, baseImageURL *url.URL) bool {
 	var (
 		actualSize int64
 		err        error
@@ -122,7 +126,7 @@ func (s *LayerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest 
 		"downloadedChecksum": blobContentsSha,
 	})
 
-	return digestID == blobContentsSha
+	return s.skipLayerCheckSumValidation(baseImageURL.Scheme) || digestID == blobContentsSha
 }
 
 func (s *LayerSource) skipTLSValidation(baseImageURL *url.URL) bool {
@@ -261,4 +265,12 @@ func preferedMediaTypes() []string {
 		specsv1.MediaTypeImageManifest,
 		manifestpkg.DockerV2Schema2MediaType,
 	}
+}
+
+func (s *LayerSource) skipLayerCheckSumValidation(scheme string) bool {
+	if s.skipChecksumValidation && scheme == "oci" {
+		return true
+	}
+
+	return false
 }

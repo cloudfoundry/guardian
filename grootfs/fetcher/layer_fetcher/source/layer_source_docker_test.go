@@ -30,10 +30,13 @@ var _ = Describe("Layer source: Docker", func() {
 		configBlob            string
 		expectedLayersDigests []types.BlobInfo
 		expectedDiffIds       []digestpkg.Digest
+
+		skipChecksumValidation bool
 	)
 
 	BeforeEach(func() {
 		trustedRegistries = []string{}
+		skipChecksumValidation = false
 
 		configBlob = "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d"
 		expectedLayersDigests = []types.BlobInfo{
@@ -58,7 +61,7 @@ var _ = Describe("Layer source: Docker", func() {
 	})
 
 	JustBeforeEach(func() {
-		layerSource = source.NewLayerSource("", "", trustedRegistries)
+		layerSource = source.NewLayerSource("", "", trustedRegistries, skipChecksumValidation)
 	})
 
 	Describe("Manifest", func() {
@@ -106,7 +109,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 			Context("when the correct credentials are provided", func() {
 				JustBeforeEach(func() {
-					layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries)
+					layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries, skipChecksumValidation)
 				})
 
 				It("fetches the manifest", func() {
@@ -186,7 +189,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			JustBeforeEach(func() {
-				layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries)
+				layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries, skipChecksumValidation)
 				var err error
 				manifest, err = layerSource.Manifest(logger, baseImageURL)
 				Expect(err).NotTo(HaveOccurred())
@@ -351,7 +354,7 @@ var _ = Describe("Layer source: Docker", func() {
 				})
 
 				JustBeforeEach(func() {
-					layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries)
+					layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries, skipChecksumValidation)
 				})
 
 				It("fetches the manifest", func() {
@@ -427,7 +430,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 			Context("when the correct credentials are provided", func() {
 				JustBeforeEach(func() {
-					layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries)
+					layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries, skipChecksumValidation)
 				})
 
 				It("fetches the config", func() {
@@ -499,6 +502,17 @@ var _ = Describe("Layer source: Docker", func() {
 			It("returns an error", func() {
 				_, _, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[1].Digest.String())
 				Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
+			})
+
+			Context("when a devious hacker tries to set skipChecksumValidation to true", func() {
+				BeforeEach(func() {
+					skipChecksumValidation = true
+				})
+
+				It("returns an error", func() {
+					_, _, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[1].Digest.String())
+					Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
+				})
 			})
 		})
 	})

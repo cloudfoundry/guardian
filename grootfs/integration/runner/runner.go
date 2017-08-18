@@ -49,6 +49,8 @@ type Runner struct {
 	// Clean on Create
 	CleanOnCreate   bool
 	NoCleanOnCreate bool
+	// Layer Checksum Validation
+	SkipLayerValidation bool
 
 	SysCredential syscall.Credential
 

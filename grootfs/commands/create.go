@@ -52,6 +52,10 @@ var CreateCommand = cli.Command{
 			Usage: "Set disk limit to be exclusive (i.e.: excluding image layers)",
 		},
 		cli.BoolFlag{
+			Name:  "skip-layer-validation",
+			Usage: "Do not validate checksums of image layers. (Can only be used with oci:/// protocol images.)",
+		},
+		cli.BoolFlag{
 			Name:  "with-clean",
 			Usage: "Clean up unused layers before creating rootfs",
 		},
@@ -93,6 +97,8 @@ var CreateCommand = cli.Command{
 				ctx.IsSet("disk-limit-size-bytes")).
 			WithExcludeImageFromQuota(ctx.Bool("exclude-image-from-quota"),
 				ctx.IsSet("exclude-image-from-quota")).
+			WithSkipLayerValidation(ctx.Bool("skip-layer-validation"),
+				ctx.IsSet("skip-layer-validation")).
 			WithClean(ctx.IsSet("with-clean"), ctx.IsSet("without-clean")).
 			WithMount(ctx.IsSet("with-mount"), ctx.IsSet("without-mount"))
 
@@ -150,7 +156,7 @@ var CreateCommand = cli.Command{
 			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper, unpackerStrategy)
 		}
 
-		layerSource := source.NewLayerSource(ctx.String("username"), ctx.String("password"), cfg.Create.InsecureRegistries)
+		layerSource := source.NewLayerSource(ctx.String("username"), ctx.String("password"), cfg.Create.InsecureRegistries, cfg.Create.SkipLayerValidation)
 
 		layerFetcher := layer_fetcher.NewLayerFetcher(&layerSource)
 		tarFetcher := tar_fetcher.NewTarFetcher()

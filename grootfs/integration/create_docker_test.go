@@ -762,4 +762,41 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 		})
 	})
+
+	Context("when --skip-layer-validation flag is passed", func() {
+		var (
+			fakeRegistry  *testhelpers.FakeRegistry
+			corruptedBlob string
+		)
+
+		AfterEach(func() {
+			fakeRegistry.Stop()
+		})
+
+		BeforeEach(func() {
+			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+			Expect(err).NotTo(HaveOccurred())
+			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+			corruptedBlob = testhelpers.EmptyBaseImageV011.Layers[1].BlobID
+			fakeRegistry.WhenGettingBlob(corruptedBlob, 0, func(w http.ResponseWriter, r *http.Request) {
+				_, err := w.Write([]byte("bad-blob"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+			fakeRegistry.Start()
+			baseImageURL = fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr())
+		})
+
+		It("has no effect", func() {
+			runner := Runner.WithInsecureRegistry(fakeRegistry.Addr())
+
+			_, err := runner.SkipLayerCheckSumValidation().Create(groot.CreateSpec{
+				BaseImage: baseImageURL,
+				ID:        "random-id",
+				Mount:     true,
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
+		})
+	})
 })
