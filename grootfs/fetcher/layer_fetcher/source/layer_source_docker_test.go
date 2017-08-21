@@ -243,7 +243,7 @@ var _ = Describe("Layer source: Docker", func() {
 		})
 	})
 
-	Context("when fetching a blob fails temporarily", func() {
+	Context("when registry communication fails temporarily", func() {
 		var fakeRegistry *testhelpers.FakeRegistry
 
 		BeforeEach(func() {
@@ -261,7 +261,17 @@ var _ = Describe("Layer source: Docker", func() {
 			fakeRegistry.Stop()
 		})
 
-		It("retries twice", func() {
+		It("retries fetching the manifest twice", func() {
+			fakeRegistry.FailNextRequests(2)
+
+			_, err := layerSource.Manifest(logger, baseImageURL)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(logger.TestSink.LogMessages()).To(
+				ContainElement("test-layer-source.fetching-image-manifest.attempt-get-image-manifest"))
+		})
+
+		It("retries fetching a blob twice", func() {
 			fakeRegistry.FailNextRequests(2)
 
 			_, _, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[0].Digest.String())

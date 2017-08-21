@@ -23,7 +23,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const MAX_BLOB_RETRIES = 3
+const MAX_DOCKER_RETRIES = 3
 
 type LayerSource struct {
 	trustedRegistries      []string
@@ -94,7 +94,7 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest st
 
 func (s *LayerSource) getBlobWithRetries(imgSrc types.ImageSource, blobInfo types.BlobInfo, logger lager.Logger) (io.ReadCloser, int64, error) {
 	var err error
-	for i := 0; i < MAX_BLOB_RETRIES; i++ {
+	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
 		logger.Info("attempt-get-blob", lager.Data{"attempt": i + 1})
 		blob, size, e := imgSrc.GetBlob(blobInfo)
 		if e == nil {
@@ -164,18 +164,33 @@ func (s *LayerSource) image(logger lager.Logger, baseImageURL *url.URL) (types.I
 
 	skipTLSValidation := s.skipTLSValidation(baseImageURL)
 	logger.Debug("new-image", lager.Data{"skipTLSValidation": skipTLSValidation})
-	img, err := ref.NewImage(&types.SystemContext{
+	sysCtx := types.SystemContext{
 		DockerInsecureSkipTLSVerify: skipTLSValidation,
 		DockerAuthConfig: &types.DockerAuthConfig{
 			Username: s.username,
 			Password: s.password,
 		},
-	})
+	}
+	img, err := s.getNewImageWithRetries(logger, ref, &sysCtx)
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "creating image")
 	}
 
 	return img, nil
+}
+
+func (s *LayerSource) getNewImageWithRetries(logger lager.Logger, ref types.ImageReference, sysCtx *types.SystemContext) (types.Image, error) {
+	var err error
+	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
+		logger.Info("attempt-get-image-manifest", lager.Data{"attempt": i + 1})
+		img, e := ref.NewImage(sysCtx)
+		if e == nil {
+			return img, nil
+		}
+		err = e
+	}
+
+	return nil, err
 }
 
 func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (types.ImageSource, error) {

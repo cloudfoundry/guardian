@@ -20,6 +20,7 @@ type FakeRegistry struct {
 	blobHandlers        map[string]blobHandler
 	blobRequestsCounter map[string]int
 	blobRegexp          *regexp.Regexp
+	manifestRegexp      *regexp.Regexp
 	failNextRequests    int
 	forceTokenAuthError bool
 	revProxy            *httputil.ReverseProxy
@@ -50,6 +51,9 @@ func (r *FakeRegistry) Start() {
 
 	r.blobRegexp = regexp.MustCompile(`\/v2\/.*\/blobs\/(.*)`)
 	r.server.RouteToHandler("GET", r.blobRegexp, r.serveBlob)
+
+	r.manifestRegexp = regexp.MustCompile(`\/v2\/.*\/manifests\/(.*)`)
+	r.server.RouteToHandler("GET", r.manifestRegexp, r.serveManifest)
 
 	ourRegexp := regexp.MustCompile(`token.*`)
 	r.server.RouteToHandler("GET", ourRegexp, r.serveToken)
@@ -92,11 +96,22 @@ func (r *FakeRegistry) serveHTTP(rw http.ResponseWriter, req *http.Request) {
 	r.revProxy.ServeHTTP(rw, req)
 }
 
+func (r *FakeRegistry) serveManifest(rw http.ResponseWriter, req *http.Request) {
+	if r.failNextRequests > 0 {
+		r.failNextRequests--
+		rw.WriteHeader(http.StatusTeapot)
+		_, _ = rw.Write([]byte("null"))
+		return
+	}
+
+	r.revProxy.ServeHTTP(rw, req)
+}
+
 func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {
 	if r.failNextRequests > 0 {
 		r.failNextRequests--
-		rw.WriteHeader(http.StatusUnauthorized)
-		_, _ = rw.Write([]byte("nope"))
+		rw.WriteHeader(http.StatusTeapot)
+		_, _ = rw.Write([]byte("null"))
 		return
 	}
 
