@@ -21,6 +21,7 @@ type FakeRegistry struct {
 	blobRequestsCounter map[string]int
 	blobRegexp          *regexp.Regexp
 	failNextRequests    int
+	forceTokenAuthError bool
 	revProxy            *httputil.ReverseProxy
 	server              *ghttp.Server
 	mutex               *sync.RWMutex
@@ -50,12 +51,45 @@ func (r *FakeRegistry) Start() {
 	r.blobRegexp = regexp.MustCompile(`\/v2\/.*\/blobs\/(.*)`)
 	r.server.RouteToHandler("GET", r.blobRegexp, r.serveBlob)
 
-	ourRegexp := regexp.MustCompile(`.*`)
-	r.server.RouteToHandler("GET", ourRegexp, r.revProxy.ServeHTTP)
+	ourRegexp := regexp.MustCompile(`token.*`)
+	r.server.RouteToHandler("GET", ourRegexp, r.serveToken)
+
+	ourRegexp = regexp.MustCompile(`.*`)
+	r.server.RouteToHandler("GET", ourRegexp, r.serveHTTP)
 }
 
 func (r *FakeRegistry) FailNextRequests(n int) {
 	r.failNextRequests = n
+}
+
+func (r *FakeRegistry) ForceTokenAuthError() {
+	r.mutex.Lock()
+	r.forceTokenAuthError = true
+	r.mutex.Unlock()
+}
+
+func (r *FakeRegistry) serveToken(rw http.ResponseWriter, req *http.Request) {
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	if r.forceTokenAuthError {
+		rw.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	r.revProxy.ServeHTTP(rw, req)
+}
+
+func (r *FakeRegistry) serveHTTP(rw http.ResponseWriter, req *http.Request) {
+	match, _ := regexp.MatchString(`^\/v2\/$`, req.RequestURI)
+	r.mutex.Lock()
+	defer r.mutex.Unlock()
+	if r.forceTokenAuthError && match {
+		rw.Header().Add("Www-Authenticate", `Bearer realm="https://`+r.Addr()+`/token",service="registry.docker.io"`)
+		rw.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	r.revProxy.ServeHTTP(rw, req)
 }
 
 func (r *FakeRegistry) serveBlob(rw http.ResponseWriter, req *http.Request) {

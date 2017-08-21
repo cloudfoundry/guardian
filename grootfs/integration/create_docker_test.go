@@ -410,8 +410,24 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 
 			Context("when the credentials are wrong", func() {
+				// We need a fake registry here because Dockerhub was rate limiting on multiple bad credential auth attempts
+				var fakeRegistry *testhelpers.FakeRegistry
+
+				BeforeEach(func() {
+					dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+					Expect(err).NotTo(HaveOccurred())
+					fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+					fakeRegistry.Start()
+					fakeRegistry.ForceTokenAuthError()
+					baseImageURL = fmt.Sprintf("docker://%s/doesnt-matter-because-fake-registry", fakeRegistry.Addr())
+				})
+
+				AfterEach(func() {
+					fakeRegistry.Stop()
+				})
+
 				It("fails", func() {
-					runner := Runner.WithCredentials("someuser", "invalid-password")
+					runner := Runner.WithCredentials("someuser", "invalid-password").WithInsecureRegistry(fakeRegistry.Addr())
 					_, err := runner.Create(groot.CreateSpec{
 						BaseImage: baseImageURL,
 						ID:        "random-id",
