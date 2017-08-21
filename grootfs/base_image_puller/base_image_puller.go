@@ -91,7 +91,6 @@ func (p *BaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (g
 	logger = logger.Session("image-pulling", lager.Data{"spec": spec})
 	logger.Info("starting")
 	defer logger.Info("ending")
-	var err error
 
 	baseImageInfo, err := p.fetcher(spec.BaseImageSrc).BaseImageInfo(logger, spec.BaseImageSrc)
 	if err != nil {
@@ -99,7 +98,7 @@ func (p *BaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (g
 	}
 	logger.Debug("fetched-layers-digests", lager.Data{"digests": baseImageInfo.LayersDigest})
 
-	if err := p.quotaExceeded(logger, baseImageInfo.LayersDigest, spec); err != nil {
+	if err = p.quotaExceeded(logger, baseImageInfo.LayersDigest, spec); err != nil {
 		return groot.BaseImage{}, err
 	}
 
@@ -124,9 +123,9 @@ func (p *BaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (g
 func (p *BaseImagePuller) fetcher(baseImageURL *url.URL) Fetcher {
 	if baseImageURL.Scheme == "" {
 		return p.tarFetcher
-	} else {
-		return p.layerFetcher
 	}
+
+	return p.layerFetcher
 }
 
 func (p *BaseImagePuller) quotaExceeded(logger lager.Logger, layersDigest []LayerDigest, spec groot.BaseImageSpec) error {
