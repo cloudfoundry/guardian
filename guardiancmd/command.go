@@ -592,33 +592,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	depotPath, dadooPath, runtimePath, nstarPath, tarPath, appArmorProfile, newuidmapPath, newgidmapPath string,
 	properties gardener.PropertyManager) *rundmc.Containerizer {
 
-	rwm := "rwm"
-	character := "c"
-	var majorMinor = func(i int64) *int64 {
-		return &i
-	}
-
-	var worldReadWrite os.FileMode = 0666
-	fuseDevice := specs.LinuxDevice{
-		Path:     "/dev/fuse",
-		Type:     "c",
-		Major:    10,
-		Minor:    229,
-		FileMode: &worldReadWrite,
-	}
-
-	denyAll := specs.LinuxDeviceCgroup{Allow: false, Access: rwm}
-	allowedDevices := []specs.LinuxDeviceCgroup{
-		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(3), Allow: true},
-		{Access: rwm, Type: character, Major: majorMinor(5), Minor: majorMinor(0), Allow: true},
-		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(8), Allow: true},
-		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(9), Allow: true},
-		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(5), Allow: true},
-		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(7), Allow: true},
-		{Access: rwm, Type: character, Major: majorMinor(1), Minor: majorMinor(7), Allow: true},
-		{Access: rwm, Type: character, Major: majorMinor(fuseDevice.Major), Minor: majorMinor(fuseDevice.Minor), Allow: true},
-	}
-
 	// TODO centralize knowledge of garden -> runc capability schema translation
 	baseProcess := specs.Process{
 		Capabilities: &specs.LinuxCapabilities{
@@ -638,17 +611,18 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
-		WithResources(&specs.LinuxResources{Devices: append([]specs.LinuxDeviceCgroup{denyAll}, allowedDevices...)}).
 		WithRootFS(cmd.Containers.DefaultRootFS).
-		WithDevices(fuseDevice).
+		WithDevices(cgroups.FuseDevice).
 		WithProcess(baseProcess).
 		WithRootFSPropagation("private")
+
 	unprivilegedBundle := baseBundle.
 		WithNamespace(goci.UserNamespace).
 		WithUIDMappings(uidMappings...).
 		WithGIDMappings(gidMappings...).
 		WithMounts(unprivilegedMounts...).
 		WithMaskedPaths(defaultMaskedPaths())
+
 	unprivilegedBundle.Spec.Linux.Seccomp = seccomp
 	if appArmorProfile != "" {
 		unprivilegedBundle = unprivilegedBundle.WithApparmorProfile(appArmorProfile)
@@ -656,9 +630,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).
 		WithCapabilities(PrivilegedMaxCaps...)
-	if !runningAsRoot() {
-		unprivilegedBundle = unprivilegedBundle.WithResources(&specs.LinuxResources{})
-	}
 
 	log.Debug("base-bundles", lager.Data{
 		"privileged":   privilegedBundle,

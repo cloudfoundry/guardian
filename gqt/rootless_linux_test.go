@@ -170,15 +170,18 @@ var _ = Describe("rootless containers", func() {
 		})
 
 		Context("when we setup limits", func() {
-			var cgroupPath, cgroupType string
-			var container garden.Container
-			JustBeforeEach(func() {
-				currentCgroup, err := exec.Command("sh", "-c", "cat /proc/self/cgroup | head -1 | awk -F ':' '{print $3}'").CombinedOutput()
-				Expect(err).NotTo(HaveOccurred())
-				cgroupName := strings.TrimSpace(string(currentCgroup))
+			var (
+				cgroupPath string
+				cgroupType string
+				container  garden.Container
+			)
 
-				cgroupPath = fmt.Sprintf("%s/cgroups-%s/%s%s/garden-%s/%s",
-					client.TmpDir, config.Tag, cgroupType, cgroupName, config.Tag, container.Handle())
+			JustBeforeEach(func() {
+				cgroupsRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
+				cgroupPath = filepath.Join(
+					getCurrentCGroupPath(cgroupsRoot, cgroupType, config.Tag),
+					container.Handle(),
+				)
 			})
 
 			BeforeEach(func() {
@@ -206,8 +209,7 @@ var _ = Describe("rootless containers", func() {
 
 				It("creates container with the specified memory limit", func() {
 					Expect(cgroupPath).To(BeADirectory())
-					memLimitBytes, err := ioutil.ReadFile(filepath.Join(cgroupPath, "memory.limit_in_bytes"))
-					Expect(err).NotTo(HaveOccurred())
+					memLimitBytes := readFile(filepath.Join(cgroupPath, "memory.limit_in_bytes"))
 					memLimit := strings.TrimSpace(string(memLimitBytes))
 					Expect(memLimit).To(Equal("67108864"))
 				})

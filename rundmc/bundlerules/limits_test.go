@@ -3,7 +3,6 @@ package bundlerules_test
 import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -132,23 +131,5 @@ var _ = Describe("LimitsRule", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(newBndl.Resources().Pids.Limit).To(BeNumerically("==", 1))
-	})
-
-	It("does not clobber other fields of the resources sections", func() {
-		bndl := goci.Bundle().WithResources(
-			&specs.LinuxResources{
-				Devices: []specs.LinuxDeviceCgroup{{Access: "foo"}},
-			},
-		)
-
-		newBndl, err := bundlerules.Limits{}.Apply(bndl, gardener.DesiredContainerSpec{
-			Limits: garden.Limits{
-				Memory: garden.MemoryLimits{LimitInBytes: 4096},
-			},
-		}, "not-needed-path")
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(*(newBndl.Resources().Memory.Limit)).To(BeNumerically("==", 4096))
-		Expect(newBndl.Resources().Devices).To(Equal(bndl.Resources().Devices))
 	})
 })

@@ -208,23 +208,6 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
-	Describe("WithResources", func() {
-		var t = true
-
-		BeforeEach(func() {
-			returnedBundle = initialBundle.WithResources(&specs.LinuxResources{Memory: &specs.LinuxMemory{DisableOOMKiller: &t}})
-		})
-
-		It("returns a bundle with the resources added to the runtime spec", func() {
-			Expect(returnedBundle.Resources()).To(Equal(&specs.LinuxResources{Memory: &specs.LinuxMemory{DisableOOMKiller: &t}}))
-		})
-
-		It("does not modify the original bundle", func() {
-			Expect(returnedBundle).NotTo(Equal(initialBundle))
-			Expect(initialBundle.Resources()).To(BeNil())
-		})
-	})
-
 	Describe("WithWindowsMemoryLimit", func() {
 		var limit uint64
 		var mem specs.WindowsMemoryResources

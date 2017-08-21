@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/garden"
@@ -173,4 +174,14 @@ func readFile(path string) string {
 	content, err := ioutil.ReadFile(path)
 	Expect(err).NotTo(HaveOccurred())
 	return string(content)
+}
+
+func getCurrentCGroup() string {
+	currentCgroup, err := exec.Command("sh", "-c", "cat /proc/self/cgroup | head -1 | awk -F ':' '{print $3}'").CombinedOutput()
+	Expect(err).NotTo(HaveOccurred())
+	return strings.TrimSpace(string(currentCgroup))
+}
+
+func getCurrentCGroupPath(cgroupsRoot, subsystem, tag string) string {
+	return filepath.Join(cgroupsRoot, subsystem, getCurrentCGroup(), fmt.Sprintf("garden-%s", tag))
 }

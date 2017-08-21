@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -32,12 +31,13 @@ var _ = Describe("Limits", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		currentCgroup, err := exec.Command("sh", "-c", "cat /proc/self/cgroup | head -1 | awk -F ':' '{print $3}'").CombinedOutput()
-		Expect(err).NotTo(HaveOccurred())
-		cgroupName = strings.TrimSpace(string(currentCgroup))
+		cgroupName = getCurrentCGroup()
 
-		cgroupPath = fmt.Sprintf("%s/cgroups-%s/%s/%s/garden-%s/%s", client.TmpDir, config.Tag, cgroupType,
-			cgroupName, config.Tag, container.Handle())
+		cgroupsRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
+		cgroupPath = filepath.Join(
+			getCurrentCGroupPath(cgroupsRoot, cgroupType, config.Tag),
+			container.Handle(),
+		)
 	})
 
 	AfterEach(func() {

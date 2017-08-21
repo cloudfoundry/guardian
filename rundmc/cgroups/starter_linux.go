@@ -4,14 +4,51 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
+
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/lager"
+)
+
+func deviceWildcard() *int64 {
+	var i int64 = -1
+	return &i
+}
+
+var (
+	worldReadWrite = os.FileMode(0666)
+	FuseDevice     = specs.LinuxDevice{
+		Path:     "/dev/fuse",
+		Type:     "c",
+		Major:    10,
+		Minor:    229,
+		FileMode: &worldReadWrite,
+	}
+
+	allowedDevices = []*specs.LinuxDeviceCgroup{{Access: "rwm", Type: "c", Major: intRef(FuseDevice.Major), Minor: intRef(FuseDevice.Minor), Allow: true}}
+
+	ociDefaultAllowedDevices = []*specs.LinuxDeviceCgroup{
+		{Access: "m", Type: "c", Major: deviceWildcard(), Minor: deviceWildcard(), Allow: true},
+		{Access: "m", Type: "b", Major: deviceWildcard(), Minor: deviceWildcard(), Allow: true},
+		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(3), Allow: true},          // /dev/null
+		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(8), Allow: true},          // /dev/random
+		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(7), Allow: true},          // /dev/full
+		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(0), Allow: true},          // /dev/tty
+		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(5), Allow: true},          // /dev/zero
+		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(9), Allow: true},          // /dev/urandom
+		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(1), Allow: true},          // /dev/console
+		{Access: "rwm", Type: "c", Major: intRef(136), Minor: deviceWildcard(), Allow: true}, // /dev/pts/*
+		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(2), Allow: true},          // /dev/ptmx
+		{Access: "rwm", Type: "c", Major: intRef(10), Minor: intRef(200), Allow: true},       // /dev/net/tun
+	}
 )
 
 type Starter struct {
@@ -22,6 +59,10 @@ const cgroupsHeader = "#subsys_name hierarchy num_cgroups enabled"
 
 type CgroupsFormatError struct {
 	Content string
+}
+
+func intRef(i int64) *int64 {
+	return &i
 }
 
 func (err CgroupsFormatError) Error() string {
@@ -38,6 +79,7 @@ func NewStarter(logger lager.Logger, procCgroupReader io.ReadCloser, procSelfCgr
 			CommandRunner:   runner,
 			Logger:          logger,
 			Chowner:         chowner,
+			//TODO: add teh device list here
 		},
 	}
 }
@@ -105,17 +147,55 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		}
 
 		subsystemMountPath := path.Join(s.CgroupPath, subsystem)
+		// TODO rename
 		if err := s.idempotentCgroupMount(logger, subsystemMountPath, subsystemToMount); err != nil {
 			return err
 		}
 
-		gardenCgroupPath := path.Join(s.CgroupPath, subsystem, dirToCreate)
+		gardenCgroupPath := filepath.Join(s.CgroupPath, subsystem, dirToCreate)
 		if err := s.createGardenCgroup(logger, gardenCgroupPath); err != nil {
+			return err
+		}
+
+		if subsystem == "devices" {
+			if err := s.modifyAllowedDevices(gardenCgroupPath, append(allowedDevices, ociDefaultAllowedDevices...)); err != nil {
+				return err
+			}
+		}
+
+		if err := s.Chowner.RecursiveChown(gardenCgroupPath); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func (s *CgroupStarter) modifyAllowedDevices(dir string, devices []*specs.LinuxDeviceCgroup) error {
+	for _, device := range devices {
+		data := fmt.Sprintf("%s %s:%s %s", device.Type, s.deviceNumberString(device.Major), s.deviceNumberString(device.Minor), device.Access)
+		err := s.setDeviceCgroup(dir, "devices.allow", data)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (d *CgroupStarter) setDeviceCgroup(dir, file, data string) error {
+	if err := ioutil.WriteFile(filepath.Join(dir, file), []byte(data), 0); err != nil {
+		return fmt.Errorf("failed to write %s to %s: %v", data, file, err)
+	}
+
+	return nil
+}
+
+func (s *CgroupStarter) deviceNumberString(number *int64) string {
+	if *number == -1 {
+		return "*"
+	}
+	return fmt.Sprint(*number)
 }
 
 func (s *CgroupStarter) createGardenCgroup(log lager.Logger, gardenCgroupPath string) error {
@@ -124,10 +204,6 @@ func (s *CgroupStarter) createGardenCgroup(log lager.Logger, gardenCgroupPath st
 	defer log.Info("finished")
 
 	if err := os.MkdirAll(gardenCgroupPath, 0700); err != nil {
-		return err
-	}
-
-	if err := s.Chowner.RecursiveChown(gardenCgroupPath); err != nil {
 		return err
 	}
 

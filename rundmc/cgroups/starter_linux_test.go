@@ -1,12 +1,12 @@
 package cgroups_test
 
 import (
-	"bytes"
 	"errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
+	"strings"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
@@ -20,12 +20,12 @@ import (
 
 var _ = Describe("CgroupStarter", func() {
 	var (
-		runner          *fake_command_runner.FakeCommandRunner
-		starter         *cgroups.CgroupStarter
-		procCgroups     *FakeReadCloser
-		procSelfCgroups *FakeReadCloser
-		logger          lager.Logger
-		chowner         *fakes.FakeChowner
+		runner                  *fake_command_runner.FakeCommandRunner
+		starter                 *cgroups.CgroupStarter
+		logger                  lager.Logger
+		chowner                 *fakes.FakeChowner
+		procCgroupsContents     string
+		procSelfCgroupsContents string
 
 		tmpDir string
 	)
@@ -35,29 +35,52 @@ var _ = Describe("CgroupStarter", func() {
 		tmpDir, err = ioutil.TempDir("", "gdncgroup")
 		Expect(err).NotTo(HaveOccurred())
 
+		procSelfCgroupsContents = ""
+		procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
+			"devices\t1\t1\t1\n"
+
 		logger = lagertest.NewTestLogger("test")
 		runner = fake_command_runner.New()
-		procCgroups = &FakeReadCloser{Buffer: bytes.NewBufferString("")}
-		procSelfCgroups = &FakeReadCloser{Buffer: bytes.NewBufferString("")}
-		chowner = &fakes.FakeChowner{}
+		chowner = new(fakes.FakeChowner)
+	})
+
+	JustBeforeEach(func() {
 		starter = &cgroups.CgroupStarter{
 			CgroupPath:      path.Join(tmpDir, "cgroup"),
 			GardenCgroup:    "garden",
 			CommandRunner:   runner,
-			ProcCgroups:     procCgroups,
-			ProcSelfCgroups: procSelfCgroups,
+			ProcCgroups:     ioutil.NopCloser(strings.NewReader(procCgroupsContents)),
+			ProcSelfCgroups: ioutil.NopCloser(strings.NewReader(procSelfCgroupsContents)),
 			Logger:          logger,
 			Chowner:         chowner,
 		}
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(tmpDir)
+		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
 	It("mkdirs the cgroup path", func() {
 		starter.Start()
 		Expect(path.Join(tmpDir, "cgroup")).To(BeADirectory())
+	})
+
+	It("adds the right content into devices.allow", func() {
+		Expect(starter.Start()).To(Succeed())
+
+		Expect(path.Join(tmpDir, "cgroup", "devices", "garden")).To(BeADirectory())
+
+		content := readFile(path.Join(tmpDir, "cgroup", "devices", "garden", "devices.allow"))
+		Expect(string(content)).To(Equal("c 10:229 rwm"))
+	})
+
+	It("adds the right content into devices.deny", func() {
+		Expect(starter.Start()).To(Succeed())
+
+		Expect(path.Join(tmpDir, "cgroup", "devices", "garden")).To(BeADirectory())
+
+		content := readFile(path.Join(tmpDir, "cgroup", "devices", "garden", "devices.deny"))
+		Expect(string(content)).To(Equal("a"))
 	})
 
 	Context("when the cgroup path is not a mountpoint", func() {
@@ -91,21 +114,15 @@ var _ = Describe("CgroupStarter", func() {
 
 	Context("with a sane /proc/cgroups and /proc/self/cgroup", func() {
 		BeforeEach(func() {
-			_, err := procCgroups.Write([]byte(
-				"#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
-					"devices\t1\t1\t1\n" +
-					"memory\t2\t1\t1\n" +
-					"cpu\t3\t1\t1\n" +
-					"cpuacct\t4\t1\t1\n",
-			))
-			Expect(err).NotTo(HaveOccurred())
+			procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
+				"devices\t1\t1\t1\n" +
+				"memory\t2\t1\t1\n" +
+				"cpu\t3\t1\t1\n" +
+				"cpuacct\t4\t1\t1\n"
 
-			_, err = procSelfCgroups.Write([]byte(
-				"5:devices:/\n" +
-					"4:memory:/\n" +
-					"3:cpu,cpuacct:/\n",
-			))
-			Expect(err).NotTo(HaveOccurred())
+			procSelfCgroupsContents = "5:devices:/\n" +
+				"4:memory:/\n" +
+				"3:cpu,cpuacct:/\n"
 
 			for _, notMounted := range []string{"devices", "cpu", "cpuacct"} {
 				runner.WhenRunning(fake_command_runner.CommandSpec{
@@ -169,16 +186,11 @@ var _ = Describe("CgroupStarter", func() {
 
 		Context("when we are in the nested case", func() {
 			BeforeEach(func() {
-				_, err := procCgroups.Write([]byte(
-					"#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
-						"memory\t2\t1\t1\n",
-				))
-				Expect(err).NotTo(HaveOccurred())
+				// TODO same?
+				procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
+					"memory\t2\t1\t1\n"
 
-				_, err = procSelfCgroups.Write([]byte(
-					"4:memory:/461299e6-b672-497c-64e5-793494b9bbdb\n",
-				))
-				Expect(err).NotTo(HaveOccurred())
+				procSelfCgroupsContents = "4:memory:/461299e6-b672-497c-64e5-793494b9bbdb\n"
 
 				for _, notMounted := range []string{"memory"} {
 					runner.WhenRunning(fake_command_runner.CommandSpec{
@@ -210,8 +222,8 @@ var _ = Describe("CgroupStarter", func() {
 
 		Context("when a subsystem is not yet mounted anywhere", func() {
 			BeforeEach(func() {
-				_, err := procCgroups.Write([]byte("freezer\t7\t1\t1\n"))
-				Expect(err).NotTo(HaveOccurred())
+				procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
+					"freezer\t7\t1\t1\n"
 
 				runner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "mountpoint",
@@ -222,8 +234,7 @@ var _ = Describe("CgroupStarter", func() {
 			})
 
 			It("mounts it as its own subsystem", func() {
-				starter.Start()
-
+				Expect(starter.Start()).To(Succeed())
 				Expect(runner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
 					Path: "mount",
 					Args: []string{"-n", "-t", "cgroup", "-o", "freezer", "cgroup", path.Join(tmpDir, "cgroup", "freezer")},
@@ -233,8 +244,8 @@ var _ = Describe("CgroupStarter", func() {
 
 		Context("when a subsystem is disabled", func() {
 			BeforeEach(func() {
-				_, err := procCgroups.Write([]byte("freezer\t7\t1\t0\n"))
-				Expect(err).NotTo(HaveOccurred())
+				procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
+					"freezer\t7\t1\t0\n"
 
 				runner.WhenRunning(fake_command_runner.CommandSpec{
 					Path: "mountpoint",
@@ -245,7 +256,7 @@ var _ = Describe("CgroupStarter", func() {
 			})
 
 			It("skips it", func() {
-				starter.Start()
+				Expect(starter.Start()).To(Succeed())
 
 				Expect(runner).ToNot(HaveExecutedSerially(fake_command_runner.CommandSpec{
 					Path: "mount",
@@ -257,21 +268,15 @@ var _ = Describe("CgroupStarter", func() {
 
 	Context("when /proc/cgroups contains malformed entries", func() {
 		BeforeEach(func() {
-			_, err := procCgroups.Write([]byte(
-				"#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
-					"devices\tA ONE AND A\t1\t1\n" +
-					"memory\tTWO AND A\t1\t1\n" +
-					"cpu\tTHREE AND A\t1\t1\n" +
-					"cpuacct\tFOUR\t1\t1\n",
-			))
-			Expect(err).NotTo(HaveOccurred())
+			procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
+				"devices\tA ONE AND A\t1\t1\n" +
+				"memory\tTWO AND A\t1\t1\n" +
+				"cpu\tTHREE AND A\t1\t1\n" +
+				"cpuacct\tFOUR\t1\t1\n"
 
-			_, err = procSelfCgroups.Write([]byte(
-				"5:devices:/\n" +
-					"4:memory:/\n" +
-					"3:cpu,cpuacct:/\n",
-			))
-			Expect(err).NotTo(HaveOccurred())
+			procSelfCgroupsContents = "5:devices:/\n" +
+				"4:memory:/\n" +
+				"3:cpu,cpuacct:/\n"
 
 			for _, notMounted := range []string{"devices", "cpu", "cpuacct"} {
 				runner.WhenRunning(fake_command_runner.CommandSpec{
@@ -291,15 +296,11 @@ var _ = Describe("CgroupStarter", func() {
 
 	Context("when /proc/cgroups is empty", func() {
 		BeforeEach(func() {
-			_, err := procCgroups.Write([]byte(""))
-			Expect(err).NotTo(HaveOccurred())
+			procCgroupsContents = ""
 
-			_, err = procSelfCgroups.Write([]byte(
-				"5:devices:/\n" +
-					"4:memory:/\n" +
-					"3:cpu,cpuacct:/\n",
-			))
-			Expect(err).NotTo(HaveOccurred())
+			procSelfCgroupsContents = "5:devices:/\n" +
+				"4:memory:/\n" +
+				"3:cpu,cpuacct:/\n"
 		})
 
 		It("returns CgroupsFormatError", func() {
@@ -310,21 +311,15 @@ var _ = Describe("CgroupStarter", func() {
 
 	Context("when /proc/cgroups contains an unknown header scheme", func() {
 		BeforeEach(func() {
-			_, err := procCgroups.Write([]byte(
-				"#subsys_name\tsome\tbogus\tcolumns\n" +
-					"devices\t1\t1\t1" +
-					"memory\t2\t1\t1" +
-					"cpu\t3\t1\t1" +
-					"cpuacct\t4\t1\t1",
-			))
-			Expect(err).NotTo(HaveOccurred())
+			procCgroupsContents = "#subsys_name\tsome\tbogus\tcolumns\n" +
+				"devices\t1\t1\t1" +
+				"memory\t2\t1\t1" +
+				"cpu\t3\t1\t1" +
+				"cpuacct\t4\t1\t1"
 
-			_, err = procSelfCgroups.Write([]byte(
-				"5:devices:/\n" +
-					"4:memory:/\n" +
-					"3:cpu,cpuacct:/\n",
-			))
-			Expect(err).NotTo(HaveOccurred())
+			procSelfCgroupsContents = "5:devices:/\n" +
+				"4:memory:/\n" +
+				"3:cpu,cpuacct:/\n"
 		})
 
 		It("returns CgroupsFormatError", func() {
@@ -332,24 +327,10 @@ var _ = Describe("CgroupStarter", func() {
 			Expect(err).To(Equal(cgroups.CgroupsFormatError{Content: "#subsys_name\tsome\tbogus\tcolumns"}))
 		})
 	})
-
-	It("closes the procCgroups reader", func() {
-		starter.Start()
-		Expect(procCgroups.closed).To(BeTrue())
-	})
-
-	It("closes the procSelfCgroups reader", func() {
-		starter.Start()
-		Expect(procSelfCgroups.closed).To(BeTrue())
-	})
 })
 
-type FakeReadCloser struct {
-	closed bool
-	*bytes.Buffer
-}
-
-func (f *FakeReadCloser) Close() error {
-	f.closed = true
-	return nil
+func readFile(path string) []byte {
+	content, err := ioutil.ReadFile(path)
+	Expect(err).NotTo(HaveOccurred())
+	return content
 }

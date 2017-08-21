@@ -53,10 +53,13 @@ var _ = Describe("gdn setup", func() {
 		Eventually(setupProcess, 10*time.Second).Should(gexec.Exit(0))
 	})
 
-	Describe("mounting cgroups", func() {
+	Describe("cgroups", func() {
 		var cgroupsRoot string
 
 		BeforeEach(func() {
+			// TODO why nodeToString anymore?
+			// TODO ensure each test is meaningfully clean (garden-NODE dir?)
+
 			// We want to test that "gdn setup" can mount the cgroup hierarchy.
 			// "gdn server" without --skip-setup does this too, and most gqts implicitly
 			// rely on it.
@@ -81,6 +84,31 @@ var _ = Describe("gdn setup", func() {
 			Expect(mountpointCmd.Run()).To(Succeed())
 		})
 
+		// TODO does parallism make this test trivial?
+		It("allows both OCI default and garden specific devices", func() {
+			cgroupPath := getCurrentCGroupPath(cgroupsRoot, "devices", tag)
+
+			content := readFile(filepath.Join(cgroupPath, "devices.list"))
+			expectedAllowedDevices := []string{
+				"c 1:3 rwm",
+				"c 5:0 rwm",
+				"c 1:8 rwm",
+				"c 1:9 rwm",
+				"c 1:5 rwm",
+				"c 1:7 rwm",
+				"c 10:229 rwm",
+				"c *:* m",
+				"b *:* m",
+				"c 5:1 rwm",
+				"c 136:* rwm",
+				"c 5:2 rwm",
+				"c 10:200 rwm",
+			}
+			contentLines := strings.Split(strings.TrimSpace(content), "\n")
+			Expect(contentLines).To(HaveLen(len(expectedAllowedDevices)))
+			Expect(contentLines).To(ConsistOf(expectedAllowedDevices))
+		})
+
 		Context("when setting up for rootless", func() {
 			var idToStr = func(id uint32) string {
 				return strconv.FormatUint(uint64(id), 10)
@@ -91,15 +119,11 @@ var _ = Describe("gdn setup", func() {
 			})
 
 			It("chowns the garden cgroup dir to the rootless user for each subsystem", func() {
-				currentCgroup, err := exec.Command("sh", "-c", "cat /proc/self/cgroup | head -1 | awk -F ':' '{print $3}'").CombinedOutput()
-				Expect(err).NotTo(HaveOccurred())
-				cgroupName := strings.TrimSpace(string(currentCgroup))
-
 				subsystems, err := ioutil.ReadDir(cgroupsRoot)
 				Expect(err).NotTo(HaveOccurred())
 
 				for _, subsystem := range subsystems {
-					path := filepath.Join(cgroupsRoot, subsystem.Name(), cgroupName, fmt.Sprintf("garden-%s", tag))
+					path := getCurrentCGroupPath(cgroupsRoot, subsystem.Name(), tag)
 					Expect(path).To(BeADirectory())
 
 					var stat syscall.Stat_t

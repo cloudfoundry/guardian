@@ -90,12 +90,6 @@ func (b Bndl) WithWindows(windows specs.Windows) Bndl {
 	return b
 }
 
-// WithResources returns a bundle with the resources replaced with the given Resources. The original bundle is not modified.
-func (b Bndl) WithResources(resources *specs.LinuxResources) Bndl {
-	b.CloneLinux().Spec.Linux.Resources = resources
-	return b
-}
-
 func (b Bndl) Resources() *specs.LinuxResources {
 	return b.Spec.Linux.Resources
 }
