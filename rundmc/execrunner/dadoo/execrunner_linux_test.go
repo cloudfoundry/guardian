@@ -893,7 +893,6 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				JustBeforeEach(func() {
 					outBuf = gbytes.NewBuffer()
 					errBuf = gbytes.NewBuffer()
-
 					_, err := runner.Attach(log, "some-process-id", garden.ProcessIO{
 						Stdout: outBuf,
 						Stderr: errBuf,
@@ -969,6 +968,17 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 					Eventually(stdinContents).Should(gbytes.Say("hello stdin"))
 				})
+			})
+		})
+
+		Context("when no process with the specified ID exists", func() {
+			BeforeEach(func() {
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", "runc-root", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, true)
+			})
+
+			It("returns ProcessNotFoundError", func() {
+				_, err := runner.Attach(log, "non-extant-process", garden.ProcessIO{}, processPath)
+				Expect(err).To(MatchError(garden.ProcessNotFoundError{ProcessID: "non-extant-process"}))
 			})
 		})
 	})

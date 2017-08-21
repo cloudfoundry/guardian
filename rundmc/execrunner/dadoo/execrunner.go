@@ -188,6 +188,13 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
 	processPath := filepath.Join(processesPath, processID)
+	if _, err := os.Stat(processPath); err != nil {
+		if os.IsNotExist(err) {
+			return nil, garden.ProcessNotFoundError{ProcessID: processID}
+		}
+		return nil, err
+	}
+
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
 	if err := process.attach(io); err != nil {
 		return nil, err
