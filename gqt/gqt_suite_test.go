@@ -183,5 +183,11 @@ func getCurrentCGroup() string {
 }
 
 func getCurrentCGroupPath(cgroupsRoot, subsystem, tag string) string {
-	return filepath.Join(cgroupsRoot, subsystem, getCurrentCGroup(), fmt.Sprintf("garden-%s", tag))
+	parentCgroup := "garden"
+
+	if tag != "" {
+		parentCgroup = fmt.Sprintf("garden-%s", tag)
+	}
+
+	return filepath.Join(cgroupsRoot, subsystem, getCurrentCGroup(), parentCgroup)
 }

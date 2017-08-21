@@ -158,6 +158,37 @@ var _ = Describe("rootless containers", func() {
 			Expect(stdout).To(gbytes.Say("devpts /dev/pts devpts rw,nosuid,noexec,relatime,gid=%d,mode=620,ptmxmode=666", unprivilegedGID))
 		})
 
+		It("has the expected device list allowed", func() {
+			container, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			cgroupRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%d", GinkgoParallelNode()))
+			cgroupPath := filepath.Join(
+				getCurrentCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode())),
+				container.Handle(),
+			)
+
+			content := readFile(filepath.Join(cgroupPath, "devices.list"))
+			expectedAllowedDevices := []string{
+				"c 1:3 rwm",
+				"c 5:0 rwm",
+				"c 1:8 rwm",
+				"c 1:9 rwm",
+				"c 1:5 rwm",
+				"c 1:7 rwm",
+				"c 10:229 rwm",
+				"c *:* m",
+				"b *:* m",
+				"c 5:1 rwm",
+				"c 136:* rwm",
+				"c 5:2 rwm",
+				"c 10:200 rwm",
+			}
+			contentLines := strings.Split(strings.TrimSpace(content), "\n")
+			Expect(contentLines).To(HaveLen(len(expectedAllowedDevices)))
+			Expect(contentLines).To(ConsistOf(expectedAllowedDevices))
+		})
+
 		Context("when the rootfs contains a read-only resolv.conf", func() {
 			BeforeEach(func() {
 				Expect(os.Chmod(filepath.Join(imagePath, "rootfs", "etc", "resolv.conf"), 0444)).To(Succeed())

@@ -95,3 +95,7 @@ func unprivilegedMounts() []specs.Mount {
 func osSpecificBundleRules() []rundmc.BundlerRule {
 	return []rundmc.BundlerRule{}
 }
+
+func defaultLinuxDevices() []specs.LinuxDevice {
+	return []specs.LinuxDevice{}
+}

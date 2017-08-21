@@ -84,7 +84,6 @@ var _ = Describe("gdn setup", func() {
 			Expect(mountpointCmd.Run()).To(Succeed())
 		})
 
-		// TODO does parallism make this test trivial?
 		It("allows both OCI default and garden specific devices", func() {
 			cgroupPath := getCurrentCGroupPath(cgroupsRoot, "devices", tag)
 

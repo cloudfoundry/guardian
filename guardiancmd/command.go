@@ -612,7 +612,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
 		WithRootFS(cmd.Containers.DefaultRootFS).
-		WithDevices(cgroups.FuseDevice).
+		WithDevices(defaultLinuxDevices()...).
 		WithProcess(baseProcess).
 		WithRootFSPropagation("private")
 
