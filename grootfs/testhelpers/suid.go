@@ -10,14 +10,14 @@ import (
 
 func SuidBinary(binPath string) {
 	sess, err := gexec.Start(
-		exec.Command("strace", "-tt", "sudo", "chown", "root:root", binPath),
+		exec.Command("strace", "-ttf", "sudo", "chown", "root:root", binPath),
 		GinkgoWriter, GinkgoWriter,
 	)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess, "5s").Should(gexec.Exit(0))
 
 	sess, err = gexec.Start(
-		exec.Command("strace", "-tt", "sudo", "chmod", "u+s", binPath),
+		exec.Command("strace", "-ttf", "sudo", "chmod", "u+s", binPath),
 		GinkgoWriter, GinkgoWriter,
 	)
 	Expect(err).NotTo(HaveOccurred())
