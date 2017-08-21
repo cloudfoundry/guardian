@@ -170,6 +170,9 @@ var _ = Describe("Runtime Plugin", func() {
 						pluginArgs = append(pluginArgs, "-d")
 					}
 					Expect(readPluginArgs(argsFilepath)).To(ConsistOf(pluginArgs))
+
+					_, err := process.Wait() // ensure plugin has finished running before asserting on output(s)
+					Expect(err).NotTo(HaveOccurred())
 				})
 
 				It("passes the spec serialised into a file", func() {
