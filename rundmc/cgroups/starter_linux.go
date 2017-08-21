@@ -172,15 +172,35 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 }
 
 func (s *CgroupStarter) modifyAllowedDevices(dir string, devices []*specs.LinuxDeviceCgroup) error {
+	if has, err := hasSubdirectories(dir); err != nil {
+		return err
+	} else if has {
+		return nil
+	}
+	if err := ioutil.WriteFile(filepath.Join(dir, "devices.deny"), []byte("a"), 0770); err != nil {
+		return err
+	}
 	for _, device := range devices {
 		data := fmt.Sprintf("%s %s:%s %s", device.Type, s.deviceNumberString(device.Major), s.deviceNumberString(device.Minor), device.Access)
-		err := s.setDeviceCgroup(dir, "devices.allow", data)
-		if err != nil {
+		if err := s.setDeviceCgroup(dir, "devices.allow", data); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+func hasSubdirectories(dir string) (bool, error) {
+	dirs, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return false, err
+	}
+	for _, fileInfo := range dirs {
+		if fileInfo.Mode().IsDir() {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (d *CgroupStarter) setDeviceCgroup(dir, file, data string) error {

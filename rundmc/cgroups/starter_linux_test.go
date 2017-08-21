@@ -71,7 +71,7 @@ var _ = Describe("CgroupStarter", func() {
 		Expect(path.Join(tmpDir, "cgroup", "devices", "garden")).To(BeADirectory())
 
 		content := readFile(path.Join(tmpDir, "cgroup", "devices", "garden", "devices.allow"))
-		Expect(string(content)).To(Equal("c 10:229 rwm"))
+		Expect(string(content)).To(Equal("c 10:200 rwm"))
 	})
 
 	It("adds the right content into devices.deny", func() {
@@ -81,6 +81,19 @@ var _ = Describe("CgroupStarter", func() {
 
 		content := readFile(path.Join(tmpDir, "cgroup", "devices", "garden", "devices.deny"))
 		Expect(string(content)).To(Equal("a"))
+	})
+
+	Context("when there is already a child device cgroup", func() {
+		JustBeforeEach(func() {
+			Expect(os.MkdirAll(path.Join(tmpDir, "cgroup", "devices", "garden", "child"), 0777)).To(Succeed())
+		})
+
+		It("does not write to devices.deny", func() {
+			Expect(starter.Start()).To(Succeed())
+			Expect(path.Join(tmpDir, "cgroup", "devices", "garden")).To(BeADirectory())
+			Expect(path.Join(tmpDir, "cgroup", "devices", "garden", "devices.deny")).NotTo(BeAnExistingFile())
+		})
+
 	})
 
 	Context("when the cgroup path is not a mountpoint", func() {
