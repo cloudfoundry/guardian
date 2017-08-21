@@ -2,6 +2,9 @@
 set -e
 
 source $(dirname $BASH_SOURCE)/test/utils.sh
+
+trap unmount_storage EXIT
+
 mount_storage
 
 dest_path=$(move_to_gopath grootfs)

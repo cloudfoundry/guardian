@@ -48,9 +48,24 @@ mount_storage() {
   done
 }
 
+unmount_storage() {
+  umount -l /mnt/ext4
+
+  for i in {1..9}
+  do
+    umount -l /mnt/btrfs-${i}
+    umount -l /mnt/xfs-${i}
+  done
+}
+
 sudo_mount_storage() {
   local MOUNT_STORAGE_FUNC=$(declare -f mount_storage)
   sudo bash -c "$MOUNT_STORAGE_FUNC; mount_storage"
+}
+
+sudo_unmount_storage() {
+  local UNMOUNT_STORAGE_FUNC=$(declare -f unmount_storage)
+  sudo bash -c "$UNMOUNT_STORAGE_FUNC; unmount_storage"
 }
 
 move_to_gopath() {
