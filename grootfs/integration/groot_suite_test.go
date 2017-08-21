@@ -9,6 +9,7 @@ import (
 	"os/user"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/integration"
@@ -25,8 +26,6 @@ import (
 
 var (
 	GrootFSBin    string
-	DraxBin       string
-	TardisBin     string
 	Driver        string
 	Runner        runner.Runner
 	StorePath     string
@@ -46,6 +45,11 @@ const btrfsMountPath = "/mnt/btrfs-%d"
 const xfsMountPath = "/mnt/xfs-%d"
 
 func TestGroot(t *testing.T) {
+	var (
+		DraxBin   string
+		TardisBin string
+	)
+
 	RegisterFailHandler(Fail)
 
 	SynchronizedBeforeSuite(func() []byte {
@@ -53,13 +57,29 @@ func TestGroot(t *testing.T) {
 		Expect(err).NotTo(HaveOccurred())
 		grootFSBin = integration.MakeBinaryAccessibleToEveryone(grootFSBin)
 
-		return []byte(grootFSBin)
-	}, func(data []byte) {
-		var err error
-		GrootUser, err = user.Lookup("groot")
+		draxBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
+		Expect(err).NotTo(HaveOccurred())
+		draxBin = integration.MakeBinaryAccessibleToEveryone(draxBin)
+		testhelpers.SuidBinary(draxBin)
+
+		tardisBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
+		Expect(err).NotTo(HaveOccurred())
+		tardisBin = integration.MakeBinaryAccessibleToEveryone(tardisBin)
+		testhelpers.SuidBinary(tardisBin)
+
+		namespacerBin, err := gexec.Build("code.cloudfoundry.org/grootfs/integration/namespacer")
 		Expect(err).NotTo(HaveOccurred())
 
-		tmpNamespacerBin, err := gexec.Build("code.cloudfoundry.org/grootfs/integration/namespacer")
+		return []byte(grootFSBin + ":" + draxBin + ":" + TardisBin + ":" + namespacerBin)
+	}, func(data []byte) {
+		var err error
+		binaries := strings.Split(string(data), ":")
+		GrootFSBin = string(binaries[0])
+		DraxBin = string(binaries[1])
+		TardisBin = string(binaries[2])
+		tmpNamespacerBin := string(binaries[3])
+
+		GrootUser, err = user.Lookup("groot")
 		Expect(err).NotTo(HaveOccurred())
 
 		rand.Seed(time.Now().UnixNano())
@@ -75,7 +95,6 @@ func TestGroot(t *testing.T) {
 		GrootGID, err = strconv.Atoi(GrootUser.Gid)
 		Expect(err).NotTo(HaveOccurred())
 
-		GrootFSBin = string(data)
 		Driver = os.Getenv("VOLUME_DRIVER")
 
 		GrootfsTestUid, _ = strconv.Atoi(os.Getenv("GROOTFS_TEST_UID"))
@@ -99,17 +118,6 @@ func TestGroot(t *testing.T) {
 			mountPath = fmt.Sprintf(btrfsMountPath, GinkgoParallelNode())
 		}
 		StorePath = path.Join(mountPath, "store")
-
-		var err error
-		DraxBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
-		Expect(err).NotTo(HaveOccurred())
-		DraxBin = integration.MakeBinaryAccessibleToEveryone(DraxBin)
-		testhelpers.SuidBinary(DraxBin)
-
-		TardisBin, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
-		Expect(err).NotTo(HaveOccurred())
-		TardisBin = integration.MakeBinaryAccessibleToEveryone(TardisBin)
-		testhelpers.SuidBinary(TardisBin)
 
 		RegistryUsername = os.Getenv("REGISTRY_USERNAME")
 		RegistryPassword = os.Getenv("REGISTRY_PASSWORD")
