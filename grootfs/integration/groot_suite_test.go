@@ -70,7 +70,7 @@ func TestGroot(t *testing.T) {
 		namespacerBin, err := gexec.Build("code.cloudfoundry.org/grootfs/integration/namespacer")
 		Expect(err).NotTo(HaveOccurred())
 
-		return []byte(grootFSBin + ":" + draxBin + ":" + TardisBin + ":" + namespacerBin)
+		return []byte(grootFSBin + ":" + draxBin + ":" + tardisBin + ":" + namespacerBin)
 	}, func(data []byte) {
 		var err error
 		binaries := strings.Split(string(data), ":")
