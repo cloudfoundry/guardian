@@ -272,6 +272,6 @@ func osSpecificBundleRules() []rundmc.BundlerRule {
 	return []rundmc.BundlerRule{bundlerules.EtcMounts{Chowner: &bundlerules.OSChowner{}}}
 }
 
-func defaultLinuxDevices() []specs.LinuxDevice {
+func getPrivilegedDevices() []specs.LinuxDevice {
 	return []specs.LinuxDevice{cgroups.FuseDevice}
 }

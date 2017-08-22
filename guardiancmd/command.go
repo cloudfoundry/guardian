@@ -612,7 +612,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	baseBundle := goci.Bundle().
 		WithNamespaces(PrivilegedContainerNamespaces...).
 		WithRootFS(cmd.Containers.DefaultRootFS).
-		WithDevices(defaultLinuxDevices()...).
 		WithProcess(baseProcess).
 		WithRootFSPropagation("private")
 
@@ -629,6 +628,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	}
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).
+		WithDevices(getPrivilegedDevices()...).
 		WithCapabilities(PrivilegedMaxCaps...)
 
 	log.Debug("base-bundles", lager.Data{

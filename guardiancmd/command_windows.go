@@ -96,6 +96,6 @@ func osSpecificBundleRules() []rundmc.BundlerRule {
 	return []rundmc.BundlerRule{}
 }
 
-func defaultLinuxDevices() []specs.LinuxDevice {
-	return []specs.LinuxDevice{}
+func getPrivilegedDevices() []specs.LinuxDevice {
+	return nil
 }
