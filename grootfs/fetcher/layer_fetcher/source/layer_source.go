@@ -46,13 +46,34 @@ func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (type
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	img, err := s.image(logger, baseImageURL)
-	if err != nil {
-		logger.Error("fetching-image-reference-failed", err)
-		return nil, errorspkg.Wrap(err, "fetching image reference")
+	var img types.Image
+	var err error
+
+	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
+		logger.Info("attempt-get-image-manifest", lager.Data{"attempt": i + 1})
+		img, err = s.image(logger, baseImageURL)
+		if err != nil {
+			logger.Error("fetching-image-reference-failed", err)
+			continue
+		}
+
+		img, err = s.convertImage(logger, img, baseImageURL)
+		if err != nil {
+			logger.Error("converting-image-failed", err)
+			continue
+		}
+
+		logger.Info("attempt-get-config", lager.Data{"attempt": i + 1})
+		_, err = img.ConfigBlob()
+		if err != nil {
+			logger.Error("fetching-image-config-failed", err)
+			continue
+		}
+
+		break
 	}
 
-	return s.convertImage(logger, img, baseImageURL)
+	return img, errorspkg.Wrap(err, "fetching image reference")
 }
 
 func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error) {
@@ -101,6 +122,7 @@ func (s *LayerSource) getBlobWithRetries(imgSrc types.ImageSource, blobInfo type
 			return blob, size, nil
 		}
 		err = e
+		logger.Error("attempt-get-blob-failed", err)
 	}
 
 	return nil, 0, err
@@ -171,26 +193,12 @@ func (s *LayerSource) image(logger lager.Logger, baseImageURL *url.URL) (types.I
 			Password: s.password,
 		},
 	}
-	img, err := s.getNewImageWithRetries(logger, ref, &sysCtx)
+	img, err := ref.NewImage(&sysCtx)
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "creating image")
 	}
 
 	return img, nil
-}
-
-func (s *LayerSource) getNewImageWithRetries(logger lager.Logger, ref types.ImageReference, sysCtx *types.SystemContext) (types.Image, error) {
-	var err error
-	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
-		logger.Info("attempt-get-image-manifest", lager.Data{"attempt": i + 1})
-		img, e := ref.NewImage(sysCtx)
-		if e == nil {
-			return img, nil
-		}
-		err = e
-	}
-
-	return nil, err
 }
 
 func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (types.ImageSource, error) {

@@ -268,7 +268,7 @@ var _ = Describe("Layer source: Docker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(logger.TestSink.LogMessages()).To(
-				ContainElement("test-layer-source.fetching-image-manifest.attempt-get-image-manifest"))
+				ContainElement("test-layer-source.fetching-image-manifest.fetching-image-reference-failed"))
 		})
 
 		It("retries fetching a blob twice", func() {
@@ -278,7 +278,23 @@ var _ = Describe("Layer source: Docker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(logger.TestSink.LogMessages()).To(
-				ContainElement("test-layer-source.streaming-blob.attempt-get-blob"))
+				ContainElement("test-layer-source.streaming-blob.attempt-get-blob-failed"))
+		})
+
+		It("retries fetching the config blob twice", func() {
+			fakeRegistry.WhenGettingBlob(configBlob, 1, func(resp http.ResponseWriter, req *http.Request) {
+				resp.WriteHeader(http.StatusTeapot)
+				_, _ = resp.Write([]byte("null"))
+				return
+			})
+
+			_, err := layerSource.Manifest(logger, baseImageURL)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(fakeRegistry.RequestedBlobs()).To(Equal([]string{configBlob}), "config blob was not prefetched within the retry")
+
+			Expect(logger.TestSink.LogMessages()).To(
+				ContainElement("test-layer-source.fetching-image-manifest.fetching-image-config-failed"))
 		})
 	})
 
