@@ -79,7 +79,6 @@ func NewStarter(logger lager.Logger, procCgroupReader io.ReadCloser, procSelfCgr
 			CommandRunner:   runner,
 			Logger:          logger,
 			Chowner:         chowner,
-			//TODO: add teh device list here
 		},
 	}
 }
@@ -147,7 +146,6 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		}
 
 		subsystemMountPath := path.Join(s.CgroupPath, subsystem)
-		// TODO rename
 		if err := s.idempotentCgroupMount(logger, subsystemMountPath, subsystemToMount); err != nil {
 			return err
 		}

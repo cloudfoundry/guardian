@@ -199,7 +199,6 @@ var _ = Describe("CgroupStarter", func() {
 
 		Context("when we are in the nested case", func() {
 			BeforeEach(func() {
-				// TODO same?
 				procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
 					"memory\t2\t1\t1\n"
 

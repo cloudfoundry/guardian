@@ -57,9 +57,6 @@ var _ = Describe("gdn setup", func() {
 		var cgroupsRoot string
 
 		BeforeEach(func() {
-			// TODO why nodeToString anymore?
-			// TODO ensure each test is meaningfully clean (garden-NODE dir?)
-
 			// We want to test that "gdn setup" can mount the cgroup hierarchy.
 			// "gdn server" without --skip-setup does this too, and most gqts implicitly
 			// rely on it.
