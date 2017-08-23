@@ -1,6 +1,8 @@
 package image_cloner_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io/ioutil"
@@ -150,6 +152,39 @@ var _ = Describe("Image", func() {
 				Expect(image.Mounts[0].Source).To(Equal("my-source"))
 				Expect(image.Mounts[0].Type).To(Equal("my-type"))
 				Expect(image.Mounts[0].Options).To(ConsistOf("my-option"))
+			})
+		})
+
+		Context("when the image has volumes", func() {
+			var image groot.ImageInfo
+			var mountSourceName string
+
+			JustBeforeEach(func() {
+				imageConfig := specsv1.Image{
+					Config: specsv1.ImageConfig{
+						Volumes: map[string]struct{}{"/foo": struct{}{}},
+					},
+				}
+
+				var err error
+				image, err = imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: false})
+				Expect(err).NotTo(HaveOccurred())
+
+				volumeHash := sha256.Sum256([]byte("/foo"))
+				mountSourceName = "vol-" + hex.EncodeToString(volumeHash[:32])
+			})
+
+			It("creates the source folders", func() {
+				Expect(filepath.Join(image.Path, mountSourceName)).To(BeADirectory())
+			})
+
+			It("returns the mount information", func() {
+				Expect(image.Mounts).To(ContainElement(groot.MountInfo{
+					Destination: "/foo",
+					Source:      filepath.Join(image.Path, mountSourceName),
+					Type:        "bind",
+					Options:     []string{"bind"},
+				}))
 			})
 		})
 

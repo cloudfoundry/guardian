@@ -1,6 +1,8 @@
 package integration_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -201,19 +203,39 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		Context("when the image has volumes", func() {
 			BeforeEach(func() {
-				integration.SkipIfNonRoot(GrootfsTestUid)
 				baseImageURL = "docker:///cfgarden/with-volume"
 			})
 
-			It("creates the volume folders", func() {
+			It("lists the volumes as mounts in the returned spec", func() {
 				image, err := Runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
-					Mount:     true,
+					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
-				volumeFolder := path.Join(image.Rootfs, "foo")
-				Expect(volumeFolder).To(BeADirectory())
+
+				volumeHash := sha256.Sum256([]byte("/foo"))
+				mountSourceName := "vol-" + hex.EncodeToString(volumeHash[:32])
+				Expect(image.Mounts).To(ContainElement(groot.MountInfo{
+					Destination: "/foo",
+					Source:      filepath.Join(StorePath, store.ImageDirName, "random-id", mountSourceName),
+					Type:        "bind",
+					Options:     []string{"bind"},
+				}))
+			})
+
+			It("create the bind mount source for the volumes", func() {
+				_, err := Runner.Create(groot.CreateSpec{
+					BaseImage: baseImageURL,
+					ID:        "random-id",
+					Mount:     mountByDefault(),
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				volumeHash := sha256.Sum256([]byte("/foo"))
+				mountSourceName := "vol-" + hex.EncodeToString(volumeHash[:32])
+
+				Expect(filepath.Join(StorePath, store.ImageDirName, "random-id", mountSourceName)).To(BeADirectory())
 			})
 		})
 

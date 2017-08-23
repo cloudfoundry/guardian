@@ -118,6 +118,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 		OwnerUID:                  ownerUid,
 		OwnerGID:                  ownerGid,
 	}
+
 	image, err := c.imageCloner.Create(logger, imageSpec)
 	if err != nil {
 		return ImageInfo{}, errorspkg.Wrap(err, "making image")
