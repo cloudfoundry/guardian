@@ -76,19 +76,18 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	if err != nil {
 		return nil, err
 	}
+	defer fd3r.Close()
 
 	logr, logw, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
+	defer logr.Close()
 
 	syncr, syncw, err := os.Pipe()
 	if err != nil {
 		return nil, err
 	}
-
-	defer fd3r.Close()
-	defer logr.Close()
 	defer syncr.Close()
 
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
