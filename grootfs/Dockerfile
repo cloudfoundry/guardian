@@ -27,7 +27,6 @@ RUN apt-get update && \
 # Install Bosh
 RUN wget https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-2.0.28-linux-amd64 && \
     mv bosh-cli-* /usr/local/bin/bosh && \
-    ln -s /usr/local/bin/bosh /usr/local/bin/bosh2 && \
     chmod +x /usr/local/bin/bosh
 
 ################################
