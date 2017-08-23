@@ -145,7 +145,7 @@ var _ = Describe("graph flags", func() {
 
 		Context("when set", func() {
 			JustBeforeEach(func() {
-				Eventually(client, "30s").Should(gbytes.Say("retain.retained"))
+				Eventually(client, "60s").Should(gbytes.Say("retain.retained"))
 			})
 
 			Context("and local images are used", func() {
