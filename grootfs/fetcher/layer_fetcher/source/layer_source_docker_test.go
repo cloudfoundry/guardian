@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
@@ -473,7 +474,7 @@ var _ = Describe("Layer source: Docker", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(size).To(Equal(int64(90)))
 
-					Eventually(buffer).Should(gbytes.Say("hello"))
+					Eventually(buffer, 5*time.Second).Should(gbytes.Say("hello"))
 					Eventually(sess).Should(gexec.Exit(0))
 				})
 			})
