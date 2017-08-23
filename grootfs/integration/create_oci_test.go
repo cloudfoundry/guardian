@@ -72,7 +72,7 @@ var _ = Describe("Create with OCI images", func() {
 
 		Expect(imageJson.Created.String()).To(Equal("2017-08-02 10:38:44.277669063 +0000 UTC"))
 		Expect(imageJson.RootFS.DiffIDs).To(Equal([]digestpkg.Digest{
-			digestpkg.NewDigestFromHex("sha256", "81404f15dd198293695d493b0d60cb8c70f89a839dadd5e740001a17de20a35b"),
+			digestpkg.NewDigestFromHex("sha256", "1a1021d32ed45a8fbd363739882c98f435dd34a050f8064943a79b9808c0da23"),
 			digestpkg.NewDigestFromHex("sha256", "11cbb5fdb554a60aef2f2f9bb8443a171a8dadb7ed1d85e4902c7dc08ce7f15e"),
 			digestpkg.NewDigestFromHex("sha256", "861df241050979359154ee2eed2f1213704eae7b05695e8f2897067e5d152d7e"),
 			digestpkg.NewDigestFromHex("sha256", "9efe56e4c4179f822c558ebc571f1cb27e93656c6b62c7979ffc066d2e3a17e2"),
@@ -141,7 +141,7 @@ var _ = Describe("Create with OCI images", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(Runner.EnsureMounted(image)).To(Succeed())
-		Expect(image.Image.RootFS.DiffIDs[0]).To(Equal(digestpkg.NewDigestFromHex("sha256", "81404f15dd198293695d493b0d60cb8c70f89a839dadd5e740001a17de20a35b")))
+		Expect(image.Image.RootFS.DiffIDs[0]).To(Equal(digestpkg.NewDigestFromHex("sha256", "1a1021d32ed45a8fbd363739882c98f435dd34a050f8064943a79b9808c0da23")))
 	})
 
 	Context("when the image has volumes", func() {
@@ -328,17 +328,17 @@ var _ = Describe("Create with OCI images", func() {
 	Describe("Unpacked layer caching", func() {
 		It("caches the unpacked image as a volume", func() {
 			_, err := Runner.Create(groot.CreateSpec{
-				BaseImage: baseImageURL,
+				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
 				ID:        "random-id",
 				Mount:     mountByDefault(),
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			layerSnapshotPath := filepath.Join(StorePath, "volumes", "06c1a80a513da76aee4a197d7807ddbd94e80fc9d669f6cd2c5a97b231cd55ac")
+			layerSnapshotPath := filepath.Join(StorePath, "volumes", "9242945d3c9c7cf5f127f9352fea38b1d3efe62ee76e25f70a3e6db63a14c233")
 			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 			image, err := Runner.Create(groot.CreateSpec{
-				BaseImage: baseImageURL,
+				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
 				ID:        "random-id-2",
 				Mount:     mountByDefault(),
 			})
@@ -472,7 +472,7 @@ var _ = Describe("Create with OCI images", func() {
 	Context("when --skip-layer-validation flag is passed", func() {
 		It("does not validate the checksums for oci image layers", func() {
 			image, err := Runner.SkipLayerCheckSumValidation().Create(groot.CreateSpec{
-				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/corrupted:latest", workDir),
+				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/also-corrupted:latest", workDir),
 				ID:        "random-id",
 				Mount:     mountByDefault(),
 				UIDMappings: []groot.IDMappingSpec{
