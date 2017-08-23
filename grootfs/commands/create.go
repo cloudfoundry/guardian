@@ -178,9 +178,8 @@ var CreateCommand = cli.Command{
 		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager)
 		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
 
-		rootFSConfigurer := storepkg.NewRootFSConfigurer()
 		creator := groot.IamCreator(
-			imageCloner, baseImagePuller, sharedLocksmith, rootFSConfigurer,
+			imageCloner, baseImagePuller, sharedLocksmith,
 			dependencyManager, metricsEmitter, cleaner,
 		)
 

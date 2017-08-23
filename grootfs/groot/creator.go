@@ -31,20 +31,18 @@ type Creator struct {
 	imageCloner       ImageCloner
 	baseImagePuller   BaseImagePuller
 	locksmith         Locksmith
-	rootFSConfigurer  RootFSConfigurer
 	dependencyManager DependencyManager
 	metricsEmitter    MetricsEmitter
 }
 
 func IamCreator(
 	imageCloner ImageCloner, baseImagePuller BaseImagePuller,
-	locksmith Locksmith, rootFSConfigurer RootFSConfigurer,
-	dependencyManager DependencyManager, metricsEmitter MetricsEmitter, cleaner Cleaner) *Creator {
+	locksmith Locksmith, dependencyManager DependencyManager,
+	metricsEmitter MetricsEmitter, cleaner Cleaner) *Creator {
 	return &Creator{
 		imageCloner:       imageCloner,
 		baseImagePuller:   baseImagePuller,
 		locksmith:         locksmith,
-		rootFSConfigurer:  rootFSConfigurer,
 		dependencyManager: dependencyManager,
 		metricsEmitter:    metricsEmitter,
 		cleaner:           cleaner,
@@ -126,14 +124,6 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 
 	imageRefName := fmt.Sprintf(ImageReferenceFormat, spec.ID)
 	if err := c.dependencyManager.Register(imageRefName, baseImage.ChainIDs); err != nil {
-		if destroyErr := c.imageCloner.Destroy(logger, spec.ID); destroyErr != nil {
-			logger.Error("failed-to-destroy-image", destroyErr)
-		}
-
-		return ImageInfo{}, err
-	}
-
-	if err := c.rootFSConfigurer.Configure(image.Rootfs, baseImage.BaseImage); err != nil {
 		if destroyErr := c.imageCloner.Destroy(logger, spec.ID); destroyErr != nil {
 			logger.Error("failed-to-destroy-image", destroyErr)
 		}

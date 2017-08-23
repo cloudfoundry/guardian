@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
@@ -22,7 +21,6 @@ var _ = Describe("Creator", func() {
 		fakeImageCloner       *grootfakes.FakeImageCloner
 		fakeBaseImagePuller   *grootfakes.FakeBaseImagePuller
 		fakeLocksmith         *grootfakes.FakeLocksmith
-		fakeRootFSConfigurer  *grootfakes.FakeRootFSConfigurer
 		fakeDependencyManager *grootfakes.FakeDependencyManager
 		fakeMetricsEmitter    *grootfakes.FakeMetricsEmitter
 		fakeCleaner           *grootfakes.FakeCleaner
@@ -36,7 +34,6 @@ var _ = Describe("Creator", func() {
 		fakeImageCloner = new(grootfakes.FakeImageCloner)
 		fakeBaseImagePuller = new(grootfakes.FakeBaseImagePuller)
 		fakeLocksmith = new(grootfakes.FakeLocksmith)
-		fakeRootFSConfigurer = new(grootfakes.FakeRootFSConfigurer)
 		fakeDependencyManager = new(grootfakes.FakeDependencyManager)
 		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
 		fakeCleaner = new(grootfakes.FakeCleaner)
@@ -56,7 +53,7 @@ var _ = Describe("Creator", func() {
 
 		creator = groot.IamCreator(
 			fakeImageCloner, fakeBaseImagePuller, fakeLocksmith,
-			fakeRootFSConfigurer, fakeDependencyManager, fakeMetricsEmitter,
+			fakeDependencyManager, fakeMetricsEmitter,
 			fakeCleaner)
 	})
 
@@ -156,30 +153,6 @@ var _ = Describe("Creator", func() {
 				OwnerUID: 50,
 				OwnerGID: 60,
 			}))
-		})
-
-		It("configures the rootfs", func() {
-			injectedBaseImage := &specsv1.Image{
-				Config: specsv1.ImageConfig{
-					Volumes: map[string]struct{}{
-						"/path/to/volume": struct{}{},
-					},
-				},
-			}
-			fakeBaseImagePuller.PullReturns(groot.BaseImage{
-				BaseImage: injectedBaseImage,
-			}, nil)
-
-			image, err := creator.Create(logger, groot.CreateSpec{
-				ID:        "my-image",
-				BaseImage: "docker:///ubuntu",
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeRootFSConfigurer.ConfigureCallCount()).To(Equal(1))
-			rootFSPath, baseImage := fakeRootFSConfigurer.ConfigureArgsForCall(0)
-			Expect(rootFSPath).To(Equal(filepath.Join(image.Path, "rootfs")))
-			Expect(baseImage).To(Equal(injectedBaseImage))
 		})
 
 		It("releases the global lock", func() {
@@ -433,40 +406,6 @@ var _ = Describe("Creator", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
 					ID:        "my-image",
 					BaseImage: "/path/to/image",
-				})
-				Expect(err).To(HaveOccurred())
-
-				Expect(fakeImageCloner.DestroyCallCount()).To(Equal(1))
-			})
-
-			It("does not configure the rootfs", func() {
-				_, err := creator.Create(logger, groot.CreateSpec{
-					ID:        "my-image",
-					BaseImage: "/path/to/image",
-				})
-				Expect(err).To(HaveOccurred())
-
-				Expect(fakeRootFSConfigurer.ConfigureCallCount()).To(Equal(0))
-			})
-		})
-
-		Context("when configuring the rootfs fails", func() {
-			BeforeEach(func() {
-				fakeRootFSConfigurer.ConfigureReturns(errors.New("failed to configure rootfs"))
-			})
-
-			It("returns an error", func() {
-				_, err := creator.Create(logger, groot.CreateSpec{
-					ID:        "my-image",
-					BaseImage: "docker:///ubuntu",
-				})
-				Expect(err).To(MatchError(ContainSubstring("failed to configure rootfs")))
-			})
-
-			It("destroys the image", func() {
-				_, err := creator.Create(logger, groot.CreateSpec{
-					ID:        "my-image",
-					BaseImage: "docker:///ubuntu",
 				})
 				Expect(err).To(HaveOccurred())
 
