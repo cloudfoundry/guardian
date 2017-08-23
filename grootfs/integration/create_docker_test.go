@@ -183,7 +183,19 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					}
 				}()
 
-				Eventually(sess, 180*time.Second).Should(gexec.Exit(0))
+				deadline := time.Now().Add(60 * time.Second)
+				for {
+					if sess.ExitCode() != -1 {
+						break
+					}
+					if time.Now().After(deadline) {
+						fmt.Println(">>>> printing debug info")
+						sess.Signal(syscall.SIGQUIT)
+						Fail("timeout exeeded")
+					}
+					time.Sleep(100 * time.Millisecond)
+				}
+				Expect(sess.ExitCode()).To(Equal(0))
 			})
 		})
 
