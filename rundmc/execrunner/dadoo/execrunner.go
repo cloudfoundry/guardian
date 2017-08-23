@@ -91,8 +91,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	defer syncr.Close()
 
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
-	process.mkfifos(spec.HostUID, spec.HostGID)
-	if err != nil {
+	if err := process.mkfifos(spec.HostUID, spec.HostGID); err != nil {
 		return nil, err
 	}
 
