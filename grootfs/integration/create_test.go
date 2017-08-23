@@ -21,6 +21,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 const (
@@ -527,9 +528,9 @@ var _ = Describe("Create", func() {
 
 			expectedRootfs := filepath.Join(StorePath, store.ImageDirName, "random-id/rootfs")
 			Expect(image.Rootfs).To(Equal(expectedRootfs))
-			Expect(image.Mounts).NotTo(BeNil())
+			Expect(image.Mounts).To(HaveLen(1))
 			Expect(image.Mounts[0].Destination).To(Equal(expectedRootfs))
-			Expect(image.Image).To(BeNil())
+			Expect(image.Image).To(Equal(v1.Image{}))
 		})
 
 		Describe("without mount", func() {

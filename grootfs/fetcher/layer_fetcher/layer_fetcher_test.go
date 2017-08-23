@@ -143,7 +143,7 @@ var _ = Describe("LayerFetcher", func() {
 
 		It("returns the correct OCI image config", func() {
 			timestamp := time.Time{}.In(time.UTC)
-			expectedConfig := &specsv1.Image{
+			expectedConfig := specsv1.Image{
 				Created: &timestamp,
 				RootFS: specsv1.RootFS{
 					DiffIDs: []digestpkg.Digest{
@@ -154,7 +154,7 @@ var _ = Describe("LayerFetcher", func() {
 			}
 
 			fakeManifest := new(layer_fetcherfakes.FakeManifest)
-			fakeManifest.OCIConfigReturns(expectedConfig, nil)
+			fakeManifest.OCIConfigReturns(&expectedConfig, nil)
 			fakeSource.ManifestReturns(fakeManifest, nil)
 
 			baseImageInfo, err := fetcher.BaseImageInfo(logger, baseImageURL)

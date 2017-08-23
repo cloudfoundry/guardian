@@ -15,6 +15,7 @@ import (
 	"code.cloudfoundry.org/grootfs/integration"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 	. "github.com/st3v/glager"
 )
 
@@ -113,7 +114,7 @@ var _ = Describe("Tar Fetcher", func() {
 			Expect(layers[0].ChainID).NotTo(BeEmpty())
 			Expect(layers[0].ParentChainID).To(BeEmpty())
 
-			Expect(baseImageInfo.Config).To(BeNil())
+			Expect(baseImageInfo.Config).To(Equal(v1.Image{}))
 		})
 
 		Context("when image content gets updated", func() {

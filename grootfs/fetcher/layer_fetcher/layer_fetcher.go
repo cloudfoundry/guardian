@@ -63,7 +63,7 @@ func (f *LayerFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL)
 
 	return base_image_puller.BaseImageInfo{
 		LayersDigest: f.createLayersDigest(logger, manifest, config),
-		Config:       config,
+		Config:       *config,
 	}, nil
 }
 

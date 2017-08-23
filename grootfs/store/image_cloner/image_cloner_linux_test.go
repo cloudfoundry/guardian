@@ -28,6 +28,7 @@ var _ = Describe("Image", func() {
 		storePath   string
 		imagesPath  string
 		imageCloner *imageclonerpkg.ImageCloner
+		imageConfig specsv1.Image
 
 		fakeImageDriver *image_clonerfakes.FakeImageDriver
 	)
@@ -49,6 +50,8 @@ var _ = Describe("Image", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		imagesPath = filepath.Join(storePath, "images")
+		timestamp := time.Now()
+		imageConfig = specsv1.Image{Created: &timestamp, Config: specsv1.ImageConfig{}}
 
 		Expect(os.Mkdir(imagesPath, 0777)).To(Succeed())
 	})
@@ -64,14 +67,12 @@ var _ = Describe("Image", func() {
 
 	Describe("Create", func() {
 		It("returns a image directory", func() {
-			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id"})
+			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(image.Path).To(BeADirectory())
 		})
 
 		It("returns an image", func() {
-			timestamp := time.Now()
-			imageConfig := &specsv1.Image{Created: &timestamp}
 			image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: true})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -81,9 +82,9 @@ var _ = Describe("Image", func() {
 		})
 
 		It("keeps the images in the same image directory", func() {
-			someImage, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id"})
+			someImage, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig})
 			Expect(err).NotTo(HaveOccurred())
-			anotherImage, err := imageCloner.Create(logger, groot.ImageSpec{ID: "another-id"})
+			anotherImage, err := imageCloner.Create(logger, groot.ImageSpec{ID: "another-id", BaseImage: imageConfig})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(someImage.Path).NotTo(BeEmpty())
@@ -98,8 +99,9 @@ var _ = Describe("Image", func() {
 			imageSpec := groot.ImageSpec{
 				ID:            "some-id",
 				BaseVolumeIDs: []string{"id-1", "id-2"},
-				BaseImage: &specsv1.Image{
+				BaseImage: specsv1.Image{
 					Author: "Groot",
+					Config: specsv1.ImageConfig{},
 				},
 			}
 			image, err := imageCloner.Create(logger, imageSpec)
@@ -112,7 +114,7 @@ var _ = Describe("Image", func() {
 
 		It("writes the image.json to the image", func() {
 			timestamp := time.Time{}.In(time.UTC)
-			baseImage := &specsv1.Image{
+			baseImage := specsv1.Image{
 				Author:  "Groot",
 				Created: &timestamp,
 				Config: specsv1.ImageConfig{
@@ -133,15 +135,13 @@ var _ = Describe("Image", func() {
 			imageJsonFile, err := os.Open(imageJsonPath)
 			Expect(err).NotTo(HaveOccurred())
 
-			imageJsonContent := &specsv1.Image{}
-			Expect(json.NewDecoder(imageJsonFile).Decode(imageJsonContent)).To(Succeed())
+			imageJsonContent := specsv1.Image{}
+			Expect(json.NewDecoder(imageJsonFile).Decode(&imageJsonContent)).To(Succeed())
 			Expect(imageJsonContent).To(Equal(baseImage))
 		})
 
 		Context("when mounting is skipped", func() {
 			It("returns a image with mount information", func() {
-				timestamp := time.Now()
-				imageConfig := &specsv1.Image{Created: &timestamp}
 				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: false})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -159,9 +159,10 @@ var _ = Describe("Image", func() {
 				gid := 2525
 
 				image, err := imageCloner.Create(logger, groot.ImageSpec{
-					ID:       "some-id",
-					OwnerUID: uid,
-					OwnerGID: gid,
+					ID:        "some-id",
+					OwnerUID:  uid,
+					OwnerGID:  gid,
+					BaseImage: imageConfig,
 				})
 
 				Expect(err).NotTo(HaveOccurred())
@@ -186,9 +187,10 @@ var _ = Describe("Image", func() {
 			Context("when only owner UID is 0", func() {
 				It("tries to enforce ownership", func() {
 					image, err := imageCloner.Create(logger, groot.ImageSpec{
-						ID:       "some-id",
-						OwnerUID: 0,
-						OwnerGID: 10000,
+						ID:        "some-id",
+						OwnerUID:  0,
+						OwnerGID:  10000,
+						BaseImage: imageConfig,
 					})
 
 					Expect(err).NotTo(HaveOccurred())
@@ -214,9 +216,10 @@ var _ = Describe("Image", func() {
 			Context("when only owner GID is 0", func() {
 				It("tries to enforce ownership", func() {
 					image, err := imageCloner.Create(logger, groot.ImageSpec{
-						ID:       "some-id",
-						OwnerUID: 50000,
-						OwnerGID: 0,
+						ID:        "some-id",
+						OwnerUID:  50000,
+						OwnerGID:  0,
+						BaseImage: imageConfig,
 					})
 
 					Expect(err).NotTo(HaveOccurred())
@@ -242,9 +245,10 @@ var _ = Describe("Image", func() {
 			Context("when both owner IDs are 0", func() {
 				It("doesn't enforce any ownership", func() {
 					_, err := imageCloner.Create(logger, groot.ImageSpec{
-						ID:       "some-id",
-						OwnerUID: 0,
-						OwnerGID: 0,
+						ID:        "some-id",
+						OwnerUID:  0,
+						OwnerGID:  0,
+						BaseImage: imageConfig,
 					})
 
 					// Because a normal user cannot change the onwership of a file to root
@@ -256,10 +260,10 @@ var _ = Describe("Image", func() {
 
 		Context("when calling it with two different ids", func() {
 			It("returns two different image paths", func() {
-				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id"})
+				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig})
 				Expect(err).NotTo(HaveOccurred())
 
-				anotherImage, err := imageCloner.Create(logger, groot.ImageSpec{ID: "another-id"})
+				anotherImage, err := imageCloner.Create(logger, groot.ImageSpec{ID: "another-id", BaseImage: imageConfig})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(image.Path).NotTo(Equal(anotherImage.Path))
@@ -272,7 +276,7 @@ var _ = Describe("Image", func() {
 			})
 
 			It("should return an error", func() {
-				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id"})
+				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig})
 				Expect(err).To(MatchError(ContainSubstring("making image path")))
 			})
 		})
@@ -283,13 +287,13 @@ var _ = Describe("Image", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id"})
+				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig})
 				Expect(err).To(MatchError(ContainSubstring("failed to create image")))
 			})
 
 			It("removes the image", func() {
 				imageID := "some-id"
-				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: imageID})
+				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: imageID, BaseImage: imageConfig})
 				Expect(err).To(HaveOccurred())
 				Expect(filepath.Join(imagesPath, imageID)).NotTo(BeADirectory())
 			})
@@ -308,13 +312,13 @@ var _ = Describe("Image", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id"})
+				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig})
 				Expect(err).To(MatchError(ContainSubstring("permission denied: can't write stuff")))
 			})
 
 			It("removes the image", func() {
 				imageID := "some-id"
-				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: imageID})
+				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: imageID, BaseImage: imageConfig})
 				Expect(err).To(HaveOccurred())
 				Expect(filepath.Join(imagesPath, imageID)).NotTo(BeADirectory())
 			})
@@ -325,6 +329,7 @@ var _ = Describe("Image", func() {
 				image, err := imageCloner.Create(logger, groot.ImageSpec{
 					ID:        "some-id",
 					DiskLimit: int64(1024),
+					BaseImage: imageConfig,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -340,6 +345,7 @@ var _ = Describe("Image", func() {
 						ID:                        "some-id",
 						DiskLimit:                 int64(1024),
 						ExcludeBaseImageFromQuota: true,
+						BaseImage:                 imageConfig,
 					})
 					Expect(err).NotTo(HaveOccurred())
 					_, spec := fakeImageDriver.CreateImageArgsForCall(0)

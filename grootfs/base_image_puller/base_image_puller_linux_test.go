@@ -35,7 +35,7 @@ var _ = Describe("Base Image Puller", func() {
 		fakeLocksmith            *grootfakes.FakeLocksmith
 		fakeMetricsEmitter       *grootfakes.FakeMetricsEmitter
 		fakeDependencyRegisterer *base_image_pullerfakes.FakeDependencyRegisterer
-		expectedImgDesc          *specsv1.Image
+		expectedImgDesc          specsv1.Image
 
 		baseImagePuller *base_image_puller.BaseImagePuller
 		layersDigest    []base_image_puller.LayerDigest
@@ -51,7 +51,7 @@ var _ = Describe("Base Image Puller", func() {
 		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
 		fakeTarFetcher = new(base_image_pullerfakes.FakeFetcher)
 		fakeLayerFetcher = new(base_image_pullerfakes.FakeFetcher)
-		expectedImgDesc = &specsv1.Image{Author: "Groot"}
+		expectedImgDesc = specsv1.Image{Author: "Groot"}
 		layersDigest = []base_image_puller.LayerDigest{
 			{BlobID: "i-am-a-layer", ChainID: "layer-111", ParentChainID: ""},
 			{BlobID: "i-am-another-layer", ChainID: "chain-222", ParentChainID: "layer-111"},
@@ -323,7 +323,7 @@ var _ = Describe("Base Image Puller", func() {
 		BeforeEach(func() {
 			fakeLayerFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
 				LayersDigest: []base_image_puller.LayerDigest{},
-				Config:       &specsv1.Image{},
+				Config:       specsv1.Image{},
 			}, errors.New("failed to get list of layers"))
 		})
 

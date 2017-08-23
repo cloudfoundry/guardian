@@ -66,7 +66,6 @@ func (l *TarFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (
 				ChainID:       l.generateChainID(baseImageURL.String(), stat.ModTime().UnixNano()),
 			},
 		},
-		Config: nil,
 	}, nil
 }
 

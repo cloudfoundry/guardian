@@ -190,7 +190,7 @@ func (b *ImageCloner) deleteImageDir(imagePath string) error {
 
 var OF = os.OpenFile
 
-func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, baseImage *specsv1.Image) error {
+func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, baseImage specsv1.Image) error {
 	logger = logger.Session("writing-image-json")
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -201,14 +201,14 @@ func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, 
 		return err
 	}
 
-	if err = json.NewEncoder(imageJsonFile).Encode(baseImage); err != nil {
+	if err = json.NewEncoder(imageJsonFile).Encode(&baseImage); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage *specsv1.Image, mountJson groot.MountInfo, mount bool) (groot.ImageInfo, error) {
+func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage specsv1.Image, mountJson groot.MountInfo, mount bool) (groot.ImageInfo, error) {
 	imageInfo := groot.ImageInfo{
 		Path:   imagePath,
 		Rootfs: rootfsPath,
@@ -216,7 +216,7 @@ func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage *specsv1
 	}
 
 	if !mount {
-		imageInfo.Mounts = []*groot.MountInfo{&mountJson}
+		imageInfo.Mounts = []groot.MountInfo{mountJson}
 	}
 
 	return imageInfo, nil

@@ -27,10 +27,10 @@ const (
 //go:generate counterfeiter . MetricsEmitter
 
 type ImageInfo struct {
-	Rootfs string         `json:"rootfs"`
-	Image  *specsv1.Image `json:"image,omitempty"`
-	Mounts []*MountInfo   `json:"mounts,omitempty"`
-	Path   string         `json:"-"`
+	Rootfs string        `json:"rootfs"`
+	Image  specsv1.Image `json:"image,omitempty"`
+	Mounts []MountInfo   `json:"mounts,omitempty"`
+	Path   string        `json:"-"`
 }
 
 type MountInfo struct {
@@ -62,7 +62,7 @@ type BaseImageSpec struct {
 }
 
 type BaseImage struct {
-	BaseImage *specsv1.Image
+	BaseImage specsv1.Image
 	ChainIDs  []string
 }
 
@@ -76,7 +76,7 @@ type ImageSpec struct {
 	DiskLimit                 int64
 	ExcludeBaseImageFromQuota bool
 	BaseVolumeIDs             []string
-	BaseImage                 *specsv1.Image
+	BaseImage                 specsv1.Image
 	OwnerUID                  int
 	OwnerGID                  int
 }

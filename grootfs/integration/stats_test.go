@@ -179,7 +179,7 @@ var _ = Describe("Stats", func() {
 	})
 })
 
-func unshareWithMount(cmdLine string, mount *groot.MountInfo) *exec.Cmd {
+func unshareWithMount(cmdLine string, mount groot.MountInfo) *exec.Cmd {
 	mountOptions := strings.Join(mount.Options, ",")
 	mountCmdLine := fmt.Sprintf("mount -t %s %s -o%s %s", mount.Type, mount.Source, mountOptions, mount.Destination)
 
