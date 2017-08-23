@@ -1,6 +1,5 @@
 # Contributing to GrootFS
 
-
 The GrootFS team uses GitHub and accepts contributions via [pull request](https://help.github.com/articles/using-pull-requests).
 
 Please verify your changes before submitting a pull request by running the tests. See the [testing](https://github.com/cloudfoundry/grootfs#running-tests-in-concourse) section for more detail.
@@ -38,7 +37,6 @@ automated system uses, then we manually make the Pull Request as having a CLA on
 
 ---
 
-
 ## Development Environment
 
 * Make sure you have golang >= 1.7 installed
@@ -46,12 +44,13 @@ automated system uses, then we manually make the Pull Request as having a CLA on
 * All dependencies are vendored as submodules (`git submodule update --init --recursive`)
 * GrootFS only compiles in linux - it might be useful to set `GOOS=linux` if developing in a different platform
 * Linux tests will fail locally if run on a different platform. To run these tests on anything other than Linux you'll need to [run the tests on Concourse](https://github.com/cloudfoundry/grootfs#running-tests-in-concourse).
-* If you want to run tests locally you may optionally want to use [ginkgo](https://onsi.github.com/ginkgo). Otherwise you can use `go test` 
+* If you want to run tests locally you may optionally want to use [ginkgo](https://onsi.github.com/ginkgo). Otherwise you can use `go test`
 	* To run a package test: `ginkgo ./<package-name>`
 	* To run all tests locally: `ginkgo -r`
 
 ----
-##Commit Style
+
+## Commit Style
 
 We try to use the following template for git commit messages:
 
@@ -66,7 +65,8 @@ should include any context that will be useful to other developers
 ```
 
 ---
-##Managing Go Dependencies
+
+## Managing Go Dependencies
 
 Our Go package dependencies are managed as git submodules in the `vendor` directory.
 To add / remove / update dependencies, run the `script/deps` script as follows:
