@@ -51,8 +51,8 @@ mount_storage() {
 }
 
 unmount_storage() {
-	# make sure that all of cleanup runs if some line fails
-	set +e
+  # make sure that all of cleanup runs if some line fails
+  set +e
 
   umount -l /mnt/ext4
 
