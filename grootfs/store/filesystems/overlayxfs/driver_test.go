@@ -77,6 +77,10 @@ var _ = Describe("Driver", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		AfterEach(func() {
+			syscall.Unmount(storePath, 0)
+		})
+
 		It("succcesfully creates and mounts a filesystem", func() {
 			Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
 			statfs := syscall.Statfs_t{}

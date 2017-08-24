@@ -78,6 +78,10 @@ var _ = Describe("Btrfs", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		AfterEach(func() {
+			syscall.Unmount(newStorePath, 0)
+		})
+
 		It("succcesfully creates and mounts a filesystem", func() {
 			Expect(driver.InitFilesystem(logger, fsFile, newStorePath)).To(Succeed())
 			statfs := syscall.Statfs_t{}
