@@ -228,6 +228,26 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
+	Describe("WithWindowsCPUShares", func() {
+		var shares uint16
+		var cpu specs.WindowsCPUResources
+
+		BeforeEach(func() {
+			shares = 125
+			cpu = specs.WindowsCPUResources{Shares: &shares}
+			returnedBundle = initialBundle.WithWindowsCPUShares(cpu)
+		})
+
+		It("returns a bundle with the windows cpu shares", func() {
+			Expect(*(returnedBundle.WindowsResources().CPU)).To(Equal(cpu))
+		})
+
+		It("does not modify the original bundle", func() {
+			Expect(returnedBundle).NotTo(Equal(initialBundle))
+			Expect(initialBundle.Resources()).To(BeNil())
+		})
+	})
+
 	Describe("WithWindows", func() {
 		var windows = specs.Windows{LayerFolders: []string{"layer-1", "layer-2"}}
 

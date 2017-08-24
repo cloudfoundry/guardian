@@ -12,7 +12,7 @@ import (
 )
 
 var _ = Describe("WindowsRule", func() {
-	It("copies the Windows config from the BaseConfig and sets the memory limit", func() {
+	It("copies the Windows config from the BaseConfig and sets the memory limit + cpu shares", func() {
 		layerFolders := []string{"layer-1", "layer-0"}
 		newBndl, err := bundlerules.Windows{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			BaseConfig: specs.Spec{
@@ -22,6 +22,7 @@ var _ = Describe("WindowsRule", func() {
 			},
 			Limits: garden.Limits{
 				Memory: garden.MemoryLimits{LimitInBytes: 4096},
+				CPU:    garden.CPULimits{LimitInShares: 321},
 			},
 		}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())
@@ -31,6 +32,9 @@ var _ = Describe("WindowsRule", func() {
 			Resources: &specs.WindowsResources{
 				Memory: &specs.WindowsMemoryResources{
 					Limit: uint64ptr(4096),
+				},
+				CPU: &specs.WindowsCPUResources{
+					Shares: uint16ptr(321),
 				},
 			},
 		}))
@@ -52,5 +56,9 @@ var _ = Describe("WindowsRule", func() {
 })
 
 func uint64ptr(i uint64) *uint64 {
+	return &i
+}
+
+func uint16ptr(i uint16) *uint16 {
 	return &i
 }
