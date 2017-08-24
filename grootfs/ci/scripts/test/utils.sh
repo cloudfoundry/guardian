@@ -27,6 +27,8 @@ mount_storage() {
 
   for i in {1..9}
   do
+    echo "There are $(losetup -a | wc -l) loop devices taken"
+
     # Make BTRFS Volume
     truncate -s 1G /btrfs_volume_${i}
     mkfs.btrfs --nodesize 4k -s 4k /btrfs_volume_${i}
