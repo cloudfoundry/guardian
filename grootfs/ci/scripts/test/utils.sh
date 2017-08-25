@@ -27,30 +27,24 @@ mount_storage() {
 
   for i in {1..5}
   do
-    case "$VOLUME_DRIVER" in
-      btrfs)
-	# Make BTRFS Volume
-	truncate -s 1G /btrfs_volume_${i}
-	mkfs.btrfs --nodesize 4k -s 4k /btrfs_volume_${i}
+    # Make BTRFS Volume
+    truncate -s 1G /btrfs_volume_${i}
+    mkfs.btrfs --nodesize 4k -s 4k /btrfs_volume_${i}
 
-	# Mount BTRFS
-	mkdir /mnt/btrfs-${i}
-	mount -t btrfs -o user_subvol_rm_allowed,rw /btrfs_volume_${i} /mnt/btrfs-${i}
-	chmod 777 -R /mnt/btrfs-${i}
-	btrfs quota enable /mnt/btrfs-${i}
-	;;
+    # Mount BTRFS
+    mkdir /mnt/btrfs-${i}
+    mount -t btrfs -o user_subvol_rm_allowed,rw /btrfs_volume_${i} /mnt/btrfs-${i}
+    chmod 777 -R /mnt/btrfs-${i}
+    btrfs quota enable /mnt/btrfs-${i}
 
-      overlay-xfs)
-	# Make XFS Volume
-	truncate -s 1G /xfs_volume_${i}
-	mkfs.xfs -b size=4096 /xfs_volume_${i}
+    # Make XFS Volume
+    truncate -s 1G /xfs_volume_${i}
+    mkfs.xfs -b size=4096 /xfs_volume_${i}
 
-	# Mount XFS
-	mkdir /mnt/xfs-${i}
-	mount -t xfs -o pquota,noatime,nobarrier /xfs_volume_${i} /mnt/xfs-${i}
-	chmod 777 -R /mnt/xfs-${i}
-	;;
-    esac
+    # Mount XFS
+    mkdir /mnt/xfs-${i}
+    mount -t xfs -o pquota,noatime,nobarrier /xfs_volume_${i} /mnt/xfs-${i}
+    chmod 777 -R /mnt/xfs-${i}
   done
 }
 
@@ -59,15 +53,8 @@ unmount_storage() {
 
   for i in {1..5}
   do
-    case "$VOLUME_DRIVER" in
-      btrfs)
-	umount -l /mnt/btrfs-${i}
-	;;
-
-      overlay-xfs)
-	umount -l /mnt/xfs-${i}
-	;;
-    esac
+    umount -l /mnt/btrfs-${i}
+    umount -l /mnt/xfs-${i}
   done
 }
 
