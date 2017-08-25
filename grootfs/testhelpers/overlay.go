@@ -3,6 +3,7 @@ package testhelpers
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -30,6 +31,8 @@ func CleanUpOverlayMounts(mountPath string) {
 			Expect(syscall.Unmount(mountPoint, 0)).To(Succeed())
 		}
 	}
+
+	exec.Command("sh", "-c", fmt.Sprintf("losetup -a | grep %s.external-log | cut -d : -f 1 | xargs losetup -d", mountPath)).Run()
 }
 
 func CleanUpImages(storePath string) {
