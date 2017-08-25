@@ -96,6 +96,7 @@ type UnpackStrategy struct {
 
 type TarUnpacker struct {
 	whiteoutHandler whiteoutHandler
+	strategy        UnpackStrategy
 }
 
 func NewTarUnpacker(unpackStrategy UnpackStrategy) (*TarUnpacker, error) {
@@ -119,6 +120,7 @@ func NewTarUnpacker(unpackStrategy UnpackStrategy) (*TarUnpacker, error) {
 
 	return &TarUnpacker{
 		whiteoutHandler: woHandler,
+		strategy:        unpackStrategy,
 	}, nil
 }
 
@@ -207,13 +209,7 @@ func (*defaultWhiteoutHandler) removeOpaqueWhiteouts(paths []string) error {
 }
 
 func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) error {
-	strategy := UnpackStrategy{Name: "btrfs"}
-	if overlayWOHandler, ok := u.whiteoutHandler.(*overlayWhiteoutHandler); ok {
-		strategy.Name = "overlay-xfs"
-		strategy.WhiteoutDevicePath = filepath.Join(overlayWOHandler.whiteoutDevDir.Name(), overlayWOHandler.whiteoutDevName)
-	}
-
-	strategyJSON, err := json.Marshal(strategy)
+	strategyJSON, err := json.Marshal(u.strategy)
 	if err != nil {
 		return err
 	}
