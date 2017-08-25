@@ -137,12 +137,19 @@ var _ = Describe("Driver", func() {
 		})
 
 		Context("when external log size is > 0", func() {
+			var logdevPath string
+
 			BeforeEach(func() {
 				driver = overlayxfs.NewDriver(StorePath, tardisBinPath, 64)
+				logdevPath = fmt.Sprintf("%s.external-log", storePath)
+			})
+
+			AfterEach(func() {
+				syscall.Unmount(storePath, 0)
+				exec.Command("sh", "-c", fmt.Sprintf("losetup -j %s | cut -d : -f 1 | xargs losetup -d", logdevPath)).Run()
 			})
 
 			It("succcesfully creates a logdev file", func() {
-				logdevPath := fmt.Sprintf("%s.external-log", storePath)
 				Expect(logdevPath).ToNot(BeAnExistingFile())
 				Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
 
