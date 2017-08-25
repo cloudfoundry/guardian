@@ -270,7 +270,7 @@ func (u *TarUnpacker) unpack(logger lager.Logger, spec base_image_puller.UnpackS
 			continue
 		}
 		if strings.Contains(tarHeader.Name, ".wh.") {
-			if err := u.whiteoutHandler.removeWhiteout(tarHeader.Name); err != nil { // pass fd here
+			if err := u.whiteoutHandler.removeWhiteout(tarHeader.Name); err != nil {
 				return err
 			}
 			continue
