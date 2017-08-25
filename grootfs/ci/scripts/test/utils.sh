@@ -25,41 +25,49 @@ mount_storage() {
   mount /ext4_volume /mnt/ext4
   chmod 777 /mnt/ext4
 
-  for i in {1..9}
+  for i in {1..5}
   do
-    echo "There are $(losetup -a | wc -l) loop devices taken"
+    case "$VOLUME_DRIVER" in
+      btrfs)
+	# Make BTRFS Volume
+	truncate -s 1G /btrfs_volume_${i}
+	mkfs.btrfs --nodesize 4k -s 4k /btrfs_volume_${i}
 
-    # Make BTRFS Volume
-    truncate -s 1G /btrfs_volume_${i}
-    mkfs.btrfs --nodesize 4k -s 4k /btrfs_volume_${i}
+	# Mount BTRFS
+	mkdir /mnt/btrfs-${i}
+	mount -t btrfs -o user_subvol_rm_allowed,rw /btrfs_volume_${i} /mnt/btrfs-${i}
+	chmod 777 -R /mnt/btrfs-${i}
+	btrfs quota enable /mnt/btrfs-${i}
+	;;
 
-    # Mount BTRFS
-    mkdir /mnt/btrfs-${i}
-    mount -t btrfs -o user_subvol_rm_allowed,rw /btrfs_volume_${i} /mnt/btrfs-${i}
-    chmod 777 -R /mnt/btrfs-${i}
-    btrfs quota enable /mnt/btrfs-${i}
+      overlay-xfs)
+	# Make XFS Volume
+	truncate -s 1G /xfs_volume_${i}
+	mkfs.xfs -b size=4096 /xfs_volume_${i}
 
-    # Make XFS Volume
-    truncate -s 1G /xfs_volume_${i}
-    mkfs.xfs -b size=4096 /xfs_volume_${i}
-
-    # Mount XFS
-    mkdir /mnt/xfs-${i}
-    mount -t xfs -o pquota,noatime,nobarrier /xfs_volume_${i} /mnt/xfs-${i}
-    chmod 777 -R /mnt/xfs-${i}
+	# Mount XFS
+	mkdir /mnt/xfs-${i}
+	mount -t xfs -o pquota,noatime,nobarrier /xfs_volume_${i} /mnt/xfs-${i}
+	chmod 777 -R /mnt/xfs-${i}
+	;;
+    esac
   done
 }
 
 unmount_storage() {
-  # make sure that all of cleanup runs if some line fails
-  set +e
-
   umount -l /mnt/ext4
 
-  for i in {1..9}
+  for i in {1..5}
   do
-    umount -l /mnt/btrfs-${i}
-    umount -l /mnt/xfs-${i}
+    case "$VOLUME_DRIVER" in
+      btrfs)
+	umount -l /mnt/btrfs-${i}
+	;;
+
+      overlay-xfs)
+	umount -l /mnt/xfs-${i}
+	;;
+    esac
   done
 }
 
