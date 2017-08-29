@@ -46,7 +46,7 @@ ENV GOPATH /go
 ENV PATH /go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 RUN mkdir -p $GOPATH
 RUN \
-  wget -qO- https://storage.googleapis.com/golang/go1.8.3.linux-amd64.tar.gz | tar -C /usr/local -xzf -
+  wget -qO- https://storage.googleapis.com/golang/go1.9.linux-amd64.tar.gz | tar -C /usr/local -xzf -
 
 ################################
 # Setup gaol
