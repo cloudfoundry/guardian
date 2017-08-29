@@ -1,2 +1,166 @@
 #!/bin/bash -e
-./hack/run-tests -p $@
+
+# Default fly target
+[ -z "$FLY_TARGET" ] && FLY_TARGET="lite"
+[ -z "$FLY_ARGS" ] && FLY_ARGS="-p -x"
+
+RED=1
+GREEN=2
+print_message() {
+  message=$1
+  colour=$2
+  printf "\r\033[00;3${colour}m[${message}]\033[0m\n"
+}
+
+usage() {
+  colour=$1
+  print_message "Usage:" $colour
+  print_message "test --- run all the tests" $colour
+  print_message "test <test path> --- only run tests below given path" $colour
+  print_message "test -u --- run all unit tests" $colour
+  print_message "test -i --- run all integration tests" $colour
+}
+
+compile_fly_cmd() {
+  task_path=$1
+
+  cmd="fly -t $FLY_TARGET"
+  cmd=$cmd" e -c $task_path"
+  cmd=$cmd" -i grootfs-git-repo=${PWD}"
+  cmd=$cmd" $FLY_ARGS"
+  cmd=$cmd" --"
+
+  echo $cmd
+}
+
+compile_ginkgo_args() {
+  test_path=${1:-""}
+
+  args=""
+  [ "$GINKGO_ARGS" != "" ] && args=$args" $GINKGO_ARGS"
+  [ $RECURSIVE -eq 1 ] && args=$args" -r"
+  [ "$test_path" != "" ] && args=$args" $test_path"
+
+  echo $args
+}
+
+fly_integration_tests() {
+  test_path=${1:-""}
+
+  cmd=$(compile_fly_cmd ci/tasks/integration-tests.yml)
+  cmd=$cmd" "$(compile_ginkgo_args $test_path)
+  eval $cmd
+}
+
+run_integration_tests() {
+  test_path=${1:-""}
+
+  case $test_path in
+    # run tests as user root
+    integration*)
+      fly_integration_tests $test_path
+      ;;
+
+    # both
+    *)
+      if [ $RECURSIVE -ne 1 ]; then
+        print_message "No suite found in '$test_path'. Please use -r to run suites in its subdirectories." $RED
+        return
+      fi
+
+      fly_integration_tests "integration"
+      ;;
+  esac
+}
+
+run_unit_tests() {
+  test_path=${1:-""}
+
+  cmd=$(compile_fly_cmd ci/tasks/unit-tests.yml)
+  cmd=$cmd" "$(compile_ginkgo_args $test_path)
+  eval $cmd
+}
+
+run_all_tests() {
+  if [ $RECURSIVE -ne 1 ]; then
+    print_message "No suite found in root directory. Please use -r to run suites in its subdirectories." $RED
+    return
+  fi
+
+  run_unit_tests ""
+  export VOLUME_DRIVER="overlay-xfs"
+  export GROOTFS_TEST_UID=0
+  export GROOTFS_TEST_GID=0
+  fly_integration_tests  "integration"
+
+  export VOLUME_DRIVER="overlay-xfs"
+  export GROOTFS_TEST_UID=1000
+  export GROOTFS_TEST_GID=1000
+  fly_integration_tests  "integration"
+
+  export VOLUME_DRIVER="btrfs"
+  export GROOTFS_TEST_UID=0
+  export GROOTFS_TEST_GID=0
+  fly_integration_tests  "integration"
+
+  export VOLUME_DRIVER="btrfs"
+  export GROOTFS_TEST_UID=1000
+  export GROOTFS_TEST_GID=1000
+  fly_integration_tests  "integration"
+}
+
+run_tests() {
+  test_path=${1:-""}
+
+  case $test_path in
+    integration*)
+      run_integration_tests $test_path
+      ;;
+
+    # no path - run all the tests
+    "")
+      run_all_tests
+      ;;
+
+    # test_path is not empty
+    *)
+      run_unit_tests $test_path
+      ;;
+    esac
+}
+
+test_path=""
+GINKGO_ARGS=""
+RECURSIVE=0
+if [ -z "$REGISTRY_PASSWORD" ]
+then
+  export REGISTRY_USERNAME="$(lpass show 'Shared-Garden/cf-garden-docker' --username)"
+  export REGISTRY_PASSWORD="$(lpass show 'Shared-Garden/cf-garden-docker' --password)"
+fi
+
+while getopts "ui" OPTION
+do
+  case $OPTION in
+    u)
+      RECURSIVE=1
+      run_unit_tests
+      exit
+      ;;
+    i)
+      RECURSIVE=1
+      run_integration_tests "integration"
+      exit
+      ;;
+    *)
+      usage $RED
+      exit
+      ;;
+  esac
+done
+
+if [ -z $@ ]
+then
+  RECURSIVE=1
+fi
+run_tests $@
+

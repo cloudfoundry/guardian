@@ -1,8 +1,8 @@
 .PHONY: all \
-	concourse-test dracorex-test \
+	test \
 	go-vet concourse-go-vet go-generate \
 	image push-image \
-	update-deps unit
+	update-deps unit integration
 
 all:
 	GOOS=linux go build -o grootfs .
@@ -16,8 +16,8 @@ help:
 	@echo '    deps ................................ installs dependencies'
 	@echo '    update-deps ......................... updates dependencies'
 	@echo '    unit ................................ run unit tests'
-	@echo '    concourse-test ...................... runs tests in concourse-lite'
-	@echo '    dracorex-test ....................... runs tests on remote CI'
+	@echo '    integration ......................... run integration tests'
+	@echo '    test ................................ runs tests in concourse-lite'
 	@echo '    compile-tests ....................... checks that tests can be compiled'
 	@echo '    go-vet .............................. runs go vet in grootfs source code'
 	@echo '    concourse-go-vet .................... runs go vet in concourse-lite'
@@ -36,13 +36,13 @@ compile-tests:
 	ginkgo build -r .; find . -name '*.test' | xargs rm
 
 unit:
-	./hack/run-tests -r -g "--skipPackage=integration"
+	./script/test -u
 
-concourse-test: go-vet
-	./hack/run-tests -r -g "-p"
+integration:
+	./script/test -i
 
-dracorex-test:
-	./hack/run-tests -d -r -g "-p"
+test: concourse-go-vet
+	./script/test
 
 ###### Go tools ###############################################################
 
