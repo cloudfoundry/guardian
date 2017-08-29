@@ -138,7 +138,7 @@ then
   export REGISTRY_PASSWORD="$(lpass show 'Shared-Garden/cf-garden-docker' --password)"
 fi
 
-while getopts "ui" OPTION
+while getopts "uia" OPTION
 do
   case $OPTION in
     u)
@@ -149,6 +149,16 @@ do
     i)
       RECURSIVE=1
       run_integration_tests "integration"
+      exit
+      ;;
+    a)
+      RECURSIVE=1
+      tmux set-option remain-on-exit on
+      tmux split-window -p 80 "./script/test -u"
+      tmux split-window -p 80 "GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 VOLUME_DRIVER=overlay-xfs ./script/test -i"
+      tmux split-window -h -p 70 "GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 VOLUME_DRIVER=btrfs ./script/test -i"
+      tmux split-window -p 50 "GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 VOLUME_DRIVER=overlay-xfs ./script/test -i"
+      tmux split-window -p 50 "GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 VOLUME_DRIVER=btrfs ./script/test -i"
       exit
       ;;
     *)
