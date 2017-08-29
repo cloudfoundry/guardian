@@ -152,13 +152,12 @@ do
       exit
       ;;
     a)
-      RECURSIVE=1
       tmux set-option remain-on-exit on
-      tmux split-window -p 80 "./script/test -u"
-      tmux split-window -p 80 "GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 VOLUME_DRIVER=overlay-xfs ./script/test -i"
-      tmux split-window -h -p 70 "GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 VOLUME_DRIVER=btrfs ./script/test -i"
-      tmux split-window -p 50 "GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 VOLUME_DRIVER=overlay-xfs ./script/test -i"
-      tmux split-window -p 50 "GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 VOLUME_DRIVER=btrfs ./script/test -i"
+      tmux split-window -p 80 "RECURSIVE=1 FLY_TARGET='$FLY_TARGET' ./script/test -u"
+      tmux split-window -p 80 "RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 VOLUME_DRIVER=overlay-xfs ./script/test -i"
+      tmux split-window -h -p 70 "RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 VOLUME_DRIVER=btrfs ./script/test -i"
+      tmux split-window -p 50 "RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 VOLUME_DRIVER=overlay-xfs ./script/test -i"
+      tmux split-window -p 50 "RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 VOLUME_DRIVER=btrfs ./script/test -i"
       exit
       ;;
     *)
