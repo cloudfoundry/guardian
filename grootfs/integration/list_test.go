@@ -20,7 +20,6 @@ var _ = Describe("List", func() {
 	var image groot.ImageInfo
 
 	BeforeEach(func() {
-		integration.SkipIfNonRoot(GrootfsTestUid)
 		sourceImagePath, err := ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -29,7 +28,7 @@ var _ = Describe("List", func() {
 		image, err = Runner.Create(groot.CreateSpec{
 			BaseImage: baseImageFile.Name(),
 			ID:        "root-image",
-			Mount:     true,
+			Mount:     mountByDefault(),
 		})
 		Expect(err).ToNot(HaveOccurred())
 	})

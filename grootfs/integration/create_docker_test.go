@@ -142,11 +142,12 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			BeforeEach(func() {
 				integration.SkipIfNonRoot(GrootfsTestUid)
 			})
+
 			It("doesn't fail", func() {
 				sess, err := runner.StartCreate(groot.CreateSpec{
 					BaseImage: "docker:///ubuntu:trusty",
 					ID:        "some-id",
-					Mount:     true,
+					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -325,11 +326,10 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			var imageID string
 
 			JustBeforeEach(func() {
-				integration.SkipIfNonRoot(GrootfsTestUid)
 				_, err := runner.Create(groot.CreateSpec{
 					ID:        "my-busybox",
 					BaseImage: "docker:///cfgarden/garden-busybox",
-					Mount:     true,
+					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -345,7 +345,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				createSpec := groot.CreateSpec{
 					ID:        "my-empty",
 					BaseImage: "docker:///cfgarden/empty:v0.1.1",
-					Mount:     true,
+					Mount:     mountByDefault(),
 				}
 				_, err := runner.Create(createSpec)
 				Expect(err).NotTo(HaveOccurred())
@@ -364,7 +364,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				_, err = runner.Create(groot.CreateSpec{
 					ID:        imageID,
 					BaseImage: "docker:///cfgarden/empty:v0.1.1",
-					Mount:     true,
+					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -390,7 +390,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					_, err = runner.WithNoClean().Create(groot.CreateSpec{
 						ID:        imageID,
 						BaseImage: "docker:///cfgarden/empty:v0.1.1",
-						Mount:     true,
+						Mount:     mountByDefault(),
 					})
 					Expect(err).NotTo(HaveOccurred())
 

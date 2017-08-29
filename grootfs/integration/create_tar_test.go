@@ -123,11 +123,10 @@ var _ = Describe("Create with local TAR images", func() {
 
 	Describe("clean up on create", func() {
 		JustBeforeEach(func() {
-			integration.SkipIfNonRoot(GrootfsTestUid)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-image-1",
 				BaseImage: baseImagePath,
-				Mount:     true,
+				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -145,7 +144,7 @@ var _ = Describe("Create with local TAR images", func() {
 			createSpec := groot.CreateSpec{
 				ID:        "my-image-2",
 				BaseImage: baseImage2Path,
-				Mount:     true,
+				Mount:     mountByDefault(),
 			}
 			_, err := Runner.Create(createSpec)
 			Expect(err).NotTo(HaveOccurred())
@@ -164,7 +163,7 @@ var _ = Describe("Create with local TAR images", func() {
 			_, err = runner.Create(groot.CreateSpec{
 				ID:        "my-image-3",
 				BaseImage: baseImage2Path,
-				Mount:     true,
+				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -188,7 +187,7 @@ var _ = Describe("Create with local TAR images", func() {
 				_, err = Runner.WithNoClean().Create(groot.CreateSpec{
 					ID:        "my-image-3",
 					BaseImage: baseImage2Path,
-					Mount:     true,
+					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 

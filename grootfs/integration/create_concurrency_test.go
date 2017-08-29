@@ -2,11 +2,9 @@ package integration_test
 
 import (
 	"fmt"
-	"path/filepath"
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/lager"
 
@@ -16,7 +14,6 @@ import (
 
 var _ = Describe("Concurrent creations", func() {
 	BeforeEach(func() {
-		integration.SkipIfNonRoot(GrootfsTestUid)
 		err := Runner.RunningAsUser(0, 0).InitStore(runner.InitSpec{
 			UIDMappings: []groot.IDMappingSpec{
 				{HostID: GrootUID, NamespaceID: 0, Size: 1},
@@ -38,7 +35,7 @@ var _ = Describe("Concurrent creations", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "test-pre-warm",
 				BaseImage: "docker:///cfgarden/empty",
-				Mount:     true,
+				Mount:     mountByDefault(),
 			})
 
 			Expect(err).NotTo(HaveOccurred())
@@ -53,14 +50,13 @@ var _ = Describe("Concurrent creations", func() {
 					defer GinkgoRecover()
 					defer wg.Done()
 					runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
-					image, err := runner.Create(groot.CreateSpec{
+					_, err := runner.Create(groot.CreateSpec{
 						ID:        fmt.Sprintf("test-%d", idx),
 						BaseImage: "docker:///cfgarden/empty",
-						Mount:     true,
+						Mount:     mountByDefault(),
 						DiskLimit: 2*1024*1024 + 512*1024,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 2)).To(Succeed())
 				}(wg, i)
 			}
 
@@ -78,14 +74,13 @@ var _ = Describe("Concurrent creations", func() {
 
 					for i := 0; i < 100; i++ {
 						runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
-						image, err := runner.Create(groot.CreateSpec{
+						_, err := runner.Create(groot.CreateSpec{
 							ID:        fmt.Sprintf("test-%d", i),
 							BaseImage: "docker:///cfgarden/empty",
-							Mount:     true,
+							Mount:     mountByDefault(),
 							DiskLimit: 2*1024*1024 + 512*1024,
 						})
 						Expect(err).NotTo(HaveOccurred())
-						Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 2)).To(Succeed())
 					}
 				}()
 
@@ -104,18 +99,6 @@ var _ = Describe("Concurrent creations", func() {
 	})
 
 	Context("cold cache", func() {
-		BeforeEach(func() {
-			// run this to setup the store before concurrency!
-			// avoids the concurrent creation of namespace.json file
-			// can be removed after #142588813 is delivered
-			_, err := Runner.Create(groot.CreateSpec{
-				ID:        "test-pre-warm",
-				BaseImage: "docker:///cfgarden/empty",
-				Mount:     true,
-			})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
 		It("can create multiple rootfses of the same image concurrently", func() {
 			wg := new(sync.WaitGroup)
 
@@ -125,15 +108,14 @@ var _ = Describe("Concurrent creations", func() {
 					defer GinkgoRecover()
 					defer wg.Done()
 					runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
-					image, err := runner.Create(groot.CreateSpec{
+					_, err := runner.Create(groot.CreateSpec{
 						ID:                        fmt.Sprintf("test-%d", idx),
-						BaseImage:                 "docker:///ubuntu",
-						Mount:                     true,
+						BaseImage:                 "docker:///cfgarden/empty",
+						Mount:                     mountByDefault(),
 						DiskLimit:                 2*1024*1024 + 512*1024,
 						ExcludeBaseImageFromQuota: true,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 2)).To(Succeed())
 				}(wg, i)
 			}
 

@@ -25,7 +25,6 @@ var _ = Describe("Delete", func() {
 
 	BeforeEach(func() {
 		var err error
-		integration.SkipIfNonRoot(GrootfsTestUid)
 		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
@@ -43,7 +42,7 @@ var _ = Describe("Delete", func() {
 		image, err = Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
 			ID:        "random-id",
-			Mount:     true,
+			Mount:     mountByDefault(),
 		})
 		Expect(err).ToNot(HaveOccurred())
 	})

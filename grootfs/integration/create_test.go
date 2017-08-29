@@ -220,11 +220,10 @@ var _ = Describe("Create", func() {
 
 	Context("when --with-clean is given", func() {
 		BeforeEach(func() {
-			integration.SkipIfNonRoot(GrootfsTestUid)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///cfgarden/garden-busybox",
-				Mount:     true,
+				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(Runner.Delete("my-busybox")).To(Succeed())
@@ -258,11 +257,10 @@ var _ = Describe("Create", func() {
 
 	Context("when --without-clean is given", func() {
 		BeforeEach(func() {
-			integration.SkipIfNonRoot(GrootfsTestUid)
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: "docker:///cfgarden/garden-busybox",
-				Mount:     true,
+				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -281,7 +279,7 @@ var _ = Describe("Create", func() {
 			_, err = Runner.Create(groot.CreateSpec{
 				ID:            "my-empty",
 				BaseImage:     "docker:///cfgarden/empty:v0.1.1",
-				Mount:         true,
+				Mount:         mountByDefault(),
 				CleanOnCreate: false,
 			})
 			Expect(err).NotTo(HaveOccurred())

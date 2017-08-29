@@ -8,7 +8,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -25,7 +24,6 @@ var _ = Describe("Metrics", func() {
 	)
 
 	BeforeEach(func() {
-		integration.SkipIfNonRoot(GrootfsTestUid)
 		fakeMetronPort = uint16(5000 + GinkgoParallelNode())
 
 		fakeMetron = testhelpers.NewFakeMetron(fakeMetronPort)
@@ -41,7 +39,7 @@ var _ = Describe("Metrics", func() {
 		spec = groot.CreateSpec{
 			ID:        "my-id",
 			BaseImage: "docker:///cfgarden/empty:v0.1.0",
-			Mount:     true,
+			Mount:     mountByDefault(),
 		}
 	})
 
@@ -131,7 +129,6 @@ var _ = Describe("Metrics", func() {
 
 		Context("when create fails", func() {
 			BeforeEach(func() {
-				integration.SkipIfNonRoot(GrootfsTestUid)
 				spec.BaseImage = "not-here"
 			})
 
@@ -216,8 +213,7 @@ var _ = Describe("Metrics", func() {
 			var runner runner.Runner
 
 			BeforeEach(func() {
-				integration.SkipIfNonRoot(GrootfsTestUid)
-				runner = Runner.RunningAsUser(GrootUID, GrootGID)
+				runner = Runner.RunningAsUser(GrootUID+1, GrootGID+1)
 			})
 
 			It("emits an error event", func() {
@@ -420,8 +416,7 @@ var _ = Describe("Metrics", func() {
 			var runner runner.Runner
 
 			BeforeEach(func() {
-				integration.SkipIfNonRoot(GrootfsTestUid)
-				runner = Runner.RunningAsUser(GrootUID, GrootGID)
+				runner = Runner.RunningAsUser(GrootUID+1, GrootGID+1)
 			})
 
 			It("emits an error event", func() {

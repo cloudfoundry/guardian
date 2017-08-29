@@ -217,11 +217,10 @@ var _ = Describe("Create with OCI images", func() {
 		var imageID string
 
 		JustBeforeEach(func() {
-			integration.SkipIfNonRoot(GrootfsTestUid)
 			_, err := runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: baseImageURL,
-				Mount:     true,
+				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -237,7 +236,7 @@ var _ = Describe("Create with OCI images", func() {
 			createSpec := groot.CreateSpec{
 				ID:        "my-empty",
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
-				Mount:     true,
+				Mount:     mountByDefault(),
 			}
 			_, err := runner.Create(createSpec)
 			Expect(err).NotTo(HaveOccurred())
@@ -256,7 +255,7 @@ var _ = Describe("Create with OCI images", func() {
 			_, err = runner.Create(groot.CreateSpec{
 				ID:        imageID,
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
-				Mount:     true,
+				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -281,7 +280,7 @@ var _ = Describe("Create with OCI images", func() {
 				_, err = runner.WithNoClean().Create(groot.CreateSpec{
 					ID:        imageID,
 					BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
-					Mount:     true,
+					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
