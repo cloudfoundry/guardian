@@ -23,6 +23,7 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
@@ -37,6 +38,22 @@ import (
 
 var _ = Describe("Create with remote DOCKER images", func() {
 	var baseImageURL string
+	var runner runnerpkg.Runner
+
+	BeforeEach(func() {
+		initSpec := runnerpkg.InitSpec{UIDMappings: []groot.IDMappingSpec{
+			{HostID: GrootUID, NamespaceID: 0, Size: 1},
+			{HostID: 100000, NamespaceID: 1, Size: 65000},
+		},
+			GIDMappings: []groot.IDMappingSpec{
+				{HostID: GrootGID, NamespaceID: 0, Size: 1},
+				{HostID: 100000, NamespaceID: 1, Size: 65000},
+			},
+		}
+
+		Expect(Runner.RunningAsUser(0, 0).InitStore(initSpec)).To(Succeed())
+		runner = Runner.SkipInitStore()
+	})
 
 	Context("when using the default registry", func() {
 		BeforeEach(func() {
@@ -44,13 +61,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		})
 
 		It("creates a root filesystem based on the image provided", func() {
-			image, err := Runner.Create(groot.CreateSpec{
+			image, err := runner.Create(groot.CreateSpec{
 				BaseImage: "docker:///cfgarden/three-layers",
 				ID:        "random-id",
 				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			Expect(runner.EnsureMounted(image)).To(Succeed())
 
 			Expect(path.Join(image.Rootfs, "layer-3-file")).To(BeARegularFile())
 			Expect(path.Join(image.Rootfs, "layer-2-file")).To(BeARegularFile())
@@ -58,13 +75,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		})
 
 		It("saves the image.json to the image folder", func() {
-			image, err := Runner.Create(groot.CreateSpec{
+			image, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        "random-id",
 				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			Expect(runner.EnsureMounted(image)).To(Succeed())
 
 			imageJsonPath := path.Join(image.Path, "image.json")
 			Expect(imageJsonPath).To(BeARegularFile())
@@ -81,21 +98,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		})
 
 		It("gives any user permission to be inside the container", func() {
-			image, err := Runner.Create(groot.CreateSpec{
+			image, err := runner.Create(groot.CreateSpec{
 				BaseImage: "docker:///cfgarden/garden-busybox",
 				ID:        "random-id",
 				Mount:     mountByDefault(),
-				UIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootUID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-				GIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootGID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			Expect(runner.EnsureMounted(image)).To(Succeed())
 
 			cmd := exec.Command(NamespacerBin, image.Rootfs, strconv.Itoa(GrootUID+100), "/bin/ls", "/")
 			cmd.SysProcAttr = &syscall.SysProcAttr{
@@ -107,41 +116,25 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		})
 
 		It("outputs a json with the correct `rootfs` key", func() {
-			image, err := Runner.Create(groot.CreateSpec{
+			image, err := runner.Create(groot.CreateSpec{
 				BaseImage: "docker:///cfgarden/garden-busybox",
 				ID:        "random-id",
 				Mount:     mountByDefault(),
-				UIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootUID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-				GIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootGID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			Expect(runner.EnsureMounted(image)).To(Succeed())
 
 			Expect(image.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, "random-id", "rootfs")))
 		})
 
 		It("outputs a json with the correct `config` key", func() {
-			image, err := Runner.Create(groot.CreateSpec{
+			image, err := runner.Create(groot.CreateSpec{
 				BaseImage: "docker:///cfgarden/garden-busybox",
 				ID:        "random-id",
 				Mount:     mountByDefault(),
-				UIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootUID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-				GIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootGID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			Expect(runner.EnsureMounted(image)).To(Succeed())
 			Expect(image.Image.RootFS.DiffIDs[0]).To(Equal(digestpkg.NewDigestFromHex("sha256", testhelpers.BusyBoxImage.Layers[0].ChainID)))
 		})
 
@@ -150,7 +143,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				integration.SkipIfNonRoot(GrootfsTestUid)
 			})
 			It("doesn't fail", func() {
-				sess, err := Runner.StartCreate(groot.CreateSpec{
+				sess, err := runner.StartCreate(groot.CreateSpec{
 					BaseImage: "docker:///ubuntu:trusty",
 					ID:        "some-id",
 					Mount:     true,
@@ -207,7 +200,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 
 			It("lists the volumes as mounts in the returned spec", func() {
-				image, err := Runner.Create(groot.CreateSpec{
+				image, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
@@ -225,7 +218,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 
 			It("create the bind mount source for the volumes", func() {
-				_, err := Runner.Create(groot.CreateSpec{
+				_, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
@@ -245,13 +238,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 
 			It("creates the link with success", func() {
-				image, err := Runner.Create(groot.CreateSpec{
+				image, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
+				Expect(runner.EnsureMounted(image)).To(Succeed())
 
 				symlinkFilePath := filepath.Join(image.Rootfs, "tmp/symlink")
 				stat, err := os.Lstat(symlinkFilePath)
@@ -270,21 +263,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 
 			It("empties the folder contents but keeps the dir", func() {
-				image, err := Runner.Create(groot.CreateSpec{
+				image, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
-					UIDMappings: []groot.IDMappingSpec{
-						{HostID: GrootUID, NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-					GIDMappings: []groot.IDMappingSpec{
-						{HostID: GrootGID, NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
+				Expect(runner.EnsureMounted(image)).To(Succeed())
 
 				whiteoutedDir := path.Join(image.Rootfs, "var")
 				Expect(whiteoutedDir).To(BeADirectory())
@@ -300,21 +285,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 
 			It("removes the whiteout file", func() {
-				image, err := Runner.Create(groot.CreateSpec{
+				image, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
-					UIDMappings: []groot.IDMappingSpec{
-						{HostID: GrootUID, NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-					GIDMappings: []groot.IDMappingSpec{
-						{HostID: GrootGID, NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
+				Expect(runner.EnsureMounted(image)).To(Succeed())
 
 				Expect(path.Join(image.Rootfs, "file-to-be-deleted")).ToNot(BeAnExistingFile())
 				Expect(path.Join(image.Rootfs, "folder")).ToNot(BeAnExistingFile())
@@ -328,13 +305,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 
 			It("correctly applies the user bit", func() {
-				image, err := Runner.Create(groot.CreateSpec{
+				image, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
+				Expect(runner.EnsureMounted(image)).To(Succeed())
 
 				setuidFilePath := path.Join(image.Rootfs, "bin", "busybox")
 				stat, err := os.Stat(setuidFilePath)
@@ -349,30 +326,28 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 			JustBeforeEach(func() {
 				integration.SkipIfNonRoot(GrootfsTestUid)
-				_, err := Runner.Create(groot.CreateSpec{
+				_, err := runner.Create(groot.CreateSpec{
 					ID:        "my-busybox",
 					BaseImage: "docker:///cfgarden/garden-busybox",
 					Mount:     true,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(Runner.Delete("my-busybox")).To(Succeed())
+				Expect(runner.Delete("my-busybox")).To(Succeed())
 				imageID = "random-id"
 			})
 
 			AfterEach(func() {
-				Expect(Runner.Delete(imageID)).To(Succeed())
+				Expect(runner.Delete(imageID)).To(Succeed())
 			})
 
 			It("cleans up unused layers before create but not the one about to be created", func() {
-				runner := Runner.WithClean()
-
 				createSpec := groot.CreateSpec{
 					ID:        "my-empty",
 					BaseImage: "docker:///cfgarden/empty:v0.1.1",
 					Mount:     true,
 				}
-				_, err := Runner.Create(createSpec)
+				_, err := runner.Create(createSpec)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(runner.Delete("my-empty")).To(Succeed())
 
@@ -385,6 +360,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preContents).To(HaveLen(3))
 
+				runner := runner.WithClean()
 				_, err = runner.Create(groot.CreateSpec{
 					ID:        imageID,
 					BaseImage: "docker:///cfgarden/empty:v0.1.1",
@@ -411,7 +387,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(1))
 
-					_, err = Runner.WithNoClean().Create(groot.CreateSpec{
+					_, err = runner.WithNoClean().Create(groot.CreateSpec{
 						ID:        imageID,
 						BaseImage: "docker:///cfgarden/empty:v0.1.1",
 						Mount:     true,
@@ -432,14 +408,14 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 			Context("when the credentials are correct", func() {
 				It("succeeds", func() {
-					runner := Runner.WithCredentials(RegistryUsername, RegistryPassword)
+					runner := runner.WithCredentials(RegistryUsername, RegistryPassword)
 					image, err := runner.Create(groot.CreateSpec{
 						BaseImage: baseImageURL,
 						ID:        "random-id",
 						Mount:     mountByDefault(),
 					})
 					Expect(err).NotTo(HaveOccurred())
-					Expect(Runner.EnsureMounted(image)).To(Succeed())
+					Expect(runner.EnsureMounted(image)).To(Succeed())
 				})
 			})
 
@@ -461,7 +437,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				})
 
 				It("fails", func() {
-					runner := Runner.WithCredentials("someuser", "invalid-password").WithInsecureRegistry(fakeRegistry.Addr())
+					runner := runner.WithCredentials("someuser", "invalid-password").WithInsecureRegistry(fakeRegistry.Addr())
 					_, err := runner.Create(groot.CreateSpec{
 						BaseImage: baseImageURL,
 						ID:        "random-id",
@@ -473,7 +449,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 			It("does not log the credentials OR their references", func() {
 				buffer := gbytes.NewBuffer()
-				runner := Runner.WithCredentials(RegistryUsername, RegistryPassword).WithStderr(buffer).WithLogLevel(lager.DEBUG)
+				runner := runner.WithCredentials(RegistryUsername, RegistryPassword).WithStderr(buffer).WithLogLevel(lager.DEBUG)
 				_, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
@@ -492,21 +468,21 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 			Context("when the image is not accounted for in the quota", func() {
 				It("succeeds", func() {
-					image, err := Runner.Create(groot.CreateSpec{
+					image, err := runner.Create(groot.CreateSpec{
 						BaseImage: baseImageURL,
 						ID:        "random-id",
 						Mount:     mountByDefault(),
 						ExcludeBaseImageFromQuota: true,
 						DiskLimit:                 10,
 					})
-					Expect(Runner.EnsureMounted(image)).To(Succeed())
+					Expect(runner.EnsureMounted(image)).To(Succeed())
 					Expect(err).ToNot(HaveOccurred())
 				})
 			})
 
 			Context("when the image is accounted for in the quota", func() {
 				It("returns an error", func() {
-					_, err := Runner.Create(groot.CreateSpec{
+					_, err := runner.Create(groot.CreateSpec{
 						BaseImage: baseImageURL,
 						ID:        "random-id",
 						Mount:     mountByDefault(),
@@ -519,7 +495,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		Describe("Unpacked layer caching", func() {
 			It("caches the unpacked image as a volume", func() {
-				_, err := Runner.Create(groot.CreateSpec{
+				_, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
@@ -529,13 +505,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				layerSnapshotPath := filepath.Join(StorePath, "volumes", "3355e23c079e9b35e4b48075147a7e7e1850b99e089af9a63eed3de235af98ca")
 				Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
-				image, err := Runner.Create(groot.CreateSpec{
+				image, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id-2",
 					Mount:     mountByDefault(),
 				})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
+				Expect(runner.EnsureMounted(image)).To(Succeed())
 				Expect(path.Join(image.Rootfs, "hello")).To(BeARegularFile())
 				Expect(path.Join(image.Rootfs, "injected-file")).To(BeARegularFile())
 			})
@@ -544,6 +520,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				var (
 					fakeRegistry  *testhelpers.FakeRegistry
 					corruptedBlob string
+					volumesDir    string
 				)
 
 				AfterEach(func() {
@@ -552,6 +529,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 				Context("when the image has a version 2 manifest schema", func() {
 					BeforeEach(func() {
+						volumesDir = filepath.Join(StorePath, store.VolumesDirName)
 						dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
 						Expect(err).NotTo(HaveOccurred())
 						fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
@@ -565,10 +543,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					})
 
 					It("fails and cleans up the corrupted volumes", func() {
-						runner := Runner.WithInsecureRegistry(fakeRegistry.Addr())
-
-						volumesDir := filepath.Join(StorePath, store.VolumesDirName)
-						Expect(volumesDir).ToNot(BeADirectory())
+						runner := runner.WithInsecureRegistry(fakeRegistry.Addr())
 
 						_, err := runner.Create(groot.CreateSpec{
 							BaseImage: baseImageURL,
@@ -601,10 +576,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					})
 
 					It("fails and never creates any volumes", func() {
-						runner := Runner.WithInsecureRegistry(fakeRegistry.Addr())
-
-						volumesDir := filepath.Join(StorePath, store.VolumesDirName)
-						Expect(volumesDir).ToNot(BeADirectory())
+						runner := runner.WithInsecureRegistry(fakeRegistry.Addr())
 
 						_, err := runner.Create(groot.CreateSpec{
 							BaseImage: baseImageURL,
@@ -627,13 +599,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 
 			It("creates a root filesystem based on the image provided", func() {
-				image, err := Runner.Create(groot.CreateSpec{
+				image, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
 				})
 				Expect(err).ToNot(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
+				Expect(runner.EnsureMounted(image)).To(Succeed())
 				Expect(path.Join(image.Rootfs, "allo")).To(BeAnExistingFile())
 				Expect(path.Join(image.Rootfs, "hello")).To(BeAnExistingFile())
 
@@ -664,7 +636,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		})
 
 		It("fails to fetch the image", func() {
-			_, err := Runner.Create(groot.CreateSpec{
+			_, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        "random-id",
 				Mount:     mountByDefault(),
@@ -674,14 +646,14 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		Context("when it's provided as a valid insecure registry", func() {
 			It("should create a root filesystem based on the image provided by the private registry", func() {
-				runner := Runner.WithInsecureRegistry(fakeRegistry.Addr())
+				runner := runner.WithInsecureRegistry(fakeRegistry.Addr())
 				image, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
+				Expect(runner.EnsureMounted(image)).To(Succeed())
 
 				Expect(path.Join(image.Rootfs, "hello")).To(BeARegularFile())
 				Expect(fakeRegistry.RequestedBlobs()).To(HaveLen(3))
@@ -719,14 +691,14 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				})
 
 				It("creates a root filesystem based on the image provided by the private registry", func() {
-					runner := Runner.WithConfig(configFilePath)
+					runner := runner.WithConfig(configFilePath)
 					image, err := runner.Create(groot.CreateSpec{
 						BaseImage: baseImageURL,
 						ID:        "random-id",
 						Mount:     mountByDefault(),
 					})
 					Expect(err).NotTo(HaveOccurred())
-					Expect(Runner.EnsureMounted(image)).To(Succeed())
+					Expect(runner.EnsureMounted(image)).To(Succeed())
 
 					Expect(path.Join(image.Rootfs, "hello")).To(BeARegularFile())
 					Expect(fakeRegistry.RequestedBlobs()).To(HaveLen(3))
@@ -735,7 +707,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 			Context("when config path is invalid", func() {
 				It("returns a useful error", func() {
-					runner := Runner.WithConfig("invalid-config-path")
+					runner := runner.WithConfig("invalid-config-path")
 					_, err := runner.Create(groot.CreateSpec{
 						BaseImage: baseImageURL,
 						ID:        "random-id",
@@ -749,7 +721,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 	Context("when the image does not exist", func() {
 		It("returns a useful error", func() {
-			_, err := Runner.Create(groot.CreateSpec{
+			_, err := runner.Create(groot.CreateSpec{
 				BaseImage: "docker:///cfgaren/sorry-not-here",
 				ID:        "random-id",
 				Mount:     mountByDefault(),
@@ -763,23 +735,15 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			baseImageURL = "docker:///cfgarden/non-writable-file"
 		})
 
-		Context("when providing id mappings", func() {
+		Context("id mappings", func() {
 			It("works", func() {
-				image, err := Runner.Create(groot.CreateSpec{
+				image, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
-					UIDMappings: []groot.IDMappingSpec{
-						{HostID: GrootUID, NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-					GIDMappings: []groot.IDMappingSpec{
-						{HostID: GrootGID, NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
+				Expect(runner.EnsureMounted(image)).To(Succeed())
 
 				Expect(path.Join(image.Rootfs, "test", "hello")).To(BeARegularFile())
 			})
@@ -791,25 +755,15 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			baseImageURL = "docker:///cfgarden/non-writable-folder"
 		})
 
-		Context("when providing id mappings", func() {
-			It("works", func() {
-				image, err := Runner.Create(groot.CreateSpec{
-					BaseImage: baseImageURL,
-					ID:        "random-id",
-					Mount:     mountByDefault(),
-					UIDMappings: []groot.IDMappingSpec{
-						{HostID: GrootUID, NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-					GIDMappings: []groot.IDMappingSpec{
-						{HostID: GrootGID, NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-				})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
-				Expect(path.Join(image.Rootfs, "test", "hello")).To(BeARegularFile())
+		It("works", func() {
+			image, err := runner.Create(groot.CreateSpec{
+				BaseImage: baseImageURL,
+				ID:        "random-id",
+				Mount:     mountByDefault(),
 			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(runner.EnsureMounted(image)).To(Succeed())
+			Expect(path.Join(image.Rootfs, "test", "hello")).To(BeARegularFile())
 		})
 	})
 
@@ -837,15 +791,13 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		})
 
 		It("has no effect", func() {
-			runner := Runner.WithInsecureRegistry(fakeRegistry.Addr())
-
-			_, err := runner.SkipLayerCheckSumValidation().Create(groot.CreateSpec{
+			r := runner.WithInsecureRegistry(fakeRegistry.Addr())
+			_, err := r.SkipLayerCheckSumValidation().Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        "random-id",
 				Mount:     true,
 			})
 
-			Expect(err).To(HaveOccurred())
 			Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
 		})
 	})

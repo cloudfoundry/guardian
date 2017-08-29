@@ -2,6 +2,7 @@ package runner
 
 import (
 	"encoding/json"
+	"errors"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -22,6 +23,10 @@ func (r Runner) StartCreate(spec groot.CreateSpec) (*gexec.Session, error) {
 }
 
 func (r Runner) Create(spec groot.CreateSpec) (groot.ImageInfo, error) {
+	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
+		return groot.ImageInfo{}, errors.New("Mappings cannot be applied to Create. Set them on init-store.")
+	}
+
 	if !r.skipInitStore {
 		if err := r.initStoreAsRoot(); err != nil {
 			return groot.ImageInfo{}, err

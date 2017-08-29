@@ -7,10 +7,12 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 
 	. "github.com/onsi/ginkgo"
@@ -287,6 +289,50 @@ var _ = Describe("Create with local TAR images", func() {
 				Mount:     false,
 			})
 			Expect(err).To(MatchError(ContainSubstring("stat /invalid/image: no such file or directory")))
+		})
+	})
+
+	Context("when mappings are provided", func() {
+		BeforeEach(func() {
+			var spec runner.InitSpec
+			spec.UIDMappings = []groot.IDMappingSpec{
+				groot.IDMappingSpec{HostID: GrootUID, NamespaceID: 0, Size: 1},
+				groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+			}
+			spec.GIDMappings = []groot.IDMappingSpec{
+				groot.IDMappingSpec{HostID: GrootGID, NamespaceID: 0, Size: 1},
+				groot.IDMappingSpec{HostID: 100000, NamespaceID: 1, Size: 65000},
+			}
+
+			Runner.RunningAsUser(0, 0).InitStore(spec)
+		})
+
+		It("creates a store that correctly maps the user/group ids", func() {
+			sourceImagePath := integration.CreateBaseImage(0, 0, GrootUID, GrootGID)
+			baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+
+			defer func() {
+				Expect(os.RemoveAll(sourceImagePath)).To(Succeed())
+				Expect(os.RemoveAll(baseImageFile.Name())).To(Succeed())
+			}()
+
+			image, err := Runner.SkipInitStore().Create(groot.CreateSpec{
+				BaseImage: baseImageFile.Name(),
+				ID:        "random-id",
+				Mount:     mountByDefault(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			grootFi, err := os.Stat(path.Join(image.Rootfs, "foo"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
+
+			rootFi, err := os.Stat(path.Join(image.Rootfs, "bar"))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
+			Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 		})
 	})
 

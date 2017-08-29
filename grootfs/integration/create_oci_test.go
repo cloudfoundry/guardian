@@ -17,7 +17,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/integration/runner"
+	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 
 	. "github.com/onsi/ginkgo"
@@ -30,6 +30,7 @@ var _ = Describe("Create with OCI images", func() {
 	var (
 		baseImageURL string
 		workDir      string
+		runner       runnerpkg.Runner
 	)
 
 	BeforeEach(func() {
@@ -37,10 +38,23 @@ var _ = Describe("Create with OCI images", func() {
 		workDir, err = os.Getwd()
 		Expect(err).NotTo(HaveOccurred())
 		baseImageURL = fmt.Sprintf("oci:///%s/assets/oci-test-image/grootfs-busybox:latest", workDir)
+
+		initSpec := runnerpkg.InitSpec{UIDMappings: []groot.IDMappingSpec{
+			{HostID: GrootUID, NamespaceID: 0, Size: 1},
+			{HostID: 100000, NamespaceID: 1, Size: 65000},
+		},
+			GIDMappings: []groot.IDMappingSpec{
+				{HostID: GrootGID, NamespaceID: 0, Size: 1},
+				{HostID: 100000, NamespaceID: 1, Size: 65000},
+			},
+		}
+
+		Expect(Runner.RunningAsUser(0, 0).InitStore(initSpec)).To(Succeed())
+		runner = Runner.SkipInitStore()
 	})
 
 	It("creates a root filesystem based on the image provided", func() {
-		image, err := Runner.Create(groot.CreateSpec{
+		image, err := runner.Create(groot.CreateSpec{
 			BaseImage: baseImageURL,
 			ID:        "random-id",
 			Mount:     mountByDefault(),
@@ -54,7 +68,7 @@ var _ = Describe("Create with OCI images", func() {
 	})
 
 	It("saves the image.json to the image folder", func() {
-		image, err := Runner.Create(groot.CreateSpec{
+		image, err := runner.Create(groot.CreateSpec{
 			BaseImage: baseImageURL,
 			ID:        "random-id",
 			Mount:     mountByDefault(),
@@ -80,18 +94,10 @@ var _ = Describe("Create with OCI images", func() {
 	})
 
 	It("gives any user permission to be inside the container", func() {
-		image, err := Runner.Create(groot.CreateSpec{
+		image, err := runner.Create(groot.CreateSpec{
 			BaseImage: baseImageURL,
 			ID:        "random-id",
 			Mount:     mountByDefault(),
-			UIDMappings: []groot.IDMappingSpec{
-				{HostID: GrootUID, NamespaceID: 0, Size: 1},
-				{HostID: 100000, NamespaceID: 1, Size: 65000},
-			},
-			GIDMappings: []groot.IDMappingSpec{
-				{HostID: GrootGID, NamespaceID: 0, Size: 1},
-				{HostID: 100000, NamespaceID: 1, Size: 65000},
-			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(Runner.EnsureMounted(image)).To(Succeed())
@@ -106,18 +112,10 @@ var _ = Describe("Create with OCI images", func() {
 	})
 
 	It("outputs a json with the correct `rootfs` key", func() {
-		image, err := Runner.Create(groot.CreateSpec{
+		image, err := runner.Create(groot.CreateSpec{
 			BaseImage: baseImageURL,
 			ID:        "random-id",
 			Mount:     mountByDefault(),
-			UIDMappings: []groot.IDMappingSpec{
-				{HostID: GrootUID, NamespaceID: 0, Size: 1},
-				{HostID: 100000, NamespaceID: 1, Size: 65000},
-			},
-			GIDMappings: []groot.IDMappingSpec{
-				{HostID: GrootGID, NamespaceID: 0, Size: 1},
-				{HostID: 100000, NamespaceID: 1, Size: 65000},
-			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(Runner.EnsureMounted(image)).To(Succeed())
@@ -126,18 +124,10 @@ var _ = Describe("Create with OCI images", func() {
 	})
 
 	It("outputs a json with the correct `config` key", func() {
-		image, err := Runner.Create(groot.CreateSpec{
+		image, err := runner.Create(groot.CreateSpec{
 			BaseImage: baseImageURL,
 			ID:        "random-id",
 			Mount:     mountByDefault(),
-			UIDMappings: []groot.IDMappingSpec{
-				{HostID: GrootUID, NamespaceID: 0, Size: 1},
-				{HostID: 100000, NamespaceID: 1, Size: 65000},
-			},
-			GIDMappings: []groot.IDMappingSpec{
-				{HostID: GrootGID, NamespaceID: 0, Size: 1},
-				{HostID: 100000, NamespaceID: 1, Size: 65000},
-			},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(Runner.EnsureMounted(image)).To(Succeed())
@@ -150,7 +140,7 @@ var _ = Describe("Create with OCI images", func() {
 		})
 
 		It("lists the volumes as mounts in the returned spec", func() {
-			image, err := Runner.Create(groot.CreateSpec{
+			image, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        "random-id",
 				Mount:     mountByDefault(),
@@ -168,7 +158,7 @@ var _ = Describe("Create with OCI images", func() {
 		})
 
 		It("create the bind mount source for the volumes", func() {
-			_, err := Runner.Create(groot.CreateSpec{
+			_, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        "random-id",
 				Mount:     mountByDefault(),
@@ -189,18 +179,10 @@ var _ = Describe("Create with OCI images", func() {
 		})
 
 		It("empties the folder contents but keeps the dir", func() {
-			image, err := Runner.Create(groot.CreateSpec{
+			image, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        "random-id",
 				Mount:     mountByDefault(),
-				UIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootUID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-				GIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootGID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(Runner.EnsureMounted(image)).To(Succeed())
@@ -215,7 +197,7 @@ var _ = Describe("Create with OCI images", func() {
 
 	Context("when the image has files with the setuid on", func() {
 		It("correctly applies the user bit", func() {
-			image, err := Runner.Create(groot.CreateSpec{
+			image, err := runner.Create(groot.CreateSpec{
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/garden-busybox:latest", workDir),
 				ID:        "random-id",
 				Mount:     mountByDefault(),
@@ -236,7 +218,7 @@ var _ = Describe("Create with OCI images", func() {
 
 		JustBeforeEach(func() {
 			integration.SkipIfNonRoot(GrootfsTestUid)
-			_, err := Runner.Create(groot.CreateSpec{
+			_, err := runner.Create(groot.CreateSpec{
 				ID:        "my-busybox",
 				BaseImage: baseImageURL,
 				Mount:     true,
@@ -252,14 +234,12 @@ var _ = Describe("Create with OCI images", func() {
 		})
 
 		It("cleans up unused layers before create but not the one about to be created", func() {
-			runner := Runner.WithClean()
-
 			createSpec := groot.CreateSpec{
 				ID:        "my-empty",
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
 				Mount:     true,
 			}
-			_, err := Runner.Create(createSpec)
+			_, err := runner.Create(createSpec)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(runner.Delete("my-empty")).To(Succeed())
 
@@ -272,6 +252,7 @@ var _ = Describe("Create with OCI images", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(preContents).To(HaveLen(6))
 
+			runner := runner.WithClean()
 			_, err = runner.Create(groot.CreateSpec{
 				ID:        imageID,
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
@@ -297,7 +278,7 @@ var _ = Describe("Create with OCI images", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preContents).To(HaveLen(4))
 
-				_, err = Runner.WithNoClean().Create(groot.CreateSpec{
+				_, err = runner.WithNoClean().Create(groot.CreateSpec{
 					ID:        imageID,
 					BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
 					Mount:     true,
@@ -314,7 +295,7 @@ var _ = Describe("Create with OCI images", func() {
 	Context("when image size exceeds disk quota", func() {
 		Context("when the image is accounted for in the quota", func() {
 			It("returns an error", func() {
-				_, err := Runner.Create(groot.CreateSpec{
+				_, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
@@ -327,7 +308,7 @@ var _ = Describe("Create with OCI images", func() {
 
 	Describe("Unpacked layer caching", func() {
 		It("caches the unpacked image as a volume", func() {
-			_, err := Runner.Create(groot.CreateSpec{
+			_, err := runner.Create(groot.CreateSpec{
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
 				ID:        "random-id",
 				Mount:     mountByDefault(),
@@ -337,7 +318,7 @@ var _ = Describe("Create with OCI images", func() {
 			layerSnapshotPath := filepath.Join(StorePath, "volumes", "9242945d3c9c7cf5f127f9352fea38b1d3efe62ee76e25f70a3e6db63a14c233")
 			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
-			image, err := Runner.Create(groot.CreateSpec{
+			image, err := runner.Create(groot.CreateSpec{
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
 				ID:        "random-id-2",
 				Mount:     mountByDefault(),
@@ -349,7 +330,7 @@ var _ = Describe("Create with OCI images", func() {
 
 		Describe("when unpacking the image fails", func() {
 			It("deletes the layer volume cache", func() {
-				_, err := Runner.Create(groot.CreateSpec{
+				_, err := runner.Create(groot.CreateSpec{
 					BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/corrupted:latest", workDir),
 					ID:        "random-id-2",
 					Mount:     true,
@@ -364,7 +345,7 @@ var _ = Describe("Create with OCI images", func() {
 
 	Context("when the image does not exist", func() {
 		It("returns a useful error", func() {
-			_, err := Runner.Create(groot.CreateSpec{
+			_, err := runner.Create(groot.CreateSpec{
 				BaseImage: "oci:///cfgarden/sorry-not-here",
 				ID:        "random-id",
 				Mount:     mountByDefault(),
@@ -376,22 +357,10 @@ var _ = Describe("Create with OCI images", func() {
 	Context("when using mappings", func() {
 		BeforeEach(func() {
 			baseImageURL = fmt.Sprintf("oci:///%s/assets/oci-test-image/grootfs-busybox:latest", workDir)
-			initSpec := runner.InitSpec{
-				UIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootUID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-				GIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootGID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-			}
-
-			Expect(Runner.RunningAsUser(0, 0).InitStore(initSpec)).To(Succeed())
 		})
 
-		It("works map the files", func() {
-			image, err := Runner.SkipInitStore().Create(groot.CreateSpec{
+		It("maps the owners of the files", func() {
+			image, err := runner.SkipInitStore().Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        "random-id",
 				Mount:     mountByDefault(),
@@ -414,22 +383,10 @@ var _ = Describe("Create with OCI images", func() {
 	Context("when the image has files that are not writable to their owner", func() {
 		BeforeEach(func() {
 			baseImageURL = fmt.Sprintf("oci:///%s/assets/oci-test-image/non-writable-file:latest", workDir)
-			initSpec := runner.InitSpec{
-				UIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootUID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-				GIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootGID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-			}
-
-			Expect(Runner.RunningAsUser(0, 0).InitStore(initSpec)).To(Succeed())
 		})
 
 		Context("when providing id mappings", func() {
-			It("works", func() {
+			It("creates those files", func() {
 				image, err := Runner.SkipInitStore().Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
@@ -449,18 +406,10 @@ var _ = Describe("Create with OCI images", func() {
 
 		Context("when providing id mappings", func() {
 			It("works", func() {
-				image, err := Runner.Create(groot.CreateSpec{
+				image, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        "random-id",
 					Mount:     mountByDefault(),
-					UIDMappings: []groot.IDMappingSpec{
-						{HostID: GrootUID, NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
-					GIDMappings: []groot.IDMappingSpec{
-						{HostID: GrootGID, NamespaceID: 0, Size: 1},
-						{HostID: 100000, NamespaceID: 1, Size: 65000},
-					},
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(Runner.EnsureMounted(image)).To(Succeed())
@@ -471,18 +420,10 @@ var _ = Describe("Create with OCI images", func() {
 
 	Context("when --skip-layer-validation flag is passed", func() {
 		It("does not validate the checksums for oci image layers", func() {
-			image, err := Runner.SkipLayerCheckSumValidation().Create(groot.CreateSpec{
+			image, err := runner.SkipLayerCheckSumValidation().Create(groot.CreateSpec{
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/also-corrupted:latest", workDir),
 				ID:        "random-id",
 				Mount:     mountByDefault(),
-				UIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootUID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
-				GIDMappings: []groot.IDMappingSpec{
-					{HostID: GrootGID, NamespaceID: 0, Size: 1},
-					{HostID: 100000, NamespaceID: 1, Size: 65000},
-				},
 			})
 
 			Expect(err).NotTo(HaveOccurred())
