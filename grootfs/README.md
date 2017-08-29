@@ -37,21 +37,19 @@ to request an invitation.
 
 ## Installation
 
-_Because GrootFS depends on Linux kernel features, you can only build it from
-or to a Linux machine._
+The simplest way to install GrootFS,
+is to download the latest compiled release
+from the [releases page](https://github.com/cloudfoundry/grootfs/releases):
 
 ```
-mkdir -p $GOPATH/src/code.cloudfoundry.org
-git clone https://github.com/cloudfoundry/grootfs.git $GOPATH/src/code.cloudfoundry.org/grootfs
-cd $GOPATH/src/code.cloudfoundry.org/grootfs
-git submodule update --init --recursive
-make
+$> curl -o /usr/local/bin/grootfs -L https://github.com/cloudfoundry/grootfs/releases/download/v0.25.0/grootfs-0.25.0
+$> chmod +x /usr/local/bin/grootfs
+$> grootfs --version
+grootfs version 0.25.0
 ```
-
-_Using `go get code.cloudfoundry.org/grootfs` is discouraged because it might
-not work due to our versioned dependencies._
 
 ### Filesystems
+
 GrootFS makes use of various Linux filesystem features in order to efficiently store
 container root filesystems on the host machine.
 
