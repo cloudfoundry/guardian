@@ -10,19 +10,18 @@
 [by](https://creativecommons.org/licenses/by-nc-nd/3.0/)
 [chattanooga-choochoo](http://chattanooga-choochoo.deviantart.com/art/Groot-584361210)
 
-GrootFS is a [Cloud Foundry](https://www.cloudfoundry.org) component to satisfy
-[garden-runc](https://github.com/cloudfoundry/garden-runc-release)'s
-requirements for handling container images.
+GrootFS is the [Cloud Foundry](https://www.cloudfoundry.org) component
+that provides filesystem isolation for containers
+and deals with container (Docker and OCI) images.
 
-It is currently under development.
-
-You can find us in the #garden [Cloud Foundry slack
-channel](https://cloudfoundry.slack.com). Use
-[https://slack.cloudfoundry.org](https://slack.cloudfoundry.org) to get an
-invitation.
+You can find us in the #grootfs channel
+of the [Cloud Foundry Slack](https://cloudfoundry.slack.com).
+Use [https://slack.cloudfoundry.org](https://slack.cloudfoundry.org)
+to request an invitation.
 
 
 # Index
+
 * [Installation](#installation)
 * [Configuration](#configuration)
 * [Initializing a store](#initializing-a-store)
