@@ -186,6 +186,10 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					}
 					if time.Now().After(deadline) {
 						fmt.Println(">>>> printing debug info")
+						netstatCmd := exec.Command("bash", "-c", "netstat -tanp | grep "+strconv.Itoa(sess.Command.Process.Pid))
+						netstatCmd.Stdout = GinkgoWriter
+						netstatCmd.Stderr = GinkgoWriter
+						Expect(netstatCmd.Run()).To(Succeed())
 						sess.Signal(syscall.SIGQUIT)
 						Fail("timeout exeeded")
 					}
