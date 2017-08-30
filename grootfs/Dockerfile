@@ -13,6 +13,7 @@ RUN apt-get update && \
         jq \
         vim \
         netcat \
+        net-tools \
         sudo \
         uidmap \
         unzip \
