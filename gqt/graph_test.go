@@ -98,16 +98,11 @@ var _ = Describe("graph flags", func() {
 		Context("when the graph cleanup threshold is exceeded", func() {
 			BeforeEach(func() {
 				config.GraphCleanupThresholdMB = intptr(0)
+				persistentImages = []string{}
 			})
 
 			Context("when there are other rootfs layers in the graph dir", func() {
-				BeforeEach(func() {
-					persistentImages = append(persistentImages, "docker:///busybox")
-				})
-
 				It("cleans up the graph directory on container creation (and not on destruction)", func() {
-					config.GraphCleanupThresholdMB = intptr(1)
-					client = restartGarden(client, config) // restart with persistent image list empty
 					Expect(numLayersInGraph()).To(BeNumerically(">", 0))
 
 					anotherContainer, err := client.Create(garden.ContainerSpec{})
