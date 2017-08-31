@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
@@ -32,6 +33,9 @@ const (
 	imageInfoName  = "image_info"
 	WhiteoutDevice = "whiteout_dev"
 	LinksDirName   = "l"
+
+	createExternalLogDevMaxAttempts      = 3
+	createExternalLogDevAttemptsInterval = 100 * time.Millisecond
 )
 
 func NewDriver(storePath, tardisBinPath string, externalLogSize int64) *Driver {
@@ -305,13 +309,9 @@ func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath, externalL
 
 	mkfsArgs := []string{"-f"}
 	if d.externalLogSize > 0 {
-		if err := d.createExternalLogFile(logger, externalLogPath); err != nil {
-			return errorspkg.Wrapf(err, "creating-external-log-file")
-		}
-
-		loopdevPath, err := d.findAssociatedLoopDevice(externalLogPath)
+		loopdevPath, err := d.createExternalLogDeviceWithTries(logger, externalLogPath)
 		if err != nil {
-			return err
+			return errorspkg.Wrap(err, "creating external log device")
 		}
 
 		mkfsArgs = append(mkfsArgs, "-l", fmt.Sprintf("logdev=%s,size=%d", loopdevPath, d.externalLogSize*1024*1024))
@@ -328,6 +328,30 @@ func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath, externalL
 	}
 
 	return nil
+}
+
+func (d *Driver) createExternalLogDeviceWithTries(logger lager.Logger, externalLogPath string) (loopdevPath string, err error) {
+	logger = logger.Session("creating-external-log-device")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	for i := 0; i < createExternalLogDevMaxAttempts; i++ {
+		if loopdevPath, err = d.createExternalLogDevice(logger, externalLogPath); err == nil {
+			return loopdevPath, nil
+		}
+		logger.Debug("retrying", lager.Data{"attempt": i + 1})
+		time.Sleep(createExternalLogDevAttemptsInterval)
+	}
+
+	return "", err
+}
+
+func (d *Driver) createExternalLogDevice(logger lager.Logger, externalLogPath string) (string, error) {
+	if err := d.createExternalLogFile(logger, externalLogPath); err != nil {
+		return "", errorspkg.Wrapf(err, "creating-external-log-file")
+	}
+
+	return d.findAssociatedLoopDevice(externalLogPath)
 }
 
 func (d *Driver) createExternalLogFile(logger lager.Logger, externalLogPath string) error {
