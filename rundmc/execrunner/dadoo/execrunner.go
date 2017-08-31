@@ -91,7 +91,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	defer syncr.Close()
 
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
-	if err := process.mkfifos(spec.HostUID, spec.HostGID); err != nil {
+	if err := process.mkfifos(spec.ContainerRootHostUID, spec.ContainerRootHostGID); err != nil {
 		return nil, err
 	}
 
@@ -271,12 +271,12 @@ func (p *process) ID() string {
 	return p.id
 }
 
-func (p *process) mkfifos(hostUid, hostGid int) error {
+func (p *process) mkfifos(hostUid, hostGid uint32) error {
 	for _, pipe := range []string{p.stdin, p.stdout, p.stderr, p.winsz, p.exit} {
 		if err := syscall.Mkfifo(pipe, 0600); err != nil {
 			return err
 		}
-		if err := os.Chown(pipe, hostUid, hostGid); err != nil {
+		if err := os.Chown(pipe, int(hostUid), int(hostGid)); err != nil {
 			return err
 		}
 	}

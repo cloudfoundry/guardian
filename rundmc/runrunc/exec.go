@@ -109,8 +109,8 @@ type ExecRunner interface {
 
 type PreparedSpec struct {
 	specs.Process
-	HostUID int
-	HostGID int
+	ContainerRootHostUID uint32
+	ContainerRootHostGID uint32
 }
 
 //go:generate counterfeiter . ExecPreparer

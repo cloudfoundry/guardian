@@ -43,8 +43,8 @@ var _ = Describe("Execer", func() {
 				Process: specs.Process{
 					Args: []string{spec.Path, bundlePath},
 				},
-				HostUID: 10,
-				HostGID: 10,
+				ContainerRootHostUID: 10,
+				ContainerRootHostGID: 10,
 			}, nil
 		}
 
@@ -82,7 +82,33 @@ var _ = Describe("ExecPreparer", func() {
 	BeforeEach(func() {
 		rootless = false
 
-		bndl = goci.Bundle().WithHostname("some-hostname")
+		uidMappings := []specs.LinuxIDMapping{
+			{
+				ContainerID: 0,
+				HostID:      1000,
+				Size:        1,
+			},
+			{
+				ContainerID: 1,
+				HostID:      1001,
+				Size:        10000,
+			},
+		}
+		gidMappings := []specs.LinuxIDMapping{
+			{
+				ContainerID: 0,
+				HostID:      1001,
+				Size:        1,
+			},
+			{
+				ContainerID: 1,
+				HostID:      1002,
+				Size:        10000,
+			},
+		}
+		bndl = goci.Bundle().WithHostname("some-hostname").
+			WithUIDMappings(uidMappings...).
+			WithGIDMappings(gidMappings...)
 		logger = lagertest.NewTestLogger("test")
 		bundleLoader = new(fakes.FakeBundleLoader)
 		users = new(fakes.FakeUserLookupper)
@@ -115,14 +141,29 @@ var _ = Describe("ExecPreparer", func() {
 		Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
 	})
 
-	It("returns the HostUID and HostGID in the returned spec", func() {
+	It("returns the host mappings for container root in the returned spec", func() {
 		users.LookupReturns(&runrunc.ExecUser{Uid: 234, Gid: 567}, nil)
 
 		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{}})
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(spec.HostUID).To(BeEquivalentTo(234))
-		Expect(spec.HostGID).To(BeEquivalentTo(567))
+		Expect(spec.ContainerRootHostUID).To(BeEquivalentTo(1000))
+		Expect(spec.ContainerRootHostGID).To(BeEquivalentTo(1001))
+	})
+
+	Context("when the bundle has no mappings for host root (container is privileged)", func() {
+		BeforeEach(func() {
+			bndl.Spec.Linux.UIDMappings = nil
+			bndl.Spec.Linux.GIDMappings = nil
+		})
+
+		It("returns 0 for container root's host UID and GID", func() {
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{}})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(spec.ContainerRootHostUID).To(BeEquivalentTo(0))
+			Expect(spec.ContainerRootHostGID).To(BeEquivalentTo(0))
+		})
 	})
 
 	It("passes the correct env", func() {
@@ -347,6 +388,11 @@ var _ = Describe("ExecPreparer", func() {
 				})
 
 				Context("when the container is privileged", func() {
+					BeforeEach(func() {
+						bndl.Spec.Linux.UIDMappings = nil
+						bndl.Spec.Linux.GIDMappings = nil
+					})
+
 					It("creates the working directory", func() {
 						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 						rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)

@@ -229,8 +229,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Context("when TTY is requested", func() {
 			It("executed the dadoo binary with the correct arguments", func() {
 				runner.Run(log, processID, &runrunc.PreparedSpec{
-					HostUID: 123,
-					HostGID: 456,
+					ContainerRootHostUID: 123,
+					ContainerRootHostGID: 456,
 				},
 					bundlePath, processPath,
 					"some-handle",
@@ -499,8 +499,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					}
 
 					process, err := runner.Run(log, processID, &runrunc.PreparedSpec{
-						HostUID: 123,
-						HostGID: 456,
+						ContainerRootHostUID: 123,
+						ContainerRootHostGID: 456,
 					},
 						bundlePath, processPath,
 						"some-handle",

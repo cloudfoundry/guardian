@@ -93,8 +93,8 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 	}
 
 	return &PreparedSpec{
-		HostUID: u.hostUid,
-		HostGID: u.hostGid,
+		ContainerRootHostUID: containerRootHostID(bndl.Spec.Linux.UIDMappings),
+		ContainerRootHostGID: containerRootHostID(bndl.Spec.Linux.GIDMappings),
 		Process: specs.Process{
 			Args:        append([]string{spec.Path}, spec.Args...),
 			ConsoleSize: consoleBox,
@@ -112,6 +112,15 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 			ApparmorProfile: bndl.Process().ApparmorProfile,
 		},
 	}, nil
+}
+
+func containerRootHostID(mappings []specs.LinuxIDMapping) uint32 {
+	for _, mapping := range mappings {
+		if mapping.ContainerID == 0 {
+			return mapping.HostID
+		}
+	}
+	return 0
 }
 
 type usr struct {
