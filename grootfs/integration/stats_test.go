@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -89,7 +90,7 @@ var _ = Describe("Stats", func() {
 			}
 
 			sess := runAsUser(cmd, GrootfsTestUid, GrootfsTestGid)
-			Eventually(sess).Should(gexec.Exit(0))
+			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 
 			expectedStats = groot.VolumeStats{
 				DiskUsage: groot.DiskUsage{
