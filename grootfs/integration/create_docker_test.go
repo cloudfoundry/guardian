@@ -112,7 +112,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			}
 			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 		})
 
 		It("outputs a json with the correct `rootfs` key", func() {
