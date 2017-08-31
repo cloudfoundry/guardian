@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
@@ -33,9 +32,6 @@ const (
 	imageInfoName  = "image_info"
 	WhiteoutDevice = "whiteout_dev"
 	LinksDirName   = "l"
-
-	losetupCheckInterval = 100 * time.Millisecond
-	losetupTries         = 3
 )
 
 func NewDriver(storePath, tardisBinPath string, externalLogSize int64) *Driver {
@@ -313,7 +309,7 @@ func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath, externalL
 			return errorspkg.Wrapf(err, "creating-external-log-file")
 		}
 
-		loopdevPath, err := d.findAssociatedLoopDeviceWithTries(externalLogPath)
+		loopdevPath, err := d.findAssociatedLoopDevice(externalLogPath)
 		if err != nil {
 			return err
 		}
@@ -360,21 +356,6 @@ func (d *Driver) createExternalLogFile(logger lager.Logger, externalLogPath stri
 	return nil
 }
 
-func (d *Driver) findAssociatedLoopDeviceWithTries(filePath string) (string, error) {
-	var loopDev string
-	var err error
-
-	for i := 0; i < losetupTries; i++ {
-		loopDev, err = d.findAssociatedLoopDevice(filePath)
-		if err == nil {
-			return loopDev, nil
-		}
-		time.Sleep(losetupTries)
-	}
-
-	return "", err
-}
-
 func (d *Driver) findAssociatedLoopDevice(filePath string) (string, error) {
 	errBuffer := bytes.NewBuffer([]byte{})
 	cmd := exec.Command("losetup", "-j", filePath)
@@ -396,7 +377,7 @@ func (d *Driver) mountFilesystem(source, destination, option, externalLogPath st
 	allOpts := strings.Trim(fmt.Sprintf("%s,loop,pquota,noatime,nobarrier", option), ",")
 
 	if d.externalLogSize > 0 {
-		loopdevPath, err := d.findAssociatedLoopDeviceWithTries(externalLogPath)
+		loopdevPath, err := d.findAssociatedLoopDevice(externalLogPath)
 		if err != nil {
 			return err
 		}
