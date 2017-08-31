@@ -54,14 +54,12 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 	defer logger.Debug("ending")
 
 	externalLogPath := fmt.Sprintf("%s.external-log", storePath)
-	var loopdevPath string
-	if err := d.mountFilesystem(filesystemPath, storePath, "remount", externalLogPath, ""); err != nil {
-		var err error
-		if loopdevPath, err = d.formatFilesystem(logger, filesystemPath, externalLogPath); err != nil {
+	if err := d.mountFilesystem(filesystemPath, storePath, "remount", externalLogPath); err != nil {
+		if err := d.formatFilesystem(logger, filesystemPath, externalLogPath); err != nil {
 			return err
 		}
 
-		if err := d.mountFilesystem(filesystemPath, storePath, "", externalLogPath, loopdevPath); err != nil {
+		if err := d.mountFilesystem(filesystemPath, storePath, "", externalLogPath); err != nil {
 			logger.Error("mounting-filesystem-failed", err, lager.Data{"filesystemPath": filesystemPath, "storePath": storePath})
 			return errorspkg.Wrap(err, "Mounting filesystem")
 		}
@@ -300,7 +298,7 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	return nil
 }
 
-func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath, externalLogPath string) (string, error) {
+func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath, externalLogPath string) error {
 	logger = logger.Session("formatting-filesystem")
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -309,9 +307,9 @@ func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath, externalL
 	mkfsArgs := []string{"-f"}
 	if d.externalLogSize > 0 {
 		var err error
-		loopdevPath, err = d.createExternalLogDevice(logger, externalLogPath)
+		loopdevPath, err = d.createExternalLogFile(logger, externalLogPath)
 		if err != nil {
-			return "", errorspkg.Wrap(err, "creating external log device")
+			return errorspkg.Wrap(err, "creating external log device")
 		}
 
 		mkfsArgs = append(mkfsArgs, "-l", fmt.Sprintf("logdev=%s,size=%d", loopdevPath, d.externalLogSize*1024*1024))
@@ -324,27 +322,10 @@ func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath, externalL
 	cmd.Stderr = stderr
 	if err := cmd.Run(); err != nil {
 		logger.Error("formatting-filesystem-failed", err, lager.Data{"cmd": cmd.Args, "stdout": stdout.String(), "stderr": stderr.String()})
-		return "", errorspkg.Errorf("Formatting XFS filesystem: %s", err.Error())
+		return errorspkg.Errorf("Formatting XFS filesystem: %s", err.Error())
 	}
 
-	return loopdevPath, nil
-}
-
-func (d *Driver) createExternalLogDevice(logger lager.Logger, externalLogPath string) (string, error) {
-	logger = logger.Session("creating-external-log-device")
-	logger.Debug("starting")
-	defer logger.Debug("ending")
-
-	loopdevPath, err := d.createExternalLogFile(logger, externalLogPath)
-	if err != nil {
-		return "", errorspkg.Wrap(err, "creating external log file")
-	}
-
-	if loopdevPath == "" {
-		return "", errorspkg.Wrap(err, "loop device path is empty")
-	}
-
-	return loopdevPath, nil
+	return nil
 }
 
 func (d *Driver) createExternalLogFile(logger lager.Logger, externalLogPath string) (string, error) {
@@ -391,16 +372,14 @@ func (d *Driver) findAssociatedLoopDevice(filePath string) (string, error) {
 	return "", errorspkg.Errorf("unexpected losetup output: %s", string(output))
 }
 
-func (d *Driver) mountFilesystem(source, destination, option, externalLogPath, loopdevPath string) error {
+func (d *Driver) mountFilesystem(source, destination, option, externalLogPath string) error {
 	allOpts := strings.Trim(fmt.Sprintf("%s,loop,pquota,noatime,nobarrier", option), ",")
 
 	if d.externalLogSize > 0 {
-		if loopdevPath == "" {
-			var err error
-			loopdevPath, err = d.findAssociatedLoopDevice(externalLogPath)
-			if err != nil {
-				return err
-			}
+		var err error
+		loopdevPath, err := d.findAssociatedLoopDevice(externalLogPath)
+		if err != nil {
+			return err
 		}
 
 		allOpts = fmt.Sprintf("%s,logdev=%s", allOpts, loopdevPath)

@@ -2,9 +2,13 @@ package integration_test
 
 import (
 	"fmt"
+	"io/ioutil"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -23,27 +27,57 @@ var _ = Describe("Init Store", func() {
 	)
 
 	var (
-		runner grootfsRunner.Runner
-		spec   grootfsRunner.InitSpec
+		runner    grootfsRunner.Runner
+		spec      grootfsRunner.InitSpec
+		storePath string
 	)
 
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
 
-		runner = Runner.WithStore(StorePath).SkipInitStore()
+		storePath = filepath.Join(StorePath, strconv.Itoa(rand.Int()))
+		Expect(os.MkdirAll(storePath, 0777)).To(Succeed())
+		runner = Runner.WithStore(storePath).SkipInitStore()
 		spec = grootfsRunner.InitSpec{}
+	})
+
+	It("returns a newly created store path", func() {
+		Expect(runner.InitStore(spec)).To(Succeed())
+
+		Expect(runner.StorePath).To(BeADirectory())
+
+		stat, err := os.Stat(runner.StorePath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0700)))
+	})
+
+	It("sets the ownership to the caller user", func() {
+		Expect(runner.InitStore(spec)).To(Succeed())
+
+		Expect(runner.StorePath).To(BeADirectory())
+
+		stat, err := os.Stat(runner.StorePath)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(rootUID)))
+		Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))
 	})
 
 	Context("when --store-size-bytes is passed", func() {
 		var backingStoreFile string
 
 		BeforeEach(func() {
+			tmpDir, err := ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+
+			storePath = filepath.Join(tmpDir, "store")
 			spec.StoreSizeBytes = 500 * 1024 * 1024
-			backingStoreFile = fmt.Sprintf("%s.backing-store", StorePath)
+			backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
+
+			runner = runner.WithStore(storePath)
 		})
 
 		AfterEach(func() {
-			_ = syscall.Unmount(StorePath, 0)
+			_ = syscall.Unmount(storePath, 0)
 			Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
 		})
 
@@ -52,7 +86,7 @@ var _ = Describe("Init Store", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			stat, err := os.Stat(backingStoreFile)
-			Expect(err).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
 			Expect(stat.Size()).To(Equal(int64(500 * 1024 * 1024)))
 		})
 
@@ -101,7 +135,7 @@ var _ = Describe("Init Store", func() {
 			It("uses the logdev mount option", func() {
 				Expect(runner.InitStore(spec)).To(Succeed())
 
-				cmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("cat /proc/mounts | grep %s", StorePath))
+				cmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("cat /proc/mounts | grep %s", storePath))
 				output, err := cmd.CombinedOutput()
 				Expect(err).NotTo(HaveOccurred())
 
@@ -120,27 +154,6 @@ var _ = Describe("Init Store", func() {
 			err := runner.InitStore(spec)
 			Expect(err).To(MatchError(ContainSubstring("--external-logdev-size-mb requires the --store-size-bytes flag")))
 		})
-	})
-
-	It("returns a newly created store path", func() {
-		Expect(runner.InitStore(spec)).To(Succeed())
-
-		Expect(runner.StorePath).To(BeADirectory())
-
-		stat, err := os.Stat(runner.StorePath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0700)))
-	})
-
-	It("sets the ownership to the caller user", func() {
-		Expect(runner.InitStore(spec)).To(Succeed())
-
-		Expect(runner.StorePath).To(BeADirectory())
-
-		stat, err := os.Stat(runner.StorePath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(rootUID)))
-		Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))
 	})
 
 	Context("when id mappings are provided", func() {
