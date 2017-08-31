@@ -99,15 +99,16 @@ int execveat(int fd, const char *path, char **argv, char **envp, int flags) {
 int setns(int fd, int nstype);
 
 int main(int argc, char **argv) {
-  int rv;
-  int mntnsfd;
-  int usrnsfd;
+  char *tarpath;
+  pid_t tpid;
   char *user = NULL;
   char *destination = NULL;
-  int tpid;
-  int containerworkdir;
-  char *tarpath;
+  char mntnspath[PATH_MAX];
+  char usrnspath[PATH_MAX];
+  int mntnsfd;
+  int usrnsfd;
   int tarfd;
+  int containerworkdirfd;
   char *compress = NULL;
   struct passwd *pw;
 
@@ -118,8 +119,7 @@ int main(int argc, char **argv) {
 
   tarpath = argv[1];
 
-  rv = sscanf(argv[2], "%d", &tpid);
-  if(rv != 1) {
+  if(sscanf(argv[2], "%d", &tpid) != 1) {
     fprintf(stderr, "invalid pid\n");
     return 1;
   }
@@ -131,9 +131,7 @@ int main(int argc, char **argv) {
     compress = argv[5];
   }
 
-  char mntnspath[PATH_MAX];
-  rv = snprintf(mntnspath, sizeof(mntnspath), "/proc/%u/ns/mnt", tpid);
-  if(rv == -1) {
+  if(snprintf(mntnspath, sizeof(mntnspath), "/proc/%u/ns/mnt", tpid) == -1) {
     perror("snprintf ns mnt path");
     return 1;
   }
@@ -150,9 +148,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  char usrnspath[PATH_MAX];
-  rv = snprintf(usrnspath, sizeof(usrnspath), "/proc/%u/ns/user", tpid);
-  if(rv == -1) {
+  if(snprintf(usrnspath, sizeof(usrnspath), "/proc/%u/ns/user", tpid) == -1) {
     perror("snprintf ns user path");
     return 1;
   }
@@ -164,8 +160,7 @@ int main(int argc, char **argv) {
   }
 
   /* switch to container's mount namespace/rootfs */
-  rv = setns(mntnsfd, CLONE_NEWNS);
-  if(rv == -1) {
+  if(setns(mntnsfd, CLONE_NEWNS) == -1) {
     perror("setns");
     return 1;
   }
@@ -174,6 +169,7 @@ int main(int argc, char **argv) {
   /* switch to container's user namespace so that user lookup returns correct uids */
   /* we allow this to fail if the container isn't user-namespaced */
   setns(usrnsfd, CLONE_NEWUSER);
+  close(usrnsfd);
 
   pw = getpwnam(user);
   if(pw == NULL) {
@@ -181,27 +177,23 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  rv = chdir(pw->pw_dir);
-  if(rv == -1) {
+  if(chdir(pw->pw_dir) == -1) {
     perror("chdir to user home");
     return 1;
   }
 
-  rv = setgid(0);
-  if(rv == -1) {
+  if(setgid(0) == -1) {
     perror("setgid");
     return 1;
   }
 
-  rv = setuid(0);
-  if(rv == -1) {
+  if(setuid(0) == -1) {
     perror("setuid");
     return 1;
   }
 
   /* create destination directory */
-  rv = mkdir_p_as(destination, pw->pw_uid, pw->pw_gid);
-  if(rv == -1) {
+  if(mkdir_p_as(destination, pw->pw_uid, pw->pw_gid) == -1) {
     char msg[1024];
     sprintf(msg, "mkdir_p_as %d %d", pw->pw_uid, pw->pw_gid);
     perror(msg);
@@ -209,51 +201,39 @@ int main(int argc, char **argv) {
   }
 
   /* save off destination dir for switching back to it later */
-  containerworkdir = open(destination, O_RDONLY);
-  if(containerworkdir == -1) {
+  containerworkdirfd = open(destination, O_RDONLY);
+  if(containerworkdirfd == -1) {
     perror("open container destination");
     return 1;
   }
 
   /* switch to container's destination directory, with host still as rootfs */
-  rv = fchdir(containerworkdir);
-  if(rv == -1) {
+  if(fchdir(containerworkdirfd) == -1) {
     perror("fchdir to container destination");
     return 1;
   }
 
-  rv = close(containerworkdir);
-  if(rv == -1) {
+  if(close(containerworkdirfd) == -1) {
     perror("close container destination");
     return 1;
   }
 
-  rv = setgid(pw->pw_gid);
-  if(rv == -1) {
+  if(setgid(pw->pw_gid) == -1) {
     perror("setgid");
     return 1;
   }
 
-  rv = setuid(pw->pw_uid);
-  if(rv == -1) {
+  if(setuid(pw->pw_uid) == -1) {
     perror("setuid");
     return 1;
   }
 
   if(compress != NULL) {
-    rv = execveat(tarfd, "", (char*[5]){"tar", "cf", "-", compress, NULL}, (char*[0]){}, AT_EMPTY_PATH);
-    if(rv == -1) {
-      perror("execveat");
-      return 1;
-    }
+    execveat(tarfd, "", (const char*[5]){"tar", "cf", "-", compress, NULL}, NULL, AT_EMPTY_PATH);
   } else {
-    rv = execveat(tarfd, "", (char*[4]){"tar", "xf", "-", NULL}, (char*[0]){}, AT_EMPTY_PATH);
-    if(rv == -1) {
-      perror("execveat");
-      return 1;
-    }
+    execveat(tarfd, "", (const char*[4]){"tar", "xf", "-", NULL}, NULL, AT_EMPTY_PATH);
   }
-
-  // unreachable
-  return 2;
+  /* execveat will not return if successful, so if we get here, we know there's been an error */
+  perror("execveat");
+  return 1;
 }
