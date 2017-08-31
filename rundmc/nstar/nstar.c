@@ -159,17 +159,17 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  /* switch to container's user namespace so that user lookup returns correct uids */
+  /* we allow this to fail if the container isn't user-namespaced */
+  setns(usrnsfd, CLONE_NEWUSER);
+  close(usrnsfd);
+
   /* switch to container's mount namespace/rootfs */
   if(setns(mntnsfd, CLONE_NEWNS) == -1) {
     perror("setns");
     return 1;
   }
   close(mntnsfd);
-
-  /* switch to container's user namespace so that user lookup returns correct uids */
-  /* we allow this to fail if the container isn't user-namespaced */
-  setns(usrnsfd, CLONE_NEWUSER);
-  close(usrnsfd);
 
   pw = getpwnam(user);
   if(pw == NULL) {
