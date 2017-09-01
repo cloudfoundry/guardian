@@ -436,8 +436,17 @@ vagrant up
 
 ### Running tests
 
+To run all tests
+
 ```
-make concourse-test
+make test
+```
+
+To run just unit or integration tests
+
+```
+make unit
+make integration
 ```
 
 
