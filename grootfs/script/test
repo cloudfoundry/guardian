@@ -44,41 +44,38 @@ compile_ginkgo_args() {
   echo $args
 }
 
-fly_integration_tests() {
+run_unit_tests() {
   test_path=${1:-""}
 
-  cmd=$(compile_fly_cmd ci/tasks/integration-tests.yml)
+  echo "Running UNIT tests"
+
+  cmd=$(compile_fly_cmd ci/tasks/unit-tests.yml)
   cmd=$cmd" "$(compile_ginkgo_args $test_path)
   eval $cmd
 }
 
 run_integration_tests() {
-  test_path=${1:-""}
+  test_path=${1:-"integration"}
 
-  case $test_path in
-    # run tests as user root
-    integration*)
-      fly_integration_tests $test_path
-      ;;
+  if [ $RECURSIVE -ne 1 ] && [ $test_path = "integration" ]; then
+    print_message "No suite found in '$test_path'. Please use -r to run suites in its subdirectories." $RED
+    return
+  fi
 
-    # both
-    *)
-      if [ $RECURSIVE -ne 1 ]; then
-        print_message "No suite found in '$test_path'. Please use -r to run suites in its subdirectories." $RED
-        return
-      fi
+  echo "Running INTEGRATION tests"
 
-      fly_integration_tests "integration"
-      ;;
-  esac
-}
-
-run_unit_tests() {
-  test_path=${1:-""}
-
-  cmd=$(compile_fly_cmd ci/tasks/unit-tests.yml)
+  cmd=$(compile_fly_cmd ci/tasks/integration-tests.yml)
   cmd=$cmd" "$(compile_ginkgo_args $test_path)
-  eval $cmd
+
+  local drivers users
+  drivers=${VOLUME_DRIVER:-overlay-xfs btrfs}
+  users=${GROOTFS_TEST_UID:-0 1000}
+
+  for driver in $drivers; do
+    for user in $users; do
+      VOLUME_DRIVER=$driver GROOTFS_TEST_UID=$user GROOTFS_TEST_GID=$user eval $cmd
+    done
+  done
 }
 
 run_all_tests() {
@@ -87,26 +84,10 @@ run_all_tests() {
     return
   fi
 
-  run_unit_tests ""
-  export VOLUME_DRIVER="overlay-xfs"
-  export GROOTFS_TEST_UID=0
-  export GROOTFS_TEST_GID=0
-  fly_integration_tests  "integration"
+  echo "Running ALL tests"
 
-  export VOLUME_DRIVER="overlay-xfs"
-  export GROOTFS_TEST_UID=1000
-  export GROOTFS_TEST_GID=1000
-  fly_integration_tests  "integration"
-
-  export VOLUME_DRIVER="btrfs"
-  export GROOTFS_TEST_UID=0
-  export GROOTFS_TEST_GID=0
-  fly_integration_tests  "integration"
-
-  export VOLUME_DRIVER="btrfs"
-  export GROOTFS_TEST_UID=1000
-  export GROOTFS_TEST_GID=1000
-  fly_integration_tests  "integration"
+  run_unit_tests
+  run_integration_tests
 }
 
 run_tests() {
