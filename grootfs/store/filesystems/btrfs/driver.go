@@ -124,6 +124,37 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	return nil
 }
 
+func (d *Driver) HandleOpaqueWhiteouts(logger lager.Logger, id string, opaqueWhiteouts []string) error {
+	volumePath, err := d.VolumePath(logger, id)
+	if err != nil {
+		return err
+	}
+
+	for _, opaqueWhiteout := range opaqueWhiteouts {
+		parentDir := path.Dir(filepath.Join(volumePath, opaqueWhiteout))
+		if err := cleanWhiteoutDir(parentDir); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func cleanWhiteoutDir(path string) error {
+	contents, err := ioutil.ReadDir(path)
+	if err != nil {
+		return errorspkg.Wrap(err, "reading whiteout directory")
+	}
+
+	for _, content := range contents {
+		if err := os.RemoveAll(filepath.Join(path, content.Name())); err != nil {
+			return errorspkg.Wrap(err, "cleaning up whiteout directory")
+		}
+	}
+
+	return nil
+}
+
 func (d *Driver) WriteVolumeMeta(_ lager.Logger, _ string, _ base_image_puller.VolumeMeta) error {
 	return nil
 }

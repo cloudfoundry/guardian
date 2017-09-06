@@ -16,7 +16,6 @@ import (
 	digestpkg "github.com/opencontainers/go-digest"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
 	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 
@@ -175,7 +174,6 @@ var _ = Describe("Create with OCI images", func() {
 	Context("when the image has opaque white outs", func() {
 		BeforeEach(func() {
 			baseImageURL = fmt.Sprintf("oci:///%s/assets/oci-test-image/opq-whiteouts-busybox:latest", workDir)
-			integration.SkipIfNonRoot(GrootfsTestUid)
 		})
 
 		It("empties the folder contents but keeps the dir", func() {

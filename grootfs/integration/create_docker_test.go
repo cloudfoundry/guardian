@@ -264,7 +264,6 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		Context("when the image has opaque white outs", func() {
 			BeforeEach(func() {
 				baseImageURL = "docker:///cfgarden/opq-whiteout-busybox"
-				integration.SkipIfNonRoot(GrootfsTestUid)
 			})
 
 			It("empties the folder contents but keeps the dir", func() {

@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -57,8 +58,13 @@ type DependencyRegisterer interface {
 	Register(id string, chainIDs []string) error
 }
 
+type UnpackOutput struct {
+	BytesWritten    int64
+	OpaqueWhiteouts []string
+}
+
 type Unpacker interface {
-	Unpack(logger lager.Logger, spec UnpackSpec) (int64, error)
+	Unpack(logger lager.Logger, spec UnpackSpec) (UnpackOutput, error)
 }
 
 type VolumeDriver interface {
@@ -68,6 +74,7 @@ type VolumeDriver interface {
 	Volumes(logger lager.Logger) ([]string, error)
 	MoveVolume(logger lager.Logger, from, to string) error
 	WriteVolumeMeta(logger lager.Logger, id string, data VolumeMeta) error
+	HandleOpaqueWhiteouts(logger lager.Logger, id string, opaqueWhiteouts []string) error
 }
 
 type BaseImagePuller struct {
@@ -288,15 +295,22 @@ func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, di
 
 func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, digest LayerDigest) (volSize int64, err error) {
 	defer p.metricsEmitter.TryEmitDurationFrom(logger, MetricsUnpackTimeName, time.Now())
+	var unpackOutput UnpackOutput
 
-	if volSize, err = p.unpacker.Unpack(logger, unpackSpec); err != nil {
+	if unpackOutput, err = p.unpacker.Unpack(logger, unpackSpec); err != nil {
 		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
 			logger.Error("volume-cleanup-failed", errD)
 		}
 		return 0, errorspkg.Wrapf(err, "unpacking layer `%s`", digest.BlobID)
 	}
+
+	if err := p.volumeDriver.HandleOpaqueWhiteouts(logger, path.Base(unpackSpec.TargetPath), unpackOutput.OpaqueWhiteouts); err != nil {
+		logger.Error("handling-opaque-whiteouts", err)
+		return 0, errorspkg.Wrap(err, "handling opaque whiteouts")
+	}
+
 	logger.Debug("layer-unpacked")
-	return volSize, nil
+	return unpackOutput.BytesWritten, nil
 }
 
 func (p *BaseImagePuller) finalizeVolume(logger lager.Logger, tempVolumeName, volumePath, chainID string, volSize int64) error {

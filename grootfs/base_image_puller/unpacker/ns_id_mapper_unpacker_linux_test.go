@@ -32,6 +32,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		unpackStrategy unpackerpkg.UnpackStrategy
 
 		commandError error
+		reexecOutput string
 	)
 
 	BeforeEach(func() {
@@ -41,6 +42,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		fakeCommandRunner = fake_command_runner.New()
 		unpackStrategy.Name = "btrfs"
 		unpacker = unpackerpkg.NewNSIdMapperUnpacker(fakeCommandRunner, fakeIDMapper, unpackStrategy)
+		reexecOutput = ""
 
 		logger = NewLogger("test-store")
 
@@ -58,7 +60,13 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 			cmd.Process = &os.Process{
 				Pid: 12, // don't panic
 			}
-			cmd.Stdout.Write([]byte("1024"))
+
+			if reexecOutput != "" {
+				_, err := cmd.Stdout.Write([]byte(reexecOutput))
+				Expect(err).NotTo(HaveOccurred())
+			}
+
+			Expect(json.NewEncoder(cmd.Stdout).Encode(base_image_puller.UnpackOutput{BytesWritten: 1024})).To(Succeed())
 			return commandError
 		})
 	})
@@ -89,7 +97,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 			TargetPath: targetPath,
 		})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(totalBytes).To(Equal(int64(1024)))
+		Expect(totalBytes).To(Equal(base_image_puller.UnpackOutput{BytesWritten: 1024}))
 	})
 
 	It("passes the provided stream to the unpack-wrapper command", func() {
@@ -156,13 +164,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 
 	Context("when the unpack wrapper prints invalid output", func() {
 		It("returns an error", func() {
-			fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
-				Path: "/proc/self/exe",
-			}, func(cmd *exec.Cmd) error {
-				cmd.Stdout.Write([]byte("not a valid thing 1024"))
-				return nil
-			})
-
+			reexecOutput = "not a valid thing {{}))"
 			_, err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				TargetPath: targetPath,
 			})

@@ -18,6 +18,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
+	"github.com/docker/docker/pkg/system"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -1008,6 +1009,56 @@ var _ = Describe("Driver", func() {
 				err := driver.MoveVolume(logger, volumePath, filepath.Dir(volumePath))
 				Expect(err).NotTo(HaveOccurred())
 			})
+		})
+	})
+
+	Describe("HandleOpaqueWhiteouts", func() {
+		var (
+			opaqueWhiteouts []string
+			volumeID        string
+			volumePath      string
+		)
+
+		JustBeforeEach(func() {
+			volumeID = randVolumeID()
+			var err error
+			volumePath, err = driver.CreateVolume(logger, "", volumeID)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.MkdirAll(filepath.Join(volumePath, "a/b"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(volumePath, "a/b/file_1"), []byte{}, 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(volumePath, "a/b/file_2"), []byte{}, 0755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(volumePath, "c/d/e"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(volumePath, "c/d/file_1"), []byte{}, 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(volumePath, "c/d/file_2"), []byte{}, 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(volumePath, "c/d/e/file_3"), []byte{}, 0755)).To(Succeed())
+
+			opaqueWhiteouts = []string{
+				"/a/b/.opaque",
+				"c/d/.opaque",
+			}
+		})
+
+		It("empties the given folders within a volume", func() {
+			Expect(driver.HandleOpaqueWhiteouts(logger, volumeID, opaqueWhiteouts)).To(Succeed())
+
+			abFolderPath := filepath.Join(volumePath, "a/b")
+			Expect(abFolderPath).To(BeADirectory())
+			files, err := ioutil.ReadDir(abFolderPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).To(BeEmpty())
+			xattr, err := system.Lgetxattr(abFolderPath, "trusted.overlay.opaque")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(xattr)).To(Equal("y"))
+
+			cdFolderPath := filepath.Join(volumePath, "c/d")
+			Expect(cdFolderPath).To(BeADirectory())
+			files, err = ioutil.ReadDir(cdFolderPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).To(BeEmpty())
+			xattr, err = system.Lgetxattr(cdFolderPath, "trusted.overlay.opaque")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(xattr)).To(Equal("y"))
 		})
 	})
 

@@ -151,6 +151,32 @@ var _ = Describe("Base Image Puller", func() {
 		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-333-incomplete-\\d*-\\d*")))
 	})
 
+	It("asks the volume driver to handle opaque whiteouts for each layer", func() {
+		volumesDir, err := ioutil.TempDir("", "volumes")
+		Expect(err).NotTo(HaveOccurred())
+
+		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, id string) (string, error) {
+			volumePath := filepath.Join(volumesDir, id)
+
+			Expect(os.MkdirAll(volumePath, 0777)).To(Succeed())
+			return volumePath, nil
+		}
+
+		_, err = baseImagePuller.Pull(logger, groot.BaseImageSpec{
+			BaseImageSrc: baseImageSrcURL,
+		})
+
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
+		_, unpackSpec := fakeUnpacker.UnpackArgsForCall(0)
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "layer-111-incomplete-\\d*-\\d*")))
+		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(1)
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-222-incomplete-\\d*-\\d*")))
+		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-333-incomplete-\\d*-\\d*")))
+	})
+
 	It("unpacks the layers got from the fetcher", func() {
 		fakeLayerFetcher.StreamBlobStub = func(_ lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error) {
 			Expect(baseImageURL).To(Equal(baseImageSrcURL))
@@ -198,9 +224,9 @@ var _ = Describe("Base Image Puller", func() {
 
 	It("writes the metadata for each volume", func() {
 		var unpackCall int
-		fakeUnpacker.UnpackStub = func(_ lager.Logger, _ base_image_puller.UnpackSpec) (int64, error) {
+		fakeUnpacker.UnpackStub = func(_ lager.Logger, _ base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error) {
 			unpackCall++
-			return int64(unpackCall * 100), nil
+			return base_image_puller.UnpackOutput{BytesWritten: int64(unpackCall * 100)}, nil
 		}
 
 		_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
@@ -574,13 +600,13 @@ var _ = Describe("Base Image Puller", func() {
 	Context("when unpacking a blob fails", func() {
 		BeforeEach(func() {
 			count := 0
-			fakeUnpacker.UnpackStub = func(_ lager.Logger, _ base_image_puller.UnpackSpec) (int64, error) {
+			fakeUnpacker.UnpackStub = func(_ lager.Logger, _ base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error) {
 				count++
 				if count == 3 {
-					return 0, errors.New("failed to unpack the blob")
+					return base_image_puller.UnpackOutput{}, errors.New("failed to unpack the blob")
 				}
 
-				return 0, nil
+				return base_image_puller.UnpackOutput{}, nil
 			}
 		})
 

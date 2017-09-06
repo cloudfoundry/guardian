@@ -303,6 +303,50 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	return nil
 }
 
+func (d *Driver) HandleOpaqueWhiteouts(logger lager.Logger, id string, opaqueWhiteouts []string) error {
+	if len(opaqueWhiteouts) == 0 {
+		return nil
+	}
+
+	volumePath, err := d.VolumePath(logger, id)
+	if err != nil {
+		return err
+	}
+
+	args := make([]string, 0)
+
+	for _, path := range opaqueWhiteouts {
+		parentDir := filepath.Dir(filepath.Join(volumePath, path))
+		args = append(args, "--opaque-path", parentDir)
+
+		if err := cleanWhiteoutDir(parentDir); err != nil {
+			return errorspkg.Wrapf(err, "clean without dir %s", parentDir)
+		}
+	}
+
+	if output, err := d.runTardis(logger, append([]string{"handle-opqwhiteouts"}, args...)...); err != nil {
+		logger.Error("handling-opaque-whiteouts-failed", err, lager.Data{"opaqueWhiteouts": opaqueWhiteouts})
+		return errorspkg.Wrapf(err, "handle opaque whiteouts: %s", output.String())
+	}
+
+	return nil
+}
+
+func cleanWhiteoutDir(path string) error {
+	contents, err := ioutil.ReadDir(path)
+	if err != nil {
+		return errorspkg.Wrap(err, "reading whiteout directory")
+	}
+
+	for _, content := range contents {
+		if err := os.RemoveAll(filepath.Join(path, content.Name())); err != nil {
+			return errorspkg.Wrap(err, "cleaning up whiteout directory")
+		}
+	}
+
+	return nil
+}
+
 func (d *Driver) WriteVolumeMeta(logger lager.Logger, id string, metadata base_image_puller.VolumeMeta) error {
 	logger = logger.Session("overlayxfs-writing-volume-metadata", lager.Data{"volmeID": id})
 	logger.Debug("starting")

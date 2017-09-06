@@ -578,6 +578,50 @@ var _ = Describe("Btrfs", func() {
 		})
 	})
 
+	Describe("HandleOpaqueWhiteouts", func() {
+		var (
+			opaqueWhiteouts []string
+			volumeID        string
+			volumePath      string
+		)
+
+		JustBeforeEach(func() {
+			volumeID = randVolumeID()
+			var err error
+			volumePath, err = driver.CreateVolume(logger, "", volumeID)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.MkdirAll(filepath.Join(volumePath, "a/b"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(volumePath, "a/b/file_1"), []byte{}, 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(volumePath, "a/b/file_2"), []byte{}, 0755)).To(Succeed())
+			Expect(os.MkdirAll(filepath.Join(volumePath, "c/d/e"), 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(volumePath, "c/d/file_1"), []byte{}, 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(volumePath, "c/d/file_2"), []byte{}, 0755)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(volumePath, "c/d/e/file_3"), []byte{}, 0755)).To(Succeed())
+
+			opaqueWhiteouts = []string{
+				"/a/b/.opaque",
+				"c/d/.opaque",
+			}
+		})
+
+		It("empties the given folders within a volume", func() {
+			Expect(driver.HandleOpaqueWhiteouts(logger, volumeID, opaqueWhiteouts)).To(Succeed())
+
+			abFolderPath := filepath.Join(volumePath, "a/b")
+			Expect(abFolderPath).To(BeADirectory())
+			files, err := ioutil.ReadDir(abFolderPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).To(BeEmpty())
+
+			cdFolderPath := filepath.Join(volumePath, "c/d")
+			Expect(cdFolderPath).To(BeADirectory())
+			files, err = ioutil.ReadDir(cdFolderPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(files).To(BeEmpty())
+		})
+	})
+
 	Describe("DestroyVolume", func() {
 		var (
 			volumeID   string

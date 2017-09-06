@@ -2,15 +2,14 @@ package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpa
 
 import (
 	"archive/tar"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"syscall"
 	"unsafe"
@@ -19,7 +18,6 @@ import (
 	"github.com/tscolari/lagregator"
 
 	"github.com/containers/storage/pkg/reexec"
-	"github.com/containers/storage/pkg/system"
 	"github.com/urfave/cli"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
@@ -52,15 +50,15 @@ func init() {
 			fail(logger, "creating-tar-unpacker", err)
 		}
 
-		var totalUnpacked int64
-		if totalUnpacked, err = unpacker.Unpack(logger, base_image_puller.UnpackSpec{
+		var unpackOutput base_image_puller.UnpackOutput
+		if unpackOutput, err = unpacker.unpack(logger, base_image_puller.UnpackSpec{
 			Stream:     os.Stdin,
 			TargetPath: rootFSPath,
 		}); err != nil {
 			fail(logger, "unpacking-failed", err)
 		}
 
-		fmt.Fprintf(os.Stdout, "%d", totalUnpacked)
+		_ = json.NewEncoder(os.Stdout).Encode(unpackOutput)
 	})
 
 	reexec.Register("chroot-unpack", func() {
@@ -88,12 +86,13 @@ func init() {
 
 		unpackSpec.Stream = os.Stdin
 
-		var totalUnpacked int64
-		if totalUnpacked, err = unpacker.unpack(logger, unpackSpec); err != nil {
+		logger.Info("unpacking")
+		var unpackOutput base_image_puller.UnpackOutput
+		if unpackOutput, err = unpacker.unpack(logger, unpackSpec); err != nil {
 			fail(logger, "unpacking-failed", err)
 		}
 
-		fmt.Fprintf(os.Stdout, "%d", totalUnpacked)
+		_ = json.NewEncoder(os.Stdout).Encode(unpackOutput)
 	})
 }
 
@@ -134,7 +133,6 @@ func NewTarUnpacker(unpackStrategy UnpackStrategy) (*TarUnpacker, error) {
 
 type whiteoutHandler interface {
 	removeWhiteout(path string) error
-	removeOpaqueWhiteouts(paths []string) error
 }
 
 type overlayWhiteoutHandler struct {
@@ -179,21 +177,6 @@ func (h *overlayWhiteoutHandler) removeWhiteout(path string) error {
 	return nil
 }
 
-func (*overlayWhiteoutHandler) removeOpaqueWhiteouts(paths []string) error {
-	for _, path := range paths {
-		parentDir := filepath.Dir(path)
-		if err := system.Lsetxattr(parentDir, "trusted.overlay.opaque", []byte("y"), 0); err != nil {
-			return errors.Wrapf(err, "set xattr for %s", parentDir)
-		}
-
-		if err := cleanWhiteoutDir(parentDir); err != nil {
-			return errors.Wrapf(err, "clean without dir %s", parentDir)
-		}
-	}
-
-	return nil
-}
-
 type defaultWhiteoutHandler struct{}
 
 func (*defaultWhiteoutHandler) removeWhiteout(path string) error {
@@ -205,59 +188,50 @@ func (*defaultWhiteoutHandler) removeWhiteout(path string) error {
 	return nil
 }
 
-func (*defaultWhiteoutHandler) removeOpaqueWhiteouts(paths []string) error {
-	for _, p := range paths {
-		parentDir := path.Dir(p)
-		if err := cleanWhiteoutDir(parentDir); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) (int64, error) {
+func (u *TarUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error) {
 	strategyJSON, err := json.Marshal(u.strategy)
 	if err != nil {
-		return 0, err
+		return base_image_puller.UnpackOutput{}, err
 	}
 
 	unpackSpecJSON, err := json.Marshal(spec)
 	if err != nil {
-		return 0, err
+		return base_image_puller.UnpackOutput{}, err
 	}
 
+	outputBuffer := bytes.NewBuffer([]byte{})
 	cmd := reexec.Command("chroot-unpack", string(unpackSpecJSON), string(strategyJSON))
 	cmd.Stderr = lagregator.NewRelogger(logger)
 	cmd.Stdin = spec.Stream
+	cmd.Stdout = outputBuffer
 
-	output, err := cmd.Output()
-	if err != nil {
-		logger.Error("chroot unpack failed", err, lager.Data{"output": string(output)})
-		return 0, errors.New(strings.TrimSpace(string(output)))
+	if err := cmd.Run(); err != nil {
+		logger.Error("chroot-unpack-failed", err, lager.Data{"output": outputBuffer.String()})
+		return base_image_puller.UnpackOutput{}, errors.New(strings.TrimSpace(outputBuffer.String()))
 	}
 
-	totalUnpacked, err := strconv.ParseInt(strings.TrimSpace(string(output)), 10, 64)
-	if err != nil {
-		logger.Error("unpack-invalid-output", err, lager.Data{"output": string(output)})
-		return 0, errors.Wrap(err, "parsing unpack output")
+	var unpackOutput base_image_puller.UnpackOutput
+	if err := json.NewDecoder(outputBuffer).Decode(&unpackOutput); err != nil {
+		logger.Error("unpack-invalid-output", err, lager.Data{"output": outputBuffer.String()})
+		return base_image_puller.UnpackOutput{}, errors.Wrap(err, "parsing unpack output")
 	}
-	return totalUnpacked, nil
+
+	return unpackOutput, nil
 }
 
-func (u *TarUnpacker) unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) (int64, error) {
+func (u *TarUnpacker) unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) (base_image_puller.UnpackOutput, error) {
 	logger = logger.Session("unpacking-with-tar", lager.Data{"spec": spec})
 	logger.Info("starting")
 	defer logger.Info("ending")
 
 	if err := safeMkdir(spec.TargetPath, 0755); err != nil {
-		return 0, err
+		return base_image_puller.UnpackOutput{}, err
 	}
 
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	if err := chroot(spec.TargetPath); err != nil {
-		return 0, errors.Wrap(err, "failed to chroot")
+		return base_image_puller.UnpackOutput{}, errors.Wrap(err, "failed to chroot")
 	}
 
 	tarReader := tar.NewReader(spec.Stream)
@@ -268,7 +242,7 @@ func (u *TarUnpacker) unpack(logger lager.Logger, spec base_image_puller.UnpackS
 		if err == io.EOF {
 			break
 		} else if err != nil {
-			return 0, err
+			return base_image_puller.UnpackOutput{}, err
 		}
 
 		if strings.Contains(tarHeader.Name, ".wh..wh..opq") {
@@ -277,20 +251,23 @@ func (u *TarUnpacker) unpack(logger lager.Logger, spec base_image_puller.UnpackS
 		}
 		if strings.Contains(tarHeader.Name, ".wh.") {
 			if err := u.whiteoutHandler.removeWhiteout(tarHeader.Name); err != nil {
-				return 0, err
+				return base_image_puller.UnpackOutput{}, err
 			}
 			continue
 		}
 
 		entrySize, err := u.handleEntry(tarHeader.Name, tarReader, tarHeader, spec)
 		if err != nil {
-			return 0, err
+			return base_image_puller.UnpackOutput{}, err
 		}
 
 		totalBytesUnpacked += entrySize
 	}
 
-	return totalBytesUnpacked, u.whiteoutHandler.removeOpaqueWhiteouts(opaqueWhiteouts)
+	return base_image_puller.UnpackOutput{
+		BytesWritten:    totalBytesUnpacked,
+		OpaqueWhiteouts: opaqueWhiteouts,
+	}, nil
 }
 
 func (u *TarUnpacker) handleEntry(entryPath string, tarReader *tar.Reader, tarHeader *tar.Header, spec base_image_puller.UnpackSpec) (entrySize int64, err error) {
