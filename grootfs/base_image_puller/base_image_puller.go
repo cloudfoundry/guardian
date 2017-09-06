@@ -44,6 +44,10 @@ type BaseImageInfo struct {
 	Config       specsv1.Image
 }
 
+type VolumeMeta struct {
+	Size int64
+}
+
 type Fetcher interface {
 	BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (BaseImageInfo, error)
 	StreamBlob(logger lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error)
@@ -54,7 +58,7 @@ type DependencyRegisterer interface {
 }
 
 type Unpacker interface {
-	Unpack(logger lager.Logger, spec UnpackSpec) error
+	Unpack(logger lager.Logger, spec UnpackSpec) (int64, error)
 }
 
 type VolumeDriver interface {
@@ -63,6 +67,7 @@ type VolumeDriver interface {
 	DestroyVolume(logger lager.Logger, id string) error
 	Volumes(logger lager.Logger) ([]string, error)
 	MoveVolume(logger lager.Logger, from, to string) error
+	WriteVolumeMeta(logger lager.Logger, id string, data VolumeMeta) error
 }
 
 type BaseImagePuller struct {
@@ -252,12 +257,12 @@ func (p *BaseImagePuller) unpackLayer(logger lager.Logger, digest LayerDigest, s
 		GIDMappings: spec.GIDMappings,
 	}
 
-	err = p.unpackLayerToTemporaryDirectory(logger, unpackSpec, digest)
+	volSize, err := p.unpackLayerToTemporaryDirectory(logger, unpackSpec, digest)
 	if err != nil {
 		return err
 	}
 
-	return p.finalizeVolume(logger, tempVolumeName, volumePath, digest.ChainID)
+	return p.finalizeVolume(logger, tempVolumeName, volumePath, digest.ChainID, volSize)
 }
 
 func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, digest LayerDigest, spec groot.BaseImageSpec) (string, string, error) {
@@ -281,23 +286,27 @@ func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, di
 	return tempVolumeName, volumePath, nil
 }
 
-func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, digest LayerDigest) error {
+func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, digest LayerDigest) (volSize int64, err error) {
 	defer p.metricsEmitter.TryEmitDurationFrom(logger, MetricsUnpackTimeName, time.Now())
 
-	if err := p.unpacker.Unpack(logger, unpackSpec); err != nil {
+	if volSize, err = p.unpacker.Unpack(logger, unpackSpec); err != nil {
 		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
 			logger.Error("volume-cleanup-failed", errD)
 		}
-		return errorspkg.Wrapf(err, "unpacking layer `%s`", digest.BlobID)
+		return 0, errorspkg.Wrapf(err, "unpacking layer `%s`", digest.BlobID)
 	}
 	logger.Debug("layer-unpacked")
-	return nil
+	return volSize, nil
 }
 
-func (p *BaseImagePuller) finalizeVolume(logger lager.Logger, tempVolumeName, volumePath, chainID string) error {
+func (p *BaseImagePuller) finalizeVolume(logger lager.Logger, tempVolumeName, volumePath, chainID string, volSize int64) error {
 	finalVolumePath := strings.Replace(volumePath, tempVolumeName, chainID, 1)
 	if err := p.volumeDriver.MoveVolume(logger, volumePath, finalVolumePath); err != nil {
 		return errorspkg.Wrapf(err, "failed to move volume to its final location")
+	}
+
+	if err := p.volumeDriver.WriteVolumeMeta(logger, chainID, VolumeMeta{Size: volSize}); err != nil {
+		return errorspkg.Wrapf(err, "writing volume `%s` metadata", chainID)
 	}
 	return nil
 }

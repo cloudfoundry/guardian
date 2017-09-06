@@ -13,6 +13,7 @@ import (
 	"strings"
 	"syscall"
 
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems"
@@ -176,6 +177,10 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 		}
 	}
 
+	if err := os.Remove(d.volumeMetaFilePath(id)); err != nil {
+		logger.Error("deleting-metadata-file-failed", err, lager.Data{"path": d.volumeMetaFilePath(id)})
+	}
+
 	if err := os.RemoveAll(volumePath); err != nil {
 		logger.Error(fmt.Sprintf("failed to destroy volume %s", volumePath), err)
 		return errorspkg.Wrapf(err, "destroying volume (%s)", id)
@@ -296,6 +301,28 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	}
 
 	return nil
+}
+
+func (d *Driver) WriteVolumeMeta(logger lager.Logger, id string, metadata base_image_puller.VolumeMeta) error {
+	logger = logger.Session("overlayxfs-writing-volume-metadata", lager.Data{"volmeID": id})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	metaFile, err := os.Create(d.volumeMetaFilePath(id))
+	if err != nil {
+		return errorspkg.Wrap(err, "creating metadata file")
+	}
+
+	if err = json.NewEncoder(metaFile).Encode(metadata); err != nil {
+		return errorspkg.Wrap(err, "writing metadata file")
+	}
+
+	return nil
+}
+
+func (d *Driver) volumeMetaFilePath(id string) string {
+	id = strings.Replace(id, "gc.", "", 1)
+	return filepath.Join(d.storePath, store.MetaDirName, fmt.Sprintf("volume-%s", id))
 }
 
 func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath, externalLogPath string) error {
@@ -438,7 +465,7 @@ func (d *Driver) getLowerDirs(logger lager.Logger, volumeIDs []string) ([]string
 			return nil, 0, errorspkg.Wrap(err, "base volume path does not exist")
 		}
 
-		volumeSize, err := d.duUsage(logger, volumePath)
+		volumeSize, err := d.volumeSize(logger, volumeIDs[i])
 		if err != nil {
 			logger.Error("calculating-base-volume-size-failed", err)
 			return nil, 0, errorspkg.Wrapf(err, "calculating base volume size %s", volumePath)
@@ -541,23 +568,23 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 	return stats, nil
 }
 
-func (d *Driver) duUsage(logger lager.Logger, path string) (int64, error) {
-	logger = logger.Session("du-metrics", lager.Data{"path": path})
+func (d *Driver) volumeSize(logger lager.Logger, id string) (int64, error) {
+	logger = logger.Session("overlayxfs-volume-size", lager.Data{"volumeID": id})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	cmd := exec.Command("du", "-bs", path)
-	stdoutBuffer := bytes.NewBuffer([]byte{})
-	stderrBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stdout = stdoutBuffer
-	cmd.Stderr = stdoutBuffer
-	if err := cmd.Run(); err != nil {
-		logger.Error("du-command-failed", err, lager.Data{"stdout": stdoutBuffer.String(), "stderr": stderrBuffer.String()})
-		return 0, errorspkg.Wrapf(err, "du failed: %s", stderrBuffer.String())
+	metaFile, err := os.Open(d.volumeMetaFilePath(id))
+	if err != nil {
+		return 0, errorspkg.Wrapf(err, "opening volume `%s` metadata", id)
 	}
 
-	usageString := strings.Split(stdoutBuffer.String(), "\t")[0]
-	return strconv.ParseInt(usageString, 10, 64)
+	var metadata base_image_puller.VolumeMeta
+	err = json.NewDecoder(metaFile).Decode(&metadata)
+	if err != nil {
+		return 0, errorspkg.Wrapf(err, "parsing volume `%s` metadata", id)
+	}
+
+	return metadata.Size, nil
 }
 
 func (d *Driver) createWhiteoutDevice(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {

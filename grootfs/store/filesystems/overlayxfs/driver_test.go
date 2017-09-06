@@ -1,6 +1,7 @@
 package overlayxfs_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -10,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
@@ -43,6 +45,7 @@ var _ = Describe("Driver", func() {
 
 		Expect(os.MkdirAll(StorePath, 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.VolumesDirName), 0777)).To(Succeed())
+		Expect(os.MkdirAll(filepath.Join(StorePath, store.MetaDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, store.ImageDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, overlayxfs.LinksDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, overlayxfs.IDDir), 0777)).To(Succeed())
@@ -78,7 +81,7 @@ var _ = Describe("Driver", func() {
 		})
 
 		AfterEach(func() {
-			syscall.Unmount(storePath, 0)
+			_ = syscall.Unmount(storePath, 0)
 		})
 
 		It("succcesfully creates and mounts a filesystem", func() {
@@ -145,8 +148,8 @@ var _ = Describe("Driver", func() {
 			})
 
 			AfterEach(func() {
-				syscall.Unmount(storePath, 0)
-				exec.Command("sh", "-c", fmt.Sprintf("losetup -j %s | cut -d : -f 1 | xargs losetup -d", logdevPath)).Run()
+				_ = syscall.Unmount(storePath, 0)
+				_ = exec.Command("sh", "-c", fmt.Sprintf("losetup -j %s | cut -d : -f 1 | xargs losetup -d", logdevPath)).Run()
 			})
 
 			It("succcesfully creates a logdev file", func() {
@@ -188,18 +191,15 @@ var _ = Describe("Driver", func() {
 		)
 
 		BeforeEach(func() {
-			var err error
 			layer1ID = randVolumeID()
-			layer1Path, err = driver.CreateVolume(logger, "parent-id", layer1ID)
-			Expect(err).NotTo(HaveOccurred())
+			layer1Path = createVolume(driver, "parent-id", layer1ID, 5000)
 			Expect(ioutil.WriteFile(filepath.Join(layer1Path, "file-hello"), []byte("hello-1"), 0755)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(layer1Path, "file-bye"), []byte("bye-1"), 0700)).To(Succeed())
 			Expect(os.Mkdir(filepath.Join(layer1Path, "a-folder"), 0700)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(layer1Path, "a-folder", "folder-file"), []byte("in-a-folder-1"), 0755)).To(Succeed())
 
 			layer2ID = randVolumeID()
-			layer2Path, err = driver.CreateVolume(logger, "parent-id", layer2ID)
-			Expect(err).NotTo(HaveOccurred())
+			layer2Path = createVolume(driver, "parent-id", layer2ID, 10000)
 			Expect(ioutil.WriteFile(filepath.Join(layer2Path, "file-bye"), []byte("bye-2"), 0700)).To(Succeed())
 			Expect(os.Mkdir(filepath.Join(layer2Path, "a-folder"), 0700)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(layer2Path, "a-folder", "folder-file"), []byte("in-a-folder-2"), 0755)).To(Succeed())
@@ -340,14 +340,7 @@ var _ = Describe("Driver", func() {
 		Context("image_info", func() {
 			BeforeEach(func() {
 				volumeID := randVolumeID()
-				var err error
-				layer1Path, err = driver.CreateVolume(logger, "parent-id", volumeID)
-				Expect(err).NotTo(HaveOccurred())
-
-				dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", layer1Path), "count=3", "bs=1024")
-				sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
+				createVolume(driver, "parent-id", volumeID, 5000)
 
 				spec.BaseVolumeIDs = []string{volumeID}
 			})
@@ -361,7 +354,7 @@ var _ = Describe("Driver", func() {
 				contents, err := ioutil.ReadFile(filepath.Join(spec.ImagePath, "image_info"))
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(string(contents)).To(Equal("3090"))
+				Expect(string(contents)).To(Equal("5000"))
 			})
 		})
 
@@ -379,12 +372,8 @@ var _ = Describe("Driver", func() {
 
 		Context("when disk limit is > 0", func() {
 			BeforeEach(func() {
-				dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", layer1Path), "count=3", "bs=1M")
-				sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
-
 				spec.DiskLimit = 1024 * 1024 * 10
+				Expect(ioutil.WriteFile(filepath.Join(StorePath, store.MetaDirName, fmt.Sprintf("volume-%s", layer1ID)), []byte(`{"Size": 3145728}`), 0644)).To(Succeed())
 			})
 
 			It("creates the backingFsBlockDev device in the `images` parent folder", func() {
@@ -434,15 +423,6 @@ var _ = Describe("Driver", func() {
 			Context("inclusive quota", func() {
 				BeforeEach(func() {
 					spec.ExclusiveDiskLimit = false
-					spec.DiskLimit = 1024 * 1024 * 10
-				})
-
-				Context("when the DiskLimit is smaller than VolumeSize", func() {
-					It("returns an error", func() {
-						spec.DiskLimit = 1024 * 1024 * 3
-						_, err := driver.CreateImage(logger, spec)
-						Expect(err).To(MatchError(ContainSubstring("disk limit is smaller than volume size")))
-					})
 				})
 
 				It("enforces the quota in the image", func() {
@@ -455,12 +435,21 @@ var _ = Describe("Driver", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Eventually(sess).Should(gexec.Exit(0))
 
-					dd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file-2", imageRootfsPath), "count=5", "bs=1M")
+					dd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file-2", imageRootfsPath), "count=4", "bs=1M")
 					sess, err = gexec.Start(dd, GinkgoWriter, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
 					Eventually(sess, 5*time.Second).Should(gexec.Exit(1))
 					Eventually(sess.Err).Should(gbytes.Say("No space left on device"))
 				})
+
+				Context("when the DiskLimit is smaller than VolumeSize", func() {
+					It("returns an error", func() {
+						spec.DiskLimit = 4000
+						_, err := driver.CreateImage(logger, spec)
+						Expect(err).To(MatchError(ContainSubstring("disk limit is smaller than volume size")))
+					})
+				})
+
 			})
 
 			Context("exclusive quota", func() {
@@ -565,10 +554,10 @@ var _ = Describe("Driver", func() {
 	Describe("DestroyImage", func() {
 		JustBeforeEach(func() {
 			volumeID := randVolumeID()
-			_, err := driver.CreateVolume(logger, "parent-id", volumeID)
-			Expect(err).NotTo(HaveOccurred())
+			createVolume(driver, "parent-id", volumeID, 3145728)
+
 			spec.BaseVolumeIDs = []string{volumeID}
-			_, err = driver.CreateImage(logger, spec)
+			_, err := driver.CreateImage(logger, spec)
 			Expect(err).ToNot(HaveOccurred())
 		})
 
@@ -616,21 +605,15 @@ var _ = Describe("Driver", func() {
 	Describe("FetchStats", func() {
 		BeforeEach(func() {
 			volumeID := randVolumeID()
-			layer1Path, err := driver.CreateVolume(logger, "parent-id", volumeID)
-			Expect(err).NotTo(HaveOccurred())
-
-			dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/file", layer1Path), "count=3", "bs=1M")
-			sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			createVolume(driver, "parent-id", volumeID, 3000000)
 
 			spec.BaseVolumeIDs = []string{volumeID}
 			spec.DiskLimit = 10 * 1024 * 1024
-			_, err = driver.CreateImage(logger, spec)
+			_, err := driver.CreateImage(logger, spec)
 			Expect(err).ToNot(HaveOccurred())
 
-			dd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/rootfs/file-1", spec.ImagePath), "count=4", "bs=1M")
-			sess, err = gexec.Start(dd, GinkgoWriter, GinkgoWriter)
+			dd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s/rootfs/file-1", spec.ImagePath), "count=4", "bs=1M")
+			sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
 		})
@@ -645,7 +628,7 @@ var _ = Describe("Driver", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(stats.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(4198400)))
-			Expect(stats.DiskUsage.TotalBytesUsed).To(Equal(int64(7344146)))
+			Expect(stats.DiskUsage.TotalBytesUsed).To(Equal(int64(3000000 + 4198400)))
 		})
 
 		Context("when path does not exist", func() {
@@ -671,11 +654,11 @@ var _ = Describe("Driver", func() {
 				Expect(err).ToNot(HaveOccurred())
 			})
 
-			It("returns an error", func() {
+			It("returns the exclusive bytes used as 0", func() {
 				volumeStats, err := driver.FetchStats(logger, spec.ImagePath)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(volumeStats.DiskUsage.ExclusiveBytesUsed).To(Equal(int64(0)))
-				Expect(volumeStats.DiskUsage.TotalBytesUsed).To(BeNumerically("~", 3*1024*1024, 100))
+				Expect(volumeStats.DiskUsage.TotalBytesUsed).To(BeNumerically("~", 3000000, 100))
 			})
 		})
 
@@ -895,6 +878,41 @@ var _ = Describe("Driver", func() {
 			Expect(symlinkPath).ToNot(BeAnExistingFile())
 		})
 
+		It("deletes the metadata file", func() {
+			metaFilePath := filepath.Join(StorePath, store.MetaDirName, fmt.Sprintf("volume-%s", volumeID))
+			Expect(ioutil.WriteFile(metaFilePath, []byte{}, 0644)).To(Succeed())
+			Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
+			Expect(metaFilePath).ToNot(BeAnExistingFile())
+		})
+
+		Context("during garbage collection", func() {
+			var metaFilePath string
+
+			JustBeforeEach(func() {
+				metaFilePath = filepath.Join(StorePath, store.MetaDirName, fmt.Sprintf("volume-%s", volumeID))
+				driver.MoveVolume(logger,
+					filepath.Join(StorePath, store.VolumesDirName, volumeID),
+					filepath.Join(StorePath, store.VolumesDirName, "gc."+volumeID),
+				)
+				volumeID = "gc." + volumeID
+			})
+
+			It("deletes the metadata file", func() {
+				Expect(ioutil.WriteFile(metaFilePath, []byte{}, 0644)).To(Succeed())
+				Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
+				Expect(metaFilePath).ToNot(BeAnExistingFile())
+			})
+		})
+
+		Context("when removing the metadata file fails", func() {
+			It("doesn't return an error, but logs the incident", func() {
+				metaFilePath := filepath.Join(StorePath, store.MetaDirName, fmt.Sprintf("volume-%s", volumeID))
+				Expect(metaFilePath).ToNot(BeAnExistingFile())
+				Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
+				Expect(logger.Buffer()).To(gbytes.Say("deleting-metadata-file-failed"))
+			})
+		})
+
 		Context("when the associated symlink has already been deleted", func() {
 			It("does not fail", func() {
 				linkFilePath := filepath.Join(StorePath, overlayxfs.LinksDirName, volumeID)
@@ -992,9 +1010,35 @@ var _ = Describe("Driver", func() {
 			})
 		})
 	})
+
+	Describe("WriteVolumeMeta", func() {
+		It("creates the correct metadata file", func() {
+			err := driver.WriteVolumeMeta(logger, "1234", base_image_puller.VolumeMeta{Size: 1024})
+			Expect(err).NotTo(HaveOccurred())
+
+			metaFilePath := filepath.Join(StorePath, store.MetaDirName, "volume-1234")
+			Expect(metaFilePath).To(BeAnExistingFile())
+			metaFile, err := os.Open(metaFilePath)
+			Expect(err).NotTo(HaveOccurred())
+			var meta base_image_puller.VolumeMeta
+
+			Expect(json.NewDecoder(metaFile).Decode(&meta)).To(Succeed())
+			Expect(meta).To(Equal(base_image_puller.VolumeMeta{Size: 1024}))
+		})
+	})
 })
 
 func randVolumeID() string {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return fmt.Sprintf("volume-%d", r.Int())
+}
+
+func createVolume(driver *overlayxfs.Driver, parentID, id string, size int64) string {
+	path, err := driver.CreateVolume(lagertest.NewTestLogger("test"), parentID, id)
+	Expect(err).NotTo(HaveOccurred())
+	metaFilePath := filepath.Join(StorePath, store.MetaDirName, fmt.Sprintf("volume-%s", id))
+	metaContents := fmt.Sprintf(`{"Size": %d}`, size)
+	Expect(ioutil.WriteFile(metaFilePath, []byte(metaContents), 0644)).To(Succeed())
+
+	return path
 }

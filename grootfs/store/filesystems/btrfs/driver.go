@@ -14,6 +14,7 @@ import (
 
 	"github.com/tscolari/lagregator"
 
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems"
@@ -120,6 +121,10 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 		}
 	}
 
+	return nil
+}
+
+func (d *Driver) WriteVolumeMeta(_ lager.Logger, _ string, _ base_image_puller.VolumeMeta) error {
 	return nil
 }
 

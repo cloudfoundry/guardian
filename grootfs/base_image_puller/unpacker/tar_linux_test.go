@@ -58,10 +58,11 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 		})
 
 		It("excludes them", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			filePath := path.Join(targetPath, "a_device")
 			Expect(filePath).ToNot(BeAnExistingFile())
@@ -95,10 +96,11 @@ var _ = Describe("Tar unpacker - Linux tests", func() {
 		})
 
 		It("preserves the modtime for symlinks", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			symlinkTargetFi, err := os.Stat(path.Join(targetPath, "symlink-target"))
 			Expect(err).NotTo(HaveOccurred())

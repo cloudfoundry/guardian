@@ -9,23 +9,25 @@ import (
 )
 
 type FakeUnpacker struct {
-	UnpackStub        func(logger lager.Logger, spec base_image_puller.UnpackSpec) error
+	UnpackStub        func(logger lager.Logger, spec base_image_puller.UnpackSpec) (int64, error)
 	unpackMutex       sync.RWMutex
 	unpackArgsForCall []struct {
 		logger lager.Logger
 		spec   base_image_puller.UnpackSpec
 	}
 	unpackReturns struct {
-		result1 error
+		result1 int64
+		result2 error
 	}
 	unpackReturnsOnCall map[int]struct {
-		result1 error
+		result1 int64
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) error {
+func (fake *FakeUnpacker) Unpack(logger lager.Logger, spec base_image_puller.UnpackSpec) (int64, error) {
 	fake.unpackMutex.Lock()
 	ret, specificReturn := fake.unpackReturnsOnCall[len(fake.unpackArgsForCall)]
 	fake.unpackArgsForCall = append(fake.unpackArgsForCall, struct {
@@ -38,9 +40,9 @@ func (fake *FakeUnpacker) Unpack(logger lager.Logger, spec base_image_puller.Unp
 		return fake.UnpackStub(logger, spec)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fake.unpackReturns.result1
+	return fake.unpackReturns.result1, fake.unpackReturns.result2
 }
 
 func (fake *FakeUnpacker) UnpackCallCount() int {
@@ -55,23 +57,26 @@ func (fake *FakeUnpacker) UnpackArgsForCall(i int) (lager.Logger, base_image_pul
 	return fake.unpackArgsForCall[i].logger, fake.unpackArgsForCall[i].spec
 }
 
-func (fake *FakeUnpacker) UnpackReturns(result1 error) {
+func (fake *FakeUnpacker) UnpackReturns(result1 int64, result2 error) {
 	fake.UnpackStub = nil
 	fake.unpackReturns = struct {
-		result1 error
-	}{result1}
+		result1 int64
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeUnpacker) UnpackReturnsOnCall(i int, result1 error) {
+func (fake *FakeUnpacker) UnpackReturnsOnCall(i int, result1 int64, result2 error) {
 	fake.UnpackStub = nil
 	if fake.unpackReturnsOnCall == nil {
 		fake.unpackReturnsOnCall = make(map[int]struct {
-			result1 error
+			result1 int64
+			result2 error
 		})
 	}
 	fake.unpackReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
+		result1 int64
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeUnpacker) Invocations() map[string][][]interface{} {

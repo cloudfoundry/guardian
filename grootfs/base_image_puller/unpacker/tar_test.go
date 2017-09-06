@@ -80,16 +80,46 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("creates regular files", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			filePath := path.Join(targetPath, "a_file")
 			Expect(filePath).To(BeARegularFile())
 			contents, err := ioutil.ReadFile(filePath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("hello-world"))
+		})
+
+		Context("unpacked bytes count", func() {
+			BeforeEach(func() {
+				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "1mb")), "count=1", "bs=1M")
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+
+				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "3mb")), "count=3", "bs=1M")
+				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+
+				cmd = exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "1k")), "count=1", "bs=1K")
+				sess, err = gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+			})
+
+			It("returns the total size that was unpacked", func() {
+				totalUnpacked, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:     stream,
+					TargetPath: targetPath,
+				})
+
+				Expect(err).NotTo(HaveOccurred())
+				Expect(totalUnpacked).To(Equal(int64(1024*1024 + 1024*1024*3 + 1024 + 11)))
+			})
 		})
 
 		Context("file ownership", func() {
@@ -99,10 +129,11 @@ var _ = Describe("Tar unpacker", func() {
 			})
 
 			It("preserves it", func() {
-				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
-				})).To(Succeed())
+				})
+				Expect(err).NotTo(HaveOccurred())
 
 				filePath := path.Join(targetPath, "groot_file")
 				Expect(filePath).To(BeARegularFile())
@@ -122,7 +153,7 @@ var _ = Describe("Tar unpacker", func() {
 				})
 
 				It("maps them", func() {
-					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
 						TargetPath: targetPath,
 						UIDMappings: []groot.IDMappingSpec{
@@ -135,7 +166,8 @@ var _ = Describe("Tar unpacker", func() {
 							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
 							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
 						},
-					})).To(Succeed())
+					})
+					Expect(err).NotTo(HaveOccurred())
 
 					filePath := path.Join(targetPath, "a_file")
 					Expect(filePath).To(BeARegularFile())
@@ -177,10 +209,11 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("creates files in subdirectories", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			filePath := path.Join(targetPath, "subdir", "subdir2", "another_file")
 			Expect(filePath).To(BeARegularFile())
@@ -196,10 +229,11 @@ var _ = Describe("Tar unpacker", func() {
 			})
 
 			It("preserves it", func() {
-				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
-				})).To(Succeed())
+				})
+				Expect(err).NotTo(HaveOccurred())
 
 				filePath := path.Join(targetPath, "groot_dir")
 				Expect(filePath).To(BeADirectory())
@@ -219,7 +253,7 @@ var _ = Describe("Tar unpacker", func() {
 				})
 
 				It("maps them", func() {
-					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
 						TargetPath: targetPath,
 						UIDMappings: []groot.IDMappingSpec{
@@ -232,7 +266,8 @@ var _ = Describe("Tar unpacker", func() {
 							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
 							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
 						},
-					})).To(Succeed())
+					})
+					Expect(err).NotTo(HaveOccurred())
 
 					filePath := path.Join(targetPath, "200_dir")
 					Expect(filePath).To(BeADirectory())
@@ -280,10 +315,11 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("preserves the modtime for files", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			fi, err := os.Stat(path.Join(targetPath, "old-file"))
 			Expect(err).NotTo(HaveOccurred())
@@ -291,10 +327,11 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("preserves the modtime for directories", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			fi, err := os.Stat(path.Join(targetPath, "old-dir"))
 			Expect(err).NotTo(HaveOccurred())
@@ -317,10 +354,11 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("keeps file permissions", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			filePath := path.Join(targetPath, "a_file")
 			stat, err := os.Stat(filePath)
@@ -330,10 +368,11 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("keeps directory permissions", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			dirPath := path.Join(targetPath, "a_dir")
 			stat, err := os.Stat(dirPath)
@@ -352,10 +391,11 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("unpacks the symlinks", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			symlinkPath := path.Join(targetPath, "symlink")
 			Expect(symlinkPath).To(BeARegularFile())
@@ -373,10 +413,11 @@ var _ = Describe("Tar unpacker", func() {
 			})
 
 			It("preserves it", func() {
-				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
-				})).To(Succeed())
+				})
+				Expect(err).NotTo(HaveOccurred())
 
 				filePath := path.Join(targetPath, "groot_link")
 				Expect(filePath).To(BeAnExistingFile())
@@ -396,7 +437,7 @@ var _ = Describe("Tar unpacker", func() {
 				})
 
 				It("maps them", func() {
-					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
 						TargetPath: targetPath,
 						UIDMappings: []groot.IDMappingSpec{
@@ -409,7 +450,8 @@ var _ = Describe("Tar unpacker", func() {
 							groot.IDMappingSpec{HostID: 11, NamespaceID: 1, Size: 900},
 							groot.IDMappingSpec{HostID: 2001, NamespaceID: 1001, Size: 900},
 						},
-					})).To(Succeed())
+					})
+					Expect(err).NotTo(HaveOccurred())
 
 					filePath := path.Join(targetPath, "200_link")
 					Expect(filePath).To(BeAnExistingFile())
@@ -436,10 +478,11 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("unpacks the hardlinks", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			hardLinkPath := path.Join(targetPath, "hardlink")
 			Expect(hardLinkPath).To(BeAnExistingFile())
@@ -462,10 +505,11 @@ var _ = Describe("Tar unpacker", func() {
 			})
 
 			It("overwrites it", func() {
-				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
-				})).To(Succeed())
+				})
+				Expect(err).NotTo(HaveOccurred())
 
 				symlinkFilePath := filepath.Join(targetPath, "symlink")
 				stat, err := os.Lstat(symlinkFilePath)
@@ -483,10 +527,11 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("keeps setuid and setgid permission", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 
 			filePath := path.Join(targetPath, "setuid_file")
 			stat, err := os.Stat(filePath)
@@ -515,10 +560,11 @@ var _ = Describe("Tar unpacker", func() {
 
 		commonWhiteoutTests := func() {
 			It("does not leak the whiteout files", func() {
-				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
-				})).To(Succeed())
+				})
+				Expect(err).NotTo(HaveOccurred())
 
 				Expect(path.Join(targetPath, ".wh.b_file")).NotTo(BeAnExistingFile())
 				Expect(path.Join(targetPath, "a_dir", ".wh.a_file")).NotTo(BeAnExistingFile())
@@ -536,20 +582,22 @@ var _ = Describe("Tar unpacker", func() {
 			commonWhiteoutTests()
 
 			It("deletes the pre-existing files", func() {
-				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
-				})).To(Succeed())
+				})
+				Expect(err).NotTo(HaveOccurred())
 
 				Expect(path.Join(targetPath, "b_file")).NotTo(BeAnExistingFile())
 				Expect(path.Join(targetPath, "a_dir", "a_file")).NotTo(BeAnExistingFile())
 			})
 
 			It("deletes the pre-existing directories", func() {
-				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
-				})).To(Succeed())
+				})
+				Expect(err).NotTo(HaveOccurred())
 				Expect(path.Join(targetPath, "b_dir")).NotTo(BeAnExistingFile())
 			})
 		})
@@ -567,10 +615,11 @@ var _ = Describe("Tar unpacker", func() {
 			commonWhiteoutTests()
 
 			It("creates dev 0 character devices to simulate file deletions", func() {
-				Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 					Stream:     stream,
 					TargetPath: targetPath,
-				})).To(Succeed())
+				})
+				Expect(err).NotTo(HaveOccurred())
 
 				bFilePath := path.Join(targetPath, "b_file")
 				stat, err := os.Stat(bFilePath)
@@ -598,7 +647,7 @@ var _ = Describe("Tar unpacker", func() {
 				})
 
 				It("returns an error", func() {
-					err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
 						TargetPath: targetPath,
 					})
@@ -618,29 +667,32 @@ var _ = Describe("Tar unpacker", func() {
 
 			commonOpaqueWhiteoutTests := func() {
 				It("cleans up the folder", func() {
-					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
 						TargetPath: targetPath,
-					})).To(Succeed())
+					})
+					Expect(err).NotTo(HaveOccurred())
 
 					Expect(path.Join(targetPath, "whiteout_dir", "a_file")).NotTo(BeAnExistingFile())
 					Expect(path.Join(targetPath, "whiteout_dir", "b_file")).NotTo(BeAnExistingFile())
 				})
 
 				It("keeps the parent directory", func() {
-					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
 						TargetPath: targetPath,
-					})).To(Succeed())
+					})
+					Expect(err).NotTo(HaveOccurred())
 
 					Expect(path.Join(targetPath, "whiteout_dir")).To(BeADirectory())
 				})
 
 				It("does not leak the whiteout file", func() {
-					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
 						TargetPath: targetPath,
-					})).To(Succeed())
+					})
+					Expect(err).NotTo(HaveOccurred())
 
 					Expect(path.Join(targetPath, "whiteout_dir", ".wh..wh..opq")).NotTo(BeAnExistingFile())
 				})
@@ -669,10 +721,11 @@ var _ = Describe("Tar unpacker", func() {
 				commonOpaqueWhiteoutTests()
 
 				It("Sets the correct attributes on the removed directory", func() {
-					Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 						Stream:     stream,
 						TargetPath: targetPath,
-					})).To(Succeed())
+					})
+					Expect(err).NotTo(HaveOccurred())
 
 					deletedDirectoryPath := path.Join(targetPath, "whiteout_dir")
 					xattrOpaque, err := system.Lgetxattr(deletedDirectoryPath, "trusted.overlay.opaque")
@@ -690,10 +743,11 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("returns the error", func() {
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(MatchError(ContainSubstring("unexpected EOF")))
+			})
+			Expect(err).To(MatchError("unexpected EOF"))
 		})
 	})
 
@@ -706,7 +760,7 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("doesn't create the file outside the target path", func() {
-			err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})
@@ -716,7 +770,7 @@ var _ = Describe("Tar unpacker", func() {
 		})
 
 		It("creates the file in the root of the target path", func() {
-			err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
 			})
@@ -728,7 +782,7 @@ var _ = Describe("Tar unpacker", func() {
 
 	Context("when creating the target directory fails", func() {
 		It("returns an error", func() {
-			err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: "/some-destination/images/1000",
 			})
@@ -741,10 +795,11 @@ var _ = Describe("Tar unpacker", func() {
 		It("still works", func() {
 			Expect(os.RemoveAll(targetPath)).To(Succeed())
 
-			Expect(tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				Stream:     stream,
 				TargetPath: targetPath,
-			})).To(Succeed())
+			})
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

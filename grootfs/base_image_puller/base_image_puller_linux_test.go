@@ -196,6 +196,32 @@ var _ = Describe("Base Image Puller", func() {
 		Expect(chainIDs).To(ConsistOf("layer-111", "chain-222", "chain-333"))
 	})
 
+	It("writes the metadata for each volume", func() {
+		var unpackCall int
+		fakeUnpacker.UnpackStub = func(_ lager.Logger, _ base_image_puller.UnpackSpec) (int64, error) {
+			unpackCall++
+			return int64(unpackCall * 100), nil
+		}
+
+		_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+			BaseImageSrc: baseImageSrcURL,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(fakeVolumeDriver.WriteVolumeMetaCallCount()).To(Equal(3))
+		_, id, metadata := fakeVolumeDriver.WriteVolumeMetaArgsForCall(0)
+		Expect(id).To(Equal("layer-111"))
+		Expect(metadata).To(Equal(base_image_puller.VolumeMeta{Size: 100}))
+
+		_, id, metadata = fakeVolumeDriver.WriteVolumeMetaArgsForCall(1)
+		Expect(id).To(Equal("chain-222"))
+		Expect(metadata).To(Equal(base_image_puller.VolumeMeta{Size: 200}))
+
+		_, id, metadata = fakeVolumeDriver.WriteVolumeMetaArgsForCall(2)
+		Expect(id).To(Equal("chain-333"))
+		Expect(metadata).To(Equal(base_image_puller.VolumeMeta{Size: 300}))
+	})
+
 	It("emits a metric with the unpack and download time for each layer", func() {
 		_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
 			BaseImageSrc: baseImageSrcURL,
@@ -218,6 +244,19 @@ var _ = Describe("Base Image Puller", func() {
 			chainID := fakeLocksmith.LockArgsForCall(len(layersDigest) - 1 - i)
 			Expect(chainID).To(Equal(layer.ChainID))
 		}
+	})
+
+	Context("when writing volume metadata fails", func() {
+		BeforeEach(func() {
+			fakeVolumeDriver.WriteVolumeMetaReturns(errors.New("metadata failed"))
+		})
+
+		It("returns an error", func() {
+			_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+				BaseImageSrc: baseImageSrcURL,
+			})
+			Expect(err).To(MatchError(ContainSubstring("metadata failed")))
+		})
 	})
 
 	Context("when registration fails", func() {
@@ -535,13 +574,13 @@ var _ = Describe("Base Image Puller", func() {
 	Context("when unpacking a blob fails", func() {
 		BeforeEach(func() {
 			count := 0
-			fakeUnpacker.UnpackStub = func(_ lager.Logger, _ base_image_puller.UnpackSpec) error {
+			fakeUnpacker.UnpackStub = func(_ lager.Logger, _ base_image_puller.UnpackSpec) (int64, error) {
 				count++
 				if count == 3 {
-					return errors.New("failed to unpack the blob")
+					return 0, errors.New("failed to unpack the blob")
 				}
 
-				return nil
+				return 0, nil
 			}
 		})
 

@@ -76,6 +76,19 @@ type FakeVolumeDriver struct {
 	moveVolumeReturnsOnCall map[int]struct {
 		result1 error
 	}
+	WriteVolumeMetaStub        func(logger lager.Logger, id string, data base_image_puller.VolumeMeta) error
+	writeVolumeMetaMutex       sync.RWMutex
+	writeVolumeMetaArgsForCall []struct {
+		logger lager.Logger
+		id     string
+		data   base_image_puller.VolumeMeta
+	}
+	writeVolumeMetaReturns struct {
+		result1 error
+	}
+	writeVolumeMetaReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -335,6 +348,56 @@ func (fake *FakeVolumeDriver) MoveVolumeReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeVolumeDriver) WriteVolumeMeta(logger lager.Logger, id string, data base_image_puller.VolumeMeta) error {
+	fake.writeVolumeMetaMutex.Lock()
+	ret, specificReturn := fake.writeVolumeMetaReturnsOnCall[len(fake.writeVolumeMetaArgsForCall)]
+	fake.writeVolumeMetaArgsForCall = append(fake.writeVolumeMetaArgsForCall, struct {
+		logger lager.Logger
+		id     string
+		data   base_image_puller.VolumeMeta
+	}{logger, id, data})
+	fake.recordInvocation("WriteVolumeMeta", []interface{}{logger, id, data})
+	fake.writeVolumeMetaMutex.Unlock()
+	if fake.WriteVolumeMetaStub != nil {
+		return fake.WriteVolumeMetaStub(logger, id, data)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.writeVolumeMetaReturns.result1
+}
+
+func (fake *FakeVolumeDriver) WriteVolumeMetaCallCount() int {
+	fake.writeVolumeMetaMutex.RLock()
+	defer fake.writeVolumeMetaMutex.RUnlock()
+	return len(fake.writeVolumeMetaArgsForCall)
+}
+
+func (fake *FakeVolumeDriver) WriteVolumeMetaArgsForCall(i int) (lager.Logger, string, base_image_puller.VolumeMeta) {
+	fake.writeVolumeMetaMutex.RLock()
+	defer fake.writeVolumeMetaMutex.RUnlock()
+	return fake.writeVolumeMetaArgsForCall[i].logger, fake.writeVolumeMetaArgsForCall[i].id, fake.writeVolumeMetaArgsForCall[i].data
+}
+
+func (fake *FakeVolumeDriver) WriteVolumeMetaReturns(result1 error) {
+	fake.WriteVolumeMetaStub = nil
+	fake.writeVolumeMetaReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeVolumeDriver) WriteVolumeMetaReturnsOnCall(i int, result1 error) {
+	fake.WriteVolumeMetaStub = nil
+	if fake.writeVolumeMetaReturnsOnCall == nil {
+		fake.writeVolumeMetaReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.writeVolumeMetaReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeVolumeDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -348,6 +411,8 @@ func (fake *FakeVolumeDriver) Invocations() map[string][][]interface{} {
 	defer fake.volumesMutex.RUnlock()
 	fake.moveVolumeMutex.RLock()
 	defer fake.moveVolumeMutex.RUnlock()
+	fake.writeVolumeMetaMutex.RLock()
+	defer fake.writeVolumeMetaMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
