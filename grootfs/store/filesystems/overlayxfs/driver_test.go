@@ -264,6 +264,19 @@ var _ = Describe("Driver", func() {
 			)))
 		})
 
+		Context("when a volume metadata file is missing", func() {
+			BeforeEach(func() {
+				metaFilePath := filepath.Join(StorePath, store.MetaDirName, "volume-"+layer1ID)
+				Expect(os.Remove(metaFilePath)).To(Succeed())
+			})
+
+			It("logs the occurence but doesn't fail", func() {
+				_, err := driver.CreateImage(logger, spec)
+				Expect(err).ToNot(HaveOccurred())
+				Eventually(logger).Should(gbytes.Say("calculating-base-volume-size-failed"))
+			})
+		})
+
 		Context("multi-layer image", func() {
 			BeforeEach(func() {
 				spec.BaseVolumeIDs = []string{layer1ID, layer2ID}
