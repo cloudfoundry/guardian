@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -41,7 +42,7 @@ var _ = Describe("Base Image Puller", func() {
 		layersDigest    []base_image_puller.LayerDigest
 
 		baseImageSrcURL *url.URL
-		fakeVolumePath  string
+		tmpVolumesDir   string
 	)
 
 	BeforeEach(func() {
@@ -70,12 +71,23 @@ var _ = Describe("Base Image Puller", func() {
 			return ioutil.NopCloser(buffer), 0, nil
 		}
 
+		var err error
+		tmpVolumesDir, err = ioutil.TempDir("", "volumes")
+		Expect(err).NotTo(HaveOccurred())
+
 		fakeVolumeDriver = new(base_image_pullerfakes.FakeVolumeDriver)
-		fakeVolumeDriver.VolumePathReturns("", errors.New("volume does not exist"))
-		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, _ string) (string, error) {
-			var err error
-			fakeVolumePath, err = ioutil.TempDir("", "volume")
-			return fakeVolumePath, err
+		fakeVolumeDriver.VolumePathStub = func(_ lager.Logger, id string) (string, error) {
+			volumeDir := filepath.Join(tmpVolumesDir, id)
+			_, err := os.Stat(volumeDir)
+			return volumeDir, err
+		}
+		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, id string) (string, error) {
+			volumeDir := filepath.Join(tmpVolumesDir, id)
+			Expect(os.MkdirAll(volumeDir, 0777)).To(Succeed())
+			return volumeDir, nil
+		}
+		fakeVolumeDriver.MoveVolumeStub = func(_ lager.Logger, from, to string) error {
+			return os.Rename(from, to)
 		}
 
 		fakeDependencyRegisterer = new(base_image_pullerfakes.FakeDependencyRegisterer)
@@ -83,7 +95,6 @@ var _ = Describe("Base Image Puller", func() {
 		baseImagePuller = base_image_puller.NewBaseImagePuller(fakeTarFetcher, fakeLayerFetcher, fakeUnpacker, fakeVolumeDriver, fakeDependencyRegisterer, fakeMetricsEmitter, fakeLocksmith)
 		logger = lagertest.NewTestLogger("image-puller")
 
-		var err error
 		baseImageSrcURL, err = url.Parse("docker:///an/image")
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -126,29 +137,163 @@ var _ = Describe("Base Image Puller", func() {
 	})
 
 	It("unpacks the layers to the respective temporary volumes", func() {
-		volumesDir, err := ioutil.TempDir("", "volumes")
-		Expect(err).NotTo(HaveOccurred())
-
-		fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, id string) (string, error) {
-			volumePath := filepath.Join(volumesDir, id)
-
-			Expect(os.MkdirAll(volumePath, 0777)).To(Succeed())
-			return volumePath, nil
-		}
-
-		_, err = baseImagePuller.Pull(logger, groot.BaseImageSpec{
+		_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
 			BaseImageSrc: baseImageSrcURL,
 		})
-
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
 		_, unpackSpec := fakeUnpacker.UnpackArgsForCall(0)
-		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "layer-111-incomplete-\\d*-\\d*")))
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(tmpVolumesDir, "layer-111-incomplete-\\d*-\\d*")))
 		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(1)
-		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-222-incomplete-\\d*-\\d*")))
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(tmpVolumesDir, "chain-222-incomplete-\\d*-\\d*")))
 		_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
-		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(volumesDir, "chain-333-incomplete-\\d*-\\d*")))
+		Expect(unpackSpec.TargetPath).To(MatchRegexp(filepath.Join(tmpVolumesDir, "chain-333-incomplete-\\d*-\\d*")))
+	})
+
+	Context("when there is a base directory provided on a layer", func() {
+		BeforeEach(func() {
+			layersDigest[1].BaseDirectory = "/home/base_directory"
+		})
+
+		Context("when the base directory exists in the parent layer", func() {
+			BeforeEach(func() {
+				fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, id string) (string, error) {
+					volumeDir := filepath.Join(tmpVolumesDir, id)
+					Expect(os.MkdirAll(volumeDir, 0777)).To(Succeed())
+
+					if strings.Contains(id, "layer-111-incomplete-") {
+						Expect(os.Mkdir(filepath.Join(volumeDir, "home"), 0700)).To(Succeed())
+						Expect(os.Mkdir(filepath.Join(volumeDir, "home", "base_directory"), 0711)).To(Succeed())
+						Expect(os.Chown(filepath.Join(volumeDir, "home"), 10000, 10001)).To(Succeed())
+						Expect(os.Chown(filepath.Join(volumeDir, "home", "base_directory"), 10002, 10003)).To(Succeed())
+					}
+					return volumeDir, nil
+				}
+			})
+
+			It("forwards the correct base directory for each layer to the unpacker", func() {
+				_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+					BaseImageSrc: baseImageSrcURL,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
+				_, unpackSpec := fakeUnpacker.UnpackArgsForCall(0)
+				Expect(unpackSpec.BaseDirectory).To(Equal(""))
+				_, unpackSpec = fakeUnpacker.UnpackArgsForCall(1)
+				Expect(unpackSpec.BaseDirectory).To(Equal("/home/base_directory"))
+				_, unpackSpec = fakeUnpacker.UnpackArgsForCall(2)
+				Expect(unpackSpec.BaseDirectory).To(Equal(""))
+			})
+
+			It("ensures the base directory exists in the volume", func() {
+				_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+					BaseImageSrc: baseImageSrcURL,
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(filepath.Join(tmpVolumesDir, "chain-222", "home", "base_directory")).To(BeADirectory())
+			})
+
+			It("sets ownership on the base directory path components based on the parent layer", func() {
+				_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+					BaseImageSrc: baseImageSrcURL,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				fileinfo, err := os.Stat(filepath.Join(tmpVolumesDir, "chain-222", "home"))
+				Expect(err).NotTo(HaveOccurred())
+				sys := fileinfo.Sys().(*syscall.Stat_t)
+				Expect(sys.Uid).To(BeEquivalentTo(10000))
+				Expect(sys.Gid).To(BeEquivalentTo(10001))
+
+				fileinfo, err = os.Stat(filepath.Join(tmpVolumesDir, "chain-222", "home", "base_directory"))
+				Expect(err).NotTo(HaveOccurred())
+				sys = fileinfo.Sys().(*syscall.Stat_t)
+				Expect(sys.Uid).To(BeEquivalentTo(10002))
+				Expect(sys.Gid).To(BeEquivalentTo(10003))
+			})
+
+			It("sets the correct permissions on the base directory based on the parent layer", func() {
+				_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+					BaseImageSrc: baseImageSrcURL,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				fileinfo, err := os.Stat(filepath.Join(tmpVolumesDir, "chain-222", "home"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fileinfo.Mode().Perm()).To(Equal(os.FileMode(0700)))
+
+				fileinfo, err = os.Stat(filepath.Join(tmpVolumesDir, "chain-222", "home", "base_directory"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(fileinfo.Mode().Perm()).To(Equal(os.FileMode(0711)))
+			})
+
+			Context("when VolumePath returns an error", func() {
+				BeforeEach(func() {
+					fakeVolumeDriver.VolumePathReturns("", errors.New("failed"))
+				})
+
+				It("returns an error", func() {
+					_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+						BaseImageSrc: baseImageSrcURL,
+					})
+					Expect(err).To(MatchError("failed"))
+				})
+			})
+		})
+
+		Context("when the base directory doesn't exist in the parent layer", func() {
+			It("returns an error", func() {
+				_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+					BaseImageSrc: baseImageSrcURL,
+				})
+				Expect(err).To(MatchError(ContainSubstring("base directory not found in parent layer")))
+			})
+		})
+
+		Context("when the base directory already exists in the child layer (e.g. because of BTRFS snapshots)", func() {
+			BeforeEach(func() {
+				fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, id string) (string, error) {
+					volumeDir := filepath.Join(tmpVolumesDir, id)
+					Expect(os.MkdirAll(volumeDir, 0777)).To(Succeed())
+
+					if strings.Contains(id, "layer-111-incomplete-") {
+						Expect(os.Mkdir(filepath.Join(volumeDir, "home"), 0700)).To(Succeed())
+						Expect(os.Mkdir(filepath.Join(volumeDir, "home", "base_directory"), 0711)).To(Succeed())
+						Expect(os.Chown(filepath.Join(volumeDir, "home"), 9996, 9997)).To(Succeed())
+						Expect(os.Chown(filepath.Join(volumeDir, "home", "base_directory"), 9998, 9999)).To(Succeed())
+					}
+
+					if strings.Contains(id, "chain-222-incomplete-") {
+						Expect(os.Mkdir(filepath.Join(volumeDir, "home"), 0700)).To(Succeed())
+						Expect(os.Mkdir(filepath.Join(volumeDir, "home", "base_directory"), 0711)).To(Succeed())
+						Expect(os.Chown(filepath.Join(volumeDir, "home"), 10000, 10001)).To(Succeed())
+						Expect(os.Chown(filepath.Join(volumeDir, "home", "base_directory"), 10002, 10003)).To(Succeed())
+					}
+					return volumeDir, nil
+				}
+			})
+
+			It("succeeds but doesn't set file attributes based on the parent layer", func() {
+				_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
+					BaseImageSrc: baseImageSrcURL,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				fileinfo, err := os.Stat(filepath.Join(tmpVolumesDir, "chain-222", "home"))
+				Expect(err).NotTo(HaveOccurred())
+				sys := fileinfo.Sys().(*syscall.Stat_t)
+				Expect(sys.Uid).To(BeEquivalentTo(10000))
+				Expect(sys.Gid).To(BeEquivalentTo(10001))
+
+				fileinfo, err = os.Stat(filepath.Join(tmpVolumesDir, "chain-222", "home", "base_directory"))
+				Expect(err).NotTo(HaveOccurred())
+				sys = fileinfo.Sys().(*syscall.Stat_t)
+				Expect(sys.Uid).To(BeEquivalentTo(10002))
+				Expect(sys.Gid).To(BeEquivalentTo(10003))
+			})
+		})
 	})
 
 	It("asks the volume driver to handle opaque whiteouts for each layer", func() {
@@ -443,26 +588,30 @@ var _ = Describe("Base Image Puller", func() {
 	})
 
 	Describe("volumes ownership", func() {
-		var spec groot.BaseImageSpec
+		var (
+			spec      groot.BaseImageSpec
+			volumeDir string
+		)
 
 		BeforeEach(func() {
 			spec = groot.BaseImageSpec{
 				BaseImageSrc: baseImageSrcURL,
 			}
+			volumeDir = filepath.Join(tmpVolumesDir, "layer-111")
 		})
 
-		It("sets the ownership of the store to the spec's owner ids", func() {
+		It("sets the ownership of the volume to the spec's owner ids", func() {
 			spec.OwnerUID = 10000
 			spec.OwnerGID = 5000
 
 			_, err := baseImagePuller.Pull(logger, spec)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(fakeVolumePath).To(BeADirectory())
-			volumePath, err := os.Stat(fakeVolumePath)
+			Expect(volumeDir).To(BeADirectory())
+			stat_t, err := os.Stat(volumeDir)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10000)))
-			Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(5000)))
+			Expect(stat_t.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10000)))
+			Expect(stat_t.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(5000)))
 		})
 
 		Context("and both owner ids are 0", func() {
@@ -473,11 +622,11 @@ var _ = Describe("Base Image Puller", func() {
 				_, err := baseImagePuller.Pull(logger, spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(fakeVolumePath).To(BeADirectory())
-				volumePath, err := os.Stat(fakeVolumePath)
+				Expect(volumeDir).To(BeADirectory())
+				stat_t, err := os.Stat(volumeDir)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
-				Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+				Expect(stat_t.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+				Expect(stat_t.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
 			})
 		})
 
@@ -489,11 +638,11 @@ var _ = Describe("Base Image Puller", func() {
 				_, err := baseImagePuller.Pull(logger, spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(fakeVolumePath).To(BeADirectory())
-				volumePath, err := os.Stat(fakeVolumePath)
+				Expect(volumeDir).To(BeADirectory())
+				stat_t, err := os.Stat(volumeDir)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
-				Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(5000)))
+				Expect(stat_t.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
+				Expect(stat_t.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(5000)))
 			})
 		})
 
@@ -505,11 +654,11 @@ var _ = Describe("Base Image Puller", func() {
 				_, err := baseImagePuller.Pull(logger, spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(fakeVolumePath).To(BeADirectory())
-				volumePath, err := os.Stat(fakeVolumePath)
+				Expect(volumeDir).To(BeADirectory())
+				stat_t, err := os.Stat(volumeDir)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(volumePath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10000)))
-				Expect(volumePath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+				Expect(stat_t.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(10000)))
+				Expect(stat_t.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
 			})
 		})
 	})
@@ -617,7 +766,7 @@ var _ = Describe("Base Image Puller", func() {
 
 		It("deletes the volume", func() {
 			_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{BaseImageSrc: baseImageSrcURL})
-			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("failed to unpack the blob")))
 
 			Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
 			_, path := fakeVolumeDriver.DestroyVolumeArgsForCall(0)
@@ -644,19 +793,18 @@ var _ = Describe("Base Image Puller", func() {
 			_, err := baseImagePuller.Pull(logger, groot.BaseImageSpec{
 				BaseImageSrc: baseImageSrcURL,
 			})
-			Expect(err).To(HaveOccurred())
+			Expect(err).To(MatchError(ContainSubstring("failed to unpack the blob")))
 
-			Eventually(fakeMetricsEmitter.TryEmitDurationFromCallCount).Should(Equal(6))
 			Eventually(func() int {
 				mutex.Lock()
 				defer mutex.Unlock()
 				return unpackTimeMetrics
-			}).Should(Equal(3))
+			}).Should(Equal(3), "incorrect number of unpack time metrics emitted")
 			Eventually(func() int {
 				mutex.Lock()
 				defer mutex.Unlock()
 				return downloadTimeMetrics
-			}).Should(Equal(3))
+			}).Should(Equal(3), "incorrect number of download time metrics emitted")
 		})
 
 		Context("when UID and GID mappings are provided", func() {

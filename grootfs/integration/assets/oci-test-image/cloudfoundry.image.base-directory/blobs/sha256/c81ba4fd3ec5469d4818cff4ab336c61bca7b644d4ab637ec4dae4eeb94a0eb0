@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 2,
+  "config": {
+    "mediaType": "application/vnd.oci.image.config.v1+json",
+    "size": 1142,
+    "digest": "sha256:a22bd35a8f924863dde6df017697de30a0f2f1006251b75553f9a67ff40599d0"
+  },
+  "layers": [
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "size": 715112,
+      "digest": "sha256:9e87eff13613eed2f67b0188f8604d1bbdd3a7f5d6a4f565e8923817db65d6e5"
+    },
+    {
+      "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
+      "size": 126,
+      "digest": "sha256:9a75ef280d2a6e15d2da245b99bad408e6aae2aaca79479729c6882df36fc258",
+      "annotations": {
+        "org.cloudfoundry.image.base-directory": "/home"
+      }
+    }
+  ]
+}

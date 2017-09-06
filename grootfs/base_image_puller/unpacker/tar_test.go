@@ -92,7 +92,7 @@ var _ = Describe("Tar unpacker", func() {
 			Expect(string(contents)).To(Equal("hello-world"))
 		})
 
-		Context("unpacked bytes count", func() {
+		Describe("unpacked bytes count", func() {
 			BeforeEach(func() {
 				cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(baseImagePath, "1mb")), "count=1", "bs=1M")
 				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
@@ -121,7 +121,33 @@ var _ = Describe("Tar unpacker", func() {
 			})
 		})
 
-		Context("file ownership", func() {
+		Context("when BaseDirectory is provided", func() {
+			It("creates the files inside that directory", func() {
+				Expect(os.MkdirAll(filepath.Join(targetPath, "hello/world"), 0755)).To(Succeed())
+				_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+					Stream:        stream,
+					TargetPath:    targetPath,
+					BaseDirectory: "/hello/world",
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				filePath := path.Join(targetPath, "/hello/world", "a_file")
+				Expect(filePath).To(BeARegularFile())
+			})
+
+			Context("when the base directory doesn't exist", func() {
+				It("returns an error", func() {
+					_, err := tarUnpacker.Unpack(logger, base_image_puller.UnpackSpec{
+						Stream:        stream,
+						TargetPath:    targetPath,
+						BaseDirectory: "/hello/world",
+					})
+					Expect(err).To(MatchError(ContainSubstring("creating directory")))
+				})
+			})
+		})
+
+		Describe("file ownership", func() {
 			BeforeEach(func() {
 				Expect(ioutil.WriteFile(filepath.Join(baseImagePath, "groot_file"), []byte{}, 0755)).To(Succeed())
 				Expect(os.Chown(filepath.Join(baseImagePath, "groot_file"), 1000, 1000)).To(Succeed())
@@ -671,7 +697,7 @@ var _ = Describe("Tar unpacker", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(unpackOutput.OpaqueWhiteouts).To(ContainElement("./whiteout_dir/.wh..wh..opq"))
+				Expect(unpackOutput.OpaqueWhiteouts).To(ContainElement("whiteout_dir/.wh..wh..opq"))
 			})
 
 			It("keeps the parent directory", func() {

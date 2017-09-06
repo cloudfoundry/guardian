@@ -103,6 +103,7 @@ func (f *LayerFetcher) createLayersDigest(logger lager.Logger, image Manifest, c
 			Size:          layer.Size,
 			ChainID:       chainID,
 			ParentChainID: parentChainID,
+			BaseDirectory: layer.Annotations[cfBaseDirectoryAnnotation],
 		})
 		parentChainID = chainID
 	}

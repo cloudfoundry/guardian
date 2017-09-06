@@ -38,7 +38,8 @@ func init() {
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		rootFSPath := os.Args[1]
-		unpackStrategyJSON := os.Args[2]
+		baseDirectory := os.Args[2]
+		unpackStrategyJSON := os.Args[3]
 
 		var unpackStrategy UnpackStrategy
 		if err := json.Unmarshal([]byte(unpackStrategyJSON), &unpackStrategy); err != nil {
@@ -51,9 +52,10 @@ func init() {
 		}
 
 		var unpackOutput base_image_puller.UnpackOutput
-		if unpackOutput, err = unpacker.unpack(logger, base_image_puller.UnpackSpec{
-			Stream:     os.Stdin,
-			TargetPath: rootFSPath,
+		if unpackOutput, err = unpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			Stream:        os.Stdin,
+			TargetPath:    rootFSPath,
+			BaseDirectory: baseDirectory,
 		}); err != nil {
 			fail(logger, "unpacking-failed", err)
 		}
@@ -245,18 +247,21 @@ func (u *TarUnpacker) unpack(logger lager.Logger, spec base_image_puller.UnpackS
 			return base_image_puller.UnpackOutput{}, err
 		}
 
+		entryPath := filepath.Join(spec.BaseDirectory, tarHeader.Name)
+
 		if strings.Contains(tarHeader.Name, ".wh..wh..opq") {
-			opaqueWhiteouts = append(opaqueWhiteouts, tarHeader.Name)
+			opaqueWhiteouts = append(opaqueWhiteouts, entryPath)
 			continue
 		}
+
 		if strings.Contains(tarHeader.Name, ".wh.") {
-			if err := u.whiteoutHandler.removeWhiteout(tarHeader.Name); err != nil {
+			if err := u.whiteoutHandler.removeWhiteout(entryPath); err != nil {
 				return base_image_puller.UnpackOutput{}, err
 			}
 			continue
 		}
 
-		entrySize, err := u.handleEntry(tarHeader.Name, tarReader, tarHeader, spec)
+		entrySize, err := u.handleEntry(entryPath, tarReader, tarHeader, spec)
 		if err != nil {
 			return base_image_puller.UnpackOutput{}, err
 		}
@@ -451,15 +456,6 @@ func (u *TarUnpacker) translateRootID(mappings []groot.IDMappingSpec) int {
 	return 0
 }
 
-func safeMkdir(path string, perm os.FileMode) error {
-	if _, err := os.Stat(path); err != nil {
-		if err := os.Mkdir(path, perm); err != nil {
-			return errors.Wrapf(err, "making destination directory `%s`", path)
-		}
-	}
-	return nil
-}
-
 func chroot(path string) error {
 	if err := syscall.Chroot(path); err != nil {
 		return err
@@ -469,5 +465,14 @@ func chroot(path string) error {
 		return err
 	}
 
+	return nil
+}
+
+func safeMkdir(path string, perm os.FileMode) error {
+	if _, err := os.Stat(path); err != nil {
+		if err := os.Mkdir(path, perm); err != nil {
+			return errors.Wrapf(err, "making destination directory `%s`", path)
+		}
+	}
 	return nil
 }

@@ -36,7 +36,7 @@ func init() {
 		logger := lager.NewLogger("unpack-wrapper")
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
-		if len(os.Args) != 3 {
+		if len(os.Args) != 4 {
 			logger.Error("parsing-command", errorspkg.New("destination directory or filesystem were not specified"))
 			os.Exit(1)
 		}
@@ -54,8 +54,9 @@ func init() {
 		// Once all id mappings are set, we need to spawn the untar function
 		// in a child proccess, so it can make use of it
 		targetDir := os.Args[1]
-		unpackStrategyJson := os.Args[2]
-		cmd := reexec.Command("unpack", targetDir, unpackStrategyJson)
+		baseDirectory := os.Args[2]
+		unpackStrategyJson := os.Args[3]
+		cmd := reexec.Command("unpack", targetDir, baseDirectory, unpackStrategyJson)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
@@ -90,13 +91,13 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 		return base_image_puller.UnpackOutput{}, errorspkg.Wrap(err, "creating tar control pipe")
 	}
 
-	unpackStrategyJson, err := json.Marshal(&u.unpackStrategy)
+	unpackStrategyJSON, err := json.Marshal(&u.unpackStrategy)
 	if err != nil {
 		logger.Error("unmarshal-unpack-strategy-failed", err)
 		return base_image_puller.UnpackOutput{}, errorspkg.Wrap(err, "unmarshal unpack strategy")
 	}
 
-	unpackCmd := reexec.Command("unpack-wrapper", spec.TargetPath, string(unpackStrategyJson))
+	unpackCmd := reexec.Command("unpack-wrapper", spec.TargetPath, spec.BaseDirectory, string(unpackStrategyJSON))
 	unpackCmd.Stdin = spec.Stream
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
 		unpackCmd.SysProcAttr = &syscall.SysProcAttr{

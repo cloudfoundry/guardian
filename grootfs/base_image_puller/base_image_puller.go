@@ -7,7 +7,9 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -27,10 +29,11 @@ const MetricsFailedUnpackTimeName = "FailedUnpackTime"
 //go:generate counterfeiter . VolumeDriver
 
 type UnpackSpec struct {
-	Stream      io.ReadCloser `json:"-"`
-	TargetPath  string
-	UIDMappings []groot.IDMappingSpec
-	GIDMappings []groot.IDMappingSpec
+	Stream        io.ReadCloser `json:"-"`
+	TargetPath    string
+	UIDMappings   []groot.IDMappingSpec
+	GIDMappings   []groot.IDMappingSpec
+	BaseDirectory string
 }
 
 type LayerDigest struct {
@@ -38,6 +41,7 @@ type LayerDigest struct {
 	ChainID       string
 	ParentChainID string
 	Size          int64
+	BaseDirectory string
 }
 
 type BaseImageInfo struct {
@@ -219,7 +223,11 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 
 	defer downloadResult.Stream.Close()
 
-	return p.unpackLayer(logger, digest, spec, downloadResult.Stream)
+	var parentDigest LayerDigest
+	if index > 0 {
+		parentDigest = layersDigests[index-1]
+	}
+	return p.unpackLayer(logger, digest, parentDigest, spec, downloadResult.Stream)
 }
 
 type downloadReturn struct {
@@ -247,7 +255,7 @@ func (p *BaseImagePuller) downloadLayer(logger lager.Logger, spec groot.BaseImag
 	downloadChan <- downloadReturn{Stream: stream, Err: err}
 }
 
-func (p *BaseImagePuller) unpackLayer(logger lager.Logger, digest LayerDigest, spec groot.BaseImageSpec, stream io.ReadCloser) error {
+func (p *BaseImagePuller) unpackLayer(logger lager.Logger, digest, parentDigest LayerDigest, spec groot.BaseImageSpec, stream io.ReadCloser) error {
 	logger = logger.Session("unpacking-layer", lager.Data{"LayerDigest": digest})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -258,13 +266,14 @@ func (p *BaseImagePuller) unpackLayer(logger lager.Logger, digest LayerDigest, s
 	}
 
 	unpackSpec := UnpackSpec{
-		TargetPath:  volumePath,
-		Stream:      stream,
-		UIDMappings: spec.UIDMappings,
-		GIDMappings: spec.GIDMappings,
+		TargetPath:    volumePath,
+		Stream:        stream,
+		UIDMappings:   spec.UIDMappings,
+		GIDMappings:   spec.GIDMappings,
+		BaseDirectory: digest.BaseDirectory,
 	}
 
-	volSize, err := p.unpackLayerToTemporaryDirectory(logger, unpackSpec, digest)
+	volSize, err := p.unpackLayerToTemporaryDirectory(logger, unpackSpec, digest, parentDigest)
 	if err != nil {
 		return err
 	}
@@ -293,10 +302,21 @@ func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, di
 	return tempVolumeName, volumePath, nil
 }
 
-func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, digest LayerDigest) (volSize int64, err error) {
+func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, digest, parentDigest LayerDigest) (volSize int64, err error) {
 	defer p.metricsEmitter.TryEmitDurationFrom(logger, MetricsUnpackTimeName, time.Now())
-	var unpackOutput UnpackOutput
 
+	if unpackSpec.BaseDirectory != "" {
+		parentPath, err := p.volumeDriver.VolumePath(logger, parentDigest.ChainID)
+		if err != nil {
+			return 0, err
+		}
+
+		if err := ensureBaseDirectoryExists(unpackSpec.BaseDirectory, unpackSpec.TargetPath, parentPath); err != nil {
+			return 0, err
+		}
+	}
+
+	var unpackOutput UnpackOutput
 	if unpackOutput, err = p.unpacker.Unpack(logger, unpackSpec); err != nil {
 		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
 			logger.Error("volume-cleanup-failed", errD)
@@ -331,4 +351,38 @@ func (p *BaseImagePuller) layersSize(layerDigests []LayerDigest) int64 {
 		totalSize += digest.Size
 	}
 	return totalSize
+}
+
+func ensureBaseDirectoryExists(baseDir, childPath, parentPath string) error {
+	if baseDir == string(filepath.Separator) {
+		return nil
+	}
+
+	if err := ensureBaseDirectoryExists(filepath.Dir(baseDir), childPath, parentPath); err != nil {
+		return err
+	}
+
+	stat, err := os.Stat(filepath.Join(childPath, baseDir))
+	if err == nil {
+		return nil
+	} else if !os.IsNotExist(err) {
+		return errorspkg.Wrapf(err, "failed to stat base directory")
+	}
+
+	stat, err = os.Stat(filepath.Join(parentPath, baseDir))
+	if err != nil {
+		return errorspkg.Wrapf(err, "base directory not found in parent layer")
+	}
+
+	fullChildBaseDir := filepath.Join(childPath, baseDir)
+	if err := os.Mkdir(fullChildBaseDir, stat.Mode()); err != nil {
+		return errorspkg.Wrapf(err, "could not create base directory in child layer")
+	}
+
+	stat_t := stat.Sys().(*syscall.Stat_t)
+	if err := os.Chown(fullChildBaseDir, int(stat_t.Uid), int(stat_t.Gid)); err != nil {
+		return errorspkg.Wrapf(err, "could not chown base directory")
+	}
+
+	return nil
 }

@@ -96,8 +96,9 @@ var _ = Describe("LayerFetcher", func() {
 			fakeManifest.OCIConfigReturns(config, nil)
 			fakeManifest.LayerInfosReturns([]types.BlobInfo{
 				types.BlobInfo{
-					Digest: digestpkg.NewDigestFromHex("sha256", "47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58"),
-					Size:   1024,
+					Digest:      digestpkg.NewDigestFromHex("sha256", "47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58"),
+					Size:        1024,
+					Annotations: map[string]string{"org.cloudfoundry.image.base-directory": "/home/cool-user"},
 				},
 				types.BlobInfo{
 					Digest: digestpkg.NewDigestFromHex("sha256", "7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76"),
@@ -117,6 +118,7 @@ var _ = Describe("LayerFetcher", func() {
 					BlobID:        "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
 					ChainID:       "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
 					ParentChainID: "",
+					BaseDirectory: "/home/cool-user",
 					Size:          1024,
 				},
 				base_image_puller.LayerDigest{

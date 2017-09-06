@@ -16,6 +16,7 @@ import (
 	digestpkg "github.com/opencontainers/go-digest"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 
@@ -131,6 +132,26 @@ var _ = Describe("Create with OCI images", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(Runner.EnsureMounted(image)).To(Succeed())
 		Expect(image.Image.RootFS.DiffIDs[0]).To(Equal(digestpkg.NewDigestFromHex("sha256", "1a1021d32ed45a8fbd363739882c98f435dd34a050f8064943a79b9808c0da23")))
+	})
+
+	Context("when the image has cloudfoundry annotations", func() {
+		Describe("org.cloudfoundry.image.base-directory", func() {
+			BeforeEach(func() {
+				integration.SkipIfNonRoot(GrootfsTestUid)
+				baseImageURL = fmt.Sprintf("oci:///%s/assets/oci-test-image/cloudfoundry.image.base-directory:latest", workDir)
+			})
+
+			It("untars the layer in the specified folder", func() {
+				image, err := runner.Create(groot.CreateSpec{
+					BaseImage: baseImageURL,
+					ID:        "random-id",
+					Mount:     true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(path.Join(image.Rootfs, "home", "example")).To(BeARegularFile())
+			})
+		})
 	})
 
 	Context("when the image has volumes", func() {
