@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	grootfsRunner "code.cloudfoundry.org/grootfs/integration/runner"
+	"code.cloudfoundry.org/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -130,6 +131,10 @@ var _ = Describe("Init Store", func() {
 			JustBeforeEach(func() {
 				runner = runner.WithExternalLogDeviceSize(64)
 				integration.SkipIfNotXFS(Driver)
+			})
+
+			AfterEach(func() {
+				testhelpers.CleanUpExternalLogDevice(storePath)
 			})
 
 			It("uses the logdev mount option", func() {

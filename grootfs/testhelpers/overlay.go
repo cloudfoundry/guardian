@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -13,8 +14,22 @@ import (
 
 	"code.cloudfoundry.org/grootfs/store"
 
+	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+func CleanUpExternalLogDevice(externalLogPath string) {
+	externalLogPathLoopDevice := bytes.NewBuffer([]byte{})
+	getExternalLogDeviceCmd := exec.Command("sh", "-c", fmt.Sprintf("losetup -a | grep %s.external-log | cut -d : -f 1", externalLogPath))
+	getExternalLogDeviceCmd.Stdout = io.MultiWriter(GinkgoWriter, externalLogPathLoopDevice)
+	getExternalLogDeviceCmd.Stderr = GinkgoWriter
+	Expect(getExternalLogDeviceCmd.Run()).To(Succeed())
+
+	cleanExternalLogDeviceCmd := exec.Command("sh", "-c", fmt.Sprintf("losetup -d %s", externalLogPathLoopDevice.String()))
+	cleanExternalLogDeviceCmd.Stdout = GinkgoWriter
+	cleanExternalLogDeviceCmd.Stderr = GinkgoWriter
+	Expect(cleanExternalLogDeviceCmd.Run()).To(Succeed())
+}
 
 func CleanUpOverlayMounts(mountPath string) {
 	output, err := exec.Command("mount").Output()
@@ -31,8 +46,6 @@ func CleanUpOverlayMounts(mountPath string) {
 			Expect(syscall.Unmount(mountPoint, 0)).To(Succeed())
 		}
 	}
-
-	exec.Command("sh", "-c", fmt.Sprintf("losetup -a | grep %s.external-log | cut -d : -f 1 | xargs losetup -d", mountPath)).Run()
 }
 
 func CleanUpImages(storePath string) {
