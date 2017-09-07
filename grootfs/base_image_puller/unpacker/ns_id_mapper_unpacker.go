@@ -3,6 +3,7 @@ package unpacker // import "code.cloudfoundry.org/grootfs/base_image_puller/unpa
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"syscall"
 
@@ -31,14 +32,19 @@ type NSIdMapperUnpacker struct {
 }
 
 func init() {
-	reexec.Register("unpack-wrapper", func() {
+	var fail = func(logger lager.Logger, message string, err error) {
+		logger.Error(message, err)
+		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+
+	reexec.Register("unpack", func() {
 		cli.ErrWriter = os.Stdout
-		logger := lager.NewLogger("unpack-wrapper")
+		logger := lager.NewLogger("unpack")
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
 
 		if len(os.Args) != 4 {
-			logger.Error("parsing-command", errorspkg.New("destination directory or filesystem were not specified"))
-			os.Exit(1)
+			fail(logger, "parsing-command", errorspkg.New("destination directory or filesystem were not specified"))
 		}
 
 		ctrlPipeR := os.NewFile(3, "/ctrl/pipe")
@@ -46,30 +52,36 @@ func init() {
 		logger.Debug("waiting-for-control-pipe")
 		_, err := ctrlPipeR.Read(buffer)
 		if err != nil {
-			logger.Error("reading-control-pipe", err)
-			os.Exit(1)
+			fail(logger, "reading-control-pipe", err)
 		}
 		logger.Debug("got-back-from-control-pipe")
 
-		// Once all id mappings are set, we need to spawn the untar function
-		// in a child proccess, so it can make use of it
 		targetDir := os.Args[1]
 		baseDirectory := os.Args[2]
-		unpackStrategyJson := os.Args[3]
-		cmd := reexec.Command("unpack", targetDir, baseDirectory, unpackStrategyJson)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
+		unpackStrategyJSON := os.Args[3]
 
-		logger.Debug("starting-unpack", lager.Data{
-			"path": cmd.Path,
-			"args": cmd.Args,
-		})
-		if err := cmd.Run(); err != nil {
-			logger.Error("unpack-command-failed", err)
-			os.Exit(1)
+		var unpackStrategy UnpackStrategy
+		if err = json.Unmarshal([]byte(unpackStrategyJSON), &unpackStrategy); err != nil {
+			fail(logger, "unmarshal-unpack-strategy-failed", err)
 		}
-		logger.Debug("unpack-command-done")
+
+		unpacker, err := NewTarUnpacker(unpackStrategy)
+		if err != nil {
+			fail(logger, "creating-tar-unpacker", err)
+		}
+
+		var unpackOutput base_image_puller.UnpackOutput
+		if unpackOutput, err = unpacker.Unpack(logger, base_image_puller.UnpackSpec{
+			Stream:        os.Stdin,
+			TargetPath:    targetDir,
+			BaseDirectory: baseDirectory,
+		}); err != nil {
+			fail(logger, "unpacking-failed", err)
+		}
+
+		json.NewEncoder(os.Stdout).Encode(unpackOutput)
+
+		logger.Debug("unpack-command-ending")
 	})
 }
 
@@ -97,7 +109,7 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 		return base_image_puller.UnpackOutput{}, errorspkg.Wrap(err, "unmarshal unpack strategy")
 	}
 
-	unpackCmd := reexec.Command("unpack-wrapper", spec.TargetPath, spec.BaseDirectory, string(unpackStrategyJSON))
+	unpackCmd := reexec.Command("unpack", spec.TargetPath, spec.BaseDirectory, string(unpackStrategyJSON))
 	unpackCmd.Stdin = spec.Stream
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
 		unpackCmd.SysProcAttr = &syscall.SysProcAttr{
@@ -110,14 +122,14 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 	unpackCmd.Stderr = lagregator.NewRelogger(logger)
 	unpackCmd.ExtraFiles = []*os.File{ctrlPipeR}
 
-	logger.Debug("starting-unpack-wrapper-command", lager.Data{
+	logger.Debug("starting-unpack-command", lager.Data{
 		"path": unpackCmd.Path,
 		"args": unpackCmd.Args,
 	})
 	if err := u.commandRunner.Start(unpackCmd); err != nil {
 		return base_image_puller.UnpackOutput{}, errorspkg.Wrap(err, "starting unpack command")
 	}
-	logger.Debug("unpack-wrapper-command-is-started")
+	logger.Debug("unpack-command-is-started")
 
 	if err := u.setIDMappings(logger, spec, unpackCmd.Process.Pid); err != nil {
 		_ = ctrlPipeW.Close()
@@ -127,18 +139,18 @@ func (u *NSIdMapperUnpacker) Unpack(logger lager.Logger, spec base_image_puller.
 	if _, err := ctrlPipeW.Write([]byte{0}); err != nil {
 		return base_image_puller.UnpackOutput{}, errorspkg.Wrap(err, "writing to tar control pipe")
 	}
-	logger.Debug("unpack-wrapper-command-is-signaled-to-continue")
+	logger.Debug("unpack-command-is-signaled-to-continue")
 
-	logger.Debug("waiting-for-unpack-wrapper-command")
+	logger.Debug("waiting-for-unpack-command")
 	if err := u.commandRunner.Wait(unpackCmd); err != nil {
 		return base_image_puller.UnpackOutput{}, errorspkg.Errorf(outBuffer.String())
 	}
-	logger.Debug("unpack-wrapper-command-done")
+	logger.Debug("unpack-command-done")
 
 	var unpackOutput base_image_puller.UnpackOutput
 	if err := json.NewDecoder(outBuffer).Decode(&unpackOutput); err != nil {
-		logger.Error("invalid-output-from-unpack-wrapper", err)
-		return base_image_puller.UnpackOutput{}, errorspkg.Wrapf(err, "invalid unpack wrapper output (%s)", err.Error())
+		logger.Error("invalid-output-from-unpack", err)
+		return base_image_puller.UnpackOutput{}, errorspkg.Wrapf(err, "invalid unpack output (%s)", err.Error())
 	}
 
 	return unpackOutput, nil

@@ -75,7 +75,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		Expect(os.RemoveAll(imagePath)).To(Succeed())
 	})
 
-	It("passes the rootfs path, base-directory and filesystem to the unpack-wrapper command", func() {
+	It("passes the rootfs path, base-directory and filesystem to the unpack command", func() {
 		_, err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			TargetPath:    targetPath,
 			BaseDirectory: "/base-folder/",
@@ -89,11 +89,11 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		Expect(commands).To(HaveLen(1))
 		Expect(commands[0].Path).To(Equal("/proc/self/exe"))
 		Expect(commands[0].Args).To(Equal([]string{
-			"unpack-wrapper", targetPath, "/base-folder/", string(unpackStrategyJson),
+			"unpack", targetPath, "/base-folder/", string(unpackStrategyJson),
 		}))
 	})
 
-	It("returns the total bytes written based on the unpack-wrapper output", func() {
+	It("returns the total bytes written based on the unpack output", func() {
 		totalBytes, err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			TargetPath: targetPath,
 		})
@@ -101,7 +101,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		Expect(totalBytes).To(Equal(base_image_puller.UnpackOutput{BytesWritten: 1024}))
 	})
 
-	It("passes the provided stream to the unpack-wrapper command", func() {
+	It("passes the provided stream to the unpack command", func() {
 		streamR, streamW, err := os.Pipe()
 		Expect(err).NotTo(HaveOccurred())
 
@@ -123,7 +123,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		Expect(string(contents)).To(Equal("hello-world"))
 	})
 
-	It("starts the unpack-wrapper command in a user namespace", func() {
+	It("starts the unpack command in a user namespace", func() {
 		_, err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			UIDMappings: []groot.IDMappingSpec{
 				{HostID: 1000, NamespaceID: 2000, Size: 10},
@@ -137,11 +137,11 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		Expect(commands[0].SysProcAttr.Cloneflags).To(Equal(uintptr(syscall.CLONE_NEWUSER)))
 	})
 
-	It("re-logs the log lines emitted by the unpack-wrapper command", func() {
+	It("re-logs the log lines emitted by the unpack command", func() {
 		fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
 			Path: "/proc/self/exe",
 		}, func(cmd *exec.Cmd) error {
-			logger := lager.NewLogger("fake-unpack-wrapper")
+			logger := lager.NewLogger("fake-unpack")
 			logger.RegisterSink(lager.NewWriterSink(cmd.Stderr, lager.DEBUG))
 			logger.Debug("foo")
 			logger.Info("bar")
@@ -155,26 +155,26 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 
 		Expect(logger).To(ContainSequence(
 			Debug(
-				Message("test-store.ns-id-mapper-unpacking.fake-unpack-wrapper.foo"),
+				Message("test-store.ns-id-mapper-unpacking.fake-unpack.foo"),
 			),
 			Info(
-				Message("test-store.ns-id-mapper-unpacking.fake-unpack-wrapper.bar"),
+				Message("test-store.ns-id-mapper-unpacking.fake-unpack.bar"),
 			),
 		))
 	})
 
-	Context("when the unpack wrapper prints invalid output", func() {
+	Context("when the unpack prints invalid output", func() {
 		It("returns an error", func() {
 			reexecOutput = "not a valid thing {{}))"
 			_, err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				TargetPath: targetPath,
 			})
-			Expect(err).To(MatchError(ContainSubstring("invalid unpack wrapper output")))
+			Expect(err).To(MatchError(ContainSubstring("invalid unpack output")))
 		})
 	})
 
 	Context("when no mappings are provided", func() {
-		It("starts the unpack-wrapper command in the same namespaces", func() {
+		It("starts the unpack command in the same namespaces", func() {
 			_, err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 				TargetPath: targetPath,
 			})
@@ -186,7 +186,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		})
 	})
 
-	It("signals the unpack-wrapper command to continue using the contol pipe", func(done Done) {
+	It("signals the unpack command to continue using the contol pipe", func(done Done) {
 		_, err := unpacker.Unpack(logger, base_image_puller.UnpackSpec{
 			TargetPath: targetPath,
 		})
@@ -283,7 +283,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		})
 	})
 
-	Context("when it fails to start the unpack-wrapper command", func() {
+	Context("when it fails to start the unpack command", func() {
 		BeforeEach(func() {
 			commandError = errors.New("failed to start unpack")
 		})
@@ -296,7 +296,7 @@ var _ = Describe("NSIdMapperUnpacker", func() {
 		})
 	})
 
-	Context("when the unpack-wrapper command fails", func() {
+	Context("when the unpack command fails", func() {
 		BeforeEach(func() {
 			fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
 				Path: "/proc/self/exe",

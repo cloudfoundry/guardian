@@ -32,37 +32,6 @@ func init() {
 		os.Exit(1)
 	}
 
-	reexec.Register("unpack", func() {
-		cli.ErrWriter = os.Stdout
-		logger := lager.NewLogger("unpack")
-		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
-
-		rootFSPath := os.Args[1]
-		baseDirectory := os.Args[2]
-		unpackStrategyJSON := os.Args[3]
-
-		var unpackStrategy UnpackStrategy
-		if err := json.Unmarshal([]byte(unpackStrategyJSON), &unpackStrategy); err != nil {
-			fail(logger, "unmarshal-unpack-strategy-failed", err)
-		}
-
-		unpacker, err := NewTarUnpacker(unpackStrategy)
-		if err != nil {
-			fail(logger, "creating-tar-unpacker", err)
-		}
-
-		var unpackOutput base_image_puller.UnpackOutput
-		if unpackOutput, err = unpacker.Unpack(logger, base_image_puller.UnpackSpec{
-			Stream:        os.Stdin,
-			TargetPath:    rootFSPath,
-			BaseDirectory: baseDirectory,
-		}); err != nil {
-			fail(logger, "unpacking-failed", err)
-		}
-
-		_ = json.NewEncoder(os.Stdout).Encode(unpackOutput)
-	})
-
 	reexec.Register("chroot-unpack", func() {
 		cli.ErrWriter = os.Stdout
 		logger := lager.NewLogger("chroot")
