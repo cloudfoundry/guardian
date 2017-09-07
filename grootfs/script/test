@@ -57,10 +57,6 @@ run_unit_tests() {
 run_integration_tests() {
   test_path=${1:-"integration"}
 
-  if [ $RECURSIVE -ne 1 ] && [ $test_path = "integration" ]; then
-    print_message "No suite found in '$test_path'. Please use -r to run suites in its subdirectories." $RED
-    return
-  fi
 
   echo "Running INTEGRATION tests"
 
