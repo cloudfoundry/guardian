@@ -43,7 +43,7 @@ func CleanUpOverlayMounts(mountPath string) {
 		mountType := mountInfo[0]
 		if mountType == "overlay" && strings.Contains(mountLine, mountPath) {
 			mountPoint := mountInfo[2]
-			Expect(syscall.Unmount(mountPoint, 0)).To(Succeed())
+			Expect(syscall.Unmount(mountPoint, syscall.MNT_DETACH)).To(Succeed())
 		}
 	}
 }

@@ -109,7 +109,7 @@ func TestGroot(t *testing.T) {
 	})
 
 	BeforeEach(func() {
-		rand.Seed(time.Now().UnixNano() + int64(GinkgoParallelNode()*1000))
+		testhelpers.ReseedRandomNumberGenerator()
 
 		if Driver == "overlay-xfs" {
 			mountPath = fmt.Sprintf(xfsMountPath, GinkgoParallelNode())
