@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,6 +23,7 @@ import (
 
 var _ = Describe("Create with local TAR images", func() {
 	var (
+		randomImageID   string
 		sourceImagePath string
 		baseImagePath   string
 		baseImageFile   *os.File
@@ -37,6 +39,8 @@ var _ = Describe("Create with local TAR images", func() {
 
 		// we need to explicitly apply perms because mkdir is subject to umask
 		Expect(os.Chmod(path.Join(sourceImagePath, "permissive-folder"), 0777)).To(Succeed())
+
+		randomImageID = testhelpers.NewRandomID()
 	})
 
 	AfterEach(func() {
@@ -50,7 +54,7 @@ var _ = Describe("Create with local TAR images", func() {
 
 		spec = groot.CreateSpec{
 			BaseImage: baseImagePath,
-			ID:        "random-id",
+			ID:        randomImageID,
 			Mount:     mountByDefault(),
 		}
 	})
@@ -86,7 +90,7 @@ var _ = Describe("Create with local TAR images", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			image2, err := Runner.Create(groot.CreateSpec{
-				ID:        "another-random-id",
+				ID:        testhelpers.NewRandomID(),
 				BaseImage: baseImagePath,
 				Mount:     false,
 			})
@@ -203,7 +207,7 @@ var _ = Describe("Create with local TAR images", func() {
 			tempDir, err := ioutil.TempDir("", "")
 			Expect(err).NotTo(HaveOccurred())
 			_, err = Runner.Create(groot.CreateSpec{
-				ID:        "random-id",
+				ID:        randomImageID,
 				BaseImage: tempDir,
 				Mount:     true,
 			})
@@ -229,7 +233,7 @@ var _ = Describe("Create with local TAR images", func() {
 			integration.UpdateBaseImageTar(baseImagePath, sourceImagePath)
 
 			image, err := Runner.Create(groot.CreateSpec{
-				ID:        "random-id-2",
+				ID:        testhelpers.NewRandomID(),
 				BaseImage: baseImagePath,
 				Mount:     mountByDefault(),
 			})
@@ -269,7 +273,7 @@ var _ = Describe("Create with local TAR images", func() {
 			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 			image, err := Runner.Create(groot.CreateSpec{
-				ID:        "random-id-2",
+				ID:        testhelpers.NewRandomID(),
 				BaseImage: baseImagePath,
 				Mount:     mountByDefault(),
 			})
@@ -284,7 +288,7 @@ var _ = Describe("Create with local TAR images", func() {
 		It("returns an error", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				BaseImage: "/invalid/image",
-				ID:        "random-id",
+				ID:        randomImageID,
 				Mount:     false,
 			})
 			Expect(err).To(MatchError(ContainSubstring("stat /invalid/image: no such file or directory")))
@@ -317,7 +321,7 @@ var _ = Describe("Create with local TAR images", func() {
 
 			image, err := Runner.SkipInitStore().Create(groot.CreateSpec{
 				BaseImage: baseImageFile.Name(),
-				ID:        "random-id",
+				ID:        randomImageID,
 				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())

@@ -21,6 +21,7 @@ var _ = Describe("Create (btrfs only)", func() {
 		baseImagePath   string
 		sourceImagePath string
 		spec            groot.CreateSpec
+		randomImageID   string
 	)
 
 	BeforeEach(func() {
@@ -30,6 +31,7 @@ var _ = Describe("Create (btrfs only)", func() {
 		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 
+		randomImageID = testhelpers.NewRandomID()
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 	})
 
@@ -44,7 +46,7 @@ var _ = Describe("Create (btrfs only)", func() {
 
 		spec = groot.CreateSpec{
 			BaseImage: baseImagePath,
-			ID:        "random-id",
+			ID:        randomImageID,
 			Mount:     true,
 			DiskLimit: tenMegabytes,
 		}
@@ -77,7 +79,7 @@ var _ = Describe("Create (btrfs only)", func() {
 					_, err := Runner.WithDraxBin(draxBin.Name()).Create(spec)
 					Expect(err).To(HaveOccurred())
 
-					imagePath := path.Join(Runner.StorePath, "images", "random-id")
+					imagePath := path.Join(Runner.StorePath, "images", randomImageID)
 					Expect(imagePath).ToNot(BeAnExistingFile())
 				})
 			})

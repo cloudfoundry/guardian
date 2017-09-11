@@ -1,6 +1,7 @@
 package testhelpers
 
 import (
+	"fmt"
 	"math/rand"
 	"time"
 
@@ -13,4 +14,8 @@ import (
 // off at the same time on different Ginkgo nodes.
 func ReseedRandomNumberGenerator() {
 	rand.Seed(time.Now().UnixNano() + int64(GinkgoParallelNode()*1000))
+}
+
+func NewRandomID() string {
+	return fmt.Sprintf("random-id-%d", rand.Int())
 }

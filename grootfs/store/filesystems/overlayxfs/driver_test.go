@@ -32,6 +32,7 @@ var _ = Describe("Driver", func() {
 		logger        *lagertest.TestLogger
 		spec          image_cloner.ImageDriverSpec
 		randomID      string
+		randomImageID string
 		tardisBinPath string
 	)
 
@@ -40,6 +41,7 @@ var _ = Describe("Driver", func() {
 		testhelpers.CopyFile(TardisBinPath, tardisBinPath)
 		testhelpers.SuidBinary(tardisBinPath)
 
+		randomImageID = testhelpers.NewRandomID()
 		randomID = randVolumeID()
 		logger = lagertest.NewTestLogger("overlay+xfs")
 		driver = overlayxfs.NewDriver(StorePath, tardisBinPath, 0)
@@ -51,7 +53,7 @@ var _ = Describe("Driver", func() {
 		Expect(os.MkdirAll(filepath.Join(StorePath, overlayxfs.LinksDirName), 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(StorePath, overlayxfs.IDDir), 0777)).To(Succeed())
 
-		imagePath := filepath.Join(StorePath, store.ImageDirName, fmt.Sprintf("random-id-%d", rand.Int()))
+		imagePath := filepath.Join(StorePath, store.ImageDirName, randomImageID)
 		Expect(os.Mkdir(imagePath, 0755)).To(Succeed())
 
 		spec = image_cloner.ImageDriverSpec{

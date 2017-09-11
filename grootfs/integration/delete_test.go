@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path"
@@ -10,6 +11,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/testhelpers"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,6 +20,7 @@ import (
 
 var _ = Describe("Delete", func() {
 	var (
+		randomImageID   string
 		sourceImagePath string
 		baseImagePath   string
 		image           groot.ImageInfo
@@ -28,6 +31,8 @@ var _ = Describe("Delete", func() {
 		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+
+		randomImageID = testhelpers.NewRandomID()
 	})
 
 	AfterEach(func() {
@@ -41,14 +46,14 @@ var _ = Describe("Delete", func() {
 		var err error
 		image, err = Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
-			ID:        "random-id",
+			ID:        randomImageID,
 			Mount:     mountByDefault(),
 		})
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("deletes an existing image", func() {
-		Expect(Runner.Delete("random-id")).To(Succeed())
+		Expect(Runner.Delete(randomImageID)).To(Succeed())
 		Expect(image.Path).NotTo(BeAnExistingFile())
 	})
 
@@ -117,7 +122,7 @@ var _ = Describe("Delete", func() {
 		})
 
 		It("doesn't remove the metadata file", func() {
-			metadataPath := filepath.Join(StorePath, store.MetaDirName, "dependencies", "image:random-id.json")
+			metadataPath := filepath.Join(StorePath, store.MetaDirName, "dependencies", fmt.Sprintf("image:%s.json", randomImageID))
 			Expect(metadataPath).To(BeAnExistingFile())
 			Expect(Runner.Delete(image.Path)).To(MatchError(ContainSubstring("deleting image path")))
 			Expect(metadataPath).To(BeAnExistingFile())

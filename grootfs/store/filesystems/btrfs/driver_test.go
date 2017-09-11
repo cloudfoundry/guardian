@@ -36,6 +36,7 @@ var _ = Describe("Btrfs", func() {
 		draxBinPath    string
 		volumesPath    string
 		btrfsMountPath string
+		randomImageID  string
 	)
 
 	BeforeEach(func() {
@@ -52,6 +53,8 @@ var _ = Describe("Btrfs", func() {
 		draxBinPath, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
 		Expect(err).NotTo(HaveOccurred())
 		testhelpers.SuidBinary(draxBinPath)
+
+		randomImageID = testhelpers.NewRandomID()
 
 		logger = NewLogger("btrfs")
 	})
@@ -231,7 +234,7 @@ var _ = Describe("Btrfs", func() {
 		Context("custom btrfs binary path", func() {
 			It("uses the custom btrfs binary given", func() {
 				driver = btrfs.NewDriver("cool-btrfs", "mkfs.btrfs", draxBinPath, storePath)
-				_, err := driver.CreateVolume(logger, "", "random-id")
+				_, err := driver.CreateVolume(logger, "", randomImageID)
 				Expect(err).To(MatchError(ContainSubstring(`"cool-btrfs": executable file not found in $PATH`)))
 			})
 		})

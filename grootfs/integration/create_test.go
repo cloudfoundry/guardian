@@ -32,11 +32,13 @@ const (
 
 var _ = Describe("Create", func() {
 	var (
+		randomImageID   string
 		baseImagePath   string
 		sourceImagePath string
 	)
 
 	BeforeEach(func() {
+		randomImageID = testhelpers.NewRandomID()
 		sourceImagePath = integration.CreateBaseImage(rootUID, rootGID, GrootUID, GrootGID)
 	})
 
@@ -55,7 +57,7 @@ var _ = Describe("Create", func() {
 
 		image, err := Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
-			ID:        "random-id",
+			ID:        randomImageID,
 			Mount:     mountByDefault(),
 		})
 		Expect(err).ToNot(HaveOccurred())
@@ -87,7 +89,7 @@ var _ = Describe("Create", func() {
 		It("returns an error", func() {
 			_, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
-				ID:        "random-id",
+				ID:        randomImageID,
 				Mount:     mountByDefault(),
 			})
 			Expect(err).To(MatchError(ContainSubstring("Store path is not initialized. Please run init-store.")))
@@ -179,7 +181,7 @@ var _ = Describe("Create", func() {
 		It("creates a image with supplied limit", func() {
 			image, err := Runner.WithLogLevel(lager.DEBUG).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
-				ID:        "random-id",
+				ID:        randomImageID,
 				DiskLimit: tenMegabytes,
 				Mount:     mountByDefault(),
 			})
@@ -194,7 +196,7 @@ var _ = Describe("Create", func() {
 				_, err := Runner.Create(groot.CreateSpec{
 					DiskLimit: -200,
 					BaseImage: baseImagePath,
-					ID:        "random-id",
+					ID:        randomImageID,
 					Mount:     mountByDefault(),
 				})
 				Expect(err).To(MatchError(ContainSubstring("disk limit cannot be negative")))
@@ -207,7 +209,7 @@ var _ = Describe("Create", func() {
 					DiskLimit:                 10485760,
 					ExcludeBaseImageFromQuota: true,
 					BaseImage:                 baseImagePath,
-					ID:                        "random-id",
+					ID:                        randomImageID,
 					Mount:                     mountByDefault(),
 				})
 				Expect(err).ToNot(HaveOccurred())
@@ -309,7 +311,7 @@ var _ = Describe("Create", func() {
 	Context("when the id is already being used", func() {
 		JustBeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
-				ID:        "random-id",
+				ID:        randomImageID,
 				BaseImage: baseImagePath,
 				Mount:     false,
 			})
@@ -319,10 +321,10 @@ var _ = Describe("Create", func() {
 		It("fails and produces a useful error", func() {
 			_, err := Runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
-				ID:        "random-id",
+				ID:        randomImageID,
 				Mount:     false,
 			})
-			Expect(err).To(MatchError(ContainSubstring("image for id `random-id` already exists")))
+			Expect(err).To(MatchError(ContainSubstring(fmt.Sprintf("image for id `%s` already exists", randomImageID))))
 		})
 	})
 
@@ -388,7 +390,7 @@ var _ = Describe("Create", func() {
 		It("returns an error", func() {
 			_, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
-				ID:        "random-id",
+				ID:        randomImageID,
 			})
 			errMessage := fmt.Sprintf("Store path filesystem (%s) is incompatible with requested driver", storePath)
 			Expect(err).To(MatchError(ContainSubstring(errMessage)))
@@ -407,7 +409,7 @@ var _ = Describe("Create", func() {
 
 		JustBeforeEach(func() {
 			spec = groot.CreateSpec{
-				ID:        "random-id",
+				ID:        randomImageID,
 				BaseImage: baseImagePath,
 				Mount:     mountByDefault(),
 			}
@@ -428,7 +430,7 @@ var _ = Describe("Create", func() {
 				runner := Runner.WithoutStore()
 				image, err := runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(image.Path).To(Equal(filepath.Join(cfg.StorePath, "images/random-id")))
+				Expect(image.Path).To(Equal(filepath.Join(cfg.StorePath, "images", randomImageID)))
 			})
 		})
 
@@ -459,7 +461,7 @@ var _ = Describe("Create", func() {
 			It("uses the drax bin from the config file", func() {
 				_, err := Runner.WithoutDraxBin().Create(groot.CreateSpec{
 					BaseImage: baseImagePath,
-					ID:        "random-id",
+					ID:        randomImageID,
 					DiskLimit: 104857600,
 					Mount:     true,
 				})
@@ -486,7 +488,7 @@ var _ = Describe("Create", func() {
 			It("uses the tardis bin from the config file", func() {
 				_, err := Runner.WithoutTardisBin().Create(groot.CreateSpec{
 					BaseImage: baseImagePath,
-					ID:        "random-id",
+					ID:        randomImageID,
 					DiskLimit: 104857600,
 					Mount:     mountByDefault(),
 				})
@@ -513,13 +515,13 @@ var _ = Describe("Create", func() {
 
 		It("returns an image json as output", func() {
 			image, err := Runner.Create(groot.CreateSpec{
-				ID:        "random-id",
+				ID:        randomImageID,
 				BaseImage: baseImagePath,
 				Mount:     false,
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			expectedRootfs := filepath.Join(StorePath, store.ImageDirName, "random-id/rootfs")
+			expectedRootfs := filepath.Join(StorePath, store.ImageDirName, randomImageID, "rootfs")
 			Expect(image.Rootfs).To(Equal(expectedRootfs))
 			Expect(image.Mounts).To(HaveLen(1))
 			Expect(image.Mounts[0].Destination).To(Equal(expectedRootfs))

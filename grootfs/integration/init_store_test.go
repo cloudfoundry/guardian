@@ -214,7 +214,7 @@ var _ = Describe("Init Store", func() {
 			Expect(runner.InitStore(spec)).To(Succeed())
 			image, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
-				ID:        "random-id",
+				ID:        testhelpers.NewRandomID(),
 				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())

@@ -16,6 +16,7 @@ import (
 
 var _ = Describe("Create (overlay-xfs only)", func() {
 	var (
+		randomImageID   string
 		baseImagePath   string
 		sourceImagePath string
 		spec            groot.CreateSpec
@@ -29,6 +30,8 @@ var _ = Describe("Create (overlay-xfs only)", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
+
+		randomImageID = testhelpers.NewRandomID()
 	})
 
 	AfterEach(func() {
@@ -42,7 +45,7 @@ var _ = Describe("Create (overlay-xfs only)", func() {
 
 		spec = groot.CreateSpec{
 			BaseImage: baseImagePath,
-			ID:        "random-id",
+			ID:        randomImageID,
 			Mount:     mountByDefault(),
 			DiskLimit: tenMegabytes,
 		}
@@ -75,7 +78,7 @@ var _ = Describe("Create (overlay-xfs only)", func() {
 					_, err := Runner.WithTardisBin(tardisBin.Name()).Create(spec)
 					Expect(err).To(HaveOccurred())
 
-					imagePath := path.Join(Runner.StorePath, "images", "random-id")
+					imagePath := path.Join(Runner.StorePath, "images", randomImageID)
 					Expect(imagePath).ToNot(BeAnExistingFile())
 				})
 			})
