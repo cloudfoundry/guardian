@@ -60,6 +60,7 @@ type Runner struct {
 func (r Runner) StartSubcommand(subcommand string, args ...string) (*gexec.Session, error) {
 	cmd := r.makeCmd(subcommand, args)
 	cmd.Env = r.EnvVars
+	cmd.Env = append(cmd.Env, "GOTRACEBACK=crash")
 
 	if r.SysCredential.Uid != 0 {
 		cmd.SysProcAttr = &syscall.SysProcAttr{
