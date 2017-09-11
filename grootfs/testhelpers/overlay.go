@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 
 	"code.cloudfoundry.org/grootfs/store"
 
@@ -43,7 +42,10 @@ func CleanUpOverlayMounts(mountPath string) {
 		mountType := mountInfo[0]
 		if mountType == "overlay" && strings.Contains(mountLine, mountPath) {
 			mountPoint := mountInfo[2]
-			Expect(syscall.Unmount(mountPoint, syscall.MNT_DETACH)).To(Succeed())
+			strace := exec.Command("strace", "-tt", "umount", mountPoint)
+			strace.Stderr = GinkgoWriter
+			err := strace.Run()
+			Expect(err).NotTo(HaveOccurred())
 		}
 	}
 }
