@@ -109,3 +109,6 @@
 [submodule "vendor/golang.org/x/crypto"]
 	path = vendor/golang.org/x/crypto
 	url = https://github.com/golang/crypto
+[submodule "vendor/github.com/docker/docker-credential-helpers"]
+	path = vendor/github.com/docker/docker-credential-helpers
+	url = https://github.com/docker/docker-credential-helpers

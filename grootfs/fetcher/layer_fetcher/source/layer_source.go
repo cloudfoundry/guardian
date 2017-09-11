@@ -215,7 +215,7 @@ func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (t
 			Username: s.username,
 			Password: s.password,
 		},
-	}, preferedMediaTypes())
+	})
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "creating image source")
 	}
