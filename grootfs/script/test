@@ -129,11 +129,11 @@ do
       exit
       ;;
     a)
-      tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' ./script/test -u\""
-      tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 VOLUME_DRIVER=overlay-xfs ./script/test -i\""
-      tmux split-window -h -p 70 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 VOLUME_DRIVER=btrfs ./script/test -i\""
-      tmux split-window -p 50 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 VOLUME_DRIVER=overlay-xfs ./script/test -i\""
-      tmux split-window -p 50 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 VOLUME_DRIVER=btrfs ./script/test -i\""
+      tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' ./script/test -u; bash\""
+      tmux split-window -p 80 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 VOLUME_DRIVER=overlay-xfs ./script/test -i; bash\""
+      tmux split-window -h -p 70 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=1000 GROOTFS_TEST_GID=1000 VOLUME_DRIVER=btrfs ./script/test -i; bash\""
+      tmux split-window -p 50 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 VOLUME_DRIVER=overlay-xfs ./script/test -i; bash\""
+      tmux split-window -p 50 "/bin/bash -c \"RECURSIVE=1 FLY_TARGET='$FLY_TARGET' GROOTFS_TEST_UID=0 GROOTFS_TEST_GID=0 VOLUME_DRIVER=btrfs ./script/test -i; bash\""
       exit
       ;;
     *)
