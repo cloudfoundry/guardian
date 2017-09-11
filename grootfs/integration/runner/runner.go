@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"os/exec"
 	"strings"
 	"syscall"
@@ -59,7 +60,11 @@ type Runner struct {
 
 func (r Runner) StartSubcommand(subcommand string, args ...string) (*gexec.Session, error) {
 	cmd := r.makeCmd(subcommand, args)
-	cmd.Env = r.EnvVars
+	if len(r.EnvVars) != 0 {
+		cmd.Env = r.EnvVars
+	} else {
+		cmd.Env = os.Environ()
+	}
 	cmd.Env = append(cmd.Env, "GOTRACEBACK=crash")
 
 	if r.SysCredential.Uid != 0 {
