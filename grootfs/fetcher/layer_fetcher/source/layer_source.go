@@ -102,7 +102,10 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest st
 	if err != nil {
 		return "", 0, err
 	}
-	defer func() { _ = blobTempFile.Close() }()
+	defer func() {
+		blob.Close()
+		blobTempFile.Close()
+	}()
 
 	blobReader := io.TeeReader(blob, blobTempFile)
 
