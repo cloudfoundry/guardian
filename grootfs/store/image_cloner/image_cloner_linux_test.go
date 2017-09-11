@@ -336,14 +336,14 @@ var _ = Describe("Image", func() {
 
 		Context("when writting the image.json fails", func() {
 			BeforeEach(func() {
-				imageclonerpkg.OF = func(name string, flag int, perm os.FileMode) (*os.File, error) {
+				imageclonerpkg.OpenFile = func(name string, flag int, perm os.FileMode) (*os.File, error) {
 					return nil, errors.New("permission denied: can't write stuff")
 				}
 			})
 
 			AfterEach(func() {
-				// needs to reassign the correct method after running the test
-				imageclonerpkg.OF = os.OpenFile
+				// needs to reassign the correct function after running the test
+				imageclonerpkg.OpenFile = os.OpenFile
 			})
 
 			It("returns an error", func() {

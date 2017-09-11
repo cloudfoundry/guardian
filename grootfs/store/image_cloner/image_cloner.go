@@ -81,7 +81,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 				log.Error("destroying-rootfs-image", err)
 			}
 
-			if err = b.deleteImageDir(imagePath); err != nil {
+			if err := os.RemoveAll(imagePath); err != nil {
 				log.Error("deleting-image-path", err)
 			}
 		}
@@ -167,7 +167,7 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 		logger.Error("destroying-image-failed", volDriverErr)
 	}
 
-	if err := b.deleteImageDir(imagePath); err != nil {
+	if err := os.RemoveAll(imagePath); err != nil {
 		logger.Error("deleting-image-dir-failed", err, lager.Data{"volumeDriverError": volDriverErr})
 		return errorspkg.Wrap(err, "deleting image path")
 	}
@@ -202,15 +202,7 @@ func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, 
 	return b.imageDriver.FetchStats(logger, imagePath)
 }
 
-func (b *ImageCloner) deleteImageDir(imagePath string) error {
-	if err := os.RemoveAll(imagePath); err != nil {
-		return errorspkg.Wrap(err, "deleting image path")
-	}
-
-	return nil
-}
-
-var OF = os.OpenFile
+var OpenFile = os.OpenFile
 
 func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, baseImage specsv1.Image) error {
 	logger = logger.Session("writing-image-json")
@@ -218,7 +210,7 @@ func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, 
 	defer logger.Debug("ending")
 
 	imageJsonPath := filepath.Join(imagePath, "image.json")
-	imageJsonFile, err := OF(imageJsonPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
+	imageJsonFile, err := OpenFile(imageJsonPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
 	if err != nil {
 		return err
 	}
