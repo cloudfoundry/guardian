@@ -120,6 +120,35 @@ var PrivilegedContainerNamespaces = []specs.LinuxNamespace{
 	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace,
 }
 
+var (
+	worldReadWrite = os.FileMode(0666)
+	fuseDevice     = specs.LinuxDevice{
+		Path:     "/dev/fuse",
+		Type:     "c",
+		Major:    10,
+		Minor:    229,
+		FileMode: &worldReadWrite,
+	}
+	allowedDevices = []specs.LinuxDeviceCgroup{
+		// runc allows these
+		{Access: "m", Type: "c", Major: deviceWildcard(), Minor: deviceWildcard(), Allow: true},
+		{Access: "m", Type: "b", Major: deviceWildcard(), Minor: deviceWildcard(), Allow: true},
+		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(3), Allow: true},          // /dev/null
+		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(8), Allow: true},          // /dev/random
+		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(7), Allow: true},          // /dev/full
+		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(0), Allow: true},          // /dev/tty
+		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(5), Allow: true},          // /dev/zero
+		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(9), Allow: true},          // /dev/urandom
+		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(1), Allow: true},          // /dev/console
+		{Access: "rwm", Type: "c", Major: intRef(136), Minor: deviceWildcard(), Allow: true}, // /dev/pts/*
+		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(2), Allow: true},          // /dev/ptmx
+		{Access: "rwm", Type: "c", Major: intRef(10), Minor: intRef(200), Allow: true},       // /dev/net/tun
+
+		// We allow these
+		{Access: "rwm", Type: fuseDevice.Type, Major: intRef(fuseDevice.Major), Minor: intRef(fuseDevice.Minor), Allow: true},
+	}
+)
+
 type GdnCommand struct {
 	SetupCommand  *SetupCommand  `command:"setup"`
 	ServerCommand *ServerCommand `command:"server"`
@@ -629,7 +658,11 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).
 		WithDevices(getPrivilegedDevices()...).
-		WithCapabilities(PrivilegedMaxCaps...)
+		WithCapabilities(PrivilegedMaxCaps...).
+		WithDeviceRestrictions(append(
+			[]specs.LinuxDeviceCgroup{{Allow: false, Access: "rwm"}},
+			allowedDevices...,
+		))
 
 	log.Debug("base-bundles", lager.Data{
 		"privileged":   privilegedBundle,
@@ -642,9 +675,9 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		CommandRunner: cmdRunner,
 	}
 
-	gardenCgroup := "garden"
+	cgroupRootPath := "garden"
 	if cmd.Server.Tag != "" {
-		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, cmd.Server.Tag)
+		cgroupRootPath = fmt.Sprintf("%s-%s", cgroupRootPath, cmd.Server.Tag)
 	}
 
 	bundleRules := []rundmc.BundlerRule{
@@ -667,7 +700,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		bundlerules.Hostname{},
 		bundlerules.Windows{},
 		bundlerules.CGroupPath{
-			GardenCgroup: gardenCgroup,
+			Path: cgroupRootPath,
 		},
 	}
 	bundleRules = append(bundleRules, osSpecificBundleRules()...)
@@ -762,4 +795,12 @@ func mustOpen(path string) io.ReadCloser {
 	} else {
 		return r
 	}
+}
+
+func deviceWildcard() *int64 {
+	return intRef(-1)
+}
+
+func intRef(i int64) *int64 {
+	return &i
 }

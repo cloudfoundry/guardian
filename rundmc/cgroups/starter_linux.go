@@ -18,75 +18,43 @@ import (
 	"code.cloudfoundry.org/lager"
 )
 
-func deviceWildcard() *int64 {
-	var i int64 = -1
-	return &i
-}
-
-var (
-	worldReadWrite = os.FileMode(0666)
-	FuseDevice     = specs.LinuxDevice{
-		Path:     "/dev/fuse",
-		Type:     "c",
-		Major:    10,
-		Minor:    229,
-		FileMode: &worldReadWrite,
-	}
-
-	allowedDevices = []*specs.LinuxDeviceCgroup{{Access: "rwm", Type: "c", Major: intRef(FuseDevice.Major), Minor: intRef(FuseDevice.Minor), Allow: true}}
-
-	ociDefaultAllowedDevices = []*specs.LinuxDeviceCgroup{
-		{Access: "m", Type: "c", Major: deviceWildcard(), Minor: deviceWildcard(), Allow: true},
-		{Access: "m", Type: "b", Major: deviceWildcard(), Minor: deviceWildcard(), Allow: true},
-		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(3), Allow: true},          // /dev/null
-		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(8), Allow: true},          // /dev/random
-		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(7), Allow: true},          // /dev/full
-		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(0), Allow: true},          // /dev/tty
-		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(5), Allow: true},          // /dev/zero
-		{Access: "rwm", Type: "c", Major: intRef(1), Minor: intRef(9), Allow: true},          // /dev/urandom
-		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(1), Allow: true},          // /dev/console
-		{Access: "rwm", Type: "c", Major: intRef(136), Minor: deviceWildcard(), Allow: true}, // /dev/pts/*
-		{Access: "rwm", Type: "c", Major: intRef(5), Minor: intRef(2), Allow: true},          // /dev/ptmx
-		{Access: "rwm", Type: "c", Major: intRef(10), Minor: intRef(200), Allow: true},       // /dev/net/tun
-	}
-)
-
-type Starter struct {
-	*CgroupStarter
-}
-
 const cgroupsHeader = "#subsys_name hierarchy num_cgroups enabled"
 
 type CgroupsFormatError struct {
 	Content string
 }
 
-func intRef(i int64) *int64 {
-	return &i
-}
-
 func (err CgroupsFormatError) Error() string {
 	return fmt.Sprintf("unknown /proc/cgroups format: %s", err.Content)
 }
 
-func NewStarter(logger lager.Logger, procCgroupReader io.ReadCloser, procSelfCgroupReader io.ReadCloser, cgroupMountpoint, gardenCgroup string, runner commandrunner.CommandRunner, chowner Chowner) *Starter {
-	return &Starter{
-		&CgroupStarter{
-			CgroupPath:      cgroupMountpoint,
-			GardenCgroup:    gardenCgroup,
-			ProcCgroups:     procCgroupReader,
-			ProcSelfCgroups: procSelfCgroupReader,
-			CommandRunner:   runner,
-			Logger:          logger,
-			Chowner:         chowner,
-		},
+func NewStarter(
+	logger lager.Logger,
+	procCgroupReader io.ReadCloser,
+	procSelfCgroupReader io.ReadCloser,
+	cgroupMountpoint string,
+	gardenCgroup string,
+	allowedDevices []specs.LinuxDeviceCgroup,
+	runner commandrunner.CommandRunner,
+	chowner Chowner,
+) *CgroupStarter {
+	return &CgroupStarter{
+		CgroupPath:      cgroupMountpoint,
+		GardenCgroup:    gardenCgroup,
+		ProcCgroups:     procCgroupReader,
+		ProcSelfCgroups: procSelfCgroupReader,
+		AllowedDevices:  allowedDevices,
+		CommandRunner:   runner,
+		Logger:          logger,
+		Chowner:         chowner,
 	}
 }
 
 type CgroupStarter struct {
-	CgroupPath    string
-	GardenCgroup  string
-	CommandRunner commandrunner.CommandRunner
+	CgroupPath     string
+	GardenCgroup   string
+	AllowedDevices []specs.LinuxDeviceCgroup
+	CommandRunner  commandrunner.CommandRunner
 
 	ProcCgroups     io.ReadCloser
 	ProcSelfCgroups io.ReadCloser
@@ -156,7 +124,7 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		}
 
 		if subsystem == "devices" {
-			if err := s.modifyAllowedDevices(gardenCgroupPath, append(allowedDevices, ociDefaultAllowedDevices...)); err != nil {
+			if err := s.modifyAllowedDevices(gardenCgroupPath, s.AllowedDevices); err != nil {
 				return err
 			}
 		}
@@ -169,7 +137,7 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 	return nil
 }
 
-func (s *CgroupStarter) modifyAllowedDevices(dir string, devices []*specs.LinuxDeviceCgroup) error {
+func (s *CgroupStarter) modifyAllowedDevices(dir string, devices []specs.LinuxDeviceCgroup) error {
 	if has, err := hasSubdirectories(dir); err != nil {
 		return err
 	} else if has {

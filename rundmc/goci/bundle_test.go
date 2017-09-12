@@ -301,6 +301,18 @@ var _ = Describe("Bundle", func() {
 		})
 	})
 
+	Describe("WithDeviceRestrictions", func() {
+		restrictions := []specs.LinuxDeviceCgroup{{Type: "some-type"}}
+
+		BeforeEach(func() {
+			returnedBundle = initialBundle.WithDeviceRestrictions(restrictions)
+		})
+
+		It("returns a bundle with the pid limit added to the runtime spec", func() {
+			Expect(returnedBundle.Resources().Devices).To(Equal(restrictions))
+		})
+	})
+
 	Describe("WithNamespace", func() {
 		It("does not change any namespaces other than the one with the given type", func() {
 			colin := specs.LinuxNamespace{Type: "colin", Path: ""}

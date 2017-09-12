@@ -182,11 +182,16 @@ func getCurrentCGroup() string {
 	return strings.TrimSpace(string(currentCgroup))
 }
 
-func getCurrentCGroupPath(cgroupsRoot, subsystem, tag string) string {
+func getCurrentCGroupPath(cgroupsRoot, subsystem, tag string, privileged bool) string {
 	parentCgroup := "garden"
-
 	if tag != "" {
 		parentCgroup = fmt.Sprintf("garden-%s", tag)
+	}
+
+	// We always use the cgroup root for privileged containers, regardless of
+	// tag.
+	if privileged {
+		parentCgroup = ""
 	}
 
 	return filepath.Join(cgroupsRoot, subsystem, getCurrentCGroup(), parentCgroup)

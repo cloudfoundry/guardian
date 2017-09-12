@@ -8,9 +8,13 @@ import (
 )
 
 type CGroupPath struct {
-	GardenCgroup string
+	Path string
 }
 
 func (r CGroupPath) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
-	return bndl.WithCGroupPath(filepath.Join(r.GardenCgroup, spec.Hostname)), nil
+	if spec.Privileged {
+		return bndl.WithCGroupPath(spec.Hostname), nil
+	}
+
+	return bndl.WithCGroupPath(filepath.Join(r.Path, spec.Hostname)), nil
 }

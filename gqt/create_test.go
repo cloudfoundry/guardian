@@ -52,7 +52,7 @@ var _ = Describe("Creating a Container", func() {
 
 		cgroupRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%d", GinkgoParallelNode()))
 		cgroupPath := filepath.Join(
-			getCurrentCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode())),
+			getCurrentCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode()), false),
 			container.Handle(),
 		)
 

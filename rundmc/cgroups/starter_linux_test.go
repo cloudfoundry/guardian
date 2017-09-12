@@ -16,6 +16,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("CgroupStarter", func() {
@@ -46,8 +47,14 @@ var _ = Describe("CgroupStarter", func() {
 
 	JustBeforeEach(func() {
 		starter = &cgroups.CgroupStarter{
-			CgroupPath:      path.Join(tmpDir, "cgroup"),
-			GardenCgroup:    "garden",
+			CgroupPath:   path.Join(tmpDir, "cgroup"),
+			GardenCgroup: "garden",
+			AllowedDevices: []specs.LinuxDeviceCgroup{{
+				Type:   "c",
+				Major:  int64ptr(10),
+				Minor:  int64ptr(200),
+				Access: "rwm",
+			}},
 			CommandRunner:   runner,
 			ProcCgroups:     ioutil.NopCloser(strings.NewReader(procCgroupsContents)),
 			ProcSelfCgroups: ioutil.NopCloser(strings.NewReader(procSelfCgroupsContents)),
@@ -345,4 +352,8 @@ func readFile(path string) []byte {
 	content, err := ioutil.ReadFile(path)
 	Expect(err).NotTo(HaveOccurred())
 	return content
+}
+
+func int64ptr(i int64) *int64 {
+	return &i
 }

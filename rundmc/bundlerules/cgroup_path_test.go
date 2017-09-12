@@ -11,9 +11,9 @@ import (
 )
 
 var _ = Describe("CGroup Path", func() {
-	It("sets the correct garden cgroup path in the bundle", func() {
+	It("sets the correct cgroup path in the bundle for unprivileged containers", func() {
 		cgroupPathRule := bundlerules.CGroupPath{
-			GardenCgroup: "test-garden-cgroup",
+			Path: "unpriv",
 		}
 
 		newBndl, err := cgroupPathRule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
@@ -21,6 +21,20 @@ var _ = Describe("CGroup Path", func() {
 		}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(newBndl.CGroupPath()).To(Equal(filepath.Join("test-garden-cgroup", "banana")))
+		Expect(newBndl.CGroupPath()).To(Equal(filepath.Join("unpriv", "banana")))
+	})
+
+	It("sets the correct cgroup path in the bundle for privileged containers", func() {
+		cgroupPathRule := bundlerules.CGroupPath{
+			Path: "unpriv",
+		}
+
+		newBndl, err := cgroupPathRule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+			Privileged: true,
+			Hostname:   "banana",
+		}, "not-needed-path")
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(newBndl.CGroupPath()).To(Equal("banana"))
 	})
 })

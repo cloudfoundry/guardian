@@ -82,7 +82,7 @@ var _ = Describe("gdn setup", func() {
 		})
 
 		It("allows both OCI default and garden specific devices", func() {
-			cgroupPath := getCurrentCGroupPath(cgroupsRoot, "devices", tag)
+			cgroupPath := getCurrentCGroupPath(cgroupsRoot, "devices", tag, false)
 
 			content := readFile(filepath.Join(cgroupPath, "devices.list"))
 			expectedAllowedDevices := []string{
@@ -119,7 +119,7 @@ var _ = Describe("gdn setup", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				for _, subsystem := range subsystems {
-					path := getCurrentCGroupPath(cgroupsRoot, subsystem.Name(), tag)
+					path := getCurrentCGroupPath(cgroupsRoot, subsystem.Name(), tag, false)
 					Expect(path).To(BeADirectory())
 
 					var stat syscall.Stat_t

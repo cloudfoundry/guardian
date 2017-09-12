@@ -21,13 +21,19 @@ var _ = Describe("Limits", func() {
 		cgroupName string
 		cgroupType string
 		limits     garden.Limits
+		privileged bool
 	)
+
+	BeforeEach(func() {
+		privileged = false
+	})
 
 	JustBeforeEach(func() {
 		client = runner.Start(config)
 		var err error
 		container, err = client.Create(garden.ContainerSpec{
-			Limits: limits,
+			Limits:     limits,
+			Privileged: privileged,
 		})
 		Expect(err).NotTo(HaveOccurred())
 
@@ -35,7 +41,7 @@ var _ = Describe("Limits", func() {
 
 		cgroupsRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
 		cgroupPath = filepath.Join(
-			getCurrentCGroupPath(cgroupsRoot, cgroupType, config.Tag),
+			getCurrentCGroupPath(cgroupsRoot, cgroupType, config.Tag, privileged),
 			container.Handle(),
 		)
 	})
@@ -133,26 +139,38 @@ var _ = Describe("Limits", func() {
 			cgroupType = "devices"
 		})
 
-		It("allows only certain devices", func() {
-			content := readFile(filepath.Join(cgroupPath, "devices.list"))
-			expectedAllowedDevices := []string{
-				"c 1:3 rwm",
-				"c 5:0 rwm",
-				"c 1:8 rwm",
-				"c 1:9 rwm",
-				"c 1:5 rwm",
-				"c 1:7 rwm",
-				"c 10:229 rwm",
-				"c *:* m",
-				"b *:* m",
-				"c 5:1 rwm",
-				"c 136:* rwm",
-				"c 5:2 rwm",
-				"c 10:200 rwm",
-			}
-			contentLines := strings.Split(strings.TrimSpace(content), "\n")
-			Expect(contentLines).To(HaveLen(len(expectedAllowedDevices)))
-			Expect(contentLines).To(ConsistOf(expectedAllowedDevices))
+		itAllowsOnlyCertainDevices := func() {
+			It("only allows certain devices", func() {
+				content := readFile(filepath.Join(cgroupPath, "devices.list"))
+				expectedAllowedDevices := []string{
+					"c 1:3 rwm",
+					"c 5:0 rwm",
+					"c 1:8 rwm",
+					"c 1:9 rwm",
+					"c 1:5 rwm",
+					"c 1:7 rwm",
+					"c 10:229 rwm",
+					"c *:* m",
+					"b *:* m",
+					"c 5:1 rwm",
+					"c 136:* rwm",
+					"c 5:2 rwm",
+					"c 10:200 rwm",
+				}
+				contentLines := strings.Split(strings.TrimSpace(content), "\n")
+				Expect(contentLines).To(HaveLen(len(expectedAllowedDevices)))
+				Expect(contentLines).To(ConsistOf(expectedAllowedDevices))
+			})
+		}
+
+		itAllowsOnlyCertainDevices()
+
+		Context("in a privileged container", func() {
+			BeforeEach(func() {
+				privileged = true
+			})
+
+			itAllowsOnlyCertainDevices()
 		})
 	})
 })

@@ -164,7 +164,7 @@ var _ = Describe("rootless containers", func() {
 
 			cgroupRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%d", GinkgoParallelNode()))
 			cgroupPath := filepath.Join(
-				getCurrentCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode())),
+				getCurrentCGroupPath(cgroupRoot, "devices", strconv.Itoa(GinkgoParallelNode()), false),
 				container.Handle(),
 			)
 
@@ -210,7 +210,7 @@ var _ = Describe("rootless containers", func() {
 			JustBeforeEach(func() {
 				cgroupsRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
 				cgroupPath = filepath.Join(
-					getCurrentCGroupPath(cgroupsRoot, cgroupType, config.Tag),
+					getCurrentCGroupPath(cgroupsRoot, cgroupType, config.Tag, false),
 					container.Handle(),
 				)
 			})

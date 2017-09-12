@@ -170,6 +170,18 @@ func (b Bndl) WithPidLimit(limit specs.LinuxPids) Bndl {
 	return b
 }
 
+func (b Bndl) WithDeviceRestrictions(deviceRestrictions []specs.LinuxDeviceCgroup) Bndl {
+	resources := b.Resources()
+	if resources == nil {
+		resources = &specs.LinuxResources{}
+	}
+
+	resources.Devices = deviceRestrictions
+	b.CloneLinux().Spec.Linux.Resources = resources
+
+	return b
+}
+
 // WithNamespace returns a bundle with the given namespace in the list of namespaces. The bundle is not modified, but any
 // existing namespace of this type will be replaced.
 func (b Bndl) WithNamespace(ns specs.LinuxNamespace) Bndl {

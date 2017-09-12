@@ -220,7 +220,7 @@ func wireCgroupsStarter(logger lager.Logger, tag string, chowner cgroups.Chowner
 		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, tag)
 	}
 
-	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, gardenCgroup, commandRunner(), chowner)
+	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, gardenCgroup, allowedDevices, commandRunner(), chowner)
 }
 
 func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
@@ -273,5 +273,5 @@ func osSpecificBundleRules() []rundmc.BundlerRule {
 }
 
 func getPrivilegedDevices() []specs.LinuxDevice {
-	return []specs.LinuxDevice{cgroups.FuseDevice}
+	return []specs.LinuxDevice{fuseDevice}
 }
