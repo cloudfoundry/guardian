@@ -20,6 +20,7 @@ RUN apt-get update && \
         python \
         python-yaml \
         strace \
+        tcpdump \
         wget && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
