@@ -143,8 +143,18 @@ var _ = Describe("Create with remote DOCKER images", func() {
 		})
 
 		Context("when the image is bigger than available memory", func() {
+			var tcpDumpSess *gexec.Session
+
 			BeforeEach(func() {
+				var err error
+				tcpDumpSess, err = gexec.Start(exec.Command("tcpdump", "-U", "-w", "/tmp/packets", "tcp"), GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+
 				integration.SkipIfNonRoot(GrootfsTestUid)
+			})
+
+			AfterEach(func() {
+				tcpDumpSess.Kill()
 			})
 
 			It("doesn't fail", func() {
@@ -190,10 +200,21 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					}
 					if time.Now().After(deadline) {
 						fmt.Println(">>>> printing debug info")
+
+						fmt.Println(">>>> netstat:")
 						netstatCmd := exec.Command("bash", "-c", "netstat -tanp | grep "+strconv.Itoa(sess.Command.Process.Pid))
 						netstatCmd.Stdout = GinkgoWriter
 						netstatCmd.Stderr = GinkgoWriter
 						Expect(netstatCmd.Run()).To(Succeed())
+
+						fmt.Println(">>>> tcpdump:")
+						cmd := exec.Command("tcpdump", "-r", "/tmp/packets", "dst registry-1.docker.io and tcp[tcpflags] & (tcp-ack) != 0")
+						cmd.Stdout = GinkgoWriter
+						cmd.Stderr = GinkgoWriter
+						Expect(cmd.Run()).To(Succeed())
+						fmt.Println(">>>> if this build recently failed, please hijack the container and download `/tmp/packets`, which contains more tcpdump info")
+
+						fmt.Println(">>>> goroutine stack:")
 						sess.Signal(syscall.SIGQUIT)
 						Fail("timeout exeeded")
 					}
