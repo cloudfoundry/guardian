@@ -20,5 +20,5 @@ func TestOverlayxfs(t *testing.T) {
 		StorePath = fmt.Sprintf("/mnt/xfs-%d", GinkgoParallelNode())
 	})
 
-	RunSpecs(t, "Overlay+Xfs Driver Suite")
+	RunSpecs(t, "Tardis/ids Suite")
 }
