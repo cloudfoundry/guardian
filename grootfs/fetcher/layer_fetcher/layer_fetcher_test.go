@@ -98,7 +98,7 @@ var _ = Describe("LayerFetcher", func() {
 				types.BlobInfo{
 					Digest:      digestpkg.NewDigestFromHex("sha256", "47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58"),
 					Size:        1024,
-					Annotations: map[string]string{"org.cloudfoundry.image.base-directory": "/home/cool-user"},
+					Annotations: map[string]string{"org.cloudfoundry.experimental.image.base-directory": "/home/cool-user"},
 				},
 				types.BlobInfo{
 					Digest: digestpkg.NewDigestFromHex("sha256", "7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76"),

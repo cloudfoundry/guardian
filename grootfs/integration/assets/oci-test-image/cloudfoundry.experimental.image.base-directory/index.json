@@ -3,8 +3,8 @@
   "manifests": [
     {
       "mediaType": "application/vnd.oci.image.manifest.v1+json",
-      "digest": "sha256:c81ba4fd3ec5469d4818cff4ab336c61bca7b644d4ab637ec4dae4eeb94a0eb0",
-      "size": 697,
+      "digest": "sha256:fa7e8e791e9f2ae161ea22aa9df705a225bc40d48ebbfb15c07534f31972e7a0",
+      "size": 710,
       "annotations": {
         "org.opencontainers.image.ref.name": "latest"
       },

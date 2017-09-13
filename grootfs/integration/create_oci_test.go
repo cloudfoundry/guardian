@@ -138,10 +138,10 @@ var _ = Describe("Create with OCI images", func() {
 	})
 
 	Context("when the image has cloudfoundry annotations", func() {
-		Describe("org.cloudfoundry.image.base-directory", func() {
+		Describe("org.cloudfoundry.experimental.image.base-directory", func() {
 			BeforeEach(func() {
 				integration.SkipIfNonRoot(GrootfsTestUid)
-				baseImageURL = fmt.Sprintf("oci:///%s/assets/oci-test-image/cloudfoundry.image.base-directory:latest", workDir)
+				baseImageURL = fmt.Sprintf("oci:///%s/assets/oci-test-image/cloudfoundry.experimental.image.base-directory:latest", workDir)
 			})
 
 			It("untars the layer in the specified folder", func() {

@@ -16,7 +16,7 @@
       "size": 126,
       "digest": "sha256:9a75ef280d2a6e15d2da245b99bad408e6aae2aaca79479729c6882df36fc258",
       "annotations": {
-        "org.cloudfoundry.image.base-directory": "/home"
+        "org.cloudfoundry.experimental.image.base-directory": "/home"
       }
     }
   ]
