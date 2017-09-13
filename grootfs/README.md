@@ -203,6 +203,8 @@ Or from a local tar file as an image source:
 grootfs --store /mnt/btrfs create /my-rootfs.tar my-image-id
 ```
 
+If you are running behind an http proxy you can use the [standard](https://wiki.archlinux.org/index.php/proxy_settings) HTTP_PROXY, HTTPS_PROXY, NO_PROXY, etc env vars.
+
 #### Output
 
 The output of this command is a json object which has the following structure:
