@@ -1,6 +1,8 @@
 package overlayxfs_test
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -577,6 +579,19 @@ var _ = Describe("Driver", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
+		It("unmounts the rootfs dir", func() {
+			Expect(driver.DestroyImage(logger, spec.ImagePath)).To(Succeed())
+			output, err := exec.Command("mount").Output()
+			Expect(err).NotTo(HaveOccurred())
+
+			buffer := bytes.NewBuffer(output)
+			scanner := bufio.NewScanner(buffer)
+			for scanner.Scan() {
+				mountLine := scanner.Text()
+				Expect(mountLine).NotTo(ContainSubstring(spec.ImagePath))
+			}
+		})
+
 		It("removes upper, work and rootfs dir from the image path", func() {
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).To(BeADirectory())
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.WorkDir)).To(BeADirectory())
@@ -906,10 +921,10 @@ var _ = Describe("Driver", func() {
 
 			JustBeforeEach(func() {
 				metaFilePath = filepath.Join(StorePath, store.MetaDirName, fmt.Sprintf("volume-%s", volumeID))
-				driver.MoveVolume(logger,
+				Expect(driver.MoveVolume(logger,
 					filepath.Join(StorePath, store.VolumesDirName, volumeID),
 					filepath.Join(StorePath, store.VolumesDirName, "gc."+volumeID),
-				)
+				)).To(Succeed())
 				volumeID = "gc." + volumeID
 			})
 

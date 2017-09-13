@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -27,13 +28,14 @@ import (
 )
 
 const (
-	UpperDir       = "diff"
-	IDDir          = "projectids"
-	WorkDir        = "workdir"
-	RootfsDir      = "rootfs"
-	imageInfoName  = "image_info"
-	WhiteoutDevice = "whiteout_dev"
-	LinksDirName   = "l"
+	UpperDir          = "diff"
+	IDDir             = "projectids"
+	WorkDir           = "workdir"
+	RootfsDir         = "rootfs"
+	imageInfoName     = "image_info"
+	WhiteoutDevice    = "whiteout_dev"
+	LinksDirName      = "l"
+	maxDestroyRetries = 5
 )
 
 func NewDriver(storePath, tardisBinPath string, externalLogSize int64) *Driver {
@@ -564,62 +566,21 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	if err := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
-		logger.Error("unmounting-rootfs-folder-failed", err)
-		return errorspkg.Wrap(err, "unmounting rootfs folder")
-	}
-	if err := os.Remove(filepath.Join(imagePath, RootfsDir)); err != nil {
-		logger.Error("removing-rootfs-folder-failed", err)
-		return errorspkg.Wrap(err, "deleting rootfs folder")
-	}
-	if err := os.RemoveAll(filepath.Join(imagePath, WorkDir)); err != nil {
-		logger.Error("removing-workdir-folder-failed", err)
-		return errorspkg.Wrap(err, "deleting workdir folder")
-	}
-	if err := os.RemoveAll(filepath.Join(imagePath, UpperDir)); err != nil {
-		logger.Error("removing-upperdir-folder-failed", err)
-		return errorspkg.Wrap(err, "deleting upperdir folder")
-	}
-
 	projectID, err := quotapkg.GetProjectID(imagePath)
 	if err != nil {
 		logger.Error("fetching-project-id-failed", err)
 		logger.Info("skipping-project-id-folder-removal")
-	} else if projectID != 0 {
+	}
+
+	if err := ensureImageDestroyed(imagePath); err != nil {
+		logger.Error("removing-image-path", err)
+		return errorspkg.Wrap(err, "deleting rootfs folder")
+	}
+
+	if projectID != 0 {
 		if err := os.RemoveAll(filepath.Join(d.storePath, IDDir, strconv.Itoa(int(projectID)))); err != nil {
 			logger.Error("removing-project-id-folder-failed", err)
 		}
-	}
-
-	return nil
-}
-
-func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec, volumeSize int64) error {
-	logger = logger.Session("applying-quotas", lager.Data{"spec": spec})
-	logger.Debug("starting")
-	defer logger.Debug("ending")
-
-	if spec.DiskLimit == 0 {
-		logger.Debug("no-need-for-quotas")
-		return nil
-	}
-
-	diskLimit := spec.DiskLimit
-	if spec.ExclusiveDiskLimit {
-		logger.Debug("applying-exclusive-quotas")
-	} else {
-		logger.Debug("applying-inclusive-quotas")
-		diskLimit -= volumeSize
-		if diskLimit < 0 {
-			err := errorspkg.New("disk limit is smaller than volume size")
-			logger.Error("applying-inclusive-quota-failed", err, lager.Data{"imagePath": spec.ImagePath})
-			return err
-		}
-	}
-
-	if output, err := d.runTardis(logger, "limit", "--disk-limit-bytes", strconv.FormatInt(diskLimit, 10), "--image-path", spec.ImagePath); err != nil {
-		logger.Error("applying-quota-failed", err, lager.Data{"diskLimit": diskLimit, "imagePath": spec.ImagePath})
-		return errorspkg.Wrapf(err, "apply disk limit: %s", output.String())
 	}
 
 	return nil
@@ -780,4 +741,55 @@ func (d *Driver) hasSUID() bool {
 func (d *Driver) generateShortishID() (string, error) {
 	id, err := shortid.Generate()
 	return id + strconv.Itoa(os.Getpid()), err
+}
+
+func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriverSpec, volumeSize int64) error {
+	logger = logger.Session("applying-quotas", lager.Data{"spec": spec})
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	if spec.DiskLimit == 0 {
+		logger.Debug("no-need-for-quotas")
+		return nil
+	}
+
+	diskLimit := spec.DiskLimit
+	if spec.ExclusiveDiskLimit {
+		logger.Debug("applying-exclusive-quotas")
+	} else {
+		logger.Debug("applying-inclusive-quotas")
+		diskLimit -= volumeSize
+		if diskLimit < 0 {
+			err := errorspkg.New("disk limit is smaller than volume size")
+			logger.Error("applying-inclusive-quota-failed", err, lager.Data{"imagePath": spec.ImagePath})
+			return err
+		}
+	}
+
+	if output, err := d.runTardis(logger, "limit", "--disk-limit-bytes", strconv.FormatInt(diskLimit, 10), "--image-path", spec.ImagePath); err != nil {
+		logger.Error("applying-quota-failed", err, lager.Data{"diskLimit": diskLimit, "imagePath": spec.ImagePath})
+		return errorspkg.Wrapf(err, "apply disk limit: %s", output.String())
+	}
+
+	return nil
+}
+
+func ensureImageDestroyed(imagePath string) error {
+	if err := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
+		return errorspkg.Wrap(err, "unmounting rootfs folder")
+	}
+
+	var err error
+	for i := 0; i < maxDestroyRetries; i++ {
+		if err = os.RemoveAll(imagePath); err == nil {
+			return nil
+		}
+		if err := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
+			return errorspkg.Wrap(err, "unmounting rootfs folder")
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return err
 }
