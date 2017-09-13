@@ -5,13 +5,16 @@ import (
 	"os"
 	"path/filepath"
 
+	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/lager"
 
+	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	imageClonerpkg "code.cloudfoundry.org/grootfs/store/image_cloner"
 	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
@@ -54,8 +57,8 @@ var CleanCommand = cli.Command{
 		}
 
 		storePath := cfg.StorePath
-		if _, err := os.Stat(storePath); os.IsNotExist(err) {
-			err := errorspkg.Errorf("no store found at %s", storePath)
+		if _, err = os.Stat(storePath); os.IsNotExist(err) {
+			err = errorspkg.Errorf("no store found at %s", storePath)
 			logger.Error("store-path-failed", err, nil)
 			return newExitError(err.Error(), 0)
 		}
@@ -73,8 +76,19 @@ var CleanCommand = cli.Command{
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
+
+		storeNamespacer := groot.NewStoreNamespacer(storePath)
+		idMappings, err := storeNamespacer.Read()
+		if err != nil {
+			logger.Error("reading-namespace-file", err)
+			return newExitError(err.Error(), 1)
+		}
+
+		runner := linux_command_runner.New()
+		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
+		nsFsDriver := namespaced.New(fsDriver, idMappings, idMapper, runner)
 		sm := storepkg.NewStoreMeasurer(storePath)
-		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 

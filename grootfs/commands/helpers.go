@@ -29,6 +29,8 @@ type fileSystemDriver interface {
 	image_cloner.ImageDriver
 	base_image_puller.VolumeDriver
 	manager.StoreDriver
+
+	Marshal(logger lager.Logger) ([]byte, error)
 }
 
 func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {

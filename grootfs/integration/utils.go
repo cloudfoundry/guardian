@@ -104,6 +104,12 @@ func SkipIfNonRoot(uid int) {
 	}
 }
 
+func SkipIfRoot(uid int) {
+	if uid == 0 {
+		Skip("These tests can only run as non-root users. Skipping.")
+	}
+}
+
 func CreateFakeDrax() (string, *os.File, *os.File) {
 	tempFolder, bin, binCalledFile := CreateFakeBin("drax")
 	testhelpers.SuidBinary(bin.Name())

@@ -2,6 +2,7 @@ package btrfs // import "code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -18,6 +19,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/filesystems"
+	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
@@ -291,6 +293,18 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 	fmt.Sscanf(usage[2], "%d", &stats.DiskUsage.ExclusiveBytesUsed)
 
 	return stats, nil
+}
+
+func (d *Driver) Marshal(logger lager.Logger) ([]byte, error) {
+	driverSpec := spec.DriverSpec{
+		Type:           "btrfs",
+		StorePath:      d.storePath,
+		FsBinaryPath:   d.btrfsBinPath,
+		MkfsBinaryPath: d.mkfsBinPath,
+		SuidBinaryPath: d.draxBinPath,
+	}
+
+	return json.Marshal(driverSpec)
 }
 
 func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) error {

@@ -41,6 +41,11 @@ var _ = Describe("Create with local TAR images", func() {
 		Expect(os.Chmod(path.Join(sourceImagePath, "permissive-folder"), 0777)).To(Succeed())
 
 		randomImageID = testhelpers.NewRandomID()
+
+		Expect(os.MkdirAll(path.Join(sourceImagePath, "prohibited-folder"), 0777)).To(Succeed())
+		Expect(os.Chown(path.Join(sourceImagePath, "prohibited-folder"), 4000, 4000)).To(Succeed())
+		Expect(os.Chmod(path.Join(sourceImagePath, "prohibited-folder"), 0700)).To(Succeed())
+		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "prohibited-folder", "file"), []byte{}, 0700)).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -336,6 +341,20 @@ var _ = Describe("Create with local TAR images", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+		})
+
+		It("can create files/folders not owned by the running user", func() {
+			image, err := Runner.SkipInitStore().Create(spec)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(Runner.EnsureMounted(image)).To(Succeed())
+
+			prohibitedFolderPath := path.Join(image.Rootfs, "prohibited-folder")
+			stat, err := os.Stat(prohibitedFolderPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(stat.Mode().Perm()).To(Equal(os.FileMode(0700)))
+			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(99999 + 4000)))
+			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(99999 + 4000)))
+			Expect(filepath.Join(prohibitedFolderPath, "file")).To(BeAnExistingFile())
 		})
 	})
 

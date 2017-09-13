@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"time"
 
@@ -46,6 +47,10 @@ var _ = Describe("Clean", func() {
 			sess, err = gexec.Start(exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(anotherSourceImagePath, "foo")), "count=2", "bs=1M"), GinkgoWriter, nil)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
+			Expect(os.MkdirAll(path.Join(anotherSourceImagePath, "prohibited-folder"), 0777)).To(Succeed())
+			Expect(os.Chown(path.Join(anotherSourceImagePath, "prohibited-folder"), 4000, 4000)).To(Succeed())
+			Expect(os.Chmod(path.Join(anotherSourceImagePath, "prohibited-folder"), 0700)).To(Succeed())
+			Expect(ioutil.WriteFile(path.Join(anotherSourceImagePath, "prohibited-folder", "file"), []byte{}, 0700)).To(Succeed())
 			anotherBaseImageFile := integration.CreateBaseImageTar(anotherSourceImagePath)
 			anotherBaseImagePath = anotherBaseImageFile.Name()
 
