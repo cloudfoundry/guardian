@@ -10,6 +10,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
+	"time"
 
 	"code.cloudfoundry.org/grootfs/store"
 
@@ -34,6 +36,7 @@ func CleanUpOverlayMounts(mountPath string) {
 	output, err := exec.Command("mount").Output()
 	Expect(err).NotTo(HaveOccurred())
 
+	mountPoints := []string{}
 	buffer := bytes.NewBuffer(output)
 	scanner := bufio.NewScanner(buffer)
 	for scanner.Scan() {
@@ -42,12 +45,31 @@ func CleanUpOverlayMounts(mountPath string) {
 		mountType := mountInfo[0]
 		if mountType == "overlay" && strings.Contains(mountLine, mountPath) {
 			mountPoint := mountInfo[2]
-			strace := exec.Command("strace", "-tt", "umount", mountPoint)
-			strace.Stderr = GinkgoWriter
-			err := strace.Run()
-			Expect(err).NotTo(HaveOccurred())
+			mountPoints = append(mountPoints, mountPoint)
 		}
 	}
+
+	for _, point := range mountPoints {
+		Expect(ensureCleanUp(point)).To(Succeed())
+	}
+
+}
+
+func ensureCleanUp(mountPoint string) error {
+	Expect(syscall.Unmount(mountPoint, 0)).To(Succeed())
+
+	var rmErr error
+	for i := 0; i < 5; i++ {
+		if rmErr = os.RemoveAll(mountPoint); rmErr == nil {
+			return nil
+		}
+
+		Expect(syscall.Unmount(mountPoint, 0)).To(Succeed())
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return rmErr
 }
 
 func CleanUpImages(storePath string) {

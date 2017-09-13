@@ -214,7 +214,6 @@ var _ = Describe("Driver", func() {
 
 		AfterEach(func() {
 			testhelpers.CleanUpOverlayMounts(StorePath)
-			Expect(os.RemoveAll(spec.ImagePath)).To(Succeed())
 		})
 
 		It("initializes the image path", func() {
