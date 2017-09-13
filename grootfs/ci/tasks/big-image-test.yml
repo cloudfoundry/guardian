@@ -1,0 +1,23 @@
+---
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: cfgarden/grootfs-ci
+    tag: latest
+
+inputs:
+  - name: grootfs-git-repo
+    path: src/code.cloudfoundry.org/grootfs
+
+params:
+  REGISTRY_USERNAME:
+  REGISTRY_PASSWORD:
+  VOLUME_DRIVER: btrfs
+  GROOTFS_TEST_UID: 0
+  GROOTFS_TEST_GID: 0
+
+run:
+  path: src/code.cloudfoundry.org/grootfs/ci/scripts/big-image-test.sh
+  user: root
