@@ -208,7 +208,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 						Expect(netstatCmd.Run()).To(Succeed())
 
 						fmt.Println(">>>> tcpdump:")
-						cmd := exec.Command("tcpdump", "-r", "/tmp/packets", "dst registry-1.docker.io and tcp[tcpflags] & (tcp-ack) != 0")
+						cmd := exec.Command("tcpdump", "-r", "/tmp/packets", "(src registry-1.docker.io or dst registry-1.docker.io) and tcp[tcpflags] & (tcp-ack) != 0")
 						cmd.Stdout = GinkgoWriter
 						cmd.Stderr = GinkgoWriter
 						Expect(cmd.Run()).To(Succeed())
