@@ -69,6 +69,7 @@ var _ = Describe("Driver", func() {
 	})
 
 	AfterEach(func() {
+		testhelpers.CleanUpOverlayMounts(storePath)
 		Expect(os.RemoveAll(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
 		Expect(os.RemoveAll(filepath.Join(storePath, store.ImageDirName))).To(Succeed())
 		Expect(os.RemoveAll(filepath.Join(storePath, overlayxfs.LinksDirName))).To(Succeed())
@@ -216,9 +217,6 @@ var _ = Describe("Driver", func() {
 			spec.BaseVolumeIDs = []string{layer1ID}
 		})
 
-		AfterEach(func() {
-			testhelpers.CleanUpOverlayMounts(StorePath)
-		})
 
 		It("initializes the image path", func() {
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).ToNot(BeAnExistingFile())

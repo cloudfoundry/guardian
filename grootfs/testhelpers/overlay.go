@@ -17,6 +17,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 )
 
 func CleanUpExternalLogDevice(externalLogPath string) {
@@ -55,15 +56,31 @@ func CleanUpOverlayMounts(mountPath string) {
 
 }
 
+func log(buff *gbytes.Buffer, message string, args ...interface{}) {
+	_, err := buff.Write([]byte(fmt.Sprintf(message, args...)))
+	Expect(err).NotTo(HaveOccurred())
+}
+
 func ensureCleanUp(mountPoint string) error {
+	buff := gbytes.NewBuffer()
+	log(buff, "Unmounting overlay mountpoint %s\n", mountPoint)
 	Expect(syscall.Unmount(mountPoint, 0)).To(Succeed())
 
 	var rmErr error
+
+	defer func() {
+		if rmErr != nil {
+			fmt.Println("Ensure cleanup loop failed. Details below:", string(buff.Contents()))
+		}
+	}()
+
 	for i := 0; i < 5; i++ {
+		log(buff, "This is #%d rm attempt of mountPoint %s\n", i+1, mountPoint)
 		if rmErr = os.RemoveAll(mountPoint); rmErr == nil {
 			return nil
 		}
 
+		log(buff, "Unmounting overlay mountpoint %s again\n", mountPoint)
 		Expect(syscall.Unmount(mountPoint, 0)).To(Succeed())
 
 		time.Sleep(100 * time.Millisecond)
