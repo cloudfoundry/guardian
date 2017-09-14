@@ -67,10 +67,10 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 		return false, err
 	}
 
-	return false, c.emitDiskCachePercentMetric(logger)
+	return false, c.emitDiskCachePercentageMetric(logger)
 }
 
-func (c *cleaner) emitDiskCachePercentMetric(logger lager.Logger) error {
+func (c *cleaner) emitDiskCachePercentageMetric(logger lager.Logger) error {
 	cacheSize, err := c.storeMeasurer.Cache(logger)
 	if err != nil {
 		logger.Error("measuring-cache-size-failed", err)
@@ -85,7 +85,7 @@ func (c *cleaner) emitDiskCachePercentMetric(logger lager.Logger) error {
 
 	if storeSize != 0 {
 		cachePercentage := float64(cacheSize) / float64(storeSize) * 100.0
-		c.metricsEmitter.TryEmitUsage(logger, MetricDiskCachePercent, int64(cachePercentage), "percentage")
+		c.metricsEmitter.TryEmitUsage(logger, MetricDiskCachePercentage, int64(cachePercentage), "percentage")
 	}
 
 	return nil

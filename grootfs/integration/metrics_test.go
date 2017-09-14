@@ -147,11 +147,11 @@ var _ = Describe("Metrics", func() {
 
 				var metrics []events.ValueMetric
 				Eventually(func() []events.ValueMetric {
-					metrics = fakeMetron.ValueMetricsFor("DiskCachePercent")
+					metrics = fakeMetron.ValueMetricsFor("DiskCachePercentage")
 					return metrics
 				}).Should(HaveLen(1))
 
-				Expect(*metrics[0].Name).To(Equal("DiskCachePercent"))
+				Expect(*metrics[0].Name).To(Equal("DiskCachePercentage"))
 				Expect(*metrics[0].Unit).To(Equal("percentage"))
 				Expect(*metrics[0].Value).To(BeNumerically("~", 20, 1))
 			})
@@ -383,11 +383,11 @@ var _ = Describe("Metrics", func() {
 
 			var metrics []events.ValueMetric
 			Eventually(func() []events.ValueMetric {
-				metrics = fakeMetron.ValueMetricsFor("DiskCachePercent")
+				metrics = fakeMetron.ValueMetricsFor("DiskCachePercentage")
 				return metrics
 			}).Should(HaveLen(1))
 
-			Expect(*metrics[0].Name).To(Equal("DiskCachePercent"))
+			Expect(*metrics[0].Name).To(Equal("DiskCachePercentage"))
 			Expect(*metrics[0].Unit).To(Equal("percentage"))
 			Expect(*metrics[0].Value).To(BeNumerically("~", 20, 1))
 		})

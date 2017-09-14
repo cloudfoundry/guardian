@@ -93,7 +93,7 @@ var _ = Describe("Cleaner", func() {
 
 				Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(1))
 				_, name, usage, units := fakeMetricsEmitter.TryEmitUsageArgsForCall(0)
-				Expect(name).To(Equal(groot.MetricDiskCachePercent))
+				Expect(name).To(Equal(groot.MetricDiskCachePercentage))
 				Expect(usage).To(Equal(int64(10)))
 				Expect(units).To(Equal("percentage"))
 			})
