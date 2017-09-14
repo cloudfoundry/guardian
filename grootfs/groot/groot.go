@@ -15,6 +15,7 @@ const (
 	MetricImageDeletionTime = "ImageDeletionTime"
 	MetricImageStatsTime    = "ImageStatsTime"
 	MetricImageCleanTime    = "ImageCleanTime"
+	MetricDiskCachePercent  = "DiskCachePercent"
 )
 
 //go:generate counterfeiter . ImageCloner
@@ -103,7 +104,9 @@ type GarbageCollector interface {
 }
 
 type StoreMeasurer interface {
-	MeasureStore(logger lager.Logger) (int64, error)
+	Usage(logger lager.Logger) (int64, error)
+	Cache(logger lager.Logger) (int64, error)
+	Size(logger lager.Logger) (int64, error)
 }
 
 type Locksmith interface {
@@ -112,6 +115,7 @@ type Locksmith interface {
 }
 
 type MetricsEmitter interface {
+	TryEmitUsage(logger lager.Logger, name string, usage int64, units string)
 	TryEmitDurationFrom(logger lager.Logger, name string, from time.Time)
 }
 

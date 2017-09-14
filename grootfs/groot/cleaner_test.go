@@ -71,7 +71,7 @@ var _ = Describe("Cleaner", func() {
 			})
 		})
 
-		It("emits metrics for clean", func() {
+		It("emits metrics for clean duration", func() {
 			_, err := cleaner.Clean(logger, 0, []string{})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -79,6 +79,60 @@ var _ = Describe("Cleaner", func() {
 			_, name, start := fakeMetricsEmitter.TryEmitDurationFromArgsForCall(0)
 			Expect(name).To(Equal(groot.MetricImageCleanTime))
 			Expect(start).NotTo(BeZero())
+		})
+
+		Describe("Disk percentage metrics", func() {
+			BeforeEach(func() {
+				fakeStoreMeasurer.CacheReturns(100, nil)
+				fakeStoreMeasurer.SizeReturns(1000, nil)
+			})
+
+			It("emits metrics for percentage of disk used by groot cache", func() {
+				_, err := cleaner.Clean(logger, 0, []string{})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(1))
+				_, name, usage, units := fakeMetricsEmitter.TryEmitUsageArgsForCall(0)
+				Expect(name).To(Equal(groot.MetricDiskCachePercent))
+				Expect(usage).To(Equal(int64(10)))
+				Expect(units).To(Equal("percentage"))
+			})
+
+			Context("when fetching the cache size errors", func() {
+				BeforeEach(func() {
+					fakeStoreMeasurer.CacheReturns(0, errors.New("boom"))
+				})
+
+				It("should not emit a disk percentage metric", func() {
+					_, err := cleaner.Clean(logger, 0, []string{})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("when fetching the store size errors", func() {
+				BeforeEach(func() {
+					fakeStoreMeasurer.SizeReturns(0, errors.New("boom"))
+				})
+
+				It("should not emit a disk percentage metric", func() {
+					_, err := cleaner.Clean(logger, 0, []string{})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(0))
+				})
+			})
+
+			Context("when fetching the store size returns 0 (but doesn't error)", func() {
+				BeforeEach(func() {
+					fakeStoreMeasurer.SizeReturns(0, nil)
+				})
+
+				It("should not emit a disk percentage metric", func() {
+					_, err := cleaner.Clean(logger, 0, []string{})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(0))
+				})
+			})
 		})
 
 		It("acquires the global lock", func() {
@@ -166,7 +220,7 @@ var _ = Describe("Cleaner", func() {
 
 			Context("when the store size is under the threshold", func() {
 				BeforeEach(func() {
-					fakeStoreMeasurer.MeasureStoreReturns(500000, nil)
+					fakeStoreMeasurer.UsageReturns(500000, nil)
 				})
 
 				It("does not remove anything", func() {
@@ -190,7 +244,7 @@ var _ = Describe("Cleaner", func() {
 
 			Context("when the store measurer fails", func() {
 				BeforeEach(func() {
-					fakeStoreMeasurer.MeasureStoreReturns(0, errors.New("failed to measure"))
+					fakeStoreMeasurer.UsageReturns(0, errors.New("failed to measure"))
 				})
 
 				It("returns the error", func() {
@@ -208,7 +262,7 @@ var _ = Describe("Cleaner", func() {
 			Context("when the store size is over the threshold", func() {
 				BeforeEach(func() {
 					threshold = 1000000
-					fakeStoreMeasurer.MeasureStoreReturns(1500000, nil)
+					fakeStoreMeasurer.UsageReturns(1500000, nil)
 				})
 
 				It("calls the garbage collector", func() {
@@ -221,7 +275,7 @@ var _ = Describe("Cleaner", func() {
 			Context("when the threshold is negative", func() {
 				BeforeEach(func() {
 					threshold = -120
-					fakeStoreMeasurer.MeasureStoreReturns(1500000, nil)
+					fakeStoreMeasurer.UsageReturns(1500000, nil)
 				})
 
 				It("indicates a no-op and returns an error", func() {

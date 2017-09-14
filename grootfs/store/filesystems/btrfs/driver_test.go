@@ -538,6 +538,14 @@ var _ = Describe("Btrfs", func() {
 		})
 	})
 
+	Describe("VolumeSize", func() {
+		It("returns zero, because we don't intend to implement this function ahead of BTRFS driver removal", func() {
+			size, err := driver.VolumeSize(logger, "some-volume-id")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(size).To(BeZero())
+		})
+	})
+
 	Describe("MoveVolume", func() {
 		var (
 			volumeID   string

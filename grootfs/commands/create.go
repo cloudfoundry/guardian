@@ -179,7 +179,7 @@ var CreateCommand = cli.Command{
 			exclusiveLocksmith,
 		)
 
-		sm := storepkg.NewStoreMeasurer(storePath)
+		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
 		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
 		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
 
@@ -214,14 +214,14 @@ var CreateCommand = cli.Command{
 		}
 		fmt.Println(string(jsonBytes))
 
-		usage, err := sm.MeasureStore(logger)
+		usage, err := sm.Usage(logger)
 		if err != nil {
 			logger.Error("measuring-store", err)
 			return newExitError(err.Error(), 1)
 		}
 
 		metricsEmitter.TryIncrementRunCount("create", nil)
-		metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage)
+		metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage, "bytes")
 
 		return nil
 	},

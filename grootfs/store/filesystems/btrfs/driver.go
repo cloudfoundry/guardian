@@ -210,8 +210,12 @@ func (d *Driver) Volumes(logger lager.Logger) ([]string, error) {
 	for _, volumeInfo := range existingVolumes {
 		volumes = append(volumes, volumeInfo.Name())
 	}
-
 	return volumes, nil
+}
+
+func (d *Driver) VolumeSize(logger lager.Logger, id string) (int64, error) {
+	logger.Debug("VolumeSize is not supported on BTRFS")
+	return 0, nil
 }
 
 func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {

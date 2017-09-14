@@ -28,8 +28,8 @@ func NewEmitter(systemReporter SystemReporter) *Emitter {
 	}
 }
 
-func (e *Emitter) TryEmitUsage(logger lager.Logger, name string, usage int64) {
-	if err := metrics.SendValue(name, float64(usage), "bytes"); err != nil {
+func (e *Emitter) TryEmitUsage(logger lager.Logger, name string, usage int64, units string) {
+	if err := metrics.SendValue(name, float64(usage), units); err != nil {
 		logger.Error("failed-to-emit-metric", err, lager.Data{
 			"key":   name,
 			"usage": usage,

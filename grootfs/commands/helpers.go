@@ -18,7 +18,6 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
-	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 	"github.com/opencontainers/runc/libcontainer/user"
 	errorspkg "github.com/pkg/errors"
@@ -26,10 +25,20 @@ import (
 )
 
 type fileSystemDriver interface {
-	image_cloner.ImageDriver
-	base_image_puller.VolumeDriver
-	manager.StoreDriver
-
+	CreateImage(logger lager.Logger, spec image_cloner.ImageDriverSpec) (groot.MountInfo, error)
+	DestroyImage(logger lager.Logger, path string) error
+	FetchStats(logger lager.Logger, path string) (groot.VolumeStats, error)
+	ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
+	ValidateFileSystem(logger lager.Logger, path string) error
+	InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error
+	VolumePath(logger lager.Logger, id string) (string, error)
+	Volumes(logger lager.Logger) ([]string, error)
+	VolumeSize(lager.Logger, string) (int64, error)
+	CreateVolume(logger lager.Logger, parentID, id string) (string, error)
+	DestroyVolume(logger lager.Logger, id string) error
+	MoveVolume(logger lager.Logger, from, to string) error
+	WriteVolumeMeta(logger lager.Logger, id string, data base_image_puller.VolumeMeta) error
+	HandleOpaqueWhiteouts(logger lager.Logger, id string, opaqueWhiteouts []string) error
 	Marshal(logger lager.Logger) ([]byte, error)
 }
 

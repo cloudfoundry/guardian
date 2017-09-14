@@ -38,7 +38,7 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 	defer logger.Info("ending")
 
 	if threshold > 0 {
-		storeSize, err := c.storeMeasurer.MeasureStore(logger)
+		storeSize, err := c.storeMeasurer.Usage(logger)
 		if err != nil {
 			return true, err
 		}
@@ -63,5 +63,30 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 		logger.Error("unlocking-failed", err)
 	}
 
-	return false, c.garbageCollector.Collect(logger)
+	if err := c.garbageCollector.Collect(logger); err != nil {
+		return false, err
+	}
+
+	return false, c.emitDiskCachePercentMetric(logger)
+}
+
+func (c *cleaner) emitDiskCachePercentMetric(logger lager.Logger) error {
+	cacheSize, err := c.storeMeasurer.Cache(logger)
+	if err != nil {
+		logger.Error("measuring-cache-size-failed", err)
+		return nil
+	}
+
+	storeSize, err := c.storeMeasurer.Size(logger)
+	if err != nil {
+		logger.Error("measuring-store-size-failed", err)
+		return nil
+	}
+
+	if storeSize != 0 {
+		cachePercentage := float64(cacheSize) / float64(storeSize) * 100.0
+		c.metricsEmitter.TryEmitUsage(logger, MetricDiskCachePercent, int64(cachePercentage), "percentage")
+	}
+
+	return nil
 }

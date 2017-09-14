@@ -56,7 +56,7 @@ var _ = Describe("Emitter", func() {
 
 	Describe("TryEmitUsage", func() {
 		It("emits metrics", func() {
-			emitter.TryEmitUsage(logger, "foo", 1000)
+			emitter.TryEmitUsage(logger, "foo", 1000, "units")
 
 			var fooMetrics []events.ValueMetric
 			Eventually(func() []events.ValueMetric {
@@ -65,7 +65,7 @@ var _ = Describe("Emitter", func() {
 			}).Should(HaveLen(1))
 
 			Expect(*fooMetrics[0].Name).To(Equal("foo"))
-			Expect(*fooMetrics[0].Unit).To(Equal("bytes"))
+			Expect(*fooMetrics[0].Unit).To(Equal("units"))
 			Expect(*fooMetrics[0].Value).To(Equal(float64(1000)))
 		})
 	})

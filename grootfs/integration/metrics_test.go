@@ -5,10 +5,12 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration/runner"
+	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"github.com/cloudfoundry/sonde-go/events"
 	. "github.com/onsi/ginkgo"
@@ -125,6 +127,34 @@ var _ = Describe("Metrics", func() {
 				return counterEvents
 			}).Should(HaveLen(1))
 			Expect(*counterEvents[0].Name).To(Equal("grootfs-create.run.success"))
+		})
+
+		Describe("--with-clean", func() {
+			BeforeEach(func() {
+				_, err := Runner.Create(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				writeMegabytes(filepath.Join(StorePath, store.TempDirName, "hello"), 100)
+				writeMegabytes(filepath.Join(StorePath, store.MetaDirName, "hello"), 100)
+			})
+
+			It("emits the percentage of disk used by groot cache", func() {
+				spec.ID = "new-id"
+				_, err := Runner.
+					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+					WithClean().Create(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				var metrics []events.ValueMetric
+				Eventually(func() []events.ValueMetric {
+					metrics = fakeMetron.ValueMetricsFor("DiskCachePercent")
+					return metrics
+				}).Should(HaveLen(1))
+
+				Expect(*metrics[0].Name).To(Equal("DiskCachePercent"))
+				Expect(*metrics[0].Unit).To(Equal("percentage"))
+				Expect(*metrics[0].Value).To(BeNumerically("~", 20, 1))
+			})
 		})
 
 		Context("when create fails", func() {
@@ -340,6 +370,26 @@ var _ = Describe("Metrics", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
+
+			writeMegabytes(filepath.Join(StorePath, store.TempDirName, "hello"), 100)
+			writeMegabytes(filepath.Join(StorePath, store.MetaDirName, "hello"), 100)
+		})
+
+		It("emits the percentage of disk used by groot cache", func() {
+			_, err := Runner.
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+				Clean(0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("DiskCachePercent")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("DiskCachePercent"))
+			Expect(*metrics[0].Unit).To(Equal("percentage"))
+			Expect(*metrics[0].Value).To(BeNumerically("~", 20, 1))
 		})
 
 		It("emits the total clean time", func() {
@@ -376,7 +426,7 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
-		It("emits the sucess count", func() {
+		It("emits the success count", func() {
 			_, err := Runner.
 				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
 				Clean(0, []string{})

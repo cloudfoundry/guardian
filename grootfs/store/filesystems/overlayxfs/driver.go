@@ -545,7 +545,7 @@ func (d *Driver) getLowerDirs(logger lager.Logger, volumeIDs []string) ([]string
 			return nil, 0, errorspkg.Wrap(err, "base volume path does not exist")
 		}
 
-		volumeSize, err := d.volumeSize(logger, volumeIDs[i])
+		volumeSize, err := d.VolumeSize(logger, volumeIDs[i])
 		if err != nil {
 			logger.Error("calculating-base-volume-size-failed", err, lager.Data{"volumeID": volumeIDs[i]})
 		}
@@ -618,7 +618,7 @@ func (d *Driver) Marshal(logger lager.Logger) ([]byte, error) {
 	return json.Marshal(driverSpec)
 }
 
-func (d *Driver) volumeSize(logger lager.Logger, id string) (int64, error) {
+func (d *Driver) VolumeSize(logger lager.Logger, id string) (int64, error) {
 	logger = logger.Session("overlayxfs-volume-size", lager.Data{"volumeID": id})
 	logger.Debug("starting")
 	defer logger.Debug("ending")

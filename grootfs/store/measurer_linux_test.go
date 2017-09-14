@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/store"
+	"code.cloudfoundry.org/grootfs/store/storefakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -20,6 +21,7 @@ var _ = Describe("Measurer", func() {
 		storePath     string
 		storeMeasurer *store.StoreMeasurer
 		logger        lager.Logger
+		volumeDriver  *storefakes.FakeVolumeDriver
 	)
 
 	BeforeEach(func() {
@@ -34,7 +36,9 @@ var _ = Describe("Measurer", func() {
 			filepath.Join(storePath, store.ImageDirName), 0744,
 		)).To(Succeed())
 
-		storeMeasurer = store.NewStoreMeasurer(storePath)
+		volumeDriver = new(storefakes.FakeVolumeDriver)
+
+		storeMeasurer = store.NewStoreMeasurer(storePath, volumeDriver)
 
 		logger = lagertest.NewTestLogger("store-measurer")
 	})
@@ -43,29 +47,85 @@ var _ = Describe("Measurer", func() {
 		Expect(os.RemoveAll(storePath)).To(Succeed())
 	})
 
-	It("measures space used by the volumes and images", func() {
-		volPath := filepath.Join(storePath, store.VolumesDirName, "sha256:fake")
-		Expect(os.MkdirAll(volPath, 0744)).To(Succeed())
-		Expect(writeFile(filepath.Join(volPath, "my-file"), 2048*1024)).To(Succeed())
+	Describe("Usage", func() {
+		It("measures space used by the volumes and images", func() {
+			volPath := filepath.Join(storePath, store.VolumesDirName, "sha256:fake")
+			Expect(os.MkdirAll(volPath, 0744)).To(Succeed())
+			Expect(writeFile(filepath.Join(volPath, "my-file"), 2048*1024)).To(Succeed())
 
-		imagePath := filepath.Join(storePath, store.ImageDirName, "my-image")
-		Expect(os.MkdirAll(imagePath, 0744)).To(Succeed())
-		Expect(writeFile(filepath.Join(imagePath, "my-file"), 2048*1024)).To(Succeed())
+			imagePath := filepath.Join(storePath, store.ImageDirName, "my-image")
+			Expect(os.MkdirAll(imagePath, 0744)).To(Succeed())
+			Expect(writeFile(filepath.Join(imagePath, "my-file"), 2048*1024)).To(Succeed())
 
-		storeSize, err := storeMeasurer.MeasureStore(logger)
-		Expect(err).NotTo(HaveOccurred())
-		xfsMetadataSize := 33755136
-		Expect(storeSize).To(BeNumerically("~", 4096*1024+xfsMetadataSize, 256*1024))
-	})
-
-	Context("when the store does not exist", func() {
-		BeforeEach(func() {
-			storeMeasurer = store.NewStoreMeasurer("/path/to/non/existent/store")
+			storeSize, err := storeMeasurer.Usage(logger)
+			Expect(err).NotTo(HaveOccurred())
+			xfsMetadataSize := 33755136
+			Expect(storeSize).To(BeNumerically("~", 4096*1024+xfsMetadataSize, 256*1024))
 		})
 
-		It("returns a useful error", func() {
-			_, err := storeMeasurer.MeasureStore(logger)
-			Expect(err).To(MatchError(ContainSubstring("Invalid path /path/to/non/existent/store")))
+		Context("when the store does not exist", func() {
+			BeforeEach(func() {
+				storeMeasurer = store.NewStoreMeasurer("/path/to/non/existent/store", volumeDriver)
+			})
+
+			It("returns a useful error", func() {
+				_, err := storeMeasurer.Usage(logger)
+				Expect(err).To(MatchError(ContainSubstring("/path/to/non/existent/store")))
+			})
+		})
+	})
+
+	Describe("Size", func() {
+		It("returns the size of the store", func() {
+			size, err := storeMeasurer.Size(logger)
+			Expect(err).NotTo(HaveOccurred())
+
+			// size from ci/scripts/test/utils.sh -> 1GB
+			truncatedFileSize := 1024 * 1024 * 1024
+			fudgeFactor := truncatedFileSize / 100
+			Expect(size).To(BeNumerically("~", truncatedFileSize, fudgeFactor))
+		})
+	})
+
+	Describe("Cache", func() {
+		BeforeEach(func() {
+			volumeDriver.VolumesReturns([]string{"sha256:fake"}, nil)
+			volumeDriver.VolumeSizeReturns(2048*1024, nil)
+		})
+
+		It("measures the size of the cache (everything in the store, except images)", func() {
+			imagePath := filepath.Join(storePath, store.ImageDirName, "my-image")
+			Expect(os.MkdirAll(imagePath, 0744)).To(Succeed())
+			Expect(writeFile(filepath.Join(imagePath, "my-file"), 2048*1024)).To(Succeed())
+
+			metaDirPath := filepath.Join(storePath, store.MetaDirName)
+			Expect(os.MkdirAll(metaDirPath, 0744)).To(Succeed())
+			Expect(writeFile(filepath.Join(metaDirPath, "my-file"), 2048*1024)).To(Succeed())
+
+			tempDataPath := filepath.Join(storePath, store.TempDirName)
+			Expect(os.MkdirAll(tempDataPath, 0744)).To(Succeed())
+			Expect(writeFile(filepath.Join(tempDataPath, "my-file"), 2048*1024)).To(Succeed())
+
+			cacheSize, err := storeMeasurer.Cache(logger)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(volumeDriver.VolumesCallCount()).To(Equal(1))
+			Expect(volumeDriver.VolumeSizeCallCount()).To(Equal(1))
+			_, volumeId := volumeDriver.VolumeSizeArgsForCall(0)
+			Expect(volumeId).To(Equal("sha256:fake"), "checked size of unexpected volume")
+
+			Expect(cacheSize).To(BeNumerically("~", 3*2048*1024, 1024))
+		})
+
+		Context("when the store does not exist", func() {
+			BeforeEach(func() {
+				storeMeasurer = store.NewStoreMeasurer("/path/to/non/existent/store", volumeDriver)
+			})
+
+			It("returns a useful error", func() {
+				_, err := storeMeasurer.Cache(logger)
+				Expect(err).To(MatchError(ContainSubstring("/path/to/non/existent/store")))
+			})
 		})
 	})
 })

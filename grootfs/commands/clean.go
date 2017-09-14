@@ -87,7 +87,7 @@ var CleanCommand = cli.Command{
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
 		nsFsDriver := namespaced.New(fsDriver, idMappings, idMapper, runner)
-		sm := storepkg.NewStoreMeasurer(storePath)
+		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
 		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
@@ -105,14 +105,14 @@ var CleanCommand = cli.Command{
 
 		fmt.Println("clean completed")
 
-		usage, err := sm.MeasureStore(logger)
+		usage, err := sm.Usage(logger)
 		if err != nil {
 			logger.Error("measuring-store", err)
 			return newExitError(err.Error(), 1)
 		}
 
 		metricsEmitter.TryIncrementRunCount("clean", nil)
-		metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage)
+		metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage, "bytes")
 		return nil
 	},
 }

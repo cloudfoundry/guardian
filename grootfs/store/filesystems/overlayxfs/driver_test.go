@@ -217,7 +217,6 @@ var _ = Describe("Driver", func() {
 			spec.BaseVolumeIDs = []string{layer1ID}
 		})
 
-
 		It("initializes the image path", func() {
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.UpperDir)).ToNot(BeAnExistingFile())
 			Expect(filepath.Join(spec.ImagePath, overlayxfs.WorkDir)).ToNot(BeAnExistingFile())
@@ -1106,6 +1105,16 @@ var _ = Describe("Driver", func() {
 
 			Expect(json.NewDecoder(metaFile).Decode(&meta)).To(Succeed())
 			Expect(meta).To(Equal(base_image_puller.VolumeMeta{Size: 1024}))
+		})
+	})
+
+	Describe("VolumeSize", func() {
+		It("returns the volume size", func() {
+			volumeID := randVolumeID()
+			createVolume(storePath, driver, "parent-id", volumeID, 3000000)
+			size, err := driver.VolumeSize(logger, volumeID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(size).To(BeEquivalentTo(3000000))
 		})
 	})
 })
