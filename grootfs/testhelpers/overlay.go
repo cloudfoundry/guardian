@@ -34,6 +34,23 @@ func CleanUpExternalLogDevice(externalLogPath string) {
 }
 
 func CleanUpOverlayMounts(mountPath string) {
+	var mountPoints []string
+
+	for i := 0; i < 10; i++ {
+		mountPoints = internalMountPoints(mountPath)
+		if len(mountPoints) != 0 {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	for _, point := range mountPoints {
+		Expect(ensureCleanUp(point)).To(Succeed())
+	}
+}
+
+func internalMountPoints(mountPath string) []string {
 	output, err := exec.Command("mount").Output()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -50,10 +67,7 @@ func CleanUpOverlayMounts(mountPath string) {
 		}
 	}
 
-	for _, point := range mountPoints {
-		Expect(ensureCleanUp(point)).To(Succeed())
-	}
-
+	return mountPoints
 }
 
 func log(buff *gbytes.Buffer, message string, args ...interface{}) {

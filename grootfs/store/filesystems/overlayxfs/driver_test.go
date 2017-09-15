@@ -70,11 +70,7 @@ var _ = Describe("Driver", func() {
 
 	AfterEach(func() {
 		testhelpers.CleanUpOverlayMounts(storePath)
-		Expect(os.RemoveAll(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
-		Expect(os.RemoveAll(filepath.Join(storePath, store.ImageDirName))).To(Succeed())
-		Expect(os.RemoveAll(filepath.Join(storePath, overlayxfs.LinksDirName))).To(Succeed())
-		Expect(os.RemoveAll(filepath.Join(storePath, overlayxfs.WhiteoutDevice))).To(Succeed())
-		Expect(os.RemoveAll(filepath.Join(storePath, overlayxfs.IDDir))).To(Succeed())
+		Expect(os.RemoveAll(storePath)).To(Succeed())
 	})
 
 	Describe("InitFilesystem", func() {
@@ -647,11 +643,6 @@ var _ = Describe("Driver", func() {
 			sess, err := gexec.Start(dd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess).Should(gexec.Exit(0))
-		})
-
-		AfterEach(func() {
-			testhelpers.CleanUpOverlayMounts(storePath)
-			Expect(os.RemoveAll(spec.ImagePath)).To(Succeed())
 		})
 
 		It("reports the image usage correctly", func() {
