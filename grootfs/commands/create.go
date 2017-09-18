@@ -110,7 +110,7 @@ var CreateCommand = cli.Command{
 			return newExitError(err.Error(), 1)
 		}
 
-		if err := validateOptions(ctx, cfg); err != nil {
+		if err = validateOptions(ctx, cfg); err != nil {
 			return newExitError(err.Error(), 1)
 		}
 
@@ -123,7 +123,7 @@ var CreateCommand = cli.Command{
 			return newExitError(err.Error(), 1)
 		}
 
-		metricsEmitter := metrics.NewEmitter(systemReporter(cfg.SlowActionThreshold))
+		metricsEmitter := metrics.NewEmitter()
 		sharedLocksmith := locksmithpkg.NewSharedFileSystem(storePath, metricsEmitter)
 		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(storePath, metricsEmitter)
 		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)

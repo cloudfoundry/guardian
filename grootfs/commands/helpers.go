@@ -7,14 +7,11 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
-	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
-	"code.cloudfoundry.org/grootfs/metrics/systemreporter"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
@@ -121,12 +118,8 @@ func readSubIDMapping(name string, id int, subidPath string) ([]groot.IDMappingS
 
 type exitErrorFunc func(message string, exitCode int) *cli.ExitError
 
-func systemReporter(threshold int) metrics.SystemReporter {
-	return systemreporter.NewLogBased(time.Duration(threshold)*time.Second, linux_command_runner.New())
-}
-
 func newErrorHandler(logger lager.Logger, action string) exitErrorFunc {
-	metricsEmitter := metrics.NewEmitter(systemReporter(0))
+	metricsEmitter := metrics.NewEmitter()
 
 	return func(message string, exitCode int) *cli.ExitError {
 		err := errors.New(message)

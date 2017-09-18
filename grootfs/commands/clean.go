@@ -70,7 +70,7 @@ var CleanCommand = cli.Command{
 		}
 
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
-		metricsEmitter := metrics.NewEmitter(systemReporter(cfg.SlowActionThreshold))
+		metricsEmitter := metrics.NewEmitter()
 
 		locksmith := locksmithpkg.NewExclusiveFileSystem(storePath, metricsEmitter)
 		dependencyManager := dependency_manager.NewDependencyManager(
