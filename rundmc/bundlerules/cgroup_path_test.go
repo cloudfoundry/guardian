@@ -17,7 +17,7 @@ var _ = Describe("CGroup Path", func() {
 		}
 
 		newBndl, err := cgroupPathRule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
-			Hostname: "banana",
+			Handle: "banana",
 		}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())
 
