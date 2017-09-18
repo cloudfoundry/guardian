@@ -33,6 +33,7 @@ const (
 	WorkDir           = "workdir"
 	RootfsDir         = "rootfs"
 	imageInfoName     = "image_info"
+	imageQuotaName    = "image_quota"
 	WhiteoutDevice    = "whiteout_dev"
 	LinksDirName      = "l"
 	maxDestroyRetries = 5
@@ -771,6 +772,10 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 		return errorspkg.Wrapf(err, "apply disk limit: %s", output.String())
 	}
 
+	if err := ioutil.WriteFile(filepath.Join(spec.ImagePath, imageQuotaName), []byte(strconv.FormatInt(diskLimit, 10)), 0600); err != nil {
+		logger.Error("writing-image-quota-failed", err)
+		return errorspkg.Wrap(err, "writing image quota")
+	}
 	return nil
 }
 

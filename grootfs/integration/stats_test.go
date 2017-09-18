@@ -92,11 +92,20 @@ var _ = Describe("Stats", func() {
 			sess := runAsUser(cmd, GrootfsTestUid, GrootfsTestGid)
 			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 
-			expectedStats = groot.VolumeStats{
-				DiskUsage: groot.DiskUsage{
-					TotalBytesUsed:     9441280,
-					ExclusiveBytesUsed: 4198400,
-				},
+			if Driver == "overlay-xfs" {
+				expectedStats = groot.VolumeStats{
+					DiskUsage: groot.DiskUsage{
+						TotalBytesUsed:     9445376,
+						ExclusiveBytesUsed: 4202496,
+					},
+				}
+			} else {
+				expectedStats = groot.VolumeStats{
+					DiskUsage: groot.DiskUsage{
+						TotalBytesUsed:     9441280,
+						ExclusiveBytesUsed: 4198400,
+					},
+				}
 			}
 		})
 

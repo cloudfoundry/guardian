@@ -81,32 +81,64 @@ var _ = Describe("Cleaner", func() {
 			Expect(start).NotTo(BeZero())
 		})
 
-		Describe("Disk percentage metrics", func() {
-			BeforeEach(func() {
-				fakeStoreMeasurer.CacheReturns(100, nil)
-				fakeStoreMeasurer.SizeReturns(1000, nil)
-			})
-
-			It("emits metrics for percentage of disk used by groot cache", func() {
-				_, err := cleaner.Clean(logger, 0, []string{})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(1))
-				_, name, usage, units := fakeMetricsEmitter.TryEmitUsageArgsForCall(0)
-				Expect(name).To(Equal(groot.MetricDiskCachePercentage))
-				Expect(usage).To(Equal(int64(10)))
-				Expect(units).To(Equal("percentage"))
-			})
-
-			Context("when fetching the cache size errors", func() {
+		Describe("Emmitting Metrics", func() {
+			Context("Disk percentage metrics", func() {
 				BeforeEach(func() {
-					fakeStoreMeasurer.CacheReturns(0, errors.New("boom"))
+					fakeStoreMeasurer.CacheReturns(100, nil)
+					fakeStoreMeasurer.SizeReturns(1000, nil)
 				})
 
-				It("should not emit a disk percentage metric", func() {
+				It("emits metrics for percentage of disk used by groot cache", func() {
 					_, err := cleaner.Clean(logger, 0, []string{})
 					Expect(err).NotTo(HaveOccurred())
-					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(0))
+
+					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(2))
+					_, name, usage, units := fakeMetricsEmitter.TryEmitUsageArgsForCall(0)
+					Expect(name).To(Equal(groot.MetricDiskCachePercentage))
+					Expect(usage).To(Equal(int64(10)))
+					Expect(units).To(Equal("percentage"))
+				})
+
+				Context("when fetching the cache size errors", func() {
+					BeforeEach(func() {
+						fakeStoreMeasurer.CacheReturns(0, errors.New("boom"))
+					})
+
+					It("should not emit a disk percentage metric", func() {
+						_, err := cleaner.Clean(logger, 0, []string{})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(1))
+					})
+				})
+			})
+
+			Context("Commited disk percentage metrics", func() {
+				BeforeEach(func() {
+					fakeStoreMeasurer.CommittedSizeReturns(100, nil)
+					fakeStoreMeasurer.SizeReturns(1000, nil)
+				})
+
+				It("emits metrics for percentage of disk committed by groot cache", func() {
+					_, err := cleaner.Clean(logger, 0, []string{})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(2))
+					_, name, usage, units := fakeMetricsEmitter.TryEmitUsageArgsForCall(1)
+					Expect(name).To(Equal(groot.MetricDiskCommittedPercentage))
+					Expect(usage).To(Equal(int64(10)))
+					Expect(units).To(Equal("percentage"))
+				})
+
+				Context("when fetching the committed size errors", func() {
+					BeforeEach(func() {
+						fakeStoreMeasurer.CommittedSizeReturns(0, errors.New("boom"))
+					})
+
+					It("should not emit a disk percentage metric", func() {
+						_, err := cleaner.Clean(logger, 0, []string{})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(1))
+					})
 				})
 			})
 
@@ -115,7 +147,7 @@ var _ = Describe("Cleaner", func() {
 					fakeStoreMeasurer.SizeReturns(0, errors.New("boom"))
 				})
 
-				It("should not emit a disk percentage metric", func() {
+				It("should not emit any disk percentage metrics", func() {
 					_, err := cleaner.Clean(logger, 0, []string{})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(0))
@@ -127,7 +159,7 @@ var _ = Describe("Cleaner", func() {
 					fakeStoreMeasurer.SizeReturns(0, nil)
 				})
 
-				It("should not emit a disk percentage metric", func() {
+				It("should not emit any disk percentage metrics", func() {
 					_, err := cleaner.Clean(logger, 0, []string{})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(0))

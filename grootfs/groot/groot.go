@@ -10,12 +10,13 @@ import (
 )
 
 const (
-	GlobalLockKey             = "global-groot-lock"
-	MetricImageCreationTime   = "ImageCreationTime"
-	MetricImageDeletionTime   = "ImageDeletionTime"
-	MetricImageStatsTime      = "ImageStatsTime"
-	MetricImageCleanTime      = "ImageCleanTime"
-	MetricDiskCachePercentage = "DiskCachePercentage"
+	GlobalLockKey                 = "global-groot-lock"
+	MetricImageCreationTime       = "ImageCreationTime"
+	MetricImageDeletionTime       = "ImageDeletionTime"
+	MetricImageStatsTime          = "ImageStatsTime"
+	MetricImageCleanTime          = "ImageCleanTime"
+	MetricDiskCachePercentage     = "DiskCachePercentage"
+	MetricDiskCommittedPercentage = "DiskCommittedPercentage"
 )
 
 //go:generate counterfeiter . ImageCloner
@@ -107,6 +108,7 @@ type StoreMeasurer interface {
 	Usage(logger lager.Logger) (int64, error)
 	Cache(logger lager.Logger) (int64, error)
 	Size(logger lager.Logger) (int64, error)
+	CommittedSize(logger lager.Logger) (int64, error)
 }
 
 type Locksmith interface {

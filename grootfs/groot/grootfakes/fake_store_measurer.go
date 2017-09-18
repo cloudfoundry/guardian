@@ -48,6 +48,19 @@ type FakeStoreMeasurer struct {
 		result1 int64
 		result2 error
 	}
+	CommittedSizeStub        func(logger lager.Logger) (int64, error)
+	committedSizeMutex       sync.RWMutex
+	committedSizeArgsForCall []struct {
+		logger lager.Logger
+	}
+	committedSizeReturns struct {
+		result1 int64
+		result2 error
+	}
+	committedSizeReturnsOnCall map[int]struct {
+		result1 int64
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -205,6 +218,57 @@ func (fake *FakeStoreMeasurer) SizeReturnsOnCall(i int, result1 int64, result2 e
 	}{result1, result2}
 }
 
+func (fake *FakeStoreMeasurer) CommittedSize(logger lager.Logger) (int64, error) {
+	fake.committedSizeMutex.Lock()
+	ret, specificReturn := fake.committedSizeReturnsOnCall[len(fake.committedSizeArgsForCall)]
+	fake.committedSizeArgsForCall = append(fake.committedSizeArgsForCall, struct {
+		logger lager.Logger
+	}{logger})
+	fake.recordInvocation("CommittedSize", []interface{}{logger})
+	fake.committedSizeMutex.Unlock()
+	if fake.CommittedSizeStub != nil {
+		return fake.CommittedSizeStub(logger)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.committedSizeReturns.result1, fake.committedSizeReturns.result2
+}
+
+func (fake *FakeStoreMeasurer) CommittedSizeCallCount() int {
+	fake.committedSizeMutex.RLock()
+	defer fake.committedSizeMutex.RUnlock()
+	return len(fake.committedSizeArgsForCall)
+}
+
+func (fake *FakeStoreMeasurer) CommittedSizeArgsForCall(i int) lager.Logger {
+	fake.committedSizeMutex.RLock()
+	defer fake.committedSizeMutex.RUnlock()
+	return fake.committedSizeArgsForCall[i].logger
+}
+
+func (fake *FakeStoreMeasurer) CommittedSizeReturns(result1 int64, result2 error) {
+	fake.CommittedSizeStub = nil
+	fake.committedSizeReturns = struct {
+		result1 int64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeStoreMeasurer) CommittedSizeReturnsOnCall(i int, result1 int64, result2 error) {
+	fake.CommittedSizeStub = nil
+	if fake.committedSizeReturnsOnCall == nil {
+		fake.committedSizeReturnsOnCall = make(map[int]struct {
+			result1 int64
+			result2 error
+		})
+	}
+	fake.committedSizeReturnsOnCall[i] = struct {
+		result1 int64
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeStoreMeasurer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -214,6 +278,8 @@ func (fake *FakeStoreMeasurer) Invocations() map[string][][]interface{} {
 	defer fake.cacheMutex.RUnlock()
 	fake.sizeMutex.RLock()
 	defer fake.sizeMutex.RUnlock()
+	fake.committedSizeMutex.RLock()
+	defer fake.committedSizeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

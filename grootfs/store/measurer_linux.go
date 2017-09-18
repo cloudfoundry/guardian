@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"io/ioutil"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -58,6 +59,36 @@ func (s *StoreMeasurer) Size(logger lager.Logger) (int64, error) {
 	return total, nil
 }
 
+func (s *StoreMeasurer) CommittedSize(logger lager.Logger) (int64, error) {
+	logger = logger.Session("measuring-committed-size")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	var totalCommittedSpace int64
+
+	imageDir := filepath.Join(s.storePath, "images")
+	files, err := ioutil.ReadDir(imageDir)
+	if err != nil {
+		return 0, errorspkg.Wrapf(err, "Cannot list images in %s", imageDir)
+	}
+
+	for _, file := range files {
+		if !file.IsDir() {
+			continue
+		}
+
+		imageQuota, err := readImageQuota(filepath.Join(imageDir, file.Name()))
+		if err != nil {
+			logger.Debug("WARNING-cannot-read-image-quota-ignoring", lager.Data{"imagePath": filepath.Join(imageDir, file.Name()), "error": err})
+			continue
+		}
+
+		totalCommittedSpace += imageQuota
+	}
+
+	return totalCommittedSpace, nil
+}
+
 func (s *StoreMeasurer) Cache(logger lager.Logger) (int64, error) {
 	logger = logger.Session("measuring-cache", lager.Data{"storePath": s.storePath})
 	logger.Debug("starting")
@@ -112,4 +143,19 @@ func duUsage(path string) (int64, error) {
 
 	usageString := strings.Split(stdoutBuffer.String(), "\t")[0]
 	return strconv.ParseInt(usageString, 10, 64)
+}
+
+func readImageQuota(imageDir string) (int64, error) {
+	quotaFilePath := filepath.Join(imageDir, "image_quota")
+	imageQuotaBytes, err := ioutil.ReadFile(quotaFilePath)
+	if err != nil {
+		return 0, err
+	}
+
+	imageQuota, err := strconv.ParseInt(string(imageQuotaBytes), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return imageQuota, nil
 }

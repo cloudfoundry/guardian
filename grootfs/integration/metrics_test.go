@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -23,6 +24,7 @@ var _ = Describe("Metrics", func() {
 		fakeMetron       *testhelpers.FakeMetron
 		fakeMetronClosed chan struct{}
 		spec             groot.CreateSpec
+		randomImageID    string
 	)
 
 	BeforeEach(func() {
@@ -38,6 +40,7 @@ var _ = Describe("Metrics", func() {
 			close(fakeMetronClosed)
 		}()
 
+		randomImageID = testhelpers.NewRandomID()
 		spec = groot.CreateSpec{
 			ID:        "my-id",
 			BaseImage: "docker:///cfgarden/empty:v0.1.0",
@@ -131,6 +134,7 @@ var _ = Describe("Metrics", func() {
 
 		Describe("--with-clean", func() {
 			BeforeEach(func() {
+				spec.DiskLimit = 10000000000
 				_, err := Runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 
@@ -139,7 +143,7 @@ var _ = Describe("Metrics", func() {
 			})
 
 			It("emits the percentage of disk used by groot cache", func() {
-				spec.ID = "new-id"
+				spec.ID = randomImageID
 				_, err := Runner.
 					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
 					WithClean().Create(spec)
@@ -154,6 +158,26 @@ var _ = Describe("Metrics", func() {
 				Expect(*metrics[0].Name).To(Equal("DiskCachePercentage"))
 				Expect(*metrics[0].Unit).To(Equal("percentage"))
 				Expect(*metrics[0].Value).To(BeNumerically("~", 20, 1))
+			})
+
+			It("emits the percentage of disk committed to the groot cache", func() {
+				integration.SkipIfNotXFS(Driver)
+
+				spec.ID = randomImageID
+				_, err := Runner.
+					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+					WithClean().Create(spec)
+				Expect(err).NotTo(HaveOccurred())
+
+				var metrics []events.ValueMetric
+				Eventually(func() []events.ValueMetric {
+					metrics = fakeMetron.ValueMetricsFor("DiskCommittedPercentage")
+					return metrics
+				}).Should(HaveLen(1))
+
+				Expect(*metrics[0].Name).To(Equal("DiskCommittedPercentage"))
+				Expect(*metrics[0].Unit).To(Equal("percentage"))
+				Expect(*metrics[0].Value).To(BeNumerically("~", 940, 1))
 			})
 		})
 
@@ -368,6 +392,7 @@ var _ = Describe("Metrics", func() {
 
 	Describe("Clean", func() {
 		BeforeEach(func() {
+			spec.DiskLimit = 10000000000
 			_, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -390,6 +415,25 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Name).To(Equal("DiskCachePercentage"))
 			Expect(*metrics[0].Unit).To(Equal("percentage"))
 			Expect(*metrics[0].Value).To(BeNumerically("~", 20, 1))
+		})
+
+		It("emits the percentage of disk committed to groot images", func() {
+			integration.SkipIfNotXFS(Driver)
+
+			_, err := Runner.
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+				Clean(0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("DiskCommittedPercentage")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("DiskCommittedPercentage"))
+			Expect(*metrics[0].Unit).To(Equal("percentage"))
+			Expect(*metrics[0].Value).To(BeNumerically("~", 940, 1))
 		})
 
 		It("emits the total clean time", func() {

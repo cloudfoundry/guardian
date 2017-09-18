@@ -35,7 +35,7 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 	logger.Info("starting")
 
 	defer c.metricsEmitter.TryEmitDurationFrom(logger, MetricImageCleanTime, time.Now())
-	defer c.emitDiskCachePercentageMetric(logger)
+	defer c.emitMetrics(logger)
 	defer logger.Info("ending")
 
 	if threshold > 0 {
@@ -67,13 +67,7 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 	return false, c.garbageCollector.Collect(logger)
 }
 
-func (c *cleaner) emitDiskCachePercentageMetric(logger lager.Logger) {
-	cacheSize, err := c.storeMeasurer.Cache(logger)
-	if err != nil {
-		logger.Error("measuring-cache-size-failed", err)
-		return
-	}
-
+func (c *cleaner) emitMetrics(logger lager.Logger) {
 	storeSize, err := c.storeMeasurer.Size(logger)
 	if err != nil {
 		logger.Error("measuring-store-size-failed", err)
@@ -81,7 +75,35 @@ func (c *cleaner) emitDiskCachePercentageMetric(logger lager.Logger) {
 	}
 
 	if storeSize != 0 {
-		cachePercentage := float64(cacheSize) / float64(storeSize) * 100.0
-		c.metricsEmitter.TryEmitUsage(logger, MetricDiskCachePercentage, int64(cachePercentage), "percentage")
+		c.emitDiskCachePercentageMetric(logger, storeSize)
+		c.emitDiskCommittedPercentageMetric(logger, storeSize)
 	}
+
+	return
+}
+
+func (c *cleaner) emitDiskCachePercentageMetric(logger lager.Logger, storeSize int64) {
+	cacheSize, err := c.storeMeasurer.Cache(logger)
+	if err != nil {
+		logger.Error("measuring-cache-size-failed", err)
+		return
+	}
+
+	percentage := float64(cacheSize) / float64(storeSize) * 100.0
+	c.metricsEmitter.TryEmitUsage(logger, MetricDiskCachePercentage, int64(percentage), "percentage")
+
+	return
+}
+
+func (c *cleaner) emitDiskCommittedPercentageMetric(logger lager.Logger, storeSize int64) {
+	committedSize, err := c.storeMeasurer.CommittedSize(logger)
+	if err != nil {
+		logger.Error("measuring-store-size-failed", err)
+		return
+	}
+
+	percentage := float64(committedSize) / float64(storeSize) * 100.0
+	c.metricsEmitter.TryEmitUsage(logger, MetricDiskCommittedPercentage, int64(percentage), "percentage")
+
+	return
 }

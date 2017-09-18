@@ -9,7 +9,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/storefakes"
-	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -20,7 +19,7 @@ var _ = Describe("Measurer", func() {
 	var (
 		storePath     string
 		storeMeasurer *store.StoreMeasurer
-		logger        lager.Logger
+		logger        *lagertest.TestLogger
 		volumeDriver  *storefakes.FakeVolumeDriver
 	)
 
@@ -84,6 +83,71 @@ var _ = Describe("Measurer", func() {
 			truncatedFileSize := 1024 * 1024 * 1024
 			fudgeFactor := truncatedFileSize / 100
 			Expect(size).To(BeNumerically("~", truncatedFileSize, fudgeFactor))
+		})
+	})
+
+	Describe("CommittedSize", func() {
+		var (
+			image2Path string
+		)
+
+		BeforeEach(func() {
+			image1Path := filepath.Join(storePath, store.ImageDirName, "my-image-1")
+			Expect(os.MkdirAll(image1Path, 0744)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(image1Path, "image_quota"), []byte("1024"), 0777)).To(Succeed())
+
+			image2Path = filepath.Join(storePath, store.ImageDirName, "my-image-2")
+			Expect(os.MkdirAll(image2Path, 0744)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(image2Path, "image_quota"), []byte("1024"), 0777)).To(Succeed())
+		})
+
+		It("returns the committed size of the store", func() {
+			committedSize, err := storeMeasurer.CommittedSize(logger)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(committedSize).To(BeNumerically("==", 2048))
+		})
+
+		Context("when the imageaDir cannot be read", func() {
+			BeforeEach(func() {
+				Expect(os.RemoveAll(filepath.Join(storePath, store.ImageDirName))).To(Succeed())
+			})
+
+			It("errors", func() {
+				_, err := storeMeasurer.CommittedSize(logger)
+				Expect(err).To(MatchError(ContainSubstring("Cannot list images")))
+
+			})
+		})
+
+		Context("when the image_quota cannot be parsed", func() {
+			BeforeEach(func() {
+				Expect(ioutil.WriteFile(filepath.Join(image2Path, "image_quota"), []byte("hello"), 0777)).To(Succeed())
+			})
+
+			It("ignore that image quota", func() {
+				committedSize, err := storeMeasurer.CommittedSize(logger)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(logger.LogMessages()).To(ContainElement(ContainSubstring("WARNING-cannot-read-image-quota-ignoring")))
+
+				Expect(committedSize).To(BeNumerically("==", 1024))
+			})
+		})
+
+		Context("when the image_quota file isn't there cannot be parsed", func() {
+			BeforeEach(func() {
+				Expect(os.RemoveAll(filepath.Join(image2Path, "image_quota"))).To(Succeed())
+			})
+
+			It("ignore that image quota", func() {
+				committedSize, err := storeMeasurer.CommittedSize(logger)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(logger.LogMessages()).To(ContainElement(ContainSubstring("WARNING-cannot-read-image-quota-ignoring")))
+
+				Expect(committedSize).To(BeNumerically("==", 1024))
+			})
 		})
 	})
 

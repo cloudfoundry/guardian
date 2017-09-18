@@ -178,7 +178,7 @@ var _ = Describe("Create", func() {
 			Expect(writeMegabytes(filepath.Join(sourceImagePath, "fatfile"), 5)).To(Succeed())
 		})
 
-		It("creates a image with supplied limit", func() {
+		It("creates an image with supplied limit", func() {
 			image, err := Runner.WithLogLevel(lager.DEBUG).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        randomImageID,
