@@ -13,7 +13,7 @@ type CGroupPath struct {
 
 func (r CGroupPath) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	if spec.Privileged {
-		return bndl.WithCGroupPath(spec.Hostname), nil
+		return bndl, nil
 	}
 
 	return bndl.WithCGroupPath(filepath.Join(r.Path, spec.Hostname)), nil

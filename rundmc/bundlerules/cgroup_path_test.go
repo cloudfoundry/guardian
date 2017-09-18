@@ -31,10 +31,8 @@ var _ = Describe("CGroup Path", func() {
 
 		newBndl, err := cgroupPathRule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			Privileged: true,
-			Hostname:   "banana",
 		}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())
-
-		Expect(newBndl.CGroupPath()).To(Equal("banana"))
+		Expect(newBndl.CGroupPath()).To(BeEmpty())
 	})
 })
