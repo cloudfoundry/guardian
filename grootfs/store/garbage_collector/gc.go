@@ -45,22 +45,15 @@ func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager
 	}
 }
 
-func (g *GarbageCollector) MarkUnused(logger lager.Logger, keepImages []string) error {
-	logger = logger.Session("garbage-collector-mark-unused")
+func (g *GarbageCollector) MarkUnused(logger lager.Logger, unusedVolumes []string) error {
+	logger = logger.Session("garbage-collector-mark-unused", lager.Data{"unusedVolumes": unusedVolumes})
 	logger.Info("starting")
 	defer logger.Info("ending")
-
-	unusedVolumes, err := g.unusedVolumes(logger, keepImages)
-	if err != nil {
-		return errorspkg.Wrap(err, "listing volumes")
-	}
-
-	logger.Debug("unused-volumes", lager.Data{"unusedVolumes": unusedVolumes})
 
 	var errorMessages []string
 	totalUnusedVolumes := len(unusedVolumes)
 
-	for volID, _ := range unusedVolumes {
+	for _, volID := range unusedVolumes {
 		volumePath, err := g.volumeDriver.VolumePath(logger, volID)
 		if err != nil {
 			errorMessages = append(errorMessages, errorspkg.Wrap(err, "fetching-volume-path").Error())
@@ -106,7 +99,7 @@ func (g *GarbageCollector) collectVolumes(logger lager.Logger) error {
 	}
 
 	var cleanupErr error
-	for volID, _ := range unusedVolumes {
+	for _, volID := range unusedVolumes {
 		if !strings.HasPrefix(volID, "gc.") {
 			continue
 		}
@@ -120,7 +113,7 @@ func (g *GarbageCollector) collectVolumes(logger lager.Logger) error {
 	return cleanupErr
 }
 
-func (g *GarbageCollector) gcVolumes(logger lager.Logger) (map[string]bool, error) {
+func (g *GarbageCollector) gcVolumes(logger lager.Logger) ([]string, error) {
 	logger = logger.Session("unused-volumes")
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -130,17 +123,17 @@ func (g *GarbageCollector) gcVolumes(logger lager.Logger) (map[string]bool, erro
 		return nil, errorspkg.Wrap(err, "failed to retrieve volume list")
 	}
 
-	collectables := map[string]bool{}
+	collectables := []string{}
 	for _, vol := range volumes {
 		if strings.HasPrefix(vol, "gc.") {
-			collectables[vol] = true
+			collectables = append(collectables, vol)
 		}
 	}
 
 	return collectables, nil
 }
 
-func (g *GarbageCollector) unusedVolumes(logger lager.Logger, keepImages []string) (map[string]bool, error) {
+func (g *GarbageCollector) UnusedVolumes(logger lager.Logger, keepImages []string) ([]string, error) {
 	logger = logger.Session("unused-volumes")
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -150,10 +143,10 @@ func (g *GarbageCollector) unusedVolumes(logger lager.Logger, keepImages []strin
 		return nil, errorspkg.Wrap(err, "failed to retrieve volume list")
 	}
 
-	orphanedVolumes := make(map[string]bool)
+	orphanedVolumes := make(map[string]struct{})
 	for _, vol := range volumes {
 		if !strings.HasPrefix(vol, "gc.") {
-			orphanedVolumes[vol] = true
+			orphanedVolumes[vol] = struct{}{}
 		}
 	}
 
@@ -176,11 +169,15 @@ func (g *GarbageCollector) unusedVolumes(logger lager.Logger, keepImages []strin
 		}
 	}
 
-	return orphanedVolumes, nil
+	orphanedVolumeIDs := []string{}
+	for id := range orphanedVolumes {
+		orphanedVolumeIDs = append(orphanedVolumeIDs, id)
+	}
+	return orphanedVolumeIDs, nil
 }
 
-func (g *GarbageCollector) removeDependencies(volumesList map[string]bool, refId string) error {
-	usedVolumes, err := g.dependencyManager.Dependencies(refId)
+func (g *GarbageCollector) removeDependencies(volumesList map[string]struct{}, refID string) error {
+	usedVolumes, err := g.dependencyManager.Dependencies(refID)
 	if err != nil {
 		return err
 	}

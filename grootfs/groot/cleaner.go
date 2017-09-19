@@ -34,8 +34,17 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 	logger = logger.Session("groot-cleaning")
 	logger.Info("starting")
 
+	storeSize, err := c.storeMeasurer.Size(logger)
+	if err != nil {
+		logger.Error("measuring-store-size-failed", err)
+	}
+
+	if storeSize != 0 {
+		defer c.emitDiskCachePercentageMetric(logger, storeSize)
+		defer c.emitDiskCommittedPercentageMetric(logger, storeSize)
+	}
+
 	defer c.metricsEmitter.TryEmitDurationFrom(logger, MetricImageCleanTime, time.Now())
-	defer c.emitMetrics(logger)
 	defer logger.Info("ending")
 
 	if threshold > 0 {
@@ -56,7 +65,16 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 		return false, errorspkg.Wrap(err, "garbage collector acquiring lock")
 	}
 
-	if err := c.garbageCollector.MarkUnused(logger, keepImages); err != nil {
+	unusedVolumes, err := c.garbageCollector.UnusedVolumes(logger, keepImages)
+	if err != nil {
+		logger.Error("marking-unused-failed", err)
+	}
+
+	if storeSize != 0 {
+		c.emitDiskPurgeableCachePercentageMetric(logger, unusedVolumes, storeSize)
+	}
+
+	if err := c.garbageCollector.MarkUnused(logger, unusedVolumes); err != nil {
 		logger.Error("marking-unused-failed", err)
 	}
 
@@ -65,21 +83,6 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 	}
 
 	return false, c.garbageCollector.Collect(logger)
-}
-
-func (c *cleaner) emitMetrics(logger lager.Logger) {
-	storeSize, err := c.storeMeasurer.Size(logger)
-	if err != nil {
-		logger.Error("measuring-store-size-failed", err)
-		return
-	}
-
-	if storeSize != 0 {
-		c.emitDiskCachePercentageMetric(logger, storeSize)
-		c.emitDiskCommittedPercentageMetric(logger, storeSize)
-	}
-
-	return
 }
 
 func (c *cleaner) emitDiskCachePercentageMetric(logger lager.Logger, storeSize int64) {
@@ -106,4 +109,21 @@ func (c *cleaner) emitDiskCommittedPercentageMetric(logger lager.Logger, storeSi
 	c.metricsEmitter.TryEmitUsage(logger, MetricDiskCommittedPercentage, int64(percentage), "percentage")
 
 	return
+}
+
+func (c *cleaner) emitDiskPurgeableCachePercentageMetric(logger lager.Logger, unusedVolumes []string, storeSize int64) {
+	storeSize, err := c.storeMeasurer.Size(logger)
+	if err != nil {
+		return
+	}
+
+	purgeableSize, err := c.storeMeasurer.PurgeableCache(logger, unusedVolumes)
+	if err != nil {
+		return
+	}
+
+	if storeSize != 0 {
+		purgeablePercentage := float64(purgeableSize) / float64(storeSize) * 100.0
+		c.metricsEmitter.TryEmitUsage(logger, MetricDiskPurgeableCachePercentage, int64(purgeablePercentage), "percentage")
+	}
 }

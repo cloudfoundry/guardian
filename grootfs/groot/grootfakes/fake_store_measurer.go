@@ -61,6 +61,20 @@ type FakeStoreMeasurer struct {
 		result1 int64
 		result2 error
 	}
+	PurgeableCacheStub        func(logger lager.Logger, volumes []string) (int64, error)
+	purgeableCacheMutex       sync.RWMutex
+	purgeableCacheArgsForCall []struct {
+		logger  lager.Logger
+		volumes []string
+	}
+	purgeableCacheReturns struct {
+		result1 int64
+		result2 error
+	}
+	purgeableCacheReturnsOnCall map[int]struct {
+		result1 int64
+		result2 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -269,6 +283,63 @@ func (fake *FakeStoreMeasurer) CommittedSizeReturnsOnCall(i int, result1 int64, 
 	}{result1, result2}
 }
 
+func (fake *FakeStoreMeasurer) PurgeableCache(logger lager.Logger, volumes []string) (int64, error) {
+	var volumesCopy []string
+	if volumes != nil {
+		volumesCopy = make([]string, len(volumes))
+		copy(volumesCopy, volumes)
+	}
+	fake.purgeableCacheMutex.Lock()
+	ret, specificReturn := fake.purgeableCacheReturnsOnCall[len(fake.purgeableCacheArgsForCall)]
+	fake.purgeableCacheArgsForCall = append(fake.purgeableCacheArgsForCall, struct {
+		logger  lager.Logger
+		volumes []string
+	}{logger, volumesCopy})
+	fake.recordInvocation("PurgeableCache", []interface{}{logger, volumesCopy})
+	fake.purgeableCacheMutex.Unlock()
+	if fake.PurgeableCacheStub != nil {
+		return fake.PurgeableCacheStub(logger, volumes)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.purgeableCacheReturns.result1, fake.purgeableCacheReturns.result2
+}
+
+func (fake *FakeStoreMeasurer) PurgeableCacheCallCount() int {
+	fake.purgeableCacheMutex.RLock()
+	defer fake.purgeableCacheMutex.RUnlock()
+	return len(fake.purgeableCacheArgsForCall)
+}
+
+func (fake *FakeStoreMeasurer) PurgeableCacheArgsForCall(i int) (lager.Logger, []string) {
+	fake.purgeableCacheMutex.RLock()
+	defer fake.purgeableCacheMutex.RUnlock()
+	return fake.purgeableCacheArgsForCall[i].logger, fake.purgeableCacheArgsForCall[i].volumes
+}
+
+func (fake *FakeStoreMeasurer) PurgeableCacheReturns(result1 int64, result2 error) {
+	fake.PurgeableCacheStub = nil
+	fake.purgeableCacheReturns = struct {
+		result1 int64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeStoreMeasurer) PurgeableCacheReturnsOnCall(i int, result1 int64, result2 error) {
+	fake.PurgeableCacheStub = nil
+	if fake.purgeableCacheReturnsOnCall == nil {
+		fake.purgeableCacheReturnsOnCall = make(map[int]struct {
+			result1 int64
+			result2 error
+		})
+	}
+	fake.purgeableCacheReturnsOnCall[i] = struct {
+		result1 int64
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeStoreMeasurer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -280,6 +351,8 @@ func (fake *FakeStoreMeasurer) Invocations() map[string][][]interface{} {
 	defer fake.sizeMutex.RUnlock()
 	fake.committedSizeMutex.RLock()
 	defer fake.committedSizeMutex.RUnlock()
+	fake.purgeableCacheMutex.RLock()
+	defer fake.purgeableCacheMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

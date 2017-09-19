@@ -92,8 +92,8 @@ var _ = Describe("Cleaner", func() {
 					_, err := cleaner.Clean(logger, 0, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(2))
-					_, name, usage, units := fakeMetricsEmitter.TryEmitUsageArgsForCall(0)
+					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(3))
+					_, name, usage, units := fakeMetricsEmitter.TryEmitUsageArgsForCall(2)
 					Expect(name).To(Equal(groot.MetricDiskCachePercentage))
 					Expect(usage).To(Equal(int64(10)))
 					Expect(units).To(Equal("percentage"))
@@ -107,7 +107,7 @@ var _ = Describe("Cleaner", func() {
 					It("should not emit a disk percentage metric", func() {
 						_, err := cleaner.Clean(logger, 0, []string{})
 						Expect(err).NotTo(HaveOccurred())
-						Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(1))
+						Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(2))
 					})
 				})
 			})
@@ -122,7 +122,7 @@ var _ = Describe("Cleaner", func() {
 					_, err := cleaner.Clean(logger, 0, []string{})
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(2))
+					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(3))
 					_, name, usage, units := fakeMetricsEmitter.TryEmitUsageArgsForCall(1)
 					Expect(name).To(Equal(groot.MetricDiskCommittedPercentage))
 					Expect(usage).To(Equal(int64(10)))
@@ -137,7 +137,37 @@ var _ = Describe("Cleaner", func() {
 					It("should not emit a disk percentage metric", func() {
 						_, err := cleaner.Clean(logger, 0, []string{})
 						Expect(err).NotTo(HaveOccurred())
-						Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(1))
+						Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(2))
+					})
+				})
+			})
+
+			Context("Purgable cache metrics", func() {
+				BeforeEach(func() {
+					fakeStoreMeasurer.PurgeableCacheReturns(100, nil)
+					fakeStoreMeasurer.SizeReturns(1000, nil)
+				})
+
+				It("emits metrics for percentage of disk committed by groot cache", func() {
+					_, err := cleaner.Clean(logger, 0, []string{})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(3))
+					_, name, usage, units := fakeMetricsEmitter.TryEmitUsageArgsForCall(0)
+					Expect(name).To(Equal(groot.MetricDiskPurgeableCachePercentage))
+					Expect(usage).To(Equal(int64(10)))
+					Expect(units).To(Equal("percentage"))
+				})
+
+				Context("when fetching the purgable cache size errors", func() {
+					BeforeEach(func() {
+						fakeStoreMeasurer.PurgeableCacheReturns(0, errors.New("boom"))
+					})
+
+					It("should not emit a disk percentage metric", func() {
+						_, err := cleaner.Clean(logger, 0, []string{})
+						Expect(err).NotTo(HaveOccurred())
+						Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(2))
 					})
 				})
 			})

@@ -97,13 +97,11 @@ func (s *StoreMeasurer) Cache(logger lager.Logger) (int64, error) {
 	var cacheSize int64
 
 	volumes, _ := s.volumeDriver.Volumes(logger)
-	for _, volume := range volumes {
-		volumeSize, err := s.volumeDriver.VolumeSize(logger, volume)
-		if err != nil {
-			return 0, err
-		}
-		cacheSize += volumeSize
+	volumesSize, err := s.calculateTotalVolumesSize(logger, volumes)
+	if err != nil {
+		return 0, err
 	}
+	cacheSize += volumesSize
 
 	for _, subdirectory := range []string{MetaDirName, TempDirName} {
 		subdirSize, err := duUsage(filepath.Join(s.storePath, subdirectory))
@@ -115,6 +113,28 @@ func (s *StoreMeasurer) Cache(logger lager.Logger) (int64, error) {
 
 	logger.Debug("cache-usage", lager.Data{"bytes": cacheSize})
 	return cacheSize, nil
+}
+
+func (s *StoreMeasurer) PurgeableCache(logger lager.Logger, unusedVolumes []string) (int64, error) {
+	volumesSize, err := s.calculateTotalVolumesSize(logger, unusedVolumes)
+	if err != nil {
+		return 0, err
+	}
+
+	return volumesSize, nil
+}
+
+func (s *StoreMeasurer) calculateTotalVolumesSize(logger lager.Logger, volumes []string) (int64, error) {
+	var size int64
+	for _, volume := range volumes {
+		volumeSize, err := s.volumeDriver.VolumeSize(logger, volume)
+		if err != nil {
+			return 0, err
+		}
+		size += volumeSize
+	}
+
+	return size, nil
 }
 
 func (s *StoreMeasurer) pathStats(path string) (totalBytes, UsedBytes int64, err error) {

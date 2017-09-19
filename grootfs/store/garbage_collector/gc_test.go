@@ -33,7 +33,7 @@ var _ = Describe("Gc", func() {
 		logger = lagertest.NewTestLogger("garbage_collector")
 	})
 
-	Describe("MarkUnused", func() {
+	Describe("UnusedVolumes", func() {
 		BeforeEach(func() {
 			fakeVolumeDriver.VolumePathStub = func(_ lager.Logger, id string) (string, error) {
 				return filepath.Join("/store/volumes", id), nil
@@ -60,8 +60,100 @@ var _ = Describe("Gc", func() {
 			fakeImageCloner.ImageIDsReturns([]string{"idA", "idB"}, nil)
 		})
 
-		It("moves all unused volumes to the gc folder", func() {
-			Expect(garbageCollector.MarkUnused(logger, []string{""})).To(Succeed())
+		It("retrieves the names of unused volumes", func() {
+			unusedVolumes, err := garbageCollector.UnusedVolumes(logger, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(unusedVolumes).To(ConsistOf("sha256:vol-d", "sha256:vol-e"))
+		})
+
+		Context("when a list of images to keep is provided", func() {
+			It("doesn't mark them for collection", func() {
+				unusedVolumes, err := garbageCollector.UnusedVolumes(logger, []string{"docker:///ubuntu"})
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(unusedVolumes).To(ConsistOf("sha256:vol-e"))
+			})
+
+			Context("when the image to keep is from a private registry", func() {
+				It("doesn't mark them for collection", func() {
+					unusedVolumes, err := garbageCollector.UnusedVolumes(logger, []string{"docker://private/ubuntu"})
+					Expect(err).NotTo(HaveOccurred())
+
+					Expect(unusedVolumes).To(ConsistOf("sha256:vol-d"))
+				})
+			})
+		})
+
+		Context("when retrieving images fails", func() {
+			BeforeEach(func() {
+				fakeImageCloner.ImageIDsReturns(nil, errors.New("failed to retrieve images"))
+			})
+
+			It("returns an error", func() {
+				_, err := garbageCollector.UnusedVolumes(logger, []string{})
+				Expect(err).To(MatchError(ContainSubstring("failed to retrieve images")))
+			})
+		})
+
+		Context("when getting the dependencies of a image fails", func() {
+			BeforeEach(func() {
+				fakeDependencyManager.DependenciesReturns(nil, errors.New("failed to access deps"))
+			})
+
+			It("returns an error", func() {
+				_, err := garbageCollector.UnusedVolumes(logger, []string{})
+				Expect(err).To(MatchError(ContainSubstring("failed to access deps")))
+			})
+		})
+
+		Context("when retrieving volume list fails", func() {
+			BeforeEach(func() {
+				fakeVolumeDriver.VolumesReturns(nil, errors.New("failed to retrieve volume list"))
+			})
+
+			It("returns an error", func() {
+				_, err := garbageCollector.UnusedVolumes(logger, []string{})
+				Expect(err).To(MatchError(ContainSubstring("failed to retrieve volume list")))
+			})
+		})
+	})
+
+	Describe("MarkUnused", func() {
+		var (
+			unusedVolumes []string
+		)
+
+		BeforeEach(func() {
+			fakeVolumeDriver.VolumePathStub = func(_ lager.Logger, id string) (string, error) {
+				return filepath.Join("/store/volumes", id), nil
+			}
+
+			fakeVolumeDriver.VolumesReturns([]string{
+				"sha256:vol-a",
+				"sha256:vol-b",
+				"sha256:vol-c",
+				"sha256:vol-d",
+				"sha256:vol-e",
+				"gc.sha256:vol-f",
+			}, nil)
+
+			fakeDependencyManager.DependenciesStub = func(id string) ([]string, error) {
+				return map[string][]string{
+					"image:idA":                         []string{"sha256:vol-a", "sha256:vol-b"},
+					"image:idB":                         []string{"sha256:vol-a", "sha256:vol-c"},
+					"baseimage:docker:///ubuntu":        []string{"sha256:vol-d"},
+					"baseimage:docker://private/ubuntu": []string{"sha256:vol-e"},
+				}[id], nil
+			}
+
+			fakeImageCloner.ImageIDsReturns([]string{"idA", "idB"}, nil)
+
+			unusedVolumes = []string{"sha256:vol-d", "sha256:vol-e"}
+		})
+
+		It("moves unused volumes to the gc folder", func() {
+			Expect(garbageCollector.MarkUnused(logger, unusedVolumes)).To(Succeed())
 			Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(2))
 			_, from1, to1 := fakeVolumeDriver.MoveVolumeArgsForCall(0)
 			Expect(from1).To(MatchRegexp("/store/volumes/sha256:vol-[ed]"))
@@ -76,32 +168,12 @@ var _ = Describe("Gc", func() {
 		})
 
 		It("doesn't remark volumes for gc", func() {
-			Expect(garbageCollector.MarkUnused(logger, []string{""})).To(Succeed())
+			Expect(garbageCollector.MarkUnused(logger, unusedVolumes)).To(Succeed())
 
 			for i := 0; i < fakeVolumeDriver.MoveVolumeCallCount(); i++ {
 				_, from, _ := fakeVolumeDriver.MoveVolumeArgsForCall(i)
 				Expect(from).NotTo(Equal("/store/volumes/gc.sha256:vol-f"))
 			}
-		})
-
-		Context("when a list of images to keep is provided", func() {
-			It("doesn't mark them for collection", func() {
-				Expect(garbageCollector.MarkUnused(logger, []string{"docker:///ubuntu"})).To(Succeed())
-
-				Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(1))
-				_, from, _ := fakeVolumeDriver.MoveVolumeArgsForCall(0)
-				Expect(from).To(Equal("/store/volumes/sha256:vol-e"))
-			})
-
-			Context("when the image to keep is from a private registry", func() {
-				It("doesn't mark them for collection", func() {
-					Expect(garbageCollector.MarkUnused(logger, []string{"docker://private/ubuntu"})).To(Succeed())
-
-					Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(1))
-					_, from, _ := fakeVolumeDriver.MoveVolumeArgsForCall(0)
-					Expect(from).To(Equal("/store/volumes/sha256:vol-d"))
-				})
-			})
 		})
 
 		Context("when checking the volume path fails", func() {
@@ -116,22 +188,12 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.MarkUnused(logger, []string{})).To(MatchError(ContainSubstring("1/2 volumes failed to be marked as unused")))
+				Expect(garbageCollector.MarkUnused(logger, unusedVolumes)).To(MatchError(ContainSubstring("1/2 volumes failed to be marked as unused")))
 			})
 
 			It("still tries to move the other unused volumes", func() {
-				Expect(garbageCollector.MarkUnused(logger, []string{})).To(HaveOccurred())
+				Expect(garbageCollector.MarkUnused(logger, unusedVolumes)).To(HaveOccurred())
 				Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(1))
-			})
-		})
-
-		Context("when retrieving volume list fails", func() {
-			BeforeEach(func() {
-				fakeVolumeDriver.VolumesReturns(nil, errors.New("failed to retrieve volume list"))
-			})
-
-			It("returns an error", func() {
-				Expect(garbageCollector.MarkUnused(logger, []string{})).To(MatchError(ContainSubstring("failed to retrieve volume list")))
 			})
 		})
 
@@ -141,33 +203,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(garbageCollector.MarkUnused(logger, []string{})).To(MatchError(ContainSubstring("2/2 volumes failed to be marked as unused")))
-			})
-		})
-
-		Context("when retrieving images fails", func() {
-			BeforeEach(func() {
-				fakeImageCloner.ImageIDsReturns(nil, errors.New("failed to retrieve images"))
-			})
-
-			It("returns an error", func() {
-				Expect(garbageCollector.MarkUnused(logger, []string{})).To(MatchError(ContainSubstring("failed to retrieve images")))
-			})
-		})
-
-		Context("when getting the dependencies of a image fails", func() {
-			BeforeEach(func() {
-				fakeDependencyManager.DependenciesReturns(nil, errors.New("failed to access deps"))
-			})
-
-			It("returns an error", func() {
-				Expect(garbageCollector.MarkUnused(logger, []string{})).To(MatchError(
-					ContainSubstring("failed to access deps"),
-				))
-			})
-
-			It("does not move any volumes", func() {
-				Expect(fakeVolumeDriver.MoveVolumeCallCount()).To(Equal(0))
+				Expect(garbageCollector.MarkUnused(logger, unusedVolumes)).To(MatchError(ContainSubstring("2/2 volumes failed to be marked as unused")))
 			})
 		})
 	})

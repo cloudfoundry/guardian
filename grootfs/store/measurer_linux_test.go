@@ -192,6 +192,23 @@ var _ = Describe("Measurer", func() {
 			})
 		})
 	})
+
+	Describe("PurgeableCache", func() {
+		var (
+			unusedVolumes []string = []string{"sha256:fake1", "sha256:fake2"}
+		)
+
+		BeforeEach(func() {
+			volumeDriver.VolumeSizeReturns(1024, nil)
+		})
+
+		It("measures the size of the unused layers", func() {
+			purgeableCacheSize, err := storeMeasurer.PurgeableCache(logger, unusedVolumes)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(purgeableCacheSize).To(BeNumerically("==", 2048))
+		})
+	})
 })
 
 func writeFile(path string, size int64) error {

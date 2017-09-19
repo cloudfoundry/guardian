@@ -436,6 +436,23 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).To(BeNumerically("~", 940, 1))
 		})
 
+		It("emits the space taken by layers that can be removed", func() {
+			_, err := Runner.
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+				Clean(0, []string{})
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("DiskPurgeableCachePercentage")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("DiskPurgeableCachePercentage"))
+			Expect(*metrics[0].Unit).To(Equal("percentage"))
+			Expect(*metrics[0].Value).To(BeZero())
+		})
+
 		It("emits the total clean time", func() {
 			_, err := Runner.
 				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
