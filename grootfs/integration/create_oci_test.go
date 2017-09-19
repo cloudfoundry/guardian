@@ -3,7 +3,6 @@ package integration_test
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,7 +12,7 @@ import (
 	"strconv"
 	"syscall"
 
-	digestpkg "github.com/opencontainers/go-digest"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -24,7 +23,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	specsv1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var _ = Describe("Create with OCI images", func() {
@@ -57,55 +55,29 @@ var _ = Describe("Create with OCI images", func() {
 	})
 
 	It("creates a root filesystem based on the image provided", func() {
-		image, err := runner.Create(groot.CreateSpec{
+		containerSpec, err := runner.Create(groot.CreateSpec{
 			BaseImage: baseImageURL,
 			ID:        randomImageID,
 			Mount:     mountByDefault(),
 		})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(Runner.EnsureMounted(image)).To(Succeed())
+		Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-		Expect(path.Join(image.Rootfs, "file-1")).To(BeARegularFile())
-		Expect(path.Join(image.Rootfs, "file-2")).To(BeARegularFile())
-		Expect(path.Join(image.Rootfs, "file-3")).To(BeARegularFile())
-	})
-
-	It("saves the image.json to the image folder", func() {
-		image, err := runner.Create(groot.CreateSpec{
-			BaseImage: baseImageURL,
-			ID:        randomImageID,
-			Mount:     mountByDefault(),
-		})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(Runner.EnsureMounted(image)).To(Succeed())
-
-		imageJsonPath := path.Join(image.Path, "image.json")
-		Expect(imageJsonPath).To(BeARegularFile())
-
-		imageJsonReader, err := os.Open(imageJsonPath)
-		Expect(err).ToNot(HaveOccurred())
-		var imageJson specsv1.Image
-		Expect(json.NewDecoder(imageJsonReader).Decode(&imageJson)).To(Succeed())
-
-		Expect(imageJson.Created.String()).To(Equal("2017-08-02 10:38:44.277669063 +0000 UTC"))
-		Expect(imageJson.RootFS.DiffIDs).To(Equal([]digestpkg.Digest{
-			digestpkg.NewDigestFromHex("sha256", "1a1021d32ed45a8fbd363739882c98f435dd34a050f8064943a79b9808c0da23"),
-			digestpkg.NewDigestFromHex("sha256", "11cbb5fdb554a60aef2f2f9bb8443a171a8dadb7ed1d85e4902c7dc08ce7f15e"),
-			digestpkg.NewDigestFromHex("sha256", "861df241050979359154ee2eed2f1213704eae7b05695e8f2897067e5d152d7e"),
-			digestpkg.NewDigestFromHex("sha256", "9efe56e4c4179f822c558ebc571f1cb27e93656c6b62c7979ffc066d2e3a17e2"),
-		}))
+		Expect(path.Join(containerSpec.Root.Path, "file-1")).To(BeARegularFile())
+		Expect(path.Join(containerSpec.Root.Path, "file-2")).To(BeARegularFile())
+		Expect(path.Join(containerSpec.Root.Path, "file-3")).To(BeARegularFile())
 	})
 
 	It("gives any user permission to be inside the container", func() {
-		image, err := runner.Create(groot.CreateSpec{
+		containerSpec, err := runner.Create(groot.CreateSpec{
 			BaseImage: baseImageURL,
 			ID:        randomImageID,
 			Mount:     mountByDefault(),
 		})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(Runner.EnsureMounted(image)).To(Succeed())
+		Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-		cmd := exec.Command(NamespacerBin, image.Rootfs, strconv.Itoa(GrootUID+100), "/bin/ls", "/")
+		cmd := exec.Command(NamespacerBin, containerSpec.Root.Path, strconv.Itoa(GrootUID+100), "/bin/ls", "/")
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			Cloneflags: syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS,
 		}
@@ -115,26 +87,15 @@ var _ = Describe("Create with OCI images", func() {
 	})
 
 	It("outputs a json with the correct `rootfs` key", func() {
-		image, err := runner.Create(groot.CreateSpec{
+		containerSpec, err := runner.Create(groot.CreateSpec{
 			BaseImage: baseImageURL,
 			ID:        randomImageID,
 			Mount:     mountByDefault(),
 		})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(Runner.EnsureMounted(image)).To(Succeed())
+		Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-		Expect(image.Rootfs).To(Equal(filepath.Join(StorePath, store.ImageDirName, randomImageID, "rootfs")))
-	})
-
-	It("outputs a json with the correct `config` key", func() {
-		image, err := runner.Create(groot.CreateSpec{
-			BaseImage: baseImageURL,
-			ID:        randomImageID,
-			Mount:     mountByDefault(),
-		})
-		Expect(err).NotTo(HaveOccurred())
-		Expect(Runner.EnsureMounted(image)).To(Succeed())
-		Expect(image.Image.RootFS.DiffIDs[0]).To(Equal(digestpkg.NewDigestFromHex("sha256", "1a1021d32ed45a8fbd363739882c98f435dd34a050f8064943a79b9808c0da23")))
+		Expect(containerSpec.Root.Path).To(Equal(filepath.Join(StorePath, store.ImageDirName, randomImageID, "rootfs")))
 	})
 
 	Context("when the image has cloudfoundry annotations", func() {
@@ -145,14 +106,14 @@ var _ = Describe("Create with OCI images", func() {
 			})
 
 			It("untars the layer in the specified folder", func() {
-				image, err := runner.Create(groot.CreateSpec{
+				containerSpec, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        randomImageID,
 					Mount:     true,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(path.Join(image.Rootfs, "home", "example")).To(BeARegularFile())
+				Expect(path.Join(containerSpec.Root.Path, "home", "example")).To(BeARegularFile())
 			})
 		})
 	})
@@ -163,7 +124,7 @@ var _ = Describe("Create with OCI images", func() {
 		})
 
 		It("lists the volumes as mounts in the returned spec", func() {
-			image, err := runner.Create(groot.CreateSpec{
+			containerSpec, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        randomImageID,
 				Mount:     mountByDefault(),
@@ -172,7 +133,7 @@ var _ = Describe("Create with OCI images", func() {
 
 			volumeHash := sha256.Sum256([]byte("/foo"))
 			mountSourceName := "vol-" + hex.EncodeToString(volumeHash[:32])
-			Expect(image.Mounts).To(ContainElement(groot.MountInfo{
+			Expect(containerSpec.Mounts).To(ContainElement(specs.Mount{
 				Destination: "/foo",
 				Source:      filepath.Join(StorePath, store.ImageDirName, randomImageID, mountSourceName),
 				Type:        "bind",
@@ -201,15 +162,15 @@ var _ = Describe("Create with OCI images", func() {
 		})
 
 		It("empties the folder contents but keeps the dir", func() {
-			image, err := runner.Create(groot.CreateSpec{
+			containerSpec, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        randomImageID,
 				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-			whiteoutedDir := path.Join(image.Rootfs, "var")
+			whiteoutedDir := path.Join(containerSpec.Root.Path, "var")
 			Expect(whiteoutedDir).To(BeADirectory())
 			contents, err := ioutil.ReadDir(whiteoutedDir)
 			Expect(err).NotTo(HaveOccurred())
@@ -219,15 +180,15 @@ var _ = Describe("Create with OCI images", func() {
 
 	Context("when the image has files with the setuid on", func() {
 		It("correctly applies the user bit", func() {
-			image, err := runner.Create(groot.CreateSpec{
+			containerSpec, err := runner.Create(groot.CreateSpec{
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/garden-busybox:latest", workDir),
 				ID:        randomImageID,
 				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-			setuidFilePath := path.Join(image.Rootfs, "bin", "busybox")
+			setuidFilePath := path.Join(containerSpec.Root.Path, "bin", "busybox")
 			stat, err := os.Stat(setuidFilePath)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -336,14 +297,14 @@ var _ = Describe("Create with OCI images", func() {
 			layerSnapshotPath := filepath.Join(StorePath, "volumes", "9242945d3c9c7cf5f127f9352fea38b1d3efe62ee76e25f70a3e6db63a14c233")
 			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
-			image, err := runner.Create(groot.CreateSpec{
+			containerSpec, err := runner.Create(groot.CreateSpec{
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/empty:v0.1.1", workDir),
 				ID:        testhelpers.NewRandomID(),
 				Mount:     mountByDefault(),
 			})
 			Expect(err).ToNot(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
-			Expect(path.Join(image.Rootfs, "injected-file")).To(BeARegularFile())
+			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
+			Expect(path.Join(containerSpec.Root.Path, "injected-file")).To(BeARegularFile())
 		})
 
 		Describe("when unpacking the image fails", func() {
@@ -378,20 +339,20 @@ var _ = Describe("Create with OCI images", func() {
 		})
 
 		It("maps the owners of the files", func() {
-			image, err := runner.SkipInitStore().Create(groot.CreateSpec{
+			containerSpec, err := runner.SkipInitStore().Create(groot.CreateSpec{
 				BaseImage: baseImageURL,
 				ID:        randomImageID,
 				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-			rootOwnedFile, err := os.Stat(path.Join(image.Rootfs, "/etc"))
+			rootOwnedFile, err := os.Stat(path.Join(containerSpec.Root.Path, "/etc"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-			user33OwnedFile, err := os.Stat(path.Join(image.Rootfs, "/var/www"))
+			user33OwnedFile, err := os.Stat(path.Join(containerSpec.Root.Path, "/var/www"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(user33OwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(99999 + 33)))
 			Expect(user33OwnedFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(99999 + 33)))
@@ -405,14 +366,14 @@ var _ = Describe("Create with OCI images", func() {
 
 		Context("when providing id mappings", func() {
 			It("creates those files", func() {
-				image, err := Runner.SkipInitStore().Create(groot.CreateSpec{
+				containerSpec, err := Runner.SkipInitStore().Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        randomImageID,
 					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
-				Expect(path.Join(image.Rootfs, "test", "hello")).To(BeARegularFile())
+				Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
+				Expect(path.Join(containerSpec.Root.Path, "test", "hello")).To(BeARegularFile())
 			})
 		})
 	})
@@ -424,29 +385,29 @@ var _ = Describe("Create with OCI images", func() {
 
 		Context("when providing id mappings", func() {
 			It("works", func() {
-				image, err := runner.Create(groot.CreateSpec{
+				containerSpec, err := runner.Create(groot.CreateSpec{
 					BaseImage: baseImageURL,
 					ID:        randomImageID,
 					Mount:     mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(Runner.EnsureMounted(image)).To(Succeed())
-				Expect(path.Join(image.Rootfs, "test", "hello")).To(BeARegularFile())
+				Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
+				Expect(path.Join(containerSpec.Root.Path, "test", "hello")).To(BeARegularFile())
 			})
 		})
 	})
 
 	Context("when --skip-layer-validation flag is passed", func() {
 		It("does not validate the checksums for oci image layers", func() {
-			image, err := runner.SkipLayerCheckSumValidation().Create(groot.CreateSpec{
+			containerSpec, err := runner.SkipLayerCheckSumValidation().Create(groot.CreateSpec{
 				BaseImage: fmt.Sprintf("oci:///%s/assets/oci-test-image/also-corrupted:latest", workDir),
 				ID:        randomImageID,
 				Mount:     mountByDefault(),
 			})
 
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
-			Expect(filepath.Join(image.Rootfs, "corrupted")).To(BeARegularFile())
+			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
+			Expect(filepath.Join(containerSpec.Root.Path, "corrupted")).To(BeARegularFile())
 		})
 	})
 })

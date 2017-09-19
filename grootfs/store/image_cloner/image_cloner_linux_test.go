@@ -3,7 +3,6 @@ package image_cloner_test
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -114,34 +113,6 @@ var _ = Describe("Image", func() {
 			Expect(spec.ImagePath).To(Equal(image.Path))
 		})
 
-		It("writes the image.json to the image", func() {
-			timestamp := time.Time{}.In(time.UTC)
-			baseImage := specsv1.Image{
-				Author:  "Groot",
-				Created: &timestamp,
-				Config: specsv1.ImageConfig{
-					User: "groot",
-				},
-			}
-
-			image, err := imageCloner.Create(logger, groot.ImageSpec{
-				ID:            "some-id",
-				BaseVolumeIDs: []string{"id-1", "id-2"},
-				BaseImage:     baseImage,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			imageJsonPath := filepath.Join(image.Path, "image.json")
-			Expect(imageJsonPath).To(BeAnExistingFile())
-
-			imageJsonFile, err := os.Open(imageJsonPath)
-			Expect(err).NotTo(HaveOccurred())
-
-			imageJsonContent := specsv1.Image{}
-			Expect(json.NewDecoder(imageJsonFile).Decode(&imageJsonContent)).To(Succeed())
-			Expect(imageJsonContent).To(Equal(baseImage))
-		})
-
 		Context("when mounting is skipped", func() {
 			It("returns a image with mount information", func() {
 				image, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig, Mount: false})
@@ -212,11 +183,6 @@ var _ = Describe("Image", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(rootfsPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(uid)))
 				Expect(rootfsPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(gid)))
-
-				imageJsonPath, err := os.Stat(filepath.Join(image.Path, "image.json"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(imageJsonPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(uid)))
-				Expect(imageJsonPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(gid)))
 			})
 
 			Context("when only owner UID is 0", func() {
@@ -240,11 +206,6 @@ var _ = Describe("Image", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(rootfsPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
 					Expect(rootfsPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(10000)))
-
-					imageJsonPath, err := os.Stat(filepath.Join(image.Path, "image.json"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(imageJsonPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
-					Expect(imageJsonPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(10000)))
 				})
 			})
 
@@ -269,11 +230,6 @@ var _ = Describe("Image", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(rootfsPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(50000)))
 					Expect(rootfsPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
-
-					imageJsonPath, err := os.Stat(filepath.Join(image.Path, "image.json"))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(imageJsonPath.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(50000)))
-					Expect(imageJsonPath.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
 				})
 			})
 
@@ -324,31 +280,6 @@ var _ = Describe("Image", func() {
 			It("returns an error", func() {
 				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig})
 				Expect(err).To(MatchError(ContainSubstring("failed to create image")))
-			})
-
-			It("removes the image", func() {
-				imageID := "some-id"
-				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: imageID, BaseImage: imageConfig})
-				Expect(err).To(HaveOccurred())
-				Expect(filepath.Join(imagesPath, imageID)).NotTo(BeADirectory())
-			})
-		})
-
-		Context("when writting the image.json fails", func() {
-			BeforeEach(func() {
-				imageclonerpkg.OpenFile = func(name string, flag int, perm os.FileMode) (*os.File, error) {
-					return nil, errors.New("permission denied: can't write stuff")
-				}
-			})
-
-			AfterEach(func() {
-				// needs to reassign the correct function after running the test
-				imageclonerpkg.OpenFile = os.OpenFile
-			})
-
-			It("returns an error", func() {
-				_, err := imageCloner.Create(logger, groot.ImageSpec{ID: "some-id", BaseImage: imageConfig})
-				Expect(err).To(MatchError(ContainSubstring("permission denied: can't write stuff")))
 			})
 
 			It("removes the image", func() {
@@ -459,22 +390,9 @@ var _ = Describe("Image", func() {
 	})
 
 	Describe("ImageIDs", func() {
-		createImage := func(name string, layers []string) {
-			imagePath := filepath.Join(imagesPath, name)
-			Expect(os.Mkdir(imagePath, 0777)).To(Succeed())
-			l := struct {
-				Layers []string `json:"layers"`
-			}{
-				Layers: layers,
-			}
-			imageJson, err := json.Marshal(l)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(ioutil.WriteFile(filepath.Join(imagePath, "image.json"), imageJson, 0644)).To(Succeed())
-		}
-
 		BeforeEach(func() {
-			createImage("image-a", []string{"sha-1", "sha-2"})
-			createImage("image-b", []string{"sha-1", "sha-3", "sha-4"})
+			Expect(os.Mkdir(filepath.Join(imagesPath, "image-a"), 0777)).To(Succeed())
+			Expect(os.Mkdir(filepath.Join(imagesPath, "image-b"), 0777)).To(Succeed())
 		})
 
 		It("returns a list with all known images", func() {

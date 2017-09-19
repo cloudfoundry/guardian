@@ -19,13 +19,14 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("Stats", func() {
 	var (
 		sourceImagePath string
 		baseImagePath   string
-		image           groot.ImageInfo
+		containerSpec   specs.Spec
 		imageID         string
 	)
 
@@ -72,7 +73,7 @@ var _ = Describe("Stats", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			image, err = Runner.Create(groot.CreateSpec{
+			containerSpec, err = Runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        imageID,
 				DiskLimit: diskLimit,
@@ -80,11 +81,11 @@ var _ = Describe("Stats", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			writeFileCmdLine := fmt.Sprintf("dd if=/dev/zero of=%s bs=1048576 count=4", filepath.Join(image.Rootfs, "hello"))
+			writeFileCmdLine := fmt.Sprintf("dd if=/dev/zero of=%s bs=1048576 count=4", filepath.Join(containerSpec.Root.Path, "hello"))
 
 			var cmd *exec.Cmd
-			if image.Mounts != nil {
-				cmd = unshareWithMount(writeFileCmdLine, image.Mounts[0])
+			if containerSpec.Mounts != nil {
+				cmd = unshareWithMount(writeFileCmdLine, containerSpec.Mounts[0])
 			} else {
 				cmd = exec.Command("sh", "-c", writeFileCmdLine)
 			}
@@ -125,7 +126,7 @@ var _ = Describe("Stats", func() {
 
 		Context("when the last parameter is the image path", func() {
 			It("returns the stats for given image path", func() {
-				stats, err := Runner.Stats(image.Path)
+				stats, err := Runner.Stats(filepath.Dir(containerSpec.Root.Path))
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(stats.DiskUsage.TotalBytesUsed).To(
@@ -189,7 +190,7 @@ var _ = Describe("Stats", func() {
 	})
 })
 
-func unshareWithMount(cmdLine string, mount groot.MountInfo) *exec.Cmd {
+func unshareWithMount(cmdLine string, mount specs.Mount) *exec.Cmd {
 	mountOptions := strings.Join(mount.Options, ",")
 	mountCmdLine := fmt.Sprintf("mount -t %s %s -o%s %s", mount.Type, mount.Source, mountOptions, mount.Destination)
 

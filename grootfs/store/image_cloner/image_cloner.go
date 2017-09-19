@@ -3,7 +3,6 @@ package image_cloner // import "code.cloudfoundry.org/grootfs/store/image_cloner
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path"
@@ -91,11 +90,6 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 		return groot.ImageInfo{}, errorspkg.Wrap(err, "making image path")
 	}
 
-	if err = b.writeBaseImageJSON(logger, imagePath, spec.BaseImage); err != nil {
-		logger.Error("writing-image-json-failed", err)
-		return groot.ImageInfo{}, errorspkg.Wrap(err, "creating image.json")
-	}
-
 	imageDriverSpec := ImageDriverSpec{
 		BaseVolumeIDs:      spec.BaseVolumeIDs,
 		Mount:              spec.Mount,
@@ -112,7 +106,6 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 
 	if err := b.setOwnership(spec,
 		imagePath,
-		filepath.Join(imagePath, "image.json"),
 		imageRootFSPath,
 	); err != nil {
 		logger.Error("setting-permission-failed", err, lager.Data{"imageDriverSpec": imageDriverSpec})
@@ -203,24 +196,6 @@ func (b *ImageCloner) Stats(logger lager.Logger, id string) (groot.VolumeStats, 
 }
 
 var OpenFile = os.OpenFile
-
-func (b *ImageCloner) writeBaseImageJSON(logger lager.Logger, imagePath string, baseImage specsv1.Image) error {
-	logger = logger.Session("writing-image-json")
-	logger.Debug("starting")
-	defer logger.Debug("ending")
-
-	imageJsonPath := filepath.Join(imagePath, "image.json")
-	imageJsonFile, err := OpenFile(imageJsonPath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666)
-	if err != nil {
-		return err
-	}
-
-	if err = json.NewEncoder(imageJsonFile).Encode(&baseImage); err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage specsv1.Image, mountJson groot.MountInfo, mount bool) (groot.ImageInfo, error) {
 	imageInfo := groot.ImageInfo{

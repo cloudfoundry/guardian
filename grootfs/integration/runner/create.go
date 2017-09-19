@@ -3,11 +3,11 @@ package runner
 import (
 	"encoding/json"
 	"errors"
-	"path/filepath"
 	"strconv"
 	"syscall"
 
 	"github.com/onsi/gomega/gexec"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/grootfs/groot"
 )
@@ -22,33 +22,32 @@ func (r Runner) StartCreate(spec groot.CreateSpec) (*gexec.Session, error) {
 	return r.StartSubcommand("create", args...)
 }
 
-func (r Runner) Create(spec groot.CreateSpec) (groot.ImageInfo, error) {
+func (r Runner) Create(spec groot.CreateSpec) (specs.Spec, error) {
 	if len(spec.UIDMappings) > 0 || len(spec.GIDMappings) > 0 {
-		return groot.ImageInfo{}, errors.New("Mappings cannot be applied to Create. Set them on init-store.")
+		return specs.Spec{}, errors.New("Mappings cannot be applied to Create. Set them on init-store.")
 	}
 
 	if !r.skipInitStore {
 		if err := r.initStoreAsRoot(); err != nil {
-			return groot.ImageInfo{}, err
+			return specs.Spec{}, err
 		}
 	}
 
 	args := r.makeCreateArgs(spec)
 	output, err := r.RunSubcommand("create", args...)
 	if err != nil {
-		return groot.ImageInfo{}, err
+		return specs.Spec{}, err
 	}
 
-	imageInfo := groot.ImageInfo{}
+	imageInfo := specs.Spec{}
 	_ = json.Unmarshal([]byte(output), &imageInfo)
-	imageInfo.Path = filepath.Dir(imageInfo.Rootfs)
 
 	return imageInfo, nil
 }
 
-func (r Runner) EnsureMounted(image groot.ImageInfo) error {
-	if len(image.Mounts) != 0 {
-		for _, mountPoint := range image.Mounts {
+func (r Runner) EnsureMounted(containerSpec specs.Spec) error {
+	if len(containerSpec.Mounts) != 0 {
+		for _, mountPoint := range containerSpec.Mounts {
 			return syscall.Mount(mountPoint.Source, mountPoint.Destination, mountPoint.Type, 0, mountPoint.Options[0])
 		}
 	}

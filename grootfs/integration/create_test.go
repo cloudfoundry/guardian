@@ -21,7 +21,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 const (
@@ -55,25 +55,25 @@ var _ = Describe("Create", func() {
 	It("keeps the ownership and permissions", func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
 
-		image, err := Runner.Create(groot.CreateSpec{
+		containerSpec, err := Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
 			ID:        randomImageID,
 			Mount:     mountByDefault(),
 		})
 		Expect(err).ToNot(HaveOccurred())
 
-		Expect(Runner.EnsureMounted(image)).To(Succeed())
-		grootFi, err := os.Stat(path.Join(image.Rootfs, "foo"))
+		Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
+		grootFi, err := os.Stat(path.Join(containerSpec.Root.Path, "foo"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 		Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-		grootLink, err := os.Lstat(path.Join(image.Rootfs, "groot-link"))
+		grootLink, err := os.Lstat(path.Join(containerSpec.Root.Path, "groot-link"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(grootLink.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 		Expect(grootLink.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-		rootFi, err := os.Stat(path.Join(image.Rootfs, "bar"))
+		rootFi, err := os.Stat(path.Join(containerSpec.Root.Path, "bar"))
 		Expect(err).NotTo(HaveOccurred())
 		Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(rootUID)))
 		Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))
@@ -113,7 +113,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("applies the same mappings to the created image", func() {
-			image, err := Runner.WithLogLevel(lager.DEBUG).SkipInitStore().
+			containerSpec, err := Runner.WithLogLevel(lager.DEBUG).SkipInitStore().
 				Create(groot.CreateSpec{
 					ID:        "some-id",
 					BaseImage: baseImagePath,
@@ -121,45 +121,45 @@ var _ = Describe("Create", func() {
 				})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-			grootFile, err := os.Stat(path.Join(image.Rootfs, "foo"))
+			grootFile, err := os.Stat(path.Join(containerSpec.Root.Path, "foo"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			grootDir, err := os.Stat(path.Join(image.Rootfs, "groot-folder"))
+			grootDir, err := os.Stat(path.Join(containerSpec.Root.Path, "groot-folder"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			grootLink, err := os.Lstat(path.Join(image.Rootfs, "groot-link"))
+			grootLink, err := os.Lstat(path.Join(containerSpec.Root.Path, "groot-link"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootLink.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootLink.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			rootFile, err := os.Stat(path.Join(image.Rootfs, "bar"))
+			rootFile, err := os.Stat(path.Join(containerSpec.Root.Path, "bar"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-			rootDir, err := os.Stat(path.Join(image.Rootfs, "root-folder"))
+			rootDir, err := os.Stat(path.Join(containerSpec.Root.Path, "root-folder"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 		})
 
 		It("allows the mapped user to have access to the created image", func() {
-			image, err := Runner.WithLogLevel(lager.DEBUG).SkipInitStore().
+			containerSpec, err := Runner.WithLogLevel(lager.DEBUG).SkipInitStore().
 				Create(groot.CreateSpec{
 					Mount:     mountByDefault(),
 					ID:        "some-id",
 					BaseImage: baseImagePath,
 				})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.EnsureMounted(image)).To(Succeed())
+			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-			listRootfsCmd := exec.Command("ls", filepath.Join(image.Rootfs, "root-folder"))
+			listRootfsCmd := exec.Command("ls", filepath.Join(containerSpec.Root.Path, "root-folder"))
 			listRootfsCmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
 					Uid: uint32(GrootUID),
@@ -179,7 +179,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("creates an image with supplied limit", func() {
-			image, err := Runner.WithLogLevel(lager.DEBUG).Create(groot.CreateSpec{
+			containerSpec, err := Runner.WithLogLevel(lager.DEBUG).Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        randomImageID,
 				DiskLimit: tenMegabytes,
@@ -187,8 +187,8 @@ var _ = Describe("Create", func() {
 			})
 			Expect(err).ToNot(HaveOccurred())
 
-			Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 4)).To(Succeed())
-			Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello2"), 2)).To(MatchError(ContainSubstring("dd: error writing")))
+			Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello"), 4)).To(Succeed())
+			Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello2"), 2)).To(MatchError(ContainSubstring("dd: error writing")))
 		})
 
 		Context("when the disk limit value is invalid", func() {
@@ -205,7 +205,7 @@ var _ = Describe("Create", func() {
 
 		Context("when the exclude-image-from-quota is also provided", func() {
 			It("creates a image with supplied limit, but doesn't take into account the base image size", func() {
-				image, err := Runner.Create(groot.CreateSpec{
+				containerSpec, err := Runner.Create(groot.CreateSpec{
 					DiskLimit:                 10485760,
 					ExcludeBaseImageFromQuota: true,
 					BaseImage:                 baseImagePath,
@@ -214,8 +214,8 @@ var _ = Describe("Create", func() {
 				})
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 6)).To(Succeed())
-				Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
+				Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello"), 6)).To(Succeed())
+				Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
 			})
 		})
 	})
@@ -428,9 +428,9 @@ var _ = Describe("Create", func() {
 
 			It("uses the store path from the config file", func() {
 				runner := Runner.WithoutStore()
-				image, err := runner.Create(spec)
+				containerSpec, err := runner.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(image.Path).To(Equal(filepath.Join(cfg.StorePath, "images", randomImageID)))
+				Expect(filepath.Dir(containerSpec.Root.Path)).To(Equal(filepath.Join(cfg.StorePath, "images", randomImageID)))
 			})
 		})
 
@@ -506,15 +506,15 @@ var _ = Describe("Create", func() {
 			})
 
 			It("creates a image with limit from the config file", func() {
-				image, err := Runner.Create(spec)
+				containerSpec, err := Runner.Create(spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 11)).To(MatchError(ContainSubstring("dd: error writing")))
+				Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello"), 11)).To(MatchError(ContainSubstring("dd: error writing")))
 			})
 		})
 
-		It("returns an image json as output", func() {
-			image, err := Runner.Create(groot.CreateSpec{
+		It("returns a partial runtime-spec as output", func() {
+			containerSpec, err := Runner.Create(groot.CreateSpec{
 				ID:        randomImageID,
 				BaseImage: baseImagePath,
 				Mount:     false,
@@ -522,34 +522,33 @@ var _ = Describe("Create", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			expectedRootfs := filepath.Join(StorePath, store.ImageDirName, randomImageID, "rootfs")
-			Expect(image.Rootfs).To(Equal(expectedRootfs))
-			Expect(image.Mounts).To(HaveLen(1))
-			Expect(image.Mounts[0].Destination).To(Equal(expectedRootfs))
-			Expect(image.Image).To(Equal(v1.Image{}))
+			Expect(containerSpec.Root.Path).To(Equal(expectedRootfs))
+			Expect(containerSpec.Mounts).To(HaveLen(1))
+			Expect(containerSpec.Mounts[0].Destination).To(Equal(expectedRootfs))
 		})
 
 		Describe("without mount", func() {
 			It("does not mount the rootfs", func() {
-				image, err := Runner.Create(groot.CreateSpec{
+				containerSpec, err := Runner.Create(groot.CreateSpec{
 					ID:        "some-id",
 					BaseImage: baseImagePath,
 					Mount:     false,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				contents, err := ioutil.ReadDir(image.Rootfs)
+				contents, err := ioutil.ReadDir(containerSpec.Root.Path)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(contents).To(BeEmpty())
 			})
 
 			Describe("Mount json output", func() {
 				var (
-					image groot.ImageInfo
+					containerSpec specs.Spec
 				)
 
 				JustBeforeEach(func() {
 					var err error
-					image, err = Runner.Create(groot.CreateSpec{
+					containerSpec, err = Runner.Create(groot.CreateSpec{
 						ID:        "some-id",
 						BaseImage: baseImagePath,
 						Mount:     false,
@@ -563,12 +562,12 @@ var _ = Describe("Create", func() {
 					})
 
 					It("returns the mount information in the output json", func() {
-						Expect(image.Mounts).ToNot(BeNil())
-						Expect(image.Mounts[0].Destination).To(Equal(image.Rootfs))
-						Expect(image.Mounts[0].Type).To(Equal(""))
-						Expect(image.Mounts[0].Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
-						Expect(image.Mounts[0].Options).To(HaveLen(1))
-						Expect(image.Mounts[0].Options[0]).To(Equal("bind"))
+						Expect(containerSpec.Mounts).ToNot(BeNil())
+						Expect(containerSpec.Mounts[0].Destination).To(Equal(containerSpec.Root.Path))
+						Expect(containerSpec.Mounts[0].Type).To(Equal(""))
+						Expect(containerSpec.Mounts[0].Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
+						Expect(containerSpec.Mounts[0].Options).To(HaveLen(1))
+						Expect(containerSpec.Mounts[0].Options[0]).To(Equal("bind"))
 					})
 				})
 
@@ -578,12 +577,12 @@ var _ = Describe("Create", func() {
 					})
 
 					It("returns the mount information in the output json", func() {
-						Expect(image.Mounts).ToNot(BeNil())
-						Expect(image.Mounts[0].Destination).To(Equal(image.Rootfs))
-						Expect(image.Mounts[0].Type).To(Equal("overlay"))
-						Expect(image.Mounts[0].Source).To(Equal("overlay"))
-						Expect(image.Mounts[0].Options).To(HaveLen(1))
-						Expect(image.Mounts[0].Options[0]).To(MatchRegexp(
+						Expect(containerSpec.Mounts).ToNot(BeNil())
+						Expect(containerSpec.Mounts[0].Destination).To(Equal(containerSpec.Root.Path))
+						Expect(containerSpec.Mounts[0].Type).To(Equal("overlay"))
+						Expect(containerSpec.Mounts[0].Source).To(Equal("overlay"))
+						Expect(containerSpec.Mounts[0].Options).To(HaveLen(1))
+						Expect(containerSpec.Mounts[0].Options[0]).To(MatchRegexp(
 							fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s",
 								filepath.Join(StorePath, overlayxfs.LinksDirName, ".*"),
 								filepath.Join(StorePath, store.ImageDirName, "some-id", overlayxfs.UpperDir),
@@ -602,11 +601,11 @@ var _ = Describe("Create", func() {
 			})
 
 			It("excludes base image from quota when config property say so", func() {
-				image, err := Runner.Create(spec)
+				containerSpec, err := Runner.Create(spec)
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello"), 6)).To(Succeed())
-				Expect(writeMegabytes(filepath.Join(image.Rootfs, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
+				Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello"), 6)).To(Succeed())
+				Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
 			})
 		})
 	})

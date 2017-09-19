@@ -207,33 +207,47 @@ If you are running behind an http proxy you can use the [standard](https://wiki.
 
 #### Output
 
-The output of this command is a json object which has the following structure:
+The output of this command is a partial [container config spec](https://github.com/opencontainers/runtime-spec/blob/master/config.md)
+containing the following keys:
 
 ```
 {
-  "rootfs": "...", # complete path to the image rootfs, which lives in <image-path>/rootfs
-  "config": {...}, # contents of image config, also writen to <image-path>/image.json
+  "root": {
+    "path": "..." # complete path to the image rootfs, which lives in <image-path>/rootfs
+  },
+  "process": {
+    "env": [
+      "VAR=somehting", # list of environmental variables defined in the base image (only if creating from docker/oci images)
+      ...
+    ]
+  },
+  "mounts": [  # array of mounts to be performed. This include image volumes and, in the case of `--without-mount` option, includes the rootfs mount options
+    {
+      "destination": "/opt/local",
+      "type": "lofs",
+      "source": "/usr/local",
+      "options": ["ro","nodevices"]
+    }
+  ]
 }
 ```
 
 * The `<image-path>/rootfs` folder is where the root filesystem lives.
-* The `<image-path>/image.json` file follows the [OCI image
-  description](https://github.com/opencontainers/image-spec/blob/master/serialization.md#image-json-description)
-  schema.
-
 
 If the `--without-mount` flag is provided  (or `create.without_mount = true` in config),
-the json output will also contain the `mount` key:
+the config spec json returned will include the rootfs mount as the first item in the mounts array:
 
 ```
   ...
-  "mount": {
-    "destination": "/path/to/rootfs",
-    "type": "overlay",
-    "source": "overlay",
-    "options": ["lowerdir=..."]
-  }
+  "mounts": [
+    {
+      "destination": "/path/to/rootfs",
+      "type": "overlay",
+      "source": "overlay",
+      "options": ["lowerdir=..."]
+    },
   ...
+  ]
 ```
 
 The `--without-mount` option exists so that GrootFS can be run as non-root. The mount information is compatible

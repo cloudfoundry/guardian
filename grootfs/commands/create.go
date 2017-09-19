@@ -30,6 +30,7 @@ import (
 	"code.cloudfoundry.org/lager"
 
 	"github.com/docker/distribution/registry/api/errcode"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 	errorspkg "github.com/pkg/errors"
 	"github.com/urfave/cli"
 )
@@ -207,7 +208,26 @@ var CreateCommand = cli.Command{
 			return newExitError(humanizedError, 1)
 		}
 
-		jsonBytes, err := json.Marshal(image)
+		containerSpec := specs.Spec{
+			Root: &specs.Root{
+				Path: image.Rootfs,
+			},
+			Process: &specs.Process{
+				Env: image.Image.Config.Env,
+			},
+			Mounts: []specs.Mount{},
+		}
+
+		for _, mount := range image.Mounts {
+			containerSpec.Mounts = append(containerSpec.Mounts, specs.Mount{
+				Destination: mount.Destination,
+				Type:        mount.Type,
+				Source:      mount.Source,
+				Options:     mount.Options,
+			})
+		}
+
+		jsonBytes, err := json.Marshal(containerSpec)
 		if err != nil {
 			logger.Error("formatting output", err)
 			return newExitError(err.Error(), 1)

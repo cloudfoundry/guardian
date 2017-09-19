@@ -16,6 +16,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("Delete", func() {
@@ -23,7 +24,7 @@ var _ = Describe("Delete", func() {
 		randomImageID   string
 		sourceImagePath string
 		baseImagePath   string
-		image           groot.ImageInfo
+		containerSpec   specs.Spec
 	)
 
 	BeforeEach(func() {
@@ -44,7 +45,7 @@ var _ = Describe("Delete", func() {
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
 		baseImagePath = baseImageFile.Name()
 		var err error
-		image, err = Runner.Create(groot.CreateSpec{
+		containerSpec, err = Runner.Create(groot.CreateSpec{
 			BaseImage: baseImagePath,
 			ID:        randomImageID,
 			Mount:     mountByDefault(),
@@ -54,7 +55,7 @@ var _ = Describe("Delete", func() {
 
 	It("deletes an existing image", func() {
 		Expect(Runner.Delete(randomImageID)).To(Succeed())
-		Expect(image.Path).NotTo(BeAnExistingFile())
+		Expect(filepath.Dir(containerSpec.Root.Path)).NotTo(BeAnExistingFile())
 	})
 
 	Context("when the store doesn't exist", func() {
@@ -69,9 +70,9 @@ var _ = Describe("Delete", func() {
 
 	Context("when a path is provided instead of an ID", func() {
 		It("deletes the image by the path", func() {
-			Expect(image.Path).To(BeAnExistingFile())
-			Expect(Runner.Delete(image.Path)).To(Succeed())
-			Expect(image.Path).NotTo(BeAnExistingFile())
+			Expect(filepath.Dir(containerSpec.Root.Path)).To(BeAnExistingFile())
+			Expect(Runner.Delete(filepath.Dir(containerSpec.Root.Path))).To(Succeed())
+			Expect(filepath.Dir(containerSpec.Root.Path)).NotTo(BeAnExistingFile())
 		})
 
 		Context("when a path to an image does not exist", func() {
@@ -112,7 +113,7 @@ var _ = Describe("Delete", func() {
 		var mntPoint string
 
 		JustBeforeEach(func() {
-			mntPoint = filepath.Join(image.Path, "mnt")
+			mntPoint = filepath.Join(filepath.Dir(containerSpec.Root.Path), "mnt")
 			Expect(os.Mkdir(mntPoint, 0700)).To(Succeed())
 			Expect(syscall.Mount(mntPoint, mntPoint, "none", syscall.MS_BIND, "")).To(Succeed())
 		})
@@ -124,7 +125,7 @@ var _ = Describe("Delete", func() {
 		It("doesn't remove the metadata file", func() {
 			metadataPath := filepath.Join(StorePath, store.MetaDirName, "dependencies", fmt.Sprintf("image:%s.json", randomImageID))
 			Expect(metadataPath).To(BeAnExistingFile())
-			Expect(Runner.Delete(image.Path)).To(MatchError(ContainSubstring("deleting image path")))
+			Expect(Runner.Delete(filepath.Dir(containerSpec.Root.Path))).To(MatchError(ContainSubstring("deleting image path")))
 			Expect(metadataPath).To(BeAnExistingFile())
 		})
 	})

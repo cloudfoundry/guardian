@@ -112,3 +112,6 @@
 [submodule "vendor/github.com/docker/docker-credential-helpers"]
 	path = vendor/github.com/docker/docker-credential-helpers
 	url = https://github.com/docker/docker-credential-helpers
+[submodule "vendor/github.com/opencontainers/runtime-spec"]
+	path = vendor/github.com/opencontainers/runtime-spec
+	url = https://github.com/opencontainers/runtime-spec

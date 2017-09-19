@@ -212,20 +212,20 @@ var _ = Describe("Init Store", func() {
 			}()
 
 			Expect(runner.InitStore(spec)).To(Succeed())
-			image, err := runner.Create(groot.CreateSpec{
+			containerSpec, err := runner.Create(groot.CreateSpec{
 				BaseImage: baseImagePath,
 				ID:        testhelpers.NewRandomID(),
 				Mount:     mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(runner.EnsureMounted(image)).To(Succeed())
-			grootFi, err := os.Stat(path.Join(image.Rootfs, "foo"))
+			Expect(runner.EnsureMounted(containerSpec)).To(Succeed())
+			grootFi, err := os.Stat(path.Join(containerSpec.Root.Path, "foo"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
 			Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			rootFi, err := os.Stat(path.Join(image.Rootfs, "bar"))
+			rootFi, err := os.Stat(path.Join(containerSpec.Root.Path, "bar"))
 			Expect(err).NotTo(HaveOccurred())
 			Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
 			Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
