@@ -33,6 +33,8 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []string) (noop bool, err error) {
 	logger = logger.Session("groot-cleaning")
 	logger.Info("starting")
+	defer c.metricsEmitter.TryEmitDurationFrom(logger, MetricImageCleanTime, time.Now())
+	defer logger.Info("ending")
 
 	storeSize, err := c.storeMeasurer.Size(logger)
 	if err != nil {
@@ -43,9 +45,6 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 		defer c.emitDiskCachePercentageMetric(logger, storeSize)
 		defer c.emitDiskCommittedPercentageMetric(logger, storeSize)
 	}
-
-	defer c.metricsEmitter.TryEmitDurationFrom(logger, MetricImageCleanTime, time.Now())
-	defer logger.Info("ending")
 
 	if threshold > 0 {
 		storeSize, err := c.storeMeasurer.Usage(logger)
@@ -67,11 +66,11 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 
 	unusedVolumes, err := c.garbageCollector.UnusedVolumes(logger, keepImages)
 	if err != nil {
-		logger.Error("marking-unused-failed", err)
+		logger.Error("finding-unused-failed", err)
 	}
 
 	if storeSize != 0 {
-		c.emitDiskPurgeableCachePercentageMetric(logger, unusedVolumes, storeSize)
+		defer c.emitDiskPurgeableCachePercentageMetric(logger, unusedVolumes, storeSize)
 	}
 
 	if err := c.garbageCollector.MarkUnused(logger, unusedVolumes); err != nil {
