@@ -1,4 +1,4 @@
-package socket2me_test
+package socket2metests_test
 
 import (
 	"bytes"
@@ -44,6 +44,24 @@ var _ = Describe("Socket2Me", func() {
 		Expect(stdout.String()).To(Equal(fmt.Sprintf("%d\n", proc.Pid)))
 	})
 
+	It("execs commands that appear to have flags of their own", func() {
+		var stdout bytes.Buffer
+		runSocketToMe(socketPath, &stdout, "/bin/echo", "--foo", "bar")
+		Expect(stdout.String()).To(Equal("--foo bar\n"))
+	})
+
+	itChownsTheSocket := func() {
+		It("chowns the socket to the configured uid and gid", func() {
+			runSocketToMe(socketPath, &bytes.Buffer{}, "/bin/true")
+			socketPathInfo, err := os.Stat(socketPath)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(socketPathInfo.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(4000)))
+			Expect(socketPathInfo.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(5000)))
+		})
+	}
+
+	itChownsTheSocket()
+
 	itSetsEnvVars := func() {
 		It("sets socket FD env var for command", func() {
 			var stdout bytes.Buffer
@@ -83,6 +101,7 @@ var _ = Describe("Socket2Me", func() {
 		})
 
 		itSetsEnvVars()
+		itChownsTheSocket()
 	})
 
 	Context("When the socket path is not passed", func() {
@@ -96,7 +115,7 @@ var _ = Describe("Socket2Me", func() {
 })
 
 func runSocketToMe(socketPath string, stdout io.Writer, cmdArgv ...string) *os.Process {
-	args := []string{"--uid=2000", "--gid=3000"}
+	args := []string{"--uid=2000", "--gid=3000", "--socket-uid=4000", "--socket-gid=5000"}
 	if socketPath != "" {
 		args = append(args, "--socket-path", socketPath)
 	}

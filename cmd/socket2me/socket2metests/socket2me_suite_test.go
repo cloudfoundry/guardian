@@ -1,4 +1,4 @@
-package socket2me_test
+package socket2metests_test
 
 import (
 	. "github.com/onsi/ginkgo"
