@@ -64,11 +64,11 @@ func TestGqt(t *testing.T) {
 		binaries.NoopPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin")
 		Expect(err).NotTo(HaveOccurred())
 
-		binaries.Socket2me, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/socket2me")
-		Expect(err).NotTo(HaveOccurred())
-
 		if runtime.GOOS == "linux" {
 			binaries.ExecRunner, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
+			Expect(err).NotTo(HaveOccurred())
+
+			binaries.Socket2me, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/socket2me")
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := exec.Command("make")

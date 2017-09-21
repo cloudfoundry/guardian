@@ -2,6 +2,7 @@ package runner
 
 import (
 	"os"
+	"os/exec"
 
 	"code.cloudfoundry.org/lager"
 )
@@ -9,6 +10,10 @@ import (
 type UserCredential interface{}
 
 func setUserCredential(runner *GardenRunner) {}
+
+func socket2meCommand(config GdnRunnerConfig) *exec.Cmd {
+	panic("Unix sockets are unsupported on Windows")
+}
 
 func (r *GardenRunner) setupDirsForUser() {}
 

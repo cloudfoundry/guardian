@@ -228,20 +228,7 @@ func NewGardenRunner(config GdnRunnerConfig) *GardenRunner {
 	if config.Socket2meSocketPath == "" {
 		runner.Command = exec.Command(config.GdnBin, append([]string{"server"}, config.toFlags()...)...)
 	} else {
-		runner.Command = exec.Command(
-			config.Socket2meBin,
-			append(
-				[]string{
-					"--socket-path",
-					config.Socket2meSocketPath,
-					fmt.Sprintf("--uid=%d", config.User.Uid),
-					fmt.Sprintf("--gid=%d", config.User.Gid),
-					"--socket-uid=0", "--socket-gid=0",
-					config.GdnBin, "server",
-				},
-				config.toFlags()...,
-			)...,
-		)
+		runner.Command = socket2meCommand(config)
 	}
 
 	runner.Command.Env = append(

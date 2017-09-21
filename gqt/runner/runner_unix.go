@@ -27,6 +27,23 @@ func setUserCredential(runner *GardenRunner) {
 	runner.Command.SysProcAttr = &syscall.SysProcAttr{Credential: credential}
 }
 
+func socket2meCommand(config GdnRunnerConfig) *exec.Cmd {
+	return exec.Command(
+		config.Socket2meBin,
+		append(
+			[]string{
+				"--socket-path",
+				config.Socket2meSocketPath,
+				fmt.Sprintf("--uid=%d", config.User.Uid),
+				fmt.Sprintf("--gid=%d", config.User.Gid),
+				"--socket-uid=0", "--socket-gid=0",
+				config.GdnBin, "server",
+			},
+			config.toFlags()...,
+		)...,
+	)
+}
+
 func (r *GardenRunner) setupDirsForUser() {
 	MustMountTmpfs(r.GraphDir)
 
