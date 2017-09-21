@@ -242,10 +242,10 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 
 	err := d.destroyBtrfsVolume(logger, snapshotMountPath)
 	if err != nil && strings.Contains(err.Error(), "Directory not empty") {
-		subvolumes, err := d.listSubvolumes(logger, imagePath)
-		if err != nil {
-			logger.Error("listing-subvolumes-failed", err)
-			return errorspkg.Wrap(err, "list subvolumes")
+		subvolumes, listErr := d.listSubvolumes(logger, imagePath)
+		if listErr != nil {
+			logger.Error("listing-subvolumes-failed", listErr)
+			return errorspkg.Wrap(listErr, "list subvolumes")
 		}
 
 		for _, subvolume := range subvolumes {
@@ -253,7 +253,11 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 				return err
 			}
 		}
-		return nil
+		err = nil
+	}
+
+	if err := os.RemoveAll(imagePath); err != nil {
+		logger.Error("removing-image-path", err)
 	}
 
 	return err

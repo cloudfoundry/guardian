@@ -780,11 +780,19 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 }
 
 func ensureImageDestroyed(imagePath string) error {
+	mounted, err := mounted(imagePath)
+	if err != nil {
+		return err
+	}
+
+	if !mounted {
+		return forcefulRemovePath(imagePath)
+	}
+
 	if err := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
 		return errorspkg.Wrap(err, "unmounting rootfs folder")
 	}
 
-	var err error
 	for i := 0; i < maxDestroyRetries; i++ {
 		if err = os.RemoveAll(imagePath); err == nil {
 			return nil
@@ -797,4 +805,13 @@ func ensureImageDestroyed(imagePath string) error {
 	}
 
 	return err
+}
+
+func mounted(mount string) (bool, error) {
+	contents, err := ioutil.ReadFile("/proc/self/mountinfo")
+	if err != nil {
+		return false, err
+	}
+
+	return strings.Contains(string(contents), mount), nil
 }

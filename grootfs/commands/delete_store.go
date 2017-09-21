@@ -28,7 +28,7 @@ var DeleteStoreCommand = cli.Command{
 
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
-			logger.Error("failed-to-initialise-driver", err)
+			logger.Error("failed-to-initialise-filesystem-driver", err)
 			return cli.NewExitError(err.Error(), 1)
 		}
 

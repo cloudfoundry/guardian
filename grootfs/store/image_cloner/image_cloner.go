@@ -3,6 +3,7 @@ package image_cloner // import "code.cloudfoundry.org/grootfs/store/image_cloner
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io/ioutil"
 	"os"
 	"path"
@@ -155,14 +156,14 @@ func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
 	}
 
 	imagePath := b.imagePath(id)
-	volDriverErr := b.imageDriver.DestroyImage(logger, imagePath)
-	if volDriverErr != nil {
+	var volDriverErr error
+	if volDriverErr = b.imageDriver.DestroyImage(logger, imagePath); volDriverErr != nil {
 		logger.Error("destroying-image-failed", volDriverErr)
 	}
 
-	if err := os.RemoveAll(imagePath); err != nil {
+	if _, err := os.Stat(imagePath); err == nil {
 		logger.Error("deleting-image-dir-failed", err, lager.Data{"volumeDriverError": volDriverErr})
-		return errorspkg.Wrap(err, "deleting image path")
+		return errors.New("deleting image path")
 	}
 
 	return nil

@@ -58,6 +58,24 @@ var _ = Describe("Delete", func() {
 		Expect(filepath.Dir(containerSpec.Root.Path)).NotTo(BeAnExistingFile())
 	})
 
+	Context("when there is a file in a directory groot doesn't have search permission on", func() {
+		JustBeforeEach(func() {
+			privateFolder := filepath.Join(containerSpec.Root.Path, "private-folder")
+			Expect(os.Mkdir(privateFolder, 0600)).To(Succeed())
+			f, err := os.Create(filepath.Join(privateFolder, "file"))
+			Expect(f.Close()).To(Succeed())
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.Chown(privateFolder, 100001, 100001)).To(Succeed())
+			Expect(os.Chown(filepath.Join(privateFolder, "file"), 100001, 100001)).To(Succeed())
+		})
+
+		It("still succeeds", func() {
+			Expect(Runner.Delete(randomImageID)).To(Succeed())
+			Expect(filepath.Dir(containerSpec.Root.Path)).NotTo(BeAnExistingFile())
+		})
+	})
+
 	Context("when the store doesn't exist", func() {
 		It("logs the image path", func() {
 			logBuffer := gbytes.NewBuffer()

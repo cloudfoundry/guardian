@@ -649,10 +649,20 @@ var _ = Describe("Driver", func() {
 			})
 		})
 
-		Context("when it fails unmount the rootfs", func() {
-			It("returns an error", func() {
-				Expect(syscall.Unmount(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir), 0)).To(Succeed())
+		Context("when it fails to unmount the rootfs", func() {
+			var busyFile *os.File
 
+			JustBeforeEach(func() {
+				var err error
+				busyFile, err = os.Create(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir, "busyfile"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				Expect(busyFile.Close()).To(Succeed())
+			})
+
+			It("returns an error", func() {
 				err := driver.DestroyImage(logger, spec.ImagePath)
 				Expect(err).To(MatchError(ContainSubstring("unmounting rootfs folder")))
 			})

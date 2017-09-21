@@ -50,11 +50,17 @@ var DeleteCommand = cli.Command{
 
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
-			logger.Error("failed-to-initialise-driver", err)
+			logger.Error("failed-to-initialise-filesystem-driver", err)
 			return newExitError(err.Error(), 1)
 		}
 
-		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
+		imageDriver, err := createImageDriver(cfg, fsDriver)
+		if err != nil {
+			logger.Error("failed-to-initialise-image-driver", err)
+			return newExitError(err.Error(), 1)
+		}
+
+		imageCloner := image_cloner.NewImageCloner(imageDriver, storePath)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, store.MetaDirName, "dependencies"),
 		)

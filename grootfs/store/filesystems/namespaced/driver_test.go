@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced/namespacedfakes"
+	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -154,6 +155,15 @@ var _ = Describe("Driver", func() {
 				integration.SkipIfRoot(os.Getuid())
 			})
 
+			It("reexecs with the correct arguments", func() {
+				Expect(driver.DestroyVolume(logger, "123")).To(Succeed())
+
+				cmds := fakeCommandRunner.StartedCommands()
+				Expect(cmds).To(HaveLen(1))
+
+				Expect(cmds[0].Args).To(ConsistOf([]string{"destroy-volume", `{"super-cool":"json"}`, "123"}))
+			})
+
 			It("uses idMapper to map the all the ids of the reexec process", func() {
 				Expect(driver.DestroyVolume(logger, "123")).To(Succeed())
 
@@ -172,14 +182,6 @@ var _ = Describe("Driver", func() {
 				}))
 			})
 
-			It("reexecs with the correct arguments", func() {
-				Expect(driver.DestroyVolume(logger, "123")).To(Succeed())
-
-				cmds := fakeCommandRunner.StartedCommands()
-				Expect(cmds).To(HaveLen(1))
-
-				Expect(cmds[0].Args).To(ConsistOf([]string{"destroy-volume", `{"super-cool":"json"}`, "123"}))
-			})
 		})
 
 		Context("when the idmappings are empty", func() {
@@ -269,6 +271,158 @@ var _ = Describe("Driver", func() {
 			Expect(loggerArg).To(Equal(logger))
 			Expect(id).To(Equal("123"))
 			Expect(opaques).To(Equal([]string{"456"}))
+		})
+	})
+
+	Describe("CreateImage", func() {
+		JustBeforeEach(func() {
+			internalDriver.CreateImageReturns(groot.MountInfo{Destination: "Dimension 31-C"}, errors.New("error"))
+		})
+
+		It("decorates the internal driver function", func() {
+			mountInfo, err := driver.CreateImage(logger, image_cloner.ImageDriverSpec{Mount: true})
+			Expect(mountInfo).To(Equal(groot.MountInfo{Destination: "Dimension 31-C"}))
+			Expect(err).To(MatchError("error"))
+			Expect(internalDriver.CreateImageCallCount()).To(Equal(1))
+			loggerArg, specArg := internalDriver.CreateImageArgsForCall(0)
+			Expect(loggerArg).To(Equal(logger))
+			Expect(specArg).To(Equal(image_cloner.ImageDriverSpec{Mount: true}))
+		})
+	})
+
+	Describe("DestroyImage", func() {
+		var (
+			commandError error
+			reexecOutput string
+		)
+
+		BeforeEach(func() {
+			commandError = nil
+			reexecOutput = ""
+		})
+
+		JustBeforeEach(func() {
+			fakeCommandRunner.WhenRunning(fake_command_runner.CommandSpec{
+				Path: "/proc/self/exe",
+			}, func(cmd *exec.Cmd) error {
+				cmd.Process = &os.Process{
+					Pid: 12, // don't panic
+				}
+
+				return nil
+			})
+
+			fakeCommandRunner.WhenWaitingFor(fake_command_runner.CommandSpec{
+				Path: "/proc/self/exe",
+			}, func(cmd *exec.Cmd) error {
+				if reexecOutput != "" {
+					_, err := cmd.Stdout.Write([]byte(reexecOutput))
+					Expect(err).NotTo(HaveOccurred())
+				}
+
+				return commandError
+			})
+
+			internalDriver.MarshalReturns([]byte(`{"super-cool":"json"}`), nil)
+		})
+
+		Context("when the running user is root", func() {
+			BeforeEach(func() {
+				integration.SkipIfNonRoot(os.Getuid())
+			})
+
+			JustBeforeEach(func() {
+				internalDriver.DestroyImageReturns(errors.New("error"))
+			})
+
+			It("doesn't call the IDMapper", func() {
+				_ = driver.DestroyImage(logger, "123")
+				Expect(idMapper.MapGIDsCallCount()).To(BeZero())
+				Expect(idMapper.MapUIDsCallCount()).To(BeZero())
+			})
+
+			It("decorates the internal driver function", func() {
+				err := driver.DestroyImage(logger, "123")
+				Expect(err).To(MatchError("error"))
+				Expect(internalDriver.DestroyImageCallCount()).To(Equal(1))
+				loggerArg, id := internalDriver.DestroyImageArgsForCall(0)
+				Expect(loggerArg).To(Equal(logger))
+				Expect(id).To(Equal("123"))
+			})
+		})
+
+		Context("when the running user is not root", func() {
+			BeforeEach(func() {
+				integration.SkipIfRoot(os.Getuid())
+			})
+
+			It("reexecs with the correct arguments", func() {
+				Expect(driver.DestroyImage(logger, "id-1")).To(Succeed())
+
+				cmds := fakeCommandRunner.StartedCommands()
+				Expect(cmds).To(HaveLen(1))
+
+				Expect(cmds[0].Args).To(ConsistOf([]string{"destroy-image", `{"super-cool":"json"}`, "id-1"}))
+			})
+
+			It("uses idMapper to map the all the ids of the reexec process", func() {
+				Expect(driver.DestroyImage(logger, "123")).To(Succeed())
+
+				Expect(idMapper.MapUIDsCallCount()).To(Equal(1))
+				_, pid, uidMappings := idMapper.MapUIDsArgsForCall(0)
+				Expect(pid).To(Equal(12))
+				Expect(uidMappings).To(Equal([]groot.IDMappingSpec{
+					{HostID: 100, NamespaceID: 1000, Size: 10},
+				}))
+
+				Expect(idMapper.MapGIDsCallCount()).To(Equal(1))
+				_, pid, gidMappings := idMapper.MapGIDsArgsForCall(0)
+				Expect(pid).To(Equal(12))
+				Expect(gidMappings).To(Equal([]groot.IDMappingSpec{
+					{HostID: 200, NamespaceID: 2000, Size: 20},
+				}))
+			})
+		})
+
+		Context("when the idmappings are empty", func() {
+			BeforeEach(func() {
+				idMappings = groot.IDMappings{}
+			})
+
+			JustBeforeEach(func() {
+				internalDriver.DestroyImageReturns(errors.New("error"))
+			})
+
+			It("doesn't call the IDMapper", func() {
+				_ = driver.DestroyImage(logger, "123")
+				Expect(idMapper.MapGIDsCallCount()).To(BeZero())
+				Expect(idMapper.MapUIDsCallCount()).To(BeZero())
+			})
+
+			It("decorates the internal driver function", func() {
+				err := driver.DestroyImage(logger, "123")
+				Expect(err).To(MatchError("error"))
+				Expect(internalDriver.DestroyImageCallCount()).To(Equal(1))
+				loggerArg, id := internalDriver.DestroyImageArgsForCall(0)
+				Expect(loggerArg).To(Equal(logger))
+				Expect(id).To(Equal("123"))
+			})
+		})
+	})
+
+	Describe("FetchStats", func() {
+		JustBeforeEach(func() {
+			internalDriver.FetchStatsReturns(groot.VolumeStats{DiskUsage: groot.DiskUsage{TotalBytesUsed: 100}}, errors.New("error"))
+		})
+
+		It("decorates the internal driver function", func() {
+			stats, err := driver.FetchStats(logger, "id-1")
+			Expect(stats).To(Equal(groot.VolumeStats{DiskUsage: groot.DiskUsage{TotalBytesUsed: 100}}))
+			Expect(err).To(MatchError("error"))
+			Expect(internalDriver.FetchStatsCallCount()).To(Equal(1))
+			loggerArg, imageIdArg := internalDriver.FetchStatsArgsForCall(0)
+			Expect(loggerArg).To(Equal(logger))
+			Expect(imageIdArg).To(Equal("id-1"))
 		})
 	})
 })
