@@ -51,7 +51,7 @@ func CleanUpOverlayMounts(mountPath string) {
 }
 
 func internalMountPoints(mountPath string) []string {
-	output, err := exec.Command("mount").Output()
+	output, err := exec.Command("cat", "/proc/mounts").Output()
 	Expect(err).NotTo(HaveOccurred())
 
 	mountPoints := []string{}
@@ -62,7 +62,7 @@ func internalMountPoints(mountPath string) []string {
 		mountInfo := strings.Split(mountLine, " ")
 		mountType := mountInfo[0]
 		if mountType == "overlay" && strings.Contains(mountLine, mountPath) {
-			mountPoint := mountInfo[2]
+			mountPoint := mountInfo[1]
 			mountPoints = append(mountPoints, mountPoint)
 		}
 	}
