@@ -80,6 +80,7 @@ func createSocket(socketPath string, socketUID, socketGID int64) uintptr {
 	}
 
 	must("chown socket", os.Chown(socketPath, int(socketUID), int(socketGID)))
+	must("chmod socket", os.Chmod(socketPath, 0600))
 	return fd
 }
 

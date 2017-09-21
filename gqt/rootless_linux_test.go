@@ -29,10 +29,6 @@ var _ = Describe("rootless containers", func() {
 		imagePath   string
 	)
 
-	var idToStr = func(id uint32) string {
-		return strconv.FormatUint(uint64(id), 10)
-	}
-
 	BeforeEach(func() {
 		tmpDir := filepath.Join(
 			os.TempDir(),

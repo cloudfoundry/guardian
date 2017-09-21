@@ -7,6 +7,10 @@ import (
 )
 
 func MustMountTmpfs(destination string) {
+	if destination == "" {
+		return
+	}
+
 	if _, err := os.Stat(destination); os.IsNotExist(err) {
 		must(os.MkdirAll(destination, 0755))
 	}
@@ -17,6 +21,10 @@ func MustMountTmpfs(destination string) {
 }
 
 func MustUnmountTmpfs(destination string) {
+	if destination == "" {
+		return
+	}
+
 	must(syscall.Unmount(destination, 0))
 }
 

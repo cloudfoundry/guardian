@@ -151,6 +151,7 @@ var _ = Describe("garden server Logging", func() {
 
 	Context("when a nonsense log-level is passed", func() {
 		BeforeEach(func() {
+			config.StartupExpectedToFail = true
 			config.LogLevel = "nonsense-log-level"
 		})
 

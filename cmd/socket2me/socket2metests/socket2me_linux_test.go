@@ -50,17 +50,18 @@ var _ = Describe("Socket2Me", func() {
 		Expect(stdout.String()).To(Equal("--foo bar\n"))
 	})
 
-	itChownsTheSocket := func() {
-		It("chowns the socket to the configured uid and gid", func() {
+	itChownsAndChmodsTheSocket := func() {
+		It("chowns the socket to the configured uid and gid with mode 600", func() {
 			runSocketToMe(socketPath, &bytes.Buffer{}, "/bin/true")
 			socketPathInfo, err := os.Stat(socketPath)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(socketPathInfo.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(4000)))
 			Expect(socketPathInfo.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(5000)))
+			Expect(socketPathInfo.Mode() & os.ModePerm).To(Equal(os.FileMode(0600)))
 		})
 	}
 
-	itChownsTheSocket()
+	itChownsAndChmodsTheSocket()
 
 	itSetsEnvVars := func() {
 		It("sets socket FD env var for command", func() {
@@ -101,7 +102,7 @@ var _ = Describe("Socket2Me", func() {
 		})
 
 		itSetsEnvVars()
-		itChownsTheSocket()
+		itChownsAndChmodsTheSocket()
 	})
 
 	Context("When the socket path is not passed", func() {

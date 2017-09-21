@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -63,6 +64,9 @@ func TestGqt(t *testing.T) {
 		binaries.NoopPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin")
 		Expect(err).NotTo(HaveOccurred())
 
+		binaries.Socket2me, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/socket2me")
+		Expect(err).NotTo(HaveOccurred())
+
 		if runtime.GOOS == "linux" {
 			binaries.ExecRunner, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
 			Expect(err).NotTo(HaveOccurred())
@@ -112,6 +116,7 @@ func defaultConfig() runner.GdnRunnerConfig {
 	config := runner.DefaultGdnRunnerConfig()
 	config.DefaultRootFS = defaultTestRootFS
 	config.GdnBin = binaries.Gdn
+	config.Socket2meBin = binaries.Socket2me
 	config.ExecRunnerBin = binaries.ExecRunner
 	config.InitBin = binaries.Init
 	config.TarBin = binaries.Tar
@@ -168,6 +173,10 @@ func uint32ptr(i uint32) *uint32 {
 
 func boolptr(b bool) *bool {
 	return &b
+}
+
+func idToStr(id uint32) string {
+	return strconv.FormatUint(uint64(id), 10)
 }
 
 func readFile(path string) string {

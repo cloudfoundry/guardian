@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"code.cloudfoundry.org/idmapper"
@@ -466,9 +467,15 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		metrics.StartDebugServer(addr, reconfigurableSink, debugServerMetrics)
 	}
 
-	err = gardenServer.Start()
-	if err != nil {
-		logger.Error("failed-to-start-server", err)
+	if err := backend.Start(); err != nil {
+		logger.Error("starting-guardian-backend", err)
+		return err
+	}
+	if err := gardenServer.SetupBomberman(); err != nil {
+		logger.Error("setting-up-bomberman", err)
+		return err
+	}
+	if err := startServer(gardenServer, logger); err != nil {
 		return err
 	}
 
@@ -487,6 +494,37 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	portPoolState = portPool.RefreshState()
 	ports.SaveState(cmd.Network.PortPoolPropertiesPath, portPoolState)
+
+	return nil
+}
+
+func startServer(gardenServer *server.GardenServer, logger lager.Logger) error {
+	socketFDStr := os.Getenv("SOCKET2ME_FD")
+	if socketFDStr == "" {
+		go func() {
+			if err := gardenServer.ListenAndServe(); err != nil {
+				logger.Error("failed-to-start-server", err)
+			}
+		}()
+		return nil
+	}
+
+	socketFD, err := strconv.Atoi(socketFDStr)
+	if err != nil {
+		return err
+	}
+
+	listener, err := net.FileListener(os.NewFile(uintptr(socketFD), fmt.Sprintf("/proc/self/fd/%d", socketFD)))
+	if err != nil {
+		logger.Error("failed-to-listen-on-socket-fd", err)
+		return err
+	}
+
+	go func() {
+		if err := gardenServer.Serve(listener); err != nil {
+			logger.Error("failed-to-start-server", err)
+		}
+	}()
 
 	return nil
 }

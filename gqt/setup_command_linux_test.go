@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -106,10 +105,6 @@ var _ = Describe("gdn setup", func() {
 		})
 
 		Context("when setting up for rootless", func() {
-			var idToStr = func(id uint32) string {
-				return strconv.FormatUint(uint64(id), 10)
-			}
-
 			BeforeEach(func() {
 				setupArgs = append(setupArgs, "--rootless-uid", idToStr(unprivilegedUID), "--rootless-gid", idToStr(unprivilegedGID))
 			})

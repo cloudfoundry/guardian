@@ -18,7 +18,13 @@ import (
 type UserCredential *syscall.Credential
 
 func setUserCredential(runner *GardenRunner) {
-	runner.Command.SysProcAttr = &syscall.SysProcAttr{Credential: runner.User}
+	credential := runner.User
+	if runner.Socket2meSocketPath != "" {
+		// socket2me sets uid/gid
+		credential = nil
+	}
+
+	runner.Command.SysProcAttr = &syscall.SysProcAttr{Credential: credential}
 }
 
 func (r *GardenRunner) setupDirsForUser() {

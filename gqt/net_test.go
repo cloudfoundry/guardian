@@ -1050,6 +1050,7 @@ var _ = Describe("IPTables Binary Flags", func() {
 
 		Context("when the path is invalid", func() {
 			BeforeEach(func() {
+				config.StartupExpectedToFail = true
 				config.IPTableseBin = "/path/to/iptables/bin"
 			})
 
@@ -1060,6 +1061,7 @@ var _ = Describe("IPTables Binary Flags", func() {
 
 		Context("when the path is valid but it's not iptables", func() {
 			BeforeEach(func() {
+				config.StartupExpectedToFail = true
 				config.IPTableseBin = "/bin/ls"
 			})
 

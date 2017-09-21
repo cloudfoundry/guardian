@@ -30,6 +30,9 @@ type GdnRunnerConfig struct {
 	TmpDir string
 	User   UserCredential
 
+	Socket2meBin        string
+	Socket2meSocketPath string
+
 	// Garden config
 	GdnBin                   string
 	TarBin                   string `flag:"tar-bin"`
@@ -84,14 +87,18 @@ type GdnRunnerConfig struct {
 	AppArmor                       string   `flag:"apparmor"`
 	Tag                            string   `flag:"tag"`
 	NetworkPool                    string   `flag:"network-pool"`
+
+	StartupExpectedToFail bool
 }
 
 func (c GdnRunnerConfig) connectionInfo() (string, string) {
-	if c.BindSocket == "" {
-		return "tcp", fmt.Sprintf("%s:%d", c.BindIP, *c.BindPort)
+	if c.Socket2meSocketPath != "" {
+		return "unix", c.Socket2meSocketPath
 	}
-
-	return "unix", c.BindSocket
+	if c.BindSocket != "" {
+		return "unix", c.BindSocket
+	}
+	return "tcp", fmt.Sprintf("%s:%d", c.BindIP, *c.BindPort)
 }
 
 func (c GdnRunnerConfig) toFlags() []string {
@@ -145,6 +152,7 @@ type Binaries struct {
 	NoopPlugin    string `json:"noop_plugin,omitempty"`
 	ExecRunner    string `json:"execrunner,omitempty"`
 	NSTar         string `json:"nstar,omitempty"`
+	Socket2me     string `json:"socket2me,omitempty"`
 }
 
 type GardenRunner struct {
@@ -217,7 +225,25 @@ func NewGardenRunner(config GdnRunnerConfig) *GardenRunner {
 		}),
 	}
 
-	runner.Command = exec.Command(config.GdnBin, append([]string{"server"}, config.toFlags()...)...)
+	if config.Socket2meSocketPath == "" {
+		runner.Command = exec.Command(config.GdnBin, append([]string{"server"}, config.toFlags()...)...)
+	} else {
+		runner.Command = exec.Command(
+			config.Socket2meBin,
+			append(
+				[]string{
+					"--socket-path",
+					config.Socket2meSocketPath,
+					fmt.Sprintf("--uid=%d", config.User.Uid),
+					fmt.Sprintf("--gid=%d", config.User.Gid),
+					"--socket-uid=0", "--socket-gid=0",
+					config.GdnBin, "server",
+				},
+				config.toFlags()...,
+			)...,
+		)
+	}
+
 	runner.Command.Env = append(
 		[]string{
 			fmt.Sprintf("TMPDIR=%s", runner.TmpDir),
@@ -244,6 +270,10 @@ func Start(config GdnRunnerConfig) *RunningGarden {
 	gdn.process = ifrit.Invoke(runner)
 	gdn.Pid = runner.Command.Process.Pid
 	gdn.Client = client.New(connection.New(runner.connectionInfo()))
+
+	if !config.StartupExpectedToFail {
+		Eventually(gdn.Ping, time.Second*10).Should(Succeed())
+	}
 
 	return gdn
 }
