@@ -204,6 +204,26 @@ var _ = Describe("CgroupStarter", func() {
 			}
 		})
 
+		Context("when the garden folder already exists", func() {
+			BeforeEach(func() {
+				for _, subsystem := range []string{"devices", "cpu", "memory"} {
+					fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden")
+					Expect(fullPath).ToNot(BeADirectory())
+					Expect(os.MkdirAll(fullPath, 0700))
+				}
+			})
+
+			It("changes the permissions of the subdirectories", func() {
+				starter.Start()
+				for _, subsystem := range []string{"devices", "cpu", "memory"} {
+					fullPath := path.Join(tmpDir, "cgroup", subsystem, "garden")
+					dirStat, err := os.Stat(fullPath)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(dirStat.Mode() & os.ModePerm).To(Equal(os.FileMode(0755)))
+				}
+			})
+		})
+
 		Context("when we are in the nested case", func() {
 			BeforeEach(func() {
 				procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
