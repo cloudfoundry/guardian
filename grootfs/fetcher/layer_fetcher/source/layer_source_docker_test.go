@@ -268,8 +268,10 @@ var _ = Describe("Layer source: Docker", func() {
 			_, err := layerSource.Manifest(logger, baseImageURL)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(logger.TestSink.LogMessages()).To(
-				ContainElement("test-layer-source.fetching-image-manifest.fetching-image-reference-failed"))
+			Expect(logger.TestSink.LogMessages()).To(ContainElement("test-layer-source.fetching-image-manifest.attempt-get-image-1"))
+			Expect(logger.TestSink.LogMessages()).To(ContainElement("test-layer-source.fetching-image-manifest.attempt-get-image-2"))
+			Expect(logger.TestSink.LogMessages()).To(ContainElement("test-layer-source.fetching-image-manifest.attempt-get-image-3"))
+			Expect(logger.TestSink.LogMessages()).To(ContainElement("test-layer-source.fetching-image-manifest.attempt-get-image-success"))
 		})
 
 		It("retries fetching a blob twice", func() {

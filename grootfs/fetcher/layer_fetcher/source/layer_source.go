@@ -46,34 +46,30 @@ func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (type
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	var img types.Image
-	var err error
-
-	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
-		logger.Info("attempt-get-image-manifest", lager.Data{"attempt": i + 1})
-		img, err = s.image(logger, baseImageURL)
-		if err != nil {
-			logger.Error("fetching-image-reference-failed", err)
-			continue
-		}
-
-		img, err = s.convertImage(logger, img, baseImageURL)
-		if err != nil {
-			logger.Error("converting-image-failed", err)
-			continue
-		}
-
-		logger.Info("attempt-get-config", lager.Data{"attempt": i + 1})
-		_, err = img.ConfigBlob()
-		if err != nil {
-			logger.Error("fetching-image-config-failed", err)
-			continue
-		}
-
-		break
+	img, err := s.getImageWithRetries(logger, baseImageURL)
+	if err != nil {
+		logger.Error("fetching-image-reference-failed", err)
+		return nil, errorspkg.Wrap(err, "fetching image reference")
 	}
 
-	return img, errorspkg.Wrap(err, "fetching image reference")
+	img, err = s.convertImage(logger, img, baseImageURL)
+	if err != nil {
+		logger.Error("converting-image-failed", err)
+		return nil, err
+	}
+
+	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
+		logger.Info("attempt-get-config", lager.Data{"attempt": i + 1})
+		_, e := img.ConfigBlob()
+		if e == nil {
+			logger.Error("fetching-image-config-failed", err)
+			return img, nil
+		}
+
+		err = e
+	}
+
+	return nil, errorspkg.Wrap(err, "fetching image configuration")
 }
 
 func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error) {
@@ -92,7 +88,7 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest st
 
 	blobInfo := types.BlobInfo{Digest: digestpkg.Digest(digest)}
 
-	blob, size, err := s.getBlobWithRetries(imgSrc, blobInfo, logger)
+	blob, size, err := s.getBlobWithRetries(logger, imgSrc, blobInfo)
 	if err != nil {
 		return "", 0, err
 	}
@@ -116,12 +112,13 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest st
 	return blobTempFile.Name(), size, nil
 }
 
-func (s *LayerSource) getBlobWithRetries(imgSrc types.ImageSource, blobInfo types.BlobInfo, logger lager.Logger) (io.ReadCloser, int64, error) {
+func (s *LayerSource) getBlobWithRetries(logger lager.Logger, imgSrc types.ImageSource, blobInfo types.BlobInfo) (io.ReadCloser, int64, error) {
 	var err error
 	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
-		logger.Info("attempt-get-blob", lager.Data{"attempt": i + 1})
+		logger.Info(fmt.Sprintf("attempt-get-blob", i+1))
 		blob, size, e := imgSrc.GetBlob(blobInfo)
 		if e == nil {
+			logger.Error("attempt-get-blob-success", err)
 			return blob, size, nil
 		}
 		err = e
@@ -181,14 +178,13 @@ func (s *LayerSource) reference(logger lager.Logger, baseImageURL *url.URL) (typ
 	return ref, nil
 }
 
-func (s *LayerSource) image(logger lager.Logger, baseImageURL *url.URL) (types.Image, error) {
+func (s *LayerSource) getImageWithRetries(logger lager.Logger, baseImageURL *url.URL) (types.Image, error) {
 	ref, err := s.reference(logger, baseImageURL)
 	if err != nil {
 		return nil, err
 	}
 
 	skipTLSValidation := s.skipTLSValidation(baseImageURL)
-	logger.Debug("new-image", lager.Data{"skipTLSValidation": skipTLSValidation})
 	sysCtx := types.SystemContext{
 		DockerInsecureSkipTLSVerify: skipTLSValidation,
 		DockerAuthConfig: &types.DockerAuthConfig{
@@ -196,12 +192,20 @@ func (s *LayerSource) image(logger lager.Logger, baseImageURL *url.URL) (types.I
 			Password: s.password,
 		},
 	}
-	img, err := ref.NewImage(&sysCtx)
-	if err != nil {
-		return nil, errorspkg.Wrap(err, "creating image")
+
+	var imgErr error
+	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
+		logger.Info(fmt.Sprintf("attempt-get-image-%d", i+1))
+
+		img, e := ref.NewImage(&sysCtx)
+		if e == nil {
+			logger.Info("attempt-get-image-success")
+			return img, nil
+		}
+		imgErr = e
 	}
 
-	return img, nil
+	return nil, errorspkg.Wrap(imgErr, "creating image")
 }
 
 func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (types.ImageSource, error) {
@@ -248,7 +252,7 @@ func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Imag
 
 	diffIDs := []digestpkg.Digest{}
 	for _, layer := range originalImage.LayerInfos() {
-		diffID, err := s.v1DiffID(layer, imgSrc)
+		diffID, err := s.v1DiffID(logger, layer, imgSrc)
 		if err != nil {
 			return nil, errorspkg.Wrap(err, "converting V1 schema failed")
 		}
@@ -265,8 +269,8 @@ func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Imag
 	return originalImage.UpdatedImage(options)
 }
 
-func (s *LayerSource) v1DiffID(layer types.BlobInfo, imgSrc types.ImageSource) (digestpkg.Digest, error) {
-	blob, _, err := imgSrc.GetBlob(layer)
+func (s *LayerSource) v1DiffID(logger lager.Logger, layer types.BlobInfo, imgSrc types.ImageSource) (digestpkg.Digest, error) {
+	blob, _, err := s.getBlobWithRetries(logger, imgSrc, layer)
 	if err != nil {
 		return "", errorspkg.Wrap(err, "fetching V1 layer blob")
 	}
