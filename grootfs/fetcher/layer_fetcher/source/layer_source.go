@@ -115,7 +115,7 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest st
 func (s *LayerSource) getBlobWithRetries(logger lager.Logger, imgSrc types.ImageSource, blobInfo types.BlobInfo) (io.ReadCloser, int64, error) {
 	var err error
 	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
-		logger.Info(fmt.Sprintf("attempt-get-blob", i+1))
+		logger.Info(fmt.Sprintf("attempt-get-blob-%d", i+1))
 		blob, size, e := imgSrc.GetBlob(blobInfo)
 		if e == nil {
 			logger.Error("attempt-get-blob-success", err)

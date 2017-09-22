@@ -42,7 +42,7 @@ integration:
 	./script/test -i
 
 test: concourse-go-vet
-	./script/test
+	./script/test -a
 
 ###### Go tools ###############################################################
 
@@ -50,7 +50,7 @@ go-vet:
 	GOOS=linux go vet `go list ./... | grep -v vendor`
 
 concourse-go-vet:
-	fly -t lite e -x -c ci/tasks/go-vet.yml -i grootfs-git-repo=${PWD}
+	fly -t grootfs-ci e -x -c ci/tasks/go-vet.yml -i grootfs-git-repo=${PWD}
 
 go-generate:
 	GOOS=linux go generate `go list ./... | grep -v vendor`
