@@ -189,11 +189,7 @@ func (s *CgroupStarter) createGardenCgroup(log lager.Logger, gardenCgroupPath st
 	log.Info("started")
 	defer log.Info("finished")
 
-	if err := os.MkdirAll(gardenCgroupPath, 0700); err != nil {
-		return err
-	}
-
-	return nil
+	return os.MkdirAll(gardenCgroupPath, 0755)
 }
 
 func (s *CgroupStarter) mountTmpfsOnCgroupPath(log lager.Logger, path string) {
