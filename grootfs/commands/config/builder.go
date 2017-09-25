@@ -39,10 +39,9 @@ type Clean struct {
 }
 
 type Init struct {
-	StoreSizeBytes     int64
-	ExternalLogdevSize int64
-	OwnerUser          string
-	OwnerGroup         string
+	StoreSizeBytes int64
+	OwnerUser      string
+	OwnerGroup     string
 }
 
 type Builder struct {
@@ -74,10 +73,6 @@ func (b *Builder) Build() (Config, error) {
 
 	if b.config.Clean.ThresholdBytes < 0 {
 		return *b.config, errorspkg.New("invalid argument: clean threshold cannot be negative")
-	}
-
-	if b.config.Init.StoreSizeBytes <= 0 && b.config.Init.ExternalLogdevSize > 0 {
-		return *b.config, errorspkg.New("--external-logdev-size-mb requires the --store-size-bytes flag")
 	}
 
 	return *b.config, nil
@@ -229,11 +224,6 @@ func (b *Builder) WithMount(mount bool, noMount bool) *Builder {
 
 func (b *Builder) WithStoreSizeBytes(size int64) *Builder {
 	b.config.Init.StoreSizeBytes = size
-	return b
-}
-
-func (b *Builder) WithExternalLogdevSize(size int64) *Builder {
-	b.config.Init.ExternalLogdevSize = size
 	return b
 }
 

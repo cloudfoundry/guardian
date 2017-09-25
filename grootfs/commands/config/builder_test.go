@@ -91,19 +91,6 @@ var _ = Describe("Builder", func() {
 			})
 		})
 
-		Context("when --external-logdev-size-mb is used without --store-size-bytes", func() {
-			BeforeEach(func() {
-				cfg.FSDriver = "overlay-xfs"
-			})
-
-			It("tells the user this is an unsupported combination", func() {
-				builder = builder.WithStoreSizeBytes(0)
-				builder = builder.WithExternalLogdevSize(100)
-				_, err := builder.Build()
-				Expect(err).To(MatchError(ContainSubstring("--external-logdev-size-mb requires the --store-size-bytes flag")))
-			})
-		})
-
 		Context("when clean threshold property is invalid", func() {
 			BeforeEach(func() {
 				cfg.Clean.ThresholdBytes = int64(-1)

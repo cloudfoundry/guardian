@@ -36,11 +36,6 @@ var InitStoreCommand = cli.Command{
 			Name:  "store-size-bytes",
 			Usage: "Creates a new filesystem of the given size and mounts it to the given Store Directory",
 		},
-		cli.Int64Flag{
-			Name:  "external-logdev-size-mb",
-			Usage: "Size of the external log device when using XFS driver. 0 to disable. Only works with store-size-bytes option.",
-			Value: 0,
-		},
 	},
 
 	Action: func(ctx *cli.Context) error {
@@ -53,8 +48,7 @@ var InitStoreCommand = cli.Command{
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder).
-			WithStoreSizeBytes(ctx.Int64("store-size-bytes")).
-			WithExternalLogdevSize(ctx.Int64("external-logdev-size-mb"))
+			WithStoreSizeBytes(ctx.Int64("store-size-bytes"))
 		cfg, err := configBuilder.Build()
 		logger.Debug("init-store", lager.Data{"currentConfig": cfg})
 		if err != nil {

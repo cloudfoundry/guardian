@@ -276,8 +276,7 @@ func specToDriver(spec spec.DriverSpec) (internalDriver, error) {
 	case "overlay-xfs":
 		return overlayxfs.NewDriver(
 			spec.StorePath,
-			spec.SuidBinaryPath,
-			0), nil
+			spec.SuidBinaryPath), nil
 	default:
 		return nil, errors.Errorf("invalid filesystem spec: %s not recognized", spec.Type)
 	}

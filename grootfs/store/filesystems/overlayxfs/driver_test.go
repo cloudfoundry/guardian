@@ -51,7 +51,7 @@ var _ = Describe("Driver", func() {
 		var err error
 		storePath, err = ioutil.TempDir(StorePath, "")
 		Expect(err).ToNot(HaveOccurred())
-		driver = overlayxfs.NewDriver(storePath, tardisBinPath, 0)
+		driver = overlayxfs.NewDriver(storePath, tardisBinPath)
 
 		Expect(os.MkdirAll(storePath, 0777)).To(Succeed())
 		Expect(os.MkdirAll(filepath.Join(storePath, store.VolumesDirName), 0777)).To(Succeed())
@@ -143,48 +143,6 @@ var _ = Describe("Driver", func() {
 			It("returns an error", func() {
 				err := driver.InitFilesystem(logger, fsFile, "/tmp/no-valid")
 				Expect(err).To(MatchError(ContainSubstring("Mounting filesystem")))
-			})
-		})
-
-		Context("when external log size is > 0", func() {
-			var logdevPath string
-
-			BeforeEach(func() {
-				driver = overlayxfs.NewDriver(storePath, tardisBinPath, 64)
-				logdevPath = fmt.Sprintf("%s.external-log", storePath)
-			})
-
-			AfterEach(func() {
-				_ = syscall.Unmount(storePath, 0)
-				_ = exec.Command("sh", "-c", fmt.Sprintf("losetup -j %s | cut -d : -f 1 | xargs losetup -d", logdevPath)).Run()
-			})
-
-			It("succcesfully creates a logdev file", func() {
-				Expect(logdevPath).ToNot(BeAnExistingFile())
-				Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
-
-				stat, err := os.Stat(logdevPath)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.Size()).To(Equal(int64(64 * 1024 * 1024)))
-			})
-
-			It("mounts the xfs volume with the logdev and size options", func() {
-				Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
-				mountinfo, err := ioutil.ReadFile("/proc/self/mountinfo")
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(string(mountinfo)).To(MatchRegexp(fmt.Sprintf("%s[^\n]*logdev", storePath)))
-			})
-
-			Context("when it fails to create the external log file", func() {
-				BeforeEach(func() {
-					Expect(os.MkdirAll(fmt.Sprintf("%s.external-log", storePath), 0755)).To(Succeed())
-				})
-
-				It("returns an error", func() {
-					err := driver.InitFilesystem(logger, fsFile, storePath)
-					Expect(err).To(MatchError(ContainSubstring("truncating external log file")))
-				})
 			})
 		})
 	})
@@ -524,7 +482,7 @@ var _ = Describe("Driver", func() {
 
 			Context("when tardis is not in the path", func() {
 				BeforeEach(func() {
-					driver = overlayxfs.NewDriver(storePath, "/bin/bananas", 0)
+					driver = overlayxfs.NewDriver(storePath, "/bin/bananas")
 				})
 
 				It("returns an error", func() {
@@ -897,7 +855,7 @@ var _ = Describe("Driver", func() {
 
 		Context("when fails to list volumes", func() {
 			It("returns an error", func() {
-				driver := overlayxfs.NewDriver(storePath, tardisBinPath, 0)
+				driver := overlayxfs.NewDriver(storePath, tardisBinPath)
 				Expect(os.RemoveAll(filepath.Join(storePath, store.VolumesDirName))).To(Succeed())
 				_, err := driver.Volumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to list volumes")))

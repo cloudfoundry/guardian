@@ -36,10 +36,6 @@ func (r Runner) InitStore(spec InitSpec) error {
 		args = append(args, "--store-size-bytes", fmt.Sprintf("%d", spec.StoreSizeBytes))
 	}
 
-	if r.ExternaLogDeviceSize > 0 {
-		args = append(args, "--external-logdev-size-mb", fmt.Sprintf("%d", r.ExternaLogDeviceSize))
-	}
-
 	_, err := r.RunSubcommand("init-store", args...)
 	return err
 }

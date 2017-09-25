@@ -54,8 +54,6 @@ type Runner struct {
 	SkipLayerValidation bool
 
 	SysCredential syscall.Credential
-
-	ExternaLogDeviceSize int64
 }
 
 func (r Runner) StartSubcommand(subcommand string, args ...string) (*gexec.Session, error) {

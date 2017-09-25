@@ -126,39 +126,6 @@ var _ = Describe("Init Store", func() {
 				Expect(err).To(MatchError(ContainSubstring("store size must be at least 200Mb")))
 			})
 		})
-
-		Context("when using external log device", func() {
-			JustBeforeEach(func() {
-				runner = runner.WithExternalLogDeviceSize(64)
-				integration.SkipIfNotXFS(Driver)
-			})
-
-			AfterEach(func() {
-				testhelpers.CleanUpExternalLogDevice(storePath)
-			})
-
-			It("uses the logdev mount option", func() {
-				Expect(runner.InitStore(spec)).To(Succeed())
-
-				cmd := exec.Command("/bin/sh", "-c", fmt.Sprintf("cat /proc/mounts | grep %s", storePath))
-				output, err := cmd.CombinedOutput()
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(string(output)).To(ContainSubstring("logdev="))
-			})
-		})
-	})
-
-	Context("when using external log device without store size bytes", func() {
-		BeforeEach(func() {
-			runner = runner.WithExternalLogDeviceSize(64)
-			integration.SkipIfNotXFS(Driver)
-		})
-
-		It("returns an error", func() {
-			err := runner.InitStore(spec)
-			Expect(err).To(MatchError(ContainSubstring("--external-logdev-size-mb requires the --store-size-bytes flag")))
-		})
 	})
 
 	Context("when id mappings are provided", func() {
