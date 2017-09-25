@@ -68,11 +68,11 @@ var _ = Describe("graph flags", func() {
 	AfterEach(func() {
 		Expect(os.RemoveAll(nonDefaultRootfsPath)).To(Succeed())
 		Expect(client.DestroyAndStop()).To(Succeed())
-		client.Cleanup()
 	})
 
 	Describe("--graph-cleanup-threshold-in-megabytes", func() {
 		JustBeforeEach(func() {
+			Expect(numLayersInGraph()).To(Equal(0))
 			container, err := client.Create(garden.ContainerSpec{
 				RootFSPath: "docker:///busybox",
 			})

@@ -303,6 +303,8 @@ func (r *RunningGarden) DestroyAndStop() error {
 		return err
 	}
 
+	r.Cleanup()
+
 	return nil
 }
 
