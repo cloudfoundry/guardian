@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"os"
+	"strconv"
 
 	"code.cloudfoundry.org/idmapper"
 )
@@ -14,7 +15,7 @@ type mapping struct {
 	size        int
 }
 
-func MapIds(procFilePath string) error {
+func mapIds(procFilePath string) error {
 	maximusID := idmapper.Min(idmapper.MustGetMaxValidUID(), idmapper.MustGetMaxValidGID())
 	currentUserUID := os.Getuid()
 	if currentUserUID != maximusID {
@@ -29,8 +30,8 @@ func MapIds(procFilePath string) error {
 		},
 		{
 			containerID: 1,
-			hostID:      1,
-			size:        maximusID - 1,
+			hostID:      65536,
+			size:        maximusID - 65536,
 		},
 	}
 
@@ -57,4 +58,18 @@ func writeMapFile(procFilePath string, desiredMappings []mapping) error {
 	}
 
 	return mapFile.Close()
+}
+
+func HandleCmd(idKind string) {
+	pid, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
+		os.Exit(1)
+	}
+
+	procGIDMap := fmt.Sprintf("/proc/%d/%sid_map", pid, idKind)
+	if err := mapIds(procGIDMap); err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 }

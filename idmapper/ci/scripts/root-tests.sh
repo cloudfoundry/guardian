@@ -22,6 +22,7 @@ move_to_gopath() {
 dest_path=$(move_to_gopath idmapper)
 cd $dest_path
 
+glide install
 
 go get github.com/onsi/gomega
 

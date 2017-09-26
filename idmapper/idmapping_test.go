@@ -7,7 +7,6 @@ import (
 )
 
 var _ = Describe("Idmapping", func() {
-	const maxID = uint32(4294967294)
 	Describe("Map", func() {
 		Context("when the mapping does not contain the given id", func() {
 			It("returns the original id", func() {

@@ -14,7 +14,15 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var _ = Describe("Newgidmap", func() {
+var _ = Describe("newgidmap", func() {
+	testIDMapperBins(func() string { return NewgidmapBin }, "%g")
+})
+
+var _ = Describe("newuidmap", func() {
+	testIDMapperBins(func() string { return NewuidmapBin }, "%u")
+})
+
+func testIDMapperBins(bin func() string, statFmt string) {
 	Context("when the user is maximus", func() {
 		var sourcePath string
 
@@ -28,8 +36,8 @@ var _ = Describe("Newgidmap", func() {
 			Expect(os.RemoveAll(sourcePath)).To(Succeed())
 		})
 
-		shouldMapFileGroupToGID := func(filePath string, gidMapping string) {
-			statCmd := exec.Command(NamespaceWrapperBin, "stat", "-c", "%g", filePath)
+		shouldMapFileGroupToID := func(filePath string, idMapping string) {
+			statCmd := exec.Command(NamespaceWrapperBin, "stat", "-c", statFmt, filePath)
 			statCmd.SysProcAttr = &syscall.SysProcAttr{
 				Cloneflags: syscall.CLONE_NEWUSER,
 			}
@@ -43,7 +51,7 @@ var _ = Describe("Newgidmap", func() {
 			statCmd.ExtraFiles = []*os.File{pipeR}
 			Expect(statCmd.Start()).To(Succeed())
 
-			idmapperCmd := exec.Command(NewgidmapBin, fmt.Sprintf("%d", statCmd.Process.Pid))
+			idmapperCmd := exec.Command(bin(), fmt.Sprintf("%d", statCmd.Process.Pid))
 			idmapperCmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
 					Uid: MaximusID,
@@ -57,37 +65,37 @@ var _ = Describe("Newgidmap", func() {
 			_, err = pipeW.Write([]byte{0})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(statCmd.Wait()).To(Succeed())
-			Eventually(buffer).Should(gbytes.Say(gidMapping))
+			Eventually(buffer).Should(gbytes.Say(idMapping))
 		}
 
-		It("correctly maps maximus user id", func() {
-			maximusFilePath := path.Join(sourcePath, "maximus")
-			Expect(ioutil.WriteFile(maximusFilePath, []byte("hello-world"), 0644)).To(Succeed())
-			Expect(os.Chown(maximusFilePath, int(MaximusID), int(MaximusID))).To(Succeed())
+		itCorrectlyMapsID := func(id, expectedId uint32) {
+			filePath := path.Join(sourcePath, "foo")
+			Expect(ioutil.WriteFile(filePath, []byte("hello-world"), 0644)).To(Succeed())
+			Expect(os.Chown(filePath, int(id), int(id))).To(Succeed())
 
-			shouldMapFileGroupToGID(maximusFilePath, fmt.Sprintf("%d", RootID))
+			shouldMapFileGroupToID(filePath, fmt.Sprintf("%d", expectedId))
+		}
+
+		It("correctly maps maximus", func() {
+			itCorrectlyMapsID(MaximusID, RootID)
 		})
 
-		It("correctly maps root user id", func() {
-			rootFilePath := path.Join(sourcePath, "root")
-			Expect(ioutil.WriteFile(rootFilePath, []byte("hello-world"), 0644)).To(Succeed())
-			Expect(os.Chown(rootFilePath, int(RootID), int(RootID))).To(Succeed())
-
-			shouldMapFileGroupToGID(rootFilePath, fmt.Sprintf("%d", NobodyID))
+		It("correctly maps root", func() {
+			itCorrectlyMapsID(RootID, overflowID)
 		})
 
-		It("correctly maps user 102 id", func() {
-			user102FilePath := path.Join(sourcePath, "102")
-			Expect(ioutil.WriteFile(user102FilePath, []byte("hello-world"), 0644)).To(Succeed())
-			Expect(os.Chown(user102FilePath, 102, 102)).To(Succeed())
+		It("does not map ids smaller than 65536", func() {
+			itCorrectlyMapsID(1000, overflowID)
+		})
 
-			shouldMapFileGroupToGID(user102FilePath, fmt.Sprintf("%d", 102))
+		It("correctly maps 65640", func() {
+			itCorrectlyMapsID(65535+105, 105)
 		})
 	})
 
-	Context("when the user is not maximus", func() {
+	Context("when neither the uid nor gid of the process are maximus", func() {
 		It("dies a horrible death", func() {
-			idmapperCmd := exec.Command(NewgidmapBin, "1234")
+			idmapperCmd := exec.Command(bin(), "1234")
 			idmapperCmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
 					Uid: 1000,
@@ -106,7 +114,7 @@ var _ = Describe("Newgidmap", func() {
 
 	Context("when the process does not exist", func() {
 		It("returns an error", func() {
-			idmapperCmd := exec.Command(NewgidmapBin, "123412341234")
+			idmapperCmd := exec.Command(bin(), "123412341234")
 			idmapperCmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
 					Uid: MaximusID,
@@ -125,7 +133,7 @@ var _ = Describe("Newgidmap", func() {
 
 	Context("when the PID is invalid", func() {
 		It("returns an error", func() {
-			idmapperCmd := exec.Command(NewgidmapBin, "120/../1")
+			idmapperCmd := exec.Command(bin(), "120/../1")
 			idmapperCmd.SysProcAttr = &syscall.SysProcAttr{
 				Credential: &syscall.Credential{
 					Uid: MaximusID,
@@ -141,4 +149,4 @@ var _ = Describe("Newgidmap", func() {
 			)
 		})
 	})
-})
+}
