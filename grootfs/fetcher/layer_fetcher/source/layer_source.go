@@ -65,6 +65,7 @@ func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (type
 			return img, nil
 		}
 
+		logger.Error("fetching-image-config-failed", e, lager.Data{"attempt": i + 1})
 		err = e
 	}
 
