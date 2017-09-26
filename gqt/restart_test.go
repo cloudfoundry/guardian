@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 
@@ -42,6 +41,7 @@ var _ = Describe("Surviving Restarts", func() {
 			propertiesDir, err = ioutil.TempDir("", "props")
 			Expect(err).NotTo(HaveOccurred())
 			config.PropertiesPath = path.Join(propertiesDir, "props.json")
+			restartConfig = config
 
 			containerSpec = garden.ContainerSpec{
 				Network: "177.100.10.30/30",
@@ -55,7 +55,6 @@ var _ = Describe("Surviving Restarts", func() {
 				},
 			}
 
-			restartConfig = defaultConfig()
 			gracefulShutdown = true
 		})
 
@@ -100,9 +99,6 @@ var _ = Describe("Surviving Restarts", func() {
 				Expect(client.Kill()).To(MatchError("exit status 137"))
 			}
 
-			if reflect.DeepEqual(restartConfig, defaultConfig()) {
-				restartConfig = config
-			}
 			client = runner.Start(restartConfig)
 		})
 
@@ -113,7 +109,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 		Context("when the destroy-containers-on-startup flag is passed", func() {
 			BeforeEach(func() {
-				config.DestroyContainersOnStartup = boolptr(true)
+				restartConfig.DestroyContainersOnStartup = boolptr(true)
 			})
 
 			JustBeforeEach(func() {
@@ -296,6 +292,7 @@ var _ = Describe("Surviving Restarts", func() {
 				Context("when the server denies all the networks", func() {
 					BeforeEach(func() {
 						config.DenyNetworks = []string{"0.0.0.0/0"}
+						restartConfig.DenyNetworks = []string{"0.0.0.0/0"}
 					})
 
 					It("still can't access disallowed IPs", func() {
@@ -309,8 +306,8 @@ var _ = Describe("Surviving Restarts", func() {
 
 				Context("when the server is restarted without deny networks applied", func() {
 					BeforeEach(func() {
-						restartConfig = config
 						config.DenyNetworks = []string{"0.0.0.0/0"}
+						restartConfig.DenyNetworks = []string{}
 					})
 
 					It("is able to access the internet", func() {
