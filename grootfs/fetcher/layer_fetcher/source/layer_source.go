@@ -59,10 +59,9 @@ func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (type
 	}
 
 	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
-		logger.Info("attempt-get-config", lager.Data{"attempt": i + 1})
+		logger.Debug("attempt-get-config", lager.Data{"attempt": i + 1})
 		_, e := img.ConfigBlob()
 		if e == nil {
-			logger.Error("fetching-image-config-failed", err)
 			return img, nil
 		}
 
@@ -115,10 +114,10 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest st
 func (s *LayerSource) getBlobWithRetries(logger lager.Logger, imgSrc types.ImageSource, blobInfo types.BlobInfo) (io.ReadCloser, int64, error) {
 	var err error
 	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
-		logger.Info(fmt.Sprintf("attempt-get-blob-%d", i+1))
+		logger.Debug(fmt.Sprintf("attempt-get-blob-%d", i+1))
 		blob, size, e := imgSrc.GetBlob(blobInfo)
 		if e == nil {
-			logger.Error("attempt-get-blob-success", err)
+			logger.Debug("attempt-get-blob-success")
 			return blob, size, nil
 		}
 		err = e
@@ -195,11 +194,11 @@ func (s *LayerSource) getImageWithRetries(logger lager.Logger, baseImageURL *url
 
 	var imgErr error
 	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
-		logger.Info(fmt.Sprintf("attempt-get-image-%d", i+1))
+		logger.Debug(fmt.Sprintf("attempt-get-image-%d", i+1))
 
 		img, e := ref.NewImage(&sysCtx)
 		if e == nil {
-			logger.Info("attempt-get-image-success")
+			logger.Debug("attempt-get-image-success")
 			return img, nil
 		}
 		imgErr = e

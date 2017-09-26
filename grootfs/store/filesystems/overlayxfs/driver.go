@@ -382,7 +382,7 @@ func cleanWhiteoutDir(path string) error {
 }
 
 func (d *Driver) WriteVolumeMeta(logger lager.Logger, id string, metadata base_image_puller.VolumeMeta) error {
-	logger = logger.Session("overlayxfs-writing-volume-metadata", lager.Data{"volmeID": id})
+	logger = logger.Session("overlayxfs-writing-volume-metadata", lager.Data{"volumeID": id})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
