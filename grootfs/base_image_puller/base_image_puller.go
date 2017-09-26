@@ -334,14 +334,15 @@ func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, u
 }
 
 func (p *BaseImagePuller) finalizeVolume(logger lager.Logger, tempVolumeName, volumePath, chainID string, volSize int64) error {
+	if err := p.volumeDriver.WriteVolumeMeta(logger, chainID, VolumeMeta{Size: volSize}); err != nil {
+		return errorspkg.Wrapf(err, "writing volume `%s` metadata", chainID)
+	}
+
 	finalVolumePath := strings.Replace(volumePath, tempVolumeName, chainID, 1)
 	if err := p.volumeDriver.MoveVolume(logger, volumePath, finalVolumePath); err != nil {
 		return errorspkg.Wrapf(err, "failed to move volume to its final location")
 	}
 
-	if err := p.volumeDriver.WriteVolumeMeta(logger, chainID, VolumeMeta{Size: volSize}); err != nil {
-		return errorspkg.Wrapf(err, "writing volume `%s` metadata", chainID)
-	}
 	return nil
 }
 
