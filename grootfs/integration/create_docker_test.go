@@ -21,7 +21,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/integration"
 	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
@@ -124,8 +123,6 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				var err error
 				tcpDumpSess, err = gexec.Start(exec.Command("tcpdump", "-U", "-w", "/tmp/packets", "tcp"), GinkgoWriter, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
-
-				integration.SkipIfNonRoot(GrootfsTestUid)
 			})
 
 			AfterEach(func() {
