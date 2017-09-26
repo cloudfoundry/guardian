@@ -525,7 +525,7 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	}
 
 	if err := ensureImageDestroyed(imagePath); err != nil {
-		logger.Error("removing-image-path", err)
+		logger.Error("removing-image-path-failed", err)
 		return errorspkg.Wrap(err, "deleting rootfs folder")
 	}
 
@@ -761,7 +761,7 @@ func ensureImageDestroyed(imagePath string) error {
 func mounted(mount string) (bool, error) {
 	contents, err := ioutil.ReadFile("/proc/self/mountinfo")
 	if err != nil {
-		return false, err
+		return false, errorspkg.Wrap(err, "reading proc mountinfo")
 	}
 
 	return strings.Contains(string(contents), mount), nil
