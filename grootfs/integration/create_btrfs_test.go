@@ -74,13 +74,38 @@ var _ = Describe("Create (btrfs only)", func() {
 			})
 
 			Context("when the drax bin doesn't have uid bit set", func() {
-				It("doesn't leak the image dir", func() {
+				BeforeEach(func() {
 					testhelpers.UnsuidBinary(draxBin.Name())
-					_, err := Runner.WithDraxBin(draxBin.Name()).Create(spec)
-					Expect(err).To(HaveOccurred())
+				})
 
-					imagePath := path.Join(Runner.StorePath, "images", randomImageID)
-					Expect(imagePath).ToNot(BeAnExistingFile())
+				Context("and groot is running rootless", func() {
+					BeforeEach(func() {
+						integration.SkipIfRoot(GrootfsTestUid)
+					})
+
+					It("returns a sensible error", func() {
+						_, err := Runner.WithDraxBin(draxBin.Name()).Create(spec)
+						Expect(err.Error()).To(ContainSubstring("missing the setuid bit on drax"))
+					})
+
+					It("doesn't leak the image dir", func() {
+						_, err := Runner.WithDraxBin(draxBin.Name()).Create(spec)
+						Expect(err).To(HaveOccurred())
+
+						imagePath := path.Join(Runner.StorePath, "images", randomImageID)
+						Expect(imagePath).ToNot(BeAnExistingFile())
+					})
+				})
+
+				Context("but groot is running as root", func() {
+					BeforeEach(func() {
+						integration.SkipIfNonRoot(GrootfsTestUid)
+					})
+
+					It("succeeds anyway", func() {
+						_, err := Runner.WithDraxBin(draxBin.Name()).Create(spec)
+						Expect(err).NotTo(HaveOccurred())
+					})
 				})
 			})
 		})

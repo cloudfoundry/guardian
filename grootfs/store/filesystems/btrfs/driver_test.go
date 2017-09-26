@@ -1,7 +1,6 @@
 package btrfs_test
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -479,17 +478,6 @@ var _ = Describe("Btrfs", func() {
 						Expect(err).To(MatchError(ContainSubstring("drax was not found in the $PATH")))
 					})
 				})
-
-				Context("and drax does not have the setuid bit", func() {
-					BeforeEach(func() {
-						testhelpers.UnsuidBinary(draxBinPath)
-					})
-
-					It("returns an error", func() {
-						_, err := driver.CreateImage(logger, spec)
-						Expect(err).To(MatchError(ContainSubstring("missing the setuid bit on drax")))
-					})
-				})
 			})
 		})
 
@@ -795,25 +783,6 @@ var _ = Describe("Btrfs", func() {
 					Expect(driver.DestroyImage(logger, spec.ImagePath)).To(Succeed())
 				})
 			})
-
-			Context("and drax does not have the setuid bit", func() {
-				BeforeEach(func() {
-					testhelpers.UnsuidBinary(draxBinPath)
-				})
-
-				It("doesn't fail, but logs the error", func() {
-					Expect(
-						driver.DestroyImage(logger, spec.ImagePath),
-					).To(Succeed())
-
-					Expect(logger).To(ContainSequence(
-						Error(
-							errors.New("missing the setuid bit on drax"),
-							Message("btrfs.btrfs-destroying-image.destroying-subvolume.destroying-quota-groups-failed"),
-						),
-					))
-				})
-			})
 		})
 
 		Context("when destroying a non existant volume", func() {
@@ -918,17 +887,6 @@ var _ = Describe("Btrfs", func() {
 				It("returns an error", func() {
 					_, err := driver.FetchStats(logger, imagePath)
 					Expect(err).To(MatchError(ContainSubstring("drax was not found in the $PATH")))
-				})
-			})
-
-			Context("and drax does not have the setuid bit", func() {
-				BeforeEach(func() {
-					testhelpers.UnsuidBinary(draxBinPath)
-				})
-
-				It("returns an error", func() {
-					_, err := driver.FetchStats(logger, imagePath)
-					Expect(err).To(MatchError(ContainSubstring("missing the setuid bit on drax")))
 				})
 			})
 		})

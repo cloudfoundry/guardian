@@ -268,14 +268,6 @@ func (d *Driver) FetchStats(logger lager.Logger, imagePath string) (groot.Volume
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	if !d.draxInPath() {
-		return groot.VolumeStats{}, errorspkg.New("drax was not found in the $PATH")
-	}
-
-	if !d.hasSUID() {
-		return groot.VolumeStats{}, errorspkg.New("missing the setuid bit on drax")
-	}
-
 	args := []string{
 		"--btrfs-bin", d.btrfsBinPath,
 		"stats",
@@ -434,7 +426,7 @@ func (d *Driver) runDrax(logger lager.Logger, args ...string) (*bytes.Buffer, er
 		return nil, errorspkg.New("drax was not found in the $PATH")
 	}
 
-	if !d.hasSUID() {
+	if !d.hasSUID() && os.Geteuid() != 0 {
 		return nil, errorspkg.New("missing the setuid bit on drax")
 	}
 

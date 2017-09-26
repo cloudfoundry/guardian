@@ -12,6 +12,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 
@@ -135,6 +136,51 @@ var _ = Describe("Stats", func() {
 				Expect(stats.DiskUsage.ExclusiveBytesUsed).To(
 					BeNumerically("~", expectedStats.DiskUsage.ExclusiveBytesUsed, 100),
 				)
+			})
+		})
+
+		Context("when aux binary doesn't have the suid bit", func() {
+			var (
+				tardisBin, draxBin string
+				runner             runner.Runner
+			)
+
+			BeforeEach(func() {
+				draxBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
+				Expect(err).NotTo(HaveOccurred())
+				draxBin = integration.MakeBinaryAccessibleToEveryone(draxBin)
+				tardisBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
+				Expect(err).NotTo(HaveOccurred())
+				tardisBin = integration.MakeBinaryAccessibleToEveryone(tardisBin)
+
+				runner = Runner.WithDraxBin(draxBin).WithTardisBin(tardisBin)
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(tardisBin)).To(Succeed())
+				Expect(os.RemoveAll(draxBin)).To(Succeed())
+			})
+
+			Context("when running as root user", func() {
+				BeforeEach(func() {
+					integration.SkipIfNonRoot(GrootfsTestUid)
+				})
+
+				It("succeeds", func() {
+					_, err := runner.Stats(filepath.Dir(containerSpec.Root.Path))
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+
+			Context("when running as non-root user", func() {
+				BeforeEach(func() {
+					integration.SkipIfRoot(GrootfsTestUid)
+				})
+
+				It("returns an error", func() {
+					_, err := runner.Stats(filepath.Dir(containerSpec.Root.Path))
+					Expect(err.Error()).To(ContainSubstring("missing the setuid bit"))
+				})
 			})
 		})
 

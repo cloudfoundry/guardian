@@ -651,7 +651,7 @@ func (d *Driver) runTardis(logger lager.Logger, args ...string) (*bytes.Buffer, 
 		return nil, errorspkg.New("tardis was not found in the $PATH")
 	}
 
-	if !d.hasSUID() {
+	if !d.hasSUID() && os.Geteuid() != 0 {
 		return nil, errorspkg.New("missing the setuid bit on tardis")
 	}
 

@@ -14,6 +14,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
@@ -123,6 +124,53 @@ var _ = Describe("Delete (btrfs only)", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(errBuffer).Should(gbytes.Say("could not delete quota group"))
 			Eventually(outBuffer).Should(gbytes.Say(fmt.Sprintf("Image %s deleted", imageId)))
+		})
+	})
+
+	Context("when drax binary doesn't have the suid bit", func() {
+		var (
+			draxBin string
+			runner  runner.Runner
+		)
+
+		BeforeEach(func() {
+			draxBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
+			Expect(err).NotTo(HaveOccurred())
+			draxBin = integration.MakeBinaryAccessibleToEveryone(draxBin)
+
+			runner = Runner.WithDraxBin(draxBin)
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(draxBin)).To(Succeed())
+		})
+
+		Context("when running as root user", func() {
+			BeforeEach(func() {
+				integration.SkipIfNonRoot(GrootfsTestUid)
+			})
+
+			It("succeeds", func() {
+				withUniqueImage(func(imageId string, containerSpec specs.Spec) {
+					err := runner.Delete(imageId)
+					Expect(err).NotTo(HaveOccurred())
+				})
+			})
+		})
+
+		Context("when running as non-root user", func() {
+			BeforeEach(func() {
+				integration.SkipIfRoot(GrootfsTestUid)
+			})
+
+			It("doesn't fail but logs an error", func() {
+				withUniqueImage(func(imageId string, containerSpec specs.Spec) {
+					buffer := gbytes.NewBuffer()
+					err := runner.WithStderr(buffer).Delete(imageId)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(string(buffer.Contents())).To(ContainSubstring("btrfs-destroying-image.destroying-subvolume.destroying-quota-groups-failed"))
+				})
+			})
 		})
 	})
 })

@@ -495,17 +495,6 @@ var _ = Describe("Driver", func() {
 					Expect(filepath.Join(spec.ImagePath, "image_quota")).ToNot(BeAnExistingFile())
 				})
 			})
-
-			Context("when tardis doesn't have the setuid bit set", func() {
-				BeforeEach(func() {
-					testhelpers.UnsuidBinary(tardisBinPath)
-				})
-
-				It("returns an error", func() {
-					_, err := driver.CreateImage(logger, spec)
-					Expect(err).To(MatchError(ContainSubstring("missing the setuid bit on tardis")))
-				})
-			})
 		})
 
 		Context("when base volume folder does not exist", func() {
