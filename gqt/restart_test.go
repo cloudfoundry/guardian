@@ -86,7 +86,7 @@ var _ = Describe("Surviving Restarts", func() {
 			existingProc, err = container.Run(
 				garden.ProcessSpec{
 					Path: "/bin/sh",
-					Args: []string{"-c", "while true; do echo hello; sleep 1; done;"},
+					Args: []string{"-c", fmt.Sprintf("while true; do echo %s; sleep 1; done;", container.Handle())},
 				},
 				garden.ProcessIO{
 					Stdout: io.MultiWriter(GinkgoWriter, out),
@@ -141,13 +141,13 @@ var _ = Describe("Surviving Restarts", func() {
 
 			It("kills the container processes", func() {
 				check := func() string {
-					out, err := exec.Command("sh", "-c", "ps -elf | grep 'while true; do echo' | grep -v grep | wc -l").CombinedOutput()
+					out, err := exec.Command("sh", "-c", fmt.Sprintf("ps -elf | grep 'while true; do echo %s' | grep -v grep | wc -l", container.Handle())).CombinedOutput()
 					Expect(err).NotTo(HaveOccurred())
 					return string(out)
 				}
 
-				Eventually(check, time.Second*2, time.Millisecond*200).Should(Equal("0\n"), "expected user process to stay alive")
-				Consistently(check, time.Second*2, time.Millisecond*200).Should(Equal("0\n"), "expected user process to stay alive")
+				Eventually(check, time.Second*2, time.Millisecond*200).Should(Equal("0\n"), "expected user process to be killed")
+				Consistently(check, time.Second*2, time.Millisecond*200).Should(Equal("0\n"), "expected user process to stay dead")
 			})
 
 			Context("when the garden server does not shut down gracefully", func() {
@@ -220,7 +220,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 				It("allows the container process to continue running", func() {
 					Consistently(func() string {
-						out, err := exec.Command("sh", "-c", "ps -elf | grep 'while true; do echo' | grep -v grep | wc -l").CombinedOutput()
+						out, err := exec.Command("sh", "-c", fmt.Sprintf("ps -elf | grep 'while true; do echo %s' | grep -v grep | wc -l", container.Handle())).CombinedOutput()
 						Expect(err).NotTo(HaveOccurred())
 						return string(out)
 					}, time.Second*2, time.Millisecond*200).Should(Equal("1\n"), "expected user process to stay alive")
@@ -228,8 +228,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 				It("can reattach to processes that are still running", func() {
 					out := gbytes.NewBuffer()
-					procId := existingProc.ID()
-					process, err := container.Attach(procId, garden.ProcessIO{
+					process, err := container.Attach(existingProc.ID(), garden.ProcessIO{
 						Stdout: io.MultiWriter(GinkgoWriter, out),
 						Stderr: io.MultiWriter(GinkgoWriter, out),
 					})
@@ -237,8 +236,8 @@ var _ = Describe("Surviving Restarts", func() {
 					psOutput, err := exec.Command("sh", "-c", "ps -elf | grep /bin/sh").CombinedOutput()
 					Expect(err).NotTo(HaveOccurred())
 					Eventually(out).Should(
-						gbytes.Say("hello"),
-						fmt.Sprintf("did not see 'hello' after 5 seconds.\n/bin/sh processes: %s", string(psOutput)),
+						gbytes.Say(container.Handle()),
+						fmt.Sprintf("did not see container handle after 5 seconds.\n/bin/sh processes: %s", string(psOutput)),
 					)
 
 					Expect(process.Signal(garden.SignalKill)).To(Succeed())
