@@ -1019,7 +1019,7 @@ var _ = Describe("Driver", func() {
 			It("returns an error", func() {
 				newVolumePath := fmt.Sprintf("%s-new", volumePath)
 				err := driver.MoveVolume(logger, "nonsense", newVolumePath)
-				Expect(err).To(MatchError(ContainSubstring("moving volume")))
+				Expect(err).To(MatchError(ContainSubstring("source volume doesn't exist")))
 			})
 		})
 

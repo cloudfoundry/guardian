@@ -303,13 +303,8 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	if err := os.Rename(from, to); err != nil {
-		if os.IsExist(err) {
-			return nil
-		}
-
-		logger.Error("moving-volume-failed", err, lager.Data{"from": from, "to": to})
-		return errorspkg.Wrap(err, "moving volume")
+	if _, err := os.Stat(from); os.IsNotExist(err) {
+		return errorspkg.Wrap(err, "source volume doesn't exist")
 	}
 
 	oldLinkFile := filepath.Join(d.storePath, LinksDirName, filepath.Base(from))
@@ -332,6 +327,15 @@ func (d *Driver) MoveVolume(logger lager.Logger, from, to string) error {
 	if err := os.Symlink(to, linkPath); err != nil {
 		logger.Error("updating-volume-symlink-failed", err)
 		return errorspkg.Wrap(err, "updating volume symlink")
+	}
+
+	if err := os.Rename(from, to); err != nil {
+		if os.IsExist(err) {
+			return nil
+		}
+
+		logger.Error("moving-volume-failed", err, lager.Data{"from": from, "to": to})
+		return errorspkg.Wrap(err, "moving volume")
 	}
 
 	return nil
