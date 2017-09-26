@@ -1,9 +1,5 @@
 package: code.cloudfoundry.org/idmapper
 import:
-- package: github.com/opencontainers/runtime-spec
-  version: ^1.0.0-rc5
-  subpackages:
-  - specs-go
 testImport:
 - package: github.com/onsi/ginkgo
   version: ^1.3.1
