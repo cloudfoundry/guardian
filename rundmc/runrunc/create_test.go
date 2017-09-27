@@ -47,7 +47,7 @@ var _ = Describe("Create", func() {
 	})
 
 	JustBeforeEach(func() {
-		runner = runrunc.NewCreator("funC", runcRoot, "newuidmap", "newgidmap", commandRunner)
+		runner = runrunc.NewCreator("funC", runcRoot, commandRunner)
 
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "funC",
@@ -69,8 +69,6 @@ var _ = Describe("Create", func() {
 			"--debug",
 			"--log", logFilePath,
 			"--log-format", "json",
-			"--newuidmap", "newuidmap",
-			"--newgidmap", "newgidmap",
 			"create",
 			"--no-new-keyring",
 			"--bundle", bundlePath,
@@ -93,8 +91,6 @@ var _ = Describe("Create", func() {
 				"--debug",
 				"--log", logFilePath,
 				"--log-format", "json",
-				"--newuidmap", "newuidmap",
-				"--newgidmap", "newgidmap",
 				"--root",
 				runcRoot,
 				"create",

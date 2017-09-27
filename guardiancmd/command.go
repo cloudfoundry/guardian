@@ -196,8 +196,6 @@ type ServerCommand struct {
 		IPTables        FileFlag `long:"iptables-bin"  default:"/sbin/iptables" description:"path to the iptables binary"`
 		IPTablesRestore FileFlag `long:"iptables-restore-bin"  default:"/sbin/iptables-restore" description:"path to the iptables-restore binary"`
 		Init            FileFlag `long:"init-bin"       description:"Path execute as pid 1 inside each container."`
-		Newuidmap       string   `long:"newuidmap-bin"  default:"newuidmap" description:"Path to the 'newuidmap' binary."`
-		Newgidmap       string   `long:"newgidmap-bin"  default:"newgidmap" description:"Path to the 'newgidmap' binary."`
 	} `group:"Binary Tools"`
 
 	Runtime struct {
@@ -419,7 +417,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		Containerizer: cmd.wireContainerizer(logger,
 			cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Runtime.Plugin,
 			cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(),
-			cmd.Containers.ApparmorProfile, cmd.Bin.Newuidmap, cmd.Bin.Newgidmap, propManager),
+			cmd.Containers.ApparmorProfile, propManager),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
@@ -656,7 +654,7 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 }
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
-	depotPath, dadooPath, runtimePath, nstarPath, tarPath, appArmorProfile, newuidmapPath, newgidmapPath string,
+	depotPath, dadooPath, runtimePath, nstarPath, tarPath, appArmorProfile string,
 	properties gardener.PropertyManager) *rundmc.Containerizer {
 
 	// TODO centralize knowledge of garden -> runc capability schema translation
@@ -754,8 +752,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		dadooPath,
 		runtimePath,
 		cmd.Runc.Root,
-		newuidmapPath,
-		newgidmapPath,
 		cmd.wireExecPreparer(),
 		cmd.wireExecRunner(
 			dadooPath,

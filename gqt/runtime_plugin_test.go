@@ -57,8 +57,6 @@ var _ = Describe("Runtime Plugin", func() {
 					"--debug",
 					"--log", HaveSuffix(filepath.Join("containers", handle, "create.log")),
 					"--log-format", "json",
-					"--newuidmap", HaveSuffix("newuidmap"),
-					"--newgidmap", HaveSuffix("newgidmap"),
 					"create",
 					"--no-new-keyring",
 					"--bundle", HaveSuffix(filepath.Join("containers", handle)),

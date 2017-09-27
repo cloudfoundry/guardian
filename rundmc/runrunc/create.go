@@ -16,17 +16,13 @@ import (
 type Creator struct {
 	runcPath      string
 	runcRoot      string
-	newuidmapPath string
-	newgidmapPath string
 	commandRunner commandrunner.CommandRunner
 }
 
-func NewCreator(runcPath, runcRoot, newuidmapPath, newgidmapPath string, commandRunner commandrunner.CommandRunner) *Creator {
+func NewCreator(runcPath, runcRoot string, commandRunner commandrunner.CommandRunner) *Creator {
 	return &Creator{
 		runcPath,
 		runcRoot,
-		newuidmapPath,
-		newgidmapPath,
 		commandRunner,
 	}
 }
@@ -43,8 +39,6 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, _ garden.Proce
 		"--debug",
 		"--log", logFilePath,
 		"--log-format", "json",
-		"--newuidmap", c.newuidmapPath,
-		"--newgidmap", c.newgidmapPath,
 	}
 
 	createArgs := []string{

@@ -31,12 +31,6 @@ func main() {
 		cli.StringFlag{
 			Name: "log-format",
 		},
-		cli.StringFlag{
-			Name: "newuidmap",
-		},
-		cli.StringFlag{
-			Name: "newgidmap",
-		},
 	}
 
 	fakeRuntimePlugin.Commands = []cli.Command{

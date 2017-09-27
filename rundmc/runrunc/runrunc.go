@@ -33,9 +33,9 @@ type RuncBinary interface {
 	DeleteCommand(id, logFile string) *exec.Cmd
 }
 
-func New(runner commandrunner.CommandRunner, runcCmdRunner RuncCmdRunner, runc RuncBinary, dadooPath, runcPath, runcRoot, newuidmapPath, newgidmapPath string, execPreparer ExecPreparer, execRunner ExecRunner) *RunRunc {
+func New(runner commandrunner.CommandRunner, runcCmdRunner RuncCmdRunner, runc RuncBinary, dadooPath, runcPath, runcRoot string, execPreparer ExecPreparer, execRunner ExecRunner) *RunRunc {
 	return &RunRunc{
-		Creator: NewCreator(runcPath, runcRoot, newuidmapPath, newgidmapPath, runner),
+		Creator: NewCreator(runcPath, runcRoot, runner),
 		Execer:  NewExecer(execPreparer, execRunner),
 
 		OomWatcher: NewOomWatcher(runner, runc),
