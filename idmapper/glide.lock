@@ -1,6 +1,10 @@
 hash: 619f4c20dc790a9c1e52be66db20550cb25af22a47bfc5a1da865891a3072774
 updated: 2017-05-02T15:52:59.423786447+01:00
 imports:
+- name: github.com/opencontainers/runtime-spec
+  version: 035da1dca3dfbb00d752eb58b0b158d6129f3776
+  subpackages:
+  - specs-go
 testImports:
 - name: github.com/onsi/ginkgo
   version: 77a8c1e5c40d6bb6c5eb4dd4bdce9763564f6298

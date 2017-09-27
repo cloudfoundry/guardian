@@ -1,3 +1,0 @@
-[submodule "vendor/github.com/opencontainers/runtime-spec"]
-	path = vendor/github.com/opencontainers/runtime-spec
-	url = https://github.com/opencontainers/runtime-spec
