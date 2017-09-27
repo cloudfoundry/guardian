@@ -137,6 +137,7 @@ var _ = Describe("Layer source: OCI", func() {
 		It("downloads a blob", func() {
 			blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigest[0].Digest.String())
 			Expect(err).NotTo(HaveOccurred())
+			Expect(size).To(Equal(int64(668151)))
 
 			blobReader, err := os.Open(blobPath)
 			Expect(err).NotTo(HaveOccurred())
@@ -146,10 +147,9 @@ var _ = Describe("Layer source: OCI", func() {
 			cmd.Stdin = blobReader
 			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(size).To(Equal(int64(668151)))
 
-			Eventually(buffer).Should(gbytes.Say("etc/localtime"))
 			Eventually(sess).Should(gexec.Exit(0))
+			Expect(string(buffer.Contents())).To(ContainSubstring("etc/localtime"))
 		})
 
 		Context("when the blob has an invalid checksum", func() {
