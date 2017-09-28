@@ -28,7 +28,5 @@ go get github.com/onsi/gomega
 
 echo "I AM ROOT" | grootsay
 
-args=$@
-[ "$args" == "" ] && args="-r integration/root"
-ginkgo -p -race $args
+ginkgo -p -race -r $@
 
