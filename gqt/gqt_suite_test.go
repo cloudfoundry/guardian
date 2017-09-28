@@ -113,16 +113,16 @@ func TestGqt(t *testing.T) {
 }
 
 func defaultConfig() runner.GdnRunnerConfig {
-	config := runner.DefaultGdnRunnerConfig()
-	config.DefaultRootFS = defaultTestRootFS
-	config.GdnBin = binaries.Gdn
-	config.Socket2meBin = binaries.Socket2me
-	config.ExecRunnerBin = binaries.ExecRunner
-	config.InitBin = binaries.Init
-	config.TarBin = binaries.Tar
-	config.NSTarBin = binaries.NSTar
+	cfg := runner.DefaultGdnRunnerConfig()
+	cfg.DefaultRootFS = defaultTestRootFS
+	cfg.GdnBin = binaries.Gdn
+	cfg.Socket2meBin = binaries.Socket2me
+	cfg.ExecRunnerBin = binaries.ExecRunner
+	cfg.InitBin = binaries.Init
+	cfg.TarBin = binaries.Tar
+	cfg.NSTarBin = binaries.NSTar
 
-	return config
+	return cfg
 }
 
 func restartGarden(client *runner.RunningGarden, config runner.GdnRunnerConfig) *runner.RunningGarden {

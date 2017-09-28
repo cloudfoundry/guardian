@@ -38,8 +38,8 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"github.com/cloudfoundry/dropsonde"
-	_ "github.com/docker/docker/daemon/graphdriver/aufs"
-	_ "github.com/docker/docker/pkg/chrootarchive" // allow reexec of docker-applyLayer
+	_ "github.com/docker/docker/daemon/graphdriver/aufs" // aufs needed for garden-shed
+	_ "github.com/docker/docker/pkg/chrootarchive"       // allow reexec of docker-applyLayer
 	"github.com/docker/docker/pkg/reexec"
 	"github.com/eapache/go-resiliency/retrier"
 	uuid "github.com/nu7hatch/gouuid"
@@ -52,7 +52,7 @@ import (
 
 // These are the maximum caps an unprivileged container process ever gets
 // (it may get less if the user is not root, see NonRootMaxCaps)
-var UnprivilegedMaxCaps = []string{
+var unprivilegedMaxCaps = []string{
 	"CAP_CHOWN",
 	"CAP_DAC_OVERRIDE",
 	"CAP_FSETID",
@@ -71,7 +71,7 @@ var UnprivilegedMaxCaps = []string{
 
 // These are the maximum caps a privileged container process ever gets
 // (it may get less if the user is not root, see NonRootMaxCaps)
-var PrivilegedMaxCaps = []string{
+var privilegedMaxCaps = []string{
 	"CAP_AUDIT_CONTROL",
 	"CAP_AUDIT_READ",
 	"CAP_AUDIT_WRITE",
@@ -115,7 +115,7 @@ var PrivilegedMaxCaps = []string{
 // These are the maximum capabilities a non-root user gets whether privileged or unprivileged
 // In other words in a privileged container a non-root user still only gets the unprivileged set
 // plus CAP_SYS_ADMIN.
-var NonRootMaxCaps = append(UnprivilegedMaxCaps, "CAP_SYS_ADMIN")
+var nonRootMaxCaps = append(unprivilegedMaxCaps, "CAP_SYS_ADMIN")
 
 var PrivilegedContainerNamespaces = []specs.LinuxNamespace{
 	goci.NetworkNamespace, goci.PIDNamespace, goci.UTSNamespace, goci.IPCNamespace, goci.MountNamespace,
@@ -177,10 +177,10 @@ type ServerCommand struct {
 		ConsoleSocketsPath       string `long:"console-sockets-path" description:"Path in which to store temporary sockets"`
 		CleanupProcessDirsOnWait bool   `long:"cleanup-process-dirs-on-wait" description:"Clean up proccess dirs on first invocation of wait"`
 
-		UIDMapStart  uint32 `long:"uid-map-start"  description:"(rootless only) The lowest numerical subordinate user ID the user is allowed to map"`
-		UIDMapLength uint32 `long:"uid-map-length" description:"(rootless only) The number of numerical subordinate user IDs the user is allowed to map"`
-		GIDMapStart  uint32 `long:"gid-map-start"  description:"(rootless only) The lowest numerical subordinate group ID the user is allowed to map"`
-		GIDMapLength uint32 `long:"gid-map-length" description:"(rootless only) The number of numerical subordinate group IDs the user is allowed to map"`
+		UIDMapStart  uint32 `long:"uid-map-start"  description:"The lowest numerical subordinate user ID the user is allowed to map"`
+		UIDMapLength uint32 `long:"uid-map-length" description:"The number of numerical subordinate user IDs the user is allowed to map"`
+		GIDMapStart  uint32 `long:"gid-map-start"  description:"The lowest numerical subordinate group ID the user is allowed to map"`
+		GIDMapLength uint32 `long:"gid-map-length" description:"The number of numerical subordinate group IDs the user is allowed to map"`
 
 		DefaultRootFS              string        `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
 		DefaultGraceTime           time.Duration `long:"default-grace-time" description:"Default time after which idle containers should expire."`
@@ -243,7 +243,7 @@ type ServerCommand struct {
 	} `group:"Container Networking"`
 
 	Limits struct {
-		CpuQuotaPerShare     uint64 `long:"cpu-quota-per-share" default:"0" description:"Maximum number of microseconds each cpu share assigned to a container allows per quota period"`
+		CPUQuotaPerShare     uint64 `long:"cpu-quota-per-share" default:"0" description:"Maximum number of microseconds each cpu share assigned to a container allows per quota period"`
 		TCPMemoryLimit       uint64 `long:"tcp-memory-limit" default:"0" description:"Set hard limit for the tcp buf memory, value in bytes"`
 		DefaultBlockIOWeight uint16 `long:"default-container-blockio-weight" default:"0" description:"Default block IO weight assigned to a container"`
 		MaxContainers        uint64 `long:"max-containers" default:"0" description:"Maximum number of containers that can be created."`
@@ -417,7 +417,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		Containerizer: cmd.wireContainerizer(logger,
 			cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Runtime.Plugin,
 			cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(),
-			cmd.Containers.ApparmorProfile, propManager),
+			cmd.Containers.ApparmorProfile, propManager, uidMappings, gidMappings),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
@@ -655,16 +655,16 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	depotPath, dadooPath, runtimePath, nstarPath, tarPath, appArmorProfile string,
-	properties gardener.PropertyManager) *rundmc.Containerizer {
+	properties gardener.PropertyManager, uidMappings, gidMappings idmapper.MappingList) *rundmc.Containerizer {
 
 	// TODO centralize knowledge of garden -> runc capability schema translation
 	baseProcess := specs.Process{
 		Capabilities: &specs.LinuxCapabilities{
-			Effective:   UnprivilegedMaxCaps,
-			Bounding:    UnprivilegedMaxCaps,
-			Inheritable: UnprivilegedMaxCaps,
-			Permitted:   UnprivilegedMaxCaps,
-			Ambient:     UnprivilegedMaxCaps,
+			Effective:   unprivilegedMaxCaps,
+			Bounding:    unprivilegedMaxCaps,
+			Inheritable: unprivilegedMaxCaps,
+			Permitted:   unprivilegedMaxCaps,
+			Ambient:     unprivilegedMaxCaps,
 		},
 		Args:        []string{"/tmp/garden-init"},
 		Cwd:         "/",
@@ -694,7 +694,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).
 		WithDevices(getPrivilegedDevices()...).
-		WithCapabilities(PrivilegedMaxCaps...).
+		WithCapabilities(privilegedMaxCaps...).
 		WithDeviceRestrictions(append(
 			[]specs.LinuxDeviceCgroup{{Allow: false, Access: "rwm"}},
 			allowedDevices...,
@@ -727,7 +727,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			MkdirChown:       chrootMkdir,
 		},
 		bundlerules.Limits{
-			CpuQuotaPerShare: cmd.Limits.CpuQuotaPerShare,
+			CpuQuotaPerShare: cmd.Limits.CPUQuotaPerShare,
 			TCPMemoryLimit:   int64(cmd.Limits.TCPMemoryLimit),
 			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
 		},

@@ -96,8 +96,8 @@ func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot strin
 	}
 
 	backingStoresPath := filepath.Join(graphRoot, "backing_stores")
-	if err := os.MkdirAll(backingStoresPath, 0660); err != nil {
-		logger.Fatal("failed-to-mkdir-backing-stores", err)
+	if mkdirErr := os.MkdirAll(backingStoresPath, 0660); mkdirErr != nil {
+		logger.Fatal("failed-to-mkdir-backing-stores", mkdirErr)
 	}
 
 	quotaedGraphDriver := &quotaed_aufs.QuotaedDriver{
@@ -229,7 +229,7 @@ func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
 		Command:       preparerootfs.Command,
 		CommandRunner: cmdRunner,
 	}
-	return runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), runrunc.EnvFunc(runrunc.UnixEnvFor), chrootMkdir, NonRootMaxCaps, runningAsRoot)
+	return runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), runrunc.EnvFunc(runrunc.UnixEnvFor), chrootMkdir, nonRootMaxCaps, runningAsRoot)
 }
 
 func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {
