@@ -211,6 +211,11 @@ func DefaultGdnRunnerConfig() GdnRunnerConfig {
 	config.NetworkPool = fmt.Sprintf("10.254.%d.0/22", 4*GinkgoParallelNode())
 	config.PortPoolStart = intptr(GinkgoParallelNode() * 7000)
 
+	config.UIDMapStart = uint32ptr(1)
+	config.UIDMapLength = uint32ptr(100000)
+	config.GIDMapStart = uint32ptr(1)
+	config.GIDMapLength = uint32ptr(100000)
+
 	return config
 }
 
@@ -432,5 +437,9 @@ func (r *RunningGarden) NumGoroutines() (int, error) {
 }
 
 func intptr(i int) *int {
+	return &i
+}
+
+func uint32ptr(i uint32) *uint32 {
 	return &i
 }

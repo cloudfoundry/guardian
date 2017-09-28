@@ -206,36 +206,6 @@ var _ = Describe("Creating a Container", func() {
 			Entry("should place the container in to the USER namespace", "user"),
 		)
 
-		It("should have the proper uid mappings", func() {
-			buffer := gbytes.NewBuffer()
-			proc, err := container.Run(garden.ProcessSpec{
-				Path: "cat",
-				Args: []string{"/proc/self/uid_map"},
-			}, garden.ProcessIO{
-				Stdout: io.MultiWriter(buffer, GinkgoWriter),
-				Stderr: GinkgoWriter,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(proc.Wait()).To(Equal(0))
-
-			Eventually(buffer).Should(gbytes.Say(`0\s+4294967294\s+1\n\s+1\s+1\s+4294967293`))
-		})
-
-		It("should have the proper gid mappings", func() {
-			buffer := gbytes.NewBuffer()
-			proc, err := container.Run(garden.ProcessSpec{
-				Path: "cat",
-				Args: []string{"/proc/self/gid_map"},
-			}, garden.ProcessIO{
-				Stdout: io.MultiWriter(buffer, GinkgoWriter),
-				Stderr: GinkgoWriter,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(proc.Wait()).To(Equal(0))
-
-			Eventually(buffer).Should(gbytes.Say(`0\s+4294967294\s+1\n\s+1\s+1\s+4294967293`))
-		})
-
 		Context("which is privileged", func() {
 			BeforeEach(func() {
 				privileged = true

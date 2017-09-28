@@ -15,6 +15,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -39,7 +40,7 @@ func wireDepot(depotPath string, bundleGenerator depot.BundleGenerator, bundleSa
 	return depot.New(depotPath, bundleGenerator, bundleSaver)
 }
 
-func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
+func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string, uidMappings, gidMappings idmapper.MappingList) gardener.VolumeCreator {
 	if cmd.Image.Plugin.Path() != "" || cmd.Image.PrivilegedPlugin.Path() != "" {
 		return cmd.wireImagePlugin()
 	}
@@ -98,4 +99,8 @@ func osSpecificBundleRules() []rundmc.BundlerRule {
 
 func getPrivilegedDevices() []specs.LinuxDevice {
 	return nil
+}
+
+func mustGetMaxValidUID() int {
+	return -1
 }

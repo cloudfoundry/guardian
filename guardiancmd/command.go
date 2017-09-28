@@ -261,9 +261,6 @@ type ServerCommand struct {
 	} `group:"Runc Arguments"`
 }
 
-var uidMappings idmapper.MappingList
-var gidMappings idmapper.MappingList
-
 func init() {
 	if reexec.Init() {
 		os.Exit(0)
@@ -356,31 +353,36 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		return fmt.Errorf("invalid pool range: %s", err)
 	}
 
+	containerRootUID := mustGetMaxValidUID()
+	containerRootGID := mustGetMaxValidUID()
 	if !runningAsRoot() {
-		uidMappings = idmapper.MappingList{
-			{
-				ContainerID: 0,
-				HostID:      uint32(os.Geteuid()),
-				Size:        1,
-			},
-			{
-				ContainerID: 1,
-				HostID:      cmd.Containers.UIDMapStart,
-				Size:        cmd.Containers.UIDMapLength,
-			},
-		}
-		gidMappings = idmapper.MappingList{
-			{
-				ContainerID: 0,
-				HostID:      uint32(os.Getegid()),
-				Size:        1,
-			},
-			{
-				ContainerID: 1,
-				HostID:      cmd.Containers.GIDMapStart,
-				Size:        cmd.Containers.GIDMapLength,
-			},
-		}
+		containerRootUID = os.Geteuid()
+		containerRootGID = os.Getegid()
+	}
+
+	uidMappings := idmapper.MappingList{
+		{
+			ContainerID: 0,
+			HostID:      uint32(containerRootUID),
+			Size:        1,
+		},
+		{
+			ContainerID: 1,
+			HostID:      cmd.Containers.UIDMapStart,
+			Size:        cmd.Containers.UIDMapLength,
+		},
+	}
+	gidMappings := idmapper.MappingList{
+		{
+			ContainerID: 0,
+			HostID:      uint32(containerRootGID),
+			Size:        1,
+		},
+		{
+			ContainerID: 1,
+			HostID:      cmd.Containers.GIDMapStart,
+			Size:        cmd.Containers.GIDMapLength,
+		},
 	}
 
 	networker, iptablesStarter, err := cmd.wireNetworker(logger, cmd.Containers.Dir, propManager, portPool)
@@ -395,7 +397,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	}
 
 	var volumeCreator gardener.VolumeCreator = nil
-	volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages)
+	volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages, uidMappings, gidMappings)
 
 	starters := []gardener.Starter{}
 	if !cmd.Server.SkipSetup {

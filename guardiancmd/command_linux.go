@@ -36,36 +36,6 @@ import (
 	"github.com/pivotal-golang/clock"
 )
 
-func init() {
-	maxUID := uint32(idmapper.MustGetMaxValidUID())
-	maxGID := uint32(idmapper.MustGetMaxValidGID())
-	uidMappings = idmapper.MappingList{
-		{
-			ContainerID: 0,
-			HostID:      maxUID,
-			Size:        1,
-		},
-		{
-			ContainerID: 1,
-			HostID:      1,
-			Size:        maxUID - 1,
-		},
-	}
-
-	gidMappings = idmapper.MappingList{
-		{
-			ContainerID: 0,
-			HostID:      maxGID,
-			Size:        1,
-		},
-		{
-			ContainerID: 1,
-			HostID:      1,
-			Size:        maxGID - 1,
-		},
-	}
-}
-
 func commandRunner() commandrunner.CommandRunner {
 	return linux_command_runner.New()
 }
@@ -74,7 +44,7 @@ func wireDepot(depotPath string, bundler depot.BundleGenerator, bundleSaver depo
 	return depot.New(depotPath, bundler, bundleSaver)
 }
 
-func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string) gardener.VolumeCreator {
+func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string, uidMappings, gidMappings idmapper.MappingList) gardener.VolumeCreator {
 	if graphRoot == "" {
 		return gardener.NoopVolumeCreator{}
 	}
@@ -275,4 +245,8 @@ func osSpecificBundleRules() []rundmc.BundlerRule {
 
 func getPrivilegedDevices() []specs.LinuxDevice {
 	return []specs.LinuxDevice{fuseDevice}
+}
+
+func mustGetMaxValidUID() int {
+	return idmapper.MustGetMaxValidUID()
 }
