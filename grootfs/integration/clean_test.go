@@ -74,8 +74,7 @@ var _ = Describe("Clean", func() {
 		Context("when the store doesn't exist", func() {
 			It("logs an error message and exits successfully", func() {
 				logBuffer := gbytes.NewBuffer()
-				_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).
-					Clean(0, []string{})
+				_, err := Runner.WithStore("/invalid-store").WithStderr(logBuffer).Clean(0)
 				Expect(err).ToNot(HaveOccurred())
 				Expect(logBuffer).To(gbytes.Say(`"error":"no store found at /invalid-store"`))
 			})
@@ -99,7 +98,7 @@ var _ = Describe("Clean", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preContents).To(HaveLen(2))
 
-				_, err = Runner.Clean(0, []string{})
+				_, err = Runner.Clean(0)
 				Expect(err).NotTo(HaveOccurred())
 
 				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
@@ -111,49 +110,6 @@ var _ = Describe("Clean", func() {
 				Expect(afterDir).To(MatchRegexp(`%s-\d+`, hex.EncodeToString(afterContentsSha[:32])))
 			})
 
-			Context("and ignored images flag is given", func() {
-				var preContents []os.FileInfo
-
-				JustBeforeEach(func() {
-					var err error
-					preContents, err = ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("doesn't delete their layers", func() {
-					_, err := Runner.Clean(0, []string{anotherBaseImagePath})
-					Expect(err).NotTo(HaveOccurred())
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(afterContents).To(Equal(preContents))
-				})
-
-				Context("when more than one image is to be ignored", func() {
-					BeforeEach(func() {
-						_, err := Runner.Create(groot.CreateSpec{
-							ID:        "my-image-3",
-							BaseImage: yetAnotherBaseImagePath,
-							Mount:     mountByDefault(),
-						})
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(Runner.Delete("my-image-3")).To(Succeed())
-					})
-
-					It("doesn't delete their layers", func() {
-						_, err := Runner.Clean(0, []string{anotherBaseImagePath, yetAnotherBaseImagePath})
-						Expect(err).NotTo(HaveOccurred())
-
-						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(afterContents).To(Equal(preContents))
-					})
-				})
-			})
-
 			Context("and a threshold is set", func() {
 				var cleanupThresholdInBytes int64
 
@@ -162,7 +118,7 @@ var _ = Describe("Clean", func() {
 						cleanupThresholdInBytes = -10
 					})
 					It("returns an error", func() {
-						_, err := Runner.Clean(cleanupThresholdInBytes, []string{})
+						_, err := Runner.Clean(cleanupThresholdInBytes)
 						Expect(err).To(MatchError("invalid argument: clean threshold cannot be negative"))
 					})
 				})
@@ -176,7 +132,7 @@ var _ = Describe("Clean", func() {
 						preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 						Expect(err).NotTo(HaveOccurred())
 
-						_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
+						_, err = Runner.Clean(cleanupThresholdInBytes)
 						Expect(err).NotTo(HaveOccurred())
 
 						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
@@ -185,7 +141,7 @@ var _ = Describe("Clean", func() {
 					})
 
 					It("reports that it was a no-op", func() {
-						output, err := Runner.Clean(cleanupThresholdInBytes, []string{})
+						output, err := Runner.Clean(cleanupThresholdInBytes)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(output).To(ContainSubstring("threshold not reached: skipping clean"))
 					})
@@ -201,7 +157,7 @@ var _ = Describe("Clean", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(preContents).To(HaveLen(2))
 
-						_, err = Runner.Clean(cleanupThresholdInBytes, []string{})
+						_, err = Runner.Clean(cleanupThresholdInBytes)
 						Expect(err).NotTo(HaveOccurred())
 
 						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
@@ -244,7 +200,7 @@ var _ = Describe("Clean", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(preContents).To(HaveLen(3))
 
-				_, err = Runner.Clean(0, []string{})
+				_, err = Runner.Clean(0)
 				Expect(err).NotTo(HaveOccurred())
 
 				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
@@ -253,49 +209,6 @@ var _ = Describe("Clean", func() {
 				for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
 					Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
 				}
-			})
-
-			Context("and ignored images flag is given", func() {
-				var preContents []os.FileInfo
-
-				JustBeforeEach(func() {
-					var err error
-					preContents, err = ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-				})
-
-				It("doesn't delete their layers", func() {
-					_, err := Runner.Clean(0, []string{"docker:///cfgarden/garden-busybox"})
-					Expect(err).NotTo(HaveOccurred())
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(afterContents).To(Equal(preContents))
-				})
-
-				Context("when more than one image is to be ignored", func() {
-					BeforeEach(func() {
-						_, err := Runner.Create(groot.CreateSpec{
-							ID:        "my-image-3",
-							BaseImage: "docker:///cfgarden/empty:v0.1.1",
-							Mount:     mountByDefault(),
-						})
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(Runner.Delete("my-image-3")).To(Succeed())
-					})
-
-					It("doesn't delete their layers", func() {
-						_, err := Runner.Clean(0, []string{"docker:///cfgarden/garden-busybox", "docker:///cfgarden/empty:v0.1.1"})
-						Expect(err).NotTo(HaveOccurred())
-
-						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-						Expect(err).NotTo(HaveOccurred())
-
-						Expect(afterContents).To(Equal(preContents))
-					})
-				})
 			})
 		})
 	})

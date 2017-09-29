@@ -85,7 +85,7 @@ var _ = Describe("Concurrent creations", func() {
 
 			for i := 0; i < 100; i++ {
 				runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
-				_, err := runner.Clean(0, []string{})
+				_, err := runner.Clean(0)
 				Expect(err).To(Succeed())
 			}
 		}()

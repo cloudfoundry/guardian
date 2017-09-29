@@ -402,8 +402,7 @@ var _ = Describe("Metrics", func() {
 
 		It("emits the percentage of disk used by groot cache", func() {
 			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Clean(0, []string{})
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
 			Expect(err).NotTo(HaveOccurred())
 
 			var metrics []events.ValueMetric
@@ -421,8 +420,7 @@ var _ = Describe("Metrics", func() {
 			integration.SkipIfNotXFS(Driver)
 
 			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Clean(0, []string{})
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
 			Expect(err).NotTo(HaveOccurred())
 
 			var metrics []events.ValueMetric
@@ -438,8 +436,7 @@ var _ = Describe("Metrics", func() {
 
 		It("emits the space taken by layers that can be removed", func() {
 			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Clean(0, []string{})
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
 			Expect(err).NotTo(HaveOccurred())
 
 			var metrics []events.ValueMetric
@@ -455,8 +452,7 @@ var _ = Describe("Metrics", func() {
 
 		It("emits the total clean time", func() {
 			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Clean(0, []string{})
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
 			Expect(err).NotTo(HaveOccurred())
 
 			var metrics []events.ValueMetric
@@ -472,8 +468,7 @@ var _ = Describe("Metrics", func() {
 
 		It("emits the locking time", func() {
 			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Clean(0, []string{})
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
 			Expect(err).NotTo(HaveOccurred())
 
 			var metrics []events.ValueMetric
@@ -489,8 +484,7 @@ var _ = Describe("Metrics", func() {
 
 		It("emits the success count", func() {
 			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Clean(0, []string{})
+				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
 			Expect(err).NotTo(HaveOccurred())
 
 			var counterEvents []events.CounterEvent
@@ -509,7 +503,7 @@ var _ = Describe("Metrics", func() {
 
 		It("emits store usage", func() {
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Clean(0, []string{})
+				Clean(0)
 			Expect(err).NotTo(HaveOccurred())
 
 			var metrics []events.ValueMetric
@@ -532,8 +526,7 @@ var _ = Describe("Metrics", func() {
 
 			It("emits an error event", func() {
 				_, err := runner.
-					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-					Clean(0, []string{})
+					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
 				Expect(err).To(HaveOccurred())
 
 				var errors []events.Error
@@ -548,8 +541,7 @@ var _ = Describe("Metrics", func() {
 
 			It("emits the fail count", func() {
 				_, err := runner.
-					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-					Clean(0, []string{})
+					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
 				Expect(err).To(HaveOccurred())
 
 				var counterEvents []events.CounterEvent

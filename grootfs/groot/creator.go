@@ -21,7 +21,6 @@ type CreateSpec struct {
 	ExcludeBaseImageFromQuota   bool
 	CleanOnCreate               bool
 	CleanOnCreateThresholdBytes int64
-	CleanOnCreateIgnoreImages   []string
 	UIDMappings                 []IDMappingSpec
 	GIDMappings                 []IDMappingSpec
 }
@@ -85,8 +84,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 	}
 
 	if spec.CleanOnCreate {
-		ignoredImages := append(spec.CleanOnCreateIgnoreImages, spec.BaseImage)
-		if _, err := c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, ignoredImages); err != nil {
+		if _, err = c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, []string{spec.BaseImage}); err != nil {
 			return ImageInfo{}, errorspkg.Wrap(err, "failed-to-cleanup-store")
 		}
 	}
@@ -96,7 +94,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 		return ImageInfo{}, err
 	}
 	defer func() {
-		if err := c.locksmith.Unlock(lockFile); err != nil {
+		if err = c.locksmith.Unlock(lockFile); err != nil {
 			logger.Error("failed-to-unlock", err)
 		}
 	}()

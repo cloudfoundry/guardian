@@ -33,10 +33,6 @@ var CleanCommand = cli.Command{
 			Name:  "threshold-bytes",
 			Usage: "Disk usage of the store directory at which cleanup should trigger.",
 		},
-		cli.StringSliceFlag{
-			Name:  "ignore-image",
-			Usage: "Images to ignore during cleanup",
-		},
 	},
 
 	Action: func(ctx *cli.Context) error {
@@ -45,7 +41,6 @@ var CleanCommand = cli.Command{
 		newExitError := newErrorHandler(logger, "clean")
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
-		configBuilder.WithIgnoreBaseImages(ctx.StringSlice("ignore-image"))
 		configBuilder.WithCleanThresholdBytes(ctx.Int64("threshold-bytes"),
 			ctx.IsSet("threshold-bytes"))
 
@@ -92,7 +87,7 @@ var CleanCommand = cli.Command{
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
-		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, cfg.Clean.IgnoreBaseImages)
+		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, []string{})
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return newExitError(err.Error(), 1)

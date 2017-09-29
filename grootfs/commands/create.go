@@ -199,7 +199,6 @@ var CreateCommand = cli.Command{
 			GIDMappings:                 idMappings.GIDMappings,
 			CleanOnCreate:               cfg.Create.WithClean,
 			CleanOnCreateThresholdBytes: cfg.Clean.ThresholdBytes,
-			CleanOnCreateIgnoreImages:   cfg.Clean.IgnoreBaseImages,
 		}
 		image, err := creator.Create(logger, createSpec)
 		if err != nil {

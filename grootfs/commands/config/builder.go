@@ -34,8 +34,7 @@ type Create struct {
 }
 
 type Clean struct {
-	IgnoreBaseImages []string `yaml:"ignore_images"`
-	ThresholdBytes   int64    `yaml:"threshold_bytes"`
+	ThresholdBytes int64 `yaml:"threshold_bytes"`
 }
 
 type Init struct {
@@ -84,15 +83,6 @@ func (b *Builder) WithInsecureRegistries(insecureRegistries []string) *Builder {
 	}
 
 	b.config.Create.InsecureRegistries = insecureRegistries
-	return b
-}
-
-func (b *Builder) WithIgnoreBaseImages(ignoreBaseImages []string) *Builder {
-	if ignoreBaseImages == nil || len(ignoreBaseImages) == 0 {
-		return b
-	}
-
-	b.config.Clean.IgnoreBaseImages = ignoreBaseImages
 	return b
 }
 

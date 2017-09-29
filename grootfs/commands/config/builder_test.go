@@ -33,8 +33,7 @@ var _ = Describe("Builder", func() {
 		}
 
 		cleanCfg = config.Clean{
-			IgnoreBaseImages: []string{"docker:///busybox"},
-			ThresholdBytes:   int64(0),
+			ThresholdBytes: int64(0),
 		}
 
 		cfg = config.Config{
@@ -76,7 +75,6 @@ var _ = Describe("Builder", func() {
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(config.Create.InsecureRegistries).To(Equal([]string{"http://example.org"}))
-			Expect(config.Clean.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
 			Expect(config.StorePath).To(Equal("/hello"))
 		})
 
@@ -139,33 +137,6 @@ var _ = Describe("Builder", func() {
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(config.Create.InsecureRegistries).To(Equal([]string{"http://example.org"}))
-			})
-		})
-	})
-
-	Describe("WithIgnoreBaseImages", func() {
-		It("overrides the config's IgnoreBaseImages entry", func() {
-			builder = builder.WithIgnoreBaseImages([]string{"1", "2"})
-			config, err := builder.Build()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(config.Clean.IgnoreBaseImages).To(Equal([]string{"1", "2"}))
-		})
-
-		Context("when empty", func() {
-			It("doesn't override the config's IgnoreBaseImages entry", func() {
-				builder = builder.WithIgnoreBaseImages([]string{})
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.Clean.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
-			})
-		})
-
-		Context("when nil", func() {
-			It("doesn't override the config's IgnoreBaseImages entry", func() {
-				builder = builder.WithIgnoreBaseImages(nil)
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.Clean.IgnoreBaseImages).To(Equal([]string{"docker:///busybox"}))
 			})
 		})
 	})
