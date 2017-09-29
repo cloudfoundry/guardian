@@ -21,16 +21,20 @@ var _ = Describe("Gc", func() {
 		fakeVolumeDriver      *garbage_collectorfakes.FakeVolumeDriver
 		fakeDependencyManager *garbage_collectorfakes.FakeDependencyManager
 		fakeImageCloner       *garbage_collectorfakes.FakeImageCloner
+		baseImage             string
 	)
 
 	BeforeEach(func() {
 		fakeImageCloner = new(garbage_collectorfakes.FakeImageCloner)
 		fakeVolumeDriver = new(garbage_collectorfakes.FakeVolumeDriver)
 		fakeDependencyManager = new(garbage_collectorfakes.FakeDependencyManager)
-
-		garbageCollector = garbage_collector.NewGC(fakeVolumeDriver, fakeImageCloner, fakeDependencyManager)
+		baseImage = ""
 
 		logger = lagertest.NewTestLogger("garbage_collector")
+	})
+
+	JustBeforeEach(func() {
+		garbageCollector = garbage_collector.NewGC(fakeVolumeDriver, fakeImageCloner, fakeDependencyManager, baseImage)
 	})
 
 	Describe("UnusedVolumes", func() {
@@ -61,23 +65,29 @@ var _ = Describe("Gc", func() {
 		})
 
 		It("retrieves the names of unused volumes", func() {
-			unusedVolumes, err := garbageCollector.UnusedVolumes(logger, []string{})
+			unusedVolumes, err := garbageCollector.UnusedVolumes(logger)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(unusedVolumes).To(ConsistOf("sha256:vol-d", "sha256:vol-e"))
 		})
 
-		Context("when a list of images to keep is provided", func() {
-			It("doesn't mark them for collection", func() {
-				unusedVolumes, err := garbageCollector.UnusedVolumes(logger, []string{"docker:///ubuntu"})
+		Context("when a base image is provided", func() {
+			BeforeEach(func() {
+				baseImage = "docker:///ubuntu"
+			})
+			It("doesn't mark it for collection", func() {
+				unusedVolumes, err := garbageCollector.UnusedVolumes(logger)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(unusedVolumes).To(ConsistOf("sha256:vol-e"))
 			})
 
-			Context("when the image to keep is from a private registry", func() {
+			Context("when the base image is from a private registry", func() {
+				BeforeEach(func() {
+					baseImage = "docker://private/ubuntu"
+				})
 				It("doesn't mark them for collection", func() {
-					unusedVolumes, err := garbageCollector.UnusedVolumes(logger, []string{"docker://private/ubuntu"})
+					unusedVolumes, err := garbageCollector.UnusedVolumes(logger)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(unusedVolumes).To(ConsistOf("sha256:vol-d"))
@@ -91,7 +101,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := garbageCollector.UnusedVolumes(logger, []string{})
+				_, err := garbageCollector.UnusedVolumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to retrieve images")))
 			})
 		})
@@ -102,7 +112,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := garbageCollector.UnusedVolumes(logger, []string{})
+				_, err := garbageCollector.UnusedVolumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to access deps")))
 			})
 		})
@@ -113,7 +123,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := garbageCollector.UnusedVolumes(logger, []string{})
+				_, err := garbageCollector.UnusedVolumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to retrieve volume list")))
 			})
 		})

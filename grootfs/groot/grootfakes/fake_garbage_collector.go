@@ -9,11 +9,10 @@ import (
 )
 
 type FakeGarbageCollector struct {
-	UnusedVolumesStub        func(logger lager.Logger, keepBaseImages []string) ([]string, error)
+	UnusedVolumesStub        func(logger lager.Logger) ([]string, error)
 	unusedVolumesMutex       sync.RWMutex
 	unusedVolumesArgsForCall []struct {
-		logger         lager.Logger
-		keepBaseImages []string
+		logger lager.Logger
 	}
 	unusedVolumesReturns struct {
 		result1 []string
@@ -50,22 +49,16 @@ type FakeGarbageCollector struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGarbageCollector) UnusedVolumes(logger lager.Logger, keepBaseImages []string) ([]string, error) {
-	var keepBaseImagesCopy []string
-	if keepBaseImages != nil {
-		keepBaseImagesCopy = make([]string, len(keepBaseImages))
-		copy(keepBaseImagesCopy, keepBaseImages)
-	}
+func (fake *FakeGarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) {
 	fake.unusedVolumesMutex.Lock()
 	ret, specificReturn := fake.unusedVolumesReturnsOnCall[len(fake.unusedVolumesArgsForCall)]
 	fake.unusedVolumesArgsForCall = append(fake.unusedVolumesArgsForCall, struct {
-		logger         lager.Logger
-		keepBaseImages []string
-	}{logger, keepBaseImagesCopy})
-	fake.recordInvocation("UnusedVolumes", []interface{}{logger, keepBaseImagesCopy})
+		logger lager.Logger
+	}{logger})
+	fake.recordInvocation("UnusedVolumes", []interface{}{logger})
 	fake.unusedVolumesMutex.Unlock()
 	if fake.UnusedVolumesStub != nil {
-		return fake.UnusedVolumesStub(logger, keepBaseImages)
+		return fake.UnusedVolumesStub(logger)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -79,10 +72,10 @@ func (fake *FakeGarbageCollector) UnusedVolumesCallCount() int {
 	return len(fake.unusedVolumesArgsForCall)
 }
 
-func (fake *FakeGarbageCollector) UnusedVolumesArgsForCall(i int) (lager.Logger, []string) {
+func (fake *FakeGarbageCollector) UnusedVolumesArgsForCall(i int) lager.Logger {
 	fake.unusedVolumesMutex.RLock()
 	defer fake.unusedVolumesMutex.RUnlock()
-	return fake.unusedVolumesArgsForCall[i].logger, fake.unusedVolumesArgsForCall[i].keepBaseImages
+	return fake.unusedVolumesArgsForCall[i].logger
 }
 
 func (fake *FakeGarbageCollector) UnusedVolumesReturns(result1 []string, result2 error) {

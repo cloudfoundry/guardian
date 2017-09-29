@@ -35,13 +35,15 @@ type GarbageCollector struct {
 	volumeDriver      VolumeDriver
 	imageCloner       ImageCloner
 	dependencyManager DependencyManager
+	baseImage         string
 }
 
-func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager) *GarbageCollector {
+func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager, baseImage string) *GarbageCollector {
 	return &GarbageCollector{
 		volumeDriver:      volumeDriver,
 		imageCloner:       imageCloner,
 		dependencyManager: dependencyManager,
+		baseImage:         baseImage,
 	}
 }
 
@@ -133,7 +135,7 @@ func (g *GarbageCollector) gcVolumes(logger lager.Logger) ([]string, error) {
 	return collectables, nil
 }
 
-func (g *GarbageCollector) UnusedVolumes(logger lager.Logger, keepImages []string) ([]string, error) {
+func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) {
 	logger = logger.Session("unused-volumes")
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -162,10 +164,10 @@ func (g *GarbageCollector) UnusedVolumes(logger lager.Logger, keepImages []strin
 		}
 	}
 
-	for _, keepImage := range keepImages {
-		imageRefName := fmt.Sprintf(base_image_puller.BaseImageReferenceFormat, keepImage)
+	if g.baseImage != "" {
+		imageRefName := fmt.Sprintf(base_image_puller.BaseImageReferenceFormat, g.baseImage)
 		if err := g.removeDependencies(orphanedVolumes, imageRefName); err != nil {
-			logger.Error("failed-to-find-white-listed-image-dependencies", err, lager.Data{"imageRefName": imageRefName})
+			logger.Error("failed-to-find-base-image-dependencies", err, lager.Data{"imageRefName": imageRefName})
 		}
 	}
 

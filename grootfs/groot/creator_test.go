@@ -81,9 +81,8 @@ var _ = Describe("Creator", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeCleaner.CleanCallCount()).To(Equal(1))
-				_, threshold, ignoredImages := fakeCleaner.CleanArgsForCall(0)
+				_, threshold := fakeCleaner.CleanArgsForCall(0)
 				Expect(threshold).To(Equal(int64(250000)))
-				Expect(ignoredImages).To(ConsistOf([]string{"/path/to/image"}))
 			})
 
 			Context("and fails to clean up", func() {

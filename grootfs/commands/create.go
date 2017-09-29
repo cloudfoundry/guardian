@@ -181,7 +181,7 @@ var CreateCommand = cli.Command{
 		)
 
 		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
-		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, baseImage)
 		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
 
 		creator := groot.IamCreator(

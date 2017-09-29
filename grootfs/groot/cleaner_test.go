@@ -49,13 +49,13 @@ var _ = Describe("Cleaner", func() {
 
 	Describe("Clean", func() {
 		It("calls the garbage collector to mark unused blobs", func() {
-			_, err := cleaner.Clean(logger, 0, []string{})
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeGarbageCollector.MarkUnusedCallCount()).To(Equal(1))
 		})
 
 		It("calls the garbage collector to collect", func() {
-			_, err := cleaner.Clean(logger, 0, []string{})
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 		})
@@ -66,13 +66,13 @@ var _ = Describe("Cleaner", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := cleaner.Clean(logger, 0, []string{})
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).To(MatchError(ContainSubstring("failed to collect unused bits")))
 			})
 		})
 
 		It("emits metrics for clean duration", func() {
-			_, err := cleaner.Clean(logger, 0, []string{})
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(1))
@@ -89,7 +89,7 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("emits metrics for percentage of disk used by groot cache", func() {
-					_, err := cleaner.Clean(logger, 0, []string{})
+					_, err := cleaner.Clean(logger, 0)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(3))
@@ -105,7 +105,7 @@ var _ = Describe("Cleaner", func() {
 					})
 
 					It("should not emit a disk percentage metric", func() {
-						_, err := cleaner.Clean(logger, 0, []string{})
+						_, err := cleaner.Clean(logger, 0)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(2))
 					})
@@ -119,7 +119,7 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("emits metrics for percentage of disk committed by groot cache", func() {
-					_, err := cleaner.Clean(logger, 0, []string{})
+					_, err := cleaner.Clean(logger, 0)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(3))
@@ -135,7 +135,7 @@ var _ = Describe("Cleaner", func() {
 					})
 
 					It("should not emit a disk percentage metric", func() {
-						_, err := cleaner.Clean(logger, 0, []string{})
+						_, err := cleaner.Clean(logger, 0)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(2))
 					})
@@ -149,7 +149,7 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("emits metrics for percentage of disk committed by groot cache", func() {
-					_, err := cleaner.Clean(logger, 0, []string{})
+					_, err := cleaner.Clean(logger, 0)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(3))
@@ -165,7 +165,7 @@ var _ = Describe("Cleaner", func() {
 					})
 
 					It("should not emit a disk percentage metric", func() {
-						_, err := cleaner.Clean(logger, 0, []string{})
+						_, err := cleaner.Clean(logger, 0)
 						Expect(err).NotTo(HaveOccurred())
 						Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(2))
 					})
@@ -178,7 +178,7 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("should not emit any disk percentage metrics", func() {
-					_, err := cleaner.Clean(logger, 0, []string{})
+					_, err := cleaner.Clean(logger, 0)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(0))
 				})
@@ -190,7 +190,7 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("should not emit any disk percentage metrics", func() {
-					_, err := cleaner.Clean(logger, 0, []string{})
+					_, err := cleaner.Clean(logger, 0)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeMetricsEmitter.TryEmitUsageCallCount()).To(Equal(0))
 				})
@@ -198,7 +198,7 @@ var _ = Describe("Cleaner", func() {
 		})
 
 		It("acquires the global lock", func() {
-			_, err := cleaner.Clean(logger, 0, []string{})
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
@@ -206,7 +206,7 @@ var _ = Describe("Cleaner", func() {
 		})
 
 		It("releases the global lock", func() {
-			_, err := cleaner.Clean(logger, 0, []string{})
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
@@ -230,7 +230,7 @@ var _ = Describe("Cleaner", func() {
 				return nil
 			}
 
-			_, err := cleaner.Clean(logger, 0, []string{})
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(markTime.UnixNano()).To(BeNumerically("<", unLockTime.UnixNano()))
@@ -243,13 +243,13 @@ var _ = Describe("Cleaner", func() {
 			})
 
 			It("still collects the garbage", func() {
-				_, err := cleaner.Clean(logger, 0, []string{})
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 			})
 
 			It("releases the global lock", func() {
-				_, err := cleaner.Clean(logger, 0, []string{})
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
@@ -262,12 +262,12 @@ var _ = Describe("Cleaner", func() {
 			})
 
 			It("returns the error", func() {
-				_, err := cleaner.Clean(logger, 0, []string{})
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).To(MatchError(ContainSubstring("failed to acquire lock")))
 			})
 
 			It("does not collect the garbage", func() {
-				_, err := cleaner.Clean(logger, 0, []string{})
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).To(HaveOccurred())
 				Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 			})
@@ -286,19 +286,19 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("does not remove anything", func() {
-					_, err := cleaner.Clean(logger, threshold, []string{})
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 				})
 
 				It("does not acquire the lock", func() {
-					_, err := cleaner.Clean(logger, threshold, []string{})
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeLocksmith.LockCallCount()).To(Equal(0))
 				})
 
 				It("sets noop to `true`", func() {
-					noop, err := cleaner.Clean(logger, threshold, []string{})
+					noop, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(noop).To(BeTrue())
 				})
@@ -310,12 +310,12 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("returns the error", func() {
-					_, err := cleaner.Clean(logger, threshold, []string{})
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).To(MatchError(ContainSubstring("failed to measure")))
 				})
 
 				It("does not remove anything", func() {
-					_, err := cleaner.Clean(logger, threshold, []string{})
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).To(HaveOccurred())
 					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 				})
@@ -328,7 +328,7 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("calls the garbage collector", func() {
-					_, err := cleaner.Clean(logger, threshold, []string{})
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 				})
@@ -341,7 +341,7 @@ var _ = Describe("Cleaner", func() {
 				})
 
 				It("indicates a no-op and returns an error", func() {
-					noop, err := cleaner.Clean(logger, threshold, []string{})
+					noop, err := cleaner.Clean(logger, threshold)
 					Expect(noop).To(BeTrue())
 					Expect(err).To(MatchError("Threshold must be greater than 0"))
 				})

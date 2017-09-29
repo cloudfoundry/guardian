@@ -9,12 +9,11 @@ import (
 )
 
 type FakeCleaner struct {
-	CleanStub        func(logger lager.Logger, threshold int64, keepImages []string) (bool, error)
+	CleanStub        func(logger lager.Logger, threshold int64) (bool, error)
 	cleanMutex       sync.RWMutex
 	cleanArgsForCall []struct {
-		logger     lager.Logger
-		threshold  int64
-		keepImages []string
+		logger    lager.Logger
+		threshold int64
 	}
 	cleanReturns struct {
 		result1 bool
@@ -28,23 +27,17 @@ type FakeCleaner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCleaner) Clean(logger lager.Logger, threshold int64, keepImages []string) (bool, error) {
-	var keepImagesCopy []string
-	if keepImages != nil {
-		keepImagesCopy = make([]string, len(keepImages))
-		copy(keepImagesCopy, keepImages)
-	}
+func (fake *FakeCleaner) Clean(logger lager.Logger, threshold int64) (bool, error) {
 	fake.cleanMutex.Lock()
 	ret, specificReturn := fake.cleanReturnsOnCall[len(fake.cleanArgsForCall)]
 	fake.cleanArgsForCall = append(fake.cleanArgsForCall, struct {
-		logger     lager.Logger
-		threshold  int64
-		keepImages []string
-	}{logger, threshold, keepImagesCopy})
-	fake.recordInvocation("Clean", []interface{}{logger, threshold, keepImagesCopy})
+		logger    lager.Logger
+		threshold int64
+	}{logger, threshold})
+	fake.recordInvocation("Clean", []interface{}{logger, threshold})
 	fake.cleanMutex.Unlock()
 	if fake.CleanStub != nil {
-		return fake.CleanStub(logger, threshold, keepImages)
+		return fake.CleanStub(logger, threshold)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -58,10 +51,10 @@ func (fake *FakeCleaner) CleanCallCount() int {
 	return len(fake.cleanArgsForCall)
 }
 
-func (fake *FakeCleaner) CleanArgsForCall(i int) (lager.Logger, int64, []string) {
+func (fake *FakeCleaner) CleanArgsForCall(i int) (lager.Logger, int64) {
 	fake.cleanMutex.RLock()
 	defer fake.cleanMutex.RUnlock()
-	return fake.cleanArgsForCall[i].logger, fake.cleanArgsForCall[i].threshold, fake.cleanArgsForCall[i].keepImages
+	return fake.cleanArgsForCall[i].logger, fake.cleanArgsForCall[i].threshold
 }
 
 func (fake *FakeCleaner) CleanReturns(result1 bool, result2 error) {

@@ -9,7 +9,7 @@ import (
 
 //go:generate counterfeiter . Cleaner
 type Cleaner interface {
-	Clean(logger lager.Logger, threshold int64, keepImages []string) (bool, error)
+	Clean(logger lager.Logger, threshold int64) (bool, error)
 }
 
 type cleaner struct {
@@ -30,7 +30,7 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	}
 }
 
-func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []string) (noop bool, err error) {
+func (c *cleaner) Clean(logger lager.Logger, threshold int64) (noop bool, err error) {
 	logger = logger.Session("groot-cleaning")
 	logger.Info("starting")
 	defer c.metricsEmitter.TryEmitDurationFrom(logger, MetricImageCleanTime, time.Now())
@@ -64,7 +64,7 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, keepImages []strin
 		return false, errorspkg.Wrap(err, "garbage collector acquiring lock")
 	}
 
-	unusedVolumes, err := c.garbageCollector.UnusedVolumes(logger, keepImages)
+	unusedVolumes, err := c.garbageCollector.UnusedVolumes(logger)
 	if err != nil {
 		logger.Error("finding-unused-failed", err)
 	}

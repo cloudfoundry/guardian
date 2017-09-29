@@ -83,11 +83,11 @@ var CleanCommand = cli.Command{
 		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
 		nsFsDriver := namespaced.New(fsDriver, idMappings, idMapper, runner)
 		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
-		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
+		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, "")
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
-		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, []string{})
+		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return newExitError(err.Error(), 1)
