@@ -44,7 +44,7 @@ var _ = Describe("Surviving Restarts", func() {
 			restartConfig = config
 
 			containerSpec = garden.ContainerSpec{
-				Network: "177.100.10.30/30",
+				Network: fmt.Sprintf("177.100.10.%d/30", 26+GinkgoParallelNode()*4),
 			}
 
 			netOutRules = []garden.NetOutRule{
