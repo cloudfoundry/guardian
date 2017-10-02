@@ -44,6 +44,7 @@ var _ = Describe("ExternalNetworker", func() {
 	)
 
 	BeforeEach(func() {
+		pluginOutput = ""
 		inputProperties := garden.Properties{
 			"some-key":               "some-value",
 			"some-other-key":         "some-other-value",
@@ -60,7 +61,7 @@ var _ = Describe("ExternalNetworker", func() {
 		}
 		logger = lagertest.NewTestLogger("test")
 		externalIP := net.ParseIP("1.2.3.4")
-		resolvConfigurer = &kawasakifakes.FakeDnsResolvConfigurer{}
+		resolvConfigurer = new(kawasakifakes.FakeDnsResolvConfigurer)
 		plugin = netplugin.New(
 			fakeCommandRunner,
 			configStore,
@@ -593,7 +594,7 @@ func createRule(netStart, netEnd string, portStart, portEnd int) garden.NetOutRu
 func checkPluginArgs(cmd *exec.Cmd, rule garden.NetOutRule) {
 	pluginInput, err := ioutil.ReadAll(cmd.Stdin)
 	Expect(err).NotTo(HaveOccurred())
-	r := &netplugin.NetOutInputs{}
+	r := new(netplugin.NetOutInputs)
 	json.Unmarshal(pluginInput, r)
 	Expect(r.NetOutRule).To(Equal(rule))
 }
@@ -601,7 +602,7 @@ func checkPluginArgs(cmd *exec.Cmd, rule garden.NetOutRule) {
 func checkBulkPluginArgs(cmd *exec.Cmd, rules []garden.NetOutRule) {
 	pluginInput, err := ioutil.ReadAll(cmd.Stdin)
 	Expect(err).NotTo(HaveOccurred())
-	r := &netplugin.BulkNetOutInputs{}
+	r := new(netplugin.BulkNetOutInputs)
 	json.Unmarshal(pluginInput, r)
 	Expect(r.NetOutRules).To(Equal(rules))
 }
