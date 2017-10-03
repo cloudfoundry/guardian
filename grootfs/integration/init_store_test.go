@@ -180,9 +180,9 @@ var _ = Describe("Init Store", func() {
 
 			Expect(runner.InitStore(spec)).To(Succeed())
 			containerSpec, err := runner.Create(groot.CreateSpec{
-				BaseImage: baseImagePath,
-				ID:        testhelpers.NewRandomID(),
-				Mount:     mountByDefault(),
+				BaseImageURL: integration.String2URL(baseImagePath),
+				ID:           testhelpers.NewRandomID(),
+				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 

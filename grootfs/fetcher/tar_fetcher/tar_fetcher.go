@@ -21,10 +21,10 @@ func NewTarFetcher() *TarFetcher {
 }
 
 func (l *TarFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
-	source string) (io.ReadCloser, int64, error) {
+	layerInfo base_image_puller.LayerInfo) (io.ReadCloser, int64, error) {
 	logger = logger.Session("stream-blob", lager.Data{
 		"baseImageURL": baseImageURL.String(),
-		"source":       source,
+		"source":       layerInfo.BlobID,
 	})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -59,8 +59,8 @@ func (l *TarFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (
 	}
 
 	return base_image_puller.BaseImageInfo{
-		LayersDigest: []base_image_puller.LayerDigest{
-			base_image_puller.LayerDigest{
+		LayerInfos: []base_image_puller.LayerInfo{
+			base_image_puller.LayerInfo{
 				BlobID:        baseImageURL.String(),
 				ParentChainID: "",
 				ChainID:       l.generateChainID(baseImageURL.String(), stat.ModTime().UnixNano()),

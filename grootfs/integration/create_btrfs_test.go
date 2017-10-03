@@ -45,10 +45,10 @@ var _ = Describe("Create (btrfs only)", func() {
 		baseImagePath = baseImageFile.Name()
 
 		spec = groot.CreateSpec{
-			BaseImage: baseImagePath,
-			ID:        randomImageID,
-			Mount:     true,
-			DiskLimit: tenMegabytes,
+			BaseImageURL: integration.String2URL(baseImagePath),
+			ID:           randomImageID,
+			Mount:        true,
+			DiskLimit:    tenMegabytes,
 		}
 	})
 

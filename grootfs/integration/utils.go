@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -167,4 +168,10 @@ func MakeBinaryAccessibleToEveryone(binaryPath string) string {
 	Expect(os.Rename(binaryPath, newBinaryPath)).To(Succeed())
 
 	return newBinaryPath
+}
+
+func String2URL(s string) *url.URL {
+	url, err := url.Parse(s)
+	Expect(err).NotTo(HaveOccurred())
+	return url
 }

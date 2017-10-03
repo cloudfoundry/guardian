@@ -42,9 +42,9 @@ var _ = Describe("Metrics", func() {
 
 		randomImageID = testhelpers.NewRandomID()
 		spec = groot.CreateSpec{
-			ID:        "my-id",
-			BaseImage: "docker:///cfgarden/empty:v0.1.0",
-			Mount:     mountByDefault(),
+			ID:           "my-id",
+			BaseImageURL: integration.String2URL("docker:///cfgarden/empty:v0.1.0"),
+			Mount:        mountByDefault(),
 		}
 	})
 
@@ -183,7 +183,7 @@ var _ = Describe("Metrics", func() {
 
 		Context("when create fails", func() {
 			BeforeEach(func() {
-				spec.BaseImage = "not-here"
+				spec.BaseImageURL = integration.String2URL("not-here")
 			})
 
 			It("emits an error event", func() {

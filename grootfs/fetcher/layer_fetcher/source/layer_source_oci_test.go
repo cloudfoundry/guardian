@@ -18,26 +18,25 @@ import (
 
 var _ = Describe("Layer source: OCI", func() {
 	var (
-		trustedRegistries []string
-		layerSource       source.LayerSource
+		layerSource source.LayerSource
 
 		logger       *lagertest.TestLogger
 		baseImageURL *url.URL
 
-		configBlob           string
-		expectedLayersDigest []types.BlobInfo
-		expectedDiffIds      []digestpkg.Digest
-		workDir              string
+		configBlob        string
+		expectedBlobInfos []types.BlobInfo
+		expectedDiffIds   []digestpkg.Digest
+		workDir           string
+		systemContext     types.SystemContext
 
-		skipChecksumValidation bool
+		skipOCIChecksumValidation bool
 	)
 
 	BeforeEach(func() {
-		trustedRegistries = []string{}
-		skipChecksumValidation = false
+		skipOCIChecksumValidation = false
 
 		configBlob = "sha256:10c8f0eb9d1af08fe6e3b8dbd29e5aa2b6ecfa491ecd04ed90de19a4ac22de7b"
-		expectedLayersDigest = []types.BlobInfo{
+		expectedBlobInfos = []types.BlobInfo{
 			{
 				Digest: "sha256:56bec22e355981d8ba0878c6c2f23b21f422f30ab0aba188b54f1ffeff59c190",
 				Size:   668151,
@@ -61,7 +60,7 @@ var _ = Describe("Layer source: OCI", func() {
 	})
 
 	JustBeforeEach(func() {
-		layerSource = source.NewLayerSource("", "", trustedRegistries, skipChecksumValidation)
+		layerSource = source.NewLayerSource(systemContext, skipOCIChecksumValidation)
 	})
 
 	Describe("Manifest", func() {
@@ -72,8 +71,8 @@ var _ = Describe("Layer source: OCI", func() {
 			Expect(manifest.ConfigInfo().Digest.String()).To(Equal(configBlob))
 
 			Expect(manifest.LayerInfos()).To(HaveLen(2))
-			Expect(manifest.LayerInfos()[0]).To(Equal(expectedLayersDigest[0]))
-			Expect(manifest.LayerInfos()[1]).To(Equal(expectedLayersDigest[1]))
+			Expect(manifest.LayerInfos()[0]).To(Equal(expectedBlobInfos[0]))
+			Expect(manifest.LayerInfos()[1]).To(Equal(expectedBlobInfos[1]))
 		})
 
 		It("contains the config", func() {
@@ -135,7 +134,7 @@ var _ = Describe("Layer source: OCI", func() {
 
 	Describe("Blob", func() {
 		It("downloads a blob", func() {
-			blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigest[0].Digest.String())
+			blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(size).To(Equal(int64(668151)))
 
@@ -154,7 +153,7 @@ var _ = Describe("Layer source: OCI", func() {
 
 		Context("when the blob has an invalid checksum", func() {
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, "sha256:steamed-blob")
+				_, _, err := layerSource.Blob(logger, baseImageURL, "sha256:steamed-blob", nil)
 				Expect(err).To(MatchError(ContainSubstring("invalid checksum digest format")))
 			})
 		})
@@ -167,21 +166,21 @@ var _ = Describe("Layer source: OCI", func() {
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigest[0].Digest.String())
+				_, _, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
 				Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
 			})
 		})
 
-		Context("when skipChecksumValidation is set to true", func() {
+		Context("when skipOCIChecksumValidation is set to true", func() {
 			BeforeEach(func() {
 				var err error
 				baseImageURL, err = url.Parse(fmt.Sprintf("oci:///%s/../../../integration/assets/oci-test-image/corrupted:latest", workDir))
 				Expect(err).NotTo(HaveOccurred())
-				skipChecksumValidation = true
+				skipOCIChecksumValidation = true
 			})
 
 			It("does not validate against checksums and does not return an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigest[0].Digest.String())
+				_, _, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

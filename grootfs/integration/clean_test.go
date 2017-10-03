@@ -60,9 +60,9 @@ var _ = Describe("Clean", func() {
 			yetAnotherBaseImagePath = yetAnotherBaseImageFile.Name()
 
 			_, err = Runner.Create(groot.CreateSpec{
-				ID:        "my-image-1",
-				BaseImage: baseImagePath,
-				Mount:     mountByDefault(),
+				ID:           "my-image-1",
+				BaseImageURL: integration.String2URL(baseImagePath),
+				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -83,10 +83,10 @@ var _ = Describe("Clean", func() {
 		Context("when there are unused volumes", func() {
 			BeforeEach(func() {
 				_, err := Runner.Create(groot.CreateSpec{
-					ID:        "my-image-2",
-					BaseImage: anotherBaseImagePath,
-					Mount:     mountByDefault(),
-					DiskLimit: 10 * 1024 * 1024,
+					ID:           "my-image-2",
+					BaseImageURL: integration.String2URL(anotherBaseImagePath),
+					Mount:        mountByDefault(),
+					DiskLimit:    10 * 1024 * 1024,
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -172,9 +172,9 @@ var _ = Describe("Clean", func() {
 	Context("Remote Images", func() {
 		BeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
-				ID:        "my-image-1",
-				BaseImage: "docker:///cfgarden/empty:v0.1.1",
-				Mount:     mountByDefault(),
+				ID:           "my-image-1",
+				BaseImageURL: integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
+				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -186,9 +186,9 @@ var _ = Describe("Clean", func() {
 		Context("when there are unused layers", func() {
 			BeforeEach(func() {
 				_, err := Runner.Create(groot.CreateSpec{
-					ID:        "my-image-2",
-					BaseImage: "docker:///cfgarden/garden-busybox",
-					Mount:     mountByDefault(),
+					ID:           "my-image-2",
+					BaseImageURL: integration.String2URL("docker:///cfgarden/garden-busybox"),
+					Mount:        mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 

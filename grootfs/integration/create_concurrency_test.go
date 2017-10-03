@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/lager"
 
@@ -46,7 +47,7 @@ var _ = Describe("Concurrent creations", func() {
 				runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
 				_, err := runner.Create(groot.CreateSpec{
 					ID:                        fmt.Sprintf("test-%d", idx),
-					BaseImage:                 fmt.Sprintf("oci://%s/assets/oci-test-image/grootfs-busybox:latest", workDir),
+					BaseImageURL:              integration.String2URL(fmt.Sprintf("oci://%s/assets/oci-test-image/grootfs-busybox:latest", workDir)),
 					Mount:                     mountByDefault(),
 					DiskLimit:                 2*1024*1024 + 512*1024,
 					ExcludeBaseImageFromQuota: true,
@@ -69,10 +70,10 @@ var _ = Describe("Concurrent creations", func() {
 			for i := 0; i < 100; i++ {
 				runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
 				_, err := runner.Create(groot.CreateSpec{
-					ID:        fmt.Sprintf("test-%d", i),
-					BaseImage: fmt.Sprintf("oci://%s/assets/oci-test-image/grootfs-busybox:latest", workDir),
-					Mount:     mountByDefault(),
-					DiskLimit: 2*1024*1024 + 512*1024,
+					ID:           fmt.Sprintf("test-%d", i),
+					BaseImageURL: integration.String2URL(fmt.Sprintf("oci://%s/assets/oci-test-image/grootfs-busybox:latest", workDir)),
+					Mount:        mountByDefault(),
+					DiskLimit:    2*1024*1024 + 512*1024,
 				})
 				Expect(err).NotTo(HaveOccurred())
 			}

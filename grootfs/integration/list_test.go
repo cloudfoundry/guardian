@@ -28,9 +28,9 @@ var _ = Describe("List", func() {
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "foo"), []byte("hello-world"), 0644)).To(Succeed())
 		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
 		containerSpec, err = Runner.Create(groot.CreateSpec{
-			BaseImage: baseImageFile.Name(),
-			ID:        "root-image",
-			Mount:     mountByDefault(),
+			BaseImageURL: integration.String2URL(baseImageFile.Name()),
+			ID:           "root-image",
+			Mount:        mountByDefault(),
 		})
 		Expect(err).ToNot(HaveOccurred())
 	})

@@ -36,9 +36,9 @@ var _ = Describe("Delete (btrfs only)", func() {
 	createUniqueImage := func(baseImagePath string) (imageId string, containerSpec specs.Spec) {
 		imageId = fmt.Sprintf("image-%d", atomic.AddUint32(&nextUniqueImageIndex, 1))
 		containerSpec, err := Runner.Create(groot.CreateSpec{
-			BaseImage: baseImagePath,
-			ID:        imageId,
-			Mount:     true,
+			BaseImageURL: integration.String2URL(baseImagePath),
+			ID:           imageId,
+			Mount:        true,
 		})
 		Expect(err).ToNot(HaveOccurred())
 

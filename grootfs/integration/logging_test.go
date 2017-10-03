@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/lager"
 
 	. "github.com/onsi/ginkgo"
@@ -17,9 +18,9 @@ var _ = Describe("Logging", func() {
 
 	BeforeEach(func() {
 		spec = groot.CreateSpec{
-			ID:        "my-image",
-			BaseImage: "/non/existent/rootfs",
-			Mount:     true,
+			ID:           "my-image",
+			BaseImageURL: integration.String2URL("/non/existent/rootfs"),
+			Mount:        true,
 		}
 	})
 

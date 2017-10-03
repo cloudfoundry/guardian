@@ -46,9 +46,9 @@ var _ = Describe("Delete", func() {
 		baseImagePath = baseImageFile.Name()
 		var err error
 		containerSpec, err = Runner.Create(groot.CreateSpec{
-			BaseImage: baseImagePath,
-			ID:        randomImageID,
-			Mount:     mountByDefault(),
+			BaseImageURL: integration.String2URL(baseImagePath),
+			ID:           randomImageID,
+			Mount:        mountByDefault(),
 		})
 		Expect(err).ToNot(HaveOccurred())
 	})

@@ -36,17 +36,18 @@ type UnpackSpec struct {
 	BaseDirectory string
 }
 
-type LayerDigest struct {
+type LayerInfo struct {
 	BlobID        string
 	ChainID       string
 	ParentChainID string
 	Size          int64
 	BaseDirectory string
+	URLs          []string
 }
 
 type BaseImageInfo struct {
-	LayersDigest []LayerDigest
-	Config       specsv1.Image
+	LayerInfos []LayerInfo
+	Config     specsv1.Image
 }
 
 type VolumeMeta struct {
@@ -55,7 +56,7 @@ type VolumeMeta struct {
 
 type Fetcher interface {
 	BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (BaseImageInfo, error)
-	StreamBlob(logger lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error)
+	StreamBlob(logger lager.Logger, baseImageURL *url.URL, layerInfo LayerInfo) (io.ReadCloser, int64, error)
 }
 
 type DependencyRegisterer interface {
@@ -82,8 +83,7 @@ type VolumeDriver interface {
 }
 
 type BaseImagePuller struct {
-	tarFetcher           Fetcher
-	layerFetcher         Fetcher
+	fetcher              Fetcher
 	unpacker             Unpacker
 	volumeDriver         VolumeDriver
 	dependencyRegisterer DependencyRegisterer
@@ -91,10 +91,9 @@ type BaseImagePuller struct {
 	locksmith            groot.Locksmith
 }
 
-func NewBaseImagePuller(tarFetcher, layerFetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer, metricsEmitter groot.MetricsEmitter, locksmith groot.Locksmith) *BaseImagePuller {
+func NewBaseImagePuller(fetcher Fetcher, unpacker Unpacker, volumeDriver VolumeDriver, dependencyRegisterer DependencyRegisterer, metricsEmitter groot.MetricsEmitter, locksmith groot.Locksmith) *BaseImagePuller {
 	return &BaseImagePuller{
-		tarFetcher:           tarFetcher,
-		layerFetcher:         layerFetcher,
+		fetcher:              fetcher,
 		unpacker:             unpacker,
 		volumeDriver:         volumeDriver,
 		dependencyRegisterer: dependencyRegisterer,
@@ -108,21 +107,21 @@ func (p *BaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (g
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	baseImageInfo, err := p.fetcher(spec.BaseImageSrc).BaseImageInfo(logger, spec.BaseImageSrc)
+	baseImageInfo, err := p.fetcher.BaseImageInfo(logger, spec.BaseImageSrc)
 	if err != nil {
-		return groot.BaseImage{}, errorspkg.Wrap(err, "fetching list of digests")
+		return groot.BaseImage{}, errorspkg.Wrap(err, "fetching list of layer infos")
 	}
-	logger.Debug("fetched-layers-digests", lager.Data{"digests": baseImageInfo.LayersDigest})
+	logger.Debug("fetched-layer-infos", lager.Data{"infos": baseImageInfo.LayerInfos})
 
-	if err = p.quotaExceeded(logger, baseImageInfo.LayersDigest, spec); err != nil {
+	if err = p.quotaExceeded(logger, baseImageInfo.LayerInfos, spec); err != nil {
 		return groot.BaseImage{}, err
 	}
 
-	err = p.buildLayer(logger, len(baseImageInfo.LayersDigest)-1, baseImageInfo.LayersDigest, spec)
+	err = p.buildLayer(logger, len(baseImageInfo.LayerInfos)-1, baseImageInfo.LayerInfos, spec)
 	if err != nil {
 		return groot.BaseImage{}, err
 	}
-	chainIDs := p.chainIDs(baseImageInfo.LayersDigest)
+	chainIDs := p.chainIDs(baseImageInfo.LayerInfos)
 
 	baseImageRefName := fmt.Sprintf(BaseImageReferenceFormat, spec.BaseImageSrc.String())
 	if err := p.dependencyRegisterer.Register(baseImageRefName, chainIDs); err != nil {
@@ -136,20 +135,12 @@ func (p *BaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (g
 	return baseImage, nil
 }
 
-func (p *BaseImagePuller) fetcher(baseImageURL *url.URL) Fetcher {
-	if baseImageURL.Scheme == "" {
-		return p.tarFetcher
-	}
-
-	return p.layerFetcher
-}
-
-func (p *BaseImagePuller) quotaExceeded(logger lager.Logger, layersDigest []LayerDigest, spec groot.BaseImageSpec) error {
+func (p *BaseImagePuller) quotaExceeded(logger lager.Logger, layerInfos []LayerInfo, spec groot.BaseImageSpec) error {
 	if spec.ExcludeBaseImageFromQuota || spec.DiskLimit == 0 {
 		return nil
 	}
 
-	totalSize := p.layersSize(layersDigest)
+	totalSize := p.layersSize(layerInfos)
 	if totalSize > spec.DiskLimit {
 		err := errorspkg.Errorf("layers exceed disk quota %d/%d bytes", totalSize, spec.DiskLimit)
 		logger.Error("blob-manifest-size-check-failed", err, lager.Data{
@@ -163,10 +154,10 @@ func (p *BaseImagePuller) quotaExceeded(logger lager.Logger, layersDigest []Laye
 	return nil
 }
 
-func (p *BaseImagePuller) chainIDs(layersDigest []LayerDigest) []string {
+func (p *BaseImagePuller) chainIDs(layerInfos []LayerInfo) []string {
 	chainIDs := []string{}
-	for _, layerDigest := range layersDigest {
-		chainIDs = append(chainIDs, layerDigest.ChainID)
+	for _, layerInfo := range layerInfos {
+		chainIDs = append(chainIDs, layerInfo.ChainID)
 	}
 	return chainIDs
 }
@@ -184,35 +175,35 @@ func (p *BaseImagePuller) volumeExists(logger lager.Logger, chainID string) bool
 	return false
 }
 
-func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDigests []LayerDigest, spec groot.BaseImageSpec) error {
+func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layerInfos []LayerInfo, spec groot.BaseImageSpec) error {
 	if index < 0 {
 		return nil
 	}
 
-	digest := layersDigests[index]
+	layerInfo := layerInfos[index]
 	logger = logger.Session("build-layer", lager.Data{
-		"blobID":        digest.BlobID,
-		"chainID":       digest.ChainID,
-		"parentChainID": digest.ParentChainID,
+		"blobID":        layerInfo.BlobID,
+		"chainID":       layerInfo.ChainID,
+		"parentChainID": layerInfo.ParentChainID,
 	})
-	if p.volumeExists(logger, digest.ChainID) {
+	if p.volumeExists(logger, layerInfo.ChainID) {
 		return nil
 	}
 
-	lockFile, err := p.locksmith.Lock(digest.ChainID)
+	lockFile, err := p.locksmith.Lock(layerInfo.ChainID)
 	if err != nil {
 		return errorspkg.Wrap(err, "acquiring lock")
 	}
 	defer p.locksmith.Unlock(lockFile)
 
-	if p.volumeExists(logger, digest.ChainID) {
+	if p.volumeExists(logger, layerInfo.ChainID) {
 		return nil
 	}
 
 	downloadChan := make(chan downloadReturn, 1)
-	go p.downloadLayer(logger, spec, digest, downloadChan)
+	go p.downloadLayer(logger, spec, layerInfo, downloadChan)
 
-	if err := p.buildLayer(logger, index-1, layersDigests, spec); err != nil {
+	if err := p.buildLayer(logger, index-1, layerInfos, spec); err != nil {
 		return err
 	}
 
@@ -223,11 +214,11 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layersDiges
 
 	defer downloadResult.Stream.Close()
 
-	var parentDigest LayerDigest
+	var parentLayerInfo LayerInfo
 	if index > 0 {
-		parentDigest = layersDigests[index-1]
+		parentLayerInfo = layerInfos[index-1]
 	}
-	return p.unpackLayer(logger, digest, parentDigest, spec, downloadResult.Stream)
+	return p.unpackLayer(logger, layerInfo, parentLayerInfo, spec, downloadResult.Stream)
 }
 
 type downloadReturn struct {
@@ -235,15 +226,15 @@ type downloadReturn struct {
 	Err    error
 }
 
-func (p *BaseImagePuller) downloadLayer(logger lager.Logger, spec groot.BaseImageSpec, digest LayerDigest, downloadChan chan downloadReturn) {
-	logger = logger.Session("downloading-layer", lager.Data{"LayerDigest": digest})
+func (p *BaseImagePuller) downloadLayer(logger lager.Logger, spec groot.BaseImageSpec, layerInfo LayerInfo, downloadChan chan downloadReturn) {
+	logger = logger.Session("downloading-layer", lager.Data{"LayerInfo": layerInfo})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 	defer p.metricsEmitter.TryEmitDurationFrom(logger, MetricsDownloadTimeName, time.Now())
 
-	stream, size, err := p.fetcher(spec.BaseImageSrc).StreamBlob(logger, spec.BaseImageSrc, digest.BlobID)
+	stream, size, err := p.fetcher.StreamBlob(logger, spec.BaseImageSrc, layerInfo)
 	if err != nil {
-		err = errorspkg.Wrapf(err, "streaming blob `%s`", digest.BlobID)
+		err = errorspkg.Wrapf(err, "streaming blob `%s`", layerInfo.BlobID)
 	}
 
 	logger.Debug("got-stream-for-blob", lager.Data{
@@ -255,12 +246,12 @@ func (p *BaseImagePuller) downloadLayer(logger lager.Logger, spec groot.BaseImag
 	downloadChan <- downloadReturn{Stream: stream, Err: err}
 }
 
-func (p *BaseImagePuller) unpackLayer(logger lager.Logger, digest, parentDigest LayerDigest, spec groot.BaseImageSpec, stream io.ReadCloser) error {
-	logger = logger.Session("unpacking-layer", lager.Data{"LayerDigest": digest})
+func (p *BaseImagePuller) unpackLayer(logger lager.Logger, layerInfo, parentLayerInfo LayerInfo, spec groot.BaseImageSpec, stream io.ReadCloser) error {
+	logger = logger.Session("unpacking-layer", lager.Data{"LayerInfo": layerInfo})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	tempVolumeName, volumePath, err := p.createTemporaryVolumeDirectory(logger, digest, spec)
+	tempVolumeName, volumePath, err := p.createTemporaryVolumeDirectory(logger, layerInfo, spec)
 	if err != nil {
 		return err
 	}
@@ -270,25 +261,25 @@ func (p *BaseImagePuller) unpackLayer(logger lager.Logger, digest, parentDigest 
 		Stream:        stream,
 		UIDMappings:   spec.UIDMappings,
 		GIDMappings:   spec.GIDMappings,
-		BaseDirectory: digest.BaseDirectory,
+		BaseDirectory: layerInfo.BaseDirectory,
 	}
 
-	volSize, err := p.unpackLayerToTemporaryDirectory(logger, unpackSpec, digest, parentDigest)
+	volSize, err := p.unpackLayerToTemporaryDirectory(logger, unpackSpec, layerInfo, parentLayerInfo)
 	if err != nil {
 		return err
 	}
 
-	return p.finalizeVolume(logger, tempVolumeName, volumePath, digest.ChainID, volSize)
+	return p.finalizeVolume(logger, tempVolumeName, volumePath, layerInfo.ChainID, volSize)
 }
 
-func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, digest LayerDigest, spec groot.BaseImageSpec) (string, string, error) {
-	tempVolumeName := fmt.Sprintf("%s-incomplete-%d-%d", digest.ChainID, time.Now().UnixNano(), rand.Int())
+func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, layerInfo LayerInfo, spec groot.BaseImageSpec) (string, string, error) {
+	tempVolumeName := fmt.Sprintf("%s-incomplete-%d-%d", layerInfo.ChainID, time.Now().UnixNano(), rand.Int())
 	volumePath, err := p.volumeDriver.CreateVolume(logger,
-		digest.ParentChainID,
+		layerInfo.ParentChainID,
 		tempVolumeName,
 	)
 	if err != nil {
-		return "", "", errorspkg.Wrapf(err, "creating volume for layer `%s`", digest.BlobID)
+		return "", "", errorspkg.Wrapf(err, "creating volume for layer `%s`", layerInfo.BlobID)
 	}
 	logger.Debug("volume-created", lager.Data{"volumePath": volumePath})
 
@@ -302,11 +293,11 @@ func (p *BaseImagePuller) createTemporaryVolumeDirectory(logger lager.Logger, di
 	return tempVolumeName, volumePath, nil
 }
 
-func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, digest, parentDigest LayerDigest) (volSize int64, err error) {
+func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, unpackSpec UnpackSpec, layerInfo, parentLayerInfo LayerInfo) (volSize int64, err error) {
 	defer p.metricsEmitter.TryEmitDurationFrom(logger, MetricsUnpackTimeName, time.Now())
 
 	if unpackSpec.BaseDirectory != "" {
-		parentPath, err := p.volumeDriver.VolumePath(logger, parentDigest.ChainID)
+		parentPath, err := p.volumeDriver.VolumePath(logger, parentLayerInfo.ChainID)
 		if err != nil {
 			return 0, err
 		}
@@ -318,10 +309,10 @@ func (p *BaseImagePuller) unpackLayerToTemporaryDirectory(logger lager.Logger, u
 
 	var unpackOutput UnpackOutput
 	if unpackOutput, err = p.unpacker.Unpack(logger, unpackSpec); err != nil {
-		if errD := p.volumeDriver.DestroyVolume(logger, digest.ChainID); errD != nil {
+		if errD := p.volumeDriver.DestroyVolume(logger, layerInfo.ChainID); errD != nil {
 			logger.Error("volume-cleanup-failed", errD)
 		}
-		return 0, errorspkg.Wrapf(err, "unpacking layer `%s`", digest.BlobID)
+		return 0, errorspkg.Wrapf(err, "unpacking layer `%s`", layerInfo.BlobID)
 	}
 
 	if err := p.volumeDriver.HandleOpaqueWhiteouts(logger, path.Base(unpackSpec.TargetPath), unpackOutput.OpaqueWhiteouts); err != nil {
@@ -346,10 +337,10 @@ func (p *BaseImagePuller) finalizeVolume(logger lager.Logger, tempVolumeName, vo
 	return nil
 }
 
-func (p *BaseImagePuller) layersSize(layerDigests []LayerDigest) int64 {
+func (p *BaseImagePuller) layersSize(layerInfos []LayerInfo) int64 {
 	var totalSize int64
-	for _, digest := range layerDigests {
-		totalSize += digest.Size
+	for _, layerInfo := range layerInfos {
+		totalSize += layerInfo.Size
 	}
 	return totalSize
 }

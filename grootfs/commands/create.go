@@ -29,6 +29,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 
+	"github.com/containers/image/types"
 	"github.com/docker/distribution/registry/api/errcode"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	errorspkg "github.com/pkg/errors"
@@ -116,8 +117,13 @@ var CreateCommand = cli.Command{
 		}
 
 		storePath := cfg.StorePath
-		baseImage := ctx.Args().First()
 		id := ctx.Args().Tail()[0]
+		baseImage := ctx.Args().First()
+		baseImageURL, err := url.Parse(baseImage)
+		if err != nil {
+			logger.Error("base-image-url-parsing-failed", err)
+			return newExitError(err.Error(), 1)
+		}
 
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
@@ -160,19 +166,16 @@ var CreateCommand = cli.Command{
 			unpacker = unpackerpkg.NewNSIdMapperUnpacker(runner, idMapper, unpackerStrategy)
 		}
 
-		layerSource := source.NewLayerSource(ctx.String("username"), ctx.String("password"), cfg.Create.InsecureRegistries, cfg.Create.SkipLayerValidation)
-
-		layerFetcher := layer_fetcher.NewLayerFetcher(&layerSource)
-		tarFetcher := tar_fetcher.NewTarFetcher()
-
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)
 
 		nsFsDriver := namespaced.New(fsDriver, idMappings, idMapper, runner)
+
+		systemContext := createSystemContext(baseImageURL, cfg.Create, ctx.String("username"), ctx.String("password"))
+
 		baseImagePuller := base_image_puller.NewBaseImagePuller(
-			tarFetcher,
-			layerFetcher,
+			createFetcher(baseImageURL, systemContext, cfg.Create),
 			unpacker,
 			nsFsDriver,
 			dependencyManager,
@@ -192,7 +195,7 @@ var CreateCommand = cli.Command{
 		createSpec := groot.CreateSpec{
 			ID:                          id,
 			Mount:                       !cfg.Create.WithoutMount,
-			BaseImage:                   baseImage,
+			BaseImageURL:                baseImageURL,
 			DiskLimit:                   cfg.Create.DiskLimitSizeBytes,
 			ExcludeBaseImageFromQuota:   cfg.Create.ExcludeImageFromQuota,
 			UIDMappings:                 idMappings.UIDMappings,
@@ -246,6 +249,47 @@ var CreateCommand = cli.Command{
 	},
 }
 
+func createFetcher(baseImageUrl *url.URL, systemContext types.SystemContext, createCfg config.Create) base_image_puller.Fetcher {
+	if baseImageUrl.Scheme == "" {
+		return tar_fetcher.NewTarFetcher()
+	}
+
+	skipOCIChecksumValidation := createCfg.SkipLayerValidation && baseImageUrl.Scheme == "oci"
+	layerSource := source.NewLayerSource(systemContext, skipOCIChecksumValidation)
+	return layer_fetcher.NewLayerFetcher(&layerSource)
+}
+
+func createSystemContext(baseImageURL *url.URL, createConfig config.Create, username, password string) types.SystemContext {
+	scheme := baseImageURL.Scheme
+	switch scheme {
+	case "docker":
+		return types.SystemContext{
+			DockerInsecureSkipTLSVerify: skipTLSValidation(baseImageURL, createConfig.InsecureRegistries),
+			DockerAuthConfig: &types.DockerAuthConfig{
+				Username: username,
+				Password: password,
+			},
+		}
+	case "oci":
+		return types.SystemContext{
+			OCICertPath: createConfig.BlobstoreClientCertificatesPath,
+		}
+	default:
+		return types.SystemContext{}
+	}
+
+}
+
+func skipTLSValidation(baseImageURL *url.URL, trustedRegistries []string) bool {
+	for _, trustedRegistry := range trustedRegistries {
+		if baseImageURL.Host == trustedRegistry {
+			return true
+		}
+	}
+
+	return false
+}
+
 func containsDockerError(errorsList errcode.Errors, errCode errcode.ErrorCode) bool {
 	for _, err := range errorsList {
 		if e, ok := err.(errcode.Error); ok && e.ErrorCode() == errCode {
@@ -258,7 +302,7 @@ func containsDockerError(errorsList errcode.Errors, errCode errcode.ErrorCode) b
 
 func tryHumanizeDockerErrorsList(err errcode.Errors, spec groot.CreateSpec) string {
 	if containsDockerError(err, errcode.ErrorCodeUnauthorized) {
-		return fmt.Sprintf("%s does not exist or you do not have permissions to see it.", spec.BaseImage)
+		return fmt.Sprintf("%s does not exist or you do not have permissions to see it.", spec.BaseImageURL.String())
 	}
 
 	return err.Error()
@@ -272,7 +316,7 @@ func tryParsingErrorMessage(err error) error {
 	if newErr.Error() == "directory provided instead of a tar file" {
 		return errorspkg.New("invalid base image: " + newErr.Error())
 	}
-	if regexp.MustCompile("pulling the image: fetching list of digests: fetching image reference: .*: no such file or directory").MatchString(err.Error()) {
+	if regexp.MustCompile("pulling the image: fetching list of layer infos: fetching image reference: .*: no such file or directory").MatchString(err.Error()) {
 		return errorspkg.New("Image source doesn't exist")
 	}
 

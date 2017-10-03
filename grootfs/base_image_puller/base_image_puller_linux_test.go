@@ -29,8 +29,7 @@ import (
 var _ = Describe("Base Image Puller", func() {
 	var (
 		logger                   lager.Logger
-		fakeTarFetcher           *base_image_pullerfakes.FakeFetcher
-		fakeLayerFetcher         *base_image_pullerfakes.FakeFetcher
+		fakeFetcher              *base_image_pullerfakes.FakeFetcher
 		fakeUnpacker             *base_image_pullerfakes.FakeUnpacker
 		fakeVolumeDriver         *base_image_pullerfakes.FakeVolumeDriver
 		fakeLocksmith            *grootfakes.FakeLocksmith
@@ -39,7 +38,7 @@ var _ = Describe("Base Image Puller", func() {
 		expectedImgDesc          specsv1.Image
 
 		baseImagePuller *base_image_puller.BaseImagePuller
-		layersDigest    []base_image_puller.LayerDigest
+		layerInfos      []base_image_puller.LayerInfo
 
 		baseImageSrcURL *url.URL
 		tmpVolumesDir   string
@@ -50,21 +49,20 @@ var _ = Describe("Base Image Puller", func() {
 
 		fakeLocksmith = new(grootfakes.FakeLocksmith)
 		fakeMetricsEmitter = new(grootfakes.FakeMetricsEmitter)
-		fakeTarFetcher = new(base_image_pullerfakes.FakeFetcher)
-		fakeLayerFetcher = new(base_image_pullerfakes.FakeFetcher)
+		fakeFetcher = new(base_image_pullerfakes.FakeFetcher)
 		expectedImgDesc = specsv1.Image{Author: "Groot"}
-		layersDigest = []base_image_puller.LayerDigest{
+		layerInfos = []base_image_puller.LayerInfo{
 			{BlobID: "i-am-a-layer", ChainID: "layer-111", ParentChainID: ""},
 			{BlobID: "i-am-another-layer", ChainID: "chain-222", ParentChainID: "layer-111"},
 			{BlobID: "i-am-the-last-layer", ChainID: "chain-333", ParentChainID: "chain-222"},
 		}
-		fakeLayerFetcher.BaseImageInfoReturns(
+		fakeFetcher.BaseImageInfoReturns(
 			base_image_puller.BaseImageInfo{
-				LayersDigest: layersDigest,
-				Config:       expectedImgDesc,
+				LayerInfos: layerInfos,
+				Config:     expectedImgDesc,
 			}, nil)
 
-		fakeLayerFetcher.StreamBlobStub = func(_ lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error) {
+		fakeFetcher.StreamBlobStub = func(_ lager.Logger, baseImageURL *url.URL, layerInfo base_image_puller.LayerInfo) (io.ReadCloser, int64, error) {
 			buffer := bytes.NewBuffer([]byte{})
 			stream := gzip.NewWriter(buffer)
 			defer stream.Close()
@@ -92,7 +90,7 @@ var _ = Describe("Base Image Puller", func() {
 
 		fakeDependencyRegisterer = new(base_image_pullerfakes.FakeDependencyRegisterer)
 
-		baseImagePuller = base_image_puller.NewBaseImagePuller(fakeTarFetcher, fakeLayerFetcher, fakeUnpacker, fakeVolumeDriver, fakeDependencyRegisterer, fakeMetricsEmitter, fakeLocksmith)
+		baseImagePuller = base_image_puller.NewBaseImagePuller(fakeFetcher, fakeUnpacker, fakeVolumeDriver, fakeDependencyRegisterer, fakeMetricsEmitter, fakeLocksmith)
 		logger = lagertest.NewTestLogger("image-puller")
 
 		baseImageSrcURL, err = url.Parse("docker:///an/image")
@@ -153,7 +151,7 @@ var _ = Describe("Base Image Puller", func() {
 
 	Context("when there is a base directory provided on a layer", func() {
 		BeforeEach(func() {
-			layersDigest[1].BaseDirectory = "/home/base_directory"
+			layerInfos[1].BaseDirectory = "/home/base_directory"
 		})
 
 		Context("when the base directory exists in the parent layer", func() {
@@ -323,13 +321,13 @@ var _ = Describe("Base Image Puller", func() {
 	})
 
 	It("unpacks the layers got from the fetcher", func() {
-		fakeLayerFetcher.StreamBlobStub = func(_ lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error) {
+		fakeFetcher.StreamBlobStub = func(_ lager.Logger, baseImageURL *url.URL, layerInfo base_image_puller.LayerInfo) (io.ReadCloser, int64, error) {
 			Expect(baseImageURL).To(Equal(baseImageSrcURL))
 
 			buffer := bytes.NewBuffer([]byte{})
 			stream := gzip.NewWriter(buffer)
 			defer stream.Close()
-			_, err := stream.Write([]byte(fmt.Sprintf("layer-%s-contents", source)))
+			_, err := stream.Write([]byte(fmt.Sprintf("layer-%s-contents", layerInfo.BlobID)))
 			Expect(err).NotTo(HaveOccurred())
 			return ioutil.NopCloser(buffer), 1200, nil
 		}
@@ -399,7 +397,7 @@ var _ = Describe("Base Image Puller", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
-		Eventually(fakeMetricsEmitter.TryEmitDurationFromCallCount).Should(Equal(2 * len(layersDigest)))
+		Eventually(fakeMetricsEmitter.TryEmitDurationFromCallCount).Should(Equal(2 * len(layerInfos)))
 	})
 
 	It("uses the locksmith for each layer", func() {
@@ -411,8 +409,8 @@ var _ = Describe("Base Image Puller", func() {
 		Expect(fakeLocksmith.LockCallCount()).To(Equal(3))
 		Expect(fakeLocksmith.UnlockCallCount()).To(Equal(3))
 
-		for i, layer := range layersDigest {
-			chainID := fakeLocksmith.LockArgsForCall(len(layersDigest) - 1 - i)
+		for i, layer := range layerInfos {
+			chainID := fakeLocksmith.LockArgsForCall(len(layerInfos) - 1 - i)
 			Expect(chainID).To(Equal(layer.ChainID))
 		}
 	})
@@ -443,39 +441,11 @@ var _ = Describe("Base Image Puller", func() {
 		})
 	})
 
-	Context("deciding between tar and layer fetcher", func() {
-		It("uses tar fetcher when the image url doesn't have a schema", func() {
-			imageSrc, err := url.Parse("/path/to/my/image")
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = baseImagePuller.Pull(logger, groot.BaseImageSpec{
-				BaseImageSrc: imageSrc,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeTarFetcher.BaseImageInfoCallCount()).To(Equal(1))
-			Expect(fakeLayerFetcher.BaseImageInfoCallCount()).To(Equal(0))
-		})
-
-		It("uses remote fetcher when the image url does have a schema", func() {
-			imageSrc, err := url.Parse("crazy://image/place")
-			Expect(err).NotTo(HaveOccurred())
-
-			_, err = baseImagePuller.Pull(logger, groot.BaseImageSpec{
-				BaseImageSrc: imageSrc,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeTarFetcher.BaseImageInfoCallCount()).To(Equal(0))
-			Expect(fakeLayerFetcher.BaseImageInfoCallCount()).To(Equal(1))
-		})
-	})
-
 	Context("when the layers size in the manifest will exceed the limit", func() {
 		Context("when including the image size in the limit", func() {
 			It("returns an error", func() {
-				fakeLayerFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
-					LayersDigest: []base_image_puller.LayerDigest{
+				fakeFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
+					LayerInfos: []base_image_puller.LayerInfo{
 						{Size: 1000},
 						{Size: 201},
 					},
@@ -491,8 +461,8 @@ var _ = Describe("Base Image Puller", func() {
 
 			Context("when the disk limit is zero", func() {
 				It("doesn't fail", func() {
-					fakeLayerFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
-						LayersDigest: []base_image_puller.LayerDigest{
+					fakeFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
+						LayerInfos: []base_image_puller.LayerInfo{
 							{Size: 1000},
 							{Size: 201},
 						},
@@ -511,8 +481,8 @@ var _ = Describe("Base Image Puller", func() {
 
 		Context("when not including the image size in the limit", func() {
 			It("doesn't fail", func() {
-				fakeLayerFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
-					LayersDigest: []base_image_puller.LayerDigest{
+				fakeFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
+					LayerInfos: []base_image_puller.LayerInfo{
 						{Size: 1000},
 						{Size: 201},
 					},
@@ -531,9 +501,9 @@ var _ = Describe("Base Image Puller", func() {
 
 	Context("when fetching the list of layers fails", func() {
 		BeforeEach(func() {
-			fakeLayerFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
-				LayersDigest: []base_image_puller.LayerDigest{},
-				Config:       specsv1.Image{},
+			fakeFetcher.BaseImageInfoReturns(base_image_puller.BaseImageInfo{
+				LayerInfos: []base_image_puller.LayerInfo{},
+				Config:     specsv1.Image{},
 			}, errors.New("failed to get list of layers"))
 		})
 
@@ -737,7 +707,7 @@ var _ = Describe("Base Image Puller", func() {
 
 	Context("when streaming a blob fails", func() {
 		BeforeEach(func() {
-			fakeLayerFetcher.StreamBlobReturns(nil, 0, errors.New("failed to stream blob"))
+			fakeFetcher.StreamBlobReturns(nil, 0, errors.New("failed to stream blob"))
 		})
 
 		It("returns an error", func() {

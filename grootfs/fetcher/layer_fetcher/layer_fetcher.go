@@ -29,7 +29,7 @@ type Manifest interface {
 
 type Source interface {
 	Manifest(logger lager.Logger, baseImageURL *url.URL) (types.Image, error)
-	Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error)
+	Blob(logger lager.Logger, baseImageURL *url.URL, digest string, layersURLs []string) (string, int64, error)
 }
 
 type LayerFetcher struct {
@@ -62,17 +62,17 @@ func (f *LayerFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL)
 	}
 
 	return base_image_puller.BaseImageInfo{
-		LayersDigest: f.createLayersDigest(logger, manifest, config),
-		Config:       *config,
+		LayerInfos: f.createLayerInfos(logger, manifest, config),
+		Config:     *config,
 	}, nil
 }
 
-func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, source string) (io.ReadCloser, int64, error) {
+func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, layerInfo base_image_puller.LayerInfo) (io.ReadCloser, int64, error) {
 	logger = logger.Session("streaming", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	blobFilePath, size, err := f.source.Blob(logger, baseImageURL, source)
+	blobFilePath, size, err := f.source.Blob(logger, baseImageURL, layerInfo.BlobID, layerInfo.URLs)
 	if err != nil {
 		logger.Error("source-blob-failed", err)
 		return nil, 0, err
@@ -87,8 +87,8 @@ func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, so
 	return blobReader, size, nil
 }
 
-func (f *LayerFetcher) createLayersDigest(logger lager.Logger, image Manifest, config *specsv1.Image) []base_image_puller.LayerDigest {
-	layersDigest := []base_image_puller.LayerDigest{}
+func (f *LayerFetcher) createLayerInfos(logger lager.Logger, image Manifest, config *specsv1.Image) []base_image_puller.LayerInfo {
+	layerInfos := []base_image_puller.LayerInfo{}
 
 	var parentChainID string
 	for i, layer := range image.LayerInfos() {
@@ -98,17 +98,18 @@ func (f *LayerFetcher) createLayersDigest(logger lager.Logger, image Manifest, c
 
 		diffID := config.RootFS.DiffIDs[i]
 		chainID := f.chainID(diffID.String(), parentChainID)
-		layersDigest = append(layersDigest, base_image_puller.LayerDigest{
+		layerInfos = append(layerInfos, base_image_puller.LayerInfo{
 			BlobID:        layer.Digest.String(),
 			Size:          layer.Size,
 			ChainID:       chainID,
 			ParentChainID: parentChainID,
 			BaseDirectory: layer.Annotations[cfBaseDirectoryAnnotation],
+			URLs:          layer.URLs,
 		})
 		parentChainID = chainID
 	}
 
-	return layersDigest
+	return layerInfos
 }
 
 func (f *LayerFetcher) chainID(diffID string, parentChainID string) string {

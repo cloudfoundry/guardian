@@ -130,8 +130,8 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 		}
 	}
 
-	if spec.BaseImage != "" {
-		args = append(args, spec.BaseImage)
+	if spec.BaseImageURL != nil {
+		args = append(args, spec.BaseImageURL.String())
 	}
 
 	if spec.ID != "" {

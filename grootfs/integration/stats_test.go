@@ -75,10 +75,10 @@ var _ = Describe("Stats", func() {
 		JustBeforeEach(func() {
 			var err error
 			containerSpec, err = Runner.Create(groot.CreateSpec{
-				BaseImage: baseImagePath,
-				ID:        imageID,
-				DiskLimit: diskLimit,
-				Mount:     isBtrfs(), // btrfs needs the mount option
+				BaseImageURL: integration.String2URL(baseImagePath),
+				ID:           imageID,
+				DiskLimit:    diskLimit,
+				Mount:        isBtrfs(), // btrfs needs the mount option
 			})
 			Expect(err).ToNot(HaveOccurred())
 

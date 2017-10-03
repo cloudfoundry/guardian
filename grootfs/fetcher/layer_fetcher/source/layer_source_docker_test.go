@@ -22,25 +22,31 @@ import (
 
 var _ = Describe("Layer source: Docker", func() {
 	var (
-		trustedRegistries []string
-		layerSource       source.LayerSource
+		layerSource source.LayerSource
 
 		logger       *lagertest.TestLogger
 		baseImageURL *url.URL
 
-		configBlob            string
-		expectedLayersDigests []types.BlobInfo
-		expectedDiffIds       []digestpkg.Digest
+		configBlob        string
+		expectedBlobInfos []types.BlobInfo
+		expectedDiffIds   []digestpkg.Digest
+		systemContext     types.SystemContext
 
-		skipChecksumValidation bool
+		skipOCIChecksumValidation bool
 	)
 
 	BeforeEach(func() {
-		trustedRegistries = []string{}
-		skipChecksumValidation = false
+		systemContext = types.SystemContext{
+			DockerAuthConfig: &types.DockerAuthConfig{
+				Username: RegistryUsername,
+				Password: RegistryPassword,
+			},
+		}
+
+		skipOCIChecksumValidation = false
 
 		configBlob = "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d"
-		expectedLayersDigests = []types.BlobInfo{
+		expectedBlobInfos = []types.BlobInfo{
 			{
 				Digest: "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
 				Size:   90,
@@ -62,7 +68,7 @@ var _ = Describe("Layer source: Docker", func() {
 	})
 
 	JustBeforeEach(func() {
-		layerSource = source.NewLayerSource("", "", trustedRegistries, skipChecksumValidation)
+		layerSource = source.NewLayerSource(systemContext, skipOCIChecksumValidation)
 	})
 
 	Describe("Manifest", func() {
@@ -73,8 +79,8 @@ var _ = Describe("Layer source: Docker", func() {
 			Expect(manifest.ConfigInfo().Digest.String()).To(Equal(configBlob))
 
 			Expect(manifest.LayerInfos()).To(HaveLen(2))
-			Expect(manifest.LayerInfos()[0]).To(Equal(expectedLayersDigests[0]))
-			Expect(manifest.LayerInfos()[1]).To(Equal(expectedLayersDigests[1]))
+			Expect(manifest.LayerInfos()[0]).To(Equal(expectedBlobInfos[0]))
+			Expect(manifest.LayerInfos()[1]).To(Equal(expectedBlobInfos[1]))
 		})
 
 		Context("when the image schema version is 1", func() {
@@ -104,15 +110,11 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				configBlob = "sha256:c2bf00eb303023869c676f91af930a12925c24d677999917e8d52c73fa10b73a"
-				expectedLayersDigests[0].Digest = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
-				expectedLayersDigests[1].Digest = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
+				expectedBlobInfos[0].Digest = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
+				expectedBlobInfos[1].Digest = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
 			})
 
 			Context("when the correct credentials are provided", func() {
-				JustBeforeEach(func() {
-					layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries, skipChecksumValidation)
-				})
-
 				It("fetches the manifest", func() {
 					manifest, err := layerSource.Manifest(logger, baseImageURL)
 					Expect(err).NotTo(HaveOccurred())
@@ -120,18 +122,23 @@ var _ = Describe("Layer source: Docker", func() {
 					Expect(manifest.ConfigInfo().Digest.String()).To(Equal(configBlob))
 
 					Expect(manifest.LayerInfos()).To(HaveLen(2))
-					Expect(manifest.LayerInfos()[0]).To(Equal(expectedLayersDigests[0]))
-					Expect(manifest.LayerInfos()[1]).To(Equal(expectedLayersDigests[1]))
+					Expect(manifest.LayerInfos()[0]).To(Equal(expectedBlobInfos[0]))
+					Expect(manifest.LayerInfos()[1]).To(Equal(expectedBlobInfos[1]))
 				})
 			})
 
 			Context("when invalid credentials are provided", func() {
+				BeforeEach(func() {
+					systemContext.DockerAuthConfig.Username = "hello"
+					systemContext.DockerAuthConfig.Password = "hello"
+				})
+
 				It("returns an error", func() {
-					baseImageURL, err := url.Parse("docker:cfgarden/empty:v0.1.0")
+					baseImageURL, err := url.Parse("docker:///cfgarden/empty:v0.1.0")
 					Expect(err).NotTo(HaveOccurred())
 
 					_, err = layerSource.Manifest(logger, baseImageURL)
-					Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
+					Expect(err).To(MatchError(ContainSubstring("unable to retrieve auth token")))
 				})
 			})
 		})
@@ -151,6 +158,9 @@ var _ = Describe("Layer source: Docker", func() {
 				var err error
 				baseImageURL, err = url.Parse("docker:///cfgarden/non-existing-image")
 				Expect(err).NotTo(HaveOccurred())
+
+				systemContext.DockerAuthConfig.Username = ""
+				systemContext.DockerAuthConfig.Password = ""
 			})
 
 			It("wraps the containers/image with a useful error", func() {
@@ -190,7 +200,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			JustBeforeEach(func() {
-				layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries, skipChecksumValidation)
+				layerSource = source.NewLayerSource(systemContext, skipOCIChecksumValidation)
 				var err error
 				manifest, err = layerSource.Manifest(logger, baseImageURL)
 				Expect(err).NotTo(HaveOccurred())
@@ -253,7 +263,7 @@ var _ = Describe("Layer source: Docker", func() {
 			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
 			fakeRegistry.Start()
 
-			trustedRegistries = []string{fakeRegistry.Addr()}
+			systemContext.DockerInsecureSkipTLSVerify = true
 			baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -277,7 +287,7 @@ var _ = Describe("Layer source: Docker", func() {
 		It("retries fetching a blob twice", func() {
 			fakeRegistry.FailNextRequests(2)
 
-			_, _, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[0].Digest.String())
+			_, _, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(logger.TestSink.LogMessages()).To(
@@ -312,6 +322,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 			baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 			Expect(err).NotTo(HaveOccurred())
+
 		})
 
 		AfterEach(func() {
@@ -325,7 +336,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 		Context("when the private registry is whitelisted", func() {
 			BeforeEach(func() {
-				trustedRegistries = []string{fakeRegistry.Addr()}
+				systemContext.DockerInsecureSkipTLSVerify = true
 			})
 
 			It("fetches the manifest", func() {
@@ -333,8 +344,8 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(manifest.LayerInfos()).To(HaveLen(2))
-				Expect(manifest.LayerInfos()[0]).To(Equal(expectedLayersDigests[0]))
-				Expect(manifest.LayerInfos()[1]).To(Equal(expectedLayersDigests[1]))
+				Expect(manifest.LayerInfos()[0]).To(Equal(expectedBlobInfos[0]))
+				Expect(manifest.LayerInfos()[1]).To(Equal(expectedBlobInfos[1]))
 			})
 
 			It("fetches the config", func() {
@@ -350,7 +361,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("downloads a blob", func() {
-				blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[0].Digest.String())
+				blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
 				Expect(err).NotTo(HaveOccurred())
 
 				blobReader, err := os.Open(blobPath)
@@ -373,8 +384,8 @@ var _ = Describe("Layer source: Docker", func() {
 					baseImageURL, err = url.Parse("docker:///cfgarden/private")
 					Expect(err).NotTo(HaveOccurred())
 
-					expectedLayersDigests[0].Digest = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
-					expectedLayersDigests[1].Digest = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
+					expectedBlobInfos[0].Digest = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
+					expectedBlobInfos[1].Digest = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
 
 					expectedDiffIds = []digestpkg.Digest{
 						digestpkg.NewDigestFromHex("sha256", "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296"),
@@ -383,7 +394,7 @@ var _ = Describe("Layer source: Docker", func() {
 				})
 
 				JustBeforeEach(func() {
-					layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries, skipChecksumValidation)
+					layerSource = source.NewLayerSource(systemContext, skipOCIChecksumValidation)
 				})
 
 				It("fetches the manifest", func() {
@@ -391,8 +402,8 @@ var _ = Describe("Layer source: Docker", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(manifest.LayerInfos()).To(HaveLen(2))
-					Expect(manifest.LayerInfos()[0]).To(Equal(expectedLayersDigests[0]))
-					Expect(manifest.LayerInfos()[1]).To(Equal(expectedLayersDigests[1]))
+					Expect(manifest.LayerInfos()[0]).To(Equal(expectedBlobInfos[0]))
+					Expect(manifest.LayerInfos()[1]).To(Equal(expectedBlobInfos[1]))
 				})
 
 				It("fetches the config", func() {
@@ -408,7 +419,7 @@ var _ = Describe("Layer source: Docker", func() {
 				})
 
 				It("downloads a blob", func() {
-					blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[0].Digest.String())
+					blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					blobReader, err := os.Open(blobPath)
@@ -430,7 +441,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 	Describe("Blob", func() {
 		It("downloads a blob", func() {
-			blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[0].Digest.String())
+			blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
 			Expect(err).NotTo(HaveOccurred())
 
 			blobReader, err := os.Open(blobPath)
@@ -453,17 +464,13 @@ var _ = Describe("Layer source: Docker", func() {
 				baseImageURL, err = url.Parse("docker:///cfgarden/private")
 				Expect(err).NotTo(HaveOccurred())
 
-				expectedLayersDigests[0].Digest = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
-				expectedLayersDigests[1].Digest = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
+				expectedBlobInfos[0].Digest = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
+				expectedBlobInfos[1].Digest = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
 			})
 
 			Context("when the correct credentials are provided", func() {
-				JustBeforeEach(func() {
-					layerSource = source.NewLayerSource(RegistryUsername, RegistryPassword, trustedRegistries, skipChecksumValidation)
-				})
-
 				It("fetches the config", func() {
-					blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[0].Digest.String())
+					blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
 					Expect(err).NotTo(HaveOccurred())
 
 					blobReader, err := os.Open(blobPath)
@@ -482,9 +489,14 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			Context("when invalid credentials are provided", func() {
+				JustBeforeEach(func() {
+					systemContext.DockerAuthConfig.Username = "hello"
+					systemContext.DockerAuthConfig.Password = "hello"
+				})
+
 				It("retuns an error", func() {
-					_, _, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[0].Digest.String())
-					Expect(err).To(MatchError(ContainSubstring("Invalid status code returned when fetching blob 401")))
+					_, _, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
+					Expect(err).To(MatchError(ContainSubstring("unable to retrieve auth token")))
 				})
 			})
 		})
@@ -494,14 +506,14 @@ var _ = Describe("Layer source: Docker", func() {
 				baseImageURL, err := url.Parse("docker:cfgarden/empty:v0.1.0")
 				Expect(err).NotTo(HaveOccurred())
 
-				_, _, err = layerSource.Blob(logger, baseImageURL, expectedLayersDigests[0].Digest.String())
+				_, _, err = layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
 				Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
 			})
 		})
 
 		Context("when the blob does not exist", func() {
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, "sha256:steamed-blob")
+				_, _, err := layerSource.Blob(logger, baseImageURL, "sha256:steamed-blob", nil)
 				Expect(err).To(MatchError(ContainSubstring("fetching blob 404")))
 			})
 		})
@@ -513,7 +525,7 @@ var _ = Describe("Layer source: Docker", func() {
 				dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
 				Expect(err).NotTo(HaveOccurred())
 				fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
-				fakeRegistry.WhenGettingBlob(expectedLayersDigests[1].Digest.String(), 1, func(rw http.ResponseWriter, req *http.Request) {
+				fakeRegistry.WhenGettingBlob(expectedBlobInfos[1].Digest.String(), 1, func(rw http.ResponseWriter, req *http.Request) {
 					_, _ = rw.Write([]byte("bad-blob"))
 				})
 				fakeRegistry.Start()
@@ -521,7 +533,7 @@ var _ = Describe("Layer source: Docker", func() {
 				baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 				Expect(err).NotTo(HaveOccurred())
 
-				trustedRegistries = []string{fakeRegistry.Addr()}
+				systemContext.DockerInsecureSkipTLSVerify = true
 			})
 
 			AfterEach(func() {
@@ -529,17 +541,17 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[1].Digest.String())
+				_, _, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[1].Digest.String(), nil)
 				Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
 			})
 
-			Context("when a devious hacker tries to set skipChecksumValidation to true", func() {
+			Context("when a devious hacker tries to set skipOCIChecksumValidation to true", func() {
 				BeforeEach(func() {
-					skipChecksumValidation = true
+					skipOCIChecksumValidation = true
 				})
 
 				It("returns an error", func() {
-					_, _, err := layerSource.Blob(logger, baseImageURL, expectedLayersDigests[1].Digest.String())
+					_, _, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[1].Digest.String(), nil)
 					Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
 				})
 			})

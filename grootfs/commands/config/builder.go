@@ -25,12 +25,13 @@ type Config struct {
 }
 
 type Create struct {
-	ExcludeImageFromQuota bool     `yaml:"exclude_image_from_quota"`
-	SkipLayerValidation   bool     `yaml:"skip_layer_validation"`
-	WithClean             bool     `yaml:"with_clean"`
-	WithoutMount          bool     `yaml:"without_mount"`
-	DiskLimitSizeBytes    int64    `yaml:"disk_limit_size_bytes"`
-	InsecureRegistries    []string `yaml:"insecure_registries"`
+	ExcludeImageFromQuota           bool     `yaml:"exclude_image_from_quota"`
+	SkipLayerValidation             bool     `yaml:"skip_layer_validation"`
+	WithClean                       bool     `yaml:"with_clean"`
+	WithoutMount                    bool     `yaml:"without_mount"`
+	DiskLimitSizeBytes              int64    `yaml:"disk_limit_size_bytes"`
+	InsecureRegistries              []string `yaml:"insecure_registries"`
+	BlobstoreClientCertificatesPath string   `yaml:"blobstore_client_certificates_path"`
 }
 
 type Clean struct {

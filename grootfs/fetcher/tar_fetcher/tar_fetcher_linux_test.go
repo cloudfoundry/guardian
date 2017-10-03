@@ -54,7 +54,7 @@ var _ = Describe("Tar Fetcher", func() {
 
 	Describe("StreamBlob", func() {
 		It("returns the contents of the source directory as a Tar stream", func() {
-			stream, _, err := fetcher.StreamBlob(logger, baseImageURL, "")
+			stream, _, err := fetcher.StreamBlob(logger, baseImageURL, base_image_puller.LayerInfo{})
 			Expect(err).ToNot(HaveOccurred())
 
 			entries := streamTar(tar.NewReader(stream))
@@ -65,7 +65,7 @@ var _ = Describe("Tar Fetcher", func() {
 		})
 
 		It("logs the tar command", func() {
-			_, _, err := fetcher.StreamBlob(logger, baseImageURL, "")
+			_, _, err := fetcher.StreamBlob(logger, baseImageURL, base_image_puller.LayerInfo{})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(logger).To(ContainSequence(
@@ -82,7 +82,7 @@ var _ = Describe("Tar Fetcher", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				imageURL, _ := url.Parse(tempDir)
-				_, _, err = fetcher.StreamBlob(logger, imageURL, "")
+				_, _, err = fetcher.StreamBlob(logger, imageURL, base_image_puller.LayerInfo{})
 				Expect(err).To(MatchError(ContainSubstring("invalid base image: directory provided instead of a tar file")))
 			})
 		})
@@ -91,7 +91,7 @@ var _ = Describe("Tar Fetcher", func() {
 			It("returns an error", func() {
 				nonExistentImageURL, _ := url.Parse("/nothing/here")
 
-				_, _, err := fetcher.StreamBlob(logger, nonExistentImageURL, "")
+				_, _, err := fetcher.StreamBlob(logger, nonExistentImageURL, base_image_puller.LayerInfo{})
 				Expect(err).To(MatchError(ContainSubstring("local image not found in `/nothing/here`")))
 			})
 		})
@@ -107,7 +107,7 @@ var _ = Describe("Tar Fetcher", func() {
 		})
 
 		It("returns the correct image", func() {
-			layers := baseImageInfo.LayersDigest
+			layers := baseImageInfo.LayerInfos
 
 			Expect(len(layers)).To(Equal(1))
 			Expect(layers[0].BlobID).To(Equal(baseImagePath))
@@ -127,7 +127,7 @@ var _ = Describe("Tar Fetcher", func() {
 			It("generates another volume id", func() {
 				newBaseImageInfo, err := fetcher.BaseImageInfo(logger, baseImageURL)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(baseImageInfo.LayersDigest[0].ChainID).NotTo(Equal(newBaseImageInfo.LayersDigest[0].ChainID))
+				Expect(baseImageInfo.LayerInfos[0].ChainID).NotTo(Equal(newBaseImageInfo.LayerInfos[0].ChainID))
 			})
 		})
 

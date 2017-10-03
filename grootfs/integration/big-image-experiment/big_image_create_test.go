@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/integration"
 	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 
@@ -53,9 +54,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		It("doesn't fail", func() {
 			sess, err := runner.StartCreate(groot.CreateSpec{
-				BaseImage: "docker:///ubuntu:trusty",
-				ID:        randomImageID,
-				Mount:     mountByDefault(),
+				BaseImageURL: integration.String2URL("docker:///ubuntu:trusty"),
+				ID:           randomImageID,
+				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 

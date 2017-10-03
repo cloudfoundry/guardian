@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash"
 	"io"
 	"io/ioutil"
 	"net/url"
@@ -26,18 +27,14 @@ import (
 const MAX_DOCKER_RETRIES = 3
 
 type LayerSource struct {
-	trustedRegistries      []string
-	username               string
-	password               string
-	skipChecksumValidation bool
+	skipOCIChecksumValidation bool
+	systemContext             types.SystemContext
 }
 
-func NewLayerSource(username, password string, trustedRegistries []string, skipChecksumValidation bool) LayerSource {
+func NewLayerSource(systemContext types.SystemContext, skipOCIChecksumValidation bool) LayerSource {
 	return LayerSource{
-		username:               username,
-		password:               password,
-		trustedRegistries:      trustedRegistries,
-		skipChecksumValidation: skipChecksumValidation,
+		systemContext:             systemContext,
+		skipOCIChecksumValidation: skipOCIChecksumValidation,
 	}
 }
 
@@ -72,7 +69,7 @@ func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (type
 	return nil, errorspkg.Wrap(err, "fetching image configuration")
 }
 
-func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string) (string, int64, error) {
+func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string, layersUrls []string) (string, int64, error) {
 	logrus.SetOutput(os.Stderr)
 	logger = logger.Session("streaming-blob", lager.Data{
 		"baseImageURL": baseImageURL,
@@ -86,7 +83,10 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest st
 		return "", 0, err
 	}
 
-	blobInfo := types.BlobInfo{Digest: digestpkg.Digest(digest)}
+	blobInfo := types.BlobInfo{
+		Digest: digestpkg.Digest(digest),
+		URLs:   layersUrls,
+	}
 
 	blob, size, err := s.getBlobWithRetries(logger, imgSrc, blobInfo)
 	if err != nil {
@@ -103,9 +103,14 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest st
 		blobTempFile.Close()
 	}()
 
-	blobReader := io.TeeReader(blob, blobTempFile)
+	hash := sha256.New()
+	blobWriter := io.MultiWriter(blobTempFile, hash)
+	if _, err := io.Copy(blobWriter, blob); err != nil {
+		logger.Error("writing-blob-to-file", err)
+		return "", 0, errorspkg.Wrap(err, "writing blob to tempfile")
+	}
 
-	if !s.checkCheckSum(logger, blobReader, digest, baseImageURL) {
+	if !s.checkCheckSum(logger, hash, digest, baseImageURL.Scheme) {
 		return "", 0, errorspkg.Errorf("invalid checksum: layer is corrupted `%s`", digest)
 	}
 
@@ -128,18 +133,10 @@ func (s *LayerSource) getBlobWithRetries(logger lager.Logger, imgSrc types.Image
 	return nil, 0, err
 }
 
-func (s *LayerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest string, baseImageURL *url.URL) bool {
-	var (
-		actualSize int64
-		err        error
-	)
-
-	hash := sha256.New()
-	if actualSize, err = io.Copy(hash, data); err != nil {
-		logger.Error("failed-to-hash-data", err)
-		return false
+func (s *LayerSource) checkCheckSum(logger lager.Logger, hash hash.Hash, digest string, scheme string) bool {
+	if s.skipOCIChecksumValidation && scheme == "oci" {
+		return true
 	}
-	logger.Debug("got-blob", lager.Data{"actualSize": actualSize})
 
 	digestID := strings.Split(digest, ":")[1]
 	blobContentsSha := hex.EncodeToString(hash.Sum(nil))
@@ -147,18 +144,7 @@ func (s *LayerSource) checkCheckSum(logger lager.Logger, data io.Reader, digest 
 		"digestIDChecksum":   digestID,
 		"downloadedChecksum": blobContentsSha,
 	})
-
-	return s.skipLayerCheckSumValidation(baseImageURL.Scheme) || digestID == blobContentsSha
-}
-
-func (s *LayerSource) skipTLSValidation(baseImageURL *url.URL) bool {
-	for _, trustedRegistry := range s.trustedRegistries {
-		if baseImageURL.Host == trustedRegistry {
-			return true
-		}
-	}
-
-	return false
+	return digestID == blobContentsSha
 }
 
 func (s *LayerSource) reference(logger lager.Logger, baseImageURL *url.URL) (types.ImageReference, error) {
@@ -184,20 +170,11 @@ func (s *LayerSource) getImageWithRetries(logger lager.Logger, baseImageURL *url
 		return nil, err
 	}
 
-	skipTLSValidation := s.skipTLSValidation(baseImageURL)
-	sysCtx := types.SystemContext{
-		DockerInsecureSkipTLSVerify: skipTLSValidation,
-		DockerAuthConfig: &types.DockerAuthConfig{
-			Username: s.username,
-			Password: s.password,
-		},
-	}
-
 	var imgErr error
 	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
 		logger.Debug(fmt.Sprintf("attempt-get-image-%d", i+1))
 
-		img, e := ref.NewImage(&sysCtx)
+		img, e := ref.NewImage(&s.systemContext)
 		if e == nil {
 			logger.Debug("attempt-get-image-success")
 			return img, nil
@@ -214,19 +191,10 @@ func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (t
 		return nil, err
 	}
 
-	skipTLSValidation := s.skipTLSValidation(baseImageURL)
-
-	imgSrc, err := ref.NewImageSource(&types.SystemContext{
-		DockerInsecureSkipTLSVerify: skipTLSValidation,
-		DockerAuthConfig: &types.DockerAuthConfig{
-			Username: s.username,
-			Password: s.password,
-		},
-	})
+	imgSrc, err := ref.NewImageSource(&s.systemContext)
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "creating image source")
 	}
-	logger.Debug("new-image-source", lager.Data{"skipTLSValidation": skipTLSValidation})
 
 	return imgSrc, nil
 }
@@ -295,12 +263,4 @@ func preferedMediaTypes() []string {
 		specsv1.MediaTypeImageManifest,
 		manifestpkg.DockerV2Schema2MediaType,
 	}
-}
-
-func (s *LayerSource) skipLayerCheckSumValidation(scheme string) bool {
-	if s.skipChecksumValidation && scheme == "oci" {
-		return true
-	}
-
-	return false
 }

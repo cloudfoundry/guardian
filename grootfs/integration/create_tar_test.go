@@ -58,9 +58,9 @@ var _ = Describe("Create with local TAR images", func() {
 		baseImagePath = baseImageFile.Name()
 
 		spec = groot.CreateSpec{
-			BaseImage: baseImagePath,
-			ID:        randomImageID,
-			Mount:     mountByDefault(),
+			BaseImageURL: integration.String2URL(baseImagePath),
+			ID:           randomImageID,
+			Mount:        mountByDefault(),
 		}
 	})
 
@@ -95,9 +95,9 @@ var _ = Describe("Create with local TAR images", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			image2, err := Runner.Create(groot.CreateSpec{
-				ID:        testhelpers.NewRandomID(),
-				BaseImage: baseImagePath,
-				Mount:     false,
+				ID:           testhelpers.NewRandomID(),
+				BaseImageURL: integration.String2URL(baseImagePath),
+				Mount:        false,
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -133,9 +133,9 @@ var _ = Describe("Create with local TAR images", func() {
 	Describe("clean up on create", func() {
 		JustBeforeEach(func() {
 			_, err := Runner.Create(groot.CreateSpec{
-				ID:        "my-image-1",
-				BaseImage: baseImagePath,
-				Mount:     mountByDefault(),
+				ID:           "my-image-1",
+				BaseImageURL: integration.String2URL(baseImagePath),
+				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -151,9 +151,9 @@ var _ = Describe("Create with local TAR images", func() {
 			baseImage2Path := baseImage2File.Name()
 
 			createSpec := groot.CreateSpec{
-				ID:        "my-image-2",
-				BaseImage: baseImage2Path,
-				Mount:     mountByDefault(),
+				ID:           "my-image-2",
+				BaseImageURL: integration.String2URL(baseImage2Path),
+				Mount:        mountByDefault(),
 			}
 			_, err := Runner.Create(createSpec)
 			Expect(err).NotTo(HaveOccurred())
@@ -170,9 +170,9 @@ var _ = Describe("Create with local TAR images", func() {
 
 			runner := Runner.WithClean()
 			_, err = runner.Create(groot.CreateSpec{
-				ID:        "my-image-3",
-				BaseImage: baseImage2Path,
-				Mount:     mountByDefault(),
+				ID:           "my-image-3",
+				BaseImageURL: integration.String2URL(baseImage2Path),
+				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -194,9 +194,9 @@ var _ = Describe("Create with local TAR images", func() {
 				baseImage2File := integration.CreateBaseImageTar(sourceImagePath)
 				baseImage2Path := baseImage2File.Name()
 				_, err = Runner.WithNoClean().Create(groot.CreateSpec{
-					ID:        "my-image-3",
-					BaseImage: baseImage2Path,
-					Mount:     mountByDefault(),
+					ID:           "my-image-3",
+					BaseImageURL: integration.String2URL(baseImage2Path),
+					Mount:        mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
@@ -212,9 +212,9 @@ var _ = Describe("Create with local TAR images", func() {
 			tempDir, err := ioutil.TempDir("", "")
 			Expect(err).NotTo(HaveOccurred())
 			_, err = Runner.Create(groot.CreateSpec{
-				ID:        randomImageID,
-				BaseImage: tempDir,
-				Mount:     true,
+				ID:           randomImageID,
+				BaseImageURL: integration.String2URL(tempDir),
+				Mount:        true,
 			})
 			Expect(err).To(MatchError("invalid base image: directory provided instead of a tar file"))
 		})
@@ -238,9 +238,9 @@ var _ = Describe("Create with local TAR images", func() {
 			integration.UpdateBaseImageTar(baseImagePath, sourceImagePath)
 
 			containerSpec, err := Runner.Create(groot.CreateSpec{
-				ID:        testhelpers.NewRandomID(),
-				BaseImage: baseImagePath,
-				Mount:     mountByDefault(),
+				ID:           testhelpers.NewRandomID(),
+				BaseImageURL: integration.String2URL(baseImagePath),
+				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
@@ -259,8 +259,8 @@ var _ = Describe("Create with local TAR images", func() {
 			baseImagePath = fmt.Sprintf("%s/assets/hacked.tar", workDir)
 
 			_, err = Runner.Create(groot.CreateSpec{
-				ID:        "image-1",
-				BaseImage: baseImagePath,
+				ID:           "image-1",
+				BaseImageURL: integration.String2URL(baseImagePath),
 			})
 			Expect(err).NotTo(HaveOccurred())
 
@@ -278,9 +278,9 @@ var _ = Describe("Create with local TAR images", func() {
 			Expect(ioutil.WriteFile(layerSnapshotPath+"/injected-file", []byte{}, 0666)).To(Succeed())
 
 			containerSpec, err := Runner.Create(groot.CreateSpec{
-				ID:        testhelpers.NewRandomID(),
-				BaseImage: baseImagePath,
-				Mount:     mountByDefault(),
+				ID:           testhelpers.NewRandomID(),
+				BaseImageURL: integration.String2URL(baseImagePath),
+				Mount:        mountByDefault(),
 			})
 			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 			Expect(err).NotTo(HaveOccurred())
@@ -292,9 +292,9 @@ var _ = Describe("Create with local TAR images", func() {
 	Context("when local image does not exist", func() {
 		It("returns an error", func() {
 			_, err := Runner.Create(groot.CreateSpec{
-				BaseImage: "/invalid/image",
-				ID:        randomImageID,
-				Mount:     false,
+				BaseImageURL: integration.String2URL("/invalid/image"),
+				ID:           randomImageID,
+				Mount:        false,
 			})
 			Expect(err).To(MatchError(ContainSubstring("stat /invalid/image: no such file or directory")))
 		})
@@ -325,9 +325,9 @@ var _ = Describe("Create with local TAR images", func() {
 			}()
 
 			containerSpec, err := Runner.SkipInitStore().Create(groot.CreateSpec{
-				BaseImage: baseImageFile.Name(),
-				ID:        randomImageID,
-				Mount:     mountByDefault(),
+				BaseImageURL: integration.String2URL(baseImageFile.Name()),
+				ID:           randomImageID,
+				Mount:        mountByDefault(),
 			})
 			Expect(err).NotTo(HaveOccurred())
 

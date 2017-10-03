@@ -44,10 +44,10 @@ var _ = Describe("Create (overlay-xfs only)", func() {
 		baseImagePath = baseImageFile.Name()
 
 		spec = groot.CreateSpec{
-			BaseImage: baseImagePath,
-			ID:        randomImageID,
-			Mount:     mountByDefault(),
-			DiskLimit: tenMegabytes,
+			BaseImageURL: integration.String2URL(baseImagePath),
+			ID:           randomImageID,
+			Mount:        mountByDefault(),
+			DiskLimit:    tenMegabytes,
 		}
 	})
 
