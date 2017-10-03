@@ -111,7 +111,7 @@ newgidmap_bin: /var/lib/packages/idmapper/bin/newgidmap
 log_level: debug
 metron_endpoint: 127.0.0.1:8081
 clean:
-  threshold_bytes: 1048576
+  cache_bytes: 1048576
   ignore_images:
     - docker:///ubuntu
     - docker://my-docker-registry.example.com:1234/busybox
@@ -135,7 +135,7 @@ create:
 | create.with\_clean | Clean up unused layers before creating rootfs |
 | create.without_mount | Don't perform the rootfs mount. |
 | clean.ignore\_images | Images to ignore during cleanup |
-| clean.threshold\_bytes | Disk usage of the store directory at which cleanup should trigger |
+| clean.cache\_bytes | Disk usage of the store directory at which cleanup should trigger |
 
 
 
@@ -359,13 +359,10 @@ They have a layer in common, `layer-1`. And after deleting `Image B`,
 It is safe to run the command in parallel, it does not interfere with other
 creations or deletions.
 
-The `clean` command has an optional integer parameter, `threshold-bytes`, and
-when the store\* size is under that `clean` is a no-op, it does not remove
-anything. On the other hand, if the store\* is over the threshold it cleans up
-any resource that is not being used.  If 0 is provided it will behave the same
-way as if the flag wasn't specified, it will clean up everything that's not
-being used.  If a non integer or negative integer is provided, the command
-fails without cleaning up anything.
+All layers that are not being used at a particular time are known as cache.
+The `clean` command has a `cache-bytes` parameter, which when set, will try to 
+keep the cache smaller than `cache-bytes` by cleaning unused layers.
+The `cache-bytes` parameter defaults to 0, which always removes all unused layers.
 
 **Caveats:**
 

@@ -35,7 +35,7 @@ type Create struct {
 }
 
 type Clean struct {
-	ThresholdBytes int64 `yaml:"threshold_bytes"`
+	CacheBytes int64 `yaml:"cache_bytes"`
 }
 
 type Init struct {
@@ -71,8 +71,8 @@ func (b *Builder) Build() (Config, error) {
 		return *b.config, errorspkg.New("invalid argument: disk limit cannot be negative")
 	}
 
-	if b.config.Clean.ThresholdBytes < 0 {
-		return *b.config, errorspkg.New("invalid argument: clean threshold cannot be negative")
+	if b.config.Clean.CacheBytes < 0 {
+		return *b.config, errorspkg.New("invalid argument: cache size cannot be negative")
 	}
 
 	return *b.config, nil
@@ -168,9 +168,9 @@ func (b *Builder) WithSkipLayerValidation(skip, isSet bool) *Builder {
 	return b
 }
 
-func (b *Builder) WithCleanThresholdBytes(threshold int64, isSet bool) *Builder {
+func (b *Builder) WithCacheBytes(cacheSize int64, isSet bool) *Builder {
 	if isSet {
-		b.config.Clean.ThresholdBytes = threshold
+		b.config.Clean.CacheBytes = cacheSize
 	}
 	return b
 }

@@ -99,6 +99,10 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 		}
 	}
 
+	if spec.CleanOnCreateCacheBytes > 0 {
+		args = append(args, "--cache-bytes", strconv.FormatInt(spec.CleanOnCreateCacheBytes, 10))
+	}
+
 	if spec.Mount {
 		args = append(args, "--with-mount")
 	} else {

@@ -110,29 +110,29 @@ var _ = Describe("Clean", func() {
 				Expect(afterDir).To(MatchRegexp(`%s-\d+`, hex.EncodeToString(afterContentsSha[:32])))
 			})
 
-			Context("and a threshold is set", func() {
-				var cleanupThresholdInBytes int64
+			Context("and a cache size is set", func() {
+				var cacheSizeInBytes int64
 
 				Context("but it lower than 0", func() {
 					BeforeEach(func() {
-						cleanupThresholdInBytes = -10
+						cacheSizeInBytes = -10
 					})
 					It("returns an error", func() {
-						_, err := Runner.Clean(cleanupThresholdInBytes)
-						Expect(err).To(MatchError("invalid argument: clean threshold cannot be negative"))
+						_, err := Runner.Clean(cacheSizeInBytes)
+						Expect(err).To(MatchError("invalid argument: cache size cannot be negative"))
 					})
 				})
 
-				Context("and the total is less than the threshold", func() {
+				Context("and the size of unused layers is less than the cache size", func() {
 					BeforeEach(func() {
-						cleanupThresholdInBytes = 500000000
+						cacheSizeInBytes = 3 * 1024 * 1024
 					})
 
 					It("does not remove the unused volumes", func() {
 						preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 						Expect(err).NotTo(HaveOccurred())
 
-						_, err = Runner.Clean(cleanupThresholdInBytes)
+						_, err = Runner.Clean(cacheSizeInBytes)
 						Expect(err).NotTo(HaveOccurred())
 
 						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
@@ -141,15 +141,15 @@ var _ = Describe("Clean", func() {
 					})
 
 					It("reports that it was a no-op", func() {
-						output, err := Runner.Clean(cleanupThresholdInBytes)
+						output, err := Runner.Clean(cacheSizeInBytes)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(output).To(ContainSubstring("threshold not reached: skipping clean"))
+						Expect(output).To(ContainSubstring("cache size not reached: skipping clean"))
 					})
 				})
 
-				Context("and the total is more than the threshold", func() {
+				Context("and the total is more than the cache size", func() {
 					BeforeEach(func() {
-						cleanupThresholdInBytes = 70000
+						cacheSizeInBytes = 1 * 1024 * 1024
 					})
 
 					It("removes the unused volumes", func() {
@@ -157,7 +157,7 @@ var _ = Describe("Clean", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(preContents).To(HaveLen(2))
 
-						_, err = Runner.Clean(cleanupThresholdInBytes)
+						_, err = Runner.Clean(cacheSizeInBytes)
 						Expect(err).NotTo(HaveOccurred())
 
 						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))

@@ -78,14 +78,14 @@ var _ = Describe("Creator", func() {
 		Context("when clean up store is requested", func() {
 			It("cleans the store", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
-					BaseImageURL:                baseImageUrl,
-					CleanOnCreate:               true,
-					CleanOnCreateThresholdBytes: int64(250000),
+					BaseImageURL:            baseImageUrl,
+					CleanOnCreate:           true,
+					CleanOnCreateCacheBytes: int64(250000),
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeCleaner.CleanCallCount()).To(Equal(1))
-				_, threshold := fakeCleaner.CleanArgsForCall(0)
-				Expect(threshold).To(Equal(int64(250000)))
+				_, cacheSize := fakeCleaner.CleanArgsForCall(0)
+				Expect(cacheSize).To(Equal(int64(250000)))
 			})
 
 			Context("and fails to clean up", func() {

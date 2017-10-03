@@ -1,6 +1,7 @@
 package btrfs_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -11,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
@@ -18,6 +20,7 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
+	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -34,6 +37,7 @@ var _ = Describe("Btrfs", func() {
 		storePath      string
 		draxBinPath    string
 		volumesPath    string
+		metaPath       string
 		btrfsMountPath string
 		randomImageID  string
 	)
@@ -48,6 +52,9 @@ var _ = Describe("Btrfs", func() {
 
 		volumesPath = filepath.Join(storePath, store.VolumesDirName)
 		Expect(os.MkdirAll(volumesPath, 0755)).To(Succeed())
+
+		metaPath = filepath.Join(storePath, store.MetaDirName)
+		Expect(os.MkdirAll(metaPath, 0755)).To(Succeed())
 
 		draxBinPath, err = gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
 		Expect(err).NotTo(HaveOccurred())
@@ -526,14 +533,6 @@ var _ = Describe("Btrfs", func() {
 		})
 	})
 
-	Describe("VolumeSize", func() {
-		It("returns zero, because we don't intend to implement this function ahead of BTRFS driver removal", func() {
-			size, err := driver.VolumeSize(logger, "some-volume-id")
-			Expect(err).NotTo(HaveOccurred())
-			Expect(size).To(BeZero())
-		})
-	})
-
 	Describe("MoveVolume", func() {
 		var (
 			volumeID   string
@@ -913,9 +912,45 @@ var _ = Describe("Btrfs", func() {
 			})
 		})
 	})
+
+	Describe("WriteVolumeMeta", func() {
+		It("creates the correct metadata file", func() {
+			err := driver.WriteVolumeMeta(logger, "1234", base_image_puller.VolumeMeta{Size: 1024})
+			Expect(err).NotTo(HaveOccurred())
+
+			metaFilePath := filepath.Join(storePath, store.MetaDirName, "volume-1234")
+			Expect(metaFilePath).To(BeAnExistingFile())
+			metaFile, err := os.Open(metaFilePath)
+			Expect(err).NotTo(HaveOccurred())
+			var meta base_image_puller.VolumeMeta
+
+			Expect(json.NewDecoder(metaFile).Decode(&meta)).To(Succeed())
+			Expect(meta).To(Equal(base_image_puller.VolumeMeta{Size: 1024}))
+		})
+	})
+
+	Describe("VolumeSize", func() {
+		It("returns the volume size", func() {
+			volumeID := randVolumeID()
+			createVolume(storePath, driver, "", volumeID, 3000000)
+			size, err := driver.VolumeSize(logger, volumeID)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(size).To(BeEquivalentTo(3000000))
+		})
+	})
 })
 
 func randVolumeID() string {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	return fmt.Sprintf("volume-%d", r.Int())
+}
+
+func createVolume(storePath string, driver *btrfs.Driver, parentID, id string, size int64) string {
+	path, err := driver.CreateVolume(lagertest.NewTestLogger("test"), parentID, id)
+	Expect(err).NotTo(HaveOccurred())
+	metaFilePath := filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", id))
+	metaContents := fmt.Sprintf(`{"Size": %d}`, size)
+	Expect(ioutil.WriteFile(metaFilePath, []byte(metaContents), 0644)).To(Succeed())
+
+	return path
 }

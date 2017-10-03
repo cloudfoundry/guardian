@@ -107,7 +107,6 @@ run_tests() {
 }
 
 test_path=""
-GINKGO_ARGS=""
 RECURSIVE=0
 if [ -z "$REGISTRY_PASSWORD" ]
 then

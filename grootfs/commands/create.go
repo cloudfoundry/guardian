@@ -66,6 +66,10 @@ var CreateCommand = cli.Command{
 			Name:  "without-clean",
 			Usage: "Do NOT clean up unused layers before creating rootfs",
 		},
+		cli.Int64Flag{
+			Name:  "cache-bytes",
+			Usage: "Disk consumed by unsused layers in the store directory before cleanup should trigger.",
+		},
 		cli.BoolFlag{
 			Name:  "with-mount",
 			Usage: "Mount the root filesystem after creation. This may require root privileges.",
@@ -102,6 +106,7 @@ var CreateCommand = cli.Command{
 				ctx.IsSet("exclude-image-from-quota")).
 			WithSkipLayerValidation(ctx.Bool("skip-layer-validation"),
 				ctx.IsSet("skip-layer-validation")).
+			WithCacheBytes(ctx.Int64("cache-bytes"), ctx.IsSet("cache-bytes")).
 			WithClean(ctx.IsSet("with-clean"), ctx.IsSet("without-clean")).
 			WithMount(ctx.IsSet("with-mount"), ctx.IsSet("without-mount"))
 
@@ -193,15 +198,15 @@ var CreateCommand = cli.Command{
 		)
 
 		createSpec := groot.CreateSpec{
-			ID:                          id,
-			Mount:                       !cfg.Create.WithoutMount,
-			BaseImageURL:                baseImageURL,
-			DiskLimit:                   cfg.Create.DiskLimitSizeBytes,
-			ExcludeBaseImageFromQuota:   cfg.Create.ExcludeImageFromQuota,
-			UIDMappings:                 idMappings.UIDMappings,
-			GIDMappings:                 idMappings.GIDMappings,
-			CleanOnCreate:               cfg.Create.WithClean,
-			CleanOnCreateThresholdBytes: cfg.Clean.ThresholdBytes,
+			ID:                        id,
+			Mount:                     !cfg.Create.WithoutMount,
+			BaseImageURL:              baseImageURL,
+			DiskLimit:                 cfg.Create.DiskLimitSizeBytes,
+			ExcludeBaseImageFromQuota: cfg.Create.ExcludeImageFromQuota,
+			UIDMappings:               idMappings.UIDMappings,
+			GIDMappings:               idMappings.GIDMappings,
+			CleanOnCreate:             cfg.Create.WithClean,
+			CleanOnCreateCacheBytes:   cfg.Clean.CacheBytes,
 		}
 		image, err := creator.Create(logger, createSpec)
 		if err != nil {

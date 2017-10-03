@@ -30,8 +30,8 @@ var CleanCommand = cli.Command{
 
 	Flags: []cli.Flag{
 		cli.Int64Flag{
-			Name:  "threshold-bytes",
-			Usage: "Disk usage of the store directory at which cleanup should trigger.",
+			Name:  "cache-bytes",
+			Usage: "Disk consumed by unsused layers in the store directory before cleanup should trigger.",
 		},
 	},
 
@@ -41,8 +41,8 @@ var CleanCommand = cli.Command{
 		newExitError := newErrorHandler(logger, "clean")
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
-		configBuilder.WithCleanThresholdBytes(ctx.Int64("threshold-bytes"),
-			ctx.IsSet("threshold-bytes"))
+		configBuilder.WithCacheBytes(ctx.Int64("cache-bytes"),
+			ctx.IsSet("cache-bytes"))
 
 		cfg, err := configBuilder.Build()
 		logger.Debug("clean-config", lager.Data{"currentConfig": cfg})
@@ -87,14 +87,14 @@ var CleanCommand = cli.Command{
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
-		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes)
+		noop, err := cleaner.Clean(logger, cfg.Clean.CacheBytes)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return newExitError(err.Error(), 1)
 		}
 
 		if noop {
-			fmt.Println("threshold not reached: skipping clean")
+			fmt.Println("cache size not reached: skipping clean")
 			return nil
 		}
 

@@ -9,7 +9,7 @@ log_level: debug
 log_file:
 metron_endpoint: 127.0.0.1:1234
 clean:
-  threshold_bytes: 1048576
+  cache_size: 1048576
   ignore_images: []
 create:
   insecure_registries: []

@@ -141,44 +141,6 @@ var _ = Describe("Metrics", func() {
 				writeMegabytes(filepath.Join(StorePath, store.TempDirName, "hello"), 100)
 				writeMegabytes(filepath.Join(StorePath, store.MetaDirName, "hello"), 100)
 			})
-
-			It("emits the percentage of disk used by groot cache", func() {
-				spec.ID = randomImageID
-				_, err := Runner.
-					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-					WithClean().Create(spec)
-				Expect(err).NotTo(HaveOccurred())
-
-				var metrics []events.ValueMetric
-				Eventually(func() []events.ValueMetric {
-					metrics = fakeMetron.ValueMetricsFor("DiskCachePercentage")
-					return metrics
-				}).Should(HaveLen(1))
-
-				Expect(*metrics[0].Name).To(Equal("DiskCachePercentage"))
-				Expect(*metrics[0].Unit).To(Equal("percentage"))
-				Expect(*metrics[0].Value).To(BeNumerically("~", 20, 1))
-			})
-
-			It("emits the percentage of disk committed to the groot cache", func() {
-				integration.SkipIfNotXFS(Driver)
-
-				spec.ID = randomImageID
-				_, err := Runner.
-					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-					WithClean().Create(spec)
-				Expect(err).NotTo(HaveOccurred())
-
-				var metrics []events.ValueMetric
-				Eventually(func() []events.ValueMetric {
-					metrics = fakeMetron.ValueMetricsFor("DiskCommittedPercentage")
-					return metrics
-				}).Should(HaveLen(1))
-
-				Expect(*metrics[0].Name).To(Equal("DiskCommittedPercentage"))
-				Expect(*metrics[0].Unit).To(Equal("percentage"))
-				Expect(*metrics[0].Value).To(BeNumerically("~", 940, 1))
-			})
 		})
 
 		Context("when create fails", func() {
@@ -398,56 +360,6 @@ var _ = Describe("Metrics", func() {
 
 			writeMegabytes(filepath.Join(StorePath, store.TempDirName, "hello"), 100)
 			writeMegabytes(filepath.Join(StorePath, store.MetaDirName, "hello"), 100)
-		})
-
-		It("emits the percentage of disk used by groot cache", func() {
-			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
-			Expect(err).NotTo(HaveOccurred())
-
-			var metrics []events.ValueMetric
-			Eventually(func() []events.ValueMetric {
-				metrics = fakeMetron.ValueMetricsFor("DiskCachePercentage")
-				return metrics
-			}).Should(HaveLen(1))
-
-			Expect(*metrics[0].Name).To(Equal("DiskCachePercentage"))
-			Expect(*metrics[0].Unit).To(Equal("percentage"))
-			Expect(*metrics[0].Value).To(BeNumerically("~", 20, 1))
-		})
-
-		It("emits the percentage of disk committed to groot images", func() {
-			integration.SkipIfNotXFS(Driver)
-
-			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
-			Expect(err).NotTo(HaveOccurred())
-
-			var metrics []events.ValueMetric
-			Eventually(func() []events.ValueMetric {
-				metrics = fakeMetron.ValueMetricsFor("DiskCommittedPercentage")
-				return metrics
-			}).Should(HaveLen(1))
-
-			Expect(*metrics[0].Name).To(Equal("DiskCommittedPercentage"))
-			Expect(*metrics[0].Unit).To(Equal("percentage"))
-			Expect(*metrics[0].Value).To(BeNumerically("~", 940, 1))
-		})
-
-		It("emits the space taken by layers that can be removed", func() {
-			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
-			Expect(err).NotTo(HaveOccurred())
-
-			var metrics []events.ValueMetric
-			Eventually(func() []events.ValueMetric {
-				metrics = fakeMetron.ValueMetricsFor("DiskPurgeableCachePercentage")
-				return metrics
-			}).Should(HaveLen(1))
-
-			Expect(*metrics[0].Name).To(Equal("DiskPurgeableCachePercentage"))
-			Expect(*metrics[0].Unit).To(Equal("percentage"))
-			Expect(*metrics[0].Value).To(BeZero())
 		})
 
 		It("emits the total clean time", func() {

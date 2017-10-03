@@ -22,56 +22,17 @@ type FakeStoreMeasurer struct {
 		result1 int64
 		result2 error
 	}
-	CacheStub        func(logger lager.Logger) (int64, error)
-	cacheMutex       sync.RWMutex
-	cacheArgsForCall []struct {
-		logger lager.Logger
-	}
-	cacheReturns struct {
-		result1 int64
-		result2 error
-	}
-	cacheReturnsOnCall map[int]struct {
-		result1 int64
-		result2 error
-	}
-	SizeStub        func(logger lager.Logger) (int64, error)
-	sizeMutex       sync.RWMutex
-	sizeArgsForCall []struct {
-		logger lager.Logger
-	}
-	sizeReturns struct {
-		result1 int64
-		result2 error
-	}
-	sizeReturnsOnCall map[int]struct {
-		result1 int64
-		result2 error
-	}
-	CommittedSizeStub        func(logger lager.Logger) (int64, error)
-	committedSizeMutex       sync.RWMutex
-	committedSizeArgsForCall []struct {
-		logger lager.Logger
-	}
-	committedSizeReturns struct {
-		result1 int64
-		result2 error
-	}
-	committedSizeReturnsOnCall map[int]struct {
-		result1 int64
-		result2 error
-	}
-	PurgeableCacheStub        func(logger lager.Logger, volumes []string) (int64, error)
-	purgeableCacheMutex       sync.RWMutex
-	purgeableCacheArgsForCall []struct {
+	CacheUsageStub        func(logger lager.Logger, volumes []string) (int64, error)
+	cacheUsageMutex       sync.RWMutex
+	cacheUsageArgsForCall []struct {
 		logger  lager.Logger
 		volumes []string
 	}
-	purgeableCacheReturns struct {
+	cacheUsageReturns struct {
 		result1 int64
 		result2 error
 	}
-	purgeableCacheReturnsOnCall map[int]struct {
+	cacheUsageReturnsOnCall map[int]struct {
 		result1 int64
 		result2 error
 	}
@@ -130,211 +91,58 @@ func (fake *FakeStoreMeasurer) UsageReturnsOnCall(i int, result1 int64, result2 
 	}{result1, result2}
 }
 
-func (fake *FakeStoreMeasurer) Cache(logger lager.Logger) (int64, error) {
-	fake.cacheMutex.Lock()
-	ret, specificReturn := fake.cacheReturnsOnCall[len(fake.cacheArgsForCall)]
-	fake.cacheArgsForCall = append(fake.cacheArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("Cache", []interface{}{logger})
-	fake.cacheMutex.Unlock()
-	if fake.CacheStub != nil {
-		return fake.CacheStub(logger)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.cacheReturns.result1, fake.cacheReturns.result2
-}
-
-func (fake *FakeStoreMeasurer) CacheCallCount() int {
-	fake.cacheMutex.RLock()
-	defer fake.cacheMutex.RUnlock()
-	return len(fake.cacheArgsForCall)
-}
-
-func (fake *FakeStoreMeasurer) CacheArgsForCall(i int) lager.Logger {
-	fake.cacheMutex.RLock()
-	defer fake.cacheMutex.RUnlock()
-	return fake.cacheArgsForCall[i].logger
-}
-
-func (fake *FakeStoreMeasurer) CacheReturns(result1 int64, result2 error) {
-	fake.CacheStub = nil
-	fake.cacheReturns = struct {
-		result1 int64
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeStoreMeasurer) CacheReturnsOnCall(i int, result1 int64, result2 error) {
-	fake.CacheStub = nil
-	if fake.cacheReturnsOnCall == nil {
-		fake.cacheReturnsOnCall = make(map[int]struct {
-			result1 int64
-			result2 error
-		})
-	}
-	fake.cacheReturnsOnCall[i] = struct {
-		result1 int64
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeStoreMeasurer) Size(logger lager.Logger) (int64, error) {
-	fake.sizeMutex.Lock()
-	ret, specificReturn := fake.sizeReturnsOnCall[len(fake.sizeArgsForCall)]
-	fake.sizeArgsForCall = append(fake.sizeArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("Size", []interface{}{logger})
-	fake.sizeMutex.Unlock()
-	if fake.SizeStub != nil {
-		return fake.SizeStub(logger)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.sizeReturns.result1, fake.sizeReturns.result2
-}
-
-func (fake *FakeStoreMeasurer) SizeCallCount() int {
-	fake.sizeMutex.RLock()
-	defer fake.sizeMutex.RUnlock()
-	return len(fake.sizeArgsForCall)
-}
-
-func (fake *FakeStoreMeasurer) SizeArgsForCall(i int) lager.Logger {
-	fake.sizeMutex.RLock()
-	defer fake.sizeMutex.RUnlock()
-	return fake.sizeArgsForCall[i].logger
-}
-
-func (fake *FakeStoreMeasurer) SizeReturns(result1 int64, result2 error) {
-	fake.SizeStub = nil
-	fake.sizeReturns = struct {
-		result1 int64
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeStoreMeasurer) SizeReturnsOnCall(i int, result1 int64, result2 error) {
-	fake.SizeStub = nil
-	if fake.sizeReturnsOnCall == nil {
-		fake.sizeReturnsOnCall = make(map[int]struct {
-			result1 int64
-			result2 error
-		})
-	}
-	fake.sizeReturnsOnCall[i] = struct {
-		result1 int64
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeStoreMeasurer) CommittedSize(logger lager.Logger) (int64, error) {
-	fake.committedSizeMutex.Lock()
-	ret, specificReturn := fake.committedSizeReturnsOnCall[len(fake.committedSizeArgsForCall)]
-	fake.committedSizeArgsForCall = append(fake.committedSizeArgsForCall, struct {
-		logger lager.Logger
-	}{logger})
-	fake.recordInvocation("CommittedSize", []interface{}{logger})
-	fake.committedSizeMutex.Unlock()
-	if fake.CommittedSizeStub != nil {
-		return fake.CommittedSizeStub(logger)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.committedSizeReturns.result1, fake.committedSizeReturns.result2
-}
-
-func (fake *FakeStoreMeasurer) CommittedSizeCallCount() int {
-	fake.committedSizeMutex.RLock()
-	defer fake.committedSizeMutex.RUnlock()
-	return len(fake.committedSizeArgsForCall)
-}
-
-func (fake *FakeStoreMeasurer) CommittedSizeArgsForCall(i int) lager.Logger {
-	fake.committedSizeMutex.RLock()
-	defer fake.committedSizeMutex.RUnlock()
-	return fake.committedSizeArgsForCall[i].logger
-}
-
-func (fake *FakeStoreMeasurer) CommittedSizeReturns(result1 int64, result2 error) {
-	fake.CommittedSizeStub = nil
-	fake.committedSizeReturns = struct {
-		result1 int64
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeStoreMeasurer) CommittedSizeReturnsOnCall(i int, result1 int64, result2 error) {
-	fake.CommittedSizeStub = nil
-	if fake.committedSizeReturnsOnCall == nil {
-		fake.committedSizeReturnsOnCall = make(map[int]struct {
-			result1 int64
-			result2 error
-		})
-	}
-	fake.committedSizeReturnsOnCall[i] = struct {
-		result1 int64
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeStoreMeasurer) PurgeableCache(logger lager.Logger, volumes []string) (int64, error) {
+func (fake *FakeStoreMeasurer) CacheUsage(logger lager.Logger, volumes []string) (int64, error) {
 	var volumesCopy []string
 	if volumes != nil {
 		volumesCopy = make([]string, len(volumes))
 		copy(volumesCopy, volumes)
 	}
-	fake.purgeableCacheMutex.Lock()
-	ret, specificReturn := fake.purgeableCacheReturnsOnCall[len(fake.purgeableCacheArgsForCall)]
-	fake.purgeableCacheArgsForCall = append(fake.purgeableCacheArgsForCall, struct {
+	fake.cacheUsageMutex.Lock()
+	ret, specificReturn := fake.cacheUsageReturnsOnCall[len(fake.cacheUsageArgsForCall)]
+	fake.cacheUsageArgsForCall = append(fake.cacheUsageArgsForCall, struct {
 		logger  lager.Logger
 		volumes []string
 	}{logger, volumesCopy})
-	fake.recordInvocation("PurgeableCache", []interface{}{logger, volumesCopy})
-	fake.purgeableCacheMutex.Unlock()
-	if fake.PurgeableCacheStub != nil {
-		return fake.PurgeableCacheStub(logger, volumes)
+	fake.recordInvocation("CacheUsage", []interface{}{logger, volumesCopy})
+	fake.cacheUsageMutex.Unlock()
+	if fake.CacheUsageStub != nil {
+		return fake.CacheUsageStub(logger, volumes)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.purgeableCacheReturns.result1, fake.purgeableCacheReturns.result2
+	return fake.cacheUsageReturns.result1, fake.cacheUsageReturns.result2
 }
 
-func (fake *FakeStoreMeasurer) PurgeableCacheCallCount() int {
-	fake.purgeableCacheMutex.RLock()
-	defer fake.purgeableCacheMutex.RUnlock()
-	return len(fake.purgeableCacheArgsForCall)
+func (fake *FakeStoreMeasurer) CacheUsageCallCount() int {
+	fake.cacheUsageMutex.RLock()
+	defer fake.cacheUsageMutex.RUnlock()
+	return len(fake.cacheUsageArgsForCall)
 }
 
-func (fake *FakeStoreMeasurer) PurgeableCacheArgsForCall(i int) (lager.Logger, []string) {
-	fake.purgeableCacheMutex.RLock()
-	defer fake.purgeableCacheMutex.RUnlock()
-	return fake.purgeableCacheArgsForCall[i].logger, fake.purgeableCacheArgsForCall[i].volumes
+func (fake *FakeStoreMeasurer) CacheUsageArgsForCall(i int) (lager.Logger, []string) {
+	fake.cacheUsageMutex.RLock()
+	defer fake.cacheUsageMutex.RUnlock()
+	return fake.cacheUsageArgsForCall[i].logger, fake.cacheUsageArgsForCall[i].volumes
 }
 
-func (fake *FakeStoreMeasurer) PurgeableCacheReturns(result1 int64, result2 error) {
-	fake.PurgeableCacheStub = nil
-	fake.purgeableCacheReturns = struct {
+func (fake *FakeStoreMeasurer) CacheUsageReturns(result1 int64, result2 error) {
+	fake.CacheUsageStub = nil
+	fake.cacheUsageReturns = struct {
 		result1 int64
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeStoreMeasurer) PurgeableCacheReturnsOnCall(i int, result1 int64, result2 error) {
-	fake.PurgeableCacheStub = nil
-	if fake.purgeableCacheReturnsOnCall == nil {
-		fake.purgeableCacheReturnsOnCall = make(map[int]struct {
+func (fake *FakeStoreMeasurer) CacheUsageReturnsOnCall(i int, result1 int64, result2 error) {
+	fake.CacheUsageStub = nil
+	if fake.cacheUsageReturnsOnCall == nil {
+		fake.cacheUsageReturnsOnCall = make(map[int]struct {
 			result1 int64
 			result2 error
 		})
 	}
-	fake.purgeableCacheReturnsOnCall[i] = struct {
+	fake.cacheUsageReturnsOnCall[i] = struct {
 		result1 int64
 		result2 error
 	}{result1, result2}
@@ -345,14 +153,8 @@ func (fake *FakeStoreMeasurer) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.usageMutex.RLock()
 	defer fake.usageMutex.RUnlock()
-	fake.cacheMutex.RLock()
-	defer fake.cacheMutex.RUnlock()
-	fake.sizeMutex.RLock()
-	defer fake.sizeMutex.RUnlock()
-	fake.committedSizeMutex.RLock()
-	defer fake.committedSizeMutex.RUnlock()
-	fake.purgeableCacheMutex.RLock()
-	defer fake.purgeableCacheMutex.RUnlock()
+	fake.cacheUsageMutex.RLock()
+	defer fake.cacheUsageMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
