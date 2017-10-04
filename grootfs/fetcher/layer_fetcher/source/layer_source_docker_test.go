@@ -133,7 +133,6 @@ var _ = Describe("Layer source: Docker", func() {
 				var fakeRegistry *testhelpers.FakeRegistry
 
 				BeforeEach(func() {
-
 					dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
 					Expect(err).NotTo(HaveOccurred())
 					fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
@@ -501,9 +500,22 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			Context("when invalid credentials are provided", func() {
-				JustBeforeEach(func() {
-					systemContext.DockerAuthConfig.Username = "hello"
-					systemContext.DockerAuthConfig.Password = "hello"
+				// We need a fake registry here because Dockerhub was rate limiting on multiple bad credential auth attempts
+				var fakeRegistry *testhelpers.FakeRegistry
+
+				BeforeEach(func() {
+					dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+					Expect(err).NotTo(HaveOccurred())
+					fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+					fakeRegistry.Start()
+					fakeRegistry.ForceTokenAuthError()
+					baseImageURL = integration.String2URL(fmt.Sprintf("docker://%s/doesnt-matter-because-fake-registry", fakeRegistry.Addr()))
+
+					systemContext.DockerInsecureSkipTLSVerify = true
+				})
+
+				AfterEach(func() {
+					fakeRegistry.Stop()
 				})
 
 				It("retuns an error", func() {
