@@ -129,6 +129,10 @@ var _ = Describe("Creating a Container", func() {
 			initProcPid int
 		)
 
+		BeforeEach(func() {
+			privileged = false
+		})
+
 		JustBeforeEach(func() {
 			var err error
 			container, err = client.Create(garden.ContainerSpec{
@@ -184,19 +188,13 @@ var _ = Describe("Creating a Container", func() {
 		})
 
 		DescribeTable("placing the container in to all namespaces", func(ns string) {
-			hostNS, err := gexec.Start(exec.Command("ls", "-l", fmt.Sprintf("/proc/1/ns/%s", ns)), GinkgoWriter, GinkgoWriter)
+			hostNSInode, err := os.Readlink(fmt.Sprintf("/proc/1/ns/%s", ns))
 			Expect(err).NotTo(HaveOccurred())
 
-			containerNS, err := gexec.Start(exec.Command("ls", "-l", fmt.Sprintf("/proc/%d/ns/%s", initProcPid, ns)), GinkgoWriter, GinkgoWriter)
+			containerNSInode, err := os.Readlink(fmt.Sprintf("/proc/%d/ns/%s", initProcPid, ns))
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(containerNS).Should(gexec.Exit(0))
-			Eventually(hostNS).Should(gexec.Exit(0))
-
-			hostFD := strings.Split(string(hostNS.Out.Contents()), ">")[1]
-			containerFD := strings.Split(string(containerNS.Out.Contents()), ">")[1]
-
-			Expect(hostFD).NotTo(Equal(containerFD))
+			Expect(hostNSInode).NotTo(Equal(containerNSInode))
 		},
 			Entry("should place the container in to the NET namespace", "net"),
 			Entry("should place the container in to the IPC namespace", "ipc"),
