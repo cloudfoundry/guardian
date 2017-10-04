@@ -189,6 +189,8 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 						fmt.Println(">>>> goroutine stack:")
 						sess.Signal(syscall.SIGQUIT)
+						Eventually(sess.ExitCode, "5s").ShouldNot(Equal(-1))
+
 						Fail("timeout exeeded")
 					}
 					time.Sleep(100 * time.Millisecond)
