@@ -10,6 +10,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
+	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/containers/image/types"
@@ -127,17 +128,28 @@ var _ = Describe("Layer source: Docker", func() {
 				})
 			})
 
-			Context("when invalid credentials are provided", func() {
+			Context("when the registry returns a 401 when trying to get the auth token", func() {
+				// We need a fake registry here because Dockerhub was rate limiting on multiple bad credential auth attempts
+				var fakeRegistry *testhelpers.FakeRegistry
+
 				BeforeEach(func() {
-					systemContext.DockerAuthConfig.Username = "hello"
-					systemContext.DockerAuthConfig.Password = "hello"
+
+					dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+					Expect(err).NotTo(HaveOccurred())
+					fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+					fakeRegistry.Start()
+					fakeRegistry.ForceTokenAuthError()
+					baseImageURL = integration.String2URL(fmt.Sprintf("docker://%s/doesnt-matter-because-fake-registry", fakeRegistry.Addr()))
+
+					systemContext.DockerInsecureSkipTLSVerify = true
 				})
 
-				It("returns an error", func() {
-					baseImageURL, err := url.Parse("docker:///cfgarden/empty:v0.1.0")
-					Expect(err).NotTo(HaveOccurred())
+				AfterEach(func() {
+					fakeRegistry.Stop()
+				})
 
-					_, err = layerSource.Manifest(logger, baseImageURL)
+				It("returns an informative error", func() {
+					_, err := layerSource.Manifest(logger, baseImageURL)
 					Expect(err).To(MatchError(ContainSubstring("unable to retrieve auth token")))
 				})
 			})
