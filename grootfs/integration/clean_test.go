@@ -123,6 +123,22 @@ var _ = Describe("Clean", func() {
 					})
 				})
 
+				Context("when one of the volumes has a missing metadata", func() {
+					BeforeEach(func() {
+						metadataFiles, err := filepath.Glob(filepath.Join(StorePath, store.MetaDirName, "volume-*"))
+						Expect(err).NotTo(HaveOccurred())
+
+						for _, metadataFile := range metadataFiles {
+							Expect(os.RemoveAll(metadataFile)).To(Succeed())
+						}
+					})
+
+					It("doesn't fail", func() {
+						_, err := Runner.Clean(0)
+						Expect(err).NotTo(HaveOccurred())
+					})
+				})
+
 				Context("and the size of unused layers is less than the cache size", func() {
 					BeforeEach(func() {
 						cacheSizeInBytes = 3 * 1024 * 1024
