@@ -1,6 +1,7 @@
 package store_test
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -12,6 +13,7 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -84,10 +86,19 @@ var _ = Describe("Measurer", func() {
 		})
 
 		It("measures the size of the unused layers", func() {
-			cacheUsage, err := storeMeasurer.CacheUsage(logger, unusedVolumes)
-			Expect(err).NotTo(HaveOccurred())
-
+			cacheUsage := storeMeasurer.CacheUsage(logger, unusedVolumes)
 			Expect(cacheUsage).To(BeNumerically("==", 2048))
+		})
+
+		Context("when the driver VolumeSize returns an error", func() {
+			BeforeEach(func() {
+				volumeDriver.VolumeSizeReturns(0, errors.New("failed here"))
+			})
+
+			It("logs the error", func() {
+				_ = storeMeasurer.CacheUsage(logger, unusedVolumes)
+				Eventually(logger).Should(gbytes.Say("failed here"))
+			})
 		})
 	})
 })

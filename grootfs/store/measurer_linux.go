@@ -40,26 +40,18 @@ func (s *StoreMeasurer) Usage(logger lager.Logger) (int64, error) {
 	return used, nil
 }
 
-func (s *StoreMeasurer) CacheUsage(logger lager.Logger, unusedVolumes []string) (int64, error) {
-	volumesSize, err := s.calculateTotalVolumesSize(logger, unusedVolumes)
-	if err != nil {
-		return 0, err
-	}
-
-	return volumesSize, nil
-}
-
-func (s *StoreMeasurer) calculateTotalVolumesSize(logger lager.Logger, volumes []string) (int64, error) {
+func (s *StoreMeasurer) CacheUsage(logger lager.Logger, unusedVolumes []string) int64 {
 	var size int64
-	for _, volume := range volumes {
+	for _, volume := range unusedVolumes {
 		volumeSize, err := s.volumeDriver.VolumeSize(logger, volume)
 		if err != nil {
-			return 0, err
+			logger.Error("fetching-volume-size-failed", err, lager.Data{"volume": volume})
+			continue
 		}
 		size += volumeSize
 	}
 
-	return size, nil
+	return size
 }
 
 func (s *StoreMeasurer) pathStats(path string) (totalBytes, UsedBytes int64, err error) {

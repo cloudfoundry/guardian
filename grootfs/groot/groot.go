@@ -108,7 +108,7 @@ type GarbageCollector interface {
 
 type StoreMeasurer interface {
 	Usage(logger lager.Logger) (int64, error)
-	CacheUsage(logger lager.Logger, volumes []string) (int64, error)
+	CacheUsage(logger lager.Logger, volumes []string) int64
 }
 
 type Locksmith interface {

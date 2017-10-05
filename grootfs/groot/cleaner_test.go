@@ -157,16 +157,16 @@ var _ = Describe("Cleaner", func() {
 			})
 		})
 
-		Context("when a cache size is provided", func() {
+		Context("when a cache bytes is provided", func() {
 			var cacheSize int64
 
 			BeforeEach(func() {
 				cacheSize = 1000000
 			})
 
-			Context("when the size of unused layers is less than the cache size", func() {
+			Context("when the size of unused layers is less than the cache bytes", func() {
 				BeforeEach(func() {
-					fakeStoreMeasurer.CacheUsageReturns(500000, nil)
+					fakeStoreMeasurer.CacheUsageReturns(500000)
 				})
 
 				It("does not remove anything", func() {
@@ -188,27 +188,10 @@ var _ = Describe("Cleaner", func() {
 				})
 			})
 
-			Context("when the store measurer fails", func() {
-				BeforeEach(func() {
-					fakeStoreMeasurer.CacheUsageReturns(0, errors.New("failed to measure"))
-				})
-
-				It("returns the error", func() {
-					_, err := cleaner.Clean(logger, cacheSize)
-					Expect(err).To(MatchError(ContainSubstring("failed to measure")))
-				})
-
-				It("does not remove anything", func() {
-					_, err := cleaner.Clean(logger, cacheSize)
-					Expect(err).To(HaveOccurred())
-					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
-				})
-			})
-
-			Context("when the size of unused layers is greater than the cache size", func() {
+			Context("when the size of unused layers is greater than the cache bytes", func() {
 				BeforeEach(func() {
 					cacheSize = 1000000
-					fakeStoreMeasurer.CacheUsageReturns(1500000, nil)
+					fakeStoreMeasurer.CacheUsageReturns(1500000)
 				})
 
 				It("calls the garbage collector", func() {
@@ -218,7 +201,7 @@ var _ = Describe("Cleaner", func() {
 				})
 			})
 
-			Context("when the cache size is negative", func() {
+			Context("when the cache bytes is negative", func() {
 				BeforeEach(func() {
 					cacheSize = -120
 				})
@@ -226,7 +209,7 @@ var _ = Describe("Cleaner", func() {
 				It("indicates a no-op and returns an error", func() {
 					noop, err := cleaner.Clean(logger, cacheSize)
 					Expect(noop).To(BeTrue())
-					Expect(err).To(MatchError("cache size must be greater than 0"))
+					Expect(err).To(MatchError("cache bytes must be greater than 0"))
 				})
 			})
 		})

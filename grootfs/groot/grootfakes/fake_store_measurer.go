@@ -22,7 +22,7 @@ type FakeStoreMeasurer struct {
 		result1 int64
 		result2 error
 	}
-	CacheUsageStub        func(logger lager.Logger, volumes []string) (int64, error)
+	CacheUsageStub        func(logger lager.Logger, volumes []string) int64
 	cacheUsageMutex       sync.RWMutex
 	cacheUsageArgsForCall []struct {
 		logger  lager.Logger
@@ -30,11 +30,9 @@ type FakeStoreMeasurer struct {
 	}
 	cacheUsageReturns struct {
 		result1 int64
-		result2 error
 	}
 	cacheUsageReturnsOnCall map[int]struct {
 		result1 int64
-		result2 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -91,7 +89,7 @@ func (fake *FakeStoreMeasurer) UsageReturnsOnCall(i int, result1 int64, result2 
 	}{result1, result2}
 }
 
-func (fake *FakeStoreMeasurer) CacheUsage(logger lager.Logger, volumes []string) (int64, error) {
+func (fake *FakeStoreMeasurer) CacheUsage(logger lager.Logger, volumes []string) int64 {
 	var volumesCopy []string
 	if volumes != nil {
 		volumesCopy = make([]string, len(volumes))
@@ -109,9 +107,9 @@ func (fake *FakeStoreMeasurer) CacheUsage(logger lager.Logger, volumes []string)
 		return fake.CacheUsageStub(logger, volumes)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1
 	}
-	return fake.cacheUsageReturns.result1, fake.cacheUsageReturns.result2
+	return fake.cacheUsageReturns.result1
 }
 
 func (fake *FakeStoreMeasurer) CacheUsageCallCount() int {
@@ -126,26 +124,23 @@ func (fake *FakeStoreMeasurer) CacheUsageArgsForCall(i int) (lager.Logger, []str
 	return fake.cacheUsageArgsForCall[i].logger, fake.cacheUsageArgsForCall[i].volumes
 }
 
-func (fake *FakeStoreMeasurer) CacheUsageReturns(result1 int64, result2 error) {
+func (fake *FakeStoreMeasurer) CacheUsageReturns(result1 int64) {
 	fake.CacheUsageStub = nil
 	fake.cacheUsageReturns = struct {
 		result1 int64
-		result2 error
-	}{result1, result2}
+	}{result1}
 }
 
-func (fake *FakeStoreMeasurer) CacheUsageReturnsOnCall(i int, result1 int64, result2 error) {
+func (fake *FakeStoreMeasurer) CacheUsageReturnsOnCall(i int, result1 int64) {
 	fake.CacheUsageStub = nil
 	if fake.cacheUsageReturnsOnCall == nil {
 		fake.cacheUsageReturnsOnCall = make(map[int]struct {
 			result1 int64
-			result2 error
 		})
 	}
 	fake.cacheUsageReturnsOnCall[i] = struct {
 		result1 int64
-		result2 error
-	}{result1, result2}
+	}{result1}
 }
 
 func (fake *FakeStoreMeasurer) Invocations() map[string][][]interface{} {
