@@ -166,8 +166,9 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 		return err
 	}
 
-	if err := os.Remove(d.volumeMetaFilePath(id)); err != nil {
-		logger.Error("deleting-metadata-file-failed", err, lager.Data{"path": d.volumeMetaFilePath(id)})
+	volumeMetaFilePath := filesystems.VolumeMetaFilePath(d.storePath, id)
+	if err := os.Remove(volumeMetaFilePath); err != nil {
+		logger.Error("deleting-metadata-file-failed", err, lager.Data{"path": volumeMetaFilePath})
 	}
 
 	if err := forcefulRemovePath(volumePath); err != nil {
@@ -389,22 +390,7 @@ func (d *Driver) WriteVolumeMeta(logger lager.Logger, id string, metadata base_i
 	logger = logger.Session("overlayxfs-writing-volume-metadata", lager.Data{"volumeID": id})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
-
-	metaFile, err := os.Create(d.volumeMetaFilePath(id))
-	if err != nil {
-		return errorspkg.Wrap(err, "creating metadata file")
-	}
-
-	if err = json.NewEncoder(metaFile).Encode(metadata); err != nil {
-		return errorspkg.Wrap(err, "writing metadata file")
-	}
-
-	return nil
-}
-
-func (d *Driver) volumeMetaFilePath(id string) string {
-	id = strings.Replace(id, "gc.", "", 1)
-	return filepath.Join(d.storePath, store.MetaDirName, fmt.Sprintf("volume-%s", id))
+	return filesystems.WriteVolumeMeta(logger, d.storePath, id, metadata)
 }
 
 func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) error {
@@ -575,18 +561,7 @@ func (d *Driver) VolumeSize(logger lager.Logger, id string) (int64, error) {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	metaFile, err := os.Open(d.volumeMetaFilePath(id))
-	if err != nil {
-		return 0, errorspkg.Wrapf(err, "opening volume `%s` metadata", id)
-	}
-
-	var metadata base_image_puller.VolumeMeta
-	err = json.NewDecoder(metaFile).Decode(&metadata)
-	if err != nil {
-		return 0, errorspkg.Wrapf(err, "parsing volume `%s` metadata", id)
-	}
-
-	return metadata.Size, nil
+	return filesystems.VolumeSize(logger, d.storePath, id)
 }
 
 func (d *Driver) createWhiteoutDevice(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {

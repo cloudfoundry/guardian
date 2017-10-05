@@ -640,6 +640,13 @@ var _ = Describe("Btrfs", func() {
 			Expect(volumePath).ToNot(BeAnExistingFile())
 		})
 
+		It("deletes the metadata file", func() {
+			metaFilePath := filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", volumeID))
+			Expect(ioutil.WriteFile(metaFilePath, []byte{}, 0644)).To(Succeed())
+			Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
+			Expect(metaFilePath).ToNot(BeAnExistingFile())
+		})
+
 		Context("custom btrfs binary path", func() {
 			It("uses the custom btrfs binary given", func() {
 				driver = btrfs.NewDriver("cool-btrfs", "mkfs.btrfs", draxBinPath, storePath)
