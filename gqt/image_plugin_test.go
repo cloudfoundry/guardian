@@ -649,6 +649,14 @@ var _ = Describe("Image Plugin", func() {
 					)
 				})
 
+				AfterEach(func() {
+					// No need to client.DestroyAndStop() because the container is never
+					// created BUT it's important to stop the server as otherwise the
+					// connection hangs around and in some cases can be used by other
+					// tests :-|
+					Expect(client.Stop()).To(Succeed())
+				})
+
 				It("returns the plugin's stdout in a useful error", func() {
 					err := client.Destroy(container.Handle())
 					Expect(err).To(MatchError(ContainSubstring("running image plugin destroy: destroy failed")))
