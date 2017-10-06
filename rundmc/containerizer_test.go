@@ -428,9 +428,10 @@ var _ = Describe("Rundmc", func() {
 	})
 
 	Describe("Info", func() {
-		var namespaces []specs.LinuxNamespace = []specs.LinuxNamespace{}
+		var namespaces []specs.LinuxNamespace
 
 		BeforeEach(func() {
+			namespaces = []specs.LinuxNamespace{}
 			fakeOCIRuntime.StateReturns(runrunc.State{Pid: 42}, nil)
 		})
 
