@@ -435,19 +435,18 @@ var _ = Describe("Dadoo ExecRunner", func() {
 							bundlePath, processPath, "some-handle", nil, garden.ProcessIO{})
 					}(log, processID, bundlePath, processPath)
 
-					Eventually(func() []lager.LogFormat {
-						return log.Logs()
-					}).Should(HaveLen(6))
-
-					runcLogs := make([]lager.LogFormat, 0)
-					for _, log := range log.Logs() {
-						if log.Message == "test.execrunner.runc" {
-							runcLogs = append(runcLogs, log)
+					var firstRuncLogLine lager.LogFormat
+					Eventually(func() bool {
+						for _, log := range log.Logs() {
+							if log.Message == "test.execrunner.runc" {
+								firstRuncLogLine = log
+								return true
+							}
 						}
-					}
+						return false
+					}).Should(BeTrue(), "never found log line with message 'test.execrunner.runc'")
 
-					Expect(runcLogs).To(HaveLen(3))
-					Expect(runcLogs[0].Data).To(HaveKeyWithValue("message", "signal: potato"))
+					Expect(firstRuncLogLine.Data).To(HaveKeyWithValue("message", "signal: potato"))
 				})
 			})
 		})
