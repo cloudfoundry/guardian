@@ -205,3 +205,12 @@ func getCurrentCGroupPath(cgroupsRoot, subsystem, tag string, privileged bool) s
 
 	return filepath.Join(cgroupsRoot, subsystem, getCurrentCGroup(), parentCgroup)
 }
+
+func removeSocket() {
+	_, err := os.Stat(config.BindSocket)
+	if err == nil {
+		Expect(os.Remove(config.BindSocket)).To(Succeed())
+	} else if !os.IsNotExist(err) {
+		Expect(err).NotTo(HaveOccurred())
+	}
+}

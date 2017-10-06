@@ -60,6 +60,9 @@ var _ = Describe("rootless containers", func() {
 		imagePath, err = ioutil.TempDir(tmpDir, "rootlessImagePath")
 		Expect(err).NotTo(HaveOccurred())
 
+		// This is necessary because previous tests may leave a socket owned by root
+		removeSocket()
+
 		unprivilegedUser := &syscall.Credential{Uid: unprivilegedUID, Gid: unprivilegedGID}
 
 		Expect(exec.Command("cp", "-r", defaultTestRootFS, imagePath).Run()).To(Succeed())
