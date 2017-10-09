@@ -769,7 +769,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	stateStore := rundmc.NewStateStore(properties)
 
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, cmdRunner)
-	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver("/run/runc"), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
+	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(cmd.Runc.Root), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
 	return rundmc.New(depot, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{})
 }
 
