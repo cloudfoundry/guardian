@@ -237,12 +237,12 @@ func NewGardenRunner(config GdnRunnerConfig) *GardenRunner {
 	}
 
 	runner.Command.Env = append(
+		os.Environ(),
 		[]string{
 			fmt.Sprintf("TMPDIR=%s", runner.TmpDir),
 			fmt.Sprintf("TEMP=%s", runner.TmpDir),
 			fmt.Sprintf("TMP=%s", runner.TmpDir),
-		},
-		os.Environ()...,
+		}...,
 	)
 	setUserCredential(runner)
 
