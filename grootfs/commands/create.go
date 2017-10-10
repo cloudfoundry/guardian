@@ -192,6 +192,11 @@ var CreateCommand = cli.Command{
 		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, baseImage)
 		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
 
+		defer func() {
+			unusedVols, _ := gc.UnusedVolumes(logger)
+			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", sm.CacheUsage(logger, unusedVols), "bytes")
+		}()
+
 		creator := groot.IamCreator(
 			imageCloner, baseImagePuller, sharedLocksmith,
 			dependencyManager, metricsEmitter, cleaner,

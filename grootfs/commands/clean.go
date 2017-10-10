@@ -87,6 +87,11 @@ var CleanCommand = cli.Command{
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
+		defer func() {
+			unusedVols, _ := gc.UnusedVolumes(logger)
+			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", sm.CacheUsage(logger, unusedVols), "bytes")
+		}()
+
 		noop, err := cleaner.Clean(logger, cfg.Clean.CacheBytes)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)

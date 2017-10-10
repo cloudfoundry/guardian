@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/dependency_manager"
+	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
@@ -66,6 +67,14 @@ var DeleteCommand = cli.Command{
 		)
 		metricsEmitter := metrics.NewEmitter()
 		deleter := groot.IamDeleter(imageCloner, dependencyManager, metricsEmitter)
+
+		sm := store.NewStoreMeasurer(storePath, fsDriver)
+		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager, "")
+
+		defer func() {
+			unusedVols, _ := gc.UnusedVolumes(logger)
+			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", sm.CacheUsage(logger, unusedVols), "bytes")
+		}()
 
 		err = deleter.Delete(logger, id)
 		if err != nil {

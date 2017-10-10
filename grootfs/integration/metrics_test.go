@@ -114,6 +114,22 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
+		It("emits grootfs unused layers size", func() {
+			spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
+			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("UnusedLayersSize")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("UnusedLayersSize"))
+			Expect(*metrics[0].Unit).To(Equal("bytes"))
+			Expect(*metrics[0].Value).To(BeZero())
+		})
+
 		It("emits the success count", func() {
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 			Expect(err).NotTo(HaveOccurred())
@@ -134,12 +150,23 @@ var _ = Describe("Metrics", func() {
 
 		Describe("--with-clean", func() {
 			BeforeEach(func() {
-				spec.DiskLimit = 10000000000
-				_, err := Runner.Create(spec)
+				spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
+				spec.CleanOnCreate = true
+			})
+
+			It("emits grootfs unused layers size", func() {
+				_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 
-				writeMegabytes(filepath.Join(StorePath, store.TempDirName, "hello"), 100)
-				writeMegabytes(filepath.Join(StorePath, store.MetaDirName, "hello"), 100)
+				var metrics []events.ValueMetric
+				Eventually(func() []events.ValueMetric {
+					metrics = fakeMetron.ValueMetricsFor("UnusedLayersSize")
+					return metrics
+				}).Should(HaveLen(1))
+
+				Expect(*metrics[0].Name).To(Equal("UnusedLayersSize"))
+				Expect(*metrics[0].Unit).To(Equal("bytes"))
+				Expect(*metrics[0].Value).To(BeZero())
 			})
 		})
 
@@ -183,7 +210,7 @@ var _ = Describe("Metrics", func() {
 	})
 
 	Describe("Delete", func() {
-		BeforeEach(func() {
+		JustBeforeEach(func() {
 			_, err := Runner.Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 		})
@@ -223,6 +250,29 @@ var _ = Describe("Metrics", func() {
 				return counterEvents
 			}).Should(HaveLen(1))
 			Expect(*counterEvents[0].Name).To(Equal("grootfs-delete.run.success"))
+		})
+
+		Context("with a non-empty base image", func() {
+			BeforeEach(func() {
+				spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
+			})
+
+			It("emits a positive unused layers size", func() {
+				err := Runner.
+					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+					Delete("my-id")
+				Expect(err).NotTo(HaveOccurred())
+
+				var metrics []events.ValueMetric
+				Eventually(func() []events.ValueMetric {
+					metrics = fakeMetron.ValueMetricsFor("UnusedLayersSize")
+					return metrics
+				}).Should(HaveLen(1))
+
+				Expect(*metrics[0].Name).To(Equal("UnusedLayersSize"))
+				Expect(*metrics[0].Unit).To(Equal("bytes"))
+				Expect(*metrics[0].Value).To(BeNumerically(">", 0))
+			})
 		})
 
 		Context("when delete fails", func() {
@@ -427,6 +477,22 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Name).To(Equal("StoreUsage"))
 			Expect(*metrics[0].Unit).To(Equal("bytes"))
 			Expect(*metrics[0].Value).NotTo(BeZero())
+		})
+
+		It("emits unused layers size", func() {
+			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
+				Clean(0)
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("UnusedLayersSize")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("UnusedLayersSize"))
+			Expect(*metrics[0].Unit).To(Equal("bytes"))
+			Expect(*metrics[0].Value).To(BeZero())
 		})
 
 		Context("when clean fails", func() {
