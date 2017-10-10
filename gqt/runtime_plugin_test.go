@@ -40,12 +40,13 @@ var _ = Describe("Runtime Plugin", func() {
 
 		Describe("creating a container", func() {
 			var (
-				handle       = fmt.Sprintf("runtime-plugin-test-handle-%s", config.Tag)
+				handle       string
 				argsFilepath string
 			)
 
 			JustBeforeEach(func() {
 				argsFilepath = filepath.Join(client.TmpDir, "create-args")
+				handle = fmt.Sprintf("runtime-plugin-test-handle-%s", config.Tag)
 			})
 
 			It("executes the plugin, passing the correct args for create", func() {
@@ -238,11 +239,11 @@ var _ = Describe("Runtime Plugin", func() {
 
 			Describe("destroying a container", func() {
 				var (
-					handle       = fmt.Sprintf("runtime-plugin-test-handle-%s", config.Tag)
 					argsFilepath string
 				)
 
 				JustBeforeEach(func() {
+					handle = fmt.Sprintf("runtime-plugin-test-handle-%s", config.Tag)
 					argsFilepath = filepath.Join(client.TmpDir, "delete-args")
 
 					_, err := client.Create(garden.ContainerSpec{Handle: handle})
