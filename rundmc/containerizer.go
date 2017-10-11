@@ -23,6 +23,7 @@ import (
 //go:generate counterfeiter . Stopper
 //go:generate counterfeiter . StateStore
 //go:generate counterfeiter . RootfsFileCreator
+//go:generate counterfeiter . PeaCreator
 
 type Depot interface {
 	Create(log lager.Logger, handle string, spec gardener.DesiredContainerSpec) error
@@ -44,6 +45,10 @@ type OCIRuntime interface {
 	State(log lager.Logger, id string) (runrunc.State, error)
 	Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
 	WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
+}
+
+type PeaCreator interface {
+	CreatePea(log lager.Logger, spec garden.ProcessSpec, ctrBundlePath string) (garden.Process, error)
 }
 
 type NstarRunner interface {
@@ -79,9 +84,10 @@ type Containerizer struct {
 	events            EventStore
 	states            StateStore
 	rootfsFileCreator RootfsFileCreator
+	peaCreator        PeaCreator
 }
 
-func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator) *Containerizer {
+func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator, peaCreator PeaCreator) *Containerizer {
 	return &Containerizer{
 		depot:             depot,
 		runtime:           runtime,
@@ -91,6 +97,7 @@ func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner Nstar
 		events:            events,
 		states:            states,
 		rootfsFileCreator: rootfsFileCreator,
+		peaCreator:        peaCreator,
 	}
 }
 
@@ -142,6 +149,10 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	if err != nil {
 		log.Error("lookup-failed", err)
 		return nil, err
+	}
+
+	if spec.Image != (garden.ImageRef{}) {
+		return c.peaCreator.CreatePea(log, spec, path)
 	}
 
 	return c.runtime.Exec(log, path, handle, spec, io)

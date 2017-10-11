@@ -29,6 +29,7 @@ var _ = Describe("Rundmc", func() {
 		fakeEventStore        *fakes.FakeEventStore
 		fakeStateStore        *fakes.FakeStateStore
 		fakeRootfsFileCreator *fakes.FakeRootfsFileCreator
+		fakePeaCreator        *fakes.FakePeaCreator
 
 		logger        lager.Logger
 		containerizer *rundmc.Containerizer
@@ -43,13 +44,14 @@ var _ = Describe("Rundmc", func() {
 		fakeEventStore = new(fakes.FakeEventStore)
 		fakeStateStore = new(fakes.FakeStateStore)
 		fakeRootfsFileCreator = new(fakes.FakeRootfsFileCreator)
+		fakePeaCreator = new(fakes.FakePeaCreator)
 		logger = lagertest.NewTestLogger("test")
 
 		fakeDepot.LookupStub = func(_ lager.Logger, handle string) (string, error) {
 			return "/path/to/" + handle, nil
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator)
+		containerizer = rundmc.New(fakeDepot, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator, fakePeaCreator)
 	})
 
 	Describe("Create", func() {
@@ -165,6 +167,35 @@ var _ = Describe("Rundmc", func() {
 			Expect(path).To(Equal("/path/to/some-handle"))
 			Expect(id).To(Equal("some-handle"))
 			Expect(spec.Path).To(Equal("hello"))
+		})
+
+		Context("when process has no image", func() {
+			It("doesn't create a pea", func() {
+				containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
+				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(0))
+			})
+		})
+
+		Context("when process has an image", func() {
+			It("creates a pea", func() {
+				fakeDepot.LookupReturns("some-bundle-path", nil)
+				processSpec := garden.ProcessSpec{Image: garden.ImageRef{URI: "some-uri"}}
+				containerizer.Run(logger, "some-handle", processSpec, garden.ProcessIO{})
+				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
+				_, actualProcessSpec, actualBundlePath := fakePeaCreator.CreatePeaArgsForCall(0)
+				Expect(actualProcessSpec).To(Equal(processSpec))
+				Expect(actualBundlePath).To(Equal("some-bundle-path"))
+			})
+
+			It("returns process from pea creator", func() {
+				procValue := dummyProcess{id: "some-id"}
+				fakePeaCreator.CreatePeaReturns(procValue, errors.New("some-error"))
+				processSpec := garden.ProcessSpec{Image: garden.ImageRef{URI: "some-uri"}}
+				containerizer.Run(logger, "some-handle", processSpec, garden.ProcessIO{})
+				process, err := containerizer.Run(logger, "some-handle", processSpec, garden.ProcessIO{})
+				Expect(process).To(Equal(procValue))
+				Expect(err).To(MatchError("some-error"))
+			})
 		})
 
 		Context("when looking up the container fails", func() {
@@ -605,6 +636,18 @@ var _ = Describe("Rundmc", func() {
 		})
 	})
 })
+
+type dummyProcess struct {
+	id string
+}
+
+func (d dummyProcess) ID() string {
+	return d.id
+}
+
+func (d dummyProcess) Wait() (int, error)          { return 0, nil }
+func (d dummyProcess) SetTTY(garden.TTYSpec) error { return nil }
+func (d dummyProcess) Signal(garden.Signal) error  { return nil }
 
 func arg2(_ lager.Logger, i interface{}) interface{} {
 	return i

@@ -11,12 +11,19 @@ import (
 
 var _ = Describe("Env Rule", func() {
 	var (
-		userEnv []string
-		newBndl goci.Bndl
-		rule    bundlerules.Env
+		userEnv           []string
+		baseconfigProcess *specs.Process
+		newBndl           goci.Bndl
+		rule              bundlerules.Env
 	)
 
 	BeforeEach(func() {
+		baseconfigProcess = &specs.Process{
+			Env: []string{
+				"TEST=banana",
+				"CONTAINER_NAME=hello",
+			},
+		}
 		userEnv = []string{"TEST=pineapple", "FOO=bar"}
 	})
 
@@ -26,12 +33,7 @@ var _ = Describe("Env Rule", func() {
 		newBndl, err = rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
 			Env: userEnv,
 			BaseConfig: specs.Spec{
-				Process: &specs.Process{
-					Env: []string{
-						"TEST=banana",
-						"CONTAINER_NAME=hello",
-					},
-				},
+				Process: baseconfigProcess,
 			},
 		}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())
@@ -51,6 +53,18 @@ var _ = Describe("Env Rule", func() {
 		It("returns the base config env", func() {
 			Expect(newBndl.Spec.Process.Env).To(Equal([]string{
 				"TEST=banana", "CONTAINER_NAME=hello",
+			}))
+		})
+	})
+
+	Context("when the baseconfig process is nil", func() {
+		BeforeEach(func() {
+			baseconfigProcess = nil
+		})
+
+		It("returns only the user env", func() {
+			Expect(newBndl.Spec.Process.Env).To(Equal([]string{
+				"TEST=pineapple", "FOO=bar",
 			}))
 		})
 	})

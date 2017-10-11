@@ -33,6 +33,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
@@ -728,24 +729,28 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			ContainerRootGID: gidMappings.Map(0),
 			MkdirChown:       chrootMkdir,
 		},
-		bundlerules.Limits{
-			CpuQuotaPerShare: cmd.Limits.CPUQuotaPerShare,
-			TCPMemoryLimit:   int64(cmd.Limits.TCPMemoryLimit),
-			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
-		},
 		bundlerules.Mounts{},
 		bundlerules.Env{},
 		bundlerules.Hostname{},
 		bundlerules.Windows{},
+	}
+	peaBundleRules := make([]rundmc.BundlerRule, len(bundleRules))
+	copy(peaBundleRules, bundleRules)
+	bundleRules = append(bundleRules,
 		bundlerules.CGroupPath{
 			Path: cgroupRootPath,
-		},
-	}
+		}, bundlerules.Limits{
+			CpuQuotaPerShare: cmd.Limits.CPUQuotaPerShare,
+			TCPMemoryLimit:   int64(cmd.Limits.TCPMemoryLimit),
+			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
+		})
 	bundleRules = append(bundleRules, osSpecificBundleRules()...)
 
 	template := &rundmc.BundleTemplate{Rules: bundleRules}
+	peaTemplate := &rundmc.BundleTemplate{Rules: peaBundleRules}
 
-	depot := wireDepot(depotPath, template, &goci.BundleSaver{})
+	bundleSaver := &goci.BundleSaver{}
+	depot := wireDepot(depotPath, template, bundleSaver)
 
 	runcrunner := runrunc.New(
 		cmdRunner,
@@ -770,7 +775,12 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(cmd.Runc.Root), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{})
+	peaCreator := &peas.PeaCreator{
+		BundleGenerator:  peaTemplate,
+		BundleSaver:      bundleSaver,
+		ContainerCreator: runrunc.NewCreator(runtimePath, cmd.Runc.Root, cmdRunner),
+	}
+	return rundmc.New(depot, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{}, peaCreator)
 }
 
 func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) *metrics.MetricsProvider {
