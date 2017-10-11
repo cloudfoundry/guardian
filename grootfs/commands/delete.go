@@ -72,7 +72,11 @@ var DeleteCommand = cli.Command{
 		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager, "")
 
 		defer func() {
-			unusedVols, _ := gc.UnusedVolumes(logger)
+			unusedVols, err := gc.UnusedVolumes(logger)
+			if err != nil {
+				logger.Error("getting-unused-layers-failed", err)
+				return
+			}
 			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", sm.CacheUsage(logger, unusedVols), "bytes")
 		}()
 
