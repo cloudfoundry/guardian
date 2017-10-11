@@ -47,7 +47,6 @@ var _ = Describe("PeaCreator", func() {
 
 	AfterEach(func() {
 		Expect(os.RemoveAll(ctrBundleDir)).To(Succeed())
-		Expect(os.RemoveAll(peas.RootfsPath)).To(Succeed())
 	})
 
 	Describe("pea creation succeeding", func() {
