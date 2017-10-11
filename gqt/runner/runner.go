@@ -286,10 +286,16 @@ type ErrGardenStop struct {
 }
 
 func (r *RunningGarden) DestroyAndStop() error {
+	defer r.forceStop()
+
 	if err := r.DestroyContainers(); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (r *RunningGarden) forceStop() error {
 	if runtime.GOOS == "windows" {
 		// Windows doesn't support SIGTERM
 		r.Kill()
