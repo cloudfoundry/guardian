@@ -65,7 +65,7 @@ type GdnRunnerConfig struct {
 	LogLevel                       string   `flag:"log-level"`
 	TCPMemoryLimit                 *uint64  `flag:"tcp-memory-limit"`
 	CPUQuotaPerShare               *uint64  `flag:"cpu-quota-per-share"`
-	IPTableseBin                   string   `flag:"iptables-bin"`
+	IPTablesBin                    string   `flag:"iptables-bin"`
 	IPTablesRestoreBin             string   `flag:"iptables-restore-bin"`
 	DNSServers                     []string `flag:"dns-server"`
 	AdditionalDNSServers           []string `flag:"additional-dns-server"`
