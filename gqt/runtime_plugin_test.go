@@ -101,6 +101,10 @@ var _ = Describe("Runtime Plugin", func() {
 					config.NetworkPluginExtraArgs = []string{networkPluginArgsFile, os.DevNull, "unused"}
 				})
 
+				AfterEach(func() {
+					Expect(os.Remove(networkPluginArgsFile)).To(Succeed())
+				})
+
 				JustBeforeEach(func() {
 					Expect(ioutil.WriteFile(
 						filepath.Join(client.TmpDir, "runtime-state-output"),

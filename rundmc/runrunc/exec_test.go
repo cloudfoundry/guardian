@@ -134,6 +134,10 @@ var _ = Describe("ExecPreparer", func() {
 		preparer = runrunc.NewExecPreparer(bundleLoader, users, enver, mkdirer, []string{"foo", "bar", "brains"}, runningAsRoot)
 	})
 
+	AfterEach(func() {
+		Expect(os.RemoveAll(bundlePath)).To(Succeed())
+	})
+
 	It("passes a process.json with the correct path and args", func() {
 		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}})
 		Expect(err).NotTo(HaveOccurred())

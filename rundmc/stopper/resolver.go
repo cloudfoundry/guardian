@@ -25,6 +25,7 @@ func (r resolver) Resolve(name, subsystem string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer stateJson.Close()
 
 	var s state
 	if err := json.NewDecoder(stateJson).Decode(&s); err != nil {

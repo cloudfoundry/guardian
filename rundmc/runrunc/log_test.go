@@ -41,6 +41,13 @@ var _ = Describe("RunAndLog", func() {
 		})
 	})
 
+	AfterEach(func() {
+		if _, err := os.Stat(logFile.Name()); err == nil {
+			Expect(logFile.Close()).To(Succeed())
+			Expect(os.Remove(logFile.Name())).To(Succeed())
+		}
+	})
+
 	It("execs the command", func() {
 		Expect(logRunner.RunAndLog(logger, func(logFile string) *exec.Cmd {
 			return exec.Command("something.exe")

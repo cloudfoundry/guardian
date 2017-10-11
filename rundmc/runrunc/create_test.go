@@ -56,8 +56,13 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 			_, err = io.Copy(logFile, strings.NewReader(logs))
 			Expect(err).NotTo(HaveOccurred())
+			Expect(logFile.Close()).To(Succeed())
 			return runcExitStatus
 		})
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(bundlePath)).To(Succeed())
 	})
 
 	It("creates the container with runC create", func() {

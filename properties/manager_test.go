@@ -164,9 +164,10 @@ var _ = Describe("Properties", func() {
 
 			tmp, err = os.Open(tmp.Name())
 			Expect(err).NotTo(HaveOccurred())
-
 			var roundtripped properties.Manager
 			Expect(json.NewDecoder(tmp).Decode(&roundtripped)).To(Succeed())
+			Expect(tmp.Close()).To(Succeed())
+			Expect(os.Remove(tmp.Name())).To(Succeed())
 
 			val, ok := roundtripped.Get("foo", "bar")
 			Expect(ok).To(BeTrue())

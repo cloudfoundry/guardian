@@ -32,7 +32,7 @@ var _ = Describe("Resolver", func() {
 	})
 
 	AfterEach(func() {
-		os.RemoveAll(fakeStateDir)
+		Expect(os.RemoveAll(fakeStateDir)).To(Succeed())
 	})
 
 	Context("with valid state.json", func() {
