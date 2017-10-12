@@ -1,15 +1,12 @@
 package peas
 
 import (
-	"fmt"
-	"net/url"
 	"os"
 	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -26,17 +23,10 @@ type ContainerCreator interface {
 type PeaCreator struct {
 	BundleGenerator  depot.BundleGenerator
 	BundleSaver      depot.BundleSaver
-	ExecPreparer     runrunc.ExecPreparer
 	ContainerCreator ContainerCreator
 }
 
-func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO garden.ProcessIO, ctrBundlePath string) (garden.Process, error) {
-	errs := func(action string, err error) (garden.Process, error) {
-		wrappedErr := errorwrapper.Wrap(err, action)
-		log.Error(action, wrappedErr)
-		return nil, wrappedErr
-	}
-
+func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, ctrBundlePath string) (garden.Process, error) {
 	log = log.Session("create-pea", lager.Data{})
 
 	processID, err := generateProcessID(spec.ID)
@@ -52,49 +42,39 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return nil, err
 	}
 
-	rootfsURL, err := url.Parse(spec.Image.URI)
-	if err != nil {
-		return errs("parsing-image-uri", err)
+	if err := os.MkdirAll(RootfsPath, 0777); err != nil {
+		return nil, err
 	}
-
-	if rootfsURL.Scheme != "raw" {
-		return errs("expecting-raw-scheme", fmt.Errorf("expected scheme 'raw', got '%s'", rootfsURL.Scheme))
+	if err := os.Chmod(RootfsPath, 0777); err != nil {
+		return nil, err
 	}
 
 	bndl, err := p.BundleGenerator.Generate(gardener.DesiredContainerSpec{
 		Handle:     processID,
 		Privileged: false,
-		BaseConfig: specs.Spec{Root: &specs.Root{Path: rootfsURL.Path}},
-	}, ctrBundlePath)
+		BaseConfig: specs.Spec{Root: &specs.Root{
+			Path: RootfsPath,
+		}},
+	}, "")
 	if err != nil {
-		return errs("generating-bundle", err)
+		wrappedErr := errorwrapper.Wrap(err, "generating bundle")
+		log.Error("generating bundle", wrappedErr)
+		return nil, wrappedErr
 	}
 
 	if err := p.BundleSaver.Save(bndl, peaBundlePath); err != nil {
-		return errs("saving-bundle", err)
+		wrappedErr := errorwrapper.Wrap(err, "saving bundle")
+		log.Error("saving bundle", wrappedErr)
+		return nil, wrappedErr
 	}
 
-	preparedProcess, err := p.ExecPreparer.Prepare(log, peaBundlePath, spec)
-	if err != nil {
-		return errs("preparing-rootfs", err)
+	if err := p.ContainerCreator.Create(log, peaBundlePath, processID, garden.ProcessIO{}); err != nil {
+		wrappedErr := errorwrapper.Wrap(err, "creating partially-shared container")
+		log.Error("creating partially-shared container", wrappedErr)
+		return nil, wrappedErr
 	}
 
-	bndl = bndl.WithProcess(preparedProcess.Process)
-	if err := p.BundleSaver.Save(bndl, peaBundlePath); err != nil {
-		return errs("saving-bundle-again", err)
-	}
-
-	peaRunDone := make(chan error)
-	go func(runcDone chan<- error) {
-		err := p.ContainerCreator.Create(log, peaBundlePath, processID, procIO)
-		if err != nil {
-			wrappedErr := errorwrapper.Wrap(err, "creating-partially-shared-container")
-			log.Error("creating-partially-shared-container", wrappedErr)
-		}
-		runcDone <- err
-	}(peaRunDone)
-
-	return &pearocess{id: processID, doneCh: peaRunDone}, nil
+	return pearocess{id: processID}, nil
 }
 
 func generateProcessID(existingID string) (string, error) {
@@ -109,17 +89,10 @@ func generateProcessID(existingID string) (string, error) {
 }
 
 type pearocess struct {
-	id     string
-	doneCh <-chan error
+	id string
 }
 
-func (p pearocess) ID() string { return p.id }
-
-func (p pearocess) Wait() (int, error) {
-	// Exit code not yet supported for peas.
-	<-p.doneCh
-	return 0, nil
-}
-
+func (p pearocess) ID() string                  { return p.id }
+func (p pearocess) Wait() (int, error)          { return 0, nil }
 func (p pearocess) SetTTY(garden.TTYSpec) error { return nil }
 func (p pearocess) Signal(garden.Signal) error  { return nil }

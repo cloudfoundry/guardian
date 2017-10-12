@@ -1,7 +1,6 @@
 package rundmc_test
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"time"
@@ -179,15 +178,13 @@ var _ = Describe("Rundmc", func() {
 
 		Context("when process has an image", func() {
 			It("creates a pea", func() {
-				pio := garden.ProcessIO{Stdout: bytes.NewBufferString("some-idiosyncratic buffer")}
 				fakeDepot.LookupReturns("some-bundle-path", nil)
 				processSpec := garden.ProcessSpec{Image: garden.ImageRef{URI: "some-uri"}}
-				containerizer.Run(logger, "some-handle", processSpec, pio)
+				containerizer.Run(logger, "some-handle", processSpec, garden.ProcessIO{})
 				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
-				_, actualProcessSpec, actualProcessIO, actualBundlePath := fakePeaCreator.CreatePeaArgsForCall(0)
+				_, actualProcessSpec, actualBundlePath := fakePeaCreator.CreatePeaArgsForCall(0)
 				Expect(actualProcessSpec).To(Equal(processSpec))
 				Expect(actualBundlePath).To(Equal("some-bundle-path"))
-				Expect(actualProcessIO).To(Equal(pio))
 			})
 
 			It("returns process from pea creator", func() {

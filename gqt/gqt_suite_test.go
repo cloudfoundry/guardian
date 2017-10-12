@@ -3,7 +3,6 @@ package gqt_test
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -184,34 +183,6 @@ func readFile(path string) string {
 	content, err := ioutil.ReadFile(path)
 	Expect(err).NotTo(HaveOccurred())
 	return string(content)
-}
-
-func copyFile(srcPath, dstPath string) error {
-	dirPath := filepath.Dir(dstPath)
-	if err := os.MkdirAll(dirPath, 0777); err != nil {
-		return err
-	}
-
-	reader, err := os.Open(srcPath)
-	if err != nil {
-		return err
-	}
-	writer, err := os.Create(dstPath)
-	if err != nil {
-		reader.Close()
-		return err
-	}
-
-	if _, err := io.Copy(writer, reader); err != nil {
-		writer.Close()
-		reader.Close()
-		return err
-	}
-
-	writer.Close()
-	reader.Close()
-
-	return os.Chmod(writer.Name(), 0777)
 }
 
 func getCurrentCGroup() string {

@@ -745,14 +745,12 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
 		})
 	bundleRules = append(bundleRules, osSpecificBundleRules()...)
-	peaBundleRules = append(peaBundleRules, bundlerules.NamespaceSharing{})
 
 	template := &rundmc.BundleTemplate{Rules: bundleRules}
 	peaTemplate := &rundmc.BundleTemplate{Rules: peaBundleRules}
 
 	bundleSaver := &goci.BundleSaver{}
 	depot := wireDepot(depotPath, template, bundleSaver)
-	execPreparer := cmd.wireExecPreparer()
 
 	runcrunner := runrunc.New(
 		cmdRunner,
@@ -761,7 +759,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		dadooPath,
 		runtimePath,
 		cmd.Runc.Root,
-		execPreparer,
+		cmd.wireExecPreparer(),
 		cmd.wireExecRunner(
 			dadooPath,
 			runtimePath,
@@ -780,8 +778,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	peaCreator := &peas.PeaCreator{
 		BundleGenerator:  peaTemplate,
 		BundleSaver:      bundleSaver,
-		ExecPreparer:     execPreparer,
-		ContainerCreator: runrunc.NewCreator(runtimePath, cmd.Runc.Root, "run", cmdRunner),
+		ContainerCreator: runrunc.NewCreator(runtimePath, cmd.Runc.Root, cmdRunner),
 	}
 	return rundmc.New(depot, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{}, peaCreator)
 }
