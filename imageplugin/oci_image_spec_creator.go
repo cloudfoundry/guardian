@@ -59,6 +59,10 @@ func (o *OCIImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*
 		return nil, err
 	}
 
+	if err := os.Symlink(rootFS.Path, filepath.Join(blobsPath, baseLayer.SHA256)); err != nil {
+		return nil, err
+	}
+
 	manifest := o.ManifestGenerator([]Layer{baseLayer, topLayer}, imageConfigSHA)
 	manifestBytes, err := json.Marshal(manifest)
 	if err != nil {

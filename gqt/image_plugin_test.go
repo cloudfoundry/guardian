@@ -447,6 +447,11 @@ var _ = Describe("Image Plugin", func() {
 						digest.Digest("sha256:" + shaOf(fmt.Sprintf("%s-%d", rootFSPath, lastModifiedTime(rootFSPath)))),
 						digest.Digest("sha256:some-digest")},
 					))
+
+					By("creating a symlink to the rootfs layer's tarball")
+					linkBasename := shaOf(fmt.Sprintf("%s-%d", rootFSPath, lastModifiedTime(rootFSPath)))
+					rootFSLinkPath := filepath.Join(ociImagePath, "blobs", "sha256", linkBasename)
+					Expect(readlink(rootFSLinkPath)).To(Equal(rootFSPath))
 				})
 			})
 
@@ -1249,4 +1254,10 @@ func copyFile(srcPath, dstPath string) error {
 	reader.Close()
 
 	return os.Chmod(writer.Name(), 0777)
+}
+
+func readlink(name string) string {
+	destination, err := os.Readlink(name)
+	Expect(err).NotTo(HaveOccurred())
+	return destination
 }
