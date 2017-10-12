@@ -44,7 +44,8 @@ var _ = Describe("GenerateManifest", func() {
 		Expect(manifest).To(Equal(imagespec.Manifest{
 			Versioned: specs.Versioned{SchemaVersion: imageplugin.ImageSpecSchemaVersion},
 			Config: imagespec.Descriptor{
-				Digest: "sha256:some-config-sha",
+				Digest:    "sha256:some-config-sha",
+				MediaType: "application/vnd.oci.image.config.v1+json",
 			},
 			Layers: []imagespec.Descriptor{
 				{
@@ -69,7 +70,8 @@ var _ = Describe("GenerateIndex", func() {
 		Expect(index).To(Equal(imagespec.Index{
 			Versioned: specs.Versioned{SchemaVersion: imageplugin.ImageSpecSchemaVersion},
 			Manifests: []imagespec.Descriptor{{
-				Digest: digest.Digest("sha256:some-manifest-sha"),
+				Digest:    digest.Digest("sha256:some-manifest-sha"),
+				MediaType: "application/vnd.oci.image.manifest.v1+json",
 			}},
 		}))
 	})

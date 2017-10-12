@@ -10,7 +10,7 @@ import (
 
 const (
 	ImageSpecSchemaVersion              = 2
-	ImageSpecBaseDirectoryAnnotationKey = "org.cloudfoundry.image.base-directory"
+	ImageSpecBaseDirectoryAnnotationKey = "org.cloudfoundry.experimental.image.base-directory"
 )
 
 func GenerateImageConfig(layerSHAs ...string) imagespec.Image {
@@ -33,7 +33,8 @@ func GenerateIndex(manifestSHA string) imagespec.Index {
 	return imagespec.Index{
 		Versioned: specs.Versioned{SchemaVersion: ImageSpecSchemaVersion},
 		Manifests: []imagespec.Descriptor{{
-			Digest: toDigest(manifestSHA),
+			Digest:    toDigest(manifestSHA),
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
 		}},
 	}
 }
@@ -42,9 +43,14 @@ func GenerateManifest(layers []Layer, configSHA string) imagespec.Manifest {
 	var ociLayers []imagespec.Descriptor
 	for _, layer := range layers {
 		ociLayer := imagespec.Descriptor{
-			Digest: toDigest(layer.SHA256),
-			URLs:   []string{layer.URL},
+			Digest:    toDigest(layer.SHA256),
+			MediaType: layer.MediaType,
 		}
+
+		if layer.URL != "" {
+			ociLayer.URLs = []string{layer.URL}
+		}
+
 		if layer.BaseDir != "" {
 			ociLayer.Annotations = map[string]string{
 				ImageSpecBaseDirectoryAnnotationKey: layer.BaseDir,
@@ -55,7 +61,7 @@ func GenerateManifest(layers []Layer, configSHA string) imagespec.Manifest {
 
 	return imagespec.Manifest{
 		Versioned: specs.Versioned{SchemaVersion: ImageSpecSchemaVersion},
-		Config:    imagespec.Descriptor{Digest: toDigest(configSHA)},
+		Config:    imagespec.Descriptor{MediaType: "application/vnd.oci.image.config.v1+json", Digest: toDigest(configSHA)},
 		Layers:    ociLayers,
 	}
 }

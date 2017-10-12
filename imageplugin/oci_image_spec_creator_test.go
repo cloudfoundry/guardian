@@ -34,10 +34,9 @@ var _ = Describe("OciImageSpecCreator", func() {
 
 		creator *imageplugin.OCIImageSpecCreator
 
-		rootFSURLStr   string
-		rootFSBaseDir  string
-		bottomLayerSHA string
-		handle         = "foobarbazbarry"
+		rootFSURLStr  string
+		rootFSBaseDir string
+		handle        = "foobarbazbarry"
 
 		newURL    *url.URL
 		createErr error
@@ -58,16 +57,15 @@ var _ = Describe("OciImageSpecCreator", func() {
 		rootFSBasePathFile, err := os.Stat(rootFSBaseDir)
 		Expect(err).NotTo(HaveOccurred())
 		rootFSBasePathMtime := rootFSBasePathFile.ModTime().UnixNano()
-		rootFSBasePathSHABytes := sha256.Sum256([]byte(rootFSBasePath))
+		rootFSBasePathSHABytes := sha256.Sum256([]byte(fmt.Sprintf("%s-%d", rootFSBasePath, rootFSBasePathMtime)))
 		rootFSBasePathSHA := hex.EncodeToString(rootFSBasePathSHABytes[:])
-		bottomLayerSHA = fmt.Sprintf("%s-%d", rootFSBasePathSHA, rootFSBasePathMtime)
 
 		depotDir = filepath.Join(tmpDir, "depot")
 
 		createdConfigSHA = shaOf(createdConfig)
 		configGenerator = func(layerSHAs ...string) imagespec.Image {
 			Expect(layerSHAs).To(Equal([]string{
-				bottomLayerSHA,
+				rootFSBasePathSHA,
 				"some-digest",
 			}))
 			return createdConfig
@@ -77,13 +75,14 @@ var _ = Describe("OciImageSpecCreator", func() {
 		manifestGenerator = func(layers []imageplugin.Layer, configSHA string) imagespec.Manifest {
 			Expect(layers).To(Equal([]imageplugin.Layer{
 				{
-					URL:    "file://" + rootFSBasePath,
-					SHA256: bottomLayerSHA,
+					SHA256:    rootFSBasePathSHA,
+					MediaType: "application/vnd.oci.image.layer.v1.tar",
 				},
 				{
-					URL:     "https://layers.com/layer.tgz",
-					SHA256:  "some-digest",
-					BaseDir: "/untar/here",
+					URL:       "https://layers.com/layer.tgz",
+					SHA256:    "some-digest",
+					BaseDir:   "/untar/here",
+					MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 				},
 			}))
 			Expect(configSHA).To(Equal(createdConfigSHA))

@@ -31,9 +31,10 @@ func NewOCIImageSpecCreator(depotDir string) *OCIImageSpecCreator {
 }
 
 type Layer struct {
-	URL     string
-	SHA256  string
-	BaseDir string
+	URL       string
+	SHA256    string
+	BaseDir   string
+	MediaType string
 }
 
 func (o *OCIImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*url.URL, error) {
@@ -111,14 +112,15 @@ func layers(rootFS *url.URL) (Layer, Layer, error) {
 	rootFSPathMtime := rootFSPathFile.ModTime().UnixNano()
 
 	baseLayer := Layer{
-		URL:    fmt.Sprintf("file://%s", rootFS.Path),
-		SHA256: fmt.Sprintf("%s-%d", shaOf([]byte(rootFS.Path)), rootFSPathMtime),
+		SHA256:    shaOf([]byte(fmt.Sprintf("%s-%d", rootFS.Path, rootFSPathMtime))),
+		MediaType: "application/vnd.oci.image.layer.v1.tar",
 	}
 
 	topLayer := Layer{
-		URL:     topLayerURL,
-		SHA256:  topLayerDigest,
-		BaseDir: topLayerPath,
+		URL:       topLayerURL,
+		SHA256:    topLayerDigest,
+		BaseDir:   topLayerPath,
+		MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 	}
 
 	return baseLayer, topLayer, nil

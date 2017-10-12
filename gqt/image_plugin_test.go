@@ -382,7 +382,10 @@ var _ = Describe("Image Plugin", func() {
 				// This must be a real file, as it has stat() called on it to get the
 				// mtime.
 				// Using a temporary directory causes flakiness.
-				var rootFSPath = "/bin/sh"
+				var (
+					ociImagePath string
+					rootFSPath   = "/bin/sh"
+				)
 
 				BeforeEach(func() {
 					containerSpec.Image = garden.ImageRef{URI: fmt.Sprintf(
@@ -391,49 +394,59 @@ var _ = Describe("Image Plugin", func() {
 					)}
 				})
 
-				It("executes the plugin, passing an OCI image URI", func() {
+				JustBeforeEach(func() {
 					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
 					Expect(err).ToNot(HaveOccurred())
 
-					ociImagePath := filepath.Join(client.DepotDir, container.Handle(), "image")
+					ociImagePath = filepath.Join(client.DepotDir, container.Handle(), "image")
 					ociImageURI := fmt.Sprintf("oci://%s", ociImagePath)
 					Expect(string(pluginArgsBytes)).To(ContainSubstring(ociImageURI))
+				})
 
+				It("executes the plugin, creating the expected OCI image", func() {
+					By("correctly writing index.json")
 					var imageIndex imagespec.Index
 					unmarshalJSONFromFile(filepath.Join(ociImagePath, "index.json"), &imageIndex)
 					Expect(imageIndex.SchemaVersion).To(Equal(imageplugin.ImageSpecSchemaVersion))
 					Expect(imageIndex.Manifests).To(HaveLen(1))
+					Expect(imageIndex.Manifests[0].MediaType).To(Equal("application/vnd.oci.image.manifest.v1+json"))
 
 					manifestDigest := imageIndex.Manifests[0].Digest.String()
 					Expect(manifestDigest).To(HavePrefix("sha256:"))
 					manifestDigest = strings.TrimLeft(manifestDigest, "sha256:")
 					manifestPath := filepath.Join(ociImagePath, "blobs", "sha256", manifestDigest)
 
+					By("correctly writing blobs/sha256/{manifest_sha}")
 					var imageManifest imagespec.Manifest
 					unmarshalJSONFromFile(manifestPath, &imageManifest)
 					Expect(imageManifest.SchemaVersion).To(Equal(imageplugin.ImageSpecSchemaVersion))
 
-					Expect(imageManifest.Layers).To(HaveLen(2))
+					Expect(imageManifest.Layers).To(Equal([]imagespec.Descriptor{
+						{
+							MediaType: "application/vnd.oci.image.layer.v1.tar",
+							Digest:    digest.Digest("sha256:" + shaOf(fmt.Sprintf("%s-%d", rootFSPath, lastModifiedTime(rootFSPath)))),
+						},
+						{
+							MediaType:   "application/vnd.oci.image.layer.v1.tar+gzip",
+							URLs:        []string{"https://droplets.com/droplet.tgz"},
+							Annotations: map[string]string{imageplugin.ImageSpecBaseDirectoryAnnotationKey: "/untar/here"},
+							Digest:      digest.Digest("sha256:some-digest"),
+						},
+					}))
 
-					Expect(imageManifest.Layers[0].URLs).To(ConsistOf("file://" + rootFSPath))
-					bottomLayerSHA := digest.Digest(
-						fmt.Sprintf("sha256:%s-%d", shaOf(rootFSPath), lastModifiedTime(rootFSPath)),
-					)
-					Expect(imageManifest.Layers[0].Digest).To(Equal(bottomLayerSHA))
-
-					Expect(imageManifest.Layers[1].URLs).To(ConsistOf("https://droplets.com/droplet.tgz"))
-					Expect(imageManifest.Layers[1].Annotations).To(HaveKeyWithValue(imageplugin.ImageSpecBaseDirectoryAnnotationKey, "/untar/here"))
-					topLayerSHA := digest.Digest("sha256:some-digest")
-					Expect(imageManifest.Layers[1].Digest).To(Equal(topLayerSHA))
-
+					By("correctly writing blobs/sha256/{config_sha}")
+					Expect(imageManifest.Config.MediaType).To(Equal("application/vnd.oci.image.config.v1+json"))
 					configDigest := imageManifest.Config.Digest.String()
 					Expect(configDigest).To(HavePrefix("sha256:"))
-					configDigest = strings.TrimLeft(configDigest, "sha256:")
+					configDigest = strings.Split(configDigest, ":")[1]
 					configPath := filepath.Join(ociImagePath, "blobs", "sha256", configDigest)
 
 					var imageConfig imagespec.Image
 					unmarshalJSONFromFile(configPath, &imageConfig)
-					Expect(imageConfig.RootFS.DiffIDs).To(Equal([]digest.Digest{bottomLayerSHA, topLayerSHA}))
+					Expect(imageConfig.RootFS.DiffIDs).To(Equal([]digest.Digest{
+						digest.Digest("sha256:" + shaOf(fmt.Sprintf("%s-%d", rootFSPath, lastModifiedTime(rootFSPath)))),
+						digest.Digest("sha256:some-digest")},
+					))
 				})
 			})
 
