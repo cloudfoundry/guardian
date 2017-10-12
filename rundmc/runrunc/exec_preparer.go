@@ -2,8 +2,6 @@ package runrunc
 
 import (
 	"fmt"
-	"io/ioutil"
-	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -45,14 +43,7 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		return nil, err
 	}
 
-	pidBytes, err := ioutil.ReadFile(filepath.Join(bundlePath, "pidfile"))
-	if err != nil {
-		log.Error("read-pidfile-failed", err)
-		return nil, err
-	}
-	pid := string(pidBytes)
-
-	rootFSPathFile := filepath.Join("/proc", pid, "root")
+	rootFSPathFile := bndl.RootFS()
 	u, err := r.lookupUser(bndl, rootFSPathFile, spec.User)
 	if err != nil {
 		log.Error("lookup-user-failed", err)

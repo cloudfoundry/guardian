@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -108,7 +107,8 @@ var _ = Describe("ExecPreparer", func() {
 		}
 		bndl = goci.Bundle().WithHostname("some-hostname").
 			WithUIDMappings(uidMappings...).
-			WithGIDMappings(gidMappings...)
+			WithGIDMappings(gidMappings...).
+			WithRootFS("some-rootfs")
 		logger = lagertest.NewTestLogger("test")
 		bundleLoader = new(fakes.FakeBundleLoader)
 		users = new(fakes.FakeUserLookupper)
@@ -125,8 +125,6 @@ var _ = Describe("ExecPreparer", func() {
 
 		users.LookupReturns(&runrunc.ExecUser{}, nil)
 		enver.EnvForReturns([]string{"FOO=bar"})
-
-		Expect(ioutil.WriteFile(filepath.Join(bundlePath, "pidfile"), []byte("999"), 0644)).To(Succeed())
 	})
 
 	JustBeforeEach(func() {
@@ -282,7 +280,7 @@ var _ = Describe("ExecPreparer", func() {
 			It("looks up the user and group IDs of the user in the right rootfs", func() {
 				Expect(users.LookupCallCount()).To(Equal(1))
 				actualRootfsPath, actualUserName := users.LookupArgsForCall(0)
-				Expect(actualRootfsPath).To(Equal(filepath.Join("/proc", "999", "root")))
+				Expect(actualRootfsPath).To(Equal("some-rootfs"))
 				Expect(actualUserName).To(Equal("spiderman"))
 			})
 
@@ -309,15 +307,6 @@ var _ = Describe("ExecPreparer", func() {
 
 				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
 				Expect(err).To(MatchError(ContainSubstring("bang")))
-			})
-		})
-
-		Context("when the pidfile can't be read", func() {
-			It("returns an appropriate error", func() {
-				Expect(os.Remove(filepath.Join(bundlePath, "pidfile"))).To(Succeed())
-
-				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
-				Expect(err).To(MatchError(ContainSubstring("pidfile")))
 			})
 		})
 	})
@@ -400,7 +389,7 @@ var _ = Describe("ExecPreparer", func() {
 					It("creates the working directory", func() {
 						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 						rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
-						Expect(rootfs).To(Equal(filepath.Join("/proc", "999", "root")))
+						Expect(rootfs).To(Equal("some-rootfs"))
 						Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
 						Expect(mode).To(BeNumerically("==", 0755))
 						Expect(recreate).To(BeFalse())
@@ -412,7 +401,7 @@ var _ = Describe("ExecPreparer", func() {
 				Context("when the container is unprivileged", func() {
 					BeforeEach(func() {
 						bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
-							bndl := goci.Bundle()
+							bndl := goci.Bundle().WithRootFS("some-rootfs")
 							bndl.Spec.Linux.UIDMappings = []specs.LinuxIDMapping{{
 								HostID:      1712,
 								ContainerID: 1012,
@@ -430,7 +419,7 @@ var _ = Describe("ExecPreparer", func() {
 					It("creates the working directory as the mapped user", func() {
 						Expect(mkdirer.MkdirAsCallCount()).To(Equal(1))
 						rootfs, uid, gid, mode, recreate, dirs := mkdirer.MkdirAsArgsForCall(0)
-						Expect(rootfs).To(Equal(filepath.Join("/proc", "999", "root")))
+						Expect(rootfs).To(Equal("some-rootfs"))
 						Expect(dirs).To(ConsistOf("/path/to/banana/dir"))
 						Expect(mode).To(BeEquivalentTo(0755))
 						Expect(recreate).To(BeFalse())

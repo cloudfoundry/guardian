@@ -32,10 +32,21 @@ var _ = Describe("Runtime Plugin", func() {
 	})
 
 	Context("when a runtime plugin is provided", func() {
+		var rootfsPath string
+
 		BeforeEach(func() {
 			config.RuntimePluginBin = binaries.RuntimePlugin
 			config.NetworkPluginBin = binaries.NetworkPlugin
-			config.ImagePluginBin = binaries.NoopPlugin
+
+			var err error
+			rootfsPath, err = ioutil.TempDir("", "gqt-runtime-plugin-tests")
+			Expect(err).NotTo(HaveOccurred())
+			config.ImagePluginBin = binaries.ImagePlugin
+			config.ImagePluginExtraArgs = []string{"\"--rootfs-path\"", rootfsPath}
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(rootfsPath)).To(Succeed())
 		})
 
 		Describe("creating a container", func() {

@@ -48,7 +48,7 @@ type OCIRuntime interface {
 }
 
 type PeaCreator interface {
-	CreatePea(log lager.Logger, spec garden.ProcessSpec, ctrBundlePath string) (garden.Process, error)
+	CreatePea(log lager.Logger, spec garden.ProcessSpec, pio garden.ProcessIO, ctrBundlePath string) (garden.Process, error)
 }
 
 type NstarRunner interface {
@@ -152,7 +152,7 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	}
 
 	if spec.Image != (garden.ImageRef{}) {
-		return c.peaCreator.CreatePea(log, spec, path)
+		return c.peaCreator.CreatePea(log, spec, io, path)
 	}
 
 	return c.runtime.Exec(log, path, handle, spec, io)
