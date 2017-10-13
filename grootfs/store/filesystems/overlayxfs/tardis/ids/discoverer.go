@@ -21,10 +21,12 @@ type Discoverer struct {
 	idsPath string
 }
 
-func (i *Discoverer) Alloc(logger lager.Logger) (uint32, error) {
+func (i *Discoverer) Alloc(logger lager.Logger) (projId uint32, err error) {
 	logger = logger.Session("project-id-allocation")
 	logger.Debug("starting")
-	defer logger.Debug("ending")
+	defer func() {
+		logger.Debug("ending", lager.Data{"projectID": projId})
+	}()
 
 	contents, err := ioutil.ReadDir(i.idsPath)
 	if err != nil {

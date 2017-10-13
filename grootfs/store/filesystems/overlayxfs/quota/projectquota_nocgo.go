@@ -4,6 +4,8 @@
 
 package quota
 
+import "code.cloudfoundry.org/lager"
+
 type Quota struct {
 	Size   uint64
 	BCount uint64
@@ -12,7 +14,7 @@ type Quota struct {
 type Control struct {
 }
 
-func NewControl(basePath string) (*Control, error) {
+func NewControl(logger lager.Logger, basePath string) (*Control, error) {
 	return nil, nil
 }
 

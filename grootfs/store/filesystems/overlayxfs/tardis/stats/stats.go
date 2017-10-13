@@ -59,7 +59,7 @@ func listQuotaUsage(logger lager.Logger, imagePath string) (int64, error) {
 	defer logger.Debug("ending")
 
 	imagesPath := filepath.Dir(imagePath)
-	quotaControl, err := quotapkg.NewControl(imagesPath)
+	quotaControl, err := quotapkg.NewControl(logger, imagesPath)
 	if err != nil {
 		logger.Error("creating-quota-control-failed", err)
 		return 0, errorspkg.Wrapf(err, "creating quota control")

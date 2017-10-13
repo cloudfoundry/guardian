@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -632,8 +633,9 @@ func (d *Driver) runTardis(logger lager.Logger, args ...string) (*bytes.Buffer, 
 
 	cmd := exec.Command(d.tardisBinPath, args...)
 	stdoutBuffer := bytes.NewBuffer([]byte{})
-	cmd.Stdout = stdoutBuffer
-	cmd.Stderr = lagregator.NewRelogger(logger)
+	relogger := lagregator.NewRelogger(logger)
+	cmd.Stdout = io.MultiWriter(stdoutBuffer, relogger)
+	cmd.Stderr = relogger
 
 	err := cmd.Run()
 

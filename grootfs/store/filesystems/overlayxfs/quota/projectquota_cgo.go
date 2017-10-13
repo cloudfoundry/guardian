@@ -61,7 +61,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/sirupsen/logrus"
+	"code.cloudfoundry.org/lager"
 )
 
 // Quota limit params - currently we only control blocks hard limit
@@ -73,6 +73,7 @@ type Quota struct {
 // Control - Context to be used by storage driver (e.g. overlay)
 // who wants to apply project quotas to container dirs
 type Control struct {
+	logger            lager.Logger
 	backingFsBlockDev string
 	nextProjectID     uint32
 	quotas            map[string]uint32
@@ -100,7 +101,8 @@ type Control struct {
 // on it. If that works, continue to scan existing containers to map allocated
 // project ids.
 //
-func NewControl(basePath string) (*Control, error) {
+func NewControl(logger lager.Logger, basePath string) (*Control, error) {
+	logger = logger.Session("projectquota")
 	//
 	// Get project id of parent dir as minimal id to be used by driver
 	//
@@ -130,6 +132,7 @@ func NewControl(basePath string) (*Control, error) {
 	}
 
 	q := Control{
+		logger:            logger,
 		backingFsBlockDev: backingFsBlockDev,
 		nextProjectID:     minProjectID + 1,
 		quotas:            make(map[string]uint32),
@@ -143,7 +146,7 @@ func NewControl(basePath string) (*Control, error) {
 		return nil, err
 	}
 
-	logrus.Debugf("NewControl(%s): nextProjectID = %d", basePath, q.nextProjectID)
+	q.logger.Debug("quota-control-created", lager.Data{"basePath": basePath, "projectID": q.nextProjectID})
 	return &q, nil
 }
 
@@ -169,7 +172,7 @@ func (q *Control) SetQuota(nextProjectID uint32, targetPath string, quota Quota)
 	//
 	// set the quota limit for the container's project id
 	//
-	logrus.Debugf("SetQuota(%s, %d): projectID=%d", targetPath, quota.Size, projectID)
+	q.logger.Debug("set-quota", lager.Data{"targetPath": targetPath, "quota": quota.Size, "projectID": projectID})
 	return setProjectQuota(q.backingFsBlockDev, projectID, quota)
 }
 
@@ -228,7 +231,7 @@ func (q *Control) GetQuota(targetPath string, quota *Quota) error {
 }
 
 // GetProjectID - get the project id of path on xfs
-func GetProjectID(targetPath string) (uint32, error) {
+func GetProjectID(targetPath string) (projId uint32, err error) {
 	dir, err := openDir(targetPath)
 	if err != nil {
 		return 0, err

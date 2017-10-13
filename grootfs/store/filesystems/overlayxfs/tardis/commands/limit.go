@@ -37,7 +37,7 @@ var LimitCommand = cli.Command{
 		imagePath := ctx.String("image-path")
 		imagesPath := filepath.Dir(imagePath)
 
-		quotaControl, err := quotapkg.NewControl(imagesPath)
+		quotaControl, err := quotapkg.NewControl(logger, imagesPath)
 		if err != nil {
 			logger.Error("creating-quota-control-failed", err, lager.Data{"imagesPath": imagesPath})
 			return errorspkg.Wrapf(err, "creating xfs quota control %s", imagesPath)
