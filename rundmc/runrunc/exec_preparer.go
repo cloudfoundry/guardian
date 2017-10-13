@@ -3,6 +3,7 @@ package runrunc
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
@@ -45,34 +46,53 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		return nil, err
 	}
 
+	capsToSet := bndl.Capabilities()
+	cwd := spec.Dir
+	username := "root"
+	containerUID := 0
+	containerGID := 0
+
+	pidfileExists := true
 	pidBytes, err := ioutil.ReadFile(filepath.Join(bundlePath, "pidfile"))
-	if err != nil {
+	if err != nil && os.IsNotExist(err) {
+		pidfileExists = false
+		log.Info("pidfile-not-present")
+	} else if err != nil {
 		log.Error("read-pidfile-failed", err)
 		return nil, err
 	}
 	pid := string(pidBytes)
 
-	rootFSPathFile := filepath.Join("/proc", pid, "root")
-	u, err := r.lookupUser(bndl, rootFSPathFile, spec.User)
-	if err != nil {
-		log.Error("lookup-user-failed", err)
-		return nil, err
+	if pidfileExists {
+		rootFSPathFile := filepath.Join("/proc", pid, "root")
+		u, err := r.lookupUser(bndl, rootFSPathFile, spec.User)
+		if err != nil {
+			log.Error("lookup-user-failed", err)
+			return nil, err
+		}
+
+		if cwd == "" {
+			cwd = u.home
+		}
+
+		if err := r.ensureDirExists(rootFSPathFile, cwd, u.hostUid, u.hostGid); err != nil {
+			log.Error("ensure-dir-failed", err)
+			return nil, err
+		}
+
+		if u.containerUid != 0 {
+			capsToSet = intersect(capsToSet, r.nonRootMaxCaps)
+		}
+
+		username = spec.User
+		containerUID = u.containerUid
+		containerGID = u.containerGid
 	}
 
-	cwd := u.home
-	if spec.Dir != "" {
-		cwd = spec.Dir
+	if cwd == "" {
+		cwd = "/"
 	}
 
-	if err := r.ensureDirExists(rootFSPathFile, cwd, u.hostUid, u.hostGid); err != nil {
-		log.Error("ensure-dir-failed", err)
-		return nil, err
-	}
-
-	capsToSet := bndl.Capabilities()
-	if u.containerUid != 0 {
-		capsToSet = intersect(capsToSet, r.nonRootMaxCaps)
-	}
 	var caps *specs.LinuxCapabilities
 	// TODO centralize knowledge of garden -> runc capability schema translation
 	if len(capsToSet) > 0 {
@@ -98,12 +118,12 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		Process: specs.Process{
 			Args:        append([]string{spec.Path}, spec.Args...),
 			ConsoleSize: consoleBox,
-			Env:         r.envDeterminer.EnvFor(u.containerUid, bndl, spec),
+			Env:         r.envDeterminer.EnvFor(containerUID, bndl, spec),
 			User: specs.User{
-				UID:            uint32(u.containerUid),
-				GID:            uint32(u.containerGid),
+				UID:            uint32(containerUID),
+				GID:            uint32(containerGID),
 				AdditionalGids: []uint32{},
-				Username:       spec.User,
+				Username:       username,
 			},
 			Cwd:             cwd,
 			Capabilities:    caps,

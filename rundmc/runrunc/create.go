@@ -16,45 +16,24 @@ import (
 type Creator struct {
 	runcPath      string
 	runcRoot      string
+	runcSubcmd    string
 	commandRunner commandrunner.CommandRunner
 }
 
-func NewCreator(runcPath, runcRoot string, commandRunner commandrunner.CommandRunner) *Creator {
+func NewCreator(runcPath, runcRoot, runcSubcmd string, commandRunner commandrunner.CommandRunner) *Creator {
 	return &Creator{
 		runcPath,
 		runcRoot,
+		runcSubcmd,
 		commandRunner,
 	}
 }
 
-func (c *Creator) Create(log lager.Logger, bundlePath, id string, _ garden.ProcessIO) (theErr error) {
-	log = log.Session("create", lager.Data{"bundle": bundlePath})
-
-	defer log.Info("finished")
-
+func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.ProcessIO) (theErr error) {
 	logFilePath := filepath.Join(bundlePath, "create.log")
 	pidFilePath := filepath.Join(bundlePath, "pidfile")
 
-	globalArgs := []string{
-		"--debug",
-		"--log", logFilePath,
-		"--log-format", "json",
-	}
-
-	createArgs := []string{
-		"create",
-		"--no-new-keyring",
-		"--bundle", bundlePath,
-		"--pid-file", pidFilePath,
-		id,
-	}
-
-	if c.runcRoot != "" {
-		globalArgs = append(globalArgs, []string{"--root", c.runcRoot}...)
-	}
-
-	cmd := exec.Command(c.runcPath, append(globalArgs, createArgs...)...)
-
+	log = log.Session("create", lager.Data{"bundle": bundlePath})
 	log.Info("creating", lager.Data{
 		"runc":        c.runcPath,
 		"runcRoot":    c.runcRoot,
@@ -63,11 +42,30 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, _ garden.Proce
 		"logPath":     logFilePath,
 		"pidFilePath": pidFilePath,
 	})
+	defer log.Info("finished")
 
+	globalArgs := []string{
+		"--debug",
+		"--log", logFilePath,
+		"--log-format", "json",
+	}
+	if c.runcRoot != "" {
+		globalArgs = append(globalArgs, []string{"--root", c.runcRoot}...)
+	}
+	subcmdArgs := []string{
+		c.runcSubcmd,
+		"--no-new-keyring",
+		"--bundle", bundlePath,
+		"--pid-file", pidFilePath,
+		id,
+	}
+	cmd := exec.Command(c.runcPath, append(globalArgs, subcmdArgs...)...)
+	cmd.Stdin = pio.Stdin
+	cmd.Stdout = pio.Stdout
+	cmd.Stderr = pio.Stderr
 	err := c.commandRunner.Run(cmd)
 
 	log.Info("completing")
-
 	defer func() {
 		theErr = processLogs(log, logFilePath, err)
 	}()

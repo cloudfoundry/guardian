@@ -138,136 +138,189 @@ var _ = Describe("ExecPreparer", func() {
 		Expect(os.RemoveAll(bundlePath)).To(Succeed())
 	})
 
-	It("passes a process.json with the correct path and args", func() {
-		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}})
-		Expect(err).NotTo(HaveOccurred())
+	itPreparesTheProcess := func() {
+		It("passes a process.json with the correct path and args", func() {
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{"infinity", "and beyond"}})
+			Expect(err).NotTo(HaveOccurred())
 
-		Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
-	})
-
-	It("returns the host mappings for container root in the returned spec", func() {
-		users.LookupReturns(&runrunc.ExecUser{Uid: 234, Gid: 567}, nil)
-
-		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{}})
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(spec.ContainerRootHostUID).To(BeEquivalentTo(1000))
-		Expect(spec.ContainerRootHostGID).To(BeEquivalentTo(1001))
-	})
-
-	Context("when the bundle has no mappings for host root (container is privileged)", func() {
-		BeforeEach(func() {
-			bndl.Spec.Linux.UIDMappings = nil
-			bndl.Spec.Linux.GIDMappings = nil
+			Expect(spec.Args).To(Equal([]string{"to enlightenment", "infinity", "and beyond"}))
 		})
 
-		It("returns 0 for container root's host UID and GID", func() {
+		It("returns the host mappings for container root in the returned spec", func() {
+			users.LookupReturns(&runrunc.ExecUser{Uid: 234, Gid: 567}, nil)
+
 			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{}})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(spec.ContainerRootHostUID).To(BeEquivalentTo(0))
-			Expect(spec.ContainerRootHostGID).To(BeEquivalentTo(0))
+			Expect(spec.ContainerRootHostUID).To(BeEquivalentTo(1000))
+			Expect(spec.ContainerRootHostGID).To(BeEquivalentTo(1001))
 		})
-	})
 
-	It("passes the correct env", func() {
-		users.LookupReturns(&runrunc.ExecUser{Uid: 234, Gid: 567}, nil)
+		Context("when the bundle has no mappings for host root (container is privileged)", func() {
+			BeforeEach(func() {
+				bndl.Spec.Linux.UIDMappings = nil
+				bndl.Spec.Linux.GIDMappings = nil
+			})
 
-		processSpec := garden.ProcessSpec{ID: "some-id"}
-		preparedSpec, err := preparer.Prepare(logger, bundlePath, processSpec)
-		Expect(err).NotTo(HaveOccurred())
+			It("returns 0 for container root's host UID and GID", func() {
+				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{Path: "to enlightenment", Args: []string{}})
+				Expect(err).NotTo(HaveOccurred())
 
-		Expect(enver.EnvForCallCount()).To(Equal(1))
-		actualUID, actualBndl, actualProcessSpec := enver.EnvForArgsForCall(0)
-		Expect(actualUID).To(Equal(234))
-		Expect(actualBndl).To(Equal(bndl))
-		Expect(actualProcessSpec).To(Equal(processSpec))
-
-		Expect(preparedSpec.Env).To(Equal([]string{"FOO=bar"}))
-	})
-
-	It("sets the rlimits correctly", func() {
-		ptr := func(n uint64) *uint64 { return &n }
-		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-			Limits: garden.ResourceLimits{
-				As:         ptr(12),
-				Core:       ptr(24),
-				Cpu:        ptr(36),
-				Data:       ptr(99),
-				Fsize:      ptr(101),
-				Locks:      ptr(111),
-				Memlock:    ptr(987),
-				Msgqueue:   ptr(777),
-				Nice:       ptr(111),
-				Nofile:     ptr(222),
-				Nproc:      ptr(1234),
-				Rss:        ptr(888),
-				Rtprio:     ptr(254),
-				Sigpending: ptr(101),
-				Stack:      ptr(44),
-			},
+				Expect(spec.ContainerRootHostUID).To(BeEquivalentTo(0))
+				Expect(spec.ContainerRootHostGID).To(BeEquivalentTo(0))
+			})
 		})
-		Expect(err).ToNot(HaveOccurred())
 
-		Expect(spec.Process.Rlimits).To(ConsistOf(
-			specs.POSIXRlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
-			specs.POSIXRlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
-			specs.POSIXRlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
-			specs.POSIXRlimit{Type: "RLIMIT_DATA", Hard: 99, Soft: 99},
-			specs.POSIXRlimit{Type: "RLIMIT_FSIZE", Hard: 101, Soft: 101},
-			specs.POSIXRlimit{Type: "RLIMIT_LOCKS", Hard: 111, Soft: 111},
-			specs.POSIXRlimit{Type: "RLIMIT_MEMLOCK", Hard: 987, Soft: 987},
-			specs.POSIXRlimit{Type: "RLIMIT_MSGQUEUE", Hard: 777, Soft: 777},
-			specs.POSIXRlimit{Type: "RLIMIT_NICE", Hard: 111, Soft: 111},
-			specs.POSIXRlimit{Type: "RLIMIT_NOFILE", Hard: 222, Soft: 222},
-			specs.POSIXRlimit{Type: "RLIMIT_NPROC", Hard: 1234, Soft: 1234},
-			specs.POSIXRlimit{Type: "RLIMIT_RSS", Hard: 888, Soft: 888},
-			specs.POSIXRlimit{Type: "RLIMIT_RTPRIO", Hard: 254, Soft: 254},
-			specs.POSIXRlimit{Type: "RLIMIT_SIGPENDING", Hard: 101, Soft: 101},
-			specs.POSIXRlimit{Type: "RLIMIT_STACK", Hard: 44, Soft: 44},
-		))
-	})
-
-	It("sets a default console size", func() {
-		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-			TTY: &garden.TTYSpec{},
-		})
-		Expect(err).NotTo(HaveOccurred())
-
-		Expect(spec.Process.ConsoleSize.Height).To(BeEquivalentTo(24))
-		Expect(spec.Process.ConsoleSize.Width).To(BeEquivalentTo(80))
-	})
-
-	It("sets console size if a TTY is configured with a WindowSize", func() {
-		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-			TTY: &garden.TTYSpec{
-				WindowSize: &garden.WindowSize{
-					Columns: 25,
-					Rows:    81,
+		It("sets the rlimits correctly", func() {
+			ptr := func(n uint64) *uint64 { return &n }
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+				Limits: garden.ResourceLimits{
+					As:         ptr(12),
+					Core:       ptr(24),
+					Cpu:        ptr(36),
+					Data:       ptr(99),
+					Fsize:      ptr(101),
+					Locks:      ptr(111),
+					Memlock:    ptr(987),
+					Msgqueue:   ptr(777),
+					Nice:       ptr(111),
+					Nofile:     ptr(222),
+					Nproc:      ptr(1234),
+					Rss:        ptr(888),
+					Rtprio:     ptr(254),
+					Sigpending: ptr(101),
+					Stack:      ptr(44),
 				},
-			},
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.Process.Rlimits).To(ConsistOf(
+				specs.POSIXRlimit{Type: "RLIMIT_AS", Hard: 12, Soft: 12},
+				specs.POSIXRlimit{Type: "RLIMIT_CORE", Hard: 24, Soft: 24},
+				specs.POSIXRlimit{Type: "RLIMIT_CPU", Hard: 36, Soft: 36},
+				specs.POSIXRlimit{Type: "RLIMIT_DATA", Hard: 99, Soft: 99},
+				specs.POSIXRlimit{Type: "RLIMIT_FSIZE", Hard: 101, Soft: 101},
+				specs.POSIXRlimit{Type: "RLIMIT_LOCKS", Hard: 111, Soft: 111},
+				specs.POSIXRlimit{Type: "RLIMIT_MEMLOCK", Hard: 987, Soft: 987},
+				specs.POSIXRlimit{Type: "RLIMIT_MSGQUEUE", Hard: 777, Soft: 777},
+				specs.POSIXRlimit{Type: "RLIMIT_NICE", Hard: 111, Soft: 111},
+				specs.POSIXRlimit{Type: "RLIMIT_NOFILE", Hard: 222, Soft: 222},
+				specs.POSIXRlimit{Type: "RLIMIT_NPROC", Hard: 1234, Soft: 1234},
+				specs.POSIXRlimit{Type: "RLIMIT_RSS", Hard: 888, Soft: 888},
+				specs.POSIXRlimit{Type: "RLIMIT_RTPRIO", Hard: 254, Soft: 254},
+				specs.POSIXRlimit{Type: "RLIMIT_SIGPENDING", Hard: 101, Soft: 101},
+				specs.POSIXRlimit{Type: "RLIMIT_STACK", Hard: 44, Soft: 44},
+			))
 		})
-		Expect(err).NotTo(HaveOccurred())
 
-		Expect(spec.Process.ConsoleSize.Width).To(BeEquivalentTo(25))
-		Expect(spec.Process.ConsoleSize.Height).To(BeEquivalentTo(81))
-	})
+		It("sets a default console size", func() {
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+				TTY: &garden.TTYSpec{},
+			})
+			Expect(err).NotTo(HaveOccurred())
 
-	It("sets Terminal to true iff a TTY is configured", func() {
-		spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-			TTY: &garden.TTYSpec{},
+			Expect(spec.Process.ConsoleSize.Height).To(BeEquivalentTo(24))
+			Expect(spec.Process.ConsoleSize.Width).To(BeEquivalentTo(80))
 		})
-		Expect(err).ToNot(HaveOccurred())
 
-		Expect(spec.Process.Terminal).To(BeTrue())
+		It("sets console size if a TTY is configured with a WindowSize", func() {
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+				TTY: &garden.TTYSpec{
+					WindowSize: &garden.WindowSize{
+						Columns: 25,
+						Rows:    81,
+					},
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
 
-		spec, err = preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
-			TTY: nil,
+			Expect(spec.Process.ConsoleSize.Width).To(BeEquivalentTo(25))
+			Expect(spec.Process.ConsoleSize.Height).To(BeEquivalentTo(81))
 		})
-		Expect(err).ToNot(HaveOccurred())
 
-		Expect(spec.Process.Terminal).To(BeFalse())
-	})
+		It("sets Terminal to true iff a TTY is configured", func() {
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+				TTY: &garden.TTYSpec{},
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.Process.Terminal).To(BeTrue())
+
+			spec, err = preparer.Prepare(logger, bundlePath, garden.ProcessSpec{
+				TTY: nil,
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			Expect(spec.Process.Terminal).To(BeFalse())
+		})
+
+		Context("when the bundle can't be loaded", func() {
+			JustBeforeEach(func() {
+				bundleLoader.LoadReturns(goci.Bundle(), errors.New("whoa! Hold them horses!"))
+			})
+
+			It("fails", func() {
+				_, err := preparer.Prepare(logger, bundlePath,
+					garden.ProcessSpec{User: "spiderman"})
+				Expect(err).To(MatchError(ContainSubstring("Hold them horses")))
+			})
+		})
+
+		Context("when the container has capabilities", func() {
+			BeforeEach(func() {
+				bndl := goci.Bundle()
+				bndl = bndl.WithCapabilities("foo", "bar", "baz")
+				bundleLoader.LoadReturns(bndl, nil)
+			})
+
+			Context("and the user is root", func() {
+				It("passes them on to the process", func() {
+					spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+					Expect(err).NotTo(HaveOccurred())
+					Expect(spec.Process.Capabilities.Effective).To(BeEmpty())
+					Expect(spec.Process.Capabilities.Bounding).To(Equal([]string{"foo", "bar", "baz"}))
+					Expect(spec.Process.Capabilities.Inheritable).To(Equal([]string{"foo", "bar", "baz"}))
+					Expect(spec.Process.Capabilities.Permitted).To(Equal([]string{"foo", "bar", "baz"}))
+					Expect(spec.Process.Capabilities.Ambient).To(BeEmpty())
+				})
+			})
+
+		})
+
+		Context("when the container has no capabilities", func() {
+			BeforeEach(func() {
+				bndl := goci.Bundle()
+				bundleLoader.LoadReturns(bndl, nil)
+			})
+
+			It("does not set the capabilities object on the process", func() {
+				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(spec.Process.Capabilities).To(BeNil())
+			})
+		})
+
+		Context("when an ApparmorProfile is defined in the base process", func() {
+			BeforeEach(func() {
+				bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
+					bndl := goci.Bundle()
+					bndl = bndl.WithProcess(specs.Process{
+						ApparmorProfile: "default-profile",
+					})
+					return bndl, nil
+				}
+			})
+
+			It("should pass it to the process spec", func() {
+				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
+				Expect(err).ToNot(HaveOccurred())
+
+				Expect(spec.Process.ApparmorProfile).To(Equal("default-profile"))
+			})
+		})
+	}
+
+	itPreparesTheProcess()
 
 	Describe("passing the correct uid and gid", func() {
 		Context("when the bundle can be loaded", func() {
@@ -290,82 +343,50 @@ var _ = Describe("ExecPreparer", func() {
 				Expect(spec.Process.User).To(Equal(specs.User{Username: "spiderman", UID: 9, GID: 7, AdditionalGids: []uint32{}}))
 			})
 		})
-
-		Context("when the bundle can't be loaded", func() {
-			JustBeforeEach(func() {
-				bundleLoader.LoadReturns(goci.Bundle(), errors.New("whoa! Hold them horses!"))
-			})
-
-			It("fails", func() {
-				_, err := preparer.Prepare(logger, bundlePath,
-					garden.ProcessSpec{User: "spiderman"})
-				Expect(err).To(MatchError(ContainSubstring("Hold them horses")))
-			})
-		})
-
-		Context("when User Lookup returns an error", func() {
-			It("passes a process.json with the correct user and group ids", func() {
-				users.LookupReturns(&runrunc.ExecUser{Uid: 0, Gid: 0}, errors.New("bang"))
-
-				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
-				Expect(err).To(MatchError(ContainSubstring("bang")))
-			})
-		})
-
-		Context("when the pidfile can't be read", func() {
-			It("returns an appropriate error", func() {
-				Expect(os.Remove(filepath.Join(bundlePath, "pidfile"))).To(Succeed())
-
-				_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
-				Expect(err).To(MatchError(ContainSubstring("pidfile")))
-			})
-		})
 	})
 
-	Context("when the container has capabilities", func() {
+	It("returns the environment, calling EnvDeterminer with the looked-up UID", func() {
+		users.LookupReturns(&runrunc.ExecUser{Uid: 234, Gid: 0}, nil)
+
+		processSpec := garden.ProcessSpec{ID: "some-id"}
+		preparedSpec, err := preparer.Prepare(logger, bundlePath, processSpec)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(enver.EnvForCallCount()).To(Equal(1))
+		actualUID, actualBndl, actualProcessSpec := enver.EnvForArgsForCall(0)
+		Expect(actualUID).To(Equal(234))
+		Expect(actualBndl).To(Equal(bndl))
+		Expect(actualProcessSpec).To(Equal(processSpec))
+
+		Expect(preparedSpec.Env).To(Equal([]string{"FOO=bar"}))
+	})
+
+	Context("when the container has capabilities and the user is not root", func() {
 		BeforeEach(func() {
 			bndl := goci.Bundle()
 			bndl = bndl.WithCapabilities("foo", "bar", "baz")
 			bundleLoader.LoadReturns(bndl, nil)
 		})
 
-		Context("and the user is root", func() {
-			It("passes them on to the process", func() {
-				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(spec.Process.Capabilities.Effective).To(BeEmpty())
-				Expect(spec.Process.Capabilities.Bounding).To(Equal([]string{"foo", "bar", "baz"}))
-				Expect(spec.Process.Capabilities.Inheritable).To(Equal([]string{"foo", "bar", "baz"}))
-				Expect(spec.Process.Capabilities.Permitted).To(Equal([]string{"foo", "bar", "baz"}))
-				Expect(spec.Process.Capabilities.Ambient).To(BeEmpty())
-			})
-		})
+		It("removes any caps not in nonRootMaxCaps list", func() {
+			users.LookupReturns(&runrunc.ExecUser{Uid: 1234, Gid: 0}, nil)
+			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
 
-		Context("and the user is not root", func() {
-			It("removes any caps not in nonRootMaxCaps list", func() {
-				users.LookupReturns(&runrunc.ExecUser{Uid: 1234, Gid: 0}, nil)
-				spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
-
-				Expect(err).NotTo(HaveOccurred())
-				Expect(spec.Process.Capabilities.Effective).To(BeEmpty())
-				Expect(spec.Process.Capabilities.Bounding).To(Equal([]string{"foo", "bar"}))
-				Expect(spec.Process.Capabilities.Inheritable).To(Equal([]string{"foo", "bar"}))
-				Expect(spec.Process.Capabilities.Permitted).To(Equal([]string{"foo", "bar"}))
-				Expect(spec.Process.Capabilities.Ambient).To(BeEmpty())
-			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(spec.Process.Capabilities.Effective).To(BeEmpty())
+			Expect(spec.Process.Capabilities.Bounding).To(Equal([]string{"foo", "bar"}))
+			Expect(spec.Process.Capabilities.Inheritable).To(Equal([]string{"foo", "bar"}))
+			Expect(spec.Process.Capabilities.Permitted).To(Equal([]string{"foo", "bar"}))
+			Expect(spec.Process.Capabilities.Ambient).To(BeEmpty())
 		})
 	})
 
-	Context("when the container has no capabilities", func() {
-		BeforeEach(func() {
-			bndl := goci.Bundle()
-			bundleLoader.LoadReturns(bndl, nil)
-		})
+	Context("when User Lookup returns an error", func() {
+		It("passes a process.json with the correct user and group ids", func() {
+			users.LookupReturns(&runrunc.ExecUser{Uid: 0, Gid: 0}, errors.New("bang"))
 
-		It("does not set the capabilities object on the process", func() {
-			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
-			Expect(err).NotTo(HaveOccurred())
-			Expect(spec.Process.Capabilities).To(BeNil())
+			_, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
+			Expect(err).To(MatchError(ContainSubstring("bang")))
 		})
 	})
 
@@ -490,22 +511,39 @@ var _ = Describe("ExecPreparer", func() {
 		})
 	})
 
-	Context("when an ApparmorProfile is defined in the base process", func() {
+	Context("when the pidfile can't be read", func() {
 		BeforeEach(func() {
-			bundleLoader.LoadStub = func(path string) (goci.Bndl, error) {
-				bndl := goci.Bundle()
-				bndl = bndl.WithProcess(specs.Process{
-					ApparmorProfile: "default-profile",
-				})
-				return bndl, nil
-			}
+			Expect(os.Remove(filepath.Join(bundlePath, "pidfile"))).To(Succeed())
 		})
 
-		It("should pass it to the process spec", func() {
-			spec, err := preparer.Prepare(logger, bundlePath, garden.ProcessSpec{})
-			Expect(err).ToNot(HaveOccurred())
+		itPreparesTheProcess()
 
-			Expect(spec.Process.ApparmorProfile).To(Equal("default-profile"))
+		Describe("UID and GID", func() {
+			Context("when the bundle can be loaded", func() {
+				JustBeforeEach(func() {
+					var err error
+					spec, err = preparer.Prepare(logger, bundlePath, garden.ProcessSpec{User: "spiderman"})
+					Expect(err).ToNot(HaveOccurred())
+				})
+
+				It("passes a process.json with UID 0 and GID 0", func() {
+					Expect(spec.Process.User).To(Equal(specs.User{Username: "root", UID: 0, GID: 0, AdditionalGids: []uint32{}}))
+				})
+			})
+		})
+
+		It("returns the environment, calling EnvDeterminer with UID 0", func() {
+			processSpec := garden.ProcessSpec{ID: "some-id"}
+			preparedSpec, err := preparer.Prepare(logger, bundlePath, processSpec)
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(enver.EnvForCallCount()).To(Equal(1))
+			actualUID, actualBndl, actualProcessSpec := enver.EnvForArgsForCall(0)
+			Expect(actualUID).To(Equal(0))
+			Expect(actualBndl).To(Equal(bndl))
+			Expect(actualProcessSpec).To(Equal(processSpec))
+
+			Expect(preparedSpec.Env).To(Equal([]string{"FOO=bar"}))
 		})
 	})
 })
