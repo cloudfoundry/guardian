@@ -443,7 +443,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 						ID:           randomImageID,
 						Mount:        mountByDefault(),
 					})
-					Expect(err).To(MatchError(ContainSubstring("authorization failed: username and password are invalid")))
+					Expect(err).To(MatchError(ContainSubstring("unable to retrieve auth token: invalid username/password")))
 				})
 			})
 
