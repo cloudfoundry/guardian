@@ -110,6 +110,23 @@ var _ = Describe("Clean", func() {
 				Expect(afterDir).To(MatchRegexp(`%s-\d+`, hex.EncodeToString(afterContentsSha[:32])))
 			})
 
+			It("removes their associated metadata", func() {
+				preContents, err := filepath.Glob(filepath.Join(StorePath, store.MetaDirName, "volume-*"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(preContents).To(HaveLen(2))
+
+				_, err = Runner.Clean(0)
+				Expect(err).NotTo(HaveOccurred())
+
+				afterContents, err := filepath.Glob(filepath.Join(StorePath, store.MetaDirName, "volume-*"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(afterContents).To(HaveLen(1))
+
+				volumeMeta := afterContents[0]
+				afterContentsSha := sha256.Sum256([]byte(baseImagePath))
+				Expect(volumeMeta).To(MatchRegexp(`volume-%s-\d+`, hex.EncodeToString(afterContentsSha[:32])))
+			})
+
 			Context("and a cache size is set", func() {
 				var cacheSizeInBytes int64
 

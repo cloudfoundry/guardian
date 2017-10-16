@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -62,7 +61,7 @@ func (g *GarbageCollector) MarkUnused(logger lager.Logger, unusedVolumes []strin
 			continue
 		}
 
-		gcVolID := fmt.Sprintf("gc.%s.%d", volID, time.Now().UnixNano())
+		gcVolID := fmt.Sprintf("gc.%s", volID)
 		gcVolumePath := strings.Replace(volumePath, volID, gcVolID, 1)
 		if err := g.volumeDriver.MoveVolume(logger, volumePath, gcVolumePath); err != nil {
 			errorMessages = append(errorMessages, errorspkg.Wrap(err, "moving-volume").Error())
