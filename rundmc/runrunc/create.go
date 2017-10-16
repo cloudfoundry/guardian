@@ -61,13 +61,13 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 
 	log.Info("completing")
 	defer func() {
-		theErr = processLogs(log, logFilePath, err)
+		theErr = processLogs(log, c.runcSubcmd, logFilePath, err)
 	}()
 
 	return
 }
 
-func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error {
+func processLogs(log lager.Logger, runcSubcmd string, logFilePath string, upstreamErr error) error {
 	logReader, err := os.OpenFile(logFilePath, os.O_RDONLY, 0644)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -87,7 +87,7 @@ func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error 
 	logging.ForwardRuncLogsToLager(log, "runc", buff)
 
 	if upstreamErr != nil {
-		return logging.WrapWithErrorFromLastLogLine("runc create", upstreamErr, buff)
+		return logging.WrapWithErrorFromLastLogLine(fmt.Sprintf("runc %s", runcSubcmd), upstreamErr, buff)
 	}
 
 	return nil

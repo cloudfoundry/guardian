@@ -3,7 +3,6 @@ package logging_test
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"io"
 	"strings"
 
@@ -85,7 +84,7 @@ var _ = Describe("WrapWithErrorFromLastLogLine", func() {
 	)
 
 	JustBeforeEach(func() {
-		wrappedErr = logging.WrapWithErrorFromLastLogLine("a tag", errors.New("some-err"), runcLogs)
+		wrappedErr = logging.WrapWithErrorFromLastLogLine("a tag", myError{}, runcLogs)
 	})
 
 	Context("when the logs are valid json", func() {
@@ -96,6 +95,10 @@ var _ = Describe("WrapWithErrorFromLastLogLine", func() {
 
 		It("returns an error containing the last runc log message", func() {
 			Expect(wrappedErr).To(MatchError("a tag: some-err: message 2"))
+		})
+
+		It("preserves the cause", func() {
+			Expect(wrappedErr.(logging.WrappedError).Underlying).To(Equal(myError{}))
 		})
 	})
 
@@ -115,4 +118,10 @@ func lagerMessage(line string) string {
 	var lagerLine struct{ Data struct{ Message string } }
 	Expect(json.Unmarshal([]byte(line), &lagerLine)).To(Succeed())
 	return lagerLine.Data.Message
+}
+
+type myError struct{}
+
+func (myError) Error() string {
+	return "some-err"
 }

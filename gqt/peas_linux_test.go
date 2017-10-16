@@ -1,6 +1,7 @@
 package gqt_test
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -82,6 +83,25 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		Eventually(stdout).Should(gbytes.Say("hello"))
+	})
+
+	It("Process.Wait() returns the process exit code", func() {
+		ctr, err := gdn.Create(garden.ContainerSpec{})
+		Expect(err).NotTo(HaveOccurred())
+		proc, err := ctr.Run(garden.ProcessSpec{
+			Path:  "sh",
+			Args:  []string{"-c", "exit 123"},
+			Image: garden.ImageRef{URI: "raw://" + defaultTestRootFS},
+		}, garden.ProcessIO{
+			Stdin:  bytes.NewBuffer(nil),
+			Stdout: GinkgoWriter,
+			Stderr: GinkgoWriter,
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		procExitCode, err := proc.Wait()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(procExitCode).To(Equal(123))
 	})
 })
 

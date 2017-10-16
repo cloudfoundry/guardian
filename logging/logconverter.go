@@ -26,6 +26,16 @@ func ForwardRuncLogsToLager(log lager.Logger, tag string, logfileContent []byte)
 	}
 }
 
+type WrappedError struct {
+	tag             string
+	lastRuncLogLine string
+	Underlying      error
+}
+
+func (e WrappedError) Error() string {
+	return fmt.Sprintf("%s: %s: %s", e.tag, e.Underlying, e.lastRuncLogLine)
+}
+
 func WrapWithErrorFromLastLogLine(tag string, originalError error, logfileContent []byte) error {
 	msg := lastNonEmptyLine(logfileContent)
 	var line logLine
@@ -33,7 +43,7 @@ func WrapWithErrorFromLastLogLine(tag string, originalError error, logfileConten
 		msg = []byte(line.Msg)
 	}
 
-	return fmt.Errorf("%s: %s: %s", tag, originalError, msg)
+	return WrappedError{Underlying: originalError, tag: tag, lastRuncLogLine: string(msg)}
 }
 
 func lastNonEmptyLine(content []byte) []byte {

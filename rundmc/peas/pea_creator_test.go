@@ -4,10 +4,13 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
@@ -59,9 +62,12 @@ var _ = Describe("PeaCreator", func() {
 	})
 
 	Describe("pea creation succeeding", func() {
-		var peaID string
-		var process garden.Process
-		var waitErr error
+		var (
+			peaID    string
+			process  garden.Process
+			exitCode int
+			waitErr  error
+		)
 
 		BeforeEach(func() {
 			peaID = "some-pea"
@@ -74,7 +80,7 @@ var _ = Describe("PeaCreator", func() {
 				Image: garden.ImageRef{URI: "raw://" + rootfsPath},
 			}, garden.ProcessIO{}, ctrBundleDir)
 			Expect(err).NotTo(HaveOccurred())
-			_, waitErr = process.Wait()
+			exitCode, waitErr = process.Wait()
 		})
 
 		It("creates the bundle directory", func() {
@@ -137,6 +143,23 @@ var _ = Describe("PeaCreator", func() {
 				processDirs, err := ioutil.ReadDir(filepath.Join(ctrBundleDir, "processes"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(processDirs).To(HaveLen(1))
+			})
+		})
+
+		Context("when container creation succeeds and user process exits with non-zero code", func() {
+			BeforeEach(func() {
+				cmdThatFails := exec.Command("bash", "-c", "exit 42")
+				if runtime.GOOS == "windows" {
+					cmdThatFails = exec.Command("cmd", "/c", "exit 42")
+				}
+
+				realExitErr := cmdThatFails.Run()
+				containerCreator.CreateReturns(logging.WrappedError{Underlying: realExitErr})
+			})
+
+			It("process.Wait returns the container creation error", func() {
+				Expect(waitErr).NotTo(HaveOccurred())
+				Expect(exitCode).To(Equal(42))
 			})
 		})
 

@@ -4,10 +4,13 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
@@ -86,12 +89,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 
 	peaRunDone := make(chan error)
 	go func(runcDone chan<- error) {
-		err := p.ContainerCreator.Create(log, peaBundlePath, processID, procIO)
-		if err != nil {
-			wrappedErr := errorwrapper.Wrap(err, "creating-partially-shared-container")
-			log.Error("creating-partially-shared-container", wrappedErr)
-		}
-		runcDone <- err
+		runcDone <- p.ContainerCreator.Create(log, peaBundlePath, processID, procIO)
 	}(peaRunDone)
 
 	return &pearocess{id: processID, doneCh: peaRunDone}, nil
@@ -116,8 +114,17 @@ type pearocess struct {
 func (p pearocess) ID() string { return p.id }
 
 func (p pearocess) Wait() (int, error) {
-	// Exit code not yet supported for peas.
-	return 0, <-p.doneCh
+	runcRunErr := <-p.doneCh
+	if runcRunErr == nil {
+		return 0, nil
+	}
+	if wrappedErr, ok := runcRunErr.(logging.WrappedError); ok {
+		if exitErr, ok := wrappedErr.Underlying.(*exec.ExitError); ok {
+			return exitErr.Sys().(syscall.WaitStatus).ExitStatus(), nil
+		}
+	}
+
+	return -1, runcRunErr
 }
 
 func (p pearocess) SetTTY(garden.TTYSpec) error { return nil }
