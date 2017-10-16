@@ -229,9 +229,9 @@ var _ = Describe("Driver", func() {
 				Expect(os.Remove(metaFilePath)).To(Succeed())
 			})
 
-			It("logs the occurence but doesn't fail", func() {
+			It("logs the occurence and errors", func() {
 				_, err := driver.CreateImage(logger, spec)
-				Expect(err).ToNot(HaveOccurred())
+				Expect(err).To(MatchError(ContainSubstring("calculating base volume size for volume")))
 				Eventually(logger).Should(gbytes.Say("calculating-base-volume-size-failed"))
 			})
 		})

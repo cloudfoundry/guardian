@@ -487,6 +487,7 @@ func (d *Driver) getLowerDirs(logger lager.Logger, volumeIDs []string) ([]string
 		volumeSize, err := d.VolumeSize(logger, volumeIDs[i])
 		if err != nil {
 			logger.Error("calculating-base-volume-size-failed", err, lager.Data{"volumeID": volumeIDs[i]})
+			return nil, 0, errorspkg.Wrapf(err, "calculating base volume size for volume %s", volumeIDs[i])
 		}
 		totalVolumeSize += volumeSize
 
