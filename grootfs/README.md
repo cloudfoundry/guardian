@@ -396,10 +396,12 @@ e.g. Datadog.
 | Metric Name | Units | Description |
 |---|---|---|
 | `ImageCreationTime` | nanos | Total duration of Image Creation |
-| `UnpackTime` | nanos | Total time taken to unpack the base image tarball |
-| `FailedUnpackTime` | nanos | Same as above but emitted on failure |
+| `UnpackTime` | nanos | Total time taken to unpack a layer |
+| `DownloadTime` | nanos | Total time taken to download a layer |
 | `StoreUsage` | bytes | Total bytes in use in the Store at the end of the command |
-| `LockingTime` | nanos | Total time the store lock is held by the command |
+| `UnusedLayersSize` | bytes | Total bytes taken up by unused layers at the end of the command |
+| `SharedLockingTime` | nanos | Total time the shared store lock is held by the command |
+| `ExclusiveLockingTime` | nanos | Total time the exclusive store lock is held by the command |
 | `grootfs-create.run` | int | Cumulative count of Create executions |
 | `grootfs-create.fail` | int | Cumulative count of failed Create executions |
 | `grootfs-create.success` | int | Cumulative count of successful Create executions |
@@ -410,7 +412,8 @@ e.g. Datadog.
 |---|---|---|
 | `ImageCleanTime` | nanos | Total duration of Clean |
 | `StoreUsage` | bytes | Total bytes in use in the Store at the end of the command |
-| `LockingTime` | nanos | Total time the store lock is held by the command |
+| `UnusedLayersSize` | bytes | Total bytes taken up by unused layers at the end of the command |
+| `ExclusiveLockingTime` | nanos | Total time the exclusive store lock is held by the command |
 | `grootfs-clean.run` | int | Cumulative count of Clean executions |
 | `grootfs-clean.fail` | int | Cumulative count of failed Clean executions |
 | `grootfs-clean.success` | int | Cumulative count of successful Clean executions |
@@ -420,6 +423,7 @@ e.g. Datadog.
 | Metric Name | Units | Description |
 |---|---|---|
 | `ImageDeletionTime` | nanos | Total duration of Image Deletion |
+| `UnusedLayersSize` | bytes | Total bytes taken up by unused layers at the end of the command |
 | `grootfs-delete.run` | int | Cumulative count of Delete executions |
 | `grootfs-delete.fail` | int | Cumulative count of failed Delete executions |
 | `grootfs-delete.success` | int | Cumulative count of successful Delete executions |

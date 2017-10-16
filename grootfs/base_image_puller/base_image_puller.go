@@ -21,7 +21,6 @@ import (
 const BaseImageReferenceFormat = "baseimage:%s"
 const MetricsUnpackTimeName = "UnpackTime"
 const MetricsDownloadTimeName = "DownloadTime"
-const MetricsFailedUnpackTimeName = "FailedUnpackTime"
 
 //go:generate counterfeiter . Fetcher
 //go:generate counterfeiter . Unpacker
