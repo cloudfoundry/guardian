@@ -31,7 +31,7 @@ var _ = Describe("Debug Endpoint", func() {
 			return strings.TrimSpace(string(out))
 		}
 
-		Eventually(netstat).ShouldNot(ContainSubstring("tcp"))
+		Eventually(netstat, "10s").ShouldNot(ContainSubstring("tcp"))
 	})
 
 	Context("when garden is started with debug address", func() {
