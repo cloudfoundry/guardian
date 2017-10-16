@@ -31,14 +31,11 @@ var _ = Describe("Dadoo", func() {
 		bundlePath  string
 		bundle      goci.Bndl
 		bundleSaver = &goci.BundleSaver{}
-		runcRoot    string
 	)
 
 	BeforeEach(func() {
 		cgroupsRoot = filepath.Join(os.TempDir(), fmt.Sprintf("dadoo-tests-cgroups-%d", GinkgoParallelNode()))
 		Expect(setupCgroups(cgroupsRoot)).To(Succeed())
-
-		runcRoot = "/run/runc"
 
 		var err error
 		bundlePath, err = ioutil.TempDir("", "dadoobundlepath")
@@ -140,7 +137,7 @@ var _ = Describe("Dadoo", func() {
 
 		JustBeforeEach(func() {
 			// hangs if GinkgoWriter is attached
-			cmd := exec.Command("runc", "--root", runcRoot, "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
+			cmd := exec.Command("runc", "create", "--no-new-keyring", "--bundle", bundlePath, filepath.Base(bundlePath))
 			Expect(cmd.Run()).To(Succeed())
 		})
 
@@ -150,7 +147,7 @@ var _ = Describe("Dadoo", func() {
 			Expect(runcLogFile.Close()).To(Succeed())
 			fmt.Print(string(runcLogFileContents))
 
-			cmd := exec.Command("runc", "--root", runcRoot, "delete", filepath.Base(bundlePath))
+			cmd := exec.Command("runc", "delete", filepath.Base(bundlePath))
 			Expect(cmd.Run()).To(Succeed())
 		})
 
@@ -317,36 +314,6 @@ var _ = Describe("Dadoo", func() {
 
 				close(done)
 			}, 10.0)
-
-			Context("when the -runc-root flag is passed", func() {
-				BeforeEach(func() {
-					runcRoot = "/tmp/runc"
-				})
-
-				It("uses the provided value as the runc root dir", func() {
-					processSpec, err := json.Marshal(&specs.Process{
-						Args:        []string{"/bin/sh", "-c", "exit 0"},
-						Cwd:         "/",
-						ConsoleSize: &specs.Box{},
-					})
-					Expect(err).NotTo(HaveOccurred())
-
-					cmd := exec.Command(dadooBinPath, "-runc-root", runcRoot, "exec", "runc", processDir, filepath.Base(bundlePath))
-					cmd.Stdin = bytes.NewReader(processSpec)
-					cmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
-
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					openIOPipes()
-
-					matches, err := filepath.Glob("/tmp/runc/*/state.json")
-					Expect(err).NotTo(HaveOccurred())
-
-					Expect(len(matches)).To(Equal(1))
-
-					Eventually(sess).Should(gexec.Exit(0))
-				})
-			})
 
 			It("should write the container's output to the named pipes inside the process dir", func() {
 				spec := specs.Process{

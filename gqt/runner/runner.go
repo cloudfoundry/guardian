@@ -32,6 +32,7 @@ type GdnRunnerConfig struct {
 
 	Socket2meBin        string
 	Socket2meSocketPath string
+	RuncRoot            string
 
 	// Garden config
 	GdnBin                   string
@@ -78,7 +79,6 @@ type GdnRunnerConfig struct {
 	InsecureDockerRegistry         string   `flag:"insecure-docker-registry"`
 	AllowHostAccess                *bool    `flag:"allow-host-access"`
 	SkipSetup                      *bool    `flag:"skip-setup"`
-	RuncRoot                       string   `flag:"runc-root"`
 	UIDMapStart                    *uint32  `flag:"uid-map-start"`
 	UIDMapLength                   *uint32  `flag:"uid-map-length"`
 	GIDMapStart                    *uint32  `flag:"gid-map-start"`
@@ -244,6 +244,14 @@ func NewGardenRunner(config GdnRunnerConfig) *GardenRunner {
 			fmt.Sprintf("TMP=%s", runner.TmpDir),
 		}...,
 	)
+	if config.RuncRoot != "" {
+		runner.Command.Env = append(
+			os.Environ(),
+			[]string{
+				fmt.Sprintf("XDG_RUNTIME_DIR=%s", config.RuncRoot),
+			}...,
+		)
+	}
 	setUserCredential(runner)
 
 	runner.Setup()

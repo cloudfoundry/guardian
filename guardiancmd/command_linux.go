@@ -163,7 +163,7 @@ func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot strin
 		ovenCleaner)
 }
 
-func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath, runcRoot string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *dadoo.ExecRunner {
+func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *dadoo.ExecRunner {
 
 	pidFileReader := &dadoo.PidFileReader{
 		Clock:         clock.NewClock(),
@@ -174,7 +174,6 @@ func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath, runcRoot string, p
 	return dadoo.NewExecRunner(
 		dadooPath,
 		runcPath,
-		runcRoot,
 		processIDGen,
 		pidFileReader,
 		commandRunner,

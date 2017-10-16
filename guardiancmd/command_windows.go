@@ -48,7 +48,7 @@ func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot strin
 	return gardener.NoopVolumeCreator{}
 }
 
-func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath, runcRoot string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *execrunner.DirectExecRunner {
+func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *execrunner.DirectExecRunner {
 	return &execrunner.DirectExecRunner{
 		RuntimePath:   runcPath,
 		CommandRunner: windows_command_runner.New(false),

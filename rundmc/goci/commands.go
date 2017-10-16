@@ -3,20 +3,11 @@ package goci
 import "os/exec"
 
 // The DefaultRuncBinary, i.e. 'runc'.
-var DefaultRuncBinary = RuncBinary{Path: "runc", Root: ""}
+var DefaultRuncBinary = RuncBinary{Path: "runc"}
 
 // RuncBinary is the path to a runc binary.
 type RuncBinary struct {
 	Path string
-	Root string
-}
-
-func (runc RuncBinary) args(args ...string) []string {
-	var base []string
-	if runc.Root != "" {
-		base = append(base, "--root", runc.Root)
-	}
-	return append(base, args...)
 }
 
 // StartCommand creates a start command using the default runc binary name.
@@ -61,7 +52,7 @@ func (runc RuncBinary) StartCommand(path, id string, detach bool, log string) *e
 
 	args = append(args, id)
 
-	cmd := exec.Command(runc.Path, runc.args(args...)...)
+	cmd := exec.Command(runc.Path, args...)
 	cmd.Dir = path
 	return cmd
 }
@@ -70,37 +61,37 @@ func (runc RuncBinary) StartCommand(path, id string, detach bool, log string) *e
 // in a running container.
 func (runc RuncBinary) ExecCommand(id, processJSONPath, pidFilePath string) *exec.Cmd {
 	return exec.Command(
-		runc.Path, runc.args("exec", id, "--pid-file", pidFilePath, "-p", processJSONPath)...,
+		runc.Path, []string{"exec", id, "--pid-file", pidFilePath, "-p", processJSONPath}...,
 	)
 }
 
 // EventsCommand returns an *exec.Cmd that, when run, will retrieve events for the container
 func (runc RuncBinary) EventsCommand(id string) *exec.Cmd {
-	return exec.Command(runc.Path, runc.args("events", id)...)
+	return exec.Command(runc.Path, []string{"events", id}...)
 }
 
 // KillCommand returns an *exec.Cmd that, when run, will signal the running
 // container.
 func (runc RuncBinary) KillCommand(id, signal, logFile string) *exec.Cmd {
 	return exec.Command(
-		runc.Path, runc.args("--debug", "--log", logFile, "--log-format", "json", "kill", id, signal)...,
+		runc.Path, []string{"--debug", "--log", logFile, "--log-format", "json", "kill", id, signal}...,
 	)
 }
 
 // StateCommand returns an *exec.Cmd that, when run, will get the state of the
 // container.
 func (runc RuncBinary) StateCommand(id, logFile string) *exec.Cmd {
-	return exec.Command(runc.Path, runc.args("--debug", "--log", logFile, "--log-format", "json", "state", id)...)
+	return exec.Command(runc.Path, []string{"--debug", "--log", logFile, "--log-format", "json", "state", id}...)
 }
 
 // StatsCommand returns an *exec.Cmd that, when run, will get the stats of the
 // container.
 func (runc RuncBinary) StatsCommand(id, logFile string) *exec.Cmd {
-	return exec.Command(runc.Path, runc.args("--debug", "--log", logFile, "--log-format", "json", "events", "--stats", id)...)
+	return exec.Command(runc.Path, []string{"--debug", "--log", logFile, "--log-format", "json", "events", "--stats", id}...)
 }
 
 // DeleteCommand returns an *exec.Cmd that, when run, will signal the running
 // container.
 func (runc RuncBinary) DeleteCommand(id, logFile string) *exec.Cmd {
-	return exec.Command(runc.Path, runc.args("--debug", "--log", logFile, "--log-format", "json", "delete", id)...)
+	return exec.Command(runc.Path, []string{"--debug", "--log", logFile, "--log-format", "json", "delete", id}...)
 }

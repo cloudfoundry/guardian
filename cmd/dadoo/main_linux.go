@@ -35,7 +35,6 @@ func main() {
 func run() int {
 	tty := flag.Bool("tty", false, "tty requested")
 	socketDirPath := flag.String("socket-dir-path", "", "path to a dir in which to store console sockets")
-	runcRoot := flag.String("runc-root", "", "root directory for storage of container state (this should be located in tmpfs)")
 	flag.Parse()
 
 	runtime := flag.Args()[1] // e.g. runc
@@ -70,9 +69,6 @@ func run() int {
 	ioWg := &sync.WaitGroup{}
 	var runcExecCmd *exec.Cmd
 	runtimeArgs := []string{"--debug", "--log", logFile, "--log-format", "json"}
-	if *runcRoot != "" {
-		runtimeArgs = append(runtimeArgs, "--root", *runcRoot)
-	}
 	runtimeArgs = append(runtimeArgs, "exec", "-d", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "--pid-file", pidFilePath)
 	if *tty {
 		winsz, err := openFile(filepath.Join(processStateDir, "winsz"), os.O_RDWR)

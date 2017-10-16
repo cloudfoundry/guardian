@@ -24,9 +24,8 @@ import (
 
 var _ = Describe("rootless containers", func() {
 	var (
-		client      *runner.RunningGarden
-		runcRootDir string
-		imagePath   string
+		client    *runner.RunningGarden
+		imagePath string
 	)
 
 	BeforeEach(func() {
@@ -55,8 +54,9 @@ var _ = Describe("rootless containers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 
-		runcRootDir, err = ioutil.TempDir(tmpDir, "runcRootDir")
+		runcRootDir, err := ioutil.TempDir(tmpDir, "runcRootDir")
 		Expect(err).NotTo(HaveOccurred())
+
 		imagePath, err = ioutil.TempDir(tmpDir, "rootlessImagePath")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -81,8 +81,8 @@ var _ = Describe("rootless containers", func() {
 		config.UIDMapLength = uint32ptr(65536)
 		config.GIDMapStart = uint32ptr(100000)
 		config.GIDMapLength = uint32ptr(65536)
-		config.RuncRoot = runcRootDir
 		config.ImagePluginExtraArgs = []string{"\"--rootfs-path\"", filepath.Join(imagePath, "rootfs")}
+		config.RuncRoot = runcRootDir
 
 		client = runner.Start(config)
 	})

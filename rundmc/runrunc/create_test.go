@@ -23,7 +23,6 @@ var _ = Describe("Create", func() {
 	var (
 		commandRunner  *fake_command_runner.FakeCommandRunner
 		bundlePath     string
-		runcRoot       string
 		runcSubcmd     string
 		logFilePath    string
 		pidFilePath    string
@@ -36,7 +35,6 @@ var _ = Describe("Create", func() {
 
 	BeforeEach(func() {
 		logs = ""
-		runcRoot = ""
 		runcSubcmd = "create"
 		runcExitStatus = nil
 		commandRunner = fake_command_runner.New()
@@ -50,7 +48,7 @@ var _ = Describe("Create", func() {
 	})
 
 	JustBeforeEach(func() {
-		runner = runrunc.NewCreator("funC", runcRoot, runcSubcmd, commandRunner)
+		runner = runrunc.NewCreator("funC", runcSubcmd, commandRunner)
 
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "funC",
@@ -112,31 +110,6 @@ var _ = Describe("Create", func() {
 				"--log", logFilePath,
 				"--log-format", "json",
 				"run",
-				"--no-new-keyring",
-				"--bundle", bundlePath,
-				"--pid-file", pidFilePath,
-				"some-id",
-			))
-		})
-	})
-
-	Context("when runcRoot is provided", func() {
-		BeforeEach(func() {
-			runcRoot = "/tmp/runc/"
-		})
-
-		It("creates the container with runC create, passing --root", func() {
-			Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(Succeed())
-
-			Expect(commandRunner.ExecutedCommands()[0].Path).To(Equal("funC"))
-			Expect(commandRunner.ExecutedCommands()[0].Args).To(ConsistOf(
-				"funC",
-				"--debug",
-				"--log", logFilePath,
-				"--log-format", "json",
-				"--root",
-				runcRoot,
-				"create",
 				"--no-new-keyring",
 				"--bundle", bundlePath,
 				"--pid-file", pidFilePath,

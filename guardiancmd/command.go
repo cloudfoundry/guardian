@@ -256,10 +256,6 @@ type ServerCommand struct {
 		DropsondeOrigin      string `long:"dropsonde-origin"      default:"garden-linux"   description:"Origin identifier for Dropsonde-emitted metrics."`
 		DropsondeDestination string `long:"dropsonde-destination" default:"127.0.0.1:3457" description:"Destination for Dropsonde-emitted metrics."`
 	} `group:"Metrics"`
-
-	Runc struct {
-		Root string `hidden:"true" long:"runc-root" default:"" description:"root directory for storage of container state (this should be located in tmpfs)"`
-	} `group:"Runc Arguments"`
 }
 
 func init() {
@@ -757,15 +753,13 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	runcrunner := runrunc.New(
 		cmdRunner,
 		runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
-		goci.RuncBinary{Path: runtimePath, Root: cmd.Runc.Root},
+		goci.RuncBinary{Path: runtimePath},
 		dadooPath,
 		runtimePath,
-		cmd.Runc.Root,
 		execPreparer,
 		cmd.wireExecRunner(
 			dadooPath,
 			runtimePath,
-			cmd.Runc.Root,
 			cmd.wireUidGenerator(),
 			cmdRunner,
 			cmd.Containers.CleanupProcessDirsOnWait,
@@ -775,13 +769,21 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
+	runcRoot := "/run/runc"
+	if os.Geteuid() != 0 {
+		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+		if runtimeDir != "" {
+			runcRoot = runtimeDir + "/runc"
+		}
+	}
+
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, cmdRunner)
-	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(cmd.Runc.Root), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
+	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
 	peaCreator := &peas.PeaCreator{
 		BundleGenerator:  peaTemplate,
 		BundleSaver:      bundleSaver,
 		ExecPreparer:     execPreparer,
-		ContainerCreator: runrunc.NewCreator(runtimePath, cmd.Runc.Root, "run", cmdRunner),
+		ContainerCreator: runrunc.NewCreator(runtimePath, "run", cmdRunner),
 	}
 	return rundmc.New(depot, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{}, peaCreator)
 }

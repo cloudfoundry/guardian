@@ -15,15 +15,13 @@ import (
 
 type Creator struct {
 	runcPath      string
-	runcRoot      string
 	runcSubcmd    string
 	commandRunner commandrunner.CommandRunner
 }
 
-func NewCreator(runcPath, runcRoot, runcSubcmd string, commandRunner commandrunner.CommandRunner) *Creator {
+func NewCreator(runcPath, runcSubcmd string, commandRunner commandrunner.CommandRunner) *Creator {
 	return &Creator{
 		runcPath,
-		runcRoot,
 		runcSubcmd,
 		commandRunner,
 	}
@@ -36,7 +34,6 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 	log = log.Session("create", lager.Data{"bundle": bundlePath})
 	log.Info("creating", lager.Data{
 		"runc":        c.runcPath,
-		"runcRoot":    c.runcRoot,
 		"bundlePath":  bundlePath,
 		"id":          id,
 		"logPath":     logFilePath,
@@ -48,9 +45,6 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 		"--debug",
 		"--log", logFilePath,
 		"--log-format", "json",
-	}
-	if c.runcRoot != "" {
-		globalArgs = append(globalArgs, []string{"--root", c.runcRoot}...)
 	}
 	subcmdArgs := []string{
 		c.runcSubcmd,
