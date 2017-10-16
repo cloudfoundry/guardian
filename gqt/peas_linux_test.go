@@ -103,6 +103,30 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(procExitCode).To(Equal(123))
 	})
+
+	It("client receives stdout and stderr of pea process", func() {
+		ctr, err := gdn.Create(garden.ContainerSpec{})
+		Expect(err).NotTo(HaveOccurred())
+
+		var stdout, stderr bytes.Buffer
+		proc, err := ctr.Run(garden.ProcessSpec{
+			Path:  "sh",
+			Args:  []string{"-c", "echo stdout && echo stderr >&2"},
+			Image: garden.ImageRef{URI: "raw://" + defaultTestRootFS},
+		}, garden.ProcessIO{
+			Stdin:  bytes.NewBuffer(nil),
+			Stdout: io.MultiWriter(&stdout, GinkgoWriter),
+			Stderr: io.MultiWriter(&stderr, GinkgoWriter),
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		procExitCode, err := proc.Wait()
+		Expect(err).NotTo(HaveOccurred())
+		Expect(procExitCode).To(Equal(0))
+
+		Expect(stdout.String()).To(Equal("stdout\n"))
+		Expect(stderr.String()).To(Equal("stderr\n"))
+	})
 })
 
 func getNS(pid string, ns string) string {
