@@ -730,6 +730,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		bundlerules.Hostname{},
 		bundlerules.Windows{},
 	}
+	bundleRules = append(bundleRules, osSpecificBundleRules()...)
 	peaBundleRules := make([]rundmc.BundlerRule, len(bundleRules))
 	copy(peaBundleRules, bundleRules)
 	bundleRules = append(bundleRules,
@@ -740,7 +741,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			TCPMemoryLimit:   int64(cmd.Limits.TCPMemoryLimit),
 			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
 		})
-	bundleRules = append(bundleRules, osSpecificBundleRules()...)
 	peaBundleRules = append(peaBundleRules, bundlerules.NamespaceSharing{})
 
 	template := &rundmc.BundleTemplate{Rules: bundleRules}

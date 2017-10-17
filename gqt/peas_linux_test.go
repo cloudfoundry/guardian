@@ -6,47 +6,48 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 )
 
 var _ = Describe("Partially shared containers (peas)", func() {
 	var (
-		gdn                   *runner.RunningGarden
-		almostEmptyRootfsPath string
+		gdn       *runner.RunningGarden
+		tmpDir    string
+		peaRootfs string
+		ctr       garden.Container
 	)
 
 	BeforeEach(func() {
 		gdn = runner.Start(config)
 		var err error
-		almostEmptyRootfsPath, err = ioutil.TempDir("", "peas-gqts")
+		tmpDir, err = ioutil.TempDir("", "peas-gqts")
 		Expect(err).NotTo(HaveOccurred())
-		Expect(os.Chmod(almostEmptyRootfsPath, 0777)).To(Succeed())
 
-		Expect(copyFile(
-			filepath.Join(defaultTestRootFS, "bin", "cat"),
-			filepath.Join(almostEmptyRootfsPath, "cat"),
-		)).To(Succeed())
-		Expect(ioutil.WriteFile(filepath.Join(almostEmptyRootfsPath, "afile"), []byte("hello"), 0666)).To(Succeed())
+		Expect(exec.Command("cp", "-a", defaultTestRootFS, tmpDir).Run()).To(Succeed())
+		Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
+		peaRootfs = filepath.Join(tmpDir, "rootfs")
+		Expect(ioutil.WriteFile(filepath.Join(peaRootfs, "ima-pea"), []byte("pea!"), 0644)).To(Succeed())
+
+		ctr, err = gdn.Create(garden.ContainerSpec{})
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	AfterEach(func() {
 		Expect(gdn.DestroyAndStop()).To(Succeed())
-		Expect(os.RemoveAll(almostEmptyRootfsPath)).To(Succeed())
+		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
 	It("runs a process in its own mount namespace, sharing all other namespaces", func() {
-		ctr, err := gdn.Create(garden.ContainerSpec{})
-		Expect(err).NotTo(HaveOccurred())
 		proc, err := ctr.Run(garden.ProcessSpec{
 			Path:  "sleep",
 			Args:  []string{"60"},
-			Image: garden.ImageRef{URI: "raw://" + defaultTestRootFS},
+			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 		}, garden.ProcessIO{
 			Stdout: GinkgoWriter,
 			Stderr: GinkgoWriter,
@@ -68,30 +69,32 @@ var _ = Describe("Partially shared containers (peas)", func() {
 	})
 
 	It("runs a process with its own rootfs", func() {
-		ctr, err := gdn.Create(garden.ContainerSpec{})
-		Expect(err).NotTo(HaveOccurred())
+		Expect(readFileInContainer(ctr, "/ima-pea", "raw://"+peaRootfs)).To(Equal("pea!"))
+	})
 
-		stdout := gbytes.NewBuffer()
-		_, err = ctr.Run(garden.ProcessSpec{
-			Path:  "/cat",
-			Args:  []string{"/afile"},
-			Image: garden.ImageRef{URI: "raw://" + almostEmptyRootfsPath},
-		}, garden.ProcessIO{
-			Stdout: io.MultiWriter(stdout, GinkgoWriter),
-			Stderr: GinkgoWriter,
-		})
-		Expect(err).NotTo(HaveOccurred())
+	It("bind mounts the same /etc/hosts file as the container", func() {
+		originalContentsInPea := readFileInContainer(ctr, "/etc/hosts", "raw://"+peaRootfs)
+		appendFileInContainer(ctr, "/etc/hosts", "foobar", "raw://"+peaRootfs)
+		contentsInPea := readFileInContainer(ctr, "/etc/hosts", "raw://"+peaRootfs)
+		Expect(originalContentsInPea).NotTo(Equal(contentsInPea))
+		contentsInContainer := readFileInContainer(ctr, "/etc/hosts", "")
+		Expect(contentsInPea).To(Equal(contentsInContainer))
+	})
 
-		Eventually(stdout).Should(gbytes.Say("hello"))
+	It("bind mounts the same /etc/resolv.conf file as the container", func() {
+		originalContentsInPea := readFileInContainer(ctr, "/etc/resolv.conf", "raw://"+peaRootfs)
+		appendFileInContainer(ctr, "/etc/resolv.conf", "foobar", "raw://"+peaRootfs)
+		contentsInPea := readFileInContainer(ctr, "/etc/resolv.conf", "raw://"+peaRootfs)
+		Expect(originalContentsInPea).NotTo(Equal(contentsInPea))
+		contentsInContainer := readFileInContainer(ctr, "/etc/resolv.conf", "")
+		Expect(contentsInPea).To(Equal(contentsInContainer))
 	})
 
 	It("Process.Wait() returns the process exit code", func() {
-		ctr, err := gdn.Create(garden.ContainerSpec{})
-		Expect(err).NotTo(HaveOccurred())
 		proc, err := ctr.Run(garden.ProcessSpec{
 			Path:  "sh",
 			Args:  []string{"-c", "exit 123"},
-			Image: garden.ImageRef{URI: "raw://" + defaultTestRootFS},
+			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 		}, garden.ProcessIO{
 			Stdin:  bytes.NewBuffer(nil),
 			Stdout: GinkgoWriter,
@@ -105,14 +108,11 @@ var _ = Describe("Partially shared containers (peas)", func() {
 	})
 
 	It("client receives stdout and stderr of pea process", func() {
-		ctr, err := gdn.Create(garden.ContainerSpec{})
-		Expect(err).NotTo(HaveOccurred())
-
 		var stdout, stderr bytes.Buffer
 		proc, err := ctr.Run(garden.ProcessSpec{
 			Path:  "sh",
 			Args:  []string{"-c", "echo stdout && echo stderr >&2"},
-			Image: garden.ImageRef{URI: "raw://" + defaultTestRootFS},
+			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 		}, garden.ProcessIO{
 			Stdin:  bytes.NewBuffer(nil),
 			Stdout: io.MultiWriter(&stdout, GinkgoWriter),
@@ -133,4 +133,34 @@ func getNS(pid string, ns string) string {
 	ns, err := os.Readlink(fmt.Sprintf("/proc/%s/ns/%s", string(pid), ns))
 	Expect(err).NotTo(HaveOccurred())
 	return ns
+}
+
+func readFileInContainer(ctr garden.Container, pathname string, image string) string {
+	stdout := bytes.Buffer{}
+	proc, err := ctr.Run(garden.ProcessSpec{
+		Path:  "cat",
+		Args:  []string{pathname},
+		Image: garden.ImageRef{URI: image},
+	}, garden.ProcessIO{
+		Stdin:  bytes.NewBuffer(nil),
+		Stdout: io.MultiWriter(&stdout, GinkgoWriter),
+		Stderr: GinkgoWriter,
+	})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(proc.Wait()).To(Equal(0))
+	return stdout.String()
+}
+
+func appendFileInContainer(ctr garden.Container, pathname, toAppend, image string) {
+	proc, err := ctr.Run(garden.ProcessSpec{
+		Path:  "sh",
+		Args:  []string{"-c", fmt.Sprintf("echo %s >> %s", toAppend, pathname)},
+		Image: garden.ImageRef{URI: image},
+	}, garden.ProcessIO{
+		Stdin:  bytes.NewBuffer(nil),
+		Stdout: GinkgoWriter,
+		Stderr: GinkgoWriter,
+	})
+	Expect(err).NotTo(HaveOccurred())
+	Expect(proc.Wait()).To(Equal(0))
 }
