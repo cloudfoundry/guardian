@@ -232,6 +232,8 @@ type ServerCommand struct {
 		DNSServers           []IPFlag `long:"dns-server" description:"DNS server IP address to use instead of automatically determined servers. Can be specified multiple times."`
 		AdditionalDNSServers []IPFlag `long:"additional-dns-server" description:"DNS server IP address to append to the automatically determined servers. Can be specified multiple times."`
 
+		AdditionalHostEntries []string `long:"additional-host-entry" description:"Per line hosts entries. Can be specified multiple times and will be appended verbatim in order to /etc/hosts"`
+
 		ExternalIP             IPFlag `long:"external-ip"                     description:"IP address to use to reach container's mapped ports. Autodetected if not specified."`
 		PortPoolStart          uint32 `long:"port-pool-start" default:"61001" description:"Start of the ephemeral port range used for mapped container ports."`
 		PortPoolSize           uint32 `long:"port-pool-size"  default:"4534"  description:"Size of the port pool used for mapped container ports."`
@@ -609,7 +611,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 	networker := kawasaki.New(
 		kawasaki.SpecParserFunc(kawasaki.ParseSpec),
 		subnets.NewPool(cmd.Network.Pool.CIDR()),
-		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, additionalDNSServers, containerMtu),
+		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, additionalDNSServers, cmd.Network.AdditionalHostEntries, containerMtu),
 		propManager,
 		factory.NewDefaultConfigurer(ipTables, depotPath),
 		portPool,

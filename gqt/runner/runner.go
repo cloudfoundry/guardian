@@ -70,6 +70,7 @@ type GdnRunnerConfig struct {
 	IPTablesRestoreBin             string   `flag:"iptables-restore-bin"`
 	DNSServers                     []string `flag:"dns-server"`
 	AdditionalDNSServers           []string `flag:"additional-dns-server"`
+	AdditionalHostEntries          []string `flag:"additional-host-entry"`
 	MTU                            *int     `flag:"mtu"`
 	PortPoolSize                   *int     `flag:"port-pool-size"`
 	PortPoolStart                  *int     `flag:"port-pool-start"`

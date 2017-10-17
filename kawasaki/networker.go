@@ -27,6 +27,7 @@ const iptablePrefixKey = "kawasaki.iptable-prefix"
 const iptableInstanceKey = "kawasaki.iptable-inst"
 const mtuKey = "kawasaki.mtu"
 const dnsServerKey = "kawasaki.dns-servers"
+const hostEntriesKey = "kawasaki.host-entries"
 
 //go:generate counterfeiter . SpecParser
 
@@ -160,9 +161,7 @@ func (n *networker) Network(log lager.Logger, containerSpec garden.ContainerSpec
 	}
 	log.Info("config-create", lager.Data{"config": config})
 
-	if err := save(n.configStore, containerSpec.Handle, config); err != nil {
-		return err
-	}
+	save(n.configStore, containerSpec.Handle, config)
 
 	if err := n.configurer.Apply(log, config, pid); err != nil {
 		return err
@@ -336,7 +335,7 @@ func getAll(config ConfigStore, handle string, key ...string) (vals []string, er
 	return vals, nil
 }
 
-func save(config ConfigStore, handle string, netConfig NetworkConfig) error {
+func save(config ConfigStore, handle string, netConfig NetworkConfig) {
 	config.Set(handle, hostIntfKey, netConfig.HostIntf)
 	config.Set(handle, containerIntfKey, netConfig.ContainerIntf)
 	config.Set(handle, bridgeIntfKey, netConfig.BridgeName)
@@ -354,8 +353,7 @@ func save(config ConfigStore, handle string, netConfig NetworkConfig) error {
 	}
 
 	config.Set(handle, dnsServerKey, strings.Join(dnsServers, ", "))
-
-	return nil
+	config.Set(handle, hostEntriesKey, strings.Join(netConfig.AdditionalHostEntries, ", "))
 }
 
 func appendIfNotNil(errors []error, err error) []error {
@@ -366,7 +364,7 @@ func appendIfNotNil(errors []error, err error) []error {
 }
 
 func load(config ConfigStore, handle string) (NetworkConfig, error) {
-	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetKey, iptablePrefixKey, iptableInstanceKey, mtuKey, externalIpKey, dnsServerKey)
+	vals, err := getAll(config, handle, hostIntfKey, containerIntfKey, bridgeIntfKey, bridgeIpKey, containerIpKey, subnetKey, iptablePrefixKey, iptableInstanceKey, mtuKey, externalIpKey, dnsServerKey, hostEntriesKey)
 
 	if err != nil {
 		return NetworkConfig{}, err
@@ -395,18 +393,21 @@ func load(config ConfigStore, handle string) (NetworkConfig, error) {
 		dnsServers = append(dnsServers, ip)
 	}
 
+	additionalHostEntries := strings.Split(vals[11], ", ")
+
 	return NetworkConfig{
-		HostIntf:            vals[0],
-		ContainerIntf:       vals[1],
-		BridgeName:          vals[2],
-		BridgeIP:            net.ParseIP(vals[3]),
-		ContainerIP:         net.ParseIP(vals[4]),
-		ExternalIP:          net.ParseIP(vals[9]),
-		Subnet:              ipnet,
-		IPTablePrefix:       vals[6],
-		IPTableInstance:     vals[7],
-		Mtu:                 mtu,
-		OperatorNameservers: dnsServers,
+		HostIntf:              vals[0],
+		ContainerIntf:         vals[1],
+		BridgeName:            vals[2],
+		BridgeIP:              net.ParseIP(vals[3]),
+		ContainerIP:           net.ParseIP(vals[4]),
+		ExternalIP:            net.ParseIP(vals[9]),
+		Subnet:                ipnet,
+		IPTablePrefix:         vals[6],
+		IPTableInstance:       vals[7],
+		Mtu:                   mtu,
+		OperatorNameservers:   dnsServers,
+		AdditionalHostEntries: additionalHostEntries,
 	}, nil
 }
 

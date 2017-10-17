@@ -12,7 +12,7 @@ import (
 
 //go:generate counterfeiter . HostFileCompiler
 type HostFileCompiler interface {
-	Compile(log lager.Logger, containerIp net.IP, handle string) ([]byte, error)
+	Compile(log lager.Logger, ip net.IP, handle string, additionalHostEntries []string) ([]byte, error)
 }
 
 //go:generate counterfeiter . ResolvCompiler
@@ -30,7 +30,7 @@ type ResolvConfigurer struct {
 func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid int) error {
 	log = log.Session("dns-resolve-configure")
 
-	containerHostsContents, err := d.HostsFileCompiler.Compile(log, cfg.ContainerIP, cfg.ContainerHandle)
+	containerHostsContents, err := d.HostsFileCompiler.Compile(log, cfg.ContainerIP, cfg.ContainerHandle, cfg.AdditionalHostEntries)
 	if err != nil {
 		log.Error("compiling-hosts-file", err)
 		return err

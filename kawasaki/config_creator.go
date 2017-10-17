@@ -36,6 +36,7 @@ type NetworkConfig struct {
 	PluginNameservers     []net.IP
 	OperatorNameservers   []net.IP
 	AdditionalNameservers []net.IP
+	AdditionalHostEntries []string
 }
 
 type Creator struct {
@@ -45,10 +46,11 @@ type Creator struct {
 	externalIP            net.IP
 	operatorNameservers   []net.IP
 	additionalNameservers []net.IP
+	additionalHostEntries []string
 	mtu                   int
 }
 
-func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix string, externalIP net.IP, operatorNameservers, additionalNameservers []net.IP, mtu int) *Creator {
+func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix string, externalIP net.IP, operatorNameservers, additionalNameservers []net.IP, additionalHostEntries []string, mtu int) *Creator {
 	if len(interfacePrefix) > maxInterfacePrefixLen {
 		panic("interface prefix is too long")
 	}
@@ -64,6 +66,7 @@ func NewConfigCreator(idGenerator IDGenerator, interfacePrefix, chainPrefix stri
 		externalIP:            externalIP,
 		operatorNameservers:   operatorNameservers,
 		additionalNameservers: additionalNameservers,
+		additionalHostEntries: additionalHostEntries,
 		mtu: min(mtu, maxAllowedMtuSize),
 	}
 }
@@ -86,6 +89,7 @@ func (c *Creator) Create(log lager.Logger, handle string, subnet *net.IPNet, ip 
 		Mtu:                   c.mtu,
 		OperatorNameservers:   c.operatorNameservers,
 		AdditionalNameservers: c.additionalNameservers,
+		AdditionalHostEntries: c.additionalHostEntries,
 	}, nil
 }
 

@@ -881,6 +881,34 @@ var _ = Describe("Networking", func() {
 		})
 	})
 
+	Describe("--additional-host-entry flag", func() {
+		Context("when passing one additional host entry", func() {
+			BeforeEach(func() {
+				config.AdditionalHostEntries = []string{"1.2.3.4 foo"}
+			})
+
+			It("adds the additional entries to the end of /etc/hosts", func() {
+				hosts := getHosts(container)
+				Expect(hosts[len(hosts)-1]).To(Equal("1.2.3.4 foo"))
+			})
+		})
+
+		Context("when passing more than one host entry", func() {
+			var firstEntry, secondEntry string
+			BeforeEach(func() {
+				firstEntry = "1.2.3.4 foo"
+				secondEntry = "2.3.4.5 bar"
+				config.AdditionalHostEntries = []string{firstEntry, secondEntry}
+			})
+
+			It("adds them all to the end of /etc/hosts in the provided order", func() {
+				hosts := getHosts(container)
+				Expect(hosts[len(hosts)-2]).To(Equal(firstEntry))
+				Expect(hosts[len(hosts)-1]).To(Equal(secondEntry))
+			})
+		})
+	})
+
 	Describe("DNS servers", func() {
 		var (
 			hostNameservers []string
@@ -1180,6 +1208,30 @@ func readResolvConf(container garden.Container) string {
 	Expect(err).ToNot(HaveOccurred())
 	Expect(exitCode).To(Equal(0))
 	return string(stdout.Contents())
+}
+
+func readHosts(container garden.Container) string {
+	stdout := gbytes.NewBuffer()
+
+	process, err := container.Run(garden.ProcessSpec{
+		Path: "cat",
+		Args: []string{"/etc/hosts"},
+	}, garden.ProcessIO{
+		Stdout: io.MultiWriter(stdout, GinkgoWriter),
+		Stderr: GinkgoWriter,
+	})
+	Expect(err).ToNot(HaveOccurred())
+
+	exitCode, err := process.Wait()
+	Expect(err).ToNot(HaveOccurred())
+	Expect(exitCode).To(Equal(0))
+	return string(stdout.Contents())
+}
+
+func getHosts(container garden.Container) []string {
+	contents := readHosts(container)
+	hosts := strings.Split(contents, "\n")
+	return hosts[:len(hosts)-1]
 }
 
 func getNameservers(container garden.Container) []string {

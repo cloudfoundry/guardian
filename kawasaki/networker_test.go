@@ -102,6 +102,10 @@ var _ = Describe("Networker", func() {
 				net.ParseIP("8.8.8.8"),
 				net.ParseIP("8.8.4.4"),
 			},
+			AdditionalHostEntries: []string{
+				"1.2.3.4 foo",
+				"2.3.4.5 bar",
+			},
 		}
 
 		fakeConfigCreator.CreateReturns(networkConfig, nil)
@@ -126,6 +130,7 @@ var _ = Describe("Networker", func() {
 			"kawasaki.iptable-inst":        networkConfig.IPTableInstance,
 			"kawasaki.mtu":                 strconv.Itoa(networkConfig.Mtu),
 			"kawasaki.dns-servers":         "8.8.8.8, 8.8.4.4",
+			"kawasaki.host-entries":        "1.2.3.4 foo, 2.3.4.5 bar",
 			gardener.MappedPortsKey:        string(portMappings),
 		}
 
@@ -198,6 +203,7 @@ var _ = Describe("Networker", func() {
 			Expect(config["kawasaki.iptable-inst"]).To(Equal(networkConfig.IPTableInstance))
 			Expect(config["kawasaki.mtu"]).To(Equal(strconv.Itoa(networkConfig.Mtu)))
 			Expect(config["kawasaki.dns-servers"]).To(Equal("8.8.8.8, 8.8.4.4"))
+			Expect(config["kawasaki.host-entries"]).To(Equal("1.2.3.4 foo, 2.3.4.5 bar"))
 		})
 
 		It("applies the right configuration", func() {

@@ -56,6 +56,32 @@ var _ = Describe("ResolvConfigurer", func() {
 		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
+	It("passes additional host entries to the hosts compiler", func() {
+		networkConfig := kawasaki.NetworkConfig{
+			ContainerHandle:       handle,
+			AdditionalHostEntries: []string{"1.2.3.4 foo", "2.3.4.5 bar"},
+		}
+
+		Expect(dnsResolv.Configure(log, networkConfig, 42)).To(Succeed())
+		_, _, _, additionalHostEntries := fakeHostsFileCompiler.CompileArgsForCall(0)
+		Expect(additionalHostEntries).To(Equal([]string{
+			"1.2.3.4 foo",
+			"2.3.4.5 bar",
+		}))
+	})
+
+	It("passes ip and handle to the hosts compiler", func() {
+		networkConfig := kawasaki.NetworkConfig{
+			ContainerHandle: handle,
+			ContainerIP:     net.IP("10.0.0.1"),
+		}
+
+		Expect(dnsResolv.Configure(log, networkConfig, 42)).To(Succeed())
+		_, ip, handle, _ := fakeHostsFileCompiler.CompileArgsForCall(0)
+		Expect(ip).To(Equal(networkConfig.ContainerIP))
+		Expect(handle).To(Equal(networkConfig.ContainerHandle))
+	})
+
 	It("should write the compiled hosts file in the depot dir", func() {
 		compiledHostsFile := "Hello world of hosts"
 		fakeHostsFileCompiler.CompileReturns([]byte(compiledHostsFile), nil)

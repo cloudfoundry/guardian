@@ -19,6 +19,7 @@ var _ = Describe("ConfigCreator", func() {
 		externalIP            net.IP
 		operatorNameservers   []net.IP
 		additionalNameservers []net.IP
+		additionalHostEntries []string
 		logger                lager.Logger
 		idGenerator           *fakes.FakeIDGenerator
 		mtu                   int
@@ -37,6 +38,10 @@ var _ = Describe("ConfigCreator", func() {
 		additionalNameservers = []net.IP{
 			net.ParseIP("1.2.3.4"),
 		}
+		additionalHostEntries = []string{
+			"9.9.9.9 foo",
+			"9.9.9.10 bar",
+		}
 
 		logger = lagertest.NewTestLogger("test")
 		idGenerator = &fakes.FakeIDGenerator{}
@@ -45,18 +50,18 @@ var _ = Describe("ConfigCreator", func() {
 	})
 
 	JustBeforeEach(func() {
-		creator = kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdef", externalIP, operatorNameservers, additionalNameservers, mtu)
+		creator = kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdef", externalIP, operatorNameservers, additionalNameservers, additionalHostEntries, mtu)
 	})
 
 	It("panics if the interface prefix is longer than 2 characters", func() {
 		Expect(func() {
-			kawasaki.NewConfigCreator(idGenerator, "too-long", "wc", externalIP, operatorNameservers, additionalNameservers, mtu)
+			kawasaki.NewConfigCreator(idGenerator, "too-long", "wc", externalIP, operatorNameservers, additionalNameservers, additionalHostEntries, mtu)
 		}).To(Panic())
 	})
 
 	It("panics if the chain prefix is longer than 16 characters", func() {
 		Expect(func() {
-			kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdefg", externalIP, operatorNameservers, additionalNameservers, mtu)
+			kawasaki.NewConfigCreator(idGenerator, "w1", "0123456789abcdefg", externalIP, operatorNameservers, additionalNameservers, additionalHostEntries, mtu)
 		}).To(Panic())
 	})
 
@@ -153,17 +158,24 @@ var _ = Describe("ConfigCreator", func() {
 		Expect(config.Mtu).To(Equal(1234))
 	})
 
-	It("Assigns the DNS servers", func() {
+	It("assigns the DNS servers", func() {
 		config, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(config.OperatorNameservers).To(Equal(operatorNameservers))
 	})
 
-	It("Assigns the Additional DNS servers", func() {
+	It("assigns the additional DNS servers", func() {
 		config, err := creator.Create(logger, "banana", subnet, ip)
 		Expect(err).NotTo(HaveOccurred())
 
 		Expect(config.AdditionalNameservers).To(Equal(additionalNameservers))
+	})
+
+	It("assigns the additional host entries", func() {
+		config, err := creator.Create(logger, "banana", subnet, ip)
+		Expect(err).NotTo(HaveOccurred())
+
+		Expect(config.AdditionalHostEntries).To(Equal(additionalHostEntries))
 	})
 })
