@@ -107,7 +107,11 @@ var _ = Describe("Creating a Container", func() {
 			_, err = client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
-			Expect(ioutil.ReadDir(filepath.Join(client.GraphDir, "aufs", "mnt"))).To(HaveLen(len(prev)))
+			Eventually(func() int {
+				num, err := ioutil.ReadDir(filepath.Join(client.GraphDir, "aufs", "mnt"))
+				Expect(err).NotTo(HaveOccurred())
+				return len(num)
+			}).Should(Equal(len(prev)))
 		})
 
 		Context("because runc doesn't exist", func() {
