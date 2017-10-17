@@ -63,6 +63,7 @@ var _ = Describe("List", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(ioutil.WriteFile(configFilePath, configYaml, 0755)).To(Succeed())
+			Expect(os.Chmod(configFilePath, 0755)).To(Succeed())
 		})
 
 		AfterEach(func() {
