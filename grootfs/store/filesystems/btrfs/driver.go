@@ -180,6 +180,11 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 			return groot.MountInfo{}, errorspkg.Wrap(err, "creating rootfs folder")
 		}
 
+		if err := os.Chmod(toPath, 0755); err != nil {
+			logger.Error("chmoding-rootfs-folder", err)
+			return mountInfo, errorspkg.Wrap(err, "chmoding rootfs folder")
+		}
+
 		mountInfo.Destination = toPath
 		mountInfo.Type = ""
 		mountInfo.Source = filepath.Join(spec.ImagePath, "snapshot")
@@ -195,6 +200,11 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 			"creating btrfs snapshot from `%s` to `%s` (%s): %s",
 			baseVolumePath, toPath, err, string(contents),
 		)
+	}
+
+	if err := os.Chmod(toPath, 0755); err != nil {
+		logger.Error("chmoding-snapshot", err)
+		return mountInfo, errorspkg.Wrap(err, "chmoding snapshot")
 	}
 
 	return mountInfo, d.applyDiskLimit(logger, spec)

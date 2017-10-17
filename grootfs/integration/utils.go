@@ -163,9 +163,11 @@ func MakeBinaryAccessibleToEveryone(binaryPath string) string {
 	binaryName := path.Base(binaryPath)
 	tempDir := fmt.Sprintf("/tmp/temp-%s-%d", binaryName, rand.Int())
 	Expect(os.MkdirAll(tempDir, 0755)).To(Succeed())
+	Expect(os.Chmod(tempDir, 0755)).To(Succeed())
 
 	newBinaryPath := filepath.Join(tempDir, binaryName)
 	Expect(os.Rename(binaryPath, newBinaryPath)).To(Succeed())
+	Expect(os.Chmod(newBinaryPath, 0755)).To(Succeed())
 
 	return newBinaryPath
 }
