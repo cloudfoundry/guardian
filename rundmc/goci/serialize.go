@@ -13,7 +13,7 @@ type BndlLoader struct {
 
 func (b *BndlLoader) Load(path string) (Bndl, error) {
 	bundle := Bndl{}
-	err := readJsonInto(filepath.Join(path, "config.json"), &bundle.Spec)
+	err := readJSONInto(filepath.Join(path, "config.json"), &bundle.Spec)
 	if err != nil {
 		return bundle, fmt.Errorf("Failed to load bundle: %s", err)
 	}
@@ -28,7 +28,7 @@ func (b BundleSaver) Save(bundle Bndl, path string) error {
 }
 
 func save(value interface{}, path string) error {
-	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, 0600)
+	w, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 	defer w.Close()
 	if err != nil {
 		return fmt.Errorf("Failed to save bundle: %s", err)
@@ -37,7 +37,7 @@ func save(value interface{}, path string) error {
 	return json.NewEncoder(w).Encode(value)
 }
 
-func readJsonInto(path string, object interface{}) error {
+func readJSONInto(path string, object interface{}) error {
 	runtimeContents, err := ioutil.ReadFile(path)
 	if err != nil {
 		return err

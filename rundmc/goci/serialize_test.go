@@ -38,7 +38,9 @@ var _ = Describe("Bundle Serialization", func() {
 				Version: "abcd",
 			},
 		}
+	})
 
+	JustBeforeEach(func() {
 		Expect(bundleSaver.Save(bndle, tmp)).To(Succeed())
 	})
 
@@ -73,6 +75,20 @@ var _ = Describe("Bundle Serialization", func() {
 				Expect(err).To(MatchError(ContainSubstring(notFoundRuntimeError[runtime.GOOS])))
 			})
 		})
+
+		Context("when the file already contains a bunch of stuff", func() {
+			BeforeEach(func() {
+				stuff := make([]byte, 1024*1024)
+				err := ioutil.WriteFile(filepath.Join(tmp, "config.json"), stuff, 0600)
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			It("truncates the file when saving", func() {
+				info, err := os.Stat(filepath.Join(tmp, "config.json"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(info.Size()).To(BeNumerically("<", 1024*1024))
+			})
+		})
 	})
 
 	Describe("Loading", func() {
@@ -99,7 +115,7 @@ var _ = Describe("Bundle Serialization", func() {
 		})
 
 		Context("when config.json is not valid bundle", func() {
-			BeforeEach(func() {
+			JustBeforeEach(func() {
 				ioutil.WriteFile(path.Join(tmp, "config.json"), []byte("appended-nonsense"), 0755)
 			})
 
