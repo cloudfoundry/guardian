@@ -74,7 +74,8 @@ var _ = Describe("Image Plugin", func() {
 			)
 
 			BeforeEach(func() {
-				tmpMountDir, err := ioutil.TempDir("", "")
+				var err error
+				tmpMountDir, err = ioutil.TempDir("", "")
 				Expect(err).NotTo(HaveOccurred())
 
 				containerSpec = garden.ContainerSpec{

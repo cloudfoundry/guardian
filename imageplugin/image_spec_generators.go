@@ -1,8 +1,6 @@
 package imageplugin
 
 import (
-	"fmt"
-
 	digest "github.com/opencontainers/go-digest"
 	specs "github.com/opencontainers/image-spec/specs-go"
 	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
@@ -67,5 +65,5 @@ func GenerateManifest(layers []Layer, configSHA string) imagespec.Manifest {
 }
 
 func toDigest(sha256Hex string) digest.Digest {
-	return digest.Digest(fmt.Sprintf("sha256:%s", sha256Hex))
+	return digest.Digest("sha256:" + sha256Hex)
 }

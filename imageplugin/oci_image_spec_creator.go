@@ -55,11 +55,11 @@ func (o *OCIImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*
 		return nil, err
 	}
 	imageConfigSHA := shaOf(imageConfigBytes)
-	if err := ioutil.WriteFile(filepath.Join(blobsPath, imageConfigSHA), imageConfigBytes, 0600); err != nil {
+	if err = ioutil.WriteFile(filepath.Join(blobsPath, imageConfigSHA), imageConfigBytes, 0600); err != nil {
 		return nil, err
 	}
 
-	if err := os.Symlink(rootFS.Path, filepath.Join(blobsPath, baseLayer.SHA256)); err != nil {
+	if err = os.Symlink(rootFS.Path, filepath.Join(blobsPath, baseLayer.SHA256)); err != nil {
 		return nil, err
 	}
 
@@ -69,7 +69,7 @@ func (o *OCIImageSpecCreator) CreateImageSpec(rootFS *url.URL, handle string) (*
 		return nil, err
 	}
 	manifestSHA := shaOf(manifestBytes)
-	if err := ioutil.WriteFile(filepath.Join(blobsPath, manifestSHA), manifestBytes, 0600); err != nil {
+	if err = ioutil.WriteFile(filepath.Join(blobsPath, manifestSHA), manifestBytes, 0600); err != nil {
 		return nil, err
 	}
 
