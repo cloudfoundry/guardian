@@ -15,6 +15,8 @@ chmod +s /usr/bin/newgidmap
 
 echo "I AM INTEGRATION: ${VOLUME_DRIVER} (${GROOTFS_TEST_UID}:${GROOTFS_TEST_GID})" | grootsay
 
+umask 077
+
 args=$@
 [ "$args" == "" ] && args="-r integration"
 ginkgo -p -race $args
