@@ -445,11 +445,6 @@ func (d *Driver) createImageDirectories(logger lager.Logger, directories map[str
 			logger.Error(fmt.Sprintf("creating-%s-folder-failed", name), err)
 			return errorspkg.Wrapf(err, "creating %s folder", name)
 		}
-
-		if err := os.Chmod(directory, 0755); err != nil {
-			logger.Error(fmt.Sprintf("chmoding-%s-folder-failed", name), err)
-			return errorspkg.Wrapf(err, "chmoding %s folder", name)
-		}
 	}
 
 	return nil
