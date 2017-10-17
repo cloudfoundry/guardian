@@ -81,6 +81,9 @@ func (n *StoreNamespacer) write(uidMappings, gidMappings []IDMappingSpec) error 
 		GIDMappings: n.normalizeMappings(gidMappings),
 	}
 
+	if err := os.Chmod(namespaceStore.Name(), 0755); err != nil {
+		return errorspkg.Wrap(err, "failed to chmod namespace file")
+	}
 	return json.NewEncoder(namespaceStore).Encode(namespace)
 }
 

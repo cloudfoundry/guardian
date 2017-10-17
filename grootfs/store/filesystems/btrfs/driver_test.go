@@ -436,6 +436,7 @@ var _ = Describe("Btrfs", func() {
 
 					BeforeEach(func() {
 						tempFolder, btrfsBin, btrfsCalledFile = integration.CreateFakeBin("btrfs")
+						Expect(os.MkdirAll(filepath.Join(spec.ImagePath, "rootfs"), 0755)).To(Succeed())
 					})
 
 					AfterEach(func() {
