@@ -61,12 +61,9 @@ var _ = Describe("Bind mount", func() {
 	})
 
 	AfterEach(func() {
-		cmd := exec.Command("umount", "-f", srcPath)
-		output, err := cmd.CombinedOutput()
-		fmt.Println(string(output))
-		Expect(err).NotTo(HaveOccurred())
+		unmount(srcPath)
 
-		err = os.RemoveAll(srcPath)
+		err := os.RemoveAll(srcPath)
 		Expect(err).ToNot(HaveOccurred())
 
 		if container != nil {
@@ -383,7 +380,9 @@ func createMountPointUnder(srcPath string) string {
 func unmount(mountpoint string) {
 	cmd := exec.Command("umount", "-f", mountpoint)
 	output, err := cmd.CombinedOutput()
-	fmt.Println(string(output))
+	if len(output) > 0 {
+		fmt.Println(string(output))
+	}
 	Expect(err).NotTo(HaveOccurred())
 }
 
