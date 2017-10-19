@@ -1,10 +1,12 @@
 package runrunc
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -46,63 +48,98 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		return nil, err
 	}
 
-	capsToSet := bndl.Capabilities()
-	cwd := spec.Dir
-	username := "root"
-	containerUID := 0
-	containerGID := 0
-
-	pidfileExists := true
-	pidBytes, err := ioutil.ReadFile(filepath.Join(bundlePath, "pidfile"))
-	if err != nil && os.IsNotExist(err) {
-		pidfileExists = false
-		log.Info("pidfile-not-present")
-	} else if err != nil {
-		log.Error("read-pidfile-failed", err)
+	rootfsPath, ctrAlreadyCreated, err := getRootfsPath(log, bundlePath)
+	if err != nil {
 		return nil, err
 	}
-	pid := string(pidBytes)
 
-	if pidfileExists {
-		rootFSPathFile := filepath.Join("/proc", pid, "root")
-		u, err := r.lookupUser(bndl, rootFSPathFile, spec.User)
-		if err != nil {
-			log.Error("lookup-user-failed", err)
-			return nil, err
-		}
-
-		if cwd == "" {
-			cwd = u.home
-		}
-
-		if err := r.ensureDirExists(rootFSPathFile, cwd, u.hostUid, u.hostGid); err != nil {
-			log.Error("ensure-dir-failed", err)
-			return nil, err
-		}
-
-		if u.containerUid != 0 {
-			capsToSet = intersect(capsToSet, r.nonRootMaxCaps)
-		}
-
-		username = spec.User
-		containerUID = u.containerUid
-		containerGID = u.containerGid
+	user, err := r.lookupUser(bndl, rootfsPath, spec.User)
+	if err != nil {
+		log.Error("lookup-user-failed", err)
+		return nil, err
 	}
 
+	cwd, err := r.getWorkingDir(log, ctrAlreadyCreated, spec, user, rootfsPath)
+	if err != nil {
+		log.Error("ensure-dir-failed", err)
+		return nil, err
+	}
+
+	return &PreparedSpec{
+		ContainerRootHostUID: containerRootHostID(bndl.Spec.Linux.UIDMappings),
+		ContainerRootHostGID: containerRootHostID(bndl.Spec.Linux.GIDMappings),
+		Process: specs.Process{
+			Args:        append([]string{spec.Path}, spec.Args...),
+			ConsoleSize: console(spec),
+			Env:         r.envDeterminer.EnvFor(user.containerUID, bndl, spec),
+			User: specs.User{
+				UID:            uint32(user.containerUID),
+				GID:            uint32(user.containerGID),
+				AdditionalGids: []uint32{},
+				Username:       spec.User,
+			},
+			Cwd:             cwd,
+			Capabilities:    r.capabilities(bndl, user.containerUID),
+			Rlimits:         toRlimits(spec.Limits),
+			Terminal:        spec.TTY != nil,
+			ApparmorProfile: bndl.Process().ApparmorProfile,
+		},
+	}, nil
+}
+
+func getRootfsPath(log lager.Logger, bundlePath string) (string, bool, error) {
+	// We only look up the user in rootfspath/etc/passwd when the rootfs is
+	// already mounted, as is the case for exec-ed processes, but not for peas.
+	// For peas, spec.User must take the form uid:gid.
+	pidBytes, err := ioutil.ReadFile(filepath.Join(bundlePath, "pidfile"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			log.Info("pidfile-not-present")
+			return "", false, nil
+		}
+		log.Error("read-pidfile-failed", err)
+		return "", false, err
+	}
+
+	return filepath.Join("/proc", string(pidBytes), "root"), true, nil
+}
+
+func (r *execPreparer) getWorkingDir(log lager.Logger, ctrAlreadyCreated bool, spec garden.ProcessSpec, user *usr, rootfsPath string) (string, error) {
+	cwd := spec.Dir
 	if cwd == "" {
-		cwd = "/"
+		if ctrAlreadyCreated {
+			cwd = user.home
+		} else {
+			cwd = "/"
+		}
 	}
 
-	var caps *specs.LinuxCapabilities
+	if err := r.ensureDirExists(ctrAlreadyCreated, rootfsPath, cwd, user.hostUID, user.hostGID); err != nil {
+		return "", err
+	}
+
+	return cwd, nil
+}
+
+func (r *execPreparer) capabilities(bndl goci.Bndl, containerUID int) *specs.LinuxCapabilities {
+	capsToSet := bndl.Capabilities()
+	if containerUID != 0 {
+		capsToSet = intersect(capsToSet, r.nonRootMaxCaps)
+	}
+
 	// TODO centralize knowledge of garden -> runc capability schema translation
 	if len(capsToSet) > 0 {
-		caps = &specs.LinuxCapabilities{
+		return &specs.LinuxCapabilities{
 			Bounding:    capsToSet,
 			Inheritable: capsToSet,
 			Permitted:   capsToSet,
 		}
 	}
 
+	return nil
+}
+
+func console(spec garden.ProcessSpec) *specs.Box {
 	consoleBox := &specs.Box{
 		Width:  80,
 		Height: 24,
@@ -111,27 +148,7 @@ func (r *execPreparer) Prepare(log lager.Logger, bundlePath string, spec garden.
 		consoleBox.Width = uint(spec.TTY.WindowSize.Columns)
 		consoleBox.Height = uint(spec.TTY.WindowSize.Rows)
 	}
-
-	return &PreparedSpec{
-		ContainerRootHostUID: containerRootHostID(bndl.Spec.Linux.UIDMappings),
-		ContainerRootHostGID: containerRootHostID(bndl.Spec.Linux.GIDMappings),
-		Process: specs.Process{
-			Args:        append([]string{spec.Path}, spec.Args...),
-			ConsoleSize: consoleBox,
-			Env:         r.envDeterminer.EnvFor(containerUID, bndl, spec),
-			User: specs.User{
-				UID:            uint32(containerUID),
-				GID:            uint32(containerGID),
-				AdditionalGids: []uint32{},
-				Username:       username,
-			},
-			Cwd:             cwd,
-			Capabilities:    caps,
-			Rlimits:         toRlimits(spec.Limits),
-			Terminal:        spec.TTY != nil,
-			ApparmorProfile: bndl.Process().ApparmorProfile,
-		},
-	}, nil
+	return consoleBox
 }
 
 func containerRootHostID(mappings []specs.LinuxIDMapping) uint32 {
@@ -144,12 +161,16 @@ func containerRootHostID(mappings []specs.LinuxIDMapping) uint32 {
 }
 
 type usr struct {
-	hostUid, hostGid           int
-	containerUid, containerGid int
+	hostUID, hostGID           int
+	containerUID, containerGID int
 	home                       string
 }
 
 func (r *execPreparer) lookupUser(bndl goci.Bndl, rootfsPath, username string) (*usr, error) {
+	if rootfsPath == "" && isUsername(username) {
+		return nil, errors.New("processes that use an `Image` field must not use usernames: they may use `User` strings of the form uid:gid, defaulting to 0:0")
+	}
+
 	u, err := r.users.Lookup(rootfsPath, username)
 	if err != nil {
 		return nil, err
@@ -162,21 +183,25 @@ func (r *execPreparer) lookupUser(bndl goci.Bndl, rootfsPath, username string) (
 	}
 
 	return &usr{
-		hostUid:      uid,
-		hostGid:      gid,
-		containerUid: u.Uid,
-		containerGid: u.Gid,
+		hostUID:      uid,
+		hostGID:      gid,
+		containerUID: u.Uid,
+		containerGID: u.Gid,
 		home:         u.Home,
 	}, nil
 }
 
-func (r *execPreparer) ensureDirExists(rootFSPathFile, dir string, uid, gid int) error {
-	if r.runningAsRoot() {
-		// the MkdirAs throws a permission error when running in rootless mode...
+func (r *execPreparer) ensureDirExists(ctrAlreadyCreated bool, rootFSPathFile, dir string, uid, gid int) error {
+	// the MkdirAs throws a permission error when running in rootless mode...
+	if r.runningAsRoot() && ctrAlreadyCreated {
 		if err := r.mkdirer.MkdirAs(rootFSPathFile, uid, gid, 0755, false, dir); err != nil {
 			return fmt.Errorf("create working directory: %s", err)
 		}
 	}
 
 	return nil
+}
+
+func isUsername(username string) bool {
+	return username != "" && !strings.Contains(username, ":")
 }

@@ -90,6 +90,54 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		Expect(contentsInPea).To(Equal(contentsInContainer))
 	})
 
+	It("runs the process as the specified uid + gid", func() {
+		var stdout bytes.Buffer
+		proc, err := ctr.Run(garden.ProcessSpec{
+			Path:  "sh",
+			Args:  []string{"-c", "echo $(id -u):$(id -g)"},
+			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+			User:  "1001:1002",
+		}, garden.ProcessIO{
+			Stdin:  bytes.NewBuffer(nil),
+			Stdout: io.MultiWriter(&stdout, GinkgoWriter),
+			Stderr: GinkgoWriter,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(proc.Wait()).To(Equal(0))
+
+		Expect(stdout.String()).To(Equal("1001:1002\n"))
+	})
+
+	It("runs the process as the uid 0 and gid 0 unless specified", func() {
+		var stdout bytes.Buffer
+		proc, err := ctr.Run(garden.ProcessSpec{
+			Path:  "sh",
+			Args:  []string{"-c", "echo $(id -u):$(id -g)"},
+			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+		}, garden.ProcessIO{
+			Stdin:  bytes.NewBuffer(nil),
+			Stdout: io.MultiWriter(&stdout, GinkgoWriter),
+			Stderr: GinkgoWriter,
+		})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(proc.Wait()).To(Equal(0))
+
+		Expect(stdout.String()).To(Equal("0:0\n"))
+	})
+
+	It("cannot run peas with a username", func() {
+		_, err := ctr.Run(garden.ProcessSpec{
+			User:  "root",
+			Path:  "pwd",
+			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+		}, garden.ProcessIO{
+			Stdin:  bytes.NewBuffer(nil),
+			Stdout: GinkgoWriter,
+			Stderr: GinkgoWriter,
+		})
+		Expect(err).To(HaveOccurred())
+	})
+
 	It("Process.Wait() returns the process exit code", func() {
 		proc, err := ctr.Run(garden.ProcessSpec{
 			Path:  "sh",
