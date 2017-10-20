@@ -29,6 +29,7 @@ var _ = Describe("Create", func() {
 		logger         *lagertest.TestLogger
 		logs           string
 		runcExitStatus error
+		recievedStdin  string
 
 		runner *runrunc.Creator
 	)
@@ -56,6 +57,13 @@ var _ = Describe("Create", func() {
 			Expect(err).NotTo(HaveOccurred())
 			_, err = io.Copy(logFile, strings.NewReader(logs))
 			Expect(err).NotTo(HaveOccurred())
+
+			if cmd.Stdin != nil {
+				stdinBytes, err := ioutil.ReadAll(cmd.Stdin)
+				Expect(err).NotTo(HaveOccurred())
+				recievedStdin = string(stdinBytes)
+			}
+
 			Expect(logFile.Close()).To(Succeed())
 			return runcExitStatus
 		})
@@ -82,16 +90,23 @@ var _ = Describe("Create", func() {
 		))
 	})
 
-	It("attaches the processIO to the runC command", func() {
+	It("attaches the stdout and stderr directly to the runC command", func() {
 		pio := garden.ProcessIO{
-			Stdin:  strings.NewReader("some-stdin"),
+			Stdin:  nil,
 			Stdout: bytes.NewBufferString("some-stdout"),
 			Stderr: bytes.NewBufferString("some-stderr"),
 		}
 		Expect(runner.Create(logger, bundlePath, "some-id", pio)).To(Succeed())
-		Expect(commandRunner.ExecutedCommands()[0].Stdin).To(Equal(pio.Stdin))
 		Expect(commandRunner.ExecutedCommands()[0].Stdout).To(Equal(pio.Stdout))
 		Expect(commandRunner.ExecutedCommands()[0].Stderr).To(Equal(pio.Stderr))
+	})
+
+	It("shuttles the stdin to the runC command", func() {
+		pio := garden.ProcessIO{
+			Stdin: bytes.NewBufferString("some-stdin"),
+		}
+		Expect(runner.Create(logger, bundlePath, "some-id", pio)).To(Succeed())
+		Expect(recievedStdin).To(Equal("some-stdin"))
 	})
 
 	Context("when running runc fails", func() {

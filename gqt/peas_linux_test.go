@@ -98,7 +98,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 			User:  "1001:1002",
 		}, garden.ProcessIO{
-			Stdin:  bytes.NewBuffer(nil),
 			Stdout: io.MultiWriter(&stdout, GinkgoWriter),
 			Stderr: GinkgoWriter,
 		})
@@ -115,7 +114,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			Args:  []string{"-c", "echo $(id -u):$(id -g)"},
 			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 		}, garden.ProcessIO{
-			Stdin:  bytes.NewBuffer(nil),
 			Stdout: io.MultiWriter(&stdout, GinkgoWriter),
 			Stderr: GinkgoWriter,
 		})
@@ -131,7 +129,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			Path:  "pwd",
 			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 		}, garden.ProcessIO{
-			Stdin:  bytes.NewBuffer(nil),
 			Stdout: GinkgoWriter,
 			Stderr: GinkgoWriter,
 		})
@@ -144,7 +141,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			Args:  []string{"-c", "exit 123"},
 			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 		}, garden.ProcessIO{
-			Stdin:  bytes.NewBuffer(nil),
 			Stdout: GinkgoWriter,
 			Stderr: GinkgoWriter,
 		})
@@ -162,7 +158,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 			Args:  []string{"-c", "echo stdout && echo stderr >&2"},
 			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 		}, garden.ProcessIO{
-			Stdin:  bytes.NewBuffer(nil),
 			Stdout: io.MultiWriter(&stdout, GinkgoWriter),
 			Stderr: io.MultiWriter(&stderr, GinkgoWriter),
 		})
@@ -174,6 +169,20 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 		Expect(stdout.String()).To(Equal("stdout\n"))
 		Expect(stderr.String()).To(Equal("stderr\n"))
+	})
+
+	It("should not leak pipes", func() {
+		initialPipes := numPipes(gdn.Pid)
+
+		process, err := ctr.Run(garden.ProcessSpec{
+			Path:  "echo",
+			Args:  []string{"hello"},
+			Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+		}, garden.ProcessIO{})
+		Expect(err).NotTo(HaveOccurred())
+		Expect(process.Wait()).To(Equal(0))
+
+		Eventually(func() int { return numPipes(gdn.Pid) }).Should(Equal(initialPipes))
 	})
 })
 
@@ -190,7 +199,6 @@ func readFileInContainer(ctr garden.Container, pathname string, image string) st
 		Args:  []string{pathname},
 		Image: garden.ImageRef{URI: image},
 	}, garden.ProcessIO{
-		Stdin:  bytes.NewBuffer(nil),
 		Stdout: io.MultiWriter(&stdout, GinkgoWriter),
 		Stderr: GinkgoWriter,
 	})
@@ -205,7 +213,6 @@ func appendFileInContainer(ctr garden.Container, pathname, toAppend, image strin
 		Args:  []string{"-c", fmt.Sprintf("echo %s >> %s", toAppend, pathname)},
 		Image: garden.ImageRef{URI: image},
 	}, garden.ProcessIO{
-		Stdin:  bytes.NewBuffer(nil),
 		Stdout: GinkgoWriter,
 		Stderr: GinkgoWriter,
 	})
