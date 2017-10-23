@@ -1045,12 +1045,8 @@ var _ = Describe("Image Plugin", func() {
 
 	Context("when both image_plugin and privileged_image_plugin are provided", func() {
 		BeforeEach(func() {
-			// make a a copy of the fake image plugin so we can check location of file called
-			privilegedImagePluginPath := fmt.Sprintf("%s-priv", binaries.ImagePlugin)
-			Expect(copyFile(binaries.ImagePlugin, privilegedImagePluginPath)).To(Succeed())
-
 			config.ImagePluginBin = binaries.ImagePlugin
-			config.PrivilegedImagePluginBin = privilegedImagePluginPath
+			config.PrivilegedImagePluginBin = binaries.PrivilegedImagePlugin
 			config.ImagePluginExtraArgs = append(
 				config.ImagePluginExtraArgs,
 				"\"--rootfs-path\"",
@@ -1132,7 +1128,7 @@ var _ = Describe("Image Plugin", func() {
 				pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "create-bin-location"))
 				Expect(err).ToNot(HaveOccurred())
 
-				Expect(string(pluginLocationBytes)).To(Equal(fmt.Sprintf("%s-priv", binaries.ImagePlugin)))
+				Expect(string(pluginLocationBytes)).To(Equal(binaries.PrivilegedImagePlugin))
 			})
 
 			Context("and metrics are collected on that container", func() {
@@ -1144,8 +1140,7 @@ var _ = Describe("Image Plugin", func() {
 				It("calls only the privileged plugin", func() {
 					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "metrics-bin-location"))
 					Expect(err).ToNot(HaveOccurred())
-
-					Expect(string(pluginLocationBytes)).To(Equal(fmt.Sprintf("%s-priv", binaries.ImagePlugin)))
+					Expect(string(pluginLocationBytes)).To(Equal(binaries.PrivilegedImagePlugin))
 				})
 			})
 
@@ -1158,7 +1153,7 @@ var _ = Describe("Image Plugin", func() {
 					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "destroy-bin-location"))
 					Expect(err).ToNot(HaveOccurred())
 
-					Expect(string(pluginLocationBytes)).To(ContainSubstring(fmt.Sprintf("%s-priv", binaries.ImagePlugin)))
+					Expect(string(pluginLocationBytes)).To(ContainSubstring(binaries.PrivilegedImagePlugin))
 				})
 			})
 		})

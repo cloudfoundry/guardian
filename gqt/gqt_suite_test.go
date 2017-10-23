@@ -59,6 +59,9 @@ func TestGqt(t *testing.T) {
 		binaries.ImagePlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin")
 		Expect(err).NotTo(HaveOccurred())
 
+		binaries.PrivilegedImagePlugin = fmt.Sprintf("%s-priv", binaries.ImagePlugin)
+		Expect(copyFile(binaries.ImagePlugin, binaries.PrivilegedImagePlugin)).To(Succeed())
+
 		binaries.RuntimePlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin")
 		Expect(err).NotTo(HaveOccurred())
 

@@ -144,16 +144,17 @@ func (c GdnRunnerConfig) toFlags() []string {
 }
 
 type Binaries struct {
-	Tar           string `json:"tar,omitempty"`
-	Gdn           string `json:"gdn,omitempty"`
-	Init          string `json:"init,omitempty"`
-	RuntimePlugin string `json:"runtime_plugin,omitempty"`
-	ImagePlugin   string `json:"image_plugin,omitempty"`
-	NetworkPlugin string `json:"network_plugin,omitempty"`
-	NoopPlugin    string `json:"noop_plugin,omitempty"`
-	ExecRunner    string `json:"execrunner,omitempty"`
-	NSTar         string `json:"nstar,omitempty"`
-	Socket2me     string `json:"socket2me,omitempty"`
+	Tar                   string `json:"tar,omitempty"`
+	Gdn                   string `json:"gdn,omitempty"`
+	Init                  string `json:"init,omitempty"`
+	RuntimePlugin         string `json:"runtime_plugin,omitempty"`
+	ImagePlugin           string `json:"image_plugin,omitempty"`
+	PrivilegedImagePlugin string `json:"privileged_image_plugin,omitempty"`
+	NetworkPlugin         string `json:"network_plugin,omitempty"`
+	NoopPlugin            string `json:"noop_plugin,omitempty"`
+	ExecRunner            string `json:"execrunner,omitempty"`
+	NSTar                 string `json:"nstar,omitempty"`
+	Socket2me             string `json:"socket2me,omitempty"`
 }
 
 type GardenRunner struct {
