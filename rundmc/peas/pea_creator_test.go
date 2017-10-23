@@ -24,7 +24,10 @@ import (
 )
 
 var _ = Describe("PeaCreator", func() {
+	const imageURI = "some-image-uri"
+
 	var (
+		volumeCreator    *peasfakes.FakeVolumeCreator
 		bundleGenerator  *depotfakes.FakeBundleGenerator
 		bundleSaver      *depotfakes.FakeBundleSaver
 		execPreparer     *runruncfakes.FakeExecPreparer
@@ -33,10 +36,11 @@ var _ = Describe("PeaCreator", func() {
 		ctrBundleDir     string
 		log              *lagertest.TestLogger
 		generatedBundle  = goci.Bndl{Spec: specs.Spec{Version: "our-bundle"}}
-		rootfsPath       = "/some/rootfs"
 	)
 
 	BeforeEach(func() {
+		volumeCreator = new(peasfakes.FakeVolumeCreator)
+		volumeCreator.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
 		bundleGenerator = new(depotfakes.FakeBundleGenerator)
 		bundleGenerator.GenerateReturns(generatedBundle, nil)
 		bundleSaver = new(depotfakes.FakeBundleSaver)
@@ -46,6 +50,7 @@ var _ = Describe("PeaCreator", func() {
 		}, nil)
 		containerCreator = new(peasfakes.FakeContainerCreator)
 		peaCreator = &peas.PeaCreator{
+			VolumeCreator:    volumeCreator,
 			BundleGenerator:  bundleGenerator,
 			BundleSaver:      bundleSaver,
 			ExecPreparer:     execPreparer,
@@ -76,8 +81,12 @@ var _ = Describe("PeaCreator", func() {
 		JustBeforeEach(func() {
 			var err error
 			process, err = peaCreator.CreatePea(log, garden.ProcessSpec{
-				ID:    peaID,
-				Image: garden.ImageRef{URI: "raw://" + rootfsPath},
+				ID: peaID,
+				Image: garden.ImageRef{
+					URI:      imageURI,
+					Username: "cakeuser",
+					Password: "cakepassword",
+				},
 			}, garden.ProcessIO{}, ctrBundleDir)
 			Expect(err).NotTo(HaveOccurred())
 			exitCode, waitErr = process.Wait()
@@ -87,13 +96,23 @@ var _ = Describe("PeaCreator", func() {
 			Expect(filepath.Join(ctrBundleDir, "processes", peaID)).To(BeADirectory())
 		})
 
-		It("generates a runtime spec using a hardcoded empty rootfs path", func() {
+		It("creates a volume", func() {
+			Expect(volumeCreator.CreateCallCount()).To(Equal(1))
+			_, actualSpec := volumeCreator.CreateArgsForCall(0)
+			Expect(actualSpec.Handle).To(Equal(peaID))
+			Expect(actualSpec.Image).To(Equal(garden.ImageRef{
+				URI:      imageURI,
+				Username: "cakeuser",
+				Password: "cakepassword",
+			}))
+		})
+
+		It("generates a runtime spec from the VolumeCreator's runtimeSpec", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualCtrSpec, actualCtrBundlePath := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec).To(Equal(gardener.DesiredContainerSpec{
 				Handle:     "some-pea",
-				Privileged: false,
-				BaseConfig: specs.Spec{Root: &specs.Root{Path: rootfsPath}},
+				BaseConfig: specs.Spec{Version: "some-spec-version"},
 			}))
 			Expect(actualCtrBundlePath).To(Equal(ctrBundleDir))
 		})
@@ -110,8 +129,12 @@ var _ = Describe("PeaCreator", func() {
 			_, actualBundlePath, actualProcessSpec := execPreparer.PrepareArgsForCall(0)
 			Expect(actualBundlePath).To(Equal(filepath.Join(ctrBundleDir, "processes", peaID)))
 			Expect(actualProcessSpec).To(Equal(garden.ProcessSpec{
-				ID:    peaID,
-				Image: garden.ImageRef{URI: "raw://" + rootfsPath},
+				ID: peaID,
+				Image: garden.ImageRef{
+					URI:      imageURI,
+					Username: "cakeuser",
+					Password: "cakepassword",
+				},
 			}))
 		})
 
@@ -176,28 +199,13 @@ var _ = Describe("PeaCreator", func() {
 
 	Describe("pea creation failing", func() {
 		var (
-			imageURI  string
 			createErr error
 		)
-
-		BeforeEach(func() {
-			imageURI = "raw://" + rootfsPath
-		})
 
 		JustBeforeEach(func() {
 			_, createErr = peaCreator.CreatePea(log, garden.ProcessSpec{
 				Image: garden.ImageRef{URI: imageURI},
 			}, garden.ProcessIO{}, ctrBundleDir)
-		})
-
-		Context("when the rootfs URI does not have scheme: raw", func() {
-			BeforeEach(func() {
-				imageURI = "/some/path"
-			})
-
-			It("returns an error", func() {
-				Expect(createErr).To(MatchError(ContainSubstring("expected scheme 'raw', got ''")))
-			})
 		})
 
 		Context("when the bundle generator returns an error", func() {
@@ -227,6 +235,16 @@ var _ = Describe("PeaCreator", func() {
 
 			It("returns a wrapped error", func() {
 				Expect(createErr).To(MatchError(ContainSubstring("papaya")))
+			})
+		})
+
+		Context("when the volume creator returns an error", func() {
+			BeforeEach(func() {
+				volumeCreator.CreateReturns(specs.Spec{}, errors.New("coconut"))
+			})
+
+			It("returns a wrapped error", func() {
+				Expect(createErr).To(MatchError(ContainSubstring("coconut")))
 			})
 		})
 	})

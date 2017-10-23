@@ -418,7 +418,8 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		Containerizer: cmd.wireContainerizer(logger,
 			cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Runtime.Plugin,
 			cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(),
-			cmd.Containers.ApparmorProfile, propManager, uidMappings, gidMappings),
+			cmd.Containers.ApparmorProfile, propManager, uidMappings, gidMappings,
+			volumizer),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
@@ -658,7 +659,8 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.Volumizer {
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	depotPath, dadooPath, runtimePath, nstarPath, tarPath, appArmorProfile string,
-	properties gardener.PropertyManager, uidMappings, gidMappings idmapper.MappingList) *rundmc.Containerizer {
+	properties gardener.PropertyManager, uidMappings, gidMappings idmapper.MappingList,
+	volumeCreator peas.VolumeCreator) *rundmc.Containerizer {
 
 	// TODO centralize knowledge of garden -> runc capability schema translation
 	baseProcess := specs.Process{
@@ -784,6 +786,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
 	peaCreator := &peas.PeaCreator{
+		VolumeCreator:    volumeCreator,
 		BundleGenerator:  peaTemplate,
 		BundleSaver:      bundleSaver,
 		ExecPreparer:     execPreparer,

@@ -1,8 +1,6 @@
 package peas
 
 import (
-	"fmt"
-	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,7 +24,13 @@ type ContainerCreator interface {
 	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 }
 
+//go:generate counterfeiter . VolumeCreator
+type VolumeCreator interface {
+	Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error)
+}
+
 type PeaCreator struct {
+	VolumeCreator    VolumeCreator
 	BundleGenerator  depot.BundleGenerator
 	BundleSaver      depot.BundleSaver
 	ExecPreparer     runrunc.ExecPreparer
@@ -55,19 +59,17 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return nil, err
 	}
 
-	rootfsURL, err := url.Parse(spec.Image.URI)
+	runtimeSpec, err := p.VolumeCreator.Create(log, garden.ContainerSpec{
+		Handle: processID,
+		Image:  spec.Image,
+	})
 	if err != nil {
-		return errs("parsing-image-uri", err)
-	}
-
-	if rootfsURL.Scheme != "raw" {
-		return errs("expecting-raw-scheme", fmt.Errorf("expected scheme 'raw', got '%s'", rootfsURL.Scheme))
+		return errs("creating-volume", err)
 	}
 
 	bndl, err := p.BundleGenerator.Generate(gardener.DesiredContainerSpec{
 		Handle:     processID,
-		Privileged: false,
-		BaseConfig: specs.Spec{Root: &specs.Root{Path: rootfsURL.Path}},
+		BaseConfig: runtimeSpec,
 	}, ctrBundlePath)
 	if err != nil {
 		return errs("generating-bundle", err)
