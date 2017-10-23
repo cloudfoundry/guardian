@@ -352,8 +352,14 @@ func createTestHostDirAndTestFile() (string, string) {
 	cmd = exec.Command("mount", "--bind", tstHostDir, tstHostDir)
 	Expect(cmd.Run()).To(Succeed())
 
+	debugOut, err := exec.Command("mount").CombinedOutput()
+	Expect(err).ToNot(HaveOccurred())
+
 	cmd = exec.Command("mount", "--make-shared", tstHostDir)
-	Expect(cmd.Run()).To(Succeed())
+	out, err := cmd.CombinedOutput()
+	debugMsg := fmt.Sprintf("Command: mount --make-share %s\n%s\nOutput of `mount` command:\n%v",
+		tstHostDir, string(debugOut), string(out))
+	Expect(err).ToNot(HaveOccurred(), debugMsg)
 
 	fileName := fmt.Sprintf("bind-mount-%d-test-file", GinkgoParallelNode())
 	file, err := os.OpenFile(filepath.Join(tstHostDir, fileName), os.O_CREATE|os.O_RDWR, 0777)
@@ -381,7 +387,7 @@ func unmount(mountpoint string) {
 	cmd := exec.Command("umount", "-f", mountpoint)
 	output, err := cmd.CombinedOutput()
 	if len(output) > 0 {
-		fmt.Println(string(output))
+		fmt.Printf("Command: umount -f [%s]\n%v", mountpoint, string(output))
 	}
 	Expect(err).NotTo(HaveOccurred())
 }
