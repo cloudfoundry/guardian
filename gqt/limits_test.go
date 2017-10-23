@@ -18,7 +18,6 @@ var _ = Describe("Limits", func() {
 		client     *runner.RunningGarden
 		container  garden.Container
 		cgroupPath string
-		cgroupName string
 		cgroupType string
 		limits     garden.Limits
 		privileged bool
@@ -36,8 +35,6 @@ var _ = Describe("Limits", func() {
 			Privileged: privileged,
 		})
 		Expect(err).NotTo(HaveOccurred())
-
-		cgroupName = getCurrentCGroup()
 
 		cgroupsRoot := filepath.Join(client.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
 		cgroupPath = filepath.Join(

@@ -4,20 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/url"
 	"time"
 
 	"github.com/cloudfoundry/dropsonde/metrics"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/lager"
 )
 
 //go:generate counterfeiter . SysInfoProvider
 //go:generate counterfeiter . Containerizer
 //go:generate counterfeiter . Networker
+//go:generate counterfeiter . Volumizer
 //go:generate counterfeiter . VolumeCreator
 //go:generate counterfeiter . UidGenerator
 //go:generate counterfeiter . PropertyManager
@@ -31,9 +30,7 @@ const ExternalIPKey = "garden.network.external-ip"
 const MappedPortsKey = "garden.network.mapped-ports"
 const GraceTimeKey = "garden.grace-time"
 
-const RawRootFSScheme = "raw"
-
-const volumeCreatorSession = "volume-creator"
+const volumizerSession = "volume-creator"
 
 type SysInfoProvider interface {
 	TotalMemory() (uint64, error)
@@ -67,8 +64,12 @@ type Networker interface {
 	Restore(log lager.Logger, handle string) error
 }
 
-type VolumeCreator interface {
-	Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (specs.Spec, error)
+type Volumizer interface {
+	Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error)
+	VolumeDestroyMetricsGC
+}
+
+type VolumeDestroyMetricsGC interface {
 	Destroy(log lager.Logger, handle string) error
 	Metrics(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error)
 	GC(log lager.Logger) error
@@ -192,8 +193,8 @@ type Gardener struct {
 	// Networker creates a network for containers
 	Networker Networker
 
-	// VolumeCreator creates volumes for containers
-	VolumeCreator VolumeCreator
+	// Volumizer creates volumes for containers
+	Volumizer Volumizer
 
 	Logger lager.Logger
 
@@ -252,50 +253,25 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		}
 	}()
 
-	path := spec.Image.URI
-	if path == "" {
-		path = spec.RootFSPath
-	} else if spec.RootFSPath != "" {
-		return nil, errors.New("Cannot provide both Image.URI and RootFSPath")
+	if err := g.Volumizer.GC(log.Session(volumizerSession)); err != nil {
+		log.Error("graph-cleanup-failed", err)
 	}
 
-	rootFSURL, err := url.Parse(path)
+	runtimeSpec, err := g.Volumizer.Create(log, spec)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := g.VolumeCreator.GC(log.Session(volumeCreatorSession)); err != nil {
-		log.Error("graph-cleanup-failed", err)
-	}
-
-	var baseConfig specs.Spec
-	if rootFSURL.Scheme == RawRootFSScheme {
-		baseConfig.Root = &specs.Root{Path: rootFSURL.Path}
-		baseConfig.Process = &specs.Process{}
-	} else {
-		var err error
-		baseConfig, err = g.VolumeCreator.Create(log.Session(volumeCreatorSession), spec.Handle, rootfs_spec.Spec{
-			RootFS:     rootFSURL,
-			Username:   spec.Image.Username,
-			Password:   spec.Image.Password,
-			QuotaSize:  int64(spec.Limits.Disk.ByteHard),
-			QuotaScope: spec.Limits.Disk.Scope,
-			Namespaced: !spec.Privileged,
-		})
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if err := g.Containerizer.Create(log, DesiredContainerSpec{
+	desiredSpec := DesiredContainerSpec{
 		Handle:     spec.Handle,
 		Hostname:   spec.Handle,
 		Privileged: spec.Privileged,
 		Env:        spec.Env,
 		BindMounts: spec.BindMounts,
 		Limits:     spec.Limits,
-		BaseConfig: baseConfig,
-	}); err != nil {
+		BaseConfig: runtimeSpec,
+	}
+	if err := g.Containerizer.Create(log, desiredSpec); err != nil {
 		return nil, err
 	}
 
@@ -347,7 +323,7 @@ func (g *Gardener) lookup(handle string) garden.Container {
 		logger:          g.Logger,
 		handle:          handle,
 		containerizer:   g.Containerizer,
-		volumeCreator:   g.VolumeCreator,
+		volumizer:       g.Volumizer,
 		networker:       g.Networker,
 		propertyManager: g.PropertyManager,
 	}
@@ -381,7 +357,7 @@ func (g *Gardener) destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	if err := g.VolumeCreator.Destroy(log.Session(volumeCreatorSession), handle); err != nil {
+	if err := g.Volumizer.Destroy(log.Session(volumizerSession), handle); err != nil {
 		return err
 	}
 

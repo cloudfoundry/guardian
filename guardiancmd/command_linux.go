@@ -44,9 +44,9 @@ func wireDepot(depotPath string, bundler depot.BundleGenerator, bundleSaver depo
 	return depot.New(depotPath, bundler, bundleSaver)
 }
 
-func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string, uidMappings, gidMappings idmapper.MappingList) gardener.VolumeCreator {
+func (cmd *ServerCommand) wireVolumizer(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string, uidMappings, gidMappings idmapper.MappingList) gardener.Volumizer {
 	if graphRoot == "" {
-		return gardener.NoopVolumeCreator{}
+		return gardener.NoopVolumizer{}
 	}
 
 	if cmd.Image.Plugin.Path() != "" || cmd.Image.PrivilegedPlugin.Path() != "" {
@@ -156,11 +156,12 @@ func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot strin
 		},
 	}
 
-	return rootfs_provider.NewCakeOrdinator(cake,
+	shed := rootfs_provider.NewCakeOrdinator(cake,
 		repoFetcher,
 		layerCreator,
 		rootfs_provider.NewMetricsAdapter(quotaManager.GetUsage, quotaedGraphDriver.GetMntPath),
 		ovenCleaner)
+	return gardener.NewVolumeProvider(shed, shed)
 }
 
 func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *dadoo.ExecRunner {

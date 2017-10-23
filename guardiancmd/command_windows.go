@@ -40,12 +40,12 @@ func wireDepot(depotPath string, bundleGenerator depot.BundleGenerator, bundleSa
 	return depot.New(depotPath, bundleGenerator, bundleSaver)
 }
 
-func (cmd *ServerCommand) wireVolumeCreator(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string, uidMappings, gidMappings idmapper.MappingList) gardener.VolumeCreator {
+func (cmd *ServerCommand) wireVolumizer(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string, uidMappings, gidMappings idmapper.MappingList) gardener.Volumizer {
 	if cmd.Image.Plugin.Path() != "" || cmd.Image.PrivilegedPlugin.Path() != "" {
 		return cmd.wireImagePlugin()
 	}
 
-	return gardener.NoopVolumeCreator{}
+	return gardener.NoopVolumizer{}
 }
 
 func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *execrunner.DirectExecRunner {

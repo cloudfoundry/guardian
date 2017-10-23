@@ -4,7 +4,6 @@ package gardenerfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager"
@@ -26,44 +25,6 @@ type FakeVolumeCreator struct {
 	createReturnsOnCall map[int]struct {
 		result1 specs.Spec
 		result2 error
-	}
-	DestroyStub        func(log lager.Logger, handle string) error
-	destroyMutex       sync.RWMutex
-	destroyArgsForCall []struct {
-		log    lager.Logger
-		handle string
-	}
-	destroyReturns struct {
-		result1 error
-	}
-	destroyReturnsOnCall map[int]struct {
-		result1 error
-	}
-	MetricsStub        func(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error)
-	metricsMutex       sync.RWMutex
-	metricsArgsForCall []struct {
-		log        lager.Logger
-		handle     string
-		privileged bool
-	}
-	metricsReturns struct {
-		result1 garden.ContainerDiskStat
-		result2 error
-	}
-	metricsReturnsOnCall map[int]struct {
-		result1 garden.ContainerDiskStat
-		result2 error
-	}
-	GCStub        func(log lager.Logger) error
-	gCMutex       sync.RWMutex
-	gCArgsForCall []struct {
-		log lager.Logger
-	}
-	gCReturns struct {
-		result1 error
-	}
-	gCReturnsOnCall map[int]struct {
-		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -122,167 +83,11 @@ func (fake *FakeVolumeCreator) CreateReturnsOnCall(i int, result1 specs.Spec, re
 	}{result1, result2}
 }
 
-func (fake *FakeVolumeCreator) Destroy(log lager.Logger, handle string) error {
-	fake.destroyMutex.Lock()
-	ret, specificReturn := fake.destroyReturnsOnCall[len(fake.destroyArgsForCall)]
-	fake.destroyArgsForCall = append(fake.destroyArgsForCall, struct {
-		log    lager.Logger
-		handle string
-	}{log, handle})
-	fake.recordInvocation("Destroy", []interface{}{log, handle})
-	fake.destroyMutex.Unlock()
-	if fake.DestroyStub != nil {
-		return fake.DestroyStub(log, handle)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.destroyReturns.result1
-}
-
-func (fake *FakeVolumeCreator) DestroyCallCount() int {
-	fake.destroyMutex.RLock()
-	defer fake.destroyMutex.RUnlock()
-	return len(fake.destroyArgsForCall)
-}
-
-func (fake *FakeVolumeCreator) DestroyArgsForCall(i int) (lager.Logger, string) {
-	fake.destroyMutex.RLock()
-	defer fake.destroyMutex.RUnlock()
-	return fake.destroyArgsForCall[i].log, fake.destroyArgsForCall[i].handle
-}
-
-func (fake *FakeVolumeCreator) DestroyReturns(result1 error) {
-	fake.DestroyStub = nil
-	fake.destroyReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeVolumeCreator) DestroyReturnsOnCall(i int, result1 error) {
-	fake.DestroyStub = nil
-	if fake.destroyReturnsOnCall == nil {
-		fake.destroyReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.destroyReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeVolumeCreator) Metrics(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error) {
-	fake.metricsMutex.Lock()
-	ret, specificReturn := fake.metricsReturnsOnCall[len(fake.metricsArgsForCall)]
-	fake.metricsArgsForCall = append(fake.metricsArgsForCall, struct {
-		log        lager.Logger
-		handle     string
-		privileged bool
-	}{log, handle, privileged})
-	fake.recordInvocation("Metrics", []interface{}{log, handle, privileged})
-	fake.metricsMutex.Unlock()
-	if fake.MetricsStub != nil {
-		return fake.MetricsStub(log, handle, privileged)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.metricsReturns.result1, fake.metricsReturns.result2
-}
-
-func (fake *FakeVolumeCreator) MetricsCallCount() int {
-	fake.metricsMutex.RLock()
-	defer fake.metricsMutex.RUnlock()
-	return len(fake.metricsArgsForCall)
-}
-
-func (fake *FakeVolumeCreator) MetricsArgsForCall(i int) (lager.Logger, string, bool) {
-	fake.metricsMutex.RLock()
-	defer fake.metricsMutex.RUnlock()
-	return fake.metricsArgsForCall[i].log, fake.metricsArgsForCall[i].handle, fake.metricsArgsForCall[i].privileged
-}
-
-func (fake *FakeVolumeCreator) MetricsReturns(result1 garden.ContainerDiskStat, result2 error) {
-	fake.MetricsStub = nil
-	fake.metricsReturns = struct {
-		result1 garden.ContainerDiskStat
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeVolumeCreator) MetricsReturnsOnCall(i int, result1 garden.ContainerDiskStat, result2 error) {
-	fake.MetricsStub = nil
-	if fake.metricsReturnsOnCall == nil {
-		fake.metricsReturnsOnCall = make(map[int]struct {
-			result1 garden.ContainerDiskStat
-			result2 error
-		})
-	}
-	fake.metricsReturnsOnCall[i] = struct {
-		result1 garden.ContainerDiskStat
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeVolumeCreator) GC(log lager.Logger) error {
-	fake.gCMutex.Lock()
-	ret, specificReturn := fake.gCReturnsOnCall[len(fake.gCArgsForCall)]
-	fake.gCArgsForCall = append(fake.gCArgsForCall, struct {
-		log lager.Logger
-	}{log})
-	fake.recordInvocation("GC", []interface{}{log})
-	fake.gCMutex.Unlock()
-	if fake.GCStub != nil {
-		return fake.GCStub(log)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.gCReturns.result1
-}
-
-func (fake *FakeVolumeCreator) GCCallCount() int {
-	fake.gCMutex.RLock()
-	defer fake.gCMutex.RUnlock()
-	return len(fake.gCArgsForCall)
-}
-
-func (fake *FakeVolumeCreator) GCArgsForCall(i int) lager.Logger {
-	fake.gCMutex.RLock()
-	defer fake.gCMutex.RUnlock()
-	return fake.gCArgsForCall[i].log
-}
-
-func (fake *FakeVolumeCreator) GCReturns(result1 error) {
-	fake.GCStub = nil
-	fake.gCReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeVolumeCreator) GCReturnsOnCall(i int, result1 error) {
-	fake.GCStub = nil
-	if fake.gCReturnsOnCall == nil {
-		fake.gCReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.gCReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *FakeVolumeCreator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	fake.destroyMutex.RLock()
-	defer fake.destroyMutex.RUnlock()
-	fake.metricsMutex.RLock()
-	defer fake.metricsMutex.RUnlock()
-	fake.gCMutex.RLock()
-	defer fake.gCMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

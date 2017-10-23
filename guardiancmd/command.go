@@ -395,8 +395,8 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		restorer = &gardener.NoopRestorer{}
 	}
 
-	var volumeCreator gardener.VolumeCreator = nil
-	volumeCreator = cmd.wireVolumeCreator(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages, uidMappings, gidMappings)
+	var volumizer gardener.Volumizer = nil
+	volumizer = cmd.wireVolumizer(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages, uidMappings, gidMappings)
 
 	starters := []gardener.Starter{}
 	if !cmd.Server.SkipSetup {
@@ -414,7 +414,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		BulkStarter:     bulkStarter,
 		SysInfoProvider: sysinfo.NewResourcesProvider(cmd.Containers.Dir),
 		Networker:       networker,
-		VolumeCreator:   volumeCreator,
+		Volumizer:       volumizer,
 		Containerizer: cmd.wireContainerizer(logger,
 			cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Runtime.Plugin,
 			cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(),
@@ -622,7 +622,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 	return networker, ipTablesStarter, nil
 }
 
-func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
+func (cmd *ServerCommand) wireImagePlugin() gardener.Volumizer {
 	var unprivilegedCommandCreator imageplugin.CommandCreator = &imageplugin.NotImplementedCommandCreator{
 		Err: errors.New("no image_plugin provided"),
 	}
@@ -645,13 +645,15 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.VolumeCreator {
 		}
 	}
 
-	return &imageplugin.ImagePlugin{
+	imagePlugin := &imageplugin.ImagePlugin{
 		UnprivilegedCommandCreator: unprivilegedCommandCreator,
 		PrivilegedCommandCreator:   privilegedCommandCreator,
 		ImageSpecCreator:           imageplugin.NewOCIImageSpecCreator(cmd.Containers.Dir),
 		CommandRunner:              commandRunner(),
 		DefaultRootfs:              cmd.Containers.DefaultRootFS,
 	}
+
+	return gardener.NewVolumeProvider(imagePlugin, imagePlugin)
 }
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger,

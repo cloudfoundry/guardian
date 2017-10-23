@@ -8,7 +8,6 @@ import (
 
 	"code.cloudfoundry.org/guardian/kawasaki"
 	fakes "code.cloudfoundry.org/guardian/kawasaki/kawasakifakes"
-	"code.cloudfoundry.org/guardian/kawasaki/netns"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -22,8 +21,6 @@ var _ = Describe("Configurer", func() {
 		fakeHostConfigurer       *fakes.FakeHostConfigurer
 		fakeContainerConfigurer  *fakes.FakeContainerConfigurer
 		fakeInstanceChainCreator *fakes.FakeInstanceChainCreator
-
-		dummyFileOpener netns.Opener
 
 		netnsFD *os.File
 
@@ -42,10 +39,6 @@ var _ = Describe("Configurer", func() {
 		var err error
 		netnsFD, err = ioutil.TempFile("", "")
 		Expect(err).NotTo(HaveOccurred())
-
-		dummyFileOpener = func(path string) (*os.File, error) {
-			return netnsFD, nil
-		}
 
 		configurer = kawasaki.NewConfigurer(fakeDnsResolvConfigurer, fakeHostConfigurer, fakeContainerConfigurer, fakeInstanceChainCreator)
 

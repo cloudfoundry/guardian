@@ -20,7 +20,7 @@ import (
 var _ = Describe("Gardener", func() {
 	var (
 		networker       *fakes.FakeNetworker
-		volumeCreator   *fakes.FakeVolumeCreator
+		volumizer       *fakes.FakeVolumizer
 		containerizer   *fakes.FakeContainerizer
 		uidGenerator    *fakes.FakeUidGenerator
 		fakeBulkStarter *fakes.FakeBulkStarter
@@ -39,7 +39,7 @@ var _ = Describe("Gardener", func() {
 		uidGenerator = new(fakes.FakeUidGenerator)
 		fakeBulkStarter = new(fakes.FakeBulkStarter)
 		networker = new(fakes.FakeNetworker)
-		volumeCreator = new(fakes.FakeVolumeCreator)
+		volumizer = new(fakes.FakeVolumizer)
 		sysinfoProvider = new(fakes.FakeSysInfoProvider)
 		propertyManager = new(fakes.FakePropertyManager)
 		restorer = new(fakes.FakeRestorer)
@@ -54,7 +54,7 @@ var _ = Describe("Gardener", func() {
 			UidGenerator:    uidGenerator,
 			BulkStarter:     fakeBulkStarter,
 			Networker:       networker,
-			VolumeCreator:   volumeCreator,
+			Volumizer:       volumizer,
 			Logger:          logger,
 			PropertyManager: propertyManager,
 			Restorer:        restorer,
@@ -63,28 +63,26 @@ var _ = Describe("Gardener", func() {
 	})
 
 	Describe("creating a container", func() {
-		ItDestroysEverything := func(rootfsPath string) {
-			BeforeEach(func() {
-				_, err := gdnr.Create(garden.ContainerSpec{
-					RootFSPath: rootfsPath,
-					Handle:     "poor-banana",
-				})
-				Expect(err).To(HaveOccurred())
-			})
-
+		ItDestroysEverything := func() {
 			It("should clean up the networking configuration", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+				Expect(err).To(HaveOccurred())
 				Expect(networker.DestroyCallCount()).To(Equal(1))
 				_, handle := networker.DestroyArgsForCall(0)
 				Expect(handle).To(Equal("poor-banana"))
 			})
 
 			It("should clean up any created volumes", func() {
-				Expect(volumeCreator.DestroyCallCount()).To(Equal(1))
-				_, handle := volumeCreator.DestroyArgsForCall(0)
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+				Expect(err).To(HaveOccurred())
+				Expect(volumizer.DestroyCallCount()).To(Equal(1))
+				_, handle := volumizer.DestroyArgsForCall(0)
 				Expect(handle).To(Equal("poor-banana"))
 			})
 
 			It("should destroy any container state", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{Handle: "poor-banana"})
+				Expect(err).To(HaveOccurred())
 				Expect(containerizer.DestroyCallCount()).To(Equal(1))
 				_, handle := containerizer.DestroyArgsForCall(0)
 				Expect(handle).To(Equal("poor-banana"))
@@ -102,6 +100,18 @@ var _ = Describe("Gardener", func() {
 			Expect(spec.Handle).To(Equal("generated-handle"))
 		})
 
+		It("assigns the hostname to be the same as the random handle", func() {
+			uidGenerator.GenerateReturns("generated-handle")
+
+			_, err := gdnr.Create(garden.ContainerSpec{})
+
+			Expect(err).NotTo(HaveOccurred())
+			Expect(containerizer.CreateCallCount()).To(Equal(1))
+			_, spec := containerizer.CreateArgsForCall(0)
+			Expect(spec.Handle).To(Equal("generated-handle"))
+			Expect(spec.Hostname).To(Equal(spec.Handle))
+		})
+
 		Context("when a handle is specified", func() {
 			It("assigns the handle to the container", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{Handle: "handle"})
@@ -117,116 +127,49 @@ var _ = Describe("Gardener", func() {
 			_, err := gdnr.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(volumeCreator.GCCallCount()).To(Equal(1))
+			Expect(volumizer.GCCallCount()).To(Equal(1))
 		})
 
 		Context("when the graph cleanup fails", func() {
 			It("does NOT return the error", func() {
-				volumeCreator.GCReturns(errors.New("graph-cleanup-fail"))
+				volumizer.GCReturns(errors.New("graph-cleanup-fail"))
 				_, err := gdnr.Create(garden.ContainerSpec{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 
-		Context("when passing a rootfs path", func() {
-			Context("when parsing the rootfs path fails", func() {
-				It("should return an error", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{
-						RootFSPath: "://banana",
-					})
-					Expect(err).To(HaveOccurred())
-				})
-
-				ItDestroysEverything("://banana")
-			})
-
-			It("passes the parsed rootfsURL to the volume creator", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{RootFSPath: "/some/path"})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(volumeCreator.CreateCallCount()).To(Equal(1))
-				_, _, fsSpec := volumeCreator.CreateArgsForCall(0)
-				Expect(fsSpec.RootFS.Path).To(Equal("/some/path"))
-			})
+		It("passes the ContainerSpec to the Volumizer", func() {
+			spec := garden.ContainerSpec{Handle: "some-ctr"}
+			_, err := gdnr.Create(spec)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(volumizer.CreateCallCount()).To(Equal(1))
+			_, actualContainerSpec := volumizer.CreateArgsForCall(0)
+			Expect(actualContainerSpec).To(Equal(spec))
 		})
 
-		Context("when passing an ImageRef", func() {
-			Context("when parsing the rootfs path fails", func() {
-				It("should return an error", func() {
-					_, err := gdnr.Create(garden.ContainerSpec{
-						RootFSPath: "://banana",
-					})
-					Expect(err).To(HaveOccurred())
-				})
-
-				ItDestroysEverything("://banana")
-			})
-
-			It("passes the parsed rootfsURL to the volume creator", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "/some/path"}})
-				Expect(err).NotTo(HaveOccurred())
-				Expect(volumeCreator.CreateCallCount()).To(Equal(1))
-				_, _, fsSpec := volumeCreator.CreateArgsForCall(0)
-				Expect(fsSpec.RootFS.Path).To(Equal("/some/path"))
-			})
-		})
-
-		Context("When both ImageRef and RootFSPath is specified", func() {
-			It("returns informative error message", func() {
-				_, err := gdnr.Create(garden.ContainerSpec{RootFSPath: "/some/path",
-					Image: garden.ImageRef{URI: "/some/path"}})
-				Expect(err).To(MatchError(ContainSubstring("Cannot provide both Image.URI and RootFSPath")))
-			})
-		})
-
-		Context("when the rootfs path is raw", func() {
-			BeforeEach(func() {
-				_, err := gdnr.Create(garden.ContainerSpec{
-					Handle:     "bob",
-					RootFSPath: "raw:///banana",
-				})
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("creates the container with the given path", func() {
-				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.BaseConfig.Root.Path).To(Equal("/banana"))
-			})
-
-			It("does not create a volume", func() {
-				Expect(volumeCreator.CreateCallCount()).To(Equal(0))
-			})
-
-			It("creates the container with an empty base config environment", func() {
-				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.BaseConfig.Process.Env).To(BeNil())
-			})
-		})
-
-		It("should ask the shed for a namespaced rootfs", func() {
+		It("calls the containerizer with an unprivileged DesiredContainerSpec", func() {
 			_, err := gdnr.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
-			Expect(volumeCreator.CreateCallCount()).To(Equal(1))
-			_, _, fsSpec := volumeCreator.CreateArgsForCall(0)
-			Expect(fsSpec.Namespaced).To(BeTrue())
+			Expect(volumizer.CreateCallCount()).To(Equal(1))
+			_, actualContainerSpec := volumizer.CreateArgsForCall(0)
+			Expect(actualContainerSpec.Privileged).To(BeFalse())
 		})
 
 		Context("when the container is privileged", func() {
-			It("should ask the shed for an unnamespaced rootfs", func() {
+			It("calls the containerizer with a privileged DesiredContainerSpec", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{
 					Privileged: true,
 				})
 				Expect(err).NotTo(HaveOccurred())
-				Expect(volumeCreator.CreateCallCount()).To(Equal(1))
-				_, _, fsSpec := volumeCreator.CreateArgsForCall(0)
-				Expect(fsSpec.Namespaced).To(BeFalse())
+				Expect(volumizer.CreateCallCount()).To(Equal(1))
+				_, actualContainerSpec := volumizer.CreateArgsForCall(0)
+				Expect(actualContainerSpec.Privileged).To(BeTrue())
 			})
 		})
 
-		Context("when volume creator fails", func() {
+		Context("when volume creation fails", func() {
 			BeforeEach(func() {
-				volumeCreator.CreateReturns(specs.Spec{}, errors.New("booom!"))
+				volumizer.CreateReturns(specs.Spec{}, errors.New("booom!"))
 			})
 
 			It("returns an error", func() {
@@ -239,7 +182,7 @@ var _ = Describe("Gardener", func() {
 				Expect(containerizer.CreateCallCount()).To(Equal(0))
 			})
 
-			ItDestroysEverything("")
+			ItDestroysEverything()
 		})
 
 		It("asks the containerizer to create a container", func() {
@@ -272,7 +215,7 @@ var _ = Describe("Gardener", func() {
 				Expect(err).To(HaveOccurred())
 			})
 
-			ItDestroysEverything("")
+			ItDestroysEverything()
 
 			It("logs the underlying error", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
@@ -281,7 +224,7 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		Context("when a disk limit is provided", func() {
+		Describe("ContainerSpec limits", func() {
 			var spec garden.ContainerSpec
 
 			BeforeEach(func() {
@@ -289,31 +232,18 @@ var _ = Describe("Gardener", func() {
 				spec.Limits.Disk.ByteHard = 10 * 1024 * 1024
 			})
 
-			It("should delegate the limit to the volume creator", func() {
-				_, err := gdnr.Create(spec)
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(volumeCreator.CreateCallCount()).To(Equal(1))
-				_, _, rpSpec := volumeCreator.CreateArgsForCall(0)
-				Expect(rpSpec.QuotaSize).To(BeEquivalentTo(spec.Limits.Disk.ByteHard))
-				Expect(rpSpec.QuotaScope).To(Equal(garden.DiskLimitScopeTotal))
-			})
-		})
-
-		Context("when a pid limit is provided", func() {
-			var spec garden.ContainerSpec
-
-			BeforeEach(func() {
-				spec.Limits.Pid = garden.PidLimits{Max: 1}
-			})
-
-			It("should delegate the limit to the containerizer", func() {
+			It("calls the containerizer with the disk limit", func() {
 				_, err := gdnr.Create(spec)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(containerizer.CreateCallCount()).To(Equal(1))
-				_, desiredSpec := containerizer.CreateArgsForCall(0)
-				Expect(desiredSpec.Limits.Pid.Max).To(BeNumerically("==", 1))
+				_, actualDesiredContainerSpec := containerizer.CreateArgsForCall(0)
+				Expect(actualDesiredContainerSpec.Limits).To(Equal(garden.Limits{
+					Disk: garden.DiskLimits{
+						Scope:    garden.DiskLimitScopeTotal,
+						ByteHard: 10 * 1024 * 1024,
+					},
+				}))
 			})
 		})
 
@@ -378,27 +308,9 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		Context("when a memory limit is provided", func() {
-			It("should pass the memory limit to the containerizer", func() {
-				memLimit := garden.Limits{
-					Memory: garden.MemoryLimits{LimitInBytes: 4096},
-				}
-
-				_, err := gdnr.Create(garden.ContainerSpec{
-					Limits: memLimit,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(containerizer.CreateCallCount()).To(Equal(1))
-
-				_, spec := containerizer.CreateArgsForCall(0)
-				Expect(spec.Limits).To(Equal(memLimit))
-			})
-		})
-
 		It("passes base config to containerizer", func() {
 			runtimeConfig := specs.Spec{Version: "some-idiosyncratic-version"}
-			volumeCreator.CreateReturns(runtimeConfig, nil)
+			volumizer.CreateReturns(runtimeConfig, nil)
 
 			_, err := gdnr.Create(garden.ContainerSpec{})
 			Expect(err).NotTo(HaveOccurred())
@@ -873,8 +785,8 @@ var _ = Describe("Gardener", func() {
 
 		It("asks the volume creator to destroy the container rootfs", func() {
 			gdnr.Destroy("some-handle")
-			Expect(volumeCreator.DestroyCallCount()).To(Equal(1))
-			_, handleToDestroy := volumeCreator.DestroyArgsForCall(0)
+			Expect(volumizer.DestroyCallCount()).To(Equal(1))
+			_, handleToDestroy := volumizer.DestroyArgsForCall(0)
 			Expect(handleToDestroy).To(Equal("some-handle"))
 		})
 
@@ -940,7 +852,7 @@ var _ = Describe("Gardener", func() {
 
 		Context("when destroying the rootfs fails", func() {
 			BeforeEach(func() {
-				volumeCreator.DestroyReturns(errors.New("rootfs deletion failed"))
+				volumizer.DestroyReturns(errors.New("rootfs deletion failed"))
 			})
 
 			It("returns the error", func() {
@@ -1344,7 +1256,7 @@ var _ = Describe("Gardener", func() {
 				Memory: memoryStat,
 			}, nil)
 
-			volumeCreator.MetricsReturns(diskStat, nil)
+			volumizer.MetricsReturns(diskStat, nil)
 		})
 
 		It("should return the cpu and memory metrics the containerizer", func() {
@@ -1366,7 +1278,7 @@ var _ = Describe("Gardener", func() {
 			_, err := container.Metrics()
 			Expect(err).NotTo(HaveOccurred())
 
-			_, _, namespaced := volumeCreator.MetricsArgsForCall(0)
+			_, _, namespaced := volumizer.MetricsArgsForCall(0)
 			Expect(namespaced).To(BeTrue())
 		})
 
@@ -1381,7 +1293,7 @@ var _ = Describe("Gardener", func() {
 				_, err := container.Metrics()
 				Expect(err).NotTo(HaveOccurred())
 
-				_, _, namespaced := volumeCreator.MetricsArgsForCall(0)
+				_, _, namespaced := volumizer.MetricsArgsForCall(0)
 				Expect(namespaced).To(BeFalse())
 			})
 		})
@@ -1410,7 +1322,7 @@ var _ = Describe("Gardener", func() {
 
 		Context("when disk metrics cannot be acquired", func() {
 			BeforeEach(func() {
-				volumeCreator.MetricsReturns(garden.ContainerDiskStat{}, errors.New("banana"))
+				volumizer.MetricsReturns(garden.ContainerDiskStat{}, errors.New("banana"))
 			})
 
 			It("should propagate the error", func() {
