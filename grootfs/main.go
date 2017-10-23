@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	defaultFilesystemDriver = "btrfs"
+	defaultFilesystemDriver = "overlay-xfs"
 	defaultDraxBin          = "drax"
 	defaultTardisBin        = "tardis"
 	defaultNewuidmapBin     = "newuidmap"
