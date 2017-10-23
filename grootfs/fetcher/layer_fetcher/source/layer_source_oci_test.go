@@ -38,12 +38,14 @@ var _ = Describe("Layer source: OCI", func() {
 		configBlob = "sha256:10c8f0eb9d1af08fe6e3b8dbd29e5aa2b6ecfa491ecd04ed90de19a4ac22de7b"
 		expectedBlobInfos = []types.BlobInfo{
 			{
-				Digest: "sha256:56bec22e355981d8ba0878c6c2f23b21f422f30ab0aba188b54f1ffeff59c190",
-				Size:   668151,
+				Digest:    "sha256:56bec22e355981d8ba0878c6c2f23b21f422f30ab0aba188b54f1ffeff59c190",
+				Size:      668151,
+				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 			},
 			{
-				Digest: "sha256:ed2d7b0f6d7786230b71fd60de08a553680a9a96ab216183bcc49c71f06033ab",
-				Size:   124,
+				Digest:    "sha256:ed2d7b0f6d7786230b71fd60de08a553680a9a96ab216183bcc49c71f06033ab",
+				Size:      124,
+				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 			},
 		}
 		expectedDiffIds = []digestpkg.Digest{

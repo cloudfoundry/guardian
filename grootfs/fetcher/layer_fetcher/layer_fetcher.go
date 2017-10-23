@@ -74,11 +74,11 @@ func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, la
 
 	blobFilePath, size, err := f.source.Blob(logger, baseImageURL, layerInfo.BlobID, layerInfo.URLs)
 	if err != nil {
-		logger.Error("source-blob-failed", err)
+		logger.Error("source-blob-failed", err, lager.Data{"baseImageUrl": baseImageURL, "blobId": layerInfo.BlobID, "URL": layerInfo.URLs})
 		return nil, 0, err
 	}
 
-	blobReader, err := NewBlobReader(blobFilePath)
+	blobReader, err := NewBlobReader(blobFilePath, layerInfo.MediaType)
 	if err != nil {
 		logger.Error("blob-reader-failed", err)
 		return nil, 0, errorspkg.Wrap(err, "opening stream from temporary blob file")
@@ -105,6 +105,7 @@ func (f *LayerFetcher) createLayerInfos(logger lager.Logger, image Manifest, con
 			ParentChainID: parentChainID,
 			BaseDirectory: layer.Annotations[cfBaseDirectoryAnnotation],
 			URLs:          layer.URLs,
+			MediaType:     layer.MediaType,
 		})
 		parentChainID = chainID
 	}

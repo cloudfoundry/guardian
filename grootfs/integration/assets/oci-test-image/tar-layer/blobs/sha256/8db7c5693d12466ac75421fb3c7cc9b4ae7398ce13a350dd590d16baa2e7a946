@@ -1,0 +1,1 @@
+{"created":"2015-08-20T14:47:37.161017125Z","architecture":"amd64","os":"linux","config":{},"rootfs":{"type":"layers","diff_ids":["sha256:12405ef1444d9b170bf809a46c1e82ff3071b0b6501657c9c425a1df5ec5cfa0"]},"history":[{"created":"2015-08-20T14:47:37.161017125Z","comment":"Imported from -"}]}
