@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -364,6 +365,24 @@ var _ = Describe("Create with OCI images", func() {
 		})
 	})
 
+	Context("when a layer is an uncompressed blob", func() {
+		BeforeEach(func() {
+			integration.SkipIfNonRoot(GrootfsTestUid)
+			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/tar-layer:latest", workDir))
+		})
+
+		It("is readable after image creation", func() {
+			containerSpec, err := runner.Create(groot.CreateSpec{
+				BaseImageURL: baseImageURL,
+				ID:           randomImageID,
+				Mount:        mountByDefault(),
+			})
+			Expect(err).NotTo(HaveOccurred())
+			filePath := path.Join(containerSpec.Root.Path, "pokemon.txt")
+			Expect(strings.TrimSpace(readFile(filePath))).To(Equal("pikachu"))
+		})
+	})
+
 	Context("when the image has files that are not writable to their owner", func() {
 		BeforeEach(func() {
 			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/non-writable-file:latest", workDir))
@@ -481,4 +500,10 @@ func startFakeBlobstore(workDir string) (*http.Server, chan struct{}) {
 	}()
 
 	return httpServer, blobstoreStopSignal
+}
+
+func readFile(name string) string {
+	content, err := ioutil.ReadFile(name)
+	Expect(err).NotTo(HaveOccurred())
+	return string(content)
 }

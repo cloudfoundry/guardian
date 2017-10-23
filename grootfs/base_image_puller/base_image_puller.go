@@ -42,6 +42,7 @@ type LayerInfo struct {
 	Size          int64
 	BaseDirectory string
 	URLs          []string
+	MediaType     string
 }
 
 type BaseImageInfo struct {
