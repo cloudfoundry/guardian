@@ -97,6 +97,7 @@ func main() {
 	grootfs.Commands = []cli.Command{
 		commands.InitStoreCommand,
 		commands.DeleteStoreCommand,
+		commands.GenerateVolumeSizeMetadata,
 		commands.CreateCommand,
 		commands.DeleteCommand,
 		commands.StatsCommand,

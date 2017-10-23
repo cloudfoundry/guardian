@@ -1,10 +1,13 @@
 package filesystems
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
@@ -44,4 +47,18 @@ func VolumeSize(logger lager.Logger, storePath, id string) (int64, error) {
 func VolumeMetaFilePath(storePath, id string) string {
 	id = strings.Replace(id, "gc.", "", 1)
 	return filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", id))
+}
+
+func CalculatePathSize(logger lager.Logger, path string) (int64, error) {
+	cmd := exec.Command("du", "-bs", path)
+	stdoutBuffer := bytes.NewBuffer([]byte{})
+	stderrBuffer := bytes.NewBuffer([]byte{})
+	cmd.Stdout = stdoutBuffer
+	cmd.Stderr = stderrBuffer
+	if err := cmd.Run(); err != nil {
+		return 0, errorspkg.Wrapf(err, "du failed: %s", stderrBuffer.String())
+	}
+
+	usageString := strings.Split(stdoutBuffer.String(), "\t")[0]
+	return strconv.ParseInt(usageString, 10, 64)
 }
