@@ -134,14 +134,14 @@ func (g *GarbageCollector) gcVolumes(logger lager.Logger) ([]string, error) {
 	return collectables, nil
 }
 
-func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) {
+func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, []string, error) {
 	logger = logger.Session("unused-volumes")
 	logger.Info("starting")
 	defer logger.Info("ending")
 
 	volumes, err := g.volumeDriver.Volumes(logger)
 	if err != nil {
-		return nil, errorspkg.Wrap(err, "failed to retrieve volume list")
+		return nil, nil, errorspkg.Wrap(err, "failed to retrieve volume list")
 	}
 
 	orphanedVolumes := make(map[string]struct{})
@@ -153,13 +153,13 @@ func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) 
 
 	imageIDs, err := g.imageCloner.ImageIDs(logger)
 	if err != nil {
-		return nil, errorspkg.Wrap(err, "failed to retrieve images")
+		return nil, nil, errorspkg.Wrap(err, "failed to retrieve images")
 	}
 
 	for _, imageID := range imageIDs {
 		imageRefName := fmt.Sprintf(groot.ImageReferenceFormat, imageID)
 		if err := g.removeDependencies(orphanedVolumes, imageRefName); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 
@@ -171,10 +171,16 @@ func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) 
 	}
 
 	orphanedVolumeIDs := []string{}
+	orphanedLocalVolumeIDs := []string{}
 	for id := range orphanedVolumes {
-		orphanedVolumeIDs = append(orphanedVolumeIDs, id)
+		// local tar volumes have the format sha256-timestamp
+		if strings.Contains(id, "-") {
+			orphanedLocalVolumeIDs = append(orphanedLocalVolumeIDs, id)
+		} else {
+			orphanedVolumeIDs = append(orphanedVolumeIDs, id)
+		}
 	}
-	return orphanedVolumeIDs, nil
+	return orphanedVolumeIDs, orphanedLocalVolumeIDs, nil
 }
 
 func (g *GarbageCollector) removeDependencies(volumesList map[string]struct{}, refID string) error {

@@ -88,7 +88,7 @@ var CleanCommand = cli.Command{
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
 		defer func() {
-			unusedVols, err := gc.UnusedVolumes(logger)
+			unusedVols, _, err := gc.UnusedVolumes(logger)
 			if err != nil {
 				logger.Error("getting-unused-layers-failed", err)
 				return

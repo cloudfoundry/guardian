@@ -1,15 +1,10 @@
 package integration_test
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
-	"path"
 	"path/filepath"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
@@ -18,46 +13,20 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Clean", func() {
 	Context("Local Images", func() {
 		var (
-			baseImagePath             string
-			anotherBaseImagePath      string
-			yetAnotherBaseImagePath   string
-			sourceImagePath           string
-			anotherSourceImagePath    string
-			yetAnotherSourceImagePath string
+			baseImagePath        string
+			anotherBaseImagePath string
 		)
 
 		BeforeEach(func() {
-			var err error
-			sourceImagePath, err = ioutil.TempDir("", "")
+			workDir, err := os.Getwd()
 			Expect(err).NotTo(HaveOccurred())
-			sess, err := gexec.Start(exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(sourceImagePath, "foo")), "count=2", "bs=1M"), GinkgoWriter, nil)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
-			baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
-			baseImagePath = baseImageFile.Name()
-
-			anotherSourceImagePath, err = ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-			sess, err = gexec.Start(exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", filepath.Join(anotherSourceImagePath, "foo")), "count=2", "bs=1M"), GinkgoWriter, nil)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
-			Expect(os.MkdirAll(path.Join(anotherSourceImagePath, "prohibited-folder"), 0777)).To(Succeed())
-			Expect(os.Chown(path.Join(anotherSourceImagePath, "prohibited-folder"), 4000, 4000)).To(Succeed())
-			Expect(os.Chmod(path.Join(anotherSourceImagePath, "prohibited-folder"), 0700)).To(Succeed())
-			Expect(ioutil.WriteFile(path.Join(anotherSourceImagePath, "prohibited-folder", "file"), []byte{}, 0700)).To(Succeed())
-			anotherBaseImageFile := integration.CreateBaseImageTar(anotherSourceImagePath)
-			anotherBaseImagePath = anotherBaseImageFile.Name()
-
-			yetAnotherSourceImagePath, err = ioutil.TempDir("", "")
-			Expect(err).NotTo(HaveOccurred())
-			yetAnotherBaseImageFile := integration.CreateBaseImageTar(yetAnotherSourceImagePath)
-			yetAnotherBaseImagePath = yetAnotherBaseImageFile.Name()
+			baseImagePath = fmt.Sprintf("oci:///%s/assets/oci-test-image/grootfs-busybox:latest", workDir)
+			anotherBaseImagePath = fmt.Sprintf("oci:///%s/assets/oci-test-image/4mb-image:latest", workDir)
 
 			_, err = Runner.Create(groot.CreateSpec{
 				ID:           "my-image-1",
@@ -96,35 +65,27 @@ var _ = Describe("Clean", func() {
 			It("removes them", func() {
 				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(2))
+				Expect(preContents).To(HaveLen(8))
 
 				_, err = Runner.Clean(0)
 				Expect(err).NotTo(HaveOccurred())
 
 				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(1))
-
-				afterDir := afterContents[0].Name()
-				afterContentsSha := sha256.Sum256([]byte(baseImagePath))
-				Expect(afterDir).To(MatchRegexp(`%s-\d+`, hex.EncodeToString(afterContentsSha[:32])))
+				Expect(afterContents).To(HaveLen(4))
 			})
 
 			It("removes their associated metadata", func() {
 				preContents, err := filepath.Glob(filepath.Join(StorePath, store.MetaDirName, "volume-*"))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(2))
+				Expect(preContents).To(HaveLen(8))
 
 				_, err = Runner.Clean(0)
 				Expect(err).NotTo(HaveOccurred())
 
 				afterContents, err := filepath.Glob(filepath.Join(StorePath, store.MetaDirName, "volume-*"))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(1))
-
-				volumeMeta := afterContents[0]
-				afterContentsSha := sha256.Sum256([]byte(baseImagePath))
-				Expect(volumeMeta).To(MatchRegexp(`volume-%s-\d+`, hex.EncodeToString(afterContentsSha[:32])))
+				Expect(afterContents).To(HaveLen(4))
 			})
 
 			Context("and a cache size is set", func() {
@@ -158,10 +119,10 @@ var _ = Describe("Clean", func() {
 
 				Context("and the size of unused layers is less than the cache size", func() {
 					BeforeEach(func() {
-						cacheSizeInBytes = 3 * 1024 * 1024
+						cacheSizeInBytes = 5 * 1024 * 1024
 					})
 
-					It("does not remove the unused volumes", func() {
+					It("does not remove the unused layer volumes", func() {
 						preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 						Expect(err).NotTo(HaveOccurred())
 
@@ -171,6 +132,36 @@ var _ = Describe("Clean", func() {
 						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 						Expect(err).NotTo(HaveOccurred())
 						Expect(afterContents).To(HaveLen(len(preContents)))
+					})
+
+					Context("local tar images", func() {
+						BeforeEach(func() {
+							yetAnotherSourceImagePath, err := ioutil.TempDir("", "")
+							Expect(err).NotTo(HaveOccurred())
+							yetAnotherBaseImageFile := integration.CreateBaseImageTar(yetAnotherSourceImagePath)
+							yetAnotherBaseImagePath := yetAnotherBaseImageFile.Name()
+
+							_, err = Runner.Create(groot.CreateSpec{
+								ID:           "my-image-local",
+								BaseImageURL: integration.String2URL(yetAnotherBaseImagePath),
+								Mount:        mountByDefault(),
+							})
+							Expect(err).NotTo(HaveOccurred())
+							Expect(Runner.Delete("my-image-local")).To(Succeed())
+						})
+
+						It("still removes unused local volumes", func() {
+							preContents, err := filepath.Glob(filepath.Join(StorePath, store.VolumesDirName, "*-*"))
+							Expect(err).NotTo(HaveOccurred())
+							Expect(preContents).ToNot(BeEmpty())
+
+							_, err = Runner.Clean(cacheSizeInBytes)
+							Expect(err).NotTo(HaveOccurred())
+
+							afterContents, err := filepath.Glob(filepath.Join(StorePath, store.VolumesDirName, "*-*"))
+							Expect(err).NotTo(HaveOccurred())
+							Expect(afterContents).To(BeEmpty())
+						})
 					})
 
 					It("reports that it was a no-op", func() {
@@ -188,14 +179,14 @@ var _ = Describe("Clean", func() {
 					It("removes the unused volumes", func() {
 						preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 						Expect(err).NotTo(HaveOccurred())
-						Expect(preContents).To(HaveLen(2))
+						Expect(preContents).To(HaveLen(8))
 
 						_, err = Runner.Clean(cacheSizeInBytes)
 						Expect(err).NotTo(HaveOccurred())
 
 						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 						Expect(err).NotTo(HaveOccurred())
-						Expect(afterContents).To(HaveLen(1))
+						Expect(afterContents).To(HaveLen(4))
 					})
 				})
 			})

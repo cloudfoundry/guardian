@@ -41,13 +41,23 @@ func (c *cleaner) Clean(logger lager.Logger, cacheBytes int64) (noop bool, err e
 	defer c.metricsEmitter.TryEmitDurationFrom(logger, MetricImageCleanTime, time.Now())
 	defer logger.Info("ending")
 
-	unusedVolumes, err := c.garbageCollector.UnusedVolumes(logger)
+	unusedLayerVolumes, unusedLocalVolumes, err := c.garbageCollector.UnusedVolumes(logger)
 	if err != nil {
 		logger.Error("finding-unused-failed", err)
 	}
 
+	if err := c.garbageCollector.MarkUnused(logger, unusedLocalVolumes); err != nil {
+		logger.Info("marking-local-volumes-failed-skipping", lager.Data{"localVolumes": unusedLocalVolumes})
+	}
+
+	defer func() {
+		if err == nil {
+			err = c.garbageCollector.Collect(logger)
+		}
+	}()
+
 	if cacheBytes > 0 {
-		if cacheBytes >= c.storeMeasurer.CacheUsage(logger, unusedVolumes) {
+		if cacheBytes >= c.storeMeasurer.CacheUsage(logger, unusedLayerVolumes) {
 			return true, nil
 		}
 	}
@@ -57,7 +67,7 @@ func (c *cleaner) Clean(logger lager.Logger, cacheBytes int64) (noop bool, err e
 		return false, errorspkg.Wrap(err, "garbage collector acquiring lock")
 	}
 
-	if err := c.garbageCollector.MarkUnused(logger, unusedVolumes); err != nil {
+	if err := c.garbageCollector.MarkUnused(logger, unusedLayerVolumes); err != nil {
 		logger.Error("marking-unused-failed", err)
 	}
 
@@ -65,5 +75,5 @@ func (c *cleaner) Clean(logger lager.Logger, cacheBytes int64) (noop bool, err e
 		logger.Error("unlocking-failed", err)
 	}
 
-	return false, c.garbageCollector.Collect(logger)
+	return false, err
 }
