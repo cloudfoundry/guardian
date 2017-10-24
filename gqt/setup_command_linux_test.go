@@ -180,7 +180,12 @@ func ensureCgroupsForTagUnmounted(cgroupsRoot string) {
 
 		fields := strings.Fields(line)
 		if fields[2] == "cgroup" && strings.Contains(fields[1], cgroupsRoot) {
-			Expect(syscall.Unmount(fields[1], 0)).To(Succeed())
+			// We want the output of lsof right before the unmount is performed, so
+			// we call it here rather than in an error handling block.
+			// We ignore the error from grep in case it returns no lines.
+			lsofOutput, _ := exec.Command("sh", "-c", fmt.Sprintf("lsof | grep %s", cgroupsRoot)).CombinedOutput()
+			msg := fmt.Sprintf("cgroup root: %s\nmountpoint: %s\nprocMountsContent: %s\nlsof output: [%s]", cgroupsRoot, fields[1], string(mountsFileContent), string(lsofOutput))
+			Expect(syscall.Unmount(fields[1], 0)).To(Succeed(), msg)
 		}
 		if fields[2] == "tmpfs" && fields[1] == cgroupsRoot {
 			tmpFsFound = true
