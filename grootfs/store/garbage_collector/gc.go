@@ -35,14 +35,16 @@ type GarbageCollector struct {
 	imageCloner       ImageCloner
 	dependencyManager DependencyManager
 	baseImage         string
+	isLocalTarVolume  func(string) bool
 }
 
-func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager, baseImage string) *GarbageCollector {
+func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager, baseImage string, isLocalTarVolume func(string) bool) *GarbageCollector {
 	return &GarbageCollector{
 		volumeDriver:      volumeDriver,
 		imageCloner:       imageCloner,
 		dependencyManager: dependencyManager,
 		baseImage:         baseImage,
+		isLocalTarVolume:  isLocalTarVolume,
 	}
 }
 
@@ -170,17 +172,16 @@ func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, []strin
 		}
 	}
 
-	orphanedVolumeIDs := []string{}
+	orphanedLayerVolumeIDs := []string{}
 	orphanedLocalVolumeIDs := []string{}
 	for id := range orphanedVolumes {
-		// local tar volumes have the format sha256-timestamp
-		if strings.Contains(id, "-") {
+		if g.isLocalTarVolume(id) {
 			orphanedLocalVolumeIDs = append(orphanedLocalVolumeIDs, id)
 		} else {
-			orphanedVolumeIDs = append(orphanedVolumeIDs, id)
+			orphanedLayerVolumeIDs = append(orphanedLayerVolumeIDs, id)
 		}
 	}
-	return orphanedVolumeIDs, orphanedLocalVolumeIDs, nil
+	return orphanedLayerVolumeIDs, orphanedLocalVolumeIDs, nil
 }
 
 func (g *GarbageCollector) removeDependencies(volumesList map[string]struct{}, refID string) error {

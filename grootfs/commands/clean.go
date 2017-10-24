@@ -10,6 +10,7 @@ import (
 
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/commands/config"
+	"code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
@@ -83,7 +84,7 @@ var CleanCommand = cli.Command{
 		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
 		nsFsDriver := namespaced.New(fsDriver, idMappings, idMapper, runner)
 		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
-		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, "")
+		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, "", tar_fetcher.IsLocalTarVolume)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 

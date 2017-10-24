@@ -3,6 +3,7 @@ package garbage_collector_test
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 
 	"code.cloudfoundry.org/grootfs/store/garbage_collector"
 	"code.cloudfoundry.org/grootfs/store/garbage_collector/garbage_collectorfakes"
@@ -34,7 +35,10 @@ var _ = Describe("Gc", func() {
 	})
 
 	JustBeforeEach(func() {
-		garbageCollector = garbage_collector.NewGC(fakeVolumeDriver, fakeImageCloner, fakeDependencyManager, baseImage)
+		isLocalTarVolume := func(id string) bool {
+			return strings.Count(id, "-") == 1
+		}
+		garbageCollector = garbage_collector.NewGC(fakeVolumeDriver, fakeImageCloner, fakeDependencyManager, baseImage, isLocalTarVolume)
 	})
 
 	Describe("UnusedVolumes", func() {

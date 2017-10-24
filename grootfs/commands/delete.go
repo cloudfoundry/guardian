@@ -6,6 +6,7 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/commands/idfinder"
+	"code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store"
@@ -69,7 +70,7 @@ var DeleteCommand = cli.Command{
 		deleter := groot.IamDeleter(imageCloner, dependencyManager, metricsEmitter)
 
 		sm := store.NewStoreMeasurer(storePath, fsDriver)
-		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager, "")
+		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager, "", tar_fetcher.IsLocalTarVolume)
 
 		defer func() {
 			unusedVols, _, err := gc.UnusedVolumes(logger)
