@@ -178,9 +178,9 @@ type ServerCommand struct {
 		ConsoleSocketsPath       string `long:"console-sockets-path" description:"Path in which to store temporary sockets"`
 		CleanupProcessDirsOnWait bool   `long:"cleanup-process-dirs-on-wait" description:"Clean up proccess dirs on first invocation of wait"`
 
-		UIDMapStart  uint32 `long:"uid-map-start"  description:"The lowest numerical subordinate user ID the user is allowed to map"`
+		UIDMapStart  uint32 `long:"uid-map-start"  default:"1" description:"The lowest numerical subordinate user ID the user is allowed to map"`
 		UIDMapLength uint32 `long:"uid-map-length" description:"The number of numerical subordinate user IDs the user is allowed to map"`
-		GIDMapStart  uint32 `long:"gid-map-start"  description:"The lowest numerical subordinate group ID the user is allowed to map"`
+		GIDMapStart  uint32 `long:"gid-map-start"  default:"1" description:"The lowest numerical subordinate group ID the user is allowed to map"`
 		GIDMapLength uint32 `long:"gid-map-length" description:"The number of numerical subordinate group IDs the user is allowed to map"`
 
 		DefaultRootFS              string        `long:"default-rootfs"     description:"Default rootfs to use when not specified on container creation."`
@@ -359,6 +359,8 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		containerRootGID = os.Getegid()
 	}
 
+	cmd.calculateDefaultMappingLengths(containerRootUID, containerRootGID)
+
 	uidMappings := idmapper.MappingList{
 		{
 			ContainerID: 0,
@@ -496,6 +498,16 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	ports.SaveState(cmd.Network.PortPoolPropertiesPath, portPoolState)
 
 	return nil
+}
+
+func (cmd *ServerCommand) calculateDefaultMappingLengths(containerRootUID, containerRootGID int) {
+	if cmd.Containers.UIDMapLength == 0 {
+		cmd.Containers.UIDMapLength = uint32(containerRootUID) - cmd.Containers.UIDMapStart
+	}
+
+	if cmd.Containers.GIDMapLength == 0 {
+		cmd.Containers.GIDMapLength = uint32(containerRootGID) - cmd.Containers.GIDMapStart
+	}
 }
 
 func startServer(gardenServer *server.GardenServer, logger lager.Logger) error {
