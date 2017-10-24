@@ -1,8 +1,10 @@
 package iptables_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os/exec"
 	"time"
 
@@ -338,13 +340,23 @@ func deleteNamespace(nsName string) {
 	sess, err := gexec.Start(exec.Command("ip", "netns", "delete", nsName), GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	Eventually(sess).Should(gexec.Exit(0))
+
+	// We suspect that sometimes `ip netns delete` exits with 0 despite not
+	// actually removing the namespace file, so we explicitly check that the
+	// netns is cleaned up.
+	var stdout bytes.Buffer
+	listNsCmd := exec.Command("ip", "netns")
+	listNsCmd.Stdout = io.MultiWriter(&stdout, GinkgoWriter)
+	listNsCmd.Stderr = GinkgoWriter
+	Expect(listNsCmd.Run()).To(Succeed())
+	Expect(stdout.String()).NotTo(ContainSubstring(nsName))
 }
 
 func wrapCmdInNs(nsName string, cmd *exec.Cmd) *exec.Cmd {
 	wrappedCmd := exec.Command("strace", "-ttT", "ip", "netns", "exec", nsName)
 	wrappedCmd.Args = append(wrappedCmd.Args, cmd.Args...)
 	wrappedCmd.Stdin = cmd.Stdin
-	wrappedCmd.Stdout = cmd.Stdout
-	wrappedCmd.Stderr = cmd.Stderr
+	wrappedCmd.Stdout = io.MultiWriter(cmd.Stdout, GinkgoWriter)
+	wrappedCmd.Stderr = io.MultiWriter(cmd.Stderr, GinkgoWriter)
 	return wrappedCmd
 }
