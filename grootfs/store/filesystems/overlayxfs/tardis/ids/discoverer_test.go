@@ -35,24 +35,24 @@ var _ = Describe("IdDiscoverer", func() {
 
 	Describe("Alloc", func() {
 		Context("when the id dir is empty", func() {
-			It("allocates the first available number", func() {
+			It("allocates the first available number, which starts at 2", func() {
 				id, err := discoverer.Alloc(logger)
 				Expect(err).NotTo(HaveOccurred())
-				Expect(id).To(Equal(uint32(1)))
+				Expect(id).To(Equal(uint32(2)))
 			})
 
 			It("always allocates unique numbers", func() {
 				id, err := discoverer.Alloc(logger)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(id).To(Equal(uint32(1)))
-
-				id, err = discoverer.Alloc(logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(uint32(2)))
 
 				id, err = discoverer.Alloc(logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(uint32(3)))
+
+				id, err = discoverer.Alloc(logger)
+				Expect(err).NotTo(HaveOccurred())
+				Expect(id).To(Equal(uint32(4)))
 			})
 
 			It("can be ran in parallel, without colisions", func() {

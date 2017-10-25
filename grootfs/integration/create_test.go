@@ -213,6 +213,8 @@ var _ = Describe("Create", func() {
 					Mount:                     mountByDefault(),
 				})
 				Expect(err).ToNot(HaveOccurred())
+				_, err = Runner.Stats(randomImageID)
+				Expect(err).NotTo(HaveOccurred())
 
 				Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello"), 6)).To(Succeed())
 				Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))
@@ -636,6 +638,8 @@ var _ = Describe("Create", func() {
 			It("excludes base image from quota when config property say so", func() {
 				containerSpec, err := Runner.Create(spec)
 				Expect(err).ToNot(HaveOccurred())
+				_, err = Runner.Stats(spec.ID)
+				Expect(err).NotTo(HaveOccurred())
 
 				Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello"), 6)).To(Succeed())
 				Expect(writeMegabytes(filepath.Join(containerSpec.Root.Path, "hello2"), 5)).To(MatchError(ContainSubstring("dd: error writing")))

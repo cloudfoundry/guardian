@@ -38,6 +38,10 @@ func (i *Discoverer) Alloc(logger lager.Logger) (projId uint32, err error) {
 }
 
 func (i *Discoverer) untilSucceeds(startId int) (uint32, error) {
+	if startId == 1 {
+		startId++
+	}
+
 	for {
 		if err := os.Mkdir(filepath.Join(i.idsPath, strconv.Itoa(startId)), 0755); err != nil {
 			if os.IsExist(err) {
