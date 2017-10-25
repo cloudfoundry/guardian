@@ -453,7 +453,7 @@ var _ = Describe("Create with OCI images", func() {
 		It("creates an image", func() {
 			cfg := config.Config{
 				Create: config.Create{
-					BlobstoreClientCertificatesPath: "assets/certs",
+					RemoteLayerClientCertificatesPath: "assets/certs",
 				},
 			}
 			Expect(runner.SetConfig(cfg)).To(Succeed())
