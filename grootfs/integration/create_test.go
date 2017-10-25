@@ -258,6 +258,56 @@ var _ = Describe("Create", func() {
 			}
 		})
 
+		Context("with local tar image", func() {
+			var yetAnotherBaseImagePath string
+			BeforeEach(func() {
+				yetAnotherSourceImagePath, err := ioutil.TempDir("", "")
+				Expect(err).NotTo(HaveOccurred())
+				yetAnotherBaseImageFile := integration.CreateBaseImageTar(yetAnotherSourceImagePath)
+				yetAnotherBaseImagePath = yetAnotherBaseImageFile.Name()
+
+				_, err = Runner.Create(groot.CreateSpec{
+					ID:           "my-old-local",
+					BaseImageURL: integration.String2URL(yetAnotherBaseImagePath),
+					Mount:        mountByDefault(),
+				})
+				Expect(err).NotTo(HaveOccurred())
+				Expect(Runner.Delete("my-old-local")).To(Succeed())
+
+				cmd := exec.Command("touch", yetAnotherBaseImagePath)
+				sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+				Expect(err).NotTo(HaveOccurred())
+				Eventually(sess).Should(gexec.Exit(0))
+			})
+
+			It("eventually removes unused local volumes", func() {
+				preContents, err := filepath.Glob(filepath.Join(StorePath, store.VolumesDirName, "*-*"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(preContents).To(HaveLen(1))
+
+				_, err = Runner.Create(groot.CreateSpec{
+					ID:            "my-local-1",
+					BaseImageURL:  integration.String2URL(yetAnotherBaseImagePath),
+					Mount:         false,
+					CleanOnCreate: true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, err = Runner.Create(groot.CreateSpec{
+					ID:            "my-local-2",
+					BaseImageURL:  integration.String2URL(yetAnotherBaseImagePath),
+					Mount:         false,
+					CleanOnCreate: true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				afterContents, err := filepath.Glob(filepath.Join(StorePath, store.VolumesDirName, "*-*"))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(afterContents).To(HaveLen(1))
+				Expect(afterContents).NotTo(Equal(preContents))
+			})
+		})
+
 		Context("when a cache bytes is given", func() {
 			Context("when the unused layers bytes are bigger than the cache bytes", func() {
 				It("cleans the store first", func() {
