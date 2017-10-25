@@ -38,6 +38,7 @@ const (
 	WhiteoutDevice    = "whiteout_dev"
 	LinksDirName      = "l"
 	maxDestroyRetries = 5
+	MinQuota          = 1024 * 256
 )
 
 func NewDriver(storePath, tardisBinPath string) *Driver {
@@ -503,6 +504,7 @@ func (d *Driver) getLowerDirs(logger lager.Logger, volumeIDs []string) ([]string
 
 		baseVolumePaths = append(baseVolumePaths, filepath.Join(LinksDirName, string(shortId)))
 	}
+
 	return baseVolumePaths, totalVolumeSize, nil
 }
 
@@ -701,12 +703,18 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 		}
 	}
 
-	if output, err := d.runTardis(logger, "limit", "--disk-limit-bytes", strconv.FormatInt(diskLimit, 10), "--image-path", spec.ImagePath); err != nil {
+	if diskLimit < MinQuota {
+		diskLimit = MinQuota
+	}
+
+	diskLimitString := strconv.FormatInt(diskLimit, 10)
+
+	if output, err := d.runTardis(logger, "limit", "--disk-limit-bytes", diskLimitString, "--image-path", spec.ImagePath); err != nil {
 		logger.Error("applying-quota-failed", err, lager.Data{"diskLimit": diskLimit, "imagePath": spec.ImagePath})
 		return errorspkg.Wrapf(err, "apply disk limit: %s", output.String())
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(spec.ImagePath, imageQuotaName), []byte(strconv.FormatInt(diskLimit, 10)), 0600); err != nil {
+	if err := ioutil.WriteFile(filepath.Join(spec.ImagePath, imageQuotaName), []byte(diskLimitString), 0600); err != nil {
 		logger.Error("writing-image-quota-failed", err)
 		return errorspkg.Wrap(err, "writing image quota")
 	}
