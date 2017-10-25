@@ -53,7 +53,7 @@ func (cmd *ServerCommand) wireVolumizer(logger lager.Logger, graphRoot string, i
 		return cmd.wireImagePlugin()
 	}
 
-	logger = logger.Session("volume-creator", lager.Data{"graphRoot": graphRoot})
+	logger = logger.Session(gardener.VolumizerSession, lager.Data{"graphRoot": graphRoot})
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger}
 
 	if err := os.MkdirAll(graphRoot, 0755); err != nil {

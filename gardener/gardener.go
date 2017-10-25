@@ -30,7 +30,7 @@ const ExternalIPKey = "garden.network.external-ip"
 const MappedPortsKey = "garden.network.mapped-ports"
 const GraceTimeKey = "garden.grace-time"
 
-const volumizerSession = "volume-creator"
+const VolumizerSession = "volumizer"
 
 type SysInfoProvider interface {
 	TotalMemory() (uint64, error)
@@ -253,7 +253,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		}
 	}()
 
-	if err := g.Volumizer.GC(log.Session(volumizerSession)); err != nil {
+	if err := g.Volumizer.GC(log.Session(VolumizerSession)); err != nil {
 		log.Error("graph-cleanup-failed", err)
 	}
 
@@ -357,7 +357,7 @@ func (g *Gardener) destroy(log lager.Logger, handle string) error {
 		return err
 	}
 
-	if err := g.Volumizer.Destroy(log.Session(volumizerSession), handle); err != nil {
+	if err := g.Volumizer.Destroy(log.Session(VolumizerSession), handle); err != nil {
 		return err
 	}
 

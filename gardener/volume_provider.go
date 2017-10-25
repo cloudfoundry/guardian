@@ -44,7 +44,7 @@ func (v *VolumeProvider) Create(log lager.Logger, spec garden.ContainerSpec) (sp
 		baseConfig.Process = &specs.Process{}
 	} else {
 		var err error
-		baseConfig, err = v.VolumeCreator.Create(log.Session(volumizerSession), spec.Handle, rootfs_spec.Spec{
+		baseConfig, err = v.VolumeCreator.Create(log.Session("volume-creator"), spec.Handle, rootfs_spec.Spec{
 			RootFS:     rootFSURL,
 			Username:   spec.Image.Username,
 			Password:   spec.Image.Password,
