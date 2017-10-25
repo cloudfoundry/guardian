@@ -149,7 +149,7 @@ var _ = Describe("Layer source: OCI", func() {
 			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(sess).Should(gexec.Exit(0))
+			Eventually(sess, "2s").Should(gexec.Exit(0))
 			Expect(string(buffer.Contents())).To(ContainSubstring("etc/localtime"))
 		})
 

@@ -385,7 +385,7 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(size).To(Equal(int64(90)))
 
-				Eventually(buffer).Should(gbytes.Say("hello"))
+				Eventually(buffer, "2s").Should(gbytes.Say("hello"))
 				Eventually(sess).Should(gexec.Exit(0))
 			})
 
