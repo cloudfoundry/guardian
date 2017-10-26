@@ -42,7 +42,7 @@
 	url = https://github.com/cloudfoundry/lager
 [submodule "vendor/github.com/containers/image"]
 	path = vendor/github.com/containers/image
-	url = https://github.com/masters-of-cats/image
+	url = https://github.com/containers/image
 [submodule "vendor/github.com/docker/go-units"]
 	path = vendor/github.com/docker/go-units
 	url = https://github.com/docker/go-units
