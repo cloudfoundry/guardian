@@ -286,7 +286,7 @@ func createSystemContext(baseImageURL *url.URL, createConfig config.Create, user
 		}
 	case "oci":
 		return types.SystemContext{
-			OCICertPath: createConfig.BlobstoreClientCertificatesPath,
+			OCICertPath: createConfig.RemoteLayerClientCertificatesPath,
 		}
 	default:
 		return types.SystemContext{}
