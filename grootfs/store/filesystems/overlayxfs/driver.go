@@ -511,7 +511,7 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	projectID, err := quotapkg.GetProjectID(imagePath)
+	projectID, err := quotapkg.GetProjectID(logger, imagePath)
 	if err != nil {
 		logger.Error("fetching-project-id-failed", err)
 		logger.Info("skipping-project-id-folder-removal")

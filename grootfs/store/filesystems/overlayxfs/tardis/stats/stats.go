@@ -22,19 +22,10 @@ func VolumeStats(logger lager.Logger, imagePath string) (groot.VolumeStats, erro
 		return groot.VolumeStats{}, errorspkg.Wrapf(err, "image path (%s) doesn't exist", imagePath)
 	}
 
-	projectID, err := quotapkg.GetProjectID(imagePath)
+	exclusiveSize, err := listQuotaUsage(logger, imagePath)
 	if err != nil {
-		logger.Error("fetching-project-id-failed", err)
-		return groot.VolumeStats{}, errorspkg.Wrapf(err, "fetching project id for %s", imagePath)
-	}
-
-	var exclusiveSize int64
-	if projectID != 0 {
-		exclusiveSize, err = listQuotaUsage(logger, imagePath)
-		if err != nil {
-			logger.Error("list-quota-usage-failed", err, lager.Data{"projectID": projectID})
-			return groot.VolumeStats{}, errorspkg.Wrapf(err, "listing quota usage %s", imagePath)
-		}
+		logger.Error("list-quota-usage-failed", err)
+		return groot.VolumeStats{}, errorspkg.Wrapf(err, "listing quota usage %s", imagePath)
 	}
 
 	volumeSize, err := readImageInfo(logger, imagePath)
@@ -58,15 +49,8 @@ func listQuotaUsage(logger lager.Logger, imagePath string) (int64, error) {
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 
-	imagesPath := filepath.Dir(imagePath)
-	quotaControl, err := quotapkg.NewControl(logger, imagesPath)
+	quota, err := quotapkg.Get(logger, imagePath)
 	if err != nil {
-		logger.Error("creating-quota-control-failed", err)
-		return 0, errorspkg.Wrapf(err, "creating quota control")
-	}
-
-	var quota quotapkg.Quota
-	if err := quotaControl.GetQuota(imagePath, &quota); err != nil {
 		logger.Error("getting-quota-failed", err)
 		return 0, errorspkg.Wrapf(err, "getting quota %s", imagePath)
 	}

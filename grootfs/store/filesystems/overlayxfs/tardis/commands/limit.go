@@ -37,17 +37,7 @@ var LimitCommand = cli.Command{
 		imagePath := ctx.String("image-path")
 		imagesPath := filepath.Dir(imagePath)
 
-		quotaControl, err := quotapkg.NewControl(logger, imagesPath)
-		if err != nil {
-			logger.Error("creating-quota-control-failed", err, lager.Data{"imagesPath": imagesPath})
-			return errorspkg.Wrapf(err, "creating xfs quota control %s", imagesPath)
-		}
-
-		diskLimit := ctx.Int64("disk-limit-bytes")
-		quota := quotapkg.Quota{
-			Size: uint64(diskLimit),
-		}
-
+		diskLimit := uint64(ctx.Int64("disk-limit-bytes"))
 		idDiscoverer := ids.NewDiscoverer(filepath.Join(filepath.Dir(imagesPath), overlayxfs.IDDir))
 		projectID, err := idDiscoverer.Alloc(logger)
 		if err != nil {
@@ -60,7 +50,7 @@ var LimitCommand = cli.Command{
 			logger.Debug("starting")
 			defer logger.Debug("ending")
 
-			if err := quotaControl.SetQuota(projectID, imagePath, quota); err != nil {
+			if err := quotapkg.Set(logger, projectID, imagePath, diskLimit); err != nil {
 				logger.Error("setting-quota-failed", err)
 				return errorspkg.Wrapf(err, "setting quota to %s", imagePath)
 			}

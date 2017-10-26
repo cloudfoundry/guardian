@@ -357,13 +357,13 @@ var _ = Describe("Driver", func() {
 				Expect(ioutil.WriteFile(filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", layer1ID)), []byte(`{"Size": 3145728}`), 0644)).To(Succeed())
 			})
 
-			It("creates the backingFsBlockDev device in the `images` parent folder", func() {
-				backingFsBlockDevPath := filepath.Join(storePath, "backingFsBlockDev")
+			It("creates the storeDevice block device in the `images` parent folder", func() {
+				storeDevicePath := filepath.Join(storePath, "storeDevice")
 
-				Expect(backingFsBlockDevPath).ToNot(BeAnExistingFile())
+				Expect(storeDevicePath).ToNot(BeAnExistingFile())
 				_, err := driver.CreateImage(logger, spec)
 				Expect(err).ToNot(HaveOccurred())
-				Expect(backingFsBlockDevPath).To(BeAnExistingFile())
+				Expect(storeDevicePath).To(BeAnExistingFile())
 			})
 
 			It("can overwrite files from the lowerdirs", func() {
@@ -685,7 +685,7 @@ var _ = Describe("Driver", func() {
 		Context("when it fails to fetch XFS project ID", func() {
 			It("returns an error", func() {
 				_, err := driver.FetchStats(logger, "/tmp")
-				Expect(err).To(MatchError(ContainSubstring("Failed to get projid for")))
+				Expect(err).To(MatchError(ContainSubstring("inappropriate ioctl for device")))
 			})
 		})
 	})
