@@ -73,7 +73,7 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, id string, spec garden.Proce
 	})
 
 	processesPath := filepath.Join(bundlePath, "processes")
-	return e.runner.Run(log, spec.ID, preparedSpec, bundlePath, processesPath, id, spec.TTY, io)
+	return e.runner.Run(log, spec.ID, preparedSpec, bundlePath, processesPath, id, io)
 }
 
 // Attach attaches to an already running process by guid

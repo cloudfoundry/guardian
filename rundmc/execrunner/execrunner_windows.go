@@ -24,7 +24,7 @@ type DirectExecRunner struct {
 	ProcessIDGen  runrunc.UidGenerator
 }
 
-func (e *DirectExecRunner) Run(log lager.Logger, processID string, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error) {
+func (e *DirectExecRunner) Run(log lager.Logger, processID string, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, io garden.ProcessIO) (garden.Process, error) {
 	log = log.Session("execrunner")
 
 	log.Info("start")

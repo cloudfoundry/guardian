@@ -2,7 +2,6 @@ package runrunc
 
 import (
 	"os"
-	"os/exec"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -15,8 +14,6 @@ import (
 //go:generate counterfeiter . EnvDeterminer
 //go:generate counterfeiter . Mkdirer
 //go:generate counterfeiter . BundleLoader
-//go:generate counterfeiter . ProcessTracker
-//go:generate counterfeiter . Process
 
 type UidGenerator interface {
 	Generate() string
@@ -57,18 +54,9 @@ type BundleLoader interface {
 	Load(path string) (goci.Bndl, error)
 }
 
-type Process interface {
-	garden.Process
-}
-
-type ProcessTracker interface {
-	Run(processID string, cmd *exec.Cmd, io garden.ProcessIO, tty *garden.TTYSpec, pidFile string) (garden.Process, error)
-	Attach(processID string, io garden.ProcessIO, pidFilePath string) (garden.Process, error)
-}
-
 //go:generate counterfeiter . ExecRunner
 type ExecRunner interface {
-	Run(log lager.Logger, passedID string, spec *PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
+	Run(log lager.Logger, passedID string, spec *PreparedSpec, bundlePath, processesPath, handle string, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
 }
 

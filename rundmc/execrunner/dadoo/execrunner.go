@@ -51,7 +51,7 @@ func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator
 	}
 }
 
-func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, pio garden.ProcessIO) (p garden.Process, theErr error) {
+func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, pio garden.ProcessIO) (p garden.Process, theErr error) {
 	log = log.Session("execrunner")
 
 	log.Info("start")
@@ -94,7 +94,7 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	}
 
 	var cmd *exec.Cmd
-	if tty != nil {
+	if spec.Terminal {
 		cmd = exec.Command(d.dadooPath, "-tty", "exec", d.runcPath, processPath, handle)
 	} else {
 		cmd = exec.Command(d.dadooPath, "exec", d.runcPath, processPath, handle)

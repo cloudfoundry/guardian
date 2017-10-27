@@ -68,7 +68,7 @@ var _ = Describe("DirectExecRunner", func() {
 				lagertest.NewTestLogger("execrunner-windows"),
 				processID, spec,
 				"a-bundle", processesDir, "handle",
-				nil, processIO,
+				processIO,
 			)
 		})
 
@@ -122,7 +122,7 @@ var _ = Describe("DirectExecRunner", func() {
 		Context("when a processID is reused concurrently", func() {
 			BeforeEach(func() {
 				processID = "reused"
-				_, err := execRunner.Run(lagertest.NewTestLogger("execrunner-windows"), processID, &runrunc.PreparedSpec{}, "a-bundle", processesDir, "handle", nil, garden.ProcessIO{})
+				_, err := execRunner.Run(lagertest.NewTestLogger("execrunner-windows"), processID, &runrunc.PreparedSpec{}, "a-bundle", processesDir, "handle", garden.ProcessIO{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -184,7 +184,7 @@ var _ = Describe("DirectExecRunner", func() {
 				lagertest.NewTestLogger("execrunner-windows"),
 				processID, spec,
 				"a-bundle", processesDir, "handle",
-				nil, garden.ProcessIO{},
+				garden.ProcessIO{},
 			)
 			Expect(err).ToNot(HaveOccurred())
 		})

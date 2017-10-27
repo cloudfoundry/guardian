@@ -54,7 +54,7 @@ var _ = Describe("Execer", func() {
 
 	BeforeEach(func() {
 		var err error
-		bundlePath, err = ioutil.TempDir("", "execer=test")
+		bundlePath, err = ioutil.TempDir("", "execer-test")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(filepath.Join(bundlePath, "pidfile"), []byte("some-pid"), 0600)).To(Succeed())
 
@@ -132,13 +132,12 @@ var _ = Describe("Execer", func() {
 		It("runs the process", func() {
 			Expect(execRunner.RunCallCount()).To(Equal(1))
 			_, processID, actualPreparedProc, actualBundlePath,
-				actualProcessPath, actualHandle, tty, actualPIO := execRunner.RunArgsForCall(0)
+				actualProcessPath, actualHandle, actualPIO := execRunner.RunArgsForCall(0)
 			Expect(processID).To(Equal(spec.ID))
 			Expect(actualPreparedProc).To(Equal(preparedProc))
 			Expect(actualBundlePath).To(Equal(bundlePath))
 			Expect(actualProcessPath).To(Equal(filepath.Join(bundlePath, "processes")))
 			Expect(actualHandle).To(Equal(id))
-			Expect(tty).To(Equal(spec.TTY))
 			Expect(actualPIO).To(Equal(pio))
 		})
 
