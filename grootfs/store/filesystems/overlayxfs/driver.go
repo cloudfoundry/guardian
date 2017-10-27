@@ -704,6 +704,7 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	}
 
 	if diskLimit < MinQuota {
+		logger.Debug("overwriting-disk-quota", lager.Data{"oldLimit": diskLimit, "newLimit": MinQuota})
 		diskLimit = MinQuota
 	}
 
