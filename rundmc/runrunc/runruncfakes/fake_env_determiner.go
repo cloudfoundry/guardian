@@ -4,18 +4,16 @@ package runruncfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 )
 
 type FakeEnvDeterminer struct {
-	EnvForStub        func(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string
+	EnvForStub        func(bndl goci.Bndl, spec runrunc.ProcessSpec) []string
 	envForMutex       sync.RWMutex
 	envForArgsForCall []struct {
-		uid  int
 		bndl goci.Bndl
-		spec garden.ProcessSpec
+		spec runrunc.ProcessSpec
 	}
 	envForReturns struct {
 		result1 []string
@@ -27,18 +25,17 @@ type FakeEnvDeterminer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeEnvDeterminer) EnvFor(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string {
+func (fake *FakeEnvDeterminer) EnvFor(bndl goci.Bndl, spec runrunc.ProcessSpec) []string {
 	fake.envForMutex.Lock()
 	ret, specificReturn := fake.envForReturnsOnCall[len(fake.envForArgsForCall)]
 	fake.envForArgsForCall = append(fake.envForArgsForCall, struct {
-		uid  int
 		bndl goci.Bndl
-		spec garden.ProcessSpec
-	}{uid, bndl, spec})
-	fake.recordInvocation("EnvFor", []interface{}{uid, bndl, spec})
+		spec runrunc.ProcessSpec
+	}{bndl, spec})
+	fake.recordInvocation("EnvFor", []interface{}{bndl, spec})
 	fake.envForMutex.Unlock()
 	if fake.EnvForStub != nil {
-		return fake.EnvForStub(uid, bndl, spec)
+		return fake.EnvForStub(bndl, spec)
 	}
 	if specificReturn {
 		return ret.result1
@@ -52,10 +49,10 @@ func (fake *FakeEnvDeterminer) EnvForCallCount() int {
 	return len(fake.envForArgsForCall)
 }
 
-func (fake *FakeEnvDeterminer) EnvForArgsForCall(i int) (int, goci.Bndl, garden.ProcessSpec) {
+func (fake *FakeEnvDeterminer) EnvForArgsForCall(i int) (goci.Bndl, runrunc.ProcessSpec) {
 	fake.envForMutex.RLock()
 	defer fake.envForMutex.RUnlock()
-	return fake.envForArgsForCall[i].uid, fake.envForArgsForCall[i].bndl, fake.envForArgsForCall[i].spec
+	return fake.envForArgsForCall[i].bndl, fake.envForArgsForCall[i].spec
 }
 
 func (fake *FakeEnvDeterminer) EnvForReturns(result1 []string) {

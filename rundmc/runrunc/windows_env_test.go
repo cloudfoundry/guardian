@@ -12,7 +12,8 @@ import (
 var _ = Describe("WindowsEnv", func() {
 	It("appends the spec env to the bundle env", func() {
 		process := specs.Process{Env: []string{"FOO=bar"}}
-		actualEnv := runrunc.WindowsEnvFor(5, goci.Bundle().WithProcess(process), garden.ProcessSpec{Env: []string{"BAZ=barry"}})
+		actualEnv := runrunc.WindowsEnvFor(goci.Bundle().WithProcess(process),
+			runrunc.ProcessSpec{ProcessSpec: garden.ProcessSpec{Env: []string{"BAZ=barry"}}})
 
 		Expect(actualEnv).To(Equal([]string{"FOO=bar", "BAZ=barry"}))
 	})

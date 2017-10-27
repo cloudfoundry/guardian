@@ -14,9 +14,12 @@ var _ = Describe("UnixEnvFor", func() {
 	Context("when the user is specified in the process spec", func() {
 		DescribeTable("appends the correct USER env var", func(specEnv, expectedEnv []string) {
 			bundle := goci.Bundle()
-			env := runrunc.UnixEnvFor(2, bundle, garden.ProcessSpec{
-				User: "spiderman",
-				Env:  specEnv,
+			env := runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+				ProcessSpec: garden.ProcessSpec{
+					User: "spiderman",
+					Env:  specEnv,
+				},
+				ContainerUID: 2,
 			})
 
 			Expect(env).To(Equal(expectedEnv))
@@ -77,8 +80,11 @@ var _ = Describe("UnixEnvFor", func() {
 	Context("when the user is not specified in the process spec", func() {
 		DescribeTable("appends the correct USER env var", func(specEnv, expectedEnv []string) {
 			bundle := goci.Bundle()
-			env := runrunc.UnixEnvFor(1, bundle, garden.ProcessSpec{
-				Env: specEnv,
+			env := runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+				ProcessSpec: garden.ProcessSpec{
+					Env: specEnv,
+				},
+				ContainerUID: 1,
 			})
 
 			Expect(env).To(Equal(expectedEnv))
@@ -139,8 +145,11 @@ var _ = Describe("UnixEnvFor", func() {
 	Context("when the environment already contains a PATH", func() {
 		It("passes the environment variables", func() {
 			bundle := goci.Bundle()
-			env := runrunc.UnixEnvFor(1, bundle, garden.ProcessSpec{
-				Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
+			env := runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+				ProcessSpec: garden.ProcessSpec{
+					Env: []string{"a=1", "b=3", "c=4", "PATH=a"},
+				},
+				ContainerUID: 1,
 			})
 
 			Expect(env).To(Equal([]string{"a=1", "b=3", "c=4", "PATH=a", "USER=root"}))
@@ -150,9 +159,12 @@ var _ = Describe("UnixEnvFor", func() {
 	Context("when the environment does not already contain a PATH", func() {
 		DescribeTable("appends a default PATH", func(procUser string, uid int, specEnv, expectedEnv []string) {
 			bundle := goci.Bundle()
-			env := runrunc.UnixEnvFor(uid, bundle, garden.ProcessSpec{
-				Env:  specEnv,
-				User: procUser,
+			env := runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+				ProcessSpec: garden.ProcessSpec{
+					Env:  specEnv,
+					User: procUser,
+				},
+				ContainerUID: uid,
 			})
 
 			Expect(env).To(Equal(expectedEnv))
@@ -227,8 +239,11 @@ var _ = Describe("UnixEnvFor", func() {
 		JustBeforeEach(func() {
 			bundle = goci.Bundle().WithProcess(specs.Process{Env: containerEnv})
 
-			env = runrunc.UnixEnvFor(9, bundle, garden.ProcessSpec{
-				Env: processEnv,
+			env = runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+				ProcessSpec: garden.ProcessSpec{
+					Env: processEnv,
+				},
+				ContainerUID: 9,
 			})
 		})
 
@@ -238,8 +253,11 @@ var _ = Describe("UnixEnvFor", func() {
 
 			bundle.Spec.Process.Env = []string{}
 
-			env = runrunc.UnixEnvFor(9, bundle, garden.ProcessSpec{
-				Env: processEnv,
+			env = runrunc.UnixEnvFor(bundle, runrunc.ProcessSpec{
+				ProcessSpec: garden.ProcessSpec{
+					Env: processEnv,
+				},
+				ContainerUID: 9,
 			})
 
 			Expect(envWContainer).To(Equal(append(containerEnv, env...)))

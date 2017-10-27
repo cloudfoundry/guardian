@@ -1,9 +1,12 @@
 package peas
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"syscall"
 
 	"code.cloudfoundry.org/garden"
@@ -33,7 +36,7 @@ type PeaCreator struct {
 	VolumeCreator    VolumeCreator
 	BundleGenerator  depot.BundleGenerator
 	BundleSaver      depot.BundleSaver
-	ExecPreparer     runrunc.ExecPreparer
+	ProcessBuilder   runrunc.ProcessBuilder
 	ContainerCreator ContainerCreator
 }
 
@@ -75,18 +78,23 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return errs("generating-bundle", err)
 	}
 
-	if err := p.BundleSaver.Save(bndl, peaBundlePath); err != nil {
-		return errs("saving-bundle", err)
+	if spec.Dir == "" {
+		spec.Dir = "/"
+	}
+	uid, gid, err := parseUser(spec.User)
+	if err != nil {
+		return errs("parse-user", err)
 	}
 
-	preparedProcess, err := p.ExecPreparer.Prepare(log, peaBundlePath, spec)
-	if err != nil {
-		return errs("preparing-rootfs", err)
-	}
+	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, runrunc.ProcessSpec{
+		ProcessSpec:  spec,
+		ContainerUID: uid,
+		ContainerGID: gid,
+	})
 
 	bndl = bndl.WithProcess(preparedProcess.Process)
 	if err := p.BundleSaver.Save(bndl, peaBundlePath); err != nil {
-		return errs("saving-bundle-again", err)
+		return errs("saving-bundle", err)
 	}
 
 	peaRunDone := make(chan error)
@@ -95,6 +103,30 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 	}(peaRunDone)
 
 	return &pearocess{id: processID, doneCh: peaRunDone}, nil
+}
+
+func parseUser(uidgid string) (int, int, error) {
+	if uidgid == "" {
+		return 0, 0, nil
+	}
+
+	errs := func() (int, int, error) {
+		return 0, 0, fmt.Errorf("'%s' is not a valid uid:gid", uidgid)
+	}
+
+	uidGidComponents := strings.Split(uidgid, ":")
+	if len(uidGidComponents) != 2 {
+		return errs()
+	}
+	uid, err := strconv.Atoi(uidGidComponents[0])
+	if err != nil {
+		return errs()
+	}
+	gid, err := strconv.Atoi(uidGidComponents[1])
+	if err != nil {
+		return errs()
+	}
+	return uid, gid, nil
 }
 
 func generateProcessID(existingID string) (string, error) {

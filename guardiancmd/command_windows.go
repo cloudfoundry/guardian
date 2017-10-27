@@ -13,7 +13,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
-	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
@@ -60,6 +59,10 @@ func wireCgroupsStarter(_ lager.Logger, _ string, _ cgroups.Chowner) gardener.St
 	return &NoopStarter{}
 }
 
+func wireMkdirer(_ commandrunner.CommandRunner) runrunc.Mkdirer {
+	return mkdirer{}
+}
+
 type mkdirer struct{}
 
 func (m mkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
@@ -72,9 +75,8 @@ func (m mkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, 
 	return nil
 }
 
-func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
-	runningAsRoot := func() bool { return true }
-	return runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), runrunc.EnvFunc(runrunc.WindowsEnvFor), mkdirer{}, nil, runningAsRoot)
+func wireEnvFunc() runrunc.EnvFunc {
+	return runrunc.EnvFunc(runrunc.WindowsEnvFor)
 }
 
 func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {

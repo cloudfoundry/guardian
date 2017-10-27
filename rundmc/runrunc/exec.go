@@ -3,7 +3,6 @@ package runrunc
 import (
 	"os"
 	"os/exec"
-	"path"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -33,6 +32,7 @@ type ExecUser struct {
 type UserLookupper interface {
 	Lookup(rootFsPath string, user string) (*ExecUser, error)
 }
+
 type Mkdirer interface {
 	MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error
 }
@@ -44,13 +44,13 @@ func (fn LookupFunc) Lookup(rootfsPath, user string) (*ExecUser, error) {
 }
 
 type EnvDeterminer interface {
-	EnvFor(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string
+	EnvFor(bndl goci.Bndl, spec ProcessSpec) []string
 }
 
-type EnvFunc func(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string
+type EnvFunc func(bndl goci.Bndl, spec ProcessSpec) []string
 
-func (fn EnvFunc) EnvFor(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string {
-	return fn(uid, bndl, spec)
+func (fn EnvFunc) EnvFor(bndl goci.Bndl, spec ProcessSpec) []string {
+	return fn(bndl, spec)
 }
 
 type BundleLoader interface {
@@ -66,41 +66,6 @@ type ProcessTracker interface {
 	Attach(processID string, io garden.ProcessIO, pidFilePath string) (garden.Process, error)
 }
 
-type Execer struct {
-	preparer ExecPreparer
-	runner   ExecRunner
-}
-
-func NewExecer(execPreparer ExecPreparer, runner ExecRunner) *Execer {
-	return &Execer{
-		preparer: execPreparer,
-		runner:   runner,
-	}
-}
-
-// Exec a process in a bundle using 'runc exec'
-func (e *Execer) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-	log = log.Session("exec", lager.Data{"id": id, "path": spec.Path})
-
-	log.Info("start")
-	defer log.Info("finished")
-
-	preparedSpec, err := e.preparer.Prepare(log, bundlePath, spec)
-	if err != nil {
-		log.Error("prepare-failed", err)
-		return nil, err
-	}
-
-	processesPath := path.Join(bundlePath, "processes")
-	return e.runner.Run(log, spec.ID, preparedSpec, bundlePath, processesPath, id, spec.TTY, io)
-}
-
-// Attach attaches to an already running process by guid
-func (e *Execer) Attach(log lager.Logger, bundlePath, id, processID string, io garden.ProcessIO) (garden.Process, error) {
-	processesPath := path.Join(bundlePath, "processes")
-	return e.runner.Attach(log, processID, io, processesPath)
-}
-
 //go:generate counterfeiter . ExecRunner
 type ExecRunner interface {
 	Run(log lager.Logger, passedID string, spec *PreparedSpec, bundlePath, processesPath, handle string, tty *garden.TTYSpec, io garden.ProcessIO) (garden.Process, error)
@@ -113,9 +78,15 @@ type PreparedSpec struct {
 	ContainerRootHostGID uint32
 }
 
-//go:generate counterfeiter . ExecPreparer
-type ExecPreparer interface {
-	Prepare(log lager.Logger, bundlePath string, spec garden.ProcessSpec) (*PreparedSpec, error)
+//go:generate counterfeiter . ProcessBuilder
+type ProcessBuilder interface {
+	BuildProcess(bndl goci.Bndl, processSpec ProcessSpec) *PreparedSpec
+}
+
+type ProcessSpec struct {
+	garden.ProcessSpec
+	ContainerUID int
+	ContainerGID int
 }
 
 //go:generate counterfeiter . Waiter

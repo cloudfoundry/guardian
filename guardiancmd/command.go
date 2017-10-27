@@ -397,8 +397,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		restorer = &gardener.NoopRestorer{}
 	}
 
-	var volumizer gardener.Volumizer = nil
-	volumizer = cmd.wireVolumizer(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages, uidMappings, gidMappings)
+	volumizer := cmd.wireVolumizer(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages, uidMappings, gidMappings)
 
 	starters := []gardener.Starter{}
 	if !cmd.Server.SkipSetup {
@@ -412,7 +411,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	var bulkStarter gardener.BulkStarter = gardener.NewBulkStarter(starters)
 
 	backend := &gardener.Gardener{
-		UidGenerator:    cmd.wireUidGenerator(),
+		UidGenerator:    cmd.wireUIDGenerator(),
 		BulkStarter:     bulkStarter,
 		SysInfoProvider: sysinfo.NewResourcesProvider(cmd.Containers.Dir),
 		Networker:       networker,
@@ -560,7 +559,7 @@ func (cmd *ServerCommand) saveProperties(logger lager.Logger, propertiesPath str
 	}
 }
 
-func (cmd *ServerCommand) wireUidGenerator() gardener.UidGeneratorFunc {
+func (cmd *ServerCommand) wireUIDGenerator() gardener.UidGeneratorFunc {
 	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
@@ -609,8 +608,8 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 	iptRunner := &logging.Runner{CommandRunner: commandRunner(), Logger: log.Session("iptables-runner")}
 	nonLoggingIptRunner := commandRunner()
 	ipTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), iptRunner, locksmith, chainPrefix)
-	nonLoggingIpTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), nonLoggingIptRunner, locksmith, chainPrefix)
-	ipTablesStarter := iptables.NewStarter(nonLoggingIpTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
+	nonLoggingIPTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), nonLoggingIptRunner, locksmith, chainPrefix)
+	ipTablesStarter := iptables.NewStarter(nonLoggingIPTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
 	ruleTranslator := iptables.NewRuleTranslator()
 
 	containerMtu := cmd.Network.Mtu
@@ -766,7 +765,9 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 
 	bundleSaver := &goci.BundleSaver{}
 	depot := wireDepot(depotPath, template, bundleSaver)
-	execPreparer := cmd.wireExecPreparer()
+
+	bndlLoader := &goci.BndlLoader{}
+	processBuilder := runrunc.NewProcessBuilder(wireEnvFunc(), nonRootMaxCaps)
 
 	runcrunner := runrunc.New(
 		cmdRunner,
@@ -774,11 +775,14 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		goci.RuncBinary{Path: runtimePath},
 		dadooPath,
 		runtimePath,
-		execPreparer,
+		bndlLoader,
+		processBuilder,
+		wireMkdirer(cmdRunner),
+		runrunc.LookupFunc(runrunc.LookupUser),
 		cmd.wireExecRunner(
 			dadooPath,
 			runtimePath,
-			cmd.wireUidGenerator(),
+			cmd.wireUIDGenerator(),
 			cmdRunner,
 			cmd.Containers.CleanupProcessDirsOnWait,
 		),
@@ -800,11 +804,11 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	peaCreator := &peas.PeaCreator{
 		VolumeCreator:    volumeCreator,
 		BundleGenerator:  peaTemplate,
+		ProcessBuilder:   processBuilder,
 		BundleSaver:      bundleSaver,
-		ExecPreparer:     execPreparer,
 		ContainerCreator: runrunc.NewCreator(runtimePath, "run", cmdRunner),
 	}
-	return rundmc.New(depot, runcrunner, &goci.BndlLoader{}, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{}, peaCreator)
+	return rundmc.New(depot, runcrunner, bndlLoader, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{}, peaCreator)
 }
 
 func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) *metrics.MetricsProvider {

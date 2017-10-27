@@ -30,12 +30,19 @@ var _ = Describe("PeaCreator", func() {
 		volumeCreator    *peasfakes.FakeVolumeCreator
 		bundleGenerator  *depotfakes.FakeBundleGenerator
 		bundleSaver      *depotfakes.FakeBundleSaver
-		execPreparer     *runruncfakes.FakeExecPreparer
+		processBuilder   *runruncfakes.FakeProcessBuilder
 		containerCreator *peasfakes.FakeContainerCreator
-		peaCreator       *peas.PeaCreator
-		ctrBundleDir     string
-		log              *lagertest.TestLogger
-		generatedBundle  = goci.Bndl{Spec: specs.Spec{Version: "our-bundle"}}
+
+		peaCreator *peas.PeaCreator
+
+		ctrBundleDir string
+		log          *lagertest.TestLogger
+
+		generatedBundle = goci.Bndl{Spec: specs.Spec{Version: "our-bundle"}}
+		builtProcess    = &runrunc.PreparedSpec{
+			Process: specs.Process{Cwd: "some-cwd"},
+		}
+		processSpec garden.ProcessSpec
 	)
 
 	BeforeEach(func() {
@@ -44,22 +51,32 @@ var _ = Describe("PeaCreator", func() {
 		bundleGenerator = new(depotfakes.FakeBundleGenerator)
 		bundleGenerator.GenerateReturns(generatedBundle, nil)
 		bundleSaver = new(depotfakes.FakeBundleSaver)
-		execPreparer = new(runruncfakes.FakeExecPreparer)
-		execPreparer.PrepareReturns(&runrunc.PreparedSpec{
-			Process: specs.Process{Cwd: "some-cwd"},
-		}, nil)
+		processBuilder = new(runruncfakes.FakeProcessBuilder)
+		processBuilder.BuildProcessReturns(builtProcess)
 		containerCreator = new(peasfakes.FakeContainerCreator)
+
 		peaCreator = &peas.PeaCreator{
 			VolumeCreator:    volumeCreator,
 			BundleGenerator:  bundleGenerator,
 			BundleSaver:      bundleSaver,
-			ExecPreparer:     execPreparer,
+			ProcessBuilder:   processBuilder,
 			ContainerCreator: containerCreator,
 		}
+
 		var err error
 		ctrBundleDir, err = ioutil.TempDir("", "pea-creator-tests")
 		Expect(err).NotTo(HaveOccurred())
 		log = lagertest.NewTestLogger("peas-unit-tests")
+		processSpec = garden.ProcessSpec{
+			ID:   "some-id",
+			Dir:  "/some/dir",
+			User: "4:5",
+			Image: garden.ImageRef{
+				URI:      imageURI,
+				Username: "cakeuser",
+				Password: "cakepassword",
+			},
+		}
 	})
 
 	AfterEach(func() {
@@ -68,38 +85,26 @@ var _ = Describe("PeaCreator", func() {
 
 	Describe("pea creation succeeding", func() {
 		var (
-			peaID    string
 			process  garden.Process
 			exitCode int
 			waitErr  error
 		)
 
-		BeforeEach(func() {
-			peaID = "some-pea"
-		})
-
 		JustBeforeEach(func() {
 			var err error
-			process, err = peaCreator.CreatePea(log, garden.ProcessSpec{
-				ID: peaID,
-				Image: garden.ImageRef{
-					URI:      imageURI,
-					Username: "cakeuser",
-					Password: "cakepassword",
-				},
-			}, garden.ProcessIO{}, ctrBundleDir)
+			process, err = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrBundleDir)
 			Expect(err).NotTo(HaveOccurred())
 			exitCode, waitErr = process.Wait()
 		})
 
 		It("creates the bundle directory", func() {
-			Expect(filepath.Join(ctrBundleDir, "processes", peaID)).To(BeADirectory())
+			Expect(filepath.Join(ctrBundleDir, "processes", processSpec.ID)).To(BeADirectory())
 		})
 
 		It("creates a volume", func() {
 			Expect(volumeCreator.CreateCallCount()).To(Equal(1))
 			_, actualSpec := volumeCreator.CreateArgsForCall(0)
-			Expect(actualSpec.Handle).To(Equal(peaID))
+			Expect(actualSpec.Handle).To(Equal(processSpec.ID))
 			Expect(actualSpec.Image).To(Equal(garden.ImageRef{
 				URI:      imageURI,
 				Username: "cakeuser",
@@ -111,61 +116,76 @@ var _ = Describe("PeaCreator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualCtrSpec, actualCtrBundlePath := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec).To(Equal(gardener.DesiredContainerSpec{
-				Handle:     "some-pea",
+				Handle:     processSpec.ID,
 				BaseConfig: specs.Spec{Version: "some-spec-version"},
 			}))
 			Expect(actualCtrBundlePath).To(Equal(ctrBundleDir))
 		})
 
-		It("saves the initial bundle to disk", func() {
-			Expect(bundleSaver.SaveCallCount()).To(BeNumerically(">=", 1))
-			actualBundle, actualBundlePath := bundleSaver.SaveArgsForCall(0)
+		It("builds a process", func() {
+			Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
+			actualBundle, actualProcessSpec := processBuilder.BuildProcessArgsForCall(0)
 			Expect(actualBundle).To(Equal(generatedBundle))
-			Expect(actualBundlePath).To(Equal(filepath.Join(ctrBundleDir, "processes", peaID)))
-		})
-
-		It("prepares the rootfs", func() {
-			Expect(execPreparer.PrepareCallCount()).To(Equal(1))
-			_, actualBundlePath, actualProcessSpec := execPreparer.PrepareArgsForCall(0)
-			Expect(actualBundlePath).To(Equal(filepath.Join(ctrBundleDir, "processes", peaID)))
-			Expect(actualProcessSpec).To(Equal(garden.ProcessSpec{
-				ID: peaID,
-				Image: garden.ImageRef{
-					URI:      imageURI,
-					Username: "cakeuser",
-					Password: "cakepassword",
-				},
+			Expect(actualProcessSpec).To(Equal(runrunc.ProcessSpec{
+				ProcessSpec:  processSpec,
+				ContainerUID: 4,
+				ContainerGID: 5,
 			}))
 		})
 
-		It("saves the bundle to disk again, adding the process", func() {
-			Expect(bundleSaver.SaveCallCount()).To(Equal(2))
-			actualBundle, actualBundlePath := bundleSaver.SaveArgsForCall(1)
+		It("saves the bundle (containing the built process) to disk", func() {
+			Expect(bundleSaver.SaveCallCount()).To(Equal(1))
+			actualBundle, actualBundlePath := bundleSaver.SaveArgsForCall(0)
 			expectedBundle := generatedBundle.WithProcess(specs.Process{Cwd: "some-cwd"})
 			Expect(actualBundle).To(Equal(expectedBundle))
-			Expect(actualBundlePath).To(Equal(filepath.Join(ctrBundleDir, "processes", peaID)))
+			Expect(actualBundlePath).To(Equal(filepath.Join(ctrBundleDir, "processes", processSpec.ID)))
 		})
 
 		It("creates a runc container based on the bundle", func() {
 			Expect(containerCreator.CreateCallCount()).To(Equal(1))
 			_, actualBundlePath, actualContainerID, _ := containerCreator.CreateArgsForCall(0)
-			Expect(actualBundlePath).To(Equal(filepath.Join(ctrBundleDir, "processes", peaID)))
-			Expect(actualContainerID).To(Equal(peaID))
+			Expect(actualBundlePath).To(Equal(filepath.Join(ctrBundleDir, "processes", processSpec.ID)))
+			Expect(actualContainerID).To(Equal(processSpec.ID))
 		})
 
 		It("returns process with expected ID", func() {
-			Expect(process.ID()).To(Equal(peaID))
+			Expect(process.ID()).To(Equal(processSpec.ID))
 		})
 
 		Context("when the process spec has no ID", func() {
 			BeforeEach(func() {
-				peaID = ""
+				processSpec.ID = ""
 			})
 
 			It("generates process ID", func() {
 				processDirs, err := ioutil.ReadDir(filepath.Join(ctrBundleDir, "processes"))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(processDirs).To(HaveLen(1))
+			})
+		})
+
+		Context("when no working dir is specified", func() {
+			BeforeEach(func() {
+				processSpec.Dir = ""
+			})
+
+			It("defaults to /", func() {
+				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
+				_, actualProcessSpec := processBuilder.BuildProcessArgsForCall(0)
+				Expect(actualProcessSpec.Dir).To(Equal("/"))
+			})
+		})
+
+		Context("when no user is specified", func() {
+			BeforeEach(func() {
+				processSpec.User = ""
+			})
+
+			It("defaults to 0:0", func() {
+				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
+				_, actualProcessSpec := processBuilder.BuildProcessArgsForCall(0)
+				Expect(actualProcessSpec.ContainerUID).To(Equal(0))
+				Expect(actualProcessSpec.ContainerGID).To(Equal(0))
 			})
 		})
 
@@ -203,9 +223,7 @@ var _ = Describe("PeaCreator", func() {
 		)
 
 		JustBeforeEach(func() {
-			_, createErr = peaCreator.CreatePea(log, garden.ProcessSpec{
-				Image: garden.ImageRef{URI: imageURI},
-			}, garden.ProcessIO{}, ctrBundleDir)
+			_, createErr = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrBundleDir)
 		})
 
 		Context("when the bundle generator returns an error", func() {
@@ -215,16 +233,6 @@ var _ = Describe("PeaCreator", func() {
 
 			It("returns a wrapped error", func() {
 				Expect(createErr).To(MatchError(ContainSubstring("banana")))
-			})
-		})
-
-		Context("when the exec preparer returns an error", func() {
-			BeforeEach(func() {
-				execPreparer.PrepareReturns(nil, errors.New("jackfruit"))
-			})
-
-			It("returns a wrapped error", func() {
-				Expect(createErr).To(MatchError(ContainSubstring("jackfruit")))
 			})
 		})
 
@@ -245,6 +253,16 @@ var _ = Describe("PeaCreator", func() {
 
 			It("returns a wrapped error", func() {
 				Expect(createErr).To(MatchError(ContainSubstring("coconut")))
+			})
+		})
+
+		Context("when the user is specified as a username, not a uid:gid", func() {
+			BeforeEach(func() {
+				processSpec.User = "frank"
+			})
+
+			It("returns an error", func() {
+				Expect(createErr).To(MatchError(ContainSubstring("frank")))
 			})
 		})
 	})

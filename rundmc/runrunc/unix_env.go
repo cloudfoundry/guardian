@@ -3,7 +3,6 @@ package runrunc
 import (
 	"regexp"
 
-	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
@@ -34,11 +33,11 @@ func envWithUser(env []string, user string) []string {
 	}
 }
 
-func UnixEnvFor(uid int, bndl goci.Bndl, spec garden.ProcessSpec) []string {
+func UnixEnvFor(bndl goci.Bndl, spec ProcessSpec) []string {
 	requestedEnv := append(bndl.Spec.Process.Env, spec.Env...)
 
 	defaultPath := DefaultPath
-	if uid == 0 {
+	if spec.ContainerUID == 0 {
 		defaultPath = DefaultRootPath
 	}
 

@@ -24,7 +24,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
-	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/idmapper"
@@ -164,6 +163,24 @@ func (cmd *ServerCommand) wireVolumizer(logger lager.Logger, graphRoot string, i
 	return gardener.NewVolumeProvider(shed, shed)
 }
 
+func wireEnvFunc() runrunc.EnvFunc {
+	return runrunc.EnvFunc(runrunc.UnixEnvFor)
+}
+
+func wireMkdirer(cmdRunner commandrunner.CommandRunner) runrunc.Mkdirer {
+	if runningAsRoot() {
+		return bundlerules.ChrootMkdir{Command: preparerootfs.Command, CommandRunner: cmdRunner}
+	}
+
+	return NoopMkdirer{}
+}
+
+type NoopMkdirer struct{}
+
+func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error {
+	return nil
+}
+
 func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *dadoo.ExecRunner {
 
 	pidFileReader := &dadoo.PidFileReader{
@@ -191,15 +208,6 @@ func wireCgroupsStarter(logger lager.Logger, tag string, chowner cgroups.Chowner
 	}
 
 	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, gardenCgroup, allowedDevices, commandRunner(), chowner)
-}
-
-func (cmd *ServerCommand) wireExecPreparer() runrunc.ExecPreparer {
-	cmdRunner := commandRunner()
-	chrootMkdir := bundlerules.ChrootMkdir{
-		Command:       preparerootfs.Command,
-		CommandRunner: cmdRunner,
-	}
-	return runrunc.NewExecPreparer(&goci.BndlLoader{}, runrunc.LookupFunc(runrunc.LookupUser), runrunc.EnvFunc(runrunc.UnixEnvFor), chrootMkdir, nonRootMaxCaps, runningAsRoot)
 }
 
 func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {
