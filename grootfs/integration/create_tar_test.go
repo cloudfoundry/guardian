@@ -256,7 +256,7 @@ var _ = Describe("Create with local TAR images", func() {
 		It("doesn't leak the file", func() {
 			workDir, err := os.Getwd()
 			Expect(err).NotTo(HaveOccurred())
-			baseImagePath = fmt.Sprintf("%s/assets/hacked.tar", workDir)
+			baseImagePath := fmt.Sprintf("%s/assets/hacked.tar", workDir)
 
 			_, err = Runner.Create(groot.CreateSpec{
 				ID:           "image-1",
