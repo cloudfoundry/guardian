@@ -1,8 +1,6 @@
 package runrunc_test
 
 import (
-	"io/ioutil"
-
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -29,20 +27,3 @@ var _ = Describe("WaitWatcher", func() {
 		Eventually(runner.RunCallCount).Should(Equal(1))
 	})
 })
-
-var _ = Describe("RemoveFiles", func() {
-	It("removes all the paths", func() {
-		a := tmpFile("testremovefiles")
-		b := tmpFile("testremovefiles")
-		runrunc.RemoveFiles([]string{a, b}).Run(lagertest.NewTestLogger("test"))
-		Expect(a).NotTo(BeAnExistingFile())
-		Expect(b).NotTo(BeAnExistingFile())
-	})
-})
-
-func tmpFile(name string) string {
-	tmp, err := ioutil.TempFile("", name)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(tmp.Close()).To(Succeed())
-	return tmp.Name()
-}

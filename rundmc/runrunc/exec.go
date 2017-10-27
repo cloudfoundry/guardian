@@ -113,16 +113,6 @@ func (w Watcher) OnExit(log lager.Logger, process Waiter, onExit Runner) {
 	onExit.Run(log)
 }
 
-type RemoveFiles []string
-
-func (files RemoveFiles) Run(log lager.Logger) {
-	for _, file := range files {
-		if err := os.Remove(file); err != nil {
-			log.Error("cleanup-process-json-failed", err)
-		}
-	}
-}
-
 func intersect(l1 []string, l2 []string) (result []string) {
 	for _, a := range l1 {
 		for _, b := range l2 {
