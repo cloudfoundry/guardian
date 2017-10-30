@@ -129,6 +129,10 @@ func (fn UidGeneratorFunc) Generate() string {
 type DesiredContainerSpec struct {
 	Handle string
 
+	CgroupPath string
+
+	Namespaces map[string]string
+
 	// Container hostname
 	Hostname string
 

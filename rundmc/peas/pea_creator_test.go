@@ -9,7 +9,6 @@ import (
 	"runtime"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
@@ -28,6 +27,7 @@ var _ = Describe("PeaCreator", func() {
 
 	var (
 		volumeCreator    *peasfakes.FakeVolumeCreator
+		pidGetter        *peasfakes.FakePidGetter
 		bundleGenerator  *depotfakes.FakeBundleGenerator
 		bundleSaver      *depotfakes.FakeBundleSaver
 		processBuilder   *runruncfakes.FakeProcessBuilder
@@ -35,6 +35,7 @@ var _ = Describe("PeaCreator", func() {
 
 		peaCreator *peas.PeaCreator
 
+		ctrHandle    string
 		ctrBundleDir string
 		log          *lagertest.TestLogger
 
@@ -48,6 +49,8 @@ var _ = Describe("PeaCreator", func() {
 	BeforeEach(func() {
 		volumeCreator = new(peasfakes.FakeVolumeCreator)
 		volumeCreator.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
+		pidGetter = new(peasfakes.FakePidGetter)
+		pidGetter.PidReturns(123, nil)
 		bundleGenerator = new(depotfakes.FakeBundleGenerator)
 		bundleGenerator.GenerateReturns(generatedBundle, nil)
 		bundleSaver = new(depotfakes.FakeBundleSaver)
@@ -57,6 +60,7 @@ var _ = Describe("PeaCreator", func() {
 
 		peaCreator = &peas.PeaCreator{
 			VolumeCreator:    volumeCreator,
+			PidGetter:        pidGetter,
 			BundleGenerator:  bundleGenerator,
 			BundleSaver:      bundleSaver,
 			ProcessBuilder:   processBuilder,
@@ -64,6 +68,7 @@ var _ = Describe("PeaCreator", func() {
 		}
 
 		var err error
+		ctrHandle = "pea-creator-tests"
 		ctrBundleDir, err = ioutil.TempDir("", "pea-creator-tests")
 		Expect(err).NotTo(HaveOccurred())
 		log = lagertest.NewTestLogger("peas-unit-tests")
@@ -92,7 +97,7 @@ var _ = Describe("PeaCreator", func() {
 
 		JustBeforeEach(func() {
 			var err error
-			process, err = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrBundleDir)
+			process, err = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrHandle, ctrBundleDir)
 			Expect(err).NotTo(HaveOccurred())
 			exitCode, waitErr = process.Wait()
 		})
@@ -112,14 +117,41 @@ var _ = Describe("PeaCreator", func() {
 			}))
 		})
 
+		It("passes the processID as handle to the bundle generator", func() {
+			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			Expect(actualCtrSpec.Handle).To(Equal(processSpec.ID))
+		})
+
 		It("generates a runtime spec from the VolumeCreator's runtimeSpec", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-			actualCtrSpec, actualCtrBundlePath := bundleGenerator.GenerateArgsForCall(0)
-			Expect(actualCtrSpec).To(Equal(gardener.DesiredContainerSpec{
-				Handle:     processSpec.ID,
-				BaseConfig: specs.Spec{Version: "some-spec-version"},
+			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			Expect(actualCtrSpec.BaseConfig).To(Equal(specs.Spec{Version: "some-spec-version"}))
+		})
+
+		It("passes the container handle as cgroup path to the bundle generator", func() {
+			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			Expect(actualCtrSpec.CgroupPath).To(Equal(ctrHandle))
+		})
+
+		It("shares all namespaces apart from mnt with the container", func() {
+			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			Expect(actualCtrSpec.Namespaces).To(Equal(map[string]string{
+				"mount":   "",
+				"network": "/proc/123/ns/net",
+				"user":    "/proc/123/ns/user",
+				"ipc":     "/proc/123/ns/ipc",
+				"pid":     "/proc/123/ns/pid",
+				"uts":     "/proc/123/ns/uts",
 			}))
-			Expect(actualCtrBundlePath).To(Equal(ctrBundleDir))
+		})
+
+		It("passes the ctrBundlePath to the bundle generator", func() {
+			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+			_, actualCtrBundle := bundleGenerator.GenerateArgsForCall(0)
+			Expect(actualCtrBundle).To(Equal(ctrBundleDir))
 		})
 
 		It("builds a process", func() {
@@ -189,6 +221,18 @@ var _ = Describe("PeaCreator", func() {
 			})
 		})
 
+		Context("when limits are provided", func() {
+			BeforeEach(func() {
+				processSpec.OverrideContainerLimits = &garden.ProcessLimits{}
+			})
+
+			It("provides an explicit cgroup path to bundle generation", func() {
+				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+				Expect(actualCtrSpec.CgroupPath).To(Equal(processSpec.ID))
+			})
+		})
+
 		Context("when container creation succeeds and user process exits with non-zero code", func() {
 			BeforeEach(func() {
 				cmdThatFails := exec.Command("bash", "-c", "exit 42")
@@ -223,7 +267,17 @@ var _ = Describe("PeaCreator", func() {
 		)
 
 		JustBeforeEach(func() {
-			_, createErr = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrBundleDir)
+			_, createErr = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrHandle, ctrBundleDir)
+		})
+
+		Context("when the bundle generator returns an error", func() {
+			BeforeEach(func() {
+				pidGetter.PidReturns(-1, errors.New("pickle"))
+			})
+
+			It("returns a wrapped error", func() {
+				Expect(createErr).To(MatchError(ContainSubstring("pickle")))
+			})
 		})
 
 		Context("when the bundle generator returns an error", func() {

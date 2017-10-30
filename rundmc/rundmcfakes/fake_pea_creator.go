@@ -10,12 +10,13 @@ import (
 )
 
 type FakePeaCreator struct {
-	CreatePeaStub        func(log lager.Logger, spec garden.ProcessSpec, pio garden.ProcessIO, ctrBundlePath string) (garden.Process, error)
+	CreatePeaStub        func(log lager.Logger, spec garden.ProcessSpec, pio garden.ProcessIO, ctrHandle, ctrBundlePath string) (garden.Process, error)
 	createPeaMutex       sync.RWMutex
 	createPeaArgsForCall []struct {
 		log           lager.Logger
 		spec          garden.ProcessSpec
 		pio           garden.ProcessIO
+		ctrHandle     string
 		ctrBundlePath string
 	}
 	createPeaReturns struct {
@@ -30,19 +31,20 @@ type FakePeaCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, pio garden.ProcessIO, ctrBundlePath string) (garden.Process, error) {
+func (fake *FakePeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, pio garden.ProcessIO, ctrHandle string, ctrBundlePath string) (garden.Process, error) {
 	fake.createPeaMutex.Lock()
 	ret, specificReturn := fake.createPeaReturnsOnCall[len(fake.createPeaArgsForCall)]
 	fake.createPeaArgsForCall = append(fake.createPeaArgsForCall, struct {
 		log           lager.Logger
 		spec          garden.ProcessSpec
 		pio           garden.ProcessIO
+		ctrHandle     string
 		ctrBundlePath string
-	}{log, spec, pio, ctrBundlePath})
-	fake.recordInvocation("CreatePea", []interface{}{log, spec, pio, ctrBundlePath})
+	}{log, spec, pio, ctrHandle, ctrBundlePath})
+	fake.recordInvocation("CreatePea", []interface{}{log, spec, pio, ctrHandle, ctrBundlePath})
 	fake.createPeaMutex.Unlock()
 	if fake.CreatePeaStub != nil {
-		return fake.CreatePeaStub(log, spec, pio, ctrBundlePath)
+		return fake.CreatePeaStub(log, spec, pio, ctrHandle, ctrBundlePath)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -56,10 +58,10 @@ func (fake *FakePeaCreator) CreatePeaCallCount() int {
 	return len(fake.createPeaArgsForCall)
 }
 
-func (fake *FakePeaCreator) CreatePeaArgsForCall(i int) (lager.Logger, garden.ProcessSpec, garden.ProcessIO, string) {
+func (fake *FakePeaCreator) CreatePeaArgsForCall(i int) (lager.Logger, garden.ProcessSpec, garden.ProcessIO, string, string) {
 	fake.createPeaMutex.RLock()
 	defer fake.createPeaMutex.RUnlock()
-	return fake.createPeaArgsForCall[i].log, fake.createPeaArgsForCall[i].spec, fake.createPeaArgsForCall[i].pio, fake.createPeaArgsForCall[i].ctrBundlePath
+	return fake.createPeaArgsForCall[i].log, fake.createPeaArgsForCall[i].spec, fake.createPeaArgsForCall[i].pio, fake.createPeaArgsForCall[i].ctrHandle, fake.createPeaArgsForCall[i].ctrBundlePath
 }
 
 func (fake *FakePeaCreator) CreatePeaReturns(result1 garden.Process, result2 error) {

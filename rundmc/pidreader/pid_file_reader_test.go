@@ -1,11 +1,11 @@
-package dadoo_test
+package pidreader_test
 
 import (
 	"io/ioutil"
 	"os"
 	"time"
 
-	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
+	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pivotal-golang/clock/fakeclock"
@@ -17,7 +17,7 @@ var _ = Describe("PidFileReader", func() {
 		clk     *fakeclock.FakeClock
 		timeout time.Duration
 
-		pdr *dadoo.PidFileReader
+		pdr *pidreader.PidFileReader
 
 		pidFileContents string
 		pidFilePath     string
@@ -31,7 +31,7 @@ var _ = Describe("PidFileReader", func() {
 	})
 
 	JustBeforeEach(func() {
-		pdr = &dadoo.PidFileReader{
+		pdr = &pidreader.PidFileReader{
 			Clock:         clk,
 			Timeout:       timeout,
 			SleepInterval: 20 * time.Millisecond,

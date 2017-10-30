@@ -24,6 +24,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
+	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/idmapper"
@@ -182,8 +183,7 @@ func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode
 }
 
 func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *dadoo.ExecRunner {
-
-	pidFileReader := &dadoo.PidFileReader{
+	pidFileReader := &pidreader.PidFileReader{
 		Clock:         clock.NewClock(),
 		Timeout:       10 * time.Second,
 		SleepInterval: time.Millisecond * 100,

@@ -32,15 +32,21 @@ type VolumeCreator interface {
 	Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error)
 }
 
+//go:generate counterfeiter . PidGetter
+type PidGetter interface {
+	Pid(pidFilePath string) (int, error)
+}
+
 type PeaCreator struct {
 	VolumeCreator    VolumeCreator
+	PidGetter        PidGetter
 	BundleGenerator  depot.BundleGenerator
 	BundleSaver      depot.BundleSaver
 	ProcessBuilder   runrunc.ProcessBuilder
 	ContainerCreator ContainerCreator
 }
 
-func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO garden.ProcessIO, ctrBundlePath string) (garden.Process, error) {
+func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO garden.ProcessIO, ctrHandle, ctrBundlePath string) (garden.Process, error) {
 	errs := func(action string, err error) (garden.Process, error) {
 		wrappedErr := errorwrapper.Wrap(err, action)
 		log.Error(action, wrappedErr)
@@ -70,9 +76,29 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return errs("creating-volume", err)
 	}
 
+	cgroupPath := ctrHandle
+	if spec.OverrideContainerLimits != nil {
+		cgroupPath = processID
+	}
+
+	originalCtrInitPid, err := p.PidGetter.Pid(filepath.Join(ctrBundlePath, "pidfile"))
+	if err != nil {
+		return errs("reading-ctr-pid", err)
+	}
+
+	linuxNamespaces := map[string]string{}
+	linuxNamespaces["mount"] = ""
+	linuxNamespaces["network"] = fmt.Sprintf("/proc/%d/ns/net", originalCtrInitPid)
+	linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
+	linuxNamespaces["ipc"] = fmt.Sprintf("/proc/%d/ns/ipc", originalCtrInitPid)
+	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
+	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", originalCtrInitPid)
+
 	bndl, err := p.BundleGenerator.Generate(gardener.DesiredContainerSpec{
 		Handle:     processID,
 		BaseConfig: runtimeSpec,
+		CgroupPath: cgroupPath,
+		Namespaces: linuxNamespaces,
 	}, ctrBundlePath)
 	if err != nil {
 		return errs("generating-bundle", err)

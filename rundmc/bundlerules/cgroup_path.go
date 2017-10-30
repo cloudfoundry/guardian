@@ -16,5 +16,9 @@ func (r CGroupPath) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ 
 		return bndl, nil
 	}
 
+	if spec.CgroupPath != "" {
+		return bndl.WithCGroupPath(filepath.Join(r.Path, spec.CgroupPath)), nil
+	}
+
 	return bndl.WithCGroupPath(filepath.Join(r.Path, spec.Handle)), nil
 }

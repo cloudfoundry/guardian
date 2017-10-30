@@ -184,8 +184,9 @@ var _ = Describe("Rundmc", func() {
 				processSpec := garden.ProcessSpec{Image: garden.ImageRef{URI: "some-uri"}}
 				containerizer.Run(logger, "some-handle", processSpec, pio)
 				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
-				_, actualProcessSpec, actualProcessIO, actualBundlePath := fakePeaCreator.CreatePeaArgsForCall(0)
+				_, actualProcessSpec, actualProcessIO, actualHandle, actualBundlePath := fakePeaCreator.CreatePeaArgsForCall(0)
 				Expect(actualProcessSpec).To(Equal(processSpec))
+				Expect(actualHandle).To(Equal("some-handle"))
 				Expect(actualBundlePath).To(Equal("some-bundle-path"))
 				Expect(actualProcessIO).To(Equal(pio))
 			})

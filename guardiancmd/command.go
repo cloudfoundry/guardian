@@ -34,6 +34,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
+	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
@@ -743,6 +744,10 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			ContainerRootGID: gidMappings.Map(0),
 			MkdirChown:       chrootMkdir,
 		},
+		bundlerules.Namespaces{},
+		bundlerules.CGroupPath{
+			Path: cgroupRootPath,
+		},
 		bundlerules.Mounts{},
 		bundlerules.Env{},
 		bundlerules.Hostname{},
@@ -752,14 +757,11 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	peaBundleRules := make([]rundmc.BundlerRule, len(bundleRules))
 	copy(peaBundleRules, bundleRules)
 	bundleRules = append(bundleRules,
-		bundlerules.CGroupPath{
-			Path: cgroupRootPath,
-		}, bundlerules.Limits{
+		bundlerules.Limits{
 			CpuQuotaPerShare: cmd.Limits.CPUQuotaPerShare,
 			TCPMemoryLimit:   int64(cmd.Limits.TCPMemoryLimit),
 			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
 		})
-	peaBundleRules = append(peaBundleRules, bundlerules.NamespaceSharing{})
 
 	template := &rundmc.BundleTemplate{Rules: bundleRules}
 	peaTemplate := &rundmc.BundleTemplate{Rules: peaBundleRules}
@@ -801,15 +803,23 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		}
 	}
 
-	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, cmdRunner)
-	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
+	pidFileReader := &pidreader.PidFileReader{
+		Clock:         clock.NewClock(),
+		Timeout:       10 * time.Second,
+		SleepInterval: time.Millisecond * 100,
+	}
+
 	peaCreator := &peas.PeaCreator{
 		VolumeCreator:    volumeCreator,
+		PidGetter:        pidFileReader,
 		BundleGenerator:  peaTemplate,
 		ProcessBuilder:   processBuilder,
 		BundleSaver:      bundleSaver,
 		ContainerCreator: runrunc.NewCreator(runtimePath, "run", runtimeExtraArgs, cmdRunner),
 	}
+
+	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, cmdRunner)
+	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
 	return rundmc.New(depot, runcrunner, bndlLoader, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{}, peaCreator)
 }
 

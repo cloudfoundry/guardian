@@ -1,4 +1,4 @@
-package dadoo
+package pidreader
 
 import (
 	"fmt"
