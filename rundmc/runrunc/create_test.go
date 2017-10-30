@@ -24,6 +24,7 @@ var _ = Describe("Create", func() {
 		commandRunner  *fake_command_runner.FakeCommandRunner
 		bundlePath     string
 		runcSubcmd     = "do-a-thing"
+		runcExtraArgs  = []string{"--some-arg", "some-value"}
 		logFilePath    string
 		pidFilePath    string
 		logger         *lagertest.TestLogger
@@ -48,7 +49,7 @@ var _ = Describe("Create", func() {
 	})
 
 	JustBeforeEach(func() {
-		runner = runrunc.NewCreator("funC", runcSubcmd, commandRunner)
+		runner = runrunc.NewCreator("funC", runcSubcmd, runcExtraArgs, commandRunner)
 
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "funC",
@@ -82,6 +83,7 @@ var _ = Describe("Create", func() {
 			"--debug",
 			"--log", logFilePath,
 			"--log-format", "json",
+			runcExtraArgs[0], runcExtraArgs[1],
 			runcSubcmd,
 			"--no-new-keyring",
 			"--bundle", bundlePath,

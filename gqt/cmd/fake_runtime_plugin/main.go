@@ -31,6 +31,9 @@ func main() {
 		cli.StringFlag{
 			Name: "log-format",
 		},
+		cli.StringFlag{
+			Name: "image-store",
+		},
 	}
 
 	fakeRuntimePlugin.Commands = []cli.Command{

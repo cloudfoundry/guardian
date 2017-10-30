@@ -36,6 +36,9 @@ var _ = Describe("Runtime Plugin", func() {
 			config.RuntimePluginBin = binaries.RuntimePlugin
 			config.NetworkPluginBin = binaries.NetworkPlugin
 			config.ImagePluginBin = binaries.NoopPlugin
+			config.RuntimePluginExtraArgs = []string{
+				`"--image-store"`, `some-image-store`,
+			}
 		})
 
 		Describe("creating a container", func() {
@@ -58,6 +61,7 @@ var _ = Describe("Runtime Plugin", func() {
 					"--debug",
 					"--log", HaveSuffix(filepath.Join("containers", handle, "create.log")),
 					"--log-format", "json",
+					"--image-store", "some-image-store",
 					"create",
 					"--no-new-keyring",
 					"--bundle", HaveSuffix(filepath.Join("containers", handle)),

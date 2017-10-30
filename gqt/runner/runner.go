@@ -56,6 +56,7 @@ type GdnRunnerConfig struct {
 	DefaultBlkioWeight             *uint64  `flag:"default-container-blockio-weight"`
 	NetworkPluginExtraArgs         []string `flag:"network-plugin-extra-arg"`
 	ImagePluginExtraArgs           []string `flag:"image-plugin-extra-arg"`
+	RuntimePluginExtraArgs         []string `flag:"runtime-plugin-extra-arg"`
 	PrivilegedImagePluginExtraArgs []string `flag:"privileged-image-plugin-extra-arg"`
 	MaxContainers                  *uint64  `flag:"max-containers"`
 	DebugIP                        string   `flag:"debug-bind-ip"`
