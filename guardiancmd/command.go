@@ -200,7 +200,8 @@ type ServerCommand struct {
 	} `group:"Binary Tools"`
 
 	Runtime struct {
-		Plugin string `long:"runtime-plugin"       default:"runc" description:"Path to the runtime plugin binary."`
+		Plugin          string   `long:"runtime-plugin"       default:"runc" description:"Path to the runtime plugin binary."`
+		PluginExtraArgs []string `long:"runtime-plugin-extra-arg" description:"Extra argument to pass to the runtime plugin. Can be specified multiple times."`
 	} `group:"Runtime"`
 
 	Graph struct {
@@ -417,7 +418,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		Networker:       networker,
 		Volumizer:       volumizer,
 		Containerizer: cmd.wireContainerizer(logger,
-			cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Runtime.Plugin,
+			cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Runtime.Plugin, cmd.Runtime.PluginExtraArgs,
 			cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(),
 			cmd.Containers.ApparmorProfile, propManager, uidMappings, gidMappings,
 			volumizer),
@@ -669,7 +670,7 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.Volumizer {
 }
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
-	depotPath, dadooPath, runtimePath, nstarPath, tarPath, appArmorProfile string,
+	depotPath, dadooPath, runtimePath string, runtimeExtraArgs []string, nstarPath, tarPath, appArmorProfile string,
 	properties gardener.PropertyManager, uidMappings, gidMappings idmapper.MappingList,
 	volumeCreator peas.VolumeCreator) *rundmc.Containerizer {
 
@@ -775,6 +776,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		goci.RuncBinary{Path: runtimePath},
 		dadooPath,
 		runtimePath,
+		runtimeExtraArgs,
 		bndlLoader,
 		processBuilder,
 		wireMkdirer(cmdRunner),
@@ -806,7 +808,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		BundleGenerator:  peaTemplate,
 		ProcessBuilder:   processBuilder,
 		BundleSaver:      bundleSaver,
-		ContainerCreator: runrunc.NewCreator(runtimePath, "run", cmdRunner),
+		ContainerCreator: runrunc.NewCreator(runtimePath, "run", runtimeExtraArgs, cmdRunner),
 	}
 	return rundmc.New(depot, runcrunner, bndlLoader, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{}, peaCreator)
 }
