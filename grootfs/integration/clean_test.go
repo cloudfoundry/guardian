@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
+	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	. "github.com/onsi/ginkgo"
@@ -50,8 +52,15 @@ var _ = Describe("Clean", func() {
 		})
 
 		Context("when there are unused volumes", func() {
+			var (
+				logBuffer     *gbytes.Buffer
+				loggingRunner runner.Runner
+			)
+
 			BeforeEach(func() {
-				_, err := Runner.Create(groot.CreateSpec{
+				logBuffer = gbytes.NewBuffer()
+				loggingRunner = Runner.WithStderr(logBuffer)
+				image, err := loggingRunner.Create(groot.CreateSpec{
 					ID:           "my-image-2",
 					BaseImageURL: integration.String2URL(anotherBaseImagePath),
 					Mount:        mountByDefault(),
@@ -59,7 +68,21 @@ var _ = Describe("Clean", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(Runner.Delete("my-image-2")).To(Succeed())
+				err = loggingRunner.Delete("my-image-2")
+				if err != nil {
+					out, _ := exec.Command("cat", "/proc/mounts").CombinedOutput()
+					GinkgoWriter.Write([]byte("\nMount table:\n"))
+					GinkgoWriter.Write(out)
+					out, _ = exec.Command("lsof", "+d", image.Root.Path).CombinedOutput()
+					GinkgoWriter.Write([]byte("\nlsof output\n"))
+					GinkgoWriter.Write(out)
+				}
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			AfterEach(func() {
+				fmt.Println(">>>>>>>>>>>>>>> my-image-2 logs <<<<<<<<<<<<<<<<<<<<<")
+				fmt.Println(string(logBuffer.Contents()))
 			})
 
 			It("removes them", func() {
@@ -208,15 +231,27 @@ var _ = Describe("Clean", func() {
 		})
 
 		Context("when there are unused layers", func() {
+			var (
+				logBuffer     *gbytes.Buffer
+				loggingRunner runner.Runner
+			)
+
 			BeforeEach(func() {
-				_, err := Runner.Create(groot.CreateSpec{
+				logBuffer = gbytes.NewBuffer()
+				loggingRunner = Runner.WithStderr(logBuffer)
+				_, err := loggingRunner.Create(groot.CreateSpec{
 					ID:           "my-image-2",
 					BaseImageURL: integration.String2URL("docker:///cfgarden/garden-busybox"),
 					Mount:        mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(Runner.Delete("my-image-2")).To(Succeed())
+				Expect(loggingRunner.Delete("my-image-2")).To(Succeed())
+			})
+
+			AfterEach(func() {
+				fmt.Println(">>>>>>>>>>>>>>> my-image-2 logs <<<<<<<<<<<<<<<<<<<<<")
+				fmt.Println(string(logBuffer.Contents()))
 			})
 
 			It("removes unused volumes", func() {

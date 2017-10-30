@@ -18,6 +18,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
@@ -131,7 +132,11 @@ var _ = Describe("Create with local TAR images", func() {
 	})
 
 	Describe("clean up on create", func() {
+		var logBuffer *gbytes.Buffer
+
 		JustBeforeEach(func() {
+			logBuffer = nil
+
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:           "my-image-1",
 				BaseImageURL: integration.String2URL(baseImagePath),
@@ -144,20 +149,27 @@ var _ = Describe("Create with local TAR images", func() {
 
 		AfterEach(func() {
 			Expect(Runner.Delete("my-image-3")).To(Succeed())
+			if logBuffer != nil {
+				fmt.Println(">>>>>>>>>>>>>>> my-image-2 logs <<<<<<<<<<<<<<<<<<<<<")
+				fmt.Println(string(logBuffer.Contents()))
+			}
 		})
 
 		It("cleans up unused layers before create but not the one about to be created", func() {
 			baseImage2File := integration.CreateBaseImageTar(sourceImagePath)
 			baseImage2Path := baseImage2File.Name()
 
+			logBuffer = gbytes.NewBuffer()
+			loggingRunner := Runner.WithStderr(logBuffer)
+
 			createSpec := groot.CreateSpec{
 				ID:           "my-image-2",
 				BaseImageURL: integration.String2URL(baseImage2Path),
 				Mount:        mountByDefault(),
 			}
-			_, err := Runner.Create(createSpec)
+			_, err := loggingRunner.Create(createSpec)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(Runner.Delete("my-image-2")).To(Succeed())
+			Expect(loggingRunner.Delete("my-image-2")).To(Succeed())
 
 			layerPath := filepath.Join(StorePath, store.VolumesDirName, integration.BaseImagePathToVolumeID(baseImage2Path))
 			stat, err := os.Stat(layerPath)
