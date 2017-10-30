@@ -43,6 +43,7 @@ var _ = Describe("PidFileReader", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		pidFilePath = pidFile.Name()
+		Expect(pidFile.Close()).To(Succeed())
 	})
 
 	AfterEach(func() {
@@ -112,9 +113,7 @@ var _ = Describe("PidFileReader", func() {
 
 	Context("when the pid file is empty", func() {
 		JustBeforeEach(func() {
-			f, err := os.OpenFile(pidFilePath, os.O_TRUNC, 0766)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(f.Close()).To(Succeed())
+			Expect(os.Truncate(pidFilePath, 0)).To(Succeed())
 		})
 
 		Context("and it is eventually populated", func() {
