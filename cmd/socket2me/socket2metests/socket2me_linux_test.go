@@ -81,7 +81,7 @@ var _ = Describe("Socket2Me", func() {
 
 	itSetsEnvVars()
 
-	It("runs the given command as the passed user and group", func() {
+	It("runs the given command as the passed user and group, with no supplementary groups", func() {
 		var stdout bytes.Buffer
 		runSocketToMe(socketPath, &stdout, "/usr/bin/id")
 		Expect(stdout.String()).To(Equal("uid=2000 gid=3000\n"))
@@ -125,6 +125,13 @@ func runSocketToMe(socketPath string, stdout io.Writer, cmdArgv ...string) *os.P
 	socketToMeCmd := exec.Command(socket2MeBinPath, args...)
 	socketToMeCmd.Stdout = io.MultiWriter(stdout, GinkgoWriter)
 	socketToMeCmd.Stderr = GinkgoWriter
+	socketToMeCmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid:    0,
+			Gid:    0,
+			Groups: []uint32{10001},
+		},
+	}
 	Expect(socketToMeCmd.Run()).To(Succeed())
 	return socketToMeCmd.Process
 }

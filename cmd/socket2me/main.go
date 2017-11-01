@@ -44,6 +44,9 @@ func main() {
 
 	socketFD := createSocket(*socketPath, *socketUID, *socketGID)
 
+	if err := syscall.Setgroups([]int{}); err != nil {
+		must("setgroups", err)
+	}
 	_, _, err := syscall.Syscall(syscall.SYS_SETGID, uintptr(*gid), 0, 0)
 	if err != 0 {
 		must("setgid", err)
