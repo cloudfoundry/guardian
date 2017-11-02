@@ -527,6 +527,11 @@ func startServer(gardenServer *server.GardenServer, logger lager.Logger) error {
 		return err
 	}
 
+	if err := ensureServerSocketDoesNotLeak(uintptr(socketFD)); err != nil {
+		logger.Error("failed-to-set-cloexec-on-server-socket", err)
+		return err
+	}
+
 	listener, err := net.FileListener(os.NewFile(uintptr(socketFD), fmt.Sprintf("/proc/self/fd/%d", socketFD)))
 	if err != nil {
 		logger.Error("failed-to-listen-on-socket-fd", err)

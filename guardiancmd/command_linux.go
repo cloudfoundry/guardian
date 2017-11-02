@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/commandrunner"
@@ -257,4 +258,12 @@ func getPrivilegedDevices() []specs.LinuxDevice {
 
 func mustGetMaxValidUID() int {
 	return idmapper.MustGetMaxValidUID()
+}
+
+func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
+	_, _, errNo := syscall.Syscall(syscall.SYS_FCNTL, socketFD, syscall.F_SETFD, syscall.FD_CLOEXEC)
+	if errNo != 0 {
+		return fmt.Errorf("setting cloexec on server socket: %s", errNo)
+	}
+	return nil
 }

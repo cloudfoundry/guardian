@@ -84,6 +84,9 @@ var _ = Describe("rootless containers", func() {
 		config.ImagePluginExtraArgs = []string{"\"--rootfs-path\"", filepath.Join(imagePath, "rootfs")}
 		config.RuncRoot = runcRootDir
 
+		config.BindSocket = ""
+		config.Socket2meSocketPath = filepath.Join(tmpDir, "socket.sock")
+
 		client = runner.Start(config)
 	})
 
@@ -272,6 +275,22 @@ var _ = Describe("rootless containers", func() {
 					Expect(shares).To(Equal("512"))
 				})
 			})
+		})
+
+		It("doesn't leak the gdn socket FD to container processes", func() {
+			ctr, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+
+			pidBytes, err := ioutil.ReadFile(filepath.Join(client.DepotDir, ctr.Handle(), "pidfile"))
+			Expect(err).NotTo(HaveOccurred())
+			pidStr := strings.TrimSpace(string(pidBytes))
+
+			fdDir := filepath.Join("/proc", pidStr, "fd")
+			ctrInitFDs, err := ioutil.ReadDir(fdDir)
+			Expect(err).NotTo(HaveOccurred())
+			for _, ctrInitFD := range ctrInitFDs {
+				Expect(os.Readlink(filepath.Join(fdDir, ctrInitFD.Name()))).NotTo(ContainSubstring("socket"))
+			}
 		})
 	})
 

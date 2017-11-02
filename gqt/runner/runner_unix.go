@@ -47,7 +47,7 @@ func socket2meCommand(config GdnRunnerConfig) *exec.Cmd {
 func (r *GardenRunner) setupDirsForUser() {
 	MustMountTmpfs(r.GraphDir)
 
-	if r.Command.SysProcAttr.Credential != nil {
+	if r.User != nil {
 		uidGid := fmt.Sprintf("%d:%d", r.User.Uid, r.User.Gid)
 
 		cmd := exec.Command("chown", uidGid, r.TmpDir)

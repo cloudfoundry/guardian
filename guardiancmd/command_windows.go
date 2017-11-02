@@ -106,3 +106,7 @@ func getPrivilegedDevices() []specs.LinuxDevice {
 func mustGetMaxValidUID() int {
 	return -1
 }
+
+func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
+	panic("this should be unreachable: no sockets on Windows")
+}
