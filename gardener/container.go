@@ -42,20 +42,9 @@ func (c *container) Info() (garden.ContainerInfo, error) {
 	log.Debug("starting")
 	defer log.Debug("finished")
 
-	containerIP, ok := c.propertyManager.Get(c.handle, ContainerIPKey)
-	if !ok {
-		return garden.ContainerInfo{}, fmt.Errorf("info: no property found: %s", ContainerIPKey)
-	}
-
-	hostIP, ok := c.propertyManager.Get(c.handle, BridgeIPKey)
-	if !ok {
-		return garden.ContainerInfo{}, fmt.Errorf("info: no property found: %s", BridgeIPKey)
-	}
-
-	externalIP, ok := c.propertyManager.Get(c.handle, ExternalIPKey)
-	if !ok {
-		return garden.ContainerInfo{}, fmt.Errorf("info: no property found: %s", ExternalIPKey)
-	}
+	containerIP, _ := c.propertyManager.Get(c.handle, ContainerIPKey)
+	hostIP, _ := c.propertyManager.Get(c.handle, BridgeIPKey)
+	externalIP, _ := c.propertyManager.Get(c.handle, ExternalIPKey)
 
 	actualContainerSpec, err := c.containerizer.Info(c.logger, c.handle)
 	if err != nil {

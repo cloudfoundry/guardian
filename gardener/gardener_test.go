@@ -1048,41 +1048,16 @@ var _ = Describe("Gardener", func() {
 			Expect(info.ContainerIP).To(Equal("1.2.3.4"))
 		})
 
-		Context("when getting the containerIP fails", func() {
-			It("should return the error", func() {
-				delete(properties, gardener.ContainerIPKey)
-				_, err := container.Info()
-				Expect(err).To(MatchError(MatchRegexp("no property found.*container-ip")))
-			})
-		})
-
 		It("returns the garden.network.host-ip property from the propertyManager as the HostIP", func() {
 			info, err := container.Info()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(info.HostIP).To(Equal("8.9.10.11"))
 		})
 
-		Context("when getting the hostIP fails", func() {
-			It("should return the error", func() {
-				delete(properties, gardener.BridgeIPKey)
-				_, err := container.Info()
-				Expect(err).To(MatchError(MatchRegexp("no property found.*host-ip")))
-			})
-		})
-
 		It("returns the garden.network.external-ip property from the propertyManager as the ExternalIP", func() {
 			info, err := container.Info()
 			Expect(err).NotTo(HaveOccurred())
 			Expect(info.ExternalIP).To(Equal("4.5.6.7"))
-		})
-
-		Context("when getting the externalIP fails", func() {
-			It("should return the error", func() {
-				delete(properties, gardener.ExternalIPKey)
-
-				_, err := container.Info()
-				Expect(err).To(MatchError(MatchRegexp("no property found.*external-ip")))
-			})
 		})
 
 		It("returns the container path based on the info returned by the containerizer", func() {
@@ -1209,12 +1184,12 @@ var _ = Describe("Gardener", func() {
 
 		Context("when info errors", func() {
 			It("returns the error", func() {
-				propertyManager.GetReturns("", false)
+				containerizer.InfoReturns(gardener.ActualContainerSpec{}, errors.New("info-error"))
 
 				infos, err := gdnr.BulkInfo([]string{"some-handle-1"})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(infos["some-handle-1"].Err).To(MatchError(ContainSubstring("no property found")))
+				Expect(infos["some-handle-1"].Err).To(MatchError(ContainSubstring("info-error")))
 			})
 		})
 	})
