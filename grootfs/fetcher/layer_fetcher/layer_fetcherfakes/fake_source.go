@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"sync"
 
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/lager"
 	"github.com/containers/image/types"
@@ -25,13 +26,12 @@ type FakeSource struct {
 		result1 types.Image
 		result2 error
 	}
-	BlobStub        func(logger lager.Logger, baseImageURL *url.URL, digest string, layersURLs []string) (string, int64, error)
+	BlobStub        func(logger lager.Logger, baseImageURL *url.URL, layerInfo base_image_puller.LayerInfo) (string, int64, error)
 	blobMutex       sync.RWMutex
 	blobArgsForCall []struct {
 		logger       lager.Logger
 		baseImageURL *url.URL
-		digest       string
-		layersURLs   []string
+		layerInfo    base_image_puller.LayerInfo
 	}
 	blobReturns struct {
 		result1 string
@@ -99,24 +99,18 @@ func (fake *FakeSource) ManifestReturnsOnCall(i int, result1 types.Image, result
 	}{result1, result2}
 }
 
-func (fake *FakeSource) Blob(logger lager.Logger, baseImageURL *url.URL, digest string, layersURLs []string) (string, int64, error) {
-	var layersURLsCopy []string
-	if layersURLs != nil {
-		layersURLsCopy = make([]string, len(layersURLs))
-		copy(layersURLsCopy, layersURLs)
-	}
+func (fake *FakeSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo base_image_puller.LayerInfo) (string, int64, error) {
 	fake.blobMutex.Lock()
 	ret, specificReturn := fake.blobReturnsOnCall[len(fake.blobArgsForCall)]
 	fake.blobArgsForCall = append(fake.blobArgsForCall, struct {
 		logger       lager.Logger
 		baseImageURL *url.URL
-		digest       string
-		layersURLs   []string
-	}{logger, baseImageURL, digest, layersURLsCopy})
-	fake.recordInvocation("Blob", []interface{}{logger, baseImageURL, digest, layersURLsCopy})
+		layerInfo    base_image_puller.LayerInfo
+	}{logger, baseImageURL, layerInfo})
+	fake.recordInvocation("Blob", []interface{}{logger, baseImageURL, layerInfo})
 	fake.blobMutex.Unlock()
 	if fake.BlobStub != nil {
-		return fake.BlobStub(logger, baseImageURL, digest, layersURLs)
+		return fake.BlobStub(logger, baseImageURL, layerInfo)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -130,10 +124,10 @@ func (fake *FakeSource) BlobCallCount() int {
 	return len(fake.blobArgsForCall)
 }
 
-func (fake *FakeSource) BlobArgsForCall(i int) (lager.Logger, *url.URL, string, []string) {
+func (fake *FakeSource) BlobArgsForCall(i int) (lager.Logger, *url.URL, base_image_puller.LayerInfo) {
 	fake.blobMutex.RLock()
 	defer fake.blobMutex.RUnlock()
-	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].baseImageURL, fake.blobArgsForCall[i].digest, fake.blobArgsForCall[i].layersURLs
+	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].baseImageURL, fake.blobArgsForCall[i].layerInfo
 }
 
 func (fake *FakeSource) BlobReturns(result1 string, result2 int64, result3 error) {

@@ -117,6 +117,7 @@ var _ = Describe("LayerFetcher", func() {
 				base_image_puller.LayerInfo{
 					BlobID:        "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
 					ChainID:       "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
+					DiffID:        "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
 					ParentChainID: "",
 					BaseDirectory: "/home/cool-user",
 					Size:          1024,
@@ -124,6 +125,7 @@ var _ = Describe("LayerFetcher", func() {
 				base_image_puller.LayerInfo{
 					BlobID:        "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
 					ChainID:       "9242945d3c9c7cf5f127f9352fea38b1d3efe62ee76e25f70a3e6db63a14c233",
+					DiffID:        "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0",
 					ParentChainID: "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
 					Size:          2048,
 				},
@@ -185,9 +187,9 @@ var _ = Describe("LayerFetcher", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeSource.BlobCallCount()).To(Equal(1))
-			_, usedImageURL, usedDigest, _ := fakeSource.BlobArgsForCall(0)
+			_, usedImageURL, layerInfo := fakeSource.BlobArgsForCall(0)
 			Expect(usedImageURL).To(Equal(baseImageURL))
-			Expect(usedDigest).To(Equal("sha256:layer-digest"))
+			Expect(layerInfo.BlobID).To(Equal("sha256:layer-digest"))
 		})
 
 		It("returns the stream from the source", func(done Done) {

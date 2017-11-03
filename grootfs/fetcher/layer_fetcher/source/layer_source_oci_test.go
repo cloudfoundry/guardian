@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 
+	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/containers/image/types"
@@ -23,11 +24,11 @@ var _ = Describe("Layer source: OCI", func() {
 		logger       *lagertest.TestLogger
 		baseImageURL *url.URL
 
-		configBlob        string
-		expectedBlobInfos []types.BlobInfo
-		expectedDiffIds   []digestpkg.Digest
-		workDir           string
-		systemContext     types.SystemContext
+		configBlob      string
+		layerInfos      []base_image_puller.LayerInfo
+		expectedDiffIds []digestpkg.Digest
+		workDir         string
+		systemContext   types.SystemContext
 
 		skipOCIChecksumValidation bool
 	)
@@ -36,14 +37,14 @@ var _ = Describe("Layer source: OCI", func() {
 		skipOCIChecksumValidation = false
 
 		configBlob = "sha256:10c8f0eb9d1af08fe6e3b8dbd29e5aa2b6ecfa491ecd04ed90de19a4ac22de7b"
-		expectedBlobInfos = []types.BlobInfo{
+		layerInfos = []base_image_puller.LayerInfo{
 			{
-				Digest:    "sha256:56bec22e355981d8ba0878c6c2f23b21f422f30ab0aba188b54f1ffeff59c190",
+				BlobID:    "sha256:56bec22e355981d8ba0878c6c2f23b21f422f30ab0aba188b54f1ffeff59c190",
 				Size:      668151,
 				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 			},
 			{
-				Digest:    "sha256:ed2d7b0f6d7786230b71fd60de08a553680a9a96ab216183bcc49c71f06033ab",
+				BlobID:    "sha256:ed2d7b0f6d7786230b71fd60de08a553680a9a96ab216183bcc49c71f06033ab",
 				Size:      124,
 				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 			},
@@ -73,8 +74,10 @@ var _ = Describe("Layer source: OCI", func() {
 			Expect(manifest.ConfigInfo().Digest.String()).To(Equal(configBlob))
 
 			Expect(manifest.LayerInfos()).To(HaveLen(2))
-			Expect(manifest.LayerInfos()[0]).To(Equal(expectedBlobInfos[0]))
-			Expect(manifest.LayerInfos()[1]).To(Equal(expectedBlobInfos[1]))
+			Expect(manifest.LayerInfos()[0].Digest.String()).To(Equal(layerInfos[0].BlobID))
+			Expect(manifest.LayerInfos()[0].Size).To(Equal(layerInfos[0].Size))
+			Expect(manifest.LayerInfos()[1].Digest.String()).To(Equal(layerInfos[1].BlobID))
+			Expect(manifest.LayerInfos()[1].Size).To(Equal(layerInfos[1].Size))
 		})
 
 		It("contains the config", func() {
@@ -136,7 +139,7 @@ var _ = Describe("Layer source: OCI", func() {
 
 	Describe("Blob", func() {
 		It("downloads a blob", func() {
-			blobPath, size, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
+			blobPath, size, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
 			Expect(err).NotTo(HaveOccurred())
 			Expect(size).To(Equal(int64(668151)))
 
@@ -155,7 +158,7 @@ var _ = Describe("Layer source: OCI", func() {
 
 		Context("when the blob has an invalid checksum", func() {
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, "sha256:steamed-blob", nil)
+				_, _, err := layerSource.Blob(logger, baseImageURL, base_image_puller.LayerInfo{BlobID: "sha256:steamed-blob"})
 				Expect(err).To(MatchError(ContainSubstring("invalid checksum digest format")))
 			})
 		})
@@ -168,7 +171,7 @@ var _ = Describe("Layer source: OCI", func() {
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
+				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
 				Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
 			})
 		})
@@ -182,7 +185,7 @@ var _ = Describe("Layer source: OCI", func() {
 			})
 
 			It("does not validate against checksums and does not return an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, expectedBlobInfos[0].Digest.String(), nil)
+				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

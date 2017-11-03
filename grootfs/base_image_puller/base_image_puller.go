@@ -38,6 +38,7 @@ type UnpackSpec struct {
 type LayerInfo struct {
 	BlobID        string
 	ChainID       string
+	DiffID        string
 	ParentChainID string
 	Size          int64
 	BaseDirectory string
