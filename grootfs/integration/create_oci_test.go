@@ -321,7 +321,7 @@ var _ = Describe("Create with OCI images", func() {
 					Mount:        true,
 				})
 
-				Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
+				Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
 				layerSnapshotPath := filepath.Join(StorePath, "volumes", "06c1a80a513da76aee4a197d7807ddbd94e80fc9d669f6cd2c5a97b231cd55ac")
 				Expect(layerSnapshotPath).ToNot(BeAnExistingFile())
 			})

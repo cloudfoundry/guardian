@@ -1,6 +1,7 @@
 package source_test
 
 import (
+	"compress/gzip"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -19,7 +20,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	digestpkg "github.com/opencontainers/go-digest"
 )
 
 var _ = Describe("Layer source: Docker", func() {
@@ -29,10 +29,9 @@ var _ = Describe("Layer source: Docker", func() {
 		logger       *lagertest.TestLogger
 		baseImageURL *url.URL
 
-		configBlob      string
-		layerInfos      []base_image_puller.LayerInfo
-		expectedDiffIds []digestpkg.Digest
-		systemContext   types.SystemContext
+		configBlob    string
+		layerInfos    []base_image_puller.LayerInfo
+		systemContext types.SystemContext
 
 		skipOCIChecksumValidation bool
 	)
@@ -50,17 +49,17 @@ var _ = Describe("Layer source: Docker", func() {
 		configBlob = "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d"
 		layerInfos = []base_image_puller.LayerInfo{
 			{
-				BlobID: "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
-				Size:   90,
+				BlobID:    "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
+				DiffID:    "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
+				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+				Size:      90,
 			},
 			{
-				BlobID: "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
-				Size:   88,
+				BlobID:    "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
+				DiffID:    "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0",
+				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+				Size:      88,
 			},
-		}
-		expectedDiffIds = []digestpkg.Digest{
-			digestpkg.NewDigestFromHex("sha256", "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5"),
-			digestpkg.NewDigestFromHex("sha256", "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0"),
 		}
 
 		logger = lagertest.NewTestLogger("test-layer-source")
@@ -115,6 +114,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 				configBlob = "sha256:c2bf00eb303023869c676f91af930a12925c24d677999917e8d52c73fa10b73a"
 				layerInfos[0].BlobID = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
+				layerInfos[0].DiffID = "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5"
 				layerInfos[1].BlobID = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
 			})
 
@@ -202,8 +202,8 @@ var _ = Describe("Layer source: Docker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config.RootFS.DiffIDs).To(HaveLen(2))
-			Expect(config.RootFS.DiffIDs[0]).To(Equal(expectedDiffIds[0]))
-			Expect(config.RootFS.DiffIDs[1]).To(Equal(expectedDiffIds[1]))
+			Expect(config.RootFS.DiffIDs[0].Hex()).To(Equal(layerInfos[0].DiffID))
+			Expect(config.RootFS.DiffIDs[1].Hex()).To(Equal(layerInfos[1].DiffID))
 		})
 
 		Context("when the image is private", func() {
@@ -227,14 +227,9 @@ var _ = Describe("Layer source: Docker", func() {
 					config, err := manifest.OCIConfig()
 					Expect(err).NotTo(HaveOccurred())
 
-					expectedDiffIds = []digestpkg.Digest{
-						digestpkg.NewDigestFromHex("sha256", "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296"),
-						digestpkg.NewDigestFromHex("sha256", "56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b"),
-					}
-
 					Expect(config.RootFS.DiffIDs).To(HaveLen(2))
-					Expect(config.RootFS.DiffIDs[0]).To(Equal(expectedDiffIds[0]))
-					Expect(config.RootFS.DiffIDs[1]).To(Equal(expectedDiffIds[1]))
+					Expect(config.RootFS.DiffIDs[0].Hex()).To(Equal("780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296"))
+					Expect(config.RootFS.DiffIDs[1].Hex()).To(Equal("56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b"))
 				})
 			})
 		})
@@ -374,11 +369,11 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(config.RootFS.DiffIDs).To(HaveLen(2))
-				Expect(config.RootFS.DiffIDs[0]).To(Equal(expectedDiffIds[0]))
-				Expect(config.RootFS.DiffIDs[1]).To(Equal(expectedDiffIds[1]))
+				Expect(config.RootFS.DiffIDs[0].Hex()).To(Equal(layerInfos[0].DiffID))
+				Expect(config.RootFS.DiffIDs[1].Hex()).To(Equal(layerInfos[1].DiffID))
 			})
 
-			It("downloads a blob", func() {
+			It("downloads and uncompresses the blob", func() {
 				blobPath, size, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
 				Expect(err).NotTo(HaveOccurred())
 
@@ -386,7 +381,7 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				buffer := gbytes.NewBuffer()
-				cmd := exec.Command("tar", "tzv")
+				cmd := exec.Command("tar", "tv")
 				cmd.Stdin = blobReader
 				sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
@@ -404,12 +399,9 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				layerInfos[0].BlobID = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
+				layerInfos[0].DiffID = "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296"
 				layerInfos[1].BlobID = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
-
-				expectedDiffIds = []digestpkg.Digest{
-					digestpkg.NewDigestFromHex("sha256", "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296"),
-					digestpkg.NewDigestFromHex("sha256", "56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b"),
-				}
+				layerInfos[1].DiffID = "56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b"
 			})
 
 			JustBeforeEach(func() {
@@ -435,11 +427,11 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(config.RootFS.DiffIDs).To(HaveLen(2))
-				Expect(config.RootFS.DiffIDs[0]).To(Equal(expectedDiffIds[0]))
-				Expect(config.RootFS.DiffIDs[1]).To(Equal(expectedDiffIds[1]))
+				Expect(config.RootFS.DiffIDs[0].Hex()).To(Equal(layerInfos[0].DiffID))
+				Expect(config.RootFS.DiffIDs[1].Hex()).To(Equal(layerInfos[1].DiffID))
 			})
 
-			It("downloads a blob", func() {
+			It("downloads and uncompresses the blob", func() {
 				blobPath, size, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
 				Expect(err).NotTo(HaveOccurred())
 
@@ -447,7 +439,7 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				buffer := gbytes.NewBuffer()
-				cmd := exec.Command("tar", "tzv")
+				cmd := exec.Command("tar", "tv")
 				cmd.Stdin = blobReader
 				sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 				Expect(err).NotTo(HaveOccurred())
@@ -460,7 +452,7 @@ var _ = Describe("Layer source: Docker", func() {
 	})
 
 	Describe("Blob", func() {
-		It("downloads a blob", func() {
+		It("downloads and uncompresses the blob", func() {
 			blobPath, size, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
 			Expect(err).NotTo(HaveOccurred())
 
@@ -468,7 +460,7 @@ var _ = Describe("Layer source: Docker", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			buffer := gbytes.NewBuffer()
-			cmd := exec.Command("tar", "tzv")
+			cmd := exec.Command("tar", "tv")
 			cmd.Stdin = blobReader
 			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -478,14 +470,50 @@ var _ = Describe("Layer source: Docker", func() {
 			Eventually(sess).Should(gexec.Exit(0))
 		})
 
+		Context("when the media type doesn't match the blob", func() {
+			var fakeRegistry *testhelpers.FakeRegistry
+
+			BeforeEach(func() {
+				dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+				Expect(err).NotTo(HaveOccurred())
+				fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+
+				fakeRegistry.WhenGettingBlob(layerInfos[0].BlobID, 1, func(rw http.ResponseWriter, req *http.Request) {
+					_, _ = rw.Write([]byte("bad-blob"))
+				})
+
+				fakeRegistry.Start()
+
+				baseImageURL, err = url.Parse(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
+				Expect(err).NotTo(HaveOccurred())
+
+				systemContext.DockerInsecureSkipTLSVerify = true
+			})
+
+			AfterEach(func() {
+				fakeRegistry.Stop()
+			})
+
+			It("returns an error", func() {
+				layerInfos[0].MediaType = "gzip"
+				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
+				Expect(err).To(MatchError(ContainSubstring("expected blob to be of type")))
+			})
+		})
+
 		Context("when the image is private", func() {
 			BeforeEach(func() {
 				var err error
 				baseImageURL, err = url.Parse("docker:///cfgarden/private")
 				Expect(err).NotTo(HaveOccurred())
 
-				layerInfos[0].BlobID = "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4"
-				layerInfos[1].BlobID = "sha256:48ce60c2de08a424e10810c41ec2f00916cfd0f12333e96eb4363eb63723be87"
+				layerInfos = []base_image_puller.LayerInfo{
+					{
+						BlobID:    "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4",
+						DiffID:    "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
+						MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+					},
+				}
 			})
 
 			Context("when the correct credentials are provided", func() {
@@ -497,7 +525,7 @@ var _ = Describe("Layer source: Docker", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					buffer := gbytes.NewBuffer()
-					cmd := exec.Command("tar", "tzv")
+					cmd := exec.Command("tar", "tv")
 					cmd.Stdin = blobReader
 					sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 					Expect(err).NotTo(HaveOccurred())
@@ -559,7 +587,9 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).NotTo(HaveOccurred())
 				fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
 				fakeRegistry.WhenGettingBlob(layerInfos[1].BlobID, 1, func(rw http.ResponseWriter, req *http.Request) {
-					_, _ = rw.Write([]byte("bad-blob"))
+					gzipWriter := gzip.NewWriter(rw)
+					_, _ = gzipWriter.Write([]byte("bad-blob"))
+					gzipWriter.Close()
 				})
 				fakeRegistry.Start()
 
@@ -575,7 +605,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 			It("returns an error", func() {
 				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[1])
-				Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
+				Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
 			})
 
 			Context("when a devious hacker tries to set skipOCIChecksumValidation to true", func() {
@@ -585,8 +615,19 @@ var _ = Describe("Layer source: Docker", func() {
 
 				It("returns an error", func() {
 					_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[1])
-					Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
+					Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
 				})
+			})
+		})
+
+		Context("when the blob doesn't match the diffID", func() {
+			BeforeEach(func() {
+				layerInfos[1].DiffID = "0000000000000000000000000000000000000000000000000000000000000000"
+			})
+
+			It("returns an error", func() {
+				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[1])
+				Expect(err).To(MatchError(ContainSubstring("diffID digest mismatch")))
 			})
 		})
 	})

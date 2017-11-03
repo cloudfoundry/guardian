@@ -1,8 +1,6 @@
 package layer_fetcher_test
 
 import (
-	"bytes"
-	"compress/gzip"
 	"io"
 	"io/ioutil"
 	"os"
@@ -22,14 +20,9 @@ var _ = Describe("BlobReader", func() {
 	)
 
 	BeforeEach(func() {
-		gzipBuffer := bytes.NewBuffer([]byte{})
-		gzipWriter := gzip.NewWriter(gzipBuffer)
-		writeString(gzipWriter, "hello-world")
-		Expect(gzipWriter.Close()).To(Succeed())
-
 		blobFile = tempFile()
 		defer blobFile.Close()
-		writeString(blobFile, readAll(gzipBuffer))
+		writeString(blobFile, "hello-world")
 	})
 
 	AfterEach(func() {
@@ -37,54 +30,20 @@ var _ = Describe("BlobReader", func() {
 	})
 
 	JustBeforeEach(func() {
-		blobReader, newBlobReaderErr = layer_fetcher.NewBlobReader(blobFile.Name(), "")
+		blobReader, newBlobReaderErr = layer_fetcher.NewBlobReader(blobFile.Name())
 		Expect(newBlobReaderErr).NotTo(HaveOccurred())
 	})
 
 	Describe("Read", func() {
-		It("reads the gziped stream", func() {
+		It("reads the stream", func() {
 			Expect(readAll(blobReader)).To(Equal("hello-world"))
-		})
-
-		Context("and the MediaType is explicitly gzip", func() {
-			JustBeforeEach(func() {
-				blobReader, newBlobReaderErr = layer_fetcher.NewBlobReader(blobFile.Name(), "application/vnd.oci.image.layer.v1.tar+gzip")
-				Expect(newBlobReaderErr).NotTo(HaveOccurred())
-			})
-
-			It("reads the gziped stream", func() {
-				Expect(readAll(blobReader)).To(Equal("hello-world"))
-			})
-		})
-
-		Context("when the blob is not gziped", func() {
-			var notABlobFile *os.File
-			BeforeEach(func() {
-				var err error
-				notABlobFile = tempFile()
-				defer notABlobFile.Close()
-				err = ioutil.WriteFile(notABlobFile.Name(), []byte("im-not-gziped!"), 0700)
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			AfterEach(func() {
-				removeAllIfTemp(notABlobFile.Name())
-			})
-
-			Describe("NewBlobReader", func() {
-				It("does not return an error", func() {
-					blobReader, err := layer_fetcher.NewBlobReader(notABlobFile.Name(), "application/vnd.oci.image.layer.v1.tar")
-					Expect(err).NotTo(HaveOccurred())
-					Expect(readAll(blobReader)).To(Equal("im-not-gziped!"))
-				})
-			})
 		})
 	})
 
 	Context("when the blob doesn't exist", func() {
 		Describe("NewBlobReader", func() {
 			It("returns an error", func() {
-				_, err := layer_fetcher.NewBlobReader("not-a-real/file", "")
+				_, err := layer_fetcher.NewBlobReader("not-a-real/file")
 				Expect(err).To(MatchError(ContainSubstring("failed to open blob")))
 			})
 		})

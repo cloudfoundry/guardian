@@ -78,7 +78,7 @@ func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, la
 		return nil, 0, err
 	}
 
-	blobReader, err := NewBlobReader(blobFilePath, layerInfo.MediaType)
+	blobReader, err := NewBlobReader(blobFilePath)
 	if err != nil {
 		logger.Error("blob-reader-failed", err)
 		return nil, 0, errorspkg.Wrap(err, "opening stream from temporary blob file")

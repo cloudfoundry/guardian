@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
-	digestpkg "github.com/opencontainers/go-digest"
 )
 
 var _ = Describe("Layer source: OCI", func() {
@@ -24,11 +23,10 @@ var _ = Describe("Layer source: OCI", func() {
 		logger       *lagertest.TestLogger
 		baseImageURL *url.URL
 
-		configBlob      string
-		layerInfos      []base_image_puller.LayerInfo
-		expectedDiffIds []digestpkg.Digest
-		workDir         string
-		systemContext   types.SystemContext
+		configBlob    string
+		layerInfos    []base_image_puller.LayerInfo
+		workDir       string
+		systemContext types.SystemContext
 
 		skipOCIChecksumValidation bool
 	)
@@ -40,18 +38,16 @@ var _ = Describe("Layer source: OCI", func() {
 		layerInfos = []base_image_puller.LayerInfo{
 			{
 				BlobID:    "sha256:56bec22e355981d8ba0878c6c2f23b21f422f30ab0aba188b54f1ffeff59c190",
+				DiffID:    "e88b3f82283bc59d5e0df427c824e9f95557e661fcb0ea15fb0fb6f97760f9d9",
 				Size:      668151,
 				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 			},
 			{
 				BlobID:    "sha256:ed2d7b0f6d7786230b71fd60de08a553680a9a96ab216183bcc49c71f06033ab",
+				DiffID:    "1e664bbd066a13dc6e8d9503fe0d439e89617eaac0558a04240bcbf4bd969ff9",
 				Size:      124,
 				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 			},
-		}
-		expectedDiffIds = []digestpkg.Digest{
-			digestpkg.NewDigestFromHex("sha256", "e88b3f82283bc59d5e0df427c824e9f95557e661fcb0ea15fb0fb6f97760f9d9"),
-			digestpkg.NewDigestFromHex("sha256", "1e664bbd066a13dc6e8d9503fe0d439e89617eaac0558a04240bcbf4bd969ff9"),
 		}
 
 		logger = lagertest.NewTestLogger("test-layer-source")
@@ -88,8 +84,8 @@ var _ = Describe("Layer source: OCI", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config.RootFS.DiffIDs).To(HaveLen(2))
-			Expect(config.RootFS.DiffIDs[0]).To(Equal(expectedDiffIds[0]))
-			Expect(config.RootFS.DiffIDs[1]).To(Equal(expectedDiffIds[1]))
+			Expect(config.RootFS.DiffIDs[0].Hex()).To(Equal(layerInfos[0].DiffID))
+			Expect(config.RootFS.DiffIDs[1].Hex()).To(Equal(layerInfos[1].DiffID))
 		})
 
 		Context("when the image url is invalid", func() {
@@ -147,7 +143,7 @@ var _ = Describe("Layer source: OCI", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			buffer := gbytes.NewBuffer()
-			cmd := exec.Command("tar", "tzv")
+			cmd := exec.Command("tar", "tv")
 			cmd.Stdin = blobReader
 			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
@@ -172,7 +168,7 @@ var _ = Describe("Layer source: OCI", func() {
 
 			It("returns an error", func() {
 				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
-				Expect(err).To(MatchError(ContainSubstring("invalid checksum: layer is corrupted")))
+				Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
 			})
 		})
 
@@ -187,6 +183,17 @@ var _ = Describe("Layer source: OCI", func() {
 			It("does not validate against checksums and does not return an error", func() {
 				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
 				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("when the blob doesn't match the diffID", func() {
+			BeforeEach(func() {
+				layerInfos[0].DiffID = "0000000000000000000000000000000000000000000000000000000000000000"
+			})
+
+			It("returns an error", func() {
+				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
+				Expect(err).To(MatchError(ContainSubstring("diffID digest mismatch")))
 			})
 		})
 	})

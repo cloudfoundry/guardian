@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -523,23 +524,29 @@ var _ = Describe("Create with remote DOCKER images", func() {
 					volumesDir    string
 				)
 
+				BeforeEach(func() {
+					volumesDir = filepath.Join(StorePath, store.VolumesDirName)
+					dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
+					Expect(err).NotTo(HaveOccurred())
+
+					fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+					fakeRegistry.Start()
+				})
+
 				AfterEach(func() {
 					fakeRegistry.Stop()
 				})
 
 				Context("when the image has a version 2 manifest schema", func() {
 					BeforeEach(func() {
-						volumesDir = filepath.Join(StorePath, store.VolumesDirName)
-						dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
-						Expect(err).NotTo(HaveOccurred())
-						fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+						baseImageURL = integration.String2URL(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 						corruptedBlob = testhelpers.EmptyBaseImageV011.Layers[1].BlobID
 						fakeRegistry.WhenGettingBlob(corruptedBlob, 0, func(w http.ResponseWriter, r *http.Request) {
-							_, err := w.Write([]byte("bad-blob"))
+							gzipWriter := gzip.NewWriter(w)
+							_, err := gzipWriter.Write([]byte("bad-blob"))
+							gzipWriter.Close()
 							Expect(err).NotTo(HaveOccurred())
 						})
-						fakeRegistry.Start()
-						baseImageURL = integration.String2URL(fmt.Sprintf("docker://%s/cfgarden/empty:v0.1.1", fakeRegistry.Addr()))
 					})
 
 					It("fails and cleans up the corrupted volumes", func() {
@@ -551,7 +558,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 							Mount:        mountByDefault(),
 						})
 
-						Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
+						Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
 
 						volumes, _ := ioutil.ReadDir(volumesDir)
 						Expect(len(volumes)).To(Equal(len(testhelpers.EmptyBaseImageV011.Layers) - 1))
@@ -563,16 +570,12 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 				Context("when the image has a version 1 manifest schema", func() {
 					BeforeEach(func() {
-						dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
-						Expect(err).NotTo(HaveOccurred())
-						fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
+						baseImageURL = integration.String2URL(fmt.Sprintf("docker://%s/cfgarden/empty:schemaV1", fakeRegistry.Addr()))
 						corruptedBlob = testhelpers.SchemaV1EmptyBaseImage.Layers[2].BlobID
 						fakeRegistry.WhenGettingBlob(corruptedBlob, 0, func(w http.ResponseWriter, r *http.Request) {
 							_, err := w.Write([]byte("bad-blob"))
 							Expect(err).NotTo(HaveOccurred())
 						})
-						fakeRegistry.Start()
-						baseImageURL = integration.String2URL(fmt.Sprintf("docker://%s/cfgarden/empty:schemaV1", fakeRegistry.Addr()))
 					})
 
 					It("fails and never creates any volumes", func() {
@@ -784,7 +787,9 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
 			corruptedBlob = testhelpers.EmptyBaseImageV011.Layers[1].BlobID
 			fakeRegistry.WhenGettingBlob(corruptedBlob, 0, func(w http.ResponseWriter, r *http.Request) {
-				_, err := w.Write([]byte("bad-blob"))
+				gzipWriter := gzip.NewWriter(w)
+				_, err := gzipWriter.Write([]byte("bad-blob"))
+				gzipWriter.Close()
 				Expect(err).NotTo(HaveOccurred())
 			})
 			fakeRegistry.Start()
@@ -799,7 +804,29 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				Mount:        true,
 			})
 
-			Expect(err).To(MatchError(ContainSubstring("layer is corrupted")))
+			Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
+		})
+	})
+
+	Context("when an image has an invalid DiffID", func() {
+		It("fails to create the rootfs", func() {
+			_, err := runner.Create(groot.CreateSpec{
+				BaseImageURL: integration.String2URL("docker:///cfgarden/alpine-invalid-diffid"),
+				ID:           randomImageID,
+				Mount:        mountByDefault(),
+			})
+			Expect(err).To(MatchError(ContainSubstring("diffID digest mismatch")))
+		})
+
+		It("doesn't pollute the cache with invalid layers", func() {
+			_, err := runner.Create(groot.CreateSpec{
+				BaseImageURL: integration.String2URL("docker:///cfgarden/alpine-invalid-diffid"),
+				ID:           randomImageID,
+				Mount:        mountByDefault(),
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(filepath.Join(StorePath, store.VolumesDirName, "0000000000000000000000000000000000000000000000000000000000000000")).ToNot(BeAnExistingFile())
 		})
 	})
 })

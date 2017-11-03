@@ -196,7 +196,9 @@ var _ = Describe("LayerFetcher", func() {
 			stream, _, err := fetcher.StreamBlob(logger, baseImageURL, layerInfo)
 			Expect(err).NotTo(HaveOccurred())
 
-			contents, err := ioutil.ReadAll(stream)
+			gzipReader, err := gzip.NewReader(stream)
+			Expect(err).NotTo(HaveOccurred())
+			contents, err := ioutil.ReadAll(gzipReader)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(contents)).To(Equal("hello-world"))
 

@@ -93,26 +93,50 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo
 	if err != nil {
 		return "", 0, err
 	}
-	logger.Debug("got-blob-stream", lager.Data{"digest": layerInfo.BlobID, "size": size})
+	logger.Debug("got-blob-stream", lager.Data{"digest": layerInfo.BlobID, "size": size, "mediaType": layerInfo.MediaType})
 
 	blobTempFile, err := ioutil.TempFile("", fmt.Sprintf("blob-%s", layerInfo.BlobID))
+
+	blobIDHash := sha256.New()
+	digestReader := ioutil.NopCloser(io.TeeReader(blob, blobIDHash))
+	if layerInfo.MediaType == "" || strings.Contains(layerInfo.MediaType, "gzip") {
+		logger.Debug("uncompressing-blob")
+
+		digestReader, err = gzip.NewReader(digestReader)
+		if err != nil {
+			return "", 0, errorspkg.Wrapf(err, "expected blob to be of type %s", layerInfo.MediaType)
+		}
+		defer digestReader.Close()
+	}
+
 	if err != nil {
 		return "", 0, err
 	}
+
 	defer func() {
 		blob.Close()
 		blobTempFile.Close()
+
+		if err != nil {
+			os.Remove(blobTempFile.Name())
+		}
 	}()
 
-	hash := sha256.New()
-	blobWriter := io.MultiWriter(blobTempFile, hash)
-	if _, err := io.Copy(blobWriter, blob); err != nil {
+	diffIDHash := sha256.New()
+	digestReader = ioutil.NopCloser(io.TeeReader(digestReader, diffIDHash))
+
+	if _, err = io.Copy(blobTempFile, digestReader); err != nil {
 		logger.Error("writing-blob-to-file", err)
 		return "", 0, errorspkg.Wrap(err, "writing blob to tempfile")
 	}
 
-	if !s.checkCheckSum(logger, hash, layerInfo.BlobID, baseImageURL.Scheme) {
-		return "", 0, errorspkg.Errorf("invalid checksum: layer is corrupted `%s`", layerInfo.BlobID)
+	blobIDHex := strings.Split(layerInfo.BlobID, ":")[1]
+	if err = s.checkCheckSum(logger, blobIDHash, blobIDHex, baseImageURL.Scheme); err != nil {
+		return "", 0, errorspkg.Wrap(err, "layerID digest mismatch")
+	}
+
+	if err = s.checkCheckSum(logger, diffIDHash, layerInfo.DiffID, baseImageURL.Scheme); err != nil {
+		return "", 0, errorspkg.Wrap(err, "diffID digest mismatch")
 	}
 
 	return blobTempFile.Name(), size, nil
@@ -134,18 +158,21 @@ func (s *LayerSource) getBlobWithRetries(logger lager.Logger, imgSrc types.Image
 	return nil, 0, err
 }
 
-func (s *LayerSource) checkCheckSum(logger lager.Logger, hash hash.Hash, digest string, scheme string) bool {
+func (s *LayerSource) checkCheckSum(logger lager.Logger, hash hash.Hash, digest string, scheme string) error {
 	if s.skipOCIChecksumValidation && scheme == "oci" {
-		return true
+		return nil
 	}
 
-	digestID := strings.Split(digest, ":")[1]
 	blobContentsSha := hex.EncodeToString(hash.Sum(nil))
 	logger.Debug("checking-checksum", lager.Data{
-		"digestIDChecksum":   digestID,
+		"digestIDChecksum":   digest,
 		"downloadedChecksum": blobContentsSha,
 	})
-	return digestID == blobContentsSha
+	if digest != blobContentsSha {
+		return errorspkg.Errorf("expected: %s, actual: %s", digest, blobContentsSha)
+	}
+
+	return nil
 }
 
 func (s *LayerSource) reference(logger lager.Logger, baseImageURL *url.URL) (types.ImageReference, error) {
