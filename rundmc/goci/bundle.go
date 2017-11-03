@@ -11,7 +11,7 @@ type Bndl struct {
 func Bundle() Bndl {
 	return Bndl{
 		Spec: specs.Spec{
-			Version: "1.0.0-rc6",
+			Version: "1.0.0",
 			Linux:   &specs.Linux{},
 			Windows: &specs.Windows{
 				LayerFolders: []string{},
