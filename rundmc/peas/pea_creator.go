@@ -27,9 +27,10 @@ type ContainerCreator interface {
 	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
 }
 
-//go:generate counterfeiter . VolumeCreator
-type VolumeCreator interface {
+//go:generate counterfeiter . Volumizer
+type Volumizer interface {
 	Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error)
+	Destroy(log lager.Logger, handle string) error
 }
 
 //go:generate counterfeiter . PidGetter
@@ -38,7 +39,7 @@ type PidGetter interface {
 }
 
 type PeaCreator struct {
-	VolumeCreator    VolumeCreator
+	Volumizer        Volumizer
 	PidGetter        PidGetter
 	BundleGenerator  depot.BundleGenerator
 	BundleSaver      depot.BundleSaver
@@ -68,7 +69,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return nil, err
 	}
 
-	runtimeSpec, err := p.VolumeCreator.Create(log, garden.ContainerSpec{
+	runtimeSpec, err := p.Volumizer.Create(log, garden.ContainerSpec{
 		Handle: processID,
 		Image:  spec.Image,
 	})
@@ -128,7 +129,12 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		runcDone <- p.ContainerCreator.Create(log, peaBundlePath, processID, procIO)
 	}(peaRunDone)
 
-	return &pearocess{id: processID, doneCh: peaRunDone}, nil
+	volumeDestroyer := func() {
+		if err := p.Volumizer.Destroy(log, processID); err != nil {
+			log.Error("destroying-volume", err)
+		}
+	}
+	return &pearocess{id: processID, doneCh: peaRunDone, volumeDestroyer: volumeDestroyer}, nil
 }
 
 func parseUser(uidgid string) (int, int, error) {
@@ -167,14 +173,16 @@ func generateProcessID(existingID string) (string, error) {
 }
 
 type pearocess struct {
-	id     string
-	doneCh <-chan error
+	id              string
+	doneCh          <-chan error
+	volumeDestroyer func()
 }
 
 func (p pearocess) ID() string { return p.id }
 
 func (p pearocess) Wait() (int, error) {
 	runcRunErr := <-p.doneCh
+	defer p.volumeDestroyer()
 	if runcRunErr == nil {
 		return 0, nil
 	}

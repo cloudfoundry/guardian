@@ -527,7 +527,7 @@ func startServer(gardenServer *server.GardenServer, logger lager.Logger) error {
 		return err
 	}
 
-	if err := ensureServerSocketDoesNotLeak(uintptr(socketFD)); err != nil {
+	if err = ensureServerSocketDoesNotLeak(uintptr(socketFD)); err != nil {
 		logger.Error("failed-to-set-cloexec-on-server-socket", err)
 		return err
 	}
@@ -678,7 +678,7 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.Volumizer {
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	depotPath, dadooPath, runtimePath string, runtimeExtraArgs []string, nstarPath, tarPath, appArmorProfile string,
 	properties gardener.PropertyManager, uidMappings, gidMappings idmapper.MappingList,
-	volumeCreator peas.VolumeCreator) *rundmc.Containerizer {
+	volumizer peas.Volumizer) *rundmc.Containerizer {
 
 	// TODO centralize knowledge of garden -> runc capability schema translation
 	baseProcess := specs.Process{
@@ -815,7 +815,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	}
 
 	peaCreator := &peas.PeaCreator{
-		VolumeCreator:    volumeCreator,
+		Volumizer:        volumizer,
 		PidGetter:        pidFileReader,
 		BundleGenerator:  peaTemplate,
 		ProcessBuilder:   processBuilder,

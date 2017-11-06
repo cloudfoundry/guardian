@@ -26,7 +26,7 @@ var _ = Describe("PeaCreator", func() {
 	const imageURI = "some-image-uri"
 
 	var (
-		volumeCreator    *peasfakes.FakeVolumeCreator
+		volumizer        *peasfakes.FakeVolumizer
 		pidGetter        *peasfakes.FakePidGetter
 		bundleGenerator  *depotfakes.FakeBundleGenerator
 		bundleSaver      *depotfakes.FakeBundleSaver
@@ -47,8 +47,8 @@ var _ = Describe("PeaCreator", func() {
 	)
 
 	BeforeEach(func() {
-		volumeCreator = new(peasfakes.FakeVolumeCreator)
-		volumeCreator.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
+		volumizer = new(peasfakes.FakeVolumizer)
+		volumizer.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
 		pidGetter = new(peasfakes.FakePidGetter)
 		pidGetter.PidReturns(123, nil)
 		bundleGenerator = new(depotfakes.FakeBundleGenerator)
@@ -59,7 +59,7 @@ var _ = Describe("PeaCreator", func() {
 		containerCreator = new(peasfakes.FakeContainerCreator)
 
 		peaCreator = &peas.PeaCreator{
-			VolumeCreator:    volumeCreator,
+			Volumizer:        volumizer,
 			PidGetter:        pidGetter,
 			BundleGenerator:  bundleGenerator,
 			BundleSaver:      bundleSaver,
@@ -89,17 +89,12 @@ var _ = Describe("PeaCreator", func() {
 	})
 
 	Describe("pea creation succeeding", func() {
-		var (
-			process  garden.Process
-			exitCode int
-			waitErr  error
-		)
+		var process garden.Process
 
 		JustBeforeEach(func() {
 			var err error
 			process, err = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrHandle, ctrBundleDir)
 			Expect(err).NotTo(HaveOccurred())
-			exitCode, waitErr = process.Wait()
 		})
 
 		It("creates the bundle directory", func() {
@@ -107,8 +102,8 @@ var _ = Describe("PeaCreator", func() {
 		})
 
 		It("creates a volume", func() {
-			Expect(volumeCreator.CreateCallCount()).To(Equal(1))
-			_, actualSpec := volumeCreator.CreateArgsForCall(0)
+			Expect(volumizer.CreateCallCount()).To(Equal(1))
+			_, actualSpec := volumizer.CreateArgsForCall(0)
 			Expect(actualSpec.Handle).To(Equal(processSpec.ID))
 			Expect(actualSpec.Image).To(Equal(garden.ImageRef{
 				URI:      imageURI,
@@ -174,7 +169,7 @@ var _ = Describe("PeaCreator", func() {
 		})
 
 		It("creates a runc container based on the bundle", func() {
-			Expect(containerCreator.CreateCallCount()).To(Equal(1))
+			Eventually(containerCreator.CreateCallCount).Should(Equal(1))
 			_, actualBundlePath, actualContainerID, _ := containerCreator.CreateArgsForCall(0)
 			Expect(actualBundlePath).To(Equal(filepath.Join(ctrBundleDir, "processes", processSpec.ID)))
 			Expect(actualContainerID).To(Equal(processSpec.ID))
@@ -233,32 +228,50 @@ var _ = Describe("PeaCreator", func() {
 			})
 		})
 
-		Context("when container creation succeeds and user process exits with non-zero code", func() {
-			BeforeEach(func() {
-				cmdThatFails := exec.Command("bash", "-c", "exit 42")
-				if runtime.GOOS == "windows" {
-					cmdThatFails = exec.Command("cmd", "/c", "exit 42")
-				}
+		Describe("Process Wait", func() {
+			var (
+				exitCode int
+				waitErr  error
+			)
 
-				realExitErr := cmdThatFails.Run()
-				containerCreator.CreateReturns(logging.WrappedError{Underlying: realExitErr})
+			JustBeforeEach(func() {
+				exitCode, waitErr = process.Wait()
 			})
 
-			It("process.Wait returns the container creation error", func() {
-				Expect(waitErr).NotTo(HaveOccurred())
-				Expect(exitCode).To(Equal(42))
+			It("cleans up volumes", func() {
+				Expect(volumizer.DestroyCallCount()).To(Equal(1))
+				_, actualHandle := volumizer.DestroyArgsForCall(0)
+				Expect(actualHandle).To(Equal(processSpec.ID))
+			})
+
+			Context("when process exits with non-zero code", func() {
+				BeforeEach(func() {
+					cmdThatFails := exec.Command("bash", "-c", "exit 42")
+					if runtime.GOOS == "windows" {
+						cmdThatFails = exec.Command("cmd", "/c", "exit 42")
+					}
+
+					realExitErr := cmdThatFails.Run()
+					containerCreator.CreateReturns(logging.WrappedError{Underlying: realExitErr})
+				})
+
+				It("returns the container creation error", func() {
+					Expect(waitErr).NotTo(HaveOccurred())
+					Expect(exitCode).To(Equal(42))
+				})
+			})
+
+			Context("when the container creation fails", func() {
+				BeforeEach(func() {
+					containerCreator.CreateReturns(errors.New("mango"))
+				})
+
+				It("returns the container creation error", func() {
+					Expect(waitErr).To(MatchError("mango"))
+				})
 			})
 		})
 
-		Context("when the container creation fails", func() {
-			BeforeEach(func() {
-				containerCreator.CreateReturns(errors.New("mango"))
-			})
-
-			It("process.Wait returns the container creation error", func() {
-				Expect(waitErr).To(MatchError("mango"))
-			})
-		})
 	})
 
 	Describe("pea creation failing", func() {
@@ -302,7 +315,7 @@ var _ = Describe("PeaCreator", func() {
 
 		Context("when the volume creator returns an error", func() {
 			BeforeEach(func() {
-				volumeCreator.CreateReturns(specs.Spec{}, errors.New("coconut"))
+				volumizer.CreateReturns(specs.Spec{}, errors.New("coconut"))
 			})
 
 			It("returns a wrapped error", func() {

@@ -509,6 +509,46 @@ var _ = Describe("Image Plugin", func() {
 				})
 			})
 
+			Context("and a pea is run on that container", func() {
+				var process garden.Process
+
+				BeforeEach(func() {
+					gardenDefaultRootfs := defaultTestRootFS
+					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"),
+						filepath.Join(tmpDir, "env"))).To(Succeed())
+				})
+
+				JustBeforeEach(func() {
+					var err error
+					process, err = container.Run(garden.ProcessSpec{
+						ID:    "test-pea",
+						Path:  "/env",
+						Dir:   "/",
+						Image: garden.ImageRef{URI: "docker:///busybox"},
+					}, garden.ProcessIO{})
+					Expect(err).NotTo(HaveOccurred())
+				})
+
+				It("executes the plugin, destroying the image when the process exits", func() {
+					exitCode, err := process.Wait()
+					Expect(exitCode).To(BeZero())
+					Expect(err).NotTo(HaveOccurred())
+
+					pluginArgsBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "args"))
+					Expect(err).ToNot(HaveOccurred())
+
+					pluginArgs := strings.Split(string(pluginArgsBytes), " ")
+					Expect(pluginArgs).To(Equal([]string{
+						binaries.ImagePlugin,
+						"--rootfs-path", tmpDir,
+						"--args-path", filepath.Join(tmpDir, "args"),
+						"--create-whoami-path", filepath.Join(tmpDir, "create-whoami"),
+						"delete",
+						process.ID(),
+					}))
+				})
+			})
+
 			Context("and metrics are collected on that container", func() {
 				var metrics garden.Metrics
 

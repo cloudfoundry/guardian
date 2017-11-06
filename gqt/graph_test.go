@@ -47,6 +47,37 @@ var _ = Describe("graph flags", func() {
 		Expect(numLayersInGraph()).To(Equal(layerCount + 2)) // +2 for the layers created for the nondefaultrootfs container
 	}
 
+	peaDoesNotLeaveDebrisInGraphOnExit := func(imageURI string) {
+		var (
+			pea                             garden.Process
+			numLayersAfterContainerCreation int
+		)
+
+		JustBeforeEach(func() {
+			imageURI := imageURI
+			container, err := client.Create(garden.ContainerSpec{
+				RootFSPath: imageURI,
+			})
+			Expect(err).ToNot(HaveOccurred())
+
+			numLayersAfterContainerCreation = numLayersInGraph()
+
+			pea, err = container.Run(garden.ProcessSpec{
+				Path:  "/bin/sh",
+				Args:  []string{"-c", "exit 0"},
+				Image: garden.ImageRef{URI: imageURI},
+			}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("does not leave debris in the graph on exit", func() {
+			Expect(pea.Wait()).To(Equal(0))
+
+			numLayersAfterPeaExits := numLayersInGraph()
+			Expect(numLayersAfterPeaExits).To(Equal(numLayersAfterContainerCreation))
+		})
+	}
+
 	BeforeEach(func() {
 		var err error
 		nonDefaultRootfsPath, err = ioutil.TempDir("", "tmpRootfs")
@@ -92,6 +123,28 @@ var _ = Describe("graph flags", func() {
 
 				Expect(numLayersInGraph()).To(BeNumerically(">", initialNumberOfLayers), "after creation, should NOT have deleted anything")
 				Expect(client.Destroy(anotherContainer.Handle())).To(Succeed())
+			})
+
+			Context("and we run a pea with the same image as the container", func() {
+				peaDoesNotLeaveDebrisInGraphOnExit("docker:///busybox")
+			})
+
+			Context("and we run a pea with another image", func() {
+				peaDoesNotLeaveDebrisInGraphOnExit("docker:///alpine")
+			})
+		})
+
+		Context("when the graph cleanup threshold is set to 0", func() {
+			BeforeEach(func() {
+				config.GraphCleanupThresholdMB = intptr(0)
+			})
+
+			Context("and we run a pea with the same image as the container", func() {
+				peaDoesNotLeaveDebrisInGraphOnExit("docker:///busybox")
+			})
+
+			Context("and we run a pea with another image", func() {
+				peaDoesNotLeaveDebrisInGraphOnExit("docker:///alpine")
 			})
 		})
 
