@@ -84,13 +84,7 @@ func (r *RunningGarden) Cleanup() {
 
 	MustUnmountTmpfs(r.GraphDir)
 
-	// In the kernel version 3.19.0-51-generic the code bellow results in
-	// hanging the running VM. We are not deleting the node-X directories. They
-	// are empty and the next test will re-use them. We will stick with that
-	// workaround until we can test on a newer kernel that will hopefully not
-	// have this bug.
-	//
-	// if err := os.RemoveAll(r.GraphPath); err != nil {
-	// 	r.logger.Error("remove-graph", err)
-	// }
+	if err := os.RemoveAll(r.GraphDir); err != nil {
+		r.logger.Error("remove-graph", err)
+	}
 }
