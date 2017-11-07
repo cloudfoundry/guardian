@@ -18,9 +18,10 @@ import (
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
-	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo/dadoofakes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	fakes "code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
+	"code.cloudfoundry.org/guardian/rundmc/signals"
+	"code.cloudfoundry.org/guardian/rundmc/signals/signalsfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -34,7 +35,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 	var (
 		fakeCommandRunner                      *fake_command_runner.FakeCommandRunner
 		fakeProcessIDGenerator                 *fakes.FakeUidGenerator
-		fakePidGetter                          *dadoofakes.FakePidGetter
+		fakePidGetter                          *signalsfakes.FakePidGetter
+		signallerFactory                       *signals.SignallerFactory
 		runner                                 *dadoo.ExecRunner
 		bundlePath                             string
 		processPath                            string
@@ -55,7 +57,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 	BeforeEach(func() {
 		fakeCommandRunner = fake_command_runner.New()
 		fakeProcessIDGenerator = new(fakes.FakeUidGenerator)
-		fakePidGetter = new(dadoofakes.FakePidGetter)
+		fakePidGetter = new(signalsfakes.FakePidGetter)
+		signallerFactory = &signals.SignallerFactory{PidGetter: fakePidGetter}
 
 		processID = fmt.Sprintf("pid-%d", GinkgoParallelNode())
 		fakePidGetter.PidReturns(0, nil)
@@ -65,7 +68,8 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		Expect(err).NotTo(HaveOccurred())
 		processPath = filepath.Join(bundlePath, "the-process")
 
-		runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, false)
+		runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator,
+			signallerFactory, fakeCommandRunner, false)
 		log = lagertest.NewTestLogger("test")
 
 		runcReturns = 0
@@ -276,7 +280,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when cleanupProcessDirsOnWait is true", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, true)
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, signallerFactory, fakeCommandRunner, true)
 			})
 
 			It("cleans up the processes dir after Wait returns", func() {
@@ -294,7 +298,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when cleanupProcessDirsOnWait is false", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, false)
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, signallerFactory, fakeCommandRunner, false)
 			})
 
 			It("does not clean up the processes dir after Wait returns", func() {
@@ -710,7 +714,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 			Context("when cleanupProcessDirsOnWait is true", func() {
 				JustBeforeEach(func() {
-					runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, true)
+					runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, signallerFactory, fakeCommandRunner, true)
 				})
 
 				It("cleans up the map entry and the process path", func() {
@@ -782,7 +786,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when cleanupProcessDirsOnWait is true", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, true)
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, signallerFactory, fakeCommandRunner, true)
 			})
 
 			It("cleans up the processes dir after Wait returns", func() {
@@ -802,7 +806,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when cleanupProcessDirsOnWait is false", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, false)
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, signallerFactory, fakeCommandRunner, false)
 			})
 
 			It("does not clean up the processes dir after Wait returns", func() {
@@ -956,7 +960,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when no process with the specified ID exists", func() {
 			BeforeEach(func() {
-				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, fakePidGetter, fakeCommandRunner, true)
+				runner = dadoo.NewExecRunner("path-to-dadoo", "path-to-runc", fakeProcessIDGenerator, signallerFactory, fakeCommandRunner, true)
 			})
 
 			It("returns ProcessNotFoundError", func() {

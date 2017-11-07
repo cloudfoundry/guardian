@@ -25,16 +25,15 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
-	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/graph"
 	"github.com/eapache/go-resiliency/retrier"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
-	"github.com/pivotal-golang/clock"
 )
 
 func commandRunner() commandrunner.CommandRunner {
@@ -183,18 +182,18 @@ func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode
 	return nil
 }
 
-func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *dadoo.ExecRunner {
-	pidFileReader := &pidreader.PidFileReader{
-		Clock:         clock.NewClock(),
-		Timeout:       10 * time.Second,
-		SleepInterval: time.Millisecond * 100,
-	}
-
+func (cmd *ServerCommand) wireExecRunner(
+	dadooPath, runcPath string,
+	processIDGen runrunc.UidGenerator,
+	signallerFactory *signals.SignallerFactory,
+	commandRunner commandrunner.CommandRunner,
+	shouldCleanup bool,
+) *dadoo.ExecRunner {
 	return dadoo.NewExecRunner(
 		dadooPath,
 		runcPath,
 		processIDGen,
-		pidFileReader,
+		signallerFactory,
 		commandRunner,
 		shouldCleanup,
 	)

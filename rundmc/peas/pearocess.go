@@ -6,12 +6,14 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/logging"
+	"code.cloudfoundry.org/guardian/rundmc/signals"
 )
 
 type pearocess struct {
 	id              string
 	doneCh          <-chan error
 	volumeDestroyer func()
+	signals.Signaller
 }
 
 func (p pearocess) ID() string { return p.id }
@@ -32,4 +34,3 @@ func (p pearocess) Wait() (int, error) {
 }
 
 func (p pearocess) SetTTY(garden.TTYSpec) error { return nil }
-func (p pearocess) Signal(garden.Signal) error  { return nil }

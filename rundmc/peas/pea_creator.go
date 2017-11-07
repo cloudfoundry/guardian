@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/lager"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -35,6 +36,11 @@ type PidGetter interface {
 	Pid(pidFilePath string) (int, error)
 }
 
+//go:generate counterfeiter . SignallerFactory
+type SignallerFactory interface {
+	NewSignaller(pidfilePath string) signals.Signaller
+}
+
 type PeaCreator struct {
 	Volumizer        Volumizer
 	PidGetter        PidGetter
@@ -42,6 +48,7 @@ type PeaCreator struct {
 	BundleSaver      depot.BundleSaver
 	ProcessBuilder   runrunc.ProcessBuilder
 	ContainerCreator ContainerCreator
+	SignallerFactory SignallerFactory
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO garden.ProcessIO, ctrHandle, ctrBundlePath string) (garden.Process, error) {
@@ -62,7 +69,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 	defer log.Info("done")
 
 	peaBundlePath := filepath.Join(ctrBundlePath, "processes", processID)
-	if err := os.MkdirAll(peaBundlePath, 0700); err != nil {
+	if mkdirErr := os.MkdirAll(peaBundlePath, 0700); mkdirErr != nil {
 		return nil, err
 	}
 
@@ -131,7 +138,16 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 			log.Error("destroying-volume", err)
 		}
 	}
-	return &pearocess{id: processID, doneCh: peaRunDone, volumeDestroyer: volumeDestroyer}, nil
+
+	// There is coupling here: the pidfile path is hardcoded here and in
+	// rundmc/runrunc/create.go.
+	// This is probably fine for now, as we will be using execrunner/dadoo for
+	// peas soon.
+	signaller := p.SignallerFactory.NewSignaller(filepath.Join(peaBundlePath, "pidfile"))
+	return &pearocess{
+		id: processID, doneCh: peaRunDone,
+		volumeDestroyer: volumeDestroyer, Signaller: signaller,
+	}, nil
 }
 
 func parseUser(uidgid string) (int, int, error) {

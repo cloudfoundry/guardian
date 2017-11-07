@@ -19,31 +19,27 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/lager"
 )
-
-//go:generate counterfeiter . PidGetter
-type PidGetter interface {
-	Pid(pidFilePath string) (int, error)
-}
 
 type ExecRunner struct {
 	dadooPath                string
 	runcPath                 string
 	processIDGen             runrunc.UidGenerator
-	pidGetter                PidGetter
+	signallerFactory         *signals.SignallerFactory
 	commandRunner            commandrunner.CommandRunner
 	cleanupProcessDirsOnWait bool
 	processes                map[string]*process
 	processesMutex           *sync.Mutex
 }
 
-func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, pidGetter PidGetter, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *ExecRunner {
+func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, signallerFactory *signals.SignallerFactory, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:                dadooPath,
 		runcPath:                 runcPath,
 		processIDGen:             processIDGen,
-		pidGetter:                pidGetter,
+		signallerFactory:         signallerFactory,
 		commandRunner:            commandRunner,
 		cleanupProcessDirsOnWait: shouldCleanup,
 		processes:                map[string]*process{},
@@ -199,17 +195,6 @@ func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.Proces
 	return process, nil
 }
 
-type osSignal garden.Signal
-
-func (s osSignal) OsSignal() syscall.Signal {
-	switch garden.Signal(s) {
-	case garden.SignalTerminate:
-		return syscall.SIGTERM
-	default:
-		return syscall.SIGKILL
-	}
-}
-
 type process struct {
 	logger                                       lager.Logger
 	id                                           string
@@ -221,7 +206,7 @@ type process struct {
 	stderrWriter                                 *DynamicMultiWriter
 	streamMutex                                  *sync.Mutex
 
-	*signaller
+	signals.Signaller
 }
 
 func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath string) *process {
@@ -243,21 +228,18 @@ func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath s
 	}
 
 	d.processes[processPath] = &process{
-		logger:   log,
-		id:       id,
-		stdin:    filepath.Join(processPath, "stdin"),
-		stdout:   filepath.Join(processPath, "stdout"),
-		stderr:   filepath.Join(processPath, "stderr"),
-		winsz:    filepath.Join(processPath, "winsz"),
-		exit:     filepath.Join(processPath, "exit"),
-		exitcode: filepath.Join(processPath, "exitcode"),
-		ioWg:     &sync.WaitGroup{},
-		winszCh:  make(chan garden.WindowSize, 5),
-		cleanup:  cleanupFunc,
-		signaller: &signaller{
-			pidFilePath: pidFilePath,
-			pidGetter:   d.pidGetter,
-		},
+		logger:       log,
+		id:           id,
+		stdin:        filepath.Join(processPath, "stdin"),
+		stdout:       filepath.Join(processPath, "stdout"),
+		stderr:       filepath.Join(processPath, "stderr"),
+		winsz:        filepath.Join(processPath, "winsz"),
+		exit:         filepath.Join(processPath, "exit"),
+		exitcode:     filepath.Join(processPath, "exitcode"),
+		ioWg:         &sync.WaitGroup{},
+		winszCh:      make(chan garden.WindowSize, 5),
+		cleanup:      cleanupFunc,
+		Signaller:    d.signallerFactory.NewSignaller(pidFilePath),
 		stdoutWriter: NewDynamicMultiWriter(),
 		stderrWriter: NewDynamicMultiWriter(),
 		streamMutex:  new(sync.Mutex),
@@ -407,25 +389,6 @@ func (p process) SetTTY(spec garden.TTYSpec) error {
 
 	defer winSize.Close()
 	return json.NewEncoder(winSize).Encode(spec.WindowSize)
-}
-
-type signaller struct {
-	pidFilePath string
-	pidGetter   PidGetter
-}
-
-func (s *signaller) Signal(signal garden.Signal) error {
-	pid, err := s.pidGetter.Pid(s.pidFilePath)
-	if err != nil {
-		return errors.New(fmt.Sprintf("fetching-pid: %s", err))
-	}
-
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		return errors.New(fmt.Sprintf("finding-process: %s", err))
-	}
-
-	return process.Signal(osSignal(signal).OsSignal())
 }
 
 func copyDadooLogsToGuardianLogger(dadooLogFilePath string, logger lager.Logger) error {

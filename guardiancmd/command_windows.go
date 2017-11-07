@@ -14,6 +14,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -47,7 +48,7 @@ func (cmd *ServerCommand) wireVolumizer(logger lager.Logger, graphRoot string, i
 	return gardener.NoopVolumizer{}
 }
 
-func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *execrunner.DirectExecRunner {
+func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, _ *signals.SignallerFactory, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *execrunner.DirectExecRunner {
 	return &execrunner.DirectExecRunner{
 		RuntimePath:   runcPath,
 		CommandRunner: windows_command_runner.New(false),

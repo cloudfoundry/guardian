@@ -16,6 +16,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/peas/peasfakes"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
+	"code.cloudfoundry.org/guardian/rundmc/signals/signalsfakes"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -32,6 +33,8 @@ var _ = Describe("PeaCreator", func() {
 		bundleSaver      *depotfakes.FakeBundleSaver
 		processBuilder   *runruncfakes.FakeProcessBuilder
 		containerCreator *peasfakes.FakeContainerCreator
+		signallerFactory *peasfakes.FakeSignallerFactory
+		signaller        *signalsfakes.FakeSignaller
 
 		peaCreator *peas.PeaCreator
 
@@ -57,6 +60,9 @@ var _ = Describe("PeaCreator", func() {
 		processBuilder = new(runruncfakes.FakeProcessBuilder)
 		processBuilder.BuildProcessReturns(builtProcess)
 		containerCreator = new(peasfakes.FakeContainerCreator)
+		signallerFactory = new(peasfakes.FakeSignallerFactory)
+		signaller = new(signalsfakes.FakeSignaller)
+		signallerFactory.NewSignallerReturns(signaller)
 
 		peaCreator = &peas.PeaCreator{
 			Volumizer:        volumizer,
@@ -65,6 +71,7 @@ var _ = Describe("PeaCreator", func() {
 			BundleSaver:      bundleSaver,
 			ProcessBuilder:   processBuilder,
 			ContainerCreator: containerCreator,
+			SignallerFactory: signallerFactory,
 		}
 
 		var err error
@@ -272,6 +279,19 @@ var _ = Describe("PeaCreator", func() {
 			})
 		})
 
+		It("creates a signaller for the process", func() {
+			Expect(signallerFactory.NewSignallerCallCount()).To(Equal(1))
+			Expect(signallerFactory.NewSignallerArgsForCall(0)).To(Equal(filepath.Join(ctrBundleDir, "processes", process.ID(), "pidfile")))
+		})
+
+		Describe("Process signalling", func() {
+			It("uses the signaller to signal the process", func() {
+				signaller.SignalReturns(errors.New("signalled"))
+				Expect(process.Signal(garden.SignalKill)).To(MatchError("signalled"))
+				Expect(signaller.SignalCallCount()).To(Equal(1))
+				Expect(signaller.SignalArgsForCall(0)).To(Equal(garden.SignalKill))
+			})
+		})
 	})
 
 	Describe("pea creation failing", func() {

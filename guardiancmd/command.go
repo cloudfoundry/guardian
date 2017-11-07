@@ -37,6 +37,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
+	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"github.com/cloudfoundry/dropsonde"
@@ -777,6 +778,14 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	bndlLoader := &goci.BndlLoader{}
 	processBuilder := runrunc.NewProcessBuilder(wireEnvFunc(), nonRootMaxCaps)
 
+	pidFileReader := &pidreader.PidFileReader{
+		Clock:         clock.NewClock(),
+		Timeout:       10 * time.Second,
+		SleepInterval: time.Millisecond * 100,
+	}
+
+	signallerFactory := &signals.SignallerFactory{PidGetter: pidFileReader}
+
 	runcrunner := runrunc.New(
 		cmdRunner,
 		runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
@@ -792,6 +801,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 			dadooPath,
 			runtimePath,
 			cmd.wireUIDGenerator(),
+			signallerFactory,
 			cmdRunner,
 			cmd.Containers.CleanupProcessDirsOnWait,
 		),
@@ -808,12 +818,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		}
 	}
 
-	pidFileReader := &pidreader.PidFileReader{
-		Clock:         clock.NewClock(),
-		Timeout:       10 * time.Second,
-		SleepInterval: time.Millisecond * 100,
-	}
-
 	peaCreator := &peas.PeaCreator{
 		Volumizer:        volumizer,
 		PidGetter:        pidFileReader,
@@ -821,6 +825,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		ProcessBuilder:   processBuilder,
 		BundleSaver:      bundleSaver,
 		ContainerCreator: runrunc.NewCreator(runtimePath, "run", runtimeExtraArgs, cmdRunner),
+		SignallerFactory: signallerFactory,
 	}
 
 	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, cmdRunner)
