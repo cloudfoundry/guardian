@@ -1,7 +1,6 @@
 package signals
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"syscall"
@@ -35,12 +34,13 @@ func (f *SignallerFactory) NewSignaller(pidfilePath string) Signaller {
 func (s *signaller) Signal(signal garden.Signal) error {
 	pid, err := s.pidGetter.Pid(s.pidFilePath)
 	if err != nil {
-		return errors.New(fmt.Sprintf("fetching-pid: %s", err))
+		return fmt.Errorf("fetching-pid: %s", err)
 	}
 
 	process, err := os.FindProcess(pid)
 	if err != nil {
-		return errors.New(fmt.Sprintf("finding-process: %s", err))
+		// Should never happen, os.FindProcess never returns an error on Linux
+		return fmt.Errorf("finding-process: %s", err)
 	}
 
 	return process.Signal(osSignal(signal).OsSignal())
