@@ -14,6 +14,7 @@ import (
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 )
@@ -55,7 +56,9 @@ func (e *DirectExecRunner) Run(log lager.Logger, processID string, spec *runrunc
 		return nil, errors.Wrap(err, "writing process spec")
 	}
 
-	cmd := exec.Command(e.RuntimePath, "--debug", "--log", "IGNORED", "--log-format", "json", "exec", "-p", specPath, "--pid-file", filepath.Join(processPath, "pidfile"), handle)
+	logPath := filepath.Join(processPath, "exec.log")
+
+	cmd := exec.Command(e.RuntimePath, "--debug", "--log", logPath, "--log-format", "json", "exec", "-p", specPath, "--pid-file", filepath.Join(processPath, "pidfile"), handle)
 	cmd.Stdout = io.Stdout
 	cmd.Stderr = io.Stderr
 	if err := e.CommandRunner.Start(cmd); err != nil {
@@ -78,6 +81,7 @@ func (e *DirectExecRunner) Run(log lager.Logger, processID string, spec *runrunc
 				proc.exitErr = err
 			}
 		}
+		forwardLogs(log, logPath)
 		proc.mux.Unlock()
 	}()
 
@@ -112,4 +116,15 @@ func (p *process) SetTTY(ttySpec garden.TTYSpec) error {
 
 func (p *process) Signal(signal garden.Signal) error {
 	return nil
+}
+
+func forwardLogs(log lager.Logger, logPath string) {
+	defer os.Remove(logPath)
+
+	buff, readErr := ioutil.ReadFile(logPath)
+	if readErr != nil {
+		log.Error("reading log file", readErr)
+	}
+
+	logging.ForwardRuncLogsToLager(log, "exec", buff)
 }
