@@ -97,18 +97,6 @@ var _ = Describe("Tar Fetcher", func() {
 		})
 	})
 
-	Describe("IsLocalTarVolume", func() {
-		It("must match the chainID returned by BaseImageInfo", func() {
-			baseImageInfo, err := fetcher.BaseImageInfo(logger, baseImageURL)
-			Expect(err).NotTo(HaveOccurred())
-
-			layers := baseImageInfo.LayerInfos
-
-			Expect(len(layers)).To(Equal(1))
-			Expect(fetcherpkg.IsLocalTarVolume(layers[0].ChainID)).To(BeTrue())
-		})
-	})
-
 	Describe("LayersDigest", func() {
 		var baseImageInfo base_image_puller.BaseImageInfo
 

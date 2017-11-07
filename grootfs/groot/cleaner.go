@@ -30,36 +30,23 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	}
 }
 
-func (c *cleaner) Clean(logger lager.Logger, cacheBytes int64) (noop bool, err error) {
+func (c *cleaner) Clean(logger lager.Logger, threshold int64) (bool, error) {
 	logger = logger.Session("groot-cleaning")
 	logger.Info("starting")
-
-	if cacheBytes < 0 {
-		return true, errorspkg.New("cache bytes must be greater than 0")
-	}
 
 	defer c.metricsEmitter.TryEmitDurationFrom(logger, MetricImageCleanTime, time.Now())
 	defer logger.Info("ending")
 
-	unusedLayerVolumes, unusedLocalVolumes, err := c.garbageCollector.UnusedVolumes(logger)
-	if err != nil {
-		logger.Error("finding-unused-failed", err)
-	}
-
-	if err := c.garbageCollector.MarkUnused(logger, unusedLocalVolumes); err != nil {
-		logger.Info("marking-local-volumes-failed-skipping", lager.Data{"localVolumes": unusedLocalVolumes})
-	}
-
-	defer func() {
-		if err == nil {
-			err = c.garbageCollector.Collect(logger)
+	if threshold > 0 {
+		storeUsage, err := c.storeMeasurer.Usage(logger)
+		if err != nil {
+			return true, errorspkg.Wrap(err, "measuring store usage")
 		}
-	}()
-
-	if cacheBytes > 0 {
-		if cacheBytes >= c.storeMeasurer.CacheUsage(logger, unusedLayerVolumes) {
+		if storeUsage < threshold {
 			return true, nil
 		}
+	} else if threshold < 0 {
+		return true, errorspkg.New("Threshold must be greater than 0")
 	}
 
 	lockFile, err := c.locksmith.Lock(GlobalLockKey)
@@ -67,7 +54,12 @@ func (c *cleaner) Clean(logger lager.Logger, cacheBytes int64) (noop bool, err e
 		return false, errorspkg.Wrap(err, "garbage collector acquiring lock")
 	}
 
-	if err := c.garbageCollector.MarkUnused(logger, unusedLayerVolumes); err != nil {
+	unusedVolumes, err := c.garbageCollector.UnusedVolumes(logger)
+	if err != nil {
+		logger.Error("finding-unused-failed", err)
+	}
+
+	if err := c.garbageCollector.MarkUnused(logger, unusedVolumes); err != nil {
 		logger.Error("marking-unused-failed", err)
 	}
 
@@ -75,5 +67,5 @@ func (c *cleaner) Clean(logger lager.Logger, cacheBytes int64) (noop bool, err e
 		logger.Error("unlocking-failed", err)
 	}
 
-	return false, err
+	return false, c.garbageCollector.Collect(logger)
 }

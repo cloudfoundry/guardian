@@ -99,8 +99,8 @@ func (r Runner) makeCreateArgs(spec groot.CreateSpec) []string {
 		}
 	}
 
-	if spec.CleanOnCreateCacheBytes > 0 {
-		args = append(args, "--cache-bytes", strconv.FormatInt(spec.CleanOnCreateCacheBytes, 10))
+	if spec.CleanOnCreateThresholdBytes > 0 {
+		args = append(args, "--threshold-bytes", strconv.FormatInt(spec.CleanOnCreateThresholdBytes, 10))
 	}
 
 	if spec.Mount {

@@ -308,19 +308,19 @@ var _ = Describe("Create", func() {
 			})
 		})
 
-		Context("when a cache bytes is given", func() {
-			Context("when the unused layers bytes are bigger than the cache bytes", func() {
+		Context("when a threshold is given", func() {
+			Context("when the store size is over the threshold", func() {
 				It("cleans the store first", func() {
 					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(1))
 
 					_, err = Runner.Create(groot.CreateSpec{
-						ID:                      "my-empty",
-						BaseImageURL:            integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
-						Mount:                   false,
-						CleanOnCreate:           true,
-						CleanOnCreateCacheBytes: 1024,
+						ID:                          "my-empty",
+						BaseImageURL:                integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
+						Mount:                       false,
+						CleanOnCreate:               true,
+						CleanOnCreateThresholdBytes: 1024,
 					})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -330,18 +330,18 @@ var _ = Describe("Create", func() {
 				})
 			})
 
-			Context("when the unused layers bytes are smaller than the cache bytes", func() {
+			Context("when thestore size is under the threshold", func() {
 				It("cleans the store first", func() {
 					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(preContents).To(HaveLen(1))
 
 					_, err = Runner.Create(groot.CreateSpec{
-						ID:                      "my-empty",
-						BaseImageURL:            integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
-						Mount:                   false,
-						CleanOnCreate:           true,
-						CleanOnCreateCacheBytes: 1024 * 1024 * 1024 * 1024,
+						ID:                          "my-empty",
+						BaseImageURL:                integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
+						Mount:                       false,
+						CleanOnCreate:               true,
+						CleanOnCreateThresholdBytes: 1024 * 1024 * 1024 * 1024,
 					})
 					Expect(err).NotTo(HaveOccurred())
 

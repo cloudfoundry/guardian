@@ -35,16 +35,14 @@ type GarbageCollector struct {
 	imageCloner       ImageCloner
 	dependencyManager DependencyManager
 	baseImage         string
-	isLocalTarVolume  func(string) bool
 }
 
-func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager, baseImage string, isLocalTarVolume func(string) bool) *GarbageCollector {
+func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager, baseImage string) *GarbageCollector {
 	return &GarbageCollector{
 		volumeDriver:      volumeDriver,
 		imageCloner:       imageCloner,
 		dependencyManager: dependencyManager,
 		baseImage:         baseImage,
-		isLocalTarVolume:  isLocalTarVolume,
 	}
 }
 
@@ -136,14 +134,14 @@ func (g *GarbageCollector) gcVolumes(logger lager.Logger) ([]string, error) {
 	return collectables, nil
 }
 
-func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, []string, error) {
+func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) {
 	logger = logger.Session("unused-volumes")
 	logger.Info("starting")
 	defer logger.Info("ending")
 
 	volumes, err := g.volumeDriver.Volumes(logger)
 	if err != nil {
-		return nil, nil, errorspkg.Wrap(err, "failed to retrieve volume list")
+		return nil, errorspkg.Wrap(err, "failed to retrieve volume list")
 	}
 
 	orphanedVolumes := make(map[string]struct{})
@@ -155,13 +153,13 @@ func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, []strin
 
 	imageIDs, err := g.imageCloner.ImageIDs(logger)
 	if err != nil {
-		return nil, nil, errorspkg.Wrap(err, "failed to retrieve images")
+		return nil, errorspkg.Wrap(err, "failed to retrieve images")
 	}
 
 	for _, imageID := range imageIDs {
 		imageRefName := fmt.Sprintf(groot.ImageReferenceFormat, imageID)
 		if err := g.removeDependencies(orphanedVolumes, imageRefName); err != nil {
-			return nil, nil, err
+			return nil, err
 		}
 	}
 
@@ -172,16 +170,11 @@ func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, []strin
 		}
 	}
 
-	orphanedLayerVolumeIDs := []string{}
-	orphanedLocalVolumeIDs := []string{}
+	orphanedVolumeIDs := []string{}
 	for id := range orphanedVolumes {
-		if g.isLocalTarVolume(id) {
-			orphanedLocalVolumeIDs = append(orphanedLocalVolumeIDs, id)
-		} else {
-			orphanedLayerVolumeIDs = append(orphanedLayerVolumeIDs, id)
-		}
+		orphanedVolumeIDs = append(orphanedVolumeIDs, id)
 	}
-	return orphanedLayerVolumeIDs, orphanedLocalVolumeIDs, nil
+	return orphanedVolumeIDs, nil
 }
 
 func (g *GarbageCollector) removeDependencies(volumesList map[string]struct{}, refID string) error {

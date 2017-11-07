@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	. "github.com/onsi/ginkgo"
@@ -18,7 +16,7 @@ import (
 )
 
 var _ = Describe("Clean", func() {
-	Context("Local Images", func() {
+	Context("OCI Images", func() {
 		var (
 			baseImagePath        string
 			anotherBaseImagePath string
@@ -52,15 +50,8 @@ var _ = Describe("Clean", func() {
 		})
 
 		Context("when there are unused volumes", func() {
-			var (
-				logBuffer     *gbytes.Buffer
-				loggingRunner runner.Runner
-			)
-
 			BeforeEach(func() {
-				logBuffer = gbytes.NewBuffer()
-				loggingRunner = Runner.WithStderr(logBuffer)
-				image, err := loggingRunner.Create(groot.CreateSpec{
+				_, err := Runner.Create(groot.CreateSpec{
 					ID:           "my-image-2",
 					BaseImageURL: integration.String2URL(anotherBaseImagePath),
 					Mount:        mountByDefault(),
@@ -68,21 +59,7 @@ var _ = Describe("Clean", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				err = loggingRunner.Delete("my-image-2")
-				if err != nil {
-					out, _ := exec.Command("cat", "/proc/mounts").CombinedOutput()
-					GinkgoWriter.Write([]byte("\nMount table:\n"))
-					GinkgoWriter.Write(out)
-					out, _ = exec.Command("lsof", "+d", image.Root.Path).CombinedOutput()
-					GinkgoWriter.Write([]byte("\nlsof output\n"))
-					GinkgoWriter.Write(out)
-				}
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			AfterEach(func() {
-				fmt.Println(">>>>>>>>>>>>>>> my-image-2 logs <<<<<<<<<<<<<<<<<<<<<")
-				fmt.Println(string(logBuffer.Contents()))
+				Expect(Runner.Delete("my-image-2")).To(Succeed())
 			})
 
 			It("removes them", func() {
@@ -98,58 +75,29 @@ var _ = Describe("Clean", func() {
 				Expect(afterContents).To(HaveLen(4))
 			})
 
-			It("removes their associated metadata", func() {
-				preContents, err := filepath.Glob(filepath.Join(StorePath, store.MetaDirName, "volume-*"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(8))
-
-				_, err = Runner.Clean(0)
-				Expect(err).NotTo(HaveOccurred())
-
-				afterContents, err := filepath.Glob(filepath.Join(StorePath, store.MetaDirName, "volume-*"))
-				Expect(err).NotTo(HaveOccurred())
-				Expect(afterContents).To(HaveLen(4))
-			})
-
-			Context("and a cache size is set", func() {
-				var cacheSizeInBytes int64
+			Context("and a threshold is set", func() {
+				var cleanupThresholdInBytes int64
 
 				Context("but it lower than 0", func() {
 					BeforeEach(func() {
-						cacheSizeInBytes = -10
+						cleanupThresholdInBytes = -10
 					})
 					It("returns an error", func() {
-						_, err := Runner.Clean(cacheSizeInBytes)
-						Expect(err).To(MatchError("invalid argument: cache size cannot be negative"))
+						_, err := Runner.Clean(cleanupThresholdInBytes)
+						Expect(err).To(MatchError("invalid argument: clean threshold cannot be negative"))
 					})
 				})
 
-				Context("when one of the volumes has a missing metadata", func() {
+				Context("and the total is less than the threshold", func() {
 					BeforeEach(func() {
-						metadataFiles, err := filepath.Glob(filepath.Join(StorePath, store.MetaDirName, "volume-*"))
-						Expect(err).NotTo(HaveOccurred())
-
-						for _, metadataFile := range metadataFiles {
-							Expect(os.RemoveAll(metadataFile)).To(Succeed())
-						}
+						cleanupThresholdInBytes = 500000000
 					})
 
-					It("doesn't fail", func() {
-						_, err := Runner.Clean(0)
-						Expect(err).NotTo(HaveOccurred())
-					})
-				})
-
-				Context("and the size of unused layers is less than the cache size", func() {
-					BeforeEach(func() {
-						cacheSizeInBytes = 5 * 1024 * 1024
-					})
-
-					It("does not remove the unused layer volumes", func() {
+					It("does not remove the unused volumes", func() {
 						preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 						Expect(err).NotTo(HaveOccurred())
 
-						_, err = Runner.Clean(cacheSizeInBytes)
+						_, err = Runner.Clean(cleanupThresholdInBytes)
 						Expect(err).NotTo(HaveOccurred())
 
 						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
@@ -157,46 +105,16 @@ var _ = Describe("Clean", func() {
 						Expect(afterContents).To(HaveLen(len(preContents)))
 					})
 
-					Context("local tar images", func() {
-						BeforeEach(func() {
-							yetAnotherSourceImagePath, err := ioutil.TempDir("", "")
-							Expect(err).NotTo(HaveOccurred())
-							yetAnotherBaseImageFile := integration.CreateBaseImageTar(yetAnotherSourceImagePath)
-							yetAnotherBaseImagePath := yetAnotherBaseImageFile.Name()
-
-							_, err = Runner.Create(groot.CreateSpec{
-								ID:           "my-image-local",
-								BaseImageURL: integration.String2URL(yetAnotherBaseImagePath),
-								Mount:        mountByDefault(),
-							})
-							Expect(err).NotTo(HaveOccurred())
-							Expect(Runner.Delete("my-image-local")).To(Succeed())
-						})
-
-						It("still removes unused local volumes", func() {
-							preContents, err := filepath.Glob(filepath.Join(StorePath, store.VolumesDirName, "*-*"))
-							Expect(err).NotTo(HaveOccurred())
-							Expect(preContents).ToNot(BeEmpty())
-
-							_, err = Runner.Clean(cacheSizeInBytes)
-							Expect(err).NotTo(HaveOccurred())
-
-							afterContents, err := filepath.Glob(filepath.Join(StorePath, store.VolumesDirName, "*-*"))
-							Expect(err).NotTo(HaveOccurred())
-							Expect(afterContents).To(BeEmpty())
-						})
-					})
-
 					It("reports that it was a no-op", func() {
-						output, err := Runner.Clean(cacheSizeInBytes)
+						output, err := Runner.Clean(cleanupThresholdInBytes)
 						Expect(err).NotTo(HaveOccurred())
-						Expect(output).To(ContainSubstring("cache size not reached: skipping clean"))
+						Expect(output).To(ContainSubstring("threshold not reached: skipping clean"))
 					})
 				})
 
-				Context("and the total is more than the cache size", func() {
+				Context("and the total is more than the threshold", func() {
 					BeforeEach(func() {
-						cacheSizeInBytes = 1 * 1024 * 1024
+						cleanupThresholdInBytes = 70000
 					})
 
 					It("removes the unused volumes", func() {
@@ -204,7 +122,7 @@ var _ = Describe("Clean", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(preContents).To(HaveLen(8))
 
-						_, err = Runner.Clean(cacheSizeInBytes)
+						_, err = Runner.Clean(cleanupThresholdInBytes)
 						Expect(err).NotTo(HaveOccurred())
 
 						afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
@@ -231,27 +149,15 @@ var _ = Describe("Clean", func() {
 		})
 
 		Context("when there are unused layers", func() {
-			var (
-				logBuffer     *gbytes.Buffer
-				loggingRunner runner.Runner
-			)
-
 			BeforeEach(func() {
-				logBuffer = gbytes.NewBuffer()
-				loggingRunner = Runner.WithStderr(logBuffer)
-				_, err := loggingRunner.Create(groot.CreateSpec{
+				_, err := Runner.Create(groot.CreateSpec{
 					ID:           "my-image-2",
 					BaseImageURL: integration.String2URL("docker:///cfgarden/garden-busybox"),
 					Mount:        mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(loggingRunner.Delete("my-image-2")).To(Succeed())
-			})
-
-			AfterEach(func() {
-				fmt.Println(">>>>>>>>>>>>>>> my-image-2 logs <<<<<<<<<<<<<<<<<<<<<")
-				fmt.Println(string(logBuffer.Contents()))
+				Expect(Runner.Delete("my-image-2")).To(Succeed())
 			})
 
 			It("removes unused volumes", func() {

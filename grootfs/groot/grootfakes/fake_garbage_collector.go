@@ -9,20 +9,18 @@ import (
 )
 
 type FakeGarbageCollector struct {
-	UnusedVolumesStub        func(logger lager.Logger) ([]string, []string, error)
+	UnusedVolumesStub        func(logger lager.Logger) ([]string, error)
 	unusedVolumesMutex       sync.RWMutex
 	unusedVolumesArgsForCall []struct {
 		logger lager.Logger
 	}
 	unusedVolumesReturns struct {
 		result1 []string
-		result2 []string
-		result3 error
+		result2 error
 	}
 	unusedVolumesReturnsOnCall map[int]struct {
 		result1 []string
-		result2 []string
-		result3 error
+		result2 error
 	}
 	MarkUnusedStub        func(logger lager.Logger, unusedVolumes []string) error
 	markUnusedMutex       sync.RWMutex
@@ -51,7 +49,7 @@ type FakeGarbageCollector struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, []string, error) {
+func (fake *FakeGarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) {
 	fake.unusedVolumesMutex.Lock()
 	ret, specificReturn := fake.unusedVolumesReturnsOnCall[len(fake.unusedVolumesArgsForCall)]
 	fake.unusedVolumesArgsForCall = append(fake.unusedVolumesArgsForCall, struct {
@@ -63,9 +61,9 @@ func (fake *FakeGarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, 
 		return fake.UnusedVolumesStub(logger)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
+		return ret.result1, ret.result2
 	}
-	return fake.unusedVolumesReturns.result1, fake.unusedVolumesReturns.result2, fake.unusedVolumesReturns.result3
+	return fake.unusedVolumesReturns.result1, fake.unusedVolumesReturns.result2
 }
 
 func (fake *FakeGarbageCollector) UnusedVolumesCallCount() int {
@@ -80,29 +78,26 @@ func (fake *FakeGarbageCollector) UnusedVolumesArgsForCall(i int) lager.Logger {
 	return fake.unusedVolumesArgsForCall[i].logger
 }
 
-func (fake *FakeGarbageCollector) UnusedVolumesReturns(result1 []string, result2 []string, result3 error) {
+func (fake *FakeGarbageCollector) UnusedVolumesReturns(result1 []string, result2 error) {
 	fake.UnusedVolumesStub = nil
 	fake.unusedVolumesReturns = struct {
 		result1 []string
-		result2 []string
-		result3 error
-	}{result1, result2, result3}
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeGarbageCollector) UnusedVolumesReturnsOnCall(i int, result1 []string, result2 []string, result3 error) {
+func (fake *FakeGarbageCollector) UnusedVolumesReturnsOnCall(i int, result1 []string, result2 error) {
 	fake.UnusedVolumesStub = nil
 	if fake.unusedVolumesReturnsOnCall == nil {
 		fake.unusedVolumesReturnsOnCall = make(map[int]struct {
 			result1 []string
-			result2 []string
-			result3 error
+			result2 error
 		})
 	}
 	fake.unusedVolumesReturnsOnCall[i] = struct {
 		result1 []string
-		result2 []string
-		result3 error
-	}{result1, result2, result3}
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeGarbageCollector) MarkUnused(logger lager.Logger, unusedVolumes []string) error {

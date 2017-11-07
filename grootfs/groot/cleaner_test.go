@@ -48,10 +48,10 @@ var _ = Describe("Cleaner", func() {
 	})
 
 	Describe("Clean", func() {
-		It("calls the garbage collector to mark unused layer and local volumes", func() {
+		It("calls the garbage collector to mark unused volumes", func() {
 			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(fakeGarbageCollector.MarkUnusedCallCount()).To(Equal(2))
+			Expect(fakeGarbageCollector.MarkUnusedCallCount()).To(Equal(1))
 		})
 
 		It("calls the garbage collector to collect", func() {
@@ -157,57 +157,46 @@ var _ = Describe("Cleaner", func() {
 			})
 		})
 
-		Context("when a cache bytes is provided", func() {
-			var cacheSize int64
+		Context("when a threshold is provided", func() {
+			var threshold int64
 
 			BeforeEach(func() {
-				cacheSize = 1000000
+				threshold = 1000000
 			})
 
-			Context("when the size of unused layers is less than the cache bytes", func() {
+			Context("when the store size under the threshold", func() {
 				BeforeEach(func() {
-					fakeGarbageCollector.UnusedVolumesReturns([]string{"layerVolume"}, []string{"localVolume-1234"}, nil)
+					fakeGarbageCollector.UnusedVolumesReturns([]string{"layerVolume", "localVolume-1234"}, nil)
 					fakeStoreMeasurer.CacheUsageReturns(500000)
 				})
 
-				It("still always marks unused local volumes", func() {
-					_, err := cleaner.Clean(logger, cacheSize)
+				It("does not remove anything", func() {
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
-
-					Expect(fakeGarbageCollector.MarkUnusedCallCount()).To(Equal(1))
-					_, volumes := fakeGarbageCollector.MarkUnusedArgsForCall(0)
-					Expect(volumes).To(ConsistOf("localVolume-1234"))
-				})
-
-				It("does not remove unused layer volumes", func() {
-					_, err := cleaner.Clean(logger, cacheSize)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(fakeGarbageCollector.UnusedVolumesCallCount()).To(Equal(1))
-					_, volumes := fakeGarbageCollector.MarkUnusedArgsForCall(0)
-					Expect(volumes).NotTo(ContainElement("layerVolume"))
+					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 				})
 
 				It("does not acquire the lock", func() {
-					_, err := cleaner.Clean(logger, cacheSize)
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeLocksmith.LockCallCount()).To(Equal(0))
 				})
 
 				It("sets noop to `true`", func() {
-					noop, err := cleaner.Clean(logger, cacheSize)
+					noop, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(noop).To(BeTrue())
 				})
 			})
 
-			Context("when the size of unused layers is greater than the cache bytes", func() {
+			Context("when the store size is greater than the threshold", func() {
 				BeforeEach(func() {
-					cacheSize = 1000000
-					fakeStoreMeasurer.CacheUsageReturns(1500000)
+					threshold = 1000000
+					fakeStoreMeasurer.UsageReturns(1500000, nil)
 				})
 
 				It("calls the garbage collector", func() {
-					_, err := cleaner.Clean(logger, cacheSize)
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 				})
@@ -215,13 +204,13 @@ var _ = Describe("Cleaner", func() {
 
 			Context("when the cache bytes is negative", func() {
 				BeforeEach(func() {
-					cacheSize = -120
+					threshold = -120
 				})
 
 				It("indicates a no-op and returns an error", func() {
-					noop, err := cleaner.Clean(logger, cacheSize)
+					noop, err := cleaner.Clean(logger, threshold)
 					Expect(noop).To(BeTrue())
-					Expect(err).To(MatchError("cache bytes must be greater than 0"))
+					Expect(err).To(MatchError("Threshold must be greater than 0"))
 				})
 			})
 		})

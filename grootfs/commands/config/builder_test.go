@@ -33,7 +33,7 @@ var _ = Describe("Builder", func() {
 		}
 
 		cleanCfg = config.Clean{
-			CacheBytes: int64(0),
+			ThresholdBytes: int64(0),
 		}
 
 		cfg = config.Config{
@@ -89,14 +89,14 @@ var _ = Describe("Builder", func() {
 			})
 		})
 
-		Context("when cache size property is invalid", func() {
+		Context("when clean threshold property is invalid", func() {
 			BeforeEach(func() {
-				cfg.Clean.CacheBytes = int64(-1)
+				cfg.Clean.ThresholdBytes = int64(-1)
 			})
 
 			It("returns an error", func() {
 				_, err := builder.Build()
-				Expect(err).To(MatchError("invalid argument: cache size cannot be negative"))
+				Expect(err).To(MatchError("invalid argument: clean threshold cannot be negative"))
 			})
 		})
 
@@ -440,20 +440,20 @@ var _ = Describe("Builder", func() {
 		})
 	})
 
-	Describe("WithCacheBytes", func() {
-		It("overrides the config's CleanCacheBytes entry when the flag is set", func() {
-			builder = builder.WithCacheBytes(1024, true)
+	Describe("WithCleanThresholdBytes", func() {
+		It("overrides the config's CleanThresholdBytes entry when the flag is set", func() {
+			builder = builder.WithCleanThresholdBytes(1024, true)
 			config, err := builder.Build()
 			Expect(err).NotTo(HaveOccurred())
-			Expect(config.Clean.CacheBytes).To(Equal(int64(1024)))
+			Expect(config.Clean.ThresholdBytes).To(Equal(int64(1024)))
 		})
 
 		Context("when flag is not set", func() {
 			It("uses the config entry", func() {
-				builder = builder.WithCacheBytes(1024, false)
+				builder = builder.WithCleanThresholdBytes(1024, false)
 				config, err := builder.Build()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(config.Clean.CacheBytes).To(Equal(cfg.Clean.CacheBytes))
+				Expect(config.Clean.ThresholdBytes).To(Equal(cfg.Clean.ThresholdBytes))
 			})
 		})
 	})

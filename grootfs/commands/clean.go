@@ -10,7 +10,6 @@ import (
 
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	storepkg "code.cloudfoundry.org/grootfs/store"
@@ -31,8 +30,8 @@ var CleanCommand = cli.Command{
 
 	Flags: []cli.Flag{
 		cli.Int64Flag{
-			Name:  "cache-bytes",
-			Usage: "Disk consumed by unsused layers in the store directory before cleanup should trigger.",
+			Name:  "threshold-bytes",
+			Usage: "Disk usage of the store directory at which cleanup should trigger",
 		},
 	},
 
@@ -42,8 +41,8 @@ var CleanCommand = cli.Command{
 		newExitError := newErrorHandler(logger, "clean")
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
-		configBuilder.WithCacheBytes(ctx.Int64("cache-bytes"),
-			ctx.IsSet("cache-bytes"))
+		configBuilder.WithCleanThresholdBytes(ctx.Int64("threshold-bytes"),
+			ctx.IsSet("threshold-bytes"))
 
 		cfg, err := configBuilder.Build()
 		logger.Debug("clean-config", lager.Data{"currentConfig": cfg})
@@ -84,12 +83,12 @@ var CleanCommand = cli.Command{
 		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
 		nsFsDriver := namespaced.New(fsDriver, idMappings, idMapper, runner)
 		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
-		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, "", tar_fetcher.IsLocalTarVolume)
+		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, "")
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
 		defer func() {
-			unusedVols, _, err := gc.UnusedVolumes(logger)
+			unusedVols, err := gc.UnusedVolumes(logger)
 			if err != nil {
 				logger.Error("getting-unused-layers-failed", err)
 				return
@@ -97,14 +96,14 @@ var CleanCommand = cli.Command{
 			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", sm.CacheUsage(logger, unusedVols), "bytes")
 		}()
 
-		noop, err := cleaner.Clean(logger, cfg.Clean.CacheBytes)
+		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return newExitError(err.Error(), 1)
 		}
 
 		if noop {
-			fmt.Println("cache size not reached: skipping clean")
+			fmt.Println("threshold not reached: skipping clean")
 			return nil
 		}
 

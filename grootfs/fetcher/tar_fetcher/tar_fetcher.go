@@ -7,18 +7,11 @@ import (
 	"io"
 	"net/url"
 	"os"
-	"regexp"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 )
-
-var tarVolumeRegExp = regexp.MustCompile("^[a-z0-9]{64}-[0-9]{19}$")
-
-func IsLocalTarVolume(id string) bool {
-	return tarVolumeRegExp.MatchString(id)
-}
 
 type TarFetcher struct {
 }

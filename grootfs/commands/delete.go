@@ -6,7 +6,6 @@ import (
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/commands/idfinder"
-	"code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store"
@@ -70,10 +69,10 @@ var DeleteCommand = cli.Command{
 		deleter := groot.IamDeleter(imageCloner, dependencyManager, metricsEmitter)
 
 		sm := store.NewStoreMeasurer(storePath, fsDriver)
-		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager, "", tar_fetcher.IsLocalTarVolume)
+		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager, "")
 
 		defer func() {
-			unusedVols, _, err := gc.UnusedVolumes(logger)
+			unusedVols, err := gc.UnusedVolumes(logger)
 			if err != nil {
 				logger.Error("getting-unused-layers-failed", err)
 				return

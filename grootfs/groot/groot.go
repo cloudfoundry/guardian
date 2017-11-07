@@ -101,7 +101,7 @@ type DependencyManager interface {
 }
 
 type GarbageCollector interface {
-	UnusedVolumes(logger lager.Logger) ([]string, []string, error)
+	UnusedVolumes(logger lager.Logger) ([]string, error)
 	MarkUnused(logger lager.Logger, unusedVolumes []string) error
 	Collect(logger lager.Logger) error
 }

@@ -67,8 +67,8 @@ var CreateCommand = cli.Command{
 			Usage: "Do NOT clean up unused layers before creating rootfs",
 		},
 		cli.Int64Flag{
-			Name:  "cache-bytes",
-			Usage: "Disk consumed by unsused layers in the store directory before cleanup should trigger.",
+			Name:  "threshold-bytes",
+			Usage: "Disk usage of the store directory at which cleanup should trigger",
 		},
 		cli.BoolFlag{
 			Name:  "with-mount",
@@ -106,7 +106,7 @@ var CreateCommand = cli.Command{
 				ctx.IsSet("exclude-image-from-quota")).
 			WithSkipLayerValidation(ctx.Bool("skip-layer-validation"),
 				ctx.IsSet("skip-layer-validation")).
-			WithCacheBytes(ctx.Int64("cache-bytes"), ctx.IsSet("cache-bytes")).
+			WithCleanThresholdBytes(ctx.Int64("threshold-bytes"), ctx.IsSet("threshold-bytes")).
 			WithClean(ctx.IsSet("with-clean"), ctx.IsSet("without-clean")).
 			WithMount(ctx.IsSet("with-mount"), ctx.IsSet("without-mount"))
 
@@ -189,11 +189,11 @@ var CreateCommand = cli.Command{
 		)
 
 		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
-		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, baseImage, tar_fetcher.IsLocalTarVolume)
+		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, baseImage)
 		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
 
 		defer func() {
-			unusedVols, _, err := gc.UnusedVolumes(logger)
+			unusedVols, err := gc.UnusedVolumes(logger)
 			if err != nil {
 				logger.Error("getting-unused-layers-failed", err)
 				return
@@ -207,15 +207,15 @@ var CreateCommand = cli.Command{
 		)
 
 		createSpec := groot.CreateSpec{
-			ID:                        id,
-			Mount:                     !cfg.Create.WithoutMount,
-			BaseImageURL:              baseImageURL,
-			DiskLimit:                 cfg.Create.DiskLimitSizeBytes,
-			ExcludeBaseImageFromQuota: cfg.Create.ExcludeImageFromQuota,
-			UIDMappings:               idMappings.UIDMappings,
-			GIDMappings:               idMappings.GIDMappings,
-			CleanOnCreate:             cfg.Create.WithClean,
-			CleanOnCreateCacheBytes:   cfg.Clean.CacheBytes,
+			ID:                          id,
+			Mount:                       !cfg.Create.WithoutMount,
+			BaseImageURL:                baseImageURL,
+			DiskLimit:                   cfg.Create.DiskLimitSizeBytes,
+			ExcludeBaseImageFromQuota:   cfg.Create.ExcludeImageFromQuota,
+			UIDMappings:                 idMappings.UIDMappings,
+			GIDMappings:                 idMappings.GIDMappings,
+			CleanOnCreate:               cfg.Create.WithClean,
+			CleanOnCreateThresholdBytes: cfg.Clean.ThresholdBytes,
 		}
 		image, err := creator.Create(logger, createSpec)
 		if err != nil {
