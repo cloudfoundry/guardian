@@ -3,15 +3,12 @@ package peas
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
-	"code.cloudfoundry.org/guardian/logging"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
@@ -171,29 +168,3 @@ func generateProcessID(existingID string) (string, error) {
 	}
 	return id.String(), nil
 }
-
-type pearocess struct {
-	id              string
-	doneCh          <-chan error
-	volumeDestroyer func()
-}
-
-func (p pearocess) ID() string { return p.id }
-
-func (p pearocess) Wait() (int, error) {
-	runcRunErr := <-p.doneCh
-	defer p.volumeDestroyer()
-	if runcRunErr == nil {
-		return 0, nil
-	}
-	if wrappedErr, ok := runcRunErr.(logging.WrappedError); ok {
-		if exitErr, ok := wrappedErr.Underlying.(*exec.ExitError); ok {
-			return exitErr.Sys().(syscall.WaitStatus).ExitStatus(), nil
-		}
-	}
-
-	return -1, runcRunErr
-}
-
-func (p pearocess) SetTTY(garden.TTYSpec) error { return nil }
-func (p pearocess) Signal(garden.Signal) error  { return nil }
