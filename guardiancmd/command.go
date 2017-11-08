@@ -873,7 +873,9 @@ func defaultMaskedPaths() []string {
 		"/proc/kcore",
 		"/proc/latency_stats",
 		"/proc/timer_stats",
+		"/proc/timer_list",
 		"/proc/sched_debug",
+		"/proc/scsi",
 	}
 }
 
