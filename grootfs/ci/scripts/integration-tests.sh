@@ -19,4 +19,4 @@ umask 077
 
 args=$@
 [ "$args" == "" ] && args="-r integration"
-ginkgo -p -race $args
+ginkgo -p -nodes 5 -race $args
