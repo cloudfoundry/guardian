@@ -10,20 +10,34 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/rundmc"
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
-	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
+type WindowsFactory struct {
+	config        *ServerCommand
+	commandRunner commandrunner.CommandRunner
+}
+
+func (cmd *ServerCommand) NewGardenFactory() GardenFactory {
+	return &WindowsFactory{config: cmd, commandRunner: windows_command_runner.New(false)}
+}
+
 type NoopStarter struct{}
 
 func (s *NoopStarter) Start() error {
 	return nil
+}
+
+func (f *WindowsFactory) WireCgroupsStarter(_ lager.Logger) gardener.Starter {
+	return &NoopStarter{}
+}
+
+func (cmd *SetupCommand) WireCgroupsStarter(_ lager.Logger) gardener.Starter {
+	return &NoopStarter{}
 }
 
 type NoopResolvConfigurer struct{}
@@ -32,36 +46,28 @@ func (*NoopResolvConfigurer) Configure(log lager.Logger, cfg kawasaki.NetworkCon
 	return nil
 }
 
-func commandRunner() commandrunner.CommandRunner {
-	return windows_command_runner.New(false)
+func (f *WindowsFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
+	return &NoopResolvConfigurer{}
 }
 
-func wireDepot(depotPath string, bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
-	return depot.New(depotPath, bundleGenerator, bundleSaver)
-}
-
-func (cmd *ServerCommand) wireVolumizer(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string, uidMappings, gidMappings idmapper.MappingList) gardener.Volumizer {
-	if cmd.Image.Plugin.Path() != "" || cmd.Image.PrivilegedPlugin.Path() != "" {
-		return cmd.wireImagePlugin()
+func (f *WindowsFactory) WireVolumizer(logger lager.Logger, uidMappings, gidMappings idmapper.MappingList) gardener.Volumizer {
+	if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
+		return f.config.wireImagePlugin(f.commandRunner)
 	}
 
 	return gardener.NoopVolumizer{}
 }
 
-func (cmd *ServerCommand) wireExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, _ *signals.SignallerFactory, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *execrunner.DirectExecRunner {
+func (f *WindowsFactory) WireExecRunner() runrunc.ExecRunner {
 	return &execrunner.DirectExecRunner{
-		RuntimePath:   runcPath,
-		CommandRunner: windows_command_runner.New(false),
-		ProcessIDGen:  processIDGen,
+		RuntimePath:   f.config.Runtime.Plugin,
+		CommandRunner: f.commandRunner,
+		ProcessIDGen:  wireUIDGenerator(),
 	}
 }
 
-func wireCgroupsStarter(_ lager.Logger, _ string, _ cgroups.Chowner) gardener.Starter {
-	return &NoopStarter{}
-}
-
-func wireMkdirer(_ commandrunner.CommandRunner) runrunc.Mkdirer {
-	return mkdirer{}
+func (f *WindowsFactory) CommandRunner() commandrunner.CommandRunner {
+	return f.commandRunner
 }
 
 type mkdirer struct{}
@@ -76,12 +82,12 @@ func (m mkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, 
 	return nil
 }
 
-func wireEnvFunc() runrunc.EnvFunc {
-	return runrunc.EnvFunc(runrunc.WindowsEnvFor)
+func (f *WindowsFactory) WireMkdirer() runrunc.Mkdirer {
+	return mkdirer{}
 }
 
-func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {
-	return &NoopResolvConfigurer{}
+func wireEnvFunc() runrunc.EnvFunc {
+	return runrunc.EnvFunc(runrunc.WindowsEnvFor)
 }
 
 func defaultBindMounts(binInitPath string) []specs.Mount {

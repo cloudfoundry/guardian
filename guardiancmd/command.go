@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 
@@ -19,7 +20,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/guardian/kawasaki"
-	"code.cloudfoundry.org/guardian/kawasaki/factory"
+	kawasakifactory "code.cloudfoundry.org/guardian/kawasaki/factory"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	"code.cloudfoundry.org/guardian/kawasaki/mtu"
 	"code.cloudfoundry.org/guardian/kawasaki/ports"
@@ -31,7 +32,7 @@ import (
 	"code.cloudfoundry.org/guardian/properties"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/pidreader"
@@ -113,6 +114,15 @@ var privilegedMaxCaps = []string{
 	"CAP_SYS_TTY_CONFIG",
 	"CAP_SYSLOG",
 	"CAP_WAKE_ALARM",
+}
+
+type GardenFactory interface {
+	WireResolvConfigurer() kawasaki.DnsResolvConfigurer
+	WireMkdirer() runrunc.Mkdirer
+	CommandRunner() commandrunner.CommandRunner
+	WireVolumizer(logger lager.Logger, uidMappings, gidMappings idmapper.MappingList) gardener.Volumizer
+	WireCgroupsStarter(logger lager.Logger) gardener.Starter
+	WireExecRunner() runrunc.ExecRunner
 }
 
 // These are the maximum capabilities a non-root user gets whether privileged or unprivileged
@@ -325,36 +335,7 @@ func restoreUnversionedAssets(assetsDir string) (string, error) {
 	return linuxAssetsDir, nil
 }
 
-func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
-	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
-
-	if err := exec.Command("modprobe", "aufs").Run(); err != nil {
-		logger.Error("unable-to-load-aufs", err)
-	}
-
-	propManager, err := cmd.loadProperties(logger, cmd.Containers.PropertiesPath)
-	if err != nil {
-		return err
-	}
-
-	portPoolState, err := ports.LoadState(cmd.Network.PortPoolPropertiesPath)
-	if err != nil {
-		if _, ok := err.(ports.StateFileNotFoundError); ok {
-			logger.Info("no-port-pool-state-to-recover-starting-clean")
-		} else {
-			logger.Error("failed-to-parse-port-pool-properties", err)
-		}
-	}
-
-	portPool, err := ports.NewPool(
-		cmd.Network.PortPoolStart,
-		cmd.Network.PortPoolSize,
-		portPoolState,
-	)
-	if err != nil {
-		return fmt.Errorf("invalid pool range: %s", err)
-	}
-
+func (cmd *ServerCommand) idMappings() (idmapper.MappingList, idmapper.MappingList) {
 	containerRootUID := mustGetMaxValidUID()
 	containerRootGID := mustGetMaxValidUID()
 	if !runningAsRoot() {
@@ -388,8 +369,31 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 			Size:        cmd.Containers.GIDMapLength,
 		},
 	}
+	return uidMappings, gidMappings
+}
 
-	networker, iptablesStarter, err := cmd.wireNetworker(logger, cmd.Containers.Dir, propManager, portPool)
+func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
+	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
+
+	if err := exec.Command("modprobe", "aufs").Run(); err != nil {
+		logger.Error("unable-to-load-aufs", err)
+	}
+
+	factory := cmd.NewGardenFactory()
+
+	propManager, err := cmd.loadProperties(logger, cmd.Containers.PropertiesPath)
+	if err != nil {
+		return err
+	}
+
+	portPool, err := cmd.wirePortPool(logger)
+	if err != nil {
+		return err
+	}
+
+	uidMappings, gidMappings := cmd.idMappings()
+
+	networker, iptablesStarter, err := cmd.wireNetworker(logger, factory, propManager, portPool)
 	if err != nil {
 		logger.Error("failed-to-wire-networker", err)
 		return err
@@ -400,12 +404,11 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		restorer = &gardener.NoopRestorer{}
 	}
 
-	volumizer := cmd.wireVolumizer(logger, cmd.Graph.Dir, cmd.Docker.InsecureRegistries, cmd.Graph.PersistentImages, uidMappings, gidMappings)
+	volumizer := factory.WireVolumizer(logger, uidMappings, gidMappings)
 
 	starters := []gardener.Starter{}
 	if !cmd.Server.SkipSetup {
-		chowner := &cgroups.OSChowner{}
-		starters = append(starters, wireCgroupsStarter(logger, cmd.Server.Tag, chowner))
+		starters = append(starters, factory.WireCgroupsStarter(logger))
 	}
 	if cmd.Network.Plugin.Path() == "" {
 		starters = append(starters, iptablesStarter)
@@ -414,16 +417,12 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	var bulkStarter gardener.BulkStarter = gardener.NewBulkStarter(starters)
 
 	backend := &gardener.Gardener{
-		UidGenerator:    cmd.wireUIDGenerator(),
+		UidGenerator:    wireUIDGenerator(),
 		BulkStarter:     bulkStarter,
 		SysInfoProvider: sysinfo.NewResourcesProvider(cmd.Containers.Dir),
 		Networker:       networker,
 		Volumizer:       volumizer,
-		Containerizer: cmd.wireContainerizer(logger,
-			cmd.Containers.Dir, cmd.Bin.Dadoo.Path(), cmd.Runtime.Plugin, cmd.Runtime.PluginExtraArgs,
-			cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(),
-			cmd.Containers.ApparmorProfile, propManager, uidMappings, gidMappings,
-			volumizer),
+		Containerizer:   cmd.wireContainerizer(logger, factory, propManager, uidMappings, gidMappings, volumizer),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
@@ -444,7 +443,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	cmd.initializeDropsonde(logger)
 
-	metricsProvider := cmd.wireMetricsProvider(logger, cmd.Containers.Dir, cmd.Graph.Dir)
+	metricsProvider := cmd.wireMetricsProvider(logger)
 
 	debugServerMetrics := map[string]func() int{
 		"numCPUS":       metricsProvider.NumCPU,
@@ -496,7 +495,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 
 	cmd.saveProperties(logger, cmd.Containers.PropertiesPath, propManager)
 
-	portPoolState = portPool.RefreshState()
+	portPoolState := portPool.RefreshState()
 	ports.SaveState(cmd.Network.PortPoolPropertiesPath, portPoolState)
 
 	return nil
@@ -510,6 +509,10 @@ func (cmd *ServerCommand) calculateDefaultMappingLengths(containerRootUID, conta
 	if cmd.Containers.GIDMapLength == 0 {
 		cmd.Containers.GIDMapLength = uint32(containerRootGID) - cmd.Containers.GIDMapStart
 	}
+}
+
+func wireUIDGenerator() gardener.UidGeneratorFunc {
+	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
 }
 
 func startServer(gardenServer *server.GardenServer, logger lager.Logger) error {
@@ -567,8 +570,29 @@ func (cmd *ServerCommand) saveProperties(logger lager.Logger, propertiesPath str
 	}
 }
 
-func (cmd *ServerCommand) wireUIDGenerator() gardener.UidGeneratorFunc {
-	return gardener.UidGeneratorFunc(func() string { return mustStringify(uuid.NewV4()) })
+func (cmd *ServerCommand) wirePortPool(logger lager.Logger) (*ports.PortPool, error) {
+	portPoolState, err := ports.LoadState(cmd.Network.PortPoolPropertiesPath)
+	if err != nil {
+		if _, ok := err.(ports.StateFileNotFoundError); ok {
+			logger.Info("no-port-pool-state-to-recover-starting-clean")
+		} else {
+			logger.Error("failed-to-parse-port-pool-properties", err)
+		}
+	}
+
+	portPool, err := ports.NewPool(
+		cmd.Network.PortPoolStart,
+		cmd.Network.PortPoolSize,
+		portPoolState,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("invalid pool range: %s", err)
+	}
+	return portPool, nil
+}
+
+func (cmd *ServerCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
+	return depot.New(cmd.Containers.Dir, bundleGenerator, bundleSaver)
 }
 
 func extractIPs(ipflags []IPFlag) []net.IP {
@@ -579,7 +603,7 @@ func extractIPs(ipflags []IPFlag) []net.IP {
 	return ips
 }
 
-func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
+func (cmd *ServerCommand) wireNetworker(log lager.Logger, factory GardenFactory, propManager kawasaki.ConfigStore, portPool *ports.PortPool) (gardener.Networker, gardener.Starter, error) {
 	externalIP, err := defaultExternalIP(cmd.Network.ExternalIP)
 	if err != nil {
 		return nil, nil, err
@@ -589,9 +613,9 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 	additionalDNSServers := extractIPs(cmd.Network.AdditionalDNSServers)
 
 	if cmd.Network.Plugin.Path() != "" {
-		resolvConfigurer := wireResolvConfigurer(depotPath)
+		resolvConfigurer := factory.WireResolvConfigurer()
 		externalNetworker := netplugin.New(
-			commandRunner(),
+			factory.CommandRunner(),
 			propManager,
 			externalIP,
 			dnsServers,
@@ -613,10 +637,9 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 	idGenerator := kawasaki.NewSequentialIDGenerator(time.Now().UnixNano())
 	locksmith := &locksmithpkg.FileSystem{}
 
-	iptRunner := &logging.Runner{CommandRunner: commandRunner(), Logger: log.Session("iptables-runner")}
-	nonLoggingIptRunner := commandRunner()
+	iptRunner := &logging.Runner{CommandRunner: factory.CommandRunner(), Logger: log.Session("iptables-runner")}
 	ipTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), iptRunner, locksmith, chainPrefix)
-	nonLoggingIPTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), nonLoggingIptRunner, locksmith, chainPrefix)
+	nonLoggingIPTables := iptables.New(cmd.Bin.IPTables.Path(), cmd.Bin.IPTablesRestore.Path(), factory.CommandRunner(), locksmith, chainPrefix)
 	ipTablesStarter := iptables.NewStarter(nonLoggingIPTables, cmd.Network.AllowHostAccess, interfacePrefix, denyNetworksList, cmd.Containers.DestroyContainersOnStartup, log)
 	ruleTranslator := iptables.NewRuleTranslator()
 
@@ -633,7 +656,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 		subnets.NewPool(cmd.Network.Pool.CIDR()),
 		kawasaki.NewConfigCreator(idGenerator, interfacePrefix, chainPrefix, externalIP, dnsServers, additionalDNSServers, cmd.Network.AdditionalHostEntries, containerMtu),
 		propManager,
-		factory.NewDefaultConfigurer(ipTables, depotPath),
+		kawasakifactory.NewDefaultConfigurer(ipTables, cmd.Containers.Dir),
 		portPool,
 		iptables.NewPortForwarder(ipTables),
 		iptables.NewFirewallOpener(ruleTranslator, ipTables),
@@ -642,7 +665,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, depotPath string, prop
 	return networker, ipTablesStarter, nil
 }
 
-func (cmd *ServerCommand) wireImagePlugin() gardener.Volumizer {
+func (cmd *ServerCommand) wireImagePlugin(commandRunner commandrunner.CommandRunner) gardener.Volumizer {
 	var unprivilegedCommandCreator imageplugin.CommandCreator = &imageplugin.NotImplementedCommandCreator{
 		Err: errors.New("no image_plugin provided"),
 	}
@@ -669,15 +692,14 @@ func (cmd *ServerCommand) wireImagePlugin() gardener.Volumizer {
 		UnprivilegedCommandCreator: unprivilegedCommandCreator,
 		PrivilegedCommandCreator:   privilegedCommandCreator,
 		ImageSpecCreator:           imageplugin.NewOCIImageSpecCreator(cmd.Containers.Dir),
-		CommandRunner:              commandRunner(),
+		CommandRunner:              commandRunner,
 		DefaultRootfs:              cmd.Containers.DefaultRootFS,
 	}
 
 	return gardener.NewVolumeProvider(imagePlugin, imagePlugin)
 }
 
-func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
-	depotPath, dadooPath, runtimePath string, runtimeExtraArgs []string, nstarPath, tarPath, appArmorProfile string,
+func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFactory,
 	properties gardener.PropertyManager, uidMappings, gidMappings idmapper.MappingList,
 	volumizer peas.Volumizer) *rundmc.Containerizer {
 
@@ -712,8 +734,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		WithMaskedPaths(defaultMaskedPaths())
 
 	unprivilegedBundle.Spec.Linux.Seccomp = seccomp
-	if appArmorProfile != "" {
-		unprivilegedBundle = unprivilegedBundle.WithApparmorProfile(appArmorProfile)
+	if cmd.Containers.ApparmorProfile != "" {
+		unprivilegedBundle = unprivilegedBundle.WithApparmorProfile(cmd.Containers.ApparmorProfile)
 	}
 	privilegedBundle := baseBundle.
 		WithMounts(privilegedMounts...).
@@ -729,7 +751,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		"unprivileged": unprivilegedBundle,
 	})
 
-	cmdRunner := commandRunner()
+	cmdRunner := factory.CommandRunner()
 	chrootMkdir := bundlerules.ChrootMkdir{
 		Command:       preparerootfs.Command,
 		CommandRunner: cmdRunner,
@@ -773,38 +795,26 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 	peaTemplate := &rundmc.BundleTemplate{Rules: peaBundleRules}
 
 	bundleSaver := &goci.BundleSaver{}
-	depot := wireDepot(depotPath, template, bundleSaver)
+	depot := cmd.wireDepot(template, bundleSaver)
 
 	bndlLoader := &goci.BndlLoader{}
 	processBuilder := runrunc.NewProcessBuilder(wireEnvFunc(), nonRootMaxCaps)
 
-	pidFileReader := &pidreader.PidFileReader{
-		Clock:         clock.NewClock(),
-		Timeout:       10 * time.Second,
-		SleepInterval: time.Millisecond * 100,
-	}
-
+	pidFileReader := wirePidfileReader()
 	signallerFactory := &signals.SignallerFactory{PidGetter: pidFileReader}
 
 	runcrunner := runrunc.New(
 		cmdRunner,
 		runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
-		goci.RuncBinary{Path: runtimePath},
-		dadooPath,
-		runtimePath,
-		runtimeExtraArgs,
+		goci.RuncBinary{Path: cmd.Runtime.Plugin},
+		cmd.Bin.Dadoo.Path(),
+		cmd.Runtime.Plugin,
+		cmd.Runtime.PluginExtraArgs,
 		bndlLoader,
 		processBuilder,
-		wireMkdirer(cmdRunner),
+		factory.WireMkdirer(),
 		runrunc.LookupFunc(runrunc.LookupUser),
-		cmd.wireExecRunner(
-			dadooPath,
-			runtimePath,
-			cmd.wireUIDGenerator(),
-			signallerFactory,
-			cmdRunner,
-			cmd.Containers.CleanupProcessDirsOnWait,
-		),
+		factory.WireExecRunner(),
 	)
 
 	eventStore := rundmc.NewEventStore(properties)
@@ -824,22 +834,30 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger,
 		BundleGenerator:  peaTemplate,
 		ProcessBuilder:   processBuilder,
 		BundleSaver:      bundleSaver,
-		ContainerCreator: runrunc.NewCreator(runtimePath, "run", runtimeExtraArgs, cmdRunner),
+		ContainerCreator: runrunc.NewCreator(cmd.Runtime.Plugin, "run", cmd.Runtime.PluginExtraArgs, cmdRunner),
 		SignallerFactory: signallerFactory,
 	}
 
-	nstar := rundmc.NewNstarRunner(nstarPath, tarPath, cmdRunner)
+	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
 	return rundmc.New(depot, runcrunner, bndlLoader, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{}, peaCreator)
 }
 
-func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger, depotPath, graphRoot string) *metrics.MetricsProvider {
+func wirePidfileReader() *pidreader.PidFileReader {
+	return &pidreader.PidFileReader{
+		Clock:         clock.NewClock(),
+		Timeout:       10 * time.Second,
+		SleepInterval: time.Millisecond * 100,
+	}
+}
+
+func (cmd *ServerCommand) wireMetricsProvider(log lager.Logger) *metrics.MetricsProvider {
 	var backingStoresPath string
-	if graphRoot != "" {
-		backingStoresPath = filepath.Join(graphRoot, "backing_stores")
+	if cmd.Graph.Dir != "" {
+		backingStoresPath = filepath.Join(cmd.Graph.Dir, "backing_stores")
 	}
 
-	return metrics.NewMetricsProvider(log, backingStoresPath, depotPath)
+	return metrics.NewMetricsProvider(log, backingStoresPath, cmd.Containers.Dir)
 }
 
 func (cmd *ServerCommand) wireMetronNotifier(log lager.Logger, metricsProvider metrics.Metrics) *metrics.PeriodicMetronNotifier {

@@ -1,7 +1,6 @@
 package guardiancmd
 
 import (
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -16,8 +15,6 @@ type SetupCommand struct {
 
 func (cmd *SetupCommand) Execute(args []string) error {
 	cmd.Logger, _ = cmd.LogLevel.Logger("guardian-setup")
-
-	chowner := &cgroups.OSChowner{UID: cmd.RootlessUID, GID: cmd.RootlessGID}
-	cgroupStarter := wireCgroupsStarter(cmd.Logger, cmd.Tag, chowner)
+	cgroupStarter := cmd.WireCgroupsStarter(cmd.Logger)
 	return cgroupStarter.Start()
 }

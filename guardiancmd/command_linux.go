@@ -23,7 +23,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
-	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -36,21 +35,32 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-func commandRunner() commandrunner.CommandRunner {
-	return linux_command_runner.New()
+type LinuxFactory struct {
+	config           *ServerCommand
+	commandRunner    commandrunner.CommandRunner
+	signallerFactory *signals.SignallerFactory
 }
 
-func wireDepot(depotPath string, bundler depot.BundleGenerator, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
-	return depot.New(depotPath, bundler, bundleSaver)
+func (cmd *ServerCommand) NewGardenFactory() GardenFactory {
+	return &LinuxFactory{
+		config:           cmd,
+		commandRunner:    linux_command_runner.New(),
+		signallerFactory: &signals.SignallerFactory{PidGetter: wirePidfileReader()},
+	}
 }
 
-func (cmd *ServerCommand) wireVolumizer(logger lager.Logger, graphRoot string, insecureRegistries, persistentImages []string, uidMappings, gidMappings idmapper.MappingList) gardener.Volumizer {
+func (f *LinuxFactory) CommandRunner() commandrunner.CommandRunner {
+	return f.commandRunner
+}
+
+func (f *LinuxFactory) WireVolumizer(logger lager.Logger, uidMappings, gidMappings idmapper.MappingList) gardener.Volumizer {
+	graphRoot := f.config.Graph.Dir
 	if graphRoot == "" {
 		return gardener.NoopVolumizer{}
 	}
 
-	if cmd.Image.Plugin.Path() != "" || cmd.Image.PrivilegedPlugin.Path() != "" {
-		return cmd.wireImagePlugin()
+	if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
+		return f.config.wireImagePlugin(f.commandRunner)
 	}
 
 	logger = logger.Session(gardener.VolumizerSession, lager.Data{"graphRoot": graphRoot})
@@ -108,13 +118,13 @@ func (cmd *ServerCommand) wireVolumizer(logger lager.Logger, graphRoot string, i
 		RepositoryFetcher: &repository_fetcher.CompositeFetcher{
 			LocalFetcher: &repository_fetcher.Local{
 				Cake:              cake,
-				DefaultRootFSPath: cmd.Containers.DefaultRootFS,
+				DefaultRootFSPath: f.config.Containers.DefaultRootFS,
 				IDProvider:        repository_fetcher.LayerIDProvider{},
 			},
 			RemoteFetcher: repository_fetcher.NewRemote(
-				cmd.Docker.Registry,
+				f.config.Docker.Registry,
 				cake,
-				distclient.NewDialer(insecureRegistries),
+				distclient.NewDialer(f.config.Docker.InsecureRegistries),
 				repository_fetcher.VerifyFunc(repository_fetcher.Verify),
 			),
 		},
@@ -129,7 +139,7 @@ func (cmd *ServerCommand) wireVolumizer(logger lager.Logger, graphRoot string, i
 
 	retainer := cleaner.NewRetainer()
 	ovenCleaner := cleaner.NewOvenCleaner(retainer,
-		cleaner.NewThreshold(int64(cmd.Graph.CleanupThresholdInMegabytes)*1024*1024),
+		cleaner.NewThreshold(int64(f.config.Graph.CleanupThresholdInMegabytes)*1024*1024),
 	)
 
 	imageRetainer := &repository_fetcher.ImageRetainer{
@@ -145,7 +155,7 @@ func (cmd *ServerCommand) wireVolumizer(logger lager.Logger, graphRoot string, i
 	// worst case is if an image is immediately created and deleted faster than
 	// we can retain it we'll garbage collect it when we shouldn't. This
 	// is an OK trade-off for not having garden startup block on dockerhub.
-	go imageRetainer.Retain(persistentImages)
+	go imageRetainer.Retain(f.config.Graph.PersistentImages)
 
 	layerCreator := rootfs_provider.NewLayerCreator(cake, rootfs_provider.SimpleVolumeCreator{}, rootFSNamespacer)
 
@@ -168,9 +178,9 @@ func wireEnvFunc() runrunc.EnvFunc {
 	return runrunc.EnvFunc(runrunc.UnixEnvFor)
 }
 
-func wireMkdirer(cmdRunner commandrunner.CommandRunner) runrunc.Mkdirer {
+func (f *LinuxFactory) WireMkdirer() runrunc.Mkdirer {
 	if runningAsRoot() {
-		return bundlerules.ChrootMkdir{Command: preparerootfs.Command, CommandRunner: cmdRunner}
+		return bundlerules.ChrootMkdir{Command: preparerootfs.Command, CommandRunner: f.commandRunner}
 	}
 
 	return NoopMkdirer{}
@@ -182,24 +192,26 @@ func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode
 	return nil
 }
 
-func (cmd *ServerCommand) wireExecRunner(
-	dadooPath, runcPath string,
-	processIDGen runrunc.UidGenerator,
-	signallerFactory *signals.SignallerFactory,
-	commandRunner commandrunner.CommandRunner,
-	shouldCleanup bool,
-) *dadoo.ExecRunner {
+func (f *LinuxFactory) WireExecRunner() runrunc.ExecRunner {
 	return dadoo.NewExecRunner(
-		dadooPath,
-		runcPath,
-		processIDGen,
-		signallerFactory,
-		commandRunner,
-		shouldCleanup,
+		f.config.Bin.Dadoo.Path(),
+		f.config.Runtime.Plugin,
+		wireUIDGenerator(),
+		f.signallerFactory,
+		f.commandRunner,
+		f.config.Containers.CleanupProcessDirsOnWait,
 	)
 }
 
-func wireCgroupsStarter(logger lager.Logger, tag string, chowner cgroups.Chowner) gardener.Starter {
+func (f *LinuxFactory) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
+	return createCgroupsStarter(logger, f.config.Server.Tag, &cgroups.OSChowner{})
+}
+
+func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
+	return createCgroupsStarter(logger, cmd.Tag, &cgroups.OSChowner{UID: cmd.RootlessUID, GID: cmd.RootlessGID})
+}
+
+func createCgroupsStarter(logger lager.Logger, tag string, chowner cgroups.Chowner) gardener.Starter {
 	cgroupsMountpoint := "/sys/fs/cgroup"
 	gardenCgroup := "garden"
 	if tag != "" {
@@ -207,15 +219,16 @@ func wireCgroupsStarter(logger lager.Logger, tag string, chowner cgroups.Chowner
 		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, tag)
 	}
 
-	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsMountpoint, gardenCgroup, allowedDevices, commandRunner(), chowner)
+	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"),
+		cgroupsMountpoint, gardenCgroup, allowedDevices, linux_command_runner.New(), chowner)
 }
 
-func wireResolvConfigurer(depotPath string) kawasaki.DnsResolvConfigurer {
+func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
 	return &kawasaki.ResolvConfigurer{
 		HostsFileCompiler: &dns.HostsFileCompiler{},
 		ResolvCompiler:    &dns.ResolvCompiler{},
 		ResolvFilePath:    "/etc/resolv.conf",
-		DepotDir:          depotPath,
+		DepotDir:          f.config.Containers.Dir,
 	}
 }
 
