@@ -525,7 +525,7 @@ func startServer(gardenServer *server.GardenServer, logger lager.Logger) error {
 	if socketFDStr == "" {
 		go func() {
 			if err := gardenServer.ListenAndServe(); err != nil {
-				logger.Error("failed-to-start-server", err)
+				logger.Fatal("failed-to-start-server", err)
 			}
 		}()
 		return nil
@@ -549,7 +549,7 @@ func startServer(gardenServer *server.GardenServer, logger lager.Logger) error {
 
 	go func() {
 		if err := gardenServer.Serve(listener); err != nil {
-			logger.Error("failed-to-start-server", err)
+			logger.Fatal("failed-to-start-server", err)
 		}
 	}()
 
