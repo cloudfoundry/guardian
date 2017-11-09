@@ -163,10 +163,15 @@ var _ = Describe("Runtime Plugin", func() {
 				})
 
 				It("executes the plugin, passing the correct args for exec", func() {
+					logfileMatcher := MatchRegexp(".*")
+					if runtime.GOOS == "windows" {
+						logfileMatcher = HaveSuffix("exec.log")
+					}
+
 					pluginArgs := []interface{}{
 						binaries.RuntimePlugin,
 						"--debug",
-						"--log", HaveSuffix("exec.log"),
+						"--log", logfileMatcher,
 						"--log-format", "json",
 						"exec",
 						"-p", MatchRegexp(".*"),
