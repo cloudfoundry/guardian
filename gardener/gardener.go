@@ -216,6 +216,10 @@ type Gardener struct {
 // Create creates a container by combining the results of networker.Network,
 // volumizer.Create and containzer.Create.
 func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err error) {
+	if spec.Handle == "" {
+		spec.Handle = g.UidGenerator.Generate()
+	}
+
 	log := g.Logger.Session("create", lager.Data{"handle": spec.Handle})
 	log.Info("start")
 
@@ -238,10 +242,6 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 
 	if err := g.checkMaxContainers(knownHandles); err != nil {
 		return nil, err
-	}
-
-	if spec.Handle == "" {
-		spec.Handle = g.UidGenerator.Generate()
 	}
 
 	defer func() {
