@@ -166,7 +166,7 @@ var _ = Describe("Runtime Plugin", func() {
 					pluginArgs := []interface{}{
 						binaries.RuntimePlugin,
 						"--debug",
-						"--log", MatchRegexp(".*"),
+						"--log", HaveSuffix("exec.log"),
 						"--log-format", "json",
 						"exec",
 						"-p", MatchRegexp(".*"),

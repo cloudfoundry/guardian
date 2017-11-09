@@ -18,6 +18,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
+	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,6 +30,7 @@ var _ = Describe("DirectExecRunner", func() {
 		cmdRunner    *fake_command_runner.FakeCommandRunner
 		processIDGen *runruncfakes.FakeUidGenerator
 		execRunner   *execrunner.DirectExecRunner
+		logger       *lagertest.TestLogger
 		runtimePath  = "container-runtime-path"
 
 		spec         *runrunc.PreparedSpec
@@ -37,6 +39,7 @@ var _ = Describe("DirectExecRunner", func() {
 		runErr       error
 		processID    string
 		processesDir string
+		logs         string
 	)
 
 	BeforeEach(func() {
@@ -46,6 +49,7 @@ var _ = Describe("DirectExecRunner", func() {
 		processIDGen.GenerateStub = func() string {
 			return strconv.Itoa(rand.Int())
 		}
+		logger = lagertest.NewTestLogger("test-execrunner-windows")
 
 		execRunner = &execrunner.DirectExecRunner{
 			RuntimePath:   runtimePath,
@@ -65,7 +69,7 @@ var _ = Describe("DirectExecRunner", func() {
 		JustBeforeEach(func() {
 			spec = &runrunc.PreparedSpec{Process: specs.Process{Cwd: "idiosyncratic-string"}}
 			process, runErr = execRunner.Run(
-				lagertest.NewTestLogger("execrunner-windows"),
+				logger,
 				processID, spec,
 				"a-bundle", processesDir, "handle",
 				processIO,
@@ -82,7 +86,7 @@ var _ = Describe("DirectExecRunner", func() {
 			Expect(cmdRunner.StartedCommands()[0].Args).To(ConsistOf(
 				runtimePath,
 				"--debug",
-				"--log", MatchRegexp(".*"),
+				"--log", filepath.Join(processesDir, process.ID(), "exec.log"),
 				"--log-format", "json",
 				"exec",
 				"-p", filepath.Join(processesDir, process.ID(), "spec.json"),
@@ -97,6 +101,33 @@ var _ = Describe("DirectExecRunner", func() {
 			actualSpec := &runrunc.PreparedSpec{}
 			Expect(json.Unmarshal(actualContents, actualSpec)).To(Succeed())
 			Expect(actualSpec).To(Equal(spec))
+		})
+
+		Describe("logging", func() {
+			BeforeEach(func() {
+				processID = "some-process-id"
+				logs = `{"time":"2016-03-02T13:56:38Z", "level":"warning", "msg":"some-message"}
+{"time":"2016-03-02T13:56:38Z", "level":"error", "msg":"some-error"}`
+				cmdRunner.WhenRunning(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
+					ioutil.WriteFile(filepath.Join(processesDir, processID, "exec.log"), []byte(logs), 0777)
+					return nil
+				})
+			})
+
+			It("forwards the logs to lager", func() {
+				var execLogs []lager.LogFormat
+				Eventually(func() []lager.LogFormat {
+					execLogs = []lager.LogFormat{}
+					for _, log := range logger.Logs() {
+						if log.Message == "test-execrunner-windows.execrunner.exec" {
+							execLogs = append(execLogs, log)
+						}
+					}
+					return execLogs
+				}).Should(HaveLen(2))
+
+				Expect(execLogs[0].Data).To(HaveKeyWithValue("message", "some-message"))
+			})
 		})
 
 		Context("when no process ID is passed", func() {
@@ -122,7 +153,7 @@ var _ = Describe("DirectExecRunner", func() {
 		Context("when a processID is reused concurrently", func() {
 			BeforeEach(func() {
 				processID = "reused"
-				_, err := execRunner.Run(lagertest.NewTestLogger("execrunner-windows"), processID, &runrunc.PreparedSpec{}, "a-bundle", processesDir, "handle", garden.ProcessIO{})
+				_, err := execRunner.Run(logger, processID, &runrunc.PreparedSpec{}, "a-bundle", processesDir, "handle", garden.ProcessIO{})
 				Expect(err).NotTo(HaveOccurred())
 			})
 
