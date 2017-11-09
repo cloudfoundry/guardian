@@ -86,6 +86,7 @@ type GdnRunnerConfig struct {
 	GIDMapStart                    *uint32  `flag:"gid-map-start"`
 	GIDMapLength                   *uint32  `flag:"gid-map-length"`
 	CleanupProcessDirsOnWait       *bool    `flag:"cleanup-process-dirs-on-wait"`
+	DisablePrivilegedContainers    *bool    `flag:"disable-privileged-containers"`
 	AppArmor                       string   `flag:"apparmor"`
 	Tag                            string   `flag:"tag"`
 	NetworkPool                    string   `flag:"network-pool"`

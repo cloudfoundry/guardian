@@ -578,6 +578,26 @@ var _ = Describe("Creating a Container", func() {
 			Expect(err).To(MatchError(("max containers reached")))
 		})
 	})
+
+	Describe("creating privileged containers", func() {
+		Context("when --disable-privileged-containers is not specified", func() {
+			It("can create privileged containers", func() {
+				_, err := client.Create(garden.ContainerSpec{Privileged: true})
+				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+
+		Context("when --disable-privileged-containers is set", func() {
+			BeforeEach(func() {
+				config.DisablePrivilegedContainers = boolptr(true)
+			})
+
+			It("cannot create privileged containers, even when gdn runs as root", func() {
+				_, err := client.Create(garden.ContainerSpec{Privileged: true})
+				Expect(err).To(MatchError("privileged container creation is disabled"))
+			})
+		})
+	})
 })
 
 func initProcessPID(handle string) int {

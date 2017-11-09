@@ -185,10 +185,11 @@ type ServerCommand struct {
 	} `group:"Server Configuration"`
 
 	Containers struct {
-		Dir                      string `long:"depot" default:"/var/run/gdn/depot" description:"Directory in which to store container data."`
-		PropertiesPath           string `long:"properties-path" description:"Path in which to store properties."`
-		ConsoleSocketsPath       string `long:"console-sockets-path" description:"Path in which to store temporary sockets"`
-		CleanupProcessDirsOnWait bool   `long:"cleanup-process-dirs-on-wait" description:"Clean up proccess dirs on first invocation of wait"`
+		Dir                        string `long:"depot" default:"/var/run/gdn/depot" description:"Directory in which to store container data."`
+		PropertiesPath             string `long:"properties-path" description:"Path in which to store properties."`
+		ConsoleSocketsPath         string `long:"console-sockets-path" description:"Path in which to store temporary sockets"`
+		CleanupProcessDirsOnWait   bool   `long:"cleanup-process-dirs-on-wait" description:"Clean up proccess dirs on first invocation of wait"`
+		DisablePrivilgedContainers bool   `long:"disable-privileged-containers" description:"Disable creation of privileged containers"`
 
 		UIDMapStart  uint32 `long:"uid-map-start"  default:"1" description:"The lowest numerical subordinate user ID the user is allowed to map"`
 		UIDMapLength uint32 `long:"uid-map-length" description:"The number of numerical subordinate user IDs the user is allowed to map"`
@@ -426,6 +427,10 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
+
+		// We want to be able to disable privileged containers independently of
+		// whether or not gdn is running as root.
+		AllowPrivilgedContainers: !cmd.Containers.DisablePrivilgedContainers,
 
 		Logger: logger,
 	}

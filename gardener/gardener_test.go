@@ -49,16 +49,17 @@ var _ = Describe("Gardener", func() {
 		containerizer.InfoReturns(gardener.ActualContainerSpec{Pid: 470, RootFSPath: "rootfs"}, nil)
 
 		gdnr = &gardener.Gardener{
-			SysInfoProvider: sysinfoProvider,
-			Containerizer:   containerizer,
-			UidGenerator:    uidGenerator,
-			BulkStarter:     fakeBulkStarter,
-			Networker:       networker,
-			Volumizer:       volumizer,
-			Logger:          logger,
-			PropertyManager: propertyManager,
-			Restorer:        restorer,
-			MaxContainers:   0,
+			SysInfoProvider:          sysinfoProvider,
+			Containerizer:            containerizer,
+			UidGenerator:             uidGenerator,
+			BulkStarter:              fakeBulkStarter,
+			Networker:                networker,
+			Volumizer:                volumizer,
+			Logger:                   logger,
+			PropertyManager:          propertyManager,
+			Restorer:                 restorer,
+			MaxContainers:            0,
+			AllowPrivilgedContainers: false,
 		}
 	})
 
@@ -156,6 +157,10 @@ var _ = Describe("Gardener", func() {
 		})
 
 		Context("when the container is privileged", func() {
+			BeforeEach(func() {
+				gdnr.AllowPrivilgedContainers = true
+			})
+
 			It("calls the containerizer with a privileged DesiredContainerSpec", func() {
 				_, err := gdnr.Create(garden.ContainerSpec{
 					Privileged: true,
@@ -186,13 +191,12 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("asks the containerizer to create a container", func() {
-			_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob", Privileged: true})
+			_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(containerizer.CreateCallCount()).To(Equal(1))
 			_, spec := containerizer.CreateArgsForCall(0)
 			Expect(spec.Handle).To(Equal("bob"))
-			Expect(spec.Privileged).To(BeTrue())
 		})
 
 		It("sets the handle as the container hostname", func() {
@@ -456,6 +460,18 @@ var _ = Describe("Gardener", func() {
 			d, err := gdnr.Lookup(c.Handle())
 			Expect(err).NotTo(HaveOccurred())
 			Expect(c).To(Equal(d))
+		})
+
+		Context("when creating privileged containers is not permitted, and a privileged container is requested", func() {
+			It("returns an error", func() {
+				_, err := gdnr.Create(garden.ContainerSpec{Privileged: true})
+				Expect(err).To(MatchError("privileged container creation is disabled"))
+			})
+
+			It("does not try to provision a volume", func() {
+				gdnr.Create(garden.ContainerSpec{Privileged: true})
+				Expect(volumizer.CreateCallCount()).To(Equal(0))
+			})
 		})
 	})
 

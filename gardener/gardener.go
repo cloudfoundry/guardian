@@ -209,6 +209,8 @@ type Gardener struct {
 	MaxContainers uint64
 
 	Restorer Restorer
+
+	AllowPrivilgedContainers bool
 }
 
 // Create creates a container by combining the results of networker.Network,
@@ -220,6 +222,10 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 	defer func(startedAt time.Time) {
 		_ = metrics.SendValue("ContainerCreationDuration", float64(time.Since(startedAt).Nanoseconds()), "nanos")
 	}(time.Now())
+
+	if !g.AllowPrivilgedContainers && spec.Privileged {
+		return nil, errors.New("privileged container creation is disabled")
+	}
 
 	knownHandles, err := g.Containerizer.Handles()
 	if err != nil {
