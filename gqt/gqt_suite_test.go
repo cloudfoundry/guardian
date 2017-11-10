@@ -112,6 +112,13 @@ func TestGqt(t *testing.T) {
 		config = defaultConfig()
 	})
 
+	AfterEach(func() {
+		// Windows worker is not containerised and therefore the test needs to take care to delete the temporary folder
+		if runtime.GOOS == "windows" {
+			Expect(os.RemoveAll(config.TmpDir)).To(Succeed())
+		}
+	})
+
 	SetDefaultEventuallyTimeout(5 * time.Second)
 	RunSpecs(t, "GQT Suite")
 }

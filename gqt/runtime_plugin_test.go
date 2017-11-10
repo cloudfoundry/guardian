@@ -101,7 +101,7 @@ var _ = Describe("Runtime Plugin", func() {
 				var networkPluginArgsFile string
 
 				BeforeEach(func() {
-					networkPluginArgsFile = filepath.Join(os.TempDir(), fmt.Sprintf("network-a-%d", GinkgoParallelNode()))
+					networkPluginArgsFile = filepath.Join(config.TmpDir, fmt.Sprintf("network-a-%d", GinkgoParallelNode()))
 					config.NetworkPluginExtraArgs = []string{networkPluginArgsFile, os.DevNull, "unused"}
 				})
 

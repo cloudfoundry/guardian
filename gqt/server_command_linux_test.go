@@ -11,7 +11,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 )
 
-var _ = FDescribe("gdn server", func() {
+var _ = Describe("gdn server", func() {
 	var (
 		server *runner.RunningGarden
 	)

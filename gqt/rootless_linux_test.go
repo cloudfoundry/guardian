@@ -29,10 +29,6 @@ var _ = Describe("rootless containers", func() {
 	)
 
 	BeforeEach(func() {
-		tmpDir := filepath.Join(
-			os.TempDir(),
-			fmt.Sprintf("test-garden-%s", config.Tag),
-		)
 		setupArgs := []string{"setup",
 			"--tag", config.Tag,
 			"--rootless-uid", idToStr(unprivilegedUID),
@@ -41,9 +37,9 @@ var _ = Describe("rootless containers", func() {
 		cmd := exec.Command(binaries.Gdn, setupArgs...)
 		cmd.Env = append(
 			[]string{
-				fmt.Sprintf("TMPDIR=%s", tmpDir),
-				fmt.Sprintf("TEMP=%s", tmpDir),
-				fmt.Sprintf("TMP=%s", tmpDir),
+				fmt.Sprintf("TMPDIR=%s", config.TmpDir),
+				fmt.Sprintf("TEMP=%s", config.TmpDir),
+				fmt.Sprintf("TMP=%s", config.TmpDir),
 			},
 			os.Environ()...,
 		)
@@ -54,10 +50,10 @@ var _ = Describe("rootless containers", func() {
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(setupProcess).Should(gexec.Exit(0))
 
-		runcRootDir, err := ioutil.TempDir(tmpDir, "runcRootDir")
+		runcRootDir, err := ioutil.TempDir(config.TmpDir, "runcRootDir")
 		Expect(err).NotTo(HaveOccurred())
 
-		imagePath, err = ioutil.TempDir(tmpDir, "rootlessImagePath")
+		imagePath, err = ioutil.TempDir(config.TmpDir, "rootlessImagePath")
 		Expect(err).NotTo(HaveOccurred())
 
 		// This is necessary because previous tests may leave a socket owned by root
@@ -85,7 +81,7 @@ var _ = Describe("rootless containers", func() {
 		config.RuncRoot = runcRootDir
 
 		config.BindSocket = ""
-		config.Socket2meSocketPath = filepath.Join(tmpDir, "socket.sock")
+		config.Socket2meSocketPath = filepath.Join(config.TmpDir, "socket.sock")
 
 		client = runner.Start(config)
 	})

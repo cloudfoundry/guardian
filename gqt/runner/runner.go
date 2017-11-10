@@ -196,10 +196,11 @@ func init() {
 func DefaultGdnRunnerConfig() GdnRunnerConfig {
 	var config GdnRunnerConfig
 	config.Tag = fmt.Sprintf("%d", GinkgoParallelNode())
-	config.TmpDir = filepath.Join(
-		os.TempDir(),
-		fmt.Sprintf("test-garden-%s", config.Tag),
-	)
+
+	var err error
+	config.TmpDir, err = ioutil.TempDir("", fmt.Sprintf("test-garden-%s-", config.Tag))
+	Expect(os.Chmod(config.TmpDir, 0777)).To(Succeed())
+	Expect(err).NotTo(HaveOccurred())
 
 	config.GraphDir = filepath.Join(graphDirBase, fmt.Sprintf("node-%s", config.Tag))
 	config.DepotDir = filepath.Join(config.TmpDir, "containers")
