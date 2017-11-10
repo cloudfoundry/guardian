@@ -208,7 +208,7 @@ func DefaultGdnRunnerConfig() GdnRunnerConfig {
 
 	if runtime.GOOS == "windows" {
 		config.BindIP = "127.0.0.1"
-		config.BindPort = intptr(9990 + GinkgoParallelNode())
+		config.BindPort = intptr(10000 + os.Getpid())
 	} else {
 		config.BindSocket = fmt.Sprintf("/tmp/garden_%s.sock", config.Tag)
 	}
