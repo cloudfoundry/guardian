@@ -896,10 +896,10 @@ func defaultMaskedPaths() []string {
 	return []string{
 		"/proc/kcore",
 		"/proc/latency_stats",
-		"/proc/timer_stats",
-		"/proc/timer_list",
 		"/proc/sched_debug",
 		"/proc/scsi",
+		"/proc/timer_list",
+		"/proc/timer_stats",
 	}
 }
 
