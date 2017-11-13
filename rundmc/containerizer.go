@@ -155,6 +155,12 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 		return c.peaCreator.CreatePea(log, spec, io, handle, path)
 	}
 
+	if spec.BindMounts != nil {
+		err := fmt.Errorf("Running a process with bind mounts and no image provided is not allowed")
+		log.Error("invalid-spec", err)
+		return nil, err
+	}
+
 	return c.runtime.Exec(log, path, handle, spec, io)
 }
 

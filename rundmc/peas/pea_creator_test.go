@@ -235,6 +235,22 @@ var _ = Describe("PeaCreator", func() {
 			})
 		})
 
+		Context("when bind mounts are provided", func() {
+			BeforeEach(func() {
+				processSpec.BindMounts = []garden.BindMount{
+					garden.BindMount{SrcPath: "/path/to/src", DstPath: "/path/to/dst"},
+				}
+			})
+
+			It("passes the bind mounts to bundle generation", func() {
+				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+				Expect(len(actualCtrSpec.BindMounts)).To(Equal(1))
+				Expect(actualCtrSpec.BindMounts[0].SrcPath).To(Equal("/path/to/src"))
+				Expect(actualCtrSpec.BindMounts[0].DstPath).To(Equal("/path/to/dst"))
+			})
+		})
+
 		Describe("Process Wait", func() {
 			var (
 				exitCode int

@@ -104,6 +104,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		BaseConfig: runtimeSpec,
 		CgroupPath: cgroupPath,
 		Namespaces: linuxNamespaces,
+		BindMounts: spec.BindMounts,
 	}, ctrBundlePath)
 	if err != nil {
 		return errs("generating-bundle", err)

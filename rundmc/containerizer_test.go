@@ -175,6 +175,23 @@ var _ = Describe("Rundmc", func() {
 				containerizer.Run(logger, "some-handle", garden.ProcessSpec{Path: "hello"}, garden.ProcessIO{})
 				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(0))
 			})
+
+			Context("when bind mounts are provided", func() {
+				It("returns an error", func() {
+					_, err := containerizer.Run(logger, "some-handle",
+						garden.ProcessSpec{
+							Path: "hello",
+							BindMounts: []garden.BindMount{
+								garden.BindMount{
+									SrcPath: "src",
+									DstPath: "dst",
+								},
+							},
+						},
+						garden.ProcessIO{})
+					Expect(err).To(MatchError("Running a process with bind mounts and no image provided is not allowed"))
+				})
+			})
 		})
 
 		Context("when process has an image", func() {
