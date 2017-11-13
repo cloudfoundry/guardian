@@ -172,11 +172,6 @@ var _ = Describe("Rootfs container create parameter", func() {
 							_, err := client.Create(garden.ContainerSpec{
 								RootFSPath: fmt.Sprintf("docker://%s:%s/busybox", dockerRegistryIP,
 									dockerRegistryPort),
-								// This container does not need to be privileged. However,
-								// Garden-Runc cannot create non-privileged containers that use
-								// docker:///busybox. It turns out that runC fails to create
-								// `/proc` inside the container.
-								Privileged: true,
 							})
 							Expect(err).ToNot(HaveOccurred())
 						})
@@ -190,11 +185,6 @@ var _ = Describe("Rootfs container create parameter", func() {
 						It("creates the container successfully ", func() {
 							_, err := client.Create(garden.ContainerSpec{
 								RootFSPath: fmt.Sprintf("docker://%s:%s/busybox", dockerRegistryIP, dockerRegistryPort),
-								// This container does not need to be privileged. However,
-								// Guardian cannot create non-privileged containers that use
-								// docker:///busybox. It turns out that runC fails to create
-								// `/proc` inside the container.
-								Privileged: true,
 							})
 							Expect(err).ToNot(HaveOccurred())
 						})
@@ -223,11 +213,6 @@ var _ = Describe("Rootfs container create parameter", func() {
 						It("creates the container successfully", func() {
 							_, err := client.Create(garden.ContainerSpec{
 								RootFSPath: fmt.Sprintf("docker://%s/busybox", serverURL.Host),
-								// This container does not need to be privileged. However,
-								// Guardian cannot create non-privileged containers that use
-								// docker:///busybox. It turns out that runC fails to create
-								// `/proc` inside the container.
-								Privileged: true,
 							})
 							Expect(err).ToNot(HaveOccurred())
 						})
@@ -240,11 +225,6 @@ var _ = Describe("Rootfs container create parameter", func() {
 							It("still works when the host is specified", func() {
 								_, err := client.Create(garden.ContainerSpec{
 									RootFSPath: fmt.Sprintf("docker://%s/busybox", serverURL.Host),
-									// This container does not need to be privileged. However,
-									// Guardian cannot create non-privileged containers that use
-									// docker:///busybox. It turns out that runC fails to create
-									// `/proc` inside the container.
-									Privileged: true,
 								})
 								Expect(err).ToNot(HaveOccurred())
 							})
@@ -252,11 +232,6 @@ var _ = Describe("Rootfs container create parameter", func() {
 							It("still works using the default host", func() {
 								_, err := client.Create(garden.ContainerSpec{
 									RootFSPath: "docker:///busybox",
-									// This container does not need to be privileged. However,
-									// Guardian cannot create non-privileged containers that use
-									// docker:///busybox. It turns out that runC fails to create
-									// `/proc` inside the container.
-									Privileged: true,
 								})
 								Expect(err).ToNot(HaveOccurred())
 							})
