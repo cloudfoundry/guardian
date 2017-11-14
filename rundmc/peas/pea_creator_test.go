@@ -261,10 +261,17 @@ var _ = Describe("PeaCreator", func() {
 				exitCode, waitErr = process.Wait()
 			})
 
-			It("cleans up volumes", func() {
-				Expect(volumizer.DestroyCallCount()).To(Equal(1))
-				_, actualHandle := volumizer.DestroyArgsForCall(0)
-				Expect(actualHandle).To(Equal(processSpec.ID))
+			Describe("Clean up", func() {
+				It("cleans up volumes", func() {
+					Expect(volumizer.DestroyCallCount()).To(Equal(1))
+					_, actualHandle := volumizer.DestroyArgsForCall(0)
+					Expect(actualHandle).To(Equal(processSpec.ID))
+				})
+
+				It("cleans up process dir", func() {
+					processPath := filepath.Join(ctrBundleDir, "processes", process.ID())
+					Expect(processPath).NotTo(BeADirectory())
+				})
 			})
 
 			Context("when process exits with non-zero code", func() {

@@ -10,9 +10,9 @@ import (
 )
 
 type pearocess struct {
-	id              string
-	doneCh          <-chan error
-	volumeDestroyer func()
+	id      string
+	doneCh  <-chan error
+	cleanup func()
 	signals.Signaller
 }
 
@@ -20,7 +20,7 @@ func (p pearocess) ID() string { return p.id }
 
 func (p pearocess) Wait() (int, error) {
 	runcRunErr := <-p.doneCh
-	defer p.volumeDestroyer()
+	defer p.cleanup()
 	if runcRunErr == nil {
 		return 0, nil
 	}

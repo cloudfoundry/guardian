@@ -134,9 +134,12 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		runcDone <- p.ContainerCreator.Create(log, peaBundlePath, processID, procIO)
 	}(peaRunDone)
 
-	volumeDestroyer := func() {
-		if err := p.Volumizer.Destroy(log, processID); err != nil {
+	cleanup := func() {
+		if err = p.Volumizer.Destroy(log, processID); err != nil {
 			log.Error("destroying-volume", err)
+		}
+		if err = os.RemoveAll(peaBundlePath); err != nil {
+			log.Error("clean-up-bundle-dir", err)
 		}
 	}
 
@@ -147,7 +150,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 	signaller := p.SignallerFactory.NewSignaller(filepath.Join(peaBundlePath, "pidfile"))
 	return &pearocess{
 		id: processID, doneCh: peaRunDone,
-		volumeDestroyer: volumeDestroyer, Signaller: signaller,
+		cleanup: cleanup, Signaller: signaller,
 	}, nil
 }
 

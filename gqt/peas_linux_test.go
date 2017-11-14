@@ -24,7 +24,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 	)
 
 	BeforeEach(func() {
-		gdn = runner.Start(config)
 		var err error
 		tmpDir, err = ioutil.TempDir("", "peas-gqts")
 		Expect(err).NotTo(HaveOccurred())
@@ -38,6 +37,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 	})
 
 	JustBeforeEach(func() {
+		gdn = runner.Start(config)
 		var err error
 		ctr, err = gdn.Create(containerSpec)
 		Expect(err).NotTo(HaveOccurred())
@@ -62,7 +62,42 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		Eventually(func() int { return numPipes(gdn.Pid) }).Should(Equal(initialPipes))
 	})
 
-	Context("bind mounts", func() {
+	Describe("Process dir", func() {
+		var processPath string
+
+		JustBeforeEach(func() {
+			process, err := ctr.Run(garden.ProcessSpec{
+				Path:  "echo",
+				Args:  []string{"hello"},
+				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+			}, garden.ProcessIO{})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(process.Wait()).To(Equal(0))
+			processPath = filepath.Join(gdn.DepotDir, ctr.Handle(), "processes", process.ID())
+		})
+
+		Context("when --cleanup-process-dirs-on-wait is set", func() {
+			BeforeEach(func() {
+				config.CleanupProcessDirsOnWait = boolptr(true)
+			})
+
+			It("should delete pea process dir", func() {
+				Expect(processPath).NotTo(BeADirectory())
+			})
+		})
+
+		Context("when --cleanup-process-dirs-on-wait is not set (default)", func() {
+			BeforeEach(func() {
+				config.CleanupProcessDirsOnWait = boolptr(false)
+			})
+
+			It("should delete pea process dir", func() {
+				Expect(processPath).NotTo(BeADirectory())
+			})
+		})
+	})
+
+	Describe("Bind mounts", func() {
 		var testSrcFile *os.File
 		destinationFile := "/tmp/file"
 		output := gbytes.NewBuffer()
