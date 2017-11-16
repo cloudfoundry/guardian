@@ -116,7 +116,6 @@ var _ = Describe("garden server Logging", func() {
 				handles = make([]string, 5)
 
 				for i := 0; i < 5; i++ {
-
 					container, err := client.Create(garden.ContainerSpec{})
 					Expect(err).NotTo(HaveOccurred())
 
@@ -124,12 +123,14 @@ var _ = Describe("garden server Logging", func() {
 					// create process
 					process, err := container.Run(garden.ProcessSpec{Path: "/bin/ls"}, garden.ProcessIO{})
 					Expect(err).NotTo(HaveOccurred())
+					// process wait
 					_, err = process.Wait()
 					Expect(err).NotTo(HaveOccurred())
 
 					// bulkinfo
 					_, err = client.BulkInfo(handles)
 					Expect(err).NotTo(HaveOccurred())
+					// bulkmetrics
 					_, err = client.BulkMetrics(handles)
 					Expect(err).NotTo(HaveOccurred())
 				}
@@ -144,7 +145,7 @@ var _ = Describe("garden server Logging", func() {
 
 			It("doesn't log too many messages", func() {
 				outLines := strings.Split(string(client.Buffer().Contents()), "\n")
-				Expect(len(outLines)).To(BeNumerically("<", 400))
+				Expect(len(outLines)).To(BeNumerically("<", 325))
 			})
 		})
 	})
