@@ -2,6 +2,8 @@ package gqt_test
 
 import (
 	"io"
+	"io/ioutil"
+	"os"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -29,22 +31,47 @@ var _ = Describe("Security", func() {
 				config.AppArmor = "garden-default"
 			})
 
-			It("should enforce the policy when running processes in unprivileged containers", func() {
-				container, err := client.Create(garden.ContainerSpec{})
-				Expect(err).NotTo(HaveOccurred())
+			itEnforcesAppArmorPolicy := func(image garden.ImageRef) {
+				It("should enforce the policy when running processes in unprivileged containers", func() {
+					container, err := client.Create(garden.ContainerSpec{})
+					Expect(err).NotTo(HaveOccurred())
 
-				buffer := gbytes.NewBuffer()
+					buffer := gbytes.NewBuffer()
 
-				_, err = container.Run(garden.ProcessSpec{
-					Path: "cat",
-					Args: []string{"/proc/self/attr/current"},
-				}, garden.ProcessIO{
-					Stdout: io.MultiWriter(GinkgoWriter, buffer),
-					Stderr: GinkgoWriter,
+					_, err = container.Run(garden.ProcessSpec{
+						Path:  "cat",
+						Args:  []string{"/proc/self/attr/current"},
+						Image: image,
+					}, garden.ProcessIO{
+						Stdout: io.MultiWriter(GinkgoWriter, buffer),
+						Stderr: GinkgoWriter,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					Eventually(buffer).Should(gbytes.Say("garden-default"))
 				})
-				Expect(err).NotTo(HaveOccurred())
+			}
 
-				Eventually(buffer).Should(gbytes.Say("garden-default"))
+			itEnforcesAppArmorPolicy(garden.ImageRef{})
+
+			Context("when running a pea", func() {
+				var (
+					tmpDir    string
+					peaRootfs string
+				)
+
+				BeforeEach(func() {
+					var err error
+					tmpDir, err = ioutil.TempDir("", "security-gqts")
+					Expect(err).NotTo(HaveOccurred())
+					peaRootfs = createPeaRoootfs(tmpDir)
+				})
+
+				AfterEach(func() {
+					Expect(os.RemoveAll(tmpDir)).To(Succeed())
+				})
+
+				itEnforcesAppArmorPolicy(garden.ImageRef{URI: peaRootfs})
 			})
 
 			It("should not enforce the policy when running processes in privileged containers", func() {

@@ -28,11 +28,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		tmpDir, err = ioutil.TempDir("", "peas-gqts")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(exec.Command("cp", "-a", defaultTestRootFS, tmpDir).Run()).To(Succeed())
-		Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
-		peaRootfs = filepath.Join(tmpDir, "rootfs")
-		Expect(exec.Command("chown", "-R", "4294967294:4294967294", peaRootfs).Run()).To(Succeed())
-		Expect(ioutil.WriteFile(filepath.Join(peaRootfs, "ima-pea"), []byte("pea!"), 0644)).To(Succeed())
+		peaRootfs = createPeaRoootfs(tmpDir)
 		containerSpec = garden.ContainerSpec{}
 	})
 

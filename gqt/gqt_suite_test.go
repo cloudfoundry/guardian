@@ -170,6 +170,15 @@ func nodeToString(ginkgoNode int) string {
 	return string(r)
 }
 
+func createPeaRoootfs(tmpDir string) string {
+	Expect(exec.Command("cp", "-a", defaultTestRootFS, tmpDir).Run()).To(Succeed())
+	Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
+	peaRootfs := filepath.Join(tmpDir, "rootfs")
+	Expect(exec.Command("chown", "-R", "4294967294:4294967294", peaRootfs).Run()).To(Succeed())
+	Expect(ioutil.WriteFile(filepath.Join(peaRootfs, "ima-pea"), []byte("pea!"), 0644)).To(Succeed())
+	return peaRootfs
+}
+
 func intptr(i int) *int {
 	return &i
 }
