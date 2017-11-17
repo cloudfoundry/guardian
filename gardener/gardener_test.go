@@ -1269,22 +1269,28 @@ var _ = Describe("Gardener", func() {
 			_, err := container.Metrics()
 			Expect(err).NotTo(HaveOccurred())
 
+			Expect(volumizer.MetricsCallCount()).To(Equal(1))
 			_, _, namespaced := volumizer.MetricsArgsForCall(0)
 			Expect(namespaced).To(BeTrue())
 		})
 
 		Context("when the container is privileged", func() {
 			BeforeEach(func() {
-				containerizer.InfoReturns(gardener.ActualContainerSpec{
-					Privileged: true,
-				}, nil)
+				volumizer.MetricsStub = func(_ lager.Logger, _ string, namespaced bool) (garden.ContainerDiskStat, error) {
+					if namespaced {
+						return garden.ContainerDiskStat{}, errors.New("not found")
+					}
+
+					return garden.ContainerDiskStat{}, nil
+				}
 			})
 
-			It("should return the disk metrics from the volumizer, informing that the volume is not namepsaced", func() {
+			It("returns the disk metrics from the volumizer after trying fetching it as namespaced first", func() {
 				_, err := container.Metrics()
 				Expect(err).NotTo(HaveOccurred())
 
-				_, _, namespaced := volumizer.MetricsArgsForCall(0)
+				Expect(volumizer.MetricsCallCount()).To(Equal(2))
+				_, _, namespaced := volumizer.MetricsArgsForCall(1)
 				Expect(namespaced).To(BeFalse())
 			})
 		})
@@ -1300,17 +1306,6 @@ var _ = Describe("Gardener", func() {
 			})
 		})
 
-		Context("when info returns an error", func() {
-			BeforeEach(func() {
-				containerizer.InfoReturns(gardener.ActualContainerSpec{}, errors.New("banana"))
-			})
-
-			It("returns an error", func() {
-				_, err := container.Metrics()
-				Expect(err).To(MatchError("banana"))
-			})
-		})
-
 		Context("when disk metrics cannot be acquired", func() {
 			BeforeEach(func() {
 				volumizer.MetricsReturns(garden.ContainerDiskStat{}, errors.New("banana"))
@@ -1318,7 +1313,7 @@ var _ = Describe("Gardener", func() {
 
 			It("should propagate the error", func() {
 				_, err := container.Metrics()
-				Expect(err).To(MatchError("banana"))
+				Expect(err).To(MatchError(ContainSubstring("banana")))
 			})
 		})
 

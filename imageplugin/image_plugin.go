@@ -3,6 +3,7 @@ package imageplugin
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os/exec"
@@ -160,6 +161,10 @@ func (p *ImagePlugin) Metrics(log lager.Logger, handle string, namespaced bool) 
 		metricsCmd = p.UnprivilegedCommandCreator.MetricsCommand(log, handle)
 	} else {
 		metricsCmd = p.PrivilegedCommandCreator.MetricsCommand(log, handle)
+	}
+
+	if metricsCmd == nil {
+		return garden.ContainerDiskStat{}, errors.New("requested image plugin not available")
 	}
 
 	stdoutBuffer := bytes.NewBuffer([]byte{})

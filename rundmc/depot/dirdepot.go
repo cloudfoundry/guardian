@@ -73,11 +73,11 @@ func (d *DirectoryDepot) Lookup(log lager.Logger, handle string) (string, error)
 	log.Debug("started")
 	defer log.Debug("finished")
 
-	if _, err := os.Stat(d.toDir(handle)); err == nil {
-		return d.toDir(handle), nil
+	if _, err := os.Stat(d.toDir(handle)); err != nil {
+		return "", ErrDoesNotExist
 	}
 
-	return d.findSubProcDir(handle)
+	return d.toDir(handle), nil
 }
 
 func (d *DirectoryDepot) Destroy(log lager.Logger, handle string) error {
@@ -115,33 +115,4 @@ func removeOrLog(log lager.Logger, path string) {
 	if err := os.RemoveAll(path); err != nil {
 		log.Error("remove-failed", err, lager.Data{"path": path})
 	}
-}
-
-func (d *DirectoryDepot) findSubProcDir(handle string) (string, error) {
-	var subProcDir string
-
-	var findDir = func(path string, f os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if f.IsDir() && f.Name() == handle {
-			subProcDir = path
-		}
-		return nil
-	}
-
-	err := filepath.Walk(d.dir, findDir)
-	if err != nil {
-		return "", err
-	}
-
-	if subProcDir == "" {
-		return "", ErrDoesNotExist
-	}
-
-	if _, err := os.Stat(subProcDir); err != nil {
-		return "", ErrDoesNotExist
-	}
-
-	return subProcDir, nil
 }

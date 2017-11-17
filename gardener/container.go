@@ -137,14 +137,12 @@ func (c *container) Metrics() (garden.Metrics, error) {
 		return garden.Metrics{}, err
 	}
 
-	actualContainerSpec, err := c.containerizer.Info(c.logger, c.handle)
-	if err != nil {
-		return garden.Metrics{}, err
-	}
-
-	diskMetrics, err := c.volumizer.Metrics(c.logger, c.handle, !actualContainerSpec.Privileged)
-	if err != nil {
-		return garden.Metrics{}, err
+	diskMetrics, err1 := c.volumizer.Metrics(c.logger, c.handle, true)
+	if err1 != nil {
+		diskMetrics, err = c.volumizer.Metrics(c.logger, c.handle, false)
+		if err != nil {
+			return garden.Metrics{}, fmt.Errorf("image plugin returned these errors:\nunprivileged: %s\nprivileged: %s", err1.Error(), err.Error())
+		}
 	}
 
 	return garden.Metrics{

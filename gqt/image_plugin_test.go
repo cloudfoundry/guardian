@@ -1158,6 +1158,14 @@ var _ = Describe("Image Plugin", func() {
 		Context("when a privileged container is created", func() {
 			var container garden.Container
 
+			BeforeEach(func() {
+				config.ImagePluginExtraArgs = append(
+					config.ImagePluginExtraArgs,
+					"\"--fail-on\"",
+					"metrics",
+				)
+			})
+
 			JustBeforeEach(func() {
 				var err error
 				container, err = client.Create(garden.ContainerSpec{Privileged: true})
@@ -1177,10 +1185,11 @@ var _ = Describe("Image Plugin", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				It("calls only the privileged plugin", func() {
+				It("tries to call both image plugins", func() {
 					pluginLocationBytes, err := ioutil.ReadFile(filepath.Join(tmpDir, "metrics-bin-location"))
 					Expect(err).ToNot(HaveOccurred())
-					Expect(string(pluginLocationBytes)).To(Equal(binaries.PrivilegedImagePlugin))
+					Expect(string(pluginLocationBytes)).To(ContainSubstring(binaries.ImagePlugin))
+					Expect(string(pluginLocationBytes)).To(ContainSubstring(binaries.PrivilegedImagePlugin))
 				})
 			})
 

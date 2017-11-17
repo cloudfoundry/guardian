@@ -612,7 +612,17 @@ var _ = Describe("ImagePlugin", func() {
 			Expect(handleArg).To(Equal(handle))
 		})
 
-		Context("when destroying an unprivileged volume", func() {
+		Context("when the image plugin available", func() {
+			BeforeEach(func() {
+				fakeUnprivilegedCommandCreator.MetricsCommandReturns(nil)
+			})
+
+			It("returns an error", func() {
+				Expect(metricsErr).To(MatchError("requested image plugin not available"))
+			})
+		})
+
+		Context("when getting metrics for an privileged volume", func() {
 			BeforeEach(func() {
 				namespaced = false
 			})
@@ -624,6 +634,16 @@ var _ = Describe("ImagePlugin", func() {
 
 				_, handleArg := fakePrivilegedCommandCreator.MetricsCommandArgsForCall(0)
 				Expect(handleArg).To(Equal(handle))
+			})
+
+			Context("when the image plugin available", func() {
+				BeforeEach(func() {
+					fakePrivilegedCommandCreator.MetricsCommandReturns(nil)
+				})
+
+				It("returns an error", func() {
+					Expect(metricsErr).To(MatchError("requested image plugin not available"))
+				})
 			})
 		})
 

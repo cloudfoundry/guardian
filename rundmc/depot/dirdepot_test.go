@@ -84,20 +84,6 @@ var _ = Describe("Depot", func() {
 				Expect(err).To(MatchError(depot.ErrDoesNotExist))
 			})
 		})
-
-		Context("when a subdirectory with the given name exists", func() {
-			It("returns the absolute path of the directory", func() {
-				os.Mkdir(filepath.Join(depotDir, "potato"), 0700)
-				Expect(dirdepot.Lookup(logger, "potato")).To(Equal(filepath.Join(depotDir, "potato")))
-			})
-		})
-
-		Context("when the subdirectory is nested within another depot subdirectory (ie. is a pea)", func() {
-			It("returns the absolute path of the grandparent directory", func() {
-				Expect(os.MkdirAll(filepath.Join(depotDir, "potato", "and", "peas"), 0700)).To(Succeed())
-				Expect(dirdepot.Lookup(logger, "peas")).To(Equal(filepath.Join(depotDir, "potato", "and", "peas")))
-			})
-		})
 	})
 
 	Describe("create", func() {

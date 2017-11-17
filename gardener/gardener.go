@@ -71,7 +71,7 @@ type Volumizer interface {
 
 type VolumeDestroyMetricsGC interface {
 	Destroy(log lager.Logger, handle string) error
-	Metrics(log lager.Logger, handle string, privileged bool) (garden.ContainerDiskStat, error)
+	Metrics(log lager.Logger, handle string, namespaced bool) (garden.ContainerDiskStat, error)
 	GC(log lager.Logger) error
 }
 
