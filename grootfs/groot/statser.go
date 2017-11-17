@@ -22,8 +22,8 @@ func (m *Statser) Stats(logger lager.Logger, id string) (VolumeStats, error) {
 	defer m.metricsEmitter.TryEmitDurationFrom(logger, MetricImageStatsTime, time.Now())
 
 	logger = logger.Session("groot-stats", lager.Data{"imageID": id})
-	logger.Info("starting")
-	defer logger.Info("ending")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
 
 	stats, err := m.imageCloner.Stats(logger, id)
 	if err != nil {
