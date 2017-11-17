@@ -481,10 +481,23 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("Info", func() {
 		var namespaces []specs.LinuxNamespace
+		var resources *specs.LinuxResources
 
 		BeforeEach(func() {
 			namespaces = []specs.LinuxNamespace{}
 			fakeOCIRuntime.StateReturns(runrunc.State{Pid: 42}, nil)
+
+			var limit int64 = 10
+			var shares uint64 = 20
+			resources = &specs.LinuxResources{
+				Memory: &specs.LinuxMemory{
+					Limit: &limit,
+				},
+				CPU: &specs.LinuxCPU{
+					Shares: &shares,
+				},
+			}
+
 		})
 
 		JustBeforeEach(func() {
@@ -493,21 +506,12 @@ var _ = Describe("Rundmc", func() {
 					return goci.Bundle(), errors.New("cannot find bundle")
 				}
 
-				var limit int64 = 10
-				var shares uint64 = 20
 				return goci.Bndl{
 					Spec: specs.Spec{
 						Root: &specs.Root{},
 						Linux: &specs.Linux{
 							Namespaces: namespaces,
-							Resources: &specs.LinuxResources{
-								Memory: &specs.LinuxMemory{
-									Limit: &limit,
-								},
-								CPU: &specs.LinuxCPU{
-									Shares: &shares,
-								},
-							},
+							Resources:  resources,
 						},
 					},
 				}, nil
@@ -543,6 +547,19 @@ var _ = Describe("Rundmc", func() {
 				fakeDepot.LookupReturns("", errors.New("spiderman-error"))
 				_, err := containerizer.Info(logger, "some-handle")
 				Expect(err).To(MatchError("spiderman-error"))
+			})
+		})
+
+		Context("when the bundle has no resources", func() {
+			BeforeEach(func() {
+				resources = nil
+			})
+
+			It("doesn't fail", func() {
+				actualSpec, err := containerizer.Info(logger, "some-handle")
+				Expect(err).NotTo(HaveOccurred())
+				Expect(actualSpec.Limits.Memory.LimitInBytes).To(BeEquivalentTo(0))
+				Expect(actualSpec.Limits.CPU.LimitInShares).To(BeEquivalentTo(0))
 			})
 		})
 

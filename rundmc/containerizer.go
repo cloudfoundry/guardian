@@ -303,6 +303,14 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 		}
 	}
 
+	var cpuShares, limitInBytes uint64
+	if bundle.Resources() != nil {
+		cpuShares = *bundle.Resources().CPU.Shares
+		limitInBytes = uint64(*bundle.Resources().Memory.Limit)
+	} else {
+		log.Debug("bundle-resources-is-nil", lager.Data{"bundle": bundle})
+	}
+
 	return gardener.ActualContainerSpec{
 		Pid:        state.Pid,
 		BundlePath: bundlePath,
@@ -311,10 +319,10 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 		Stopped:    c.states.IsStopped(handle),
 		Limits: garden.Limits{
 			CPU: garden.CPULimits{
-				LimitInShares: *bundle.Resources().CPU.Shares,
+				LimitInShares: cpuShares,
 			},
 			Memory: garden.MemoryLimits{
-				LimitInBytes: uint64(*bundle.Resources().Memory.Limit),
+				LimitInBytes: limitInBytes,
 			},
 		},
 		Privileged: privileged,
