@@ -5,23 +5,18 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
-	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
-	"time"
 
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/kawasaki/configure"
 	"code.cloudfoundry.org/guardian/kawasaki/netns"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
-
 	"github.com/docker/docker/pkg/reexec"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 )
 
 func init() {
@@ -45,21 +40,15 @@ var _ = Describe("Container", func() {
 		netNsName = fmt.Sprintf("my-netns-%d", GinkgoParallelNode())
 		linkName = fmt.Sprintf("my-dummy-link-%d", GinkgoParallelNode())
 
-		sess, err := gexec.Start(exec.Command("ip", "netns", "add", netNsName), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess, time.Second*10).Should(gexec.Exit(0))
+		runCommand("ip", "netns", "add", netNsName)
 
 		netNsPath := fmt.Sprintf("/run/netns/%s", netNsName)
+		var err error
 		netNsFd, err = os.Open(netNsPath)
 		Expect(err).NotTo(HaveOccurred())
 
-		sess, err = gexec.Start(exec.Command("ip", "link", "add", linkName, "type", "dummy"), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
-
-		sess, err = gexec.Start(exec.Command("ip", "link", "set", linkName, "netns", netNsName), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
+		runCommand("ip", "link", "add", linkName, "type", "dummy")
+		runCommand("ip", "link", "set", linkName, "netns", netNsName)
 
 		configurer = &configure.Container{
 			FileOpener: netns.Opener(func(path string) (*os.File, error) {
@@ -81,9 +70,7 @@ var _ = Describe("Container", func() {
 	})
 
 	AfterEach(func() {
-		sess, err := gexec.Start(exec.Command("ip", "netns", "delete", netNsName), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
+		runCommand("ip", "netns", "delete", netNsName)
 		netNsPath := fmt.Sprintf("/var/run/netns/%s", netNsName)
 		Eventually(netNsPath).ShouldNot(BeAnExistingFile())
 	})
@@ -153,34 +140,24 @@ var _ = Describe("Container", func() {
 })
 
 func linkIP(netNsName, linkName string) string {
-	cmd := exec.Command("ip", "netns", "exec", netNsName, "ifconfig", linkName)
-
-	buffer := gbytes.NewBuffer()
-	sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	stdout := runCommand("ip", "netns", "exec", netNsName, "ifconfig", linkName)
 
 	re, err := regexp.Compile(`inet addr:([0-9.]+)`)
 	Expect(err).NotTo(HaveOccurred())
 
-	ret := re.FindStringSubmatch(string(buffer.Contents()))
+	ret := re.FindStringSubmatch(stdout)
 	Expect(ret).NotTo(BeEmpty())
 
 	return ret[1]
 }
 
 func linkMTU(netNsName, linkName string) int {
-	cmd := exec.Command("ip", "netns", "exec", netNsName, "ifconfig", linkName)
-
-	buffer := gbytes.NewBuffer()
-	sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	stdout := runCommand("ip", "netns", "exec", netNsName, "ifconfig", linkName)
 
 	re, err := regexp.Compile(`MTU:([0-9]+)`)
 	Expect(err).NotTo(HaveOccurred())
 
-	ret := re.FindStringSubmatch(string(buffer.Contents()))
+	ret := re.FindStringSubmatch(stdout)
 	Expect(ret).NotTo(BeEmpty())
 
 	mtu, err := strconv.ParseInt(ret[1], 10, 32)
@@ -190,28 +167,17 @@ func linkMTU(netNsName, linkName string) int {
 }
 
 func linkUp(netNsName, linkName string) bool {
-	cmd := exec.Command("ip", "netns", "exec", netNsName, "ip", "link", "list", linkName)
-
-	buffer := gbytes.NewBuffer()
-	sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
-
-	return !strings.Contains(string(buffer.Contents()), "DOWN")
+	stdout := runCommand("ip", "netns", "exec", netNsName, "ip", "link", "list", linkName)
+	return !strings.Contains(stdout, "DOWN")
 }
 
 func linkDefaultGW(netNsName, linkName string) string {
-	cmd := exec.Command("ip", "netns", "exec", netNsName, "ip", "route", "list", "dev", linkName)
-
-	buffer := gbytes.NewBuffer()
-	sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	stdout := runCommand("ip", "netns", "exec", netNsName, "ip", "route", "list", "dev", linkName)
 
 	re, err := regexp.Compile(`default via ([0-9.]+)`)
 	Expect(err).NotTo(HaveOccurred())
 
-	ret := re.FindStringSubmatch(string(buffer.Contents()))
+	ret := re.FindStringSubmatch(stdout)
 	Expect(ret).NotTo(BeEmpty())
 
 	return ret[1]
