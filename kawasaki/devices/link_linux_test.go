@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 
 	"code.cloudfoundry.org/guardian/kawasaki/devices"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 	"github.com/vishvananda/netlink"
 )
 
@@ -21,9 +19,7 @@ var _ = Describe("Link Management", func() {
 	)
 
 	BeforeEach(func() {
-		cmd, err := gexec.Start(exec.Command("sh", "-c", "mountpoint /sys || mount -t sysfs sysfs /sys"), GinkgoWriter, GinkgoWriter)
-		Expect(err).ToNot(HaveOccurred())
-		Eventually(cmd).Should(gexec.Exit(0))
+		runCommand("sh", "-c", "mountpoint /sys || mount -t sysfs sysfs /sys")
 
 		name = fmt.Sprintf("gdn-test-%d", GinkgoParallelNode())
 		link := &netlink.GenericLink{
@@ -120,22 +116,17 @@ var _ = Describe("Link Management", func() {
 		BeforeEach(func() {
 			netnsName = fmt.Sprintf("gdnsetnstest%d", GinkgoParallelNode())
 
-			cmd, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("ip netns add %s", netnsName)), GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(cmd, "5s").Should(gexec.Exit(0))
+			runCommand("sh", "-c", fmt.Sprintf("ip netns add %s", netnsName))
 		})
 
 		AfterEach(func() {
-			cmd, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("ip netns delete %s", netnsName)), GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(cmd, "5s").Should(gexec.Exit(0))
+			runCommand("sh", "-c", fmt.Sprintf("ip netns delete %s", netnsName))
 		})
 
 		It("moves the interface in to the given namespace by pid", func() {
 			// look at this perfectly ordinary hat
-			netns, err := gexec.Start(exec.Command("ip", "netns", "exec", netnsName, "sleep", "6312736"), GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			defer netns.Kill()
+			cmd := startCommand("ip", "netns", "exec", netnsName, "sleep", "6312736")
+			defer cmd.Process.Kill()
 
 			// (it has the following fd)
 			f, err := os.Open(fmt.Sprintf("/var/run/netns/%s", netnsName))
@@ -149,9 +140,7 @@ var _ = Describe("Link Management", func() {
 			Expect(intfs).ToNot(ContainElement(intf))
 
 			// oh my word it's in the hat!
-			session, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("ip netns exec %s ifconfig %s", netnsName, name)), GinkgoWriter, GinkgoWriter)
-			Expect(err).ToNot(HaveOccurred())
-			Eventually(session, "5s").Should(gexec.Exit(0))
+			runCommand("sh", "-c", fmt.Sprintf("ip netns exec %s ifconfig %s", netnsName, name))
 		})
 
 		Context("when the interface does not exist", func() {
@@ -194,7 +183,7 @@ var _ = Describe("Link Management", func() {
 
 		Context("When the interface exist", func() {
 			BeforeEach(func() {
-				cmd, err := gexec.Start(exec.Command(
+				runCommand(
 					"sh", "-c", `
 					ip netns add netns1
 					ip link add veth0 type veth peer name veth1
@@ -202,33 +191,27 @@ var _ = Describe("Link Management", func() {
 					ip netns exec netns1 ifconfig veth1 10.1.1.1/24 up
 					ifconfig veth0 10.1.1.2/24 up
 					`,
-				), GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(cmd, "10s").Should(gexec.Exit(0))
+				)
 			})
 
 			AfterEach(func() {
-				cmd, err := gexec.Start(exec.Command(
+				runCommand(
 					"sh", "-c", `
 					ip netns exec netns1 ip link del veth1
 					ip netns delete netns1
 					`,
-				), GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(cmd, "5s").Should(gexec.Exit(0))
+				)
 			})
 
 			It("Gets statistics from the interface", func() {
 				link := devices.Link{}
 				beforeStat, err := link.Statistics("veth0")
 				Expect(err).ToNot(HaveOccurred())
-				cmd, err := gexec.Start(exec.Command(
+				runCommand(
 					"sh", "-c", `
 					ping -c 10 -s 80 10.1.1.1
 					`,
-				), GinkgoWriter, GinkgoWriter)
-				Expect(err).ToNot(HaveOccurred())
-				Eventually(cmd, "15s").Should(gexec.Exit(0))
+				)
 
 				afterStat, err := link.Statistics("veth0")
 				Expect(err).ToNot(HaveOccurred())
