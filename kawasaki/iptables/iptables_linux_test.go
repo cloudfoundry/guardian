@@ -19,6 +19,8 @@ import (
 )
 
 var _ = Describe("IPTables controller", func() {
+	const iptablesTimeout = 4.0
+
 	var (
 		netnsName          string
 		prefix             string
@@ -284,7 +286,7 @@ var _ = Describe("IPTables controller", func() {
 			Expect(iptablesController.CreateChain("filter", "test-chain-1")).To(Succeed())
 			Expect(iptablesController.CreateChain("filter", "test-chain-2")).To(Succeed())
 			close(done)
-		}, 2.0)
+		}, iptablesTimeout)
 
 		It("should lock to correct key", func() {
 			Expect(iptablesController.CreateChain("filter", "test-chain-1")).To(Succeed())
@@ -307,7 +309,7 @@ var _ = Describe("IPTables controller", func() {
 				Expect(iptablesController.PrependRule("non-existent-chain", iptables.SingleFilterRule{})).NotTo(Succeed())
 				Expect(iptablesController.CreateChain("filter", "test-chain-2")).To(Succeed())
 				close(done)
-			}, 2.0)
+			}, iptablesTimeout)
 		})
 
 		Context("when running an iptables command panics", func() {
@@ -315,7 +317,7 @@ var _ = Describe("IPTables controller", func() {
 				Expect(func() { iptablesController.PrependRule("panic", iptables.SingleFilterRule{}) }).To(Panic())
 				Expect(iptablesController.CreateChain("filter", "test-chain-2")).To(Succeed())
 				close(done)
-			}, 2.0)
+			}, iptablesTimeout)
 		})
 
 		Context("when unlocking fails", func() {
