@@ -519,25 +519,31 @@ var _ = Describe("Creating a Container", func() {
 	})
 
 	It("does not make containers available to lookup until creation is completed", func() {
-		go func() {
+		handle := "handlecake"
+
+		assertionsComplete := make(chan struct{})
+		go func(done chan<- struct{}) {
 			defer GinkgoRecover()
+			defer close(done)
 
-			_, err := client.Create(garden.ContainerSpec{
-				Handle:     "handlecake",
-				Properties: garden.Properties{"somename": "somevalue"},
-			})
-			Expect(err).NotTo(HaveOccurred())
-		}()
+			var lookupContainer garden.Container
+			Eventually(func() error {
+				var err error
+				lookupContainer, err = client.Lookup(handle)
+				return err
+			}, time.Second*10, time.Millisecond*100).ShouldNot(HaveOccurred())
 
-		var lookupContainer garden.Container
-		Eventually(func() error {
-			var err error
-			lookupContainer, err = client.Lookup("handlecake")
-			return err
-		}, time.Second*10, time.Millisecond*100).ShouldNot(HaveOccurred())
+			// Properties used to be set after containers were available from lookup
+			Expect(lookupContainer.Properties()).To(HaveKeyWithValue("somename", "somevalue"))
+		}(assertionsComplete)
 
-		// Properties used to be set after containers were available from lookup
-		Expect(lookupContainer.Properties()).To(HaveKeyWithValue("somename", "somevalue"))
+		_, err := client.Create(garden.ContainerSpec{
+			Handle:     handle,
+			Properties: garden.Properties{"somename": "somevalue"},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		<-assertionsComplete
 	})
 
 	Context("create more containers than the maxkeyring limit", func() {
