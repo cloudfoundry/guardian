@@ -189,7 +189,7 @@ func init() {
 		// This must be set outside of the Ginkgo node directory (tmpDir) because
 		// otherwise the Concourse worker may run into one of the AUFS kernel
 		// module bugs that cause the VM to become unresponsive.
-		graphDirBase = "/tmp/aufs_mount"
+		graphDirBase = filepath.Join("/tmp", "aufs_mount")
 	}
 }
 
@@ -202,7 +202,7 @@ func DefaultGdnRunnerConfig() GdnRunnerConfig {
 	Expect(os.Chmod(config.TmpDir, 0777)).To(Succeed())
 	Expect(err).NotTo(HaveOccurred())
 
-	config.GraphDir = filepath.Join(graphDirBase, fmt.Sprintf("node-%s", config.Tag))
+	config.GraphDir = filepath.Join(graphDirBase, filepath.Base(config.TmpDir))
 	config.DepotDir = filepath.Join(config.TmpDir, "containers")
 	config.ConsoleSocketsPath = filepath.Join(config.TmpDir, "console-sockets")
 
