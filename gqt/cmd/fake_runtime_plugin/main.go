@@ -38,6 +38,7 @@ func main() {
 
 	fakeRuntimePlugin.Commands = []cli.Command{
 		CreateCommand,
+		RunCommand,
 		DeleteCommand,
 		StateCommand,
 		EventsCommand,
@@ -82,6 +83,34 @@ var CreateCommand = cli.Command{
 
 	Action: func(ctx *cli.Context) error {
 		writeArgs("create")
+
+		if err := ioutil.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
+			panic(err)
+		}
+
+		return nil
+	},
+}
+
+var RunCommand = cli.Command{
+	Name: "run",
+	Flags: []cli.Flag{
+		cli.BoolFlag{
+			Name: "no-new-keyring",
+		},
+		cli.StringFlag{
+			Name: "bundle",
+		},
+		cli.StringFlag{
+			Name: "pid-file",
+		},
+		cli.StringFlag{
+			Name: "detach",
+		},
+	},
+
+	Action: func(ctx *cli.Context) error {
+		writeArgs("run")
 
 		if err := ioutil.WriteFile(ctx.String("pid-file"), []byte(strconv.Itoa(os.Getppid())), 0777); err != nil {
 			panic(err)

@@ -50,9 +50,6 @@ func TestGqt(t *testing.T) {
 		binaries.Gdn, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/gdn", "-tags", "daemon", "-race", "-ldflags", "-extldflags '-static'")
 		Expect(err).NotTo(HaveOccurred())
 
-		binaries.Init, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/init")
-		Expect(err).NotTo(HaveOccurred())
-
 		binaries.NetworkPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -76,11 +73,12 @@ func TestGqt(t *testing.T) {
 			Expect(err).NotTo(HaveOccurred())
 
 			cmd := exec.Command("make")
-			cmd.Dir = "../rundmc/nstar"
-			cmd.Stdout = GinkgoWriter
-			cmd.Stderr = GinkgoWriter
-			Expect(cmd.Run()).To(Succeed())
+			runCommandInDir(cmd, "../rundmc/nstar")
 			binaries.NSTar = "../rundmc/nstar/nstar"
+
+			cmd = exec.Command("gcc", "-static", "-o", "init", "init.c")
+			runCommandInDir(cmd, "../cmd/init")
+			binaries.Init = "../cmd/init/init"
 		}
 
 		data, err := json.Marshal(binaries)
@@ -102,8 +100,8 @@ func TestGqt(t *testing.T) {
 		}
 
 		// chmod all the artifacts
-		Expect(os.Chmod(filepath.Join(binaries.Init, "..", ".."), 0755)).To(Succeed())
-		filepath.Walk(filepath.Join(binaries.Init, "..", ".."), func(path string, info os.FileInfo, err error) error {
+		Expect(os.Chmod(filepath.Join(binaries.Gdn, "..", ".."), 0755)).To(Succeed())
+		filepath.Walk(filepath.Join(binaries.Gdn, "..", ".."), func(path string, info os.FileInfo, err error) error {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(os.Chmod(path, 0755)).To(Succeed())
 			return nil
@@ -121,6 +119,13 @@ func TestGqt(t *testing.T) {
 
 	SetDefaultEventuallyTimeout(5 * time.Second)
 	RunSpecs(t, "GQT Suite")
+}
+
+func runCommandInDir(cmd *exec.Cmd, workingDir string) {
+	cmd.Dir = workingDir
+	cmd.Stdout = GinkgoWriter
+	cmd.Stderr = GinkgoWriter
+	Expect(cmd.Run()).To(Succeed())
 }
 
 func defaultConfig() runner.GdnRunnerConfig {

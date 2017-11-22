@@ -15,16 +15,18 @@ import (
 )
 
 type Creator struct {
-	runcPath      string
-	runcSubcmd    string
-	runcExtraArgs []string
-	commandRunner commandrunner.CommandRunner
+	runcPath            string
+	runcSubcmd          string
+	runcSubcmdExtraArgs []string
+	runcExtraArgs       []string
+	commandRunner       commandrunner.CommandRunner
 }
 
-func NewCreator(runcPath, runcSubcmd string, runcExtraArgs []string, commandRunner commandrunner.CommandRunner) *Creator {
+func NewCreator(runcPath, runcSubcmd string, runcSubcmdExtraArgs, runcExtraArgs []string, commandRunner commandrunner.CommandRunner) *Creator {
 	return &Creator{
 		runcPath,
 		runcSubcmd,
+		runcSubcmdExtraArgs,
 		runcExtraArgs,
 		commandRunner,
 	}
@@ -50,12 +52,15 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 		"--log-format", "json",
 	}
 	subcmdArgs := []string{
-		c.runcSubcmd,
 		"--no-new-keyring",
 		"--bundle", bundlePath,
 		"--pid-file", pidFilePath,
 		id,
 	}
+
+	subcmdArgs = append(c.runcSubcmdExtraArgs, subcmdArgs...)
+	subcmdArgs = append([]string{c.runcSubcmd}, subcmdArgs...)
+
 	cmd := exec.Command(c.runcPath, append(globalArgs, append(c.runcExtraArgs, subcmdArgs...)...)...)
 
 	if pio.Stdin != nil {

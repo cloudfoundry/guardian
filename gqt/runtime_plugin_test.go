@@ -48,26 +48,63 @@ var _ = Describe("Runtime Plugin", func() {
 			)
 
 			JustBeforeEach(func() {
-				argsFilepath = filepath.Join(client.TmpDir, "create-args")
 				handle = fmt.Sprintf("runtime-plugin-test-handle-%s", config.Tag)
 			})
 
-			It("executes the plugin, passing the correct args for create", func() {
-				_, err := client.Create(garden.ContainerSpec{Handle: handle})
-				Expect(err).ToNot(HaveOccurred())
+			// The "on Linux / on Windows" Contexts here are only temporary.
+			// Right now winc does not support "winc run -d" so we have to branch
+			// the logic.
+			// The winc team are aware and have a story to add support:
+			// https://www.pivotaltracker.com/n/projects/1156164/stories/153062983
+			Context("on Linux", func() {
+				JustBeforeEach(func() {
+					onlyOnLinux()
+					argsFilepath = filepath.Join(client.TmpDir, "run-args")
+				})
 
-				Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
-					binaries.RuntimePlugin,
-					"--debug",
-					"--log", HaveSuffix(filepath.Join("containers", handle, "create.log")),
-					"--log-format", "json",
-					"--image-store", "some-image-store",
-					"create",
-					"--no-new-keyring",
-					"--bundle", HaveSuffix(filepath.Join("containers", handle)),
-					"--pid-file", HaveSuffix(filepath.Join("containers", handle, "pidfile")),
-					handle,
-				))
+				It("executes the plugin, passing the correct args for create", func() {
+					_, err := client.Create(garden.ContainerSpec{Handle: handle})
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
+						binaries.RuntimePlugin,
+						"--debug",
+						"--log", HaveSuffix(filepath.Join("containers", handle, "create.log")),
+						"--log-format", "json",
+						"--image-store", "some-image-store",
+						"run",
+						"--detach",
+						"--no-new-keyring",
+						"--bundle", HaveSuffix(filepath.Join("containers", handle)),
+						"--pid-file", HaveSuffix(filepath.Join("containers", handle, "pidfile")),
+						handle,
+					))
+				})
+			})
+
+			Context("on Windows", func() {
+				JustBeforeEach(func() {
+					onlyOnWindows()
+					argsFilepath = filepath.Join(client.TmpDir, "create-args")
+				})
+
+				It("executes the plugin, passing the correct args for create", func() {
+					_, err := client.Create(garden.ContainerSpec{Handle: handle})
+					Expect(err).ToNot(HaveOccurred())
+
+					Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
+						binaries.RuntimePlugin,
+						"--debug",
+						"--log", HaveSuffix(filepath.Join("containers", handle, "create.log")),
+						"--log-format", "json",
+						"--image-store", "some-image-store",
+						"create",
+						"--no-new-keyring",
+						"--bundle", HaveSuffix(filepath.Join("containers", handle)),
+						"--pid-file", HaveSuffix(filepath.Join("containers", handle, "pidfile")),
+						handle,
+					))
+				})
 			})
 
 			Context("when the network plugin returns configuration", func() {

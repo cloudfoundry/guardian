@@ -117,3 +117,11 @@ func mustGetMaxValidUID() int {
 func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 	panic("this should be unreachable: no sockets on Windows")
 }
+
+func createCmd() string {
+	return "create"
+}
+
+func createCmdExtraArgs() []string {
+	return []string{}
+}

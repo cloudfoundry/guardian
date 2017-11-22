@@ -21,16 +21,17 @@ import (
 
 var _ = Describe("Create", func() {
 	var (
-		commandRunner  *fake_command_runner.FakeCommandRunner
-		bundlePath     string
-		runcSubcmd     = "do-a-thing"
-		runcExtraArgs  = []string{"--some-arg", "some-value"}
-		logFilePath    string
-		pidFilePath    string
-		logger         *lagertest.TestLogger
-		logs           string
-		runcExitStatus error
-		recievedStdin  string
+		commandRunner       *fake_command_runner.FakeCommandRunner
+		bundlePath          string
+		runcSubcmd          = "do-a-thing"
+		runcSubcmdExtraArgs = []string{"maybe-do-a-detach"}
+		runcExtraArgs       = []string{"--some-arg", "some-value"}
+		logFilePath         string
+		pidFilePath         string
+		logger              *lagertest.TestLogger
+		logs                string
+		runcExitStatus      error
+		recievedStdin       string
 
 		runner *runrunc.Creator
 	)
@@ -49,7 +50,7 @@ var _ = Describe("Create", func() {
 	})
 
 	JustBeforeEach(func() {
-		runner = runrunc.NewCreator("funC", runcSubcmd, runcExtraArgs, commandRunner)
+		runner = runrunc.NewCreator("funC", runcSubcmd, runcSubcmdExtraArgs, runcExtraArgs, commandRunner)
 
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "funC",
@@ -85,6 +86,7 @@ var _ = Describe("Create", func() {
 			"--log-format", "json",
 			runcExtraArgs[0], runcExtraArgs[1],
 			runcSubcmd,
+			runcSubcmdExtraArgs[0],
 			"--no-new-keyring",
 			"--bundle", bundlePath,
 			"--pid-file", pidFilePath,

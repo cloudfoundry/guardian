@@ -814,6 +814,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		goci.RuncBinary{Path: cmd.Runtime.Plugin},
 		cmd.Bin.Dadoo.Path(),
 		cmd.Runtime.Plugin,
+		createCmd(),
+		createCmdExtraArgs(),
 		cmd.Runtime.PluginExtraArgs,
 		bndlLoader,
 		processBuilder,
@@ -840,7 +842,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		BundleGenerator:  peaTemplate,
 		ProcessBuilder:   processBuilder,
 		BundleSaver:      bundleSaver,
-		ContainerCreator: runrunc.NewCreator(cmd.Runtime.Plugin, "run", cmd.Runtime.PluginExtraArgs, cmdRunner),
+		ContainerCreator: runrunc.NewCreator(cmd.Runtime.Plugin, "run", []string{}, cmd.Runtime.PluginExtraArgs, cmdRunner),
 		SignallerFactory: signallerFactory,
 	}
 

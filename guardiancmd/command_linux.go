@@ -279,3 +279,11 @@ func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 	}
 	return nil
 }
+
+func createCmd() string {
+	return "run"
+}
+
+func createCmdExtraArgs() []string {
+	return []string{"--detach"}
+}
