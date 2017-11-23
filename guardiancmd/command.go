@@ -713,7 +713,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			Bounding:    unprivilegedMaxCaps,
 			Inheritable: unprivilegedMaxCaps,
 			Permitted:   unprivilegedMaxCaps,
-			Ambient:     unprivilegedMaxCaps,
 		},
 		Args:        []string{"/tmp/garden-init"},
 		Cwd:         "/",
