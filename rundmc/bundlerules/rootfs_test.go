@@ -87,10 +87,6 @@ var _ = Describe("RootFS", func() {
 							"-gid", "0",
 							"-recreate", "true",
 							"-perm", "755",
-							// this is a workaround for our current aufs code not properly changing the
-							// ownership of / to container-root. without this step runc is unable to
-							// pivot root in user-namespaced containers.
-							".pivot_root",
 							// stuff in this directory frequently confuses runc, and poses a potential
 							// security vulnerability.
 							"dev",
@@ -135,10 +131,6 @@ var _ = Describe("RootFS", func() {
 							"-gid", "888",
 							"-recreate", "true",
 							"-perm", "755",
-							// this is a workaround for our current aufs code not properly changing the
-							// ownership of / to container-root. without this step runc is unable to
-							// pivot root in user-namespaced containers.
-							".pivot_root",
 							// stuff in this directory frequently confuses runc, and poses a potential
 							// security vulnerability.
 							"dev",

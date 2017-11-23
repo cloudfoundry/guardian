@@ -29,7 +29,6 @@ func (r RootFS) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ stri
 
 	r.MkdirChown.MkdirAs(
 		spec.BaseConfig.Root.Path, uid, gid, 0755, true,
-		".pivot_root",
 		"dev", "proc", "sys",
 	)
 
