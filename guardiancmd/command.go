@@ -36,7 +36,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/pidreader"
-	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
@@ -123,6 +122,7 @@ type GardenFactory interface {
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner() runrunc.ExecRunner
+	WireRootfsFileCreator() rundmc.RootfsFileCreator
 	OsSpecificBundleRules() []rundmc.BundlerRule
 }
 
@@ -837,7 +837,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, runcrunner, bndlLoader, nstar, stopper, eventStore, stateStore, &preparerootfs.SymlinkRefusingFileCreator{}, peaCreator)
+	return rundmc.New(depot, runcrunner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator)
 }
 
 func wirePidfileReader() *pidreader.PidFileReader {

@@ -65,6 +65,16 @@ func (f *WindowsFactory) WireExecRunner() runrunc.ExecRunner {
 	}
 }
 
+func (f *WindowsFactory) WireRootfsFileCreator() rundmc.RootfsFileCreator {
+	return noopRootfsFileCreator{}
+}
+
+type noopRootfsFileCreator struct{}
+
+func (noopRootfsFileCreator) CreateFiles(rootFSPath string, pathsToCreate ...string) error {
+	return nil
+}
+
 func (f *WindowsFactory) OsSpecificBundleRules() []rundmc.BundlerRule {
 	return []rundmc.BundlerRule{}
 }

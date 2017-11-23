@@ -237,6 +237,10 @@ func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
 	}
 }
 
+func (f *LinuxFactory) WireRootfsFileCreator() rundmc.RootfsFileCreator {
+	return preparerootfs.SymlinkRefusingFileCreator{}
+}
+
 func defaultBindMounts(binInitPath string) []specs.Mount {
 	devptsGid := 0
 	if runningAsRoot() {
