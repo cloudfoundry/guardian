@@ -13,6 +13,7 @@ type Status string
 
 const CreatedStatus Status = "created"
 const StoppedStatus Status = "stopped"
+const RunningStatus Status = "running"
 
 type State struct {
 	Pid    int

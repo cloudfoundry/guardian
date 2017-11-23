@@ -35,8 +35,8 @@ func StatsCommand(id, logFile string) *exec.Cmd {
 }
 
 // DeleteCommand creates a command that deletes a container using the default runc binary name.
-func DeleteCommand(id, logFile string) *exec.Cmd {
-	return DefaultRuncBinary.DeleteCommand(id, logFile)
+func DeleteCommand(id string, force bool, logFile string) *exec.Cmd {
+	return DefaultRuncBinary.DeleteCommand(id, force, logFile)
 }
 
 func EventsCommand(id string) *exec.Cmd {
@@ -92,6 +92,10 @@ func (runc RuncBinary) StatsCommand(id, logFile string) *exec.Cmd {
 
 // DeleteCommand returns an *exec.Cmd that, when run, will signal the running
 // container.
-func (runc RuncBinary) DeleteCommand(id, logFile string) *exec.Cmd {
-	return exec.Command(runc.Path, []string{"--debug", "--log", logFile, "--log-format", "json", "delete", id}...)
+func (runc RuncBinary) DeleteCommand(id string, force bool, logFile string) *exec.Cmd {
+	deleteArgs := []string{"--debug", "--log", logFile, "--log-format", "json", "delete"}
+	if force {
+		deleteArgs = append(deleteArgs, "--force")
+	}
+	return exec.Command(runc.Path, append(deleteArgs, id)...)
 }

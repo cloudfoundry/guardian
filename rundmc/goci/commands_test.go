@@ -66,8 +66,15 @@ var _ = Describe("Commands", func() {
 
 	Describe("DeleteCommand", func() {
 		It("creates an *exec.Cmd to delete the bundle", func() {
-			cmd := goci.DeleteCommand("my-bundle-id", "log.file")
+			cmd := goci.DeleteCommand("my-bundle-id", false, "log.file")
 			Expect(cmd.Args).To(Equal([]string{"funC", "--debug", "--log", "log.file", "--log-format", "json", "delete", "my-bundle-id"}))
+		})
+
+		Context("when forced", func() {
+			It("passes the force flag to runc", func() {
+				cmd := goci.DeleteCommand("my-bundle-id", true, "log.file")
+				Expect(cmd.Args).To(Equal([]string{"funC", "--debug", "--log", "log.file", "--log-format", "json", "delete", "--force", "my-bundle-id"}))
+			})
 		})
 	})
 })

@@ -70,10 +70,11 @@ type FakeRuncBinary struct {
 	killCommandReturnsOnCall map[int]struct {
 		result1 *exec.Cmd
 	}
-	DeleteCommandStub        func(id, logFile string) *exec.Cmd
+	DeleteCommandStub        func(id string, force bool, logFile string) *exec.Cmd
 	deleteCommandMutex       sync.RWMutex
 	deleteCommandArgsForCall []struct {
 		id      string
+		force   bool
 		logFile string
 	}
 	deleteCommandReturns struct {
@@ -332,17 +333,18 @@ func (fake *FakeRuncBinary) KillCommandReturnsOnCall(i int, result1 *exec.Cmd) {
 	}{result1}
 }
 
-func (fake *FakeRuncBinary) DeleteCommand(id string, logFile string) *exec.Cmd {
+func (fake *FakeRuncBinary) DeleteCommand(id string, force bool, logFile string) *exec.Cmd {
 	fake.deleteCommandMutex.Lock()
 	ret, specificReturn := fake.deleteCommandReturnsOnCall[len(fake.deleteCommandArgsForCall)]
 	fake.deleteCommandArgsForCall = append(fake.deleteCommandArgsForCall, struct {
 		id      string
+		force   bool
 		logFile string
-	}{id, logFile})
-	fake.recordInvocation("DeleteCommand", []interface{}{id, logFile})
+	}{id, force, logFile})
+	fake.recordInvocation("DeleteCommand", []interface{}{id, force, logFile})
 	fake.deleteCommandMutex.Unlock()
 	if fake.DeleteCommandStub != nil {
-		return fake.DeleteCommandStub(id, logFile)
+		return fake.DeleteCommandStub(id, force, logFile)
 	}
 	if specificReturn {
 		return ret.result1
@@ -356,10 +358,10 @@ func (fake *FakeRuncBinary) DeleteCommandCallCount() int {
 	return len(fake.deleteCommandArgsForCall)
 }
 
-func (fake *FakeRuncBinary) DeleteCommandArgsForCall(i int) (string, string) {
+func (fake *FakeRuncBinary) DeleteCommandArgsForCall(i int) (string, bool, string) {
 	fake.deleteCommandMutex.RLock()
 	defer fake.deleteCommandMutex.RUnlock()
-	return fake.deleteCommandArgsForCall[i].id, fake.deleteCommandArgsForCall[i].logFile
+	return fake.deleteCommandArgsForCall[i].id, fake.deleteCommandArgsForCall[i].force, fake.deleteCommandArgsForCall[i].logFile
 }
 
 func (fake *FakeRuncBinary) DeleteCommandReturns(result1 *exec.Cmd) {

@@ -30,7 +30,7 @@ type RuncBinary interface {
 	StateCommand(id, logFile string) *exec.Cmd
 	StatsCommand(id, logFile string) *exec.Cmd
 	KillCommand(id, signal, logFile string) *exec.Cmd
-	DeleteCommand(id, logFile string) *exec.Cmd
+	DeleteCommand(id string, force bool, logFile string) *exec.Cmd
 }
 
 func New(

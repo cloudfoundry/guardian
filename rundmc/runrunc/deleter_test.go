@@ -19,6 +19,7 @@ var _ = Describe("Delete", func() {
 		runner        *fakes.FakeRuncCmdRunner
 		runcBinary    *fakes.FakeRuncBinary
 		logger        *lagertest.TestLogger
+		force         bool
 
 		deleter *runrunc.Deleter
 	)
@@ -27,11 +28,12 @@ var _ = Describe("Delete", func() {
 		runcBinary = new(fakes.FakeRuncBinary)
 		commandRunner = fake_command_runner.New()
 		runner = new(fakes.FakeRuncCmdRunner)
+		force = false
 		logger = lagertest.NewTestLogger("test")
 
 		deleter = runrunc.NewDeleter(runner, runcBinary)
 
-		runcBinary.DeleteCommandStub = func(id, logFile string) *exec.Cmd {
+		runcBinary.DeleteCommandStub = func(id string, force bool, logFile string) *exec.Cmd {
 			return exec.Command("funC", "--log", logFile, "delete", id)
 		}
 
@@ -41,11 +43,23 @@ var _ = Describe("Delete", func() {
 	})
 
 	It("runs 'runc delete' in the container directory using the logging runner", func() {
-		Expect(deleter.Delete(logger, "some-container")).To(Succeed())
+		Expect(deleter.Delete(logger, force, "some-container")).To(Succeed())
 		Expect(commandRunner).To(HaveExecutedSerially(fake_command_runner.CommandSpec{
 			Path: "funC",
 			Args: []string{"--log", "potato.log", "delete", "some-container"},
 		}))
 	})
 
+	Context("when forced", func() {
+		BeforeEach(func() {
+			force = true
+		})
+
+		It("passes the force to the delete command", func() {
+			Expect(deleter.Delete(logger, force, "some-container")).To(Succeed())
+			Expect(runcBinary.DeleteCommandCallCount()).To(Equal(1))
+			_, passedForce, _ := runcBinary.DeleteCommandArgsForCall(0)
+			Expect(passedForce).To(Equal(force))
+		})
+	})
 })

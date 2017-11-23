@@ -18,13 +18,13 @@ func NewDeleter(runner RuncCmdRunner, runc RuncBinary) *Deleter {
 	}
 }
 
-func (d *Deleter) Delete(log lager.Logger, handle string) error {
+func (d *Deleter) Delete(log lager.Logger, force bool, handle string) error {
 	log = log.Session("delete", lager.Data{"handle": handle})
 
 	log.Info("started")
 	defer log.Info("finished")
 
 	return d.runner.RunAndLog(log, func(logFile string) *exec.Cmd {
-		return d.runc.DeleteCommand(handle, logFile)
+		return d.runc.DeleteCommand(handle, force, logFile)
 	})
 }

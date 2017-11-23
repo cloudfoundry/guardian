@@ -41,7 +41,7 @@ type OCIRuntime interface {
 	Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error)
 	Kill(log lager.Logger, bundlePath string) error
-	Delete(log lager.Logger, bundlePath string) error
+	Delete(log lager.Logger, force bool, bundlePath string) error
 	State(log lager.Logger, id string) (runrunc.State, error)
 	Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error)
 	WatchEvents(log lager.Logger, id string, eventsNotifier runrunc.EventsNotifier) error
@@ -264,14 +264,18 @@ func (c *Containerizer) Destroy(log lager.Logger, handle string) error {
 		"state": state,
 	})
 
-	if state.Status == runrunc.CreatedStatus || state.Status == runrunc.StoppedStatus {
-		if err := c.runtime.Delete(log, handle); err != nil {
+	if shouldDelete(state.Status) {
+		if err := c.runtime.Delete(log, state.Status == runrunc.RunningStatus, handle); err != nil {
 			log.Error("delete-failed", err)
 			return err
 		}
 	}
 
 	return nil
+}
+
+func shouldDelete(status runrunc.Status) bool {
+	return status == runrunc.CreatedStatus || status == runrunc.StoppedStatus || status == runrunc.RunningStatus
 }
 
 func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {

@@ -407,11 +407,13 @@ var _ = Describe("Rundmc", func() {
 		Context("when in a state that should result in a delete", func() {
 			var status runrunc.Status
 
-			stateThatShouldResultInADelete := func() {
+			stateThatShouldResultInADelete := func(force bool) {
 				It("should run delete", func() {
 					Expect(containerizer.Destroy(logger, "some-handle")).To(Succeed())
 					Expect(fakeOCIRuntime.DeleteCallCount()).To(Equal(1))
-					Expect(arg2(fakeOCIRuntime.DeleteArgsForCall(0))).To(Equal("some-handle"))
+					_, passedForce, passedHandle := fakeOCIRuntime.DeleteArgsForCall(0)
+					Expect(passedForce).To(Equal(force))
+					Expect(passedHandle).To(Equal("some-handle"))
 				})
 
 				Context("when delete fails", func() {
@@ -434,7 +436,7 @@ var _ = Describe("Rundmc", func() {
 					status = "created"
 				})
 
-				stateThatShouldResultInADelete()
+				stateThatShouldResultInADelete(false)
 			})
 
 			Context("when in the 'stopped' state", func() {
@@ -442,7 +444,15 @@ var _ = Describe("Rundmc", func() {
 					status = "stopped"
 				})
 
-				stateThatShouldResultInADelete()
+				stateThatShouldResultInADelete(false)
+			})
+
+			Context("when in the 'running' state", func() {
+				BeforeEach(func() {
+					status = "running"
+				})
+
+				stateThatShouldResultInADelete(true)
 			})
 		})
 
@@ -686,7 +696,3 @@ func (d dummyProcess) ID() string {
 func (d dummyProcess) Wait() (int, error)          { return 0, nil }
 func (d dummyProcess) SetTTY(garden.TTYSpec) error { return nil }
 func (d dummyProcess) Signal(garden.Signal) error  { return nil }
-
-func arg2(_ lager.Logger, i interface{}) interface{} {
-	return i
-}

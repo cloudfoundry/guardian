@@ -72,10 +72,11 @@ type FakeOCIRuntime struct {
 	killReturnsOnCall map[int]struct {
 		result1 error
 	}
-	DeleteStub        func(log lager.Logger, bundlePath string) error
+	DeleteStub        func(log lager.Logger, force bool, bundlePath string) error
 	deleteMutex       sync.RWMutex
 	deleteArgsForCall []struct {
 		log        lager.Logger
+		force      bool
 		bundlePath string
 	}
 	deleteReturns struct {
@@ -339,17 +340,18 @@ func (fake *FakeOCIRuntime) KillReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeOCIRuntime) Delete(log lager.Logger, bundlePath string) error {
+func (fake *FakeOCIRuntime) Delete(log lager.Logger, force bool, bundlePath string) error {
 	fake.deleteMutex.Lock()
 	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
 	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
 		log        lager.Logger
+		force      bool
 		bundlePath string
-	}{log, bundlePath})
-	fake.recordInvocation("Delete", []interface{}{log, bundlePath})
+	}{log, force, bundlePath})
+	fake.recordInvocation("Delete", []interface{}{log, force, bundlePath})
 	fake.deleteMutex.Unlock()
 	if fake.DeleteStub != nil {
-		return fake.DeleteStub(log, bundlePath)
+		return fake.DeleteStub(log, force, bundlePath)
 	}
 	if specificReturn {
 		return ret.result1
@@ -363,10 +365,10 @@ func (fake *FakeOCIRuntime) DeleteCallCount() int {
 	return len(fake.deleteArgsForCall)
 }
 
-func (fake *FakeOCIRuntime) DeleteArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeOCIRuntime) DeleteArgsForCall(i int) (lager.Logger, bool, string) {
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
-	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].bundlePath
+	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].force, fake.deleteArgsForCall[i].bundlePath
 }
 
 func (fake *FakeOCIRuntime) DeleteReturns(result1 error) {
