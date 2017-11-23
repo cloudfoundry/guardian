@@ -12,7 +12,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -50,7 +49,7 @@ func (f *WindowsFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
 	return &NoopResolvConfigurer{}
 }
 
-func (f *WindowsFactory) WireVolumizer(logger lager.Logger, uidMappings, gidMappings idmapper.MappingList) gardener.Volumizer {
+func (f *WindowsFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
 		return f.config.wireImagePlugin(f.commandRunner)
 	}
@@ -64,6 +63,10 @@ func (f *WindowsFactory) WireExecRunner() runrunc.ExecRunner {
 		CommandRunner: f.commandRunner,
 		ProcessIDGen:  wireUIDGenerator(),
 	}
+}
+
+func (f *WindowsFactory) OsSpecificBundleRules() []rundmc.BundlerRule {
+	return []rundmc.BundlerRule{}
 }
 
 func (f *WindowsFactory) CommandRunner() commandrunner.CommandRunner {
@@ -100,10 +103,6 @@ func privilegedMounts() []specs.Mount {
 
 func unprivilegedMounts() []specs.Mount {
 	return []specs.Mount{}
-}
-
-func osSpecificBundleRules() []rundmc.BundlerRule {
-	return []rundmc.BundlerRule{}
 }
 
 func getPrivilegedDevices() []specs.LinuxDevice {

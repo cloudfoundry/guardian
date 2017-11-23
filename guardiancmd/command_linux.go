@@ -39,13 +39,18 @@ type LinuxFactory struct {
 	config           *ServerCommand
 	commandRunner    commandrunner.CommandRunner
 	signallerFactory *signals.SignallerFactory
+	uidMappings      idmapper.MappingList
+	gidMappings      idmapper.MappingList
 }
 
 func (cmd *ServerCommand) NewGardenFactory() GardenFactory {
+	uidMappings, gidMappings := cmd.idMappings()
 	return &LinuxFactory{
 		config:           cmd,
 		commandRunner:    linux_command_runner.New(),
 		signallerFactory: &signals.SignallerFactory{PidGetter: wirePidfileReader()},
+		uidMappings:      uidMappings,
+		gidMappings:      gidMappings,
 	}
 }
 
@@ -53,7 +58,7 @@ func (f *LinuxFactory) CommandRunner() commandrunner.CommandRunner {
 	return f.commandRunner
 }
 
-func (f *LinuxFactory) WireVolumizer(logger lager.Logger, uidMappings, gidMappings idmapper.MappingList) gardener.Volumizer {
+func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	graphRoot := f.config.Graph.Dir
 	if graphRoot == "" {
 		return gardener.NoopVolumizer{}
@@ -132,8 +137,8 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger, uidMappings, gidMappin
 
 	rootFSNamespacer := &rootfs_provider.UidNamespacer{
 		Translator: rootfs_provider.NewUidTranslator(
-			uidMappings,
-			gidMappings,
+			f.uidMappings,
+			f.gidMappings,
 		),
 	}
 
@@ -260,8 +265,19 @@ func unprivilegedMounts() []specs.Mount {
 	}
 }
 
-func osSpecificBundleRules() []rundmc.BundlerRule {
-	return []rundmc.BundlerRule{bundlerules.EtcMounts{Chowner: &bundlerules.OSChowner{}}}
+func (f *LinuxFactory) OsSpecificBundleRules() []rundmc.BundlerRule {
+	chrootMkdir := bundlerules.ChrootMkdir{
+		Command:       preparerootfs.Command,
+		CommandRunner: f.commandRunner,
+	}
+	return []rundmc.BundlerRule{
+		bundlerules.RootFS{
+			ContainerRootUID: f.uidMappings.Map(0),
+			ContainerRootGID: f.gidMappings.Map(0),
+			MkdirChown:       chrootMkdir,
+		},
+		bundlerules.EtcMounts{Chowner: &bundlerules.OSChowner{}},
+	}
 }
 
 func getPrivilegedDevices() []specs.LinuxDevice {

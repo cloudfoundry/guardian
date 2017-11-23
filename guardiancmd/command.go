@@ -120,9 +120,10 @@ type GardenFactory interface {
 	WireResolvConfigurer() kawasaki.DnsResolvConfigurer
 	WireMkdirer() runrunc.Mkdirer
 	CommandRunner() commandrunner.CommandRunner
-	WireVolumizer(logger lager.Logger, uidMappings, gidMappings idmapper.MappingList) gardener.Volumizer
+	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner() runrunc.ExecRunner
+	OsSpecificBundleRules() []rundmc.BundlerRule
 }
 
 // These are the maximum capabilities a non-root user gets whether privileged or unprivileged
@@ -392,8 +393,6 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		return err
 	}
 
-	uidMappings, gidMappings := cmd.idMappings()
-
 	networker, iptablesStarter, err := cmd.wireNetworker(logger, factory, propManager, portPool)
 	if err != nil {
 		logger.Error("failed-to-wire-networker", err)
@@ -405,7 +404,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		restorer = &gardener.NoopRestorer{}
 	}
 
-	volumizer := factory.WireVolumizer(logger, uidMappings, gidMappings)
+	volumizer := factory.WireVolumizer(logger)
 
 	starters := []gardener.Starter{}
 	if !cmd.Server.SkipSetup {
@@ -423,7 +422,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		SysInfoProvider: sysinfo.NewResourcesProvider(cmd.Containers.Dir),
 		Networker:       networker,
 		Volumizer:       volumizer,
-		Containerizer:   cmd.wireContainerizer(logger, factory, propManager, uidMappings, gidMappings, volumizer),
+		Containerizer:   cmd.wireContainerizer(logger, factory, propManager, volumizer),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
@@ -705,8 +704,7 @@ func (cmd *ServerCommand) wireImagePlugin(commandRunner commandrunner.CommandRun
 }
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFactory,
-	properties gardener.PropertyManager, uidMappings, gidMappings idmapper.MappingList,
-	volumizer peas.Volumizer) *rundmc.Containerizer {
+	properties gardener.PropertyManager, volumizer peas.Volumizer) *rundmc.Containerizer {
 
 	// TODO centralize knowledge of garden -> runc capability schema translation
 	baseProcess := specs.Process{
@@ -731,6 +729,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		WithProcess(baseProcess).
 		WithRootFSPropagation("private")
 
+	uidMappings, gidMappings := cmd.idMappings()
 	unprivilegedBundle := baseBundle.
 		WithNamespace(goci.UserNamespace).
 		WithUIDMappings(uidMappings...).
@@ -756,12 +755,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		"unprivileged": unprivilegedBundle,
 	})
 
-	cmdRunner := factory.CommandRunner()
-	chrootMkdir := bundlerules.ChrootMkdir{
-		Command:       preparerootfs.Command,
-		CommandRunner: cmdRunner,
-	}
-
 	cgroupRootPath := "garden"
 	if cmd.Server.Tag != "" {
 		cgroupRootPath = fmt.Sprintf("%s-%s", cgroupRootPath, cmd.Server.Tag)
@@ -772,11 +765,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			PrivilegedBase:   privilegedBundle,
 			UnprivilegedBase: unprivilegedBundle,
 		},
-		bundlerules.RootFS{
-			ContainerRootUID: uidMappings.Map(0),
-			ContainerRootGID: gidMappings.Map(0),
-			MkdirChown:       chrootMkdir,
-		},
 		bundlerules.Namespaces{},
 		bundlerules.CGroupPath{
 			Path: cgroupRootPath,
@@ -786,7 +774,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		bundlerules.Hostname{},
 		bundlerules.Windows{},
 	}
-	bundleRules = append(bundleRules, osSpecificBundleRules()...)
+	bundleRules = append(bundleRules, factory.OsSpecificBundleRules()...)
 	peaBundleRules := make([]rundmc.BundlerRule, len(bundleRules))
 	copy(peaBundleRules, bundleRules)
 	bundleRules = append(bundleRules,
@@ -808,6 +796,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	pidFileReader := wirePidfileReader()
 	signallerFactory := &signals.SignallerFactory{PidGetter: pidFileReader}
 
+	cmdRunner := factory.CommandRunner()
 	runcrunner := runrunc.New(
 		cmdRunner,
 		runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
