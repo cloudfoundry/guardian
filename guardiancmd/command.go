@@ -816,8 +816,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
 
-	//TODO: should use filepath.Join
-	runcRoot := "/run/runc"
+	runcRoot := filepath.Join("/", "run", "runc")
 	if os.Geteuid() != 0 {
 		runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
 		if runtimeDir != "" {
