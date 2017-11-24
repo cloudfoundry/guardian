@@ -47,7 +47,11 @@ func TestGqt(t *testing.T) {
 
 		binaries.Tar = os.Getenv("GARDEN_TAR_PATH")
 
-		binaries.Gdn, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/gdn", "-tags", "daemon", "-race", "-ldflags", "-extldflags '-static'")
+		gdnBuildArgs := []string{"-tags", "daemon", "-ldflags", "-extldflags '-static'"}
+		if os.Getenv("RACE_DETECTION") != "" {
+			gdnBuildArgs = append(gdnBuildArgs, "-race")
+		}
+		binaries.Gdn, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/gdn", gdnBuildArgs...)
 		Expect(err).NotTo(HaveOccurred())
 
 		binaries.NetworkPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin")
