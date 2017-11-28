@@ -161,7 +161,7 @@ var _ = Describe("Execer", func() {
 			Expect(execRunner.RunCallCount()).To(Equal(1))
 			_, processID, actualProcessPath, actualSandboxHandle, actualSandboxBundlePath,
 				actualContainerRootHostUID, actualContainerRootHostGID, actualPIO, actualTTY,
-				actualProcJSON := execRunner.RunArgsForCall(0)
+				actualProcJSON, _ := execRunner.RunArgsForCall(0)
 			Expect(processID).To(Equal(spec.ID))
 			Expect(actualProcessPath).To(Equal(filepath.Join(bundlePath, "processes", processID)))
 			Expect(actualSandboxHandle).To(Equal(id))
@@ -185,7 +185,7 @@ var _ = Describe("Execer", func() {
 
 			It("runs the process, specifying a TTY", func() {
 				Expect(execRunner.RunCallCount()).To(Equal(1))
-				_, _, _, _, _, _, _, _, actualTTY, _ := execRunner.RunArgsForCall(0)
+				_, _, _, _, _, _, _, _, actualTTY, _, _ := execRunner.RunArgsForCall(0)
 				Expect(actualTTY).To(BeTrue())
 			})
 		})

@@ -37,7 +37,6 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"github.com/cloudfoundry/dropsonde"
@@ -121,7 +120,7 @@ type GardenFactory interface {
 	CommandRunner() commandrunner.CommandRunner
 	WireVolumizer(logger lager.Logger) gardener.Volumizer
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
-	WireExecRunner() runrunc.ExecRunner
+	WireExecRunner(runMode string) runrunc.ExecRunner
 	WireRootfsFileCreator() rundmc.RootfsFileCreator
 	OsSpecificBundleRules() []rundmc.BundlerRule
 }
@@ -794,7 +793,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	processBuilder := runrunc.NewProcessBuilder(wireEnvFunc(), nonRootMaxCaps)
 
 	pidFileReader := wirePidfileReader()
-	signallerFactory := &signals.SignallerFactory{PidGetter: pidFileReader}
 
 	cmdRunner := factory.CommandRunner()
 	runcrunner := runrunc.New(
@@ -810,7 +808,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		processBuilder,
 		factory.WireMkdirer(),
 		runrunc.LookupFunc(runrunc.LookupUser),
-		factory.WireExecRunner(),
+		factory.WireExecRunner("exec"),
 		wireUIDGenerator(),
 	)
 
@@ -826,13 +824,12 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	}
 
 	peaCreator := &peas.PeaCreator{
-		Volumizer:        volumizer,
-		PidGetter:        pidFileReader,
-		BundleGenerator:  peaTemplate,
-		ProcessBuilder:   processBuilder,
-		BundleSaver:      bundleSaver,
-		ContainerCreator: runrunc.NewCreator(cmd.Runtime.Plugin, "run", []string{}, cmd.Runtime.PluginExtraArgs, cmdRunner),
-		SignallerFactory: signallerFactory,
+		Volumizer:       volumizer,
+		PidGetter:       pidFileReader,
+		BundleGenerator: peaTemplate,
+		ProcessBuilder:  processBuilder,
+		BundleSaver:     bundleSaver,
+		ExecRunner:      factory.WireExecRunner("run"),
 	}
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)

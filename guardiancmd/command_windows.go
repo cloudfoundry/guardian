@@ -57,7 +57,7 @@ func (f *WindowsFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	return gardener.NoopVolumizer{}
 }
 
-func (f *WindowsFactory) WireExecRunner() runrunc.ExecRunner {
+func (f *WindowsFactory) WireExecRunner(runMode string) runrunc.ExecRunner {
 	return &execrunner.DirectExecRunner{
 		RuntimePath:   f.config.Runtime.Plugin,
 		CommandRunner: f.commandRunner,

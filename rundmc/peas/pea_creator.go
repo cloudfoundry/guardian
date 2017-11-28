@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/lager"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -19,11 +18,6 @@ import (
 )
 
 var RootfsPath = filepath.Join(os.TempDir(), "pea-empty-rootfs")
-
-//go:generate counterfeiter . ContainerCreator
-type ContainerCreator interface {
-	Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error
-}
 
 //go:generate counterfeiter . Volumizer
 type Volumizer interface {
@@ -36,22 +30,16 @@ type PidGetter interface {
 	Pid(pidFilePath string) (int, error)
 }
 
-//go:generate counterfeiter . SignallerFactory
-type SignallerFactory interface {
-	NewSignaller(pidfilePath string) signals.Signaller
-}
-
 type PeaCreator struct {
-	Volumizer        Volumizer
-	PidGetter        PidGetter
-	BundleGenerator  depot.BundleGenerator
-	BundleSaver      depot.BundleSaver
-	ProcessBuilder   runrunc.ProcessBuilder
-	ContainerCreator ContainerCreator
-	SignallerFactory SignallerFactory
+	Volumizer       Volumizer
+	PidGetter       PidGetter
+	BundleGenerator depot.BundleGenerator
+	BundleSaver     depot.BundleSaver
+	ProcessBuilder  runrunc.ProcessBuilder
+	ExecRunner      runrunc.ExecRunner
 }
 
-func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO garden.ProcessIO, ctrHandle, ctrBundlePath string) (garden.Process, error) {
+func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error) {
 	errs := func(action string, err error) (garden.Process, error) {
 		wrappedErr := errorwrapper.Wrap(err, action)
 		log.Error(action, wrappedErr)
@@ -68,7 +56,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 	log.Info("creating", lager.Data{"process_id": processID})
 	defer log.Info("done")
 
-	peaBundlePath := filepath.Join(ctrBundlePath, "processes", processID)
+	peaBundlePath := filepath.Join(sandboxBundlePath, "processes", processID)
 	if mkdirErr := os.MkdirAll(peaBundlePath, 0700); mkdirErr != nil {
 		return nil, err
 	}
@@ -81,12 +69,12 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return errs("creating-volume", err)
 	}
 
-	cgroupPath := ctrHandle
+	cgroupPath := sandboxHandle
 	if spec.OverrideContainerLimits != nil {
 		cgroupPath = processID
 	}
 
-	originalCtrInitPid, err := p.PidGetter.Pid(filepath.Join(ctrBundlePath, "pidfile"))
+	originalCtrInitPid, err := p.PidGetter.Pid(filepath.Join(sandboxBundlePath, "pidfile"))
 	if err != nil {
 		return errs("reading-ctr-pid", err)
 	}
@@ -105,7 +93,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		CgroupPath: cgroupPath,
 		Namespaces: linuxNamespaces,
 		BindMounts: spec.BindMounts,
-	}, ctrBundlePath)
+	}, sandboxBundlePath)
 	if err != nil {
 		return errs("generating-bundle", err)
 	}
@@ -129,29 +117,14 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return errs("saving-bundle", err)
 	}
 
-	peaRunDone := make(chan error)
-	go func(runcDone chan<- error) {
-		runcDone <- p.ContainerCreator.Create(log, peaBundlePath, processID, procIO)
-	}(peaRunDone)
-
-	cleanup := func() {
-		if err = p.Volumizer.Destroy(log, processID); err != nil {
-			log.Error("destroying-volume", err)
-		}
-		if err = os.RemoveAll(peaBundlePath); err != nil {
-			log.Error("clean-up-bundle-dir", err)
-		}
+	extraCleanup := func() error {
+		return p.Volumizer.Destroy(log, processID)
 	}
-
-	// There is coupling here: the pidfile path is hardcoded here and in
-	// rundmc/runrunc/create.go.
-	// This is probably fine for now, as we will be using execrunner/dadoo for
-	// peas soon.
-	signaller := p.SignallerFactory.NewSignaller(filepath.Join(peaBundlePath, "pidfile"))
-	return &pearocess{
-		id: processID, doneCh: peaRunDone,
-		cleanup: cleanup, Signaller: signaller,
-	}, nil
+	return p.ExecRunner.Run(
+		log, processID, peaBundlePath, sandboxHandle, sandboxBundlePath,
+		preparedProcess.ContainerRootHostUID, preparedProcess.ContainerRootHostGID,
+		procIO, preparedProcess.Process.Terminal, nil, extraCleanup,
+	)
 }
 
 func parseUser(uidgid string) (int, int, error) {

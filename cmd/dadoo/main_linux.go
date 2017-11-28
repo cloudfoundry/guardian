@@ -37,6 +37,7 @@ func run() int {
 	socketDirPath := flag.String("socket-dir-path", "", "path to a dir in which to store console sockets")
 	flag.Parse()
 
+	runMode := flag.Args()[0] // exec or run
 	runtime := flag.Args()[1] // e.g. runc
 	processStateDir := flag.Args()[2]
 	containerId := flag.Args()[3]
@@ -68,8 +69,6 @@ func run() int {
 
 	ioWg := &sync.WaitGroup{}
 	var runcExecCmd *exec.Cmd
-	runtimeArgs := []string{"--debug", "--log", logFile, "--log-format", "json"}
-	runtimeArgs = append(runtimeArgs, "exec", "-d", "-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()), "--pid-file", pidFilePath)
 	if *tty {
 		winsz, err := openFile(filepath.Join(processStateDir, "winsz"), os.O_RDWR)
 		defer closeFile(winsz)
@@ -82,11 +81,9 @@ func run() int {
 			return logAndExit(fmt.Sprintf("value for --socket-dir-path cannot exceed %d characters in length", MaxSocketDirPathLength))
 		}
 		ttySocketPath := setupTTYSocket(stdinR, stdoutW, winsz, pidFilePath, *socketDirPath, ioWg)
-		runtimeArgs = append(runtimeArgs, "--tty", "--console-socket", ttySocketPath, containerId)
-		runcExecCmd = exec.Command(runtime, runtimeArgs...)
+		runcExecCmd = dadoo.BuildRuncCommand(runtime, runMode, processStateDir, containerId, ttySocketPath, logFile)
 	} else {
-		runtimeArgs = append(runtimeArgs, containerId)
-		runcExecCmd = exec.Command(runtime, runtimeArgs...)
+		runcExecCmd = dadoo.BuildRuncCommand(runtime, runMode, processStateDir, containerId, "", logFile)
 		runcExecCmd.Stdin = stdinR
 		runcExecCmd.Stdout = stdoutW
 		runcExecCmd.Stderr = stderrW
@@ -273,7 +270,7 @@ func killProcess(pidFilePath string) {
 func readPid(pidFilePath string) (int, error) {
 	retrier := retrier.New(retrier.ConstantBackoff(20, 500*time.Millisecond), nil)
 	var (
-		pid int = -1
+		pid = -1
 		err error
 	)
 	retrier.Run(func() error {

@@ -24,8 +24,8 @@ type DirectExecRunner struct {
 
 func (e *DirectExecRunner) Run(
 	log lager.Logger, processID, processPath, sandboxHandle, _ string,
-	_, _ uint32, pio garden.ProcessIO, _ bool,
-	procJSON io.Reader,
+	_, _ uint32, pio garden.ProcessIO, _ bool, procJSON io.Reader,
+	_ func() error,
 ) (garden.Process, error) {
 	log = log.Session("execrunner")
 

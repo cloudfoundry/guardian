@@ -60,7 +60,7 @@ type ExecRunner interface {
 	Run(
 		log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
 		containerRootHostUID, containerRootHostGID uint32, pio garden.ProcessIO, tty bool,
-		procJSON io.Reader,
+		procJSON io.Reader, extraCleanup func() error,
 	) (garden.Process, error)
 	Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
 }

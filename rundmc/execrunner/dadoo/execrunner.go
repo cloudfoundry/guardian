@@ -50,7 +50,7 @@ func NewExecRunner(
 func (d *ExecRunner) Run(
 	log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
 	containerRootHostUID, containerRootHostGID uint32, pio garden.ProcessIO, tty bool,
-	procJSON io.Reader,
+	procJSON io.Reader, extraCleanup func() error,
 ) (proc garden.Process, theErr error) {
 	log = log.Session("execrunner")
 
@@ -75,13 +75,13 @@ func (d *ExecRunner) Run(
 	}
 	defer syncr.Close()
 
-	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
+	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), extraCleanup)
 	if err := process.mkfifos(containerRootHostUID, containerRootHostGID); err != nil {
 		return nil, err
 	}
 
 	cmd := buildDadooCommand(
-		tty, d.dadooPath, d.runMode, d.runcPath, processPath, sandboxHandle,
+		tty, d.dadooPath, d.runMode, d.runcPath, processID, processPath, sandboxHandle,
 		[]*os.File{fd3w, logw, syncw}, procJSON,
 	)
 
@@ -155,13 +155,19 @@ func (d *ExecRunner) Run(
 	return process, nil
 }
 
-func buildDadooCommand(tty bool, dadooPath, dadooRunMode, runcPath, processPath, handle string, extraFiles []*os.File, stdin io.Reader) *exec.Cmd {
-	var cmd *exec.Cmd
+func buildDadooCommand(tty bool, dadooPath, dadooRunMode, runcPath, processID, processPath, sandboxHandle string, extraFiles []*os.File, stdin io.Reader) *exec.Cmd {
+	dadooArgs := []string{}
 	if tty {
-		cmd = exec.Command(dadooPath, "-tty", dadooRunMode, runcPath, processPath, handle)
-	} else {
-		cmd = exec.Command(dadooPath, dadooRunMode, runcPath, processPath, handle)
+		dadooArgs = append(dadooArgs, "-tty")
 	}
+	dadooArgs = append(dadooArgs, dadooRunMode, runcPath, processPath)
+	if dadooRunMode == "run" {
+		dadooArgs = append(dadooArgs, processID)
+	} else {
+		dadooArgs = append(dadooArgs, sandboxHandle)
+	}
+
+	cmd := exec.Command(dadooPath, dadooArgs...)
 	cmd.ExtraFiles = extraFiles
 	cmd.Stdin = stdin
 
@@ -177,7 +183,7 @@ func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.Proces
 		return nil, err
 	}
 
-	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
+	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"), nil)
 	if err := process.attach(io); err != nil {
 		return nil, err
 	}
@@ -199,7 +205,7 @@ type process struct {
 	signals.Signaller
 }
 
-func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath string) *process {
+func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath string, extraCleanup func() error) *process {
 	d.processesMutex.Lock()
 	defer d.processesMutex.Unlock()
 
@@ -211,6 +217,13 @@ func (d *ExecRunner) getProcess(log lager.Logger, id, processPath, pidFilePath s
 		d.processesMutex.Lock()
 		delete(d.processes, processPath)
 		d.processesMutex.Unlock()
+
+		if extraCleanup != nil {
+			if err := extraCleanup(); err != nil {
+				return err
+			}
+		}
+
 		if d.cleanupProcessDirsOnWait {
 			return os.RemoveAll(processPath)
 		}

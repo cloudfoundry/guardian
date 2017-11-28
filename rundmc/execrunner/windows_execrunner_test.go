@@ -69,6 +69,7 @@ var _ = Describe("DirectExecRunner", func() {
 				processIO,
 				false,
 				bytes.NewBufferString("some-process"),
+				nil,
 			)
 		})
 
@@ -192,6 +193,7 @@ var _ = Describe("DirectExecRunner", func() {
 				garden.ProcessIO{},
 				false,
 				bytes.NewBufferString("some-process"),
+				nil,
 			)
 			Expect(err).ToNot(HaveOccurred())
 		})

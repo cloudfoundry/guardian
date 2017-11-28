@@ -48,7 +48,7 @@ type OCIRuntime interface {
 }
 
 type PeaCreator interface {
-	CreatePea(log lager.Logger, spec garden.ProcessSpec, pio garden.ProcessIO, ctrHandle, ctrBundlePath string) (garden.Process, error)
+	CreatePea(log lager.Logger, spec garden.ProcessSpec, pio garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error)
 }
 
 type NstarRunner interface {

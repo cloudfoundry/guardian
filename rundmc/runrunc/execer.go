@@ -21,7 +21,7 @@ type Execer struct {
 	mkdirer        Mkdirer
 	userLookuper   UserLookupper
 	runner         ExecRunner
-	processIDGen   UidGenerator //TODO: rename?
+	processIDGen   UidGenerator
 }
 
 func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookuper UserLookupper, runner ExecRunner, processIDGen UidGenerator) *Execer {
@@ -101,7 +101,7 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec g
 
 	return e.runner.Run(
 		log, processID, processPath, sandboxHandle, bundlePath, preparedSpec.ContainerRootHostUID,
-		preparedSpec.ContainerRootHostGID, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec),
+		preparedSpec.ContainerRootHostGID, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec), nil,
 	)
 }
 

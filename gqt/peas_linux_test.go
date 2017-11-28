@@ -87,8 +87,8 @@ var _ = Describe("Partially shared containers (peas)", func() {
 				config.CleanupProcessDirsOnWait = boolptr(false)
 			})
 
-			It("should delete pea process dir", func() {
-				Expect(processPath).NotTo(BeADirectory())
+			It("should not delete pea process dir", func() {
+				Expect(processPath).To(BeADirectory())
 			})
 		})
 	})
