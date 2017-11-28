@@ -61,7 +61,6 @@ func (f *WindowsFactory) WireExecRunner() runrunc.ExecRunner {
 	return &execrunner.DirectExecRunner{
 		RuntimePath:   f.config.Runtime.Plugin,
 		CommandRunner: f.commandRunner,
-		ProcessIDGen:  wireUIDGenerator(),
 	}
 }
 

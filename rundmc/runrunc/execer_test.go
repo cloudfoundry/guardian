@@ -2,6 +2,7 @@ package runrunc_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -19,11 +20,12 @@ import (
 
 var _ = Describe("Execer", func() {
 	var (
-		bundleLoader   *fakes.FakeBundleLoader
-		processBuilder *fakes.FakeProcessBuilder
-		mkdirer        *fakes.FakeMkdirer
-		userLookuper   *fakes.FakeUserLookupper
-		execRunner     *fakes.FakeExecRunner
+		bundleLoader       *fakes.FakeBundleLoader
+		processBuilder     *fakes.FakeProcessBuilder
+		mkdirer            *fakes.FakeMkdirer
+		userLookuper       *fakes.FakeUserLookupper
+		processIDGenerator *fakes.FakeUidGenerator
+		execRunner         *fakes.FakeExecRunner
 
 		execer *runrunc.Execer
 
@@ -49,7 +51,7 @@ var _ = Describe("Execer", func() {
 				HostID:      20,
 				Size:        100,
 			})
-		preparedProc = &runrunc.PreparedSpec{ContainerRootHostGID: 1001}
+		preparedProc *runrunc.PreparedSpec
 	)
 
 	BeforeEach(func() {
@@ -67,6 +69,12 @@ var _ = Describe("Execer", func() {
 			TTY:  &garden.TTYSpec{WindowSize: &garden.WindowSize{Rows: 42}},
 		}
 
+		preparedProc = &runrunc.PreparedSpec{
+			ContainerRootHostUID: 1000,
+			ContainerRootHostGID: 1001,
+			Process:              specs.Process{Cwd: "some-cwd"},
+		}
+
 		bundleLoader = new(fakes.FakeBundleLoader)
 		bundleLoader.LoadReturns(bndl, nil)
 		processBuilder = new(fakes.FakeProcessBuilder)
@@ -74,6 +82,7 @@ var _ = Describe("Execer", func() {
 		mkdirer = new(fakes.FakeMkdirer)
 		userLookuper = new(fakes.FakeUserLookupper)
 		userLookuper.LookupReturns(user, nil)
+		processIDGenerator = new(fakes.FakeUidGenerator)
 		execRunner = new(fakes.FakeExecRunner)
 
 		execer = runrunc.NewExecer(
@@ -82,6 +91,7 @@ var _ = Describe("Execer", func() {
 			mkdirer,
 			userLookuper,
 			execRunner,
+			processIDGenerator,
 		)
 	})
 
@@ -129,16 +139,55 @@ var _ = Describe("Execer", func() {
 			}))
 		})
 
+		It("does not generate an ID for the process if one is specified", func() {
+			Expect(processIDGenerator.GenerateCallCount()).To(Equal(0))
+		})
+
+		Context("when no process ID is specified", func() {
+			BeforeEach(func() {
+				spec.ID = ""
+			})
+
+			It("generates one", func() {
+				Expect(processIDGenerator.GenerateCallCount()).To(Equal(1))
+			})
+		})
+
+		It("creates the process directory", func() {
+			Expect(filepath.Join(bundlePath, "processes", spec.ID)).To(BeADirectory())
+		})
+
 		It("runs the process", func() {
 			Expect(execRunner.RunCallCount()).To(Equal(1))
-			_, processID, actualPreparedProc, actualBundlePath,
-				actualProcessPath, actualHandle, actualPIO := execRunner.RunArgsForCall(0)
+			_, processID, actualProcessPath, actualSandboxHandle, actualSandboxBundlePath,
+				actualContainerRootHostUID, actualContainerRootHostGID, actualPIO, actualTTY,
+				actualProcJSON := execRunner.RunArgsForCall(0)
 			Expect(processID).To(Equal(spec.ID))
-			Expect(actualPreparedProc).To(Equal(preparedProc))
-			Expect(actualBundlePath).To(Equal(bundlePath))
-			Expect(actualProcessPath).To(Equal(filepath.Join(bundlePath, "processes")))
-			Expect(actualHandle).To(Equal(id))
+			Expect(actualProcessPath).To(Equal(filepath.Join(bundlePath, "processes", processID)))
+			Expect(actualSandboxHandle).To(Equal(id))
+			Expect(actualSandboxBundlePath).To(Equal(bundlePath))
+			Expect(actualContainerRootHostUID).To(Equal(preparedProc.ContainerRootHostUID))
+			Expect(actualContainerRootHostGID).To(Equal(preparedProc.ContainerRootHostGID))
 			Expect(actualPIO).To(Equal(pio))
+			Expect(actualTTY).To(BeFalse())
+
+			actualProcJSONBytes, err := ioutil.ReadAll(actualProcJSON)
+			Expect(err).NotTo(HaveOccurred())
+			procJSONBytes, err := json.Marshal(preparedProc.Process)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(string(actualProcJSONBytes)).To(Equal(string(procJSONBytes)))
+		})
+
+		Context("when the process has a terminal", func() {
+			BeforeEach(func() {
+				preparedProc.Process.Terminal = true
+			})
+
+			It("runs the process, specifying a TTY", func() {
+				Expect(execRunner.RunCallCount()).To(Equal(1))
+				_, _, _, _, _, _, _, _, actualTTY, _ := execRunner.RunArgsForCall(0)
+				Expect(actualTTY).To(BeTrue())
+			})
 		})
 
 		Context("when a working directory is not specified", func() {
@@ -194,6 +243,16 @@ var _ = Describe("Execer", func() {
 
 			It("returns an error", func() {
 				Expect(execErr).To(MatchError(ContainSubstring("mkdir")))
+			})
+		})
+
+		Context("when the process ID is already in use", func() {
+			BeforeEach(func() {
+				Expect(os.MkdirAll(filepath.Join(bundlePath, "processes", spec.ID), 0700)).To(Succeed())
+			})
+
+			It("returns an error", func() {
+				Expect(execErr).To(MatchError("process ID 'some-process-id' already in use"))
 			})
 		})
 

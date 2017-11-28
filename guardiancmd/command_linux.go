@@ -201,10 +201,10 @@ func (f *LinuxFactory) WireExecRunner() runrunc.ExecRunner {
 	return dadoo.NewExecRunner(
 		f.config.Bin.Dadoo.Path(),
 		f.config.Runtime.Plugin,
-		wireUIDGenerator(),
 		f.signallerFactory,
 		f.commandRunner,
 		f.config.Containers.CleanupProcessDirsOnWait,
+		"exec",
 	)
 }
 

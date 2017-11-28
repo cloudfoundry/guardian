@@ -811,6 +811,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		factory.WireMkdirer(),
 		runrunc.LookupFunc(runrunc.LookupUser),
 		factory.WireExecRunner(),
+		wireUIDGenerator(),
 	)
 
 	eventStore := rundmc.NewEventStore(properties)

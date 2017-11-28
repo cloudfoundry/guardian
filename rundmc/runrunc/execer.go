@@ -1,7 +1,12 @@
 package runrunc
 
 import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 
@@ -16,21 +21,23 @@ type Execer struct {
 	mkdirer        Mkdirer
 	userLookuper   UserLookupper
 	runner         ExecRunner
+	processIDGen   UidGenerator //TODO: rename?
 }
 
-func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookuper UserLookupper, runner ExecRunner) *Execer {
+func NewExecer(bundleLoader BundleLoader, processBuilder ProcessBuilder, mkdirer Mkdirer, userLookuper UserLookupper, runner ExecRunner, processIDGen UidGenerator) *Execer {
 	return &Execer{
 		bundleLoader:   bundleLoader,
 		processBuilder: processBuilder,
 		mkdirer:        mkdirer,
 		userLookuper:   userLookuper,
 		runner:         runner,
+		processIDGen:   processIDGen,
 	}
 }
 
 // Exec a process in a bundle using 'runc exec'
-func (e *Execer) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
-	log = log.Session("exec", lager.Data{"id": id, "path": spec.Path})
+func (e *Execer) Exec(log lager.Logger, bundlePath, sandboxHandle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+	log = log.Session("exec", lager.Data{"id": sandboxHandle, "path": spec.Path})
 
 	log.Info("start")
 	defer log.Info("finished")
@@ -73,7 +80,29 @@ func (e *Execer) Exec(log lager.Logger, bundlePath, id string, spec garden.Proce
 	})
 
 	processesPath := filepath.Join(bundlePath, "processes")
-	return e.runner.Run(log, spec.ID, preparedSpec, bundlePath, processesPath, id, io)
+
+	processID := spec.ID
+	if processID == "" {
+		processID = e.processIDGen.Generate()
+	}
+	processPath := filepath.Join(processesPath, processID)
+	if _, err := os.Stat(processPath); err == nil {
+		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
+	}
+
+	if err := os.MkdirAll(processPath, 0700); err != nil {
+		return nil, err
+	}
+
+	encodedSpec, err := json.Marshal(preparedSpec.Process)
+	if err != nil {
+		return nil, err // this could *almost* be a panic: a valid spec should always encode (but out of caution we'll error)
+	}
+
+	return e.runner.Run(
+		log, processID, processPath, sandboxHandle, bundlePath, preparedSpec.ContainerRootHostUID,
+		preparedSpec.ContainerRootHostGID, io, preparedSpec.Terminal, bytes.NewReader(encodedSpec),
+	)
 }
 
 // Attach attaches to an already running process by guid

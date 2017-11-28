@@ -2,9 +2,7 @@ package dadoo
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,7 +16,6 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/logging"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/lager"
 )
@@ -26,45 +23,39 @@ import (
 type ExecRunner struct {
 	dadooPath                string
 	runcPath                 string
-	processIDGen             runrunc.UidGenerator
 	signallerFactory         *signals.SignallerFactory
 	commandRunner            commandrunner.CommandRunner
 	cleanupProcessDirsOnWait bool
 	processes                map[string]*process
 	processesMutex           *sync.Mutex
+	runMode                  string
 }
 
-func NewExecRunner(dadooPath, runcPath string, processIDGen runrunc.UidGenerator, signallerFactory *signals.SignallerFactory, commandRunner commandrunner.CommandRunner, shouldCleanup bool) *ExecRunner {
+func NewExecRunner(
+	dadooPath, runcPath string, signallerFactory *signals.SignallerFactory,
+	commandRunner commandrunner.CommandRunner, shouldCleanup bool, runMode string,
+) *ExecRunner {
 	return &ExecRunner{
 		dadooPath:                dadooPath,
 		runcPath:                 runcPath,
-		processIDGen:             processIDGen,
 		signallerFactory:         signallerFactory,
 		commandRunner:            commandRunner,
 		cleanupProcessDirsOnWait: shouldCleanup,
 		processes:                map[string]*process{},
 		processesMutex:           new(sync.Mutex),
+		runMode:                  runMode,
 	}
 }
 
-func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, pio garden.ProcessIO) (p garden.Process, theErr error) {
+func (d *ExecRunner) Run(
+	log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
+	containerRootHostUID, containerRootHostGID uint32, pio garden.ProcessIO, tty bool,
+	procJSON io.Reader,
+) (proc garden.Process, theErr error) {
 	log = log.Session("execrunner")
 
 	log.Info("start")
 	defer log.Info("done")
-
-	if processID == "" {
-		processID = d.processIDGen.Generate()
-	}
-	processPath := filepath.Join(processesPath, processID)
-	_, err := os.Stat(processPath)
-	if err == nil {
-		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
-	}
-
-	if err := os.MkdirAll(processPath, 0700); err != nil {
-		return nil, err
-	}
 
 	fd3r, fd3w, err := os.Pipe()
 	if err != nil {
@@ -85,18 +76,16 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	defer syncr.Close()
 
 	process := d.getProcess(log, processID, processPath, filepath.Join(processPath, "pidfile"))
-	if err := process.mkfifos(spec.ContainerRootHostUID, spec.ContainerRootHostGID); err != nil {
+	if err := process.mkfifos(containerRootHostUID, containerRootHostGID); err != nil {
 		return nil, err
 	}
 
-	var cmd *exec.Cmd
-	if spec.Terminal {
-		cmd = exec.Command(d.dadooPath, "-tty", "exec", d.runcPath, processPath, handle)
-	} else {
-		cmd = exec.Command(d.dadooPath, "exec", d.runcPath, processPath, handle)
-	}
+	cmd := buildDadooCommand(
+		tty, d.dadooPath, d.runMode, d.runcPath, processPath, sandboxHandle,
+		[]*os.File{fd3w, logw, syncw}, procJSON,
+	)
 
-	dadooLogFilePath := filepath.Join(bundlePath, fmt.Sprintf("dadoo.%s.log", processID))
+	dadooLogFilePath := filepath.Join(sandboxBundlePath, fmt.Sprintf("dadoo.%s.log", processID))
 	dadooLogFile, err := os.Create(dadooLogFilePath)
 	if err != nil {
 		return nil, err
@@ -105,18 +94,6 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	cmd.Stdout = dadooLogFile
 	cmd.Stderr = dadooLogFile
 
-	cmd.ExtraFiles = []*os.File{
-		fd3w,
-		logw,
-		syncw,
-	}
-
-	encodedSpec, err := json.Marshal(spec.Process)
-	if err != nil {
-		return nil, err // this could *almost* be a panic: a valid spec should always encode (but out of caution we'll error)
-	}
-
-	cmd.Stdin = bytes.NewReader(encodedSpec)
 	if err := d.commandRunner.Start(cmd); err != nil {
 		return nil, err
 	}
@@ -176,6 +153,19 @@ func (d *ExecRunner) Run(log lager.Logger, processID string, spec *runrunc.Prepa
 	}
 
 	return process, nil
+}
+
+func buildDadooCommand(tty bool, dadooPath, dadooRunMode, runcPath, processPath, handle string, extraFiles []*os.File, stdin io.Reader) *exec.Cmd {
+	var cmd *exec.Cmd
+	if tty {
+		cmd = exec.Command(dadooPath, "-tty", dadooRunMode, runcPath, processPath, handle)
+	} else {
+		cmd = exec.Command(dadooPath, dadooRunMode, runcPath, processPath, handle)
+	}
+	cmd.ExtraFiles = extraFiles
+	cmd.Stdin = stdin
+
+	return cmd
 }
 
 func (d *ExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {

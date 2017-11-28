@@ -7,7 +7,7 @@ ARGS=$@
 DIRS=$(for d in $ARGS; do [ -d "$d" ] && echo "$d"; done)
 
 TASK=ci/guardian.yml
-if [ $GOOS == "windows" ]; then
+if [ "$GOOS" == "windows" ]; then
   TASK=ci/guardian-windows.yml
 fi
 

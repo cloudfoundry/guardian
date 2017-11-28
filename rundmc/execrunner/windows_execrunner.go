@@ -1,8 +1,7 @@
 package execrunner
 
 import (
-	"encoding/json"
-	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,52 +14,41 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/logging"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 )
 
 type DirectExecRunner struct {
 	RuntimePath   string
 	CommandRunner commandrunner.CommandRunner
-	ProcessIDGen  runrunc.UidGenerator
 }
 
-func (e *DirectExecRunner) Run(log lager.Logger, processID string, spec *runrunc.PreparedSpec, bundlePath, processesPath, handle string, io garden.ProcessIO) (garden.Process, error) {
+func (e *DirectExecRunner) Run(
+	log lager.Logger, processID, processPath, sandboxHandle, _ string,
+	_, _ uint32, pio garden.ProcessIO, _ bool,
+	procJSON io.Reader,
+) (garden.Process, error) {
 	log = log.Session("execrunner")
 
 	log.Info("start")
 	defer log.Info("done")
 
-	if processID == "" {
-		processID = e.ProcessIDGen.Generate()
-	}
-
-	proc := &process{id: processID}
-	marshaledSpec, err := json.Marshal(spec)
-	if err != nil {
-		return nil, errors.Wrap(err, "marshaling process spec")
-	}
-
-	processPath := filepath.Join(processesPath, proc.ID())
-	_, err = os.Stat(processPath)
-	if err == nil {
-		return nil, errors.New(fmt.Sprintf("process ID '%s' already in use", processID))
-	}
-
-	if err := os.MkdirAll(processPath, 0700); err != nil {
-		return nil, err
-	}
-
 	specPath := filepath.Join(processPath, "spec.json")
-	if err := ioutil.WriteFile(specPath, marshaledSpec, 0600); err != nil {
+	specFile, err := os.OpenFile(specPath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return nil, errors.Wrap(err, "opening process spec file for writing")
+	}
+	defer specFile.Close()
+	if _, err := io.Copy(specFile, procJSON); err != nil {
 		return nil, errors.Wrap(err, "writing process spec")
 	}
 
 	logPath := filepath.Join(processPath, "exec.log")
 
-	cmd := exec.Command(e.RuntimePath, "--debug", "--log", logPath, "--log-format", "json", "exec", "-p", specPath, "--pid-file", filepath.Join(processPath, "pidfile"), handle)
-	cmd.Stdout = io.Stdout
-	cmd.Stderr = io.Stderr
+	proc := &process{id: processID}
+
+	cmd := exec.Command(e.RuntimePath, "--debug", "--log", logPath, "--log-format", "json", "exec", "-p", specPath, "--pid-file", filepath.Join(processPath, "pidfile"), sandboxHandle)
+	cmd.Stdout = pio.Stdout
+	cmd.Stderr = pio.Stderr
 	if err := e.CommandRunner.Start(cmd); err != nil {
 		return nil, errors.Wrap(err, "execing runtime plugin")
 	}

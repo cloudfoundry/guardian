@@ -2,22 +2,19 @@ package execrunner_test
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
+	"runtime"
 	"sync"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc/runruncfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -27,42 +24,36 @@ import (
 
 var _ = Describe("DirectExecRunner", func() {
 	var (
-		cmdRunner    *fake_command_runner.FakeCommandRunner
-		processIDGen *runruncfakes.FakeUidGenerator
-		execRunner   *execrunner.DirectExecRunner
-		logger       *lagertest.TestLogger
-		runtimePath  = "container-runtime-path"
+		cmdRunner   *fake_command_runner.FakeCommandRunner
+		execRunner  *execrunner.DirectExecRunner
+		logger      *lagertest.TestLogger
+		runtimePath = "container-runtime-path"
 
-		spec         *runrunc.PreparedSpec
-		process      garden.Process
-		processIO    garden.ProcessIO
-		runErr       error
-		processID    string
-		processesDir string
-		logs         string
+		spec        *runrunc.PreparedSpec
+		process     garden.Process
+		processIO   garden.ProcessIO
+		runErr      error
+		processID   string
+		processPath string
+		logs        string
 	)
 
 	BeforeEach(func() {
-		var err error
 		cmdRunner = fake_command_runner.New()
-		processIDGen = new(runruncfakes.FakeUidGenerator)
-		processIDGen.GenerateStub = func() string {
-			return strconv.Itoa(rand.Int())
-		}
 		logger = lagertest.NewTestLogger("test-execrunner-windows")
 
 		execRunner = &execrunner.DirectExecRunner{
 			RuntimePath:   runtimePath,
 			CommandRunner: cmdRunner,
-			ProcessIDGen:  processIDGen,
 		}
-		processID = ""
-		processesDir, err = ioutil.TempDir("", "processes")
+		processID = "process-id"
+		var err error
+		processPath, err = ioutil.TempDir("", "processes")
 		Expect(err).ToNot(HaveOccurred())
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(processesDir)).To(Succeed())
+		Expect(os.RemoveAll(processPath)).To(Succeed())
 	})
 
 	Describe("Run", func() {
@@ -70,9 +61,14 @@ var _ = Describe("DirectExecRunner", func() {
 			spec = &runrunc.PreparedSpec{Process: specs.Process{Cwd: "idiosyncratic-string"}}
 			process, runErr = execRunner.Run(
 				logger,
-				processID, spec,
-				"a-bundle", processesDir, "handle",
+				processID,
+				processPath,
+				"handle",
+				"not-used",
+				0, 0,
 				processIO,
+				false,
+				bytes.NewBufferString("some-process"),
 			)
 		})
 
@@ -86,21 +82,19 @@ var _ = Describe("DirectExecRunner", func() {
 			Expect(cmdRunner.StartedCommands()[0].Args).To(ConsistOf(
 				runtimePath,
 				"--debug",
-				"--log", filepath.Join(processesDir, process.ID(), "exec.log"),
+				"--log", filepath.Join(processPath, "exec.log"),
 				"--log-format", "json",
 				"exec",
-				"-p", filepath.Join(processesDir, process.ID(), "spec.json"),
+				"-p", filepath.Join(processPath, "spec.json"),
 				"--pid-file", MatchRegexp(".*"),
 				"handle",
 			))
 		})
 
 		It("writes the process spec", func() {
-			actualContents, err := ioutil.ReadFile(filepath.Join(processesDir, process.ID(), "spec.json"))
+			actualContents, err := ioutil.ReadFile(filepath.Join(processPath, "spec.json"))
 			Expect(err).ToNot(HaveOccurred())
-			actualSpec := &runrunc.PreparedSpec{}
-			Expect(json.Unmarshal(actualContents, actualSpec)).To(Succeed())
-			Expect(actualSpec).To(Equal(spec))
+			Expect(string(actualContents)).To(Equal("some-process"))
 		})
 
 		Describe("logging", func() {
@@ -109,7 +103,7 @@ var _ = Describe("DirectExecRunner", func() {
 				logs = `{"time":"2016-03-02T13:56:38Z", "level":"warning", "msg":"some-message"}
 {"time":"2016-03-02T13:56:38Z", "level":"error", "msg":"some-error"}`
 				cmdRunner.WhenRunning(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					ioutil.WriteFile(filepath.Join(processesDir, processID, "exec.log"), []byte(logs), 0777)
+					ioutil.WriteFile(filepath.Join(processPath, "exec.log"), []byte(logs), 0777)
 					return nil
 				})
 			})
@@ -130,16 +124,6 @@ var _ = Describe("DirectExecRunner", func() {
 			})
 		})
 
-		Context("when no process ID is passed", func() {
-			BeforeEach(func() {
-				processIDGen.GenerateReturns("some-generated-id")
-			})
-
-			It("uses a generated process ID", func() {
-				Expect(process.ID()).To(Equal("some-generated-id"))
-			})
-		})
-
 		Context("when a process ID is passed", func() {
 			BeforeEach(func() {
 				processID = "frank"
@@ -147,18 +131,6 @@ var _ = Describe("DirectExecRunner", func() {
 
 			It("uses it", func() {
 				Expect(process.ID()).To(Equal("frank"))
-			})
-		})
-
-		Context("when a processID is reused concurrently", func() {
-			BeforeEach(func() {
-				processID = "reused"
-				_, err := execRunner.Run(logger, processID, &runrunc.PreparedSpec{}, "a-bundle", processesDir, "handle", garden.ProcessIO{})
-				Expect(err).NotTo(HaveOccurred())
-			})
-
-			It("returns a sensible error", func() {
-				Expect(runErr).To(MatchError(fmt.Sprintf("process ID '%s' already in use", processID)))
 			})
 		})
 
@@ -210,12 +182,16 @@ var _ = Describe("DirectExecRunner", func() {
 		)
 
 		JustBeforeEach(func() {
-			spec := &runrunc.PreparedSpec{Process: specs.Process{Cwd: "idiosyncratic-string"}}
 			process, err = execRunner.Run(
 				lagertest.NewTestLogger("execrunner-windows"),
-				processID, spec,
-				"a-bundle", processesDir, "handle",
+				processID,
+				processPath,
+				"handle",
+				"not-used",
+				0, 0,
 				garden.ProcessIO{},
+				false,
+				bytes.NewBufferString("some-process"),
 			)
 			Expect(err).ToNot(HaveOccurred())
 		})
@@ -223,7 +199,7 @@ var _ = Describe("DirectExecRunner", func() {
 		Context("when the process exits 0", func() {
 			BeforeEach(func() {
 				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					return exec.Command("powershell.exe", "-Command", "Exit 0").Run()
+					return exitWith(0).Run()
 				})
 			})
 
@@ -237,7 +213,7 @@ var _ = Describe("DirectExecRunner", func() {
 		Context("when the process returns a non-zero exit code", func() {
 			BeforeEach(func() {
 				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					return exec.Command("powershell.exe", "-Command", "Exit 12").Run()
+					return exitWith(12).Run()
 				})
 			})
 
@@ -265,7 +241,7 @@ var _ = Describe("DirectExecRunner", func() {
 		Context("when it is called consecutive times", func() {
 			BeforeEach(func() {
 				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					return exec.Command("powershell.exe", "-Command", "Exit 12").Run()
+					return exitWith(12).Run()
 				})
 			})
 
@@ -286,7 +262,7 @@ var _ = Describe("DirectExecRunner", func() {
 			BeforeEach(func() {
 				cmdRunner.WhenWaitingFor(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
 					<-proceed
-					return exec.Command("powershell.exe", "-Command", "Exit 12").Run()
+					return exitWith(12).Run()
 				})
 			})
 
@@ -312,3 +288,11 @@ var _ = Describe("DirectExecRunner", func() {
 		})
 	})
 })
+
+func exitWith(exitCode int) *exec.Cmd {
+	if runtime.GOOS == "windows" {
+		return exec.Command("powershell.exe", "-Command", fmt.Sprintf("Exit %d", exitCode))
+	}
+
+	return exec.Command("sh", "-c", fmt.Sprintf("exit %d", exitCode))
+}

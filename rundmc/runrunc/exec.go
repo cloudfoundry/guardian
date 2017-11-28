@@ -1,6 +1,7 @@
 package runrunc
 
 import (
+	"io"
 	"os"
 
 	"code.cloudfoundry.org/garden"
@@ -56,7 +57,11 @@ type BundleLoader interface {
 
 //go:generate counterfeiter . ExecRunner
 type ExecRunner interface {
-	Run(log lager.Logger, passedID string, spec *PreparedSpec, bundlePath, processesPath, handle string, io garden.ProcessIO) (garden.Process, error)
+	Run(
+		log lager.Logger, processID, processPath, sandboxHandle, sandboxBundlePath string,
+		containerRootHostUID, containerRootHostGID uint32, pio garden.ProcessIO, tty bool,
+		procJSON io.Reader,
+	) (garden.Process, error)
 	Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error)
 }
 
