@@ -772,6 +772,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		bundlerules.Env{},
 		bundlerules.Hostname{},
 		bundlerules.Windows{},
+		bundlerules.RootFS{},
 	}
 	bundleRules = append(bundleRules, factory.OsSpecificBundleRules()...)
 	peaBundleRules := make([]rundmc.BundlerRule, len(bundleRules))

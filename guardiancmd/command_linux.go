@@ -185,7 +185,7 @@ func wireEnvFunc() runrunc.EnvFunc {
 
 func (f *LinuxFactory) WireMkdirer() runrunc.Mkdirer {
 	if runningAsRoot() {
-		return bundlerules.ChrootMkdir{Command: preparerootfs.Command, CommandRunner: f.commandRunner}
+		return bundlerules.MkdirChowner{Command: preparerootfs.Command, CommandRunner: f.commandRunner}
 	}
 
 	return NoopMkdirer{}
@@ -270,12 +270,12 @@ func unprivilegedMounts() []specs.Mount {
 }
 
 func (f *LinuxFactory) OsSpecificBundleRules() []rundmc.BundlerRule {
-	chrootMkdir := bundlerules.ChrootMkdir{
+	chrootMkdir := bundlerules.MkdirChowner{
 		Command:       preparerootfs.Command,
 		CommandRunner: f.commandRunner,
 	}
 	return []rundmc.BundlerRule{
-		bundlerules.RootFS{
+		bundlerules.PrepareRootFS{
 			ContainerRootUID: f.uidMappings.Map(0),
 			ContainerRootGID: f.gidMappings.Map(0),
 			MkdirChown:       chrootMkdir,
