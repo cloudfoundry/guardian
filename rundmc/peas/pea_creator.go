@@ -74,18 +74,10 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		cgroupPath = processID
 	}
 
-	originalCtrInitPid, err := p.PidGetter.Pid(filepath.Join(sandboxBundlePath, "pidfile"))
+	linuxNamespaces, err := p.linuxNamespaces(sandboxBundlePath)
 	if err != nil {
-		return errs("reading-ctr-pid", err)
+		return errs("determining-namespaces", err)
 	}
-
-	linuxNamespaces := map[string]string{}
-	linuxNamespaces["mount"] = ""
-	linuxNamespaces["network"] = fmt.Sprintf("/proc/%d/ns/net", originalCtrInitPid)
-	linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
-	linuxNamespaces["ipc"] = fmt.Sprintf("/proc/%d/ns/ipc", originalCtrInitPid)
-	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
-	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", originalCtrInitPid)
 
 	bndl, err := p.BundleGenerator.Generate(gardener.DesiredContainerSpec{
 		Handle:     processID,
@@ -125,6 +117,23 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		preparedProcess.ContainerRootHostUID, preparedProcess.ContainerRootHostGID,
 		procIO, preparedProcess.Process.Terminal, nil, extraCleanup,
 	)
+}
+
+func (p *PeaCreator) linuxNamespaces(sandboxBundlePath string) (map[string]string, error) {
+	originalCtrInitPid, err := p.PidGetter.Pid(filepath.Join(sandboxBundlePath, "pidfile"))
+	if err != nil {
+		return nil, errorwrapper.Wrap(err, "reading-ctr-pid")
+	}
+
+	linuxNamespaces := map[string]string{}
+	linuxNamespaces["mount"] = ""
+	linuxNamespaces["network"] = fmt.Sprintf("/proc/%d/ns/net", originalCtrInitPid)
+	linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
+	linuxNamespaces["ipc"] = fmt.Sprintf("/proc/%d/ns/ipc", originalCtrInitPid)
+	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
+	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", originalCtrInitPid)
+
+	return linuxNamespaces, nil
 }
 
 func parseUser(uidgid string) (int, int, error) {
