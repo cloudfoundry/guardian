@@ -30,13 +30,19 @@ type PidGetter interface {
 	Pid(pidFilePath string) (int, error)
 }
 
+//go:generate counterfeiter . PrivilegedGetter
+type PrivilegedGetter interface {
+	Privileged(bundlePath string) (bool, error)
+}
+
 type PeaCreator struct {
-	Volumizer       Volumizer
-	PidGetter       PidGetter
-	BundleGenerator depot.BundleGenerator
-	BundleSaver     depot.BundleSaver
-	ProcessBuilder  runrunc.ProcessBuilder
-	ExecRunner      runrunc.ExecRunner
+	Volumizer        Volumizer
+	PidGetter        PidGetter
+	PrivilegedGetter PrivilegedGetter
+	BundleGenerator  depot.BundleGenerator
+	BundleSaver      depot.BundleSaver
+	ProcessBuilder   runrunc.ProcessBuilder
+	ExecRunner       runrunc.ExecRunner
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error) {
@@ -61,9 +67,15 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return nil, err
 	}
 
+	privileged, err := p.PrivilegedGetter.Privileged(sandboxBundlePath)
+	if err != nil {
+		return errs("determining-privileged", err)
+	}
+
 	runtimeSpec, err := p.Volumizer.Create(log, garden.ContainerSpec{
-		Handle: processID,
-		Image:  spec.Image,
+		Handle:     processID,
+		Image:      spec.Image,
+		Privileged: privileged,
 	})
 	if err != nil {
 		return errs("creating-volume", err)
@@ -74,7 +86,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		cgroupPath = processID
 	}
 
-	linuxNamespaces, err := p.linuxNamespaces(sandboxBundlePath)
+	linuxNamespaces, err := p.linuxNamespaces(sandboxBundlePath, privileged)
 	if err != nil {
 		return errs("determining-namespaces", err)
 	}
@@ -85,6 +97,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		CgroupPath: cgroupPath,
 		Namespaces: linuxNamespaces,
 		BindMounts: spec.BindMounts,
+		Privileged: privileged,
 	}, sandboxBundlePath)
 	if err != nil {
 		return errs("generating-bundle", err)
@@ -119,7 +132,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 	)
 }
 
-func (p *PeaCreator) linuxNamespaces(sandboxBundlePath string) (map[string]string, error) {
+func (p *PeaCreator) linuxNamespaces(sandboxBundlePath string, privileged bool) (map[string]string, error) {
 	originalCtrInitPid, err := p.PidGetter.Pid(filepath.Join(sandboxBundlePath, "pidfile"))
 	if err != nil {
 		return nil, errorwrapper.Wrap(err, "reading-ctr-pid")
@@ -128,10 +141,13 @@ func (p *PeaCreator) linuxNamespaces(sandboxBundlePath string) (map[string]strin
 	linuxNamespaces := map[string]string{}
 	linuxNamespaces["mount"] = ""
 	linuxNamespaces["network"] = fmt.Sprintf("/proc/%d/ns/net", originalCtrInitPid)
-	linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
 	linuxNamespaces["ipc"] = fmt.Sprintf("/proc/%d/ns/ipc", originalCtrInitPid)
 	linuxNamespaces["pid"] = fmt.Sprintf("/proc/%d/ns/pid", originalCtrInitPid)
 	linuxNamespaces["uts"] = fmt.Sprintf("/proc/%d/ns/uts", originalCtrInitPid)
+
+	if !privileged {
+		linuxNamespaces["user"] = fmt.Sprintf("/proc/%d/ns/user", originalCtrInitPid)
+	}
 
 	return linuxNamespaces, nil
 }

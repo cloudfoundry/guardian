@@ -35,6 +35,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
+	"code.cloudfoundry.org/guardian/rundmc/peas/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
@@ -792,8 +793,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	bndlLoader := &goci.BndlLoader{}
 	processBuilder := runrunc.NewProcessBuilder(wireEnvFunc(), nonRootMaxCaps)
 
-	pidFileReader := wirePidfileReader()
-
 	cmdRunner := factory.CommandRunner()
 	runcrunner := runrunc.New(
 		cmdRunner,
@@ -823,13 +822,17 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		}
 	}
 
+	pidFileReader := wirePidfileReader()
+	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
+
 	peaCreator := &peas.PeaCreator{
-		Volumizer:       volumizer,
-		PidGetter:       pidFileReader,
-		BundleGenerator: peaTemplate,
-		ProcessBuilder:  processBuilder,
-		BundleSaver:     bundleSaver,
-		ExecRunner:      factory.WireExecRunner("run"),
+		Volumizer:        volumizer,
+		PidGetter:        pidFileReader,
+		PrivilegedGetter: privilegeChecker,
+		BundleGenerator:  peaTemplate,
+		ProcessBuilder:   processBuilder,
+		BundleSaver:      bundleSaver,
+		ExecRunner:       factory.WireExecRunner("run"),
 	}
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)

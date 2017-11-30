@@ -24,12 +24,13 @@ var _ = Describe("PeaCreator", func() {
 	const imageURI = "some-image-uri"
 
 	var (
-		volumizer       *peasfakes.FakeVolumizer
-		pidGetter       *peasfakes.FakePidGetter
-		bundleGenerator *depotfakes.FakeBundleGenerator
-		bundleSaver     *depotfakes.FakeBundleSaver
-		processBuilder  *runruncfakes.FakeProcessBuilder
-		execRunner      *runruncfakes.FakeExecRunner
+		volumizer        *peasfakes.FakeVolumizer
+		pidGetter        *peasfakes.FakePidGetter
+		bundleGenerator  *depotfakes.FakeBundleGenerator
+		bundleSaver      *depotfakes.FakeBundleSaver
+		processBuilder   *runruncfakes.FakeProcessBuilder
+		execRunner       *runruncfakes.FakeExecRunner
+		privilegedGetter *peasfakes.FakePrivilegedGetter
 
 		peaCreator *peas.PeaCreator
 
@@ -62,13 +63,17 @@ var _ = Describe("PeaCreator", func() {
 
 		execRunner = new(runruncfakes.FakeExecRunner)
 
+		privilegedGetter = new(peasfakes.FakePrivilegedGetter)
+		privilegedGetter.PrivilegedReturns(false, nil)
+
 		peaCreator = &peas.PeaCreator{
-			Volumizer:       volumizer,
-			PidGetter:       pidGetter,
-			BundleGenerator: bundleGenerator,
-			BundleSaver:     bundleSaver,
-			ProcessBuilder:  processBuilder,
-			ExecRunner:      execRunner,
+			Volumizer:        volumizer,
+			PidGetter:        pidGetter,
+			BundleGenerator:  bundleGenerator,
+			BundleSaver:      bundleSaver,
+			ProcessBuilder:   processBuilder,
+			ExecRunner:       execRunner,
+			PrivilegedGetter: privilegedGetter,
 		}
 
 		var err error
@@ -105,6 +110,12 @@ var _ = Describe("PeaCreator", func() {
 			Expect(filepath.Join(ctrBundleDir, "processes", processSpec.ID)).To(BeADirectory())
 		})
 
+		It("checks the sandbox container's privilege", func() {
+			Expect(privilegedGetter.PrivilegedCallCount()).To(Equal(1))
+			actualBundlePath := privilegedGetter.PrivilegedArgsForCall(0)
+			Expect(actualBundlePath).To(Equal(ctrBundleDir))
+		})
+
 		It("creates a volume", func() {
 			Expect(volumizer.CreateCallCount()).To(Equal(1))
 			_, actualSpec := volumizer.CreateArgsForCall(0)
@@ -114,6 +125,7 @@ var _ = Describe("PeaCreator", func() {
 				Username: "cakeuser",
 				Password: "cakepassword",
 			}))
+			Expect(actualSpec.Privileged).To(Equal(false))
 		})
 
 		It("passes the processID as handle to the bundle generator", func() {
@@ -134,17 +146,43 @@ var _ = Describe("PeaCreator", func() {
 			Expect(actualCtrSpec.CgroupPath).To(Equal(ctrHandle))
 		})
 
-		It("shares all namespaces apart from mnt with the container", func() {
+		It("passes Privileged to bundle generator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
-			Expect(actualCtrSpec.Namespaces).To(Equal(map[string]string{
-				"mount":   "",
-				"network": "/proc/123/ns/net",
-				"user":    "/proc/123/ns/user",
-				"ipc":     "/proc/123/ns/ipc",
-				"pid":     "/proc/123/ns/pid",
-				"uts":     "/proc/123/ns/uts",
-			}))
+			Expect(actualCtrSpec.Privileged).To(Equal(false))
+		})
+
+		Describe("sharing namespaces", func() {
+			It("shares all namespaces apart from mnt with the container", func() {
+				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+				Expect(actualCtrSpec.Namespaces).To(Equal(map[string]string{
+					"mount":   "",
+					"network": "/proc/123/ns/net",
+					"user":    "/proc/123/ns/user",
+					"ipc":     "/proc/123/ns/ipc",
+					"pid":     "/proc/123/ns/pid",
+					"uts":     "/proc/123/ns/uts",
+				}))
+			})
+
+			Context("when sandbox container is privileged", func() {
+				BeforeEach(func() {
+					privilegedGetter.PrivilegedReturns(true, nil)
+				})
+
+				It("shares all namespaces apart from mnt and user with the container", func() {
+					Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+					actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+					Expect(actualCtrSpec.Namespaces).To(Equal(map[string]string{
+						"mount":   "",
+						"network": "/proc/123/ns/net",
+						"ipc":     "/proc/123/ns/ipc",
+						"pid":     "/proc/123/ns/pid",
+						"uts":     "/proc/123/ns/uts",
+					}))
+				})
+			})
 		})
 
 		It("passes the ctrBundlePath to the bundle generator", func() {
@@ -345,6 +383,16 @@ var _ = Describe("PeaCreator", func() {
 
 			It("returns an error", func() {
 				Expect(createErr).To(MatchError("execrunner-error"))
+			})
+		})
+
+		Context("when the privileged getter returns an error", func() {
+			BeforeEach(func() {
+				privilegedGetter.PrivilegedReturns(false, errors.New("privileged-getter-error"))
+			})
+
+			It("returns an error", func() {
+				Expect(createErr).To(MatchError(ContainSubstring("privileged-getter-error")))
 			})
 		})
 	})
