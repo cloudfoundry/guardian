@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	. "github.com/onsi/ginkgo"
@@ -44,8 +45,17 @@ func subvolumeDelete(subvolumeAbsPath string) {
 }
 
 func CleanUpBtrfsSubvolumes(btrfsPath string) {
-	for _, subvolumePath := range subvolumePaths(btrfsPath) {
+	// This is a hack to ensure we delete nested submodules. It simply orders the list of submodules
+	// by how many nested directories there are and deletes the most (i.e. most deeply nested) first.
+	subvolumes := subvolumePaths(btrfsPath)
+	sort.Slice(subvolumes, func(i, j int) bool {
+		return strings.Count(subvolumes[i], "/") > strings.Count(subvolumes[j], "/")
+	})
+
+	for _, subvolumePath := range subvolumes {
 		subvolumeAbsPath := filepath.Join(btrfsPath, subvolumePath)
 		subvolumeDelete(subvolumeAbsPath)
 	}
+
+	Expect(len(subvolumePaths(btrfsPath))).To(BeZero())
 }
