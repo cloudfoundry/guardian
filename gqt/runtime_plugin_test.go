@@ -227,12 +227,12 @@ var _ = Describe("Runtime Plugin", func() {
 				It("passes the spec serialised into a file", func() {
 					processSpecFilePath := filepath.Join(client.TmpDir, "exec-process-spec")
 					Eventually(processSpecFilePath).Should(BeAnExistingFile())
-					processSpecFile, err := os.Open(processSpecFilePath)
-					Expect(err).ToNot(HaveOccurred())
-					defer processSpecFile.Close()
 
 					var processSpec runrunc.PreparedSpec
-					Expect(json.NewDecoder(processSpecFile).Decode(&processSpec)).To(Succeed())
+					processSpecContent, err := ioutil.ReadFile(processSpecFilePath)
+					Expect(err).ToNot(HaveOccurred())
+					Expect(json.Unmarshal(processSpecContent, &processSpec)).To(Succeed())
+
 					Expect(processSpec.Process.Args[0]).To(Equal("some-idiosyncratic-binary"))
 				})
 
