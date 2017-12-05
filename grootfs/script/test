@@ -1,8 +1,8 @@
 #!/bin/bash -e
 
 # Default fly target
-[ -z "$FLY_TARGET" ] && FLY_TARGET="grootfs-ci"
-[ -z "$FLY_ARGS" ] && FLY_ARGS="-p -x"
+[ -z "$FLY_TARGET" ] && FLY_TARGET="garden-ci"
+[ -z "$FLY_ARGS" ] && FLY_ARGS="-p"
 
 RED=1
 GREEN=2
