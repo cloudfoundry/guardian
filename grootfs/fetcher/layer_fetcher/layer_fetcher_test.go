@@ -61,17 +61,6 @@ var _ = Describe("LayerFetcher", func() {
 			Expect(usedImageURL).To(Equal(baseImageURL))
 		})
 
-		It("closes the manifest", func() {
-			fakeManifest := new(layer_fetcherfakes.FakeManifest)
-			fakeManifest.OCIConfigReturns(&specsv1.Image{}, nil)
-			fakeSource.ManifestReturns(fakeManifest, nil)
-
-			_, err := fetcher.BaseImageInfo(logger, baseImageURL)
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(fakeManifest.CloseCallCount()).To(Equal(1))
-		})
-
 		Context("when fetching the manifest fails", func() {
 			BeforeEach(func() {
 				fakeSource.ManifestReturns(nil, errors.New("fetching the manifest"))

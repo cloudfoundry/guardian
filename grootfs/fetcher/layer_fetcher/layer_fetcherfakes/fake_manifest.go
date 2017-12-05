@@ -21,15 +21,6 @@ type FakeManifest struct {
 	referenceReturnsOnCall map[int]struct {
 		result1 types.ImageReference
 	}
-	CloseStub        func() error
-	closeMutex       sync.RWMutex
-	closeArgsForCall []struct{}
-	closeReturns     struct {
-		result1 error
-	}
-	closeReturnsOnCall map[int]struct {
-		result1 error
-	}
 	ManifestStub        func() ([]byte, string, error)
 	manifestMutex       sync.RWMutex
 	manifestArgsForCall []struct{}
@@ -142,15 +133,6 @@ type FakeManifest struct {
 		result1 types.Image
 		result2 error
 	}
-	IsMultiImageStub        func() bool
-	isMultiImageMutex       sync.RWMutex
-	isMultiImageArgsForCall []struct{}
-	isMultiImageReturns     struct {
-		result1 bool
-	}
-	isMultiImageReturnsOnCall map[int]struct {
-		result1 bool
-	}
 	SizeStub        func() (int64, error)
 	sizeMutex       sync.RWMutex
 	sizeArgsForCall []struct{}
@@ -203,46 +185,6 @@ func (fake *FakeManifest) ReferenceReturnsOnCall(i int, result1 types.ImageRefer
 	}
 	fake.referenceReturnsOnCall[i] = struct {
 		result1 types.ImageReference
-	}{result1}
-}
-
-func (fake *FakeManifest) Close() error {
-	fake.closeMutex.Lock()
-	ret, specificReturn := fake.closeReturnsOnCall[len(fake.closeArgsForCall)]
-	fake.closeArgsForCall = append(fake.closeArgsForCall, struct{}{})
-	fake.recordInvocation("Close", []interface{}{})
-	fake.closeMutex.Unlock()
-	if fake.CloseStub != nil {
-		return fake.CloseStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.closeReturns.result1
-}
-
-func (fake *FakeManifest) CloseCallCount() int {
-	fake.closeMutex.RLock()
-	defer fake.closeMutex.RUnlock()
-	return len(fake.closeArgsForCall)
-}
-
-func (fake *FakeManifest) CloseReturns(result1 error) {
-	fake.CloseStub = nil
-	fake.closeReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *FakeManifest) CloseReturnsOnCall(i int, result1 error) {
-	fake.CloseStub = nil
-	if fake.closeReturnsOnCall == nil {
-		fake.closeReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.closeReturnsOnCall[i] = struct {
-		result1 error
 	}{result1}
 }
 
@@ -699,46 +641,6 @@ func (fake *FakeManifest) UpdatedImageReturnsOnCall(i int, result1 types.Image, 
 	}{result1, result2}
 }
 
-func (fake *FakeManifest) IsMultiImage() bool {
-	fake.isMultiImageMutex.Lock()
-	ret, specificReturn := fake.isMultiImageReturnsOnCall[len(fake.isMultiImageArgsForCall)]
-	fake.isMultiImageArgsForCall = append(fake.isMultiImageArgsForCall, struct{}{})
-	fake.recordInvocation("IsMultiImage", []interface{}{})
-	fake.isMultiImageMutex.Unlock()
-	if fake.IsMultiImageStub != nil {
-		return fake.IsMultiImageStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.isMultiImageReturns.result1
-}
-
-func (fake *FakeManifest) IsMultiImageCallCount() int {
-	fake.isMultiImageMutex.RLock()
-	defer fake.isMultiImageMutex.RUnlock()
-	return len(fake.isMultiImageArgsForCall)
-}
-
-func (fake *FakeManifest) IsMultiImageReturns(result1 bool) {
-	fake.IsMultiImageStub = nil
-	fake.isMultiImageReturns = struct {
-		result1 bool
-	}{result1}
-}
-
-func (fake *FakeManifest) IsMultiImageReturnsOnCall(i int, result1 bool) {
-	fake.IsMultiImageStub = nil
-	if fake.isMultiImageReturnsOnCall == nil {
-		fake.isMultiImageReturnsOnCall = make(map[int]struct {
-			result1 bool
-		})
-	}
-	fake.isMultiImageReturnsOnCall[i] = struct {
-		result1 bool
-	}{result1}
-}
-
 func (fake *FakeManifest) Size() (int64, error) {
 	fake.sizeMutex.Lock()
 	ret, specificReturn := fake.sizeReturnsOnCall[len(fake.sizeArgsForCall)]
@@ -787,8 +689,6 @@ func (fake *FakeManifest) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.referenceMutex.RLock()
 	defer fake.referenceMutex.RUnlock()
-	fake.closeMutex.RLock()
-	defer fake.closeMutex.RUnlock()
 	fake.manifestMutex.RLock()
 	defer fake.manifestMutex.RUnlock()
 	fake.signaturesMutex.RLock()
@@ -809,8 +709,6 @@ func (fake *FakeManifest) Invocations() map[string][][]interface{} {
 	defer fake.updatedImageNeedsLayerDiffIDsMutex.RUnlock()
 	fake.updatedImageMutex.RLock()
 	defer fake.updatedImageMutex.RUnlock()
-	fake.isMultiImageMutex.RLock()
-	defer fake.isMultiImageMutex.RUnlock()
 	fake.sizeMutex.RLock()
 	defer fake.sizeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

@@ -52,7 +52,6 @@ func (f *LayerFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL)
 	if err != nil {
 		return base_image_puller.BaseImageInfo{}, err
 	}
-	defer manifest.Close()
 
 	logger.Debug("fetching-image-config")
 	var config *specsv1.Image
