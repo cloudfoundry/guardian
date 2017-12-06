@@ -14,7 +14,6 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"github.com/urfave/cli"
 
-	"code.cloudfoundry.org/guardian/gardener"
 	"github.com/kardianos/osext"
 )
 
@@ -176,14 +175,6 @@ var CreateCommand = cli.Command{
 			}
 		}
 
-		image := &gardener.Image{}
-		imageJson := ctx.GlobalString("image-json")
-		if imageJson != "" {
-			if err := json.Unmarshal([]byte(imageJson), image); err != nil {
-				panic(err)
-			}
-		}
-
 		var mounts []specs.Mount
 		mountsJson := ctx.GlobalString("mounts-json")
 		if mountsJson != "" {
@@ -207,33 +198,17 @@ var CreateCommand = cli.Command{
 			log.Info(logContent)
 		}
 
-		oldReturnSchema := ctx.GlobalBool("old-return-schema")
-
-		var output interface{}
-		if oldReturnSchema {
-			output = gardener.DesiredImageSpec{
-				RootFS: rootfsPath,
-				Image:  *image,
-				Mounts: mounts,
-				Spec: specs.Spec{
-					Windows: &specs.Windows{
-						LayerFolders: []string{"layer", "folders"},
-					},
-				},
-			}
-		} else {
-			output = specs.Spec{
-				Root: &specs.Root{
-					Path: rootfsPath,
-				},
-				Mounts: mounts,
-				Process: &specs.Process{
-					Env: env,
-				},
-				Windows: &specs.Windows{
-					LayerFolders: []string{"layer", "folders"},
-				},
-			}
+		output := specs.Spec{
+			Root: &specs.Root{
+				Path: rootfsPath,
+			},
+			Mounts: mounts,
+			Process: &specs.Process{
+				Env: env,
+			},
+			Windows: &specs.Windows{
+				LayerFolders: []string{"layer", "folders"},
+			},
 		}
 
 		b, err := json.Marshal(output)

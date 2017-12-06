@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"net/url"
 	"os/exec"
-	"reflect"
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
-	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	fakes "code.cloudfoundry.org/guardian/imageplugin/imagepluginfakes"
 	"code.cloudfoundry.org/lager"
@@ -68,8 +66,7 @@ var _ = Describe("ImagePlugin", func() {
 			namespaced         bool
 
 			// fakeImagePluginStdout will override these if set
-			createdSpec              specs.Spec
-			createdOldSchemaResponse gardener.DesiredImageSpec
+			createdSpec specs.Spec
 
 			fakeImagePluginStdout string
 			fakeImagePluginStderr string
@@ -88,7 +85,6 @@ var _ = Describe("ImagePlugin", func() {
 			rootfs = "docker:///busybox"
 			namespaced = true //assume unprivileged by default
 
-			createdOldSchemaResponse = gardener.DesiredImageSpec{}
 			createdSpec = specs.Spec{
 				Root: &specs.Root{Path: "/image-rootfs/rootfs"},
 			}
@@ -108,13 +104,7 @@ var _ = Describe("ImagePlugin", func() {
 				func(cmd *exec.Cmd) error {
 					cmd.Stderr.Write([]byte(fakeImagePluginStderr))
 					if fakeImagePluginStdout == "" {
-						var createOutputs interface{}
-						createOutputs = createdSpec
-						if !reflect.DeepEqual(createdOldSchemaResponse, gardener.DesiredImageSpec{}) {
-							createOutputs = createdOldSchemaResponse
-						}
-
-						b, err := json.Marshal(createOutputs)
+						b, err := json.Marshal(createdSpec)
 						Expect(err).NotTo(HaveOccurred())
 						fakeImagePluginStdout = string(b)
 					}
@@ -317,52 +307,6 @@ var _ = Describe("ImagePlugin", func() {
 
 			It("returns the list of mounts to configure", func() {
 				Expect(baseRuntimeSpec.Mounts).To(Equal(createdSpec.Mounts))
-			})
-		})
-
-		Context("when the image plugin returns old schema", func() {
-			BeforeEach(func() {
-				createdOldSchemaResponse = gardener.DesiredImageSpec{
-					Spec: specs.Spec{Windows: &specs.Windows{
-						LayerFolders: []string{"layer", "folders"},
-					}},
-					RootFS: "old-schema-rootfs",
-					Image: gardener.Image{Config: gardener.ImageConfig{Env: []string{
-						"OLD_VAR=foo",
-					}}},
-					Mounts: []specs.Mount{
-						{
-							Source:      "src",
-							Destination: "dest",
-							Options:     []string{"bind"},
-							Type:        "bind",
-						},
-					},
-				}
-			})
-
-			It("returns the base config with rootfs, env, and mounts added", func() {
-				expectedRuntimeSpec := specs.Spec{
-					Windows: &specs.Windows{
-						LayerFolders: []string{"layer", "folders"},
-					},
-					Root: &specs.Root{
-						Path: "old-schema-rootfs",
-					},
-					Process: &specs.Process{
-						Env: []string{"OLD_VAR=foo"},
-					},
-					Mounts: []specs.Mount{
-						{
-							Source:      "src",
-							Destination: "dest",
-							Options:     []string{"bind"},
-							Type:        "bind",
-						},
-					},
-				}
-
-				Expect(baseRuntimeSpec).To(Equal(expectedRuntimeSpec))
 			})
 		})
 

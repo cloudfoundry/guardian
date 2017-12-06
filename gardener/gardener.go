@@ -75,26 +75,6 @@ type VolumeDestroyMetricsGC interface {
 	GC(log lager.Logger) error
 }
 
-// DEPRECATED
-// Image plugins should return a runtime config json (represented in Go
-// by a `specs.Spec`).
-// For now, a json-serialised DesiredImageSpec is stil supported but will be
-// removed.
-type DesiredImageSpec struct {
-	RootFS string        `json:"rootfs,omitempty"`
-	Mounts []specs.Mount `json:"mounts,omitempty"`
-	Image  Image         `json:"image,omitempty"`
-	specs.Spec
-}
-
-type Image struct {
-	Config ImageConfig `json:"config,omitempty"`
-}
-
-type ImageConfig struct {
-	Env []string `json:"Env,omitempty"`
-}
-
 type UidGenerator interface {
 	Generate() string
 }

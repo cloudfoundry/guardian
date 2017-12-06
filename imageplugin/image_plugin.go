@@ -12,7 +12,6 @@ import (
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
-	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	errorwrapper "github.com/pkg/errors"
@@ -92,36 +91,24 @@ func (p *ImagePlugin) Create(log lager.Logger, handle string, spec rootfs_spec.S
 		return errs(err, fmt.Sprintf("running image plugin create: %s", stdoutBuffer.String()))
 	}
 
-	var desiredSpec gardener.DesiredImageSpec
-	if err := json.Unmarshal(stdoutBuffer.Bytes(), &desiredSpec); err != nil {
+	var runtimeSpec specs.Spec
+	if err := json.Unmarshal(stdoutBuffer.Bytes(), &runtimeSpec); err != nil {
 		logData := lager.Data{"action": "create", "stdout": stdoutBuffer.String()}
 		log.Error("image-plugin-parsing", err, logData)
 		return errs(err, fmt.Sprintf("parsing image plugin create: %s", stdoutBuffer.String()))
 	}
 
 	// Allow spec.Process.Env to be accessed without nil checks everywhere
-	if desiredSpec.Process == nil {
-		desiredSpec.Process = &specs.Process{}
+	if runtimeSpec.Process == nil {
+		runtimeSpec.Process = &specs.Process{}
 	}
 
 	// Allow spec.Root.Path to be accessed without nil checks everywhere
-	if desiredSpec.Root == nil {
-		desiredSpec.Root = &specs.Root{}
+	if runtimeSpec.Root == nil {
+		runtimeSpec.Root = &specs.Root{}
 	}
 
-	if desiredSpec.RootFS != "" {
-		desiredSpec.Root.Path = desiredSpec.RootFS
-	}
-
-	if desiredSpec.Image.Config.Env != nil {
-		desiredSpec.Process.Env = desiredSpec.Image.Config.Env
-	}
-
-	if desiredSpec.Mounts != nil {
-		desiredSpec.Spec.Mounts = desiredSpec.Mounts
-	}
-
-	return desiredSpec.Spec, nil
+	return runtimeSpec, nil
 }
 
 func (p *ImagePlugin) Destroy(log lager.Logger, handle string) error {
