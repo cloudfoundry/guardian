@@ -280,12 +280,15 @@ func (f *LinuxFactory) OsSpecificBundleRules() []rundmc.BundlerRule {
 			ContainerRootGID: f.gidMappings.Map(0),
 			MkdirChown:       chrootMkdir,
 		},
-		bundlerules.EtcMounts{Chowner: &bundlerules.OSChowner{}},
 	}
 }
 
 func getPrivilegedDevices() []specs.LinuxDevice {
 	return []specs.LinuxDevice{fuseDevice}
+}
+
+func bindMountPoints() []string {
+	return []string{"/etc/hosts", "/etc/resolv.conf"}
 }
 
 func mustGetMaxValidUID() int {

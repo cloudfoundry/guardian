@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
@@ -24,18 +25,25 @@ type BundleGenerator interface {
 	Generate(spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
 }
 
-// a depot which stores containers as subdirs of a depot directory
-type DirectoryDepot struct {
-	dir         string
-	bundler     BundleGenerator
-	bundleSaver BundleSaver
+//go:generate counterfeiter . BindMountSourceCreator
+type BindMountSourceCreator interface {
+	Create(containerDir string, privileged bool) ([]garden.BindMount, error)
 }
 
-func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver) *DirectoryDepot {
+// a depot which stores containers as subdirs of a depot directory
+type DirectoryDepot struct {
+	dir              string
+	bundler          BundleGenerator
+	bundleSaver      BundleSaver
+	MountManipulator BindMountSourceCreator
+}
+
+func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver, mountManipulator BindMountSourceCreator) *DirectoryDepot {
 	return &DirectoryDepot{
-		dir:         dir,
-		bundler:     bundler,
-		bundleSaver: bundleSaver,
+		dir:              dir,
+		bundler:          bundler,
+		bundleSaver:      bundleSaver,
+		MountManipulator: mountManipulator,
 	}
 }
 
@@ -51,17 +59,25 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec gardener.D
 		return err
 	}
 
-	bundle, err := d.bundler.Generate(spec, containerDir)
-	if err != nil {
+	errs := func(msg string, err error) error {
 		removeOrLog(log, containerDir)
-		log.Error("generate-failed", err, lager.Data{"path": containerDir})
+		log.Error(msg, err, lager.Data{"path": containerDir})
 		return err
 	}
 
+	bindMounts, err := d.MountManipulator.Create(containerDir, !spec.Privileged)
+	if err != nil {
+		return errs("create-bindmount-sources-failed", err)
+	}
+	spec.BindMounts = append(spec.BindMounts, bindMounts...)
+
+	bundle, err := d.bundler.Generate(spec, containerDir)
+	if err != nil {
+		return errs("generate-failed", err)
+	}
+
 	if err := d.bundleSaver.Save(bundle, containerDir); err != nil {
-		removeOrLog(log, containerDir)
-		log.Error("create-failed", err, lager.Data{"path": containerDir})
-		return err
+		return errs("create-failed", err)
 	}
 
 	return nil

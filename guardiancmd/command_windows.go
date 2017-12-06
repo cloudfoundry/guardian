@@ -118,6 +118,10 @@ func getPrivilegedDevices() []specs.LinuxDevice {
 	return nil
 }
 
+func bindMountPoints() []string {
+	return nil
+}
+
 func mustGetMaxValidUID() int {
 	return -1
 }

@@ -595,8 +595,8 @@ func (cmd *ServerCommand) wirePortPool(logger lager.Logger) (*ports.PortPool, er
 	return portPool, nil
 }
 
-func (cmd *ServerCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver) *depot.DirectoryDepot {
-	return depot.New(cmd.Containers.Dir, bundleGenerator, bundleSaver)
+func (cmd *ServerCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver, mountManipulator depot.BindMountSourceCreator) *depot.DirectoryDepot {
+	return depot.New(cmd.Containers.Dir, bundleGenerator, bundleSaver, mountManipulator)
 }
 
 func extractIPs(ipflags []IPFlag) []net.IP {
@@ -788,7 +788,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	peaTemplate := &rundmc.BundleTemplate{Rules: peaBundleRules}
 
 	bundleSaver := &goci.BundleSaver{}
-	depot := cmd.wireDepot(template, bundleSaver)
+	MountManipulator := wireBindMountSourceCreator(uidMappings, gidMappings)
+	depot := cmd.wireDepot(template, bundleSaver, MountManipulator)
 
 	bndlLoader := &goci.BndlLoader{}
 	processBuilder := runrunc.NewProcessBuilder(wireEnvFunc(), nonRootMaxCaps)
@@ -861,6 +862,15 @@ func (cmd *ServerCommand) wireMetronNotifier(log lager.Logger, metricsProvider m
 	return metrics.NewPeriodicMetronNotifier(
 		log, metricsProvider, cmd.Metrics.EmissionInterval, clock.NewClock(),
 	)
+}
+
+func wireBindMountSourceCreator(uidMappings, gidMappings idmapper.MappingList) depot.BindMountSourceCreator {
+	return &depot.DepotBindMountSourceCreator{
+		BindMountPoints:      bindMountPoints(),
+		Chowner:              &depot.OSChowner{},
+		ContainerRootHostUID: uidMappings.Map(0),
+		ContainerRootHostGID: gidMappings.Map(0),
+	}
 }
 
 func (cmd *ServerCommand) initializeDropsonde(log lager.Logger) {
