@@ -314,11 +314,13 @@ func (r *RunningGarden) forceStop() error {
 		r.Kill()
 	} else {
 		if err := r.Stop(); err != nil {
+			fmt.Printf("error on r.Stop() during forceStop: %s", err.Error())
 			return ErrGardenStop{error: err}
 		}
 	}
 
 	if err := r.removeTempDirPreservingCgroupMounts(); err != nil {
+		fmt.Printf("error on r.removeTempDirPreservingCgroupMounts() during forceStop: %s", err.Error())
 		return err
 	}
 
@@ -374,6 +376,10 @@ func (r *RunningGarden) cleanGardenCgroups(cGroupsPath string) error {
 	return nil
 }
 
+// findCgroupPath, when running inside a container, returns the relative path of
+// the cgroup in the host.
+// E.g. /6d8612e9-cf2c-48d7-669e-249a546683f7, where 6d8612e9-cf2c-48d7-669e-249a546683f7
+// is the container id.
 func (r *RunningGarden) findCgroupPath(cgroupToFind string) (string, error) {
 	cgroupContent, err := ioutil.ReadFile(fmt.Sprintf("/proc/self/cgroup"))
 	if err != nil {
