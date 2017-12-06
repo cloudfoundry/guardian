@@ -24,13 +24,14 @@ var _ = Describe("PeaCreator", func() {
 	const imageURI = "some-image-uri"
 
 	var (
-		volumizer        *peasfakes.FakeVolumizer
-		pidGetter        *peasfakes.FakePidGetter
-		bundleGenerator  *depotfakes.FakeBundleGenerator
-		bundleSaver      *depotfakes.FakeBundleSaver
-		processBuilder   *runruncfakes.FakeProcessBuilder
-		execRunner       *runruncfakes.FakeExecRunner
-		privilegedGetter *peasfakes.FakePrivilegedGetter
+		volumizer              *peasfakes.FakeVolumizer
+		pidGetter              *peasfakes.FakePidGetter
+		bindMountSourceCreator *depotfakes.FakeBindMountSourceCreator
+		bundleGenerator        *depotfakes.FakeBundleGenerator
+		bundleSaver            *depotfakes.FakeBundleSaver
+		processBuilder         *runruncfakes.FakeProcessBuilder
+		execRunner             *runruncfakes.FakeExecRunner
+		privilegedGetter       *peasfakes.FakePrivilegedGetter
 
 		peaCreator *peas.PeaCreator
 
@@ -38,10 +39,20 @@ var _ = Describe("PeaCreator", func() {
 		ctrBundleDir string
 		log          *lagertest.TestLogger
 
-		generatedBundle = goci.Bndl{Spec: specs.Spec{Version: "our-bundle"}}
-		builtProcess    *runrunc.PreparedSpec
-		processSpec     garden.ProcessSpec
-		pio             = garden.ProcessIO{Stdin: bytes.NewBufferString("something")}
+		generatedBundle   = goci.Bndl{Spec: specs.Spec{Version: "our-bundle"}}
+		defaultBindMounts = []garden.BindMount{{
+			SrcPath: "/some/src",
+			DstPath: "/some/dest",
+			Mode:    garden.BindMountModeRO,
+		}}
+		specifiedBindMounts = []garden.BindMount{{
+			SrcPath: "/some/src2",
+			DstPath: "/some/dest2",
+			Mode:    garden.BindMountModeRW,
+		}}
+		builtProcess *runrunc.PreparedSpec
+		processSpec  garden.ProcessSpec
+		pio          = garden.ProcessIO{Stdin: bytes.NewBufferString("something")}
 	)
 
 	BeforeEach(func() {
@@ -49,6 +60,9 @@ var _ = Describe("PeaCreator", func() {
 		volumizer.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
 		pidGetter = new(peasfakes.FakePidGetter)
 		pidGetter.PidReturns(123, nil)
+		bindMountSourceCreator = new(depotfakes.FakeBindMountSourceCreator)
+		bindMountSourceCreator.CreateReturns(defaultBindMounts, nil)
+
 		bundleGenerator = new(depotfakes.FakeBundleGenerator)
 		bundleGenerator.GenerateReturns(generatedBundle, nil)
 		bundleSaver = new(depotfakes.FakeBundleSaver)
@@ -67,13 +81,14 @@ var _ = Describe("PeaCreator", func() {
 		privilegedGetter.PrivilegedReturns(false, nil)
 
 		peaCreator = &peas.PeaCreator{
-			Volumizer:        volumizer,
-			PidGetter:        pidGetter,
-			BundleGenerator:  bundleGenerator,
-			BundleSaver:      bundleSaver,
-			ProcessBuilder:   processBuilder,
-			ExecRunner:       execRunner,
-			PrivilegedGetter: privilegedGetter,
+			Volumizer:              volumizer,
+			PidGetter:              pidGetter,
+			BindMountSourceCreator: bindMountSourceCreator,
+			BundleGenerator:        bundleGenerator,
+			BundleSaver:            bundleSaver,
+			ProcessBuilder:         processBuilder,
+			ExecRunner:             execRunner,
+			PrivilegedGetter:       privilegedGetter,
 		}
 
 		var err error
@@ -90,6 +105,7 @@ var _ = Describe("PeaCreator", func() {
 				Username: "cakeuser",
 				Password: "cakepassword",
 			},
+			BindMounts: specifiedBindMounts,
 		}
 	})
 
@@ -126,6 +142,19 @@ var _ = Describe("PeaCreator", func() {
 				Password: "cakepassword",
 			}))
 			Expect(actualSpec.Privileged).To(Equal(false))
+		})
+
+		It("creates the sources for bind mounts", func() {
+			Expect(bindMountSourceCreator.CreateCallCount()).To(Equal(1))
+			actualContainerDir, actualChown := bindMountSourceCreator.CreateArgsForCall(0)
+			Expect(actualContainerDir).To(Equal(ctrBundleDir))
+			Expect(actualChown).To(BeTrue())
+		})
+
+		It("passes bind mounts to bundle generator", func() {
+			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			Expect(actualCtrSpec.BindMounts).To(Equal(append(specifiedBindMounts, defaultBindMounts...)))
 		})
 
 		It("passes the processID as handle to the bundle generator", func() {
@@ -299,22 +328,6 @@ var _ = Describe("PeaCreator", func() {
 				Expect(actualCtrSpec.CgroupPath).To(Equal(processSpec.ID))
 			})
 		})
-
-		Context("when bind mounts are provided", func() {
-			BeforeEach(func() {
-				processSpec.BindMounts = []garden.BindMount{
-					garden.BindMount{SrcPath: "/path/to/src", DstPath: "/path/to/dst"},
-				}
-			})
-
-			It("passes the bind mounts to bundle generation", func() {
-				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
-				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
-				Expect(len(actualCtrSpec.BindMounts)).To(Equal(1))
-				Expect(actualCtrSpec.BindMounts[0].SrcPath).To(Equal("/path/to/src"))
-				Expect(actualCtrSpec.BindMounts[0].DstPath).To(Equal("/path/to/dst"))
-			})
-		})
 	})
 
 	Describe("pea creation failing", func() {
@@ -326,7 +339,17 @@ var _ = Describe("PeaCreator", func() {
 			_, createErr = peaCreator.CreatePea(log, processSpec, garden.ProcessIO{}, ctrHandle, ctrBundleDir)
 		})
 
-		Context("when the bundle generator returns an error", func() {
+		Context("when the bind mount source creator return an error", func() {
+			BeforeEach(func() {
+				bindMountSourceCreator.CreateReturns(nil, errors.New("explode"))
+			})
+
+			It("returns a wrapped error", func() {
+				Expect(createErr).To(MatchError(ContainSubstring("explode")))
+			})
+		})
+
+		Context("when the pid getter returns an error", func() {
 			BeforeEach(func() {
 				pidGetter.PidReturns(-1, errors.New("pickle"))
 			})

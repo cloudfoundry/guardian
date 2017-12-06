@@ -32,18 +32,18 @@ type BindMountSourceCreator interface {
 
 // a depot which stores containers as subdirs of a depot directory
 type DirectoryDepot struct {
-	dir              string
-	bundler          BundleGenerator
-	bundleSaver      BundleSaver
-	MountManipulator BindMountSourceCreator
+	dir                    string
+	bundler                BundleGenerator
+	bundleSaver            BundleSaver
+	BindMountSourceCreator BindMountSourceCreator
 }
 
-func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver, mountManipulator BindMountSourceCreator) *DirectoryDepot {
+func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver, bindMountSourceCreator BindMountSourceCreator) *DirectoryDepot {
 	return &DirectoryDepot{
-		dir:              dir,
-		bundler:          bundler,
-		bundleSaver:      bundleSaver,
-		MountManipulator: mountManipulator,
+		dir:                    dir,
+		bundler:                bundler,
+		bundleSaver:            bundleSaver,
+		BindMountSourceCreator: bindMountSourceCreator,
 	}
 }
 
@@ -65,11 +65,11 @@ func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec gardener.D
 		return err
 	}
 
-	bindMounts, err := d.MountManipulator.Create(containerDir, !spec.Privileged)
+	defaultBindMounts, err := d.BindMountSourceCreator.Create(containerDir, !spec.Privileged)
 	if err != nil {
 		return errs("create-bindmount-sources-failed", err)
 	}
-	spec.BindMounts = append(spec.BindMounts, bindMounts...)
+	spec.BindMounts = append(spec.BindMounts, defaultBindMounts...)
 
 	bundle, err := d.bundler.Generate(spec, containerDir)
 	if err != nil {

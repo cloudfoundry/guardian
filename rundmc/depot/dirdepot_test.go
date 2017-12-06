@@ -98,9 +98,9 @@ var _ = Describe("Depot", func() {
 		It("creates bind mount sources", func() {
 			Expect(dirdepot.Create(logger, "aardvaark", spec)).To(Succeed())
 			Expect(bindMountSourceCreator.CreateCallCount()).To(Equal(1))
-			actualContainerDir, actualPrivileged := bindMountSourceCreator.CreateArgsForCall(0)
+			actualContainerDir, actualChown := bindMountSourceCreator.CreateArgsForCall(0)
 			Expect(actualContainerDir).To(Equal(filepath.Join(depotDir, "aardvaark")))
-			Expect(actualPrivileged).To(BeTrue())
+			Expect(actualChown).To(BeTrue())
 		})
 
 		Context("when bind mount creation fails", func() {

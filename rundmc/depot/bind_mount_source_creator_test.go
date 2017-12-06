@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
@@ -103,19 +102,6 @@ var _ = Describe("DepotBindMountSourceCreator", func() {
 		})
 
 		It("returns an error", func() {
-			Expect(createErr).To(HaveOccurred())
-		})
-	})
-
-	Context("when two mountpoints have the same basename", func() {
-		BeforeEach(func() {
-			mountpoints = []string{"/etc/hosts", "/var/hosts"}
-		})
-
-		It("returns an error", func() {
-			if runtime.GOOS == "windows" {
-				Skip("Doesn't run on Windows")
-			}
 			Expect(createErr).To(HaveOccurred())
 		})
 	})

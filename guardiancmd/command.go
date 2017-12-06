@@ -595,8 +595,8 @@ func (cmd *ServerCommand) wirePortPool(logger lager.Logger) (*ports.PortPool, er
 	return portPool, nil
 }
 
-func (cmd *ServerCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver, mountManipulator depot.BindMountSourceCreator) *depot.DirectoryDepot {
-	return depot.New(cmd.Containers.Dir, bundleGenerator, bundleSaver, mountManipulator)
+func (cmd *ServerCommand) wireDepot(bundleGenerator depot.BundleGenerator, bundleSaver depot.BundleSaver, bindMountSourceCreator depot.BindMountSourceCreator) *depot.DirectoryDepot {
+	return depot.New(cmd.Containers.Dir, bundleGenerator, bundleSaver, bindMountSourceCreator)
 }
 
 func extractIPs(ipflags []IPFlag) []net.IP {
@@ -788,8 +788,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	peaTemplate := &rundmc.BundleTemplate{Rules: peaBundleRules}
 
 	bundleSaver := &goci.BundleSaver{}
-	MountManipulator := wireBindMountSourceCreator(uidMappings, gidMappings)
-	depot := cmd.wireDepot(template, bundleSaver, MountManipulator)
+	bindMountSourceCreator := wireBindMountSourceCreator(uidMappings, gidMappings)
+	depot := cmd.wireDepot(template, bundleSaver, bindMountSourceCreator)
 
 	bndlLoader := &goci.BndlLoader{}
 	processBuilder := runrunc.NewProcessBuilder(wireEnvFunc(), nonRootMaxCaps)
@@ -827,13 +827,14 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
 
 	peaCreator := &peas.PeaCreator{
-		Volumizer:        volumizer,
-		PidGetter:        pidFileReader,
-		PrivilegedGetter: privilegeChecker,
-		BundleGenerator:  peaTemplate,
-		ProcessBuilder:   processBuilder,
-		BundleSaver:      bundleSaver,
-		ExecRunner:       factory.WireExecRunner("run"),
+		Volumizer:              volumizer,
+		PidGetter:              pidFileReader,
+		PrivilegedGetter:       privilegeChecker,
+		BindMountSourceCreator: bindMountSourceCreator,
+		BundleGenerator:        peaTemplate,
+		ProcessBuilder:         processBuilder,
+		BundleSaver:            bundleSaver,
+		ExecRunner:             factory.WireExecRunner("run"),
 	}
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)

@@ -36,13 +36,14 @@ type PrivilegedGetter interface {
 }
 
 type PeaCreator struct {
-	Volumizer        Volumizer
-	PidGetter        PidGetter
-	PrivilegedGetter PrivilegedGetter
-	BundleGenerator  depot.BundleGenerator
-	BundleSaver      depot.BundleSaver
-	ProcessBuilder   runrunc.ProcessBuilder
-	ExecRunner       runrunc.ExecRunner
+	Volumizer              Volumizer
+	PidGetter              PidGetter
+	PrivilegedGetter       PrivilegedGetter
+	BindMountSourceCreator depot.BindMountSourceCreator
+	BundleGenerator        depot.BundleGenerator
+	BundleSaver            depot.BundleSaver
+	ProcessBuilder         runrunc.ProcessBuilder
+	ExecRunner             runrunc.ExecRunner
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error) {
@@ -72,6 +73,11 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return errs("determining-privileged", err)
 	}
 
+	defaultBindMounts, err := p.BindMountSourceCreator.Create(sandboxBundlePath, !privileged)
+	if err != nil {
+		return errs("creating-bind-mount-sources", err)
+	}
+
 	runtimeSpec, err := p.Volumizer.Create(log, garden.ContainerSpec{
 		Handle:     processID,
 		Image:      spec.Image,
@@ -96,7 +102,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		BaseConfig: runtimeSpec,
 		CgroupPath: cgroupPath,
 		Namespaces: linuxNamespaces,
-		BindMounts: spec.BindMounts,
+		BindMounts: append(spec.BindMounts, defaultBindMounts...),
 		Privileged: privileged,
 	}, sandboxBundlePath)
 	if err != nil {
