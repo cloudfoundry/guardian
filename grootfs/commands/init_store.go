@@ -56,7 +56,7 @@ var InitStoreCommand = cli.Command{
 			return cli.NewExitError(err.Error(), 1)
 		}
 
-		if (ctx.IsSet("uid-mappings") || ctx.IsSet("gid-mapping")) && ctx.IsSet("rootless") {
+		if (ctx.IsSet("uid-mapping") || ctx.IsSet("gid-mapping")) && ctx.IsSet("rootless") {
 			return cli.NewExitError("cannot specify --rootless and --uid-mapping/--gid-mapping", 1)
 		}
 
