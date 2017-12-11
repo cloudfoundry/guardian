@@ -24,7 +24,6 @@ import (
 )
 
 var _ = Describe("Image Plugin", func() {
-
 	var (
 		tmpDir                            string
 		client                            *runner.RunningGarden
@@ -32,6 +31,7 @@ var _ = Describe("Image Plugin", func() {
 	)
 
 	BeforeEach(func() {
+		config = resetImagePluginConfig()
 		containerDestructionShouldSucceed = true
 		var err error
 		tmpDir, err = ioutil.TempDir("", "")
@@ -142,8 +142,8 @@ var _ = Describe("Image Plugin", func() {
 						string(envJson),
 					)
 
-					gardenDefaultRootfs := defaultTestRootFS
-					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"),
+					rootfs := createRootfs(func(string) {}, 0755)
+					Expect(copyFile(filepath.Join(rootfs, "bin", "env"),
 						filepath.Join(tmpDir, "env"))).To(Succeed())
 				})
 
@@ -192,8 +192,8 @@ var _ = Describe("Image Plugin", func() {
 						string(mountsJson),
 					)
 
-					gardenDefaultRootfs := defaultTestRootFS
-					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "cat"),
+					rootfs := createRootfs(func(string) {}, 0755)
+					Expect(copyFile(filepath.Join(rootfs, "bin", "cat"),
 						filepath.Join(tmpDir, "cat"))).To(Succeed())
 				})
 
@@ -405,15 +405,14 @@ var _ = Describe("Image Plugin", func() {
 				var process garden.Process
 
 				BeforeEach(func() {
-					gardenDefaultRootfs := defaultTestRootFS
-					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"),
+					rootfs := createRootfs(func(string) {}, 0755)
+					Expect(copyFile(filepath.Join(rootfs, "bin", "env"),
 						filepath.Join(tmpDir, "env"))).To(Succeed())
 				})
 
 				JustBeforeEach(func() {
 					var err error
 					process, err = container.Run(garden.ProcessSpec{
-						ID:    "test-pea",
 						Path:  "/env",
 						Dir:   "/",
 						Image: garden.ImageRef{URI: "docker:///busybox"},
@@ -710,8 +709,8 @@ var _ = Describe("Image Plugin", func() {
 						"\"--env-json\"",
 						string(envJson),
 					)
-					gardenDefaultRootfs := defaultTestRootFS
-					Expect(copyFile(filepath.Join(gardenDefaultRootfs, "bin", "env"),
+					rootfs := createRootfs(func(string) {}, 0755)
+					Expect(copyFile(filepath.Join(rootfs, "bin", "env"),
 						filepath.Join(tmpDir, "env"))).To(Succeed())
 				})
 

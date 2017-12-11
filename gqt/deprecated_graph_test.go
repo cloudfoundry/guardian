@@ -89,6 +89,7 @@ var _ = Describe("graph flags", func() {
 
 	JustBeforeEach(func() {
 		config.PersistentImages = persistentImages
+		config = resetImagePluginConfig()
 		client = runner.Start(config)
 
 		layersPath = path.Join(client.GraphDir, "aufs", "layers")

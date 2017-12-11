@@ -38,6 +38,15 @@ var gqtStartTime time.Time
 
 var defaultTestRootFS string
 
+func goCompile(mainPackagePath string, buildArgs ...string) string {
+	if os.Getenv("RACE_DETECTION") != "" {
+		buildArgs = append(buildArgs, "-race")
+	}
+	bin, err := gexec.Build(mainPackagePath, buildArgs...)
+	Expect(err).NotTo(HaveOccurred())
+	return bin
+}
+
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -46,35 +55,19 @@ func TestGqt(t *testing.T) {
 		binaries = runner.Binaries{}
 
 		binaries.Tar = os.Getenv("GARDEN_TAR_PATH")
-
-		gdnBuildArgs := []string{"-tags", "daemon", "-ldflags", "-extldflags '-static'"}
-		if os.Getenv("RACE_DETECTION") != "" {
-			gdnBuildArgs = append(gdnBuildArgs, "-race")
-		}
-		binaries.Gdn, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/gdn", gdnBuildArgs...)
-		Expect(err).NotTo(HaveOccurred())
-
-		binaries.NetworkPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin")
-		Expect(err).NotTo(HaveOccurred())
-
-		binaries.ImagePlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin")
-		Expect(err).NotTo(HaveOccurred())
+		binaries.Gdn = goCompile("code.cloudfoundry.org/guardian/cmd/gdn", "-tags", "daemon", "-ldflags", "-extldflags '-static'")
+		binaries.NetworkPlugin = goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin")
+		binaries.ImagePlugin = goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin")
 
 		binaries.PrivilegedImagePlugin = fmt.Sprintf("%s-priv", binaries.ImagePlugin)
 		Expect(copyFile(binaries.ImagePlugin, binaries.PrivilegedImagePlugin)).To(Succeed())
 
-		binaries.RuntimePlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin")
-		Expect(err).NotTo(HaveOccurred())
-
-		binaries.NoopPlugin, err = gexec.Build("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin")
-		Expect(err).NotTo(HaveOccurred())
+		binaries.RuntimePlugin = goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin")
+		binaries.NoopPlugin = goCompile("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin")
 
 		if runtime.GOOS == "linux" {
-			binaries.ExecRunner, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
-			Expect(err).NotTo(HaveOccurred())
-
-			binaries.Socket2me, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/socket2me")
-			Expect(err).NotTo(HaveOccurred())
+			binaries.ExecRunner = goCompile("code.cloudfoundry.org/guardian/cmd/dadoo")
+			binaries.Socket2me = goCompile("code.cloudfoundry.org/guardian/cmd/socket2me")
 
 			cmd := exec.Command("make")
 			runCommandInDir(cmd, "../rundmc/nstar")
@@ -83,6 +76,10 @@ func TestGqt(t *testing.T) {
 			cmd = exec.Command("gcc", "-static", "-o", "init", "init.c")
 			runCommandInDir(cmd, "../cmd/init")
 			binaries.Init = "../cmd/init/init"
+
+			binaries.Groot = goCompile("code.cloudfoundry.org/grootfs")
+			binaries.Tardis = goCompile("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
+			Expect(os.Chmod(binaries.Tardis, 04755)).To(Succeed())
 		}
 
 		data, err := json.Marshal(binaries)
@@ -112,6 +109,10 @@ func TestGqt(t *testing.T) {
 		})
 
 		config = defaultConfig()
+		if runtime.GOOS == "linux" {
+			initGrootStore(config.ImagePluginBin, config.StorePath, []string{"0:4294967294:1", "1:65536:4294901758"})
+			initGrootStore(config.PrivilegedImagePluginBin, config.PrivilegedStorePath, nil)
+		}
 	})
 
 	AfterEach(func() {
@@ -125,6 +126,18 @@ func TestGqt(t *testing.T) {
 	RunSpecs(t, "GQT Suite")
 }
 
+func initGrootStore(grootBin, storePath string, idMappings []string) {
+	initStoreArgs := []string{"--store", storePath, "init-store", "--store-size-bytes", fmt.Sprintf("%d", 2*1024*1024*1024)}
+	for _, idMapping := range idMappings {
+		initStoreArgs = append(initStoreArgs, "--uid-mapping", idMapping, "--gid-mapping", idMapping)
+	}
+
+	initStore := exec.Command(grootBin, initStoreArgs...)
+	initStore.Stdout = GinkgoWriter
+	initStore.Stderr = GinkgoWriter
+	Expect(initStore.Run()).To(Succeed())
+}
+
 func runCommandInDir(cmd *exec.Cmd, workingDir string) {
 	cmd.Dir = workingDir
 	cmd.Stdout = GinkgoWriter
@@ -132,8 +145,12 @@ func runCommandInDir(cmd *exec.Cmd, workingDir string) {
 	Expect(cmd.Run()).To(Succeed())
 }
 
+func runCommand(cmd *exec.Cmd) {
+	runCommandInDir(cmd, "")
+}
+
 func defaultConfig() runner.GdnRunnerConfig {
-	cfg := runner.DefaultGdnRunnerConfig()
+	cfg := runner.DefaultGdnRunnerConfig(binaries)
 	cfg.DefaultRootFS = defaultTestRootFS
 	cfg.GdnBin = binaries.Gdn
 	cfg.Socket2meBin = binaries.Socket2me
@@ -141,6 +158,8 @@ func defaultConfig() runner.GdnRunnerConfig {
 	cfg.InitBin = binaries.Init
 	cfg.TarBin = binaries.Tar
 	cfg.NSTarBin = binaries.NSTar
+	cfg.ImagePluginBin = binaries.Groot
+	cfg.PrivilegedImagePluginBin = binaries.Groot
 
 	return cfg
 }
@@ -177,15 +196,6 @@ func nodeToString(ginkgoNode int) string {
 	Expect(r).To(BeNumerically(">=", 'a'))
 	Expect(r).To(BeNumerically("<=", 'z'))
 	return string(r)
-}
-
-func createPeaRoootfs(tmpDir string) string {
-	Expect(exec.Command("cp", "-a", defaultTestRootFS, tmpDir).Run()).To(Succeed())
-	Expect(os.Chmod(tmpDir, 0777)).To(Succeed())
-	peaRootfs := filepath.Join(tmpDir, "rootfs")
-	Expect(exec.Command("chown", "-R", "4294967294:4294967294", peaRootfs).Run()).To(Succeed())
-	Expect(ioutil.WriteFile(filepath.Join(peaRootfs, "ima-pea"), []byte("pea!"), 0644)).To(Succeed())
-	return peaRootfs
 }
 
 func intptr(i int) *int {
@@ -270,4 +280,45 @@ func removeSocket() {
 	} else if !os.IsNotExist(err) {
 		Expect(err).NotTo(HaveOccurred())
 	}
+}
+
+func createPeaRootfs() string {
+	return createRootfs(func(root string) {
+		Expect(exec.Command("chown", "-R", "4294967294:4294967294", root).Run()).To(Succeed())
+		Expect(ioutil.WriteFile(filepath.Join(root, "ima-pea"), []byte("pea!"), 0644)).To(Succeed())
+	}, 0777)
+}
+
+func createRootfsTar(modifyRootfs func(string)) string {
+	return tarUpDir(createRootfs(modifyRootfs, 0755))
+}
+
+func createRootfs(modifyRootfs func(string), perm os.FileMode) string {
+	var err error
+	tmpDir, err := ioutil.TempDir("", "test-rootfs")
+	Expect(err).NotTo(HaveOccurred())
+	unpackedRootfs := filepath.Join(tmpDir, "unpacked")
+	Expect(os.Mkdir(unpackedRootfs, perm)).To(Succeed())
+	runCommand(exec.Command("tar", "xf", defaultTestRootFS, "-C", unpackedRootfs))
+
+	Expect(os.Chmod(tmpDir, perm)).To(Succeed())
+	modifyRootfs(unpackedRootfs)
+
+	return unpackedRootfs
+}
+
+func tarUpDir(path string) string {
+	tarPath := filepath.Join(filepath.Dir(path), filepath.Base(path)+".tar")
+	repackCmd := exec.Command("sh", "-c", fmt.Sprintf("tar cf %s *", tarPath))
+	runCommandInDir(repackCmd, path)
+
+	return tarPath
+}
+
+func resetImagePluginConfig() runner.GdnRunnerConfig {
+	config.ImagePluginBin = ""
+	config.PrivilegedImagePluginBin = ""
+	config.ImagePluginExtraArgs = []string{}
+	config.PrivilegedImagePluginExtraArgs = []string{}
+	return config
 }

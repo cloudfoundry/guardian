@@ -134,6 +134,11 @@ var _ = Describe("Destroying a Container", func() {
 
 			Expect(client.Destroy(container.Handle())).NotTo(Succeed())
 			Eventually(client).Should(gexec.Exit())
+			// This sleep is here because it helps avoid what looks like a race condition in cgroup removal vs
+			// writing to the devices.deny file on startup. Without it, we frequently hit a condition where
+			// listing directories under the `garden` cgroup returns nothing, but writing to `devices.deny`
+			// returns with an EINVAL (indicative of there being cgroup children). Possibly a kernel race?
+			time.Sleep(time.Second)
 
 			// start guardian back up with the 'kill -9 <gdn pid> on down' behaviour disabled
 			client = runner.Start(originalConfig)

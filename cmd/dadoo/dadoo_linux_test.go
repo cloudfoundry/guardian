@@ -53,7 +53,9 @@ var _ = Describe("Dadoo", func() {
 		bundle, err = loader.Load(bundlePath)
 		Expect(err).NotTo(HaveOccurred())
 
-		cp, err := gexec.Start(exec.Command("cp", "-a", os.Getenv("GARDEN_TEST_ROOTFS"), filepath.Join(bundlePath, "root")), GinkgoWriter, GinkgoWriter)
+		rootfsPath := filepath.Join(bundlePath, "root")
+		Expect(os.MkdirAll(rootfsPath, 0700)).To(Succeed())
+		cp, err := gexec.Start(exec.Command("tar", "-xf", os.Getenv("GARDEN_TEST_ROOTFS"), "-C", rootfsPath), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(cp, "2m").Should(gexec.Exit(0))
 

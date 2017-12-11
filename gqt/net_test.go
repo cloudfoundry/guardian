@@ -35,24 +35,17 @@ var _ = Describe("Networking", func() {
 
 		exampleDotCom net.IP
 
-		extraProperties garden.Properties
+		extraProperties             garden.Properties
+		rootFSWithoutHostsAndResolv string
 	)
 
-	createRootFSWithoutHostsAndResolv := func() string {
-		rootFSWithoutHostsAndResolv, err := ioutil.TempDir("", "net-test")
-		Expect(err).NotTo(HaveOccurred())
-		Expect(os.Chmod(rootFSWithoutHostsAndResolv, 0755)).To(Succeed())
-		copyRootFSCmd := exec.Command("cp", "-r", fmt.Sprintf("%s/.", defaultTestRootFS), rootFSWithoutHostsAndResolv)
-		copyRootFSCmd.Stdout = GinkgoWriter
-		copyRootFSCmd.Stderr = GinkgoWriter
-		Expect(copyRootFSCmd.Run()).To(Succeed())
-		Expect(os.Chmod(filepath.Join(rootFSWithoutHostsAndResolv, "tmp"), 0777)).To(Succeed())
-		Expect(os.Remove(filepath.Join(rootFSWithoutHostsAndResolv, "etc", "hosts"))).To(Succeed())
-		Expect(os.Remove(filepath.Join(rootFSWithoutHostsAndResolv, "etc", "resolv.conf"))).To(Succeed())
-		return rootFSWithoutHostsAndResolv
-	}
-
 	BeforeEach(func() {
+		rootFSWithoutHostsAndResolv = createRootfs(func(root string) {
+			Expect(os.Chmod(filepath.Join(root, "tmp"), 0777)).To(Succeed())
+			Expect(os.Remove(filepath.Join(root, "etc", "hosts"))).To(Succeed())
+			Expect(os.Remove(filepath.Join(root, "etc", "resolv.conf"))).To(Succeed())
+		}, 0755)
+
 		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
 		containerSpec = garden.ContainerSpec{}
 
@@ -78,6 +71,7 @@ var _ = Describe("Networking", func() {
 	})
 
 	AfterEach(func() {
+		Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
 		Expect(client.DestroyAndStop()).To(Succeed())
 	})
 
@@ -174,17 +168,6 @@ var _ = Describe("Networking", func() {
 	})
 
 	Context("when the rootFS does not contain /etc/hosts or /etc/resolv.conf", func() {
-		var (
-			rootFSWithoutHostsAndResolv string
-		)
-
-		BeforeEach(func() {
-			rootFSWithoutHostsAndResolv = createRootFSWithoutHostsAndResolv()
-		})
-
-		AfterEach(func() {
-			Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
-		})
 
 		It("adds it and an entry with container IP and handle", func() {
 			itShouldLookupContainerUsingHandle(container, container.Handle())
@@ -580,15 +563,9 @@ var _ = Describe("Networking", func() {
 			})
 
 			Context("when the rootFS does not contain /etc/resolv.conf", func() {
-				var rootFSWithoutHostsAndResolv string
 
 				BeforeEach(func() {
-					rootFSWithoutHostsAndResolv = createRootFSWithoutHostsAndResolv()
 					containerSpec.RootFSPath = fmt.Sprintf("raw://%s", rootFSWithoutHostsAndResolv)
-				})
-
-				AfterEach(func() {
-					Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
 				})
 
 				It("sets the nameserver entries in the container's /etc/resolv.conf to the values supplied by the network plugin", func() {
@@ -942,15 +919,8 @@ var _ = Describe("Networking", func() {
 			})
 
 			Context("when the rootFS doesn't contain /etc/resolv.conf", func() {
-				var rootFSWithoutHostsAndResolv string
-
 				BeforeEach(func() {
-					rootFSWithoutHostsAndResolv = createRootFSWithoutHostsAndResolv()
 					containerSpec.RootFSPath = fmt.Sprintf("raw://%s", rootFSWithoutHostsAndResolv)
-				})
-
-				AfterEach(func() {
-					Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
 				})
 
 				It("creates it and adds the IP address to the container's /etc/resolv.conf", func() {

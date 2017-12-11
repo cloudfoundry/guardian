@@ -240,15 +240,16 @@ var _ = Describe("Run", func() {
 
 			BeforeEach(func() {
 				var err error
-				rootfs, err = ioutil.TempDir("", "symlinks")
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(os.Mkdir(filepath.Join(rootfs, "tmp"), 0777)).To(Succeed())
-
 				target, err = ioutil.TempDir("", "symlinkstarget")
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(os.Symlink(target, path.Join(rootfs, "symlink"))).To(Succeed())
+				rootfs = createRootfsTar(func(unpackedRootfs string) {
+					Expect(os.Symlink(target, path.Join(unpackedRootfs, "symlink"))).To(Succeed())
+				})
+			})
+
+			AfterEach(func() {
+				Expect(os.RemoveAll(target)).To(Succeed())
 			})
 
 			It("does not follow symlinks into the host when creating cwd", func() {
@@ -257,11 +258,11 @@ var _ = Describe("Run", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				_, err = container.Run(garden.ProcessSpec{
-					Path: "echo",
-					Args: []string{"hello"},
+					Path: "non-existing-cmd",
+					Args: []string{},
 					Dir:  "/symlink/foo/bar",
 				}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
-				Expect(err).To(HaveOccurred()) // echo won't be in the rootfs
+				Expect(err).To(HaveOccurred())
 				Expect(path.Join(target, "foo")).NotTo(BeADirectory())
 			})
 		})

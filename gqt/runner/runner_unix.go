@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -45,6 +46,7 @@ func socket2meCommand(config GdnRunnerConfig) *exec.Cmd {
 }
 
 func (r *GardenRunner) setupDirsForUser() {
+	// TODO: Remove this when we get rid of shed
 	MustMountTmpfs(r.GraphDir)
 
 	if r.User != nil {
@@ -65,10 +67,18 @@ func (r *GardenRunner) setupDirsForUser() {
 }
 
 func (r *RunningGarden) Cleanup() {
-	// unmount aufs since the docker graph driver leaves this around,
-	// otherwise the following commands might fail
-	retry := retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil)
+	// GROOT CLEANUP
+	Expect(syscall.Unmount(filepath.Join(r.TmpDir, "groot_store"), 0)).To(Succeed())
+	Expect(os.RemoveAll(filepath.Join(r.TmpDir, "groot_store"))).To(Succeed())
+	Expect(os.RemoveAll(filepath.Join(r.TmpDir, "groot_store.backing-store"))).To(Succeed())
 
+	Expect(syscall.Unmount(filepath.Join(r.TmpDir, "groot_privileged_store"), 0)).To(Succeed())
+	Expect(os.RemoveAll(filepath.Join(r.TmpDir, "groot_privileged_store"))).To(Succeed())
+	Expect(os.RemoveAll(filepath.Join(r.TmpDir, "groot_privileged_store.backing-store"))).To(Succeed())
+
+	// AUFS CLEANUP
+	// TODO: Remove this when we get rid of shed
+	retry := retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil)
 	Expect(retry.Run(func() error {
 		if err := os.RemoveAll(path.Join(r.GraphDir, "aufs")); err == nil {
 			return nil // if we can remove it, it's already unmounted

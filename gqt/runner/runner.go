@@ -92,6 +92,8 @@ type GdnRunnerConfig struct {
 	NetworkPool                    string   `flag:"network-pool"`
 
 	StartupExpectedToFail bool
+	StorePath             string
+	PrivilegedStorePath   string
 }
 
 func (c GdnRunnerConfig) connectionInfo() (string, string) {
@@ -148,6 +150,8 @@ func (c GdnRunnerConfig) toFlags() []string {
 type Binaries struct {
 	Tar                   string `json:"tar,omitempty"`
 	Gdn                   string `json:"gdn,omitempty"`
+	Groot                 string `json:"groot,omitempty"`
+	Tardis                string `json:"tardis,omitempty"`
 	Init                  string `json:"init,omitempty"`
 	RuntimePlugin         string `json:"runtime_plugin,omitempty"`
 	ImagePlugin           string `json:"image_plugin,omitempty"`
@@ -165,8 +169,6 @@ type GardenRunner struct {
 }
 
 func (r *GardenRunner) Setup() {
-	Expect(os.MkdirAll(r.TmpDir, 0755)).To(Succeed())
-	Expect(os.MkdirAll(r.DepotDir, 0755)).To(Succeed())
 	r.setupDirsForUser()
 }
 
@@ -193,18 +195,21 @@ func init() {
 	}
 }
 
-func DefaultGdnRunnerConfig() GdnRunnerConfig {
+func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
 	var config GdnRunnerConfig
 	config.Tag = fmt.Sprintf("%d", GinkgoParallelNode())
 
 	var err error
 	config.TmpDir, err = ioutil.TempDir("", fmt.Sprintf("test-garden-%s-", config.Tag))
-	Expect(os.Chmod(config.TmpDir, 0777)).To(Succeed())
 	Expect(err).NotTo(HaveOccurred())
+	Expect(os.MkdirAll(config.TmpDir, 0777)).To(Succeed())
+	Expect(os.Chmod(config.TmpDir, 0777)).To(Succeed())
 
 	config.GraphDir = filepath.Join(graphDirBase, filepath.Base(config.TmpDir))
-	config.DepotDir = filepath.Join(config.TmpDir, "containers")
 	config.ConsoleSocketsPath = filepath.Join(config.TmpDir, "console-sockets")
+
+	config.DepotDir = filepath.Join(config.TmpDir, "containers")
+	Expect(os.MkdirAll(config.DepotDir, 0755)).To(Succeed())
 
 	if runtime.GOOS == "windows" {
 		config.BindIP = "127.0.0.1"
@@ -220,6 +225,12 @@ func DefaultGdnRunnerConfig() GdnRunnerConfig {
 	config.UIDMapLength = uint32ptr(100000)
 	config.GIDMapStart = uint32ptr(1)
 	config.GIDMapLength = uint32ptr(100000)
+
+	config.StorePath = filepath.Join(config.TmpDir, "groot_store")
+	config.PrivilegedStorePath = filepath.Join(config.TmpDir, "groot_privileged_store")
+
+	config.ImagePluginExtraArgs = []string{`"--store"`, config.StorePath, `"--tardis-bin"`, binaries.Tardis, `"--log-level"`, "debug"}
+	config.PrivilegedImagePluginExtraArgs = []string{`"--store"`, config.PrivilegedStorePath, `"--tardis-bin"`, binaries.Tardis, `"--log-level"`, "debug"}
 
 	return config
 }
@@ -301,14 +312,12 @@ type ErrGardenStop struct {
 func (r *RunningGarden) DestroyAndStop() error {
 	defer r.forceStop()
 
-	if err := r.DestroyContainers(); err != nil {
-		return err
-	}
-
-	return nil
+	return r.DestroyContainers()
 }
 
 func (r *RunningGarden) forceStop() error {
+	defer r.Cleanup()
+
 	if runtime.GOOS == "windows" {
 		// Windows doesn't support SIGTERM
 		r.Kill()
@@ -319,17 +328,15 @@ func (r *RunningGarden) forceStop() error {
 		}
 	}
 
-	if err := r.removeTempDirPreservingCgroupMounts(); err != nil {
-		fmt.Printf("error on r.removeTempDirPreservingCgroupMounts() during forceStop: %s", err.Error())
+	if err := r.removeTempDirContentsPreservingMounts(); err != nil {
+		fmt.Printf("error on r.removeTempDirContentsPreservingMounts() during forceStop: %s", err.Error())
 		return err
 	}
-
-	r.Cleanup()
 
 	return nil
 }
 
-func (r *RunningGarden) removeTempDirPreservingCgroupMounts() error {
+func (r *RunningGarden) removeTempDirContentsPreservingMounts() error {
 	tmpDir, err := os.Open(r.TmpDir)
 	if err != nil {
 		return err
@@ -341,14 +348,16 @@ func (r *RunningGarden) removeTempDirPreservingCgroupMounts() error {
 	}
 
 	for _, tmpDirChild := range tmpDirContents {
-		if !strings.Contains(tmpDirChild.Name(), "cgroups-") {
-			if err := os.RemoveAll(filepath.Join(r.TmpDir, tmpDirChild.Name())); err != nil {
-				return err
-			}
-		} else {
+		if strings.Contains(tmpDirChild.Name(), "cgroups-") {
 			cGroupsPath := path.Join(r.TmpDir, tmpDirChild.Name())
 			if err = r.cleanGardenCgroups(cGroupsPath); err != nil {
 				return err
+			}
+		} else {
+			if !strings.Contains(tmpDirChild.Name(), "store") {
+				if err := os.RemoveAll(filepath.Join(r.TmpDir, tmpDirChild.Name())); err != nil {
+					return err
+				}
 			}
 		}
 	}

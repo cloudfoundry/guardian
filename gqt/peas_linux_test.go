@@ -17,18 +17,13 @@ import (
 var _ = Describe("Partially shared containers (peas)", func() {
 	var (
 		gdn           *runner.RunningGarden
-		tmpDir        string
 		peaRootfs     string
 		ctr           garden.Container
 		containerSpec garden.ContainerSpec
 	)
 
 	BeforeEach(func() {
-		var err error
-		tmpDir, err = ioutil.TempDir("", "peas-gqts")
-		Expect(err).NotTo(HaveOccurred())
-
-		peaRootfs = createPeaRoootfs(tmpDir)
+		peaRootfs = createPeaRootfs()
 		containerSpec = garden.ContainerSpec{}
 	})
 
@@ -41,7 +36,6 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 	AfterEach(func() {
 		Expect(gdn.DestroyAndStop()).To(Succeed())
-		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
 	It("should not leak pipes", func() {
@@ -100,7 +94,7 @@ var _ = Describe("Partially shared containers (peas)", func() {
 
 		BeforeEach(func() {
 			var err error
-			testSrcFile, err = ioutil.TempFile(tmpDir, "host-file")
+			testSrcFile, err = ioutil.TempFile("", "host-file")
 			Expect(err).NotTo(HaveOccurred())
 			_, err = testSrcFile.WriteString("test-mount")
 			Expect(err).NotTo(HaveOccurred())

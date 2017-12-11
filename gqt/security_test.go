@@ -2,8 +2,6 @@ package gqt_test
 
 import (
 	"io"
-	"io/ioutil"
-	"os"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -56,19 +54,11 @@ var _ = Describe("Security", func() {
 
 			Context("when running a pea", func() {
 				var (
-					tmpDir    string
 					peaRootfs string
 				)
 
 				BeforeEach(func() {
-					var err error
-					tmpDir, err = ioutil.TempDir("", "security-gqts")
-					Expect(err).NotTo(HaveOccurred())
-					peaRootfs = createPeaRoootfs(tmpDir)
-				})
-
-				AfterEach(func() {
-					Expect(os.RemoveAll(tmpDir)).To(Succeed())
+					peaRootfs = createPeaRootfs()
 				})
 
 				itEnforcesAppArmorPolicy(garden.ImageRef{URI: peaRootfs})

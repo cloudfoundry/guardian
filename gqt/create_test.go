@@ -95,20 +95,20 @@ var _ = Describe("Creating a Container", func() {
 			Expect(ioutil.ReadDir(client.DepotDir)).To(BeEmpty())
 		})
 
-		It("cleans up the graph", func() {
+		It("cleans up the groot store", func() {
 			// pre-warm cache to avoid test pollution
-			// i.e. ensure base layers that are never removed are already in the graph
+			// i.e. ensure base layers that are never removed are already in the groot store
 			_, err := client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
-			prev, err := ioutil.ReadDir(filepath.Join(client.GraphDir, "aufs", "mnt"))
+			prev, err := ioutil.ReadDir(filepath.Join(client.TmpDir, "groot_store", "images"))
 			Expect(err).NotTo(HaveOccurred())
 
 			_, err = client.Create(containerSpec)
 			Expect(err).To(HaveOccurred())
 
 			Eventually(func() int {
-				num, err := ioutil.ReadDir(filepath.Join(client.GraphDir, "aufs", "mnt"))
+				num, err := ioutil.ReadDir(filepath.Join(client.TmpDir, "groot_store", "images"))
 				Expect(err).NotTo(HaveOccurred())
 				return len(num)
 			}).Should(Equal(len(prev)))
@@ -232,17 +232,18 @@ var _ = Describe("Creating a Container", func() {
 	})
 
 	Context("after creating a container with a specified root filesystem", func() {
-		var rootFSPath string
+		var (
+			tmpDir     string
+			rootFSPath string
+		)
 
 		JustBeforeEach(func() {
 			var err error
 
-			rootFSPath, err = ioutil.TempDir("", "test-rootfs")
-			Expect(err).NotTo(HaveOccurred())
-			command := fmt.Sprintf("cp -rf %s/* %s", defaultTestRootFS, rootFSPath)
-			Expect(exec.Command("sh", "-c", command).Run()).To(Succeed())
-			Expect(ioutil.WriteFile(filepath.Join(rootFSPath, "my-file"), []byte("some-content"), 0644)).To(Succeed())
-			Expect(os.Mkdir(path.Join(rootFSPath, "somedir"), 0777)).To(Succeed())
+			rootFSPath = createRootfsTar(func(unpackedRootfs string) {
+				Expect(ioutil.WriteFile(filepath.Join(unpackedRootfs, "my-file"), []byte("some-content"), 0644)).To(Succeed())
+				Expect(os.Mkdir(path.Join(unpackedRootfs, "somedir"), 0777)).To(Succeed())
+			})
 
 			container, err = client.Create(garden.ContainerSpec{
 				RootFSPath: rootFSPath,
@@ -250,12 +251,16 @@ var _ = Describe("Creating a Container", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
+		AfterEach(func() {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		})
+
 		It("provides the containers with the right rootfs", func() {
 			Expect(container).To(HaveFile("/my-file"))
 
 			By("Isolating the filesystem propertly for multiple containers")
 
-			runCommand(container, "touch", []string{"/somedir/created-file"})
+			runInContainer(container, "touch", []string{"/somedir/created-file"})
 			Expect(container).To(HaveFile("/somedir/created-file"))
 
 			container2, err := client.Create(garden.ContainerSpec{
@@ -626,7 +631,7 @@ func initProcessPID(handle string) int {
 	return state.Pid
 }
 
-func runCommand(container garden.Container, path string, args []string) {
+func runInContainer(container garden.Container, path string, args []string) {
 	proc, err := container.Run(
 		garden.ProcessSpec{
 			Path: path,

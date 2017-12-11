@@ -53,23 +53,28 @@ var _ = Describe("rootless containers", func() {
 		runcRootDir, err := ioutil.TempDir(config.TmpDir, "runcRootDir")
 		Expect(err).NotTo(HaveOccurred())
 
-		imagePath, err = ioutil.TempDir(config.TmpDir, "rootlessImagePath")
+		tempDir, err := ioutil.TempDir(config.TmpDir, "rootlessImagePath")
 		Expect(err).NotTo(HaveOccurred())
+
+		imagePath = filepath.Join(tempDir, "rootfs")
+		Expect(os.MkdirAll(imagePath, 0755)).To(Succeed())
 
 		// This is necessary because previous tests may leave a socket owned by root
 		removeSocket()
 
 		unprivilegedUser := &syscall.Credential{Uid: unprivilegedUID, Gid: unprivilegedGID}
 
-		Expect(exec.Command("cp", "-r", defaultTestRootFS, imagePath).Run()).To(Succeed())
+		runCommand(exec.Command("tar", "xf", defaultTestRootFS, "-C", imagePath))
 		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), runcRootDir).Run()).To(Succeed())
-		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), imagePath).Run()).To(Succeed())
+		Expect(exec.Command("chown", "-R", fmt.Sprintf("%d:%d", unprivilegedUID, unprivilegedGID), tempDir).Run()).To(Succeed())
 		// The 'alice' user in the GARDEN_TEST_ROOTFS has a UID of 1000
 		// The tests below use a uid range of 100000 -> 165536
 		// 100000 + (1000 - 1) = 100999 (-1 because we map from 0)
-		Expect(exec.Command("chown", "-R", "100999:100999", filepath.Join(imagePath, "rootfs", "home", "alice")).Run()).To(Succeed())
+		runCommand(exec.Command("chown", "-R", "100999:100999", filepath.Join(imagePath, "home", "alice")))
 
+		config = resetImagePluginConfig()
 		config.ImagePluginBin = binaries.ImagePlugin
+		config.ImagePluginExtraArgs = []string{"\"--rootfs-path\"", imagePath}
 		config.NetworkPluginBin = "/bin/true"
 		config.User = unprivilegedUser
 		config.SkipSetup = boolptr(true)
@@ -77,7 +82,6 @@ var _ = Describe("rootless containers", func() {
 		config.UIDMapLength = uint32ptr(65536)
 		config.GIDMapStart = uint32ptr(100000)
 		config.GIDMapLength = uint32ptr(65536)
-		config.ImagePluginExtraArgs = []string{"\"--rootfs-path\"", filepath.Join(imagePath, "rootfs")}
 		config.RuncRoot = runcRootDir
 
 		config.BindSocket = ""
@@ -189,7 +193,7 @@ var _ = Describe("rootless containers", func() {
 
 		Context("when the rootfs contains a read-only resolv.conf", func() {
 			BeforeEach(func() {
-				Expect(os.Chmod(filepath.Join(imagePath, "rootfs", "etc", "resolv.conf"), 0444)).To(Succeed())
+				Expect(os.Chmod(filepath.Join(imagePath, "etc", "resolv.conf"), 0444)).To(Succeed())
 			})
 
 			It("succeeds anyway", func() {

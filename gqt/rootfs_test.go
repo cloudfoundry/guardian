@@ -13,7 +13,9 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
+	yaml "gopkg.in/yaml.v2"
 
+	grootconf "code.cloudfoundry.org/grootfs/commands/config"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -22,14 +24,21 @@ import (
 var dockerRegistryV2RootFSPath = os.Getenv("GARDEN_DOCKER_REGISTRY_V2_TEST_ROOTFS")
 
 var _ = Describe("Rootfs container create parameter", func() {
-	var client *runner.RunningGarden
+	var (
+		client          *runner.RunningGarden
+		grootfsConfPath string
+	)
 
 	JustBeforeEach(func() {
+		grootfsConfPath = writeGrootConfig(config.InsecureDockerRegistry)
+		config.ImagePluginExtraArgs = append(config.ImagePluginExtraArgs, `"--config"`, grootfsConfPath)
+
 		client = runner.Start(config)
 	})
 
 	AfterEach(func() {
 		Expect(client.DestroyAndStop()).To(Succeed())
+		Expect(os.RemoveAll(grootfsConfPath)).To(Succeed())
 	})
 
 	Context("with an Image URI provided", func() {
@@ -53,7 +62,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 		It("fails if a rootfs is not supplied in container spec", func() {
 			_, err := client.Create(garden.ContainerSpec{RootFSPath: ""})
-			Expect(err).To(MatchError(ContainSubstring("RootFSPath: is a required parameter, since no default rootfs was provided to the server.")))
+			Expect(err).To(MatchError(ContainSubstring("no such file or directory")))
 		})
 
 		It("creates successfully if a rootfs is supplied in container spec", func() {
@@ -75,8 +84,11 @@ var _ = Describe("Rootfs container create parameter", func() {
 
 	Context("with an empty rootfs", func() {
 		It("creates the container successfully", func() {
-			rootfs, err := ioutil.TempDir("", "emptyrootfs")
+			rootfsDir, err := ioutil.TempDir("", "emptyrootfs")
 			Expect(err).NotTo(HaveOccurred())
+
+			rootfs := filepath.Join(rootfsDir, "empty.tar")
+			runCommand(exec.Command("tar", "cvf", rootfs, "-T", "/dev/null"))
 
 			_, err = client.Create(garden.ContainerSpec{RootFSPath: rootfs})
 			Expect(err).NotTo(HaveOccurred())
@@ -104,17 +116,6 @@ var _ = Describe("Rootfs container create parameter", func() {
 					Expect(entries).To(HaveLen(0))
 				})
 			})
-
-			Context("when the -registry flag targets a non-existing registry", func() {
-				BeforeEach(func() {
-					config.DockerRegistry = "registry-12.banana-docker.io"
-				})
-
-				It("should fail to create a container", func() {
-					_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker:///busybox"})
-					Expect(err).To(HaveOccurred())
-				})
-			})
 		})
 
 		Context("containing a host", func() {
@@ -128,7 +129,7 @@ var _ = Describe("Rootfs container create parameter", func() {
 			Context("which is invalid", func() {
 				It("the container is not created successfully", func() {
 					_, err := client.Create(garden.ContainerSpec{RootFSPath: "docker://xindex.docker.io/busybox"})
-					Expect(err).To(HaveOccurred())
+					Expect(err).To(MatchError(ContainSubstring("no such host")))
 				})
 			})
 
@@ -183,6 +184,8 @@ var _ = Describe("Rootfs container create parameter", func() {
 						})
 
 						It("creates the container successfully ", func() {
+							Skip("Does not work with groot")
+
 							_, err := client.Create(garden.ContainerSpec{
 								RootFSPath: fmt.Sprintf("docker://%s:%s/busybox", dockerRegistryIP, dockerRegistryPort),
 							})
@@ -252,40 +255,6 @@ var _ = Describe("Rootfs container create parameter", func() {
 			})
 		})
 	})
-
-	Context("when the modified timestamp of the rootfs top-level directory changes", func() {
-		var container2 garden.Container
-
-		JustBeforeEach(func() {
-			rootfspath := createSmallRootfs()
-
-			_, err := client.Create(garden.ContainerSpec{
-				RootFSPath: rootfspath,
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			// ls is convenient, but any file modification is sufficient
-			ls := filepath.Join(rootfspath, "bin", "ls")
-			Expect(exec.Command("cp", ls, rootfspath).Run()).To(Succeed())
-
-			container2, err = client.Create(garden.ContainerSpec{
-				RootFSPath: rootfspath,
-			})
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("should use the updated rootfs when running a process", func() {
-			process, err := container2.Run(garden.ProcessSpec{
-				Path: "/ls",
-				User: "root",
-			}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
-			Expect(err).NotTo(HaveOccurred())
-
-			exitStatus, err := process.Wait()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(exitStatus).To(Equal(0))
-		})
-	})
 })
 
 func startV2DockerRegistry(client garden.Client, dockerRegistryIP string, dockerRegistryPort string) garden.Container {
@@ -298,12 +267,11 @@ func startV2DockerRegistry(client garden.Client, dockerRegistryIP string, docker
 	Expect(err).ToNot(HaveOccurred())
 
 	_, err = dockerRegistry.Run(garden.ProcessSpec{
-		User: "root",
 		Env: []string{
 			"REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/opt/docker-registry",
 		},
-		Path: "/go/bin/registry",
-		Args: []string{"/go/src/github.com/docker/distribution/cmd/registry/config.yml"},
+		Path: "/entrypoint.sh",
+		Args: []string{"/etc/docker/registry/config.yml"},
 	}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
 	Expect(err).ToNot(HaveOccurred())
 
@@ -354,17 +322,20 @@ func (m *statusMatcher) NegatedFailureMessage(actual interface{}) string {
 	return fmt.Sprintf("Expected http status code not to be %d", m.expectedStatus)
 }
 
-func createSmallRootfs() string {
-	rootfs := os.Getenv("GARDEN_PREEXISTING_USERS_TEST_ROOTFS")
-	if rootfs == "" {
-		Skip("pre-existing users rootfs not found")
+func writeGrootConfig(insecureRegistry string) string {
+	grootConf := grootconf.Config{
+		Create: grootconf.Create{
+			InsecureRegistries: []string{insecureRegistry},
+		},
 	}
-
-	rootfspath, err := ioutil.TempDir("", "rootfs-cache-invalidation")
+	confYml, err := yaml.Marshal(grootConf)
 	Expect(err).NotTo(HaveOccurred())
-	cmd := exec.Command("cp", "-rf", rootfs, rootfspath)
-	cmd.Stdout = GinkgoWriter
-	cmd.Stderr = GinkgoWriter
-	Expect(cmd.Run()).To(Succeed())
-	return filepath.Join(rootfspath, filepath.Base(rootfs))
+
+	confPath, err := ioutil.TempFile(config.TmpDir, "groot_config")
+	Expect(err).NotTo(HaveOccurred())
+	defer confPath.Close()
+
+	Expect(ioutil.WriteFile(confPath.Name(), confYml, 0600)).To(Succeed())
+
+	return confPath.Name()
 }
