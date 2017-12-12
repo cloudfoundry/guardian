@@ -59,13 +59,13 @@ func (f *LinuxFactory) CommandRunner() commandrunner.CommandRunner {
 }
 
 func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
+	if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
+		return f.config.wireImagePlugin(f.commandRunner)
+	}
+
 	graphRoot := f.config.Graph.Dir
 	if graphRoot == "" {
 		return gardener.NoopVolumizer{}
-	}
-
-	if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
-		return f.config.wireImagePlugin(f.commandRunner)
 	}
 
 	logger = logger.Session(gardener.VolumizerSession, lager.Data{"graphRoot": graphRoot})
