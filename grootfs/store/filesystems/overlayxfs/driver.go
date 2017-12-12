@@ -413,23 +413,6 @@ func (d *Driver) formatFilesystem(logger lager.Logger, filesystemPath string) er
 	return nil
 }
 
-func (d *Driver) findAssociatedLoopDevice(filePath string) (string, error) {
-	errBuffer := bytes.NewBuffer([]byte{})
-	cmd := exec.Command("losetup", "-j", filePath)
-	cmd.Stderr = errBuffer
-	output, err := cmd.Output()
-	if err != nil {
-		return "", errorspkg.Wrapf(err, "finding attached loop device: %s", errBuffer.String())
-	}
-
-	losetupColumns := strings.Split(string(output), ":")
-	if len(losetupColumns) == 3 {
-		return losetupColumns[0], nil
-	}
-
-	return "", errorspkg.Errorf("unexpected losetup output: %s", string(output))
-}
-
 func (d *Driver) mountFilesystem(source, destination, option string) error {
 	allOpts := strings.Trim(fmt.Sprintf("%s,loop,pquota,noatime,nobarrier", option), ",")
 	cmd := exec.Command("mount", "-o", allOpts, "-t", "xfs", source, destination)
