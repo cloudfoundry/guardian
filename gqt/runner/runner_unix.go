@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"path"
-	"path/filepath"
 	"syscall"
 	"time"
 
@@ -68,13 +67,18 @@ func (r *GardenRunner) setupDirsForUser() {
 
 func (r *RunningGarden) Cleanup() {
 	// GROOT CLEANUP
-	Expect(syscall.Unmount(filepath.Join(r.TmpDir, "groot_store"), 0)).To(Succeed())
-	Expect(os.RemoveAll(filepath.Join(r.TmpDir, "groot_store"))).To(Succeed())
-	Expect(os.RemoveAll(filepath.Join(r.TmpDir, "groot_store.backing-store"))).To(Succeed())
+	storePath := r.GardenRunner.GdnRunnerConfig.StorePath
+	privStorePath := r.GardenRunner.GdnRunnerConfig.PrivilegedStorePath
 
-	Expect(syscall.Unmount(filepath.Join(r.TmpDir, "groot_privileged_store"), 0)).To(Succeed())
-	Expect(os.RemoveAll(filepath.Join(r.TmpDir, "groot_privileged_store"))).To(Succeed())
-	Expect(os.RemoveAll(filepath.Join(r.TmpDir, "groot_privileged_store.backing-store"))).To(Succeed())
+	clearGrootStore(r.GardenRunner.GdnRunnerConfig.ImagePluginBin, storePath)
+	Expect(syscall.Unmount(storePath, 0)).To(Succeed())
+	Expect(os.RemoveAll(storePath)).To(Succeed())
+	Expect(os.RemoveAll(storePath + ".backing-store")).To(Succeed())
+
+	clearGrootStore(r.GardenRunner.GdnRunnerConfig.PrivilegedImagePluginBin, privStorePath)
+	Expect(syscall.Unmount(privStorePath, 0)).To(Succeed())
+	Expect(os.RemoveAll(privStorePath)).To(Succeed())
+	Expect(os.RemoveAll(privStorePath + ".backing-store")).To(Succeed())
 
 	// AUFS CLEANUP
 	// TODO: Remove this when we get rid of shed
@@ -97,4 +101,15 @@ func (r *RunningGarden) Cleanup() {
 	if err := os.RemoveAll(r.GraphDir); err != nil {
 		r.logger.Error("remove-graph", err)
 	}
+}
+
+func clearGrootStore(grootBin, storePath string) {
+	deleteStoreArgs := []string{"--store", storePath, "delete-store"}
+
+	deleteStore := exec.Command(grootBin, deleteStoreArgs...)
+	deleteStore.Stdout = GinkgoWriter
+	deleteStore.Stderr = GinkgoWriter
+	// a bug in groot will cause this to fail on total deletion, but it will clear the store contents
+	// which means the store can be unmounted
+	deleteStore.Run()
 }
