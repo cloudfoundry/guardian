@@ -205,7 +205,7 @@ func forcefulRemovePath(path string) (err error) {
 		return nil
 	}
 
-	if os.IsPermission(err) {
+	if err != nil {
 		err = rmPath(path)
 	}
 
@@ -720,12 +720,16 @@ func ensureImageDestroyed(imagePath string) error {
 	}
 
 	for i := 0; i < maxDestroyRetries; i++ {
-		if err = os.RemoveAll(imagePath); err == nil {
+		if err = forcefulRemovePath(imagePath); err == nil {
 			return nil
 		}
-		if err := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
-			return errorspkg.Wrap(err, "unmounting rootfs folder")
+		e := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0)
+		if e == nil {
+			err = e
+			continue
 		}
+
+		err = errorspkg.Wrap(e, "unmounting rootfs folder")
 
 		time.Sleep(100 * time.Millisecond)
 	}
