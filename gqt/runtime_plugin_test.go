@@ -231,7 +231,7 @@ var _ = Describe("Runtime Plugin", func() {
 					var processSpec runrunc.PreparedSpec
 					processSpecContent, err := ioutil.ReadFile(processSpecFilePath)
 					Expect(err).ToNot(HaveOccurred())
-					Expect(json.Unmarshal(processSpecContent, &processSpec)).To(Succeed())
+					Expect(json.Unmarshal(processSpecContent, &processSpec)).To(Succeed(), fmt.Sprintf("Process Spec: %s\n", string(processSpecContent)))
 
 					Expect(processSpec.Process.Args[0]).To(Equal("some-idiosyncratic-binary"))
 				})
