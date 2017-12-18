@@ -1,1 +1,9 @@
 cmd/guardian/guardian
+cmd/init/init
+rundmc/nstar/nstar
+
+*.o
+
+gqt/--action
+gqt/down
+gqt/up

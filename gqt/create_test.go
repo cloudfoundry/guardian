@@ -1,7 +1,6 @@
 package gqt_test
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -646,19 +645,13 @@ func runInContainer(container garden.Container, path string, args []string) {
 }
 
 func numOpenSockets(pid int) (num int) {
-	sess, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep sock", pid)), GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
-
-	return bytes.Count(sess.Out.Contents(), []byte{'\n'})
+	stdout := runCommand(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep sock", pid)))
+	return strings.Count(stdout, "\n")
 }
 
 func numPipes(pid int) (num int) {
-	sess, err := gexec.Start(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep pipe", pid)), GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
-
-	return bytes.Count(sess.Out.Contents(), []byte{'\n'})
+	stdout := runCommand(exec.Command("sh", "-c", fmt.Sprintf("lsof -p %d | grep pipe", pid)))
+	return strings.Count(stdout, "\n")
 }
 
 func findCgroupPath(pid int, cgroupToFind string) string {

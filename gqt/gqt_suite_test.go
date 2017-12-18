@@ -138,15 +138,17 @@ func initGrootStore(grootBin, storePath string, idMappings []string) {
 	Expect(initStore.Run()).To(Succeed())
 }
 
-func runCommandInDir(cmd *exec.Cmd, workingDir string) {
+func runCommandInDir(cmd *exec.Cmd, workingDir string) string {
+	var stdout bytes.Buffer
 	cmd.Dir = workingDir
-	cmd.Stdout = GinkgoWriter
+	cmd.Stdout = io.MultiWriter(&stdout, GinkgoWriter)
 	cmd.Stderr = GinkgoWriter
 	Expect(cmd.Run()).To(Succeed())
+	return stdout.String()
 }
 
-func runCommand(cmd *exec.Cmd) {
-	runCommandInDir(cmd, "")
+func runCommand(cmd *exec.Cmd) string {
+	return runCommandInDir(cmd, "")
 }
 
 func defaultConfig() runner.GdnRunnerConfig {
