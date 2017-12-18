@@ -77,7 +77,7 @@ var _ = Describe("Delete (btrfs only)", func() {
 			sess, err = gexec.Start(exec.Command("sudo", "btrfs", "qgroup", "show", StorePath), GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
-			Expect(sess).ToNot(gbytes.Say(rootID))
+			Expect(sess).ToNot(gbytes.Say(fmt.Sprintf("0/%s", rootID)))
 		})
 	})
 
