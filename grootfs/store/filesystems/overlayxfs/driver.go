@@ -13,7 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
@@ -173,7 +172,7 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 		logger.Error("deleting-metadata-file-failed", err, lager.Data{"path": volumeMetaFilePath})
 	}
 
-	if err := forcefulRemovePath(volumePath); err != nil {
+	if err := os.RemoveAll(volumePath); err != nil {
 		logger.Error(fmt.Sprintf("failed to destroy volume %s", volumePath), err)
 		return errorspkg.Wrapf(err, "destroying volume (%s)", id)
 	}
@@ -195,31 +194,6 @@ func (d *Driver) removeVolumeLink(linkInfoPath string) error {
 		if err := os.Remove(linkInfoPath); err != nil && !os.IsNotExist(err) {
 			return errorspkg.Wrapf(err, "removing symlink information file %s", linkInfoPath)
 		}
-	}
-
-	return nil
-}
-
-func forcefulRemovePath(path string) (err error) {
-	if err = os.RemoveAll(path); err == nil {
-		return nil
-	}
-
-	if err != nil {
-		err = rmPath(path)
-	}
-
-	return
-}
-
-func rmPath(path string) error {
-	outBuffer := bytes.NewBuffer([]byte{})
-
-	rmCmd := exec.Command("rm", "-rf", path)
-	rmCmd.Stdout = outBuffer
-	rmCmd.Stderr = outBuffer
-	if err := rmCmd.Run(); err != nil {
-		return errorspkg.Wrapf(err, "removing path %s `%s`", path, outBuffer.String())
 	}
 
 	return nil
@@ -502,7 +476,7 @@ func (d *Driver) DestroyImage(logger lager.Logger, imagePath string) error {
 		logger.Info("skipping-project-id-folder-removal")
 	}
 
-	if err := ensureImageDestroyed(imagePath); err != nil {
+	if err := ensureImageDestroyed(logger, imagePath); err != nil {
 		logger.Error("removing-image-path-failed", err)
 		return errorspkg.Wrap(err, "deleting rootfs folder")
 	}
@@ -705,43 +679,9 @@ func (d *Driver) applyDiskLimit(logger lager.Logger, spec image_cloner.ImageDriv
 	return nil
 }
 
-func ensureImageDestroyed(imagePath string) error {
-	mounted, err := mounted(imagePath)
-	if err != nil {
-		return err
-	}
-
-	if !mounted {
-		return forcefulRemovePath(imagePath)
-	}
-
+func ensureImageDestroyed(logger lager.Logger, imagePath string) error {
 	if err := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0); err != nil {
-		return errorspkg.Wrap(err, "unmounting rootfs folder")
+		logger.Info("unmount image path failed", lager.Data{"path": imagePath, "error": err})
 	}
-
-	for i := 0; i < maxDestroyRetries; i++ {
-		if err = forcefulRemovePath(imagePath); err == nil {
-			return nil
-		}
-		e := syscall.Unmount(filepath.Join(imagePath, RootfsDir), 0)
-		if e == nil {
-			err = e
-			continue
-		}
-
-		err = errorspkg.Wrap(e, "unmounting rootfs folder")
-
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	return err
-}
-
-func mounted(mount string) (bool, error) {
-	contents, err := ioutil.ReadFile("/proc/self/mountinfo")
-	if err != nil {
-		return false, errorspkg.Wrap(err, "reading proc mountinfo")
-	}
-
-	return strings.Contains(string(contents), mount), nil
+	return os.RemoveAll(imagePath)
 }

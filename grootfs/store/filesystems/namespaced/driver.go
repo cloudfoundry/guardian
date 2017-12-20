@@ -59,15 +59,10 @@ func init() {
 		os.Exit(0)
 	}
 
-	reexec.Register("destroy-volume", func() {
+	reexec.Register("with-caps-in-userns", func() {
 		cli.ErrWriter = os.Stdout
-		logger := lager.NewLogger("destroy-volume")
+		logger := lager.NewLogger("with-caps-in-userns")
 		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
-
-		if len(os.Args) != 3 {
-			logger.Error("parsing-command", errors.New("drivers json or id not specified"))
-			os.Exit(1)
-		}
 
 		ctrlPipeR := os.NewFile(3, "/ctrl/pipe")
 		buffer := make([]byte, 1)
@@ -77,6 +72,27 @@ func init() {
 			os.Exit(1)
 		}
 		logger.Debug("got-back-from-control-pipe")
+
+		outputBuffer := bytes.NewBuffer([]byte{})
+		cmd := reexec.Command(os.Args[1], os.Args[2], os.Args[3])
+		cmd.Stderr = lagregator.NewRelogger(logger)
+		cmd.Stdout = outputBuffer
+
+		if err := cmd.Run(); err != nil {
+			logger.Error(os.Args[1], errors.Wrapf(err, "reexecing: %s", outputBuffer.String()))
+			os.Exit(1)
+		}
+	})
+
+	reexec.Register("destroy-volume", func() {
+		cli.ErrWriter = os.Stdout
+		logger := lager.NewLogger("destroy-volume")
+		logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.DEBUG))
+
+		if len(os.Args) != 3 {
+			logger.Error("parsing-command", errors.New("drivers json or id not specified"))
+			os.Exit(1)
+		}
 
 		var driverSpec spec.DriverSpec
 		if err := json.Unmarshal([]byte(os.Args[1]), &driverSpec); err != nil {
@@ -106,15 +122,6 @@ func init() {
 			logger.Error("parsing-command", errors.New("drivers json or path not specified"))
 			os.Exit(1)
 		}
-
-		ctrlPipeR := os.NewFile(3, "/ctrl/pipe")
-		buffer := make([]byte, 1)
-		logger.Debug("waiting-for-control-pipe")
-		if _, err := ctrlPipeR.Read(buffer); err != nil {
-			logger.Error("reading-control-pipe", err)
-			os.Exit(1)
-		}
-		logger.Debug("got-back-from-control-pipe")
 
 		var driverSpec spec.DriverSpec
 		if err := json.Unmarshal([]byte(os.Args[1]), &driverSpec); err != nil {
@@ -161,7 +168,7 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	}
 
 	outputBuffer := bytes.NewBuffer([]byte{})
-	cmd := reexec.Command("destroy-volume", string(driverJSON), id)
+	cmd := reexec.Command("with-caps-in-userns", "destroy-volume", string(driverJSON), id)
 	cmd.Stderr = lagregator.NewRelogger(logger)
 	cmd.Stdout = outputBuffer
 	cmd.ExtraFiles = []*os.File{ctrlPipeR}
@@ -230,7 +237,7 @@ func (d *Driver) DestroyImage(logger lager.Logger, path string) error {
 	}
 
 	outputBuffer := bytes.NewBuffer([]byte{})
-	cmd := reexec.Command("destroy-image", string(driverJSON), path)
+	cmd := reexec.Command("with-caps-in-userns", "destroy-image", string(driverJSON), path)
 	cmd.Stderr = lagregator.NewRelogger(logger)
 	cmd.Stdout = outputBuffer
 	cmd.ExtraFiles = []*os.File{ctrlPipeR}

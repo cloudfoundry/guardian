@@ -161,7 +161,7 @@ var _ = Describe("Driver", func() {
 				cmds := fakeCommandRunner.StartedCommands()
 				Expect(cmds).To(HaveLen(1))
 
-				Expect(cmds[0].Args).To(ConsistOf([]string{"destroy-volume", `{"super-cool":"json"}`, "123"}))
+				Expect(cmds[0].Args).To(ConsistOf([]string{"with-caps-in-userns", "destroy-volume", `{"super-cool":"json"}`, "123"}))
 			})
 
 			It("uses idMapper to map the all the ids of the reexec process", func() {
@@ -362,7 +362,7 @@ var _ = Describe("Driver", func() {
 				cmds := fakeCommandRunner.StartedCommands()
 				Expect(cmds).To(HaveLen(1))
 
-				Expect(cmds[0].Args).To(ConsistOf([]string{"destroy-image", `{"super-cool":"json"}`, "id-1"}))
+				Expect(cmds[0].Args).To(ConsistOf([]string{"with-caps-in-userns", "destroy-image", `{"super-cool":"json"}`, "id-1"}))
 			})
 
 			It("uses idMapper to map the all the ids of the reexec process", func() {

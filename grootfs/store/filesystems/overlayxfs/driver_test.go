@@ -638,7 +638,7 @@ var _ = Describe("Driver", func() {
 
 			It("returns an error", func() {
 				err := driver.DestroyImage(logger, spec.ImagePath)
-				Expect(err).To(MatchError(ContainSubstring("unmounting rootfs folder")))
+				Expect(err).To(HaveOccurred())
 			})
 		})
 	})
