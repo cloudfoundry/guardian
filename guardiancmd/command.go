@@ -795,10 +795,13 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	processBuilder := runrunc.NewProcessBuilder(wireEnvFunc(), nonRootMaxCaps)
 
 	cmdRunner := factory.CommandRunner()
+	runcRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
+	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin}
+
 	runcrunner := runrunc.New(
 		cmdRunner,
-		runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile),
-		goci.RuncBinary{Path: cmd.Runtime.Plugin},
+		runcRunner,
+		runcBinary,
 		cmd.Bin.Dadoo.Path(),
 		cmd.Runtime.Plugin,
 		createCmd(),
@@ -826,6 +829,8 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	pidFileReader := wirePidfileReader()
 	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
 
+	runcDeleter := runrunc.NewDeleter(runcRunner, runcBinary)
+
 	peaCreator := &peas.PeaCreator{
 		Volumizer:              volumizer,
 		PidGetter:              pidFileReader,
@@ -835,6 +840,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		ProcessBuilder:         processBuilder,
 		BundleSaver:            bundleSaver,
 		ExecRunner:             factory.WireExecRunner("run"),
+		RuncDeleter:            runcDeleter,
 	}
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)

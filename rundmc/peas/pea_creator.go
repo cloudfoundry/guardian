@@ -12,6 +12,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
+	multierror "github.com/hashicorp/go-multierror"
 	uuid "github.com/nu7hatch/gouuid"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	errorwrapper "github.com/pkg/errors"
@@ -35,6 +36,11 @@ type PrivilegedGetter interface {
 	Privileged(bundlePath string) (bool, error)
 }
 
+//go:generate counterfeiter . RuncDeleter
+type RuncDeleter interface {
+	Delete(log lager.Logger, force bool, handle string) error
+}
+
 type PeaCreator struct {
 	Volumizer              Volumizer
 	PidGetter              PidGetter
@@ -44,6 +50,7 @@ type PeaCreator struct {
 	BundleSaver            depot.BundleSaver
 	ProcessBuilder         runrunc.ProcessBuilder
 	ExecRunner             runrunc.ExecRunner
+	RuncDeleter            RuncDeleter
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error) {
@@ -129,7 +136,17 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 	}
 
 	extraCleanup := func() error {
-		return p.Volumizer.Destroy(log, processID)
+		var result *multierror.Error
+		err := p.RuncDeleter.Delete(log, true, processID)
+		if err != nil {
+			result = multierror.Append(result, err)
+		}
+		err = p.Volumizer.Destroy(log, processID)
+		if err != nil {
+			result = multierror.Append(result, err)
+		}
+
+		return result.ErrorOrNil()
 	}
 	return p.ExecRunner.Run(
 		log, processID, peaBundlePath, sandboxHandle, sandboxBundlePath,

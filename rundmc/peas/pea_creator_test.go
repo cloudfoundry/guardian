@@ -25,6 +25,7 @@ var _ = Describe("PeaCreator", func() {
 
 	var (
 		volumizer              *peasfakes.FakeVolumizer
+		runcDeleter            *peasfakes.FakeRuncDeleter
 		pidGetter              *peasfakes.FakePidGetter
 		bindMountSourceCreator *depotfakes.FakeBindMountSourceCreator
 		bundleGenerator        *depotfakes.FakeBundleGenerator
@@ -58,6 +59,7 @@ var _ = Describe("PeaCreator", func() {
 	BeforeEach(func() {
 		volumizer = new(peasfakes.FakeVolumizer)
 		volumizer.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
+		runcDeleter = new(peasfakes.FakeRuncDeleter)
 		pidGetter = new(peasfakes.FakePidGetter)
 		pidGetter.PidReturns(123, nil)
 		bindMountSourceCreator = new(depotfakes.FakeBindMountSourceCreator)
@@ -89,6 +91,7 @@ var _ = Describe("PeaCreator", func() {
 			ProcessBuilder:         processBuilder,
 			ExecRunner:             execRunner,
 			PrivilegedGetter:       privilegedGetter,
+			RuncDeleter:            runcDeleter,
 		}
 
 		var err error
@@ -271,7 +274,15 @@ var _ = Describe("PeaCreator", func() {
 			Eventually(execRunner.RunCallCount()).Should(Equal(1))
 			_, _, _, _, _, _, _, _, _, _, cleanup := execRunner.RunArgsForCall(0)
 			volumizer.DestroyReturns(errors.New("an-err"))
-			Expect(cleanup()).To(MatchError("an-err"))
+			Expect(cleanup().Error()).To(ContainSubstring("an-err"))
+			Expect(volumizer.DestroyCallCount()).To(Equal(1))
+		})
+
+		It("deletes the container when the process is cleaned up", func() {
+			Eventually(execRunner.RunCallCount()).Should(Equal(1))
+			_, _, _, _, _, _, _, _, _, _, cleanup := execRunner.RunArgsForCall(0)
+			runcDeleter.DeleteReturns(errors.New("delete-err"))
+			Expect(cleanup().Error()).To(ContainSubstring("delete-err"))
 			Expect(volumizer.DestroyCallCount()).To(Equal(1))
 		})
 

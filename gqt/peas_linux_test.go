@@ -6,6 +6,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -50,6 +52,36 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		Expect(process.Wait()).To(Equal(0))
 
 		Eventually(func() int { return numPipes(gdn.Pid) }).Should(Equal(initialPipes))
+	})
+
+	Context("when created with process limits", func() {
+		var limits = garden.ProcessLimits{
+			Memory: garden.MemoryLimits{
+				LimitInBytes: 64 * 1024 * 1024,
+			},
+		}
+
+		It("should not leak cgroups", func() {
+			catOut := gbytes.NewBuffer()
+			process, err := ctr.Run(garden.ProcessSpec{
+				ID:    "pea-process",
+				Path:  "readlink",
+				Args:  []string{"/proc/self"},
+				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+				OverrideContainerLimits: &limits,
+			}, garden.ProcessIO{
+				Stdout: catOut,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			Expect(process.Wait()).To(Equal(0))
+
+			pidString := string(catOut.Contents())
+			pid, err := strconv.Atoi(strings.TrimSpace(pidString))
+			Expect(err).NotTo(HaveOccurred())
+
+			memCgroupPath := findCgroupPath(pid, "memory")
+			Eventually(memCgroupPath).ShouldNot(BeADirectory())
+		})
 	})
 
 	Describe("Process dir", func() {
