@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -104,6 +105,40 @@ var _ = Describe("Runtime Plugin", func() {
 						"--pid-file", HaveSuffix(filepath.Join("containers", handle, "pidfile")),
 						handle,
 					))
+				})
+
+				Context("creating a pea", func() {
+					JustBeforeEach(func() {
+						argsFilepath = filepath.Join(client.TmpDir, "run-args")
+					})
+
+					It("executes the plugin, passing the correct args for whatever a pea needs", func() {
+						container, err := client.Create(garden.ContainerSpec{Handle: handle})
+						Expect(err).ToNot(HaveOccurred())
+						process, err := container.Run(garden.ProcessSpec{
+							Path:  "cmd.exe",
+							Args:  []string{"echo", "hello"},
+							Image: garden.ImageRef{URI: defaultTestRootFS},
+						}, garden.ProcessIO{})
+						Expect(err).NotTo(HaveOccurred())
+
+						cmd := exec.Command("powershell", "-Command", fmt.Sprintf("ls -r %s", client.TmpDir))
+						cmd.Stdout = GinkgoWriter
+						cmd.Stderr = GinkgoWriter
+						Expect(cmd.Run()).To(Succeed())
+
+						procId := process.ID()
+						Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
+							binaries.RuntimePlugin,
+							"--debug",
+							"--log", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "run.log")),
+							"--log-format", "json",
+							"run",
+							"--pid-file", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "pidfile")),
+							"--bundle", HaveSuffix(filepath.Join("containers", handle, "processes", procId)),
+							procId,
+						))
+					})
 				})
 			})
 

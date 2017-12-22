@@ -1,6 +1,7 @@
 package execrunner
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -20,33 +21,39 @@ import (
 type DirectExecRunner struct {
 	RuntimePath   string
 	CommandRunner commandrunner.CommandRunner
+	RunMode       string
 }
 
 func (e *DirectExecRunner) Run(
 	log lager.Logger, processID, processPath, sandboxHandle, _ string,
 	_, _ uint32, pio garden.ProcessIO, _ bool, procJSON io.Reader,
-	_ func() error,
+	extraCleanup func() error,
 ) (garden.Process, error) {
 	log = log.Session("execrunner")
 
 	log.Info("start")
 	defer log.Info("done")
 
-	specPath := filepath.Join(processPath, "spec.json")
-	specFile, err := os.OpenFile(specPath, os.O_WRONLY|os.O_CREATE, 0600)
-	if err != nil {
-		return nil, errors.Wrap(err, "opening process spec file for writing")
+	logPath := filepath.Join(processPath, fmt.Sprintf("%s.log", e.RunMode))
+	cmd := exec.Command(e.RuntimePath, "--debug", "--log", logPath, "--log-format", "json", e.RunMode, "--pid-file", filepath.Join(processPath, "pidfile"))
+
+	if e.RunMode == "exec" {
+		specPath := filepath.Join(processPath, "spec.json")
+		specFile, err := os.OpenFile(specPath, os.O_WRONLY|os.O_CREATE, 0600)
+		if err != nil {
+			return nil, errors.Wrap(err, "opening process spec file for writing")
+		}
+		defer specFile.Close()
+		if _, err := io.Copy(specFile, procJSON); err != nil {
+			return nil, errors.Wrap(err, "writing process spec")
+		}
+		cmd.Args = append(cmd.Args, "-p", specPath, sandboxHandle)
+	} else {
+		cmd.Args = append(cmd.Args, "--bundle", processPath, processID)
 	}
-	defer specFile.Close()
-	if _, err := io.Copy(specFile, procJSON); err != nil {
-		return nil, errors.Wrap(err, "writing process spec")
-	}
 
-	logPath := filepath.Join(processPath, "exec.log")
+	proc := &process{id: processID, cleanup: extraCleanup, logger: log}
 
-	proc := &process{id: processID}
-
-	cmd := exec.Command(e.RuntimePath, "--debug", "--log", logPath, "--log-format", "json", "exec", "-p", specPath, "--pid-file", filepath.Join(processPath, "pidfile"), sandboxHandle)
 	cmd.Stdout = pio.Stdout
 	cmd.Stderr = pio.Stderr
 	if err := e.CommandRunner.Start(cmd); err != nil {
@@ -85,6 +92,8 @@ type process struct {
 	exitCode int
 	exitErr  error
 	mux      sync.RWMutex
+	cleanup  func() error
+	logger   lager.Logger
 }
 
 func (p *process) ID() string {
@@ -94,6 +103,12 @@ func (p *process) ID() string {
 func (p *process) Wait() (int, error) {
 	p.mux.RLock()
 	defer p.mux.RUnlock()
+
+	if p.cleanup != nil {
+		if err := p.cleanup(); err != nil {
+			p.logger.Error("process-cleanup", err)
+		}
+	}
 
 	return p.exitCode, p.exitErr
 }

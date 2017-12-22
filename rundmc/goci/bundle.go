@@ -14,6 +14,7 @@ func Bundle() Bndl {
 			Version: "1.0.0",
 			Linux:   &specs.Linux{},
 			Windows: &specs.Windows{
+				Network:      &specs.WindowsNetwork{},
 				LayerFolders: []string{},
 			},
 			Process: &specs.Process{

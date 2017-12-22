@@ -58,7 +58,9 @@ var _ = Describe("PeaCreator", func() {
 
 	BeforeEach(func() {
 		volumizer = new(peasfakes.FakeVolumizer)
-		volumizer.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
+		volumizer.CreateReturns(specs.Spec{Version: "some-spec-version", Windows: &specs.Windows{
+			Network: &specs.WindowsNetwork{},
+		}}, nil)
 		runcDeleter = new(peasfakes.FakeRuncDeleter)
 		pidGetter = new(peasfakes.FakePidGetter)
 		pidGetter.PidReturns(123, nil)
@@ -169,13 +171,26 @@ var _ = Describe("PeaCreator", func() {
 		It("generates a runtime spec from the VolumeCreator's runtimeSpec", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
-			Expect(actualCtrSpec.BaseConfig).To(Equal(specs.Spec{Version: "some-spec-version"}))
+			Expect(actualCtrSpec.BaseConfig).To(Equal(specs.Spec{
+				Version: "some-spec-version",
+				Windows: &specs.Windows{
+					Network: &specs.WindowsNetwork{
+						NetworkSharedContainerName: "pea-creator-tests",
+					},
+				},
+			}))
 		})
 
 		It("passes the container handle as cgroup path to the bundle generator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec.CgroupPath).To(Equal(ctrHandle))
+		})
+
+		It("passes sandbox handle to bundle generator", func() {
+			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+			Expect(actualCtrSpec.BaseConfig.Windows.Network.NetworkSharedContainerName).To(Equal(ctrHandle))
 		})
 
 		It("passes Privileged to bundle generator", func() {
@@ -246,7 +261,7 @@ var _ = Describe("PeaCreator", func() {
 			Eventually(execRunner.RunCallCount()).Should(Equal(1))
 			_, actualProcessID, actualProcessPath, actualSandboxHandle, actualSandboxBundlePath,
 				actualContainerRootHostUID, actualContainerRootHostGID, actualPio, actualTTY,
-				actualProcJSON, _ := execRunner.RunArgsForCall(0)
+				_, _ := execRunner.RunArgsForCall(0)
 			Expect(actualProcessID).To(Equal(processSpec.ID))
 			Expect(actualProcessPath).To(Equal(filepath.Join(ctrBundleDir, "processes", processSpec.ID)))
 			Expect(actualSandboxHandle).To(Equal(ctrHandle))
@@ -255,7 +270,6 @@ var _ = Describe("PeaCreator", func() {
 			Expect(actualContainerRootHostGID).To(Equal(builtProcess.ContainerRootHostGID))
 			Expect(actualPio).To(Equal(pio))
 			Expect(actualTTY).To(BeFalse())
-			Expect(actualProcJSON).To(BeNil())
 		})
 
 		Context("when the runtime spec uses a TTY", func() {

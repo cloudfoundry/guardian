@@ -94,6 +94,14 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return errs("creating-volume", err)
 	}
 
+	if runtimeSpec.Windows == nil {
+		runtimeSpec.Windows = &specs.Windows{}
+	}
+
+	runtimeSpec.Windows.Network = &specs.WindowsNetwork{
+		NetworkSharedContainerName: sandboxHandle,
+	}
+
 	cgroupPath := sandboxHandle
 	if spec.OverrideContainerLimits != nil {
 		cgroupPath = processID
