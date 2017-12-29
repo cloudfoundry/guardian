@@ -1,12 +1,12 @@
 package gqt_test
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"code.cloudfoundry.org/garden"
@@ -62,25 +62,28 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		}
 
 		It("should not leak cgroups", func() {
-			catOut := gbytes.NewBuffer()
+			stdout := gbytes.NewBuffer()
 			process, err := ctr.Run(garden.ProcessSpec{
 				ID:    "pea-process",
-				Path:  "readlink",
-				Args:  []string{"/proc/self"},
+				Path:  "cat",
+				Args:  []string{"/proc/self/cgroup"},
 				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
 				OverrideContainerLimits: &limits,
 			}, garden.ProcessIO{
-				Stdout: catOut,
+				Stdout: stdout,
 			})
+
 			Expect(err).NotTo(HaveOccurred())
 			Expect(process.Wait()).To(Equal(0))
 
-			pidString := string(catOut.Contents())
-			pid, err := strconv.Atoi(strings.TrimSpace(pidString))
-			Expect(err).NotTo(HaveOccurred())
+			cgroupsPath := filepath.Join(config.TmpDir, fmt.Sprintf("cgroups-%s", config.Tag))
 
-			memCgroupPath := findCgroupPath(pid, "memory")
-			Eventually(memCgroupPath).ShouldNot(BeADirectory())
+			peaCgroups := stdout.Contents()
+			cgroups := strings.Split(string(peaCgroups), "\n")
+			for _, cgroup := range cgroups[:len(cgroups)-1] {
+				cgroupData := strings.Split(cgroup, ":")
+				Eventually(filepath.Join(cgroupsPath, cgroupData[1], cgroupData[2])).ShouldNot(BeADirectory())
+			}
 		})
 	})
 
