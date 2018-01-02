@@ -84,11 +84,9 @@ var _ = Describe("Dadoo", func() {
 	})
 
 	AfterEach(func() {
-		// Note: We're not umounting the tmpfs here as it can cause a bug in AUFS
-		// to surface and lock up the VM running the test
-		//syscall.Unmount(bundlePath, 0x2) TODO: is it safe to add this unmount back in now?
-		os.RemoveAll(filepath.Join(bundlePath, "root"))
-		os.RemoveAll(bundlePath)
+		Expect(syscall.Unmount(bundlePath, 0x2)).To(Succeed())
+		Expect(os.RemoveAll(filepath.Join(bundlePath, "root"))).To(Succeed())
+		Expect(os.RemoveAll(bundlePath)).To(Succeed())
 	})
 
 	Describe("running dadoo", func() {
