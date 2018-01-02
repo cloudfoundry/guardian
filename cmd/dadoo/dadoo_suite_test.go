@@ -14,6 +14,7 @@ import (
 )
 
 var dadooBinPath string
+var fakeRuncBinPath string
 
 func TestDadoo(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -31,6 +32,9 @@ func TestDadoo(t *testing.T) {
 		bins["dadoo_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
 		Expect(err).NotTo(HaveOccurred())
 
+		bins["fakerunc_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo/fake_runc")
+		Expect(err).NotTo(HaveOccurred())
+
 		data, err := json.Marshal(bins)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -44,6 +48,7 @@ func TestDadoo(t *testing.T) {
 		Expect(json.Unmarshal(data, &bins)).To(Succeed())
 
 		dadooBinPath = bins["dadoo_bin_path"]
+		fakeRuncBinPath = bins["fakerunc_bin_path"]
 	})
 
 	SynchronizedAfterSuite(func() {}, func() {

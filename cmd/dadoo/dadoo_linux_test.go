@@ -731,15 +731,6 @@ var _ = Describe("Dadoo", func() {
 					})
 
 					Context("when tty setup fails", func() {
-						var (
-							fakeRuncBinPath string
-						)
-						BeforeEach(func() {
-							var err error
-							fakeRuncBinPath, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo/fake_runc")
-							Expect(err).NotTo(HaveOccurred())
-						})
-
 						It("kills the process and exits with 2", func() {
 							dadooCmd := exec.Command(dadooBinPath, "-tty", "-socket-dir-path", os.TempDir(), "exec", fakeRuncBinPath, processDir, filepath.Base(bundlePath))
 							dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
@@ -862,15 +853,6 @@ var _ = Describe("Dadoo", func() {
 					})
 
 					Context("when tty setup fails", func() {
-						var (
-							fakeRuncBinPath string
-						)
-						BeforeEach(func() {
-							var err error
-							fakeRuncBinPath, err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo/fake_runc")
-							Expect(err).NotTo(HaveOccurred())
-						})
-
 						It("kills the process and exits with 2", func() {
 							dadooCmd := exec.Command(dadooBinPath, "-tty", "-socket-dir-path", os.TempDir(), "run", fakeRuncBinPath, processDir, filepath.Base(bundlePath))
 							dadooCmd.ExtraFiles = []*os.File{mustOpen("/dev/null"), runcLogFile, mustOpen("/dev/null")}
