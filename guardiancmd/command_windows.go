@@ -61,6 +61,7 @@ func (f *WindowsFactory) WireExecRunner(runMode string) runrunc.ExecRunner {
 	return &execrunner.DirectExecRunner{
 		RuntimePath:   f.config.Runtime.Plugin,
 		CommandRunner: f.commandRunner,
+		RunMode:       runMode,
 	}
 }
 

@@ -28,6 +28,7 @@ var _ = Describe("DirectExecRunner", func() {
 		execRunner  *execrunner.DirectExecRunner
 		logger      *lagertest.TestLogger
 		runtimePath = "container-runtime-path"
+		cleanupFunc func() error
 
 		spec        *runrunc.PreparedSpec
 		process     garden.Process
@@ -45,6 +46,7 @@ var _ = Describe("DirectExecRunner", func() {
 		execRunner = &execrunner.DirectExecRunner{
 			RuntimePath:   runtimePath,
 			CommandRunner: cmdRunner,
+			RunMode:       "exec",
 		}
 		processID = "process-id"
 		var err error
@@ -69,7 +71,7 @@ var _ = Describe("DirectExecRunner", func() {
 				processIO,
 				false,
 				bytes.NewBufferString("some-process"),
-				nil,
+				cleanupFunc,
 			)
 		})
 
@@ -96,6 +98,57 @@ var _ = Describe("DirectExecRunner", func() {
 			actualContents, err := ioutil.ReadFile(filepath.Join(processPath, "spec.json"))
 			Expect(err).ToNot(HaveOccurred())
 			Expect(string(actualContents)).To(Equal("some-process"))
+		})
+
+		Context("when the exec mode is 'run'", func() {
+			BeforeEach(func() {
+				execRunner.RunMode = "run"
+			})
+
+			It("executes the runtime plugin with the correct arguments", func() {
+				Expect(cmdRunner.StartedCommands()).To(HaveLen(1))
+				Expect(cmdRunner.StartedCommands()[0].Path).To(Equal(runtimePath))
+				Expect(cmdRunner.StartedCommands()[0].Args).To(ConsistOf(
+					runtimePath,
+					"--debug",
+					"--log", filepath.Join(processPath, "run.log"),
+					"--log-format", "json",
+					"run",
+					"--pid-file", MatchRegexp(".*"),
+					"--bundle", processPath,
+					processID,
+				))
+			})
+
+			Describe("cleanup", func() {
+				var called bool
+
+				BeforeEach(func() {
+					called = false
+					cleanupFunc = func() error {
+						called = true
+						return nil
+					}
+				})
+
+				It("performs extra cleanup after Wait returns", func() {
+					process.Wait()
+					Expect(called).To(BeTrue())
+				})
+
+				Context("when the extra cleanup returns an error", func() {
+					BeforeEach(func() {
+						cleanupFunc = func() error {
+							return errors.New("a-cleanup-error")
+						}
+					})
+
+					It("logs the error", func() {
+						process.Wait()
+						Expect(string(logger.Buffer().Contents())).To(ContainSubstring("a-cleanup-error"))
+					})
+				})
+			})
 		})
 
 		Describe("logging", func() {
