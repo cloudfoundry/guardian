@@ -925,9 +925,3 @@ func setupCgroups(cgroupsRoot string) error {
 
 	return starter.Start()
 }
-
-func devNull() *os.File {
-	f, err := os.OpenFile("/dev/null", os.O_APPEND, 0700)
-	Expect(err).NotTo(HaveOccurred())
-	return f
-}
