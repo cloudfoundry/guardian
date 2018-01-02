@@ -47,6 +47,8 @@ func TestDadoo(t *testing.T) {
 	})
 
 	SynchronizedAfterSuite(func() {}, func() {
+		gexec.CleanupBuildArtifacts()
+
 		mountsFileContent, err := ioutil.ReadFile("/proc/self/mounts")
 		Expect(err).NotTo(HaveOccurred())
 
