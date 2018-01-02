@@ -84,6 +84,8 @@ var _ = Describe("Dadoo", func() {
 	})
 
 	AfterEach(func() {
+		cmd := exec.Command("runc", "delete", "-f", filepath.Base(bundlePath))
+		Expect(cmd.Run()).To(Succeed())
 		Expect(syscall.Unmount(bundlePath, 0x2)).To(Succeed())
 		Expect(os.RemoveAll(filepath.Join(bundlePath, "root"))).To(Succeed())
 		Expect(os.RemoveAll(bundlePath)).To(Succeed())
@@ -608,11 +610,6 @@ var _ = Describe("Dadoo", func() {
 		Describe("exec", func() {
 			BeforeEach(func() {
 				mode = "exec"
-			})
-
-			AfterEach(func() {
-				cmd := exec.Command("runc", "delete", filepath.Base(bundlePath))
-				Expect(cmd.Run()).To(Succeed())
 			})
 
 			JustBeforeEach(func() {
