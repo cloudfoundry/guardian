@@ -227,7 +227,10 @@ func setupTTYSocket(stdin io.Reader, stdout io.Writer, winszFifo io.Reader, pidF
 			return
 		}
 
-		os.RemoveAll(sockDir)
+		if err = os.RemoveAll(sockDir); err != nil {
+			return
+		}
+
 		if err = setOnlcr(master); err != nil {
 			return
 		}
