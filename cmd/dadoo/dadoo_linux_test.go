@@ -39,7 +39,8 @@ var _ = Describe("Dadoo", func() {
 		bundlePath, err = ioutil.TempDir("", "dadoobundlepath")
 		Expect(err).NotTo(HaveOccurred())
 
-		Expect(syscall.Mount("tmpfs", bundlePath, "tmpfs", 0, "")).To(Succeed())
+		// runc require write permission on the rootfs when in userns
+		Expect(os.Chmod(bundlePath, 0755)).To(Succeed())
 
 		cmd := exec.Command("runc", "spec")
 		cmd.Dir = bundlePath
@@ -82,8 +83,6 @@ var _ = Describe("Dadoo", func() {
 	AfterEach(func() {
 		cmd := exec.Command("runc", "delete", "-f", filepath.Base(bundlePath))
 		Expect(cmd.Run()).To(Succeed())
-		Expect(syscall.Unmount(bundlePath, 0x2)).To(Succeed())
-		Expect(os.RemoveAll(filepath.Join(bundlePath, "root"))).To(Succeed())
 		Expect(os.RemoveAll(bundlePath)).To(Succeed())
 	})
 
