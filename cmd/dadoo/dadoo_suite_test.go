@@ -2,7 +2,6 @@ package main_test
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,8 +14,11 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var dadooBinPath string
-var fakeRuncBinPath string
+var (
+	dadooBinPath    string
+	fakeRuncBinPath string
+	cgroupsRoot     string
+)
 
 func TestDadoo(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -30,6 +32,9 @@ func TestDadoo(t *testing.T) {
 		if skip {
 			return nil
 		}
+
+		cgroupsRoot = filepath.Join(os.TempDir(), "dadoo-cgroups")
+		Expect(setupCgroups(cgroupsRoot)).To(Succeed())
 
 		bins["dadoo_bin_path"], err = gexec.Build("code.cloudfoundry.org/guardian/cmd/dadoo")
 		Expect(err).NotTo(HaveOccurred())
@@ -51,14 +56,10 @@ func TestDadoo(t *testing.T) {
 
 		dadooBinPath = bins["dadoo_bin_path"]
 		fakeRuncBinPath = bins["fakerunc_bin_path"]
-
-		cgroupsRoot := filepath.Join(os.TempDir(), fmt.Sprintf("dadoo-tests-cgroups-%d", GinkgoParallelNode()))
-		Expect(setupCgroups(cgroupsRoot)).To(Succeed())
 	})
 
 	SynchronizedAfterSuite(func() {}, func() {
 		gexec.CleanupBuildArtifacts()
-
 		mountsFileContent, err := ioutil.ReadFile("/proc/self/mounts")
 		Expect(err).NotTo(HaveOccurred())
 
@@ -73,6 +74,9 @@ func TestDadoo(t *testing.T) {
 				Expect(syscall.Unmount(fields[1], 0)).To(Succeed())
 			}
 		}
+
+		Expect(syscall.Unmount(cgroupsRoot, 0)).To(Succeed())
+		Expect(os.Remove(cgroupsRoot)).To(Succeed())
 	})
 
 	BeforeEach(func() {
