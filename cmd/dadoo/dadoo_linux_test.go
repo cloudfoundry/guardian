@@ -402,7 +402,7 @@ var _ = Describe("Dadoo", func() {
 					go io.Copy(pipeW, stdout)
 					go io.Copy(buffer, pipeR)
 
-					Eventually(buffer).Should(gbytes.Say(" onlcr"))
+					Eventually(buffer).Should(gbytes.Say(" onlcr"), fmt.Sprintf("DEBUG: Buffer: \n%s\n", string(buffer.Contents())))
 					Consistently(buffer, "3s").ShouldNot(gbytes.Say("-onlcr"))
 				}, 5.0)
 
