@@ -27,7 +27,6 @@ import (
 
 var _ = Describe("Dadoo", func() {
 	var (
-		cgroupsRoot string
 		bundlePath  string
 		bundle      goci.Bndl
 		bundleSaver = &goci.BundleSaver{}
@@ -36,9 +35,6 @@ var _ = Describe("Dadoo", func() {
 	)
 
 	BeforeEach(func() {
-		cgroupsRoot = filepath.Join(os.TempDir(), fmt.Sprintf("dadoo-tests-cgroups-%d", GinkgoParallelNode()))
-		Expect(setupCgroups(cgroupsRoot)).To(Succeed())
-
 		var err error
 		bundlePath, err = ioutil.TempDir("", "dadoobundlepath")
 		Expect(err).NotTo(HaveOccurred())

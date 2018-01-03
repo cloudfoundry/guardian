@@ -2,8 +2,10 @@ package main_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -49,6 +51,9 @@ func TestDadoo(t *testing.T) {
 
 		dadooBinPath = bins["dadoo_bin_path"]
 		fakeRuncBinPath = bins["fakerunc_bin_path"]
+
+		cgroupsRoot := filepath.Join(os.TempDir(), fmt.Sprintf("dadoo-tests-cgroups-%d", GinkgoParallelNode()))
+		Expect(setupCgroups(cgroupsRoot)).To(Succeed())
 	})
 
 	SynchronizedAfterSuite(func() {}, func() {
