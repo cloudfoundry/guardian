@@ -431,6 +431,13 @@ func (r *RunningGarden) DestroyContainers() error {
 
 	for _, container := range containers {
 		if err := r.Destroy(container.Handle()); err != nil {
+			processForest, psErr := exec.Command("ps", "auxf").CombinedOutput()
+			if psErr != nil {
+				fmt.Printf("DEBUG: printing process tree failed: %s\n", psErr.Error())
+			} else {
+				fmt.Printf("DEBUG: process tree: \n%s\n", string(processForest))
+			}
+
 			return err
 		}
 	}
