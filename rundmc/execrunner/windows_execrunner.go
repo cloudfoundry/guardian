@@ -39,13 +39,8 @@ func (e *DirectExecRunner) Run(
 
 	if e.RunMode == "exec" {
 		specPath := filepath.Join(processPath, "spec.json")
-		specFile, err := os.OpenFile(specPath, os.O_WRONLY|os.O_CREATE, 0600)
-		if err != nil {
-			return nil, errors.Wrap(err, "opening process spec file for writing")
-		}
-		defer specFile.Close()
-		if _, err := io.Copy(specFile, procJSON); err != nil {
-			return nil, errors.Wrap(err, "writing process spec")
+		if err := writeProcessJSON(procJSON, specPath); err != nil {
+			return nil, err
 		}
 		cmd.Args = append(cmd.Args, "-p", specPath, sandboxHandle)
 	} else {
@@ -81,6 +76,19 @@ func (e *DirectExecRunner) Run(
 	}()
 
 	return proc, nil
+}
+
+func writeProcessJSON(procJSON io.Reader, specPath string) error {
+	specFile, err := os.OpenFile(specPath, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return errors.Wrap(err, "opening process spec file for writing")
+	}
+	defer specFile.Close()
+	if _, err := io.Copy(specFile, procJSON); err != nil {
+		return errors.Wrap(err, "writing process spec")
+	}
+
+	return nil
 }
 
 func (e *DirectExecRunner) Attach(log lager.Logger, processID string, io garden.ProcessIO, processesPath string) (garden.Process, error) {
