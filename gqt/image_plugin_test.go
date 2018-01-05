@@ -1100,9 +1100,7 @@ var _ = Describe("Image Plugin", func() {
 	})
 
 	Context("when images are located in a private registry", func() {
-		var (
-			imageSpec garden.ImageRef
-		)
+		var imageSpec garden.ImageRef
 
 		BeforeEach(func() {
 			config.LogLevel = "debug"
@@ -1140,10 +1138,10 @@ var _ = Describe("Image Plugin", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			Eventually(client, "1s").ShouldNot(gbytes.Say("imagepluginuser"))
-			Eventually(client, "1s").ShouldNot(gbytes.Say("secretpassword"))
+			log := string(client.Buffer().Contents())
+			Expect(log).NotTo(ContainSubstring("imagepluginuser"))
+			Expect(log).NotTo(ContainSubstring("secretpassword"))
 		})
-
 	})
 })
 
