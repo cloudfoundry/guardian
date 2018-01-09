@@ -6,8 +6,8 @@ import (
 	"os"
 	"os/exec"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/containers/image/types"
 	. "github.com/onsi/ginkgo"
@@ -24,7 +24,7 @@ var _ = Describe("Layer source: OCI", func() {
 		baseImageURL *url.URL
 
 		configBlob    string
-		layerInfos    []base_image_puller.LayerInfo
+		layerInfos    []groot.LayerInfo
 		workDir       string
 		systemContext types.SystemContext
 
@@ -35,7 +35,7 @@ var _ = Describe("Layer source: OCI", func() {
 		skipOCIChecksumValidation = false
 
 		configBlob = "sha256:10c8f0eb9d1af08fe6e3b8dbd29e5aa2b6ecfa491ecd04ed90de19a4ac22de7b"
-		layerInfos = []base_image_puller.LayerInfo{
+		layerInfos = []groot.LayerInfo{
 			{
 				BlobID:    "sha256:56bec22e355981d8ba0878c6c2f23b21f422f30ab0aba188b54f1ffeff59c190",
 				DiffID:    "e88b3f82283bc59d5e0df427c824e9f95557e661fcb0ea15fb0fb6f97760f9d9",
@@ -154,7 +154,7 @@ var _ = Describe("Layer source: OCI", func() {
 
 		Context("when the blob has an invalid checksum", func() {
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, base_image_puller.LayerInfo{BlobID: "sha256:steamed-blob"})
+				_, _, err := layerSource.Blob(logger, baseImageURL, groot.LayerInfo{BlobID: "sha256:steamed-blob"})
 				Expect(err).To(MatchError(ContainSubstring("invalid checksum digest format")))
 			})
 		})

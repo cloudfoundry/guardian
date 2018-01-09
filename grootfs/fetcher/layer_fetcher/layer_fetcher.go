@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 
 	"github.com/containers/image/types"
@@ -29,7 +29,7 @@ type Manifest interface {
 
 type Source interface {
 	Manifest(logger lager.Logger, baseImageURL *url.URL) (types.Image, error)
-	Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo base_image_puller.LayerInfo) (string, int64, error)
+	Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (string, int64, error)
 }
 
 type LayerFetcher struct {
@@ -42,7 +42,7 @@ func NewLayerFetcher(source Source) *LayerFetcher {
 	}
 }
 
-func (f *LayerFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {
+func (f *LayerFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (groot.BaseImageInfo, error) {
 	logger = logger.Session("layers-digest", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -50,23 +50,23 @@ func (f *LayerFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL)
 	logger.Debug("fetching-image-manifest")
 	manifest, err := f.source.Manifest(logger, baseImageURL)
 	if err != nil {
-		return base_image_puller.BaseImageInfo{}, err
+		return groot.BaseImageInfo{}, err
 	}
 
 	logger.Debug("fetching-image-config")
 	var config *specsv1.Image
 	config, err = manifest.OCIConfig()
 	if err != nil {
-		return base_image_puller.BaseImageInfo{}, err
+		return groot.BaseImageInfo{}, err
 	}
 
-	return base_image_puller.BaseImageInfo{
+	return groot.BaseImageInfo{
 		LayerInfos: f.createLayerInfos(logger, manifest, config),
 		Config:     *config,
 	}, nil
 }
 
-func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, layerInfo base_image_puller.LayerInfo) (io.ReadCloser, int64, error) {
+func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
 	logger = logger.Session("streaming", lager.Data{"baseImageURL": baseImageURL})
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -86,8 +86,8 @@ func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, la
 	return blobReader, size, nil
 }
 
-func (f *LayerFetcher) createLayerInfos(logger lager.Logger, image Manifest, config *specsv1.Image) []base_image_puller.LayerInfo {
-	layerInfos := []base_image_puller.LayerInfo{}
+func (f *LayerFetcher) createLayerInfos(logger lager.Logger, image Manifest, config *specsv1.Image) []groot.LayerInfo {
+	layerInfos := []groot.LayerInfo{}
 
 	var parentChainID string
 	for i, layer := range image.LayerInfos() {
@@ -97,7 +97,7 @@ func (f *LayerFetcher) createLayerInfos(logger lager.Logger, image Manifest, con
 
 		diffID := config.RootFS.DiffIDs[i]
 		chainID := f.chainID(diffID.String(), parentChainID)
-		layerInfos = append(layerInfos, base_image_puller.LayerInfo{
+		layerInfos = append(layerInfos, groot.LayerInfo{
 			BlobID:        layer.Digest.String(),
 			Size:          layer.Size,
 			ChainID:       chainID,

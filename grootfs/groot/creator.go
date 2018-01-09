@@ -78,8 +78,14 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 		OwnerGID:                  ownerGid,
 	}
 
+	baseImageInfo, err := c.baseImagePuller.FetchBaseImageInfo(logger, baseImageSpec)
+	if err != nil {
+		return ImageInfo{}, err
+	}
+	baseImageChainIDs := chainIDs(baseImageInfo.LayerInfos)
+
 	if spec.CleanOnCreate {
-		if _, err = c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes); err != nil {
+		if _, err = c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, baseImageChainIDs); err != nil {
 			return ImageInfo{}, errorspkg.Wrap(err, "failed-to-cleanup-store")
 		}
 	}
@@ -94,8 +100,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 		}
 	}()
 
-	baseImage, err := c.baseImagePuller.Pull(logger, baseImageSpec)
-	if err != nil {
+	if err := c.baseImagePuller.Pull(logger, baseImageInfo, baseImageSpec); err != nil {
 		return ImageInfo{}, errorspkg.Wrap(err, "pulling the image")
 	}
 
@@ -104,8 +109,8 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 		Mount:                     spec.Mount,
 		DiskLimit:                 spec.DiskLimit,
 		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
-		BaseVolumeIDs:             baseImage.ChainIDs,
-		BaseImage:                 baseImage.BaseImage,
+		BaseVolumeIDs:             baseImageChainIDs,
+		BaseImage:                 baseImageInfo.Config,
 		OwnerUID:                  ownerUid,
 		OwnerGID:                  ownerGid,
 	}
@@ -116,7 +121,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 	}
 
 	imageRefName := fmt.Sprintf(ImageReferenceFormat, spec.ID)
-	if err := c.dependencyManager.Register(imageRefName, baseImage.ChainIDs); err != nil {
+	if err := c.dependencyManager.Register(imageRefName, baseImageChainIDs); err != nil {
 		if destroyErr := c.imageCloner.Destroy(logger, spec.ID); destroyErr != nil {
 			logger.Error("failed-to-destroy-image", destroyErr)
 		}
@@ -125,6 +130,14 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 	}
 
 	return image, nil
+}
+
+func chainIDs(layerInfos []LayerInfo) []string {
+	chainIDs := []string{}
+	for _, layerInfo := range layerInfos {
+		chainIDs = append(chainIDs, layerInfo.ChainID)
+	}
+	return chainIDs
 }
 
 func (c *Creator) parseOwner(uidMappings, gidMappings []IDMappingSpec) (int, int) {

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"os"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 )
@@ -21,7 +21,7 @@ func NewTarFetcher() *TarFetcher {
 }
 
 func (l *TarFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
-	layerInfo base_image_puller.LayerInfo) (io.ReadCloser, int64, error) {
+	layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
 	logger = logger.Session("stream-blob", lager.Data{
 		"baseImageURL": baseImageURL.String(),
 		"source":       layerInfo.BlobID,
@@ -47,20 +47,20 @@ func (l *TarFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
 	return stream, 0, nil
 }
 
-func (l *TarFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (base_image_puller.BaseImageInfo, error) {
+func (l *TarFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (groot.BaseImageInfo, error) {
 	logger = logger.Session("layers-digest", lager.Data{"baseImageURL": baseImageURL.String()})
 	logger.Info("starting")
 	defer logger.Info("ending")
 
 	stat, err := os.Stat(baseImageURL.String())
 	if err != nil {
-		return base_image_puller.BaseImageInfo{},
+		return groot.BaseImageInfo{},
 			errorspkg.Wrap(err, "fetching image timestamp")
 	}
 
-	return base_image_puller.BaseImageInfo{
-		LayerInfos: []base_image_puller.LayerInfo{
-			base_image_puller.LayerInfo{
+	return groot.BaseImageInfo{
+		LayerInfos: []groot.LayerInfo{
+			groot.LayerInfo{
 				BlobID:        baseImageURL.String(),
 				ParentChainID: "",
 				ChainID:       l.generateChainID(baseImageURL.String(), stat.ModTime().UnixNano()),

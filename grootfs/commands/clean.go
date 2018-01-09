@@ -83,12 +83,12 @@ var CleanCommand = cli.Command{
 		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
 		nsFsDriver := namespaced.New(fsDriver, idMappings, idMapper, runner)
 		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
-		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, "")
+		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
 		defer func() {
-			unusedVols, err := gc.UnusedVolumes(logger)
+			unusedVols, err := gc.UnusedVolumes(logger, nil)
 			if err != nil {
 				logger.Error("getting-unused-layers-failed", err)
 				return
@@ -96,7 +96,7 @@ var CleanCommand = cli.Command{
 			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", sm.CacheUsage(logger, unusedVols), "bytes")
 		}()
 
-		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes)
+		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, nil)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return newExitError(err.Error(), 1)

@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
 	fetcherpkg "code.cloudfoundry.org/grootfs/fetcher/tar_fetcher"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -54,7 +54,7 @@ var _ = Describe("Tar Fetcher", func() {
 
 	Describe("StreamBlob", func() {
 		It("returns the contents of the source directory as a Tar stream", func() {
-			stream, _, err := fetcher.StreamBlob(logger, baseImageURL, base_image_puller.LayerInfo{})
+			stream, _, err := fetcher.StreamBlob(logger, baseImageURL, groot.LayerInfo{})
 			Expect(err).ToNot(HaveOccurred())
 
 			entries := streamTar(tar.NewReader(stream))
@@ -65,7 +65,7 @@ var _ = Describe("Tar Fetcher", func() {
 		})
 
 		It("logs the tar command", func() {
-			_, _, err := fetcher.StreamBlob(logger, baseImageURL, base_image_puller.LayerInfo{})
+			_, _, err := fetcher.StreamBlob(logger, baseImageURL, groot.LayerInfo{})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(logger).To(ContainSequence(
@@ -82,7 +82,7 @@ var _ = Describe("Tar Fetcher", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				imageURL, _ := url.Parse(tempDir)
-				_, _, err = fetcher.StreamBlob(logger, imageURL, base_image_puller.LayerInfo{})
+				_, _, err = fetcher.StreamBlob(logger, imageURL, groot.LayerInfo{})
 				Expect(err).To(MatchError(ContainSubstring("invalid base image: directory provided instead of a tar file")))
 			})
 		})
@@ -91,14 +91,14 @@ var _ = Describe("Tar Fetcher", func() {
 			It("returns an error", func() {
 				nonExistentImageURL, _ := url.Parse("/nothing/here")
 
-				_, _, err := fetcher.StreamBlob(logger, nonExistentImageURL, base_image_puller.LayerInfo{})
+				_, _, err := fetcher.StreamBlob(logger, nonExistentImageURL, groot.LayerInfo{})
 				Expect(err).To(MatchError(ContainSubstring("local image not found in `/nothing/here`")))
 			})
 		})
 	})
 
 	Describe("LayersDigest", func() {
-		var baseImageInfo base_image_puller.BaseImageInfo
+		var baseImageInfo groot.BaseImageInfo
 
 		JustBeforeEach(func() {
 			var err error

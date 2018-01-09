@@ -183,17 +183,16 @@ var CreateCommand = cli.Command{
 			createFetcher(baseImageURL, systemContext, cfg.Create),
 			unpacker,
 			nsFsDriver,
-			dependencyManager,
 			metricsEmitter,
 			exclusiveLocksmith,
 		)
 
 		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
-		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager, baseImage)
+		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
 		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
 
 		defer func() {
-			unusedVols, err := gc.UnusedVolumes(logger)
+			unusedVols, err := gc.UnusedVolumes(logger, nil)
 			if err != nil {
 				logger.Error("getting-unused-layers-failed", err)
 				return
@@ -330,7 +329,7 @@ func tryParsingErrorMessage(err error) error {
 	if newErr.Error() == "directory provided instead of a tar file" {
 		return errorspkg.New("invalid base image: " + newErr.Error())
 	}
-	if regexp.MustCompile("pulling the image: fetching list of layer infos: fetching image reference: .*: no such file or directory").MatchString(err.Error()) {
+	if regexp.MustCompile("fetching image reference: .*: no such file or directory").MatchString(err.Error()) {
 		return errorspkg.New("Image source doesn't exist")
 	}
 

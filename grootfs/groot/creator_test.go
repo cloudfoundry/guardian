@@ -29,6 +29,10 @@ var _ = Describe("Creator", func() {
 
 		creator *groot.Creator
 		logger  lager.Logger
+
+		layerInfos    []groot.LayerInfo
+		baseImageInfo groot.BaseImageInfo
+		pullError     error
 	)
 
 	BeforeEach(func() {
@@ -54,10 +58,28 @@ var _ = Describe("Creator", func() {
 			Rootfs: "/path/to/images/123/rootfs",
 		}, nil)
 
+		layerInfos = []groot.LayerInfo{
+			groot.LayerInfo{ChainID: "id-1"},
+			groot.LayerInfo{ChainID: "id-2"},
+		}
+		baseImageInfo = groot.BaseImageInfo{
+			LayerInfos: layerInfos,
+			Config: specsv1.Image{
+				Author: "Groot",
+			},
+		}
+
+		pullError = nil
+
 		creator = groot.IamCreator(
 			fakeImageCloner, fakeBaseImagePuller, fakeLocksmith,
 			fakeDependencyManager, fakeMetricsEmitter,
 			fakeCleaner)
+	})
+
+	JustBeforeEach(func() {
+		fakeBaseImagePuller.FetchBaseImageInfoReturns(baseImageInfo, nil)
+		fakeBaseImagePuller.PullReturns(pullError)
 	})
 
 	AfterEach(func() {
@@ -84,8 +106,9 @@ var _ = Describe("Creator", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeCleaner.CleanCallCount()).To(Equal(1))
-				_, cacheSize := fakeCleaner.CleanArgsForCall(0)
+				_, cacheSize, chainIDsToPreserve := fakeCleaner.CleanArgsForCall(0)
 				Expect(cacheSize).To(Equal(int64(250000)))
+				Expect(chainIDsToPreserve).To(ConsistOf("id-1", "id-2"))
 			})
 
 			Context("and fails to clean up", func() {
@@ -116,7 +139,8 @@ var _ = Describe("Creator", func() {
 
 			baseImageURL, err := url.Parse("/path/to/image")
 			Expect(err).NotTo(HaveOccurred())
-			_, imageSpec := fakeBaseImagePuller.PullArgsForCall(0)
+			_, actualBaseImageInfo, imageSpec := fakeBaseImagePuller.PullArgsForCall(0)
+			Expect(baseImageInfo).To(Equal(actualBaseImageInfo))
 			Expect(imageSpec.BaseImageSrc).To(Equal(baseImageURL))
 			Expect(imageSpec.UIDMappings).To(Equal(uidMappings))
 			Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
@@ -125,13 +149,6 @@ var _ = Describe("Creator", func() {
 		})
 
 		It("makes an image", func() {
-			baseImage := groot.BaseImage{
-				ChainIDs: []string{"id-1", "id-2"},
-				BaseImage: specsv1.Image{
-					Author: "Groot",
-				},
-			}
-			fakeBaseImagePuller.PullReturns(baseImage, nil)
 
 			uidMappings := []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 50, NamespaceID: 0, Size: 1}}
 			gidMappings := []groot.IDMappingSpec{groot.IDMappingSpec{HostID: 60, NamespaceID: 0, Size: 1}}
@@ -192,15 +209,6 @@ var _ = Describe("Creator", func() {
 		})
 
 		Describe("store ownership", func() {
-			BeforeEach(func() {
-				baseImage := groot.BaseImage{
-					BaseImage: specsv1.Image{
-						Author: "Groot",
-					},
-				}
-				fakeBaseImagePuller.PullReturns(baseImage, nil)
-			})
-
 			It("is defined by the root ID mappings", func() {
 				uidMappings := []groot.IDMappingSpec{
 					groot.IDMappingSpec{HostID: 50, NamespaceID: 0, Size: 1},
@@ -218,7 +226,7 @@ var _ = Describe("Creator", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeBaseImagePuller.PullCallCount()).To(Equal(1))
-				_, imageSpec := fakeBaseImagePuller.PullArgsForCall(0)
+				_, _, imageSpec := fakeBaseImagePuller.PullArgsForCall(0)
 				Expect(imageSpec.OwnerUID).To(Equal(50))
 				Expect(imageSpec.OwnerGID).To(Equal(60))
 
@@ -236,7 +244,7 @@ var _ = Describe("Creator", func() {
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(fakeBaseImagePuller.PullCallCount()).To(Equal(1))
-					_, imageSpec := fakeBaseImagePuller.PullArgsForCall(0)
+					_, _, imageSpec := fakeBaseImagePuller.PullArgsForCall(0)
 					Expect(imageSpec.OwnerUID).To(Equal(os.Getuid()))
 					Expect(imageSpec.OwnerGID).To(Equal(os.Getgid()))
 
@@ -339,7 +347,7 @@ var _ = Describe("Creator", func() {
 
 		Context("when pulling the image fails", func() {
 			BeforeEach(func() {
-				fakeBaseImagePuller.PullReturns(groot.BaseImage{}, errors.New("failed to pull image"))
+				pullError = errors.New("failed to pull image")
 			})
 
 			It("returns the error", func() {
@@ -373,7 +381,6 @@ var _ = Describe("Creator", func() {
 		Context("when registering dependencies fails", func() {
 			BeforeEach(func() {
 				fakeDependencyManager.RegisterReturns(errors.New("failed to register dependencies"))
-				fakeBaseImagePuller.PullReturns(groot.BaseImage{}, nil)
 			})
 
 			It("returns an errors", func() {
@@ -398,14 +405,6 @@ var _ = Describe("Creator", func() {
 
 		Context("when disk limit is given", func() {
 			It("passes the disk limit to the imageCloner", func() {
-				baseImage := groot.BaseImage{
-					ChainIDs: []string{"id-1", "id-2"},
-					BaseImage: specsv1.Image{
-						Author: "Groot",
-					},
-				}
-				fakeBaseImagePuller.PullReturns(baseImage, nil)
-
 				_, err := creator.Create(logger, groot.CreateSpec{
 					ID:           "some-id",
 					DiskLimit:    int64(1024),

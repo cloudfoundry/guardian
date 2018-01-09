@@ -5,8 +5,8 @@ import (
 	"net/url"
 	"sync"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	"github.com/containers/image/types"
 )
@@ -26,12 +26,12 @@ type FakeSource struct {
 		result1 types.Image
 		result2 error
 	}
-	BlobStub        func(logger lager.Logger, baseImageURL *url.URL, layerInfo base_image_puller.LayerInfo) (string, int64, error)
+	BlobStub        func(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (string, int64, error)
 	blobMutex       sync.RWMutex
 	blobArgsForCall []struct {
 		logger       lager.Logger
 		baseImageURL *url.URL
-		layerInfo    base_image_puller.LayerInfo
+		layerInfo    groot.LayerInfo
 	}
 	blobReturns struct {
 		result1 string
@@ -99,13 +99,13 @@ func (fake *FakeSource) ManifestReturnsOnCall(i int, result1 types.Image, result
 	}{result1, result2}
 }
 
-func (fake *FakeSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo base_image_puller.LayerInfo) (string, int64, error) {
+func (fake *FakeSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (string, int64, error) {
 	fake.blobMutex.Lock()
 	ret, specificReturn := fake.blobReturnsOnCall[len(fake.blobArgsForCall)]
 	fake.blobArgsForCall = append(fake.blobArgsForCall, struct {
 		logger       lager.Logger
 		baseImageURL *url.URL
-		layerInfo    base_image_puller.LayerInfo
+		layerInfo    groot.LayerInfo
 	}{logger, baseImageURL, layerInfo})
 	fake.recordInvocation("Blob", []interface{}{logger, baseImageURL, layerInfo})
 	fake.blobMutex.Unlock()
@@ -124,7 +124,7 @@ func (fake *FakeSource) BlobCallCount() int {
 	return len(fake.blobArgsForCall)
 }
 
-func (fake *FakeSource) BlobArgsForCall(i int) (lager.Logger, *url.URL, base_image_puller.LayerInfo) {
+func (fake *FakeSource) BlobArgsForCall(i int) (lager.Logger, *url.URL, groot.LayerInfo) {
 	fake.blobMutex.RLock()
 	defer fake.blobMutex.RUnlock()
 	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].baseImageURL, fake.blobArgsForCall[i].layerInfo

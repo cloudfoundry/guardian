@@ -64,13 +64,25 @@ type BaseImageSpec struct {
 	OwnerGID                  int
 }
 
-type BaseImage struct {
-	BaseImage specsv1.Image
-	ChainIDs  []string
+type LayerInfo struct {
+	BlobID        string
+	ChainID       string
+	DiffID        string
+	ParentChainID string
+	Size          int64
+	BaseDirectory string
+	URLs          []string
+	MediaType     string
+}
+
+type BaseImageInfo struct {
+	LayerInfos []LayerInfo
+	Config     specsv1.Image
 }
 
 type BaseImagePuller interface {
-	Pull(logger lager.Logger, spec BaseImageSpec) (BaseImage, error)
+	FetchBaseImageInfo(logger lager.Logger, spec BaseImageSpec) (BaseImageInfo, error)
+	Pull(logger lager.Logger, imageInfo BaseImageInfo, spec BaseImageSpec) error
 }
 
 type ImageSpec struct {
@@ -101,7 +113,7 @@ type DependencyManager interface {
 }
 
 type GarbageCollector interface {
-	UnusedVolumes(logger lager.Logger) ([]string, error)
+	UnusedVolumes(logger lager.Logger, chainIDsToPreserve []string) ([]string, error)
 	MarkUnused(logger lager.Logger, unusedVolumes []string) error
 	Collect(logger lager.Logger) error
 }

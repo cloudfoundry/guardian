@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
@@ -34,15 +33,13 @@ type GarbageCollector struct {
 	volumeDriver      VolumeDriver
 	imageCloner       ImageCloner
 	dependencyManager DependencyManager
-	baseImage         string
 }
 
-func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager, baseImage string) *GarbageCollector {
+func NewGC(volumeDriver VolumeDriver, imageCloner ImageCloner, dependencyManager DependencyManager) *GarbageCollector {
 	return &GarbageCollector{
 		volumeDriver:      volumeDriver,
 		imageCloner:       imageCloner,
 		dependencyManager: dependencyManager,
-		baseImage:         baseImage,
 	}
 }
 
@@ -134,7 +131,7 @@ func (g *GarbageCollector) gcVolumes(logger lager.Logger) ([]string, error) {
 	return collectables, nil
 }
 
-func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) {
+func (g *GarbageCollector) UnusedVolumes(logger lager.Logger, chainIDsToPreserve []string) ([]string, error) {
 	logger = logger.Session("unused-volumes")
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -158,17 +155,14 @@ func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) 
 
 	for _, imageID := range imageIDs {
 		imageRefName := fmt.Sprintf(groot.ImageReferenceFormat, imageID)
-		if err := g.removeDependencies(orphanedVolumes, imageRefName); err != nil {
+		usedVolumes, err := g.dependencyManager.Dependencies(imageRefName)
+		if err != nil {
 			return nil, err
 		}
+		g.removeDependencyFromOrphanList(orphanedVolumes, usedVolumes)
 	}
 
-	if g.baseImage != "" {
-		imageRefName := fmt.Sprintf(base_image_puller.BaseImageReferenceFormat, g.baseImage)
-		if err := g.removeDependencies(orphanedVolumes, imageRefName); err != nil {
-			logger.Error("failed-to-find-base-image-dependencies", err, lager.Data{"imageRefName": imageRefName})
-		}
-	}
+	g.removeDependencyFromOrphanList(orphanedVolumes, chainIDsToPreserve)
 
 	orphanedVolumeIDs := []string{}
 	for id := range orphanedVolumes {
@@ -177,15 +171,8 @@ func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) 
 	return orphanedVolumeIDs, nil
 }
 
-func (g *GarbageCollector) removeDependencies(volumesList map[string]struct{}, refID string) error {
-	usedVolumes, err := g.dependencyManager.Dependencies(refID)
-	if err != nil {
-		return err
-	}
-
+func (g *GarbageCollector) removeDependencyFromOrphanList(volumesList map[string]struct{}, usedVolumes []string) {
 	for _, volumeID := range usedVolumes {
 		delete(volumesList, volumeID)
 	}
-
-	return nil
 }

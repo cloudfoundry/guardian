@@ -9,40 +9,106 @@ import (
 )
 
 type FakeBaseImagePuller struct {
-	PullStub        func(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImage, error)
-	pullMutex       sync.RWMutex
-	pullArgsForCall []struct {
+	FetchBaseImageInfoStub        func(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImageInfo, error)
+	fetchBaseImageInfoMutex       sync.RWMutex
+	fetchBaseImageInfoArgsForCall []struct {
 		logger lager.Logger
 		spec   groot.BaseImageSpec
 	}
-	pullReturns struct {
-		result1 groot.BaseImage
+	fetchBaseImageInfoReturns struct {
+		result1 groot.BaseImageInfo
 		result2 error
 	}
-	pullReturnsOnCall map[int]struct {
-		result1 groot.BaseImage
+	fetchBaseImageInfoReturnsOnCall map[int]struct {
+		result1 groot.BaseImageInfo
 		result2 error
+	}
+	PullStub        func(logger lager.Logger, imageInfo groot.BaseImageInfo, spec groot.BaseImageSpec) error
+	pullMutex       sync.RWMutex
+	pullArgsForCall []struct {
+		logger    lager.Logger
+		imageInfo groot.BaseImageInfo
+		spec      groot.BaseImageSpec
+	}
+	pullReturns struct {
+		result1 error
+	}
+	pullReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBaseImagePuller) Pull(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImage, error) {
-	fake.pullMutex.Lock()
-	ret, specificReturn := fake.pullReturnsOnCall[len(fake.pullArgsForCall)]
-	fake.pullArgsForCall = append(fake.pullArgsForCall, struct {
+func (fake *FakeBaseImagePuller) FetchBaseImageInfo(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImageInfo, error) {
+	fake.fetchBaseImageInfoMutex.Lock()
+	ret, specificReturn := fake.fetchBaseImageInfoReturnsOnCall[len(fake.fetchBaseImageInfoArgsForCall)]
+	fake.fetchBaseImageInfoArgsForCall = append(fake.fetchBaseImageInfoArgsForCall, struct {
 		logger lager.Logger
 		spec   groot.BaseImageSpec
 	}{logger, spec})
-	fake.recordInvocation("Pull", []interface{}{logger, spec})
-	fake.pullMutex.Unlock()
-	if fake.PullStub != nil {
-		return fake.PullStub(logger, spec)
+	fake.recordInvocation("FetchBaseImageInfo", []interface{}{logger, spec})
+	fake.fetchBaseImageInfoMutex.Unlock()
+	if fake.FetchBaseImageInfoStub != nil {
+		return fake.FetchBaseImageInfoStub(logger, spec)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.pullReturns.result1, fake.pullReturns.result2
+	return fake.fetchBaseImageInfoReturns.result1, fake.fetchBaseImageInfoReturns.result2
+}
+
+func (fake *FakeBaseImagePuller) FetchBaseImageInfoCallCount() int {
+	fake.fetchBaseImageInfoMutex.RLock()
+	defer fake.fetchBaseImageInfoMutex.RUnlock()
+	return len(fake.fetchBaseImageInfoArgsForCall)
+}
+
+func (fake *FakeBaseImagePuller) FetchBaseImageInfoArgsForCall(i int) (lager.Logger, groot.BaseImageSpec) {
+	fake.fetchBaseImageInfoMutex.RLock()
+	defer fake.fetchBaseImageInfoMutex.RUnlock()
+	return fake.fetchBaseImageInfoArgsForCall[i].logger, fake.fetchBaseImageInfoArgsForCall[i].spec
+}
+
+func (fake *FakeBaseImagePuller) FetchBaseImageInfoReturns(result1 groot.BaseImageInfo, result2 error) {
+	fake.FetchBaseImageInfoStub = nil
+	fake.fetchBaseImageInfoReturns = struct {
+		result1 groot.BaseImageInfo
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBaseImagePuller) FetchBaseImageInfoReturnsOnCall(i int, result1 groot.BaseImageInfo, result2 error) {
+	fake.FetchBaseImageInfoStub = nil
+	if fake.fetchBaseImageInfoReturnsOnCall == nil {
+		fake.fetchBaseImageInfoReturnsOnCall = make(map[int]struct {
+			result1 groot.BaseImageInfo
+			result2 error
+		})
+	}
+	fake.fetchBaseImageInfoReturnsOnCall[i] = struct {
+		result1 groot.BaseImageInfo
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeBaseImagePuller) Pull(logger lager.Logger, imageInfo groot.BaseImageInfo, spec groot.BaseImageSpec) error {
+	fake.pullMutex.Lock()
+	ret, specificReturn := fake.pullReturnsOnCall[len(fake.pullArgsForCall)]
+	fake.pullArgsForCall = append(fake.pullArgsForCall, struct {
+		logger    lager.Logger
+		imageInfo groot.BaseImageInfo
+		spec      groot.BaseImageSpec
+	}{logger, imageInfo, spec})
+	fake.recordInvocation("Pull", []interface{}{logger, imageInfo, spec})
+	fake.pullMutex.Unlock()
+	if fake.PullStub != nil {
+		return fake.PullStub(logger, imageInfo, spec)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.pullReturns.result1
 }
 
 func (fake *FakeBaseImagePuller) PullCallCount() int {
@@ -51,37 +117,36 @@ func (fake *FakeBaseImagePuller) PullCallCount() int {
 	return len(fake.pullArgsForCall)
 }
 
-func (fake *FakeBaseImagePuller) PullArgsForCall(i int) (lager.Logger, groot.BaseImageSpec) {
+func (fake *FakeBaseImagePuller) PullArgsForCall(i int) (lager.Logger, groot.BaseImageInfo, groot.BaseImageSpec) {
 	fake.pullMutex.RLock()
 	defer fake.pullMutex.RUnlock()
-	return fake.pullArgsForCall[i].logger, fake.pullArgsForCall[i].spec
+	return fake.pullArgsForCall[i].logger, fake.pullArgsForCall[i].imageInfo, fake.pullArgsForCall[i].spec
 }
 
-func (fake *FakeBaseImagePuller) PullReturns(result1 groot.BaseImage, result2 error) {
+func (fake *FakeBaseImagePuller) PullReturns(result1 error) {
 	fake.PullStub = nil
 	fake.pullReturns = struct {
-		result1 groot.BaseImage
-		result2 error
-	}{result1, result2}
+		result1 error
+	}{result1}
 }
 
-func (fake *FakeBaseImagePuller) PullReturnsOnCall(i int, result1 groot.BaseImage, result2 error) {
+func (fake *FakeBaseImagePuller) PullReturnsOnCall(i int, result1 error) {
 	fake.PullStub = nil
 	if fake.pullReturnsOnCall == nil {
 		fake.pullReturnsOnCall = make(map[int]struct {
-			result1 groot.BaseImage
-			result2 error
+			result1 error
 		})
 	}
 	fake.pullReturnsOnCall[i] = struct {
-		result1 groot.BaseImage
-		result2 error
-	}{result1, result2}
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeBaseImagePuller) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.fetchBaseImageInfoMutex.RLock()
+	defer fake.fetchBaseImageInfoMutex.RUnlock()
 	fake.pullMutex.RLock()
 	defer fake.pullMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}

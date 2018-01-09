@@ -9,9 +9,9 @@ import (
 	"os/exec"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/source"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -30,7 +30,7 @@ var _ = Describe("Layer source: Docker", func() {
 		baseImageURL *url.URL
 
 		configBlob    string
-		layerInfos    []base_image_puller.LayerInfo
+		layerInfos    []groot.LayerInfo
 		systemContext types.SystemContext
 
 		skipOCIChecksumValidation bool
@@ -47,7 +47,7 @@ var _ = Describe("Layer source: Docker", func() {
 		skipOCIChecksumValidation = false
 
 		configBlob = "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d"
-		layerInfos = []base_image_puller.LayerInfo{
+		layerInfos = []groot.LayerInfo{
 			{
 				BlobID:    "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
 				DiffID:    "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
@@ -507,7 +507,7 @@ var _ = Describe("Layer source: Docker", func() {
 				baseImageURL, err = url.Parse("docker:///cfgarden/private")
 				Expect(err).NotTo(HaveOccurred())
 
-				layerInfos = []base_image_puller.LayerInfo{
+				layerInfos = []groot.LayerInfo{
 					{
 						BlobID:    "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4",
 						DiffID:    "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
@@ -574,7 +574,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 		Context("when the blob does not exist", func() {
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, base_image_puller.LayerInfo{BlobID: "sha256:steamed-blob"})
+				_, _, err := layerSource.Blob(logger, baseImageURL, groot.LayerInfo{BlobID: "sha256:steamed-blob"})
 				Expect(err).To(MatchError(ContainSubstring("fetching blob 404")))
 			})
 		})

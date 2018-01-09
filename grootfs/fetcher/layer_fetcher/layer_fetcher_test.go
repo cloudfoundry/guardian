@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/grootfs/groot"
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher/layer_fetcherfakes"
@@ -102,8 +102,8 @@ var _ = Describe("LayerFetcher", func() {
 			baseImageInfo, err := fetcher.BaseImageInfo(logger, baseImageURL)
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(baseImageInfo.LayerInfos).To(Equal([]base_image_puller.LayerInfo{
-				base_image_puller.LayerInfo{
+			Expect(baseImageInfo.LayerInfos).To(Equal([]groot.LayerInfo{
+				groot.LayerInfo{
 					BlobID:        "sha256:47e3dd80d678c83c50cb133f4cf20e94d088f890679716c8b763418f55827a58",
 					ChainID:       "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
 					DiffID:        "afe200c63655576eaa5cabe036a2c09920d6aee67653ae75a9d35e0ec27205a5",
@@ -111,7 +111,7 @@ var _ = Describe("LayerFetcher", func() {
 					BaseDirectory: "/home/cool-user",
 					Size:          1024,
 				},
-				base_image_puller.LayerInfo{
+				groot.LayerInfo{
 					BlobID:        "sha256:7f2760e7451ce455121932b178501d60e651f000c3ab3bc12ae5d1f57614cc76",
 					ChainID:       "9242945d3c9c7cf5f127f9352fea38b1d3efe62ee76e25f70a3e6db63a14c233",
 					DiffID:        "d7c6a5f0d9a15779521094fa5eaf026b719984fb4bfe8e0012bd1da1b62615b0",
@@ -158,7 +158,7 @@ var _ = Describe("LayerFetcher", func() {
 	})
 
 	Describe("StreamBlob", func() {
-		var layerInfo = base_image_puller.LayerInfo{
+		var layerInfo = groot.LayerInfo{
 			BlobID: "sha256:layer-digest",
 		}
 		BeforeEach(func() {

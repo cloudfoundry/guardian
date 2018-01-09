@@ -12,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"code.cloudfoundry.org/grootfs/base_image_puller"
+	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	_ "github.com/containers/image/docker"
 	manifestpkg "github.com/containers/image/manifest"
@@ -70,7 +70,7 @@ func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (type
 	return nil, errorspkg.Wrap(err, "fetching image configuration")
 }
 
-func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo base_image_puller.LayerInfo) (string, int64, error) {
+func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (string, int64, error) {
 	logrus.SetOutput(os.Stderr)
 	logger = logger.Session("streaming-blob", lager.Data{
 		"baseImageURL": baseImageURL,
