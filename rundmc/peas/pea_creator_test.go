@@ -391,6 +391,21 @@ var _ = Describe("PeaCreator", func() {
 			It("returns a wrapped error", func() {
 				Expect(createErr).To(MatchError(ContainSubstring("banana")))
 			})
+
+			It("invokes cleanup on the volumizer", func() {
+				Expect(volumizer.DestroyCallCount()).To(Equal(1))
+			})
+
+			Context("and volumizer.Destroy returns an error", func() {
+				BeforeEach(func() {
+					volumizer.DestroyReturns(errors.New("Pikachu!"))
+				})
+
+				It("contains both error strings in the returned error", func() {
+					Expect(createErr.Error()).To(ContainSubstring("Pikachu!"))
+					Expect(createErr.Error()).To(ContainSubstring("banana"))
+				})
+			})
 		})
 
 		Context("when the bundle saver returns an error", func() {
@@ -400,6 +415,21 @@ var _ = Describe("PeaCreator", func() {
 
 			It("returns a wrapped error", func() {
 				Expect(createErr).To(MatchError(ContainSubstring("papaya")))
+			})
+
+			It("invokes cleanup on the volumizer", func() {
+				Expect(volumizer.DestroyCallCount()).To(Equal(1))
+			})
+
+			Context("and volumizer.Destroy returns an error", func() {
+				BeforeEach(func() {
+					volumizer.DestroyReturns(errors.New("Pikachu!"))
+				})
+
+				It("contains both error strings in the returned error", func() {
+					Expect(createErr.Error()).To(ContainSubstring("Pikachu!"))
+					Expect(createErr.Error()).To(ContainSubstring("papaya"))
+				})
 			})
 		})
 
@@ -429,7 +459,22 @@ var _ = Describe("PeaCreator", func() {
 			})
 
 			It("returns an error", func() {
-				Expect(createErr).To(MatchError("execrunner-error"))
+				Expect(createErr.Error()).To(ContainSubstring("execrunner-error"))
+			})
+
+			It("invokes cleanup on the volumizer", func() {
+				Expect(volumizer.DestroyCallCount()).To(Equal(1))
+			})
+
+			Context("and volumizer.Destroy returns an error", func() {
+				BeforeEach(func() {
+					volumizer.DestroyReturns(errors.New("Pikachu!"))
+				})
+
+				It("contains both error strings in the returned error", func() {
+					Expect(createErr.Error()).To(ContainSubstring("Pikachu!"))
+					Expect(createErr.Error()).To(ContainSubstring("execrunner-error"))
+				})
 			})
 		})
 

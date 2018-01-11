@@ -85,6 +85,19 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return errs("creating-bind-mount-sources", err)
 	}
 
+	if spec.Dir == "" {
+		spec.Dir = "/"
+	}
+	uid, gid, err := parseUser(spec.User)
+	if err != nil {
+		return errs("parse-user", err)
+	}
+
+	linuxNamespaces, err := p.linuxNamespaces(sandboxBundlePath, privileged)
+	if err != nil {
+		return errs("determining-namespaces", err)
+	}
+
 	runtimeSpec, err := p.Volumizer.Create(log, garden.ContainerSpec{
 		Handle:     processID,
 		Image:      spec.Image,
@@ -95,7 +108,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 	}
 
 	if runtimeSpec.Windows == nil {
-		runtimeSpec.Windows = &specs.Windows{}
+		runtimeSpec.Windows = new(specs.Windows)
 	}
 
 	runtimeSpec.Windows.Network = &specs.WindowsNetwork{
@@ -107,12 +120,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		cgroupPath = processID
 	}
 
-	linuxNamespaces, err := p.linuxNamespaces(sandboxBundlePath, privileged)
-	if err != nil {
-		return errs("determining-namespaces", err)
-	}
-
-	bndl, err := p.BundleGenerator.Generate(gardener.DesiredContainerSpec{
+	bndl, genErr := p.BundleGenerator.Generate(gardener.DesiredContainerSpec{
 		Handle:     processID,
 		BaseConfig: runtimeSpec,
 		CgroupPath: cgroupPath,
@@ -120,16 +128,9 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		BindMounts: append(spec.BindMounts, defaultBindMounts...),
 		Privileged: privileged,
 	}, sandboxBundlePath)
-	if err != nil {
-		return errs("generating-bundle", err)
-	}
-
-	if spec.Dir == "" {
-		spec.Dir = "/"
-	}
-	uid, gid, err := parseUser(spec.User)
-	if err != nil {
-		return errs("parse-user", err)
+	if genErr != nil {
+		destroyErr := p.Volumizer.Destroy(log, processID)
+		return errs("generating-bundle", multierror.Append(genErr, destroyErr))
 	}
 
 	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, runrunc.ProcessSpec{
@@ -139,8 +140,9 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 	})
 
 	bndl = bndl.WithProcess(preparedProcess.Process)
-	if err := p.BundleSaver.Save(bndl, peaBundlePath); err != nil {
-		return errs("saving-bundle", err)
+	if saveErr := p.BundleSaver.Save(bndl, peaBundlePath); saveErr != nil {
+		destroyErr := p.Volumizer.Destroy(log, processID)
+		return errs("saving-bundle", multierror.Append(saveErr, destroyErr))
 	}
 
 	extraCleanup := func() error {
@@ -156,11 +158,17 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 
 		return result.ErrorOrNil()
 	}
-	return p.ExecRunner.Run(
+	proc, runErr := p.ExecRunner.Run(
 		log, processID, peaBundlePath, sandboxHandle, sandboxBundlePath,
 		preparedProcess.ContainerRootHostUID, preparedProcess.ContainerRootHostGID,
 		procIO, preparedProcess.Process.Terminal, nil, extraCleanup,
 	)
+	if runErr != nil {
+		destroyErr := p.Volumizer.Destroy(log, processID)
+		return nil, multierror.Append(runErr, destroyErr)
+	}
+
+	return proc, nil
 }
 
 func (p *PeaCreator) linuxNamespaces(sandboxBundlePath string, privileged bool) (map[string]string, error) {
