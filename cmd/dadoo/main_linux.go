@@ -26,7 +26,10 @@ import (
 	cmsg "github.com/opencontainers/runc/libcontainer/utils"
 )
 
-const MaxSocketDirPathLength = 80
+const (
+	MaxSocketDirPathLength = 80
+	RuncExecTimeout        = time.Second * 5
+)
 
 func main() {
 	os.Exit(run())
@@ -97,15 +100,12 @@ func run() int {
 		return 2
 	}
 
-	var status syscall.WaitStatus
-	var rusage syscall.Rusage
-	_, err = syscall.Wait4(runcExecCmd.Process.Pid, &status, 0, &rusage)
-	check(err)    // Start succeeded but Wait4 failed, this can only be a programmer error
+	runcExitStatus := awaitRuncExit(runcExecCmd.Process)
 	logFD.Close() // No more logs from runc so close fd
 
 	// also check that masterFD is received and streaming or whatevs
-	runcExitCodePipe.Write([]byte{byte(status.ExitStatus())})
-	if status.ExitStatus() != 0 {
+	runcExitCodePipe.Write([]byte{byte(runcExitStatus)})
+	if runcExitStatus != 0 {
 		return 3 // nothing to wait for, container didn't launch
 	}
 
@@ -113,6 +113,44 @@ func run() int {
 	check(err)
 
 	return waitForContainerToExit(processStateDir, containerPid, signals, ioWg)
+}
+
+func awaitRuncExit(runcProc *os.Process) int {
+	runcExitStatusCh := make(chan int)
+	go func() {
+		var status syscall.WaitStatus
+		var rusage syscall.Rusage
+		_, err := syscall.Wait4(runcProc.Pid, &status, 0, &rusage)
+		check(err) // Start succeeded but Wait4 failed, this can only be a programmer error
+		runcExitStatusCh <- status.ExitStatus()
+	}()
+
+	// Dadoo is waiting for `runc {exec|run} -d` to exit. This runc process has a
+	// child, runc[2:INIT], that will exec and become the user process. Just
+	// before execing, it reads the process metadata from a fifo. Once it's done
+	// this, its parent (runc -d) unblocks from pipe-opening and can exit.
+	//
+	// There is a race between this run operation and concurrent deletion of the
+	// same garden container. When deleting the container, runc SIGKILLs the
+	// container init process. Since this init process is PID1 in a pidns, the
+	// kernel first SIGKILLs all other members of this pidns. This includes
+	// runc[2:INIT], but not runc exec -d. Runc exec -d is not waiting on
+	// runc[2:INIT], so it becomes a zombie. Runc exec -d will never unblock,
+	// because no process will come along to open the other end of the fifo.
+	//
+	// Runc delete times out after 10 seconds, if the container init is still
+	// alive. It will still be alive, because the kernel won't kill it until all
+	// the zombies in the same pidns are reaped. We resolve this race by killing
+	// runc exec -d after 5 seconds.
+	//
+	// https://www.pivotaltracker.com/story/show/154242239
+	select {
+	case runcExitStatus := <-runcExitStatusCh:
+		return runcExitStatus
+	case <-time.After(RuncExecTimeout):
+		check(runcProc.Kill())
+		return <-runcExitStatusCh
+	}
 }
 
 // If gdn server process dies, we need dadoo to keep stdout/err reader
