@@ -148,7 +148,7 @@ func awaitRuncExit(runcProc *os.Process) int {
 	case runcExitStatus := <-runcExitStatusCh:
 		return runcExitStatus
 	case <-time.After(RuncExecTimeout):
-		fmt.Printf("runc process with PID %d timed out after %d\n", runcProc.Pid, RuncExecTimeout)
+		fmt.Printf("runc process with PID %d timed out after %s\n", runcProc.Pid, RuncExecTimeout)
 		check(runcProc.Kill())
 		fmt.Println("killed runc")
 		return <-runcExitStatusCh
