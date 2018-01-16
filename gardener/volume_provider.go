@@ -3,7 +3,10 @@ package gardener
 import (
 	"errors"
 	"net/url"
+	"os"
+	"os/exec"
 
+	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/lager"
@@ -12,13 +15,26 @@ import (
 
 const RawRootFSScheme = "raw"
 
+type CommandFactory func(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
+
 type VolumeProvider struct {
 	VolumeCreator VolumeCreator
 	VolumeDestroyMetricsGC
+	prepareRootfsCmd func(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd
+	commandRunner    commandrunner.CommandRunner
+	ContainerRootUID int
+	ContainerRootGID int
 }
 
-func NewVolumeProvider(creator VolumeCreator, manager VolumeDestroyMetricsGC) *VolumeProvider {
-	return &VolumeProvider{VolumeCreator: creator, VolumeDestroyMetricsGC: manager}
+func NewVolumeProvider(creator VolumeCreator, manager VolumeDestroyMetricsGC, prepareRootfsCmd CommandFactory, commandrunner commandrunner.CommandRunner, rootUID, rootGID int) *VolumeProvider {
+	return &VolumeProvider{
+		VolumeCreator:          creator,
+		VolumeDestroyMetricsGC: manager,
+		prepareRootfsCmd:       prepareRootfsCmd,
+		commandRunner:          commandrunner,
+		ContainerRootUID:       rootUID,
+		ContainerRootGID:       rootGID,
+	}
 }
 
 type VolumeCreator interface {
@@ -57,5 +73,38 @@ func (v *VolumeProvider) Create(log lager.Logger, spec garden.ContainerSpec) (sp
 		}
 	}
 
+	v.mkdirAndChown(!spec.Privileged, baseConfig)
+
 	return baseConfig, nil
+}
+
+func (v *VolumeProvider) mkdirAndChown(namespaced bool, spec specs.Spec) error {
+	var uid, gid int
+	if namespaced {
+		uid = v.ContainerRootUID
+		gid = v.ContainerRootGID
+	}
+
+	v.mkdirAs(
+		spec.Root.Path, uid, gid, 0755, true,
+		"dev", "proc", "sys",
+	)
+
+	v.mkdirAs(
+		spec.Root.Path, uid, gid, 0777, false,
+		"tmp",
+	)
+
+	return nil
+}
+
+func (v *VolumeProvider) mkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) error {
+	return v.commandRunner.Run(v.prepareRootfsCmd(
+		rootFSPathFile,
+		uid,
+		gid,
+		mode,
+		recreate,
+		paths...,
+	))
 }

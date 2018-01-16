@@ -60,14 +60,138 @@ func (f *LinuxFactory) CommandRunner() commandrunner.CommandRunner {
 
 func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
-		return f.config.wireImagePlugin(f.commandRunner)
+		return f.config.wireImagePlugin(f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 	}
 
-	graphRoot := f.config.Graph.Dir
-	if graphRoot == "" {
+	if f.config.Graph.Dir == "" {
 		return gardener.NoopVolumizer{}
 	}
 
+	shed := f.wireShed(logger)
+	return gardener.NewVolumeProvider(shed, shed, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
+}
+
+func wireEnvFunc() runrunc.EnvFunc {
+	return runrunc.EnvFunc(runrunc.UnixEnvFor)
+}
+
+func (f *LinuxFactory) WireMkdirer() runrunc.Mkdirer {
+	if runningAsRoot() {
+		return bundlerules.MkdirChowner{Command: preparerootfs.Command, CommandRunner: f.commandRunner}
+	}
+
+	return NoopMkdirer{}
+}
+
+type NoopMkdirer struct{}
+
+func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error {
+	return nil
+}
+
+func (f *LinuxFactory) WireExecRunner(runMode string) runrunc.ExecRunner {
+	return dadoo.NewExecRunner(
+		f.config.Bin.Dadoo.Path(),
+		f.config.Runtime.Plugin,
+		f.signallerFactory,
+		f.commandRunner,
+		f.config.Containers.CleanupProcessDirsOnWait,
+		runMode,
+	)
+}
+
+func (f *LinuxFactory) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
+	return createCgroupsStarter(logger, f.config.Server.Tag, &cgroups.OSChowner{})
+}
+
+func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
+	return createCgroupsStarter(logger, cmd.Tag, &cgroups.OSChowner{UID: cmd.RootlessUID, GID: cmd.RootlessGID})
+}
+
+func createCgroupsStarter(logger lager.Logger, tag string, chowner cgroups.Chowner) gardener.Starter {
+	cgroupsMountpoint := "/sys/fs/cgroup"
+	gardenCgroup := "garden"
+	if tag != "" {
+		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
+		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, tag)
+	}
+
+	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"),
+		cgroupsMountpoint, gardenCgroup, allowedDevices, linux_command_runner.New(), chowner)
+}
+
+func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
+	return &kawasaki.ResolvConfigurer{
+		HostsFileCompiler: &dns.HostsFileCompiler{},
+		ResolvCompiler:    &dns.ResolvCompiler{},
+		ResolvFilePath:    "/etc/resolv.conf",
+		DepotDir:          f.config.Containers.Dir,
+	}
+}
+
+func (f *LinuxFactory) WireRootfsFileCreator() rundmc.RootfsFileCreator {
+	return preparerootfs.SymlinkRefusingFileCreator{}
+}
+
+func defaultBindMounts(binInitPath string) []specs.Mount {
+	devptsGid := 0
+	if runningAsRoot() {
+		devptsGid = 5
+	}
+
+	return []specs.Mount{
+		{Type: "sysfs", Source: "sysfs", Destination: "/sys", Options: []string{"nosuid", "noexec", "nodev", "ro"}},
+		{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
+		{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
+			Options: []string{"nosuid", "noexec", "newinstance", fmt.Sprintf("gid=%d", devptsGid), "ptmxmode=0666", "mode=0620"}},
+		{Type: "bind", Source: binInitPath, Destination: "/tmp/garden-init", Options: []string{"bind"}},
+	}
+}
+
+func privilegedMounts() []specs.Mount {
+	return []specs.Mount{
+		{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
+	}
+}
+
+func unprivilegedMounts() []specs.Mount {
+	return []specs.Mount{
+		{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
+		{Type: "cgroup", Source: "cgroup", Destination: "/sys/fs/cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}},
+	}
+}
+
+func getPrivilegedDevices() []specs.LinuxDevice {
+	return []specs.LinuxDevice{fuseDevice}
+}
+
+func bindMountPoints() []string {
+	return []string{"/etc/hosts", "/etc/resolv.conf"}
+}
+
+func mustGetMaxValidUID() int {
+	return idmapper.MustGetMaxValidUID()
+}
+
+func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
+	_, _, errNo := syscall.Syscall(syscall.SYS_FCNTL, socketFD, syscall.F_SETFD, syscall.FD_CLOEXEC)
+	if errNo != 0 {
+		return fmt.Errorf("setting cloexec on server socket: %s", errNo)
+	}
+	return nil
+}
+
+func createCmd() string {
+	return "run"
+}
+
+func createCmdExtraArgs() []string {
+	return []string{"--detach"}
+}
+
+func (f *LinuxFactory) wireShed(logger lager.Logger) *rootfs_provider.CakeOrdinator {
+
+	graphRoot := f.config.Graph.Dir
 	logger = logger.Session(gardener.VolumizerSession, lager.Data{"graphRoot": graphRoot})
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger}
 
@@ -171,142 +295,9 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 		},
 	}
 
-	shed := rootfs_provider.NewCakeOrdinator(cake,
+	return rootfs_provider.NewCakeOrdinator(cake,
 		repoFetcher,
 		layerCreator,
 		rootfs_provider.NewMetricsAdapter(quotaManager.GetUsage, quotaedGraphDriver.GetMntPath),
 		ovenCleaner)
-	return gardener.NewVolumeProvider(shed, shed)
-}
-
-func wireEnvFunc() runrunc.EnvFunc {
-	return runrunc.EnvFunc(runrunc.UnixEnvFor)
-}
-
-func (f *LinuxFactory) WireMkdirer() runrunc.Mkdirer {
-	if runningAsRoot() {
-		return bundlerules.MkdirChowner{Command: preparerootfs.Command, CommandRunner: f.commandRunner}
-	}
-
-	return NoopMkdirer{}
-}
-
-type NoopMkdirer struct{}
-
-func (NoopMkdirer) MkdirAs(rootFSPathFile string, uid, gid int, mode os.FileMode, recreate bool, path ...string) error {
-	return nil
-}
-
-func (f *LinuxFactory) WireExecRunner(runMode string) runrunc.ExecRunner {
-	return dadoo.NewExecRunner(
-		f.config.Bin.Dadoo.Path(),
-		f.config.Runtime.Plugin,
-		f.signallerFactory,
-		f.commandRunner,
-		f.config.Containers.CleanupProcessDirsOnWait,
-		runMode,
-	)
-}
-
-func (f *LinuxFactory) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	return createCgroupsStarter(logger, f.config.Server.Tag, &cgroups.OSChowner{})
-}
-
-func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	return createCgroupsStarter(logger, cmd.Tag, &cgroups.OSChowner{UID: cmd.RootlessUID, GID: cmd.RootlessGID})
-}
-
-func createCgroupsStarter(logger lager.Logger, tag string, chowner cgroups.Chowner) gardener.Starter {
-	cgroupsMountpoint := "/sys/fs/cgroup"
-	gardenCgroup := "garden"
-	if tag != "" {
-		cgroupsMountpoint = filepath.Join(os.TempDir(), fmt.Sprintf("cgroups-%s", tag))
-		gardenCgroup = fmt.Sprintf("%s-%s", gardenCgroup, tag)
-	}
-
-	return cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"),
-		cgroupsMountpoint, gardenCgroup, allowedDevices, linux_command_runner.New(), chowner)
-}
-
-func (f *LinuxFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
-	return &kawasaki.ResolvConfigurer{
-		HostsFileCompiler: &dns.HostsFileCompiler{},
-		ResolvCompiler:    &dns.ResolvCompiler{},
-		ResolvFilePath:    "/etc/resolv.conf",
-		DepotDir:          f.config.Containers.Dir,
-	}
-}
-
-func (f *LinuxFactory) WireRootfsFileCreator() rundmc.RootfsFileCreator {
-	return preparerootfs.SymlinkRefusingFileCreator{}
-}
-
-func defaultBindMounts(binInitPath string) []specs.Mount {
-	devptsGid := 0
-	if runningAsRoot() {
-		devptsGid = 5
-	}
-
-	return []specs.Mount{
-		{Type: "sysfs", Source: "sysfs", Destination: "/sys", Options: []string{"nosuid", "noexec", "nodev", "ro"}},
-		{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm"},
-		{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
-			Options: []string{"nosuid", "noexec", "newinstance", fmt.Sprintf("gid=%d", devptsGid), "ptmxmode=0666", "mode=0620"}},
-		{Type: "bind", Source: binInitPath, Destination: "/tmp/garden-init", Options: []string{"bind"}},
-	}
-}
-
-func privilegedMounts() []specs.Mount {
-	return []specs.Mount{
-		{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
-	}
-}
-
-func unprivilegedMounts() []specs.Mount {
-	return []specs.Mount{
-		{Type: "proc", Source: "proc", Destination: "/proc", Options: []string{"nosuid", "noexec", "nodev"}},
-		{Type: "cgroup", Source: "cgroup", Destination: "/sys/fs/cgroup", Options: []string{"ro", "nosuid", "noexec", "nodev"}},
-	}
-}
-
-func (f *LinuxFactory) OsSpecificBundleRules() []rundmc.BundlerRule {
-	chrootMkdir := bundlerules.MkdirChowner{
-		Command:       preparerootfs.Command,
-		CommandRunner: f.commandRunner,
-	}
-	return []rundmc.BundlerRule{
-		bundlerules.PrepareRootFS{
-			ContainerRootUID: f.uidMappings.Map(0),
-			ContainerRootGID: f.gidMappings.Map(0),
-			MkdirChown:       chrootMkdir,
-		},
-	}
-}
-
-func getPrivilegedDevices() []specs.LinuxDevice {
-	return []specs.LinuxDevice{fuseDevice}
-}
-
-func bindMountPoints() []string {
-	return []string{"/etc/hosts", "/etc/resolv.conf"}
-}
-
-func mustGetMaxValidUID() int {
-	return idmapper.MustGetMaxValidUID()
-}
-
-func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
-	_, _, errNo := syscall.Syscall(syscall.SYS_FCNTL, socketFD, syscall.F_SETFD, syscall.FD_CLOEXEC)
-	if errNo != 0 {
-		return fmt.Errorf("setting cloexec on server socket: %s", errNo)
-	}
-	return nil
-}
-
-func createCmd() string {
-	return "run"
-}
-
-func createCmdExtraArgs() []string {
-	return []string{"--detach"}
 }

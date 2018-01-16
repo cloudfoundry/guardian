@@ -2,8 +2,12 @@ package gardener_test
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
+	"os"
+	"os/exec"
 
+	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -17,14 +21,22 @@ import (
 
 var _ = Describe("VolumeProvider", func() {
 	var (
-		volumeCreator  *fakes.FakeVolumeCreator
-		volumeProvider *gardener.VolumeProvider
-		logger         lager.Logger
+		volumeCreator    *fakes.FakeVolumeCreator
+		volumeProvider   *gardener.VolumeProvider
+		cmdRunner        *fake_command_runner.FakeCommandRunner
+		mkdirCommandStub gardener.CommandFactory
+		logger           lager.Logger
 	)
 
 	BeforeEach(func() {
 		volumeCreator = new(fakes.FakeVolumeCreator)
-		volumeProvider = gardener.NewVolumeProvider(volumeCreator, nil)
+		cmdRunner = new(fake_command_runner.FakeCommandRunner)
+		mkdirCommandStub = func(rootfsPath string, uid, gid int, mode os.FileMode, recreate bool, paths ...string) *exec.Cmd {
+			args := []string{rootfsPath, fmt.Sprintf("%d", uid), fmt.Sprintf("%d", gid), fmt.Sprintf("%#o", mode), fmt.Sprintf("%t", recreate)}
+			args = append(args, paths...)
+			return exec.Command("echo", args...)
+		}
+		volumeProvider = gardener.NewVolumeProvider(volumeCreator, nil, mkdirCommandStub, cmdRunner, 5, 5)
 		logger = lagertest.NewTestLogger("volume-provider-test")
 	})
 
@@ -57,6 +69,16 @@ var _ = Describe("VolumeProvider", func() {
 				})
 			})
 
+			Context("when the deprecated RootfsPath is specified instead of the Image", func() {
+				BeforeEach(func() {
+					containerSpec = garden.ContainerSpec{RootFSPath: "raw:///some/rootfs"}
+				})
+
+				It("returns the rootfs path in the runtime spec", func() {
+					Expect(runtimeSpec.Root.Path).To(Equal("/some/rootfs"))
+				})
+			})
+
 			Context("when passed a non-raw rootfs", func() {
 				BeforeEach(func() {
 					containerSpec = garden.ContainerSpec{
@@ -75,7 +97,7 @@ var _ = Describe("VolumeProvider", func() {
 						Privileged: true,
 					}
 
-					volumeCreator.CreateReturns(specs.Spec{Version: "best-spec"}, nil)
+					volumeCreator.CreateReturns(specs.Spec{Version: "best-spec", Root: &specs.Root{Path: "/hello"}}, nil)
 				})
 
 				It("calls the VolumeCreator with the correct parameters", func() {
@@ -96,18 +118,45 @@ var _ = Describe("VolumeProvider", func() {
 				})
 
 				It("returns the runtime spec from the VolumeCreator", func() {
-					Expect(runtimeSpec).To(Equal(specs.Spec{Version: "best-spec"}))
-				})
-			})
-
-			Context("when the deprecated RootfsPath is specified instead of the Image", func() {
-				BeforeEach(func() {
-					containerSpec = garden.ContainerSpec{RootFSPath: "raw:///some/rootfs"}
+					Expect(runtimeSpec).To(Equal(specs.Spec{Version: "best-spec", Root: &specs.Root{Path: "/hello"}}))
 				})
 
-				It("returns the rootfs path in the runtime spec", func() {
-					Expect(runtimeSpec.Root.Path).To(Equal("/some/rootfs"))
+				Context("when the container is not usernamespaced", func() {
+					BeforeEach(func() {
+						containerSpec = garden.ContainerSpec{
+							Privileged: true,
+						}
+					})
+
+					It("would execute the correct root filesystem modifications", func() {
+						commands := cmdRunner.ExecutedCommands()
+						Expect(commands).To(HaveLen(2))
+						Expect(commands[0].Args).To(HaveLen(9))
+						Expect(commands[0].Args).To(ConsistOf("echo", "/hello", "0", "0", "0755", "true", "dev", "proc", "sys"))
+
+						Expect(commands[1].Args).To(HaveLen(7))
+						Expect(commands[1].Args).To(ConsistOf("echo", "/hello", "0", "0", "0777", "false", "tmp"))
+					})
 				})
+
+				Context("when the container is usernamespaced", func() {
+					BeforeEach(func() {
+						containerSpec = garden.ContainerSpec{
+							Privileged: false,
+						}
+					})
+
+					It("would execute the correct root filesystem modifications", func() {
+						commands := cmdRunner.ExecutedCommands()
+						Expect(commands).To(HaveLen(2))
+						Expect(commands[0].Args).To(HaveLen(9))
+						Expect(commands[0].Args).To(ConsistOf("echo", "/hello", "5", "5", "0755", "true", "dev", "proc", "sys"))
+
+						Expect(commands[1].Args).To(HaveLen(7))
+						Expect(commands[1].Args).To(ConsistOf("echo", "/hello", "5", "5", "0777", "false", "tmp"))
+					})
+				})
+
 			})
 		})
 

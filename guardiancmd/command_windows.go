@@ -51,7 +51,7 @@ func (f *WindowsFactory) WireResolvConfigurer() kawasaki.DnsResolvConfigurer {
 
 func (f *WindowsFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	if f.config.Image.Plugin.Path() != "" || f.config.Image.PrivilegedPlugin.Path() != "" {
-		return f.config.wireImagePlugin(f.commandRunner)
+		return f.config.wireImagePlugin(f.commandRunner, 0, 0)
 	}
 
 	return gardener.NoopVolumizer{}
@@ -73,10 +73,6 @@ type noopRootfsFileCreator struct{}
 
 func (noopRootfsFileCreator) CreateFiles(rootFSPath string, pathsToCreate ...string) error {
 	return nil
-}
-
-func (f *WindowsFactory) OsSpecificBundleRules() []rundmc.BundlerRule {
-	return []rundmc.BundlerRule{}
 }
 
 func (f *WindowsFactory) CommandRunner() commandrunner.CommandRunner {

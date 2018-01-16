@@ -37,6 +37,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/peas"
 	"code.cloudfoundry.org/guardian/rundmc/peas/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/pidreader"
+	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
@@ -123,7 +124,6 @@ type GardenFactory interface {
 	WireCgroupsStarter(logger lager.Logger) gardener.Starter
 	WireExecRunner(runMode string) runrunc.ExecRunner
 	WireRootfsFileCreator() rundmc.RootfsFileCreator
-	OsSpecificBundleRules() []rundmc.BundlerRule
 }
 
 // These are the maximum capabilities a non-root user gets whether privileged or unprivileged
@@ -669,7 +669,7 @@ func (cmd *ServerCommand) wireNetworker(log lager.Logger, factory GardenFactory,
 	return networker, ipTablesStarter, nil
 }
 
-func (cmd *ServerCommand) wireImagePlugin(commandRunner commandrunner.CommandRunner) gardener.Volumizer {
+func (cmd *ServerCommand) wireImagePlugin(commandRunner commandrunner.CommandRunner, uid, gid int) gardener.Volumizer {
 	var unprivilegedCommandCreator imageplugin.CommandCreator = &imageplugin.NotImplementedCommandCreator{
 		Err: errors.New("no image_plugin provided"),
 	}
@@ -700,7 +700,7 @@ func (cmd *ServerCommand) wireImagePlugin(commandRunner commandrunner.CommandRun
 		DefaultRootfs:              cmd.Containers.DefaultRootFS,
 	}
 
-	return gardener.NewVolumeProvider(imagePlugin, imagePlugin)
+	return gardener.NewVolumeProvider(imagePlugin, imagePlugin, gardener.CommandFactory(preparerootfs.Command), commandRunner, uid, gid)
 }
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFactory,
@@ -774,7 +774,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		bundlerules.Windows{},
 		bundlerules.RootFS{},
 	}
-	bundleRules = append(bundleRules, factory.OsSpecificBundleRules()...)
 	peaBundleRules := make([]rundmc.BundlerRule, len(bundleRules))
 	copy(peaBundleRules, bundleRules)
 	bundleRules = append(bundleRules,
