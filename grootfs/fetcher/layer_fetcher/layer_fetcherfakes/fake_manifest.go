@@ -47,6 +47,15 @@ type FakeManifest struct {
 		result1 [][]byte
 		result2 error
 	}
+	LayerInfosForCopyStub        func() []types.BlobInfo
+	layerInfosForCopyMutex       sync.RWMutex
+	layerInfosForCopyArgsForCall []struct{}
+	layerInfosForCopyReturns     struct {
+		result1 []types.BlobInfo
+	}
+	layerInfosForCopyReturnsOnCall map[int]struct {
+		result1 []types.BlobInfo
+	}
 	ConfigInfoStub        func() types.BlobInfo
 	configInfoMutex       sync.RWMutex
 	configInfoArgsForCall []struct{}
@@ -283,6 +292,46 @@ func (fake *FakeManifest) SignaturesReturnsOnCall(i int, result1 [][]byte, resul
 		result1 [][]byte
 		result2 error
 	}{result1, result2}
+}
+
+func (fake *FakeManifest) LayerInfosForCopy() []types.BlobInfo {
+	fake.layerInfosForCopyMutex.Lock()
+	ret, specificReturn := fake.layerInfosForCopyReturnsOnCall[len(fake.layerInfosForCopyArgsForCall)]
+	fake.layerInfosForCopyArgsForCall = append(fake.layerInfosForCopyArgsForCall, struct{}{})
+	fake.recordInvocation("LayerInfosForCopy", []interface{}{})
+	fake.layerInfosForCopyMutex.Unlock()
+	if fake.LayerInfosForCopyStub != nil {
+		return fake.LayerInfosForCopyStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.layerInfosForCopyReturns.result1
+}
+
+func (fake *FakeManifest) LayerInfosForCopyCallCount() int {
+	fake.layerInfosForCopyMutex.RLock()
+	defer fake.layerInfosForCopyMutex.RUnlock()
+	return len(fake.layerInfosForCopyArgsForCall)
+}
+
+func (fake *FakeManifest) LayerInfosForCopyReturns(result1 []types.BlobInfo) {
+	fake.LayerInfosForCopyStub = nil
+	fake.layerInfosForCopyReturns = struct {
+		result1 []types.BlobInfo
+	}{result1}
+}
+
+func (fake *FakeManifest) LayerInfosForCopyReturnsOnCall(i int, result1 []types.BlobInfo) {
+	fake.LayerInfosForCopyStub = nil
+	if fake.layerInfosForCopyReturnsOnCall == nil {
+		fake.layerInfosForCopyReturnsOnCall = make(map[int]struct {
+			result1 []types.BlobInfo
+		})
+	}
+	fake.layerInfosForCopyReturnsOnCall[i] = struct {
+		result1 []types.BlobInfo
+	}{result1}
 }
 
 func (fake *FakeManifest) ConfigInfo() types.BlobInfo {
@@ -693,6 +742,8 @@ func (fake *FakeManifest) Invocations() map[string][][]interface{} {
 	defer fake.manifestMutex.RUnlock()
 	fake.signaturesMutex.RLock()
 	defer fake.signaturesMutex.RUnlock()
+	fake.layerInfosForCopyMutex.RLock()
+	defer fake.layerInfosForCopyMutex.RUnlock()
 	fake.configInfoMutex.RLock()
 	defer fake.configInfoMutex.RUnlock()
 	fake.configBlobMutex.RLock()
