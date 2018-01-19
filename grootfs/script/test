@@ -108,10 +108,10 @@ run_tests() {
 
 test_path=""
 RECURSIVE=0
-if [ -z "$REGISTRY_PASSWORD" ]
+if [ -z "$DOCKER_REGISTRY_PASSWORD" ]
 then
-  export REGISTRY_USERNAME="$(lpass show 'Shared-Garden/cf-garden-docker' --username)"
-  export REGISTRY_PASSWORD="$(lpass show 'Shared-Garden/cf-garden-docker' --password)"
+  export DOCKER_REGISTRY_USERNAME="$(lpass show 'Shared-Garden/cf-garden-docker' --username)"
+  export DOCKER_REGISTRY_PASSWORD="$(lpass show 'Shared-Garden/cf-garden-docker' --password)"
 fi
 
 while getopts "uia" OPTION

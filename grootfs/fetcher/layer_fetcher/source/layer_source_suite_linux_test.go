@@ -18,8 +18,8 @@ func TestSource(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	BeforeEach(func() {
-		RegistryUsername = os.Getenv("REGISTRY_USERNAME")
-		RegistryPassword = os.Getenv("REGISTRY_PASSWORD")
+		RegistryUsername = os.Getenv("DOCKER_REGISTRY_USERNAME")
+		RegistryPassword = os.Getenv("DOCKER_REGISTRY_PASSWORD")
 	})
 
 	RunSpecs(t, "Layer Fetcher Source Suite")

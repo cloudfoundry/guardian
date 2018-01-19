@@ -119,8 +119,8 @@ func TestGroot(t *testing.T) {
 		}
 		StorePath = path.Join(mountPath, "store")
 
-		RegistryUsername = os.Getenv("REGISTRY_USERNAME")
-		RegistryPassword = os.Getenv("REGISTRY_PASSWORD")
+		RegistryUsername = os.Getenv("DOCKER_REGISTRY_USERNAME")
+		RegistryPassword = os.Getenv("DOCKER_REGISTRY_PASSWORD")
 
 		Runner = runner.Runner{
 			GrootFSBin: GrootFSBin,
