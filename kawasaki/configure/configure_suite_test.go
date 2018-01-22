@@ -20,6 +20,6 @@ func runCommand(arg0 string, argv ...string) string {
 	cmd := exec.Command(arg0, argv...)
 	cmd.Stdout = io.MultiWriter(&stdout, GinkgoWriter)
 	cmd.Stderr = GinkgoWriter
-	Expect(cmd.Run()).To(Succeed())
+	ExpectWithOffset(1, cmd.Run()).To(Succeed())
 	return stdout.String()
 }

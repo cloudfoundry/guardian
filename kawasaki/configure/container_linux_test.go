@@ -42,7 +42,7 @@ var _ = Describe("Container", func() {
 
 		runCommand("ip", "netns", "add", netNsName)
 
-		netNsPath := fmt.Sprintf("/run/netns/%s", netNsName)
+		netNsPath := "/run/netns/" + netNsName
 		var err error
 		netNsFd, err = os.Open(netNsPath)
 		Expect(err).NotTo(HaveOccurred())
@@ -71,7 +71,7 @@ var _ = Describe("Container", func() {
 
 	AfterEach(func() {
 		runCommand("ip", "netns", "delete", netNsName)
-		netNsPath := fmt.Sprintf("/var/run/netns/%s", netNsName)
+		netNsPath := "/var/run/netns/" + netNsName
 		Eventually(netNsPath).ShouldNot(BeAnExistingFile())
 	})
 
