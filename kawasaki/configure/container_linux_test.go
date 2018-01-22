@@ -101,10 +101,7 @@ var _ = Describe("Container", func() {
 
 	Context("when the netns file disappears", func() {
 		BeforeEach(func() {
-			var err error
-			netNsFd, err = ioutil.TempFile("", "")
-			Expect(err).NotTo(HaveOccurred())
-
+			netNsFd = tempFile("", "")
 			Expect(os.Remove(netNsFd.Name())).To(Succeed())
 		})
 
@@ -116,9 +113,7 @@ var _ = Describe("Container", func() {
 
 	Context("when the netns path is invalid", func() {
 		BeforeEach(func() {
-			var err error
-			netNsFd, err = ioutil.TempFile("", "")
-			Expect(err).NotTo(HaveOccurred())
+			netNsFd = tempFile("", "")
 		})
 
 		It("returns the error", func() {
@@ -142,8 +137,7 @@ var _ = Describe("Container", func() {
 func linkIP(netNsName, linkName string) string {
 	stdout := runCommand("ip", "netns", "exec", netNsName, "ifconfig", linkName)
 
-	re, err := regexp.Compile(`inet addr:([0-9.]+)`)
-	Expect(err).NotTo(HaveOccurred())
+	re := regexp.MustCompile(`inet addr:([0-9.]+)`)
 
 	ret := re.FindStringSubmatch(stdout)
 	Expect(ret).NotTo(BeEmpty())
@@ -154,8 +148,7 @@ func linkIP(netNsName, linkName string) string {
 func linkMTU(netNsName, linkName string) int {
 	stdout := runCommand("ip", "netns", "exec", netNsName, "ifconfig", linkName)
 
-	re, err := regexp.Compile(`MTU:([0-9]+)`)
-	Expect(err).NotTo(HaveOccurred())
+	re := regexp.MustCompile(`MTU:([0-9]+)`)
 
 	ret := re.FindStringSubmatch(stdout)
 	Expect(ret).NotTo(BeEmpty())
@@ -174,11 +167,16 @@ func linkUp(netNsName, linkName string) bool {
 func linkDefaultGW(netNsName, linkName string) string {
 	stdout := runCommand("ip", "netns", "exec", netNsName, "ip", "route", "list", "dev", linkName)
 
-	re, err := regexp.Compile(`default via ([0-9.]+)`)
-	Expect(err).NotTo(HaveOccurred())
+	re := regexp.MustCompile(`default via ([0-9.]+)`)
 
 	ret := re.FindStringSubmatch(stdout)
 	Expect(ret).NotTo(BeEmpty())
 
 	return ret[1]
+}
+
+func tempFile(dir, prefix string) *os.File {
+	f, err := ioutil.TempFile(dir, prefix)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+	return f
 }
