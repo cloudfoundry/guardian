@@ -800,39 +800,6 @@ var _ = Describe("Dadoo", func() {
 
 					close(done)
 				}, 10.0)
-
-				It("doesn't hang when runc doesn't exit quickly", func(done Done) {
-					Expect(bundleSaver.Save(bundle, bundlePath)).To(Succeed())
-
-					syncPipeR, syncPipeW, err := os.Pipe()
-					Expect(err).NotTo(HaveOccurred())
-					defer syncPipeR.Close()
-					defer syncPipeW.Close()
-
-					cmd := exec.Command(dadooBinPath, "run", fakeRuncBinPath, processDir, filepath.Base(bundlePath))
-					cmd.ExtraFiles = []*os.File{
-						mustOpen("/dev/null"),
-						runcLogFile,
-						syncPipeW,
-					}
-					// simulate the `runc run -d` hanging
-					cmd.Env = append(os.Environ(), "SLEEP_SECONDS=20")
-
-					sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-					Expect(err).NotTo(HaveOccurred())
-					openIOPipes()
-
-					_, err = os.Open(stdoutPipe)
-					Expect(err).NotTo(HaveOccurred())
-
-					syncMsg := make([]byte, 1)
-					_, err = syncPipeR.Read(syncMsg)
-					Expect(err).NotTo(HaveOccurred())
-
-					Eventually(sess).Should(gexec.Exit(3))
-
-					close(done)
-				}, 10.0)
 			})
 
 			Context("requesting a TTY", func() {

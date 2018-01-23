@@ -6,19 +6,10 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"strconv"
 	"time"
 )
 
 func main() {
-	if os.Getenv("SLEEP_SECONDS") != "" {
-		sleepSeconds, err := strconv.Atoi(os.Getenv("SLEEP_SECONDS"))
-		if err != nil {
-			panic(err)
-		}
-		time.Sleep(time.Second * time.Duration(sleepSeconds))
-	}
-
 	ioutil.WriteFile("/tmp/something", []byte(fmt.Sprintf("%#v", os.Args)), 0755)
 	socketPath, pidPath := "", ""
 	for idx, s := range os.Args {
