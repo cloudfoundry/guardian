@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	. "github.com/onsi/ginkgo"
@@ -84,7 +85,12 @@ var _ = Describe("Socket2Me", func() {
 	It("runs the given command as the passed user and group, with no supplementary groups", func() {
 		var stdout bytes.Buffer
 		runSocketToMe(socketPath, &stdout, "/usr/bin/id")
-		Expect(stdout.String()).To(Equal("uid=2000 gid=3000\n"))
+		outputString := stdout.String()
+		if strings.Contains(outputString, "groups") {
+			Expect(outputString).To(Equal("uid=2000 gid=3000 groups=3000\n"))
+		} else {
+			Expect(outputString).To(Equal("uid=2000 gid=3000\n"))
+		}
 	})
 
 	Context("when the socket file already exists", func() {

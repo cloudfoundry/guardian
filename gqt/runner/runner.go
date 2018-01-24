@@ -397,12 +397,16 @@ func (r *RunningGarden) findCgroupPath(cgroupToFind string) (string, error) {
 
 	cgroups := strings.Split(string(cgroupContent), "\n")
 	for _, cgroup := range cgroups {
-		separator := fmt.Sprintf(":%s:", cgroupToFind)
-		if strings.Contains(cgroup, separator) {
-			return strings.Split(cgroup, separator)[1], nil
+		fields := strings.Split(cgroup, ":")
+		if len(fields) != 3 {
+			return "", errors.New("Error parsing cgroups:" + cgroup)
+		}
+		subsystems := strings.Split(fields[1], ",")
+		if containsElement(subsystems, cgroupToFind) {
+			return fields[2], nil
 		}
 	}
-	return "", errors.New("Cgroup subsystem not found")
+	return "", errors.New("Cgroup subsystem not found: " + cgroupToFind)
 }
 
 func (r *RunningGarden) Stop() error {
@@ -478,4 +482,13 @@ func intptr(i int) *int {
 
 func uint32ptr(i uint32) *uint32 {
 	return &i
+}
+
+func containsElement(strings []string, elem string) bool {
+	for _, e := range strings {
+		if e == elem {
+			return true
+		}
+	}
+	return false
 }

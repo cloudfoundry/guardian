@@ -2,6 +2,7 @@ package gqt_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -254,10 +255,24 @@ func copyFile(srcPath, dstPath string) error {
 	return os.Chmod(writer.Name(), 0777)
 }
 
-func getCurrentCGroup() string {
-	currentCgroup, err := exec.Command("sh", "-c", "cat /proc/self/cgroup | head -1 | awk -F ':' '{print $3}'").CombinedOutput()
-	Expect(err).NotTo(HaveOccurred())
-	return strings.TrimSpace(string(currentCgroup))
+func getCurrentCGroup(cgroupToFind string) (string, error) {
+	cgroupContent, err := ioutil.ReadFile(fmt.Sprintf("/proc/self/cgroup"))
+	if err != nil {
+		return "", err
+	}
+
+	cgroups := strings.Split(string(cgroupContent), "\n")
+	for _, cgroup := range cgroups {
+		fields := strings.Split(cgroup, ":")
+		if len(fields) != 3 {
+			return "", errors.New("Error parsing cgroups:" + cgroup)
+		}
+		subsystems := strings.Split(fields[1], ",")
+		if containsElement(subsystems, cgroupToFind) {
+			return fields[2], nil
+		}
+	}
+	return "", errors.New("Cgroup subsystem not found: " + cgroupToFind)
 }
 
 func getCurrentCGroupPath(cgroupsRoot, subsystem, tag string, privileged bool) string {
@@ -272,7 +287,18 @@ func getCurrentCGroupPath(cgroupsRoot, subsystem, tag string, privileged bool) s
 		parentCgroup = ""
 	}
 
-	return filepath.Join(cgroupsRoot, subsystem, getCurrentCGroup(), parentCgroup)
+	currentCgroup, err := getCurrentCGroup(subsystem)
+	Expect(err).NotTo(HaveOccurred())
+	return filepath.Join(cgroupsRoot, subsystem, currentCgroup, parentCgroup)
+}
+
+func containsElement(strings []string, elem string) bool {
+	for _, e := range strings {
+		if e == elem {
+			return true
+		}
+	}
+	return false
 }
 
 func removeSocket() {
