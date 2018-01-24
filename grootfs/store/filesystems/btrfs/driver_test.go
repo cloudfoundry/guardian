@@ -388,7 +388,7 @@ var _ = Describe("Btrfs", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(mountInfo.Type).To(Equal(""))
-				Expect(mountInfo.Destination).To(Equal(filepath.Join(spec.ImagePath, "rootfs")))
+				Expect(mountInfo.Destination).To(Equal("/"))
 				Expect(mountInfo.Source).To(Equal(filepath.Join(spec.ImagePath, "snapshot")))
 				Expect(mountInfo.Options).To(HaveLen(1))
 				Expect(mountInfo.Options[0]).To(Equal("bind"))

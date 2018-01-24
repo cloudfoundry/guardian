@@ -268,7 +268,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 	}
 
 	return groot.MountInfo{
-		Destination: rootfsDir,
+		Destination: "/",
 		Source:      "overlay",
 		Type:        "overlay",
 		Options:     []string{d.formatMountData(baseVolumePaths, workDir, upperDir, true)},

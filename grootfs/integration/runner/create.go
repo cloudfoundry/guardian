@@ -48,7 +48,11 @@ func (r Runner) Create(spec groot.CreateSpec) (specs.Spec, error) {
 func (r Runner) EnsureMounted(containerSpec specs.Spec) error {
 	if len(containerSpec.Mounts) != 0 {
 		for _, mountPoint := range containerSpec.Mounts {
-			return syscall.Mount(mountPoint.Source, mountPoint.Destination, mountPoint.Type, 0, mountPoint.Options[0])
+			dest := mountPoint.Destination
+			if mountPoint.Destination == "/" {
+				dest = containerSpec.Root.Path
+			}
+			return syscall.Mount(mountPoint.Source, dest, mountPoint.Type, 0, mountPoint.Options[0])
 		}
 	}
 

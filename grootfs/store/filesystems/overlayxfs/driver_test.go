@@ -214,7 +214,7 @@ var _ = Describe("Driver", func() {
 
 			Expect(mountJson.Type).To(Equal("overlay"))
 			Expect(mountJson.Source).To(Equal("overlay"))
-			Expect(mountJson.Destination).To(Equal(filepath.Join(spec.ImagePath, overlayxfs.RootfsDir)))
+			Expect(mountJson.Destination).To(Equal("/"))
 			Expect(mountJson.Options).To(HaveLen(1))
 			Expect(mountJson.Options[0]).To(MatchRegexp(fmt.Sprintf("lowerdir=%s,upperdir=%s,workdir=%s",
 				filepath.Join(storePath, overlayxfs.LinksDirName, ".*"),

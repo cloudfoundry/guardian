@@ -185,7 +185,7 @@ func (d *Driver) CreateImage(logger lager.Logger, spec image_cloner.ImageDriverS
 			return mountInfo, errorspkg.Wrap(err, "chmoding rootfs folder")
 		}
 
-		mountInfo.Destination = toPath
+		mountInfo.Destination = "/"
 		mountInfo.Type = ""
 		mountInfo.Source = filepath.Join(spec.ImagePath, "snapshot")
 		mountInfo.Options = []string{"bind"}

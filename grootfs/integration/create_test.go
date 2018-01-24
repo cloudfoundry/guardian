@@ -609,7 +609,7 @@ var _ = Describe("Create", func() {
 			expectedRootfs := filepath.Join(StorePath, store.ImageDirName, randomImageID, "rootfs")
 			Expect(containerSpec.Root.Path).To(Equal(expectedRootfs))
 			Expect(containerSpec.Mounts).To(HaveLen(1))
-			Expect(containerSpec.Mounts[0].Destination).To(Equal(expectedRootfs))
+			Expect(containerSpec.Mounts[0].Destination).To(Equal("/"))
 		})
 
 		Describe("without mount", func() {
@@ -648,7 +648,7 @@ var _ = Describe("Create", func() {
 
 					It("returns the mount information in the output json", func() {
 						Expect(containerSpec.Mounts).ToNot(BeNil())
-						Expect(containerSpec.Mounts[0].Destination).To(Equal(containerSpec.Root.Path))
+						Expect(containerSpec.Mounts[0].Destination).To(Equal("/"))
 						Expect(containerSpec.Mounts[0].Type).To(Equal(""))
 						Expect(containerSpec.Mounts[0].Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
 						Expect(containerSpec.Mounts[0].Options).To(HaveLen(1))
@@ -663,7 +663,7 @@ var _ = Describe("Create", func() {
 
 					It("returns the mount information in the output json", func() {
 						Expect(containerSpec.Mounts).ToNot(BeNil())
-						Expect(containerSpec.Mounts[0].Destination).To(Equal(containerSpec.Root.Path))
+						Expect(containerSpec.Mounts[0].Destination).To(Equal("/"))
 						Expect(containerSpec.Mounts[0].Type).To(Equal("overlay"))
 						Expect(containerSpec.Mounts[0].Source).To(Equal("overlay"))
 						Expect(containerSpec.Mounts[0].Options).To(HaveLen(1))
