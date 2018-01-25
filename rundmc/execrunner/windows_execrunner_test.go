@@ -2,9 +2,12 @@ package execrunner_test
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
+	"math/big"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -48,7 +51,7 @@ var _ = Describe("DirectExecRunner", func() {
 			CommandRunner: cmdRunner,
 			RunMode:       "exec",
 		}
-		processID = "process-id"
+		processID = randomProcessID()
 		var err error
 		processPath, err = ioutil.TempDir("", "processes")
 		Expect(err).ToNot(HaveOccurred())
@@ -85,7 +88,7 @@ var _ = Describe("DirectExecRunner", func() {
 			Expect(cmdRunner.StartedCommands()[0].Args).To(ConsistOf(
 				runtimePath,
 				"--debug",
-				"--log", filepath.Join(processPath, "exec.log"),
+				"--log", filepath.Join(os.TempDir(), processID, "exec.log"),
 				"--log-format", "json",
 				"exec",
 				"-p", filepath.Join(processPath, "spec.json"),
@@ -111,7 +114,7 @@ var _ = Describe("DirectExecRunner", func() {
 				Expect(cmdRunner.StartedCommands()[0].Args).To(ConsistOf(
 					runtimePath,
 					"--debug",
-					"--log", filepath.Join(processPath, "run.log"),
+					"--log", filepath.Join(os.TempDir(), processID, "run.log"),
 					"--log-format", "json",
 					"run",
 					"--pid-file", MatchRegexp(".*"),
@@ -153,11 +156,10 @@ var _ = Describe("DirectExecRunner", func() {
 
 		Describe("logging", func() {
 			BeforeEach(func() {
-				processID = "some-process-id"
 				logs = `{"time":"2016-03-02T13:56:38Z", "level":"warning", "msg":"some-message"}
 {"time":"2016-03-02T13:56:38Z", "level":"error", "msg":"some-error"}`
 				cmdRunner.WhenRunning(fake_command_runner.CommandSpec{Path: runtimePath}, func(c *exec.Cmd) error {
-					ioutil.WriteFile(filepath.Join(processPath, "exec.log"), []byte(logs), 0777)
+					ioutil.WriteFile(filepath.Join(os.TempDir(), processID, "exec.log"), []byte(logs), 0777)
 					return nil
 				})
 			})
@@ -175,6 +177,11 @@ var _ = Describe("DirectExecRunner", func() {
 				}).Should(HaveLen(2))
 
 				Expect(execLogs[0].Data).To(HaveKeyWithValue("message", "some-message"))
+			})
+
+			It("deletes the log file directory after forwarding the logs", func() {
+				process.Wait()
+				Expect(filepath.Join(os.TempDir(), processID)).NotTo(BeADirectory())
 			})
 		})
 
@@ -350,4 +357,12 @@ func exitWith(exitCode int) *exec.Cmd {
 	}
 
 	return exec.Command("sh", "-c", fmt.Sprintf("exit %d", exitCode))
+}
+
+func randomProcessID() string {
+	max := big.NewInt(math.MaxInt64)
+	r, err := rand.Int(rand.Reader, max)
+	ExpectWithOffset(1, err).NotTo(HaveOccurred())
+
+	return fmt.Sprintf("%d", r.Int64())
 }
