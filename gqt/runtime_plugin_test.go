@@ -131,7 +131,7 @@ var _ = Describe("Runtime Plugin", func() {
 						Expect(readPluginArgs(argsFilepath)).To(ConsistOf(
 							binaries.RuntimePlugin,
 							"--debug",
-							"--log", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "run.log")),
+							"--log", HaveSuffix(filepath.Join(procId, "run.log")),
 							"--log-format", "json",
 							"run",
 							"--pid-file", HaveSuffix(filepath.Join("containers", handle, "processes", procId, "pidfile")),

@@ -34,7 +34,12 @@ func (e *DirectExecRunner) Run(
 	log.Info("start")
 	defer log.Info("done")
 
-	logPath := filepath.Join(processPath, fmt.Sprintf("%s.log", e.RunMode))
+	logDir := filepath.Join(os.TempDir(), processID)
+	if err := os.MkdirAll(logDir, 0755); err != nil {
+		return nil, errors.Wrap(err, "creating log temp dir")
+	}
+
+	logPath := filepath.Join(logDir, fmt.Sprintf("%s.log", e.RunMode))
 	cmd := exec.Command(e.RuntimePath, "--debug", "--log", logPath, "--log-format", "json", e.RunMode, "--pid-file", filepath.Join(processPath, "pidfile"))
 
 	if e.RunMode == "exec" {
@@ -130,7 +135,7 @@ func (p *process) Signal(signal garden.Signal) error {
 }
 
 func forwardLogs(log lager.Logger, logPath string) {
-	defer os.Remove(logPath)
+	defer os.RemoveAll(filepath.Dir(logPath))
 
 	buff, readErr := ioutil.ReadFile(logPath)
 	if readErr != nil {
