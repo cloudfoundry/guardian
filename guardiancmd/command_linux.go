@@ -3,6 +3,7 @@ package guardiancmd
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 	"time"
@@ -190,9 +191,13 @@ func createCmdExtraArgs() []string {
 }
 
 func (f *LinuxFactory) wireShed(logger lager.Logger) *rootfs_provider.CakeOrdinator {
-
 	graphRoot := f.config.Graph.Dir
 	logger = logger.Session(gardener.VolumizerSession, lager.Data{"graphRoot": graphRoot})
+
+	if err := exec.Command("modprobe", "aufs").Run(); err != nil {
+		logger.Error("unable-to-load-aufs", err)
+	}
+
 	runner := &logging.Runner{CommandRunner: linux_command_runner.New(), Logger: logger}
 
 	if err := os.MkdirAll(graphRoot, 0755); err != nil {

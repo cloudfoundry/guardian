@@ -6,7 +6,6 @@ import (
 	"io"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -375,10 +374,6 @@ func (cmd *ServerCommand) idMappings() (idmapper.MappingList, idmapper.MappingLi
 
 func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) error {
 	logger, reconfigurableSink := cmd.Logger.Logger("guardian")
-
-	if err := exec.Command("modprobe", "aufs").Run(); err != nil {
-		logger.Error("unable-to-load-aufs", err)
-	}
 
 	factory := cmd.NewGardenFactory()
 
