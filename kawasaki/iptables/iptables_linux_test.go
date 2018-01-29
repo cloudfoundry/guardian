@@ -278,7 +278,7 @@ var _ = Describe("IPTables controller", func() {
 
 				Consistently(done).ShouldNot(BeClosed())
 				fakeUnlocker.Unlock()
-				Eventually(done).Should(BeClosed())
+				Eventually(done, iptablesTimeout).Should(BeClosed())
 			})
 		})
 
