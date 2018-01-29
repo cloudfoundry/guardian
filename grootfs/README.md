@@ -406,8 +406,8 @@ e.g. Datadog.
 | `SharedLockingTime` | nanos | Total time the shared store lock is held by the command |
 | `ExclusiveLockingTime` | nanos | Total time the exclusive store lock is held by the command |
 | `grootfs-create.run` | int | Cumulative count of Create executions |
-| `grootfs-create.fail` | int | Cumulative count of failed Create executions |
-| `grootfs-create.success` | int | Cumulative count of successful Create executions |
+| `grootfs-create.run.fail` | int | Cumulative count of failed Create executions |
+| `grootfs-create.run.success` | int | Cumulative count of successful Create executions |
 | `grootfs-error.create` | | Emits when an error has occurred |
 
 #### Clean
@@ -418,8 +418,8 @@ e.g. Datadog.
 | `UnusedLayersSize` | bytes | Total bytes taken up by unused layers at the end of the command |
 | `ExclusiveLockingTime` | nanos | Total time the exclusive store lock is held by the command |
 | `grootfs-clean.run` | int | Cumulative count of Clean executions |
-| `grootfs-clean.fail` | int | Cumulative count of failed Clean executions |
-| `grootfs-clean.success` | int | Cumulative count of successful Clean executions |
+| `grootfs-clean.run.fail` | int | Cumulative count of failed Clean executions |
+| `grootfs-clean.run.success` | int | Cumulative count of successful Clean executions |
 | `grootfs-error.clean` | | Emits when an error has occurred |
 
 #### Delete
@@ -428,8 +428,8 @@ e.g. Datadog.
 | `ImageDeletionTime` | nanos | Total duration of Image Deletion |
 | `UnusedLayersSize` | bytes | Total bytes taken up by unused layers at the end of the command |
 | `grootfs-delete.run` | int | Cumulative count of Delete executions |
-| `grootfs-delete.fail` | int | Cumulative count of failed Delete executions |
-| `grootfs-delete.success` | int | Cumulative count of successful Delete executions |
+| `grootfs-delete.run.fail` | int | Cumulative count of failed Delete executions |
+| `grootfs-delete.run.success` | int | Cumulative count of successful Delete executions |
 | `grootfs-error.delete` | | Emits when an error has occurred |
 
 #### Stats
@@ -437,8 +437,8 @@ e.g. Datadog.
 |---|---|---|
 | `ImageStatsTime` | nanos | Total duration of retrieving Image Stats |
 | `grootfs-stats.run` | int | Cumulative count of Stats executions |
-| `grootfs-stats.fail` | int | Cumulative count of failed Stats executions |
-| `grootfs-stats.success` | int | Cumulative count of successful Stats executions |
+| `grootfs-stats.run.fail` | int | Cumulative count of failed Stats executions |
+| `grootfs-stats.run.success` | int | Cumulative count of successful Stats executions |
 | `grootfs-error.stats` | | Emits when an error has occurred |
 
 ## Running tests in Concourse
