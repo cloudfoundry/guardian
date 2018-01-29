@@ -61,7 +61,7 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 	validationPath := filepath.Dir(m.storePath)
 	stat, err := os.Stat(m.storePath)
 	if err == nil && stat.IsDir() {
-		logger.Info("store-path-already-exists", lager.Data{"StorePath": m.storePath})
+		logger.Debug("store-path-already-exists", lager.Data{"StorePath": m.storePath})
 		validationPath = m.storePath
 	}
 
@@ -70,7 +70,7 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 	}
 
 	if err := m.storeDriver.ValidateFileSystem(logger, validationPath); err != nil {
-		logger.Error("store-path-validation-failed", err)
+		logger.Debug(errorspkg.Wrap(err, "store-could-not-be-validated").Error())
 		if spec.StoreSizeBytes <= 0 {
 			return errorspkg.Wrap(err, "validating store path filesystem")
 		}
@@ -80,7 +80,7 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 		}
 
 	} else {
-		logger.Info("store-already-initialized")
+		logger.Debug("store-already-initialized")
 	}
 
 	if err := os.MkdirAll(filepath.Join(m.storePath, store.MetaDirName), 0755); err != nil {

@@ -107,7 +107,6 @@ func (d *Driver) ValidateFileSystem(logger lager.Logger, path string) error {
 	defer logger.Debug("ending")
 
 	if err := filesystems.CheckFSPath(path, "xfs", "noatime", "nobarrier", "prjquota"); err != nil {
-		logger.Error("validating-filesystem", err)
 		return errorspkg.Wrap(err, "overlay-xfs filesystem validation")
 	}
 
