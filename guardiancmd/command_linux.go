@@ -65,7 +65,8 @@ func (f *LinuxFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 	}
 
 	if f.config.Graph.Dir == "" {
-		return gardener.NoopVolumizer{}
+		noop := gardener.NoopVolumizer{}
+		return gardener.NewVolumeProvider(noop, noop, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, f.uidMappings.Map(0), f.gidMappings.Map(0))
 	}
 
 	shed := f.wireShed(logger)

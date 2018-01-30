@@ -47,7 +47,7 @@ type GdnRunnerConfig struct {
 
 	DefaultRootFS                  string   `flag:"default-rootfs"`
 	DepotDir                       string   `flag:"depot"`
-	GraphDir                       string   `flag:"graph"`
+	GraphDir                       *string  `flag:"graph"`
 	ConsoleSocketsPath             string   `flag:"console-sockets-path"`
 	BindIP                         string   `flag:"bind-ip"`
 	BindPort                       *int     `flag:"bind-port"`
@@ -129,6 +129,9 @@ func (c GdnRunnerConfig) toFlags() []string {
 			if v != "" {
 				gardenArgs = append(gardenArgs, "--"+flagName, v)
 			}
+			if v == "" && vField.Kind() != reflect.String && !vField.IsNil() {
+				gardenArgs = append(gardenArgs, "--"+flagName, "")
+			}
 		case int, uint64, uint32:
 			gardenArgs = append(gardenArgs, "--"+flagName, fmt.Sprintf("%d", v))
 		case bool:
@@ -205,7 +208,8 @@ func DefaultGdnRunnerConfig(binaries Binaries) GdnRunnerConfig {
 	Expect(os.MkdirAll(config.TmpDir, 0777)).To(Succeed())
 	Expect(os.Chmod(config.TmpDir, 0777)).To(Succeed())
 
-	config.GraphDir = filepath.Join(graphDirBase, filepath.Base(config.TmpDir))
+	graphDir := filepath.Join(graphDirBase, filepath.Base(config.TmpDir))
+	config.GraphDir = &graphDir
 	config.ConsoleSocketsPath = filepath.Join(config.TmpDir, "console-sockets")
 
 	config.DepotDir = filepath.Join(config.TmpDir, "containers")

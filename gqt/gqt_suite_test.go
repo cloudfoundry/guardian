@@ -217,6 +217,10 @@ func boolptr(b bool) *bool {
 	return &b
 }
 
+func stringptr(s string) *string {
+	return &s
+}
+
 func idToStr(id uint32) string {
 	return strconv.FormatUint(uint64(id), 10)
 }

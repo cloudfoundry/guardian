@@ -46,7 +46,7 @@ func socket2meCommand(config GdnRunnerConfig) *exec.Cmd {
 
 func (r *GardenRunner) setupDirsForUser() {
 	// TODO: Remove this when we get rid of shed
-	MustMountTmpfs(r.GraphDir)
+	MustMountTmpfs(*r.GraphDir)
 
 	if r.User != nil {
 		uidGid := fmt.Sprintf("%d:%d", r.User.Uid, r.User.Gid)
@@ -84,11 +84,11 @@ func (r *RunningGarden) Cleanup() {
 	// TODO: Remove this when we get rid of shed
 	retry := retrier.New(retrier.ConstantBackoff(200, 500*time.Millisecond), nil)
 	Expect(retry.Run(func() error {
-		if err := os.RemoveAll(path.Join(r.GraphDir, "aufs")); err == nil {
+		if err := os.RemoveAll(path.Join(*r.GraphDir, "aufs")); err == nil {
 			return nil // if we can remove it, it's already unmounted
 		}
 
-		if err := syscall.Unmount(path.Join(r.GraphDir, "aufs"), MNT_DETACH); err != nil {
+		if err := syscall.Unmount(path.Join(*r.GraphDir, "aufs"), MNT_DETACH); err != nil {
 			r.logger.Error("failed-unmount-attempt", err)
 			return err
 		}
@@ -96,9 +96,9 @@ func (r *RunningGarden) Cleanup() {
 		return nil
 	})).To(Succeed())
 
-	MustUnmountTmpfs(r.GraphDir)
+	MustUnmountTmpfs(*r.GraphDir)
 
-	if err := os.RemoveAll(r.GraphDir); err != nil {
+	if err := os.RemoveAll(*r.GraphDir); err != nil {
 		r.logger.Error("remove-graph", err)
 	}
 }

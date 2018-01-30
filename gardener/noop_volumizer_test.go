@@ -2,6 +2,7 @@ package gardener_test
 
 import (
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager/lagertest"
 
@@ -22,7 +23,7 @@ var _ = Describe("NoopVolumizer", func() {
 
 	Describe("Create", func() {
 		It("returns ErrGraphDisabled", func() {
-			_, err := volumizer.Create(logger, garden.ContainerSpec{})
+			_, err := volumizer.Create(logger, "some-handle", rootfs_spec.Spec{})
 			Expect(err).To(Equal(gardener.ErrGraphDisabled))
 		})
 	})

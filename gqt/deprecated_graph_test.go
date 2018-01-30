@@ -92,9 +92,9 @@ var _ = Describe("graph flags", func() {
 		config = resetImagePluginConfig()
 		client = runner.Start(config)
 
-		layersPath = path.Join(client.GraphDir, "aufs", "layers")
-		diffPath = path.Join(client.GraphDir, "aufs", "diff")
-		mntPath = path.Join(client.GraphDir, "aufs", "mnt")
+		layersPath = path.Join(*client.GraphDir, "aufs", "layers")
+		diffPath = path.Join(*client.GraphDir, "aufs", "diff")
+		mntPath = path.Join(*client.GraphDir, "aufs", "mnt")
 	})
 
 	AfterEach(func() {

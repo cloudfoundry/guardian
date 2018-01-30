@@ -41,6 +41,26 @@ var _ = Describe("Rootfs container create parameter", func() {
 		Expect(os.RemoveAll(grootfsConfPath)).To(Succeed())
 	})
 
+	Context("without an image plugin or shed", func() {
+		var rootfsPath string
+		BeforeEach(func() {
+			config = resetImagePluginConfig()
+			config.GraphDir = stringptr("")
+			rootfsPath = createRootfs(func(string) {}, 0755)
+		})
+
+		AfterEach(func() {
+			Expect(os.RemoveAll(rootfsPath)).To(Succeed())
+		})
+
+		It("does not error when creating a container from a raw rootfs", func() {
+			_, err := client.Create(garden.ContainerSpec{
+				Image: garden.ImageRef{URI: fmt.Sprintf("raw://%s", rootfsPath)},
+			})
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
 	Context("with an Image URI provided", func() {
 		It("creates a container using that URI as the rootfs", func() {
 			_, err := client.Create(garden.ContainerSpec{Image: garden.ImageRef{URI: "docker:///cfgarden/garden-busybox"}})

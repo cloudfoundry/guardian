@@ -11,6 +11,7 @@ import (
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
+	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -54,7 +55,8 @@ func (f *WindowsFactory) WireVolumizer(logger lager.Logger) gardener.Volumizer {
 		return f.config.wireImagePlugin(f.commandRunner, 0, 0)
 	}
 
-	return gardener.NoopVolumizer{}
+	noop := gardener.NoopVolumizer{}
+	return gardener.NewVolumeProvider(noop, noop, gardener.CommandFactory(preparerootfs.Command), f.commandRunner, 0, 0)
 }
 
 func (f *WindowsFactory) WireExecRunner(runMode string) runrunc.ExecRunner {
