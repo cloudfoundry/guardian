@@ -323,13 +323,13 @@ func (r *RunningGarden) forceStop() error {
 		r.Kill()
 	} else {
 		if err := r.Stop(); err != nil {
-			fmt.Printf("error on r.Stop() during forceStop: %s", err.Error())
+			fmt.Printf("error on r.Stop() during forceStop: %s\n", err.Error())
 			return ErrGardenStop{error: err}
 		}
 	}
 
 	if err := r.removeTempDirContentsPreservingMounts(); err != nil {
-		fmt.Printf("error on r.removeTempDirContentsPreservingMounts() during forceStop: %s", err.Error())
+		fmt.Printf("error on r.removeTempDirContentsPreservingMounts() during forceStop: %s\n", err.Error())
 		return err
 	}
 
@@ -377,12 +377,39 @@ func (r *RunningGarden) cleanGardenCgroups(cGroupsPath string) error {
 			return err
 		}
 		nestedCgroup := filepath.Join(cGroupsPath, subsystem.Name(), cGroupPath)
-		if err := os.Remove(filepath.Join(nestedCgroup, fmt.Sprintf("garden-%s", r.Tag))); err != nil && !os.IsNotExist(err) {
-			return err
+		path := filepath.Join(nestedCgroup, "garden-"+r.Tag)
+		rmErr := os.Remove(path)
+		if rmErr != nil && !os.IsNotExist(rmErr) {
+			procInfo, infoErr := getCgroupProcInfos(path)
+			if infoErr != nil {
+				return fmt.Errorf("%s: %s", rmErr, infoErr)
+			}
+			return fmt.Errorf("%s: %s", rmErr, procInfo)
 		}
 	}
 
 	return nil
+}
+
+func getCgroupProcInfos(cgroupFs string) (string, error) {
+	pids, readErr := ioutil.ReadFile(filepath.Join(cgroupFs, "cgroup.procs"))
+	if readErr != nil {
+		return "", fmt.Errorf("error reading cgroup.procs: %s", readErr)
+	}
+	var procInfos []string
+	for _, pid := range strings.Split(strings.TrimSpace(string(pids)), "\n") {
+		procInfo, infoErr := getProcInfo(pid)
+		if infoErr != nil {
+			return "", fmt.Errorf("getting proc info: %s", infoErr)
+		}
+		procInfos = append(procInfos, procInfo)
+	}
+	return strings.Join(procInfos, "\n"), nil
+}
+
+func getProcInfo(pid string) (string, error) {
+	line, err := ioutil.ReadFile(filepath.Join("/proc", pid, "cmdline"))
+	return string(line), err
 }
 
 // findCgroupPath, when running inside a container, returns the relative path of
