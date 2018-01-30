@@ -1,14 +1,16 @@
 package iptables_test
 
 import (
+	"bytes"
+	"io"
+	"os/exec"
 	"sync"
+	"syscall"
+	"testing"
 
 	"code.cloudfoundry.org/guardian/pkg/locksmith"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"testing"
 )
 
 func TestIptablesManager(t *testing.T) {
@@ -26,6 +28,25 @@ type FakeLocksmith struct {
 
 	unlockReturnsStuff bool
 	unlockReturnsErr   error
+}
+
+func run(cmd *exec.Cmd) (int, string) {
+	var buff bytes.Buffer
+	cmd.Stdout = io.MultiWriter(&buff, GinkgoWriter)
+	cmd.Stderr = GinkgoWriter
+	Expect(cmd.Start()).To(Succeed())
+	err := cmd.Wait()
+	if err == nil {
+		return 0, buff.String()
+	}
+	exitErr := err.(*exec.ExitError)
+	return exitErr.Sys().(syscall.WaitStatus).ExitStatus(), buff.String()
+}
+
+func runForStdout(cmd *exec.Cmd) string {
+	exitCode, stdout := run(cmd)
+	Expect(exitCode).To(Equal(0))
+	return stdout
 }
 
 func NewFakeLocksmith() *FakeLocksmith {

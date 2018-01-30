@@ -1,7 +1,6 @@
 package iptables_test
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -14,13 +13,9 @@ import (
 	"code.cloudfoundry.org/guardian/pkg/locksmith"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
-	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("IPTables controller", func() {
-	const iptablesTimeout = 10.0
-
 	var (
 		netnsName          string
 		prefix             string
@@ -57,19 +52,13 @@ var _ = Describe("IPTables controller", func() {
 	Describe("CreateChain", func() {
 		It("creates the chain", func() {
 			Expect(iptablesController.CreateChain("filter", "test-chain")).To(Succeed())
-
-			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-n", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			runForStdout(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-n", "-L", "test-chain")))
 		})
 
 		Context("when the table is nat", func() {
 			It("creates the nat chain", func() {
 				Expect(iptablesController.CreateChain("nat", "test-chain")).To(Succeed())
-
-				sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", "nat", "-n", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
+				runForStdout(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", "nat", "-n", "-L", "test-chain")))
 			})
 		})
 
@@ -96,11 +85,8 @@ var _ = Describe("IPTables controller", func() {
 			Expect(iptablesController.PrependRule("test-chain", fakeTCPRule)).To(Succeed())
 			Expect(iptablesController.PrependRule("test-chain", fakeUDPRule)).To(Succeed())
 
-			buff := gbytes.NewBuffer()
-			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-S", "test-chain")), buff, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-			Expect(buff).To(gbytes.Say("-A test-chain -p udp\n-A test-chain -p tcp"))
+			cmd := runForStdout(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-S", "test-chain")))
+			Expect(cmd).To(ContainSubstring("-A test-chain -p udp\n-A test-chain -p tcp"))
 		})
 
 		It("returns an error when the chain does not exist", func() {
@@ -124,11 +110,8 @@ var _ = Describe("IPTables controller", func() {
 				fakeUDPRule,
 			})).To(Succeed())
 
-			buff := gbytes.NewBuffer()
-			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-S", "test-chain")), buff, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-			Expect(buff).To(gbytes.Say("-A test-chain -p udp\n-A test-chain -p tcp"))
+			cmd := wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-S", "test-chain"))
+			Expect(runForStdout(cmd)).To(ContainSubstring("-A test-chain -p udp\n-A test-chain -p tcp"))
 		})
 
 		It("returns an error when the chain does not exist", func() {
@@ -153,10 +136,8 @@ var _ = Describe("IPTables controller", func() {
 
 		It("deletes the chain", func() {
 			Expect(iptablesController.DeleteChain("filter", "test-chain")).To(Succeed())
-
-			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-n", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(1))
+			exitCode, _ := run(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-n", "-L", "test-chain")))
+			Expect(exitCode).To(Equal(1))
 		})
 
 		Context("when the table is nat", func() {
@@ -167,9 +148,9 @@ var _ = Describe("IPTables controller", func() {
 			It("deletes the nat chain", func() {
 				Expect(iptablesController.DeleteChain("nat", "test-chain")).To(Succeed())
 
-				sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", "nat", "-n", "-L", "test-chain")), GinkgoWriter, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(1))
+				cmd := wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", "nat", "-n", "-L", "test-chain"))
+				exitCode, _ := run(cmd)
+				Expect(exitCode).To(Equal(1))
 			})
 		})
 
@@ -189,20 +170,14 @@ var _ = Describe("IPTables controller", func() {
 
 		JustBeforeEach(func() {
 			Expect(iptablesController.CreateChain(table, "test-chain")).To(Succeed())
-
-			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", table, "-A", "test-chain", "-j", "ACCEPT")), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			runForStdout(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", table, "-A", "test-chain", "-j", "ACCEPT")))
 		})
 
 		It("flushes the chain", func() {
 			Expect(iptablesController.FlushChain(table, "test-chain")).To(Succeed())
 
-			buff := gbytes.NewBuffer()
-			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", table, "-S", "test-chain")), buff, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
-			Consistently(buff).ShouldNot(gbytes.Say("-A test-chain"))
+			stdout := runForStdout(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", table, "-S", "test-chain")))
+			Expect(stdout).NotTo(ContainSubstring("-A test-chain"))
 		})
 
 		Context("when the table is nat", func() {
@@ -213,11 +188,8 @@ var _ = Describe("IPTables controller", func() {
 			It("flushes the nat chain", func() {
 				Expect(iptablesController.FlushChain(table, "test-chain")).To(Succeed())
 
-				buff := gbytes.NewBuffer()
-				sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", table, "-S", "test-chain")), buff, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-				Eventually(sess).Should(gexec.Exit(0))
-				Consistently(buff).ShouldNot(gbytes.Say("-A test-chain"))
+				cmd := wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", table, "-S", "test-chain"))
+				Expect(runForStdout(cmd)).NotTo(ContainSubstring("-A test-chain"))
 			})
 		})
 
@@ -239,23 +211,14 @@ var _ = Describe("IPTables controller", func() {
 			Expect(iptablesController.CreateChain(table, "test-chain-1")).To(Succeed())
 			Expect(iptablesController.CreateChain(table, "test-chain-2")).To(Succeed())
 
-			sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", table, "-A", "test-chain-1", "-j", "test-chain-2")), GinkgoWriter, GinkgoWriter)
-			Expect(err).NotTo(HaveOccurred())
-			Eventually(sess).Should(gexec.Exit(0))
+			cmd := wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", table, "-A", "test-chain-1", "-j", "test-chain-2"))
+			runForStdout(cmd)
 		})
 
 		It("deletes the references", func() {
 			Expect(iptablesController.DeleteChainReferences(table, "test-chain-1", "test-chain-2")).To(Succeed())
-
-			Eventually(func() string {
-				buff := gbytes.NewBuffer()
-				sess, err := gexec.Start(wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", table, "-S", "test-chain-1")), buff, GinkgoWriter)
-				Expect(err).NotTo(HaveOccurred())
-
-				Eventually(sess).Should(gexec.Exit(0))
-
-				return string(buff.Contents())
-			}).ShouldNot(ContainSubstring("test-chain-2"))
+			cmd := wrapCmdInNs(netnsName, exec.Command("iptables", "-w", "-t", table, "-S", "test-chain-1"))
+			Expect(runForStdout(cmd)).NotTo(ContainSubstring("test-chain-2"))
 		})
 	})
 
@@ -278,15 +241,14 @@ var _ = Describe("IPTables controller", func() {
 
 				Consistently(done).ShouldNot(BeClosed())
 				fakeUnlocker.Unlock()
-				Eventually(done, iptablesTimeout).Should(BeClosed())
+				Eventually(done, time.Second*10).Should(BeClosed())
 			})
 		})
 
-		It("should unlock, ensuring future commands can get the lock", func(done Done) {
+		It("should unlock, ensuring future commands can get the lock", func() {
 			Expect(iptablesController.CreateChain("filter", "test-chain-1")).To(Succeed())
 			Expect(iptablesController.CreateChain("filter", "test-chain-2")).To(Succeed())
-			close(done)
-		}, iptablesTimeout)
+		})
 
 		It("should lock to correct key", func() {
 			Expect(iptablesController.CreateChain("filter", "test-chain-1")).To(Succeed())
@@ -304,20 +266,18 @@ var _ = Describe("IPTables controller", func() {
 		})
 
 		Context("when running an iptables command fails", func() {
-			It("still unlocks", func(done Done) {
+			It("still unlocks", func() {
 				// this is going to fail, because the chain does not exist
 				Expect(iptablesController.PrependRule("non-existent-chain", iptables.SingleFilterRule{})).NotTo(Succeed())
 				Expect(iptablesController.CreateChain("filter", "test-chain-2")).To(Succeed())
-				close(done)
-			}, iptablesTimeout)
+			})
 		})
 
 		Context("when running an iptables command panics", func() {
-			It("still unlocks", func(done Done) {
+			It("still unlocks", func() {
 				Expect(func() { iptablesController.PrependRule("panic", iptables.SingleFilterRule{}) }).To(Panic())
 				Expect(iptablesController.CreateChain("filter", "test-chain-2")).To(Succeed())
-				close(done)
-			}, iptablesTimeout)
+			})
 		})
 
 		Context("when unlocking fails", func() {
@@ -333,25 +293,17 @@ var _ = Describe("IPTables controller", func() {
 })
 
 func makeNamespace(nsName string) {
-	sess, err := gexec.Start(exec.Command("ip", "netns", "add", nsName), GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	runForStdout(exec.Command("ip", "netns", "add", nsName))
 }
 
 func deleteNamespace(nsName string) {
-	sess, err := gexec.Start(exec.Command("ip", "netns", "delete", nsName), GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(sess).Should(gexec.Exit(0))
+	runForStdout(exec.Command("ip", "netns", "delete", nsName))
 
 	// We suspect that sometimes `ip netns delete` exits with 0 despite not
 	// actually removing the namespace file, so we explicitly check that the
 	// netns is cleaned up.
-	var stdout bytes.Buffer
-	listNsCmd := exec.Command("ip", "netns")
-	listNsCmd.Stdout = io.MultiWriter(&stdout, GinkgoWriter)
-	listNsCmd.Stderr = GinkgoWriter
-	Expect(listNsCmd.Run()).To(Succeed())
-	Expect(stdout.String()).NotTo(ContainSubstring(nsName))
+	stdout := runForStdout(exec.Command("ip", "netns"))
+	Expect(stdout).NotTo(ContainSubstring(nsName))
 }
 
 func wrapCmdInNs(nsName string, cmd *exec.Cmd) *exec.Cmd {
