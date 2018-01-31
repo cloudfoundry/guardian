@@ -54,11 +54,11 @@ var _ = Describe("Dadoo", func() {
 		Expect(os.MkdirAll(rootfsPath, 0700)).To(Succeed())
 		cp, err := gexec.Start(exec.Command("tar", "-xf", os.Getenv("GARDEN_TEST_ROOTFS"), "-C", rootfsPath), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(cp, "2m").Should(gexec.Exit(0))
+		Expect(cp.Wait().ExitCode()).To(Equal(0))
 
 		chown, err := gexec.Start(exec.Command("chown", "-R", "1:1", filepath.Join(bundlePath, "root")), GinkgoWriter, GinkgoWriter)
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(chown, "2m").Should(gexec.Exit(0))
+		Expect(chown.Wait().ExitCode()).To(Equal(0))
 
 		bundle = bundle.
 			WithProcess(
@@ -179,7 +179,7 @@ var _ = Describe("Dadoo", func() {
 					})
 					openIOPipes()
 
-					Eventually(sess).Should(gexec.Exit(24))
+					Expect(sess.Wait().ExitCode()).To(Equal(24))
 				})
 
 				It("should write the exit code to a file named exitcode in the container dir", func() {
@@ -189,9 +189,8 @@ var _ = Describe("Dadoo", func() {
 						ConsoleSize: &specs.Box{},
 					})
 					openIOPipes()
-					Eventually(sess).Should(gexec.Exit(24))
+					Expect(sess.Wait().ExitCode()).To(Equal(24))
 
-					Eventually(filepath.Join(processDir, "exitcode")).Should(BeAnExistingFile())
 					Expect(ioutil.ReadFile(filepath.Join(processDir, "exitcode"))).To(Equal([]byte("24")))
 				})
 
@@ -206,9 +205,8 @@ var _ = Describe("Dadoo", func() {
 						ConsoleSize: &specs.Box{},
 					})
 					openIOPipes()
-					Eventually(sess).Should(gexec.Exit(128 + 9))
+					Expect(sess.Wait().ExitCode()).To(Equal(128 + 9))
 
-					Eventually(filepath.Join(processDir, "exitcode")).Should(BeAnExistingFile())
 					Expect(ioutil.ReadFile(filepath.Join(processDir, "exitcode"))).To(Equal([]byte("137")))
 				})
 
@@ -249,7 +247,7 @@ var _ = Describe("Dadoo", func() {
 						ConsoleSize: &specs.Box{},
 					})
 					openIOPipes()
-					Eventually(sess).Should(gexec.Exit(24))
+					Expect(sess.Wait().ExitCode()).To(Equal(24))
 
 					Consistently(func() *gexec.Session {
 						sess, err := gexec.Start(exec.Command("runc", "state", filepath.Base(bundlePath)), GinkgoWriter, GinkgoWriter)
@@ -340,7 +338,7 @@ var _ = Describe("Dadoo", func() {
 					_, err = os.OpenFile(winszPipe, os.O_WRONLY, 0600)
 					Expect(err).NotTo(HaveOccurred())
 
-					Eventually(sess).Should(gexec.Exit(0))
+					Expect(sess.Wait().ExitCode()).To(Equal(0))
 				})
 
 				It("should forward IO", func() {
@@ -366,7 +364,7 @@ var _ = Describe("Dadoo", func() {
 					_, err = stdin.WriteString("banana\n")
 					Expect(err).NotTo(HaveOccurred())
 
-					Eventually(sess).Should(gexec.Exit(0))
+					Expect(sess.Wait().ExitCode()).To(Equal(0))
 
 					data, err := ioutil.ReadAll(stdout)
 					Expect(err).NotTo(HaveOccurred())
@@ -512,8 +510,8 @@ var _ = Describe("Dadoo", func() {
 						_, err = os.OpenFile(stderrPipe, os.O_RDONLY, 0600)
 						Expect(err).NotTo(HaveOccurred())
 
-						Eventually(process).Should(gexec.Exit(2))
-						Eventually(process).Should(gbytes.Say("open %s: no such file or directory", winszPipe))
+						Expect(process.Wait().ExitCode()).To(Equal(2))
+						Expect(string(process.Buffer().Contents())).To(ContainSubstring("open %s: no such file or directory", winszPipe))
 					})
 				})
 			})
@@ -530,8 +528,8 @@ var _ = Describe("Dadoo", func() {
 						ConsoleSize: &specs.Box{},
 					})
 
-					Eventually(process).Should(gexec.Exit(2))
-					Eventually(process).Should(gbytes.Say("open %s: no such file or directory", stdinPipe))
+					Expect(process.Wait().ExitCode()).To(Equal(2))
+					Expect(string(process.Buffer().Contents())).To(ContainSubstring("open %s: no such file or directory", stdinPipe))
 				})
 			})
 
@@ -550,8 +548,8 @@ var _ = Describe("Dadoo", func() {
 					_, err := os.OpenFile(stdinPipe, os.O_WRONLY, 0600)
 					Expect(err).NotTo(HaveOccurred())
 
-					Eventually(process).Should(gexec.Exit(2))
-					Eventually(process).Should(gbytes.Say("open %s: no such file or directory", stdoutPipe))
+					Expect(process.Wait().ExitCode()).To(Equal(2))
+					Expect(string(process.Buffer().Contents())).To(ContainSubstring("open %s: no such file or directory", stdoutPipe))
 				})
 			})
 
@@ -572,8 +570,8 @@ var _ = Describe("Dadoo", func() {
 					_, err = os.OpenFile(stdoutPipe, os.O_RDONLY, 0600)
 					Expect(err).NotTo(HaveOccurred())
 
-					Eventually(process).Should(gexec.Exit(2))
-					Eventually(process).Should(gbytes.Say("open %s: no such file or directory", stderrPipe))
+					Expect(process.Wait().ExitCode()).To(Equal(2))
+					Expect(string(process.Buffer().Contents())).To(ContainSubstring("open %s: no such file or directory", stderrPipe))
 				})
 			})
 
@@ -596,8 +594,8 @@ var _ = Describe("Dadoo", func() {
 					_, err = os.OpenFile(stderrPipe, os.O_RDONLY, 0600)
 					Expect(err).NotTo(HaveOccurred())
 
-					Eventually(process).Should(gexec.Exit(2))
-					Eventually(process).Should(gbytes.Say("open %s: no such file or directory", exitPipe))
+					Expect(process.Wait().ExitCode()).To(Equal(2))
+					Expect(string(process.Buffer().Contents())).To(ContainSubstring("open %s: no such file or directory", exitPipe))
 				})
 			})
 		}
@@ -666,7 +664,7 @@ var _ = Describe("Dadoo", func() {
 					_, err = syncPipeR.Read(syncMsg)
 					Expect(err).NotTo(HaveOccurred())
 
-					Eventually(sess).Should(gexec.Exit(24))
+					Expect(sess.Wait().ExitCode()).To(Equal(24))
 
 					close(done)
 				}, 10.0)
@@ -720,8 +718,8 @@ var _ = Describe("Dadoo", func() {
 
 							openIOPipes()
 
-							Eventually(dadooSession).Should(gexec.Exit(2))
-							Eventually(stdout).Should(gbytes.Say(fmt.Sprintf("value for --socket-dir-path cannot exceed 80 characters in length")))
+							Expect(dadooSession.Wait().ExitCode()).To(Equal(2))
+							Expect(string(stdout.Contents())).To(ContainSubstring(fmt.Sprintf("value for --socket-dir-path cannot exceed 80 characters in length")))
 						})
 					})
 
@@ -753,8 +751,8 @@ var _ = Describe("Dadoo", func() {
 								return pidCmd.Run()
 							}).ShouldNot(Succeed())
 
-							Eventually(dadooSession).Should(gexec.Exit(2))
-							Eventually(stdout).Should(gbytes.Say("incorrect number of bytes read"))
+							Expect(dadooSession.Wait().ExitCode()).To(Equal(2))
+							Expect(string(stdout.Contents())).To(ContainSubstring("incorrect number of bytes read"))
 						})
 					})
 				})
@@ -796,7 +794,7 @@ var _ = Describe("Dadoo", func() {
 					_, err = syncPipeR.Read(syncMsg)
 					Expect(err).NotTo(HaveOccurred())
 
-					Eventually(sess).Should(gexec.Exit(24))
+					Expect(sess.Wait().ExitCode()).To(Equal(24))
 
 					close(done)
 				}, 10.0)
@@ -842,8 +840,8 @@ var _ = Describe("Dadoo", func() {
 
 							openIOPipes()
 
-							Eventually(dadooSession).Should(gexec.Exit(2))
-							Eventually(stdout).Should(gbytes.Say(fmt.Sprintf("value for --socket-dir-path cannot exceed 80 characters in length")))
+							Expect(dadooSession.Wait().ExitCode()).To(Equal(2))
+							Expect(string(stdout.Contents())).To(ContainSubstring("value for --socket-dir-path cannot exceed 80 characters in length"))
 						})
 					})
 
@@ -874,8 +872,8 @@ var _ = Describe("Dadoo", func() {
 								return pidCmd.Run()
 							}).ShouldNot(Succeed())
 
-							Eventually(dadooSession).Should(gexec.Exit(2))
-							Eventually(stdout).Should(gbytes.Say("incorrect number of bytes read"))
+							Expect(dadooSession.Wait().ExitCode()).To(Equal(2))
+							Expect(string(stdout.Contents())).To(ContainSubstring("incorrect number of bytes read"))
 						})
 					})
 				})
