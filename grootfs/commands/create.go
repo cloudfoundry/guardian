@@ -200,15 +200,6 @@ var CreateCommand = cli.Command{
 			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", sm.CacheUsage(logger, unusedVols), "bytes")
 		}()
 
-		defer func() {
-			commitedQuota, err := sm.CommittedQuota(logger)
-			if err != nil {
-				logger.Error("getting-commited-quota-failed", err)
-				return
-			}
-			metricsEmitter.TryEmitUsage(logger, "CommittedQuotaInMB", commitedQuota/(1024*1024), "MB")
-		}()
-
 		creator := groot.IamCreator(
 			imageCloner, baseImagePuller, sharedLocksmith,
 			dependencyManager, metricsEmitter, cleaner,
