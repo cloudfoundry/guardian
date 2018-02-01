@@ -148,6 +148,34 @@ var _ = Describe("Metrics", func() {
 			Expect(*counterEvents[0].Name).To(Equal("grootfs-create.run.success"))
 		})
 
+		It("emits grootfs disk space committed to quotas in MB", func() {
+			integration.SkipIfNotXFS(Driver)
+			spec.DiskLimit = 100 * 1024 * 1024
+			spec.ExcludeBaseImageFromQuota = true
+
+			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
+			Expect(err).NotTo(HaveOccurred())
+
+			spec.ID = "my-id-2"
+			spec.DiskLimit = 200 * 1024 * 1024
+			_, err = Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("CommittedQuotaInMB")
+				return metrics
+			}).Should(HaveLen(2))
+
+			Expect(*metrics[0].Name).To(Equal("CommittedQuotaInMB"))
+			Expect(*metrics[0].Unit).To(Equal("MB"))
+			Expect(*metrics[0].Value).To(BeEquivalentTo(100))
+
+			Expect(*metrics[1].Name).To(Equal("CommittedQuotaInMB"))
+			Expect(*metrics[1].Unit).To(Equal("MB"))
+			Expect(*metrics[1].Value).To(BeEquivalentTo(300))
+		})
+
 		Describe("--with-clean", func() {
 			BeforeEach(func() {
 				spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")

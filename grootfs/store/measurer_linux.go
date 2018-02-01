@@ -1,6 +1,10 @@
 package store
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
 	"syscall"
 
 	"code.cloudfoundry.org/lager"
@@ -52,6 +56,50 @@ func (s *StoreMeasurer) CacheUsage(logger lager.Logger, unusedVolumes []string) 
 	}
 
 	return size
+}
+
+func (s *StoreMeasurer) CommittedQuota(logger lager.Logger) (int64, error) {
+	logger = logger.Session("measuring-committed-size")
+	logger.Debug("starting")
+	defer logger.Debug("ending")
+
+	var totalCommittedSpace int64
+
+	imageDir := filepath.Join(s.storePath, "images")
+	files, err := ioutil.ReadDir(imageDir)
+	if err != nil {
+		return 0, errorspkg.Wrapf(err, "Cannot list images in %s", imageDir)
+	}
+
+	for _, file := range files {
+		if !file.IsDir() {
+			continue
+		}
+
+		imageQuota, err := readImageQuota(filepath.Join(imageDir, file.Name()))
+		if err != nil && !os.IsNotExist(err) {
+			return -1, err
+		}
+
+		totalCommittedSpace += imageQuota
+	}
+
+	return totalCommittedSpace, nil
+}
+
+func readImageQuota(imageDir string) (int64, error) {
+	quotaFilePath := filepath.Join(imageDir, "image_quota")
+	imageQuotaBytes, err := ioutil.ReadFile(quotaFilePath)
+	if err != nil {
+		return 0, err
+	}
+
+	imageQuota, err := strconv.ParseInt(string(imageQuotaBytes), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+
+	return imageQuota, nil
 }
 
 func (s *StoreMeasurer) pathStats(path string) (totalBytes, UsedBytes int64, err error) {
