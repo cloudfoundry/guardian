@@ -101,6 +101,46 @@ var _ = Describe("Measurer", func() {
 			})
 		})
 	})
+
+	Describe("CommittedQuota", func() {
+		BeforeEach(func() {
+			image1Path := filepath.Join(storePath, store.ImageDirName, "my-image-1")
+			Expect(os.MkdirAll(image1Path, 0744)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(image1Path, "image_quota"), []byte("1024"), 0777)).To(Succeed())
+
+			image2Path := filepath.Join(storePath, store.ImageDirName, "my-image-2")
+			Expect(os.MkdirAll(image2Path, 0744)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(image2Path, "image_quota"), []byte("2048"), 0777)).To(Succeed())
+		})
+
+		It("returns the committed size of the store", func() {
+			committedSize, err := storeMeasurer.CommittedQuota(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(committedSize).To(BeNumerically("==", 3072))
+		})
+
+		It("ignores images without quota", func() {
+			Expect(os.Remove(filepath.Join(storePath, store.ImageDirName, "my-image-2", "image_quota"))).To(Succeed())
+			committedSize, err := storeMeasurer.CommittedQuota(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(committedSize).To(BeNumerically("==", 1024))
+		})
+
+		It("handles the absence of dirs when traversing (e.g. when there is a concurrent delete that removes an image)", func() {
+			Expect(os.RemoveAll(filepath.Join(storePath, store.ImageDirName))).To(Succeed())
+			_, err := storeMeasurer.CommittedQuota(logger)
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("errors when unable to read quota files", func() {
+			erroneousImagePath := filepath.Join(storePath, store.ImageDirName, "erroneous-image")
+			Expect(os.MkdirAll(erroneousImagePath, 0744)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(erroneousImagePath, "image_quota"), []byte("what!?"), 0777)).To(Succeed())
+
+			_, err := storeMeasurer.CommittedQuota(logger)
+			Expect(err).To(HaveOccurred())
+		})
+	})
 })
 
 func writeFile(path string, size int64) error {
