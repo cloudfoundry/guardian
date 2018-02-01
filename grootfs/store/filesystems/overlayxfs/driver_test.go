@@ -940,10 +940,22 @@ var _ = Describe("Driver", func() {
 			})
 		})
 
-		Context("when removing the metadata file fails", func() {
+		// We release the lock before actually deleting image metadata files marked
+		// for GC. Therefore concurrent groot processes may try to delete the same
+		// metadata file.
+		Context("when removing the metadata file fails for a reason other than the file not existing", func() {
+			var metaFilePath string
+
+			JustBeforeEach(func() {
+				metaFilePath = filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", volumeID))
+				createFileEvenRootCantRemove(metaFilePath)
+			})
+
+			AfterEach(func() {
+				removeFileEvenRootCantRemove(metaFilePath)
+			})
+
 			It("doesn't return an error, but logs the incident", func() {
-				metaFilePath := filepath.Join(storePath, store.MetaDirName, fmt.Sprintf("volume-%s", volumeID))
-				Expect(metaFilePath).ToNot(BeAnExistingFile())
 				Expect(driver.DestroyVolume(logger, volumeID)).To(Succeed())
 				Expect(logger.Buffer()).To(gbytes.Say("deleting-metadata-file-failed"))
 			})
@@ -1149,4 +1161,16 @@ func ensureQuotaMatches(fileName string, expectedQuota int) {
 	Expect(err).NotTo(HaveOccurred())
 
 	Expect(quota).To(BeNumerically("~", expectedQuota, 5))
+}
+
+func createFileEvenRootCantRemove(pathname string) {
+	f, err := os.OpenFile(pathname, os.O_CREATE|os.O_WRONLY, 0600)
+	Expect(err).NotTo(HaveOccurred())
+	f.Close()
+	Expect(syscall.Mount(pathname, pathname, "", syscall.MS_BIND, "bind")).To(Succeed())
+}
+
+func removeFileEvenRootCantRemove(pathname string) {
+	Expect(syscall.Unmount(pathname, 0)).To(Succeed())
+	Expect(os.Remove(pathname)).To(Succeed())
 }

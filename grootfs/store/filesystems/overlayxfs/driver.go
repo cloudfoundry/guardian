@@ -167,12 +167,12 @@ func (d *Driver) DestroyVolume(logger lager.Logger, id string) error {
 	}
 
 	volumeMetaFilePath := filesystems.VolumeMetaFilePath(d.storePath, id)
-	if err := os.Remove(volumeMetaFilePath); err != nil {
+	if err := os.Remove(volumeMetaFilePath); err != nil && !os.IsNotExist(err) {
 		logger.Error("deleting-metadata-file-failed", err, lager.Data{"path": volumeMetaFilePath})
 	}
 
 	if err := os.RemoveAll(volumePath); err != nil {
-		logger.Error(fmt.Sprintf("failed to destroy volume %s", volumePath), err)
+		logger.Error("failed to destroy volume "+volumePath, err)
 		return errorspkg.Wrapf(err, "destroying volume (%s)", id)
 	}
 	return nil
