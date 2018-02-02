@@ -281,9 +281,9 @@ var _ = Describe("Create", func() {
 			})
 
 			It("eventually removes unused local volumes", func() {
-				preContents, err := filepath.Glob(filepath.Join(StorePath, store.VolumesDirName, "*-*"))
+				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
-				Expect(preContents).To(HaveLen(1))
+				Expect(preContents).To(HaveLen(2)) // Docker image and local tar, from 2 BeforeEachs above
 
 				_, err = Runner.Create(groot.CreateSpec{
 					ID:            "my-local-1",
@@ -301,10 +301,12 @@ var _ = Describe("Create", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				afterContents, err := filepath.Glob(filepath.Join(StorePath, store.VolumesDirName, "*-*"))
+				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(afterContents).To(HaveLen(1))
-				Expect(afterContents).NotTo(Equal(preContents))
+				// We now have 2 groot images, one of which is based on the same base
+				// image as the tar rootfs from the preContents, but with a new mtime.
+				Expect(preContents).NotTo(ContainElement(afterContents[0]))
 			})
 		})
 

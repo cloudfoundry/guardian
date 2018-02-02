@@ -70,8 +70,8 @@ func (l *TarFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (
 }
 
 func (l *TarFetcher) generateChainID(baseImagePath string, timestamp int64) string {
-	baseImagePathSha := sha256.Sum256([]byte(baseImagePath))
-	return fmt.Sprintf("%s-%d", hex.EncodeToString(baseImagePathSha[:32]), timestamp)
+	shaSum := sha256.Sum256([]byte(fmt.Sprintf("%s-%d", baseImagePath, timestamp)))
+	return hex.EncodeToString(shaSum[:])
 }
 
 func (l *TarFetcher) validateBaseImage(baseImagePath string) error {

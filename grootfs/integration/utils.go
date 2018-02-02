@@ -147,8 +147,8 @@ func BaseImagePathToVolumeID(baseImagePath string) string {
 	stat, err := os.Stat(baseImagePath)
 	Expect(err).ToNot(HaveOccurred())
 
-	baseImagePathSha := sha256.Sum256([]byte(baseImagePath))
-	return fmt.Sprintf("%s-%d", hex.EncodeToString(baseImagePathSha[:32]), stat.ModTime().UnixNano())
+	shaSum := sha256.Sum256([]byte(fmt.Sprintf("%s-%d", baseImagePath, stat.ModTime().UnixNano())))
+	return hex.EncodeToString(shaSum[:])
 }
 
 type CustomRoundTripper struct {
