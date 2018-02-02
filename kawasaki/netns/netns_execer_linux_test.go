@@ -8,11 +8,9 @@ import (
 	"os/exec"
 
 	"code.cloudfoundry.org/guardian/kawasaki/netns"
-	"github.com/vishvananda/netlink"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
+	"github.com/vishvananda/netlink"
 )
 
 var _ = Describe("NetnsExecerLinux", func() {
@@ -23,15 +21,11 @@ var _ = Describe("NetnsExecerLinux", func() {
 	})
 
 	JustBeforeEach(func() {
-		sess, err := gexec.Start(exec.Command("ip", "netns", "add", netnsName), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess, "3s").Should(gexec.Exit(0))
+		Expect(runCommand(exec.Command("ip", "netns", "add", netnsName))).To(Succeed())
 	})
 
 	AfterEach(func() {
-		sess, err := gexec.Start(exec.Command("ip", "netns", "delete", netnsName), GinkgoWriter, GinkgoWriter)
-		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess, "3s").Should(gexec.Exit(0))
+		Expect(runCommand(exec.Command("ip", "netns", "delete", netnsName))).To(Succeed())
 	})
 
 	Describe("Executing a function inside the network namespace", func() {
@@ -62,3 +56,9 @@ var _ = Describe("NetnsExecerLinux", func() {
 		})
 	})
 })
+
+func runCommand(cmd *exec.Cmd) error {
+	cmd.Stdout = GinkgoWriter
+	cmd.Stderr = GinkgoWriter
+	return cmd.Run()
+}
