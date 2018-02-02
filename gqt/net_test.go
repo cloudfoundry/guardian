@@ -13,11 +13,13 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/kawasaki/mtu"
+	"github.com/eapache/go-resiliency/retrier"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
@@ -1083,25 +1085,30 @@ func containerIP(container garden.Container) string {
 }
 
 func checkConnection(container garden.Container, ip string, port int) error {
-	process, err := container.Run(garden.ProcessSpec{
-		User: "alice",
-		Path: "sh",
-		Args: []string{"-c", fmt.Sprintf("echo hello | nc -w5 %s %d", ip, port)},
-	}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
-	if err != nil {
-		return err
+	checkConn := func() error {
+		process, err := container.Run(garden.ProcessSpec{
+			User: "alice",
+			Path: "sh",
+			Args: []string{"-c", fmt.Sprintf("echo hello | nc -w5 %s %d", ip, port)},
+		}, garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter})
+		if err != nil {
+			return err
+		}
+
+		exitCode, err := process.Wait()
+		if err != nil {
+			return err
+		}
+
+		if exitCode == 0 {
+			return nil
+		} else {
+			return fmt.Errorf("Request failed. Process exited with code %d", exitCode)
+		}
 	}
 
-	exitCode, err := process.Wait()
-	if err != nil {
-		return err
-	}
-
-	if exitCode == 0 {
-		return nil
-	} else {
-		return fmt.Errorf("Request failed. Process exited with code %d", exitCode)
-	}
+	backoffRetrier := retrier.New(retrier.ExponentialBackoff(5, time.Second), nil)
+	return backoffRetrier.Run(checkConn)
 }
 
 func ipAddress(subnet string, index int) string {
