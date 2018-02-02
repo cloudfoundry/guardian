@@ -22,18 +22,6 @@ type FakeStoreMeasurer struct {
 		result1 int64
 		result2 error
 	}
-	CacheUsageStub        func(logger lager.Logger, volumes []string) int64
-	cacheUsageMutex       sync.RWMutex
-	cacheUsageArgsForCall []struct {
-		logger  lager.Logger
-		volumes []string
-	}
-	cacheUsageReturns struct {
-		result1 int64
-	}
-	cacheUsageReturnsOnCall map[int]struct {
-		result1 int64
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -89,67 +77,11 @@ func (fake *FakeStoreMeasurer) UsageReturnsOnCall(i int, result1 int64, result2 
 	}{result1, result2}
 }
 
-func (fake *FakeStoreMeasurer) CacheUsage(logger lager.Logger, volumes []string) int64 {
-	var volumesCopy []string
-	if volumes != nil {
-		volumesCopy = make([]string, len(volumes))
-		copy(volumesCopy, volumes)
-	}
-	fake.cacheUsageMutex.Lock()
-	ret, specificReturn := fake.cacheUsageReturnsOnCall[len(fake.cacheUsageArgsForCall)]
-	fake.cacheUsageArgsForCall = append(fake.cacheUsageArgsForCall, struct {
-		logger  lager.Logger
-		volumes []string
-	}{logger, volumesCopy})
-	fake.recordInvocation("CacheUsage", []interface{}{logger, volumesCopy})
-	fake.cacheUsageMutex.Unlock()
-	if fake.CacheUsageStub != nil {
-		return fake.CacheUsageStub(logger, volumes)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.cacheUsageReturns.result1
-}
-
-func (fake *FakeStoreMeasurer) CacheUsageCallCount() int {
-	fake.cacheUsageMutex.RLock()
-	defer fake.cacheUsageMutex.RUnlock()
-	return len(fake.cacheUsageArgsForCall)
-}
-
-func (fake *FakeStoreMeasurer) CacheUsageArgsForCall(i int) (lager.Logger, []string) {
-	fake.cacheUsageMutex.RLock()
-	defer fake.cacheUsageMutex.RUnlock()
-	return fake.cacheUsageArgsForCall[i].logger, fake.cacheUsageArgsForCall[i].volumes
-}
-
-func (fake *FakeStoreMeasurer) CacheUsageReturns(result1 int64) {
-	fake.CacheUsageStub = nil
-	fake.cacheUsageReturns = struct {
-		result1 int64
-	}{result1}
-}
-
-func (fake *FakeStoreMeasurer) CacheUsageReturnsOnCall(i int, result1 int64) {
-	fake.CacheUsageStub = nil
-	if fake.cacheUsageReturnsOnCall == nil {
-		fake.cacheUsageReturnsOnCall = make(map[int]struct {
-			result1 int64
-		})
-	}
-	fake.cacheUsageReturnsOnCall[i] = struct {
-		result1 int64
-	}{result1}
-}
-
 func (fake *FakeStoreMeasurer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.usageMutex.RLock()
 	defer fake.usageMutex.RUnlock()
-	fake.cacheUsageMutex.RLock()
-	defer fake.cacheUsageMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

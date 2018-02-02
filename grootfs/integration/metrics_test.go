@@ -24,7 +24,6 @@ var _ = Describe("Metrics", func() {
 		fakeMetron       *testhelpers.FakeMetron
 		fakeMetronClosed chan struct{}
 		spec             groot.CreateSpec
-		randomImageID    string
 	)
 
 	BeforeEach(func() {
@@ -40,7 +39,6 @@ var _ = Describe("Metrics", func() {
 			close(fakeMetronClosed)
 		}()
 
-		randomImageID = testhelpers.NewRandomID()
 		spec = groot.CreateSpec{
 			ID:           "my-id",
 			BaseImageURL: integration.String2URL("docker:///cfgarden/empty:v0.1.0"),
@@ -150,30 +148,48 @@ var _ = Describe("Metrics", func() {
 
 		It("emits grootfs disk space committed to quotas in MB", func() {
 			integration.SkipIfNotXFS(Driver)
-			spec.DiskLimit = 100 * 1024 * 1024
+			spec.DiskLimit = 1 * 1024 * 1024
 			spec.ExcludeBaseImageFromQuota = true
 
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
 			spec.ID = "my-id-2"
-			spec.DiskLimit = 200 * 1024 * 1024
+			spec.DiskLimit = 2 * 1024 * 1024
 			_, err = Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 			Expect(err).NotTo(HaveOccurred())
 
 			var metrics []events.ValueMetric
 			Eventually(func() []events.ValueMetric {
-				metrics = fakeMetron.ValueMetricsFor("CommittedQuotaInMB")
+				metrics = fakeMetron.ValueMetricsFor("CommittedQuotaInBytes")
 				return metrics
 			}).Should(HaveLen(2))
 
-			Expect(*metrics[0].Name).To(Equal("CommittedQuotaInMB"))
-			Expect(*metrics[0].Unit).To(Equal("MB"))
-			Expect(*metrics[0].Value).To(BeEquivalentTo(100))
+			Expect(*metrics[0].Name).To(Equal("CommittedQuotaInBytes"))
+			Expect(*metrics[0].Unit).To(Equal("bytes"))
+			Expect(*metrics[0].Value).To(BeEquivalentTo(1 * 1024 * 1024))
 
-			Expect(*metrics[1].Name).To(Equal("CommittedQuotaInMB"))
-			Expect(*metrics[1].Unit).To(Equal("MB"))
-			Expect(*metrics[1].Value).To(BeEquivalentTo(300))
+			Expect(*metrics[1].Name).To(Equal("CommittedQuotaInBytes"))
+			Expect(*metrics[1].Unit).To(Equal("bytes"))
+			Expect(*metrics[1].Value).To(BeEquivalentTo(3 * 1024 * 1024))
+		})
+
+		It("emits grootfs disk space used by volumes", func() {
+			integration.SkipIfNotXFS(Driver)
+
+			spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
+			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
+			Expect(err).NotTo(HaveOccurred())
+
+			var metrics []events.ValueMetric
+			Eventually(func() []events.ValueMetric {
+				metrics = fakeMetron.ValueMetricsFor("DownloadedLayersSizeInBytes")
+				return metrics
+			}).Should(HaveLen(1))
+
+			Expect(*metrics[0].Name).To(Equal("DownloadedLayersSizeInBytes"))
+			Expect(*metrics[0].Unit).To(Equal("bytes"))
+			Expect(*metrics[0].Value).To(BeNumerically("~", 2*1024*1024, 1*1024*1024))
 		})
 
 		Describe("--with-clean", func() {

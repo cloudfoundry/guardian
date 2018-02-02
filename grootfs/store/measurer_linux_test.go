@@ -13,16 +13,16 @@ import (
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Measurer", func() {
 	var (
-		storePath     string
-		storeMeasurer *store.StoreMeasurer
-		logger        *lagertest.TestLogger
-		volumeDriver  *storefakes.FakeVolumeDriver
+		storePath          string
+		storeMeasurer      *store.StoreMeasurer
+		logger             *lagertest.TestLogger
+		volumeDriver       *storefakes.FakeVolumeDriver
+		unusedVolumeGetter *storefakes.FakeUnusedVolumeGetter
 	)
 
 	BeforeEach(func() {
@@ -38,8 +38,9 @@ var _ = Describe("Measurer", func() {
 		)).To(Succeed())
 
 		volumeDriver = new(storefakes.FakeVolumeDriver)
+		unusedVolumeGetter = new(storefakes.FakeUnusedVolumeGetter)
 
-		storeMeasurer = store.NewStoreMeasurer(storePath, volumeDriver)
+		storeMeasurer = store.NewStoreMeasurer(storePath, volumeDriver, unusedVolumeGetter)
 
 		logger = lagertest.NewTestLogger("store-measurer")
 	})
@@ -66,7 +67,7 @@ var _ = Describe("Measurer", func() {
 
 		Context("when the store does not exist", func() {
 			BeforeEach(func() {
-				storeMeasurer = store.NewStoreMeasurer("/path/to/non/existent/store", volumeDriver)
+				storeMeasurer = store.NewStoreMeasurer("/path/to/non/existent/store", volumeDriver, unusedVolumeGetter)
 			})
 
 			It("returns a useful error", func() {
@@ -76,18 +77,27 @@ var _ = Describe("Measurer", func() {
 		})
 	})
 
-	Describe("CacheUsage", func() {
-		var (
-			unusedVolumes []string = []string{"sha256:fake1", "sha256:fake2"}
-		)
-
+	Describe("TotalVolumeSize", func() {
 		BeforeEach(func() {
-			volumeDriver.VolumeSizeReturns(1024, nil)
+			volumeDriver.VolumeSizeReturns(2048, nil)
+			volumeDriver.VolumesReturns([]string{"sha256:fake1", "sha256:fake2"}, nil)
 		})
 
-		It("measures the size of the unused layers", func() {
-			cacheUsage := storeMeasurer.CacheUsage(logger, unusedVolumes)
-			Expect(cacheUsage).To(BeNumerically("==", 2048))
+		It("measures the size of all layers", func() {
+			cacheUsage, err := storeMeasurer.TotalVolumeSize(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cacheUsage).To(BeNumerically("==", 4096))
+		})
+
+		Context("when getting volumes returns an error", func() {
+			BeforeEach(func() {
+				volumeDriver.VolumesReturns([]string{}, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.TotalVolumeSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
 		})
 
 		Context("when the driver VolumeSize returns an error", func() {
@@ -95,9 +105,44 @@ var _ = Describe("Measurer", func() {
 				volumeDriver.VolumeSizeReturns(0, errors.New("failed here"))
 			})
 
-			It("logs the error", func() {
-				_ = storeMeasurer.CacheUsage(logger, unusedVolumes)
-				Eventually(logger).Should(gbytes.Say("failed here"))
+			It("returns the error", func() {
+				_, err := storeMeasurer.TotalVolumeSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+	})
+
+	Describe("UnusedVolumeSize", func() {
+		BeforeEach(func() {
+			volumeDriver.VolumeSizeReturns(1024, nil)
+			unusedVolumeGetter.UnusedVolumesReturns([]string{"sha256:fake1", "sha256:fake2"}, nil)
+		})
+
+		It("measures the size of the unused layers", func() {
+			cacheUsage, err := storeMeasurer.UnusedVolumesSize(logger)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(cacheUsage).To(BeNumerically("==", 2048))
+		})
+
+		Context("when getting volumes returns an error", func() {
+			BeforeEach(func() {
+				unusedVolumeGetter.UnusedVolumesReturns([]string{}, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.UnusedVolumesSize(logger)
+				Expect(err).To(HaveOccurred())
+			})
+		})
+
+		Context("when the driver VolumeSize returns an error", func() {
+			BeforeEach(func() {
+				volumeDriver.VolumeSizeReturns(0, errors.New("failed here"))
+			})
+
+			It("returns the error", func() {
+				_, err := storeMeasurer.UnusedVolumesSize(logger)
+				Expect(err).To(HaveOccurred())
 			})
 		})
 	})

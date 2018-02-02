@@ -187,27 +187,9 @@ var CreateCommand = cli.Command{
 			exclusiveLocksmith,
 		)
 
-		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
 		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
+		sm := storepkg.NewStoreMeasurer(storePath, fsDriver, gc)
 		cleaner := groot.IamCleaner(exclusiveLocksmith, sm, gc, metricsEmitter)
-
-		defer func() {
-			unusedVols, err := gc.UnusedVolumes(logger, nil)
-			if err != nil {
-				logger.Error("getting-unused-layers-failed", err)
-				return
-			}
-			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", sm.CacheUsage(logger, unusedVols), "bytes")
-		}()
-
-		defer func() {
-			commitedQuota, err := sm.CommittedQuota(logger)
-			if err != nil {
-				logger.Error("getting-commited-quota-failed", err)
-				return
-			}
-			metricsEmitter.TryEmitUsage(logger, "CommittedQuotaInMB", commitedQuota/(1024*1024), "MB")
-		}()
 
 		creator := groot.IamCreator(
 			imageCloner, baseImagePuller, sharedLocksmith,
@@ -258,17 +240,38 @@ var CreateCommand = cli.Command{
 		}
 		fmt.Println(string(jsonBytes))
 
-		usage, err := sm.Usage(logger)
-		if err != nil {
-			logger.Error("measuring-store", err)
-			return newExitError(err.Error(), 1)
-		}
-
-		metricsEmitter.TryIncrementRunCount("create", nil)
-		metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage, "bytes")
+		emitMetrics(logger, metricsEmitter, sm)
 
 		return nil
 	},
+}
+
+func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *storepkg.StoreMeasurer) {
+	metricsEmitter.TryIncrementRunCount("create", nil)
+
+	usage, err := sm.Usage(logger)
+	if err != nil {
+		logger.Error("measuring-store", err)
+	}
+	metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage, "bytes")
+
+	unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
+	if err != nil {
+		logger.Error("getting-unused-layers-size", err)
+	}
+	metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
+
+	totalVolumesSize, err := sm.TotalVolumeSize(logger)
+	if err != nil {
+		logger.Error("getting-total-layers-size", err)
+	}
+	metricsEmitter.TryEmitUsage(logger, "DownloadedLayersSizeInBytes", totalVolumesSize, "bytes")
+
+	commitedQuota, err := sm.CommittedQuota(logger)
+	if err != nil {
+		logger.Error("getting-commited-quota-failed", err)
+	}
+	metricsEmitter.TryEmitUsage(logger, "CommittedQuotaInBytes", commitedQuota, "bytes")
 }
 
 func createFetcher(baseImageUrl *url.URL, systemContext types.SystemContext, createCfg config.Create) base_image_puller.Fetcher {

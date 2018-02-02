@@ -68,16 +68,15 @@ var DeleteCommand = cli.Command{
 		metricsEmitter := metrics.NewEmitter()
 		deleter := groot.IamDeleter(imageCloner, dependencyManager, metricsEmitter)
 
-		sm := store.NewStoreMeasurer(storePath, fsDriver)
 		gc := garbage_collector.NewGC(fsDriver, imageCloner, dependencyManager)
+		sm := store.NewStoreMeasurer(storePath, fsDriver, gc)
 
 		defer func() {
-			unusedVols, err := gc.UnusedVolumes(logger, nil)
+			unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
 			if err != nil {
-				logger.Error("getting-unused-layers-failed", err)
-				return
+				logger.Error("getting-unused-layers-size", err)
 			}
-			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", sm.CacheUsage(logger, unusedVols), "bytes")
+			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
 		}()
 
 		err = deleter.Delete(logger, id)

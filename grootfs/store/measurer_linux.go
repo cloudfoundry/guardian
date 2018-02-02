@@ -12,21 +12,28 @@ import (
 )
 
 //go:generate counterfeiter . VolumeDriver
+//go:generate counterfeiter . UnusedVolumeGetter
 
 type VolumeDriver interface {
-	Volumes(logger lager.Logger) ([]string, error)
 	VolumeSize(lager.Logger, string) (int64, error)
+	Volumes(lager.Logger) ([]string, error)
+}
+
+type UnusedVolumeGetter interface {
+	UnusedVolumes(lager.Logger, []string) ([]string, error)
 }
 
 type StoreMeasurer struct {
-	storePath    string
-	volumeDriver VolumeDriver
+	storePath          string
+	volumeDriver       VolumeDriver
+	unusedVolumeGetter UnusedVolumeGetter
 }
 
-func NewStoreMeasurer(storePath string, volumeDriver VolumeDriver) *StoreMeasurer {
+func NewStoreMeasurer(storePath string, volumeDriver VolumeDriver, unusedVolumeGetter UnusedVolumeGetter) *StoreMeasurer {
 	return &StoreMeasurer{
-		storePath:    storePath,
-		volumeDriver: volumeDriver,
+		storePath:          storePath,
+		volumeDriver:       volumeDriver,
+		unusedVolumeGetter: unusedVolumeGetter,
 	}
 }
 
@@ -44,18 +51,33 @@ func (s *StoreMeasurer) Usage(logger lager.Logger) (int64, error) {
 	return used, nil
 }
 
-func (s *StoreMeasurer) CacheUsage(logger lager.Logger, unusedVolumes []string) int64 {
+func (s *StoreMeasurer) UnusedVolumesSize(logger lager.Logger) (int64, error) {
+	unusedVols, err := s.unusedVolumeGetter.UnusedVolumes(logger, nil)
+	if err != nil {
+		return 0, err
+	}
+	return s.countVolumeSize(logger, unusedVols)
+}
+
+func (s *StoreMeasurer) TotalVolumeSize(logger lager.Logger) (int64, error) {
+	vols, err := s.volumeDriver.Volumes(logger)
+	if err != nil {
+		return 0, err
+	}
+	return s.countVolumeSize(logger, vols)
+}
+
+func (s *StoreMeasurer) countVolumeSize(logger lager.Logger, volumes []string) (int64, error) {
 	var size int64
-	for _, volume := range unusedVolumes {
+	for _, volume := range volumes {
 		volumeSize, err := s.volumeDriver.VolumeSize(logger, volume)
 		if err != nil {
-			logger.Error("fetching-volume-size-failed", err, lager.Data{"volume": volume})
-			continue
+			return 0, err
 		}
 		size += volumeSize
 	}
 
-	return size
+	return size, nil
 }
 
 func (s *StoreMeasurer) CommittedQuota(logger lager.Logger) (int64, error) {

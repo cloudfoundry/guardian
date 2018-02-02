@@ -82,18 +82,17 @@ var CleanCommand = cli.Command{
 		runner := linux_command_runner.New()
 		idMapper := unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
 		nsFsDriver := namespaced.New(fsDriver, idMappings, idMapper, runner)
-		sm := storepkg.NewStoreMeasurer(storePath, fsDriver)
 		gc := garbage_collector.NewGC(nsFsDriver, imageCloner, dependencyManager)
+		sm := storepkg.NewStoreMeasurer(storePath, fsDriver, gc)
 
 		cleaner := groot.IamCleaner(locksmith, sm, gc, metricsEmitter)
 
 		defer func() {
-			unusedVols, err := gc.UnusedVolumes(logger, nil)
+			unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
 			if err != nil {
-				logger.Error("getting-unused-layers-failed", err)
-				return
+				logger.Error("getting-unused-volumes-size", err)
 			}
-			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", sm.CacheUsage(logger, unusedVols), "bytes")
+			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
 		}()
 
 		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, nil)

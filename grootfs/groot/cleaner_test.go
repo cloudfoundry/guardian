@@ -175,7 +175,6 @@ var _ = Describe("Cleaner", func() {
 			Context("when the store size under the threshold", func() {
 				BeforeEach(func() {
 					fakeGarbageCollector.UnusedVolumesReturns([]string{"layerVolume", "localVolume-1234"}, nil)
-					fakeStoreMeasurer.CacheUsageReturns(500000)
 				})
 
 				It("does not remove anything", func() {
@@ -199,7 +198,6 @@ var _ = Describe("Cleaner", func() {
 
 			Context("when the store size is greater than the threshold", func() {
 				BeforeEach(func() {
-					threshold = 1000000
 					fakeStoreMeasurer.UsageReturns(1500000, nil)
 				})
 
