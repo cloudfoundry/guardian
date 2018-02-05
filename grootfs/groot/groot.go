@@ -113,13 +113,14 @@ type DependencyManager interface {
 }
 
 type GarbageCollector interface {
-	UnusedVolumes(logger lager.Logger, chainIDsToPreserve []string) ([]string, error)
+	UnusedVolumes(logger lager.Logger) ([]string, error)
 	MarkUnused(logger lager.Logger, unusedVolumes []string) error
 	Collect(logger lager.Logger) error
 }
 
 type StoreMeasurer interface {
-	Usage(logger lager.Logger) (int64, error)
+	CommittedQuota(logger lager.Logger) (int64, error)
+	TotalVolumeSize(logger lager.Logger) (int64, error)
 }
 
 type Locksmith interface {

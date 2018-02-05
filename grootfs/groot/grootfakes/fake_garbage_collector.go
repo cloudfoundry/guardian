@@ -9,11 +9,10 @@ import (
 )
 
 type FakeGarbageCollector struct {
-	UnusedVolumesStub        func(logger lager.Logger, chainIDsToPreserve []string) ([]string, error)
+	UnusedVolumesStub        func(logger lager.Logger) ([]string, error)
 	unusedVolumesMutex       sync.RWMutex
 	unusedVolumesArgsForCall []struct {
-		logger             lager.Logger
-		chainIDsToPreserve []string
+		logger lager.Logger
 	}
 	unusedVolumesReturns struct {
 		result1 []string
@@ -50,22 +49,16 @@ type FakeGarbageCollector struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeGarbageCollector) UnusedVolumes(logger lager.Logger, chainIDsToPreserve []string) ([]string, error) {
-	var chainIDsToPreserveCopy []string
-	if chainIDsToPreserve != nil {
-		chainIDsToPreserveCopy = make([]string, len(chainIDsToPreserve))
-		copy(chainIDsToPreserveCopy, chainIDsToPreserve)
-	}
+func (fake *FakeGarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) {
 	fake.unusedVolumesMutex.Lock()
 	ret, specificReturn := fake.unusedVolumesReturnsOnCall[len(fake.unusedVolumesArgsForCall)]
 	fake.unusedVolumesArgsForCall = append(fake.unusedVolumesArgsForCall, struct {
-		logger             lager.Logger
-		chainIDsToPreserve []string
-	}{logger, chainIDsToPreserveCopy})
-	fake.recordInvocation("UnusedVolumes", []interface{}{logger, chainIDsToPreserveCopy})
+		logger lager.Logger
+	}{logger})
+	fake.recordInvocation("UnusedVolumes", []interface{}{logger})
 	fake.unusedVolumesMutex.Unlock()
 	if fake.UnusedVolumesStub != nil {
-		return fake.UnusedVolumesStub(logger, chainIDsToPreserve)
+		return fake.UnusedVolumesStub(logger)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -79,10 +72,10 @@ func (fake *FakeGarbageCollector) UnusedVolumesCallCount() int {
 	return len(fake.unusedVolumesArgsForCall)
 }
 
-func (fake *FakeGarbageCollector) UnusedVolumesArgsForCall(i int) (lager.Logger, []string) {
+func (fake *FakeGarbageCollector) UnusedVolumesArgsForCall(i int) lager.Logger {
 	fake.unusedVolumesMutex.RLock()
 	defer fake.unusedVolumesMutex.RUnlock()
-	return fake.unusedVolumesArgsForCall[i].logger, fake.unusedVolumesArgsForCall[i].chainIDsToPreserve
+	return fake.unusedVolumesArgsForCall[i].logger
 }
 
 func (fake *FakeGarbageCollector) UnusedVolumesReturns(result1 []string, result2 error) {

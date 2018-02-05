@@ -20,7 +20,7 @@ type VolumeDriver interface {
 }
 
 type UnusedVolumeGetter interface {
-	UnusedVolumes(lager.Logger, []string) ([]string, error)
+	UnusedVolumes(lager.Logger) ([]string, error)
 }
 
 type StoreMeasurer struct {
@@ -52,7 +52,7 @@ func (s *StoreMeasurer) Usage(logger lager.Logger) (int64, error) {
 }
 
 func (s *StoreMeasurer) UnusedVolumesSize(logger lager.Logger) (int64, error) {
-	unusedVols, err := s.unusedVolumeGetter.UnusedVolumes(logger, nil)
+	unusedVols, err := s.unusedVolumeGetter.UnusedVolumes(logger)
 	if err != nil {
 		return 0, err
 	}

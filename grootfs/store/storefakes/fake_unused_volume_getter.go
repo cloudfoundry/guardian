@@ -9,11 +9,10 @@ import (
 )
 
 type FakeUnusedVolumeGetter struct {
-	UnusedVolumesStub        func(lager.Logger, []string) ([]string, error)
+	UnusedVolumesStub        func(lager.Logger) ([]string, error)
 	unusedVolumesMutex       sync.RWMutex
 	unusedVolumesArgsForCall []struct {
 		arg1 lager.Logger
-		arg2 []string
 	}
 	unusedVolumesReturns struct {
 		result1 []string
@@ -27,22 +26,16 @@ type FakeUnusedVolumeGetter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeUnusedVolumeGetter) UnusedVolumes(arg1 lager.Logger, arg2 []string) ([]string, error) {
-	var arg2Copy []string
-	if arg2 != nil {
-		arg2Copy = make([]string, len(arg2))
-		copy(arg2Copy, arg2)
-	}
+func (fake *FakeUnusedVolumeGetter) UnusedVolumes(arg1 lager.Logger) ([]string, error) {
 	fake.unusedVolumesMutex.Lock()
 	ret, specificReturn := fake.unusedVolumesReturnsOnCall[len(fake.unusedVolumesArgsForCall)]
 	fake.unusedVolumesArgsForCall = append(fake.unusedVolumesArgsForCall, struct {
 		arg1 lager.Logger
-		arg2 []string
-	}{arg1, arg2Copy})
-	fake.recordInvocation("UnusedVolumes", []interface{}{arg1, arg2Copy})
+	}{arg1})
+	fake.recordInvocation("UnusedVolumes", []interface{}{arg1})
 	fake.unusedVolumesMutex.Unlock()
 	if fake.UnusedVolumesStub != nil {
-		return fake.UnusedVolumesStub(arg1, arg2)
+		return fake.UnusedVolumesStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -56,10 +49,10 @@ func (fake *FakeUnusedVolumeGetter) UnusedVolumesCallCount() int {
 	return len(fake.unusedVolumesArgsForCall)
 }
 
-func (fake *FakeUnusedVolumeGetter) UnusedVolumesArgsForCall(i int) (lager.Logger, []string) {
+func (fake *FakeUnusedVolumeGetter) UnusedVolumesArgsForCall(i int) lager.Logger {
 	fake.unusedVolumesMutex.RLock()
 	defer fake.unusedVolumesMutex.RUnlock()
-	return fake.unusedVolumesArgsForCall[i].arg1, fake.unusedVolumesArgsForCall[i].arg2
+	return fake.unusedVolumesArgsForCall[i].arg1
 }
 
 func (fake *FakeUnusedVolumeGetter) UnusedVolumesReturns(result1 []string, result2 error) {

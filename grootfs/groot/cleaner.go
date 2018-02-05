@@ -9,7 +9,7 @@ import (
 
 //go:generate counterfeiter . Cleaner
 type Cleaner interface {
-	Clean(logger lager.Logger, cacheSize int64, chainIDsToPreserve []string) (bool, error)
+	Clean(logger lager.Logger, cacheSize int64) (bool, error)
 }
 
 type cleaner struct {
@@ -30,7 +30,7 @@ func IamCleaner(locksmith Locksmith, sm StoreMeasurer,
 	}
 }
 
-func (c *cleaner) Clean(logger lager.Logger, threshold int64, chainIDsToPreserve []string) (bool, error) {
+func (c *cleaner) Clean(logger lager.Logger, threshold int64) (bool, error) {
 	logger = logger.Session("groot-cleaning")
 	logger.Info("starting")
 
@@ -38,23 +38,31 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, chainIDsToPreserve
 	defer logger.Info("ending")
 
 	if threshold > 0 {
-		storeUsage, err := c.storeMeasurer.Usage(logger)
+		committedQuota, err := c.storeMeasurer.CommittedQuota(logger)
 		if err != nil {
-			return true, errorspkg.Wrap(err, "measuring store usage")
+			return false, errorspkg.Wrap(err, "failed to calculate committed quota")
 		}
-		if storeUsage < threshold {
+		totalVolumesSize, err := c.storeMeasurer.TotalVolumeSize(logger)
+		if err != nil {
+			return false, errorspkg.Wrap(err, "failed to calculate total volumes size")
+		}
+		if (committedQuota + totalVolumesSize) < threshold {
 			return true, nil
 		}
 	} else if threshold < 0 {
 		return true, errorspkg.New("Threshold must be greater than 0")
 	}
 
+	return false, c.collectGarbage(logger)
+}
+
+func (c *cleaner) collectGarbage(logger lager.Logger) error {
 	lockFile, err := c.locksmith.Lock(GlobalLockKey)
 	if err != nil {
-		return false, errorspkg.Wrap(err, "garbage collector acquiring lock")
+		return errorspkg.Wrap(err, "garbage collector acquiring lock")
 	}
 
-	unusedVolumes, err := c.garbageCollector.UnusedVolumes(logger, chainIDsToPreserve)
+	unusedVolumes, err := c.garbageCollector.UnusedVolumes(logger)
 	if err != nil {
 		logger.Error("finding-unused-failed", err)
 	}
@@ -67,5 +75,5 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64, chainIDsToPreserve
 		logger.Error("unlocking-failed", err)
 	}
 
-	return false, c.garbageCollector.Collect(logger)
+	return c.garbageCollector.Collect(logger)
 }

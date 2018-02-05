@@ -97,7 +97,7 @@ var _ = Describe("Creator", func() {
 			Expect(fakeLocksmith.LockArgsForCall(0)).To(Equal(groot.GlobalLockKey))
 		})
 
-		Context("when clean up store is requested", func() {
+		Context("when cleaning up store is requested", func() {
 			It("cleans the store", func() {
 				_, err := creator.Create(logger, groot.CreateSpec{
 					BaseImageURL:                baseImageUrl,
@@ -106,9 +106,8 @@ var _ = Describe("Creator", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeCleaner.CleanCallCount()).To(Equal(1))
-				_, cacheSize, chainIDsToPreserve := fakeCleaner.CleanArgsForCall(0)
+				_, cacheSize := fakeCleaner.CleanArgsForCall(0)
 				Expect(cacheSize).To(Equal(int64(250000)))
-				Expect(chainIDsToPreserve).To(ConsistOf("id-1", "id-2"))
 			})
 
 			Context("and fails to clean up", func() {

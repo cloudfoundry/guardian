@@ -224,6 +224,9 @@ var _ = Describe("Create", func() {
 
 	Context("when --with-clean is given", func() {
 		BeforeEach(func() {
+			// BTRFS driver doesn't do quotas in the same way and we don't really care
+			integration.SkipIfNotXFS(Driver)
+
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:           "my-busybox",
 				BaseImageURL: integration.String2URL("docker:///cfgarden/garden-busybox"),
@@ -237,25 +240,79 @@ var _ = Describe("Create", func() {
 			_ = Runner.Delete("my-empty")
 		})
 
-		It("cleans the store first", func() {
-			preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(preContents).To(HaveLen(1))
+		Context("when the total commit exceeds the threshold", func() {
+			Context("by pulling new base layers", func() {
+				It("cleans the store", func() {
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(preContents).To(HaveLen(1))
 
-			_, err = Runner.Create(groot.CreateSpec{
-				ID:            "my-empty",
-				BaseImageURL:  integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
-				Mount:         false,
-				CleanOnCreate: true,
+					_, err = Runner.Create(groot.CreateSpec{
+						ID:            "my-empty",
+						BaseImageURL:  integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
+						Mount:         false,
+						CleanOnCreate: true,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(afterContents).To(HaveLen(2))
+					for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
+						Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
+					}
+				})
 			})
-			Expect(err).NotTo(HaveOccurred())
 
-			afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(afterContents).To(HaveLen(2))
-			for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
-				Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
-			}
+			Context("by virtue of its committed quota", func() {
+				It("cleans the store", func() {
+					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(preContents).To(HaveLen(1))
+
+					_, err = Runner.Create(groot.CreateSpec{
+						ID:                          "my-empty",
+						BaseImageURL:                integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
+						Mount:                       false,
+						CleanOnCreate:               true,
+						CleanOnCreateThresholdBytes: 100 * 1024 * 1024,
+						DiskLimit:                   200 * 1024 * 1024,
+						ExcludeBaseImageFromQuota:   true,
+					})
+					Expect(err).NotTo(HaveOccurred())
+
+					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+					Expect(err).NotTo(HaveOccurred())
+					Expect(afterContents).To(HaveLen(2))
+					for _, layer := range testhelpers.EmptyBaseImageV011.Layers {
+						Expect(filepath.Join(StorePath, store.VolumesDirName, layer.ChainID)).To(BeADirectory())
+					}
+				})
+			})
+		})
+
+		Context("when the total commit doesn't exceed the threshold", func() {
+			It("doesn't clean the store", func() {
+				preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(preContents).To(HaveLen(1))
+
+				_, err = Runner.Create(groot.CreateSpec{
+					ID:                          "my-empty",
+					BaseImageURL:                integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
+					Mount:                       false,
+					CleanOnCreate:               true,
+					CleanOnCreateThresholdBytes: 100 * 1024 * 1024,
+					DiskLimit:                   10 * 1024 * 1024,
+					ExcludeBaseImageFromQuota:   true,
+				})
+				Expect(err).NotTo(HaveOccurred())
+
+				afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
+				Expect(err).NotTo(HaveOccurred())
+				Expect(afterContents).To(HaveLen(3))
+				Expect(afterContents).To(ContainElement(preContents[0]))
+			})
 		})
 
 		Context("with local tar image", func() {
@@ -307,50 +364,6 @@ var _ = Describe("Create", func() {
 				// We now have 2 groot images, one of which is based on the same base
 				// image as the tar rootfs from the preContents, but with a new mtime.
 				Expect(preContents).NotTo(ContainElement(afterContents[0]))
-			})
-		})
-
-		Context("when a threshold is given", func() {
-			Context("when the store size is over the threshold", func() {
-				It("cleans the store first", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(preContents).To(HaveLen(1))
-
-					_, err = Runner.Create(groot.CreateSpec{
-						ID:                          "my-empty",
-						BaseImageURL:                integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
-						Mount:                       false,
-						CleanOnCreate:               true,
-						CleanOnCreateThresholdBytes: 1024,
-					})
-					Expect(err).NotTo(HaveOccurred())
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(2))
-				})
-			})
-
-			Context("when thestore size is under the threshold", func() {
-				It("cleans the store first", func() {
-					preContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(preContents).To(HaveLen(1))
-
-					_, err = Runner.Create(groot.CreateSpec{
-						ID:                          "my-empty",
-						BaseImageURL:                integration.String2URL("docker:///cfgarden/empty:v0.1.1"),
-						Mount:                       false,
-						CleanOnCreate:               true,
-						CleanOnCreateThresholdBytes: 1024 * 1024 * 1024 * 1024,
-					})
-					Expect(err).NotTo(HaveOccurred())
-
-					afterContents, err := ioutil.ReadDir(filepath.Join(StorePath, store.VolumesDirName))
-					Expect(err).NotTo(HaveOccurred())
-					Expect(afterContents).To(HaveLen(3))
-				})
 			})
 		})
 	})

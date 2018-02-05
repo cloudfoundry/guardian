@@ -131,7 +131,7 @@ func (g *GarbageCollector) gcVolumes(logger lager.Logger) ([]string, error) {
 	return collectables, nil
 }
 
-func (g *GarbageCollector) UnusedVolumes(logger lager.Logger, chainIDsToPreserve []string) ([]string, error) {
+func (g *GarbageCollector) UnusedVolumes(logger lager.Logger) ([]string, error) {
 	logger = logger.Session("unused-volumes")
 	logger.Info("starting")
 	defer logger.Info("ending")
@@ -161,8 +161,6 @@ func (g *GarbageCollector) UnusedVolumes(logger lager.Logger, chainIDsToPreserve
 		}
 		g.removeDependencyFromOrphanList(orphanedVolumes, usedVolumes)
 	}
-
-	g.removeDependencyFromOrphanList(orphanedVolumes, chainIDsToPreserve)
 
 	orphanedVolumeIDs := []string{}
 	for id := range orphanedVolumes {

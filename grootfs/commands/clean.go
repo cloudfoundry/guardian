@@ -95,7 +95,7 @@ var CleanCommand = cli.Command{
 			metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
 		}()
 
-		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes, nil)
+		noop, err := cleaner.Clean(logger, cfg.Clean.ThresholdBytes)
 		if err != nil {
 			logger.Error("cleaning-up-unused-resources", err)
 			return newExitError(err.Error(), 1)

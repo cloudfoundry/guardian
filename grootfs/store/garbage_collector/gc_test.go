@@ -67,20 +67,10 @@ var _ = Describe("Gc", func() {
 		})
 
 		It("retrieves the names of unused volumes", func() {
-			unusedVolumes, err := garbageCollector.UnusedVolumes(logger, nil)
+			unusedVolumes, err := garbageCollector.UnusedVolumes(logger)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(unusedVolumes).To(ConsistOf("sha256ubuntu", "sha256privateubuntu", "unusedLayerVolume", "unusedLocalVolume-timestamp"))
-		})
-
-		Context("when certain chain IDs should be preserved", func() {
-
-			It("doesnt list it as unused", func() {
-				unusedVolumes, err := garbageCollector.UnusedVolumes(logger, []string{"sha256ubuntu"})
-				Expect(err).NotTo(HaveOccurred())
-
-				Expect(unusedVolumes).To(ConsistOf("sha256privateubuntu", "unusedLayerVolume", "unusedLocalVolume-timestamp"))
-			})
 		})
 
 		Context("when retrieving images fails", func() {
@@ -89,7 +79,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := garbageCollector.UnusedVolumes(logger, nil)
+				_, err := garbageCollector.UnusedVolumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to retrieve images")))
 			})
 		})
@@ -100,7 +90,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := garbageCollector.UnusedVolumes(logger, nil)
+				_, err := garbageCollector.UnusedVolumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to access deps")))
 			})
 		})
@@ -111,7 +101,7 @@ var _ = Describe("Gc", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := garbageCollector.UnusedVolumes(logger, nil)
+				_, err := garbageCollector.UnusedVolumes(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to retrieve volume list")))
 			})
 		})

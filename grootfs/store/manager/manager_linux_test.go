@@ -287,24 +287,6 @@ var _ = Describe("Manager", func() {
 				Expect(path).To(Equal(storePath))
 			})
 
-			Context("when the store size is less than 200Mb", func() {
-				BeforeEach(func() {
-					spec.StoreSizeBytes = 1024 * 1024 * 199
-				})
-
-				It("returns an error", func() {
-					err := manager.InitStore(logger, spec)
-					Expect(err).To(MatchError(ContainSubstring("store size must be at least 200Mb")))
-				})
-
-				It("doesn't create the store folder", func() {
-					Expect(storePath).ToNot(BeAnExistingFile())
-					err := manager.InitStore(logger, spec)
-					Expect(err).To(HaveOccurred())
-					Expect(storePath).ToNot(BeAnExistingFile())
-				})
-			})
-
 			Context("when the store is considered valid", func() {
 				BeforeEach(func() {
 					storeDriver.ValidateFileSystemReturns(nil)

@@ -9,12 +9,11 @@ import (
 )
 
 type FakeCleaner struct {
-	CleanStub        func(logger lager.Logger, cacheSize int64, chainIDsToPreserve []string) (bool, error)
+	CleanStub        func(logger lager.Logger, cacheSize int64) (bool, error)
 	cleanMutex       sync.RWMutex
 	cleanArgsForCall []struct {
-		logger             lager.Logger
-		cacheSize          int64
-		chainIDsToPreserve []string
+		logger    lager.Logger
+		cacheSize int64
 	}
 	cleanReturns struct {
 		result1 bool
@@ -28,23 +27,17 @@ type FakeCleaner struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCleaner) Clean(logger lager.Logger, cacheSize int64, chainIDsToPreserve []string) (bool, error) {
-	var chainIDsToPreserveCopy []string
-	if chainIDsToPreserve != nil {
-		chainIDsToPreserveCopy = make([]string, len(chainIDsToPreserve))
-		copy(chainIDsToPreserveCopy, chainIDsToPreserve)
-	}
+func (fake *FakeCleaner) Clean(logger lager.Logger, cacheSize int64) (bool, error) {
 	fake.cleanMutex.Lock()
 	ret, specificReturn := fake.cleanReturnsOnCall[len(fake.cleanArgsForCall)]
 	fake.cleanArgsForCall = append(fake.cleanArgsForCall, struct {
-		logger             lager.Logger
-		cacheSize          int64
-		chainIDsToPreserve []string
-	}{logger, cacheSize, chainIDsToPreserveCopy})
-	fake.recordInvocation("Clean", []interface{}{logger, cacheSize, chainIDsToPreserveCopy})
+		logger    lager.Logger
+		cacheSize int64
+	}{logger, cacheSize})
+	fake.recordInvocation("Clean", []interface{}{logger, cacheSize})
 	fake.cleanMutex.Unlock()
 	if fake.CleanStub != nil {
-		return fake.CleanStub(logger, cacheSize, chainIDsToPreserve)
+		return fake.CleanStub(logger, cacheSize)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -58,10 +51,10 @@ func (fake *FakeCleaner) CleanCallCount() int {
 	return len(fake.cleanArgsForCall)
 }
 
-func (fake *FakeCleaner) CleanArgsForCall(i int) (lager.Logger, int64, []string) {
+func (fake *FakeCleaner) CleanArgsForCall(i int) (lager.Logger, int64) {
 	fake.cleanMutex.RLock()
 	defer fake.cleanMutex.RUnlock()
-	return fake.cleanArgsForCall[i].logger, fake.cleanArgsForCall[i].cacheSize, fake.cleanArgsForCall[i].chainIDsToPreserve
+	return fake.cleanArgsForCall[i].logger, fake.cleanArgsForCall[i].cacheSize
 }
 
 func (fake *FakeCleaner) CleanReturns(result1 bool, result2 error) {

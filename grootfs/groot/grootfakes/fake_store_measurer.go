@@ -9,16 +9,29 @@ import (
 )
 
 type FakeStoreMeasurer struct {
-	UsageStub        func(logger lager.Logger) (int64, error)
-	usageMutex       sync.RWMutex
-	usageArgsForCall []struct {
+	CommittedQuotaStub        func(logger lager.Logger) (int64, error)
+	committedQuotaMutex       sync.RWMutex
+	committedQuotaArgsForCall []struct {
 		logger lager.Logger
 	}
-	usageReturns struct {
+	committedQuotaReturns struct {
 		result1 int64
 		result2 error
 	}
-	usageReturnsOnCall map[int]struct {
+	committedQuotaReturnsOnCall map[int]struct {
+		result1 int64
+		result2 error
+	}
+	TotalVolumeSizeStub        func(logger lager.Logger) (int64, error)
+	totalVolumeSizeMutex       sync.RWMutex
+	totalVolumeSizeArgsForCall []struct {
+		logger lager.Logger
+	}
+	totalVolumeSizeReturns struct {
+		result1 int64
+		result2 error
+	}
+	totalVolumeSizeReturnsOnCall map[int]struct {
 		result1 int64
 		result2 error
 	}
@@ -26,52 +39,103 @@ type FakeStoreMeasurer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeStoreMeasurer) Usage(logger lager.Logger) (int64, error) {
-	fake.usageMutex.Lock()
-	ret, specificReturn := fake.usageReturnsOnCall[len(fake.usageArgsForCall)]
-	fake.usageArgsForCall = append(fake.usageArgsForCall, struct {
+func (fake *FakeStoreMeasurer) CommittedQuota(logger lager.Logger) (int64, error) {
+	fake.committedQuotaMutex.Lock()
+	ret, specificReturn := fake.committedQuotaReturnsOnCall[len(fake.committedQuotaArgsForCall)]
+	fake.committedQuotaArgsForCall = append(fake.committedQuotaArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
-	fake.recordInvocation("Usage", []interface{}{logger})
-	fake.usageMutex.Unlock()
-	if fake.UsageStub != nil {
-		return fake.UsageStub(logger)
+	fake.recordInvocation("CommittedQuota", []interface{}{logger})
+	fake.committedQuotaMutex.Unlock()
+	if fake.CommittedQuotaStub != nil {
+		return fake.CommittedQuotaStub(logger)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.usageReturns.result1, fake.usageReturns.result2
+	return fake.committedQuotaReturns.result1, fake.committedQuotaReturns.result2
 }
 
-func (fake *FakeStoreMeasurer) UsageCallCount() int {
-	fake.usageMutex.RLock()
-	defer fake.usageMutex.RUnlock()
-	return len(fake.usageArgsForCall)
+func (fake *FakeStoreMeasurer) CommittedQuotaCallCount() int {
+	fake.committedQuotaMutex.RLock()
+	defer fake.committedQuotaMutex.RUnlock()
+	return len(fake.committedQuotaArgsForCall)
 }
 
-func (fake *FakeStoreMeasurer) UsageArgsForCall(i int) lager.Logger {
-	fake.usageMutex.RLock()
-	defer fake.usageMutex.RUnlock()
-	return fake.usageArgsForCall[i].logger
+func (fake *FakeStoreMeasurer) CommittedQuotaArgsForCall(i int) lager.Logger {
+	fake.committedQuotaMutex.RLock()
+	defer fake.committedQuotaMutex.RUnlock()
+	return fake.committedQuotaArgsForCall[i].logger
 }
 
-func (fake *FakeStoreMeasurer) UsageReturns(result1 int64, result2 error) {
-	fake.UsageStub = nil
-	fake.usageReturns = struct {
+func (fake *FakeStoreMeasurer) CommittedQuotaReturns(result1 int64, result2 error) {
+	fake.CommittedQuotaStub = nil
+	fake.committedQuotaReturns = struct {
 		result1 int64
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeStoreMeasurer) UsageReturnsOnCall(i int, result1 int64, result2 error) {
-	fake.UsageStub = nil
-	if fake.usageReturnsOnCall == nil {
-		fake.usageReturnsOnCall = make(map[int]struct {
+func (fake *FakeStoreMeasurer) CommittedQuotaReturnsOnCall(i int, result1 int64, result2 error) {
+	fake.CommittedQuotaStub = nil
+	if fake.committedQuotaReturnsOnCall == nil {
+		fake.committedQuotaReturnsOnCall = make(map[int]struct {
 			result1 int64
 			result2 error
 		})
 	}
-	fake.usageReturnsOnCall[i] = struct {
+	fake.committedQuotaReturnsOnCall[i] = struct {
+		result1 int64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeStoreMeasurer) TotalVolumeSize(logger lager.Logger) (int64, error) {
+	fake.totalVolumeSizeMutex.Lock()
+	ret, specificReturn := fake.totalVolumeSizeReturnsOnCall[len(fake.totalVolumeSizeArgsForCall)]
+	fake.totalVolumeSizeArgsForCall = append(fake.totalVolumeSizeArgsForCall, struct {
+		logger lager.Logger
+	}{logger})
+	fake.recordInvocation("TotalVolumeSize", []interface{}{logger})
+	fake.totalVolumeSizeMutex.Unlock()
+	if fake.TotalVolumeSizeStub != nil {
+		return fake.TotalVolumeSizeStub(logger)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.totalVolumeSizeReturns.result1, fake.totalVolumeSizeReturns.result2
+}
+
+func (fake *FakeStoreMeasurer) TotalVolumeSizeCallCount() int {
+	fake.totalVolumeSizeMutex.RLock()
+	defer fake.totalVolumeSizeMutex.RUnlock()
+	return len(fake.totalVolumeSizeArgsForCall)
+}
+
+func (fake *FakeStoreMeasurer) TotalVolumeSizeArgsForCall(i int) lager.Logger {
+	fake.totalVolumeSizeMutex.RLock()
+	defer fake.totalVolumeSizeMutex.RUnlock()
+	return fake.totalVolumeSizeArgsForCall[i].logger
+}
+
+func (fake *FakeStoreMeasurer) TotalVolumeSizeReturns(result1 int64, result2 error) {
+	fake.TotalVolumeSizeStub = nil
+	fake.totalVolumeSizeReturns = struct {
+		result1 int64
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeStoreMeasurer) TotalVolumeSizeReturnsOnCall(i int, result1 int64, result2 error) {
+	fake.TotalVolumeSizeStub = nil
+	if fake.totalVolumeSizeReturnsOnCall == nil {
+		fake.totalVolumeSizeReturnsOnCall = make(map[int]struct {
+			result1 int64
+			result2 error
+		})
+	}
+	fake.totalVolumeSizeReturnsOnCall[i] = struct {
 		result1 int64
 		result2 error
 	}{result1, result2}
@@ -80,8 +144,10 @@ func (fake *FakeStoreMeasurer) UsageReturnsOnCall(i int, result1 int64, result2 
 func (fake *FakeStoreMeasurer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.usageMutex.RLock()
-	defer fake.usageMutex.RUnlock()
+	fake.committedQuotaMutex.RLock()
+	defer fake.committedQuotaMutex.RUnlock()
+	fake.totalVolumeSizeMutex.RLock()
+	defer fake.totalVolumeSizeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

@@ -48,7 +48,7 @@ func IamCreator(
 	}
 }
 
-func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error) {
+func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (info ImageInfo, createErr error) {
 	defer c.metricsEmitter.TryEmitDurationFrom(logger, MetricImageCreationTime, time.Now())
 
 	logger = logger.Session("groot-creating", lager.Data{"imageID": spec.ID, "spec": spec})
@@ -84,12 +84,6 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 	}
 	baseImageChainIDs := chainIDs(baseImageInfo.LayerInfos)
 
-	if spec.CleanOnCreate {
-		if _, err = c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes, baseImageChainIDs); err != nil {
-			return ImageInfo{}, errorspkg.Wrap(err, "failed-to-cleanup-store")
-		}
-	}
-
 	lockFile, err := c.locksmith.Lock(GlobalLockKey)
 	if err != nil {
 		return ImageInfo{}, err
@@ -97,6 +91,11 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (ImageInfo, error
 	defer func() {
 		if err = c.locksmith.Unlock(lockFile); err != nil {
 			logger.Error("failed-to-unlock", err)
+		}
+		if spec.CleanOnCreate {
+			if _, err = c.cleaner.Clean(logger, spec.CleanOnCreateThresholdBytes); err != nil {
+				createErr = errorspkg.Wrap(err, "failed-to-cleanup-store")
+			}
 		}
 	}()
 

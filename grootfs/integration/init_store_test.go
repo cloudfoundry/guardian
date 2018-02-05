@@ -115,17 +115,6 @@ var _ = Describe("Init Store", func() {
 				Expect(logs).To(gbytes.Say("store-already-initialized"))
 			})
 		})
-
-		Context("when the given backing store size is too small", func() {
-			BeforeEach(func() {
-				spec.StoreSizeBytes = 199 * 1024 * 1024
-			})
-
-			It("returns an error", func() {
-				err := runner.InitStore(spec)
-				Expect(err).To(MatchError(ContainSubstring("store size must be at least 200Mb")))
-			})
-		})
 	})
 
 	Context("when id mappings are provided", func() {

@@ -1,7 +1,6 @@
 package manager
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -204,11 +203,6 @@ func (m *Manager) DeleteStore(logger lager.Logger, locksmith groot.Locksmith) er
 }
 
 func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes int64) error {
-	if storeSizeBytes < MinStoreSizeBytes {
-		logger.Error("init-store-failed", errors.New("store size must be at least 200Mb"), lager.Data{"storeSize": storeSizeBytes})
-		return errorspkg.New("store size must be at least 200Mb")
-	}
-
 	backingStoreFile := fmt.Sprintf("%s.backing-store", m.storePath)
 	if _, err := os.Stat(backingStoreFile); os.IsNotExist(err) {
 		if err := ioutil.WriteFile(backingStoreFile, []byte{}, 0600); err != nil {

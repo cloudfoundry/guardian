@@ -49,21 +49,19 @@ var _ = Describe("Cleaner", func() {
 
 	Describe("Clean", func() {
 		It("calls the garbage collector to gather a list of unused volumes", func() {
-			_, err := cleaner.Clean(logger, 0, []string{"preserve"})
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeGarbageCollector.UnusedVolumesCallCount()).To(Equal(1))
-			_, actualChainIDsToPreserve := fakeGarbageCollector.UnusedVolumesArgsForCall(0)
-			Expect(actualChainIDsToPreserve).To(ConsistOf("preserve"))
 		})
 
 		It("calls the garbage collector to mark unused volumes", func() {
-			_, err := cleaner.Clean(logger, 0, nil)
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeGarbageCollector.MarkUnusedCallCount()).To(Equal(1))
 		})
 
 		It("calls the garbage collector to collect", func() {
-			_, err := cleaner.Clean(logger, 0, nil)
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 		})
@@ -74,13 +72,13 @@ var _ = Describe("Cleaner", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := cleaner.Clean(logger, 0, nil)
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).To(MatchError(ContainSubstring("failed to collect unused bits")))
 			})
 		})
 
 		It("emits metrics for clean duration", func() {
-			_, err := cleaner.Clean(logger, 0, nil)
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeMetricsEmitter.TryEmitDurationFromCallCount()).To(Equal(1))
@@ -90,7 +88,7 @@ var _ = Describe("Cleaner", func() {
 		})
 
 		It("acquires the global lock", func() {
-			_, err := cleaner.Clean(logger, 0, nil)
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
@@ -98,7 +96,7 @@ var _ = Describe("Cleaner", func() {
 		})
 
 		It("releases the global lock", func() {
-			_, err := cleaner.Clean(logger, 0, nil)
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
@@ -122,7 +120,7 @@ var _ = Describe("Cleaner", func() {
 				return nil
 			}
 
-			_, err := cleaner.Clean(logger, 0, nil)
+			_, err := cleaner.Clean(logger, 0)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(markTime.UnixNano()).To(BeNumerically("<", unLockTime.UnixNano()))
@@ -135,13 +133,13 @@ var _ = Describe("Cleaner", func() {
 			})
 
 			It("still collects the garbage", func() {
-				_, err := cleaner.Clean(logger, 0, nil)
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 			})
 
 			It("releases the global lock", func() {
-				_, err := cleaner.Clean(logger, 0, nil)
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeLocksmith.UnlockCallCount()).To(Equal(1))
@@ -154,12 +152,12 @@ var _ = Describe("Cleaner", func() {
 			})
 
 			It("returns the error", func() {
-				_, err := cleaner.Clean(logger, 0, nil)
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).To(MatchError(ContainSubstring("failed to acquire lock")))
 			})
 
 			It("does not collect the garbage", func() {
-				_, err := cleaner.Clean(logger, 0, nil)
+				_, err := cleaner.Clean(logger, 0)
 				Expect(err).To(HaveOccurred())
 				Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 			})
@@ -172,51 +170,76 @@ var _ = Describe("Cleaner", func() {
 				threshold = 1000000
 			})
 
-			Context("when the store size under the threshold", func() {
+			Context("when the committed quota + total volume size is < the threshold", func() {
 				BeforeEach(func() {
+					fakeStoreMeasurer.TotalVolumeSizeReturns(999997, nil)
+					fakeStoreMeasurer.CommittedQuotaReturns(2, nil)
 					fakeGarbageCollector.UnusedVolumesReturns([]string{"layerVolume", "localVolume-1234"}, nil)
 				})
 
 				It("does not remove anything", func() {
-					_, err := cleaner.Clean(logger, threshold, nil)
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(0))
 				})
 
 				It("does not acquire the lock", func() {
-					_, err := cleaner.Clean(logger, threshold, nil)
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeLocksmith.LockCallCount()).To(Equal(0))
 				})
 
 				It("sets noop to `true`", func() {
-					noop, err := cleaner.Clean(logger, threshold, nil)
+					noop, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(noop).To(BeTrue())
 				})
 			})
 
-			Context("when the store size is greater than the threshold", func() {
+			Context("when the committed quota + total volume size is greater than the threshold", func() {
 				BeforeEach(func() {
-					fakeStoreMeasurer.UsageReturns(1500000, nil)
+					fakeStoreMeasurer.TotalVolumeSizeReturns(999999, nil)
+					fakeStoreMeasurer.CommittedQuotaReturns(2, nil)
 				})
 
 				It("calls the garbage collector", func() {
-					_, err := cleaner.Clean(logger, threshold, nil)
+					_, err := cleaner.Clean(logger, threshold)
 					Expect(err).NotTo(HaveOccurred())
 					Expect(fakeGarbageCollector.CollectCallCount()).To(Equal(1))
 				})
 			})
 
-			Context("when the cache bytes is negative", func() {
+			Context("when the threshold is negative", func() {
 				BeforeEach(func() {
 					threshold = -120
 				})
 
 				It("indicates a no-op and returns an error", func() {
-					noop, err := cleaner.Clean(logger, threshold, nil)
+					noop, err := cleaner.Clean(logger, threshold)
 					Expect(noop).To(BeTrue())
 					Expect(err).To(MatchError("Threshold must be greater than 0"))
+				})
+			})
+
+			Context("when getting the committed quota fails", func() {
+				BeforeEach(func() {
+					fakeStoreMeasurer.CommittedQuotaReturns(0, errors.New("explosion"))
+				})
+
+				It("returns a wrapped error", func() {
+					_, err := cleaner.Clean(logger, threshold)
+					Expect(err).To(MatchError(ContainSubstring("failed to calculate committed quota")))
+				})
+			})
+
+			Context("when getting the total volumes size fails", func() {
+				BeforeEach(func() {
+					fakeStoreMeasurer.TotalVolumeSizeReturns(0, errors.New("explosion"))
+				})
+
+				It("returns a wrapped error", func() {
+					_, err := cleaner.Clean(logger, threshold)
+					Expect(err).To(MatchError(ContainSubstring("failed to calculate total volumes size")))
 				})
 			})
 		})
