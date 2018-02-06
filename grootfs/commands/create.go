@@ -261,7 +261,7 @@ func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *store
 	}
 	metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
 
-	totalVolumesSize, err := sm.TotalVolumeSize(logger)
+	totalVolumesSize, err := sm.TotalVolumesSize(logger)
 	if err != nil {
 		logger.Error("getting-total-layers-size", err)
 	}

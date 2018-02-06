@@ -77,14 +77,14 @@ var _ = Describe("Measurer", func() {
 		})
 	})
 
-	Describe("TotalVolumeSize", func() {
+	Describe("TotalVolumesSize", func() {
 		BeforeEach(func() {
 			volumeDriver.VolumeSizeReturns(2048, nil)
 			volumeDriver.VolumesReturns([]string{"sha256:fake1", "sha256:fake2"}, nil)
 		})
 
 		It("measures the size of all layers", func() {
-			cacheUsage, err := storeMeasurer.TotalVolumeSize(logger)
+			cacheUsage, err := storeMeasurer.TotalVolumesSize(logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(cacheUsage).To(BeNumerically("==", 4096))
 		})
@@ -95,7 +95,7 @@ var _ = Describe("Measurer", func() {
 			})
 
 			It("returns the error", func() {
-				_, err := storeMeasurer.TotalVolumeSize(logger)
+				_, err := storeMeasurer.TotalVolumesSize(logger)
 				Expect(err).To(HaveOccurred())
 			})
 		})
@@ -106,8 +106,19 @@ var _ = Describe("Measurer", func() {
 			})
 
 			It("returns the error", func() {
-				_, err := storeMeasurer.TotalVolumeSize(logger)
+				_, err := storeMeasurer.TotalVolumesSize(logger)
 				Expect(err).To(HaveOccurred())
+			})
+
+			Context("but it's because a file doesn't exist", func() {
+				BeforeEach(func() {
+					volumeDriver.VolumeSizeReturns(0, os.ErrNotExist)
+				})
+
+				It("carries on silently", func() {
+					_, err := storeMeasurer.TotalVolumesSize(logger)
+					Expect(err).NotTo(HaveOccurred())
+				})
 			})
 		})
 	})

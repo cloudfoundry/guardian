@@ -42,7 +42,7 @@ func (c *cleaner) Clean(logger lager.Logger, threshold int64) (bool, error) {
 		if err != nil {
 			return false, errorspkg.Wrap(err, "failed to calculate committed quota")
 		}
-		totalVolumesSize, err := c.storeMeasurer.TotalVolumeSize(logger)
+		totalVolumesSize, err := c.storeMeasurer.TotalVolumesSize(logger)
 		if err != nil {
 			return false, errorspkg.Wrap(err, "failed to calculate total volumes size")
 		}

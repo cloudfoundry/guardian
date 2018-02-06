@@ -120,7 +120,7 @@ type GarbageCollector interface {
 
 type StoreMeasurer interface {
 	CommittedQuota(logger lager.Logger) (int64, error)
-	TotalVolumeSize(logger lager.Logger) (int64, error)
+	TotalVolumesSize(logger lager.Logger) (int64, error)
 }
 
 type Locksmith interface {

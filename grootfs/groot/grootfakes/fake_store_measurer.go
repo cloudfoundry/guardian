@@ -22,16 +22,16 @@ type FakeStoreMeasurer struct {
 		result1 int64
 		result2 error
 	}
-	TotalVolumeSizeStub        func(logger lager.Logger) (int64, error)
-	totalVolumeSizeMutex       sync.RWMutex
-	totalVolumeSizeArgsForCall []struct {
+	TotalVolumesSizeStub        func(logger lager.Logger) (int64, error)
+	totalVolumesSizeMutex       sync.RWMutex
+	totalVolumesSizeArgsForCall []struct {
 		logger lager.Logger
 	}
-	totalVolumeSizeReturns struct {
+	totalVolumesSizeReturns struct {
 		result1 int64
 		result2 error
 	}
-	totalVolumeSizeReturnsOnCall map[int]struct {
+	totalVolumesSizeReturnsOnCall map[int]struct {
 		result1 int64
 		result2 error
 	}
@@ -90,52 +90,52 @@ func (fake *FakeStoreMeasurer) CommittedQuotaReturnsOnCall(i int, result1 int64,
 	}{result1, result2}
 }
 
-func (fake *FakeStoreMeasurer) TotalVolumeSize(logger lager.Logger) (int64, error) {
-	fake.totalVolumeSizeMutex.Lock()
-	ret, specificReturn := fake.totalVolumeSizeReturnsOnCall[len(fake.totalVolumeSizeArgsForCall)]
-	fake.totalVolumeSizeArgsForCall = append(fake.totalVolumeSizeArgsForCall, struct {
+func (fake *FakeStoreMeasurer) TotalVolumesSize(logger lager.Logger) (int64, error) {
+	fake.totalVolumesSizeMutex.Lock()
+	ret, specificReturn := fake.totalVolumesSizeReturnsOnCall[len(fake.totalVolumesSizeArgsForCall)]
+	fake.totalVolumesSizeArgsForCall = append(fake.totalVolumesSizeArgsForCall, struct {
 		logger lager.Logger
 	}{logger})
-	fake.recordInvocation("TotalVolumeSize", []interface{}{logger})
-	fake.totalVolumeSizeMutex.Unlock()
-	if fake.TotalVolumeSizeStub != nil {
-		return fake.TotalVolumeSizeStub(logger)
+	fake.recordInvocation("TotalVolumesSize", []interface{}{logger})
+	fake.totalVolumesSizeMutex.Unlock()
+	if fake.TotalVolumesSizeStub != nil {
+		return fake.TotalVolumesSizeStub(logger)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.totalVolumeSizeReturns.result1, fake.totalVolumeSizeReturns.result2
+	return fake.totalVolumesSizeReturns.result1, fake.totalVolumesSizeReturns.result2
 }
 
-func (fake *FakeStoreMeasurer) TotalVolumeSizeCallCount() int {
-	fake.totalVolumeSizeMutex.RLock()
-	defer fake.totalVolumeSizeMutex.RUnlock()
-	return len(fake.totalVolumeSizeArgsForCall)
+func (fake *FakeStoreMeasurer) TotalVolumesSizeCallCount() int {
+	fake.totalVolumesSizeMutex.RLock()
+	defer fake.totalVolumesSizeMutex.RUnlock()
+	return len(fake.totalVolumesSizeArgsForCall)
 }
 
-func (fake *FakeStoreMeasurer) TotalVolumeSizeArgsForCall(i int) lager.Logger {
-	fake.totalVolumeSizeMutex.RLock()
-	defer fake.totalVolumeSizeMutex.RUnlock()
-	return fake.totalVolumeSizeArgsForCall[i].logger
+func (fake *FakeStoreMeasurer) TotalVolumesSizeArgsForCall(i int) lager.Logger {
+	fake.totalVolumesSizeMutex.RLock()
+	defer fake.totalVolumesSizeMutex.RUnlock()
+	return fake.totalVolumesSizeArgsForCall[i].logger
 }
 
-func (fake *FakeStoreMeasurer) TotalVolumeSizeReturns(result1 int64, result2 error) {
-	fake.TotalVolumeSizeStub = nil
-	fake.totalVolumeSizeReturns = struct {
+func (fake *FakeStoreMeasurer) TotalVolumesSizeReturns(result1 int64, result2 error) {
+	fake.TotalVolumesSizeStub = nil
+	fake.totalVolumesSizeReturns = struct {
 		result1 int64
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeStoreMeasurer) TotalVolumeSizeReturnsOnCall(i int, result1 int64, result2 error) {
-	fake.TotalVolumeSizeStub = nil
-	if fake.totalVolumeSizeReturnsOnCall == nil {
-		fake.totalVolumeSizeReturnsOnCall = make(map[int]struct {
+func (fake *FakeStoreMeasurer) TotalVolumesSizeReturnsOnCall(i int, result1 int64, result2 error) {
+	fake.TotalVolumesSizeStub = nil
+	if fake.totalVolumesSizeReturnsOnCall == nil {
+		fake.totalVolumesSizeReturnsOnCall = make(map[int]struct {
 			result1 int64
 			result2 error
 		})
 	}
-	fake.totalVolumeSizeReturnsOnCall[i] = struct {
+	fake.totalVolumesSizeReturnsOnCall[i] = struct {
 		result1 int64
 		result2 error
 	}{result1, result2}
@@ -146,8 +146,8 @@ func (fake *FakeStoreMeasurer) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.committedQuotaMutex.RLock()
 	defer fake.committedQuotaMutex.RUnlock()
-	fake.totalVolumeSizeMutex.RLock()
-	defer fake.totalVolumeSizeMutex.RUnlock()
+	fake.totalVolumesSizeMutex.RLock()
+	defer fake.totalVolumesSizeMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

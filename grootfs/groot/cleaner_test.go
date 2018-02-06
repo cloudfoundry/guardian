@@ -172,7 +172,7 @@ var _ = Describe("Cleaner", func() {
 
 			Context("when the committed quota + total volume size is < the threshold", func() {
 				BeforeEach(func() {
-					fakeStoreMeasurer.TotalVolumeSizeReturns(999997, nil)
+					fakeStoreMeasurer.TotalVolumesSizeReturns(999997, nil)
 					fakeStoreMeasurer.CommittedQuotaReturns(2, nil)
 					fakeGarbageCollector.UnusedVolumesReturns([]string{"layerVolume", "localVolume-1234"}, nil)
 				})
@@ -198,7 +198,7 @@ var _ = Describe("Cleaner", func() {
 
 			Context("when the committed quota + total volume size is greater than the threshold", func() {
 				BeforeEach(func() {
-					fakeStoreMeasurer.TotalVolumeSizeReturns(999999, nil)
+					fakeStoreMeasurer.TotalVolumesSizeReturns(999999, nil)
 					fakeStoreMeasurer.CommittedQuotaReturns(2, nil)
 				})
 
@@ -234,7 +234,7 @@ var _ = Describe("Cleaner", func() {
 
 			Context("when getting the total volumes size fails", func() {
 				BeforeEach(func() {
-					fakeStoreMeasurer.TotalVolumeSizeReturns(0, errors.New("explosion"))
+					fakeStoreMeasurer.TotalVolumesSizeReturns(0, errors.New("explosion"))
 				})
 
 				It("returns a wrapped error", func() {

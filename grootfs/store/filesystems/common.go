@@ -32,13 +32,13 @@ func WriteVolumeMeta(logger lager.Logger, storePath, id string, metadata base_im
 func VolumeSize(logger lager.Logger, storePath, id string) (int64, error) {
 	metaFile, err := os.Open(VolumeMetaFilePath(storePath, id))
 	if err != nil {
-		return 0, errorspkg.Wrapf(err, "opening volume `%s` metadata", id)
+		return 0, err
 	}
 
 	var metadata base_image_puller.VolumeMeta
 	err = json.NewDecoder(metaFile).Decode(&metadata)
 	if err != nil {
-		return 0, errorspkg.Wrapf(err, "parsing volume `%s` metadata", id)
+		return 0, err
 	}
 
 	return metadata.Size, nil

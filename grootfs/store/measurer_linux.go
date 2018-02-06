@@ -56,22 +56,22 @@ func (s *StoreMeasurer) UnusedVolumesSize(logger lager.Logger) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	return s.countVolumeSize(logger, unusedVols)
+	return s.countVolumesSize(logger, unusedVols)
 }
 
-func (s *StoreMeasurer) TotalVolumeSize(logger lager.Logger) (int64, error) {
+func (s *StoreMeasurer) TotalVolumesSize(logger lager.Logger) (int64, error) {
 	vols, err := s.volumeDriver.Volumes(logger)
 	if err != nil {
 		return 0, err
 	}
-	return s.countVolumeSize(logger, vols)
+	return s.countVolumesSize(logger, vols)
 }
 
-func (s *StoreMeasurer) countVolumeSize(logger lager.Logger, volumes []string) (int64, error) {
+func (s *StoreMeasurer) countVolumesSize(logger lager.Logger, volumes []string) (int64, error) {
 	var size int64
 	for _, volume := range volumes {
 		volumeSize, err := s.volumeDriver.VolumeSize(logger, volume)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			return 0, err
 		}
 		size += volumeSize
@@ -100,7 +100,7 @@ func (s *StoreMeasurer) CommittedQuota(logger lager.Logger) (int64, error) {
 
 		imageQuota, err := readImageQuota(filepath.Join(imageDir, file.Name()))
 		if err != nil && !os.IsNotExist(err) {
-			return -1, err
+			return 0, err
 		}
 
 		totalCommittedSpace += imageQuota
