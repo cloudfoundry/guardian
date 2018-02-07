@@ -188,13 +188,22 @@ var _ = Describe("Measurer", func() {
 			Expect(err).To(HaveOccurred())
 		})
 
-		It("errors when unable to read quota files", func() {
+		It("errors when unable to read quota files containing garbage", func() {
 			erroneousImagePath := filepath.Join(storePath, store.ImageDirName, "erroneous-image")
 			Expect(os.MkdirAll(erroneousImagePath, 0744)).To(Succeed())
 			Expect(ioutil.WriteFile(filepath.Join(erroneousImagePath, "image_quota"), []byte("what!?"), 0777)).To(Succeed())
 
 			_, err := storeMeasurer.CommittedQuota(logger)
 			Expect(err).To(HaveOccurred())
+		})
+
+		It("silently ignores empty quota files", func() {
+			erroneousImagePath := filepath.Join(storePath, store.ImageDirName, "erroneous-image")
+			Expect(os.MkdirAll(erroneousImagePath, 0744)).To(Succeed())
+			Expect(ioutil.WriteFile(filepath.Join(erroneousImagePath, "image_quota"), []byte(""), 0777)).To(Succeed())
+
+			_, err := storeMeasurer.CommittedQuota(logger)
+			Expect(err).NotTo(HaveOccurred())
 		})
 	})
 })

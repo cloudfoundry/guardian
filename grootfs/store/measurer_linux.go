@@ -116,6 +116,10 @@ func readImageQuota(imageDir string) (int64, error) {
 		return 0, err
 	}
 
+	if len(imageQuotaBytes) == 0 {
+		return 0, nil
+	}
+
 	imageQuota, err := strconv.ParseInt(string(imageQuotaBytes), 10, 64)
 	if err != nil {
 		return 0, err
