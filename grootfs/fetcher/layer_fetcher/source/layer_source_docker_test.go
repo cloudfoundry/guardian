@@ -101,8 +101,11 @@ var _ = Describe("Layer source: Docker", func() {
 
 				Expect(manifest.LayerInfos()).To(HaveLen(3))
 				Expect(manifest.LayerInfos()[0].Digest.String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.Layers[0].BlobID))
+				Expect(manifest.LayerInfos()[0].Size).To(Equal(int64(-1)))
 				Expect(manifest.LayerInfos()[1].Digest.String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.Layers[1].BlobID))
+				Expect(manifest.LayerInfos()[1].Size).To(Equal(int64(-1)))
 				Expect(manifest.LayerInfos()[2].Digest.String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.Layers[2].BlobID))
+				Expect(manifest.LayerInfos()[2].Size).To(Equal(int64(-1)))
 			})
 		})
 
@@ -512,6 +515,7 @@ var _ = Describe("Layer source: Docker", func() {
 						BlobID:    "sha256:dabca1fccc91489bf9914945b95582f16d6090f423174641710083d6651db4a4",
 						DiffID:    "780016ca8250bcbed0cbcf7b023c75550583de26629e135a1e31c0bf91fba296",
 						MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
+						Size:      90,
 					},
 				}
 			})

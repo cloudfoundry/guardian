@@ -291,6 +291,36 @@ var _ = Describe("Create with OCI images", func() {
 		})
 	})
 
+	Context("when the layer size reported in the manifest is less than the physical size of the layer", func() {
+		BeforeEach(func() {
+			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/invalid-manifest-size-less-than-physical-size:latest", workDir))
+		})
+
+		It("returns an informative error", func() {
+			_, err := runner.Create(groot.CreateSpec{
+				BaseImageURL: baseImageURL,
+				ID:           randomImageID,
+				Mount:        mountByDefault(),
+			})
+			Expect(err).To(MatchError(ContainSubstring("layer size is greater than the value in the manifest")))
+		})
+	})
+
+	Context("when the layer size reported in the manifest is more than the physical size of the layer", func() {
+		BeforeEach(func() {
+			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/invalid-manifest-size-more-than-physical-size:latest", workDir))
+		})
+
+		It("returns an informative error", func() {
+			_, err := runner.Create(groot.CreateSpec{
+				BaseImageURL: baseImageURL,
+				ID:           randomImageID,
+				Mount:        mountByDefault(),
+			})
+			Expect(err).To(MatchError(ContainSubstring("layer size is less than the value in the manifest")))
+		})
+	})
+
 	Describe("Unpacked layer caching", func() {
 		It("caches the unpacked image as a volume", func() {
 			_, err := runner.Create(groot.CreateSpec{

@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 
+	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	_ "github.com/containers/image/docker"
@@ -95,10 +96,18 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo
 	}
 	logger.Debug("got-blob-stream", lager.Data{"digest": layerInfo.BlobID, "size": size, "mediaType": layerInfo.MediaType})
 
+	quotaedReader := &layer_fetcher.QuotaedReader{
+		DelegateReader: blob,
+		QuotaLeft:      layerInfo.Size,
+		QuotaExceededErrorHandler: func() error {
+			return fmt.Errorf("layer size is greater than the value in the manifest")
+		},
+	}
+
 	blobTempFile, err := ioutil.TempFile("", fmt.Sprintf("blob-%s", layerInfo.BlobID))
 
 	blobIDHash := sha256.New()
-	digestReader := ioutil.NopCloser(io.TeeReader(blob, blobIDHash))
+	digestReader := ioutil.NopCloser(io.TeeReader(quotaedReader, blobIDHash))
 	if layerInfo.MediaType == "" || strings.Contains(layerInfo.MediaType, "gzip") {
 		logger.Debug("uncompressing-blob")
 
@@ -137,6 +146,10 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo
 
 	if err = s.checkCheckSum(logger, diffIDHash, layerInfo.DiffID, baseImageURL.Scheme); err != nil {
 		return "", 0, errorspkg.Wrap(err, "diffID digest mismatch")
+	}
+
+	if quotaedReader.QuotaLeft > 0 {
+		return "", 0, fmt.Errorf("layer size is less than the value in the manifest")
 	}
 
 	return blobTempFile.Name(), size, nil
@@ -259,6 +272,7 @@ func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Imag
 		ManifestMIMEType: manifestpkg.DockerV2Schema2MediaType,
 		InformationOnly: types.ManifestUpdateInformation{
 			LayerDiffIDs: diffIDs,
+			LayerInfos:   originalImage.LayerInfos(),
 		},
 	}
 
