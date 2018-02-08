@@ -46,7 +46,7 @@ var _ = Describe("Concurrent creations", func() {
 				defer wg.Done()
 				runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
 				_, err := runner.Create(groot.CreateSpec{
-					ID:                          fmt.Sprintf("test-%d", idx),
+					ID:                          fmt.Sprintf("test-%d-%d", GinkgoParallelNode(), idx),
 					BaseImageURL:                integration.String2URL(fmt.Sprintf("oci://%s/assets/oci-test-image/grootfs-busybox:latest", workDir)),
 					Mount:                       mountByDefault(),
 					DiskLimit:                   2*1024*1024 + 512*1024,
@@ -72,7 +72,7 @@ var _ = Describe("Concurrent creations", func() {
 			for i := 0; i < 100; i++ {
 				runner := Runner.WithLogLevel(lager.ERROR) // clone runner to avoid data-race on stdout
 				_, err := runner.Create(groot.CreateSpec{
-					ID:           fmt.Sprintf("test-%d", i),
+					ID:           fmt.Sprintf("test-%d-%d", GinkgoParallelNode(), i),
 					BaseImageURL: integration.String2URL(fmt.Sprintf("oci://%s/assets/oci-test-image/grootfs-busybox:latest", workDir)),
 					Mount:        mountByDefault(),
 					DiskLimit:    2*1024*1024 + 512*1024,
