@@ -23,6 +23,7 @@ var _ = Describe("QuotaedReader", func() {
 
 	BeforeEach(func() {
 		quota = 20
+		skipValidation = false
 	})
 
 	JustBeforeEach(func() {
@@ -75,21 +76,6 @@ var _ = Describe("QuotaedReader", func() {
 			It("reads only as many bytes as allowed by the quota plus one", func() {
 				b, _ := ioutil.ReadAll(qr)
 				Expect(b).To(HaveLen(int(quota + 1)))
-			})
-		})
-
-		Context("when the underlying reader has less bytes than the quota", func() {
-			var data string
-
-			BeforeEach(func() {
-				data = "will read it all"
-				delegate = strings.NewReader(data)
-			})
-
-			It("reads all the data", func() {
-				bytesRead, err := ioutil.ReadAll(qr)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(bytesRead).To(Equal([]byte(data)))
 			})
 		})
 
