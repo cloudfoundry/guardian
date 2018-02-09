@@ -7,11 +7,12 @@ import (
 type QuotaedReader struct {
 	DelegateReader            io.Reader
 	QuotaLeft                 int64
+	SkipValidation            bool
 	QuotaExceededErrorHandler func() error
 }
 
 func (q *QuotaedReader) Read(p []byte) (int, error) {
-	if q.QuotaLeft < 0 {
+	if q.QuotaLeft < 0 || q.SkipValidation {
 		return q.DelegateReader.Read(p)
 	}
 
@@ -27,4 +28,8 @@ func (q *QuotaedReader) Read(p []byte) (int, error) {
 	}
 
 	return n, err
+}
+
+func (q *QuotaedReader) AnyQuotaLeft() bool {
+	return q.QuotaLeft > 0 && !q.SkipValidation
 }

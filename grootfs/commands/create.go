@@ -56,7 +56,7 @@ var CreateCommand = cli.Command{
 		},
 		cli.BoolFlag{
 			Name:  "skip-layer-validation",
-			Usage: "Do not validate checksums of image layers. (Can only be used with oci:/// protocol images.)",
+			Usage: "Do not validate checksums and sizes of image layers. (Can only be used with oci:/// protocol images.)",
 		},
 		cli.BoolFlag{
 			Name:  "with-clean",
@@ -279,8 +279,8 @@ func createFetcher(baseImageUrl *url.URL, systemContext types.SystemContext, cre
 		return tar_fetcher.NewTarFetcher()
 	}
 
-	skipOCIChecksumValidation := createCfg.SkipLayerValidation && baseImageUrl.Scheme == "oci"
-	layerSource := source.NewLayerSource(systemContext, skipOCIChecksumValidation)
+	skipOCILayerValidation := createCfg.SkipLayerValidation && baseImageUrl.Scheme == "oci"
+	layerSource := source.NewLayerSource(systemContext, skipOCILayerValidation)
 	return layer_fetcher.NewLayerFetcher(&layerSource)
 }
 
