@@ -12,7 +12,6 @@ import (
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 
-	"github.com/cloudfoundry/dropsonde"
 	"github.com/containers/storage/pkg/reexec"
 	"github.com/urfave/cli"
 )
@@ -141,13 +140,6 @@ func main() {
 		if err := os.Setenv("TMPDIR", filepath.Join(cfg.StorePath, store.TempDirName)); err != nil {
 			logger.Error("setting TMPDIR env var", err)
 			return cli.NewExitError(err.Error(), 1)
-		}
-
-		dropsondeOrigin := grootfs.Name
-		if cfg.MetronEndpoint != "" {
-			if err := dropsonde.Initialize(cfg.MetronEndpoint, dropsondeOrigin); err != nil {
-				logger.Error("failed-to-initialize-metrics-emitter", err)
-			}
 		}
 
 		return nil

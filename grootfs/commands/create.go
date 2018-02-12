@@ -91,11 +91,10 @@ var CreateCommand = cli.Command{
 	Action: func(ctx *cli.Context) error {
 		logger := ctx.App.Metadata["logger"].(lager.Logger)
 		logger = logger.Session("create")
-		newExitError := newErrorHandler(logger, "create")
 
 		if ctx.NArg() != 2 {
 			logger.Error("parsing-command", errorspkg.New("invalid arguments"), lager.Data{"args": ctx.Args()})
-			return newExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
+			return cli.NewExitError(fmt.Sprintf("invalid arguments - usage: %s", ctx.Command.Usage), 1)
 		}
 
 		configBuilder := ctx.App.Metadata["configBuilder"].(*config.Builder)
@@ -114,11 +113,11 @@ var CreateCommand = cli.Command{
 		logger.Debug("create-config", lager.Data{"currentConfig": cfg})
 		if err != nil {
 			logger.Error("config-builder-failed", err)
-			return newExitError(err.Error(), 1)
+			return cli.NewExitError(err.Error(), 1)
 		}
 
 		if err = validateOptions(ctx, cfg); err != nil {
-			return newExitError(err.Error(), 1)
+			return cli.NewExitError(err.Error(), 1)
 		}
 
 		storePath := cfg.StorePath
@@ -127,15 +126,15 @@ var CreateCommand = cli.Command{
 		baseImageURL, err := url.Parse(baseImage)
 		if err != nil {
 			logger.Error("base-image-url-parsing-failed", err)
-			return newExitError(err.Error(), 1)
+			return cli.NewExitError(err.Error(), 1)
 		}
 
 		fsDriver, err := createFileSystemDriver(cfg)
 		if err != nil {
-			return newExitError(err.Error(), 1)
+			return cli.NewExitError(err.Error(), 1)
 		}
 
-		metricsEmitter := metrics.NewEmitter()
+		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
 		sharedLocksmith := locksmithpkg.NewSharedFileSystem(storePath, metricsEmitter)
 		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(storePath, metricsEmitter)
 		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
@@ -144,13 +143,13 @@ var CreateCommand = cli.Command{
 		manager := manager.New(storePath, storeNamespacer, fsDriver, fsDriver, fsDriver)
 		if !manager.IsStoreInitialized(logger) {
 			logger.Error("store-verification-failed", errors.New("store is not initialized"))
-			return newExitError("Store path is not initialized. Please run init-store.", 1)
+			return cli.NewExitError("Store path is not initialized. Please run init-store.", 1)
 		}
 
 		idMappings, err := storeNamespacer.Read()
 		if err != nil {
 			logger.Error("reading-namespace-file", err)
-			return newExitError(err.Error(), 1)
+			return cli.NewExitError(err.Error(), 1)
 		}
 
 		runner := linux_command_runner.New()
@@ -164,7 +163,7 @@ var CreateCommand = cli.Command{
 		if os.Getuid() == 0 {
 			unpacker, err = unpackerpkg.NewTarUnpacker(unpackerStrategy)
 			if err != nil {
-				return newExitError(err.Error(), 1)
+				return cli.NewExitError(err.Error(), 1)
 			}
 		} else {
 			idMapper = unpackerpkg.NewIDMapper(cfg.NewuidmapBin, cfg.NewgidmapBin, runner)
@@ -211,7 +210,7 @@ var CreateCommand = cli.Command{
 		if err != nil {
 			logger.Error("creating", err)
 			humanizedError := tryHumanize(err, createSpec)
-			return newExitError(humanizedError, 1)
+			return cli.NewExitError(humanizedError, 1)
 		}
 
 		containerSpec := specs.Spec{
@@ -236,7 +235,7 @@ var CreateCommand = cli.Command{
 		jsonBytes, err := json.Marshal(containerSpec)
 		if err != nil {
 			logger.Error("formatting output", err)
-			return newExitError(err.Error(), 1)
+			return cli.NewExitError(err.Error(), 1)
 		}
 		fmt.Println(string(jsonBytes))
 
@@ -247,8 +246,6 @@ var CreateCommand = cli.Command{
 }
 
 func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *storepkg.StoreMeasurer) {
-	metricsEmitter.TryIncrementRunCount("create", nil)
-
 	usage, err := sm.Usage(logger)
 	if err != nil {
 		logger.Error("measuring-store", err)

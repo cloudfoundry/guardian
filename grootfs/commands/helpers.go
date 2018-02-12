@@ -1,7 +1,6 @@
 package commands
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -13,7 +12,6 @@ import (
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
@@ -21,7 +19,6 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/opencontainers/runc/libcontainer/user"
 	errorspkg "github.com/pkg/errors"
-	"github.com/urfave/cli"
 )
 
 type fileSystemDriver interface {
@@ -137,17 +134,4 @@ func readSubIDMapping(name string, id int, subidPath string) ([]groot.IDMappingS
 	}
 
 	return mappings, nil
-}
-
-type exitErrorFunc func(message string, exitCode int) *cli.ExitError
-
-func newErrorHandler(logger lager.Logger, action string) exitErrorFunc {
-	metricsEmitter := metrics.NewEmitter()
-
-	return func(message string, exitCode int) *cli.ExitError {
-		err := errors.New(message)
-		defer metricsEmitter.TryIncrementRunCount(action, err)
-		metricsEmitter.TryEmitError(logger, action, err, int32(exitCode))
-		return cli.NewExitError(message, exitCode)
-	}
 }

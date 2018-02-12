@@ -1,14 +1,12 @@
 package metrics_test
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/metrics"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager/lagertest"
-	"github.com/cloudfoundry/dropsonde"
 	"github.com/cloudfoundry/sonde-go/events"
 
 	. "github.com/onsi/ginkgo"
@@ -17,11 +15,12 @@ import (
 
 var _ = Describe("Emitter", func() {
 	var (
-		fakeMetronPort   uint16
-		fakeMetron       *testhelpers.FakeMetron
-		fakeMetronClosed chan struct{}
-		emitter          *metrics.Emitter
-		logger           *lagertest.TestLogger
+		fakeMetronPort     uint16
+		fakeMetron         *testhelpers.FakeMetron
+		fakeMetronClosed   chan struct{}
+		fakeMetronEndpoint string
+		emitter            *metrics.Emitter
+		logger             *lagertest.TestLogger
 	)
 
 	BeforeEach(func() {
@@ -30,9 +29,10 @@ var _ = Describe("Emitter", func() {
 		fakeMetron = testhelpers.NewFakeMetron(fakeMetronPort)
 		Expect(fakeMetron.Listen()).To(Succeed())
 
-		Expect(
-			dropsonde.Initialize(fmt.Sprintf("127.0.0.1:%d", fakeMetronPort), "foo"),
-		).To(Succeed())
+		fakeMetronEndpoint = fmt.Sprintf("127.0.0.1:%d", fakeMetronPort)
+
+		logger = lagertest.NewTestLogger("emitter")
+		emitter = metrics.NewEmitter(logger, fakeMetronEndpoint)
 
 		fakeMetronClosed = make(chan struct{})
 		go func() {
@@ -41,9 +41,6 @@ var _ = Describe("Emitter", func() {
 			close(fakeMetronClosed)
 		}()
 
-		emitter = metrics.NewEmitter()
-
-		logger = lagertest.NewTestLogger("emitter")
 	})
 
 	AfterEach(func() {
@@ -84,60 +81,6 @@ var _ = Describe("Emitter", func() {
 				BeNumerically(">", float64(time.Second-time.Millisecond)),
 				BeNumerically("<", float64(time.Second+10*time.Millisecond)),
 			))
-		})
-	})
-
-	Describe("TryIncrementRunCount", func() {
-		It("increments the success run counter", func() {
-			emitter.TryIncrementRunCount("foo", nil)
-
-			var counterEvents []events.CounterEvent
-			Eventually(func() []events.CounterEvent {
-				counterEvents = fakeMetron.CounterEvents("grootfs-foo.run")
-				return counterEvents
-			}).Should(HaveLen(1))
-			Expect(*counterEvents[0].Name).To(Equal("grootfs-foo.run"))
-
-			Eventually(func() []events.CounterEvent {
-				counterEvents = fakeMetron.CounterEvents("grootfs-foo.run.success")
-				return counterEvents
-			}).Should(HaveLen(1))
-			Expect(*counterEvents[0].Name).To(Equal("grootfs-foo.run.success"))
-		})
-
-		Context("when the err is not nil", func() {
-			It("increments the fail run counter", func() {
-				emitter.TryIncrementRunCount("foo", errors.New("bar"))
-
-				var counterEvents []events.CounterEvent
-				Eventually(func() []events.CounterEvent {
-					counterEvents = fakeMetron.CounterEvents("grootfs-foo.run")
-					return counterEvents
-				}).Should(HaveLen(1))
-				Expect(*counterEvents[0].Name).To(Equal("grootfs-foo.run"))
-
-				Eventually(func() []events.CounterEvent {
-					counterEvents = fakeMetron.CounterEvents("grootfs-foo.run.fail")
-					return counterEvents
-				}).Should(HaveLen(1))
-				Expect(*counterEvents[0].Name).To(Equal("grootfs-foo.run.fail"))
-			})
-		})
-	})
-
-	Describe("TryEmitError", func() {
-		It("emits error", func() {
-			emitter.TryEmitError(logger, "create", errors.New("hello"), int32(10))
-
-			var errors []events.Error
-			Eventually(func() []events.Error {
-				errors = fakeMetron.Errors()
-				return errors
-			}).Should(HaveLen(1))
-
-			Expect(*errors[0].Source).To(Equal("grootfs-error.create"))
-			Expect(*errors[0].Code).To(Equal(int32(10)))
-			Expect(*errors[0].Message).To(Equal("hello"))
 		})
 	})
 })

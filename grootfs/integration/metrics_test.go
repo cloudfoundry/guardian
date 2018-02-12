@@ -10,7 +10,6 @@ import (
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
-	"code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"github.com/cloudfoundry/sonde-go/events"
@@ -128,24 +127,6 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).To(BeZero())
 		})
 
-		It("emits the success count", func() {
-			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
-			Expect(err).NotTo(HaveOccurred())
-
-			var counterEvents []events.CounterEvent
-			Eventually(func() []events.CounterEvent {
-				counterEvents = fakeMetron.CounterEvents("grootfs-create.run")
-				return counterEvents
-			}).Should(HaveLen(1))
-			Expect(*counterEvents[0].Name).To(Equal("grootfs-create.run"))
-
-			Eventually(func() []events.CounterEvent {
-				counterEvents = fakeMetron.CounterEvents("grootfs-create.run.success")
-				return counterEvents
-			}).Should(HaveLen(1))
-			Expect(*counterEvents[0].Name).To(Equal("grootfs-create.run.success"))
-		})
-
 		It("emits grootfs disk space committed to quotas in MB", func() {
 			integration.SkipIfNotXFS(Driver)
 			spec.DiskLimit = 1 * 1024 * 1024
@@ -213,44 +194,6 @@ var _ = Describe("Metrics", func() {
 				Expect(*metrics[0].Value).To(BeZero())
 			})
 		})
-
-		Context("when create fails", func() {
-			BeforeEach(func() {
-				spec.BaseImageURL = integration.String2URL("not-here")
-			})
-
-			It("emits an error event", func() {
-				_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
-				Expect(err).To(HaveOccurred())
-
-				var errors []events.Error
-				Eventually(func() []events.Error {
-					errors = fakeMetron.Errors()
-					return errors
-				}).Should(HaveLen(1))
-
-				Expect(*errors[0].Source).To(Equal("grootfs-error.create"))
-				Expect(*errors[0].Message).To(ContainSubstring("stat not-here: no such file or directory"))
-			})
-
-			It("emits the fail count", func() {
-				_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
-				Expect(err).To(HaveOccurred())
-
-				var counterEvents []events.CounterEvent
-				Eventually(func() []events.CounterEvent {
-					counterEvents = fakeMetron.CounterEvents("grootfs-create.run")
-					return counterEvents
-				}).Should(HaveLen(1))
-				Expect(*counterEvents[0].Name).To(Equal("grootfs-create.run"))
-
-				Eventually(func() []events.CounterEvent {
-					counterEvents = fakeMetron.CounterEvents("grootfs-create.run.fail")
-					return counterEvents
-				}).Should(HaveLen(1))
-				Expect(*counterEvents[0].Name).To(Equal("grootfs-create.run.fail"))
-			})
-		})
 	})
 
 	Describe("Delete", func() {
@@ -276,26 +219,6 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
-		It("emits the sucess count", func() {
-			err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Delete("my-id")
-			Expect(err).NotTo(HaveOccurred())
-
-			var counterEvents []events.CounterEvent
-			Eventually(func() []events.CounterEvent {
-				counterEvents = fakeMetron.CounterEvents("grootfs-delete.run")
-				return counterEvents
-			}).Should(HaveLen(1))
-			Expect(*counterEvents[0].Name).To(Equal("grootfs-delete.run"))
-
-			Eventually(func() []events.CounterEvent {
-				counterEvents = fakeMetron.CounterEvents("grootfs-delete.run.success")
-				return counterEvents
-			}).Should(HaveLen(1))
-			Expect(*counterEvents[0].Name).To(Equal("grootfs-delete.run.success"))
-		})
-
 		Context("with a non-empty base image", func() {
 			BeforeEach(func() {
 				spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
@@ -316,132 +239,6 @@ var _ = Describe("Metrics", func() {
 				Expect(*metrics[0].Name).To(Equal("UnusedLayersSize"))
 				Expect(*metrics[0].Unit).To(Equal("bytes"))
 				Expect(*metrics[0].Value).To(BeNumerically(">", 0))
-			})
-		})
-
-		Context("when delete fails", func() {
-			var runner runner.Runner
-
-			BeforeEach(func() {
-				runner = Runner.RunningAsUser(GrootUID+1, GrootGID+1)
-			})
-
-			It("emits an error event", func() {
-				err := runner.
-					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-					Delete("my-id")
-				Expect(err).To(HaveOccurred())
-
-				var errors []events.Error
-				Eventually(func() []events.Error {
-					errors = fakeMetron.Errors()
-					return errors
-				}).Should(HaveLen(1))
-
-				Expect(*errors[0].Source).To(Equal("grootfs-error.delete"))
-				Expect(*errors[0].Message).To(ContainSubstring("permission denied"))
-			})
-
-			It("emits the fail count", func() {
-				err := runner.
-					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-					Delete("my-id")
-				Expect(err).To(HaveOccurred())
-
-				var counterEvents []events.CounterEvent
-				Eventually(func() []events.CounterEvent {
-					counterEvents = fakeMetron.CounterEvents("grootfs-delete.run")
-					return counterEvents
-				}).Should(HaveLen(1))
-				Expect(*counterEvents[0].Name).To(Equal("grootfs-delete.run"))
-
-				Eventually(func() []events.CounterEvent {
-					counterEvents = fakeMetron.CounterEvents("grootfs-delete.run.fail")
-					return counterEvents
-				}).Should(HaveLen(1))
-				Expect(*counterEvents[0].Name).To(Equal("grootfs-delete.run.fail"))
-			})
-		})
-	})
-
-	Describe("Stats", func() {
-		BeforeEach(func() {
-			_, err := Runner.Create(spec)
-			Expect(err).NotTo(HaveOccurred())
-		})
-
-		It("emits the total time for metrics command", func() {
-			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Stats("my-id")
-			Expect(err).NotTo(HaveOccurred())
-
-			var metrics []events.ValueMetric
-			Eventually(func() []events.ValueMetric {
-				metrics = fakeMetron.ValueMetricsFor("ImageStatsTime")
-				return metrics
-			}).Should(HaveLen(1))
-
-			Expect(*metrics[0].Name).To(Equal("ImageStatsTime"))
-			Expect(*metrics[0].Unit).To(Equal("nanos"))
-			Expect(*metrics[0].Value).NotTo(BeZero())
-		})
-
-		It("emits the sucess count", func() {
-			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-				Stats("my-id")
-			Expect(err).NotTo(HaveOccurred())
-
-			var counterEvents []events.CounterEvent
-			Eventually(func() []events.CounterEvent {
-				counterEvents = fakeMetron.CounterEvents("grootfs-stats.run")
-				return counterEvents
-			}).Should(HaveLen(1))
-			Expect(*counterEvents[0].Name).To(Equal("grootfs-stats.run"))
-
-			Eventually(func() []events.CounterEvent {
-				counterEvents = fakeMetron.CounterEvents("grootfs-stats.run.success")
-				return counterEvents
-			}).Should(HaveLen(1))
-			Expect(*counterEvents[0].Name).To(Equal("grootfs-stats.run.success"))
-		})
-
-		Context("when stats fails", func() {
-			It("emits an error event", func() {
-				_, err := Runner.
-					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-					Stats("some-other-id")
-				Expect(err).To(HaveOccurred())
-
-				var errors []events.Error
-				Eventually(func() []events.Error {
-					errors = fakeMetron.Errors()
-					return errors
-				}).Should(HaveLen(1))
-
-				Expect(*errors[0].Source).To(Equal("grootfs-error.stats"))
-				Expect(*errors[0].Message).To(ContainSubstring("not found"))
-			})
-
-			It("emits the fail count", func() {
-				_, err := Runner.
-					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
-					Stats("some-other-id")
-				Expect(err).To(HaveOccurred())
-
-				var counterEvents []events.CounterEvent
-				Eventually(func() []events.CounterEvent {
-					counterEvents = fakeMetron.CounterEvents("grootfs-stats.run")
-					return counterEvents
-				}).Should(HaveLen(1))
-				Expect(*counterEvents[0].Name).To(Equal("grootfs-stats.run"))
-
-				Eventually(func() []events.CounterEvent {
-					counterEvents = fakeMetron.CounterEvents("grootfs-stats.run.fail")
-					return counterEvents
-				}).Should(HaveLen(1))
-				Expect(*counterEvents[0].Name).To(Equal("grootfs-stats.run.fail"))
 			})
 		})
 	})
@@ -488,25 +285,6 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Value).NotTo(BeZero())
 		})
 
-		It("emits the success count", func() {
-			_, err := Runner.
-				WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
-			Expect(err).NotTo(HaveOccurred())
-
-			var counterEvents []events.CounterEvent
-			Eventually(func() []events.CounterEvent {
-				counterEvents = fakeMetron.CounterEvents("grootfs-clean.run")
-				return counterEvents
-			}).Should(HaveLen(1))
-			Expect(*counterEvents[0].Name).To(Equal("grootfs-clean.run"))
-
-			Eventually(func() []events.CounterEvent {
-				counterEvents = fakeMetron.CounterEvents("grootfs-clean.run.success")
-				return counterEvents
-			}).Should(HaveLen(1))
-			Expect(*counterEvents[0].Name).To(Equal("grootfs-clean.run.success"))
-		})
-
 		It("emits store usage", func() {
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).
 				Clean(0)
@@ -537,48 +315,6 @@ var _ = Describe("Metrics", func() {
 			Expect(*metrics[0].Name).To(Equal("UnusedLayersSize"))
 			Expect(*metrics[0].Unit).To(Equal("bytes"))
 			Expect(*metrics[0].Value).To(BeZero())
-		})
-
-		Context("when clean fails", func() {
-			var runner runner.Runner
-
-			BeforeEach(func() {
-				runner = Runner.RunningAsUser(GrootUID+1, GrootGID+1)
-			})
-
-			It("emits an error event", func() {
-				_, err := runner.
-					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
-				Expect(err).To(HaveOccurred())
-
-				var errors []events.Error
-				Eventually(func() []events.Error {
-					errors = fakeMetron.Errors()
-					return errors
-				}).Should(HaveLen(1))
-
-				Expect(*errors[0].Source).To(Equal("grootfs-error.clean"))
-				Expect(*errors[0].Message).To(ContainSubstring("permission denied"))
-			})
-
-			It("emits the fail count", func() {
-				_, err := runner.
-					WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Clean(0)
-				Expect(err).To(HaveOccurred())
-
-				var counterEvents []events.CounterEvent
-				Eventually(func() []events.CounterEvent {
-					counterEvents = fakeMetron.CounterEvents("grootfs-clean.run")
-					return counterEvents
-				}).Should(HaveLen(1))
-				Expect(*counterEvents[0].Name).To(Equal("grootfs-clean.run"))
-
-				Eventually(func() []events.CounterEvent {
-					counterEvents = fakeMetron.CounterEvents("grootfs-clean.run.fail")
-					return counterEvents
-				}).Should(HaveLen(1))
-				Expect(*counterEvents[0].Name).To(Equal("grootfs-clean.run.fail"))
-			})
 		})
 	})
 
