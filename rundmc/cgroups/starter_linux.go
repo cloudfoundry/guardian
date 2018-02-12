@@ -74,7 +74,11 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		return err
 	}
 
-	if !s.isMountPoint(s.CgroupPath) {
+	mountPoint, err := s.isMountPoint(s.CgroupPath)
+	if err != nil {
+		return err
+	}
+	if !mountPoint {
 		s.mountTmpfsOnCgroupPath(logger, s.CgroupPath)
 	} else {
 		logger.Info("cgroups-tmpfs-already-mounted", lager.Data{"path": s.CgroupPath})
@@ -239,7 +243,11 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 
 	logger.Info("started")
 
-	if !s.isMountPoint(cgroupPath) {
+	mountPoint, err := s.isMountPoint(cgroupPath)
+	if err != nil {
+		return err
+	}
+	if !mountPoint {
 		if err := os.MkdirAll(cgroupPath, 0755); err != nil {
 			return fmt.Errorf("mkdir '%s': %s", cgroupPath, err)
 		}
@@ -258,8 +266,14 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 	return nil
 }
 
-func (s *CgroupStarter) isMountPoint(path string) bool {
+func (s *CgroupStarter) isMountPoint(path string) (bool, error) {
 	// append trailing slash to force symlink traversal; symlinking e.g. 'cpu'
 	// to 'cpu,cpuacct' is common
-	return s.CommandRunner.Run(exec.Command("mountpoint", "-q", path+"/")) == nil
+	cmd := exec.Command("mountpoint", "-q", path+"/")
+
+	if err := s.CommandRunner.Start(cmd); err != nil {
+		return false, err
+	}
+
+	return s.CommandRunner.Wait(cmd) == nil, nil
 }

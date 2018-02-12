@@ -105,7 +105,7 @@ var _ = Describe("CgroupStarter", func() {
 
 	Context("when the cgroup path is not a mountpoint", func() {
 		BeforeEach(func() {
-			runner.WhenRunning(fake_command_runner.CommandSpec{
+			runner.WhenWaitingFor(fake_command_runner.CommandSpec{
 				Path: "mountpoint",
 				Args: []string{"-q", path.Join(tmpDir, "cgroup") + "/"},
 			}, func(cmd *exec.Cmd) error {
@@ -132,6 +132,21 @@ var _ = Describe("CgroupStarter", func() {
 		})
 	})
 
+	Context("when there is an error checking for a mountpoint on Start", func() {
+		BeforeEach(func() {
+			runner.WhenStarting(fake_command_runner.CommandSpec{
+				Path: "mountpoint",
+				Args: []string{"-q", path.Join(tmpDir, "cgroup") + "/"},
+			}, func(cmd *exec.Cmd) error {
+				return errors.New("mountpoint-errored-on-start")
+			})
+		})
+
+		It("returns an error", func() {
+			Expect(starter.Start()).To(MatchError("mountpoint-errored-on-start"))
+		})
+	})
+
 	Context("with a sane /proc/cgroups and /proc/self/cgroup", func() {
 		BeforeEach(func() {
 			procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
@@ -145,7 +160,7 @@ var _ = Describe("CgroupStarter", func() {
 				"3:cpu,cpuacct:/\n"
 
 			for _, notMounted := range []string{"devices", "cpu", "cpuacct"} {
-				runner.WhenRunning(fake_command_runner.CommandSpec{
+				runner.WhenWaitingFor(fake_command_runner.CommandSpec{
 					Path: "mountpoint",
 					Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted) + "/"},
 				}, func(cmd *exec.Cmd) error {
@@ -232,7 +247,7 @@ var _ = Describe("CgroupStarter", func() {
 				procSelfCgroupsContents = "4:memory:/461299e6-b672-497c-64e5-793494b9bbdb\n"
 
 				for _, notMounted := range []string{"memory"} {
-					runner.WhenRunning(fake_command_runner.CommandSpec{
+					runner.WhenWaitingFor(fake_command_runner.CommandSpec{
 						Path: "mountpoint",
 						Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted) + "/"},
 					}, func(cmd *exec.Cmd) error {
@@ -264,7 +279,7 @@ var _ = Describe("CgroupStarter", func() {
 				procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
 					"freezer\t7\t1\t1\n"
 
-				runner.WhenRunning(fake_command_runner.CommandSpec{
+				runner.WhenWaitingFor(fake_command_runner.CommandSpec{
 					Path: "mountpoint",
 					Args: []string{"-q", path.Join(tmpDir, "cgroup", "freezer") + "/"},
 				}, func(cmd *exec.Cmd) error {
