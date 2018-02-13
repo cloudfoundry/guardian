@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"sync"
 	"syscall"
@@ -136,9 +137,16 @@ func (d *ExecRunner) Run(
 
 	defer func() {
 		lastLogLine := <-doneReadingRuncLogs
-		if theErr != nil {
-			theErr = logging.WrapWithErrorFromLastLogLine("runc exec", theErr, lastLogLine)
+		if theErr == nil {
+			return
 		}
+
+		if isNoSuchExecutable(lastLogLine) {
+			theErr = garden.ExecutableNotFoundError{Message: logging.MsgFromLastLogLine(lastLogLine)}
+			return
+		}
+
+		theErr = logging.WrapWithErrorFromLastLogLine("runc exec", theErr, lastLogLine)
 	}()
 
 	log.Info("read-exit-fd")
@@ -153,6 +161,13 @@ func (d *ExecRunner) Run(
 	}
 
 	return process, nil
+}
+
+func isNoSuchExecutable(logLine []byte) bool {
+	noSuchFile := regexp.MustCompile(`starting container process caused \\"exec: .*: stat .*: no such file or directory`)
+	executableNotFound := regexp.MustCompile(`starting container process caused \\"exec: .*: executable file not found in \$PATH`)
+
+	return noSuchFile.Match(logLine) || executableNotFound.Match(logLine)
 }
 
 func buildDadooCommand(tty bool, dadooPath, dadooRunMode, runcPath, processID, processPath, sandboxHandle string, extraFiles []*os.File, stdin io.Reader) *exec.Cmd {

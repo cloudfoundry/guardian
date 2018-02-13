@@ -502,6 +502,46 @@ var _ = Describe("Run", func() {
 			Eventually(status).Should(Receive(BeEquivalentTo(42)))
 		})
 	})
+
+	Describe("Errors", func() {
+		Context("when trying to run an executable which does not exist", func() {
+			var (
+				runErr     error
+				binaryPath string
+			)
+
+			JustBeforeEach(func() {
+				client = runner.Start(config)
+
+				container, err := client.Create(garden.ContainerSpec{})
+				Expect(err).NotTo(HaveOccurred())
+
+				_, runErr = container.Run(garden.ProcessSpec{
+					Path: binaryPath,
+				}, garden.ProcessIO{})
+			})
+
+			Context("when the executable is a fully qualified path", func() {
+				BeforeEach(func() {
+					binaryPath = "/bin/fake"
+				})
+
+				It("returns a useful error type", func() {
+					Expect(runErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
+				})
+			})
+
+			Context("when the executable should be somewhere on the $PATH", func() {
+				BeforeEach(func() {
+					binaryPath = "fake-path"
+				})
+
+				It("returns a useful error type", func() {
+					Expect(runErr).To(BeAssignableToTypeOf(garden.ExecutableNotFoundError{}))
+				})
+			})
+		})
+	})
 })
 
 var _ = Describe("Attach", func() {

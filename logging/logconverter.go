@@ -37,13 +37,17 @@ func (e WrappedError) Error() string {
 }
 
 func WrapWithErrorFromLastLogLine(tag string, originalError error, logfileContent []byte) error {
-	msg := lastNonEmptyLine(logfileContent)
+	return WrappedError{Underlying: originalError, tag: tag, lastRuncLogLine: MsgFromLastLogLine(logfileContent)}
+}
+
+func MsgFromLastLogLine(logFileContent []byte) string {
+	msg := lastNonEmptyLine(logFileContent)
 	var line logLine
 	if err := json.Unmarshal(msg, &line); err == nil {
 		msg = []byte(line.Msg)
 	}
 
-	return WrappedError{Underlying: originalError, tag: tag, lastRuncLogLine: string(msg)}
+	return string(msg)
 }
 
 func lastNonEmptyLine(content []byte) []byte {

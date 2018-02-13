@@ -391,6 +391,38 @@ var _ = Describe("Dadoo ExecRunner", func() {
 					close(done)
 				}, 10.0)
 			})
+
+			Context("when runc tries to exec a non-existent binary", func() {
+				Context("when the binary is not on the $PATH", func() {
+					BeforeEach(func() {
+						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"starting container process caused \"exec: \\\"potato\\\": executable file not found in $PATH\""}`
+					})
+
+					It("Returns a garden.RequestedBinaryNotFoundError error", func() {
+						_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+
+						message := `starting container process caused "exec: \"potato\": executable file not found in $PATH"`
+						expectedErr := garden.ExecutableNotFoundError{Message: message}
+
+						Expect(err).To(MatchError(expectedErr))
+					})
+				})
+
+				Context("when a fully qualified binary does not exist", func() {
+					BeforeEach(func() {
+						dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"fatal", "msg":"starting container process caused \"exec: \\\"/bin/potato\\\": stat /bin/potato: no such file or directory\""}`
+					})
+
+					It("Returns a garden.RequestedBinaryNotFoundError error", func() {
+						_, err := runner.Run(log, processID, processPath, "some-handle", bundlePath, 123, 456, defaultProcessIO(), false, nil, nil)
+
+						message := `starting container process caused "exec: \"/bin/potato\": stat /bin/potato: no such file or directory"`
+						expectedErr := garden.ExecutableNotFoundError{Message: message}
+
+						Expect(err).To(MatchError(expectedErr))
+					})
+				})
+			})
 		})
 
 		Context("when dadoo panics before reporting runc's exit code", func() {
