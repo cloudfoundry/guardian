@@ -48,6 +48,18 @@ type FakeStoreDriver struct {
 	initFilesystemReturnsOnCall map[int]struct {
 		result1 error
 	}
+	DeInitFilesystemStub        func(logger lager.Logger, storePath string) error
+	deInitFilesystemMutex       sync.RWMutex
+	deInitFilesystemArgsForCall []struct {
+		logger    lager.Logger
+		storePath string
+	}
+	deInitFilesystemReturns struct {
+		result1 error
+	}
+	deInitFilesystemReturnsOnCall map[int]struct {
+		result1 error
+	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
@@ -202,6 +214,55 @@ func (fake *FakeStoreDriver) InitFilesystemReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
+func (fake *FakeStoreDriver) DeInitFilesystem(logger lager.Logger, storePath string) error {
+	fake.deInitFilesystemMutex.Lock()
+	ret, specificReturn := fake.deInitFilesystemReturnsOnCall[len(fake.deInitFilesystemArgsForCall)]
+	fake.deInitFilesystemArgsForCall = append(fake.deInitFilesystemArgsForCall, struct {
+		logger    lager.Logger
+		storePath string
+	}{logger, storePath})
+	fake.recordInvocation("DeInitFilesystem", []interface{}{logger, storePath})
+	fake.deInitFilesystemMutex.Unlock()
+	if fake.DeInitFilesystemStub != nil {
+		return fake.DeInitFilesystemStub(logger, storePath)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fake.deInitFilesystemReturns.result1
+}
+
+func (fake *FakeStoreDriver) DeInitFilesystemCallCount() int {
+	fake.deInitFilesystemMutex.RLock()
+	defer fake.deInitFilesystemMutex.RUnlock()
+	return len(fake.deInitFilesystemArgsForCall)
+}
+
+func (fake *FakeStoreDriver) DeInitFilesystemArgsForCall(i int) (lager.Logger, string) {
+	fake.deInitFilesystemMutex.RLock()
+	defer fake.deInitFilesystemMutex.RUnlock()
+	return fake.deInitFilesystemArgsForCall[i].logger, fake.deInitFilesystemArgsForCall[i].storePath
+}
+
+func (fake *FakeStoreDriver) DeInitFilesystemReturns(result1 error) {
+	fake.DeInitFilesystemStub = nil
+	fake.deInitFilesystemReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeStoreDriver) DeInitFilesystemReturnsOnCall(i int, result1 error) {
+	fake.DeInitFilesystemStub = nil
+	if fake.deInitFilesystemReturnsOnCall == nil {
+		fake.deInitFilesystemReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.deInitFilesystemReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
 func (fake *FakeStoreDriver) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -211,6 +272,8 @@ func (fake *FakeStoreDriver) Invocations() map[string][][]interface{} {
 	defer fake.validateFileSystemMutex.RUnlock()
 	fake.initFilesystemMutex.RLock()
 	defer fake.initFilesystemMutex.RUnlock()
+	fake.deInitFilesystemMutex.RLock()
+	defer fake.deInitFilesystemMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

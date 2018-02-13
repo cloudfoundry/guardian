@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"strconv"
 	"syscall"
@@ -143,6 +144,40 @@ var _ = Describe("Driver", func() {
 			It("returns an error", func() {
 				err := driver.InitFilesystem(logger, fsFile, "/tmp/no-valid")
 				Expect(err).To(MatchError(ContainSubstring("Mounting filesystem")))
+			})
+		})
+	})
+
+	Describe("DeInitFilesystem", func() {
+		var fsFile, storePath string
+
+		BeforeEach(func() {
+			tempFile, err := ioutil.TempFile("", "xfs-filesystem")
+			Expect(err).NotTo(HaveOccurred())
+			fsFile = tempFile.Name()
+			Expect(os.Truncate(fsFile, 1024*1024*1024)).To(Succeed())
+
+			storePath, err = ioutil.TempDir("", "store")
+			Expect(err).NotTo(HaveOccurred())
+			Expect(driver.InitFilesystem(logger, fsFile, storePath)).To(Succeed())
+			Expect(testhelpers.XFSMountPoints()).To(ContainElement(storePath))
+		})
+
+		It("succcesfully unmounts a filesystem", func() {
+			Expect(driver.DeInitFilesystem(logger, storePath)).To(Succeed())
+			Expect(testhelpers.XFSMountPoints()).NotTo(ContainElement(storePath))
+		})
+
+		Context("when the store path is not a mountpoint", func() {
+			var newPath string
+			BeforeEach(func() {
+				newPath = path.Join(storePath, "milkyway")
+				Expect(os.MkdirAll(newPath, 0755)).To(Succeed())
+			})
+
+			It("succcesfully unmounts a filesystem", func() {
+				Expect(driver.DeInitFilesystem(logger, newPath)).To(Succeed())
+				Expect(testhelpers.XFSMountPoints()).To(ContainElement(storePath))
 			})
 		})
 	})

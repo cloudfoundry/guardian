@@ -21,6 +21,7 @@ type StoreDriver interface {
 	ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error
 	ValidateFileSystem(logger lager.Logger, path string) error
 	InitFilesystem(logger lager.Logger, filesystemPath, storePath string) error
+	DeInitFilesystem(logger lager.Logger, storePath string) error
 }
 
 type Manager struct {
@@ -192,6 +193,11 @@ func (m *Manager) DeleteStore(logger lager.Logger, locksmith groot.Locksmith) er
 			logger.Error("destroying-volume-failed", err, lager.Data{"volume": volume})
 			return errorspkg.Wrapf(err, "destroying volume %s", volume)
 		}
+	}
+
+	if err := m.storeDriver.DeInitFilesystem(logger, m.storePath); err != nil {
+		logger.Error("deinitialising-store-failed", err)
+		return errorspkg.Wrap(err, "deinitialising store")
 	}
 
 	if err := os.RemoveAll(m.storePath); err != nil {

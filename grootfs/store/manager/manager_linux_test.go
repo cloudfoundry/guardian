@@ -515,6 +515,15 @@ var _ = Describe("Manager", func() {
 			Expect(lockKey).To(Equal(groot.GlobalLockKey))
 		})
 
+		It("uses the store driver to deinitialise the store", func() {
+			Expect(manager.DeleteStore(logger, locksmith)).To(Succeed())
+
+			Expect(storeDriver.DeInitFilesystemCallCount()).To(Equal(1))
+
+			_, path := storeDriver.DeInitFilesystemArgsForCall(0)
+			Expect(path).To(Equal(storePath))
+		})
+
 		It("deletes the store path", func() {
 			Expect(storePath).To(BeAnExistingFile())
 			Expect(manager.DeleteStore(logger, locksmith)).To(Succeed())
@@ -540,6 +549,17 @@ var _ = Describe("Manager", func() {
 			It("returns an error", func() {
 				err := manager.DeleteStore(logger, locksmith)
 				Expect(err).To(MatchError(ContainSubstring("failed to delete")))
+			})
+		})
+
+		Context("when store driver fails to deinitialise the store", func() {
+			BeforeEach(func() {
+				storeDriver.DeInitFilesystemReturns(errors.New("failed to deinitialise"))
+			})
+
+			It("returns an error", func() {
+				err := manager.DeleteStore(logger, locksmith)
+				Expect(err).To(MatchError(ContainSubstring("failed to deinitialise")))
 			})
 		})
 

@@ -62,6 +62,10 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 	return nil
 }
 
+func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
+	return nil
+}
+
 func (d *Driver) ConfigureStore(logger lager.Logger, storePath string, ownerUID, ownerGID int) error {
 	return nil
 }

@@ -55,6 +55,25 @@ func internalMountPoints(mountPath string) []string {
 	return mountPoints
 }
 
+func XFSMountPoints() []string {
+	output, err := exec.Command("cat", "/proc/mounts").Output()
+	Expect(err).NotTo(HaveOccurred())
+
+	mountPoints := []string{}
+	buffer := bytes.NewBuffer(output)
+	scanner := bufio.NewScanner(buffer)
+	for scanner.Scan() {
+		mountLine := scanner.Text()
+		mountInfo := strings.Split(mountLine, " ")
+		mountType := mountInfo[2]
+		if mountType == "xfs" {
+			mountPoints = append(mountPoints, mountInfo[1])
+		}
+	}
+
+	return mountPoints
+}
+
 func log(buff *gbytes.Buffer, message string, args ...interface{}) {
 	_, err := buff.Write([]byte(fmt.Sprintf(message, args...)))
 	Expect(err).NotTo(HaveOccurred())

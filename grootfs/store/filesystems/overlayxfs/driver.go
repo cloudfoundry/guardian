@@ -71,6 +71,23 @@ func (d *Driver) InitFilesystem(logger lager.Logger, filesystemPath, storePath s
 	return nil
 }
 
+func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
+	isMntPnt, err := isMountpoint(storePath)
+	if err != nil {
+		return err
+	}
+	if !isMntPnt {
+		return nil
+	}
+
+	if err := syscall.Unmount(storePath, syscall.MNT_DETACH); err != nil {
+		logger.Error("unmounting-store-path-failed", err, lager.Data{"storePath": storePath})
+		return errorspkg.Wrapf(err, "unmounting store path")
+	}
+
+	return nil
+}
+
 func (d *Driver) ConfigureStore(logger lager.Logger, path string, ownerUID, ownerGID int) error {
 	logger = logger.Session("overlayxfs-configure-store", lager.Data{"path": path})
 	logger.Debug("starting")
@@ -683,4 +700,27 @@ func ensureImageDestroyed(logger lager.Logger, imagePath string) error {
 		logger.Info("unmount image path failed", lager.Data{"path": imagePath, "error": err})
 	}
 	return os.RemoveAll(imagePath)
+}
+
+func getDeviceForFile(path string) (uint64, error) {
+	info, _ := os.Stat(path)
+	stat, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		return 0, fmt.Errorf("failed to stat %s", path)
+	}
+	return stat.Dev, nil
+}
+
+func isMountpoint(path string) (bool, error) {
+	dev, err := getDeviceForFile(path)
+	if err != nil {
+		return false, err
+	}
+
+	parentDev, err := getDeviceForFile(filepath.Dir(path))
+	if err != nil {
+		return false, err
+	}
+
+	return dev != parentDev, nil
 }
