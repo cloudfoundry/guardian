@@ -116,14 +116,20 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 	}
 
 	cgroupPath := sandboxHandle
+	limits := garden.Limits{}
 	if spec.OverrideContainerLimits != nil {
 		cgroupPath = processID
+		limits = garden.Limits{
+			CPU:    spec.OverrideContainerLimits.CPU,
+			Memory: spec.OverrideContainerLimits.Memory,
+		}
 	}
 
 	bndl, genErr := p.BundleGenerator.Generate(gardener.DesiredContainerSpec{
 		Handle:     processID,
 		BaseConfig: runtimeSpec,
 		CgroupPath: cgroupPath,
+		Limits:     limits,
 		Namespaces: linuxNamespaces,
 		BindMounts: append(spec.BindMounts, defaultBindMounts...),
 		Privileged: privileged,

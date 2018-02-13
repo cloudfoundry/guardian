@@ -343,13 +343,25 @@ var _ = Describe("PeaCreator", func() {
 
 		Context("when limits are provided", func() {
 			BeforeEach(func() {
-				processSpec.OverrideContainerLimits = &garden.ProcessLimits{}
+				processSpec.OverrideContainerLimits = &garden.ProcessLimits{
+					CPU:    garden.CPULimits{LimitInShares: 1},
+					Memory: garden.MemoryLimits{LimitInBytes: 2},
+				}
 			})
 
 			It("provides an explicit cgroup path to bundle generation", func() {
 				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
 				Expect(actualCtrSpec.CgroupPath).To(Equal(processSpec.ID))
+			})
+
+			It("sets the memory and CPU limits, and no other limits", func() {
+				Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
+				actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
+				Expect(actualCtrSpec.Limits).To(Equal(garden.Limits{
+					CPU:    processSpec.OverrideContainerLimits.CPU,
+					Memory: processSpec.OverrideContainerLimits.Memory,
+				}))
 			})
 		})
 	})

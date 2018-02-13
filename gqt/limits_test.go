@@ -115,7 +115,7 @@ var _ = Describe("Limits", func() {
 
 		Context("when started with low cpu limit turned off", func() {
 			Context("when when a container with cpu limits is created", func() {
-				It("throttles process cpu usage", func() {
+				It("does not throttle process cpu usage", func() {
 					periods, throttled, time, err := parseCpuStats(filepath.Join(cgroupPath, "cpu.stat"))
 					Expect(err).NotTo(HaveOccurred())
 					Expect(periods).To(BeNumerically("==", 0))

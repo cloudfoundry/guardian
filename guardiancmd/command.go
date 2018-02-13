@@ -767,18 +767,13 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		bundlerules.Hostname{},
 		bundlerules.Windows{},
 		bundlerules.RootFS{},
-	}
-	peaBundleRules := make([]rundmc.BundlerRule, len(bundleRules))
-	copy(peaBundleRules, bundleRules)
-	bundleRules = append(bundleRules,
 		bundlerules.Limits{
 			CpuQuotaPerShare: cmd.Limits.CPUQuotaPerShare,
 			TCPMemoryLimit:   int64(cmd.Limits.TCPMemoryLimit),
 			BlockIOWeight:    cmd.Limits.DefaultBlockIOWeight,
-		})
-
+		},
+	}
 	template := &rundmc.BundleTemplate{Rules: bundleRules}
-	peaTemplate := &rundmc.BundleTemplate{Rules: peaBundleRules}
 
 	bundleSaver := &goci.BundleSaver{}
 	bindMountSourceCreator := wireBindMountSourceCreator(uidMappings, gidMappings)
@@ -829,7 +824,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		PidGetter:              pidFileReader,
 		PrivilegedGetter:       privilegeChecker,
 		BindMountSourceCreator: bindMountSourceCreator,
-		BundleGenerator:        peaTemplate,
+		BundleGenerator:        template,
 		ProcessBuilder:         processBuilder,
 		BundleSaver:            bundleSaver,
 		ExecRunner:             factory.WireExecRunner("run"),
