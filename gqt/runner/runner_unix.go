@@ -70,12 +70,8 @@ func (r *RunningGarden) Cleanup() {
 	storePath := r.GardenRunner.GdnRunnerConfig.StorePath
 	privStorePath := r.GardenRunner.GdnRunnerConfig.PrivilegedStorePath
 
-	if r.ImagePluginBin != "" {
-		clearGrootStore(r.GardenRunner.GdnRunnerConfig.ImagePluginBin, storePath)
-	}
-	if r.PrivilegedImagePluginBin != "" {
-		clearGrootStore(r.GardenRunner.GdnRunnerConfig.PrivilegedImagePluginBin, privStorePath)
-	}
+	clearGrootStore(r.GrootBin, storePath)
+	clearGrootStore(r.GrootBin, privStorePath)
 
 	// AUFS CLEANUP
 	// TODO: Remove this when we get rid of shed

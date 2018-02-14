@@ -36,6 +36,7 @@ type GdnRunnerConfig struct {
 
 	// Garden config
 	GdnBin                   string
+	GrootBin                 string
 	TarBin                   string `flag:"tar-bin"`
 	InitBin                  string `flag:"init-bin"`
 	RuntimePluginBin         string `flag:"runtime-plugin"`

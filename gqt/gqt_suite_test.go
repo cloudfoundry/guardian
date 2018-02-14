@@ -156,6 +156,7 @@ func defaultConfig() runner.GdnRunnerConfig {
 	cfg := runner.DefaultGdnRunnerConfig(binaries)
 	cfg.DefaultRootFS = defaultTestRootFS
 	cfg.GdnBin = binaries.Gdn
+	cfg.GrootBin = binaries.Groot
 	cfg.Socket2meBin = binaries.Socket2me
 	cfg.ExecRunnerBin = binaries.ExecRunner
 	cfg.InitBin = binaries.Init
