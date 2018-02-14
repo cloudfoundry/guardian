@@ -70,15 +70,12 @@ func (r *RunningGarden) Cleanup() {
 	storePath := r.GardenRunner.GdnRunnerConfig.StorePath
 	privStorePath := r.GardenRunner.GdnRunnerConfig.PrivilegedStorePath
 
-	clearGrootStore(r.GardenRunner.GdnRunnerConfig.ImagePluginBin, storePath)
-	Expect(syscall.Unmount(storePath, 0)).To(Succeed())
-	Expect(os.RemoveAll(storePath)).To(Succeed())
-	Expect(os.RemoveAll(storePath + ".backing-store")).To(Succeed())
-
-	clearGrootStore(r.GardenRunner.GdnRunnerConfig.PrivilegedImagePluginBin, privStorePath)
-	Expect(syscall.Unmount(privStorePath, 0)).To(Succeed())
-	Expect(os.RemoveAll(privStorePath)).To(Succeed())
-	Expect(os.RemoveAll(privStorePath + ".backing-store")).To(Succeed())
+	if r.ImagePluginBin != "" {
+		clearGrootStore(r.GardenRunner.GdnRunnerConfig.ImagePluginBin, storePath)
+	}
+	if r.PrivilegedImagePluginBin != "" {
+		clearGrootStore(r.GardenRunner.GdnRunnerConfig.PrivilegedImagePluginBin, privStorePath)
+	}
 
 	// AUFS CLEANUP
 	// TODO: Remove this when we get rid of shed
@@ -109,7 +106,5 @@ func clearGrootStore(grootBin, storePath string) {
 	deleteStore := exec.Command(grootBin, deleteStoreArgs...)
 	deleteStore.Stdout = GinkgoWriter
 	deleteStore.Stderr = GinkgoWriter
-	// a bug in groot will cause this to fail on total deletion, but it will clear the store contents
-	// which means the store can be unmounted
-	deleteStore.Run()
+	Expect(deleteStore.Run()).To(Succeed())
 }

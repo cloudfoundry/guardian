@@ -91,12 +91,17 @@ func main() {
 			Name:  "old-return-schema",
 			Usage: "use old, deprecated DesiredImageSpec as return json",
 		},
+		cli.StringFlag{
+			Name:  "store",
+			Usage: "path to store. Not used by fake, but needed for delete-store not to fail.",
+		},
 	}
 
 	fakeImagePlugin.Commands = []cli.Command{
 		CreateCommand,
 		DeleteCommand,
 		StatsCommand,
+		DeleteStoreCommand,
 	}
 
 	_ = fakeImagePlugin.Run(os.Args)
@@ -336,6 +341,14 @@ var StatsCommand = cli.Command{
 			fmt.Println("{}")
 		}
 
+		return nil
+	},
+}
+
+var DeleteStoreCommand = cli.Command{
+	Name: "delete-store",
+
+	Action: func(ctx *cli.Context) error {
 		return nil
 	},
 }
