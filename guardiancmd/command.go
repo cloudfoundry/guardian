@@ -271,6 +271,10 @@ type ServerCommand struct {
 		DropsondeOrigin      string `long:"dropsonde-origin"      default:"garden-linux"   description:"Origin identifier for Dropsonde-emitted metrics."`
 		DropsondeDestination string `long:"dropsonde-destination" default:"127.0.0.1:3457" description:"Destination for Dropsonde-emitted metrics."`
 	} `group:"Metrics"`
+
+	Containerd struct {
+		Socket string `long:"containerd-socket" description:"Path to a containerd socket."`
+	} `group:"Containerd"`
 }
 
 func init() {
