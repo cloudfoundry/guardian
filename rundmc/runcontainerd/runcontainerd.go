@@ -13,7 +13,6 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
-	"github.com/containerd/containerd/linux/runctypes"
 )
 
 type RunContainerd struct {
@@ -42,7 +41,7 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 
 	// a "container" in containerd terms is just a bunch of metadata, it does not actually create
 	// any running processes at all
-	container, err := r.client.NewContainer(r.context, id, containerd.WithSpec(&bundle.Spec), containerd.WithRuntime("io.containerd.runtime.v1.linux", &runctypes.RuncOptions{RuntimeRoot: "/var/vcap/sys/run/containerd"}))
+	container, err := r.client.NewContainer(r.context, id, containerd.WithSpec(&bundle.Spec))
 	if err != nil {
 		return err
 	}
@@ -55,15 +54,9 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 		io.Stderr = bytes.NewBuffer(nil)
 	}
 
-	// rootfsMount := mount.Mount{
-	// 	Options: bundle.Spec.Mounts[0].Options,
-	// 	Type:    bundle.Spec.Mounts[0].Type,
-	// 	Source:  bundle.Spec.Mounts[0].Source,
-	// }
 	// container.NewTask essentially does a `runc create`
-	// TODO: rootfsMount not necessary
-	// _, err = container.NewTask(r.context, cio.NewCreator(cio.WithStdio, cio.WithFIFODir("/var/vcap/sys/run/containerd")), withMaximusIO, containerd.WithRootFS([]mount.Mount{rootfsMount}))
-	_, err = container.NewTask(r.context, cio.NewCreator(cio.WithStdio, cio.WithFIFODir("/var/vcap/sys/run/containerd")), withMaximusIO)
+	//	_, err = container.NewTask(r.context, cio.NewIO(io.Stdin, io.Stdout, io.Stderr))
+
 	return err
 }
 
@@ -92,7 +85,7 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garde
 		processID = r.processIDGen.Generate()
 	}
 
-	process, err := task.Exec(r.context, processID, &preparedSpec.Process, cio.NewCreator(cio.WithStdio))
+	process, err := task.Exec(r.context, processID, &preparedSpec.Process, cio.NewIO(io.Stdin, io.Stdout, io.Stderr))
 	if err != nil {
 		return nil, err
 	}
@@ -104,22 +97,14 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garde
 	return newGardenProcess(r.context, process, processID), nil
 }
 
-func withMaximusIO(_ context.Context, client *containerd.Client, r *containerd.TaskInfo) error {
-	r.Options = &runctypes.CreateOptions{
-		IoUid: 4294967294,
-		IoGid: 4294967294,
-	}
-	return nil
-}
-
 func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error) {
 	_, task, err := r.getContainerTask(id)
 	if err != nil {
 		return nil, err
 	}
 
-	process, err := task.LoadProcess(r.context, processId, cio.NewAttach(cio.WithStdio))
-	if err != nil {
+	process, err := task.LoadProcess(r.context, processId, cio.WithAttach(io.Stdin, io.Stdout, io.Stderr))
+	if err != il {
 		return nil, err
 	}
 
