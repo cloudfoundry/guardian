@@ -34,6 +34,7 @@ var _ = Describe("Surviving Restarts", func() {
 			containerSpec       garden.ContainerSpec
 			restartConfig       runner.GdnRunnerConfig
 			gracefulShutdown    bool
+			processImage        garden.ImageRef
 		)
 
 		BeforeEach(func() {
@@ -56,6 +57,7 @@ var _ = Describe("Surviving Restarts", func() {
 			}
 
 			gracefulShutdown = true
+			processImage = garden.ImageRef{}
 		})
 
 		JustBeforeEach(func() {
@@ -84,8 +86,9 @@ var _ = Describe("Surviving Restarts", func() {
 			out := gbytes.NewBuffer()
 			existingProc, err = container.Run(
 				garden.ProcessSpec{
-					Path: "/bin/sh",
-					Args: []string{"-c", fmt.Sprintf("while true; do echo %s; sleep 1; done;", container.Handle())},
+					Path:  "/bin/sh",
+					Args:  []string{"-c", fmt.Sprintf("while true; do echo %s; sleep 1; done;", container.Handle())},
+					Image: processImage,
 				},
 				garden.ProcessIO{
 					Stdout: io.MultiWriter(GinkgoWriter, out),
@@ -214,12 +217,23 @@ var _ = Describe("Surviving Restarts", func() {
 					Expect(out).To(gbytes.Say("hello"))
 				})
 
-				It("allows the container process to continue running", func() {
-					Consistently(func() string {
-						out, err := exec.Command("sh", "-c", fmt.Sprintf("ps -elf | grep 'while true; do echo %s' | grep -v grep | wc -l", container.Handle())).CombinedOutput()
-						Expect(err).NotTo(HaveOccurred())
-						return string(out)
-					}, time.Second*2, time.Millisecond*200).Should(Equal("1\n"), "expected user process to stay alive")
+				itAllowsTheProcessToContinueRunning := func() {
+					It("allows the container process to continue running", func() {
+						Consistently(func() string {
+							out, err := exec.Command("sh", "-c", fmt.Sprintf("ps -elf | grep 'while true; do echo %s' | grep -v grep | wc -l", container.Handle())).CombinedOutput()
+							Expect(err).NotTo(HaveOccurred())
+							return string(out)
+						}, time.Second*2, time.Millisecond*200).Should(Equal("1\n"), "expected user process to stay alive")
+					})
+				}
+				itAllowsTheProcessToContinueRunning()
+
+				Context("when running a pea", func() {
+					BeforeEach(func() {
+						processImage = garden.ImageRef{URI: defaultTestRootFS}
+					})
+
+					itAllowsTheProcessToContinueRunning()
 				})
 
 				It("can reattach to processes that are still running", func() {
