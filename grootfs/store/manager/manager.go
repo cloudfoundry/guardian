@@ -154,7 +154,7 @@ func (m *Manager) configureStore(logger lager.Logger, ownerUID, ownerGID int) er
 	return nil
 }
 
-func (m *Manager) DeleteStore(logger lager.Logger, locksmith groot.Locksmith) error {
+func (m *Manager) DeleteStore(logger lager.Logger) error {
 	logger = logger.Session("store-manager-delete-store")
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -163,13 +163,6 @@ func (m *Manager) DeleteStore(logger lager.Logger, locksmith groot.Locksmith) er
 		logger.Info("store-not-found", lager.Data{"storePath": m.storePath})
 		return nil
 	}
-
-	fileLock, err := locksmith.Lock(groot.GlobalLockKey)
-	if err != nil {
-		logger.Error("locking-failed", err)
-		return errorspkg.Wrap(err, "failed to lock - refusing to delete possibly corrupted store")
-	}
-	defer locksmith.Unlock(fileLock)
 
 	existingImages, err := m.images()
 	if err != nil {

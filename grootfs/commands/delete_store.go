@@ -2,8 +2,6 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 
 import (
 	"code.cloudfoundry.org/grootfs/commands/config"
-	"code.cloudfoundry.org/grootfs/metrics"
-	"code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 	"github.com/urfave/cli"
@@ -33,10 +31,9 @@ var DeleteStoreCommand = cli.Command{
 		}
 
 		storePath := cfg.StorePath
-		locksmith := locksmith.NewSharedFileSystem(storePath, metrics.NewEmitter(logger, cfg.MetronEndpoint))
 		manager := manager.New(storePath, nil, fsDriver, fsDriver, fsDriver)
 
-		if err := manager.DeleteStore(logger, locksmith); err != nil {
+		if err := manager.DeleteStore(logger); err != nil {
 			logger.Error("cleaning-up-store-failed", err)
 			return cli.NewExitError(err.Error(), 1)
 		}

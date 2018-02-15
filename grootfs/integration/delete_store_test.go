@@ -60,7 +60,7 @@ var _ = Describe("Delete Store", func() {
 		})
 
 		It("does not delete the directory", func() {
-			Expect(runner.DeleteStore()).To(MatchError(ContainSubstring("refusing to delete possibly corrupted store")))
+			Expect(runner.DeleteStore()).NotTo(Succeed())
 			Expect(storePath).To(BeAnExistingFile())
 		})
 	})

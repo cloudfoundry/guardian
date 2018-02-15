@@ -80,7 +80,7 @@ func (d *Driver) DeInitFilesystem(logger lager.Logger, storePath string) error {
 		return nil
 	}
 
-	if err := syscall.Unmount(storePath, syscall.MNT_DETACH); err != nil {
+	if err := syscall.Unmount(storePath, 0); err != nil {
 		logger.Error("unmounting-store-path-failed", err, lager.Data{"storePath": storePath})
 		return errorspkg.Wrapf(err, "unmounting store path")
 	}
