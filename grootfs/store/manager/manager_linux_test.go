@@ -62,13 +62,7 @@ var _ = Describe("Manager", func() {
 
 	Describe("InitStore", func() {
 		BeforeEach(func() {
-			storePath = filepath.Join(os.TempDir(), fmt.Sprintf("init-store-%d", GinkgoParallelNode()))
-		})
-
-		It("creates the store path folder", func() {
-			Expect(storePath).ToNot(BeAnExistingFile())
-			Expect(manager.InitStore(logger, spec)).To(Succeed())
-			Expect(storePath).To(BeADirectory())
+			storePath = filepath.Join(os.TempDir(), "grootfs", fmt.Sprintf("init-store-%d", GinkgoParallelNode()))
 		})
 
 		It("sets the caller user as the owner of the store", func() {

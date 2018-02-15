@@ -202,6 +202,11 @@ func (m *Manager) DeleteStore(logger lager.Logger) error {
 }
 
 func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes int64) error {
+	if err := os.MkdirAll(m.storePath, 0755); err != nil {
+		logger.Error("init-store-failed", err)
+		return errorspkg.Wrap(err, "initializing store")
+	}
+
 	backingStoreFile := fmt.Sprintf("%s.backing-store", m.storePath)
 	if _, err := os.Stat(backingStoreFile); os.IsNotExist(err) {
 		if err := ioutil.WriteFile(backingStoreFile, []byte{}, 0600); err != nil {
@@ -213,11 +218,6 @@ func (m *Manager) createAndMountFilesystem(logger lager.Logger, storeSizeBytes i
 	if err := os.Truncate(backingStoreFile, storeSizeBytes); err != nil {
 		logger.Error("truncating-backing-store-file-failed", err, lager.Data{"backingstoreFile": backingStoreFile, "size": storeSizeBytes})
 		return errorspkg.Wrap(err, "truncating backing store file")
-	}
-
-	if err := os.MkdirAll(m.storePath, 0755); err != nil {
-		logger.Error("init-store-failed", err)
-		return errorspkg.Wrap(err, "initializing store")
 	}
 
 	if err := m.storeDriver.InitFilesystem(logger, backingStoreFile, m.storePath); err != nil {
