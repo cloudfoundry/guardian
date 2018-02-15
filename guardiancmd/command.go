@@ -914,7 +914,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		runner = runcontainerd.New(containerdClient, bndlLoader, ctx, processBuilder, wireUIDGenerator())
 	}
 
-	return rundmc.New(depot, runcrunner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver)
+	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver)
 }
 
 func wirePidfileReader() *pidreader.PidFileReader {

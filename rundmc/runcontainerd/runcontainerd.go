@@ -14,8 +14,6 @@ import (
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
 	"github.com/containerd/containerd/linux/runctypes"
-	"github.com/containerd/containerd/mount"
-	"github.com/containerd/containerd/oci"
 )
 
 type RunContainerd struct {
@@ -44,7 +42,7 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 
 	// a "container" in containerd terms is just a bunch of metadata, it does not actually create
 	// any running processes at all
-	container, err := r.client.NewContainer(r.context, id, containerd.WithSpec(&bundle.Spec, oci.WithRootless), containerd.WithRuntime("io.containerd.runtime.v1.linux", &runctypes.RuncOptions{RuntimeRoot: "/var/vcap/sys/run/containerd"}))
+	container, err := r.client.NewContainer(r.context, id, containerd.WithSpec(&bundle.Spec), containerd.WithRuntime("io.containerd.runtime.v1.linux", &runctypes.RuncOptions{RuntimeRoot: "/var/vcap/sys/run/containerd"}))
 	if err != nil {
 		return err
 	}
@@ -64,7 +62,8 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 	// }
 	// container.NewTask essentially does a `runc create`
 	// TODO: rootfsMount not necessary
-	_, err = container.NewTask(r.context, cio.NewCreator(cio.WithStdio, cio.WithFIFODir("/var/vcap/sys/run/containerd")), withMaximusIO, containerd.WithRootFS([]mount.Mount{rootfsMount}))
+	// _, err = container.NewTask(r.context, cio.NewCreator(cio.WithStdio, cio.WithFIFODir("/var/vcap/sys/run/containerd")), withMaximusIO, containerd.WithRootFS([]mount.Mount{rootfsMount}))
+	_, err = container.NewTask(r.context, cio.NewCreator(cio.WithStdio, cio.WithFIFODir("/var/vcap/sys/run/containerd")), withMaximusIO)
 	return err
 }
 
