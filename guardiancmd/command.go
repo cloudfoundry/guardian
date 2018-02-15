@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -308,11 +309,48 @@ func (cmd *ServerCommand) Execute([]string) error {
 		cmd.Bin.Tar = FileFlag(filepath.Join(restoredAssetsDir, "bin", "tar"))
 		cmd.Bin.IPTables = FileFlag(filepath.Join(restoredAssetsDir, "sbin", "iptables"))
 		cmd.Bin.IPTablesRestore = FileFlag(filepath.Join(restoredAssetsDir, "sbin", "iptables-restore"))
+		cmd.Image.Plugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
+		cmd.Image.PluginExtraArgs = []string{
+			"--store", "/var/lib/grootfs/store",
+			"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
+			"--log-level", cmd.Logger.LogLevel,
+		}
+		cmd.Image.PrivilegedPlugin = FileFlag(filepath.Join(restoredAssetsDir, "bin", "grootfs"))
+		cmd.Image.PrivilegedPluginExtraArgs = []string{
+			"--store", "/var/lib/grootfs/store-privileged",
+			"--tardis-bin", FileFlag(filepath.Join(restoredAssetsDir, "bin", "tardis")).Path(),
+			"--log-level", cmd.Logger.LogLevel,
+		}
 
 		cmd.Network.AllowHostAccess = true
+
+		maxId := mustGetMaxValidUID()
+
+		initStoreCmd := newInitStoreCommand(cmd.Image.Plugin.Path(), cmd.Image.PluginExtraArgs)
+		initStoreCmd.Args = append(initStoreCmd.Args,
+			"--uid-mapping", fmt.Sprintf("0:%d:1", maxId),
+			"--uid-mapping", fmt.Sprintf("1:1:%d", maxId-1),
+			"--gid-mapping", fmt.Sprintf("0:%d:1", maxId),
+			"--gid-mapping", fmt.Sprintf("1:1:%d", maxId-1))
+		runCommand(initStoreCmd)
+
+		privInitStoreCmd := newInitStoreCommand(cmd.Image.PrivilegedPlugin.Path(), cmd.Image.PrivilegedPluginExtraArgs)
+		runCommand(privInitStoreCmd)
 	}
 
 	return <-ifrit.Invoke(sigmon.New(cmd)).Wait()
+}
+
+func newInitStoreCommand(pluginPath string, pluginGlobalArgs []string) *exec.Cmd {
+	return exec.Command(pluginPath, append(pluginGlobalArgs, "init-store", "--store-size-bytes", strconv.Itoa(10*1024*1024*1024))...)
+}
+
+func runCommand(cmd *exec.Cmd) {
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Err: %v Output: %s", err, string(output))
+		os.Exit(1)
+	}
 }
 
 func runningAsRoot() bool {
