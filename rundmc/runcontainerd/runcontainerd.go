@@ -1,27 +1,58 @@
 package runcontainerd
 
 import (
+	"bytes"
+	"context"
 	"fmt"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/cio"
 )
 
 type RunContainerd struct {
-	client *containerd.Client
+	client       *containerd.Client
+	bundleLoader *goci.BndlLoader
+	context      context.Context
 }
 
-func New(client *containerd.Client) *RunContainerd {
+func New(client *containerd.Client, bundleLoader *goci.BndlLoader, context context.Context) *RunContainerd {
 	return &RunContainerd{
-		client: client,
+		client:       client,
+		bundleLoader: bundleLoader,
+		context:      context,
 	}
 }
 
 func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error {
-	return fmt.Errorf("Create not implemented")
+	bundle, err := r.bundleLoader.Load(bundlePath)
+	if err != nil {
+		return err
+	}
+
+	// a "container" in containerd terms is just a bunch of metadata, it does not actually create
+	// any running processes at all
+	container, err := r.client.NewContainer(r.context, id, containerd.WithSpec(&bundle.Spec))
+	if err != nil {
+		return err
+	}
+
+	// containerd panics if you provide container.NewTask with nil IOs
+	// this is a hacky spiketastic workaround
+	if io.Stdin == nil || io.Stdout == nil || io.Stderr == nil {
+		io.Stdin = bytes.NewBuffer(nil)
+		io.Stdout = bytes.NewBuffer(nil)
+		io.Stderr = bytes.NewBuffer(nil)
+	}
+
+	// container.NewTask essentially does a `runc create`
+	_, err = container.NewTask(r.context, cio.NewIO(io.Stdin, io.Stdout, io.Stderr))
+
+	return err
 }
 
 func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
@@ -41,7 +72,27 @@ func (r *RunContainerd) Delete(log lager.Logger, force bool, bundlePath string) 
 }
 
 func (r *RunContainerd) State(log lager.Logger, id string) (runrunc.State, error) {
-	return runrunc.State{}, fmt.Errorf("State not implemented")
+	container, err := r.client.LoadContainer(r.context, id)
+	if err != nil {
+		return runrunc.State{}, err
+	}
+
+	task, err := container.Task(r.context, nil)
+	if err != nil {
+		return runrunc.State{}, err
+	}
+
+	status, err := task.Status(r.context)
+	if err != nil {
+		return runrunc.State{}, err
+	}
+
+	state := runrunc.State{
+		Pid:    int(task.Pid()),
+		Status: runrunc.Status(status.Status),
+	}
+
+	return state, nil
 }
 
 func (r *RunContainerd) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {

@@ -1,6 +1,7 @@
 package guardiancmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -43,6 +44,7 @@ import (
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"github.com/cloudfoundry/dropsonde"
 	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/namespaces"
 	_ "github.com/docker/docker/daemon/graphdriver/aufs" // aufs needed for garden-shed
 	_ "github.com/docker/docker/pkg/chrootarchive"       // allow reexec of docker-applyLayer
 	"github.com/docker/docker/pkg/reexec"
@@ -842,11 +844,12 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
 
 	if cmd.Containerd.Socket != "" {
+		ctx := namespaces.WithNamespace(context.Background(), "garden")
 		containerdClient, err := containerd.New(cmd.Containerd.Socket)
 		if err != nil {
 			panic(err)
 		}
-		runner = runcontainerd.New(containerdClient)
+		runner = runcontainerd.New(containerdClient, bndlLoader, ctx)
 	}
 
 	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator)
