@@ -7,12 +7,17 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
+	"github.com/containerd/containerd"
 )
 
-type RunContainerd struct{}
+type RunContainerd struct {
+	client *containerd.Client
+}
 
-func New() *RunContainerd {
-	return &RunContainerd{}
+func New(client *containerd.Client) *RunContainerd {
+	return &RunContainerd{
+		client: client,
+	}
 }
 
 func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garden.ProcessIO) error {
