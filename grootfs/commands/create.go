@@ -248,25 +248,25 @@ var CreateCommand = cli.Command{
 func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *storepkg.StoreMeasurer) {
 	usage, err := sm.Usage(logger)
 	if err != nil {
-		logger.Error("measuring-store", err)
+		logger.Info(fmt.Sprintf("measuring-store: %s", err))
 	}
 	metricsEmitter.TryEmitUsage(logger, "StoreUsage", usage, "bytes")
 
 	unusedVolumesSize, err := sm.UnusedVolumesSize(logger)
 	if err != nil {
-		logger.Error("getting-unused-layers-size", err)
+		logger.Info(fmt.Sprintf("getting-unused-layers-size: %s", err))
 	}
 	metricsEmitter.TryEmitUsage(logger, "UnusedLayersSize", unusedVolumesSize, "bytes")
 
 	totalVolumesSize, err := sm.TotalVolumesSize(logger)
 	if err != nil {
-		logger.Error("getting-total-layers-size", err)
+		logger.Info(fmt.Sprintf("getting-total-layers-size: %s", err))
 	}
 	metricsEmitter.TryEmitUsage(logger, "DownloadedLayersSizeInBytes", totalVolumesSize, "bytes")
 
 	commitedQuota, err := sm.CommittedQuota(logger)
 	if err != nil {
-		logger.Error("getting-commited-quota-failed", err)
+		logger.Info(fmt.Sprintf("getting-commited-quota: %s", err))
 	}
 	metricsEmitter.TryEmitUsage(logger, "CommittedQuotaInBytes", commitedQuota, "bytes")
 }
