@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -67,8 +68,32 @@ func (r *RunContainerd) Kill(log lager.Logger, bundlePath string) error {
 	return fmt.Errorf("Kill not implemented")
 }
 
-func (r *RunContainerd) Delete(log lager.Logger, force bool, bundlePath string) error {
-	return fmt.Errorf("Delete not implemented")
+func (r *RunContainerd) Delete(log lager.Logger, force bool, id string) error {
+	container, err := r.client.LoadContainer(r.context, id)
+	if err != nil {
+		return err
+	}
+
+	task, err := container.Task(r.context, nil)
+	if err != nil {
+		return err
+	}
+
+	if err = task.Kill(r.context, syscall.SIGTERM); err != nil {
+		return err
+	}
+
+	exitCode, err := task.Wait(r.context)
+	if err != nil {
+		return err
+	}
+	<-exitCode
+
+	_, err = task.Delete(r.context)
+	if err != nil {
+		return err
+	}
+	return container.Delete(r.context)
 }
 
 func (r *RunContainerd) State(log lager.Logger, id string) (runrunc.State, error) {
