@@ -849,7 +849,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		if err != nil {
 			panic(err)
 		}
-		runner = runcontainerd.New(containerdClient, bndlLoader, ctx, processBuilder)
+		runner = runcontainerd.New(containerdClient, bndlLoader, ctx, processBuilder, wireUIDGenerator())
 	}
 
 	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator)

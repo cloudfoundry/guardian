@@ -20,14 +20,16 @@ type RunContainerd struct {
 	bundleLoader   *goci.BndlLoader
 	context        context.Context
 	processBuilder runrunc.ProcessBuilder
+	processIDGen   runrunc.UidGenerator
 }
 
-func New(client *containerd.Client, bundleLoader *goci.BndlLoader, context context.Context, processBuilder runrunc.ProcessBuilder) *RunContainerd {
+func New(client *containerd.Client, bundleLoader *goci.BndlLoader, context context.Context, processBuilder runrunc.ProcessBuilder, processIDGen runrunc.UidGenerator) *RunContainerd {
 	return &RunContainerd{
 		client:         client,
 		bundleLoader:   bundleLoader,
 		context:        context,
 		processBuilder: processBuilder,
+		processIDGen:   processIDGen,
 	}
 }
 
@@ -78,8 +80,12 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garde
 		ProcessSpec: spec,
 	})
 
-	// We hardcode the task ID to potato, in reality process ID generator should be used (see runrunc)
-	process, err := task.Exec(r.context, "potato", &preparedSpec.Process, cio.NewIO(io.Stdin, io.Stdout, io.Stderr))
+	processID := spec.ID
+	if processID == "" {
+		processID = r.processIDGen.Generate()
+	}
+
+	process, err := task.Exec(r.context, processID, &preparedSpec.Process, cio.NewIO(io.Stdin, io.Stdout, io.Stderr))
 	if err != nil {
 		return nil, err
 	}
@@ -88,11 +94,21 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garde
 		return nil, fmt.Errorf("hey %s", err)
 	}
 
-	return newGardenProcess(r.context, process), nil
+	return newGardenProcess(r.context, process, processID), nil
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error) {
-	return nil, fmt.Errorf("Attach not implemented")
+	_, task, err := r.getContainerTask(id)
+	if err != nil {
+		return nil, err
+	}
+
+	process, err := task.LoadProcess(r.context, processId, cio.WithAttach(io.Stdin, io.Stdout, io.Stderr))
+	if err != nil {
+		return nil, err
+	}
+
+	return newGardenProcess(r.context, process, processId), nil
 }
 
 func (r *RunContainerd) Kill(log lager.Logger, bundlePath string) error {
@@ -156,14 +172,19 @@ func (r *RunContainerd) getContainerTask(containerID string) (containerd.Contain
 type ContainerdToGardenProcessAdapter struct {
 	containerdProcess containerd.Process
 	context           context.Context
+	processID         string
 }
 
-func newGardenProcess(context context.Context, process containerd.Process) *ContainerdToGardenProcessAdapter {
-	return &ContainerdToGardenProcessAdapter{containerdProcess: process, context: context}
+func newGardenProcess(context context.Context, process containerd.Process, processID string) *ContainerdToGardenProcessAdapter {
+	return &ContainerdToGardenProcessAdapter{
+		containerdProcess: process,
+		context:           context,
+		processID:         processID,
+	}
 }
 
 func (w *ContainerdToGardenProcessAdapter) ID() string {
-	return fmt.Sprint(w.containerdProcess.Pid())
+	return w.processID
 }
 
 func (w *ContainerdToGardenProcessAdapter) Wait() (int, error) {
