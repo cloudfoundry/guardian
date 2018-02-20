@@ -37,9 +37,9 @@ func socket2meCommand(config GdnRunnerConfig) *exec.Cmd {
 				fmt.Sprintf("--uid=%d", config.User.Uid),
 				fmt.Sprintf("--gid=%d", config.User.Gid),
 				"--socket-uid=0", "--socket-gid=0",
-				config.GdnBin, "server",
+				config.GdnBin,
 			},
-			config.toFlags()...,
+			config.toServerFlags()...,
 		)...,
 	)
 }
