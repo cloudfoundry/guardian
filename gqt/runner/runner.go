@@ -27,8 +27,9 @@ import (
 )
 
 type GdnRunnerConfig struct {
-	TmpDir string
-	User   UserCredential
+	TmpDir         string
+	User           UserCredential
+	ConfigFilePath string
 
 	Socket2meBin        string
 	Socket2meSocketPath string
@@ -107,8 +108,12 @@ func (c GdnRunnerConfig) connectionInfo() (string, string) {
 	return "tcp", fmt.Sprintf("%s:%d", c.BindIP, *c.BindPort)
 }
 
-func (c GdnRunnerConfig) toFlags() []string {
+func (c GdnRunnerConfig) toServerFlags() []string {
 	gardenArgs := []string{}
+	if c.ConfigFilePath != "" {
+		gardenArgs = append(gardenArgs, "--config", c.ConfigFilePath)
+	}
+	gardenArgs = append(gardenArgs, "server")
 
 	vConf := reflect.ValueOf(c)
 	tConf := vConf.Type()
@@ -252,7 +257,7 @@ func NewGardenRunner(config GdnRunnerConfig) *GardenRunner {
 	}
 
 	if config.Socket2meSocketPath == "" {
-		runner.Command = exec.Command(config.GdnBin, append([]string{"server"}, config.toFlags()...)...)
+		runner.Command = exec.Command(config.GdnBin, config.toServerFlags()...)
 	} else {
 		runner.Command = socket2meCommand(config)
 	}
@@ -476,18 +481,6 @@ func (r *RunningGarden) DestroyContainers() error {
 
 type debugVars struct {
 	NumGoRoutines int `json:"numGoRoutines"`
-}
-
-func (r *RunningGarden) DumpGoroutines() (string, error) {
-	debugURL := fmt.Sprintf("http://%s:%d/debug/pprof/goroutine?debug=2", r.DebugIP, *r.DebugPort)
-	res, err := http.Get(debugURL)
-	if err != nil {
-		return "", err
-	}
-	defer res.Body.Close()
-
-	b, err := ioutil.ReadAll(res.Body)
-	return string(b), err
 }
 
 func (r *RunningGarden) NumGoroutines() (int, error) {

@@ -167,6 +167,10 @@ var (
 type GdnCommand struct {
 	SetupCommand  *SetupCommand  `command:"setup"`
 	ServerCommand *ServerCommand `command:"server"`
+
+	// This must be present to stop go-flags complaining, but it's not actually
+	// used. We parse this flag outside of the go-flags framework.
+	ConfigFilePath string `long:"config" description:"Config file path."`
 }
 
 type ServerCommand struct {
