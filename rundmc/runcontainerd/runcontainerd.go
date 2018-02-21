@@ -184,6 +184,7 @@ func newGardenProcess(context context.Context, process containerd.Process, proce
 }
 
 func (w *ContainerdToGardenProcessAdapter) ID() string {
+	// We should pass the id, not the pid?
 	return w.processID
 }
 
