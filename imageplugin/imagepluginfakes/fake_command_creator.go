@@ -5,18 +5,18 @@ import (
 	"os/exec"
 	"sync"
 
-	"code.cloudfoundry.org/garden-shed/rootfs_spec"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeCommandCreator struct {
-	CreateCommandStub        func(log lager.Logger, handle string, spec rootfs_spec.Spec) (*exec.Cmd, error)
+	CreateCommandStub        func(log lager.Logger, handle string, spec gardener.RootfsSpec) (*exec.Cmd, error)
 	createCommandMutex       sync.RWMutex
 	createCommandArgsForCall []struct {
 		log    lager.Logger
 		handle string
-		spec   rootfs_spec.Spec
+		spec   gardener.RootfsSpec
 	}
 	createCommandReturns struct {
 		result1 *exec.Cmd
@@ -54,13 +54,13 @@ type FakeCommandCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeCommandCreator) CreateCommand(log lager.Logger, handle string, spec rootfs_spec.Spec) (*exec.Cmd, error) {
+func (fake *FakeCommandCreator) CreateCommand(log lager.Logger, handle string, spec gardener.RootfsSpec) (*exec.Cmd, error) {
 	fake.createCommandMutex.Lock()
 	ret, specificReturn := fake.createCommandReturnsOnCall[len(fake.createCommandArgsForCall)]
 	fake.createCommandArgsForCall = append(fake.createCommandArgsForCall, struct {
 		log    lager.Logger
 		handle string
-		spec   rootfs_spec.Spec
+		spec   gardener.RootfsSpec
 	}{log, handle, spec})
 	fake.recordInvocation("CreateCommand", []interface{}{log, handle, spec})
 	fake.createCommandMutex.Unlock()
@@ -79,7 +79,7 @@ func (fake *FakeCommandCreator) CreateCommandCallCount() int {
 	return len(fake.createCommandArgsForCall)
 }
 
-func (fake *FakeCommandCreator) CreateCommandArgsForCall(i int) (lager.Logger, string, rootfs_spec.Spec) {
+func (fake *FakeCommandCreator) CreateCommandArgsForCall(i int) (lager.Logger, string, gardener.RootfsSpec) {
 	fake.createCommandMutex.RLock()
 	defer fake.createCommandMutex.RUnlock()
 	return fake.createCommandArgsForCall[i].log, fake.createCommandArgsForCall[i].handle, fake.createCommandArgsForCall[i].spec

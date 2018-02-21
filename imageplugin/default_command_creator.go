@@ -9,7 +9,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_spec"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -18,7 +18,7 @@ type DefaultCommandCreator struct {
 	ExtraArgs []string
 }
 
-func (cc *DefaultCommandCreator) CreateCommand(log lager.Logger, handle string, spec rootfs_spec.Spec) (*exec.Cmd, error) {
+func (cc *DefaultCommandCreator) CreateCommand(log lager.Logger, handle string, spec gardener.RootfsSpec) (*exec.Cmd, error) {
 	args := append(cc.ExtraArgs, "create")
 
 	if spec.QuotaSize > 0 {

@@ -6,7 +6,6 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -14,7 +13,7 @@ type NoopVolumizer struct{}
 
 var ErrGraphDisabled = errors.New("volume graph is disabled")
 
-func (NoopVolumizer) Create(lager.Logger, string, rootfs_spec.Spec) (specs.Spec, error) {
+func (NoopVolumizer) Create(lager.Logger, string, RootfsSpec) (specs.Spec, error) {
 	return specs.Spec{}, ErrGraphDisabled
 }
 
