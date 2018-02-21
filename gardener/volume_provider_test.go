@@ -9,7 +9,6 @@ import (
 
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/gardener"
 	fakes "code.cloudfoundry.org/guardian/gardener/gardenerfakes"
 	"code.cloudfoundry.org/lager"
@@ -107,7 +106,7 @@ var _ = Describe("VolumeProvider", func() {
 
 					parsedRootFS, err := url.Parse("docker:///alpine")
 					Expect(err).NotTo(HaveOccurred())
-					Expect(rootfsSpec).To(Equal(rootfs_spec.Spec{
+					Expect(rootfsSpec).To(Equal(gardener.RootfsSpec{
 						RootFS:     parsedRootFS,
 						Username:   "cakeuser",
 						Password:   "cakepassword",

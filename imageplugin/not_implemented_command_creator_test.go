@@ -3,7 +3,7 @@ package imageplugin_test
 import (
 	"errors"
 
-	"code.cloudfoundry.org/garden-shed/rootfs_spec"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/imageplugin"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,7 +22,7 @@ var _ = Describe("NotImplementedCommandCreator", func() {
 
 	Describe("CreateCommand", func() {
 		It("returns nil and provided error", func() {
-			cmd, err := notImplementedCommandCreator.CreateCommand(nil, "", rootfs_spec.Spec{})
+			cmd, err := notImplementedCommandCreator.CreateCommand(nil, "", gardener.RootfsSpec{})
 			Expect(cmd).To(BeNil())
 			Expect(err).To(MatchError(errors.New("NOT IMPLEMENTED")))
 		})

@@ -4,19 +4,18 @@ package gardenerfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type FakeVolumeCreator struct {
-	CreateStub        func(log lager.Logger, handle string, spec rootfs_spec.Spec) (specs.Spec, error)
+	CreateStub        func(log lager.Logger, handle string, spec gardener.RootfsSpec) (specs.Spec, error)
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
 		log    lager.Logger
 		handle string
-		spec   rootfs_spec.Spec
+		spec   gardener.RootfsSpec
 	}
 	createReturns struct {
 		result1 specs.Spec
@@ -30,13 +29,13 @@ type FakeVolumeCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (specs.Spec, error) {
+func (fake *FakeVolumeCreator) Create(log lager.Logger, handle string, spec gardener.RootfsSpec) (specs.Spec, error) {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
 		log    lager.Logger
 		handle string
-		spec   rootfs_spec.Spec
+		spec   gardener.RootfsSpec
 	}{log, handle, spec})
 	fake.recordInvocation("Create", []interface{}{log, handle, spec})
 	fake.createMutex.Unlock()
@@ -55,7 +54,7 @@ func (fake *FakeVolumeCreator) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeVolumeCreator) CreateArgsForCall(i int) (lager.Logger, string, rootfs_spec.Spec) {
+func (fake *FakeVolumeCreator) CreateArgsForCall(i int) (lager.Logger, string, gardener.RootfsSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].spec

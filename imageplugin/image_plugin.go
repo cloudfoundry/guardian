@@ -11,7 +11,7 @@ import (
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_spec"
+	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 	errorwrapper "github.com/pkg/errors"
@@ -22,7 +22,7 @@ const PreloadedPlusLayerScheme = "preloaded+layer"
 
 //go:generate counterfeiter . CommandCreator
 type CommandCreator interface {
-	CreateCommand(log lager.Logger, handle string, spec rootfs_spec.Spec) (*exec.Cmd, error)
+	CreateCommand(log lager.Logger, handle string, spec gardener.RootfsSpec) (*exec.Cmd, error)
 	DestroyCommand(log lager.Logger, handle string) *exec.Cmd
 	MetricsCommand(log lager.Logger, handle string) *exec.Cmd
 }
@@ -40,7 +40,7 @@ type ImagePlugin struct {
 	DefaultRootfs              string
 }
 
-func (p *ImagePlugin) Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (specs.Spec, error) {
+func (p *ImagePlugin) Create(log lager.Logger, handle string, spec gardener.RootfsSpec) (specs.Spec, error) {
 	errs := func(err error, action string) (specs.Spec, error) {
 		return specs.Spec{}, errorwrapper.Wrap(err, action)
 	}

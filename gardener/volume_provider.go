@@ -8,7 +8,6 @@ import (
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/garden-shed/rootfs_spec"
 	"code.cloudfoundry.org/lager"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -38,7 +37,17 @@ func NewVolumeProvider(creator VolumeCreator, manager VolumeDestroyMetricsGC, pr
 }
 
 type VolumeCreator interface {
-	Create(log lager.Logger, handle string, spec rootfs_spec.Spec) (specs.Spec, error)
+	Create(log lager.Logger, handle string, spec RootfsSpec) (specs.Spec, error)
+}
+
+// TODO GoRename RootfsSpec
+type RootfsSpec struct {
+	RootFS     *url.URL
+	Username   string `json:"-"`
+	Password   string `json:"-"`
+	Namespaced bool
+	QuotaSize  int64
+	QuotaScope garden.DiskLimitScope
 }
 
 func (v *VolumeProvider) Create(log lager.Logger, spec garden.ContainerSpec) (specs.Spec, error) {
@@ -60,7 +69,7 @@ func (v *VolumeProvider) Create(log lager.Logger, spec garden.ContainerSpec) (sp
 		baseConfig.Process = &specs.Process{}
 	} else {
 		var err error
-		baseConfig, err = v.VolumeCreator.Create(log.Session("volume-creator"), spec.Handle, rootfs_spec.Spec{
+		baseConfig, err = v.VolumeCreator.Create(log.Session("volume-creator"), spec.Handle, RootfsSpec{
 			RootFS:     rootFSURL,
 			Username:   spec.Image.Username,
 			Password:   spec.Image.Password,

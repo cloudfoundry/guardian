@@ -14,12 +14,10 @@ import (
 	"code.cloudfoundry.org/commandrunner/fake_command_runner"
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
-	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
 var _ = Describe("DirectExecRunner", func() {
@@ -30,7 +28,6 @@ var _ = Describe("DirectExecRunner", func() {
 		runtimePath = "container-runtime-path"
 		cleanupFunc func() error
 
-		spec        *runrunc.PreparedSpec
 		process     garden.Process
 		processIO   garden.ProcessIO
 		runErr      error
@@ -60,7 +57,6 @@ var _ = Describe("DirectExecRunner", func() {
 
 	Describe("Run", func() {
 		JustBeforeEach(func() {
-			spec = &runrunc.PreparedSpec{Process: specs.Process{Cwd: "idiosyncratic-string"}}
 			process, runErr = execRunner.Run(
 				logger,
 				processID,
