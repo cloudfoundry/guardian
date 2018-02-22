@@ -3,6 +3,7 @@ package integration_test
 import (
 	"errors"
 	"fmt"
+	"io"
 	"math/rand"
 	"os"
 	"os/exec"
@@ -19,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 
 	"testing"
@@ -84,10 +86,8 @@ func TestGroot(t *testing.T) {
 
 		rand.Seed(time.Now().UnixNano())
 		NamespacerBin = fmt.Sprintf("/tmp/namespacer-%d", rand.Int())
-		cpNamespacerBin := exec.Command("cp", tmpNamespacerBin, NamespacerBin)
-		sess, err := gexec.Start(cpNamespacerBin, GinkgoWriter, GinkgoWriter)
+		_, _, err = runCommand(exec.Command("cp", tmpNamespacerBin, NamespacerBin))
 		Expect(err).NotTo(HaveOccurred())
-		Eventually(sess).Should(gexec.Exit(0))
 
 		GrootUID, err = strconv.Atoi(GrootUser.Uid)
 		Expect(err).NotTo(HaveOccurred())
@@ -145,14 +145,9 @@ func TestGroot(t *testing.T) {
 }
 
 func writeMegabytes(outputPath string, mb int) error {
-	cmd := exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", outputPath), "bs=1048576", fmt.Sprintf("count=%d", mb))
-	sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	_, stderr, err := runCommand(exec.Command("dd", "if=/dev/zero", fmt.Sprintf("of=%s", outputPath), "bs=1048576", fmt.Sprintf("count=%d", mb)))
 	if err != nil {
-		return err
-	}
-	Eventually(sess, 10*time.Second).Should(gexec.Exit())
-	if sess.ExitCode() > 0 {
-		return errors.New(string(sess.Err.Contents()))
+		return errors.New(stderr)
 	}
 	return nil
 }
@@ -163,4 +158,12 @@ func mountByDefault() bool {
 
 func isBtrfs() bool {
 	return Driver == "btrfs"
+}
+
+func runCommand(command *exec.Cmd) (string, string, error) {
+	stdout, stderr := gbytes.NewBuffer(), gbytes.NewBuffer()
+	command.Stdout = io.MultiWriter(GinkgoWriter, stdout)
+	command.Stderr = io.MultiWriter(GinkgoWriter, stderr)
+	err := command.Run()
+	return string(stdout.Contents()), string(stderr.Contents()), err
 }
