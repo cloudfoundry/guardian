@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strings"
 
 	"code.cloudfoundry.org/guardian/kawasaki/devices"
 	. "github.com/onsi/ginkgo"
@@ -124,8 +125,23 @@ var _ = Describe("Link Management", func() {
 		})
 
 		It("moves the interface in to the given namespace by pid", func() {
+			diagnostics := func() string {
+				var ifaceNames []string
+				ifaces, err := net.Interfaces()
+				Expect(err).NotTo(HaveOccurred())
+				for _, iface := range ifaces {
+					ifaceNames = append(ifaceNames, iface.Name)
+				}
+
+				return fmt.Sprintf(`test outer ns interfaces: [%s]
+interface we were trying to move: %s
+test inner ns interfaces: %s
+`, strings.Join(ifaceNames, ", "), intf.Name,
+					runCommand("ip", "netns", "exec", netnsName, "ip", "link"))
+			}
+
 			// look at this perfectly ordinary hat
-			cmd := startCommand("ip", "netns", "exec", netnsName, "sleep", "6312736")
+			cmd, _ := startCommand("ip", "netns", "exec", netnsName, "sleep", "6312736")
 			defer cmd.Process.Kill()
 
 			// (it has the following fd)
@@ -133,7 +149,7 @@ var _ = Describe("Link Management", func() {
 			Expect(err).ToNot(HaveOccurred())
 
 			// I wave the magic wand
-			Expect(l.SetNs(intf, int(f.Fd()))).To(Succeed())
+			Expect(l.SetNs(intf, int(f.Fd()))).To(Succeed(), diagnostics())
 
 			// the bunny has vanished! where is the bunny?
 			intfs, _ := net.Interfaces()
