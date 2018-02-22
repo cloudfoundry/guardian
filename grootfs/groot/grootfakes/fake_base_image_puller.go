@@ -9,11 +9,10 @@ import (
 )
 
 type FakeBaseImagePuller struct {
-	FetchBaseImageInfoStub        func(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImageInfo, error)
+	FetchBaseImageInfoStub        func(logger lager.Logger) (groot.BaseImageInfo, error)
 	fetchBaseImageInfoMutex       sync.RWMutex
 	fetchBaseImageInfoArgsForCall []struct {
 		logger lager.Logger
-		spec   groot.BaseImageSpec
 	}
 	fetchBaseImageInfoReturns struct {
 		result1 groot.BaseImageInfo
@@ -40,17 +39,16 @@ type FakeBaseImagePuller struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBaseImagePuller) FetchBaseImageInfo(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImageInfo, error) {
+func (fake *FakeBaseImagePuller) FetchBaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, error) {
 	fake.fetchBaseImageInfoMutex.Lock()
 	ret, specificReturn := fake.fetchBaseImageInfoReturnsOnCall[len(fake.fetchBaseImageInfoArgsForCall)]
 	fake.fetchBaseImageInfoArgsForCall = append(fake.fetchBaseImageInfoArgsForCall, struct {
 		logger lager.Logger
-		spec   groot.BaseImageSpec
-	}{logger, spec})
-	fake.recordInvocation("FetchBaseImageInfo", []interface{}{logger, spec})
+	}{logger})
+	fake.recordInvocation("FetchBaseImageInfo", []interface{}{logger})
 	fake.fetchBaseImageInfoMutex.Unlock()
 	if fake.FetchBaseImageInfoStub != nil {
-		return fake.FetchBaseImageInfoStub(logger, spec)
+		return fake.FetchBaseImageInfoStub(logger)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -64,10 +62,10 @@ func (fake *FakeBaseImagePuller) FetchBaseImageInfoCallCount() int {
 	return len(fake.fetchBaseImageInfoArgsForCall)
 }
 
-func (fake *FakeBaseImagePuller) FetchBaseImageInfoArgsForCall(i int) (lager.Logger, groot.BaseImageSpec) {
+func (fake *FakeBaseImagePuller) FetchBaseImageInfoArgsForCall(i int) lager.Logger {
 	fake.fetchBaseImageInfoMutex.RLock()
 	defer fake.fetchBaseImageInfoMutex.RUnlock()
-	return fake.fetchBaseImageInfoArgsForCall[i].logger, fake.fetchBaseImageInfoArgsForCall[i].spec
+	return fake.fetchBaseImageInfoArgsForCall[i].logger
 }
 
 func (fake *FakeBaseImagePuller) FetchBaseImageInfoReturns(result1 groot.BaseImageInfo, result2 error) {

@@ -273,11 +273,11 @@ func emitMetrics(logger lager.Logger, metricsEmitter *metrics.Emitter, sm *store
 
 func createFetcher(baseImageUrl *url.URL, systemContext types.SystemContext, createCfg config.Create) base_image_puller.Fetcher {
 	if baseImageUrl.Scheme == "" {
-		return tar_fetcher.NewTarFetcher()
+		return tar_fetcher.NewTarFetcher(baseImageUrl)
 	}
 
 	skipOCILayerValidation := createCfg.SkipLayerValidation && baseImageUrl.Scheme == "oci"
-	layerSource := source.NewLayerSource(systemContext, skipOCILayerValidation)
+	layerSource := source.NewLayerSource(systemContext, skipOCILayerValidation, baseImageUrl)
 	return layer_fetcher.NewLayerFetcher(&layerSource)
 }
 

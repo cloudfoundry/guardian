@@ -3,7 +3,6 @@ package base_image_pullerfakes
 
 import (
 	"io"
-	"net/url"
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller"
@@ -12,11 +11,10 @@ import (
 )
 
 type FakeFetcher struct {
-	BaseImageInfoStub        func(logger lager.Logger, baseImageURL *url.URL) (groot.BaseImageInfo, error)
+	BaseImageInfoStub        func(logger lager.Logger) (groot.BaseImageInfo, error)
 	baseImageInfoMutex       sync.RWMutex
 	baseImageInfoArgsForCall []struct {
-		logger       lager.Logger
-		baseImageURL *url.URL
+		logger lager.Logger
 	}
 	baseImageInfoReturns struct {
 		result1 groot.BaseImageInfo
@@ -26,12 +24,11 @@ type FakeFetcher struct {
 		result1 groot.BaseImageInfo
 		result2 error
 	}
-	StreamBlobStub        func(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error)
+	StreamBlobStub        func(logger lager.Logger, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error)
 	streamBlobMutex       sync.RWMutex
 	streamBlobArgsForCall []struct {
-		logger       lager.Logger
-		baseImageURL *url.URL
-		layerInfo    groot.LayerInfo
+		logger    lager.Logger
+		layerInfo groot.LayerInfo
 	}
 	streamBlobReturns struct {
 		result1 io.ReadCloser
@@ -47,17 +44,16 @@ type FakeFetcher struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (groot.BaseImageInfo, error) {
+func (fake *FakeFetcher) BaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, error) {
 	fake.baseImageInfoMutex.Lock()
 	ret, specificReturn := fake.baseImageInfoReturnsOnCall[len(fake.baseImageInfoArgsForCall)]
 	fake.baseImageInfoArgsForCall = append(fake.baseImageInfoArgsForCall, struct {
-		logger       lager.Logger
-		baseImageURL *url.URL
-	}{logger, baseImageURL})
-	fake.recordInvocation("BaseImageInfo", []interface{}{logger, baseImageURL})
+		logger lager.Logger
+	}{logger})
+	fake.recordInvocation("BaseImageInfo", []interface{}{logger})
 	fake.baseImageInfoMutex.Unlock()
 	if fake.BaseImageInfoStub != nil {
-		return fake.BaseImageInfoStub(logger, baseImageURL)
+		return fake.BaseImageInfoStub(logger)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -71,10 +67,10 @@ func (fake *FakeFetcher) BaseImageInfoCallCount() int {
 	return len(fake.baseImageInfoArgsForCall)
 }
 
-func (fake *FakeFetcher) BaseImageInfoArgsForCall(i int) (lager.Logger, *url.URL) {
+func (fake *FakeFetcher) BaseImageInfoArgsForCall(i int) lager.Logger {
 	fake.baseImageInfoMutex.RLock()
 	defer fake.baseImageInfoMutex.RUnlock()
-	return fake.baseImageInfoArgsForCall[i].logger, fake.baseImageInfoArgsForCall[i].baseImageURL
+	return fake.baseImageInfoArgsForCall[i].logger
 }
 
 func (fake *FakeFetcher) BaseImageInfoReturns(result1 groot.BaseImageInfo, result2 error) {
@@ -99,18 +95,17 @@ func (fake *FakeFetcher) BaseImageInfoReturnsOnCall(i int, result1 groot.BaseIma
 	}{result1, result2}
 }
 
-func (fake *FakeFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
+func (fake *FakeFetcher) StreamBlob(logger lager.Logger, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
 	fake.streamBlobMutex.Lock()
 	ret, specificReturn := fake.streamBlobReturnsOnCall[len(fake.streamBlobArgsForCall)]
 	fake.streamBlobArgsForCall = append(fake.streamBlobArgsForCall, struct {
-		logger       lager.Logger
-		baseImageURL *url.URL
-		layerInfo    groot.LayerInfo
-	}{logger, baseImageURL, layerInfo})
-	fake.recordInvocation("StreamBlob", []interface{}{logger, baseImageURL, layerInfo})
+		logger    lager.Logger
+		layerInfo groot.LayerInfo
+	}{logger, layerInfo})
+	fake.recordInvocation("StreamBlob", []interface{}{logger, layerInfo})
 	fake.streamBlobMutex.Unlock()
 	if fake.StreamBlobStub != nil {
-		return fake.StreamBlobStub(logger, baseImageURL, layerInfo)
+		return fake.StreamBlobStub(logger, layerInfo)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -124,10 +119,10 @@ func (fake *FakeFetcher) StreamBlobCallCount() int {
 	return len(fake.streamBlobArgsForCall)
 }
 
-func (fake *FakeFetcher) StreamBlobArgsForCall(i int) (lager.Logger, *url.URL, groot.LayerInfo) {
+func (fake *FakeFetcher) StreamBlobArgsForCall(i int) (lager.Logger, groot.LayerInfo) {
 	fake.streamBlobMutex.RLock()
 	defer fake.streamBlobMutex.RUnlock()
-	return fake.streamBlobArgsForCall[i].logger, fake.streamBlobArgsForCall[i].baseImageURL, fake.streamBlobArgsForCall[i].layerInfo
+	return fake.streamBlobArgsForCall[i].logger, fake.streamBlobArgsForCall[i].layerInfo
 }
 
 func (fake *FakeFetcher) StreamBlobReturns(result1 io.ReadCloser, result2 int64, result3 error) {

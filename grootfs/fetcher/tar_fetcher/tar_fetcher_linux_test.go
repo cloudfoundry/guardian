@@ -30,21 +30,20 @@ var _ = Describe("Tar Fetcher", func() {
 	)
 
 	BeforeEach(func() {
-		fetcher = fetcherpkg.NewTarFetcher()
 
 		var err error
 		sourceImagePath, err = ioutil.TempDir("", "image")
 		Expect(err).NotTo(HaveOccurred())
 		Expect(ioutil.WriteFile(path.Join(sourceImagePath, "a_file"), []byte("hello-world"), 0600)).To(Succeed())
 		logger = NewLogger("tar-fetcher")
+		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
+		baseImagePath = baseImageFile.Name()
+		baseImageURL, err = url.Parse(baseImagePath)
+		Expect(err).NotTo(HaveOccurred())
 	})
 
 	JustBeforeEach(func() {
-		baseImageFile := integration.CreateBaseImageTar(sourceImagePath)
-		baseImagePath = baseImageFile.Name()
-		var err error
-		baseImageURL, err = url.Parse(baseImagePath)
-		Expect(err).NotTo(HaveOccurred())
+		fetcher = fetcherpkg.NewTarFetcher(baseImageURL)
 	})
 
 	AfterEach(func() {
@@ -54,7 +53,7 @@ var _ = Describe("Tar Fetcher", func() {
 
 	Describe("StreamBlob", func() {
 		It("returns the contents of the source directory as a Tar stream", func() {
-			stream, _, err := fetcher.StreamBlob(logger, baseImageURL, groot.LayerInfo{})
+			stream, _, err := fetcher.StreamBlob(logger, groot.LayerInfo{})
 			Expect(err).ToNot(HaveOccurred())
 
 			entries := streamTar(tar.NewReader(stream))
@@ -65,7 +64,7 @@ var _ = Describe("Tar Fetcher", func() {
 		})
 
 		It("logs the tar command", func() {
-			_, _, err := fetcher.StreamBlob(logger, baseImageURL, groot.LayerInfo{})
+			_, _, err := fetcher.StreamBlob(logger, groot.LayerInfo{})
 			Expect(err).ToNot(HaveOccurred())
 
 			Expect(logger).To(ContainSequence(
@@ -77,33 +76,39 @@ var _ = Describe("Tar Fetcher", func() {
 		})
 
 		Context("when the source is a directory", func() {
-			It("returns an error message", func() {
+			BeforeEach(func() {
 				tempDir, err := ioutil.TempDir("", "")
 				Expect(err).NotTo(HaveOccurred())
 
-				imageURL, _ := url.Parse(tempDir)
-				_, _, err = fetcher.StreamBlob(logger, imageURL, groot.LayerInfo{})
+				baseImageURL, _ = url.Parse(tempDir)
+			})
+			It("returns an error message", func() {
+				_, _, err := fetcher.StreamBlob(logger, groot.LayerInfo{})
 				Expect(err).To(MatchError(ContainSubstring("invalid base image: directory provided instead of a tar file")))
 			})
 		})
 
 		Context("when the source does not exist", func() {
-			It("returns an error", func() {
-				nonExistentImageURL, _ := url.Parse("/nothing/here")
+			BeforeEach(func() {
+				baseImageURL, _ = url.Parse("/nothing/here")
+			})
 
-				_, _, err := fetcher.StreamBlob(logger, nonExistentImageURL, groot.LayerInfo{})
+			It("returns an error", func() {
+
+				_, _, err := fetcher.StreamBlob(logger, groot.LayerInfo{})
 				Expect(err).To(MatchError(ContainSubstring("local image not found in `/nothing/here`")))
 			})
 		})
 	})
 
 	Describe("LayersDigest", func() {
-		var baseImageInfo groot.BaseImageInfo
+		var (
+			baseImageInfo groot.BaseImageInfo
+			imageInfoErr  error
+		)
 
 		JustBeforeEach(func() {
-			var err error
-			baseImageInfo, err = fetcher.BaseImageInfo(logger, baseImageURL)
-			Expect(err).NotTo(HaveOccurred())
+			baseImageInfo, imageInfoErr = fetcher.BaseImageInfo(logger)
 		})
 
 		It("returns the correct image", func() {
@@ -125,22 +130,21 @@ var _ = Describe("Tar Fetcher", func() {
 			})
 
 			It("generates another volume id", func() {
-				newBaseImageInfo, err := fetcher.BaseImageInfo(logger, baseImageURL)
+				newBaseImageInfo, err := fetcher.BaseImageInfo(logger)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(baseImageInfo.LayerInfos[0].ChainID).NotTo(Equal(newBaseImageInfo.LayerInfos[0].ChainID))
 			})
 		})
 
 		Context("when the image doesn't exist", func() {
-			JustBeforeEach(func() {
+			BeforeEach(func() {
 				var err error
 				baseImageURL, err = url.Parse("/not-here")
 				Expect(err).ToNot(HaveOccurred())
 			})
 
 			It("returns an error", func() {
-				_, err := fetcher.BaseImageInfo(logger, baseImageURL)
-				Expect(err).To(MatchError(ContainSubstring("fetching image timestamp")))
+				Expect(imageInfoErr).To(MatchError(ContainSubstring("fetching image timestamp")))
 			})
 		})
 	})

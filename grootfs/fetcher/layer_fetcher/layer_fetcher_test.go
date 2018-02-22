@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"errors"
 	"io/ioutil"
-	"net/url"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -25,7 +24,6 @@ var _ = Describe("LayerFetcher", func() {
 		fakeSource        *layer_fetcherfakes.FakeSource
 		fetcher           *layer_fetcher.LayerFetcher
 		logger            *lagertest.TestLogger
-		baseImageURL      *url.URL
 		gzipedBlobContent []byte
 	)
 
@@ -43,8 +41,7 @@ var _ = Describe("LayerFetcher", func() {
 		fetcher = layer_fetcher.NewLayerFetcher(fakeSource)
 
 		logger = lagertest.NewTestLogger("test-layer-fetcher")
-		baseImageURL, err = url.Parse("docker:///cfgarden/empty:v0.1.1")
-		Expect(err).NotTo(HaveOccurred())
+
 	})
 
 	Describe("BaseImageInfo", func() {
@@ -53,12 +50,10 @@ var _ = Describe("LayerFetcher", func() {
 			fakeManifest.OCIConfigReturns(&specsv1.Image{}, nil)
 			fakeSource.ManifestReturns(fakeManifest, nil)
 
-			_, err := fetcher.BaseImageInfo(logger, baseImageURL)
+			_, err := fetcher.BaseImageInfo(logger)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeSource.ManifestCallCount()).To(Equal(1))
-			_, usedImageURL := fakeSource.ManifestArgsForCall(0)
-			Expect(usedImageURL).To(Equal(baseImageURL))
 		})
 
 		Context("when fetching the manifest fails", func() {
@@ -67,7 +62,7 @@ var _ = Describe("LayerFetcher", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := fetcher.BaseImageInfo(logger, baseImageURL)
+				_, err := fetcher.BaseImageInfo(logger)
 				Expect(err).To(MatchError(ContainSubstring("fetching the manifest")))
 			})
 		})
@@ -96,10 +91,7 @@ var _ = Describe("LayerFetcher", func() {
 			})
 			fakeSource.ManifestReturns(fakeManifest, nil)
 
-			baseImageURL, err := url.Parse("docker:///cfgarden/empty:v0.1.1")
-			Expect(err).NotTo(HaveOccurred())
-
-			baseImageInfo, err := fetcher.BaseImageInfo(logger, baseImageURL)
+			baseImageInfo, err := fetcher.BaseImageInfo(logger)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(baseImageInfo.LayerInfos).To(Equal([]groot.LayerInfo{
@@ -129,7 +121,7 @@ var _ = Describe("LayerFetcher", func() {
 			})
 
 			It("returns the error", func() {
-				_, err := fetcher.BaseImageInfo(logger, baseImageURL)
+				_, err := fetcher.BaseImageInfo(logger)
 				Expect(err).To(MatchError(ContainSubstring("OCI Config retrieval failed")))
 			})
 		})
@@ -150,7 +142,7 @@ var _ = Describe("LayerFetcher", func() {
 			fakeManifest.OCIConfigReturns(&expectedConfig, nil)
 			fakeSource.ManifestReturns(fakeManifest, nil)
 
-			baseImageInfo, err := fetcher.BaseImageInfo(logger, baseImageURL)
+			baseImageInfo, err := fetcher.BaseImageInfo(logger)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(baseImageInfo.Config).To(Equal(expectedConfig))
@@ -172,17 +164,16 @@ var _ = Describe("LayerFetcher", func() {
 		})
 
 		It("uses the source", func() {
-			_, _, err := fetcher.StreamBlob(logger, baseImageURL, layerInfo)
+			_, _, err := fetcher.StreamBlob(logger, layerInfo)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeSource.BlobCallCount()).To(Equal(1))
-			_, usedImageURL, layerInfo := fakeSource.BlobArgsForCall(0)
-			Expect(usedImageURL).To(Equal(baseImageURL))
+			_, layerInfo := fakeSource.BlobArgsForCall(0)
 			Expect(layerInfo.BlobID).To(Equal("sha256:layer-digest"))
 		})
 
 		It("returns the stream from the source", func(done Done) {
-			stream, _, err := fetcher.StreamBlob(logger, baseImageURL, layerInfo)
+			stream, _, err := fetcher.StreamBlob(logger, layerInfo)
 			Expect(err).NotTo(HaveOccurred())
 
 			gzipReader, err := gzip.NewReader(stream)
@@ -204,7 +195,7 @@ var _ = Describe("LayerFetcher", func() {
 
 			fakeSource.BlobReturns(tmpFile.Name(), 1024, nil)
 
-			_, size, err := fetcher.StreamBlob(logger, baseImageURL, layerInfo)
+			_, size, err := fetcher.StreamBlob(logger, layerInfo)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(size).To(Equal(int64(1024)))
 		})
@@ -213,7 +204,7 @@ var _ = Describe("LayerFetcher", func() {
 			It("returns an error", func() {
 				fakeSource.BlobReturns("", 0, errors.New("failed to stream blob"))
 
-				_, _, err := fetcher.StreamBlob(logger, baseImageURL, layerInfo)
+				_, _, err := fetcher.StreamBlob(logger, layerInfo)
 				Expect(err).To(MatchError(ContainSubstring("failed to stream blob")))
 			})
 		})

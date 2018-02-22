@@ -69,12 +69,12 @@ var _ = Describe("Layer source: Docker", func() {
 	})
 
 	JustBeforeEach(func() {
-		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation)
+		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, baseImageURL)
 	})
 
 	Describe("Manifest", func() {
 		It("fetches the manifest", func() {
-			manifest, err := layerSource.Manifest(logger, baseImageURL)
+			manifest, err := layerSource.Manifest(logger)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(manifest.ConfigInfo().Digest.String()).To(Equal(configBlob))
@@ -94,7 +94,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("fetches the manifest", func() {
-				manifest, err := layerSource.Manifest(logger, baseImageURL)
+				manifest, err := layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(manifest.ConfigInfo().Digest.String()).To(Equal(testhelpers.SchemaV1EmptyBaseImage.ConfigBlobID))
@@ -123,7 +123,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 			Context("when the correct credentials are provided", func() {
 				It("fetches the manifest", func() {
-					manifest, err := layerSource.Manifest(logger, baseImageURL)
+					manifest, err := layerSource.Manifest(logger)
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(manifest.ConfigInfo().Digest.String()).To(Equal(configBlob))
@@ -156,18 +156,20 @@ var _ = Describe("Layer source: Docker", func() {
 				})
 
 				It("returns an informative error", func() {
-					_, err := layerSource.Manifest(logger, baseImageURL)
+					_, err := layerSource.Manifest(logger)
 					Expect(err).To(MatchError(ContainSubstring("unable to retrieve auth token")))
 				})
 			})
 		})
 
 		Context("when the image url is invalid", func() {
-			It("returns an error", func() {
-				baseImageURL, err := url.Parse("docker:cfgarden/empty:v0.1.0")
+			BeforeEach(func() {
+				var err error
+				baseImageURL, err = url.Parse("docker:cfgarden/empty:v0.1.0")
 				Expect(err).NotTo(HaveOccurred())
-
-				_, err = layerSource.Manifest(logger, baseImageURL)
+			})
+			It("returns an error", func() {
+				_, err := layerSource.Manifest(logger)
 				Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
 			})
 		})
@@ -183,12 +185,12 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("wraps the containers/image with a useful error", func() {
-				_, err := layerSource.Manifest(logger, baseImageURL)
+				_, err := layerSource.Manifest(logger)
 				Expect(err.Error()).To(MatchRegexp("^fetching image reference"))
 			})
 
 			It("logs the original error message", func() {
-				_, err := layerSource.Manifest(logger, baseImageURL)
+				_, err := layerSource.Manifest(logger)
 				Expect(err).To(HaveOccurred())
 
 				Expect(logger).To(gbytes.Say("fetching-image-reference-failed"))
@@ -199,7 +201,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 	Describe("Config", func() {
 		It("fetches the config", func() {
-			manifest, err := layerSource.Manifest(logger, baseImageURL)
+			manifest, err := layerSource.Manifest(logger)
 			Expect(err).NotTo(HaveOccurred())
 			config, err := manifest.OCIConfig()
 			Expect(err).NotTo(HaveOccurred())
@@ -219,9 +221,9 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			JustBeforeEach(func() {
-				layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation)
+				layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, baseImageURL)
 				var err error
-				manifest, err = layerSource.Manifest(logger, baseImageURL)
+				manifest, err = layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
 			})
 
@@ -238,11 +240,14 @@ var _ = Describe("Layer source: Docker", func() {
 		})
 
 		Context("when the image url is invalid", func() {
-			It("returns an error", func() {
-				baseImageURL, err := url.Parse("docker:cfgarden/empty:v0.1.0")
+			BeforeEach(func() {
+				var err error
+				baseImageURL, err = url.Parse("docker:cfgarden/empty:v0.1.0")
 				Expect(err).NotTo(HaveOccurred())
+			})
 
-				_, err = layerSource.Manifest(logger, baseImageURL)
+			It("returns an error", func() {
+				_, err := layerSource.Manifest(logger)
 				Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
 			})
 		})
@@ -255,7 +260,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("fetches the config", func() {
-				manifest, err := layerSource.Manifest(logger, baseImageURL)
+				manifest, err := layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
 				config, err := manifest.OCIConfig()
 				Expect(err).NotTo(HaveOccurred())
@@ -289,7 +294,7 @@ var _ = Describe("Layer source: Docker", func() {
 		It("retries fetching the manifest twice", func() {
 			fakeRegistry.FailNextRequests(2)
 
-			_, err := layerSource.Manifest(logger, baseImageURL)
+			_, err := layerSource.Manifest(logger)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(logger.TestSink.LogMessages()).To(ContainElement("test-layer-source.fetching-image-manifest.attempt-get-image-1"))
@@ -301,7 +306,7 @@ var _ = Describe("Layer source: Docker", func() {
 		It("retries fetching a blob twice", func() {
 			fakeRegistry.FailNextRequests(2)
 
-			_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
+			_, _, err := layerSource.Blob(logger, layerInfos[0])
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(logger.TestSink.LogMessages()).To(
@@ -315,7 +320,7 @@ var _ = Describe("Layer source: Docker", func() {
 				return
 			})
 
-			_, err := layerSource.Manifest(logger, baseImageURL)
+			_, err := layerSource.Manifest(logger)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeRegistry.RequestedBlobs()).To(Equal([]string{configBlob}), "config blob was not prefetched within the retry")
@@ -344,7 +349,7 @@ var _ = Describe("Layer source: Docker", func() {
 		})
 
 		It("fails to fetch the manifest", func() {
-			_, err := layerSource.Manifest(logger, baseImageURL)
+			_, err := layerSource.Manifest(logger)
 			Expect(err).To(HaveOccurred())
 		})
 
@@ -354,7 +359,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("fetches the manifest", func() {
-				manifest, err := layerSource.Manifest(logger, baseImageURL)
+				manifest, err := layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(manifest.LayerInfos()).To(HaveLen(2))
@@ -365,7 +370,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("fetches the config", func() {
-				manifest, err := layerSource.Manifest(logger, baseImageURL)
+				manifest, err := layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
 
 				config, err := manifest.OCIConfig()
@@ -377,7 +382,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("downloads and uncompresses the blob", func() {
-				blobPath, size, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
+				blobPath, size, err := layerSource.Blob(logger, layerInfos[0])
 				Expect(err).NotTo(HaveOccurred())
 
 				blobReader, err := os.Open(blobPath)
@@ -408,11 +413,11 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			JustBeforeEach(func() {
-				layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation)
+				layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, baseImageURL)
 			})
 
 			It("fetches the manifest", func() {
-				manifest, err := layerSource.Manifest(logger, baseImageURL)
+				manifest, err := layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(manifest.LayerInfos()).To(HaveLen(2))
@@ -423,7 +428,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("fetches the config", func() {
-				manifest, err := layerSource.Manifest(logger, baseImageURL)
+				manifest, err := layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
 
 				config, err := manifest.OCIConfig()
@@ -435,7 +440,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("downloads and uncompresses the blob", func() {
-				blobPath, size, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
+				blobPath, size, err := layerSource.Blob(logger, layerInfos[0])
 				Expect(err).NotTo(HaveOccurred())
 
 				blobReader, err := os.Open(blobPath)
@@ -456,7 +461,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 	Describe("Blob", func() {
 		It("downloads and uncompresses the blob", func() {
-			blobPath, size, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
+			blobPath, size, err := layerSource.Blob(logger, layerInfos[0])
 			Expect(err).NotTo(HaveOccurred())
 
 			blobReader, err := os.Open(blobPath)
@@ -499,7 +504,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 			It("returns an error", func() {
 				layerInfos[0].MediaType = "gzip"
-				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
+				_, _, err := layerSource.Blob(logger, layerInfos[0])
 				Expect(err).To(MatchError(ContainSubstring("expected blob to be of type")))
 			})
 		})
@@ -522,7 +527,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 			Context("when the correct credentials are provided", func() {
 				It("fetches the config", func() {
-					blobPath, size, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
+					blobPath, size, err := layerSource.Blob(logger, layerInfos[0])
 					Expect(err).NotTo(HaveOccurred())
 
 					blobReader, err := os.Open(blobPath)
@@ -560,25 +565,28 @@ var _ = Describe("Layer source: Docker", func() {
 				})
 
 				It("retuns an error", func() {
-					_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[0])
+					_, _, err := layerSource.Blob(logger, layerInfos[0])
 					Expect(err).To(MatchError(ContainSubstring("unable to retrieve auth token")))
 				})
 			})
 		})
 
 		Context("when the image url is invalid", func() {
-			It("returns an error", func() {
-				baseImageURL, err := url.Parse("docker:cfgarden/empty:v0.1.0")
+			BeforeEach(func() {
+				var err error
+				baseImageURL, err = url.Parse("docker:cfgarden/empty:v0.1.0")
 				Expect(err).NotTo(HaveOccurred())
+			})
 
-				_, _, err = layerSource.Blob(logger, baseImageURL, layerInfos[0])
+			It("returns an error", func() {
+				_, _, err := layerSource.Blob(logger, layerInfos[0])
 				Expect(err).To(MatchError(ContainSubstring("parsing url failed")))
 			})
 		})
 
 		Context("when the blob does not exist", func() {
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, groot.LayerInfo{BlobID: "sha256:steamed-blob"})
+				_, _, err := layerSource.Blob(logger, groot.LayerInfo{BlobID: "sha256:steamed-blob"})
 				Expect(err).To(MatchError(ContainSubstring("fetching blob 404")))
 			})
 		})
@@ -608,7 +616,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[1])
+				_, _, err := layerSource.Blob(logger, layerInfos[1])
 				Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
 			})
 
@@ -618,7 +626,7 @@ var _ = Describe("Layer source: Docker", func() {
 				})
 
 				It("returns an error", func() {
-					_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[1])
+					_, _, err := layerSource.Blob(logger, layerInfos[1])
 					Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
 				})
 			})
@@ -630,7 +638,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			It("returns an error", func() {
-				_, _, err := layerSource.Blob(logger, baseImageURL, layerInfos[1])
+				_, _, err := layerSource.Blob(logger, layerInfos[1])
 				Expect(err).To(MatchError(ContainSubstring("diffID digest mismatch")))
 			})
 		})

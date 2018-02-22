@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -40,8 +39,7 @@ var _ = Describe("Base Image Puller", func() {
 		layerInfos      []groot.LayerInfo
 		baseImageInfo   groot.BaseImageInfo
 
-		baseImageSrcURL *url.URL
-		tmpVolumesDir   string
+		tmpVolumesDir string
 	)
 
 	BeforeEach(func() {
@@ -62,7 +60,7 @@ var _ = Describe("Base Image Puller", func() {
 		}
 		fakeFetcher.BaseImageInfoReturns(baseImageInfo, nil)
 
-		fakeFetcher.StreamBlobStub = func(_ lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
+		fakeFetcher.StreamBlobStub = func(_ lager.Logger, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
 			buffer := bytes.NewBuffer([]byte{})
 			stream := gzip.NewWriter(buffer)
 			defer stream.Close()
@@ -90,25 +88,18 @@ var _ = Describe("Base Image Puller", func() {
 
 		baseImagePuller = base_image_puller.NewBaseImagePuller(fakeFetcher, fakeUnpacker, fakeVolumeDriver, fakeMetricsEmitter, fakeLocksmith)
 		logger = lagertest.NewTestLogger("image-puller")
-
-		baseImageSrcURL, err = url.Parse("docker:///an/image")
-		Expect(err).NotTo(HaveOccurred())
 	})
 
 	Describe("FetchBaseImageInfo", func() {
 		It("returns the image description", func() {
-			baseImage, err := baseImagePuller.FetchBaseImageInfo(logger, groot.BaseImageSpec{
-				BaseImageSrc: baseImageSrcURL,
-			})
+			baseImage, err := baseImagePuller.FetchBaseImageInfo(logger)
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(baseImage.Config).To(Equal(expectedImgDesc))
 		})
 
 		It("returns the chain ids", func() {
-			baseImage, err := baseImagePuller.FetchBaseImageInfo(logger, groot.BaseImageSpec{
-				BaseImageSrc: baseImageSrcURL,
-			})
+			baseImage, err := baseImagePuller.FetchBaseImageInfo(logger)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(chainIDs(baseImage.LayerInfos)).To(ConsistOf("layer-111", "chain-222", "chain-333"))
 		})
@@ -122,9 +113,7 @@ var _ = Describe("Base Image Puller", func() {
 			})
 
 			It("returns an error", func() {
-				_, err := baseImagePuller.FetchBaseImageInfo(logger, groot.BaseImageSpec{
-					BaseImageSrc: baseImageSrcURL,
-				})
+				_, err := baseImagePuller.FetchBaseImageInfo(logger)
 				Expect(err).To(MatchError(ContainSubstring("failed to get list of layers")))
 			})
 		})
@@ -132,9 +121,7 @@ var _ = Describe("Base Image Puller", func() {
 
 	Describe("Pull", func() {
 		It("creates volumes for all the layers", func() {
-			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-				BaseImageSrc: baseImageSrcURL,
-			})
+			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(3))
@@ -152,9 +139,7 @@ var _ = Describe("Base Image Puller", func() {
 		})
 
 		It("unpacks the layers to the respective temporary volumes", func() {
-			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-				BaseImageSrc: baseImageSrcURL,
-			})
+			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
@@ -188,9 +173,7 @@ var _ = Describe("Base Image Puller", func() {
 				})
 
 				It("forwards the correct base directory for each layer to the unpacker", func() {
-					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-						BaseImageSrc: baseImageSrcURL,
-					})
+					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
@@ -203,17 +186,13 @@ var _ = Describe("Base Image Puller", func() {
 				})
 
 				It("ensures the base directory exists in the volume", func() {
-					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-						BaseImageSrc: baseImageSrcURL,
-					})
+					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(filepath.Join(tmpVolumesDir, "chain-222", "home", "base_directory")).To(BeADirectory())
 				})
 
 				It("sets ownership on the base directory path components based on the parent layer", func() {
-					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-						BaseImageSrc: baseImageSrcURL,
-					})
+					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 					Expect(err).NotTo(HaveOccurred())
 
 					fileinfo, err := os.Stat(filepath.Join(tmpVolumesDir, "chain-222", "home"))
@@ -230,9 +209,7 @@ var _ = Describe("Base Image Puller", func() {
 				})
 
 				It("sets the correct permissions on the base directory based on the parent layer", func() {
-					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-						BaseImageSrc: baseImageSrcURL,
-					})
+					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 					Expect(err).NotTo(HaveOccurred())
 
 					fileinfo, err := os.Stat(filepath.Join(tmpVolumesDir, "chain-222", "home"))
@@ -250,9 +227,7 @@ var _ = Describe("Base Image Puller", func() {
 					})
 
 					It("returns an error", func() {
-						err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-							BaseImageSrc: baseImageSrcURL,
-						})
+						err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 						Expect(err).To(MatchError("failed"))
 					})
 				})
@@ -260,9 +235,7 @@ var _ = Describe("Base Image Puller", func() {
 
 			Context("when the base directory doesn't exist in the parent layer", func() {
 				It("returns an error", func() {
-					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-						BaseImageSrc: baseImageSrcURL,
-					})
+					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 					Expect(err).To(MatchError(ContainSubstring("base directory not found in parent layer")))
 				})
 			})
@@ -291,9 +264,7 @@ var _ = Describe("Base Image Puller", func() {
 				})
 
 				It("succeeds but doesn't set file attributes based on the parent layer", func() {
-					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-						BaseImageSrc: baseImageSrcURL,
-					})
+					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 					Expect(err).NotTo(HaveOccurred())
 
 					fileinfo, err := os.Stat(filepath.Join(tmpVolumesDir, "chain-222", "home"))
@@ -322,9 +293,7 @@ var _ = Describe("Base Image Puller", func() {
 				return volumePath, nil
 			}
 
-			err = baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-				BaseImageSrc: baseImageSrcURL,
-			})
+			err = baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 
 			Expect(err).NotTo(HaveOccurred())
 
@@ -338,8 +307,7 @@ var _ = Describe("Base Image Puller", func() {
 		})
 
 		It("unpacks the layers got from the fetcher", func() {
-			fakeFetcher.StreamBlobStub = func(_ lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
-				Expect(baseImageURL).To(Equal(baseImageSrcURL))
+			fakeFetcher.StreamBlobStub = func(_ lager.Logger, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
 
 				buffer := bytes.NewBuffer([]byte{})
 				stream := gzip.NewWriter(buffer)
@@ -349,9 +317,7 @@ var _ = Describe("Base Image Puller", func() {
 				return ioutil.NopCloser(buffer), 1200, nil
 			}
 
-			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-				BaseImageSrc: baseImageSrcURL,
-			})
+			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeUnpacker.UnpackCallCount()).To(Equal(3))
@@ -377,9 +343,7 @@ var _ = Describe("Base Image Puller", func() {
 				return base_image_puller.UnpackOutput{BytesWritten: int64(unpackCall * 100)}, nil
 			}
 
-			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-				BaseImageSrc: baseImageSrcURL,
-			})
+			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeVolumeDriver.WriteVolumeMetaCallCount()).To(Equal(3))
@@ -397,18 +361,14 @@ var _ = Describe("Base Image Puller", func() {
 		})
 
 		It("emits a metric with the unpack and download time for each layer", func() {
-			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-				BaseImageSrc: baseImageSrcURL,
-			})
+			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Eventually(fakeMetricsEmitter.TryEmitDurationFromCallCount).Should(Equal(2 * len(layerInfos)))
 		})
 
 		It("uses the locksmith for each layer", func() {
-			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-				BaseImageSrc: baseImageSrcURL,
-			})
+			err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(fakeLocksmith.LockCallCount()).To(Equal(3))
@@ -426,9 +386,7 @@ var _ = Describe("Base Image Puller", func() {
 			})
 
 			It("returns an error", func() {
-				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-					BaseImageSrc: baseImageSrcURL,
-				})
+				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 				Expect(err).To(MatchError(ContainSubstring("metadata failed")))
 			})
 		})
@@ -446,7 +404,6 @@ var _ = Describe("Base Image Puller", func() {
 
 				It("returns an error", func() {
 					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-						BaseImageSrc:              baseImageSrcURL,
 						DiskLimit:                 1200,
 						ExcludeBaseImageFromQuota: false,
 					})
@@ -456,7 +413,6 @@ var _ = Describe("Base Image Puller", func() {
 				Context("when the disk limit is zero", func() {
 					It("doesn't fail", func() {
 						err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-							BaseImageSrc:              baseImageSrcURL,
 							DiskLimit:                 0,
 							ExcludeBaseImageFromQuota: false,
 						})
@@ -476,7 +432,6 @@ var _ = Describe("Base Image Puller", func() {
 					}, nil)
 
 					err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-						BaseImageSrc:              baseImageSrcURL,
 						DiskLimit:                 1024,
 						ExcludeBaseImageFromQuota: true,
 					})
@@ -491,7 +446,6 @@ var _ = Describe("Base Image Puller", func() {
 
 			BeforeEach(func() {
 				spec = groot.BaseImageSpec{
-					BaseImageSrc: baseImageSrcURL,
 					UIDMappings: []groot.IDMappingSpec{
 						{
 							HostID:      os.Getuid(),
@@ -535,9 +489,7 @@ var _ = Describe("Base Image Puller", func() {
 			)
 
 			BeforeEach(func() {
-				spec = groot.BaseImageSpec{
-					BaseImageSrc: baseImageSrcURL,
-				}
+				spec = groot.BaseImageSpec{}
 				volumeDir = filepath.Join(tmpVolumesDir, "layer-111")
 			})
 
@@ -610,18 +562,14 @@ var _ = Describe("Base Image Puller", func() {
 			})
 
 			It("does not try to create any layer", func() {
-				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-					BaseImageSrc: baseImageSrcURL,
-				})
+				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(0))
 			})
 
 			It("doesn't need to use the locksmith", func() {
-				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-					BaseImageSrc: baseImageSrcURL,
-				})
+				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeLocksmith.LockCallCount()).To(Equal(0))
@@ -640,9 +588,7 @@ var _ = Describe("Base Image Puller", func() {
 			})
 
 			It("only creates the children of the existing volume", func() {
-				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-					BaseImageSrc: baseImageSrcURL,
-				})
+				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeVolumeDriver.CreateVolumeCallCount()).To(Equal(1))
@@ -651,9 +597,7 @@ var _ = Describe("Base Image Puller", func() {
 			})
 
 			It("uses the locksmith for the other volumes", func() {
-				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-					BaseImageSrc: baseImageSrcURL,
-				})
+				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeLocksmith.LockCallCount()).To(Equal(1))
@@ -669,9 +613,7 @@ var _ = Describe("Base Image Puller", func() {
 			})
 
 			It("returns an error", func() {
-				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-					BaseImageSrc: baseImageSrcURL,
-				})
+				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 				Expect(err).To(MatchError(ContainSubstring("failed to create volume")))
 			})
 		})
@@ -682,7 +624,7 @@ var _ = Describe("Base Image Puller", func() {
 			})
 
 			It("returns an error", func() {
-				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{BaseImageSrc: baseImageSrcURL})
+				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 				Expect(err).To(MatchError(ContainSubstring("failed to stream blob")))
 			})
 		})
@@ -701,12 +643,12 @@ var _ = Describe("Base Image Puller", func() {
 			})
 
 			It("returns an error", func() {
-				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{BaseImageSrc: baseImageSrcURL})
+				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 				Expect(err).To(MatchError(ContainSubstring("failed to unpack the blob")))
 			})
 
 			It("deletes the volume", func() {
-				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{BaseImageSrc: baseImageSrcURL})
+				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 				Expect(err).To(MatchError(ContainSubstring("failed to unpack the blob")))
 
 				Expect(fakeVolumeDriver.DestroyVolumeCallCount()).To(Equal(1))
@@ -731,9 +673,7 @@ var _ = Describe("Base Image Puller", func() {
 					}
 				}
 
-				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{
-					BaseImageSrc: baseImageSrcURL,
-				})
+				err := baseImagePuller.Pull(logger, baseImageInfo, groot.BaseImageSpec{})
 				Expect(err).To(MatchError(ContainSubstring("failed to unpack the blob")))
 
 				Eventually(func() int {
@@ -753,7 +693,6 @@ var _ = Describe("Base Image Puller", func() {
 
 				BeforeEach(func() {
 					spec = groot.BaseImageSpec{
-						BaseImageSrc: baseImageSrcURL,
 						UIDMappings: []groot.IDMappingSpec{
 							{
 								HostID:      1,

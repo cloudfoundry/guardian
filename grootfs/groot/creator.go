@@ -69,7 +69,6 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (info ImageInfo, 
 
 	ownerUid, ownerGid := c.parseOwner(spec.UIDMappings, spec.GIDMappings)
 	baseImageSpec := BaseImageSpec{
-		BaseImageSrc:              spec.BaseImageURL,
 		DiskLimit:                 spec.DiskLimit,
 		ExcludeBaseImageFromQuota: spec.ExcludeBaseImageFromQuota,
 		UIDMappings:               spec.UIDMappings,
@@ -78,7 +77,7 @@ func (c *Creator) Create(logger lager.Logger, spec CreateSpec) (info ImageInfo, 
 		OwnerGID:                  ownerGid,
 	}
 
-	baseImageInfo, err := c.baseImagePuller.FetchBaseImageInfo(logger, baseImageSpec)
+	baseImageInfo, err := c.baseImagePuller.FetchBaseImageInfo(logger)
 	if err != nil {
 		return ImageInfo{}, err
 	}

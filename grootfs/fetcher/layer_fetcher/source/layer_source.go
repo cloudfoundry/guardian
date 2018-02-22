@@ -31,27 +31,29 @@ const MAX_DOCKER_RETRIES = 3
 type LayerSource struct {
 	skipOCILayerValidation bool
 	systemContext          types.SystemContext
+	baseImageURL           *url.URL
 }
 
-func NewLayerSource(systemContext types.SystemContext, skipOCILayerValidation bool) LayerSource {
+func NewLayerSource(systemContext types.SystemContext, skipOCILayerValidation bool, baseImageURL *url.URL) LayerSource {
 	return LayerSource{
 		systemContext:          systemContext,
 		skipOCILayerValidation: skipOCILayerValidation,
+		baseImageURL:           baseImageURL,
 	}
 }
 
-func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (types.Image, error) {
-	logger = logger.Session("fetching-image-manifest", lager.Data{"baseImageURL": baseImageURL})
+func (s *LayerSource) Manifest(logger lager.Logger) (types.Image, error) {
+	logger = logger.Session("fetching-image-manifest", lager.Data{"baseImageURL": s.baseImageURL})
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	img, err := s.getImageWithRetries(logger, baseImageURL)
+	img, err := s.getImageWithRetries(logger)
 	if err != nil {
 		logger.Error("fetching-image-reference-failed", err)
 		return nil, errorspkg.Wrap(err, "fetching image reference")
 	}
 
-	img, err = s.convertImage(logger, img, baseImageURL)
+	img, err = s.convertImage(logger, img)
 	if err != nil {
 		logger.Error("converting-image-failed", err)
 		return nil, err
@@ -71,16 +73,16 @@ func (s *LayerSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (type
 	return nil, errorspkg.Wrap(err, "fetching image configuration")
 }
 
-func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (string, int64, error) {
+func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (string, int64, error) {
 	logrus.SetOutput(os.Stderr)
 	logger = logger.Session("streaming-blob", lager.Data{
-		"baseImageURL": baseImageURL,
+		"baseImageURL": s.baseImageURL,
 		"digest":       layerInfo.BlobID,
 	})
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	imgSrc, err := s.imageSource(logger, baseImageURL)
+	imgSrc, err := s.imageSource(logger)
 	if err != nil {
 		return "", 0, err
 	}
@@ -141,11 +143,11 @@ func (s *LayerSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo
 	}
 
 	blobIDHex := strings.Split(layerInfo.BlobID, ":")[1]
-	if err = s.checkCheckSum(logger, blobIDHash, blobIDHex, baseImageURL.Scheme); err != nil {
+	if err = s.checkCheckSum(logger, blobIDHash, blobIDHex); err != nil {
 		return "", 0, errorspkg.Wrap(err, "layerID digest mismatch")
 	}
 
-	if err = s.checkCheckSum(logger, diffIDHash, layerInfo.DiffID, baseImageURL.Scheme); err != nil {
+	if err = s.checkCheckSum(logger, diffIDHash, layerInfo.DiffID); err != nil {
 		return "", 0, errorspkg.Wrap(err, "diffID digest mismatch")
 	}
 
@@ -172,8 +174,8 @@ func (s *LayerSource) getBlobWithRetries(logger lager.Logger, imgSrc types.Image
 	return nil, 0, err
 }
 
-func (s *LayerSource) checkCheckSum(logger lager.Logger, hash hash.Hash, digest string, scheme string) error {
-	if s.skipOCILayerValidation && scheme == "oci" {
+func (s *LayerSource) checkCheckSum(logger lager.Logger, hash hash.Hash, digest string) error {
+	if s.skipOCILayerValidation && s.baseImageURL.Scheme == "oci" {
 		return nil
 	}
 
@@ -189,15 +191,15 @@ func (s *LayerSource) checkCheckSum(logger lager.Logger, hash hash.Hash, digest 
 	return nil
 }
 
-func (s *LayerSource) reference(logger lager.Logger, baseImageURL *url.URL) (types.ImageReference, error) {
+func (s *LayerSource) reference(logger lager.Logger) (types.ImageReference, error) {
 	refString := "/"
-	if baseImageURL.Host != "" {
-		refString += "/" + baseImageURL.Host
+	if s.baseImageURL.Host != "" {
+		refString += "/" + s.baseImageURL.Host
 	}
-	refString += baseImageURL.Path
+	refString += s.baseImageURL.Path
 
 	logger.Debug("parsing-reference", lager.Data{"refString": refString})
-	transport := transports.Get(baseImageURL.Scheme)
+	transport := transports.Get(s.baseImageURL.Scheme)
 	ref, err := transport.ParseReference(refString)
 	if err != nil {
 		return nil, errorspkg.Wrap(err, "parsing url failed")
@@ -206,8 +208,8 @@ func (s *LayerSource) reference(logger lager.Logger, baseImageURL *url.URL) (typ
 	return ref, nil
 }
 
-func (s *LayerSource) getImageWithRetries(logger lager.Logger, baseImageURL *url.URL) (types.Image, error) {
-	ref, err := s.reference(logger, baseImageURL)
+func (s *LayerSource) getImageWithRetries(logger lager.Logger) (types.Image, error) {
+	ref, err := s.reference(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -227,8 +229,8 @@ func (s *LayerSource) getImageWithRetries(logger lager.Logger, baseImageURL *url
 	return nil, errorspkg.Wrap(imgErr, "creating image")
 }
 
-func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (types.ImageSource, error) {
-	ref, err := s.reference(logger, baseImageURL)
+func (s *LayerSource) imageSource(logger lager.Logger) (types.ImageSource, error) {
+	ref, err := s.reference(logger)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +243,7 @@ func (s *LayerSource) imageSource(logger lager.Logger, baseImageURL *url.URL) (t
 	return imgSrc, nil
 }
 
-func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Image, baseImageURL *url.URL) (types.Image, error) {
+func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Image) (types.Image, error) {
 	_, mimetype, err := originalImage.Manifest()
 	if err != nil {
 		return nil, err
@@ -255,7 +257,7 @@ func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Imag
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	imgSrc, err := s.imageSource(logger, baseImageURL)
+	imgSrc, err := s.imageSource(logger)
 	if err != nil {
 		return nil, err
 	}

@@ -136,11 +136,8 @@ var _ = Describe("Creator", func() {
 			})
 			Expect(err).NotTo(HaveOccurred())
 
-			baseImageURL, err := url.Parse("/path/to/image")
-			Expect(err).NotTo(HaveOccurred())
 			_, actualBaseImageInfo, imageSpec := fakeBaseImagePuller.PullArgsForCall(0)
 			Expect(baseImageInfo).To(Equal(actualBaseImageInfo))
-			Expect(imageSpec.BaseImageSrc).To(Equal(baseImageURL))
 			Expect(imageSpec.UIDMappings).To(Equal(uidMappings))
 			Expect(imageSpec.GIDMappings).To(Equal(gidMappings))
 			Expect(imageSpec.OwnerUID).To(Equal(2))

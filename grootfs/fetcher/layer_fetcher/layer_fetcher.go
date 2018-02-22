@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"net/url"
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/groot"
@@ -28,8 +27,8 @@ type Manifest interface {
 }
 
 type Source interface {
-	Manifest(logger lager.Logger, baseImageURL *url.URL) (types.Image, error)
-	Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (string, int64, error)
+	Manifest(logger lager.Logger) (types.Image, error)
+	Blob(logger lager.Logger, layerInfo groot.LayerInfo) (string, int64, error)
 }
 
 type LayerFetcher struct {
@@ -42,13 +41,13 @@ func NewLayerFetcher(source Source) *LayerFetcher {
 	}
 }
 
-func (f *LayerFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (groot.BaseImageInfo, error) {
-	logger = logger.Session("layers-digest", lager.Data{"baseImageURL": baseImageURL})
+func (f *LayerFetcher) BaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, error) {
+	logger = logger.Session("layers-digest")
 	logger.Info("starting")
 	defer logger.Info("ending")
 
 	logger.Debug("fetching-image-manifest")
-	manifest, err := f.source.Manifest(logger, baseImageURL)
+	manifest, err := f.source.Manifest(logger)
 	if err != nil {
 		return groot.BaseImageInfo{}, err
 	}
@@ -66,14 +65,14 @@ func (f *LayerFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL)
 	}, nil
 }
 
-func (f *LayerFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
-	logger = logger.Session("streaming", lager.Data{"baseImageURL": baseImageURL})
+func (f *LayerFetcher) StreamBlob(logger lager.Logger, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
+	logger = logger.Session("streaming")
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	blobFilePath, size, err := f.source.Blob(logger, baseImageURL, layerInfo)
+	blobFilePath, size, err := f.source.Blob(logger, layerInfo)
 	if err != nil {
-		logger.Error("source-blob-failed", err, lager.Data{"baseImageUrl": baseImageURL, "blobId": layerInfo.BlobID, "URL": layerInfo.URLs})
+		logger.Error("source-blob-failed", err, lager.Data{"blobId": layerInfo.BlobID, "URL": layerInfo.URLs})
 		return nil, 0, err
 	}
 

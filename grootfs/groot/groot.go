@@ -1,7 +1,6 @@
 package groot // import "code.cloudfoundry.org/grootfs/groot"
 
 import (
-	"net/url"
 	"os"
 	"time"
 
@@ -57,7 +56,6 @@ type IDMappingSpec struct {
 type BaseImageSpec struct {
 	DiskLimit                 int64
 	ExcludeBaseImageFromQuota bool
-	BaseImageSrc              *url.URL
 	UIDMappings               []IDMappingSpec
 	GIDMappings               []IDMappingSpec
 	OwnerUID                  int
@@ -81,7 +79,7 @@ type BaseImageInfo struct {
 }
 
 type BaseImagePuller interface {
-	FetchBaseImageInfo(logger lager.Logger, spec BaseImageSpec) (BaseImageInfo, error)
+	FetchBaseImageInfo(logger lager.Logger) (BaseImageInfo, error)
 	Pull(logger lager.Logger, imageInfo BaseImageInfo, spec BaseImageSpec) error
 }
 

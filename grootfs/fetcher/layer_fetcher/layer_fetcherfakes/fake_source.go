@@ -2,7 +2,6 @@
 package layer_fetcherfakes
 
 import (
-	"net/url"
 	"sync"
 
 	"code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
@@ -12,11 +11,10 @@ import (
 )
 
 type FakeSource struct {
-	ManifestStub        func(logger lager.Logger, baseImageURL *url.URL) (types.Image, error)
+	ManifestStub        func(logger lager.Logger) (types.Image, error)
 	manifestMutex       sync.RWMutex
 	manifestArgsForCall []struct {
-		logger       lager.Logger
-		baseImageURL *url.URL
+		logger lager.Logger
 	}
 	manifestReturns struct {
 		result1 types.Image
@@ -26,12 +24,11 @@ type FakeSource struct {
 		result1 types.Image
 		result2 error
 	}
-	BlobStub        func(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (string, int64, error)
+	BlobStub        func(logger lager.Logger, layerInfo groot.LayerInfo) (string, int64, error)
 	blobMutex       sync.RWMutex
 	blobArgsForCall []struct {
-		logger       lager.Logger
-		baseImageURL *url.URL
-		layerInfo    groot.LayerInfo
+		logger    lager.Logger
+		layerInfo groot.LayerInfo
 	}
 	blobReturns struct {
 		result1 string
@@ -47,17 +44,16 @@ type FakeSource struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeSource) Manifest(logger lager.Logger, baseImageURL *url.URL) (types.Image, error) {
+func (fake *FakeSource) Manifest(logger lager.Logger) (types.Image, error) {
 	fake.manifestMutex.Lock()
 	ret, specificReturn := fake.manifestReturnsOnCall[len(fake.manifestArgsForCall)]
 	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct {
-		logger       lager.Logger
-		baseImageURL *url.URL
-	}{logger, baseImageURL})
-	fake.recordInvocation("Manifest", []interface{}{logger, baseImageURL})
+		logger lager.Logger
+	}{logger})
+	fake.recordInvocation("Manifest", []interface{}{logger})
 	fake.manifestMutex.Unlock()
 	if fake.ManifestStub != nil {
-		return fake.ManifestStub(logger, baseImageURL)
+		return fake.ManifestStub(logger)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -71,10 +67,10 @@ func (fake *FakeSource) ManifestCallCount() int {
 	return len(fake.manifestArgsForCall)
 }
 
-func (fake *FakeSource) ManifestArgsForCall(i int) (lager.Logger, *url.URL) {
+func (fake *FakeSource) ManifestArgsForCall(i int) lager.Logger {
 	fake.manifestMutex.RLock()
 	defer fake.manifestMutex.RUnlock()
-	return fake.manifestArgsForCall[i].logger, fake.manifestArgsForCall[i].baseImageURL
+	return fake.manifestArgsForCall[i].logger
 }
 
 func (fake *FakeSource) ManifestReturns(result1 types.Image, result2 error) {
@@ -99,18 +95,17 @@ func (fake *FakeSource) ManifestReturnsOnCall(i int, result1 types.Image, result
 	}{result1, result2}
 }
 
-func (fake *FakeSource) Blob(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (string, int64, error) {
+func (fake *FakeSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (string, int64, error) {
 	fake.blobMutex.Lock()
 	ret, specificReturn := fake.blobReturnsOnCall[len(fake.blobArgsForCall)]
 	fake.blobArgsForCall = append(fake.blobArgsForCall, struct {
-		logger       lager.Logger
-		baseImageURL *url.URL
-		layerInfo    groot.LayerInfo
-	}{logger, baseImageURL, layerInfo})
-	fake.recordInvocation("Blob", []interface{}{logger, baseImageURL, layerInfo})
+		logger    lager.Logger
+		layerInfo groot.LayerInfo
+	}{logger, layerInfo})
+	fake.recordInvocation("Blob", []interface{}{logger, layerInfo})
 	fake.blobMutex.Unlock()
 	if fake.BlobStub != nil {
-		return fake.BlobStub(logger, baseImageURL, layerInfo)
+		return fake.BlobStub(logger, layerInfo)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -124,10 +119,10 @@ func (fake *FakeSource) BlobCallCount() int {
 	return len(fake.blobArgsForCall)
 }
 
-func (fake *FakeSource) BlobArgsForCall(i int) (lager.Logger, *url.URL, groot.LayerInfo) {
+func (fake *FakeSource) BlobArgsForCall(i int) (lager.Logger, groot.LayerInfo) {
 	fake.blobMutex.RLock()
 	defer fake.blobMutex.RUnlock()
-	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].baseImageURL, fake.blobArgsForCall[i].layerInfo
+	return fake.blobArgsForCall[i].logger, fake.blobArgsForCall[i].layerInfo
 }
 
 func (fake *FakeSource) BlobReturns(result1 string, result2 int64, result3 error) {

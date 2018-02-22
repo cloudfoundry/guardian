@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
-	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -38,8 +37,8 @@ type VolumeMeta struct {
 }
 
 type Fetcher interface {
-	BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (groot.BaseImageInfo, error)
-	StreamBlob(logger lager.Logger, baseImageURL *url.URL, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error)
+	BaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, error)
+	StreamBlob(logger lager.Logger, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error)
 }
 
 type DependencyRegisterer interface {
@@ -83,12 +82,12 @@ func NewBaseImagePuller(fetcher Fetcher, unpacker Unpacker, volumeDriver VolumeD
 	}
 }
 
-func (p *BaseImagePuller) FetchBaseImageInfo(logger lager.Logger, spec groot.BaseImageSpec) (groot.BaseImageInfo, error) {
-	logger = logger.Session("fetching-image-info", lager.Data{"spec": spec})
+func (p *BaseImagePuller) FetchBaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, error) {
+	logger = logger.Session("fetching-image-info")
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	return p.fetcher.BaseImageInfo(logger, spec.BaseImageSrc)
+	return p.fetcher.BaseImageInfo(logger)
 }
 
 func (p *BaseImagePuller) Pull(logger lager.Logger, baseImageInfo groot.BaseImageInfo, spec groot.BaseImageSpec) error {
@@ -161,7 +160,7 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layerInfos 
 	}
 
 	downloadChan := make(chan downloadReturn, 1)
-	go p.downloadLayer(logger, spec, layerInfo, downloadChan)
+	go p.downloadLayer(logger, layerInfo, downloadChan)
 
 	if err := p.buildLayer(logger, index-1, layerInfos, spec); err != nil {
 		return err
@@ -186,22 +185,18 @@ type downloadReturn struct {
 	Err    error
 }
 
-func (p *BaseImagePuller) downloadLayer(logger lager.Logger, spec groot.BaseImageSpec, layerInfo groot.LayerInfo, downloadChan chan downloadReturn) {
+func (p *BaseImagePuller) downloadLayer(logger lager.Logger, layerInfo groot.LayerInfo, downloadChan chan downloadReturn) {
 	logger = logger.Session("downloading-layer", lager.Data{"LayerInfo": layerInfo})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
 	defer p.metricsEmitter.TryEmitDurationFrom(logger, MetricsDownloadTimeName, time.Now())
 
-	stream, size, err := p.fetcher.StreamBlob(logger, spec.BaseImageSrc, layerInfo)
+	stream, size, err := p.fetcher.StreamBlob(logger, layerInfo)
 	if err != nil {
 		err = errorspkg.Wrapf(err, "streaming blob `%s`", layerInfo.BlobID)
 	}
 
-	logger.Debug("got-stream-for-blob", lager.Data{
-		"size":                      size,
-		"diskLimit":                 spec.DiskLimit,
-		"excludeBaseImageFromQuota": spec.ExcludeBaseImageFromQuota,
-	})
+	logger.Debug("got-stream-for-blob", lager.Data{"size": size})
 
 	downloadChan <- downloadReturn{Stream: stream, Err: err}
 }

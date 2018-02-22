@@ -14,32 +14,31 @@ import (
 )
 
 type TarFetcher struct {
+	baseImagePath string
 }
 
-func NewTarFetcher() *TarFetcher {
-	return &TarFetcher{}
+func NewTarFetcher(baseImageURL *url.URL) *TarFetcher {
+	return &TarFetcher{baseImagePath: baseImageURL.String()}
 }
 
-func (l *TarFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
-	layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
+func (l *TarFetcher) StreamBlob(logger lager.Logger, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error) {
 	logger = logger.Session("stream-blob", lager.Data{
-		"baseImageURL": baseImageURL.String(),
-		"source":       layerInfo.BlobID,
+		"baseImagePath": l.baseImagePath,
+		"source":        layerInfo.BlobID,
 	})
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	baseImagePath := baseImageURL.String()
-	if _, err := os.Stat(baseImagePath); err != nil {
-		return nil, 0, errorspkg.Wrapf(err, "local image not found in `%s`", baseImagePath)
+	if _, err := os.Stat(l.baseImagePath); err != nil {
+		return nil, 0, errorspkg.Wrapf(err, "local image not found in `%s`", l.baseImagePath)
 	}
 
-	if err := l.validateBaseImage(baseImagePath); err != nil {
+	if err := l.validateBaseImage(); err != nil {
 		return nil, 0, errorspkg.Wrap(err, "invalid base image")
 	}
 
-	logger.Debug("opening-tar", lager.Data{"baseImagePath": baseImagePath})
-	stream, err := os.Open(baseImagePath)
+	logger.Debug("opening-tar", lager.Data{"baseImagePath": l.baseImagePath})
+	stream, err := os.Open(l.baseImagePath)
 	if err != nil {
 		return nil, 0, errorspkg.Wrap(err, "reading local image")
 	}
@@ -47,12 +46,12 @@ func (l *TarFetcher) StreamBlob(logger lager.Logger, baseImageURL *url.URL,
 	return stream, 0, nil
 }
 
-func (l *TarFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (groot.BaseImageInfo, error) {
-	logger = logger.Session("layers-digest", lager.Data{"baseImageURL": baseImageURL.String()})
+func (l *TarFetcher) BaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, error) {
+	logger = logger.Session("layers-digest", lager.Data{"baseImagePath": l.baseImagePath})
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	stat, err := os.Stat(baseImageURL.String())
+	stat, err := os.Stat(l.baseImagePath)
 	if err != nil {
 		return groot.BaseImageInfo{},
 			errorspkg.Wrap(err, "fetching image timestamp")
@@ -61,21 +60,21 @@ func (l *TarFetcher) BaseImageInfo(logger lager.Logger, baseImageURL *url.URL) (
 	return groot.BaseImageInfo{
 		LayerInfos: []groot.LayerInfo{
 			groot.LayerInfo{
-				BlobID:        baseImageURL.String(),
+				BlobID:        l.baseImagePath,
 				ParentChainID: "",
-				ChainID:       l.generateChainID(baseImageURL.String(), stat.ModTime().UnixNano()),
+				ChainID:       l.generateChainID(stat.ModTime().UnixNano()),
 			},
 		},
 	}, nil
 }
 
-func (l *TarFetcher) generateChainID(baseImagePath string, timestamp int64) string {
-	shaSum := sha256.Sum256([]byte(fmt.Sprintf("%s-%d", baseImagePath, timestamp)))
+func (l *TarFetcher) generateChainID(timestamp int64) string {
+	shaSum := sha256.Sum256([]byte(fmt.Sprintf("%s-%d", l.baseImagePath, timestamp)))
 	return hex.EncodeToString(shaSum[:])
 }
 
-func (l *TarFetcher) validateBaseImage(baseImagePath string) error {
-	stat, err := os.Stat(baseImagePath)
+func (l *TarFetcher) validateBaseImage() error {
+	stat, err := os.Stat(l.baseImagePath)
 	if err != nil {
 		return err
 	}
