@@ -68,6 +68,10 @@ func (l *TarFetcher) BaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, er
 	}, nil
 }
 
+func (l *TarFetcher) Close() error {
+	return nil
+}
+
 func (l *TarFetcher) generateChainID(timestamp int64) string {
 	shaSum := sha256.Sum256([]byte(fmt.Sprintf("%s-%d", l.baseImagePath, timestamp)))
 	return hex.EncodeToString(shaSum[:])

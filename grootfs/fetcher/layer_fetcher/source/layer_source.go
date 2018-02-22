@@ -16,6 +16,7 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/lager"
 	_ "github.com/containers/image/docker"
+	"github.com/containers/image/image"
 	manifestpkg "github.com/containers/image/manifest"
 	_ "github.com/containers/image/oci/layout"
 	"github.com/containers/image/transports"
@@ -32,6 +33,8 @@ type LayerSource struct {
 	skipOCILayerValidation bool
 	systemContext          types.SystemContext
 	baseImageURL           *url.URL
+	// imageSource needs to be a singleton that is initialised on demand in createImageSource. DO NOT use the field directly, use getImageSource instead
+	imageSource types.ImageSource
 }
 
 func NewLayerSource(systemContext types.SystemContext, skipOCILayerValidation bool, baseImageURL *url.URL) LayerSource {
@@ -82,7 +85,7 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	imgSrc, err := s.imageSource(logger)
+	imgSrc, err := s.getImageSource(logger)
 	if err != nil {
 		return "", 0, err
 	}
@@ -158,6 +161,13 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	return blobTempFile.Name(), size, nil
 }
 
+func (s *LayerSource) Close() error {
+	if s.imageSource != nil {
+		return s.imageSource.Close()
+	}
+	return nil
+}
+
 func (s *LayerSource) getBlobWithRetries(logger lager.Logger, imgSrc types.ImageSource, blobInfo types.BlobInfo) (io.ReadCloser, int64, error) {
 	var err error
 	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
@@ -209,27 +219,38 @@ func (s *LayerSource) reference(logger lager.Logger) (types.ImageReference, erro
 }
 
 func (s *LayerSource) getImageWithRetries(logger lager.Logger) (types.Image, error) {
-	ref, err := s.reference(logger)
-	if err != nil {
-		return nil, err
-	}
-
 	var imgErr error
+	var img types.Image
 	for i := 0; i < MAX_DOCKER_RETRIES; i++ {
 		logger.Debug(fmt.Sprintf("attempt-get-image-%d", i+1))
 
-		img, e := ref.NewImage(&s.systemContext)
-		if e == nil {
-			logger.Debug("attempt-get-image-success")
-			return img, nil
+		imageSource, err := s.getImageSource(logger)
+		if err == nil {
+			img, err = image.FromUnparsedImage(&s.systemContext, image.UnparsedInstance(imageSource, nil))
+			if err == nil {
+				logger.Debug("attempt-get-image-success")
+				return img, nil
+			}
 		}
-		imgErr = e
+		imgErr = err
 	}
 
 	return nil, errorspkg.Wrap(imgErr, "creating image")
 }
 
-func (s *LayerSource) imageSource(logger lager.Logger) (types.ImageSource, error) {
+func (s *LayerSource) getImageSource(logger lager.Logger) (types.ImageSource, error) {
+	if s.imageSource == nil {
+		var err error
+		s.imageSource, err = s.createImageSource(logger)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return s.imageSource, nil
+}
+
+func (s *LayerSource) createImageSource(logger lager.Logger) (types.ImageSource, error) {
 	ref, err := s.reference(logger)
 	if err != nil {
 		return nil, err
@@ -257,7 +278,7 @@ func (s *LayerSource) convertImage(logger lager.Logger, originalImage types.Imag
 	logger.Info("starting")
 	defer logger.Info("ending")
 
-	imgSrc, err := s.imageSource(logger)
+	imgSrc, err := s.getImageSource(logger)
 	if err != nil {
 		return nil, err
 	}

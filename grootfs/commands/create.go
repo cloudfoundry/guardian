@@ -178,8 +178,16 @@ var CreateCommand = cli.Command{
 
 		systemContext := createSystemContext(baseImageURL, cfg.Create, ctx.String("username"), ctx.String("password"))
 
+		fetcher := createFetcher(baseImageURL, systemContext, cfg.Create)
+		defer func() {
+			err := fetcher.Close()
+			if err != nil {
+				logger.Error("closing-fetcher", err)
+			}
+		}()
+
 		baseImagePuller := base_image_puller.NewBaseImagePuller(
-			createFetcher(baseImageURL, systemContext, cfg.Create),
+			fetcher,
 			unpacker,
 			nsFsDriver,
 			metricsEmitter,

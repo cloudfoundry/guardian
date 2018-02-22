@@ -39,6 +39,7 @@ type VolumeMeta struct {
 type Fetcher interface {
 	BaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, error)
 	StreamBlob(logger lager.Logger, layerInfo groot.LayerInfo) (io.ReadCloser, int64, error)
+	Close() error
 }
 
 type DependencyRegisterer interface {

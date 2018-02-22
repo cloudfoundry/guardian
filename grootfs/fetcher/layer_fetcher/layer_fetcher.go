@@ -29,6 +29,7 @@ type Manifest interface {
 type Source interface {
 	Manifest(logger lager.Logger) (types.Image, error)
 	Blob(logger lager.Logger, layerInfo groot.LayerInfo) (string, int64, error)
+	Close() error
 }
 
 type LayerFetcher struct {
@@ -83,6 +84,10 @@ func (f *LayerFetcher) StreamBlob(logger lager.Logger, layerInfo groot.LayerInfo
 	}
 
 	return blobReader, size, nil
+}
+
+func (f *LayerFetcher) Close() error {
+	return f.source.Close()
 }
 
 func (f *LayerFetcher) createLayerInfos(logger lager.Logger, image Manifest, config *specsv1.Image) []groot.LayerInfo {
