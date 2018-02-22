@@ -1,6 +1,8 @@
 package devices_test
 
 import (
+	"bytes"
+	"io"
 	"os/exec"
 	"os/user"
 	"testing"
@@ -20,14 +22,17 @@ func TestDevices(t *testing.T) {
 	RunSpecs(t, "Devices Suite")
 }
 
-func startCommand(arg0 string, argv ...string) *exec.Cmd {
+func startCommand(arg0 string, argv ...string) (*exec.Cmd, *bytes.Buffer) {
 	cmd := exec.Command(arg0, argv...)
-	cmd.Stdout = GinkgoWriter
+	stdout := new(bytes.Buffer)
+	cmd.Stdout = io.MultiWriter(stdout, GinkgoWriter)
 	cmd.Stderr = GinkgoWriter
 	ExpectWithOffset(1, cmd.Start()).To(Succeed())
-	return cmd
+	return cmd, stdout
 }
 
-func runCommand(arg0 string, argv ...string) {
-	ExpectWithOffset(1, startCommand(arg0, argv...).Wait()).To(Succeed())
+func runCommand(arg0 string, argv ...string) string {
+	cmd, stdout := startCommand(arg0, argv...)
+	ExpectWithOffset(1, cmd.Wait()).To(Succeed())
+	return stdout.String()
 }
