@@ -125,7 +125,7 @@ var _ = Describe("Link Management", func() {
 		})
 
 		It("moves the interface in to the given namespace by pid", func() {
-			diagnostics := func() string {
+			diagnostics := func(fd uintptr, netnsfile string) string {
 				var ifaceNames []string
 				ifaces, err := net.Interfaces()
 				Expect(err).NotTo(HaveOccurred())
@@ -133,11 +133,21 @@ var _ = Describe("Link Management", func() {
 					ifaceNames = append(ifaceNames, iface.Name)
 				}
 
-				return fmt.Sprintf(`test outer ns interfaces: [%s]
+				return fmt.Sprintf(`
+test outer ns interfaces: [%s]
 interface we were trying to move: %s
 test inner ns interfaces: %s
-`, strings.Join(ifaceNames, ", "), intf.Name,
-					runCommand("ip", "netns", "exec", netnsName, "ip", "link"))
+file descriptor of the netns: %d
+ginkgo test process (pid=%d) open file descriptors: %s
+processes (including threads) using  netns file %s: %s
+`,
+					strings.Join(ifaceNames, ", "),
+					intf.Name,
+					runCommand("ip", "netns", "exec", netnsName, "ip", "link"),
+					fd,
+					os.Getpid(), runCommand("/bin/sh", "-c", fmt.Sprintf("ls -la /proc/%d/fd", os.Getpid())),
+					netnsfile, runCommand("/bin/sh", "-c", "lsof | grep netns"),
+				)
 			}
 
 			// look at this perfectly ordinary hat
@@ -145,11 +155,13 @@ test inner ns interfaces: %s
 			defer cmd.Process.Kill()
 
 			// (it has the following fd)
-			f, err := os.Open(fmt.Sprintf("/var/run/netns/%s", netnsName))
+			netnsfile := fmt.Sprintf("/var/run/netns/%s", netnsName)
+			f, err := os.Open(netnsfile)
 			Expect(err).ToNot(HaveOccurred())
+			defer f.Close()
 
 			// I wave the magic wand
-			Expect(l.SetNs(intf, int(f.Fd()))).To(Succeed(), diagnostics())
+			Expect(l.SetNs(intf, int(f.Fd()))).To(Succeed(), diagnostics(f.Fd(), netnsfile))
 
 			// the bunny has vanished! where is the bunny?
 			intfs, _ := net.Interfaces()
