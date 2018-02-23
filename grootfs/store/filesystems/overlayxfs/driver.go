@@ -349,30 +349,11 @@ func (d *Driver) HandleOpaqueWhiteouts(logger lager.Logger, id string, opaqueWhi
 	for _, path := range opaqueWhiteouts {
 		parentDir := filepath.Dir(filepath.Join(volumePath, path))
 		args = append(args, "--opaque-path", parentDir)
-
-		if err := cleanWhiteoutDir(parentDir); err != nil {
-			return errorspkg.Wrapf(err, "clean without dir %s", parentDir)
-		}
 	}
 
 	if output, err := d.runTardis(logger, append([]string{"handle-opqwhiteouts"}, args...)...); err != nil {
 		logger.Error("handling-opaque-whiteouts-failed", err, lager.Data{"opaqueWhiteouts": opaqueWhiteouts})
 		return errorspkg.Wrapf(err, "handle opaque whiteouts: %s", output.String())
-	}
-
-	return nil
-}
-
-func cleanWhiteoutDir(path string) error {
-	contents, err := ioutil.ReadDir(path)
-	if err != nil {
-		return errorspkg.Wrap(err, "reading whiteout directory")
-	}
-
-	for _, content := range contents {
-		if err := os.RemoveAll(filepath.Join(path, content.Name())); err != nil {
-			return errorspkg.Wrap(err, "cleaning up whiteout directory")
-		}
 	}
 
 	return nil

@@ -162,12 +162,13 @@ var _ = Describe("Create with OCI images", func() {
 		})
 	})
 
-	Context("when the image has opaque white outs", func() {
+	Context("when a layer in an image has opaque whiteouts", func() {
 		BeforeEach(func() {
+			integration.SkipIfNotXFS(Driver)
 			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/opq-whiteouts-busybox:latest", workDir))
 		})
 
-		It("empties the folder contents but keeps the dir", func() {
+		It("the upper layer dir that contains the opaque whiteout totally shadows the same dir in the lower layer", func() {
 			containerSpec, err := runner.Create(groot.CreateSpec{
 				BaseImageURL: baseImageURL,
 				ID:           randomImageID,
@@ -180,7 +181,8 @@ var _ = Describe("Create with OCI images", func() {
 			Expect(whiteoutedDir).To(BeADirectory())
 			contents, err := ioutil.ReadDir(whiteoutedDir)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(contents).To(BeEmpty())
+			Expect(contents).To(HaveLen(1))
+			Expect(filepath.Join(containerSpec.Root.Path, "var", "istillexist")).To(BeAnExistingFile())
 		})
 	})
 

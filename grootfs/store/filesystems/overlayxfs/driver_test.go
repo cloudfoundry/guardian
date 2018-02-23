@@ -1116,19 +1116,18 @@ var _ = Describe("Driver", func() {
 			Expect(ioutil.WriteFile(filepath.Join(volumePath, "c/d/e/file_3"), []byte{}, 0755)).To(Succeed())
 
 			opaqueWhiteouts = []string{
-				"/a/b/.opaque",
-				"c/d/.opaque",
+				"/a/b/.wh..wh..opq",
+				"c/d/.wh..wh..opq",
 			}
 		})
 
-		It("empties the given folders within a volume", func() {
+		It("sets the overlay opaque dir xattr", func() {
 			Expect(driver.HandleOpaqueWhiteouts(logger, volumeID, opaqueWhiteouts)).To(Succeed())
 
 			abFolderPath := filepath.Join(volumePath, "a/b")
-			Expect(abFolderPath).To(BeADirectory())
 			files, err := ioutil.ReadDir(abFolderPath)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(files).To(BeEmpty())
+			Expect(files).To(HaveLen(2))
 			xattr, err := system.Lgetxattr(abFolderPath, "trusted.overlay.opaque")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(xattr)).To(Equal("y"))
@@ -1137,7 +1136,7 @@ var _ = Describe("Driver", func() {
 			Expect(cdFolderPath).To(BeADirectory())
 			files, err = ioutil.ReadDir(cdFolderPath)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(files).To(BeEmpty())
+			Expect(files).To(HaveLen(3))
 			xattr, err = system.Lgetxattr(cdFolderPath, "trusted.overlay.opaque")
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(xattr)).To(Equal("y"))

@@ -34,7 +34,7 @@ var _ = Describe("Layer source: OCI", func() {
 	BeforeEach(func() {
 		skipOCILayerValidation = false
 
-		configBlob = "sha256:10c8f0eb9d1af08fe6e3b8dbd29e5aa2b6ecfa491ecd04ed90de19a4ac22de7b"
+		configBlob = "sha256:18c5d86cd64efe05ea5e2e18de4b48848a4f5a425235097f34e17f6aca81f4f3"
 		layerInfos = []groot.LayerInfo{
 			{
 				BlobID:    "sha256:56bec22e355981d8ba0878c6c2f23b21f422f30ab0aba188b54f1ffeff59c190",
@@ -43,9 +43,9 @@ var _ = Describe("Layer source: OCI", func() {
 				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 			},
 			{
-				BlobID:    "sha256:ed2d7b0f6d7786230b71fd60de08a553680a9a96ab216183bcc49c71f06033ab",
-				DiffID:    "1e664bbd066a13dc6e8d9503fe0d439e89617eaac0558a04240bcbf4bd969ff9",
-				Size:      124,
+				BlobID:    "sha256:e8fbc9c5bf16d3409f75a9d0f0751d90ab562565335b793673e906efcc7bd7c8",
+				DiffID:    "8c3258a61af653812528b6d303bc126b5ef910cb54b6e20a0b1ed52887a0cef1",
+				Size:      172,
 				MediaType: "application/vnd.oci.image.layer.v1.tar+gzip",
 			},
 		}
