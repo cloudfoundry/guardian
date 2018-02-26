@@ -39,7 +39,8 @@ func parseResolvContents(resolvContents string, hostIP net.IP) []string {
 			continue
 		}
 
-		if !strings.Contains(resolvEntry, "127.0.0.") {
+		pattern := regexp.MustCompile(`127\.\d{1,3}\.\d{1,3}\.\d{1,3}`)
+		if !pattern.MatchString(resolvEntry) {
 			nameserverFields := strings.Fields(resolvEntry)
 			if len(nameserverFields) != 2 {
 				continue
