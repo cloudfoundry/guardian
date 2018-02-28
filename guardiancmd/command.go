@@ -834,8 +834,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		runcBinary,
 		cmd.Bin.Dadoo.Path(),
 		cmd.Runtime.Plugin,
-		createCmd(),
-		createCmdExtraArgs(),
 		cmd.Runtime.PluginExtraArgs,
 		bndlLoader,
 		processBuilder,

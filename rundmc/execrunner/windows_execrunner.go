@@ -35,7 +35,14 @@ func (e *DirectExecRunner) Run(
 	defer log.Info("done")
 
 	logPath := filepath.Join(processPath, fmt.Sprintf("%s.log", e.RunMode))
-	cmd := exec.Command(e.RuntimePath, "--debug", "--log", logPath, "--log-format", "json", e.RunMode, "--pid-file", filepath.Join(processPath, "pidfile"))
+	args := []string{
+		"--debug", "--log", logPath, "--log-format", "json", e.RunMode,
+	}
+	if e.RunMode == "run" {
+		args = append(args, "--detach", "--no-new-keyring")
+	}
+	args = append(args, "--pid-file", filepath.Join(processPath, "pidfile"))
+	cmd := exec.Command(e.RuntimePath, args...)
 
 	if e.RunMode == "exec" {
 		specPath := filepath.Join(processPath, "spec.json")

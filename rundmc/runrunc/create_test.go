@@ -21,17 +21,15 @@ import (
 
 var _ = Describe("Create", func() {
 	var (
-		commandRunner       *fake_command_runner.FakeCommandRunner
-		bundlePath          string
-		runcSubcmd          = "do-a-thing"
-		runcSubcmdExtraArgs = []string{"maybe-do-a-detach"}
-		runcExtraArgs       = []string{"--some-arg", "some-value"}
-		logFilePath         string
-		pidFilePath         string
-		logger              *lagertest.TestLogger
-		logs                string
-		runcExitStatus      error
-		recievedStdin       string
+		commandRunner  *fake_command_runner.FakeCommandRunner
+		bundlePath     string
+		runcExtraArgs  = []string{"--some-arg", "some-value"}
+		logFilePath    string
+		pidFilePath    string
+		logger         *lagertest.TestLogger
+		logs           string
+		runcExitStatus error
+		recievedStdin  string
 
 		runner *runrunc.Creator
 	)
@@ -50,7 +48,7 @@ var _ = Describe("Create", func() {
 	})
 
 	JustBeforeEach(func() {
-		runner = runrunc.NewCreator("funC", runcSubcmd, runcSubcmdExtraArgs, runcExtraArgs, commandRunner)
+		runner = runrunc.NewCreator("funC", runcExtraArgs, commandRunner)
 
 		commandRunner.WhenRunning(fake_command_runner.CommandSpec{
 			Path: "funC",
@@ -85,8 +83,8 @@ var _ = Describe("Create", func() {
 			"--log", logFilePath,
 			"--log-format", "json",
 			runcExtraArgs[0], runcExtraArgs[1],
-			runcSubcmd,
-			runcSubcmdExtraArgs[0],
+			"run",
+			"--detach",
 			"--no-new-keyring",
 			"--bundle", bundlePath,
 			"--pid-file", pidFilePath,
@@ -119,7 +117,7 @@ var _ = Describe("Create", func() {
 		})
 
 		It("returns runc's exit status", func() {
-			Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc do-a-thing: some-error: "))
+			Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc run: some-error: "))
 		})
 	})
 
@@ -150,7 +148,7 @@ var _ = Describe("Create", func() {
 			})
 
 			It("return an error including parsed logs when runC fails to start the container", func() {
-				Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc do-a-thing: boom: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
+				Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc run: boom: Container start failed: [10] System error: fork/exec POTATO: no such file or directory"))
 			})
 
 			Context("when the log messages can't be parsed", func() {
@@ -159,7 +157,7 @@ var _ = Describe("Create", func() {
 				})
 
 				It("returns an error with the last non-empty line", func() {
-					Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc do-a-thing: boom: garbage"))
+					Expect(runner.Create(logger, bundlePath, "some-id", garden.ProcessIO{})).To(MatchError("runc run: boom: garbage"))
 				})
 			})
 		})
