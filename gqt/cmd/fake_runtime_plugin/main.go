@@ -104,7 +104,7 @@ var RunCommand = cli.Command{
 		cli.StringFlag{
 			Name: "pid-file",
 		},
-		cli.StringFlag{
+		cli.BoolFlag{
 			Name: "detach",
 		},
 	},

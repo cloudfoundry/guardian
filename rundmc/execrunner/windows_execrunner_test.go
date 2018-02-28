@@ -110,6 +110,8 @@ var _ = Describe("DirectExecRunner", func() {
 					"--log", filepath.Join(processPath, "run.log"),
 					"--log-format", "json",
 					"run",
+					"--detach",
+					"--no-new-keyring",
 					"--pid-file", MatchRegexp(".*"),
 					"--bundle", processPath,
 					processID,

@@ -15,18 +15,14 @@ import (
 )
 
 type Creator struct {
-	runcPath            string
-	runcSubcmd          string
-	runcSubcmdExtraArgs []string
-	runcExtraArgs       []string
-	commandRunner       commandrunner.CommandRunner
+	runcPath      string
+	runcExtraArgs []string
+	commandRunner commandrunner.CommandRunner
 }
 
-func NewCreator(runcPath, runcSubcmd string, runcSubcmdExtraArgs, runcExtraArgs []string, commandRunner commandrunner.CommandRunner) *Creator {
+func NewCreator(runcPath string, runcExtraArgs []string, commandRunner commandrunner.CommandRunner) *Creator {
 	return &Creator{
 		runcPath,
-		runcSubcmd,
-		runcSubcmdExtraArgs,
 		runcExtraArgs,
 		commandRunner,
 	}
@@ -46,22 +42,22 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 	})
 	defer log.Info("finished")
 
-	globalArgs := []string{
+	args := []string{
 		"--debug",
 		"--log", logFilePath,
 		"--log-format", "json",
 	}
-	subcmdArgs := []string{
+	args = append(args, c.runcExtraArgs...)
+	args = append(args, []string{
+		"run",
+		"--detach",
 		"--no-new-keyring",
 		"--bundle", bundlePath,
 		"--pid-file", pidFilePath,
 		id,
-	}
+	}...)
 
-	subcmdArgs = append(c.runcSubcmdExtraArgs, subcmdArgs...)
-	subcmdArgs = append([]string{c.runcSubcmd}, subcmdArgs...)
-
-	cmd := exec.Command(c.runcPath, append(globalArgs, append(c.runcExtraArgs, subcmdArgs...)...)...)
+	cmd := exec.Command(c.runcPath, args...)
 
 	if pio.Stdin != nil {
 		pipeR, pipeW, err := os.Pipe()
@@ -87,13 +83,13 @@ func (c *Creator) Create(log lager.Logger, bundlePath, id string, pio garden.Pro
 
 	log.Info("completing")
 	defer func() {
-		theErr = processLogs(log, c.runcSubcmd, logFilePath, err)
+		theErr = processLogs(log, logFilePath, err)
 	}()
 
 	return
 }
 
-func processLogs(log lager.Logger, runcSubcmd string, logFilePath string, upstreamErr error) error {
+func processLogs(log lager.Logger, logFilePath string, upstreamErr error) error {
 	logReader, err := os.OpenFile(logFilePath, os.O_RDONLY, 0644)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -113,7 +109,7 @@ func processLogs(log lager.Logger, runcSubcmd string, logFilePath string, upstre
 	logging.ForwardRuncLogsToLager(log, "runc", buff)
 
 	if upstreamErr != nil {
-		return logging.WrapWithErrorFromLastLogLine(fmt.Sprintf("runc %s", runcSubcmd), upstreamErr, buff)
+		return logging.WrapWithErrorFromLastLogLine("runc run", upstreamErr, buff)
 	}
 
 	return nil

@@ -183,14 +183,6 @@ func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 	return nil
 }
 
-func createCmd() string {
-	return "run"
-}
-
-func createCmdExtraArgs() []string {
-	return []string{"--detach"}
-}
-
 func (f *LinuxFactory) wireShed(logger lager.Logger) *rootfs_provider.CakeOrdinator {
 	graphRoot := f.config.Graph.Dir
 	logger = logger.Session(gardener.VolumizerSession, lager.Data{"graphRoot": graphRoot})
