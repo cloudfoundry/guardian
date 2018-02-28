@@ -893,7 +893,7 @@ func setupCgroups(cgroupsRoot string) error {
 	logger := lagertest.NewTestLogger("test")
 	runner := linux_command_runner.New()
 
-	starter := cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), cgroupsRoot, "garden", []specs.LinuxDeviceCgroup{}, runner, &cgroups.OSChowner{})
+	starter := cgroups.NewStarter(logger, mustOpen("/proc/cgroups"), mustOpen("/proc/self/cgroup"), mustOpen("/proc/self/mountinfo"), cgroupsRoot, "garden", []specs.LinuxDeviceCgroup{}, runner, &cgroups.OSChowner{})
 
 	return starter.Start()
 }

@@ -21,12 +21,13 @@ import (
 
 var _ = Describe("CgroupStarter", func() {
 	var (
-		runner                  *fake_command_runner.FakeCommandRunner
-		starter                 *cgroups.CgroupStarter
-		logger                  lager.Logger
-		chowner                 *fakes.FakeChowner
-		procCgroupsContents     string
-		procSelfCgroupsContents string
+		runner                    *fake_command_runner.FakeCommandRunner
+		starter                   *cgroups.CgroupStarter
+		logger                    lager.Logger
+		chowner                   *fakes.FakeChowner
+		procCgroupsContents       string
+		procSelfCgroupsContents   string
+		procSelfMountinfoContents string
 
 		tmpDir string
 	)
@@ -55,11 +56,12 @@ var _ = Describe("CgroupStarter", func() {
 				Minor:  int64ptr(200),
 				Access: "rwm",
 			}},
-			CommandRunner:   runner,
-			ProcCgroups:     ioutil.NopCloser(strings.NewReader(procCgroupsContents)),
-			ProcSelfCgroups: ioutil.NopCloser(strings.NewReader(procSelfCgroupsContents)),
-			Logger:          logger,
-			Chowner:         chowner,
+			CommandRunner:     runner,
+			ProcCgroups:       ioutil.NopCloser(strings.NewReader(procCgroupsContents)),
+			ProcSelfCgroups:   ioutil.NopCloser(strings.NewReader(procSelfCgroupsContents)),
+			ProcSelfMountinfo: ioutil.NopCloser(strings.NewReader(procSelfMountinfoContents)),
+			Logger:            logger,
+			Chowner:           chowner,
 		}
 	})
 
@@ -159,6 +161,11 @@ var _ = Describe("CgroupStarter", func() {
 				"4:memory:/\n" +
 				"3:cpu,cpuacct:/\n"
 
+			procSelfMountinfoContents = "101 100 0:50 / /  ro,relatime - cgroup cgroup ro\n" +
+				"102 100 0:51 / /sys/fs/cgroup/memory      rw,nosuid,nodev,noexec shared:2    - cgroup cgroup ro\n" +
+				"103 100 0:51 / /sys/fs/cgroup/devices     rw,nosuid,nodev,noexec tag:1 tag:2 - cgroup cgroup ro\n" +
+				"104 100 0:51 / /sys/fs/cgroup/cpu,cpuacct rw,nosuid,nodev,noexec             - cgroup cgroup ro\n"
+
 			for _, notMounted := range []string{"devices", "cpu", "cpuacct"} {
 				runner.WhenWaitingFor(fake_command_runner.CommandSpec{
 					Path: "mountpoint",
@@ -242,11 +249,15 @@ var _ = Describe("CgroupStarter", func() {
 		Context("when we are in the nested case", func() {
 			BeforeEach(func() {
 				procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
-					"memory\t2\t1\t1\n"
+					"memory\t2\t1\t1\n" +
+					"cpu\t3\t1\t1\n"
 
-				procSelfCgroupsContents = "4:memory:/461299e6-b672-497c-64e5-793494b9bbdb\n"
+				procSelfCgroupsContents = "4:memory:/461299e6-b672-497c-64e5-793494b9bbdb\n" +
+					"5:cpu:/f46ede94-0c5e-4d4f-84de-ab0223436379\n"
 
-				for _, notMounted := range []string{"memory"} {
+				procSelfMountinfoContents = "1 1 0:0 /f46ede94-0c5e-4d4f-84de-ab0223436379 /sys/fs/cgroup/cpu ro - cgroup cgroup\n"
+
+				for _, notMounted := range []string{"memory", "cpu"} {
 					runner.WhenWaitingFor(fake_command_runner.CommandSpec{
 						Path: "mountpoint",
 						Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted) + "/"},
@@ -263,8 +274,13 @@ var _ = Describe("CgroupStarter", func() {
 					allChowns = append(allChowns, chowner.RecursiveChownArgsForCall(i))
 				}
 
-				for _, subsystem := range []string{"memory"} {
-					fullPath := path.Join(tmpDir, "cgroup", subsystem, "461299e6-b672-497c-64e5-793494b9bbdb", "garden")
+				expected := []string{
+					path.Join("memory", "461299e6-b672-497c-64e5-793494b9bbdb"),
+					"cpu",
+				}
+
+				for _, partialPath := range expected {
+					fullPath := path.Join(tmpDir, "cgroup", partialPath, "garden")
 					Expect(fullPath).To(BeADirectory())
 					Expect(allChowns).To(ContainElement(fullPath))
 					dirStat, err := os.Stat(fullPath)
