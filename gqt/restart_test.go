@@ -1,7 +1,6 @@
 package gqt_test
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,6 +17,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"github.com/onsi/gomega/gexec"
 )
 
 var _ = Describe("Surviving Restarts", func() {
@@ -74,9 +74,9 @@ var _ = Describe("Surviving Restarts", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Sanity check for "destroys the remaining containers' bridges"
-			containerBridgeIPs, err := exec.Command("ip", "addr", "show", containerBridgeName).CombinedOutput()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(string(containerBridgeIPs)).To(ContainSubstring("inet %s", info.HostIP))
+			session := gexecStart(exec.Command("ip", "addr", "show", containerBridgeName))
+			Expect(session.Wait("10s")).To(gexec.Exit(0))
+			Expect(session.Out).To(gbytes.Say("inet %s", info.HostIP))
 
 			hostNetInPort, _, err = container.NetIn(hostNetInPort, 8080)
 			Expect(err).NotTo(HaveOccurred())
@@ -130,19 +130,16 @@ var _ = Describe("Surviving Restarts", func() {
 			})
 
 			It("destroys the remaining containers' bridges", func() {
-				var stderr bytes.Buffer
-				cmd := exec.Command("ip", "link", "show", containerBridgeName)
-				cmd.Stdout = GinkgoWriter
-				cmd.Stderr = io.MultiWriter(&stderr, GinkgoWriter)
-				Expect(cmd.Run()).NotTo(Succeed())
-				Expect(stderr.String()).To(Equal(fmt.Sprintf("Device \"%s\" does not exist.\n", containerBridgeName)))
+				session := gexecStart(exec.Command("ip", "link", "show", containerBridgeName))
+				Expect(session.Wait("10s")).NotTo(gexec.Exit(0))
+				Expect(session.Err).To(gbytes.Say("Device \"%s\" does not exist.\n", containerBridgeName))
 			})
 
 			It("kills the container processes", func() {
 				check := func() string {
-					out, err := exec.Command("sh", "-c", fmt.Sprintf("ps -elf | grep 'while true; do echo %s' | grep -v grep | wc -l", container.Handle())).CombinedOutput()
-					Expect(err).NotTo(HaveOccurred())
-					return string(out)
+					session := gexecStart(exec.Command("sh", "-c", fmt.Sprintf("ps -elf | grep 'while true; do echo %s' | grep -v grep | wc -l", container.Handle())))
+					Expect(session.Wait()).To(gexec.Exit(0))
+					return string(session.Out.Contents())
 				}
 
 				Eventually(check, time.Second*2, time.Millisecond*200).Should(Equal("0\n"), "expected user process to be killed")
@@ -375,3 +372,9 @@ var _ = Describe("Surviving Restarts", func() {
 		})
 	})
 })
+
+func gexecStart(cmd *exec.Cmd) *gexec.Session {
+	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	return session
+}
