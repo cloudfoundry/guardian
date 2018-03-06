@@ -5,14 +5,14 @@ import (
 	"os/exec"
 
 	"code.cloudfoundry.org/commandrunner"
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 type RootFS struct {
 }
 
-func (r RootFS) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (r RootFS) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	return bndl.WithRootFS(spec.BaseConfig.Root.Path), nil
 }
 

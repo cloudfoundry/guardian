@@ -10,6 +10,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -38,19 +39,19 @@ type SysInfoProvider interface {
 }
 
 type Containerizer interface {
-	Create(log lager.Logger, spec DesiredContainerSpec) error
+	Create(log lager.Logger, desiredContainerSpec spec.DesiredContainerSpec) error
 	Handles() ([]string, error)
 
-	StreamIn(log lager.Logger, handle string, spec garden.StreamInSpec) error
-	StreamOut(log lager.Logger, handle string, spec garden.StreamOutSpec) (io.ReadCloser, error)
+	StreamIn(log lager.Logger, handle string, streamInSpec garden.StreamInSpec) error
+	StreamOut(log lager.Logger, handle string, streamOutSpec garden.StreamOutSpec) (io.ReadCloser, error)
 
-	Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	Run(log lager.Logger, handle string, processSpec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	Attach(log lager.Logger, handle string, processGUID string, io garden.ProcessIO) (garden.Process, error)
 	Stop(log lager.Logger, handle string, kill bool) error
 	Destroy(log lager.Logger, handle string) error
 	RemoveBundle(log lager.Logger, handle string) error
 
-	Info(log lager.Logger, handle string) (ActualContainerSpec, error)
+	Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error)
 	Metrics(log lager.Logger, handle string) (ActualContainerMetrics, error)
 }
 
@@ -106,55 +107,6 @@ func (fn UidGeneratorFunc) Generate() string {
 	return fn()
 }
 
-type DesiredContainerSpec struct {
-	Handle string
-
-	CgroupPath string
-
-	Namespaces map[string]string
-
-	// Container hostname
-	Hostname string
-
-	// Bind mounts
-	BindMounts []garden.BindMount
-
-	Env []string
-
-	// Container is privileged
-	Privileged bool
-
-	Limits garden.Limits
-
-	BaseConfig specs.Spec
-}
-
-type ActualContainerSpec struct {
-	// The PID of the container's init process
-	Pid int
-
-	// The path to the container's bundle directory
-	BundlePath string
-
-	// The path to the container's rootfs
-	RootFSPath string
-
-	// Whether the container is stopped
-	Stopped bool
-
-	// Process IDs (not PIDs) of processes in the container
-	ProcessIDs []string
-
-	// Events (e.g. OOM) which have occured in the container
-	Events []string
-
-	// Applied limits
-	Limits garden.Limits
-
-	// Whether the container is privileged
-	Privileged bool
-}
-
 type ActualContainerMetrics struct {
 	CPU    garden.ContainerCPUStat
 	Memory garden.ContainerMemoryStat
@@ -195,19 +147,19 @@ type Gardener struct {
 
 // Create creates a container by combining the results of networker.Network,
 // volumizer.Create and containzer.Create.
-func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err error) {
-	if spec.Handle == "" {
-		spec.Handle = g.UidGenerator.Generate()
+func (g *Gardener) Create(containerSpec garden.ContainerSpec) (ctr garden.Container, err error) {
+	if containerSpec.Handle == "" {
+		containerSpec.Handle = g.UidGenerator.Generate()
 	}
 
-	log := g.Logger.Session("create", lager.Data{"handle": spec.Handle})
+	log := g.Logger.Session("create", lager.Data{"handle": containerSpec.Handle})
 	log.Info("start")
 
 	defer func(startedAt time.Time) {
 		_ = metrics.SendValue("ContainerCreationDuration", float64(time.Since(startedAt).Nanoseconds()), "nanos")
 	}(time.Now())
 
-	if !g.AllowPrivilgedContainers && spec.Privileged {
+	if !g.AllowPrivilgedContainers && containerSpec.Privileged {
 		return nil, errors.New("privileged container creation is disabled")
 	}
 
@@ -216,7 +168,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		return nil, err
 	}
 
-	if err := g.checkDuplicateHandle(knownHandles, spec.Handle); err != nil {
+	if err := g.checkDuplicateHandle(knownHandles, containerSpec.Handle); err != nil {
 		return nil, err
 	}
 
@@ -232,7 +184,7 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 
 			log.Info("start")
 
-			err := g.destroy(log, spec.Handle)
+			err := g.destroy(log, containerSpec.Handle)
 			if err != nil {
 				log.Error("destroy-failed", err)
 			}
@@ -247,25 +199,25 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		log.Error("graph-cleanup-failed", err)
 	}
 
-	runtimeSpec, err := g.Volumizer.Create(log, spec)
+	runtimeSpec, err := g.Volumizer.Create(log, containerSpec)
 	if err != nil {
 		return nil, err
 	}
 
-	desiredSpec := DesiredContainerSpec{
-		Handle:     spec.Handle,
-		Hostname:   spec.Handle,
-		Privileged: spec.Privileged,
-		Env:        spec.Env,
-		BindMounts: spec.BindMounts,
-		Limits:     spec.Limits,
+	desiredSpec := spec.DesiredContainerSpec{
+		Handle:     containerSpec.Handle,
+		Hostname:   containerSpec.Handle,
+		Privileged: containerSpec.Privileged,
+		Env:        containerSpec.Env,
+		BindMounts: containerSpec.BindMounts,
+		Limits:     containerSpec.Limits,
 		BaseConfig: runtimeSpec,
 	}
 	if err := g.Containerizer.Create(log, desiredSpec); err != nil {
 		return nil, err
 	}
 
-	actualSpec, err := g.Containerizer.Info(log, spec.Handle)
+	actualSpec, err := g.Containerizer.Info(log, containerSpec.Handle)
 	if err != nil {
 		return nil, err
 	}
@@ -276,22 +228,22 @@ func (g *Gardener) Create(spec garden.ContainerSpec) (ctr garden.Container, err 
 		return nil, err
 	}
 
-	if err = g.Networker.Network(log, spec, actualSpec.Pid); err != nil {
+	if err = g.Networker.Network(log, containerSpec, actualSpec.Pid); err != nil {
 		return nil, err
 	}
 
-	container, err := g.Lookup(spec.Handle)
+	container, err := g.Lookup(containerSpec.Handle)
 	if err != nil {
 		return nil, err
 	}
 
-	if spec.GraceTime != 0 {
-		if err := container.SetGraceTime(spec.GraceTime); err != nil {
+	if containerSpec.GraceTime != 0 {
+		if err := container.SetGraceTime(containerSpec.GraceTime); err != nil {
 			return nil, err
 		}
 	}
 
-	for name, value := range spec.Properties {
+	for name, value := range containerSpec.Properties {
 		if err := container.SetProperty(name, value); err != nil {
 			return nil, err
 		}

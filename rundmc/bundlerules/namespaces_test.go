@@ -1,7 +1,7 @@
 package bundlerules_test
 
 import (
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	. "github.com/onsi/ginkgo"
@@ -13,7 +13,7 @@ var _ = Describe("Namespaces", func() {
 	It("sets all namespaces in the bundle to those provided by the spec", func() {
 		initialBndl := goci.Bundle()
 
-		desiredContainerSpec := gardener.DesiredContainerSpec{Namespaces: map[string]string{"mount": "", "network": "test-net-ns", "user": "test-user-ns"}}
+		desiredContainerSpec := spec.DesiredContainerSpec{Namespaces: map[string]string{"mount": "", "network": "test-net-ns", "user": "test-user-ns"}}
 		transformedBndl, err := bundlerules.Namespaces{}.Apply(initialBndl, desiredContainerSpec, "")
 		Expect(err).NotTo(HaveOccurred())
 

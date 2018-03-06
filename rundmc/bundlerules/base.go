@@ -1,7 +1,7 @@
 package bundlerules
 
 import (
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"github.com/mitchellh/copystructure"
 )
@@ -11,7 +11,7 @@ type Base struct {
 	UnprivilegedBase goci.Bndl
 }
 
-func (r Base) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (r Base) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	if spec.Privileged {
 		copiedBndl, err := copystructure.Copy(r.PrivilegedBase)
 		if err != nil {

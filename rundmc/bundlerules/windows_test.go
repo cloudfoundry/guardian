@@ -6,7 +6,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
@@ -14,7 +14,7 @@ import (
 var _ = Describe("WindowsRule", func() {
 	It("copies the Windows config from the BaseConfig and sets the memory limit + cpu shares", func() {
 		layerFolders := []string{"layer-1", "layer-0"}
-		newBndl, err := bundlerules.Windows{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		newBndl, err := bundlerules.Windows{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 			BaseConfig: specs.Spec{
 				Windows: &specs.Windows{
 					LayerFolders: layerFolders,
@@ -42,7 +42,7 @@ var _ = Describe("WindowsRule", func() {
 
 	Context("when the base bundle does not contain Windows config", func() {
 		It("returns the original bundle", func() {
-			newBndl, err := bundlerules.Windows{}.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+			newBndl, err := bundlerules.Windows{}.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 				BaseConfig: specs.Spec{
 					Windows: nil,
 				},

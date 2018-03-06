@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
@@ -26,7 +26,7 @@ var _ = Describe("RootFS", func() {
 		rule = bundlerules.RootFS{}
 
 		var err error
-		returnedBundle, err = rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		returnedBundle, err = rule.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 			BaseConfig: specs.Spec{Root: &specs.Root{Path: rootfsPath}},
 		}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())

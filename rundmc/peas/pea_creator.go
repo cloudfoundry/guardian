@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
@@ -53,7 +53,7 @@ type PeaCreator struct {
 	RuncDeleter            RuncDeleter
 }
 
-func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error) {
+func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error) {
 	errs := func(action string, err error) (garden.Process, error) {
 		wrappedErr := errorwrapper.Wrap(err, action)
 		log.Error(action, wrappedErr)
@@ -62,7 +62,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 
 	log = log.Session("create-pea", lager.Data{})
 
-	processID, err := generateProcessID(spec.ID)
+	processID, err := generateProcessID(processSpec.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -85,10 +85,10 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 		return errs("creating-bind-mount-sources", err)
 	}
 
-	if spec.Dir == "" {
-		spec.Dir = "/"
+	if processSpec.Dir == "" {
+		processSpec.Dir = "/"
 	}
-	uid, gid, err := parseUser(spec.User)
+	uid, gid, err := parseUser(processSpec.User)
 	if err != nil {
 		return errs("parse-user", err)
 	}
@@ -100,7 +100,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 
 	runtimeSpec, err := p.Volumizer.Create(log, garden.ContainerSpec{
 		Handle:     processID,
-		Image:      spec.Image,
+		Image:      processSpec.Image,
 		Privileged: privileged,
 	})
 	if err != nil {
@@ -117,21 +117,21 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 
 	cgroupPath := sandboxHandle
 	limits := garden.Limits{}
-	if spec.OverrideContainerLimits != nil {
+	if processSpec.OverrideContainerLimits != nil {
 		cgroupPath = processID
 		limits = garden.Limits{
-			CPU:    spec.OverrideContainerLimits.CPU,
-			Memory: spec.OverrideContainerLimits.Memory,
+			CPU:    processSpec.OverrideContainerLimits.CPU,
+			Memory: processSpec.OverrideContainerLimits.Memory,
 		}
 	}
 
-	bndl, genErr := p.BundleGenerator.Generate(gardener.DesiredContainerSpec{
+	bndl, genErr := p.BundleGenerator.Generate(spec.DesiredContainerSpec{
 		Handle:     processID,
 		BaseConfig: runtimeSpec,
 		CgroupPath: cgroupPath,
 		Limits:     limits,
 		Namespaces: linuxNamespaces,
-		BindMounts: append(spec.BindMounts, defaultBindMounts...),
+		BindMounts: append(processSpec.BindMounts, defaultBindMounts...),
 		Privileged: privileged,
 	}, sandboxBundlePath)
 	if genErr != nil {
@@ -140,7 +140,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, procIO
 	}
 
 	preparedProcess := p.ProcessBuilder.BuildProcess(bndl, runrunc.ProcessSpec{
-		ProcessSpec:  spec,
+		ProcessSpec:  processSpec,
 		ContainerUID: uid,
 		ContainerGID: gid,
 	})

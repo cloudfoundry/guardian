@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	fakes "code.cloudfoundry.org/guardian/gardener/gardenerfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
@@ -46,7 +47,7 @@ var _ = Describe("Gardener", func() {
 
 		propertyManager.GetReturns("", true)
 		containerizer.HandlesReturns([]string{"some-handle"}, nil)
-		containerizer.InfoReturns(gardener.ActualContainerSpec{Pid: 470, RootFSPath: "rootfs"}, nil)
+		containerizer.InfoReturns(spec.ActualContainerSpec{Pid: 470, RootFSPath: "rootfs"}, nil)
 
 		gdnr = &gardener.Gardener{
 			SysInfoProvider:          sysinfoProvider,
@@ -252,7 +253,7 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("should ask the networker to configure the network", func() {
-			containerizer.InfoReturns(gardener.ActualContainerSpec{
+			containerizer.InfoReturns(spec.ActualContainerSpec{
 				Pid:        42,
 				BundlePath: "bndl",
 			}, nil)
@@ -269,7 +270,7 @@ var _ = Describe("Gardener", func() {
 
 		Context("when container info cannot be retrieved", func() {
 			It("errors", func() {
-				containerizer.InfoReturns(gardener.ActualContainerSpec{}, errors.New("boom"))
+				containerizer.InfoReturns(spec.ActualContainerSpec{}, errors.New("boom"))
 
 				_, err := gdnr.Create(garden.ContainerSpec{Handle: "bob"})
 				Expect(err).To(MatchError("boom"))
@@ -279,7 +280,7 @@ var _ = Describe("Gardener", func() {
 
 		Context("when container info returns pid = 0", func() {
 			BeforeEach(func() {
-				containerizer.InfoReturns(gardener.ActualContainerSpec{Pid: 0}, nil)
+				containerizer.InfoReturns(spec.ActualContainerSpec{Pid: 0}, nil)
 			})
 
 			It("errors", func() {
@@ -1049,7 +1050,7 @@ var _ = Describe("Gardener", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(info.State).To(Equal("active"))
 
-			containerizer.InfoReturns(gardener.ActualContainerSpec{
+			containerizer.InfoReturns(spec.ActualContainerSpec{
 				Stopped: true,
 			}, nil)
 
@@ -1077,7 +1078,7 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("returns the container path based on the info returned by the containerizer", func() {
-			containerizer.InfoReturns(gardener.ActualContainerSpec{
+			containerizer.InfoReturns(spec.ActualContainerSpec{
 				BundlePath: "/foo/bar/baz",
 			}, nil)
 
@@ -1089,7 +1090,7 @@ var _ = Describe("Gardener", func() {
 
 		Context("when getting the ActualContainerSpec fails", func() {
 			It("return the error", func() {
-				containerizer.InfoReturns(gardener.ActualContainerSpec{}, errors.New("info-error"))
+				containerizer.InfoReturns(spec.ActualContainerSpec{}, errors.New("info-error"))
 
 				_, err := container.Info()
 				Expect(err).To(MatchError("info-error"))
@@ -1151,7 +1152,7 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("returns the events reported by the containerizer", func() {
-			containerizer.InfoReturns(gardener.ActualContainerSpec{
+			containerizer.InfoReturns(spec.ActualContainerSpec{
 				Events: []string{"some", "things", "happened"},
 			}, nil)
 
@@ -1200,7 +1201,7 @@ var _ = Describe("Gardener", func() {
 
 		Context("when info errors", func() {
 			It("returns the error", func() {
-				containerizer.InfoReturns(gardener.ActualContainerSpec{}, errors.New("info-error"))
+				containerizer.InfoReturns(spec.ActualContainerSpec{}, errors.New("info-error"))
 
 				infos, err := gdnr.BulkInfo([]string{"some-handle-1"})
 				Expect(err).NotTo(HaveOccurred())
@@ -1356,7 +1357,7 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("gets the set CPU limits", func() {
-			containerizer.InfoReturns(gardener.ActualContainerSpec{
+			containerizer.InfoReturns(spec.ActualContainerSpec{
 				Limits: garden.Limits{
 					CPU: garden.CPULimits{
 						LimitInShares: 10,
@@ -1370,7 +1371,7 @@ var _ = Describe("Gardener", func() {
 		})
 
 		It("gets the set memory limits", func() {
-			containerizer.InfoReturns(gardener.ActualContainerSpec{
+			containerizer.InfoReturns(spec.ActualContainerSpec{
 				Limits: garden.Limits{
 					Memory: garden.MemoryLimits{
 						LimitInBytes: 20,
@@ -1385,7 +1386,7 @@ var _ = Describe("Gardener", func() {
 
 		Context("when Info fails", func() {
 			It("forwards the error", func() {
-				containerizer.InfoReturns(gardener.ActualContainerSpec{}, errors.New("some-error"))
+				containerizer.InfoReturns(spec.ActualContainerSpec{}, errors.New("some-error"))
 
 				_, err := container.CurrentCPULimits()
 				Expect(err).To(MatchError("some-error"))

@@ -1,20 +1,20 @@
 package rundmc
 
 import (
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 //go:generate counterfeiter . BundlerRule
 type BundlerRule interface {
-	Apply(bndle goci.Bndl, spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
+	Apply(bndle goci.Bndl, desiredContainerSpec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
 }
 
 type BundleTemplate struct {
 	Rules []BundlerRule
 }
 
-func (b BundleTemplate) Generate(spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
+func (b BundleTemplate) Generate(spec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
 	var bndl goci.Bndl
 
 	for _, rule := range b.Rules {

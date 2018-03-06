@@ -1,7 +1,7 @@
 package bundlerules_test
 
 import (
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	. "github.com/onsi/ginkgo"
@@ -30,7 +30,7 @@ var _ = Describe("Env Rule", func() {
 	JustBeforeEach(func() {
 		var err error
 		rule = bundlerules.Env{}
-		newBndl, err = rule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		newBndl, err = rule.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 			Env: userEnv,
 			BaseConfig: specs.Spec{
 				Process: baseconfigProcess,

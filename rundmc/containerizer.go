@@ -9,6 +9,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
@@ -26,7 +27,7 @@ import (
 //go:generate counterfeiter . PeaCreator
 
 type Depot interface {
-	Create(log lager.Logger, handle string, spec gardener.DesiredContainerSpec) error
+	Create(log lager.Logger, handle string, desiredContainerSpec spec.DesiredContainerSpec) error
 	Lookup(log lager.Logger, handle string) (path string, err error)
 	Destroy(log lager.Logger, handle string) error
 	Handles() ([]string, error)
@@ -48,7 +49,7 @@ type OCIRuntime interface {
 }
 
 type PeaCreator interface {
-	CreatePea(log lager.Logger, spec garden.ProcessSpec, pio garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error)
+	CreatePea(log lager.Logger, processSpec garden.ProcessSpec, pio garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error)
 }
 
 type NstarRunner interface {
@@ -102,7 +103,7 @@ func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner Nstar
 }
 
 // Create creates a bundle in the depot and starts its init process
-func (c *Containerizer) Create(log lager.Logger, spec gardener.DesiredContainerSpec) error {
+func (c *Containerizer) Create(log lager.Logger, spec spec.DesiredContainerSpec) error {
 	log = log.Session("containerizer-create", lager.Data{"handle": spec.Handle})
 
 	log.Info("start")
@@ -283,20 +284,20 @@ func (c *Containerizer) RemoveBundle(log lager.Logger, handle string) error {
 	return c.depot.Destroy(log, handle)
 }
 
-func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualContainerSpec, error) {
+func (c *Containerizer) Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error) {
 	bundlePath, err := c.depot.Lookup(log, handle)
 	if err != nil {
-		return gardener.ActualContainerSpec{}, err
+		return spec.ActualContainerSpec{}, err
 	}
 
 	bundle, err := c.loader.Load(bundlePath)
 	if err != nil {
-		return gardener.ActualContainerSpec{}, err
+		return spec.ActualContainerSpec{}, err
 	}
 
 	state, err := c.runtime.State(log, handle)
 	if err != nil {
-		return gardener.ActualContainerSpec{}, err
+		return spec.ActualContainerSpec{}, err
 	}
 
 	privileged := true
@@ -315,7 +316,7 @@ func (c *Containerizer) Info(log lager.Logger, handle string) (gardener.ActualCo
 		log.Debug("bundle-resources-is-nil", lager.Data{"bundle": bundle})
 	}
 
-	return gardener.ActualContainerSpec{
+	return spec.ActualContainerSpec{
 		Pid:        state.Pid,
 		BundlePath: bundlePath,
 		RootFSPath: bundle.RootFS(),

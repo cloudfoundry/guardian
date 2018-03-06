@@ -4,17 +4,17 @@ package depotfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 type FakeBundleGenerator struct {
-	GenerateStub        func(spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
+	GenerateStub        func(desiredContainerSpec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
 	generateMutex       sync.RWMutex
 	generateArgsForCall []struct {
-		spec         gardener.DesiredContainerSpec
-		containerDir string
+		desiredContainerSpec spec.DesiredContainerSpec
+		containerDir         string
 	}
 	generateReturns struct {
 		result1 goci.Bndl
@@ -28,17 +28,17 @@ type FakeBundleGenerator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeBundleGenerator) Generate(spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
+func (fake *FakeBundleGenerator) Generate(desiredContainerSpec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error) {
 	fake.generateMutex.Lock()
 	ret, specificReturn := fake.generateReturnsOnCall[len(fake.generateArgsForCall)]
 	fake.generateArgsForCall = append(fake.generateArgsForCall, struct {
-		spec         gardener.DesiredContainerSpec
-		containerDir string
-	}{spec, containerDir})
-	fake.recordInvocation("Generate", []interface{}{spec, containerDir})
+		desiredContainerSpec spec.DesiredContainerSpec
+		containerDir         string
+	}{desiredContainerSpec, containerDir})
+	fake.recordInvocation("Generate", []interface{}{desiredContainerSpec, containerDir})
 	fake.generateMutex.Unlock()
 	if fake.GenerateStub != nil {
-		return fake.GenerateStub(spec, containerDir)
+		return fake.GenerateStub(desiredContainerSpec, containerDir)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -52,10 +52,10 @@ func (fake *FakeBundleGenerator) GenerateCallCount() int {
 	return len(fake.generateArgsForCall)
 }
 
-func (fake *FakeBundleGenerator) GenerateArgsForCall(i int) (gardener.DesiredContainerSpec, string) {
+func (fake *FakeBundleGenerator) GenerateArgsForCall(i int) (spec.DesiredContainerSpec, string) {
 	fake.generateMutex.RLock()
 	defer fake.generateMutex.RUnlock()
-	return fake.generateArgsForCall[i].spec, fake.generateArgsForCall[i].containerDir
+	return fake.generateArgsForCall[i].desiredContainerSpec, fake.generateArgsForCall[i].containerDir
 }
 
 func (fake *FakeBundleGenerator) GenerateReturns(result1 goci.Bndl, result2 error) {

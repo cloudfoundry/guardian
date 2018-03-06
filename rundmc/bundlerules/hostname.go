@@ -1,14 +1,14 @@
 package bundlerules
 
 import (
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
 type Hostname struct {
 }
 
-func (r Hostname) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (r Hostname) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	hostname := spec.Hostname
 	if len(hostname) > 49 {
 		hostname = hostname[len(hostname)-49:]

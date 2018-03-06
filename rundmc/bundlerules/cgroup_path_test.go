@@ -3,7 +3,7 @@ package bundlerules_test
 import (
 	"path/filepath"
 
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	. "github.com/onsi/ginkgo"
@@ -16,7 +16,7 @@ var _ = Describe("CGroup Path", func() {
 			Path: "unpriv",
 		}
 
-		newBndl, err := cgroupPathRule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		newBndl, err := cgroupPathRule.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 			Handle: "banana",
 		}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())
@@ -29,7 +29,7 @@ var _ = Describe("CGroup Path", func() {
 			Path: "unpriv",
 		}
 
-		newBndl, err := cgroupPathRule.Apply(goci.Bundle(), gardener.DesiredContainerSpec{
+		newBndl, err := cgroupPathRule.Apply(goci.Bundle(), spec.DesiredContainerSpec{
 			Privileged: true,
 		}, "not-needed-path")
 		Expect(err).NotTo(HaveOccurred())
