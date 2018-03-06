@@ -7,15 +7,16 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeContainerizer struct {
-	CreateStub        func(log lager.Logger, spec gardener.DesiredContainerSpec) error
+	CreateStub        func(log lager.Logger, desiredContainerSpec spec.DesiredContainerSpec) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		log  lager.Logger
-		spec gardener.DesiredContainerSpec
+		log                  lager.Logger
+		desiredContainerSpec spec.DesiredContainerSpec
 	}
 	createReturns struct {
 		result1 error
@@ -34,12 +35,12 @@ type FakeContainerizer struct {
 		result1 []string
 		result2 error
 	}
-	StreamInStub        func(log lager.Logger, handle string, spec garden.StreamInSpec) error
+	StreamInStub        func(log lager.Logger, handle string, streamInSpec garden.StreamInSpec) error
 	streamInMutex       sync.RWMutex
 	streamInArgsForCall []struct {
-		log    lager.Logger
-		handle string
-		spec   garden.StreamInSpec
+		log          lager.Logger
+		handle       string
+		streamInSpec garden.StreamInSpec
 	}
 	streamInReturns struct {
 		result1 error
@@ -47,12 +48,12 @@ type FakeContainerizer struct {
 	streamInReturnsOnCall map[int]struct {
 		result1 error
 	}
-	StreamOutStub        func(log lager.Logger, handle string, spec garden.StreamOutSpec) (io.ReadCloser, error)
+	StreamOutStub        func(log lager.Logger, handle string, streamOutSpec garden.StreamOutSpec) (io.ReadCloser, error)
 	streamOutMutex       sync.RWMutex
 	streamOutArgsForCall []struct {
-		log    lager.Logger
-		handle string
-		spec   garden.StreamOutSpec
+		log           lager.Logger
+		handle        string
+		streamOutSpec garden.StreamOutSpec
 	}
 	streamOutReturns struct {
 		result1 io.ReadCloser
@@ -62,13 +63,13 @@ type FakeContainerizer struct {
 		result1 io.ReadCloser
 		result2 error
 	}
-	RunStub        func(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
+	RunStub        func(log lager.Logger, handle string, processSpec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error)
 	runMutex       sync.RWMutex
 	runArgsForCall []struct {
-		log    lager.Logger
-		handle string
-		spec   garden.ProcessSpec
-		io     garden.ProcessIO
+		log         lager.Logger
+		handle      string
+		processSpec garden.ProcessSpec
+		io          garden.ProcessIO
 	}
 	runReturns struct {
 		result1 garden.Process
@@ -131,18 +132,18 @@ type FakeContainerizer struct {
 	removeBundleReturnsOnCall map[int]struct {
 		result1 error
 	}
-	InfoStub        func(log lager.Logger, handle string) (gardener.ActualContainerSpec, error)
+	InfoStub        func(log lager.Logger, handle string) (spec.ActualContainerSpec, error)
 	infoMutex       sync.RWMutex
 	infoArgsForCall []struct {
 		log    lager.Logger
 		handle string
 	}
 	infoReturns struct {
-		result1 gardener.ActualContainerSpec
+		result1 spec.ActualContainerSpec
 		result2 error
 	}
 	infoReturnsOnCall map[int]struct {
-		result1 gardener.ActualContainerSpec
+		result1 spec.ActualContainerSpec
 		result2 error
 	}
 	MetricsStub        func(log lager.Logger, handle string) (gardener.ActualContainerMetrics, error)
@@ -163,17 +164,17 @@ type FakeContainerizer struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeContainerizer) Create(log lager.Logger, spec gardener.DesiredContainerSpec) error {
+func (fake *FakeContainerizer) Create(log lager.Logger, desiredContainerSpec spec.DesiredContainerSpec) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		log  lager.Logger
-		spec gardener.DesiredContainerSpec
-	}{log, spec})
-	fake.recordInvocation("Create", []interface{}{log, spec})
+		log                  lager.Logger
+		desiredContainerSpec spec.DesiredContainerSpec
+	}{log, desiredContainerSpec})
+	fake.recordInvocation("Create", []interface{}{log, desiredContainerSpec})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(log, spec)
+		return fake.CreateStub(log, desiredContainerSpec)
 	}
 	if specificReturn {
 		return ret.result1
@@ -187,10 +188,10 @@ func (fake *FakeContainerizer) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeContainerizer) CreateArgsForCall(i int) (lager.Logger, gardener.DesiredContainerSpec) {
+func (fake *FakeContainerizer) CreateArgsForCall(i int) (lager.Logger, spec.DesiredContainerSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].spec
+	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].desiredContainerSpec
 }
 
 func (fake *FakeContainerizer) CreateReturns(result1 error) {
@@ -255,18 +256,18 @@ func (fake *FakeContainerizer) HandlesReturnsOnCall(i int, result1 []string, res
 	}{result1, result2}
 }
 
-func (fake *FakeContainerizer) StreamIn(log lager.Logger, handle string, spec garden.StreamInSpec) error {
+func (fake *FakeContainerizer) StreamIn(log lager.Logger, handle string, streamInSpec garden.StreamInSpec) error {
 	fake.streamInMutex.Lock()
 	ret, specificReturn := fake.streamInReturnsOnCall[len(fake.streamInArgsForCall)]
 	fake.streamInArgsForCall = append(fake.streamInArgsForCall, struct {
-		log    lager.Logger
-		handle string
-		spec   garden.StreamInSpec
-	}{log, handle, spec})
-	fake.recordInvocation("StreamIn", []interface{}{log, handle, spec})
+		log          lager.Logger
+		handle       string
+		streamInSpec garden.StreamInSpec
+	}{log, handle, streamInSpec})
+	fake.recordInvocation("StreamIn", []interface{}{log, handle, streamInSpec})
 	fake.streamInMutex.Unlock()
 	if fake.StreamInStub != nil {
-		return fake.StreamInStub(log, handle, spec)
+		return fake.StreamInStub(log, handle, streamInSpec)
 	}
 	if specificReturn {
 		return ret.result1
@@ -283,7 +284,7 @@ func (fake *FakeContainerizer) StreamInCallCount() int {
 func (fake *FakeContainerizer) StreamInArgsForCall(i int) (lager.Logger, string, garden.StreamInSpec) {
 	fake.streamInMutex.RLock()
 	defer fake.streamInMutex.RUnlock()
-	return fake.streamInArgsForCall[i].log, fake.streamInArgsForCall[i].handle, fake.streamInArgsForCall[i].spec
+	return fake.streamInArgsForCall[i].log, fake.streamInArgsForCall[i].handle, fake.streamInArgsForCall[i].streamInSpec
 }
 
 func (fake *FakeContainerizer) StreamInReturns(result1 error) {
@@ -305,18 +306,18 @@ func (fake *FakeContainerizer) StreamInReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeContainerizer) StreamOut(log lager.Logger, handle string, spec garden.StreamOutSpec) (io.ReadCloser, error) {
+func (fake *FakeContainerizer) StreamOut(log lager.Logger, handle string, streamOutSpec garden.StreamOutSpec) (io.ReadCloser, error) {
 	fake.streamOutMutex.Lock()
 	ret, specificReturn := fake.streamOutReturnsOnCall[len(fake.streamOutArgsForCall)]
 	fake.streamOutArgsForCall = append(fake.streamOutArgsForCall, struct {
-		log    lager.Logger
-		handle string
-		spec   garden.StreamOutSpec
-	}{log, handle, spec})
-	fake.recordInvocation("StreamOut", []interface{}{log, handle, spec})
+		log           lager.Logger
+		handle        string
+		streamOutSpec garden.StreamOutSpec
+	}{log, handle, streamOutSpec})
+	fake.recordInvocation("StreamOut", []interface{}{log, handle, streamOutSpec})
 	fake.streamOutMutex.Unlock()
 	if fake.StreamOutStub != nil {
-		return fake.StreamOutStub(log, handle, spec)
+		return fake.StreamOutStub(log, handle, streamOutSpec)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -333,7 +334,7 @@ func (fake *FakeContainerizer) StreamOutCallCount() int {
 func (fake *FakeContainerizer) StreamOutArgsForCall(i int) (lager.Logger, string, garden.StreamOutSpec) {
 	fake.streamOutMutex.RLock()
 	defer fake.streamOutMutex.RUnlock()
-	return fake.streamOutArgsForCall[i].log, fake.streamOutArgsForCall[i].handle, fake.streamOutArgsForCall[i].spec
+	return fake.streamOutArgsForCall[i].log, fake.streamOutArgsForCall[i].handle, fake.streamOutArgsForCall[i].streamOutSpec
 }
 
 func (fake *FakeContainerizer) StreamOutReturns(result1 io.ReadCloser, result2 error) {
@@ -358,19 +359,19 @@ func (fake *FakeContainerizer) StreamOutReturnsOnCall(i int, result1 io.ReadClos
 	}{result1, result2}
 }
 
-func (fake *FakeContainerizer) Run(log lager.Logger, handle string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
+func (fake *FakeContainerizer) Run(log lager.Logger, handle string, processSpec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
 	fake.runMutex.Lock()
 	ret, specificReturn := fake.runReturnsOnCall[len(fake.runArgsForCall)]
 	fake.runArgsForCall = append(fake.runArgsForCall, struct {
-		log    lager.Logger
-		handle string
-		spec   garden.ProcessSpec
-		io     garden.ProcessIO
-	}{log, handle, spec, io})
-	fake.recordInvocation("Run", []interface{}{log, handle, spec, io})
+		log         lager.Logger
+		handle      string
+		processSpec garden.ProcessSpec
+		io          garden.ProcessIO
+	}{log, handle, processSpec, io})
+	fake.recordInvocation("Run", []interface{}{log, handle, processSpec, io})
 	fake.runMutex.Unlock()
 	if fake.RunStub != nil {
-		return fake.RunStub(log, handle, spec, io)
+		return fake.RunStub(log, handle, processSpec, io)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -387,7 +388,7 @@ func (fake *FakeContainerizer) RunCallCount() int {
 func (fake *FakeContainerizer) RunArgsForCall(i int) (lager.Logger, string, garden.ProcessSpec, garden.ProcessIO) {
 	fake.runMutex.RLock()
 	defer fake.runMutex.RUnlock()
-	return fake.runArgsForCall[i].log, fake.runArgsForCall[i].handle, fake.runArgsForCall[i].spec, fake.runArgsForCall[i].io
+	return fake.runArgsForCall[i].log, fake.runArgsForCall[i].handle, fake.runArgsForCall[i].processSpec, fake.runArgsForCall[i].io
 }
 
 func (fake *FakeContainerizer) RunReturns(result1 garden.Process, result2 error) {
@@ -614,7 +615,7 @@ func (fake *FakeContainerizer) RemoveBundleReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeContainerizer) Info(log lager.Logger, handle string) (gardener.ActualContainerSpec, error) {
+func (fake *FakeContainerizer) Info(log lager.Logger, handle string) (spec.ActualContainerSpec, error) {
 	fake.infoMutex.Lock()
 	ret, specificReturn := fake.infoReturnsOnCall[len(fake.infoArgsForCall)]
 	fake.infoArgsForCall = append(fake.infoArgsForCall, struct {
@@ -644,24 +645,24 @@ func (fake *FakeContainerizer) InfoArgsForCall(i int) (lager.Logger, string) {
 	return fake.infoArgsForCall[i].log, fake.infoArgsForCall[i].handle
 }
 
-func (fake *FakeContainerizer) InfoReturns(result1 gardener.ActualContainerSpec, result2 error) {
+func (fake *FakeContainerizer) InfoReturns(result1 spec.ActualContainerSpec, result2 error) {
 	fake.InfoStub = nil
 	fake.infoReturns = struct {
-		result1 gardener.ActualContainerSpec
+		result1 spec.ActualContainerSpec
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeContainerizer) InfoReturnsOnCall(i int, result1 gardener.ActualContainerSpec, result2 error) {
+func (fake *FakeContainerizer) InfoReturnsOnCall(i int, result1 spec.ActualContainerSpec, result2 error) {
 	fake.InfoStub = nil
 	if fake.infoReturnsOnCall == nil {
 		fake.infoReturnsOnCall = make(map[int]struct {
-			result1 gardener.ActualContainerSpec
+			result1 spec.ActualContainerSpec
 			result2 error
 		})
 	}
 	fake.infoReturnsOnCall[i] = struct {
-		result1 gardener.ActualContainerSpec
+		result1 spec.ActualContainerSpec
 		result2 error
 	}{result1, result2}
 }

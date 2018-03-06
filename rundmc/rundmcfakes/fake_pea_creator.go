@@ -10,11 +10,11 @@ import (
 )
 
 type FakePeaCreator struct {
-	CreatePeaStub        func(log lager.Logger, spec garden.ProcessSpec, pio garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error)
+	CreatePeaStub        func(log lager.Logger, processSpec garden.ProcessSpec, pio garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error)
 	createPeaMutex       sync.RWMutex
 	createPeaArgsForCall []struct {
 		log               lager.Logger
-		spec              garden.ProcessSpec
+		processSpec       garden.ProcessSpec
 		pio               garden.ProcessIO
 		sandboxHandle     string
 		sandboxBundlePath string
@@ -31,20 +31,20 @@ type FakePeaCreator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakePeaCreator) CreatePea(log lager.Logger, spec garden.ProcessSpec, pio garden.ProcessIO, sandboxHandle string, sandboxBundlePath string) (garden.Process, error) {
+func (fake *FakePeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, pio garden.ProcessIO, sandboxHandle string, sandboxBundlePath string) (garden.Process, error) {
 	fake.createPeaMutex.Lock()
 	ret, specificReturn := fake.createPeaReturnsOnCall[len(fake.createPeaArgsForCall)]
 	fake.createPeaArgsForCall = append(fake.createPeaArgsForCall, struct {
 		log               lager.Logger
-		spec              garden.ProcessSpec
+		processSpec       garden.ProcessSpec
 		pio               garden.ProcessIO
 		sandboxHandle     string
 		sandboxBundlePath string
-	}{log, spec, pio, sandboxHandle, sandboxBundlePath})
-	fake.recordInvocation("CreatePea", []interface{}{log, spec, pio, sandboxHandle, sandboxBundlePath})
+	}{log, processSpec, pio, sandboxHandle, sandboxBundlePath})
+	fake.recordInvocation("CreatePea", []interface{}{log, processSpec, pio, sandboxHandle, sandboxBundlePath})
 	fake.createPeaMutex.Unlock()
 	if fake.CreatePeaStub != nil {
-		return fake.CreatePeaStub(log, spec, pio, sandboxHandle, sandboxBundlePath)
+		return fake.CreatePeaStub(log, processSpec, pio, sandboxHandle, sandboxBundlePath)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -61,7 +61,7 @@ func (fake *FakePeaCreator) CreatePeaCallCount() int {
 func (fake *FakePeaCreator) CreatePeaArgsForCall(i int) (lager.Logger, garden.ProcessSpec, garden.ProcessIO, string, string) {
 	fake.createPeaMutex.RLock()
 	defer fake.createPeaMutex.RUnlock()
-	return fake.createPeaArgsForCall[i].log, fake.createPeaArgsForCall[i].spec, fake.createPeaArgsForCall[i].pio, fake.createPeaArgsForCall[i].sandboxHandle, fake.createPeaArgsForCall[i].sandboxBundlePath
+	return fake.createPeaArgsForCall[i].log, fake.createPeaArgsForCall[i].processSpec, fake.createPeaArgsForCall[i].pio, fake.createPeaArgsForCall[i].sandboxHandle, fake.createPeaArgsForCall[i].sandboxBundlePath
 }
 
 func (fake *FakePeaCreator) CreatePeaReturns(result1 garden.Process, result2 error) {

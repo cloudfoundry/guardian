@@ -3,7 +3,7 @@ package bundlerules
 import (
 	"path/filepath"
 
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
 
@@ -11,7 +11,7 @@ type CGroupPath struct {
 	Path string
 }
 
-func (r CGroupPath) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (r CGroupPath) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	if spec.Privileged {
 		return bndl, nil
 	}

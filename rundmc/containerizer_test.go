@@ -8,6 +8,7 @@ import (
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	fakes "code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
@@ -57,7 +58,7 @@ var _ = Describe("Rundmc", func() {
 
 	Describe("Create", func() {
 		It("should ask the depot to create a container", func() {
-			spec := gardener.DesiredContainerSpec{
+			spec := spec.DesiredContainerSpec{
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
 			}
@@ -73,7 +74,7 @@ var _ = Describe("Rundmc", func() {
 		Context("when creating the depot directory fails", func() {
 			It("returns an error", func() {
 				fakeDepot.CreateReturns(errors.New("blam"))
-				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
+				Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
 					Handle:     "exuberant!",
 					BaseConfig: specs.Spec{Root: &specs.Root{}},
 				})).NotTo(Succeed())
@@ -81,7 +82,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should create a container in the given directory", func() {
-			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
+			Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
 			})).To(Succeed())
@@ -94,7 +95,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should prepare the root file system by creating mount points", func() {
-			Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
+			Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{Path: "some-rootfs"}},
 			})).To(Succeed())
@@ -111,7 +112,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
+				Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
 					BaseConfig: specs.Spec{Root: &specs.Root{}},
 				})).To(MatchError("file-create-fail"))
 			})
@@ -123,7 +124,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
+				Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
 					BaseConfig: specs.Spec{Root: &specs.Root{}},
 				})).NotTo(Succeed())
 			})
@@ -138,7 +139,7 @@ var _ = Describe("Rundmc", func() {
 			created := make(chan struct{})
 			go func() {
 				defer GinkgoRecover()
-				Expect(containerizer.Create(logger, gardener.DesiredContainerSpec{
+				Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
 					Handle:     "some-container",
 					BaseConfig: specs.Spec{Root: &specs.Root{}},
 				})).To(Succeed())

@@ -5,7 +5,7 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/opencontainers/runtime-spec/specs-go"
 
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
@@ -50,7 +50,7 @@ var _ = Describe("Base", func() {
 
 	Context("when it is privileged", func() {
 		It("should use the correct base", func() {
-			retBndl, err := rule.Apply(goci.Bndl{}, gardener.DesiredContainerSpec{
+			retBndl, err := rule.Apply(goci.Bndl{}, spec.DesiredContainerSpec{
 				Privileged: true,
 			}, "not-needed-path")
 			Expect(err).NotTo(HaveOccurred())
@@ -58,7 +58,7 @@ var _ = Describe("Base", func() {
 		})
 
 		It("returns a copy of the original Bndl data structure", func() {
-			retBndl, err := rule.Apply(goci.Bndl{}, gardener.DesiredContainerSpec{
+			retBndl, err := rule.Apply(goci.Bndl{}, spec.DesiredContainerSpec{
 				Privileged: true,
 			}, "not-needed-path")
 			Expect(err).NotTo(HaveOccurred())
@@ -70,7 +70,7 @@ var _ = Describe("Base", func() {
 
 	Context("when it is not privileged", func() {
 		It("should use the correct base", func() {
-			retBndl, err := rule.Apply(goci.Bndl{}, gardener.DesiredContainerSpec{
+			retBndl, err := rule.Apply(goci.Bndl{}, spec.DesiredContainerSpec{
 				Privileged: false,
 			}, "not-needed-path")
 			Expect(err).NotTo(HaveOccurred())
@@ -79,7 +79,7 @@ var _ = Describe("Base", func() {
 		})
 
 		It("returns a copy of the original Bndl data structure", func() {
-			retBndl, err := rule.Apply(goci.Bndl{}, gardener.DesiredContainerSpec{
+			retBndl, err := rule.Apply(goci.Bndl{}, spec.DesiredContainerSpec{
 				Privileged: false,
 			}, "not-needed-path")
 			Expect(err).NotTo(HaveOccurred())

@@ -2,7 +2,7 @@ package bundlerules
 
 import (
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
@@ -10,7 +10,7 @@ import (
 type Mounts struct {
 }
 
-func (b Mounts) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (b Mounts) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	var mounts []specs.Mount
 	for _, m := range spec.BindMounts {
 		modeOpt := "ro"

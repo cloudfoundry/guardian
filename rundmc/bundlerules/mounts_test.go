@@ -6,7 +6,7 @@ import (
 	"github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 )
@@ -49,7 +49,7 @@ var _ = Describe("MountsRule", func() {
 
 		bndl, err = bundlerules.Mounts{}.Apply(
 			originalBndl,
-			gardener.DesiredContainerSpec{
+			spec.DesiredContainerSpec{
 				BindMounts: bindMounts,
 				BaseConfig: specs.Spec{Mounts: desiredImageSpecMounts},
 			}, "not-needed-path")

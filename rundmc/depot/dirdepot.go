@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/lager"
 )
@@ -22,7 +22,7 @@ type BundleSaver interface {
 
 //go:generate counterfeiter . BundleGenerator
 type BundleGenerator interface {
-	Generate(spec gardener.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
+	Generate(desiredContainerSpec spec.DesiredContainerSpec, containerDir string) (goci.Bndl, error)
 }
 
 //go:generate counterfeiter . BindMountSourceCreator
@@ -47,7 +47,7 @@ func New(dir string, bundler BundleGenerator, bundleSaver BundleSaver, bindMount
 	}
 }
 
-func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec gardener.DesiredContainerSpec) error {
+func (d *DirectoryDepot) Create(log lager.Logger, handle string, spec spec.DesiredContainerSpec) error {
 	log = log.Session("depot-create", lager.Data{"handle": handle})
 
 	log.Info("started")

@@ -1,14 +1,14 @@
 package bundlerules
 
 import (
-	"code.cloudfoundry.org/guardian/gardener"
+	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type Windows struct{}
 
-func (w Windows) Apply(bndl goci.Bndl, spec gardener.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+func (w Windows) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
 	if spec.BaseConfig.Windows == nil {
 		return bndl, nil
 	}

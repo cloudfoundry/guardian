@@ -4,18 +4,18 @@ package rundmcfakes
 import (
 	"sync"
 
-	"code.cloudfoundry.org/guardian/gardener"
+	"code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/lager"
 )
 
 type FakeDepot struct {
-	CreateStub        func(log lager.Logger, handle string, spec gardener.DesiredContainerSpec) error
+	CreateStub        func(log lager.Logger, handle string, desiredContainerSpec spec.DesiredContainerSpec) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
-		log    lager.Logger
-		handle string
-		spec   gardener.DesiredContainerSpec
+		log                  lager.Logger
+		handle               string
+		desiredContainerSpec spec.DesiredContainerSpec
 	}
 	createReturns struct {
 		result1 error
@@ -64,18 +64,18 @@ type FakeDepot struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeDepot) Create(log lager.Logger, handle string, spec gardener.DesiredContainerSpec) error {
+func (fake *FakeDepot) Create(log lager.Logger, handle string, desiredContainerSpec spec.DesiredContainerSpec) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
-		log    lager.Logger
-		handle string
-		spec   gardener.DesiredContainerSpec
-	}{log, handle, spec})
-	fake.recordInvocation("Create", []interface{}{log, handle, spec})
+		log                  lager.Logger
+		handle               string
+		desiredContainerSpec spec.DesiredContainerSpec
+	}{log, handle, desiredContainerSpec})
+	fake.recordInvocation("Create", []interface{}{log, handle, desiredContainerSpec})
 	fake.createMutex.Unlock()
 	if fake.CreateStub != nil {
-		return fake.CreateStub(log, handle, spec)
+		return fake.CreateStub(log, handle, desiredContainerSpec)
 	}
 	if specificReturn {
 		return ret.result1
@@ -89,10 +89,10 @@ func (fake *FakeDepot) CreateCallCount() int {
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeDepot) CreateArgsForCall(i int) (lager.Logger, string, gardener.DesiredContainerSpec) {
+func (fake *FakeDepot) CreateArgsForCall(i int) (lager.Logger, string, spec.DesiredContainerSpec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
-	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].spec
+	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].handle, fake.createArgsForCall[i].desiredContainerSpec
 }
 
 func (fake *FakeDepot) CreateReturns(result1 error) {
