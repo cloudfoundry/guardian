@@ -102,7 +102,9 @@ func wireEnvFunc() runrunc.EnvFunc {
 }
 
 func defaultBindMounts(binInitPath string) []specs.Mount {
-	return []specs.Mount{}
+	return []specs.Mount{
+		{Type: "bind", Source: filepath.Dir(binInitPath), Destination: "/tmp/bin", Options: []string{"bind"}},
+	}
 }
 
 func privilegedMounts() []specs.Mount {

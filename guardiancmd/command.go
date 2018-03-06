@@ -750,10 +750,11 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 			Inheritable: unprivilegedMaxCaps,
 			Permitted:   unprivilegedMaxCaps,
 		},
-		Args:        []string{"/tmp/garden-init"},
+		Args:        []string{"/tmp/bin/garden-init"},
 		Cwd:         "/",
 		ConsoleSize: &specs.Box{},
 	}
+
 	mounts := defaultBindMounts(cmd.Bin.Init.Path())
 	privilegedMounts := append(mounts, privilegedMounts()...)
 	unprivilegedMounts := append(mounts, unprivilegedMounts()...)

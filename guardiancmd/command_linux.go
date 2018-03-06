@@ -146,7 +146,7 @@ func defaultBindMounts(binInitPath string) []specs.Mount {
 		{Type: "tmpfs", Source: "tmpfs", Destination: "/dev/shm", Options: []string{"rw", "nodev", "relatime"}},
 		{Type: "devpts", Source: "devpts", Destination: "/dev/pts",
 			Options: []string{"nosuid", "noexec", "newinstance", fmt.Sprintf("gid=%d", devptsGid), "ptmxmode=0666", "mode=0620"}},
-		{Type: "bind", Source: binInitPath, Destination: "/tmp/garden-init", Options: []string{"bind"}},
+		{Type: "bind", Source: binInitPath, Destination: "/tmp/bin/garden-init", Options: []string{"bind"}},
 	}
 }
 
