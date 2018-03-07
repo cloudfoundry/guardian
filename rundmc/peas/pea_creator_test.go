@@ -37,6 +37,7 @@ var _ = Describe("PeaCreator", func() {
 		peaCreator *peas.PeaCreator
 
 		ctrHandle    string
+		rootfsDir    string
 		ctrBundleDir string
 		log          *lagertest.TestLogger
 
@@ -57,8 +58,18 @@ var _ = Describe("PeaCreator", func() {
 	)
 
 	BeforeEach(func() {
+		var err error
+		rootfsDir, err = ioutil.TempDir("", "pea-creator-tests-rootfs")
+		Expect(os.MkdirAll(filepath.Join(rootfsDir, "etc"), 0755)).To(Succeed())
+		Expect(ioutil.WriteFile(filepath.Join(rootfsDir, "etc", "passwd"), []byte("frank:x:1000:2000:Frank:/home/frank:/bin/sh"), 0644)).To(Succeed())
+		Expect(err).NotTo(HaveOccurred())
+
 		volumizer = new(peasfakes.FakeVolumizer)
-		volumizer.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
+		volumizer.CreateReturns(
+			specs.Spec{
+				Version: "some-spec-version",
+				Root:    &specs.Root{Path: rootfsDir},
+			}, nil)
 		runcDeleter = new(peasfakes.FakeRuncDeleter)
 		pidGetter = new(peasfakes.FakePidGetter)
 		pidGetter.PidReturns(123, nil)
@@ -94,7 +105,6 @@ var _ = Describe("PeaCreator", func() {
 			RuncDeleter:            runcDeleter,
 		}
 
-		var err error
 		ctrHandle = "pea-creator-tests"
 		ctrBundleDir, err = ioutil.TempDir("", "pea-creator-tests")
 		Expect(err).NotTo(HaveOccurred())
@@ -170,6 +180,7 @@ var _ = Describe("PeaCreator", func() {
 			Expect(bundleGenerator.GenerateCallCount()).To(Equal(1))
 			actualCtrSpec, _ := bundleGenerator.GenerateArgsForCall(0)
 			Expect(actualCtrSpec.BaseConfig).To(Equal(specs.Spec{
+				Root:    &specs.Root{Path: rootfsDir},
 				Version: "some-spec-version",
 				Windows: &specs.Windows{
 					Network: &specs.WindowsNetwork{
@@ -460,8 +471,32 @@ var _ = Describe("PeaCreator", func() {
 				processSpec.User = "frank"
 			})
 
-			It("returns an error", func() {
-				Expect(createErr).To(MatchError(ContainSubstring("frank")))
+			It("resolves Frank's uid and gid", func() {
+				Expect(processBuilder.BuildProcessCallCount()).To(Equal(1))
+				_, actualProcessSpec := processBuilder.BuildProcessArgsForCall(0)
+				Expect(actualProcessSpec.ContainerUID).To(Equal(1000))
+				Expect(actualProcessSpec.ContainerGID).To(Equal(2000))
+			})
+		})
+
+		Context("when the specified username is not on /etc/passwd", func() {
+			BeforeEach(func() {
+				processSpec.User = "bob"
+			})
+
+			It("returns an informative error", func() {
+				Expect(createErr.Error()).To(ContainSubstring("User 'bob' is not in /etc/passwd"))
+			})
+		})
+
+		Context("when the specified username /etc/passwd does not exist", func() {
+			BeforeEach(func() {
+				processSpec.User = "bob"
+				Expect(os.Remove(filepath.Join(rootfsDir, "etc", "passwd"))).To(Succeed())
+			})
+
+			It("returns an informative error", func() {
+				Expect(createErr.Error()).To(ContainSubstring("/etc/passwd does not exist in the rootfs"))
 			})
 		})
 
