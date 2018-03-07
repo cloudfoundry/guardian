@@ -11,8 +11,7 @@ import (
 )
 
 const (
-	XfsType   = int64(0x58465342)
-	BtrfsType = int64(0x9123683E)
+	XfsType = int64(0x58465342)
 )
 
 func CheckFSPath(path string, filesystem string, mountOptions ...string) error {
@@ -63,8 +62,6 @@ func filesystemCode(filesystem string) (int64, error) {
 	switch filesystem {
 	case "xfs":
 		return XfsType, nil
-	case "btrfs":
-		return BtrfsType, nil
 	default:
 		return 0, errorspkg.Errorf("filesystem %s is not supported", filesystem)
 	}

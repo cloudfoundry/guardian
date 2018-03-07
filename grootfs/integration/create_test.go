@@ -224,9 +224,6 @@ var _ = Describe("Create", func() {
 
 	Context("when --with-clean is given", func() {
 		BeforeEach(func() {
-			// BTRFS driver doesn't do quotas in the same way and we don't really care
-			integration.SkipIfNotXFS(Driver)
-
 			_, err := Runner.Create(groot.CreateSpec{
 				ID:           "my-busybox",
 				BaseImageURL: integration.String2URL("docker:///cfgarden/garden-busybox"),
@@ -483,7 +480,7 @@ var _ = Describe("Create", func() {
 			storePath, err = ioutil.TempDir("/mnt/ext4", "")
 			Expect(err).NotTo(HaveOccurred())
 
-			runner = Runner.WithStore(storePath).WithDriver(Driver)
+			runner = Runner.WithStore(storePath)
 		})
 
 		It("returns an error", func() {
@@ -546,33 +543,6 @@ var _ = Describe("Create", func() {
 			})
 		})
 
-		Describe("drax bin", func() {
-			var (
-				draxCalledFile *os.File
-				draxBin        *os.File
-			)
-
-			BeforeEach(func() {
-				integration.SkipIfNotBTRFS(Driver)
-				_, draxBin, draxCalledFile = integration.CreateFakeDrax()
-				cfg.DraxBin = draxBin.Name()
-			})
-
-			It("uses the drax bin from the config file", func() {
-				_, err := Runner.WithoutDraxBin().Create(groot.CreateSpec{
-					BaseImageURL: integration.String2URL(baseImagePath),
-					ID:           randomImageID,
-					DiskLimit:    104857600,
-					Mount:        true,
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				contents, err := ioutil.ReadFile(draxCalledFile.Name())
-				Expect(err).NotTo(HaveOccurred())
-				Expect(string(contents)).To(Equal("I'm groot - drax"))
-			})
-		})
-
 		Describe("tardis bin", func() {
 			var (
 				tardisCalledFile *os.File
@@ -580,7 +550,6 @@ var _ = Describe("Create", func() {
 			)
 
 			BeforeEach(func() {
-				integration.SkipIfNotXFS(Driver)
 				_, tardisBin, tardisCalledFile = integration.CreateFakeTardis()
 				cfg.TardisBin = tardisBin.Name()
 			})
@@ -656,26 +625,7 @@ var _ = Describe("Create", func() {
 					Expect(err).NotTo(HaveOccurred())
 				})
 
-				Context("BTRFS", func() {
-					BeforeEach(func() {
-						integration.SkipIfNotBTRFS(Driver)
-					})
-
-					It("returns the mount information in the output json", func() {
-						Expect(containerSpec.Mounts).ToNot(BeNil())
-						Expect(containerSpec.Mounts[0].Destination).To(Equal("/"))
-						Expect(containerSpec.Mounts[0].Type).To(Equal(""))
-						Expect(containerSpec.Mounts[0].Source).To(Equal(filepath.Join(StorePath, store.ImageDirName, "some-id", "snapshot")))
-						Expect(containerSpec.Mounts[0].Options).To(HaveLen(1))
-						Expect(containerSpec.Mounts[0].Options[0]).To(Equal("bind"))
-					})
-				})
-
 				Context("XFS", func() {
-					BeforeEach(func() {
-						integration.SkipIfNotXFS(Driver)
-					})
-
 					It("returns the mount information in the output json", func() {
 						Expect(containerSpec.Mounts).ToNot(BeNil())
 						Expect(containerSpec.Mounts[0].Destination).To(Equal("/"))

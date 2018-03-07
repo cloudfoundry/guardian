@@ -23,7 +23,6 @@ var _ = Describe("Delete Store", func() {
 	)
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
-		integration.SkipIfNotXFS(Driver)
 		tmpDir, err := ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())
 

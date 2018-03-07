@@ -11,9 +11,7 @@ import (
 type Config struct {
 	StorePath      string `yaml:"store"`
 	FSDriver       string `yaml:"driver"`
-	DraxBin        string `yaml:"drax_bin"`
 	TardisBin      string `yaml:"tardis_bin"`
-	BtrfsProgsPath string `yaml:"btrfs_progs_path"`
 	NewuidmapBin   string `yaml:"newuidmap_bin"`
 	NewgidmapBin   string `yaml:"newgidmap_bin"`
 	MetronEndpoint string `yaml:"metron_endpoint"`
@@ -103,13 +101,6 @@ func (b *Builder) WithFSDriver(driver string, isSet bool) *Builder {
 	return b
 }
 
-func (b *Builder) WithDraxBin(draxBin string, isSet bool) *Builder {
-	if isSet || b.config.DraxBin == "" {
-		b.config.DraxBin = draxBin
-	}
-	return b
-}
-
 func (b *Builder) WithTardisBin(tardisBin string, isSet bool) *Builder {
 	if isSet || b.config.TardisBin == "" {
 		b.config.TardisBin = tardisBin
@@ -127,13 +118,6 @@ func (b *Builder) WithNewuidmapBin(newuidmapBin string, isSet bool) *Builder {
 func (b *Builder) WithNewgidmapBin(newgidmapBin string, isSet bool) *Builder {
 	if isSet || b.config.NewgidmapBin == "" {
 		b.config.NewgidmapBin = newgidmapBin
-	}
-	return b
-}
-
-func (b *Builder) WithBtrfsProgsPath(btrfsProgsPath string, isSet bool) *Builder {
-	if isSet || b.config.BtrfsProgsPath == "" {
-		b.config.BtrfsProgsPath = btrfsProgsPath
 	}
 	return b
 }

@@ -27,7 +27,6 @@ var _ = Describe("GenerateVolumeSizeMetadata", func() {
 	)
 
 	BeforeEach(func() {
-		integration.SkipIfNotXFS(Driver)
 		Runner = Runner.WithStore(StorePath)
 
 		workDir, err := os.Getwd()

@@ -164,7 +164,6 @@ var _ = Describe("Create with OCI images", func() {
 
 	Context("when a layer in an image has opaque whiteouts", func() {
 		BeforeEach(func() {
-			integration.SkipIfNotXFS(Driver)
 			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/opq-whiteouts-busybox:latest", workDir))
 		})
 

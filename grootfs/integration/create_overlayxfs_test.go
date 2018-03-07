@@ -23,8 +23,6 @@ var _ = Describe("Create (overlay-xfs only)", func() {
 	)
 
 	BeforeEach(func() {
-		integration.SkipIfNotXFS(Driver)
-
 		var err error
 		sourceImagePath, err = ioutil.TempDir("", "")
 		Expect(err).NotTo(HaveOccurred())

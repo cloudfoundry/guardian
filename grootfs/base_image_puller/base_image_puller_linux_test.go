@@ -240,7 +240,7 @@ var _ = Describe("Base Image Puller", func() {
 				})
 			})
 
-			Context("when the base directory already exists in the child layer (e.g. because of BTRFS snapshots)", func() {
+			Context("when the base directory already exists in the child layer", func() {
 				BeforeEach(func() {
 					fakeVolumeDriver.CreateVolumeStub = func(_ lager.Logger, _, id string) (string, error) {
 						volumeDir := filepath.Join(tmpVolumesDir, id)

@@ -64,28 +64,13 @@ func (r Runner) WithoutDriver() Runner {
 // Binaries
 ///////////////////////////////////////////////////////////////////////////////
 
-func (r Runner) WithDraxBin(draxBin string) Runner {
-	r.DraxBin = draxBin
-	return r
-}
-
-func (r Runner) WithoutDraxBin() Runner {
-	r.DraxBin = ""
-	return r
-}
-
-func (r Runner) WithTardisBin(draxBin string) Runner {
-	r.TardisBin = draxBin
+func (r Runner) WithTardisBin(tardisBin string) Runner {
+	r.TardisBin = tardisBin
 	return r
 }
 
 func (r Runner) WithoutTardisBin() Runner {
 	r.TardisBin = ""
-	return r
-}
-
-func (r Runner) WithBtrfsProgsPath(btrfsProgsPath string) Runner {
-	r.BtrfsProgsPath = btrfsProgsPath
 	return r
 }
 

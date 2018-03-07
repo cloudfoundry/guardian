@@ -27,16 +27,6 @@ mount_storage() {
 
   for i in {1..5}
   do
-    # Make BTRFS Volume
-    truncate -s 1G /btrfs_volume_${i}
-    mkfs.btrfs --nodesize 4k -s 4k /btrfs_volume_${i}
-
-    # Mount BTRFS
-    mkdir /mnt/btrfs-${i}
-    mount -t btrfs -o user_subvol_rm_allowed,rw /btrfs_volume_${i} /mnt/btrfs-${i}
-    chmod 777 -R /mnt/btrfs-${i}
-    btrfs quota enable /mnt/btrfs-${i}
-
     # Make XFS Volume
     truncate -s 1G /xfs_volume_${i}
     mkfs.xfs -b size=4096 /xfs_volume_${i}
@@ -53,7 +43,6 @@ unmount_storage() {
 
   for i in {1..5}
   do
-    umount -l /mnt/btrfs-${i}
     umount -l /mnt/xfs-${i}
   done
 }
@@ -93,16 +82,3 @@ install_dependencies() {
   fi
 }
 
-setup_drax() {
-  drax_path=$1
-  cp $drax_path /usr/local/bin/drax
-  chown root:root /usr/local/bin/drax
-  chmod u+s /usr/local/bin/drax
-}
-
-sudo_setup_drax() {
-  drax_path=$1
-
-  local SETUP_DRAX_FUNC=$(declare -f setup_drax)
-  sudo bash -c "$SETUP_DRAX_FUNC; setup_drax $drax_path"
-}

@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"io/ioutil"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -12,7 +11,6 @@ import (
 	unpackerpkg "code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/namespaced"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
@@ -42,9 +40,6 @@ type fileSystemDriver interface {
 
 func createFileSystemDriver(cfg config.Config) (fileSystemDriver, error) {
 	switch cfg.FSDriver {
-	case "btrfs":
-		return btrfs.NewDriver(filepath.Join(cfg.BtrfsProgsPath, "btrfs"),
-			filepath.Join(cfg.BtrfsProgsPath, "mkfs.btrfs"), cfg.DraxBin, cfg.StorePath), nil
 	case "overlay-xfs":
 		return overlayxfs.NewDriver(cfg.StorePath, cfg.TardisBin), nil
 	default:

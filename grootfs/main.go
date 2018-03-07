@@ -18,7 +18,6 @@ import (
 
 const (
 	defaultFilesystemDriver = "overlay-xfs"
-	defaultDraxBin          = "drax"
 	defaultTardisBin        = "tardis"
 	defaultNewuidmapBin     = "newuidmap"
 	defaultNewgidmapBin     = "newgidmap"
@@ -49,7 +48,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "driver",
-			Usage: "Storage driver to use <btrfs|overlay-xfs>",
+			Usage: "Storage driver to use, currently only overlay-xfs is supported",
 			Value: defaultFilesystemDriver,
 		},
 		cli.StringFlag{
@@ -65,16 +64,6 @@ func main() {
 			Name:  "tardis-bin",
 			Usage: "Path to tardis bin. (If not provided will use $PATH)",
 			Value: defaultTardisBin,
-		},
-		cli.StringFlag{
-			Name:  "drax-bin",
-			Usage: "Path to drax bin. (If not provided will use $PATH)",
-			Value: defaultDraxBin,
-		},
-		cli.StringFlag{
-			Name:  "btrfs-progs-path",
-			Usage: "Path to btrfs progs. (If not provided will use $PATH)",
-			Value: "",
 		},
 		cli.StringFlag{
 			Name:  "newuidmap-bin",
@@ -113,12 +102,10 @@ func main() {
 
 		cfg, err := cfgBuilder.WithStorePath(ctx.GlobalString("store"), ctx.IsSet("store")).
 			WithFSDriver(ctx.GlobalString("driver"), ctx.IsSet("driver")).
-			WithDraxBin(ctx.GlobalString("drax-bin"), ctx.IsSet("drax-bin")).
 			WithTardisBin(ctx.GlobalString("tardis-bin"), ctx.IsSet("tardis-bin")).
 			WithMetronEndpoint(ctx.GlobalString("metron-endpoint")).
 			WithLogLevel(ctx.GlobalString("log-level"), ctx.IsSet("log-level")).
 			WithLogFile(ctx.GlobalString("log-file")).
-			WithBtrfsProgsPath(ctx.GlobalString("btrfs-progs-path"), ctx.IsSet("btrfs-progs-path")).
 			WithNewuidmapBin(ctx.GlobalString("newuidmap-bin"), ctx.IsSet("newuidmap-bin")).
 			WithNewgidmapBin(ctx.GlobalString("newgidmap-bin"), ctx.IsSet("newgidmap-bin")).
 			Build()

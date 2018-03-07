@@ -41,9 +41,7 @@ var _ = Describe("Builder", func() {
 			Clean:          cleanCfg,
 			StorePath:      "/hello",
 			FSDriver:       "kitten-fs",
-			DraxBin:        "/config/drax",
 			TardisBin:      "/config/tardis",
-			BtrfsProgsPath: "/config/btrfs-progs",
 			NewuidmapBin:   "/config/newuidmap",
 			NewgidmapBin:   "/config/newgidmap",
 			MetronEndpoint: "config_endpoint:1111",
@@ -203,37 +201,6 @@ var _ = Describe("Builder", func() {
 		})
 	})
 
-	Describe("WithDraxBin", func() {
-		It("overrides the config's drax path entry when command line flag is set", func() {
-			builder = builder.WithDraxBin("/my/drax", true)
-			config, err := builder.Build()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(config.DraxBin).To(Equal("/my/drax"))
-		})
-
-		Context("when drax path is not provided via command line", func() {
-			It("uses the config's drax path ", func() {
-				builder = builder.WithDraxBin("/my/drax", false)
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.DraxBin).To(Equal("/config/drax"))
-			})
-
-			Context("and drax path is not set in the config", func() {
-				BeforeEach(func() {
-					cfg.DraxBin = ""
-				})
-
-				It("uses the provided drax path ", func() {
-					builder = builder.WithDraxBin("/my/drax", false)
-					config, err := builder.Build()
-					Expect(err).NotTo(HaveOccurred())
-					Expect(config.DraxBin).To(Equal("/my/drax"))
-				})
-			})
-		})
-	})
-
 	Describe("WithTardisBin", func() {
 		It("overrides the config's tardis path entry when command line flag is set", func() {
 			builder = builder.WithTardisBin("/my/tardis", true)
@@ -322,37 +289,6 @@ var _ = Describe("Builder", func() {
 					config, err := builder.Build()
 					Expect(err).NotTo(HaveOccurred())
 					Expect(config.NewgidmapBin).To(Equal("/my/newgidmap"))
-				})
-			})
-		})
-	})
-
-	Describe("WithBtrfsProgsPath", func() {
-		It("overrides the config's btrfs path entry when command line flag is set", func() {
-			builder = builder.WithBtrfsProgsPath("/my/btrfs-progs", true)
-			config, err := builder.Build()
-			Expect(err).NotTo(HaveOccurred())
-			Expect(config.BtrfsProgsPath).To(Equal("/my/btrfs-progs"))
-		})
-
-		Context("when btrfs path is not provided via command line", func() {
-			It("uses the config's btrfs path ", func() {
-				builder = builder.WithBtrfsProgsPath("/my/btrfs-progs", false)
-				config, err := builder.Build()
-				Expect(err).NotTo(HaveOccurred())
-				Expect(config.BtrfsProgsPath).To(Equal("/config/btrfs-progs"))
-			})
-
-			Context("and btrfs path is not set in the config", func() {
-				BeforeEach(func() {
-					cfg.BtrfsProgsPath = ""
-				})
-
-				It("uses the provided btrfs path ", func() {
-					builder = builder.WithBtrfsProgsPath("/my/btrfs-progs", false)
-					config, err := builder.Build()
-					Expect(err).NotTo(HaveOccurred())
-					Expect(config.BtrfsProgsPath).To(Equal("/my/btrfs-progs"))
 				})
 			})
 		})

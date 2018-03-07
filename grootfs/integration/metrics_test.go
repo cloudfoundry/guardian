@@ -128,7 +128,6 @@ var _ = Describe("Metrics", func() {
 		})
 
 		It("emits grootfs disk space committed to quotas in MB", func() {
-			integration.SkipIfNotXFS(Driver)
 			spec.DiskLimit = 1 * 1024 * 1024
 			spec.ExcludeBaseImageFromQuota = true
 
@@ -156,8 +155,6 @@ var _ = Describe("Metrics", func() {
 		})
 
 		It("emits grootfs disk space used by volumes", func() {
-			integration.SkipIfNotXFS(Driver)
-
 			spec.BaseImageURL = integration.String2URL("docker:///cfgarden/garden-busybox")
 			_, err := Runner.WithMetronEndpoint(net.ParseIP("127.0.0.1"), fakeMetronPort).Create(spec)
 			Expect(err).NotTo(HaveOccurred())

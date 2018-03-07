@@ -54,7 +54,6 @@ GrootFS makes use of various Linux filesystem features in order to efficiently s
 container root filesystems on the host machine.
 
 Currently we support:
-* BTRFS (`--driver btrfs`)
 * Overlay on XFS (`--driver overlay-xfs`)
 
 GrootFS's 'store' directory must be stored on one of these filesystems. Our setup
@@ -72,18 +71,15 @@ sudo hack/quick-setup
 ```
 
 We assume that:
-* You are running a Debian/Ubuntu based system with BTRFS and XFS enabled in the kernel
+* You are running a Debian/Ubuntu based system with XFS enabled in the kernel
 
 This will:
-* Install the userspace tools required to use GrootFS on either BTRFS or XFS
-* Create a BTRFS filesystem and mount it under /var/lib/grootfs/btrfs
+* Install the userspace tools required to use GrootFS on XFS
 * Create an XFS filesystem and mount it under /var/lib/grootfs/xfs
 
 By default all operations will happen in the `/var/lib/grootfs` folder. You can
 change this by passing the `--store` flag to the `grootfs` binary. The store folder is
-expected to be inside either of the mounted BTRFS or XFS volumes. You will also
-need to pass the `--driver` option with a value of either `btrfs` or `overlay-xfs`
-accordingly.
+expected to be inside either of the mounted  XFS volumes.
 
 For user/group id mapping, you'll also require `newuidmap` and `newgidmap` to be
 installed (uidmap package on Ubuntu)
@@ -103,9 +99,7 @@ Following is an example configuration file with all options provided:
 
 ```yaml
 store: /var/lib/data/grootfs/store
-driver: btrfs
-btrfs_progs_path: /var/lib/packages/btrfs-progs/bin
-drax_bin: /var/lib/packages/grootfs/bin/drax
+driver: overlay-xfs
 newuidmap_bin: /var/lib/packages/idmapper/bin/newuidmap
 newgidmap_bin: /var/lib/packages/idmapper/bin/newgidmap
 log_level: debug
@@ -124,9 +118,7 @@ create:
 | Key | Description  |
 |---|---|
 | store  | Path to the store directory |
-| driver | Filesystem driver to use \<btrfs \| overlay-xfs\> |
-| btrfs_progs_path  | Path to btrfs progs. (If not provided will use $PATH)  |
-| drax_bin | Path to drax bin. (If not provided will use $PATH) |
+| driver | Storage driver to use, currently only overlay-xfs is supported |
 | newuidmap_bin | Path to newuidmap bin. (If not provided will use $PATH) |
 | newgidmap_bin | Path to newgidmap bin. (If not provided will use $PATH) |
 | log_level | Set logging level \<debug \| info \| error \| fatal\> |
@@ -141,7 +133,7 @@ create:
 
 ### Initializing a store
 
-If you have an existing XFS or BTRFS filesystem mounted, you can use this to hold GrootFS's image store.
+If you have an existing XFS filesystem mounted, you can use this to hold GrootFS's image store.
 To create a store directory within your existing mountpath:
 
 ```
@@ -186,7 +178,7 @@ You can delete a store by running the following:
 While this command will delete all contents of the store path, it will leave
 the backing filesystem intact.
 ```
-grootfs --store /mnt/btrfs/my-store-dir --driver btrfs delete-store
+grootfs --store /mnt/xfs/my-store-dir --driver overlay-xfs delete-store
 ```
 
 ### Creating an image
@@ -194,13 +186,13 @@ grootfs --store /mnt/btrfs/my-store-dir --driver btrfs delete-store
 You can create a rootfs image based on a remote docker image:
 
 ```
-grootfs --store /mnt/btrfs create docker:///ubuntu:latest my-image-id
+grootfs --store /mnt/xfs create docker:///ubuntu:latest my-image-id
 ```
 
 Or from a local tar file as an image source:
 
 ```
-grootfs --store /mnt/btrfs create /my-rootfs.tar my-image-id
+grootfs --store /mnt/xfs create /my-rootfs.tar my-image-id
 ```
 
 If you are running behind an http proxy you can use the [standard](https://wiki.archlinux.org/index.php/proxy_settings) HTTP_PROXY, HTTPS_PROXY, NO_PROXY, etc env vars.
@@ -253,23 +245,23 @@ the config spec json returned will include the rootfs mount as the first item in
 The `--without-mount` option exists so that GrootFS can be run as non-root. The mount information is compatible
 with [OCI container spec](https://github.com/opencontainers/runtime-spec/blob/master/config.md#example-linux).
 
-#### Disk Quotas & Drax
+#### Disk Quotas & Tardis
 
-GrootFS supports per-filesystem disk-quotas through the Drax binary. BTRFS
-disk-quotas can only be enabled by a root user, therefore Drax must be owned by
+GrootFS supports per-filesystem disk-quotas through the Tardis binary. XFS
+disk-quotas can only be enabled by a root user, therefore Tardis must be owned by
 root, with the user bit set, and moved somewhere in the $PATH.
 
 ```
 make
-chown root drax
-chmod u+s drax
-mv drax /usr/local/bin/
+chown root tardis
+chmod u+s tardis
+mv tardis /usr/local/bin/
 ```
 
-Once Drax is configured, you can apply a quota to the rootfs:
+Once Tardis is configured, you can apply a quota to the rootfs:
 
 ```
-grootfs --store /mnt/btrfs create \
+grootfs --store /mnt/xfs create \
         --disk-limit-size-bytes 10485760 \
         docker:///ubuntu:latest \
         my-image-id
@@ -281,13 +273,13 @@ You can destroy a created rootfs image by calling `grootfs delete` with the
 image-id:
 
 ```
-grootfs --store /mnt/btrfs delete my-image-id
+grootfs --store /mnt/xfs delete my-image-id
 ```
 
 Or the rootfs image path:
 
 ```
-grootfs --store /mnt/btrfs delete /mnt/btrfs/images/<uid>/my-image-id
+grootfs --store /mnt/xfs delete /mnt/xfs/images/<uid>/my-image-id
 ```
 
 **Caveats:**
@@ -301,13 +293,13 @@ You can get stats from an image by calling `grootfs stats` with the
 image-id:
 
 ```
-grootfs --store /mnt/btrfs stats my-image-id
+grootfs --store /mnt/xfs stats my-image-id
 ```
 
 Or the image path:
 
 ```
-grootfs --store /mnt/btrfs delete /mnt/btrfs/images/<uid>/my-image-id
+grootfs --store /mnt/xfs delete /mnt/xfs/images/<uid>/my-image-id
 ```
 
 This will result in a JSON object of the following form:
@@ -328,7 +320,7 @@ base image, i.e.: just the container data.
 ### Clean up
 
 ```
-grootfs --store /mnt/btrfs clean
+grootfs --store /mnt/xfs clean
 ```
 
 When `clean` is called, any layers that aren't being used by a rootfs that
@@ -479,9 +471,6 @@ make integration
   `r-xr-x---`) and therefore, when GrootFS runs as a non-root user it cannot
   write files into the rootfs `/root`. You can work around this by either
   running as root or [using a UID/GID mapping](#usergroup-id-mapping).
-
-* You must mount the btrfs volume with `-o user_subvol_rm_allowed` or you
-  won't be able to delete images or clean up after failure scenarios.
 
 * Files not visible to the calling user in the base image won't be in the
   resulting rootfs.

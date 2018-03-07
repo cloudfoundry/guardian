@@ -9,7 +9,7 @@ install_apt_packages() {
     gcc make \
     vim-nox \
     git silversearcher-ag curl jq \
-    btrfs-tools uidmap \
+    uidmap \
     xfsprogs \
     python-minimal
 }
@@ -65,10 +65,9 @@ install_groot() {
   pushd $HOME/go/src/code.cloudfoundry.org/grootfs
     make deps
     make
-    cp {grootfs,drax,tardis} /usr/local/bin
-    chmod u+s /usr/local/bin/drax
+    cp {grootfs,tardis} /usr/local/bin
     chmod u+s /usr/local/bin/tardis
-    cp hack/{quick-setup,cleanup-store} /usr/local/bin
+    cp hack/quick-setup /usr/local/bin
   popd
 }
 
@@ -77,7 +76,6 @@ setup_filesystems() {
     return
   fi
 
-  # Configure btrfs environment
   quick-setup
 }
 

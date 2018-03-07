@@ -99,8 +99,7 @@ var _ = Describe("Init Store", func() {
 			cmd.Stdout = buffer
 			Expect(cmd.Run()).To(Succeed())
 
-			fsType := map[string]string{"btrfs": "BTRFS", "overlay-xfs": "XFS"}
-			Expect(buffer).To(gbytes.Say(fsType[Driver]))
+			Expect(buffer).To(gbytes.Say("XFS"))
 		})
 
 		Context("when the given store path is already initialized", func() {

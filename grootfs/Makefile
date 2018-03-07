@@ -6,7 +6,6 @@
 
 all:
 	GOOS=linux go build -o grootfs .
-	GOOS=linux go build -o drax ./store/filesystems/btrfs/drax
 	GOOS=linux go build -o tardis ./store/filesystems/overlayxfs/tardis
 
 cf: all

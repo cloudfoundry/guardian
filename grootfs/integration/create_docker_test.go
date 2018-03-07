@@ -223,7 +223,6 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		Context("when a layer in an image has opaque whiteouts", func() {
 			BeforeEach(func() {
-				integration.SkipIfNotXFS(Driver)
 				baseImageURL = integration.String2URL("docker:///cfgarden/opq-whiteout-busybox")
 			})
 

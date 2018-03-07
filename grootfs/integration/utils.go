@@ -87,18 +87,6 @@ func FindGID(group string) uint32 {
 	return uint32(i)
 }
 
-func SkipIfNotBTRFS(driver string) {
-	if driver != "btrfs" {
-		Skip("These tests are only for BTRFS driver. Skipping.")
-	}
-}
-
-func SkipIfNotXFS(driver string) {
-	if driver != "overlay-xfs" {
-		Skip("These tests are only for Overlay-XFS driver. Skipping.")
-	}
-}
-
 func SkipIfNonRoot(uid int) {
 	if uid != 0 {
 		Skip("These tests can only run as root user. Skipping.")
@@ -109,12 +97,6 @@ func SkipIfRoot(uid int) {
 	if uid == 0 {
 		Skip("These tests can only run as non-root users. Skipping.")
 	}
-}
-
-func CreateFakeDrax() (string, *os.File, *os.File) {
-	tempFolder, bin, binCalledFile := CreateFakeBin("drax")
-	testhelpers.SuidBinary(bin.Name())
-	return tempFolder, bin, binCalledFile
 }
 
 func CreateFakeTardis() (string, *os.File, *os.File) {

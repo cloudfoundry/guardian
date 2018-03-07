@@ -10,7 +10,6 @@ import (
 	"code.cloudfoundry.org/grootfs/base_image_puller"
 	"code.cloudfoundry.org/grootfs/base_image_puller/unpacker"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store/filesystems/btrfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/store/filesystems/spec"
 	"code.cloudfoundry.org/grootfs/store/image_cloner"
@@ -274,12 +273,6 @@ func (d *Driver) FetchStats(logger lager.Logger, path string) (groot.VolumeStats
 
 func specToDriver(spec spec.DriverSpec) (internalDriver, error) {
 	switch spec.Type {
-	case "btrfs":
-		return btrfs.NewDriver(
-			spec.FsBinaryPath,
-			spec.MkfsBinaryPath,
-			spec.SuidBinaryPath,
-			spec.StorePath), nil
 	case "overlay-xfs":
 		return overlayxfs.NewDriver(
 			spec.StorePath,

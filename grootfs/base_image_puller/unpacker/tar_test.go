@@ -42,7 +42,7 @@ var _ = Describe("Tar unpacker", func() {
 
 	BeforeEach(func() {
 		var err error
-		tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
+		tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "defaultfs"})
 		Expect(err).NotTo(HaveOccurred())
 
 		targetPath, err = ioutil.TempDir("", "")
@@ -597,10 +597,10 @@ var _ = Describe("Tar unpacker", func() {
 			})
 		}
 
-		Context("BTRFS", func() {
+		Context("defaultfs", func() {
 			BeforeEach(func() {
 				var err error
-				tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "btrfs"})
+				tarUnpacker, err = unpacker.NewTarUnpacker(unpacker.UnpackStrategy{Name: "defaultfs"})
 				Expect(err).NotTo(HaveOccurred())
 			})
 

@@ -78,7 +78,7 @@ var _ = Describe("Stats", func() {
 				BaseImageURL: integration.String2URL(baseImagePath),
 				ID:           imageID,
 				DiskLimit:    diskLimit,
-				Mount:        isBtrfs(), // btrfs needs the mount option
+				Mount:        mountByDefault(),
 			})
 			Expect(err).ToNot(HaveOccurred())
 
@@ -94,20 +94,11 @@ var _ = Describe("Stats", func() {
 			sess := runAsUser(cmd, GrootfsTestUid, GrootfsTestGid)
 			Eventually(sess, 5*time.Second).Should(gexec.Exit(0))
 
-			if Driver == "overlay-xfs" {
-				expectedStats = groot.VolumeStats{
-					DiskUsage: groot.DiskUsage{
-						TotalBytesUsed:     9445376,
-						ExclusiveBytesUsed: 4202496,
-					},
-				}
-			} else {
-				expectedStats = groot.VolumeStats{
-					DiskUsage: groot.DiskUsage{
-						TotalBytesUsed:     9441280,
-						ExclusiveBytesUsed: 4198400,
-					},
-				}
+			expectedStats = groot.VolumeStats{
+				DiskUsage: groot.DiskUsage{
+					TotalBytesUsed:     9445376,
+					ExclusiveBytesUsed: 4202496,
+				},
 			}
 		})
 
@@ -141,24 +132,20 @@ var _ = Describe("Stats", func() {
 
 		Context("when aux binary doesn't have the suid bit", func() {
 			var (
-				tardisBin, draxBin string
-				runner             runner.Runner
+				tardisBin string
+				runner    runner.Runner
 			)
 
 			BeforeEach(func() {
-				draxBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/btrfs/drax")
-				Expect(err).NotTo(HaveOccurred())
-				draxBin = integration.MakeBinaryAccessibleToEveryone(draxBin)
 				tardisBin, err := gexec.Build("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
 				Expect(err).NotTo(HaveOccurred())
 				tardisBin = integration.MakeBinaryAccessibleToEveryone(tardisBin)
 
-				runner = Runner.WithDraxBin(draxBin).WithTardisBin(tardisBin)
+				runner = Runner.WithTardisBin(tardisBin)
 			})
 
 			AfterEach(func() {
 				Expect(os.RemoveAll(tardisBin)).To(Succeed())
-				Expect(os.RemoveAll(draxBin)).To(Succeed())
 			})
 
 			Context("when running as root user", func() {
@@ -186,7 +173,6 @@ var _ = Describe("Stats", func() {
 
 		Context("when the image has no quotas", func() {
 			BeforeEach(func() {
-				integration.SkipIfNotXFS(Driver)
 				diskLimit = 0
 			})
 
