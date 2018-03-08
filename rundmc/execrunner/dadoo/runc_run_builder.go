@@ -11,7 +11,7 @@ func BuildRuncCommand(runtimePath, runMode, processPath, containerHandle, ttyCon
 	runtimeArgs := []string{
 		"--debug", "--log", logfilePath, "--log-format", "json",
 		runMode,
-		"-d",
+		"--detach",
 		"--pid-file", filepath.Join(processPath, "pidfile"),
 	}
 	runtimeArgs = append(runtimeArgs, runmodeArgs(runMode, processPath)...)
@@ -22,7 +22,7 @@ func BuildRuncCommand(runtimePath, runMode, processPath, containerHandle, ttyCon
 
 func runmodeArgs(runMode, bundlePath string) []string {
 	if runMode == "run" {
-		return []string{"--no-new-keyring", "-b", bundlePath}
+		return []string{"--no-new-keyring", "--bundle", bundlePath}
 	}
 
 	return []string{"-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid())}
