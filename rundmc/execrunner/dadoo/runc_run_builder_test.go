@@ -25,7 +25,7 @@ var _ = Describe("RuncRunBuilder", func() {
 			runtimePath,
 			"--debug", "--log", logfilePath, "--log-format", "json",
 			"exec",
-			"-d", "--pid-file", filepath.Join(processPath, "pidfile"),
+			"--detach", "--pid-file", filepath.Join(processPath, "pidfile"),
 			"-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()),
 			ctrHandle,
 		}))
@@ -38,7 +38,7 @@ var _ = Describe("RuncRunBuilder", func() {
 			runtimePath,
 			"--debug", "--log", logfilePath, "--log-format", "json",
 			"exec",
-			"-d", "--pid-file", filepath.Join(processPath, "pidfile"),
+			"--detach", "--pid-file", filepath.Join(processPath, "pidfile"),
 			"-p", fmt.Sprintf("/proc/%d/fd/0", os.Getpid()),
 			"--tty", "--console-socket", "path/to/socketfile",
 			ctrHandle,
@@ -52,8 +52,8 @@ var _ = Describe("RuncRunBuilder", func() {
 			runtimePath,
 			"--debug", "--log", logfilePath, "--log-format", "json",
 			"run",
-			"-d", "--pid-file", filepath.Join(processPath, "pidfile"),
-			"--no-new-keyring", "-b", processPath,
+			"--detach", "--pid-file", filepath.Join(processPath, "pidfile"),
+			"--no-new-keyring", "--bundle", processPath,
 			ctrHandle,
 		}))
 	})
@@ -65,8 +65,8 @@ var _ = Describe("RuncRunBuilder", func() {
 			runtimePath,
 			"--debug", "--log", logfilePath, "--log-format", "json",
 			"run",
-			"-d", "--pid-file", filepath.Join(processPath, "pidfile"),
-			"--no-new-keyring", "-b", processPath,
+			"--detach", "--pid-file", filepath.Join(processPath, "pidfile"),
+			"--no-new-keyring", "--bundle", processPath,
 			"--console-socket", "/some/socket",
 			ctrHandle,
 		}))

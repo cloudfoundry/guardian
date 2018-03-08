@@ -99,13 +99,13 @@ var RunCommand = cli.Command{
 			Name: "no-new-keyring",
 		},
 		cli.StringFlag{
-			Name: "bundle",
+			Name: "bundle, b",
 		},
 		cli.StringFlag{
 			Name: "pid-file",
 		},
 		cli.BoolFlag{
-			Name: "detach",
+			Name: "detach, d",
 		},
 	},
 
@@ -121,8 +121,12 @@ var RunCommand = cli.Command{
 }
 
 var DeleteCommand = cli.Command{
-	Name:  "delete",
-	Flags: []cli.Flag{},
+	Name: "delete",
+	Flags: []cli.Flag{
+		cli.BoolFlag{
+			Name: "force, f",
+		},
+	},
 
 	Action: func(ctx *cli.Context) error {
 		writeArgs("delete")
