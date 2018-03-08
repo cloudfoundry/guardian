@@ -43,6 +43,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		dadooReturns                           error
 		runcHangsForEver                       bool
 		dadooPanicsBeforeReportingRuncExitCode bool
+		waitBeforeStdoutWrite                  bool
 		dadooWritesLogs                        string
 		dadooWritesExitCode                    []byte
 		log                                    *lagertest.TestLogger
@@ -76,6 +77,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		runcReturns = 0
 		dadooReturns = nil
 		runcHangsForEver = false
+		waitBeforeStdoutWrite = false
 		dadooPanicsBeforeReportingRuncExitCode = false
 		dadooWritesExitCode = []byte("0")
 		dadooWritesLogs = `{"time":"2016-03-02T13:56:38Z", "level":"warning", "msg":"signal: potato"}
@@ -178,7 +180,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 				Expect(exit.Close()).To(Succeed())
 
 				// Sleep before printing any stdout/stderr to allow attach calls to complete
-				time.Sleep(time.Millisecond * 50)
+				if waitBeforeStdoutWrite {
+					time.Sleep(time.Millisecond * 500)
+				}
+
 				// do some test IO (directly write to stdout and copy stdin->stderr)
 				so.WriteString("hello stdout")
 
@@ -713,6 +718,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 		})
 
 		Context("when running and attaching", func() {
+			BeforeEach(func() {
+				waitBeforeStdoutWrite = true
+			})
+
 			It("multiplexes stdout and stderr", func() {
 				runStdout := gbytes.NewBuffer()
 				runStderr := gbytes.NewBuffer()
@@ -869,10 +878,7 @@ var _ = Describe("Dadoo ExecRunner", func() {
 
 		Context("when dadoo has already exited", func() {
 			It("returns the process", func() {
-				out := gbytes.NewBuffer()
-				process, err := runner.Attach(log, processID, garden.ProcessIO{
-					Stdout: out,
-				}, filepath.Dir(processPath))
+				process, err := runner.Attach(log, processID, garden.ProcessIO{}, filepath.Dir(processPath))
 				Expect(err).NotTo(HaveOccurred())
 				Expect(process).NotTo(BeNil())
 			})
@@ -917,8 +923,11 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 
 			Context("and the process doesn't immediately write to stdout or stderr", func() {
-
 				var outBuf, errBuf *gbytes.Buffer
+
+				BeforeEach(func() {
+					waitBeforeStdoutWrite = true
+				})
 
 				JustBeforeEach(func() {
 					outBuf = gbytes.NewBuffer()
@@ -950,6 +959,10 @@ var _ = Describe("Dadoo ExecRunner", func() {
 			})
 
 			Context("and the process is already writing to stdout and stderr", func() {
+				BeforeEach(func() {
+					waitBeforeStdoutWrite = true
+				})
+
 				JustBeforeEach(func() {
 					_, err := stdout.WriteString("potato")
 					Expect(err).NotTo(HaveOccurred())
