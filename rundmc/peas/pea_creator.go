@@ -1,7 +1,6 @@
 package peas
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -89,6 +88,10 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	if processSpec.Dir == "" {
 		processSpec.Dir = "/"
 	}
+	uid, gid, err := parseUser(processSpec.User)
+	if err != nil {
+		return errs("parse-user", err)
+	}
 
 	linuxNamespaces, err := p.linuxNamespaces(sandboxBundlePath, privileged)
 	if err != nil {
@@ -102,11 +105,6 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	})
 	if err != nil {
 		return errs("creating-volume", err)
-	}
-
-	uid, gid, err := parseUser(processSpec.User, runtimeSpec.Root.Path)
-	if err != nil {
-		return errs("parse-user", err)
 	}
 
 	if runtimeSpec.Windows == nil {
@@ -199,21 +197,15 @@ func (p *PeaCreator) linuxNamespaces(sandboxBundlePath string, privileged bool) 
 	return linuxNamespaces, nil
 }
 
-func parseUser(username, rootfs string) (int, int, error) {
-	if username == "" {
+func parseUser(uidgid string) (int, int, error) {
+	if uidgid == "" {
 		return 0, 0, nil
 	}
-	if strings.Contains(username, ":") {
-		return parseUidGid(username)
-	}
 
-	return resolveUser(username, rootfs)
-}
-
-func parseUidGid(uidgid string) (int, int, error) {
 	errs := func() (int, int, error) {
 		return 0, 0, fmt.Errorf("'%s' is not a valid uid:gid", uidgid)
 	}
+
 	uidGidComponents := strings.Split(uidgid, ":")
 	if len(uidGidComponents) != 2 {
 		return errs()
@@ -227,37 +219,6 @@ func parseUidGid(uidgid string) (int, int, error) {
 		return errs()
 	}
 	return uid, gid, nil
-}
-
-func resolveUser(username, rootfs string) (int, int, error) {
-	passwdFile, err := os.Open(filepath.Join(rootfs, "etc", "passwd"))
-	if err != nil {
-		if os.IsNotExist(err) {
-			return 0, 0, fmt.Errorf("/etc/passwd does not exist in the rootfs")
-		}
-		return 0, 0, err
-	}
-	defer passwdFile.Close()
-
-	scanner := bufio.NewScanner(passwdFile)
-	for scanner.Scan() {
-		userEntries := strings.Split(scanner.Text(), ":")
-		if userEntries[0] != username {
-			continue
-		}
-		uid, err := strconv.Atoi(userEntries[2])
-		if err != nil {
-			return 0, 0, err
-		}
-		gid, err := strconv.Atoi(userEntries[3])
-		if err != nil {
-			return 0, 0, err
-		}
-
-		return uid, gid, nil
-	}
-
-	return 0, 0, fmt.Errorf("User '%s' is not in /etc/passwd", username)
 }
 
 func generateProcessID(existingID string) (string, error) {
