@@ -24,6 +24,7 @@ import (
 //go:generate counterfeiter . Restorer
 //go:generate counterfeiter . Starter
 //go:generate counterfeiter . BulkStarter
+//go:generate counterfeiter . PeaCleaner
 
 const ContainerIPKey = "garden.network.container-ip"
 const BridgeIPKey = "garden.network.host-ip"
@@ -101,6 +102,11 @@ type Restorer interface {
 	Restore(logger lager.Logger, handles []string) []string
 }
 
+type PeaCleaner interface {
+	CleanAll(logger lager.Logger) error
+	Clean(logger lager.Logger, handle string) error
+}
+
 type UidGeneratorFunc func() string
 
 func (fn UidGeneratorFunc) Generate() string {
@@ -141,6 +147,8 @@ type Gardener struct {
 	MaxContainers uint64
 
 	Restorer Restorer
+
+	PeaCleaner PeaCleaner
 
 	AllowPrivilgedContainers bool
 }
@@ -455,6 +463,10 @@ func (g *Gardener) Start() error {
 
 	if err := g.BulkStarter.StartAll(); err != nil {
 		return fmt.Errorf("bulk starter: %s", err)
+	}
+
+	if err := g.PeaCleaner.CleanAll(log); err != nil {
+		return fmt.Errorf("clean peas: %s", err)
 	}
 
 	handles, err := g.Containerizer.Handles()

@@ -451,6 +451,7 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	}
 
 	var bulkStarter gardener.BulkStarter = gardener.NewBulkStarter(starters)
+	peaCleaner := cmd.wirePeaCleaner(factory, volumizer)
 
 	backend := &gardener.Gardener{
 		UidGenerator:    wireUIDGenerator(),
@@ -458,10 +459,11 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 		SysInfoProvider: sysinfo.NewResourcesProvider(cmd.Containers.Dir),
 		Networker:       networker,
 		Volumizer:       volumizer,
-		Containerizer:   cmd.wireContainerizer(logger, factory, propManager, volumizer),
+		Containerizer:   cmd.wireContainerizer(logger, factory, propManager, volumizer, peaCleaner),
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
+		PeaCleaner:      peaCleaner,
 
 		// We want to be able to disable privileged containers independently of
 		// whether or not gdn is running as root.
@@ -539,6 +541,15 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	ports.SaveState(cmd.Network.PortPoolPropertiesPath, portPoolState)
 
 	return nil
+}
+
+func (cmd *ServerCommand) wirePeaCleaner(factory GardenFactory, volumizer gardener.Volumizer) gardener.PeaCleaner {
+	cmdRunner := factory.CommandRunner()
+	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
+	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin}
+
+	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
+	return peas.NewPeaCleaner(runcDeleter, volumizer, cmd.Containers.Dir)
 }
 
 func (cmd *ServerCommand) calculateDefaultMappingLengths(containerRootUID, containerRootGID int) {
@@ -740,7 +751,7 @@ func (cmd *ServerCommand) wireImagePlugin(commandRunner commandrunner.CommandRun
 }
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFactory,
-	properties gardener.PropertyManager, volumizer peas.Volumizer) *rundmc.Containerizer {
+	properties gardener.PropertyManager, volumizer peas.Volumizer, peaCleaner gardener.PeaCleaner) *rundmc.Containerizer {
 
 	initMount, initPath := initBindMountAndPath(cmd.Bin.Init.Path())
 
@@ -828,12 +839,12 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	processBuilder := runrunc.NewProcessBuilder(wireEnvFunc(), nonRootMaxCaps)
 
 	cmdRunner := factory.CommandRunner()
-	runcRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
+	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin}
 
 	runcrunner := runrunc.New(
 		cmdRunner,
-		runcRunner,
+		runcLogRunner,
 		runcBinary,
 		cmd.Bin.Dadoo.Path(),
 		cmd.Runtime.Plugin,
@@ -860,7 +871,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	pidFileReader := wirePidfileReader()
 	privilegeChecker := &privchecker.PrivilegeChecker{BundleLoader: bndlLoader}
 
-	runcDeleter := runrunc.NewDeleter(runcRunner, runcBinary)
+	runcDeleter := runrunc.NewDeleter(runcLogRunner, runcBinary)
 
 	peaCreator := &peas.PeaCreator{
 		Volumizer:              volumizer,
@@ -872,6 +883,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		BundleSaver:            bundleSaver,
 		ExecRunner:             factory.WireExecRunner("run"),
 		RuncDeleter:            runcDeleter,
+		PeaCleaner:             peaCleaner,
 	}
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
