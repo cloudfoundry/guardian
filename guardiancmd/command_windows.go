@@ -104,7 +104,7 @@ func wireEnvFunc() runrunc.EnvFunc {
 // Note - it's not possible to bind mount a single file in Windows, so we are
 // using a directory instead
 func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
-	initPathInContainer := filepath.Join(os.TempDir(), "bin", filepath.Base(initPathOnHost))
+	initPathInContainer := filepath.Join(`C:\`, "Windows", "Temp", "bin", filepath.Base(initPathOnHost))
 	return specs.Mount{
 		Type:        "bind",
 		Source:      filepath.Dir(initPathOnHost),
