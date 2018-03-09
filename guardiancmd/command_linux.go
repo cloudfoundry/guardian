@@ -136,7 +136,7 @@ func (f *LinuxFactory) WireRootfsFileCreator() rundmc.RootfsFileCreator {
 }
 
 func initBindMountAndPath(initPathOnHost string) (specs.Mount, string) {
-	initPathInContainer := filepath.Join(os.TempDir(), "garden-init")
+	initPathInContainer := filepath.Join("/tmp", "garden-init")
 	return specs.Mount{
 		Type:        "bind",
 		Source:      initPathOnHost,
