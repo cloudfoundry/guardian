@@ -32,6 +32,7 @@ func NewStarter(
 	logger lager.Logger,
 	procCgroupReader io.ReadCloser,
 	procSelfCgroupReader io.ReadCloser,
+	procSelfMountinfoReader io.ReadCloser,
 	cgroupMountpoint string,
 	gardenCgroup string,
 	allowedDevices []specs.LinuxDeviceCgroup,
@@ -39,14 +40,15 @@ func NewStarter(
 	chowner Chowner,
 ) *CgroupStarter {
 	return &CgroupStarter{
-		CgroupPath:      cgroupMountpoint,
-		GardenCgroup:    gardenCgroup,
-		ProcCgroups:     procCgroupReader,
-		ProcSelfCgroups: procSelfCgroupReader,
-		AllowedDevices:  allowedDevices,
-		CommandRunner:   runner,
-		Logger:          logger,
-		Chowner:         chowner,
+		CgroupPath:        cgroupMountpoint,
+		GardenCgroup:      gardenCgroup,
+		ProcCgroups:       procCgroupReader,
+		ProcSelfCgroups:   procSelfCgroupReader,
+		ProcSelfMountinfo: procSelfMountinfoReader,
+		AllowedDevices:    allowedDevices,
+		CommandRunner:     runner,
+		Logger:            logger,
+		Chowner:           chowner,
 	}
 }
 
@@ -56,8 +58,9 @@ type CgroupStarter struct {
 	AllowedDevices []specs.LinuxDeviceCgroup
 	CommandRunner  commandrunner.CommandRunner
 
-	ProcCgroups     io.ReadCloser
-	ProcSelfCgroups io.ReadCloser
+	ProcCgroups       io.ReadCloser
+	ProcSelfCgroups   io.ReadCloser
+	ProcSelfMountinfo io.ReadCloser
 
 	Logger  lager.Logger
 	Chowner Chowner
@@ -219,6 +222,11 @@ type group struct {
 func (s *CgroupStarter) subsystemGroupings() (map[string]group, error) {
 	groupings := map[string]group{}
 
+	existingCgroupHierarchy, err := s.existingCgroupHierarchy()
+	if err != nil {
+		return groupings, err
+	}
+
 	scanner := bufio.NewScanner(s.ProcSelfCgroups)
 	for scanner.Scan() {
 		segs := strings.Split(scanner.Text(), ":")
@@ -228,10 +236,48 @@ func (s *CgroupStarter) subsystemGroupings() (map[string]group, error) {
 
 		subsystems := strings.Split(segs[1], ",")
 		for _, subsystem := range subsystems {
-			groupings[subsystem] = group{segs[1], segs[2]}
+			path := segs[2]
+			if existingPath, ok := existingCgroupHierarchy[subsystem]; ok {
+				// If the existing cgroup mountpoint is mounting a prefix of the
+				// desired path, we're inside of a cgroup ourselves.  When
+				// garden creates further cgroups (directories), we should only
+				// do so relative to our current mount point.
+				if newPath, err := filepath.Rel(existingPath.Path, path); err == nil {
+					path = filepath.Clean("/" + newPath)
+				}
+			}
+			groupings[subsystem] = group{segs[1], path}
 		}
 	}
 
+	return groupings, scanner.Err()
+}
+
+// existingCgroupHierarchy returns the paths of the namespaces in effect
+// relative to the root namespace.
+func (s *CgroupStarter) existingCgroupHierarchy() (map[string]group, error) {
+	groupings := map[string]group{}
+
+	scanner := bufio.NewScanner(s.ProcSelfMountinfo)
+	for scanner.Scan() {
+		segs := strings.Split(scanner.Text(), " ")
+		// Format: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/Documentation/filesystems/proc.txt?h=v4.15#n1680
+		// We need to find the field that signifies the end of optional fields
+		optionalEnd := -1
+		for idx, seg := range segs {
+			if seg == "-" {
+				optionalEnd = idx
+				break
+			}
+		}
+		if optionalEnd < 6 || len(segs) < (optionalEnd+2) || segs[optionalEnd+1] != "cgroup" {
+			continue
+		}
+		subsystems := path.Base(segs[4])
+		for _, subsystem := range strings.Split(subsystems, ",") {
+			groupings[subsystem] = group{subsystems, segs[3]}
+		}
+	}
 	return groupings, scanner.Err()
 }
 
