@@ -25,6 +25,7 @@ var _ = Describe("Gardener", func() {
 		containerizer   *fakes.FakeContainerizer
 		uidGenerator    *fakes.FakeUidGenerator
 		fakeBulkStarter *fakes.FakeBulkStarter
+		fakePeaCleaner  *fakes.FakePeaCleaner
 		sysinfoProvider *fakes.FakeSysInfoProvider
 		propertyManager *fakes.FakePropertyManager
 		restorer        *fakes.FakeRestorer
@@ -39,6 +40,7 @@ var _ = Describe("Gardener", func() {
 		containerizer = new(fakes.FakeContainerizer)
 		uidGenerator = new(fakes.FakeUidGenerator)
 		fakeBulkStarter = new(fakes.FakeBulkStarter)
+		fakePeaCleaner = new(fakes.FakePeaCleaner)
 		networker = new(fakes.FakeNetworker)
 		volumizer = new(fakes.FakeVolumizer)
 		sysinfoProvider = new(fakes.FakeSysInfoProvider)
@@ -59,6 +61,7 @@ var _ = Describe("Gardener", func() {
 			Logger:                   logger,
 			PropertyManager:          propertyManager,
 			Restorer:                 restorer,
+			PeaCleaner:               fakePeaCleaner,
 			MaxContainers:            0,
 			AllowPrivilgedContainers: false,
 		}
@@ -699,6 +702,21 @@ var _ = Describe("Gardener", func() {
 		It("should return the error when it failes to get a list of handles", func() {
 			containerizer.HandlesReturns([]string{}, errors.New("banana"))
 			Expect(gdnr.Start()).To(MatchError("banana"))
+		})
+
+		It("should cleanup peas", func() {
+			Expect(gdnr.Start()).To(Succeed())
+			Expect(fakePeaCleaner.CleanAllCallCount()).To(Equal(1))
+		})
+
+		Context("when the bulk starter fails", func() {
+			BeforeEach(func() {
+				fakePeaCleaner.CleanAllReturns(errors.New("bam"))
+			})
+
+			It("returns the error", func() {
+				Expect(gdnr.Start()).To(MatchError(ContainSubstring("bam")))
+			})
 		})
 	})
 

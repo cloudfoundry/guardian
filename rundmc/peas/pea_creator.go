@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gardener"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -51,6 +52,7 @@ type PeaCreator struct {
 	ProcessBuilder         runrunc.ProcessBuilder
 	ExecRunner             runrunc.ExecRunner
 	RuncDeleter            RuncDeleter
+	PeaCleaner             gardener.PeaCleaner
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error) {
@@ -152,17 +154,7 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	}
 
 	extraCleanup := func() error {
-		var result *multierror.Error
-		err := p.RuncDeleter.Delete(log, true, processID)
-		if err != nil {
-			result = multierror.Append(result, err)
-		}
-		err = p.Volumizer.Destroy(log, processID)
-		if err != nil {
-			result = multierror.Append(result, err)
-		}
-
-		return result.ErrorOrNil()
+		return p.PeaCleaner.Clean(log, processID)
 	}
 	proc, runErr := p.ExecRunner.Run(
 		log, processID, peaBundlePath, sandboxHandle, sandboxBundlePath,

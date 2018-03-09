@@ -202,4 +202,11 @@ var _ = Describe("Depot", func() {
 			})
 		})
 	})
+
+	Describe("GetDir", func() {
+		It("returns the depot dir", func() {
+			dirDepot := depot.New("/path/to/depot", nil, nil, nil)
+			Expect(dirDepot.GetDir()).To(Equal("/path/to/depot"))
+		})
+	})
 })

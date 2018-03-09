@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gardener/gardenerfakes"
 	"code.cloudfoundry.org/guardian/rundmc/depot/depotfakes"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/peas"
@@ -25,6 +26,7 @@ var _ = Describe("PeaCreator", func() {
 
 	var (
 		volumizer              *peasfakes.FakeVolumizer
+		peaCleaner             *gardenerfakes.FakePeaCleaner
 		runcDeleter            *peasfakes.FakeRuncDeleter
 		pidGetter              *peasfakes.FakePidGetter
 		bindMountSourceCreator *depotfakes.FakeBindMountSourceCreator
@@ -58,6 +60,7 @@ var _ = Describe("PeaCreator", func() {
 
 	BeforeEach(func() {
 		volumizer = new(peasfakes.FakeVolumizer)
+		peaCleaner = new(gardenerfakes.FakePeaCleaner)
 		volumizer.CreateReturns(specs.Spec{Version: "some-spec-version"}, nil)
 		runcDeleter = new(peasfakes.FakeRuncDeleter)
 		pidGetter = new(peasfakes.FakePidGetter)
@@ -92,6 +95,7 @@ var _ = Describe("PeaCreator", func() {
 			ExecRunner:             execRunner,
 			PrivilegedGetter:       privilegedGetter,
 			RuncDeleter:            runcDeleter,
+			PeaCleaner:             peaCleaner,
 		}
 
 		var err error
@@ -283,20 +287,13 @@ var _ = Describe("PeaCreator", func() {
 			})
 		})
 
-		It("destroys the volume when the process is cleaned up", func() {
+		It("cleans up the pea", func() {
 			Eventually(execRunner.RunCallCount()).Should(Equal(1))
 			_, _, _, _, _, _, _, _, _, _, cleanup := execRunner.RunArgsForCall(0)
-			volumizer.DestroyReturns(errors.New("an-err"))
-			Expect(cleanup().Error()).To(ContainSubstring("an-err"))
-			Expect(volumizer.DestroyCallCount()).To(Equal(1))
-		})
-
-		It("deletes the container when the process is cleaned up", func() {
-			Eventually(execRunner.RunCallCount()).Should(Equal(1))
-			_, _, _, _, _, _, _, _, _, _, cleanup := execRunner.RunArgsForCall(0)
-			runcDeleter.DeleteReturns(errors.New("delete-err"))
-			Expect(cleanup().Error()).To(ContainSubstring("delete-err"))
-			Expect(volumizer.DestroyCallCount()).To(Equal(1))
+			Expect(cleanup()).To(Succeed())
+			Expect(peaCleaner.CleanCallCount()).To(Equal(1))
+			_, processID := peaCleaner.CleanArgsForCall(0)
+			Expect(processID).To(Equal(processSpec.ID))
 		})
 
 		Context("when the process spec has no ID", func() {

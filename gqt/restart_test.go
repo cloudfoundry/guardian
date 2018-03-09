@@ -35,6 +35,7 @@ var _ = Describe("Surviving Restarts", func() {
 			restartConfig       runner.GdnRunnerConfig
 			gracefulShutdown    bool
 			processImage        garden.ImageRef
+			processID           string
 		)
 
 		BeforeEach(func() {
@@ -58,6 +59,7 @@ var _ = Describe("Surviving Restarts", func() {
 
 			gracefulShutdown = true
 			processImage = garden.ImageRef{}
+			processID = ""
 		})
 
 		JustBeforeEach(func() {
@@ -86,6 +88,7 @@ var _ = Describe("Surviving Restarts", func() {
 			out := gbytes.NewBuffer()
 			existingProc, err = container.Run(
 				garden.ProcessSpec{
+					ID:    processID,
 					Path:  "/bin/sh",
 					Args:  []string{"-c", fmt.Sprintf("while true; do echo %s; sleep 1; done;", container.Handle())},
 					Image: processImage,
@@ -144,6 +147,17 @@ var _ = Describe("Surviving Restarts", func() {
 
 				Eventually(check, time.Second*2, time.Millisecond*200).Should(Equal("0\n"), "expected user process to be killed")
 				Consistently(check, time.Second*2, time.Millisecond*200).Should(Equal("0\n"), "expected user process to stay dead")
+			})
+
+			Context("when running a pea", func() {
+				BeforeEach(func() {
+					processImage = garden.ImageRef{URI: defaultTestRootFS}
+					processID = "unique-potato"
+				})
+
+				It("destroys the pea container", func() {
+					Expect(filepath.Join("/run/runc", processID)).NotTo(BeADirectory())
+				})
 			})
 
 			Context("when the garden server does not shut down gracefully", func() {

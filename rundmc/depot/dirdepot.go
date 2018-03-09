@@ -105,6 +105,10 @@ func (d *DirectoryDepot) Destroy(log lager.Logger, handle string) error {
 	return os.RemoveAll(d.toDir(handle))
 }
 
+func (d *DirectoryDepot) GetDir() string {
+	return d.dir
+}
+
 //go:generate counterfeiter . BundleLoader
 type BundleLoader interface {
 	Load(bundleDir string) (goci.Bndl, error)
