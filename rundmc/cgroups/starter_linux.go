@@ -37,16 +37,18 @@ func NewStarter(
 	allowedDevices []specs.LinuxDeviceCgroup,
 	runner commandrunner.CommandRunner,
 	chowner Chowner,
+	mountPointChecker MountPointChecker,
 ) *CgroupStarter {
 	return &CgroupStarter{
-		CgroupPath:      cgroupMountpoint,
-		GardenCgroup:    gardenCgroup,
-		ProcCgroups:     procCgroupReader,
-		ProcSelfCgroups: procSelfCgroupReader,
-		AllowedDevices:  allowedDevices,
-		CommandRunner:   runner,
-		Logger:          logger,
-		Chowner:         chowner,
+		CgroupPath:        cgroupMountpoint,
+		GardenCgroup:      gardenCgroup,
+		ProcCgroups:       procCgroupReader,
+		ProcSelfCgroups:   procSelfCgroupReader,
+		AllowedDevices:    allowedDevices,
+		CommandRunner:     runner,
+		Logger:            logger,
+		Chowner:           chowner,
+		MountPointChecker: mountPointChecker,
 	}
 }
 
@@ -59,8 +61,9 @@ type CgroupStarter struct {
 	ProcCgroups     io.ReadCloser
 	ProcSelfCgroups io.ReadCloser
 
-	Logger  lager.Logger
-	Chowner Chowner
+	Logger            lager.Logger
+	Chowner           Chowner
+	MountPointChecker MountPointChecker
 }
 
 func (s *CgroupStarter) Start() error {
@@ -74,7 +77,7 @@ func (s *CgroupStarter) mountCgroupsIfNeeded(logger lager.Logger) error {
 		return err
 	}
 
-	mountPoint, err := s.isMountPoint(s.CgroupPath)
+	mountPoint, err := s.MountPointChecker.IsMountPoint(s.CgroupPath)
 	if err != nil {
 		return err
 	}
@@ -243,7 +246,7 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 
 	logger.Info("started")
 
-	mountPoint, err := s.isMountPoint(cgroupPath)
+	mountPoint, err := s.MountPointChecker.IsMountPoint(cgroupPath)
 	if err != nil {
 		return err
 	}
@@ -264,16 +267,4 @@ func (s *CgroupStarter) idempotentCgroupMount(logger lager.Logger, cgroupPath, s
 	logger.Info("finished")
 
 	return nil
-}
-
-func (s *CgroupStarter) isMountPoint(path string) (bool, error) {
-	// append trailing slash to force symlink traversal; symlinking e.g. 'cpu'
-	// to 'cpu,cpuacct' is common
-	cmd := exec.Command("mountpoint", "-q", path+"/")
-
-	if err := s.CommandRunner.Start(cmd); err != nil {
-		return false, err
-	}
-
-	return s.CommandRunner.Wait(cmd) == nil, nil
 }
