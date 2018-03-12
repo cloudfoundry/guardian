@@ -684,7 +684,11 @@ func ensureImageDestroyed(logger lager.Logger, imagePath string) error {
 }
 
 func getDeviceForFile(path string) (uint64, error) {
-	info, _ := os.Stat(path)
+	info, err := os.Stat(path)
+	if err != nil {
+		return 0, errorspkg.Wrap(err, "stat image path")
+	}
+
 	stat, ok := info.Sys().(*syscall.Stat_t)
 	if !ok {
 		return 0, fmt.Errorf("failed to stat %s", path)

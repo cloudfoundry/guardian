@@ -180,6 +180,13 @@ var _ = Describe("Driver", func() {
 				Expect(testhelpers.XFSMountPoints()).To(ContainElement(storePath))
 			})
 		})
+
+		Context("when the store path does not exist", func() {
+
+			It("succcesfully unmounts a filesystem", func() {
+				Expect(driver.DeInitFilesystem(logger, "does/not/exist")).To(MatchError(ContainSubstring("stat image path")))
+			})
+		})
 	})
 
 	Describe("CreateImage", func() {
