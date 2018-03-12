@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path"
 	"strings"
 
@@ -21,12 +20,16 @@ import (
 
 var _ = Describe("CgroupStarter", func() {
 	var (
-		runner                  *fake_command_runner.FakeCommandRunner
-		starter                 *cgroups.CgroupStarter
-		logger                  lager.Logger
-		chowner                 *fakes.FakeChowner
-		procCgroupsContents     string
-		procSelfCgroupsContents string
+		runner                    *fake_command_runner.FakeCommandRunner
+		starter                   *cgroups.CgroupStarter
+		logger                    lager.Logger
+		chowner                   *fakes.FakeChowner
+		mountPointChecker         *fakes.FakeMountPointChecker
+		procCgroupsContents       string
+		procSelfCgroupsContents   string
+		cgroupPathMounted         bool
+		cgroupPathMountCheckError error
+		notMountedCgroups         []string
 
 		tmpDir string
 	)
@@ -43,9 +46,27 @@ var _ = Describe("CgroupStarter", func() {
 		logger = lagertest.NewTestLogger("test")
 		runner = fake_command_runner.New()
 		chowner = new(fakes.FakeChowner)
+		mountPointChecker = new(fakes.FakeMountPointChecker)
+		cgroupPathMounted = true
+		cgroupPathMountCheckError = nil
+		notMountedCgroups = []string{}
 	})
 
 	JustBeforeEach(func() {
+		mountPointChecker.Stub = func(p string) (bool, error) {
+			for _, notMounted := range notMountedCgroups {
+				if p == path.Join(tmpDir, "cgroup", notMounted) {
+					return false, nil
+				}
+			}
+
+			if p == path.Join(tmpDir, "cgroup") {
+				return cgroupPathMounted, cgroupPathMountCheckError
+			}
+
+			return true, nil
+		}
+
 		starter = &cgroups.CgroupStarter{
 			CgroupPath:   path.Join(tmpDir, "cgroup"),
 			GardenCgroup: "garden",
@@ -55,11 +76,12 @@ var _ = Describe("CgroupStarter", func() {
 				Minor:  int64ptr(200),
 				Access: "rwm",
 			}},
-			CommandRunner:   runner,
-			ProcCgroups:     ioutil.NopCloser(strings.NewReader(procCgroupsContents)),
-			ProcSelfCgroups: ioutil.NopCloser(strings.NewReader(procSelfCgroupsContents)),
-			Logger:          logger,
-			Chowner:         chowner,
+			CommandRunner:     runner,
+			ProcCgroups:       ioutil.NopCloser(strings.NewReader(procCgroupsContents)),
+			ProcSelfCgroups:   ioutil.NopCloser(strings.NewReader(procSelfCgroupsContents)),
+			Logger:            logger,
+			Chowner:           chowner,
+			MountPointChecker: mountPointChecker.Spy,
 		}
 	})
 
@@ -105,12 +127,7 @@ var _ = Describe("CgroupStarter", func() {
 
 	Context("when the cgroup path is not a mountpoint", func() {
 		BeforeEach(func() {
-			runner.WhenWaitingFor(fake_command_runner.CommandSpec{
-				Path: "mountpoint",
-				Args: []string{"-q", path.Join(tmpDir, "cgroup") + "/"},
-			}, func(cmd *exec.Cmd) error {
-				return errors.New("not a mountpoint")
-			})
+			cgroupPathMounted = false
 		})
 
 		It("mounts it", func() {
@@ -134,16 +151,11 @@ var _ = Describe("CgroupStarter", func() {
 
 	Context("when there is an error checking for a mountpoint on Start", func() {
 		BeforeEach(func() {
-			runner.WhenStarting(fake_command_runner.CommandSpec{
-				Path: "mountpoint",
-				Args: []string{"-q", path.Join(tmpDir, "cgroup") + "/"},
-			}, func(cmd *exec.Cmd) error {
-				return errors.New("mountpoint-errored-on-start")
-			})
+			cgroupPathMountCheckError = errors.New("mountpoint check error")
 		})
 
 		It("returns an error", func() {
-			Expect(starter.Start()).To(MatchError("mountpoint-errored-on-start"))
+			Expect(starter.Start()).To(MatchError("mountpoint check error"))
 		})
 	})
 
@@ -159,14 +171,7 @@ var _ = Describe("CgroupStarter", func() {
 				"4:memory:/\n" +
 				"3:cpu,cpuacct:/\n"
 
-			for _, notMounted := range []string{"devices", "cpu", "cpuacct"} {
-				runner.WhenWaitingFor(fake_command_runner.CommandSpec{
-					Path: "mountpoint",
-					Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted) + "/"},
-				}, func(cmd *exec.Cmd) error {
-					return errors.New("not a mountpoint")
-				})
-			}
+			notMountedCgroups = []string{"devices", "cpu", "cpuacct"}
 		})
 
 		It("succeeds", func() {
@@ -245,15 +250,7 @@ var _ = Describe("CgroupStarter", func() {
 					"memory\t2\t1\t1\n"
 
 				procSelfCgroupsContents = "4:memory:/461299e6-b672-497c-64e5-793494b9bbdb\n"
-
-				for _, notMounted := range []string{"memory"} {
-					runner.WhenWaitingFor(fake_command_runner.CommandSpec{
-						Path: "mountpoint",
-						Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted) + "/"},
-					}, func(cmd *exec.Cmd) error {
-						return errors.New("not a mountpoint")
-					})
-				}
+				notMountedCgroups = []string{"memory"}
 			})
 
 			It("creates subdirectories owned by the specified user and group", func() {
@@ -278,13 +275,7 @@ var _ = Describe("CgroupStarter", func() {
 			BeforeEach(func() {
 				procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
 					"freezer\t7\t1\t1\n"
-
-				runner.WhenWaitingFor(fake_command_runner.CommandSpec{
-					Path: "mountpoint",
-					Args: []string{"-q", path.Join(tmpDir, "cgroup", "freezer") + "/"},
-				}, func(cmd *exec.Cmd) error {
-					return errors.New("not a mountpoint")
-				})
+				notMountedCgroups = []string{"freezer"}
 			})
 
 			It("mounts it as its own subsystem", func() {
@@ -300,13 +291,7 @@ var _ = Describe("CgroupStarter", func() {
 			BeforeEach(func() {
 				procCgroupsContents = "#subsys_name\thierarchy\tnum_cgroups\tenabled\n" +
 					"freezer\t7\t1\t0\n"
-
-				runner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "mountpoint",
-					Args: []string{"-q", path.Join(tmpDir, "cgroup", "freezer") + "/"},
-				}, func(cmd *exec.Cmd) error {
-					return errors.New("not a mountpoint")
-				})
+				notMountedCgroups = []string{"freezer"}
 			})
 
 			It("skips it", func() {
@@ -331,15 +316,7 @@ var _ = Describe("CgroupStarter", func() {
 			procSelfCgroupsContents = "5:devices:/\n" +
 				"4:memory:/\n" +
 				"3:cpu,cpuacct:/\n"
-
-			for _, notMounted := range []string{"devices", "cpu", "cpuacct"} {
-				runner.WhenRunning(fake_command_runner.CommandSpec{
-					Path: "mountpoint",
-					Args: []string{"-q", path.Join(tmpDir, "cgroup", notMounted) + "/"},
-				}, func(cmd *exec.Cmd) error {
-					return errors.New("not a mountpoint")
-				})
-			}
+			notMountedCgroups = []string{"devices", "cpu", "cpuacct"}
 		})
 
 		It("returns CgroupsFormatError", func() {
