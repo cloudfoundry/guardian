@@ -21,6 +21,10 @@ var _ = Describe("Mountpoint checker", func() {
 		isMountError error
 	)
 
+	JustBeforeEach(func() {
+		isMountPoint, isMountError = cgroups.IsMountPoint(mountPoint)
+	})
+
 	Context("when the path exists", func() {
 		BeforeEach(func() {
 			var err error
@@ -30,10 +34,6 @@ var _ = Describe("Mountpoint checker", func() {
 			mountPoint = filepath.Join(tmpDir, "mount-point")
 			Expect(os.Mkdir(mountPoint, os.ModeDir)).To(Succeed())
 
-		})
-
-		JustBeforeEach(func() {
-			isMountPoint, isMountError = cgroups.IsMountPoint(mountPoint)
 		})
 
 		AfterEach(func() {
