@@ -3,6 +3,7 @@ package rundmc
 import (
 	"fmt"
 	"io"
+	"strings"
 	"time"
 
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -25,6 +26,7 @@ import (
 //go:generate counterfeiter . StateStore
 //go:generate counterfeiter . RootfsFileCreator
 //go:generate counterfeiter . PeaCreator
+//go:generate counterfeiter . PeaUsernameResolver
 
 type Depot interface {
 	Create(log lager.Logger, handle string, desiredContainerSpec spec.DesiredContainerSpec) error
@@ -75,30 +77,36 @@ type RootfsFileCreator interface {
 	CreateFiles(rootFSPath string, pathsToCreate ...string) error
 }
 
-// Containerizer knows how to manage a depot of container bundles
-type Containerizer struct {
-	depot             Depot
-	loader            BundleLoader
-	runtime           OCIRuntime
-	stopper           Stopper
-	nstar             NstarRunner
-	events            EventStore
-	states            StateStore
-	rootfsFileCreator RootfsFileCreator
-	peaCreator        PeaCreator
+type PeaUsernameResolver interface {
+	ResolveUser(log lager.Logger, bundlePath, handle string, image garden.ImageRef, username string) (int, int, error)
 }
 
-func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator, peaCreator PeaCreator) *Containerizer {
+// Containerizer knows how to manage a depot of container bundles
+type Containerizer struct {
+	depot               Depot
+	loader              BundleLoader
+	runtime             OCIRuntime
+	stopper             Stopper
+	nstar               NstarRunner
+	events              EventStore
+	states              StateStore
+	rootfsFileCreator   RootfsFileCreator
+	peaCreator          PeaCreator
+	peaUsernameResolver PeaUsernameResolver
+}
+
+func New(depot Depot, runtime OCIRuntime, loader BundleLoader, nstarRunner NstarRunner, stopper Stopper, events EventStore, states StateStore, rootfsFileCreator RootfsFileCreator, peaCreator PeaCreator, peaUsernameResolver PeaUsernameResolver) *Containerizer {
 	return &Containerizer{
-		depot:             depot,
-		runtime:           runtime,
-		loader:            loader,
-		nstar:             nstarRunner,
-		stopper:           stopper,
-		events:            events,
-		states:            states,
-		rootfsFileCreator: rootfsFileCreator,
-		peaCreator:        peaCreator,
+		depot:               depot,
+		runtime:             runtime,
+		loader:              loader,
+		nstar:               nstarRunner,
+		stopper:             stopper,
+		events:              events,
+		states:              states,
+		rootfsFileCreator:   rootfsFileCreator,
+		peaCreator:          peaCreator,
+		peaUsernameResolver: peaUsernameResolver,
 	}
 }
 
@@ -146,14 +154,23 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 	log.Info("started")
 	defer log.Info("finished")
 
-	path, err := c.depot.Lookup(log, handle)
+	bundlePath, err := c.depot.Lookup(log, handle)
 	if err != nil {
 		log.Error("lookup-failed", err)
 		return nil, err
 	}
 
 	if spec.Image != (garden.ImageRef{}) {
-		return c.peaCreator.CreatePea(log, spec, io, handle, path)
+		if shouldResolveUsername(spec.User) {
+			resolvedUID, resolvedGID, err := c.peaUsernameResolver.ResolveUser(log, bundlePath, handle, spec.Image, spec.User)
+			if err != nil {
+				return nil, err
+			}
+
+			spec.User = fmt.Sprintf("%d:%d", resolvedUID, resolvedGID)
+		}
+
+		return c.peaCreator.CreatePea(log, spec, io, handle, bundlePath)
 	}
 
 	if spec.BindMounts != nil {
@@ -162,7 +179,11 @@ func (c *Containerizer) Run(log lager.Logger, handle string, spec garden.Process
 		return nil, err
 	}
 
-	return c.runtime.Exec(log, path, handle, spec, io)
+	return c.runtime.Exec(log, bundlePath, handle, spec, io)
+}
+
+func shouldResolveUsername(username string) bool {
+	return username != "" && !strings.Contains(username, ":")
 }
 
 func (c *Containerizer) Attach(log lager.Logger, handle string, processID string, io garden.ProcessIO) (garden.Process, error) {

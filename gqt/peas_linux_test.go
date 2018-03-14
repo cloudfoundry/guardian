@@ -54,6 +54,21 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		Eventually(func() int { return numPipes(gdn.Pid) }).Should(Equal(initialPipes))
 	})
 
+	Context("when run with /etc/passwd username", func() {
+		It("should not leak username resolving peas", func() {
+			ctr.Run(garden.ProcessSpec{
+				User:  "alice",
+				Path:  "echo",
+				Args:  []string{"hello"},
+				Image: garden.ImageRef{URI: "raw://" + peaRootfs},
+			}, garden.ProcessIO{})
+
+			for _, pid := range collectPeaPids(ctr.Handle()) {
+				Eventually("/proc/"+pid, "10s").ShouldNot(BeAnExistingFile())
+			}
+		})
+	})
+
 	Describe("process limits", func() {
 		It("should not leak cgroups", func() {
 			stdout := gbytes.NewBuffer()
@@ -245,3 +260,22 @@ var _ = Describe("Partially shared containers (peas)", func() {
 		})
 	})
 })
+
+func collectPeaPids(handle string) []string {
+	peaPids := []string{}
+	processesDir := filepath.Join(config.DepotDir, handle, "processes")
+
+	err := filepath.Walk(processesDir, func(path string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		if info.Name() == "pidfile" {
+			pid, err := ioutil.ReadFile(path)
+			Expect(err).NotTo(HaveOccurred())
+			peaPids = append(peaPids, string(pid))
+		}
+		return nil
+	})
+	Expect(err).NotTo(HaveOccurred())
+	return peaPids
+}
