@@ -895,6 +895,13 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		PeaCleaner:             peaCleaner,
 	}
 
+	peaUsernameResolver := &peas.PeaUsernameResolver{
+		PidGetter:    pidFileReader,
+		PeaCreator:   peaCreator,
+		Loader:       bndlLoader,
+		UserLookuper: runrunc.LookupFunc(runrunc.LookupUser),
+	}
+
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
 
@@ -907,7 +914,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		runner = runcontainerd.New(containerdClient, bndlLoader, ctx, processBuilder, wireUIDGenerator())
 	}
 
-	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator)
+	return rundmc.New(depot, runcrunner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver)
 }
 
 func wirePidfileReader() *pidreader.PidFileReader {

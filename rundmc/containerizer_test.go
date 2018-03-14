@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/garden/gardenfakes"
 	"code.cloudfoundry.org/guardian/gardener"
-	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
+	specpkg "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	fakes "code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
@@ -23,15 +24,16 @@ import (
 
 var _ = Describe("Rundmc", func() {
 	var (
-		fakeDepot             *fakes.FakeDepot
-		fakeBundleLoader      *fakes.FakeBundleLoader
-		fakeOCIRuntime        *fakes.FakeOCIRuntime
-		fakeNstarRunner       *fakes.FakeNstarRunner
-		fakeStopper           *fakes.FakeStopper
-		fakeEventStore        *fakes.FakeEventStore
-		fakeStateStore        *fakes.FakeStateStore
-		fakeRootfsFileCreator *fakes.FakeRootfsFileCreator
-		fakePeaCreator        *fakes.FakePeaCreator
+		fakeDepot               *fakes.FakeDepot
+		fakeBundleLoader        *fakes.FakeBundleLoader
+		fakeOCIRuntime          *fakes.FakeOCIRuntime
+		fakeNstarRunner         *fakes.FakeNstarRunner
+		fakeStopper             *fakes.FakeStopper
+		fakeEventStore          *fakes.FakeEventStore
+		fakeStateStore          *fakes.FakeStateStore
+		fakeRootfsFileCreator   *fakes.FakeRootfsFileCreator
+		fakePeaCreator          *fakes.FakePeaCreator
+		fakePeaUsernameResolver *fakes.FakePeaUsernameResolver
 
 		logger        lager.Logger
 		containerizer *rundmc.Containerizer
@@ -47,18 +49,19 @@ var _ = Describe("Rundmc", func() {
 		fakeStateStore = new(fakes.FakeStateStore)
 		fakeRootfsFileCreator = new(fakes.FakeRootfsFileCreator)
 		fakePeaCreator = new(fakes.FakePeaCreator)
+		fakePeaUsernameResolver = new(fakes.FakePeaUsernameResolver)
 		logger = lagertest.NewTestLogger("test")
 
 		fakeDepot.LookupStub = func(_ lager.Logger, handle string) (string, error) {
 			return "/path/to/" + handle, nil
 		}
 
-		containerizer = rundmc.New(fakeDepot, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator, fakePeaCreator)
+		containerizer = rundmc.New(fakeDepot, fakeOCIRuntime, fakeBundleLoader, fakeNstarRunner, fakeStopper, fakeEventStore, fakeStateStore, fakeRootfsFileCreator, fakePeaCreator, fakePeaUsernameResolver)
 	})
 
 	Describe("Create", func() {
 		It("should ask the depot to create a container", func() {
-			spec := spec.DesiredContainerSpec{
+			spec := specpkg.DesiredContainerSpec{
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
 			}
@@ -74,7 +77,7 @@ var _ = Describe("Rundmc", func() {
 		Context("when creating the depot directory fails", func() {
 			It("returns an error", func() {
 				fakeDepot.CreateReturns(errors.New("blam"))
-				Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
 					Handle:     "exuberant!",
 					BaseConfig: specs.Spec{Root: &specs.Root{}},
 				})).NotTo(Succeed())
@@ -82,7 +85,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should create a container in the given directory", func() {
-			Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
+			Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{}},
 			})).To(Succeed())
@@ -95,7 +98,7 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		It("should prepare the root file system by creating mount points", func() {
-			Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
+			Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
 				Handle:     "exuberant!",
 				BaseConfig: specs.Spec{Root: &specs.Root{Path: "some-rootfs"}},
 			})).To(Succeed())
@@ -112,7 +115,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("returns the error", func() {
-				Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
 					BaseConfig: specs.Spec{Root: &specs.Root{}},
 				})).To(MatchError("file-create-fail"))
 			})
@@ -124,7 +127,7 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("should return an error", func() {
-				Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
 					BaseConfig: specs.Spec{Root: &specs.Root{}},
 				})).NotTo(Succeed())
 			})
@@ -139,7 +142,7 @@ var _ = Describe("Rundmc", func() {
 			created := make(chan struct{})
 			go func() {
 				defer GinkgoRecover()
-				Expect(containerizer.Create(logger, spec.DesiredContainerSpec{
+				Expect(containerizer.Create(logger, specpkg.DesiredContainerSpec{
 					Handle:     "some-container",
 					BaseConfig: specs.Spec{Root: &specs.Root{}},
 				})).To(Succeed())
@@ -196,10 +199,18 @@ var _ = Describe("Rundmc", func() {
 		})
 
 		Context("when process has an image", func() {
+			var (
+				processSpec garden.ProcessSpec
+				pio         garden.ProcessIO
+			)
+
+			BeforeEach(func() {
+				processSpec = garden.ProcessSpec{Image: garden.ImageRef{URI: "some-uri"}}
+				pio = garden.ProcessIO{Stdout: bytes.NewBufferString("some-idiosyncratic buffer")}
+			})
+
 			It("creates a pea", func() {
-				pio := garden.ProcessIO{Stdout: bytes.NewBufferString("some-idiosyncratic buffer")}
 				fakeDepot.LookupReturns("some-bundle-path", nil)
-				processSpec := garden.ProcessSpec{Image: garden.ImageRef{URI: "some-uri"}}
 				containerizer.Run(logger, "some-handle", processSpec, pio)
 				Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
 				_, actualProcessSpec, actualProcessIO, actualHandle, actualBundlePath := fakePeaCreator.CreatePeaArgsForCall(0)
@@ -210,13 +221,53 @@ var _ = Describe("Rundmc", func() {
 			})
 
 			It("returns process from pea creator", func() {
-				procValue := dummyProcess{id: "some-id"}
-				fakePeaCreator.CreatePeaReturns(procValue, errors.New("some-error"))
-				processSpec := garden.ProcessSpec{Image: garden.ImageRef{URI: "some-uri"}}
-				containerizer.Run(logger, "some-handle", processSpec, garden.ProcessIO{})
-				process, err := containerizer.Run(logger, "some-handle", processSpec, garden.ProcessIO{})
-				Expect(process).To(Equal(procValue))
-				Expect(err).To(MatchError("some-error"))
+				fakeProcess := new(gardenfakes.FakeProcess)
+				fakeProcess.IDReturns("some-id")
+				fakePeaCreator.CreatePeaReturns(fakeProcess, nil)
+				process, err := containerizer.Run(logger, "some-handle", processSpec, pio)
+				Expect(process.ID()).To(Equal("some-id"))
+				Expect(err).NotTo(HaveOccurred())
+			})
+
+			Describe("Username resolving", func() {
+				Context("when user is not specified", func() {
+					It("does not try to resolve the user", func() {
+						containerizer.Run(logger, "some-handle", processSpec, pio)
+						Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(0))
+					})
+				})
+
+				Context("when user is specified as uid:gid", func() {
+					BeforeEach(func() {
+						processSpec.User = "1:2"
+					})
+
+					It("does not try to resolve the user", func() {
+						containerizer.Run(logger, "some-handle", processSpec, pio)
+						Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(0))
+					})
+				})
+
+				Context("when user is specified as username", func() {
+					BeforeEach(func() {
+						processSpec.User = "foobar"
+					})
+
+					It("resolves username to uid:gid", func() {
+						fakePeaUsernameResolver.ResolveUserReturns(1, 2, nil)
+
+						_, err := containerizer.Run(logger, "some-handle", processSpec, pio)
+						Expect(err).NotTo(HaveOccurred())
+
+						Expect(fakePeaUsernameResolver.ResolveUserCallCount()).To(Equal(1))
+						_, _, _, _, resolverInputUsername := fakePeaUsernameResolver.ResolveUserArgsForCall(0)
+						Expect(resolverInputUsername).To(Equal("foobar"))
+
+						Expect(fakePeaCreator.CreatePeaCallCount()).To(Equal(1))
+						_, createdPeaProcessSpec, _, _, _ := fakePeaCreator.CreatePeaArgsForCall(0)
+						Expect(createdPeaProcessSpec.User).To(Equal("1:2"))
+					})
+				})
 			})
 		})
 
@@ -685,15 +736,3 @@ var _ = Describe("Rundmc", func() {
 		})
 	})
 })
-
-type dummyProcess struct {
-	id string
-}
-
-func (d dummyProcess) ID() string {
-	return d.id
-}
-
-func (d dummyProcess) Wait() (int, error)          { return 0, nil }
-func (d dummyProcess) SetTTY(garden.TTYSpec) error { return nil }
-func (d dummyProcess) Signal(garden.Signal) error  { return nil }
