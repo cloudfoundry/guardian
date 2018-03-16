@@ -826,7 +826,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		bundlerules.CGroupPath{
 			Path: cgroupRootPath,
 		},
-		bundlerules.Mounts{},
+		wireMounts(),
 		bundlerules.Env{},
 		bundlerules.Hostname{},
 		bundlerules.Windows{},

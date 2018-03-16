@@ -11,6 +11,7 @@ import (
 	. "code.cloudfoundry.org/commandrunner/fake_command_runner/matchers"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	fakes "code.cloudfoundry.org/guardian/rundmc/cgroups/cgroupsfakes"
+	"code.cloudfoundry.org/guardian/rundmc/rundmcfakes"
 	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	. "github.com/onsi/ginkgo"
@@ -24,7 +25,7 @@ var _ = Describe("CgroupStarter", func() {
 		starter                   *cgroups.CgroupStarter
 		logger                    lager.Logger
 		chowner                   *fakes.FakeChowner
-		mountPointChecker         *fakes.FakeMountPointChecker
+		mountPointChecker         *rundmcfakes.FakeMountPointChecker
 		procCgroupsContents       string
 		procSelfCgroupsContents   string
 		cgroupPathMounted         bool
@@ -46,7 +47,7 @@ var _ = Describe("CgroupStarter", func() {
 		logger = lagertest.NewTestLogger("test")
 		runner = fake_command_runner.New()
 		chowner = new(fakes.FakeChowner)
-		mountPointChecker = new(fakes.FakeMountPointChecker)
+		mountPointChecker = new(rundmcfakes.FakeMountPointChecker)
 		cgroupPathMounted = true
 		cgroupPathMountCheckError = nil
 		notMountedCgroups = []string{}

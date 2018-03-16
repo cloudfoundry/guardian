@@ -103,14 +103,14 @@ func (f *LinuxFactory) WireExecRunner(runMode string) runrunc.ExecRunner {
 }
 
 func (f *LinuxFactory) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	return createCgroupsStarter(logger, f.config.Server.Tag, &cgroups.OSChowner{}, cgroups.IsMountPoint)
+	return createCgroupsStarter(logger, f.config.Server.Tag, &cgroups.OSChowner{}, rundmc.IsMountPoint)
 }
 
 func (cmd *SetupCommand) WireCgroupsStarter(logger lager.Logger) gardener.Starter {
-	return createCgroupsStarter(logger, cmd.Tag, &cgroups.OSChowner{UID: cmd.RootlessUID, GID: cmd.RootlessGID}, cgroups.IsMountPoint)
+	return createCgroupsStarter(logger, cmd.Tag, &cgroups.OSChowner{UID: cmd.RootlessUID, GID: cmd.RootlessGID}, rundmc.IsMountPoint)
 }
 
-func createCgroupsStarter(logger lager.Logger, tag string, chowner cgroups.Chowner, mountPointChecker cgroups.MountPointChecker) gardener.Starter {
+func createCgroupsStarter(logger lager.Logger, tag string, chowner cgroups.Chowner, mountPointChecker rundmc.MountPointChecker) gardener.Starter {
 	cgroupsMountpoint := "/sys/fs/cgroup"
 	gardenCgroup := "garden"
 	if tag != "" {
@@ -307,4 +307,8 @@ func (f *LinuxFactory) wireShed(logger lager.Logger) *rootfs_provider.CakeOrdina
 		layerCreator,
 		rootfs_provider.NewMetricsAdapter(quotaManager.GetUsage, quotaedGraphDriver.GetMntPath),
 		ovenCleaner)
+}
+
+func wireMounts() bundlerules.Mounts {
+	return bundlerules.Mounts{MountPointChecker: rundmc.IsMountPoint, MountOptionsGetter: rundmc.GetMountOptions}
 }

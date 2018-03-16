@@ -1,4 +1,4 @@
-package cgroups_test
+package rundmc_test
 
 import (
 	"io/ioutil"
@@ -6,7 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	"code.cloudfoundry.org/guardian/rundmc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -22,7 +22,7 @@ var _ = Describe("Mountpoint checker", func() {
 	)
 
 	JustBeforeEach(func() {
-		isMountPoint, isMountError = cgroups.IsMountPoint(mountPoint)
+		isMountPoint, isMountError = rundmc.IsMountPoint(mountPoint)
 	})
 
 	Context("when the path exists", func() {
