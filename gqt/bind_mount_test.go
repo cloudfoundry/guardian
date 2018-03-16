@@ -24,6 +24,7 @@ var _ = Describe("Bind mount", func() {
 		dstPath             string                 // bm: destination
 		bindMountMode       garden.BindMountMode   // bm: RO or RW
 		bindMountOrigin     garden.BindMountOrigin // bm: Container or Host
+		mountOptions        []string
 
 		// pre-existing file for permissions testing
 		testFileName string
@@ -37,12 +38,12 @@ var _ = Describe("Bind mount", func() {
 		bindMountMode = garden.BindMountModeRO
 		bindMountOrigin = garden.BindMountOriginHost
 		testFileName = ""
-
-		srcPath, testFileName = createTestHostDirAndTestFile()
+		mountOptions = []string{"--bind"}
 		bindMountOrigin = garden.BindMountOriginHost
 	})
 
 	JustBeforeEach(func() {
+		srcPath, testFileName = createTestHostDirAndTestFile(mountOptions)
 		client = runner.Start(config)
 
 		var err error
@@ -203,6 +204,17 @@ var _ = Describe("Bind mount", func() {
 				})
 			})
 		})
+
+		Context("when mount directory is a mountpoint with an extra option", func() {
+			BeforeEach(func() {
+				mountOptions = []string{"-t", "tmpfs", "-o", "noexec"}
+			})
+
+			It("should suceed", func() {
+				readProcess := containerReadFile(container, dstPath, testFileName, "root")
+				Expect(readProcess.Wait()).To(Equal(0))
+			})
+		})
 	})
 
 	Context("which is read-write", func() {
@@ -340,7 +352,7 @@ var _ = Describe("Bind mount", func() {
 	})
 })
 
-func createTestHostDirAndTestFile() (string, string) {
+func createTestHostDirAndTestFile(mountOptions []string) (string, string) {
 	tstHostDir, err := ioutil.TempDir("", "bind-mount-test-dir")
 	Expect(err).ToNot(HaveOccurred())
 	err = os.Chown(tstHostDir, 0, 0)
@@ -349,7 +361,7 @@ func createTestHostDirAndTestFile() (string, string) {
 	Expect(err).ToNot(HaveOccurred())
 
 	var cmd *exec.Cmd
-	cmd = exec.Command("mount", "--bind", tstHostDir, tstHostDir)
+	cmd = exec.Command("mount", append(mountOptions, tstHostDir, tstHostDir)...)
 	Expect(cmd.Run()).To(Succeed())
 
 	debugOut, err := exec.Command("mount").CombinedOutput()

@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/guardian/gardener"
 	"code.cloudfoundry.org/guardian/kawasaki"
 	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
@@ -99,6 +100,16 @@ func (f *WindowsFactory) WireMkdirer() runrunc.Mkdirer {
 
 func wireEnvFunc() runrunc.EnvFunc {
 	return runrunc.EnvFunc(runrunc.WindowsEnvFor)
+}
+
+func wireMounts() bundlerules.Mounts {
+	noopMountpointChecker := func(path string) (bool, error) {
+		return false, nil
+	}
+	noopMountOptionsGetter := func(path string) ([]string, error) {
+		return []string{}, nil
+	}
+	return bundlerules.Mounts{MountPointChecker: noopMountpointChecker, MountOptionsGetter: noopMountOptionsGetter}
 }
 
 // Note - it's not possible to bind mount a single file in Windows, so we are

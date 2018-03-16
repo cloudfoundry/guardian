@@ -15,6 +15,7 @@ import (
 
 	"code.cloudfoundry.org/commandrunner"
 	"code.cloudfoundry.org/guardian/logging"
+	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/lager"
 )
 
@@ -37,7 +38,7 @@ func NewStarter(
 	allowedDevices []specs.LinuxDeviceCgroup,
 	runner commandrunner.CommandRunner,
 	chowner Chowner,
-	mountPointChecker MountPointChecker,
+	mountPointChecker rundmc.MountPointChecker,
 ) *CgroupStarter {
 	return &CgroupStarter{
 		CgroupPath:        cgroupMountpoint,
@@ -63,7 +64,7 @@ type CgroupStarter struct {
 
 	Logger            lager.Logger
 	Chowner           Chowner
-	MountPointChecker MountPointChecker
+	MountPointChecker rundmc.MountPointChecker
 }
 
 func (s *CgroupStarter) Start() error {
