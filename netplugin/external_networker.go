@@ -79,8 +79,9 @@ type UpInputs struct {
 }
 
 type UpOutputs struct {
-	Properties map[string]string
-	DNSServers []string `json:"dns_servers,omitempty"`
+	Properties    map[string]string
+	DNSServers    []string `json:"dns_servers,omitempty"`
+	SearchDomains []string `json:"search_domains,omitempty"`
 }
 
 func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden.ContainerSpec, pid int) error {
@@ -123,6 +124,7 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 			OperatorNameservers:   p.operatorNameservers,
 			AdditionalNameservers: p.additionalNameservers,
 			PluginNameservers:     pluginNameservers,
+			SearchDomains:         outputs.SearchDomains,
 		}
 
 		err = p.resolvConfigurer.Configure(log, cfg, pid)
