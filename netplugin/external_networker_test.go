@@ -327,6 +327,67 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 		})
 
+		Describe("Search domain configuration inside the container", func() {
+			var cfg kawasaki.NetworkConfig
+
+			BeforeEach(func() {
+				pluginOutput = `{
+						"properties": {
+							"garden.network.container-ip": "10.255.1.2"
+						}
+				  }`
+			})
+
+			JustBeforeEach(func() {
+				var (
+					log lager.Logger
+					pid int
+				)
+
+				err := plugin.Network(logger, containerSpec, 42)
+				Expect(err).NotTo(HaveOccurred())
+
+				Expect(resolvConfigurer.ConfigureCallCount()).To(Equal(1))
+				log, cfg, pid = resolvConfigurer.ConfigureArgsForCall(0)
+				Expect(log).To(Equal(logger))
+				Expect(pid).To(Equal(42))
+			})
+
+			It("is called with an empty list of search domains", func() {
+				Expect(cfg.SearchDomains).To(BeEmpty())
+			})
+
+			Context("when one search domain is configured", func() {
+				BeforeEach(func() {
+					pluginOutput = `{
+						"properties": {
+							"garden.network.container-ip": "10.255.1.2"
+						},
+						"search_domains": ["potato"]
+				  }`
+				})
+
+				It("is called with those search domains", func() {
+					Expect(cfg.SearchDomains).To(Equal([]string{"potato"}))
+				})
+			})
+
+			Context("when two search domain are configured", func() {
+				BeforeEach(func() {
+					pluginOutput = `{
+						"properties": {
+							"garden.network.container-ip": "10.255.1.2"
+						},
+						"search_domains": ["potato","banana"]
+				  }`
+				})
+
+				It("is called with that search domains", func() {
+					Expect(cfg.SearchDomains).To(Equal([]string{"potato", "banana"}))
+				})
+			})
+		})
+
 		Context("when the external plugin errors", func() {
 			BeforeEach(func() {
 				pluginErr = errors.New("external-plugin-error")
