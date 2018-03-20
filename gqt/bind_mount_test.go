@@ -364,13 +364,21 @@ func createTestHostDirAndTestFile(mountOptions []string) (string, string) {
 	cmd = exec.Command("mount", append(mountOptions, tstHostDir, tstHostDir)...)
 	Expect(cmd.Run()).To(Succeed())
 
-	debugOut, err := exec.Command("mount").CombinedOutput()
+	mountCommandOutputBytes, err := exec.Command("mount").CombinedOutput()
+	mountCommandOutput := string(mountCommandOutputBytes)
 	Expect(err).ToNot(HaveOccurred())
+	Expect(mountCommandOutput).To(ContainSubstring(tstHostDir), fmt.Sprintf("%s appears not to be mounted; 'mount' command output:\n%s", tstHostDir, mountCommandOutput))
+
+	procSelfMountInfoBytes, err := ioutil.ReadFile("/proc/self/mountinfo")
+	procSelfMountInfo := string(procSelfMountInfoBytes)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(procSelfMountInfo).To(ContainSubstring(tstHostDir), fmt.Sprintf("%s appears not to be visible in the process mount namespace; '/proc/self/mountinfo' content:\n%s", tstHostDir, procSelfMountInfo))
+	fmt.Fprintf(GinkgoWriter, "/proc/self/mountinfo content:\n%s", procSelfMountInfo)
 
 	cmd = exec.Command("mount", "--make-shared", tstHostDir)
-	out, err := cmd.CombinedOutput()
+	mountMakeSharedCommandOutputBytes, err := cmd.CombinedOutput()
 	debugMsg := fmt.Sprintf("Command: mount --make-share %s\n%s\nOutput of `mount` command:\n%v",
-		tstHostDir, string(debugOut), string(out))
+		tstHostDir, mountCommandOutput, string(mountMakeSharedCommandOutputBytes))
 	Expect(err).ToNot(HaveOccurred(), debugMsg)
 
 	fileName := fmt.Sprintf("bind-mount-%d-test-file", GinkgoParallelNode())
