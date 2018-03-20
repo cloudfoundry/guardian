@@ -1,0 +1,341 @@
+package gqt_test
+
+import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"net"
+	"os"
+	"path"
+	"path/filepath"
+
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/runner"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+)
+
+var _ = Describe("Network plugin", func() {
+	var (
+		client    *runner.RunningGarden
+		container garden.Container
+
+		containerSpec    garden.ContainerSpec
+		containerNetwork string
+
+		extraProperties             garden.Properties
+		rootFSWithoutHostsAndResolv string
+
+		argsFile  string
+		stdinFile string
+	)
+
+	BeforeEach(func() {
+		rootFSWithoutHostsAndResolv = createRootfs(func(root string) {
+			Expect(os.Chmod(filepath.Join(root, "tmp"), 0777)).To(Succeed())
+			Expect(os.Remove(filepath.Join(root, "etc", "hosts"))).To(Succeed())
+			Expect(os.Remove(filepath.Join(root, "etc", "resolv.conf"))).To(Succeed())
+		}, 0755)
+
+		containerNetwork = fmt.Sprintf("192.168.%d.0/24", 12+GinkgoParallelNode())
+		containerSpec = garden.ContainerSpec{}
+
+		tmpDir, err := ioutil.TempDir("", "netplugtest")
+		Expect(err).NotTo(HaveOccurred())
+
+		argsFile = path.Join(tmpDir, "args.log")
+		stdinFile = path.Join(tmpDir, "stdin.log")
+
+		config.NetworkPluginBin = binaries.NetworkPlugin
+		config.NetworkPluginExtraArgs = []string{argsFile, stdinFile}
+	})
+
+	JustBeforeEach(func() {
+		var err error
+
+		client = runner.Start(config)
+
+		containerSpec.Network = containerNetwork
+		containerSpec.Properties = extraProperties
+		container, err = client.Create(containerSpec)
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterEach(func() {
+		Expect(os.RemoveAll(rootFSWithoutHostsAndResolv)).To(Succeed())
+		Expect(client.DestroyAndStop()).To(Succeed())
+	})
+
+	Context("and the plugin is essentially a noop", func() {
+		BeforeEach(func() {
+			config.NetworkPluginBin = "/bin/true"
+		})
+
+		It("successfully creates a container", func() {
+			_, err := client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+	})
+
+	Context("when the network plugin returns properties and dns_servers", func() {
+		var pluginReturn string
+
+		BeforeEach(func() {
+			pluginReturn = `{
+					"properties":{
+						"foo":"bar",
+						"kawasaki.mtu":"1499",
+						"garden.network.container-ip":"10.255.10.10",
+						"garden.network.host-ip":"255.255.255.255"
+					},
+					"dns_servers": [
+						"1.2.3.4",
+						"1.2.3.5"
+					]
+			  }`
+			config.NetworkPluginExtraArgs = append(
+				config.NetworkPluginExtraArgs,
+				pluginReturn,
+			)
+			extraProperties = garden.Properties{
+				"some-property-on-the-spec": "some-value",
+				"network.some-key":          "some-value",
+				"network.some-other-key":    "some-other-value",
+				"some-other-key":            "do-not-propagate",
+				"garden.whatever":           "do-not-propagate",
+				"kawasaki.nope":             "do-not-propagate",
+			}
+		})
+
+		Context("when the container spec has properties that start with 'network.'", func() {
+			var expectedJSON string
+
+			BeforeEach(func() {
+				expectedJSON = `"some-key":"some-value","some-other-key":"some-other-value"}`
+			})
+
+			It("propagates those properties as JSON to the network plugin up action", func() {
+				Eventually(getContent(stdinFile)).Should(ContainSubstring(expectedJSON))
+			})
+		})
+
+		It("sets the nameserver entries in the container's /etc/resolv.conf to the values supplied by the network plugin", func() {
+			Expect(getNameservers(container)).To(Equal([]string{"1.2.3.4", "1.2.3.5"}))
+		})
+
+		Context("when the rootFS does not contain /etc/resolv.conf", func() {
+			BeforeEach(func() {
+				containerSpec.RootFSPath = fmt.Sprintf("raw://%s", rootFSWithoutHostsAndResolv)
+			})
+
+			It("sets the nameserver entries in the container's /etc/resolv.conf to the values supplied by the network plugin", func() {
+				Expect(getNameservers(container)).To(Equal([]string{"1.2.3.4", "1.2.3.5"}))
+			})
+		})
+
+		It("executes the network plugin during container destroy", func() {
+			containerHandle := container.Handle()
+
+			Expect(client.Destroy(containerHandle)).To(Succeed())
+			Expect(argsFile).To(BeAnExistingFile())
+
+			Eventually(getContent(argsFile)).Should(ContainSubstring(fmt.Sprintf("%s %s", argsFile, stdinFile)))
+			Eventually(getContent(argsFile)).Should(ContainSubstring(fmt.Sprintf("--action down --handle %s", containerHandle)))
+		})
+
+		It("passes the container pid to plugin's stdin", func() {
+			Eventually(getContent(stdinFile)).Should(
+				MatchRegexp(`.*{"Pid":[0-9]+.*}.*`),
+			)
+		})
+
+		It("executes the network plugin during container creation", func() {
+			containerHandle := container.Handle()
+
+			Eventually(getContent(argsFile)).Should(
+				ContainSubstring(
+					fmt.Sprintf("%s %s %s --action up --handle %s", argsFile, stdinFile, pluginReturn, containerHandle),
+				),
+			)
+		})
+
+		Context("and the containerSpec contains NetOutRules", func() {
+			BeforeEach(func() {
+				containerSpec.NetOut = []garden.NetOutRule{
+					garden.NetOutRule{
+						Protocol: garden.ProtocolTCP,
+						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.8.8"))},
+						Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+					},
+					garden.NetOutRule{
+						Protocol: garden.ProtocolTCP,
+						Networks: []garden.IPRange{garden.IPRangeFromIP(net.ParseIP("8.8.4.4"))},
+						Ports:    []garden.PortRange{garden.PortRangeFromPort(53)},
+					},
+				}
+			})
+
+			It("passes the NetOut rules to the plugin during container creation", func() {
+				jsonBytes, err := json.Marshal(containerSpec.NetOut)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(getContent(stdinFile)).Should(
+					ContainSubstring("\"netout_rules\":" + string(jsonBytes)),
+				)
+			})
+		})
+
+		Context("and the containerSpec contains NetIn", func() {
+			BeforeEach(func() {
+				containerSpec.NetIn = []garden.NetIn{
+					garden.NetIn{
+						HostPort:      9999,
+						ContainerPort: 8080,
+					},
+					garden.NetIn{
+						HostPort:      9989,
+						ContainerPort: 8081,
+					},
+				}
+			})
+
+			It("passes the NetIn input to the plugin during container creation", func() {
+				jsonBytes, err := json.Marshal(containerSpec.NetIn)
+				Expect(err).NotTo(HaveOccurred())
+
+				Eventually(getContent(stdinFile)).Should(
+					ContainSubstring("\"netin\":" + string(jsonBytes)),
+				)
+			})
+		})
+
+		It("persists the returned properties to the container's properties", func() {
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			containerProperties := info.Properties
+
+			Expect(containerProperties["foo"]).To(Equal("bar"))
+			Expect(containerProperties["garden.network.container-ip"]).To(Equal("10.255.10.10"))
+			Expect(containerProperties["garden.network.host-ip"]).To(Equal("255.255.255.255"))
+		})
+
+		It("doesn't remove existing properties", func() {
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(info.Properties).To(HaveKey("some-property-on-the-spec"))
+		})
+
+		It("sets the ExternalIP and ContainerIP fields on the container.Info()", func() {
+			info, err := container.Info()
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(info.ExternalIP).NotTo(BeEmpty())
+			Expect(info.ContainerIP).To(Equal("10.255.10.10"))
+		})
+
+		Context("when BulkNetOut is called", func() {
+			It("passes down the bulk net out rules to the external networker", func() {
+				rules := []garden.NetOutRule{
+					garden.NetOutRule{
+						Protocol: garden.ProtocolTCP,
+					},
+					garden.NetOutRule{
+						Protocol: garden.ProtocolUDP,
+					},
+				}
+				container.BulkNetOut(rules)
+
+				Eventually(getContent(stdinFile)).Should(
+					ContainSubstring(`{"container_ip":"10.255.10.10","netout_rules":[{"protocol":1},{"protocol":2}]}`),
+				)
+			})
+		})
+
+	})
+
+	Context("when the network plugin returns properties but no dns_servers", func() {
+		var (
+			hostNameservers []string
+		)
+
+		BeforeEach(func() {
+			out, err := ioutil.ReadFile("/etc/resolv.conf")
+			Expect(err).NotTo(HaveOccurred())
+			hostNameservers = parseNameservers(string(out))
+
+			pluginReturn := `{
+					"properties":{
+						"foo":"bar",
+						"kawasaki.mtu":"1499",
+						"garden.network.container-ip":"10.255.10.10",
+						"garden.network.host-ip":"255.255.255.255"
+					}
+			  }`
+			config.NetworkPluginExtraArgs = append(
+				config.NetworkPluginExtraArgs,
+				pluginReturn,
+			)
+		})
+
+		Context("and --dns-server/--additional-dns-server has not been provided", func() {
+			It("adds the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
+				resolvConf := readResolvConf(container)
+
+				for _, hostNameserver := range hostNameservers {
+					Expect(resolvConf).To(ContainSubstring(hostNameserver))
+					Expect(resolvConf).NotTo(ContainSubstring("127.0.0."))
+				}
+			})
+		})
+
+		Context("when --dns-server is provided", func() {
+			BeforeEach(func() {
+				config.DNSServers = []string{"1.2.3.4"}
+			})
+
+			It("adds the IP address to the container's /etc/resolv.conf", func() {
+				nameservers := getNameservers(container)
+				Expect(nameservers).To(ContainElement("1.2.3.4"))
+			})
+
+			It("strips the host's DNS servers from the container's /etc/resolv.conf", func() {
+				nameservers := getNameservers(container)
+
+				for _, hostNameserver := range hostNameservers {
+					Expect(nameservers).NotTo(ContainElement(hostNameserver))
+				}
+			})
+		})
+
+		Context("when --additional-dns-server is provided", func() {
+			BeforeEach(func() {
+				config.AdditionalDNSServers = []string{"1.2.3.4"}
+			})
+
+			It("writes the IP address and the host's non-127.0.0.0/24 DNS servers to the container's /etc/resolv.conf", func() {
+				resolvConf := readResolvConf(container)
+
+				for _, hostNameserver := range hostNameservers {
+					Expect(resolvConf).To(ContainSubstring(hostNameserver))
+					Expect(resolvConf).NotTo(ContainSubstring("127.0.0."))
+				}
+
+				Expect(resolvConf).To(ContainSubstring("nameserver 1.2.3.4"))
+			})
+		})
+
+		Context("when --dns-server and --additional-dns-server is provided", func() {
+			BeforeEach(func() {
+				config.DNSServers = []string{"1.2.3.4"}
+				config.AdditionalDNSServers = []string{"1.2.3.5"}
+			})
+
+			It("writes the --dns-server and --additional-dns-server DNS servers to the container's /etc/resolv.conf", func() {
+				resolvConf := readResolvConf(container)
+				Expect(resolvConf).To(Equal("nameserver 1.2.3.4\nnameserver 1.2.3.5\n"))
+			})
+		})
+	})
+})
