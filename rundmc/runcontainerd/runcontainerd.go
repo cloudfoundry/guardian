@@ -55,7 +55,7 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 	}
 
 	// container.NewTask essentially does a `runc create`
-	//	_, err = container.NewTask(r.context, cio.NewIO(io.Stdin, io.Stdout, io.Stderr))
+	_, err = container.NewTask(r.context, cio.NewCreator(cio.WithStreams(io.Stdin, io.Stdout, io.Stderr)))
 
 	return err
 }
@@ -85,7 +85,7 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garde
 		processID = r.processIDGen.Generate()
 	}
 
-	process, err := task.Exec(r.context, processID, &preparedSpec.Process, cio.NewIO(io.Stdin, io.Stdout, io.Stderr))
+	process, err := task.Exec(r.context, processID, &preparedSpec.Process, cio.NewCreator(cio.WithStreams(io.Stdin, io.Stdout, io.Stderr)))
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +103,8 @@ func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId strin
 		return nil, err
 	}
 
-	process, err := task.LoadProcess(r.context, processId, cio.WithAttach(io.Stdin, io.Stdout, io.Stderr))
-	if err != il {
+	process, err := task.LoadProcess(r.context, processId, cio.NewAttach(cio.WithStreams(io.Stdin, io.Stdout, io.Stderr)))
+	if err != nil {
 		return nil, err
 	}
 
