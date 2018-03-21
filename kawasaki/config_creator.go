@@ -37,7 +37,7 @@ type NetworkConfig struct {
 	OperatorNameservers   []net.IP
 	AdditionalNameservers []net.IP
 	AdditionalHostEntries []string
-	SearchDomains         []string
+	PluginSearchDomains   []string
 }
 
 type Creator struct {

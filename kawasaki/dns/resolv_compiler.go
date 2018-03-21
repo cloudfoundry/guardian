@@ -9,7 +9,13 @@ import (
 
 type ResolvCompiler struct{}
 
-func (n *ResolvCompiler) Determine(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP) []string {
+func (n *ResolvCompiler) Determine(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP, pluginSearchDomains []string) (entries []string) {
+	if pluginSearchDomains != nil {
+		defer func() {
+			entries = append(entries, searchDomainEntry(pluginSearchDomains))
+		}()
+	}
+
 	if pluginNameservers != nil {
 		return nameserverEntries(pluginNameservers)
 	}
@@ -18,11 +24,11 @@ func (n *ResolvCompiler) Determine(resolvContents string, hostIP net.IP, pluginN
 		return nameserverEntries(append(operatorNameservers, additionalNameservers...))
 	}
 
-	nameserversFromHost := parseResolvContents(resolvContents, hostIP)
+	nameserversFromHost := parseResolvContents(resolvContents, hostIP, pluginSearchDomains != nil)
 	return append(nameserversFromHost, nameserverEntries(additionalNameservers)...)
 }
 
-func parseResolvContents(resolvContents string, hostIP net.IP) []string {
+func parseResolvContents(resolvContents string, hostIP net.IP, ignoreSearchDomains bool) []string {
 	loopbackNameserver := regexp.MustCompile(`^\s*nameserver\s+127\.0\.0\.\d+\s*$`)
 	if loopbackNameserver.MatchString(resolvContents) {
 		return nameserverEntries([]net.IP{hostIP})
@@ -31,6 +37,10 @@ func parseResolvContents(resolvContents string, hostIP net.IP) []string {
 	entries := []string{}
 	for _, resolvEntry := range strings.Split(strings.TrimSpace(resolvContents), "\n") {
 		if resolvEntry == "" {
+			continue
+		}
+
+		if ignoreSearchDomains && strings.HasPrefix(resolvEntry, "search") {
 			continue
 		}
 
@@ -63,4 +73,12 @@ func nameserverEntries(ips []net.IP) []string {
 
 func nameserverEntry(ip string) string {
 	return fmt.Sprintf("nameserver %s", ip)
+}
+
+func searchDomainEntry(entries []string) string {
+	searchDomains := "search"
+	for _, entry := range entries {
+		searchDomains += " " + entry
+	}
+	return searchDomains
 }

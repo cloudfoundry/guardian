@@ -9,7 +9,7 @@ import (
 )
 
 type FakeResolvCompiler struct {
-	DetermineStub        func(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP) []string
+	DetermineStub        func(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP, pluginSearchDomains []string) []string
 	determineMutex       sync.RWMutex
 	determineArgsForCall []struct {
 		resolvContents        string
@@ -17,6 +17,7 @@ type FakeResolvCompiler struct {
 		pluginNameservers     []net.IP
 		operatorNameservers   []net.IP
 		additionalNameservers []net.IP
+		pluginSearchDomains   []string
 	}
 	determineReturns struct {
 		result1 []string
@@ -28,7 +29,7 @@ type FakeResolvCompiler struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeResolvCompiler) Determine(resolvContents string, hostIP net.IP, pluginNameservers []net.IP, operatorNameservers []net.IP, additionalNameservers []net.IP) []string {
+func (fake *FakeResolvCompiler) Determine(resolvContents string, hostIP net.IP, pluginNameservers []net.IP, operatorNameservers []net.IP, additionalNameservers []net.IP, pluginSearchDomains []string) []string {
 	var pluginNameserversCopy []net.IP
 	if pluginNameservers != nil {
 		pluginNameserversCopy = make([]net.IP, len(pluginNameservers))
@@ -44,6 +45,11 @@ func (fake *FakeResolvCompiler) Determine(resolvContents string, hostIP net.IP, 
 		additionalNameserversCopy = make([]net.IP, len(additionalNameservers))
 		copy(additionalNameserversCopy, additionalNameservers)
 	}
+	var pluginSearchDomainsCopy []string
+	if pluginSearchDomains != nil {
+		pluginSearchDomainsCopy = make([]string, len(pluginSearchDomains))
+		copy(pluginSearchDomainsCopy, pluginSearchDomains)
+	}
 	fake.determineMutex.Lock()
 	ret, specificReturn := fake.determineReturnsOnCall[len(fake.determineArgsForCall)]
 	fake.determineArgsForCall = append(fake.determineArgsForCall, struct {
@@ -52,11 +58,12 @@ func (fake *FakeResolvCompiler) Determine(resolvContents string, hostIP net.IP, 
 		pluginNameservers     []net.IP
 		operatorNameservers   []net.IP
 		additionalNameservers []net.IP
-	}{resolvContents, hostIP, pluginNameserversCopy, operatorNameserversCopy, additionalNameserversCopy})
-	fake.recordInvocation("Determine", []interface{}{resolvContents, hostIP, pluginNameserversCopy, operatorNameserversCopy, additionalNameserversCopy})
+		pluginSearchDomains   []string
+	}{resolvContents, hostIP, pluginNameserversCopy, operatorNameserversCopy, additionalNameserversCopy, pluginSearchDomainsCopy})
+	fake.recordInvocation("Determine", []interface{}{resolvContents, hostIP, pluginNameserversCopy, operatorNameserversCopy, additionalNameserversCopy, pluginSearchDomainsCopy})
 	fake.determineMutex.Unlock()
 	if fake.DetermineStub != nil {
-		return fake.DetermineStub(resolvContents, hostIP, pluginNameservers, operatorNameservers, additionalNameservers)
+		return fake.DetermineStub(resolvContents, hostIP, pluginNameservers, operatorNameservers, additionalNameservers, pluginSearchDomains)
 	}
 	if specificReturn {
 		return ret.result1
@@ -70,10 +77,10 @@ func (fake *FakeResolvCompiler) DetermineCallCount() int {
 	return len(fake.determineArgsForCall)
 }
 
-func (fake *FakeResolvCompiler) DetermineArgsForCall(i int) (string, net.IP, []net.IP, []net.IP, []net.IP) {
+func (fake *FakeResolvCompiler) DetermineArgsForCall(i int) (string, net.IP, []net.IP, []net.IP, []net.IP, []string) {
 	fake.determineMutex.RLock()
 	defer fake.determineMutex.RUnlock()
-	return fake.determineArgsForCall[i].resolvContents, fake.determineArgsForCall[i].hostIP, fake.determineArgsForCall[i].pluginNameservers, fake.determineArgsForCall[i].operatorNameservers, fake.determineArgsForCall[i].additionalNameservers
+	return fake.determineArgsForCall[i].resolvContents, fake.determineArgsForCall[i].hostIP, fake.determineArgsForCall[i].pluginNameservers, fake.determineArgsForCall[i].operatorNameservers, fake.determineArgsForCall[i].additionalNameservers, fake.determineArgsForCall[i].pluginSearchDomains
 }
 
 func (fake *FakeResolvCompiler) DetermineReturns(result1 []string) {

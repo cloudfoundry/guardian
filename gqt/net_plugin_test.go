@@ -49,7 +49,7 @@ var _ = Describe("Network plugin", func() {
 
 		out, err := ioutil.ReadFile("/etc/resolv.conf")
 		Expect(err).NotTo(HaveOccurred())
-		hostNameservers = parseNameservers(string(out))
+		hostNameservers = parseEntries(string(out), "nameserver")
 	})
 
 	JustBeforeEach(func() {
@@ -131,7 +131,7 @@ var _ = Describe("Network plugin", func() {
 		})
 	})
 
-	Context("and the containerSpec contains NetIn", func() {
+	Context("when the containerSpec contains NetIn", func() {
 		BeforeEach(func() {
 			containerSpec.NetIn = []garden.NetIn{
 				garden.NetIn{
@@ -180,6 +180,15 @@ var _ = Describe("Network plugin", func() {
 			Expect(resolvConf).To(ContainSubstring(hostNameserver))
 			Expect(resolvConf).NotTo(ContainSubstring("127.0.0."))
 		}
+	})
+
+	It("adds the host's search domains to the container's /etc/resolv.conf", func() {
+		containerSearchDomains := getSearchDomains(container)
+		resolvConf, err := ioutil.ReadFile("/etc/resolv.conf")
+		Expect(err).NotTo(HaveOccurred())
+		hostSearchDomains := parseEntries(string(resolvConf), "search")
+
+		Expect(containerSearchDomains).To(ConsistOf(hostSearchDomains))
 	})
 
 	Context("when --dns-server is provided", func() {
@@ -323,6 +332,21 @@ var _ = Describe("Network plugin", func() {
 			It("sets the nameserver entries in the container's /etc/resolv.conf to the values supplied by the network plugin", func() {
 				Expect(getNameservers(container)).To(Equal([]string{"1.2.3.4", "1.2.3.5"}))
 			})
+		})
+	})
+
+	Context("when the network plugin returns search_domains", func() {
+		BeforeEach(func() {
+			pluginReturn = `{
+					"properties":{
+						"garden.network.container-ip":"10.255.10.10"
+					},
+					"search_domains": ["potato", "tomato"]
+			  }`
+		})
+
+		It("sets the nameserver entries in the container's /etc/resolv.conf to the values supplied by the network plugin", func() {
+			Expect(getSearchDomains(container)).To(Equal([]string{"potato", "tomato"}))
 		})
 	})
 })

@@ -17,7 +17,7 @@ type HostFileCompiler interface {
 
 //go:generate counterfeiter . ResolvCompiler
 type ResolvCompiler interface {
-	Determine(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP) []string
+	Determine(resolvContents string, hostIP net.IP, pluginNameservers, operatorNameservers, additionalNameservers []net.IP, pluginSearchDomains []string) []string
 }
 
 type ResolvConfigurer struct {
@@ -46,7 +46,7 @@ func (d *ResolvConfigurer) Configure(log lager.Logger, cfg NetworkConfig, pid in
 		log.Error("reading-host-resolv-file", err)
 		return err
 	}
-	resolvEntries := d.ResolvCompiler.Determine(string(hostResolvContents), cfg.BridgeIP, cfg.PluginNameservers, cfg.OperatorNameservers, cfg.AdditionalNameservers)
+	resolvEntries := d.ResolvCompiler.Determine(string(hostResolvContents), cfg.BridgeIP, cfg.PluginNameservers, cfg.OperatorNameservers, cfg.AdditionalNameservers, cfg.PluginSearchDomains)
 
 	containerResolvContents := ""
 	for _, resolvEntry := range resolvEntries {

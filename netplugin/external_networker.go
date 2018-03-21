@@ -124,7 +124,7 @@ func (p *externalBinaryNetworker) Network(log lager.Logger, containerSpec garden
 			OperatorNameservers:   p.operatorNameservers,
 			AdditionalNameservers: p.additionalNameservers,
 			PluginNameservers:     pluginNameservers,
-			SearchDomains:         outputs.SearchDomains,
+			PluginSearchDomains:   outputs.SearchDomains,
 		}
 
 		err = p.resolvConfigurer.Configure(log, cfg, pid)

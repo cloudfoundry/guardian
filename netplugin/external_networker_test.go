@@ -354,7 +354,7 @@ var _ = Describe("ExternalNetworker", func() {
 			})
 
 			It("is called with an empty list of search domains", func() {
-				Expect(cfg.SearchDomains).To(BeEmpty())
+				Expect(cfg.PluginSearchDomains).To(BeEmpty())
 			})
 
 			Context("when one search domain is configured", func() {
@@ -368,7 +368,7 @@ var _ = Describe("ExternalNetworker", func() {
 				})
 
 				It("is called with those search domains", func() {
-					Expect(cfg.SearchDomains).To(Equal([]string{"potato"}))
+					Expect(cfg.PluginSearchDomains).To(Equal([]string{"potato"}))
 				})
 			})
 
@@ -383,7 +383,7 @@ var _ = Describe("ExternalNetworker", func() {
 				})
 
 				It("is called with that search domains", func() {
-					Expect(cfg.SearchDomains).To(Equal([]string{"potato", "banana"}))
+					Expect(cfg.PluginSearchDomains).To(Equal([]string{"potato", "banana"}))
 				})
 			})
 		})

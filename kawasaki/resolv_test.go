@@ -111,16 +111,18 @@ var _ = Describe("ResolvConfigurer", func() {
 			OperatorNameservers:   []net.IP{net.ParseIP("9.8.7.6"), net.ParseIP("5.4.3.2")},
 			AdditionalNameservers: []net.IP{net.ParseIP("11.11.11.11")},
 			PluginNameservers:     []net.IP{net.ParseIP("11.11.11.12")},
+			PluginSearchDomains:   []string{"one", "two"},
 		}
 		Expect(dnsResolv.Configure(log, cfg, 42)).To(Succeed())
 
 		Expect(fakeResolvCompiler.DetermineCallCount()).To(Equal(1))
-		actualResolvFileContents, actualHostIP, actualPluginNameservers, actualOperatorNameservers, actualAdditionalNameservers := fakeResolvCompiler.DetermineArgsForCall(0)
+		actualResolvFileContents, actualHostIP, actualPluginNameservers, actualOperatorNameservers, actualAdditionalNameservers, actualPluginSearchDomains := fakeResolvCompiler.DetermineArgsForCall(0)
 		Expect(actualResolvFileContents).To(Equal("nameserver 1.2.3.4\n"))
 		Expect(actualHostIP).To(Equal(net.ParseIP("10.11.12.13")))
 		Expect(actualPluginNameservers).To(Equal([]net.IP{net.ParseIP("11.11.11.12")}))
 		Expect(actualOperatorNameservers).To(Equal([]net.IP{net.ParseIP("9.8.7.6"), net.ParseIP("5.4.3.2")}))
 		Expect(actualAdditionalNameservers).To(Equal([]net.IP{net.ParseIP("11.11.11.11")}))
+		Expect(actualPluginSearchDomains).To(ConsistOf("one", "two"))
 
 		resolvFileContents, err := ioutil.ReadFile(filepath.Join(depotDir, handle, "resolv.conf"))
 		Expect(err).NotTo(HaveOccurred())
