@@ -13,6 +13,7 @@ import (
 	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
+	"github.com/containerd/containerd/linux/runctypes"
 )
 
 type RunContainerd struct {
@@ -55,7 +56,7 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 	}
 
 	// container.NewTask essentially does a `runc create`
-	_, err = container.NewTask(r.context, cio.NewCreator(cio.WithStreams(io.Stdin, io.Stdout, io.Stderr)))
+	_, err = container.NewTask(r.context, cio.NewCreator(cio.WithStreams(io.Stdin, io.Stdout, io.Stderr)), withMaximusIO)
 
 	return err
 }
@@ -199,4 +200,12 @@ func (w *ContainerdToGardenProcessAdapter) SetTTY(garden.TTYSpec) error {
 
 func (w *ContainerdToGardenProcessAdapter) Signal(garden.Signal) error {
 	return errors.New("Signal is not implemented")
+}
+
+func withMaximusIO(_ context.Context, client *containerd.Client, r *containerd.TaskInfo) error {
+	r.Options = &runctypes.CreateOptions{
+		IoUid: 4294967294,
+		IoGid: 4294967294,
+	}
+	return nil
 }
