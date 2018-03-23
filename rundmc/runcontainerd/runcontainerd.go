@@ -86,7 +86,7 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garde
 		processID = r.processIDGen.Generate()
 	}
 
-	process, err := task.Exec(r.context, processID, &preparedSpec.Process, cio.NewCreator(cio.WithStreams(io.Stdin, io.Stdout, io.Stderr)))
+	process, err := task.Exec(r.context, processID, &preparedSpec.Process, cio.NewCreator(cio.WithStreams(io.Stdin, io.Stdout, io.Stderr), cio.WithTerminal))
 	if err != nil {
 		return nil, err
 	}
