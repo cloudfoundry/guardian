@@ -1,7 +1,6 @@
 package runcontainerd
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -47,17 +46,8 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 		return err
 	}
 
-	// containerd panics if you provide container.NewTask with nil IOs
-	// this is a hacky spiketastic workaround
-	if io.Stdin == nil || io.Stdout == nil || io.Stderr == nil {
-		io.Stdin = bytes.NewBuffer(nil)
-		io.Stdout = bytes.NewBuffer(nil)
-		io.Stderr = bytes.NewBuffer(nil)
-	}
-
 	// container.NewTask essentially does a `runc create`
-	_, err = container.NewTask(r.context, cio.NewCreator(cio.WithStreams(io.Stdin, io.Stdout, io.Stderr)), withMaximusIO)
-
+	_, err = container.NewTask(r.context, cio.NullIO, withMaximusIO)
 	return err
 }
 
@@ -86,7 +76,12 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garde
 		processID = r.processIDGen.Generate()
 	}
 
-	process, err := task.Exec(r.context, processID, &preparedSpec.Process, cio.NewCreator(cio.WithStreams(io.Stdin, io.Stdout, io.Stderr), cio.WithTerminal))
+	opts := []cio.Opt{cio.WithStreams(io.Stdin, io.Stdout, io.Stderr)}
+	if preparedSpec.Process.Terminal {
+		opts = append(opts, cio.WithTerminal)
+	}
+
+	process, err := task.Exec(r.context, processID, &preparedSpec.Process, cio.NewCreator(opts...))
 	if err != nil {
 		return nil, err
 	}
