@@ -160,33 +160,20 @@ func (p *BaseImagePuller) buildLayer(logger lager.Logger, index int, layerInfos 
 		return nil
 	}
 
-	downloadChan := make(chan downloadReturn, 1)
-	go p.downloadLayer(logger, layerInfo, downloadChan)
-
 	if err := p.buildLayer(logger, index-1, layerInfos, spec); err != nil {
 		return err
 	}
-
-	downloadResult := <-downloadChan
-	if downloadResult.Err != nil {
-		return downloadResult.Err
-	}
-
-	defer downloadResult.Stream.Close()
 
 	var parentLayerInfo groot.LayerInfo
 	if index > 0 {
 		parentLayerInfo = layerInfos[index-1]
 	}
-	return p.unpackLayer(logger, layerInfo, parentLayerInfo, spec, downloadResult.Stream)
+
+	return p.downloadLayer(logger, layerInfo, parentLayerInfo, spec)
+
 }
 
-type downloadReturn struct {
-	Stream io.ReadCloser
-	Err    error
-}
-
-func (p *BaseImagePuller) downloadLayer(logger lager.Logger, layerInfo groot.LayerInfo, downloadChan chan downloadReturn) {
+func (p *BaseImagePuller) downloadLayer(logger lager.Logger, layerInfo, parentLayerInfo groot.LayerInfo, spec groot.BaseImageSpec) error {
 	logger = logger.Session("downloading-layer", lager.Data{"LayerInfo": layerInfo})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -194,12 +181,13 @@ func (p *BaseImagePuller) downloadLayer(logger lager.Logger, layerInfo groot.Lay
 
 	stream, size, err := p.fetcher.StreamBlob(logger, layerInfo)
 	if err != nil {
-		err = errorspkg.Wrapf(err, "streaming blob `%s`", layerInfo.BlobID)
+		return errorspkg.Wrapf(err, "streaming blob `%s`", layerInfo.BlobID)
 	}
+	defer stream.Close()
 
 	logger.Debug("got-stream-for-blob", lager.Data{"size": size})
 
-	downloadChan <- downloadReturn{Stream: stream, Err: err}
+	return p.unpackLayer(logger, layerInfo, parentLayerInfo, spec, stream)
 }
 
 func (p *BaseImagePuller) unpackLayer(logger lager.Logger, layerInfo, parentLayerInfo groot.LayerInfo, spec groot.BaseImageSpec, stream io.ReadCloser) error {
