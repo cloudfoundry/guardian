@@ -56,11 +56,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"syscall"
 	"unsafe"
 
 	"code.cloudfoundry.org/lager"
 	"github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
 func Get(logger lager.Logger, path string) (Quota, error) {
@@ -93,7 +93,7 @@ func Get(logger lager.Logger, path string) (Quota, error) {
 	var cs = C.CString(storeDevicePath)
 	defer C.free(unsafe.Pointer(cs))
 
-	_, _, errno := syscall.Syscall6(syscall.SYS_QUOTACTL, C.Q_XGETPQUOTA,
+	_, _, errno := unix.Syscall6(unix.SYS_QUOTACTL, C.Q_XGETPQUOTA,
 		uintptr(unsafe.Pointer(cs)), uintptr(C.__u32(projectID)),
 		uintptr(unsafe.Pointer(&d)), 0, 0)
 	if errno != 0 {
@@ -135,7 +135,7 @@ func Set(logger lager.Logger, projectID uint32, path string, quotaSize uint64) e
 	var cs = C.CString(storeDevicePath)
 	defer C.free(unsafe.Pointer(cs))
 
-	_, _, errno := syscall.Syscall6(syscall.SYS_QUOTACTL, C.Q_XSETPQLIM,
+	_, _, errno := unix.Syscall6(unix.SYS_QUOTACTL, C.Q_XSETPQLIM,
 		uintptr(unsafe.Pointer(cs)), uintptr(d.d_id),
 		uintptr(unsafe.Pointer(&d)), 0, 0)
 	if errno != 0 {
@@ -194,7 +194,7 @@ func setProjectID(projectID uint32, path string) error {
 func getXattr(dir *C.DIR) (C.struct_fsxattr, error) {
 	var fsx C.struct_fsxattr
 
-	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, getDirFd(dir), C.FS_IOC_FSGETXATTR,
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, getDirFd(dir), C.FS_IOC_FSGETXATTR,
 		uintptr(unsafe.Pointer(&fsx)))
 	if errno != 0 {
 		return fsx, errno
@@ -204,7 +204,7 @@ func getXattr(dir *C.DIR) (C.struct_fsxattr, error) {
 }
 
 func setXattr(dir *C.DIR, fsx C.struct_fsxattr) error {
-	_, _, errno := syscall.Syscall(syscall.SYS_IOCTL, getDirFd(dir), C.FS_IOC_FSSETXATTR,
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, getDirFd(dir), C.FS_IOC_FSSETXATTR,
 		uintptr(unsafe.Pointer(&fsx)))
 	if errno != 0 {
 		return errno
@@ -221,15 +221,13 @@ func getStoreDevicePath(imagePath string) (string, error) {
 		return storeDevicePath, nil
 	}
 
-	fileinfo, err := os.Stat(basePath)
-	if err != nil {
+	var stat unix.Stat_t
+	if err := unix.Stat(basePath, &stat); err != nil {
 		return "", err
 	}
 
-	// by stat-ing the image path weare getting information about the underlying store device
-	stat := fileinfo.Sys().(*syscall.Stat_t)
 	// mknod will create a new block device with the same major and minor numbers as returned by stat (but with a different path)
-	if err := syscall.Mknod(storeDevicePath, syscall.S_IFBLK|0600, int(stat.Dev)); err != nil && !os.IsExist(err) {
+	if err := unix.Mknod(storeDevicePath, unix.S_IFBLK|0600, int(stat.Dev)); err != nil && !os.IsExist(err) {
 		return "", errors.Errorf("creating backing fs block device %s: %v", storeDevicePath, err)
 	}
 
