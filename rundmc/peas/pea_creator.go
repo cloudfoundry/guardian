@@ -10,6 +10,7 @@ import (
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
+	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/depot"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
@@ -53,6 +54,7 @@ type PeaCreator struct {
 	ExecRunner             runrunc.ExecRunner
 	RuncDeleter            RuncDeleter
 	PeaCleaner             gardener.PeaCleaner
+	Runtime                rundmc.OCIRuntime
 }
 
 func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec, procIO garden.ProcessIO, sandboxHandle, sandboxBundlePath string) (garden.Process, error) {
@@ -156,11 +158,14 @@ func (p *PeaCreator) CreatePea(log lager.Logger, processSpec garden.ProcessSpec,
 	extraCleanup := func() error {
 		return p.PeaCleaner.Clean(log, processID)
 	}
-	proc, runErr := p.ExecRunner.Run(
-		log, processID, peaBundlePath, sandboxHandle, sandboxBundlePath,
-		preparedProcess.ContainerRootHostUID, preparedProcess.ContainerRootHostGID,
-		procIO, preparedProcess.Process.Terminal, nil, extraCleanup,
-	)
+
+	proc, runErr := p.Runtime.Run(log, processID, peaBundlePath, procIO, extraCleanup)
+
+	// proc, runErr := p.ExecRunner.Run(
+	// 	log, processID, peaBundlePath, sandboxHandle, sandboxBundlePath,
+	// 	preparedProcess.ContainerRootHostUID, preparedProcess.ContainerRootHostGID,
+	// 	procIO, preparedProcess.Process.Terminal, nil, extraCleanup,
+	// )
 	if runErr != nil {
 		destroyErr := p.Volumizer.Destroy(log, processID)
 		return nil, multierror.Append(runErr, destroyErr)

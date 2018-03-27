@@ -4,6 +4,8 @@ import (
 	"os/exec"
 
 	"code.cloudfoundry.org/commandrunner"
+	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/lager"
 )
 
 const DefaultRootPath = "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
@@ -21,6 +23,10 @@ type RunRunc struct {
 	*Stater
 	*Killer
 	*Deleter
+}
+
+func (r *RunRunc) Run(log lager.Logger, bundlePath, id string, io garden.ProcessIO, cleanup func() error) (garden.Process, error) {
+	return nil, nil
 }
 
 //go:generate counterfeiter . RuncBinary

@@ -4,6 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
+	"strconv"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -46,9 +49,34 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 		return err
 	}
 
+	containerdIO := cio.NullIO
+	if io.Stdin != nil {
+		containerdIO = cio.NewCreator(cio.WithStreams(io.Stdin, io.Stdout, io.Stderr))
+	}
+
 	// container.NewTask essentially does a `runc create`
-	_, err = container.NewTask(r.context, cio.NullIO, withMaximusIO)
-	return err
+	task, err := container.NewTask(r.context, containerdIO, withMaximusIO)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filepath.Join(bundlePath, "pidfile"), []byte(strconv.FormatUint(uint64(task.Pid()), 10)), 0644)
+}
+
+func (r *RunContainerd) Run(log lager.Logger, processID, processPath string, pio garden.ProcessIO, extraCleanup func() error) (garden.Process, error) {
+	if err := r.Create(log, processPath, processID, pio); err != nil {
+		return nil, err
+	}
+
+	_, task, err := r.getContainerTask(processID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := task.Start(r.context); err != nil {
+		return nil, err
+	}
+
+	return newGardenProcess(r.context, task, processID, extraCleanup), nil
 }
 
 func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garden.ProcessSpec, io garden.ProcessIO) (garden.Process, error) {
@@ -90,7 +118,7 @@ func (r *RunContainerd) Exec(log lager.Logger, bundlePath, id string, spec garde
 		return nil, fmt.Errorf("hey %s", err)
 	}
 
-	return newGardenProcess(r.context, process, processID), nil
+	return newGardenProcess(r.context, process, processID, noopCleanup), nil
 }
 
 func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId string, io garden.ProcessIO) (garden.Process, error) {
@@ -104,7 +132,7 @@ func (r *RunContainerd) Attach(log lager.Logger, bundlePath, id, processId strin
 		return nil, err
 	}
 
-	return newGardenProcess(r.context, process, processId), nil
+	return newGardenProcess(r.context, process, processId, noopCleanup), nil
 }
 
 func (r *RunContainerd) Kill(log lager.Logger, bundlePath string) error {
@@ -169,13 +197,15 @@ type ContainerdToGardenProcessAdapter struct {
 	containerdProcess containerd.Process
 	context           context.Context
 	processID         string
+	cleanup           func() error
 }
 
-func newGardenProcess(context context.Context, process containerd.Process, processID string) *ContainerdToGardenProcessAdapter {
+func newGardenProcess(context context.Context, process containerd.Process, processID string, cleanup func() error) *ContainerdToGardenProcessAdapter {
 	return &ContainerdToGardenProcessAdapter{
 		containerdProcess: process,
 		context:           context,
 		processID:         processID,
+		cleanup:           cleanup,
 	}
 }
 
@@ -185,6 +215,8 @@ func (w *ContainerdToGardenProcessAdapter) ID() string {
 }
 
 func (w *ContainerdToGardenProcessAdapter) Wait() (int, error) {
+	// TODO: cleanup error handling
+	defer w.cleanup()
 	exitStatusChan, err := w.containerdProcess.Wait(w.context)
 	exitStatus := <-exitStatusChan
 	return int(exitStatus.ExitCode()), err
@@ -202,5 +234,9 @@ func withMaximusIO(_ context.Context, client *containerd.Client, r *containerd.T
 		IoUid: 4294967294,
 		IoGid: 4294967294,
 	}
+	return nil
+}
+
+func noopCleanup() error {
 	return nil
 }

@@ -851,20 +851,29 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin}
 
 	var runner rundmc.OCIRuntime
-	runner = runrunc.New(
-		cmdRunner,
-		runcLogRunner,
-		runcBinary,
-		cmd.Bin.Dadoo.Path(),
-		cmd.Runtime.Plugin,
-		cmd.Runtime.PluginExtraArgs,
-		bndlLoader,
-		processBuilder,
-		factory.WireMkdirer(),
-		runrunc.LookupFunc(runrunc.LookupUser),
-		factory.WireExecRunner("exec"),
-		wireUIDGenerator(),
-	)
+	if cmd.Containerd.Socket != "" {
+		ctx := namespaces.WithNamespace(context.Background(), "garden")
+		containerdClient, err := containerd.New(cmd.Containerd.Socket)
+		if err != nil {
+			panic(err)
+		}
+		runner = runcontainerd.New(containerdClient, bndlLoader, ctx, processBuilder, wireUIDGenerator())
+	} else {
+		runner = runrunc.New(
+			cmdRunner,
+			runcLogRunner,
+			runcBinary,
+			cmd.Bin.Dadoo.Path(),
+			cmd.Runtime.Plugin,
+			cmd.Runtime.PluginExtraArgs,
+			bndlLoader,
+			processBuilder,
+			factory.WireMkdirer(),
+			runrunc.LookupFunc(runrunc.LookupUser),
+			factory.WireExecRunner("exec"),
+			wireUIDGenerator(),
+		)
+	}
 
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
@@ -893,6 +902,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 		ExecRunner:             factory.WireExecRunner("run"),
 		RuncDeleter:            runcDeleter,
 		PeaCleaner:             peaCleaner,
+		Runtime:                runner,
 	}
 
 	peaUsernameResolver := &peas.PeaUsernameResolver{
@@ -904,15 +914,6 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-
-	if cmd.Containerd.Socket != "" {
-		ctx := namespaces.WithNamespace(context.Background(), "garden")
-		containerdClient, err := containerd.New(cmd.Containerd.Socket)
-		if err != nil {
-			panic(err)
-		}
-		runner = runcontainerd.New(containerdClient, bndlLoader, ctx, processBuilder, wireUIDGenerator())
-	}
 
 	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver)
 }
