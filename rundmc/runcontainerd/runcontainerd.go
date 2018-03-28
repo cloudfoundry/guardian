@@ -60,6 +60,11 @@ func (r *RunContainerd) Create(log lager.Logger, bundlePath, id string, io garde
 	if err != nil {
 		return err
 	}
+
+	if err := task.Start(r.context); err != nil {
+		return err
+	}
+
 	return ioutil.WriteFile(filepath.Join(bundlePath, "pidfile"), []byte(strconv.FormatUint(uint64(task.Pid()), 10)), 0644)
 }
 
@@ -70,10 +75,6 @@ func (r *RunContainerd) Run(log lager.Logger, processID, processPath string, pio
 
 	_, task, err := r.getContainerTask(processID)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := task.Start(r.context); err != nil {
 		return nil, err
 	}
 
