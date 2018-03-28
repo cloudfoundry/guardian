@@ -69,7 +69,7 @@ var _ = Describe("Layer source: Docker", func() {
 	})
 
 	JustBeforeEach(func() {
-		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, baseImageURL)
+		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, false, 0, baseImageURL)
 	})
 
 	Describe("Manifest", func() {
@@ -221,7 +221,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			JustBeforeEach(func() {
-				layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, baseImageURL)
+				layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, false, 0, baseImageURL)
 				var err error
 				manifest, err = layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -413,7 +413,7 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			JustBeforeEach(func() {
-				layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, baseImageURL)
+				layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, false, 0, baseImageURL)
 			})
 
 			It("fetches the manifest", func() {

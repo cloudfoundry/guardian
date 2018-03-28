@@ -28,7 +28,7 @@ var _ = Describe("QuotaedReader", func() {
 
 	JustBeforeEach(func() {
 		qr = &layer_fetcher.QuotaedReader{
-			DelegateReader: delegate,
+			DelegateReader: ioutil.NopCloser(delegate),
 			QuotaLeft:      quota,
 			SkipValidation: skipValidation,
 			QuotaExceededErrorHandler: func() error {

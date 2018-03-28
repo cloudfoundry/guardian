@@ -59,7 +59,7 @@ var _ = Describe("Layer source: OCI", func() {
 	})
 
 	JustBeforeEach(func() {
-		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, baseImageURL)
+		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, false, 0, baseImageURL)
 	})
 
 	Describe("Manifest", func() {
@@ -233,6 +233,12 @@ var _ = Describe("Layer source: OCI", func() {
 			It("returns an error", func() {
 				_, _, err := layerSource.Blob(logger, layerInfos[0])
 				Expect(err).To(MatchError(ContainSubstring("layer size is less than the value in the manifest")))
+			})
+		})
+
+		Context("when the uncompressed layer size is bigger that the quota", func() {
+			BeforeEach(func() {
+
 			})
 		})
 	})

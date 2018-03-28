@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -421,7 +422,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 		})
 
-		Context("when image size exceeds disk quota", func() {
+		Context("when the total size of compressed layers is greater than the quota", func() {
 			BeforeEach(func() {
 				baseImageURL = integration.String2URL("docker:///cfgarden/empty:v0.1.1")
 			})
@@ -449,6 +450,38 @@ var _ = Describe("Create with remote DOCKER images", func() {
 						DiskLimit:    10,
 					})
 					Expect(err).To(MatchError(ContainSubstring("layers exceed disk quota")))
+				})
+			})
+		})
+
+		Context("when the total size of compressed layer is less than the quota, but the uncompressed size is bigger", func() {
+			var diskLimit int64 = 12 * 1024
+
+			BeforeEach(func() {
+				baseImageURL = integration.String2URL("docker:///cfgarden/zip-bomb")
+			})
+
+			It("returns an error", func() {
+				_, err := runner.Create(groot.CreateSpec{
+					BaseImageURL: baseImageURL,
+					ID:           randomImageID,
+					Mount:        mountByDefault(),
+					DiskLimit:    diskLimit,
+				})
+				Expect(err).To(MatchError(ContainSubstring("uncompressed layer size exceeds quota")))
+			})
+
+			Context("when the image is not accounted for in the quota", func() {
+				It("succeeds", func() {
+					containerSpec, err := runner.Create(groot.CreateSpec{
+						BaseImageURL: baseImageURL,
+						ID:           randomImageID,
+						Mount:        mountByDefault(),
+						ExcludeBaseImageFromQuota: true,
+						DiskLimit:                 diskLimit,
+					})
+					Expect(runner.EnsureMounted(containerSpec)).To(Succeed())
+					Expect(err).ToNot(HaveOccurred())
 				})
 			})
 		})
@@ -747,7 +780,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			corruptedBlob = testhelpers.EmptyBaseImageV011.Layers[1].BlobID
 			fakeRegistry.WhenGettingBlob(corruptedBlob, 0, func(w http.ResponseWriter, r *http.Request) {
 				gzipWriter := gzip.NewWriter(w)
-				_, err := gzipWriter.Write([]byte("bad-blob"))
+				_, err := io.WriteString(gzipWriter, "bad-blob")
 				gzipWriter.Close()
 				Expect(err).NotTo(HaveOccurred())
 			})

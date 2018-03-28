@@ -34,14 +34,18 @@ type LayerSource struct {
 	systemContext          types.SystemContext
 	baseImageURL           *url.URL
 	// imageSource needs to be a singleton that is initialised on demand in createImageSource. DO NOT use the field directly, use getImageSource instead
-	imageSource types.ImageSource
+	imageSource       types.ImageSource
+	imageQuota        int64
+	enforceImageQuota bool
 }
 
-func NewLayerSource(systemContext types.SystemContext, skipOCILayerValidation bool, baseImageURL *url.URL) LayerSource {
+func NewLayerSource(systemContext types.SystemContext, skipOCILayerValidation, enforceImageQuota bool, diskLimit int64, baseImageURL *url.URL) LayerSource {
 	return LayerSource{
 		systemContext:          systemContext,
 		skipOCILayerValidation: skipOCILayerValidation,
 		baseImageURL:           baseImageURL,
+		imageQuota:             diskLimit,
+		enforceImageQuota:      enforceImageQuota,
 	}
 }
 
@@ -101,14 +105,7 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 	}
 	logger.Debug("got-blob-stream", lager.Data{"digest": layerInfo.BlobID, "size": size, "mediaType": layerInfo.MediaType})
 
-	quotaedReader := &layer_fetcher.QuotaedReader{
-		DelegateReader: blob,
-		QuotaLeft:      layerInfo.Size,
-		SkipValidation: s.skipOCILayerValidation,
-		QuotaExceededErrorHandler: func() error {
-			return fmt.Errorf("layer size is greater than the value in the manifest")
-		},
-	}
+	quotaedReader := layer_fetcher.NewQuotaedReader(blob, layerInfo.Size, s.skipOCILayerValidation, "layer size is greater than the value in the manifest")
 
 	blobTempFile, err := ioutil.TempFile("", fmt.Sprintf("blob-%s", layerInfo.BlobID))
 
@@ -122,6 +119,14 @@ func (s *LayerSource) Blob(logger lager.Logger, layerInfo groot.LayerInfo) (stri
 			return "", 0, errorspkg.Wrapf(err, "expected blob to be of type %s", layerInfo.MediaType)
 		}
 		defer digestReader.Close()
+
+		if s.enforceImageQuota && s.imageQuota > 0 {
+			uncompressedQuoptaedReader := layer_fetcher.NewQuotaedReader(digestReader, s.imageQuota, false, "uncompressed layer size exceeds quota")
+			digestReader = uncompressedQuoptaedReader
+			defer func() {
+				s.imageQuota = uncompressedQuoptaedReader.QuotaLeft
+			}()
+		}
 	}
 
 	if err != nil {

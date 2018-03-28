@@ -278,7 +278,7 @@ var _ = Describe("Create with OCI images", func() {
 		})
 	})
 
-	Context("when image size exceeds disk quota", func() {
+	Context("when the total size of compressed layers is greater than the quota", func() {
 		Context("when the image is accounted for in the quota", func() {
 			It("returns an error", func() {
 				_, err := runner.Create(groot.CreateSpec{
@@ -288,6 +288,38 @@ var _ = Describe("Create with OCI images", func() {
 					DiskLimit:    10,
 				})
 				Expect(err).To(MatchError(ContainSubstring("layers exceed disk quota")))
+			})
+		})
+	})
+
+	Context("when the total size of compressed layer is less than the quota, but the uncompressed size is bigger", func() {
+		// The only layer of zip-bomb is a tar with size 20480 bytes
+		var diskLimit int64 = 20480 - 1
+
+		BeforeEach(func() {
+			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/zip-bomb:latest", workDir))
+		})
+
+		It("returns an error", func() {
+			_, err := runner.Create(groot.CreateSpec{
+				BaseImageURL: baseImageURL,
+				ID:           randomImageID,
+				Mount:        mountByDefault(),
+				DiskLimit:    diskLimit,
+			})
+			Expect(err).To(MatchError(ContainSubstring("uncompressed layer size exceeds quota")))
+		})
+
+		Context("when the image is not accounted for in the quota", func() {
+			It("succeeds", func() {
+				_, err := runner.Create(groot.CreateSpec{
+					BaseImageURL: baseImageURL,
+					ID:           randomImageID,
+					Mount:        mountByDefault(),
+					ExcludeBaseImageFromQuota: true,
+					DiskLimit:                 diskLimit,
+				})
+				Expect(err).NotTo(HaveOccurred())
 			})
 		})
 	})
