@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
+	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gardener"
@@ -221,12 +222,18 @@ func (w *ContainerdToGardenProcessAdapter) Wait() (int, error) {
 	exitStatus := <-exitStatusChan
 	return int(exitStatus.ExitCode()), err
 }
+
 func (w *ContainerdToGardenProcessAdapter) SetTTY(garden.TTYSpec) error {
 	return errors.New("SetTTY is not implemented")
 }
 
-func (w *ContainerdToGardenProcessAdapter) Signal(garden.Signal) error {
-	return errors.New("Signal is not implemented")
+func (w *ContainerdToGardenProcessAdapter) Signal(signal garden.Signal) error {
+	syscallSignal, err := toSyscallSignal(signal)
+	if err != nil {
+		return err
+	}
+
+	return w.containerdProcess.Kill(w.context, syscallSignal)
 }
 
 func withMaximusIO(_ context.Context, client *containerd.Client, r *containerd.TaskInfo) error {
@@ -239,4 +246,15 @@ func withMaximusIO(_ context.Context, client *containerd.Client, r *containerd.T
 
 func noopCleanup() error {
 	return nil
+}
+
+func toSyscallSignal(signal garden.Signal) (syscall.Signal, error) {
+	switch signal {
+	case garden.SignalTerminate:
+		return syscall.SIGTERM, nil
+	case garden.SignalKill:
+		return syscall.SIGKILL, nil
+	}
+
+	return -1, fmt.Errorf("Cannot convert garden signal %d to syscall.Signal", signal)
 }
