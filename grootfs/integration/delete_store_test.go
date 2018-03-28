@@ -1,7 +1,6 @@
 package integration_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -16,10 +15,9 @@ import (
 
 var _ = Describe("Delete Store", func() {
 	var (
-		backingStoreFile string
-		runner           grootfsRunner.Runner
-		spec             grootfsRunner.InitSpec
-		storePath        string
+		runner    grootfsRunner.Runner
+		spec      grootfsRunner.InitSpec
+		storePath string
 	)
 	BeforeEach(func() {
 		integration.SkipIfNonRoot(GrootfsTestUid)
@@ -28,7 +26,6 @@ var _ = Describe("Delete Store", func() {
 
 		storePath = filepath.Join(tmpDir, "store")
 		spec.StoreSizeBytes = 500 * 1024 * 1024
-		backingStoreFile = fmt.Sprintf("%s.backing-store", storePath)
 
 		runner = Runner.WithStore(storePath)
 	})

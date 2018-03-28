@@ -6,16 +6,15 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"syscall"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller/base_image_pullerfakes"
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/image_cloner/image_clonerfakes"
 	managerpkg "code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/grootfs/store/manager/managerfakes"
 	"code.cloudfoundry.org/lager/lagertest"
+	"golang.org/x/sys/unix"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,7 +28,6 @@ var _ = Describe("Manager", func() {
 		imgDriver   *image_clonerfakes.FakeImageDriver
 		volDriver   *base_image_pullerfakes.FakeVolumeDriver
 		storeDriver *managerfakes.FakeStoreDriver
-		locksmith   *grootfakes.FakeLocksmith
 		manager     *managerpkg.Manager
 		storePath   string
 		logger      *lagertest.TestLogger
@@ -43,7 +41,6 @@ var _ = Describe("Manager", func() {
 		imgDriver = new(image_clonerfakes.FakeImageDriver)
 		volDriver = new(base_image_pullerfakes.FakeVolumeDriver)
 		storeDriver = new(managerfakes.FakeStoreDriver)
-		locksmith = new(grootfakes.FakeLocksmith)
 		namespacer = new(managerfakes.FakeStoreNamespacer)
 
 		logger = lagertest.NewTestLogger("store-manager")
@@ -67,10 +64,10 @@ var _ = Describe("Manager", func() {
 
 		It("sets the caller user as the owner of the store", func() {
 			Expect(manager.InitStore(logger, spec)).To(Succeed())
-			stat, err := os.Stat(storePath)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
-			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+			var stat unix.Stat_t
+			Expect(unix.Stat(storePath, &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(0)))
+			Expect(stat.Gid).To(Equal(uint32(0)))
 		})
 
 		Describe("Path validation", func() {
@@ -192,10 +189,10 @@ var _ = Describe("Manager", func() {
 
 			It("sets the root mapping as the owner of the store", func() {
 				Expect(manager.InitStore(logger, spec)).To(Succeed())
-				stat, err := os.Stat(storePath)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(GrootUID))
-				Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(GrootGID))
+				var stat unix.Stat_t
+				Expect(unix.Stat(storePath, &stat)).To(Succeed())
+				Expect(stat.Uid).To(Equal(GrootUID))
+				Expect(stat.Gid).To(Equal(GrootGID))
 			})
 
 			It("calls the namespace writer to set the metadata", func() {
@@ -229,10 +226,10 @@ var _ = Describe("Manager", func() {
 
 				It("sets caller user as the owner of the store", func() {
 					Expect(manager.InitStore(logger, spec)).To(Succeed())
-					stat, err := os.Stat(storePath)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(0)))
-					Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(0)))
+					var stat unix.Stat_t
+					Expect(unix.Stat(storePath, &stat)).To(Succeed())
+					Expect(stat.Uid).To(Equal(uint32(0)))
+					Expect(stat.Gid).To(Equal(uint32(0)))
 				})
 			})
 		})
