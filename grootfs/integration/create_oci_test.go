@@ -335,7 +335,7 @@ var _ = Describe("Create with OCI images", func() {
 				ID:           randomImageID,
 				Mount:        mountByDefault(),
 			})
-			Expect(err).To(MatchError(ContainSubstring("layer size is greater than the value in the manifest")))
+			Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 		})
 	})
 
@@ -350,7 +350,7 @@ var _ = Describe("Create with OCI images", func() {
 				ID:           randomImageID,
 				Mount:        mountByDefault(),
 			})
-			Expect(err).To(MatchError(ContainSubstring("layer size is less than the value in the manifest")))
+			Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 		})
 	})
 

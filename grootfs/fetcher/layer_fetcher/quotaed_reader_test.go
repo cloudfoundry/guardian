@@ -15,22 +15,19 @@ import (
 
 var _ = Describe("QuotaedReader", func() {
 	var (
-		delegate       io.Reader
-		quota          int64
-		qr             *layer_fetcher.QuotaedReader
-		skipValidation bool
+		delegate io.Reader
+		quota    int64
+		qr       *layer_fetcher.QuotaedReader
 	)
 
 	BeforeEach(func() {
 		quota = 20
-		skipValidation = false
 	})
 
 	JustBeforeEach(func() {
 		qr = &layer_fetcher.QuotaedReader{
 			DelegateReader: ioutil.NopCloser(delegate),
 			QuotaLeft:      quota,
-			SkipValidation: skipValidation,
 			QuotaExceededErrorHandler: func() error {
 				return fmt.Errorf("err-quota-exceeded")
 			},
@@ -81,65 +78,25 @@ var _ = Describe("QuotaedReader", func() {
 
 		Context("when we pass a negative quota", func() {
 			BeforeEach(func() {
-				delegate = strings.NewReader("does not limit")
+				delegate = strings.NewReader("OMG, negative quota!")
 				quota = -1
 			})
 
-			It("reads all the data", func() {
-				Expect(ioutil.ReadAll(qr)).To(Equal([]byte("does not limit")))
+			It("returns an error", func() {
+				_, err := ioutil.ReadAll(qr)
+				Expect(err).To(MatchError("err-quota-exceeded"))
 			})
 		})
 
-		Context("when skipValidation is true", func() {
+		Context("when we pass zero quota", func() {
 			BeforeEach(func() {
-				delegate = strings.NewReader("does not limit")
-				skipValidation = true
-				quota = 1
-			})
-
-			It("reads all the data", func() {
-				Expect(ioutil.ReadAll(qr)).To(Equal([]byte("does not limit")))
-			})
-		})
-	})
-
-	Describe("AnyQuotaLeft", func() {
-		Context("when there is quota left", func() {
-			BeforeEach(func() {
-				quota = 10
-			})
-
-			It("returns true", func() {
-				Expect(qr.AnyQuotaLeft()).To(BeTrue())
-			})
-
-			Context("when skipValidation is true", func() {
-				BeforeEach(func() {
-					skipValidation = true
-				})
-
-				It("returns false", func() {
-					Expect(qr.AnyQuotaLeft()).To(BeFalse())
-				})
-			})
-		})
-		Context("when there is no quota left", func() {
-			BeforeEach(func() {
+				delegate = strings.NewReader("A")
 				quota = 0
 			})
 
-			It("returns false", func() {
-				Expect(qr.AnyQuotaLeft()).To(BeFalse())
-			})
-
-			Context("when skipValidation is true", func() {
-				BeforeEach(func() {
-					skipValidation = true
-				})
-
-				It("returns false", func() {
-					Expect(qr.AnyQuotaLeft()).To(BeFalse())
-				})
+			It("returns an error", func() {
+				_, err := ioutil.ReadAll(qr)
+				Expect(err).To(MatchError("err-quota-exceeded"))
 			})
 		})
 	})

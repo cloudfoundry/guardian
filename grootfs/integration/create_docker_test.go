@@ -535,7 +535,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 						corruptedBlob = testhelpers.EmptyBaseImageV011.Layers[1].BlobID
 						fakeRegistry.WhenGettingBlob(corruptedBlob, 0, func(w http.ResponseWriter, r *http.Request) {
 							gzipWriter := gzip.NewWriter(w)
-							_, err := gzipWriter.Write([]byte("bad-blob"))
+							_, err := io.WriteString(gzipWriter, "bad-blob")
 							gzipWriter.Close()
 							Expect(err).NotTo(HaveOccurred())
 						})
@@ -550,7 +550,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 							Mount:        mountByDefault(),
 						})
 
-						Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
+						Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 
 						volumes, _ := ioutil.ReadDir(volumesDir)
 						Expect(len(volumes)).To(Equal(len(testhelpers.EmptyBaseImageV011.Layers) - 1))
@@ -565,7 +565,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 						baseImageURL = integration.String2URL(fmt.Sprintf("docker://%s/cfgarden/empty:schemaV1", fakeRegistry.Addr()))
 						corruptedBlob = testhelpers.SchemaV1EmptyBaseImage.Layers[2].BlobID
 						fakeRegistry.WhenGettingBlob(corruptedBlob, 0, func(w http.ResponseWriter, r *http.Request) {
-							_, err := w.Write([]byte("bad-blob"))
+							_, err := io.WriteString(w, "bad-blob")
 							Expect(err).NotTo(HaveOccurred())
 						})
 					})
@@ -581,7 +581,8 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 						Expect(err).To(MatchError(ContainSubstring("converting V1 schema failed")))
 
-						volumes, _ := ioutil.ReadDir(volumesDir)
+						volumes, err := ioutil.ReadDir(volumesDir)
+						Expect(err).NotTo(HaveOccurred())
 						Expect(len(volumes)).To(Equal(0))
 					})
 				})
@@ -613,9 +614,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 	})
 
 	Context("when a private registry is used", func() {
-		var (
-			fakeRegistry *testhelpers.FakeRegistry
-		)
+		var fakeRegistry *testhelpers.FakeRegistry
 
 		BeforeEach(func() {
 			dockerHubUrl, err := url.Parse("https://registry-1.docker.io")
@@ -796,7 +795,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 				Mount:        true,
 			})
 
-			Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
+			Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 		})
 	})
 

@@ -3,6 +3,7 @@ package source_test
 import (
 	"compress/gzip"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -33,7 +34,9 @@ var _ = Describe("Layer source: Docker", func() {
 		layerInfos    []groot.LayerInfo
 		systemContext types.SystemContext
 
-		skipOCILayerValidation bool
+		skipOCILayerValidation   bool
+		skipImageQuotaValidation bool
+		imageQuota               int64
 	)
 
 	BeforeEach(func() {
@@ -45,6 +48,8 @@ var _ = Describe("Layer source: Docker", func() {
 		}
 
 		skipOCILayerValidation = false
+		skipImageQuotaValidation = true
+		imageQuota = 0
 
 		configBlob = "sha256:217f3b4afdf698d639f854d9c6d640903a011413bc7e7bffeabe63c7ca7e4a7d"
 		layerInfos = []groot.LayerInfo{
@@ -69,7 +74,7 @@ var _ = Describe("Layer source: Docker", func() {
 	})
 
 	JustBeforeEach(func() {
-		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, false, 0, baseImageURL)
+		layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, skipImageQuotaValidation, imageQuota, baseImageURL)
 	})
 
 	Describe("Manifest", func() {
@@ -221,7 +226,6 @@ var _ = Describe("Layer source: Docker", func() {
 			})
 
 			JustBeforeEach(func() {
-				layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, false, 0, baseImageURL)
 				var err error
 				manifest, err = layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -412,10 +416,6 @@ var _ = Describe("Layer source: Docker", func() {
 				layerInfos[1].DiffID = "56702ece901015f4f42dc82d1386c5ffc13625c008890d52548ff30dd142838b"
 			})
 
-			JustBeforeEach(func() {
-				layerSource = source.NewLayerSource(systemContext, skipOCILayerValidation, false, 0, baseImageURL)
-			})
-
 			It("fetches the manifest", func() {
 				manifest, err := layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
@@ -466,15 +466,15 @@ var _ = Describe("Layer source: Docker", func() {
 
 			blobReader, err := os.Open(blobPath)
 			Expect(err).NotTo(HaveOccurred())
+			defer blobReader.Close()
 
-			buffer := gbytes.NewBuffer()
 			cmd := exec.Command("tar", "tv")
 			cmd.Stdin = blobReader
-			sess, err := gexec.Start(cmd, buffer, GinkgoWriter)
+			sess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(size).To(Equal(int64(90)))
 
-			Eventually(buffer).Should(gbytes.Say("hello"))
+			Eventually(sess.Out).Should(gbytes.Say("hello"))
 			Eventually(sess).Should(gexec.Exit(0))
 		})
 
@@ -487,7 +487,7 @@ var _ = Describe("Layer source: Docker", func() {
 				fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
 
 				fakeRegistry.WhenGettingBlob(layerInfos[0].BlobID, 1, func(rw http.ResponseWriter, req *http.Request) {
-					_, _ = rw.Write([]byte("bad-blob"))
+					io.WriteString(rw, "bad-blob")
 				})
 
 				fakeRegistry.Start()
@@ -505,7 +505,7 @@ var _ = Describe("Layer source: Docker", func() {
 			It("returns an error", func() {
 				layerInfos[0].MediaType = "gzip"
 				_, _, err := layerSource.Blob(logger, layerInfos[0])
-				Expect(err).To(MatchError(ContainSubstring("expected blob to be of type")))
+				Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 			})
 		})
 
@@ -600,7 +600,7 @@ var _ = Describe("Layer source: Docker", func() {
 				fakeRegistry = testhelpers.NewFakeRegistry(dockerHubUrl)
 				fakeRegistry.WhenGettingBlob(layerInfos[1].BlobID, 1, func(rw http.ResponseWriter, req *http.Request) {
 					gzipWriter := gzip.NewWriter(rw)
-					_, _ = gzipWriter.Write([]byte("bad-blob"))
+					io.WriteString(gzipWriter, "bad-blob")
 					gzipWriter.Close()
 				})
 				fakeRegistry.Start()
@@ -617,7 +617,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 			It("returns an error", func() {
 				_, _, err := layerSource.Blob(logger, layerInfos[1])
-				Expect(err).To(MatchError(ContainSubstring("layerID digest mismatch")))
+				Expect(err).To(MatchError(ContainSubstring("layer size is different from the value in the manifest")))
 			})
 
 			Context("when a devious hacker tries to set skipOCILayerValidation to true", func() {
@@ -642,7 +642,25 @@ var _ = Describe("Layer source: Docker", func() {
 				Expect(err).To(MatchError(ContainSubstring("diffID digest mismatch")))
 			})
 		})
+
+		Context("when image quota validation is not skipped", func() {
+			BeforeEach(func() {
+				skipImageQuotaValidation = false
+			})
+
+			Context("when the uncompressed layer size is bigger that the quota", func() {
+				BeforeEach(func() {
+					imageQuota = 1
+				})
+
+				It("returns quota exceeded error", func() {
+					_, _, err := layerSource.Blob(logger, layerInfos[0])
+					Expect(err).To(MatchError(ContainSubstring("uncompressed layer size exceeds quota")))
+				})
+			})
+		})
 	})
+
 	Describe("Close", func() {
 		It("can close prior any interactions", func() {
 			Expect(layerSource.Close()).To(Succeed())

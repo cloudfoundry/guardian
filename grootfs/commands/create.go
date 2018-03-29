@@ -285,8 +285,12 @@ func createFetcher(baseImageUrl *url.URL, systemContext types.SystemContext, cre
 	}
 
 	skipOCILayerValidation := createCfg.SkipLayerValidation && baseImageUrl.Scheme == "oci"
-	layerSource := source.NewLayerSource(systemContext, skipOCILayerValidation, !createCfg.ExcludeImageFromQuota, createCfg.DiskLimitSizeBytes, baseImageUrl)
+	layerSource := source.NewLayerSource(systemContext, skipOCILayerValidation, shouldSkipImageQuotaValidation(createCfg), createCfg.DiskLimitSizeBytes, baseImageUrl)
 	return layer_fetcher.NewLayerFetcher(&layerSource)
+}
+
+func shouldSkipImageQuotaValidation(createCfg config.Create) bool {
+	return createCfg.ExcludeImageFromQuota || createCfg.DiskLimitSizeBytes == 0
 }
 
 func createSystemContext(baseImageURL *url.URL, createConfig config.Create, username, password string) types.SystemContext {
