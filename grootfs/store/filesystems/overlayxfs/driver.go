@@ -511,8 +511,6 @@ func (d *Driver) Marshal(logger lager.Logger) ([]byte, error) {
 	driverSpec := spec.DriverSpec{
 		Type:           "overlay-xfs",
 		StorePath:      d.storePath,
-		FsBinaryPath:   "",
-		MkfsBinaryPath: "",
 		SuidBinaryPath: d.tardisBinPath,
 	}
 
