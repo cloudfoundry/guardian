@@ -5,17 +5,19 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
+	"golang.org/x/sys/unix"
 )
 
-const ExclusiveMetricsLockingTime = "ExclusiveLockingTime"
-const SharedMetricsLockingTime = "SharedLockingTime"
+const (
+	ExclusiveMetricsLockingTime = "ExclusiveLockingTime"
+	SharedMetricsLockingTime    = "SharedLockingTime"
+)
 
 type FileSystem struct {
 	storePath      string
@@ -24,28 +26,33 @@ type FileSystem struct {
 	metricName     string
 }
 
-func NewExclusiveFileSystem(storePath string, metricsEmitter groot.MetricsEmitter) *FileSystem {
+func NewExclusiveFileSystem(storePath string) *FileSystem {
 	return &FileSystem{
-		storePath:      storePath,
-		metricsEmitter: metricsEmitter,
-		lockType:       syscall.LOCK_EX,
-		metricName:     ExclusiveMetricsLockingTime,
+		storePath:  storePath,
+		lockType:   unix.LOCK_EX,
+		metricName: ExclusiveMetricsLockingTime,
 	}
 }
 
-func NewSharedFileSystem(storePath string, metricsEmitter groot.MetricsEmitter) *FileSystem {
+func NewSharedFileSystem(storePath string) *FileSystem {
 	return &FileSystem{
-		storePath:      storePath,
-		metricsEmitter: metricsEmitter,
-		lockType:       syscall.LOCK_SH,
-		metricName:     SharedMetricsLockingTime,
+		storePath:  storePath,
+		lockType:   unix.LOCK_SH,
+		metricName: SharedMetricsLockingTime,
 	}
 }
 
-var FlockSyscall = syscall.Flock
+func (l *FileSystem) WithMetrics(e groot.MetricsEmitter) *FileSystem {
+	l.metricsEmitter = e
+	return l
+}
+
+var FlockSyscall = unix.Flock
 
 func (l *FileSystem) Lock(key string) (*os.File, error) {
-	defer l.metricsEmitter.TryEmitDurationFrom(lager.NewLogger("nil"), l.metricName, time.Now())
+	if l.metricsEmitter != nil {
+		defer l.metricsEmitter.TryEmitDurationFrom(lager.NewLogger("nil"), l.metricName, time.Now())
+	}
 
 	key = strings.Replace(key, "/", "", -1)
 	lockFile, err := os.OpenFile(l.path(key), os.O_CREATE|os.O_WRONLY, 0600)
@@ -64,7 +71,7 @@ func (l *FileSystem) Lock(key string) (*os.File, error) {
 func (l *FileSystem) Unlock(lockFile *os.File) error {
 	defer lockFile.Close()
 	fd := int(lockFile.Fd())
-	return FlockSyscall(fd, syscall.LOCK_UN)
+	return FlockSyscall(fd, unix.LOCK_UN)
 }
 
 func (l *FileSystem) path(key string) string {

@@ -66,7 +66,7 @@ var CleanCommand = cli.Command{
 		imageCloner := imageClonerpkg.NewImageCloner(fsDriver, storePath)
 		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
 
-		locksmith := locksmithpkg.NewExclusiveFileSystem(storePath, metricsEmitter)
+		locksmith := locksmithpkg.NewExclusiveFileSystem(storePath).WithMetrics(metricsEmitter)
 		dependencyManager := dependency_manager.NewDependencyManager(
 			filepath.Join(storePath, storepkg.MetaDirName, "dependencies"),
 		)

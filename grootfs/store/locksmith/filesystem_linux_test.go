@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/locksmith"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -39,7 +38,7 @@ var _ = Describe("Filesystem", func() {
 		var exclusiveLocksmith *locksmith.FileSystem
 
 		JustBeforeEach(func() {
-			exclusiveLocksmith = locksmith.NewExclusiveFileSystem(storePath, metricsEmitter)
+			exclusiveLocksmith = locksmith.NewExclusiveFileSystem(storePath)
 		})
 
 		It("blocks when locking the same key twice", func() {
@@ -80,23 +79,28 @@ var _ = Describe("Filesystem", func() {
 				Expect(lockFile).To(BeAnExistingFile())
 			})
 
-			It("emits the locking time metric", func() {
-				startTime := time.Now()
-				_ = filepath.Join(storePath, store.LocksDirName, "key.lock")
-				_, err := exclusiveLocksmith.Lock("key")
-				Expect(err).NotTo(HaveOccurred())
+			Context("when a metrics emmitter is provided", func() {
+				JustBeforeEach(func() {
+					exclusiveLocksmith = exclusiveLocksmith.WithMetrics(metricsEmitter)
+				})
 
-				Expect(metricsEmitter.TryEmitDurationFromCallCount()).To(Equal(1))
-				_, metricName, fromTime := metricsEmitter.TryEmitDurationFromArgsForCall(0)
+				It("emits the locking time metric", func() {
+					startTime := time.Now()
+					_ = filepath.Join(storePath, store.LocksDirName, "key.lock")
+					_, err := exclusiveLocksmith.Lock("key")
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(metricName).To(Equal(locksmith.ExclusiveMetricsLockingTime))
-				Expect(fromTime.Unix()).To(BeNumerically("~", startTime.Unix(), 1))
+					Expect(metricsEmitter.TryEmitDurationFromCallCount()).To(Equal(1))
+					_, metricName, fromTime := metricsEmitter.TryEmitDurationFromArgsForCall(0)
+
+					Expect(metricName).To(Equal(locksmith.ExclusiveMetricsLockingTime))
+					Expect(fromTime.Unix()).To(BeNumerically("~", startTime.Unix(), 1))
+				})
 			})
 
 			Context("when creating the lock file fails", func() {
 				BeforeEach(func() {
 					storePath = "/not/real"
-					exclusiveLocksmith = locksmith.NewExclusiveFileSystem(storePath, metricsEmitter)
 				})
 
 				It("returns an error", func() {
@@ -145,7 +149,7 @@ var _ = Describe("Filesystem", func() {
 	Context("SharedLocksmith", func() {
 		var sharedLocksmith *locksmith.FileSystem
 		JustBeforeEach(func() {
-			sharedLocksmith = locksmith.NewSharedFileSystem(storePath, metricsEmitter)
+			sharedLocksmith = locksmith.NewSharedFileSystem(storePath)
 		})
 
 		It("blocks when locking the same key twice", func() {
@@ -186,23 +190,28 @@ var _ = Describe("Filesystem", func() {
 				Expect(lockFile).To(BeAnExistingFile())
 			})
 
-			It("emits the locking time metric", func() {
-				startTime := time.Now()
-				_ = filepath.Join(storePath, store.LocksDirName, "key.lock")
-				_, err := sharedLocksmith.Lock("key")
-				Expect(err).NotTo(HaveOccurred())
+			Context("when a metrics emmitter is provided", func() {
+				JustBeforeEach(func() {
+					sharedLocksmith = sharedLocksmith.WithMetrics(metricsEmitter)
+				})
 
-				Expect(metricsEmitter.TryEmitDurationFromCallCount()).To(Equal(1))
-				_, metricName, fromTime := metricsEmitter.TryEmitDurationFromArgsForCall(0)
+				It("emits the locking time metric", func() {
+					startTime := time.Now()
+					_ = filepath.Join(storePath, store.LocksDirName, "key.lock")
+					_, err := sharedLocksmith.Lock("key")
+					Expect(err).NotTo(HaveOccurred())
 
-				Expect(metricName).To(Equal(locksmith.SharedMetricsLockingTime))
-				Expect(fromTime.Unix()).To(BeNumerically("~", startTime.Unix(), 1))
+					Expect(metricsEmitter.TryEmitDurationFromCallCount()).To(Equal(1))
+					_, metricName, fromTime := metricsEmitter.TryEmitDurationFromArgsForCall(0)
+
+					Expect(metricName).To(Equal(locksmith.SharedMetricsLockingTime))
+					Expect(fromTime.Unix()).To(BeNumerically("~", startTime.Unix(), 1))
+				})
 			})
 
 			Context("when creating the lock file fails", func() {
 				BeforeEach(func() {
 					storePath = "/not/real"
-					sharedLocksmith = locksmith.NewSharedFileSystem(storePath, metricsEmitter)
 				})
 
 				It("returns an error", func() {

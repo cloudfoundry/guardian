@@ -135,8 +135,8 @@ var CreateCommand = cli.Command{
 		}
 
 		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
-		sharedLocksmith := locksmithpkg.NewSharedFileSystem(storePath, metricsEmitter)
-		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(storePath, metricsEmitter)
+		sharedLocksmith := locksmithpkg.NewSharedFileSystem(storePath).WithMetrics(metricsEmitter)
+		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(storePath).WithMetrics(metricsEmitter)
 		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
 
 		storeNamespacer := groot.NewStoreNamespacer(storePath)
