@@ -1,7 +1,6 @@
 package locksmith // import "code.cloudfoundry.org/grootfs/store/locksmith"
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -75,5 +74,5 @@ func (l *FileSystem) Unlock(lockFile *os.File) error {
 }
 
 func (l *FileSystem) path(key string) string {
-	return filepath.Join(l.storePath, store.LocksDirName, fmt.Sprintf("%s.lock", key))
+	return filepath.Join(l.storePath, store.LocksDirName, key+".lock")
 }

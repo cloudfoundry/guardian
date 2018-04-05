@@ -6,17 +6,16 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 )
 
 var _ = Describe("Delete", func() {
@@ -133,11 +132,11 @@ var _ = Describe("Delete", func() {
 		JustBeforeEach(func() {
 			mntPoint = filepath.Join(filepath.Dir(containerSpec.Root.Path), "mnt")
 			Expect(os.Mkdir(mntPoint, 0700)).To(Succeed())
-			Expect(syscall.Mount(mntPoint, mntPoint, "none", syscall.MS_BIND, "")).To(Succeed())
+			Expect(unix.Mount(mntPoint, mntPoint, "none", unix.MS_BIND, "")).To(Succeed())
 		})
 
 		AfterEach(func() {
-			Expect(syscall.Unmount(mntPoint, syscall.MNT_DETACH)).To(Succeed())
+			Expect(unix.Unmount(mntPoint, unix.MNT_DETACH)).To(Succeed())
 		})
 
 		It("doesn't remove the metadata file", func() {

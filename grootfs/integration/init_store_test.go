@@ -9,16 +9,15 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
-	"syscall"
 
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	grootfsRunner "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gbytes"
+	"golang.org/x/sys/unix"
 )
 
 var _ = Describe("Init Store", func() {
@@ -57,10 +56,10 @@ var _ = Describe("Init Store", func() {
 
 		Expect(runner.StorePath).To(BeADirectory())
 
-		stat, err := os.Stat(runner.StorePath)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(rootUID)))
-		Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))
+		var stat unix.Stat_t
+		Expect(unix.Stat(runner.StorePath, &stat)).To(Succeed())
+		Expect(stat.Uid).To(Equal(uint32(rootUID)))
+		Expect(stat.Gid).To(Equal(uint32(rootGID)))
 	})
 
 	Context("when --store-size-bytes is passed", func() {
@@ -78,7 +77,7 @@ var _ = Describe("Init Store", func() {
 		})
 
 		AfterEach(func() {
-			_ = syscall.Unmount(storePath, 0)
+			_ = unix.Unmount(storePath, 0)
 			Expect(os.RemoveAll(backingStoreFile)).To(Succeed())
 		})
 
@@ -133,10 +132,10 @@ var _ = Describe("Init Store", func() {
 
 			Expect(runner.StorePath).To(BeADirectory())
 
-			stat, err := os.Stat(runner.StorePath)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
-			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+			var stat unix.Stat_t
+			Expect(unix.Stat(runner.StorePath, &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(GrootUID)))
+			Expect(stat.Gid).To(Equal(uint32(GrootGID)))
 		})
 	})
 
@@ -150,10 +149,10 @@ var _ = Describe("Init Store", func() {
 
 			Expect(runner.StorePath).To(BeADirectory())
 
-			stat, err := os.Stat(runner.StorePath)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(stat.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
-			Expect(stat.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+			var stat unix.Stat_t
+			Expect(unix.Stat(runner.StorePath, &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(GrootUID)))
+			Expect(stat.Gid).To(Equal(uint32(GrootGID)))
 		})
 
 		It("creates a store that correctly maps the user/group ids", func() {
@@ -175,15 +174,16 @@ var _ = Describe("Init Store", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(runner.EnsureMounted(containerSpec)).To(Succeed())
-			grootFi, err := os.Stat(path.Join(containerSpec.Root.Path, "foo"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
-			Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			rootFi, err := os.Stat(path.Join(containerSpec.Root.Path, "bar"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
-			Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+			var stat unix.Stat_t
+			Expect(unix.Stat(path.Join(containerSpec.Root.Path, "foo"), &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(stat.Gid).To(Equal(uint32(GrootGID + 99999)))
+
+			stat = unix.Stat_t{}
+			Expect(unix.Stat(path.Join(containerSpec.Root.Path, "bar"), &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(GrootUID)))
+			Expect(stat.Gid).To(Equal(uint32(GrootGID)))
 		})
 
 		Context("and id mappings are provided", func() {

@@ -8,7 +8,6 @@ import (
 	"code.cloudfoundry.org/grootfs/integration"
 	grootfsRunner "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

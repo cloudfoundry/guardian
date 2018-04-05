@@ -11,7 +11,6 @@ import (
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	"code.cloudfoundry.org/grootfs/store"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )

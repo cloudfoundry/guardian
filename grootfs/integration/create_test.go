@@ -17,11 +17,11 @@ import (
 	"code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs"
 	"code.cloudfoundry.org/grootfs/testhelpers"
 	"code.cloudfoundry.org/lager"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -63,20 +63,21 @@ var _ = Describe("Create", func() {
 		Expect(err).ToNot(HaveOccurred())
 
 		Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
-		grootFi, err := os.Stat(path.Join(containerSpec.Root.Path, "foo"))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(grootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
-		Expect(grootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
 
-		grootLink, err := os.Lstat(path.Join(containerSpec.Root.Path, "groot-link"))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(grootLink.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
-		Expect(grootLink.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+		var stat unix.Stat_t
+		Expect(unix.Stat(path.Join(containerSpec.Root.Path, "foo"), &stat)).To(Succeed())
+		Expect(stat.Uid).To(Equal(uint32(GrootUID)))
+		Expect(stat.Gid).To(Equal(uint32(GrootGID)))
 
-		rootFi, err := os.Stat(path.Join(containerSpec.Root.Path, "bar"))
-		Expect(err).NotTo(HaveOccurred())
-		Expect(rootFi.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(rootUID)))
-		Expect(rootFi.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(rootGID)))
+		stat = unix.Stat_t{}
+		Expect(unix.Lstat(path.Join(containerSpec.Root.Path, "groot-link"), &stat)).To(Succeed())
+		Expect(stat.Uid).To(Equal(uint32(GrootUID)))
+		Expect(stat.Gid).To(Equal(uint32(GrootGID)))
+
+		stat = unix.Stat_t{}
+		Expect(unix.Stat(path.Join(containerSpec.Root.Path, "bar"), &stat)).To(Succeed())
+		Expect(stat.Uid).To(Equal(uint32(rootUID)))
+		Expect(stat.Gid).To(Equal(uint32(rootGID)))
 	})
 
 	Context("when the store isn't initialized", func() {
@@ -123,30 +124,30 @@ var _ = Describe("Create", func() {
 
 			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-			grootFile, err := os.Stat(path.Join(containerSpec.Root.Path, "foo"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(grootFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
-			Expect(grootFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
+			var stat unix.Stat_t
+			Expect(unix.Stat(path.Join(containerSpec.Root.Path, "foo"), &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(stat.Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			grootDir, err := os.Stat(path.Join(containerSpec.Root.Path, "groot-folder"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(grootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
-			Expect(grootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
+			stat = unix.Stat_t{}
+			Expect(unix.Stat(path.Join(containerSpec.Root.Path, "groot-folder"), &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(stat.Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			grootLink, err := os.Lstat(path.Join(containerSpec.Root.Path, "groot-link"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(grootLink.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID + 99999)))
-			Expect(grootLink.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID + 99999)))
+			stat = unix.Stat_t{}
+			Expect(unix.Lstat(path.Join(containerSpec.Root.Path, "groot-link"), &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(GrootUID + 99999)))
+			Expect(stat.Gid).To(Equal(uint32(GrootGID + 99999)))
 
-			rootFile, err := os.Stat(path.Join(containerSpec.Root.Path, "bar"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(rootFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
-			Expect(rootFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+			stat = unix.Stat_t{}
+			Expect(unix.Stat(path.Join(containerSpec.Root.Path, "bar"), &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(GrootUID)))
+			Expect(stat.Gid).To(Equal(uint32(GrootGID)))
 
-			rootDir, err := os.Stat(path.Join(containerSpec.Root.Path, "root-folder"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(rootDir.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
-			Expect(rootDir.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+			stat = unix.Stat_t{}
+			Expect(unix.Stat(path.Join(containerSpec.Root.Path, "root-folder"), &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(GrootUID)))
+			Expect(stat.Gid).To(Equal(uint32(GrootGID)))
 		})
 
 		It("allows the mapped user to have access to the created image", func() {

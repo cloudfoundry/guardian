@@ -17,18 +17,17 @@ import (
 	"strings"
 	"syscall"
 
-	specs "github.com/opencontainers/runtime-spec/specs-go"
-
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
 	"code.cloudfoundry.org/grootfs/integration"
 	runnerpkg "code.cloudfoundry.org/grootfs/integration/runner"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/testhelpers"
-
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 )
 
 var _ = Describe("Create with OCI images", func() {
@@ -416,15 +415,15 @@ var _ = Describe("Create with OCI images", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(Runner.EnsureMounted(containerSpec)).To(Succeed())
 
-			rootOwnedFile, err := os.Stat(path.Join(containerSpec.Root.Path, "/etc"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(GrootUID)))
-			Expect(rootOwnedFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(GrootGID)))
+			var stat unix.Stat_t
+			Expect(unix.Stat(filepath.Join(containerSpec.Root.Path, "/etc"), &stat)).NotTo(HaveOccurred())
+			Expect(stat.Uid).To(Equal(uint32(GrootUID)))
+			Expect(stat.Gid).To(Equal(uint32(GrootGID)))
 
-			user33OwnedFile, err := os.Stat(path.Join(containerSpec.Root.Path, "/var/www"))
-			Expect(err).NotTo(HaveOccurred())
-			Expect(user33OwnedFile.Sys().(*syscall.Stat_t).Uid).To(Equal(uint32(99999 + 33)))
-			Expect(user33OwnedFile.Sys().(*syscall.Stat_t).Gid).To(Equal(uint32(99999 + 33)))
+			stat = unix.Stat_t{}
+			Expect(unix.Stat(filepath.Join(containerSpec.Root.Path, "/var/www"), &stat)).To(Succeed())
+			Expect(stat.Uid).To(Equal(uint32(99999 + 33)))
+			Expect(stat.Gid).To(Equal(uint32(99999 + 33)))
 		})
 	})
 
