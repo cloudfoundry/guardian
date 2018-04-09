@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot"
-	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/lager"
 	errorspkg "github.com/pkg/errors"
 	"golang.org/x/sys/unix"
@@ -19,23 +18,23 @@ const (
 )
 
 type FileSystem struct {
-	storePath      string
+	locksDir       string
 	metricsEmitter groot.MetricsEmitter
 	lockType       int
 	metricName     string
 }
 
-func NewExclusiveFileSystem(storePath string) *FileSystem {
+func NewExclusiveFileSystem(locksDir string) *FileSystem {
 	return &FileSystem{
-		storePath:  storePath,
+		locksDir:   locksDir,
 		lockType:   unix.LOCK_EX,
 		metricName: ExclusiveMetricsLockingTime,
 	}
 }
 
-func NewSharedFileSystem(storePath string) *FileSystem {
+func NewSharedFileSystem(locksDir string) *FileSystem {
 	return &FileSystem{
-		storePath:  storePath,
+		locksDir:   locksDir,
 		lockType:   unix.LOCK_SH,
 		metricName: SharedMetricsLockingTime,
 	}
@@ -74,5 +73,5 @@ func (l *FileSystem) Unlock(lockFile *os.File) error {
 }
 
 func (l *FileSystem) path(key string) string {
-	return filepath.Join(l.storePath, store.LocksDirName, key+".lock")
+	return filepath.Join(l.locksDir, key+".lock")
 }

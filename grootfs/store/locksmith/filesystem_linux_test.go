@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/grootfs/groot/grootfakes"
-	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/locksmith"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -18,19 +17,18 @@ import (
 var _ = Describe("Filesystem", func() {
 	var (
 		metricsEmitter *grootfakes.FakeMetricsEmitter
-		storePath      string
+		path           string
 	)
 
 	BeforeEach(func() {
 		var err error
-		storePath, err = ioutil.TempDir("", "store")
+		path, err = ioutil.TempDir("", "store")
 		Expect(err).ToNot(HaveOccurred())
-		Expect(os.Mkdir(filepath.Join(storePath, "locks"), 0755)).To(Succeed())
 		metricsEmitter = new(grootfakes.FakeMetricsEmitter)
 	})
 
 	AfterEach(func() {
-		Expect(os.RemoveAll(storePath)).To(Succeed())
+		Expect(os.RemoveAll(path)).To(Succeed())
 		locksmith.FlockSyscall = syscall.Flock
 	})
 
@@ -38,7 +36,7 @@ var _ = Describe("Filesystem", func() {
 		var exclusiveLocksmith *locksmith.FileSystem
 
 		JustBeforeEach(func() {
-			exclusiveLocksmith = locksmith.NewExclusiveFileSystem(storePath)
+			exclusiveLocksmith = locksmith.NewExclusiveFileSystem(path)
 		})
 
 		It("blocks when locking the same key twice", func() {
@@ -62,7 +60,7 @@ var _ = Describe("Filesystem", func() {
 
 		Describe("Lock", func() {
 			It("creates the lock file in the lock path when it does not exist", func() {
-				lockFile := filepath.Join(storePath, store.LocksDirName, "key.lock")
+				lockFile := filepath.Join(path, "key.lock")
 
 				Expect(lockFile).ToNot(BeAnExistingFile())
 				_, err := exclusiveLocksmith.Lock("key")
@@ -71,7 +69,7 @@ var _ = Describe("Filesystem", func() {
 			})
 
 			It("removes slashes(/) from key name", func() {
-				lockFile := filepath.Join(storePath, store.LocksDirName, "/tmpkey.lock")
+				lockFile := filepath.Join(path, "/tmpkey.lock")
 
 				Expect(lockFile).ToNot(BeAnExistingFile())
 				_, err := exclusiveLocksmith.Lock("/tmp/key")
@@ -86,7 +84,7 @@ var _ = Describe("Filesystem", func() {
 
 				It("emits the locking time metric", func() {
 					startTime := time.Now()
-					_ = filepath.Join(storePath, store.LocksDirName, "key.lock")
+					_ = filepath.Join(path, "key.lock")
 					_, err := exclusiveLocksmith.Lock("key")
 					Expect(err).NotTo(HaveOccurred())
 
@@ -100,11 +98,11 @@ var _ = Describe("Filesystem", func() {
 
 			Context("when creating the lock file fails", func() {
 				BeforeEach(func() {
-					storePath = "/not/real"
+					path = "/not/real"
 				})
 
 				It("returns an error", func() {
-					lockFile := filepath.Join(storePath, "key")
+					lockFile := filepath.Join(path, "key")
 
 					_, err := exclusiveLocksmith.Lock("key")
 					Expect(err).To(MatchError(ContainSubstring("creating lock file for key `key`:")))
@@ -149,7 +147,7 @@ var _ = Describe("Filesystem", func() {
 	Context("SharedLocksmith", func() {
 		var sharedLocksmith *locksmith.FileSystem
 		JustBeforeEach(func() {
-			sharedLocksmith = locksmith.NewSharedFileSystem(storePath)
+			sharedLocksmith = locksmith.NewSharedFileSystem(path)
 		})
 
 		It("blocks when locking the same key twice", func() {
@@ -172,7 +170,7 @@ var _ = Describe("Filesystem", func() {
 
 		Describe("Lock", func() {
 			It("creates the lock file in the lock path when it does not exist", func() {
-				lockFile := filepath.Join(storePath, store.LocksDirName, "key.lock")
+				lockFile := filepath.Join(path, "key.lock")
 
 				Expect(lockFile).ToNot(BeAnExistingFile())
 
@@ -182,7 +180,7 @@ var _ = Describe("Filesystem", func() {
 			})
 
 			It("removes slashes(/) from key name", func() {
-				lockFile := filepath.Join(storePath, store.LocksDirName, "/tmpkey.lock")
+				lockFile := filepath.Join(path, "/tmpkey.lock")
 
 				Expect(lockFile).ToNot(BeAnExistingFile())
 				_, err := sharedLocksmith.Lock("/tmp/key")
@@ -197,7 +195,7 @@ var _ = Describe("Filesystem", func() {
 
 				It("emits the locking time metric", func() {
 					startTime := time.Now()
-					_ = filepath.Join(storePath, store.LocksDirName, "key.lock")
+					_ = filepath.Join(path, "key.lock")
 					_, err := sharedLocksmith.Lock("key")
 					Expect(err).NotTo(HaveOccurred())
 
@@ -211,11 +209,11 @@ var _ = Describe("Filesystem", func() {
 
 			Context("when creating the lock file fails", func() {
 				BeforeEach(func() {
-					storePath = "/not/real"
+					path = "/not/real"
 				})
 
 				It("returns an error", func() {
-					lockFile := filepath.Join(storePath, "key")
+					lockFile := filepath.Join(path, "key")
 
 					_, err := sharedLocksmith.Lock("key")
 					Expect(err).To(MatchError(ContainSubstring("creating lock file for key `key`:")))
