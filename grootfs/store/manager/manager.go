@@ -90,7 +90,6 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) (err error) {
 		if err := m.createAndMountFilesystem(logger, spec.StoreSizeBytes); err != nil {
 			return err
 		}
-
 	} else {
 		logger.Debug("store-already-initialized")
 	}

@@ -109,7 +109,7 @@ var InitStoreCommand = cli.Command{
 
 		manager := manager.New(storePath, namespacer, fsDriver, fsDriver, fsDriver, initStoreLocksmith)
 		if err := manager.InitStore(logger, spec); err != nil {
-			logger.Error("cleaning-up-store-failed", err)
+			logger.Error("init-store-failed", err)
 			return cli.NewExitError(errorspkg.Cause(err).Error(), 1)
 		}
 
