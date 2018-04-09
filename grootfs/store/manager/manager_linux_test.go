@@ -6,13 +6,16 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"code.cloudfoundry.org/grootfs/base_image_puller/base_image_pullerfakes"
 	"code.cloudfoundry.org/grootfs/groot"
+	"code.cloudfoundry.org/grootfs/groot/grootfakes"
 	"code.cloudfoundry.org/grootfs/store"
 	"code.cloudfoundry.org/grootfs/store/image_cloner/image_clonerfakes"
 	managerpkg "code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/grootfs/store/manager/managerfakes"
+	"code.cloudfoundry.org/lager"
 	"code.cloudfoundry.org/lager/lagertest"
 	"golang.org/x/sys/unix"
 
@@ -33,6 +36,7 @@ var _ = Describe("Manager", func() {
 		logger      *lagertest.TestLogger
 		spec        managerpkg.InitSpec
 		namespacer  *managerfakes.FakeStoreNamespacer
+		locksmith   *grootfakes.FakeLocksmith
 	)
 
 	BeforeEach(func() {
@@ -42,6 +46,7 @@ var _ = Describe("Manager", func() {
 		volDriver = new(base_image_pullerfakes.FakeVolumeDriver)
 		storeDriver = new(managerfakes.FakeStoreDriver)
 		namespacer = new(managerfakes.FakeStoreNamespacer)
+		locksmith = new(grootfakes.FakeLocksmith)
 
 		logger = lagertest.NewTestLogger("store-manager")
 
@@ -54,12 +59,127 @@ var _ = Describe("Manager", func() {
 	})
 
 	JustBeforeEach(func() {
-		manager = managerpkg.New(storePath, namespacer, volDriver, imgDriver, storeDriver)
+		manager = managerpkg.New(storePath, namespacer, volDriver, imgDriver, storeDriver, locksmith)
 	})
 
 	Describe("InitStore", func() {
 		BeforeEach(func() {
 			storePath = filepath.Join(os.TempDir(), "grootfs", fmt.Sprintf("init-store-%d", GinkgoParallelNode()))
+		})
+
+		Describe("Critical Section", func() {
+			var (
+				lockfile    *os.File
+				lockMutex   *sync.Mutex
+				lockChannel chan bool
+			)
+
+			BeforeEach(func() {
+				lockMutex = new(sync.Mutex)
+				lockChannel = make(chan bool)
+
+				locksmith.LockStub = func(key string) (*os.File, error) {
+					lockMutex.Lock()
+					return lockfile, nil
+				}
+
+				locksmith.UnlockStub = func(lockFile *os.File) error {
+					lockMutex.Unlock()
+					return nil
+				}
+			})
+
+			It("uses locksmith to provide a locking mechanism", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(locksmith.LockCallCount()).To(Equal(1))
+
+				Expect(locksmith.UnlockCallCount()).To(Equal(1))
+				actualLockfile := locksmith.UnlockArgsForCall(0)
+				Expect(lockfile).To(Equal(actualLockfile))
+			})
+
+			It("serialises the critical section", func() {
+				storeDriver.ValidateFileSystemStub = func(_ lager.Logger, _ string) error {
+					<-lockChannel
+					return nil
+				}
+
+				// Start two concurrent InitStore funcs
+				// In the BeforeEach, we have set ValidateFileystem to block to ensure both
+				// InitStore funcs try to enter the critical section
+				wg := &sync.WaitGroup{}
+				wg.Add(2)
+
+				go func() {
+					defer func() {
+						GinkgoRecover()
+						wg.Done()
+					}()
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
+				}()
+
+				go func() {
+					defer func() {
+						GinkgoRecover()
+						wg.Done()
+					}()
+					Expect(manager.InitStore(logger, spec)).To(Succeed())
+				}()
+
+				// Check both InitStores have tried to obtain the lock
+				Eventually(locksmith.LockCallCount).Should(Equal(2))
+
+				// Check that only one InitStore has obtained the lock
+				Consistently(storeDriver.ValidateFileSystemCallCount).Should(Equal(1))
+
+				// Release the first InitStore and check the other obtains the lock and continues
+				lockChannel <- true
+				Eventually(storeDriver.ValidateFileSystemCallCount).Should(Equal(2))
+
+				// Release the second InitStore
+				close(lockChannel)
+
+				// Wait for both InitStores to complete to avoid go routine pollution
+				wg.Wait()
+			})
+
+			It("uses a clear lock name", func() {
+				Expect(manager.InitStore(logger, spec)).To(Succeed())
+				Expect(locksmith.LockArgsForCall(0)).To(Equal("init-store"))
+			})
+
+			Context("when locking fails", func() {
+				BeforeEach(func() {
+					locksmith.LockReturns(nil, errors.New("lock-error"))
+				})
+
+				It("bubbles up the error", func() {
+					Expect(manager.InitStore(logger, spec)).To(MatchError(ContainSubstring("lock-error")))
+				})
+			})
+
+			Context("when something fails after locking", func() {
+				BeforeEach(func() {
+					namespacer.ApplyMappingsReturns(errors.New("apply-mappings-error"))
+				})
+
+				It("still unlocks", func() {
+					Expect(manager.InitStore(logger, spec)).To(MatchError(ContainSubstring("apply-mappings-error")))
+					Expect(locksmith.UnlockCallCount()).To(Equal(1))
+				})
+
+				Context("when the unlock also fails", func() {
+					BeforeEach(func() {
+						locksmith.UnlockReturns(errors.New("unlock-error"))
+					})
+
+					It("bubbles up the errors", func() {
+						err := manager.InitStore(logger, spec)
+						Expect(err).To(MatchError(ContainSubstring("unlock-error")))
+						Expect(err).To(MatchError(ContainSubstring("apply-mappings-error")))
+					})
+				})
+			})
 		})
 
 		It("sets the caller user as the owner of the store", func() {
@@ -148,6 +268,7 @@ var _ = Describe("Manager", func() {
 				Expect(manager.InitStore(logger, spec)).To(Succeed())
 			})
 		})
+
 		Context("when the namespacer fails to create", func() {
 			BeforeEach(func() {
 				namespacer.ApplyMappingsReturns(errors.New("failed to create"))

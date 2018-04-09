@@ -31,7 +31,7 @@ var DeleteStoreCommand = cli.Command{
 		}
 
 		storePath := cfg.StorePath
-		manager := manager.New(storePath, nil, fsDriver, fsDriver, fsDriver)
+		manager := manager.New(storePath, nil, fsDriver, fsDriver, fsDriver, nil)
 
 		if err := manager.DeleteStore(logger); err != nil {
 			logger.Error("cleaning-up-store-failed", err)

@@ -30,6 +30,7 @@ type Manager struct {
 	volumeDriver    base_image_puller.VolumeDriver
 	storeDriver     StoreDriver
 	storeNamespacer StoreNamespacer
+	locksmith       groot.Locksmith
 }
 
 //go:generate counterfeiter . StoreNamespacer
@@ -43,17 +44,18 @@ type InitSpec struct {
 	StoreSizeBytes int64
 }
 
-func New(storePath string, storeNamespacer StoreNamespacer, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver StoreDriver) *Manager {
+func New(storePath string, storeNamespacer StoreNamespacer, volumeDriver base_image_puller.VolumeDriver, imageDriver image_cloner.ImageDriver, storeDriver StoreDriver, locksmith groot.Locksmith) *Manager {
 	return &Manager{
 		storePath:       storePath,
 		volumeDriver:    volumeDriver,
 		imageDriver:     imageDriver,
 		storeDriver:     storeDriver,
 		storeNamespacer: storeNamespacer,
+		locksmith:       locksmith,
 	}
 }
 
-func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
+func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) (err error) {
 	logger = logger.Session("store-manager-init-store", lager.Data{"storePath": m.storePath, "spec": spec})
 	logger.Debug("starting")
 	defer logger.Debug("ending")
@@ -68,6 +70,16 @@ func (m *Manager) InitStore(logger lager.Logger, spec InitSpec) error {
 	if spec.StoreSizeBytes > 0 {
 		validationPath = m.storePath
 	}
+
+	lockFile, err := m.locksmith.Lock("init-store")
+	if err != nil {
+		return errorspkg.Wrap(err, "locking")
+	}
+	defer func() {
+		if unlockErr := m.locksmith.Unlock(lockFile); unlockErr != nil {
+			err = errorspkg.Wrap(err, unlockErr.Error())
+		}
+	}()
 
 	if err := m.storeDriver.ValidateFileSystem(logger, validationPath); err != nil {
 		logger.Debug(errorspkg.Wrap(err, "store-could-not-be-validated").Error())

@@ -136,13 +136,16 @@ var CreateCommand = cli.Command{
 
 		metricsEmitter := metrics.NewEmitter(logger, cfg.MetronEndpoint)
 
-		locksDir := filepath.Join(storePath, storepkg.LocksDirName)
-		sharedLocksmith := locksmithpkg.NewSharedFileSystem(locksDir).WithMetrics(metricsEmitter)
-		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(locksDir).WithMetrics(metricsEmitter)
-		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
+		initLocksDir := filepath.Join("/", "var", "run")
+		storeLocksDir := filepath.Join(storePath, storepkg.LocksDirName)
+		sharedLocksmith := locksmithpkg.NewSharedFileSystem(storeLocksDir).WithMetrics(metricsEmitter)
+		exclusiveLocksmith := locksmithpkg.NewExclusiveFileSystem(storeLocksDir).WithMetrics(metricsEmitter)
+		initStoreLocksmith := locksmithpkg.NewExclusiveFileSystem(initLocksDir)
 
+		imageCloner := image_cloner.NewImageCloner(fsDriver, storePath)
 		storeNamespacer := groot.NewStoreNamespacer(storePath)
-		manager := manager.New(storePath, storeNamespacer, fsDriver, fsDriver, fsDriver)
+
+		manager := manager.New(storePath, storeNamespacer, fsDriver, fsDriver, fsDriver, initStoreLocksmith)
 		if !manager.IsStoreInitialized(logger) {
 			logger.Error("store-verification-failed", errors.New("store is not initialized"))
 			return cli.NewExitError("Store path is not initialized. Please run init-store.", 1)

@@ -3,10 +3,12 @@ package commands // import "code.cloudfoundry.org/grootfs/commands"
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
 	"code.cloudfoundry.org/grootfs/groot"
+	locksmithpkg "code.cloudfoundry.org/grootfs/store/locksmith"
 	"code.cloudfoundry.org/grootfs/store/manager"
 	"code.cloudfoundry.org/lager"
 
@@ -102,7 +104,10 @@ var InitStoreCommand = cli.Command{
 			StoreSizeBytes: storeSizeBytes,
 		}
 
-		manager := manager.New(storePath, namespacer, fsDriver, fsDriver, fsDriver)
+		initLocksDir := filepath.Join("/", "var", "run")
+		initStoreLocksmith := locksmithpkg.NewExclusiveFileSystem(initLocksDir)
+
+		manager := manager.New(storePath, namespacer, fsDriver, fsDriver, fsDriver, initStoreLocksmith)
 		if err := manager.InitStore(logger, spec); err != nil {
 			logger.Error("cleaning-up-store-failed", err)
 			return cli.NewExitError(errorspkg.Cause(err).Error(), 1)
