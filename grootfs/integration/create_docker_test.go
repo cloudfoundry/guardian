@@ -109,7 +109,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		It("outputs a json with the correct `Process.Env` key", func() {
 			containerSpec, err := runner.Create(groot.CreateSpec{
-				BaseImageURL: integration.String2URL("docker:///cfgarden/with-volume"),
+				BaseImageURL: integration.String2URL("docker:///cfgarden/with-volume-and-process-env"),
 				ID:           randomImageID,
 				Mount:        mountByDefault(),
 			})
@@ -162,7 +162,7 @@ var _ = Describe("Create with remote DOCKER images", func() {
 
 		Context("when the image has volumes", func() {
 			BeforeEach(func() {
-				baseImageURL = integration.String2URL("docker:///cfgarden/with-volume")
+				baseImageURL = integration.String2URL("docker:///cfgarden/with-volume-and-process-env")
 			})
 
 			It("lists the volumes as mounts in the returned spec", func() {
