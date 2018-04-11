@@ -21,10 +21,12 @@ type FakeManifest struct {
 	referenceReturnsOnCall map[int]struct {
 		result1 types.ImageReference
 	}
-	ManifestStub        func() ([]byte, string, error)
+	ManifestStub        func(ctx context.Context) ([]byte, string, error)
 	manifestMutex       sync.RWMutex
-	manifestArgsForCall []struct{}
-	manifestReturns     struct {
+	manifestArgsForCall []struct {
+		ctx context.Context
+	}
+	manifestReturns struct {
 		result1 []byte
 		result2 string
 		result3 error
@@ -47,15 +49,6 @@ type FakeManifest struct {
 		result1 [][]byte
 		result2 error
 	}
-	LayerInfosForCopyStub        func() []types.BlobInfo
-	layerInfosForCopyMutex       sync.RWMutex
-	layerInfosForCopyArgsForCall []struct{}
-	layerInfosForCopyReturns     struct {
-		result1 []types.BlobInfo
-	}
-	layerInfosForCopyReturnsOnCall map[int]struct {
-		result1 []types.BlobInfo
-	}
 	ConfigInfoStub        func() types.BlobInfo
 	configInfoMutex       sync.RWMutex
 	configInfoArgsForCall []struct{}
@@ -65,10 +58,12 @@ type FakeManifest struct {
 	configInfoReturnsOnCall map[int]struct {
 		result1 types.BlobInfo
 	}
-	ConfigBlobStub        func() ([]byte, error)
+	ConfigBlobStub        func(context.Context) ([]byte, error)
 	configBlobMutex       sync.RWMutex
-	configBlobArgsForCall []struct{}
-	configBlobReturns     struct {
+	configBlobArgsForCall []struct {
+		arg1 context.Context
+	}
+	configBlobReturns struct {
 		result1 []byte
 		result2 error
 	}
@@ -76,10 +71,12 @@ type FakeManifest struct {
 		result1 []byte
 		result2 error
 	}
-	OCIConfigStub        func() (*v1.Image, error)
+	OCIConfigStub        func(context.Context) (*v1.Image, error)
 	oCIConfigMutex       sync.RWMutex
-	oCIConfigArgsForCall []struct{}
-	oCIConfigReturns     struct {
+	oCIConfigArgsForCall []struct {
+		arg1 context.Context
+	}
+	oCIConfigReturns struct {
 		result1 *v1.Image
 		result2 error
 	}
@@ -96,6 +93,19 @@ type FakeManifest struct {
 	layerInfosReturnsOnCall map[int]struct {
 		result1 []types.BlobInfo
 	}
+	LayerInfosForCopyStub        func(context.Context) ([]types.BlobInfo, error)
+	layerInfosForCopyMutex       sync.RWMutex
+	layerInfosForCopyArgsForCall []struct {
+		arg1 context.Context
+	}
+	layerInfosForCopyReturns struct {
+		result1 []types.BlobInfo
+		result2 error
+	}
+	layerInfosForCopyReturnsOnCall map[int]struct {
+		result1 []types.BlobInfo
+		result2 error
+	}
 	EmbeddedDockerReferenceConflictsStub        func(ref reference.Named) bool
 	embeddedDockerReferenceConflictsMutex       sync.RWMutex
 	embeddedDockerReferenceConflictsArgsForCall []struct {
@@ -107,10 +117,12 @@ type FakeManifest struct {
 	embeddedDockerReferenceConflictsReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	InspectStub        func() (*types.ImageInspectInfo, error)
+	InspectStub        func(context.Context) (*types.ImageInspectInfo, error)
 	inspectMutex       sync.RWMutex
-	inspectArgsForCall []struct{}
-	inspectReturns     struct {
+	inspectArgsForCall []struct {
+		arg1 context.Context
+	}
+	inspectReturns struct {
 		result1 *types.ImageInspectInfo
 		result2 error
 	}
@@ -129,9 +141,10 @@ type FakeManifest struct {
 	updatedImageNeedsLayerDiffIDsReturnsOnCall map[int]struct {
 		result1 bool
 	}
-	UpdatedImageStub        func(options types.ManifestUpdateOptions) (types.Image, error)
+	UpdatedImageStub        func(ctx context.Context, options types.ManifestUpdateOptions) (types.Image, error)
 	updatedImageMutex       sync.RWMutex
 	updatedImageArgsForCall []struct {
+		ctx     context.Context
 		options types.ManifestUpdateOptions
 	}
 	updatedImageReturns struct {
@@ -197,14 +210,16 @@ func (fake *FakeManifest) ReferenceReturnsOnCall(i int, result1 types.ImageRefer
 	}{result1}
 }
 
-func (fake *FakeManifest) Manifest() ([]byte, string, error) {
+func (fake *FakeManifest) Manifest(ctx context.Context) ([]byte, string, error) {
 	fake.manifestMutex.Lock()
 	ret, specificReturn := fake.manifestReturnsOnCall[len(fake.manifestArgsForCall)]
-	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct{}{})
-	fake.recordInvocation("Manifest", []interface{}{})
+	fake.manifestArgsForCall = append(fake.manifestArgsForCall, struct {
+		ctx context.Context
+	}{ctx})
+	fake.recordInvocation("Manifest", []interface{}{ctx})
 	fake.manifestMutex.Unlock()
 	if fake.ManifestStub != nil {
-		return fake.ManifestStub()
+		return fake.ManifestStub(ctx)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
@@ -216,6 +231,12 @@ func (fake *FakeManifest) ManifestCallCount() int {
 	fake.manifestMutex.RLock()
 	defer fake.manifestMutex.RUnlock()
 	return len(fake.manifestArgsForCall)
+}
+
+func (fake *FakeManifest) ManifestArgsForCall(i int) context.Context {
+	fake.manifestMutex.RLock()
+	defer fake.manifestMutex.RUnlock()
+	return fake.manifestArgsForCall[i].ctx
 }
 
 func (fake *FakeManifest) ManifestReturns(result1 []byte, result2 string, result3 error) {
@@ -294,46 +315,6 @@ func (fake *FakeManifest) SignaturesReturnsOnCall(i int, result1 [][]byte, resul
 	}{result1, result2}
 }
 
-func (fake *FakeManifest) LayerInfosForCopy() []types.BlobInfo {
-	fake.layerInfosForCopyMutex.Lock()
-	ret, specificReturn := fake.layerInfosForCopyReturnsOnCall[len(fake.layerInfosForCopyArgsForCall)]
-	fake.layerInfosForCopyArgsForCall = append(fake.layerInfosForCopyArgsForCall, struct{}{})
-	fake.recordInvocation("LayerInfosForCopy", []interface{}{})
-	fake.layerInfosForCopyMutex.Unlock()
-	if fake.LayerInfosForCopyStub != nil {
-		return fake.LayerInfosForCopyStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.layerInfosForCopyReturns.result1
-}
-
-func (fake *FakeManifest) LayerInfosForCopyCallCount() int {
-	fake.layerInfosForCopyMutex.RLock()
-	defer fake.layerInfosForCopyMutex.RUnlock()
-	return len(fake.layerInfosForCopyArgsForCall)
-}
-
-func (fake *FakeManifest) LayerInfosForCopyReturns(result1 []types.BlobInfo) {
-	fake.LayerInfosForCopyStub = nil
-	fake.layerInfosForCopyReturns = struct {
-		result1 []types.BlobInfo
-	}{result1}
-}
-
-func (fake *FakeManifest) LayerInfosForCopyReturnsOnCall(i int, result1 []types.BlobInfo) {
-	fake.LayerInfosForCopyStub = nil
-	if fake.layerInfosForCopyReturnsOnCall == nil {
-		fake.layerInfosForCopyReturnsOnCall = make(map[int]struct {
-			result1 []types.BlobInfo
-		})
-	}
-	fake.layerInfosForCopyReturnsOnCall[i] = struct {
-		result1 []types.BlobInfo
-	}{result1}
-}
-
 func (fake *FakeManifest) ConfigInfo() types.BlobInfo {
 	fake.configInfoMutex.Lock()
 	ret, specificReturn := fake.configInfoReturnsOnCall[len(fake.configInfoArgsForCall)]
@@ -374,14 +355,16 @@ func (fake *FakeManifest) ConfigInfoReturnsOnCall(i int, result1 types.BlobInfo)
 	}{result1}
 }
 
-func (fake *FakeManifest) ConfigBlob() ([]byte, error) {
+func (fake *FakeManifest) ConfigBlob(arg1 context.Context) ([]byte, error) {
 	fake.configBlobMutex.Lock()
 	ret, specificReturn := fake.configBlobReturnsOnCall[len(fake.configBlobArgsForCall)]
-	fake.configBlobArgsForCall = append(fake.configBlobArgsForCall, struct{}{})
-	fake.recordInvocation("ConfigBlob", []interface{}{})
+	fake.configBlobArgsForCall = append(fake.configBlobArgsForCall, struct {
+		arg1 context.Context
+	}{arg1})
+	fake.recordInvocation("ConfigBlob", []interface{}{arg1})
 	fake.configBlobMutex.Unlock()
 	if fake.ConfigBlobStub != nil {
-		return fake.ConfigBlobStub()
+		return fake.ConfigBlobStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -393,6 +376,12 @@ func (fake *FakeManifest) ConfigBlobCallCount() int {
 	fake.configBlobMutex.RLock()
 	defer fake.configBlobMutex.RUnlock()
 	return len(fake.configBlobArgsForCall)
+}
+
+func (fake *FakeManifest) ConfigBlobArgsForCall(i int) context.Context {
+	fake.configBlobMutex.RLock()
+	defer fake.configBlobMutex.RUnlock()
+	return fake.configBlobArgsForCall[i].arg1
 }
 
 func (fake *FakeManifest) ConfigBlobReturns(result1 []byte, result2 error) {
@@ -417,14 +406,16 @@ func (fake *FakeManifest) ConfigBlobReturnsOnCall(i int, result1 []byte, result2
 	}{result1, result2}
 }
 
-func (fake *FakeManifest) OCIConfig() (*v1.Image, error) {
+func (fake *FakeManifest) OCIConfig(arg1 context.Context) (*v1.Image, error) {
 	fake.oCIConfigMutex.Lock()
 	ret, specificReturn := fake.oCIConfigReturnsOnCall[len(fake.oCIConfigArgsForCall)]
-	fake.oCIConfigArgsForCall = append(fake.oCIConfigArgsForCall, struct{}{})
-	fake.recordInvocation("OCIConfig", []interface{}{})
+	fake.oCIConfigArgsForCall = append(fake.oCIConfigArgsForCall, struct {
+		arg1 context.Context
+	}{arg1})
+	fake.recordInvocation("OCIConfig", []interface{}{arg1})
 	fake.oCIConfigMutex.Unlock()
 	if fake.OCIConfigStub != nil {
-		return fake.OCIConfigStub()
+		return fake.OCIConfigStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -436,6 +427,12 @@ func (fake *FakeManifest) OCIConfigCallCount() int {
 	fake.oCIConfigMutex.RLock()
 	defer fake.oCIConfigMutex.RUnlock()
 	return len(fake.oCIConfigArgsForCall)
+}
+
+func (fake *FakeManifest) OCIConfigArgsForCall(i int) context.Context {
+	fake.oCIConfigMutex.RLock()
+	defer fake.oCIConfigMutex.RUnlock()
+	return fake.oCIConfigArgsForCall[i].arg1
 }
 
 func (fake *FakeManifest) OCIConfigReturns(result1 *v1.Image, result2 error) {
@@ -500,6 +497,57 @@ func (fake *FakeManifest) LayerInfosReturnsOnCall(i int, result1 []types.BlobInf
 	}{result1}
 }
 
+func (fake *FakeManifest) LayerInfosForCopy(arg1 context.Context) ([]types.BlobInfo, error) {
+	fake.layerInfosForCopyMutex.Lock()
+	ret, specificReturn := fake.layerInfosForCopyReturnsOnCall[len(fake.layerInfosForCopyArgsForCall)]
+	fake.layerInfosForCopyArgsForCall = append(fake.layerInfosForCopyArgsForCall, struct {
+		arg1 context.Context
+	}{arg1})
+	fake.recordInvocation("LayerInfosForCopy", []interface{}{arg1})
+	fake.layerInfosForCopyMutex.Unlock()
+	if fake.LayerInfosForCopyStub != nil {
+		return fake.LayerInfosForCopyStub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fake.layerInfosForCopyReturns.result1, fake.layerInfosForCopyReturns.result2
+}
+
+func (fake *FakeManifest) LayerInfosForCopyCallCount() int {
+	fake.layerInfosForCopyMutex.RLock()
+	defer fake.layerInfosForCopyMutex.RUnlock()
+	return len(fake.layerInfosForCopyArgsForCall)
+}
+
+func (fake *FakeManifest) LayerInfosForCopyArgsForCall(i int) context.Context {
+	fake.layerInfosForCopyMutex.RLock()
+	defer fake.layerInfosForCopyMutex.RUnlock()
+	return fake.layerInfosForCopyArgsForCall[i].arg1
+}
+
+func (fake *FakeManifest) LayerInfosForCopyReturns(result1 []types.BlobInfo, result2 error) {
+	fake.LayerInfosForCopyStub = nil
+	fake.layerInfosForCopyReturns = struct {
+		result1 []types.BlobInfo
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *FakeManifest) LayerInfosForCopyReturnsOnCall(i int, result1 []types.BlobInfo, result2 error) {
+	fake.LayerInfosForCopyStub = nil
+	if fake.layerInfosForCopyReturnsOnCall == nil {
+		fake.layerInfosForCopyReturnsOnCall = make(map[int]struct {
+			result1 []types.BlobInfo
+			result2 error
+		})
+	}
+	fake.layerInfosForCopyReturnsOnCall[i] = struct {
+		result1 []types.BlobInfo
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *FakeManifest) EmbeddedDockerReferenceConflicts(ref reference.Named) bool {
 	fake.embeddedDockerReferenceConflictsMutex.Lock()
 	ret, specificReturn := fake.embeddedDockerReferenceConflictsReturnsOnCall[len(fake.embeddedDockerReferenceConflictsArgsForCall)]
@@ -548,14 +596,16 @@ func (fake *FakeManifest) EmbeddedDockerReferenceConflictsReturnsOnCall(i int, r
 	}{result1}
 }
 
-func (fake *FakeManifest) Inspect() (*types.ImageInspectInfo, error) {
+func (fake *FakeManifest) Inspect(arg1 context.Context) (*types.ImageInspectInfo, error) {
 	fake.inspectMutex.Lock()
 	ret, specificReturn := fake.inspectReturnsOnCall[len(fake.inspectArgsForCall)]
-	fake.inspectArgsForCall = append(fake.inspectArgsForCall, struct{}{})
-	fake.recordInvocation("Inspect", []interface{}{})
+	fake.inspectArgsForCall = append(fake.inspectArgsForCall, struct {
+		arg1 context.Context
+	}{arg1})
+	fake.recordInvocation("Inspect", []interface{}{arg1})
 	fake.inspectMutex.Unlock()
 	if fake.InspectStub != nil {
-		return fake.InspectStub()
+		return fake.InspectStub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -567,6 +617,12 @@ func (fake *FakeManifest) InspectCallCount() int {
 	fake.inspectMutex.RLock()
 	defer fake.inspectMutex.RUnlock()
 	return len(fake.inspectArgsForCall)
+}
+
+func (fake *FakeManifest) InspectArgsForCall(i int) context.Context {
+	fake.inspectMutex.RLock()
+	defer fake.inspectMutex.RUnlock()
+	return fake.inspectArgsForCall[i].arg1
 }
 
 func (fake *FakeManifest) InspectReturns(result1 *types.ImageInspectInfo, result2 error) {
@@ -639,16 +695,17 @@ func (fake *FakeManifest) UpdatedImageNeedsLayerDiffIDsReturnsOnCall(i int, resu
 	}{result1}
 }
 
-func (fake *FakeManifest) UpdatedImage(options types.ManifestUpdateOptions) (types.Image, error) {
+func (fake *FakeManifest) UpdatedImage(ctx context.Context, options types.ManifestUpdateOptions) (types.Image, error) {
 	fake.updatedImageMutex.Lock()
 	ret, specificReturn := fake.updatedImageReturnsOnCall[len(fake.updatedImageArgsForCall)]
 	fake.updatedImageArgsForCall = append(fake.updatedImageArgsForCall, struct {
+		ctx     context.Context
 		options types.ManifestUpdateOptions
-	}{options})
-	fake.recordInvocation("UpdatedImage", []interface{}{options})
+	}{ctx, options})
+	fake.recordInvocation("UpdatedImage", []interface{}{ctx, options})
 	fake.updatedImageMutex.Unlock()
 	if fake.UpdatedImageStub != nil {
-		return fake.UpdatedImageStub(options)
+		return fake.UpdatedImageStub(ctx, options)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -662,10 +719,10 @@ func (fake *FakeManifest) UpdatedImageCallCount() int {
 	return len(fake.updatedImageArgsForCall)
 }
 
-func (fake *FakeManifest) UpdatedImageArgsForCall(i int) types.ManifestUpdateOptions {
+func (fake *FakeManifest) UpdatedImageArgsForCall(i int) (context.Context, types.ManifestUpdateOptions) {
 	fake.updatedImageMutex.RLock()
 	defer fake.updatedImageMutex.RUnlock()
-	return fake.updatedImageArgsForCall[i].options
+	return fake.updatedImageArgsForCall[i].ctx, fake.updatedImageArgsForCall[i].options
 }
 
 func (fake *FakeManifest) UpdatedImageReturns(result1 types.Image, result2 error) {
@@ -742,8 +799,6 @@ func (fake *FakeManifest) Invocations() map[string][][]interface{} {
 	defer fake.manifestMutex.RUnlock()
 	fake.signaturesMutex.RLock()
 	defer fake.signaturesMutex.RUnlock()
-	fake.layerInfosForCopyMutex.RLock()
-	defer fake.layerInfosForCopyMutex.RUnlock()
 	fake.configInfoMutex.RLock()
 	defer fake.configInfoMutex.RUnlock()
 	fake.configBlobMutex.RLock()
@@ -752,6 +807,8 @@ func (fake *FakeManifest) Invocations() map[string][][]interface{} {
 	defer fake.oCIConfigMutex.RUnlock()
 	fake.layerInfosMutex.RLock()
 	defer fake.layerInfosMutex.RUnlock()
+	fake.layerInfosForCopyMutex.RLock()
+	defer fake.layerInfosForCopyMutex.RUnlock()
 	fake.embeddedDockerReferenceConflictsMutex.RLock()
 	defer fake.embeddedDockerReferenceConflictsMutex.RUnlock()
 	fake.inspectMutex.RLock()

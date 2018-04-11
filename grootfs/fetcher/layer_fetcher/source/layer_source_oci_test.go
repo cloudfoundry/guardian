@@ -1,6 +1,7 @@
 package source_test
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"os"
@@ -84,7 +85,7 @@ var _ = Describe("Layer source: OCI", func() {
 			manifest, err := layerSource.Manifest(logger)
 			Expect(err).NotTo(HaveOccurred())
 
-			config, err := manifest.OCIConfig()
+			config, err := manifest.OCIConfig(context.TODO())
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config.RootFS.DiffIDs).To(HaveLen(2))

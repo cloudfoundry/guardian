@@ -2,6 +2,7 @@ package source_test
 
 import (
 	"compress/gzip"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -208,7 +209,7 @@ var _ = Describe("Layer source: Docker", func() {
 		It("fetches the config", func() {
 			manifest, err := layerSource.Manifest(logger)
 			Expect(err).NotTo(HaveOccurred())
-			config, err := manifest.OCIConfig()
+			config, err := manifest.OCIConfig(context.TODO())
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(config.RootFS.DiffIDs).To(HaveLen(2))
@@ -233,7 +234,7 @@ var _ = Describe("Layer source: Docker", func() {
 
 			Context("when the correct credentials are provided", func() {
 				It("fetches the config", func() {
-					config, err := manifest.OCIConfig()
+					config, err := manifest.OCIConfig(context.TODO())
 					Expect(err).NotTo(HaveOccurred())
 
 					Expect(config.RootFS.DiffIDs).To(HaveLen(2))
@@ -266,7 +267,7 @@ var _ = Describe("Layer source: Docker", func() {
 			It("fetches the config", func() {
 				manifest, err := layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
-				config, err := manifest.OCIConfig()
+				config, err := manifest.OCIConfig(context.TODO())
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(config.RootFS.DiffIDs).To(HaveLen(3))
@@ -377,7 +378,7 @@ var _ = Describe("Layer source: Docker", func() {
 				manifest, err := layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
 
-				config, err := manifest.OCIConfig()
+				config, err := manifest.OCIConfig(context.TODO())
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(config.RootFS.DiffIDs).To(HaveLen(2))
@@ -431,7 +432,7 @@ var _ = Describe("Layer source: Docker", func() {
 				manifest, err := layerSource.Manifest(logger)
 				Expect(err).NotTo(HaveOccurred())
 
-				config, err := manifest.OCIConfig()
+				config, err := manifest.OCIConfig(context.TODO())
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(config.RootFS.DiffIDs).To(HaveLen(2))

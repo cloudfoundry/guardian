@@ -1,6 +1,7 @@
 package layer_fetcher // import "code.cloudfoundry.org/grootfs/fetcher/layer_fetcher"
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -55,7 +56,7 @@ func (f *LayerFetcher) BaseImageInfo(logger lager.Logger) (groot.BaseImageInfo, 
 
 	logger.Debug("fetching-image-config")
 	var config *specsv1.Image
-	config, err = manifest.OCIConfig()
+	config, err = manifest.OCIConfig(context.TODO())
 	if err != nil {
 		return groot.BaseImageInfo{}, err
 	}
