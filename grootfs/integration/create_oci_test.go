@@ -1,10 +1,8 @@
 package integration_test
 
 import (
-	"crypto/sha256"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -26,7 +24,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-	specs "github.com/opencontainers/runtime-spec/specs-go"
 	"golang.org/x/sys/unix"
 )
 
@@ -120,44 +117,6 @@ var _ = Describe("Create with OCI images", func() {
 
 				Expect(path.Join(containerSpec.Root.Path, "home", "example")).To(BeARegularFile())
 			})
-		})
-	})
-
-	Context("when the image has volumes", func() {
-		BeforeEach(func() {
-			baseImageURL = integration.String2URL(fmt.Sprintf("oci:///%s/assets/oci-test-image/with-volume:latest", workDir))
-		})
-
-		It("lists the volumes as mounts in the returned spec", func() {
-			containerSpec, err := runner.Create(groot.CreateSpec{
-				BaseImageURL: baseImageURL,
-				ID:           randomImageID,
-				Mount:        mountByDefault(),
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			volumeHash := sha256.Sum256([]byte("/foo"))
-			mountSourceName := "vol-" + hex.EncodeToString(volumeHash[:32])
-			Expect(containerSpec.Mounts).To(ContainElement(specs.Mount{
-				Destination: "/foo",
-				Source:      filepath.Join(StorePath, store.ImageDirName, randomImageID, mountSourceName),
-				Type:        "bind",
-				Options:     []string{"bind"},
-			}))
-		})
-
-		It("create the bind mount source for the volumes", func() {
-			_, err := runner.Create(groot.CreateSpec{
-				BaseImageURL: baseImageURL,
-				ID:           randomImageID,
-				Mount:        mountByDefault(),
-			})
-			Expect(err).NotTo(HaveOccurred())
-
-			volumeHash := sha256.Sum256([]byte("/foo"))
-			mountSourceName := "vol-" + hex.EncodeToString(volumeHash[:32])
-
-			Expect(filepath.Join(StorePath, store.ImageDirName, randomImageID, mountSourceName)).To(BeADirectory())
 		})
 	})
 

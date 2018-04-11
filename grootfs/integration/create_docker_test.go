@@ -2,8 +2,6 @@ package integration_test
 
 import (
 	"compress/gzip"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,7 +16,6 @@ import (
 	"syscall"
 	"time"
 
-	specs "github.com/opencontainers/runtime-spec/specs-go"
 	yaml "gopkg.in/yaml.v2"
 
 	"code.cloudfoundry.org/grootfs/commands/config"
@@ -160,41 +157,21 @@ var _ = Describe("Create with remote DOCKER images", func() {
 			})
 		})
 
-		Context("when the image has volumes", func() {
+		Context("when the image has volumes which refer to existing directories", func() {
 			BeforeEach(func() {
-				baseImageURL = integration.String2URL("docker:///cfgarden/with-volume-and-process-env")
+				baseImageURL = integration.String2URL("docker:///cfgarden/with-volume:v1")
 			})
 
-			It("lists the volumes as mounts in the returned spec", func() {
+			It("nothing should be done, but the directories + contents should be visible", func() {
 				containerSpec, err := runner.Create(groot.CreateSpec{
 					BaseImageURL: baseImageURL,
 					ID:           randomImageID,
 					Mount:        mountByDefault(),
 				})
 				Expect(err).NotTo(HaveOccurred())
+				Expect(runner.EnsureMounted(containerSpec)).To(Succeed())
 
-				volumeHash := sha256.Sum256([]byte("/foo"))
-				mountSourceName := "vol-" + hex.EncodeToString(volumeHash[:32])
-				Expect(containerSpec.Mounts).To(ContainElement(specs.Mount{
-					Destination: "/foo",
-					Source:      filepath.Join(StorePath, store.ImageDirName, randomImageID, mountSourceName),
-					Type:        "bind",
-					Options:     []string{"bind"},
-				}))
-			})
-
-			It("create the bind mount source for the volumes", func() {
-				_, err := runner.Create(groot.CreateSpec{
-					BaseImageURL: baseImageURL,
-					ID:           randomImageID,
-					Mount:        mountByDefault(),
-				})
-				Expect(err).NotTo(HaveOccurred())
-
-				volumeHash := sha256.Sum256([]byte("/foo"))
-				mountSourceName := "vol-" + hex.EncodeToString(volumeHash[:32])
-
-				Expect(filepath.Join(StorePath, store.ImageDirName, randomImageID, mountSourceName)).To(BeADirectory())
+				Expect(filepath.Join(StorePath, store.ImageDirName, randomImageID, "rootfs", "etc", "foo")).To(BeADirectory())
 			})
 		})
 

@@ -1,8 +1,6 @@
 package image_cloner // import "code.cloudfoundry.org/grootfs/store/image_cloner"
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"io/ioutil"
 	"os"
@@ -119,27 +117,7 @@ func (b *ImageCloner) Create(logger lager.Logger, spec groot.ImageSpec) (groot.I
 		return groot.ImageInfo{}, errorspkg.Wrap(err, "creating image object")
 	}
 
-	if err := b.createVolumesSources(imageInfo.Mounts, spec.OwnerUID, spec.OwnerGID); err != nil {
-		return groot.ImageInfo{}, errorspkg.Wrap(err, "creating volume source")
-	}
-
 	return imageInfo, nil
-}
-
-func (b *ImageCloner) createVolumesSources(mounts []groot.MountInfo, ownerUID, ownerGID int) error {
-	for _, mountInfo := range mounts {
-		if mountInfo.Type != "bind" {
-			continue
-		}
-
-		if err := os.Mkdir(mountInfo.Source, 0755); err != nil {
-			return err
-		}
-		if err := os.Chown(mountInfo.Source, ownerUID, ownerGID); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (b *ImageCloner) Destroy(logger lager.Logger, id string) error {
@@ -207,18 +185,6 @@ func (b *ImageCloner) imageInfo(rootfsPath, imagePath string, baseImage specsv1.
 
 	if !mount {
 		imageInfo.Mounts = []groot.MountInfo{mountJson}
-	}
-
-	for volume, _ := range baseImage.Config.Volumes {
-		volumeHash := sha256.Sum256([]byte(volume))
-		mountSourceName := "vol-" + hex.EncodeToString(volumeHash[:32])
-
-		imageInfo.Mounts = append(imageInfo.Mounts, groot.MountInfo{
-			Destination: volume,
-			Source:      filepath.Join(imagePath, mountSourceName),
-			Type:        "bind",
-			Options:     []string{"bind"},
-		})
 	}
 
 	return imageInfo, nil
