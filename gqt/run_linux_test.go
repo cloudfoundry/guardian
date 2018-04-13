@@ -9,7 +9,6 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
-	"syscall"
 
 	"code.cloudfoundry.org/garden"
 	"code.cloudfoundry.org/guardian/gqt/runner"
@@ -19,6 +18,7 @@ import (
 	"github.com/onsi/gomega/gbytes"
 	"github.com/onsi/gomega/gexec"
 	"github.com/onsi/gomega/types"
+	"golang.org/x/sys/unix"
 )
 
 var _ = Describe("Run", func() {
@@ -197,15 +197,15 @@ var _ = Describe("Run", func() {
 	Describe("security", func() {
 		Describe("rlimits", func() {
 			It("sets requested rlimits, even if they are increased above current limit", func() {
-				var old syscall.Rlimit
-				Expect(syscall.Getrlimit(syscall.RLIMIT_NOFILE, &old)).To(Succeed())
+				var old unix.Rlimit
+				Expect(unix.Getrlimit(unix.RLIMIT_NOFILE, &old)).To(Succeed())
 
-				Expect(syscall.Setrlimit(syscall.RLIMIT_NOFILE, &syscall.Rlimit{
+				Expect(unix.Setrlimit(unix.RLIMIT_NOFILE, &unix.Rlimit{
 					Max: 100000,
 					Cur: 100000,
 				})).To(Succeed())
 
-				defer syscall.Setrlimit(syscall.RLIMIT_NOFILE, &old)
+				defer unix.Setrlimit(unix.RLIMIT_NOFILE, &old)
 
 				client = runner.Start(config)
 				container, err := client.Create(garden.ContainerSpec{
@@ -669,7 +669,7 @@ func filesInDir(path string) []string {
 	files := make([]string, 0)
 	Expect(filepath.Walk(path, func(p string, i os.FileInfo, err error) error {
 		Expect(err).NotTo(HaveOccurred())
-		if i.Mode()&os.ModeDir == os.ModeDir {
+		if i.IsDir() {
 			return nil
 		}
 
@@ -682,7 +682,7 @@ func filesInDir(path string) []string {
 
 func ttySpec(path string, args ...string) garden.ProcessSpec {
 	base := spec(path, args...)
-	base.TTY = &garden.TTYSpec{}
+	base.TTY = new(garden.TTYSpec)
 	return base
 }
 
@@ -715,7 +715,13 @@ func checkFileInfo(expectedInfo fileInfo) error {
 	if actualInfo.Mode().String() != expectedInfo.mode {
 		return fmt.Errorf("mode %v is not the expected %v of file %v", actualInfo.Mode(), expectedInfo.mode, path)
 	}
-	if uid := actualInfo.Sys().(*syscall.Stat_t).Uid; uid != expectedInfo.owner {
+
+	var stat unix.Stat_t
+	if err = unix.Stat(path, &stat); err != nil {
+		return err
+	}
+
+	if uid := stat.Uid; uid != expectedInfo.owner {
 		return fmt.Errorf("owner %v is not the expected %v of file %v", uid, expectedInfo.owner, path)
 	}
 	return nil
