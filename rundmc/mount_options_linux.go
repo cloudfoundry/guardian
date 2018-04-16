@@ -2,6 +2,7 @@ package rundmc
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/docker/docker/pkg/mount"
@@ -11,19 +12,11 @@ func (g MountOptionsGetter) GetMountOptions(path string) ([]string, error) {
 	return g(path)
 }
 
-func (c MountPointChecker) IsMountPoint(path string) (bool, error) {
-	return c(path)
-}
-
-func IsMountPoint(path string) (bool, error) {
-	mountInfo, err := getMountInfo(path)
-	if err != nil {
-		return false, err
-	}
-	return mountInfo != nil, nil
-}
-
 func GetMountOptions(path string) ([]string, error) {
+	if err := verifyExistingDirectory(path); err != nil {
+		return nil, err
+	}
+
 	mountInfo, err := getMountInfo(path)
 	if err != nil {
 		return nil, err
@@ -49,4 +42,17 @@ func getMountInfo(path string) (*mount.Info, error) {
 	}
 
 	return nil, nil
+}
+
+func verifyExistingDirectory(path string) error {
+	stat, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+
+	if !stat.IsDir() {
+		return fmt.Errorf("%s is not a directory", path)
+	}
+
+	return nil
 }
