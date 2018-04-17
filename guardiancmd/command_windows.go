@@ -17,6 +17,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
+	"github.com/docker/docker/pkg/mount"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
@@ -105,13 +106,13 @@ func wireEnvFunc() runrunc.EnvFunc {
 }
 
 func wireMounts() bundlerules.Mounts {
-	noopMountpointChecker := func(path string) (bool, error) {
-		return false, nil
-	}
-	noopMountOptionsGetter := func(path string) ([]string, error) {
+	noopMountOptionsGetter := func(path string, mountInfos []*mount.Info) ([]string, error) {
 		return []string{}, nil
 	}
-	return bundlerules.Mounts{MountPointChecker: noopMountpointChecker, MountOptionsGetter: noopMountOptionsGetter}
+	noopMountInfosProvider := func() ([]*mount.Info, error) {
+		return []*mount.Info{}, nil
+	}
+	return bundlerules.Mounts{MountOptionsGetter: noopMountOptionsGetter, MountInfosProvider: noopMountInfosProvider}
 }
 
 // Note - it's not possible to bind mount a single file in Windows, so we are

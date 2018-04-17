@@ -5,18 +5,24 @@ import (
 	spec "code.cloudfoundry.org/guardian/gardener/container-spec"
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/goci"
+	"github.com/docker/docker/pkg/mount"
 	"github.com/opencontainers/runtime-spec/specs-go"
 )
 
 type Mounts struct {
-	MountPointChecker  rundmc.MountPointChecker
 	MountOptionsGetter rundmc.MountOptionsGetter
+	MountInfosProvider func() ([]*mount.Info, error)
 }
 
 func (b Mounts) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) (goci.Bndl, error) {
+	mountInfos, err := b.MountInfosProvider()
+	if err != nil {
+		return goci.Bndl{}, err
+	}
+
 	var mounts []specs.Mount
 	for _, m := range spec.BindMounts {
-		mountOptions, err := b.buildMountOptions(m)
+		mountOptions, err := b.buildMountOptions(m, mountInfos)
 		if err != nil {
 			return goci.Bndl{}, err
 		}
@@ -32,19 +38,10 @@ func (b Mounts) Apply(bndl goci.Bndl, spec spec.DesiredContainerSpec, _ string) 
 	return bndl.WithPrependedMounts(spec.BaseConfig.Mounts...).WithMounts(mounts...), nil
 }
 
-func (b Mounts) buildMountOptions(m garden.BindMount) ([]string, error) {
+func (b Mounts) buildMountOptions(m garden.BindMount, mountInfos []*mount.Info) ([]string, error) {
 	mountOptions := []string{"bind", getMountMode(m)}
 
-	isSrcMountpoint, err := b.MountPointChecker(m.SrcPath)
-	if err != nil {
-		return nil, err
-	}
-
-	if !isSrcMountpoint {
-		return mountOptions, nil
-	}
-
-	srcMountOptions, err := b.MountOptionsGetter(m.SrcPath)
+	srcMountOptions, err := b.MountOptionsGetter(m.SrcPath, mountInfos)
 	if err != nil {
 		return nil, err
 	}

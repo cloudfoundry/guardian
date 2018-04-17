@@ -14,7 +14,7 @@ import (
 var _ = Describe("Mountpoint checker", func() {
 
 	var (
-		mountPoint   string
+		pathToCheck  string
 		toBeMounted  string
 		tmpDir       string
 		isMountPoint bool
@@ -22,7 +22,7 @@ var _ = Describe("Mountpoint checker", func() {
 	)
 
 	JustBeforeEach(func() {
-		isMountPoint, isMountError = rundmc.IsMountPoint(mountPoint)
+		isMountPoint, isMountError = rundmc.IsMountPoint(pathToCheck)
 	})
 
 	Context("when the path exists", func() {
@@ -31,8 +31,8 @@ var _ = Describe("Mountpoint checker", func() {
 			tmpDir, err = ioutil.TempDir("", "mountpoint-checker")
 			Expect(err).NotTo(HaveOccurred())
 
-			mountPoint = filepath.Join(tmpDir, "mount-point")
-			Expect(os.Mkdir(mountPoint, os.ModeDir)).To(Succeed())
+			pathToCheck = filepath.Join(tmpDir, "mount-point")
+			Expect(os.Mkdir(pathToCheck, os.ModeDir)).To(Succeed())
 
 		})
 
@@ -47,12 +47,12 @@ var _ = Describe("Mountpoint checker", func() {
 				toBeMounted = filepath.Join(tmpDir, "to-be-mounted")
 				Expect(os.Mkdir(toBeMounted, os.ModeDir)).To(Succeed())
 
-				cmd := exec.Command("mount", "-t", "tmpfs", toBeMounted, mountPoint)
+				cmd := exec.Command("mount", "-t", "tmpfs", toBeMounted, pathToCheck)
 				Expect(cmd.Run()).To(Succeed())
 			})
 
 			AfterEach(func() {
-				cmd := exec.Command("umount", mountPoint)
+				cmd := exec.Command("umount", pathToCheck)
 				Expect(cmd.Run()).To(Succeed())
 
 			})
@@ -74,7 +74,25 @@ var _ = Describe("Mountpoint checker", func() {
 
 	Context("when the path does not exist", func() {
 		BeforeEach(func() {
-			mountPoint = "/does/not/exist"
+			pathToCheck = "/does/not/exist"
+		})
+
+		It("does not report it as a mountpoint", func() {
+			Expect(isMountError).NotTo(HaveOccurred())
+			Expect(isMountPoint).To(BeFalse())
+		})
+	})
+
+	Context("when the path is a file", func() {
+		BeforeEach(func() {
+			file, err := ioutil.TempFile("", "not-a-dir")
+			Expect(err).NotTo(HaveOccurred())
+			defer file.Close()
+			pathToCheck = file.Name()
+		})
+
+		AfterEach(func() {
+			Expect(os.Remove(pathToCheck)).To(Succeed())
 		})
 
 		It("does not report it as a mountpoint", func() {

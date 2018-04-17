@@ -5,13 +5,15 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc"
+	"github.com/docker/docker/pkg/mount"
 )
 
 type FakeMountOptionsGetter struct {
-	Stub        func(path string) ([]string, error)
+	Stub        func(path string, mountInfos []*mount.Info) ([]string, error)
 	mutex       sync.RWMutex
 	argsForCall []struct {
-		path string
+		path       string
+		mountInfos []*mount.Info
 	}
 	returns struct {
 		result1 []string
@@ -25,16 +27,22 @@ type FakeMountOptionsGetter struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeMountOptionsGetter) Spy(path string) ([]string, error) {
+func (fake *FakeMountOptionsGetter) Spy(path string, mountInfos []*mount.Info) ([]string, error) {
+	var mountInfosCopy []*mount.Info
+	if mountInfos != nil {
+		mountInfosCopy = make([]*mount.Info, len(mountInfos))
+		copy(mountInfosCopy, mountInfos)
+	}
 	fake.mutex.Lock()
 	ret, specificReturn := fake.returnsOnCall[len(fake.argsForCall)]
 	fake.argsForCall = append(fake.argsForCall, struct {
-		path string
-	}{path})
-	fake.recordInvocation("MountOptionsGetter", []interface{}{path})
+		path       string
+		mountInfos []*mount.Info
+	}{path, mountInfosCopy})
+	fake.recordInvocation("MountOptionsGetter", []interface{}{path, mountInfosCopy})
 	fake.mutex.Unlock()
 	if fake.Stub != nil {
-		return fake.Stub(path)
+		return fake.Stub(path, mountInfos)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -48,10 +56,10 @@ func (fake *FakeMountOptionsGetter) CallCount() int {
 	return len(fake.argsForCall)
 }
 
-func (fake *FakeMountOptionsGetter) ArgsForCall(i int) string {
+func (fake *FakeMountOptionsGetter) ArgsForCall(i int) (string, []*mount.Info) {
 	fake.mutex.RLock()
 	defer fake.mutex.RUnlock()
-	return fake.argsForCall[i].path
+	return fake.argsForCall[i].path, fake.argsForCall[i].mountInfos
 }
 
 func (fake *FakeMountOptionsGetter) Returns(result1 []string, result2 error) {

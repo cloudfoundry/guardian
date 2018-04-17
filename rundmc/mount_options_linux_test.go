@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"code.cloudfoundry.org/guardian/rundmc"
+	"github.com/docker/docker/pkg/mount"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -21,7 +22,9 @@ var _ = Describe("Mount options", func() {
 	)
 
 	JustBeforeEach(func() {
-		mountOptions, getMountOptionsErr = rundmc.GetMountOptions(mountPoint)
+		mountInfos, err := mount.GetMounts()
+		Expect(err).NotTo(HaveOccurred())
+		mountOptions, getMountOptionsErr = rundmc.GetMountOptions(mountPoint, mountInfos)
 	})
 
 	BeforeEach(func() {
@@ -40,33 +43,31 @@ var _ = Describe("Mount options", func() {
 		Expect(os.RemoveAll(tmpDir)).To(Succeed())
 	})
 
-	Context("when the path does not exist", func() {
-		BeforeEach(func() {
-			Expect(os.RemoveAll(mountPoint)).To(Succeed())
-		})
-
-		It("returns an error", func() {
-			Expect(getMountOptionsErr).To(HaveOccurred())
-		})
-	})
-
-	Context("when the path is not a directory", func() {
+	Context("when the path is a file bind mount", func() {
 		BeforeEach(func() {
 			Expect(os.RemoveAll(mountPoint)).To(Succeed())
 			_, err := os.Create(mountPoint)
 			Expect(err).NotTo(HaveOccurred())
+
+			Expect(exec.Command("mount", "--bind", mountPoint, mountPoint).Run()).To(Succeed())
+			Expect(exec.Command("mount", "-o", "remount,noexec,bind", mountPoint, mountPoint).Run()).To(Succeed())
 		})
 
-		It("returns an informative error", func() {
-			Expect(getMountOptionsErr).To(HaveOccurred())
-			Expect(getMountOptionsErr.Error()).To(ContainSubstring("not a directory"))
+		AfterEach(func() {
+			cmd := exec.Command("umount", mountPoint)
+			Expect(cmd.Run()).To(Succeed())
+		})
+
+		It("returns mount options", func() {
+			Expect(getMountOptionsErr).NotTo(HaveOccurred())
+			Expect(mountOptions).To(SatisfyAll(ContainElement("noexec")))
 		})
 	})
 
-	Context("when the path is not mounted", func() {
-		It("returns an informative error", func() {
-			Expect(getMountOptionsErr).To(HaveOccurred())
-			Expect(getMountOptionsErr.Error()).To(ContainSubstring("not a mount point"))
+	Context("when the path is not a mountpoint", func() {
+		It("returns an empty options list", func() {
+			Expect(getMountOptionsErr).NotTo(HaveOccurred())
+			Expect(mountOptions).To(BeEmpty())
 		})
 	})
 

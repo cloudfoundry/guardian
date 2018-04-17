@@ -1,45 +1,33 @@
 package rundmc
 
 import (
-	"fmt"
+	"bytes"
 	"os"
-	"path/filepath"
-	"syscall"
+	"os/exec"
 )
-
-const no_device = -1
 
 func (c MountPointChecker) IsMountPoint(path string) (bool, error) {
 	return c(path)
 }
 
 func IsMountPoint(path string) (bool, error) {
-	dev, err := getDeviceForFile(path)
-	if dev == no_device || err != nil {
-		return false, err
+	// append trailing slash to force symlink traversal; symlinking e.g. 'cpu'
+	// to 'cpu,cpuacct' is common
+	cmd := exec.Command("mountpoint", path+"/")
+	cmdOutput, err := cmd.CombinedOutput()
+	if err == nil {
+		return true, nil
 	}
 
-	parentDev, err := getDeviceForFile(filepath.Dir(path))
-	if parentDev == no_device || err != nil {
-		return false, err
+	// According to the mountpoint command implementation, an error means
+	// that the path either does not exist, or is not a mountpoint
+	if bytes.Contains(cmdOutput, []byte("is not a mountpoint")) {
+		return false, nil
 	}
 
-	return dev != parentDev, nil
-}
-
-func getDeviceForFile(path string) (int64, error) {
-	var info os.FileInfo
-	var err error
-	if info, err = os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			return no_device, nil
-		}
-		return 0, fmt.Errorf("failed to stat %s", path)
+	if stat, statErr := os.Stat(path); os.IsNotExist(statErr) || !stat.IsDir() {
+		return false, nil
 	}
 
-	stat, ok := info.Sys().(*syscall.Stat_t)
-	if !ok {
-		return 0, fmt.Errorf("failed to convert to system stat %s", path)
-	}
-	return int64(stat.Dev), nil
+	return false, err
 }
