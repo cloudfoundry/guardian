@@ -92,6 +92,7 @@ type GdnRunnerConfig struct {
 	AppArmor                       string   `flag:"apparmor"`
 	Tag                            string   `flag:"tag"`
 	NetworkPool                    string   `flag:"network-pool"`
+	ContainerdSocket               string   `flag:"containerd-socket"`
 
 	StartupExpectedToFail bool
 	StorePath             string

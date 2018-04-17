@@ -1,6 +1,7 @@
 package guardiancmd
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -38,10 +39,14 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/peas/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"github.com/cloudfoundry/dropsonde"
+	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/namespaces"
 	_ "github.com/docker/docker/daemon/graphdriver/aufs" // aufs needed for garden-shed
 	_ "github.com/docker/docker/pkg/chrootarchive"       // allow reexec of docker-applyLayer
 	"github.com/docker/docker/pkg/reexec"
@@ -276,6 +281,10 @@ type ServerCommand struct {
 		DropsondeOrigin      string `long:"dropsonde-origin"      default:"garden-linux"   description:"Origin identifier for Dropsonde-emitted metrics."`
 		DropsondeDestination string `long:"dropsonde-destination" default:"127.0.0.1:3457" description:"Destination for Dropsonde-emitted metrics."`
 	} `group:"Metrics"`
+
+	Containerd struct {
+		Socket string `long:"containerd-socket" description:"Path to a containerd socket."`
+	} `group:"Containerd"`
 }
 
 func init() {
@@ -453,13 +462,19 @@ func (cmd *ServerCommand) Run(signals <-chan os.Signal, ready chan<- struct{}) e
 	var bulkStarter gardener.BulkStarter = gardener.NewBulkStarter(starters)
 	peaCleaner := cmd.wirePeaCleaner(factory, volumizer)
 
+	containerizer, err := cmd.wireContainerizer(logger, factory, propManager, volumizer, peaCleaner)
+	if err != nil {
+		logger.Error("failed-to-wire-containerizer", err)
+		return err
+	}
+
 	backend := &gardener.Gardener{
 		UidGenerator:    wireUIDGenerator(),
 		BulkStarter:     bulkStarter,
 		SysInfoProvider: sysinfo.NewResourcesProvider(cmd.Containers.Dir),
 		Networker:       networker,
 		Volumizer:       volumizer,
-		Containerizer:   cmd.wireContainerizer(logger, factory, propManager, volumizer, peaCleaner),
+		Containerizer:   containerizer,
 		PropertyManager: propManager,
 		MaxContainers:   cmd.Limits.MaxContainers,
 		Restorer:        restorer,
@@ -751,7 +766,7 @@ func (cmd *ServerCommand) wireImagePlugin(commandRunner commandrunner.CommandRun
 }
 
 func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFactory,
-	properties gardener.PropertyManager, volumizer peas.Volumizer, peaCleaner gardener.PeaCleaner) *rundmc.Containerizer {
+	properties gardener.PropertyManager, volumizer peas.Volumizer, peaCleaner gardener.PeaCleaner) (*rundmc.Containerizer, error) {
 
 	initMount, initPath := initBindMountAndPath(cmd.Bin.Init.Path())
 
@@ -842,20 +857,31 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 	runcLogRunner := runrunc.NewLogRunner(cmdRunner, runrunc.LogDir(os.TempDir()).GenerateLogFile)
 	runcBinary := goci.RuncBinary{Path: cmd.Runtime.Plugin}
 
-	runcrunner := runrunc.New(
-		cmdRunner,
-		runcLogRunner,
-		runcBinary,
-		cmd.Bin.Dadoo.Path(),
-		cmd.Runtime.Plugin,
-		cmd.Runtime.PluginExtraArgs,
-		bndlLoader,
-		processBuilder,
-		factory.WireMkdirer(),
-		runrunc.LookupFunc(runrunc.LookupUser),
-		factory.WireExecRunner("exec"),
-		wireUIDGenerator(),
-	)
+	var runner rundmc.OCIRuntime
+	if cmd.Containerd.Socket != "" {
+		containerdClient, err := containerd.New(cmd.Containerd.Socket)
+		if err != nil {
+			return nil, err
+		}
+		ctx := namespaces.WithNamespace(context.Background(), "garden")
+		nerd := nerd.New(containerdClient, ctx)
+		runner = runcontainerd.New(nerd, bndlLoader)
+	} else {
+		runner = runrunc.New(
+			cmdRunner,
+			runcLogRunner,
+			runcBinary,
+			cmd.Bin.Dadoo.Path(),
+			cmd.Runtime.Plugin,
+			cmd.Runtime.PluginExtraArgs,
+			bndlLoader,
+			processBuilder,
+			factory.WireMkdirer(),
+			runrunc.LookupFunc(runrunc.LookupUser),
+			factory.WireExecRunner("exec"),
+			wireUIDGenerator(),
+		)
+	}
 
 	eventStore := rundmc.NewEventStore(properties)
 	stateStore := rundmc.NewStateStore(properties)
@@ -895,7 +921,7 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	nstar := rundmc.NewNstarRunner(cmd.Bin.NSTar.Path(), cmd.Bin.Tar.Path(), cmdRunner)
 	stopper := stopper.New(stopper.NewRuncStateCgroupPathResolver(runcRoot), nil, retrier.New(retrier.ConstantBackoff(10, 1*time.Second), nil))
-	return rundmc.New(depot, runcrunner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver)
+	return rundmc.New(depot, runner, bndlLoader, nstar, stopper, eventStore, stateStore, factory.WireRootfsFileCreator(), peaCreator, peaUsernameResolver), nil
 }
 
 func wirePidfileReader() *pidreader.PidFileReader {

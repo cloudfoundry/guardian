@@ -12,32 +12,33 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 	"code.cloudfoundry.org/guardian/kawasaki/iptables"
 	"code.cloudfoundry.org/guardian/pkg/locksmith"
+	"github.com/burntsushi/toml"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
-
-	"encoding/json"
-	"testing"
 )
 
-var ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
+var (
+	ginkgoIO = garden.ProcessIO{Stdout: GinkgoWriter, Stderr: GinkgoWriter}
+	// the unprivileged user is baked into the cfgarden/garden-ci-ubuntu image
+	unprivilegedUID = uint32(5000)
+	unprivilegedGID = uint32(5000)
 
-var config runner.GdnRunnerConfig
-var binaries runner.Binaries
-
-// the unprivileged user is baked into the cfgarden/garden-ci-ubuntu image
-var unprivilegedUID = uint32(5000)
-var unprivilegedGID = uint32(5000)
-
-var gqtStartTime time.Time
-
-var defaultTestRootFS string
+	config             runner.GdnRunnerConfig
+	containerdConfig   containerdrunner.Config
+	binaries           runner.Binaries
+	containerdBinaries containerdrunner.Binaries
+	gqtStartTime       time.Time
+	defaultTestRootFS  string
+)
 
 func goCompile(mainPackagePath string, buildArgs ...string) string {
 	if os.Getenv("RACE_DETECTION") != "" {
@@ -48,47 +49,24 @@ func goCompile(mainPackagePath string, buildArgs ...string) string {
 	return bin
 }
 
+type runnerBinaries struct {
+	Garden     runner.Binaries
+	Containerd containerdrunner.Binaries
+}
+
 func TestGqt(t *testing.T) {
 	RegisterFailHandler(Fail)
 
 	SynchronizedBeforeSuite(func() []byte {
-		var err error
-		binaries = runner.Binaries{}
-
-		binaries.Tar = os.Getenv("GARDEN_TAR_PATH")
-		binaries.Gdn = goCompile("code.cloudfoundry.org/guardian/cmd/gdn", "-tags", "daemon", "-ldflags", "-extldflags '-static'")
-		binaries.NetworkPlugin = goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin")
-		binaries.ImagePlugin = goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin")
-
-		binaries.PrivilegedImagePlugin = fmt.Sprintf("%s-priv", binaries.ImagePlugin)
-		Expect(copyFile(binaries.ImagePlugin, binaries.PrivilegedImagePlugin)).To(Succeed())
-
-		binaries.RuntimePlugin = goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin")
-		binaries.NoopPlugin = goCompile("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin")
-
-		if runtime.GOOS == "linux" {
-			binaries.ExecRunner = goCompile("code.cloudfoundry.org/guardian/cmd/dadoo")
-			binaries.Socket2me = goCompile("code.cloudfoundry.org/guardian/cmd/socket2me")
-
-			cmd := exec.Command("make")
-			runCommandInDir(cmd, "../rundmc/nstar")
-			binaries.NSTar = "../rundmc/nstar/nstar"
-
-			cmd = exec.Command("gcc", "-static", "-o", "init", "init.c")
-			runCommandInDir(cmd, "../cmd/init")
-			binaries.Init = "../cmd/init/init"
-
-			binaries.Groot = goCompile("code.cloudfoundry.org/grootfs")
-			binaries.Tardis = goCompile("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
-			Expect(os.Chmod(binaries.Tardis, 04755)).To(Succeed())
-		}
-
-		data, err := json.Marshal(binaries)
-		Expect(err).NotTo(HaveOccurred())
-
-		return data
+		return jsonMarshal(runnerBinaries{
+			Garden:     getGardenBinaries(),
+			Containerd: getContainerdBinaries(),
+		})
 	}, func(data []byte) {
-		Expect(json.Unmarshal(data, &binaries)).To(Succeed())
+		bins := new(runnerBinaries)
+		jsonUnmarshal(data, bins)
+		binaries = bins.Garden
+		containerdBinaries = bins.Containerd
 		defaultTestRootFS = os.Getenv("GARDEN_TEST_ROOTFS")
 	})
 
@@ -114,6 +92,8 @@ func TestGqt(t *testing.T) {
 			initGrootStore(config.ImagePluginBin, config.StorePath, []string{"0:4294967294:1", "1:65536:4294901758"})
 			initGrootStore(config.PrivilegedImagePluginBin, config.PrivilegedStorePath, nil)
 		}
+
+		containerdConfig = defaultContainerdConfig(config)
 	})
 
 	AfterEach(func() {
@@ -125,6 +105,49 @@ func TestGqt(t *testing.T) {
 
 	SetDefaultEventuallyTimeout(5 * time.Second)
 	RunSpecs(t, "GQT Suite")
+}
+
+func getGardenBinaries() runner.Binaries {
+	gardenBinaries := runner.Binaries{
+		Tar:           os.Getenv("GARDEN_TAR_PATH"),
+		Gdn:           goCompile("code.cloudfoundry.org/guardian/cmd/gdn", "-tags", "daemon", "-ldflags", "-extldflags '-static'"),
+		NetworkPlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_network_plugin"),
+		ImagePlugin:   goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_image_plugin"),
+		RuntimePlugin: goCompile("code.cloudfoundry.org/guardian/gqt/cmd/fake_runtime_plugin"),
+		NoopPlugin:    goCompile("code.cloudfoundry.org/guardian/gqt/cmd/noop_plugin"),
+	}
+
+	gardenBinaries.PrivilegedImagePlugin = gardenBinaries.ImagePlugin + "-priv"
+	Expect(copyFile(gardenBinaries.ImagePlugin, gardenBinaries.PrivilegedImagePlugin)).To(Succeed())
+
+	if runtime.GOOS == "linux" {
+		gardenBinaries.ExecRunner = goCompile("code.cloudfoundry.org/guardian/cmd/dadoo")
+		gardenBinaries.Socket2me = goCompile("code.cloudfoundry.org/guardian/cmd/socket2me")
+
+		cmd := exec.Command("make")
+		runCommandInDir(cmd, "../rundmc/nstar")
+		gardenBinaries.NSTar = "../rundmc/nstar/nstar"
+
+		cmd = exec.Command("gcc", "-static", "-o", "init", "init.c")
+		runCommandInDir(cmd, "../cmd/init")
+		gardenBinaries.Init = "../cmd/init/init"
+
+		gardenBinaries.Groot = goCompile("code.cloudfoundry.org/grootfs")
+		gardenBinaries.Tardis = goCompile("code.cloudfoundry.org/grootfs/store/filesystems/overlayxfs/tardis")
+		Expect(os.Chmod(gardenBinaries.Tardis, 04755)).To(Succeed())
+	}
+
+	return gardenBinaries
+}
+
+func getContainerdBinaries() containerdrunner.Binaries {
+	containerdBin := makeContainerd()
+
+	return containerdrunner.Binaries{
+		Containerd: filepath.Join(containerdBin, "containerd"),
+		Ctr:        filepath.Join(containerdBin, "ctr"),
+		Dir:        containerdBin,
+	}
 }
 
 func initGrootStore(grootBin, storePath string, idMappings []string) {
@@ -164,6 +187,20 @@ func defaultConfig() runner.GdnRunnerConfig {
 	cfg.NSTarBin = binaries.NSTar
 	cfg.ImagePluginBin = binaries.Groot
 	cfg.PrivilegedImagePluginBin = binaries.Groot
+
+	return cfg
+}
+
+func defaultContainerdConfig(gdnRunnerConfig runner.GdnRunnerConfig) containerdrunner.Config {
+	containerdDataDir, err := ioutil.TempDir("", "")
+	Expect(err).NotTo(HaveOccurred())
+
+	cfg := containerdrunner.ParallelisableContainerdConfig(containerdDataDir)
+	cfg.ContainerdBin = containerdBinaries.Containerd
+	cfg.CtrBin = containerdBinaries.Ctr
+	cfg.BinariesDir = containerdBinaries.Dir
+
+	cfg.RunDir = containerdDataDir
 
 	return cfg
 }
@@ -354,4 +391,32 @@ func resetImagePluginConfig() runner.GdnRunnerConfig {
 	config.ImagePluginExtraArgs = []string{}
 	config.PrivilegedImagePluginExtraArgs = []string{}
 	return config
+}
+
+func mustGetEnv(env string) string {
+	if value := os.Getenv(env); value != "" {
+		return value
+	}
+	panic(fmt.Sprintf("%s env must be non-empty", env))
+}
+
+func makeContainerd() string {
+	if runtime.GOOS == "windows" {
+		return ""
+	}
+	containerdPath := filepath.Join(mustGetEnv("GOPATH"), filepath.FromSlash("src/github.com/containerd/containerd"))
+	makeContainerdCommand := exec.Command("make")
+	makeContainerdCommand.Env = append(os.Environ(), "BUILDTAGS=no_btrfs")
+	runCommandInDir(makeContainerdCommand, containerdPath)
+	return filepath.Join(containerdPath, "bin")
+}
+
+func jsonMarshal(v interface{}) []byte {
+	buf := bytes.NewBuffer([]byte{})
+	Expect(toml.NewEncoder(buf).Encode(v)).To(Succeed())
+	return buf.Bytes()
+}
+
+func jsonUnmarshal(data []byte, v interface{}) {
+	Expect(toml.Unmarshal(data, v)).To(Succeed())
 }

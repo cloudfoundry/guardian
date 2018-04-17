@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 
 	. "code.cloudfoundry.org/guardian/matchers"
@@ -298,7 +299,7 @@ var _ = Describe("Creating a Container", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 	})
-
+	//TODO why duplicate?
 	Context("when creating a container fails", func() {
 		It("should not leak networking configuration", func() {
 			_, err := client.Create(garden.ContainerSpec{
@@ -608,7 +609,51 @@ var _ = Describe("Creating a Container", func() {
 			})
 		})
 	})
+
+	Context("when the containerd socket has been passed", func() {
+		var (
+			containerdSession *gexec.Session
+		)
+
+		BeforeEach(func() {
+			containerdSession = containerdrunner.NewSession(containerdConfig)
+			config.ContainerdSocket = containerdConfig.GRPC.Address
+		})
+
+		AfterEach(func() {
+			containerDelete(container.Handle())
+			Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
+		})
+
+		JustBeforeEach(func() {
+			var err error
+			container, err = client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("makes created containers available for lookup via ctr", func() {
+			lookupCommand := exec.Command(containerdBinaries.Ctr, "--address", config.ContainerdSocket, "--namespace", "garden", "tasks", "ps", container.Handle())
+
+			session, err := gexec.Start(lookupCommand, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(session).Should(gbytes.Say(container.Handle()))
+			Eventually(session).Should(gexec.Exit(0))
+		})
+	})
 })
+
+func containerDelete(handle string) {
+	deleteTaskCommand := exec.Command(containerdBinaries.Ctr, "--address", config.ContainerdSocket, "--namespace", "garden", "tasks", "delete", handle, "-f")
+	session, err := gexec.Start(deleteTaskCommand, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	// exits 137=128+9, because containerd 'kill -9's it
+	Eventually(session).Should(gexec.Exit())
+
+	deleteContainerCommand := exec.Command(containerdBinaries.Ctr, "--address", config.ContainerdSocket, "--namespace", "garden", "containers", "delete", handle)
+	session, err = gexec.Start(deleteContainerCommand, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	Eventually(session).Should(gexec.Exit(0))
+}
 
 func initProcessPID(handle string) int {
 	Eventually(fmt.Sprintf("/run/runc/%s/state.json", handle)).Should(BeAnExistingFile())
