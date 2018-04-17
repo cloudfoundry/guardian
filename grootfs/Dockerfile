@@ -24,17 +24,6 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-##############################
-# Install Bosh
-RUN wget https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-2.0.28-linux-amd64 && \
-    mv bosh-cli-* /usr/local/bin/bosh && \
-    chmod +x /usr/local/bin/bosh
-
-################################
-# Install CF
-RUN wget "https://cli.run.pivotal.io/stable?release=debian64&version=6.28.0&source=github-rel" -O cf.deb && \
-    dpkg -i cf.deb
-
 ###############################
 # Setup the GOPATH
 RUN mkdir -p /go && \
