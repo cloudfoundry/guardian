@@ -1,7 +1,6 @@
 package guardiancmd
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -39,14 +38,10 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/peas/privchecker"
 	"code.cloudfoundry.org/guardian/rundmc/pidreader"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
-	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
-	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/stopper"
 	"code.cloudfoundry.org/guardian/sysinfo"
 	"github.com/cloudfoundry/dropsonde"
-	"github.com/containerd/containerd"
-	"github.com/containerd/containerd/namespaces"
 	_ "github.com/docker/docker/daemon/graphdriver/aufs" // aufs needed for garden-shed
 	_ "github.com/docker/docker/pkg/chrootarchive"       // allow reexec of docker-applyLayer
 	"github.com/docker/docker/pkg/reexec"
@@ -859,13 +854,11 @@ func (cmd *ServerCommand) wireContainerizer(log lager.Logger, factory GardenFact
 
 	var runner rundmc.OCIRuntime
 	if cmd.Containerd.Socket != "" {
-		containerdClient, err := containerd.New(cmd.Containerd.Socket)
+		var err error
+		runner, err = wireContainerd(cmd.Containerd.Socket, bndlLoader)
 		if err != nil {
 			return nil, err
 		}
-		ctx := namespaces.WithNamespace(context.Background(), "garden")
-		nerd := nerd.New(containerdClient, ctx)
-		runner = runcontainerd.New(nerd, bndlLoader)
 	} else {
 		runner = runrunc.New(
 			cmdRunner,

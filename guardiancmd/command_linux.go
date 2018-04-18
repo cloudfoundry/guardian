@@ -1,6 +1,7 @@
 package guardiancmd
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -25,11 +26,16 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/cgroups"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner/dadoo"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
+	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/guardian/rundmc/signals"
 	"code.cloudfoundry.org/idmapper"
 	"code.cloudfoundry.org/lager"
+	"github.com/containerd/containerd"
+	"github.com/containerd/containerd/namespaces"
 	"github.com/docker/docker/daemon/graphdriver"
 	"github.com/docker/docker/graph"
 	"github.com/eapache/go-resiliency/retrier"
@@ -311,4 +317,14 @@ func (f *LinuxFactory) wireShed(logger lager.Logger) *rootfs_provider.CakeOrdina
 
 func wireMounts() bundlerules.Mounts {
 	return bundlerules.Mounts{MountPointChecker: rundmc.IsMountPoint, MountOptionsGetter: rundmc.GetMountOptions}
+}
+
+func wireContainerd(socket string, bndlLoader *goci.BndlLoader) (rundmc.OCIRuntime, error) {
+	containerdClient, err := containerd.New(socket)
+	if err != nil {
+		return nil, err
+	}
+	ctx := namespaces.WithNamespace(context.Background(), "garden")
+	nerd := nerd.New(containerdClient, ctx)
+	return runcontainerd.New(nerd, bndlLoader), nil
 }

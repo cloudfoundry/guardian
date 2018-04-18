@@ -1,6 +1,7 @@
 package guardiancmd
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc"
 	"code.cloudfoundry.org/guardian/rundmc/bundlerules"
 	"code.cloudfoundry.org/guardian/rundmc/execrunner"
+	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/preparerootfs"
 	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	"code.cloudfoundry.org/lager"
@@ -150,4 +152,8 @@ func mustGetMaxValidUID() int {
 
 func ensureServerSocketDoesNotLeak(socketFD uintptr) error {
 	panic("this should be unreachable: no sockets on Windows")
+}
+
+func wireContainerd(socket string, bndlLoader *goci.BndlLoader) (rundmc.OCIRuntime, error) {
+	return nil, errors.New("containerd not impletemented on windows")
 }
