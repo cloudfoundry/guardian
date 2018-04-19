@@ -44,7 +44,6 @@ var _ = Describe("Networking", func() {
 	BeforeEach(func() {
 		rootFSWithoutHostsAndResolv = createRootfs(func(root string) {
 			Expect(os.Chmod(filepath.Join(root, "tmp"), 0777)).To(Succeed())
-			Expect(os.Chmod(filepath.Join(root, "root"), 0777)).To(Succeed())
 			Expect(os.Remove(filepath.Join(root, "etc", "hosts"))).To(Succeed())
 			Expect(os.Remove(filepath.Join(root, "etc", "resolv.conf"))).To(Succeed())
 		}, 0755)
