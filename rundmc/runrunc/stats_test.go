@@ -92,7 +92,11 @@ var _ = Describe("Stats", func() {
 								"hierarchical_memsw_limit": 31,
 								"total_swap": 32
 							}
-						}
+						},
+						"pids": {
+							"current": 33,
+							"limit": 34
+            }
 					}
 				}`))
 
@@ -145,6 +149,16 @@ var _ = Describe("Stats", func() {
 				HierarchicalMemswLimit: 31,
 				TotalSwap:              32,
 				TotalUsageTowardLimit:  22,
+			}))
+		})
+
+		It("parses the Pid stats", func() {
+			stats, err := statser.Stats(logger, "some-handle")
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(stats.Pid).To(Equal(garden.ContainerPidStat{
+				Current: 33,
+				Max:     34,
 			}))
 		})
 

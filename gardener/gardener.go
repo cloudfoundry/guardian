@@ -116,6 +116,7 @@ func (fn UidGeneratorFunc) Generate() string {
 type ActualContainerMetrics struct {
 	CPU    garden.ContainerCPUStat
 	Memory garden.ContainerMemoryStat
+	Pid    garden.ContainerPidStat
 }
 
 // Gardener orchestrates other components to implement the Garden API

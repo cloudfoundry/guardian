@@ -28,6 +28,10 @@ type runcStats struct {
 		MemoryStats struct {
 			Stats garden.ContainerMemoryStat `json:"raw"`
 		} `json:"memory"`
+		PidStats struct {
+			Current uint64 `json:"current"`
+			Max     uint64 `json:"limit"`
+		} `json:"pids"`
 	}
 }
 
@@ -64,6 +68,10 @@ func (r *Statser) Stats(log lager.Logger, id string) (gardener.ActualContainerMe
 			Usage:  data.Data.CPUStats.CPUUsage.Usage,
 			System: data.Data.CPUStats.CPUUsage.System,
 			User:   data.Data.CPUStats.CPUUsage.User,
+		},
+		Pid: garden.ContainerPidStat{
+			Current: data.Data.PidStats.Current,
+			Max:     data.Data.PidStats.Max,
 		},
 	}
 

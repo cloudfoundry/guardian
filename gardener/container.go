@@ -149,6 +149,7 @@ func (c *container) Metrics() (garden.Metrics, error) {
 		CPUStat:    actualContainerMetrics.CPU,
 		MemoryStat: actualContainerMetrics.Memory,
 		DiskStat:   diskMetrics,
+		PidStat:    actualContainerMetrics.Pid,
 	}, nil
 }
 
