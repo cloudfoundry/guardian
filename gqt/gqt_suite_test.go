@@ -93,7 +93,7 @@ func TestGqt(t *testing.T) {
 			initGrootStore(config.PrivilegedImagePluginBin, config.PrivilegedStorePath, nil)
 		}
 
-		containerdConfig = defaultContainerdConfig(config)
+		containerdConfig = defaultContainerdConfig()
 	})
 
 	AfterEach(func() {
@@ -191,11 +191,11 @@ func defaultConfig() runner.GdnRunnerConfig {
 	return cfg
 }
 
-func defaultContainerdConfig(gdnRunnerConfig runner.GdnRunnerConfig) containerdrunner.Config {
+func defaultContainerdConfig() containerdrunner.Config {
 	containerdDataDir, err := ioutil.TempDir("", "")
 	Expect(err).NotTo(HaveOccurred())
 
-	cfg := containerdrunner.ParallelisableContainerdConfig(containerdDataDir)
+	cfg := containerdrunner.ContainerdConfig(containerdDataDir)
 	cfg.ContainerdBin = containerdBinaries.Containerd
 	cfg.CtrBin = containerdBinaries.Ctr
 	cfg.BinariesDir = containerdBinaries.Dir

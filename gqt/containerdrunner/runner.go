@@ -13,9 +13,9 @@ import (
 )
 
 type Binaries struct {
-	Dir        string `json:"dir,omitempty"`
-	Containerd string `json:"containerd,omitempty"`
-	Ctr        string `json:"ctr,omitempty"`
+	Dir        string
+	Containerd string
+	Ctr        string
 }
 
 type Config struct {
@@ -41,7 +41,7 @@ type DebugConfig struct {
 	Level   string `toml:"level"`
 }
 
-func ParallelisableContainerdConfig(containerdDataDir string) Config {
+func ContainerdConfig(containerdDataDir string) Config {
 	return Config{
 		Root:      filepath.Join(containerdDataDir, "root"),
 		State:     filepath.Join(containerdDataDir, "state"),
@@ -57,7 +57,21 @@ func ParallelisableContainerdConfig(containerdDataDir string) Config {
 	}
 }
 
-func NewSession(config Config) *gexec.Session {
+// TODO: Get rid of NewDefaultSession
+func NewSession(runDir string, bins Binaries, config Config) *gexec.Session {
+	configFile, err := os.OpenFile(filepath.Join(runDir, "containerd.toml"), os.O_TRUNC|os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(toml.NewEncoder(configFile).Encode(&config)).To(Succeed())
+	Expect(configFile.Close()).To(Succeed())
+
+	cmd := exec.Command(bins.Containerd, "--config", configFile.Name())
+	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s", fmt.Sprintf("%s:%s", os.Getenv("PATH"), bins.Dir)))
+	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+	Expect(err).NotTo(HaveOccurred())
+	return session
+}
+
+func NewDefaultSession(config Config) *gexec.Session {
 	configFile, err := os.OpenFile(filepath.Join(config.RunDir, "containerd.toml"), os.O_TRUNC|os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(toml.NewEncoder(configFile).Encode(&config)).To(Succeed())

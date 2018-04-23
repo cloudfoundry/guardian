@@ -616,7 +616,7 @@ var _ = Describe("Creating a Container", func() {
 		)
 
 		BeforeEach(func() {
-			containerdSession = containerdrunner.NewSession(containerdConfig)
+			containerdSession = containerdrunner.NewDefaultSession(containerdConfig)
 			config.ContainerdSocket = containerdConfig.GRPC.Address
 		})
 

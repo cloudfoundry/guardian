@@ -7,6 +7,7 @@ import (
 	"code.cloudfoundry.org/guardian/rundmc/goci"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/runcontainerdfakes"
+	"code.cloudfoundry.org/guardian/rundmc/runrunc"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -103,59 +104,57 @@ var _ = Describe("Runcontainerd", func() {
 		})
 	})
 
-	Describe("State", func() {
-		var (
-			stateErr        error
-			loadedContainer *runcontainerdfakes.FakeContainer
-			loadedTask      *runcontainerdfakes.FakeTask
-		)
-
-		BeforeEach(func() {
-			loadedContainer = new(runcontainerdfakes.FakeContainer)
-			loadedTask = new(runcontainerdfakes.FakeTask)
-			nerdulator.LoadContainerReturns(loadedContainer, nil)
-			nerdulator.GetTaskReturns(loadedTask, nil)
-			nerdulator.GetTaskPidReturns(1)
-		})
+	Describe("Delete", func() {
+		var deleteErr error
 
 		JustBeforeEach(func() {
-			_, stateErr = runContainerd.State(nil, "some-id")
+			deleteErr = runContainerd.Delete(nil, false, "container-id")
 		})
 
-		It("should load the container, with the correct args", func() {
-			Expect(stateErr).NotTo(HaveOccurred())
-			Expect(nerdulator.LoadContainerCallCount()).To(Equal(1))
-			actualID := nerdulator.LoadContainerArgsForCall(0)
-			Expect(actualID).To(Equal("some-id"))
+		It("deletes the containerd container with the passed id", func() {
+			Expect(nerdulator.DeleteCallCount()).To(Equal(1))
+			_, actualID := nerdulator.DeleteArgsForCall(0)
+			Expect(actualID).To(Equal("container-id"))
 		})
 
-		It("should load the container's associated task, with the correct args", func() {
-			Expect(stateErr).NotTo(HaveOccurred())
-			Expect(nerdulator.GetTaskCallCount()).To(Equal(1))
-			container := nerdulator.GetTaskArgsForCall(0)
-			Expect(container).To(Equal(loadedContainer))
-		})
-
-		It("should load the task's pid, with the correct args", func() {
-			Expect(stateErr).NotTo(HaveOccurred())
-			task := nerdulator.GetTaskPidArgsForCall(0)
-			Expect(task).To(Equal(loadedTask))
-			Expect(nerdulator.GetTaskPidCallCount()).To(Equal(1))
-		})
-
-		Context("when loading the container fails", func() {
+		Context("when deleting a containerd container errors", func() {
 			BeforeEach(func() {
-				nerdulator.LoadContainerReturns(nil, errors.New("BOOM"))
+				nerdulator.DeleteReturns(errors.New("could not delete"))
 			})
 
 			It("bubbles up that error", func() {
-				Expect(stateErr).To(MatchError("BOOM"))
+				Expect(deleteErr).To(MatchError("could not delete"))
 			})
 		})
+	})
 
-		Context("when loading the container's task fails", func() {
+	Describe("State", func() {
+		var (
+			state    runrunc.State
+			stateErr error
+		)
+
+		BeforeEach(func() {
+			nerdulator.StateReturns(1, "running", nil)
+		})
+
+		JustBeforeEach(func() {
+			state, stateErr = runContainerd.State(nil, "some-id")
+		})
+
+		It("fetches the container's state, with the correct args", func() {
+			Expect(stateErr).NotTo(HaveOccurred())
+			Expect(nerdulator.StateCallCount()).To(Equal(1))
+			_, actualID := nerdulator.StateArgsForCall(0)
+			Expect(actualID).To(Equal("some-id"))
+
+			Expect(state.Pid).To(Equal(1))
+			Expect(state.Status).To(Equal(runrunc.RunningStatus))
+		})
+
+		Context("when getting the state fails", func() {
 			BeforeEach(func() {
-				nerdulator.GetTaskReturns(nil, errors.New("BOOM"))
+				nerdulator.StateReturns(0, "", errors.New("BOOM"))
 			})
 
 			It("bubbles up that error", func() {

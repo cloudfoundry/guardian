@@ -3,6 +3,7 @@ package nerd
 import (
 	"context"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -33,14 +34,40 @@ func (n *Nerd) StartTask(task containerd.Task) error {
 	return task.Start(n.context)
 }
 
-func (n *Nerd) LoadContainer(id string) (containerd.Container, error) {
-	return n.client.LoadContainer(n.context, id)
+func (n *Nerd) Delete(log lager.Logger, containerID string) error {
+	container, err := n.client.LoadContainer(n.context, containerID)
+	if err != nil {
+		return err
+	}
+
+	task, err := container.Task(n.context, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = task.Delete(n.context, containerd.WithProcessKill)
+	if err != nil {
+		return err
+	}
+
+	return container.Delete(n.context)
 }
 
-func (n *Nerd) GetTask(container containerd.Container) (containerd.Task, error) {
-	return container.Task(n.context, nil)
-}
+func (n *Nerd) State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error) {
+	container, err := n.client.LoadContainer(n.context, containerID)
+	if err != nil {
+		return 0, "", err
+	}
 
-func (n *Nerd) GetTaskPid(task containerd.Task) int {
-	return int(task.Pid())
+	task, err := container.Task(n.context, nil)
+	if err != nil {
+		return 0, "", err
+	}
+
+	status, err := task.Status(n.context)
+	if err != nil {
+		return 0, "", err
+	}
+
+	return int(task.Pid()), status.Status, nil
 }

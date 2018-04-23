@@ -28,9 +28,9 @@ type Nerdulator interface {
 	CreateContainer(id string, spec specs.Spec) (containerd.Container, error)
 	CreateTask(io cio.Creator, container containerd.Container) (containerd.Task, error)
 	StartTask(task containerd.Task) error
-	LoadContainer(id string) (containerd.Container, error)
-	GetTask(container containerd.Container) (containerd.Task, error)
-	GetTaskPid(task containerd.Task) int
+
+	State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error)
+	Delete(log lager.Logger, containerID string) error
 }
 
 //go:generate counterfeiter . BundleLoader
@@ -81,22 +81,17 @@ func (r *RunContainerd) Kill(log lager.Logger, bundlePath string) error {
 	return fmt.Errorf("Kill is not implemented yet")
 }
 
-func (r *RunContainerd) Delete(log lager.Logger, force bool, bundlePath string) error {
-	return fmt.Errorf("Delete is not implemented yet")
+func (r *RunContainerd) Delete(log lager.Logger, force bool, id string) error {
+	return r.nerd.Delete(nil, id)
 }
 
 func (r *RunContainerd) State(log lager.Logger, id string) (runrunc.State, error) {
-	container, err := r.nerd.LoadContainer(id)
+	pid, status, err := r.nerd.State(log, id)
 	if err != nil {
 		return runrunc.State{}, err
 	}
 
-	task, err := r.nerd.GetTask(container)
-	if err != nil {
-		return runrunc.State{}, err
-	}
-
-	return runrunc.State{Pid: r.nerd.GetTaskPid(task)}, nil
+	return runrunc.State{Pid: pid, Status: runrunc.Status(status)}, nil
 }
 
 func (r *RunContainerd) Stats(log lager.Logger, id string) (gardener.ActualContainerMetrics, error) {

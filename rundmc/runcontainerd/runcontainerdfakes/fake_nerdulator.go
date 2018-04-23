@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd"
+	"code.cloudfoundry.org/lager"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/cio"
 	specs "github.com/opencontainers/runtime-spec/specs-go"
@@ -50,42 +51,33 @@ type FakeNerdulator struct {
 	startTaskReturnsOnCall map[int]struct {
 		result1 error
 	}
-	LoadContainerStub        func(id string) (containerd.Container, error)
-	loadContainerMutex       sync.RWMutex
-	loadContainerArgsForCall []struct {
-		id string
+	StateStub        func(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error)
+	stateMutex       sync.RWMutex
+	stateArgsForCall []struct {
+		log         lager.Logger
+		containerID string
 	}
-	loadContainerReturns struct {
-		result1 containerd.Container
-		result2 error
-	}
-	loadContainerReturnsOnCall map[int]struct {
-		result1 containerd.Container
-		result2 error
-	}
-	GetTaskStub        func(container containerd.Container) (containerd.Task, error)
-	getTaskMutex       sync.RWMutex
-	getTaskArgsForCall []struct {
-		container containerd.Container
-	}
-	getTaskReturns struct {
-		result1 containerd.Task
-		result2 error
-	}
-	getTaskReturnsOnCall map[int]struct {
-		result1 containerd.Task
-		result2 error
-	}
-	GetTaskPidStub        func(task containerd.Task) int
-	getTaskPidMutex       sync.RWMutex
-	getTaskPidArgsForCall []struct {
-		task containerd.Task
-	}
-	getTaskPidReturns struct {
+	stateReturns struct {
 		result1 int
+		result2 containerd.ProcessStatus
+		result3 error
 	}
-	getTaskPidReturnsOnCall map[int]struct {
+	stateReturnsOnCall map[int]struct {
 		result1 int
+		result2 containerd.ProcessStatus
+		result3 error
+	}
+	DeleteStub        func(log lager.Logger, containerID string) error
+	deleteMutex       sync.RWMutex
+	deleteArgsForCall []struct {
+		log         lager.Logger
+		containerID string
+	}
+	deleteReturns struct {
+		result1 error
+	}
+	deleteReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -243,153 +235,107 @@ func (fake *FakeNerdulator) StartTaskReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeNerdulator) LoadContainer(id string) (containerd.Container, error) {
-	fake.loadContainerMutex.Lock()
-	ret, specificReturn := fake.loadContainerReturnsOnCall[len(fake.loadContainerArgsForCall)]
-	fake.loadContainerArgsForCall = append(fake.loadContainerArgsForCall, struct {
-		id string
-	}{id})
-	fake.recordInvocation("LoadContainer", []interface{}{id})
-	fake.loadContainerMutex.Unlock()
-	if fake.LoadContainerStub != nil {
-		return fake.LoadContainerStub(id)
+func (fake *FakeNerdulator) State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error) {
+	fake.stateMutex.Lock()
+	ret, specificReturn := fake.stateReturnsOnCall[len(fake.stateArgsForCall)]
+	fake.stateArgsForCall = append(fake.stateArgsForCall, struct {
+		log         lager.Logger
+		containerID string
+	}{log, containerID})
+	fake.recordInvocation("State", []interface{}{log, containerID})
+	fake.stateMutex.Unlock()
+	if fake.StateStub != nil {
+		return fake.StateStub(log, containerID)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1, ret.result2, ret.result3
 	}
-	return fake.loadContainerReturns.result1, fake.loadContainerReturns.result2
+	return fake.stateReturns.result1, fake.stateReturns.result2, fake.stateReturns.result3
 }
 
-func (fake *FakeNerdulator) LoadContainerCallCount() int {
-	fake.loadContainerMutex.RLock()
-	defer fake.loadContainerMutex.RUnlock()
-	return len(fake.loadContainerArgsForCall)
+func (fake *FakeNerdulator) StateCallCount() int {
+	fake.stateMutex.RLock()
+	defer fake.stateMutex.RUnlock()
+	return len(fake.stateArgsForCall)
 }
 
-func (fake *FakeNerdulator) LoadContainerArgsForCall(i int) string {
-	fake.loadContainerMutex.RLock()
-	defer fake.loadContainerMutex.RUnlock()
-	return fake.loadContainerArgsForCall[i].id
+func (fake *FakeNerdulator) StateArgsForCall(i int) (lager.Logger, string) {
+	fake.stateMutex.RLock()
+	defer fake.stateMutex.RUnlock()
+	return fake.stateArgsForCall[i].log, fake.stateArgsForCall[i].containerID
 }
 
-func (fake *FakeNerdulator) LoadContainerReturns(result1 containerd.Container, result2 error) {
-	fake.LoadContainerStub = nil
-	fake.loadContainerReturns = struct {
-		result1 containerd.Container
-		result2 error
-	}{result1, result2}
+func (fake *FakeNerdulator) StateReturns(result1 int, result2 containerd.ProcessStatus, result3 error) {
+	fake.StateStub = nil
+	fake.stateReturns = struct {
+		result1 int
+		result2 containerd.ProcessStatus
+		result3 error
+	}{result1, result2, result3}
 }
 
-func (fake *FakeNerdulator) LoadContainerReturnsOnCall(i int, result1 containerd.Container, result2 error) {
-	fake.LoadContainerStub = nil
-	if fake.loadContainerReturnsOnCall == nil {
-		fake.loadContainerReturnsOnCall = make(map[int]struct {
-			result1 containerd.Container
-			result2 error
+func (fake *FakeNerdulator) StateReturnsOnCall(i int, result1 int, result2 containerd.ProcessStatus, result3 error) {
+	fake.StateStub = nil
+	if fake.stateReturnsOnCall == nil {
+		fake.stateReturnsOnCall = make(map[int]struct {
+			result1 int
+			result2 containerd.ProcessStatus
+			result3 error
 		})
 	}
-	fake.loadContainerReturnsOnCall[i] = struct {
-		result1 containerd.Container
-		result2 error
-	}{result1, result2}
+	fake.stateReturnsOnCall[i] = struct {
+		result1 int
+		result2 containerd.ProcessStatus
+		result3 error
+	}{result1, result2, result3}
 }
 
-func (fake *FakeNerdulator) GetTask(container containerd.Container) (containerd.Task, error) {
-	fake.getTaskMutex.Lock()
-	ret, specificReturn := fake.getTaskReturnsOnCall[len(fake.getTaskArgsForCall)]
-	fake.getTaskArgsForCall = append(fake.getTaskArgsForCall, struct {
-		container containerd.Container
-	}{container})
-	fake.recordInvocation("GetTask", []interface{}{container})
-	fake.getTaskMutex.Unlock()
-	if fake.GetTaskStub != nil {
-		return fake.GetTaskStub(container)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getTaskReturns.result1, fake.getTaskReturns.result2
-}
-
-func (fake *FakeNerdulator) GetTaskCallCount() int {
-	fake.getTaskMutex.RLock()
-	defer fake.getTaskMutex.RUnlock()
-	return len(fake.getTaskArgsForCall)
-}
-
-func (fake *FakeNerdulator) GetTaskArgsForCall(i int) containerd.Container {
-	fake.getTaskMutex.RLock()
-	defer fake.getTaskMutex.RUnlock()
-	return fake.getTaskArgsForCall[i].container
-}
-
-func (fake *FakeNerdulator) GetTaskReturns(result1 containerd.Task, result2 error) {
-	fake.GetTaskStub = nil
-	fake.getTaskReturns = struct {
-		result1 containerd.Task
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeNerdulator) GetTaskReturnsOnCall(i int, result1 containerd.Task, result2 error) {
-	fake.GetTaskStub = nil
-	if fake.getTaskReturnsOnCall == nil {
-		fake.getTaskReturnsOnCall = make(map[int]struct {
-			result1 containerd.Task
-			result2 error
-		})
-	}
-	fake.getTaskReturnsOnCall[i] = struct {
-		result1 containerd.Task
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *FakeNerdulator) GetTaskPid(task containerd.Task) int {
-	fake.getTaskPidMutex.Lock()
-	ret, specificReturn := fake.getTaskPidReturnsOnCall[len(fake.getTaskPidArgsForCall)]
-	fake.getTaskPidArgsForCall = append(fake.getTaskPidArgsForCall, struct {
-		task containerd.Task
-	}{task})
-	fake.recordInvocation("GetTaskPid", []interface{}{task})
-	fake.getTaskPidMutex.Unlock()
-	if fake.GetTaskPidStub != nil {
-		return fake.GetTaskPidStub(task)
+func (fake *FakeNerdulator) Delete(log lager.Logger, containerID string) error {
+	fake.deleteMutex.Lock()
+	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
+	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
+		log         lager.Logger
+		containerID string
+	}{log, containerID})
+	fake.recordInvocation("Delete", []interface{}{log, containerID})
+	fake.deleteMutex.Unlock()
+	if fake.DeleteStub != nil {
+		return fake.DeleteStub(log, containerID)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	return fake.getTaskPidReturns.result1
+	return fake.deleteReturns.result1
 }
 
-func (fake *FakeNerdulator) GetTaskPidCallCount() int {
-	fake.getTaskPidMutex.RLock()
-	defer fake.getTaskPidMutex.RUnlock()
-	return len(fake.getTaskPidArgsForCall)
+func (fake *FakeNerdulator) DeleteCallCount() int {
+	fake.deleteMutex.RLock()
+	defer fake.deleteMutex.RUnlock()
+	return len(fake.deleteArgsForCall)
 }
 
-func (fake *FakeNerdulator) GetTaskPidArgsForCall(i int) containerd.Task {
-	fake.getTaskPidMutex.RLock()
-	defer fake.getTaskPidMutex.RUnlock()
-	return fake.getTaskPidArgsForCall[i].task
+func (fake *FakeNerdulator) DeleteArgsForCall(i int) (lager.Logger, string) {
+	fake.deleteMutex.RLock()
+	defer fake.deleteMutex.RUnlock()
+	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].containerID
 }
 
-func (fake *FakeNerdulator) GetTaskPidReturns(result1 int) {
-	fake.GetTaskPidStub = nil
-	fake.getTaskPidReturns = struct {
-		result1 int
+func (fake *FakeNerdulator) DeleteReturns(result1 error) {
+	fake.DeleteStub = nil
+	fake.deleteReturns = struct {
+		result1 error
 	}{result1}
 }
 
-func (fake *FakeNerdulator) GetTaskPidReturnsOnCall(i int, result1 int) {
-	fake.GetTaskPidStub = nil
-	if fake.getTaskPidReturnsOnCall == nil {
-		fake.getTaskPidReturnsOnCall = make(map[int]struct {
-			result1 int
+func (fake *FakeNerdulator) DeleteReturnsOnCall(i int, result1 error) {
+	fake.DeleteStub = nil
+	if fake.deleteReturnsOnCall == nil {
+		fake.deleteReturnsOnCall = make(map[int]struct {
+			result1 error
 		})
 	}
-	fake.getTaskPidReturnsOnCall[i] = struct {
-		result1 int
+	fake.deleteReturnsOnCall[i] = struct {
+		result1 error
 	}{result1}
 }
 
@@ -402,12 +348,10 @@ func (fake *FakeNerdulator) Invocations() map[string][][]interface{} {
 	defer fake.createTaskMutex.RUnlock()
 	fake.startTaskMutex.RLock()
 	defer fake.startTaskMutex.RUnlock()
-	fake.loadContainerMutex.RLock()
-	defer fake.loadContainerMutex.RUnlock()
-	fake.getTaskMutex.RLock()
-	defer fake.getTaskMutex.RUnlock()
-	fake.getTaskPidMutex.RLock()
-	defer fake.getTaskPidMutex.RUnlock()
+	fake.stateMutex.RLock()
+	defer fake.stateMutex.RUnlock()
+	fake.deleteMutex.RLock()
+	defer fake.deleteMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

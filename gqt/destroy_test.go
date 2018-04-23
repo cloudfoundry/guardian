@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"code.cloudfoundry.org/garden"
+	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
 	"code.cloudfoundry.org/guardian/gqt/runner"
 
 	. "github.com/onsi/ginkgo"
@@ -232,6 +233,40 @@ var _ = Describe("Destroying a Container", func() {
 
 				itRemovesTheNetworkBridge()
 			})
+		})
+	})
+
+	Context("when the containerd socket has been passed", func() {
+		var (
+			containerdSession *gexec.Session
+			container         garden.Container
+		)
+
+		BeforeEach(func() {
+			containerdSession = containerdrunner.NewDefaultSession(containerdConfig)
+			config.ContainerdSocket = containerdConfig.GRPC.Address
+		})
+
+		AfterEach(func() {
+			Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
+		})
+
+		JustBeforeEach(func() {
+			var err error
+			container, err = client.Create(garden.ContainerSpec{})
+			Expect(err).NotTo(HaveOccurred())
+		})
+
+		It("removes the container from ctr lookup", func() {
+			err := client.Destroy(container.Handle())
+			Expect(err).NotTo(HaveOccurred())
+
+			lookupCommand := exec.Command(containerdBinaries.Ctr, "--address", config.ContainerdSocket, "--namespace", "garden", "containers", "list")
+
+			session, err := gexec.Start(lookupCommand, GinkgoWriter, GinkgoWriter)
+			Expect(err).NotTo(HaveOccurred())
+			Consistently(session).ShouldNot(gbytes.Say(container.Handle()))
+			Eventually(session).Should(gexec.Exit(0))
 		})
 	})
 })
