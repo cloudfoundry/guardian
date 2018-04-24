@@ -9,15 +9,22 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"code.cloudfoundry.org/commandrunner/linux_command_runner"
 	"code.cloudfoundry.org/guardian/gqt/containerdrunner"
+	"code.cloudfoundry.org/guardian/rundmc"
+	"code.cloudfoundry.org/guardian/rundmc/cgroups"
+	"code.cloudfoundry.org/lager/lagertest"
 	"github.com/burntsushi/toml"
 	"github.com/containerd/containerd"
 	"github.com/containerd/containerd/namespaces"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
+	specs "github.com/opencontainers/runtime-spec/specs-go"
+	"golang.org/x/sys/unix"
 )
 
 type TestConfig struct {
@@ -27,6 +34,8 @@ type TestConfig struct {
 }
 
 var (
+	cgroupsPath string
+
 	testConfig        *TestConfig
 	containerdClient  *containerd.Client
 	containerdContext context.Context
@@ -37,8 +46,8 @@ var (
 func TestNerd(t *testing.T) {
 	RegisterFailHandler(Fail)
 	SynchronizedBeforeSuite(func() []byte {
-		gdnBin := goCompile("code.cloudfoundry.org/guardian/cmd/gdn", "-tags", "daemon", "-ldflags", "-extldflags '-static'")
-		setupCgroups(gdnBin)
+		cgroupsPath = filepath.Join(os.TempDir(), "cgroups")
+		setupCgroups(cgroupsPath)
 
 		bins := getContainerdBinaries()
 
@@ -48,7 +57,12 @@ func TestNerd(t *testing.T) {
 		containerdConfig := containerdrunner.ContainerdConfig(runDir)
 		containerdSession = containerdrunner.NewSession(runDir, bins, containerdConfig)
 
-		return jsonMarshal(&TestConfig{RunDir: runDir, Socket: containerdConfig.GRPC.Address, CtrBin: bins.Ctr})
+		testConfig := &TestConfig{
+			RunDir: runDir,
+			Socket: containerdConfig.GRPC.Address,
+			CtrBin: bins.Ctr,
+		}
+		return jsonMarshal(testConfig)
 	}, func(data []byte) {
 		testConfig = &TestConfig{}
 		jsonUnmarshal(data, testConfig)
@@ -63,38 +77,55 @@ func TestNerd(t *testing.T) {
 	SynchronizedAfterSuite(func() {}, func() {
 		Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
 		Expect(os.RemoveAll(testConfig.RunDir)).To(Succeed())
+		teardownCgroups(cgroupsPath)
 		gexec.CleanupBuildArtifacts()
 	})
 
 	RunSpecs(t, "Nerd Suite")
 }
 
-func goCompile(mainPackagePath string, buildArgs ...string) string {
-	if os.Getenv("RACE_DETECTION") != "" {
-		buildArgs = append(buildArgs, "-race")
-	}
-	bin, err := gexec.Build(mainPackagePath, buildArgs...)
-	Expect(err).NotTo(HaveOccurred())
-	return bin
+func setupCgroups(cgroupsRoot string) {
+	logger := lagertest.NewTestLogger("test")
+	runner := linux_command_runner.New()
+
+	starter := cgroups.NewStarter(logger,
+		mustOpen("/proc/cgroups"),
+		mustOpen("/proc/self/cgroup"),
+		cgroupsRoot,
+		"nerd",
+		[]specs.LinuxDeviceCgroup{},
+		runner,
+		&cgroups.OSChowner{},
+		rundmc.IsMountPoint)
+
+	Expect(starter.Start()).To(Succeed())
 }
 
-func setupCgroups(gdn string) {
-	tag := "nerd-tests"
-	tmpDir := filepath.Join(os.TempDir(), tag)
-
-	cmd := exec.Command(gdn, "setup", "--tag", tag)
-	cmd.Env = append(
-		[]string{
-			fmt.Sprintf("TMPDIR=%s", tmpDir),
-			fmt.Sprintf("TEMP=%s", tmpDir),
-			fmt.Sprintf("TMP=%s", tmpDir),
-		},
-		os.Environ()...,
-	)
-	setupProcess, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
+func mustOpen(path string) *os.File {
+	r, err := os.Open(path)
 	Expect(err).NotTo(HaveOccurred())
 
-	Expect(setupProcess.Wait().ExitCode()).To(BeZero())
+	return r
+}
+
+func teardownCgroups(cgroupsRoot string) {
+	mountsFileContent, err := ioutil.ReadFile("/proc/self/mounts")
+	Expect(err).NotTo(HaveOccurred())
+
+	lines := strings.Split(string(mountsFileContent), "\n")
+	for _, line := range lines {
+		if line == "" {
+			continue
+		}
+
+		fields := strings.Fields(line)
+		if fields[2] == "cgroup" {
+			Expect(unix.Unmount(fields[1], 0)).To(Succeed())
+		}
+	}
+
+	Expect(unix.Unmount(cgroupsRoot, 0)).To(Succeed())
+	Expect(os.Remove(cgroupsRoot)).To(Succeed())
 }
 
 func getContainerdBinaries() containerdrunner.Binaries {

@@ -74,6 +74,10 @@ var _ = Describe("Nerd", func() {
 			Expect(cnerd.Create(testLogger, "test-id", spec)).To(Succeed())
 		})
 
+		AfterEach(func() {
+			cnerd.Delete(testLogger, "test-id")
+		})
+
 		It("gets the pid and status of a running task", func() {
 			pid, status, err := cnerd.State(testLogger, "test-id")
 
