@@ -12,8 +12,8 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-//go:generate counterfeiter . Nerdulator
-type Nerdulator interface {
+//go:generate counterfeiter . NerdContainerizer
+type NerdContainerizer interface {
 	Create(log lager.Logger, containerID string, spec *specs.Spec) error
 	Delete(log lager.Logger, containerID string) error
 
@@ -26,11 +26,11 @@ type BundleLoader interface {
 }
 
 type RunContainerd struct {
-	nerd         Nerdulator
+	nerd         NerdContainerizer
 	bundleLoader BundleLoader
 }
 
-func New(nerdulator Nerdulator, bundleLoader BundleLoader) *RunContainerd {
+func New(nerdulator NerdContainerizer, bundleLoader BundleLoader) *RunContainerd {
 	return &RunContainerd{
 		nerd:         nerdulator,
 		bundleLoader: bundleLoader,

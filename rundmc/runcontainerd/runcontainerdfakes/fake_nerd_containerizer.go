@@ -10,7 +10,7 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-type FakeNerdulator struct {
+type FakeNerdContainerizer struct {
 	CreateStub        func(log lager.Logger, containerID string, spec *specs.Spec) error
 	createMutex       sync.RWMutex
 	createArgsForCall []struct {
@@ -56,7 +56,7 @@ type FakeNerdulator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeNerdulator) Create(log lager.Logger, containerID string, spec *specs.Spec) error {
+func (fake *FakeNerdContainerizer) Create(log lager.Logger, containerID string, spec *specs.Spec) error {
 	fake.createMutex.Lock()
 	ret, specificReturn := fake.createReturnsOnCall[len(fake.createArgsForCall)]
 	fake.createArgsForCall = append(fake.createArgsForCall, struct {
@@ -75,26 +75,26 @@ func (fake *FakeNerdulator) Create(log lager.Logger, containerID string, spec *s
 	return fake.createReturns.result1
 }
 
-func (fake *FakeNerdulator) CreateCallCount() int {
+func (fake *FakeNerdContainerizer) CreateCallCount() int {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return len(fake.createArgsForCall)
 }
 
-func (fake *FakeNerdulator) CreateArgsForCall(i int) (lager.Logger, string, *specs.Spec) {
+func (fake *FakeNerdContainerizer) CreateArgsForCall(i int) (lager.Logger, string, *specs.Spec) {
 	fake.createMutex.RLock()
 	defer fake.createMutex.RUnlock()
 	return fake.createArgsForCall[i].log, fake.createArgsForCall[i].containerID, fake.createArgsForCall[i].spec
 }
 
-func (fake *FakeNerdulator) CreateReturns(result1 error) {
+func (fake *FakeNerdContainerizer) CreateReturns(result1 error) {
 	fake.CreateStub = nil
 	fake.createReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeNerdulator) CreateReturnsOnCall(i int, result1 error) {
+func (fake *FakeNerdContainerizer) CreateReturnsOnCall(i int, result1 error) {
 	fake.CreateStub = nil
 	if fake.createReturnsOnCall == nil {
 		fake.createReturnsOnCall = make(map[int]struct {
@@ -106,7 +106,7 @@ func (fake *FakeNerdulator) CreateReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeNerdulator) Delete(log lager.Logger, containerID string) error {
+func (fake *FakeNerdContainerizer) Delete(log lager.Logger, containerID string) error {
 	fake.deleteMutex.Lock()
 	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
 	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
@@ -124,26 +124,26 @@ func (fake *FakeNerdulator) Delete(log lager.Logger, containerID string) error {
 	return fake.deleteReturns.result1
 }
 
-func (fake *FakeNerdulator) DeleteCallCount() int {
+func (fake *FakeNerdContainerizer) DeleteCallCount() int {
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
 	return len(fake.deleteArgsForCall)
 }
 
-func (fake *FakeNerdulator) DeleteArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeNerdContainerizer) DeleteArgsForCall(i int) (lager.Logger, string) {
 	fake.deleteMutex.RLock()
 	defer fake.deleteMutex.RUnlock()
 	return fake.deleteArgsForCall[i].log, fake.deleteArgsForCall[i].containerID
 }
 
-func (fake *FakeNerdulator) DeleteReturns(result1 error) {
+func (fake *FakeNerdContainerizer) DeleteReturns(result1 error) {
 	fake.DeleteStub = nil
 	fake.deleteReturns = struct {
 		result1 error
 	}{result1}
 }
 
-func (fake *FakeNerdulator) DeleteReturnsOnCall(i int, result1 error) {
+func (fake *FakeNerdContainerizer) DeleteReturnsOnCall(i int, result1 error) {
 	fake.DeleteStub = nil
 	if fake.deleteReturnsOnCall == nil {
 		fake.deleteReturnsOnCall = make(map[int]struct {
@@ -155,7 +155,7 @@ func (fake *FakeNerdulator) DeleteReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeNerdulator) State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error) {
+func (fake *FakeNerdContainerizer) State(log lager.Logger, containerID string) (int, containerd.ProcessStatus, error) {
 	fake.stateMutex.Lock()
 	ret, specificReturn := fake.stateReturnsOnCall[len(fake.stateArgsForCall)]
 	fake.stateArgsForCall = append(fake.stateArgsForCall, struct {
@@ -173,19 +173,19 @@ func (fake *FakeNerdulator) State(log lager.Logger, containerID string) (int, co
 	return fake.stateReturns.result1, fake.stateReturns.result2, fake.stateReturns.result3
 }
 
-func (fake *FakeNerdulator) StateCallCount() int {
+func (fake *FakeNerdContainerizer) StateCallCount() int {
 	fake.stateMutex.RLock()
 	defer fake.stateMutex.RUnlock()
 	return len(fake.stateArgsForCall)
 }
 
-func (fake *FakeNerdulator) StateArgsForCall(i int) (lager.Logger, string) {
+func (fake *FakeNerdContainerizer) StateArgsForCall(i int) (lager.Logger, string) {
 	fake.stateMutex.RLock()
 	defer fake.stateMutex.RUnlock()
 	return fake.stateArgsForCall[i].log, fake.stateArgsForCall[i].containerID
 }
 
-func (fake *FakeNerdulator) StateReturns(result1 int, result2 containerd.ProcessStatus, result3 error) {
+func (fake *FakeNerdContainerizer) StateReturns(result1 int, result2 containerd.ProcessStatus, result3 error) {
 	fake.StateStub = nil
 	fake.stateReturns = struct {
 		result1 int
@@ -194,7 +194,7 @@ func (fake *FakeNerdulator) StateReturns(result1 int, result2 containerd.Process
 	}{result1, result2, result3}
 }
 
-func (fake *FakeNerdulator) StateReturnsOnCall(i int, result1 int, result2 containerd.ProcessStatus, result3 error) {
+func (fake *FakeNerdContainerizer) StateReturnsOnCall(i int, result1 int, result2 containerd.ProcessStatus, result3 error) {
 	fake.StateStub = nil
 	if fake.stateReturnsOnCall == nil {
 		fake.stateReturnsOnCall = make(map[int]struct {
@@ -210,7 +210,7 @@ func (fake *FakeNerdulator) StateReturnsOnCall(i int, result1 int, result2 conta
 	}{result1, result2, result3}
 }
 
-func (fake *FakeNerdulator) Invocations() map[string][][]interface{} {
+func (fake *FakeNerdContainerizer) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.createMutex.RLock()
@@ -226,7 +226,7 @@ func (fake *FakeNerdulator) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *FakeNerdulator) recordInvocation(key string, args []interface{}) {
+func (fake *FakeNerdContainerizer) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -238,4 +238,4 @@ func (fake *FakeNerdulator) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ runcontainerd.Nerdulator = new(FakeNerdulator)
+var _ runcontainerd.NerdContainerizer = new(FakeNerdContainerizer)

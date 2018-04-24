@@ -15,15 +15,15 @@ import (
 
 var _ = Describe("Runcontainerd", func() {
 	var (
-		nerdulator    *runcontainerdfakes.FakeNerdulator
+		nerd          *runcontainerdfakes.FakeNerdContainerizer
 		bundleLoader  *runcontainerdfakes.FakeBundleLoader
 		runContainerd *runcontainerd.RunContainerd
 	)
 
 	BeforeEach(func() {
-		nerdulator = new(runcontainerdfakes.FakeNerdulator)
+		nerd = new(runcontainerdfakes.FakeNerdContainerizer)
 		bundleLoader = new(runcontainerdfakes.FakeBundleLoader)
-		runContainerd = runcontainerd.New(nerdulator, bundleLoader)
+		runContainerd = runcontainerd.New(nerd, bundleLoader)
 	})
 
 	Describe("Create", func() {
@@ -56,14 +56,14 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		It("creates the container with the passed containerID", func() {
-			Expect(nerdulator.CreateCallCount()).To(Equal(1))
-			_, actualID, _ := nerdulator.CreateArgsForCall(0)
+			Expect(nerd.CreateCallCount()).To(Equal(1))
+			_, actualID, _ := nerd.CreateArgsForCall(0)
 			Expect(actualID).To(Equal(id))
 		})
 
 		It("creates the container using the spec from the loaded bundle", func() {
-			Expect(nerdulator.CreateCallCount()).To(Equal(1))
-			_, _, actualSpec := nerdulator.CreateArgsForCall(0)
+			Expect(nerd.CreateCallCount()).To(Equal(1))
+			_, _, actualSpec := nerd.CreateArgsForCall(0)
 			Expect(actualSpec).To(Equal(&bundle.Spec))
 		})
 
@@ -79,7 +79,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when creating the container returns an error", func() {
 			BeforeEach(func() {
-				nerdulator.CreateReturns(errors.New("EXPLODE"))
+				nerd.CreateReturns(errors.New("EXPLODE"))
 			})
 
 			It("bubbles up that", func() {
@@ -96,14 +96,14 @@ var _ = Describe("Runcontainerd", func() {
 		})
 
 		It("deletes the containerd container with the passed id", func() {
-			Expect(nerdulator.DeleteCallCount()).To(Equal(1))
-			_, actualID := nerdulator.DeleteArgsForCall(0)
+			Expect(nerd.DeleteCallCount()).To(Equal(1))
+			_, actualID := nerd.DeleteArgsForCall(0)
 			Expect(actualID).To(Equal("container-id"))
 		})
 
 		Context("when deleting a containerd container errors", func() {
 			BeforeEach(func() {
-				nerdulator.DeleteReturns(errors.New("could not delete"))
+				nerd.DeleteReturns(errors.New("could not delete"))
 			})
 
 			It("bubbles up that error", func() {
@@ -120,7 +120,7 @@ var _ = Describe("Runcontainerd", func() {
 		)
 
 		BeforeEach(func() {
-			nerdulator.StateReturns(1, "running", nil)
+			nerd.StateReturns(1, "running", nil)
 		})
 
 		JustBeforeEach(func() {
@@ -129,8 +129,8 @@ var _ = Describe("Runcontainerd", func() {
 
 		It("fetches the container's state, with the correct args", func() {
 			Expect(stateErr).NotTo(HaveOccurred())
-			Expect(nerdulator.StateCallCount()).To(Equal(1))
-			_, actualID := nerdulator.StateArgsForCall(0)
+			Expect(nerd.StateCallCount()).To(Equal(1))
+			_, actualID := nerd.StateArgsForCall(0)
 			Expect(actualID).To(Equal("some-id"))
 
 			Expect(state.Pid).To(Equal(1))
@@ -139,7 +139,7 @@ var _ = Describe("Runcontainerd", func() {
 
 		Context("when getting the state fails", func() {
 			BeforeEach(func() {
-				nerdulator.StateReturns(0, "", errors.New("BOOM"))
+				nerd.StateReturns(0, "", errors.New("BOOM"))
 			})
 
 			It("bubbles up that error", func() {
