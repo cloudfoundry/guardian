@@ -17,23 +17,29 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 
 	"code.cloudfoundry.org/guardian/rundmc/runcontainerd/nerd"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagertest"
 )
 
 var _ = Describe("Nerd", func() {
-	var cnerd *nerd.Nerd
+	var (
+		testLogger lager.Logger
+		cnerd      *nerd.Nerd
+	)
 
 	BeforeEach(func() {
+		testLogger = lagertest.NewTestLogger("nerd-test")
 		cnerd = nerd.New(containerdClient, containerdContext)
 	})
 
 	Describe("Create", func() {
 		AfterEach(func() {
-			cnerd.Delete(nil, "test-id")
+			cnerd.Delete(testLogger, "test-id")
 		})
 
 		It("creates the containerd container by id", func() {
 			spec := generateSpec(containerdContext, containerdClient, "test-id")
-			Expect(cnerd.Create(nil, "test-id", spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, "test-id", spec)).To(Succeed())
 
 			containers := listContainers(testConfig.CtrBin, testConfig.Socket)
 			Expect(containers).To(ContainSubstring("test-id"))
@@ -41,7 +47,7 @@ var _ = Describe("Nerd", func() {
 
 		It("starts an init process in the container", func() {
 			spec := generateSpec(containerdContext, containerdClient, "test-id")
-			Expect(cnerd.Create(nil, "test-id", spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, "test-id", spec)).To(Succeed())
 
 			containers := listProcesses(testConfig.CtrBin, testConfig.Socket, "test-id")
 			Expect(containers).To(ContainSubstring("test-id"))
@@ -51,11 +57,11 @@ var _ = Describe("Nerd", func() {
 	Describe("Delete", func() {
 		BeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, "test-id")
-			Expect(cnerd.Create(nil, "test-id", spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, "test-id", spec)).To(Succeed())
 		})
 
 		It("deletes the containerd container by id", func() {
-			Expect(cnerd.Delete(nil, "test-id")).To(Succeed())
+			Expect(cnerd.Delete(testLogger, "test-id")).To(Succeed())
 
 			containers := listContainers(testConfig.CtrBin, testConfig.Socket)
 			Expect(containers).NotTo(ContainSubstring("test-id"))
@@ -65,11 +71,11 @@ var _ = Describe("Nerd", func() {
 	Describe("State", func() {
 		BeforeEach(func() {
 			spec := generateSpec(containerdContext, containerdClient, "test-id")
-			Expect(cnerd.Create(nil, "test-id", spec)).To(Succeed())
+			Expect(cnerd.Create(testLogger, "test-id", spec)).To(Succeed())
 		})
 
 		It("gets the pid and status of a running task", func() {
-			pid, status, err := cnerd.State(nil, "test-id")
+			pid, status, err := cnerd.State(testLogger, "test-id")
 
 			Expect(err).NotTo(HaveOccurred())
 			Expect(pid).NotTo(BeZero())

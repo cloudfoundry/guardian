@@ -59,7 +59,7 @@ func (r *RunContainerd) Kill(log lager.Logger, bundlePath string) error {
 }
 
 func (r *RunContainerd) Delete(log lager.Logger, force bool, id string) error {
-	return r.nerd.Delete(nil, id)
+	return r.nerd.Delete(log, id)
 }
 
 func (r *RunContainerd) State(log lager.Logger, id string) (runrunc.State, error) {
