@@ -33,7 +33,6 @@ var (
 	unprivilegedGID = uint32(5000)
 
 	config             runner.GdnRunnerConfig
-	containerdConfig   containerdrunner.Config
 	binaries           runner.Binaries
 	containerdBinaries containerdrunner.Binaries
 	gqtStartTime       time.Time
@@ -92,8 +91,6 @@ func TestGqt(t *testing.T) {
 			initGrootStore(config.ImagePluginBin, config.StorePath, []string{"0:4294967294:1", "1:65536:4294901758"})
 			initGrootStore(config.PrivilegedImagePluginBin, config.PrivilegedStorePath, nil)
 		}
-
-		containerdConfig = defaultContainerdConfig()
 	})
 
 	AfterEach(func() {
@@ -144,9 +141,9 @@ func getContainerdBinaries() containerdrunner.Binaries {
 	containerdBin := makeContainerd()
 
 	return containerdrunner.Binaries{
+		Dir:        containerdBin,
 		Containerd: filepath.Join(containerdBin, "containerd"),
 		Ctr:        filepath.Join(containerdBin, "ctr"),
-		Dir:        containerdBin,
 	}
 }
 
@@ -187,20 +184,6 @@ func defaultConfig() runner.GdnRunnerConfig {
 	cfg.NSTarBin = binaries.NSTar
 	cfg.ImagePluginBin = binaries.Groot
 	cfg.PrivilegedImagePluginBin = binaries.Groot
-
-	return cfg
-}
-
-func defaultContainerdConfig() containerdrunner.Config {
-	containerdDataDir, err := ioutil.TempDir("", "")
-	Expect(err).NotTo(HaveOccurred())
-
-	cfg := containerdrunner.ContainerdConfig(containerdDataDir)
-	cfg.ContainerdBin = containerdBinaries.Containerd
-	cfg.CtrBin = containerdBinaries.Ctr
-	cfg.BinariesDir = containerdBinaries.Dir
-
-	cfg.RunDir = containerdDataDir
 
 	return cfg
 }

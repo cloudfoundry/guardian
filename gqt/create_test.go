@@ -616,12 +616,16 @@ var _ = Describe("Creating a Container", func() {
 		)
 
 		BeforeEach(func() {
-			containerdSession = containerdrunner.NewDefaultSession(containerdConfig)
+			runDir, err := ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+			containerdConfig := containerdrunner.ContainerdConfig(runDir)
+			containerdSession = containerdrunner.NewSession(runDir, containerdBinaries, containerdConfig)
+
 			config.ContainerdSocket = containerdConfig.GRPC.Address
 		})
 
 		AfterEach(func() {
-			containerDelete(container.Handle())
+			Expect(client.Destroy(container.Handle())).To(Succeed())
 			Expect(containerdSession.Terminate().Wait()).To(gexec.Exit(0))
 		})
 
@@ -631,7 +635,7 @@ var _ = Describe("Creating a Container", func() {
 			Expect(err).NotTo(HaveOccurred())
 		})
 
-		It("makes created containers available for lookup via ctr", func() {
+		It("creates a containerd container with running init task", func() {
 			lookupCommand := exec.Command(containerdBinaries.Ctr, "--address", config.ContainerdSocket, "--namespace", "garden", "tasks", "ps", container.Handle())
 
 			session, err := gexec.Start(lookupCommand, GinkgoWriter, GinkgoWriter)
@@ -641,19 +645,6 @@ var _ = Describe("Creating a Container", func() {
 		})
 	})
 })
-
-func containerDelete(handle string) {
-	deleteTaskCommand := exec.Command(containerdBinaries.Ctr, "--address", config.ContainerdSocket, "--namespace", "garden", "tasks", "delete", handle, "-f")
-	session, err := gexec.Start(deleteTaskCommand, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	// exits 137=128+9, because containerd 'kill -9's it
-	Eventually(session).Should(gexec.Exit())
-
-	deleteContainerCommand := exec.Command(containerdBinaries.Ctr, "--address", config.ContainerdSocket, "--namespace", "garden", "containers", "delete", handle)
-	session, err = gexec.Start(deleteContainerCommand, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	Eventually(session).Should(gexec.Exit(0))
-}
 
 func initProcessPID(handle string) int {
 	Eventually(fmt.Sprintf("/run/runc/%s/state.json", handle)).Should(BeAnExistingFile())

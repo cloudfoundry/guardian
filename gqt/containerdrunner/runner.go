@@ -57,7 +57,6 @@ func ContainerdConfig(containerdDataDir string) Config {
 	}
 }
 
-// TODO: Get rid of NewDefaultSession
 func NewSession(runDir string, bins Binaries, config Config) *gexec.Session {
 	configFile, err := os.OpenFile(filepath.Join(runDir, "containerd.toml"), os.O_TRUNC|os.O_WRONLY|os.O_CREATE, os.ModePerm)
 	Expect(err).NotTo(HaveOccurred())
@@ -66,19 +65,6 @@ func NewSession(runDir string, bins Binaries, config Config) *gexec.Session {
 
 	cmd := exec.Command(bins.Containerd, "--config", configFile.Name())
 	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s", fmt.Sprintf("%s:%s", os.Getenv("PATH"), bins.Dir)))
-	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
-	Expect(err).NotTo(HaveOccurred())
-	return session
-}
-
-func NewDefaultSession(config Config) *gexec.Session {
-	configFile, err := os.OpenFile(filepath.Join(config.RunDir, "containerd.toml"), os.O_TRUNC|os.O_WRONLY|os.O_CREATE, os.ModePerm)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(toml.NewEncoder(configFile).Encode(&config)).To(Succeed())
-	Expect(configFile.Close()).To(Succeed())
-
-	cmd := exec.Command(config.ContainerdBin, "--config", configFile.Name())
-	cmd.Env = append(os.Environ(), fmt.Sprintf("PATH=%s", fmt.Sprintf("%s:%s", os.Getenv("PATH"), config.BinariesDir)))
 	session, err := gexec.Start(cmd, GinkgoWriter, GinkgoWriter)
 	Expect(err).NotTo(HaveOccurred())
 	return session

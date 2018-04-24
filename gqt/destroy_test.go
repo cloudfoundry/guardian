@@ -243,7 +243,11 @@ var _ = Describe("Destroying a Container", func() {
 		)
 
 		BeforeEach(func() {
-			containerdSession = containerdrunner.NewDefaultSession(containerdConfig)
+			runDir, err := ioutil.TempDir("", "")
+			Expect(err).NotTo(HaveOccurred())
+			containerdConfig := containerdrunner.ContainerdConfig(runDir)
+			containerdSession = containerdrunner.NewSession(runDir, containerdBinaries, containerdConfig)
+
 			config.ContainerdSocket = containerdConfig.GRPC.Address
 		})
 

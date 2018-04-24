@@ -10,7 +10,6 @@ import (
 	specs "github.com/opencontainers/runtime-spec/specs-go"
 )
 
-// TODO: I don't think we should use the same context repeatedly?
 type Nerd struct {
 	client  *containerd.Client
 	context context.Context
